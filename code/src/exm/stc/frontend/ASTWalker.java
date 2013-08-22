@@ -49,11 +49,11 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.exceptions.VariableUsageException;
 import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Builtins;
-import exm.stc.common.lang.Builtins.TclOpTemplate;
 import exm.stc.common.lang.Constants;
+import exm.stc.common.lang.ForeignFunctions;
+import exm.stc.common.lang.ForeignFunctions.TclOpTemplate;
+import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
-import exm.stc.common.lang.Operators.IntrinsicFunction;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
@@ -1807,7 +1807,7 @@ public class ASTWalker {
                                 inlineTcl != null);
     }
 
-    TaskMode taskMode = Builtins.getTaskMode(function);
+    TaskMode taskMode = ForeignFunctions.getTaskMode(function);
     
     // TODO: assume for now that all non-local builtins are targetable
     // This is still not quite right (See issue #230)
@@ -1885,7 +1885,7 @@ public class ASTWalker {
           } else { 
             mode = TaskMode.valueOf(val);
           }
-          Builtins.addTaskMode(function, mode);
+          ForeignFunctions.addTaskMode(function, mode);
         } catch (IllegalArgumentException e) {
           throw new UserException(context, "Unknown dispatch mode " + val + ". "
               + " Valid options are: " + StringUtil.concat(TaskMode.values()));
@@ -1906,7 +1906,7 @@ public class ASTWalker {
       throw new UserException(context, "Unknown builtin op " + val);
     }
     assert(opcode != null);
-    Builtins.addOpEquiv(function, opcode);
+    ForeignFunctions.addOpEquiv(function, opcode);
   }
 
   /**
@@ -1919,15 +1919,15 @@ public class ASTWalker {
   private void registerFunctionAnnotation(Context context, String function,
                   String annotation) throws UserException {
     if (annotation.equals(Annotations.FN_ASSERTION)) {
-      Builtins.addAssertVariable(function);
+      ForeignFunctions.addAssertVariable(function);
     } else if (annotation.equals(Annotations.FN_PURE)) {
-      Builtins.addPure(function);
+      ForeignFunctions.addPure(function);
     } else if (annotation.equals(Annotations.FN_COMMUTATIVE)) {
-      Builtins.addCommutative(function);
+      ForeignFunctions.addCommutative(function);
     } else if (annotation.equals(Annotations.FN_COPY)) {
-      Builtins.addCopy(function);
+      ForeignFunctions.addCopy(function);
     } else if (annotation.equals(Annotations.FN_MINMAX)) {
-      Builtins.addMinMax(function);
+      ForeignFunctions.addMinMax(function);
     } else if (annotation.equals(Annotations.FN_PAR)) {
       context.setFunctionProperty(function, FnProp.PARALLEL);
     } else {

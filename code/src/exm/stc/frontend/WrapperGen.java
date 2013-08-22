@@ -16,8 +16,8 @@ import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.Builtins;
-import exm.stc.common.lang.Builtins.TclOpTemplate;
+import exm.stc.common.lang.ForeignFunctions;
+import exm.stc.common.lang.ForeignFunctions.TclOpTemplate;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -79,7 +79,7 @@ public class WrapperGen {
     }
     inlineTcl.addOutNames(fdecl.getOutNames());
     inlineTcl.verifyNames(context);
-    Builtins.addInlineTemplate(function, inlineTcl);
+    ForeignFunctions.addInlineTemplate(function, inlineTcl);
     return inlineTcl;
   }
   
@@ -152,7 +152,7 @@ public class WrapperGen {
    */
   public void saveWrapper(String function, FunctionType ft, FunctionDecl decl,
       TaskMode taskMode, boolean isParallel, boolean isTargetable) {
-    TclOpTemplate template = Builtins.getInlineTemplate(function);
+    TclOpTemplate template = ForeignFunctions.getInlineTemplate(function);
     assert(template != null) : "Expected save template for " + function;
     SavedWrapper wrapper = new SavedWrapper(function, ft, decl, taskMode,
                                     isParallel, isTargetable, template);

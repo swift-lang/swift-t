@@ -25,18 +25,18 @@ import java.util.List;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.Builtins.TemplateElem.ElemKind;
+import exm.stc.common.lang.ForeignFunctions.TemplateElem.ElemKind;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.MultiMap.ListFactory;
 import exm.stc.frontend.Context;
 
 /**
- * Static class to track info about semantics of built-in functions.
+ * Static class to track info about semantics of foreign functions.
  * 
  * Currently it is sufficient to have this as a static class.
  */
-public class Builtins {
+public class ForeignFunctions {
   public static final String INPUT_FILE = "input_file";
   public static final String UNCACHED_INPUT_FILE = "uncached_input_file";
   public static final String ARRAY_SIZE = "size";
@@ -44,6 +44,7 @@ public class Builtins {
   public static final String RANGE_STEP = "rangestep";
   public static final Object ARGV = "argv";
   
+ 
   /** Names of built-ins which don't have side effects */
   private static HashSet<String> pure = new HashSet<String>();
   
@@ -79,6 +80,7 @@ public class Builtins {
   
   private static HashMap<String, TaskMode> taskModes
     = new HashMap<String, TaskMode>();
+
   
   public static void addPure(String builtinFunction) {
     pure.add(builtinFunction);

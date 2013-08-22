@@ -35,7 +35,7 @@ import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Builtins;
+import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.TaskMode;
@@ -142,7 +142,7 @@ public class FunctionInline implements OptimizerPass {
     while (it.hasNext()) {
       BuiltinFunction f = it.next();
       List<String> usages = finder.functionUsages.get(f.getName());
-      if (usages.size() == 0 && ! Builtins.hasOpEquiv(f.getName())) {
+      if (usages.size() == 0 && ! ForeignFunctions.hasOpEquiv(f.getName())) {
         logger.debug("Prune builtin: " + f.getName());
         it.remove();
       }

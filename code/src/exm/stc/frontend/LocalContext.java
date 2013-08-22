@@ -22,13 +22,13 @@ import java.util.List;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Operators.IntrinsicFunction;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
 
 /**
  * Track context within a function.  New child contexts are created

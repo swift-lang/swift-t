@@ -42,8 +42,8 @@ import exm.stc.common.exceptions.STCFatal;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Builtins;
-import exm.stc.common.lang.Builtins.TclOpTemplate;
+import exm.stc.common.lang.ForeignFunctions;
+import exm.stc.common.lang.ForeignFunctions.TclOpTemplate;
 import exm.stc.common.lang.CompileTimeArgs;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ExecContext;
@@ -799,7 +799,7 @@ public class TurbineGenerator implements CompilerBackend {
     //TODO: for time being, share code with built-in function generation
     TclFunRef fn = BuiltinOps.getBuiltinOpImpl(op);
     if (fn == null) {
-      List<String> impls = Builtins.findOpImpl(op);
+      List<String> impls = ForeignFunctions.findOpImpl(op);
       
       // It should be impossible for there to be no implementation for a function
       // like this
@@ -973,7 +973,7 @@ public class TurbineGenerator implements CompilerBackend {
     logger.debug("call builtin: " + function);
     TclFunRef tclf = builtinSymbols.get(function);
     assert tclf != null : "Builtin " + function + "not found";
-    Builtins.getTaskMode(function).checkSpawn(execContextStack.peek());
+    ForeignFunctions.getTaskMode(function).checkSpawn(execContextStack.peek());
 
     builtinFunctionCall(function, tclf, inputs, outputs, props);
   }
@@ -1014,7 +1014,7 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void builtinLocalFunctionCall(String functionName,
           List<Arg> inputs, List<Var> outputs) {
-    TclOpTemplate template = Builtins.getInlineTemplate(functionName);
+    TclOpTemplate template = ForeignFunctions.getInlineTemplate(functionName);
     assert(template != null);
     
     List<TclTree> result = TclTemplateProcessor.processTemplate(template,

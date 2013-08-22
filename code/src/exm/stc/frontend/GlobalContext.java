@@ -27,7 +27,7 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.Operators.IntrinsicFunction;
+import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.Type;

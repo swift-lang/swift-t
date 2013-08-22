@@ -16,17 +16,14 @@
 package exm.stc.common.lang;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.Types.PrimType;
 import exm.stc.common.lang.Types.ScalarFutureType;
 import exm.stc.common.lang.Types.Type;
@@ -54,15 +51,7 @@ public class Operators {
     LOG, EXP, SQRT, IS_NAN,
     ASSERT_EQ, ASSERT, SPRINTF,
   }
-  
-  /**
-   * Intrinsic functions with special handling that don't fit in above
-   * framework: e.g. have different calling conventions.
-   */
-  public static enum IntrinsicFunction {
-    FILENAME,
-  }
-  
+
   /** Map of <number type> -> ( <token type> -> <internal opcode> ) */
   private static final Map<Type, Map<Integer, BuiltinOpcode>> arithOps = 
                     new HashMap<Type, Map<Integer, BuiltinOpcode>>();
@@ -299,20 +288,6 @@ public class Operators {
 
   public static boolean isShortCircuitable(BuiltinOpcode op) {
     return op == BuiltinOpcode.AND || op == BuiltinOpcode.OR;
-  }
-  
-  /**
-   * Which properties are accepted for an intrinsic function
-   * @param intF
-   * @return
-   */
-  public static List<TaskPropKey> validProps(IntrinsicFunction intF) {
-    switch (intF) {
-      case FILENAME:
-        return Collections.emptyList();
-      default:
-        throw new STCRuntimeError("Unimplemented for " + intF);
-    }
   }
 
 }

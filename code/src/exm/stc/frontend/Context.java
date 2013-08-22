@@ -33,7 +33,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.Operators.IntrinsicFunction;
+import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.Type;

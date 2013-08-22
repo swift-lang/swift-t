@@ -38,10 +38,11 @@ import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Builtins;
+import exm.stc.common.lang.ForeignFunctions;
+import exm.stc.common.lang.Intrinsics;
+import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
-import exm.stc.common.lang.Operators.IntrinsicFunction;
 import exm.stc.common.lang.Operators.OpType;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.TaskProp;
@@ -470,7 +471,7 @@ public class ExprWalker {
                                 f.function(), f.type(), f.args(), oList, false);
     try {
       // If this is an assert statement, disable it
-      if (Builtins.isAssertVariant(f.function()) &&
+      if (ForeignFunctions.isAssertVariant(f.function()) &&
               Settings.getBoolean(Settings.OPT_DISABLE_ASSERTS)) {
         return;
       }
@@ -537,7 +538,7 @@ public class ExprWalker {
     if (context.isIntrinsic(f.function())) {
       // Handle annotation specially
       IntrinsicFunction intF = context.lookupIntrinsic(f.function());
-      List<TaskPropKey> validProps = Operators.validProps(intF);
+      List<TaskPropKey> validProps = Intrinsics.validProps(intF);
       if (!validProps.contains(ann)) {
           throw new InvalidAnnotationException(context, "Cannot specify " +
                 "property " + ann + " for intrinsic function " + f.function());
@@ -891,11 +892,11 @@ public class ExprWalker {
       IntrinsicFunction intF = context.lookupIntrinsic(function);
       backend.intrinsicCall(intF, iList, oList, props);
     } else if (context.hasFunctionProp(function, FnProp.BUILTIN)) {
-      if (Builtins.hasOpEquiv(function)) {
+      if (ForeignFunctions.hasOpEquiv(function)) {
         assert(oList.size() <= 1);
         Var out = oList.size() == 0 ? null : oList.get(0);
 
-        backend.asyncOp(Builtins.getOpEquiv(function), out, 
+        backend.asyncOp(ForeignFunctions.getOpEquiv(function), out, 
                         Arg.fromVarList(iList), props);
       } else {
         backend.builtinFunctionCall(function, iList, oList, props);

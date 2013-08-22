@@ -10,7 +10,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.Builtins;
+import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.util.MultiMap;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
@@ -63,7 +63,7 @@ public class PruneFunctions implements OptimizerPass {
         depGraph.put(currFn.getName(), fnCall.functionName());
       } else if (inst.op == Opcode.ASYNC_OP) {
         // Async ops can be implemented with builtins
-        List<String> fnNames = Builtins.findOpImpl(((Builtin)inst).subop);
+        List<String> fnNames = ForeignFunctions.findOpImpl(((Builtin)inst).subop);
         if (fnNames != null) {
           for (String fnName: fnNames) {
             depGraph.put(currFn.getName(), fnName);

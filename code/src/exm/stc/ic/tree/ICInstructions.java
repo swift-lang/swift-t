@@ -33,7 +33,7 @@ import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgKind;
-import exm.stc.common.lang.Builtins;
+import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.CompileTimeArgs;
 import exm.stc.common.lang.OpEvaluator;
 import exm.stc.common.lang.Operators;
@@ -2655,9 +2655,9 @@ public class ICInstructions {
     }
     
     private boolean isCopyFunction() {
-      if (Builtins.isCopyFunction(functionName)) {
+      if (ForeignFunctions.isCopyFunction(functionName)) {
         return true;
-      } else if (Builtins.isMinMaxFunction(functionName)
+      } else if (ForeignFunctions.isMinMaxFunction(functionName)
               && getInput(0).equals(getInput(1))) {
         return true;
       }
@@ -2666,7 +2666,7 @@ public class ICInstructions {
     
     @Override
     public List<ResultVal> getResults(CVMap existing) {
-      if (Builtins.isPure(functionName)) {
+      if (ForeignFunctions.isPure(functionName)) {
         if (!this.writesMappedVar() && isCopyFunction()) {
           // Handle copy as a special case
           return ResultVal.makeCopy(getOutput(0),
@@ -2677,7 +2677,7 @@ public class ICInstructions {
             boolean outputClosed = false;// safe assumption
             String canonicalFunctionName = this.functionName;
             List<Arg> in = new ArrayList<Arg>(getInputs());
-            if (Builtins.isCommutative(this.functionName)) {
+            if (ForeignFunctions.isCommutative(this.functionName)) {
               // put in canonical order
               Collections.sort(in);
             }
@@ -2699,12 +2699,12 @@ public class ICInstructions {
      */
     private void addSpecialCVs(List<ResultVal> cvs) {
       if (op == Opcode.CALL_BUILTIN && (
-          this.functionName.equals(Builtins.INPUT_FILE) ||
-          this.functionName.equals(Builtins.UNCACHED_INPUT_FILE))) {
+          this.functionName.equals(ForeignFunctions.INPUT_FILE) ||
+          this.functionName.equals(ForeignFunctions.UNCACHED_INPUT_FILE))) {
         cvs.add(filenameCV(getInput(0), getOutput(0)));
       } else if (op == Opcode.CALL_BUILTIN_LOCAL &&
-          (this.functionName.equals(Builtins.RANGE) ||
-           this.functionName.equals(Builtins.RANGE_STEP))) {
+          (this.functionName.equals(ForeignFunctions.RANGE) ||
+           this.functionName.equals(ForeignFunctions.RANGE_STEP))) {
         addRangeCVs(cvs);
       }
       
@@ -2724,7 +2724,7 @@ public class ICInstructions {
       } else {
         allValues = false;
       }
-      if (this.functionName.equals(Builtins.RANGE_STEP)) {
+      if (this.functionName.equals(ForeignFunctions.RANGE_STEP)) {
         if (getInput(2).isIntVal()) {
           step = getInput(2).getIntLit();
         } else {
@@ -2948,7 +2948,7 @@ public class ICInstructions {
     
     @Override
     public boolean hasSideEffects() {
-      return (!Builtins.isPure(functionName)) ||
+      return (!ForeignFunctions.isPure(functionName)) ||
             this.writesAliasVar() || this.writesMappedVar();
     }
   
@@ -2956,7 +2956,7 @@ public class ICInstructions {
     public Map<Var, Arg> constantFold(String enclosingFnName,
                                   Map<Var, Arg> knownConstants) {
       
-      if (this.functionName.equals(Builtins.ARGV)) {
+      if (this.functionName.equals(ForeignFunctions.ARGV)) {
         // See if argument name is constant
         Arg argName = knownConstants.get(inputs.get(0).getVar());
         if (argName != null) {
@@ -3004,9 +3004,9 @@ public class ICInstructions {
         }
       }
       
-      if (allClosed && (Builtins.hasOpEquiv(this.functionName)
-                || Builtins.hasInlineVersion(this.functionName))) {
-        TaskMode mode = Builtins.getTaskMode(this.functionName);
+      if (allClosed && (ForeignFunctions.hasOpEquiv(this.functionName)
+                || ForeignFunctions.hasInlineVersion(this.functionName))) {
+        TaskMode mode = ForeignFunctions.getTaskMode(this.functionName);
         if (mode == null) {
           mode = TaskMode.LOCAL;
         }
@@ -3027,8 +3027,8 @@ public class ICInstructions {
       List<Var> retainedInputs = varInputs(true);
       assert(values.size() == retainedInputs.size());
       
-      if (Builtins.hasOpEquiv(functionName)) {
-        BuiltinOpcode newOp = Builtins.getOpEquiv(functionName);
+      if (ForeignFunctions.hasOpEquiv(functionName)) {
+        BuiltinOpcode newOp = ForeignFunctions.getOpEquiv(functionName);
         assert(newOp != null);
         
         if (outputs.size() == 1) {
@@ -3041,7 +3041,7 @@ public class ICInstructions {
               Builtin.createLocal(newOp, null, values));
         }
       } else {
-        assert(Builtins.hasInlineVersion(functionName));
+        assert(ForeignFunctions.hasInlineVersion(functionName));
         for (int i = 0; i < outputs.size(); i++) {
           checkSwappedOutput(outputs.get(i), outVars.get(i));
         }
@@ -3139,7 +3139,7 @@ public class ICInstructions {
         case CALL_LOCAL_CONTROL:
           return TaskMode.LOCAL_CONTROL;
         case CALL_BUILTIN:
-          return Builtins.getTaskMode(functionName);
+          return ForeignFunctions.getTaskMode(functionName);
         case CALL_CONTROL:
           return TaskMode.CONTROL;
         default:
@@ -3210,7 +3210,7 @@ public class ICInstructions {
 
     @Override
     public boolean hasSideEffects() {
-      return (!Builtins.isPure(functionName)) ||
+      return (!ForeignFunctions.isPure(functionName)) ||
             this.writesAliasVar() || this.writesMappedVar();
     }
   
@@ -3220,7 +3220,7 @@ public class ICInstructions {
       // Replace any variables for which constant values are known
       ICUtil.replaceArgsInList(knownConstants, inputs);
       
-      if (this.functionName.equals(Builtins.ARGV)) {
+      if (this.functionName.equals(ForeignFunctions.ARGV)) {
         Arg argName = this.inputs.get(0);
         if (argName.isStringVal()) {
           String val = CompileTimeArgs.lookup(argName.getStringLit());
@@ -3236,7 +3236,7 @@ public class ICInstructions {
     static ResultVal makeArraySizeComputedValue(Var arr, Arg size) {
       assert(Types.isArray(arr.type()));
       assert(size.isImmediateInt());
-      return ResultVal.buildResult(Opcode.CALL_BUILTIN_LOCAL, Builtins.ARRAY_SIZE,
+      return ResultVal.buildResult(Opcode.CALL_BUILTIN_LOCAL, ForeignFunctions.ARRAY_SIZE,
                                    arr.asArg(), size, true);
     }
     
@@ -3270,8 +3270,8 @@ public class ICInstructions {
     
     @Override
     public List<Var> getClosedOutputs() {
-      if (functionName.equals(Builtins.RANGE) || 
-          functionName.equals(Builtins.RANGE_STEP)) {
+      if (functionName.equals(ForeignFunctions.RANGE) || 
+          functionName.equals(ForeignFunctions.RANGE_STEP)) {
         // Range closes outputs at end
         return Arrays.asList(outputs.get(0));
       }
@@ -3288,8 +3288,8 @@ public class ICInstructions {
     @Override
     public List<Var> getWriteIncrVars() {
       // Range is special case where output array modified
-      if (functionName.equals(Builtins.RANGE) ||
-          functionName.equals(Builtins.RANGE_STEP)) {
+      if (functionName.equals(ForeignFunctions.RANGE) ||
+          functionName.equals(ForeignFunctions.RANGE_STEP)) {
         // Array output must be incremented
         return Arrays.asList(getOutput(0));
       }

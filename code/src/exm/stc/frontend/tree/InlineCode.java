@@ -17,8 +17,8 @@ package exm.stc.frontend.tree;
 
 import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.Builtins.TclOpTemplate;
-import exm.stc.common.lang.Builtins.TemplateElem;
+import exm.stc.common.lang.ForeignFunctions.TclOpTemplate;
+import exm.stc.common.lang.ForeignFunctions.TemplateElem;
 import exm.stc.frontend.Context;
 
 public class InlineCode {

@@ -19,7 +19,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashSet;
 
-import exm.stc.common.lang.Builtins;
+import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
@@ -55,7 +55,7 @@ public class ProgressOpcodes {
     if (isCheapWorkerOpcode(i.op)) {
       return true;
     } else if (i.op == Opcode.CALL_BUILTIN_LOCAL) {
-      TaskMode fnMode = Builtins.getTaskMode(((LocalFunctionCall)i).getFunctionName());
+      TaskMode fnMode = ForeignFunctions.getTaskMode(((LocalFunctionCall)i).getFunctionName());
       if (fnMode == TaskMode.LOCAL) {
         return true;
       }
