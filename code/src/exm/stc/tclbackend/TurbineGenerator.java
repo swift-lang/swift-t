@@ -2439,12 +2439,11 @@ public class TurbineGenerator implements CompilerBackend {
   private Expression getTurbineWaitId(Var var) {
     Value wv = varToExpr(var);
     Expression waitExpr;
-    if (Types.isFile(var.type())) {
+    if (Types.isFile(var)) {
       // Block on file status
       waitExpr = Turbine.getFileStatus(wv);
-    } else if (Types.isScalarFuture(var.type()) ||
-            Types.isRef(var.type()) ||
-            Types.isArray(var.type())) {
+    } else if (Types.isScalarFuture(var) || Types.isRef(var) ||
+            Types.isArray(var) || Types.isScalarUpdateable(var)) {
       waitExpr = wv;
     } else {
       throw new STCRuntimeError("Don't know how to wait on var: "

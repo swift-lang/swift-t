@@ -769,6 +769,7 @@ public class TypeChecker {
       throws TypeMismatchException {
     if (!(srctype.assignableTo(dsttype) &&
           srctype.getImplType().equals(dsttype.getImplType()))) {
+      new Exception().printStackTrace();
       throw new TypeMismatchException(context, "Type mismatch: copying from "
           + srctype.toString() + " to " + dsttype.toString());
     }

@@ -1628,6 +1628,18 @@ public class Types {
     return key.type().assignableTo(arrayKeyType(arr));
   }
   
+
+  /**
+   * Return true if the type is one that we can subscribe to
+   * the final value of 
+   * @param waitExprType
+   * @return
+   */
+  public static boolean canWaitForFinalize(Typed type) {
+    return isFuture(type) || isScalarUpdateable(type) ||
+           isArray(type);
+  }
+  
   public static boolean isFuture(Typed t) {
     return isScalarFuture(t) || isRef(t);
   }

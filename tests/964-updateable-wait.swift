@@ -2,19 +2,20 @@
   Test for waiting on updateable
  */
 import sys;
-
-// SKIP-THIS-TEST
+import assert;
+import math;
 
 main {
     updateable_float counter = 0;
     int limit = toint(argv("limit"));
-    float limitf = tofloat(argv("limit"));
-    foreach i in [1:limit] {
-        counter <incr> := 1;
-    }
 
     wait (counter) {
         // This should run after counter is finalized
-        assertEqual(counter, limitf, "counter == limit");
+        assertEqual(round(counter), limit, "counter == limit");
+    }
+    wait (sleep(0.1)) { 
+        foreach i in [1:limit] {
+            counter <incr> := 1;
+        }
     }
 }

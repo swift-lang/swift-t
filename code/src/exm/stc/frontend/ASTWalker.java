@@ -66,6 +66,7 @@ import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.RefType;
 import exm.stc.common.lang.Types.StructType;
+import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.SubType;
 import exm.stc.common.lang.Types.Type;
@@ -620,8 +621,21 @@ public class ASTWalker {
     Wait wait = Wait.fromAST(context, tree);
     ArrayList<Var> waitEvaled = new ArrayList<Var>();
     for (SwiftAST expr: wait.getWaitExprs()) {
-      Var res = exprWalker.eval(context, expr, 
-          TypeChecker.findSingleExprType(context, expr), false, null);
+      Type waitExprType = TypeChecker.findSingleExprType(context, expr);
+      if (Types.isUnion(waitExprType)) {
+        // Choose first alternative type
+        for (Type alt: UnionType.getAlternatives(waitExprType)) {
+          if (Types.canWaitForFinalize(alt)) {
+            waitExprType = alt;
+            break;
+          }
+        }
+      }
+      if (!Types.canWaitForFinalize(waitExprType)) {
+        throw new TypeMismatchException(context, "Waiting for type " +
+            waitExprType.typeName() + " is not supported");
+      }
+      Var res = exprWalker.eval(context, expr, waitExprType, false, null);
       waitEvaled.add(res);
     }
     
