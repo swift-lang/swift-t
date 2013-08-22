@@ -56,6 +56,7 @@ public class Var implements Comparable<Var>, Typed {
    *    inserted variables */
   public static final String OPT_VAR_PREFIX = "__o_";
   public static final String OPT_VALUE_VAR_PREFIX = "__ov_";
+  public static final String OPT_FILENAME_PREFIX = "__of_";
   public static final String LOOP_INDEX_VAR_PREFIX = "__i";
   public static final String GLOBAL_CONST_VAR_PREFIX = "__c";
   public static final String DEREF_COMPILER_VAR_PREFIX = "__dr_";

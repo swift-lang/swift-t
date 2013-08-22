@@ -741,6 +741,14 @@ public class TurbineGenerator implements CompilerBackend {
   }
   
   @Override
+  public void getLocalFileName(Var filename, Var file) {
+    assert(filename.type().assignableTo(Types.V_STRING));
+    assert(file.type().assignableTo(Types.V_FILE));
+    pointStack.peek().add(new SetVariable(prefixVar(filename),
+                        Turbine.localFilePath(varToExpr(file))));
+  }
+  
+  @Override
   public void isMapped(Var isMapped, Var file) {
     assert(Types.isFile(file));
     assert(isMapped.type().assignableTo(Types.V_BOOL));

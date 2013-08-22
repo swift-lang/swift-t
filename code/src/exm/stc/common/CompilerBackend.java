@@ -155,9 +155,13 @@ public interface CompilerBackend {
   
   /**
    * Extract handle to filename future out of file variable
-   * @param initUnmapped if true, assign arbitrary filename to unmapped files
    */
   public void getFileName(Var filename, Var file);
+  
+  /**
+   * Extract handle to filename future out of localfile variable
+   */
+  public void getLocalFileName(Var filename, Var file);
   
   /**
    * Determine if a file is mapped

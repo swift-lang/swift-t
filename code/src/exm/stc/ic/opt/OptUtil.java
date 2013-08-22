@@ -53,6 +53,14 @@ public class OptUtil {
     return b.uniqueVarName(Var.OPT_VALUE_VAR_PREFIX + name);
   }
   
+  public static String optFilenamePrefix(Block b, Var v) {
+    return optFilenamePrefix(b, v.name());
+  }
+  
+  public static String optFilenamePrefix(Block b, String name) {
+    return b.uniqueVarName(Var.OPT_FILENAME_PREFIX + name);
+  }
+  
   /**
    * Same as fetchValue of, but more times
    * @param block
@@ -166,7 +174,8 @@ public class OptUtil {
 
   public static List<Var> createLocalOpOutputVars(Block block,
           ListIterator<Statement> insertPos,
-          List<Var> outputFutures, Map<Var, Var> outputFilenames) {
+          List<Var> outputFutures, Map<Var, Var> outputFilenames,
+          boolean mapOutVars) {
     if (outputFutures == null) {
       return Collections.emptyList();
     }
@@ -174,7 +183,7 @@ public class OptUtil {
     List<Instruction> instBuffer = new ArrayList<Instruction>();
     
     List<Var> outValVars = WrapUtil.createLocalOpOutputs(block, outputFutures,
-                                  outputFilenames, instBuffer, true);
+                               outputFilenames, instBuffer, true, mapOutVars);
 
     for (Instruction inst: instBuffer) {
       insertPos.add(inst);
@@ -185,8 +194,9 @@ public class OptUtil {
 
   public static void fixupImmChange(Block srcBlock,
           Block targetBlock, MakeImmChange change,
-          List<Instruction> instBuffer, List<Var> newOutVars,
-                                        List<Var> oldOutVars) {
+          List<Instruction> instBuffer, 
+          List<Var> newOutVars, List<Var> oldOutVars,
+          boolean mapOutputFiles) {
     instBuffer.addAll(Arrays.asList(change.newInsts));
     
     // System.err.println("Swapped " + inst + " for " + change.newInst);
@@ -201,7 +211,8 @@ public class OptUtil {
 
     // Now copy back values into future
     if (change.storeOutputVals) {
-      WrapUtil.setLocalOpOutputs(oldOutVars, newOutVars, instBuffer);
+      WrapUtil.setLocalOpOutputs(targetBlock, oldOutVars, newOutVars,
+                                 instBuffer, !mapOutputFiles);
     }
   }
   

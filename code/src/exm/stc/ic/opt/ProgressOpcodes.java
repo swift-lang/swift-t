@@ -54,7 +54,7 @@ public class ProgressOpcodes {
   public static boolean isCheapWorkerInst(Instruction i) {
     if (isCheapWorkerOpcode(i.op)) {
       return true;
-    } else if (i.op == Opcode.CALL_BUILTIN_LOCAL) {
+    } else if (i.op == Opcode.CALL_FOREIGN_LOCAL) {
       TaskMode fnMode = ForeignFunctions.getTaskMode(((LocalFunctionCall)i).getFunctionName());
       if (fnMode == TaskMode.LOCAL) {
         return true;
@@ -154,6 +154,7 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.LOAD_BLOB);
     opcodes.add(Opcode.LOAD_FILE);
     opcodes.add(Opcode.GET_FILENAME);
+    opcodes.add(Opcode.GET_LOCAL_FILENAME);
     opcodes.add(Opcode.IS_MAPPED);
     opcodes.add(Opcode.CHOOSE_TMP_FILENAME);
     opcodes.add(Opcode.INIT_LOCAL_OUTPUT_FILE);
@@ -217,6 +218,7 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.COPY_REF);
     opcodes.add(Opcode.LOCAL_OP);
     opcodes.add(Opcode.GET_FILENAME);
+    opcodes.add(Opcode.GET_LOCAL_FILENAME);
     opcodes.add(Opcode.IS_MAPPED);
     opcodes.add(Opcode.SET_FILENAME_VAL);
     opcodes.add(Opcode.INIT_LOCAL_OUTPUT_FILE);
@@ -239,7 +241,7 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.CALL_CONTROL);
     opcodes.add(Opcode.CALL_LOCAL);
     opcodes.add(Opcode.CALL_LOCAL_CONTROL);
-    opcodes.add(Opcode.CALL_BUILTIN);
+    opcodes.add(Opcode.CALL_FOREIGN);
     return opcodes;
   }
 }

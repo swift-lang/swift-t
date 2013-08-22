@@ -87,7 +87,7 @@ public class FunctionInline implements OptimizerPass {
   private static boolean isFunctionCall(Instruction inst) {
     return inst.op == Opcode.CALL_CONTROL || inst.op == Opcode.CALL_LOCAL ||
            inst.op == Opcode.CALL_SYNC || inst.op == Opcode.CALL_LOCAL_CONTROL ||
-           inst.op == Opcode.CALL_BUILTIN;
+           inst.op == Opcode.CALL_FOREIGN;
   }
 
   /**

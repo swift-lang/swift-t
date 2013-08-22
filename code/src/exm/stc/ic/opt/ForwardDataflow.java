@@ -703,7 +703,7 @@ public class ForwardDataflow implements OptimizerPass {
     if (req == null) {
       return false;
     }
-
+    
     // Create replacement sequence
     Block insertContext;
     ListIterator<Statement> insertPoint;
@@ -767,13 +767,13 @@ public class ForwardDataflow implements OptimizerPass {
     
     // Need filenames for output file values
     Map<Var, Var> filenameVals = loadOutputFileNames(cv, req.out,
-                                      insertContext, insertPoint);
+                      insertContext, insertPoint, req.mapOutVars);
     
     List<Var> outValVars = OptUtil.createLocalOpOutputVars(insertContext,
-                                    insertPoint, req.out, filenameVals);
+                     insertPoint, req.out, filenameVals, req.mapOutVars);
     MakeImmChange change = inst.makeImmediate(outValVars, inVals);
     OptUtil.fixupImmChange(block, insertContext, change, alt, outValVars,
-                           req.out);
+                           req.out, req.mapOutVars);
 
     if (logger.isTraceEnabled()) {
       logger.trace("Replacing instruction <" + inst + "> with sequence "
@@ -794,13 +794,13 @@ public class ForwardDataflow implements OptimizerPass {
 
   private static Map<Var, Var> loadOutputFileNames(ValueTracker cv,
       List<Var> outputs, Block insertContext,
-      ListIterator<Statement> insertPoint) {
+      ListIterator<Statement> insertPoint, boolean mapOutVars) {
     if (outputs == null)
       outputs = Collections.emptyList();
     
     Map<Var, Var> filenameVals = new HashMap<Var, Var>();
     for (Var output: outputs) {
-      if (Types.isFile(output)) {
+      if (Types.isFile(output) && mapOutVars) {
         // Can only do this with unmapped vars, since otherwise we need
         // to wait for filename to be set
         assert(output.isMapped() == Ternary.FALSE);

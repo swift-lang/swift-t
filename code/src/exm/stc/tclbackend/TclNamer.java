@@ -31,6 +31,7 @@ public class TclNamer {
   private static final String TCL_VALUE_VAR_PREFIX = "v:";
   private static final String TCL_OPT_VAR_PREFIX = "opt:";
   private static final String TCL_OPT_VALUE_VAR_PREFIX = "optv:";
+  private static final String TCL_OPT_FILENAME_PREFIX = "optf:";
   private static final String TCL_STRUCT_FIELD_VAR_PREFIX = "sf:";
   private static final String TCL_LOOPINDEX_VAR_PREFIX = "i:";
   private static final String TCL_GLOBAL_CONST_VAR_PREFIX = "c:";
@@ -61,6 +62,9 @@ public class TclNamer {
     } else if (varname.startsWith(Var.OPT_VAR_PREFIX))  {
       return TCL_OPT_VAR_PREFIX +
           varname.substring(Var.OPT_VAR_PREFIX.length());
+    } else if (varname.startsWith(Var.OPT_FILENAME_PREFIX))  {
+      return TCL_OPT_FILENAME_PREFIX +
+          varname.substring(Var.OPT_FILENAME_PREFIX.length());
     } else if (varname.startsWith(Var.LOOP_INDEX_VAR_PREFIX)) {
       return TCL_LOOPINDEX_VAR_PREFIX +
           varname.substring(Var.LOOP_INDEX_VAR_PREFIX.length());

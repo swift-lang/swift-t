@@ -200,6 +200,8 @@ public class ICInstructions {
       public final TaskMode mode;
       /** If inputs should be recursively closed */
       public final boolean recursiveClose;
+      /** If outputs should have mapping initialized */
+      public final boolean mapOutVars;
       
       public MakeImmRequest(List<Var> out, List<Var> in) {
         this(out, in, TaskMode.LOCAL);
@@ -210,10 +212,15 @@ public class ICInstructions {
       }
       public MakeImmRequest(List<Var> out, List<Var> in, TaskMode mode,
                             boolean recursiveClose) {
+        this(out, in, mode, recursiveClose, true);
+      } 
+      public MakeImmRequest(List<Var> out, List<Var> in, TaskMode mode,
+          boolean recursiveClose, boolean mapOutVars) {
         this.out = out;
         this.in = in;
         this.mode = mode;
         this.recursiveClose = recursiveClose;
+        this.mapOutVars = mapOutVars;
       }
     }
     
@@ -809,6 +816,9 @@ public class ICInstructions {
       case GET_FILENAME:
         gen.getFileName(getOutput(0), getInput(0).getVar());
         break;
+      case GET_LOCAL_FILENAME:
+        gen.getLocalFileName(getOutput(0), getInput(0).getVar());
+        break;
       case IS_MAPPED:
         gen.isMapped(getOutput(0), getInput(0).getVar());
         break;
@@ -1155,6 +1165,12 @@ public class ICInstructions {
     public static Instruction getFileName(Var filename, Var file) {
       return new TurbineOp(Opcode.GET_FILENAME, filename, file.asArg());
     }
+    
+    public static Instruction getLocalFileName(Var filename, Var file) {
+      assert(file.type().assignableTo(Types.V_FILE));
+      assert(filename.type().assignableTo(Types.V_STRING));
+      return new TurbineOp(Opcode.GET_LOCAL_FILENAME, filename, file.asArg());
+    }
  
     public static Instruction setFilenameVal(Var file, Arg filenameVal) {
       return new TurbineOp(Opcode.SET_FILENAME_VAL, file, filenameVal);
@@ -1269,6 +1285,8 @@ public class ICInstructions {
 
       case GET_FILENAME:
         // Only effect is setting alias var
+        return false;
+      case GET_LOCAL_FILENAME:
         return false;
       case IS_MAPPED:
         // will always returns same result for same var
@@ -1903,6 +1921,7 @@ public class ICInstructions {
       case FREE_BLOB:
       case DECR_LOCAL_FILE_REF:
       case GET_FILENAME:
+      case GET_LOCAL_FILENAME:
       case IS_MAPPED:
       case ARRAY_LOOKUP_IMM:
       case COPY_REF:
@@ -2062,6 +2081,10 @@ public class ICInstructions {
                                       filename, filenameVal, true));
           }
           return res;
+        }
+        case GET_LOCAL_FILENAME: {
+          return filenameLocalCV(getOutput(0).asArg(),
+                                 getInput(0).getVar()).asList();
         }
         case SET_FILENAME_VAL: {
           Arg file = getOutput(0).asArg();
@@ -2671,8 +2694,6 @@ public class ICInstructions {
           // Handle copy as a special case
           return ResultVal.makeCopy(getOutput(0),
                                          getInput(0)).asList();
-        } else if (isImpl(SpecialFunction.SIZE)) {
-          return makeArraySizeCV();
         } else {
           List<ResultVal> res = new ArrayList<ResultVal>();
           for (int output = 0; output < getOutputs().size(); output++) {
@@ -2700,23 +2721,27 @@ public class ICInstructions {
      * @param res
      */
     private void addSpecialCVs(List<ResultVal> cvs) {
-      if (op == Opcode.CALL_BUILTIN && (
-          isImpl(SpecialFunction.INPUT_FILE) ||
-          isImpl(SpecialFunction.UNCACHED_INPUT_FILE))) {
-        cvs.add(filenameCV(getInput(0), getOutput(0)));
-      } else if (op == Opcode.CALL_BUILTIN_LOCAL &&
+      if (isImpl(SpecialFunction.INPUT_FILE) ||
+          isImpl(SpecialFunction.UNCACHED_INPUT_FILE)) {
+        if (op == Opcode.CALL_FOREIGN) {
+          cvs.add(filenameCV(getInput(0), getOutput(0)));
+        } else if (op == Opcode.CALL_FOREIGN_LOCAL){
+          cvs.add(filenameLocalCV(getInput(0), getOutput(0)));
+        }
+      } else if (op == Opcode.CALL_FOREIGN_LOCAL &&
           (isImpl(SpecialFunction.RANGE) ||
            isImpl(SpecialFunction.RANGE_STEP))) {
         addRangeCVs(cvs);
+      } else if (isImpl(SpecialFunction.SIZE)) {
+          cvs.add(makeArraySizeCV());
       }
-      
     }
 
     /**
      * @param inputFile
      * @return true if this instruction calls a given special function
      */
-    protected boolean isImpl(SpecialFunction special) {
+    public boolean isImpl(SpecialFunction special) {
       return ForeignFunctions.isSpecialImpl(special, this.functionName);
     }
 
@@ -2751,7 +2776,7 @@ public class ICInstructions {
       }
     }
 
-    private List<ResultVal> makeArraySizeCV() {
+    private ResultVal makeArraySizeCV() {
       boolean isFuture;
       if (Types.isString(getOutput(0))) {
         isFuture = true;
@@ -2760,7 +2785,7 @@ public class ICInstructions {
         isFuture = false;
       }
       return makeArraySizeCV(getInput(0).getVar(), getOutput(0).asArg(),
-                             isFuture).asList();
+                             isFuture);
     }
 
     static ResultVal makeArraySizeCV(Var arr, Arg size, boolean future) {
@@ -2783,7 +2808,7 @@ public class ICInstructions {
     private FunctionCall(Opcode op, String functionName,
         List<Arg> inputs, List<Var> outputs, TaskProps props) {
       super(op, functionName);
-      if (op != Opcode.CALL_BUILTIN && op != Opcode.CALL_CONTROL &&
+      if (op != Opcode.CALL_FOREIGN && op != Opcode.CALL_CONTROL &&
           op != Opcode.CALL_SYNC && op != Opcode.CALL_LOCAL &&
           op != Opcode.CALL_LOCAL_CONTROL) {
         throw new STCRuntimeError("Tried to create function call"
@@ -2827,7 +2852,7 @@ public class ICInstructions {
     public static FunctionCall createBuiltinCall(
         String functionName, List<Arg> inputs, List<Var> outputs,
         TaskProps props) {
-      return new FunctionCall(Opcode.CALL_BUILTIN, functionName,
+      return new FunctionCall(Opcode.CALL_FOREIGN, functionName,
           inputs, outputs, props);
     }
   
@@ -2853,7 +2878,7 @@ public class ICInstructions {
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       switch(this.op) {
-      case CALL_BUILTIN:
+      case CALL_FOREIGN:
         gen.builtinFunctionCall(functionName, inputs, outputs, props);
         break;
       case CALL_SYNC:
@@ -2946,7 +2971,7 @@ public class ICInstructions {
     @Override
     public List<Var> getReadOutputs(Map<String, Function> fns) {
       switch (op) {
-        case CALL_BUILTIN: {
+        case CALL_FOREIGN: {
           List<Var> res = new ArrayList<Var>();
           // Only some output types might be read
           for (Var o: outputs) {
@@ -2977,7 +3002,7 @@ public class ICInstructions {
           throw new STCRuntimeError("unexpected op: " + op);
       }
     }
-    
+
     @Override
     public boolean hasSideEffects() {
       return (!ForeignFunctions.isPure(functionName)) ||
@@ -3042,10 +3067,18 @@ public class ICInstructions {
         if (mode == null) {
           mode = TaskMode.LOCAL;
         }
+        
+        // True unless the function alters mapping itself
+        boolean mapOutVars = true;
+        if (isImpl(SpecialFunction.INPUT_FILE)) {
+          mapOutVars = false;
+        }
+        
         // All args are closed!
         return new MakeImmRequest(
             Collections.unmodifiableList(this.outputs),
-            Collections.unmodifiableList(this.varInputs(true)), mode);
+            Collections.unmodifiableList(this.varInputs(true)),
+            mode, false, mapOutVars);
 
       }
       return null;
@@ -3100,7 +3133,7 @@ public class ICInstructions {
     @Override
     public List<Var> getBlockingInputs() {
       List<Var> blocksOn = new ArrayList<Var>();
-      if (op == Opcode.CALL_BUILTIN) {
+      if (op == Opcode.CALL_FOREIGN) {
         for (Arg in: inputs) {
           if (in.isVar()) {
             Var v = in.getVar();
@@ -3125,7 +3158,7 @@ public class ICInstructions {
     @Override
     public Pair<List<Var>, List<Var>> getIncrVars(Map<String, Function> functions) {
       switch (op) { 
-        case CALL_BUILTIN:
+        case CALL_FOREIGN:
         case CALL_CONTROL:
         case CALL_LOCAL:
         case CALL_LOCAL_CONTROL: {
@@ -3143,7 +3176,7 @@ public class ICInstructions {
             if (RefCounting.hasWriteRefCount(outVar)) {
               writeIncr.add(outVar);
             }
-            if (op != Opcode.CALL_BUILTIN) {              
+            if (op != Opcode.CALL_FOREIGN) {              
               Function f = functions.get(this.functionName);
               boolean writeOnly = f.isOutputWriteOnly(i);
               
@@ -3170,7 +3203,7 @@ public class ICInstructions {
           return TaskMode.LOCAL;
         case CALL_LOCAL_CONTROL:
           return TaskMode.LOCAL_CONTROL;
-        case CALL_BUILTIN:
+        case CALL_FOREIGN:
           return ForeignFunctions.getTaskMode(functionName);
         case CALL_CONTROL:
           return TaskMode.CONTROL;
@@ -3194,7 +3227,7 @@ public class ICInstructions {
   
     public LocalFunctionCall(String functionName,
         List<Arg> inputs, List<Var> outputs) {
-      super(Opcode.CALL_BUILTIN_LOCAL, functionName);
+      super(Opcode.CALL_FOREIGN_LOCAL, functionName);
       this.outputs = new ArrayList<Var>();
       this.outputs.addAll(outputs);
       this.inputs = new ArrayList<Arg>();
@@ -3240,6 +3273,16 @@ public class ICInstructions {
       return Collections.unmodifiableList(outputs);
     }
 
+    
+    @Override
+    public List<Var> getInitialized() {
+      if (isImpl(SpecialFunction.INPUT_FILE)) {
+        // The local version of input_file initializes the output for writing
+        return getOutput(0).asList();
+      }
+      return Var.NONE;
+    }
+    
     @Override
     public boolean hasSideEffects() {
       return (!ForeignFunctions.isPure(functionName)) ||
@@ -3750,7 +3793,7 @@ public class ICInstructions {
   public static enum Opcode {
     FAKE, // Used for ComputedValue if there isn't a real opcode
     COMMENT,
-    CALL_BUILTIN, CALL_BUILTIN_LOCAL, CALL_CONTROL, CALL_SYNC, CALL_LOCAL,
+    CALL_FOREIGN, CALL_FOREIGN_LOCAL, CALL_CONTROL, CALL_SYNC, CALL_LOCAL,
     CALL_LOCAL_CONTROL,
     DEREF_INT, DEREF_STRING, DEREF_FLOAT, DEREF_BOOL, DEREF_BLOB,
     DEREF_FILE,
@@ -3780,7 +3823,7 @@ public class ICInstructions {
     UPDATE_MIN_IMM, UPDATE_INCR_IMM, UPDATE_SCALE_IMM,
     INIT_LOCAL_OUTPUT_FILE,
     GET_FILENAME, CHOOSE_TMP_FILENAME, IS_MAPPED,
-    SET_FILENAME_VAL, GET_FILENAME_VAL
+    SET_FILENAME_VAL, GET_FILENAME_VAL, GET_LOCAL_FILENAME
   }
 
   
@@ -4053,9 +4096,10 @@ public class ICInstructions {
     }
     
     private static boolean hasLocalVersion(BuiltinOpcode op) {
-      if (op == BuiltinOpcode.COPY_FILE) {
-        return false;
-      } else {
+    if (op == BuiltinOpcode.COPY_FILE) {
+      // TODO: implement local version of copy_file
+      return false;
+    } else {
         return true;
       }
     }
@@ -4624,6 +4668,13 @@ public class ICInstructions {
                                             file, filenameVal, true);
   }
 
+  public static ResultVal filenameLocalCV(Arg outFilename, Var inFile) {
+    assert(inFile.type().assignableTo(Types.V_FILE));
+    assert(outFilename.type().assignableTo(Types.V_STRING));
+    return ResultVal.buildResult(Opcode.GET_LOCAL_FILENAME,
+                    inFile.asArg().asList(), outFilename, true);
+  }
+  
   private static String formatFunctionCall(Opcode op, 
       String functionName, List<Var> outputs, List<Arg> inputs) {
     String result = op.toString().toLowerCase() + " " + functionName;

@@ -33,6 +33,8 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.ForeignFunctions;
+import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
@@ -51,6 +53,7 @@ import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.opt.ICOptimizer;
+import exm.stc.ic.opt.OptUtil;
 import exm.stc.ic.tree.Conditionals.IfStatement;
 import exm.stc.ic.tree.Conditionals.SwitchStatement;
 import exm.stc.ic.tree.ForeachLoops.ForeachLoop;
@@ -755,8 +758,7 @@ public class STCMiddleEnd {
         assert(Types.isString(filename)) : "Wrong output type for filename";
         assert(Types.isFile(file)) : "Wrong input type for filename";;
         // Implement as alias lookup, then copy
-        String filenameAliasN = block.uniqueVarName(
-                            Var.OPT_VAR_PREFIX + "_fname" + file.name());
+        String filenameAliasN = OptUtil.optFilenamePrefix(block, file);
         Var filenameAlias = block.declareVariable(Types.F_STRING,
             filenameAliasN, Alloc.ALIAS, DefType.LOCAL_COMPILER, null);
         block.addInstruction(TurbineOp.getFileName(filenameAlias, file));
@@ -938,10 +940,14 @@ public class STCMiddleEnd {
     }
 
     Block mainBlock = fn.mainBlock();
+
+    // Check if we need to initialize mappings of output files
+    boolean mapOutFiles = ForeignFunctions.isSpecialImpl(
+                        SpecialFunction.INPUT_FILE, builtinName);  
     
     Pair<List<WaitVar>, Map<Var, Var>> p;
     p = WrapUtil.buildWaitVars(mainBlock, mainBlock.statementIterator(),
-                               userInArgs, outArgs);
+                               userInArgs, outArgs, mapOutFiles);
     
     // Variables we must wait for
     List<WaitVar> waitVars = p.val1;
@@ -962,11 +968,13 @@ public class STCMiddleEnd {
     List<Instruction> instBuffer = new ArrayList<Instruction>();
     List<Arg> inVals = WrapUtil.fetchLocalOpInputs(waitBlock, userInArgs,
                                                   instBuffer, false);
+    
     List<Var> outVals = WrapUtil.createLocalOpOutputs(waitBlock, outArgs,
-                                                filenameVars, instBuffer, false);
+                            filenameVars, instBuffer, false, mapOutFiles);
     instBuffer.add(new LocalFunctionCall(builtinName, inVals, outVals));
     
-    WrapUtil.setLocalOpOutputs(outArgs, outVals, instBuffer);
+    WrapUtil.setLocalOpOutputs(waitBlock, outArgs, outVals, instBuffer,
+                               !mapOutFiles);
     
     waitBlock.addInstructions(instBuffer);
   }

@@ -431,7 +431,7 @@ public class WaitCoalescer implements OptimizerPass {
       it.remove();
       
       Pair<List<WaitVar>, Map<Var, Var>> r;
-      r = WrapUtil.buildWaitVars(block, it, req.in, req.out);
+      r = WrapUtil.buildWaitVars(block, it, req.in, req.out, req.mapOutVars);
       
       List<WaitVar> waitVars = r.val1;
       Map<Var, Var> filenameMap = r.val2;
@@ -472,11 +472,11 @@ public class WaitCoalescer implements OptimizerPass {
       // Create local instruction, copy out outputs
       List<Var> localOutputs = WrapUtil.createLocalOpOutputs(
                               wait.getBlock(), req.out, filenameMap,
-                              instBuffer, true); 
+                              instBuffer, true, req.mapOutVars); 
       
       MakeImmChange change = inst.makeImmediate(localOutputs, inVals);
       OptUtil.fixupImmChange(block, wait.getBlock(), change, instBuffer,
-                                        localOutputs, req.out);
+                                 localOutputs, req.out, req.mapOutVars);
       
       // Remove old instruction, add new one inside wait block
       wait.getBlock().addInstructions(instBuffer);

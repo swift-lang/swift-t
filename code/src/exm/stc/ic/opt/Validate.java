@@ -30,6 +30,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
+import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.HierarchicalSet;
@@ -38,6 +39,7 @@ import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.ICContinuations.ContVarDefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
+import exm.stc.ic.tree.ICInstructions.CommonFunctionCall;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICInstructions.RefCountOp;
@@ -479,7 +481,10 @@ public class Validate implements OptimizerPass {
       for (Var init: initialized) {
         assert(Types.outputRequiresInitialization(init)) : inst + " " + init;
         
-        if (inst.op != Opcode.LOAD_FILE) // LOAD_FILE initialises and assigns the future
+        // some functions initialise and assign the future at once
+        if (inst.op != Opcode.LOAD_FILE && 
+            !(inst.op == Opcode.CALL_FOREIGN_LOCAL &&
+              ((CommonFunctionCall)inst).isImpl(SpecialFunction.INPUT_FILE)))
           ICUtil.remove(regularOutputs, init);
         if (initVars.contains(init)) {
           throw new STCRuntimeError("double initialized variable " + init);
