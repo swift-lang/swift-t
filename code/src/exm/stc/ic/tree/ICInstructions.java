@@ -1523,6 +1523,13 @@ public class ICInstructions {
         }
         break;
       }
+      case STRUCTREF_LOOKUP: {
+        Var structRef = getInput(0).getVar();
+        if (waitForClose || closedVars.contains(structRef)) {
+          return new MakeImmRequest(null, structRef.asList());
+        }
+        break;  
+      }
       // TODO: can we do something with DEREF_INSERT versions here?
       case ARRAY_INSERT_FUTURE:
       case ARRAY_DEREF_INSERT_FUTURE: {
@@ -1601,7 +1608,7 @@ public class ICInstructions {
     @Override
     public MakeImmChange makeImmediate(List<Var> out, List<Arg> values) {
       switch (op) {
-      case ARRAY_LOOKUP_REF_IMM:
+      case ARRAY_LOOKUP_REF_IMM: {
         assert(values.size() == 1);
         // Input should be unchanged
         assert(values.get(0).getVar().equals(getInput(0).getVar()));
@@ -1612,6 +1619,7 @@ public class ICInstructions {
         Instruction newI = arrayLookupImm(valOut,
             getInput(0).getVar(), getInput(1));
         return new MakeImmChange(valOut, refOut, newI);
+      }
       case ARRAY_LOOKUP_FUTURE:
         assert(values.size() == 1);
         return new MakeImmChange(
@@ -1643,6 +1651,16 @@ public class ICInstructions {
         // Switch from ref to plain array
         return new MakeImmChange(arrayLookupRefImm(
                 getOutput(0), values.get(0).getVar(), getInput(1)));
+      case STRUCTREF_LOOKUP: {
+        assert(values.size() == 1);
+        // OUtput switched from ref to value
+        assert(Types.isRefTo(getInput(0).getVar(), values.get(0).type()));
+        Var refOut = getOutput(0);
+        Var valOut = Var.createDerefTmp(refOut, Alloc.ALIAS);
+        Instruction newI = structLookup(valOut, values.get(0).getVar(),
+                                        getInput(1).getStringLit());
+        return new MakeImmChange(valOut, refOut, newI);
+      }
       case ARRAY_INSERT_FUTURE:
         assert(values.size() == 1);
         return new MakeImmChange(
