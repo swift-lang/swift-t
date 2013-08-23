@@ -93,7 +93,7 @@ AC_SUBST([CP_U], [$ac_cv_path_cp_u])
 ADLB_ENABLE_MPE=no
 AC_ARG_WITH(mpe,
   AS_HELP_STRING([--with-mpe],
-                 [Enable MPE, set directory with MPE library]),
+                 [Enable MPE, set MPE directory]),
                  [ADLB_ENABLE_MPE=yes
                  USE_MPE=${withval}], [])
 AC_SUBST(USE_MPE)
@@ -184,7 +184,7 @@ AC_ARG_ENABLE(log-trace,
   AS_HELP_STRING([--enable-log-trace], [enable trace logging]),
   ENABLE_LOG_TRACE=1)
 AC_ARG_ENABLE(log-trace-mpi,
-  AS_HELP_STRING([--with-log-trace-mpi], [trace MPI calls]),
+  AS_HELP_STRING([--enable-log-trace-mpi], [trace MPI calls]),
   ENABLE_LOG_TRACE_MPI=1)
 
 AC_DEFINE_UNQUOTED(ENABLE_LOG_DEBUG, [${ENABLE_LOG_DEBUG}],
