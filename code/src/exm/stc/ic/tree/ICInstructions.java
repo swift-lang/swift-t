@@ -700,9 +700,18 @@ public class ICInstructions {
         gen.arrayRefDerefInsertImm(getOutput(0),
             getOutput(1), getInput(0), getInput(1).getVar());
         break;
-      case ARRAY_BUILD:
-        gen.arrayBuild(getOutput(0), Arg.toVarList(getInputs()));
+      case ARRAY_BUILD: {
+        assert (getInputs().size() % 2 == 0);
+        int elemCount = getInputs().size() / 2;
+        List<Arg> keys = new ArrayList<Arg>(elemCount);
+        List<Var> vals = new ArrayList<Var>(elemCount);
+        for (int i = 0; i < elemCount; i++) {
+          keys.add(getInput(i * 2));
+          vals.add(getInput(i * 2 + 1).getVar());
+        }
+        gen.arrayBuild(getOutput(0), keys, vals);
         break;
+      }
       case STRUCT_LOOKUP:
         gen.structLookup(getOutput(0), getInput(0).getVar(),
                          getInput(1).getStringLit());
@@ -925,10 +934,14 @@ public class ICInstructions {
           oVar, arrayVar.asArg(), arrayIndex);
     }
   
-    public static Instruction arrayBuild(Var array, List<Var> members) {
-      ArrayList<Arg> inputs = new ArrayList<Arg>(members.size());
-      for (Var mem: members) {
-        inputs.add(mem.asArg());
+    public static Instruction arrayBuild(Var array, List<Arg> keys, List<Arg> vals) {
+      int elemCount = keys.size();
+      assert(vals.size() == elemCount);
+      
+      ArrayList<Arg> inputs = new ArrayList<Arg>(elemCount * 2);
+      for (int i = 0; i < elemCount; i++) {
+        inputs.add(keys.get(i));
+        inputs.add(vals.get(i));
       }
       return new TurbineOp(Opcode.ARRAY_BUILD, array.asList(), inputs);
     }
@@ -2166,14 +2179,16 @@ public class ICInstructions {
           // Computed value for whole array
           res.add(ResultVal.buildResult(op, getInputs(), arr.asArg(), true));
           // For individual array elements
-          int arrSize = getInputs().size();
-          for (int i = 0; i < arrSize; i++) {
-            res.add(makeArrayCV(arr, Arg.createIntLit(i),
-                                                getInput(i).getVar(), false));
+          assert(getInputs().size() % 2 == 0);
+          int elemCount = getInputs().size() / 2;
+          for (int i = 0; i < elemCount; i++) {
+            Arg key = getInput(2 * i);
+            Var val = getInput(2 * i + 1).getVar();
+            res.add(makeArrayCV(arr, key, val, false));
           }
           
           res.add(CommonFunctionCall.makeArraySizeCV(arr,
-                      Arg.createIntLit(arrSize), false));
+                      Arg.createIntLit(elemCount), false));
           return res;
         }
         case ARRAY_LOOKUP_IMM:
@@ -2311,9 +2326,11 @@ public class ICInstructions {
         case STORE_REF:
           return Pair.create(getInput(0).getVar().asList(), Var.NONE);
         case ARRAY_BUILD: {
-          List<Var> readIncr = new ArrayList<Var>(getInputs().size());
-          for (Arg elem: getInputs()) {
-            // Container gets reference
+          List<Var> readIncr = new ArrayList<Var>(getInputs().size() / 2);
+          for (int i = 0; i < getInputs().size() / 2; i++) {
+            // Skip keys and only get values
+            Arg elem = getInput(i * 2 + 1);
+            // Container gets reference to member
             if (RefCounting.hasReadRefCount(elem.getVar())) {
               readIncr.add(elem.getVar());
             }

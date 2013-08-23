@@ -92,7 +92,7 @@ class Turbine {
   private static final Token C_F_DEREF_INSERT = turbFn("c_f_insert_r");
   private static final Token CR_V_DEREF_INSERT = turbFn("cr_v_insert_r");
   private static final Token CR_F_DEREF_INSERT = turbFn("cr_f_insert_r");
-  private static final Token ARRAY_BUILD = turbFn("array_build");
+  private static final Token ARRAY_KV_BUILD = turbFn("array_kv_build");
   
   // Container nested creation
   private static final Token C_V_CREATE_NESTED = turbFn("create_nested");
@@ -1256,10 +1256,11 @@ class Turbine {
                           dst, src);
   }
   
-  public static Command arrayBuild(Value array, List<Expression> arrMemExprs,
+  public static Command arrayBuild(Value array, 
+      List<Expression> arrKeyExprs, List<Expression> arrValExprs,
       boolean close, TypeName valType) {
-    return new Command(ARRAY_BUILD, array, new TclList(arrMemExprs),
-                       LiteralInt.boolValue(close), valType);
+    return new Command(ARRAY_KV_BUILD, array, new TclList(arrKeyExprs),
+         new TclList(arrValExprs), LiteralInt.boolValue(close), valType);
   }
   
   public static Command batchDeclare(List<String> batchedVarNames,

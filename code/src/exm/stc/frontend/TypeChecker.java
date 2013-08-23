@@ -160,7 +160,8 @@ public class TypeChecker {
       // Type is always the same: an array of integers
       return new ExprType(new ArrayType(Types.F_INT, Types.F_INT));
     }
-    case ExMParser.ARRAY_ELEMS: {
+    case ExMParser.ARRAY_ELEMS:
+    case ExMParser.ARRAY_KV_ELEMS: {
       return ArrayElems.fromAST(context, tree).getType(context);
     }
     default:
@@ -835,8 +836,7 @@ public class TypeChecker {
           throw new TypeMismatchException(context, 
               "Type variable " + typeVar + " for call to function " +
               function + " could not be bound to concrete type: no " +
-              "intersection between " +
-              "types: " + candidates);
+              "intersection between types: " + cands);
         }
         possible.put(typeVar, intersection);
       }

@@ -481,13 +481,22 @@ public class STCMiddleEnd {
         TurbineOp.arrayRefDerefInsertFuture(outerArray, array, ix, member));
   }
   
-  public void arrayBuild(Var array, List<Var> members) {
+  /**
+   * Build an array in one hit.
+   * @param array
+   * @param keys key values for array (NOT futures)
+   * @param vals
+   */
+  public void arrayBuild(Var array, List<Arg> keys, List<Var> vals) {
     assert(Types.isArray(array.type()));
-    for (Var member: members) {
-      assert(member.type().assignableTo(array.type().memberType()));
+    for (Arg key: keys) {
+      assert(Types.isArrayKeyVal(array, key));
+    }
+    for (Var val: vals) {
+      assert(Types.isMemberType(array, val));
     }
     currBlock().addInstruction(
-        TurbineOp.arrayBuild(array, members));
+        TurbineOp.arrayBuild(array, keys, Arg.fromVarList(vals)));
   }
   
   public void arrayInsertImm(Var array, Arg ix, Var member) {

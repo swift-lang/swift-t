@@ -86,6 +86,8 @@ tokens {
     IMPORT_PATH;
     ARRAY_RANGE;
     ARRAY_ELEMS;
+    ARRAY_KV_ELEMS;
+    ARRAY_KV_ELEM;
     ANNOTATION;
     GLOBAL_CONST;
     TCL_FUN_REF;
@@ -589,6 +591,7 @@ base_expr:
         |    LPAREN e=expr RPAREN
             -> $e
         |   array_constructor
+        |   array_kv_constructor
     ;
 
 literal:
@@ -655,7 +658,21 @@ array_elems_more:
         COMMA expr -> expr
     ;
 
-
+array_kv_constructor:
+		LBRACE RBRACE -> ^( ARRAY_KV_ELEMS )
+	|   LBRACE e=array_kv_elem array_kv_elems_more* RBRACE
+			-> ^( ARRAY_KV_ELEMS $e array_kv_elems_more* )
+	;
+	
+array_kv_elem:
+		k=expr COLON v=expr
+			-> ^( ARRAY_KV_ELEM $k $v )
+	;
+	
+array_kv_elems_more:
+		COMMA array_kv_elem -> array_kv_elem
+	;
+	
 assignment_expr:
         i=assignment_list ASSIGN e=expr more_expr* ->
         ^( ASSIGN_EXPRESSION $i $e more_expr* )

@@ -34,33 +34,63 @@ import exm.stc.frontend.TypeChecker;
 
 public class ArrayElems {
   
-  private final ArrayList<SwiftAST> members;
+  // Keys. null if keys not specified
+  private final ArrayList<SwiftAST> keys;
+  private final ArrayList<SwiftAST> values;
   
-  
-  public List<SwiftAST> getMembers() {
-    return Collections.unmodifiableList(members);
-  }
-  
-  public int getMemberCount() {
-    return members.size();
+  public boolean hasKeys() {
+    return keys != null;
   }
 
-  public SwiftAST getMember(int i) {
-    return members.get(i);
+  public List<SwiftAST> getKeys() {
+    assert(keys != null) : "No keys, should call hasKeys first";
+    return Collections.unmodifiableList(keys);
+  }
+
+  public List<SwiftAST> getVals() {
+    return Collections.unmodifiableList(values);
   }
   
-  public ArrayElems(ArrayList<SwiftAST> members) {
-    super();
-    this.members = members;
+  public int getElemCount() {
+    return values.size();
+  }
+
+  public SwiftAST getVal(int i) {
+    return values.get(i);
+  }
+  
+  /**
+   * Constructor when keys not specified. 
+   * @param values
+   */
+  public ArrayElems(ArrayList<SwiftAST> values) {
+    this (null, values);
+  }
+  
+  public ArrayElems(ArrayList<SwiftAST> keys, ArrayList<SwiftAST> values) {
+    this.keys = keys;
+    this.values = values;
   }
   
   public static ArrayElems fromAST(Context context, SwiftAST tree) {
-    assert(tree.getType() == ExMParser.ARRAY_ELEMS);
-    ArrayList<SwiftAST> members = new ArrayList<SwiftAST>(tree.getChildCount());
-    for (SwiftAST child: tree.children()) {
-      members.add(child);
+    if (tree.getType() == ExMParser.ARRAY_ELEMS) {
+      ArrayList<SwiftAST> vals = new ArrayList<SwiftAST>(tree.getChildCount());
+      for (SwiftAST child: tree.children()) {
+        vals.add(child);
+      }
+      return new ArrayElems(vals);
+    } else {
+      assert(tree.getType() == ExMParser.ARRAY_KV_ELEMS);
+      ArrayList<SwiftAST> keys = new ArrayList<SwiftAST>(tree.getChildCount());
+      ArrayList<SwiftAST> vals = new ArrayList<SwiftAST>(tree.getChildCount());
+      for (SwiftAST elemT: tree.children()) {
+        assert(elemT.getType() == ExMParser.ARRAY_KV_ELEM);
+        assert(elemT.getChildCount() == 2);
+        keys.add(elemT.child(0));
+        vals.add(elemT.child(1));
+      }
+      return new ArrayElems(keys, vals);
     }
-    return new ArrayElems(members);
   }
 
   /**
@@ -69,25 +99,65 @@ public class ArrayElems {
    */
   public ExprType getType(Context context) throws UserException {
     // Check to see all arguments have compatible types
-    List<SwiftAST> members = getMembers();
-    if (members.size() == 0) {
-      return new ExprType(new ArrayType(Types.F_INT, new WildcardType()));
+    List<SwiftAST> vals = getVals();
+
+    List<Type> possibleKeyTypes;
+    List<Type> possibleValTypes = findCompatibleTypes(context, vals);
+    if (keys == null) {
+      possibleKeyTypes = Collections.singletonList(Types.F_INT);
+    } else {
+      possibleKeyTypes = findCompatibleTypes(context, keys);
+      checkKeyTypeAlts(context, possibleKeyTypes);
     }
-    List<Type> memberTypes = new ArrayList<Type>(members.size());
-    for (SwiftAST elem: members) {
-      memberTypes.add(TypeChecker.findSingleExprType(context, elem));
-    }
-    
-    List<Type> possibleTypes = Types.typeIntersection(memberTypes);
-    if (possibleTypes.size() == 0) {
-      throw new TypeMismatchException(context, "Elements in array" +
-          " constructor have incompatible types: " + memberTypes.toString());
-    }
-    
+
     List<Type> possibleArrayTypes = new ArrayList<Type>();
-    for (Type alt: possibleTypes) {
-      possibleArrayTypes.add(new ArrayType(Types.F_INT, alt));
+    for (Type keyAlt: possibleKeyTypes) {
+      if (Types.isValidArrayKey(keyAlt)) {
+        for (Type valAlt: possibleValTypes) {
+          possibleArrayTypes.add(new ArrayType(keyAlt, valAlt));
+        }
+      }
     }
     return new ExprType(UnionType.makeUnion(possibleArrayTypes));
+  }
+
+  /**
+   * Check that at least one key type is viable
+   * @param context
+   * @param possibleKeyTypes
+   * @throws TypeMismatchException
+   */
+  private void checkKeyTypeAlts(Context context, List<Type> possibleKeyTypes)
+      throws TypeMismatchException {
+    boolean foundValidKeyType = false;
+    for (Type possibleKeyType: possibleKeyTypes) {
+      if (Types.isValidArrayKey(possibleKeyType)) {
+        foundValidKeyType = true;
+      }
+    }
+    if (!foundValidKeyType) {
+      throw new TypeMismatchException(context, "Invalid key type in array " +
+              "literal: " + UnionType.makeUnion(possibleKeyTypes).typeName());
+    }
+  }
+
+  private List<Type> findCompatibleTypes(Context context, List<SwiftAST> exprs)
+      throws UserException, TypeMismatchException {
+    
+    if (exprs.size() == 0) {
+      return Collections.<Type>singletonList(new WildcardType());
+    } else {
+      List<Type> valTypes = new ArrayList<Type>(exprs.size());
+      for (SwiftAST elem: exprs) {
+        valTypes.add(TypeChecker.findSingleExprType(context, elem));
+      }
+      
+      List<Type> possibleTypes = Types.typeIntersection(valTypes);
+      if (possibleTypes.size() == 0) {
+        throw new TypeMismatchException(context, "Elements in array" +
+            " constructor have incompatible types: " + valTypes.toString());
+      }
+      return possibleTypes;
+    }
   }
 }

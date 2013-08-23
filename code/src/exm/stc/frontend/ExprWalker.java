@@ -180,6 +180,7 @@ public class ExprWalker {
         arrayRange(context, tree, oVar, renames);
         break;
       case ExMParser.ARRAY_ELEMS:
+      case ExMParser.ARRAY_KV_ELEMS:
         arrayElems(context, tree, oVar, renames);
         break;
       default:
@@ -788,17 +789,36 @@ public class ExprWalker {
     Type arrType = TypeChecker.findSingleExprType(context, tree);
     assert(Types.isArray(arrType) || Types.isUnion(arrType));
     assert(arrType.assignableTo(oVar.type()));
-    
-    Type memType = oVar.type().memberType();
-    /** Evaluate all the members */
-    List<Var> computedMembers = new ArrayList<Var>();
-    for (int i = 0; i < ae.getMemberCount(); i++) {
-      SwiftAST mem = ae.getMember(i);
-      Var computedMember = eval(context, mem, 
-          memType, false, renames);
-      computedMembers.add(computedMember);
+
+    Type keyType = Types.arrayKeyType(oVar);
+    Type valType = Types.arrayMemberType(oVar);
+
+    // Evaluate all the values
+    List<Var> vals = new ArrayList<Var>(ae.getElemCount());
+    for (SwiftAST val: ae.getVals()) {
+      vals.add(eval(context, val, valType, false, renames));
     }
-    backend.arrayBuild(oVar, computedMembers);
+    
+    if (ae.hasKeys()) {
+      // If user specified keys, they will be futures so we can't use
+      // arrayBuild operation.
+      List<Var> keyFutures = new ArrayList<Var>(ae.getElemCount());
+      for (SwiftAST key: ae.getKeys()) {
+        keyFutures.add(eval(context, key, keyType, false, renames));
+      }
+      for (int i = 0; i < ae.getElemCount(); i++) {
+        backend.arrayInsertFuture(oVar, keyFutures.get(i), vals.get(i));
+      }
+    } else {
+      // We know keys ahead of time, use arrayBuild operation
+      assert(Types.isInt(keyType));
+      List<Arg> keys = new ArrayList<Arg>(ae.getElemCount());
+      for (int i = 0; i < ae.getElemCount(); i++) {
+        keys.add(Arg.createIntLit(i));
+      }
+      backend.arrayBuild(oVar, keys, vals);
+    }
+    
   }
 
   private void callFunction(Context context, String function,

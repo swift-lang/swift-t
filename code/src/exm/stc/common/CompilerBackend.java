@@ -286,12 +286,12 @@ public interface CompilerBackend {
 
 
   /**
-   * Build array with indices [0..members.size() - 1] comprised of the
-   * variables from members 
+   * Build array with specified key-value pairs 
    * @param array
-   * @param members
+   * @param keys
+   * @param vals
    */
-  public void arrayBuild(Var array, List<Var> members);
+  public void arrayBuild(Var array, List<Arg> keys, List<Var> vals);
 
   public void arrayCreateNestedFuture(Var arrayResult,
       Var array, Var ix);

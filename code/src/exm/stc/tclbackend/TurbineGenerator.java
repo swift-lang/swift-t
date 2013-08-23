@@ -1345,16 +1345,23 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void arrayBuild(Var array, List<Var> members) {
+  public void arrayBuild(Var array, List<Arg> keys, List<Var> vals) {
     assert(Types.isArray(array.type()));
-    List<Expression> arrMemExprs = new ArrayList<Expression>(members.size());
-    for (int i = 0; i < members.size(); i++) {
-      Var member = members.get(i);
-      assert(member.type().assignableTo(array.type().memberType()));
-      arrMemExprs.add(varToExpr(member));
+    assert(keys.size() == vals.size());
+    int elemCount = keys.size();
+    
+    List<Expression> keyExprs = new ArrayList<Expression>(elemCount * 2);
+    List<Expression> valExprs = new ArrayList<Expression>(elemCount);
+    for (int i = 0; i < elemCount; i++) {
+      Arg key = keys.get(i);
+      Var val = vals.get(i);
+      assert(Types.isMemberType(array, val));
+      assert(Types.isArrayKeyVal(array, key));
+      keyExprs.add(argToExpr(key));
+      valExprs.add(varToExpr(val));
     }
     pointStack.peek().add(
-        Turbine.arrayBuild(varToExpr(array), arrMemExprs, true,
+        Turbine.arrayBuild(varToExpr(array), keyExprs, valExprs, true,
                            arrayValueType(array, false)));
   }
   

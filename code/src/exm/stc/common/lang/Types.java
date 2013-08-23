@@ -1563,7 +1563,7 @@ public class Types {
     }
   }
 
-  public static boolean isMemberType(Typed member, Typed arr) {
+  public static boolean isMemberType(Typed arr, Typed member) {
     Type memberType = arrayMemberType(arr.type());
     return (member.type().assignableTo(memberType));
   }

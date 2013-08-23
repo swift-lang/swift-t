@@ -167,7 +167,7 @@ public class ResultVal {
             "not member ref: " + contents + " " + arr;
       val = ComputedValue.arrayRefCV(arr, ix);
     } else {
-      assert(Types.isMemberType(contents, arr)) :
+      assert(Types.isMemberType(arr, contents)) :
             "not member: " + contents + " " + arr;
       val = ComputedValue.arrayCV(arr, ix);
     }
@@ -184,7 +184,7 @@ public class ResultVal {
       val = ComputedValue.arrayRefNestedCV(arr, ix);
       et = EquivalenceType.VALUE;
     } else {
-      assert(contents == null || Types.isMemberType(contents, arr)) :
+      assert(contents == null || Types.isMemberType(arr, contents)) :
             "not member: " + contents + " " + arr;
       val = ComputedValue.arrayNestedCV(arr, ix);
       et = EquivalenceType.REFERENCE;

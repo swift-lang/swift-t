@@ -27,7 +27,6 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.PrimType;
-import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.tclbackend.tree.Command;
 import exm.stc.tclbackend.tree.Expression;

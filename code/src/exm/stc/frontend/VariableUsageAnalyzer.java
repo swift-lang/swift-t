@@ -600,8 +600,14 @@ class VariableUsageAnalyzer {
           }
           break;
         case ExMParser.ARRAY_ELEMS:
+        case ExMParser.ARRAY_KV_ELEMS:
           ArrayElems ae = ArrayElems.fromAST(context, node);
-          for (SwiftAST mem: ae.getMembers()) {
+          if (ae.hasKeys()) {
+            for (SwiftAST key: ae.getKeys()) {
+              exprNodes.push(key);
+            }
+          }
+          for (SwiftAST mem: ae.getVals()) {
             exprNodes.push(mem);
           }
           break;
