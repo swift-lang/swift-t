@@ -437,7 +437,7 @@ public class HoistLoops implements OptimizerPass {
     // Check that any output variables that are aliases are
     // initialized if needed
     for (Var out: inst.getOutputs()) {
-      if (out.storage() == Alloc.ALIAS) {
+      if (Types.outputRequiresInitialization(out)) {
         if (!inst.getInitialized().contains(out)) {
           int initDepth = state.initializedMap.getDepth(out);
           if (logger.isTraceEnabled())
