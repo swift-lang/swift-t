@@ -44,6 +44,27 @@ namespace eval turbine {
         adlb::write_refcount_decr $c
       }
     }
+    
+    # build array by inserting items into a container starting at 0
+    # close: decrement writers count at end
+    # val_type: type of array values
+    proc array_kv_build { c keys vals close val_type } {
+      set n [ llength $keys ]
+      log "array_kv_build: <$c> $n elems, close $close"
+      if { $n > 0 } {
+        for { set i 0 } { $i < $n } { incr i } {
+          set key [ lindex $keys $i ]
+          set val [ lindex $vals $i ]
+          set drops 0
+          if { [ expr {$close && $i == $n - 1 } ] } {
+            set drops 1
+          }
+          adlb::insert $c $key $val $val_type $drops
+        }
+      } else {
+        adlb::write_refcount_decr $c
+      }
+    }
 
     # Just like adlb::container_reference but add logging
     # Note that container_reference always consumes a read reference count
