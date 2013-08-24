@@ -576,15 +576,9 @@ public class ICInstructions {
     
     /** Private constructor: use static methods to create */
     private TurbineOp(Opcode op, List<Var> outputs, List<Arg> inputs) {
-      this(op, outputs, inputs, Collections.<Arg>emptyList());
-    }
-    
-    private TurbineOp(Opcode op, List<Var> outputs, List<Arg> inputs,
-                      List<Arg> dummyInputs) {
       super(op);
       this.outputs = initArgList(outputs);
       this.inputs = initArgList(inputs);
-      this.dummyInputs = initArgList(dummyInputs);
     }
     
     
@@ -617,11 +611,7 @@ public class ICInstructions {
   
     private List<Var> outputs; /** Variables that are modified by this instruction */
     private List<Arg> inputs; /** Variables that are read-only */
-    
-    // TODO: dummyInputs is unused?
-    /** Variables that are not actually read, but somehow are related */
-    private List<Arg> dummyInputs;
-    
+        
     @Override
     public String toString() {
       String result = op.toString().toLowerCase();
@@ -629,9 +619,6 @@ public class ICInstructions {
         result += " " + o.name();
       }
       for (Arg i: inputs) {
-        result += " " + i.toString();
-      }
-      for (Arg i: dummyInputs) {
         result += " " + i.toString();
       }
       return result;
@@ -1269,7 +1256,6 @@ public class ICInstructions {
   
     public void renameInputs(Map<Var, Arg> renames) {     
        ICUtil.replaceArgsInList(renames, inputs);
-       ICUtil.replaceArgsInList(renames, dummyInputs);
     }
   
     @Override
