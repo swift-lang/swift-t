@@ -291,7 +291,7 @@ public class ArrayBuild extends FunctionOptimizerPass {
     
     List<InitState> blockInits = new ArrayList<InitState>();
     for (Block inner: cont.getBlocks()) {
-      InitState blockInit = contInit.makeChild();
+      InitState blockInit = contInit.enterBlock(inner);
       optRecurseOnBlock(logger, f, inner, info, blockInit, cands.makeChild(),
                      invalid.makeChild());
       blockInits.add(blockInit);
@@ -364,21 +364,26 @@ public class ArrayBuild extends FunctionOptimizerPass {
         }
       }
     }
+    
+    InitState blockInit = outerInit.enterBlock(block);
 
     // Move forward until all variables are initialized
     ListIterator<Statement> insertPos = block.statementIterator();
     while (insertPos.hasNext() && !needsInit.isEmpty()) {
       Statement stmt = insertPos.next();
-      InitState init = InitVariables.analyze(logger, stmt);
+      InitVariables.updateInitVars(logger, stmt, blockInit, false);
+      // Check to see if everything is ready now
+      // TODO: iterating over this every time is inefficient, but probably
+      //       good enough
       Iterator<Var> it = needsInit.iterator();
       while (it.hasNext()) {
         Var v = it.next();
         if (InitVariables.assignBeforeRead(v)) {
-          if (init.assignedVals.contains(v)) {
+          if (blockInit.assignedVals.contains(v)) {
             it.remove();
           }
         } else if (InitVariables.varMustBeInitialized(v, false)) {
-          if (init.initVars.contains(v)) {
+          if (blockInit.initVars.contains(v)) {
             it.remove();
           }
         }

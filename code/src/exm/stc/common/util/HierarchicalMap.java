@@ -76,7 +76,7 @@ public class HierarchicalMap<K, V> implements Map<K, V> {
 
   /**
    * @param key
-   * @return the depth at which the key is defined
+   * @return the depth at which the key is defined, -1 if not present
    */
   public int getDepth(K key) {
     int depth = 0;

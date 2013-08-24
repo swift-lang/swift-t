@@ -27,13 +27,14 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.HierarchicalMap;
+import exm.stc.common.util.Pair;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICContinuations.WaitVar;
 import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.Instruction.InitType;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
@@ -297,13 +298,15 @@ public class HoistLoops implements OptimizerPass {
       for (Var out: inst.getModifiedOutputs()) {
         write(out, piecewiseOutputs.contains(out));
       }
-      for (Var init: inst.getInitialized()) {
-        initialize(init);
+      for (Pair<Var, InitType> init: inst.getInitialized()) {
+        initialize(init.val1, init.val2);
       }
     }
     
-    public void initialize(Var v) {
-      assert(Types.outputRequiresInitialization(v));
+    public void initialize(Var v, InitType initType) {
+      assert(Types.outputRequiresInitialization(v) ||
+             Types.inputRequiresInitialization(v));
+      // Track partial or full initialization
       initializedMap.put(v, this.block);
     }
     
@@ -438,7 +441,7 @@ public class HoistLoops implements OptimizerPass {
     // initialized if needed
     for (Var out: inst.getOutputs()) {
       if (Types.outputRequiresInitialization(out)) {
-        if (!inst.getInitialized().contains(out)) {
+        if (!inst.isInitialized(out)) {
           int initDepth = state.initializedMap.getDepth(out);
           if (logger.isTraceEnabled())
             logger.trace("hoist limited to " + initDepth + " because of "

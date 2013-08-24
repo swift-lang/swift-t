@@ -3,29 +3,31 @@ package exm.stc.ic.refcount;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.HierarchicalSet;
+import exm.stc.common.util.Pair;
 import exm.stc.ic.opt.AliasTracker;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.Instruction.InitType;
 
 /**
  * State about variables, etc that gets propagated down from parents
  */
 class TopDownInfo {
-  final HierarchicalSet<Var> assignedAliasVars;
+  final HierarchicalSet<Var> initAliasVars;
   final AliasTracker aliases;
   public TopDownInfo() {
     this(new HierarchicalSet<Var>(), new AliasTracker());
   }
   
-  private TopDownInfo(HierarchicalSet<Var> assignedAliasVars,
+  private TopDownInfo(HierarchicalSet<Var> initAliasVars,
                        AliasTracker aliases) {
-    this.assignedAliasVars = assignedAliasVars;
+    this.initAliasVars = initAliasVars;
     this.aliases = aliases;
   }
   
   public TopDownInfo makeChild() {
-    return new TopDownInfo(this.assignedAliasVars.makeChild(),
-                            this.aliases.makeChild());
+    return new TopDownInfo(this.initAliasVars.makeChild(),
+                           this.aliases.makeChild());
   }
 
   /**
@@ -35,7 +37,7 @@ class TopDownInfo {
     TopDownInfo child = makeChild();
     for (Var v : cont.constructDefinedVars()) {
       if (v.storage() == Alloc.ALIAS) {
-        assignedAliasVars.add(v);
+        initAliasVars.add(v);
       }
     }
     return child;
@@ -43,12 +45,12 @@ class TopDownInfo {
 
   public void updateForInstruction(Instruction inst) {
     // Track which alias vars are assigned
-    for (Var out : inst.getInitialized()) {
-      if (out.storage() == Alloc.ALIAS) {
-        assignedAliasVars.add(out);
+    for (Pair<Var, InitType> out: inst.getInitialized()) {
+      if (out.val1.storage() == Alloc.ALIAS) {
+        assert(out.val2 == InitType.FULL); // Can't handle otherwise
+        initAliasVars.add(out.val1);
       }
     }
-    
     aliases.update(inst);
   }
   

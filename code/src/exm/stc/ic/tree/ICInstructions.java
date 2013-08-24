@@ -334,13 +334,32 @@ public class ICInstructions {
       return Var.NONE;
     }
     
+    public static enum InitType {
+      PARTIAL, // In case multiple init instructions are needed
+      FULL;    // If this fully initializes variable
+    }
     /**
      * @return list of vars initialized by this instruction
      */
-    public List<Var> getInitialized() {
-      return Var.NONE;
+    public List<Pair<Var, InitType>> getInitialized() {
+      return Collections.emptyList();
     }
-
+    
+    /**
+     * Return true if var is initialized by instruction
+     * @param inst
+     * @param var
+     * @return
+     */
+    public boolean isInitialized(Var var) {
+      for (Pair<Var, InitType> init: getInitialized()) {
+        if (var.equals(init.val1)) {
+          return true;
+        }
+      }
+      return false;
+    }
+    
     /**
      * @return list of output variables that are actually modified
      *      typically this is all outputs, but in some special cases
@@ -1225,15 +1244,22 @@ public class ICInstructions {
         ICUtil.replaceVarsInList(renames, outputs, false);
       } else {
         assert(mode == RenameMode.REFERENCE);
-        // Don't replace initialized aliases
-        List<Var> initAliasOut = getInitialized();
         for (int i = 0; i < outputs.size(); i++) {
           Var output = outputs.get(i);
-          if (!initAliasOut.contains(output) &&
-                renames.containsKey(output)) {
-            Arg repl = renames.get(output);
-            if (repl.isVar()) {
-              outputs.set(i, repl.getVar());
+          if (renames.containsKey(output)) {
+            // Avoid replacing aliases that were initialized
+            boolean isInit = false;
+            for (Pair<Var, InitType> p: getInitialized()) {
+              if (output.equals(p.val1)) {
+                isInit = true;
+                break;
+              }
+            }
+            if (!isInit) {
+              Arg repl = renames.get(output);
+              if (repl.isVar()) {
+                outputs.set(i, repl.getVar());
+              }
             }
           }
         }
@@ -1800,8 +1826,9 @@ public class ICInstructions {
           + values.toString());
     }
 
+    @SuppressWarnings("unchecked")
     @Override
-    public List<Var> getInitialized() {
+    public List<Pair<Var, InitType>> getInitialized() {
       switch (op) {
         case LOAD_REF:
         case COPY_REF:
@@ -1810,19 +1837,22 @@ public class ICInstructions {
         case GET_FILENAME:
         case STRUCT_LOOKUP:
           // Initialises alias
-          return getOutput(0).asList();
+          return Arrays.asList(Pair.create(getOutput(0), InitType.FULL));
           
 
         case INIT_UPDATEABLE_FLOAT:
           // Initializes updateable
-          return getOutput(0).asList();
+          return Arrays.asList(Pair.create(getOutput(0), InitType.FULL));
         
         case INIT_LOCAL_OUTPUT_FILE:
         case LOAD_FILE:
           // Initializes output file value
-          return getOutput(0).asList();
+          return Arrays.asList(Pair.create(getOutput(0), InitType.FULL));
+        case STRUCT_INSERT:
+          // Fills in part of struct
+          return Arrays.asList(Pair.create(getOutput(0), InitType.PARTIAL));
         default:
-          return Var.NONE;
+          return Collections.emptyList();
       }
     }
 
@@ -3319,13 +3349,14 @@ public class ICInstructions {
     }
 
     
+    @SuppressWarnings("unchecked")
     @Override
-    public List<Var> getInitialized() {
+    public List<Pair<Var, InitType>> getInitialized() {
       if (isImpl(SpecialFunction.INPUT_FILE)) {
         // The local version of input_file initializes the output for writing
-        return getOutput(0).asList();
+        return Arrays.asList(Pair.create(getOutput(0), InitType.FULL));
       }
-      return Var.NONE;
+      return Collections.emptyList();
     }
     
     @Override

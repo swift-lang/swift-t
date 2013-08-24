@@ -6,19 +6,25 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.StructType;
+import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.util.HierarchicalMap;
 import exm.stc.common.util.HierarchicalSet;
+import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.CommonFunctionCall;
 import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.Instruction.InitType;
 import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
@@ -31,21 +37,27 @@ public class InitVariables {
   public static class InitState {
     public final HierarchicalSet<Var> initVars;
     public final HierarchicalSet<Var> assignedVals;
+    /** Track which struct fields remain to be initialized
+     *  (if there is no entry, none are) */
+    public final HierarchicalMap<Var, List<String>> uninitStructFields;
     
     private InitState(HierarchicalSet<Var> initVars,
-        HierarchicalSet<Var> assignedVals) {
+        HierarchicalSet<Var> assignedVals,
+        HierarchicalMap<Var, List<String>> uninitStructFields) {
       this.initVars = initVars;
       this.assignedVals = assignedVals;
+      this.uninitStructFields = uninitStructFields;
     }
     
-    public InitState() {
-      this(new HierarchicalSet<Var>(), new HierarchicalSet<Var>());
+    private InitState() {
+      this(new HierarchicalSet<Var>(), new HierarchicalSet<Var>(),
+           new HierarchicalMap<Var, List<String>>());
     }
     
-    public InitState makeChild() {
-      return new InitState(initVars.makeChild(), assignedVals.makeChild());
+    private InitState makeChild() {
+      return new InitState(initVars.makeChild(), assignedVals.makeChild(),
+                           uninitStructFields.makeChildMap());
     }
-    
 
     /**
      * Create new state initialized for function
@@ -55,7 +67,7 @@ public class InitVariables {
     public static InitState enterFunction(Function fn) {
       InitState state = new InitState();
       for (Var v: fn.getInputList()) {
-        if (varMustBeInitialized(v, false)) {
+        if (varMustBeInitialized(v, false) || varMustBeInitialized(v, true)) {
           state.initVars.add(v);
         }
         if (assignBeforeRead(v)) {
@@ -63,7 +75,7 @@ public class InitVariables {
         }
       }
       for (Var v: fn.getOutputList()) {
-        if (varMustBeInitialized(v, true)) {
+        if (varMustBeInitialized(v, true) || varMustBeInitialized(v, false)) {
           state.initVars.add(v);
         }
       }
@@ -90,6 +102,10 @@ public class InitVariables {
       return contState;
     }
     
+    public InitState enterBlock(Block block) {
+      return makeChild();
+    }
+    
     public static boolean canUnifyBranches(Continuation cont) {
       return cont.isExhaustiveSyncConditional();
     }
@@ -111,6 +127,147 @@ public class InitVariables {
       initVars.addAll(Sets.intersection(branchInitVars));
       assignedVals.addAll(Sets.intersection(branchAssigned));
     }
+
+    /**
+     * Update initialized variables for instruction
+     * @param inst
+     * @param validate
+     */
+    public void updateInitVars(Instruction inst, boolean validate) {
+      
+      if (validate) {
+        for (Arg in: inst.getInputs()) {
+          if (in.isVar()) {
+            assertInitialized(inst, in.getVar(), false);
+            
+            assertAssigned(inst, in.getVar());
+          }
+        }
+      }
+      List<Var> regularOutputs = inst.getOutputs();
+      List<Pair<Var, InitType>> initialized = inst.getInitialized();
+      
+      if (initialized.size() > 0) {
+        regularOutputs = new ArrayList<Var>(regularOutputs);
+        for (Pair<Var, InitType> init: initialized) {
+          Var initVar = init.val1;
+          InitType initType = init.val2;
+          assert(Types.outputRequiresInitialization(initVar) ||
+                 Types.inputRequiresInitialization(initVar)) : inst + " " + init;
+          // some functions initialise and assign the future at once
+          if (!initAndAssignLocalFile(inst))
+            ICUtil.remove(regularOutputs, initVar);
+
+          if (initType == InitType.FULL) {
+            if (validate && initVars.contains(initVar)) {
+              throw new STCRuntimeError("double initialized variable " + init);
+            }
+            initVars.add(initVar);
+          } else {
+            assert(initType == InitType.PARTIAL);
+            updatePartialInit(inst, initVar);
+          }
+        }
+      }
+      for (Var out: regularOutputs) {
+        if (validate) {
+          assertInitialized(inst, out, true);
+        }
+        
+        if (assignBeforeRead(out)) {
+          boolean added = assignedVals.add(out);
+    
+          if (validate && !added) {
+            throw new STCRuntimeError("double assigned val " + out);
+          }
+        }
+      }
+    }
+
+    /**
+     * Update state for partially initialized variable.
+     * @param inst
+     * @param initVar
+     */
+    private void updatePartialInit(Instruction inst, Var initVar) {
+      if (Types.isStruct(initVar)) {
+        updatePartialInitStruct(inst, initVar);
+      } else {
+        throw new STCRuntimeError("Can't handle partial init for type " +
+                                   initVar.type());
+      }
+    }
+
+    private void updatePartialInitStruct(Instruction inst, Var initVar) {
+      assert(inst.op == Opcode.STRUCT_INSERT) : "Expected STRUCT_INSERT";
+      String field = inst.getInput(0).getStringLit();
+      
+      List<String> prevUninitFields = uninitStructFields.get(initVar);
+      List<String> newUninitFields; 
+      StructType st = (StructType)(initVar.type().getImplType());
+      if (prevUninitFields == null) {
+        // Initialize with fields
+        newUninitFields = new ArrayList<String>(st.getFieldCount() - 1);
+        for (StructField f: st.getFields()) {
+          // Add all except initialized
+          if (!f.getName().equals(field)) {
+            newUninitFields.add(f.getName());
+          }
+        }
+      } else {
+        // Create a new array to avoid modifying something higher up in 
+        // hierarchical map
+        newUninitFields = new ArrayList<String>(prevUninitFields.size() - 1);
+        // Add back all uninitialized fields except the new one
+        boolean wasUninit = false;
+        for (String prevUninit: prevUninitFields) {
+          if (prevUninit.equals(field)) {
+            wasUninit = true;
+          } else {
+            newUninitFields.add(prevUninit);
+          }
+        }
+        if (!wasUninit) {
+          throw new STCRuntimeError(initVar.name() + "." + field +
+                                    " was doubly initialized");
+        }
+      }
+
+      if (Logging.getSTCLogger().isTraceEnabled()) {
+        Logging.getSTCLogger().debug("At " + inst + ": uninit for " +
+                               initVar.name() + " " + newUninitFields);
+      }
+
+      uninitStructFields.put(initVar, newUninitFields);
+
+      if (newUninitFields.isEmpty()) {
+        // All initialized: struct is fully initialized
+        initVars.add(initVar);
+      }
+    }
+
+    /**
+     * Check that variable is initialized
+     * @param context
+     * @param var
+     * @param output
+     */
+    private void assertInitialized(Object context, Var var, boolean output) {
+      if (varMustBeInitialized(var, output) &&
+          !initVars.contains(var)) {
+        throw new STCRuntimeError("Uninitialized var " +
+                      var + " in " + context.toString());
+      }
+    }
+    
+    private void assertAssigned(Object context, Var inVar) {
+      if (assignBeforeRead(inVar)
+          && !assignedVals.contains(inVar)) {
+        throw new STCRuntimeError("Var " + inVar + " was an unassigned value " +
+                                 " read in instruction " + context.toString());
+      }
+    }
+    
     
   }
   
@@ -160,15 +317,15 @@ public class InitVariables {
     
     if (validate) {
       for (Var v: c.requiredVars(false)) {
-        checkInitialized(c.getType(), state.initVars, v, false);
-        checkAssigned(c.getType(), state.assignedVals, v);
+        state.assertInitialized(c.getType(), v, false);
+        state.assertAssigned(c.getType(), v);
       }
     }
     if (validate && c.isAsync()) {
       // If alias var passed to async continuation, must be initialized
       for (PassedVar pv: c.getPassedVars()) {
-        checkInitialized(c.getType(), state.initVars, pv.var, false);
-        checkAssigned(c.getType(), state.assignedVals, pv.var);
+        state.assertInitialized(c.getType(), pv.var, false);
+        state.assertAssigned(c.getType(), pv.var);
       }
     }
 
@@ -233,25 +390,6 @@ public class InitVariables {
     }
   }
 
-  private static void checkInitialized(Object context,
-      HierarchicalSet<Var> initVars, Var var, boolean output) {
-    if (varMustBeInitialized(var, output) &&
-        !initVars.contains(var)) {
-      throw new STCRuntimeError("Uninitialized var " +
-                    var + " in " + context.toString());
-    }
-  }
-  
-  private static void checkAssigned(Object context,
-      HierarchicalSet<Var> assignedVals, Var inVar) {
-    if (assignBeforeRead(inVar)
-        && !assignedVals.contains(inVar)) {
-      throw new STCRuntimeError("Var " + inVar + " was an unassigned value " +
-                               " read in instruction " + context.toString());
-    }
-  }
-  
-  
   /**
    * Update state with variables initialized by statement
    * @param logger
@@ -263,7 +401,7 @@ public class InitVariables {
             Statement stmt, InitState state, boolean validate) {
     switch (stmt.type()) {
       case INSTRUCTION:
-        updateInitVars(stmt.instruction(), state, validate);
+        state.updateInitVars(stmt.instruction(), validate);
         break;
       case CONDITIONAL:
         // Recurse on the conditional.
@@ -275,51 +413,6 @@ public class InitVariables {
     }
   }
   
-  private static void updateInitVars(Instruction inst, InitState state,
-                                    boolean validate) {
-    
-    if (validate) {
-      for (Arg in: inst.getInputs()) {
-        if (in.isVar()) {
-          checkInitialized(inst, state.initVars, in.getVar(), false);
-          
-          checkAssigned(inst, state.assignedVals, in.getVar());
-        }
-      }
-    }
-    List<Var> regularOutputs = inst.getOutputs();
-    List<Var> initialized = inst.getInitialized();
-    
-    if (initialized.size() > 0) {
-      regularOutputs = new ArrayList<Var>(regularOutputs);
-      for (Var init: initialized) {
-        assert(Types.outputRequiresInitialization(init)) : inst + " " + init;
-        
-        // some functions initialise and assign the future at once
-        if (!initAndAssignLocalFile(inst))
-          ICUtil.remove(regularOutputs, init);
-        if (validate && state.initVars.contains(init)) {
-          throw new STCRuntimeError("double initialized variable " + init);
-        }
-        state.initVars.add(init);
-      }
-    }
-    
-    for (Var out: regularOutputs) {
-      if (validate) {
-        checkInitialized(inst, state.initVars, out, true);
-      }
-      
-      if (assignBeforeRead(out)) {
-        boolean added = state.assignedVals.add(out);
-
-        if (validate && !added) {
-          throw new STCRuntimeError("double assigned val " + out);
-        }
-      }
-    }
-  }
-
   public static boolean assignBeforeRead(Var v) {
     return v.storage() == Alloc.LOCAL;
   }

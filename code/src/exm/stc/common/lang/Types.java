@@ -1846,7 +1846,8 @@ public class Types {
    */
   public static boolean inputRequiresInitialization(Var input) {
     return input.storage() == Alloc.ALIAS 
-        || Types.isScalarUpdateable(input);
+        || Types.isScalarUpdateable(input)
+        || isStruct(input); // Need to load all struct members
   }
   
   /**

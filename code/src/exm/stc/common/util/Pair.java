@@ -15,6 +15,9 @@
  */
 package exm.stc.common.util;
 
+import java.util.ArrayList;
+import java.util.List;
+
 
 public class Pair<T1, T2> {
   public final T1 val1;
@@ -47,5 +50,21 @@ public class Pair<T1, T2> {
   @Override
   public String toString() {
     return "(" + val1.toString() + ", " + val2.toString() + ")";
+  }
+  
+  public static <T, S> List<T> extract1(List<Pair<T, S>> list) {
+    ArrayList<T> res = new ArrayList<T>(list.size());
+    for (Pair<T, S> p: list) {
+      res.add(p.val1);
+    }
+    return res;
+  }
+  
+  public static <T, S> List<S> extract2(List<Pair<T, S>> list) {
+    ArrayList<S> res = new ArrayList<S>(list.size());
+    for (Pair<T, S> p: list) {
+      res.add(p.val2);
+    }
+    return res;
   }
 }

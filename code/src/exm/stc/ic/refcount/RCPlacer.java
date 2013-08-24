@@ -21,6 +21,7 @@ import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.Counters;
+import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
 import exm.stc.ic.opt.AliasTracker.AliasKey;
 import exm.stc.ic.opt.TreeWalk;
@@ -29,6 +30,7 @@ import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ForeachLoops.AbstractForeachLoop;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.Instruction.InitType;
 import exm.stc.ic.tree.ICInstructions.RefCountOp;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
@@ -128,8 +130,8 @@ public class RCPlacer {
         Var var = increments.getRefCountVar(block, e.getKey(), true);
         Long incr = e.getValue();
         if (incr > 0) {
-          if (inst != null && !(var.storage() == Alloc.ALIAS &&
-                                inst.getInitialized().contains(var))) {
+          boolean varInit = inst.isInitialized(var);
+          if (inst != null && !(var.storage() == Alloc.ALIAS && varInit)) {
             insertIncrBefore(block, stmtIt, var, incr, rcType);
           } else {
             insertIncrAfter(block, stmtIt, var, incr, rcType);
@@ -143,7 +145,6 @@ public class RCPlacer {
     // Clear out all increments
     increments.resetAll();
   }
-  
 
   /**
    * Try to piggyback reference decrements onto var declarations, for example if
@@ -473,9 +474,10 @@ public class RCPlacer {
       Statement stmt = stmtIt.next();
       switch (stmt.type()) {
         case INSTRUCTION: {
-          for (Var out: stmt.instruction().getInitialized()) {
-            if (out.storage() == Alloc.ALIAS) {
-              addIncrForVar(block, increments, rcType, stmtIt, out);
+          for (Pair<Var, InitType> init: stmt.instruction().getInitialized()) {
+            if (init.val1.storage() == Alloc.ALIAS) {
+              assert(init.val2 == InitType.FULL);
+              addIncrForVar(block, increments, rcType, stmtIt, init.val1);
             }
           }
           break;
@@ -517,9 +519,10 @@ public class RCPlacer {
     HashSet<Var> result = new HashSet<Var>();
     for (Statement stmt: block.getStatements()) {
       if (stmt.type() == StatementType.INSTRUCTION) {
-        for (Var v: stmt.instruction().getInitialized()) {
-          if (v.storage() == Alloc.ALIAS) {
-            result.add(v);
+        for (Pair<Var, InitType> init: stmt.instruction().getInitialized()) {
+          if (init.val1.storage() == Alloc.ALIAS) {
+            assert(init.val2 == InitType.FULL);
+            result.add(init.val1);
           }
         }
       } else {

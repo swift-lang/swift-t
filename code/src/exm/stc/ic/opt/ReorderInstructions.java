@@ -18,6 +18,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.MultiMap;
+import exm.stc.common.util.Pair;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
 import exm.stc.ic.tree.Conditionals.Conditional;
@@ -356,7 +357,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
               getAllInputs(inst),
               inst.getOutputs(),
               inst.getModifiedOutputs(),
-              inst.getInitialized(),
+              Pair.extract1(inst.getInitialized()),
               inst.getPiecewiseAssignedOutputs());
         }
         case CONDITIONAL: {
@@ -437,7 +438,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
       info.inputVars.addAll(getAllInputs(inst));
       info.outputs.addAll(inst.getOutputs());
       info.modifiedOutputs.addAll(inst.getModifiedOutputs());
-      info.initialized.addAll(inst.getInitialized());
+      info.initialized.addAll(Pair.extract1(inst.getInitialized()));
       info.piecewiseAssigned.addAll(inst.getPiecewiseAssignedOutputs());
     }
     

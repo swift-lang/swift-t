@@ -176,10 +176,10 @@ public class RefcountPass implements OptimizerPass {
     if (RCUtil.cancelEnabled()) {
       // Second put saved refcounts back into IC
       placeRefcounts(logger, fn, block, increments,
-          parentInfo.assignedAliasVars);
+          parentInfo.initAliasVars);
     }
 
-    addTemporaryStructFields(block, increments, parentInfo.assignedAliasVars);
+    addTemporaryStructFields(block, increments, parentInfo);
   }
 
   /**
@@ -502,7 +502,7 @@ public class RefcountPass implements OptimizerPass {
    * @param parentAssignedAliasVars
    */
   private void addTemporaryStructFields(Block block, RCTracker increments,
-      Set<Var> parentAssignedAliasVars) {
+                                        TopDownInfo parentInfo) {
     // Vars that were created out of order
     Set<Var> alreadyCreated = new HashSet<Var>();
     for (Var toCreate: increments.getCreatedTemporaries()) {
@@ -513,10 +513,6 @@ public class RefcountPass implements OptimizerPass {
       ListIterator<Statement> insertPos = block.statementIterator();
 
       AliasKey pathToCreate = increments.getAliases().getCanonical(toCreate);
-
-      // Track assigned alias vars in this block so we know where we can
-      // insert lookup instructions
-      Set<Var> blockAssignedAlias = new HashSet<Var>();
 
       Deque<Pair<String, Var>> stack = new ArrayDeque<Pair<String,Var>>();
       int pos; // Track which the closest existing parent is
@@ -533,8 +529,11 @@ public class RefcountPass implements OptimizerPass {
           break;
         }
       }
-      assert(pos >= 0); // At least the root should exist
+      assert(pos >= 0); // At least the root should exist      
       
+      // Track assigned alias vars in this block so we know where we can
+      // insert lookup instructions
+      TopDownInfo aliasInfo = parentInfo.makeChild();
       Var parentStruct = curr;
       // Do lookups in dependency order
       while (!stack.isEmpty()) {
@@ -544,26 +543,20 @@ public class RefcountPass implements OptimizerPass {
         
         // If curr is alias, may not be able to read yet:
         // must scan down block for location where insert can occur
-        if (curr.storage() == Alloc.ALIAS &&
-            !parentAssignedAliasVars.contains(parentStruct)) {
-          while (!blockAssignedAlias.contains(parentStruct)) {
+        if (curr.storage() == Alloc.ALIAS) {
+          while (!aliasInfo.initAliasVars.contains(parentStruct)) {
             assert (insertPos.hasNext()) : "Malformed IR, var not init: " +
                     parentStruct;
             Statement stmt = insertPos.next();
             if (stmt.type() == StatementType.INSTRUCTION) {
-              Instruction inst = stmt.instruction();
-              for (Var v: inst.getInitialized()) {
-                if (v.storage() == Alloc.ALIAS) {
-                  blockAssignedAlias.add(v);
-                }
-              }
+              aliasInfo.updateForInstruction(stmt.instruction());
             }
           }
         }
-        Instruction newInst = TurbineOp
-            .structLookup(child, parentStruct, field);
-        blockAssignedAlias.addAll(newInst.getInitialized());
+        Instruction newInst =
+              TurbineOp.structLookup(child, parentStruct, field);
         insertPos.add(newInst);
+        aliasInfo.updateForInstruction(newInst);
 
         alreadyCreated.add(child);
         parentStruct = child;
