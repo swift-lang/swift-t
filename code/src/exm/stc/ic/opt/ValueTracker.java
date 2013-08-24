@@ -176,7 +176,7 @@ public class ValueTracker implements CVMap {
     availableVals.put(val, valLoc);
     if (valLoc.isVar()) {
       varContents.put(valLoc.getVar(), val);
-      if (outClosed) {
+      if (outClosed && valLoc.getVar().storage() != Alloc.LOCAL) {
         if (logger.isTraceEnabled()) {
           logger.trace("Output " + valLoc + " was closed");
         }
