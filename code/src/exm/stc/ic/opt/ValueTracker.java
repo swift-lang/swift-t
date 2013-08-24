@@ -408,7 +408,11 @@ public class ValueTracker implements CVMap {
 
   
   static class UnifiedState {
-
+    
+    // Cap number of unification iterations to avoid chance of infinite
+    // loops in case of bugs, etc.
+    static final int MAX_UNIFY_ITERATIONS = 20;
+    
     private UnifiedState(
         Set<Var> closed, Set<Var> recursivelyClosed,
         List<ResultVal> availableVals) {
@@ -451,8 +455,12 @@ public class ValueTracker implements CVMap {
         
         List<ResultVal> availVals = new ArrayList<ResultVal>();
         List<ComputedValue> allUnifiedCVs = new ArrayList<ComputedValue>();
+        int iter = 1;
         boolean newCVs;
         do {
+          if (logger.isTraceEnabled()) {
+            logger.trace("Start iteration " + iter + " of unification");
+          }
           List<ComputedValue> newAllBranchCVs = findAllBranchCVs(
               parentState, branchStates, allUnifiedCVs);
           Pair<List<ResultVal>, Boolean> result = unifyCVs(reorderingAllowed,
@@ -461,6 +469,15 @@ public class ValueTracker implements CVMap {
           availVals.addAll(result.val1);
           newCVs = result.val2;
           allUnifiedCVs.addAll(newAllBranchCVs);
+          
+          if (logger.isTraceEnabled()) {
+            logger.trace("Finish iteration " + iter + " of unification.  "
+                       + "New CVs: " + result.val1);
+          }
+          if (iter >= MAX_UNIFY_ITERATIONS) {
+            break;
+          }
+          iter++;
         } while (newCVs);
 
         return new UnifiedState(closed, recClosed, availVals);
