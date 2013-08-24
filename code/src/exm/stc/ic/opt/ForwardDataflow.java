@@ -53,9 +53,10 @@ import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICContinuations.WaitVar;
 import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.TurbineOp;
+import exm.stc.ic.tree.ICInstructions.Instruction.Fetched;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmRequest;
+import exm.stc.ic.tree.ICInstructions.TurbineOp;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.Function;
@@ -730,51 +731,19 @@ public class ForwardDataflow implements OptimizerPass {
 
     // Now load the values
     List<Instruction> alt = new ArrayList<Instruction>();
-    List<Arg> inVals = new ArrayList<Arg>(req.in.size());
-
-    // same var might appear multiple times
-    HashMap<Var, Arg> alreadyFetched = new HashMap<Var, Arg>();
-    for (Var v : req.in) {
-      Arg maybeVal;
-      boolean fetchedHere;
-      if (alreadyFetched.containsKey(v)) {
-        maybeVal = alreadyFetched.get(v);
-        fetchedHere = true;
-      } else {
-        maybeVal = cv.findRetrieveResult(v);
-        fetchedHere = false;
-      }
-      // Can only retrieve value of future or reference
-      // If we inserted a wait, need to consider if local value can
-      // be passed into new scope.
-      if (maybeVal != null
-          && (fetchedHere || noWaitRequired ||
-              Semantics.canPassToChildTask(maybeVal.type()))) {
-        /*
-         * this variable might not actually be passed through continuations to
-         * the current scope, so we might have temporarily made the IC invalid,
-         * but we rely on fixupVariablePassing to fix this later
-         */
-        inVals.add(maybeVal);
-        alreadyFetched.put(v, maybeVal);
-      } else {
-        // Generate instruction to fetch val, append to alt
-        Var fetchedV = OptUtil.fetchForLocalOp(insertContext, alt, v);
-        Arg fetched = Arg.createVar(fetchedV);
-        inVals.add(fetched);
-        alreadyFetched.put(v, fetched);
-      }
-    }
+    List<Fetched<Arg>> inVals = fetchInputsForSwitch(cv, req, insertContext,
+                                                     noWaitRequired, alt);
     
     // Need filenames for output file values
     Map<Var, Var> filenameVals = loadOutputFileNames(cv, req.out,
                       insertContext, insertPoint, req.mapOutVars);
     
-    List<Var> outValVars = OptUtil.createLocalOpOutputVars(insertContext,
-                     insertPoint, req.out, filenameVals, req.mapOutVars);
-    MakeImmChange change = inst.makeImmediate(outValVars, inVals);
-    OptUtil.fixupImmChange(block, insertContext, change, alt, outValVars,
-                           req.out, req.mapOutVars);
+    List<Var> outFetched = OptUtil.createLocalOpOutputVars(insertContext,
+                      insertPoint, req.out, filenameVals, req.mapOutVars);
+    MakeImmChange change;
+    change = inst.makeImmediate(Fetched.makeList(req.out, outFetched), inVals);
+    OptUtil.fixupImmChange(block, insertContext, change, alt,
+                           outFetched, req.out, req.mapOutVars);
 
     if (logger.isTraceEnabled()) {
       logger.trace("Replacing instruction <" + inst + "> with sequence "
@@ -791,6 +760,47 @@ public class ForwardDataflow implements OptimizerPass {
       ICUtil.rewindIterator(stmts, alt.size());
     }
     return true;
+  }
+
+  private static List<Fetched<Arg>> fetchInputsForSwitch(ValueTracker cv,
+      MakeImmRequest req, Block insertContext, boolean noWaitRequired,
+      List<Instruction> alt) {
+    List<Fetched<Arg>> inVals = new ArrayList<Fetched<Arg>>(req.in.size());
+
+    // same var might appear multiple times
+    HashMap<Var, Arg> alreadyFetched = new HashMap<Var, Arg>();
+    for (Var toFetch: req.in) {
+      Arg maybeVal;
+      boolean fetchedHere;
+      if (alreadyFetched.containsKey(toFetch)) {
+        maybeVal = alreadyFetched.get(toFetch);
+        fetchedHere = true;
+      } else {
+        maybeVal = cv.findRetrieveResult(toFetch);
+        fetchedHere = false;
+      }
+      // Can only retrieve value of future or reference
+      // If we inserted a wait, need to consider if local value can
+      // be passed into new scope.
+      if (maybeVal != null
+          && (fetchedHere || noWaitRequired ||
+              Semantics.canPassToChildTask(maybeVal.type()))) {
+        /*
+         * this variable might not actually be passed through continuations to
+         * the current scope, so we might have temporarily made the IC invalid,
+         * but we rely on fixupVariablePassing to fix this later
+         */
+        inVals.add(new Fetched<Arg>(toFetch, maybeVal));
+        alreadyFetched.put(toFetch, maybeVal);
+      } else {
+        // Generate instruction to fetch val, append to alt
+        Var fetchedV = OptUtil.fetchForLocalOp(insertContext, alt, toFetch);
+        Arg fetched = Arg.createVar(fetchedV);
+        inVals.add(new Fetched<Arg>(toFetch, fetched));
+        alreadyFetched.put(toFetch, fetched);
+      }
+    }
+    return inVals;
   }
 
   private static Map<Var, Var> loadOutputFileNames(ValueTracker cv,

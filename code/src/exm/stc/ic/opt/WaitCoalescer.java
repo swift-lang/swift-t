@@ -57,6 +57,7 @@ import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICContinuations.WaitVar;
 import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.Instruction.Fetched;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmRequest;
 import exm.stc.ic.tree.ICTree.Block;
@@ -474,7 +475,9 @@ public class WaitCoalescer implements OptimizerPass {
                               wait.getBlock(), req.out, filenameMap,
                               instBuffer, true, req.mapOutVars); 
       
-      MakeImmChange change = inst.makeImmediate(localOutputs, inVals);
+      MakeImmChange change = inst.makeImmediate(
+                                  Fetched.makeList(req.out, localOutputs),
+                                  Fetched.makeList(req.in, inVals));
       OptUtil.fixupImmChange(block, wait.getBlock(), change, instBuffer,
                                  localOutputs, req.out, req.mapOutVars);
       

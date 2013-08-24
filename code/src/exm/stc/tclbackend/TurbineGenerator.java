@@ -1370,7 +1370,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isArray(array.type()));
     assert(Types.isArrayKeyVal(array, arrIx));
     assert(writersDecr.isImmediateInt());
-    assert(member.type().assignableTo(Types.arrayMemberType(array.type())));
+    assert(Types.isMemberType(array, member));
     
     Command r = Turbine.arrayStoreImmediate(
         varToExpr(member), varToExpr(array),
@@ -1654,7 +1654,7 @@ public class TurbineGenerator implements CompilerBackend {
     pointStack.peek().add(i);
 
     if (hasElse) {
-       // Put it on the stack so it can be retrieved when we start else block
+       // Put it on the stack so it can be fetched when we start else block
       pointStack.push(elseBlock);
     }
     pointStack.push(thenBlock);

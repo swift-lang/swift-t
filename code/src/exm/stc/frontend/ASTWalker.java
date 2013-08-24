@@ -691,7 +691,7 @@ public class ASTWalker {
     If ifStmt = If.fromAST(context, tree); 
     
     
-    // Condition must be boolean and stored to be retrieved later
+    // Condition must be boolean and stored to be fetched later
     Var conditionVar = exprWalker.eval(context,
         ifStmt.getCondition(), ifStmt.getCondType(context),
         false, null);

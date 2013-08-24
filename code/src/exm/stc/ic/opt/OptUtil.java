@@ -184,7 +184,7 @@ public class OptUtil {
     
     List<Var> outValVars = WrapUtil.createLocalOpOutputs(block, outputFutures,
                                outputFilenames, instBuffer, true, mapOutVars);
-
+    
     for (Instruction inst: instBuffer) {
       insertPos.add(inst);
     }

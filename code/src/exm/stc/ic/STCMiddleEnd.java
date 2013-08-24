@@ -542,7 +542,7 @@ public class STCMiddleEnd {
     assert(Types.isArrayKeyFuture(array, ix));
 
     currBlock().addInstruction(
-      TurbineOp.arrayCreateNestedComputed(arrayResult, array, ix));
+      TurbineOp.arrayCreateNestedFuture(arrayResult, array, ix));
   }
 
   public void arrayCreateNestedImm(Var arrayResult,

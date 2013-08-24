@@ -292,6 +292,61 @@ public class ICInstructions {
       }
     }
     
+    public static class Fetched<V> {
+      public Fetched(Var original, V fetched) {
+        super();
+        this.original = original;
+        this.fetched = fetched;
+      }
+      public final Var original;
+      public final V fetched;
+      
+      public static <T> List<Fetched<T>> makeList(
+          List<Var> original, List<T> fetched) {
+        // Handle nulls gracefully
+        if (original == null) {
+          original = Collections.emptyList();
+        }
+        if (fetched == null) {
+          fetched = Collections.emptyList();
+        }
+        assert(original.size() == fetched.size());
+        List<Fetched<T>> result = new ArrayList<Fetched<T>>(fetched.size());
+        for (int i = 0; i < fetched.size(); i++) {
+          result.add(new Fetched<T>(original.get(i), fetched.get(i)));
+        }
+        return result;
+      }
+
+      public static <T> List<T> getFetched(List<Fetched<T>> fetched) {
+        List<T> res = new ArrayList<T>(fetched.size());
+        for (Fetched<T> f: fetched) {
+          res.add(f.fetched);
+        }
+        return res;
+      }
+
+      public static <T> T findFetched(Collection<Fetched<T>> fetched, Var v) {
+        for (Fetched<T> f: fetched) {
+          if (v.equals(f.original)) {
+            return f.fetched;
+          }
+        }
+        return null;
+      }
+      
+      /**
+       * Find fetched and cast to var if returned
+       * @param fetched
+       * @param v
+       * @return
+       */
+      public static Var findFetchedVar(Collection<Fetched<Arg>> fetched, Var v) {
+        Arg res = findFetched(fetched, v);
+        return (res == null) ? null : res.getVar(); 
+      }
+    }
+    
     /**
      * 
      * @param closedVars variables closed at point of current instruction
@@ -301,11 +356,22 @@ public class ICInstructions {
      *            a list of vars that are the variables whose values are needed
      *            and output vars that need to be have value vars created
      */
-    public abstract MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-                                                  boolean waitForClose);
+    public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
+                                           boolean waitForClose) {
+      // Not implemented
+      return null;
+    }
 
-    public abstract MakeImmChange makeImmediate(List<Var> outVals,
-                                                List<Arg> inValues);
+    /**
+     * Called to actually perform change requested
+     * @param outVals any output values loaded
+     * @param inValues any input values loaded
+     * @return
+     */
+    public MakeImmChange makeImmediate(List<Fetched<Var>> outVals,
+                                       List<Fetched<Arg>> inValues) {
+      throw new STCRuntimeError("makeImmediate not valid on " + type());
+    }
 
     /**
      * @return non-null the futures this instruction will block on
@@ -540,11 +606,6 @@ public class ICInstructions {
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars, 
                                            boolean waitForClose) {
       return null;
-    }
-
-    @Override
-    public MakeImmChange makeImmediate(List<Var> out, List<Arg> values) {
-      throw new STCRuntimeError("Not valid on comment!");
     }
 
     @Override
@@ -898,6 +959,9 @@ public class ICInstructions {
     
     public static Instruction arrayInsertImm(Var array,
         Arg ix, Var member) {
+      assert(Types.isArray(array));
+      assert(Types.isArrayKeyVal(array, ix));
+      assert(Types.isMemberType(array, member));
       return new TurbineOp(Opcode.ARRAY_INSERT_IMM,
                             array, ix, member.asArg());
     }
@@ -1088,7 +1152,7 @@ public class ICInstructions {
           
     }
   
-    public static Instruction arrayCreateNestedComputed(Var arrayResult,
+    public static Instruction arrayCreateNestedFuture(Var arrayResult,
         Var array, Var ix) {
       assert(Types.isArrayRef(arrayResult.type()));
       assert(arrayResult.storage() != Alloc.ALIAS);
@@ -1542,20 +1606,47 @@ public class ICInstructions {
         }
         break;  
       }
-      // TODO: can we do something with DEREF_INSERT versions here?
+      case ARRAY_DEREF_INSERT_IMM: {
+        // See if we can get deref arg
+        Var mem = getInput(1).getVar();
+        List<Var> vs = mkImmVarList(waitForClose, closedVars, mem.asList());
+        if (vs.size() > 0) {
+          return new MakeImmRequest(null, vs);
+        }
+        break;
+      }
       case ARRAY_INSERT_FUTURE:
       case ARRAY_DEREF_INSERT_FUTURE: {
         Var ix = getInput(0).getVar();
-        if (waitForClose || closedVars.contains(ix)) {
-          return new MakeImmRequest(null, Arrays.asList(ix));
+        Var val = getInput(1).getVar();
+        List<Var> vs;
+        if (op == Opcode.ARRAY_INSERT_FUTURE) {
+          vs = ix.asList();
+        } else { 
+          assert(op == Opcode.ARRAY_DEREF_INSERT_FUTURE);
+          vs = Arrays.asList(ix, val);
+        }
+        vs = mkImmVarList(waitForClose, closedVars, vs);
+        if (vs.size() > 0) {
+          return new MakeImmRequest(null, vs);
         }
         break;
       }
       case ARRAYREF_INSERT_IMM: 
       case ARRAYREF_DEREF_INSERT_IMM: {
+        List<Var> vs;
         Var innerArrRef = getOutput(1);
-        if (insertRefWaitForClose || closedVars.contains(innerArrRef)) {
-          return new MakeImmRequest(null, Arrays.asList(innerArrRef));
+        Var mem = getInput(1).getVar();
+        if (op == Opcode.ARRAYREF_INSERT_IMM) {
+          vs = innerArrRef.asList();
+        } else {
+          assert(op == Opcode.ARRAYREF_DEREF_INSERT_IMM);
+          vs = Arrays.asList(innerArrRef, mem);
+        }
+        vs = mkImmVarList(insertRefWaitForClose, closedVars, vs);
+        
+        if (vs.size() > 0) {
+          return new MakeImmRequest(null, vs);
         }
         break;
       }
@@ -1563,11 +1654,18 @@ public class ICInstructions {
       case ARRAYREF_DEREF_INSERT_FUTURE: {
         Var innerArrRef = getOutput(1);
         Var ix = getInput(0).getVar();
+        Var mem = getInput(1).getVar();
+        List<Var> req;
+        if (op == Opcode.ARRAYREF_INSERT_FUTURE) {
+          req = Arrays.asList(innerArrRef, ix);
+        } else {
+          assert(op == Opcode.ARRAYREF_DEREF_INSERT_FUTURE);
+          req = Arrays.asList(innerArrRef, ix, mem);
+        }
         // We will take either the index or the dereferenced array
-        List<Var> req2 = mkImmVarList(insertRefWaitForClose, closedVars,
-                                      innerArrRef, ix);
-        if (req2.size() > 0) {
-          return new MakeImmRequest(null, req2);
+        req = mkImmVarList(insertRefWaitForClose, closedVars, req);
+        if (req.size() > 0) {
+          return new MakeImmRequest(null, req);
         }
         break;
       }
@@ -1608,7 +1706,12 @@ public class ICInstructions {
     
     private List<Var> mkImmVarList(boolean waitForClose,
                                    Set<Var> closedVars, Var... args) {
-      ArrayList<Var> req = new ArrayList<Var>(args.length);
+      return mkImmVarList(waitForClose, closedVars, Arrays.asList(args));
+    }
+    
+    private List<Var> mkImmVarList(boolean waitForClose,
+          Set<Var> closedVars, List<Var> args) {
+      ArrayList<Var> req = new ArrayList<Var>(args.size());
       for (Var v: args) {
         if (waitForClose || closedVars.contains(v)) {
           req.add(v);
@@ -1618,120 +1721,164 @@ public class ICInstructions {
     }
 
     @Override
-    public MakeImmChange makeImmediate(List<Var> out, List<Arg> values) {
+    public MakeImmChange makeImmediate(List<Fetched<Var>> out,
+                                       List<Fetched<Arg>> values) {
       switch (op) {
       case ARRAY_LOOKUP_REF_IMM: {
         assert(values.size() == 1);
         // Input should be unchanged
-        assert(values.get(0).getVar().equals(getInput(0).getVar()));
-        // OUtput switched from ref to value
+        Var arr = getInput(0).getVar();
+        Var newArr = values.get(0).fetched.getVar();
+        assert(newArr.equals(arr));
+        // Output switched from ref to value
         Var refOut = getOutput(0);
-        Var valOut = Var.createDerefTmp(refOut, 
-                                      Alloc.ALIAS);
-        Instruction newI = arrayLookupImm(valOut,
-            getInput(0).getVar(), getInput(1));
+        Var valOut = Var.createDerefTmp(refOut, Alloc.ALIAS);
+        Instruction newI = arrayLookupImm(valOut, arr, getInput(1));
         return new MakeImmChange(valOut, refOut, newI);
       }
-      case ARRAY_LOOKUP_FUTURE:
+      case ARRAY_LOOKUP_FUTURE: {
         assert(values.size() == 1);
+        Arg newIx = values.get(0).fetched;
         return new MakeImmChange(
-                arrayLookupRefImm(getOutput(0), 
-                          getInput(0).getVar(), values.get(0)));
-      case ARRAYREF_LOOKUP_FUTURE:
+                arrayLookupRefImm(getOutput(0), getInput(0).getVar(), newIx));
+      }
+      case ARRAYREF_LOOKUP_FUTURE: {
         assert(values.size() == 1 || values.size() == 2);
+        Var mem = getOutput(0); 
+        Var arrRef = getInput(0).getVar();
+        Var ix = getInput(1).getVar();
+        Arg newIx = Fetched.findFetched(values, ix);
+        Var newArr = Fetched.findFetchedVar(values, arrRef);
+        
+        Instruction inst;
         // Could be either array ref, index, or both
-        if (values.size() == 2) {
-          return new MakeImmChange(arrayLookupRefImm(
-              getOutput(0), values.get(0).getVar(), 
-              values.get(1)));
+        if (newIx != null && newArr != null) {
+          inst = arrayLookupRefImm(mem, newArr, newIx);
+        } else if (newIx != null && newArr == null){
+          inst = arrayRefLookupImm(mem, arrRef, newIx);
         } else { 
-          Arg v1 = values.get(0);
-          Var arrayVar = getInput(0).getVar();
-          if (Types.isArrayKeyVal(arrayVar, v1)) {
-            // replace index
-            return new MakeImmChange(arrayRefLookupImm(getOutput(0), 
-                                                      arrayVar, v1));
-          } else {
-            // replace the array ref
-            return new MakeImmChange(
-                    arrayLookupFuture(getOutput(0), 
-                            v1.getVar(), getInput(1).getVar()));
-          }
+          assert(newIx == null && newArr != null);
+          inst = arrayLookupFuture(mem, newArr, ix);
         }
-      case ARRAYREF_LOOKUP_IMM:
+        return new MakeImmChange(inst);
+      }
+      case ARRAYREF_LOOKUP_IMM: {
         assert(values.size() == 1);
         // Switch from ref to plain array
-        return new MakeImmChange(arrayLookupRefImm(
-                getOutput(0), values.get(0).getVar(), getInput(1)));
+        Var newArr = values.get(0).fetched.getVar();
+        return new MakeImmChange(
+            arrayLookupRefImm(getOutput(0), newArr, getInput(1)));
+      }
       case STRUCTREF_LOOKUP: {
         assert(values.size() == 1);
         // OUtput switched from ref to value
-        assert(Types.isRefTo(getInput(0).getVar(), values.get(0).type()));
+        Var newStruct = values.get(0).fetched.getVar();
+        assert(Types.isRefTo(getInput(0).getVar(), newStruct));
         Var refOut = getOutput(0);
         Var valOut = Var.createDerefTmp(refOut, Alloc.ALIAS);
-        Instruction newI = structLookup(valOut, values.get(0).getVar(),
-                                        getInput(1).getStringLit());
+        String field = getInput(1).getStringLit();
+        Instruction newI = structLookup(valOut, newStruct, field);
         return new MakeImmChange(valOut, refOut, newI);
       }
-      case ARRAY_INSERT_FUTURE:
+      case ARRAY_DEREF_INSERT_IMM: {
         assert(values.size() == 1);
+        Var derefMember = values.get(0).fetched.getVar();
         return new MakeImmChange(
-            arrayInsertImm(getOutput(0), values.get(0), getInput(1).getVar()));
-      case ARRAY_DEREF_INSERT_FUTURE:
+            arrayInsertImm(getOutput(0), getInput(0), derefMember));
+      }
+      case ARRAY_INSERT_FUTURE: {
         assert(values.size() == 1);
+        Arg fetchedIx = values.get(0).fetched;
         return new MakeImmChange(
-            arrayDerefInsertImm(getOutput(0), values.get(0),
-                                getInput(1).getVar()));
+            arrayInsertImm(getOutput(0), fetchedIx, getInput(1).getVar()));
+      }
+      case ARRAY_DEREF_INSERT_FUTURE: {
+        Var arr = getOutput(0);
+        Var ix = getInput(0).getVar();
+        Var mem = getInput(1).getVar();
+        Arg newIx = Fetched.findFetched(values, ix);
+        Var newMem = Fetched.findFetchedVar(values, mem);
+        Instruction inst;
+        if (newIx != null && newMem != null) {
+          inst = arrayInsertImm(arr, newIx, newMem);
+        } else if (newIx != null && newMem == null) {
+          inst = arrayDerefInsertImm(arr, newIx, mem); 
+        } else {
+          assert(newIx == null && newMem != null);
+          inst = arrayInsertFuture(arr, ix, newMem);
+        }
+        return new MakeImmChange(inst);
+      }
       case ARRAYREF_INSERT_IMM: {
         assert(values.size() == 1);
-        Var newOut = values.get(0).getVar();
+        Var newOut = values.get(0).fetched.getVar();
         // Switch from ref to plain array
         return new MakeImmChange(arrayInsertImm(
             newOut, getInput(0), getInput(1).getVar()));
       }
       case ARRAYREF_DEREF_INSERT_IMM: {
-        assert(values.size() == 1);
-        Var newOut = values.get(0).getVar();
-        // Switch from ref to plain array
-        return new MakeImmChange(arrayDerefInsertImm(
-            newOut, getInput(0), getInput(1).getVar()));
+        Var outerArrRef = getOutput(0);
+        Var innerArrRef = getOutput(1);
+        Arg ix = getInput(0);
+        Var mem = getInput(1).getVar();
+        Var newArr = Fetched.findFetchedVar(values, innerArrRef);
+        Var newMem = Fetched.findFetchedVar(values, mem);
+        Instruction newI;
+        if (newArr != null && newMem != null) {
+          newI = arrayInsertImm(newArr, ix, newMem);
+        } else if (newArr != null && newMem == null) {
+          newI = arrayDerefInsertImm(newArr, ix, mem);
+        } else {
+          assert(newArr == null && newMem != null);
+          newI = arrayRefInsertImm(outerArrRef, innerArrRef, ix, newMem);
+        }
+        
+        return new MakeImmChange(newI);
       }
       case ARRAYREF_INSERT_FUTURE:
-      case ARRAYREF_DEREF_INSERT_FUTURE:
-        assert(values.size() == 1 || values.size() == 2);
-        // Could be either array ref, index, or both
-        if (values.size() == 2) {
-          return new MakeImmChange(arrayInsertImm(
-              values.get(0).getVar(),
-              values.get(1), getInput(1).getVar()));
-        } else {
-          Var array = getOutput(1);
-          Arg v1 = values.get(0);
-          if (Types.isArrayKeyVal(array, v1)) {
-            // replace index
-            if (op == Opcode.ARRAYREF_INSERT_FUTURE) {
-              return new MakeImmChange(arrayRefInsertImm(getOutput(0), 
-                              array, v1, getInput(1).getVar()));
-            } else {
-              assert(op == Opcode.ARRAYREF_DEREF_INSERT_FUTURE);
-              return new MakeImmChange(arrayRefDerefInsertImm(getOutput(0), 
-                  array, v1, getInput(1).getVar()));
-            }
+      case ARRAYREF_DEREF_INSERT_FUTURE: {
+        Var outerArr = getOutput(0);
+        Var arrRef = getOutput(1);
+        Var ix = getInput(0).getVar();
+        Var mem = getInput(1).getVar();
+        
+        // Various combinations are possible
+        Var newArr = Fetched.findFetchedVar(values, arrRef);
+        Arg newIx = Fetched.findFetched(values, ix);
+        Var derefMem = Fetched.findFetchedVar(values, mem);
+        
+        Instruction inst;
+        if (derefMem != null || op == Opcode.ARRAYREF_INSERT_FUTURE) {
+          if (derefMem != null) {
+            assert(op == Opcode.ARRAYREF_DEREF_INSERT_FUTURE);
+            // It was dereferenced
+            mem = derefMem;
+          }
+          if (newArr != null && newIx != null) {
+            inst = arrayInsertImm(newArr, newIx, mem);
+          } else if (newArr != null && newIx == null) {
+            inst = arrayInsertFuture(newArr, ix, mem);
+          } else if (newArr == null && newIx != null) {
+            inst = arrayRefInsertImm(outerArr, arrRef, newIx, mem);
           } else {
-            // replace the array ref
-            if (op == Opcode.ARRAYREF_INSERT_FUTURE) {
-              return new MakeImmChange(arrayInsertFuture(v1.getVar(),
-                              getInput(0).getVar(), getInput(1).getVar()));
-            } else {
-              assert(op == Opcode.ARRAYREF_DEREF_INSERT_FUTURE);
-              return new MakeImmChange(arrayDerefInsertFuture(v1.getVar(),
-                  getInput(0).getVar(), getInput(1).getVar()));
-            }
+            inst = arrayRefInsertFuture(outerArr, arrRef, ix, mem);
+          }
+        } else {
+          assert(op == Opcode.ARRAYREF_DEREF_INSERT_FUTURE);
+          if (newArr != null && newIx != null) {
+            inst = arrayDerefInsertImm(newArr, newIx, mem);
+          } else if (newArr != null && newIx == null) {
+            inst = arrayDerefInsertFuture(newArr, ix, mem);
+          } else {
+            assert(newArr == null && newIx != null);
+            inst = arrayRefDerefInsertImm(outerArr, arrRef, newIx, mem);
           }
         }
+        return new MakeImmChange(inst);
+      }
       case ARRAY_CREATE_NESTED_FUTURE: {
         assert(values.size() == 1);
-        Arg ix = values.get(0);
+        Arg ix = values.get(0).fetched;
         Var oldResult = getOutput(0);
         Var oldArray = getOutput(1);
         assert(Types.isArrayKeyVal(oldArray, ix)) : oldArray + " " + ix.type();
@@ -1744,34 +1891,32 @@ public class ICInstructions {
       }
       case ARRAYREF_CREATE_NESTED_FUTURE: {
         assert(values.size() == 1 || values.size() == 2);
-        if (values.size() == 2) {
+        Var arrResult = getOutput(0);
+        Var outerArr = getOutput(1);
+        Var arrRef = getOutput(2);
+        Var ix = getInput(0).getVar();
+        
+        Var newArr = Fetched.findFetchedVar(values, arrRef);
+        Arg newIx = Fetched.findFetched(values, ix);
+        
+        if (newArr != null && newIx != null) {
           Var oldOut = getOutput(0);
           assert(Types.isArrayRef(oldOut.type()));
-          Var newOut = Var.createDerefTmp(oldOut, Alloc.ALIAS);
+          Var newOut = Var.createDerefTmp(arrResult, Alloc.ALIAS);
           return new MakeImmChange(newOut, oldOut,
-              arrayCreateNestedImm(newOut, values.get(0).getVar(),
-                                   values.get(1)));
+              arrayCreateNestedImm(newOut, newArr, newIx));
+        } else if (newArr != null && newIx == null) {
+          return new MakeImmChange(
+              arrayCreateNestedFuture(arrResult, newArr, ix));
         } else {
-          // We weren't able to switch to the version returning a plain
-          // array
-          Arg newA = values.get(0);
-          Var arr = getOutput(2); // The outer array
-          if (Types.isArrayKeyVal(arr, newA)) {
-            return new MakeImmChange(
-                arrayRefCreateNestedImmIx(getOutput(0), getOutput(1), arr, newA));
-          } else {
-            assert(Types.isArray(newA.type()));
-            // Replacing array ref with array
-            assert(Types.isArray(newA.type()));
-            return new MakeImmChange(
-                arrayCreateNestedComputed(getOutput(0), newA.getVar(),
-                                          getInput(0).getVar()));
-          }
+          assert(newArr == null && newIx != null);
+          return new MakeImmChange(
+              arrayRefCreateNestedImmIx(arrResult, outerArr, arrRef, newIx));
         }
       }
       case ARRAYREF_CREATE_NESTED_IMM: {
         assert(values.size() == 1);
-        Var newArr = values.get(0).getVar();
+        Var newArr = values.get(0).fetched.getVar();
         Arg ix = getInput(0);
         Var arrResult = getOutput(0);
         assert(Types.isArray(newArr));
@@ -1801,7 +1946,7 @@ public class ICInstructions {
                                     " ... shouldn't be here");
         }
         return new MakeImmChange(null, null, TurbineOp.updateImm(
-            getOutput(0), mode, values.get(0)));
+            getOutput(0), mode, values.get(0).fetched));
       }
       default:
         // fall through
@@ -3146,34 +3291,37 @@ public class ICInstructions {
     }
     
     @Override
-    public MakeImmChange makeImmediate(List<Var> outVars, 
-                                        List<Arg> values) {
+    public MakeImmChange makeImmediate(List<Fetched<Var>> outVars, 
+                                       List<Fetched<Arg>> values) {
       // Discard non-future inputs.  These are things like priorities or
       // targets which do not need to be retained for the local version
       List<Var> retainedInputs = varInputs(true);
       assert(values.size() == retainedInputs.size());
-      
+
+      Instruction inst;
+      List<Arg> fetchedVals = Fetched.getFetched(values);
       if (ForeignFunctions.hasOpEquiv(functionName)) {
         BuiltinOpcode newOp = ForeignFunctions.getOpEquiv(functionName);
         assert(newOp != null);
         
         if (outputs.size() == 1) {
-          checkSwappedOutput(outputs.get(0), outVars.get(0));
-          return new MakeImmChange(
-              Builtin.createLocal(newOp, outVars.get(0), values));
+          checkSwappedOutput(outputs.get(0), outVars.get(0).fetched);
+          inst = Builtin.createLocal(newOp, outVars.get(0).fetched,
+                                                       fetchedVals);
         } else {
           assert(outputs.size() == 0);
-          return new MakeImmChange(
-              Builtin.createLocal(newOp, null, values));
+          inst = Builtin.createLocal(newOp, null, fetchedVals);
         }
       } else {
         assert(ForeignFunctions.hasInlineVersion(functionName));
         for (int i = 0; i < outputs.size(); i++) {
-          checkSwappedOutput(outputs.get(i), outVars.get(i));
+          assert(outputs.get(i).equals(outVars.get(i).original));
+          checkSwappedOutput(outputs.get(i), outVars.get(i).fetched);
         }
-        return new MakeImmChange(
-                new LocalFunctionCall(functionName, values, outVars));
+        List<Var> fetchedOut = Fetched.getFetched(outVars);
+        inst = new LocalFunctionCall(functionName, fetchedVals, fetchedOut);
       }
+      return new MakeImmChange(inst);
     }
 
     /**
@@ -3382,12 +3530,6 @@ public class ICInstructions {
     }
 
     @Override
-    public MakeImmChange makeImmediate(List<Var> outVars, 
-                                        List<Arg> values) {
-      throw new STCRuntimeError("Invalid method call");
-    }
-
-    @Override
     public List<Var> getBlockingInputs() {
       // doesn't take futures as args
       return Var.NONE;
@@ -3529,8 +3671,9 @@ public class ICInstructions {
     }
 
     @Override
-    public MakeImmChange makeImmediate(List<Var> outVals,
-        List<Arg> inValues) {
+    public MakeImmChange makeImmediate(List<Fetched<Var>> outVals,
+                                       List<Fetched<Arg>> inValues) {
+      // Already immediate
       return null;
     }
 
@@ -3680,11 +3823,6 @@ public class ICInstructions {
       }
       return null;
     }
-
-    @Override
-    public MakeImmChange makeImmediate(List<Var> out, List<Arg> values) {
-      throw new STCRuntimeError("Not valid on loop continue!");
-    }
     
     @Override
     public List<Var> getReadIncrVars() {
@@ -3823,11 +3961,6 @@ public class ICInstructions {
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
                                            boolean waitForClose) {
       return null;
-    }
-
-    @Override
-    public MakeImmChange makeImmediate(List<Var> out, List<Arg> values) {
-      throw new STCRuntimeError("Not valid on loop continue!");
     }
    
     @Override
@@ -4207,21 +4340,23 @@ public class ICInstructions {
     }
 
     @Override
-    public MakeImmChange makeImmediate(List<Var> newOut, List<Arg> newIn) {
+    public MakeImmChange makeImmediate(List<Fetched<Var>> newOut,
+                                       List<Fetched<Arg>> newIn) {
       if (op == Opcode.LOCAL_OP) {
         throw new STCRuntimeError("Already immediate!");
       } else {
         assert(newIn.size() == inputs.size());
+        List<Arg> newInArgs = Fetched.getFetched(newIn);
         if (output != null) {
           assert(newOut.size() == 1);
           assert(Types.derefResultType(output.type()).equals(
-              newOut.get(0).type()));
+                 newOut.get(0).fetched.type()));
           return new MakeImmChange(
-              Builtin.createLocal(subop, newOut.get(0), newIn));
+              Builtin.createLocal(subop, newOut.get(0).fetched, newInArgs));
         } else {
           assert(newOut == null || newOut.size() == 0);
           return new MakeImmChange(
-              Builtin.createLocal(subop, null, newIn));
+              Builtin.createLocal(subop, null, newInArgs));
         }
       }
     }
@@ -4543,7 +4678,7 @@ public class ICInstructions {
    * Return the canonical ComputedValue representation for
    * retrieving the value of this type
    * @param src
-   * @return null if cannot be retrieved
+   * @return null if cannot be fetched
    */
   public static ComputedValue retrieveCompVal(Var src) {
     Type srcType = src.type();
