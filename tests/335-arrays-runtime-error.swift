@@ -1,8 +1,9 @@
 
 // Regression test for compiler bug
 
-// Known bug: at O3 double write isn't caught
+// Known bug: at O2/O3 double write isn't caught
 // See issue #475
+// SKIP-O2-TEST
 // SKIP-O3-TEST
 
 // Test should fail from double write
