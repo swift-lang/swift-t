@@ -29,7 +29,7 @@ O1_OPTS=("constant-fold" "dead-code-elim"
                     "forward-dataflow" "unroll-loops"
                      "controlflow-fusion" )
 O2_OPTS=("expand-dataflow-ops" "wait-coalesce" "hoisting" "expand-loops"
-         "function-signature")
+         "function-signature" "array-build")
 O3_OPTS=("pipeline" "function-inline" "reorder-insts" "algebra" "full-unroll")
 EXPERIMENTAL_OPTS=()
 
@@ -106,6 +106,9 @@ function get_compiler_opt_name() {
                     return 0
                     ;;
         piggyback-refcounts) echo "stc.opt.piggyback-refcounts"
+                    return 0
+                    ;;
+        array-build) echo "stc.opt.array-build"
                     return 0
                     ;;
         array-switcheroo) echo "stc.array-ref-switcheroo"

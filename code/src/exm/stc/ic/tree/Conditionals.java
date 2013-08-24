@@ -50,6 +50,11 @@ public class Conditionals {
     }
     
     @Override
+    public boolean isConditional() {
+      return true;
+    }
+    
+    @Override
     public boolean isExhaustiveSyncConditional() {
       return true;
     }

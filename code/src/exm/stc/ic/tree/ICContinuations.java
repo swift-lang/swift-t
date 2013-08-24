@@ -343,6 +343,12 @@ public class ICContinuations {
     public abstract boolean isLoop();
 
     /**
+     * @return true if this is a conditional in which at most one of the
+     *              subblocks is executed
+     */
+    public abstract boolean isConditional();
+
+    /**
      * @return true if this is a conditional that executes synchronously, with
      *          the blocks representing the exhaustive set of possible paths
      */
@@ -488,6 +494,11 @@ public class ICContinuations {
     @Override
     public boolean isLoop() {
       return true;
+    }
+    
+    @Override
+    public boolean isConditional() {
+      return false;
     }
 
     @Override
@@ -876,6 +887,11 @@ public class ICContinuations {
     public boolean isLoop() {
       return false;
     }
+    
+    @Override
+    public boolean isConditional() {
+      return false;
+    }
 
     @Override
     protected void replaceConstructVars(Map<Var, Arg> renames, 
@@ -1180,6 +1196,11 @@ public class ICContinuations {
       // The parallel annotation means that the contents of block can execute
       // multiple times => basically a loop
       return isParallel();
+    }
+    
+    @Override
+    public boolean isConditional() {
+      return false;
     }
 
     @Override

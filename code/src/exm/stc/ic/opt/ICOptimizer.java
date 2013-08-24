@@ -124,7 +124,11 @@ public class ICOptimizer {
       }
       pipe.addPass(inliner);
       
+      
       if ((iteration % 3) == 2) {
+        // Try to merge instructions into array build
+        pipe.addPass(new ArrayBuild());
+        
         // Try occasionally to unroll loops.  Don't do it on first iteration
         // so the code can be shrunk a little first
         pipe.addPass(new LoopUnroller());

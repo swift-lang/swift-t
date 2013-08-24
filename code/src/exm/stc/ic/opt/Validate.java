@@ -15,7 +15,6 @@
  */
 package exm.stc.ic.opt;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -27,21 +26,13 @@ import org.apache.log4j.Logger;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
-import exm.stc.common.lang.PassedVar;
-import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.util.HierarchicalSet;
-import exm.stc.common.util.Sets;
-import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.ICContinuations.ContVarDefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
-import exm.stc.ic.tree.ICInstructions.CommonFunctionCall;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICInstructions.RefCountOp;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
@@ -103,7 +94,7 @@ public class Validate implements OptimizerPass {
     for (Function fn : program.getFunctions()) {
       checkParentLinks(logger, program, fn);
       checkUniqueVarNames(logger, program, fn);
-      checkVarInit(logger, program, fn);
+      InitVariables.checkVarInit(logger, fn);
     }
   }
 
@@ -314,223 +305,4 @@ public class Validate implements OptimizerPass {
       }
     }
   }
-
-  /**
-   * Check alias and vars are initialized before being read. 
-   * 
-   * @param logger
-   * @param program
-   * @param fn
-   * @param block
-   */
-  private void checkVarInit(Logger logger, Program program,
-      Function fn) {
-    HierarchicalSet<Var> initVars = new HierarchicalSet<Var>();
-    HierarchicalSet<Var> assignedVals = new HierarchicalSet<Var>();
-    for (Var v: fn.getInputList()) {
-      if (varMustBeInitialized(v, false)) {
-        initVars.add(v);
-      }
-      if (assignBeforeRead(v)) {
-        assignedVals.add(v);
-      }
-    }
-    for (Var v: fn.getOutputList()) {
-      if (varMustBeInitialized(v, true)) {
-        initVars.add(v);
-      }
-    }
-    checkInitializationRec(logger, program, fn, fn.mainBlock(),
-                           initVars, assignedVals);
-  }
-  
-  private boolean assignBeforeRead(Var v) {
-    return v.storage() == Alloc.LOCAL;
-  }
-  
-  private boolean varMustBeInitialized(Var v, boolean output) {
-    if (output) {
-      return Types.outputRequiresInitialization(v);
-    } else {
-      return Types.inputRequiresInitialization(v);
-    } 
-  }
-   
-  
-  private void checkInitializationRec(Logger logger, Program program,
-      Function fn, Block block, HierarchicalSet<Var> initVars,
-      HierarchicalSet<Var> assignedVals) {
-    for (Var v: block.getVariables()) {
-      if (v.mapping() != null) {
-        if (varMustBeInitialized(v.mapping(), false)) {
-          assert (initVars.contains(v.mapping())):
-            v + " mapped to uninitialized var " + v.mapping();
-        }
-        if (assignBeforeRead(v.mapping())) {
-          assert(assignedVals.contains(v.mapping())) :
-            v + " mapped to unassigned var " + v.mapping();
-        }
-      }
-    }
-    
-    for (Statement stmt: block.getStatements()) {
-      updateInitVars(logger, program, fn, stmt, initVars, assignedVals);
-    }
-    
-    for (Continuation c: block.getContinuations()) {
-      checkInitializationRec(logger, program, fn, initVars, assignedVals, c);
-    }
-  }
-
-  /**
-   * Check variable initialization recursively on continuation
-   * @param logger
-   * @param program
-   * @param fn
-   * @param initVars Initialized vars.  Updated if we discover that more vars
-   *      are initialized after continuation
-   * @param c
-   */
-  private void checkInitializationRec(Logger logger, Program program,
-      Function fn, HierarchicalSet<Var> initVars, HierarchicalSet<Var> assignedVals,
-      Continuation c) {
-    for (Var v: c.requiredVars(false)) {
-      checkInitialized(c.getType(), initVars, v, false);
-      checkAssigned(c.getType(), assignedVals, v);
-    }
-    if (c.isAsync()) {
-      // If alias var passed to async continuation, must be initialized
-      for (PassedVar pv: c.getPassedVars()) {
-        checkInitialized(c.getType(), initVars, pv.var, false);
-        checkAssigned(c.getType(), assignedVals, pv.var);
-      }
-    }
-    
-    boolean unifyBranches = c.isExhaustiveSyncConditional();
-    List<Set<Var>> branchInitVars = null, branchAssigned = null;
-    if (unifyBranches) {
-      branchInitVars = new ArrayList<Set<Var>>();
-      branchAssigned = new ArrayList<Set<Var>>();
-    }
-    
-    HierarchicalSet<Var> contInit = initVars.makeChild();
-    HierarchicalSet<Var> contAssigned = assignedVals.makeChild();
-    
-    for (Var v: c.constructDefinedVars()) {
-      if (varMustBeInitialized(v, false)) {
-        contInit.add(v);
-      }
-      if (assignBeforeRead(v)) {
-        contAssigned.add(v);
-      }
-    }
-    for (Block inner: c.getBlocks()) {
-      HierarchicalSet<Var> blockInitVars = contInit.makeChild();
-      HierarchicalSet<Var> blockAssigned = contAssigned.makeChild();
-      checkInitializationRec(logger, program, fn, inner,
-                             blockInitVars, blockAssigned);
-      if (unifyBranches) {
-        branchInitVars.add(blockInitVars);
-        branchAssigned.add(blockAssigned);
-      }
-    }
-    
-    // Unify information from branches into parent
-    if (unifyBranches) {
-      for (Var initOnAll: Sets.intersection(branchInitVars)) {
-        initVars.add(initOnAll);
-      }
-      for (Var assignedOnAll: Sets.intersection(branchAssigned)) {
-        assignedVals.add(assignedOnAll);
-      }
-    }
-  }
-
-  private void updateInitVars(Logger logger, Program program, Function fn, 
-            Statement stmt, HierarchicalSet<Var> initVars,
-            HierarchicalSet<Var> assignedVals) {
-    switch (stmt.type()) {
-      case INSTRUCTION:
-        updateInitVars(stmt.instruction(), initVars, assignedVals);
-        break;
-      case CONDITIONAL:
-        // Recurse on the conditional.
-        // This will also fill in information about which variables are closed on the branch
-        checkInitializationRec(logger, program, fn, initVars, assignedVals, stmt.conditional());
-        break;
-      default:
-        throw new STCRuntimeError("Unknown statement type" + stmt.type());
-    }
-  }
-  
-  private void updateInitVars(Instruction inst, HierarchicalSet<Var> initVars,
-                              HierarchicalSet<Var> assignedVals) {
-    for (Arg in: inst.getInputs()) {
-      if (in.isVar()) {
-        Var inVar = in.getVar();
-        checkInitialized(inst, initVars, inVar, false);
-        
-        checkAssigned(inst, assignedVals, inVar);
-      }
-    }
-    List<Var> regularOutputs = inst.getOutputs();
-    List<Var> initialized = inst.getInitialized();
-    
-    if (initialized.size() > 0) {
-      regularOutputs = new ArrayList<Var>(regularOutputs);
-      for (Var init: initialized) {
-        assert(Types.outputRequiresInitialization(init)) : inst + " " + init;
-        
-        // some functions initialise and assign the future at once
-        if (!initAndAssignLocalFile(inst))
-          ICUtil.remove(regularOutputs, init);
-        if (initVars.contains(init)) {
-          throw new STCRuntimeError("double initialized variable " + init);
-        }
-        initVars.add(init);
-      }
-    }
-    
-    for (Var out: regularOutputs) {
-      checkInitialized(inst, initVars, out, true);
-      
-      if (assignBeforeRead(out)) {
-        if (assignedVals.contains(out)) {
-          throw new STCRuntimeError("double assigned val " + out);
-        }
-
-        assignedVals.add(out);
-      }
-    }
-  }
-
-  public boolean initAndAssignLocalFile(Instruction inst) {
-    if (inst.op == Opcode.LOAD_FILE) {
-      return true;
-    } else if (inst.op == Opcode.CALL_FOREIGN_LOCAL &&
-          ((CommonFunctionCall)inst).isImpl(SpecialFunction.INPUT_FILE)) {
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  private void checkInitialized(Object context,
-      HierarchicalSet<Var> initVars, Var var, boolean output) {
-    if (varMustBeInitialized(var, output) &&
-        !initVars.contains(var)) {
-      throw new STCRuntimeError("Uninitialized var " +
-                    var + " in " + context.toString());
-    }
-  }
-  
-  private void checkAssigned(Object context,
-      HierarchicalSet<Var> assignedVals, Var inVar) {
-    if (assignBeforeRead(inVar)
-        && !assignedVals.contains(inVar)) {
-      throw new STCRuntimeError("Var " + inVar + " was an unassigned value " +
-                               " read in instruction " + context.toString());
-    }
-  }
-
 }

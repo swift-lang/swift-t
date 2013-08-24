@@ -87,6 +87,7 @@ public class Settings
   public static final String OPT_CANCEL_REFCOUNTS = "stc.opt.cancel-refcounts";
   public static final String OPT_PIGGYBACK_REFCOUNTS = "stc.opt.piggyback-refcounts";
   public static final String OPT_MAX_ITERATIONS = "stc.opt.max-iterations";
+  public static final String OPT_ARRAY_BUILD = "stc.opt.array-build";
   public static final String TURBINE_NO_STACK = "stc.codegen.no-stack";
   public static final String TURBINE_NO_STACK_VARS = "stc.codegen.no-stack-vars";
 
@@ -167,6 +168,7 @@ public class Settings
     defaults.setProperty(OPT_REORDER_INSTS, "false");
     defaults.setProperty(OPT_CANCEL_REFCOUNTS, "true");
     defaults.setProperty(OPT_PIGGYBACK_REFCOUNTS, "true");
+    defaults.setProperty(OPT_ARRAY_BUILD, "true");
     defaults.setProperty(OPT_MAX_ITERATIONS, "10");
     defaults.setProperty(EXPERIMENTAL_REFCOUNTING, "true");
     defaults.setProperty(AUTO_DECLARE, "true");
@@ -302,6 +304,7 @@ public class Settings
     getBoolean(OPT_UNROLL_LOOPS);
     getBoolean(OPT_EXPAND_LOOPS);
     getBoolean(OPT_FULL_UNROLL);
+    getBoolean(OPT_ARRAY_BUILD);
     getLong(OPT_EXPAND_LOOP_THRESHOLD_ITERS);
     getLong(OPT_UNROLL_LOOP_THRESHOLD_ITERS);
     getLong(OPT_EXPAND_LOOP_THRESHOLD_INSTS);
