@@ -536,7 +536,7 @@ public class ForwardDataflow implements OptimizerPass {
     }
 
     if (unifyBranches) {
-      return UnifiedState.unify(reorderingAllowed, cv, cont.parent(),
+      return UnifiedState.unify(logger, reorderingAllowed, cv, cont,
                                 branchStates, contBlocks);
     } else {
       return UnifiedState.EMPTY;

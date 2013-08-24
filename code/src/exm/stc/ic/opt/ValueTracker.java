@@ -26,6 +26,7 @@ import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
+import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.CVMap;
 import exm.stc.ic.tree.ICInstructions.TurbineOp;
@@ -429,9 +430,18 @@ public class ValueTracker implements CVMap {
      * @param branchStates
      * @return
      */
-    static UnifiedState unify(boolean reorderingAllowed,
-                               ValueTracker parentState, Block parent,
-                               List<ValueTracker> branchStates, List<Block> branchBlocks) {
+    static UnifiedState unify(Logger logger, boolean reorderingAllowed,
+                   ValueTracker parentState, Continuation cont,
+                   List<ValueTracker> branchStates, List<Block> branchBlocks) {
+      if (logger.isTraceEnabled()) {
+        logger.trace("Unifying state from " + branchBlocks.size() +
+                     " branches with continuation type " + cont.getType());
+        for (int i = 0; i < branchBlocks.size(); i++) {
+          logger.trace("Branch " + (i + 1) + " type was " +
+                      branchBlocks.get(i).getType());
+        }
+        logger.trace(cont.toString());
+      }
       if (branchStates.isEmpty()) {
         return EMPTY;
       } else {
@@ -446,7 +456,7 @@ public class ValueTracker implements CVMap {
           List<ComputedValue> newAllBranchCVs = findAllBranchCVs(
               parentState, branchStates, allUnifiedCVs);
           Pair<List<ResultVal>, Boolean> result = unifyCVs(reorderingAllowed,
-                                      parent, branchStates,
+                                      cont.parent(), branchStates,
                                       branchBlocks, newAllBranchCVs);
           availVals.addAll(result.val1);
           newCVs = result.val2;
