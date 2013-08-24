@@ -34,7 +34,6 @@ extends UserException
   
   public static UndefinedVarError fromName(Context context, String varName,
           String extra) {
-    new Exception().printStackTrace();
     String msg = "No variable called " + varName +
                  " was defined in this context.";
     if (extra != null) {

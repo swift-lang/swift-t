@@ -475,6 +475,10 @@ public class ValueTracker implements CVMap {
                        + "New CVs: " + result.val1);
           }
           if (iter >= MAX_UNIFY_ITERATIONS) {
+            logger.debug("Exceeded max unify iterations.");
+            if (logger.isTraceEnabled()) {
+              logger.trace(cont); // Dump IR for inspection
+            }
             break;
           }
           iter++;
