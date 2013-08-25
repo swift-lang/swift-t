@@ -1,7 +1,11 @@
+import assert;
+
 
 main {
   // Call to avoid test_fn being optimized out
-  test_fn();
+  float z = test_fn();
+
+  assertEqual(z, 1.0, "z");
 }
 
 (float x, float y) run() "turbine" "0.0.1" [
@@ -18,7 +22,7 @@ main {
     if (x > y) {
       z = x;
     } else {
-      z= y;
+      z = y;
     }
   }
 }
