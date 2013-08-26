@@ -119,7 +119,7 @@ type external void;
   "set <<f>> [ turbine::input_file_local <<filename>> ]"
 ];
 
-(file f) input_url(string filename) "turbine" "0.0.2" "input_url";
+(url f) input_url(string url) "turbine" "0.0.2" "input_url";
 
 // Substitute for C ternary operator:
 @pure
