@@ -121,6 +121,9 @@ type external void;
 
 (url f) input_url(string url) "turbine" "0.0.2" "input_url";
 
+@pure @stc_intrinsic=FILENAME
+(string n) urlname(url x) "turbine" "0.0.2" "";
+
 // Substitute for C ternary operator:
 @pure
 (int o) ternary(boolean b, int i1, int i2) "turbine" "0.0.2"
