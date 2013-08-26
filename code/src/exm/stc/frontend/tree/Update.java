@@ -89,7 +89,7 @@ public class Update {
     
     Var v = context.lookupVarUser(var.getText());
     
-    if (!Types.isScalarUpdateable(v.type())) {
+    if (!Types.isPrimUpdateable(v.type())) {
       throw new TypeMismatchException(context, "can only update" +
           " updateable variables: variable " + v.name() + " had " +
           " type " + v.type().typeName());

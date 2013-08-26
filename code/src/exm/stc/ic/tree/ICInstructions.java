@@ -2073,16 +2073,14 @@ public class ICInstructions {
         if (oa.kind == ArgKind.VAR) {
           Var v = oa.getVar();
           Type t = v.type();
-          if (Types.isScalarFuture(t)
-              || Types.isRef(t)) {
+          if (Types.isPrimFuture(t) || Types.isRef(t)) {
             blocksOn.add(v);
-          } else if (Types.isScalarValue(t) ||
-              Types.isStruct(t) || Types.isArray(t) ||
-              Types.isScalarUpdateable(t)) {
+          } else if (Types.isPrimValue(t) || Types.isStruct(t) ||
+              Types.isArray(t) || Types.isPrimUpdateable(t)) {
             // No turbine ops block on these types
           } else {
             throw new STCRuntimeError("Don't handle type "
-                + t.toString() + " here");
+                                + t.toString() + " here");
           }
         }
       }
@@ -2177,7 +2175,8 @@ public class ICInstructions {
           // retrieve* is invertible
           Arg src = getInput(0);
           Var dst = getOutput(0);
-          if (Types.isScalarUpdateable(src.getVar().type())) {
+          if (Types.isPrimUpdateable(src.getVar().type())) {
+            // Don't try to optimize lookups of updateables
             return null;
           }
 
@@ -3155,7 +3154,7 @@ public class ICInstructions {
       List<Var> varInputs = new ArrayList<Var>();
       for (Arg input: inputs) {
         if (input.isVar()) {
-          if (!noValues || !Types.isScalarValue(input.type())) {
+          if (!noValues || !Types.isPrimValue(input.type())) {
             varInputs.add(input.getVar());
           }
         }
@@ -3346,10 +3345,9 @@ public class ICInstructions {
         for (Arg in: inputs) {
           if (in.isVar()) {
             Var v = in.getVar();
-            if (Types.isScalarFuture(v.type())
+            if (Types.isPrimFuture(v.type())
                 || Types.isRef(v.type())) {
-              // TODO: this is a conservative idea of which ones
-              // are set
+              // TODO: this is a conservative idea of which ones are set
               blocksOn.add(v);
             }
           }
@@ -4373,8 +4371,7 @@ public class ICInstructions {
         for (Arg inarg: inputs) {
           if (inarg.isVar()) {
             Var invar = inarg.getVar();
-            if (Types.isRef(invar.type())
-                || Types.isScalarFuture(invar.type())) {
+            if (Types.isRef(invar) || Types.isPrimFuture(invar)) {
               result.add(invar);
             }
           }
@@ -4614,7 +4611,7 @@ public class ICInstructions {
   }
 
   public static Instruction valueSet(Var dst, Arg value) {
-    if (Types.isScalarValue(dst.type())) {
+    if (Types.isPrimValue(dst.type())) {
       switch (dst.type().primType()) {
       case BOOL:
         assert(value.isImmediateBool());
@@ -4650,27 +4647,27 @@ public class ICInstructions {
 
  
   public static Instruction retrieveValueOf(Var dst, Var src) {
-    assert(Types.isScalarValue(dst.type()));
-    assert(Types.isScalarFuture(src.type())
-            || Types.isScalarUpdateable(src.type()));
+    assert(Types.isPrimValue(dst.type()));
+    assert(Types.isPrimFuture(src.type())
+            || Types.isPrimUpdateable(src.type()));
     switch (src.type().primType()) {
-    case BOOL:
-      return TurbineOp.retrieveBool(dst, src);
-    case INT:
-      return TurbineOp.retrieveInt(dst, src);
-    case FLOAT:
-      return TurbineOp.retrieveFloat(dst, src);
-    case STRING:
-      return TurbineOp.retrieveString(dst, src);
-    case BLOB:
-      return TurbineOp.retrieveBlob(dst, src);
-    case VOID:
-      return TurbineOp.retrieveVoid(dst, src);
-    case FILE:
-      return TurbineOp.retrieveFile(dst, src);
-    default:
-      throw new STCRuntimeError("method to retrieve " +
-            src.type().typeName() + " is not known yet");
+      case BOOL:
+        return TurbineOp.retrieveBool(dst, src);
+      case INT:
+        return TurbineOp.retrieveInt(dst, src);
+      case FLOAT:
+        return TurbineOp.retrieveFloat(dst, src);
+      case STRING:
+        return TurbineOp.retrieveString(dst, src);
+      case BLOB:
+        return TurbineOp.retrieveBlob(dst, src);
+      case VOID:
+        return TurbineOp.retrieveVoid(dst, src);
+      case FILE:
+        return TurbineOp.retrieveFile(dst, src);
+      default:
+        throw new STCRuntimeError("method to retrieve " +
+              src.type().typeName() + " is not known yet");
     }
   }
   
@@ -4691,7 +4688,7 @@ public class ICInstructions {
 
   public static ResultVal assignComputedVal(Var dst, Arg val) {
     Type dstType = dst.type();
-    if (Types.isScalarValue(dstType)) {
+    if (Types.isPrimValue(dstType)) {
         BuiltinOpcode op;
         switch(dstType.primType()) {
         case BOOL:
@@ -4729,7 +4726,7 @@ public class ICInstructions {
 
   private static Opcode assignOpcode(Type dstType) {
     Opcode op = null;
-    if (Types.isScalarFuture(dstType)) {
+    if (Types.isPrimFuture(dstType)) {
        switch(dstType.primType()) {
        case BOOL:
          op = Opcode.STORE_BOOL;
@@ -4763,7 +4760,7 @@ public class ICInstructions {
   
   private static Opcode retrieveOpcode(Type srcType) {
     Opcode op;
-    if (Types.isScalarFuture(srcType)) {
+    if (Types.isPrimFuture(srcType)) {
       switch(srcType.primType()) {
       case BOOL:
         op = Opcode.LOAD_BOOL;
@@ -4803,7 +4800,7 @@ public class ICInstructions {
   private static Opcode derefOpCode(Type type) {
     if (Types.isRef(type)) {
       Type refedType = type.memberType();
-      if (Types.isScalarFuture(refedType)) {
+      if (Types.isPrimFuture(refedType)) {
         switch (refedType.primType()) {
         case BLOB:
           return Opcode.DEREF_BLOB;
@@ -4827,7 +4824,7 @@ public class ICInstructions {
 
 
   public static Instruction futureSet(Var dst, Arg src) {
-    assert(Types.isScalarFuture(dst.type()));
+    assert(Types.isPrimFuture(dst.type()));
     switch (dst.type().primType()) {
     case BOOL:
       assert(src.isImmediateBool());

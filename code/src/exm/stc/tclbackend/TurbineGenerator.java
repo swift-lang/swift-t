@@ -362,7 +362,7 @@ public class TurbineGenerator implements CompilerBackend {
       String tclVarName = prefixVar(var);
       if (Types.isFile(t)) {
         batchedFiles.add(decl);
-      } else if (Types.isScalarFuture(t) || Types.isScalarUpdateable(t) ||
+      } else if (Types.isPrimFuture(t) || Types.isPrimUpdateable(t) ||
           Types.isArray(t) || Types.isRef(t)) {
         List<Expression> createArgs = new ArrayList<Expression>();
         // Data type
@@ -381,7 +381,7 @@ public class TurbineGenerator implements CompilerBackend {
       } else if (Types.isStruct(t)) {
         // don't allocate in data store
         pointStack.peek().add(Turbine.allocateStruct(prefixVar(var)));
-      } else if (Types.isScalarValue(t)) {
+      } else if (Types.isPrimValue(t)) {
         assert(var.storage() == Alloc.LOCAL);
         pointStack.peek().add(new Comment("Value " + var.name() + " with type " +
                               var.type().toString() + " was defined"));
@@ -1461,8 +1461,7 @@ public class TurbineGenerator implements CompilerBackend {
   public void update(Var updateable, UpdateMode updateMode, Var val) {
     assert(Types.isScalarUpdateable(updateable.type()));
     assert(Types.isScalarFuture(val.type()));
-    assert(updateable.type().primType() ==
-                             val.type().primType());
+    assert(updateable.type().primType() == val.type().primType());
     assert(updateMode != null);
     String builtinName = getUpdateBuiltin(updateMode);
     pointStack.peek().add(new Command(builtinName, Arrays.asList(
@@ -1731,7 +1730,7 @@ public class TurbineGenerator implements CompilerBackend {
             baseType = new ArrayInfo(w.type()).baseType;
             useDeepWait = true;
           }
-          if (Types.isScalarFuture(baseType)) {
+          if (Types.isPrimFuture(baseType)) {
             // ok
           } else if (Types.isRef(baseType)) {
             // TODO: might not be really recursive, but works for now
@@ -1903,20 +1902,22 @@ public class TurbineGenerator implements CompilerBackend {
       // Pass in variable ids directly in rule string
       for (Var v: usedVariables) {
         Type t = v.type();
-        if (Types.isScalarFuture(t) || Types.isRef(t) ||
+        if (Types.isPrimFuture(t) || Types.isRef(t) ||
             Types.isArray(t) || Types.isStruct(t) ||
-            Types.isScalarUpdateable(t)) {
+            Types.isPrimUpdateable(t)) {
           // Just passing turbine id
           exprs.add(varToExpr(v));
-        } else if (Types.isScalarValue(t)) {
+        } else if (Types.isPrimValue(t)) {
           PrimType pt = t.primType();
           if (pt == PrimType.INT || pt == PrimType.BOOL
               || pt == PrimType.FLOAT || pt == PrimType.STRING) {
             // Serialize
             exprs.add(varToExpr(v));
+          } else if (pt == PrimType.VOID) {
+            // Add a dummy token
+            exprs.add(new Token("void"));
           } else {
-            throw new STCRuntimeError("Don't know how to pass" +
-                  " var with type " + v);
+            throw new STCRuntimeError("Don't know how to pass var " + v);
           }
         } else {
           throw new STCRuntimeError("Don't know how to pass var with type "

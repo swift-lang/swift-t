@@ -179,11 +179,10 @@ public class Pipeline extends FunctionOptimizerPass {
     } else if (Types.isBlob(t)) {
       // Blobs also tend to be fairly large
       return 5;
-    } else if (Types.isScalarFuture(t) ||
-              Types.isRef(t)) {
-      // Baseline cost is scalar future: 1
+    } else if (Types.isPrimFuture(t) || Types.isRef(t)) {
+      // Baseline cost is plain future: 1
       return 1;
-    } else if (Types.isScalarValue(t)) {
+    } else if (Types.isPrimValue(t)) {
       return 0;
     } else if (Types.isArray(t)) {
       return 1;

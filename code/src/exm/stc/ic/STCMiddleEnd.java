@@ -836,7 +836,7 @@ public class STCMiddleEnd {
   
   public void localOp(BuiltinOpcode op, Var out, List<Arg> in) {
     if (out != null) {
-      assert(Types.isScalarValue(out.type()));
+      assert(Types.isPrimValue(out.type()));
     }
     currBlock().addInstruction(Builtin.createLocal(op, out, in));
   }
@@ -884,7 +884,7 @@ public class STCMiddleEnd {
     props.assertInternalTypesValid();
     
     if (out != null) {
-      assert(Types.isScalarFuture(out.type()));
+      assert(Types.isPrimFuture(out.type()));
     }
     currBlock().addInstruction(Builtin.createAsync(op, out, in, props));
   }
@@ -917,12 +917,12 @@ public class STCMiddleEnd {
    */
   public void addGlobal(String name, Arg val) {
     assert(val.isConstant() ||
-        (Types.isScalarValue(val.getVar().type())));
+        (Types.isPrimValue(val.getVar().type())));
     program.addGlobalConst(name, val);
   }
 
   public void initUpdateable(Var updateable, Arg val) {
-    assert(Types.isScalarUpdateable(updateable.type()));
+    assert(Types.isPrimUpdateable(updateable.type()));
     if (!updateable.type().equals(Types.UP_FLOAT)) {
       throw new STCRuntimeError(updateable.type() +
           " not yet supported");
@@ -933,19 +933,17 @@ public class STCMiddleEnd {
   }
   
   public void latestValue(Var result, Var updateable) {
-    assert(Types.isScalarUpdateable(updateable.type()));
-    assert(Types.isScalarValue(result.type()));
-    assert(updateable.type().primType() ==
-                  result.type().primType());
+    assert(Types.isPrimUpdateable(updateable.type()));
+    assert(Types.isPrimValue(result.type()));
+    assert(updateable.type().primType() == result.type().primType());
     currBlock().addInstruction(
           TurbineOp.latestValue(result, updateable));
   }
 
   public void update(Var updateable, Operators.UpdateMode updateMode, Var val) {
-    assert(Types.isScalarUpdateable(updateable.type()));
-    assert(Types.isScalarFuture(val.type()));
-    assert(updateable.type().primType() ==
-                             val.type().primType());
+    assert(Types.isPrimUpdateable(updateable.type()));
+    assert(Types.isPrimFuture(val.type()));
+    assert(updateable.type().primType() == val.type().primType());
     assert(updateMode != null);
     
     currBlock().addInstruction(
@@ -954,7 +952,7 @@ public class STCMiddleEnd {
   
   public void updateImm(Var updateable, Operators.UpdateMode updateMode,
                                                 Arg val) {
-    assert(Types.isScalarUpdateable(updateable.type()));
+    assert(Types.isPrimUpdateable(updateable.type()));
     if (updateable.type().equals(Types.UP_FLOAT)) {
       assert(val.isImmediateFloat());
     } else {

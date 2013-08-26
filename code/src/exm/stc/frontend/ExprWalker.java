@@ -61,6 +61,7 @@ import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.frontend.Context.FnProp;
 import exm.stc.frontend.VariableUsageInfo.VInfo;
 import exm.stc.frontend.tree.ArrayElems;
@@ -246,26 +247,37 @@ public class ExprWalker {
    */
   public void copyByValue(Context context, Var src, Var dst,
       Type type) throws UserException {
-    if (Types.isScalarFuture(type)) {
-      if (Types.isInt(type)) {
-        backend.asyncOp(BuiltinOpcode.COPY_INT, dst,src.asArg().asList());
-      } else if (Types.isString(type)) {
-        backend.asyncOp(BuiltinOpcode.COPY_STRING, dst,src.asArg().asList());
-      } else if (Types.isFloat(type)) {
-        backend.asyncOp(BuiltinOpcode.COPY_FLOAT, dst, src.asArg().asList());
-      } else if (Types.isBool(type)) {
-        backend.asyncOp(BuiltinOpcode.COPY_BOOL, dst, src.asArg().asList());
-      } else if (Types.isBlob(type)) {
-        backend.asyncOp(BuiltinOpcode.COPY_BLOB, dst, src.asArg().asList());
-      } else if (Types.isVoid(type)) {
-        // Sort of silly, but might be needed
-        backend.asyncOp(BuiltinOpcode.COPY_VOID, dst, src.asArg().asList());
-      } else if (Types.isFile(type)) {
-        backend.copyFile(dst, src);
-      } else {
-        throw new STCRuntimeError(context.getFileLine() +
-            "Haven't implemented copy for scalar type " +
-                                        type.toString());
+    if (Types.isInt(type)) {
+      backend.asyncOp(BuiltinOpcode.COPY_INT, dst,src.asArg().asList());
+    } else if (Types.isString(type)) {
+      backend.asyncOp(BuiltinOpcode.COPY_STRING, dst,src.asArg().asList());
+    } else if (Types.isFloat(type)) {
+      backend.asyncOp(BuiltinOpcode.COPY_FLOAT, dst, src.asArg().asList());
+    } else if (Types.isBool(type)) {
+      backend.asyncOp(BuiltinOpcode.COPY_BOOL, dst, src.asArg().asList());
+    } else if (Types.isBlob(type)) {
+      backend.asyncOp(BuiltinOpcode.COPY_BLOB, dst, src.asArg().asList());
+    } else if (Types.isVoid(type)) {
+      // Sort of silly, but might be needed
+      backend.asyncOp(BuiltinOpcode.COPY_VOID, dst, src.asArg().asList());
+    } else if (Types.isFile(type)) {
+      switch (type.fileKind()) {
+        case LOCAL_FS:
+          backend.copyFile(dst, src);
+          break;
+        case URL:
+          // Can only copy unmapped URLs
+          if (dst.isMapped() != Ternary.FALSE) {
+            throw new TypeMismatchException("Do not support assigning " +
+            		"to (possibly) mapped url variable " + dst.name() + ". " +
+                "There is no general way to assign to a URL.");                
+          } else {
+            backend.copyFile(dst, src);
+          }
+          break;
+        default:
+          throw new STCRuntimeError("Missing copy handler for file type: "
+                                    + type);
       }
     } else if (Types.isStruct(type)) {
       copyStructByValue(context, src, dst, new Stack<String>(), new Stack<String>(),
@@ -350,34 +362,22 @@ public class ExprWalker {
     assert(Types.isRef(src.type()));
     assert(Types.isAssignableRefTo(src.type(), dst.type()));
   
-    if (Types.isScalarFuture(dst.type())) {
-      Type dstType = dst.type();
-      if (Types.isInt(dstType)) {
-        backend.dereferenceInt(dst, src);
-      } else if (Types.isString(dstType)) {
-        backend.dereferenceString(dst, src);
-      } else if (Types.isFloat(dstType)) {
-        backend.dereferenceFloat(dst, src);
-      } else if (Types.isBool(dstType)) {
-        backend.dereferenceBool(dst, src);
-      } else if (Types.isFile(dstType)) {
-        backend.dereferenceFile(dst, src);
-      } else if (Types.isBlob(dstType)) {
-        backend.dereferenceBlob(dst, src);
-      } else {
-        throw new STCRuntimeError("Don't know how to dereference "
-            + " type " + src.type().toString());
-      }
-    } else if (Types.isArray(dst.type())) {
-      String wName = context.getFunctionContext().constructName("copy-wait");
-      List<Var> waitVars = Arrays.asList(src);
-      backend.startWaitStatement(wName, waitVars,
-              WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
-      Var derefed = varCreator.createTmpAlias(context, dst.type());
-      backend.retrieveRef(derefed, src);
-      copyArrayByValue(context, dst, derefed);
-      backend.endWaitStatement();
-    } else if (Types.isStruct(dst.type())) {
+    Type dstType = dst.type();
+    if (Types.isInt(dstType)) {
+      backend.dereferenceInt(dst, src);
+    } else if (Types.isString(dstType)) {
+      backend.dereferenceString(dst, src);
+    } else if (Types.isFloat(dstType)) {
+      backend.dereferenceFloat(dst, src);
+    } else if (Types.isBool(dstType)) {
+      backend.dereferenceBool(dst, src);
+    } else if (Types.isFile(dstType)) {
+      backend.dereferenceFile(dst, src);
+    } else if (Types.isBlob(dstType)) {
+      backend.dereferenceBlob(dst, src);
+    } else if (Types.isArray(dstType)) {
+      derefThenCopyArray(context, dst, src);
+    } else if (Types.isStruct(dstType)) {
       dereferenceStruct(context, dst, src);
     } else {
       throw new STCRuntimeError("Can't dereference type " + src.type());
@@ -385,8 +385,8 @@ public class ExprWalker {
   }
 
   public void assign(Var dst, Arg src) {
-    assert(Types.isScalarValue(src.type()));
-    assert(Types.isScalarFuture(dst.type()));
+    assert(Types.isPrimValue(src.type()));
+    assert(Types.isPrimFuture(dst.type()));
     assert(src.type().assignableTo(Types.derefResultType(dst.type()))) :
                       dst + " = " + src;
     switch (src.type().primType()) {
@@ -407,6 +407,9 @@ public class ExprWalker {
         break;
       case VOID:
         backend.assignVoid(dst, src);
+        break;
+      case FILE:
+        backend.assignFile(dst, src);
         break;
       default:
         throw new STCRuntimeError("assigning from type " + src.type()
@@ -1027,7 +1030,7 @@ public class ExprWalker {
 
   private void assignVariable(Context context, Var oVar,
       Var src) throws UserException {
-    if (Types.isScalarUpdateable(src.type())) {
+    if (Types.isPrimUpdateable(src.type())) {
       Var snapshot = snapshotUpdateable(context, src);
       src = snapshot;
     }
@@ -1041,7 +1044,7 @@ public class ExprWalker {
 
   private Var snapshotUpdateable(Context context, Var src)
       throws UserException, UndefinedTypeException {
-    assert(Types.isScalarUpdateable(src.type()));
+    assert(Types.isPrimUpdateable(src.type()));
     // Create a future alias to the updateable type so that
     // types match
     Var val = varCreator.createTmpLocalVal(context,
@@ -1082,6 +1085,20 @@ public class ExprWalker {
             src, member, ix, -1, 1, true);
     backend.arrayInsertImm(dst, Arg.createVar(ix), member);
     backend.endForeachLoop();
+    backend.endWaitStatement();
+  }
+
+  private void derefThenCopyArray(Context context, Var dst, Var src)
+      throws UserException, UndefinedTypeException {
+    assert(Types.isArrayRef(src));
+    assert(Types.isArray(dst));
+    String wName = context.getFunctionContext().constructName("copy-wait");
+    List<Var> waitVars = Arrays.asList(src);
+    backend.startWaitStatement(wName, waitVars,
+            WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
+    Var derefed = varCreator.createTmpAlias(context, dst.type());
+    backend.retrieveRef(derefed, src);
+    copyArrayByValue(context, dst, derefed);
     backend.endWaitStatement();
   }
 

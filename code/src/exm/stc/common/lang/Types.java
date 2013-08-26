@@ -166,36 +166,6 @@ public class Types {
     }
   }
 
-  public enum PrimType
-  {
-    INT, STRING, FLOAT, BOOL, 
-    BLOB, FILE,
-     // Void is a type with no information (i.e. the external type in Swift, or 
-     // the unit type in functional languages)
-    VOID; 
-
-    static String toString(PrimType pt) {
-      if (pt == INT) {
-        return "int";
-      } else if (pt == STRING) {
-        return "string";
-      } else if (pt == FLOAT) {
-        return "float";
-      } else if (pt == BOOL) {
-        return "boolean";
-      } else if (pt == VOID) {
-        return "void";
-      } else if (pt == BLOB) {
-        return "blob";
-      } else if (pt == FILE) {
-        return "file";
-      } else {
-        return "UNKNOWN_TYPE";
-      }
-    }
-
-  }
-
   public static class RefType extends Type {
     private final Type referencedType;
     public RefType(Type referencedType) {
@@ -433,12 +403,130 @@ public class Types {
     }
   }
 
-  public static class ScalarValueType extends Type {
-    private final PrimType type;
+  
+  /**
+   * Enum to represent the primitive types implemented in the language.
+   */
+  public static enum PrimType {
+    INT, STRING, FLOAT, BOOL, BLOB,
+     // Void is a type with no information (i.e. the external type in Swift/K,
+     // or the unit type in functional languages)
+    VOID,
+    // Files are treated in a similar way to other primitive types in Swift
+    FILE; 
+  
+    public String typeName() {
+      switch (this) {
+        case INT:
+          return "int";
+        case STRING:
+          return "string";
+        case FLOAT:
+          return "float";
+        case BOOL:
+          return "boolean";
+        case VOID:
+          return "void";
+        case BLOB:
+          return "blob";
+        default:
+          throw new STCRuntimeError("typeName not implemented for " + this);
+      }
+    }
+  }
+
+  /**
+   * Abstract class with common functionality for primitive types
+   */
+  public static abstract class AbstractPrimType extends Type {
+    
+    @Override
+    public abstract PrimType primType();
+    
+    @Override
+    public Type getImplType() {
+      // This is a primitive type: implements itself
+      return this;
+    }
+
+    @Override
+    public Type bindTypeVars(Map<String, Type> vals) {
+      // No type vars in primitive
+      return this;
+    }
+
+    @Override
+    public Map<String, Type> matchTypeVars(Type concrete) {
+      concrete = concrete.stripSubTypes();
+      // No type vars in primitive, but check that types match
+      if (this.equals(concrete)) {
+        return Collections.emptyMap();
+      } else {
+        return null;
+      }
+    }
+
+    @Override
+    public Type concretize(Type concrete) {
+      assert(this.assignableTo(concrete));
+      return this;
+    }
+
+    @Override
+    public boolean hasTypeVar() {
+      return false;
+    }
+
+    @Override
+    public String toString() {
+      // Just return plain typename
+      return this.typeName();
+    } 
+  }
+  
+  /**
+   * Abstract class with common functionality for scalar types
+   */
+  public static abstract class AbstractScalarType extends AbstractPrimType {
+    protected final PrimType primType;
+
+    public AbstractScalarType(PrimType primType) {
+      assert(primType != PrimType.FILE); // File type is handled elsewhere
+      this.primType = primType;
+    }
+
+    @Override
+    public PrimType primType() {
+      return this.primType;
+    }
+
+    @Override
+    public boolean equals(Object other) {
+      if (!(other instanceof Type)) {
+        throw new STCRuntimeError("Comparing " + this.getClass().getName() +
+                                  " with non-type object");
+      }
+      Type otherT = (Type) other;
+      // Check that class and primType match
+      if (this.getClass().equals(other.getClass())) {
+        return ((AbstractScalarType)otherT).primType == this.primType;
+      } else {
+        return false;
+      }
+    }
+    
+    @Override
+    public int hashCode() {
+      return primType.hashCode() * 31 + getClass().hashCode();
+    }
+
+
+  }
+
+  public static class ScalarValueType extends AbstractScalarType {
 
     public ScalarValueType(PrimType type) {
-      super();
-      this.type = type;
+      super(type);
     }
 
     @Override
@@ -447,77 +535,15 @@ public class Types {
     }
 
     @Override
-    public PrimType primType() {
-      return this.type;
-    }
-
-    @Override
-    public String toString() {
-      return typeName();
-    }
-
-    @Override
     public String typeName() {
-      return VALUE_SIGIL + PrimType.toString(type);
-    }
-
-    @Override
-    public boolean equals(Object other) {
-      if (!(other instanceof Type)) {
-        throw new STCRuntimeError("Comparing ScalarValueType with "
-            + "non-type object");
-      }
-      Type otherT = (Type) other;
-      if (otherT instanceof ScalarValueType) {
-        return otherT.primType().equals(this.type);
-      } else {
-        return false;
-      }
-    }
-
-    @Override
-    public int hashCode() {
-      return type.hashCode() ^ ScalarValueType.class.hashCode();
-    }
-
-    @Override
-    public Type bindTypeVars(Map<String, Type> vals) {
-      return this;
-    }
-
-    @Override
-    public Map<String, Type> matchTypeVars(Type concrete) {
-      concrete = concrete.stripSubTypes();
-      if (this.equals(concrete)) {
-        return Collections.emptyMap();
-      } else {
-        return null;
-      }
-    }
-
-    @Override
-    public Type concretize(Type concrete) {
-      assert(this.assignableTo(concrete));
-      return this;
-    }
-    
-    @Override
-    public boolean hasTypeVar() {
-      return false;
-    }
-    
-    @Override
-    public Type getImplType() {
-      return this;
+      return VALUE_SIGIL + primType.typeName();
     }
   }
 
 
-  public static class ScalarFutureType extends Type {
-    private final PrimType type;
-    public ScalarFutureType(PrimType type) {
-      super();
-      this.type = type;
+  public static class ScalarFutureType extends AbstractScalarType {
+    public ScalarFutureType(PrimType primType) {
+      super(primType);
     }
 
     @Override
@@ -526,80 +552,14 @@ public class Types {
     }
 
     @Override
-    public PrimType primType() {
-      return this.type;
-    }
-
-    @Override
-    public String toString() {
-      return typeName();
-    }
-
-    /**
-     * Prepend prim type name with $ to indicate it is the value of
-     * the type, rather than a future
-     */
-    @Override
     public String typeName() {
-      return PrimType.toString(type);
-    }
-
-    @Override
-    public boolean equals(Object other) {
-      if (!(other instanceof Type)) {
-        throw new STCRuntimeError("Comparing ScalarFutureType with non-type "
-            + "object");
-      }
-      Type otherT = (Type) other;
-      if (otherT instanceof ScalarFutureType) {
-        return otherT.primType() == this.type;
-      } else {
-        return false;
-      }
-    }
-
-    @Override
-    public int hashCode() {
-      return type.hashCode() ^ ScalarFutureType.class.hashCode();
-    }
-
-    @Override
-    public Type bindTypeVars(Map<String, Type> vals) {
-      return this;
-    }
-
-    @Override
-    public Map<String, Type> matchTypeVars(Type concrete) {
-      concrete = concrete.stripSubTypes();
-      if (this.equals(concrete)) {
-        return Collections.emptyMap();
-      } else {
-        return null;
-      }
-    }
-
-    @Override
-    public Type concretize(Type concrete) {
-      assert(this.assignableTo(concrete));
-      return this;
-    }
-    
-    @Override
-    public boolean hasTypeVar() {
-      return false;
-    }
-    
-    @Override
-    public Type getImplType() {
-      return this;
+      return primType.typeName();
     }
   }
 
-  public static class ScalarUpdateableType extends Type {
-    private final PrimType type;
-    public ScalarUpdateableType(PrimType type) {
-      super();
-      this.type = type;
+  public static class ScalarUpdateableType extends AbstractScalarType {
+    public ScalarUpdateableType(PrimType primType) {
+      super(primType);
     }
 
     @Override
@@ -608,84 +568,124 @@ public class Types {
     }
 
     @Override
-    public PrimType primType() {
-      return this.type;
-    }
-
-    @Override
-    public String toString() {
-      return typeName();
-    }
-
-    /**
-     * 
-     */
-    @Override
     public String typeName() {
-      return "updateable_" + PrimType.toString(type);
-    }
-
-    @Override
-    public boolean equals(Object other) {
-      if (!(other instanceof Type)) {
-        throw new STCRuntimeError("Comparing ScalarUpdateableType " +
-            "with non-type object");
-      }
-      Type otherT = (Type) other;
-      if (otherT instanceof ScalarUpdateableType) {
-        return otherT.primType().equals(this.type);
-      } else {
-        return false;
-      }
+      return "updateable_" + primType.typeName();
     }
 
     public static ScalarFutureType asScalarFuture(Type upType) {
-      assert(isScalarUpdateable(upType));
+      assert(upType instanceof ScalarUpdateableType);
       return new ScalarFutureType(upType.primType());
     }
     
     public static ScalarValueType asScalarValue(Type valType) {
-      assert(isScalarUpdateable(valType));
+      assert(valType instanceof ScalarUpdateableType);
       return new ScalarValueType(valType.primType());
+    }
+
+  }
+  
+  public static enum FileKind {
+    LOCAL_FS, // A file on the local file system
+    URL // A file represented by a URL
+    ;
+
+    public String typeName() {
+      switch (this) {
+        case LOCAL_FS:
+          return "file";
+        case URL:
+          return "url";
+        default:
+          throw new STCRuntimeError("typeName not implemented for " + this);
+      }
+    }      
+  }
+  
+  /**
+   * A file variable.  There are multiple possible types of files, such as
+   * those on a local file system, or those represented by a URL
+   */
+  public abstract static class AbstractFileType extends AbstractPrimType {
+
+    protected final FileKind kind;
+    
+    private AbstractFileType(FileKind kind) {
+      this.kind = kind;
+    }
+
+    @Override
+    public PrimType primType() {
+      return PrimType.FILE;
+    }
+    
+    @Override
+    public FileKind fileKind() {
+      return kind;
     }
 
     @Override
     public int hashCode() {
-      return type.hashCode() ^ ScalarUpdateableType.class.hashCode();
+      return kind.hashCode() + 13 * getClass().hashCode();
     }
-
+    
     @Override
-    public Type bindTypeVars(Map<String, Type> vals) {
-      return this;
-    }
-
-    @Override
-    public Map<String, Type> matchTypeVars(Type concrete) {
-      concrete = concrete.stripSubTypes();
-      if (this.equals(concrete)) {
-        return Collections.emptyMap();
-      } else {
-        return null;
+    public boolean equals(Object other) {
+      // Generic comparison algorithm for files
+      if (!(other instanceof Type)) {
+        throw new STCRuntimeError("Comparing " + this.getClass().getName() +
+                                  "with non-type object");
       }
-    }
-    
-    @Override
-    public Type concretize(Type concrete) {
-      assert(this.assignableTo(concrete));
-      return this;
-    }
-
-    @Override
-    public boolean hasTypeVar() {
-      return false;
-    }
-    
-    @Override
-    public Type getImplType() {
-      return this;
+      Type otherT = (Type) other;
+      if (this.getClass().isInstance(otherT)) {
+        // Check that the kind matches
+        return ((AbstractFileType)otherT).kind == this.kind;
+      } else {
+        return false;
+      }
     }
   }
   
+  public static class FileValueType extends AbstractFileType {
+  
+    public FileValueType(FileKind kind) {
+      super(kind);
+    }
+    
+    @Override
+    public StructureType structureType() {
+      return StructureType.FILE_VALUE;
+    }
+  
+    @Override
+    public String typeName() {
+      return VALUE_SIGIL + this.kind.typeName();
+    }
+    
+  }
+
+  public static class FileFutureType extends AbstractFileType {
+
+    public FileFutureType(FileKind kind) {
+      super(kind);
+    }
+    
+    @Override
+    public StructureType structureType() {
+      return StructureType.FILE_FUTURE;
+    }
+
+    @Override
+    public String typeName() {
+      return this.kind.typeName();
+    }
+    
+  }
+  
+  /**
+   * A union of multiple types that represents situations such as:
+   * - A function that accepts multiple alternative types for an input parameter
+   * - An expression that can be evaluated to multiple possible types.
+   */
   public static class UnionType extends Type {
     private final List<Type> alts;
     
@@ -699,6 +699,13 @@ public class Types {
       return alts;
     }
     
+    /**
+     * Return the list of possible types in a union.  This can be called on
+     * non-union types for convenience, in which case it will only return
+     * the single non-union type.
+     * @param type
+     * @return
+     */
     public static List<Type> getAlternatives(Type type) {
       if (isUnion(type)) {
         return ((UnionType)type).getAlternatives();
@@ -1043,6 +1050,8 @@ public class Types {
     SCALAR_UPDATEABLE,
     SCALAR_FUTURE,
     SCALAR_VALUE,
+    FILE_FUTURE,
+    FILE_VALUE,
     ARRAY,
     /** Reference is only used internally in compiler */
     REFERENCE,
@@ -1076,8 +1085,13 @@ public class Types {
      * @return
      */
     public PrimType primType() {
-      throw new STCRuntimeError("primitiveType() not implemented " +
+      throw new STCRuntimeError("primType() not implemented " +
       "for class " + getClass().getName());
+    }
+    
+    public FileKind fileKind() {
+      throw new STCRuntimeError("fileKind() not implemented " +
+                            "for class " + getClass().getName());
     }
 
     public Type memberType() {
@@ -1431,6 +1445,11 @@ public class Types {
     }
     
     @Override
+    public FileKind fileKind() {
+      return baseType.fileKind();
+    }
+    
+    @Override
     public Type memberType() {
       return baseType.memberType();
     }
@@ -1636,19 +1655,38 @@ public class Types {
    * @return
    */
   public static boolean canWaitForFinalize(Typed type) {
-    return isFuture(type) || isScalarUpdateable(type) ||
+    return isFuture(type) || isPrimUpdateable(type) ||
            isArray(type);
   }
   
-  public static boolean isFuture(Typed t) {
-    return isScalarFuture(t) || isRef(t);
-  }
-  
   /**
-   * Convenience function to check if a type is scalar
+   * Check if the type is any kind of future that has single-assignment
+   * semantics
    * @param t
    * @return
    */
+  public static boolean isFuture(Typed t) {
+    return isPrimFuture(t) || isRef(t);
+  }
+
+  
+  /**
+   * Convenience function to check if a type is a primitive future
+   * @param t
+   * @return
+   */
+  public static boolean isPrimFuture(Typed t) {
+    return isFile(t) || isScalarFuture(t);
+  }
+  
+  public static boolean isPrimValue(Typed t) {
+    return isFileVal(t) || isScalarValue(t);
+  }
+  
+  public static boolean isPrimUpdateable(Typed t) {
+    return isScalarUpdateable(t);
+  }
+
   public static boolean isScalarFuture(Typed t) {
     return t.type().structureType() == StructureType.SCALAR_FUTURE;
   }
@@ -1674,11 +1712,11 @@ public class Types {
   }
   
   public static boolean isFuture(PrimType primType, Typed t) {
-    return isScalarFuture(t) && t.type().primType() == primType;
+    return isPrimFuture(t) && t.type().primType() == primType;
   }
   
   public static boolean isVal(PrimType primType, Typed t) {
-    return isScalarValue(t) && t.type().primType() == primType;
+    return isPrimValue(t) && t.type().primType() == primType;
   }
   
   public static boolean isRef(PrimType primType, Typed t) {
@@ -1746,11 +1784,11 @@ public class Types {
   }
 
   public static boolean isFile(Typed t) {
-    return isFuture(PrimType.FILE, t);
+    return t.type().structureType() == StructureType.FILE_FUTURE;
   }
   
   public static boolean isFileVal(Typed t) {
-    return isVal(PrimType.FILE, t);
+    return t.type().structureType() == StructureType.FILE_VALUE;
   }
   
   public static boolean isFileRef(Typed t) {
@@ -1788,6 +1826,8 @@ public class Types {
   public static Type derefResultType(Typed t) {
     if (isScalarFuture(t) || isScalarUpdateable(t))  {
       return new ScalarValueType(t.type().primType());
+    } else if (isFile(t)) {
+      return new FileValueType(t.type().fileKind());
     } else if (isRef(t)) {
       return t.type().memberType();
     } else {
@@ -1800,7 +1840,7 @@ public class Types {
    */
   public static boolean isMappable(Typed t) {
     // We can only map files right now..
-    return t.type().assignableTo(F_FILE);
+    return isFile(t);
   }
 
   public static boolean isUnion(Typed type) {
@@ -1846,7 +1886,7 @@ public class Types {
    */
   public static boolean inputRequiresInitialization(Var input) {
     return input.storage() == Alloc.ALIAS 
-        || Types.isScalarUpdateable(input)
+        || Types.isPrimUpdateable(input)
         || isStruct(input); // Need to load all struct members
   }
   
@@ -1858,7 +1898,7 @@ public class Types {
    */
   public static boolean outputRequiresInitialization(Var output) {
     return output.storage() == Alloc.ALIAS 
-        || isScalarUpdateable(output)
+        || isPrimUpdateable(output)
         || isFileVal(output);
   }
   
@@ -1988,11 +2028,15 @@ public class Types {
   
   public static final Type F_BLOB = new ScalarFutureType(PrimType.BLOB);
   public static final Type R_BLOB = new RefType(F_BLOB);
-  public static final Type V_BLOB =
-      new ScalarValueType(PrimType.BLOB);   
-  public static final Type F_FILE = new ScalarFutureType(PrimType.FILE);
-  public static final Type V_FILE = new ScalarValueType(PrimType.FILE);
+  public static final Type V_BLOB = new ScalarValueType(PrimType.BLOB);
+  
+  public static final Type F_FILE = new FileFutureType(FileKind.LOCAL_FS);
+  public static final Type V_FILE = new FileValueType(FileKind.LOCAL_FS);
   public static final Type REF_FILE = new RefType(F_FILE);
+  
+  public static final Type F_URL = new FileFutureType(FileKind.URL);
+  public static final Type V_URL = new FileValueType(FileKind.URL);
+  public static final Type REF_URL = new RefType(F_URL);
   
   public static final Type V_VOID = new ScalarValueType(PrimType.VOID);
   public static final Type F_VOID = new ScalarFutureType(PrimType.VOID);
@@ -2026,6 +2070,7 @@ public class Types {
     registerPrimitiveType(F_VOID);
     registerPrimitiveType(F_BLOB);
     registerPrimitiveType(F_FILE);
+    registerPrimitiveType(F_URL);
     registerPrimitiveType(UP_FLOAT);
     registerPrimitiveType(F_LOCATION);
   }

@@ -384,7 +384,7 @@ public class TypeChecker {
    */
   public static Type dereferenceResultType(Type memberType) {
     Type resultType;
-    if (Types.isScalarFuture(memberType)) {
+    if (Types.isPrimFuture(memberType)) {
       resultType = memberType;
     } else if (Types.isArray(memberType) || Types.isStruct(memberType)) {
       resultType = new RefType(memberType);

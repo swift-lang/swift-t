@@ -134,7 +134,7 @@ public class ForwardDataflow implements OptimizerPass {
         } else if (currLoc.isConstant()) {
           Arg prevLoc = av.getLocation(resVal.value());
           if (prevLoc.isVar()) {
-            assert (Types.isScalarValue(prevLoc.getVar().type()));
+            assert(Types.isPrimValue(prevLoc.getVar().type()));
             // Constants are the best... might as well replace
             av.addComputedValue(resVal, Ternary.TRUE);
             if (prevLoc.isMapped() == Ternary.FALSE) {
@@ -403,7 +403,7 @@ public class ForwardDataflow implements OptimizerPass {
         cv.close(wv.var, false);
       }
       for (Var v : f.getInputList()) {
-        if (Types.isScalarUpdateable(v.type())) {
+        if (Types.isPrimUpdateable(v.type())) {
           // Updateables always have a value
           cv.close(v, false);
         }
@@ -669,7 +669,7 @@ public class ForwardDataflow implements OptimizerPass {
       List<Var> in = inst.getBlockingInputs();
       if (in != null) {
         for (Var ov : inst.getOutputs()) {
-          if (!Types.isScalarValue(ov.type())) {
+          if (!Types.isPrimValue(ov.type())) {
             cv.setDependencies(ov, in);
           }
         }

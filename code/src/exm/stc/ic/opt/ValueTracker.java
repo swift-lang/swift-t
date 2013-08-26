@@ -328,7 +328,7 @@ public class ValueTracker implements CVMap {
    *          more scalar futures
    */
   public void setDependencies(Var future, Collection<Var> depend) {
-    assert (!Types.isScalarValue(future.type()));
+    assert (!Types.isPrimValue(future.type()));
     assert (!reorderingAllowed) : "Tracking transitive dependencies "
         + "unsafe until reordering disabled";
     CopyOnWriteSmallSet<Var> depset = dependsOn.get(future);
@@ -337,7 +337,7 @@ public class ValueTracker implements CVMap {
       dependsOn.put(future, depset);
     }
     for (Var v : depend) {
-      assert (!Types.isScalarValue(v.type()));
+      assert (!Types.isPrimValue(v.type()));
       depset.add(v);
     }
   }
@@ -527,7 +527,7 @@ public class ValueTracker implements CVMap {
             allSame = false;
           }
           
-          if (!Types.isScalarValue(loc.type())) {
+          if (!Types.isPrimValue(loc.type())) {
             allVals = false;
           }
           locs.add(loc);
@@ -572,7 +572,7 @@ public class ValueTracker implements CVMap {
     private static Var createUnifyingVar(Block parent,
         List<ValueTracker> branchStates, List<Block> branchBlocks,
         List<Arg> locs, Type type) {
-      boolean isValue = Types.isScalarValue(type);
+      boolean isValue = Types.isPrimValue(type);
       // declare new temporary value in outer block
       Var unifiedLoc;
       if (isValue) {

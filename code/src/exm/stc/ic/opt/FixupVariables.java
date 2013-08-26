@@ -121,7 +121,7 @@ public class FixupVariables implements OptimizerPass {
     res.removeReadWrite(fn.getOutputList());
     for (Var v: fn.getInputList()) {
       // TODO: should these be passed in through output list instead?
-      if (Types.isScalarUpdateable(v.type())) {
+      if (Types.isPrimUpdateable(v.type())) {
         res.removeWritten(v);
       }
     }

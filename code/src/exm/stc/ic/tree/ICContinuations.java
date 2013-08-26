@@ -1328,7 +1328,7 @@ public class ICContinuations {
       if (!recursive) {
         return false;
       }
-      if (Types.isScalarFuture(wv.type())) {
+      if (Types.isPrimFuture(wv.type())) {
         return false;
       }
       return true;

@@ -192,7 +192,7 @@ public class VarCreator {
   
   public Var createTmpLocalVal(Context context, Type type) 
         throws UserException {
-    assert(Types.isScalarValue(type));
+    assert(Types.isPrimValue(type));
     Var val = context.createLocalValueVariable(type);
     declare(val);
     return val;
@@ -224,7 +224,7 @@ public class VarCreator {
   public Var createValueOfVar(Context context, Var future,
         boolean initialise)
                                                   throws UserException {
-    assert(Types.isScalarFuture(future.type()));
+    assert(Types.isPrimFuture(future.type()));
     Type valType = Types.derefResultType(future.type());
     Var val = context.createLocalValueVariable(valType, future.name());
     if (initialise) {
@@ -259,7 +259,7 @@ public class VarCreator {
    */
   public Var fetchValueOf(Context context, Var future) 
       throws UserException, UndefinedTypeException, DoubleDefineException {
-    assert(Types.isScalarFuture(future.type()));
+    assert(Types.isPrimFuture(future.type()));
     Type futureType = future.type();
     Var val = createValueOfVar(context, future);
     switch (futureType.primType()) {

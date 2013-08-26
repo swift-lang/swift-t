@@ -83,7 +83,7 @@ public class FunctionSignature implements OptimizerPass {
     
     for (WaitVar input: fn.blockingInputs()) {
       // See if we can switch to value version
-      if (Types.isScalarFuture(input.var.type())) {
+      if (Types.isPrimFuture(input.var.type())) {
         Type valueT = Types.derefResultType(input.var.type());
         if (Semantics.canPassToChildTask(valueT)) {
           switchVars.add(input.var);

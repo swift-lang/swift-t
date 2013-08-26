@@ -1237,7 +1237,7 @@ public class ASTWalker {
       } else {
         var = declareVariable(context, vDesc);
       } 
-      if (Types.isScalarUpdateable(var.type())) {
+      if (Types.isPrimUpdateable(var.type())) {
         if (walkMode == WalkMode.ONLY_DECLARATIONS) {
           throw new TypeMismatchException(context, var.name() +
                   " is an updateable and its declaration cannot be chained");  

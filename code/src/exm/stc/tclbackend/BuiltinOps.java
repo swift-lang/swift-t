@@ -69,7 +69,7 @@ public class BuiltinOps {
         return new SetVariable(TclNamer.prefixVar(out.name()), fmt);
       } else {
         assert(out != null);
-        assert(Types.isScalarValue(out.type()));
+        assert(Types.isPrimValue(out.type()));
         Expression rhs;
         // First handle special cases, then typical case
         if (op == BuiltinOpcode.STRCAT) {

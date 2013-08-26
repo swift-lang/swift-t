@@ -1,11 +1,11 @@
 
-app echo(file i)
+app echo(url i)
 {
-  "echo" i;
+  "echo" "echo:" i;
 }
 
 main
 {
-  file f = input_url("ftp://host/path/file");
+  url f = input_url("ftp://host/path/file");
   echo(f);
 }

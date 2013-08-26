@@ -44,7 +44,7 @@ public class RefCounting {
   }
 
   public static boolean mayHaveReadRefcount(Type type) {
-    if (Types.isScalarValue(type)) {
+    if (Types.isPrimValue(type)) {
       return false;
     }
     return true;
@@ -52,7 +52,7 @@ public class RefCounting {
 
   public static boolean mayHaveWriteRefcount(Type type) {
     // Struct members may have write refcount 
-    return Types.isArray(type) || Types.isScalarUpdateable(type) ||
+    return Types.isArray(type) || Types.isPrimUpdateable(type) ||
            Types.isStruct(type);
   }
 

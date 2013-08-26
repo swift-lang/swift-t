@@ -62,13 +62,13 @@ public class WrapUtil {
     }
     Type value_t = Types.derefResultType(var);
     
-    if (Types.isScalarUpdateable(var)) {
+    if (Types.isPrimUpdateable(var)) {
       Var value_v = createValueVar(valName, value_t);
       
       block.addVariable(value_v);
       instBuffer.add(TurbineOp.latestValue(value_v, var));
       return value_v;
-    } else if (Types.isScalarFuture(var)) {
+    } else if (Types.isPrimFuture(var)) {
       // The result will be a value
       // Use the OPT_VALUE_VAR_PREFIX to make sure we don't clash with
       //  something inserted by the frontend (this caused problems before)
@@ -95,8 +95,7 @@ public class WrapUtil {
   }
 
   public static Var createValueVar(String name, Type type) {
-    Var value_v = new Var(type,
-        name,
+    Var value_v = new Var(type, name,
         Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
     return value_v;
   }
@@ -127,7 +126,7 @@ public class WrapUtil {
     List<WaitVar> waitVars = new ArrayList<WaitVar>(inArgs.size());
     Map<Var, Var> filenameVars = new HashMap<Var, Var>();
     for (Var in: inArgs) {
-      if (!Types.isScalarUpdateable(in.type())) {
+      if (!Types.isPrimUpdateable(in.type())) {
         waitVars.add(new WaitVar(in, false));
       }
     }
@@ -262,7 +261,7 @@ public class WrapUtil {
     }
     List<Var> outVals = new ArrayList<Var>();
     for (Var outArg: outputFutures) {
-      if (Types.isArray(outArg.type()) || Types.isScalarUpdateable(outArg.type())) {
+      if (Types.isArray(outArg.type()) || Types.isPrimUpdateable(outArg.type())) {
         // Use standard representation
         outVals.add(outArg);
       } else {
