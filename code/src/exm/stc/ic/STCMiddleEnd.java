@@ -746,7 +746,6 @@ public class STCMiddleEnd {
   public void copyFile(Var target, Var src) {
     assert(Types.isFile(src));
     assert(Types.isFile(target));
-    
     // Generate different code depending on whether target is mapped
     Ternary targetMapped = target.isMapped();
     Block block = currBlock();
@@ -767,7 +766,7 @@ public class STCMiddleEnd {
     }
   }
 
-  private void copyFile(Block block, Var target, Var src,boolean targetMapped) {
+  private void copyFile(Block block, Var target, Var src, boolean targetMapped) {
     Var targetFilename = null;
     List<WaitVar> waitVars;
     if (targetMapped) {
@@ -792,7 +791,6 @@ public class STCMiddleEnd {
     block.addContinuation(wait);
 
     Block waitBlock = wait.getBlock();
-     
 
     // Retrieve src file info
     Var srcVal = waitBlock.declareVariable(Types.V_FILE,
@@ -818,6 +816,15 @@ public class STCMiddleEnd {
       waitBlock.addInstruction(TurbineOp.copyFileContents(targetVal, srcVal));
       waitBlock.addInstruction(TurbineOp.assignFile(target, targetVal.asArg()));
     } else {
+      Var srcFilenameVal = waitBlock.declareVariable(Types.V_STRING,
+          OptUtil.optFilenamePrefix(waitBlock, srcVal), Alloc.LOCAL,
+          DefType.LOCAL_COMPILER, null);
+      // Set filename of target to name of source
+      waitBlock.addInstruction(TurbineOp.getLocalFileName(srcFilenameVal, srcVal));
+      waitBlock.addInstruction(TurbineOp.setFilenameVal(target,
+                                                        srcFilenameVal.asArg()));
+      
+      // Mark target as closed
       waitBlock.addInstruction(TurbineOp.assignFile(target, srcVal.asArg()));
     }
   }
