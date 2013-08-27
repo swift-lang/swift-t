@@ -63,6 +63,7 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ArrayInfo;
 import exm.stc.common.lang.Types.ArrayType;
 import exm.stc.common.lang.Types.ExprType;
+import exm.stc.common.lang.Types.FileKind;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.RefType;
 import exm.stc.common.lang.Types.StructType;
@@ -2243,7 +2244,7 @@ public class ASTWalker {
       assert(redirT.getChildCount() == 2);
       SwiftAST redirType = redirT.child(0);
       SwiftAST redirExpr = redirT.child(1);
-      String redirTypeName = redirT.getText();
+      String redirTypeName = LogHelper.tokName(redirType.getType());
       
       // Now typecheck
       Type type = TypeChecker.findSingleExprType(context, redirExpr);
@@ -2251,6 +2252,10 @@ public class ASTWalker {
       if (!Types.isFile(type)) {
         throw new TypeMismatchException(context, "Invalid type for" +
             " app redirection, must be file: " + type.typeName());
+      } else if (type.fileKind() != FileKind.LOCAL_FS) {
+        throw new TypeMismatchException(context, "Cannot redirect " +
+              redirTypeName + " to/from variable type " + type.typeName() + 
+              ". Expected a regular file.");
       }
       
       Var result = exprWalker.eval(context, redirExpr, type, false, null);

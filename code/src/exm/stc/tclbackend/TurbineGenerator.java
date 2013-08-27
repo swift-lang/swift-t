@@ -58,6 +58,7 @@ import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ArrayInfo;
+import exm.stc.common.lang.Types.FileKind;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.PrimType;
 import exm.stc.common.lang.Types.StructType;
@@ -741,8 +742,8 @@ public class TurbineGenerator implements CompilerBackend {
   
   @Override
   public void getLocalFileName(Var filename, Var file) {
-    assert(filename.type().assignableTo(Types.V_STRING));
-    assert(file.type().assignableTo(Types.V_FILE));
+    assert(Types.isFileVal(filename));
+    assert(Types.isFileVal(file));
     pointStack.peek().add(new SetVariable(prefixVar(filename),
                         Turbine.localFilePath(varToExpr(file))));
   }
@@ -772,8 +773,12 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void initLocalOutputFile(Var localFile, Arg filenameVal, Arg isMapped) {
     assert(Types.isFileVal(localFile));
+    FileKind fileKind = localFile.type().fileKind();
     assert(filenameVal.isImmediateString());
     assert(isMapped.isImmediateBool());
+    assert(isMapped.isVar() || isMapped.getBoolLit() ||
+        fileKind.supportsTmpImmediate()) : "Can't give unmapped file of kind " 
+      + fileKind.typeName() + " a generated temporary file name";
     
     // Initialize refcount to 1 if unmapped, or 2 if mapped so that the file
     // isn't deleted upon the block finishing
@@ -788,8 +793,8 @@ public class TurbineGenerator implements CompilerBackend {
   
   @Override
   public void copyFileContents(Var dst, Var src) {
-    assert(dst.type().assignableTo(Types.V_FILE));
-    assert(src.type().assignableTo(Types.V_FILE));
+    assert(Types.isFileVal(Types.V_FILE));
+    assert(Types.isFileVal(Types.V_FILE));
     pointStack.peek().add(Turbine.copyFileContents(varToExpr(dst),
                                                    varToExpr(src)));  
   }

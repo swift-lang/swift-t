@@ -598,6 +598,35 @@ public class Types {
         default:
           throw new STCRuntimeError("typeName not implemented for " + this);
       }
+    }
+
+    /**
+     * @return Whether this file kind supports creation of temporary files
+     */
+    public boolean supportsTmpImmediate() {
+      switch (this) {
+        case LOCAL_FS:
+          return true;
+        case URL:
+          return false;
+        default:
+          throw new STCRuntimeError("not implemented for " + this);
+      }
+    }
+
+    /**
+     * @return Whether we can do a physical copy from/to two different 
+     * paths of this file type
+     */
+    public boolean supportsPhysicalCopy() {
+      switch (this) {
+        case LOCAL_FS:
+          return true;
+        case URL:
+          return false;
+        default:
+          throw new STCRuntimeError("not implemented for " + this);
+      }
     }      
   }
   

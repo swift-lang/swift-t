@@ -1,5 +1,3 @@
-
-// SKIP-THIS-TEST
 // THIS-TEST-SHOULD-NOT-COMPILE
 // Doesn't make sense to redirect stdout to a url
 

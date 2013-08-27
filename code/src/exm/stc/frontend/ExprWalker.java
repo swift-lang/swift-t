@@ -261,23 +261,13 @@ public class ExprWalker {
       // Sort of silly, but might be needed
       backend.asyncOp(BuiltinOpcode.COPY_VOID, dst, src.asArg().asList());
     } else if (Types.isFile(type)) {
-      switch (type.fileKind()) {
-        case LOCAL_FS:
+      if (dst.isMapped() == Ternary.FALSE || 
+          dst.type().fileKind().supportsPhysicalCopy()) {
           backend.copyFile(dst, src);
-          break;
-        case URL:
-          // Can only copy unmapped URLs
-          if (dst.isMapped() != Ternary.FALSE) {
-            throw new TypeMismatchException("Do not support assigning " +
-            		"to (possibly) mapped url variable " + dst.name() + ". " +
-                "There is no general way to assign to a URL.");                
-          } else {
-            backend.copyFile(dst, src);
-          }
-          break;
-        default:
-          throw new STCRuntimeError("Missing copy handler for file type: "
-                                    + type);
+      } else {
+        throw new TypeMismatchException("Do not support physical copy " +
+            "to (possibly) mapped variable " + dst.name() + " with " +
+            "type " + dst.type().typeName());       
       }
     } else if (Types.isStruct(type)) {
       copyStructByValue(context, src, dst, new Stack<String>(), new Stack<String>(),
