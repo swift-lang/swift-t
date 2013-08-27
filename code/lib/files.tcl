@@ -254,6 +254,7 @@ namespace eval turbine {
 
     # Create a reference to track local file
     proc create_local_file_ref { filepath {refcount 1} } {
+        # puts "create_local_file_ref $filepath $refcount"
         return [ list $filepath $refcount ]
     }
 
@@ -283,6 +284,7 @@ namespace eval turbine {
     proc decr_local_file_refcount { varname } {
         upvar 1 $varname v
         set new_refcount [ expr {[ lindex $v 1 ] - 1} ]
+        # puts "decr_local_file_refcount $varname={$v} new=$new_refcount"
         lset v 1 $new_refcount
         if { $new_refcount == 0 } {
             set path [ lindex $v 0 ]
