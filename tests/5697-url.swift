@@ -48,13 +48,10 @@ main() {
 
   assertEqual(urlname(f4), "file://test4", "url 4");
  
-  // TODO copy_url5 causes problems for -O0
   url f5<"file://test5"> = copy_url5(input_url("http://five.com"));
 
   assertEqual(urlname(f5), "file://test5", "url 5");
  
-  // TODO: copy_url6 is where the problem is for -O1.
-  //  The issue appears to be an extra read refcount decr for the file
   url f6<"file://test6"> = copy_url6(input_url("http://six.com"));
 
   assertEqual(urlname(f6), "file://test6", "url 6");

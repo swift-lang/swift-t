@@ -3393,14 +3393,22 @@ public class ICInstructions {
             if (RefCounting.hasWriteRefCount(outVar)) {
               writeIncr.add(outVar);
             }
+            boolean readRC = false;
             if (op != Opcode.CALL_FOREIGN) {              
               Function f = functions.get(this.functionName);
               boolean writeOnly = f.isOutputWriteOnly(i);
               
               // keep read references to output vars
               if (!writeOnly && RefCounting.hasReadRefCount(outVar)) {
-                readIncr.add(outVar);
+                readRC = true;
               }
+            }
+            if (Types.isFile(outVar)) {
+              // Need read refcount for filename
+              readRC = true;
+            }
+            if (readRC && RefCounting.hasReadRefCount(outVar)) {
+              readIncr.add(outVar);
             }
           }
           return Pair.create(readIncr, writeIncr);
