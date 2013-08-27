@@ -1925,7 +1925,8 @@ public class TurbineGenerator implements CompilerBackend {
         } else if (Types.isPrimValue(t)) {
           PrimType pt = t.primType();
           if (pt == PrimType.INT || pt == PrimType.BOOL
-              || pt == PrimType.FLOAT || pt == PrimType.STRING) {
+              || pt == PrimType.FLOAT || pt == PrimType.STRING
+              || pt == PrimType.FILE) {
             // Serialize
             exprs.add(varToExpr(v));
           } else if (pt == PrimType.VOID) {

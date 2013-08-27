@@ -16,7 +16,10 @@ public class Semantics {
   public static boolean canPassToChildTask(Typed t) {
     if (Types.isBlobVal(t)) {
       return false;
-    } else if (Types.isFileVal(t)) {
+    } else if (Types.isFileVal(t) &&
+               t.type().fileKind().supportsTmpImmediate()) {
+      // The current scheme for managing temporary files doesn't
+      // allow copying a file value across task boundaries
       return false;
     } else {
       return true;
