@@ -3285,6 +3285,7 @@ public class ICInstructions {
         // True unless the function alters mapping itself
         boolean mapOutVars = true;
         if (isImpl(SpecialFunction.INITS_OUTPUT_MAPPING)) {
+          // TODO: handle e.g. URLs differently here?
           mapOutVars = false;
         }
         

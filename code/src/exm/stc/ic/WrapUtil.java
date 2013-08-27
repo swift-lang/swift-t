@@ -161,8 +161,11 @@ public class WrapUtil {
     assert(Types.isFile(file.type()));
     Instruction getFileName = TurbineOp.getFileName(filename, file);
     
-    if (file.isMapped() == Ternary.TRUE) {
-      // Just get the mapping in this case
+    if (file.isMapped() == Ternary.TRUE ||
+        !file.type().fileKind().supportsTmpImmediate()) {
+      // Just get the mapping in these cases:
+      // - File is definitely mapped
+      // - The file type doesn't support temporary creation
       insertPos.add(getFileName);
     } else {
       // Use optimizer var prefixes to avoid clash with any frontend vars

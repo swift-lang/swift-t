@@ -818,6 +818,7 @@ public class ForwardDataflow implements OptimizerPass {
 
         if (output.isMapped() == Ternary.FALSE) {
           // Initialize unmapped var
+          assert (output.type().fileKind().supportsTmpImmediate());
           WrapUtil.initTemporaryFileName(insertPoint, output, filenameVal);
         } else {
           // Load existing mapping

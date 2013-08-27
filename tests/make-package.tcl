@@ -8,3 +8,7 @@ puts [ eval ::pkg::create -name "funcs" -version 0.0 $items ]
 set items [ eval list \
                 -source 165-autowrap-struct.funcs.tcl ]
 puts [ eval ::pkg::create -name "funcs_165" -version 0.5 $items ]
+
+set items [ eval list \
+                -source 5697-url.funcs.tcl ]
+puts [ eval ::pkg::create -name "funcs_5697" -version 0.5 $items ]
