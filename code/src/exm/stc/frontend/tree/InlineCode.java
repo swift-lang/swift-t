@@ -38,6 +38,7 @@ public class InlineCode {
     StringBuilder currTok = new StringBuilder();
     StringBuilder currVar = null;
     boolean inVar = false;
+    boolean inDerefVar = false;
     for (int i = 0; i < in.length(); i++) {
       char c = in.charAt(i);
       if (inVar) {
@@ -46,7 +47,8 @@ public class InlineCode {
         } else if (c == '>') {
           if (i < in.length() - 1 || in.charAt(i+1) == '>') {
             i++; // Move past second >
-            template.addElem(TemplateElem.createVar(currVar.toString()));
+            template.addElem(TemplateElem.createVar(currVar.toString(),
+                                                    inDerefVar));
             currVar = null;
             currTok = new StringBuilder();
             inVar = false;
@@ -63,8 +65,16 @@ public class InlineCode {
                                   "template string \"" + in + "\"");
         }
       } else {
-        if (c == '<' && i < in.length() - 1 && in.charAt(i+1) == '<') {
-          i++;
+        if ((c == '<' && i < in.length() - 1 && in.charAt(i+1) == '<') ||
+            (c == '$' && i < in.length() - 2 && in.charAt(i+1) == '<' &&
+             in.charAt(i+2) == '<')) {
+          if (c == '$') {
+            inDerefVar = true;
+            i++; // Skip $
+          } else {
+            inDerefVar = false;
+          }
+          i++; // Skip <
           while (i < in.length() - 1 && in.charAt(i+1) == '<') {
             // Find last <<, and use as part of substitution
             i++;

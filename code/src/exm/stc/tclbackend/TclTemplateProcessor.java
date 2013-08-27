@@ -81,9 +81,21 @@ public class TclTemplateProcessor {
           result.add(new Token(tok));
         }
       } else {
-        assert(elem.getKind() == ElemKind.VARIABLE);
         for (Expression e: toks.get(elem.getVarName())) {
-          result.add(e);
+          if (elem.getKind() == ElemKind.VARIABLE) {
+            result.add(e);
+          } else {
+            assert(elem.getKind() == ElemKind.DEREF_VARIABLE);
+            // TODO: hacky
+            Expression derefE;
+            if (e instanceof Value) {
+              derefE = e;
+            } else {
+              assert(e instanceof Token);
+              derefE = new Value(e.toString());
+            }
+            result.add(derefE);
+          }
         }
       }
     }

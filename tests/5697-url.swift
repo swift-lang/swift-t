@@ -12,7 +12,7 @@ app (url o) copy_url(url i)
 }
 
 (url o) copy_url3(url i) "turbine" "0.0" [
-  "puts [ list copy_url3 [ turbine::local_file_path <<i>> ] [ turbine::local_file_path ${<<o>>} ] ]"
+  "puts [ list copy_url3 [ turbine::local_file_path <<i>> ] [ turbine::local_file_path $<<o>> ] ]"
 ];
 
 (url o) copy_url4 (url i) {
@@ -21,7 +21,7 @@ app (url o) copy_url(url i)
 
 (url o) copy_url5(url i) "funcs_5697" "0.5" "copy_url5" [
   """
-  funcs_5697::copy_url5_impl [ turbine::local_file_path <<i>> ] [ turbine::local_file_path ${<<o>>} ]
+  funcs_5697::copy_url5_impl [ turbine::local_file_path <<i>> ] [ turbine::local_file_path $<<o>> ]
   """
 ];
 
