@@ -29,6 +29,7 @@ import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UndefinedOperatorException;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.OpType;
@@ -45,6 +46,7 @@ import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.frontend.tree.ArrayElems;
 import exm.stc.frontend.tree.ArrayRange;
 import exm.stc.frontend.tree.FunctionCall;
@@ -481,6 +483,7 @@ public class TypeChecker {
       List<Var> outputs, boolean firstCall) throws UserException {
     List<Type> outTs = new ArrayList<Type>(outputs.size());
     for (Var output: outputs) {
+      checkFunctionOutputValid(context, function, output);
       outTs.add(output.type());
     }
     List<FunctionType> alts = concretiseFunctionCall(context, function,
@@ -505,6 +508,40 @@ public class TypeChecker {
     throw new TypeMismatchException(context, "Could not find consistent " +
             "binding for type variables.  Viable function signatures based on " +
             "input arguments were: " + alts + " but output types were " + outTs);
+  }
+
+  /**
+   * Check that function output var is valid
+   * @param output
+   * @throws TypeMismatchException 
+   */
+  private static void checkFunctionOutputValid(Context context,
+          String function, Var output) throws TypeMismatchException {
+    if (Types.isFile(output) && output.isMapped() == Ternary.FALSE &&
+        !output.type().fileKind().supportsTmpImmediate() &&
+        !ForeignFunctions.initsOutputMapping(function)) {
+      /*
+       * We can't create temporary files for this type.  If we detect any 
+       * where a definitely unmapped var is an output to a function, then
+       * we can avoid generating code where this happens.  Why?
+       * Suppose that write a program where a leaf function is called with
+       * an unmapped output file.  There are two cases:
+       * 1. The unmapped input file is declared in the same scope as
+       *    the leaf function => isMapped() == false and we're done.
+       * 2. The unmapped input file is a function output argument =>
+       *    backtrack through the caller hierarchy until we reach the
+       *    function where the unmapped variable was declared.  In that
+       *    function we called a composite function with the (definitely) 
+       *    unmapped variable for which isMapped() == false.
+       * So by this simple check we can prevent leaf functions being called
+       * with unmapped output files.
+       * The exception to this is a special function that will initialize an
+       * unmapped variable on its own
+       */
+      throw new TypeMismatchException(context, "Type " + output.type().typeName()
+          + " does not support creating temporary files. Unmapped var " + output.name()
+          + " cannot be used as function output variable.");
+    }
   }
 
   /**

@@ -429,7 +429,7 @@ public class InitVariables {
     if (inst.op == Opcode.LOAD_FILE) {
       return true;
     } else if (inst.op == Opcode.CALL_FOREIGN_LOCAL &&
-          ((CommonFunctionCall)inst).isImpl(SpecialFunction.INPUT_FILE)) {
+          ((CommonFunctionCall)inst).isImpl(SpecialFunction.INITS_OUTPUT_MAPPING)) {
       return true;
     } else {
       return false;

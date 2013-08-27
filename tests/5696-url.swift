@@ -1,4 +1,3 @@
-// SKIP-THIS-TEST
 // THIS-TEST-SHOULD-NOT-COMPILE
 // Check that we can't provide unmapped URL as output arg
 

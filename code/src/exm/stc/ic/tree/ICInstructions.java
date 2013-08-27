@@ -1254,8 +1254,8 @@ public class ICInstructions {
     }
     
     public static Instruction getLocalFileName(Var filename, Var file) {
-      assert(file.type().assignableTo(Types.V_FILE));
-      assert(filename.type().assignableTo(Types.V_STRING));
+      assert(Types.isFileVal(file));
+      assert(Types.isStringVal(filename));
       return new TurbineOp(Opcode.GET_LOCAL_FILENAME, filename, file.asArg());
     }
  
@@ -2927,7 +2927,11 @@ public class ICInstructions {
      */
     private void addSpecialCVs(List<ResultVal> cvs) {
       if (isImpl(SpecialFunction.INPUT_FILE) ||
-          isImpl(SpecialFunction.UNCACHED_INPUT_FILE)) {
+          isImpl(SpecialFunction.UNCACHED_INPUT_FILE) ||
+          isImpl(SpecialFunction.INPUT_URL)) {
+        // Track that the output variable has the filename of the input
+        // This is compatible with UNCACHED_INPUT_FILE preventing caching,
+        // as we still assume that the input_file function is impure
         if (op == Opcode.CALL_FOREIGN) {
           cvs.add(filenameCV(getInput(0), getOutput(0)));
         } else if (op == Opcode.CALL_FOREIGN_LOCAL){
@@ -2944,10 +2948,15 @@ public class ICInstructions {
 
     /**
      * @param inputFile
-     * @return true if this instruction calls a given special function
+     * @return true if this instruction calls any of the given special functions
      */
-    public boolean isImpl(SpecialFunction special) {
-      return ForeignFunctions.isSpecialImpl(special, this.functionName);
+    public boolean isImpl(SpecialFunction ...specials) {
+      for (SpecialFunction special: specials) {
+        if (ForeignFunctions.isSpecialImpl(this.functionName, special)) {
+          return true;
+        }
+      }
+      return false;
     }
 
     private void addRangeCVs(List<ResultVal> cvs) {
@@ -2986,7 +2995,7 @@ public class ICInstructions {
       if (Types.isString(getOutput(0))) {
         isFuture = true;
       } else {
-        assert(getOutput(0).type().assignableTo(Types.V_INT));
+        assert(Types.isIntVal(getOutput(0)));
         isFuture = false;
       }
       return makeArraySizeCV(getInput(0).getVar(), getOutput(0).asArg(),
@@ -3275,7 +3284,7 @@ public class ICInstructions {
         
         // True unless the function alters mapping itself
         boolean mapOutVars = true;
-        if (isImpl(SpecialFunction.INPUT_FILE)) {
+        if (isImpl(SpecialFunction.INITS_OUTPUT_MAPPING)) {
           mapOutVars = false;
         }
         
@@ -3484,7 +3493,7 @@ public class ICInstructions {
     @SuppressWarnings("unchecked")
     @Override
     public List<Pair<Var, InitType>> getInitialized() {
-      if (isImpl(SpecialFunction.INPUT_FILE)) {
+      if (isImpl(SpecialFunction.INITS_OUTPUT_MAPPING)) {
         // The local version of input_file initializes the output for writing
         return Arrays.asList(Pair.create(getOutput(0), InitType.FULL));
       }
@@ -4869,8 +4878,8 @@ public class ICInstructions {
   }
 
   public static ResultVal filenameLocalCV(Arg outFilename, Var inFile) {
-    assert(inFile.type().assignableTo(Types.V_FILE));
-    assert(outFilename.type().assignableTo(Types.V_STRING));
+    assert(Types.isFileVal(inFile));
+    assert(outFilename.isImmediateString());
     return ResultVal.buildResult(Opcode.GET_LOCAL_FILENAME,
                     inFile.asArg().asList(), outFilename, true);
   }

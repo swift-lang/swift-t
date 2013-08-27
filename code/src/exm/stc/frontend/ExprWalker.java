@@ -455,6 +455,8 @@ public class ExprWalker {
     assert(tree.getType() == ExMParser.CALL_FUNCTION);
     
     FunctionCall f = FunctionCall.fromAST(context, tree, true);
+    
+    // This will check the type of the function call
     FunctionType concrete = TypeChecker.concretiseFunctionCall(context,
                                 f.function(), f.type(), f.args(), oList, false);
     try {
@@ -513,7 +515,6 @@ public class ExprWalker {
       }
     }
     
-    // callFunction will check that argument types match function
     callFunction(context, f.function(), concrete, oList, argVars, propVals);
     if (openedWait) {
       backend.endWaitStatement();

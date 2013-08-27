@@ -2497,8 +2497,9 @@ public class ASTWalker {
     // Need to wait for filename for files
     Var filenameFuture = varCreator.createFilenameAlias(context, fileVar);
 
-    if (fileVar.defType() == DefType.OUTARG) {
-      // If output is unmapped, need to assign file name
+    if (fileVar.defType() == DefType.OUTARG &&
+        fileVar.type().fileKind().supportsTmpImmediate()) {
+      // If output may be unmapped, need to assign file name
       backend.getFileName(filenameFuture, fileVar, true);
     } else {
       backend.getFileName(filenameFuture, fileVar, false);

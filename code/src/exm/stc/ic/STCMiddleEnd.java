@@ -767,6 +767,11 @@ public class STCMiddleEnd {
   }
 
   private void copyFile(Block block, Var target, Var src, boolean targetMapped) {
+    assert(Types.isFile(target));
+    assert(Types.isFile(src));
+    assert(src.type().assignableTo(target.type()));
+    assert(!targetMapped || target.type().fileKind().supportsPhysicalCopy());
+    
     Var targetFilename = null;
     List<WaitVar> waitVars;
     if (targetMapped) {
@@ -793,7 +798,7 @@ public class STCMiddleEnd {
     Block waitBlock = wait.getBlock();
 
     // Retrieve src file info
-    Var srcVal = waitBlock.declareVariable(Types.V_FILE,
+    Var srcVal = waitBlock.declareVariable(Types.derefResultType(src),
         OptUtil.optVPrefix(waitBlock, src), Alloc.LOCAL,
         DefType.LOCAL_COMPILER, null);
     waitBlock.addInstruction(TurbineOp.retrieveFile(srcVal, src));
@@ -802,7 +807,7 @@ public class STCMiddleEnd {
       Var targetFilenameVal = waitBlock.declareVariable(Types.V_STRING,
           OptUtil.optVPrefix(waitBlock, targetFilename), Alloc.LOCAL,
           DefType.LOCAL_COMPILER, null);
-      Var targetVal = waitBlock.declareVariable(Types.V_FILE,
+      Var targetVal = waitBlock.declareVariable(Types.derefResultType(target),
           OptUtil.optVPrefix(waitBlock, target), Alloc.LOCAL,
           DefType.LOCAL_COMPILER, null);
       
@@ -1036,8 +1041,7 @@ public class STCMiddleEnd {
     Block mainBlock = fn.mainBlock();
 
     // Check if we need to initialize mappings of output files
-    boolean mapOutFiles = ForeignFunctions.isSpecialImpl(
-                        SpecialFunction.INPUT_FILE, builtinName);  
+    boolean mapOutFiles = !ForeignFunctions.initsOutputMapping(builtinName);  
     
     Pair<List<WaitVar>, Map<Var, Var>> p;
     p = WrapUtil.buildWaitVars(mainBlock, mainBlock.statementIterator(),

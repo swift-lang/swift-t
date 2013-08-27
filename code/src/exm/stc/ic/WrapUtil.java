@@ -207,6 +207,8 @@ public class WrapUtil {
       ListIterator<? super Statement> insertPos, Var file, Var filenameVal) {
     assert(Types.isFile(file));
     assert(Types.isStringVal(filenameVal));
+    assert(file.type().fileKind().supportsTmpImmediate()) :
+        "Can't create temporary file for type " + file.type();
     // Select temporary file name
     insertPos.add(TurbineOp.chooseTmpFilename(filenameVal));
     // Set the filename on the file var
@@ -396,7 +398,7 @@ public class WrapUtil {
   public static void setFilenameFromFileVal(Block block,
       List<Instruction> instBuffer, Var fileFut, Var fileVal) {
     assert(Types.isFile(fileFut));
-    assert(fileVal.type().assignableTo(Types.V_FILE));
+    assert(Types.isFileVal(fileVal));
     String filenameVName = OptUtil.optFilenamePrefix(block, fileFut);  
     Var filenameV = block.declareVariable(Types.V_STRING, filenameVName,
           Alloc.LOCAL, DefType.LOCAL_COMPILER, null);

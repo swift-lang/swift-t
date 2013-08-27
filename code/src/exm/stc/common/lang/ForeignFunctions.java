@@ -44,8 +44,12 @@ public class ForeignFunctions {
    * can exploit the particular semantics of them.
    */
   public static enum SpecialFunction {
-    INPUT_FILE, UNCACHED_INPUT_FILE,
-    SIZE, RANGE, RANGE_STEP, ARGV
+    INPUT_FILE, UNCACHED_INPUT_FILE, INPUT_URL,
+    SIZE, RANGE, RANGE_STEP, ARGV;
+    
+    /** List of functions that will initialize output mapping */
+    public static final SpecialFunction INITS_OUTPUT_MAPPING[] = new
+        SpecialFunction[] {UNCACHED_INPUT_FILE, INPUT_FILE, INPUT_URL};
   }
   
   /**
@@ -113,16 +117,29 @@ public class ForeignFunctions {
   }
   
   /**
-   * Check if a given function is an implementation of a special function
-   * @param special
+   * Check if a given function is an implementation of any of the given
+   *  special functions
    * @param function
+   * @param special
    * @return
    */
-  public static boolean isSpecialImpl(SpecialFunction special, String function) {
+  public static boolean isSpecialImpl(String function,
+                          SpecialFunction ...specials) {
     SpecialFunction act = specialImpls.get(function);
-    return act != null && act == special;
+    if (act != null) {
+      for (SpecialFunction special: specials) {
+        if (act == special) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
   
+  public static boolean initsOutputMapping(String function) {
+    return isSpecialImpl(function, SpecialFunction.INITS_OUTPUT_MAPPING);
+  }
+
   /**
    * Find an implementation of the special operation
    * @param special
