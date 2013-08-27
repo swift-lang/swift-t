@@ -742,7 +742,7 @@ public class TurbineGenerator implements CompilerBackend {
   
   @Override
   public void getLocalFileName(Var filename, Var file) {
-    assert(Types.isFileVal(filename));
+    assert(Types.isStringVal(filename));
     assert(Types.isFileVal(file));
     pointStack.peek().add(new SetVariable(prefixVar(filename),
                         Turbine.localFilePath(varToExpr(file))));
@@ -793,10 +793,20 @@ public class TurbineGenerator implements CompilerBackend {
   
   @Override
   public void copyFileContents(Var dst, Var src) {
-    assert(Types.isFileVal(Types.V_FILE));
-    assert(Types.isFileVal(Types.V_FILE));
-    pointStack.peek().add(Turbine.copyFileContents(varToExpr(dst),
-                                                   varToExpr(src)));  
+    assert(Types.isFileVal(dst));
+    assert(Types.isFileVal(src));
+    FileKind dstKind = dst.type().fileKind();
+    assert(dstKind.supportsPhysicalCopy());
+    FileKind srcKind = src.type().fileKind();
+    assert(srcKind.supportsPhysicalCopy());
+    if (dstKind == FileKind.LOCAL_FS &&
+        srcKind == FileKind.LOCAL_FS) {
+      pointStack.peek().add(Turbine.copyFileContents(varToExpr(dst),
+                                                     varToExpr(src)));
+    } else {
+      throw new STCRuntimeError("Don't know how to copy " + srcKind + " -> "
+                                                                  + dstKind);
+    }
   }
   
   @Override
