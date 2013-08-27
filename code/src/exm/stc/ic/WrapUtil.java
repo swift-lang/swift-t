@@ -312,7 +312,7 @@ public class WrapUtil {
     Var outVal = WrapUtil.declareLocalOutputVar(block, outFut, outValName);
     WrapUtil.initLocalOutputVar(block, filenameVars, instBuffer,
                                 outFut, outVal, mapOutFile);
-    WrapUtil.cleanupLocalOutputVar(block, outVal);
+    WrapUtil.cleanupLocalOutputVar(block, outFut, outVal);
     return outVal;
   }
 
@@ -360,12 +360,15 @@ public class WrapUtil {
     }
   }
   
-  private static void cleanupLocalOutputVar(Block block, Var outVal) {
+  private static void cleanupLocalOutputVar(Block block, Var outFut, Var outVal) {
     if (Types.isBlobVal(outVal)) {
       block.addCleanup(outVal, TurbineOp.freeBlob(outVal));
     } else if (Types.isFileVal(outVal)) {
-      // Cleanup file if not copied to file future
-      block.addCleanup(outVal, TurbineOp.decrLocalFileRef(outVal));
+      // Cleanup temporary file (if created) if not copied to file future
+      if (outFut.isMapped() != Ternary.TRUE &&
+          outFut.type().fileKind().supportsTmpImmediate()) {
+        block.addCleanup(outVal, TurbineOp.decrLocalFileRef(outVal));
+      }
     }
   }
   

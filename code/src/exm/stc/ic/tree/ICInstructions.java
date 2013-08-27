@@ -1101,6 +1101,9 @@ public class ICInstructions {
     }
 
     public static Instruction decrLocalFileRef(Var fileVal) {
+      assert(Types.isFileVal(fileVal));
+      // We should only be freeing local file refs if we allocated a temporary 
+      assert(fileVal.type().fileKind().supportsTmpImmediate());
       // View all as inputs: only used in cleanupaction context
       return new TurbineOp(Opcode.DECR_LOCAL_FILE_REF, Collections.<Var>emptyList(),
                                                        fileVal.asArg());

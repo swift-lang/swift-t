@@ -2225,7 +2225,11 @@ public class ASTWalker {
       Var localOutput = localOutputs.get(i);
       if (Types.isFile(output.type())) {
         backend.assignFile(output, Arg.createVar(localOutput));
-        backend.decrLocalFileRef(localOutput); // Cleanup local file if needed
+        if (output.isMapped() != Ternary.TRUE &&
+            output.type().fileKind().supportsTmpImmediate()) {
+          // Cleanup temporary local file if needed
+          backend.decrLocalFileRef(localOutput); 
+        }
       } else {
         assert(Types.isVoid(output.type()));
         backend.assignVoid(output, Arg.createVar(localOutput));
