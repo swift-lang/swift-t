@@ -786,7 +786,15 @@ public class TurbineGenerator implements CompilerBackend {
     ifMapped.add(new SetVariable(TCLTMP_INIT_REFCOUNT, LiteralInt.TWO));
     ifUnmapped.add(new SetVariable(TCLTMP_INIT_REFCOUNT, LiteralInt.ONE));
     
-    pointStack.peek().add(new If(argToExpr(isMapped), ifMapped, ifUnmapped));
+    if (isMapped.isBoolVal()) {
+      if (isMapped.getBoolLit()) {
+        pointStack.peek().append(ifMapped);  
+      } else {
+        pointStack.peek().append(ifUnmapped);
+      }
+    } else {
+      pointStack.peek().add(new If(argToExpr(isMapped), ifMapped, ifUnmapped)); 
+    }
     pointStack.peek().add(Turbine.createLocalFile(prefixVar(localFile),
              argToExpr(filenameVal), new Value(TCLTMP_INIT_REFCOUNT)));
   }
