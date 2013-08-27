@@ -453,6 +453,8 @@ public class Main {
         System.out.println("Aborting due to failure in cpp preprocessor invoked as: " +
             cmdString + ". " + ("Exit code was " + cppExitCode + ". "));
         System.exit(1);
+      } else if (cppStderr.length() != 0){
+        logger.warn("Preprocessor warnings:\n" + cppStderr);
       }
     } catch (IOException e) {
       System.out.println("I/O error while launching preprocessor with command line:" +

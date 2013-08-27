@@ -233,8 +233,8 @@ public class Literals {
             realString.append(c);
             break;
           default:
-              throw new InvalidSyntaxException(context, "Don't recognise escape code \\"
-                  + c);
+              throw new InvalidSyntaxException(context, "Don't recognise escape code '\\"
+                  + c + "'");
           }
         }
       } else {
