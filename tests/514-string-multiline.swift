@@ -1,5 +1,6 @@
 
 import io;
+import assert;
 
 f() "turbine" "0.0"
 [----
@@ -29,4 +30,10 @@ A\101
 
 printf("OUTPUT: %s %s %s", t1, t2, t3);
   f();
+
+  string t4 =
+"""
+aaa \\
+""";
+  assertEqual(t4, "\naaa \\\n", "t4");
 }
