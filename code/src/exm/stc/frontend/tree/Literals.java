@@ -174,12 +174,19 @@ public class Literals {
       if (c == '\\') {
         // Escape code!
         // We use the same escape codes as C
-        i++; c = escapedString.charAt(i);
+        i++; 
+
+        if (i >= escapedString.length()) {
+          throw new InvalidSyntaxException(context, "'\\' cannot appear "
+              + "at end of string: it must be followed by escape code");
+        }
+        c = escapedString.charAt(i);
         if (Character.isDigit(c)) {
           // Octal escape code e.g. \7 \23 \03 \123
           String oct = String.valueOf(c);
           int digits = 1;
-          while (digits < 3 && Character.isDigit(escapedString.charAt(i+1))) {
+          while (digits < 3 && escapedString.length() > i + 1 &&
+                 Character.isDigit(escapedString.charAt(i + 1))) {
             i++;
             digits++;
             oct += escapedString.charAt(i);
@@ -189,21 +196,35 @@ public class Literals {
         } else if (c == 'x') {
           // Hex escape code e.g. \x7 \xf \xf2
           String hex = "";
+          
+          int next = i + 1; // Move past x
           int digits = 0;
-          c = escapedString.charAt(i+1);
-          while (digits < 2 && (Character.isDigit(c) ||
-              Character.toUpperCase(c) >= 'A' &&
-              Character.toUpperCase(c) <= 'F')) {
-            i++;
+          if (next >= escapedString.length()) {
+            throw new InvalidSyntaxException(context, "'\\x' cannot appear "
+                + "at end of string: it must be followed by hex number");
+          }
+          c = escapedString.charAt(next);
+          // Check that next char is hex digit before advancing
+          while (digits < 2 && 
+              (Character.isDigit(c) ||
+                (Character.toUpperCase(c) >= 'A' &&
+                Character.toUpperCase(c) <= 'F'))) {
             digits++;
-            hex += Character.isDigit(escapedString.charAt(i));
-            c = escapedString.charAt(i+1);
+            hex += c;
+            next++; // Move to point at next character
+            if (next >= escapedString.length()) {
+              break;
+            } else {
+              c = escapedString.charAt(next);
+            }
           }
           if (digits == 0) {
             throw new InvalidSyntaxException(context, "Hex escape code \\x was not "
-                    + "followed by hex digit, instead " + c);
+                    + "followed by hex digit, instead '" + c + "'");
           }
           realString.append((char)Integer.parseInt(hex,16));
+          
+          i = next - 1; // Set i to last index consumed
         } else {
           switch (c) {
           case 'a':
