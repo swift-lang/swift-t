@@ -119,7 +119,10 @@ type external void;
   "set <<f>> [ turbine::input_file_local <<filename>> ]"
 ];
 
-(url f) input_url(string url) "turbine" "0.0.2" "input_url";
+@pure @implements=input_url
+(url f) input_url(string url) "turbine" "0.0.2" "input_url" [
+  "set <<f>> [ turbine::input_url_local <<url>> ]"
+];
 
 @pure @stc_intrinsic=FILENAME
 (string n) urlname(url x) "turbine" "0.0.2" "";

@@ -133,6 +133,11 @@ namespace eval turbine {
       store_void [ get_file_status $outfile ]
     }
 
+    proc input_url_local { url } {
+      # Create local file ref with extra refcount so that it is never deleted
+      return [ create_local_file_ref $fname 100 ]
+    }
+
     # fname: filename as tcl string
     # return: local file handle
     proc input_url_local { fname } {
