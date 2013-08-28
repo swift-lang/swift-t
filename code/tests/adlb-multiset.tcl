@@ -21,6 +21,7 @@ namespace import turbine::string_*
 
 turbine::defaults
 turbine::init $engines $servers
+turbine::enable_read_refcount
 
 if { ! [ adlb::amserver ] } {
 
