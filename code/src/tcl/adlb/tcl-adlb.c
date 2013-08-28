@@ -956,7 +956,7 @@ extract_create_props(Tcl_Interp *interp, bool accept_id, int argstart,
   // Process type-specific params
   switch (*type)
   {
-    case ADLB_DATA_TYPE_CONTAINER:
+    case ADLB_DATA_TYPE_CONTAINER: {
       TCL_CONDITION(objc > argpos + 1,
                     "adlb::create type=container requires "
                     "key and value types!");
@@ -968,6 +968,17 @@ extract_create_props(Tcl_Interp *interp, bool accept_id, int argstart,
       type_extra->CONTAINER.key_type = key_type;
       type_extra->CONTAINER.val_type = val_type;
       break;
+    }
+    case ADLB_DATA_TYPE_MULTISET: {
+      TCL_CONDITION(objc > argpos,
+                    "adlb::create type=multiset requires "
+                    "member type!");
+      adlb_data_type val_type;
+      rc = type_from_obj(interp, objv, objv[argpos++], &val_type);
+      TCL_CHECK(rc);
+      type_extra->MULTISET.val_type = val_type;
+      break;
+    }
     default:
       break;
   }
@@ -1042,6 +1053,11 @@ ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
     case ADLB_DATA_TYPE_CONTAINER: {
       rc = ADLB_Create_container(id, type_extra.CONTAINER.key_type,
                     type_extra.CONTAINER.val_type, props, &new_id);
+      break;
+    }
+    case ADLB_DATA_TYPE_MULTISET: {
+      rc = ADLB_Create_multiset(id, type_extra.MULTISET.val_type,
+                                props, &new_id);
       break;
     }
     case ADLB_DATA_TYPE_NULL:
