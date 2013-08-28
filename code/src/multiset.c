@@ -12,6 +12,7 @@ struct adlb_multiset_chunk_s {
 
 void multiset_init(adlb_multiset *set, adlb_data_type elem_type) {
   set->elem_type = elem_type;
+  set->chunks = NULL;
   set->chunk_count = 0;
   set->chunk_arr_size = 0;
   set->last_chunk_elems = ADLB_MULTISET_CHUNK_SIZE;
@@ -35,9 +36,16 @@ uint multiset_size(const adlb_multiset *set) {
 
 adlb_data_code multiset_add(adlb_multiset *set, const void *data, int length) {
   adlb_multiset_chunk *chunk = NULL;
-  if (set->last_chunk_elems >= ADLB_MULTISET_CHUNK_SIZE) {
+  if (set->last_chunk_elems >= ADLB_MULTISET_CHUNK_SIZE)
+  {
     // TODO: use proper alloc for adlb
-    if (set->chunk_arr_size == set->chunk_count) {
+    if (set->chunk_arr_size == 0) {
+      // resize chunk pointer array if needed
+      set->chunk_arr_size = 1; // Start off with a small array
+      set->chunks = malloc(set->chunk_arr_size * sizeof(set->chunks[0]));
+    }
+    else if (set->chunk_arr_size == set->chunk_count)
+    {
       // resize chunk pointer array if needed
       set->chunk_arr_size = set->chunk_arr_size * 2;
       set->chunks = realloc(set->chunks, set->chunk_arr_size *
@@ -46,7 +54,9 @@ adlb_data_code multiset_add(adlb_multiset *set, const void *data, int length) {
     chunk = malloc(sizeof(adlb_multiset_chunk));
     set->chunks[set->chunk_count++] = chunk;
     set->last_chunk_elems = 0;
-  } else {
+  }
+  else 
+  {
     chunk = set->chunks[set->chunk_count - 1];
   }
   adlb_datum_storage *elem = &chunk->arr[set->last_chunk_elems++];
