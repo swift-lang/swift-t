@@ -33,7 +33,7 @@ uint multiset_size(const adlb_multiset *set) {
           set->last_chunk_elems;
 }
 
-adlb_data_code multiset_add(adlb_multiset *set, void *data, int length) {
+adlb_data_code multiset_add(adlb_multiset *set, const void *data, int length) {
   adlb_multiset_chunk *chunk = NULL;
   if (set->last_chunk_elems >= ADLB_MULTISET_CHUNK_SIZE) {
     // TODO: use proper alloc for adlb

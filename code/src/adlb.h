@@ -130,6 +130,11 @@ adlb_code ADLB_Create_container(adlb_datum_id id,
                                 adlb_create_props props,
                                 adlb_datum_id *new_id);
 
+adlb_code ADLB_Create_multiset(adlb_datum_id id,
+                                adlb_data_type val_type, 
+                                adlb_create_props props,
+                                adlb_datum_id *new_id);
+
 adlb_code ADLBP_Exists(adlb_datum_id id, const char *subscript, bool* result,
                        adlb_refcounts decr);
 adlb_code ADLB_Exists(adlb_datum_id id, const char *subscript, bool* result,

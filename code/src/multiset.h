@@ -26,7 +26,7 @@ typedef struct adlb_multiset_s {
 
 void multiset_init(adlb_multiset *set, adlb_data_type elem_type);
 uint multiset_size(const adlb_multiset *set);
-adlb_data_code multiset_add(adlb_multiset *set, void *data, int length);
+adlb_data_code multiset_add(adlb_multiset *set, const void *data, int length);
 
 adlb_data_code multiset_free(adlb_multiset *set);
 adlb_data_code multiset_slice(adlb_multiset *set, uint start, uint count,

@@ -695,20 +695,35 @@ data_store(adlb_datum_id id, const char *subscript,
   bool freed_datum = false;
 
   adlb_data_code dc;
-  if (subscript == NULL)
+  if (d->type == ADLB_DATA_TYPE_MULTISET)
   {
+    // Store appends to multiset
+    check_verbose(subscript == NULL, ADLB_DATA_ERROR_TYPE,
+                  "Cannot provide subscript when appending to multiset");
+    adlb_data_type elem_type = d->data.MULTISET->elem_type;
+    check_verbose(type == elem_type, ADLB_DATA_ERROR_TYPE,
+            "Type mismatch for multiset val: expected %s actual %s\n",
+            ADLB_Data_type_tostring(type), ADLB_Data_type_tostring(elem_type));
+    // Handle addition to multiset
+    dc = multiset_add(d->data.MULTISET, buffer, length);
+    DATA_CHECK(dc);
+
+    if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
+    {
+      // TODO: print repr of element
+      DEBUG("data_store <%"PRId64">+=%s\n", id, "?");
+    }
+  }
+  else if (subscript == NULL)
+  {
+    check_verbose(type == d->type, ADLB_DATA_ERROR_TYPE,
+            "Type mismatch: expected %s actual %s\n",
+            ADLB_Data_type_tostring(type), ADLB_Data_type_tostring(d->type));
+
     // Handle store to top-level datum
     dc = ADLB_Unpack(&d->data, d->type, buffer, length);
     DATA_CHECK(dc);
-
     d->status.set = true;
-
-    if (type != d->type)
-    {
-      printf("Type mismatch: expected %i actual %i\n",
-            type, d->type);
-      return ADLB_DATA_ERROR_TYPE;
-    }
 
     if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
     {
@@ -716,17 +731,20 @@ data_store(adlb_datum_id id, const char *subscript,
       DEBUG("data_store <%"PRId64">=%s\n", id, val_s);
       free(val_s);
     }
- 
   }
   else
   {
     // Handle insert
-    check_verbose(d->type == ADLB_DATA_TYPE_CONTAINER,
-                  ADLB_DATA_ERROR_TYPE,
-                  "not a container: <%"PRId64">",
-                  id);
-  
+    check_verbose(d->type == ADLB_DATA_TYPE_CONTAINER, ADLB_DATA_ERROR_TYPE,
+                  "type %s not a container: <%"PRId64">",
+                  ADLB_Data_type_tostring(d->type), id);
+    
     adlb_container *c = &d->data.CONTAINER;
+    
+    check_verbose(type == c->val_type, ADLB_DATA_ERROR_TYPE,
+        "Type mismatch for container value: expected %s actual %s\n",
+        ADLB_Data_type_tostring(type), ADLB_Data_type_tostring(c->val_type));
+
     // Does the link already exist?
     adlb_container_val t = NULL;
     bool found = container_lookup(c, subscript, &t);

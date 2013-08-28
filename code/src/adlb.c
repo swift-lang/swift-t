@@ -589,6 +589,17 @@ ADLB_Create_container(adlb_datum_id id, adlb_data_type key_type,
                            props, new_id);
 }
 
+adlb_code ADLB_Create_multiset(adlb_datum_id id,
+                                adlb_data_type val_type, 
+                                adlb_create_props props,
+                                adlb_datum_id *new_id)
+{
+  adlb_type_extra extra_type;
+  extra_type.MULTISET.val_type = val_type;
+  return ADLBP_Create_impl(id, ADLB_DATA_TYPE_MULTISET, extra_type,
+                           props, new_id);
+}
+
 adlb_code
 ADLBP_Exists(adlb_datum_id id, const char *subscript, bool* result,
              adlb_refcounts decr)
