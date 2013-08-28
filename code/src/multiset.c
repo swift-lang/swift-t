@@ -178,5 +178,7 @@ xlb_multiset_extract_slice(xlb_multiset *set, int start, int count,
     pos_in_chunk = 0;
   }
 
+  // Record actual length of output
+  output->length = output_pos;
   return ADLB_DATA_SUCCESS;
 }

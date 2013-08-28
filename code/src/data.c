@@ -1007,6 +1007,8 @@ extract_members(adlb_container *cont, int count, int offset,
     }
   }
 
+  // Mark actual length of output
+  output->length = output_pos;
   TRACE("extract_members: output_length: %i\n", output->length);
   return ADLB_DATA_SUCCESS;
 }
@@ -1104,6 +1106,8 @@ data_enumerate(adlb_datum_id id, int count, int offset,
     *actual = slice_size;
     *key_type = d->data.CONTAINER.key_type;
     *val_type = d->data.CONTAINER.val_type;
+    TRACE("Enumerate container: %i elems %i bytes\n", slice_size,
+                                                      data->length);
     return ADLB_DATA_SUCCESS;
   }
   else if (d->type == ADLB_DATA_TYPE_MULTISET)
@@ -1115,7 +1119,7 @@ data_enumerate(adlb_datum_id id, int count, int offset,
   
     if (include_vals) {
       // Extract members to buffer
-      dc = xlb_multiset_extract_slice(d->data.MULTISET, offset, count,
+      dc = xlb_multiset_extract_slice(d->data.MULTISET, offset, slice_size,
                                       caller_buffer, data);
       DATA_CHECK(dc);
     }
@@ -1123,6 +1127,8 @@ data_enumerate(adlb_datum_id id, int count, int offset,
     *actual = slice_size;
     *key_type = ADLB_DATA_TYPE_NULL;
     *val_type = d->data.MULTISET->elem_type;
+    TRACE("Enumerate multiset: %i elems %i bytes\n", slice_size,
+                                                     data->length);
     return ADLB_DATA_SUCCESS;
   }
   else
