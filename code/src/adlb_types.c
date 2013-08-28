@@ -10,6 +10,7 @@
 #include "adlb.h"
 #include "data_cleanup.h"
 #include "data_structs.h"
+#include "multiset.h"
 
 static char *data_repr_container(adlb_container *c);
 
@@ -135,9 +136,8 @@ adlb_data_code ADLB_Free_storage(adlb_datum_storage *d, adlb_data_type type)
     }
     case ADLB_DATA_TYPE_MULTISET:
       //TODO: implement for multiset
-      //multiset_free(d->MULTISET);
-      check_verbose(false, ADLB_DATA_ERROR_UNKNOWN,
-          "free not implemented for multiset");
+      dc = xlb_multiset_free(d->MULTISET);
+      DATA_CHECK(dc);
       break;
     case ADLB_DATA_TYPE_STRUCT:
       data_free_struct(d->STRUCT, true);

@@ -64,7 +64,7 @@ adlb_data_code xlb_multiset_add(xlb_multiset *set, const void *data, int length)
 }
 
 adlb_data_code xlb_multiset_free(xlb_multiset *set) {
-  // TODO: need to modify to optional free memory or decrement
+  // TODO: need to modify to optionally free memory or decrement
   //      references so can be correctly integrated into rest
   //      of gc infrastructure
   for (uint i = 0; i < set->chunk_count; i++) {
