@@ -5,6 +5,8 @@
 
 #include <stdio.h>
 
+#include <vint.h>
+
 #include "adlb.h"
 #include "data_cleanup.h"
 #include "data_structs.h"
@@ -42,6 +44,39 @@ ADLB_Pack(const adlb_datum_storage *d, adlb_data_type type,
       verbose_error(ADLB_DATA_ERROR_TYPE,
         "Cannot serialize unknown type %i!\n", type);
   }
+}
+
+adlb_data_code
+ADLB_Pack_buffer(const adlb_datum_storage *d, adlb_data_type type,
+        const adlb_buffer *tmp_buf, adlb_buffer *output,
+        bool *output_caller_buffer, int *output_pos)
+{
+  adlb_data_code dc;
+
+  // Get binary representation of datum
+  adlb_binary_data packed;
+  dc = ADLB_Pack(d, type, tmp_buf, &packed); 
+  DATA_CHECK(dc);
+
+  // Check buffer large enough for this member
+  int required_size = *output_pos + (int)VINT_MAX_BYTES + packed.length;
+  ADLB_Resize_buf(output, output_caller_buffer, required_size);
+
+  // Prefix with length of member
+  int vint_len = vint_encode(packed.length, output->data + *output_pos);
+  assert(vint_len >= 1);
+  *output_pos += vint_len;
+
+  // Copy in data
+  assert(packed.length >= 0);
+  memcpy(output->data + *output_pos, packed.data, (size_t)packed.length);
+  *output_pos += packed.length;
+  
+  // Free any malloced temporary memory
+  if (packed.data != tmp_buf->data)
+    ADLB_Free_binary_data(&packed);
+
+  return ADLB_DATA_SUCCESS;
 }
 
 adlb_data_code ADLB_Unpack(adlb_datum_storage *d, adlb_data_type type,

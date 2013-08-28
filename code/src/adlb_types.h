@@ -109,7 +109,7 @@ typedef struct {
   uint chunk_count;
   uint item_count;
   slice_chunk_t chunks[];
-} slice_t;
+} adlb_slice_t;
 
 typedef struct adlb_struct_s {
   adlb_struct_type type;
@@ -164,6 +164,25 @@ adlb_data_code
 ADLB_Pack(const adlb_datum_storage *d, adlb_data_type type,
           const adlb_buffer *caller_buffer,
           adlb_binary_data *result);
+
+/*
+  Pack a datum into a buffer, prefixing with size stored as vint,
+  so that contiguously stored datums can be correctly extracted.
+  This will use tmp_buf as temporary storage if needed, and resize
+  output if needed.
+
+  tmp_buf: temporary storage that datum may be serialized into if
+           needed
+  output: the output buffer to append to
+  output_caller_buffer: set to false if we allocate a new buffer,   
+                        untouched otherwise
+  output_pos: current offset into output buffer, which is updated
+            for any appended data
+ */
+adlb_data_code
+ADLB_Pack_buffer(const adlb_datum_storage *d, adlb_data_type type,
+        const adlb_buffer *tmp_buf, adlb_buffer *output,
+        bool *output_caller_buffer, int *output_pos);
 
 /*
    Take ownership of data, allocing new buffer if needed

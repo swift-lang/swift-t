@@ -223,7 +223,7 @@ datum_init_multiset(adlb_datum *d, adlb_data_type val_type)
 {
   d->data.MULTISET = malloc(sizeof(*(d->data.MULTISET)));
   assert(d->data.MULTISET != NULL);
-  multiset_init(d->data.MULTISET, val_type);
+  xlb_multiset_init(d->data.MULTISET, val_type);
   
   // Container structure is filled in, so set
   d->status.set = true;
@@ -705,7 +705,7 @@ data_store(adlb_datum_id id, const char *subscript,
             "Type mismatch for multiset val: expected %s actual %s\n",
             ADLB_Data_type_tostring(type), ADLB_Data_type_tostring(elem_type));
     // Handle addition to multiset
-    dc = multiset_add(d->data.MULTISET, buffer, length);
+    dc = xlb_multiset_add(d->data.MULTISET, buffer, length);
     DATA_CHECK(dc);
 
     if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
@@ -975,7 +975,6 @@ extract_members(adlb_container *cont, int count, int offset,
   adlb_data_code dc;
   struct table* members = cont->members;
   bool use_caller_buf;
-  // TODO: support caller provided buffer
   
   dc = ADLB_Init_buf(caller_buffer, output, &use_caller_buf, 65536);
   ADLB_DATA_CHECK(dc);
@@ -1034,34 +1033,34 @@ pack_member(adlb_container *cont, struct list_sp_item *item,
   }
   if (include_vals)
   {
-    // Get binary representation of member
-    adlb_container_val v = item->data;
-    adlb_binary_data member_data;
-    dc = ADLB_Pack(v, cont->val_type, tmp_buf, &member_data); 
+    dc = ADLB_Pack_buffer(item->data, cont->val_type, tmp_buf, result,
+                          result_caller_buffer, result_pos);
     DATA_CHECK(dc);
-
-    // Check buffer large enough for this member
-    int required_size = *result_pos + (int)VINT_MAX_BYTES + member_data.length;
-    ADLB_Resize_buf(result, result_caller_buffer, required_size);
- 
-    // Prefix with length of member
-    vint_len = vint_encode(member_data.length, (unsigned char*)result->data +
-                                               *result_pos);
-    assert(vint_len >= 1);
-    *result_pos += vint_len;
-    // Copy in member
-    assert(member_data.length >= 0);
-    memcpy(result->data + *result_pos, member_data.data, (size_t)member_data.length);
-    *result_pos += member_data.length;
-    
-    // Free any malloced memory
-    if (member_data.data != tmp_buf->data)
-      ADLB_Free_binary_data(&member_data);
   }
   
   return ADLB_DATA_SUCCESS;
 }
 
+static int
+enumerate_slice_size(int offset, int count, int actual_size)
+{
+  // Number of elements after offset
+  int post_offset = actual_size - offset;
+  if (post_offset < 0)
+  {
+    // might be negative
+    post_offset = 0;
+  }
+  if (count < 0) {
+    // Unlimited count
+    return post_offset;
+  } else if (count <= post_offset) {
+    // Slice size limited by specified count
+    return count;
+  } else {
+    return post_offset;
+  }
+}
 
 /**
    @param container_id
@@ -1077,42 +1076,60 @@ pack_member(adlb_container *cont, struct list_sp_item *item,
    @param actual Returns the number of entries in the container
  */
 adlb_data_code
-data_enumerate(adlb_datum_id container_id, int count, int offset,
+data_enumerate(adlb_datum_id id, int count, int offset,
                bool include_keys, bool include_vals, 
                const adlb_buffer *caller_buffer,
                adlb_buffer *data, int* actual,
                adlb_data_type *key_type, adlb_data_type *val_type)
 {
-  TRACE("data_enumerate(%"PRId64")", container_id);
-  adlb_datum* c = table_lp_search(&tds, container_id);
+  TRACE("data_enumerate(%"PRId64")", id);
+  adlb_data_code dc;
+  adlb_datum* d = table_lp_search(&tds, id);
 
-  check_verbose(c != NULL, ADLB_DATA_ERROR_NOT_FOUND,
-                "not found: <%"PRId64">", container_id);
-  check_verbose(c->type == ADLB_DATA_TYPE_CONTAINER,
-                ADLB_DATA_ERROR_TYPE,
-                "not a container: <%"PRId64">", container_id);
+  check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
+                "not found: <%"PRId64">", id);
+  if (d->type == ADLB_DATA_TYPE_CONTAINER)
+  {
+    int slice_size = enumerate_slice_size(offset, count,
+                        d->data.CONTAINER.members->size);
 
-
-  int slice_size = c->data.CONTAINER.members->size - offset;
-  if (count >= 0) {
-    if (slice_size > count) {
-      // size of slice limited
-      slice_size = count;
+    if (include_keys || include_vals)
+    {
+      dc = extract_members(&d->data.CONTAINER, count, offset,
+                                  include_keys, include_vals,
+                                  caller_buffer, data);
+      DATA_CHECK(dc);
     }
+
+    *actual = slice_size;
+    *key_type = d->data.CONTAINER.key_type;
+    *val_type = d->data.CONTAINER.val_type;
+    return ADLB_DATA_SUCCESS;
   }
-  // might be negative
-  slice_size = slice_size < 0 ? 0 : slice_size;
-
-  *actual = slice_size;
-
-  adlb_data_code dc = extract_members(&c->data.CONTAINER, count, offset,
-                                      include_keys, include_vals,
+  else if (d->type == ADLB_DATA_TYPE_MULTISET)
+  {
+    check_verbose(!include_keys, ADLB_DATA_ERROR_TYPE, "<%"PRId64"> "
+        " with type multiset does not have keys to enumerate", id);
+    int slice_size = enumerate_slice_size(offset, count,
+                              xlb_multiset_size(d->data.MULTISET));
+  
+    if (include_vals) {
+      // Extract members to buffer
+      dc = xlb_multiset_extract_slice(d->data.MULTISET, offset, count,
                                       caller_buffer, data);
-  DATA_CHECK(dc);
+      DATA_CHECK(dc);
+    }
 
-  *key_type = c->data.CONTAINER.key_type;
-  *val_type = c->data.CONTAINER.val_type;
-  return ADLB_DATA_SUCCESS;
+    *actual = slice_size;
+    *key_type = ADLB_DATA_TYPE_NULL;
+    *val_type = d->data.MULTISET->elem_type;
+    return ADLB_DATA_SUCCESS;
+  }
+  else
+  {
+    verbose_error(ADLB_DATA_ERROR_TYPE, "enumeration of <%"PRId64"> with "
+            "type %s not supported", id, ADLB_Data_type_tostring(d->type));
+  }
 }
 
 adlb_data_code
@@ -1129,7 +1146,7 @@ data_container_size(adlb_datum_id container_id, int* size)
       *size = c->data.CONTAINER.members->size;
       return ADLB_DATA_SUCCESS;
     case ADLB_DATA_TYPE_MULTISET:
-      *size = (int)multiset_size(c->data.MULTISET);
+      *size = (int)xlb_multiset_size(c->data.MULTISET);
       return ADLB_DATA_SUCCESS;
     default: 
       printf("not a container or multiset: <%"PRId64">", container_id);

@@ -73,7 +73,7 @@ adlb_data_code data_retrieve(adlb_datum_id id, const char *subscript,
                              adlb_binary_data *result); 
 
 adlb_data_code
-data_enumerate(adlb_datum_id container_id, int count, int offset,
+data_enumerate(adlb_datum_id id, int count, int offset,
                bool include_keys, bool include_vals,
                const adlb_buffer *caller_buffer,
                adlb_buffer *data, int* actual,

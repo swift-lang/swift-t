@@ -11,26 +11,29 @@
  */
 
 // Length of allocation chunk for multiset
-#define ADLB_MULTISET_CHUNK_SIZE 1024
+#define XLB_MULTISET_CHUNK_SIZE 1024
 
-typedef struct adlb_multiset_chunk_s adlb_multiset_chunk;
+typedef struct xlb_multiset_chunk_s xlb_multiset_chunk;
 
 typedef struct adlb_multiset_s {
   adlb_data_type_short elem_type;
-  adlb_multiset_chunk **chunks;
+  xlb_multiset_chunk **chunks;
   uint chunk_count;      // Number of actual chunks
   uint chunk_arr_size;   // Allocated size of pointer array
   uint last_chunk_elems; // Number of actual data items
-} adlb_multiset;
+} xlb_multiset;
 
 
-void multiset_init(adlb_multiset *set, adlb_data_type elem_type);
-uint multiset_size(const adlb_multiset *set);
-adlb_data_code multiset_add(adlb_multiset *set, const void *data, int length);
+void xlb_multiset_init(xlb_multiset *set, adlb_data_type elem_type);
+uint xlb_multiset_size(const xlb_multiset *set);
+adlb_data_code xlb_multiset_add(xlb_multiset *set, const void *data, int length);
 
-adlb_data_code multiset_free(adlb_multiset *set);
-adlb_data_code multiset_slice(adlb_multiset *set, uint start, uint count,
-                              slice_t **res);
+adlb_data_code xlb_multiset_free(xlb_multiset *set);
+adlb_data_code xlb_multiset_slice(xlb_multiset *set, uint start, uint count,
+                              adlb_slice_t **res);
+adlb_data_code
+xlb_multiset_extract_slice(xlb_multiset *set, int start, int count,
+              const adlb_buffer *caller_buffer, adlb_buffer *output); 
 
-void free_multiset_slice(slice_t *slice);
+void free_xlb_multiset_slice(adlb_slice_t *slice);
 #endif // __XLB_MULTISET_H
