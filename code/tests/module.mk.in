@@ -23,6 +23,7 @@ TEST_SRC_TCL := $(DIR)/error.tcl               \
 	        $(DIR)/adlb-lookup-fail.tcl    \
 	        $(DIR)/adlb-type-error.tcl     \
                 $(DIR)/adlb-containers.tcl     \
+                $(DIR)/adlb-multiset.tcl       \
                 $(DIR)/noop.tcl                \
                 $(DIR)/adlb-putget.tcl         \
                 $(DIR)/batcher.tcl             \
