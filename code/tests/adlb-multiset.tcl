@@ -53,6 +53,9 @@ if { ! [ adlb::amserver ] } {
         error "Elem $i not found"
       }
     }
+
+    # cleanup
+    adlb::read_refcount_decr $c
     puts "SUCCESS"
 } else {
     adlb::server
