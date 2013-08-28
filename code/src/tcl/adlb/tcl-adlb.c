@@ -1827,6 +1827,7 @@ ADLB_Enumerate_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = ADLB_Enumerate(container_id, count, offset, decr,
                       include_keys, include_vals,
                       &data, &data_length, &records, &kv_type);
+  TCL_CONDITION(rc == ADLB_SUCCESS, "ADLB enumerate call failed");
 
   // Return results to Tcl
   Tcl_Obj* result;

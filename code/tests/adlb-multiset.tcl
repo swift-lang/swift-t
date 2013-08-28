@@ -29,7 +29,7 @@ if { ! [ adlb::amserver ] } {
     
     set iterations 50
     for { set i 0 } { $i < $iterations } { incr i } {
-        adlb::store $c integer [ expr 100 + $i ]
+        adlb::store $c integer [ expr 100 + $i ] 0
     }
 
     # Drop final slot to close multiset
