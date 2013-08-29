@@ -88,7 +88,7 @@ static adlb_data_code
 datum_init_multiset(adlb_datum *d, adlb_data_type val_type);
 
 static adlb_data_code
-data_close(adlb_datum_id id, adlb_datum *d, int** result, int* count);
+xlb_data_close(adlb_datum_id id, adlb_datum *d, int** result, int* count);
 static adlb_data_code datum_gc(adlb_datum_id id, adlb_datum* d,
            refcount_scavenge scav);
 
@@ -124,7 +124,7 @@ static inline int print_id_sub(char *buf, adlb_datum_id id, const char *sub)
    @param server_num Number amongst servers
  */
 adlb_data_code
-data_init(int s, int server_num)
+xlb_data_init(int s, int server_num)
 {
   assert(server_num >= 0 && server_num < s);
   servers = s;
@@ -150,7 +150,7 @@ data_init(int s, int server_num)
 }
 
 adlb_data_code
-data_create(adlb_datum_id id, adlb_data_type type,
+xlb_data_create(adlb_datum_id id, adlb_data_type type,
             const adlb_type_extra *type_extra,
             const adlb_create_props *props)
 {
@@ -252,7 +252,7 @@ datum_init_props(adlb_datum_id id, adlb_datum *d,
 }
 
 adlb_data_code
-data_exists(adlb_datum_id id, const char* subscript, bool* result)
+xlb_data_exists(adlb_datum_id id, const char* subscript, bool* result)
 {
   adlb_datum* d = table_lp_search(&tds, id);
 
@@ -280,7 +280,7 @@ data_exists(adlb_datum_id id, const char* subscript, bool* result)
 }
 
 adlb_data_code
-data_typeof(adlb_datum_id id, adlb_data_type* type)
+xlb_data_typeof(adlb_datum_id id, adlb_data_type* type)
 {
   check_verbose(id != ADLB_DATA_ID_NULL, ADLB_DATA_ERROR_NULL,
                 "given ADLB_DATA_ID_NULL");
@@ -299,7 +299,7 @@ data_typeof(adlb_datum_id id, adlb_data_type* type)
                for the given container id
  */
 adlb_data_code
-data_container_typeof(adlb_datum_id id, adlb_data_type* key_type,
+xlb_data_container_typeof(adlb_datum_id id, adlb_data_type* key_type,
                                         adlb_data_type* val_type)
 {
   adlb_datum* d = table_lp_search(&tds, id);
@@ -315,7 +315,7 @@ data_container_typeof(adlb_datum_id id, adlb_data_type* key_type,
   return ADLB_DATA_SUCCESS;
 }
 
-adlb_data_code data_permanent(adlb_datum_id id) {
+adlb_data_code xlb_data_permanent(adlb_datum_id id) {
   adlb_datum* d = table_lp_search(&tds, id);
   check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
                 "not found: <%"PRId64">", id);
@@ -339,7 +339,7 @@ xlb_datum_lookup(adlb_datum_id id, adlb_datum **d)
    Caller must free result
  */
 adlb_data_code
-data_reference_count(adlb_datum_id id, adlb_refcounts change,
+xlb_data_reference_count(adlb_datum_id id, adlb_refcounts change,
           refcount_scavenge scav, bool *garbage_collected,
           adlb_refcounts *refcounts_scavenged,
           adlb_ranks *notifications)
@@ -407,8 +407,9 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
     // Should not go negative
     check_verbose(d->read_refcount > 0 &&
                    d->read_refcount + read_incr >= 0,
-                ADLB_DATA_ERROR_SLOTS_NEGATIVE, "<%"PRId64"> read_refcount: %i "
-                "incr: %i", id, d->read_refcount, read_incr);
+                ADLB_DATA_ERROR_SLOTS_NEGATIVE,
+                "<%"PRId64"> read_refcount: %i incr: %i",
+                id, d->read_refcount, read_incr);
     d->read_refcount += read_incr;
     DEBUG("read_refcount: <%"PRId64"> => %i", id, d->read_refcount);
   }
@@ -417,12 +418,13 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
     // Should not go negative
     check_verbose(d->write_refcount > 0 &&
                    d->write_refcount + write_incr >= 0,
-                ADLB_DATA_ERROR_SLOTS_NEGATIVE, "<%"PRId64"> write_refcount: %i "
-                "incr: %i", id, d->write_refcount, write_incr);
+                ADLB_DATA_ERROR_SLOTS_NEGATIVE,
+                "<%"PRId64"> write_refcount: %i incr: %i",
+                id, d->write_refcount, write_incr);
     d->write_refcount += write_incr;
     if (d->write_refcount == 0) {
       adlb_data_code dc;
-      dc = data_close(id, d, &notifications->ranks, &notifications->count);
+      dc = xlb_data_close(id, d, &notifications->ranks, &notifications->count);
       DATA_CHECK(dc);
     }
     DEBUG("write_refcount: <%"PRId64"> => %i", id, d->write_refcount);
@@ -468,7 +470,7 @@ datum_gc(adlb_datum_id id, adlb_datum* d,
 }
 
 adlb_data_code
-data_referand_refcount(const void *data, int length,
+xlb_data_referand_refcount(const void *data, int length,
         adlb_data_type type, adlb_datum_id id,
         adlb_refcounts change)
 {
@@ -485,7 +487,7 @@ data_referand_refcount(const void *data, int length,
 
 
 adlb_data_code
-data_lock(adlb_datum_id id, int rank, bool* result)
+xlb_data_lock(adlb_datum_id id, int rank, bool* result)
 {
   adlb_datum* d = table_lp_search(&tds, id);
   check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
@@ -508,7 +510,7 @@ data_lock(adlb_datum_id id, int rank, bool* result)
 }
 
 adlb_data_code
-data_unlock(adlb_datum_id id)
+xlb_data_unlock(adlb_datum_id id)
 {
   int* r = table_lp_remove(&locked, id);
   check_verbose(r != NULL, ADLB_DATA_ERROR_NOT_FOUND,
@@ -524,7 +526,7 @@ data_unlock(adlb_datum_id id)
    @return ADLB_SUCCESS or ADLB_ERROR
  */
 adlb_data_code
-data_subscribe(adlb_datum_id id, const char *subscript,
+xlb_data_subscribe(adlb_datum_id id, const char *subscript,
               int rank, int* result)
 {
   if (subscript == NULL)
@@ -586,7 +588,7 @@ data_subscribe(adlb_datum_id id, const char *subscript,
     the caller is responsible for setting references and then
     decrementing the read reference count of the container.
  */
-adlb_data_code data_container_reference(adlb_datum_id container_id,
+adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
                                         const char* subscript,
                                         adlb_datum_id reference,
                                         adlb_data_type ref_type,
@@ -675,7 +677,7 @@ adlb_data_code data_container_reference(adlb_datum_id container_id,
    type: type of data to be assigned
  */
 adlb_data_code
-data_store(adlb_datum_id id, const char *subscript,
+xlb_data_store(adlb_datum_id id, const char *subscript,
           const void* buffer, int length,
           adlb_data_type type, 
           adlb_refcounts refcount_decr,
@@ -825,7 +827,7 @@ data_store(adlb_datum_id id, const char *subscript,
    Caller must free result
  */
 static adlb_data_code
-data_close(adlb_datum_id id, adlb_datum *d, int** result, int* count)
+xlb_data_close(adlb_datum_id id, adlb_datum *d, int** result, int* count)
 {
   assert(d != NULL);
   list_i_toints(&d->listeners, result, count);
@@ -867,7 +869,7 @@ data_close(adlb_datum_id id, adlb_datum *d, int** result, int* count)
             ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND if id found, but not subscript
  */
 adlb_data_code
-data_retrieve(adlb_datum_id id, const char *subscript,
+xlb_data_retrieve(adlb_datum_id id, const char *subscript,
               adlb_data_type* type,
               const adlb_buffer *caller_buffer,
               adlb_binary_data *result)
@@ -1071,17 +1073,17 @@ enumerate_slice_size(int offset, int count, int actual_size)
    @param container_id
    @param count maximum number of elements to return, negative for unlimited
    @param offset offset of member to start at
-   @param data Filled in with output location for encoded binary keys and values.
-                Members are stored with key first, then value.  The length in bytes
-                of the key and value is encoded with vint_encode and prefixed to
-                the actual data
+   @param data Filled in with output location for encoded binary keys and
+               values.  Members are stored with key first, then value.  The
+               length in bytes of the key and value is encoded with vint_encode
+               and prefixed to the actual data
    @param length Length of data in data
    @param include_keys whether to include keys in result
    @param include_vals whether to include values in result
    @param actual Returns the number of entries in the container
  */
 adlb_data_code
-data_enumerate(adlb_datum_id id, int count, int offset,
+xlb_data_enumerate(adlb_datum_id id, int count, int offset,
                bool include_keys, bool include_vals, 
                const adlb_buffer *caller_buffer,
                adlb_buffer *data, int* actual,
@@ -1142,7 +1144,7 @@ data_enumerate(adlb_datum_id id, int count, int offset,
 }
 
 adlb_data_code
-data_container_size(adlb_datum_id container_id, int* size)
+xlb_data_container_size(adlb_datum_id container_id, int* size)
 {
   adlb_datum* c = table_lp_search(&tds, container_id);
 
@@ -1235,7 +1237,7 @@ insert_notifications(adlb_datum *d,
 }
 
 adlb_data_code
-data_insert_atomic(adlb_datum_id container_id, const char* subscript,
+xlb_data_insert_atomic(adlb_datum_id container_id, const char* subscript,
                    bool* created, bool *value_present)
 {
   adlb_datum* d = table_lp_search(&tds, container_id);
@@ -1269,7 +1271,7 @@ data_insert_atomic(adlb_datum_id container_id, const char* subscript,
            in which case return ADLB_DATA_ID_NULL
  */
 adlb_data_code
-data_unique(adlb_datum_id* result)
+xlb_data_unique(adlb_datum_id* result)
 {
   // Tim: can we remove this loop and save table lookup?
   // I don't think in general that we can reasonably support
@@ -1425,7 +1427,7 @@ const char
 }
 
 const char*
-data_rc_type_tostring(adlb_refcount_type rc_type)
+xlb_data_rc_type_tostring(adlb_refcount_type rc_type)
 {
   switch (rc_type)
   {
@@ -1488,7 +1490,7 @@ static void free_locked_entry(int64_t key, void *val)
 }
 
 adlb_data_code
-data_finalize()
+xlb_data_finalize()
 {
   // First report any leaks or other problems
   report_leaks();

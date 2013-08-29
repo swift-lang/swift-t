@@ -28,36 +28,36 @@
 #include "adlb_types.h"
 #include "notifications.h"
 
-adlb_data_code data_init(int s, int r);
+adlb_data_code xlb_data_init(int s, int r);
 
-adlb_data_code data_declare_struct_type(adlb_struct_type type,
+adlb_data_code xlb_data_declare_struct_type(adlb_struct_type type,
                     const char *type_name,
                     int field_count,
                     const adlb_data_type *field_types,
                     const char **field_names);
 
-adlb_data_code data_typeof(adlb_datum_id id, adlb_data_type* key_type);
+adlb_data_code xlb_data_typeof(adlb_datum_id id, adlb_data_type* key_type);
 
 
-adlb_data_code data_container_typeof(adlb_datum_id id,
+adlb_data_code xlb_data_container_typeof(adlb_datum_id id,
                                      adlb_data_type* key_type,
                                      adlb_data_type* val_type);
 
-adlb_data_code data_create(adlb_datum_id id, adlb_data_type type,
+adlb_data_code xlb_data_create(adlb_datum_id id, adlb_data_type type,
                            const adlb_type_extra *type_extra,
                            const adlb_create_props *props);
 
-adlb_data_code data_exists(adlb_datum_id id, const char *subscript,
+adlb_data_code xlb_data_exists(adlb_datum_id id, const char *subscript,
                            bool* result);
 
-adlb_data_code data_lock(adlb_datum_id id, int rank, bool* result);
+adlb_data_code xlb_data_lock(adlb_datum_id id, int rank, bool* result);
 
-adlb_data_code data_unlock(adlb_datum_id id);
+adlb_data_code xlb_data_unlock(adlb_datum_id id);
 
-adlb_data_code data_subscribe(adlb_datum_id id, const char *subscript,
+adlb_data_code xlb_data_subscribe(adlb_datum_id id, const char *subscript,
                               int rank, int* result);
 
-adlb_data_code data_container_reference(adlb_datum_id container_id,
+adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
                                         const char* subscript,
                                         adlb_datum_id reference,
                                         adlb_data_type ref_type,
@@ -65,22 +65,22 @@ adlb_data_code data_container_reference(adlb_datum_id container_id,
                                         adlb_binary_data *result);
 
 
-adlb_data_code data_container_size(adlb_datum_id container_id,
+adlb_data_code xlb_data_container_size(adlb_datum_id container_id,
                                    int* size);
 
-adlb_data_code data_retrieve(adlb_datum_id id, const char *subscript,
+adlb_data_code xlb_data_retrieve(adlb_datum_id id, const char *subscript,
                              adlb_data_type* type,
                              const adlb_buffer *caller_buffer,
                              adlb_binary_data *result); 
 
 adlb_data_code
-data_enumerate(adlb_datum_id id, int count, int offset,
+xlb_data_enumerate(adlb_datum_id id, int count, int offset,
                bool include_keys, bool include_vals,
                const adlb_buffer *caller_buffer,
                adlb_buffer *data, int* actual,
                adlb_data_type *key_type, adlb_data_type *val_type);
 
-adlb_data_code data_store(adlb_datum_id id, const char *subscript,
+adlb_data_code xlb_data_store(adlb_datum_id id, const char *subscript,
           const void* buffer, int length, adlb_data_type type,
           adlb_refcounts refcount_decr,
           adlb_notif_t *notifications);
@@ -109,7 +109,8 @@ static const refcount_scavenge NO_SCAVENGE =
                             with 0, this means we weren't successful and
                             didn't modify any reference counts
  */
-adlb_data_code data_reference_count(adlb_datum_id id, adlb_refcounts change,
+adlb_data_code xlb_data_reference_count(adlb_datum_id id,
+                adlb_refcounts change,
                 refcount_scavenge scav, bool *garbage_collected,
                 adlb_refcounts *refcounts_scavenged,
                 adlb_ranks *notifications);
@@ -119,20 +120,20 @@ adlb_data_code data_reference_count(adlb_datum_id id, adlb_refcounts change,
   TODO: promote to adlb.h?
  */
 adlb_data_code
-data_referand_refcount(const void *data, int length,
+xlb_data_referand_refcount(const void *data, int length,
         adlb_data_type type, adlb_datum_id id,
         adlb_refcounts change);
 
 const char*
-data_rc_type_tostring(adlb_refcount_type rc_type);
+xlb_data_rc_type_tostring(adlb_refcount_type rc_type);
 
-adlb_data_code data_insert_atomic(adlb_datum_id container_id,
+adlb_data_code xlb_data_insert_atomic(adlb_datum_id container_id,
                                   const char* subscript,
                                   bool* created, bool *value_present);
 
-adlb_data_code data_unique(adlb_datum_id* result);
+adlb_data_code xlb_data_unique(adlb_datum_id* result);
 
-adlb_data_code data_finalize(void);
+adlb_data_code xlb_data_finalize(void);
 
 #define DATA_CHECK(rc) { if (rc != ADLB_DATA_SUCCESS) return rc; }
 

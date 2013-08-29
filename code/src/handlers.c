@@ -568,10 +568,10 @@ handle_create(int caller)
   adlb_datum_id id = data.id;
   if (id == ADLB_DATA_ID_NULL)
     // Allocate a new id
-    dc = data_unique(&id);
+    dc = xlb_data_unique(&id);
 
   if (dc == ADLB_DATA_SUCCESS)
-    dc = data_create(id, data.type, &data.type_extra, &data.props);
+    dc = xlb_data_create(id, data.type, &data.type_extra, &data.props);
 
   struct packed_create_response resp = { .dc = dc, .id = id };
   RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
@@ -611,11 +611,11 @@ handle_multicreate(int caller)
       break;
     }
     adlb_datum_id new_id;
-    dc = data_unique(&new_id);
+    dc = xlb_data_unique(&new_id);
     new_ids[i] = new_id;
     if (dc != ADLB_DATA_SUCCESS)
       break;
-    dc = data_create(new_id, specs[i].type, &specs[i].type_extra,
+    dc = xlb_data_create(new_id, specs[i].type, &specs[i].type_extra,
                      &specs[i].props);
     if (dc != ADLB_DATA_SUCCESS)
       break;
@@ -649,7 +649,7 @@ handle_exists(int caller)
   adlb_refcounts decr;
   MSG_UNPACK_BIN(xfer_pos, &decr);
 
-  resp.dc = data_exists(id, subscript, &resp.result);
+  resp.dc = xlb_data_exists(id, subscript, &resp.result);
 
   if (resp.dc == ADLB_DATA_SUCCESS)
   {
@@ -698,7 +698,7 @@ handle_store(int caller)
 
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
 
-  int dc = data_store(hdr.id, subscript, xfer, length, hdr.type,
+  int dc = xlb_data_store(hdr.id, subscript, xfer, length, hdr.type,
                       hdr.refcount_decr, &notifs);
 
   struct packed_store_resp resp = {
@@ -783,7 +783,7 @@ handle_retrieve(int caller)
 
   adlb_binary_data result;
   adlb_data_type type;
-  int dc = data_retrieve(hdr->id, subscript, &type, NULL, &result);
+  int dc = xlb_data_retrieve(hdr->id, subscript, &type, NULL, &result);
   assert(dc != ADLB_DATA_SUCCESS || result.length >= 0);
 
   if (dc == ADLB_DATA_SUCCESS && !ADLB_RC_IS_NULL(decr_self)) {
@@ -806,7 +806,7 @@ handle_retrieve(int caller)
   else if (dc == ADLB_DATA_SUCCESS && !ADLB_RC_IS_NULL(incr_referand))
   {
     assert(ADLB_RC_NONNEGATIVE(incr_referand));
-    dc = data_referand_refcount(result.data, result.length, type, hdr->id,
+    dc = xlb_data_referand_refcount(result.data, result.length, type, hdr->id,
                                 incr_referand);
   }
 
@@ -838,10 +838,10 @@ handle_enumerate(int caller)
 
   adlb_buffer data = { .data = NULL, .length = 0 };
   struct packed_enumerate_result res;
-  adlb_data_code dc = data_enumerate(opts.id, opts.count, opts.offset,
-                                     opts.request_subscripts, opts.request_members,
-                                     &xfer_buf, &data, &res.records,
-                                     &res.key_type, &res.val_type);
+  adlb_data_code dc = xlb_data_enumerate(opts.id, opts.count, opts.offset,
+                           opts.request_subscripts, opts.request_members,
+                           &xfer_buf, &data, &res.records,
+                           &res.key_type, &res.val_type);
   bool free_data = (dc == ADLB_DATA_SUCCESS && xfer_buf.data != data.data);
   if (dc == ADLB_DATA_SUCCESS)
   {
@@ -884,7 +884,7 @@ handle_subscribe(int caller)
   DEBUG("subscribe: <%"PRId64">[%s]", id, subscript);
   struct pack_sub_resp resp;
   int result;
-  resp.dc = data_subscribe(id, subscript, caller, &result);
+  resp.dc = xlb_data_subscribe(id, subscript, caller, &result);
   if (resp.dc == ADLB_DATA_SUCCESS)
     resp.subscribed = result != 0;
   else
@@ -908,7 +908,7 @@ handle_refcount_incr(int caller)
         msg.change.read_refcount, msg.change.write_refcount);
 
   adlb_ranks notify_ranks = ADLB_NO_RANKS;
-  adlb_data_code dc = data_reference_count(msg.id, msg.change, NO_SCAVENGE,
+  adlb_data_code dc = xlb_data_reference_count(msg.id, msg.change, NO_SCAVENGE,
                                            NULL, NULL, &notify_ranks);
 
   DEBUG("data_reference_count => %i", dc);
@@ -967,7 +967,8 @@ handle_insert_atomic(int caller)
   resp.value_len = -1; // Default: no data returned
 
   bool value_present;
-  resp.dc = data_insert_atomic(id, subscript, &resp.created, &value_present);
+  resp.dc = xlb_data_insert_atomic(id, subscript, &resp.created,
+                                   &value_present);
 
   // Only return value if it was already present
   return_value = return_value && !resp.created;
@@ -976,7 +977,8 @@ handle_insert_atomic(int caller)
   if (return_value && resp.dc == ADLB_DATA_SUCCESS && value_present)
   {
     // Retrieve, optionally using xfer for storage
-    resp.dc = data_retrieve(id, subscript, &resp.value_type, &xfer_buf, &value);
+    resp.dc = xlb_data_retrieve(id, subscript, &resp.value_type,
+                                &xfer_buf, &value);
     resp.value_len = value.length;
   }
   
@@ -1003,7 +1005,7 @@ handle_unique(int caller)
   RECV(&msg, 1, MPI_INT, caller, ADLB_TAG_UNIQUE);
 
   adlb_datum_id id;
-  data_unique(&id);
+  xlb_data_unique(&id);
 
   RSEND(&id, 1, MPI_ADLB_ID, caller, ADLB_TAG_RESPONSE);
   DEBUG("Unique: <%"PRId64">", id);
@@ -1019,7 +1021,7 @@ handle_typeof(int caller)
   RECV(&id, 1, MPI_ADLB_ID, caller, ADLB_TAG_TYPEOF);
 
   adlb_data_type type;
-  adlb_data_code dc = data_typeof(id, &type);
+  adlb_data_code dc = xlb_data_typeof(id, &type);
   if (dc != ADLB_DATA_SUCCESS)
     type = -1;
 
@@ -1035,7 +1037,7 @@ handle_container_typeof(int caller)
   RECV(&id, 1, MPI_ADLB_ID, caller, ADLB_TAG_CONTAINER_TYPEOF);
 
   adlb_data_type types[2];
-  adlb_data_code dc = data_container_typeof(id, &types[0], &types[1]);
+  adlb_data_code dc = xlb_data_container_typeof(id, &types[0], &types[1]);
   if (dc != ADLB_DATA_SUCCESS) {
    types[0] = -1;
    types[1] = -1;
@@ -1068,7 +1070,7 @@ handle_container_reference(int caller)
         container_id, subscript, reference, ref_type);
   
   adlb_binary_data member;
-  adlb_data_code dc = data_container_reference(container_id,
+  adlb_data_code dc = xlb_data_container_reference(container_id,
                         subscript, reference, ref_type, NULL,
                         &member);
   if (dc == ADLB_DATA_SUCCESS)
@@ -1117,7 +1119,7 @@ handle_container_size(int caller)
   RECV(&req, sizeof(req), MPI_BYTE, caller, ADLB_TAG_CONTAINER_SIZE);
 
   int size;
-  adlb_data_code dc = data_container_size(req.id, &size);
+  adlb_data_code dc = xlb_data_container_size(req.id, &size);
   DEBUG("CONTAINER_SIZE: <%"PRId64"> => <%i>", req.id, size);
 
   if (dc == ADLB_DATA_SUCCESS)
@@ -1144,7 +1146,7 @@ handle_lock(int caller)
   DEBUG("Lock: <%"PRId64"> by rank: %i", id, caller);
 
   bool result;
-  adlb_data_code dc = data_lock(id, caller, &result);
+  adlb_data_code dc = xlb_data_lock(id, caller, &result);
   char c;
   if (dc == ADLB_DATA_SUCCESS)
   {
@@ -1168,7 +1170,7 @@ handle_unlock(int caller)
 
   DEBUG("Unlock: <%"PRId64"> by rank: %i ", id, caller);
 
-  adlb_data_code dc = data_unlock(id);
+  adlb_data_code dc = xlb_data_unlock(id);
 
   char c = (dc == ADLB_DATA_SUCCESS) ? '1' : 'x';
   RSEND(&c, 1, MPI_CHAR, caller, ADLB_TAG_RESPONSE);
@@ -1264,7 +1266,7 @@ refcount_decr_helper(adlb_datum_id id, adlb_refcounts decr)
   {
     adlb_ranks notify;
     adlb_data_code dc;
-    dc = data_reference_count(id, adlb_rc_negate(decr), NO_SCAVENGE,
+    dc = xlb_data_reference_count(id, adlb_rc_negate(decr), NO_SCAVENGE,
                               NULL, NULL, &notify);
     if (dc == ADLB_DATA_SUCCESS)
     {

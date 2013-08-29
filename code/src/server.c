@@ -122,7 +122,7 @@ xlb_server_init()
   list_i_init(&workers_shutdown);
   xlb_requestqueue_init();
   workqueue_init(xlb_types_size);
-  data_init(xlb_servers, xlb_server_number(xlb_comm_rank));
+  xlb_data_init(xlb_servers, xlb_server_number(xlb_comm_rank));
   adlb_code code = setup_idle_time();
   ADLB_CHECK(code);
   // Set a default value for now:
