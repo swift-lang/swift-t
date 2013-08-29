@@ -79,4 +79,36 @@ refcount_impl(adlb_datum *d, adlb_datum_id id,
           bool *garbage_collected, adlb_refcounts *refcounts_scavenged,
           adlb_ranks *notifications);
 
+/*
+  Utility function to resize string buffer using realloc if needed
+  to fit new data
+  str: *str is a malloced character buffer.  This is modified if
+       we reallocate the buffer
+  curr_size: the current size in bytes of the buffer pointed to by *str
+  pos: the index after the current last byte in the string (i.e. where
+       the null terminating byte would go)
+  needed: the amount which we want to append to the string
+ */
+// Check string buffer is big enough for needed chars + a terminating null byte
+static inline adlb_data_code
+xlb_resize_str(char **str, size_t *curr_size, int pos, size_t needed)
+{
+  assert(pos >= 0);
+  size_t total_needed = ((size_t)pos) + needed + 1;
+  if (total_needed > *curr_size)
+  {
+    size_t new_size = *curr_size + 1024;
+    if (new_size < total_needed)
+      new_size = total_needed + 1024;
+
+    char *new = realloc(*str, new_size);
+    if (new == NULL)
+      return ADLB_DATA_ERROR_OOM;
+    *str = new;
+    *curr_size = new_size;
+  }
+  return ADLB_DATA_SUCCESS;
+}
+
+
 #endif // __XLB_DATA_INTERNAL_H

@@ -1,6 +1,8 @@
 #include "multiset.h"
 
 #include <assert.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "data.h"
 #include "data_cleanup.h"
@@ -9,6 +11,14 @@
 struct xlb_multiset_chunk_s {
   adlb_datum_storage arr[XLB_MULTISET_CHUNK_SIZE];
 };
+
+xlb_multiset *xlb_multiset_alloc(adlb_data_type elem_type)
+{
+  xlb_multiset *m;
+  m = malloc(sizeof(*m));
+  xlb_multiset_init(m, elem_type);
+  return m;
+}
 
 void xlb_multiset_init(xlb_multiset *set, adlb_data_type elem_type) {
   set->elem_type = elem_type;
@@ -34,7 +44,8 @@ uint xlb_multiset_size(const xlb_multiset *set) {
           set->last_chunk_elems;
 }
 
-adlb_data_code xlb_multiset_add(xlb_multiset *set, const void *data, int length) {
+adlb_data_code xlb_multiset_add(xlb_multiset *set, const void *data,
+              int length, const adlb_datum_storage **stored) {
   xlb_multiset_chunk *chunk = NULL;
   if (set->last_chunk_elems >= XLB_MULTISET_CHUNK_SIZE)
   {
@@ -60,26 +71,35 @@ adlb_data_code xlb_multiset_add(xlb_multiset *set, const void *data, int length)
     chunk = set->chunks[set->chunk_count - 1];
   }
   adlb_datum_storage *elem = &chunk->arr[set->last_chunk_elems++];
+  if (stored != NULL) {
+    *stored = elem;
+  }
   return ADLB_Unpack(elem, set->elem_type, data, length);
 }
 
-adlb_data_code xlb_multiset_free(xlb_multiset *set) {
-  // TODO: need to modify to optionally free memory or decrement
-  //      references so can be correctly integrated into rest
-  //      of gc infrastructure
+adlb_data_code
+xlb_multiset_cleanup(xlb_multiset *set, bool free_root, bool free_mem,
+                        adlb_refcounts change, refcount_scavenge scav)
+{
+  // Can't support subscripts
+  assert(ADLB_RC_IS_NULL(scav.refcounts) || scav.subscript == NULL);
   for (uint i = 0; i < set->chunk_count; i++) {
     xlb_multiset_chunk *chunk = set->chunks[i];
     uint clen = chunk_len(set, i);
     for (int j = 0; j < clen; j++) {
       adlb_datum_storage *d = &chunk->arr[j];
-      adlb_data_code dc = cleanup_storage(d, set->elem_type, ADLB_DATA_ID_NULL,
-                                        NO_SCAVENGE);
+      adlb_data_code dc = cleanup_storage2(d, set->elem_type, ADLB_DATA_ID_NULL,
+                                           free_mem, change, scav);
       DATA_CHECK(dc);
     }
-    free(set->chunks[i]);
+    if (free_mem)
+      free(set->chunks[i]);
   }
-  free(set->chunks);
-  // Caller frees set if malloced
+  if (free_mem)
+    free(set->chunks);
+  // Optionally free root of data structure
+  if (free_root)
+    free(set);
   return ADLB_DATA_SUCCESS;
 }
 
@@ -163,7 +183,10 @@ xlb_multiset_extract_slice(xlb_multiset *set, int start, int count,
   uint pos_in_chunk = start % XLB_MULTISET_CHUNK_SIZE;
   while (c < count && chunk_ix < set->chunk_count) {
     xlb_multiset_chunk *chunk = set->chunks[chunk_ix];
-    while (c < count && pos_in_chunk < XLB_MULTISET_CHUNK_SIZE) {
+    // Find size of current chunk.
+    uint chunk_elems = chunk_len(set, chunk_ix);
+    
+    while (c < count && pos_in_chunk < chunk_elems) {
       // Append element to buffer
       adlb_datum_storage *elem = &chunk->arr[pos_in_chunk];
       dc = ADLB_Pack_buffer(elem, elem_type, &tmp_buf,
@@ -180,5 +203,54 @@ xlb_multiset_extract_slice(xlb_multiset *set, int start, int count,
 
   // Record actual length of output
   output->length = output_pos;
+  return ADLB_DATA_SUCCESS;
+}
+
+adlb_data_code
+xlb_multiset_repr(xlb_multiset *set, char **repr)
+{
+  adlb_data_code dc;
+  size_t res_len = 1024;
+  char *res = malloc(res_len);
+  int res_pos = 0;
+  bool first = true;
+
+  res_pos += sprintf(&res[res_pos], "{");
+
+  for (int chunk_ix = 0; chunk_ix < set->chunk_count; chunk_ix++)
+  {
+    xlb_multiset_chunk *chunk = set->chunks[chunk_ix];
+    // Find size of current chunk.
+    uint chunk_elems = chunk_len(set, chunk_ix);
+    for (int i = 0; i < chunk_elems; i++)
+    {
+      char *elem_s = ADLB_Data_repr(&chunk->arr[i], set->elem_type);
+      size_t elem_strlen = strlen(elem_s);
+      // String plus additional chars
+      size_t elem_repr_len = elem_strlen + 4;
+      
+
+      dc = xlb_resize_str(&res, &res_len, res_pos, elem_repr_len);
+      DATA_CHECK(dc);
+      
+      if (first)
+      {
+        first = false;
+      }
+      else
+      {
+        res_pos += sprintf(&res[res_pos], ", ");
+      }
+      res_pos += sprintf(&res[res_pos], "{%s}", elem_s);
+      free(elem_s);
+    }
+  }
+
+  dc = xlb_resize_str(&res, &res_len, res_pos, 1);
+  DATA_CHECK(dc);
+
+  res_pos += sprintf(&res[res_pos], "}");
+
+  *repr = res;
   return ADLB_DATA_SUCCESS;
 }

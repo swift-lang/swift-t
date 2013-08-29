@@ -389,7 +389,7 @@ ADLB_Free_storage(adlb_datum_storage *d, adlb_data_type type);
    printing debug information
   */
 char *
-ADLB_Data_repr(adlb_datum_storage *d, adlb_data_type type);
+ADLB_Data_repr(const adlb_datum_storage *d, adlb_data_type type);
 
 
 static inline adlb_data_code

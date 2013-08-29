@@ -221,11 +221,11 @@ datum_init_container(adlb_datum *d, adlb_data_type key_type,
 static adlb_data_code
 datum_init_multiset(adlb_datum *d, adlb_data_type val_type)
 {
-  d->data.MULTISET = malloc(sizeof(*(d->data.MULTISET)));
-  assert(d->data.MULTISET != NULL);
-  xlb_multiset_init(d->data.MULTISET, val_type);
+  d->data.MULTISET = xlb_multiset_alloc(val_type);
+  check_verbose(d->data.MULTISET != NULL, ADLB_DATA_ERROR_OOM,
+                "Could not allocate multiset: out of memory");
   
-  // Container structure is filled in, so set
+  // Multiset structure is filled in, so mark as set
   d->status.set = true;
   return ADLB_DATA_SUCCESS;
 }
@@ -705,13 +705,15 @@ data_store(adlb_datum_id id, const char *subscript,
             "Type mismatch for multiset val: expected %s actual %s\n",
             ADLB_Data_type_tostring(type), ADLB_Data_type_tostring(elem_type));
     // Handle addition to multiset
-    dc = xlb_multiset_add(d->data.MULTISET, buffer, length);
+    const adlb_datum_storage *elem;
+    dc = xlb_multiset_add(d->data.MULTISET, buffer, length, &elem);
     DATA_CHECK(dc);
 
     if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
     {
-      // TODO: print repr of element
-      DEBUG("data_store <%"PRId64">+=%s\n", id, "?");
+      char *val_s = ADLB_Data_repr(elem, elem_type);
+      DEBUG("data_store <%"PRId64">+=%s\n", id, val_s);
+      free(val_s);
     }
   }
   else if (subscript == NULL)

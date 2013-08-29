@@ -1,19 +1,13 @@
 #include "data_cleanup.h"
 
 #include "data_structs.h"
+#include "multiset.h"
 #include "refcount.h"
 #include "table.h"
 
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-
-/* cleanup_storage with extra options that control how many reference
-   counts of referands are decremented */
-static adlb_data_code
-cleanup_storage2(adlb_datum_storage *d, adlb_data_type type,
-             adlb_datum_id id, bool free_mem,
-             adlb_refcounts rc_change, refcount_scavenge scav);
 
 adlb_data_code
 cleanup_storage(adlb_datum_storage *d, adlb_data_type type, adlb_datum_id id,
@@ -29,7 +23,7 @@ cleanup_storage(adlb_datum_storage *d, adlb_data_type type, adlb_datum_id id,
   return cleanup_storage2(d, type, id, true, rc_change, scav);
 }
 
-static adlb_data_code
+adlb_data_code
 cleanup_storage2(adlb_datum_storage *d, adlb_data_type type,
              adlb_datum_id id, bool free_mem,
              adlb_refcounts rc_change, refcount_scavenge scav)
@@ -42,7 +36,13 @@ cleanup_storage2(adlb_datum_storage *d, adlb_data_type type,
     // reference counting
     return cleanup_members(&d->CONTAINER, free_mem, rc_change, scav);
   }
-  else if (type == ADLB_DATA_TYPE_STRUCT) {
+  else if (type == ADLB_DATA_TYPE_MULTISET)
+  {
+    return xlb_multiset_cleanup(d->MULTISET, free_mem, free_mem,
+                                rc_change, scav);
+  }
+  else if (type == ADLB_DATA_TYPE_STRUCT)
+  {
     int scav_ix = -1; // negative == don't scavenge
     if (scav.subscript != NULL) 
     {

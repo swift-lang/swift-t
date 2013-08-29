@@ -12,7 +12,7 @@
 #include "data_structs.h"
 #include "multiset.h"
 
-static char *data_repr_container(adlb_container *c);
+static char *data_repr_container(const adlb_container *c);
 
 adlb_data_code
 ADLB_Pack(const adlb_datum_storage *d, adlb_data_type type,
@@ -135,8 +135,7 @@ adlb_data_code ADLB_Free_storage(adlb_datum_storage *d, adlb_data_type type)
       break;
     }
     case ADLB_DATA_TYPE_MULTISET:
-      //TODO: implement for multiset
-      dc = xlb_multiset_free(d->MULTISET);
+      dc = xlb_multiset_cleanup(d->MULTISET, true, true, ADLB_NO_RC, NO_SCAVENGE);
       DATA_CHECK(dc);
       break;
     case ADLB_DATA_TYPE_STRUCT:
@@ -156,32 +155,10 @@ adlb_data_code ADLB_Free_storage(adlb_datum_storage *d, adlb_data_type type)
   return ADLB_DATA_SUCCESS;
 }
 
-
-
-// Check string buffer is big enough for needed chars + a terminating null byte
-static adlb_data_code check_str_size(char **str, size_t *curr_size, int pos,
-                                     size_t needed)
-{
-  assert(pos >= 0);
-  size_t total_needed = ((size_t)pos) + needed + 1;
-  if (total_needed > *curr_size)
-  {
-    size_t new_size = *curr_size + 1024;
-    if (new_size < total_needed)
-      new_size = total_needed + 1024;
-
-    char *new = realloc(*str, new_size);
-    if (new == NULL)
-      return ADLB_DATA_ERROR_OOM;
-    *str = new;
-    *curr_size = new_size;
-  }
-  return ADLB_DATA_SUCCESS;
-}
-
-char *ADLB_Data_repr(adlb_datum_storage *d, adlb_data_type type)
+char *ADLB_Data_repr(const adlb_datum_storage *d, adlb_data_type type)
 {
   int rc;
+  adlb_data_code dc;
   char *tmp;
   switch (type)
   {
@@ -231,8 +208,9 @@ char *ADLB_Data_repr(adlb_datum_storage *d, adlb_data_type type)
     case ADLB_DATA_TYPE_CONTAINER:
       return data_repr_container(&d->CONTAINER);
     case ADLB_DATA_TYPE_MULTISET:
-      // TODO:
-      return strdup("MULTISET???");
+      dc = xlb_multiset_repr(d->MULTISET, &tmp);
+      assert(dc == ADLB_DATA_SUCCESS);
+      return tmp;
     case ADLB_DATA_TYPE_STRUCT:
       return data_struct_repr(d->STRUCT);
     default:
@@ -244,7 +222,7 @@ char *ADLB_Data_repr(adlb_datum_storage *d, adlb_data_type type)
   return strdup("???");
 }
 
-static char *data_repr_container(adlb_container *c)
+static char *data_repr_container(const adlb_container *c)
 {
   adlb_data_code dc;
   struct table* members = c->members;
@@ -254,7 +232,7 @@ static char *data_repr_container(adlb_container *c)
 
   const char *kts = ADLB_Data_type_tostring(c->key_type);
   const char *vts = ADLB_Data_type_tostring(c->val_type);
-  dc = check_str_size(&cont_str, &cont_str_len, cont_str_pos,
+  dc = xlb_resize_str(&cont_str, &cont_str_len, cont_str_pos,
                  strlen(kts) + strlen(vts) + 4);
   assert(dc == ADLB_DATA_SUCCESS);
   cont_str_pos += sprintf(&cont_str[cont_str_pos], "%s=>%s: ", kts, vts);
@@ -268,7 +246,7 @@ static char *data_repr_container(adlb_container *c)
       char *key = item->key;
       adlb_container_val v = item->data;
       char *value_s = ADLB_Data_repr(v, c->val_type);
-      dc = check_str_size(&cont_str, &cont_str_len, cont_str_pos,
+      dc = xlb_resize_str(&cont_str, &cont_str_len, cont_str_pos,
                      strlen(key) + strlen(value_s) + 7);
       assert(dc == ADLB_DATA_SUCCESS);
       cont_str_pos += sprintf(&cont_str[cont_str_pos], "\"%s\"={%s} ",

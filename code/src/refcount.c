@@ -7,6 +7,7 @@
 #include "common.h"
 #include "data_cleanup.h"
 #include "data_structs.h"
+#include "multiset.h"
 #include "sync.h"
 
 adlb_data_code incr_rc_svr(adlb_datum_id id, adlb_refcounts change)
@@ -65,9 +66,8 @@ incr_rc_referand(adlb_datum_storage *d, adlb_data_type type,
       DATA_CHECK(dc);
       break;
     case ADLB_DATA_TYPE_MULTISET:
-      //TODO: implement for multiset
-      check_verbose(false, ADLB_DATA_ERROR_UNKNOWN,
-          "free not implemented for multiset");
+      dc = xlb_multiset_cleanup(d->MULTISET, false, false, change, NO_SCAVENGE);
+      DATA_CHECK(dc);
       break;
     case ADLB_DATA_TYPE_STRUCT:
       // increment referand for all members in struct

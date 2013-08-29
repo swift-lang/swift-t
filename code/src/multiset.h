@@ -24,16 +24,41 @@ typedef struct adlb_multiset_s {
 } xlb_multiset;
 
 
-void xlb_multiset_init(xlb_multiset *set, adlb_data_type elem_type);
-uint xlb_multiset_size(const xlb_multiset *set);
-adlb_data_code xlb_multiset_add(xlb_multiset *set, const void *data, int length);
+xlb_multiset *xlb_multiset_alloc(adlb_data_type elem_type);
 
-adlb_data_code xlb_multiset_free(xlb_multiset *set);
-adlb_data_code xlb_multiset_slice(xlb_multiset *set, uint start, uint count,
-                              adlb_slice_t **res);
+void xlb_multiset_init(xlb_multiset *set, adlb_data_type elem_type);
+
+uint xlb_multiset_size(const xlb_multiset *set);
+
+/*
+  Add datum to multiset.
+  stored: if not NULL, this is set to a pointer to the data inside
+          the multiset
+ */
+adlb_data_code
+xlb_multiset_add(xlb_multiset *set, const void *data, int length,
+                 const adlb_datum_storage **stored);
+/*
+  Free memory and clear references from multiset
+ */
+adlb_data_code
+xlb_multiset_cleanup(xlb_multiset *set, bool free_root, bool free_mem,
+                     adlb_refcounts change, refcount_scavenge scav);
+
+adlb_data_code
+xlb_multiset_slice(xlb_multiset *set, uint start, uint count,
+                                        adlb_slice_t **res);
+
+void free_xlb_multiset_slice(adlb_slice_t *slice);
+
 adlb_data_code
 xlb_multiset_extract_slice(xlb_multiset *set, int start, int count,
               const adlb_buffer *caller_buffer, adlb_buffer *output); 
 
-void free_xlb_multiset_slice(adlb_slice_t *slice);
+/*
+ String representation of multiset.  Caller must free result.
+ */
+adlb_data_code
+xlb_multiset_repr(xlb_multiset *set, char **repr);
+
 #endif // __XLB_MULTISET_H
