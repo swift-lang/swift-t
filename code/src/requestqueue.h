@@ -56,7 +56,7 @@ int xlb_requestqueue_size(void);
    Get number of workers (in result) equal to parallelism
    @return True iff enough workers were found
  */
-bool requestqueue_parallel_workers(int type, int parallelism,
+bool xlb_requestqueue_parallel_workers(int type, int parallelism,
                                    int* result);
 
 /**

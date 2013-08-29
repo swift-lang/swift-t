@@ -29,7 +29,8 @@ void xlb_multiset_init(xlb_multiset *set, adlb_data_type elem_type) {
 }
 
 // Work out the number of elements currently in chunk
-uint chunk_len(xlb_multiset *set, uint chunk_num) {
+static uint
+chunk_len(xlb_multiset *set, uint chunk_num) {
   if (chunk_num < set->chunk_count - 1) {
     // not the last: should be full
     return XLB_MULTISET_CHUNK_SIZE;

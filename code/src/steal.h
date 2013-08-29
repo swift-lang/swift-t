@@ -45,6 +45,6 @@ adlb_code steal(bool* result);
 /**
    Handle an accepted steal request
   */
-adlb_code handle_steal(int caller, const struct packed_steal *req);
+adlb_code xlb_handle_steal(int caller, const struct packed_steal *req);
 
 #endif

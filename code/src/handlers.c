@@ -200,7 +200,7 @@ handle_sync(int caller)
   struct packed_sync *hdr = malloc(PACKED_SYNC_SIZE);
   RECV(hdr, (int)PACKED_SYNC_SIZE, MPI_BYTE, caller, ADLB_TAG_SYNC_REQUEST);
 
-  adlb_code rc = handle_accepted_sync(caller, hdr, NULL);
+  adlb_code rc = xlb_handle_accepted_sync(caller, hdr, NULL);
   free(hdr);
   ADLB_CHECK(rc);
   MPE_LOG(xlb_mpe_svr_sync_end);
@@ -287,7 +287,7 @@ put(int type, int putter, int priority, int answer, int target,
   xlb_work_unit *work = work_unit_alloc((size_t)length);
   RECV(work->payload, length, MPI_BYTE, putter, ADLB_TAG_WORK);
   DEBUG("work unit: x%i %s ", parallelism, xfer);
-  workqueue_add(type, putter, priority, answer, target,
+  xlb_workq_add(type, putter, priority, answer, target,
                 length, parallelism, work);
 
   return ADLB_SUCCESS;
@@ -309,7 +309,7 @@ adlb_code put_targeted_local(int type, int putter, int priority, int answer,
   worker = xlb_requestqueue_matches_target(target, type);
   if (worker != ADLB_RANK_NULL)
   {
-    xlb_work_unit_id wuid = workqueue_unique();
+    xlb_work_unit_id wuid = xlb_workq_unique();
     rc = send_work(target, wuid, type, answer, payload, length, 1);
     ADLB_CHECK(rc);
   }
@@ -318,7 +318,7 @@ adlb_code put_targeted_local(int type, int putter, int priority, int answer,
     xlb_work_unit *work = work_unit_alloc((size_t)length);
     memcpy(work->payload, payload, (size_t)length);
     DEBUG("put_targeted_local(): server storing work...");
-    workqueue_add(type, putter, priority, answer, target,
+    xlb_workq_add(type, putter, priority, answer, target,
                   length, 1, work);
   }
 
@@ -426,7 +426,7 @@ static inline bool
 check_workqueue(int caller, int type)
 {
   TRACE_START;
-  xlb_work_unit* wu = workqueue_get(caller, type);
+  xlb_work_unit* wu = xlb_workq_get(caller, type);
   bool result = false;
   if (wu != NULL)
   {
@@ -469,16 +469,16 @@ xlb_check_parallel_tasks(int type)
   int* ranks = NULL;
   adlb_code result = ADLB_SUCCESS;
 
-  TRACE("\t tasks: %"PRId64"\n", workqueue_parallel_tasks());
+  TRACE("\t tasks: %"PRId64"\n", xlb_workq_parallel_tasks());
 
   // Fast path for no parallel task case
-  if (workqueue_parallel_tasks() == 0)
+  if (xlb_workq_parallel_tasks() == 0)
   {
     result = ADLB_NOTHING;
     goto end;
   }
 
-  bool found = workqueue_pop_parallel(&wu, &ranks, type);
+  bool found = xlb_workq_pop_parallel(&wu, &ranks, type);
   if (! found)
     return ADLB_NOTHING;
   for (int i = 0; i < wu->parallelism; i++)
@@ -644,7 +644,7 @@ handle_exists(int caller)
   const char *subscript;
   int sub_strlen;
   char *xfer_pos = xfer;
-  xfer_pos += unpack_id_subscript(xfer_pos, &id, &subscript, &sub_strlen);
+  xfer_pos += xlb_unpack_id_sub(xfer_pos, &id, &subscript, &sub_strlen);
 
   adlb_refcounts decr;
   MSG_UNPACK_BIN(xfer_pos, &decr);
@@ -710,8 +710,8 @@ handle_store(int caller)
   if (ADLB_CLIENT_NOTIFIES)
   {
     // process and remove any local notifications for this server
-    process_local_notifications(hdr.id, NULL, &notifs.close_notify);
-    process_local_notifications(hdr.id, subscript, &notifs.insert_notify);
+    xlb_process_local_notif(hdr.id, NULL, &notifs.close_notify);
+    xlb_process_local_notif(hdr.id, subscript, &notifs.insert_notify);
 
     // TODO: process reference setting locally if possible.  This is slightly
     // more complex as we might want to pass the notification work for the
@@ -747,12 +747,12 @@ handle_store(int caller)
   else
   {
     // send notifications by self
-    adlb_code rc = notify_all(&notifs, hdr.id, subscript, xfer, length,
+    adlb_code rc = xlb_notify_all(&notifs, hdr.id, subscript, xfer, length,
                               hdr.type);
     ADLB_CHECK(rc);
   }
 
-  free_adlb_notif(&notifs);
+  xlb_free_notif(&notifs);
 
   TRACE("STORE DONE");
   MPE_LOG(xlb_mpe_svr_store_end);
@@ -879,7 +879,7 @@ handle_subscribe(int caller)
   adlb_datum_id id;
   const char *subscript;
   int sub_strlen;
-  unpack_id_subscript(xfer, &id, &subscript, &sub_strlen);
+  xlb_unpack_id_sub(xfer, &id, &subscript, &sub_strlen);
 
   DEBUG("subscribe: <%"PRId64">[%s]", id, subscript);
   struct pack_sub_resp resp;
@@ -923,7 +923,7 @@ handle_refcount_incr(int caller)
   if (dc == ADLB_DATA_SUCCESS && ADLB_CLIENT_NOTIFIES)
   {
     // Remove any notifications that can be handled locally
-    process_local_notifications(msg.id, NULL, &notify_ranks);
+    xlb_process_local_notif(msg.id, NULL, &notify_ranks);
     resp.notifs.notify_closed_count = notify_ranks.count;
   }
 
@@ -938,13 +938,13 @@ handle_refcount_incr(int caller)
     }
     else
     {
-      rc = close_notify(msg.id, NULL, notify_ranks.ranks,
+      rc = xlb_close_notify(msg.id, NULL, notify_ranks.ranks,
                         notify_ranks.count);
       ADLB_CHECK(rc);
     }
   }
   
-  free_adlb_ranks(&notify_ranks);
+  xlb_free_ranks(&notify_ranks);
   return ADLB_SUCCESS;
 }
 
@@ -959,7 +959,7 @@ handle_insert_atomic(int caller)
   int sub_strlen;
   adlb_datum_id id;
   char *xfer_pos = xfer;
-  xfer_pos += unpack_id_subscript(xfer_pos, &id, &subscript, &sub_strlen);
+  xfer_pos += xlb_unpack_id_sub(xfer_pos, &id, &subscript, &sub_strlen);
   bool return_value;
   MSG_UNPACK_BIN(xfer_pos, &return_value);
 
@@ -1064,7 +1064,7 @@ handle_container_reference(int caller)
   MSG_UNPACK_BIN(xfer_read, &ref_type);
   MSG_UNPACK_BIN(xfer_read, &reference);
 
-  unpack_id_subscript(xfer_read, &container_id, &subscript, &sub_strlen);
+  xlb_unpack_id_sub(xfer_read, &container_id, &subscript, &sub_strlen);
 
   DEBUG("Container_reference: <%"PRId64">[%s] => <%"PRId64"> (%i)",
         container_id, subscript, reference, ref_type);
@@ -1094,7 +1094,7 @@ handle_container_reference(int caller)
       if (dc == ADLB_DATA_SUCCESS)
       {
         // TODO: offload to client?
-        adlb_code rc = set_reference_and_notify(reference, member.data,
+        adlb_code rc = xlb_set_ref_and_notify(reference, member.data,
                                       member.length, ref_type);
         ADLB_CHECK(rc);
       }
@@ -1248,9 +1248,10 @@ notify_helper(adlb_datum_id id, adlb_ranks *notifications)
   if (notifications->count > 0)
   {
     adlb_code rc;
-    rc = close_notify(id, NULL, notifications->ranks, notifications->count);
+    rc = xlb_close_notify(id, NULL, notifications->ranks,
+                          notifications->count);
     ADLB_CHECK(rc);
-    free_adlb_ranks(notifications);
+    xlb_free_ranks(notifications);
   }
   return ADLB_SUCCESS;
 }

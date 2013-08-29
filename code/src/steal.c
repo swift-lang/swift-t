@@ -137,7 +137,7 @@ steal_sync(int target, int max_memory)
   struct packed_sync *req = malloc(PACKED_SYNC_SIZE);
   req->mode = ADLB_SYNC_STEAL;
   req->steal.max_memory = max_memory;
-  workqueue_type_counts(req->steal.work_type_counts, xlb_types_size);
+  xlb_workq_type_counts(req->steal.work_type_counts, xlb_types_size);
 
   adlb_code code = xlb_sync2(target, req);
   free(req);
@@ -160,7 +160,7 @@ steal_payloads(int target, int count)
     xlb_work_unit *work = work_unit_alloc((size_t)wus[i].length);
     RECV(work->payload, wus[i].length, MPI_BYTE, target,
          ADLB_TAG_RESPONSE_STEAL);
-    workqueue_add(wus[i].type, wus[i].putter, wus[i].priority,
+    xlb_workq_add(wus[i].type, wus[i].putter, wus[i].priority,
                   wus[i].answer, wus[i].target, wus[i].length,
                   wus[i].parallelism, work);
   }
@@ -248,7 +248,7 @@ handle_steal_callback(void *cb_data, xlb_work_unit *work)
 }
 
 adlb_code
-handle_steal(int caller, const struct packed_steal *req)
+xlb_handle_steal(int caller, const struct packed_steal *req)
 {
   TRACE_START;
   MPE_LOG(xlb_mpe_svr_steal_start);
@@ -263,13 +263,13 @@ handle_steal(int caller, const struct packed_steal *req)
   state.work_units = malloc(sizeof(*state.work_units) * state.max_size);
   state.size = 0;
   state.stole_count = 0;
-  workqueue_steal_callback cb;
+  xlb_workq_steal_callback cb;
   cb.f = handle_steal_callback;
   cb.data = &state;
 
   // Maximum amount of memory to return- currently unused
   // Call steal.  This function will call back to send messages
-  code = workqueue_steal(req->max_memory, req->work_type_counts, cb);
+  code = xlb_workq_steal(req->max_memory, req->work_type_counts, cb);
   ADLB_CHECK(code);
  
   // send any remaining.  If nothing left (or nothing was stolen)

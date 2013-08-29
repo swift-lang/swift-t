@@ -53,14 +53,14 @@ static adlb_code notify_nonlocal(int target, int server,
 }
 
 
-void free_adlb_notif(adlb_notif_t *notifs)
+void xlb_free_notif(adlb_notif_t *notifs)
 {
-  free_adlb_ranks(&notifs->close_notify);
-  free_adlb_ranks(&notifs->insert_notify);
-  free_adlb_datums(&notifs->references);
+  xlb_free_ranks(&notifs->close_notify);
+  xlb_free_ranks(&notifs->insert_notify);
+  xlb_free_datums(&notifs->references);
 }
 
-void free_adlb_ranks(adlb_ranks *ranks)
+void xlb_free_ranks(adlb_ranks *ranks)
 {
   if (ranks->ranks != NULL)
   {
@@ -69,7 +69,7 @@ void free_adlb_ranks(adlb_ranks *ranks)
   }
 }
 
-void free_adlb_datums(adlb_datums *datums)
+void xlb_free_datums(adlb_datums *datums)
 {
   if (datums->ids != NULL)
   {
@@ -86,7 +86,7 @@ void free_adlb_datums(adlb_datums *datums)
           positive indicates it should be parsed to integer
    value: string value to set references to.
  */
-adlb_code set_references(adlb_datum_id *refs, int refs_count,
+adlb_code xlb_set_refs(adlb_datum_id *refs, int refs_count,
                          const char *value, int value_len,
                          adlb_data_type type)
 {
@@ -94,14 +94,14 @@ adlb_code set_references(adlb_datum_id *refs, int refs_count,
   for (int i = 0; i < refs_count; i++)
   {
     TRACE("Notifying reference %"PRId64"\n", refs[i]);
-    rc = set_reference_and_notify(refs[i], value, value_len, type);
+    rc = xlb_set_ref_and_notify(refs[i], value, value_len, type);
     ADLB_CHECK(rc);
   }
   return ADLB_SUCCESS;
 }
 
 adlb_code
-close_notify(adlb_datum_id id, const char *subscript,
+xlb_close_notify(adlb_datum_id id, const char *subscript,
                    int* ranks, int count)
 {
   adlb_code rc;
@@ -127,7 +127,7 @@ close_notify(adlb_datum_id id, const char *subscript,
 }
 
 adlb_code
-process_local_notifications(adlb_datum_id id, const char *subscript,
+xlb_process_local_notif(adlb_datum_id id, const char *subscript,
                             adlb_ranks *ranks)
 {
   assert(xlb_am_server);
@@ -166,10 +166,10 @@ process_local_notifications(adlb_datum_id id, const char *subscript,
 }
 
 adlb_code
-set_reference_and_notify(adlb_datum_id id, const void *value, int length,
+xlb_set_ref_and_notify(adlb_datum_id id, const void *value, int length,
                          adlb_data_type type)
 {
-  DEBUG("set_reference: <%"PRId64">=%p[%i]", id, value, length);
+  DEBUG("xlb_set_ref: <%"PRId64">=%p[%i]", id, value, length);
 
   int rc = ADLB_SUCCESS;
   int server = ADLB_Locate(id);
@@ -184,7 +184,7 @@ set_reference_and_notify(adlb_datum_id id, const void *value, int length,
 }
 
 adlb_code
-notify_all(const adlb_notif_t *notifs,
+xlb_notify_all(const adlb_notif_t *notifs,
            adlb_datum_id id, const char *subscript,
            const void *value, int value_len,
            adlb_data_type value_type)
@@ -192,14 +192,14 @@ notify_all(const adlb_notif_t *notifs,
   adlb_code rc;
   if (notifs->close_notify.count > 0)
   {
-    rc = close_notify(id, NULL, notifs->close_notify.ranks,
+    rc = xlb_close_notify(id, NULL, notifs->close_notify.ranks,
                  notifs->close_notify.count);
     ADLB_CHECK(rc);
   }
   if (notifs->insert_notify.count > 0)
   {
     assert(subscript != NULL);
-    rc = close_notify(id, subscript, notifs->insert_notify.ranks,
+    rc = xlb_close_notify(id, subscript, notifs->insert_notify.ranks,
                  notifs->insert_notify.count);
     ADLB_CHECK(rc);
   }
@@ -207,7 +207,7 @@ notify_all(const adlb_notif_t *notifs,
   {
     assert(value != NULL);
     // TODO: handle other types
-    rc = set_references(notifs->references.ids,
+    rc = xlb_set_refs(notifs->references.ids,
                    notifs->references.count, value, value_len,
                    value_type);
     ADLB_CHECK(rc);

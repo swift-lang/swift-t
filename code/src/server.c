@@ -121,7 +121,7 @@ xlb_server_init()
 
   list_i_init(&workers_shutdown);
   xlb_requestqueue_init();
-  workqueue_init(xlb_types_size);
+  xlb_workq_init(xlb_types_size);
   xlb_data_init(xlb_servers, xlb_server_number(xlb_comm_rank));
   adlb_code code = setup_idle_time();
   ADLB_CHECK(code);
@@ -349,7 +349,8 @@ xlb_handle_pending_syncs()
       int rank = xlb_pending_syncs[i].rank;
       DEBUG("server_sync: [%d] handling deferred sync %d from %d",
           xlb_comm_rank, i, rank);
-      adlb_code code = handle_accepted_sync(rank, xlb_pending_syncs[i].hdr, NULL);
+      adlb_code code = xlb_handle_accepted_sync(rank,
+                     xlb_pending_syncs[i].hdr, NULL);
       if (code == ADLB_SUCCESS)
       {
         free(xlb_pending_syncs[i].hdr);
@@ -616,7 +617,7 @@ server_shutdown()
 {
   DEBUG("server down.");
   xlb_requestqueue_shutdown();
-  workqueue_finalize();
+  xlb_workq_finalize();
   return ADLB_SUCCESS;
 }
 

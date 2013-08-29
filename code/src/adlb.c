@@ -613,7 +613,7 @@ ADLBP_Exists(adlb_datum_id id, const char *subscript, bool* result,
 
   char req[PACKED_SUBSCRIPT_MAX + sizeof(decr)];
   char *req_ptr = req;
-  req_ptr += pack_id_subscript(req_ptr, id, subscript);
+  req_ptr += xlb_pack_id_sub(req_ptr, id, subscript);
   assert(req_ptr > req);
 
   MSG_PACK_BIN(req_ptr, decr);
@@ -666,8 +666,8 @@ process_notifications(adlb_datum_id id, const char *subscript,
          to_server_rank, ADLB_TAG_RESPONSE);
   }
 
-  notify_all(&not, id, subscript, data, data_len, type);
-  free_adlb_notif(&not);
+  xlb_notify_all(&not, id, subscript, data, data_len, type);
+  xlb_free_notif(&not);
   return ADLB_SUCCESS;
 }
 
@@ -700,12 +700,12 @@ ADLBP_Store(adlb_datum_id id, const char *subscript, adlb_data_type type,
     // This is a server-to-server operation on myself
     TRACE("Store SELF");
     adlb_notif_t notifs = ADLB_NO_NOTIFS;
-    dc = data_store(id, subscript, data, length,
+    dc = xlb_data_store(id, subscript, data, length,
                     type, refcount_decr, &notifs);
     ADLB_DATA_CHECK(dc);
 
-    code = notify_all(&notifs, id, subscript, data, length, type);
-    free_adlb_notif(&notifs);
+    code = xlb_notify_all(&notifs, id, subscript, data, length, type);
+    xlb_free_notif(&notifs);
     ADLB_CHECK(code);
     return ADLB_SUCCESS;
   }
@@ -821,7 +821,7 @@ ADLBP_Insert_atomic(adlb_datum_id id, const char *subscript,
 
   DEBUG("ADLB_Insert_atomic: <%"PRId64">[\"%s\"]", id, subscript);
   char *xfer_pos = xfer;
-  xfer_pos += pack_id_subscript(xfer_pos, id, subscript);
+  xfer_pos += xlb_pack_id_sub(xfer_pos, id, subscript);
 
   bool return_value = data != NULL;
   MSG_PACK_BIN(xfer_pos, return_value);
@@ -1038,7 +1038,7 @@ ADLBP_Subscribe(adlb_datum_id id, const char *subscript,
 
   to_server_rank = ADLB_Locate(id);
 
-  int req_length = pack_id_subscript(xfer, id, subscript);
+  int req_length = xlb_pack_id_sub(xfer, id, subscript);
   assert(req_length > 0);
 
   struct pack_sub_resp result;
@@ -1095,7 +1095,7 @@ ADLBP_Container_reference(adlb_datum_id id, const char *subscript,
 
   MSG_PACK_BIN(xfer_pos, ref_type);
   MSG_PACK_BIN(xfer_pos, reference);
-  xfer_pos += pack_id_subscript(xfer_pos, id, subscript);
+  xfer_pos += xlb_pack_id_sub(xfer_pos, id, subscript);
 
   int to_server_rank = ADLB_Locate(id);
 
@@ -1246,7 +1246,7 @@ ADLBP_Finalize()
   MPI_Finalized(&flag);
   CHECK_MSG(!flag,
             "ERROR: MPI_Finalize() called before ADLB_Finalize()\n");
-  data_finalize();
+  xlb_data_finalize();
   if (xlb_comm_rank >= xlb_master_server_rank)
   {
     // Server:

@@ -146,7 +146,7 @@ xlb_get_tag_name(int tag)
 
  */
 int
-pack_id_subscript(void *buffer, adlb_datum_id id, const char *subscript)
+xlb_pack_id_sub(void *buffer, adlb_datum_id id, const char *subscript)
 {
   assert(buffer != NULL);
   void *pos = buffer;
@@ -175,7 +175,7 @@ pack_id_subscript(void *buffer, adlb_datum_id id, const char *subscript)
   return the number of bytes consumed from buffer
  */
 int
-unpack_id_subscript(const void *buffer, adlb_datum_id *id,
+xlb_unpack_id_sub(const void *buffer, adlb_datum_id *id,
                     const char **subscript, int *sub_strlen)
 {
   assert(buffer != NULL);

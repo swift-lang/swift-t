@@ -188,7 +188,7 @@ static inline adlb_code msg_from_other_server(int other_server, int target,
                         xlb_comm_rank, other_server);
     bool server_sync_rejected = false;
     
-    handle_accepted_sync(other_server, other_hdr, &server_sync_rejected);
+    xlb_handle_accepted_sync(other_server, other_hdr, &server_sync_rejected);
 
     if (other_server == target && server_sync_rejected)
     {
@@ -231,7 +231,7 @@ static inline adlb_code msg_from_other_server(int other_server, int target,
 /*
   One we have accepted sync, do whatever processing needed to service
  */
-adlb_code handle_accepted_sync(int rank, const struct packed_sync *hdr,
+adlb_code xlb_handle_accepted_sync(int rank, const struct packed_sync *hdr,
                                bool *server_sync_rejected)
 {
   static int response = 1;
@@ -246,7 +246,7 @@ adlb_code handle_accepted_sync(int rank, const struct packed_sync *hdr,
   else if (mode == ADLB_SYNC_STEAL)
   {
     // Respond to steal
-    code = handle_steal(rank, &hdr->steal);
+    code = xlb_handle_steal(rank, &hdr->steal);
   }
   else
   {

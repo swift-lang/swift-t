@@ -56,9 +56,9 @@ typedef struct
   unsigned char payload[]; 
 } xlb_work_unit;
 
-void workqueue_init(int work_types);
+void xlb_workq_init(int work_types);
 
-xlb_work_unit_id workqueue_unique(void);
+xlb_work_unit_id xlb_workq_unique(void);
 
 /** Allocate work unit with space for payload */
 static inline xlb_work_unit *work_unit_alloc(size_t payload_length)
@@ -70,7 +70,7 @@ static inline xlb_work_unit *work_unit_alloc(size_t payload_length)
 /*
  * Initialize work unit fields and add to queue
  */
-void workqueue_add(int type, int putter, int priority, int answer,
+void xlb_workq_add(int type, int putter, int priority, int answer,
                    int target, int length, int parallelism,
                    xlb_work_unit *wu);
 
@@ -79,37 +79,37 @@ void workqueue_add(int type, int putter, int priority, int answer,
    Caller must work_unit_free() the result if
    Returns NULL if nothing found
  */
-xlb_work_unit* workqueue_get(int target, int type);
+xlb_work_unit* xlb_workq_get(int target, int type);
 
 /**
    Are we able to release a parallel task of type?
    If so, return true, put the work unit in wu, and the ranks in
    ranks.  Caller must free ranks
  */
-bool workqueue_pop_parallel(xlb_work_unit** wu, int** ranks, int work_type);
+bool xlb_workq_pop_parallel(xlb_work_unit** wu, int** ranks, int work_type);
 
-extern int64_t workqueue_parallel_task_count;
+extern int64_t xlb_workq_parallel_task_count;
 
-static inline int64_t workqueue_parallel_tasks()
+static inline int64_t xlb_workq_parallel_tasks()
 {
-  TRACE("workqueue_parallel_tasks: %"PRId64"",
-        workqueue_parallel_task_count);
-  return workqueue_parallel_task_count;
+  TRACE("xlb_workq_parallel_tasks: %"PRId64"",
+        xlb_workq_parallel_task_count);
+  return xlb_workq_parallel_task_count;
 }
 
 
 typedef struct {
   adlb_code (*f)(void*, xlb_work_unit*);
   void *data;
-} workqueue_steal_callback;
+} xlb_workq_steal_callback;
 
 /*
  * steal_type_counts: counts that stealer has of each type
  * callback: called for every stolen unit.  The callback
             function is responsible for freeing work unit
  */
-adlb_code workqueue_steal(int max_memory, const int *steal_type_counts,
-                      workqueue_steal_callback cb);
+adlb_code xlb_workq_steal(int max_memory, const int *steal_type_counts,
+                      xlb_workq_steal_callback cb);
 
 /* present should be an array of size >= number of request types
  * it is filled in with the counts of types
@@ -117,10 +117,10 @@ adlb_code workqueue_steal(int max_memory, const int *steal_type_counts,
  * size: size of the array (greater than num of work types)
  * ntypes: returns number of elements filled in
  */
-void workqueue_type_counts(int *types, int size);
+void xlb_workq_type_counts(int *types, int size);
 
 void work_unit_free(xlb_work_unit* wu);
 
-void workqueue_finalize(void);
+void xlb_workq_finalize(void);
 
 #endif

@@ -58,20 +58,20 @@ typedef struct {
                          .insert_notify = ADLB_NO_RANKS, \
                          .references = ADLB_NO_DATUMS}
 
-void free_adlb_notif(adlb_notif_t *notifs);
-void free_adlb_ranks(adlb_ranks *ranks);
-void free_adlb_datums(adlb_datums *datums);
+void xlb_free_notif(adlb_notif_t *notifs);
+void xlb_free_ranks(adlb_ranks *ranks);
+void xlb_free_datums(adlb_datums *datums);
 
-adlb_code set_references(adlb_datum_id *refs, int refs_count,
+adlb_code xlb_set_refs(adlb_datum_id *refs, int refs_count,
                          const char *value, int value_len,
                          adlb_data_type type);
 
 adlb_code
-set_reference_and_notify(adlb_datum_id id, const void *value, int length,
+xlb_set_ref_and_notify(adlb_datum_id id, const void *value, int length,
                          adlb_data_type type);
 
 adlb_code
-close_notify(adlb_datum_id id, const char *subscript,
+xlb_close_notify(adlb_datum_id id, const char *subscript,
                    int* ranks, int count);
 
 /*
@@ -79,11 +79,11 @@ close_notify(adlb_datum_id id, const char *subscript,
    locally.  Frees memory if all removed.
  */
 adlb_code
-process_local_notifications(adlb_datum_id id, const char *subscript,
+xlb_process_local_notif(adlb_datum_id id, const char *subscript,
                             adlb_ranks *ranks);
 
 adlb_code
-notify_all(const adlb_notif_t *notifs, adlb_datum_id id,
+xlb_notify_all(const adlb_notif_t *notifs, adlb_datum_id id,
            const char *subscript, const void *value, int value_len,
            adlb_data_type value_type);
 

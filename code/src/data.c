@@ -812,7 +812,7 @@ xlb_data_store(adlb_datum_id id, const char *subscript,
     adlb_refcounts incr = { .read_refcount = xlb_read_refcount_enabled ?
                                             -refcount_decr.read_refcount : 0,
                             .write_refcount = -refcount_decr.write_refcount };
-    dc = xlb_rc_impl(d, id, incr , NO_SCAVENGE,
+    dc = xlb_rc_impl(d, id, incr, NO_SCAVENGE,
                                NULL, NULL, &notifications->close_notify);
     DATA_CHECK(dc);
   }

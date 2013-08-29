@@ -78,19 +78,19 @@ static struct rbtree* typed_work;
 static struct rbtree* parallel_work;
 
 // Track number of parallel tasks
-int64_t workqueue_parallel_task_count;
+int64_t xlb_workq_parallel_task_count;
 
 void
-workqueue_init(int work_types)
+xlb_workq_init(int work_types)
 {
   assert(work_types >= 1);
-  DEBUG("workqueue_init(work_types=%i)", work_types);
+  DEBUG("xlb_workq_init(work_types=%i)", work_types);
   bool b = table_ip_init(&targeted_work, 128);
   valgrind_assert(b);
   typed_work = malloc(sizeof(struct rbtree) * (size_t)work_types);
   valgrind_assert(typed_work != NULL);
   parallel_work = malloc(sizeof(struct rbtree) * (size_t)work_types);
-  workqueue_parallel_task_count = 0;
+  xlb_workq_parallel_task_count = 0;
   valgrind_assert(parallel_work != NULL);
   for (int i = 0; i < work_types; i++)
   {
@@ -100,17 +100,17 @@ workqueue_init(int work_types)
 }
 
 xlb_work_unit_id
-workqueue_unique()
+xlb_workq_unique()
 {
   return unique++;
 }
 
 void
-workqueue_add(int type, int putter, int priority, int answer,
+xlb_workq_add(int type, int putter, int priority, int answer,
               int target_rank, int length, int parallelism,
               xlb_work_unit* wu)
 {
-  wu->id = workqueue_unique();
+  wu->id = xlb_workq_unique();
   wu->type = type;
   wu->putter = putter;
   wu->priority = priority;
@@ -119,24 +119,24 @@ workqueue_add(int type, int putter, int priority, int answer,
   wu->length = length;
   wu->parallelism = parallelism;
 
-  DEBUG("workqueue_add(): %"PRId64": x%i %s",
+  DEBUG("xlb_workq_add(): %"PRId64": x%i %s",
         wu->id, wu->parallelism, (char*) wu->payload);
 
   if (target_rank < 0 && parallelism == 1)
   {
     // Untargeted single-process task
-    TRACE("workqueue_add(): single-process");
+    TRACE("xlb_workq_add(): single-process");
     struct rbtree* T = &typed_work[type];
     rbtree_add(T, -priority, wu);
   }
   else if (parallelism > 1)
   {
     // Untargeted parallel task
-    TRACE("workqueue_add(): parallel task: %p", wu);
+    TRACE("xlb_workq_add(): parallel task: %p", wu);
     struct rbtree* T = &parallel_work[type];
     TRACE("rbtree_add: wu: %p key: %i\n", wu, -priority);
     rbtree_add(T, -priority, wu);
-    workqueue_parallel_task_count++;
+    xlb_workq_parallel_task_count++;
   }
   else
   {
@@ -165,15 +165,15 @@ static inline xlb_work_unit*
 pop_targeted(heap* H, int target)
 {
   xlb_work_unit* result = heap_root_val(H);
-  DEBUG("workqueue_get(): targeted: %"PRId64"", result->id);
+  DEBUG("xlb_workq_get(): targeted: %"PRId64"", result->id);
   heap_del_root(H);
   return result;
 }
 
 xlb_work_unit*
-workqueue_get(int target, int type)
+xlb_workq_get(int target, int type)
 {
-  DEBUG("workqueue_get(target=%i, type=%i)", target, type);
+  DEBUG("xlb_workq_get(target=%i, type=%i)", target, type);
 
   xlb_work_unit* wu = NULL;
 
@@ -197,7 +197,7 @@ workqueue_get(int target, int type)
     return NULL;
   rbtree_remove_node(T, node);
   wu = node->data;
-  DEBUG("workqueue_get(): untargeted: %"PRId64"", wu->id);
+  DEBUG("xlb_workq_get(): untargeted: %"PRId64"", wu->id);
   free(node);
   return wu;
 }
@@ -219,7 +219,7 @@ static bool pop_parallel_cb(struct rbtree_node* node,
                             void* user_data);
 
 bool
-workqueue_pop_parallel(xlb_work_unit** wu, int** ranks, int work_type)
+xlb_workq_pop_parallel(xlb_work_unit** wu, int** ranks, int work_type)
 {
   TRACE_START;
   bool result = false;
@@ -242,7 +242,7 @@ workqueue_pop_parallel(xlb_work_unit** wu, int** ranks, int work_type)
       rbtree_remove_node(T, data.node);
       TRACE("rbtree_removed: wu: %p node: %p...", wu, data.node);
       free(data.node);
-      workqueue_parallel_task_count--;
+      xlb_workq_parallel_task_count--;
     }
   }
   TRACE_END;
@@ -261,8 +261,8 @@ pop_parallel_cb(struct rbtree_node* node, void* user_data)
 
   int ranks[wu->parallelism];
   bool found =
-      requestqueue_parallel_workers(data->type, wu->parallelism,
-                                    ranks);
+      xlb_requestqueue_parallel_workers(data->type, wu->parallelism,
+                                        ranks);
   if (found)
   {
     data->wu = wu;
@@ -285,8 +285,8 @@ rand_choose(float *weights, int length) {
 }
 
 static inline adlb_code
-workqueue_steal_type(struct rbtree *q, int num,
-                      workqueue_steal_callback cb)
+xlb_workq_steal_type(struct rbtree *q, int num,
+                      xlb_workq_steal_callback cb)
 {
   assert(q->size >= num);
   for (int i = 0; i < num; i++)
@@ -303,8 +303,8 @@ workqueue_steal_type(struct rbtree *q, int num,
 
 
 adlb_code
-workqueue_steal(int max_memory, const int *steal_type_counts,
-                          workqueue_steal_callback cb)
+xlb_workq_steal(int max_memory, const int *steal_type_counts,
+                          xlb_workq_steal_callback cb)
 {
   // for each type:
   //    select # to send to stealer
@@ -337,15 +337,15 @@ workqueue_steal(int max_memory, const int *steal_type_counts,
         double single_pc = single_count / (double) tot_count;
         int single_to_send = (int)(single_pc * to_send);
         int par_to_send = to_send - single_to_send;
-        TRACE("workqueue_steal(): stealing type=%i single=%i/%i par=%i/%i"
+        TRACE("xlb_workq_steal(): stealing type=%i single=%i/%i par=%i/%i"
               " This server count: %i versus %i",
                         t, single_to_send, single_count, par_to_send, par_count,
                         tot_count, stealer_count);
         adlb_code code;
-        code = workqueue_steal_type(&(typed_work[t]), single_to_send, cb);
+        code = xlb_workq_steal_type(&(typed_work[t]), single_to_send, cb);
         ADLB_CHECK(code);
-        code = workqueue_steal_type(&(parallel_work[t]), par_to_send, cb);
-        workqueue_parallel_task_count -= par_to_send;
+        code = xlb_workq_steal_type(&(parallel_work[t]), par_to_send, cb);
+        xlb_workq_parallel_task_count -= par_to_send;
         ADLB_CHECK(code);
       }
     }
@@ -353,7 +353,7 @@ workqueue_steal(int max_memory, const int *steal_type_counts,
   return ADLB_SUCCESS;
 }
 
-void workqueue_type_counts(int *types, int size)
+void xlb_workq_type_counts(int *types, int size)
 {
   assert(size >= xlb_types_size);
   for (int t = 0; t < xlb_types_size; t++)
@@ -414,7 +414,7 @@ wu_targeted_clear_callback(int key, void *val)
 }
 
 void
-workqueue_finalize()
+xlb_workq_finalize()
 {
   TRACE_START;
 

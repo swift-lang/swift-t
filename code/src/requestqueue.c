@@ -124,13 +124,13 @@ xlb_requestqueue_matches_type(int type)
 }
 
 bool
-requestqueue_parallel_workers(int type, int parallelism, int* ranks)
+xlb_requestqueue_parallel_workers(int type, int parallelism, int* ranks)
 {
   bool result = false;
   struct list2* L = &type_requests[type];
   int count = list2_size(L);
 
-  TRACE("requestqueue_parallel_workers(type=%i x%i) count=%i ...",
+  TRACE("xlb_requestqueue_parallel_workers(type=%i x%i) count=%i ...",
         type, parallelism, count);
 
   if (count >= parallelism)

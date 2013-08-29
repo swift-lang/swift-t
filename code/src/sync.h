@@ -60,7 +60,7 @@ typedef struct {
 extern xlb_pending_sync xlb_pending_syncs[];
 extern int xlb_pending_sync_count;
 
-adlb_code handle_accepted_sync(int rank, const struct packed_sync *hdr,
+adlb_code xlb_handle_accepted_sync(int rank, const struct packed_sync *hdr,
                                bool *server_sync_rejected);
 
 #endif

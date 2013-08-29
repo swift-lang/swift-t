@@ -28,7 +28,7 @@ adlb_data_code xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change)
   if (server == xlb_comm_rank)
   {
     adlb_ranks notify = ADLB_NO_RANKS;
-    adlb_data_code dc = data_reference_count(id, change,
+    adlb_data_code dc = xlb_data_reference_count(id, change,
             NO_SCAVENGE, NULL, NULL, &notify);
     // TODO: handle notifications here if needed for some reason
     check_verbose(notify.count == 0, ADLB_DATA_ERROR_UNKNOWN,
@@ -169,7 +169,7 @@ xlb_incr_rc_scav(adlb_datum_id id, const char *subscript,
     else
     {
       DEBUG("Need to do extra increment of referands <%"PRId64">", id);
-      return data_referand_refcount(ref_data, ref_data_len, ref_type,
+      return xlb_data_referand_refcount(ref_data, ref_data_len, ref_type,
                                   id, incr_referand);
     }
   }
@@ -178,8 +178,8 @@ xlb_incr_rc_scav(adlb_datum_id id, const char *subscript,
     // First attempt aborted and did nothing, do things one
     // step at a time
     DEBUG("Need to manually update refcounts for <%"PRId64">", id);
-    dc = data_referand_refcount(ref_data, ref_data_len, ref_type,
-                                id, incr_referand);
+    dc = xlb_data_referand_refcount(ref_data, ref_data_len, ref_type,
+                                    id, incr_referand);
     DATA_CHECK(dc);
     
     // Weren't able to acquire any reference counts, so attempted
