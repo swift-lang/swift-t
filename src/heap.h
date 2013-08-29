@@ -92,14 +92,15 @@ heap_clear(heap *heap)
   heap_clear_callback(heap, NULL);
 }
 
-heap* heap_create(size_t init_capacity) {
+static inline heap*
+heap_create(size_t init_capacity) {
   heap* result = malloc(sizeof(heap));
   heap_init(result, init_capacity);
   return result;
 }
 
-
-void heap_check(heap *heap) {
+static inline void
+heap_check(heap *heap) {
   heap_ix_t i;
   for (i = 0; i < heap->size; i++) {
     heap_key_t k = heap->array[i].key;
