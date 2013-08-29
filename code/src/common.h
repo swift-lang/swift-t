@@ -77,7 +77,7 @@ extern double xlb_start_time;
 extern char xfer[];
 const static adlb_buffer xfer_buf = { .data = xfer, .length = XFER_SIZE };
 
-int random_server(void);
+int xlb_random_server(void);
 
 /**
    Time since XLB was initialized

@@ -293,15 +293,15 @@ put(int type, int putter, int priority, int answer, int target,
   return ADLB_SUCCESS;
 }
 
-adlb_code put_targeted_local(int type, int putter, int priority, int answer,
-             int target, const void* payload, int length)
+adlb_code xlb_put_targeted_local(int type, int putter, int priority,
+      int answer, int target, const void* payload, int length)
 {
   assert(xlb_map_to_server(target) == xlb_comm_rank);
   assert(target >= 0);
   int worker;
   int rc;
 
-  DEBUG("put_targeted_local: to: %i payload: %s", target, (char*) payload);
+  DEBUG("xlb_put_targeted_local: to: %i payload: %s", target, (char*) payload);
   assert(length >= 0);
 
   // Work unit is for this server
@@ -317,7 +317,7 @@ adlb_code put_targeted_local(int type, int putter, int priority, int answer,
   {
     xlb_work_unit *work = work_unit_alloc((size_t)length);
     memcpy(work->payload, payload, (size_t)length);
-    DEBUG("put_targeted_local(): server storing work...");
+    DEBUG("xlb_put_targeted_local(): server storing work...");
     xlb_workq_add(type, putter, priority, answer, target,
                   length, 1, work);
   }
@@ -360,10 +360,10 @@ handle_get(int caller)
   bool b = check_workqueue(caller, type);
   if (b) goto end;
 
-  if (!stealing && steal_allowed())
+  if (!stealing && xlb_steal_allowed())
   {
     stealing = true;
-    int rc = steal(&stole);
+    int rc = xlb_steal(&stole);
     ADLB_CHECK(rc);
     stealing = false;
     if (stole)

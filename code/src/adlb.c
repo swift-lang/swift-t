@@ -44,7 +44,7 @@
 #include "notifications.h"
 #include "server.h"
 
-adlb_code next_server;
+static adlb_code next_server;
 
 static void print_proc_self_status(void);
 
@@ -748,7 +748,7 @@ get_next_server()
   static int next_server_index = 0;
   int offset = next_server_index % xlb_servers;
   int rank = xlb_comm_size - xlb_servers + offset;
-  // DEBUG("random_server => %i\n", rank);
+  // DEBUG("xlb_random_server => %i\n", rank);
   next_server_index = (next_server_index + 1) % xlb_servers;
   return rank;
 }

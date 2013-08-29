@@ -418,7 +418,7 @@ double xlb_steal_last = 0.0;
 static inline adlb_code
 check_steal(void)
 {
-  if (! steal_allowed())
+  if (! xlb_steal_allowed())
     // Too soon to try again
     return ADLB_SUCCESS;
   if (xlb_requestqueue_size() == 0)
@@ -428,7 +428,7 @@ check_steal(void)
   // Steal...
   TRACE_START;
   bool b;
-  int rc = steal(&b);
+  int rc = xlb_steal(&b);
   ADLB_CHECK(rc);
   if (b)
   {

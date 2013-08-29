@@ -34,13 +34,13 @@
    Are there any other servers?
    Are we allowed to steal yet?
  */
-bool steal_allowed(void);
+bool xlb_steal_allowed(void);
 
 /**
    Issue sync() and steal.
    @return result true if stole something, else false
  */
-adlb_code steal(bool* result);
+adlb_code xlb_steal(bool* result);
 
 /**
    Handle an accepted steal request

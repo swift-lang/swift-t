@@ -250,10 +250,3 @@ shutdown_rank(int rank)
   SEND(&g, sizeof(g), MPI_BYTE, rank, ADLB_TAG_RESPONSE_GET);
   return ADLB_SUCCESS;
 }
-
-/**
-   Release memory
- */
-void
-requestqueue_finalize()
-{}

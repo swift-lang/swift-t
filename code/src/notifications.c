@@ -27,7 +27,7 @@ static adlb_code notify_local(int target, const char *payload, int length)
   int answer_rank = -1;
   int work_prio = 1;
   int work_type = 1; // work_type CONTROL
-  int rc = put_targeted_local(work_type, xlb_comm_rank,
+  int rc = xlb_put_targeted_local(work_type, xlb_comm_rank,
                work_prio, answer_rank,
                target, payload, length);
   ADLB_CHECK(rc);

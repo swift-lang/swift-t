@@ -44,12 +44,12 @@ get_target_server(int* result)
 {
   do
   {
-    *result = random_server();
+    *result = xlb_random_server();
   } while (*result == xlb_comm_rank);
 }
 
 bool
-steal_allowed()
+xlb_steal_allowed()
 {
   if (xlb_servers == 1)
     // No other servers
@@ -66,7 +66,7 @@ static inline adlb_code steal_sync(int target, int max_memory);
 static inline adlb_code steal_payloads(int target, int count);
 
 adlb_code
-steal(bool* result)
+xlb_steal(bool* result)
 {
   adlb_code rc;
   int target;

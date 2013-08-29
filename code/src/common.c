@@ -53,7 +53,7 @@ MPI_Comm adlb_server_comm;
 MPI_Comm adlb_worker_comm;
 
 int
-random_server()
+xlb_random_server()
 {
   int result = random_between(xlb_master_server_rank, xlb_comm_size);
   return result;
