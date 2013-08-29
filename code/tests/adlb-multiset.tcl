@@ -23,6 +23,37 @@ turbine::defaults
 turbine::init $engines $servers
 turbine::enable_read_refcount
 
+proc check_multiset_range { ms offset count start_val end_val } {
+
+    set elems [ adlb::enumerate $ms members $count $offset ]
+
+    set size_act [ llength $elems ]
+    set size_exp [ expr $end_val - $start_val + 1 ]
+    if { $size_act == $size_exp } {
+      puts "<$ms> offset=$offset count=$count found=$size_act"
+    } else {
+      error "Expected $size_exp elems in <$ms> but got $size_act"
+    }
+    
+    set enum_count [ adlb::enumerate $ms count $count $offset ]
+    if { $enum_count != $size_act } {
+      error "adlb::enumerate with count gave incorrect result: $enum_count"
+    }
+
+
+    set elems_found [ dict create ]
+    foreach elem $elems {
+      dict set elems_found $elem 1
+    }
+    
+    for { set val $start_val } { $val <= $end_val } { incr val } {
+      puts "CHECK <$ms> contains $val"
+      if { ! [ dict exists $elems_found $val ] } {
+        error "Elem $val not found"
+      }
+    }
+}
+
 if { ! [ adlb::amserver ] } {
 
     set c [ adlb::unique ]
@@ -41,19 +72,39 @@ if { ! [ adlb::amserver ] } {
       error "Wrong multiset size: $z expected: $iterations"
     }
 
-    set elems [ adlb::enumerate $c members all 0 ]
-    set elems_found [ dict create ]
-    foreach elem $elems {
-      dict set elems_found $elem 1
+    # Request all
+    check_multiset_range $c 0 all 100 [ expr 100 + $iterations - 1 ]
+    
+    # Request > number in set
+    check_multiset_range $c 0 5000 100 [ expr 100 + $iterations - 1 ]
+    
+    # Request == number in set
+    check_multiset_range $c 0 $iterations 100 [ expr 100 + $iterations - 1 ]
+
+    # Request < number in set
+    check_multiset_range $c 0 [ expr $iterations - 10 ] \
+                         100 [ expr 100 + $iterations - 1 - 10 ]
+
+    # Request all starting at offset
+    check_multiset_range $c 2 all 102 [ expr 100 + $iterations - 1 ]
+
+    # Request none starting at offset
+    check_multiset_range $c 50 all 0 -1
+    
+    # Request several starting at offset
+    check_multiset_range $c 25 5 125 129
+
+    
+    set failed [ catch {adlb::enumerate $c subscripts all 0} ]
+    if { ! $failed } {
+      error "Expected adlb::enumerate with subscripts on multiset to fail"
     }
     
-    
-    for { set i 0 } { $i < $iterations } { incr i } {
-      set key [ expr 100 + $i ]
-      if { ! [ dict exists $elems_found $key ] } {
-        error "Elem $i not found"
-      }
+    set failed [ catch {adlb::enumerate $c dict all 0} ]
+    if { ! $failed } {
+      error "Expected adlb::enumerate with subscripts on multiset to fail"
     }
+
 
     # cleanup
     adlb::read_refcount_decr $c
