@@ -146,11 +146,11 @@ adlb_code ADLB_Exists(adlb_datum_id id, const char *subscript, bool* result,
   length: length of binary representation
  */
 adlb_code ADLBP_Store(adlb_datum_id id, const char *subscript,
-                      adlb_data_type type,
-                      const void *data, int length, adlb_refcounts refcount_decr);
+                      adlb_data_type type, const void *data, int length,
+                      adlb_refcounts refcount_decr);
 adlb_code ADLB_Store(adlb_datum_id id, const char *subscript,
-                      adlb_data_type type,
-                      const void *data, int length, adlb_refcounts refcount_decr);
+                      adlb_data_type type, const void *data, int length,
+                      adlb_refcounts refcount_decr);
 
 /*
    Retrieve contents of datum.

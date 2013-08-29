@@ -130,16 +130,17 @@ adlb_data_code ADLB_Free_storage(adlb_datum_storage *d, adlb_data_type type)
       break;
     case ADLB_DATA_TYPE_CONTAINER:
     {
-      dc = cleanup_members(&d->CONTAINER, true, ADLB_NO_RC, NO_SCAVENGE);
+      dc = xlb_members_cleanup(&d->CONTAINER, true, ADLB_NO_RC, NO_SCAVENGE);
       DATA_CHECK(dc);
       break;
     }
     case ADLB_DATA_TYPE_MULTISET:
-      dc = xlb_multiset_cleanup(d->MULTISET, true, true, ADLB_NO_RC, NO_SCAVENGE);
+      dc = xlb_multiset_cleanup(d->MULTISET, true, true, ADLB_NO_RC,
+                                NO_SCAVENGE);
       DATA_CHECK(dc);
       break;
     case ADLB_DATA_TYPE_STRUCT:
-      data_free_struct(d->STRUCT, true);
+      xlb_free_struct(d->STRUCT, true);
       break;
     // Types with no malloced storage:
     case ADLB_DATA_TYPE_INTEGER:
@@ -202,7 +203,8 @@ char *ADLB_Data_repr(const adlb_datum_storage *d, adlb_data_type type)
       return tmp;
     case ADLB_DATA_TYPE_FILE_REF:
       rc = asprintf(&tmp, "status:<%"PRId64"> filename:<%"PRId64"> mapped:%i",
-            d->FILE_REF.status_id, d->FILE_REF.filename_id, d->FILE_REF.mapped);
+                    d->FILE_REF.status_id, d->FILE_REF.filename_id,
+                    d->FILE_REF.mapped);
       assert(rc >= 0);
       return tmp;
     case ADLB_DATA_TYPE_CONTAINER:
@@ -212,7 +214,7 @@ char *ADLB_Data_repr(const adlb_datum_storage *d, adlb_data_type type)
       assert(dc == ADLB_DATA_SUCCESS);
       return tmp;
     case ADLB_DATA_TYPE_STRUCT:
-      return data_struct_repr(d->STRUCT);
+      return xlb_struct_repr(d->STRUCT);
     default:
       rc = asprintf(&tmp, "unknown type: %i\n", type);
       assert(rc >= 0);

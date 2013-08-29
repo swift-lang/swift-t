@@ -34,7 +34,8 @@ static adlb_code notify_local(int target, const char *payload, int length)
   return ADLB_SUCCESS;
 }
 
-static adlb_code notify_nonlocal(int target, int server, const char *payload, int length)
+static adlb_code notify_nonlocal(int target, int server,
+                        const char *payload, int length)
 {
   int answer_rank = -1;
   int work_prio = 1;

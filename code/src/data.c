@@ -112,7 +112,8 @@ static void container_add(adlb_container *c, const char *key,
 static void report_leaks(void);
 
 // Maximum length of id/subscript string
-#define ID_SUB_PAIR_MAX (sizeof(adlb_datum_id) / 3 + ADLB_DATA_SUBSCRIPT_MAX + 1)
+#define ID_SUB_PAIR_MAX \
+  (sizeof(adlb_datum_id) / 3 + ADLB_DATA_SUBSCRIPT_MAX + 1)
 static inline int print_id_sub(char *buf, adlb_datum_id id, const char *sub)
 {
   return sprintf(buf, "%"PRId64"[%s]", id, sub);
@@ -244,7 +245,7 @@ datum_init_props(adlb_datum_id id, adlb_datum *d,
                 "write_refcount negative: %i", props->write_refcount);
   d->read_refcount = props->read_refcount;
   d->write_refcount = props->write_refcount;
-  data_init_status(&d->status); // default status
+  xlb_data_init_status(&d->status); // default status
   d->status.permanent = props->permanent;
 
   return ADLB_DATA_SUCCESS;
@@ -323,7 +324,7 @@ adlb_data_code data_permanent(adlb_datum_id id) {
 }
 
 adlb_data_code
-datum_lookup(adlb_datum_id id, adlb_datum **d)
+xlb_datum_lookup(adlb_datum_id id, adlb_datum **d)
 {
   *d= table_lp_search(&tds, id);
   check_verbose(*d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
@@ -344,14 +345,14 @@ data_reference_count(adlb_datum_id id, adlb_refcounts change,
           adlb_ranks *notifications)
 {
   adlb_datum* d;
-  adlb_data_code dc = datum_lookup(id, &d);
+  adlb_data_code dc = xlb_datum_lookup(id, &d);
   DATA_CHECK(dc);
-  return refcount_impl(d, id, change, scav, garbage_collected,
+  return xlb_rc_impl(d, id, change, scav, garbage_collected,
                        refcounts_scavenged, notifications);
 }
 
 adlb_data_code
-refcount_impl(adlb_datum *d, adlb_datum_id id,
+xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
           adlb_refcounts change, refcount_scavenge scav,
           bool *garbage_collected, adlb_refcounts *refcounts_scavenged,
           adlb_ranks *notifications)
@@ -453,7 +454,7 @@ datum_gc(adlb_datum_id id, adlb_datum* d,
   if (d->status.set)
   {
     // Cleanup the storage if initialized
-    adlb_data_code dc = cleanup_storage(&d->data, d->type, id, scav);
+    adlb_data_code dc = xlb_datum_cleanup(&d->data, d->type, id, scav);
     DATA_CHECK(dc);
   }
 
@@ -476,7 +477,7 @@ data_referand_refcount(const void *data, int length,
   dc = ADLB_Unpack(&d, type, data, length);
   DATA_CHECK(dc);
 
-  rc = incr_rc_referand(&d, type, change);
+  rc = xlb_incr_referand(&d, type, change);
   dc = ADLB_Free_storage(&d, type);
   DATA_CHECK(dc);
   return rc;
@@ -809,7 +810,7 @@ data_store(adlb_datum_id id, const char *subscript,
     adlb_refcounts incr = { .read_refcount = xlb_read_refcount_enabled ?
                                             -refcount_decr.read_refcount : 0,
                             .write_refcount = -refcount_decr.write_refcount };
-    dc = refcount_impl(d, id, incr , NO_SCAVENGE,
+    dc = xlb_rc_impl(d, id, incr , NO_SCAVENGE,
                                NULL, NULL, &notifications->close_notify);
     DATA_CHECK(dc);
   }
@@ -915,11 +916,11 @@ data_retrieve(adlb_datum_id id, const char *subscript,
       case ADLB_DATA_TYPE_STRUCT:
       {
         int field_ix;
-        dc = data_struct_str_to_ix(subscript, &field_ix);
+        dc = xlb_struct_str_to_ix(subscript, &field_ix);
         DATA_CHECK(dc);
 
         const adlb_datum_storage *v;
-        dc = data_struct_get_field(d->data.STRUCT, field_ix, &v, type);
+        dc = xlb_struct_get_field(d->data.STRUCT, field_ix, &v, type);
         DATA_CHECK(dc);
         return ADLB_Pack(v, *type, caller_buffer, result);
       }
@@ -1200,7 +1201,7 @@ insert_notifications(adlb_datum *d,
       // going to create a new reference to them
       adlb_refcounts referand_incr = { .read_refcount = references->count,
                                        .write_refcount = 0 };
-      dc = incr_rc_referand(inserted_value, value_type, referand_incr);
+      dc = xlb_incr_referand(inserted_value, value_type, referand_incr);
       DATA_CHECK(dc);
 
       // Now that references are incremented on ref variables,
@@ -1208,7 +1209,7 @@ insert_notifications(adlb_datum *d,
       adlb_ranks tmp = ADLB_NO_RANKS;
       adlb_refcounts read_decr = { .read_refcount = -1,
                                    .write_refcount = 0 };
-      dc = refcount_impl(d, container_id, read_decr, NO_SCAVENGE,
+      dc = xlb_rc_impl(d, container_id, read_decr, NO_SCAVENGE,
                          garbage_collected, NULL, &tmp);
       DATA_CHECK(dc);
       assert(tmp.count == 0);
@@ -1500,7 +1501,7 @@ data_finalize()
   
   table_lp_free_callback(&locked, false, free_locked_entry);
 
-  adlb_data_code dc = data_struct_finalize();
+  adlb_data_code dc = xlb_struct_finalize();
   DATA_CHECK(dc);
   return ADLB_DATA_SUCCESS;
 }

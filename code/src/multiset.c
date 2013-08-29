@@ -88,8 +88,8 @@ xlb_multiset_cleanup(xlb_multiset *set, bool free_root, bool free_mem,
     uint clen = chunk_len(set, i);
     for (int j = 0; j < clen; j++) {
       adlb_datum_storage *d = &chunk->arr[j];
-      adlb_data_code dc = cleanup_storage2(d, set->elem_type, ADLB_DATA_ID_NULL,
-                                           free_mem, change, scav);
+      adlb_data_code dc = xlb_datum_cleanup2(d, set->elem_type,
+                          ADLB_DATA_ID_NULL, free_mem, change, scav);
       DATA_CHECK(dc);
     }
     if (free_mem)
@@ -122,7 +122,8 @@ adlb_data_code xlb_multiset_slice(xlb_multiset *set, uint start, uint count,
 
   // Allocate enough space for chunk pointers
   size_t max_chunks = (size_t)(count / XLB_MULTISET_CHUNK_SIZE + 1);
-  adlb_slice_t *slice = malloc(sizeof(adlb_slice_t) + sizeof(slice_chunk_t) * max_chunks);
+  adlb_slice_t *slice = malloc(sizeof(adlb_slice_t) +
+                               sizeof(slice_chunk_t) * max_chunks);
   
 
   // First chunk

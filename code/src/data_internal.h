@@ -21,7 +21,7 @@ typedef struct {
 } adlb_data_status;
 
 
-static inline void data_init_status(adlb_data_status *s)
+static inline void xlb_data_init_status(adlb_data_status *s)
 {
   memset(s, 0, sizeof(*s));
 }
@@ -67,14 +67,14 @@ typedef struct
 #endif
 
 adlb_data_code
-datum_lookup(adlb_datum_id id, adlb_datum **d);
+xlb_datum_lookup(adlb_datum_id id, adlb_datum **d);
 
 /*
   Alternative, more flexible implementation of refcount
   that directly takes datum reference
  */
 adlb_data_code
-refcount_impl(adlb_datum *d, adlb_datum_id id,
+xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
           adlb_refcounts change, refcount_scavenge scav,
           bool *garbage_collected, adlb_refcounts *refcounts_scavenged,
           adlb_ranks *notifications);

@@ -39,7 +39,7 @@ static adlb_data_code struct_type_free(struct_type_info *t);
 static adlb_struct *alloc_struct(struct_type_info *t);
 
 
-const char *data_struct_type_name(adlb_struct_type type)
+const char *xlb_struct_type_name(adlb_struct_type type)
 {
   if (type >= 0 && type < struct_types_size)
   {
@@ -121,7 +121,7 @@ adlb_data_code ADLB_Declare_struct_type(adlb_struct_type type,
   return ADLB_DATA_SUCCESS;
 }
 
-adlb_data_code data_struct_finalize(void)
+adlb_data_code xlb_struct_finalize(void)
 {
   if (struct_types != NULL)
   {
@@ -278,7 +278,7 @@ adlb_data_code ADLB_Pack_struct(const adlb_struct *s,
 }
 
 // Get data for struct field
-adlb_data_code data_struct_get_field(adlb_struct *s, int field_ix,
+adlb_data_code xlb_struct_get_field(adlb_struct *s, int field_ix,
                         const adlb_datum_storage **val, adlb_data_type *type)
 {
   check_valid_type(s->type);
@@ -293,7 +293,7 @@ adlb_data_code data_struct_get_field(adlb_struct *s, int field_ix,
   return ADLB_DATA_SUCCESS;
 }
 
-adlb_data_code data_free_struct(adlb_struct *s, bool free_root_ptr)
+adlb_data_code xlb_free_struct(adlb_struct *s, bool free_root_ptr)
 {
   assert(s != NULL);
   check_valid_type(s->type);
@@ -310,13 +310,13 @@ adlb_data_code data_free_struct(adlb_struct *s, bool free_root_ptr)
 }
 
 adlb_data_code
-incr_rc_referand_struct(adlb_struct *s, adlb_refcounts rc_change)
+xlb_struct_incr_referand(adlb_struct *s, adlb_refcounts rc_change)
 {
-  return data_cleanup_struct(s, false, rc_change, ADLB_NO_RC, -1);
+  return xlb_struct_cleanup(s, false, rc_change, ADLB_NO_RC, -1);
 }
 
 adlb_data_code
-data_cleanup_struct(adlb_struct *s, bool free_mem,
+xlb_struct_cleanup(adlb_struct *s, bool free_mem,
         adlb_refcounts rc_change, adlb_refcounts scav_refcounts, int scav_ix)
 {
   assert(s != NULL);
@@ -331,28 +331,28 @@ data_cleanup_struct(adlb_struct *s, bool free_mem,
   {
     if (do_scavenge && (scav_ix < 0 || scav_ix == i))
     {
-      dc = incr_scav_rc_referand(&s->data[i], t->field_types[i],
+      dc = xlb_incr_scav_referand(&s->data[i], t->field_types[i],
                                 rc_change, scav_refcounts);
       DATA_CHECK(dc);
     }
     else
     {
       // Don't scavenge
-      dc = incr_rc_referand(&s->data[i], t->field_types[i], rc_change);
+      dc = xlb_incr_referand(&s->data[i], t->field_types[i], rc_change);
       DATA_CHECK(dc);
     }
   }
 
   if (free_mem)
   {
-    dc = data_free_struct(s, true);
+    dc = xlb_free_struct(s, true);
     DATA_CHECK(dc);
   }
   return ADLB_DATA_SUCCESS;
 }
 
 adlb_data_code
-data_struct_str_to_ix(const char *subscript, int *field_ix)
+xlb_struct_str_to_ix(const char *subscript, int *field_ix)
 {
   char *end;
   long field_ixl = strtol(subscript, &end, 10);
@@ -365,7 +365,7 @@ data_struct_str_to_ix(const char *subscript, int *field_ix)
   return ADLB_DATA_SUCCESS;
 }
 
-char *data_struct_repr(adlb_struct *s)
+char *xlb_struct_repr(adlb_struct *s)
 {
   if (is_valid_type(s->type))
   {

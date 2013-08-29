@@ -47,7 +47,8 @@ adlb_data_code data_create(adlb_datum_id id, adlb_data_type type,
                            const adlb_type_extra *type_extra,
                            const adlb_create_props *props);
 
-adlb_data_code data_exists(adlb_datum_id id, const char *subscript, bool* result);
+adlb_data_code data_exists(adlb_datum_id id, const char *subscript,
+                           bool* result);
 
 adlb_data_code data_lock(adlb_datum_id id, int rank, bool* result);
 
@@ -103,10 +104,10 @@ static const refcount_scavenge NO_SCAVENGE =
 /*
   Modify data reference count
 
-  scav/refcounts_scavenged: try to scavenge reference counts to referenced items.
-                            if *refcounts_scavenged is filled with 0, this means
-                            we weren't successful and didn't modify any reference
-                            counts
+  scav/refcounts_scavenged: try to scavenge reference counts to referenced
+                            items.  If *refcounts_scavenged is filled
+                            with 0, this means we weren't successful and
+                            didn't modify any reference counts
  */
 adlb_data_code data_reference_count(adlb_datum_id id, adlb_refcounts change,
                 refcount_scavenge scav, bool *garbage_collected,

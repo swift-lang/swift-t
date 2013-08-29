@@ -10,7 +10,7 @@
 #include "multiset.h"
 #include "sync.h"
 
-adlb_data_code incr_rc_svr(adlb_datum_id id, adlb_refcounts change)
+adlb_data_code xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change)
 {
   assert(xlb_am_server); // Only makes sense to run on server
 
@@ -48,7 +48,7 @@ adlb_data_code incr_rc_svr(adlb_datum_id id, adlb_refcounts change)
 }
 
 adlb_data_code
-incr_rc_referand(adlb_datum_storage *d, adlb_data_type type,
+xlb_incr_referand(adlb_datum_storage *d, adlb_data_type type,
                  adlb_refcounts change)
 {
   assert(d != NULL);
@@ -62,28 +62,29 @@ incr_rc_referand(adlb_datum_storage *d, adlb_data_type type,
       // Types that don't hold references
       break;
     case ADLB_DATA_TYPE_CONTAINER:
-      dc = cleanup_members(&d->CONTAINER, false, change, NO_SCAVENGE);
+      dc = xlb_members_cleanup(&d->CONTAINER, false, change, NO_SCAVENGE);
       DATA_CHECK(dc);
       break;
     case ADLB_DATA_TYPE_MULTISET:
-      dc = xlb_multiset_cleanup(d->MULTISET, false, false, change, NO_SCAVENGE);
+      dc = xlb_multiset_cleanup(d->MULTISET, false, false, change,
+                                NO_SCAVENGE);
       DATA_CHECK(dc);
       break;
     case ADLB_DATA_TYPE_STRUCT:
       // increment referand for all members in struct
-      dc = incr_rc_referand_struct(d->STRUCT, change);
+      dc = xlb_struct_incr_referand(d->STRUCT, change);
       DATA_CHECK(dc);
       break;
     case ADLB_DATA_TYPE_REF:
       // decrement reference
-      dc = incr_rc_svr(d->REF, change);
+      dc = xlb_incr_rc_svr(d->REF, change);
       DATA_CHECK(dc);
       break;
     case ADLB_DATA_TYPE_FILE_REF:
       // decrement references held
-      dc = incr_rc_svr(d->FILE_REF.status_id, change);
+      dc = xlb_incr_rc_svr(d->FILE_REF.status_id, change);
       DATA_CHECK(dc);
-      dc = incr_rc_svr(d->FILE_REF.filename_id, change);
+      dc = xlb_incr_rc_svr(d->FILE_REF.filename_id, change);
       DATA_CHECK(dc);
       break;
     default:
@@ -97,7 +98,7 @@ incr_rc_referand(adlb_datum_storage *d, adlb_data_type type,
 
 // Modify reference count of referands and check scavenging
 adlb_data_code
-incr_scav_rc_referand(adlb_datum_storage *d, adlb_data_type type,
+xlb_incr_scav_referand(adlb_datum_storage *d, adlb_data_type type,
         adlb_refcounts change, adlb_refcounts to_scavenge)
 {
   assert(to_scavenge.read_refcount >= 0);
@@ -105,7 +106,7 @@ incr_scav_rc_referand(adlb_datum_storage *d, adlb_data_type type,
 
   if (ADLB_RC_IS_NULL(to_scavenge))
   {
-    return incr_rc_referand(d, type, change);
+    return xlb_incr_referand(d, type, change);
   }
   else
   {
@@ -116,7 +117,7 @@ incr_scav_rc_referand(adlb_datum_storage *d, adlb_data_type type,
   }
 }
 adlb_data_code
-update_read_refcount_scav(adlb_datum_id id, const char *subscript,
+xlb_incr_rc_scav(adlb_datum_id id, const char *subscript,
         const void *ref_data, int ref_data_len, adlb_data_type ref_type,
         adlb_refcounts decr_self, adlb_refcounts incr_referand,
         adlb_ranks *notifications)
@@ -135,12 +136,12 @@ update_read_refcount_scav(adlb_datum_id id, const char *subscript,
   }
 
   adlb_datum *d;
-  dc = datum_lookup(id, &d);
+  dc = xlb_datum_lookup(id, &d);
   DATA_CHECK(dc);
 
   if (ADLB_RC_IS_NULL(incr_referand))
   {
-    return refcount_impl(d, id, adlb_rc_negate(decr_self),
+    return xlb_rc_impl(d, id, adlb_rc_negate(decr_self),
                   NO_SCAVENGE, NULL, NULL, notifications);
   }
 
@@ -150,7 +151,7 @@ update_read_refcount_scav(adlb_datum_id id, const char *subscript,
   bool garbage_collected = false;
   refcount_scavenge scav_req = { .subscript = subscript,
                                  .refcounts = incr_referand };
-  dc = refcount_impl(d, id, adlb_rc_negate(decr_self), scav_req,
+  dc = xlb_rc_impl(d, id, adlb_rc_negate(decr_self), scav_req,
                         &garbage_collected, &scavenged, notifications);
   DATA_CHECK(dc);
 
@@ -183,7 +184,7 @@ update_read_refcount_scav(adlb_datum_id id, const char *subscript,
     
     // Weren't able to acquire any reference counts, so attempted
     // decrement unsuccessful.  Retry.
-    return refcount_impl(d, id, adlb_rc_negate(decr_self), NO_SCAVENGE,
+    return xlb_rc_impl(d, id, adlb_rc_negate(decr_self), NO_SCAVENGE,
                           NULL, NULL, notifications);
   }
 }

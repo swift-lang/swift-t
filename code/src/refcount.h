@@ -12,18 +12,18 @@
 
 
 // Decrement reference count of given id
-adlb_data_code incr_rc_svr(adlb_datum_id id, adlb_refcounts change);
+adlb_data_code xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change);
 
 /* Modify refcount of referenced items */
 adlb_data_code
-incr_rc_referand(adlb_datum_storage *d,
+xlb_incr_referand(adlb_datum_storage *d,
         adlb_data_type type, adlb_refcounts change);
 
 /* Modify refcount of referenced items.  If to_scavenge is positive,
    scavenge that number of read references to referands.
  */
 adlb_data_code
-incr_scav_rc_referand(adlb_datum_storage *d, adlb_data_type type,
+xlb_incr_scav_referand(adlb_datum_storage *d, adlb_data_type type,
         adlb_refcounts change, adlb_refcounts to_scavenge);
 
 /*
@@ -32,7 +32,7 @@ incr_scav_rc_referand(adlb_datum_storage *d, adlb_data_type type,
   TODO: in future, ability to offload this work to client
  */
 adlb_data_code
-update_read_refcount_scav(adlb_datum_id id, const char *subscript,
+xlb_incr_rc_scav(adlb_datum_id id, const char *subscript,
         const void *ref_data, int ref_data_len, adlb_data_type ref_type,
         adlb_refcounts decr_self, adlb_refcounts incr_referand,
         adlb_ranks *notifications);

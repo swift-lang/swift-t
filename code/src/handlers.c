@@ -793,7 +793,7 @@ handle_retrieve(int caller)
     if (dc == ADLB_DATA_SUCCESS)
     {
       adlb_ranks notify;
-      dc = update_read_refcount_scav(hdr->id, subscript,
+      dc = xlb_incr_rc_scav(hdr->id, subscript,
                                result.data, result.length,
                                type, decr_self, incr_referand, &notify);
       if (dc == ADLB_DATA_SUCCESS)
@@ -1085,7 +1085,7 @@ handle_container_reference(int caller)
       adlb_refcounts referand_incr = ADLB_READ_RC;
       // container_reference must consume a read reference, and we need
       // to increment read refcount of referenced variable
-      dc = update_read_refcount_scav(container_id, subscript,
+      dc = xlb_incr_rc_scav(container_id, subscript,
                         member.data, member.length,
                         ref_type, self_decr, referand_incr, &notify);
 
