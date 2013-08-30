@@ -506,7 +506,7 @@ AC_ARG_WITH(tcl,
 # Set USE_TCL_LIB_DIR: location of libtcl
 LIBTCL=libtcl${TCL_VERSION}.${SO_SUFFIX}
 USE_TCL_LIB_DIR=${USE_TCL}/lib
-if [[ ! -f ${USE_TCL_LIB_DIR} ]]
+if [[ ! -f ${USE_TCL_LIB_DIR}/${LIBTCL} ]]
 then
   USE_TCL_LIB_DIR=${USE_TCL}/lib64
 fi
