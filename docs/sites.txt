@@ -678,14 +678,22 @@ MPI_VERSION=2
 ----
 
 ===== Submitting jobs
-TODO
-----
-wrote: /u/sciteam/tarmstro/turbine-output/2013/08/29/15/25/27/turbine-aprun.sh
-Error: nodes= or procs= not specified
-  Please add either -l nodes=<#nodes>:ppn=<#ppn> or -l procs=# to your submission to specify the required amount of compute resources
-  qsub: Your job has been administratively rejected by the queueing system.
-  qsub: There may be a more detailed explanation prior to this notice.
+Submitting jobs is largely the same with with other Cray systems. One
+difference is that the size of the job is specified using a different
+notation.  
 
+Blue Waters requires the submit script to specify job size using
+different directives to other Cray systems.  It does *not* support the
+'mpp' directives: trying to use an 'mpp' directive may cause your job
+to be rejected or stuck in the queue. The correct directive is: 
+----
+#PBS -l nodes=1:ppn=32
+----
+
+The +turbine-aprun-run.zsh+ script supports Blue Waters.  You can invoke
+it as follows (for a single node/32 processes per node):
+----
+QUEUE=normal BLUE_WATERS=true PPN=32 turbine-aprun-run.zsh -n 32 helloworld.tcl
 ----
 
 == Cloud
