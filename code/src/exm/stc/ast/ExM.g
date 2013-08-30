@@ -186,10 +186,10 @@ top_level_statement:
 new_type_definition:
         TYPE tname=ID LBRACE type_field* RBRACE ->
             ^( DEFINE_NEW_STRUCT_TYPE $tname type_field*)
-    |   TYPE tname=ID baset=ID array_marker* SEMICOLON ->
-            ^( DEFINE_NEW_TYPE $tname $baset array_marker* )
-    |   TYPEDEF tname=ID baset=ID array_marker* SEMICOLON ->
-            ^( TYPEDEF $tname $baset array_marker* )
+    |   TYPE tname=ID baset=standalone_type SEMICOLON ->
+            ^( DEFINE_NEW_TYPE $tname $baset )
+    |   TYPEDEF tname=ID baset=standalone_type SEMICOLON ->
+            ^( TYPEDEF $tname $baset )
     ;
 
 // Import can a string or a dotted list of identifiers
@@ -201,11 +201,19 @@ import_statement:
 
 // Identifier path: separated by full stops
 import_path:
-        ID id_subscript* -> ^( IMPORT_PATH ID id_subscript* )
+        m=module_name module_subscript* 
+        	-> ^( IMPORT_PATH $m module_subscript* )
     ;
 
+module_name: ID;
+
+module_subscript:
+        '.' module_name -> module_name
+    ;
+
+
 type_field:
-        type=ID name=ID  array_marker* SEMICOLON ->
+        type=type_prefix name=var_name array_marker* SEMICOLON ->
             ^( STRUCT_FIELD_DEF $type $name array_marker* )
     ;
     
@@ -213,10 +221,10 @@ type_field:
 function_definition:
 	annotation* (
 		// app function
-		APP o=formal_argument_list f=ID i=formal_argument_list
+		APP o=formal_argument_list f=func_name i=formal_argument_list
         	LBRACE app_body SEMICOLON? RBRACE ->
         	^( DEFINE_APP_FUNCTION $f $o $i app_body annotation* )
-    |   tp=type_parameters o=formal_argument_list f=ID i=formal_argument_list (
+    |   tp=type_parameters o=formal_argument_list f=func_name i=formal_argument_list (
     		// Composite function with block
         	b=block ->
         		^( DEFINE_FUNCTION $f $tp $o $i $b annotation* )
@@ -225,6 +233,8 @@ function_definition:
         		^( DEFINE_BUILTIN_FUNCTION $f $tp $o $i tcl_body annotation* )
         )
     );
+
+func_name: ID;
 
 app_body:
     command app_redirection*
@@ -247,7 +257,7 @@ command_arg:
         variable
     |   literal
     |   LPAREN expr RPAREN -> expr
-    |   ATSIGN ID -> ^( APP_FILENAME ID )
+    |   ATSIGN var_name -> ^( APP_FILENAME var_name )
     ;
 
 app_redirection:
@@ -273,16 +283,18 @@ tcl_fun_ref:
 
 type_parameters:
         /* empty */ -> ^( TYPE_PARAMETERS )
-    |   LT id_list GT -> ^( TYPE_PARAMETERS id_list )
+    |   LT var_name_list GT -> ^( TYPE_PARAMETERS var_name_list )
     ;
 
-id_list:
-        ID id_list_more
+var_name_list:
+        var_name var_name_list_more
     ;
-id_list_more:
+
+var_name_list_more:
         /* empty */
-    |   COMMA id_list -> id_list
+    |   COMMA var_name_list -> var_name_list
     ;
+
 inline_tcl:
     LSQUARE tcl=(STRING|STRING_MULTI_LINE_1|STRING_MULTI_LINE_2) RSQUARE
           -> ^( INLINE_TCL $tcl );
@@ -309,7 +321,7 @@ formal_arguments_rest:
 
 arg_decl:
     // Match standard declaration AST
-        type=multi_type VARARGS? v=ID array_marker*
+        type=multi_type_prefix VARARGS? v=var_name array_marker*
             -> ^( DECLARATION $type
                 ^( DECLARE_VARIABLE_REST $v array_marker* )
                 VARARGS?)
@@ -319,22 +331,22 @@ arg_decl:
 // The initial part of a type declaration, e.g. "int" in int A[]
 // or "set<int>"
 type_prefix:
-		ID
-	|   ID LT standalone_type GT -> ^( PARAM_TYPE ID standalone_type ) 
+		type_name
+	|   type_name LT standalone_type GT -> ^( PARAM_TYPE type_name standalone_type ) 
 	;
 
-multi_type:
-        ID another_type*
-            -> ^( MULTI_TYPE ID another_type* )
+multi_type_prefix:
+        type_prefix another_type*
+            -> ^( MULTI_TYPE type_prefix another_type* )
     ;
 
 another_type:
-        PIPE ID -> ID
+        PIPE type_prefix -> type_prefix
     ;
 
 // Type that stands alone outside of variable declaration
 standalone_type:
-	type=ID array_marker*
+	type=type_prefix array_marker*
 		-> ^( STANDALONE_TYPE $type array_marker* )  
 	;
 
@@ -400,9 +412,9 @@ switch_case:
     ;
 
 foreach_loop:
-        annotation* FOREACH v=ID COMMA i=ID IN e=expr b=block
+        annotation* FOREACH v=var_name COMMA i=var_name IN e=expr b=block
         -> ^( FOREACH_LOOP $e $b $v $i annotation* )
-    |   annotation* FOREACH v=ID IN e=expr b=block
+    |   annotation* FOREACH v=var_name IN e=expr b=block
         -> ^( FOREACH_LOOP $e $b $v annotation* )
     ;
 
@@ -443,11 +455,11 @@ for_loop_update_more:
 for_loop_declaration: declare_assign_single;
 
 for_loop_assignment:
-        ID ASSIGN expr -> ^( FOR_LOOP_ASSIGN ID expr )
+        var_name ASSIGN expr -> ^( FOR_LOOP_ASSIGN var_name expr )
     ;
 
 iterate_loop:
-        ITERATE v=ID b=block UNTIL LPAREN e=expr RPAREN
+        ITERATE v=var_name b=block UNTIL LPAREN e=expr RPAREN
                 -> ^( ITERATE $v $b $e )
     ;
 wait_stmt:
@@ -456,9 +468,8 @@ wait_stmt:
     ;
 
 declaration_multi:
-        type=ID declare_rest declare_rest_more*
-            -> ^( DECLARATION $type declare_rest
-                                                declare_rest_more* )
+        type=type_prefix declare_rest declare_rest_more*
+            -> ^( DECLARATION $type declare_rest declare_rest_more* )
     ;
 
 declare_rest_more:
@@ -468,7 +479,7 @@ declare_rest_more:
 // Single variable declaration with assignment
 // keep same AST structure
 declare_assign_single:
-        type=ID v=ID array_marker* mapping? ASSIGN expr
+        type=type_prefix v=var_name array_marker* mapping? ASSIGN expr
             -> ^( DECLARATION $type
                   ^( DECLARE_ASSIGN
                     ^( DECLARE_VARIABLE_REST $v array_marker*
@@ -476,7 +487,7 @@ declare_assign_single:
     ;
 
 declare_rest:
-    v=ID array_marker* mapping? (
+    v=var_name array_marker* mapping? (
           /* empty */ ->  ^( DECLARE_VARIABLE_REST $v array_marker*
                              mapping?)
        |  ASSIGN expr ->  ^( DECLARE_ASSIGN
@@ -572,15 +583,19 @@ uexpr_op: NOT
 pfexpr:
         (base_expr->base_expr)
         (   array_index -> ^(ARRAY_LOAD $pfexpr array_index )
-          | id_subscript -> ^(STRUCT_LOAD $pfexpr id_subscript )
+          | var_subscript -> ^(STRUCT_LOAD $pfexpr var_subscript )
         )*
     ;
+
+var_name: ID;
+
+type_name: ID;
 
 array_index:
         LSQUARE expr RSQUARE -> expr
     ;
 
-id_subscript:
+var_subscript:
         '.' ID -> ID
     ;
 
@@ -606,8 +621,9 @@ literal:
 
 
 variable:
-        ID -> ^( VARIABLE ID )
+        var_name -> ^( VARIABLE var_name )
     ;
+
 bool_lit: TRUE | FALSE
     ;
 
@@ -703,7 +719,7 @@ assign_target:
     ;
 
 assign_path_element:
-        id_subscript -> ^( STRUCT_PATH id_subscript)
+        var_subscript -> ^( STRUCT_PATH var_subscript)
     |   array_index   -> ^( ARRAY_PATH  array_index)
     ;
 

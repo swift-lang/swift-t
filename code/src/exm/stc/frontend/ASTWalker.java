@@ -61,16 +61,15 @@ import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ArrayInfo;
-import exm.stc.common.lang.Types.ArrayType;
 import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Types.FileKind;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.RefType;
 import exm.stc.common.lang.Types.StructType;
-import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.SubType;
 import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
@@ -2530,18 +2529,12 @@ public class ASTWalker {
     assert (defnTree.getType() == ExMParser.DEFINE_NEW_TYPE ||
             defnTree.getType() == ExMParser.TYPEDEF );
     int children = defnTree.getChildCount();
-    assert(children >= 2);
+    assert(children == 2);
     String typeName = defnTree.child(0).getText();
-    String baseTypeName = defnTree.child(1).getText();
+    SwiftAST baseTypeT = defnTree.child(1);
     
-    Type baseType = context.lookupTypeUser(baseTypeName);
-    
-    for (int i = defnTree.getChildCount() - 1; i >= 2; i--) {
-      SwiftAST arrayT = defnTree.child(i);
-      assert(arrayT.getType() == ExMParser.ARRAY);
-      Type keyType = VariableDeclaration.getArrayKeyType(context, arrayT);
-      baseType = new ArrayType(keyType, baseType);
-    }
+    Type baseType = VariableDeclaration.extractStandaloneType(
+                                          context, baseTypeT);
     
     Type newType;
     if (aliasOnly) {
