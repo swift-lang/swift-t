@@ -21,14 +21,19 @@ changecom(`dnl')#!/bin/bash -e
 
 # Define a convenience macro
 # This simply does environment variable substition when m4 runs
-define(`getenv', `esyscmd(printf -- "$`$1' ")')
+define(`getenv', `esyscmd(printf -- "$`$1'")')
 
 #PBS -N TURBINE
 #PBS -q getenv(QUEUE)
 #PBS -l walltime=getenv(WALLTIME)
-#PBS -l mppwidth=getenv(PROCS)
-#PBS -l mppnppn=getenv(PPN)
 #PBS -o getenv(OUTPUT_FILE)
+
+# Set the job size using appropriate directives for this system
+ifelse(getenv(BLUE_WATERS), `true',
+#PBS -l nodes=getenv(NODES):ppn=getenv(PPN),
+#PBS -l mppwidth=getenv(PROCS)
+#PBS -l mppnppn=getenv(PPN))
+
 # Pass all environment variables to the job
 #PBS -V
 
