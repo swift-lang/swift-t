@@ -653,7 +653,7 @@ cd exm-trunk
 
 - exm-settings.zsh needs some customization.  The changed settings were:
 ----
-EXM_PREFIX=/u/sciteam/tarmstro/soft/exm-trunk-r8763
+EXM_PREFIX=/u/sciteam/tarmstro/soft/exm-trunk-r8770
 
 # Use the latest GNU-compatible version of mpich
 EXM_MPI=/opt/cray/mpt/default/gni/mpich2-gnu/48
@@ -672,9 +672,21 @@ MPI_VERSION=2
 ----
 - I also needed to make a change to the configure script (as of Aug 29 2013)
   so that it found the tcl shared library in /usr/lib64 instead of /usr/lib
+- After that the +exm-setup.zsh+ script should take care of installation
+----
+./exm-setup.zsh
+----
 
 ===== Submitting jobs
 TODO
+----
+wrote: /u/sciteam/tarmstro/turbine-output/2013/08/29/15/25/27/turbine-aprun.sh
+Error: nodes= or procs= not specified
+  Please add either -l nodes=<#nodes>:ppn=<#ppn> or -l procs=# to your submission to specify the required amount of compute resources
+  qsub: Your job has been administratively rejected by the queueing system.
+  qsub: There may be a more detailed explanation prior to this notice.
+
+----
 
 == Cloud
 
