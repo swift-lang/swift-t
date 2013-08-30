@@ -513,6 +513,7 @@ fi
 
 which tclsh
 which tclsh8.5
+ldd $( which tclsh )
 echo UTLD $USE_TCL_LIB_DIR
 
 AC_MSG_CHECKING([for ${LIBTCL} ])
