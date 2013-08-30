@@ -511,11 +511,6 @@ then
   USE_TCL_LIB_DIR=${USE_TCL}/lib64
 fi
 
-which tclsh
-which tclsh8.5
-ldd $( which tclsh )
-echo UTLD $USE_TCL_LIB_DIR
-
 AC_MSG_CHECKING([for ${LIBTCL} ])
 if [[ ! -r ${USE_TCL_LIB_DIR}/${LIBTCL} ]]
 then
