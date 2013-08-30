@@ -51,6 +51,7 @@ tokens {
     STRUCT_FIELD_DEF;
     VARIABLE;
     MULTI_TYPE;
+    PARAM_TYPE;
     STANDALONE_TYPE;
     INT_LITERAL;
     FLOAT_LITERAL;
@@ -182,12 +183,6 @@ top_level_statement:
             import_statement)
     ;
 
-function_definition:
-        composite_function_definition
-    |   app_function_definition
-    |   builtin_function_definition
-    ;
-
 new_type_definition:
         TYPE tname=ID LBRACE type_field* RBRACE ->
             ^( DEFINE_NEW_STRUCT_TYPE $tname type_field*)
@@ -213,12 +208,23 @@ type_field:
         type=ID name=ID  array_marker* SEMICOLON ->
             ^( STRUCT_FIELD_DEF $type $name array_marker* )
     ;
-app_function_definition:
-        annotation*
-        APP o=formal_argument_list f=ID i=formal_argument_list
-        LBRACE app_body SEMICOLON? RBRACE ->
-        ^( DEFINE_APP_FUNCTION $f $o $i app_body annotation* )
-    ;
+    
+
+function_definition:
+	annotation* (
+		// app function
+		APP o=formal_argument_list f=ID i=formal_argument_list
+        	LBRACE app_body SEMICOLON? RBRACE ->
+        	^( DEFINE_APP_FUNCTION $f $o $i app_body annotation* )
+    |   tp=type_parameters o=formal_argument_list f=ID i=formal_argument_list (
+    		// Composite function with block
+        	b=block ->
+        		^( DEFINE_FUNCTION $f $tp $o $i $b annotation* )
+        |   // Builtin TCL function
+        	tcl_body SEMICOLON ->
+        		^( DEFINE_BUILTIN_FUNCTION $f $tp $o $i tcl_body annotation* )
+        )
+    );
 
 app_body:
     command app_redirection*
@@ -253,23 +259,10 @@ redirect_type:
         (STDIN|STDOUT|STDERR)
     ;
 
-composite_function_definition:
-        annotation*
-        o=formal_argument_list f=ID i=formal_argument_list
-        b=block ->
-        ^( DEFINE_FUNCTION $f $o $i $b annotation* )
-    ;
-
-builtin_function_definition:
-        annotation*
-        tp=type_parameters
-        o=formal_argument_list f=ID i=formal_argument_list
-         tcl_package
-         tcl_fun_ref? inline_tcl? SEMICOLON ->
-        ^( DEFINE_BUILTIN_FUNCTION $f $tp $o $i tcl_package tcl_fun_ref?
-                                   inline_tcl? annotation* )
-    ;
-
+tcl_body:
+		tcl_package tcl_fun_ref? inline_tcl?
+	;
+	
 tcl_package:
         pkg=STRING version=STRING -> ^( TCL_PACKAGE $pkg $version )
     ;
@@ -322,6 +315,14 @@ arg_decl:
                 VARARGS?)
     ;
 
+
+// The initial part of a type declaration, e.g. "int" in int A[]
+// or "set<int>"
+type_prefix:
+		ID
+	|   ID LT standalone_type GT -> ^( PARAM_TYPE ID standalone_type ) 
+	;
+
 multi_type:
         ID another_type*
             -> ^( MULTI_TYPE ID another_type* )
@@ -333,9 +334,8 @@ another_type:
 
 // Type that stands alone outside of variable declaration
 standalone_type:
-		// TODO: should support array markers here later
-		//type=ID array_marker* -> ^( STANDALONE_TYPE $type array_marker* )  
-		type=ID -> ^( STANDALONE_TYPE $type )
+	type=ID array_marker*
+		-> ^( STANDALONE_TYPE $type array_marker* )  
 	;
 
 block: LBRACE stmt* RBRACE -> ^( BLOCK stmt* )

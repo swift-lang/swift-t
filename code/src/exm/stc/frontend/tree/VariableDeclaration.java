@@ -24,6 +24,7 @@ import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.ArrayType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LogHelper;
@@ -120,7 +121,7 @@ public class VariableDeclaration {
       SwiftAST subtree = tree.child(i);
       if (subtree.getType() == ExMParser.ARRAY) {
         Type keyType = getArrayKeyType(context, subtree);
-        varType = new Types.ArrayType(keyType, varType);
+        varType = new ArrayType(keyType, varType);
       } else if (subtree.getType() == ExMParser.MAPPING) {
         assert(mappingExpr == null);
         assert(subtree.getChildCount() == 1);
@@ -162,14 +163,21 @@ public class VariableDeclaration {
   }
 
   public static Type extractStandaloneType(Context context,
-      SwiftAST standaloneTypeT) throws UndefinedTypeException {
-    Type keyType;
+      SwiftAST standaloneTypeT) throws UndefinedTypeException, TypeMismatchException {
     assert(standaloneTypeT.getType() == ExMParser.STANDALONE_TYPE);
-    assert(standaloneTypeT.getChildCount() == 1);
-    // TODO: later we might want to have compound types in standalone type
-    String keyTypeName = standaloneTypeT.child(0).getText(); 
-    keyType = context.lookupTypeUser(keyTypeName);
-    return keyType;
+    assert(standaloneTypeT.getChildCount() >= 1);
+    // Extract the initial type
+    String resultTypeName = standaloneTypeT.child(0).getText(); 
+    Type resultType = context.lookupTypeUser(resultTypeName);
+    
+    // Apply the array markers from right to left
+    for (int i = standaloneTypeT.getChildCount() - 1; i >= 1; i--) {
+      SwiftAST arrayT = standaloneTypeT.child(i);
+      assert(arrayT.getType() == ExMParser.ARRAY);
+      Type keyType = getArrayKeyType(context, arrayT);
+      resultType = new ArrayType(keyType, resultType);
+    }
+    return resultType;
   }
   
   public static class VariableDescriptor {

@@ -1968,11 +1968,18 @@ public class ASTWalker {
     String function = tree.child(0).getText();
     LogHelper.debug(context, "define function: " + context.getLocation() +
                               function);
-    assert(tree.getChildCount() >= 4);
-    SwiftAST outputs = tree.child(1);
-    SwiftAST inputs = tree.child(2);
+    assert(tree.getChildCount() >= 5);
+    SwiftAST typeParams = tree.child(1);
+    SwiftAST outputs = tree.child(2);
+    SwiftAST inputs = tree.child(3);
     
-    List<String> annotations = extractFunctionAnnotations(context, tree, 4);
+    assert(typeParams.getType() == ExMParser.TYPE_PARAMETERS);
+    if (typeParams.getChildCount() != 0) {
+      throw new UserException(context, "Cannot provide type parameters for "
+                                      + "Swift functions");
+    }
+    
+    List<String> annotations = extractFunctionAnnotations(context, tree, 5);
     
     FunctionDecl fdecl = FunctionDecl.fromAST(context, function, inputs,
                           outputs, Collections.<String>emptySet());
@@ -2036,9 +2043,9 @@ public class ASTWalker {
     // defineFunction should already have been called
     assert(context.isFunction(function));
     assert(context.hasFunctionProp(function, FnProp.COMPOSITE));
-    SwiftAST outputs = tree.child(1);
-    SwiftAST inputs = tree.child(2);
-    SwiftAST block = tree.child(3);
+    SwiftAST outputs = tree.child(2);
+    SwiftAST inputs = tree.child(3);
+    SwiftAST block = tree.child(4);
 
     FunctionDecl fdecl = FunctionDecl.fromAST(context, function, 
                   inputs, outputs, Collections.<String>emptySet());
