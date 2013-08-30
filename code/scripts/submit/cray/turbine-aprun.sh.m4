@@ -28,11 +28,14 @@ define(`getenv', `esyscmd(printf -- "$`$1'")')
 #PBS -l walltime=getenv(WALLTIME)
 #PBS -o getenv(OUTPUT_FILE)
 
-# Set the job size using appropriate directives for this system
+### Set the job size using appropriate directives for this system
 ifelse(getenv(BLUE_WATERS), `true',
+### Blue Waters mode
 #PBS -l nodes=getenv(NODES):ppn=getenv(PPN),
+### Default aprun mode
 #PBS -l mppwidth=getenv(PROCS)
 #PBS -l mppnppn=getenv(PPN))
+### End job size directives selection
 
 # Pass all environment variables to the job
 #PBS -V
