@@ -91,7 +91,7 @@ public class Types {
 
     @Override
     public int hashCode() {
-      return memberType.hashCode() ^ ArrayType.class.hashCode();
+      return memberType.hashCode() + 13 * ArrayType.class.hashCode();
     }
 
     @Override
@@ -166,6 +166,109 @@ public class Types {
     }
   }
 
+  /**
+   * Unordered set of data which allows duplicates
+   */
+  public static class BagType extends Type {
+    public static final String BAG = "bag";
+    private final Type elemType;
+
+    public BagType(Type elemType) {
+      this.elemType = elemType;
+    }
+
+    @Override
+    public StructureType structureType() {
+      return StructureType.BAG;
+    }
+    
+    @Override
+    public Type memberType() {
+      return elemType;
+    }
+
+
+    @Override
+    public String toString() {
+      return BAG + "<" + elemType.toString() + ">";
+    }
+
+    @Override
+    public String typeName() {
+      return BAG + "<" + elemType.typeName() + ">";
+    }
+
+    @Override
+    public boolean equals(Object other) {
+      if (!(other instanceof Type)) {
+        throw new STCRuntimeError("Comparing BagType with non-type " +
+                "object");
+      }
+      if (!(other instanceof BagType)) {
+        return false;
+      }
+      BagType otherT = (BagType) other;
+      return otherT.elemType.equals(elemType);
+    }
+
+    @Override
+    public int hashCode() {
+      return elemType.hashCode() + 31 * BagType.class.hashCode();
+    }
+
+    @Override
+    public Type bindTypeVars(Map<String, Type> vals) {
+      return new BagType(elemType.bindTypeVars(vals));
+    }
+
+    @Override
+    public Map<String, Type> matchTypeVars(Type concrete) {
+      if (Types.isBag(concrete)) {
+        BagType concreteBag = (BagType)concrete.baseType();
+        return elemType.matchTypeVars(concreteBag.elemType);
+      }
+      return null;
+    }
+    
+    @Override
+    public Type concretize(Type concrete) {
+      assert(isBag(concrete));
+      BagType concreteBag = (BagType)concrete.baseType();
+      Type cElem = elemType.concretize(concreteBag.memberType());
+      if (cElem == this.elemType)
+        return this;
+      return new BagType(cElem);
+    }
+
+    @Override
+    public boolean assignableTo(Type other) {
+      if (!isBag(other)) {
+        return false;
+      }
+      BagType otherB = (BagType)other.baseType();
+      // TODO
+      // For now, types must exactly match, due to contra/co-variance issues
+      // with type parameters. Need to check to see if member types
+      // can be converted to other member types
+      
+      return elemType.matchTypeVars(otherB.elemType) != null;
+    }
+
+    @Override
+    public boolean hasTypeVar() {
+      return elemType.hasTypeVar();
+    }
+
+    @Override
+    public Type getImplType() {
+      Type implElem = elemType.getImplType();
+      if (implElem == elemType)
+        return this;
+      else
+        return new BagType(implElem);
+    }
+  }
+  
   public static class RefType extends Type {
     private final Type referencedType;
     public RefType(Type referencedType) {
@@ -1082,6 +1185,7 @@ public class Types {
     FILE_FUTURE,
     FILE_VALUE,
     ARRAY,
+    BAG,
     /** Reference is only used internally in compiler */
     REFERENCE,
     STRUCT,
@@ -1595,6 +1699,10 @@ public class Types {
    */
   public static boolean isArrayRef(Typed t) {
     return isRef(t) && Types.isArray(t.type().memberType());
+  }
+  
+  public static boolean isBag(Typed t) {
+    return t.type().structureType() == StructureType.BAG;
   }
 
   /**

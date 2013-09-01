@@ -10,8 +10,8 @@ import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ArrayType;
+import exm.stc.common.lang.Types.BagType;
 import exm.stc.common.lang.Types.Type;
-import exm.stc.common.lang.Types.WildcardType;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LogHelper;
 
@@ -35,11 +35,9 @@ public class TypeTree {
         assert(typeT.childCount() == 2);
         SwiftAST outerTypeT = typeT.child(0);
         SwiftAST paramT = typeT.child(1);
+        // Build from inside-out: find parameter type first
         Type param = extractStandaloneType(context, paramT);
-
-        Type outerType = extractParameterizableType(context, outerTypeT, param);
-        String paramTypeStr = outerType.typeName() + "<" + param.typeName() + ">";
-        throw new STCRuntimeError("TODO: param type " + paramTypeStr);
+        return extractParameterizableType(context, outerTypeT, param);
       }
       default:
         throw new STCRuntimeError("Unexpected token in type: " +
@@ -133,9 +131,8 @@ public class TypeTree {
           SwiftAST typeT, Type paramT) throws TypeMismatchException {
     assert(typeT.getType() == ExMParser.ID);
     String typeName = typeT.getText();
-    // TODO: actual logic
-    if (typeName.equals("bag")) {
-      return new WildcardType();
+    if (typeName.equals(BagType.BAG)) {
+      return new BagType(paramT);
     } else {
       throw new TypeMismatchException(typeName + 
            " is not the name of a type that can accept a <...> parameter");
