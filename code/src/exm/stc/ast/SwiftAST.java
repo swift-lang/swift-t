@@ -80,6 +80,10 @@ public class SwiftAST extends CommonTree {
   }
   
   public List<SwiftAST> children(int start) {
+    // Return empty list if nothing in range
+    if (childCount() <= start) {
+      return Collections.emptyList();
+    }
     return children().subList(start, children.size());
   }
   

@@ -264,12 +264,12 @@ public class ForLoopDescriptor {
       SwiftAST loopVarInit = init.child(i);
       int initType = loopVarInit.getType(); 
       if (initType == ExMParser.DECLARATION) {
-        VariableDeclaration decl = VariableDeclaration.fromAST(context, 
+        VariableDeclaration decl = VariableDeclaration.fromAST(context,
                         loopVarInit);
         assert(decl.count() == 1);
         VariableDescriptor loopVarDesc = decl.getVar(0);
         SwiftAST expr = decl.getVarExpr(0);
-        assert(loopVarDesc.getMappingExpr() == null); 
+        assert(loopVarDesc.getMappingExpr() == null);
         assert(expr != null);  // shouldn't be mapped, enforced by syntax
         Var loopVar = new Var(loopVarDesc.getType(),
                 loopVarDesc.getName(), Alloc.STACK,

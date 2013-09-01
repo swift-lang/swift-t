@@ -16,18 +16,13 @@
 package exm.stc.frontend.tree;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
-import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.exceptions.TypeMismatchException;
-import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.ArrayType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.frontend.Context;
-import exm.stc.frontend.LogHelper;
 
 public class VariableDeclaration {
 
@@ -81,10 +76,9 @@ public class VariableDeclaration {
     VariableDeclaration res = new VariableDeclaration();
     assert(tree.getType() == ExMParser.DECLARATION);
     assert(tree.getChildCount() >= 2);
-    assert(tree.child(0).getType() == ExMParser.ID);
     
-    String typeName = tree.child(0).getText();
-    Type baseType = context.lookupTypeUser(typeName);
+    SwiftAST typeT = tree.child(0);
+    Type baseType = TypeTree.extractTypePrefix(context, typeT);
     
     for (SwiftAST declTree: tree.children(1)) {
       SwiftAST expr;
@@ -115,71 +109,22 @@ public class VariableDeclaration {
     String varName = nameTree.getText();
     SwiftAST mappingExpr = null;
     
-    Type varType = baseType;
-    // Process array indices backward to get correct type
-    for (int i = tree.getChildCount() - 1; i >= 1; i--) {
-      SwiftAST subtree = tree.child(i);
-      if (subtree.getType() == ExMParser.ARRAY) {
-        Type keyType = getArrayKeyType(context, subtree);
-        varType = new ArrayType(keyType, varType);
-      } else if (subtree.getType() == ExMParser.MAPPING) {
-        assert(mappingExpr == null);
-        assert(subtree.getChildCount() == 1);
-        mappingExpr = subtree.child(0);
-      } else {
-        throw new STCRuntimeError("Unexpected token in variable " +
-            "declaration: " + LogHelper.tokName(subtree.getType()));
-      }
+    int nextChild = 1;
+    
+    if (nextChild < tree.getChildCount() &&
+          tree.child(nextChild).getType() == ExMParser.MAPPING) {
+      SwiftAST mappingTree = tree.child(nextChild++);
+      assert(mappingTree.getChildCount() == 1);
+      mappingExpr = mappingTree.child(0);
+      nextChild++;
     }
+    
+    // Assume rest of subtrees are array markers
+    List<SwiftAST> arrMarkers = tree.children(nextChild);
+    Type varType = TypeTree.applyArrayMarkers(context, arrMarkers, baseType);
     return new VariableDescriptor(varType, varName, mappingExpr);
   }
 
-  /**
-   * Given an ARRAY tree, corresponding to an array type specification,
-   * e.g. [] or [string], then decide on the key type of the array 
-   * @param context
-   * @param subtree
-   * @return
-   * @throws UndefinedTypeException
-   * @throws TypeMismatchException 
-   */
-  public static Type getArrayKeyType(Context context, SwiftAST subtree)
-      throws UndefinedTypeException, TypeMismatchException {
-    assert(subtree.getType() == ExMParser.ARRAY);
-    Type keyType;
-    if (subtree.getChildCount() == 0) {
-      // Default to int key type if not specified.
-      keyType = Types.F_INT;
-    } else {
-      assert(subtree.getChildCount() == 1);
-      SwiftAST standaloneTypeT = subtree.child(0);
-      keyType = extractStandaloneType(context, standaloneTypeT);
-      if (!Types.isValidArrayKey(keyType)) {
-        throw new TypeMismatchException(context, "Unsupported key type for"
-                                    + " arrays: " + keyType);
-      }
-    }
-    return keyType;
-  }
-
-  public static Type extractStandaloneType(Context context,
-      SwiftAST standaloneTypeT) throws UndefinedTypeException, TypeMismatchException {
-    assert(standaloneTypeT.getType() == ExMParser.STANDALONE_TYPE);
-    assert(standaloneTypeT.getChildCount() >= 1);
-    // Extract the initial type
-    String resultTypeName = standaloneTypeT.child(0).getText(); 
-    Type resultType = context.lookupTypeUser(resultTypeName);
-    
-    // Apply the array markers from right to left
-    for (int i = standaloneTypeT.getChildCount() - 1; i >= 1; i--) {
-      SwiftAST arrayT = standaloneTypeT.child(i);
-      assert(arrayT.getType() == ExMParser.ARRAY);
-      Type keyType = getArrayKeyType(context, arrayT);
-      resultType = new ArrayType(keyType, resultType);
-    }
-    return resultType;
-  }
-  
   public static class VariableDescriptor {
     private final Type type;
     private final String name;

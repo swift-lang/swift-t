@@ -89,6 +89,7 @@ import exm.stc.frontend.tree.IterateDescriptor;
 import exm.stc.frontend.tree.LValue;
 import exm.stc.frontend.tree.Literals;
 import exm.stc.frontend.tree.Switch;
+import exm.stc.frontend.tree.TypeTree;
 import exm.stc.frontend.tree.Update;
 import exm.stc.frontend.tree.VariableDeclaration;
 import exm.stc.frontend.tree.VariableDeclaration.VariableDescriptor;
@@ -2533,8 +2534,7 @@ public class ASTWalker {
     String typeName = defnTree.child(0).getText();
     SwiftAST baseTypeT = defnTree.child(1);
     
-    Type baseType = VariableDeclaration.extractStandaloneType(
-                                          context, baseTypeT);
+    Type baseType = TypeTree.extractStandaloneType(context, baseTypeT);
     
     Type newType;
     if (aliasOnly) {
@@ -2574,14 +2574,9 @@ public class ASTWalker {
       }
       String name = fieldTree.child(1).getText();
 
-      // Account for any [] 
-      for (int j = 2; j < fieldTree.getChildCount(); j++) {
-        SwiftAST arrayT = fieldTree.child(j);
-        assert(arrayT.getType() == ExMParser.ARRAY);
-        // Work out the key type
-        Type keyType = VariableDeclaration.getArrayKeyType(context, arrayT);
-        fieldType = new Types.ArrayType(keyType, fieldType);
-      }
+      // Account for any []'s
+      List<SwiftAST> arrMarkers = fieldTree.children(2);
+      fieldType = TypeTree.applyArrayMarkers(context, arrMarkers, fieldType);
       if (usedFieldNames.contains(name)) {
         throw new DoubleDefineException(context, "Field " + name
             + " is defined twice in type" + typeName);

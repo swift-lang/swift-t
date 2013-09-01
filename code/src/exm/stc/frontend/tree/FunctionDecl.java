@@ -23,7 +23,6 @@ import java.util.Set;
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.exceptions.InvalidSyntaxException;
-import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
@@ -33,11 +32,10 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.TypeVariable;
 import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LocalContext;
-import exm.stc.frontend.LogHelper;
 
 public class FunctionDecl {
   private final FunctionType ftype;
@@ -132,36 +130,31 @@ public class FunctionDecl {
       throws UserException {
     assert(arg.getType() == ExMParser.DECLARATION);
     assert(arg.getChildCount() == 2 || arg.getChildCount() == 3);
+    SwiftAST baseTypes = arg.child(0);
+    SwiftAST restDecl = arg.child(1);
+    assert(restDecl.getType() == ExMParser.DECLARE_VARIABLE_REST);
     
-    ArgDecl argInfo;
+    // Handle alternative types
+    List<Type> altPrefixes = TypeTree.extractMultiType(context, baseTypes);
+    assert(altPrefixes.size() > 0);
+    ArrayList<Type> alts = new ArrayList<Type>(altPrefixes.size());
+    String varname = null;
+    for (Type altPrefix: altPrefixes) {
+      // Construct var in order to apply array markers and get full type 
+      Var v = fromFormalArgTree(context, altPrefix, restDecl, DefType.INARG);
+      varname = v.name();
+      alts.add(v.type());
+    }
+    Type argType = UnionType.makeUnion(alts);
+
     boolean thisVarArgs = false;
     if (arg.getChildCount() == 3) {
       assert(arg.child(2).getType() == ExMParser.VARARGS);
       thisVarArgs = true;
     }
-    SwiftAST baseTypes = arg.child(0);
-    SwiftAST restDecl = arg.child(1);
-    assert(baseTypes.getType() == ExMParser.MULTI_TYPE);
-    assert(baseTypes.getChildCount() >= 1); // Grammar should ensure this
-    assert(restDecl.getType() == ExMParser.DECLARE_VARIABLE_REST);
-    ArrayList<Type> alts =
-                new ArrayList<Type>(baseTypes.getChildCount());
-    String varname = null;
-    for (int i = 0; i < baseTypes.getChildCount(); i++) {
-      SwiftAST typeAlt = baseTypes.child(i);
-      assert(typeAlt.getType() == ExMParser.ID);
-      String typeName = typeAlt.getText();
-      Type baseType = context.lookupTypeUser(typeName);
-      
-      Var v = fromFormalArgTree(context, baseType, restDecl, DefType.INARG);
-      varname = v.name();
-      alts.add(v.type());
-    }
-    Type argType = UnionType.makeUnion(alts);
-    argInfo = new ArgDecl(varname, argType, thisVarArgs);
-    return argInfo;
+    
+    return new ArgDecl(varname, argType, thisVarArgs);
   }
-  
   
   /**
     * Take a DECLARE_VARIABLE_REST subtree of the AST and return the appropriate declared
@@ -174,31 +167,28 @@ public class FunctionDecl {
     * @throws UndefinedTypeException
    * @throws InvalidSyntaxException 
     */
-    public static Var fromFormalArgTree(
-        Context context, Type baseType, SwiftAST tree, DefType deftype)
-        throws UserException {
-      assert(tree.getType() == ExMParser.DECLARE_VARIABLE_REST);
-      assert(tree.getChildCount() >= 1);
-      SwiftAST nameTree = tree.child(0);
-      assert(nameTree.getType() == ExMParser.ID);
-      String varName = nameTree.getText();
-      
-      Type varType = baseType;
-      // Process array markers backwards to get correct type
-      for (int i = tree.getChildCount() - 1; i >= 1; i--) {
-        SwiftAST subtree = tree.child(i);
-        if (subtree.getType() == ExMParser.ARRAY) {
-          Type keyType = VariableDeclaration.getArrayKeyType(context, subtree);
-          varType = new Types.ArrayType(keyType, varType);
-        } else if (subtree.getType() == ExMParser.MAPPING) {
-          throw new InvalidSyntaxException(context, "Cannot map function argument");
-        } else {
-          throw new STCRuntimeError("Unexpected token in variable " +
-              "declaration: " + LogHelper.tokName(subtree.getType()));
-        }
+  public static Var fromFormalArgTree(
+      Context context, Type baseType, SwiftAST tree, DefType deftype)
+      throws UserException {
+    assert(tree.getType() == ExMParser.DECLARE_VARIABLE_REST);
+    assert(tree.getChildCount() >= 1);
+    SwiftAST nameTree = tree.child(0);
+    assert(nameTree.getType() == ExMParser.ID);
+    String varName = nameTree.getText();
+
+    // Process array markers to get final type
+    List<SwiftAST> arrMarkers = tree.children(1);
+    for (SwiftAST subtree: arrMarkers) {
+      // Avoid internal errors if a mapping is applied in this context
+      if (subtree.getType() == ExMParser.MAPPING) {
+        throw new InvalidSyntaxException(context, "Cannot map function argument");
       }
-      return new Var(varType, varName, Alloc.STACK, deftype, null);
     }
+    
+    Type varType = TypeTree.applyArrayMarkers(context, arrMarkers, baseType);
+
+    return new Var(varType, varName, Alloc.STACK, deftype, null);
+  }
 
   public List<Var> getInVars() {
     ArrayList<Var> inVars = new ArrayList<Var>(inNames.size());

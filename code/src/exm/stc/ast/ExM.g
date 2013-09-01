@@ -331,7 +331,7 @@ arg_decl:
 // The initial part of a type declaration, e.g. "int" in int A[]
 // or "set<int>"
 type_prefix:
-		type_name
+		  type_name
 	|   type_name LT standalone_type GT -> ^( PARAM_TYPE type_name standalone_type ) 
 	;
 
@@ -482,8 +482,8 @@ declare_assign_single:
         type=type_prefix v=var_name array_marker* mapping? ASSIGN expr
             -> ^( DECLARATION $type
                   ^( DECLARE_ASSIGN
-                    ^( DECLARE_VARIABLE_REST $v array_marker*
-                             mapping?) expr))
+                    ^( DECLARE_VARIABLE_REST $v mapping? array_marker* )
+                     expr ))
     ;
 
 declare_rest:
