@@ -11,6 +11,7 @@ import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ArrayType;
 import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Types.WildcardType;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LogHelper;
 
@@ -23,41 +24,29 @@ public class TypeTree {
    * @param typeT
    * @return
    * @throws UndefinedTypeException
+   * @throws TypeMismatchException 
    */
   public static Type extractTypePrefix(Context context, SwiftAST typeT)
-                                        throws UndefinedTypeException {
+                      throws UndefinedTypeException, TypeMismatchException {
     switch (typeT.getType()) {
       case ExMParser.ID:
         return context.lookupTypeUser(typeT.getText());
-      case ExMParser.PARAM_TYPE:
-        // TODO
-        throw new STCRuntimeError("Implement PARAM_TYPE");
+      case ExMParser.PARAM_TYPE: {
+        assert(typeT.childCount() == 2);
+        SwiftAST outerTypeT = typeT.child(0);
+        SwiftAST paramT = typeT.child(1);
+        Type param = extractStandaloneType(context, paramT);
+
+        Type outerType = extractParameterizableType(context, outerTypeT, param);
+        String paramTypeStr = outerType.typeName() + "<" + param.typeName() + ">";
+        throw new STCRuntimeError("TODO: param type " + paramTypeStr);
+      }
       default:
         throw new STCRuntimeError("Unexpected token in type: " +
                               LogHelper.tokName(typeT.getType()));
     }
   }
 
-  /**
-   * Extract a list of types from a multi_type rule in the grammar.
-   * @param context
-   * @param baseTypes
-   * @return A list with at least one type
-   * @throws UndefinedTypeException
-   */
-  public static List<Type> extractMultiType(Context context, SwiftAST baseTypes)
-      throws UndefinedTypeException {
-    assert(baseTypes.getType() == ExMParser.MULTI_TYPE);
-    assert(baseTypes.getChildCount() >= 1); // Grammar should ensure this
-    List<Type> altPrefixes = new ArrayList<Type>(baseTypes.getChildCount());
-    
-    for (int i = 0; i < baseTypes.getChildCount(); i++) {
-      SwiftAST typeAlt = baseTypes.child(i);
-      altPrefixes.add(TypeTree.extractTypePrefix(context, typeAlt));
-    }
-    return altPrefixes;
-  }
-  
   public static Type extractStandaloneType(Context context,
       SwiftAST standaloneTypeT) throws UndefinedTypeException, TypeMismatchException {
     assert(standaloneTypeT.getType() == ExMParser.STANDALONE_TYPE);
@@ -110,6 +99,47 @@ public class TypeTree {
       }
     }
     return keyType;
+  }
+
+  /**
+   * Extract a list of types from a multi_type rule in the grammar.
+   * @param context
+   * @param baseTypes
+   * @return A list with at least one type
+   * @throws UndefinedTypeException
+   * @throws TypeMismatchException 
+   */
+  public static List<Type> extractMultiType(Context context, SwiftAST baseTypes)
+      throws UndefinedTypeException, TypeMismatchException {
+    assert(baseTypes.getType() == ExMParser.MULTI_TYPE);
+    assert(baseTypes.getChildCount() >= 1); // Grammar should ensure this
+    List<Type> altPrefixes = new ArrayList<Type>(baseTypes.getChildCount());
+    
+    for (int i = 0; i < baseTypes.getChildCount(); i++) {
+      SwiftAST typeAlt = baseTypes.child(i);
+      altPrefixes.add(TypeTree.extractTypePrefix(context, typeAlt));
+    }
+    return altPrefixes;
+  }
+  
+  /**
+   * Look up and fill in parameters for a parameterizable type
+   * @param typeT
+   * @param paramT
+   * @return
+   * @throws TypeMismatchException
+   */
+  public static Type extractParameterizableType(Context context,
+          SwiftAST typeT, Type paramT) throws TypeMismatchException {
+    assert(typeT.getType() == ExMParser.ID);
+    String typeName = typeT.getText();
+    // TODO: actual logic
+    if (typeName.equals("bag")) {
+      return new WildcardType();
+    } else {
+      throw new TypeMismatchException(typeName + 
+           " is not the name of a type that can accept a <...> parameter");
+    }
   }
 
 }

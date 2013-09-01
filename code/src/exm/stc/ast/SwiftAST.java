@@ -64,6 +64,13 @@ public class SwiftAST extends CommonTree {
   }
   
   /**
+   * Shorter alternative to getChildCount()
+   */
+  public int childCount() {
+    return getChildCount();
+  }
+  
+  /**
    * alternative to getChild so we can avoid having the cast to 
    * SwiftAST everywhere
    */
