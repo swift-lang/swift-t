@@ -212,6 +212,8 @@ public class VariableUsageInfo {
         // v might be read
         if (Types.isArray(v.type) && v.maxReadDepth == 0) {
           // ok to refer to entire array if not written
+        } else if (Types.isBag(v.type)) {
+          // ok not to add anything
         } else if (Types.isStruct(v.type)) {
           // check this elsewhere in the incompletely defined
           //  struct portion
