@@ -22,6 +22,7 @@ import java.util.List;
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.exceptions.InvalidAnnotationException;
+import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Annotations;
@@ -29,8 +30,8 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LocalContext;
 import exm.stc.frontend.TypeChecker;
@@ -240,13 +241,23 @@ public class ForeachLoop {
       throws UserException {
     Type arrayType = TypeChecker.findSingleExprType(context, arrayVarTree);
     for (Type alt: UnionType.getAlternatives(arrayType)) {
-      if (Types.isArray(alt) || Types.isArrayRef(alt)) {
+      if (Types.isArray(alt) || Types.isArrayRef(alt) || Types.isBag(alt)) {
         return alt;
       }
     }
     throw new TypeMismatchException(context,
         "Expected array type in expression for foreach loop " +
                 "but got type: " + arrayType.typeName());
+  }
+
+  public static Type findElemType(Type arrayType) throws STCRuntimeError {
+    if (Types.isArray(arrayType) || Types.isArrayRef(arrayType)) {
+      return Types.arrayMemberType(arrayType);
+    } else if (Types.isBag(arrayType)) {
+      return Types.bagElemType(arrayType);
+    } else {
+      throw new STCRuntimeError("Invalid type " + arrayType);
+    }
   }
 
   /**
@@ -266,6 +277,10 @@ public class ForeachLoop {
     Type arrayType = findArrayType(context); 
     loopBodyContext = new LocalContext(context);
     if (countVarName != null) {
+      if (!Types.isArray(arrayType) && !Types.isArrayRef(arrayType)) {
+        throw new UserException("Cannot have iteration counter with foreach "
+                              + "loop over " + arrayType.typeName());
+      }
       keyType = Types.arrayKeyType(arrayType);
       Type keyValType = Types.derefResultType(keyType);
       loopCountVal = context.createLocalValueVariable(keyValType,
@@ -280,10 +295,10 @@ public class ForeachLoop {
       loopCountVal = null;
     }
 
-    Alloc memberVarStorage = rangeLoop ? Alloc.TEMP 
-                                            : Alloc.ALIAS;
+    Alloc memberVarStorage = rangeLoop ? Alloc.TEMP : Alloc.ALIAS;
+    
     memberVar = loopBodyContext.declareVariable(
-        Types.arrayMemberType(arrayType), getMemberVarName(),
+        findElemType(arrayType), getMemberVarName(),
         memberVarStorage, DefType.LOCAL_USER, null);
     return loopBodyContext;
   }

@@ -1704,6 +1704,11 @@ public class Types {
   public static boolean isBag(Typed t) {
     return t.type().structureType() == StructureType.BAG;
   }
+  
+  public static boolean isBagRef(Typed t) {
+    return isRef(t) &&
+        t.type().memberType().structureType() == StructureType.BAG;
+  }
 
   /**
    * Convenience function to get member type of array or array ref
@@ -1716,6 +1721,17 @@ public class Types {
     } else {
       throw new STCRuntimeError("called arrayMemberType on non-array"
           + " type " + arrayT.toString());
+    }
+  }
+
+  public static Type bagElemType(Typed t) {
+    if (isBag(t)) {
+      return t.type().memberType();
+    } else if (isBagRef(t)) {
+      return t.type().memberType().memberType();
+    } else {
+      throw new STCRuntimeError("called bagElemType on non-array"
+                                      + " type " + t.toString());
     }
   }
 
