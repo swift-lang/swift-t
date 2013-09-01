@@ -31,8 +31,8 @@ import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.CVMap;
-import exm.stc.ic.tree.ICInstructions.TurbineOp;
 import exm.stc.ic.tree.ICTree.Block;
+import exm.stc.ic.tree.TurbineOp;
 
 /**
  * ValueTracker keep tracks of which variables are closed and which computed

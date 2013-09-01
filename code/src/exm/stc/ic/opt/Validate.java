@@ -33,13 +33,13 @@ import exm.stc.ic.tree.ICContinuations.ContVarDefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.RefCountOp;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.Statement;
+import exm.stc.ic.tree.TurbineOp.RefCountOp;
 
 /**
  * Perform some sanity checks on intermediate code:

@@ -202,12 +202,12 @@ public class WaitCoalescer implements OptimizerPass {
   @Override
   public void optimize(Logger logger, Program prog) {
     for (Function f: prog.getFunctions()) {
-      rearrangeWaits(logger, f, f.mainBlock(), ExecContext.CONTROL);
+      rearrangeWaits(logger, prog, f, f.mainBlock(), ExecContext.CONTROL);
     }
   }
 
-  public boolean rearrangeWaits(Logger logger, Function fn, Block block,
-                                       ExecContext currContext) {
+  public boolean rearrangeWaits(Logger logger, Program prog, Function fn,
+                                Block block, ExecContext currContext) {
     boolean exploded = false;
     logger.trace("Entering function " + fn.getName());
     try {
@@ -238,14 +238,15 @@ public class WaitCoalescer implements OptimizerPass {
     }
     
     logger.trace("Pushing down waits...");
-    boolean pushedDown = pushDownWaits(logger, fn, block, currContext);
+    boolean pushedDown = pushDownWaits(logger, prog, fn, block, currContext);
     
     // Recurse on child blocks
-    boolean recChanged = rearrangeWaitsRec(logger, fn, block, currContext);
+    boolean recChanged = rearrangeWaitsRec(logger, prog, fn, block,
+                                           currContext);
     return exploded || merged || pushedDown || recChanged;
   }
 
-  private boolean rearrangeWaitsRec(Logger logger,
+  private boolean rearrangeWaitsRec(Logger logger, Program prog,
                   Function fn, Block block, ExecContext currContext) {
     // List of waits to inline (to avoid modifying continuations while
     //          iterating over them)
@@ -256,7 +257,7 @@ public class WaitCoalescer implements OptimizerPass {
     for (Continuation c: block.allComplexStatements()) {
       ExecContext newContext = c.childContext(currContext);
       for (Block childB: c.getBlocks()) {
-        if (rearrangeWaits(logger, fn, childB, newContext)) {
+        if (rearrangeWaits(logger, prog, fn, childB, newContext)) {
           changed = true;
         }
       }
@@ -706,9 +707,9 @@ public class WaitCoalescer implements OptimizerPass {
    * @param currContext
    * @return
    */
-  private boolean pushDownWaits(Logger logger, Function fn, Block block,
-                                      ExecContext currContext) {
-    MultiMap<Var, InstOrCont> waitMap = buildWaiterMap(block);
+  private boolean pushDownWaits(Logger logger, Program prog, Function fn,
+                                Block block, ExecContext currContext) {
+    MultiMap<Var, InstOrCont> waitMap = buildWaiterMap(prog, block);
     
     if (waitMap.isDefinitelyEmpty()) {
       // If waitMap is empty, can't push anything down, so just
@@ -1119,11 +1120,12 @@ public class WaitCoalescer implements OptimizerPass {
 
   private static ListFactory<InstOrCont> LL_FACT = 
                     new LinkedListFactory<InstOrCont>();
-  private static MultiMap<Var, InstOrCont> buildWaiterMap(Block block) {
+  private static MultiMap<Var, InstOrCont> buildWaiterMap(Program prog,
+                                                          Block block) {
     // Use linked list to support more efficient removal in middle of list
     MultiMap<Var, InstOrCont> waitMap =
                         new MultiMap<Var, InstOrCont>(LL_FACT); 
-    findRelocatableBlockingInstructions(block, waitMap);
+    findRelocatableBlockingInstructions(prog, block, waitMap);
     findBlockingContinuations(block, waitMap);
     return waitMap;
   }
@@ -1140,8 +1142,8 @@ public class WaitCoalescer implements OptimizerPass {
     }
   }
 
-  private static void findRelocatableBlockingInstructions(Block block,
-          MultiMap<Var, InstOrCont> waitMap) {
+  private static void findRelocatableBlockingInstructions(Program prog,
+          Block block, MultiMap<Var, InstOrCont> waitMap) {
     for (Statement stmt: block.getStatements()) {
       if (stmt.type() != StatementType.INSTRUCTION) {
         continue; // Only interested in instructions
@@ -1159,7 +1161,7 @@ public class WaitCoalescer implements OptimizerPass {
       }
       if (canMove) {
         // Put in map based on which inputs will block execution of task
-        List<Var> bi = inst.getBlockingInputs();
+        List<Var> bi = inst.getBlockingInputs(prog);
         if (bi != null) {
           for (Var in: bi) {
             if (Types.isFuture(in.type())) {

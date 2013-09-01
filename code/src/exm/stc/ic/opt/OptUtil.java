@@ -32,11 +32,11 @@ import exm.stc.ic.WrapUtil;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
-import exm.stc.ic.tree.ICInstructions.TurbineOp;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.RenameMode;
 import exm.stc.ic.tree.ICTree.Statement;
+import exm.stc.ic.tree.TurbineOp;
 
 public class OptUtil {
 

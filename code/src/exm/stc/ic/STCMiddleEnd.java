@@ -71,12 +71,12 @@ import exm.stc.ic.tree.ICInstructions.LocalFunctionCall;
 import exm.stc.ic.tree.ICInstructions.LoopBreak;
 import exm.stc.ic.tree.ICInstructions.LoopContinue;
 import exm.stc.ic.tree.ICInstructions.RunExternal;
-import exm.stc.ic.tree.ICInstructions.TurbineOp;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.BuiltinFunction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
+import exm.stc.ic.tree.TurbineOp;
 
 /**
  * This class can be used to create the intermediate representation for a 

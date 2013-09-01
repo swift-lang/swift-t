@@ -31,12 +31,12 @@ import exm.stc.ic.tree.ForeachLoops.AbstractForeachLoop;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Instruction.InitType;
-import exm.stc.ic.tree.ICInstructions.RefCountOp;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Statement;
 import exm.stc.ic.tree.ICTree.StatementType;
+import exm.stc.ic.tree.TurbineOp.RefCountOp;
 
 /**
  * Functions to insert reference count operations in IC tree.  There are a number

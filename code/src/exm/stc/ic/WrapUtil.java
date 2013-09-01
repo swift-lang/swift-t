@@ -36,9 +36,9 @@ import exm.stc.ic.tree.Conditionals.IfStatement;
 import exm.stc.ic.tree.ICContinuations.WaitVar;
 import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.TurbineOp;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Statement;
+import exm.stc.ic.tree.TurbineOp;
 
 /**
  * Utility functions used to generate wrappers for local operations

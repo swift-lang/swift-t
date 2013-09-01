@@ -50,8 +50,8 @@ import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
@@ -100,9 +100,18 @@ public class ICTree {
     private final Set<Var> globalVars = new HashSet<Var>();
 
     private final ArrayList<Function> functions = new ArrayList<Function>();
-    private final ArrayList<BuiltinFunction> builtinFuns = new ArrayList<BuiltinFunction>();
-    private final Set<Pair<String, String>> required = new HashSet<Pair<String, String>>();
-    private final List<StructType> structTypes = new ArrayList<StructType>();
+    private final Map<String, Function> functionsByName =
+                                            new HashMap<String, Function>();
+    
+    private final ArrayList<BuiltinFunction> builtinFuns =
+                                            new ArrayList<BuiltinFunction>();
+    
+    private final Set<Pair<String, String>> required =
+                                            new HashSet<Pair<String, String>>();
+    
+    private final List<StructType> structTypes =
+                                            new ArrayList<StructType>();
+    
     public void generate(Logger logger, CompilerBackend gen)
         throws UserException {
       Map<String, List<Boolean>> blockVectors = new 
@@ -170,10 +179,13 @@ public class ICTree {
   
     public void addFunction(Function fn) {
       this.functions.add(fn);
+      this.functionsByName.put(fn.getName(), fn);
     }
   
     public void addFunctions(Collection<Function> c) {
-      functions.addAll(c);
+      for (Function f: c) {
+        addFunction(f);
+      }
     }
   
     public List<Function> getFunctions() {
@@ -188,8 +200,75 @@ public class ICTree {
       return res;
     }
 
+    public Map<String, Function> getFunctionMap() {
+      return Collections.unmodifiableMap(functionsByName);
+    }
+
+    public Function lookupFunction(String functionName) {
+      return functionsByName.get(functionName);
+    }
+
     public ListIterator<Function> functionIterator() {
-      return functions.listIterator();
+      // Use custom iterator to intercept operations
+      return new ListIterator<Function>() {
+        private final ListIterator<Function> internal =
+                              functions.listIterator();
+        
+        Function lastReturned = null;
+        
+        @Override
+        public void set(Function e) {
+          internal.set(e);
+          functionsByName.remove(lastReturned.getName());
+          functionsByName.put(e.getName(), e);
+        }
+        
+        @Override
+        public void remove() {
+          internal.remove();
+          functionsByName.remove(lastReturned);
+        }
+        
+        @Override
+        public int previousIndex() {
+          return internal.previousIndex();
+        }
+        
+        @Override
+        public Function previous() {
+          Function f = internal.previous();
+          lastReturned = f;
+          return f;
+        }
+        
+        @Override
+        public int nextIndex() {
+          return internal.nextIndex();
+        }
+        
+        @Override
+        public Function next() {
+          Function f = internal.next();
+          lastReturned = f;
+          return f;
+        }
+        
+        @Override
+        public boolean hasPrevious() {
+          return internal.hasPrevious();
+        }
+        
+        @Override
+        public boolean hasNext() {
+          return internal.hasNext();
+        }
+        
+        @Override
+        public void add(Function e) {
+          internal.add(e);
+          functionsByName.put(e.getName(), e);
+        }
+      };
     }
     
     public ListIterator<BuiltinFunction> builtinIterator() {

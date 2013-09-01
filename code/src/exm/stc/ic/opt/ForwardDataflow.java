@@ -56,7 +56,6 @@ import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Instruction.Fetched;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmRequest;
-import exm.stc.ic.tree.ICInstructions.TurbineOp;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.Function;
@@ -64,6 +63,7 @@ import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.RenameMode;
 import exm.stc.ic.tree.ICTree.Statement;
 import exm.stc.ic.tree.ICTree.StatementType;
+import exm.stc.ic.tree.TurbineOp;
 
 /**
  * This optimisation pass does a range of optimizations. The overarching idea is
@@ -286,7 +286,8 @@ public class ForwardDataflow implements OptimizerPass {
     }
 
     Block main = f.mainBlock();
-    List<WaitVar> blockingVariables = findBlockingVariables(logger, f, main);
+    List<WaitVar> blockingVariables;
+    blockingVariables = findBlockingVariables(logger, program, f, main);
 
     if (blockingVariables != null) {
       List<Var> locals = f.getInputList();
@@ -294,7 +295,7 @@ public class ForwardDataflow implements OptimizerPass {
         logger.trace("Blocking " + f.getName() + ": " + blockingVariables);
       }
       for (WaitVar wv : blockingVariables) {
-        boolean isConst = program.lookupGlobalConst(wv.var.name()) != null;
+        boolean isConst = (wv.var.defType() == DefType.GLOBAL_CONST);
         // Global constants are already set
         if (!isConst && locals.contains(wv.var)) {
           // Check if a non-arg
@@ -312,7 +313,7 @@ public class ForwardDataflow implements OptimizerPass {
    * @return
    */
   private static List<WaitVar> findBlockingVariables(Logger logger,
-      Function fn, Block block) {
+      Program prog, Function fn, Block block) {
     /*
      * TODO: could exploit the information we have in getBlockingInputs() to
      * explore dependencies between variables and work out which variables are
@@ -325,7 +326,7 @@ public class ForwardDataflow implements OptimizerPass {
     }
 
     // Find blocking variables in instructions and continuations
-    BlockingVarFinder walker = new BlockingVarFinder();
+    BlockingVarFinder walker = new BlockingVarFinder(prog);
     TreeWalk.walkSyncChildren(logger, fn, block, true, walker);
 
     if (walker.blockingVariables == null) {
@@ -338,6 +339,13 @@ public class ForwardDataflow implements OptimizerPass {
   }
 
   private static final class BlockingVarFinder extends TreeWalker {
+
+    private BlockingVarFinder(Program prog) {
+      this.prog = prog;
+    }
+
+    private final Program prog;
+    
     // Set of blocking variables. May contain duplicates for explicit/not
     // explicit -
     // we eliminate these at end
@@ -364,8 +372,8 @@ public class ForwardDataflow implements OptimizerPass {
 
     @Override
     public void visit(Instruction inst) {
-      List<WaitVar> waitVars = WaitVar.asWaitVarList(inst.getBlockingInputs(),
-          false);
+      List<WaitVar> waitVars = WaitVar.asWaitVarList(
+          inst.getBlockingInputs(prog), false);
       updateBlockingSet(waitVars);
     }
 
@@ -593,8 +601,8 @@ public class ForwardDataflow implements OptimizerPass {
       Statement stmt = stmts.next();
 
       if (stmt.type() == StatementType.INSTRUCTION) {
-        handleInstruction(logger, f, execCx, block, stmts, stmt.instruction(),
-            cv, replaceInputs, replaceAll);
+        handleInstruction(logger, program, f, execCx, block, stmts,
+            stmt.instruction(), cv, replaceInputs, replaceAll);
       } else {
         assert (stmt.type() == StatementType.CONDITIONAL);
         // handle situations like:
@@ -615,7 +623,8 @@ public class ForwardDataflow implements OptimizerPass {
     logger.trace(sb);
   }
 
-  private void handleInstruction(Logger logger, Function f, ExecContext execCx,
+  private void handleInstruction(Logger logger, Program prog,
+      Function f, ExecContext execCx,
       Block block, ListIterator<Statement> stmts, Instruction inst, ValueTracker cv,
       HierarchicalMap<Var, Arg> replaceInputs,
       HierarchicalMap<Var, Arg> replaceAll) {
@@ -666,7 +675,7 @@ public class ForwardDataflow implements OptimizerPass {
      * This is only safe once future reordering is disallowed.
      */
     if (!reorderingAllowed) {
-      List<Var> in = inst.getBlockingInputs();
+      List<Var> in = inst.getBlockingInputs(prog);
       if (in != null) {
         for (Var ov : inst.getOutputs()) {
           if (!Types.isPrimValue(ov.type())) {

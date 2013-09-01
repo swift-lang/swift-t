@@ -1,7 +1,5 @@
 package exm.stc.ic.refcount;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Map.Entry;
 
 import exm.stc.common.Settings;
@@ -13,8 +11,6 @@ import exm.stc.ic.opt.AliasTracker.AliasKey;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICTree.Block;
-import exm.stc.ic.tree.ICTree.Function;
-import exm.stc.ic.tree.ICTree.Program;
 
 public class RCUtil {
 
@@ -39,15 +35,6 @@ public class RCUtil {
     assert (block.getParentCont() == cont);
     return !block.getVariables().contains(var)
         && !cont.constructDefinedVars().contains(var);
-  }
-  
-
-  static Map<String, Function> buildFunctionMap(Program program) {
-    Map<String, Function> functionMap = new HashMap<String, Function>();
-    for (Function f : program.getFunctions()) {
-      functionMap.put(f.getName(), f);
-    }
-    return functionMap;
   }
   
   static boolean cancelEnabled() {

@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -35,8 +36,8 @@ import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Constants;
+import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
@@ -138,7 +139,7 @@ public class FunctionInline implements OptimizerPass {
 
   private void pruneBuiltins(Logger logger, Program program,
       FuncCallFinder finder) {
-    ListIterator<BuiltinFunction> it = program.builtinIterator();
+    Iterator<BuiltinFunction> it = program.builtinIterator();
     while (it.hasNext()) {
       BuiltinFunction f = it.next();
       List<String> usages = finder.functionUsages.get(f.getName());
@@ -262,7 +263,7 @@ public class FunctionInline implements OptimizerPass {
     Map<String, Function> toInline = new HashMap<String, Function>();
     // Functions where inlining must occur
     Set<String> callSiteFunctions = new HashSet<String>();
-    ListIterator<Function> functionIter = program.functionIterator();
+    Iterator<Function> functionIter = program.functionIterator();
     while (functionIter.hasNext()) {
       Function f = functionIter.next();
       List<String> occurrences = inlineLocations.get(f.getName());

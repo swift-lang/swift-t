@@ -3,15 +3,15 @@ package exm.stc.ic.opt;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
 
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Constants;
+import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.util.MultiMap;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
 import exm.stc.ic.tree.ICInstructions.Builtin;
@@ -110,7 +110,7 @@ public class PruneFunctions implements OptimizerPass {
   }
 
   private void pruneBuiltins(Program program, Set<String> needed) {
-    ListIterator<BuiltinFunction> bIt = program.builtinIterator();
+    Iterator<BuiltinFunction> bIt = program.builtinIterator();
     while (bIt.hasNext()) {
       BuiltinFunction f = bIt.next();
       if (!needed.contains(f.getName())) {
@@ -120,7 +120,7 @@ public class PruneFunctions implements OptimizerPass {
   }
 
   private void pruneFunctions(Program program, Set<String> needed) {
-    ListIterator<Function> fIt = program.functionIterator();
+    Iterator<Function> fIt = program.functionIterator();
     while (fIt.hasNext()) {
       Function f = fIt.next();
       if (!needed.contains(f.getName())) {
