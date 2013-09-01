@@ -43,6 +43,7 @@ import exm.stc.frontend.VariableUsageInfo.ViolationType;
 import exm.stc.frontend.tree.ArrayElems;
 import exm.stc.frontend.tree.ArrayRange;
 import exm.stc.frontend.tree.Assignment;
+import exm.stc.frontend.tree.Assignment.AssignOp;
 import exm.stc.frontend.tree.ForLoopDescriptor;
 import exm.stc.frontend.tree.ForeachLoop;
 import exm.stc.frontend.tree.If;
@@ -321,6 +322,11 @@ class VariableUsageAnalyzer {
                   "assign_expression: child count < 2");
     // walk LHS to see what is assigned, and to walk index expressions
     Assignment assignments = Assignment.fromAST(context, tree);
+    
+    if (assignments.op != AssignOp.ASSIGN) {
+      //TODO
+      throw new STCRuntimeError("Haven't implemented append support");
+    }
 
     for (Pair<List<LValue>, SwiftAST> assign:
                     assignments.getMatchedAssignments(context)) {

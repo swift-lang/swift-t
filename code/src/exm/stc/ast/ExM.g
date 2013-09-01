@@ -18,19 +18,20 @@ grammar ExM;
 options {output=AST;}
 
 tokens {
-    PLUS     = '+' ;
-    MINUS    = '-' ;
+    PLUS    = '+' ;
+    MINUS   = '-' ;
     MULT    = '*' ;
     DIV     = '/' ;
-    INTDIV     = '%/' ;
+    INTDIV  = '%/' ;
     MOD     = '%%' ;
     POW     = '**' ;
     ASSIGN  = '=';
     MUTATE  = ':=';
+    APPEND  = '+=';
     NOT     = '!';
     AND     = '&&';
-    OR     = '||';
-    EQUALS = '==';
+    OR      = '||';
+    EQUALS  = '==';
     NEQUALS = '!=';
     GT = '>';
     LT = '<';
@@ -332,7 +333,8 @@ arg_decl:
 // or "set<int>"
 type_prefix:
 		  type_name
-	|   type_name LT standalone_type GT -> ^( PARAM_TYPE type_name standalone_type ) 
+	|   type_name LT standalone_type GT
+	  -> ^( PARAM_TYPE type_name standalone_type )
 	;
 
 multi_type_prefix:
@@ -690,8 +692,13 @@ array_kv_elems_more:
 	;
 	
 assignment_expr:
-        i=assignment_list ASSIGN e=expr more_expr* ->
-        ^( ASSIGN_EXPRESSION $i $e more_expr* )
+        i=assignment_list assign_op e=expr more_expr* ->
+          ^( ASSIGN_EXPRESSION assign_op $i $e more_expr* )
+    ;
+
+// Different assignment operators
+assign_op:
+        ASSIGN | APPEND
     ;
 
 more_expr:

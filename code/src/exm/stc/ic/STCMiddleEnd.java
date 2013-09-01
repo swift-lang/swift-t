@@ -578,6 +578,7 @@ public class STCMiddleEnd {
 
   }
 
+
   public void assignReference(Var target, Var src) {
     currBlock().addInstruction(
         TurbineOp.addressOf(target, src));

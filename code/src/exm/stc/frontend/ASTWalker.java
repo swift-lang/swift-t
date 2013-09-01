@@ -81,6 +81,7 @@ import exm.stc.frontend.VariableUsageInfo.VInfo;
 import exm.stc.frontend.tree.ArrayRange;
 import exm.stc.frontend.tree.Assignment;
 import exm.stc.frontend.tree.ForLoopDescriptor;
+import exm.stc.frontend.tree.Assignment.AssignOp;
 import exm.stc.frontend.tree.ForLoopDescriptor.LoopVar;
 import exm.stc.frontend.tree.ForeachLoop;
 import exm.stc.frontend.tree.FunctionDecl;
@@ -1247,7 +1248,7 @@ public class ASTWalker {
         initUpdateableVar(context, var, assignedExpr);
       } else if (walkMode != WalkMode.ONLY_DECLARATIONS) {
          if (assignedExpr != null) {
-           Assignment assignment = new Assignment(
+           Assignment assignment = new Assignment(AssignOp.ASSIGN,
                    Arrays.asList(new LValue(declTree, var)),
                    Arrays.asList(assignedExpr));
            assignedVars.addAll(assignMultiExpression(context, assignment, walkMode));
@@ -1330,13 +1331,15 @@ public class ASTWalker {
     for (Pair<List<LValue>, SwiftAST> pair: assign.getMatchedAssignments(context)) {
       List<LValue> lVals = pair.val1;
       SwiftAST rVal = pair.val2;
-      List<Var> assignTargets = assignSingleExpr(context, lVals, rVal, walkMode);
+      List<Var> assignTargets = assignSingleExpr(context, assign.op,
+                                              lVals, rVal, walkMode);
       multiAssignTargets.addAll(assignTargets);
     }
     return multiAssignTargets;
   }
 
-  private List<Var> assignSingleExpr(Context context, List<LValue> lVals,
+  private List<Var> assignSingleExpr(Context context, AssignOp op,
+      List<LValue> lVals,
       SwiftAST rValExpr, WalkMode walkMode) throws UserException, TypeMismatchException,
       UndefinedVarError, UndefinedTypeException {
     ExprType rValTs = Assignment.checkAssign(context, lVals, rValExpr);
@@ -1344,26 +1347,17 @@ public class ASTWalker {
     List<Var> result = new ArrayList<Var>(lVals.size());
     Deque<Runnable> afterActions = new LinkedList<Runnable>();
     boolean skipEval = false;
-    // TODO: need to handle ambiguous input types
     for (int i = 0; i < lVals.size(); i++) {
       LValue lVal = lVals.get(i);
       Type rValType = rValTs.get(i);
 
-      // Declare and initialize lval if not previously declared
-      if (lVal.var == null) {
-        // Should already have declared if only evaluating 
-        assert(walkMode != WalkMode.ONLY_EVALUATION) : walkMode;
-        LValue newLVal = lVal.varDeclarationNeeded(context, rValType);
-        assert(newLVal != null && newLVal.var != null);
-        varCreator.createVariable(context, newLVal.var);
-        lVal = newLVal;
-      }
+      lVal = declareLValueIfNeeded(context, walkMode, lVal, rValType);
 
       if (walkMode != WalkMode.ONLY_DECLARATIONS) {
         Type lValType = lVal.getType(context);
-        
+
         String lValDesc = lVal.toString();
-        Type rValConcrete = TypeChecker.checkAssignment(context, rValType,
+        Type rValConcrete = TypeChecker.checkAssignment(context, op, rValType,
                                                         lValType, lValDesc);
         backend.addComment("Swift l." + context.getLine() +
             ": assigning expression to " + lValDesc);
@@ -1406,6 +1400,22 @@ public class ASTWalker {
       action.run();
     }
     return result;
+  }
+
+
+  public LValue declareLValueIfNeeded(Context context, WalkMode walkMode,
+      LValue lVal, Type rValType) throws UserException {
+    // Declare and initialize lval if not previously declared
+    if (lVal.var == null) {
+      // Should already have declared if only evaluating 
+      assert(walkMode != WalkMode.ONLY_EVALUATION) : walkMode;
+      LValue newLVal = lVal.varDeclarationNeeded(context, rValType);
+      assert(newLVal != null && newLVal.var != null);
+      varCreator.createVariable(context, newLVal.var);
+      return newLVal;
+    } else {
+      return lVal;
+    }
   }
   /**
    * Process an LValue for an assignment, resulting in a variable that

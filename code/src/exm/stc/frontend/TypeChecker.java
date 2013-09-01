@@ -49,6 +49,7 @@ import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.frontend.tree.ArrayElems;
 import exm.stc.frontend.tree.ArrayRange;
+import exm.stc.frontend.tree.Assignment.AssignOp;
 import exm.stc.frontend.tree.FunctionCall;
 
 /**
@@ -813,9 +814,15 @@ public class TypeChecker {
     }
   }
 
+  public static Type checkAssignment(Context context,
+      Type rValType, Type lValType, String lValName) throws TypeMismatchException {
+    return checkAssignment(context, AssignOp.ASSIGN, rValType, lValType, lValName);
+  }
+  
   /**
    * Checks whether rValType can be assigned to lValType
    * @param context
+   * @param op 
    * @param rValType
    * @param lValType
    * @param lValName
@@ -823,18 +830,27 @@ public class TypeChecker {
    *          member of union
    * @throws TypeMismatchException
    */
-  public static Type checkAssignment(Context context, Type rValType,
-      Type lValType, String lValName) throws TypeMismatchException {
+  public static Type checkAssignment(Context context, AssignOp op,
+      Type rValType, Type lValType, String lValName) throws TypeMismatchException {
+    Type targetLValType;
+    if (op == AssignOp.ASSIGN) {
+      targetLValType = lValType;
+    } else {
+      assert(op == AssignOp.APPEND);
+      targetLValType = Types.bagElemType(lValType);
+    }
+    
     for (Type altRValType: UnionType.getAlternatives(rValType)) {
-      if (altRValType.assignableTo(lValType)
-          || (Types.isRef(lValType) &&
-                altRValType.assignableTo(lValType.memberType()))
+      if (altRValType.assignableTo(targetLValType)
+          || (Types.isRef(targetLValType) &&
+                altRValType.assignableTo(targetLValType.memberType()))
           || (Types.isRef(altRValType) &&
-                altRValType.memberType().assignableTo(lValType))) {
+                altRValType.memberType().assignableTo(targetLValType))) {
         return altRValType;
       }
     }
-    throw new TypeMismatchException(context, "Cannot assign to "
+    throw new TypeMismatchException(context, "Cannot "
+        + op.toString().toLowerCase() + " to "
         + lValName + ": LVal has type "
         + lValType.toString() + " but RVal has type " + rValType.toString());
   }

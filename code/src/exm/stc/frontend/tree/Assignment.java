@@ -20,18 +20,30 @@ import java.util.Collections;
 import java.util.List;
 
 import exm.stc.ast.SwiftAST;
+import exm.stc.ast.antlr.ExMParser;
+import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.util.Pair;
 import exm.stc.frontend.Context;
+import exm.stc.frontend.LogHelper;
 import exm.stc.frontend.TypeChecker;
 
 public class Assignment {
+  
+  public static enum AssignOp {
+    ASSIGN, // Regular = assignment
+    APPEND, // Append += assignment
+    ;
+  }
+  
+  public final AssignOp op;
   public final List<SwiftAST> rValExprs;
   public final List<LValue> lVals;
-  public Assignment(List<LValue> lVals, List<SwiftAST> rValExprs) {
-    super();
+  public Assignment(AssignOp op, List<LValue> lVals,
+                    List<SwiftAST> rValExprs) {
+    this.op = op;
     this.lVals = Collections.unmodifiableList(new ArrayList<LValue>(lVals));
     this.rValExprs = Collections.unmodifiableList(
                                          new ArrayList<SwiftAST>(rValExprs));
@@ -86,8 +98,26 @@ public class Assignment {
   }
   
   public static final Assignment fromAST(Context context, SwiftAST tree) {
-    List<LValue> lVals = LValue.extractLVals(context, tree.child(0));
-    List<SwiftAST> rValExprs = tree.children(1);
-    return new Assignment(lVals, rValExprs);
+    assert(tree.getType() == ExMParser.ASSIGN_EXPRESSION);
+    assert(tree.childCount() >= 3);
+    AssignOp assignOp;
+    int assignOpTok = tree.child(0).getType();
+    switch (assignOpTok) {
+      case ExMParser.ASSIGN:
+        assignOp = AssignOp.ASSIGN;
+        break;
+      case ExMParser.APPEND:
+        assignOp = AssignOp.APPEND;
+        break;
+      default:
+        throw new STCRuntimeError("Unknown assign op: " +
+                                  LogHelper.tokName(assignOpTok));
+    }
+    
+    SwiftAST lValsT = tree.child(1);
+    List<LValue> lVals = LValue.extractLVals(context, lValsT);
+    
+    List<SwiftAST> rValExprs = tree.children(2);
+    return new Assignment(assignOp, lVals, rValExprs);
   }
 }
