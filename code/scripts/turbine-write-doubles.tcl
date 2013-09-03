@@ -24,6 +24,7 @@ set sizeof_double [ blobutils_sizeof_float ]
 set length [ expr $argc * $sizeof_double ]
 
 set ptr [ blobutils_malloc $length ]
+set ptr [ blobutils_cast_to_dbl_ptr $ptr ]
 
 set blob [ blobutils_create_ptr $ptr $length ]
 
