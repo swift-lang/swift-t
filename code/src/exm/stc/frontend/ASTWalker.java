@@ -1372,7 +1372,7 @@ public class ASTWalker {
       exprWalker.evalToVars(context, rValExpr, target.rValTargets, null);
     }
     
-    return finalizeLVals(context, target);
+    return finalizeLVals(context, op, target);
   }
 
 
@@ -1420,7 +1420,6 @@ public class ASTWalker {
         
 
         LValue reducedLVal = reduceLVal(context, lVal);
-        reducedLVals.add(reducedLVal);
         
         if (rValExpr.getType() == ExMParser.VARIABLE) {
           // Should only be one lval if variable on rhs
@@ -1432,7 +1431,7 @@ public class ASTWalker {
                 + " to itself");
           }
           
-          if (isReducedArrayLVal(reducedLVal)) {
+          if (isReducedArrLVal(reducedLVal) && op == AssignOp.ASSIGN) {
             /* Special case: 
              * A[i] = x;  
              * we just want x to be inserted into A without any temp variables being
@@ -1446,7 +1445,7 @@ public class ASTWalker {
         }
         
         if (!skipEval) {
-          if (isReducedVarLVal(reducedLVal)) {
+          if (op == AssignOp.ASSIGN && isReducedVarLVal(reducedLVal)) {
             // If RVal and LVal types match exactly, then we just eval to LVal
             // var.  Otherwise we may need to dereference something
             Var targetVar = reducedLVal.var;
@@ -1458,12 +1457,20 @@ public class ASTWalker {
                                        rValConcrete + " " + targetVar;
               rValTargets.add(targetVar); 
             }
-          } else {
-            assert(isReducedArrayLVal(reducedLVal));
+          } else if (op == AssignOp.ASSIGN && isReducedArrLVal(reducedLVal)) {
             // Create temporary variable to insert into array
             rValTargets.add(varCreator.createTmp(context, rValConcrete));
+          } else if (op == AssignOp.APPEND && isReducedVarLVal(reducedLVal)) {
+            rValTargets.add(varCreator.createTmp(context, rValConcrete));
+          } else {
+            assert(op == AssignOp.APPEND && isReducedArrLVal(reducedLVal));
+            // TODO: need to create appendable at array index if not present
+            // then replace reducedLVal with this appendable
+            // reducedLVal = ...;
+            throw new STCRuntimeError("Unimplemented: append to array...");
           }
         }
+        reducedLVals.add(reducedLVal);
       }
     }
     
@@ -1478,7 +1485,7 @@ public class ASTWalker {
    * @return the final lvalues that can be waited on
    * @throws UserException
    */
-  private List<Var> finalizeLVals(Context context, LRVals target)
+  private List<Var> finalizeLVals(Context context, AssignOp op, LRVals target)
       throws UserException {
     List<Var> result = new ArrayList<Var>(target.rValTargets.size());
     for (int i = 0; i < target.reducedLVals.size(); i++) {
@@ -1486,15 +1493,7 @@ public class ASTWalker {
       Var rValVar = target.rValTargets.get(i);
       
       Var resultVar;
-      if (isReducedArrayLVal(lVal)) {
-        // Insert into array if needed
-        handle1DArrayLVal(context, lVal, rValVar);
-        
-        // TODO: sometimes this will give back a reference to a var
-        //      rather than the actual thing that should be waited on
-        resultVar = rValVar;
-      } else {
-        assert(isReducedVarLVal(lVal));
+      if (op == AssignOp.ASSIGN && isReducedVarLVal(lVal)) {
         if (Types.isRefTo(rValVar, lVal.var)) {
           // dereference if needed
           exprWalker.dereference(context, lVal.var, rValVar);
@@ -1503,6 +1502,36 @@ public class ASTWalker {
           assert(rValVar.type().assignableTo(lVal.var.type()));
         }
         resultVar = lVal.var;
+      } else if (op == AssignOp.ASSIGN && isReducedArrLVal(lVal)) {
+        // Insert into array if needed
+        handle1DArrayLVal(context, lVal, rValVar);
+        
+        // TODO: sometimes this will give back a reference to a var
+        //      rather than the actual thing that should be waited on
+        resultVar = rValVar;
+      } else {
+        assert(op == AssignOp.APPEND && isReducedVarLVal(lVal));
+        Type elemType = Types.bagElemType(lVal.var);
+        if (Types.isRefTo(rValVar, elemType)) {
+          // Wait, then deref if needed
+          String waitName = context.getFunctionContext().constructName(
+                                                    "bag-deref-append");
+          backend.startWaitStatement(waitName, rValVar.asList(),
+                 WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
+          Var derefed = varCreator.createTmpAlias(context, elemType);
+          backend.retrieveRef(derefed, rValVar);
+          // TODO: actual insert
+          // backend.bagAppend(lVal.var, derefed);
+          backend.endWaitStatement();
+          // TODO: use real signal var rather than reference
+          resultVar = rValVar;
+        } else {
+          assert(rValVar.type().assignableTo(elemType));
+          // TODO
+          // backend.bagAppend(lVal.var, rValVar);
+          resultVar = rValVar;
+        }
+        throw new STCRuntimeError("Not implemented: appending with +=");
       }
       result.add(resultVar);
     }
@@ -1514,7 +1543,7 @@ public class ASTWalker {
    * @param reducedLVal
    * @return true if this is a valid reduced array lval
    */
-  private boolean isReducedArrayLVal(LValue reducedLVal) {
+  private boolean isReducedArrLVal(LValue reducedLVal) {
     return reducedLVal.indices.size() == 1 &&
             reducedLVal.indices.get(0).getType() == ExMParser.ARRAY_PATH;
   }
