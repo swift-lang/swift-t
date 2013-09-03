@@ -24,7 +24,6 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -80,8 +79,8 @@ import exm.stc.frontend.Context.FnProp;
 import exm.stc.frontend.VariableUsageInfo.VInfo;
 import exm.stc.frontend.tree.ArrayRange;
 import exm.stc.frontend.tree.Assignment;
-import exm.stc.frontend.tree.ForLoopDescriptor;
 import exm.stc.frontend.tree.Assignment.AssignOp;
+import exm.stc.frontend.tree.ForLoopDescriptor;
 import exm.stc.frontend.tree.ForLoopDescriptor.LoopVar;
 import exm.stc.frontend.tree.ForeachLoop;
 import exm.stc.frontend.tree.FunctionDecl;
@@ -1338,14 +1337,68 @@ public class ASTWalker {
     return multiAssignTargets;
   }
 
+  /**
+   * Class to track current state of evaluating matching LVals and RVals
+   */
+  private static class LRVals {
+    private LRVals(List<LValue> reducedLVals, List<Var> rValTargets,
+        boolean skipREval) {
+      assert(reducedLVals.size() == rValTargets.size());
+      this.reducedLVals = reducedLVals;
+      this.rValTargets = rValTargets;
+      this.skipREval = skipREval;
+    }
+    /**
+     * LVals that have been stripped down
+     */
+    final List<LValue> reducedLVals;
+    /**
+     * Variables that we want to evaluate RVals into
+     */
+    final List<Var> rValTargets;
+    /**
+     * True if we can skip evaluation of RVal
+     */
+    final boolean skipREval;
+  }
+  
   private List<Var> assignSingleExpr(Context context, AssignOp op,
-      List<LValue> lVals,
-      SwiftAST rValExpr, WalkMode walkMode) throws UserException, TypeMismatchException,
-      UndefinedVarError, UndefinedTypeException {
+      List<LValue> lVals, SwiftAST rValExpr, WalkMode walkMode) 
+          throws UserException {
+    
+    LRVals target = prepareLRVals(context, op, lVals, rValExpr, walkMode);
+
+    if (!target.skipREval && walkMode != WalkMode.ONLY_DECLARATIONS) {
+      exprWalker.evalToVars(context, rValExpr, target.rValTargets, null);
+    }
+    
+    return finalizeLVals(context, target);
+  }
+
+
+  /**
+   * Setup LValues of expression for assignment
+   * @param context
+   * @param op
+   * @param lVals
+   * @param rValExpr
+   * @param walkMode
+   * @return LRVals object containing reduced version of lVal expressions
+   *      (which are either a var or an array+index), a list of variables
+   *      to evaluate the R.H.S. of the expression into, and a flag
+   *      indicating that evaluating the R.H.S. can be skipped
+   * @throws UserException
+   */
+  private LRVals prepareLRVals(Context context, AssignOp op,
+      List<LValue> lVals, SwiftAST rValExpr, WalkMode walkMode)
+      throws UserException{
     ExprType rValTs = Assignment.checkAssign(context, lVals, rValExpr);
     
-    List<Var> result = new ArrayList<Var>(lVals.size());
-    Deque<Runnable> afterActions = new LinkedList<Runnable>();
+    List<LValue> reducedLVals = new ArrayList<LValue>(lVals.size());
+    
+    // Variables we should evaluate R.H.S. of expression into
+    List<Var> rValTargets = new ArrayList<Var>(lVals.size());
+    
     boolean skipEval = false;
     for (int i = 0; i < lVals.size(); i++) {
       LValue lVal = lVals.get(i);
@@ -1354,56 +1407,129 @@ public class ASTWalker {
       lVal = declareLValueIfNeeded(context, walkMode, lVal, rValType);
 
       if (walkMode != WalkMode.ONLY_DECLARATIONS) {
-        Type lValType = lVal.getType(context);
-
-        String lValDesc = lVal.toString();
-        Type rValConcrete = TypeChecker.checkAssignment(context, op, rValType,
-                                                        lValType, lValDesc);
-        backend.addComment("Swift l." + context.getLine() +
-            ": assigning expression to " + lValDesc);
-  
         // the variable we will evaluate expression into
         context.syncFilePos(lVal.tree, lineMapping);
-        Var var = evalLValue(context, rValExpr, rValConcrete, lVal, 
-                                                        afterActions);
+        backend.addComment("Swift l." + context.getLine() +
+            ": assigning expression to " + lVal.toString());
         
-        if (lVals.size() == 1 && rValExpr.getType() == ExMParser.VARIABLE) {
-          /* Special case: 
-           * A[i] = x;  
-           * we just want x to be inserted into A without any temp variables being
-           * created.  evalLvalue will do the insertion, and return the variable
-           * represented by the LValue, but this happens to be x (because A[i] is 
-           * now just an alias for x.  So we're done and can return!
-           */
-          String rValVar = rValExpr.child(0).getText();
-          if (var.name().equals(rValVar)) {
-            // LHS is just an alias for RHS.  This is ok if this is e.g.
-            // A[i] = x; but not if it is x = x;
-            if (lVal.indices.size() == 0) {
-              throw new UserException(context, "Assigning var " + rValVar
-                  + " to itself");
-            }
-            skipEval = true; 
-            break;
+
+        // First do typechecking
+        Type lValType = lVal.getType(context);
+        Type rValConcrete = TypeChecker.checkAssignment(context, op, rValType,
+                                                   lValType, lVal.toString());
+        
+
+        LValue reducedLVal = reduceLVal(context, lVal);
+        reducedLVals.add(reducedLVal);
+        
+        if (rValExpr.getType() == ExMParser.VARIABLE) {
+          // Should only be one lval if variable on rhs
+          assert(lVals.size() == 1);
+          Var rValVar = context.lookupVarUser(rValExpr.child(0).getText());
+
+          if (lVal.var.equals(rValVar)) {
+            throw new UserException(context, "Assigning var " + rValVar
+                + " to itself");
+          }
+          
+          if (isReducedArrayLVal(reducedLVal)) {
+            /* Special case: 
+             * A[i] = x;  
+             * we just want x to be inserted into A without any temp variables being
+             * created.  evalLvalue will do the insertion, and return rValVar,
+             * which means we don't need to evaluate anything further
+             */
+
+            rValTargets.add(rValVar);
+            skipEval = true;
           }
         }
-        result.add(var);
+        
+        if (!skipEval) {
+          if (isReducedVarLVal(reducedLVal)) {
+            // If RVal and LVal types match exactly, then we just eval to LVal
+            // var.  Otherwise we may need to dereference something
+            Var targetVar = reducedLVal.var;
+            if (Types.isRefTo(rValConcrete, targetVar)) {
+              // Evaluate into reference var, and deref later
+              rValTargets.add(varCreator.createTmp(context, rValConcrete));
+            } else {
+              assert(rValConcrete.assignableTo(targetVar.type())) :
+                                       rValConcrete + " " + targetVar;
+              rValTargets.add(targetVar); 
+            }
+          } else {
+            assert(isReducedArrayLVal(reducedLVal));
+            // Create temporary variable to insert into array
+            rValTargets.add(varCreator.createTmp(context, rValConcrete));
+          }
+        }
       }
-      
-    }
-
-    if (! skipEval && walkMode != WalkMode.ONLY_DECLARATIONS) {
-      exprWalker.evalToVars(context, rValExpr, result, null);
     }
     
-    for (Runnable action: afterActions) {
-      action.run();
+    return new LRVals(reducedLVals, rValTargets, skipEval);
+  }
+
+
+  /**
+   * Perform any final actions for LVals like inserting into arrays
+   * @param context
+   * @param target
+   * @return the final lvalues that can be waited on
+   * @throws UserException
+   */
+  private List<Var> finalizeLVals(Context context, LRVals target)
+      throws UserException {
+    List<Var> result = new ArrayList<Var>(target.rValTargets.size());
+    for (int i = 0; i < target.reducedLVals.size(); i++) {
+      LValue lVal = target.reducedLVals.get(i);
+      Var rValVar = target.rValTargets.get(i);
+      
+      Var resultVar;
+      if (isReducedArrayLVal(lVal)) {
+        // Insert into array if needed
+        handle1DArrayLVal(context, lVal, rValVar);
+        
+        // TODO: sometimes this will give back a reference to a var
+        //      rather than the actual thing that should be waited on
+        resultVar = rValVar;
+      } else {
+        assert(isReducedVarLVal(lVal));
+        if (Types.isRefTo(rValVar, lVal.var)) {
+          // dereference if needed
+          exprWalker.dereference(context, lVal.var, rValVar);
+        } else {
+          // if not reference, types should match
+          assert(rValVar.type().assignableTo(lVal.var.type()));
+        }
+        resultVar = lVal.var;
+      }
+      result.add(resultVar);
     }
     return result;
   }
 
 
-  public LValue declareLValueIfNeeded(Context context, WalkMode walkMode,
+  /**
+   * @param reducedLVal
+   * @return true if this is a valid reduced array lval
+   */
+  private boolean isReducedArrayLVal(LValue reducedLVal) {
+    return reducedLVal.indices.size() == 1 &&
+            reducedLVal.indices.get(0).getType() == ExMParser.ARRAY_PATH;
+  }
+
+
+  /**
+   * @param reducedLVal
+   * @return true if this is a valid reduced variable lval 
+   */
+  private boolean isReducedVarLVal(LValue reducedLVal) {
+    return reducedLVal.indices.isEmpty();
+  }
+
+
+  private LValue declareLValueIfNeeded(Context context, WalkMode walkMode,
       LValue lVal, Type rValType) throws UserException {
     // Declare and initialize lval if not previously declared
     if (lVal.var == null) {
@@ -1421,79 +1547,47 @@ public class ASTWalker {
    * Process an LValue for an assignment, resulting in a variable that
    * we can assign the RValue to
    * @param context
-   * @param rValExpr
-   * @param rValType type of the above expr
    * @param lval
-   * @param afterActions sometimes the lvalue evaluation code wants to insert
-   *                    code after the rvalue has been evaluated.  Any
-   *                    runnables added to afterActions will be run after
-   *                    the Rvalue is evaluated
-   * @return the variable referred to by the LValue
+   * @return an Lvalue which is either a simple value, or an array with
+   *      a single level of indexing
    */
-  private Var evalLValue(Context context, SwiftAST rValExpr,
-      Type rValType, LValue lval, Deque<Runnable> afterActions)
+  private LValue reduceLVal(Context context, LValue lval)
       throws UndefinedVarError, UserException, UndefinedTypeException,
       TypeMismatchException {
-    LValue arrayBaseLval = null; // Keep track of the root of the array
     LogHelper.trace(context, ("Evaluating lval " + lval.toString() + " with type " +
-    lval.getType(context)));
-    // Iteratively reduce the target until we have a scalar we can
-    // assign to
-    while (lval.indices.size() > 0) {
-      if (lval.indices.get(0).getType() == ExMParser.STRUCT_PATH) {
-        lval = reduceStructLVal(context, lval);
-      } else {
-        assert(lval.indices.get(0).getType() == ExMParser.ARRAY_PATH);
-        if (arrayBaseLval == null) { 
-            arrayBaseLval = lval;
+                              lval.getType(context)));
+    if (lval.var == null) {
+      lval = new LValue(lval.predecessor, lval.tree, 
+                        context.lookupVarInternal(lval.varName), lval.indices);
+    }
+    
+    boolean done = false;
+    // Iteratively reduce the target until we have the thing we're assigning to
+    while (!done && lval.indices.size() > 0) {
+      int indexType = lval.indices.get(0).getType();
+      switch (indexType) {
+        case ExMParser.STRUCT_PATH:
+          lval = reduceStructLVal(context, lval);
+          break;
+        case ExMParser.ARRAY_PATH: {
+          if (lval.indices.size() == 1) {
+            // Perform final insert after we evaluate RVal
+            done = true;
+          } else {
+            lval = reduceMultiDArrayLVal(context, lval);
+          }
+          break;
         }
-        assert(Types.isArray(arrayBaseLval.var.type()));
-        lval = reduceArrayLVal(context, arrayBaseLval, lval, rValExpr, rValType,
-                                afterActions);
-        LogHelper.trace(context, "Reduced to lval " + lval.toString() + 
-                " with type " + lval.getType(context));
+        default:
+          throw new STCRuntimeError("Unexpected lval tree type: " +
+                                  LogHelper.tokName(indexType));
       }
+
+      LogHelper.trace(context, "Reduced to lval " + lval.toString() + 
+            " with type " + lval.getType(context));
     }
-
-    String varName = lval.varName;
-    Var lValVar = context.lookupVarUser(varName);
-
-    // Now if there is some mismatch between reference/value, rectify it
-    return fixupRefValMismatch(context, rValType, lValVar);
+    return lval;
   }
-
-
-  /**
-   * If there is a mismatch between lvalue and rvalue type in assignment
-   * where one is a reference and one isn't, fix that up
-   * @param context
-   * @param rValType
-   * @param lValVar
-   * @return a replacement lvalue var if needed, or the original if types match
-   * @throws UserException
-   * @throws UndefinedTypeException
-   */
-  private Var fixupRefValMismatch(Context context, Type rValType,
-      Var lValVar) throws UserException, UndefinedTypeException {
-    if (rValType.assignableTo(lValVar.type())) {
-      return lValVar;
-    } else if (Types.isRef(lValVar.type())
-            && rValType.assignableTo(lValVar.type())) {
-      Var rValVar = varCreator.createTmp(context, rValType);
-      backend.assignReference(lValVar, rValVar);
-      return rValVar;
-    } else if (Types.isRef(rValType) 
-            && rValType.memberType().assignableTo(lValVar.type())) {
-      Var rValVar = varCreator.createTmp(context, rValType);
-      exprWalker.dereference(context, lValVar, rValVar);
-      return rValVar;
-    } else {
-      throw new STCRuntimeError("Don't support assigning an "
-          + "expression with type " + rValType.toString() + " to variable "
-          + lValVar.toString() + " yet");
-    }
-  }
-
 
   /**
    * Processes part of an assignTarget path: the prefix
@@ -1539,7 +1633,7 @@ public class ASTWalker {
                                fieldPath.get(i));
       curr = next;
     }
-    LValue newTarget = new LValue(lval.tree, curr,
+    LValue newTarget = new LValue(lval, lval.tree, curr,
         lval.indices.subList(structPathLen, lval.indices.size()));
     LogHelper.trace(context, "Transform target " + lval.toString() +
         "<" + lval.getType(context).toString() + "> to " +
@@ -1549,170 +1643,143 @@ public class ASTWalker {
     return newTarget;
   }
 
+  /**
+   * Perform the final step of evaluating an array lval
+   * @param context
+   * @param outerArrLVal the outermost array from the current lval
+   * @param lval the current lval to reduce
+   * @param rValVar if the rval is a variable, the variable,
+   *            otherwise null
+   * @param rValIsRef if the Rvalue should be dereference before insertion
+   * @param afterActions
+   * @throws TypeMismatchException
+   * @throws UserException
+   * @throws UndefinedTypeException
+   */
+  private void handle1DArrayLVal(Context context, LValue lval, Var rValVar)
+      throws TypeMismatchException, UserException, UndefinedTypeException {
+    assert(lval.indices.size() == 1);
+    assert(Types.isArray(lval.var) ||Types.isArrayRef(lval.var));
+    Var outerArray = lval.getOuterArray();
+    assert(Types.isArray(outerArray));
+    
+    // Check that it is a valid array
+    final Var arr = lval.var;
+  
+    // Find or create variable to store expression result
+    boolean rValIsRef = Types.isRef(rValVar);
+    
+    // We know what variable the result will go into now
+    // Now need to work out the index and generate code to insert the
+    // variable into the array
+  
+    SwiftAST indexTree = lval.indices.get(0);
+
+    SwiftAST indexExpr = checkArrayIndexExpr(context, lval.var, indexTree);
+    
+    boolean isArrayRef = Types.isArrayRef(arr);
+    Type keyType = Types.arrayKeyType(arr);
+    Long literal = Literals.extractIntLit(context, indexExpr);
+  
+    if (Types.isInt(keyType) && literal != null) {
+      long arrIx = literal;
+      // Add this variable to array
+      backendArrayInsert(arr, arrIx, rValVar, isArrayRef, rValIsRef,
+                         outerArray);
+    } else {
+      // Handle the general case where the index must be computed
+      Var indexVar = exprWalker.eval(context, indexExpr, keyType, false, null);
+      backendArrayInsert(arr, indexVar, rValVar, isArrayRef,
+                         rValIsRef, outerArray);
+    }
+
+  }
+
+
   /** Handle a prefix of array lookups for the assign target
-   * @param afterActions 
    * @throws UserException
    * @throws UndefinedTypeException
    * @throws TypeMismatchException */
-  private LValue reduceArrayLVal(Context context, LValue origLval,
-    LValue lval, SwiftAST rValExpr, Type rValType, Deque<Runnable> afterActions)
-        throws TypeMismatchException, UndefinedTypeException, UserException {
+  private LValue reduceMultiDArrayLVal(Context context,
+                                       LValue lval) throws UserException {
 
-    SwiftAST indexExpr = lval.indices.get(0);
+    SwiftAST indexTree = lval.indices.get(0);
+    SwiftAST indexExpr = checkArrayIndexExpr(context, lval.var, indexTree);
+    
+    assert(lval.indices.size() > 1);
+    // multi-dimensional array handling: need to dynamically create subarray
+    Var lvalArr = context.lookupVarUser(lval.varName);
+    Type memberType = lval.getType(context, 1);
+    Var mVar; // Variable for member we're looking up
+    if (Types.isArray(memberType)) {
+      Long literal = Literals.extractIntLit(context, indexExpr);
+      if (literal != null) {
+        long arrIx = literal;
+        // Add this variable to array
+        if (Types.isArray(lvalArr.type())) {
+          mVar = varCreator.createTmpAlias(context, memberType);
+          backend.arrayCreateNestedImm(mVar, lvalArr, 
+                      Arg.createIntLit(arrIx));
+        } else {
+          assert(Types.isArrayRef(lvalArr.type()));
+          mVar = varCreator.createTmp(context, 
+                                new RefType(memberType));
+          backend.arrayRefCreateNestedImm(mVar, lval.getOuterArray(), 
+                                   lvalArr, Arg.createIntLit(arrIx));
+        }
+
+      } else {
+        // Handle the general case where the index must be computed
+        mVar = varCreator.createTmp(context, new RefType(memberType));
+        Type keyType = Types.arrayKeyType(lvalArr);
+        Var indexVar = exprWalker.eval(context, indexExpr, keyType,
+                                       false, null);
+        
+        if (Types.isArray(lvalArr.type())) {
+          backend.arrayCreateNestedFuture(mVar, lvalArr, indexVar);
+        } else {
+          assert(Types.isArrayRef(lvalArr.type()));
+          backend.arrayRefCreateNestedFuture(mVar, lval.getOuterArray(),
+                                             lvalArr, indexVar);
+        }
+      }
+    } else {
+      /* 
+       * Retrieve non-array member
+       * must use reference because we might have to wait for the result to 
+       * be inserted
+       */
+      mVar = varCreator.createTmp(context, new RefType(memberType));
+    }
+
+    return new LValue(lval, lval.tree, mVar,
+        lval.indices.subList(1, lval.indices.size()));
+}
+
+
+  /**
+   * Type-check ARRAY_PATH tree and return index expression
+   * @param context
+   * @param array
+   * @param indexExpr
+   * @return
+   * @throws UserException
+   * @throws TypeMismatchException
+   */
+  private SwiftAST checkArrayIndexExpr(Context context, Var array,
+      SwiftAST indexExpr) throws UserException, TypeMismatchException {
     assert (indexExpr.getType() == ExMParser.ARRAY_PATH);
     assert (indexExpr.getChildCount() == 1);
     // Typecheck index expression
     Type indexType = TypeChecker.findSingleExprType(context, 
                                              indexExpr.child(0));
-    if (!Types.isArrayKeyFuture(lval.var, indexType)) {
+    if (!Types.isArrayKeyFuture(array, indexType)) {
       throw new TypeMismatchException(context, 
           "Array key type mismatch in LVal.  " +
-          "Expected: " + Types.arrayKeyType(lval.var) + " " +
+          "Expected: " + Types.arrayKeyType(array) + " " +
           "Actual: " + indexType.typeName());
     }
-    
-    if (lval.indices.size() == 1) {
-      Var lookedup = assignTo1DArray(context, origLval, lval, rValExpr, 
-                                                      rValType, afterActions);
-      return new LValue(lval.tree, lookedup, new ArrayList<SwiftAST>());
-    } else {
-      // multi-dimensional array handling: need to dynamically create subarray
-      Var lvalArr = context.lookupVarUser(lval.varName);
-      Type memberType = lval.getType(context, 1);
-      Var mVar; // Variable for member we're looking up
-      if (Types.isArray(memberType)) {
-
-        Long literal = Literals.extractIntLit(context, indexExpr.child(0));
-        if (literal != null) {
-          long arrIx = literal;
-          // Add this variable to array
-          if (Types.isArray(lvalArr.type())) {
-            mVar = varCreator.createTmpAlias(context, memberType);
-            backend.arrayCreateNestedImm(mVar, lvalArr, 
-                        Arg.createIntLit(arrIx));
-          } else {
-            assert(Types.isArrayRef(lvalArr.type()));
-            mVar = varCreator.createTmp(context, 
-                                  new RefType(memberType));
-            backend.arrayRefCreateNestedImm(mVar, origLval.var, 
-                lvalArr, Arg.createIntLit(arrIx));
-          }
-
-        } else {
-          // Handle the general case where the index must be computed
-          mVar = varCreator.createTmp(context, new RefType(memberType));
-          Type keyType = Types.arrayKeyType(lvalArr);
-          Var indexVar = exprWalker.eval(context, indexExpr.child(0), keyType,
-                                         false, null);
-          
-          if (Types.isArray(lvalArr.type())) {
-            backend.arrayCreateNestedFuture(mVar, lvalArr, indexVar);
-          } else {
-            assert(Types.isArrayRef(lvalArr.type()));
-            backend.arrayRefCreateNestedFuture(mVar, origLval.var, lvalArr,
-                                               indexVar);
-          }
-        }
-      } else {
-        /* 
-         * Retrieve non-array member
-         * must use reference because we might have to wait for the result to 
-         * be inserted
-         */
-        mVar = varCreator.createTmp(context, new RefType(memberType));
-      }
-
-      return new LValue(lval.tree, mVar,
-          lval.indices.subList(1, lval.indices.size()));
-    }
-}
-
-  private Var assignTo1DArray(Context context, final LValue origLval,
-      LValue lval, SwiftAST rvalExpr, Type rvalType,
-      Deque<Runnable> afterActions)
-      throws TypeMismatchException, UserException, UndefinedTypeException {
-    assert (rvalExpr.getType() != ExMParser.ARRAY_PATH);
-    assert(lval.indices.size() == 1);
-    assert(Types.isArray(origLval.var.type()));
-    final Var lvalVar;
-    // Check that it is a valid array
-    final Var arr = lval.var;
-
-    Type arrType = arr.type();
-
-    if (!Types.isArray(arrType) && !Types.isArrayRef(arrType)) {
-      throw new TypeMismatchException(context, "Variable " + arr.name()
-          + "is not an array, cannot index\n.");
-    }
-    final boolean isArrayRef = Types.isArrayRef(arrType);
-
-    LogHelper.debug(context, 
-            "Token type: " + LogHelper.tokName(rvalExpr.getType()));
-    // Find or create variable to store expression result
-
-    final boolean rvalIsRef = Types.isRef(rvalType);
-    
-    if (!rvalIsRef) {
-      if (rvalExpr.getType() == ExMParser.VARIABLE) {
-        // Get a handle to the variable, so we can just insert the variable
-        //  directly into the array
-        // This is a bit of a hack.  We return the rval as the lval and rely
-        //  on the rest of the compiler frontend to treat the self-assignment
-        //  as a no-op
-        lvalVar = context.lookupVarUser(rvalExpr.child(0).getText());
-      } else {
-        // In other cases we need an intermediate variable
-        Type arrMemberType;
-        if (Types.isArray(arrType)) {
-          arrMemberType = arrType.memberType();
-        } else {
-          assert(Types.isArrayRef(arrType));
-          arrMemberType = arrType.memberType().memberType();
-        }
-        lvalVar = varCreator.createTmp(context, arrMemberType);
-      }
-    } else {
-      //Rval is a ref, so create a new value of the dereferenced type and
-      // rely on the compiler frontend later inserting instruction to
-      // copy
-      lvalVar = varCreator.createTmp(context, rvalType);
-    }
-
-    // We know what variable the result will go into now
-    // Now need to work out the index and generate code to insert the
-    // variable into the array
-
-    SwiftAST indexTree = lval.indices.get(0);
-    assert (indexTree.getType() == ExMParser.ARRAY_PATH);
-    assert (indexTree.getChildCount() == 1);
-    SwiftAST indexExpr = indexTree.child(0);
-
-
-    final Var outermostArray = origLval.var;
-    Type keyType = Types.arrayKeyType(arrType);
-    
-    Long literal = Literals.extractIntLit(context, indexExpr);
-
-    if (Types.isInt(keyType) && literal != null) {
-      final long arrIx = literal;
-      // Add this variable to array
-      afterActions.addFirst(new Runnable() {
-        @Override
-        public void run() {
-          backendArrayInsert(arr, arrIx, lvalVar, isArrayRef, rvalIsRef,
-              outermostArray);
-        }});
-    } else {
-      // Handle the general case where the index must be computed
-      final Var indexVar = exprWalker.eval(context, indexExpr, keyType, false, null);
-      afterActions.addFirst(new Runnable() {
-        @Override
-        public void run() {
-          backendArrayInsert(arr, indexVar, lvalVar, isArrayRef,
-              rvalIsRef, outermostArray);
-        }});
-    }
-    return lvalVar;
+    return indexExpr.child(0);
   }
 
   private void backendArrayInsert(final Var arr, long ix, Var member,
@@ -1733,7 +1800,7 @@ public class ASTWalker {
     }
   }
   
-  public void backendArrayInsert(Var arr, Var ix, Var member,
+  private void backendArrayInsert(Var arr, Var ix, Var member,
       boolean isArrayRef, boolean rvalIsRef, Var outermostArray) {
     if (isArrayRef && rvalIsRef) {
       backend.arrayRefDerefInsertFuture(outermostArray, arr, 

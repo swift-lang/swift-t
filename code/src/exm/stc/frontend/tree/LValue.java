@@ -41,6 +41,8 @@ import exm.stc.frontend.LogHelper;
 import exm.stc.frontend.TypeChecker;
 
 public class LValue {
+  /** A predecessor before reduction */
+  public final LValue predecessor;
   public final Var var;
   public final String varName;
   public final List<SwiftAST> indices;
@@ -49,6 +51,44 @@ public class LValue {
   public LValue(SwiftAST tree, Var var) {
     this(tree, var, new ArrayList<SwiftAST>(0));
   }
+  
+  public LValue(SwiftAST tree, Var var, List<SwiftAST> indices) {
+    this(null, tree, var, indices);
+  }
+   
+  public LValue(LValue predecessor, 
+                SwiftAST tree, Var var, List<SwiftAST> indices) {
+    this.predecessor = predecessor;
+    this.tree = tree;
+    this.var = var;
+    this.varName = var.name();
+    this.indices = Collections.unmodifiableList(indices);
+  }
+  
+  public LValue(SwiftAST tree, String varName, List<SwiftAST> indices) {
+    this.predecessor = null;
+    this.tree = tree;
+    this.var = null;
+    this.varName = varName;
+    this.indices = Collections.unmodifiableList(indices);
+  }
+  
+  public LValue getPredecessor() {
+    return predecessor;
+  }
+  
+  public Var getOuterArray() {
+    assert(Types.isArray(this.var) || Types.isArrayRef(this.var));
+    LValue prev = this;
+    LValue curr = this.predecessor;
+    while (curr != null &&
+           (Types.isArray(curr.var) || Types.isArrayRef(curr.var))) {
+      prev = curr;
+      curr = curr.predecessor;
+    }
+    return prev.var;
+  }
+  
   public Type getType(Context context) throws TypeMismatchException {
     return getType(context, indices.size());
   }
@@ -142,20 +182,6 @@ public class LValue {
       structPath.add(ixExpr.child(0).getText());
     }
     return structPath;
-  }
-
-  public LValue(SwiftAST tree, Var var, List<SwiftAST> indicies) {
-    this.tree = tree;
-    this.var = var;
-    this.varName = var.name();
-    this.indices = Collections.unmodifiableList(indicies);
-  }
-
-  public LValue(SwiftAST tree, String varName, List<SwiftAST> indicies) {
-    this.tree = tree;
-    this.var = null;
-    this.varName = varName;
-    this.indices = Collections.unmodifiableList(indicies);
   }
 
   /**
