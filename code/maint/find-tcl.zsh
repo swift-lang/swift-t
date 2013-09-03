@@ -9,7 +9,7 @@ DIR=$1
 source scripts/helpers.zsh
 if [[ ${?} != 0 ]]
 then
-  print "\n Could not source helpers.zsh!"
+  print "\n Could not source helpers.zsh!" > /dev/stderr
   exit 1
 fi
 
