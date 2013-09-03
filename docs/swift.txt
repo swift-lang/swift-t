@@ -745,6 +745,8 @@ The following binary arithmetic operators on numbers are defined:
 +==+ (equals), +!=+ (not equals), +>+ (greater than), +<+ (less than),
 +>=+ (greater than or equal to), +&lt;=+ (less than or equal to)
 
++xor()+ is a builtin function.
+
 The following unary operators are defined:
 
 +-+ (negate), +!+ (boolean not)
@@ -766,6 +768,15 @@ A function that accepts more than one type is denoted as +f(int|string)+.
 
 If a function is described below an *Import:* label, be sure to
 +import+ that package.
+
+=== General
+
++xor(boolean,boolean) -> boolean+:: Exclusive logical or
++make_void() -> void+:: Create a void value
++size(A[]) -> int+:: Obtain the size of array +A+
++contains(A[], key) -> boolean+:: Test that future +A[key]+ exists.
+This function blocks until +A+ is closed.  Consumers of +A[key]+ may
+block again until +A[key]+ is stored. 
 
 === Type conversion
 
@@ -835,22 +846,31 @@ Obtain the length of the given string
 +hash(string) -> int+::
 Hash the string to a 32-bit integer
 
- import io;
-
 +sprintf(string format, int|float|string|boolean...)+::
 As +sprintf()+ in C
 
++string_join(string A[], string separator) -> string+:: 
+Join strings in +A+ with given separator.  The separator may be the
+empty string
+
 === Math
+
++max|min_integer(int,int) -> int+:: Obtain maximum or minimum integer,
+respectively  
++max|min_float(float,float) -> float+:: Obtain maximum or minimum float,
+respectively  
++pow_integer(int b,int x)+:: Obtain b^x^
++pow_float(float b,float x)+:: Obtain b^x^
 
 *Import:* +math+
 
-+floor(float i) -> int+:: Round down
-+ceil(float i) -> int+:: Round up
-+round(float i) -> int+:: Round nearest
-+log(float i) -> float+:: Natural logarithm
-+exp(float i) -> float+:: Natural exponentiation: e^i^
-+sqrt(float i) -> float+:: Square root
-+is_nan(float i) -> boolean+:: Check for NaN
++floor(float) -> int+:: Round down
++ceil(float) -> int+:: Round up
++round(float) -> int+:: Round nearest
++log(float) -> float+:: Natural logarithm
++exp(float) -> float+:: Natural exponentiation: e^i^
++sqrt(float) -> float+:: Square root
++is_nan(float) -> boolean+:: Check for NaN
 +abs_integer(int) -> int+:: Absolute value
 +abs_float(float) -> float+:: Absolute value
 
@@ -949,8 +969,16 @@ If condition is false, report +message+ and exit immediately.
 === Files
 
 +filename(file) -> string+::   Obtain the name of a file
-+input_file(string) -> file+:: Obtain a +file+.  At run time, the
++input(string) -> file+:: Obtain a +file+.  At run time, the
 filesystem is checked for the given file name
++input_file(string) -> file+:: Alias for +input()+
++input_url(string) -> file+:: Obtain a +file+.  Some
+automatic operations and optimizations are disabled
++urlname(file) -> string+::   Obtain the name of a file created with 
++input_url()+
+
+*Import:* +files+
+
 +read(file) -> string+::   Read file as a string
 +write(string) -> file+::  Write string to file
 +glob(string) -> file[]+:: Perform glob operation, returning files
