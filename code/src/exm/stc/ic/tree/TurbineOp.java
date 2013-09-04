@@ -188,6 +188,10 @@ public class TurbineOp extends Instruction {
       gen.arrayBuild(getOutput(0), keys, vals);
       break;
     }
+    case BAG_INSERT:
+      // TODO: piggyback writers refcount
+      gen.bagInsert(getOutput(0), getInput(0).getVar(), Arg.ZERO);
+      break;
     case STRUCT_LOOKUP:
       gen.structLookup(getOutput(0), getInput(0).getVar(),
                        getInput(1).getStringLit());
@@ -425,6 +429,11 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.ARRAY_BUILD, array.asList(), inputs);
   }
 
+  public static Instruction bagInsert(Var bag, Var elem) {
+    assert(Types.isBagElem(bag, elem));
+    return new TurbineOp(Opcode.BAG_INSERT, bag, elem.asArg());
+  }
+  
   public static Instruction structInsert(Var structVar,
       String fieldName, Var fieldContents) {
     return new TurbineOp(Opcode.STRUCT_INSERT,
@@ -754,6 +763,8 @@ public class TurbineOp extends Instruction {
       // Effect can be tracked back to original array
       return false;
 
+    case BAG_INSERT:
+      return false;
     
     case UPDATE_INCR:
     case UPDATE_MIN:
@@ -1543,6 +1554,7 @@ public class TurbineOp extends Instruction {
     case SET_FILENAME_VAL:
     case INIT_LOCAL_OUTPUT_FILE:
     case ARRAY_BUILD:
+    case BAG_INSERT:
       return TaskMode.SYNC;
     
     case ARRAY_DEREF_INSERT_IMM:
@@ -2020,6 +2032,8 @@ public class TurbineOp extends Instruction {
         return Pair.create(readVars,
                 Arrays.asList(outerArr));
       }
+      case BAG_INSERT:
+        return Pair.create(getInput(0).getVar().asList(), Var.NONE);
       case STRUCT_INSERT:
         // Do nothing: reference count tracker can track variables
         // across struct boundaries

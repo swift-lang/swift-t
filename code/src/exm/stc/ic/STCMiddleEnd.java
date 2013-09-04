@@ -276,17 +276,21 @@ public class STCMiddleEnd {
   }
 
   public void startForeachLoop(String loopName,
-          Var arrayVar, Var memberVar, Var loopCountVar, 
+          Var container, Var memberVar, Var loopCountVar, 
           int splitDegree, int leafDegree, boolean arrayClosed) {
-    if(!Types.isArray(arrayVar.type())) {
-      throw new STCRuntimeError("foreach loop over non-array: " + 
-                arrayVar.toString()); 
+    assert(Types.isArray(container.type()) || Types.isBag(container.type())):
+          "foreach loop over bad type: " + container.toString(); 
+    if (Types.isArray(container)) {
+      assert(container.type().memberType().equals(memberVar.type()));
+      assert(loopCountVar == null || 
+          Types.isArrayKeyVal(container, loopCountVar.asArg()));
+    } else {
+      assert(Types.isBag(container));
+      assert(Types.isBagElem(container, memberVar));
+      assert(loopCountVar == null);
     }
-    assert(arrayVar.type().memberType().equals(memberVar.type()));
-    assert(loopCountVar == null || 
-          Types.isArrayKeyVal(arrayVar, loopCountVar.asArg()));
     ForeachLoop loop = new ForeachLoop(loopName,
-            arrayVar, memberVar, loopCountVar, splitDegree, leafDegree,
+            container, memberVar, loopCountVar, splitDegree, leafDegree,
             arrayClosed, PassedVar.NONE, Var.NONE,
             RefCount.NONE, new MultiMap<Var, RefCount>(), RefCount.NONE);
     currBlock().addContinuation(loop);
@@ -580,7 +584,7 @@ public class STCMiddleEnd {
   public void bagInsert(Var bag, Var elem) {
     assert(Types.isBag(bag));
     assert(Types.isBagElem(bag, elem));
-    //currBlock().addInstruction(TurbineOp.bagInsert(bag, elem));
+    currBlock().addInstruction(TurbineOp.bagInsert(bag, elem));
   }
 
 

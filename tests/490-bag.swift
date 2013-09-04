@@ -1,10 +1,9 @@
-// SKIP-THIS-TEST
-
 main {
   bag<int> b;
   
   b += 1;
   b += 1;
+  b += 2;
 
   f(b);
 }

@@ -53,7 +53,7 @@ public class RefCounting {
   public static boolean mayHaveWriteRefcount(Type type) {
     // Struct members may have write refcount 
     return Types.isArray(type) || Types.isPrimUpdateable(type) ||
-           Types.isStruct(type);
+           Types.isStruct(type) || Types.isBag(type);
   }
 
   /**

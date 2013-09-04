@@ -364,7 +364,7 @@ public class TurbineGenerator implements CompilerBackend {
       if (Types.isFile(t)) {
         batchedFiles.add(decl);
       } else if (Types.isPrimFuture(t) || Types.isPrimUpdateable(t) ||
-          Types.isArray(t) || Types.isRef(t)) {
+          Types.isArray(t) || Types.isRef(t) || Types.isBag(t)) {
         List<Expression> createArgs = new ArrayList<Expression>();
         // Data type
         createArgs.add(representationType(t, true));
@@ -372,6 +372,8 @@ public class TurbineGenerator implements CompilerBackend {
         if (Types.isArray(t)) {
           createArgs.add(Turbine.ADLB_INT_TYPE); // key
           createArgs.add(arrayValueType(t,true)); // value
+        } else if (Types.isBag(t)) {
+          createArgs.add(bagValueType(t, true));
         }
         if (initReaders != null)
           createArgs.add(argToExpr(initReaders));
@@ -388,8 +390,8 @@ public class TurbineGenerator implements CompilerBackend {
                               var.type().toString() + " was defined"));
         // don't need to do anything
       } else {
-        throw new STCRuntimeError("Code generation only implemented" +
-            " for initialisation of scalar, reference, array and struct types");
+        throw new STCRuntimeError("Code generation not supported for declaration " +
+        		"of type: " + t.typeName());
       }
     }
     
@@ -455,6 +457,8 @@ public class TurbineGenerator implements CompilerBackend {
       return refRepresentationType(t.memberType(), creation);
     } else if (Types.isArray(t)) {
       return Turbine.ADLB_CONTAINER_TYPE;
+    } else if (Types.isBag(t)) {
+      return Turbine.ADLB_MULTISET_TYPE;
     } else {
       throw new STCRuntimeError("Unknown ADLB representation type for " + t);
     }
@@ -476,6 +480,10 @@ public class TurbineGenerator implements CompilerBackend {
   
   private TypeName arrayValueType(Type arrType, boolean creation) {
     return refRepresentationType(Types.arrayMemberType(arrType), creation);
+  }
+  
+  private TypeName bagValueType(Type bagType, boolean creation) {
+    return refRepresentationType(Types.bagElemType(bagType), creation);
   }
   
   private void allocateFile(Var var, Arg initReaders) {
@@ -1454,6 +1462,14 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
+  public void bagInsert(Var bag, Var elem, Arg writersDecr) {
+    assert(Types.isBagElem(bag, elem));
+    pointStack.peek().add(Turbine.bagAppend(varToExpr(bag),
+          refRepresentationType(elem.type(), false), varToExpr(elem),
+          argToExpr(writersDecr)));
+  }
+  
+  @Override
   public void initUpdateable(Var updateable, Arg val) {
     assert(Types.isScalarUpdateable(updateable.type()));
     if (!updateable.type().equals(Types.UP_FLOAT)) {
@@ -1927,7 +1943,7 @@ public class TurbineGenerator implements CompilerBackend {
         Type t = v.type();
         if (Types.isPrimFuture(t) || Types.isRef(t) ||
             Types.isArray(t) || Types.isStruct(t) ||
-            Types.isPrimUpdateable(t)) {
+            Types.isPrimUpdateable(t) || Types.isBag(t)) {
           // Just passing turbine id
           exprs.add(varToExpr(v));
         } else if (Types.isPrimValue(t)) {
@@ -2000,30 +2016,38 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void startForeachLoop(String loopName, Var arrayVar, Var memberVar,
+  public void startForeachLoop(String loopName, Var container, Var memberVar,
         Var loopCountVar, int splitDegree, int leafDegree, boolean arrayClosed,
         List<PassedVar> passedVars, List<RefCount> perIterIncrs, 
         MultiMap<Var, RefCount> constIncrs) {
-    assert(Types.isArray(arrayVar.type()));
-    assert(loopCountVar == null || 
-          Types.isArrayKeyVal(arrayVar, loopCountVar.asArg()));
+
+    boolean haveKeys = loopCountVar != null;
+    
+    if (Types.isArray(container)) {
+      assert(!haveKeys || 
+            Types.isArrayKeyVal(container, loopCountVar.asArg()));
+      assert(Types.isMemberType(container, memberVar));
+    } else {
+      assert(Types.isBag(container));
+      assert(!haveKeys);
+      assert(Types.isBagElem(container, memberVar));
+    }
 
     if (!arrayClosed) {
       throw new STCRuntimeError("Loops over open containers not yet supported");
     }
 
-    boolean haveKeys = loopCountVar != null;
     String contentsVar = TCLTMP_ARRAY_CONTENTS;
 
     if (splitDegree <= 0) {
       // Load container contents and increment refcounts
       pointStack.peek().add(Turbine.containerContents(contentsVar,
-                          varToExpr(arrayVar), haveKeys));
+                          varToExpr(container), haveKeys));
       Value tclDict = new Value(contentsVar);
       Expression containerSize = Turbine.dictSize(tclDict);
       handleForeachContainerRefcounts(perIterIncrs, constIncrs, containerSize);
     } else {
-      startForeachSplit(loopName, arrayVar, contentsVar, splitDegree, 
+      startForeachSplit(loopName, container, contentsVar, splitDegree, 
           leafDegree, haveKeys, passedVars, perIterIncrs, constIncrs);
     }
     startForeachInner(new Value(contentsVar), memberVar, loopCountVar);
@@ -2475,7 +2499,8 @@ public class TurbineGenerator implements CompilerBackend {
       // Block on file status
       waitExpr = Turbine.getFileStatus(wv);
     } else if (Types.isScalarFuture(var) || Types.isRef(var) ||
-            Types.isArray(var) || Types.isScalarUpdateable(var)) {
+            Types.isArray(var) || Types.isScalarUpdateable(var)||
+            Types.isBag(var)) {
       waitExpr = wv;
     } else {
       throw new STCRuntimeError("Don't know how to wait on var: "

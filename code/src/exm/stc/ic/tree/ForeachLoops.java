@@ -176,14 +176,14 @@ public class ForeachLoops {
   }
 
   public static class ForeachLoop extends AbstractForeachLoop {
-    private Var arrayVar;
-    private boolean arrayClosed;
+    private Var container;
+    private boolean containerClosed;
     public Var getArrayVar() {
-      return arrayVar;
+      return container;
     }
 
     private ForeachLoop(Block block,
-        String loopName, Var arrayVar, Var loopVar,
+        String loopName, Var container, Var loopVar,
         Var loopCounterVar, int splitDegree, int leafDegree,
         boolean arrayClosed,
         List<PassedVar> passedVars, List<Var> keepOpenVars,
@@ -193,19 +193,19 @@ public class ForeachLoops {
       super(block, loopName, loopVar, loopCounterVar, splitDegree, leafDegree,
           -1, false, passedVars, keepOpenVars, startIncrements, constStartIncrements,
           endDecrements);
-      this.arrayVar = arrayVar;
-      this.arrayClosed = arrayClosed;
+      this.container = container;
+      this.containerClosed = arrayClosed;
     }
 
-    public ForeachLoop(String loopName, Var arrayVar,
+    public ForeachLoop(String loopName, Var container,
         Var loopVar, Var loopCounterVar, int splitDegree, int leafDegree,
-        boolean arrayClosed, List<PassedVar> passedVars,
+        boolean containerClosed, List<PassedVar> passedVars,
         List<Var> keepOpenVars, List<RefCount> startIncrements,
         MultiMap<Var, RefCount> constStartIncrements,
         List<RefCount> endDecrements) {
       this(new Block(BlockType.FOREACH_BODY, null), loopName,
-          arrayVar, loopVar, loopCounterVar,
-          splitDegree, leafDegree, arrayClosed, 
+          container, loopVar, loopCounterVar,
+          splitDegree, leafDegree, containerClosed, 
           passedVars, keepOpenVars, startIncrements, 
           constStartIncrements, endDecrements);
     }
@@ -213,8 +213,8 @@ public class ForeachLoops {
     @Override
     public ForeachLoop clone() {
       return new ForeachLoop(this.loopBody.clone(), loopName,
-        arrayVar, loopVar, loopCounterVar, splitDegree, leafDegree,
-        arrayClosed, passedVars, keepOpenVars, startIncrements, 
+        container, loopVar, loopCounterVar, splitDegree, leafDegree,
+        containerClosed, passedVars, keepOpenVars, startIncrements, 
         constStartIncrements, endDecrements);
     }
 
@@ -225,7 +225,7 @@ public class ForeachLoops {
 
     @Override
     public boolean isAsync() { 
-      return !arrayClosed || splitDegree > 0;
+      return !containerClosed || splitDegree > 0;
     }
     
     @Override
@@ -238,7 +238,7 @@ public class ForeachLoops {
       if (this.isAsync()) {
         boolean found = false;
         for (PassedVar passed: passedVars) {
-          if (passed.var.equals(arrayVar)) {
+          if (passed.var.equals(container)) {
             found = true;
             break;
           }
@@ -251,7 +251,7 @@ public class ForeachLoops {
           ArrayList<PassedVar> passedPlus = 
               new ArrayList<PassedVar>(passedVars.size() + 1);
           passedPlus.addAll(passedVars);
-          passedPlus.add(new PassedVar(arrayVar, false));
+          passedPlus.add(new PassedVar(container, false));
           super.setPassedVars(passedPlus);
           return;
         }
@@ -271,16 +271,16 @@ public class ForeachLoops {
 
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
-      gen.startForeachLoop(loopName, arrayVar, loopVar, loopCounterVar,
-                splitDegree, leafDegree, arrayClosed, 
+      gen.startForeachLoop(loopName, container, loopVar, loopCounterVar,
+                splitDegree, leafDegree, containerClosed, 
                 passedVars, startIncrements, constStartIncrements);
       this.loopBody.generate(logger, gen, info);
-      gen.endForeachLoop(splitDegree, arrayClosed, endDecrements);
+      gen.endForeachLoop(splitDegree, containerClosed, endDecrements);
     }
 
     @Override
     public void prettyPrint(StringBuilder sb, String currentIndent) {
-      if (!arrayClosed) {
+      if (!containerClosed) {
         sb.append(currentIndent + "@arrayblock\n");
       }
       if (splitDegree < 0) {
@@ -290,7 +290,7 @@ public class ForeachLoops {
       if (loopCounterVar != null) {
         sb.append(", " + loopCounterVar.name());
       }
-      sb.append(" in " + arrayVar.name() + " ");
+      sb.append(" in " + container.name() + " ");
       ICUtil.prettyPrintVarInfo(sb, passedVars, keepOpenVars);
       prettyPrintIncrs(sb);
       sb.append(" {\n");
@@ -301,8 +301,8 @@ public class ForeachLoops {
     @Override
     public void replaceConstructVars_(Map<Var, Arg> renames,
                                       RenameMode mode) {
-      if (renames.containsKey(arrayVar)) {
-        arrayVar = renames.get(arrayVar).getVar();
+      if (renames.containsKey(container)) {
+        container = renames.get(container).getVar();
       }
       
       if (mode == RenameMode.REPLACE_VAR) {
@@ -320,13 +320,13 @@ public class ForeachLoops {
     public Collection<Var> requiredVars(boolean forDeadCodeElim) {
       Collection<Var> res = new ArrayList<Var>(
           super.requiredVars(forDeadCodeElim));
-      res.add(arrayVar);
+      res.add(container);
       return res;
     }
 
     @Override
     public void removeVars_(Set<Var> removeVars) {
-      checkNotRemoved(arrayVar, removeVars);
+      checkNotRemoved(container, removeVars);
       checkNotRemoved(loopVar, removeVars);
       if (loopCounterVar != null) {
         checkNotRemoved(loopCounterVar, removeVars);
@@ -357,9 +357,9 @@ public class ForeachLoops {
     @Override
     public Block tryInline(Set<Var> closedVars, Set<Var> recClosedVars,
         boolean keepExplicitDependencies) {
-      if (closedVars.contains(arrayVar) ||
-          recClosedVars.contains(arrayVar)) {
-        this.arrayClosed = true;
+      if (closedVars.contains(container) ||
+          recClosedVars.contains(container)) {
+        this.containerClosed = true;
       }
       return null;
     }
@@ -367,7 +367,7 @@ public class ForeachLoops {
     public boolean fuseable(ForeachLoop o) {
       // annotation parameters should match to respect any
       // user settings
-      return this.arrayVar.equals(o.arrayVar)
+      return this.container.equals(o.container)
           && this.splitDegree == o.splitDegree;
     }
 

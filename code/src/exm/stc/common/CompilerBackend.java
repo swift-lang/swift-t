@@ -313,6 +313,8 @@ public interface CompilerBackend {
   public void arrayRefCreateNestedImm(Var arrayResult,
       Var outerArray, Var array, Arg ix);
 
+  public void bagInsert(Var bag, Var elem, Arg writersDecr);
+
   public void initUpdateable(Var updateable, Arg val);
   public void latestValue(Var result, Var updateable);
   
@@ -403,7 +405,7 @@ public interface CompilerBackend {
   /**
    * 
    * @param loopName unique name for loop
-   * @param arrayVar
+   * @param container
    * @param memberVar
    * @param loopCountVar counter variable, can be null
    * @param splitDegree
@@ -414,7 +416,7 @@ public interface CompilerBackend {
    * @param constIncrs constant increments
    */
   public void startForeachLoop(String loopName,
-      Var arrayVar, Var memberVar, Var loopCountVar, int splitDegree,
+      Var container, Var memberVar, Var loopCountVar, int splitDegree,
       int leafDegree, boolean arrayClosed,
       List<PassedVar> passedVars, List<RefCount> perIterIncrs,
       MultiMap<Var, RefCount> constIncrs);

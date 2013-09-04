@@ -67,6 +67,9 @@ class Turbine {
   public static final String CONTAINER_TYPENAME = "container";
   public static final TypeName ADLB_CONTAINER_TYPE = 
                                           new TypeName(CONTAINER_TYPENAME);
+  public static final String MULTISET_TYPENAME = "multiset";
+  public static final TypeName ADLB_MULTISET_TYPE = 
+                                          new TypeName(MULTISET_TYPENAME);
   public static final String REF_TYPENAME = "ref";
   public static final TypeName ADLB_REF_TYPE = new TypeName(REF_TYPENAME);
   public static final String FILE_REF_TYPENAME = "file_ref";
@@ -952,6 +955,12 @@ class Turbine {
             callerReadRefs, callerWriteRefs));
   }
 
+
+  public static TclTree bagAppend(Value bag, TypeName elemType,
+                                  Value elem, Expression decr) {
+    return new Command(adlbFn("store"), bag, elemType, elem, decr);
+  }
+  
   public static TclTree incrWriters(Value arr, Expression incr) {
     return new Command(WRITE_REFCOUNT_INCR, arr, incr);
   }
