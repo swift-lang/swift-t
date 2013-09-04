@@ -12,6 +12,9 @@ main
   A[1] = a;
   A[2] = bc;
   A[10] = d;
+  A[11] = "e";
+  A[12] = "f";
+  A[13] = "g";
   string s = string_join(A, ":");
   printf("s:%s", s);
 }

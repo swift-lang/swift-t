@@ -1,3 +1,3 @@
 #!/bin/sh -e
 
-grep s:bc:d:a ${TURBINE_OUTPUT}
+grep s:bc:d:a:e:f:g ${TURBINE_OUTPUT}

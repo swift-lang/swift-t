@@ -1,4 +1,3 @@
-// SKIP-THIS-TEST
 
 main {
   bag<string[]> string_bag;
