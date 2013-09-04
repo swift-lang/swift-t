@@ -1261,7 +1261,6 @@ public class ASTWalker {
   private void initUpdateableVar(Context context, Var var,
                                                 SwiftAST initExpr) {
     if (initExpr != null) {
-      // TODO
       // Handle as special case because currently we need an initial
       // value for the updateable variable right away
       if (var.type().equals(Types.UP_FLOAT)) {
@@ -2280,7 +2279,10 @@ public class ASTWalker {
     String appName = Literals.extractLiteralString(context, appNameT);
     
     // Evaluate any argument expressions
-    List<Var> args = evalAppCmdArgs(context, cmd);
+    Pair<List<Var>, Boolean> evaledArgs = evalAppCmdArgs(context, cmd);
+    
+    List<Var> args = evaledArgs.val1;
+    boolean openedEvalWait = evaledArgs.val2;
     
     // Process any redirections
     Redirects<Var> redirFutures = processAppRedirects(context,
@@ -2349,6 +2351,9 @@ public class ASTWalker {
       }
     }
     backend.endWaitStatement();
+    if (openedEvalWait) {
+      backend.endWaitStatement();
+    }
   }
 
   private Redirects<Var> processAppRedirects(Context context,
@@ -2522,9 +2527,10 @@ public class ASTWalker {
    * @throws TypeMismatchException
    * @throws UserException
    */
-  private List<Var> 
+  private Pair<List<Var>, Boolean>
       evalAppCmdArgs(Context context, SwiftAST cmdArgs) 
           throws TypeMismatchException, UserException {
+    List<Var> refArgs = new ArrayList<Var>();
     List<Var> args = new ArrayList<Var>();
     // Skip first arg: that is id
     for (SwiftAST cmdArg: cmdArgs.children(1)) {
@@ -2539,28 +2545,57 @@ public class ASTWalker {
         args.add(file);
       } else {
         Type exprType = TypeChecker.findSingleExprType(context, cmdArg);
-        Type baseType; // Type after expanding arrays
-        if (Types.isArray(exprType)) {
-          ArrayInfo info = new ArrayInfo(exprType);
-          baseType = info.baseType;
-        } else if (Types.isRef(exprType)) {
-          // TODO
-          throw new STCRuntimeError("TODO: support reference types on " +
-          		"app cmd line");
-        } else {
-          baseType = exprType;
+        Type baseType = exprType; // Type after expanding arrays
+        while (true) {
+          // Iteratively reduce until we get base type
+          if (Types.isArray(baseType)) {
+            ArrayInfo info = new ArrayInfo(baseType);
+            baseType = info.baseType;
+          } else if (Types.isRef(baseType)) {
+            baseType = Types.derefResultType(baseType);
+          } else {
+            break;
+          }
         }
+        
         if (Types.isString(baseType) || Types.isInt(baseType) ||
             Types.isFloat(baseType) || Types.isBool(baseType) ||
             Types.isFile(baseType)) {
-            args.add(exprWalker.eval(context, cmdArg, exprType, false, null));
+            Var arg = exprWalker.eval(context, cmdArg, exprType, false, null);
+            args.add(arg);
+            if (Types.isRef(arg)) {
+              refArgs.add(arg);
+            }
         } else {
           throw new TypeMismatchException(context, "Cannot convert type " +
                         baseType.typeName() + " to app command line arg");
         }
       }
     }
-    return args;
+    
+    if (refArgs.isEmpty()) {
+      return Pair.create(args, false);
+    } else {
+      // Replace refs with dereferenced
+      backend.startWaitStatement(
+          context.getFunctionContext().constructName("ref-argwait"),
+          refArgs, WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
+      
+      for (int i = 0; i < args.size(); i++) {
+        Var oldArg = args.get(i);
+        if (Types.isRef(oldArg)) {
+          // Replace old arg with dereferenced version
+          Var derefedArg = varCreator.createTmpAlias(context,
+                              Types.derefResultType(oldArg));
+          backend.retrieveRef(derefedArg, oldArg);
+          args.set(i, derefedArg);
+        }
+      }
+      
+      // Caller will close wait
+      return Pair.create(args, true);
+    }
+    
   }
 
   /**

@@ -1982,7 +1982,7 @@ public class Types {
     } else if (isFile(t)) {
       return new FileValueType(t.type().fileKind());
     } else if (isRef(t)) {
-      return t.type().memberType();
+      return t.type().baseType().memberType();
     } else {
       throw new STCRuntimeError(t.type() + " can't be dereferenced");
     }
