@@ -329,13 +329,18 @@ namespace eval turbine {
     }
     # This is called when every entry in container is set
     proc string_join_store { result container separator } {
-        set separator_value [ retrieve $separator ]
+        set separator_value [ retrieve_decr_string $separator ]
         set A [ list ]
-        foreach i [ container_list $container ] {
-            set td [ container_lookup $container $i ]
-            set v  [ retrieve_decr_string $td ]
+        # TODO: borrow refcount directly from container
+        set read_decr 0
+        set contents [ adlb::enumerate $container dict all 0 $read_decr ]
+        set sorted_keys [ lsort -integer [ dict keys $contents ] ]
+        foreach i $sorted_keys {
+            set td [ dict get $contents $i ]
+            set v  [ retrieve_string $td ]
             lappend A $v
         }
+        read_refcount_decr $container
         set s [ join $A $separator_value ]
         store_string $result $s
     }
