@@ -1479,6 +1479,10 @@ Time in seconds taken by ADLB task servers to shut down.  May include
 a decimal point.  Default 0.1 .  In very large runs, this may be set to
 5 to ensure correctness.
 
++ADLB_REPORT_LEAKS=1+::
+Enable reporting of any unfreed data in ADLB data store at end of
+execution.
+
 +TURBINE_LAUNCH_OPTIONS+::
 Provide other arguments to +mpiexec+, such as a machine file, etc.
 
