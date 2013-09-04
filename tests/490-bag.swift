@@ -4,6 +4,7 @@ main {
   bag<int> b;
   
   b += 1;
+  b += 1;
 
   f(b);
 }

@@ -575,7 +575,12 @@ public class STCMiddleEnd {
     assert(Types.isArray(outerArr.type()));
     currBlock().addInstruction(TurbineOp.arrayRefCreateNestedComputed(
                                       arrayResult, outerArr, array, ix));
-
+  }
+  
+  public void bagInsert(Var bag, Var elem) {
+    assert(Types.isBag(bag));
+    assert(Types.isBagElem(bag, elem));
+    //currBlock().addInstruction(TurbineOp.bagInsert(bag, elem));
   }
 
 

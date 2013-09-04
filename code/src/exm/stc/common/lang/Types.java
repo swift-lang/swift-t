@@ -1799,7 +1799,10 @@ public class Types {
   public static boolean isArrayKeyFuture(Typed arr, Typed key) {
     return key.type().assignableTo(arrayKeyType(arr));
   }
-  
+
+  public static boolean isBagElem(Typed bag, Typed elem) {
+    return elem.type().assignableTo(bagElemType(bag));
+  }
 
   /**
    * Return true if the type is one that we can subscribe to

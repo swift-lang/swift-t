@@ -1510,27 +1510,8 @@ public class ASTWalker {
         resultVar = rValVar;
       } else {
         assert(op == AssignOp.APPEND && isReducedVarLVal(lVal));
-        Type elemType = Types.bagElemType(lVal.var);
-        if (Types.isRefTo(rValVar, elemType)) {
-          // Wait, then deref if needed
-          String waitName = context.getFunctionContext().constructName(
-                                                    "bag-deref-append");
-          backend.startWaitStatement(waitName, rValVar.asList(),
-                 WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
-          Var derefed = varCreator.createTmpAlias(context, elemType);
-          backend.retrieveRef(derefed, rValVar);
-          // TODO: actual insert
-          // backend.bagAppend(lVal.var, derefed);
-          backend.endWaitStatement();
-          // TODO: use real signal var rather than reference
-          resultVar = rValVar;
-        } else {
-          assert(rValVar.type().assignableTo(elemType));
-          // TODO
-          // backend.bagAppend(lVal.var, rValVar);
-          resultVar = rValVar;
-        }
-        throw new STCRuntimeError("Not implemented: appending with +=");
+        Var bag = lVal.var;
+        resultVar = backendBagAppend(context, bag, rValVar);
       }
       result.add(resultVar);
     }
@@ -1843,6 +1824,73 @@ public class ASTWalker {
       backend.arrayInsertFuture(arr, ix, member);
     }
   }
+
+  /**
+   * Helper function to insert element into bag, selecting appropriate
+   * backend implementation.
+   * @param context
+   * @param bag
+   * @param elem
+   * @return
+   * @throws UserException
+   * @throws UndefinedTypeException
+   */
+  private Var backendBagAppend(Context context, Var bag, Var elem)
+                                            throws UserException {
+    // Result variable for statement, which should be element being
+    // inserted
+    Var stmtResultVar = elem;
+
+    Type elemType = Types.bagElemType(bag);
+    
+    boolean bagRef = Types.isBagRef(bag);
+    boolean elemRef = Types.isRefTo(elem, elemType); 
+    boolean openWait = bagRef || elemRef; 
+    
+    // May need to open wait in order to deal with dereference bag or element
+    if (openWait) {
+      // Wait, then deref if needed
+      String waitName = context.getFunctionContext().constructName(
+                                                "bag-deref-append");
+      
+      List<Var> waitVars = new ArrayList<Var>(2);
+      if (bagRef) {
+        waitVars.add(bag);
+      }
+      if (elemRef) {
+        waitVars.add(elem);
+      }
+          
+      backend.startWaitStatement(waitName, waitVars,
+             WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
+      
+      if (bagRef) {
+        // Dereference and use in place
+        Var derefedBag = varCreator.createTmpAlias(context,
+                               Types.derefResultType(bag));
+        backend.retrieveRef(derefedBag, bag);
+        bag = derefedBag;
+      }
+      if (elemRef) {
+        // TODO: use real signal var rather than reference
+        stmtResultVar = elem;
+        
+        // Dereference and use in place of old var
+        Var derefedElem = varCreator.createTmpAlias(context, elemType);
+        backend.retrieveRef(derefedElem, elem);
+        elem = derefedElem;
+      }
+    }
+    
+    // Do the actual insert
+    backend.bagInsert(bag, elem);
+    
+    if (openWait) {
+      backend.endWaitStatement();
+    }
+    return stmtResultVar;
+  }
+
 
   /**
    * Statement that evaluates an expression with no assignment E.g., trace()

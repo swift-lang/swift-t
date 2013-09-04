@@ -26,6 +26,7 @@ import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.util.TernaryLogic.Ternary;
+import exm.stc.frontend.tree.Assignment.AssignOp;
 
 /**
  * A module to perform analysis of variable usage in a compound function
@@ -78,8 +79,8 @@ public class VariableUsageInfo {
     return null;
   }
 
-  public void assign(Context context, String name) {
-    complexAssign(context, name, null, 0);
+  public void assign(Context context, String name, AssignOp op) {
+    complexAssign(context, name, null, 0, op);
   }
 
   /**
@@ -88,15 +89,16 @@ public class VariableUsageInfo {
    * @param name
    * @param fieldPath
    * @param arrayDepth
+   * @param op 
    */
   public void complexAssign(Context context, String name,
-      List<String> fieldPath, int arrayDepth) {
+      List<String> fieldPath, int arrayDepth, AssignOp op) {
     if (!vars.containsKey(name)) {
       violations.add(new Violation(ViolationType.ERROR, "Variable " +
           name + " not yet declared", context));
     } else {
       List<Violation> v = vars.get(name).assign(context,
-                                    fieldPath, arrayDepth);
+                                    fieldPath, arrayDepth, op);
       if (v != null) violations.addAll(v);
     }
 
@@ -331,6 +333,7 @@ public class VariableUsageInfo {
     private final boolean declaredInCurrentScope;
     private final String name;
     private Ternary assigned;
+    private Ternary appended;
     private Ternary read;
     /**
      * The depth of indexing at which array assignment occurred
@@ -339,7 +342,8 @@ public class VariableUsageInfo {
     private int maxReadDepth;
 
     public VInfo(Type type, boolean mapped, String name, boolean locallyDeclared) {
-      this(type, mapped, locallyDeclared, name, Ternary.FALSE, Ternary.FALSE, 0, -1);
+      this(type, mapped, locallyDeclared, name, Ternary.FALSE, Ternary.FALSE,
+           Ternary.FALSE, 0, -1);
     }
 
     public boolean hasMapping() {
@@ -348,7 +352,7 @@ public class VariableUsageInfo {
 
     private VInfo(Type type, boolean hasMapping, Map<String, VInfo> structFields,
         boolean locallyDeclared, String name,
-        Ternary assigned, Ternary read, int arrayAssignDepth,
+        Ternary assigned, Ternary appended, Ternary read, int arrayAssignDepth,
         int maxReadDepth) {
       this.type = type;
       this.hasMapping = hasMapping;
@@ -356,6 +360,7 @@ public class VariableUsageInfo {
       this.declaredInCurrentScope = locallyDeclared;
       this.name = name;
       this.assigned = assigned;
+      this.appended = appended;
       this.read = read;
       this.arrayAssignDepth = arrayAssignDepth;
       this.maxReadDepth = maxReadDepth;
@@ -363,7 +368,8 @@ public class VariableUsageInfo {
     }
 
     private VInfo(Type type, boolean mapped, boolean locallyDeclared, String name,
-        Ternary assigned, Ternary read, int arrayAssignDepth, int maxReadDepth) {
+        Ternary assigned, Ternary read, Ternary appended, 
+         int arrayAssignDepth, int maxReadDepth) {
       this.type = type;
       this.hasMapping = mapped;
       if (Types.isStruct(type)) {
@@ -378,6 +384,7 @@ public class VariableUsageInfo {
       this.declaredInCurrentScope = locallyDeclared;
       this.name = name;
       this.assigned = assigned;
+      this.appended = appended;
       this.read = read;
       this.arrayAssignDepth = arrayAssignDepth;
       this.maxReadDepth = maxReadDepth;
@@ -420,6 +427,10 @@ public class VariableUsageInfo {
         return assigned;
       }
     }
+    
+    public Ternary isAppended() {
+      return appended;
+    }
 
     /**
      * Helper function to check if it is either read
@@ -452,7 +463,8 @@ public class VariableUsageInfo {
       }
 
       return new VInfo(type, hasMapping, structFields,
-          locallyDeclared, name, Ternary.FALSE, Ternary.FALSE, 0, -1);
+          locallyDeclared, name, Ternary.FALSE, Ternary.FALSE,
+          Ternary.FALSE, 0, -1);
     }
 
 
@@ -469,49 +481,58 @@ public class VariableUsageInfo {
      *  myVar[0].x
      * @param fieldPath the path of struct fields (can be null for no path)
      * @param arrayDepth the number of array indices at end of assignment
+     * @param op 
      */
     public List<Violation> assign(Context context,
-        List<String> fieldPath, int arrayDepth) {
+        List<String> fieldPath, int arrayDepth, AssignOp op) {
       if (fieldPath != null && fieldPath.size() > 0) {
-        return structAssign(context, fieldPath, arrayDepth);
+        return structAssign(context, fieldPath, arrayDepth, op);
       } else if (arrayDepth > 0) {
-        return arrayAssign(context, arrayDepth);
+        return arrayAssign(context, arrayDepth, op);
       } else {
         // Assigning to the whole variable
         assert(arrayDepth == 0);
         assert(fieldPath == null || fieldPath.size() == 0);
-        return plainAssign(context);
+        return plainAssign(context, op);
       }
     }
 
 
-    private List<Violation> plainAssign(Context context) {
-      if (assigned == Ternary.TRUE) {
+    private List<Violation> plainAssign(Context context, AssignOp op) {
+      if (assigned == Ternary.TRUE ||
+          (op == AssignOp.ASSIGN && appended == Ternary.TRUE)) {
         // There will definitely be a double assignment
         return Arrays.asList(new Violation(
             ViolationType.ERROR, "Variable " + name
             + " cannot be written: it already has been assigned a value",
             context));
-      } else {
-        // Let assignment proceed
-        ArrayList<Violation> res = new ArrayList<Violation>();
-        if (assigned == Ternary.MAYBE) {
-          res.add(new Violation(ViolationType.WARNING,
-              "Possible double write of " + "variable " + name, context));
-        }
+      }
+      
+      // Let assignment proceed
+      ArrayList<Violation> res = new ArrayList<Violation>();
+      if (assigned == Ternary.MAYBE ||
+          (op == AssignOp.ASSIGN && appended == Ternary.MAYBE)) {
+        res.add(new Violation(ViolationType.WARNING,
+            "Possible double write of " + "variable " + name, context));
+      }
+      
+      if (op == AssignOp.ASSIGN) {
         if (Types.isStruct(type)) {
           // All internal fields are assigned with this action
           for (VInfo fieldVI: this.structFields.values()) {
-            fieldVI.plainAssign(context);
+            fieldVI.plainAssign(context, op);
           }
         }
         this.assigned = Ternary.TRUE;
-        return res;
+      } else {
+        assert(op == AssignOp.APPEND);
+        this.appended = Ternary.TRUE;
       }
+      return res;
     }
 
 
-    private List<Violation> arrayAssign(Context context, int arrayDepth) {
+    private List<Violation> arrayAssign(Context context, int arrayDepth, AssignOp op) {
       // Assigning to an index of the array
       if (assigned != Ternary.FALSE) {
         if (arrayAssignDepth != arrayDepth) {
@@ -535,7 +556,7 @@ public class VariableUsageInfo {
 
 
     private List<Violation> structAssign(Context context,
-        List<String> fieldPath, int arrayDepth) {
+        List<String> fieldPath, int arrayDepth, AssignOp op) {
       VInfo fieldVInfo;
       if (structFields != null) {
         if (this.assigned != Ternary.FALSE) {
@@ -559,7 +580,7 @@ public class VariableUsageInfo {
                 this.name + " but variable isn't a struct", context));
       }
       fieldPath.remove(0);
-      return fieldVInfo.assign(context, fieldPath, arrayDepth);
+      return fieldVInfo.assign(context, fieldPath, arrayDepth, op);
     }
 
     public Violation read(Context context,
@@ -699,17 +720,21 @@ public class VariableUsageInfo {
        * path
        */
       Ternary assignedInBranch;
+      Ternary appendedInBranch;
+      
       /* we keep track of the depth of indexing used for array assignment:
        * currently we assume that it is the same across branches (TODO) */
       int expectAssignedDepth;
       if (exhaustive) {
         VInfo firstBranch = branches.get(0);
         assignedInBranch = firstBranch.assigned;
+        appendedInBranch = firstBranch.appended;
         expectAssignedDepth = firstBranch.arrayAssignDepth;
       } else {
         /* Shouldn't be assigned on any branch, because if we don't enter any branch,
          * no assignment occurs*/
         assignedInBranch = Ternary.FALSE;
+        appendedInBranch = Ternary.FALSE;
         expectAssignedDepth = 0;
       }
 
@@ -735,8 +760,13 @@ public class VariableUsageInfo {
         // Update the assignment state of variable
         assignedInBranch = Ternary.consensus(assignedInBranch,
                                               currBr.assigned);
+        appendedInBranch = Ternary.consensus(appendedInBranch,
+                                              currBr.appended);
       }
 
+
+      this.appended = Ternary.or(appended, appendedInBranch);
+      
       // First handle the clear situations
       if (assignedInBranch == Ternary.FALSE) {
         // was not touched in branches

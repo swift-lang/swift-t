@@ -87,8 +87,7 @@ class VariableUsageAnalyzer {
     for (Var global: context.getScopeVariables()) {
       globVui.declare(context,
           global.name(), global.type(), false);
-      globVui.assign(context, 
-          global.name());
+      globVui.assign(context, global.name(), AssignOp.ASSIGN);
     }
     
     VariableUsageInfo argVui = globVui.createNested(); // create copy with globals
@@ -97,7 +96,7 @@ class VariableUsageAnalyzer {
     // Add input and output variables to initial variable info
     for (Var i: iList) {
       argVui.declare(context, i.name(), i.type(), false);
-      argVui.assign(context, i.name());
+      argVui.assign(context, i.name(), AssignOp.ASSIGN);
       fnContext.declareVariable(i.type(), i.name(), i.storage(), 
             i.defType(), i.mapping());
     }
@@ -310,7 +309,7 @@ class VariableUsageAnalyzer {
         LogHelper.debug(context, "Variable " + var.getName() + 
               " was declared and assigned"); 
         walkExpr(context, vu, assignExpr);
-        vu.assign(context, var.getName());
+        vu.assign(context, var.getName(), AssignOp.ASSIGN);
       }
     }
   }
@@ -322,11 +321,6 @@ class VariableUsageAnalyzer {
                   "assign_expression: child count < 2");
     // walk LHS to see what is assigned, and to walk index expressions
     Assignment assignments = Assignment.fromAST(context, tree);
-    
-    if (assignments.op != AssignOp.ASSIGN) {
-      //TODO
-      throw new STCRuntimeError("Haven't implemented append support");
-    }
 
     for (Pair<List<LValue>, SwiftAST> assign:
                     assignments.getMatchedAssignments(context)) {
@@ -349,15 +343,15 @@ class VariableUsageAnalyzer {
                   Alloc.STACK, DefType.LOCAL_USER, null);
         }
         
-        singleAssignment(context, vu, lVal);
+        singleAssignment(context, vu, lVal, assignments.op);
       }
     }
   }
 
   private void singleAssignment(Context context, VariableUsageInfo vu,
-          LValue lVal) throws InvalidWriteException, InvalidSyntaxException {
+          LValue lVal, AssignOp op) throws InvalidWriteException, InvalidSyntaxException {
     if (lVal.indices.size() == 0) {
-      vu.assign(context, lVal.varName);
+      vu.assign(context, lVal.varName, op);
     } else {
       int arrayDepth = 0;
       // The path must have the structure
@@ -375,7 +369,7 @@ class VariableUsageAnalyzer {
         }
       }
       vu.complexAssign(context, lVal.varName, lVal.structPath(),
-                                arrayDepth);
+                                arrayDepth, op);
     }
 
     // Indicies can also be expressions with variables in them
@@ -420,10 +414,10 @@ class VariableUsageAnalyzer {
     // Both loop variables are assigned before loop body runs
     initial.declare(context, loop.getMemberVarName(), 
         loop.getMemberVar().type(), loop.getMemberVar().mapping() != null);
-    initial.assign(context, loop.getMemberVarName());
+    initial.assign(context, loop.getMemberVarName(), AssignOp.ASSIGN);
     if (loop.getCountVarName() != null) {
       initial.declare(context, loop.getCountVarName(), Types.F_INT, false);
-      initial.assign(context, loop.getCountVarName());
+      initial.assign(context, loop.getCountVarName(), AssignOp.ASSIGN);
     }
     
     // Workaround to get correct type info: have two nested variable usage infos.
@@ -471,7 +465,7 @@ class VariableUsageAnalyzer {
       }
       // we assume that each variable has an initializer and an update, so it
       // will be assigned before each loop iteration
-      outerLoopInfo.assign(context, v.name());
+      outerLoopInfo.assign(context, v.name(), AssignOp.ASSIGN);
     }
     
     // Create body context with loop vars
@@ -513,7 +507,7 @@ class VariableUsageAnalyzer {
     bodyInfo.declare(context, v.name(), v.type(), v.mapping() != null);
     // we assume that each variable has an initializer and an update, so it
     // will be assigned before each loop iteration
-    bodyInfo.assign(context, v.name());
+    bodyInfo.assign(context, v.name(), AssignOp.ASSIGN);
     
     walkBlock(bodyContext, loop.getBody(), bodyInfo);
     
