@@ -16,7 +16,7 @@ VERBOSE=0
 STC_OPT_LEVELS=() #-O levels to test for STC
 DEFAULT_STC_OPT_LEVEL=2
 ADDTL_STC_ARGS=()
-LEAK_CHECK=0
+LEAK_CHECK=1
 STC_TESTS_OUT_DIR=
 
 # Speed up the tests
@@ -65,7 +65,7 @@ do
       STC_OPT_LEVELS+=${OPTARG}
       ;;
     l)
-      LEAK_CHECK=1
+      LEAK_CHECK=0
       ;;
     o)
       if [ ! -d ${OPTARG} ]; then
@@ -83,6 +83,12 @@ done
 if (( VERBOSE ))
 then
   set -x
+fi
+
+if (( LEAK_CHECK ))
+then
+  # Force reporting of leaks by ADLB
+  export ADLB_REPORT_LEAKS=true
 fi
 
 if [ ${#STC_OPT_LEVELS} -eq 0 ]
@@ -214,13 +220,11 @@ run_test()
       return 1
     fi
 
-    if (( LEAK_CHECK ))
+    # Check for leaks
+    if grep -F -q "LEAK DETECTED:" ${TURBINE_OUTPUT}
     then
-      # Check for leaks
-      grep -F -q "ADLB: LEAK:" ${TURBINE_OUTPUT}
-      # This is 0 if nothing was found
-      LEAKS=$(( ! ${?} ))
-      if (( LEAKS ))
+      LEAK_TEST_COUNT=$((LEAK_TEST_COUNT + 1))
+      if (( LEAK_CHECK ))
         then
         print "Memory leak!"
         return 1
@@ -299,6 +303,10 @@ report_stats_and_exit()
   if [ "${FAILED_TESTS}" != "" ]; then
       print "failed tests: ${#FAILED_TESTS} (${FAILED_TESTS})"
   fi
+
+  if [ ${LEAK_TEST_COUNT} != 0 ]; then
+      print "leaky tests: ${LEAK_TEST_COUNT}"
+  fi
   
   if [ "${DISABLED_TESTS}" != "" ]; then
       print "disabled tests: ${#DISABLED_TESTS} (${DISABLED_TESTS})"
@@ -310,6 +318,7 @@ TESTS_RUN=0
 SWIFT_FILES=( ${STC_TESTS_DIR}/*.swift )
 SWIFT_FILE_TOTAL=${#SWIFT_FILES}
 FAILED_TESTS=()
+LEAK_TEST_COUNT=0
 DISABLED_TESTS=()
 
 # Setup signal handler for early termination
