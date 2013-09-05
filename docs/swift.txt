@@ -457,6 +457,23 @@ Array literals may also be expressed with list syntax:
 int C[] = [4,5,6];
 ----
 
+=== Nested arrays
+Swift allows arrays of arrays: nested arrays.  They can be declared and
+assigned as follows:
+
+----
+// An array of arrays of files with string keys
+file A[string][string];
+A["foo"]["bar"] = input_file("test.txt");
+A["foo"]["qux"] = input_file("test2.txt");
+----
+
+*Note:* there is currently a limitation in assignment of nested arrays
+that a given array can only be assigned at a single "index level".  If
++A+ is a 2D array, for example, then you cannot mix assignments specifying
+one index (e.g. +A[i] = ...+) with assignments specifying three indices
+(e.g. +A[i][j] = ...+).
+
 === Structs
 
 In Swift, structs are defined with the +type+ keyword.  They define
@@ -477,6 +494,30 @@ Structs are accessed with the +.+ syntax:
 person p;
 p.name = "Abe";
 p.age = 90;
+----
+
+It is possible to have arrays of structs, with some restriction on
+how they can be assigned.  Each struct in the array must be assigned
+_in toto_ (as a whole).  For example, the following code is valid:
+
+----
+person people[], p1, p2;
+
+p1.name = "Thelma";
+p1.age = 31;
+
+p2.name = "Louise";
+p2.age = 29;
+
+people[0] = p1;
+people[1] = p2;
+----
+
+However, attempting to assign the structs in the following way is
+currently unsupported:
+----
+people[2].name = "Abe";  // Not supported!
+people[2].age = 90;      // Not supported!
 ----
 
 === Defining new types
