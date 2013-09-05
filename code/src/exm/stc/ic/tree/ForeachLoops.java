@@ -854,7 +854,6 @@ public class ForeachLoops {
         }
         lastIterLoopVar = currIterLoopVar;
       }
-      //System.err.println("FIRST: " + this + "\nSECOND: " + unrolled);
       return Collections.<Continuation>singletonList(unrolled);
     }
 

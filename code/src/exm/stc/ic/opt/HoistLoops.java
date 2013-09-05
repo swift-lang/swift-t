@@ -100,11 +100,6 @@ public class HoistLoops implements OptimizerPass {
       }
       hoistRec(logger, mainBlockState);
     }
-    /*
-    StringBuilder sb = new StringBuilder();
-    prog.prettyPrint(sb);
-    System.err.println(sb.toString()); */
-    // Might need to be updated
   }
   
   /**

@@ -23,6 +23,9 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
+
+import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
@@ -193,13 +196,18 @@ public class OptUtil {
   }  
 
   public static void fixupImmChange(Block srcBlock,
-          Block targetBlock, MakeImmChange change,
+          Block targetBlock, Instruction oldInst,
+          MakeImmChange change,
           List<Instruction> instBuffer, 
           List<Var> newOutVars, List<Var> oldOutVars,
           boolean mapOutputFiles) {
     instBuffer.addAll(Arrays.asList(change.newInsts));
+
+    Logger logger = Logging.getSTCLogger();
+    if (logger.isTraceEnabled()) {
+      logger.trace("Swapped " + oldInst + " for " + change.newInsts);
+    }
     
-    // System.err.println("Swapped " + inst + " for " + change.newInst);
     if (!change.isOutVarSame()) {
       // Output variable of instruction changed, need to fix up
       Var newOut = change.newOut;

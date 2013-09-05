@@ -157,8 +157,7 @@ public class SwiftModule {
       lexer.quiet = true;
       Token t = lexer.nextToken();
       while (t.getType() != ExMLexer.EOF) {
-        if (t.getChannel() == ExMLexer.CPP) { 
-          //System.err.println("CPP token: " + t.getText());
+        if (t.getChannel() == ExMLexer.CPP) {
           assert(t.getText().substring(0, 2).equals("# ")): t.getText();
           StreamTokenizer tok = new StreamTokenizer(
                 new StringReader(t.getText().substring(2)));

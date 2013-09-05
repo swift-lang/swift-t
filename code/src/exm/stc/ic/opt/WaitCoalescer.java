@@ -479,7 +479,7 @@ public class WaitCoalescer implements OptimizerPass {
       MakeImmChange change = inst.makeImmediate(
                                   Fetched.makeList(req.out, localOutputs),
                                   Fetched.makeList(req.in, inVals));
-      OptUtil.fixupImmChange(block, wait.getBlock(), change, instBuffer,
+      OptUtil.fixupImmChange(block, wait.getBlock(), inst, change, instBuffer,
                                  localOutputs, req.out, req.mapOutVars);
       
       // Remove old instruction, add new one inside wait block

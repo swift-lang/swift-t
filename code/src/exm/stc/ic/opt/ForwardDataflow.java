@@ -366,7 +366,6 @@ public class ForwardDataflow implements OptimizerPass {
         }
 
         updateBlockingSet(waitOn);
-        // System.err.println("Blocking so far:" + blockingVariables);
       }
     }
 
@@ -379,7 +378,6 @@ public class ForwardDataflow implements OptimizerPass {
 
     private void updateBlockingSet(List<WaitVar> waitOn) {
       assert (waitOn != null);
-      // System.err.println("waitOn: " + waitOn);
       if (blockingVariables == null) {
         blockingVariables = new HashSet<WaitVar>(waitOn);
       } else {
@@ -751,7 +749,7 @@ public class ForwardDataflow implements OptimizerPass {
                       insertPoint, req.out, filenameVals, req.mapOutVars);
     MakeImmChange change;
     change = inst.makeImmediate(Fetched.makeList(req.out, outFetched), inVals);
-    OptUtil.fixupImmChange(block, insertContext, change, alt,
+    OptUtil.fixupImmChange(block, insertContext, inst, change, alt,
                            outFetched, req.out, req.mapOutVars);
 
     if (logger.isTraceEnabled()) {
