@@ -15,13 +15,9 @@
  */
 package exm.stc.frontend;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -33,11 +29,9 @@ import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Logging;
-import exm.stc.common.Settings;
 import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.InvalidAnnotationException;
-import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.ModuleLoadException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
@@ -76,6 +70,7 @@ import exm.stc.common.util.StringUtil;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.frontend.Context.FnProp;
 import exm.stc.frontend.LValWalker.LRVals;
+import exm.stc.frontend.LoadedModules.LocatedModule;
 import exm.stc.frontend.VariableUsageInfo.VInfo;
 import exm.stc.frontend.tree.ArrayRange;
 import exm.stc.frontend.tree.Assignment;
@@ -108,35 +103,17 @@ public class ASTWalker {
   private ExprWalker exprWalker = null;
   private VariableUsageAnalyzer varAnalyzer = null;
   private WrapperGen wrapper = null;
-
-  /** Map of canonical name to input file for all already loaded */
-  private Map<String, SwiftModule> loadedModuleMap = 
-                        new HashMap<String, SwiftModule>();
   
-  /** List of modules in order of inclusion */
-  private List<ModuleInfo> loadedModules = new ArrayList<ModuleInfo>();
-  
-  /** 
-   * Set of input files that have been compiled (or are in process of being
-   * compiled.
-   */
-  private Set<String> compiledInputFiles = new HashSet<String>();
-  
-  /** Stack of input files.  Top of stack is one currently processed */
-  private Deque<SwiftModule> inputFiles = new ArrayDeque<SwiftModule>();
-  
-  /** Line mapping for current input file */
-  private LineMapping lineMapping;
+  /** Track which modules are loaded and compiled */
+  private LoadedModules modules = null;
 
   private static enum FrontendPass {
     DEFINITIONS, // Process top level defs
     COMPILE,     // Compile functions
   }
-  
-  
+    
   public ASTWalker() {
   }
-
 
   /**
    * Walk the AST and make calls to backend to generate lower level code.
@@ -145,16 +122,16 @@ public class ASTWalker {
    * @param tree
    * @throws UserException
    */
-  public void walk(STCMiddleEnd backend, SwiftModule mainModule) 
+  public void walk(STCMiddleEnd backend, ParsedModule mainModule) 
           throws UserException {
     this.backend = backend;
+    this.modules = new LoadedModules();
     this.varCreator = new VarCreator(backend);
     this.wrapper = new WrapperGen(backend);
-    this.exprWalker = new ExprWalker(wrapper, varCreator, backend,
-                                     mainModule.lineMapping);
-    this.lValWalker = new LValWalker(lineMapping, backend, varCreator,
-                                     exprWalker);
+    this.exprWalker = new ExprWalker(wrapper, varCreator, backend, modules);
+    this.lValWalker = new LValWalker(backend, varCreator, exprWalker);
     this.varAnalyzer = new VariableUsageAnalyzer();
+    
     GlobalContext context = new GlobalContext(mainModule.inputFilePath,
                                               Logging.getSTCLogger());
     SwiftAST ast = mainModule.ast;
@@ -167,13 +144,13 @@ public class ASTWalker {
       LogHelper.debug(context, ast.printTree());
 
     // Assume root module for now (TODO)
-    ModuleInfo mainInfo = new ModuleInfo(mainModule.inputFilePath, "");
-    ModuleInfo builtins = createModuleInfo(context, Arrays.asList("builtins"));
+    LocatedModule mainInfo = modules.setupRootModule(mainModule);
+    LocatedModule builtins = LocatedModule.fromPath(context, Arrays.asList("builtins"));
     
     // Two passes: first to find definitions, second to compile functions
     loadModule(context, FrontendPass.DEFINITIONS, builtins);
     walkFile(context, mainInfo, mainModule, FrontendPass.DEFINITIONS);
-    for (ModuleInfo loadedModule: loadedModules) {
+    for (LocatedModule loadedModule: modules.loadedModules()) {
       loadModule(context, FrontendPass.COMPILE, loadedModule);
     }
     
@@ -187,55 +164,40 @@ public class ASTWalker {
 
 
   /**
-   * Called to walk an input file
+   * Walk the statements in a file.
    * @param context
-   * @param ast
+   * @param module the parsed file to compile
+   * @param pass controls whether we just load top-level defs, or whether
+   *          we attempt to compile the module
    * @throws UserException
    */
-  private void walkFile(GlobalContext context, 
-        ModuleInfo module, SwiftModule parsed,
-        FrontendPass pass)
-      throws UserException {
-    if (pass == FrontendPass.DEFINITIONS) {
-      assert(!loadedModuleMap.containsKey(module.canonicalName));
-      loadedModuleMap.put(module.canonicalName, parsed);
-      loadedModules.add(module);
-    }
-    
+  private void walkFile(GlobalContext context, LocatedModule module,
+      ParsedModule parsed, FrontendPass pass) throws UserException {
     LogHelper.debug(context, "Entered module " + module.canonicalName
                + " on pass " + pass);
-    filePush(parsed);
+    boolean compiling = (pass == FrontendPass.COMPILE);
+    modules.enterModule(module, parsed, compiling);
     walkTopLevel(context, parsed.ast, pass);
-    filePop();
+    modules.exitModule();
     LogHelper.debug(context, "Finishing module" + module.canonicalName
                + " for pass " + pass);
   }
 
   /**
-   * Called when starting to process new input file
-   * @param parsed
+   * Get the line map for the current file
    */
-  private void filePush(SwiftModule parsed) {
-    inputFiles.push(parsed);
-    updateCurrentFile();
-  }
-
-  /**
-   * Called when finished processing input file
-   */
-  private void filePop() {
-    inputFiles.pop();
-    updateCurrentFile();
+  private LineMapping lineMap() {
+    return modules.currLineMap();
   }
   
-  private void updateCurrentFile() {
-    if (inputFiles.isEmpty()) {
-      lineMapping = null;
-    } else {
-      lineMapping = inputFiles.peek().lineMapping;
-    }
+  /**
+   * Synchronize file position to line mapping
+   * @param context
+   * @param tree
+   */
+  private void syncFilePos(Context context, SwiftAST tree) {
+    context.syncFilePos(tree, lineMap());
   }
-
 
   private void walkTopLevel(GlobalContext context, SwiftAST fileTree,
       FrontendPass pass) throws UserException {
@@ -259,11 +221,11 @@ public class ASTWalker {
   private void walkTopLevelDefs(GlobalContext context, SwiftAST fileTree)
       throws UserException, DoubleDefineException, UndefinedTypeException {
     assert(fileTree.getType() == ExMParser.PROGRAM);
-    context.syncFilePos(fileTree, lineMapping);
+    context.syncFilePos(fileTree, lineMap());
     
     for (SwiftAST topLevelDefn: fileTree.children()) {
       int type = topLevelDefn.getType();
-      context.syncFilePos(topLevelDefn, lineMapping);
+      context.syncFilePos(topLevelDefn, lineMap());
       switch (type) {
       case ExMParser.IMPORT:
         importModule(context, topLevelDefn, FrontendPass.DEFINITIONS);
@@ -295,7 +257,7 @@ public class ASTWalker {
         break;
       
       case ExMParser.EOF:
-        endOfFile(context, topLevelDefn);
+        // Do nothing
         break;
   
       default:
@@ -317,11 +279,11 @@ public class ASTWalker {
   private void walkTopLevelCompile(GlobalContext context, SwiftAST fileTree)
       throws UserException {
     assert(fileTree.getType() == ExMParser.PROGRAM);
-    context.syncFilePos(fileTree, lineMapping);
+    context.syncFilePos(fileTree, lineMap());
     // Second pass to compile functions
     for (int i = 0; i < fileTree.getChildCount(); i++) {
       SwiftAST topLevelDefn = fileTree.child(i);
-      context.syncFilePos(topLevelDefn, lineMapping);
+      context.syncFilePos(topLevelDefn, lineMap());
       int type = topLevelDefn.getType();
       switch (type) {
       case ExMParser.IMPORT:
@@ -339,137 +301,56 @@ public class ASTWalker {
     }
   }
 
-  private static class ModuleInfo {
-    public final String filePath;
-    public final String canonicalName;
-    
-    public ModuleInfo(String filePath, String canonicalName) {
-      super();
-      this.filePath = filePath;
-      this.canonicalName = canonicalName;
-    }
-  }
-
+  /**
+   * Handle an import statement by loading definitions for, or compiling
+   * module as needed.
+   * @param context
+   * @param tree
+   * @param pass
+   * @throws UserException
+   */
   private void importModule(GlobalContext context, SwiftAST tree,
       FrontendPass pass) throws UserException {
     assert(tree.getType() == ExMParser.IMPORT);
     assert(tree.getChildCount() == 1);
     SwiftAST moduleID = tree.child(0);
     
-    ModuleInfo module = parseModuleName(context, moduleID);
-    
+    LocatedModule module = LocatedModule.fromModuleNameAST(context, moduleID);
     loadModule(context, pass, module);
   }
 
-
+  /**
+   * Compile or load definitions for a module (depending on pass), if needed.
+   * Avoids double-compiling or double loading a module.
+   * @param context
+   * @param pass
+   * @param module
+   * @throws ModuleLoadException
+   * @throws UserException
+   */
   private void loadModule(GlobalContext context, FrontendPass pass,
-      ModuleInfo module) throws ModuleLoadException, UserException {
-    SwiftModule parsed;
-    boolean alreadyLoaded;
-    if (loadedModuleMap.containsKey(module.canonicalName)) {
-      alreadyLoaded = true;
-      parsed = loadedModuleMap.get(module.canonicalName);
-    } else {
-      alreadyLoaded = false;
-      // Load the file
-      try {
-        parsed = SwiftModule.parse(module.filePath, false);
-      } catch (IOException e) {
-        throw new ModuleLoadException(context, module.filePath, e);
-      }
-    }
+      LocatedModule module) throws ModuleLoadException, UserException {
+    Pair<ParsedModule, Boolean> loaded = modules.loadIfNeeded(context, module);
+    ParsedModule parsed = loaded.val1;
+    boolean newlyLoaded = loaded.val2;
     
     // Now file is parsed, we decide how to handle import
     if (pass == FrontendPass.DEFINITIONS) {
       // Don't reload definitions
-      if (!alreadyLoaded) {
+      if (newlyLoaded) {
         walkFile(context, module, parsed, pass);
       }
     } else {
       assert(pass == FrontendPass.COMPILE);
       // Should have been loaded at defs stage
-      assert(alreadyLoaded);
+      assert(!newlyLoaded);
       // Check if already being compiled
-      if (!compiledInputFiles.contains(module.canonicalName)) {
+      if (!modules.wasCompiled(module)) {
         walkFile(context, module, parsed, pass);
       }
     }
   }
-
-  private ModuleInfo parseModuleName(Context context, SwiftAST moduleID)
-      throws InvalidSyntaxException, ModuleLoadException {
-    List<String> modulePath;
-    if (moduleID.getType() == ExMParser.STRING) {
-      // Forms:  
-      //   module      => ./module.swift
-      //   pkg/module  => pkg/module.swift
-      // Implicit .swift extension added.  Relative to module search path
-      String path = Literals.extractLiteralString(context, moduleID);
-      modulePath = new ArrayList<String>();
-      for (String elem: path.split("/+")) {
-        modulePath.add(elem);
-      }
-    } else {
-      assert(moduleID.getType() == ExMParser.IMPORT_PATH);
-      // Forms:
-      // pkg        => ./module.swift
-      // pkg.module => pkg/module.swift
-      modulePath = new ArrayList<String>();
-      for (SwiftAST idT: moduleID.children()) {
-        assert(idT.getType() == ExMParser.ID);
-        modulePath.add(idT.getText());
-      }
-    }
-    return createModuleInfo(context, modulePath);
-  }
-
-
-  private static String moduleCanonicalName(List<String> modulePath) {
-    String canonicalName = "";
-    boolean first = true;
-    for (String component: modulePath) {
-      if (first) {
-        first = false;
-      } else {
-        canonicalName += ".";
-      }
-      canonicalName += component;
-    }
-    return canonicalName;
-  }
-
-  private ModuleInfo createModuleInfo(Context context, List<String> modulePath)
-      throws ModuleLoadException {
-    String canonicalName = moduleCanonicalName(modulePath);
-    String filePath = locateModule(context, canonicalName, modulePath);
-    return new ModuleInfo(filePath, canonicalName);
-  }
-
-
-  private String locateModule(Context context, String moduleName,
-                              List<String> modulePath) throws ModuleLoadException {
-    for (String searchDir: Settings.getModulePath()) {
-      if (searchDir.length() == 0) {
-        continue;
-      }
-      String currDir = searchDir;
-      // Find right subdirectory
-      for (String subDir: modulePath.subList(0, modulePath.size() - 1)) {
-        currDir = currDir + File.separator + subDir;
-      }
-      String fileName = modulePath.get(modulePath.size() - 1) + ".swift";
-      String filePath = currDir + File.separator + fileName;
-      
-      if (new File(filePath).isFile()) {
-        LogHelper.debug(context, "Resolved " + moduleName + " to " + filePath);
-        return filePath;
-      }
-    }
-    
-    throw new ModuleLoadException(context, "Could not find module " + moduleName + 
-                  " in search path: " + Settings.getModulePath().toString());
-  }
-
+  
   /**
    * Walk a tree that is a procedure statement.
    *
@@ -482,10 +363,9 @@ public class ASTWalker {
    * @throws UserException
    */
   private List<Var> walkStatement(Context context, SwiftAST tree, WalkMode walkMode)
-  throws UserException
-  {
+  throws UserException {
       int token = tree.getType();
-      context.syncFilePos(tree, lineMapping);
+      syncFilePos(context, tree);
       
       
       if (walkMode == WalkMode.ONLY_DECLARATIONS) { 
@@ -590,7 +470,7 @@ public class ASTWalker {
     for (SwiftAST stmt: stmts) {
       stmtResults = walkStatement(context, stmt, WalkMode.ONLY_EVALUATION);
       if (stmtResults == null || stmtResults.isEmpty()) {
-        context.syncFilePos(stmt, lineMapping);
+        syncFilePos(context, stmt);
         throw new UserException(context, "Tried to wait for result"
             + " of statement of type " + LogHelper.tokName(stmt.getType())
             + " but statement doesn't have output future to wait on");
@@ -1347,8 +1227,8 @@ public class ASTWalker {
           throws UserException {
     // First do any preparation/reduction of lvals and obtain vars
     // to evaluate the R.H.S. expression(s) into
-    LRVals target = lValWalker.prepareLVals(context, op, lVals, rValExpr,
-                                             walkMode);
+    LRVals target = lValWalker.prepareLVals(context, lineMap(), op, lVals,
+                                            rValExpr, walkMode);
 
     // Evaluate the R.H.S. expressions(s)
     if (!target.skipREval && walkMode != WalkMode.ONLY_DECLARATIONS) {
@@ -1584,7 +1464,7 @@ public class ASTWalker {
 
   private void defineFunction(Context context, SwiftAST tree)
   throws UserException {
-    context.syncFilePos(tree, lineMapping);
+    syncFilePos(context, tree);
     String function = tree.child(0).getText();
     LogHelper.debug(context, "define function: " + context.getLocation() +
                               function);
@@ -1642,7 +1522,7 @@ public class ASTWalker {
           SwiftAST tree, int firstChild) throws InvalidAnnotationException {
     List<String> annotations = new ArrayList<String>();
     for (SwiftAST subtree: tree.children(firstChild)) {
-      context.syncFilePos(subtree, lineMapping);
+      syncFilePos(context, subtree);
       assert(subtree.getType() == ExMParser.ANNOTATION);
       assert(subtree.getChildCount() == 1 || subtree.getChildCount() == 2);
       String annotation = subtree.child(0).getText();
@@ -1674,8 +1554,8 @@ public class ASTWalker {
     List<Var> oList = fdecl.getOutVars();
     
     // Analyse variable usage inside function and annotate AST
-    context.syncFilePos(tree, lineMapping);
-    varAnalyzer.analyzeVariableUsage(context, lineMapping, function,
+    syncFilePos(context, tree);
+    varAnalyzer.analyzeVariableUsage(context, lineMap(), function,
                                      iList, oList, block);
 
     LocalContext functionContext = new LocalContext(context, function);
@@ -1737,9 +1617,9 @@ public class ASTWalker {
     props.put(TaskPropKey.LOCATION, loc.asArg());
     
     
-    context.syncFilePos(tree, lineMapping);
+    syncFilePos(context, tree);
     List<String> annotations = extractFunctionAnnotations(context, tree, 4);
-    context.syncFilePos(tree, lineMapping);
+    syncFilePos(context, tree);
     boolean hasSideEffects = true, deterministic = false;
     for (String annotation: annotations) {
       if (annotation.equals(Annotations.FN_PURE)) {
@@ -1877,7 +1757,7 @@ public class ASTWalker {
 
     // Process redirections
     for (SwiftAST redirT: redirects) {
-      context.syncFilePos(redirT, lineMapping);
+      syncFilePos(context, redirT);
       assert(redirT.getChildCount() == 2);
       SwiftAST redirType = redirT.child(0);
       SwiftAST redirExpr = redirT.child(1);
@@ -2247,11 +2127,7 @@ public class ASTWalker {
     LogHelper.debug(context, "Defined new type called " + typeName + ": "
         + newType.toString());
   }
-
-  private String endOfFile(Context context, SwiftAST tree) {
-    return "# EOF";
-  }
-
+  
   private void globalConst(Context context, SwiftAST tree) 
         throws UserException {
     assert(tree.getType() == ExMParser.GLOBAL_CONST);

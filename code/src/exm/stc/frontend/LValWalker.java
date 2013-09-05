@@ -32,15 +32,13 @@ import exm.stc.ic.STCMiddleEnd;
  */
 public class LValWalker {
   
-  public LValWalker(LineMapping lineMapping, STCMiddleEnd backend,
-      VarCreator varCreator, ExprWalker exprWalker) {
-    this.lineMapping = lineMapping;
+  public LValWalker(STCMiddleEnd backend, VarCreator varCreator,
+                    ExprWalker exprWalker) {
     this.backend = backend;
     this.varCreator = varCreator;
     this.exprWalker = exprWalker;
   }
-
-  private final LineMapping lineMapping;
+  
   private final STCMiddleEnd backend;
   private final VarCreator varCreator;
   private final ExprWalker exprWalker;
@@ -59,8 +57,8 @@ public class LValWalker {
    *         that evaluating the R.H.S. can be skipped
    * @throws UserException
    */
-  public LRVals prepareLVals(Context context, AssignOp op,
-      List<LValue> lVals, SwiftAST rValExpr, WalkMode walkMode)
+  public LRVals prepareLVals(Context context, LineMapping lineMapping,
+      AssignOp op, List<LValue> lVals, SwiftAST rValExpr, WalkMode walkMode)
       throws UserException {
     ExprType rValTs = Assignment.checkAssign(context, lVals, rValExpr);
 

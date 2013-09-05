@@ -26,7 +26,7 @@ import exm.stc.common.exceptions.STCFatal;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.util.Misc;
 import exm.stc.frontend.ASTWalker;
-import exm.stc.frontend.SwiftModule;
+import exm.stc.frontend.ParsedModule;
 import exm.stc.ic.STCMiddleEnd;
 import exm.stc.tclbackend.TurbineGenerator;
 
@@ -60,7 +60,7 @@ public class STCompiler {
       String timestamp = Misc.timestamp();
       logger.info("STC starting: " + timestamp);
       
-      SwiftModule parsed = parseFile(inputFile, preprocessed);
+      ParsedModule parsed = parseFile(inputFile, preprocessed);
       
       boolean profile = Settings.getBoolean(Settings.PROFILE_STC);
       
@@ -124,9 +124,9 @@ public class STCompiler {
     e.printStackTrace();
   }
 
-  private SwiftModule parseFile(String inputFile, boolean preprocessed) throws ModuleLoadException {
+  private ParsedModule parseFile(String inputFile, boolean preprocessed) throws ModuleLoadException {
     try {
-      return SwiftModule.parse(inputFile, preprocessed);
+      return ParsedModule.parse(inputFile, preprocessed);
     } catch (IOException e) {
       throw new ModuleLoadException(inputFile, e);
     }

@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
-import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.CompilerBackend.WaitMode;
@@ -78,14 +77,14 @@ public class ExprWalker {
   private final VarCreator varCreator;
   private final WrapperGen wrappers;
   private final STCMiddleEnd backend;
-  private final LineMapping lineMapping;
+  private final LoadedModules modules;
   
   public ExprWalker(WrapperGen wrappers, VarCreator creator, 
-                    STCMiddleEnd backend, LineMapping lineMapping) {
+                    STCMiddleEnd backend, LoadedModules modules) {
     this.wrappers = wrappers;
     this.varCreator = creator;
     this.backend = backend;
-    this.lineMapping = lineMapping;
+    this.modules = modules;
   }
 
   /**
@@ -103,7 +102,7 @@ public class ExprWalker {
     LogHelper.debug(context, "walkExpr " + tree.getText() +
           " assigning to vars: " + oList);
     int token = tree.getType();
-    context.syncFilePos(tree, lineMapping);
+    context.syncFilePos(tree, modules.currLineMap());
 
     if (token == ExMParser.CALL_FUNCTION) {
       callFunctionExpression(context, tree, oList, renames);
@@ -202,7 +201,7 @@ public class ExprWalker {
   public Var eval(Context context, SwiftAST tree, Type type,
       boolean storeInStack, Map<String, String> renames) throws UserException {
     assert(type != null);
-    context.syncFilePos(tree, lineMapping);
+    context.syncFilePos(tree, modules.currLineMap());
     if (tree.getType() == ExMParser.VARIABLE) {
       // Base case: don't need to create new variable
       String varName = tree.child(0).getText();

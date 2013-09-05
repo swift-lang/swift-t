@@ -23,9 +23,9 @@ import exm.stc.ui.ExitCode;
 /**
  * Represents an input Swift source file
  */
-public class SwiftModule {
+public class ParsedModule {
   
-  public SwiftModule(String filePath, SwiftAST ast, LineMapping lineMapping) {
+  public ParsedModule(String filePath, SwiftAST ast, LineMapping lineMapping) {
     this.inputFilePath = filePath;
     this.ast = ast;
     this.lineMapping = lineMapping;
@@ -35,13 +35,13 @@ public class SwiftModule {
   public final LineMapping lineMapping;
     
   /**
-   * Parse the specified file and create a SwiftModule object
+   * Parse the specified file and create a ParsedModule object
    * @param path
    * @param preprocessed
    * @return
    * @throws IOException
    */
-  public static SwiftModule parse(String path, boolean preprocessed)
+  public static ParsedModule parse(String path, boolean preprocessed)
                                                 throws IOException {
     FileInputStream inputStream = setupInput(path);
     /* Parse the input file and build AST */
@@ -57,7 +57,7 @@ public class SwiftModule {
     }
     SwiftAST tree = runANTLR(antlrInput, lineMapping);
     
-    return new SwiftModule(path, tree, lineMapping);
+    return new ParsedModule(path, tree, lineMapping);
   }
   /**
    * TODO: consider module naming
