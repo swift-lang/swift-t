@@ -215,6 +215,8 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.ARRAYREF_DEREF_INSERT_IMM);
     opcodes.add(Opcode.ARRAYREF_INSERT_FUTURE);
     opcodes.add(Opcode.ARRAYREF_DEREF_INSERT_FUTURE);
+    opcodes.add(Opcode.BAG_INSERT);
+    opcodes.add(Opcode.ARRAY_CREATE_BAG);
     opcodes.add(Opcode.COPY_REF);
     opcodes.add(Opcode.LOCAL_OP);
     opcodes.add(Opcode.GET_FILENAME);

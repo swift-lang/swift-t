@@ -584,9 +584,16 @@ public class STCMiddleEnd {
   public void bagInsert(Var bag, Var elem) {
     assert(Types.isBag(bag));
     assert(Types.isBagElem(bag, elem));
-    currBlock().addInstruction(TurbineOp.bagInsert(bag, elem));
+    currBlock().addInstruction(TurbineOp.bagInsert(bag, elem, Arg.ZERO));
   }
 
+
+  public void arrayCreateBag(Var bag, Var arr, Arg key) {
+    assert(Types.isBag(bag));
+    assert(Types.isArray(arr));
+    assert(Types.isArrayKeyVal(arr, key));
+    currBlock().addInstruction(TurbineOp.arrayCreateBag(bag, arr, key));
+  }
 
   public void assignReference(Var target, Var src) {
     currBlock().addInstruction(

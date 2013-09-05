@@ -942,7 +942,8 @@ public class ASTWalker {
    */
   private void foreachArray(Context context, ForeachLoop loop)
       throws UserException, UndefinedTypeException {
-    Var arrayVar = exprWalker.eval(context, loop.getArrayVarTree(), loop.findArrayType(context), true, null);
+    Var arrayVar = exprWalker.eval(context, loop.getArrayVarTree(),
+                          loop.findArrayType(context), false, null);
 
     VariableUsageInfo bodyVU = loop.getBody().checkedGetVariableUsage();
     List<Var> writtenVars = new ArrayList<Var>();
@@ -1459,14 +1460,10 @@ public class ASTWalker {
           } else if (op == AssignOp.ASSIGN && isReducedArrLVal(reducedLVal)) {
             // Create temporary variable to insert into array
             rValTargets.add(varCreator.createTmp(context, rValConcrete));
-          } else if (op == AssignOp.APPEND && isReducedVarLVal(reducedLVal)) {
-            rValTargets.add(varCreator.createTmp(context, rValConcrete));
           } else {
-            assert(op == AssignOp.APPEND && isReducedArrLVal(reducedLVal));
-            // TODO: need to create appendable at array index if not present
-            // then replace reducedLVal with this appendable
-            // reducedLVal = ...;
-            throw new STCRuntimeError("Unimplemented: append to array...");
+            assert(op == AssignOp.APPEND);
+            // Create temporary variable to append
+            rValTargets.add(varCreator.createTmp(context, rValConcrete));
           }
         }
         reducedLVals.add(reducedLVal);
@@ -1508,11 +1505,17 @@ public class ASTWalker {
         // TODO: sometimes this will give back a reference to a var
         //      rather than the actual thing that should be waited on
         resultVar = rValVar;
-      } else {
-        assert(op == AssignOp.APPEND && isReducedVarLVal(lVal));
+      } else if (op == AssignOp.APPEND && isReducedVarLVal(lVal)) {
         Var bag = lVal.var;
         resultVar = backendBagAppend(context, bag, rValVar);
+      } else {
+        assert(op == AssignOp.APPEND && isReducedArrLVal(lVal));
+        appendToBagInArray(context, lVal.var, lVal.indices.get(0), rValVar);
+        // TODO: sometimes this will give back a reference to a var
+        //      rather than the actual thing that should be waited on
+        resultVar = rValVar;
       }
+      
       result.add(resultVar);
     }
     return result;
@@ -1684,7 +1687,7 @@ public class ASTWalker {
   
     SwiftAST indexTree = lval.indices.get(0);
 
-    SwiftAST indexExpr = checkArrayIndexExpr(context, lval.var, indexTree);
+    SwiftAST indexExpr = checkArrayKeyExpr(context, lval.var, indexTree);
     
     boolean isArrayRef = Types.isArrayRef(arr);
     Type keyType = Types.arrayKeyType(arr);
@@ -1704,6 +1707,54 @@ public class ASTWalker {
 
   }
 
+  /**
+   * Create an empty bag inside an array/array ref, or return the
+   * bag at index if not present
+   * @param context
+   * @param var
+   * @param elem variable to insert into bag
+   * @return
+   * @throws UserException 
+   * @throws TypeMismatchException 
+   */
+  private Var appendToBagInArray(Context context, Var arr, SwiftAST keyTree,
+      Var elem) throws UserException {
+    Var key = evalKey(context, arr, checkArrayKeyExpr(context, arr, keyTree));
+    List<Var> waitVars;
+    if (Types.isArrayRef(arr)) {
+      // Wait for index and reference
+      waitVars = Arrays.asList(key, arr);
+    } else {
+      assert(Types.isArray(arr));
+      // Wait for index only
+      waitVars = Arrays.asList(key);
+    }
+    
+    backend.startWaitStatement(
+        context.getFunctionContext().constructName("bag-create-wait"),
+        waitVars, WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
+    
+    Var derefArr; // Plain array (not reference);
+    if (Types.isArrayRef(arr)) {
+      derefArr = varCreator.createTmpAlias(context, Types.derefResultType(arr));
+      backend.retrieveRef(derefArr, arr);
+    } else {
+      derefArr = arr;
+    }
+    
+    Var keyVal = varCreator.fetchValueOf(context, key);
+    
+    Type bagType = Types.arrayMemberType(derefArr);
+    assert(Types.isBag(bagType));
+    Var bag = varCreator.createTmpAlias(context, bagType);
+    // create or get nested bag instruction
+    backend.arrayCreateBag(bag, derefArr, keyVal.asArg());
+    backendBagAppend(context, bag, elem);  
+    
+    backend.endWaitStatement();
+    return bag;
+  }
+
 
   /** Handle a prefix of array lookups for the assign target
    * @throws UserException
@@ -1713,7 +1764,7 @@ public class ASTWalker {
                                        LValue lval) throws UserException {
 
     SwiftAST indexTree = lval.indices.get(0);
-    SwiftAST indexExpr = checkArrayIndexExpr(context, lval.var, indexTree);
+    SwiftAST indexExpr = checkArrayKeyExpr(context, lval.var, indexTree);
     
     assert(lval.indices.size() > 1);
     // multi-dimensional array handling: need to dynamically create subarray
@@ -1740,9 +1791,7 @@ public class ASTWalker {
       } else {
         // Handle the general case where the index must be computed
         mVar = varCreator.createTmp(context, new RefType(memberType));
-        Type keyType = Types.arrayKeyType(lvalArr);
-        Var indexVar = exprWalker.eval(context, indexExpr, keyType,
-                                       false, null);
+        Var indexVar = evalKey(context, lvalArr, indexExpr);
         
         if (Types.isArray(lvalArr.type())) {
           backend.arrayCreateNestedFuture(mVar, lvalArr, indexVar);
@@ -1766,6 +1815,15 @@ public class ASTWalker {
 }
 
 
+  private Var evalKey(Context context, Var arr, SwiftAST indexExpr)
+      throws UserException {
+    Type keyType = Types.arrayKeyType(arr);
+    Var indexVar = exprWalker.eval(context, indexExpr, keyType,
+                                   false, null);
+    return indexVar;
+  }
+
+
   /**
    * Type-check ARRAY_PATH tree and return index expression
    * @param context
@@ -1775,7 +1833,7 @@ public class ASTWalker {
    * @throws UserException
    * @throws TypeMismatchException
    */
-  private SwiftAST checkArrayIndexExpr(Context context, Var array,
+  private SwiftAST checkArrayKeyExpr(Context context, Var array,
       SwiftAST indexExpr) throws UserException, TypeMismatchException {
     assert (indexExpr.getType() == ExMParser.ARRAY_PATH);
     assert (indexExpr.getChildCount() == 1);

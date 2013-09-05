@@ -1480,6 +1480,20 @@ public class TurbineGenerator implements CompilerBackend {
     pointStack.peek().add(Turbine.updateableFloatInit(varToExpr(updateable),
                                                       argToExpr(val)));
   }
+  
+  @Override
+  public void arrayCreateBag(Var bag, Var arr, Arg ix, Arg callerReadRefs,
+      Arg callerWriteRefs) {
+    assert(Types.isBag(bag));
+    assert(bag.storage() == Alloc.ALIAS);
+    assert(Types.isArrayKeyVal(arr, ix));
+    assert(Types.isMemberType(arr, bag));
+    assert(callerReadRefs.isImmediateInt());
+    assert(callerWriteRefs.isImmediateInt());
+    
+    throw new STCRuntimeError("arrayCreateBag not implemented in " +
+    		"turbine generator");
+  }
 
   @Override
   public void latestValue(Var result, Var updateable) {

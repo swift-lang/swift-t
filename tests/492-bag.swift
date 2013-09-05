@@ -11,6 +11,11 @@ main {
 
 
     // TODO: check results
+    foreach bag, i in A {
+     foreach elem in bag {
+       trace(i, elem);
+     }
+    }
 }
 
 (int o) id (int i) {

@@ -210,7 +210,7 @@ public class ExprWalker {
         varName = renames.get(varName);
       }
       Var var = context.lookupVarUser(varName);
-      
+      System.err.println("Eval " + type + " var " + var.name());
       // Check to see that the current variable's storage is adequate
       // Might need to convert type, can't do that here
       if ((var.storage() == Alloc.STACK || (!storeInStack))

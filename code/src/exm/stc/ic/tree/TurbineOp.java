@@ -189,8 +189,7 @@ public class TurbineOp extends Instruction {
       break;
     }
     case BAG_INSERT:
-      // TODO: piggyback writers refcount
-      gen.bagInsert(getOutput(0), getInput(0).getVar(), Arg.ZERO);
+      gen.bagInsert(getOutput(0), getInput(0).getVar(), getInput(1));
       break;
     case STRUCT_LOOKUP:
       gen.structLookup(getOutput(0), getInput(0).getVar(),
@@ -244,6 +243,10 @@ public class TurbineOp extends Instruction {
     case ARRAY_CREATE_NESTED_IMM:
       gen.arrayCreateNestedImm(getOutput(0), getOutput(1), getInput(0),
                                getInput(1), getInput(2));
+      break;
+    case ARRAY_CREATE_BAG:
+      gen.arrayCreateBag(getOutput(0), getOutput(1), getInput(0),
+                         getInput(1), getInput(2));
       break;
     case LOAD_INT:
       gen.retrieveInt(getOutput(0), getInput(0).getVar(),
@@ -429,9 +432,10 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.ARRAY_BUILD, array.asList(), inputs);
   }
 
-  public static Instruction bagInsert(Var bag, Var elem) {
+  public static Instruction bagInsert(Var bag, Var elem, Arg writersDecr) {
     assert(Types.isBagElem(bag, elem));
-    return new TurbineOp(Opcode.BAG_INSERT, bag, elem.asArg());
+    assert(writersDecr.isImmediateInt());
+    return new TurbineOp(Opcode.BAG_INSERT, bag, elem.asArg(), writersDecr);
   }
   
   public static Instruction structInsert(Var structVar,
@@ -620,6 +624,17 @@ public class TurbineOp extends Instruction {
         // reference counts outmost array
         Arrays.asList(arrayResult, outerArray, array),
         ix);
+  }
+  
+
+  public static Instruction arrayCreateBag(Var bag,
+      Var array, Arg arrIx) {
+    assert(Types.isArrayKeyVal(array, arrIx));
+    assert(bag.storage() == Alloc.ALIAS);
+    // Both arrays are modified, so outputs
+    return new TurbineOp(Opcode.ARRAY_CREATE_BAG,
+        Arrays.asList(bag, array),
+        arrIx, Arg.ZERO, Arg.ZERO);
   }
 
   public static Instruction initUpdateableFloat(Var updateable, Arg val) {
@@ -847,6 +862,7 @@ public class TurbineOp extends Instruction {
     case ARRAYREF_CREATE_NESTED_FUTURE:
     case ARRAY_CREATE_NESTED_IMM:
     case ARRAYREF_CREATE_NESTED_IMM:
+    case ARRAY_CREATE_BAG:
         /* It might seem like these nested creation primitives have a 
          * side-effect, but for optimisation purposes they can be treated as 
          * side-effect free, as the side-effect is only relevant if the array 
@@ -1388,6 +1404,7 @@ public class TurbineOp extends Instruction {
       case COPY_REF:
       case ARRAY_LOOKUP_IMM:
       case ARRAY_CREATE_NESTED_IMM:
+      case ARRAY_CREATE_BAG:
       case GET_FILENAME:
       case STRUCT_LOOKUP:
         // Initialises alias
@@ -1420,6 +1437,9 @@ public class TurbineOp extends Instruction {
       // In create_nested instructions the 
       // second array being inserted into is needed
       return Arrays.asList(getOutput(1));
+    case ARRAY_CREATE_BAG:
+      // the array being inserted into
+      return getOutput(1).asList();
     case ARRAYREF_CREATE_NESTED_IMM:
     case ARRAYREF_CREATE_NESTED_FUTURE:
       // In ref_create_nested instructions the 
@@ -1436,6 +1456,7 @@ public class TurbineOp extends Instruction {
     case ARRAY_CREATE_NESTED_FUTURE:
     case ARRAYREF_CREATE_NESTED_IMM:
     case ARRAYREF_CREATE_NESTED_FUTURE:
+    case ARRAY_CREATE_BAG:
       // In create_nested instructions only the 
       // first output (the created array) is needed
       return Collections.singletonList(getOutput(0));
@@ -1468,6 +1489,7 @@ public class TurbineOp extends Instruction {
         return getOutputs();
       case ARRAY_CREATE_NESTED_FUTURE:
       case ARRAY_CREATE_NESTED_IMM:
+      case ARRAY_CREATE_BAG:
       case ARRAYREF_CREATE_NESTED_FUTURE:
       case ARRAYREF_CREATE_NESTED_IMM: {
         // All arrays except the newly created array; 
@@ -1540,6 +1562,7 @@ public class TurbineOp extends Instruction {
     case STRUCT_INSERT:
     case STRUCT_LOOKUP:
     case ARRAY_CREATE_NESTED_IMM:
+    case ARRAY_CREATE_BAG:
     case STORE_REF:
     case LOAD_REF:
     case FREE_BLOB:
@@ -1834,10 +1857,13 @@ public class TurbineOp extends Instruction {
       case ARRAY_CREATE_NESTED_FUTURE:
       case ARRAY_CREATE_NESTED_IMM:
       case ARRAYREF_CREATE_NESTED_FUTURE:
-      case ARRAYREF_CREATE_NESTED_IMM: {
+      case ARRAYREF_CREATE_NESTED_IMM: 
+      case ARRAY_CREATE_BAG: {
         // CREATE_NESTED <out inner array> <in array> <in index>
         // OR
         // CREATE_NESTED <out inner array> <outer arr> <in array> <in index>
+        // OR
+        // CREATE_BAG <out inner bag> <in array> <in index> 
         Var nestedArr = getOutput(0);
         Var arr;
         if (op == Opcode.ARRAYREF_CREATE_NESTED_FUTURE ||
@@ -1849,7 +1875,8 @@ public class TurbineOp extends Instruction {
         Arg ix = getInput(0);
         List<ResultVal> res = new ArrayList<ResultVal>();
         
-        boolean returnsRef =  op != Opcode.ARRAY_CREATE_NESTED_IMM;
+        boolean returnsRef = op != Opcode.ARRAY_CREATE_NESTED_IMM &&
+                             op != Opcode.ARRAY_CREATE_BAG;
         // Mark as not substitutable since this op may have
         // side-effect of creating array
         res.add(ResultVal.makeArrayResult(arr, ix, nestedArr,
@@ -1857,7 +1884,8 @@ public class TurbineOp extends Instruction {
         res.add(ResultVal.makeCreateNestedResult(arr, ix, nestedArr,
             returnsRef));
         
-        if (op == Opcode.ARRAY_CREATE_NESTED_IMM) {
+        if (op == Opcode.ARRAY_CREATE_NESTED_IMM ||
+            op == Opcode.ARRAY_CREATE_BAG) {
           // No references involved, the instruction returns the nested
           // array directly
         } else {
@@ -2100,18 +2128,15 @@ public class TurbineOp extends Instruction {
       case ARRAY_CREATE_NESTED_IMM: {
         // Instruction can give additional refcounts back
         Var nestedArr = getOutput(0);
-        long amt = increments.getCount(nestedArr);
-        if (amt > 0) {
-          assert(getInputs().size() == 3);
-          // Which argument is increment
-          int inputPos = (type == RefCountType.READERS ? 1 : 2);
-
-          Arg oldAmt = getInput(inputPos);
-          if (oldAmt.isIntVal()) {
-            setInput(inputPos, Arg.createIntLit(oldAmt.getIntLit() + amt));
-            return nestedArr.asList();
-          }
-        }
+        assert(getInputs().size() == 3);
+        return tryPiggyBackHelper(increments, type, nestedArr, 1, 2);
+      }
+      case BAG_INSERT: {
+        Var bag = getOutput(0);
+        return tryPiggyBackHelper(increments, type, bag, 1, -1);
+      }
+      case ARRAY_CREATE_BAG: {
+        // TODO: refcounts for inner bag/ outer arr
         break;
       }
       default:
@@ -2121,12 +2146,50 @@ public class TurbineOp extends Instruction {
     // Fall through to here if can do nothing
     return Var.NONE;
   }
+
+  
+  /**
+   * Try to piggyback by applying refcount to an argument
+   * @param increments
+   * @param type
+   * @param var the variable with refcount being managed
+   * @param readDecrInput input index of read refcount arg, negative if none
+   * @param writeDecrInput input index of write refcount arg, negative if none
+   * @return
+   */
+  private List<Var> tryPiggyBackHelper(Counters<Var> increments,
+      RefCountType type, Var var, int readDecrInput, int writeDecrInput) {
+    long amt = increments.getCount(var);
+    if (amt > 0) {
+      // Which argument is increment
+      int inputPos;
+      if (type == RefCountType.READERS) {
+        inputPos = readDecrInput;
+      } else {
+        assert(type == RefCountType.WRITERS);
+        inputPos = writeDecrInput;
+      }
+      if (inputPos < 0) {
+        // No input
+        return Var.NONE;
+      }
+      assert(inputPos < inputs.size());
+
+      Arg oldAmt = getInput(inputPos);
+      if (oldAmt.isIntVal()) {
+        setInput(inputPos, Arg.createIntLit(oldAmt.getIntLit() + amt));
+        return var.asList();
+      }
+    }
+    return Var.NONE;
+  }
   
   public Pair<Var, Var> getComponentAlias() {
     switch (op) {
       case ARRAY_CREATE_NESTED_IMM:
       case ARRAY_CREATE_NESTED_FUTURE:
-        // From inner array to immediately enclosing
+      case ARRAY_CREATE_BAG:
+        // From inner object to immediately enclosing
         return Pair.create(getOutput(0), getOutput(1));
       case ARRAYREF_CREATE_NESTED_IMM:
       case ARRAYREF_CREATE_NESTED_FUTURE:
@@ -2156,6 +2219,7 @@ public class TurbineOp extends Instruction {
       case ARRAY_CREATE_NESTED_IMM:
       case ARRAYREF_CREATE_NESTED_FUTURE:
       case ARRAYREF_CREATE_NESTED_IMM:
+      case ARRAY_CREATE_BAG:
         return true;
       default:
         return false;
