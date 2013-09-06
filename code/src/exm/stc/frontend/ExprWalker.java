@@ -900,6 +900,11 @@ public class ExprWalker {
       throw new STCRuntimeError("Couldn't locate function definition for " +
           "previously defined function " + function);
     }
+    
+    if (context.hasFunctionProp(function, FnProp.DEPRECATED)) {
+      LogHelper.warn(context, "Call to deprecated function: " + function);
+    }
+    
     if (context.isIntrinsic(function)) {
       IntrinsicFunction intF = context.lookupIntrinsic(function);
       backend.intrinsicCall(intF, iList, oList, props);

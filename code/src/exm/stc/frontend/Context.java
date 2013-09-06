@@ -429,7 +429,8 @@ public abstract class Context {
     BUILTIN, SYNC,
     WRAPPED_BUILTIN,
     PARALLEL, /** if this is a parallel task */
-    TARGETABLE /** if this is targetable */;
+    TARGETABLE, /** if this is targetable */
+    DEPRECATED, /** Warn if user uses function */
   }
   
   /**

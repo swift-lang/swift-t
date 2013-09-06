@@ -1455,6 +1455,8 @@ public class ASTWalker {
       ForeignFunctions.addMinMax(function);
     } else if (annotation.equals(Annotations.FN_PAR)) {
       context.setFunctionProperty(function, FnProp.PARALLEL);
+    } else if (annotation.equals(Annotations.FN_DEPRECATED)) {
+      context.setFunctionProperty(function, FnProp.DEPRECATED);
     } else {
       throw new InvalidAnnotationException(context, "function", annotation, false);
     }
