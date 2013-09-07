@@ -588,13 +588,6 @@ public class ForwardDataflow implements OptimizerPass {
       HierarchicalMap<Var, Arg> replaceInputs,
       HierarchicalMap<Var, Arg> replaceAll) throws InvalidWriteException,
       InvalidOptionException {
-    logger.trace("STATEMENTS AT START:");
-    StringBuilder sb = new StringBuilder();
-    for (Statement stmt: block.getStatements()) {
-      stmt.prettyPrint(sb, "    ");
-    }
-    logger.trace(sb);
-    
     while (stmts.hasNext()) {
       Statement stmt = stmts.next();
 
@@ -613,12 +606,6 @@ public class ForwardDataflow implements OptimizerPass {
         cv.addComputedValues(condClosed.availableVals, Ternary.FALSE);
       }
     }
-    logger.trace("STATEMENTS AT END: ");
-    sb = new StringBuilder();
-    for (Statement stmt: block.getStatements()) {
-      stmt.prettyPrint(sb, "    ");
-    }
-    logger.trace(sb);
   }
 
   private void handleInstruction(Logger logger, Program prog,
