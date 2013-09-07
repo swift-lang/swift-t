@@ -97,12 +97,12 @@ import exm.stc.ic.STCMiddleEnd;
  */
 public class ASTWalker {
 
-  private STCMiddleEnd backend;
-  private VarCreator varCreator = null;
-  private LValWalker lValWalker = null;
-  private ExprWalker exprWalker = null;
-  private VariableUsageAnalyzer varAnalyzer = null;
-  private WrapperGen wrapper = null;
+  private final STCMiddleEnd backend;
+  private final VarCreator varCreator;
+  private final LValWalker lValWalker;
+  private final ExprWalker exprWalker;
+  private final VariableUsageAnalyzer varAnalyzer;
+  private final WrapperGen wrapper;
   
   /** Track which modules are loaded and compiled */
   private LoadedModules modules = null;
@@ -112,7 +112,14 @@ public class ASTWalker {
     COMPILE,     // Compile functions
   }
     
-  public ASTWalker() {
+  public ASTWalker(STCMiddleEnd backend) {
+    this.backend = backend;
+    this.modules = new LoadedModules();
+    this.varCreator = new VarCreator(backend);
+    this.wrapper = new WrapperGen(backend);
+    this.exprWalker = new ExprWalker(wrapper, varCreator, backend, modules);
+    this.lValWalker = new LValWalker(backend, varCreator, exprWalker);
+    this.varAnalyzer = new VariableUsageAnalyzer();
   }
 
   /**
@@ -122,34 +129,19 @@ public class ASTWalker {
    * @param tree
    * @throws UserException
    */
-  public void walk(STCMiddleEnd backend, ParsedModule mainModule) 
-          throws UserException {
-    this.backend = backend;
-    this.modules = new LoadedModules();
-    this.varCreator = new VarCreator(backend);
-    this.wrapper = new WrapperGen(backend);
-    this.exprWalker = new ExprWalker(wrapper, varCreator, backend, modules);
-    this.lValWalker = new LValWalker(backend, varCreator, exprWalker);
-    this.varAnalyzer = new VariableUsageAnalyzer();
-    
-    GlobalContext context = new GlobalContext(mainModule.inputFilePath,
-                                              Logging.getSTCLogger());
-    SwiftAST ast = mainModule.ast;
-    // Dump ANTLR's view of the SwiftAST (unsightly):
-    // if (logger.isDebugEnabled())
-    // logger.debug("tree: \n" + tree.toStringTree());
+  public void walk(String mainFilePath, boolean preprocessed) throws UserException {
 
-    // Use our custom printTree
-    if (LogHelper.isDebugEnabled())
-      LogHelper.debug(context, ast.printTree());
+    GlobalContext context = new GlobalContext(mainFilePath,
+                                              Logging.getSTCLogger());
 
     // Assume root module for now (TODO)
-    LocatedModule mainInfo = modules.setupRootModule(mainModule);
-    LocatedModule builtins = LocatedModule.fromPath(context, Arrays.asList("builtins"));
+    LocatedModule mainModule = new LocatedModule(mainFilePath, "", preprocessed);
+    LocatedModule builtins = LocatedModule.fromPath(context,
+                          Arrays.asList("builtins"), false);
     
     // Two passes: first to find definitions, second to compile functions
     loadModule(context, FrontendPass.DEFINITIONS, builtins);
-    walkFile(context, mainInfo, mainModule, FrontendPass.DEFINITIONS);
+    loadModule(context, FrontendPass.DEFINITIONS, mainModule);
     for (LocatedModule loadedModule: modules.loadedModules()) {
       loadModule(context, FrontendPass.COMPILE, loadedModule);
     }
@@ -315,7 +307,8 @@ public class ASTWalker {
     assert(tree.getChildCount() == 1);
     SwiftAST moduleID = tree.child(0);
     
-    LocatedModule module = LocatedModule.fromModuleNameAST(context, moduleID);
+    LocatedModule module = LocatedModule.fromModuleNameAST(context,
+                                                  moduleID, false);
     loadModule(context, pass, module);
   }
 
@@ -338,6 +331,14 @@ public class ASTWalker {
     if (pass == FrontendPass.DEFINITIONS) {
       // Don't reload definitions
       if (newlyLoaded) {
+        // Use our custom printTree
+        if (LogHelper.isDebugEnabled()) {
+          LogHelper.debug(context, "Loading new module " +
+                                      module.canonicalName);
+          LogHelper.debug(context, parsed.ast.printTree());
+        }
+          
+        
         walkFile(context, module, parsed, pass);
       }
     } else {

@@ -42,19 +42,6 @@ public class LoadedModules {
   public List<LocatedModule> loadedModules() {
     return Collections.unmodifiableList(loadedModules);
   }
-
-  /**
-   * Special handling for root module (i.e. main file) of program that
-   * takes a parsed AST and returns a moduleInfo
-   * @param mainModule
-   * @return
-   */
-  public LocatedModule setupRootModule(ParsedModule mainModule) {
-    LocatedModule root = new LocatedModule(mainModule.inputFilePath, "");
-    loadedModules.add(root);
-    loadedModuleMap.put(root.canonicalName, mainModule);
-    return root;
-  }
   
   /**
    * 
@@ -63,7 +50,8 @@ public class LoadedModules {
    * @throws ModuleLoadException 
    */
   public Pair<ParsedModule, Boolean> loadIfNeeded(Context context,
-                 LocatedModule module) throws ModuleLoadException {
+                                             LocatedModule module)
+             throws ModuleLoadException {
     boolean didLoad;
     ParsedModule parsed;
     if (loadedModuleMap.containsKey(module.canonicalName)) {
@@ -73,7 +61,7 @@ public class LoadedModules {
       didLoad = true;
       // Load the file
       try {
-        parsed = ParsedModule.parse(module.filePath, false);
+        parsed = ParsedModule.parse(module.filePath, module.preprocessed);
       } catch (IOException e) {
         throw new ModuleLoadException(context, module.filePath, e);
       }
@@ -161,11 +149,13 @@ public class LoadedModules {
   public static class LocatedModule {
     public final String filePath;
     public final String canonicalName;
+    public final boolean preprocessed;
     
-    public LocatedModule(String filePath, String canonicalName) {
-      super();
+    public LocatedModule(String filePath, String canonicalName,
+      boolean preprocessed) {
       this.filePath = filePath;
       this.canonicalName = canonicalName;
+      this.preprocessed = preprocessed;
     }
     
     /**
@@ -176,11 +166,11 @@ public class LoadedModules {
      * @return
      * @throws ModuleLoadException
      */
-    public static LocatedModule fromPath(Context context, List<String> modulePath)
-        throws ModuleLoadException {
+    public static LocatedModule fromPath(Context context, List<String> modulePath,
+        boolean preprocessed) throws ModuleLoadException {
       String canonicalName = moduleCanonicalName(modulePath);
       String filePath = locateModule(context, canonicalName, modulePath);
-      return new LocatedModule(filePath, canonicalName);
+      return new LocatedModule(filePath, canonicalName, preprocessed);
     }
 
     /**
@@ -193,7 +183,8 @@ public class LoadedModules {
      * @throws ModuleLoadException
      */
     public static LocatedModule fromModuleNameAST(Context context,
-        SwiftAST moduleID) throws InvalidSyntaxException, ModuleLoadException {
+        SwiftAST moduleID, boolean preprocessed)
+            throws InvalidSyntaxException, ModuleLoadException {
       List<String> modulePath;
       if (moduleID.getType() == ExMParser.STRING) {
         // Forms:  
@@ -216,7 +207,7 @@ public class LoadedModules {
           modulePath.add(idT.getText());
         }
       }
-      return fromPath(context, modulePath);
+      return fromPath(context, modulePath, preprocessed);
     }
 
   }

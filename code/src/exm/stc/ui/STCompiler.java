@@ -57,40 +57,21 @@ public class STCompiler {
   public void compile(String inputFile, boolean preprocessed, PrintStream output,
           PrintStream icOutput) {
     try {
-      String timestamp = Misc.timestamp();
-      logger.info("STC starting: " + timestamp);
-      
-      ParsedModule parsed = parseFile(inputFile, preprocessed);
-      
+      logger.info("STC starting: " + Misc.timestamp());
+
       boolean profile = Settings.getBoolean(Settings.PROFILE_STC);
       
       /* 
        * Walk AST, and build intermediate representation
        * This is where type checking and other semantic analysis happens.
        */
-      for (int i = 0; i < (profile ? 1000000 : 1); i++) {
-        if (i > 0)
-          parsed.ast.resetAnnotations();
-        ASTWalker walker = new ASTWalker();
-        STCMiddleEnd intermediate = new STCMiddleEnd(logger, icOutput);
-        walker.walk(intermediate, parsed);
-        
-        /* Optimise intermediate representation by repeatedly rewriting tree
-         * NOTE: currently the optimizer pass is actually required for correctness,
-         * as the frontend doesn't always provide correct information about which variables
-         * need to be passed into blocks.  The optimizer will fix this problem
-         */
-        intermediate.optimize();
-      
-        /* Generate output tcl code from intermediate representation */
-        TurbineGenerator codeGen = new TurbineGenerator(logger, timestamp);
-        intermediate.regenerate(codeGen);
-        String code = codeGen.code();
-
-        output.println(code);
-        output.close();
+      int compileIterations = profile ? 100000 : 1;
+      for (int i = 0; i < compileIterations; i++) {
+        compileOnce(inputFile, preprocessed, output, icOutput);
       }
-      
+
+      output.close();
+
       if (icOutput != null) {
         icOutput.close();
       }
@@ -118,17 +99,30 @@ public class STCompiler {
     }
   }
 
+  private void compileOnce(String inputFile, boolean preprocessed,
+      PrintStream output, PrintStream icOutput) throws UserException {
+    STCMiddleEnd intermediate = new STCMiddleEnd(logger, icOutput);
+    ASTWalker walker = new ASTWalker(intermediate);
+    walker.walk(inputFile, preprocessed);
+    
+    /* Optimise intermediate representation by repeatedly rewriting tree
+     * NOTE: currently the optimizer pass is actually required for correctness,
+     * as the frontend doesn't always provide correct information about which variables
+     * need to be passed into blocks.  The optimizer will fix this problem
+     */
+    intermediate.optimize();
+   
+    /* Generate output tcl code from intermediate representation */
+    TurbineGenerator codeGen = new TurbineGenerator(logger, Misc.timestamp());
+    intermediate.regenerate(codeGen);
+    String code = codeGen.code();
+
+    output.println(code);
+  }
+
   public static void reportInternalError(Throwable e) {
     System.err.println("STC INTERNAL ERROR");
     System.err.println("Please report this");
     e.printStackTrace();
-  }
-
-  private ParsedModule parseFile(String inputFile, boolean preprocessed) throws ModuleLoadException {
-    try {
-      return ParsedModule.parse(inputFile, preprocessed);
-    } catch (IOException e) {
-      throw new ModuleLoadException(inputFile, e);
-    }
   }
 }
