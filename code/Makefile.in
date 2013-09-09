@@ -86,9 +86,11 @@ C_UTILS = @USE_C_UTILS@
 
 INCLUDES = -I . -I src -I $(C_UTILS)/include
 
-# No logging
 LDFLAGS  = @LDFLAGS@
 CFLAGS  = @CFLAGS@ $(PIC) $(STD) $(INCLUDES) $(WARNS)
+ifeq ($(USE_XLC),1)
+	CFLAGS += -qpack_semantic=gnu
+endif
 
 LIBS := -L $(C_UTILS)/lib -l exmcutils
 
