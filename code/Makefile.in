@@ -10,9 +10,23 @@
 
 USE_MAC=@USE_MAC@
 ifeq ($(USE_MAC),no)
+USE_XLC = @USE_XLC@
+ifeq ($(USE_XLC),0)
+#       Not XLC: GCC
+        PIC = -fPIC
+        STD = -std=gnu99
+        SHARED = -shared
+	WARNS=-Wall -Wconversion
+else
+#       Using XLC
+        PIC = -qpic
+        STD =
+        SHARED = -qmkshrobj
+	WARNS =
+endif
+
   MAC_NAME =
   SO_SUFFIX = so
-  SHARED = -shared
 else
   MAC_NAME = -install_name $(INSTALL_LIB)/libadlb.dylib
   SO_SUFFIX = dylib
@@ -71,21 +85,6 @@ RANLIB  = @RANLIB@
 C_UTILS = @USE_C_UTILS@
 
 INCLUDES = -I . -I src -I $(C_UTILS)/include
-
-USE_XLC = @USE_XLC@
-ifeq ($(USE_XLC),0)
-#       Not XLC: GCC
-        PIC = -fPIC
-        STD = -std=gnu99
-        SHARED = -shared
-	WARNS=-Wall
-else
-#       Using XLC
-        PIC = -qpic
-        STD =
-        SHARED = -qmkshrobj
-	WARNS =
-endif
 
 # No logging
 LDFLAGS  = @LDFLAGS@
@@ -154,7 +153,7 @@ $(ADLB_A): $(OBJS)
 
 $(ADLB_SO): $(OBJS) $(NLOBJS) lib
 	$(Q) "  LINK		$(@)"
-	$(E) $(LINKER) -shared $(SHARED) -g -o $(@) \
+	$(E) $(LINKER) $(SHARED) -g -o $(@) \
                 $(LDFLAGS)                      \
 	        $(OBJS) 		        \
                 $(LIBS)                         \
