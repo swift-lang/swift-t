@@ -83,7 +83,9 @@ CFLAGS := @CFLAGS@
 
 # Set includes
 CFLAGS += -I . -I src/turbine
-# CFLAGS += additional system includes here
+ifeq ($(USE_XLC),1)
+	CFLAGS += -qpack_semantic=gnu
+endif
 
 C_UTILS = @USE_C_UTILS@
 
