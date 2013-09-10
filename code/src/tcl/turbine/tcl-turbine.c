@@ -131,13 +131,12 @@ Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   SPAWN_RULE_CMD = Tcl_NewStringObj("::turbine::spawn_rule", -1);
 
   log_init();
+  log_normalize();
 
   // Did the user disable logging?
   char* s = getenv("TURBINE_LOG");
   if (s != NULL && strcmp(s, "0") == 0)
     log_enabled(false);
-  else
-    log_normalize();
 
   return TCL_OK;
 }
