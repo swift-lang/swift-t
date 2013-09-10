@@ -27,9 +27,17 @@
 #include <stdbool.h>
 
 void   log_init(void);
+
 void   log_enabled(bool b);
+
 void   log_normalize(void);
+
+/**
+    Time in seconds since last log_normalize().
+    From gettimeofday().
+ */
 double log_time(void);
+
 void   log_finalize(void);
 
 void log_printf(char* format, ...);
