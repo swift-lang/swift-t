@@ -28,7 +28,8 @@
 #include <stdbool.h>
 #include <limits.h>
 
-#include "mpi.h"
+#include <mpi.h>
+
 #include "adlb-defs.h"
 
 #include "version.h"
@@ -51,7 +52,7 @@ adlb_code ADLB_Server(long max_memory);
 
 adlb_code ADLB_Version(version* output);
 
-adlb_code ADLB_Hostmap_stats(int* count, int* name_max);
+adlb_code ADLB_Hostmap_stats(uint* count, uint* name_max);
 
 adlb_code ADLB_Hostmap_lookup(const char* name, int count,
                               int* output, int* actual);

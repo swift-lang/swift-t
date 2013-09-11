@@ -275,6 +275,7 @@ pop_parallel_cb(struct rbtree_node* node, void* user_data)
   return false;
 }
 
+/*
 static inline int
 rand_choose(float *weights, int length) {
   if (length == 1) {
@@ -283,6 +284,7 @@ rand_choose(float *weights, int length) {
     return random_draw(weights, length);
   }
 }
+*/
 
 static inline adlb_code
 xlb_workq_steal_type(struct rbtree *q, int num,

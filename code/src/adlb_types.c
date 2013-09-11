@@ -3,6 +3,8 @@
 
 #include "adlb_types.h"
 
+#include <stdint.h>
+#include <inttypes.h>
 #include <stdio.h>
 
 #include <vint.h>
@@ -38,13 +40,17 @@ ADLB_Pack(const adlb_datum_storage *d, adlb_data_type type,
     case ADLB_DATA_TYPE_CONTAINER:
       verbose_error(ADLB_DATA_ERROR_TYPE,
         "Serialization of containers not yet supported!\n");
+      break;
     case ADLB_DATA_TYPE_MULTISET:
       verbose_error(ADLB_DATA_ERROR_TYPE,
         "Serialization of multisets not yet supported!\n");
+      break;
     default:
       verbose_error(ADLB_DATA_ERROR_TYPE,
         "Cannot serialize unknown type %i!\n", type);
   }
+  // Unreachable:
+  return ADLB_DATA_ERROR_UNKNOWN;
 }
 
 adlb_data_code

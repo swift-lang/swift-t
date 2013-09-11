@@ -16,6 +16,7 @@
 
 
 #include <assert.h>
+#include <inttypes.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -116,7 +117,8 @@ static void report_leaks(void);
   (sizeof(adlb_datum_id) / 3 + ADLB_DATA_SUBSCRIPT_MAX + 1)
 static inline int print_id_sub(char *buf, adlb_datum_id id, const char *sub)
 {
-  return sprintf(buf, "%"PRId64"[%s]", id, sub);
+  int t = sprintf(buf, "%"PRId64"[%s]", id, sub);
+  return t;
 }
 
 /**
@@ -931,6 +933,9 @@ xlb_data_retrieve(adlb_datum_id id, const char *subscript,
                         "on type: %s", ADLB_Data_type_tostring(d->type));
     }
   }
+  // Unreachable
+  assert(false);
+  return ADLB_DATA_ERROR_UNKNOWN;
 }
 
 /**

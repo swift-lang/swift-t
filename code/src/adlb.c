@@ -213,7 +213,7 @@ ADLB_Version(version* output)
 }
 
 adlb_code
-ADLB_Hostmap_stats(int* count, int* name_max)
+ADLB_Hostmap_stats(uint* count, uint* name_max)
 {
   struct utsname u;
   *count = hostmap.size;
