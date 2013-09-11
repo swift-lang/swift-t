@@ -43,6 +43,7 @@
 #include <string.h>
 #include <exm-string.h>
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <inttypes.h>
 
@@ -605,7 +606,7 @@ ADLB_Hostmap_List_Cmd(ClientData cdata, Tcl_Interp *interp,
   int name_max;
   ADLB_Hostmap_stats(&count, &name_max);
   // Extra byte per name for RS
-  int chars = count*(name_max+1);
+  uint chars = count*(name_max+1);
   char* buffer = malloc(chars * sizeof(char));
 
   int actual;
@@ -619,7 +620,7 @@ ADLB_Hostmap_List_Cmd(ClientData cdata, Tcl_Interp *interp,
     char* t = strchr(p, '\r');
     assert(t != NULL);
     *t = '\0';
-    Tcl_Obj* name = Tcl_NewStringObj(p, t-p);
+    Tcl_Obj* name = Tcl_NewStringObj(p, (int) (t-p));
     names[i] = name;
     p = t+1;
   }
