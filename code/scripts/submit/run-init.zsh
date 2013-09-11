@@ -15,7 +15,8 @@
 
 # RUN-INIT
 
-# Common submission setup file used by Cobalt and PBS (and APRUN)
+# Common queue  submission setup file used by Cobalt and PBS
+#   (and APRUN)
 # Used to process command line arguments, initialize basic settings
 # before launching qsub
 
@@ -34,7 +35,7 @@ export VERBOSE=0
 export PPN=${PPN:-1}
 
 # Place to store output directory name
-OUTPUT_TOKEN_FILE=turbine-cobalt-directory.txt
+OUTPUT_TOKEN_FILE=turbine-directory.txt
 
 # Job environment
 typeset -T ENV env

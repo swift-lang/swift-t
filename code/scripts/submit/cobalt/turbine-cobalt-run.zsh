@@ -1,4 +1,4 @@
-#!/bin/zsh -f
+#!/bin/zsh -efu
 
 # Copyright 2013 University of Chicago and Argonne National Laboratory
 #
@@ -28,11 +28,11 @@
 #          a subdirectory based on the current time
 #          will be created, reported, and used
 #          (default ~/turbine-output)
-# TURBINE_PPN: Processes-per-node: see below
+# PPN: Processes-per-node: see below: (default 1)
 
-# On the BG/P: usually set TURBINE_PPN=4  (default 4)
-# On the BG/Q: usually set TURBINE_PPN=16 (default 4)
-# On Eureka:   usually set TURBINE_PPN=8  (default 4)
+# On Eureka:   usually set PPN=8
+# On the BG/P: usually set PPN=4
+# On the BG/Q: usually set PPN=16
 
 # Runs job in TURBINE_OUTPUT
 # Pipes output and error to TURBINE_OUTPUT/output.txt
@@ -43,84 +43,8 @@
 # (We follow the mpiexec convention.)
 
 export TURBINE_HOME=$( cd $( dirname $0 )/../../.. ; /bin/pwd )
-# declare TURBINE_HOME
-source ${TURBINE_HOME}/scripts/turbine-config.sh
-source ${TURBINE_HOME}/scripts/helpers.zsh
 
-# Defaults:
-export PROCS=0
-SETTINGS=0
-WALLTIME=${WALLTIME:-00:15:00}
-TURBINE_OUTPUT_ROOT=${HOME}/turbine-output
-VERBOSE=0
-
-# Place to store output directory name
-OUTPUT_TOKEN_FILE=turbine-cobalt-directory.txt
-
-# Job environment
-typeset -T ENV env
-env=()
-
-# Get options
-while getopts "d:e:n:o:s:t:V" OPTION
- do
-  case ${OPTION}
-   in
-    d)
-      OUTPUT_TOKEN_FILE=${OPTARG}
-      ;;
-    e) env+=${OPTARG}
-      ;;
-    n) PROCS=${OPTARG}
-      ;;
-    o) TURBINE_OUTPUT_ROOT=${OPTARG}
-      ;;
-    s) SETTINGS=${OPTARG}
-      ;;
-    t) WALLTIME=${OPTARG}
-      ;;
-    V)
-      VERBOSE=1
-      ;;
-    *)
-      print "abort"
-      exit 1
-      ;;
-  esac
-done
-shift $(( OPTIND-1 ))
-
-if (( VERBOSE ))
-then
-  set -x
-fi
-
-SCRIPT=$1
-shift
-ARGS=${*}
-
-if [[ ${SETTINGS} != 0 ]]
-then
-  declare SETTINGS
-  source ${SETTINGS}
-  exitcode "error in settings: ${SETTINGS}"
-fi
-
-checkvars QUEUE SCRIPT MODE
-
-START=$( date +%s )
-
-[[ ${PROCS} != 0 ]]
-exitcode "PROCS==0"
-
-RUN=$( date_path )
-
-# Create the directory in which to run
-TURBINE_OUTPUT=${TURBINE_OUTPUT_ROOT}/${RUN}
-declare TURBINE_OUTPUT
-print ${TURBINE_OUTPUT} > ${OUTPUT_TOKEN_FILE}
-mkdir -p ${TURBINE_OUTPUT}
-exitcode "mkdir failed: ${TURBINE_OUTPUT}"
+source ${TURBINE_HOME}/scripts/submit/run-init.zsh
 
 # Log file for turbine-cobalt settings
 LOG_FILE=${TURBINE_OUTPUT}/turbine-cobalt.log
@@ -129,39 +53,23 @@ OUTPUT_FILE=${TURBINE_OUTPUT}/output.txt
 
 print "SCRIPT:            ${SCRIPT}" >> ${LOG_FILE}
 SCRIPT_NAME=$( basename ${SCRIPT} )
-[[ -f ${SCRIPT} ]]
-exitcode "script not found: ${SCRIPT}"
+[[ -f ${SCRIPT} ]] || abort "script not found: ${SCRIPT}"
 cp ${SCRIPT} ${TURBINE_OUTPUT}
-exitcode "copy failed: ${SCRIPT} -> ${TURBINE_OUTPUT}"
 
 JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt
 
 source ${TURBINE_HOME}/scripts/turbine-config.sh
-exitcode "turbine-config.sh failed!"
 
 # Turbine-specific environment (with defaults)
 TURBINE_ENGINES=${TURBINE_ENGINES:-1}
 ADLB_SERVERS=${ADLB_SERVERS:-1}
 TURBINE_WORKERS=$(( PROCS - TURBINE_ENGINES - ADLB_SERVERS ))
-ADLB_EXHAUST_TIME=${ADLB_EXHAUST_TIME:-5}
+ADLB_EXHAUST_TIME=${ADLB_EXHAUST_TIME:-0.1}
+ADLB_PRINT_TIME=${ADLB_PRINT_TIME:-0}
 TURBINE_LOG=${TURBINE_LOG:-1}
 TURBINE_DEBUG=${TURBINE_DEBUG:-1}
 ADLB_DEBUG=${ADLB_DEBUG:-1}
-TURBINE_PPN=${TURBINE_PPN:-4}
 N=${N:-0}
-
-env+=( TCLLIBPATH="${TCLLIBPATH}"
-       TURBINE_ENGINES=${TURBINE_ENGINES}
-       TURBINE_WORKERS=${TURBINE_WORKERS}
-       ADLB_SERVERS=${ADLB_SERVERS}
-       ADLB_EXHAUST_TIME=${ADLB_EXHAUST_TIME}
-       TURBINE_LOG=${TURBINE_LOG}
-       TURBINE_DEBUG=${TURBINE_DEBUG}
-       ADLB_DEBUG=${ADLB_DEBUG}
-       MPIRUN_LABEL=1
-       TURBINE_CACHE_SIZE=0
-       N=${N}
-     )
 
 declare SCRIPT_NAME
 # declare MODE
@@ -174,12 +82,26 @@ elif [[ ${MODE} == "BGP" ]]
   MODE_ARG="--mode vn"
 elif [[ ${MODE} == "BGQ" ]]
 then
-  # On the BG/Q, we need TURBINE_PPN: default 1
-  MODE_ARG="--proccount ${PROCS} --mode c${TURBINE_PPN}"
+  # On the BG/Q, we need PPN: default 1
+  MODE_ARG="--proccount ${PROCS} --mode c${PPN}"
 else
   print "Unknown mode: ${MODE}"
   exit 1
 fi
+
+env+=( TCLLIBPATH="${TCLLIBPATH}"
+       TURBINE_ENGINES=${TURBINE_ENGINES}
+       TURBINE_WORKERS=${TURBINE_WORKERS}
+       ADLB_SERVERS=${ADLB_SERVERS}
+       ADLB_EXHAUST_TIME=${ADLB_EXHAUST_TIME}
+       ADLB_PRINT_TIME=${ADLB_PRINT_TIME}
+       TURBINE_LOG=${TURBINE_LOG}
+       TURBINE_DEBUG=${TURBINE_DEBUG}
+       ADLB_DEBUG=${ADLB_DEBUG}
+       MPIRUN_LABEL=1
+       TURBINE_CACHE_SIZE=0
+       N=${N}
+     )
 
 if [[ ${MODE} == "BGQ" ]]
 then
@@ -189,20 +111,17 @@ then
 fi
 
 # Round NODES up for extra processes
-NODES=$(( PROCS/TURBINE_PPN ))
-(( PROCS % TURBINE_PPN )) && (( NODES++ ))
+NODES=$(( PROCS/PPN ))
+(( PROCS % PPN )) && (( NODES++ )) || true
 declare NODES
 
 # Launch it
 if [[ ${MODE} == "cluster" ]]
 then
   export COMMAND="${SCRIPT_NAME} ${ARGS}"
-  export PPN=${TURBINE_PPN}
-  m4 < ${TURBINE_HOME}/scripts/submit/cobalt/turbine-cobalt.sh.m4 > \
-       ${TURBINE_OUTPUT}/turbine-cobalt.sh
-  exitcode
+  m4 ${TURBINE_HOME}/scripts/submit/cobalt/turbine-cobalt.sh.m4 > \
+     ${TURBINE_OUTPUT}/turbine-cobalt.sh
   chmod u+x ${TURBINE_OUTPUT}/turbine-cobalt.sh
-  exitcode
   qsub -n ${NODES}             \
        -t ${WALLTIME}          \
        -q ${QUEUE}             \
@@ -260,8 +179,7 @@ print "COMPLETE:          $( date_nice )" >> ${LOG_FILE}
 print "TOTAL_TIME:        ${TOTAL_TIME}"  >> ${LOG_FILE}
 
 # Check for errors in output file
-[[ -f ${OUTPUT_FILE} ]]
-exitcode "No job error file: expected: ${OUTPUT_FILE}"
+[[ -f ${OUTPUT_FILE} ]] || abort "no output file!"
 
 # Report non-zero job result codes
 grep "job result code:" ${OUTPUT_FILE} | grep -v "code: 0"
