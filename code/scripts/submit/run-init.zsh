@@ -78,7 +78,7 @@ fi
 export SCRIPT=$1
 checkvar SCRIPT
 shift
-ARGS=${*}
+export ARGS=${*}
 
 if [[ ${SETTINGS} != 0 ]]
 then
