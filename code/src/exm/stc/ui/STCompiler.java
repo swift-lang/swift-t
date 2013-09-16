@@ -15,18 +15,15 @@
  */
 package exm.stc.ui;
 
-import java.io.IOException;
 import java.io.PrintStream;
 
 import org.apache.log4j.Logger;
 
 import exm.stc.common.Settings;
-import exm.stc.common.exceptions.ModuleLoadException;
 import exm.stc.common.exceptions.STCFatal;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.util.Misc;
 import exm.stc.frontend.ASTWalker;
-import exm.stc.frontend.ParsedModule;
 import exm.stc.ic.STCMiddleEnd;
 import exm.stc.tclbackend.TurbineGenerator;
 

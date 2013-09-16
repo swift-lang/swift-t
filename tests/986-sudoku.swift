@@ -26,11 +26,12 @@ sudoku_solve (updateable_float solved, blob board, int filled) {
   if (solved == 0.0) {
     // number of steps to take before returning
     int quota = toint(argv("dfsquota", "25000"));
+    // Board size in total squares
     int boardsize = sudoku_board_size();
     boardinfo candidates3[] = @prio=filled sudoku_step(solved, board,
                                                   false, quota);
     foreach c3 in candidates3 {
-      if (c3.filledSquares == boardsize * boardsize) {
+      if (c3.filledSquares == boardsize) {
         solved <incr> := 1;
         print_board(c3.board);
         printf("SOLVED!");
@@ -60,6 +61,7 @@ type boardinfo {
     "sudoku::sudoku_step <<nextboards>> <<solved>> <<board>> <<breadthfirst>> <<quota>>"
 ];
 
+// Total squares on board
 (int size) sudoku_board_size () "sudoku" "0.0" [
     "set size [ sudoku::board_size ]"
 ];
