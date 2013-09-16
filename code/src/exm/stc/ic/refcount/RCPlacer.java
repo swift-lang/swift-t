@@ -472,6 +472,11 @@ public class RCPlacer {
     ListIterator<Statement> stmtIt = block.statementIterator();
     while (stmtIt.hasNext()) {
       Statement stmt = stmtIt.next();
+      if (logger.isTraceEnabled()) {
+        for (Entry<AliasKey, Long> e: increments.rcIter(rcType)) {
+          logger.trace("Try to place: " + e.getKey() + " at " + stmt);
+        }
+      }
       switch (stmt.type()) {
         case INSTRUCTION: {
           for (Pair<Var, InitType> init: stmt.instruction().getInitialized()) {
@@ -491,7 +496,6 @@ public class RCPlacer {
         default: 
           throw new STCRuntimeError("Unknown statement type " + stmt.type());
       }
-      
     }
   }
 
