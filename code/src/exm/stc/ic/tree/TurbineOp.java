@@ -26,6 +26,7 @@ import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue;
+import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.opt.ResultVal;
 import exm.stc.ic.opt.ValueTracker;
 import exm.stc.ic.tree.ICInstructions.CVMap;
@@ -1654,8 +1655,8 @@ public class TurbineOp extends Instruction {
                                     Arrays.asList(src), dst.asArg(), false);
           result.add(deref);
           // Add any new cvs that result from dereferencing the variable
-          for (ComputedValue refCV: existing.getVarContents(src.getVar())) {
-            result.addAll(ResultVal.createLoadRefCVs(refCV, dst));
+          for (ResultVal refRV: existing.getVarContents(src.getVar())) {
+            result.addAll(ResultVal.createLoadRefCVs(refRV, dst));
           }
         }
         return result;
@@ -1889,7 +1890,8 @@ public class TurbineOp extends Instruction {
       case COPY_REF: {
         List<ResultVal> res = new ArrayList<ResultVal>();
         res.add(ResultVal.makeAlias(getOutput(0), getInput(0)));
-        res.addAll(ValueTracker.makeCopiedRVs(existing, getOutput(0), getInput(0)));
+        res.addAll(ValueTracker.makeCopiedRVs(existing, getOutput(0),
+                                  getInput(0), EquivalenceType.ALIAS));
         return res;
       }
       default:

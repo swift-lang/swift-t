@@ -52,6 +52,7 @@ import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue;
+import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.opt.ResultVal;
 import exm.stc.ic.opt.Semantics;
 import exm.stc.ic.opt.ValueTracker;
@@ -581,14 +582,14 @@ public class ICInstructions {
      * @param v
      * @return all computed values stored in var
      */
-    public List<ComputedValue> getVarContents(Var v);
+    public List<ResultVal> getVarContents(Var v);
     
     /**
      * Get computed values in which this variable is in input
      * @param input
      * @return
      */
-    public List<Pair<Arg, ComputedValue>> getReferencedCVs(Var input);
+    public List<ResultVal> getReferencedCVs(Var input);
   }
 
   public static class Comment extends Instruction {
@@ -2196,7 +2197,8 @@ public class ICInstructions {
         // Add transitively valid computed values if a copy
         List<ResultVal> res = new ArrayList<ResultVal>();
         res.add(basic);
-        res.addAll(ValueTracker.makeCopiedRVs(existing, getOutput(0), getInput(0)));
+        res.addAll(ValueTracker.makeCopiedRVs(existing, getOutput(0), getInput(0),
+                                                            EquivalenceType.VALUE));
         return res;
       }
       
@@ -2308,9 +2310,10 @@ public class ICInstructions {
       if (args == null) {
         return Collections.emptyList();
       }
-      List<ComputedValue> varVals = cvs.getVarContents(args.val1);
+      List<ResultVal> varRVs = cvs.getVarContents(args.val1);
       List<ResultVal> res = new ArrayList<ResultVal>(); 
-      for (ComputedValue varVal: varVals) {
+      for (ResultVal varRV: varRVs) {
+        ComputedValue varVal = varRV.value();
         if (varVal.op() == this.op) {
           BuiltinOpcode aop = BuiltinOpcode.valueOf(varVal.subop());
           if (aop == BuiltinOpcode.PLUS_INT ||

@@ -169,12 +169,13 @@ public class ResultVal {
    * @param refContent
    * @return
    */
-  public static List<ResultVal> createLoadRefCVs(ComputedValue refContent,
+  public static List<ResultVal> createLoadRefCVs(ResultVal refContent,
                                                    Var derefDst) {
-    if (refContent.op() == Opcode.FAKE && 
-        refContent.subop().equals(ComputedValue.REF_TO_ARRAY_CONTENTS)) {
+    ComputedValue cv = refContent.value();
+    if (cv.op() == Opcode.FAKE && 
+        cv.subop().equals(ComputedValue.REF_TO_ARRAY_CONTENTS)) {
       return makeArrayResult(
-          refContent.getInput(0).getVar(), refContent.getInput(1),
+          cv.getInput(0).getVar(), cv.getInput(1),
           derefDst, false).asList();  
     } 
     return Collections.emptyList();

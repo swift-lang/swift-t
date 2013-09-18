@@ -27,6 +27,7 @@ import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
 import exm.stc.common.util.TernaryLogic.Ternary;
+import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.CVMap;
@@ -49,7 +50,7 @@ public class ValueTracker implements CVMap {
    * Map of variable names to value variables or literals which have been
    * created and set in this scope
    */
-  final HashMap<ComputedValue, Arg> availableVals;
+  final HashMap<ComputedValue, ResultVal> availableVals;
   
   /**
    * Blacklist of values that should not be used for substitution.
@@ -60,12 +61,12 @@ public class ValueTracker implements CVMap {
   /**
    * What computedValues are stored in each value (inverse of availableVals)
    */
-  private final MultiMap<Var, ComputedValue> varContents;
+  private final MultiMap<Var, ResultVal> varContents;
   
   /**
    * What computedValues references this variable
    */
-  private final MultiMap<Var, Pair<Arg, ComputedValue>> varReferences;
+  private final MultiMap<Var, ResultVal> varReferences;
 
   /** variables which are closed at this point in program */
   final HierarchicalSet<Var> closed;
@@ -90,10 +91,10 @@ public class ValueTracker implements CVMap {
     this.reorderingAllowed = reorderingAllowed;
     this.parent = null;
     this.varsPassedFromParent = false;
-    this.availableVals = new HashMap<ComputedValue, Arg>();
+    this.availableVals = new HashMap<ComputedValue, ResultVal>();
     this.blackList = new HashSet<ComputedValue>();
-    this.varContents = new MultiMap<Var, ComputedValue>();
-    this.varReferences = new MultiMap<Var, Pair<Arg,ComputedValue>>();
+    this.varContents = new MultiMap<Var, ResultVal>();
+    this.varReferences = new MultiMap<Var, ResultVal>();
     this.closed = new HierarchicalSet<Var>();
     this.recursivelyClosed = new HierarchicalSet<Var>();
     this.dependsOn = new HashMap<Var, CopyOnWriteSmallSet<Var>>();
@@ -101,10 +102,10 @@ public class ValueTracker implements CVMap {
 
   private ValueTracker(Logger logger, boolean reorderingAllowed,
       ValueTracker parent, boolean varsPassedFromParent,
-      HashMap<ComputedValue, Arg> availableVals,
+      HashMap<ComputedValue, ResultVal> availableVals,
       HashSet<ComputedValue> blackList,
-      MultiMap<Var, ComputedValue> varContents,
-      MultiMap<Var, Pair<Arg, ComputedValue>> varReferences,
+      MultiMap<Var, ResultVal> varContents,
+      MultiMap<Var, ResultVal> varReferences,
       HierarchicalSet<Var> closed, HierarchicalSet<Var> recursivelyClosed,
       HashMap<Var, CopyOnWriteSmallSet<Var>> dependsOn) {
     this.logger = logger;
@@ -157,27 +158,27 @@ public class ValueTracker implements CVMap {
 
   /**
    * 
-   * @param res
+   * @param resVal
    * @param replace
    *          for debugging purposes, set to true if we intend to replace
    */
-  public void addComputedValue(ResultVal res, Ternary replace) {
-    boolean outClosed = res.outClosed();
-    ComputedValue val = res.value();
+  public void addComputedValue(ResultVal resVal, Ternary replace) {
+    boolean outClosed = resVal.outClosed();
+    ComputedValue val = resVal.value();
     if (isAvailable(val)) {
       if (replace == Ternary.FALSE) {
         throw new STCRuntimeError("Unintended overwrite of "
-            + getLocation(val) + " with " + res);
+            + getLocation(val) + " with " + resVal);
       }
     } else if (replace == Ternary.TRUE) {
-      throw new STCRuntimeError("Expected overwrite of " + " with " + res
+      throw new STCRuntimeError("Expected overwrite of " + " with " + resVal
           + " but no existing value");
     }
 
-    Arg valLoc = res.location();
-    availableVals.put(val, valLoc);
+    Arg valLoc = resVal.location();
+    availableVals.put(val, resVal);
     if (valLoc.isVar()) {
-      varContents.put(valLoc.getVar(), val);
+      varContents.put(valLoc.getVar(), resVal);
       if (outClosed && valLoc.getVar().storage() != Alloc.LOCAL) {
         if (logger.isTraceEnabled()) {
           logger.trace("Output " + valLoc + " was closed");
@@ -187,7 +188,7 @@ public class ValueTracker implements CVMap {
     }
     for (Arg input: val.getInputs()) {
       if (input.isVar()) {
-        varReferences.put(input.getVar(), Pair.create(valLoc, val));
+        varReferences.put(input.getVar(), resVal);
       }
     }
   }
@@ -224,15 +225,15 @@ public class ValueTracker implements CVMap {
     ValueTracker curr = this;
 
     while (curr != null) {
-      Arg loc = curr.availableVals.get(val);
-      if (loc != null) {
+      ResultVal rv = curr.availableVals.get(val);
+      if (rv != null) {
         // Found a value, now see if it is actually visible
         if (!passRequired) {
-          return loc;
-        } else if (!Semantics.canPassToChildTask(loc.type())) {
+          return rv.location();
+        } else if (!Semantics.canPassToChildTask(rv.location().type())) {
           return null;
         } else {
-          return loc;
+          return rv.location();
         }
       }
 
@@ -243,32 +244,31 @@ public class ValueTracker implements CVMap {
     return null;
   }
 
-  public List<ComputedValue> getVarContents(Var v) {
+  public List<ResultVal> getVarContents(Var v) {
     ValueTracker curr = this;
-    List<ComputedValue> res = new ArrayList<ComputedValue>();
+    List<ResultVal> res = new ArrayList<ResultVal>();
 
     while (curr != null) {
-      for (ComputedValue cv: curr.varContents.get(v)) {
-        if (!blackList.contains(cv)) {
-          res.add(cv);
+      for (ResultVal rv: curr.varContents.get(v)) {
+        if (!blackList.contains(rv.value())) {
+          res.add(rv);
         }
       }
       curr = curr.parent;
     }
-    return res == null ? Collections.<ComputedValue> emptyList() : res;
+    return res;
   }
 
   /**
    * Get computed values in which this variable is in input
    */
-  public List<Pair<Arg, ComputedValue>> getReferencedCVs(Var input) {
-    List<Pair<Arg, ComputedValue>> res = 
-        new ArrayList<Pair<Arg,ComputedValue>>();
+  public List<ResultVal> getReferencedCVs(Var input) {
+    List<ResultVal> res = new ArrayList<ResultVal>();
     ValueTracker curr = this;
     while (curr != null) {
-      for (Pair<Arg, ComputedValue> x: curr.varReferences.get(input)) {
-        if (!blackList.contains(x.val2)) {
-          res.add(x);
+      for (ResultVal rv: curr.varReferences.get(input)) {
+        if (!blackList.contains(rv.value())) {
+          res.add(rv);
         }
       }
       curr = curr.parent;
@@ -352,10 +352,10 @@ public class ValueTracker implements CVMap {
       newDO.put(e.getKey(), new CopyOnWriteSmallSet<Var>(e.getValue()));
     }
     return new ValueTracker(logger, reorderingAllowed, this, varsPassedFromParent,
-        new HashMap<ComputedValue, Arg>(),
+        new HashMap<ComputedValue, ResultVal>(),
         blackList, // blacklist shared globally
-        new MultiMap<Var, ComputedValue>(),
-        new MultiMap<Var, Pair<Arg, ComputedValue>>(),
+        new MultiMap<Var, ResultVal>(),
+        new MultiMap<Var, ResultVal>(),
         closed.makeChild(), recursivelyClosed.makeChild(), newDO);
   }
   
@@ -364,33 +364,46 @@ public class ValueTracker implements CVMap {
    * @param varContents
    * @return
    */
-  public static List<ResultVal> makeCopiedRVs(CVMap existing, Var dst, Arg src) {
+  public static List<ResultVal> makeCopiedRVs(CVMap existing, Var dst, Arg src,
+                                              EquivalenceType equivType) {
     if (!src.isVar()) {
       return Collections.emptyList();
     }
-    
+
     List<ResultVal> res = new ArrayList<ResultVal>();
+
+    // We assigned dst <- src, so if src == CV_1, then dst == CV_1
+    // at least as far as the value goes (alias is another story)
     Var srcVar = src.getVar();
+    List<ResultVal> srcRVs = existing.getVarContents(srcVar);
     boolean closed = existing.isClosed(srcVar);
-    List<ComputedValue> cvs = existing.getVarContents(srcVar);
-    if (Logging.getSTCLogger().isTraceEnabled()) {
-      Logging.getSTCLogger().trace("Copy " + src + " => " + dst + " cvs: " +
-                                  cvs);
+    Logger logger = Logging.getSTCLogger();
+    
+    if (logger.isTraceEnabled()) {
+      logger.trace("Copy " + src + " => " + dst + " srcRVs: " + srcRVs);
     }
-    for (ComputedValue cv: cvs) {
-      // create new result value with conservative parameters
-      res.add(new ResultVal(cv, dst.asArg(), closed, false));
+    for (ResultVal srcRV: srcRVs) {
+      // create new result value.
+      // Note that we need to mark that this is a copy, not the original
+      // TODO: if cv.equivType() == ALIAS, flag in ResultVal that this is a copy
+      // TODO: what about if src is alias for dst
+      ResultVal dstRV = new ResultVal(cv.makeCopiedCV(), dst.asArg(), closed, false);
+      if (logger.isTraceEnabled()) {
+        logger.trace("Created ResultVal " + dstRV + " based on "
+                      + dst + " <- " + src + " && " + src + " == " + srcRV.value());
+      }
+      res.add(dstRV);
     }
     
-    List<Pair<Arg, ComputedValue>> inputCVs = existing.getReferencedCVs(srcVar);
-    if (Logging.getSTCLogger().isTraceEnabled()) {
-      Logging.getSTCLogger().trace("Copy " + src + " => " + dst + " inputCvs: " +
-                          inputCVs);
+    List<ResultVal> inputRVs = existing.getReferencedCVs(srcVar);
+    if (logger.isTraceEnabled()) {
+      logger.trace("Copy " + src + " => " + dst + " inputCvs: " +
+                          inputRVs);
     }
-    for (Pair<Arg, ComputedValue> pair: inputCVs) {
-      ComputedValue origCV = pair.val2;
-      List<Arg> newInputs = new ArrayList<Arg>(origCV.getInputs().size());
-      for (Arg input: origCV.getInputs()) {
+    for (ResultVal inputRV: inputRVs) {
+      ComputedValue inputVal = inputRV.value();
+      List<Arg> newInputs = new ArrayList<Arg>(inputVal.getInputs().size());
+      for (Arg input: inputVal.getInputs()) {
         if (input.isVar() && input.getVar().equals(srcVar)) {
           newInputs.add(dst.asArg());
         } else {
@@ -399,8 +412,10 @@ public class ValueTracker implements CVMap {
       }
       
       // create new result value with conservative parameters
-      res.add(new ResultVal(origCV.substituteInputs(newInputs), pair.val1,
-                            closed, false));
+      // TODO: what are right parameters here? Does it depend
+      //       on whether src is alias of dst?
+      res.add(new ResultVal(inputVal.substituteInputs(newInputs), 000,
+                            inputRV.location(), inputRV.outClosed(), false));
     }
     
     return res;
@@ -573,14 +588,17 @@ public class ValueTracker implements CVMap {
       boolean isValue = Types.isPrimValue(type);
       // declare new temporary value in outer block
       Var unifiedLoc;
+      EquivalenceType equivType; // Equivalence of src and dst
       if (isValue) {
         unifiedLoc = parent.declareVariable(type, 
             OptUtil.optVPrefix(parent, "unified"), Alloc.LOCAL,
             DefType.LOCAL_COMPILER, null);
+        equivType = EquivalenceType.VALUE;
       } else {
         unifiedLoc = parent.declareVariable(type, 
             OptUtil.optVPrefix(parent, "unified"), Alloc.ALIAS,
             DefType.LOCAL_COMPILER, null);
+        equivType = EquivalenceType.ALIAS;
       }
       
       
@@ -596,8 +614,8 @@ public class ValueTracker implements CVMap {
         
         // Add in additional computed values resulting from copy
         ValueTracker branchState = branchStates.get(i);
-        branchState.addComputedValues(
-            makeCopiedRVs(branchState, unifiedLoc, loc), Ternary.MAYBE);
+        branchState.addComputedValues(makeCopiedRVs(branchState, unifiedLoc,
+                                            loc, equivType), Ternary.MAYBE);
       }
       return unifiedLoc;
     }

@@ -61,7 +61,6 @@ public class ComputedValue {
   private final int hashCode; // Cache hashcode 
   
   public ComputedValue(Opcode op, String subop, int index, List<Arg> inputs) {
-    super();
     assert(op != null);
     assert(subop != null);
     assert(inputs != null);
@@ -153,7 +152,7 @@ public class ComputedValue {
   public ComputedValue substituteInputs(List<Arg> newInputs) {
     return new ComputedValue(op, subop, index, newInputs);
   }
-  
+
   public static ComputedValue makeCopy(Arg src) {
     return new ComputedValue(Opcode.FAKE, ComputedValue.COPY_OF, src.asList());
   }
