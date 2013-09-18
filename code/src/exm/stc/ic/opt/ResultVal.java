@@ -7,7 +7,6 @@ import java.util.List;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
-import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.tree.ICInstructions.Opcode;
 
 /**
@@ -18,7 +17,6 @@ public class ResultVal {
   /** Storage location or constant value of result */
   private final Arg location;
   private final boolean outClosed; // true if out is known to be closed
-  private final EquivalenceType equivType;
   /** If the output can be substituted safely with previous instances of cv */
   private  final boolean substitutable;
   
@@ -34,45 +32,29 @@ public class ResultVal {
     return outClosed;
   }
 
-  public EquivalenceType equivType() {
-    return equivType;
-  }
-
   public boolean isSubstitutable() {
     return substitutable;
   }
 
   public ResultVal(ComputedValue value, Arg location,
-      boolean outClosed, EquivalenceType equivType, boolean substitutable) {
+      boolean outClosed, boolean substitutable) {
     assert(value != null);
     this.value = value;
     this.location = location;
     this.outClosed = outClosed;
-    assert(equivType != null);
-    this.equivType = equivType;
     this.substitutable = substitutable;
   }
   
   public static ResultVal buildResult(Opcode op, String subop, int index,
       List<Arg> inputs,
-      Arg valLocation, boolean outClosed, EquivalenceType equivType, boolean substitutable) {
+      Arg valLocation, boolean outClosed, boolean substitutable) {
     ComputedValue cv = new ComputedValue(op, subop, index, inputs);
-    return new ResultVal(cv, valLocation, outClosed, equivType, substitutable);
-  }
-
-  public static ResultVal buildResult(Opcode op, String subop, List<Arg> inputs,
-      Arg valLocation, boolean outClosed, EquivalenceType equivType, boolean substitutable) {
-    return buildResult(op, subop, 0, inputs, valLocation, outClosed, equivType, substitutable);
-  }
-
-  public static ResultVal buildResult(Opcode op, String subop, List<Arg> inputs,
-      Arg valLocation, boolean outClosed, EquivalenceType equivType) {
-    return buildResult(op, subop, inputs, valLocation, outClosed, equivType, true);
+    return new ResultVal(cv, valLocation, outClosed, substitutable);
   }
 
   public static ResultVal buildResult(Opcode op, String subop, List<Arg> inputs,
       Arg valLocation, boolean outClosed) {
-    return buildResult(op, subop, inputs, valLocation, outClosed, EquivalenceType.VALUE);
+    return buildResult(op, subop, 0, inputs, valLocation, outClosed, true);
   }
 
   public static ResultVal buildResult(Opcode op, List<Arg> inputs,
@@ -81,39 +63,27 @@ public class ResultVal {
   }
 
   public static ResultVal buildResult(Opcode op, Arg input,
-      Arg valLocation, boolean outClosed, EquivalenceType equivType) {
+                        Arg valLocation, boolean outClosed) {
     return buildResult(op, "", Collections.singletonList(input), valLocation,
-                       outClosed, equivType);
+                       outClosed);
   }
 
   public static ResultVal buildResult(Opcode op, String subop,
         int index, List<Arg> inputs,
       Arg valLocation, boolean outClosed) {
-    return buildResult(op, subop, index, inputs, valLocation, outClosed,
-                       EquivalenceType.VALUE, true);
+    return buildResult(op, subop, index, inputs, valLocation, outClosed, true);
   }
 
   public static ResultVal buildResult(Opcode op, String subop, Arg input,
       Arg valLocation, boolean outClosed) {
     return buildResult(op, subop, Arrays.asList(input), valLocation, outClosed);
   }
-
-  public static ResultVal buildResult(Opcode op, Arg input,
-      Arg valLocation, boolean outClosed) {
-    return buildResult(op, "", input, valLocation, outClosed);
-  }
-
   public static ResultVal buildResult(Opcode op, String subop, List<Arg> inputs) {
     return buildResult(op, subop, inputs, null, false);
   }
 
   public static ResultVal buildResult(Opcode op, List<Arg> inputs) {
     return buildResult(op, "", inputs);
-  }
-
-  public static ResultVal buildResult(Opcode op, List<Arg> inputs,
-      Arg valLocation, boolean outClosed, EquivalenceType equivType) {
-    return buildResult(op, "", inputs, valLocation, outClosed, equivType);
   }
 
   /**
@@ -123,7 +93,7 @@ public class ResultVal {
    */
   public static ResultVal makeCopy(Var dst, Arg src) {
     return new ResultVal(ComputedValue.makeCopy(src), dst.asArg(),
-                        false, EquivalenceType.VALUE, true);
+                         false, true);
   }
   
   /**
@@ -132,8 +102,8 @@ public class ResultVal {
    * @return Computed value indicating dst is alias of src
    */
   public static ResultVal makeAlias(Var dst, Arg src) {
-    return new ResultVal(ComputedValue.makeCopy(src), dst.asArg(),
-                          false, EquivalenceType.REFERENCE, true);
+    return new ResultVal(ComputedValue.makeAlias(src), dst.asArg(),
+                          false, true);
   }
   
   /**
@@ -171,33 +141,35 @@ public class ResultVal {
             "not member: " + contents + " " + arr;
       val = ComputedValue.arrayCV(arr, ix);
     }
-    return new ResultVal(val, contentsArg, false,
-                          EquivalenceType.VALUE, substitutable);
+    return new ResultVal(val, contentsArg, false, substitutable);
   }
   
   public static ResultVal makeCreateNestedResult(Var arr, Arg ix, Var contents,
       boolean refResult) {
     Arg contentsArg = contents == null ? null : Arg.createVar(contents);
     ComputedValue val;
-    EquivalenceType et;
     if (refResult) {
       val = ComputedValue.arrayRefNestedCV(arr, ix);
-      et = EquivalenceType.VALUE;
     } else {
       assert(contents == null || Types.isMemberType(arr, contents)) :
             "not member: " + contents + " " + arr;
       val = ComputedValue.arrayNestedCV(arr, ix);
-      et = EquivalenceType.REFERENCE;
     }
-    return new ResultVal(val, contentsArg, false, et, true);
+    return new ResultVal(val, contentsArg, false, true);
+  }
+  
+  public static ResultVal makeStructLookupResult(Var elem, Var struct,
+                                                 String fieldName) {
+    return new ResultVal(ComputedValue.structMemberCV(struct, fieldName),
+                         elem.asArg(), false, true);
   }
   
   /**
-   * Check to see if we can add new computed values to a derferenced variable
+   * Check to see if we can add new computed values to a dereferenced variable
    * @param refContent
    * @return
    */
-  public static List<ResultVal> createDereferencedCVs(ComputedValue refContent,
+  public static List<ResultVal> createLoadRefCVs(ComputedValue refContent,
                                                    Var derefDst) {
     if (refContent.op() == Opcode.FAKE && 
         refContent.subop().equals(ComputedValue.REF_TO_ARRAY_CONTENTS)) {

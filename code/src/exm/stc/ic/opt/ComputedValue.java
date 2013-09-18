@@ -22,7 +22,6 @@ import java.util.List;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
-import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Opcode;
 
 /**
@@ -42,12 +41,16 @@ public class ComputedValue {
    * they should be put in a canonical sorted order
    */
   
+  /**
+   * Define a notion of equivalence between locations with the same computed
+   * value.
+   */
   public static enum EquivalenceType {
-    VALUE, // ValLocation contains the same value as the canonical instance of 
-           // expression
-    REFERENCE, // ValLocation is a direct reference to the canonical instance of
-               // expression (i.e. writes to any instance of the computedvalue
-               //       are visible in all instances of it)
+    // Matching ComputedValues indicates that locations have same value
+    VALUE,
+    // Matching ComputedValues indicates that locations are aliases for
+    // each other.  E.g. writing to either location gives same result.
+    ALIAS,
   };
   
   final Opcode op;
@@ -150,49 +153,82 @@ public class ComputedValue {
   public ComputedValue substituteInputs(List<Arg> newInputs) {
     return new ComputedValue(op, subop, index, newInputs);
   }
-
-  public static ComputedValue create(Instruction inst) {
-    // TODO create unique expression for RHS of any kind of instruction
-    // that we want to be able to eliminate
-    /*
-    if (inst.op == Opcode.LOCAL_ARITH_OP && 
-        ((LocalArithOp)inst).localop == ArithOpcode.PLUS_INT)
-    {
-      return new ComputedValue(inst.op, ((LocalArithOp)inst).localop.toString(), 
-                                  sortArgs(inst.getInputs()),
-                                  inst.getOutputs().get(0).getVariable());
-    } else if (inst.op == Opcode.ASSIGN_INT) {
-      return new ComputedValue(inst.op, "", inst.getInputs(),
-          inst.getOutputs().get(0).getVariable());
-    } else if (inst.op == Opcode.ARRAY_LOAD_COMPUTED
-        || inst.op == Opcode.ARRAY_LOAD_IMM_IX ||
-        inst.op ==  Opcode.ARRAYREF_LOAD_COMPUTED || inst.op == 
-        Opcode.ARRAY_LOAD_IMM_IX || inst.op == Opcode.DEREFERENCE_BLOB
-        || inst.op == Opcode.DEREFERENCE_BOOL || inst.op == Opcode.DEREFERENCE_FLOAT
-        || inst.op == Opcode.DEREFERENCE_INT || inst.op == Opcode.DEREFERENCE_STRING
-        || inst.op == Opcode.STRUCT_LOOKUP || inst.op == Opcode.STRUCTREF_LOOKUP) {
-      return new ComputedValue(inst.op, "", inst.getInputs(), 
-          inst.getOutputs().get(0).getVariable());
-    } else if (inst.op == Opcode.STRUCT_INSERT) {
-      return new ComputedValue(Opcode.STRUCT_LOOKUP, "",
-          Arrays.asList(inst.getOutputs().get(0), inst.getInputs().get(0)),
-          inst.getInputs().get(1).getVariable());
-    }
-    */
-    
-    return null;
-  }   
   
   public static ComputedValue makeCopy(Arg src) {
     return new ComputedValue(Opcode.FAKE, ComputedValue.COPY_OF, src.asList());
   }
   
+  public static ComputedValue makeAlias(Arg src) {
+    return new ComputedValue(Opcode.FAKE, ComputedValue.ALIAS_OF, src.asList());
+  }
+  
+  /**
+   * Computed value to indicate that something is a direct handle
+   * to array contents
+   * @param arr
+   * @param ix
+   * @return
+   */
+  public static ComputedValue arrayCV(Var arr, Arg ix) {
+    return new ComputedValue(Opcode.FAKE, ComputedValue.ARRAY_CONTENTS,
+                              Arrays.asList(arr.asArg(), ix));
+  }
+
+  /**
+   * Computed value to indicate that something is a reference to a direct
+   * handle to array contents
+   * @param arr
+   * @param ix
+   * @return
+   */
+  public static ComputedValue arrayRefCV(Var arr, Arg ix) {
+    return new ComputedValue(Opcode.FAKE, ComputedValue.REF_TO_ARRAY_CONTENTS,
+                              Arrays.asList(arr.asArg(), ix));
+  }
+
+  public static ComputedValue arrayRefNestedCV(Var arr, Arg ix) {
+    return new ComputedValue(Opcode.FAKE, ComputedValue.REF_TO_ARRAY_NESTED,
+        Arrays.asList(arr.asArg(), ix));
+  }
+
+  public static ComputedValue arrayNestedCV(Var arr, Arg ix) {
+    return new ComputedValue(Opcode.FAKE, ComputedValue.ARRAY_NESTED,
+        Arrays.asList(arr.asArg(), ix));
+  }
+  
+  public static ComputedValue structMemberCV(Var struct, String fieldName) {
+    return new ComputedValue(Opcode.STRUCT_LOOKUP, 
+            Arrays.asList(struct.asArg(), Arg.createStringLit(fieldName)));
+  }
+
   public boolean isCopy() {
     return this.op == Opcode.FAKE && this.subop.equals(COPY_OF);
   }
   
-  public static boolean isAlias(ResultVal r) {
-    return r.value().isCopy() && r.equivType() == EquivalenceType.REFERENCE;
+  public boolean isAlias() {
+    return this.op == Opcode.FAKE && this.subop.equals(ALIAS_OF); 
+  }
+  
+  public boolean isArrayMember() {
+    return (op == Opcode.FAKE && subop.equals(ComputedValue.ARRAY_NESTED)) ||
+           (op == Opcode.FAKE && subop.equals(ComputedValue.ARRAY_CONTENTS));
+  }
+  
+  public boolean isStructMember() {
+    return op == Opcode.STRUCT_LOOKUP;
+  }
+  
+  /**
+   * Return the equivalence type of this computed value
+   * @return
+   */
+  public EquivalenceType equivType() {
+    if (isAlias() || isArrayMember() ||
+        op == Opcode.LOAD_REF || isStructMember()) {
+      return EquivalenceType.ALIAS;
+    }
+    // Assume value equivalence unless otherwise known
+    return EquivalenceType.VALUE;
   }
   
   /* Special subop strings to use with fake opcode */
@@ -203,24 +239,5 @@ public class ComputedValue {
   public static final String ARRAY_NESTED = "autocreated_nested";
   public static final String REF_TO_ARRAY_NESTED = "ref_to_autocreated_nested";
   public static final String COPY_OF = "copy_of";
-
-  public static ComputedValue arrayCV(Var arr, Arg ix) {
-    return new ComputedValue(Opcode.FAKE, ComputedValue.ARRAY_CONTENTS,
-                              Arrays.asList(arr.asArg(), ix));
-  }
-  
-  public static ComputedValue arrayRefCV(Var arr, Arg ix) {
-    return new ComputedValue(Opcode.FAKE, ComputedValue.REF_TO_ARRAY_CONTENTS,
-                              Arrays.asList(arr.asArg(), ix));
-  }
-  
-  public static ComputedValue arrayRefNestedCV(Var arr, Arg ix) {
-    return new ComputedValue(Opcode.FAKE, ComputedValue.REF_TO_ARRAY_NESTED,
-        Arrays.asList(arr.asArg(), ix));
-  }
-  
-  public static ComputedValue arrayNestedCV(Var arr, Arg ix) {
-    return new ComputedValue(Opcode.FAKE, ComputedValue.ARRAY_NESTED,
-        Arrays.asList(arr.asArg(), ix));
-  }
+  public static final String ALIAS_OF = "alias_of";
 }

@@ -26,7 +26,6 @@ import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue;
-import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.opt.ResultVal;
 import exm.stc.ic.opt.ValueTracker;
 import exm.stc.ic.tree.ICInstructions.CVMap;
@@ -1628,18 +1627,15 @@ public class TurbineOp extends Instruction {
         }
 
         boolean outIsClosed;
-        EquivalenceType equiv;
         if (op == Opcode.LOAD_REF) {
           outIsClosed = false;
-          equiv = EquivalenceType.REFERENCE;
         } else {
           outIsClosed = true;
-          equiv = EquivalenceType.VALUE;
         }
         
         List<ResultVal> result = new ArrayList<ResultVal>();
         
-        ResultVal retrieve = vanillaResult(outIsClosed, equiv);
+        ResultVal retrieve = vanillaResult(outIsClosed);
         result.add(retrieve);
         
         Opcode cvop = ICInstructions.assignOpcode(src.futureType());
@@ -1659,7 +1655,7 @@ public class TurbineOp extends Instruction {
           result.add(deref);
           // Add any new cvs that result from dereferencing the variable
           for (ComputedValue refCV: existing.getVarContents(src.getVar())) {
-            result.addAll(ResultVal.createDereferencedCVs(refCV, dst));
+            result.addAll(ResultVal.createLoadRefCVs(refCV, dst));
           }
         }
         return result;
@@ -1682,22 +1678,14 @@ public class TurbineOp extends Instruction {
         Opcode cvop = ICInstructions.retrieveOpcode(dst.futureType());
         assert(cvop != null);
 
-        
-        EquivalenceType equiv;
-        if (op == Opcode.STORE_REF) {
-          equiv = EquivalenceType.REFERENCE;
-        } else {
-          equiv = EquivalenceType.VALUE;
-        }
         ResultVal retrieve = ResultVal.buildResult(cvop,
-            Arrays.asList(dst), src, false, equiv);
+                        Arrays.asList(dst), src, false);
         
         if (op == Opcode.STORE_REF) {
           Opcode derefOp = ICInstructions.derefOpCode(dst.futureType());
           if (derefOp != null) {
             ResultVal deref = 
-                 ResultVal.buildResult(derefOp, Arrays.asList(dst),
-                             src, false, EquivalenceType.REFERENCE);
+                 ResultVal.buildResult(derefOp, Arrays.asList(dst), src, false);
             return Arrays.asList(retrieve, assign, deref);
           }
         }
@@ -1758,17 +1746,13 @@ public class TurbineOp extends Instruction {
       }
       
       case STRUCT_INSERT: {
-        // Lookup
-        ResultVal lookup = ResultVal.buildResult(Opcode.STRUCT_LOOKUP,
-            Arrays.asList(getOutput(0).asArg(), getInput(0)),
-            getInput(1), false, EquivalenceType.REFERENCE);
+        ResultVal lookup = ResultVal.makeStructLookupResult(
+            getInput(1).getVar(), getOutput(0), getInput(0).getStringLit());
         return lookup.asList(); 
       }
       case STRUCT_LOOKUP: {
-        // don't know if its closed
-        ResultVal lookup = ResultVal.buildResult(Opcode.STRUCT_LOOKUP,
-            Arrays.asList(getInput(0), getInput(1)), getOutput(0).asArg(),
-            false, EquivalenceType.REFERENCE);
+        ResultVal lookup = ResultVal.makeStructLookupResult(
+            getOutput(0), getInput(0).getVar(), getInput(1).getStringLit());
         return lookup.asList(); 
       }
       case ARRAY_INSERT_IMM:
@@ -1918,19 +1902,15 @@ public class TurbineOp extends Instruction {
     return ResultVal.makeArrayResult(arr, ix, member, insertingRef, true);
   }
 
-  private ResultVal vanillaResult(boolean closed) {
-    return vanillaResult(closed, EquivalenceType.VALUE);
-  }
 
   /**
    * Create the "standard" computed value
    * assume 1 ouput arg
    * @return
    */
-  private ResultVal vanillaResult(boolean closed, EquivalenceType equiv) {
+  private ResultVal vanillaResult(boolean closed) {
     assert(outputs.size() == 1);
-    return ResultVal.buildResult(op, inputs, outputs.get(0).asArg(),
-        closed, equiv);
+    return ResultVal.buildResult(op, inputs, outputs.get(0).asArg(), closed);
   }
 
   @Override

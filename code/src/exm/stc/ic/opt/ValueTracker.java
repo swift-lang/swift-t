@@ -27,7 +27,6 @@ import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
 import exm.stc.common.util.TernaryLogic.Ternary;
-import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.CVMap;
@@ -380,8 +379,7 @@ public class ValueTracker implements CVMap {
     }
     for (ComputedValue cv: cvs) {
       // create new result value with conservative parameters
-      res.add(new ResultVal(cv, dst.asArg(), closed,
-                            EquivalenceType.VALUE, false));
+      res.add(new ResultVal(cv, dst.asArg(), closed, false));
     }
     
     List<Pair<Arg, ComputedValue>> inputCVs = existing.getReferencedCVs(srcVar);
@@ -402,7 +400,7 @@ public class ValueTracker implements CVMap {
       
       // create new result value with conservative parameters
       res.add(new ResultVal(origCV.substituteInputs(newInputs), pair.val1,
-                            closed, EquivalenceType.VALUE, false));
+                            closed, false));
     }
     
     return res;
@@ -606,8 +604,7 @@ public class ValueTracker implements CVMap {
 
 
     private static ResultVal createUnifiedCV(ComputedValue cv, Arg loc) {
-      return new ResultVal(cv, loc, false, 
-                                  EquivalenceType.VALUE, false);
+      return new ResultVal(cv, loc, false, false);
     }
     
     
