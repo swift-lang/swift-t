@@ -27,7 +27,7 @@ import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
-import exm.stc.ic.opt.ResultVal;
+import exm.stc.ic.opt.ValLoc;
 import exm.stc.ic.opt.ValueTracker;
 import exm.stc.ic.tree.ICInstructions.CVMap;
 import exm.stc.ic.tree.ICInstructions.CommonFunctionCall;
@@ -1609,7 +1609,7 @@ public class TurbineOp extends Instruction {
   }
 
   @Override
-  public List<ResultVal> getResults(CVMap existing) {
+  public List<ValLoc> getResults(CVMap existing) {
     switch(op) {
       case LOAD_BOOL:
       case LOAD_FLOAT:
@@ -1634,9 +1634,9 @@ public class TurbineOp extends Instruction {
           outIsClosed = true;
         }
         
-        List<ResultVal> result = new ArrayList<ResultVal>();
+        List<ValLoc> result = new ArrayList<ValLoc>();
         
-        ResultVal retrieve = vanillaResult(outIsClosed);
+        ValLoc retrieve = vanillaResult(outIsClosed);
         result.add(retrieve);
         
         Opcode cvop = ICInstructions.assignOpcode(src.futureType());
@@ -1644,19 +1644,19 @@ public class TurbineOp extends Instruction {
           throw new STCRuntimeError("Need assign op for "
               + src.getVar());
         }
-        ResultVal assign = ResultVal.buildResult(cvop,
+        ValLoc assign = ValLoc.buildResult(cvop,
                   Arrays.asList(dst.asArg()), src, outIsClosed);
         result.add(assign);
         
         
         Opcode derefOp = ICInstructions.derefOpCode(src.futureType());
         if (derefOp != null) {
-          ResultVal deref = ResultVal.buildResult(derefOp, 
+          ValLoc deref = ValLoc.buildResult(derefOp, 
                                     Arrays.asList(src), dst.asArg(), false);
           result.add(deref);
           // Add any new cvs that result from dereferencing the variable
-          for (ResultVal refRV: existing.getVarContents(src.getVar())) {
-            result.addAll(ResultVal.createLoadRefCVs(refRV, dst));
+          for (ValLoc refRV: existing.getVarContents(src.getVar())) {
+            result.addAll(ValLoc.createLoadRefCVs(refRV, dst));
           }
         }
         return result;
@@ -1672,28 +1672,28 @@ public class TurbineOp extends Instruction {
 
         // add assign so we can avoid recreating future 
         // (true b/c this instruction closes val immediately)
-        ResultVal assign = vanillaResult(true);
+        ValLoc assign = vanillaResult(true);
         // add retrieve so we can avoid retrieving later
         Arg dst = getOutput(0).asArg();
         Arg src = getInput(0);
         Opcode cvop = ICInstructions.retrieveOpcode(dst.futureType());
         assert(cvop != null);
 
-        ResultVal retrieve = ResultVal.buildResult(cvop,
+        ValLoc retrieve = ValLoc.buildResult(cvop,
                         Arrays.asList(dst), src, false);
         
         if (op == Opcode.STORE_REF) {
           Opcode derefOp = ICInstructions.derefOpCode(dst.futureType());
           if (derefOp != null) {
-            ResultVal deref = 
-                 ResultVal.buildResult(derefOp, Arrays.asList(dst), src, false);
+            ValLoc deref = 
+                 ValLoc.buildResult(derefOp, Arrays.asList(dst), src, false);
             return Arrays.asList(retrieve, assign, deref);
           }
         }
         return Arrays.asList(retrieve, assign);
       }
       case IS_MAPPED: {
-        ResultVal vanilla = vanillaResult(true);
+        ValLoc vanilla = vanillaResult(true);
         assert(vanilla != null);
         Var fileVar = getInput(0).getVar();
         if (fileVar.isMapped() == Ternary.MAYBE) {
@@ -1702,22 +1702,24 @@ public class TurbineOp extends Instruction {
           // We know the value already, so check it's a constant
           Arg result = Arg.createBoolLit(fileVar.isMapped() == Ternary.TRUE);
           return Arrays.asList(vanilla,
-                ResultVal.makeCopy(getOutput(0), result));
+                ValLoc.makeCopy(getOutput(0), result));
         }
       }
       case GET_FILENAME: {
-        List<ResultVal> res = new ArrayList<ResultVal>();
+        List<ValLoc> res = new ArrayList<ValLoc>();
         Arg filename = getOutput(0).asArg();
         Arg file = getInput(0);
         res.add(ICInstructions.filenameCV(filename, file.getVar()));
         
         // Check to see if value of filename is in local value
-        Arg filenameVal = existing.getLocation(ICInstructions.filenameValCV(file, null).value());
+        ComputedValue filenameCV = ICInstructions.filenameValCV(
+                                            file, null).value();
+        ValLoc filenameVal = existing.lookupCV(filenameCV);
         if (filenameVal != null) {
           // We know that if we fetch from the output future of this instruction,
           // we'll get the previously stored filename
-          res.add(ResultVal.buildResult(Opcode.LOAD_STRING,
-                                    filename, filenameVal, true));
+          res.add(ValLoc.buildResult(Opcode.LOAD_STRING,
+                                    filename, filenameVal.location(), true));
         }
         return res;
       }
@@ -1747,12 +1749,12 @@ public class TurbineOp extends Instruction {
       }
       
       case STRUCT_INSERT: {
-        ResultVal lookup = ResultVal.makeStructLookupResult(
+        ValLoc lookup = ValLoc.makeStructLookupResult(
             getInput(1).getVar(), getOutput(0), getInput(0).getStringLit());
         return lookup.asList(); 
       }
       case STRUCT_LOOKUP: {
-        ResultVal lookup = ResultVal.makeStructLookupResult(
+        ValLoc lookup = ValLoc.makeStructLookupResult(
             getOutput(0), getInput(0).getVar(), getInput(1).getStringLit());
         return lookup.asList(); 
       }
@@ -1785,9 +1787,9 @@ public class TurbineOp extends Instruction {
       }
       case ARRAY_BUILD: {
         Var arr = getOutput(0);
-        List<ResultVal> res = new ArrayList<ResultVal>();
+        List<ValLoc> res = new ArrayList<ValLoc>();
         // Computed value for whole array
-        res.add(ResultVal.buildResult(op, getInputs(), arr.asArg(), true));
+        res.add(ValLoc.buildResult(op, getInputs(), arr.asArg(), true));
         // For individual array elements
         assert(getInputs().size() % 2 == 0);
         int elemCount = getInputs().size() / 2;
@@ -1818,20 +1820,22 @@ public class TurbineOp extends Instruction {
         } else {
           assert (Types.isAssignableRefTo(contents.type(), 
               Types.arrayMemberType(arr.type())));
-          ResultVal refCV = makeArrayCV(arr, ix, contents, true);
-          Arg prev = existing.getLocation(ComputedValue.arrayCV(arr, ix));
+          ValLoc refCV = makeArrayCV(arr, ix, contents, true);
+          ValLoc prev = existing.lookupCV(
+                                     ComputedValue.arrayCV(arr, ix));
           if (prev != null) {
             /* All these array loads give back a reference, but if a value
              * was previously inserted at this index, then we can 
              * short-circuit this as we know what is in the reference */
-            ResultVal retrieveCV = ResultVal.buildResult(ICInstructions.retrieveOpcode(
-                contents.type()), contents.asArg(), prev, false);
+            ValLoc retrieveCV = ValLoc.buildResult(
+                ICInstructions.retrieveOpcode(contents.type()),
+                contents.asArg(), prev.location(), false);
             Opcode derefOp = ICInstructions.derefOpCode(contents.type());
             if (derefOp == null) {
               return Arrays.asList(retrieveCV, refCV);
             } else {
-              ResultVal derefCV = ResultVal.buildResult(derefOp,
-                                              contents.asArg(), prev, false);
+              ValLoc derefCV = ValLoc.buildResult(derefOp,
+                               contents.asArg(), prev.location(), false);
               return Arrays.asList(retrieveCV, refCV, derefCV);
             }
           } else {
@@ -1858,15 +1862,15 @@ public class TurbineOp extends Instruction {
           arr = getOutput(1);
         }
         Arg ix = getInput(0);
-        List<ResultVal> res = new ArrayList<ResultVal>();
+        List<ValLoc> res = new ArrayList<ValLoc>();
         
         boolean returnsRef = op != Opcode.ARRAY_CREATE_NESTED_IMM &&
                              op != Opcode.ARRAY_CREATE_BAG;
         // Mark as not substitutable since this op may have
         // side-effect of creating array
-        res.add(ResultVal.makeArrayResult(arr, ix, nestedArr,
+        res.add(ValLoc.makeArrayResult(arr, ix, nestedArr,
                                               returnsRef));
-        res.add(ResultVal.makeCreateNestedResult(arr, ix, nestedArr,
+        res.add(ValLoc.makeCreateNestedResult(arr, ix, nestedArr,
             returnsRef));
         
         if (op == Opcode.ARRAY_CREATE_NESTED_IMM ||
@@ -1874,22 +1878,23 @@ public class TurbineOp extends Instruction {
           // No references involved, the instruction returns the nested
           // array directly
         } else {
-          Arg prev = existing.getLocation(ComputedValue.arrayCV(arr, ix));
           assert (Types.isRefTo(nestedArr.type(), 
                       Types.arrayMemberType(arr.type())));
+
+          ValLoc prev = existing.lookupCV(ComputedValue.arrayCV(arr, ix));
           if (prev != null) {
             // See if we know the value of this reference already
-            ResultVal derefCV = ResultVal.buildResult(
+            ValLoc derefCV = ValLoc.buildResult(
                 ICInstructions.retrieveOpcode(nestedArr.type()),
-                Arrays.asList(nestedArr.asArg()), prev, false);
+                Arrays.asList(nestedArr.asArg()), prev.location(), false);
             res.add(derefCV);
           }
         }
         return res;
       }
       case COPY_REF: {
-        List<ResultVal> res = new ArrayList<ResultVal>();
-        res.add(ResultVal.makeAlias(getOutput(0), getInput(0)));
+        List<ValLoc> res = new ArrayList<ValLoc>();
+        res.add(ValLoc.makeAlias(getOutput(0), getInput(0)));
         res.addAll(ValueTracker.makeCopiedRVs(existing, getOutput(0),
                                   getInput(0), EquivalenceType.ALIAS));
         return res;
@@ -1899,9 +1904,9 @@ public class TurbineOp extends Instruction {
     }
   }
   
-  private static ResultVal makeArrayCV(Var arr, Arg ix, Var member,
+  private static ValLoc makeArrayCV(Var arr, Arg ix, Var member,
       boolean insertingRef) {
-    return ResultVal.makeArrayResult(arr, ix, member, insertingRef, true);
+    return ValLoc.makeArrayResult(arr, ix, member, insertingRef, true);
   }
 
 
@@ -1910,9 +1915,9 @@ public class TurbineOp extends Instruction {
    * assume 1 ouput arg
    * @return
    */
-  private ResultVal vanillaResult(boolean closed) {
+  private ValLoc vanillaResult(boolean closed) {
     assert(outputs.size() == 1);
-    return ResultVal.buildResult(op, inputs, outputs.get(0).asArg(), closed);
+    return ValLoc.buildResult(op, inputs, outputs.get(0).asArg(), closed);
   }
 
   @Override

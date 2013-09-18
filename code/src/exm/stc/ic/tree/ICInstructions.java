@@ -53,7 +53,7 @@ import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
-import exm.stc.ic.opt.ResultVal;
+import exm.stc.ic.opt.ValLoc;
 import exm.stc.ic.opt.Semantics;
 import exm.stc.ic.opt.ValueTracker;
 import exm.stc.ic.tree.Conditionals.Conditional;
@@ -502,7 +502,7 @@ public class ICInstructions {
      *        returned should have the out field set so we know where to find 
      *        it 
      */
-    public abstract List<ResultVal> getResults(CVMap existing);
+    public abstract List<ValLoc> getResults(CVMap existing);
     
     @Override
     public Statement cloneStatement() {
@@ -570,6 +570,10 @@ public class ICInstructions {
   
   public static interface CVMap {
     
+    /**
+     * @param v
+     * @return true if the variable is known to be closed
+     */
     public boolean isClosed(Var v);
     
     /**
@@ -577,19 +581,19 @@ public class ICInstructions {
      * @return the current location of a given computedValue
      *        (either a constant value, or a variable)
      */
-    public Arg getLocation(ComputedValue val);
+    public ValLoc lookupCV(ComputedValue val);
     /**
      * @param v
      * @return all computed values stored in var
      */
-    public List<ResultVal> getVarContents(Var v);
+    public List<ValLoc> getVarContents(Var v);
     
     /**
      * Get computed values in which this variable is in input
      * @param input
      * @return
      */
-    public List<ResultVal> getReferencedCVs(Var input);
+    public List<ValLoc> getReferencedCVs(Var input);
   }
 
   public static class Comment extends Instruction {
@@ -652,7 +656,7 @@ public class ICInstructions {
     }
 
     @Override
-    public List<ResultVal> getResults(CVMap existing) {
+    public List<ValLoc> getResults(CVMap existing) {
       return null;
     }
 
@@ -698,14 +702,14 @@ public class ICInstructions {
     }
     
     @Override
-    public List<ResultVal> getResults(CVMap existing) {
+    public List<ValLoc> getResults(CVMap existing) {
       if (ForeignFunctions.isPure(functionName)) {
         if (!this.writesMappedVar() && isCopyFunction()) {
           // Handle copy as a special case
-          return ResultVal.makeCopy(getOutput(0),
+          return ValLoc.makeCopy(getOutput(0),
                                          getInput(0)).asList();
         } else {
-          List<ResultVal> res = new ArrayList<ResultVal>();
+          List<ValLoc> res = new ArrayList<ValLoc>();
           for (int output = 0; output < getOutputs().size(); output++) {
             boolean outputClosed = false;// safe assumption
             String canonicalFunctionName = this.functionName;
@@ -715,7 +719,7 @@ public class ICInstructions {
               Collections.sort(in);
             }
             
-            res.add(ResultVal.buildResult(this.op, 
+            res.add(ValLoc.buildResult(this.op, 
                 canonicalFunctionName, output, in, 
                 getOutput(output).asArg(), outputClosed));
           }
@@ -730,7 +734,7 @@ public class ICInstructions {
      * Add specific CVs for special operations
      * @param res
      */
-    private void addSpecialCVs(List<ResultVal> cvs) {
+    private void addSpecialCVs(List<ValLoc> cvs) {
       if (isImpl(SpecialFunction.INPUT_FILE) ||
           isImpl(SpecialFunction.UNCACHED_INPUT_FILE) ||
           isImpl(SpecialFunction.INPUT_URL)) {
@@ -764,7 +768,7 @@ public class ICInstructions {
       return false;
     }
 
-    private void addRangeCVs(List<ResultVal> cvs) {
+    private void addRangeCVs(List<ValLoc> cvs) {
       boolean allValues = true;
       long start = 0, end = 0, step = 1; 
       
@@ -795,7 +799,7 @@ public class ICInstructions {
       }
     }
 
-    private ResultVal makeArraySizeCV() {
+    private ValLoc makeArraySizeCV() {
       boolean isFuture;
       if (Types.isString(getOutput(0))) {
         isFuture = true;
@@ -807,12 +811,12 @@ public class ICInstructions {
                              isFuture);
     }
 
-    static ResultVal makeArraySizeCV(Var arr, Arg size, boolean future) {
+    static ValLoc makeArraySizeCV(Var arr, Arg size, boolean future) {
       assert(Types.isArray(arr.type()));
       assert(size.isImmediateInt());
       String subop = future ? ComputedValue.ARRAY_SIZE_FUTURE :
                               ComputedValue.ARRAY_SIZE_VAL;
-      return ResultVal.buildResult(Opcode.FAKE, subop,
+      return ValLoc.buildResult(Opcode.FAKE, subop,
                                    arr.asArg(), size, true);
     }
     
@@ -1527,14 +1531,14 @@ public class ICInstructions {
     }
 
     @Override
-    public List<ResultVal> getResults(CVMap existing) {
+    public List<ValLoc> getResults(CVMap existing) {
       if (deterministic) {
-        List<ResultVal> cvs = new ArrayList<ResultVal>(
+        List<ValLoc> cvs = new ArrayList<ValLoc>(
                                                         outFiles.size());
         for (int i = 0; i < outFiles.size(); i++) {
           // Unique key for cv includes number of output
           // Output file should be closed after external program executes
-          ResultVal cv = ResultVal.buildResult(op, cmd, i,
+          ValLoc cv = ValLoc.buildResult(op, cmd, i,
                      args, outFiles.get(i).asArg(), true);
           cvs.add(cv);
         }
@@ -1687,7 +1691,7 @@ public class ICInstructions {
     }
 
     @Override
-    public List<ResultVal> getResults(CVMap existing) {
+    public List<ValLoc> getResults(CVMap existing) {
       // Nothing
       return null;
     }
@@ -1805,7 +1809,7 @@ public class ICInstructions {
     }
    
     @Override
-    public List<ResultVal> getResults(CVMap existing) {
+    public List<ValLoc> getResults(CVMap existing) {
       // nothing
       return null;
     }
@@ -2183,26 +2187,26 @@ public class ICInstructions {
     }
     
     @Override
-    public List<ResultVal> getResults(CVMap existing) {
+    public List<ValLoc> getResults(CVMap existing) {
       if (this.hasSideEffects()) {
         // Two invocations of this aren't equivalent
         return null;
       }
       
-      ResultVal basic = makeBasicComputedValue();
+      ValLoc basic = makeBasicComputedValue();
       
       if (subop == BuiltinOpcode.COPY_INT || subop == BuiltinOpcode.COPY_BOOL
       || subop == BuiltinOpcode.COPY_FLOAT || subop == BuiltinOpcode.COPY_STRING
       || subop == BuiltinOpcode.COPY_BLOB || subop == BuiltinOpcode.COPY_VOID) {
         // Add transitively valid computed values if a copy
-        List<ResultVal> res = new ArrayList<ResultVal>();
+        List<ValLoc> res = new ArrayList<ValLoc>();
         res.add(basic);
         res.addAll(ValueTracker.makeCopiedRVs(existing, getOutput(0), getInput(0),
                                                             EquivalenceType.VALUE));
         return res;
       }
       
-      List<ResultVal> inferred = makeInferredComputedValues(existing);
+      List<ValLoc> inferred = makeInferredComputedValues(existing);
       if (inferred.isEmpty()) {
         if (basic != null) {
           return Collections.singletonList(basic);
@@ -2213,7 +2217,7 @@ public class ICInstructions {
         if (basic == null) {  
           return inferred;
         } else {
-          List<ResultVal> res = new ArrayList<ResultVal>(
+          List<ValLoc> res = new ArrayList<ValLoc>(
                                                     1 + inferred.size());
           res.add(basic);
           res.addAll(inferred);
@@ -2227,16 +2231,16 @@ public class ICInstructions {
      * Create computed value that describes the output
      * @return
      */
-    private ResultVal makeBasicComputedValue() {
+    private ValLoc makeBasicComputedValue() {
       if (subop == BuiltinOpcode.COPY_INT || subop == BuiltinOpcode.COPY_BOOL
       || subop == BuiltinOpcode.COPY_FLOAT || subop == BuiltinOpcode.COPY_STRING
       || subop == BuiltinOpcode.COPY_BLOB || subop == BuiltinOpcode.COPY_VOID) {
         // It might be assigning a constant val
-        return ResultVal.makeCopy(this.output, this.inputs.get(0));
+        return ValLoc.makeCopy(this.output, this.inputs.get(0));
       } else if (Operators.isMinMaxOp(subop)) {
         assert(this.inputs.size() == 2);
         if (this.inputs.get(0).equals(this.inputs.get(1))) {
-          return ResultVal.makeCopy(this.output, this.inputs.get(0));
+          return ValLoc.makeCopy(this.output, this.inputs.get(0));
         }
       } else if (output != null) {
         // put arguments into canonical order
@@ -2256,13 +2260,13 @@ public class ICInstructions {
         }
         
         boolean outClosed = (this.op == Opcode.LOCAL_OP);
-        return ResultVal.buildResult(this.op, cvOp.name(), cvInputs,
+        return ValLoc.buildResult(this.op, cvOp.name(), cvInputs,
                                 this.output.asArg(), outClosed);
       }
       return null;
     }
 
-    private List<ResultVal> makeInferredComputedValues(CVMap cvs) {
+    private List<ValLoc> makeInferredComputedValues(CVMap cvs) {
       try {
         if (!Settings.getBoolean(Settings.OPT_ALGEBRA)) {
           return Collections.emptyList();
@@ -2273,7 +2277,7 @@ public class ICInstructions {
       switch (subop) {
         case PLUS_INT:
         case MINUS_INT:
-        List<ResultVal> inferred = tryAlgebra(cvs);
+        List<ValLoc> inferred = tryAlgebra(cvs);
         printInferredValues(inferred);
         return inferred;
         default:
@@ -2283,13 +2287,13 @@ public class ICInstructions {
     }
 
 
-    private void printInferredValues(List<ResultVal> inferred) {
+    private void printInferredValues(List<ValLoc> inferred) {
       Logger logger = Logging.getSTCLogger();
       if (logger.isTraceEnabled()) {
         StringBuilder sb = new StringBuilder();
         if (!inferred.isEmpty()){
           sb.append(this + " => ");
-          for (ResultVal t: inferred) {
+          for (ValLoc t: inferred) {
             sb.append(t.location() + " == " + t + ", ");
           }
         }
@@ -2298,7 +2302,7 @@ public class ICInstructions {
     }
 
 
-    private List<ResultVal> tryAlgebra(CVMap cvs) {
+    private List<ValLoc> tryAlgebra(CVMap cvs) {
       // do basic algebra, useful for adjacent array indices
       // TODO: could be more sophisticated, e.g. build operator tree
       //    and reduce to canonical form
@@ -2310,9 +2314,9 @@ public class ICInstructions {
       if (args == null) {
         return Collections.emptyList();
       }
-      List<ResultVal> varRVs = cvs.getVarContents(args.val1);
-      List<ResultVal> res = new ArrayList<ResultVal>(); 
-      for (ResultVal varRV: varRVs) {
+      List<ValLoc> varRVs = cvs.getVarContents(args.val1);
+      List<ValLoc> res = new ArrayList<ValLoc>(); 
+      for (ValLoc varRV: varRVs) {
         ComputedValue varVal = varRV.value();
         if (varVal.op() == this.op) {
           BuiltinOpcode aop = BuiltinOpcode.valueOf(varVal.subop());
@@ -2326,7 +2330,7 @@ public class ICInstructions {
               // x = z + c1 + c2
               long c = args.val2 + add.val2;
               if (c == 0) {
-                res.add(ResultVal.makeCopy(this.output,
+                res.add(ValLoc.makeCopy(this.output,
                                                  add.val1.asArg()));
               } else {
                 res.add(plusCV(op, add.val1.asArg(),
@@ -2377,9 +2381,9 @@ public class ICInstructions {
      * @param output2
      * @return
      */
-    private static ResultVal plusCV(Opcode op, Arg arg1, Arg arg2,
+    private static ValLoc plusCV(Opcode op, Arg arg1, Arg arg2,
         Var output) {
-      return ResultVal.buildResult(op, BuiltinOpcode.PLUS_INT.name(),
+      return ValLoc.buildResult(op, BuiltinOpcode.PLUS_INT.name(),
           Arrays.asList(arg1, arg2), output.asArg(), op == Opcode.LOCAL_OP);
     }
 
@@ -2482,7 +2486,7 @@ public class ICInstructions {
     return new ComputedValue(op, Arrays.asList(src.asArg()));
   }
 
-  public static ResultVal assignComputedVal(Var dst, Arg val) {
+  public static ValLoc assignComputedVal(Var dst, Arg val) {
     Type dstType = dst.type();
     if (Types.isPrimValue(dstType)) {
         BuiltinOpcode op;
@@ -2508,12 +2512,12 @@ public class ICInstructions {
         default:
           throw new STCRuntimeError("Unhandled type: " + dstType);
         }
-        return ResultVal.buildResult(Opcode.LOCAL_OP, 
+        return ValLoc.buildResult(Opcode.LOCAL_OP, 
             op.toString(), Arrays.asList(val), dst.asArg(), false);
     } else {
       Opcode op = assignOpcode(dstType);
       if (op != null) {
-        return ResultVal.buildResult(op, Arrays.asList(val), dst.asArg()
+        return ValLoc.buildResult(op, Arrays.asList(val), dst.asArg()
                                                                           , true);
       }
     }
@@ -2649,25 +2653,25 @@ public class ICInstructions {
     }
   }
 
-  public static ResultVal filenameCV(Arg outFilename, Var inFile) {
+  public static ValLoc filenameCV(Arg outFilename, Var inFile) {
     assert(Types.isFile(inFile.type()));
     assert(outFilename.isVar());
     assert(Types.isString(outFilename.getVar().type()));
-    return ResultVal.buildResult(Opcode.GET_FILENAME,
+    return ValLoc.buildResult(Opcode.GET_FILENAME,
         Arrays.asList(inFile.asArg()), outFilename, false);
   }
   
-  public static ResultVal filenameValCV(Arg file, Arg filenameVal) {
+  public static ValLoc filenameValCV(Arg file, Arg filenameVal) {
     assert(Types.isFile(file.type()));
     assert(filenameVal == null || filenameVal.isImmediateString());
-    return ResultVal.buildResult(Opcode.GET_FILENAME_VAL,
+    return ValLoc.buildResult(Opcode.GET_FILENAME_VAL,
                                             file, filenameVal, true);
   }
 
-  public static ResultVal filenameLocalCV(Arg outFilename, Var inFile) {
+  public static ValLoc filenameLocalCV(Arg outFilename, Var inFile) {
     assert(Types.isFileVal(inFile));
     assert(outFilename.isImmediateString());
-    return ResultVal.buildResult(Opcode.GET_LOCAL_FILENAME,
+    return ValLoc.buildResult(Opcode.GET_LOCAL_FILENAME,
                     inFile.asArg().asList(), outFilename, true);
   }
   

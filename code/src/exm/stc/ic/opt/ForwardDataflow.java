@@ -108,13 +108,13 @@ public class ForwardDataflow implements OptimizerPass {
       Instruction inst, ValueTracker av,
       HierarchicalMap<Var, Arg> replaceInputs,
       HierarchicalMap<Var, Arg> replaceAll) {
-    List<ResultVal> irs = inst.getResults(av);
+    List<ValLoc> irs = inst.getResults(av);
     
     if (irs != null) {
       if (logger.isTraceEnabled()) {
         logger.trace("irs: " + irs.toString());
       }
-      for (ResultVal resVal : irs) {
+      for (ValLoc resVal : irs) {
         assert(resVal != null) : inst + " " + irs;
         if (resVal.value().isAlias()) {
           replaceAll
@@ -132,7 +132,7 @@ public class ForwardDataflow implements OptimizerPass {
           // Can't replace, track this value
           av.addComputedValue(resVal, Ternary.FALSE);
         } else if (currLoc.isConstant()) {
-          Arg prevLoc = av.getLocation(resVal.value());
+          Arg prevLoc = av.lookupCV(resVal.value()).location();
           if (prevLoc.isVar()) {
             assert(Types.isPrimValue(prevLoc.getVar().type()));
             // Constants are the best... might as well replace
@@ -161,7 +161,7 @@ public class ForwardDataflow implements OptimizerPass {
           final boolean substitute;
           assert (currLoc.isVar());
           // See if we should replace
-          Arg prevLoc = av.getLocation(resVal.value());
+          Arg prevLoc = av.lookupCV(resVal.value()).location();
           
           boolean currUnmapped = (currLoc.isMapped() == Ternary.FALSE);
           boolean prevUnmapped = (prevLoc.isMapped() == Ternary.FALSE);
@@ -222,8 +222,8 @@ public class ForwardDataflow implements OptimizerPass {
     }
   }
 
-  private static void purgeValues(Logger logger, ValueTracker state, List<ResultVal> rvs) {
-    for (ResultVal rv: rvs) {
+  private static void purgeValues(Logger logger, ValueTracker state, List<ValLoc> rvs) {
+    for (ValLoc rv: rvs) {
       Logging.getSTCLogger().debug("Invalidating " + rv);
       state.invalidateComputedValue(rv.value());
     }
@@ -248,7 +248,7 @@ public class ForwardDataflow implements OptimizerPass {
       if (v.storage() == Alloc.GLOBAL_CONST) {
         Arg val = program.lookupGlobalConst(v.name());
         assert (val != null) : v.name();
-        ResultVal compVal = ICInstructions.assignComputedVal(v, val);
+        ValLoc compVal = ICInstructions.assignComputedVal(v, val);
         globalState.addComputedValue(compVal,
             Ternary.fromBool(globalState.isAvailable(compVal.value())));
       }
@@ -418,7 +418,7 @@ public class ForwardDataflow implements OptimizerPass {
     for (Var v : block.getVariables()) {
       if (v.mapping() != null && Types.isFile(v.type())) {
         // Track the mapping
-        ResultVal filenameVal = ICInstructions.filenameCV(
+        ValLoc filenameVal = ICInstructions.filenameCV(
             Arg.createVar(v.mapping()), v);
         cv.addComputedValue(filenameVal, Ternary.FALSE);
       }

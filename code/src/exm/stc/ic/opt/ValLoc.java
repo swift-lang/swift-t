@@ -10,13 +10,15 @@ import exm.stc.common.lang.Var;
 import exm.stc.ic.tree.ICInstructions.Opcode;
 
 /**
- * Represent ComputedValue from a function
+ * Represent a ComputedValue with a known value or stored in
+ * a known location 
  */
-public class ResultVal {
+public class ValLoc {
   private final ComputedValue value;
   /** Storage location or constant value of result */
   private final Arg location;
-  private final boolean outClosed; // true if out is known to be closed
+  /** true if location var is known to be closed */
+  private final boolean locClosed; 
   /** If the output can be substituted safely with previous instances of cv */
   private  final boolean substitutable;
   
@@ -28,61 +30,61 @@ public class ResultVal {
     return location;
   }
 
-  public boolean outClosed() {
-    return outClosed;
+  public boolean locClosed() {
+    return locClosed;
   }
 
   public boolean isSubstitutable() {
     return substitutable;
   }
 
-  public ResultVal(ComputedValue value, Arg location,
-      boolean outClosed, boolean substitutable) {
+  public ValLoc(ComputedValue value, Arg location,
+      boolean locClosed, boolean substitutable) {
     assert(value != null);
     this.value = value;
     this.location = location;
-    this.outClosed = outClosed;
+    this.locClosed = locClosed;
     this.substitutable = substitutable;
   }
   
-  public static ResultVal buildResult(Opcode op, String subop, int index,
+  public static ValLoc buildResult(Opcode op, String subop, int index,
       List<Arg> inputs,
-      Arg valLocation, boolean outClosed, boolean substitutable) {
+      Arg valLocation, boolean locClosed, boolean substitutable) {
     ComputedValue cv = new ComputedValue(op, subop, index, inputs);
-    return new ResultVal(cv, valLocation, outClosed, substitutable);
+    return new ValLoc(cv, valLocation, locClosed, substitutable);
   }
 
-  public static ResultVal buildResult(Opcode op, String subop, List<Arg> inputs,
-      Arg valLocation, boolean outClosed) {
-    return buildResult(op, subop, 0, inputs, valLocation, outClosed, true);
+  public static ValLoc buildResult(Opcode op, String subop, List<Arg> inputs,
+      Arg valLocation, boolean locClosed) {
+    return buildResult(op, subop, 0, inputs, valLocation, locClosed, true);
   }
 
-  public static ResultVal buildResult(Opcode op, List<Arg> inputs,
-      Arg valLocation, boolean outClosed) {
-    return buildResult(op, "", inputs, valLocation, outClosed);
+  public static ValLoc buildResult(Opcode op, List<Arg> inputs,
+      Arg valLocation, boolean locClosed) {
+    return buildResult(op, "", inputs, valLocation, locClosed);
   }
 
-  public static ResultVal buildResult(Opcode op, Arg input,
-                        Arg valLocation, boolean outClosed) {
+  public static ValLoc buildResult(Opcode op, Arg input,
+                        Arg valLocation, boolean locClosed) {
     return buildResult(op, "", Collections.singletonList(input), valLocation,
-                       outClosed);
+                       locClosed);
   }
 
-  public static ResultVal buildResult(Opcode op, String subop,
+  public static ValLoc buildResult(Opcode op, String subop,
         int index, List<Arg> inputs,
-      Arg valLocation, boolean outClosed) {
-    return buildResult(op, subop, index, inputs, valLocation, outClosed, true);
+      Arg valLocation, boolean locClosed) {
+    return buildResult(op, subop, index, inputs, valLocation, locClosed, true);
   }
 
-  public static ResultVal buildResult(Opcode op, String subop, Arg input,
-      Arg valLocation, boolean outClosed) {
-    return buildResult(op, subop, Arrays.asList(input), valLocation, outClosed);
+  public static ValLoc buildResult(Opcode op, String subop, Arg input,
+      Arg valLocation, boolean locClosed) {
+    return buildResult(op, subop, Arrays.asList(input), valLocation, locClosed);
   }
-  public static ResultVal buildResult(Opcode op, String subop, List<Arg> inputs) {
+  public static ValLoc buildResult(Opcode op, String subop, List<Arg> inputs) {
     return buildResult(op, subop, inputs, null, false);
   }
 
-  public static ResultVal buildResult(Opcode op, List<Arg> inputs) {
+  public static ValLoc buildResult(Opcode op, List<Arg> inputs) {
     return buildResult(op, "", inputs);
   }
 
@@ -91,8 +93,8 @@ public class ResultVal {
    * @param src
    * @return Computed value indicating dst has same value as src
    */
-  public static ResultVal makeCopy(Var dst, Arg src) {
-    return new ResultVal(ComputedValue.makeCopy(src), dst.asArg(),
+  public static ValLoc makeCopy(Var dst, Arg src) {
+    return new ValLoc(ComputedValue.makeCopy(src), dst.asArg(),
                          false, true);
   }
   
@@ -101,8 +103,8 @@ public class ResultVal {
    * @param src
    * @return Computed value indicating dst is alias of src
    */
-  public static ResultVal makeAlias(Var dst, Arg src) {
-    return new ResultVal(ComputedValue.makeAlias(src), dst.asArg(),
+  public static ValLoc makeAlias(Var dst, Arg src) {
+    return new ValLoc(ComputedValue.makeAlias(src), dst.asArg(),
                           false, true);
   }
   
@@ -114,7 +116,7 @@ public class ResultVal {
    * @param refResult if contents is ref
    * @return
    */
-  public static ResultVal makeArrayResult(Var arr, Arg ix, Var contents,
+  public static ValLoc makeArrayResult(Var arr, Arg ix, Var contents,
         boolean refResult) {
     return makeArrayResult(arr, ix, contents, refResult, true);
   }
@@ -128,7 +130,7 @@ public class ResultVal {
    * @param substitutable 
    * @return
    */
-  public static ResultVal makeArrayResult(Var arr, Arg ix, Var contents,
+  public static ValLoc makeArrayResult(Var arr, Arg ix, Var contents,
         boolean refResult, boolean substitutable) {
     Arg contentsArg = contents.asArg();
     ComputedValue val;
@@ -141,10 +143,10 @@ public class ResultVal {
             "not member: " + contents + " " + arr;
       val = ComputedValue.arrayCV(arr, ix);
     }
-    return new ResultVal(val, contentsArg, false, substitutable);
+    return new ValLoc(val, contentsArg, false, substitutable);
   }
   
-  public static ResultVal makeCreateNestedResult(Var arr, Arg ix, Var contents,
+  public static ValLoc makeCreateNestedResult(Var arr, Arg ix, Var contents,
       boolean refResult) {
     Arg contentsArg = contents == null ? null : Arg.createVar(contents);
     ComputedValue val;
@@ -155,12 +157,12 @@ public class ResultVal {
             "not member: " + contents + " " + arr;
       val = ComputedValue.arrayNestedCV(arr, ix);
     }
-    return new ResultVal(val, contentsArg, false, true);
+    return new ValLoc(val, contentsArg, false, true);
   }
   
-  public static ResultVal makeStructLookupResult(Var elem, Var struct,
+  public static ValLoc makeStructLookupResult(Var elem, Var struct,
                                                  String fieldName) {
-    return new ResultVal(ComputedValue.structMemberCV(struct, fieldName),
+    return new ValLoc(ComputedValue.structMemberCV(struct, fieldName),
                          elem.asArg(), false, true);
   }
   
@@ -169,7 +171,7 @@ public class ResultVal {
    * @param refContent
    * @return
    */
-  public static List<ResultVal> createLoadRefCVs(ResultVal refContent,
+  public static List<ValLoc> createLoadRefCVs(ValLoc refContent,
                                                    Var derefDst) {
     ComputedValue cv = refContent.value();
     if (cv.op() == Opcode.FAKE && 
@@ -183,7 +185,7 @@ public class ResultVal {
   
 
   
-  public List<ResultVal> asList() {
+  public List<ValLoc> asList() {
     return Collections.singletonList(this);
   }
   
