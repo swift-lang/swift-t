@@ -55,6 +55,7 @@ import exm.stc.ic.opt.ComputedValue;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.opt.Semantics;
 import exm.stc.ic.opt.ValLoc;
+import exm.stc.ic.opt.ValLoc.Closed;
 import exm.stc.ic.opt.ValueTracker;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICTree.Block;
@@ -711,7 +712,7 @@ public class ICInstructions {
         } else {
           List<ValLoc> res = new ArrayList<ValLoc>();
           for (int output = 0; output < getOutputs().size(); output++) {
-            boolean outputClosed = false;// safe assumption
+            Closed outputClosed = Closed.MAYBE_NOT;// safe assumption
             String canonicalFunctionName = this.functionName;
             List<Arg> in = new ArrayList<Arg>(getInputs());
             if (ForeignFunctions.isCommutative(this.functionName)) {
@@ -817,7 +818,7 @@ public class ICInstructions {
       String subop = future ? ComputedValue.ARRAY_SIZE_FUTURE :
                               ComputedValue.ARRAY_SIZE_VAL;
       return ValLoc.buildResult(Opcode.FAKE, subop,
-                                   arr.asArg(), size, true);
+                                arr.asArg(), size, Closed.YES);
     }
     
   }
@@ -1533,13 +1534,12 @@ public class ICInstructions {
     @Override
     public List<ValLoc> getResults(CVMap existing) {
       if (deterministic) {
-        List<ValLoc> cvs = new ArrayList<ValLoc>(
-                                                        outFiles.size());
+        List<ValLoc> cvs = new ArrayList<ValLoc>(outFiles.size());
         for (int i = 0; i < outFiles.size(); i++) {
           // Unique key for cv includes number of output
           // Output file should be closed after external program executes
           ValLoc cv = ValLoc.buildResult(op, cmd, i,
-                     args, outFiles.get(i).asArg(), true);
+                     args, outFiles.get(i).asArg(), Closed.YES);
           cvs.add(cv);
         }
         return cvs;
@@ -2259,7 +2259,7 @@ public class ICInstructions {
           cvOp = subop;
         }
         
-        boolean outClosed = (this.op == Opcode.LOCAL_OP);
+        Closed outClosed = Closed.fromBool((this.op == Opcode.LOCAL_OP));
         return ValLoc.buildResult(this.op, cvOp.name(), cvInputs,
                                 this.output.asArg(), outClosed);
       }
@@ -2384,7 +2384,8 @@ public class ICInstructions {
     private static ValLoc plusCV(Opcode op, Arg arg1, Arg arg2,
         Var output) {
       return ValLoc.buildResult(op, BuiltinOpcode.PLUS_INT.name(),
-          Arrays.asList(arg1, arg2), output.asArg(), op == Opcode.LOCAL_OP);
+          Arrays.asList(arg1, arg2), output.asArg(), 
+          Closed.fromBool(op == Opcode.LOCAL_OP));
     }
 
 
@@ -2513,12 +2514,11 @@ public class ICInstructions {
           throw new STCRuntimeError("Unhandled type: " + dstType);
         }
         return ValLoc.buildResult(Opcode.LOCAL_OP, 
-            op.toString(), Arrays.asList(val), dst.asArg(), false);
+            op.toString(), Arrays.asList(val), dst.asArg(), Closed.MAYBE_NOT);
     } else {
       Opcode op = assignOpcode(dstType);
       if (op != null) {
-        return ValLoc.buildResult(op, Arrays.asList(val), dst.asArg()
-                                                                          , true);
+        return ValLoc.buildResult(op, Arrays.asList(val), dst.asArg() , Closed.YES);
       }
     }
     throw new STCRuntimeError("DOn't know how to assign to " + dst);
@@ -2658,21 +2658,21 @@ public class ICInstructions {
     assert(outFilename.isVar());
     assert(Types.isString(outFilename.getVar().type()));
     return ValLoc.buildResult(Opcode.GET_FILENAME,
-        Arrays.asList(inFile.asArg()), outFilename, false);
+        Arrays.asList(inFile.asArg()), outFilename, Closed.MAYBE_NOT);
   }
   
   public static ValLoc filenameValCV(Arg file, Arg filenameVal) {
     assert(Types.isFile(file.type()));
     assert(filenameVal == null || filenameVal.isImmediateString());
     return ValLoc.buildResult(Opcode.GET_FILENAME_VAL,
-                                            file, filenameVal, true);
+                            file, filenameVal, Closed.YES);
   }
 
   public static ValLoc filenameLocalCV(Arg outFilename, Var inFile) {
     assert(Types.isFileVal(inFile));
     assert(outFilename.isImmediateString());
     return ValLoc.buildResult(Opcode.GET_LOCAL_FILENAME,
-                    inFile.asArg().asList(), outFilename, true);
+                    inFile.asArg().asList(), outFilename, Closed.YES);
   }
   
   private static String formatFunctionCall(Opcode op, 

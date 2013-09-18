@@ -27,8 +27,6 @@ public class ValLoc {
   /** true if location var is a copy only. I.e. cannot be alias
    * of another value with same CV */
   private final boolean isValCopy;
-  /** If the output can be substituted safely with previous instances of cv */
-  private final boolean substitutable;
   
   public ComputedValue value() {
     return value;
@@ -41,9 +39,9 @@ public class ValLoc {
   public boolean locClosed() {
     return locClosed;
   }
-
-  public boolean isSubstitutable() {
-    return substitutable;
+  
+  public boolean isValCopy() {
+    return isValCopy;
   }
   
   public EquivalenceType equivType() {
@@ -56,56 +54,53 @@ public class ValLoc {
   }
 
   private ValLoc(ComputedValue value, Arg location,
-      boolean locClosed, boolean substitutable,
-      boolean isValCopy) {
+      boolean locClosed, boolean isValCopy) {
     assert(value != null);
     this.value = value;
     this.location = location;
     this.locClosed = locClosed;
-    this.substitutable = substitutable;
     this.isValCopy = isValCopy;
   }
   
   public ValLoc(ComputedValue value, Arg location,
-      boolean locClosed, boolean substitutable) {
-    this(value, location, locClosed, substitutable, false);
+      Closed locClosed,  IsValCopy isValCopy) {
+    this(value, location, locClosed == Closed.YES,
+         isValCopy == IsValCopy.YES);
+  }
+  
+  public static ValLoc build(ComputedValue value, Arg location,
+                             Closed locClosed) {
+    return new ValLoc(value, location, locClosed, IsValCopy.NO);
   }
   
   public static ValLoc buildResult(Opcode op, String subop, int index,
-      List<Arg> inputs,
-      Arg valLocation, boolean locClosed, boolean substitutable) {
+      List<Arg> inputs, Arg valLocation, Closed locClosed) {
     ComputedValue cv = new ComputedValue(op, subop, index, inputs);
-    return new ValLoc(cv, valLocation, locClosed, substitutable);
+    return new ValLoc(cv, valLocation, locClosed, IsValCopy.NO);
   }
 
   public static ValLoc buildResult(Opcode op, String subop, List<Arg> inputs,
-      Arg valLocation, boolean locClosed) {
-    return buildResult(op, subop, 0, inputs, valLocation, locClosed, true);
+      Arg valLocation, Closed locClosed) {
+    return buildResult(op, subop, 0, inputs, valLocation, locClosed);
   }
 
   public static ValLoc buildResult(Opcode op, List<Arg> inputs,
-      Arg valLocation, boolean locClosed) {
-    return buildResult(op, "", inputs, valLocation, locClosed);
+      Arg valLocation, Closed locClosed) {
+    return buildResult(op, "", 0, inputs, valLocation, locClosed);
   }
 
   public static ValLoc buildResult(Opcode op, Arg input,
-                        Arg valLocation, boolean locClosed) {
+                        Arg valLocation, Closed locClosed) {
     return buildResult(op, "", Collections.singletonList(input), valLocation,
                        locClosed);
   }
 
-  public static ValLoc buildResult(Opcode op, String subop,
-        int index, List<Arg> inputs,
-      Arg valLocation, boolean locClosed) {
-    return buildResult(op, subop, index, inputs, valLocation, locClosed, true);
-  }
-
   public static ValLoc buildResult(Opcode op, String subop, Arg input,
-      Arg valLocation, boolean locClosed) {
+      Arg valLocation, Closed locClosed) {
     return buildResult(op, subop, Arrays.asList(input), valLocation, locClosed);
   }
   public static ValLoc buildResult(Opcode op, String subop, List<Arg> inputs) {
-    return buildResult(op, subop, inputs, null, false);
+    return buildResult(op, subop, inputs, null, Closed.MAYBE_NOT);
   }
 
   public static ValLoc buildResult(Opcode op, List<Arg> inputs) {
@@ -118,8 +113,8 @@ public class ValLoc {
    * @return Computed value indicating dst has same value as src
    */
   public static ValLoc makeCopy(Var dst, Arg src) {
-    return new ValLoc(ComputedValue.makeCopy(src), dst.asArg(),
-                         false, true);
+    return ValLoc.build(ComputedValue.makeCopy(src), dst.asArg(),
+                        Closed.MAYBE_NOT);
   }
   
   /**
@@ -137,7 +132,7 @@ public class ValLoc {
     // See if we still have an alias
     boolean newIsValCopy = isValCopy || copyType != EquivalenceType.ALIAS;
     return new ValLoc(value, copiedTo.asArg(), newLocClosed,
-                      substitutable, newIsValCopy);
+                      newIsValCopy);
   }
 
   /**
@@ -153,7 +148,7 @@ public class ValLoc {
     
     boolean newIsValCopy = isValCopy || copyType != EquivalenceType.ALIAS;
     ComputedValue newVal = value.substituteInputs(newInputs);
-    return new ValLoc(newVal, location, locClosed, substitutable, newIsValCopy);
+    return new ValLoc(newVal, location, locClosed, newIsValCopy);
   }
   
   /**
@@ -161,23 +156,10 @@ public class ValLoc {
    * @param src
    * @return Computed value indicating dst is alias of src
    */
-  public static ValLoc makeAlias(Var dst, Arg src) {
-    return new ValLoc(ComputedValue.makeAlias(src), dst.asArg(),
-                          false, true);
+  public static ValLoc makeAlias(Var dst, Var src, Closed srcClosed) {
+    return build(ComputedValue.makeAlias(src.asArg()), dst.asArg(), srcClosed);
   }
   
-  /**
-   * Make a standard computed value for array contents
-   * @param arr
-   * @param ix
-   * @param contents
-   * @param refResult if contents is ref
-   * @return
-   */
-  public static ValLoc makeArrayResult(Var arr, Arg ix, Var contents,
-        boolean refResult) {
-    return makeArrayResult(arr, ix, contents, refResult, true);
-  }
 
   /**
    * Make a standard computed value for array contents
@@ -189,7 +171,7 @@ public class ValLoc {
    * @return
    */
   public static ValLoc makeArrayResult(Var arr, Arg ix, Var contents,
-        boolean refResult, boolean substitutable) {
+        boolean refResult) {
     Arg contentsArg = contents.asArg();
     ComputedValue val;
     if (refResult) {
@@ -201,7 +183,7 @@ public class ValLoc {
             "not member: " + contents + " " + arr;
       val = ComputedValue.arrayCV(arr, ix);
     }
-    return new ValLoc(val, contentsArg, false, substitutable);
+    return new ValLoc(val, contentsArg, Closed.MAYBE_NOT, IsValCopy.NO);
   }
   
   public static ValLoc makeCreateNestedResult(Var arr, Arg ix, Var contents,
@@ -215,13 +197,13 @@ public class ValLoc {
             "not member: " + contents + " " + arr;
       val = ComputedValue.arrayNestedCV(arr, ix);
     }
-    return new ValLoc(val, contentsArg, false, true);
+    return ValLoc.build(val, contentsArg, Closed.MAYBE_NOT);
   }
   
   public static ValLoc makeStructLookupResult(Var elem, Var struct,
                                                  String fieldName) {
-    return new ValLoc(ComputedValue.structMemberCV(struct, fieldName),
-                         elem.asArg(), false, true);
+    return ValLoc.build(ComputedValue.structMemberCV(struct, fieldName),
+                         elem.asArg(), Closed.MAYBE_NOT);
   }
   
   /**
@@ -251,4 +233,21 @@ public class ValLoc {
     return value.toString() + " => " + location;
   }
 
+  /**
+   * Use enum instead of boolean for typechecking and to make calls
+   * easier to parse
+   */
+  public static enum Closed {
+    YES,
+    MAYBE_NOT;
+
+    public static Closed fromBool(boolean b) {
+      return b ? YES : MAYBE_NOT;
+    }
+  }
+  
+  public static enum IsValCopy {
+    YES,
+    NO;
+  }
 }

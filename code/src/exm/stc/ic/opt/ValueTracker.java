@@ -29,6 +29,8 @@ import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
+import exm.stc.ic.opt.ValLoc.Closed;
+import exm.stc.ic.opt.ValLoc.IsValCopy;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.CVMap;
@@ -518,7 +520,8 @@ public class ValueTracker implements CVMap {
         // See what is same across all branches
         boolean allVals = true;
         boolean allSameLocation = true;
-        boolean allClosed = true;
+        Closed allClosed = Closed.YES;
+        IsValCopy anyValCopy = IsValCopy.NO;
         
         // Keep track of all locations to use as key into map
         List<Arg> branchLocs = new ArrayList<Arg>(branchStates.size());
@@ -538,7 +541,11 @@ public class ValueTracker implements CVMap {
           }
           
           if (!loc.locClosed()) {
-            allClosed = false;
+            allClosed = Closed.MAYBE_NOT;
+          }
+          
+          if (loc.isValCopy()) {
+            anyValCopy = IsValCopy.YES;
           }
           
           branchLocs.add(loc.location());
@@ -557,11 +564,11 @@ public class ValueTracker implements CVMap {
         }
         
         if (allSameLocation) {
-          availVals.add(createUnifiedCV(cv, firstLoc.location(), allClosed));
+          availVals.add(createUnifiedCV(cv, firstLoc.location(), allClosed, anyValCopy));
         } else if (unifiedLocs.containsKey(branchLocs)) {
           // We already unified this list of variables: just reuse that
           Var unifiedLoc = unifiedLocs.get(branchLocs);
-          availVals.add(createUnifiedCV(cv, unifiedLoc.asArg(), allClosed));
+          availVals.add(createUnifiedCV(cv, unifiedLoc.asArg(), allClosed, anyValCopy));
         } else {
           Var unifiedLoc = createUnifyingVar(parent, branchStates,
                     branchBlocks, branchLocs, firstLoc.location().type());
@@ -571,7 +578,7 @@ public class ValueTracker implements CVMap {
           unifiedLocs.put(branchLocs, unifiedLoc);
           
           // Signal that value is stored in new var
-          availVals.add(createUnifiedCV(cv, unifiedLoc.asArg(), allClosed));
+          availVals.add(createUnifiedCV(cv, unifiedLoc.asArg(), allClosed, anyValCopy));
         }
       }
       
@@ -621,8 +628,8 @@ public class ValueTracker implements CVMap {
 
 
     private static ValLoc createUnifiedCV(ComputedValue cv, Arg loc,
-                                                 boolean allClosed) {
-      return new ValLoc(cv, loc, allClosed, false);
+              Closed allClosed, IsValCopy anyValCopy) {
+      return new ValLoc(cv, loc, allClosed, anyValCopy);
     }
     
     

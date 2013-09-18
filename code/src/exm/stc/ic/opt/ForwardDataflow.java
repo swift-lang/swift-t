@@ -204,7 +204,7 @@ public class ForwardDataflow implements OptimizerPass {
           // Now we've decided whether to use the current or previous
           // variable for the computed expression
           if (substitute) {
-            if (usePrev && resVal.isSubstitutable()) {
+            if (usePrev) {
               // Do it
               if (logger.isTraceEnabled())
                 logger.trace("replace " + currLoc + " with " + prevLoc);

@@ -28,6 +28,7 @@ import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.opt.ValLoc;
+import exm.stc.ic.opt.ValLoc.Closed;
 import exm.stc.ic.opt.ValueTracker;
 import exm.stc.ic.tree.ICInstructions.CVMap;
 import exm.stc.ic.tree.ICInstructions.CommonFunctionCall;
@@ -1627,11 +1628,11 @@ public class TurbineOp extends Instruction {
           return null;
         }
 
-        boolean outIsClosed;
+        Closed outIsClosed;
         if (op == Opcode.LOAD_REF) {
-          outIsClosed = false;
+          outIsClosed = Closed.MAYBE_NOT;
         } else {
-          outIsClosed = true;
+          outIsClosed = Closed.YES;
         }
         
         List<ValLoc> result = new ArrayList<ValLoc>();
@@ -1652,7 +1653,7 @@ public class TurbineOp extends Instruction {
         Opcode derefOp = ICInstructions.derefOpCode(src.futureType());
         if (derefOp != null) {
           ValLoc deref = ValLoc.buildResult(derefOp, 
-                                    Arrays.asList(src), dst.asArg(), false);
+                    Arrays.asList(src), dst.asArg(), Closed.MAYBE_NOT);
           result.add(deref);
           // Add any new cvs that result from dereferencing the variable
           for (ValLoc refRV: existing.getVarContents(src.getVar())) {
@@ -1672,28 +1673,28 @@ public class TurbineOp extends Instruction {
 
         // add assign so we can avoid recreating future 
         // (true b/c this instruction closes val immediately)
-        ValLoc assign = vanillaResult(true);
+        ValLoc assign = vanillaResult(Closed.YES);
         // add retrieve so we can avoid retrieving later
         Arg dst = getOutput(0).asArg();
         Arg src = getInput(0);
-        Opcode cvop = ICInstructions.retrieveOpcode(dst.futureType());
-        assert(cvop != null);
 
-        ValLoc retrieve = ValLoc.buildResult(cvop,
-                        Arrays.asList(dst), src, false);
+        ValLoc retrieve = ValLoc.buildResult(
+                        ICInstructions.retrieveOpcode(dst.futureType()),
+                        Arrays.asList(dst), src, Closed.MAYBE_NOT);
         
         if (op == Opcode.STORE_REF) {
           Opcode derefOp = ICInstructions.derefOpCode(dst.futureType());
           if (derefOp != null) {
-            ValLoc deref = 
-                 ValLoc.buildResult(derefOp, Arrays.asList(dst), src, false);
+            ValLoc deref = ValLoc.buildResult(derefOp, Arrays.asList(dst),
+                                              src, Closed.MAYBE_NOT);
             return Arrays.asList(retrieve, assign, deref);
           }
         }
         return Arrays.asList(retrieve, assign);
       }
       case IS_MAPPED: {
-        ValLoc vanilla = vanillaResult(true);
+        // Closed because we don't need to wait to check mapping
+        ValLoc vanilla = vanillaResult(Closed.YES);
         assert(vanilla != null);
         Var fileVar = getInput(0).getVar();
         if (fileVar.isMapped() == Ternary.MAYBE) {
@@ -1719,7 +1720,7 @@ public class TurbineOp extends Instruction {
           // We know that if we fetch from the output future of this instruction,
           // we'll get the previously stored filename
           res.add(ValLoc.buildResult(Opcode.LOAD_STRING,
-                                    filename, filenameVal.location(), true));
+                            filename, filenameVal.location(), Closed.YES));
         }
         return res;
       }
@@ -1737,11 +1738,11 @@ public class TurbineOp extends Instruction {
       case DEREF_FLOAT:
       case DEREF_INT:
       case DEREF_STRING: {
-        return vanillaResult(false).asList();
+        return vanillaResult(Closed.MAYBE_NOT).asList();
       }
       case DEREF_FILE: {
         if (getOutput(0).isMapped() == Ternary.FALSE) {
-          return vanillaResult(false).asList();
+          return vanillaResult(Closed.MAYBE_NOT).asList();
         } else {
           // Can't use potentially mapped files interchangeably
           return null;
@@ -1783,20 +1784,20 @@ public class TurbineOp extends Instruction {
                                 op == Opcode.ARRAYREF_DEREF_INSERT_IMM ||
                                 op == Opcode.ARRAY_DEREF_INSERT_FUTURE ||
                                 op == Opcode.ARRAY_DEREF_INSERT_IMM);
-        return Arrays.asList(makeArrayCV(arr, ix, member, insertingRef));
+        return Arrays.asList(ValLoc.makeArrayResult(arr, ix, member, insertingRef));
       }
       case ARRAY_BUILD: {
         Var arr = getOutput(0);
         List<ValLoc> res = new ArrayList<ValLoc>();
         // Computed value for whole array
-        res.add(ValLoc.buildResult(op, getInputs(), arr.asArg(), true));
+        res.add(ValLoc.buildResult(op, getInputs(), arr.asArg(), Closed.YES));
         // For individual array elements
         assert(getInputs().size() % 2 == 0);
         int elemCount = getInputs().size() / 2;
         for (int i = 0; i < elemCount; i++) {
           Arg key = getInput(2 * i);
           Var val = getInput(2 * i + 1).getVar();
-          res.add(makeArrayCV(arr, key, val, false));
+          res.add(ValLoc.makeArrayResult(arr, key, val, false));
         }
         
         res.add(CommonFunctionCall.makeArraySizeCV(arr,
@@ -1816,11 +1817,11 @@ public class TurbineOp extends Instruction {
 
         if (op == Opcode.ARRAY_LOOKUP_IMM) {
           // This just retrieves the item immediately
-          return Arrays.asList(makeArrayCV(arr, ix, contents, false));
+          return Arrays.asList(ValLoc.makeArrayResult(arr, ix, contents, false));
         } else {
           assert (Types.isAssignableRefTo(contents.type(), 
               Types.arrayMemberType(arr.type())));
-          ValLoc refCV = makeArrayCV(arr, ix, contents, true);
+          ValLoc refCV = ValLoc.makeArrayResult(arr, ix, contents, true);
           ValLoc prev = existing.lookupCV(
                                      ComputedValue.arrayCV(arr, ix));
           if (prev != null) {
@@ -1829,13 +1830,13 @@ public class TurbineOp extends Instruction {
              * short-circuit this as we know what is in the reference */
             ValLoc retrieveCV = ValLoc.buildResult(
                 ICInstructions.retrieveOpcode(contents.type()),
-                contents.asArg(), prev.location(), false);
+                contents.asArg(), prev.location(), Closed.MAYBE_NOT);
             Opcode derefOp = ICInstructions.derefOpCode(contents.type());
             if (derefOp == null) {
               return Arrays.asList(retrieveCV, refCV);
             } else {
               ValLoc derefCV = ValLoc.buildResult(derefOp,
-                               contents.asArg(), prev.location(), false);
+                       contents.asArg(), prev.location(), Closed.MAYBE_NOT);
               return Arrays.asList(retrieveCV, refCV, derefCV);
             }
           } else {
@@ -1886,7 +1887,8 @@ public class TurbineOp extends Instruction {
             // See if we know the value of this reference already
             ValLoc derefCV = ValLoc.buildResult(
                 ICInstructions.retrieveOpcode(nestedArr.type()),
-                Arrays.asList(nestedArr.asArg()), prev.location(), false);
+                Arrays.asList(nestedArr.asArg()), prev.location(),
+                Closed.MAYBE_NOT);
             res.add(derefCV);
           }
         }
@@ -1894,7 +1896,9 @@ public class TurbineOp extends Instruction {
       }
       case COPY_REF: {
         List<ValLoc> res = new ArrayList<ValLoc>();
-        res.add(ValLoc.makeAlias(getOutput(0), getInput(0)));
+        Var srcRef = getInput(0).getVar();
+        res.add(ValLoc.makeAlias(getOutput(0), srcRef,
+                       Closed.fromBool(existing.isClosed(srcRef))));
         res.addAll(ValueTracker.makeCopiedRVs(existing, getOutput(0),
                       getInput(0), getMode(), EquivalenceType.ALIAS));
         return res;
@@ -1904,18 +1908,12 @@ public class TurbineOp extends Instruction {
     }
   }
   
-  private static ValLoc makeArrayCV(Var arr, Arg ix, Var member,
-      boolean insertingRef) {
-    return ValLoc.makeArrayResult(arr, ix, member, insertingRef, true);
-  }
-
-
   /**
    * Create the "standard" computed value
    * assume 1 ouput arg
    * @return
    */
-  private ValLoc vanillaResult(boolean closed) {
+  private ValLoc vanillaResult(Closed closed) {
     assert(outputs.size() == 1);
     return ValLoc.buildResult(op, inputs, outputs.get(0).asArg(), closed);
   }
