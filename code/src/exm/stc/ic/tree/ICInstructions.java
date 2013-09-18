@@ -53,8 +53,8 @@ import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.ComputedValue;
 import exm.stc.ic.opt.ComputedValue.EquivalenceType;
-import exm.stc.ic.opt.ValLoc;
 import exm.stc.ic.opt.Semantics;
+import exm.stc.ic.opt.ValLoc;
 import exm.stc.ic.opt.ValueTracker;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICTree.Block;
@@ -2202,7 +2202,7 @@ public class ICInstructions {
         List<ValLoc> res = new ArrayList<ValLoc>();
         res.add(basic);
         res.addAll(ValueTracker.makeCopiedRVs(existing, getOutput(0), getInput(0),
-                                                            EquivalenceType.VALUE));
+                                              getMode(), EquivalenceType.VALUE));
         return res;
       }
       

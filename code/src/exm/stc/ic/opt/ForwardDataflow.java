@@ -173,7 +173,7 @@ public class ForwardDataflow implements OptimizerPass {
             assert (prevLoc.isVar());
             boolean currClosed = av.isClosed(currLoc.getVar());
             boolean prevClosed = av.isClosed(prevLoc.getVar());
-            if (resVal.value().equivType() == EquivalenceType.ALIAS) {
+            if (resVal.equivType() == EquivalenceType.ALIAS) {
               // The two locations are both references to same thing, so can
               // replace all references, including writes to currLoc
               replaceAll.put(currLoc.getVar(), prevLoc);

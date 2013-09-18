@@ -1,12 +1,17 @@
 package exm.stc.ic.opt;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
+import exm.stc.ic.ICUtil;
+import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.tree.ICInstructions.Opcode;
 
 /**
@@ -18,9 +23,12 @@ public class ValLoc {
   /** Storage location or constant value of result */
   private final Arg location;
   /** true if location var is known to be closed */
-  private final boolean locClosed; 
+  private final boolean locClosed;
+  /** true if location var is a copy only. I.e. cannot be alias
+   * of another value with same CV */
+  private final boolean isValCopy;
   /** If the output can be substituted safely with previous instances of cv */
-  private  final boolean substitutable;
+  private final boolean substitutable;
   
   public ComputedValue value() {
     return value;
@@ -37,14 +45,30 @@ public class ValLoc {
   public boolean isSubstitutable() {
     return substitutable;
   }
+  
+  public EquivalenceType equivType() {
+    if (isValCopy) {
+      // Cannot be alias since a copy happened;
+      return EquivalenceType.VALUE;
+    } else {
+      return value.equivType();
+    }
+  }
 
-  public ValLoc(ComputedValue value, Arg location,
-      boolean locClosed, boolean substitutable) {
+  private ValLoc(ComputedValue value, Arg location,
+      boolean locClosed, boolean substitutable,
+      boolean isValCopy) {
     assert(value != null);
     this.value = value;
     this.location = location;
     this.locClosed = locClosed;
     this.substitutable = substitutable;
+    this.isValCopy = isValCopy;
+  }
+  
+  public ValLoc(ComputedValue value, Arg location,
+      boolean locClosed, boolean substitutable) {
+    this(value, location, locClosed, substitutable, false);
   }
   
   public static ValLoc buildResult(Opcode op, String subop, int index,
@@ -96,6 +120,40 @@ public class ValLoc {
   public static ValLoc makeCopy(Var dst, Arg src) {
     return new ValLoc(ComputedValue.makeCopy(src), dst.asArg(),
                          false, true);
+  }
+  
+  /**
+   * Make copy of ValLoc to reflect that location was copied
+   * to somewhere  
+   * @param copiedTo
+   * @param immediateCopy if copy happens immediately
+   * @param copyType method of copying (i.e. whether it is an alias) 
+   * @return
+   */
+  public ValLoc copyOf(Var copiedTo, TaskMode copyMode,
+                       EquivalenceType copyType) {
+    // See if we can determine that new location is closed
+    boolean newLocClosed = locClosed && copyMode == TaskMode.SYNC;
+    // See if we still have an alias
+    boolean newIsValCopy = isValCopy || copyType != EquivalenceType.ALIAS;
+    return new ValLoc(value, copiedTo.asArg(), newLocClosed,
+                      substitutable, newIsValCopy);
+  }
+
+  /**
+   * Create copy of this ValLoc with original substituted
+   * for replacement
+   */
+  public ValLoc substituteInputs(Var original, Arg replacement,
+      EquivalenceType copyType) {
+    Map<Var, Arg> replace = Collections.singletonMap(original, replacement);
+    
+    List<Arg> newInputs = new ArrayList<Arg>(value.getInputs());
+    ICUtil.replaceArgsInList(replace, newInputs);
+    
+    boolean newIsValCopy = isValCopy || copyType != EquivalenceType.ALIAS;
+    ComputedValue newVal = value.substituteInputs(newInputs);
+    return new ValLoc(newVal, location, locClosed, substitutable, newIsValCopy);
   }
   
   /**

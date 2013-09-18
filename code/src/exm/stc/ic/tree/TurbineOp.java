@@ -1896,7 +1896,7 @@ public class TurbineOp extends Instruction {
         List<ValLoc> res = new ArrayList<ValLoc>();
         res.add(ValLoc.makeAlias(getOutput(0), getInput(0)));
         res.addAll(ValueTracker.makeCopiedRVs(existing, getOutput(0),
-                                  getInput(0), EquivalenceType.ALIAS));
+                      getInput(0), getMode(), EquivalenceType.ALIAS));
         return res;
       }
       default:

@@ -218,8 +218,8 @@ public class ComputedValue {
   }
   
   /**
-   * Return the equivalence type of this computed value
-   * @return
+   * @return the equivalence type of this computed value,
+   *         assuming it wasn't copied
    */
   public EquivalenceType equivType() {
     if (isAlias() || isArrayMember() ||
@@ -239,4 +239,5 @@ public class ComputedValue {
   public static final String REF_TO_ARRAY_NESTED = "ref_to_autocreated_nested";
   public static final String COPY_OF = "copy_of";
   public static final String ALIAS_OF = "alias_of";
+
 }

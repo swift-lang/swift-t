@@ -16,6 +16,7 @@ import org.apache.log4j.Logger;
 import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
@@ -31,6 +32,7 @@ import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.CVMap;
+import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.TurbineOp;
 
@@ -370,7 +372,7 @@ public class ValueTracker implements CVMap {
    * @return
    */
   public static List<ValLoc> makeCopiedRVs(CVMap existing, Var dst, Arg src,
-                                              EquivalenceType equivType) {
+                TaskMode copyMode, EquivalenceType equivType) {
     if (!src.isVar()) {
       return Collections.emptyList();
     }
@@ -381,19 +383,14 @@ public class ValueTracker implements CVMap {
     // at least as far as the value goes (alias is another story)
     Var srcVar = src.getVar();
     List<ValLoc> srcVLs = existing.getVarContents(srcVar);
-    boolean closed = existing.isClosed(srcVar);
     Logger logger = Logging.getSTCLogger();
     
     if (logger.isTraceEnabled()) {
       logger.trace("Copy " + src + " => " + dst + " srcRVs: " + srcVLs);
     }
     for (ValLoc srcVL: srcVLs) {
-      // create new result value.
-      // Note that we need to mark that this is a copy, not the original
-      // TODO: if cv.equivType() == ALIAS, flag in ValLoc that this is a copy
-      // TODO: what about if src is alias for dst
-      ValLoc dstRV = new ValLoc(srcVL.makeCopiedVL(),
-                                               dst.asArg(), closed, false);
+      // create new result value for copy
+      ValLoc dstRV = srcVL.copyOf(dst, copyMode, equivType);
       if (logger.isTraceEnabled()) {
         logger.trace("Created ValLoc " + dstRV + " based on "
                       + dst + " <- " + src + " && " + src + " == " + srcVL.value());
@@ -403,25 +400,11 @@ public class ValueTracker implements CVMap {
     
     List<ValLoc> inputRVs = existing.getReferencedCVs(srcVar);
     if (logger.isTraceEnabled()) {
-      logger.trace("Copy " + src + " => " + dst + " inputCvs: " +
-                          inputRVs);
+      logger.trace("Copy " + src + " => " + dst + " inputCvs: " + inputRVs);
     }
     for (ValLoc inputRV: inputRVs) {
-      ComputedValue inputVal = inputRV.value();
-      List<Arg> newInputs = new ArrayList<Arg>(inputVal.getInputs().size());
-      for (Arg input: inputVal.getInputs()) {
-        if (input.isVar() && input.getVar().equals(srcVar)) {
-          newInputs.add(dst.asArg());
-        } else {
-          newInputs.add(input);
-        }
-      }
-      
-      // create new result value with conservative parameters
-      // TODO: what are right parameters here? Does it depend
-      //       on whether src is alias of dst?
-      res.add(new ValLoc(inputVal.substituteInputs(newInputs), 000,
-                            inputRV.location(), inputRV.locClosed(), false));
+      // create new result value with replaced inputs
+      res.add(inputRV.substituteInputs(srcVar, dst.asArg(), equivType));
     }
     
     return res;
@@ -619,17 +602,19 @@ public class ValueTracker implements CVMap {
       for (int i = 0; i < branchStates.size(); i++) {
         Arg loc = locs.get(i);
         Block branchBlock = branchBlocks.get(i);
+        Instruction copyInst;
         if (isValue) {
-          branchBlock.addInstruction(ICInstructions.valueSet(unifiedLoc, loc));
+          copyInst = ICInstructions.valueSet(unifiedLoc, loc);
         } else {
           assert (loc.isVar()) : loc + " " + loc.getKind();
-          branchBlock.addInstruction(TurbineOp.copyRef(unifiedLoc, loc.getVar()));
+          copyInst = TurbineOp.copyRef(unifiedLoc, loc.getVar());
         }
+        branchBlock.addInstruction(copyInst);
         
         // Add in additional computed values resulting from copy
         ValueTracker branchState = branchStates.get(i);
         branchState.addComputedValues(makeCopiedRVs(branchState, unifiedLoc,
-                                            loc, equivType), Ternary.MAYBE);
+                         loc, copyInst.getMode(), equivType), Ternary.MAYBE);
       }
       return unifiedLoc;
     }
