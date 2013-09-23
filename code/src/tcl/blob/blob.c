@@ -65,6 +65,12 @@ blobutils_malloc(size_t bytes)
   return result;
 }
 
+void
+blobutils_free(void* p)
+{
+  free(p);
+}
+
 void*
 blobutils_ptr_add(void* p, int offset)
 {
