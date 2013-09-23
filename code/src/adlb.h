@@ -64,7 +64,7 @@ adlb_code ADLB_Hostmap_lookup(const char* name, int count,
    @param offset: Start with this hostname
    @param actual: OUT Number of hostnames written
  */
-adlb_code ADLB_Hostmap_list(char* output, int max, int offset,
+adlb_code ADLB_Hostmap_list(char* output, uint max, uint offset,
                             int* actual);
 
 adlb_code ADLBP_Put(const void* payload, int length, int target, int answer,

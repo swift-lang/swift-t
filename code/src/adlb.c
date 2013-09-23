@@ -241,7 +241,7 @@ ADLB_Hostmap_lookup(const char* name, int count,
 }
 
 adlb_code
-ADLB_Hostmap_list(char* output, int max, int offset, int* actual)
+ADLB_Hostmap_list(char* output, uint max, uint offset, int* actual)
 {
   // Number of chars written
   int count = 0;
