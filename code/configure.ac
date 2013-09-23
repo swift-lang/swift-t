@@ -628,6 +628,13 @@ AC_ARG_ENABLE(bgp,
 AC_DEFINE_UNQUOTED(ENABLE_BGP, $ENABLE_BGP,
                    [Special handling for BG/P.])
 
+ENABLE_DEV=0
+AC_ARG_ENABLE(dev,
+    AS_HELP_STRING([--enable-dev],
+                   [Turn on more warnings for developers.]),
+    ENABLE_DEV=1)
+AC_SUBST(ENABLE_DEV)
+
 AC_CONFIG_FILES(
         src/turbine/turbine-version.h
         src/turbine/module.mk

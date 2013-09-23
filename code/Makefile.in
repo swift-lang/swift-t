@@ -21,6 +21,10 @@ INSTALL_EXPORT  = $(INSTALL_PREFIX)/export
 # The submit scripts are loaded from their respective module.mk files
 SCRIPTS_SUBMIT  :=
 
+ifeq (@ENABLE_DEV@,1)
+	WARN_CONVERSION = -Wconversion
+endif
+
 # Shared object suffix is .so on Linux, .dylib on Mac
 # GCC shared library creation argument
 # Linux: -shared; Mac: -dynamiclib
@@ -32,7 +36,7 @@ ifeq ($(USE_MAC),no)
 		PIC = -fPIC
 		STD = -std=gnu99
 		SHARED = -shared
-		WARNS = -Wall -Wconversion
+		WARNS = -Wall $(WARN_CONVERSION)
 	else
 #       	Using XLC
 		PIC = -qpic
