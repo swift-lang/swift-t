@@ -602,8 +602,8 @@ static int
 ADLB_Hostmap_List_Cmd(ClientData cdata, Tcl_Interp *interp,
                       int objc, Tcl_Obj *const objv[])
 {
-  int count;
-  int name_max;
+  uint count;
+  uint name_max;
   ADLB_Hostmap_stats(&count, &name_max);
   // Extra byte per name for RS
   uint chars = count*(name_max+1);
