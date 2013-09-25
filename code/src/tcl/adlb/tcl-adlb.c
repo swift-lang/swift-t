@@ -1096,7 +1096,8 @@ ADLB_Multicreate_Cmd(ClientData cdata, Tcl_Interp *interp,
   int count = objc - 1;
   ADLB_create_spec specs[count];
 
-  for (int i = 0; i < count; i++) {
+  for (int i = 0; i < count; i++)
+  {
     int n;
     Tcl_Obj **elems;
     rc = Tcl_ListObjGetElements(interp, objv[i + 1], &n, &elems);
@@ -1124,7 +1125,8 @@ ADLB_Exists_Impl(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[], bool has_subscript)
 {
   int min_args = has_subscript ? 3 : 2;
-  TCL_CONDITION(objc >= min_args, "requires at least %i arguments", min_args);
+  TCL_CONDITION(objc >= min_args,
+                "requires at least %i arguments", min_args);
   int argpos = 1;
 
   adlb_datum_id id;
@@ -1138,25 +1140,40 @@ ADLB_Exists_Impl(ClientData cdata, Tcl_Interp *interp,
   {
     subscript = Tcl_GetString(objv[argpos++]);
     TCL_CONDITION(subscript != NULL, "bad subscript argument");
+    DEBUG_ADLB("adlb::exists <%"PRId64">[%s]", id, subscript);
+  }
+  else
+  {
+    DEBUG_ADLB("adlb::exists <%"PRId64">", id);
   }
 
   adlb_refcounts decr = ADLB_NO_RC;
   if (argpos < objc)
   {
-    rc = Tcl_GetIntFromObj(interp, objv[argpos++], &decr.read_refcount);
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++],
+                           &decr.read_refcount);
     TCL_CHECK_MSG(rc, "Expected integer argument");
   }
 
   if (argpos < objc)
   {
-    rc = Tcl_GetIntFromObj(interp, objv[argpos++], &decr.write_refcount);
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++],
+                           &decr.write_refcount);
     TCL_CHECK_MSG(rc, "Expected integer argument");
   }
 
-  TCL_CONDITION(argpos == objc, "unexpected trailing args at %ith arg", argpos);
+  TCL_CONDITION(argpos == objc,
+                "unexpected trailing args at %ith arg", argpos);
 
   rc = ADLB_Exists(id, subscript, &b, decr);
   TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", id);
+
+  if (has_subscript)
+    DEBUG_ADLB("adlb::exists <%"PRId64">[%s] => %s",
+               id, subscript, bool2string(b));
+  else
+    DEBUG_ADLB("adlb::exists <%"PRId64"> => %s", id, bool2string(b));
+
   Tcl_Obj* result = Tcl_NewBooleanObj(b);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
