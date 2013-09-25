@@ -635,6 +635,9 @@ AC_ARG_ENABLE(dev,
     ENABLE_DEV=1)
 AC_SUBST(ENABLE_DEV)
 
+# We take system libraries out of arguments to the linker (#546)
+ldconfig -v 2>/dev/null | grep -vP '\t' | cut -d : -f 1 > system-libs.txt
+
 AC_CONFIG_FILES(
         src/turbine/turbine-version.h
         src/turbine/module.mk

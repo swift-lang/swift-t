@@ -21,6 +21,8 @@ INSTALL_EXPORT  = $(INSTALL_PREFIX)/export
 # The submit scripts are loaded from their respective module.mk files
 SCRIPTS_SUBMIT  :=
 
+SYSTEM_LIBS = $(shell cat system-libs.txt)
+
 ifeq (@ENABLE_DEV@,1)
 	WARN_CONVERSION = -Wconversion
 endif
@@ -109,7 +111,11 @@ MPI_LIB_DIR = @USE_MPI_LIB_DIR@
 MPI_LIB_NAME = @USE_MPI_LIB_NAME@
 # The actual linker arguments:
 CFLAGS += -I $(MPI_INCLUDE)
-MPI_LIB	:= -L$(MPI_LIB_DIR) -l $(MPI_LIB_NAME)
+MPI_LIB :=
+ifeq ($(filter $(MPI_LIB_DIR),$(SYSTEM_LIBS)),)
+  MPI_LIB += -L$(MPI_LIB_DIR)
+endif
+MPI_LIB	+= -l$(MPI_LIB_NAME)
            # -l mpl # Needed for older MPICH
 
 LAUNCHER = @USE_LAUNCHER@
@@ -152,7 +158,10 @@ endif
 LIBS :=
 LIBS += -L$(ADLB)/lib -l adlb
 LIBS += -L$(C_UTILS)/lib -l exmcutils
-LIBS += -L$(TCL_LIB_DIR) -l$(TCL_LIB_NAME)
+ifeq ($(filter $(TCL_LIB_DIR),$(SYSTEM_LIBS)),)
+	LIBS += -L$(TCL_LIB_DIR)
+endif
+LIBS += -l$(TCL_LIB_NAME)
 ifeq ($(ENABLE_MPE),1)
 	LIBS += -L$(USE_MPE)/lib -l mpe
 endif
