@@ -22,7 +22,7 @@
 namespace eval turbine {
     namespace export container_f_get container_f_insert
     namespace export c_f_lookup
-    
+
     namespace import ::turbine::c::create_nested
 
     # build array by inserting items into a container starting at 0
@@ -44,7 +44,7 @@ namespace eval turbine {
         adlb::write_refcount_decr $c
       }
     }
-    
+
     # build array by inserting items into a container starting at 0
     # close: decrement writers count at end
     # val_type: type of array values
@@ -69,7 +69,7 @@ namespace eval turbine {
     # Just like adlb::container_reference but add logging
     # Note that container_reference always consumes a read reference count
     proc container_reference { c i r type } {
-        log "creating reference: <$c>\[$i\] <- <*$r> ($type)"
+        log "creating reference: <$c>\[\"$i\"\] <- <*$r> ($type)"
         adlb::container_reference $c $i $r $type
     }
 
@@ -326,7 +326,7 @@ namespace eval turbine {
         # don't need read reference
         set c [ acquire_ref $cr 0 1 ]
         set s [ retrieve_decr $j ]
-        container_insert $c $s $d $t 
+        container_insert $c $s $d $t
         log "insert: (now) <$c>\[$s\]=<$d>"
         adlb::write_refcount_decr $oc
     }
@@ -369,7 +369,7 @@ namespace eval turbine {
     proc cr_v_insert_r_body { cr j dr t oc } {
         set c [ acquire_ref $cr 0 1 ]
         set d [ adlb::acquire_ref $dr $t 1 1 ]
-        container_insert $c $j $d $t 
+        container_insert $c $j $d $t
         adlb::write_refcount_decr $oc
     }
 

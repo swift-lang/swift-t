@@ -153,7 +153,7 @@ namespace eval turbine {
             if { $read_refcount != 1 } {
                 read_refcount_incr $filename [ expr $read_refcount - 1 ]
             }
-            
+
         } else {
             # use new string that will be set later to something arbitrary
             # add an extra refcount for the closing rule below
@@ -229,7 +229,7 @@ namespace eval turbine {
     proc retrieve_decr_integer { id {cachemode CACHED} } {
       return [ retrieve_integer $id $cachemode 1 ]
     }
-    
+
     proc create_ref { id {read_refcount 1} {write_refcount 1} \
                              {permanent 0} } {
         return [ adlb::create $id ref $read_refcount \
@@ -258,7 +258,7 @@ namespace eval turbine {
         debug "retrieve: <$id>=$result"
         return $result
     }
-    
+
     proc acquire_ref { id {incrref 1} {decrref 0} } {
         set result [ adlb::acquire_ref $id ref $incrref $decrref ]
         debug "acquire_ref: <$id>=$result"
@@ -268,7 +268,7 @@ namespace eval turbine {
     proc retrieve_decr_ref { id {cachemode CACHED} } {
       return [ retrieve_ref $id $cachemode 1 ]
     }
-    
+
     proc create_file_ref { id {read_refcount 1} {write_refcount 1} \
                              {permanent 0} } {
         return [ adlb::create $id file_ref $read_refcount \
@@ -301,7 +301,7 @@ namespace eval turbine {
     proc retrieve_decr_file_ref { id {cachemode CACHED} } {
       return [ retrieve_file_ref $id $cachemode 1 ]
     }
-    
+
     proc acquire_file_ref { id {incrref 1} {decrref 0} } {
         set result [ adlb::acquire_ref $id file_ref $incrref $decrref ]
         debug "acquire_file_ref: <$id>=$result"
@@ -342,13 +342,13 @@ namespace eval turbine {
     proc retrieve_decr_struct { id {cachemode CACHED} } {
       return [ retrieve_struct $id $cachemode 1 ]
     }
-    
+
     proc acquire_struct { id {incrref 1} {decrref 0} } {
         set result [ adlb::acquire_ref $id struct $incrref $decrref ]
         debug "acquire_struct: <$id>=$result"
         return $result
     }
-    
+
     proc acquire_subscript { id sub type {incrref 1} {decrref 0} } {
         set result [ adlb::acquire_sub_ref $id $sub $type \
                      $incrref $decrref ]
@@ -515,7 +515,7 @@ namespace eval turbine {
     # usage: container_insert <id> <subscript> <member> <type> [<drops>]
     # @param drops = 0 by default
     proc container_insert { id subscript member type {drops 0} } {
-        log "insert: <$id>\[$subscript\]=<$member>"
+        log "insert: <$id>\[\"$subscript\"\]=<$member>"
         adlb::insert $id $subscript $member $type $drops
     }
 

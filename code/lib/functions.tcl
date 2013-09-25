@@ -374,13 +374,32 @@ namespace eval turbine {
         exec $command $values
     }
 
+    # o = i;
+    proc copy_integer { o i } {
+        rule $i "copy_integer_body $o $i" name "copy-$o-$i"
+    }
+    proc copy_integer_body { o i } {
+        set i_value [ retrieve_decr_integer $i ]
+        set o_value $i_value
+        store_integer $o $o_value
+    }
+
+    # o = i;
+    proc copy_float { o i } {
+        rule $i "copy_float_body $o $i" name "copy-$o-$i"
+    }
+    proc copy_float_body { o i } {
+        set i_value [ retrieve_decr_float $i ]
+        set o_value $i_value
+        store_float $o $o_value
+    }
+
     # o = i.  Void has no value, so this just makes sure that
     #         they close sequentially
     proc copy_void { o i } {
         rule $i "copy_void_body $o $i" name "copy-$o-$i"
     }
     proc copy_void_body { o i } {
-        log "copy_void $i => $o"
         store_void $o
         read_refcount_decr $i
     }
@@ -391,7 +410,6 @@ namespace eval turbine {
     }
     proc copy_string_body { o i } {
         set i_value [ retrieve_decr_string $i ]
-        log "copy $i_value => $i_value"
         store_string $o $i_value
     }
 
@@ -401,7 +419,6 @@ namespace eval turbine {
     }
     proc copy_blob_body { o i } {
         set i_value [ retrieve_decr_blob $i ]
-        log "copy $i_value => $i_value"
         store_blob $o $i_value
         free_blob $i
     }

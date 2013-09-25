@@ -25,7 +25,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         rule "$a $b" "plus_integer_body $c $a $b" \
-            name "plus-$a-$b" 
+            name "plus-$a-$b"
     }
 
     proc plus_integer_body { c a b } {
@@ -41,7 +41,7 @@ namespace eval turbine {
         set b [ lindex $inputs 1 ]
 
         rule "$a $b" "plus_float_body $c $a $b" \
-            name "plus-$a-$b" 
+            name "plus-$a-$b"
     }
 
     proc plus_float_body { c a b } {
@@ -60,7 +60,7 @@ namespace eval turbine {
         set b [ lindex $inputs 1 ]
 
         rule  "$a $b" "minus_integer_body $c $a $b" \
-            name "minus-$a-$b" 
+            name "minus-$a-$b"
     }
     proc minus_integer_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
@@ -76,7 +76,7 @@ namespace eval turbine {
         set b [ lindex $inputs 1 ]
 
         rule "$a $b" "minus_float_body $c $a $b" \
-            name "minus-$a-$b" 
+            name "minus-$a-$b"
     }
     proc minus_float_body {c a b } {
         set a_value [ retrieve_decr_float $a ]
@@ -91,7 +91,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         rule  "$a $b" "multiply_integer_body $c $a $b" \
-            name "mult-$a-$b" 
+            name "mult-$a-$b"
     }
     proc multiply_integer_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
@@ -107,7 +107,7 @@ namespace eval turbine {
         set b [ lindex $inputs 1 ]
 
         rule "$a $b" "multiply_float_body $c $a $b" \
-            name "mult-$a-$b" 
+            name "mult-$a-$b"
     }
     proc multiply_float_body { c a b } {
         set a_value [ retrieve_decr_float $a ]
@@ -123,7 +123,7 @@ namespace eval turbine {
         set b [ lindex $inputs 1 ]
 
         rule "$a $b" "divide_integer_body $c $a $b" \
-            name "div-$a-$b" 
+            name "div-$a-$b"
     }
     proc divide_integer_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
@@ -141,7 +141,7 @@ namespace eval turbine {
         set b [ lindex $inputs 1 ]
 
         rule "$a $b"  "divide_float_body $c $a $b" \
-            name "div-$a-$b" 
+            name "div-$a-$b"
     }
     proc divide_float_body { c a b } {
         set a_value [ retrieve_decr_float $a ]
@@ -153,7 +153,7 @@ namespace eval turbine {
 
     # c = -a;
     proc negate_integer { c a } {
-        rule $a "negate_integer_body $c $a" name "negate-$a" 
+        rule $a "negate_integer_body $c $a" name "negate-$a"
     }
 
     proc negate_integer_body { c a } {
@@ -165,7 +165,7 @@ namespace eval turbine {
 
     # c = -a;
     proc negate_float { c a } {
-        rule $a "negate_float_body $c $a" name "negate-$a" 
+        rule $a "negate_float_body $c $a" name "negate-$a"
     }
 
     proc negate_float_body { c a } {
@@ -180,7 +180,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "$a $b" "mod_integer_body $c $a $b" name "mod-$a-$b" 
+        rule "$a $b" "mod_integer_body $c $a $b" name "mod-$a-$b"
     }
 
     proc mod_integer_body { c a b } {
@@ -221,33 +221,11 @@ namespace eval turbine {
         return [ expr {$sign * ( abs($a) % abs($b) )} ]
     }
 
-    # o = i;
-    proc copy_integer { o i } {
-        rule $i "copy_integer_body $o $i" name "copy-$o-$i" 
-    }
-    proc copy_integer_body { o i } {
-        set i_value [ retrieve_decr_integer $i ]
-        set o_value $i_value
-        log "copy $i_value => $o_value"
-        store_integer $o $o_value
-    }
-
-    # o = i;
-    proc copy_float { o i } {
-        rule $i "copy_float_body $o $i" name "copy-$o-$i" 
-    }
-    proc copy_float_body { o i } {
-        set i_value [ retrieve_decr_float $i ]
-        set o_value $i_value
-        log "copy $i_value => $o_value"
-        store_float $o $o_value
-    }
-
     proc max_integer { c inputs } {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "$a $b" "max_integer_body $c $a $b" name "max-$a-$b" 
+        rule "$a $b" "max_integer_body $c $a $b" name "max-$a-$b"
     }
 
     proc max_integer_body { c a b } {
@@ -262,7 +240,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "$a $b" "min_integer_body $c $a $b" name "min-$a-$b" 
+        rule "$a $b" "min_integer_body $c $a $b" name "min-$a-$b"
     }
 
     proc min_integer_body { c a b } {
@@ -277,7 +255,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "$a $b" "max_float_body $c $a $b" name "max-$a-$b" 
+        rule "$a $b" "max_float_body $c $a $b" name "max-$a-$b"
     }
 
     proc max_float_body { c a b } {
@@ -292,7 +270,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "$a $b" "min_float_body $c $a $b" name "min-$a-$b" 
+        rule "$a $b" "min_float_body $c $a $b" name "min-$a-$b"
     }
 
     proc min_float_body { c a b } {
@@ -315,7 +293,7 @@ namespace eval turbine {
     }
 
     proc ceil { c a } {
-        rule $a "ceil_body $c $a" name "round-$a" 
+        rule $a "ceil_body $c $a" name "round-$a"
     }
 
     proc ceil_body { c a } {
@@ -326,7 +304,7 @@ namespace eval turbine {
     }
 
     proc round { c a } {
-        rule $a "round_body $c $a" name "round-$a" 
+        rule $a "round_body $c $a" name "round-$a"
     }
 
     proc round_body { c a } {
@@ -337,7 +315,7 @@ namespace eval turbine {
     }
 
     proc itof { c a } {
-        rule $a "itof_body $c $a" name "itf-$a" 
+        rule $a "itof_body $c $a" name "itf-$a"
     }
 
     proc itof_body { c a } {
@@ -358,7 +336,7 @@ namespace eval turbine {
     }
 
     proc exp { c a } {
-        rule $a "exp_body $c $a" name "exp-$a" 
+        rule $a "exp_body $c $a" name "exp-$a"
     }
 
     proc exp_body { c a } {
@@ -369,7 +347,7 @@ namespace eval turbine {
     }
 
     proc sqrt { c a } {
-        rule $a "sqrt_body $c $a" name "sqrt-$a" 
+        rule $a "sqrt_body $c $a" name "sqrt-$a"
     }
 
     proc sqrt_body { c a } {
@@ -380,7 +358,7 @@ namespace eval turbine {
     }
 
     proc abs_float { c a } {
-        rule $a "abs_float_body $c $a" name "abs_float-$a" 
+        rule $a "abs_float_body $c $a" name "abs_float-$a"
     }
 
     proc abs_float_body { c a } {
@@ -391,7 +369,7 @@ namespace eval turbine {
     }
 
     proc abs_integer { c a } {
-        rule $a "abs_integer_body $c $a" name "abs_integer-$a" 
+        rule $a "abs_integer_body $c $a" name "abs_integer-$a"
     }
 
     proc abs_integer_body { c a } {
@@ -405,7 +383,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
         rule "$a $b" "pow_integer_body $c $a $b" \
-            name "pow-$a-$b" 
+            name "pow-$a-$b"
     }
     proc pow_integer_body { c a b } {
         set a_value [ retrieve_decr_integer $a ]
@@ -429,7 +407,7 @@ namespace eval turbine {
         set a [ lindex $inputs 0 ]
         set b [ lindex $inputs 1 ]
 
-        rule "$a $b" "pow_float_body $c $a $b" name "pow-$a-$b" 
+        rule "$a $b" "pow_float_body $c $a $b" name "pow-$a-$b"
     }
     proc pow_float_body { c a b } {
         set a_value [ retrieve_decr_float $a ]
@@ -441,7 +419,7 @@ namespace eval turbine {
 
     # checks to see if float i is NaN, sets o to true or false accordingly
     proc is_nan { o i } {
-        rule $i "is_nan_body $o $i" name "is_nan-$o-$i" 
+        rule $i "is_nan_body $o $i" name "is_nan-$o-$i"
     }
     proc is_nan_body { o i } {
       set i_value [ retrieve_decr_float $i ]

@@ -1140,11 +1140,6 @@ ADLB_Exists_Impl(ClientData cdata, Tcl_Interp *interp,
   {
     subscript = Tcl_GetString(objv[argpos++]);
     TCL_CONDITION(subscript != NULL, "bad subscript argument");
-    DEBUG_ADLB("adlb::exists <%"PRId64">[%s]", id, subscript);
-  }
-  else
-  {
-    DEBUG_ADLB("adlb::exists <%"PRId64">", id);
   }
 
   adlb_refcounts decr = ADLB_NO_RC;
