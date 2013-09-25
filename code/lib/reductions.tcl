@@ -37,12 +37,14 @@ namespace eval turbine {
             "turbine::array_min_float_body $result $container"
     }
     proc array_min_float_body { result container } {
+        log "array_min_float: <$container>"
         set m [ expr Inf ]
         foreach i [ container_list $container ] {
             set td [ container_lookup $container $i ]
             set v  [ retrieve_decr_float $td ]
             if { $v < $m } { set m $v }
         }
+        log "array_min_float: <$container> => $m"
         store_float $result $m
     }
 
