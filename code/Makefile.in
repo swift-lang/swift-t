@@ -442,6 +442,7 @@ distclean:: clean
 	@rm -fv Makefile **/*.mk
 	@rm -fv src/turbine/turbine-version.h
 	@rm -fv scripts/turbine-config.sh
+	@rm -fv system-libs.txt
 
 .PHONY: clean install package test_results
 
