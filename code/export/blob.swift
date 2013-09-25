@@ -38,6 +38,9 @@
 (float f[]) floats_from_blob(blob b) "turbine" "0.0.2" "floats_from_blob";
 @pure @dispatch=WORKER
 (blob o) blob_read(file f) "turbine" "0.0.2" "blob_read";
+@pure @dispatch=WORKER
+(file f) blob_write(blob o) "turbine" "0.0.2"
+  [ "turbine::blob_write_local <<f>> <<o>>" ];
 @pure
 (blob o) blob_zeroes_float(int n)
 "turbine" "0.2.0"

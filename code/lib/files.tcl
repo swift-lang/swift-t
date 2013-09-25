@@ -55,29 +55,30 @@ namespace eval turbine {
     # mapped and unmapped output files.
     # Will make sure that output files are mapped before executing cmd
     # msg: log msg
-    # waitfor: list of regular
+    # waitfor: list of regular inputs
     # outfiles: output files, will wait correctly for these
     # infiles: input files, will wait correctly for these
     # target: Where to send work e.g. $turbine::WORK
     # cmd: command to execute when closed
     proc rule_file_helper { msg waitfor outfiles infiles target cmd } {
-      foreach outfile $outfiles {
-        if { [ is_file_mapped $outfile ] } {
-          # Wait for mapping to be ready
-	  set outpath [ get_file_path $outfile ]
-          lappend waitfor $outpath
-        } else {
-          # Assign temporary mapping
-          init_unmapped $outfile
-        }
-      }
 
-      foreach infile $infiles {
-        # Wait for both path and status
-	set inpath [ get_file_path $infile ]
-	set instatus [ get_file_status $infile ]
-        lappend waitfor $inpath $instatus
-      }
+        foreach outfile $outfiles {
+            if { [ is_file_mapped $outfile ] } {
+                # Wait for mapping to be ready
+                set outpath [ get_file_path $outfile ]
+                lappend waitfor $outpath
+            } else {
+                # Assign temporary mapping
+                init_unmapped $outfile
+            }
+        }
+
+        foreach infile $infiles {
+            # Wait for both path and status
+            set inpath [ get_file_path $infile ]
+            set instatus [ get_file_status $infile ]
+            lappend waitfor $inpath $instatus
+        }
         rule $waitfor $cmd  name $msg target $target
     }
 
@@ -362,6 +363,15 @@ namespace eval turbine {
         log "blob_read: length: $length"
 	store_blob $result [ list $ptr $length ]
         blobutils_destroy $blob
+    }
+
+    proc blob_write_local { local_file_name blob } {
+        set ptr    [ lindex $blob 0 ]
+        set length [ lindex $blob 1 ]
+        set b [ blobutils_create $ptr $length ]
+        upvar $local_file_name local_file
+        blobutils_write [ local_file_path $local_file ] $b
+        delete_turbine_blob $b
     }
 
     proc file_lines { result input } {
