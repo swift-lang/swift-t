@@ -26,9 +26,8 @@ import exm.stc.common.util.Pair;
 import exm.stc.ic.opt.InitVariables.InitState;
 import exm.stc.ic.opt.Semantics;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
+import exm.stc.ic.opt.valuenumber.ComputedValue.ArgOrCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
-import exm.stc.ic.opt.valuenumber.ComputedValue.RecCV;
-import exm.stc.ic.tree.Opcode;
 import exm.stc.ic.tree.ICTree.GlobalConstants;
 
 /**
@@ -56,14 +55,14 @@ class CongruentSets {
    *  A variable starts off as part of one-element set (itself)
    * @return
    */
-  private final Map<RecCV, Arg> canonical;
+  private final Map<ArgOrCV, Arg> canonical;
   
   /**
    * Store reverse direction links from canonical. Must manually traverse
    * parents.  Note that links aren't deleted, so the presence of a link
    * from X -> Y in here doesn't imply that X is still canonical.
    */
-  private final MultiMap<Arg, RecCV> canonicalInv;
+  private final MultiMap<Arg, ArgOrCV> canonicalInv;
   
   /**
    * Track sets that were merged into this one.  Allows
@@ -76,7 +75,7 @@ class CongruentSets {
    * go through and recanonicalize them if needed.
    * Must manually traverse parents to find all.
    */
-  private final MultiMap<Arg, RecCV> componentIndex;
+  private final MultiMap<Arg, ArgOrCV> componentIndex;
 
   /**
    * Track variables which are not accessible from parent
@@ -115,10 +114,10 @@ class CongruentSets {
       CongruentSets parent, Set<Arg> contradictions) {
     this.congType = congType;
     this.parent = parent;
-    this.canonical = new HashMap<RecCV, Arg>();
-    this.canonicalInv = new MultiMap<Arg, RecCV>();
+    this.canonical = new HashMap<ArgOrCV, Arg>();
+    this.canonicalInv = new MultiMap<Arg, ArgOrCV>();
     this.mergedInto = new MultiMap<Arg, Arg>();
-    this.componentIndex = new MultiMap<Arg, RecCV>();
+    this.componentIndex = new MultiMap<Arg, ArgOrCV>();
     this.inaccessible = new HashSet<Var>();
     this.contradictions = contradictions;
     this.mergeQueue = new LinkedList<ToMerge>();
@@ -146,8 +145,8 @@ class CongruentSets {
   public void printTraceInfo(Logger logger) {
     if (logger.isTraceEnabled()) {
       // Print congruence sets nicely
-      MultiMap<Arg, RecCV> sets = activeSets();
-      for (Entry<Arg, List<RecCV>> e: sets.entrySet()) {
+      MultiMap<Arg, ArgOrCV> sets = activeSets();
+      for (Entry<Arg, List<ArgOrCV>> e: sets.entrySet()) {
         assert(e.getValue().size() > 0);
         if (e.getValue().size() == 1) {
           // Should be self-reference, don't print
@@ -192,12 +191,12 @@ class CongruentSets {
    * canonical and canonicalInv  
    * @return
    */
-  private MultiMap<Arg, RecCV> activeSets() {
-    HashMap<RecCV, Arg> effective = new HashMap<RecCV, Arg>();
-    MultiMap<Arg, RecCV> res = new MultiMap<Arg, RecCV>();
+  private MultiMap<Arg, ArgOrCV> activeSets() {
+    HashMap<ArgOrCV, Arg> effective = new HashMap<ArgOrCV, Arg>();
+    MultiMap<Arg, ArgOrCV> res = new MultiMap<Arg, ArgOrCV>();
     CongruentSets curr = this;
     do {
-      for (Entry<RecCV, Arg> e: curr.canonical.entrySet()) {
+      for (Entry<ArgOrCV, Arg> e: curr.canonical.entrySet()) {
         // Seen in an inner scope, not active
         if (!effective.containsKey(e.getKey())) {
           res.put(e.getValue(), e.getKey());
@@ -255,7 +254,7 @@ class CongruentSets {
    */
   public Arg findCanonical(Arg arg) {
     assert(arg != null);
-    Arg result = findCanonical(new RecCV(arg));
+    Arg result = findCanonical(new ArgOrCV(arg));
     assert(result != null) : "Could not find canonical for " + arg;
     return result;
   }
@@ -270,7 +269,7 @@ class CongruentSets {
    * will update structures to reflect that it's a single-element set.
    * @return canonical representative of congruence set, maybe null 
    */
-  public Arg findCanonical(RecCV val) {
+  public Arg findCanonical(ArgOrCV val) {
     Arg canon = null;
     CongruentSets curr = this;
 
@@ -314,7 +313,7 @@ class CongruentSets {
     // since we don't want them to be used in parent or sibling contexts
     CongruentSets curr = this;
     do {
-      for (RecCV setMember: curr.canonicalInv.get(arg)) {
+      for (ArgOrCV setMember: curr.canonicalInv.get(arg)) {
         if (setMember.isArg() && !setMember.arg().equals(arg)) {
           if (logger.isTraceEnabled()) {
             logger.trace("Contradiction implication " + arg + " => " +
@@ -328,7 +327,7 @@ class CongruentSets {
     // Propagate contradiction to components
     curr = this;
     do {
-      for (RecCV cv: curr.componentIndex.get(arg)) {
+      for (ArgOrCV cv: curr.componentIndex.get(arg)) {
         if (logger.isTraceEnabled()) {
           logger.trace("Contradiction implication " + arg + " => " +
                         cv);
@@ -351,7 +350,7 @@ class CongruentSets {
    * @param val
    * @return
    */
-  private boolean containsContradictoryArg(RecCV val) {
+  private boolean containsContradictoryArg(ArgOrCV val) {
     if (val.isArg()) {
       // Check for 
       if (contradictions.contains(findCanonical(val.arg()))) {
@@ -359,8 +358,8 @@ class CongruentSets {
       }
     } else {
       assert(val.isCV());
-      for (RecCV input: val.cv().getInputs()) {
-        if (containsContradictoryArg(input)) {
+      for (Arg input: val.cv().getInputs()) {
+        if (contradictions.contains(findCanonical(input))) {
           return true;
         }
       }
@@ -373,25 +372,25 @@ class CongruentSets {
    * @param arg
    * @return
    */
-  public List<RecCV> findCongruentValues(Arg arg) {
+  public List<ArgOrCV> findCongruentValues(Arg arg) {
     CongruentSets curr = this;
     Arg canonical = findCanonical(arg);
     if (contradictions.contains(arg)) {
       return Collections.emptyList();
     }
 
-    List<RecCV> res = null;
+    List<ArgOrCV> res = null;
     
     if (!arg.equals(canonical)) {
       // Canonical is different to arg
-      res = new ArrayList<RecCV>();
-      res.add(new RecCV(canonical));
+      res = new ArrayList<ArgOrCV>();
+      res.add(new ArgOrCV(canonical));
     }
     
     do {
-      for (RecCV cv: curr.canonicalInv.get(canonical)) {
+      for (ArgOrCV cv: curr.canonicalInv.get(canonical)) {
         if (res == null) {
-          res = new ArrayList<RecCV>();
+          res = new ArrayList<ArgOrCV>();
         }
         res.add(cv);
       }
@@ -410,14 +409,14 @@ class CongruentSets {
    * @param val
    * @param canonicalVal
    */
-  public void addToSet(GlobalConstants consts, RecCV val, Arg canonicalVal) {
+  public void addToSet(GlobalConstants consts, ArgOrCV val, Arg canonicalVal) {
     assert(val != null);
     assert(canonicalVal != null);
     addSetEntry(val, canonicalVal);
     processQueues(consts);
   }
 
-  private void addSetEntry(RecCV val, Arg canonicalVal) {
+  private void addSetEntry(ArgOrCV val, Arg canonicalVal) {
     logger.trace("Add " + val + " to " + canonicalVal);
     setCanonicalEntry(val, canonicalVal);
     if (containsContradictoryArg(val)) {
@@ -427,8 +426,7 @@ class CongruentSets {
       markContradiction(canonicalVal);
     }
     if (val.isCV()) {
-      ComputedValue<RecCV> val2 = val.cv();
-      checkForRecanonicalization(canonicalVal, val2);
+      checkForRecanonicalization(canonicalVal, val.cv());
     }
   }
 
@@ -499,13 +497,13 @@ class CongruentSets {
            oldCanon + ":" + oldCanon.type() +
             newCanon + " " + newCanon.type();  
     
-    // Handle situation where oldCanonical is part of another RecCV 
+    // Handle situation where oldCanonical is part of another ArgOrCV 
    updateCanonicalComponents(consts, oldCanon, newCanon);
     
     // Find all the references to old and add new entry pointing to new
     CongruentSets curr = this;
     do {
-      for (RecCV val: curr.canonicalInv.get(oldCanon)) {
+      for (ArgOrCV val: curr.canonicalInv.get(oldCanon)) {
         Arg canonicalCheck = findCanonical(val);
         // Confirm that oldCanonical was actually the canonical one
         // This should only be necessary on recursive calls when
@@ -535,10 +533,10 @@ class CongruentSets {
     logger.trace("Done merging " + oldCanon + " into " + newCanon);
   }
 
-  public Iterable<RecCV> availableThisScope() {
+  public Iterable<ArgOrCV> availableThisScope() {
     // TODO: will want to translate args back to canonical for parent scope
-    List<RecCV> avail = new ArrayList<RecCV>();
-    for (List<RecCV> vals: canonicalInv.values()) {
+    List<ArgOrCV> avail = new ArrayList<ArgOrCV>();
+    for (List<ArgOrCV> vals: canonicalInv.values()) {
       avail.addAll(vals);
     }
     return avail;
@@ -572,15 +570,15 @@ class CongruentSets {
     do {
       logger.trace("Iterating over components of: " + oldComponent + ": " +
                     curr.componentIndex.get(oldComponent));
-      for (RecCV outerCV: curr.componentIndex.get(oldComponent)) {
+      for (ArgOrCV outerCV: curr.componentIndex.get(oldComponent)) {
         assert(outerCV.isCV());
-        RecCV newOuterCV = outerCV;
+        ArgOrCV newOuterCV = outerCV;
         if (newComponent != null &&
             outerCV.cv().canSubstituteInputs(congType)) {
           // First substitute the inputs
-          List<RecCV> newInputs = replaceInput(
+          List<Arg> newInputs = replaceInput(
               outerCV.cv().getInputs(), oldComponent, newComponent);
-          newOuterCV = new RecCV(outerCV.cv().substituteInputs(newInputs));
+          newOuterCV = outerCV.substituteInputs(newInputs);
         }
         // Then do other canonicalization
         newOuterCV = canonicalize(consts, newOuterCV);
@@ -622,20 +620,17 @@ class CongruentSets {
             }
           }
         }
-        
-        // TODO: we don't have true recursive CVs now
-        //changeCanonical(outerCV, newOuterCV);
       }
       curr = curr.parent;
     } while (curr != null);
   }
 
-  private List<RecCV> replaceInput(List<RecCV> oldInputs,
+  private List<Arg> replaceInput(List<Arg> oldInputs,
       Arg inputToReplace, Arg newInput) {
-    List<RecCV> newInputs = new ArrayList<RecCV>(oldInputs.size());
-    for (RecCV oldInput: oldInputs) {
-      if (oldInput.isArg() && oldInput.arg().equals(inputToReplace)) {
-        newInputs.add(new RecCV(newInput));
+    List<Arg> newInputs = new ArrayList<Arg>(oldInputs.size());
+    for (Arg oldInput: oldInputs) {
+      if (oldInput.equals(inputToReplace)) {
+        newInputs.add(newInput);
       } else {
         newInputs.add(oldInput);
       }
@@ -643,7 +638,7 @@ class CongruentSets {
     return newInputs;
   }
 
-  private void setCanonicalEntry(RecCV val, Arg canonicalVal) {
+  private void setCanonicalEntry(ArgOrCV val, Arg canonicalVal) {
     canonical.put(val, canonicalVal);
     canonicalInv.put(canonicalVal, val);
   }
@@ -653,7 +648,7 @@ class CongruentSets {
    * happens, need to go through and replace old Arg with new
    * canonical Arg.
    */
-  private void addInputIndex(Arg newInput, RecCV newCV) {
+  private void addInputIndex(Arg newInput, ArgOrCV newCV) {
     if (Congruences.isConst(newInput)) {
       // Don't need to track constants as they won't be replaced
       return;
@@ -664,17 +659,17 @@ class CongruentSets {
     componentIndex.put(newInput, newCV);
   }
 
-  private void checkCanonicalInv(HashMap<RecCV, Arg> inEffect,
-      MultiMap<Arg, RecCV> inEffectInv) {
+  private void checkCanonicalInv(HashMap<ArgOrCV, Arg> inEffect,
+      MultiMap<Arg, ArgOrCV> inEffectInv) {
     CongruentSets curr;
     // Verify all entries in CanonicalInv for active keys are correct
     curr = this;
     do {
-      for (Entry<Arg, List<RecCV>> e: curr.canonicalInv.entrySet()) {
+      for (Entry<Arg, List<ArgOrCV>> e: curr.canonicalInv.entrySet()) {
         Arg key1 = e.getKey();
         if (inEffectInv.containsKey(key1)) {
           // Currently in effect
-          for (RecCV val: e.getValue()) {
+          for (ArgOrCV val: e.getValue()) {
             Arg key2 = inEffect.get(val);
             assert(key2 != null) : "No canonical entry for " + val +
                                    " in set " + key1;
@@ -683,7 +678,7 @@ class CongruentSets {
           }
         } else {
           // Check it was swallowed up into another set
-          Arg newKey = inEffect.get(new RecCV(key1));
+          Arg newKey = inEffect.get(new ArgOrCV(key1));
           assert(newKey != null && !newKey.equals(key1)) :
             " Expected " + key1 + " to be part of another set, but " +
             " was part of " + newKey;
@@ -701,29 +696,29 @@ class CongruentSets {
    * @param resVal
    * @return
    */
-  public RecCV canonicalize(GlobalConstants consts, ArgCV origVal) {
+  public ArgOrCV canonicalize(GlobalConstants consts, ArgCV origVal) {
     // First replace the args with whatever current canonical values,
     // then perform additional canonicalization
     return canonicalize(consts, canonicalizeInputs(origVal));
   }
     
 
-  private RecCV canonicalize(GlobalConstants consts, RecCV result) {
+  private ArgOrCV canonicalize(GlobalConstants consts, ArgOrCV result) {
 
     if (result.isCV()) {
       // Then do additional transformations such as constant folding
-      ComputedValue<RecCV> resultValue = result.cv();
+      ComputedValue<Arg> resultValue = result.cv();
       if (resultValue.isCopy() || resultValue.isAlias()) {
         // Strip out copy/alias operations, since we can use value directly
-        result = result.cv().getInput(0);
+        result = new ArgOrCV(resultValue.getInput(0));
       } else if (resultValue.isDerefCompVal()) {
-        RecCV resolvedRef = tryResolveRef(resultValue);
+        ArgOrCV resolvedRef = tryResolveRef(resultValue);
         if (resolvedRef != null) {
           result = resolvedRef;
         }
       } else if (constFoldEnabled &&
                  this.congType == CongruenceType.VALUE) {
-        RecCV constantFolded = tryConstantFold(resultValue);
+        ArgOrCV constantFolded = tryConstantFold(resultValue);
         if (constantFolded != null) {
           result = constantFolded;
         }
@@ -744,37 +739,29 @@ class CongruentSets {
    * @param cv
    * @return
    */
-  private RecCV canonicalizeInputs(ArgCV cv) {
+  private ArgOrCV canonicalizeInputs(ArgCV cv) {
     List<Arg> inputs = cv.getInputs();
-    List<RecCV> newInputs = new ArrayList<RecCV>(inputs.size());
+    List<Arg> newInputs = new ArrayList<Arg>(inputs.size());
     for (Arg input: inputs) {
       // Canonicalize inputs to get this into a canonical form
       
       if (cv.canSubstituteInputs(congType)) {
-        Arg canonicalInput = findCanonical(new RecCV(input));
-        if (canonicalInput != null) {
-          // Add canonical
-          newInputs.add(new RecCV(canonicalInput));
-        } else {
-          // input is only representative of class
-          // TODO: should support RecCVs as inputs
-          newInputs.add(new RecCV(input));
-          throw new STCRuntimeError("Not yet supported: ComputedValues " +
-                                    "in ComputedValues");
-        }
+        Arg canonicalInput = findCanonical(new ArgOrCV(input));
+        assert(canonicalInput != null);
+        // Add canonical
+        newInputs.add(canonicalInput);
       } else {
         // Not allowed to substitute, e.g. for filenames where we don't
         // have reference transparency for args
-        newInputs.add(new RecCV(input));
+        newInputs.add(input);
       }
     }
   
-    RecCV newCV = new RecCV(cv.op, cv.subop, newInputs);
+    ArgOrCV newCV = new ArgOrCV(cv.op, cv.subop, newInputs);
     if (findCanonical(newCV) == null) {
       // Add to index if not present
-      for (RecCV newInput: newInputs) {
-        assert(newInput.isArg());
-        addInputIndex(newInput.arg(), newCV);
+      for (Arg newInput: newInputs) {
+        addInputIndex(newInput, newCV);
       }
     }
     return newCV;
@@ -785,7 +772,7 @@ class CongruentSets {
    * @param val
    * @return
    */
-  private RecCV tryConstantFold(ComputedValue<RecCV> val) {
+  private ArgOrCV tryConstantFold(ComputedValue<Arg> val) {
     assert(constFoldEnabled);
     assert(this.congType == CongruenceType.VALUE);
     return ConstantFolder.constantFold(logger, this, val);
@@ -798,15 +785,14 @@ class CongruentSets {
    * @param result
    * @return
    */
-  private RecCV tryReplaceGlobalConstant(GlobalConstants consts, RecCV result) {
+  private ArgOrCV tryReplaceGlobalConstant(GlobalConstants consts, ArgOrCV result) {
     assert(constShareEnabled);
-    ComputedValue<RecCV> val = result.cv();
+    ComputedValue<Arg> val = result.cv();
     if (val.op().isAssign()) {
-      RecCV assignedVal = val.getInput(0);
-      if (assignedVal.isArg() && assignedVal.arg().isConstant()) {
-        Arg constVal = assignedVal.arg();
-        Var globalConst = consts.getOrCreateByVal(constVal);
-        result = new RecCV(globalConst.asArg());
+      Arg assignedVal = val.getInput(0);
+      if (assignedVal.isConstant()) {
+        Var globalConst = consts.getOrCreateByVal(assignedVal);
+        result = new ArgOrCV(globalConst.asArg());
       }
     }
     return result;
@@ -818,17 +804,14 @@ class CongruentSets {
    * @param val
    * @return
    */
-  private RecCV tryResolveRef(ComputedValue<RecCV> val) {
+  private ArgOrCV tryResolveRef(ComputedValue<Arg> val) {
     assert(val.isDerefCompVal());
-    RecCV refV = val.getInput(0);
-    if (refV.isArg()) {
-      Arg ref = refV.arg();
-      for (RecCV v: findCongruentValues(ref)) {
-        if (v.isCV()) {
-          ComputedValue<RecCV> v2 = v.cv();
-          if (v2.isArrayMemberRef()) {
-            return new RecCV(v2.derefArrayMemberRef());
-          }
+    Arg ref = val.getInput(0);
+    for (ArgOrCV v: findCongruentValues(ref)) {
+      if (v.isCV()) {
+        ArgCV v2 = v.cv();
+        if (v2.isArrayMemberRef()) {
+          return new ArgOrCV(ComputedValue.derefArrayMemberRef(v2));
         }
       }
     }
@@ -842,16 +825,16 @@ class CongruentSets {
    * @param val
    */
   private void checkForRecanonicalization(Arg canonicalVal,
-      ComputedValue<RecCV> val) {
+      ComputedValue<Arg> val) {
     if (val.op().isRetrieve() && canonicalVal.isConstant()) {
       // If we found out the value of a future, add to queue for
       // later processing
-      Arg future = val.getInput(0).arg();
+      Arg future = val.getInput(0);
       assert(future.isVar());
       recanonicalizeQueue.add(future);
     } else if (val.isArrayMemberRef()) {
       // Might be able to dereference
-      Arg arrayMemberRef = val.getInput(0).arg();
+      Arg arrayMemberRef = val.getInput(0);
       recanonicalizeQueue.add(arrayMemberRef);
     }
   }
@@ -908,7 +891,7 @@ class CongruentSets {
     public Arg get(Object key) {
       assert(key instanceof Var);
       Var v = (Var)key;
-      RecCV cv = new RecCV(v.asArg());
+      ArgOrCV cv = new ArgOrCV(v.asArg());
       Arg replace = null;
       CongruentSets curr = CongruentSets.this;
       List<CongruentSets> visited = new ArrayList<CongruentSets>();

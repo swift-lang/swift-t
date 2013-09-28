@@ -10,7 +10,7 @@ import exm.stc.common.lang.OpEvaluator;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.TernaryLogic.Ternary;
-import exm.stc.ic.opt.valuenumber.ComputedValue.RecCV;
+import exm.stc.ic.opt.valuenumber.ComputedValue.ArgOrCV;
 import exm.stc.ic.tree.ICInstructions.CommonFunctionCall;
 import exm.stc.ic.tree.Opcode;
 
@@ -27,8 +27,8 @@ public class ConstantFolder {
    *         one of these stored in a future.  Returns null if not
    *         successful. 
    */
-  public static RecCV constantFold(Logger logger, CongruentSets sets,
-                                   ComputedValue<RecCV> val) {
+  public static ArgOrCV constantFold(Logger logger, CongruentSets sets,
+                                   ComputedValue<Arg> val) {
     switch (val.op) {
       case ASYNC_OP:
       case LOCAL_OP:
@@ -51,11 +51,11 @@ public class ConstantFolder {
   }
 
 
-  private static RecCV foldBuiltinOp(Logger logger, CongruentSets sets,
-                                     ComputedValue<RecCV> val) {
+  private static ArgOrCV foldBuiltinOp(Logger logger, CongruentSets sets,
+                                     ComputedValue<Arg> val) {
     List<Arg> inputs;
     if (val.op == Opcode.LOCAL_OP) {
-      inputs = convertToArgs(val);
+      inputs = val.inputs;
     } else {
       assert(val.op == Opcode.ASYNC_OP);
       inputs = findFutureValues(sets, val);
@@ -79,29 +79,27 @@ public class ConstantFolder {
   }
   
 
-  private static RecCV foldIsMapped(ComputedValue<RecCV> val) {
-    RecCV fileCV = val.getInput(0);
-    if (fileCV.isArg()) {
-      assert(fileCV.arg().isVar());
-      Var file = fileCV.arg().getVar();
-      if (file.isMapped() != Ternary.MAYBE) {
-        Arg isMapped = Arg.createBoolLit(file.isMapped() == Ternary.TRUE);
-        return new RecCV(isMapped);
-      } 
+  private static ArgOrCV foldIsMapped(ComputedValue<Arg> val) {
+    Arg fileCV = val.getInput(0);
+    assert(fileCV.isVar());
+    Var file = fileCV.getVar();
+    if (file.isMapped() != Ternary.MAYBE) {
+      Arg isMapped = Arg.createBoolLit(file.isMapped() == Ternary.TRUE);
+      return new ArgOrCV(isMapped);
     }
     return null;
   }
 
 
-  private static RecCV foldFunctionCall(Logger logger, CongruentSets sets,
-      ComputedValue<RecCV> val) {
+  private static ArgOrCV foldFunctionCall(Logger logger, CongruentSets sets,
+      ComputedValue<Arg> val) {
     List<Arg> inputs;
     if (!CommonFunctionCall.canConstantFold(val)) {
       return null;
     }
     boolean usesValues = CommonFunctionCall.acceptsLocalValArgs(val.op);
     if (usesValues) {
-      inputs = convertToArgs(val);
+      inputs = val.inputs;
     } else {
       inputs = findFutureValues(sets, val);
     }
@@ -122,29 +120,15 @@ public class ConstantFolder {
    * @param constant
    * @return
    */
-  private static RecCV valFromArg(boolean futureResult, Arg constant) {
+  private static ArgOrCV valFromArg(boolean futureResult, Arg constant) {
     if (!futureResult) {
       // Can use directly
-      return new RecCV(constant);
+      return new ArgOrCV(constant);
     } else {
       // Record stored future
-      return new RecCV(Opcode.assignOpcode(constant.futureType()),
-                                    new RecCV(constant).asList());
+      return new ArgOrCV(Opcode.assignOpcode(constant.futureType()),
+                                             constant.asList());
     }
-  }
-
-  private static List<Arg> convertToArgs(ComputedValue<RecCV> val) {
-    for (RecCV arg: val.inputs) {
-      if (!arg.isArg()) {
-        return null;
-      }
-    }
-    
-    List<Arg> inputs = new ArrayList<Arg>(val.inputs.size());
-    for (RecCV arg: val.inputs) {
-      inputs.add(arg.arg());
-    }
-    return inputs;
   }
 
   /**
@@ -156,21 +140,18 @@ public class ConstantFolder {
    *      if we couldn't resolve to args.
    */
   private static List<Arg> findFutureValues(CongruentSets sets,
-                                            ComputedValue<RecCV> val) {
+                                            ComputedValue<Arg> val) {
     List<Arg> inputs = new ArrayList<Arg>(val.inputs.size());
-    for (RecCV arg: val.inputs) {
-      if (!arg.isArg()) {
-        return null;
-      }
-      if (arg.arg().isConstant()) {
+    for (Arg arg: val.inputs) {
+      if (arg.isConstant()) {
         // For some calling conventions, constants are used
-        inputs.add(arg.arg());
+        inputs.add(arg);
       } else {
         Arg storedConst = findValueOf(sets, arg);
         if (storedConst != null && storedConst.isConstant()) {
           inputs.add(storedConst);
         } else {
-          inputs.add(arg.arg());
+          inputs.add(arg);
         }
       }
     }
@@ -183,12 +164,12 @@ public class ConstantFolder {
    * @param arg
    * @return a value stored to the var, or null
    */
-  private static Arg findValueOf(CongruentSets sets, RecCV arg) {
-    assert(arg.arg().isVar()) : arg.arg();
+  private static Arg findValueOf(CongruentSets sets, Arg arg) {
+    assert(arg.isVar()) : arg;
     // Try to find constant load
-    Opcode retrieveOp = Opcode.retrieveOpcode(arg.arg().getVar());
+    Opcode retrieveOp = Opcode.retrieveOpcode(arg.getVar());
     assert(retrieveOp != null);
-    RecCV retrieveVal = new RecCV(retrieveOp, arg.asList());
+    ArgOrCV retrieveVal = new ArgOrCV(retrieveOp, arg.asList());
     return sets.findCanonical(retrieveVal);
   }
 

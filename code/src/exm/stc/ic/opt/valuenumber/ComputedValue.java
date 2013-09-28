@@ -303,16 +303,16 @@ public class ComputedValue<T> {
    * Convert a Array Member Ref to an Array Member value.
    * @return
    */
-  public ComputedValue<T> derefArrayMemberRef() {
-    assert(isArrayMemberRef());
+  public static ArgCV derefArrayMemberRef(ArgCV memRef) {
+    assert(memRef.isArrayMemberRef());
     Object newSubop;
-    if (subop.equals(REF_TO_ARRAY_NESTED)) {
+    if (memRef.subop.equals(REF_TO_ARRAY_NESTED)) {
       newSubop = ARRAY_NESTED;
     } else {
-      assert(subop.equals(REF_TO_ARRAY_CONTENTS));
+      assert(memRef.subop.equals(REF_TO_ARRAY_CONTENTS));
       newSubop = ARRAY_CONTENTS;
     }
-    return new ComputedValue<T>(Opcode.FAKE, newSubop, inputs);
+    return new ArgCV(Opcode.FAKE, newSubop, memRef.inputs);
   }
 
   public boolean isStructMember() {
@@ -368,30 +368,33 @@ public class ComputedValue<T> {
       super(op, subop, inputs);
     }
     
+    public ArgCV substituteInputs(List<Arg> newInputs) {
+      return new ArgCV(op, subop, newInputs);
+    }
   }
 
   /**
    * Tagged union for Arg or recursive ComputedValue 
    */
-  public static class RecCV {
-    public RecCV(ComputedValue<RecCV> cv) {
+  public static class ArgOrCV {
+    public ArgOrCV(ArgCV cv) {
       this.cv = cv;
       this.arg = null;
     }
     
-    public RecCV(Opcode op, Object subop, List<RecCV> inputs) {
-      this(new ComputedValue<RecCV>(op, subop, inputs));
+    public ArgOrCV(Opcode op, Object subop, List<Arg> inputs) {
+      this(new ArgCV(op, subop, inputs));
     }
     
-    public RecCV(Opcode op, List<RecCV> inputs) {
+    public ArgOrCV(Opcode op, List<Arg> inputs) {
       this(op, "", inputs);
     }
-    public RecCV(Arg arg) {
+    public ArgOrCV(Arg arg) {
       this.cv = null;
       this.arg = arg;
     }
 
-    private final ComputedValue<RecCV> cv;
+    private final ArgCV cv;
     private final Arg arg;
     
     public boolean isCV() {
@@ -402,7 +405,7 @@ public class ComputedValue<T> {
       return arg != null;
     }
     
-    public List<RecCV> asList() {
+    public List<ArgOrCV> asList() {
       return Collections.singletonList(this);
     }
     
@@ -410,7 +413,7 @@ public class ComputedValue<T> {
       return arg;
     }
     
-    public ComputedValue<RecCV> cv() {
+    public ArgCV cv() {
       return cv;
     }
     
@@ -438,10 +441,10 @@ public class ComputedValue<T> {
         return true;
       if (obj == null)
         return false;
-      if (!(obj instanceof RecCV))
+      if (!(obj instanceof ArgOrCV))
         throw new STCRuntimeError("Comparing " + this.getClass().getName() + 
                   " with " + obj.getClass().getName());
-      RecCV other = (RecCV) obj;
+      ArgOrCV other = (ArgOrCV) obj;
       if (arg != null) {
         if (other.arg == null) {
           return false;
@@ -454,6 +457,10 @@ public class ComputedValue<T> {
         }
         return cv.equals(other.cv);
       }
+    }
+
+    public ArgOrCV substituteInputs(List<Arg> newInputs) {
+      return new ArgOrCV(cv.substituteInputs(newInputs));
     }
   }
 }

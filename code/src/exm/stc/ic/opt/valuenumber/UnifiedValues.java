@@ -23,7 +23,7 @@ import exm.stc.common.util.Sets;
 import exm.stc.ic.opt.OptUtil;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
-import exm.stc.ic.opt.valuenumber.ComputedValue.RecCV;
+import exm.stc.ic.opt.valuenumber.ComputedValue.ArgOrCV;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsValCopy;
@@ -292,7 +292,7 @@ public class UnifiedValues {
     List<ArgCV> allBranchCVs = new ArrayList<ArgCV>();
     Congruences firstState = branchStates.get(0);
     // iterate over values stored in the bottom level only?
-    for (RecCV val: firstState.availableThisScope(congType)) {
+    for (ArgOrCV val: firstState.availableThisScope(congType)) {
       ArgCV convertedVal = parentState.convertToArgs(val, congType);
       if (convertedVal != null) {
         if (!alreadyAdded.contains(convertedVal) &&

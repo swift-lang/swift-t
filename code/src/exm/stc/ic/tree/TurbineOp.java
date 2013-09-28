@@ -25,7 +25,6 @@ import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
-import exm.stc.ic.opt.valuenumber.ComputedValue;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
 import exm.stc.ic.opt.valuenumber.ValLoc;

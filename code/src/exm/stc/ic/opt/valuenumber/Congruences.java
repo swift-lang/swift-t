@@ -1,7 +1,6 @@
 package exm.stc.ic.opt.valuenumber;
 
 import java.util.AbstractSet;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -22,8 +21,8 @@ import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.opt.InitVariables.InitState;
 import exm.stc.ic.opt.valuenumber.ClosedVarTracker.ClosedEntry;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
+import exm.stc.ic.opt.valuenumber.ComputedValue.ArgOrCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
-import exm.stc.ic.opt.valuenumber.ComputedValue.RecCV;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
 import exm.stc.ic.tree.ICInstructions.Instruction.ValueState;
@@ -185,9 +184,9 @@ public class Congruences implements ValueState {
             CongruentSets congruent,
             boolean addInverses, int stmtIndex) {
     // LocCV may already be in congruent set
-    Arg canonLoc = congruent.findCanonical(new RecCV(location)); 
+    Arg canonLoc = congruent.findCanonical(new ArgOrCV(location)); 
     // Canonicalize value based on existing congruences
-    RecCV canonVal = congruent.canonicalize(consts, value);
+    ArgOrCV canonVal = congruent.canonicalize(consts, value);
   
     // Check if value is already associated with a location
     Arg canonLocFromVal = congruent.findCanonical(canonVal);
@@ -223,23 +222,21 @@ public class Congruences implements ValueState {
    * @param canonVal
    */
   private void addInverses(GlobalConstants consts, String errContext,
-                          Arg canonLoc, RecCV canonVal, int stmtIndex) {
+                          Arg canonLoc, ArgOrCV canonVal, int stmtIndex) {
     if (canonVal.isCV() && canonVal.cv().inputs.size() == 1) {
-      ComputedValue<RecCV> cv = canonVal.cv();
-      RecCV input = cv.getInput(0);
-      if (input.isArg()) {
-        Arg invOutput = input.arg();
-        // Only add value congruences to be safe.
-        // It might be possible to handle ALIAS congruences, e.g. for
-        // STORE_REF/LOAD_REF pair here later on (TODO)
-        if (cv.op().isAssign()) {
-          ArgCV invVal = ComputedValue.retrieveCompVal(canonLoc.getVar());
-          updateInv(consts, errContext, invOutput, invVal, stmtIndex);
-        } else if (cv.op().isRetrieve()) {
-          ArgCV invVal = new ArgCV(Opcode.assignOpcode(invOutput.getVar()),
-                                   canonLoc.asList());
-          updateInv(consts, errContext, invOutput, invVal, stmtIndex);
-        }
+      ComputedValue<Arg> cv = canonVal.cv();
+      Arg invOutput = cv.getInput(0);
+
+      // Only add value congruences to be safe.
+      // It might be possible to handle ALIAS congruences, e.g. for
+      // STORE_REF/LOAD_REF pair here later on (TODO)
+      if (cv.op().isAssign()) {
+        ArgCV invVal = ComputedValue.retrieveCompVal(canonLoc.getVar());
+        updateInv(consts, errContext, invOutput, invVal, stmtIndex);
+      } else if (cv.op().isRetrieve()) {
+        ArgCV invVal = new ArgCV(Opcode.assignOpcode(invOutput.getVar()),
+                                 canonLoc.asList());
+        updateInv(consts, errContext, invOutput, invVal, stmtIndex);
       }
     } else if (canonVal.isArg() && canonVal.arg().isVar() &&
                canonVal.arg().getVar().storage() == Alloc.GLOBAL_CONST) {
@@ -266,7 +263,7 @@ public class Congruences implements ValueState {
    * @param newLoc representative of set with location just maybeAssigned
    * @param oldLoc representative of existing set
    */
-  private void mergeSets(String errContext, RecCV value,
+  private void mergeSets(String errContext, ArgOrCV value,
       GlobalConstants consts, CongruentSets congruent,
       Arg oldLoc, Arg newLoc, IsAssign newIsAssign, int stmtIndex) {
     if (newLoc.equals(oldLoc)) {
@@ -323,7 +320,7 @@ public class Congruences implements ValueState {
    * @return
    */
   private boolean checkNoContradiction(String errContext,
-    CongruenceType congType, RecCV value, Arg val1, Arg val2) {
+    CongruenceType congType, ArgOrCV value, Arg val1, Arg val2) {
     boolean contradiction = false;
     if (congType == CongruenceType.VALUE) {
       if (val1.isConstant() && val2.isConstant() && !val1.equals(val2)) {
@@ -488,17 +485,26 @@ public class Congruences implements ValueState {
     //          E.g. if A[x], A[y] are stored and we find out that x == y
   }
 
+  /**
+   * User friendly string for location.
+   * @param assigned
+   * @return
+   */
   private String printableAssignValue(List<Arg> assigned) {
-    // TODO: more user-friendly string for e.g. arround location
+    assert(assigned.size() > 0);
+    StringBuilder sb = new StringBuilder();
+    sb.append(assigned.toString());
+    for (Arg arg: assigned.subList(1, assigned.size())) {
+      sb.append("[" + arg + "]");
+    }
     return assigned.toString();
   }
 
   private List<Arg> canonicalizeAssignValue(GlobalConstants consts,
                                             ArgCV val) {
-    // TODO: Need to canonicalize root var by alias and subscripts by value.
-    //       Probably just need to handle each location type separately
-    //       E.g. Values, futures, refs, arrays.  Could model as root
-    //            + subscript
+    // Canonicalize location as appropriate
+    //  (e.g. root var by alias and subscripts by value)
+    // TODO: will need to recanonicalize?
     
     if (val.isArrayMember() || val.isArrayMemberRef()) {
       Arg arr = byAlias.findCanonical(val.getInput(0));
@@ -729,12 +735,8 @@ public class Congruences implements ValueState {
     return findCanonical(val, congType) != null;
   }
   
-  private Arg findCanonical(RecCV val, CongruenceType congType) {
-    return getCongruentSet(congType).findCanonical(val);
-  }
-
   @Override
-  public List<RecCV> findCongruent(Arg arg, CongruenceType congType) {
+  public List<ArgOrCV> findCongruent(Arg arg, CongruenceType congType) {
     return getCongruentSet(congType).findCongruentValues(arg);
   }
   
@@ -759,17 +761,17 @@ public class Congruences implements ValueState {
    * @param congType
    * @return
    */
-  public Iterable<RecCV> availableThisScope(CongruenceType congType) {
+  public Iterable<ArgOrCV> availableThisScope(CongruenceType congType) {
     return getCongruentSet(congType).availableThisScope();
   }
 
   /**
-   * Convert from recursive value back into flat representation
+   * Convert from ArgOrCV into ArgCV implementation
    * @param val
    * @param congType
    * @return
    */
-  public ArgCV convertToArgs(RecCV val, CongruenceType congType) {
+  public ArgCV convertToArgs(ArgOrCV val, CongruenceType congType) {
     if (val.isArg()) {
       if (congType == CongruenceType.VALUE) {
         return ComputedValue.makeCopy(val.arg());
@@ -779,21 +781,7 @@ public class Congruences implements ValueState {
       }
     } else {
       assert(val.isCV());
-      List<RecCV> oldInputs = val.cv().getInputs();
-      List<Arg> newInputs = new ArrayList<Arg>(oldInputs.size());
-      for (RecCV input: oldInputs) {
-        if (input.isArg()) {
-          newInputs.add(input.arg());
-        } else {
-          Arg canonicalInput = findCanonical(input, congType);
-          if (canonicalInput == null) {
-            return null;
-          }
-          newInputs.add(canonicalInput);
-        }
-      }
-
-      return new ArgCV(val.cv().op, val.cv().subop, newInputs);
+      return val.cv();
     }
   }
 

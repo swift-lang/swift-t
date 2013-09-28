@@ -53,7 +53,7 @@ import exm.stc.ic.opt.Semantics;
 import exm.stc.ic.opt.valuenumber.ComputedValue;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
-import exm.stc.ic.opt.valuenumber.ComputedValue.RecCV;
+import exm.stc.ic.opt.valuenumber.ComputedValue.ArgOrCV;
 import exm.stc.ic.opt.valuenumber.ValLoc;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
@@ -445,7 +445,7 @@ public class ICInstructions {
      * TODO: is this necessary? can we move logic into Congruences
      */
     public static interface ValueState {
-      public List<RecCV> findCongruent(Arg arg, CongruenceType congType);
+      public List<ArgOrCV> findCongruent(Arg arg, CongruenceType congType);
       public Arg findCanonical(ArgCV arg, CongruenceType congType);
     }
     
@@ -2123,10 +2123,10 @@ public class ICInstructions {
       }
       
       // Now arg1 should be var, arg2 constant
-      List<RecCV> vals = cvs.findCongruent(args.val1.asArg(),
+      List<ArgOrCV> vals = cvs.findCongruent(args.val1.asArg(),
                                 CongruenceType.VALUE);
       List<ValLoc> res = new ArrayList<ValLoc>(); 
-      for (RecCV val: vals) {
+      for (ArgOrCV val: vals) {
         if (val.isCV()) {
           ValLoc newCV = tryAlgebra(args, val.cv());
           if (newCV != null) {
@@ -2139,7 +2139,7 @@ public class ICInstructions {
 
 
     private ValLoc tryAlgebra(Pair<Var, Long> canonArgs,
-                            ComputedValue<RecCV> varVal) {
+                            ComputedValue<Arg> varVal) {
       if (varVal.op() != this.op) {
         return null;
       }
@@ -2147,11 +2147,8 @@ public class ICInstructions {
       if (aop == BuiltinOpcode.PLUS_INT ||
           aop == BuiltinOpcode.MINUS_INT) {
         // Don't handle recursive values (TODO?)
-        if (!varVal.getInput(0).isArg() || !varVal.getInput(1).isArg()) {
-          return null;
-        }
-        Arg arg1 = varVal.getInput(0).arg();
-        Arg arg2 = varVal.getInput(1).arg();
+        Arg arg1 = varVal.getInput(0);
+        Arg arg2 = varVal.getInput(1);
         Pair<Var, Long> add = convertToCanonicalAdd(aop, arg1, arg2);
         if (add != null) {
           // Note that if this instruction computes x = y + c1
