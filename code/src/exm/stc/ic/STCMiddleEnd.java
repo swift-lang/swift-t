@@ -927,10 +927,10 @@ public class STCMiddleEnd {
         TurbineOp.structRefLookup(result, structVar, structField));
   }
 
-  public void structInsert(Var structVar, String fieldName,
+  public void structInitField(Var structVar, String fieldName,
       Var fieldContents) {
     currBlock().addInstruction(
-        TurbineOp.structInsert(structVar, fieldName, fieldContents));
+        TurbineOp.structInitField(structVar, fieldName, fieldContents));
   }
 
   /**

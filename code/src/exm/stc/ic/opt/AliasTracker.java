@@ -17,7 +17,7 @@ import exm.stc.common.util.HierarchicalMap;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.Opcode;
+import exm.stc.ic.tree.Opcode;
 
 /**
  * Track which variables alias what.  AliasKey is a canonical key that
@@ -83,7 +83,7 @@ public class AliasTracker {
   }
 
   public List<Alias> getInstructionAliases(Instruction inst) {
-    if (inst.op == Opcode.STRUCT_INSERT) {
+    if (inst.op == Opcode.STRUCT_INIT_FIELD) {
       return Collections.singletonList(new Alias(inst.getOutput(0), 
                             inst.getInput(0).getStringLit(),
                             inst.getInput(1).getVar()));

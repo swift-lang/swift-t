@@ -125,7 +125,7 @@ public class VarCreator {
         } else {
           initialiseVariable(context, tmp);
         }
-        backend.structInsert(structToInit, f.getName(), tmp);
+        backend.structInitField(structToInit, f.getName(), tmp);
         path.pop();
       }
     }

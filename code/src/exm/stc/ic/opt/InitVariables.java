@@ -25,10 +25,10 @@ import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.CommonFunctionCall;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Instruction.InitType;
-import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Statement;
+import exm.stc.ic.tree.Opcode;
 
 /**
  * Analysis of which variables are initialized.
@@ -199,7 +199,7 @@ public class InitVariables {
     }
 
     private void updatePartialInitStruct(Instruction inst, Var initVar) {
-      assert(inst.op == Opcode.STRUCT_INSERT) : "Expected STRUCT_INSERT";
+      assert(inst.op == Opcode.STRUCT_INIT_FIELD) : "Expected STRUCT_INIT_FIELD";
       String field = inst.getInput(0).getStringLit();
       
       List<String> prevUninitFields = uninitStructFields.get(initVar);

@@ -51,12 +51,12 @@ import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
-import exm.stc.ic.opt.ComputedValue;
-import exm.stc.ic.opt.ComputedValue.EquivalenceType;
 import exm.stc.ic.opt.Semantics;
-import exm.stc.ic.opt.ValLoc;
-import exm.stc.ic.opt.ValLoc.Closed;
-import exm.stc.ic.opt.ValueTracker;
+import exm.stc.ic.opt.valuenumber.ComputedValue;
+import exm.stc.ic.opt.valuenumber.ComputedValue.EquivalenceType;
+import exm.stc.ic.opt.valuenumber.ValLoc;
+import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
+import exm.stc.ic.opt.valuenumber.ValueTracker;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
@@ -75,44 +75,6 @@ import exm.stc.ic.tree.ICTree.StatementType;
  */
 public class ICInstructions {
 
-  public static enum Opcode {
-    FAKE, // Used for ComputedValue if there isn't a real opcode
-    COMMENT,
-    CALL_FOREIGN, CALL_FOREIGN_LOCAL, CALL_CONTROL, CALL_SYNC, CALL_LOCAL,
-    CALL_LOCAL_CONTROL,
-    DEREF_INT, DEREF_STRING, DEREF_FLOAT, DEREF_BOOL, DEREF_BLOB,
-    DEREF_FILE,
-    STORE_INT, STORE_STRING, STORE_FLOAT, STORE_BOOL, STORE_REF, 
-    LOAD_INT, LOAD_STRING, LOAD_FLOAT, LOAD_BOOL, LOAD_REF,
-    STORE_BLOB, LOAD_BLOB, FREE_BLOB,
-    STORE_VOID, LOAD_VOID, 
-    STORE_FILE, DECR_LOCAL_FILE_REF,
-    LOAD_FILE, // dummy instruction
-    DECR_WRITERS, DECR_REF, INCR_WRITERS, INCR_REF,
-    
-    ARRAYREF_LOOKUP_FUTURE, ARRAY_LOOKUP_FUTURE,
-    ARRAYREF_LOOKUP_IMM, ARRAY_LOOKUP_REF_IMM, ARRAY_LOOKUP_IMM,
-    ARRAY_INSERT_FUTURE, ARRAY_DEREF_INSERT_FUTURE, 
-    ARRAY_INSERT_IMM, ARRAY_DEREF_INSERT_IMM, 
-    ARRAYREF_INSERT_FUTURE, ARRAYREF_DEREF_INSERT_FUTURE,
-    ARRAYREF_INSERT_IMM, ARRAYREF_DEREF_INSERT_IMM, 
-    ARRAY_BUILD,
-    BAG_INSERT, ARRAY_CREATE_BAG,
-    STRUCT_LOOKUP, STRUCTREF_LOOKUP, STRUCT_INSERT,
-    ARRAY_CREATE_NESTED_FUTURE, ARRAYREF_CREATE_NESTED_FUTURE,
-    ARRAY_CREATE_NESTED_IMM, ARRAYREF_CREATE_NESTED_IMM,
-    LOOP_BREAK, LOOP_CONTINUE, 
-    COPY_REF,
-    LOCAL_OP, ASYNC_OP,
-    RUN_EXTERNAL,
-    INIT_UPDATEABLE_FLOAT, UPDATE_MIN, UPDATE_INCR, UPDATE_SCALE, LATEST_VALUE,
-    UPDATE_MIN_IMM, UPDATE_INCR_IMM, UPDATE_SCALE_IMM,
-    INIT_LOCAL_OUTPUT_FILE,
-    GET_FILENAME, CHOOSE_TMP_FILENAME, IS_MAPPED,
-    SET_FILENAME_VAL, GET_FILENAME_VAL, GET_LOCAL_FILENAME,
-    COPY_FILE_CONTENTS
-  }
- 
   public static abstract class Instruction implements Statement {
     public final Opcode op;
   
@@ -503,7 +465,7 @@ public class ICInstructions {
      *        returned should have the out field set so we know where to find 
      *        it 
      */
-    public abstract List<ValLoc> getResults(CVMap existing);
+    public abstract List<ValLoc> getResults(ValueTracker existing);
     
     @Override
     public Statement cloneStatement() {
@@ -568,34 +530,6 @@ public class ICInstructions {
       return false;
     }
   }
-  
-  public static interface CVMap {
-    
-    /**
-     * @param v
-     * @return true if the variable is known to be closed
-     */
-    public boolean isClosed(Var v);
-    
-    /**
-     * @param val
-     * @return the current location of a given computedValue
-     *        (either a constant value, or a variable)
-     */
-    public ValLoc lookupCV(ComputedValue val);
-    /**
-     * @param v
-     * @return all computed values stored in var
-     */
-    public List<ValLoc> getVarContents(Var v);
-    
-    /**
-     * Get computed values in which this variable is in input
-     * @param input
-     * @return
-     */
-    public List<ValLoc> getReferencedCVs(Var input);
-  }
 
   public static class Comment extends Instruction {
     private final String text;
@@ -657,7 +591,7 @@ public class ICInstructions {
     }
 
     @Override
-    public List<ValLoc> getResults(CVMap existing) {
+    public List<ValLoc> getResults(ValueTracker existing) {
       return null;
     }
 
@@ -703,7 +637,7 @@ public class ICInstructions {
     }
     
     @Override
-    public List<ValLoc> getResults(CVMap existing) {
+    public List<ValLoc> getResults(ValueTracker existing) {
       if (ForeignFunctions.isPure(functionName)) {
         if (!this.writesMappedVar() && isCopyFunction()) {
           // Handle copy as a special case
@@ -714,14 +648,17 @@ public class ICInstructions {
           for (int output = 0; output < getOutputs().size(); output++) {
             Closed outputClosed = Closed.MAYBE_NOT;// safe assumption
             String canonicalFunctionName = this.functionName;
-            List<Arg> in = new ArrayList<Arg>(getInputs());
+            List<Arg> inputs = getInputs();
+            List<Arg> cvArgs = new ArrayList<Arg>(inputs.size() + 1);
+            cvArgs.addAll(inputs);
             if (ForeignFunctions.isCommutative(this.functionName)) {
               // put in canonical order
-              Collections.sort(in);
+              Collections.sort(cvArgs);
             }
+            cvArgs.add(Arg.createIntLit(output)); // Disambiguate outputs
             
             res.add(ValLoc.buildResult(this.op, 
-                canonicalFunctionName, output, in, 
+                canonicalFunctionName, cvArgs, 
                 getOutput(output).asArg(), outputClosed));
           }
           addSpecialCVs(res);
@@ -743,9 +680,9 @@ public class ICInstructions {
         // This is compatible with UNCACHED_INPUT_FILE preventing caching,
         // as we still assume that the input_file function is impure
         if (op == Opcode.CALL_FOREIGN) {
-          cvs.add(filenameCV(getInput(0), getOutput(0)));
+          cvs.add(ValLoc.makeFilename(getInput(0), getOutput(0)));
         } else if (op == Opcode.CALL_FOREIGN_LOCAL){
-          cvs.add(filenameLocalCV(getInput(0), getOutput(0)));
+          cvs.add(ValLoc.makeFilenameLocal(getInput(0), getOutput(0)));
         }
       } else if (op == Opcode.CALL_FOREIGN_LOCAL &&
           (isImpl(SpecialFunction.RANGE) ||
@@ -1532,14 +1469,17 @@ public class ICInstructions {
     }
 
     @Override
-    public List<ValLoc> getResults(CVMap existing) {
+    public List<ValLoc> getResults(ValueTracker existing) {
       if (deterministic) {
         List<ValLoc> cvs = new ArrayList<ValLoc>(outFiles.size());
         for (int i = 0; i < outFiles.size(); i++) {
+          List<Arg> cvArgs = new ArrayList<Arg>(args.size() + 1);
+          cvArgs.addAll(args);
+          cvArgs.add(Arg.createIntLit(i)); // Disambiguate outputs
           // Unique key for cv includes number of output
           // Output file should be closed after external program executes
-          ValLoc cv = ValLoc.buildResult(op, cmd, i,
-                     args, outFiles.get(i).asArg(), Closed.YES);
+          ValLoc cv = ValLoc.buildResult(op, cmd,
+                     cvArgs, outFiles.get(i).asArg(), Closed.YES);
           cvs.add(cv);
         }
         return cvs;
@@ -1691,7 +1631,7 @@ public class ICInstructions {
     }
 
     @Override
-    public List<ValLoc> getResults(CVMap existing) {
+    public List<ValLoc> getResults(ValueTracker existing) {
       // Nothing
       return null;
     }
@@ -1809,7 +1749,7 @@ public class ICInstructions {
     }
    
     @Override
-    public List<ValLoc> getResults(CVMap existing) {
+    public List<ValLoc> getResults(ValueTracker existing) {
       // nothing
       return null;
     }
@@ -2187,7 +2127,7 @@ public class ICInstructions {
     }
     
     @Override
-    public List<ValLoc> getResults(CVMap existing) {
+    public List<ValLoc> getResults(ValueTracker existing) {
       if (this.hasSideEffects()) {
         // Two invocations of this aren't equivalent
         return null;
@@ -2266,7 +2206,7 @@ public class ICInstructions {
       return null;
     }
 
-    private List<ValLoc> makeInferredComputedValues(CVMap cvs) {
+    private List<ValLoc> makeInferredComputedValues(ValueTracker cvs) {
       try {
         if (!Settings.getBoolean(Settings.OPT_ALGEBRA)) {
           return Collections.emptyList();
@@ -2302,7 +2242,7 @@ public class ICInstructions {
     }
 
 
-    private List<ValLoc> tryAlgebra(CVMap cvs) {
+    private List<ValLoc> tryAlgebra(ValueTracker cvs) {
       // do basic algebra, useful for adjacent array indices
       // TODO: could be more sophisticated, e.g. build operator tree
       //    and reduce to canonical form
@@ -2471,21 +2411,6 @@ public class ICInstructions {
               src.type().typeName() + " is not known yet");
     }
   }
-  
-  /**
-   * Return the canonical ComputedValue representation for
-   * retrieving the value of this type
-   * @param src
-   * @return null if cannot be fetched
-   */
-  public static ComputedValue retrieveCompVal(Var src) {
-    Type srcType = src.type();
-    Opcode op = retrieveOpcode(srcType);
-    if (op == null) {
-      return null;
-    }
-    return new ComputedValue(op, Arrays.asList(src.asArg()));
-  }
 
   public static ValLoc assignComputedVal(Var dst, Arg val) {
     Type dstType = dst.type();
@@ -2516,112 +2441,13 @@ public class ICInstructions {
         return ValLoc.buildResult(Opcode.LOCAL_OP, 
             op.toString(), Arrays.asList(val), dst.asArg(), Closed.MAYBE_NOT);
     } else {
-      Opcode op = assignOpcode(dstType);
+      Opcode op = Opcode.assignOpcode(dstType);
       if (op != null) {
         return ValLoc.buildResult(op, Arrays.asList(val), dst.asArg() , Closed.YES);
       }
     }
     throw new STCRuntimeError("DOn't know how to assign to " + dst);
   }
-
-  static Opcode assignOpcode(Type dstType) {
-    Opcode op = null;
-    if (Types.isPrimFuture(dstType)) {
-       switch(dstType.primType()) {
-       case BOOL:
-         op = Opcode.STORE_BOOL;
-         break;
-       case INT:
-         op = Opcode.STORE_INT;
-         break;
-       case FLOAT:
-         op = Opcode.STORE_FLOAT;
-         break;
-       case STRING:
-         op = Opcode.STORE_STRING;
-         break;
-       case BLOB:
-         op = Opcode.STORE_BLOB;
-         break;
-       case VOID:
-         op = Opcode.STORE_VOID;
-         break;
-       case FILE:
-         op = Opcode.STORE_FILE;
-         break;
-       default:
-         throw new STCRuntimeError("don't know how to assign " + dstType);
-       }
-    } else if (Types.isRef(dstType)) {
-      op = Opcode.STORE_REF;
-    }
-    return op;
-  }
-  
-  static Opcode retrieveOpcode(Type srcType) {
-    Opcode op;
-    if (Types.isPrimFuture(srcType)) {
-      switch(srcType.primType()) {
-      case BOOL:
-        op = Opcode.LOAD_BOOL;
-        break;
-      case INT:
-        op = Opcode.LOAD_INT;
-        break;
-      case FLOAT:
-        op = Opcode.LOAD_FLOAT;
-        break;
-      case STRING:
-        op = Opcode.LOAD_STRING;
-        break;
-      case BLOB:
-        op = Opcode.LOAD_BLOB;
-        break;
-      case VOID:
-        op = Opcode.LOAD_VOID;
-        break;
-      case FILE:
-        op = Opcode.LOAD_FILE;
-        break;
-      default:
-        // Can't retrieve other types
-        op = null;
-      }
-
-    } else if (Types.isRef(srcType)) {
-      op = Opcode.LOAD_REF;
-    } else {
-      op = null;
-    }
-    return op;
-  }
-  
-
-  static Opcode derefOpCode(Type type) {
-    if (Types.isRef(type)) {
-      Type refedType = type.memberType();
-      if (Types.isPrimFuture(refedType)) {
-        switch (refedType.primType()) {
-        case BLOB:
-          return Opcode.DEREF_BLOB;
-        case FILE:
-          return Opcode.DEREF_FILE;
-        case BOOL:
-          return Opcode.DEREF_BOOL;
-        case FLOAT:
-          return Opcode.DEREF_FLOAT;
-        case INT:
-          return Opcode.DEREF_INT;
-        case STRING:
-          return Opcode.DEREF_STRING;
-        case VOID:
-          throw new STCRuntimeError("Tried to dereference void");
-        }
-      }
-    }
-    return null;
-  }
-
 
   public static Instruction futureSet(Var dst, Arg src) {
     assert(Types.isPrimFuture(dst.type()));
@@ -2651,28 +2477,6 @@ public class ICInstructions {
       throw new STCRuntimeError("method to set " +
           dst.type().typeName() + " is not known yet");
     }
-  }
-
-  public static ValLoc filenameCV(Arg outFilename, Var inFile) {
-    assert(Types.isFile(inFile.type()));
-    assert(outFilename.isVar());
-    assert(Types.isString(outFilename.getVar().type()));
-    return ValLoc.buildResult(Opcode.GET_FILENAME,
-        Arrays.asList(inFile.asArg()), outFilename, Closed.MAYBE_NOT);
-  }
-  
-  public static ValLoc filenameValCV(Arg file, Arg filenameVal) {
-    assert(Types.isFile(file.type()));
-    assert(filenameVal == null || filenameVal.isImmediateString());
-    return ValLoc.buildResult(Opcode.GET_FILENAME_VAL,
-                            file, filenameVal, Closed.YES);
-  }
-
-  public static ValLoc filenameLocalCV(Arg outFilename, Var inFile) {
-    assert(Types.isFileVal(inFile));
-    assert(outFilename.isImmediateString());
-    return ValLoc.buildResult(Opcode.GET_LOCAL_FILENAME,
-                    inFile.asArg().asList(), outFilename, Closed.YES);
   }
   
   private static String formatFunctionCall(Opcode op, 

@@ -24,10 +24,10 @@ import exm.stc.common.lang.TaskMode;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.LocalFunctionCall;
-import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Statement;
 import exm.stc.ic.tree.ICTree.StatementType;
+import exm.stc.ic.tree.Opcode;
 
 /**
  * Helper functions and data to determine whether given instructions can
@@ -139,8 +139,8 @@ public class ProgressOpcodes {
     HashSet<Opcode> opcodes = new HashSet<Opcode>();
     opcodes.add(Opcode.DECR_WRITERS);
     opcodes.add(Opcode.FREE_BLOB);
-    opcodes.add(Opcode.DECR_REF);
-    opcodes.add(Opcode.INCR_REF);
+    opcodes.add(Opcode.DECR_READERS);
+    opcodes.add(Opcode.INCR_READERS);
     opcodes.add(Opcode.INCR_WRITERS);
     opcodes.add(Opcode.LOCAL_OP);
     opcodes.add(Opcode.COPY_REF);
@@ -159,7 +159,7 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.CHOOSE_TMP_FILENAME);
     opcodes.add(Opcode.INIT_LOCAL_OUTPUT_FILE);
     opcodes.add(Opcode.COMMENT);
-    opcodes.add(Opcode.STRUCT_INSERT);
+    opcodes.add(Opcode.STRUCT_INIT_FIELD);
     opcodes.add(Opcode.STRUCT_LOOKUP);
     return opcodes;
   }
@@ -181,8 +181,8 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.COMMENT);
     opcodes.add(Opcode.DECR_WRITERS);
     opcodes.add(Opcode.FREE_BLOB);
-    opcodes.add(Opcode.DECR_REF);
-    opcodes.add(Opcode.INCR_REF);
+    opcodes.add(Opcode.DECR_READERS);
+    opcodes.add(Opcode.INCR_READERS);
     opcodes.add(Opcode.INCR_WRITERS);
     opcodes.add(Opcode.CALL_LOCAL);
     opcodes.add(Opcode.STORE_BOOL);

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License
  */
-package exm.stc.ic.opt;
+package exm.stc.ic.opt.valuenumber;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -21,8 +21,9 @@ import java.util.List;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
-import exm.stc.ic.tree.ICInstructions.Opcode;
+import exm.stc.ic.tree.Opcode;
 
 /**
  * A class that provides a canonical description of a computed value.
@@ -31,7 +32,7 @@ import exm.stc.ic.tree.ICInstructions.Opcode;
  * If cv1.equals(cv2) then that should mean that the expressions are 
  *    for all intents and purposes identical
  *    
- * This is related to the "Global Value Numbering" optimisation in the
+ * This is related to the "Value Numbering" optimisation in the
  * compiler literature.
  */
 public class ComputedValue {
@@ -55,24 +56,18 @@ public class ComputedValue {
   
   final Opcode op;
   final String subop;
-  final int index; // Index of output if multiple outputs (0 is default);
   final List<Arg> inputs;
   
   private final int hashCode; // Cache hashcode 
   
-  public ComputedValue(Opcode op, String subop, int index, List<Arg> inputs) {
+  public ComputedValue(Opcode op, String subop, List<Arg> inputs) {
     assert(op != null);
     assert(subop != null);
     assert(inputs != null);
     this.op = op;
     this.subop = subop;
-    this.index = index;
     this.inputs = inputs;
     this.hashCode = calcHashCode();
-  }
-  
-  public ComputedValue(Opcode op, String subop, List<Arg> inputs) {
-    this(op, subop, 0, inputs);
   }
   
   public ComputedValue(Opcode op, List<Arg> inputs) {
@@ -104,7 +99,6 @@ public class ComputedValue {
     ComputedValue other = (ComputedValue) otherO;
     if (this.op == other.op && 
         this.subop.equals(other.subop) &&
-        this.index == other.index &&
         this.inputs.size() == other.inputs.size()) {
       for (int i = 0; i < inputs.size(); i++) {
         if (!this.inputs.get(i).equals(other.inputs.get(i))) {
@@ -126,7 +120,6 @@ public class ComputedValue {
   public int calcHashCode() {
     int result = this.op.hashCode();
     result = 37 * result + this.subop.hashCode(); 
-    result = 37 * result + ((Integer)index).hashCode();
     for (Arg o: this.inputs) {
       if (o == null) {
         throw new STCRuntimeError("Null oparg in " + this);
@@ -150,7 +143,7 @@ public class ComputedValue {
    * @return
    */
   public ComputedValue substituteInputs(List<Arg> newInputs) {
-    return new ComputedValue(op, subop, index, newInputs);
+    return new ComputedValue(op, subop, newInputs);
   }
 
   public static ComputedValue makeCopy(Arg src) {
@@ -159,6 +152,21 @@ public class ComputedValue {
   
   public static ComputedValue makeAlias(Arg src) {
     return new ComputedValue(Opcode.FAKE, ComputedValue.ALIAS_OF, src.asList());
+  }
+  
+  /**
+   * Return the canonical ComputedValue representation for
+   * retrieving the value of this type
+   * @param src
+   * @return null if cannot be fetched
+   */
+  public static ComputedValue retrieveCompVal(Var src) {
+    Type srcType = src.type();
+    Opcode op = Opcode.retrieveOpcode(srcType);
+    if (op == null) {
+      return null;
+    }
+    return new ComputedValue(op, Arrays.asList(src.asArg()));
   }
   
   /**
@@ -199,7 +207,7 @@ public class ComputedValue {
     return new ComputedValue(Opcode.STRUCT_LOOKUP, 
             Arrays.asList(struct.asArg(), Arg.createStringLit(fieldName)));
   }
-
+  
   public boolean isCopy() {
     return this.op == Opcode.FAKE && this.subop.equals(COPY_OF);
   }

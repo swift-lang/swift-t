@@ -1198,7 +1198,7 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void structInsert(Var structVar, String fieldName,
+  public void structInitField(Var structVar, String fieldName,
       Var fieldContents) {
     pointStack.peek().add(
         Turbine.structInsert(prefixVar(structVar),

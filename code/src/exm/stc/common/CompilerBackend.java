@@ -239,7 +239,7 @@ public interface CompilerBackend {
   public void structRefLookup(Var result, Var structVar,
       String fieldName);
 
-  public void structInsert(Var structVar, String fieldName,
+  public void structInitField(Var structVar, String fieldName,
                                           Var fieldContents);
 
   public void arrayLookupFuture(Var oVar, Var arrayVar,

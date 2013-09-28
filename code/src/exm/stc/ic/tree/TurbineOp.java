@@ -25,15 +25,13 @@ import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
-import exm.stc.ic.opt.ComputedValue;
-import exm.stc.ic.opt.ComputedValue.EquivalenceType;
-import exm.stc.ic.opt.ValLoc;
-import exm.stc.ic.opt.ValLoc.Closed;
-import exm.stc.ic.opt.ValueTracker;
-import exm.stc.ic.tree.ICInstructions.CVMap;
+import exm.stc.ic.opt.valuenumber.ComputedValue;
+import exm.stc.ic.opt.valuenumber.ComputedValue.EquivalenceType;
+import exm.stc.ic.opt.valuenumber.ValLoc;
+import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
+import exm.stc.ic.opt.valuenumber.ValueTracker;
 import exm.stc.ic.tree.ICInstructions.CommonFunctionCall;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.Opcode;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.GenInfo;
 import exm.stc.ic.tree.ICTree.Program;
@@ -200,8 +198,8 @@ public class TurbineOp extends Instruction {
       gen.structRefLookup(getOutput(0), getInput(0).getVar(),
                            getInput(1).getStringLit());
       break;
-    case STRUCT_INSERT:
-      gen.structInsert(getOutput(0), getInput(0).getStringLit(),
+    case STRUCT_INIT_FIELD:
+      gen.structInitField(getOutput(0), getInput(0).getStringLit(),
                        getInput(1).getVar());
       break;
     case DEREF_INT:
@@ -439,9 +437,9 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.BAG_INSERT, bag, elem.asArg(), writersDecr);
   }
   
-  public static Instruction structInsert(Var structVar,
+  public static Instruction structInitField(Var structVar,
       String fieldName, Var fieldContents) {
-    return new TurbineOp(Opcode.STRUCT_INSERT,
+    return new TurbineOp(Opcode.STRUCT_INIT_FIELD,
                     structVar,
                     Arg.createStringLit(fieldName),
                     fieldContents.asArg());
@@ -764,7 +762,7 @@ public class TurbineOp extends Instruction {
     switch (op) {
     /* The direct container write functions only mutate their output 
      * argument */
-    case STRUCT_INSERT:
+    case STRUCT_INIT_FIELD:
       return this.writesAliasVar();
       
     case ARRAY_BUILD:
@@ -1420,7 +1418,7 @@ public class TurbineOp extends Instruction {
       case LOAD_FILE:
         // Initializes output file value
         return Arrays.asList(Pair.create(getOutput(0), InitType.FULL));
-      case STRUCT_INSERT:
+      case STRUCT_INIT_FIELD:
         // Fills in part of struct
         return Arrays.asList(Pair.create(getOutput(0), InitType.PARTIAL));
       default:
@@ -1497,7 +1495,7 @@ public class TurbineOp extends Instruction {
         List<Var> outputs = getOutputs();
         return outputs.subList(1, outputs.size());
       }
-      case STRUCT_INSERT:
+      case STRUCT_INIT_FIELD:
         return getOutputs();
       case SET_FILENAME_VAL:
         // File's filename might be modified
@@ -1560,7 +1558,7 @@ public class TurbineOp extends Instruction {
     case INIT_UPDATEABLE_FLOAT:
     case LATEST_VALUE:
     case ARRAY_INSERT_IMM:
-    case STRUCT_INSERT:
+    case STRUCT_INIT_FIELD:
     case STRUCT_LOOKUP:
     case ARRAY_CREATE_NESTED_IMM:
     case ARRAY_CREATE_BAG:
@@ -1610,7 +1608,7 @@ public class TurbineOp extends Instruction {
   }
 
   @Override
-  public List<ValLoc> getResults(CVMap existing) {
+  public List<ValLoc> getResults(ValueTracker existing) {
     switch(op) {
       case LOAD_BOOL:
       case LOAD_FLOAT:
@@ -1640,7 +1638,7 @@ public class TurbineOp extends Instruction {
         ValLoc retrieve = vanillaResult(outIsClosed);
         result.add(retrieve);
         
-        Opcode cvop = ICInstructions.assignOpcode(src.futureType());
+        Opcode cvop = Opcode.assignOpcode(src.futureType());
         if (cvop == null) {
           throw new STCRuntimeError("Need assign op for "
               + src.getVar());
@@ -1650,7 +1648,7 @@ public class TurbineOp extends Instruction {
         result.add(assign);
         
         
-        Opcode derefOp = ICInstructions.derefOpCode(src.futureType());
+        Opcode derefOp = Opcode.derefOpCode(src.futureType());
         if (derefOp != null) {
           ValLoc deref = ValLoc.buildResult(derefOp, 
                     Arrays.asList(src), dst.asArg(), Closed.MAYBE_NOT);
@@ -1679,11 +1677,11 @@ public class TurbineOp extends Instruction {
         Arg src = getInput(0);
 
         ValLoc retrieve = ValLoc.buildResult(
-                        ICInstructions.retrieveOpcode(dst.futureType()),
+                        Opcode.retrieveOpcode(dst.futureType()),
                         Arrays.asList(dst), src, Closed.MAYBE_NOT);
         
         if (op == Opcode.STORE_REF) {
-          Opcode derefOp = ICInstructions.derefOpCode(dst.futureType());
+          Opcode derefOp = Opcode.derefOpCode(dst.futureType());
           if (derefOp != null) {
             ValLoc deref = ValLoc.buildResult(derefOp, Arrays.asList(dst),
                                               src, Closed.MAYBE_NOT);
@@ -1710,11 +1708,10 @@ public class TurbineOp extends Instruction {
         List<ValLoc> res = new ArrayList<ValLoc>();
         Arg filename = getOutput(0).asArg();
         Arg file = getInput(0);
-        res.add(ICInstructions.filenameCV(filename, file.getVar()));
+        res.add(ValLoc.makeFilename(filename, file.getVar()));
         
         // Check to see if value of filename is in local value
-        ComputedValue filenameCV = ICInstructions.filenameValCV(
-                                            file, null).value();
+        ComputedValue filenameCV = ValLoc.makeFilenameVal(file, null).value();
         ValLoc filenameVal = existing.lookupCV(filenameCV);
         if (filenameVal != null) {
           // We know that if we fetch from the output future of this instruction,
@@ -1725,13 +1722,13 @@ public class TurbineOp extends Instruction {
         return res;
       }
       case GET_LOCAL_FILENAME: {
-        return ICInstructions.filenameLocalCV(getOutput(0).asArg(),
+        return ValLoc.makeFilenameLocal(getOutput(0).asArg(),
                                getInput(0).getVar()).asList();
       }
       case SET_FILENAME_VAL: {
         Arg file = getOutput(0).asArg();
         Arg val = getInput(0);
-        return ICInstructions.filenameValCV(file, val).asList();
+        return ValLoc.makeFilenameVal(file, val).asList();
       }
       case DEREF_BLOB:
       case DEREF_BOOL:
@@ -1749,7 +1746,7 @@ public class TurbineOp extends Instruction {
         }
       }
       
-      case STRUCT_INSERT: {
+      case STRUCT_INIT_FIELD: {
         ValLoc lookup = ValLoc.makeStructLookupResult(
             getInput(1).getVar(), getOutput(0), getInput(0).getStringLit());
         return lookup.asList(); 
@@ -1829,9 +1826,9 @@ public class TurbineOp extends Instruction {
              * was previously inserted at this index, then we can 
              * short-circuit this as we know what is in the reference */
             ValLoc retrieveCV = ValLoc.buildResult(
-                ICInstructions.retrieveOpcode(contents.type()),
+                Opcode.retrieveOpcode(contents.type()),
                 contents.asArg(), prev.location(), Closed.MAYBE_NOT);
-            Opcode derefOp = ICInstructions.derefOpCode(contents.type());
+            Opcode derefOp = Opcode.derefOpCode(contents.type());
             if (derefOp == null) {
               return Arrays.asList(retrieveCV, refCV);
             } else {
@@ -1886,7 +1883,7 @@ public class TurbineOp extends Instruction {
           if (prev != null) {
             // See if we know the value of this reference already
             ValLoc derefCV = ValLoc.buildResult(
-                ICInstructions.retrieveOpcode(nestedArr.type()),
+                Opcode.retrieveOpcode(nestedArr.type()),
                 Arrays.asList(nestedArr.asArg()), prev.location(),
                 Closed.MAYBE_NOT);
             res.add(derefCV);
@@ -2047,7 +2044,7 @@ public class TurbineOp extends Instruction {
       }
       case BAG_INSERT:
         return Pair.create(getInput(0).getVar().asList(), Var.NONE);
-      case STRUCT_INSERT:
+      case STRUCT_INIT_FIELD:
         // Do nothing: reference count tracker can track variables
         // across struct boundaries
         return super.getIncrVars();
@@ -2249,7 +2246,7 @@ public class TurbineOp extends Instruction {
     
     public static RefCountType getRCType(Opcode op) {
       assert(isRefcountOp(op));
-      if (op == Opcode.INCR_REF || op == Opcode.DECR_REF) {
+      if (op == Opcode.INCR_READERS || op == Opcode.DECR_READERS) {
         return RefCountType.READERS;
       } else {
         assert(op == Opcode.INCR_WRITERS || op == Opcode.DECR_WRITERS);
@@ -2272,9 +2269,9 @@ public class TurbineOp extends Instruction {
     private static Opcode getRefCountOp(boolean increment, RefCountType type) {
       if (type == RefCountType.READERS) {
         if (increment) {
-          return Opcode.INCR_REF;
+          return Opcode.INCR_READERS;
         } else {
-          return Opcode.DECR_REF;
+          return Opcode.DECR_READERS;
         }
       } else {
         assert(type == RefCountType.WRITERS);
@@ -2287,11 +2284,11 @@ public class TurbineOp extends Instruction {
     }
 
     public static boolean isIncrement(Opcode op) {
-      return (op == Opcode.INCR_REF || op == Opcode.INCR_WRITERS);
+      return (op == Opcode.INCR_READERS || op == Opcode.INCR_WRITERS);
     }
     
     public static boolean isDecrement(Opcode op) {
-      return (op == Opcode.DECR_REF || op == Opcode.DECR_WRITERS);
+      return (op == Opcode.DECR_READERS || op == Opcode.DECR_WRITERS);
     }
 
     public static boolean isRefcountOp(Opcode op) {
@@ -2307,10 +2304,10 @@ public class TurbineOp extends Instruction {
         case INCR_WRITERS:
           gen.incrWriters(getRCTarget(this), getRCAmount(this));
           break;
-        case DECR_REF:
+        case DECR_READERS:
           gen.decrRef(getRCTarget(this), getRCAmount(this));
           break;
-        case INCR_REF:
+        case INCR_READERS:
           gen.incrRef(getRCTarget(this), getRCAmount(this));
           break;
         default:

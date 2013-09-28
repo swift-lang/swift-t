@@ -1,4 +1,4 @@
-package exm.stc.ic.opt;
+package exm.stc.ic.opt.valuenumber;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,8 +11,8 @@ import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.ic.ICUtil;
-import exm.stc.ic.opt.ComputedValue.EquivalenceType;
-import exm.stc.ic.tree.ICInstructions.Opcode;
+import exm.stc.ic.opt.valuenumber.ComputedValue.EquivalenceType;
+import exm.stc.ic.tree.Opcode;
 
 /**
  * Represent a ComputedValue with a known value or stored in
@@ -73,20 +73,15 @@ public class ValLoc {
     return new ValLoc(value, location, locClosed, IsValCopy.NO);
   }
   
-  public static ValLoc buildResult(Opcode op, String subop, int index,
+  public static ValLoc buildResult(Opcode op, String subop,
       List<Arg> inputs, Arg valLocation, Closed locClosed) {
-    ComputedValue cv = new ComputedValue(op, subop, index, inputs);
+    ComputedValue cv = new ComputedValue(op, subop, inputs);
     return new ValLoc(cv, valLocation, locClosed, IsValCopy.NO);
-  }
-
-  public static ValLoc buildResult(Opcode op, String subop, List<Arg> inputs,
-      Arg valLocation, Closed locClosed) {
-    return buildResult(op, subop, 0, inputs, valLocation, locClosed);
   }
 
   public static ValLoc buildResult(Opcode op, List<Arg> inputs,
       Arg valLocation, Closed locClosed) {
-    return buildResult(op, "", 0, inputs, valLocation, locClosed);
+    return buildResult(op, "", inputs, valLocation, locClosed);
   }
 
   public static ValLoc buildResult(Opcode op, Arg input,
@@ -205,6 +200,30 @@ public class ValLoc {
     return ValLoc.build(ComputedValue.structMemberCV(struct, fieldName),
                          elem.asArg(), Closed.MAYBE_NOT);
   }
+  
+
+  public static ValLoc makeFilename(Arg outFilename, Var inFile) {
+    assert(Types.isFile(inFile.type()));
+    assert(outFilename.isVar());
+    assert(Types.isString(outFilename.getVar().type()));
+    return ValLoc.buildResult(Opcode.GET_FILENAME,
+        Arrays.asList(inFile.asArg()), outFilename, Closed.MAYBE_NOT);
+  }
+  
+  public static ValLoc makeFilenameVal(Arg file, Arg filenameVal) {
+    assert(Types.isFile(file.type()));
+    assert(filenameVal == null || filenameVal.isImmediateString());
+    return ValLoc.buildResult(Opcode.GET_FILENAME_VAL,
+                            file, filenameVal, Closed.YES);
+  }
+
+  public static ValLoc makeFilenameLocal(Arg outFilename, Var inFile) {
+    assert(Types.isFileVal(inFile));
+    assert(outFilename.isImmediateString());
+    return ValLoc.buildResult(Opcode.GET_LOCAL_FILENAME,
+                    inFile.asArg().asList(), outFilename, Closed.YES);
+  }
+  
   
   /**
    * Check to see if we can add new computed values to a dereferenced variable
