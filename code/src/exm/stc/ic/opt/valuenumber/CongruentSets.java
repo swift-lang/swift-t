@@ -254,7 +254,7 @@ class CongruentSets {
   public Arg findCanonical(Arg arg) {
     assert(arg != null);
     Arg result = findCanonical(new RecCV(arg));
-    assert(result != null);
+    assert(result != null) : "Could not find canonical for " + arg;
     return result;
   }
   
@@ -298,12 +298,9 @@ class CongruentSets {
   public Map<Var, Arg> getReplacementMap(InitState init) {
     return new ReplacementMap(init);
   }
-
-  public void markContradiction(RecCV val) {
-    markContradiction(findCanonical(val));
-  }
   
   public void markContradiction(Arg arg) {
+    assert(arg != null);
     arg = findCanonical(arg);
     boolean newContradiction = contradictions.add(arg);
     if (!newContradiction) {

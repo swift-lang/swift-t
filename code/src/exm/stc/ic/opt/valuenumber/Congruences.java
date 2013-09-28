@@ -466,8 +466,16 @@ public class Congruences implements ValueState {
           + "This may have been caused by a double-write to a variable. "
           + "Please look at any previous warnings emitted by compiler. "
           + "Otherwise this could indicate a stc bug");
-      byAlias.markContradiction(byAlias.canonicalize(consts, vl.value()));
-      byValue.markContradiction(byValue.canonicalize(consts, vl.value()));
+      Arg aliasCanon = byAlias.findCanonical(
+                          byAlias.canonicalize(consts, vl.value()));
+      if (aliasCanon != null) {
+        byAlias.markContradiction(aliasCanon);
+      }
+      Arg valCanon = byValue.findCanonical(
+                          byValue.canonicalize(consts, vl.value()));
+      if (valCanon != null) {
+        byValue.markContradiction(valCanon);
+      }
       return;
     } 
     if (logger.isTraceEnabled()) {
