@@ -16,6 +16,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.opt.InitVariables.InitState;
 import exm.stc.ic.opt.valuenumber.ClosedVarTracker.ClosedEntry;
@@ -23,6 +24,7 @@ import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
 import exm.stc.ic.opt.valuenumber.ComputedValue.RecCV;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
+import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
 import exm.stc.ic.tree.ICInstructions.Instruction.ValueState;
 import exm.stc.ic.tree.ICTree.GlobalConstants;
 import exm.stc.ic.tree.ICTree.RenameMode;
@@ -69,6 +71,7 @@ public class Congruences implements ValueState {
   private final ClosedVarTracker track;
   private final CongruentSets byValue;
   private final CongruentSets byAlias;
+  private final HierarchicalSet<RecCV> maybeAssigned;
   private final boolean reorderingAllowed;
   
   private Congruences(Logger logger,
@@ -76,12 +79,14 @@ public class Congruences implements ValueState {
                         ClosedVarTracker track,
                         CongruentSets byValue,
                         CongruentSets byAlias,
+                        HierarchicalSet<RecCV> maybeAssigned,
                         boolean reorderingAllowed) {
     this.logger = logger;
     this.parent = parent;
     this.track = track;
     this.byValue = byValue;
     this.byAlias = byAlias;
+    this.maybeAssigned = maybeAssigned;
     this.reorderingAllowed = reorderingAllowed;
   }
   
@@ -89,6 +94,7 @@ public class Congruences implements ValueState {
     this(logger, null, ClosedVarTracker.makeRoot(logger, reorderingAllowed),
         CongruentSets.makeRoot(CongruenceType.VALUE),
          CongruentSets.makeRoot(CongruenceType.ALIAS),
+         new HierarchicalSet<RecCV>(),
          reorderingAllowed);
   }
   
@@ -96,7 +102,8 @@ public class Congruences implements ValueState {
           int parentStmtIndex) {
     Congruences child = new Congruences(logger, this,
              track.enterContinuation(parentStmtIndex),
-             byValue.makeChild(), byAlias.makeChild(), reorderingAllowed);
+             byValue.makeChild(), byAlias.makeChild(),
+             maybeAssigned.makeChild(), reorderingAllowed);
     
     /*
      * TODO: how to handle difference between information that is shared
@@ -121,15 +128,18 @@ public class Congruences implements ValueState {
 
   public Congruences enterBlock() {
     return new Congruences(logger, this, track.enterBlock(),
-     byValue.makeChild(), byAlias.makeChild(), reorderingAllowed);
+     byValue.makeChild(), byAlias.makeChild(), maybeAssigned.makeChild(),
+     reorderingAllowed);
   }
   
   public void update(GlobalConstants consts, String errContext,
                      ValLoc resVal, int stmtIndex) {
+    logger.trace(resVal + " " + resVal.congType());
+
     if (resVal.congType() == CongruenceType.ALIAS) {
       // Update aliases only if congType matches
       update(consts, errContext, resVal.location(), resVal.value(),
-                                          byAlias, true, stmtIndex);
+                      resVal.isAssign(), byAlias, true, stmtIndex);
     } else {
       assert(resVal.congType() == CongruenceType.VALUE);
     }
@@ -144,7 +154,11 @@ public class Congruences implements ValueState {
     
     // Both alias and value links result in updates to value
     update(consts, errContext, resVal.location(), resVal.value(),
-                                       byValue, true, stmtIndex);
+           resVal.isAssign(), byValue, true, stmtIndex);
+    
+    // Check assignment after all other updates, so that any
+    // contradictions get propagated correctly
+    markAssigned(consts, resVal);
   }
   
   /**
@@ -154,12 +168,15 @@ public class Congruences implements ValueState {
    * @param errContext
    * @param location
    * @param value
+   * @param isAssign YES if value represents a single-assignment location
+   *                and location is the thing stored to that location
    * @param congruent
    * @param addInverses
    * @return
    */
   private void update(GlobalConstants consts, String errContext,
-            Arg location, ArgCV value, CongruentSets congruent,
+            Arg location, ArgCV value, IsAssign isAssign, 
+            CongruentSets congruent,
             boolean addInverses, int stmtIndex) {
     // LocCV may already be in congruent set
     Arg canonLoc = congruent.findCanonical(new RecCV(location)); 
@@ -174,8 +191,8 @@ public class Congruences implements ValueState {
       congruent.addToSet(consts, canonVal, canonLoc);
     } else {
       // Need to merge together two existing sets
-      mergeSets(errContext, canonVal, consts, congruent, canonLoc,
-                canonLocFromVal, stmtIndex);
+      mergeSets(errContext, canonVal, consts, congruent,
+                canonLocFromVal, canonLoc, isAssign, stmtIndex);
     }
     
     if (addInverses) {
@@ -231,19 +248,20 @@ public class Congruences implements ValueState {
   private void updateInv(GlobalConstants consts, String errContext,
       Arg invOutput, ArgCV invVal, int stmtIndex) {
     CongruentSets valCong = getCongruentSet(CongruenceType.VALUE);
-    update(consts, errContext, invOutput, invVal, valCong, false, stmtIndex);
+    update(consts, errContext, invOutput, invVal, IsAssign.NO,
+           valCong, false, stmtIndex);
   }
   /**
    * Merge two congruence sets that are newly connected via value
    * @param errContext
    * @param resVal
    * @param congruent
-   * @param newLoc representative of set with location just assigned
+   * @param newLoc representative of set with location just maybeAssigned
    * @param oldLoc representative of existing set
    */
   private void mergeSets(String errContext, RecCV value,
       GlobalConstants consts, CongruentSets congruent,
-      Arg newLoc, Arg oldLoc, int stmtIndex) {
+      Arg oldLoc, Arg newLoc, IsAssign newIsAssign, int stmtIndex) {
     if (newLoc.equals(oldLoc)) {
       // Already merged
       return;
@@ -254,10 +272,11 @@ public class Congruences implements ValueState {
       congruent.markContradiction(newLoc);
       congruent.markContradiction(oldLoc);
     }
+        
     
     // Must merge.  Select which is the preferred value
     // (for replacement purposes, etc.)
-    Arg winner = preferred(congruent, oldLoc, newLoc, stmtIndex);
+    Arg winner = preferred(congruent, oldLoc, newLoc, newIsAssign, stmtIndex);
     Arg loser = (winner == oldLoc ? newLoc : oldLoc);
     if (logger.isTraceEnabled()) {
       logger.trace("old: " + oldLoc + " vs. new: " + newLoc +
@@ -286,6 +305,16 @@ public class Congruences implements ValueState {
     congruent.changeCanonical(consts, oldVal, newVal);
   }
 
+  /**
+   * Check if vals contradict each other.
+   * TODO: will the double assignment checking subsume this?
+   * @param errContext
+   * @param congType
+   * @param value
+   * @param val1
+   * @param val2
+   * @return
+   */
   private boolean checkNoContradiction(String errContext,
     CongruenceType congType, RecCV value, Arg val1, Arg val2) {
     boolean contradiction = false;
@@ -327,13 +356,29 @@ public class Congruences implements ValueState {
    * @return the preferred of the two args
    */
   private Arg preferred(CongruentSets congruent,
-                        Arg oldArg, Arg newArg, int stmtIndex) {
+            Arg oldArg, Arg newArg, IsAssign newIsAssign, int stmtIndex) {
     if (congruent.congType == CongruenceType.VALUE) {
       // Constants trump all
       if (isConst(oldArg)) {
         return oldArg;
       } else if (isConst(newArg)) {
+        return newArg;
+      }
+      /*
+       * If newArg was stored directly to the location, doesn't make
+       * sense to substitute.  In some cases this could result in a
+       * bad substitution creating a circular dependency.
+       */
+      if (newIsAssign == IsAssign.TO_VALUE) {
+        return newArg;
+      }
+      
+      // Mapped var must be canonical member of congruence set.
+      // If both are mapped, keep old and caller will abort merge
+      if (oldArg.isMapped() != Ternary.FALSE) {
         return oldArg;
+      } else if (newArg.isMapped() != Ternary.FALSE) {
+        return newArg;
       }
     } else {
       assert(congruent.congType == CongruenceType.ALIAS);
@@ -343,16 +388,6 @@ public class Congruences implements ValueState {
       if (oldArg.getVar().storage() != Alloc.ALIAS) {
         return oldArg;
       } else if (newArg.getVar().storage() != Alloc.ALIAS){
-        return newArg;
-      }
-    }
-    
-    if (congruent.congType == CongruenceType.VALUE) {
-      // Mapped var must be canonical member of congruence set.
-      // If both are mapped, keep old and caller will abort merge
-      if (oldArg.isMapped() != Ternary.FALSE) {
-        return oldArg;
-      } else if (newArg.isMapped() != Ternary.FALSE) {
         return newArg;
       }
     }
@@ -395,6 +430,42 @@ public class Congruences implements ValueState {
     assert(canonical.isVar()) : "Should only have a variable as" +
     		    " canonical member in ALIAS congruence relationship";
     return canonical.getVar();
+  }
+
+  /**
+   * 
+   * @param canonLoc CV representing a single assignment location
+   * @param assign
+   */
+  private void markAssigned(GlobalConstants consts, ValLoc vl) {
+    RecCV assigned;
+    if (vl.isAssign() == IsAssign.NO) {
+      return;
+    } else if (vl.isAssign() == IsAssign.TO_LOCATION) {
+      Arg location = vl.location();
+      assert(location.isVar()) : "Can't assign constant: " + location;
+      assigned = new RecCV(location);  
+    } else {
+      assert(vl.isAssign() == IsAssign.TO_VALUE);
+      // TODO: Need to canonicalize root var by alias and subscripts by value.
+      //       Probably just need to handle each location type separately
+      //       E.g. Values, futures, refs, arrays.  Could model as root
+      //            + subscript
+      assigned = byValue.canonicalize(consts, vl.value());
+    }
+    if (maybeAssigned.contains(assigned)) {
+      // Potential double assignment: avoid doing any optimizations on
+      // the contents of this location.
+      logger.debug("Potential double assignment to " + assigned);
+      byAlias.markContradiction(assigned);
+      byValue.markContradiction(assigned);
+      return;
+    } 
+    maybeAssigned.add(assigned);
+    
+    // TODO: will need to unify stored state
+    // TODO: will need to merge maybeAssigned info upon congruence merges.
+    //          E.g. if A[x], A[y] are stored and we find out that x == y
   }
 
   public void markClosed(Var var, int stmtIndex, boolean recursive) {

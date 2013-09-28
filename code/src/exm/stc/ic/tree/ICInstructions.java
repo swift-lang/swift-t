@@ -56,6 +56,7 @@ import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
 import exm.stc.ic.opt.valuenumber.ComputedValue.RecCV;
 import exm.stc.ic.opt.valuenumber.ValLoc;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
+import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
@@ -637,10 +638,10 @@ public class ICInstructions {
     @Override
     public List<ValLoc> getResults(ValueState existing) {
       if (ForeignFunctions.isPure(functionName)) {
-        if (!this.writesMappedVar() && isCopyFunction()) {
+        if (isCopyFunction()) {
           // Handle copy as a special case
-          return ValLoc.makeCopy(getOutput(0),
-                                         getInput(0)).asList();
+          return ValLoc.makeCopy(getOutput(0), getInput(0),
+                                 IsAssign.TO_LOCATION).asList();
         } else {
           List<ValLoc> res = new ArrayList<ValLoc>();
           for (int output = 0; output < getOutputs().size(); output++) {
@@ -657,7 +658,7 @@ public class ICInstructions {
             
             res.add(ValLoc.buildResult(this.op, 
                 canonicalFunctionName, cvArgs, 
-                getOutput(output).asArg(), outputClosed));
+                getOutput(output).asArg(), outputClosed, IsAssign.TO_LOCATION));
           }
           addSpecialCVs(res);
           return res;
@@ -680,14 +681,16 @@ public class ICInstructions {
         if (op == Opcode.CALL_FOREIGN) {
           cvs.add(ValLoc.makeFilename(getInput(0), getOutput(0)));
         } else if (op == Opcode.CALL_FOREIGN_LOCAL){
-          cvs.add(ValLoc.makeFilenameLocal(getInput(0), getOutput(0)));
+          // Don't mark as IsAssign since standard cv catches this
+          cvs.add(ValLoc.makeFilenameLocal(getInput(0), getOutput(0),
+                                        IsAssign.NO));
         }
       } else if (op == Opcode.CALL_FOREIGN_LOCAL &&
           (isImpl(SpecialFunction.RANGE) ||
            isImpl(SpecialFunction.RANGE_STEP))) {
         addRangeCVs(cvs);
       } else if (isImpl(SpecialFunction.SIZE)) {
-          cvs.add(makeArraySizeCV());
+          cvs.add(makeArraySizeCV(IsAssign.NO));
       }
     }
 
@@ -735,12 +738,12 @@ public class ICInstructions {
         long arrSize = Math.max(0, (end - start) / step + 1);
         Var arr = getOutput(0);
         cvs.add(makeArraySizeCV(arr, Arg.createIntLit(arrSize),
-                                           false));
-        // TODO: somehow add array elements?
+                                false, IsAssign.NO));
+        // TODO: add array elements up to some limit?
       }
     }
 
-    private ValLoc makeArraySizeCV() {
+    private ValLoc makeArraySizeCV(IsAssign isAssign) {
       boolean isFuture;
       if (Types.isString(getOutput(0))) {
         isFuture = true;
@@ -749,16 +752,17 @@ public class ICInstructions {
         isFuture = false;
       }
       return makeArraySizeCV(getInput(0).getVar(), getOutput(0).asArg(),
-                             isFuture);
+                             isFuture, isAssign);
     }
 
-    static ValLoc makeArraySizeCV(Var arr, Arg size, boolean future) {
+    static ValLoc makeArraySizeCV(Var arr, Arg size, boolean future,
+                                  IsAssign isAssign) {
       assert(Types.isArray(arr.type()));
       assert(size.isImmediateInt());
       String subop = future ? ComputedValue.ARRAY_SIZE_FUTURE :
                               ComputedValue.ARRAY_SIZE_VAL;
       return ValLoc.buildResult(Opcode.FAKE, subop,
-                                arr.asArg(), size, Closed.YES_NOT_RECURSIVE);
+              arr.asArg(), size, Closed.YES_NOT_RECURSIVE, isAssign);
     }
 
 
@@ -1455,7 +1459,8 @@ public class ICInstructions {
           // Unique key for cv includes number of output
           // Output file should be closed after external program executes
           ValLoc cv = ValLoc.buildResult(op, cmd,
-                     cvArgs, outFiles.get(i).asArg(), Closed.YES_NOT_RECURSIVE);
+                     cvArgs, outFiles.get(i).asArg(), Closed.YES_NOT_RECURSIVE,
+                     IsAssign.TO_LOCATION);
           cvs.add(cv);
         }
         return cvs;
@@ -2036,11 +2041,13 @@ public class ICInstructions {
     private ValLoc makeBasicComputedValue() {
       if (Operators.isCopy(this.subop)) {
         // It might be assigning a constant val
-        return ValLoc.makeCopy(this.output, this.inputs.get(0));
+        return ValLoc.makeCopy(this.output, this.inputs.get(0),
+                               IsAssign.TO_LOCATION);
       } else if (Operators.isMinMaxOp(subop)) {
         assert(this.inputs.size() == 2);
         if (this.inputs.get(0).equals(this.inputs.get(1))) {
-          return ValLoc.makeCopy(this.output, this.inputs.get(0));
+          return ValLoc.makeCopy(this.output, this.inputs.get(0),
+                                 IsAssign.TO_LOCATION);
         }
       } else if (output != null) {
         // put arguments into canonical order
@@ -2060,7 +2067,8 @@ public class ICInstructions {
         }
         
         return ValLoc.buildResult(this.op, cvOp, cvInputs,
-                                this.output.asArg(), outputClosed(op));
+                                this.output.asArg(), outputClosed(op),
+                                IsAssign.TO_LOCATION);
       }
       return null;
     }
@@ -2152,7 +2160,8 @@ public class ICInstructions {
           long c = canonArgs.val2 + add.val2;
           if (c == 0) {
             // Check if additions cancel
-            return ValLoc.makeCopy(this.output, add.val1.asArg());
+            return ValLoc.makeCopy(this.output, add.val1.asArg(),
+                                   IsAssign.NO);
           } else {
             // Otherwise add them together
             return plusCV(op, add.val1.asArg(), Arg.createIntLit(c),
@@ -2204,7 +2213,8 @@ public class ICInstructions {
         Var output) {
       // TODO: short circuit here e.g. if one arg is 0
       return ValLoc.buildResult(op, BuiltinOpcode.PLUS_INT,
-          Arrays.asList(arg1, arg2), output.asArg(), outputClosed(op));
+          Arrays.asList(arg1, arg2), output.asArg(), outputClosed(op),
+          IsAssign.NO);
     }
 
 

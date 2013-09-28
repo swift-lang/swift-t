@@ -1,16 +1,13 @@
 package exm.stc.ic.opt.valuenumber;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
-import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
 import exm.stc.ic.tree.Opcode;
@@ -28,6 +25,9 @@ public class ValLoc {
   /** true if location var is a copy only. I.e. cannot be alias
    * of another value with same CV */
   private final boolean isValCopy;
+  
+  /** Whether this represents a store operation */
+  private final IsAssign isAssign;
   
   public ArgCV value() {
     return value;
@@ -54,75 +54,65 @@ public class ValLoc {
     }
   }
 
+  public IsAssign isAssign() {
+    return isAssign;
+  }
+
   private ValLoc(ArgCV value, Arg location,
-      Closed locClosed, boolean isValCopy) {
+      Closed locClosed, boolean isValCopy, IsAssign isAssign) {
     assert(value != null);
     this.value = value;
     this.location = location;
     this.locClosed = locClosed;
     this.isValCopy = isValCopy;
+    this.isAssign = isAssign;
   }
   
   public ValLoc(ArgCV value, Arg location,
-      Closed locClosed,  IsValCopy isValCopy) {
+      Closed locClosed,  IsValCopy isValCopy, IsAssign isAssign) {
     this(value, location, locClosed,
-         isValCopy == IsValCopy.YES);
+         isValCopy == IsValCopy.YES, isAssign);
   }
   
   public static ValLoc build(ArgCV value, Arg location,
-                             Closed locClosed) {
-    return new ValLoc(value, location, locClosed, IsValCopy.NO);
+                             Closed locClosed, IsAssign isAssign) {
+    return new ValLoc(value, location, locClosed, IsValCopy.NO, isAssign);
   }
   
   public static ValLoc buildResult(Opcode op, Object subop, List<Arg> inputs,
-                      Arg valLocation, Closed locClosed, IsValCopy valCopy) {
+                      Arg valLocation, Closed locClosed, IsValCopy valCopy,
+                      IsAssign isAssign) {
     ArgCV cv = new ArgCV(op, subop, inputs);
-    return new ValLoc(cv, valLocation, locClosed, valCopy);
+    return new ValLoc(cv, valLocation, locClosed, valCopy, isAssign);
   }
-
-  public static ValLoc buildResult(Opcode op, List<Arg> inputs,
-      Arg valLocation, Closed locClosed, IsValCopy valCopy) {
+  
+  public static ValLoc buildResult(Opcode op, List<Arg> inputs, Arg valLocation,
+      Closed locClosed, IsAssign isAssign) {
     return buildResult(op, "", inputs, valLocation, locClosed,
-                       valCopy);
+                       IsValCopy.NO, isAssign);
   }
-
+  
   public static ValLoc buildResult(Opcode op, Object subop,
-      List<Arg> inputs, Arg valLocation, Closed locClosed) {
+      List<Arg> inputs, Arg valLocation, Closed locClosed, IsAssign isAssign) {
     return buildResult(op, subop, inputs, valLocation, locClosed,
-                       IsValCopy.NO);  
-  }
-
-  public static ValLoc buildResult(Opcode op, List<Arg> inputs,
-      Arg valLocation, Closed locClosed) {
-    return buildResult(op, "", inputs, valLocation, locClosed);
-  }
-
-  public static ValLoc buildResult(Opcode op, Arg input,
-                        Arg valLocation, Closed locClosed) {
-    return buildResult(op, "", Collections.singletonList(input), valLocation,
-                       locClosed);
+                       IsValCopy.NO, isAssign);
   }
 
   public static ValLoc buildResult(Opcode op, Object subop, Arg input,
-      Arg valLocation, Closed locClosed) {
-    return buildResult(op, subop, Arrays.asList(input), valLocation, locClosed);
+      Arg valLocation, Closed locClosed, IsAssign isAssign) {
+    return buildResult(op, subop, Arrays.asList(input), valLocation, locClosed,
+                       isAssign);
   }
-  public static ValLoc buildResult(Opcode op, String subop, List<Arg> inputs) {
-    return buildResult(op, subop, inputs, null, Closed.MAYBE_NOT);
-  }
-
-  public static ValLoc buildResult(Opcode op, List<Arg> inputs) {
-    return buildResult(op, "", inputs);
-  }
-
+  
   /**
    * @param dst
    * @param src
    * @return Computed value indicating dst has same value as src
    */
-  public static ValLoc makeCopy(Var dst, Arg src) {
+  public static ValLoc makeCopy(Var dst, Arg src, IsAssign isAssign) {
+    assert(isAssign != IsAssign.TO_VALUE);
     return ValLoc.build(ComputedValue.makeCopy(src), dst.asArg(),
-                        Closed.MAYBE_NOT);
+                        Closed.MAYBE_NOT, isAssign);
   }
   
   /**
@@ -145,23 +135,7 @@ public class ValLoc {
     // See if we still have an alias
     boolean newIsValCopy = isValCopy || copyType != CongruenceType.ALIAS;
     return new ValLoc(value, copiedTo.asArg(), newLocClosed,
-                      newIsValCopy);
-  }
-
-  /**
-   * Create copy of this ValLoc with original substituted
-   * for replacement
-   */
-  public ValLoc substituteInputs(Var original, Arg replacement,
-      CongruenceType copyType) {
-    Map<Var, Arg> replace = Collections.singletonMap(original, replacement);
-    
-    List<Arg> newInputs = new ArrayList<Arg>(value.getInputs());
-    ICUtil.replaceArgsInList(replace, newInputs);
-    
-    boolean newIsValCopy = isValCopy || copyType != CongruenceType.ALIAS;
-    ArgCV newVal = value.substituteInputs2(newInputs);
-    return new ValLoc(newVal, location, locClosed, newIsValCopy);
+                      newIsValCopy, IsAssign.TO_LOCATION);
   }
   
   /**
@@ -171,7 +145,7 @@ public class ValLoc {
    */
   public static ValLoc makeAlias(Var dst, Var src) {
     return build(ComputedValue.makeAlias(src.asArg()), dst.asArg(),
-                 Closed.MAYBE_NOT);
+                 Closed.MAYBE_NOT, IsAssign.NO);
   }
   
 
@@ -185,9 +159,13 @@ public class ValLoc {
    * @return
    */
   public static ValLoc makeArrayResult(Var arr, Arg ix, Var contents,
-        boolean refResult) {
+        boolean refResult, IsAssign isAssign) {
     Arg contentsArg = contents.asArg();
     ArgCV val;
+    // TODO: how to handle assigns to array references?
+    //       Will need to make sure that everything is respected if
+    //       we created a dereferenced one.  Is an alternative to have
+    //       nested CVs?
     if (refResult) {
       assert(Types.isMemberReference(contents, arr)) :
             "not member ref: " + contents + " " + arr;
@@ -197,7 +175,8 @@ public class ValLoc {
             "not member: " + contents + " " + arr;
       val = ComputedValue.arrayCV(arr, ix);
     }
-    return new ValLoc(val, contentsArg, Closed.MAYBE_NOT, IsValCopy.NO);
+    return new ValLoc(val, contentsArg, Closed.MAYBE_NOT, IsValCopy.NO,
+                       isAssign);
   }
   
   public static ValLoc makeCreateNestedResult(Var arr, Arg ix, Var contents,
@@ -211,13 +190,13 @@ public class ValLoc {
             "not member: " + contents + " " + arr;
       val = ComputedValue.arrayNestedCV(arr, ix);
     }
-    return ValLoc.build(val, contentsArg, Closed.MAYBE_NOT);
+    return ValLoc.build(val, contentsArg, Closed.MAYBE_NOT, IsAssign.NO);
   }
   
   public static ValLoc makeStructLookupResult(Var elem, Var struct,
                                                  String fieldName) {
     return ValLoc.build(ComputedValue.structMemberCV(struct, fieldName),
-                         elem.asArg(), Closed.MAYBE_NOT);
+                         elem.asArg(), Closed.MAYBE_NOT, IsAssign.NO);
   }
   
 
@@ -226,21 +205,26 @@ public class ValLoc {
     assert(outFilename.isVar());
     assert(Types.isString(outFilename.getVar().type()));
     return ValLoc.buildResult(Opcode.GET_FILENAME,
-        Arrays.asList(inFile.asArg()), outFilename, Closed.MAYBE_NOT);
+        Arrays.asList(inFile.asArg()), outFilename, Closed.MAYBE_NOT,
+        IsAssign.NO);
   }
   
-  public static ValLoc makeFilenameVal(Arg file, Arg filenameVal) {
+  public static ValLoc makeFilenameVal(Arg file, Arg filenameVal,
+                                       IsAssign isAssign) {
     assert(Types.isFile(file.type()));
     assert(filenameVal == null || filenameVal.isImmediateString());
     return ValLoc.buildResult(Opcode.GET_FILENAME_VAL,
-                            file, filenameVal, Closed.YES_NOT_RECURSIVE);
+            file.asList(), filenameVal, Closed.YES_NOT_RECURSIVE, isAssign);
   }
 
-  public static ValLoc makeFilenameLocal(Arg outFilename, Var inFile) {
+  public static ValLoc makeFilenameLocal(Arg outFilename, Var inFile,
+          IsAssign isAssign) {
+    assert(isAssign != IsAssign.TO_VALUE);
     assert(Types.isFileVal(inFile));
     assert(outFilename.isImmediateString());
     return ValLoc.buildResult(Opcode.GET_LOCAL_FILENAME,
-            inFile.asArg().asList(), outFilename, Closed.YES_NOT_RECURSIVE);
+            inFile.asArg().asList(), outFilename, Closed.YES_NOT_RECURSIVE,
+            isAssign);
   }
 
   /**
@@ -248,11 +232,13 @@ public class ValLoc {
    * @param contents of ref
    * @param ref
    * @param copied if it is a copy of the original
+   * @param isAssign
    */
-  public static ValLoc derefCompVal(Var v, Var ref, IsValCopy copied) {
+  public static ValLoc derefCompVal(Var v, Var ref, IsValCopy copied,
+                                    IsAssign isAssign) {
     assert(Types.isRefTo(ref, v)) : ref + " should be ref to " + v;
     return new ValLoc(ComputedValue.derefCompVal(ref),
-                      v.asArg(), Closed.MAYBE_NOT, copied);
+                      v.asArg(), Closed.MAYBE_NOT, copied, isAssign);
   }
   
 
@@ -262,7 +248,18 @@ public class ValLoc {
   }
   
   public String toString() {
-    return value.toString() + " => " + location;
+    String res = value.toString() + " => " + location;
+    if (isValCopy) {
+      res += " VAL_COPY";
+    }
+    if (locClosed != Closed.MAYBE_NOT) {
+      res += " " + locClosed;
+    }
+    if (isAssign != IsAssign.NO) {
+      res += " " + isAssign;
+    }
+    
+    return res;
   }
 
   /**
@@ -283,8 +280,26 @@ public class ValLoc {
     }
   }
   
+  /**
+   * Whether the congruence is a copy of a value
+   */
   public static enum IsValCopy {
     YES,
+    NO;
+  }
+  
+  /**
+   * Whether we assigned a single assignment location here
+   * TO_VALUE if:
+   * - The computed value represents a single-assignment location such as
+   *    a future array index
+   * - The instruction creating this ValLoc assigned that location.
+   * TO_LOCATION if:
+   *  - This instruction assigns the output.
+   */
+  public static enum IsAssign {
+    TO_LOCATION,
+    TO_VALUE,
     NO;
   }
 }

@@ -25,6 +25,7 @@ import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
 import exm.stc.ic.opt.valuenumber.ComputedValue.RecCV;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
+import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsValCopy;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions;
@@ -201,12 +202,17 @@ public class UnifiedValues {
                     "allSame: " + allSameLocation + " allVals: " + allVals);
       }
       
+      // TODO: fill in with correct
+      IsAssign isAssign = IsAssign.NO;
+      
       if (allSameLocation) {
-        availVals.add(createUnifiedCV(cv, firstLoc, allClosed, anyValCopy));
+        availVals.add(createUnifiedCV(cv, firstLoc, allClosed, anyValCopy,
+                                      isAssign));
       } else if (unifiedLocs.containsKey(branchLocs)) {
         // We already unified this list of variables: just reuse that
         Var unifiedLoc = unifiedLocs.get(branchLocs);
-        availVals.add(createUnifiedCV(cv, unifiedLoc.asArg(), allClosed, anyValCopy));
+        availVals.add(createUnifiedCV(cv, unifiedLoc.asArg(), allClosed,
+                                      anyValCopy, isAssign));
       } else {
         Var unifiedLoc = createUnifyingVar(consts, fn, parent, branchStates,
                   branchBlocks, branchLocs, firstLoc.type());
@@ -216,7 +222,8 @@ public class UnifiedValues {
         unifiedLocs.put(branchLocs, unifiedLoc);
         
         // Signal that value is stored in new var
-        availVals.add(createUnifiedCV(cv, unifiedLoc.asArg(), allClosed, anyValCopy));
+        availVals.add(createUnifiedCV(cv, unifiedLoc.asArg(), allClosed, anyValCopy,
+                                      isAssign));
       }
     }
     
@@ -248,7 +255,7 @@ public class UnifiedValues {
       ValLoc copyVal;
       if (isValue) {
         copyInst = ICInstructions.valueSet(unifiedLoc, loc);
-        copyVal = ValLoc.makeCopy(unifiedLoc, loc);
+        copyVal = ValLoc.makeCopy(unifiedLoc, loc, IsAssign.TO_LOCATION);
       } else {
         assert (loc.isVar()) : loc + " " + loc.getKind();
         copyInst = TurbineOp.copyRef(unifiedLoc, loc.getVar());
@@ -266,8 +273,9 @@ public class UnifiedValues {
 
 
   private static ValLoc createUnifiedCV(ArgCV cv, Arg loc,
-            Closed allClosed, IsValCopy anyValCopy) {
-    return new ValLoc(cv, loc, allClosed, anyValCopy);
+            Closed allClosed, IsValCopy anyValCopy,
+            IsAssign maybeAssigned) {
+    return new ValLoc(cv, loc, allClosed, anyValCopy, maybeAssigned);
   }
   
   

@@ -302,6 +302,10 @@ class CongruentSets {
     return new ReplacementMap(init);
   }
 
+  public void markContradiction(RecCV val) {
+    markContradiction(findCanonical(val));
+  }
+  
   public void markContradiction(Arg arg) {
     arg = findCanonical(arg);
     boolean newContradiction = contradictions.add(arg);

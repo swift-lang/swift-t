@@ -30,6 +30,7 @@ import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
 import exm.stc.ic.opt.valuenumber.ValLoc;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
+import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsValCopy;
 import exm.stc.ic.tree.ICInstructions.CommonFunctionCall;
 import exm.stc.ic.tree.ICInstructions.Instruction;
@@ -1553,9 +1554,10 @@ public class TurbineOp extends Instruction {
 
         if (op == Opcode.LOAD_REF) {
           // use standard deref value
-          return ValLoc.derefCompVal(dst, src.getVar(), IsValCopy.NO).asList();
+          return ValLoc.derefCompVal(dst, src.getVar(), IsValCopy.NO,
+                                     IsAssign.NO).asList();
         } else {
-          return vanillaResult(outIsClosed).asList();
+          return vanillaResult(outIsClosed, IsAssign.NO).asList();
         }
       }
       case STORE_REF:
@@ -1569,7 +1571,8 @@ public class TurbineOp extends Instruction {
 
         // add assign so we can avoid recreating future 
         // (closed b/c this instruction closes val immediately)
-        ValLoc assign = vanillaResult(Closed.YES_NOT_RECURSIVE);
+        ValLoc assign = vanillaResult(Closed.YES_NOT_RECURSIVE,
+                                      IsAssign.TO_LOCATION);
         // add retrieve so we can avoid retrieving later
         Arg dst = getOutput(0).asArg();
         Arg src = getInput(0);
@@ -1578,7 +1581,7 @@ public class TurbineOp extends Instruction {
         if (op == Opcode.STORE_REF) {
           // Use standard dereference computed value
           ValLoc retrieve = ValLoc.derefCompVal(src.getVar(), dst.getVar(),
-                                             IsValCopy.NO);
+                                   IsValCopy.NO, IsAssign.TO_VALUE);
           return Arrays.asList(retrieve, assign);
         } else {
           return assign.asList();
@@ -1586,7 +1589,8 @@ public class TurbineOp extends Instruction {
       }
       case IS_MAPPED: {
         // Closed because we don't need to wait to check mapping
-        ValLoc vanilla = vanillaResult(Closed.YES_NOT_RECURSIVE);
+        ValLoc vanilla = vanillaResult(Closed.YES_NOT_RECURSIVE,
+                                       IsAssign.TO_LOCATION);
         assert(vanilla != null);
         Var fileVar = getInput(0).getVar();
         if (fileVar.isMapped() == Ternary.MAYBE) {
@@ -1595,7 +1599,7 @@ public class TurbineOp extends Instruction {
           // We know the value already, so check it's a constant
           Arg result = Arg.createBoolLit(fileVar.isMapped() == Ternary.TRUE);
           return Arrays.asList(vanilla,
-                ValLoc.makeCopy(getOutput(0), result));
+                ValLoc.makeCopy(getOutput(0), result, IsAssign.NO));
         }
       }
       case GET_FILENAME: {
@@ -1605,35 +1609,44 @@ public class TurbineOp extends Instruction {
         res.add(ValLoc.makeFilename(filename, file.getVar()));
         
         // Check to see if value of filename is in local value
-        ArgCV filenameCV = ValLoc.makeFilenameVal(file, null).value();
+        ArgCV filenameCV = ValLoc.makeFilenameVal(file, null,
+                                                  IsAssign.NO).value();
         Arg filenameVal = existing.findCanonical(filenameCV,
-                                                    CongruenceType.VALUE);
+                                                 CongruenceType.VALUE);
         if (filenameVal != null) {
           // We know that if we fetch from the output future of this instruction,
           // we'll get the previously stored filename
-          res.add(ValLoc.buildResult(Opcode.LOAD_STRING,
-                            filename, filenameVal, Closed.YES_NOT_RECURSIVE));
+          res.add(ValLoc.buildResult(Opcode.LOAD_STRING, filename.asList(),
+                        filenameVal, Closed.YES_NOT_RECURSIVE, IsAssign.NO));
         }
         return res;
       }
       case GET_LOCAL_FILENAME: {
         return ValLoc.makeFilenameLocal(getOutput(0).asArg(),
-                               getInput(0).getVar()).asList();
+                getInput(0).getVar(), IsAssign.TO_LOCATION).asList();
       }
       case SET_FILENAME_VAL: {
         Arg file = getOutput(0).asArg();
         Arg val = getInput(0);
-        return ValLoc.makeFilenameVal(file, val).asList();
+        return ValLoc.makeFilenameVal(file, val, IsAssign.TO_VALUE).asList();
       }
       case DEREF_BLOB:
       case DEREF_BOOL:
       case DEREF_FLOAT:
       case DEREF_INT:
-      case DEREF_STRING: {
-        // Use standard dereference value
-        return ValLoc.derefCompVal(getOutput(0), getInput(0).getVar(),
-                                   IsValCopy.YES).asList();
+      case DEREF_STRING: 
+      case DEREF_FILE: {
+        // Provide this one to indicate that output was assigned
+        ValLoc regular = vanillaResult(Closed.MAYBE_NOT, IsAssign.TO_LOCATION);
+        // Provide standard dereference value
+        // TODO: automatically do inverses in congruence
+        ValLoc inv = ValLoc.derefCompVal(getOutput(0), getInput(0).getVar(),
+                                   IsValCopy.YES, IsAssign.NO);
+        return Arrays.asList(regular, inv);
       }
+      /*
+       * TODO: this was previously here to avoid substituting mapped vals.
+       * Congurenes should handle that correctly now.  Delete this soon
       case DEREF_FILE: {
         if (getOutput(0).isMapped() == Ternary.FALSE) {
           return ValLoc.derefCompVal(getOutput(0), getInput(0).getVar(),
@@ -1643,8 +1656,7 @@ public class TurbineOp extends Instruction {
           // TODO: still relevant?
           return null;
         }
-      }
-      
+      }*/
       case STRUCT_INIT_FIELD: {
         ValLoc lookup = ValLoc.makeStructLookupResult(
             getInput(1).getVar(), getOutput(0), getInput(0).getStringLit());
@@ -1680,25 +1692,26 @@ public class TurbineOp extends Instruction {
                                 op == Opcode.ARRAYREF_DEREF_INSERT_IMM ||
                                 op == Opcode.ARRAY_DEREF_INSERT_FUTURE ||
                                 op == Opcode.ARRAY_DEREF_INSERT_IMM);
-        return Arrays.asList(ValLoc.makeArrayResult(arr, ix, member, insertingRef));
+        return Arrays.asList(ValLoc.makeArrayResult(arr, ix, member,
+                                       insertingRef, IsAssign.TO_VALUE));
       }
       case ARRAY_BUILD: {
         Var arr = getOutput(0);
         List<ValLoc> res = new ArrayList<ValLoc>();
         // Computed value for whole array
         res.add(ValLoc.buildResult(op, getInputs(), arr.asArg(),
-                                   Closed.YES_NOT_RECURSIVE));
+                       Closed.YES_NOT_RECURSIVE, IsAssign.NO));
         // For individual array elements
         assert(getInputs().size() % 2 == 0);
         int elemCount = getInputs().size() / 2;
         for (int i = 0; i < elemCount; i++) {
           Arg key = getInput(2 * i);
           Var val = getInput(2 * i + 1).getVar();
-          res.add(ValLoc.makeArrayResult(arr, key, val, false));
+          res.add(ValLoc.makeArrayResult(arr, key, val, false, IsAssign.TO_VALUE));
         }
         
         res.add(CommonFunctionCall.makeArraySizeCV(arr,
-                    Arg.createIntLit(elemCount), false));
+                    Arg.createIntLit(elemCount), false, IsAssign.NO));
         return res;
       }
       case ARRAY_LOOKUP_IMM:
@@ -1714,11 +1727,14 @@ public class TurbineOp extends Instruction {
 
         if (op == Opcode.ARRAY_LOOKUP_IMM) {
           // This just retrieves the item immediately
-          return Arrays.asList(ValLoc.makeArrayResult(arr, ix, contents, false));
+          return Arrays.asList(ValLoc.makeArrayResult(arr, ix, contents, false,
+                                                      IsAssign.NO));
         } else {
           assert (Types.isMemberReference(contents, arr));
           List<ValLoc> res = new ArrayList<ValLoc>();
-          res.add(ValLoc.makeArrayResult(arr, ix, contents, true));
+          // Will assign the reference
+          res.add(ValLoc.makeArrayResult(arr, ix, contents, true,
+                                         IsAssign.TO_LOCATION));
           addDerefMemberVals(existing, arr, contents, ix, res);
           return res;
         }
@@ -1749,7 +1765,7 @@ public class TurbineOp extends Instruction {
         // Mark as not substitutable since this op may have
         // side-effect of creating array
         res.add(ValLoc.makeArrayResult(arr, ix, nestedArr,
-                                              returnsRef));
+                                              returnsRef, IsAssign.NO));
         res.add(ValLoc.makeCreateNestedResult(arr, ix, nestedArr,
             returnsRef));
         
@@ -1796,19 +1812,21 @@ public class TurbineOp extends Instruction {
         assert(Types.isMemberType(arr, prev.type()));
         IsValCopy valCopy = congType == CongruenceType.ALIAS ?
                             IsValCopy.NO : IsValCopy.YES;
-        res.add(ValLoc.derefCompVal(prev.getVar(), memberRef, valCopy));
+        res.add(ValLoc.derefCompVal(prev.getVar(), memberRef, valCopy,
+                                    IsAssign.TO_LOCATION));
       }
     }
   }
   
   /**
    * Create the "standard" computed value
-   * assume 1 ouput arg
+   * assume 1 output arg
    * @return
    */
-  private ValLoc vanillaResult(Closed closed) {
+  private ValLoc vanillaResult(Closed closed, IsAssign isAssign) {
     assert(outputs.size() == 1);
-    return ValLoc.buildResult(op, inputs, outputs.get(0).asArg(), closed);
+    return ValLoc.buildResult(op, inputs, outputs.get(0).asArg(), closed,
+                              isAssign);
   }
 
   @Override

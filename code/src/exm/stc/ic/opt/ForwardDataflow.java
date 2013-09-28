@@ -49,6 +49,7 @@ import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
 import exm.stc.ic.opt.valuenumber.Congruences;
 import exm.stc.ic.opt.valuenumber.UnifiedValues;
 import exm.stc.ic.opt.valuenumber.ValLoc;
+import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -144,7 +145,8 @@ public class ForwardDataflow implements OptimizerPass {
         Arg val = constants.lookupByVar(v);
         assert (val != null) : v.name();
         
-        ValLoc assign = ComputedValue.assignComputedVal(v, val);
+        ValLoc assign = ComputedValue.assignComputedVal(v, val,
+                                                IsAssign.TO_LOCATION);
         congruent.update(constants, f.getName(), assign, 0);
       }
     }

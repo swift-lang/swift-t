@@ -26,6 +26,7 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
+import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
 import exm.stc.ic.tree.Opcode;
 
 /**
@@ -159,15 +160,6 @@ public class ComputedValue<T> {
   public ComputedValue<T> substituteInputs(List<T> newInputs) {
     return new ComputedValue<T>(op, subop, newInputs);
   }
-  
-  /**
-   * Make a copy with a different list of inputs
-   * @param newInputs
-   * @return
-   */
-   public ArgCV substituteInputs2(List<Arg> newInputs) {
-     return new ArgCV(op, subop, newInputs);
-   }
 
   public static ArgCV makeCopy(Arg src) {
     return new ArgCV(Opcode.FAKE, ComputedValue.COPY_OF,
@@ -194,7 +186,8 @@ public class ComputedValue<T> {
     return new ArgCV(op, Arrays.asList(src.asArg()));
   }
 
-  public static ValLoc assignComputedVal(Var dst, Arg val) {
+  public static ValLoc assignComputedVal(Var dst, Arg val,
+                                         IsAssign isAssign) {
     Type dstType = dst.type();
     if (Types.isPrimValue(dstType)) {
         BuiltinOpcode op;
@@ -221,12 +214,13 @@ public class ComputedValue<T> {
           throw new STCRuntimeError("Unhandled type: " + dstType);
         }
         return ValLoc.buildResult(Opcode.LOCAL_OP, 
-            op.toString(), Arrays.asList(val), dst.asArg(), Closed.MAYBE_NOT);
+            op.toString(), Arrays.asList(val), dst.asArg(), Closed.MAYBE_NOT,
+            isAssign);
     } else {
       Opcode op = Opcode.assignOpcode(dstType);
       if (op != null) {
         return ValLoc.buildResult(op, Arrays.asList(val), dst.asArg(),
-                                  Closed.YES_NOT_RECURSIVE);
+                                  Closed.YES_NOT_RECURSIVE, isAssign);
       }
     }
     throw new STCRuntimeError("DOn't know how to assign to " + dst);
