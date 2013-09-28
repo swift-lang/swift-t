@@ -28,7 +28,6 @@ import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.valuenumber.ComputedValue;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
-import exm.stc.ic.opt.valuenumber.ComputedValue.RecCV;
 import exm.stc.ic.opt.valuenumber.ValLoc;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsValCopy;
@@ -1640,7 +1639,7 @@ public class TurbineOp extends Instruction {
         ValLoc retrieve;
         if (op == Opcode.LOAD_REF) {
           // use standard deref value
-          retrieve = ValLoc.derefCompVal(src.getVar(), dst, IsValCopy.NO);
+          retrieve = ValLoc.derefCompVal(dst, src.getVar(), IsValCopy.NO);
         } else {
           retrieve = vanillaResult(outIsClosed);
         }
@@ -1654,21 +1653,7 @@ public class TurbineOp extends Instruction {
         ValLoc assign = ValLoc.buildResult(cvop,
                   Arrays.asList(dst.asArg()), src, outIsClosed);
         result.add(assign);
-        
-        // TODO: redundant?
-        Opcode derefOp = Opcode.derefOpCode(src.futureType());
-        if (derefOp != null) {
-          ValLoc deref = ValLoc.buildResult(derefOp, 
-                    Arrays.asList(src), dst.asArg(), Closed.MAYBE_NOT);
-          result.add(deref);
-          // Add any new cvs that result from dereferencing the variable
-          for (RecCV val: existing.findCongruent(src.getVar().asArg(),
-                                                   CongruenceType.VALUE)) {
-            if (val.isCV()) {
-              result.addAll(ValLoc.createLoadRefCVs(val.cv(), dst));
-            }
-          }
-        }
+
         return result;
       }
       case STORE_REF:

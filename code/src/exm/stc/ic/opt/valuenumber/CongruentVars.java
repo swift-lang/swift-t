@@ -1063,11 +1063,12 @@ public class CongruentVars implements ValueState {
       public Arg get(Object key) {
         assert(key instanceof Var);
         Var v = (Var)key;
+        RecCV cv = new RecCV(v.asArg());
         Arg replace = null;
         CongruentSet curr = CongruentSet.this;
         List<CongruentSet> visited = new ArrayList<CongruentSet>();
         do {
-          replace = curr.canonical.get(v.asArg());
+          replace = curr.canonical.get(cv);
           if (replace != null) {
             break;
           }
@@ -1078,16 +1079,26 @@ public class CongruentVars implements ValueState {
         if (replace != null && replace.isVar()) {
           for (CongruentSet s: visited) {
             if (s.inaccessible.contains(replace.getVar())) {
+              if (logger.isTraceEnabled()) {
+                logger.trace(v + " => !!" + replace + "(" + congType + ")"
+                      + ": INACCESSIBLE");
+              }
               // Cannot access variable
               return null;
             }
           }
         }
         if (replace != null && contradictions.contains(replace)) {
-          // Don't do any replacements in sets with contradictions 
+          // Don't do any replacements in sets with contradictions
+          if (logger.isTraceEnabled()) {
+            logger.trace(v + " => !!" + replace + "(" + congType + ")" +
+                  ": CONTRADICTION");
+          }
           return null;
         }
-        
+        if (logger.isTraceEnabled()) {
+          logger.trace(v + " => " + replace + "(" + congType + ")");
+        }
         return replace;
       }
       

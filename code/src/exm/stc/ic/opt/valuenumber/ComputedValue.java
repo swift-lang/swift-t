@@ -399,8 +399,9 @@ public class ComputedValue<T> {
         return true;
       if (obj == null)
         return false;
-      if (getClass() != obj.getClass())
-        return false;
+      if (!(obj instanceof RecCV))
+        throw new STCRuntimeError("Comparing " + this.getClass().getName() + 
+                  " with " + obj.getClass().getName());
       RecCV other = (RecCV) obj;
       if (arg == null) {
         if (other.arg != null)

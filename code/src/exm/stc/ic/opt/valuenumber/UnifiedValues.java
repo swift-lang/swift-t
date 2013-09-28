@@ -281,11 +281,12 @@ public class UnifiedValues {
     for (RecCV val: firstState.availableThisScope(congType)) {
       ArgCV convertedVal = parentState.convertToArgs(val, congType);
       if (convertedVal != null) {
-        if (!alreadyAdded.contains(val) && !parentState.isAvailable(val, congType)) {
+        if (!alreadyAdded.contains(convertedVal) &&
+            !parentState.isAvailable(convertedVal, congType)) {
           int nBranches = branchStates.size();
           boolean presentInAll = true;
           for (CongruentVars otherState: branchStates.subList(1, nBranches)) {
-            if (!otherState.isAvailable(val, congType)) {
+            if (!otherState.isAvailable(convertedVal, congType)) {
               presentInAll = false;
               break;
             }

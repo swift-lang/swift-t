@@ -13,7 +13,6 @@ import exm.stc.common.lang.Var;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
-import exm.stc.ic.opt.valuenumber.ComputedValue.RecCV;
 import exm.stc.ic.tree.Opcode;
 
 /**
@@ -243,25 +242,7 @@ public class ValLoc {
     return ValLoc.buildResult(Opcode.GET_LOCAL_FILENAME,
             inFile.asArg().asList(), outFilename, Closed.YES_NOT_RECURSIVE);
   }
-  
-  
-  /**
-   * Check to see if we can add new computed values to a dereferenced variable
-   * @param refContent
-   * @return
-   */
-  public static List<ValLoc> createLoadRefCVs(ComputedValue<RecCV> cv,
-                                                   Var derefDst) {
-    if (cv.isArrayMemberRef() &&
-        cv.getInput(0).isArg() && cv.getInput(1).isArg()) {
-      // We've now got a direct handle to the array contents
-      return makeArrayResult(
-          cv.getInput(0).arg().getVar(), cv.getInput(1).arg(),
-          derefDst, false).asList();  
-    } 
-    return Collections.emptyList();
-  }
-  
+
   /**
    * ValLoc representing result of dereference ref
    * @param contents of ref
@@ -269,7 +250,7 @@ public class ValLoc {
    * @param copied if it is a copy of the original
    */
   public static ValLoc derefCompVal(Var v, Var ref, IsValCopy copied) {
-    assert(Types.isRefTo(ref, v));
+    assert(Types.isRefTo(ref, v)) : ref + " should be ref to " + v;
     return new ValLoc(ComputedValue.derefCompVal(ref),
                       v.asArg(), Closed.MAYBE_NOT, copied);
   }
