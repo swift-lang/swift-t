@@ -402,21 +402,20 @@ public class ForwardDataflow implements OptimizerPass {
                         InitState init) {
     Congruences state = congruences.get(block);
     
-    // TODO: need to use InitState when replacing
     // TODO: use closed info when replacing?
     ListIterator<Statement> stmtIt = block.statementIterator();
     while (stmtIt.hasNext()) {
       Statement stmt = stmtIt.next();
       if (stmt.type() == StatementType.INSTRUCTION) {
         // Replace vars in instruction
-        replaceCongruent(stmt.instruction(), state);
+        replaceCongruent(stmt.instruction(), state, init);
         
         // Update init state
         InitVariables.updateInitVars(logger, stmt, init, false);
       } else {
         assert(stmt.type() == StatementType.CONDITIONAL);
         // Replace vars recursively in conditional
-        replaceCongruentNonRec(stmt.conditional(), state);
+        replaceCongruentNonRec(stmt.conditional(), state, init);
         replaceValsRec(stmt.conditional(), congruences, init);
       }
 
@@ -424,10 +423,10 @@ public class ForwardDataflow implements OptimizerPass {
     }
     
     // Replace in cleanups
-    replaceCleanupCongruent(block, state);
+    replaceCleanupCongruent(block, state, init);
     
     for (Continuation cont: block.getContinuations()) {
-      replaceCongruentNonRec(cont, state);
+      replaceCongruentNonRec(cont, state, init);
       replaceValsRec(cont, congruences, init);
     }
   }
@@ -556,24 +555,24 @@ public class ForwardDataflow implements OptimizerPass {
       Arrays.asList(RenameMode.VALUE, RenameMode.REFERENCE);
   
   private static void replaceCongruentNonRec(Continuation cont,
-                                      Congruences congruent) {
+                              Congruences congruent, InitState init) {
     for (RenameMode mode: RENAME_MODES) {
-      cont.renameVars(congruent.replacements(mode), mode, false); 
+      cont.renameVars(congruent.replacements(mode, init), mode, false); 
     }
   }
 
-  private static void replaceCongruent(Statement stmt,
-                                       Congruences congruent) {
+  private static void replaceCongruent(Statement stmt, Congruences congruent,
+                                                            InitState init) {
     for (RenameMode mode: RENAME_MODES) {
-      stmt.renameVars(congruent.replacements(mode), mode);
+      stmt.renameVars(congruent.replacements(mode, init), mode);
     }
   }
   
   private static void replaceCleanupCongruent(Block block,
-                                        Congruences congruent) {
+                            Congruences congruent, InitState init) {
 
     for (RenameMode mode: RENAME_MODES) {
-      block.renameCleanupActions(congruent.replacements(mode), mode);
+      block.renameCleanupActions(congruent.replacements(mode, init), mode);
     }
   }
 

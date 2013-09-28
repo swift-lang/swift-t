@@ -18,6 +18,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.TernaryLogic.Ternary;
+import exm.stc.ic.opt.InitVariables.InitState;
 import exm.stc.ic.opt.valuenumber.ClosedVarTracker.ClosedEntry;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
@@ -542,14 +543,15 @@ public class Congruences implements ValueState {
 
   /**  
    * @param mode
+   * @param init 
    * @return replacements in effect for given rename mode
    */
-  public Map<Var, Arg> replacements(RenameMode mode) {
+  public Map<Var, Arg> replacements(RenameMode mode, InitState init) {
     if (mode == RenameMode.VALUE) {
-      return byValue.getReplacementMap();
+      return byValue.getReplacementMap(init);
     } else { 
       assert(mode == RenameMode.REFERENCE);
-      return byAlias.getReplacementMap();
+      return byAlias.getReplacementMap(init);
     }
   }
 

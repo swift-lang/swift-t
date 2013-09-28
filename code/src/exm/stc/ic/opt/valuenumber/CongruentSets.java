@@ -22,6 +22,7 @@ import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
+import exm.stc.ic.opt.InitVariables.InitState;
 import exm.stc.ic.opt.Semantics;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
@@ -96,11 +97,6 @@ class CongruentSets {
   private final Set<Arg> contradictions;
   
   /**
-   * Map interface to look up replacements
-   */
-  private final ReplacementMap replacementMap;
-  
-  /**
    * Record the equivalence type being represented
    */
   public final CongruenceType congType;
@@ -115,7 +111,6 @@ class CongruentSets {
     this.componentIndex = new MultiMap<Arg, RecCV>();
     this.inaccessible = new HashSet<Var>();
     this.contradictions = contradictions;
-    this.replacementMap = new ReplacementMap();
   }
   
   /**
@@ -271,8 +266,8 @@ class CongruentSets {
     }
   }
   
-  public Map<Var, Arg> getReplacementMap() {
-    return replacementMap;
+  public Map<Var, Arg> getReplacementMap(InitState init) {
+    return new ReplacementMap(init);
   }
 
   public void markContradiction(Arg arg) {
@@ -486,8 +481,6 @@ class CongruentSets {
           addToSet(newOuterCV, canonical);
           if (contradictions.contains(newComponent) &&
               !contradictions.contains(oldComponent)) {
-            // TODO: concurrent modification problem here
-            
             // Propagate contradiction to set
             markContradiction(canonical);
           }
@@ -784,10 +777,16 @@ class CongruentSets {
 
   /**
    * Implement Map interface to allow other modules to look up replacements
-   * as if they were using a regular Map.
+   * as if they were using a regular Map.  Takes an InitState argument that
+   * is used to check that a replacement is good 
    */
   public class ReplacementMap extends AbstractMap<Var, Arg> {
+    private final InitState initVars;
 
+    public ReplacementMap(InitState initVars) {
+      this.initVars = initVars;
+    }
+    
     @Override
     public Arg get(Object key) {
       assert(key instanceof Var);
@@ -805,18 +804,7 @@ class CongruentSets {
         curr = curr.parent;
       } while (curr != null);
       
-      if (replace != null && replace.isVar()) {
-        for (CongruentSets s: visited) {
-          if (s.inaccessible.contains(replace.getVar())) {
-            if (logger.isTraceEnabled()) {
-              logger.trace(v + " => !!" + replace + "(" + congType + ")"
-                    + ": INACCESSIBLE");
-            }
-            // Cannot access variable
-            return null;
-          }
-        }
-      }
+      // Abort immediately if we have a contradiction
       if (replace != null && contradictions.contains(replace)) {
         // Don't do any replacements in sets with contradictions
         if (logger.isTraceEnabled()) {
@@ -825,12 +813,43 @@ class CongruentSets {
         }
         return null;
       }
+      
+      if (replace != null && replace.isVar()) {
+        for (CongruentSets s: visited) {
+          if (s.inaccessible.contains(replace.getVar())) {
+            if (logger.isTraceEnabled()) {
+              logger.trace(v + " => !!" + replace + "(" + congType + ")"
+                    + ": INACCESSIBLE");
+            }
+            // Cannot access variable
+            // TODO: find alternative?
+            return null;
+          }
+        }
+      }
+      
+      if (replace != null && replace.isVar()) {
+        boolean output = (congType == CongruenceType.ALIAS);
+        if (!initVars.isInitialized(replace.getVar(), output)) {
+          // Can't use yet: not initialized
+          // TODO: check alternative canonical vals
+          logger.trace(v + " => " + replace + "(" + congType + ")" +
+                        ": NOT INITIALIZED");
+          return null;
+        }
+      }
+      
       if (logger.isTraceEnabled()) {
         logger.trace(v + " => " + replace + "(" + congType + ")");
       }
       return replace;
     }
     
+    public boolean isInitialized(Var var) {
+      // TODO Auto-generated method stub
+      return false;
+    }
+
     @Override
     public boolean containsKey(Object key) {
       return get(key) != null;

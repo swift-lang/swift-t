@@ -247,6 +247,22 @@ public class InitVariables {
     }
 
     /**
+     * Check that variable is correctly initialized
+     * @param var
+     * @param output
+     * @return
+     */
+    public boolean isInitialized(Var var, boolean output) {
+      if (varMustBeInitialized(var, output) && !initVars.contains(var)) {
+        return false;
+      }
+      if (!output && assignBeforeRead(var) && !assignedVals.contains(var)) {
+        return false;
+      }
+      return true;
+    }
+    
+    /**
      * Check that variable is initialized
      * @param context
      * @param var
