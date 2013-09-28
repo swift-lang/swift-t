@@ -410,17 +410,18 @@ public class ComputedValue<T> {
         throw new STCRuntimeError("Comparing " + this.getClass().getName() + 
                   " with " + obj.getClass().getName());
       RecCV other = (RecCV) obj;
-      if (arg == null) {
-        if (other.arg != null)
+      if (arg != null) {
+        if (other.arg == null) {
           return false;
-      } else if (!arg.equals(other.arg))
-        return false;
-      if (cv == null) {
-        if (other.cv != null)
+        }
+        return arg.equals(other.arg);
+      } else {
+        assert(cv != null);
+        if (other.cv == null) {
           return false;
-      } else if (!cv.equals(other.cv))
-        return false;
-      return true;
+        }
+        return cv.equals(other.cv);
+      }
     }
   }
 }

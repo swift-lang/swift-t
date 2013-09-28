@@ -451,7 +451,7 @@ public class Congruences implements ValueState {
       //       Probably just need to handle each location type separately
       //       E.g. Values, futures, refs, arrays.  Could model as root
       //            + subscript
-      assigned = byValue.canonicalize(consts, vl.value());
+      assigned = byAlias.canonicalize(consts, vl.value());
     }
     if (maybeAssigned.contains(assigned)) {
       // Potential double assignment: avoid doing any optimizations on
@@ -461,6 +461,9 @@ public class Congruences implements ValueState {
       byValue.markContradiction(assigned);
       return;
     } 
+    if (logger.isTraceEnabled()) {
+      logger.trace("First assignment to " + assigned);
+    }
     maybeAssigned.add(assigned);
     
     // TODO: will need to unify stored state
