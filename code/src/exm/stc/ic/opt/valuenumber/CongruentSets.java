@@ -418,23 +418,31 @@ class CongruentSets {
     
     // The common case is that we do the one merge and we're done.
     // However, it's possible that each merge can trigger more merges.
-    // Use a work queue here to iteratively process them (recursive
-    // function calls would probably be a bad idea since there can be
-    // long chains of merges).
     if (moreMerges != null && !moreMerges.isEmpty()) {
-      // Merge in FIFO order
-      LinkedList<ToMerge> mergeQ = new LinkedList<ToMerge>();
-      mergeQ.addAll(moreMerges);
-      while (!mergeQ.isEmpty()) {
-        ToMerge merge = mergeQ.pop();
-        // recanonicalize in case of changes: may be redundant work
-        oldCanon = findCanonical(merge.oldSet);
-        newCanon = findCanonical(merge.newSet);
-        if (!oldCanon.equals(newCanon)) {
-          moreMerges = changeCanonicalOnce(oldCanon, newCanon);
-          if (moreMerges != null) {
-            mergeQ.addAll(moreMerges);
-          }
+      handleConsequentialMerges(moreMerges);
+    }
+  }
+
+  private void handleConsequentialMerges(List<ToMerge> merges) {
+    Arg oldCanon;
+    Arg newCanon;
+    /*
+     * Merge in FIFO order
+     * Use a work queue here to iteratively process them (recursive
+     * function calls would probably be a bad idea since there can be
+     * long chains of merges).
+     */
+    LinkedList<ToMerge> mergeQ = new LinkedList<ToMerge>();
+    mergeQ.addAll(merges);
+    while (!mergeQ.isEmpty()) {
+      ToMerge merge = mergeQ.pop();
+      // recanonicalize in case of changes: may be redundant work
+      oldCanon = findCanonical(merge.oldSet);
+      newCanon = findCanonical(merge.newSet);
+      if (!oldCanon.equals(newCanon)) {
+        merges = changeCanonicalOnce(oldCanon, newCanon);
+        if (merges != null) {
+          mergeQ.addAll(merges);
         }
       }
     }
@@ -459,8 +467,7 @@ class CongruentSets {
             newCanon + " " + newCanon.type();  
     
     // Handle situation where oldCanonical is part of another RecCV 
-   List<ToMerge> toMerge = updateCanonicalComponents(oldCanon,
-                                                     newCanon);
+   List<ToMerge> toMerge = updateCanonicalComponents(oldCanon, newCanon);
     
     // Find all the references to old and add new entry pointing to new
     CongruentSets curr = this;
