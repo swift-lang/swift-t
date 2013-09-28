@@ -1794,8 +1794,11 @@ public class TurbineOp extends Instruction {
         assert(Types.isMemberType(arr, prev.type()));
         IsValCopy valCopy = congType == CongruenceType.ALIAS ?
                             IsValCopy.NO : IsValCopy.YES;
+        // Only mark one output as assigned
+        IsAssign isAssign = congType == CongruenceType.VALUE ?
+                            IsAssign.TO_LOCATION : IsAssign.NO;
         res.add(ValLoc.derefCompVal(prev.getVar(), memberRef, valCopy,
-                                    IsAssign.TO_LOCATION));
+                                    isAssign));
       }
     }
   }
