@@ -23,6 +23,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.opt.InitVariables.InitState;
 import exm.stc.ic.opt.Semantics;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
@@ -916,6 +917,13 @@ class CongruentSets {
     public Arg get(Object key) {
       assert(key instanceof Var);
       Var v = (Var)key;
+      
+      if (v.isMapped() != Ternary.FALSE && congType == CongruenceType.VALUE) {
+        // Don't replace mapped variables: referential transparency doesn't
+        // apply
+        return null;
+      }
+      
       ArgOrCV cv = new ArgOrCV(v.asArg());
       Arg replace = null;
       CongruentSets curr = CongruentSets.this;

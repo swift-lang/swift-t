@@ -370,21 +370,15 @@ public class Congruences implements ValueState {
       /*
        * If newArg was stored directly to the location, doesn't make
        * sense to substitute.  In some cases this could result in a
-       * bad substitution creating a circular dependency.
+       * bad substitution creating a circular dependency.  We handle
+       * the situation where double-assignment occurs separately: a
+       * double-assignment tends to be an error and we disable optimization
+       * more aggressively in those cases.
        */
       if (newIsAssign == IsAssign.TO_VALUE) {
         return newArg;
       }
-      
-      // Mapped var must be canonical member of congruence set.
-      // If both are mapped, keep old and caller will abort merge
-      // TODO: need to handle situation where isMapped() arg and array
-      // value conflict. 
-      if (oldArg.isMapped() != Ternary.FALSE) {
-        return oldArg;
-      } else if (newArg.isMapped() != Ternary.FALSE) {
-        return newArg;
-      }
+     
     } else {
       assert(congruent.congType == CongruenceType.ALIAS);
       assert(oldArg.isVar() && newArg.isVar());
