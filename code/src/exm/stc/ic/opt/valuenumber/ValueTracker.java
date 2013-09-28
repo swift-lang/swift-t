@@ -1,6 +1,5 @@
 package exm.stc.ic.opt.valuenumber;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map.Entry;
@@ -23,7 +22,9 @@ public class ValueTracker {
   
   private final Logger logger;
 
-  /** variables which are closed at this point in program */
+  /** variables which are closed at this point in program 
+   * TODO: switch to map-per-level with stmt index info. 
+   * */
   final HierarchicalSet<Var> closed;
 
   /** variables which are recursively closed at this point in program */

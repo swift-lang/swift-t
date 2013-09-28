@@ -96,6 +96,17 @@ public class Congruences implements ValueState {
              track.makeChild(),
              byValue.makeChild(), byAlias.makeChild(), reorderingAllowed);
     
+    /*
+     * TODO: how to handle difference between information that is shared
+     * between inner/outer scopes.  E.g.
+     * - Congruences are valid inside and outside of wait
+     * - Except considering obstructions to variable passing:
+     *    ->> consider handling this in replacement walk, by
+     *        iterating over alternatives
+     * - Closed info is sensitive to execution order: need to create new
+     *    one per state 
+     */
+    
     // If variables aren't visible in child scope, mark them as unpassable
     if (!varsPassedFromParents) {
       for (CongruentSets set: Arrays.asList(child.byValue, child.byAlias)) {
