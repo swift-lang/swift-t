@@ -298,8 +298,8 @@ public class ForwardDataflow implements OptimizerPass {
     
     ListIterator<Statement> stmts = block.statementIterator();
     while (stmts.hasNext()) {
+      int stmtIndex = stmts.nextIndex();
       Statement stmt = stmts.next();
-      int stmtIndex = stmts.previousIndex();
       
       if (stmt.type() == StatementType.INSTRUCTION) {
         /* First try to see if we can expand instruction sequence */
@@ -319,7 +319,8 @@ public class ForwardDataflow implements OptimizerPass {
            */
           continue;
         }
-        findCongruencesInst(program, f, execCx, block, stmts, inst, state);
+        findCongruencesInst(program, f, execCx, block, stmts, inst, stmtIndex,
+                            state);
       } else {
         assert (stmt.type() == StatementType.CONDITIONAL);
         // handle situations like:
@@ -342,8 +343,7 @@ public class ForwardDataflow implements OptimizerPass {
 
   private void findCongruencesInst(Program prog, Function f,
       ExecContext execCx, Block block, ListIterator<Statement> stmts,
-      Instruction inst, Congruences state) {
-    int stmtIndex = stmts.previousIndex();
+      Instruction inst, int stmtIndex, Congruences state) {
     
     /*
      * See if value is already computed somewhere and see if we should replace
@@ -738,7 +738,9 @@ public class ForwardDataflow implements OptimizerPass {
           // Load existing mapping
           // Should only get here if value of mapped var is available.
           assert(output.mapping() != null);
-          assert(state.isClosed(output.mapping(), insertPoint.previousIndex()));
+          int insertStmtIndex = insertPoint.nextIndex();
+          assert(state.isClosed(output.mapping(), insertStmtIndex))
+               : output.mapping() + " not closed @ " + insertStmtIndex;
           Var filenameAlias = insertContext.declareVariable(Types.F_STRING,
               OptUtil.optFilenamePrefix(insertContext, output),
               Alloc.ALIAS, DefType.LOCAL_COMPILER, null);
