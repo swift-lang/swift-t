@@ -658,6 +658,10 @@ class CongruentSets {
    * canonical Arg.
    */
   private void addInputIndex(Arg newInput, RecCV newCV) {
+    if (Congruences.isConst(newInput)) {
+      // Don't need to track constants as they won't be replaced
+      return;
+    }
     if (logger.isTraceEnabled()) {
       logger.trace("Add component: " + newInput + "=>" + newCV);
     }

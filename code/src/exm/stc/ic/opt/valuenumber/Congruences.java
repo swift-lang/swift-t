@@ -426,7 +426,7 @@ public class Congruences implements ValueState {
    * @param arg
    * @return
    */
-  private boolean isConst(Arg arg) {
+  static boolean isConst(Arg arg) {
     return arg.isConstant() || 
         (arg.isVar() && arg.getVar().storage() == Alloc.GLOBAL_CONST);
   }
