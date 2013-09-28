@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -390,13 +391,54 @@ class CongruentSets {
       markContradiction(canonicalVal);
     }
   }
-  
+
+
   /**
    * Replace oldCanonical with newCanonical as canonical member of a set
    * @param oldCanonical
    * @param newCanonical
    */
-  public void changeCanonical(Arg oldCanonical, Arg newCanonical) {
+  public void changeCanonical(Arg oldCanonical,
+                                           Arg newCanonical) {
+    List<ToMerge> consequentMerges;
+    // Do the initial merge
+    consequentMerges = changeCanonicalOnce(oldCanonical, newCanonical);
+    
+    // The common case is that we do the one merge and we're done.
+    // However, it's possible that each merge can trigger more merges.
+    // Use a work queue here to iteratively process them (recursive
+    // function calls would probably be a bad idea since there can be
+    // long chains of merges).
+    if (consequentMerges != null && !consequentMerges.isEmpty()) {
+      // Merge in FIFO order
+      LinkedList<ToMerge> mergeQ = new LinkedList<ToMerge>();
+      mergeQ.addAll(consequentMerges);
+      while (!mergeQ.isEmpty()) {
+        ToMerge merge = mergeQ.pop();
+        // recanonicalize in case of changes: may be redundant work
+        oldCanonical = findCanonical(merge.oldSet);
+        newCanonical = findCanonical(merge.newSet);
+        if (!oldCanonical.equals(newCanonical)) {
+          consequentMerges = changeCanonicalOnce(oldCanonical, newCanonical);
+          if (consequentMerges != null) {
+            mergeQ.addAll(consequentMerges);
+          }
+        }
+      }
+    }
+  }
+  
+  /**
+   * Merge together two sets
+   * @param oldCanonical
+   * @param newCanonical
+   * 
+   * @return list of additional merges that need to happen as a result of
+   *      the change in components.  Must return so caller can decide
+   *      what to do
+   */
+  private List<ToMerge> changeCanonicalOnce(Arg oldCanonical,
+                                           Arg newCanonical) {
     logger.trace("Merging " + oldCanonical + " into " + newCanonical);
     assert(!oldCanonical.equals(newCanonical));
     // Check that types are compatible in sets being merged
@@ -406,9 +448,10 @@ class CongruentSets {
             newCanonical + " " + newCanonical.type();  
     
     // Handle situation where oldCanonical is part of another RecCV 
-    updateCanonicalComponents(oldCanonical, newCanonical);
+   List<ToMerge> toMerge = updateCanonicalComponents(oldCanonical,
+                                                     newCanonical);
     
-    // Find all the references to old and update to point to new
+    // Find all the references to old and add new entry pointing to new
     CongruentSets curr = this;
     do {
       for (RecCV val: curr.canonicalInv.get(oldCanonical)) {
@@ -439,6 +482,7 @@ class CongruentSets {
     this.mergedInto.put(newCanonical, oldCanonical);
     
     logger.trace("Done merging " + oldCanonical + " into " + newCanonical);
+    return toMerge;
   }
 
   public Iterable<RecCV> availableThisScope() {
@@ -450,18 +494,29 @@ class CongruentSets {
     return avail;
   }
 
+  public static class ToMerge {
+    private ToMerge(Arg oldSet, Arg newSet) {
+      this.oldSet = oldSet;
+      this.newSet = newSet;
+    }
+    public final Arg oldSet;
+    public final Arg newSet;
+  }
+  
   /**
    * Recanonicalize components.  If an old computed value had
    * a reference to oldCanonical in it, then it's no longer
    * canonical, so need to replace.
    * 
-   * TODO: need to handle fact that canonicalizing components
-   * might result in recursively merging classes!
    * @param oldComponent
    * @param newComponent
+   * @return list of merges that need to happen as a result of
+   *      the change in components.  Must return so caller can decide
+   *      what to do
    */
-  private void updateCanonicalComponents(Arg oldComponent,
-                                         Arg newComponent) {
+  private List<ToMerge> updateCanonicalComponents(Arg oldComponent,
+                                                       Arg newComponent) {
+    List<ToMerge> toMerge = new ArrayList<ToMerge>(); 
     CongruentSets curr = this;
     do {
       for (RecCV outerCV: curr.componentIndex.get(oldComponent)) {
@@ -477,14 +532,23 @@ class CongruentSets {
         this.componentIndex.put(newComponent, newOuterCV);
         Arg canonical = findCanonical(outerCV);
         if (canonical != null) {
-          // If this was already part of a set, should add updated one
-          addToSet(newOuterCV, canonical);
+          // Check to see if this CV bridges two sets
+          Arg newCanonical = findCanonical(newOuterCV);
+          if (newCanonical != null && !newCanonical.equals(canonical)) {
+            // Already in a set, mark that we need to merge
+            toMerge.add(new ToMerge(canonical, newCanonical));
+          } else {
+            // Add to same set
+            addToSet(newOuterCV, canonical);
+          }
+          
           if (contradictions.contains(newComponent) &&
               !contradictions.contains(oldComponent)) {
             // Propagate contradiction to set
             markContradiction(canonical);
           }
         }
+        
         // TODO: we don't have true recursive CVs now
         //changeCanonical(outerCV, newOuterCV);
       }
@@ -494,6 +558,7 @@ class CongruentSets {
     // Remove component map in this scope, since we won't use
     // oldCanonical any more (leave outer scopes untouched)
     this.componentIndex.remove(oldComponent);
+    return toMerge;
   }
 
   private List<RecCV> replaceInput(List<RecCV> oldInputs,
