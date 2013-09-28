@@ -259,6 +259,10 @@ public class Congruences implements ValueState {
     // (for replacement purposes, etc.)
     Arg winner = preferred(congruent, oldLoc, newLoc, stmtIndex);
     Arg loser = (winner == oldLoc ? newLoc : oldLoc);
+    if (logger.isTraceEnabled()) {
+      logger.trace("old: " + oldLoc + " vs. new: " + newLoc +
+                   " winner: " + winner);
+    }
     changeCanonical(consts, congruent, loser, winner);
   }
 
@@ -324,7 +328,6 @@ public class Congruences implements ValueState {
    */
   private Arg preferred(CongruentSets congruent,
                         Arg oldArg, Arg newArg, int stmtIndex) {
-  
     if (congruent.congType == CongruenceType.VALUE) {
       // Constants trump all
       if (isConst(oldArg)) {
@@ -443,14 +446,17 @@ public class Congruences implements ValueState {
       logger.trace(varArg + " has no refcount");
       return true;
     }
+
     Var canonicalAlias = getCanonicalAlias(varArg);
-    ClosedEntry canonicalClosed;
     
-    canonicalClosed = isClosedNonAlias(canonicalAlias, stmtIndex, recursive);
-    if (canonicalClosed != null &&
-        canonicalClosed.matches(recursive, stmtIndex)) {
+    ClosedEntry ce;
+    ce = isClosedNonAlias(canonicalAlias, stmtIndex, recursive);
+    if (logger.isTraceEnabled()) {
+      logger.trace("Closed " + varArg + "(" + canonicalAlias + "): " + ce);
+    }
+    if (ce != null && ce.matches(recursive, stmtIndex)) {
       // We're done..
-      logger.trace(varArg + " closed @ " + canonicalClosed.stmtIndex);
+      logger.trace(varArg + " closed @ " + ce.stmtIndex);
       return true;
     }
     
@@ -459,14 +465,16 @@ public class Congruences implements ValueState {
     for (Arg mergedSet: byAlias.allMergedCanonicals(canonicalAlias.asArg())) {
       assert(mergedSet.isVar());
       Var merged = mergedSet.getVar();
-      ClosedEntry ce = isClosedNonAlias(merged, stmtIndex, recursive); 
+      isClosedNonAlias(merged, stmtIndex, recursive);
+      if (logger.isTraceEnabled()) {
+        logger.trace("Closed " + varArg + "(" + mergedSet + "): " + ce);
+      }
       if (ce != null) {
         // Mark canonical alias as closed to avoid having to trace back
         // again like this.
         track.close(canonicalAlias, ce);
         if (ce.matches(recursive, stmtIndex)) {
-
-          logger.trace(varArg + " closed @ " + canonicalClosed.stmtIndex +
+          logger.trace(varArg + " closed @ " + ce.stmtIndex +
                        " via " + merged);
           return true;
         }

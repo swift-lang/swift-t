@@ -377,7 +377,8 @@ public class ForwardDataflow implements OptimizerPass {
     List<BlockingVar> contClosedVars = cont.blockingVars(true);
     if (contClosedVars != null) {
       for (BlockingVar bv : contClosedVars) {
-        contState.markClosed(bv.var, stmtIndex, bv.recursive);
+        int contStmtIndex = 0; // No statements in cont scope
+        contState.markClosed(bv.var, contStmtIndex, bv.recursive);
       }
     }
 
@@ -416,7 +417,7 @@ public class ForwardDataflow implements OptimizerPass {
       state.printTraceInfo(logger);
     }
     
-    // TODO: use closed info when replacing?
+    // TODO: ideally, use closed info when replacing to ensure correctness
     ListIterator<Statement> stmtIt = block.statementIterator();
     while (stmtIt.hasNext()) {
       Statement stmt = stmtIt.next();

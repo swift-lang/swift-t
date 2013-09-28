@@ -118,6 +118,7 @@ public class ClosedVarTracker {
     
   public ClosedEntry getClosedEntry(Var var, boolean recursive, int stmtIndex) {
     ClosedEntry ce = getDirectClosedEntry(var, recursive, stmtIndex);
+
     if (ce != null && ce.matches(recursive, stmtIndex)) {
       // Only stop search here if we didn't find anything
       return ce;
@@ -178,6 +179,7 @@ public class ClosedVarTracker {
     int currStmtIndex = stmtIndex;
     while (curr != null) {
       for (ClosedEntry ce: curr.closed.get(var)) {
+        logger.trace(var + " " + ce + " vs " + recursive + ", " + currStmtIndex);
         // Check that statement index and recursiveness is right
         if (ce.matches(recursive, currStmtIndex)) {
           if (curr == this) {
