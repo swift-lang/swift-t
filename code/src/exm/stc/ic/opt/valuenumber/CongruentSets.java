@@ -76,7 +76,7 @@ class CongruentSets {
    * go through and recanonicalize them if needed.
    * Must manually traverse parents to find all.
    */
-  private final MultiMap<Arg, ArgCV> componentIndex;
+  private final Map<Arg, Set<ArgCV>> componentIndex;
 
   /**
    * Track variables which are not accessible from parent
@@ -118,7 +118,7 @@ class CongruentSets {
     this.canonical = new HashMap<ArgOrCV, Arg>();
     this.canonicalInv = new MultiMap<Arg, ArgOrCV>();
     this.mergedInto = new MultiMap<Arg, Arg>();
-    this.componentIndex = new MultiMap<Arg, ArgCV>();
+    this.componentIndex = new HashMap<Arg, Set<ArgCV>>();
     this.inaccessible = new HashSet<Var>();
     this.contradictions = contradictions;
     this.mergeQueue = new LinkedList<ToMerge>();
@@ -351,7 +351,7 @@ class CongruentSets {
     // Propagate contradiction to components
     curr = this;
     do {
-      for (ArgCV cv: curr.componentIndex.get(arg)) {
+      for (ArgCV cv: curr.lookupComponentIndex(arg)) {
         if (logger.isTraceEnabled()) {
           logger.trace("Contradiction implication " + arg + " => " +
                         cv);
@@ -612,8 +612,8 @@ class CongruentSets {
     CongruentSets curr = this;
     do {
       logger.trace("Iterating over components of: " + oldComponent + ": " +
-                    curr.componentIndex.get(oldComponent));
-      for (ArgCV outerCV: curr.componentIndex.get(oldComponent)) {
+                    curr.lookupComponentIndex(oldComponent));
+      for (ArgCV outerCV: curr.lookupComponentIndex(oldComponent)) {
         ArgCV newOuterCV1 = outerCV;
         if (newComponent != null &&
             outerCV.canSubstituteInputs(congType)) {
@@ -692,11 +692,25 @@ class CongruentSets {
    * info among different sets.  We need to track constants as these
    * are often the canonical member of a set.
    */
-  private void addInputIndex(Arg newInput, ArgCV newCV) {
+  private void addInputIndex(Arg input, ArgCV cv) {
     if (logger.isTraceEnabled()) {
-      logger.trace("Add component: " + newInput + "=>" + newCV);
+      logger.trace("Add component: " + input + "=>" + cv);
     }
-    componentIndex.put(newInput, newCV);
+    Set<ArgCV> set = componentIndex.get(input);
+    if (set == null) {
+      set = new HashSet<ArgCV>();
+      componentIndex.put(input, set);
+    }
+    set.add(cv);
+  }
+
+  private Set<ArgCV> lookupComponentIndex(Arg oldComponent) {
+    Set<ArgCV> res = this.componentIndex.get(oldComponent);
+    if (res != null) {
+      return res;
+    } else {
+      return Collections.emptySet();
+    }
   }
 
   private void checkCanonicalInv(HashMap<ArgOrCV, Arg> inEffect,
