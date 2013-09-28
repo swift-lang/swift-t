@@ -299,6 +299,18 @@ public class ComputedValue<T> {
     return op == Opcode.STRUCT_LOOKUP;
   }
   
+  public boolean canSubstituteInputs(CongruenceType congType) {
+    if (op == Opcode.GET_FILENAME || op == Opcode.GET_FILENAME_VAL) {
+      if (congType == CongruenceType.VALUE) {
+        // Even if two file variables are congruent by value, they may
+        // have different filename
+        return false;
+      }
+    }
+    // In most cases we have referential transparency, so can freely substitute
+    return true;
+  }
+  
   /**
    * @return the equivalence type of this computed value,
    *         assuming it wasn't copied

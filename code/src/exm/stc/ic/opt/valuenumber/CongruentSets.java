@@ -259,8 +259,8 @@ class CongruentSets {
   }
   
 
-  public Arg findCanonical(ArgCV val) {
-    return findCanonical(canonicalizeInputs(val));
+  public Arg findCanonical(GlobalConstants constants, ArgCV val) {
+    return findCanonical(canonicalize(constants, val));
   }
   
   /**
@@ -582,7 +582,8 @@ class CongruentSets {
       for (RecCV outerCV: curr.componentIndex.get(oldComponent)) {
         assert(outerCV.isCV());
         RecCV newOuterCV = outerCV;
-        if (newComponent != null) {
+        if (newComponent != null &&
+            outerCV.cv().canSubstituteInputs(congType)) {
           // First substitute the inputs
           List<RecCV> newInputs = replaceInput(
               outerCV.cv().getInputs(), oldComponent, newComponent);
@@ -745,16 +746,23 @@ class CongruentSets {
     List<RecCV> newInputs = new ArrayList<RecCV>(inputs.size());
     for (Arg input: inputs) {
       // Canonicalize inputs to get this into a canonical form
-      Arg canonicalInput = findCanonical(new RecCV(input));
-      if (canonicalInput != null) {
-        // Add canonical
-        newInputs.add(new RecCV(canonicalInput));
+      
+      if (cv.canSubstituteInputs(congType)) {
+        Arg canonicalInput = findCanonical(new RecCV(input));
+        if (canonicalInput != null) {
+          // Add canonical
+          newInputs.add(new RecCV(canonicalInput));
+        } else {
+          // input is only representative of class
+          // TODO: should support RecCVs as inputs
+          newInputs.add(new RecCV(input));
+          throw new STCRuntimeError("Not yet supported: ComputedValues " +
+                                    "in ComputedValues");
+        }
       } else {
-        // input is only representative of class
-        // TODO: should support RecCVs as inputs
+        // Not allowed to substitute, e.g. for filenames where we don't
+        // have reference transparency for args
         newInputs.add(new RecCV(input));
-        throw new STCRuntimeError("Not yet supported: ComputedValues " +
-        		                      "in ComputedValues");
       }
     }
   

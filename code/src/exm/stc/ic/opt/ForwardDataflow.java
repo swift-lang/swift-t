@@ -138,7 +138,8 @@ public class ForwardDataflow implements OptimizerPass {
 
   private Congruences initFuncState(Logger logger,
         GlobalConstants constants, Function f) {
-    Congruences congruent = new Congruences(logger, reorderingAllowed);
+    Congruences congruent = new Congruences(logger, constants,
+                                            reorderingAllowed);
     for (Var v : constants.vars()) {
       // First, all constants can be treated as being set
       if (v.storage() == Alloc.GLOBAL_CONST) {

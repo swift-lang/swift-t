@@ -68,6 +68,7 @@ public class Congruences implements ValueState {
    *         -> TODO when to try and do arithmetic?
    */
   private final Logger logger;
+  private final GlobalConstants consts;
   private final Congruences parent;
   private final ClosedVarTracker track;
   private final CongruentSets byValue;
@@ -76,6 +77,7 @@ public class Congruences implements ValueState {
   private final boolean reorderingAllowed;
   
   private Congruences(Logger logger,
+                        GlobalConstants consts,
                         Congruences parent,
                         ClosedVarTracker track,
                         CongruentSets byValue,
@@ -83,6 +85,7 @@ public class Congruences implements ValueState {
                         HierarchicalSet<List<Arg>> maybeAssigned,
                         boolean reorderingAllowed) {
     this.logger = logger;
+    this.consts = consts;
     this.parent = parent;
     this.track = track;
     this.byValue = byValue;
@@ -91,8 +94,10 @@ public class Congruences implements ValueState {
     this.reorderingAllowed = reorderingAllowed;
   }
   
-  public Congruences(Logger logger, boolean reorderingAllowed) {
-    this(logger, null, ClosedVarTracker.makeRoot(logger, reorderingAllowed),
+  public Congruences(Logger logger, GlobalConstants consts,
+                    boolean reorderingAllowed) {
+    this(logger, consts, null,
+        ClosedVarTracker.makeRoot(logger, reorderingAllowed),
         CongruentSets.makeRoot(CongruenceType.VALUE),
          CongruentSets.makeRoot(CongruenceType.ALIAS),
          new HierarchicalSet<List<Arg>>(),
@@ -101,7 +106,7 @@ public class Congruences implements ValueState {
   
   public Congruences enterContinuation(boolean varsPassedFromParents,
           int parentStmtIndex) {
-    Congruences child = new Congruences(logger, this,
+    Congruences child = new Congruences(logger, consts, this,
              track.enterContinuation(parentStmtIndex),
              byValue.makeChild(), byAlias.makeChild(),
              maybeAssigned.makeChild(), reorderingAllowed);
@@ -128,7 +133,7 @@ public class Congruences implements ValueState {
   
 
   public Congruences enterBlock() {
-    return new Congruences(logger, this, track.enterBlock(),
+    return new Congruences(logger, consts, this, track.enterBlock(),
      byValue.makeChild(), byAlias.makeChild(), maybeAssigned.makeChild(),
      reorderingAllowed);
   }
@@ -692,7 +697,7 @@ public class Congruences implements ValueState {
     if (cvRetrieve == null) {
       return null;
     }
-    Arg val = byValue.findCanonical(cvRetrieve);
+    Arg val = byValue.findCanonical(consts, cvRetrieve);
     if (val != null && !byValue.hasContradiction(val)) {
       return val;
     } else {
@@ -709,7 +714,7 @@ public class Congruences implements ValueState {
    */
   @Override
   public Arg findCanonical(ArgCV val, CongruenceType congType) {
-    return getCongruentSet(congType).findCanonical(val);
+    return getCongruentSet(congType).findCanonical(consts, val);
   }
   
   public boolean isAvailable(ArgCV val, CongruenceType congType) {
