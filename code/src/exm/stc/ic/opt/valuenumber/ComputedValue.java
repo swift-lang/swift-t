@@ -227,6 +227,16 @@ public class ComputedValue<T> {
   }
   
   /**
+   * Computed value representing result of dereference ref
+   * @param ref
+   * @param copied if it is a copy of the original
+   */
+  public static ArgCV derefCompVal(Var ref) {
+    assert(Types.isRef(ref));
+    return new ArgCV(Opcode.LOAD_REF, ref.asArg().asList());
+  }
+  
+  /**
    * Computed value to indicate that something is a direct handle
    * to array contents
    * @param arr

@@ -262,6 +262,18 @@ public class ValLoc {
     return Collections.emptyList();
   }
   
+  /**
+   * ValLoc representing result of dereference ref
+   * @param contents of ref
+   * @param ref
+   * @param copied if it is a copy of the original
+   */
+  public static ValLoc derefCompVal(Var v, Var ref, IsValCopy copied) {
+    assert(Types.isRefTo(ref, v));
+    return new ValLoc(ComputedValue.derefCompVal(ref),
+                      v.asArg(), Closed.MAYBE_NOT, copied);
+  }
+  
 
   
   public List<ValLoc> asList() {

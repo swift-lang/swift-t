@@ -1637,7 +1637,13 @@ public class TurbineOp extends Instruction {
         
         List<ValLoc> result = new ArrayList<ValLoc>();
         
-        ValLoc retrieve = vanillaResult(outIsClosed);
+        ValLoc retrieve;
+        if (op == Opcode.LOAD_REF) {
+          // use standard deref value
+          retrieve = ValLoc.derefCompVal(src.getVar(), dst, IsValCopy.NO);
+        } else {
+          retrieve = vanillaResult(outIsClosed);
+        }
         result.add(retrieve);
         
         Opcode cvop = Opcode.assignOpcode(src.futureType());
@@ -1649,7 +1655,7 @@ public class TurbineOp extends Instruction {
                   Arrays.asList(dst.asArg()), src, outIsClosed);
         result.add(assign);
         
-        
+        // TODO: redundant?
         Opcode derefOp = Opcode.derefOpCode(src.futureType());
         if (derefOp != null) {
           ValLoc deref = ValLoc.buildResult(derefOp, 
@@ -1681,17 +1687,16 @@ public class TurbineOp extends Instruction {
         Arg dst = getOutput(0).asArg();
         Arg src = getInput(0);
 
-        ValLoc retrieve = ValLoc.buildResult(
-                        Opcode.retrieveOpcode(dst.futureType()),
-                        Arrays.asList(dst), src, Closed.MAYBE_NOT);
-        
+        ValLoc retrieve;
+
         if (op == Opcode.STORE_REF) {
-          Opcode derefOp = Opcode.derefOpCode(dst.futureType());
-          if (derefOp != null) {
-            ValLoc deref = ValLoc.buildResult(derefOp, Arrays.asList(dst),
-                                              src, Closed.MAYBE_NOT);
-            return Arrays.asList(retrieve, assign, deref);
-          }
+          // Use standard dereference computed value
+          retrieve = ValLoc.derefCompVal(src.getVar(), dst.getVar(),
+                                             IsValCopy.NO);
+        } else {
+          retrieve = ValLoc.buildResult(
+              Opcode.retrieveOpcode(dst.futureType()),
+              Arrays.asList(dst), src, Closed.MAYBE_NOT);
         }
         return Arrays.asList(retrieve, assign);
       }
@@ -1741,13 +1746,17 @@ public class TurbineOp extends Instruction {
       case DEREF_FLOAT:
       case DEREF_INT:
       case DEREF_STRING: {
-        return vanillaResult(Closed.MAYBE_NOT).asList();
+        // Use standard dereference value
+        return ValLoc.derefCompVal(getOutput(0), getInput(0).getVar(),
+                                   IsValCopy.YES).asList();
       }
       case DEREF_FILE: {
         if (getOutput(0).isMapped() == Ternary.FALSE) {
-          return vanillaResult(Closed.MAYBE_NOT).asList();
+          return ValLoc.derefCompVal(getOutput(0), getInput(0).getVar(),
+                                     IsValCopy.YES).asList();
         } else {
           // Can't use potentially mapped files interchangeably
+          // TODO: still relevant?
           return null;
         }
       }
@@ -1899,21 +1908,10 @@ public class TurbineOp extends Instruction {
                                                 CongruenceType.ALIAS)) {
       Arg prev = existing.findCanonical(memCV, congType);
       if (prev != null) {
+        assert(Types.isMemberType(arr, prev.type()));
         IsValCopy valCopy = congType == CongruenceType.ALIAS ?
                             IsValCopy.NO : IsValCopy.YES;
-        res.add(ValLoc.buildResult(
-            Opcode.retrieveOpcode(memberRef.type()),
-            Arrays.asList(memberRef.asArg()), prev,
-            Closed.MAYBE_NOT, valCopy));
-      }
-
-      // Also handle dereferencing
-      if (prev != null && congType == CongruenceType.VALUE) {
-        Opcode derefOp = Opcode.derefOpCode(memberRef.type());
-        if (derefOp != null) {
-          res.add(ValLoc.buildResult(derefOp,
-                   memberRef.asArg(), prev, Closed.MAYBE_NOT));
-        }
+        res.add(ValLoc.derefCompVal(prev.getVar(), memberRef, valCopy));
       }
     }
   }
