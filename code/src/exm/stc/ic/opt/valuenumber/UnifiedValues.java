@@ -65,7 +65,7 @@ public class UnifiedValues {
    * @return
    */
   public static UnifiedValues unify(Logger logger, GlobalConstants consts,
-                 Function fn, boolean reorderingAllowed,
+                 Function fn, boolean reorderingAllowed, int parentStmtIndex,
                  Congruences state, Continuation cont,
                  List<Congruences> branchStates, List<Block> branchBlocks) {
     if (logger.isTraceEnabled()) {
@@ -82,7 +82,7 @@ public class UnifiedValues {
     } else {
       Set<Var> closed = new HashSet<Var>();
       Set<Var> recClosed = new HashSet<Var>();
-      unifyClosed(state, branchStates, closed, recClosed);
+      unifyClosed(branchStates, closed, recClosed, parentStmtIndex);
       
       List<ValLoc> availVals = new ArrayList<ValLoc>();
       List<ArgCV> allUnifiedCVs = new ArrayList<ArgCV>();
@@ -104,9 +104,8 @@ public class UnifiedValues {
           List<ArgCV> newAllBranchCVs = findAllBranchCVs(state, congType,
                                             branchStates, allUnifiedCVs);
           Pair<List<ValLoc>, Boolean> result = unifyCVs(consts, fn,
-                                  reorderingAllowed,
-                                  cont.parent(), congType, branchStates,
-                                  branchBlocks, newAllBranchCVs, unifiedVars);
+                  reorderingAllowed, cont.parent(), parentStmtIndex, congType,
+                  branchStates, branchBlocks, newAllBranchCVs, unifiedVars);
           availVals.addAll(result.val1);
           if (result.val2) {
             newCVs = true;
@@ -145,9 +144,10 @@ public class UnifiedValues {
    */
   private static Pair<List<ValLoc>, Boolean> unifyCVs(GlobalConstants consts,
       Function fn,
-      boolean reorderingAllowed, Block parent, CongruenceType congType,
-      List<Congruences> branchStates, List<Block> branchBlocks,
-      List<ArgCV> allBranchCVs, Map<List<Arg>, Var> unifiedLocs) {
+      boolean reorderingAllowed, Block parent, int parentStmtIndex,
+      CongruenceType congType, List<Congruences> branchStates,
+      List<Block> branchBlocks, List<ArgCV> allBranchCVs,
+      Map<List<Arg>, Var> unifiedLocs) {
     List<ValLoc> availVals = new ArrayList<ValLoc>();
     
     boolean createdNewBranchCVs = false;
@@ -156,7 +156,7 @@ public class UnifiedValues {
       // See what is same across all branches
       // TODO: this is imperfect in situations where the canonical
       //       name of a value has been changed in a child branch.
-      //       May not be able to do much about it.
+      //       May need to reverse the change using mergedInto map
       boolean allVals = true;
       boolean allSameLocation = true;
       Closed allClosed = Closed.YES_RECURSIVE;
@@ -166,7 +166,8 @@ public class UnifiedValues {
       List<Arg> branchLocs = new ArrayList<Arg>(branchStates.size());
 
       Arg firstLoc = branchStates.get(0).findCanonical(cv, congType);
-      for (Congruences bs: branchStates) {
+      for (int i = 0; i < branchStates.size(); i++) {
+        Congruences bs = branchStates.get(i);
         Arg loc = bs.findCanonical(cv, congType);
         assert(loc != null);
         
@@ -178,15 +179,16 @@ public class UnifiedValues {
           allVals = false;
         }
         
+        int branchStmtCount = branchBlocks.get(i).getStatements().size();
         if (allClosed == Closed.YES_RECURSIVE &&
-            !bs.isRecClosed(loc)) {
-          if (bs.isClosed(loc)) {
+            !bs.isRecClosed(loc, branchStmtCount)) {
+          if (bs.isClosed(loc,branchStmtCount)) {
             allClosed = Closed.MAYBE_NOT;
           } else {
             allClosed = Closed.YES_NOT_RECURSIVE;
           }
         } else if (allClosed == Closed.YES_NOT_RECURSIVE &&
-            !bs.isClosed(loc)) {
+            !bs.isClosed(loc, branchStmtCount)) {
           allClosed = Closed.MAYBE_NOT;
         }
         
@@ -256,7 +258,8 @@ public class UnifiedValues {
       
       // Add in additional computed values resulting from copy
       Congruences branchState = branchStates.get(i);
-      branchState.update(consts, fn.getName(), copyVal);
+      int branchStmts = branchBlock.getStatements().size();
+      branchState.update(consts, fn.getName(), copyVal, branchStmts);
     }
     return unifiedLoc;
   }
@@ -303,30 +306,25 @@ public class UnifiedValues {
     return allBranchCVs;
   }
   
-  private static void unifyClosed(Congruences parentState,
-      List<Congruences> branchStates,
-      Set<Var> closed, Set<Var> recClosed) {
+  private static void unifyClosed(List<Congruences> branchStates,
+      Set<Var> closed, Set<Var> recClosed, int parentStmtIndex) {
     List<Set<Var>> branchClosed = new ArrayList<Set<Var>>();
     List<Set<Var>> branchRecClosed = new ArrayList<Set<Var>>();
     for (Congruences branchState: branchStates) {
       // Inspect all variables that are closed in each branch
-      branchClosed.add(branchState.getClosed());
-      branchRecClosed.add(branchState.getRecursivelyClosed());
+      branchClosed.add(branchState.getScopeClosed(false));
+      branchRecClosed.add(branchState.getScopeClosed(true));
     }
     
 
     // Add variables closed in first branch that aren't closed in parent
     // to output sets
     for (Var closedVar: Sets.intersectionIter(branchClosed)) {
-      if (!parentState.isClosed(closedVar)) {
-        closed.add(closedVar);
-      }
+      closed.add(closedVar);
     }
     
     for (Var recClosedVar: Sets.intersectionIter(branchRecClosed)) {
-      if (!parentState.isRecClosed(recClosedVar)) {
-        recClosed.add(recClosedVar);
-      }
+      recClosed.add(recClosedVar);
     }
   }
   

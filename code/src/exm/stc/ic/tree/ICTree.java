@@ -923,6 +923,10 @@ public class ICTree {
       return continuations.get(i);
     }
 
+    public void removeContinuation(int i) {
+      continuations.remove(i);
+    }
+
     public List<Var> getVariables() {
       return Collections.unmodifiableList(variables);
     }

@@ -23,12 +23,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Settings;
-import exm.stc.common.exceptions.InvalidWriteException;
+import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.PassedVar;
@@ -47,8 +48,7 @@ import exm.stc.ic.opt.valuenumber.ComputedValue;
 import exm.stc.ic.opt.valuenumber.Congruences;
 import exm.stc.ic.opt.valuenumber.UnifiedValues;
 import exm.stc.ic.opt.valuenumber.ValLoc;
-import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
-import exm.stc.ic.opt.valuenumber.ValLoc.IsValCopy;
+import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
@@ -107,33 +107,26 @@ public class ForwardDataflow implements OptimizerPass {
     return Settings.OPT_FORWARD_DATAFLOW;
   }
 
-  /**
-   * Do a kind of dataflow analysis where we try to identify which futures are
-   * closed at different points in the program. This allows us to switch to
-   * lower-overhead versions of many operations.
-   * 
-   * @param logger
-   * @param program
-   * @throws InvalidWriteException
-   */
-  public void optimize(Logger logger, Program program) {
+  @Override
+  public void optimize(Logger logger, Program prog) throws UserException {
     this.logger = logger;
-
-    for (Function f : program.getFunctions()) {
-      // Do repeated passes until converged
-      boolean changes;
-      int pass = 1;
-      do {
-        Congruences fnState = initFuncState(logger, program.constants(), f);
-        
-        logger.trace("closed variable analysis on function " + f.getName()
-            + " pass " + pass);
-        changes = forwardDataflow(logger, program, f, ExecContext.CONTROL,
-            f.mainBlock(), fnState);
-        liftWait(logger, program, f);
-        pass++;
-      } while (changes);
+    for (Function f: prog.getFunctions()) {
+      runPass(prog, f);
+      liftWait(logger, prog, f);
     }
+  }
+
+  private void runPass(Program prog, Function f) {
+    // First pass finds all congruence classes and expands some instructions
+    Map<Block, Congruences> cong;
+    cong = findCongruences(prog, f, ExecContext.CONTROL);
+    
+    // Second pass replaces values based on congruence classes
+    replaceVals(f.mainBlock(), cong, InitState.enterFunction(f));
+    
+    // Third pass inlines continuations
+    inlinePass(f.mainBlock(), cong);
+    
   }
 
   private Congruences initFuncState(Logger logger,
@@ -146,15 +139,12 @@ public class ForwardDataflow implements OptimizerPass {
         assert (val != null) : v.name();
         
         ValLoc assign = ComputedValue.assignComputedVal(v, val);
-        ValLoc retrieve = new ValLoc(ComputedValue.retrieveCompVal(v),
-                          val, Closed.YES_NOT_RECURSIVE, IsValCopy.NO);
-        congruent.update(constants, f.getName(), assign);
-        congruent.update(constants, f.getName(), retrieve);
+        congruent.update(constants, f.getName(), assign, 0);
       }
     }
     
     for (WaitVar wv : f.blockingInputs()) {
-      congruent.markClosed(wv.var, false);
+      congruent.markClosed(wv.var, 0, false);
     }
     return congruent;
   }
@@ -277,21 +267,6 @@ public class ForwardDataflow implements OptimizerPass {
     }
   }
 
-  private void newPass(Program prog, Function f) {
-    // First pass finds all congruence classes and expands some instructions
-    Map<Block, Congruences> cong;
-    cong = findCongruences(prog, f, ExecContext.CONTROL);
-    
-    // Second pass replaces values based on congruence classes
-    replaceVals(f.mainBlock(), cong, InitState.enterFunction(f), null);
-    
-    // Third pass works out congruence classes again
-    //cong = findCongruences(prog, f, ExecContext.CONTROL);
-    
-    // Fourth pass inlines waits & if statements
-    // TODO
-  }
-  
   /**
    * Build congruence map.  Also expand operations where input
    * values are closed.
@@ -314,49 +289,58 @@ public class ForwardDataflow implements OptimizerPass {
       if (v.mapping() != null && Types.isFile(v.type())) {
         // Track the mapping
         ValLoc filenameVal = ValLoc.makeFilename(v.mapping().asArg(), v);
-        state.update(program.constants(), f.getName(), filenameVal);
+        state.update(program.constants(), f.getName(), filenameVal, 0);
       }
     }
     
     ListIterator<Statement> stmts = block.statementIterator();
     while (stmts.hasNext()) {
       Statement stmt = stmts.next();
-    
+      int stmtIndex = stmts.previousIndex();
+      
       if (stmt.type() == StatementType.INSTRUCTION) {
-        findCongruencesInst(program, f, execCx, block, stmts,
-            stmt.instruction(), state);
+        /* First try to see if we can expand instruction sequence */
+
+        Instruction inst = stmt.instruction();
+        if (logger.isTraceEnabled()) {
+          state.printTraceInfo(logger);
+          logger.trace("-----------------------------");
+          logger.trace("At instruction: " + inst);
+        }
+        
+        if (switchToImmediate(logger, f, execCx, block, state, inst, stmts,
+                              stmtIndex)) {
+          /*
+           * We switched the instruction for a new sequence of instructions. 
+           * Restart iteration and *don't* increment statement index to account.
+           */
+          continue;
+        }
+        findCongruencesInst(program, f, execCx, block, stmts, inst, state);
       } else {
         assert (stmt.type() == StatementType.CONDITIONAL);
         // handle situations like:
         // all branches assign future X a local values v1,v2,v3,etc.
         // in this case should try to create another local value outside of
         // conditional z which has the value from all branches stored
-        UnifiedValues unified = findCongruencesContRec(program, f,
-                               execCx, stmt.conditional(), state, result);
-        state.addUnifiedValues(program.constants(), f.getName(), unified);
+        UnifiedValues unified = findCongruencesContRec(program, f, execCx,
+                            stmt.conditional(), stmtIndex, state, result);
+        state.addUnifiedValues(program.constants(), f.getName(), stmtIndex, unified);
       }
     }
     
     for (Continuation cont: block.getContinuations()) {
-      findCongruencesContRec(program, f, execCx, cont, state, result);
+      findCongruencesContRec(program, f, execCx, cont, stmts.previousIndex(),
+                             state, result);
     }
+    
+    validateState(state);
   }
 
   private void findCongruencesInst(Program prog, Function f,
       ExecContext execCx, Block block, ListIterator<Statement> stmts,
       Instruction inst, Congruences state) {
-    if (logger.isTraceEnabled()) {
-      state.printTraceInfo(logger);
-      logger.trace("-----------------------------");
-      logger.trace("At instruction: " + inst);
-    }
-
-    /* First try to see if we can expand instruction sequence, before
-     * updating the congruences.  If we can, we will rewind the iterator
-     * and return */
-    if (switchToImmediate(logger, f, execCx, block, state, inst, stmts)) {
-      return;
-    }
+    int stmtIndex = stmts.previousIndex();
     
     /*
      * See if value is already computed somewhere and see if we should replace
@@ -364,7 +348,7 @@ public class ForwardDataflow implements OptimizerPass {
      * NOTE: we don't delete any instructions on this pass, but rather rely on
      * dead code elim to later clean up unneeded instructions instead.
      */
-    updateCongruent(logger, prog.constants(), f, inst, state);
+    updateCongruent(logger, prog.constants(), f, inst, stmtIndex, state);
 
     updateTransitiveDeps(prog, inst, state);
 
@@ -372,21 +356,21 @@ public class ForwardDataflow implements OptimizerPass {
       if (logger.isTraceEnabled()) {
         logger.trace("Output " + out.name() + " is closed");
       }
-      state.markClosed(out, false);
+      state.markClosed(out, stmtIndex, false);
     }
   }
 
   private UnifiedValues findCongruencesContRec(Program prog,
       Function fn, ExecContext execCx, Continuation cont,
-      Congruences state, Map<Block, Congruences> result) {
+      int stmtIndex, Congruences state, Map<Block, Congruences> result) {
     logger.trace("Recursing on continuation " + cont.getType());
 
-    Congruences contState = state.makeChild(cont.inheritsParentVars());
+    Congruences contState = state.enterContinuation(cont.inheritsParentVars(), stmtIndex);
     // additional variables may be close once we're inside continuation
     List<BlockingVar> contClosedVars = cont.blockingVars(true);
     if (contClosedVars != null) {
       for (BlockingVar bv : contClosedVars) {
-        contState.markClosed(bv.var, bv.recursive);
+        contState.markClosed(bv.var, stmtIndex, bv.recursive);
       }
     }
 
@@ -396,7 +380,7 @@ public class ForwardDataflow implements OptimizerPass {
                       new ArrayList<Congruences>() : null;
 
     for (Block contBlock: cont.getBlocks()) {
-      Congruences blockState = contState.makeChild(true);
+      Congruences blockState = contState.enterBlock();
       findCongruencesRec(prog, fn, contBlock, cont.childContext(execCx),
                          blockState, result);
 
@@ -407,30 +391,33 @@ public class ForwardDataflow implements OptimizerPass {
 
     if (unifyBranches) {
       return UnifiedValues.unify(logger, prog.constants(), fn,
-                                reorderingAllowed, state, cont,
-                                branchStates, cont.getBlocks());
+                    reorderingAllowed, stmtIndex, state, cont,
+                              branchStates, cont.getBlocks());
     } else {
       return UnifiedValues.EMPTY;
     }
   }
   
   private void replaceVals(Block block, Map<Block, Congruences> congruences,
-                        InitState init, Object closedVars) {
+                        InitState init) {
     Congruences state = congruences.get(block);
     
-    // TODO: need way of only replacing with values valid at this point
-    //      of things
+    // TODO: need to use InitState when replacing
+    // TODO: use closed info when replacing?
     ListIterator<Statement> stmtIt = block.statementIterator();
     while (stmtIt.hasNext()) {
       Statement stmt = stmtIt.next();
       if (stmt.type() == StatementType.INSTRUCTION) {
         // Replace vars in instruction
         replaceCongruent(stmt.instruction(), state);
+        
+        // Update init state
+        InitVariables.updateInitVars(logger, stmt, init, false);
       } else {
         assert(stmt.type() == StatementType.CONDITIONAL);
         // Replace vars recursively in conditional
         replaceCongruentNonRec(stmt.conditional(), state);
-        replaceValsRec(stmt.conditional(), congruences, init, closedVars);
+        replaceValsRec(stmt.conditional(), congruences, init);
       }
 
       InitVariables.updateInitVars(logger, stmt, init, false);
@@ -441,244 +428,111 @@ public class ForwardDataflow implements OptimizerPass {
     
     for (Continuation cont: block.getContinuations()) {
       replaceCongruentNonRec(cont, state);
-      replaceValsRec(cont, congruences, init, closedVars);
+      replaceValsRec(cont, congruences, init);
     }
   }
 
   private void replaceValsRec(Continuation cont,
-          Map<Block, Congruences> congruences, InitState init,
-          Object closedVars) {
+          Map<Block, Congruences> congruences, InitState init) {
     InitState contInit = init.enterContinuation(cont);
+    List<InitState> branchInits = new ArrayList<InitState>();
     for (Block contBlock: cont.getBlocks()) {
-      replaceVals(contBlock, congruences, contInit.enterBlock(contBlock),
-                  closedVars);
+      InitState branchInit = contInit.enterBlock(contBlock);
+      replaceVals(contBlock, congruences, branchInit);
+      branchInits.add(branchInit);
+    }
+    
+    if (InitState.canUnifyBranches(cont)) {
+      init.unifyBranches(cont, branchInits);
     }
   }
 
   /**
-   * 
-   * @param execCx
-   * @param block
-   * @param cv
-   *          copy of cv from outer scope, or null if it should be initialized
-   * @param replaceInputs
-   *          : a set of variable replaces to do from this point in IC onwards
-   * @return true if this should be called again
-   * @throws InvalidWriteException
+   * Inline from bottom-up
+   * @param mainBlock
+   * @param cong
    */
-  private boolean forwardDataflow(Logger logger, Program program, Function f,
-      ExecContext execCx, Block block, Congruences state) {
-    for (Var v : block.getVariables()) {
-      if (v.mapping() != null && Types.isFile(v.type())) {
-        // Track the mapping
-        ValLoc filenameVal = ValLoc.makeFilename(v.mapping().asArg(), v);
-        state.update(program.constants(), f.getName(), filenameVal);
+  private void inlinePass(Block block, Map<Block, Congruences> cong) {
+    Congruences blockState = cong.get(block);
+    assert(blockState != null);
+    
+    // Use original statement count from when block was constructed
+    int origStmtCount = block.getStatements().size();
+    
+    ListIterator<Statement> stmtIt = block.statementIterator();
+    while (stmtIt.hasNext()) {
+      Statement stmt = stmtIt.next();
+      if (stmt.type() == StatementType.CONDITIONAL) {
+        // First recurse
+        tryInlineConditional(block, stmtIt, stmt.conditional(), cong);
+      } else {
+        assert(stmt.type() == StatementType.INSTRUCTION);
+        // Leave instructions alone
       }
     }
 
-    handleStatements(logger, program, f, execCx, block,
-                     block.statementIterator(), state);
-
-    replaceCleanupCongruent(block, state);
-
-    boolean inlined = false;
-    // might be able to eliminate wait statements or reduce the number
-    // of vars they are blocking on
-    for (int i = 0; i < block.getContinuations().size(); i++) {
-      Continuation c = block.getContinuation(i);
-
-      // Replace all variables in the continuation construct
-      replaceCongruentNonRec(c, state);
-
-      Block toInline = c.tryInline(state.getClosed(),
-                                   state.getRecursivelyClosed(),
-                                   reorderingAllowed);
-      if (logger.isTraceEnabled()) {
-        logger.trace("Inlining continuation " + c.getType());
-      }
-      if (toInline != null) {
-
-        prepareForInline(toInline, state);
-        c.inlineInto(block, toInline);
-        i--; // compensate for removal of continuation
-        inlined = true;
+    // Block state will reflect closed vars as of end of block
+    Set<Var> closedVars = blockState.getClosed(origStmtCount);
+    Set<Var> recClosedVars = blockState.getRecursivelyClosed(origStmtCount);
+    
+    ListIterator<Continuation> contIt = block.continuationIterator();
+    while (contIt.hasNext()) {
+      Continuation cont = contIt.next();
+      // First recurse
+      inlinePassRecurse(cont, cong);
+      // Then try to inline
+      if (cont.isNoop()) {
+        contIt.remove();
+      } else if (tryInlineContinuation(block, cont, contIt,
+                                       closedVars, recClosedVars)) {
+        // Success!  Will now iterate over rest
       }
     }
-    
+  }
 
-    if (inlined) {
-      // Rebuild data structures for this block after inlining
-      validateState(state);
-      return true;
+  private boolean tryInlineContinuation(Block block,
+              Continuation cont,
+              ListIterator<Continuation> contIt,
+              Set<Var> closedVars, Set<Var> recClosedVars) {
+    Block toInline = null;
+    toInline = cont.tryInline(closedVars, recClosedVars, reorderingAllowed);
+    if (toInline != null) {
+      // Remove old and then add new
+      contIt.remove();
+      block.insertInline(toInline, contIt, block.statementEndIterator());
     }
-
-    // Note: assume that continuations aren't added to rule engine until after
-    // all code in block has run
-    for (Continuation cont : block.getContinuations()) {
-      recurseOnContinuation(logger, program, f, execCx, cont, state);
-    }
-    
-    // Check that things are valid before leaving
-    validateState(state);
-    
-    // Didn't inline everything, all changes should be propagated ok
     return false;
   }
 
-  /**
-   * 
-   * @param logger
-   * @param program
-   * @param fn
-   * @param execCx
-   * @param cont
-   * @param cv
-   * @param replaceInputs
-   * @param replaceAll
-   * @return any variables that are guaranteed to be closed in current context
-   *         after continuation is evaluated
-   * @throws InvalidWriteException
-   */
-  private UnifiedValues recurseOnContinuation(Logger logger, Program program,
-      Function fn, ExecContext execCx, Continuation cont,
-      Congruences state) {
-    logger.trace("Recursing on continuation " + cont.getType());
-
-    Congruences contState = state.makeChild(cont.inheritsParentVars());
-    // additional variables may be close once we're inside continuation
-    List<BlockingVar> contClosedVars = cont.blockingVars(true);
-    if (contClosedVars != null) {
-      for (BlockingVar bv : contClosedVars) {
-        contState.markClosed(bv.var, bv.recursive);
-      }
+  private boolean tryInlineConditional(Block block,
+      ListIterator<Statement> stmtIt, Conditional conditional,
+      Map<Block, Congruences> cong) {
+    inlinePassRecurse(conditional, cong);
+    
+    // Then see if we can inline
+    Block predicted = conditional.branchPredict(
+                                Collections.<Var,Arg>emptyMap());
+    if (conditional.isNoop()) {
+      stmtIt.remove();
+      return true;
     }
-
-    // For conditionals, find variables closed on all branches
-    boolean unifyBranches = cont.isExhaustiveSyncConditional();
-    List<Congruences> branchStates = unifyBranches ?
-                      new ArrayList<Congruences>() : null;
-
-    List<Block> contBlocks = cont.getBlocks();
-    for (int i = 0; i < contBlocks.size(); i++) {
-      Congruences blockState;
-      boolean again;
-      int pass = 1;
-      do {
-        logger.debug("closed variable analysis on nested block pass " + pass);
-        blockState = contState.makeChild(true);
-        again = forwardDataflow(logger, program, fn, cont.childContext(execCx),
-            contBlocks.get(i), blockState);
-
-        // changes in nested scope don't require extra pass over this scope
-        pass++;
-      } while (again);
-
-      if (unifyBranches) {
-        branchStates.add(blockState);
-      }
+    if (predicted != null) {
+      /* Insert block inline.  This will put iterator past end of
+       * inserted code (which is what we want!) */
+      stmtIt.remove();
+      block.insertInline(predicted, stmtIt);
+      return true;
     }
+    return false;
+  }
 
-    if (unifyBranches) {
-      return UnifiedValues.unify(logger, program.constants(), fn,
-                                reorderingAllowed, state, cont,
-                                branchStates, contBlocks);
-    } else {
-      return UnifiedValues.EMPTY;
+  private void inlinePassRecurse(Continuation cont,
+                                 Map<Block, Congruences> cong) {
+    for (Block inner: cont.getBlocks()) {
+      inlinePass(inner, cong);
     }
   }
   
-  /**
-   * Need to apply pending updates to everything in block to be
-   * inline aside from contents of nested continuations.
-   * @param blockToInline
-   * @param replaceInputs
-   * @param replaceAll
-   */
-  private static void prepareForInline(Block blockToInline,
-                                       Congruences state) {
-    // Redo replacements for newly inserted instructions/continuations
-    for (Statement stmt: blockToInline.getStatements()) {
-      replaceCongruent(stmt, state);
-    }
-    for (Continuation c : blockToInline.getContinuations()) {
-      replaceCongruentNonRec(c, state);
-    }
-  }
-
-  /**
-   * 
-   * @param logger
-   * @param f
-   * @param execCx
-   * @param block
-   * @param stmts
-   * @param cv
-   * @param replaceInputs
-   * @param replaceAll
-   */
-  private void handleStatements(Logger logger, Program program, Function f,
-      ExecContext execCx, Block block, ListIterator<Statement> stmts,
-      Congruences state) {
-    while (stmts.hasNext()) {
-      Statement stmt = stmts.next();
-
-      if (stmt.type() == StatementType.INSTRUCTION) {
-        handleInstruction(logger, program, f, execCx, block, stmts,
-            stmt.instruction(), state);
-      } else {
-        assert (stmt.type() == StatementType.CONDITIONAL);
-        // handle situations like:
-        // all branches assign future X a local values v1,v2,v3,etc.
-        // in this case should try to create another local value outside of
-        // conditional z which has the value from all branches stored
-        UnifiedValues unified = recurseOnContinuation(logger, program, f,
-            execCx, stmt.conditional(), state);
-        state.addUnifiedValues(program.constants(), f.getName(), unified);
-      }
-    }
-  }
-
-  private void handleInstruction(Logger logger, Program prog,
-      Function f, ExecContext execCx, Block block,
-      ListIterator<Statement> stmts, Instruction inst,
-      Congruences state) {
-    if (logger.isTraceEnabled()) {
-      state.printTraceInfo(logger);
-      logger.trace("-----------------------------");
-      logger.trace("At instruction: " + inst);
-    }
-
-    // Immediately replace congruent variables
-    replaceCongruent(inst, state);
-    
-    if (logger.isTraceEnabled()) {
-      logger.trace("Instruction after updates: " + inst);
-    }
-    // now try to see if we can change to the immediate version
-    if (switchToImmediate(logger, f, execCx, block, state, inst, stmts)) {
-      // Continue pass at the start of the newly inserted sequence
-      // as if it was always there
-      return;
-    }
-    
-    /*
-     * See if value is already computed somewhere and see if we should replace
-     * variables going forward
-     * NOTE: we don't delete any instructions on this pass, but rather rely on
-     * dead code elim to later clean up unneeded instructions instead.
-     */
-    updateCongruent(logger, prog.constants(), f, inst, state);
-
-    updateTransitiveDeps(prog, inst, state);
-
-    for (Var out: inst.getClosedOutputs()) {
-      if (logger.isTraceEnabled()) {
-        logger.trace("Output " + out.name() + " is closed");
-      }
-      state.markClosed(out, false);
-    }
-  }
-
   private void updateTransitiveDeps(Program prog, Instruction inst,
       Congruences state) {
     /*
@@ -724,7 +578,8 @@ public class ForwardDataflow implements OptimizerPass {
   }
 
   private static void updateCongruent(Logger logger, GlobalConstants consts,
-            Function function, Instruction inst, Congruences state) {
+            Function function, Instruction inst, int stmtIndex,
+            Congruences state) {
     List<ValLoc> irs = inst.getResults(state);
     
     if (irs != null) {
@@ -732,7 +587,7 @@ public class ForwardDataflow implements OptimizerPass {
         logger.trace("irs: " + irs.toString());
       }
       for (ValLoc resVal : irs) {
-        state.update(consts, function.getName(), resVal);
+        state.update(consts, function.getName(), resVal, stmtIndex);
       }
     } else {
       logger.trace("no icvs");
@@ -753,9 +608,9 @@ public class ForwardDataflow implements OptimizerPass {
    */
   private static boolean switchToImmediate(Logger logger, Function fn,
       ExecContext execCx, Block block, Congruences state,
-      Instruction inst, ListIterator<Statement> stmts) {
+      Instruction inst, ListIterator<Statement> stmts, int stmtIndex) {
     // First see if we can replace some futures with values
-    MakeImmRequest req = inst.canMakeImmediate(state.getClosed(), false);
+    MakeImmRequest req = inst.canMakeImmediate(state.getClosed(stmtIndex), false);
 
     if (req == null) {
       return false;
@@ -861,7 +716,8 @@ public class ForwardDataflow implements OptimizerPass {
 
   private static Map<Var, Var> loadOutputFileNames(Congruences state,
       List<Var> outputs, Block insertContext,
-      ListIterator<Statement> insertPoint, boolean mapOutVars) {
+      ListIterator<Statement> insertPoint,
+      boolean mapOutVars) {
     if (outputs == null)
       outputs = Collections.emptyList();
     
@@ -880,7 +736,7 @@ public class ForwardDataflow implements OptimizerPass {
           // Load existing mapping
           // Should only get here if value of mapped var is available.
           assert(output.mapping() != null);
-          assert(state.isClosed(output.mapping()));
+          assert(state.isClosed(output.mapping(), insertPoint.previousIndex()));
           Var filenameAlias = insertContext.declareVariable(Types.F_STRING,
               OptUtil.optFilenamePrefix(insertContext, output),
               Alloc.ALIAS, DefType.LOCAL_COMPILER, null);

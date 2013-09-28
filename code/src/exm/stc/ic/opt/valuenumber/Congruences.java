@@ -4,6 +4,7 @@ import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +18,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.TernaryLogic.Ternary;
+import exm.stc.ic.opt.valuenumber.ClosedVarTracker.ClosedEntry;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
 import exm.stc.ic.opt.valuenumber.ComputedValue.RecCV;
@@ -51,7 +53,8 @@ import exm.stc.ic.tree.Opcode;
  * variable is mapped: we can only have one mapped variable in each
  * congruence set, and it must be the canonical member
  *   
- * TODO: need to fix inter-variable dependency tracking
+ * TODO: we could more closely link alias and inter-variable
+ *       dependency tracking
  */
 public class Congruences implements ValueState {
 
@@ -64,16 +67,14 @@ public class Congruences implements ValueState {
   final Logger logger;
   final Congruences parent;
   final Map<Arg, Var> createdConstants = new HashMap<Arg, Var>();
-  final ValueTracker track;
+  final ClosedVarTracker track;
   final CongruentSets byValue;
   final CongruentSets byAlias;
   final boolean reorderingAllowed;
-  final Set<Var> closedSet;
-  final Set<Var> recClosedSet;
   
   private Congruences(Logger logger,
                         Congruences parent,
-                        ValueTracker track,
+                        ClosedVarTracker track,
                         CongruentSets byValue,
                         CongruentSets byAlias,
                         boolean reorderingAllowed) {
@@ -83,20 +84,19 @@ public class Congruences implements ValueState {
     this.byValue = byValue;
     this.byAlias = byAlias;
     this.reorderingAllowed = reorderingAllowed;
-    this.closedSet = new ClosedSet(false);
-    this.recClosedSet = new ClosedSet(true);
   }
   
   public Congruences(Logger logger, boolean reorderingAllowed) {
-    this(logger, null, new ValueTracker(logger, reorderingAllowed),
+    this(logger, null, ClosedVarTracker.makeRoot(logger, reorderingAllowed),
         CongruentSets.makeRoot(CongruenceType.VALUE),
          CongruentSets.makeRoot(CongruenceType.ALIAS),
          reorderingAllowed);
   }
   
-  public Congruences makeChild(boolean varsPassedFromParents) {
+  public Congruences enterContinuation(boolean varsPassedFromParents,
+          int parentStmtIndex) {
     Congruences child = new Congruences(logger, this,
-             track.makeChild(),
+             track.enterContinuation(parentStmtIndex),
              byValue.makeChild(), byAlias.makeChild(), reorderingAllowed);
     
     /*
@@ -119,12 +119,18 @@ public class Congruences implements ValueState {
     return child;
   }
   
+
+  public Congruences enterBlock() {
+    return new Congruences(logger, this, track.enterBlock(),
+     byValue.makeChild(), byAlias.makeChild(), reorderingAllowed);
+  }
+  
   public void update(GlobalConstants consts, String errContext,
-                     ValLoc resVal) {
+                     ValLoc resVal, int stmtIndex) {
     if (resVal.congType() == CongruenceType.ALIAS) {
       // Update aliases only if congType matches
       update(consts, errContext, resVal.location(), resVal.value(),
-                                                    byAlias, true);
+                                          byAlias, true, stmtIndex);
     } else {
       assert(resVal.congType() == CongruenceType.VALUE);
     }
@@ -135,11 +141,11 @@ public class Congruences implements ValueState {
      * congruence so that we can pick a closed variable to represent
      * the value if possible.
      */
-    markClosed(resVal.location(), resVal.locClosed());
+    markClosed(resVal.location(), stmtIndex, resVal.locClosed());
     
     // Both alias and value links result in updates to value
     update(consts, errContext, resVal.location(), resVal.value(),
-                                                  byValue, true);
+                                       byValue, true, stmtIndex);
   }
   
   /**
@@ -153,9 +159,9 @@ public class Congruences implements ValueState {
    * @param addInverses
    * @return
    */
-  public void update(GlobalConstants consts, String errContext,
+  private void update(GlobalConstants consts, String errContext,
             Arg location, ArgCV value, CongruentSets congruent,
-            boolean addInverses) {
+            boolean addInverses, int stmtIndex) {
     // LocCV may already be in congruent set
     Arg canonLoc = congruent.findCanonical(new RecCV(location)); 
     // Canonicalize value based on existing congruences
@@ -169,11 +175,12 @@ public class Congruences implements ValueState {
       congruent.addToSet(canonVal, canonLoc);
     } else {
       // Need to merge together two existing sets
-      mergeSets(errContext, canonVal, congruent, canonLoc, canonLocFromVal);
+      mergeSets(errContext, canonVal, congruent, canonLoc, canonLocFromVal,
+                stmtIndex);
     }
     
     if (addInverses) {
-      addInverses(consts, errContext, canonLoc, canonVal);
+      addInverses(consts, errContext, canonLoc, canonVal, stmtIndex);
     }
   }
 
@@ -194,7 +201,7 @@ public class Congruences implements ValueState {
    * @param canonVal
    */
   private void addInverses(GlobalConstants consts, String errContext,
-                                    Arg canonLoc, RecCV canonVal) {
+                          Arg canonLoc, RecCV canonVal, int stmtIndex) {
     if (canonVal.isCV() && canonVal.cv().inputs.size() == 1) {
       ComputedValue<RecCV> cv = canonVal.cv();
       RecCV input = cv.getInput(0);
@@ -202,17 +209,30 @@ public class Congruences implements ValueState {
         Arg invOutput = input.arg();
         // Only add value congruences to be safe.. may be able to
         // relax this later e.g. for STORE_REF/LOAD_REF pair (TODO)
-        CongruentSets valueSet = getCongruentSet(CongruenceType.VALUE);
         if (cv.op().isAssign()) {
           ArgCV invVal = ComputedValue.retrieveCompVal(canonLoc.getVar());
-          update(consts, errContext, invOutput, invVal, valueSet, false);
+          updateInv(consts, errContext, invOutput, invVal, stmtIndex);
         } else if (cv.op().isRetrieve()) {
           ArgCV invVal = new ArgCV(Opcode.assignOpcode(invOutput.getVar()),
                                    canonLoc.asList());
-          update(consts, errContext, invOutput, invVal, valueSet, false);
+          updateInv(consts, errContext, invOutput, invVal, stmtIndex);
         }
       }
+    } else if (canonVal.isArg() && canonVal.arg().isVar() &&
+               canonVal.arg().getVar().storage() == Alloc.GLOBAL_CONST) {
+      // Add value for retrieval of global
+      Var globalConst = canonVal.arg().getVar();
+      Arg constVal = consts.lookupByVar(globalConst);
+      assert(constVal != null);
+      ArgCV invVal = ComputedValue.retrieveCompVal(globalConst);
+      updateInv(consts, errContext, constVal, invVal, stmtIndex);
     }
+  }
+
+  private void updateInv(GlobalConstants consts, String errContext,
+      Arg invOutput, ArgCV invVal, int stmtIndex) {
+    CongruentSets valCong = getCongruentSet(CongruenceType.VALUE);
+    update(consts, errContext, invOutput, invVal, valCong, false, stmtIndex);
   }
   /**
    * Merge two congruence sets that are newly connected via value
@@ -223,7 +243,7 @@ public class Congruences implements ValueState {
    * @param oldLoc representative of existing set
    */
   private void mergeSets(String errContext, RecCV value,
-      CongruentSets congruent, Arg newLoc, Arg oldLoc) {
+      CongruentSets congruent, Arg newLoc, Arg oldLoc, int stmtIndex) {
     if (newLoc.equals(oldLoc)) {
       // Already merged
       return;
@@ -237,7 +257,7 @@ public class Congruences implements ValueState {
     
     // Must merge.  Select which is the preferred value
     // (for replacement purposes, etc.)
-    Arg winner = preferred(congruent, oldLoc, newLoc);
+    Arg winner = preferred(congruent, oldLoc, newLoc, stmtIndex);
     Arg loser = (winner == oldLoc ? newLoc : oldLoc);
     changeCanonical(congruent, loser, winner);
   }
@@ -291,7 +311,10 @@ public class Congruences implements ValueState {
   }
 
   /**
-   * Check which arg is preferred as 
+   * Check which arg is preferred as the replacement.
+   * 
+   * Note that this ordering is important for correctness.  If we replace
+   * a closed var with a non-closed var, we may produce incorrect results.
    * @param track
    * @param congType 
    * @param oldArg current one
@@ -299,7 +322,7 @@ public class Congruences implements ValueState {
    * @return the preferred of the two args
    */
   private Arg preferred(CongruentSets congruent,
-                            Arg oldArg, Arg newArg) {
+                        Arg oldArg, Arg newArg, int stmtIndex) {
   
     if (congruent.congType == CongruenceType.VALUE) {
       // Constants trump all
@@ -336,6 +359,18 @@ public class Congruences implements ValueState {
        return newArg;
     }
     
+    // Prefer closed
+    if (congruent.congType == CongruenceType.VALUE) {
+      // Check if this gives us a reason to prefer newArg
+      if (isRecClosed(newArg.getVar(), stmtIndex) && 
+          !isRecClosed(oldArg.getVar(), stmtIndex)) {
+        return newArg;
+      } else if (isClosed(newArg.getVar(), stmtIndex) 
+              && !isClosed(oldArg.getVar(), stmtIndex)) {
+        return newArg;
+      }
+    }
+    
     // otherwise keep old arg
     return oldArg;
   }
@@ -358,12 +393,12 @@ public class Congruences implements ValueState {
     return canonical.getVar();
   }
 
-  public void markClosed(Var var, boolean recursive) {
-    if (var.storage() == Alloc.LOCAL) {
+  public void markClosed(Var var, int stmtIndex, boolean recursive) {
+    if (!trackClosed(var)) {
       // Don't bother tracking this info: not actually closed
       return;
     }
-    track.close(getCanonicalAlias(var.asArg()), recursive);
+    track.close(getCanonicalAlias(var.asArg()), stmtIndex, recursive);
   }
   
   /**
@@ -372,83 +407,139 @@ public class Congruences implements ValueState {
    * @param closed 
    * @param resVal
    */
-  private void markClosed(Arg location, Closed closed) {
+  private void markClosed(Arg location, int stmtIndex, Closed closed) {
     if (closed != Closed.MAYBE_NOT && location.isVar()) {
       // Mark the canonical version of the variable closed
-      Var canonAlias = getCanonicalAlias(location);
       if (closed == Closed.YES_NOT_RECURSIVE) {
-        track.close(canonAlias, false);
+        markClosed(location.getVar(), stmtIndex, false);
       } else {
         assert(closed == Closed.YES_RECURSIVE);
-        track.close(canonAlias, true);
+        markClosed(location.getVar(), stmtIndex, true);
       }
     }
   }
 
-  public boolean isClosed(Var var) {
-    return isClosed(var.asArg());
+  public boolean isClosed(Var var, int stmtIndex) {
+    return isClosed(var.asArg(), stmtIndex);
   }
   
-  public boolean isClosed(Arg varArg) {
-    return isClosed(varArg, false);
+  public boolean isClosed(Arg varArg, int stmtIndex) {
+    return isClosed(varArg, stmtIndex, false);
   }
   
-  public boolean isRecClosed(Var var) {
-    return isRecClosed(var.asArg());
+  public boolean isRecClosed(Var var, int stmtIndex) {
+    return isRecClosed(var.asArg(), stmtIndex);
   }
 
-  public boolean isRecClosed(Arg varArg) {
-    return isClosed(varArg, true);
+  public boolean isRecClosed(Arg varArg, int stmtIndex) {
+    return isClosed(varArg, stmtIndex, true);
   }
 
-  private boolean isClosed(Arg varArg, boolean recursive) {
+  private boolean isClosed(Arg varArg, int stmtIndex, boolean recursive) {
     // Find canonical var for alias, and check if that is closed.
-    if (varArg.isConstant()) {
+    if (!trackClosed(varArg.getVar())) {
+      // No write refcount - always closed
+      logger.trace(varArg + " has no refcount");
       return true;
     }
     Var canonicalAlias = getCanonicalAlias(varArg);
-    boolean canonicalClosed;
+    ClosedEntry canonicalClosed;
     
-    canonicalClosed = isClosedNonAlias(canonicalAlias, recursive);
-    if (canonicalClosed) {
+    canonicalClosed = isClosedNonAlias(canonicalAlias, stmtIndex, recursive);
+    if (canonicalClosed != null &&
+        canonicalClosed.matches(recursive, stmtIndex)) {
       // We're done..
+      logger.trace(varArg + " closed @ " + canonicalClosed.stmtIndex);
       return true;
     }
     
     // If canonical not closed, need to check if a merged set was closed,
-    // since closed info isn't immediate synchronized with merges
-    for (Arg mergedSet: byAlias.mergedCanonicals(canonicalAlias.asArg())) {
+    // since closed info isn't immediately synchronized with merges
+    for (Arg mergedSet: byAlias.allMergedCanonicals(canonicalAlias.asArg())) {
       assert(mergedSet.isVar());
       Var merged = mergedSet.getVar();
-      if (isClosedNonAlias(merged, recursive)) {
+      ClosedEntry ce = isClosedNonAlias(merged, stmtIndex, recursive); 
+      if (ce != null) {
         // Mark canonical alias as closed to avoid having to trace back
         // again like this.
-        track.close(canonicalAlias, recursive);
-        return true;
+        track.close(canonicalAlias, ce);
+        if (ce.matches(recursive, stmtIndex)) {
+
+          logger.trace(varArg + " closed @ " + canonicalClosed.stmtIndex +
+                       " via " + merged);
+          return true;
+        }
       }
     }
     return false;
   }
 
   /**
-   * Check if closed, ignoring any alias info
+   * Whether we should track reference count for this var
+   * @param var
+   * @return
    */
-  private boolean isClosedNonAlias(Var var, boolean recursive) {
-    if (recursive) {
-      return track.isRecursivelyClosed(var);
-    } else {
-      return track.isClosed(var);
-    }
-  }
-  
-  public Set<Var> getClosed() {
-    return closedSet;
+  private boolean trackClosed(Var var) {
+    // TODO: more precise?
+    return var.storage() != Alloc.LOCAL &&
+           var.storage() != Alloc.GLOBAL_CONST;
   }
 
-  public Set<Var> getRecursivelyClosed() {
-    return recClosedSet;
+  /**
+   * Check if closed, ignoring any alias info.
+   * Returns best closed entry we could find.  Caller is responsible
+   * for checking.
+   */
+  private ClosedEntry isClosedNonAlias(Var var, int stmtIndex,
+                                       boolean recursive) {
+    return track.getClosedEntry(var, recursive, stmtIndex);
   }
   
+  public Set<Var> getClosed(int stmtIndex) {
+    return new ClosedSet(stmtIndex, false);
+  }
+
+  public Set<Var> getRecursivelyClosed(int stmtIndex) {
+    return new ClosedSet(stmtIndex, false);
+  }
+  
+  /**
+   * Return set of vars that were closed in this scope but
+   * not in parent scopes
+   * @param recursiveOnly
+   * @return
+   */
+  public Set<Var> getScopeClosed(boolean recursiveOnly) {
+    // Get variables that can be inferred to be closed
+    Set<Var> nonAlias = track.getScopeClosed(recursiveOnly);
+
+    // In parent scope, some alias sets that might be merged.  Add in
+    // a representative that was merged into the closed set.  We know
+    // that each var returned by getScopeClosed was at some point in this
+    // block.  By backtrakcing through merges that happened in this block,
+    // we can find the canonical representatives of all set in the parent
+    // block.
+    // As optimization, only create new set on demand
+    Set<Var> expanded = null; 
+
+    for (Var closed: nonAlias) {
+      for (Arg merged: byAlias.mergedCanonicalsThisScope(closed.asArg())) {
+        assert(merged.isVar());
+        if (expanded == null) {
+          // Copy to new set
+          expanded = new HashSet<Var>();
+          expanded.addAll(nonAlias);
+        }
+        expanded.add(merged.getVar());
+      }
+    }
+    if (expanded != null) {
+      return expanded;
+    } else {
+      return nonAlias;
+    }
+  }
+
   /**  
    * @param mode
    * @return replacements in effect for given rename mode
@@ -517,17 +608,17 @@ public class Congruences implements ValueState {
   }
   
   public void addUnifiedValues(GlobalConstants consts, String errContext,
-                               UnifiedValues unified) {
+                                 int stmtIndex, UnifiedValues unified) {
     // TODO: need to refine this merge to compensate for sets being
     //      named differently in child
     for (Var closed: unified.closed) {
-      markClosed(closed, false);
+      markClosed(closed, stmtIndex, false);
     }
     for (Var closed: unified.recursivelyClosed) {
-      markClosed(closed, true);
+      markClosed(closed, stmtIndex, true);
     }
     for (ValLoc loc: unified.availableVals) {
-      update(consts, errContext, loc);
+      update(consts, errContext, loc, stmtIndex);
     }
   }
 
@@ -582,6 +673,10 @@ public class Congruences implements ValueState {
    * @param from
    * TODO: need to update to use correct canonical alias as they change
    * TODO: or alternatively use history of changes to search on demand?
+   * TODO: this information can be propagated up the IR tree, since if
+   *      A -> B in a wait statement, this implies that in any parent
+   *      blocks, that if B is set, then A is set (assuming no
+   *      contradictions)
    */
   public void setDependencies(Var to, List<Var> fromVars) {
     Var toCanon = getCanonicalAlias(to.asArg());
@@ -595,11 +690,12 @@ public class Congruences implements ValueState {
    * Implement set interface for checking if var is closed
    */
   private class ClosedSet extends AbstractSet<Var> {
-    ClosedSet(boolean recursive) {
-      super();
+    ClosedSet(int stmtIndex, boolean recursive) {
+      this.stmtIndex = stmtIndex;
       this.recursive = recursive;
     }
 
+    private final int stmtIndex;
     private final boolean recursive;
   
     @Override
@@ -607,28 +703,15 @@ public class Congruences implements ValueState {
       assert(o instanceof Var);
       Var v = (Var)o;
       if (recursive) {
-        return isRecClosed(v);
+        return isRecClosed(v, stmtIndex);
       } else {
-        return isClosed(v);
+        return isClosed(v, stmtIndex);
       }
     }
 
-    /**
-     * @return iterator over all aliases of all closed vars
-     */
     @Override
     public Iterator<Var> iterator() {
-      List<Var> allClosed = new ArrayList<Var>();
-      Set<Var> closedSet = recursive ? track.getRecursivelyClosed()
-                                     : track.getClosed();
-      for (Var closed: closedSet) {
-        for (RecCV cong: findCongruent(closed.asArg(), CongruenceType.ALIAS)) {
-          if (cong.isArg() && cong.arg().isVar()) {
-            allClosed.add(cong.arg().getVar());
-          }
-        }
-      }
-      return allClosed.iterator();
+      throw new STCRuntimeError("iterator() not supported");
     }
     
     @Override

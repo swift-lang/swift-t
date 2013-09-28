@@ -749,7 +749,16 @@ class CongruentSets {
   /**
    * @return iterator over all previous canonicals merged into this one
    */
-  public Iterable<Arg> mergedCanonicals(Arg canonical) {
+  public Iterable<Arg> allMergedCanonicals(Arg canonical) {
+    return mergedCanonicals(canonical, false);
+  }
+  
+  public Iterable<Arg> mergedCanonicalsThisScope(Arg canonical) {
+    return mergedCanonicals(canonical, true);
+  }
+  
+  private Iterable<Arg> mergedCanonicals(Arg canonical,
+                boolean followAncestors) {
     List<Arg> allMerged = new ArrayList<Arg>();
     
     Deque<Pair<CongruentSets, Arg>> work =
@@ -765,7 +774,7 @@ class CongruentSets {
         // Track back those merged into this one
         work.push(Pair.create(curr, mergedSet));
       }
-      if (curr.parent != null) {
+      if (followAncestors && curr.parent != null) {
         // Track back merges happening in parents
         work.push(Pair.create(curr.parent, set));
       }
