@@ -169,7 +169,15 @@ public class CongruentVars implements ValueState {
     // canonicalize based on existing congruences
     RecCV canonVal = canonicalize(congruent, value);
 
-    updateCanonical(errContext, canonLoc, canonVal, congruent);
+    Arg canonLocFromVal = congruent.findCanonical(canonVal);
+    if (canonLocFromVal == null) {
+      // Handle case where value not congruent to anything yet.
+      // Just add val to arg's set
+      congruent.addToSet(canonVal, canonLoc);
+    } else {
+      // Need to merge together two existing sets
+      mergeSets(errContext, canonVal, congruent, canonLoc, canonLocFromVal);
+    }
     
     if (addInverses) {
       addInverses(errContext, canonLoc, canonVal);
@@ -178,6 +186,13 @@ public class CongruentVars implements ValueState {
     return true;
   }
 
+  /**
+   * Add any inverse operations that can be directly inferred from
+   * a value that was just added
+   * @param errContext
+   * @param canonLoc
+   * @param canonVal
+   */
   private void addInverses(String errContext, Arg canonLoc, RecCV canonVal) {
     if (canonVal.isCV() && canonVal.cv().inputs.size() == 1) {
       ComputedValue<RecCV> cv = canonVal.cv();
@@ -200,32 +215,6 @@ public class CongruentVars implements ValueState {
   }
 
   /**
-   * Update post-canonicalization
-   * @param errContext
-   * @param canonLoc
-   * @param canonVal
-   * @param congruent
-   */
-  private void updateCanonical(String errContext, Arg canonLoc, RecCV canonVal,
-      CongruentSet congruent) {
-    if (canonVal.isCV() && (canonVal.cv().isCopy() || canonVal.cv().isAlias())) {
-      // handle alias/copies directly
-      // we should already have correct set for congruence type.
-      Arg copySrc = congruent.findCanonical(canonVal.cv().getInput(0).arg());
-      mergeSets(errContext, canonVal, congruent, canonLoc, copySrc);
-    } else {
-      Arg canonLocFromVal = congruent.findCanonical(canonVal);
-      if (canonLocFromVal == null) {
-        // Not congruent to anything via value, just add val to set
-        congruent.addToSet(canonVal, canonLoc);
-      } else {
-        // Need to merge together two distinct sets
-        mergeSets(errContext, canonVal, congruent, canonLoc, canonLocFromVal);
-      }
-    }
-  }
-
-  /**
    * Do any canonicalization of result value here, e.g. to implement
    * constant folding, etc.
    * @param resVal
@@ -239,7 +228,7 @@ public class CongruentVars implements ValueState {
       // Then do additional transformations such as constant folding
       ComputedValue<RecCV> resultValue = result.cv();
       if (resultValue.isCopy() || resultValue.isAlias()) {
-        // Copy/alias operation is not needed for RecCV
+        // Strip out copy/alias operations, since we can use value directly
         result = result.cv().getInput(0);  
       } else if (congruent.congType == CongruenceType.VALUE) {
         RecCV constantFolded = tryConstantFold(congruent, resultValue);
@@ -606,7 +595,12 @@ public class CongruentVars implements ValueState {
     if (cvRetrieve == null) {
       return null;
     }
-    return byValue.findCanonical(cvRetrieve);
+    Arg val = byValue.findCanonical(cvRetrieve);
+    if (val != null && !byValue.contradictions.contains(val)) {
+      return val;
+    } else {
+      return null;
+    }
   }
   
   /**
@@ -621,12 +615,8 @@ public class CongruentVars implements ValueState {
     return findCanonical(val, congType) != null;
   }
   
-  public Arg findCanonical(RecCV val, CongruenceType congType) {
+  private Arg findCanonical(RecCV val, CongruenceType congType) {
     return getCongruentSet(congType).findCanonical(val);
-  }
-  
-  public boolean isAvailable(RecCV val, CongruenceType congType) {
-    return findCanonical(val, congType) != null;
   }
 
   @Override
@@ -888,6 +878,7 @@ public class CongruentVars implements ValueState {
      * @return not null
      */
     public Arg findCanonical(Arg arg) {
+      assert(arg != null);
       Arg result = findCanonical(new RecCV(arg));
       assert(result != null);
       return result;
@@ -965,7 +956,10 @@ public class CongruentVars implements ValueState {
             logger.trace("Contradiction implication " + arg + " => " +
                           cv);
           }
-          markContradiction(findCanonical(cv));
+          Arg set = findCanonical(cv);
+          if (set != null) {
+            markContradiction(set);
+          }
         }
         curr = curr.parent;
       } while (curr != null);
