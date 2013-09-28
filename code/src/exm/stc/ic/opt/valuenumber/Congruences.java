@@ -271,13 +271,6 @@ public class Congruences implements ValueState {
       return;
     }
     
-    if (!checkNoContradiction(errContext, congruent.congType,
-                              value, newLoc, oldLoc)) {
-      congruent.markContradiction(newLoc);
-      congruent.markContradiction(oldLoc);
-    }
-        
-    
     // Must merge.  Select which is the preferred value
     // (for replacement purposes, etc.)
     Arg winner = preferred(congruent, oldLoc, newLoc, newIsAssign, stmtIndex);
@@ -287,6 +280,12 @@ public class Congruences implements ValueState {
                    " winner: " + winner);
     }
     changeCanonical(consts, congruent, loser, winner);
+    
+    // Mark contradiction after changes
+    if (!checkNoContradiction(errContext, congruent.congType,
+                              value, newLoc, oldLoc)) {
+      congruent.markContradiction(newLoc);
+    }
   }
 
   /**
@@ -703,7 +702,7 @@ public class Congruences implements ValueState {
   
   /**
    * See if the result of a value retrieval is already in scope
-   * 
+   * Returns nothing if contradiction found!
    * @param v
    * @return
    */
@@ -713,6 +712,7 @@ public class Congruences implements ValueState {
       return null;
     }
     Arg val = byValue.findCanonical(consts, cvRetrieve);
+
     if (val != null && !byValue.hasContradiction(val)) {
       return val;
     } else {
@@ -720,10 +720,21 @@ public class Congruences implements ValueState {
     }
   }
   
-  public Arg findCanonical(Arg arg, CongruenceType congType) {
-    return getCongruentSet(congType).findCanonical(arg);
+  /**
+   * See if the value of a local var is already in scope
+   * Returns nothing if contradiction found!
+   * @param v
+   * @return
+   */
+  public Arg findValue(Var output) {
+    Arg val = byValue.findCanonical(output.asArg());
+    if (val != null && !byValue.hasContradiction(val)) {
+      return val;
+    } else {
+      return null;
+    }
   }
-
+  
   /**
    * @return canonical location for given value, null if not stored anywhere
    */

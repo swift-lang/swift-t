@@ -334,11 +334,6 @@ public class ForeachLoops {
     }
 
     @Override
-    public Block branchPredict(Map<Var, Arg> knownConstants) {
-      return null;
-    }
-
-    @Override
     public boolean isNoop() {
       return this.loopBody.isEmpty();
     }
@@ -556,7 +551,8 @@ public class ForeachLoops {
     }
 
     @Override
-    public Block branchPredict(Map<Var, Arg> knownConstants) {
+    public Block tryInline(Set<Var> closedVars, Set<Var> recClosedVars,
+                           boolean keepExplicitDependencies) {
       // Could inline loop if there is only one iteration...
       if (start.isIntVal() && end.isIntVal()) {
         long startV = start.getIntLit();
@@ -575,6 +571,8 @@ public class ForeachLoops {
         }
 
         if (singleIter) {
+          this.loopBody.declareVariable(loopVar);
+          this.loopBody.addInstructionFront(ICInstructions.valueSet(loopVar, start));
           return this.loopBody;
         }
       }

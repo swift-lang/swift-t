@@ -301,9 +301,15 @@ class CongruentSets {
   }
   
   public void markContradiction(Arg arg) {
+
     assert(arg != null);
     arg = findCanonical(arg);
     boolean newContradiction = contradictions.add(arg);
+    
+    if (logger.isTraceEnabled()) {
+      logger.trace("Contradiction for: " + arg + " new " + newContradiction);
+    }
+    
     if (!newContradiction) {
       // Don't need to do work: avoid infinite loop
       return;
@@ -319,7 +325,9 @@ class CongruentSets {
             logger.trace("Contradiction implication " + arg + " => " +
                           setMember);
           }
-          contradictions.add(setMember.arg());
+          markContradiction(setMember.arg());
+        } else if (setMember.isCV()) {
+          addCVContradictions(setMember.cv());
         }
       }
       curr = curr.parent;
@@ -339,6 +347,18 @@ class CongruentSets {
       }
       curr = curr.parent;
     } while (curr != null);
+  }
+
+  /**
+   * Add contradictions flowing from a member of a structure, e.g. array
+   * to the whole array.
+   * @param cv
+   */
+  private void addCVContradictions(ArgCV cv) {
+    for (Arg structure: cv.componentOf()) {
+      logger.trace("MARK: " + structure);
+      markContradiction(structure);
+    }
   }
 
   public boolean hasContradiction(Arg val) {
@@ -424,6 +444,13 @@ class CongruentSets {
       // conservatively mark this congruence set as containing
       // a contradiction
       markContradiction(canonicalVal);
+    }
+    if (contradictions.contains(canonicalVal)) {
+      if (val.isArg()) {
+        markContradiction(val.arg());
+      } else {
+        addCVContradictions(val.cv());
+      }
     }
     if (val.isCV()) {
       checkForRecanonicalization(canonicalVal, val.cv());
@@ -646,13 +673,11 @@ class CongruentSets {
   /**
    * Keep index of where Arg appears.  When merge
    * happens, need to go through and replace old Arg with new
-   * canonical Arg.
+   * canonical Arg.  We also use this to propagate contradiction
+   * info among different sets.  We need to track constants as these
+   * are often the canonical member of a set.
    */
   private void addInputIndex(Arg newInput, ArgOrCV newCV) {
-    if (Congruences.isConst(newInput)) {
-      // Don't need to track constants as they won't be replaced
-      return;
-    }
     if (logger.isTraceEnabled()) {
       logger.trace("Add component: " + newInput + "=>" + newCV);
     }

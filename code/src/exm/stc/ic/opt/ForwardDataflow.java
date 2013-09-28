@@ -45,7 +45,6 @@ import exm.stc.ic.opt.InitVariables.InitState;
 import exm.stc.ic.opt.ProgressOpcodes.Category;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
 import exm.stc.ic.opt.valuenumber.ComputedValue;
-import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
 import exm.stc.ic.opt.valuenumber.Congruences;
 import exm.stc.ic.opt.valuenumber.UnifiedValues;
 import exm.stc.ic.opt.valuenumber.ValLoc;
@@ -56,7 +55,6 @@ import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICContinuations.WaitVar;
 import exm.stc.ic.tree.ICInstructions;
-import exm.stc.ic.tree.Opcode;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Instruction.Fetched;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
@@ -68,6 +66,7 @@ import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.RenameMode;
 import exm.stc.ic.tree.ICTree.Statement;
 import exm.stc.ic.tree.ICTree.StatementType;
+import exm.stc.ic.tree.Opcode;
 import exm.stc.ic.tree.TurbineOp;
 
 /**
@@ -537,8 +536,7 @@ public class ForwardDataflow implements OptimizerPass {
     inlinePassRecurse(conditional, cong);
     
     // Then see if we can inline
-    Block predicted = conditional.branchPredict(
-                                Collections.<Var,Arg>emptyMap());
+    Block predicted = conditional.branchPredict();
     if (conditional.isNoop()) {
       stmtIt.remove();
       return true;
@@ -607,12 +605,16 @@ public class ForwardDataflow implements OptimizerPass {
           // Replace a computation with future output with a store
           Arg val = state.findRetrieveResult(output);
           if (val != null) {
-            stmtIt.set(ICInstructions.futureSet(output, val));
+            Instruction futureSet = ICInstructions.futureSet(output, val);
+            stmtIt.set(futureSet);
+            logger.trace("Replaced with " + futureSet);
           }
         } else if (Types.isScalarValue(output)) {
-          Arg val = state.findCanonical(output.asArg(), CongruenceType.VALUE);
+          Arg val = state.findValue(output);
           if (val != null && val.isConstant()) {
-            stmtIt.set(ICInstructions.valueSet(output, val));
+            Instruction valueSet = ICInstructions.valueSet(output, val);
+            stmtIt.set(valueSet);
+            logger.trace("Replaced with " + valueSet);
           }
         }
       }

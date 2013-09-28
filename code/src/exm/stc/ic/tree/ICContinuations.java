@@ -160,13 +160,6 @@ public class ICContinuations {
     public abstract Collection<Var> requiredVars(boolean forDeadCodeElim);
 
     /**
-     * See if we can predict branch and flatten this to a block
-     * @param knownConstants
-     * @return a block which is the branch that will run
-     */
-    public abstract Block branchPredict(Map<Var, Arg> knownConstants);
-
-    /**
      * replace variables with constants in loop construct
      * @param knownConstants
      * @return true if anything changed
@@ -745,11 +738,6 @@ public class ICContinuations {
     }
 
     @Override
-    public Block branchPredict(Map<Var, Arg> knownConstants) {
-      return null;
-    }
-
-    @Override
     public boolean isNoop() {
       // TODO: think about particular conditions that would render it a noop.
       //
@@ -904,11 +892,6 @@ public class ICContinuations {
     @Override
     public void removeVars(Set<Var> removeVars) {
       removeVarsInBlocks(removeVars);
-    }
-
-    @Override
-    public Block branchPredict(Map<Var, Arg> knownConstants) {
-      return null;
     }
 
     @Override
@@ -1252,12 +1235,6 @@ public class ICContinuations {
           it.remove();
         }
       }
-    }
-
-    @Override
-    public Block branchPredict(Map<Var, Arg> knownConstants) {
-      // Do nothing
-      return null;
     }
 
     @Override

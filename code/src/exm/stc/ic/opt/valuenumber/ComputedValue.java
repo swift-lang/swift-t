@@ -315,6 +315,20 @@ public class ComputedValue<T> {
     return new ArgCV(Opcode.FAKE, newSubop, memRef.inputs);
   }
 
+
+  public List<T> componentOf() {
+    if (isArrayMember() || isArrayMemberRef()) {
+      return Collections.singletonList(inputs.get(0));
+    } else if (isCopy() || isAlias()) {
+      return Collections.singletonList(inputs.get(0));
+    } else if (isDerefCompVal()) {
+      return Collections.singletonList(inputs.get(0));
+    } else if (isStructMember()) {
+      return Collections.singletonList(inputs.get(0));
+    }
+    return Collections.emptyList();
+  }
+  
   public boolean isStructMember() {
     return op == Opcode.STRUCT_LOOKUP;
   }
@@ -371,6 +385,7 @@ public class ComputedValue<T> {
     public ArgCV substituteInputs(List<Arg> newInputs) {
       return new ArgCV(op, subop, newInputs);
     }
+
   }
 
   /**

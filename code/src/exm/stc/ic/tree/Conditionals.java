@@ -76,6 +76,16 @@ public class Conditionals {
     
     @Override
     public abstract Conditional clone();
+    
+
+    /**
+     * See if we can predict branch and flatten this to a block
+     * @return a block which is the branch that will run
+     */
+    public Block branchPredict() {
+      return tryInline(Collections.<Var>emptySet(),
+                       Collections.<Var>emptySet(), false);
+    }
   }
   
   public static class IfStatement extends Conditional {
@@ -173,25 +183,16 @@ public class Conditionals {
     }
   
     @Override
-    public Block branchPredict(Map<Var, Arg> knownConstants) {
-      Arg val;
-      
+    public Block tryInline(Set<Var> closedVars, Set<Var> recClosedVars,
+        boolean keepExplicitDependencies) {
       if (condition.isVar()) {
-        val = knownConstants.get(condition.getVar());
-        if (val == null) {
-          return null;
-        }
-      } else {
-        val = condition; 
+        return null;
       }
-      
-      assert(val.isIntVal()
-            || val.isBoolVal());
-      if (val.isIntVal()
-          && val.getIntLit() != 0) {
+
+      assert(condition.isIntVal() || condition.isBoolVal());
+      if (condition.isIntVal() && condition.getIntLit() != 0) {
         return thenBlock;
-      } else if (val.isBoolVal() &&
-          val.getBoolLit()) {
+      } else if (condition.isBoolVal() && condition.getBoolLit()) {
         return thenBlock;
       } else {
         return elseBlock;
@@ -345,14 +346,11 @@ public class Conditionals {
     }
   
     @Override
-    public Block branchPredict(Map<Var, Arg> knownConstants) {
+    public Block tryInline(Set<Var> closedVars, Set<Var> recClosedVars,
+                           boolean keepExplicitDependencies) {
       if (switchVar.isVar()) {
-        if (knownConstants.containsKey(switchVar.getVar())) {
-          this.switchVar = knownConstants.get(switchVar.getVar());
-        } else {
-          // Variable condition
-          return null;
-        }
+        // Variable condition
+        return null;
       } 
       long val = switchVar.getIntLit();
       // Check cases

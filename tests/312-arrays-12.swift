@@ -2,11 +2,6 @@
 
 // CHeck that double writes are caught
 
-
-// Known bug: at O3 double write isn't caught
-// See issue #475
-// SKIP-O3-TEST
-
 main {
     int A[];
     A[id(1)] = 1;
