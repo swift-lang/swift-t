@@ -65,8 +65,8 @@ public class UnifiedValues {
    */
   public static UnifiedValues unify(Logger logger, Function fn,
                  boolean reorderingAllowed,
-                 CongruentVars state, Continuation cont,
-                 List<CongruentVars> branchStates, List<Block> branchBlocks) {
+                 Congruences state, Continuation cont,
+                 List<Congruences> branchStates, List<Block> branchBlocks) {
     if (logger.isTraceEnabled()) {
       logger.trace("Unifying state from " + branchBlocks.size() +
                    " branches with continuation type " + cont.getType());
@@ -143,7 +143,7 @@ public class UnifiedValues {
    */
   private static Pair<List<ValLoc>, Boolean> unifyCVs(Function fn,
       boolean reorderingAllowed, Block parent, CongruenceType congType,
-      List<CongruentVars> branchStates, List<Block> branchBlocks,
+      List<Congruences> branchStates, List<Block> branchBlocks,
       List<ArgCV> allBranchCVs, Map<List<Arg>, Var> unifiedLocs) {
     List<ValLoc> availVals = new ArrayList<ValLoc>();
     
@@ -163,7 +163,7 @@ public class UnifiedValues {
       List<Arg> branchLocs = new ArrayList<Arg>(branchStates.size());
 
       Arg firstLoc = branchStates.get(0).findCanonical(cv, congType);
-      for (CongruentVars bs: branchStates) {
+      for (Congruences bs: branchStates) {
         Arg loc = bs.findCanonical(cv, congType);
         assert(loc != null);
         
@@ -220,7 +220,7 @@ public class UnifiedValues {
 
 
   private static Var createUnifyingVar(Function fn,
-      Block parent, List<CongruentVars> branchStates, List<Block> branchBlocks,
+      Block parent, List<Congruences> branchStates, List<Block> branchBlocks,
       List<Arg> locs, Type type) {
     boolean isValue = Types.isPrimValue(type);
     // declare new temporary value in outer block
@@ -252,7 +252,7 @@ public class UnifiedValues {
       branchBlock.addInstruction(copyInst);
       
       // Add in additional computed values resulting from copy
-      CongruentVars branchState = branchStates.get(i);
+      Congruences branchState = branchStates.get(i);
       branchState.update(fn.getName(), copyVal);
     }
     return unifiedLoc;
@@ -273,10 +273,10 @@ public class UnifiedValues {
    * @param alreadyAdded ignore these
    * @return
    */
-  private static List<ArgCV> findAllBranchCVs(CongruentVars parentState,
-      CongruenceType congType, List<CongruentVars> branchStates, List<ArgCV> alreadyAdded) {
+  private static List<ArgCV> findAllBranchCVs(Congruences parentState,
+      CongruenceType congType, List<Congruences> branchStates, List<ArgCV> alreadyAdded) {
     List<ArgCV> allBranchCVs = new ArrayList<ArgCV>();
-    CongruentVars firstState = branchStates.get(0);
+    Congruences firstState = branchStates.get(0);
     // iterate over values stored in the bottom level only?
     for (RecCV val: firstState.availableThisScope(congType)) {
       ArgCV convertedVal = parentState.convertToArgs(val, congType);
@@ -285,7 +285,7 @@ public class UnifiedValues {
             !parentState.isAvailable(convertedVal, congType)) {
           int nBranches = branchStates.size();
           boolean presentInAll = true;
-          for (CongruentVars otherState: branchStates.subList(1, nBranches)) {
+          for (Congruences otherState: branchStates.subList(1, nBranches)) {
             if (!otherState.isAvailable(convertedVal, congType)) {
               presentInAll = false;
               break;
@@ -300,12 +300,12 @@ public class UnifiedValues {
     return allBranchCVs;
   }
   
-  private static void unifyClosed(CongruentVars parentState,
-      List<CongruentVars> branchStates,
+  private static void unifyClosed(Congruences parentState,
+      List<Congruences> branchStates,
       Set<Var> closed, Set<Var> recClosed) {
     List<Set<Var>> branchClosed = new ArrayList<Set<Var>>();
     List<Set<Var>> branchRecClosed = new ArrayList<Set<Var>>();
-    for (CongruentVars branchState: branchStates) {
+    for (Congruences branchState: branchStates) {
       // Inspect all variables that are closed in each branch
       branchClosed.add(branchState.getClosed());
       branchRecClosed.add(branchState.getRecursivelyClosed());

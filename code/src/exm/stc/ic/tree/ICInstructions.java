@@ -461,7 +461,7 @@ public class ICInstructions {
     /**
      * Limited interface to allow instructions to query what values
      * are available.
-     * TODO: is this necessary? can we move logic into CongruentVars
+     * TODO: is this necessary? can we move logic into Congruences
      */
     public static interface ValueState {
       public List<RecCV> findCongruent(Arg arg, CongruenceType congType);

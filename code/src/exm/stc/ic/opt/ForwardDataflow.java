@@ -44,7 +44,7 @@ import exm.stc.ic.WrapUtil;
 import exm.stc.ic.opt.ProgressOpcodes.Category;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
 import exm.stc.ic.opt.valuenumber.ComputedValue;
-import exm.stc.ic.opt.valuenumber.CongruentVars;
+import exm.stc.ic.opt.valuenumber.Congruences;
 import exm.stc.ic.opt.valuenumber.UnifiedValues;
 import exm.stc.ic.opt.valuenumber.ValLoc;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
@@ -121,7 +121,7 @@ public class ForwardDataflow implements OptimizerPass {
       boolean changes;
       int pass = 1;
       do {
-        CongruentVars fnState = initFuncState(logger, program, f);
+        Congruences fnState = initFuncState(logger, program, f);
         
         logger.trace("closed variable analysis on function " + f.getName()
             + " pass " + pass);
@@ -133,9 +133,9 @@ public class ForwardDataflow implements OptimizerPass {
     }
   }
 
-  private CongruentVars initFuncState(Logger logger,
+  private Congruences initFuncState(Logger logger,
         Program program, Function f) {
-    CongruentVars congruent = new CongruentVars(logger, reorderingAllowed);
+    Congruences congruent = new Congruences(logger, reorderingAllowed);
     for (Var v : program.getGlobalVars()) {
       // First, all constants can be treated as being set
       if (v.storage() == Alloc.GLOBAL_CONST) {
@@ -286,7 +286,7 @@ public class ForwardDataflow implements OptimizerPass {
    * @throws InvalidWriteException
    */
   private boolean forwardDataflow(Logger logger, Program program, Function f,
-      ExecContext execCx, Block block, CongruentVars state) throws InvalidWriteException {
+      ExecContext execCx, Block block, Congruences state) throws InvalidWriteException {
     for (Var v : block.getVariables()) {
       if (v.mapping() != null && Types.isFile(v.type())) {
         // Track the mapping
@@ -360,10 +360,10 @@ public class ForwardDataflow implements OptimizerPass {
    */
   private UnifiedValues recurseOnContinuation(Logger logger, Program program,
       Function fn, ExecContext execCx, Continuation cont,
-      CongruentVars state) throws InvalidWriteException {
+      Congruences state) throws InvalidWriteException {
     logger.trace("Recursing on continuation " + cont.getType());
 
-    CongruentVars contState = state.makeChild(cont.inheritsParentVars());
+    Congruences contState = state.makeChild(cont.inheritsParentVars());
     // additional variables may be close once we're inside continuation
     List<BlockingVar> contClosedVars = cont.blockingVars(true);
     if (contClosedVars != null) {
@@ -374,12 +374,12 @@ public class ForwardDataflow implements OptimizerPass {
 
     // For conditionals, find variables closed on all branches
     boolean unifyBranches = cont.isExhaustiveSyncConditional();
-    List<CongruentVars> branchStates = unifyBranches ?
-                      new ArrayList<CongruentVars>() : null;
+    List<Congruences> branchStates = unifyBranches ?
+                      new ArrayList<Congruences>() : null;
 
     List<Block> contBlocks = cont.getBlocks();
     for (int i = 0; i < contBlocks.size(); i++) {
-      CongruentVars blockState;
+      Congruences blockState;
       boolean again;
       int pass = 1;
       do {
@@ -413,7 +413,7 @@ public class ForwardDataflow implements OptimizerPass {
    * @param replaceAll
    */
   private static void prepareForInline(Block blockToInline,
-                                       CongruentVars state) {
+                                       Congruences state) {
     // Redo replacements for newly inserted instructions/continuations
     for (Statement stmt: blockToInline.getStatements()) {
       replaceCongruent(stmt, state);
@@ -437,7 +437,7 @@ public class ForwardDataflow implements OptimizerPass {
    */
   private void handleStatements(Logger logger, Program program, Function f,
       ExecContext execCx, Block block, ListIterator<Statement> stmts,
-      CongruentVars state) 
+      Congruences state) 
           throws InvalidWriteException {
     while (stmts.hasNext()) {
       Statement stmt = stmts.next();
@@ -461,7 +461,7 @@ public class ForwardDataflow implements OptimizerPass {
   private void handleInstruction(Logger logger, Program prog,
       Function f, ExecContext execCx, Block block,
       ListIterator<Statement> stmts, Instruction inst,
-      CongruentVars state) {
+      Congruences state) {
     if (logger.isTraceEnabled()) {
       state.printTraceInfo(logger);
       logger.trace("-----------------------------");
@@ -517,21 +517,21 @@ public class ForwardDataflow implements OptimizerPass {
       Arrays.asList(RenameMode.VALUE, RenameMode.REFERENCE);
   
   private static void replaceCongruentNonRec(Continuation cont,
-                                      CongruentVars congruent) {
+                                      Congruences congruent) {
     for (RenameMode mode: RENAME_MODES) {
       cont.renameVars(congruent.replacements(mode), mode, false); 
     }
   }
 
   private static void replaceCongruent(Statement stmt,
-                                       CongruentVars congruent) {
+                                       Congruences congruent) {
     for (RenameMode mode: RENAME_MODES) {
       stmt.renameVars(congruent.replacements(mode), mode);
     }
   }
   
   private static void replaceCleanupCongruent(Block block,
-                                        CongruentVars congruent) {
+                                        Congruences congruent) {
 
     for (RenameMode mode: RENAME_MODES) {
       block.renameCleanupActions(congruent.replacements(mode), mode);
@@ -539,7 +539,7 @@ public class ForwardDataflow implements OptimizerPass {
   }
 
   private static void updateCongruent(Logger logger, Function function,
-            Instruction inst, CongruentVars state) {
+            Instruction inst, Congruences state) {
     List<ValLoc> irs = inst.getResults(state);
     
     if (irs != null) {
@@ -561,7 +561,7 @@ public class ForwardDataflow implements OptimizerPass {
     }
   }
 
-  private static void purgeValues(Logger logger, CongruentVars congruent,
+  private static void purgeValues(Logger logger, Congruences congruent,
                                   List<ValLoc> rvs) {
     for (ValLoc rv: rvs) {
       Logging.getSTCLogger().debug("Invalidating " + rv);
@@ -582,7 +582,7 @@ public class ForwardDataflow implements OptimizerPass {
    * @return
    */
   private static boolean switchToImmediate(Logger logger, Function fn,
-      ExecContext execCx, Block block, CongruentVars state,
+      ExecContext execCx, Block block, Congruences state,
       Instruction inst, ListIterator<Statement> stmts) {
     // First see if we can replace some futures with values
     MakeImmRequest req = inst.canMakeImmediate(state.getClosed(), false);
@@ -648,7 +648,7 @@ public class ForwardDataflow implements OptimizerPass {
   }
 
   private static List<Fetched<Arg>> fetchInputsForSwitch(
-      CongruentVars state,
+      Congruences state,
       MakeImmRequest req, Block insertContext, boolean noWaitRequired,
       List<Instruction> alt) {
     List<Fetched<Arg>> inVals = new ArrayList<Fetched<Arg>>(req.in.size());
@@ -689,7 +689,7 @@ public class ForwardDataflow implements OptimizerPass {
     return inVals;
   }
 
-  private static Map<Var, Var> loadOutputFileNames(CongruentVars state,
+  private static Map<Var, Var> loadOutputFileNames(Congruences state,
       List<Var> outputs, Block insertContext,
       ListIterator<Statement> insertPoint, boolean mapOutVars) {
     if (outputs == null)
@@ -726,7 +726,7 @@ public class ForwardDataflow implements OptimizerPass {
   /**
    * Do any validations of the state of things
    */
-  private void validateState(CongruentVars state) {
+  private void validateState(Congruences state) {
     if (ICOptimizer.SUPER_DEBUG) {
       state.validate();
     }
