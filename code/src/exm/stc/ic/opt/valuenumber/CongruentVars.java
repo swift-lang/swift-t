@@ -27,6 +27,8 @@ import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
 import exm.stc.ic.opt.valuenumber.ComputedValue.RecCV;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
+import exm.stc.ic.tree.ICInstructions.Builtin;
+import exm.stc.ic.tree.Opcode;
 import exm.stc.ic.tree.ICInstructions.Instruction.ValueState;
 import exm.stc.ic.tree.ICTree.RenameMode;
 
@@ -115,6 +117,9 @@ public class CongruentVars implements ValueState {
   }
   
   public boolean update(String errContext, ValLoc resVal) {
+    // TODO: try to constant-fold value here
+    resVal = canonicalize(resVal);
+    
     if (resVal.congType() == CongruenceType.ALIAS) {
       // Update aliases only if congType matches
       if (!update(errContext, resVal, byAlias)) {
@@ -136,7 +141,26 @@ public class CongruentVars implements ValueState {
     return update(errContext, resVal, byValue);
   }
   
-  
+  /**
+   * Do any canonicalization of result value here
+   * @param resVal
+   * @return
+   */
+  private ValLoc canonicalize(ValLoc resVal) {
+    // TODO: constant fold
+    if (resVal.value().op == Opcode.ASYNC_OP ||
+        resVal.value().op == Opcode.LOCAL_OP) {
+      // TODO: constant fold
+      // Builtin.constantFold(op, outVar, constInputs);
+      // TODO: canonicalize
+    }
+    if (resVal.value().op == Opcode.IS_MAPPED) {
+      // TODO
+      // etc
+    }
+    return resVal;
+  }
+
   private CongruentSet getCongruentSet(CongruenceType congType) {
     if (congType == CongruenceType.VALUE) {
       return byValue;
