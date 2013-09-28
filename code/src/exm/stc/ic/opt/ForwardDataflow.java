@@ -56,6 +56,7 @@ import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICContinuations.WaitVar;
 import exm.stc.ic.tree.ICInstructions;
+import exm.stc.ic.tree.Opcode;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Instruction.Fetched;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
@@ -311,7 +312,7 @@ public class ForwardDataflow implements OptimizerPass {
         /* First try to see if we can expand instruction sequence */
 
         Instruction inst = stmt.instruction();
-        if (logger.isTraceEnabled()) {
+        if (logger.isTraceEnabled() && inst.op != Opcode.COMMENT) {
           state.printTraceInfo(logger);
           logger.trace("-----------------------------");
           logger.trace("At instruction: " + inst);
