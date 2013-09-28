@@ -53,6 +53,8 @@ constant-fold: propagate constants and do compile-time evaluation of
       expressions
 dead-code-elim: eliminate unused variables, instructions and branches
       (this must be enabled for most other passes to be useful)
+shared-constants: lift all constants into shared global constant region
+      and share instances of same value
 flatten-nested: flatten nested blocks
 forward-dataflow: forward dataflow analysis to eliminate common
       subexpressions, optimize array lookups, eliminate redundant

@@ -47,6 +47,7 @@ public class Settings
   
   public static final String IC_OUTPUT_FILE = "stc.ic.output-file";
   public static final String OPT_CONSTANT_FOLD = "stc.opt.constant-fold";
+  public static final String OPT_SHARED_CONSTANTS = "stc.opt.shared-constants";
   public static final String OPT_FLATTEN_NESTED = "stc.opt.flatten-nested";
   public static final String OPT_DEAD_CODE_ELIM = "stc.opt.dead-code-elim";
   public static final String OPT_FORWARD_DATAFLOW = "stc.opt.forward-dataflow";
@@ -144,6 +145,7 @@ public class Settings
     // Code optimisation settings - defaults
     defaults.setProperty(OPT_FLATTEN_NESTED, "true");
     defaults.setProperty(OPT_CONSTANT_FOLD, "true");
+    defaults.setProperty(OPT_SHARED_CONSTANTS, "true");
     defaults.setProperty(OPT_DEAD_CODE_ELIM, "true");
     defaults.setProperty(OPT_UNROLL_LOOPS, "true");
     defaults.setProperty(OPT_EXPAND_LOOPS, "true");
