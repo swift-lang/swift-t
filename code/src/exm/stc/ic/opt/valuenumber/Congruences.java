@@ -379,6 +379,8 @@ public class Congruences implements ValueState {
       
       // Mapped var must be canonical member of congruence set.
       // If both are mapped, keep old and caller will abort merge
+      // TODO: need to handle situation where isMapped() arg and array
+      // value conflict. 
       if (oldArg.isMapped() != Ternary.FALSE) {
         return oldArg;
       } else if (newArg.isMapped() != Ternary.FALSE) {
@@ -511,7 +513,6 @@ public class Congruences implements ValueState {
       Arg ix = byValue.findCanonical(val.getInput(1));
       return Arrays.asList(arr, ix);
     } else if (val.op == Opcode.GET_FILENAME_VAL) {
-      
       return Arrays.asList(Arg.createStringLit("filename"),
                            byAlias.findCanonical(val.getInput(0)));
     } else {
