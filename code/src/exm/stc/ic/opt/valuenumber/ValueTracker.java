@@ -42,13 +42,13 @@ public class ValueTracker {
    * Map of variable names to value variables or literals which have been
    * created and set in this scope
    */
-  final HashMap<ComputedValue, ValLoc> availableVals;
+  final HashMap<ComputedValue<Arg>, ValLoc> availableVals;
   
   /**
    * Blacklist of values that should not be used for substitution.
    * Shared globally within function.
    */
-  final HashSet<ComputedValue> blackList;
+  final HashSet<ComputedValue<Arg>> blackList;
 
   /**
    * What computedValues are stored in each value (inverse of availableVals)
@@ -83,8 +83,8 @@ public class ValueTracker {
     this.reorderingAllowed = reorderingAllowed;
     this.parent = null;
     this.varsPassedFromParent = false;
-    this.availableVals = new HashMap<ComputedValue, ValLoc>();
-    this.blackList = new HashSet<ComputedValue>();
+    this.availableVals = new HashMap<ComputedValue<Arg>, ValLoc>();
+    this.blackList = new HashSet<ComputedValue<Arg>>();
     this.varContents = new MultiMap<Var, ValLoc>();
     this.varReferences = new MultiMap<Var, ValLoc>();
     this.closed = new HierarchicalSet<Var>();
@@ -94,8 +94,8 @@ public class ValueTracker {
 
   private ValueTracker(Logger logger, boolean reorderingAllowed,
       ValueTracker parent, boolean varsPassedFromParent,
-      HashMap<ComputedValue, ValLoc> availableVals,
-      HashSet<ComputedValue> blackList,
+      HashMap<ComputedValue<Arg>, ValLoc> availableVals,
+      HashSet<ComputedValue<Arg>> blackList,
       MultiMap<Var, ValLoc> varContents,
       MultiMap<Var, ValLoc> varReferences,
       HierarchicalSet<Var> closed, HierarchicalSet<Var> recursivelyClosed,
@@ -129,7 +129,7 @@ public class ValueTracker {
     return recursivelyClosed.contains(var);
   }
 
-  public boolean isAvailable(ComputedValue val) {
+  public boolean isAvailable(ComputedValue<Arg> val) {
     return lookupCV(val) != null;
   }
 
@@ -140,7 +140,7 @@ public class ValueTracker {
    * @return
    */
   public Arg findRetrieveResult(Var v) {
-    ComputedValue cvRetrieve = ComputedValue.retrieveCompVal(v);
+    ComputedValue<Arg> cvRetrieve = ComputedValue.retrieveCompVal(v);
     if (cvRetrieve == null) {
       return null;
     } else {
@@ -161,7 +161,7 @@ public class ValueTracker {
    */
   public void addComputedValue(ValLoc resVal, Ternary replace) {
     boolean outClosed = resVal.locClosed();
-    ComputedValue val = resVal.value();
+    ComputedValue<Arg> val = resVal.value();
     if (isAvailable(val)) {
       if (replace == Ternary.FALSE) {
         throw new STCRuntimeError("Unintended overwrite of "
@@ -206,7 +206,7 @@ public class ValueTracker {
    * future additions.
    * @param cv
    */
-  public void invalidateComputedValue(ComputedValue cv) {
+  public void invalidateComputedValue(ComputedValue<Arg> cv) {
     blackList.add(cv);
   }
 
@@ -216,7 +216,7 @@ public class ValueTracker {
    * @param val
    * @return
    */
-  public ValLoc lookupCV(ComputedValue val) {
+  public ValLoc lookupCV(ComputedValue<Arg> val) {
     
     if (blackList.contains(val)) {
       // Should not be available
@@ -354,7 +354,7 @@ public class ValueTracker {
       newDO.put(e.getKey(), new CopyOnWriteSmallSet<Var>(e.getValue()));
     }
     return new ValueTracker(logger, reorderingAllowed, this, varsPassedFromParent,
-        new HashMap<ComputedValue, ValLoc>(),
+        new HashMap<ComputedValue<Arg>, ValLoc>(),
         blackList, // blacklist shared globally
         new MultiMap<Var, ValLoc>(),
         new MultiMap<Var, ValLoc>(),

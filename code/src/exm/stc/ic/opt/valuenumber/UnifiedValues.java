@@ -80,7 +80,8 @@ public class UnifiedValues {
       unifyClosed(parentState, branchStates, closed, recClosed);
       
       List<ValLoc> availVals = new ArrayList<ValLoc>();
-      List<ComputedValue> allUnifiedCVs = new ArrayList<ComputedValue>();
+      List<ComputedValue<Arg>> allUnifiedCVs =
+                  new ArrayList<ComputedValue<Arg>>();
       
       // Track which sets of args from each branch are mapped into a
       // unified var
@@ -91,7 +92,7 @@ public class UnifiedValues {
         if (logger.isTraceEnabled()) {
           logger.trace("Start iteration " + iter + " of unification");
         }
-        List<ComputedValue> newAllBranchCVs = findAllBranchCVs(
+        List<ComputedValue<Arg>> newAllBranchCVs = findAllBranchCVs(
             parentState, branchStates, allUnifiedCVs);
         Pair<List<ValLoc>, Boolean> result = unifyCVs(reorderingAllowed,
                                  cont.parent(), branchStates, branchBlocks,
@@ -131,12 +132,12 @@ public class UnifiedValues {
   private static Pair<List<ValLoc>, Boolean> unifyCVs(boolean
       reorderingAllowed, Block parent,
       List<ValueTracker> branchStates, List<Block> branchBlocks,
-      List<ComputedValue> allBranchCVs, Map<List<Arg>, Var> unifiedLocs) {
+      List<ComputedValue<Arg>> allBranchCVs, Map<List<Arg>, Var> unifiedLocs) {
     List<ValLoc> availVals = new ArrayList<ValLoc>();
     
     boolean createdNewBranchCVs = false;
     
-    for (ComputedValue cv: allBranchCVs) {
+    for (ComputedValue<Arg> cv: allBranchCVs) {
       // See what is same across all branches
       boolean allVals = true;
       boolean allSameLocation = true;
@@ -247,7 +248,7 @@ public class UnifiedValues {
   }
 
 
-  private static ValLoc createUnifiedCV(ComputedValue cv, Arg loc,
+  private static ValLoc createUnifiedCV(ComputedValue<Arg> cv, Arg loc,
             Closed allClosed, IsValCopy anyValCopy) {
     return new ValLoc(cv, loc, allClosed, anyValCopy);
   }
@@ -260,11 +261,11 @@ public class UnifiedValues {
    * @param alreadyAdded ignore these
    * @return
    */
-  private static List<ComputedValue> findAllBranchCVs(ValueTracker parentState,
-      List<ValueTracker> branchStates, List<ComputedValue> alreadyAdded) {
-    List<ComputedValue> allBranchCVs = new ArrayList<ComputedValue>();
+  private static List<ComputedValue<Arg>> findAllBranchCVs(ValueTracker parentState,
+      List<ValueTracker> branchStates, List<ComputedValue<Arg>> alreadyAdded) {
+    List<ComputedValue<Arg>> allBranchCVs = new ArrayList<ComputedValue<Arg>>();
     ValueTracker firstState = branchStates.get(0);
-    for (ComputedValue val: firstState.availableVals.keySet()) {
+    for (ComputedValue<Arg> val: firstState.availableVals.keySet()) {
       if (!alreadyAdded.contains(val) && !parentState.isAvailable(val)) {
         int nBranches = branchStates.size();
         boolean presentInAll = true;

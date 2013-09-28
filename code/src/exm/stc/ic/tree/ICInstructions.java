@@ -2257,7 +2257,7 @@ public class ICInstructions {
       List<ValLoc> varRVs = cvs.getVarContents(args.val1);
       List<ValLoc> res = new ArrayList<ValLoc>(); 
       for (ValLoc varRV: varRVs) {
-        ComputedValue varVal = varRV.value();
+        ComputedValue<Arg> varVal = varRV.value();
         if (varVal.op() == this.op) {
           BuiltinOpcode aop = BuiltinOpcode.valueOf(varVal.subop());
           if (aop == BuiltinOpcode.PLUS_INT ||

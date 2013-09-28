@@ -19,7 +19,7 @@ import exm.stc.ic.tree.Opcode;
  * a known location 
  */
 public class ValLoc {
-  private final ComputedValue value;
+  private final ComputedValue<Arg> value;
   /** Storage location or constant value of result */
   private final Arg location;
   /** true if location var is known to be closed */
@@ -28,7 +28,7 @@ public class ValLoc {
    * of another value with same CV */
   private final boolean isValCopy;
   
-  public ComputedValue value() {
+  public ComputedValue<Arg> value() {
     return value;
   }
 
@@ -53,7 +53,7 @@ public class ValLoc {
     }
   }
 
-  private ValLoc(ComputedValue value, Arg location,
+  private ValLoc(ComputedValue<Arg> value, Arg location,
       boolean locClosed, boolean isValCopy) {
     assert(value != null);
     this.value = value;
@@ -62,20 +62,20 @@ public class ValLoc {
     this.isValCopy = isValCopy;
   }
   
-  public ValLoc(ComputedValue value, Arg location,
+  public ValLoc(ComputedValue<Arg> value, Arg location,
       Closed locClosed,  IsValCopy isValCopy) {
     this(value, location, locClosed == Closed.YES,
          isValCopy == IsValCopy.YES);
   }
   
-  public static ValLoc build(ComputedValue value, Arg location,
+  public static ValLoc build(ComputedValue<Arg> value, Arg location,
                              Closed locClosed) {
     return new ValLoc(value, location, locClosed, IsValCopy.NO);
   }
   
   public static ValLoc buildResult(Opcode op, String subop,
       List<Arg> inputs, Arg valLocation, Closed locClosed) {
-    ComputedValue cv = new ComputedValue(op, subop, inputs);
+    ComputedValue<Arg> cv = new ComputedValue<Arg>(op, subop, inputs);
     return new ValLoc(cv, valLocation, locClosed, IsValCopy.NO);
   }
 
@@ -142,7 +142,7 @@ public class ValLoc {
     ICUtil.replaceArgsInList(replace, newInputs);
     
     boolean newIsValCopy = isValCopy || copyType != EquivalenceType.ALIAS;
-    ComputedValue newVal = value.substituteInputs(newInputs);
+    ComputedValue<Arg> newVal = value.substituteInputs(newInputs);
     return new ValLoc(newVal, location, locClosed, newIsValCopy);
   }
   
@@ -168,7 +168,7 @@ public class ValLoc {
   public static ValLoc makeArrayResult(Var arr, Arg ix, Var contents,
         boolean refResult) {
     Arg contentsArg = contents.asArg();
-    ComputedValue val;
+    ComputedValue<Arg> val;
     if (refResult) {
       assert(Types.isMemberReference(contents, arr)) :
             "not member ref: " + contents + " " + arr;
@@ -184,7 +184,7 @@ public class ValLoc {
   public static ValLoc makeCreateNestedResult(Var arr, Arg ix, Var contents,
       boolean refResult) {
     Arg contentsArg = contents == null ? null : Arg.createVar(contents);
-    ComputedValue val;
+    ComputedValue<Arg> val;
     if (refResult) {
       val = ComputedValue.arrayRefNestedCV(arr, ix);
     } else {
@@ -232,7 +232,7 @@ public class ValLoc {
    */
   public static List<ValLoc> createLoadRefCVs(ValLoc refContent,
                                                    Var derefDst) {
-    ComputedValue cv = refContent.value();
+    ComputedValue<Arg> cv = refContent.value();
     if (cv.op() == Opcode.FAKE && 
         cv.subop().equals(ComputedValue.REF_TO_ARRAY_CONTENTS)) {
       return makeArrayResult(

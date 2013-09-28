@@ -1711,7 +1711,7 @@ public class TurbineOp extends Instruction {
         res.add(ValLoc.makeFilename(filename, file.getVar()));
         
         // Check to see if value of filename is in local value
-        ComputedValue filenameCV = ValLoc.makeFilenameVal(file, null).value();
+        ComputedValue<Arg> filenameCV = ValLoc.makeFilenameVal(file, null).value();
         ValLoc filenameVal = existing.lookupCV(filenameCV);
         if (filenameVal != null) {
           // We know that if we fetch from the output future of this instruction,

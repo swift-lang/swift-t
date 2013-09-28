@@ -35,7 +35,7 @@ import exm.stc.ic.tree.Opcode;
  * This is related to the "Value Numbering" optimisation in the
  * compiler literature.
  */
-public class ComputedValue {
+public class ComputedValue<T> {
   /** Ordered list of inputs of the expression.
    * The order is treated as important in deciding if the two computed values
    * are the same.  If the order of arguments to an expression doesn't matter,
@@ -56,11 +56,11 @@ public class ComputedValue {
   
   final Opcode op;
   final String subop;
-  final List<Arg> inputs;
+  final List<T> inputs;
   
   private final int hashCode; // Cache hashcode 
   
-  public ComputedValue(Opcode op, String subop, List<Arg> inputs) {
+  public ComputedValue(Opcode op, String subop, List<T> inputs) {
     assert(op != null);
     assert(subop != null);
     assert(inputs != null);
@@ -70,7 +70,7 @@ public class ComputedValue {
     this.hashCode = calcHashCode();
   }
   
-  public ComputedValue(Opcode op, List<Arg> inputs) {
+  public ComputedValue(Opcode op, List<T> inputs) {
     this(op, "", inputs);
   }
 
@@ -83,11 +83,11 @@ public class ComputedValue {
     return subop;
   }
 
-  public List<Arg> getInputs() {
+  public List<T> getInputs() {
     return inputs;
   }
   
-  public Arg getInput(int i) {
+  public T getInput(int i) {
     return inputs.get(i);
   }
 
@@ -96,12 +96,17 @@ public class ComputedValue {
    */
   @Override
   public boolean equals(Object otherO) {
-    ComputedValue other = (ComputedValue) otherO;
+    if (!(otherO instanceof ComputedValue)) {
+      throw new STCRuntimeError("Compared ComputedValue to " +
+                                otherO.getClass());
+    }
+    ComputedValue<?> other = (ComputedValue<?>) otherO;
     if (this.op == other.op && 
         this.subop.equals(other.subop) &&
         this.inputs.size() == other.inputs.size()) {
       for (int i = 0; i < inputs.size(); i++) {
-        if (!this.inputs.get(i).equals(other.inputs.get(i))) {
+        Object otherInput = other.inputs.get(i);
+        if (!this.inputs.get(i).equals(otherInput)) {
           return false;
         }
       }
@@ -120,9 +125,9 @@ public class ComputedValue {
   public int calcHashCode() {
     int result = this.op.hashCode();
     result = 37 * result + this.subop.hashCode(); 
-    for (Arg o: this.inputs) {
+    for (T o: this.inputs) {
       if (o == null) {
-        throw new STCRuntimeError("Null oparg in " + this);
+        throw new STCRuntimeError("Null input in " + this);
       }
       result = 37 * result + o.hashCode();
     }
@@ -133,7 +138,7 @@ public class ComputedValue {
     return op.toString() + "." + subop + inputs.toString();
   }
   
-  public List<ComputedValue> asList() {
+  public List<ComputedValue<T>> asList() {
     return Collections.singletonList(this);
   }
 
@@ -142,16 +147,18 @@ public class ComputedValue {
    * @param newInputs
    * @return
    */
-  public ComputedValue substituteInputs(List<Arg> newInputs) {
-    return new ComputedValue(op, subop, newInputs);
+  public ComputedValue<T> substituteInputs(List<T> newInputs) {
+    return new ComputedValue<T>(op, subop, newInputs);
   }
 
-  public static ComputedValue makeCopy(Arg src) {
-    return new ComputedValue(Opcode.FAKE, ComputedValue.COPY_OF, src.asList());
+  public static ComputedValue<Arg> makeCopy(Arg src) {
+    return new ComputedValue<Arg>(Opcode.FAKE, ComputedValue.COPY_OF,
+                                  src.asList());
   }
   
-  public static ComputedValue makeAlias(Arg src) {
-    return new ComputedValue(Opcode.FAKE, ComputedValue.ALIAS_OF, src.asList());
+  public static ComputedValue<Arg> makeAlias(Arg src) {
+    return new ComputedValue<Arg>(Opcode.FAKE, ComputedValue.ALIAS_OF,
+                                  src.asList());
   }
   
   /**
@@ -160,13 +167,13 @@ public class ComputedValue {
    * @param src
    * @return null if cannot be fetched
    */
-  public static ComputedValue retrieveCompVal(Var src) {
+  public static ComputedValue<Arg> retrieveCompVal(Var src) {
     Type srcType = src.type();
     Opcode op = Opcode.retrieveOpcode(srcType);
     if (op == null) {
       return null;
     }
-    return new ComputedValue(op, Arrays.asList(src.asArg()));
+    return new ComputedValue<Arg>(op, Arrays.asList(src.asArg()));
   }
   
   /**
@@ -176,8 +183,8 @@ public class ComputedValue {
    * @param ix
    * @return
    */
-  public static ComputedValue arrayCV(Var arr, Arg ix) {
-    return new ComputedValue(Opcode.FAKE, ComputedValue.ARRAY_CONTENTS,
+  public static ComputedValue<Arg> arrayCV(Var arr, Arg ix) {
+    return new ComputedValue<Arg>(Opcode.FAKE, ComputedValue.ARRAY_CONTENTS,
                               Arrays.asList(arr.asArg(), ix));
   }
 
@@ -188,23 +195,23 @@ public class ComputedValue {
    * @param ix
    * @return
    */
-  public static ComputedValue arrayRefCV(Var arr, Arg ix) {
-    return new ComputedValue(Opcode.FAKE, ComputedValue.REF_TO_ARRAY_CONTENTS,
-                              Arrays.asList(arr.asArg(), ix));
+  public static ComputedValue<Arg> arrayRefCV(Var arr, Arg ix) {
+    return new ComputedValue<Arg>(Opcode.FAKE,
+        ComputedValue.REF_TO_ARRAY_CONTENTS, Arrays.asList(arr.asArg(), ix));
   }
 
-  public static ComputedValue arrayRefNestedCV(Var arr, Arg ix) {
-    return new ComputedValue(Opcode.FAKE, ComputedValue.REF_TO_ARRAY_NESTED,
-        Arrays.asList(arr.asArg(), ix));
+  public static ComputedValue<Arg> arrayRefNestedCV(Var arr, Arg ix) {
+    return new ComputedValue<Arg>(Opcode.FAKE, 
+        ComputedValue.REF_TO_ARRAY_NESTED, Arrays.asList(arr.asArg(), ix));
   }
 
-  public static ComputedValue arrayNestedCV(Var arr, Arg ix) {
-    return new ComputedValue(Opcode.FAKE, ComputedValue.ARRAY_NESTED,
+  public static ComputedValue<Arg> arrayNestedCV(Var arr, Arg ix) {
+    return new ComputedValue<Arg>(Opcode.FAKE, ComputedValue.ARRAY_NESTED,
         Arrays.asList(arr.asArg(), ix));
   }
   
-  public static ComputedValue structMemberCV(Var struct, String fieldName) {
-    return new ComputedValue(Opcode.STRUCT_LOOKUP, 
+  public static ComputedValue<Arg> structMemberCV(Var struct, String fieldName) {
+    return new ComputedValue<Arg>(Opcode.STRUCT_LOOKUP, 
             Arrays.asList(struct.asArg(), Arg.createStringLit(fieldName)));
   }
   
