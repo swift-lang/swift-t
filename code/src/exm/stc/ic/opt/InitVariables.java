@@ -217,7 +217,8 @@ public class InitVariables {
       } else {
         // Create a new array to avoid modifying something higher up in 
         // hierarchical map
-        newUninitFields = new ArrayList<String>(prevUninitFields.size() - 1);
+        newUninitFields = new ArrayList<String>(
+              Math.max(0, prevUninitFields.size() - 1));
         // Add back all uninitialized fields except the new one
         boolean wasUninit = false;
         for (String prevUninit: prevUninitFields) {
