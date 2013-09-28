@@ -93,6 +93,17 @@ class CongruentSets {
    */
   private final Set<Arg> contradictions;
   
+  /**
+   * Queue of merges that need to be completed before returning
+   */
+  private final LinkedList<ToMerge> mergeQueue;
+  
+  /**
+   * List of future vars that may have obtained a constant value,
+   * requiring further processing before returning
+   */
+  private final LinkedList<Var> futureValQueue;
+  
   private final boolean constShareEnabled;
   private final boolean constFoldEnabled;
   
@@ -111,6 +122,9 @@ class CongruentSets {
     this.componentIndex = new MultiMap<Arg, RecCV>();
     this.inaccessible = new HashSet<Var>();
     this.contradictions = contradictions;
+    this.mergeQueue = new LinkedList<ToMerge>();
+    this.futureValQueue = new LinkedList<Var>();
+    
     if (parent != null) {
       this.constShareEnabled = parent.constShareEnabled;
       this.constFoldEnabled = parent.constFoldEnabled;
@@ -166,6 +180,10 @@ class CongruentSets {
   public void validate() {
     // Building active sets performs some validation
     activeSets();
+    
+    // Should not have any outstanding work to complete
+    assert(mergeQueue.isEmpty()) : mergeQueue;
+    assert(futureValQueue.isEmpty()) : futureValQueue;
   }
 
   /**
@@ -392,9 +410,14 @@ class CongruentSets {
    * @param val
    * @param canonicalVal
    */
-  public void addToSet(RecCV val, Arg canonicalVal) {
+  public void addToSet(GlobalConstants consts, RecCV val, Arg canonicalVal) {
     assert(val != null);
     assert(canonicalVal != null);
+    addSetEntry(val, canonicalVal);
+    processQueues(consts);
+  }
+
+  private void addSetEntry(RecCV val, Arg canonicalVal) {
     logger.trace("Add " + val + " to " + canonicalVal);
     setCanonicalEntry(val, canonicalVal);
     if (containsContradictoryArg(val)) {
@@ -402,6 +425,15 @@ class CongruentSets {
       // conservatively mark this congruence set as containing
       // a contradiction
       markContradiction(canonicalVal);
+    }
+    if (val.isCV()) {
+      ComputedValue<RecCV> val2 = val.cv();
+      if (val2.op().isRetrieve() && canonicalVal.isConstant()) {
+        // If we found out the value of a future, add to queue for
+        // later processing
+        Var future = val2.getInput(0).arg().getVar();
+        futureValQueue.add(future);
+      }
     }
   }
 
@@ -411,19 +443,17 @@ class CongruentSets {
    * @param oldCanon
    * @param newCanon
    */
-  public void changeCanonical(Arg oldCanon, Arg newCanon) {
-    List<ToMerge> moreMerges;
+  public void changeCanonical(GlobalConstants consts, Arg oldCanon,
+                                                      Arg newCanon) {
     // Do the initial merge
-    moreMerges = changeCanonicalOnce(oldCanon, newCanon);
+    changeCanonicalOnce(consts, oldCanon, newCanon);
     
     // The common case is that we do the one merge and we're done.
     // However, it's possible that each merge can trigger more merges.
-    if (moreMerges != null && !moreMerges.isEmpty()) {
-      handleConsequentialMerges(moreMerges);
-    }
+    processQueues(consts);
   }
 
-  private void handleConsequentialMerges(List<ToMerge> merges) {
+  private void processQueues(GlobalConstants consts) {
     Arg oldCanon;
     Arg newCanon;
     /*
@@ -432,32 +462,35 @@ class CongruentSets {
      * function calls would probably be a bad idea since there can be
      * long chains of merges).
      */
-    LinkedList<ToMerge> mergeQ = new LinkedList<ToMerge>();
-    mergeQ.addAll(merges);
-    while (!mergeQ.isEmpty()) {
-      ToMerge merge = mergeQ.pop();
-      // recanonicalize in case of changes: may be redundant work
-      oldCanon = findCanonical(merge.oldSet);
-      newCanon = findCanonical(merge.newSet);
-      if (!oldCanon.equals(newCanon)) {
-        merges = changeCanonicalOnce(oldCanon, newCanon);
-        if (merges != null) {
-          mergeQ.addAll(merges);
+    do {
+      while (!mergeQueue.isEmpty()) {
+        ToMerge merge = mergeQueue.removeFirst();
+        // recanonicalize in case of changes: may be redundant work
+        oldCanon = findCanonical(merge.oldSet);
+        newCanon = findCanonical(merge.newSet);
+        if (!oldCanon.equals(newCanon)) {
+          changeCanonicalOnce(consts, oldCanon, newCanon);
         }
       }
-    }
+      while (!futureValQueue.isEmpty()) {
+        Var futureWithVal = futureValQueue.removeFirst();
+        updateCanonicalComponents(consts, futureWithVal.asArg(), null);
+      }
+      // Outer loop in case processing one queue results in additions
+      // to another
+    } while (!mergeQueue.isEmpty() || !futureValQueue.isEmpty());
   }
   
   /**
-   * Merge together two sets
+   * Merge together two sets.
+   * 
+   * This updates mergeQueue and futureValQueue, so caller needs to
+   * process those.
    * @param oldCanon
    * @param newCanon
-   * 
-   * @return list of additional merges that need to happen as a result of
-   *      the change in components.  Must return so caller can decide
-   *      what to do
    */
-  private List<ToMerge> changeCanonicalOnce(Arg oldCanon, Arg newCanon) {
+  private void changeCanonicalOnce(GlobalConstants consts,
+                                    Arg oldCanon, Arg newCanon) {
     logger.trace("Merging " + oldCanon + " into " + newCanon);
     assert(!oldCanon.equals(newCanon));
     // Check that types are compatible in sets being merged
@@ -467,7 +500,7 @@ class CongruentSets {
             newCanon + " " + newCanon.type();  
     
     // Handle situation where oldCanonical is part of another RecCV 
-   List<ToMerge> toMerge = updateCanonicalComponents(oldCanon, newCanon);
+   updateCanonicalComponents(consts, oldCanon, newCanon);
     
     // Find all the references to old and add new entry pointing to new
     CongruentSets curr = this;
@@ -500,7 +533,6 @@ class CongruentSets {
     this.mergedInto.put(newCanon, oldCanon);
     
     logger.trace("Done merging " + oldCanon + " into " + newCanon);
-    return toMerge;
   }
 
   public Iterable<RecCV> availableThisScope() {
@@ -526,49 +558,61 @@ class CongruentSets {
    * a reference to oldCanonical in it, then it's no longer
    * canonical, so need to replace.
    * 
+   * This will add to the merge queue, so callers need to process it
+   * before returning to other modules
+   * 
    * @param oldComponent
-   * @param newComponent
-   * @return list of merges that need to happen as a result of
-   *      the change in components.  Must return so caller can decide
-   *      what to do
+   * @param newComponent if null, just recanonicalize
    */
-  private List<ToMerge> updateCanonicalComponents(Arg oldComponent,
-                                                       Arg newComponent) {
-    List<ToMerge> toMerge = new ArrayList<ToMerge>(); 
+  private void updateCanonicalComponents(GlobalConstants consts,
+                              Arg oldComponent, Arg newComponent) { 
     CongruentSets curr = this;
     do {
       for (RecCV outerCV: curr.componentIndex.get(oldComponent)) {
         assert(outerCV.isCV());
-        List<RecCV> newInputs = replaceInput(
-            outerCV.cv().getInputs(), oldComponent, newComponent);
-        RecCV newOuterCV = new RecCV(
-            outerCV.cv().substituteInputs(newInputs));
-        if (logger.isTraceEnabled()) {
-          logger.trace("Sub " + oldComponent + " for "
-                      + newComponent + " in " + outerCV); 
+        RecCV newOuterCV = outerCV;
+        if (newComponent != null) {
+          // First substitute the inputs
+          List<RecCV> newInputs = replaceInput(
+              outerCV.cv().getInputs(), oldComponent, newComponent);
+          newOuterCV = new RecCV(outerCV.cv().substituteInputs(newInputs));
         }
-        this.componentIndex.put(newComponent, newOuterCV);
-        Arg canonical = findCanonical(outerCV);
-        if (canonical != null) {
-          // Check to see if this CV bridges two sets
-          Arg newCanonical = findCanonical(newOuterCV);
-          if (newCanonical != null && !newCanonical.equals(canonical)) {
-            // Already in a set, mark that we need to merge
-            toMerge.add(new ToMerge(canonical, newCanonical));
-            if (logger.isTraceEnabled()) {
-              logger.trace("Merging " + oldComponent + " into " +
-                  newComponent + " causing merging of " + canonical +
-                  " into " + newCanonical);
-            }
-          } else {
-            // Add to same set
-            addToSet(newOuterCV, canonical);
+        // Then do other canonicalization
+        newOuterCV = canonicalize(consts, newOuterCV);
+        if (newOuterCV != outerCV) {
+          if (logger.isTraceEnabled()) {
+            logger.trace("Sub " + oldComponent + " for "
+                        + newComponent + " in " + outerCV); 
           }
-          
-          if (contradictions.contains(newComponent) &&
-              !contradictions.contains(oldComponent)) {
-            // Propagate contradiction to set
-            markContradiction(canonical);
+          this.componentIndex.put(newComponent, newOuterCV);
+          Arg canonical = findCanonical(outerCV);
+          if (canonical != null) {
+            // Check to see if this CV bridges two sets
+            Arg newCanonical = findCanonical(newOuterCV);
+            if (newCanonical != null && !newCanonical.equals(canonical)) {
+              // Already in a set, mark that we need to merge
+              mergeQueue.add(new ToMerge(canonical, newCanonical));
+              if (logger.isTraceEnabled()) {
+                if (newComponent != null) {
+                  logger.trace("Merging " + oldComponent + " into " +
+                    newComponent + " causing merging of " + canonical +
+                    " into " + newCanonical);
+                } else {
+                  logger.trace("Getting value of " + oldComponent +
+                                " causing merging of " + canonical +
+                                " into " + newCanonical);
+                }
+              }
+            } else {
+              // Add to same set
+              addToSet(consts, newOuterCV, canonical);
+            }
+            
+            if (contradictions.contains(newComponent) &&
+                !contradictions.contains(oldComponent)) {
+              // Propagate contradiction to set
+              markContradiction(canonical);
+            }
           }
         }
         
@@ -581,7 +625,6 @@ class CongruentSets {
     // Remove component map in this scope, since we won't use
     // oldCanonical any more (leave outer scopes untouched)
     this.componentIndex.remove(oldComponent);
-    return toMerge;
   }
 
   private List<RecCV> replaceInput(List<RecCV> oldInputs,
@@ -649,9 +692,13 @@ class CongruentSets {
    * @return
    */
   public RecCV canonicalize(GlobalConstants consts, ArgCV origVal) {
-    // First replace the args with whatever current canonical values
-    RecCV result = canonicalizeInputs(origVal);
+    // First replace the args with whatever current canonical values,
+    // then perform additional canonicalization
+    return canonicalize(consts, canonicalizeInputs(origVal));
+  }
     
+
+  private RecCV canonicalize(GlobalConstants consts, RecCV result) {
     if (result.isCV()) {
       // Then do additional transformations such as constant folding
       ComputedValue<RecCV> resultValue = result.cv();
@@ -672,7 +719,6 @@ class CongruentSets {
     if (constShareEnabled && result.isCV()) {
       result = tryReplaceGlobalConstant(consts, result);
     }
-    
     return result;
   }
 

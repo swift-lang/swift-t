@@ -96,6 +96,9 @@ public class ConstantFolder {
   private static RecCV foldFunctionCall(Logger logger, CongruentSets sets,
       ComputedValue<RecCV> val) {
     List<Arg> inputs;
+    if (!CommonFunctionCall.canConstantFold(val)) {
+      return null;
+    }
     boolean usesValues = CommonFunctionCall.acceptsLocalValArgs(val.op);
     if (usesValues) {
       inputs = convertToArgs(val);
@@ -159,11 +162,16 @@ public class ConstantFolder {
       if (!arg.isArg()) {
         return null;
       }
-      Arg storedConst = findValueOf(sets, arg);
-      if (storedConst != null && storedConst.isConstant()) {
-        inputs.add(storedConst);
-      } else {
+      if (arg.arg().isConstant()) {
+        // For some calling conventions, constants are used
         inputs.add(arg.arg());
+      } else {
+        Arg storedConst = findValueOf(sets, arg);
+        if (storedConst != null && storedConst.isConstant()) {
+          inputs.add(storedConst);
+        } else {
+          inputs.add(arg.arg());
+        }
       }
     }
     return inputs;
@@ -176,7 +184,7 @@ public class ConstantFolder {
    * @return a value stored to the var, or null
    */
   private static Arg findValueOf(CongruentSets sets, RecCV arg) {
-    assert(arg.arg().isVar());
+    assert(arg.arg().isVar()) : arg.arg();
     // Try to find constant load
     Opcode retrieveOp = Opcode.retrieveOpcode(arg.arg().getVar());
     assert(retrieveOp != null);

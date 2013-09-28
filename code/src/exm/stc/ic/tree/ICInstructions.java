@@ -761,6 +761,18 @@ public class ICInstructions {
                                 arr.asArg(), size, Closed.YES_NOT_RECURSIVE);
     }
 
+
+    /**
+     * Check if we should try to constant fold. To enable constant
+     * folding for a funciton it needs ot have an entry here and
+     * in tryConstantFold()
+     * @param op
+     * @return
+     */
+    public static boolean canConstantFold(ComputedValue<?> cv) {
+      return isImpl((String)cv.subop(), SpecialFunction.ARGV);
+    }
+    
     /**
      * Try to constant fold any special functions.
      * @param cv

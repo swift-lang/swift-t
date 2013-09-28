@@ -3,7 +3,6 @@ package exm.stc.ic.opt.valuenumber;
 import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -65,13 +64,12 @@ public class Congruences implements ValueState {
    *         canonicalization table.
    *         -> TODO when to try and do arithmetic?
    */
-  final Logger logger;
-  final Congruences parent;
-  final Map<Arg, Var> createdConstants = new HashMap<Arg, Var>();
-  final ClosedVarTracker track;
-  final CongruentSets byValue;
-  final CongruentSets byAlias;
-  final boolean reorderingAllowed;
+  private final Logger logger;
+  private final Congruences parent;
+  private final ClosedVarTracker track;
+  private final CongruentSets byValue;
+  private final CongruentSets byAlias;
+  private final boolean reorderingAllowed;
   
   private Congruences(Logger logger,
                         Congruences parent,
@@ -173,11 +171,11 @@ public class Congruences implements ValueState {
     if (canonLocFromVal == null) {
       // Handle case where value not congruent to anything yet.
       // Just add val to arg's set
-      congruent.addToSet(canonVal, canonLoc);
+      congruent.addToSet(consts, canonVal, canonLoc);
     } else {
       // Need to merge together two existing sets
-      mergeSets(errContext, canonVal, congruent, canonLoc, canonLocFromVal,
-                stmtIndex);
+      mergeSets(errContext, canonVal, consts, congruent, canonLoc,
+                canonLocFromVal, stmtIndex);
     }
     
     if (addInverses) {
@@ -244,7 +242,8 @@ public class Congruences implements ValueState {
    * @param oldLoc representative of existing set
    */
   private void mergeSets(String errContext, RecCV value,
-      CongruentSets congruent, Arg newLoc, Arg oldLoc, int stmtIndex) {
+      GlobalConstants consts, CongruentSets congruent,
+      Arg newLoc, Arg oldLoc, int stmtIndex) {
     if (newLoc.equals(oldLoc)) {
       // Already merged
       return;
@@ -260,7 +259,7 @@ public class Congruences implements ValueState {
     // (for replacement purposes, etc.)
     Arg winner = preferred(congruent, oldLoc, newLoc, stmtIndex);
     Arg loser = (winner == oldLoc ? newLoc : oldLoc);
-    changeCanonical(congruent, loser, winner);
+    changeCanonical(consts, congruent, loser, winner);
   }
 
   /**
@@ -269,7 +268,8 @@ public class Congruences implements ValueState {
    * @param locCV
    * @param canonicalFromVal
    */
-  private void changeCanonical(CongruentSets congruent, Arg oldVal, Arg newVal) {
+  private void changeCanonical(GlobalConstants consts,
+          CongruentSets congruent, Arg oldVal, Arg newVal) {
     assert(!oldVal.equals(newVal));
     
     if (congruent.congType == CongruenceType.VALUE) {
@@ -279,7 +279,7 @@ public class Congruences implements ValueState {
       }
     }
     
-    congruent.changeCanonical(oldVal, newVal);
+    congruent.changeCanonical(consts, oldVal, newVal);
   }
 
   private boolean checkNoContradiction(String errContext,
