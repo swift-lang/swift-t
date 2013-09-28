@@ -26,10 +26,12 @@ import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.valuenumber.ComputedValue;
-import exm.stc.ic.opt.valuenumber.ComputedValue.EquivalenceType;
+import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
+import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
+import exm.stc.ic.opt.valuenumber.ComputedValue.RecCV;
 import exm.stc.ic.opt.valuenumber.ValLoc;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
-import exm.stc.ic.opt.valuenumber.ValueTracker;
+import exm.stc.ic.opt.valuenumber.ValLoc.IsValCopy;
 import exm.stc.ic.tree.ICInstructions.CommonFunctionCall;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Function;
@@ -1608,7 +1610,7 @@ public class TurbineOp extends Instruction {
   }
 
   @Override
-  public List<ValLoc> getResults(ValueTracker existing) {
+  public List<ValLoc> getResults(ValueState existing) {
     switch(op) {
       case LOAD_BOOL:
       case LOAD_FLOAT:
@@ -1630,7 +1632,7 @@ public class TurbineOp extends Instruction {
         if (op == Opcode.LOAD_REF) {
           outIsClosed = Closed.MAYBE_NOT;
         } else {
-          outIsClosed = Closed.YES;
+          outIsClosed = Closed.YES_NOT_RECURSIVE;
         }
         
         List<ValLoc> result = new ArrayList<ValLoc>();
@@ -1654,8 +1656,11 @@ public class TurbineOp extends Instruction {
                     Arrays.asList(src), dst.asArg(), Closed.MAYBE_NOT);
           result.add(deref);
           // Add any new cvs that result from dereferencing the variable
-          for (ValLoc refRV: existing.getVarContents(src.getVar())) {
-            result.addAll(ValLoc.createLoadRefCVs(refRV, dst));
+          for (RecCV val: existing.findCongruent(src.getVar().asArg(),
+                                                   CongruenceType.VALUE)) {
+            if (val.isCV()) {
+              result.addAll(ValLoc.createLoadRefCVs(val.cv(), dst));
+            }
           }
         }
         return result;
@@ -1670,8 +1675,8 @@ public class TurbineOp extends Instruction {
       case STORE_FILE: {
 
         // add assign so we can avoid recreating future 
-        // (true b/c this instruction closes val immediately)
-        ValLoc assign = vanillaResult(Closed.YES);
+        // (closed b/c this instruction closes val immediately)
+        ValLoc assign = vanillaResult(Closed.YES_NOT_RECURSIVE);
         // add retrieve so we can avoid retrieving later
         Arg dst = getOutput(0).asArg();
         Arg src = getInput(0);
@@ -1692,7 +1697,7 @@ public class TurbineOp extends Instruction {
       }
       case IS_MAPPED: {
         // Closed because we don't need to wait to check mapping
-        ValLoc vanilla = vanillaResult(Closed.YES);
+        ValLoc vanilla = vanillaResult(Closed.YES_NOT_RECURSIVE);
         assert(vanilla != null);
         Var fileVar = getInput(0).getVar();
         if (fileVar.isMapped() == Ternary.MAYBE) {
@@ -1711,13 +1716,14 @@ public class TurbineOp extends Instruction {
         res.add(ValLoc.makeFilename(filename, file.getVar()));
         
         // Check to see if value of filename is in local value
-        ComputedValue<Arg> filenameCV = ValLoc.makeFilenameVal(file, null).value();
-        ValLoc filenameVal = existing.lookupCV(filenameCV);
+        ArgCV filenameCV = ValLoc.makeFilenameVal(file, null).value();
+        Arg filenameVal = existing.findCanonical(filenameCV,
+                                                    CongruenceType.VALUE);
         if (filenameVal != null) {
           // We know that if we fetch from the output future of this instruction,
           // we'll get the previously stored filename
           res.add(ValLoc.buildResult(Opcode.LOAD_STRING,
-                            filename, filenameVal.location(), Closed.YES));
+                            filename, filenameVal, Closed.YES_NOT_RECURSIVE));
         }
         return res;
       }
@@ -1787,7 +1793,8 @@ public class TurbineOp extends Instruction {
         Var arr = getOutput(0);
         List<ValLoc> res = new ArrayList<ValLoc>();
         // Computed value for whole array
-        res.add(ValLoc.buildResult(op, getInputs(), arr.asArg(), Closed.YES));
+        res.add(ValLoc.buildResult(op, getInputs(), arr.asArg(),
+                                   Closed.YES_NOT_RECURSIVE));
         // For individual array elements
         assert(getInputs().size() % 2 == 0);
         int elemCount = getInputs().size() / 2;
@@ -1816,29 +1823,11 @@ public class TurbineOp extends Instruction {
           // This just retrieves the item immediately
           return Arrays.asList(ValLoc.makeArrayResult(arr, ix, contents, false));
         } else {
-          assert (Types.isAssignableRefTo(contents.type(), 
-              Types.arrayMemberType(arr.type())));
-          ValLoc refCV = ValLoc.makeArrayResult(arr, ix, contents, true);
-          ValLoc prev = existing.lookupCV(
-                                     ComputedValue.arrayCV(arr, ix));
-          if (prev != null) {
-            /* All these array loads give back a reference, but if a value
-             * was previously inserted at this index, then we can 
-             * short-circuit this as we know what is in the reference */
-            ValLoc retrieveCV = ValLoc.buildResult(
-                Opcode.retrieveOpcode(contents.type()),
-                contents.asArg(), prev.location(), Closed.MAYBE_NOT);
-            Opcode derefOp = Opcode.derefOpCode(contents.type());
-            if (derefOp == null) {
-              return Arrays.asList(retrieveCV, refCV);
-            } else {
-              ValLoc derefCV = ValLoc.buildResult(derefOp,
-                       contents.asArg(), prev.location(), Closed.MAYBE_NOT);
-              return Arrays.asList(retrieveCV, refCV, derefCV);
-            }
-          } else {
-            return Arrays.asList(refCV);
-          }
+          assert (Types.isMemberReference(contents, arr));
+          List<ValLoc> res = new ArrayList<ValLoc>();
+          res.add(ValLoc.makeArrayResult(arr, ix, contents, true));
+          addDerefMemberVals(existing, arr, contents, ix, res);
+          return res;
         }
       }
       case ARRAY_CREATE_NESTED_FUTURE:
@@ -1876,32 +1865,56 @@ public class TurbineOp extends Instruction {
           // No references involved, the instruction returns the nested
           // array directly
         } else {
-          assert (Types.isRefTo(nestedArr.type(), 
-                      Types.arrayMemberType(arr.type())));
-
-          ValLoc prev = existing.lookupCV(ComputedValue.arrayCV(arr, ix));
-          if (prev != null) {
-            // See if we know the value of this reference already
-            ValLoc derefCV = ValLoc.buildResult(
-                Opcode.retrieveOpcode(nestedArr.type()),
-                Arrays.asList(nestedArr.asArg()), prev.location(),
-                Closed.MAYBE_NOT);
-            res.add(derefCV);
-          }
+          addDerefMemberVals(existing, arr, nestedArr, ix, res);
         }
         return res;
       }
       case COPY_REF: {
         List<ValLoc> res = new ArrayList<ValLoc>();
         Var srcRef = getInput(0).getVar();
-        res.add(ValLoc.makeAlias(getOutput(0), srcRef,
-                       Closed.fromBool(existing.isClosed(srcRef))));
-        res.addAll(ValueTracker.makeCopiedRVs(existing, getOutput(0),
-                      getInput(0), getMode(), EquivalenceType.ALIAS));
+        res.add(ValLoc.makeAlias(getOutput(0), srcRef));
         return res;
       }
       default:
         return null;
+    }
+  }
+
+  /**
+   * Handle cases where we know what A[i] is, and we're looking
+   * up A[i], but result is going into reference *A[i].  In that
+   * case we know what we'll get when we dereference *A[i] 
+   * @param existing
+   * @param arr
+   * @param memberRef
+   * @param ix
+   * @param res
+   */
+  private void addDerefMemberVals(ValueState existing, Var arr, Var memberRef,
+      Arg ix, List<ValLoc> res) {
+    assert(Types.isMemberReference(memberRef, arr));
+    ArgCV memCV = ComputedValue.arrayCV(arr, ix);
+    // Check to see if we know what result of retrieve ref this will be
+    for (CongruenceType congType: Arrays.asList(CongruenceType.VALUE,
+                                                CongruenceType.ALIAS)) {
+      Arg prev = existing.findCanonical(memCV, congType);
+      if (prev != null) {
+        IsValCopy valCopy = congType == CongruenceType.ALIAS ?
+                            IsValCopy.NO : IsValCopy.YES;
+        res.add(ValLoc.buildResult(
+            Opcode.retrieveOpcode(memberRef.type()),
+            Arrays.asList(memberRef.asArg()), prev,
+            Closed.MAYBE_NOT, valCopy));
+      }
+
+      // Also handle dereferencing
+      if (prev != null && congType == CongruenceType.VALUE) {
+        Opcode derefOp = Opcode.derefOpCode(memberRef.type());
+        if (derefOp != null) {
+          res.add(ValLoc.buildResult(derefOp,
+                   memberRef.asArg(), prev, Closed.MAYBE_NOT));
+        }
+      }
     }
   }
   

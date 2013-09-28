@@ -1,6 +1,7 @@
 package exm.stc.ic.opt.valuenumber;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -13,22 +14,24 @@ import org.apache.log4j.Logger;
 import exm.stc.common.Logging;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
-import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.opt.OptUtil;
-import exm.stc.ic.opt.valuenumber.ComputedValue.EquivalenceType;
+import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
+import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
+import exm.stc.ic.opt.valuenumber.ComputedValue.RecCV;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsValCopy;
-import exm.stc.ic.tree.ICInstructions;
-import exm.stc.ic.tree.TurbineOp;
 import exm.stc.ic.tree.ICContinuations.Continuation;
+import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
+import exm.stc.ic.tree.ICTree.Function;
+import exm.stc.ic.tree.TurbineOp;
 
 /**
  * Handle unifying values from multiple branches.
@@ -56,13 +59,14 @@ public class UnifiedValues {
    * Assuming that branches are exhaustive, work out the set of variables
    * closed after the conditional has executed.
    * 
-   * @param parentState
+   * @param state
    * @param branchStates
    * @return
    */
-  public static UnifiedValues unify(Logger logger, boolean reorderingAllowed,
-                 ValueTracker parentState, Continuation cont,
-                 List<ValueTracker> branchStates, List<Block> branchBlocks) {
+  public static UnifiedValues unify(Logger logger, Function fn,
+                 boolean reorderingAllowed,
+                 CongruentVars state, Continuation cont,
+                 List<CongruentVars> branchStates, List<Block> branchBlocks) {
     if (logger.isTraceEnabled()) {
       logger.trace("Unifying state from " + branchBlocks.size() +
                    " branches with continuation type " + cont.getType());
@@ -77,11 +81,10 @@ public class UnifiedValues {
     } else {
       Set<Var> closed = new HashSet<Var>();
       Set<Var> recClosed = new HashSet<Var>();
-      unifyClosed(parentState, branchStates, closed, recClosed);
+      unifyClosed(state, branchStates, closed, recClosed);
       
       List<ValLoc> availVals = new ArrayList<ValLoc>();
-      List<ComputedValue<Arg>> allUnifiedCVs =
-                  new ArrayList<ComputedValue<Arg>>();
+      List<ArgCV> allUnifiedCVs = new ArrayList<ArgCV>();
       
       // Track which sets of args from each branch are mapped into a
       // unified var
@@ -92,19 +95,28 @@ public class UnifiedValues {
         if (logger.isTraceEnabled()) {
           logger.trace("Start iteration " + iter + " of unification");
         }
-        List<ComputedValue<Arg>> newAllBranchCVs = findAllBranchCVs(
-            parentState, branchStates, allUnifiedCVs);
-        Pair<List<ValLoc>, Boolean> result = unifyCVs(reorderingAllowed,
-                                 cont.parent(), branchStates, branchBlocks,
-                                             newAllBranchCVs, unifiedVars);
-        availVals.addAll(result.val1);
-        newCVs = result.val2;
-        allUnifiedCVs.addAll(newAllBranchCVs);
+        newCVs = false;
         
-        if (logger.isTraceEnabled()) {
-          logger.trace("Finish iteration " + iter + " of unification.  "
-                     + "New CVs: " + result.val1);
+        for (CongruenceType congType: Arrays.asList(CongruenceType.VALUE,
+                                                    CongruenceType.ALIAS)) {
+
+          List<ArgCV> newAllBranchCVs = findAllBranchCVs(state, congType,
+                                            branchStates, allUnifiedCVs);
+          Pair<List<ValLoc>, Boolean> result = unifyCVs(fn, reorderingAllowed,
+                                  cont.parent(), congType, branchStates,
+                                  branchBlocks, newAllBranchCVs, unifiedVars);
+          availVals.addAll(result.val1);
+          if (result.val2) {
+            newCVs = true;
+          }
+
+          allUnifiedCVs.addAll(newAllBranchCVs);
+          if (logger.isTraceEnabled()) {
+            logger.trace("Finish iteration " + iter + " of unification for "
+                       + congType + " New CVs: " + result.val1);
+          }
         }
+        
         if (iter >= MAX_UNIFY_ITERATIONS) {
           logger.debug("Exceeded max unify iterations.");
           if (logger.isTraceEnabled()) {
@@ -129,53 +141,53 @@ public class UnifiedValues {
    * @param unifiedLocs 
    * @return
    */
-  private static Pair<List<ValLoc>, Boolean> unifyCVs(boolean
-      reorderingAllowed, Block parent,
-      List<ValueTracker> branchStates, List<Block> branchBlocks,
-      List<ComputedValue<Arg>> allBranchCVs, Map<List<Arg>, Var> unifiedLocs) {
+  private static Pair<List<ValLoc>, Boolean> unifyCVs(Function fn,
+      boolean reorderingAllowed, Block parent, CongruenceType congType,
+      List<CongruentVars> branchStates, List<Block> branchBlocks,
+      List<ArgCV> allBranchCVs, Map<List<Arg>, Var> unifiedLocs) {
     List<ValLoc> availVals = new ArrayList<ValLoc>();
     
     boolean createdNewBranchCVs = false;
     
-    for (ComputedValue<Arg> cv: allBranchCVs) {
+    for (ArgCV cv: allBranchCVs) {
       // See what is same across all branches
+      // TODO: this is imperfect in situations where the canonical
+      //       name of a value has been changed in a child branch.
+      //       May not be able to do much about it.
       boolean allVals = true;
       boolean allSameLocation = true;
-      Closed allClosed = Closed.YES;
+      Closed allClosed = Closed.YES_RECURSIVE;
       IsValCopy anyValCopy = IsValCopy.NO;
       
       // Keep track of all locations to use as key into map
       List<Arg> branchLocs = new ArrayList<Arg>(branchStates.size());
-          
-      int br = 0;
-      ValLoc firstLoc = branchStates.get(0).lookupCV(cv);
-      for (ValueTracker bs: branchStates) {
-        ValLoc loc = bs.lookupCV(cv);
+
+      Arg firstLoc = branchStates.get(0).findCanonical(cv, congType);
+      for (CongruentVars bs: branchStates) {
+        Arg loc = bs.findCanonical(cv, congType);
         assert(loc != null);
         
-        if (loc != firstLoc && !loc.location().equals(firstLoc.location())) {
+        if (loc != firstLoc && !loc.equals(firstLoc)) {
           allSameLocation = false;
         }
         
-        if (!Types.isPrimValue(loc.location().type())) {
+        if (!Types.isPrimValue(loc.type())) {
           allVals = false;
         }
         
-        if (!loc.locClosed()) {
+        if (allClosed == Closed.YES_RECURSIVE &&
+            !bs.isRecClosed(loc)) {
+          if (bs.isClosed(loc)) {
+            allClosed = Closed.MAYBE_NOT;
+          } else {
+            allClosed = Closed.YES_NOT_RECURSIVE;
+          }
+        } else if (allClosed == Closed.YES_NOT_RECURSIVE &&
+            !bs.isClosed(loc)) {
           allClosed = Closed.MAYBE_NOT;
         }
         
-        if (loc.isValCopy()) {
-          anyValCopy = IsValCopy.YES;
-        }
-        
-        branchLocs.add(loc.location());
-        
-        Logger logger = Logging.getSTCLogger();
-        if (logger.isTraceEnabled()) {
-          logger.trace("Branch " + br + ": " + bs.availableVals);
-        }
-        br++;
+        branchLocs.add(loc);
       }
       
 
@@ -185,14 +197,14 @@ public class UnifiedValues {
       }
       
       if (allSameLocation) {
-        availVals.add(createUnifiedCV(cv, firstLoc.location(), allClosed, anyValCopy));
+        availVals.add(createUnifiedCV(cv, firstLoc, allClosed, anyValCopy));
       } else if (unifiedLocs.containsKey(branchLocs)) {
         // We already unified this list of variables: just reuse that
         Var unifiedLoc = unifiedLocs.get(branchLocs);
         availVals.add(createUnifiedCV(cv, unifiedLoc.asArg(), allClosed, anyValCopy));
       } else {
-        Var unifiedLoc = createUnifyingVar(parent, branchStates,
-                  branchBlocks, branchLocs, firstLoc.location().type());
+        Var unifiedLoc = createUnifyingVar(fn, parent, branchStates,
+                  branchBlocks, branchLocs, firstLoc.type());
         createdNewBranchCVs = true;
 
         // Store the new location
@@ -207,23 +219,20 @@ public class UnifiedValues {
   }
 
 
-  private static Var createUnifyingVar(Block parent,
-      List<ValueTracker> branchStates, List<Block> branchBlocks,
+  private static Var createUnifyingVar(Function fn,
+      Block parent, List<CongruentVars> branchStates, List<Block> branchBlocks,
       List<Arg> locs, Type type) {
     boolean isValue = Types.isPrimValue(type);
     // declare new temporary value in outer block
     Var unifiedLoc;
-    EquivalenceType equivType; // Equivalence of src and dst
     if (isValue) {
       unifiedLoc = parent.declareVariable(type, 
           OptUtil.optVPrefix(parent, "unified"), Alloc.LOCAL,
           DefType.LOCAL_COMPILER, null);
-      equivType = EquivalenceType.VALUE;
     } else {
       unifiedLoc = parent.declareVariable(type, 
           OptUtil.optVPrefix(parent, "unified"), Alloc.ALIAS,
           DefType.LOCAL_COMPILER, null);
-      equivType = EquivalenceType.ALIAS;
     }
     
     
@@ -231,24 +240,26 @@ public class UnifiedValues {
       Arg loc = locs.get(i);
       Block branchBlock = branchBlocks.get(i);
       Instruction copyInst;
+      ValLoc copyVal;
       if (isValue) {
         copyInst = ICInstructions.valueSet(unifiedLoc, loc);
+        copyVal = ValLoc.makeCopy(unifiedLoc, loc);
       } else {
         assert (loc.isVar()) : loc + " " + loc.getKind();
         copyInst = TurbineOp.copyRef(unifiedLoc, loc.getVar());
+        copyVal = ValLoc.makeAlias(unifiedLoc, loc.getVar());
       }
       branchBlock.addInstruction(copyInst);
       
       // Add in additional computed values resulting from copy
-      ValueTracker branchState = branchStates.get(i);
-      branchState.addComputedValues(ValueTracker.makeCopiedRVs(branchState, unifiedLoc,
-                       loc, copyInst.getMode(), equivType), Ternary.MAYBE);
+      CongruentVars branchState = branchStates.get(i);
+      branchState.update(fn.getName(), copyVal);
     }
     return unifiedLoc;
   }
 
 
-  private static ValLoc createUnifiedCV(ComputedValue<Arg> cv, Arg loc,
+  private static ValLoc createUnifiedCV(ArgCV cv, Arg loc,
             Closed allClosed, IsValCopy anyValCopy) {
     return new ValLoc(cv, loc, allClosed, anyValCopy);
   }
@@ -257,40 +268,46 @@ public class UnifiedValues {
   /**
    * Find computed values that appear in all branches but not parent
    * @param parentState
+   * @param congType 
    * @param branchStates
    * @param alreadyAdded ignore these
    * @return
    */
-  private static List<ComputedValue<Arg>> findAllBranchCVs(ValueTracker parentState,
-      List<ValueTracker> branchStates, List<ComputedValue<Arg>> alreadyAdded) {
-    List<ComputedValue<Arg>> allBranchCVs = new ArrayList<ComputedValue<Arg>>();
-    ValueTracker firstState = branchStates.get(0);
-    for (ComputedValue<Arg> val: firstState.availableVals.keySet()) {
-      if (!alreadyAdded.contains(val) && !parentState.isAvailable(val)) {
-        int nBranches = branchStates.size();
-        boolean presentInAll = true;
-        for (ValueTracker otherState: branchStates.subList(1, nBranches)) {
-          if (!otherState.isAvailable(val)) {
-            presentInAll = false;
-            break;
+  private static List<ArgCV> findAllBranchCVs(CongruentVars parentState,
+      CongruenceType congType, List<CongruentVars> branchStates, List<ArgCV> alreadyAdded) {
+    List<ArgCV> allBranchCVs = new ArrayList<ArgCV>();
+    CongruentVars firstState = branchStates.get(0);
+    // iterate over values stored in the bottom level only?
+    for (RecCV val: firstState.availableThisScope(congType)) {
+      ArgCV convertedVal = parentState.convertToArgs(val, congType);
+      if (convertedVal != null) {
+        if (!alreadyAdded.contains(val) && !parentState.isAvailable(val, congType)) {
+          int nBranches = branchStates.size();
+          boolean presentInAll = true;
+          for (CongruentVars otherState: branchStates.subList(1, nBranches)) {
+            if (!otherState.isAvailable(val, congType)) {
+              presentInAll = false;
+              break;
+            }
           }
-        }
-        if (presentInAll) {
-          allBranchCVs.add(val);
+          if (presentInAll) {
+            allBranchCVs.add(convertedVal);
+          }
         }
       }
     }
     return allBranchCVs;
   }
   
-  private static void unifyClosed(ValueTracker parentState,
-      List<ValueTracker> branchStates,
+  private static void unifyClosed(CongruentVars parentState,
+      List<CongruentVars> branchStates,
       Set<Var> closed, Set<Var> recClosed) {
     List<Set<Var>> branchClosed = new ArrayList<Set<Var>>();
     List<Set<Var>> branchRecClosed = new ArrayList<Set<Var>>();
-    for (ValueTracker branchState: branchStates) {
-      branchClosed.add(branchState.closed);
-      branchRecClosed.add(branchState.recursivelyClosed);
+    for (CongruentVars branchState: branchStates) {
+      // Inspect all variables that are closed in each branch
+      branchClosed.add(branchState.getClosed());
+      branchRecClosed.add(branchState.getRecursivelyClosed());
     }
     
 
@@ -303,7 +320,7 @@ public class UnifiedValues {
     }
     
     for (Var recClosedVar: Sets.intersectionIter(branchRecClosed)) {
-      if (!parentState.isRecursivelyClosed(recClosedVar)) {
+      if (!parentState.isRecClosed(recClosedVar)) {
         recClosed.add(recClosedVar);
       }
     }

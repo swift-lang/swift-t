@@ -45,7 +45,6 @@ import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.Counters;
@@ -53,10 +52,11 @@ import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.Semantics;
 import exm.stc.ic.opt.valuenumber.ComputedValue;
-import exm.stc.ic.opt.valuenumber.ComputedValue.EquivalenceType;
+import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
+import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
+import exm.stc.ic.opt.valuenumber.ComputedValue.RecCV;
 import exm.stc.ic.opt.valuenumber.ValLoc;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
-import exm.stc.ic.opt.valuenumber.ValueTracker;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
@@ -459,13 +459,23 @@ public class ICInstructions {
     }
     
     /**
+     * Limited interface to allow instructions to query what values
+     * are available.
+     * TODO: is this necessary? can we move logic into CongruentVars
+     */
+    public static interface ValueState {
+      public List<RecCV> findCongruent(Arg arg, CongruenceType congType);
+      public Arg findCanonical(ArgCV arg, CongruenceType congType);
+    }
+    
+    /**
      * @param existing already known values (sometimes needed to 
      *              work out which vales are created by an instruction)
      * @return a list of all values computed by expression.  Each ComputedValue
      *        returned should have the out field set so we know where to find 
      *        it 
      */
-    public abstract List<ValLoc> getResults(ValueTracker existing);
+    public abstract List<ValLoc> getResults(ValueState existing);
     
     @Override
     public Statement cloneStatement() {
@@ -591,7 +601,7 @@ public class ICInstructions {
     }
 
     @Override
-    public List<ValLoc> getResults(ValueTracker existing) {
+    public List<ValLoc> getResults(ValueState existing) {
       return null;
     }
 
@@ -637,7 +647,7 @@ public class ICInstructions {
     }
     
     @Override
-    public List<ValLoc> getResults(ValueTracker existing) {
+    public List<ValLoc> getResults(ValueState existing) {
       if (ForeignFunctions.isPure(functionName)) {
         if (!this.writesMappedVar() && isCopyFunction()) {
           // Handle copy as a special case
@@ -755,7 +765,7 @@ public class ICInstructions {
       String subop = future ? ComputedValue.ARRAY_SIZE_FUTURE :
                               ComputedValue.ARRAY_SIZE_VAL;
       return ValLoc.buildResult(Opcode.FAKE, subop,
-                                arr.asArg(), size, Closed.YES);
+                                arr.asArg(), size, Closed.YES_NOT_RECURSIVE);
     }
     
   }
@@ -1469,7 +1479,7 @@ public class ICInstructions {
     }
 
     @Override
-    public List<ValLoc> getResults(ValueTracker existing) {
+    public List<ValLoc> getResults(ValueState existing) {
       if (deterministic) {
         List<ValLoc> cvs = new ArrayList<ValLoc>(outFiles.size());
         for (int i = 0; i < outFiles.size(); i++) {
@@ -1479,7 +1489,7 @@ public class ICInstructions {
           // Unique key for cv includes number of output
           // Output file should be closed after external program executes
           ValLoc cv = ValLoc.buildResult(op, cmd,
-                     cvArgs, outFiles.get(i).asArg(), Closed.YES);
+                     cvArgs, outFiles.get(i).asArg(), Closed.YES_NOT_RECURSIVE);
           cvs.add(cv);
         }
         return cvs;
@@ -1631,7 +1641,7 @@ public class ICInstructions {
     }
 
     @Override
-    public List<ValLoc> getResults(ValueTracker existing) {
+    public List<ValLoc> getResults(ValueState existing) {
       // Nothing
       return null;
     }
@@ -1749,7 +1759,7 @@ public class ICInstructions {
     }
    
     @Override
-    public List<ValLoc> getResults(ValueTracker existing) {
+    public List<ValLoc> getResults(ValueState existing) {
       // nothing
       return null;
     }
@@ -2127,24 +2137,13 @@ public class ICInstructions {
     }
     
     @Override
-    public List<ValLoc> getResults(ValueTracker existing) {
+    public List<ValLoc> getResults(ValueState existing) {
       if (this.hasSideEffects()) {
         // Two invocations of this aren't equivalent
         return null;
       }
       
       ValLoc basic = makeBasicComputedValue();
-      
-      if (subop == BuiltinOpcode.COPY_INT || subop == BuiltinOpcode.COPY_BOOL
-      || subop == BuiltinOpcode.COPY_FLOAT || subop == BuiltinOpcode.COPY_STRING
-      || subop == BuiltinOpcode.COPY_BLOB || subop == BuiltinOpcode.COPY_VOID) {
-        // Add transitively valid computed values if a copy
-        List<ValLoc> res = new ArrayList<ValLoc>();
-        res.add(basic);
-        res.addAll(ValueTracker.makeCopiedRVs(existing, getOutput(0), getInput(0),
-                                              getMode(), EquivalenceType.VALUE));
-        return res;
-      }
       
       List<ValLoc> inferred = makeInferredComputedValues(existing);
       if (inferred.isEmpty()) {
@@ -2157,8 +2156,7 @@ public class ICInstructions {
         if (basic == null) {  
           return inferred;
         } else {
-          List<ValLoc> res = new ArrayList<ValLoc>(
-                                                    1 + inferred.size());
+          List<ValLoc> res = new ArrayList<ValLoc>(1 + inferred.size());
           res.add(basic);
           res.addAll(inferred);
           return res;
@@ -2172,9 +2170,7 @@ public class ICInstructions {
      * @return
      */
     private ValLoc makeBasicComputedValue() {
-      if (subop == BuiltinOpcode.COPY_INT || subop == BuiltinOpcode.COPY_BOOL
-      || subop == BuiltinOpcode.COPY_FLOAT || subop == BuiltinOpcode.COPY_STRING
-      || subop == BuiltinOpcode.COPY_BLOB || subop == BuiltinOpcode.COPY_VOID) {
+      if (Operators.isCopy(this.subop)) {
         // It might be assigning a constant val
         return ValLoc.makeCopy(this.output, this.inputs.get(0));
       } else if (Operators.isMinMaxOp(subop)) {
@@ -2199,14 +2195,13 @@ public class ICInstructions {
           cvOp = subop;
         }
         
-        Closed outClosed = Closed.fromBool((this.op == Opcode.LOCAL_OP));
         return ValLoc.buildResult(this.op, cvOp.name(), cvInputs,
-                                this.output.asArg(), outClosed);
+                                this.output.asArg(), outputClosed(op));
       }
       return null;
     }
 
-    private List<ValLoc> makeInferredComputedValues(ValueTracker cvs) {
+    private List<ValLoc> makeInferredComputedValues(ValueState cvs) {
       try {
         if (!Settings.getBoolean(Settings.OPT_ALGEBRA)) {
           return Collections.emptyList();
@@ -2242,7 +2237,7 @@ public class ICInstructions {
     }
 
 
-    private List<ValLoc> tryAlgebra(ValueTracker cvs) {
+    private List<ValLoc> tryAlgebra(ValueState cvs) {
       // do basic algebra, useful for adjacent array indices
       // TODO: could be more sophisticated, e.g. build operator tree
       //    and reduce to canonical form
@@ -2254,34 +2249,54 @@ public class ICInstructions {
       if (args == null) {
         return Collections.emptyList();
       }
-      List<ValLoc> varRVs = cvs.getVarContents(args.val1);
+      
+      // Now arg1 should be var, arg2 constant
+      List<RecCV> vals = cvs.findCongruent(args.val1.asArg(),
+                                CongruenceType.VALUE);
       List<ValLoc> res = new ArrayList<ValLoc>(); 
-      for (ValLoc varRV: varRVs) {
-        ComputedValue<Arg> varVal = varRV.value();
-        if (varVal.op() == this.op) {
-          BuiltinOpcode aop = BuiltinOpcode.valueOf(varVal.subop());
-          if (aop == BuiltinOpcode.PLUS_INT ||
-              aop == BuiltinOpcode.MINUS_INT) { 
-            Pair<Var, Long> add = convertToCanonicalAdd(aop,
-                                  varVal.getInput(0), varVal.getInput(1));
-            if (add != null) {
-              // Note that if this instruction computes x = y + c1
-              // and y = z + c2 was computed earlier, then
-              // x = z + c1 + c2
-              long c = args.val2 + add.val2;
-              if (c == 0) {
-                res.add(ValLoc.makeCopy(this.output,
-                                                 add.val1.asArg()));
-              } else {
-                res.add(plusCV(op, add.val1.asArg(),
-                             Arg.createIntLit(c),
-                             this.output));
-              }
-            }
+      for (RecCV val: vals) {
+        if (val.isCV()) {
+          ValLoc newCV = tryAlgebra(args, val.cv());
+          if (newCV != null) {
+            res.add(newCV);
           }
         }
       }
       return res;
+    }
+
+
+    private ValLoc tryAlgebra(Pair<Var, Long> canonArgs,
+                            ComputedValue<RecCV> varVal) {
+      if (varVal.op() != this.op) {
+        return null;
+      }
+      BuiltinOpcode aop = BuiltinOpcode.valueOf(varVal.subop());
+      if (aop == BuiltinOpcode.PLUS_INT ||
+          aop == BuiltinOpcode.MINUS_INT) {
+        // Don't handle recursive values (TODO?)
+        if (!varVal.getInput(0).isArg() || !varVal.getInput(1).isArg()) {
+          return null;
+        }
+        Arg arg1 = varVal.getInput(0).arg();
+        Arg arg2 = varVal.getInput(1).arg();
+        Pair<Var, Long> add = convertToCanonicalAdd(aop, arg1, arg2);
+        if (add != null) {
+          // Note that if this instruction computes x = y + c1
+          // and y = z + c2 was computed earlier, then
+          // x = z + c1 + c2
+          long c = canonArgs.val2 + add.val2;
+          if (c == 0) {
+            // Check if additions cancel
+            return ValLoc.makeCopy(this.output, add.val1.asArg());
+          } else {
+            // Otherwise add them together
+            return plusCV(op, add.val1.asArg(), Arg.createIntLit(c),
+                          this.output);
+          }
+        }
+      }
+      return null;
     }
 
     
@@ -2323,9 +2338,15 @@ public class ICInstructions {
      */
     private static ValLoc plusCV(Opcode op, Arg arg1, Arg arg2,
         Var output) {
+      // TODO: short circuit here e.g. if one arg is 0
       return ValLoc.buildResult(op, BuiltinOpcode.PLUS_INT.name(),
-          Arrays.asList(arg1, arg2), output.asArg(), 
-          Closed.fromBool(op == Opcode.LOCAL_OP));
+          Arrays.asList(arg1, arg2), output.asArg(), outputClosed(op));
+    }
+
+
+    private static Closed outputClosed(Opcode op) {
+      Closed locClosed = op == Opcode.LOCAL_OP ? Closed.YES_NOT_RECURSIVE : Closed.MAYBE_NOT;
+      return locClosed;
     }
 
 
@@ -2410,43 +2431,6 @@ public class ICInstructions {
         throw new STCRuntimeError("method to retrieve " +
               src.type().typeName() + " is not known yet");
     }
-  }
-
-  public static ValLoc assignComputedVal(Var dst, Arg val) {
-    Type dstType = dst.type();
-    if (Types.isPrimValue(dstType)) {
-        BuiltinOpcode op;
-        switch(dstType.primType()) {
-        case BOOL:
-          op = BuiltinOpcode.COPY_BOOL;
-          break;
-        case INT:
-          op = BuiltinOpcode.COPY_INT;
-          break;
-        case FLOAT:
-          op = BuiltinOpcode.COPY_FLOAT;
-          break;
-        case STRING:
-          op = BuiltinOpcode.COPY_STRING;
-          break;
-        case BLOB:
-          op = BuiltinOpcode.COPY_BLOB;
-          break;
-        case VOID:
-          op = BuiltinOpcode.COPY_VOID;
-          break;
-        default:
-          throw new STCRuntimeError("Unhandled type: " + dstType);
-        }
-        return ValLoc.buildResult(Opcode.LOCAL_OP, 
-            op.toString(), Arrays.asList(val), dst.asArg(), Closed.MAYBE_NOT);
-    } else {
-      Opcode op = Opcode.assignOpcode(dstType);
-      if (op != null) {
-        return ValLoc.buildResult(op, Arrays.asList(val), dst.asArg() , Closed.YES);
-      }
-    }
-    throw new STCRuntimeError("DOn't know how to assign to " + dst);
   }
 
   public static Instruction futureSet(Var dst, Arg src) {

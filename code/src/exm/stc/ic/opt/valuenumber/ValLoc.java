@@ -11,7 +11,9 @@ import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.ic.ICUtil;
-import exm.stc.ic.opt.valuenumber.ComputedValue.EquivalenceType;
+import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
+import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
+import exm.stc.ic.opt.valuenumber.ComputedValue.RecCV;
 import exm.stc.ic.tree.Opcode;
 
 /**
@@ -19,16 +21,16 @@ import exm.stc.ic.tree.Opcode;
  * a known location 
  */
 public class ValLoc {
-  private final ComputedValue<Arg> value;
+  private final ArgCV value;
   /** Storage location or constant value of result */
   private final Arg location;
-  /** true if location var is known to be closed */
-  private final boolean locClosed;
+  /** if location var is known to be closed */
+  private final Closed locClosed;
   /** true if location var is a copy only. I.e. cannot be alias
    * of another value with same CV */
   private final boolean isValCopy;
   
-  public ComputedValue<Arg> value() {
+  public ArgCV value() {
     return value;
   }
 
@@ -36,7 +38,7 @@ public class ValLoc {
     return location;
   }
 
-  public boolean locClosed() {
+  public Closed locClosed() {
     return locClosed;
   }
   
@@ -44,17 +46,17 @@ public class ValLoc {
     return isValCopy;
   }
   
-  public EquivalenceType equivType() {
+  public CongruenceType congType() {
     if (isValCopy) {
       // Cannot be alias since a copy happened;
-      return EquivalenceType.VALUE;
+      return CongruenceType.VALUE;
     } else {
-      return value.equivType();
+      return value.congType();
     }
   }
 
-  private ValLoc(ComputedValue<Arg> value, Arg location,
-      boolean locClosed, boolean isValCopy) {
+  private ValLoc(ArgCV value, Arg location,
+      Closed locClosed, boolean isValCopy) {
     assert(value != null);
     this.value = value;
     this.location = location;
@@ -62,21 +64,33 @@ public class ValLoc {
     this.isValCopy = isValCopy;
   }
   
-  public ValLoc(ComputedValue<Arg> value, Arg location,
+  public ValLoc(ArgCV value, Arg location,
       Closed locClosed,  IsValCopy isValCopy) {
-    this(value, location, locClosed == Closed.YES,
+    this(value, location, locClosed,
          isValCopy == IsValCopy.YES);
   }
   
-  public static ValLoc build(ComputedValue<Arg> value, Arg location,
+  public static ValLoc build(ArgCV value, Arg location,
                              Closed locClosed) {
     return new ValLoc(value, location, locClosed, IsValCopy.NO);
   }
   
+  public static ValLoc buildResult(Opcode op, String subop, List<Arg> inputs,
+                      Arg valLocation, Closed locClosed, IsValCopy valCopy) {
+    ArgCV cv = new ArgCV(op, subop, inputs);
+    return new ValLoc(cv, valLocation, locClosed, valCopy);
+  }
+
+  public static ValLoc buildResult(Opcode op, List<Arg> inputs,
+      Arg valLocation, Closed locClosed, IsValCopy valCopy) {
+    return buildResult(op, "", inputs, valLocation, locClosed,
+                       valCopy);
+  }
+
   public static ValLoc buildResult(Opcode op, String subop,
       List<Arg> inputs, Arg valLocation, Closed locClosed) {
-    ComputedValue<Arg> cv = new ComputedValue<Arg>(op, subop, inputs);
-    return new ValLoc(cv, valLocation, locClosed, IsValCopy.NO);
+    return buildResult(op, subop, inputs, valLocation, locClosed,
+                       IsValCopy.NO);  
   }
 
   public static ValLoc buildResult(Opcode op, List<Arg> inputs,
@@ -121,11 +135,16 @@ public class ValLoc {
    * @return
    */
   public ValLoc copyOf(Var copiedTo, TaskMode copyMode,
-                       EquivalenceType copyType) {
+                       CongruenceType copyType) {
     // See if we can determine that new location is closed
-    boolean newLocClosed = locClosed && copyMode == TaskMode.SYNC;
+    Closed newLocClosed; 
+    if (copyMode == TaskMode.SYNC) {
+      newLocClosed = locClosed;
+    } else {
+      newLocClosed = Closed.MAYBE_NOT;
+    }
     // See if we still have an alias
-    boolean newIsValCopy = isValCopy || copyType != EquivalenceType.ALIAS;
+    boolean newIsValCopy = isValCopy || copyType != CongruenceType.ALIAS;
     return new ValLoc(value, copiedTo.asArg(), newLocClosed,
                       newIsValCopy);
   }
@@ -135,14 +154,14 @@ public class ValLoc {
    * for replacement
    */
   public ValLoc substituteInputs(Var original, Arg replacement,
-      EquivalenceType copyType) {
+      CongruenceType copyType) {
     Map<Var, Arg> replace = Collections.singletonMap(original, replacement);
     
     List<Arg> newInputs = new ArrayList<Arg>(value.getInputs());
     ICUtil.replaceArgsInList(replace, newInputs);
     
-    boolean newIsValCopy = isValCopy || copyType != EquivalenceType.ALIAS;
-    ComputedValue<Arg> newVal = value.substituteInputs(newInputs);
+    boolean newIsValCopy = isValCopy || copyType != CongruenceType.ALIAS;
+    ArgCV newVal = value.substituteInputs2(newInputs);
     return new ValLoc(newVal, location, locClosed, newIsValCopy);
   }
   
@@ -151,8 +170,9 @@ public class ValLoc {
    * @param src
    * @return Computed value indicating dst is alias of src
    */
-  public static ValLoc makeAlias(Var dst, Var src, Closed srcClosed) {
-    return build(ComputedValue.makeAlias(src.asArg()), dst.asArg(), srcClosed);
+  public static ValLoc makeAlias(Var dst, Var src) {
+    return build(ComputedValue.makeAlias(src.asArg()), dst.asArg(),
+                 Closed.MAYBE_NOT);
   }
   
 
@@ -168,7 +188,7 @@ public class ValLoc {
   public static ValLoc makeArrayResult(Var arr, Arg ix, Var contents,
         boolean refResult) {
     Arg contentsArg = contents.asArg();
-    ComputedValue<Arg> val;
+    ArgCV val;
     if (refResult) {
       assert(Types.isMemberReference(contents, arr)) :
             "not member ref: " + contents + " " + arr;
@@ -184,7 +204,7 @@ public class ValLoc {
   public static ValLoc makeCreateNestedResult(Var arr, Arg ix, Var contents,
       boolean refResult) {
     Arg contentsArg = contents == null ? null : Arg.createVar(contents);
-    ComputedValue<Arg> val;
+    ArgCV val;
     if (refResult) {
       val = ComputedValue.arrayRefNestedCV(arr, ix);
     } else {
@@ -214,14 +234,14 @@ public class ValLoc {
     assert(Types.isFile(file.type()));
     assert(filenameVal == null || filenameVal.isImmediateString());
     return ValLoc.buildResult(Opcode.GET_FILENAME_VAL,
-                            file, filenameVal, Closed.YES);
+                            file, filenameVal, Closed.YES_NOT_RECURSIVE);
   }
 
   public static ValLoc makeFilenameLocal(Arg outFilename, Var inFile) {
     assert(Types.isFileVal(inFile));
     assert(outFilename.isImmediateString());
     return ValLoc.buildResult(Opcode.GET_LOCAL_FILENAME,
-                    inFile.asArg().asList(), outFilename, Closed.YES);
+            inFile.asArg().asList(), outFilename, Closed.YES_NOT_RECURSIVE);
   }
   
   
@@ -230,13 +250,13 @@ public class ValLoc {
    * @param refContent
    * @return
    */
-  public static List<ValLoc> createLoadRefCVs(ValLoc refContent,
+  public static List<ValLoc> createLoadRefCVs(ComputedValue<RecCV> cv,
                                                    Var derefDst) {
-    ComputedValue<Arg> cv = refContent.value();
-    if (cv.op() == Opcode.FAKE && 
-        cv.subop().equals(ComputedValue.REF_TO_ARRAY_CONTENTS)) {
+    if (cv.isArrayMemberRef() &&
+        cv.getInput(0).isArg() && cv.getInput(1).isArg()) {
+      // We've now got a direct handle to the array contents
       return makeArrayResult(
-          cv.getInput(0).getVar(), cv.getInput(1),
+          cv.getInput(0).arg().getVar(), cv.getInput(1).arg(),
           derefDst, false).asList();  
     } 
     return Collections.emptyList();
@@ -257,11 +277,16 @@ public class ValLoc {
    * easier to parse
    */
   public static enum Closed {
-    YES,
+    YES_RECURSIVE,
+    YES_NOT_RECURSIVE,
     MAYBE_NOT;
 
-    public static Closed fromBool(boolean b) {
-      return b ? YES : MAYBE_NOT;
+    public boolean isClosed() {
+      return this == YES_NOT_RECURSIVE || this == YES_RECURSIVE;
+    }
+    
+    public boolean isRecClosed() {
+      return this == YES_RECURSIVE;
     }
   }
   

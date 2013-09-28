@@ -205,7 +205,8 @@ public class OptUtil {
 
     Logger logger = Logging.getSTCLogger();
     if (logger.isTraceEnabled()) {
-      logger.trace("Swapped " + oldInst + " for " + change.newInsts);
+      logger.trace("Swapped " + oldInst + " for " +
+                   Arrays.asList(change.newInsts));
     }
     
     if (!change.isOutVarSame()) {

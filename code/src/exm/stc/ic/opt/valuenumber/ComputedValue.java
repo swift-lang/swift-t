@@ -21,8 +21,11 @@ import java.util.List;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
+import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
 import exm.stc.ic.tree.Opcode;
 
 /**
@@ -43,10 +46,10 @@ public class ComputedValue<T> {
    */
   
   /**
-   * Define a notion of equivalence between locations with the same computed
+   * Define a notion of congruence between locations with the same computed
    * value.
    */
-  public static enum EquivalenceType {
+  public static enum CongruenceType {
     // Matching ComputedValues indicates that locations have same value
     VALUE,
     // Matching ComputedValues indicates that locations are aliases for
@@ -150,14 +153,23 @@ public class ComputedValue<T> {
   public ComputedValue<T> substituteInputs(List<T> newInputs) {
     return new ComputedValue<T>(op, subop, newInputs);
   }
+  
+  /**
+   * Make a copy with a different list of inputs
+   * @param newInputs
+   * @return
+   */
+   public ArgCV substituteInputs2(List<Arg> newInputs) {
+     return new ArgCV(op, subop, newInputs);
+   }
 
-  public static ComputedValue<Arg> makeCopy(Arg src) {
-    return new ComputedValue<Arg>(Opcode.FAKE, ComputedValue.COPY_OF,
+  public static ArgCV makeCopy(Arg src) {
+    return new ArgCV(Opcode.FAKE, ComputedValue.COPY_OF,
                                   src.asList());
   }
   
-  public static ComputedValue<Arg> makeAlias(Arg src) {
-    return new ComputedValue<Arg>(Opcode.FAKE, ComputedValue.ALIAS_OF,
+  public static ArgCV makeAlias(Arg src) {
+    return new ArgCV(Opcode.FAKE, ComputedValue.ALIAS_OF,
                                   src.asList());
   }
   
@@ -167,13 +179,51 @@ public class ComputedValue<T> {
    * @param src
    * @return null if cannot be fetched
    */
-  public static ComputedValue<Arg> retrieveCompVal(Var src) {
+  public static ArgCV retrieveCompVal(Var src) {
     Type srcType = src.type();
     Opcode op = Opcode.retrieveOpcode(srcType);
     if (op == null) {
       return null;
     }
-    return new ComputedValue<Arg>(op, Arrays.asList(src.asArg()));
+    return new ArgCV(op, Arrays.asList(src.asArg()));
+  }
+
+  public static ValLoc assignComputedVal(Var dst, Arg val) {
+    Type dstType = dst.type();
+    if (Types.isPrimValue(dstType)) {
+        BuiltinOpcode op;
+        switch(dstType.primType()) {
+        case BOOL:
+          op = BuiltinOpcode.COPY_BOOL;
+          break;
+        case INT:
+          op = BuiltinOpcode.COPY_INT;
+          break;
+        case FLOAT:
+          op = BuiltinOpcode.COPY_FLOAT;
+          break;
+        case STRING:
+          op = BuiltinOpcode.COPY_STRING;
+          break;
+        case BLOB:
+          op = BuiltinOpcode.COPY_BLOB;
+          break;
+        case VOID:
+          op = BuiltinOpcode.COPY_VOID;
+          break;
+        default:
+          throw new STCRuntimeError("Unhandled type: " + dstType);
+        }
+        return ValLoc.buildResult(Opcode.LOCAL_OP, 
+            op.toString(), Arrays.asList(val), dst.asArg(), Closed.MAYBE_NOT);
+    } else {
+      Opcode op = Opcode.assignOpcode(dstType);
+      if (op != null) {
+        return ValLoc.buildResult(op, Arrays.asList(val), dst.asArg(),
+                                  Closed.YES_NOT_RECURSIVE);
+      }
+    }
+    throw new STCRuntimeError("DOn't know how to assign to " + dst);
   }
   
   /**
@@ -183,8 +233,8 @@ public class ComputedValue<T> {
    * @param ix
    * @return
    */
-  public static ComputedValue<Arg> arrayCV(Var arr, Arg ix) {
-    return new ComputedValue<Arg>(Opcode.FAKE, ComputedValue.ARRAY_CONTENTS,
+  public static ArgCV arrayCV(Var arr, Arg ix) {
+    return new ArgCV(Opcode.FAKE, ComputedValue.ARRAY_CONTENTS,
                               Arrays.asList(arr.asArg(), ix));
   }
 
@@ -195,23 +245,23 @@ public class ComputedValue<T> {
    * @param ix
    * @return
    */
-  public static ComputedValue<Arg> arrayRefCV(Var arr, Arg ix) {
-    return new ComputedValue<Arg>(Opcode.FAKE,
+  public static ArgCV arrayRefCV(Var arr, Arg ix) {
+    return new ArgCV(Opcode.FAKE,
         ComputedValue.REF_TO_ARRAY_CONTENTS, Arrays.asList(arr.asArg(), ix));
   }
 
-  public static ComputedValue<Arg> arrayRefNestedCV(Var arr, Arg ix) {
-    return new ComputedValue<Arg>(Opcode.FAKE, 
+  public static ArgCV arrayRefNestedCV(Var arr, Arg ix) {
+    return new ArgCV(Opcode.FAKE, 
         ComputedValue.REF_TO_ARRAY_NESTED, Arrays.asList(arr.asArg(), ix));
   }
 
-  public static ComputedValue<Arg> arrayNestedCV(Var arr, Arg ix) {
-    return new ComputedValue<Arg>(Opcode.FAKE, ComputedValue.ARRAY_NESTED,
+  public static ArgCV arrayNestedCV(Var arr, Arg ix) {
+    return new ArgCV(Opcode.FAKE, ComputedValue.ARRAY_NESTED,
         Arrays.asList(arr.asArg(), ix));
   }
   
-  public static ComputedValue<Arg> structMemberCV(Var struct, String fieldName) {
-    return new ComputedValue<Arg>(Opcode.STRUCT_LOOKUP, 
+  public static ArgCV structMemberCV(Var struct, String fieldName) {
+    return new ArgCV(Opcode.STRUCT_LOOKUP, 
             Arrays.asList(struct.asArg(), Arg.createStringLit(fieldName)));
   }
   
@@ -228,6 +278,13 @@ public class ComputedValue<T> {
            (op == Opcode.FAKE && subop.equals(ComputedValue.ARRAY_CONTENTS));
   }
   
+  public boolean isArrayMemberRef() {
+    return (op == Opcode.FAKE && 
+          subop.equals(ComputedValue.REF_TO_ARRAY_NESTED)) ||
+        (op == Opcode.FAKE &&
+          subop.equals(ComputedValue.REF_TO_ARRAY_CONTENTS));
+  }
+  
   public boolean isStructMember() {
     return op == Opcode.STRUCT_LOOKUP;
   }
@@ -236,13 +293,14 @@ public class ComputedValue<T> {
    * @return the equivalence type of this computed value,
    *         assuming it wasn't copied
    */
-  public EquivalenceType equivType() {
+  public CongruenceType congType() {
     if (isAlias() || isArrayMember() ||
-        op == Opcode.LOAD_REF || isStructMember()) {
-      return EquivalenceType.ALIAS;
+        op == Opcode.LOAD_REF || isStructMember() ||
+        op == Opcode.GET_FILENAME) {
+      return CongruenceType.ALIAS;
     }
     // Assume value equivalence unless otherwise known
-    return EquivalenceType.VALUE;
+    return CongruenceType.VALUE;
   }
   
   /* Special subop strings to use with fake opcode */
@@ -255,4 +313,96 @@ public class ComputedValue<T> {
   public static final String COPY_OF = "copy_of";
   public static final String ALIAS_OF = "alias_of";
 
+  /**
+   * Shorter class name for ComputedValue parameterized with Args
+   */
+  public static class ArgCV extends ComputedValue<Arg> {
+
+    public ArgCV(Opcode op, List<Arg> inputs) {
+      super(op, inputs);
+    }
+    
+    public ArgCV(Opcode op, String subop, List<Arg> inputs) {
+      super(op, subop, inputs);
+    }
+    
+  }
+
+  /**
+   * Tagged union for Arg or recursive ComputedValue 
+   */
+  public static class RecCV {
+    public RecCV(ComputedValue<RecCV> cv) {
+      this.cv = cv;
+      this.arg = null;
+    }
+    
+    public RecCV(Opcode op, String subop, List<RecCV> inputs) {
+      this(new ComputedValue<RecCV>(op, subop, inputs));
+    }
+
+    public RecCV(Arg arg) {
+      this.cv = null;
+      this.arg = arg;
+    }
+    
+    private final ComputedValue<RecCV> cv;
+    private final Arg arg;
+    
+    public boolean isCV() {
+      return cv != null;
+    }
+    
+    public boolean isArg() {
+      return arg != null;
+    }
+    
+    public Arg arg() {
+      return arg;
+    }
+    
+    public ComputedValue<RecCV> cv() {
+      return cv;
+    }
+    
+    @Override
+    public String toString() {
+      if (isArg()) {
+        return arg.toString();
+      } else {
+        return cv.toString();
+      }
+    }
+
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result = 1;
+      result = prime * result + ((arg == null) ? 0 : arg.hashCode());
+      result = prime * result + ((cv == null) ? 0 : cv.hashCode());
+      return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj)
+        return true;
+      if (obj == null)
+        return false;
+      if (getClass() != obj.getClass())
+        return false;
+      RecCV other = (RecCV) obj;
+      if (arg == null) {
+        if (other.arg != null)
+          return false;
+      } else if (!arg.equals(other.arg))
+        return false;
+      if (cv == null) {
+        if (other.cv != null)
+          return false;
+      } else if (!cv.equals(other.cv))
+        return false;
+      return true;
+    }
+  }
 }
