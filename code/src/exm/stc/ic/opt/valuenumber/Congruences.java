@@ -3,6 +3,7 @@ package exm.stc.ic.opt.valuenumber;
 import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -71,7 +72,7 @@ public class Congruences implements ValueState {
   private final ClosedVarTracker track;
   private final CongruentSets byValue;
   private final CongruentSets byAlias;
-  private final HierarchicalSet<RecCV> maybeAssigned;
+  private final HierarchicalSet<List<Arg>> maybeAssigned;
   private final boolean reorderingAllowed;
   
   private Congruences(Logger logger,
@@ -79,7 +80,7 @@ public class Congruences implements ValueState {
                         ClosedVarTracker track,
                         CongruentSets byValue,
                         CongruentSets byAlias,
-                        HierarchicalSet<RecCV> maybeAssigned,
+                        HierarchicalSet<List<Arg>> maybeAssigned,
                         boolean reorderingAllowed) {
     this.logger = logger;
     this.parent = parent;
@@ -94,7 +95,7 @@ public class Congruences implements ValueState {
     this(logger, null, ClosedVarTracker.makeRoot(logger, reorderingAllowed),
         CongruentSets.makeRoot(CongruenceType.VALUE),
          CongruentSets.makeRoot(CongruenceType.ALIAS),
-         new HierarchicalSet<RecCV>(),
+         new HierarchicalSet<List<Arg>>(),
          reorderingAllowed);
   }
   
@@ -439,13 +440,13 @@ public class Congruences implements ValueState {
    * @param assign
    */
   private void markAssigned(String errContext, GlobalConstants consts, ValLoc vl) {
-    RecCV assigned;
+    List<Arg> assigned;
     if (vl.isAssign() == IsAssign.NO) {
       return;
     } else if (vl.isAssign() == IsAssign.TO_LOCATION) {
       Arg location = vl.location();
       assert(location.isVar()) : "Can't assign constant: " + location;
-      assigned = new RecCV(location);  
+      assigned = Collections.singletonList(location);  
     } else {
       assert(vl.isAssign() == IsAssign.TO_VALUE);
       assigned = canonicalizeAssignValue(consts, vl.value());
@@ -460,8 +461,8 @@ public class Congruences implements ValueState {
           + "This may have been caused by a double-write to a variable. "
           + "Please look at any previous warnings emitted by compiler. "
           + "Otherwise this could indicate a stc bug");
-      byAlias.markContradiction(assigned);
-      byValue.markContradiction(assigned);
+      byAlias.markContradiction(byAlias.canonicalize(consts, vl.value()));
+      byValue.markContradiction(byValue.canonicalize(consts, vl.value()));
       return;
     } 
     if (logger.isTraceEnabled()) {
@@ -474,19 +475,30 @@ public class Congruences implements ValueState {
     //          E.g. if A[x], A[y] are stored and we find out that x == y
   }
 
-  private String printableAssignValue(RecCV assigned) {
+  private String printableAssignValue(List<Arg> assigned) {
     // TODO: more user-friendly string for e.g. arround location
     return assigned.toString();
   }
 
-  private RecCV canonicalizeAssignValue(GlobalConstants consts, ArgCV val) {
-    RecCV assigned;
+  private List<Arg> canonicalizeAssignValue(GlobalConstants consts,
+                                            ArgCV val) {
     // TODO: Need to canonicalize root var by alias and subscripts by value.
     //       Probably just need to handle each location type separately
     //       E.g. Values, futures, refs, arrays.  Could model as root
     //            + subscript
-    assigned = byAlias.canonicalize(consts, val);
-    return assigned;
+    
+    if (val.isArrayMember() || val.isArrayMemberRef()) {
+      Arg arr = byAlias.findCanonical(val.getInput(0));
+      Arg ix = byValue.findCanonical(val.getInput(1));
+      return Arrays.asList(arr, ix);
+    } else if (val.op == Opcode.GET_FILENAME_VAL) {
+      
+      return Arrays.asList(Arg.createStringLit("filename"),
+                           byAlias.findCanonical(val.getInput(0)));
+    } else {
+      throw new STCRuntimeError("Don't know how to canonicalize " +
+                            val + " for assignment value tracking");
+    }
   }
 
   public void markClosed(Var var, int stmtIndex, boolean recursive) {

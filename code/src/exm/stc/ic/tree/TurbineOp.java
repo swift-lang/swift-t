@@ -1581,7 +1581,7 @@ public class TurbineOp extends Instruction {
         if (op == Opcode.STORE_REF) {
           // Use standard dereference computed value
           ValLoc retrieve = ValLoc.derefCompVal(src.getVar(), dst.getVar(),
-                                   IsValCopy.NO, IsAssign.TO_VALUE);
+                                   IsValCopy.NO, IsAssign.NO);
           return Arrays.asList(retrieve, assign);
         } else {
           return assign.asList();
@@ -1796,7 +1796,7 @@ public class TurbineOp extends Instruction {
                             IsValCopy.NO : IsValCopy.YES;
         // Only mark one output as assigned
         IsAssign isAssign = congType == CongruenceType.VALUE ?
-                            IsAssign.TO_LOCATION : IsAssign.NO;
+                            IsAssign.NO : IsAssign.NO;
         res.add(ValLoc.derefCompVal(prev.getVar(), memberRef, valCopy,
                                     isAssign));
       }
