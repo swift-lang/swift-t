@@ -37,6 +37,7 @@ import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
+import exm.stc.ic.tree.ICTree.GlobalConstants;
 import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.Statement;
 import exm.stc.ic.tree.TurbineOp.RefCountOp;
@@ -93,7 +94,7 @@ public class Validate implements OptimizerPass {
 
     for (Function fn : program.getFunctions()) {
       checkParentLinks(logger, program, fn);
-      checkUniqueVarNames(logger, program, fn);
+      checkUniqueVarNames(logger, program.constants(), fn);
       InitVariables.checkVarInit(logger, fn);
     }
   }
@@ -105,10 +106,11 @@ public class Validate implements OptimizerPass {
    * @param program
    * @param fn
    */
-  private void checkUniqueVarNames(Logger logger, Program program, Function fn) {
+  private void checkUniqueVarNames(Logger logger, GlobalConstants constants,
+        Function fn) {
     Map<String, Var> declared = new HashMap<String, Var>();
-    for (Var global: program.getGlobalVars()) {
-      declared.put(global.name(), global);
+    for (Var consts: constants.vars()) {
+      declared.put(consts.name(), consts);
     }
     
     for (Var in: fn.getInputList()) {
@@ -119,11 +121,11 @@ public class Validate implements OptimizerPass {
       declared.put(out.name(), out);
     }
     
-    checkUniqueVarNames(logger, program, fn, fn.mainBlock(), declared);
+    checkUniqueVarNames(logger, fn, fn.mainBlock(), declared);
   }
 
-  private void checkUniqueVarNames(Logger logger, Program program, Function fn,
-          Block block, Map<String, Var> declared) {
+  private void checkUniqueVarNames(Logger logger,
+      Function fn, Block block, Map<String, Var> declared) {
     for (Var v: block.getVariables()) {
       checkVarUnique(logger, fn, declared, v);
       if (v.mapping() != null) {
@@ -142,8 +144,7 @@ public class Validate implements OptimizerPass {
         checkVarUnique(logger, fn, declared, v);
       }
       for (Block inner: c.getBlocks()) { 
-        checkUniqueVarNames(logger, program, fn, inner,
-                            declared);
+        checkUniqueVarNames(logger, fn, inner, declared);
       }
     }
   }

@@ -937,9 +937,8 @@ public class STCMiddleEnd {
      TODO: Handle updateable globals
    */
   public void addGlobal(String name, Arg val) {
-    assert(val.isConstant() ||
-        (Types.isPrimValue(val.getVar().type())));
-    program.addGlobalConst(name, val);
+    assert(val.isConstant());
+    program.constants().add(name, val);
   }
 
   public void initUpdateable(Var updateable, Arg val) {

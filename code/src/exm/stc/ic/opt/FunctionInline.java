@@ -56,6 +56,7 @@ import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.BuiltinFunction;
 import exm.stc.ic.tree.ICTree.Function;
+import exm.stc.ic.tree.ICTree.GlobalConstants;
 import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.RenameMode;
 import exm.stc.ic.tree.ICTree.Statement;
@@ -455,7 +456,8 @@ public class FunctionInline implements OptimizerPass {
     ListIterator<Statement> insertPos;
     
     // rename vars
-    chooseUniqueNames(logger, prog, contextFunction, inlineBlock, renames);
+    chooseUniqueNames(logger, prog.constants(), contextFunction, inlineBlock,
+                      renames);
     
     if (logger.isTraceEnabled())
         logger.trace("inlining renames: " + renames);
@@ -512,11 +514,14 @@ public class FunctionInline implements OptimizerPass {
    * @param inlineBlock block to be inlined
    * @param replacements updated with new renames
    */
-  private static void chooseUniqueNames(Logger logger, Program prog,
+  private static void chooseUniqueNames(Logger logger,
+      GlobalConstants constants,
       Function targetFunction, Block inlineBlock,
       Map<Var, Arg> replacements) {
     Set<String> excludedNames = new HashSet<String>();
-    excludedNames.addAll(prog.getGlobalConsts().keySet());
+    for (Var globalConst: constants.vars()) {
+      excludedNames.add(globalConst.name());
+    }
     Deque<Block> blocks = new ArrayDeque<Block>();
     blocks.add(inlineBlock);
     // Walk block to find local vars

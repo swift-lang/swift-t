@@ -199,8 +199,6 @@ public class ICOptimizer {
       boolean debug, Program prog, long nIterations) throws UserException {   
     OptimizerPipeline postprocess = new OptimizerPipeline(icOutput);
     
-    postprocess.addPass(new ConstantSharing());
-    
     // Final dead code elimination to clean up any remaining dead code 
     // (from last iteration or constant sharing)
     postprocess.addPass(new DeadCodeEliminator());

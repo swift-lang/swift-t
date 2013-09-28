@@ -59,6 +59,7 @@ import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmRequest;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
+import exm.stc.ic.tree.ICTree.GlobalConstants;
 import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.RenameMode;
 import exm.stc.ic.tree.ICTree.Statement;
@@ -123,7 +124,7 @@ public class ForwardDataflow implements OptimizerPass {
       boolean changes;
       int pass = 1;
       do {
-        Congruences fnState = initFuncState(logger, program, f);
+        Congruences fnState = initFuncState(logger, program.constants(), f);
         
         logger.trace("closed variable analysis on function " + f.getName()
             + " pass " + pass);
@@ -136,19 +137,19 @@ public class ForwardDataflow implements OptimizerPass {
   }
 
   private Congruences initFuncState(Logger logger,
-        Program program, Function f) {
+        GlobalConstants constants, Function f) {
     Congruences congruent = new Congruences(logger, reorderingAllowed);
-    for (Var v : program.getGlobalVars()) {
+    for (Var v : constants.vars()) {
       // First, all constants can be treated as being set
       if (v.storage() == Alloc.GLOBAL_CONST) {
-        Arg val = program.lookupGlobalConst(v.name());
+        Arg val = constants.lookupByVar(v);
         assert (val != null) : v.name();
         
         ValLoc assign = ComputedValue.assignComputedVal(v, val);
         ValLoc retrieve = new ValLoc(ComputedValue.retrieveCompVal(v),
                           val, Closed.YES_NOT_RECURSIVE, IsValCopy.NO);
-        congruent.update(f.getName(), assign);
-        congruent.update(f.getName(), retrieve);
+        congruent.update(constants, f.getName(), assign);
+        congruent.update(constants, f.getName(), retrieve);
       }
     }
     
@@ -302,7 +303,7 @@ public class ForwardDataflow implements OptimizerPass {
                     Function f, ExecContext execCx) {
     Map<Block, Congruences> result = new HashMap<Block, Congruences>();
     findCongruencesRec(program, f, f.mainBlock(), execCx,
-          initFuncState(logger, program, f), result);
+          initFuncState(logger, program.constants(), f), result);
     return result;
   }
   
@@ -313,7 +314,7 @@ public class ForwardDataflow implements OptimizerPass {
       if (v.mapping() != null && Types.isFile(v.type())) {
         // Track the mapping
         ValLoc filenameVal = ValLoc.makeFilename(v.mapping().asArg(), v);
-        state.update(f.getName(), filenameVal);
+        state.update(program.constants(), f.getName(), filenameVal);
       }
     }
     
@@ -332,7 +333,7 @@ public class ForwardDataflow implements OptimizerPass {
         // conditional z which has the value from all branches stored
         UnifiedValues unified = findCongruencesContRec(program, f,
                                execCx, stmt.conditional(), state, result);
-        state.addUnifiedValues(f.getName(), unified);
+        state.addUnifiedValues(program.constants(), f.getName(), unified);
       }
     }
     
@@ -363,7 +364,7 @@ public class ForwardDataflow implements OptimizerPass {
      * NOTE: we don't delete any instructions on this pass, but rather rely on
      * dead code elim to later clean up unneeded instructions instead.
      */
-    updateCongruent(logger, f, inst, state);
+    updateCongruent(logger, prog.constants(), f, inst, state);
 
     updateTransitiveDeps(prog, inst, state);
 
@@ -405,7 +406,8 @@ public class ForwardDataflow implements OptimizerPass {
     }
 
     if (unifyBranches) {
-      return UnifiedValues.unify(logger, fn, reorderingAllowed, state, cont,
+      return UnifiedValues.unify(logger, prog.constants(), fn,
+                                reorderingAllowed, state, cont,
                                 branchStates, cont.getBlocks());
     } else {
       return UnifiedValues.EMPTY;
@@ -470,7 +472,7 @@ public class ForwardDataflow implements OptimizerPass {
       if (v.mapping() != null && Types.isFile(v.type())) {
         // Track the mapping
         ValLoc filenameVal = ValLoc.makeFilename(v.mapping().asArg(), v);
-        state.update(f.getName(), filenameVal);
+        state.update(program.constants(), f.getName(), filenameVal);
       }
     }
 
@@ -577,7 +579,8 @@ public class ForwardDataflow implements OptimizerPass {
     }
 
     if (unifyBranches) {
-      return UnifiedValues.unify(logger, fn, reorderingAllowed, state, cont,
+      return UnifiedValues.unify(logger, program.constants(), fn,
+                                reorderingAllowed, state, cont,
                                 branchStates, contBlocks);
     } else {
       return UnifiedValues.EMPTY;
@@ -630,7 +633,7 @@ public class ForwardDataflow implements OptimizerPass {
         // conditional z which has the value from all branches stored
         UnifiedValues unified = recurseOnContinuation(logger, program, f,
             execCx, stmt.conditional(), state);
-        state.addUnifiedValues(f.getName(), unified);
+        state.addUnifiedValues(program.constants(), f.getName(), unified);
       }
     }
   }
@@ -664,7 +667,7 @@ public class ForwardDataflow implements OptimizerPass {
      * NOTE: we don't delete any instructions on this pass, but rather rely on
      * dead code elim to later clean up unneeded instructions instead.
      */
-    updateCongruent(logger, f, inst, state);
+    updateCongruent(logger, prog.constants(), f, inst, state);
 
     updateTransitiveDeps(prog, inst, state);
 
@@ -720,8 +723,8 @@ public class ForwardDataflow implements OptimizerPass {
     }
   }
 
-  private static void updateCongruent(Logger logger, Function function,
-            Instruction inst, Congruences state) {
+  private static void updateCongruent(Logger logger, GlobalConstants consts,
+            Function function, Instruction inst, Congruences state) {
     List<ValLoc> irs = inst.getResults(state);
     
     if (irs != null) {
@@ -729,7 +732,7 @@ public class ForwardDataflow implements OptimizerPass {
         logger.trace("irs: " + irs.toString());
       }
       for (ValLoc resVal : irs) {
-        state.update(function.getName(), resVal);
+        state.update(consts, function.getName(), resVal);
       }
     } else {
       logger.trace("no icvs");

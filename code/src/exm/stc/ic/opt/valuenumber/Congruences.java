@@ -3,6 +3,7 @@ package exm.stc.ic.opt.valuenumber;
 import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +22,7 @@ import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
 import exm.stc.ic.opt.valuenumber.ComputedValue.RecCV;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
 import exm.stc.ic.tree.ICInstructions.Instruction.ValueState;
+import exm.stc.ic.tree.ICTree.GlobalConstants;
 import exm.stc.ic.tree.ICTree.RenameMode;
 import exm.stc.ic.tree.Opcode;
 
@@ -61,6 +63,7 @@ public class Congruences implements ValueState {
    */
   final Logger logger;
   final Congruences parent;
+  final Map<Arg, Var> createdConstants = new HashMap<Arg, Var>();
   final ValueTracker track;
   final CongruentSets byValue;
   final CongruentSets byAlias;
@@ -116,10 +119,12 @@ public class Congruences implements ValueState {
     return child;
   }
   
-  public void update(String errContext, ValLoc resVal) {
+  public void update(GlobalConstants consts, String errContext,
+                     ValLoc resVal) {
     if (resVal.congType() == CongruenceType.ALIAS) {
       // Update aliases only if congType matches
-      update(errContext, resVal.location(), resVal.value(), byAlias, true);
+      update(consts, errContext, resVal.location(), resVal.value(),
+                                                    byAlias, true);
     } else {
       assert(resVal.congType() == CongruenceType.VALUE);
     }
@@ -133,13 +138,14 @@ public class Congruences implements ValueState {
     markClosed(resVal.location(), resVal.locClosed());
     
     // Both alias and value links result in updates to value
-    update(errContext, resVal.location(), resVal.value(),
-                  byValue, true);
+    update(consts, errContext, resVal.location(), resVal.value(),
+                                                  byValue, true);
   }
   
   /**
    * Update a congruentSet with the information that value is stored
    * in location
+   * @param consts Global constants to add canonical vals if needed
    * @param errContext
    * @param location
    * @param value
@@ -147,13 +153,13 @@ public class Congruences implements ValueState {
    * @param addInverses
    * @return
    */
-  public void update(String errContext,
+  public void update(GlobalConstants consts, String errContext,
             Arg location, ArgCV value, CongruentSets congruent,
             boolean addInverses) {
     // LocCV may already be in congruent set
     Arg canonLoc = congruent.findCanonical(new RecCV(location)); 
     // Canonicalize value based on existing congruences
-    RecCV canonVal = congruent.canonicalize(value);
+    RecCV canonVal = congruent.canonicalize(consts, value);
   
     // Check if value is already associated with a location
     Arg canonLocFromVal = congruent.findCanonical(canonVal);
@@ -167,7 +173,7 @@ public class Congruences implements ValueState {
     }
     
     if (addInverses) {
-      addInverses(errContext, canonLoc, canonVal);
+      addInverses(consts, errContext, canonLoc, canonVal);
     }
   }
 
@@ -187,7 +193,8 @@ public class Congruences implements ValueState {
    * @param canonLoc
    * @param canonVal
    */
-  private void addInverses(String errContext, Arg canonLoc, RecCV canonVal) {
+  private void addInverses(GlobalConstants consts, String errContext,
+                                    Arg canonLoc, RecCV canonVal) {
     if (canonVal.isCV() && canonVal.cv().inputs.size() == 1) {
       ComputedValue<RecCV> cv = canonVal.cv();
       RecCV input = cv.getInput(0);
@@ -198,11 +205,11 @@ public class Congruences implements ValueState {
         CongruentSets valueSet = getCongruentSet(CongruenceType.VALUE);
         if (cv.op().isAssign()) {
           ArgCV invVal = ComputedValue.retrieveCompVal(canonLoc.getVar());
-          update(errContext, invOutput, invVal, valueSet, false);
+          update(consts, errContext, invOutput, invVal, valueSet, false);
         } else if (cv.op().isRetrieve()) {
           ArgCV invVal = new ArgCV(Opcode.assignOpcode(invOutput.getVar()),
                                    canonLoc.asList());
-          update(errContext, invOutput, invVal, valueSet, false);
+          update(consts, errContext, invOutput, invVal, valueSet, false);
         }
       }
     }
@@ -296,9 +303,9 @@ public class Congruences implements ValueState {
   
     if (congruent.congType == CongruenceType.VALUE) {
       // Constants trump all
-      if (oldArg.isConstant()) {
+      if (isConst(oldArg)) {
         return oldArg;
-      } else if (newArg.isConstant()) {
+      } else if (isConst(newArg)) {
         return oldArg;
       }
     } else {
@@ -331,6 +338,16 @@ public class Congruences implements ValueState {
     
     // otherwise keep old arg
     return oldArg;
+  }
+
+  /**
+   * Check if argument is a value or future constant
+   * @param arg
+   * @return
+   */
+  private boolean isConst(Arg arg) {
+    return arg.isConstant() || 
+        (arg.isVar() && arg.getVar().storage() == Alloc.GLOBAL_CONST);
   }
 
   private Var getCanonicalAlias(Arg varArg) {
@@ -499,7 +516,7 @@ public class Congruences implements ValueState {
     return getCongruentSet(congType).findCongruentValues(arg);
   }
   
-  public void addUnifiedValues(String errContext,
+  public void addUnifiedValues(GlobalConstants consts, String errContext,
                                UnifiedValues unified) {
     // TODO: need to refine this merge to compensate for sets being
     //      named differently in child
@@ -510,7 +527,7 @@ public class Congruences implements ValueState {
       markClosed(closed, true);
     }
     for (ValLoc loc: unified.availableVals) {
-      update(errContext, loc);
+      update(consts, errContext, loc);
     }
   }
 

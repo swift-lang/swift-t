@@ -58,7 +58,7 @@ public class UniqueVarNames implements OptimizerPass {
   @Override
   public void optimize(Logger logger, Program in) {
     for (Function f: in.getFunctions()) {
-      makeVarNamesUnique(f, in.getGlobalVars());
+      makeVarNamesUnique(f, in.constants().vars());
     }
   }
 

@@ -77,8 +77,8 @@ public class ConstantFold implements OptimizerPass {
   public void optimize(Logger logger, Program in) throws InvalidOptionException {
     HierarchicalMap<Var, Arg> globalConsts =  new HierarchicalMap<Var, Arg>();
     // Populate global constants
-    for (Var global: in.getGlobalVars()) {
-      Arg constVal = in.lookupGlobalConst(global.name());
+    for (Var global: in.constants().vars()) {
+      Arg constVal = in.constants().lookupByVar(global);
       globalConsts.put(global, constVal);
     }
     

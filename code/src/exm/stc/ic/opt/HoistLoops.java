@@ -80,7 +80,7 @@ public class HoistLoops implements OptimizerPass {
     for (Function f: prog.getFunctions()) {
       HoistTracking global = new HoistTracking();
       // Global constants already written
-      for (Var gv: prog.getGlobalVars()) {
+      for (Var gv: prog.constants().vars()) {
         global.write(gv, false);
         global.declare(gv);
       }

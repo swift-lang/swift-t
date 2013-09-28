@@ -43,7 +43,7 @@ public class LoopUnroller implements OptimizerPass {
       logger.debug("looking to unroll loops in " + f.getName());
       if (unrollLoops(logger, prog, f, f.mainBlock())) {
         // Unrolling can introduce duplicate vars
-        UniqueVarNames.makeVarNamesUnique(f, prog.getGlobalVars());
+        UniqueVarNames.makeVarNamesUnique(f, prog.constants().vars());
         FlattenNested.flattenNestedBlocks(f.mainBlock());
       }
     }

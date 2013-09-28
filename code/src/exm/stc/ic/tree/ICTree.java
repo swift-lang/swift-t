@@ -86,18 +86,8 @@ public class ICTree {
   
   public static class Program {
 
-    /**
-     * Use treemap to keep them in alpha order
-     */
-    private final TreeMap<String, Arg> globalConsts = 
-                                            new TreeMap<String, Arg>();
-    private final HashMap<Arg, String> globalConstsInv = 
-                                            new HashMap<Arg, String>();
-    /**
-     * Corresponding variable declarations
-     */
-    private final Set<Var> globalVars = new HashSet<Var>();
-
+    private final GlobalConstants constants = new GlobalConstants();
+    
     private final ArrayList<Function> functions = new ArrayList<Function>();
     private final Map<String, Function> functionsByName =
                                             new HashMap<String, Function>();
@@ -153,15 +143,7 @@ public class ICTree {
   
       gen.turbineStartup();
       
-      // Global Constants
-      logger.debug("Generating global constants");
-      for (Entry<String, Arg> c: globalConsts.entrySet()) {
-        String name = c.getKey();
-        Arg val = c.getValue();
-        gen.addGlobal(name, val);
-      }
-      logger.debug("Done generating global constants");
-      
+      constants.generate(logger, gen);
     }
     
     public void addRequiredPackage(String pkg, String version) {
@@ -273,31 +255,100 @@ public class ICTree {
     public ListIterator<BuiltinFunction> builtinIterator() {
       return builtinFuns.listIterator();
     }
+    
+    public GlobalConstants constants() {
+      return constants;
+    }
+    
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      prettyPrint(sb);
+      return sb.toString();
+    }
+  
+    public void prettyPrint(StringBuilder out) {
+      for (Pair<String, String> req: required) {
+        out.append("require " + req.val1 + "::" + req.val2 + "\n");
+      }
+      
+      for (StructType st: structTypes) {
+        out.append(st.toString() + "\n");
+      }
+      
+      constants.prettyPrint(out);
+      out.append("\n");
+      
+      for (BuiltinFunction f: builtinFuns) {
+        f.prettyPrint(out);
+        out.append("\n");
+      }
+  
+      for (Function f: functions) {
+        f.prettyPrint(out);
+        out.append("\n");
+      }
+    }
+  
+  
+    public void log(PrintStream icOutput, String codeTitle) {
+      StringBuilder ic = new StringBuilder();
+      try {
+        icOutput.append("\n\n" + codeTitle + ": \n" + 
+            "============================================\n");
+        prettyPrint(ic) ;
+        icOutput.append(ic.toString());
+        icOutput.flush();
+      } catch (Exception e) {
+        icOutput.append("ERROR while generating code. Got: "
+            + ic.toString());
+        icOutput.flush();
+        e.printStackTrace();
+        throw new STCRuntimeError("Error while generating IC: " +
+        e.toString());
+      }
+    }
+  }
+  
+  public static class GlobalConstants {
+    /**
+     * Use treemap to keep them in alpha order
+     */
+    private final TreeMap<Var, Arg> globalConsts = new TreeMap<Var, Arg>();
+    private final HashMap<Arg, Var> globalConstsInv =  new HashMap<Arg, Var>();
+    private final HashSet<String> usedNames = new HashSet<String>(); 
 
-    public void addGlobalConst(String name, Arg val) {
-      if (globalConsts.put(name, val) != null) {
-        throw new STCRuntimeError("Overwriting global constant "
-            + name);
-      }
-      globalConstsInv.put(val, name);
-      Var globalVar;
-      if (val.isVar()) {
-        globalVar = val.getVar();
-        assert(globalVar.defType() == DefType.GLOBAL_CONST);
-      } else {
-        globalVar = new Var(val.futureType(), name, Alloc.GLOBAL_CONST,
-                            DefType.GLOBAL_CONST);
-      }
-      globalVars.add(globalVar);
+    public Var add(String name, Arg val) {
+      Var var = new Var(val.futureType(), name, Alloc.GLOBAL_CONST,
+          DefType.GLOBAL_CONST);
+      
+      Arg prevVal = globalConsts.put(var, val);
+      assert(prevVal == null) :
+          new STCRuntimeError("Overwriting global constant " + name);
+    
+      Var prev = globalConstsInv.put(val, var);
+      assert(prev == null) :
+          "Duplicate global const for value " + val + " " + prev;
+      
+      usedNames.add(name);
+      return var;
     }
     
     /** 
-     * Add global const with generated name
+     * Return a global constant with matching value, otherwise create it
      * @param val
-     * @return
+     * @return global constant for given value
      */
-    public String addGlobalConst(Arg val) {
-      
+    public Var getOrCreateByVal(Arg val) {
+      Var existing = lookupByValue(val);
+      if (existing != null) {
+        return existing;
+      } else {
+        return autoCreate(val);
+      }
+    }
+
+    private Var autoCreate(Arg val) {
       String suffix;
       switch(val.kind) {
       case BOOLVAL:
@@ -331,92 +382,58 @@ public class ICTree {
       String origname = Var.GLOBAL_CONST_VAR_PREFIX + suffix;
       String name = origname;
       int seq = 0;
-      while (globalConsts.containsKey(name)) {
+      while (usedNames.contains(name)) {
         seq++;
         name = origname + "-" + seq;
       }
-      addGlobalConst(name, val);
-      return name;
+      return add(name, val);
     }
     
-    public void removeGlobalConst(String unused) {
+    public void remove(Var unused) {
       Arg val = globalConsts.remove(unused);
       globalConstsInv.remove(val);
     }
 
-    public String invLookupGlobalConst(Arg val) {
+    public Var lookupByValue(Arg val) {
       return this.globalConstsInv.get(val);
  
     }
   
-    public Arg lookupGlobalConst(String name) {
-      return this.globalConsts.get(name);
+    public Arg lookupByVar(Var var) {
+      return this.globalConsts.get(var);
  
     }
 
-    public SortedMap<String, Arg> getGlobalConsts() {
+    public SortedMap<Var, Arg> map() {
       return Collections.unmodifiableSortedMap(globalConsts);
     }
     
-    public Collection<Var> getGlobalVars() {
-      return globalVars;
+    public Collection<Var> vars() {
+      return globalConsts.keySet();
     }
-    
-    @Override
-    public String toString() {
-      StringBuilder sb = new StringBuilder();
-      prettyPrint(sb);
-      return sb.toString();
+
+    public void generate(Logger logger, CompilerBackend gen) {
+      // Global Constants
+      logger.debug("Generating global constants");
+      for (Entry<Var, Arg> c: globalConsts.entrySet()) {
+        String name = c.getKey().name();
+        Arg val = c.getValue();
+        gen.addGlobal(name, val);
+      }
+      logger.debug("Done generating global constants");
     }
-  
+
     public void prettyPrint(StringBuilder out) {
-      for (Pair<String, String> req: required) {
-        out.append("require " + req.val1 + "::" + req.val2 + "\n");
-      }
-      
-      for (StructType st: structTypes) {
-        out.append(st.toString() + "\n");
-      }
-      
-      for (Entry<String, Arg> constE: globalConsts.entrySet()) {
+      for (Entry<Var, Arg> constE: globalConsts.entrySet()) {
         Arg val = constE.getValue();
-        out.append("const " +   constE.getKey() + " = ");
+        out.append("const " +   constE.getKey().name() + " = ");
         out.append(val.toString());
         out.append(" as " + val.futureType().typeName());
         out.append("\n");
       }
-      
-      out.append("\n");
-      
-      for (BuiltinFunction f: builtinFuns) {
-        f.prettyPrint(out);
-        out.append("\n");
-      }
-  
-      for (Function f: functions) {
-        f.prettyPrint(out);
-        out.append("\n");
-      }
+       
     }
-  
-  
-    public void log(PrintStream icOutput, String codeTitle) {
-      StringBuilder ic = new StringBuilder();
-      try {
-        icOutput.append("\n\n" + codeTitle + ": \n" + 
-            "============================================\n");
-        prettyPrint(ic) ;
-        icOutput.append(ic.toString());
-        icOutput.flush();
-      } catch (Exception e) {
-        icOutput.append("ERROR while generating code. Got: "
-            + ic.toString());
-        icOutput.flush();
-        e.printStackTrace();
-        throw new STCRuntimeError("Error while generating IC: " +
-        e.toString());
-      }
-    }
+
   }
 
   public static class BuiltinFunction {

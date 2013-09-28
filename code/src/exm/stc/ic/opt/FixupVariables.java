@@ -20,7 +20,6 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -32,8 +31,8 @@ import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
@@ -44,6 +43,7 @@ import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.CleanupAction;
 import exm.stc.ic.tree.ICTree.Function;
+import exm.stc.ic.tree.ICTree.GlobalConstants;
 import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.Statement;
 
@@ -78,14 +78,15 @@ public class FixupVariables implements OptimizerPass {
                                   boolean updateLists) {
     Set<Var> referencedGlobals = new HashSet<Var>();
     for (Function fn : prog.getFunctions()) {
-      fixupFunction(logger, prog, fn, referencedGlobals, updateLists);
+      fixupFunction(logger, prog.constants(), fn, referencedGlobals,
+                    updateLists);
     }
     
     if (updateLists)
-      removeUnusedGlobals(prog, referencedGlobals);
+      removeUnusedGlobals(prog.constants(), referencedGlobals);
   }
 
-  public static void fixupFunction(Logger logger, Program prog,
+  public static void fixupFunction(Logger logger, GlobalConstants constants,
           Function fn, Set<Var> referencedGlobals, boolean updateLists) {
     HierarchicalSet<Var> fnargs = new HierarchicalSet<Var>();
     for (Var v : fn.getInputList()) {
@@ -94,12 +95,7 @@ public class FixupVariables implements OptimizerPass {
     for (Var v : fn.getOutputList()) {
       fnargs.add(v);
     }
-    for (Entry<String, Arg> e : prog.getGlobalConsts().entrySet()) {
-      Arg a = e.getValue();
-      Var v = new Var(a.futureType(), e.getKey(),
-          Alloc.GLOBAL_CONST, DefType.GLOBAL_CONST, null);
-      fnargs.add(v);
-    }
+    fnargs.addAll(constants.vars());
     
     AliasTracker aliases = new AliasTracker();
     
@@ -535,13 +531,13 @@ public class FixupVariables implements OptimizerPass {
     return addedGlobals;
   }
 
-  private static void removeUnusedGlobals(Program prog,
+  private static void removeUnusedGlobals(GlobalConstants constants,
        Set<Var> referencedGlobals) {
-    Set<String> globNames = new HashSet<String>(prog.getGlobalConsts().keySet());
-    Set<String> referencedGlobNames = Var.nameSet(referencedGlobals);
-    globNames.removeAll(referencedGlobNames);
-    for (String unused: globNames) {
-      prog.removeGlobalConst(unused);
+    Set<Var> globNames = new HashSet<Var>(
+                                constants.map().keySet());
+    globNames.removeAll(referencedGlobals);
+    for (Var unused: globNames) {
+      constants.remove(unused);
     }
   }
 }

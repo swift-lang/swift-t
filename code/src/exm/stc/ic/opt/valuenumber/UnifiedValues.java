@@ -31,6 +31,7 @@ import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
+import exm.stc.ic.tree.ICTree.GlobalConstants;
 import exm.stc.ic.tree.TurbineOp;
 
 /**
@@ -63,8 +64,8 @@ public class UnifiedValues {
    * @param branchStates
    * @return
    */
-  public static UnifiedValues unify(Logger logger, Function fn,
-                 boolean reorderingAllowed,
+  public static UnifiedValues unify(Logger logger, GlobalConstants consts,
+                 Function fn, boolean reorderingAllowed,
                  Congruences state, Continuation cont,
                  List<Congruences> branchStates, List<Block> branchBlocks) {
     if (logger.isTraceEnabled()) {
@@ -102,7 +103,8 @@ public class UnifiedValues {
 
           List<ArgCV> newAllBranchCVs = findAllBranchCVs(state, congType,
                                             branchStates, allUnifiedCVs);
-          Pair<List<ValLoc>, Boolean> result = unifyCVs(fn, reorderingAllowed,
+          Pair<List<ValLoc>, Boolean> result = unifyCVs(consts, fn,
+                                  reorderingAllowed,
                                   cont.parent(), congType, branchStates,
                                   branchBlocks, newAllBranchCVs, unifiedVars);
           availVals.addAll(result.val1);
@@ -141,7 +143,8 @@ public class UnifiedValues {
    * @param unifiedLocs 
    * @return
    */
-  private static Pair<List<ValLoc>, Boolean> unifyCVs(Function fn,
+  private static Pair<List<ValLoc>, Boolean> unifyCVs(GlobalConstants consts,
+      Function fn,
       boolean reorderingAllowed, Block parent, CongruenceType congType,
       List<Congruences> branchStates, List<Block> branchBlocks,
       List<ArgCV> allBranchCVs, Map<List<Arg>, Var> unifiedLocs) {
@@ -203,7 +206,7 @@ public class UnifiedValues {
         Var unifiedLoc = unifiedLocs.get(branchLocs);
         availVals.add(createUnifiedCV(cv, unifiedLoc.asArg(), allClosed, anyValCopy));
       } else {
-        Var unifiedLoc = createUnifyingVar(fn, parent, branchStates,
+        Var unifiedLoc = createUnifyingVar(consts, fn, parent, branchStates,
                   branchBlocks, branchLocs, firstLoc.type());
         createdNewBranchCVs = true;
 
@@ -219,7 +222,7 @@ public class UnifiedValues {
   }
 
 
-  private static Var createUnifyingVar(Function fn,
+  private static Var createUnifyingVar(GlobalConstants consts, Function fn,
       Block parent, List<Congruences> branchStates, List<Block> branchBlocks,
       List<Arg> locs, Type type) {
     boolean isValue = Types.isPrimValue(type);
@@ -253,7 +256,7 @@ public class UnifiedValues {
       
       // Add in additional computed values resulting from copy
       Congruences branchState = branchStates.get(i);
-      branchState.update(fn.getName(), copyVal);
+      branchState.update(consts, fn.getName(), copyVal);
     }
     return unifiedLoc;
   }

@@ -26,6 +26,7 @@ import exm.stc.ic.opt.Semantics;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
 import exm.stc.ic.opt.valuenumber.ComputedValue.RecCV;
+import exm.stc.ic.tree.ICTree.GlobalConstants;
 import exm.stc.ic.tree.Opcode;
 
 /**
@@ -562,10 +563,11 @@ class CongruentSets {
   /**
    * Do any canonicalization of result value here, e.g. to implement
    * constant folding, etc.
+   * @param consts 
    * @param resVal
    * @return
    */
-  public RecCV canonicalize(ArgCV origVal) {
+  public RecCV canonicalize(GlobalConstants consts, ArgCV origVal) {
     // First replace the args with whatever current canonical values
     RecCV result = canonicalizeInputs(origVal);
     
@@ -580,7 +582,13 @@ class CongruentSets {
         if (constantFolded != null) {
           result = constantFolded;
         }
-      }      
+      }  
+    }
+
+    // Replace a constant future with a global constant
+    // This has effect of creating global constants for any used values
+    if (result.isCV()) {
+      result = tryReplaceGlobalConstant(consts, result);
     }
     
     return result;
@@ -652,6 +660,19 @@ class CongruentSets {
       // ARGV, etc too
     }
     return null;
+  }
+
+  private RecCV tryReplaceGlobalConstant(GlobalConstants consts, RecCV result) {
+    ComputedValue<RecCV> val = result.cv();
+    if (val.op().isAssign()) {
+      RecCV assignedVal = val.getInput(0);
+      if (assignedVal.isArg() && assignedVal.arg().isConstant()) {
+        Arg constVal = assignedVal.arg();
+        Var globalConst = consts.getOrCreateByVal(constVal);
+        result = new RecCV(globalConst.asArg());
+      }
+    }
+    return result;
   }
 
   /**
