@@ -323,9 +323,11 @@ public class ForwardDataflow implements OptimizerPass {
         inlined = true;
       }
     }
+    
 
     if (inlined) {
       // Rebuild data structures for this block after inlining
+      validateState(state);
       return true;
     }
 
@@ -334,7 +336,10 @@ public class ForwardDataflow implements OptimizerPass {
     for (Continuation cont : block.getContinuations()) {
       recurseOnContinuation(logger, program, f, execCx, cont, state);
     }
-
+    
+    // Check that things are valid before leaving
+    validateState(state);
+    
     // Didn't inline everything, all changes should be propagated ok
     return false;
   }
@@ -716,5 +721,14 @@ public class ForwardDataflow implements OptimizerPass {
       }
     }
     return filenameVals;
+  }
+
+  /**
+   * Do any validations of the state of things
+   */
+  private void validateState(CongruentVars state) {
+    if (ICOptimizer.SUPER_DEBUG) {
+      state.validate();
+    }
   }
 }

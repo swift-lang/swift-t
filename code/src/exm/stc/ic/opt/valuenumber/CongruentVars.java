@@ -416,6 +416,14 @@ public class CongruentVars implements ValueState {
   }
   
   /**
+   * Do any internal validations
+   */
+  public void validate() {
+    byAlias.validate();
+    byValue.validate();
+  }
+  
+  /**
    * See if the result of a value retrieval is already in scope
    * 
    * @param v
@@ -633,10 +641,17 @@ public class CongruentVars implements ValueState {
         } while (curr != null);
       }
     }
+    
+    public void validate() {
+      // Building active sets performs some validation
+      activeSets();
+    }
 
     /**
      * Reconstruct current sets and check consistency between
-     * canonical and canonicalInvs 
+     * canonical and canonicalInvs.
+     * Note that this also checks internal consistency between
+     * canonical and canonicalInv  
      * @return
      */
     private MultiMap<Arg, RecCV> activeSets() {
@@ -920,7 +935,10 @@ public class CongruentVars implements ValueState {
     /**
      * Recanonicalize components.  If an old computed value had
      * a reference to oldCanonical in it, then it's no longer
-     * canonical, so need to replace
+     * canonical, so need to replace.
+     * 
+     * TODO: need to handle fact that canonicalizing components
+     * might result in recursively merging classes!
      * @param oldComponent
      * @param newComponent
      */
