@@ -438,7 +438,7 @@ public class Congruences implements ValueState {
 
   private boolean isClosed(Arg varArg, int stmtIndex, boolean recursive) {
     // Find canonical var for alias, and check if that is closed.
-    if (!trackClosed(varArg.getVar())) {
+    if (varArg.isConstant() || !trackClosed(varArg.getVar())) {
       // No write refcount - always closed
       logger.trace(varArg + " has no refcount");
       return true;
