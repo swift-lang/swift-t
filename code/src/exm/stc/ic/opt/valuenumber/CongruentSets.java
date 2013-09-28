@@ -623,7 +623,7 @@ class CongruentSets {
           newOuterCV1 = outerCV.substituteInputs(newInputs);
         }
         // Then do other canonicalization
-        ArgOrCV newOuterCV2 = canonicalize(consts, newOuterCV1);
+        ArgOrCV newOuterCV2 = canonicalizeInternal(consts, newOuterCV1, false);
         if (newOuterCV2.isArg() || !newOuterCV2.cv().equals(outerCV)) {
           if (logger.isTraceEnabled()) {
             logger.trace("Sub " + oldComponent + " for "
@@ -737,14 +737,19 @@ class CongruentSets {
    * @return
    */
   public ArgOrCV canonicalize(GlobalConstants consts, ArgCV origVal) {
-    // First replace the args with whatever current canonical values,
-    // then perform additional canonicalization
-    return canonicalizeInternal(consts, canonicalizeInputs(origVal));
+    return canonicalizeInternal(consts, origVal, true);
+  }
+  
+  private ArgOrCV canonicalizeInternal(GlobalConstants consts, ArgCV origVal,
+                                       boolean addComponentIndex) {
+    // First replace the args with whatever current canonical values
+    ArgCV replacedInputs = canonicalizeInputs(origVal, addComponentIndex);
+    // Then perform additional canonicalization
+    return canonicalizeInternal(consts, replacedInputs);
   }
     
 
-  private ArgOrCV canonicalizeInternal(GlobalConstants consts,
-                                        ArgCV val) {
+  private ArgOrCV canonicalizeInternal(GlobalConstants consts, ArgCV val) {
     ArgOrCV result = null;
     // Then do additional transformations such as constant folding
     if (val.isCopy() || val.isAlias()) {
@@ -784,9 +789,10 @@ class CongruentSets {
     * Convert ComputedValue parameterized with <Arg> to
     *       ComputedValue parameterized with ComputedValue
    * @param cv
+   * @param addComponentIndex whether to add to component index
    * @return
    */
-  private ArgCV canonicalizeInputs(ArgCV cv) {
+  private ArgCV canonicalizeInputs(ArgCV cv, boolean addComponentIndex) {
     List<Arg> inputs = cv.getInputs();
     List<Arg> newInputs = new ArrayList<Arg>(inputs.size());
     for (Arg input: inputs) {
@@ -805,7 +811,7 @@ class CongruentSets {
     }
   
     ArgCV newCV = new ArgCV(cv.op, cv.subop, newInputs);
-    if (findCanonicalInternal(newCV) == null) {
+    if (addComponentIndex && findCanonicalInternal(newCV) == null) {
       // Add to index if not present
       for (Arg newInput: newInputs) {
         addInputIndex(newInput, newCV);

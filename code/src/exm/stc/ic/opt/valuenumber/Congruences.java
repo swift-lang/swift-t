@@ -271,6 +271,14 @@ public class Congruences implements ValueState {
       return;
     }
     
+    if (!checkNoContradiction(errContext, congruent.congType,
+        value, newLoc, oldLoc)) {
+      // Mark both sets as in error and do not merge 
+      congruent.markContradiction(newLoc);
+      congruent.markContradiction(oldLoc);
+      return;
+    }
+    
     // Must merge.  Select which is the preferred value
     // (for replacement purposes, etc.)
     Arg winner = preferred(congruent, oldLoc, newLoc, newIsAssign, stmtIndex);
@@ -280,12 +288,6 @@ public class Congruences implements ValueState {
                    " winner: " + winner);
     }
     changeCanonical(consts, congruent, loser, winner);
-    
-    // Mark contradiction after changes
-    if (!checkNoContradiction(errContext, congruent.congType,
-                              value, newLoc, oldLoc)) {
-      congruent.markContradiction(newLoc);
-    }
   }
 
   /**
