@@ -720,7 +720,7 @@ public class ValueNumber implements OptimizerPass {
                                     insertContext, noWaitRequired, alt);
     
     // Need filenames for output file values
-    Map<Var, Var> filenameVals = loadOutputFileNames(state,
+    Map<Var, Var> filenameVals = loadOutputFileNames(state, stmtIndex,
                       req.out, insertContext, insertPoint, req.mapOutVars);
     
     List<Var> outFetched = OptUtil.createLocalOpOutputVars(insertContext,
@@ -790,8 +790,8 @@ public class ValueNumber implements OptimizerPass {
   }
 
   private static Map<Var, Var> loadOutputFileNames(Congruences state,
-      List<Var> outputs, Block insertContext,
-      ListIterator<Statement> insertPoint,
+      int oldStmtIndex, List<Var> outputs,
+      Block insertContext, ListIterator<Statement> insertPoint,
       boolean mapOutVars) {
     if (outputs == null)
       outputs = Collections.emptyList();
@@ -811,9 +811,8 @@ public class ValueNumber implements OptimizerPass {
           // Load existing mapping
           // Should only get here if value of mapped var is available.
           assert(output.mapping() != null);
-          int insertStmtIndex = insertPoint.nextIndex();
-          assert(state.isClosed(output.mapping(), insertStmtIndex))
-               : output.mapping() + " not closed @ " + insertStmtIndex;
+          assert(state.isClosed(output.mapping(), oldStmtIndex))
+               : output.mapping() + " not closed @ " + oldStmtIndex;
           Var filenameAlias = insertContext.declareVariable(Types.F_STRING,
               OptUtil.optFilenamePrefix(insertContext, output),
               Alloc.ALIAS, DefType.LOCAL_COMPILER, null);
