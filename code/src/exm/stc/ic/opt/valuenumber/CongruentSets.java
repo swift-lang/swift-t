@@ -454,7 +454,10 @@ class CongruentSets {
 
   private void addSetEntry(ArgOrCV val, Arg canonicalVal) {
     logger.trace("Add " + val + " to " + canonicalVal);
-    setCanonicalEntry(val, canonicalVal);
+    boolean newEntry = setCanonicalEntry(val, canonicalVal);
+    if (!newEntry) {
+      return;
+    }
     if (containsContradictoryArg(val)) {
       // See if anything contradictory contained in val, if so
       // conservatively mark this congruence set as containing
@@ -611,8 +614,10 @@ class CongruentSets {
            oldComponent + " " + newComponent;
     CongruentSets curr = this;
     do {
-      logger.trace("Iterating over components of: " + oldComponent + ": " +
+      if (logger.isTraceEnabled()) {
+        logger.trace("Iterating over components of: " + oldComponent + ": " +
                     curr.lookupComponentIndex(oldComponent));
+      }
       for (ArgCV outerCV: curr.lookupComponentIndex(oldComponent)) {
         ArgCV newOuterCV1 = outerCV;
         if (newComponent != null &&
@@ -634,37 +639,51 @@ class CongruentSets {
           }
           Arg canonical = findCanonicalInternal(outerCV);
           if (canonical != null) {
-            // Check to see if this CV bridges two sets
-            Arg newCanonical = findCanonical(newOuterCV2);
-            if (newCanonical != null && !newCanonical.equals(canonical)) {
-              // Already in a set, mark that we need to merge
-              mergeQueue.add(new ToMerge(canonical, newCanonical));
-              if (logger.isTraceEnabled()) {
-                if (newComponent != null) {
-                  logger.trace("Merging " + oldComponent + " into " +
-                    newComponent + " causing merging of " + canonical +
-                    " into " + newCanonical);
-                } else {
-                  logger.trace("Getting value of " + oldComponent +
-                                " causing merging of " + canonical +
-                                " into " + newCanonical);
-                }
-              }
-            } else {
-              // Add to same set
-              addSetEntry(newOuterCV2, canonical);
-            }
-            
-            if (contradictions.contains(newComponent) &&
-                !contradictions.contains(oldComponent)) {
-              // Propagate contradiction to set
-              markContradiction(canonical);
-            }
+            addUpdatedCV(oldComponent, newComponent, newOuterCV2, canonical);
           }
         }
       }
       curr = curr.parent;
     } while (curr != null);
+  }
+
+  /**
+   * Finish adding an updated CV obtained by substituting components
+   * @param oldComponent original component
+   * @param newComponent replaced with
+   * @param newCV canonicalized computed value 
+   * @param canonical existing set that it is a member of
+   */
+  private void addUpdatedCV(Arg oldComponent, Arg newComponent, ArgOrCV newCV,
+                            Arg canonical) {
+    // Check to see if this CV bridges two sets
+    Arg newCanonical = findCanonical(newCV);
+    if (newCanonical != null) {
+      if (newCanonical.equals(canonical)) {
+        // Add to same set
+        addSetEntry(newCV, canonical);
+      } else {
+        // Already in a set, mark that we need to merge
+        mergeQueue.add(new ToMerge(canonical, newCanonical));
+        if (logger.isTraceEnabled()) {
+          if (newComponent != null) {
+            logger.trace("Merging " + oldComponent + " into " +
+              newComponent + " causing merging of " + canonical +
+              " into " + newCanonical);
+          } else {
+            logger.trace("Getting value of " + oldComponent +
+                          " causing merging of " + canonical +
+                          " into " + newCanonical);
+          }
+        }
+      }
+    }
+    
+    if (contradictions.contains(newComponent) &&
+        !contradictions.contains(oldComponent)) {
+      // Propagate contradiction to set
+      markContradiction(canonical);
+    }
   }
 
   private List<Arg> replaceInput(List<Arg> oldInputs,
@@ -680,9 +699,16 @@ class CongruentSets {
     return newInputs;
   }
 
-  private void setCanonicalEntry(ArgOrCV val, Arg canonicalVal) {
-    canonical.put(val, canonicalVal);
+  /**
+   * 
+   * @param val
+   * @param canonicalVal
+   * @return true if new entry in this scope
+   */
+  private boolean setCanonicalEntry(ArgOrCV val, Arg canonicalVal) {
+    Arg prev = canonical.put(val, canonicalVal);
     canonicalInv.put(canonicalVal, val);
+    return prev == null;
   }
 
   /**
@@ -898,10 +924,16 @@ class CongruentSets {
       // later processing
       Arg future = val.getInput(0);
       assert(future.isVar());
+      if (logger.isTraceEnabled()) {
+        logger.trace("Enqueue future with val " + future);
+      }
       recanonicalizeQueue.add(future);
     } else if (val.isArrayMemberRef()) {
       // Might be able to dereference
       Arg arrayMemberRef = val.getInput(0);
+      if (logger.isTraceEnabled()) {
+        logger.trace("Enqueue array member ref " + arrayMemberRef);
+      }
       recanonicalizeQueue.add(arrayMemberRef);
     }
   }
