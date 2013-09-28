@@ -263,7 +263,7 @@ public class CongruentVars implements ValueState {
             logger.debug("Constant fold: " + val + " => " + res);
           }
           boolean futureResult = val.op != Opcode.LOCAL_OP;
-          return canonicalConstantVal(futureResult, res);
+          return valFromArg(futureResult, res);
         }
       }
     } else if (val.op == Opcode.IS_MAPPED) {
@@ -274,7 +274,14 @@ public class CongruentVars implements ValueState {
     return null;
   }
 
-  private RecCV canonicalConstantVal(boolean futureResult, Arg constant) {
+  /**
+   * Convert arg representing result of computation (maybe constant)
+   * into a computed value
+   * @param futureResult
+   * @param constant
+   * @return
+   */
+  private RecCV valFromArg(boolean futureResult, Arg constant) {
     if (!futureResult) {
       // Can use directly
       return new RecCV(constant);

@@ -41,33 +41,38 @@ public class OpEvaluator {
     } else if (Operators.isCopy(op)) {
       return null;
     } else {
-      /* we need all arguments to constant fold */
+      /* Check what arguments are */
       boolean allInt = true;
       boolean allFloat = true;
       boolean allString = true;
       boolean allBool = true;
+      boolean allConst = true;
       // Check that there are no nulls
       for (Arg in : inputs) {
         if (in == null) {
           return null;
         }
-        allInt = allInt && in.isIntVal();
-        allFloat = allFloat && in.isFloatVal();
-        allString = allString && in.isStringVal();
-        allBool = allBool && in.isBoolVal();
+        allInt = allInt && in.isImmediateInt();
+        allFloat = allFloat && in.isImmediateFloat();
+        allString = allString && in.isImmediateString();
+        allBool = allBool && in.isImmediateBool();
+        allConst = allConst && in.isConstant();
       }
 
-      if (allInt) {
-        return evalIntOp(op, inputs);
-      } else if (allFloat) {
-        return evalFloatOp(op, inputs);
-      } else if (allString) {
-        return evalStringOp(op, inputs);
-      } else if (allBool) {
-        return evalBoolOp(op, inputs);
-      } else {
-        return evalOtherOp(op, inputs);
+      if (allConst) {
+        if (allInt) {
+          return evalIntOp(op, inputs);
+        } else if (allFloat) {
+          return evalFloatOp(op, inputs);
+        } else if (allString) {
+          return evalStringOp(op, inputs);
+        } else if (allBool) {
+          return evalBoolOp(op, inputs);
+        } else {
+          return evalOtherOp(op, inputs);
+        }
       }
+      return null;
     }
   }
 
@@ -76,16 +81,23 @@ public class OpEvaluator {
    * need to know both arguments to evaluate
    * 
    * @param constArgs
-   *          unknown args are null
+   *          unknown args are null.  Currently assume 2 args
    * @return
    */
   private static Arg
       evalShortCircuit(BuiltinOpcode op, List<Arg> constArgs) {
+    assert(constArgs.size() == 2) :
+          "Assume 2 args for short circuited operations";
     List<Arg> constInputs = new ArrayList<Arg>(2);
+    Arg nonConstInput = null;
     for (Arg in : constArgs) {
       if (in != null) {
-        assert (in.isBoolVal());
-        constInputs.add(in);
+        if (in.isBoolVal()) {
+          constInputs.add(in);
+        } else {
+          assert(in.isVar());
+          nonConstInput = in;
+        }
       }
     }
     if (constInputs.size() >= 1) {
@@ -103,10 +115,14 @@ public class OpEvaluator {
         }
       } else if (constInputs.size() == 1) {
         // see if we can short-circuit
-        if (op == BuiltinOpcode.AND && arg1) {
+        if (op == BuiltinOpcode.AND && !arg1) {
+          return Arg.createBoolLit(false);
+        } else if (op == BuiltinOpcode.AND && arg1 && nonConstInput != null) {
+          return nonConstInput;
+        } else if (op == BuiltinOpcode.OR && arg1) {
           return Arg.createBoolLit(true);
         } else if (op == BuiltinOpcode.OR && !arg1) {
-          return Arg.createBoolLit(false);
+          return nonConstInput;
         }
       }
     }

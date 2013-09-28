@@ -2034,7 +2034,11 @@ public class ICInstructions {
     public static Map<Var, Arg> constantFold(BuiltinOpcode op, Var outVar,
         List<Arg> inputs) {
       Arg out = OpEvaluator.eval(op, inputs);
-      return (out == null) ? null : Collections.singletonMap(outVar, out);
+      if (out != null && out.isConstant()) {
+        return Collections.singletonMap(outVar, out);
+      } else {
+        return null;
+      }
     }
     
     private static boolean hasLocalVersion(BuiltinOpcode op) {
