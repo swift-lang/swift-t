@@ -122,27 +122,26 @@ public class ValueTracker {
   /**
    * Register that variable future depends on all of the variables in the
    * collection, so that if future is closed, then the other variables must be
-   * closed TODO: later could allow specification that something is
+   * closed 
+   * TODO: later could allow specification that something is
    * recursively closed
    * 
-   * @param future
+   * @param to
    *          a scalar future
-   * @param depend
+   * @param from
    *          more scalar futures
    */
-  public void setDependencies(Var future, Collection<Var> depend) {
-    assert (!Types.isPrimValue(future.type()));
+  public void setDependency(Var to, Var from) {
+    assert (!Types.isPrimValue(to.type()));
     assert (!reorderingAllowed) : "Tracking transitive dependencies "
         + "unsafe until reordering disabled";
-    CopyOnWriteSmallSet<Var> depset = dependsOn.get(future);
+    CopyOnWriteSmallSet<Var> depset = dependsOn.get(to);
     if (depset == null) {
       depset = new CopyOnWriteSmallSet<Var>();
-      dependsOn.put(future, depset);
+      dependsOn.put(to, depset);
     }
-    for (Var v : depend) {
-      assert (!Types.isPrimValue(v.type()));
-      depset.add(v);
-    }
+    assert (!Types.isPrimValue(from.type()));
+    depset.add(from);
   }
 
   public void printTraceInfo(Logger logger) {

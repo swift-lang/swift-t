@@ -63,6 +63,12 @@ class CongruentSets {
   private final MultiMap<Arg, RecCV> canonicalInv;
   
   /**
+   * Track sets that were merged into this one.  Allows
+   * finding an alternate value if current is out of scope.
+   */
+  private final MultiMap<Arg, Arg> mergedInto;
+  
+  /**
    * Track places where CV1 appears inside CV2, so that we can
    * go through and recanonicalize them if needed.
    * Must manually traverse parents to find all.
@@ -101,6 +107,7 @@ class CongruentSets {
     this.parent = parent;
     this.canonical = new HashMap<RecCV, Arg>();
     this.canonicalInv = new MultiMap<Arg, RecCV>();
+    this.mergedInto = new MultiMap<Arg, Arg>();
     this.componentIndex = new MultiMap<Arg, RecCV>();
     this.inaccessible = new HashSet<Var>();
     this.contradictions = contradictions;
@@ -429,6 +436,8 @@ class CongruentSets {
     // Clear out-of-date entries in current scope
     // (leave outer scopes untouched since they're not harmful)
     this.canonicalInv.remove(oldCanonical);
+    
+    this.mergedInto.put(newCanonical, oldCanonical);
     
     logger.trace("Done merging " + oldCanonical + " into " + newCanonical);
   }

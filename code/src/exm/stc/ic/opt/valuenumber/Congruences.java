@@ -49,15 +49,12 @@ import exm.stc.ic.tree.Opcode;
  * variable is mapped: we can only have one mapped variable in each
  * congruence set, and it must be the canonical member
  *   
- * TODO: need to increment dependency management into this
+ * TODO: need to fix inter-variable dependency tracking
  */
 public class Congruences implements ValueState {
 
   /* 
    * Arithmetic, etc:
-   * - TODO: Do constant folding as we go?
-   *         Lookup args in table, see if constant 
-   *         -> TODO: can we do this when we "convert"?
    * - TODO: move arithmetic logic into congruence: can chase args through
    *         canonicalization table.
    *         -> TODO when to try and do arithmetic?
@@ -108,13 +105,10 @@ public class Congruences implements ValueState {
     return child;
   }
   
-  public boolean update(String errContext, ValLoc resVal) {
+  public void update(String errContext, ValLoc resVal) {
     if (resVal.congType() == CongruenceType.ALIAS) {
       // Update aliases only if congType matches
-      if (!update(errContext, resVal.location(), resVal.value(),
-                  byAlias, true)) {
-        return false;
-      }
+      update(errContext, resVal.location(), resVal.value(), byAlias, true);
     } else {
       assert(resVal.congType() == CongruenceType.VALUE);
     }
@@ -128,7 +122,7 @@ public class Congruences implements ValueState {
     markClosed(resVal.location(), resVal.locClosed());
     
     // Both alias and value links result in updates to value
-    return update(errContext, resVal.location(), resVal.value(),
+    update(errContext, resVal.location(), resVal.value(),
                   byValue, true);
   }
   
@@ -142,15 +136,15 @@ public class Congruences implements ValueState {
    * @param addInverses
    * @return
    */
-  public boolean update(String errContext,
+  public void update(String errContext,
             Arg location, ArgCV value, CongruentSets congruent,
             boolean addInverses) {
-    // It's possible that locCV is already congruent with something:
-    // find canonical location
+    // LocCV may already be in congruent set
     Arg canonLoc = congruent.findCanonical(new RecCV(location)); 
-    // canonicalize based on existing congruences
+    // Canonicalize value based on existing congruences
     RecCV canonVal = congruent.canonicalize(value);
   
+    // Check if value is already associated with a location
     Arg canonLocFromVal = congruent.findCanonical(canonVal);
     if (canonLocFromVal == null) {
       // Handle case where value not congruent to anything yet.
@@ -164,8 +158,6 @@ public class Congruences implements ValueState {
     if (addInverses) {
       addInverses(errContext, canonLoc, canonVal);
     }
-    
-    return true;
   }
 
   private CongruentSets getCongruentSet(CongruenceType congType) {
@@ -223,11 +215,6 @@ public class Congruences implements ValueState {
                               value, newLoc, oldLoc)) {
       congruent.markContradiction(newLoc);
       congruent.markContradiction(oldLoc);
-      /*
-       * TODO: is more aggressive strategy of aborting and poisoning all
-       * values necessary? More surgical approach might work better since
-       * we can make contradiction set as big as possible
-       */
     }
     
     // Must merge.  Select which is the preferred value
@@ -425,14 +412,6 @@ public class Congruences implements ValueState {
     }
   }
 
-
-  public void markContradiction(ValLoc val) {
-    // TODO: shouldn't be called currently?
-    //  remove later if we don't need infrastructure
-    throw new STCRuntimeError("markContradiction shouldn't be called from" +
-    		                      " outside Congruences");
-  }
-
   public void printTraceInfo(Logger logger) {
     byAlias.printTraceInfo(logger);
     byValue.printTraceInfo(logger);
@@ -489,13 +468,14 @@ public class Congruences implements ValueState {
   
   public void addUnifiedValues(String errContext,
                                UnifiedValues unified) {
+    // TODO: need to refine this merge to compensate for sets being
+    //      named differently in child
     for (Var closed: unified.closed) {
       markClosed(closed, false);
     }
     for (Var closed: unified.recursivelyClosed) {
       markClosed(closed, true);
     }
-    // TODO: merge in computedvalues
     for (ValLoc loc: unified.availableVals) {
       update(errContext, loc);
     }
@@ -545,8 +525,20 @@ public class Congruences implements ValueState {
     }
   }
 
-  public void setDependencies(Var ov, List<Var> in) {
-    // TODO Fill this in
+  /**
+   * Add in closedness dependency: if to is closed, implies
+   * from is closed
+   * @param to
+   * @param from
+   * TODO: need to update to use correct canonical alias as they change
+   * TODO: or alternatively use history of changes to search on demand
+   */
+  public void setDependencies(Var to, List<Var> fromVars) {
+    Var toCanon = getCanonicalAlias(to.asArg());
+    for (Var fromVar: fromVars) {
+      Var fromCanon = getCanonicalAlias(fromVar.asArg());
+      track.setDependency(toCanon, fromCanon);
+    }
   }
 
   /**
@@ -593,7 +585,5 @@ public class Congruences implements ValueState {
     public int size() {
       throw new STCRuntimeError("size() not supported");
     }
-
-    
   }
 }
