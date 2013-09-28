@@ -425,10 +425,12 @@ public class ComputedValue<T> {
     }
     
     public Arg arg() {
+      assert(arg != null) : "Not an arg " + this;
       return arg;
     }
     
     public ArgCV cv() {
+      assert(cv != null) : "Not a cv " + this;
       return cv;
     }
     

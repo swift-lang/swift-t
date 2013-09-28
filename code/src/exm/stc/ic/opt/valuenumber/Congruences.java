@@ -488,11 +488,11 @@ public class Congruences implements ValueState {
   private String printableAssignValue(List<Arg> assigned) {
     assert(assigned.size() > 0);
     StringBuilder sb = new StringBuilder();
-    sb.append(assigned.toString());
+    sb.append(assigned.get(0).toString());
     for (Arg arg: assigned.subList(1, assigned.size())) {
       sb.append("[" + arg + "]");
     }
-    return assigned.toString();
+    return sb.toString();
   }
 
   private List<Arg> canonicalizeAssignValue(GlobalConstants consts,

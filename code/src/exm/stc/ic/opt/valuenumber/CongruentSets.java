@@ -76,7 +76,7 @@ class CongruentSets {
    * go through and recanonicalize them if needed.
    * Must manually traverse parents to find all.
    */
-  private final MultiMap<Arg, ArgOrCV> componentIndex;
+  private final MultiMap<Arg, ArgCV> componentIndex;
 
   /**
    * Track variables which are not accessible from parent
@@ -118,7 +118,7 @@ class CongruentSets {
     this.canonical = new HashMap<ArgOrCV, Arg>();
     this.canonicalInv = new MultiMap<Arg, ArgOrCV>();
     this.mergedInto = new MultiMap<Arg, Arg>();
-    this.componentIndex = new MultiMap<Arg, ArgOrCV>();
+    this.componentIndex = new MultiMap<Arg, ArgCV>();
     this.inaccessible = new HashSet<Var>();
     this.contradictions = contradictions;
     this.mergeQueue = new LinkedList<ToMerge>();
@@ -261,8 +261,23 @@ class CongruentSets {
   }
   
 
+  /**
+   * Find canonical for ArgCV, canonicalizing val firstt
+   * @param constants
+   * @param val
+   * @return
+   */
   public Arg findCanonical(GlobalConstants constants, ArgCV val) {
     return findCanonical(canonicalize(constants, val));
+  }
+  
+  /**
+   * Find canonical using an ArgCV that's already been canonicalized
+   * @param val
+   * @return
+   */
+  private Arg findCanonicalInternal(ArgCV val) {
+    return findCanonical(new ArgOrCV(val));
   }
   
   /**
@@ -336,12 +351,12 @@ class CongruentSets {
     // Propagate contradiction to components
     curr = this;
     do {
-      for (ArgOrCV cv: curr.componentIndex.get(arg)) {
+      for (ArgCV cv: curr.componentIndex.get(arg)) {
         if (logger.isTraceEnabled()) {
           logger.trace("Contradiction implication " + arg + " => " +
                         cv);
         }
-        Arg set = findCanonical(cv);
+        Arg set = findCanonical(new ArgOrCV(cv));
         if (set != null) {
           markContradiction(set);
         }
@@ -598,30 +613,29 @@ class CongruentSets {
     do {
       logger.trace("Iterating over components of: " + oldComponent + ": " +
                     curr.componentIndex.get(oldComponent));
-      for (ArgOrCV outerCV: curr.componentIndex.get(oldComponent)) {
-        assert(outerCV.isCV());
-        ArgOrCV newOuterCV = outerCV;
+      for (ArgCV outerCV: curr.componentIndex.get(oldComponent)) {
+        ArgCV newOuterCV1 = outerCV;
         if (newComponent != null &&
-            outerCV.cv().canSubstituteInputs(congType)) {
+            outerCV.canSubstituteInputs(congType)) {
           // First substitute the inputs
           List<Arg> newInputs = replaceInput(
-              outerCV.cv().getInputs(), oldComponent, newComponent);
-          newOuterCV = outerCV.substituteInputs(newInputs);
+              outerCV.getInputs(), oldComponent, newComponent);
+          newOuterCV1 = outerCV.substituteInputs(newInputs);
         }
         // Then do other canonicalization
-        newOuterCV = canonicalize(consts, newOuterCV);
-        if (!newOuterCV.equals(outerCV)) {
+        ArgOrCV newOuterCV2 = canonicalize(consts, newOuterCV1);
+        if (newOuterCV2.isArg() || !newOuterCV2.cv().equals(outerCV)) {
           if (logger.isTraceEnabled()) {
             logger.trace("Sub " + oldComponent + " for "
                         + newComponent + " in " + outerCV); 
           }
-          if (newComponent != null) {
-            addInputIndex(newComponent, newOuterCV);
+          if (newComponent != null && newOuterCV2.isCV()) {
+            addInputIndex(newComponent, newOuterCV2.cv());
           }
-          Arg canonical = findCanonical(outerCV);
+          Arg canonical = findCanonicalInternal(outerCV);
           if (canonical != null) {
             // Check to see if this CV bridges two sets
-            Arg newCanonical = findCanonical(newOuterCV);
+            Arg newCanonical = findCanonical(newOuterCV2);
             if (newCanonical != null && !newCanonical.equals(canonical)) {
               // Already in a set, mark that we need to merge
               mergeQueue.add(new ToMerge(canonical, newCanonical));
@@ -638,7 +652,7 @@ class CongruentSets {
               }
             } else {
               // Add to same set
-              addSetEntry(newOuterCV, canonical);
+              addSetEntry(newOuterCV2, canonical);
             }
             
             if (contradictions.contains(newComponent) &&
@@ -678,7 +692,7 @@ class CongruentSets {
    * info among different sets.  We need to track constants as these
    * are often the canonical member of a set.
    */
-  private void addInputIndex(Arg newInput, ArgOrCV newCV) {
+  private void addInputIndex(Arg newInput, ArgCV newCV) {
     if (logger.isTraceEnabled()) {
       logger.trace("Add component: " + newInput + "=>" + newCV);
     }
@@ -725,32 +739,39 @@ class CongruentSets {
   public ArgOrCV canonicalize(GlobalConstants consts, ArgCV origVal) {
     // First replace the args with whatever current canonical values,
     // then perform additional canonicalization
-    return canonicalize(consts, canonicalizeInputs(origVal));
+    return canonicalizeInternal(consts, canonicalizeInputs(origVal));
   }
     
 
-  private ArgOrCV canonicalize(GlobalConstants consts, ArgOrCV result) {
-
-    if (result.isCV()) {
-      // Then do additional transformations such as constant folding
-      ComputedValue<Arg> resultValue = result.cv();
-      if (resultValue.isCopy() || resultValue.isAlias()) {
-        // Strip out copy/alias operations, since we can use value directly
-        result = new ArgOrCV(resultValue.getInput(0));
-      } else if (resultValue.isDerefCompVal()) {
-        ArgOrCV resolvedRef = tryResolveRef(resultValue);
-        if (resolvedRef != null) {
-          result = resolvedRef;
-        }
-      } else if (constFoldEnabled &&
-                 this.congType == CongruenceType.VALUE) {
-        ArgOrCV constantFolded = tryConstantFold(resultValue);
-        if (constantFolded != null) {
-          result = constantFolded;
-        }
+  private ArgOrCV canonicalizeInternal(GlobalConstants consts,
+                                        ArgCV val) {
+    ArgOrCV result = null;
+    // Then do additional transformations such as constant folding
+    if (val.isCopy() || val.isAlias()) {
+      // Strip out copy/alias operations, since we can use value directly
+      return new ArgOrCV(val.getInput(0));
+    }
+    
+    // Try to resolve dereferenced references
+    if (val.isDerefCompVal()) {
+      ArgCV resolvedRef = tryResolveRef(val);
+      if (resolvedRef != null) {
+        val = resolvedRef;
+      }
+    } 
+    
+    if (constFoldEnabled &&
+               this.congType == CongruenceType.VALUE) {
+      ArgOrCV constantFolded = tryConstantFold(val);
+      if (constantFolded != null) {
+        result = constantFolded;
       }
     }
-
+    
+    if (result == null) {
+      result = new ArgOrCV(val);
+    }
+    
     // Replace a constant future with a global constant
     // This has effect of creating global constants for any used values
     if (constShareEnabled && result.isCV()) {
@@ -765,14 +786,14 @@ class CongruentSets {
    * @param cv
    * @return
    */
-  private ArgOrCV canonicalizeInputs(ArgCV cv) {
+  private ArgCV canonicalizeInputs(ArgCV cv) {
     List<Arg> inputs = cv.getInputs();
     List<Arg> newInputs = new ArrayList<Arg>(inputs.size());
     for (Arg input: inputs) {
       // Canonicalize inputs to get this into a canonical form
       
       if (cv.canSubstituteInputs(congType)) {
-        Arg canonicalInput = findCanonical(new ArgOrCV(input));
+        Arg canonicalInput = findCanonical(input);
         assert(canonicalInput != null);
         // Add canonical
         newInputs.add(canonicalInput);
@@ -783,8 +804,8 @@ class CongruentSets {
       }
     }
   
-    ArgOrCV newCV = new ArgOrCV(cv.op, cv.subop, newInputs);
-    if (findCanonical(newCV) == null) {
+    ArgCV newCV = new ArgCV(cv.op, cv.subop, newInputs);
+    if (findCanonicalInternal(newCV) == null) {
       // Add to index if not present
       for (Arg newInput: newInputs) {
         addInputIndex(newInput, newCV);
@@ -798,7 +819,7 @@ class CongruentSets {
    * @param val
    * @return
    */
-  private ArgOrCV tryConstantFold(ComputedValue<Arg> val) {
+  private ArgOrCV tryConstantFold(ArgCV val) {
     assert(constFoldEnabled);
     assert(this.congType == CongruenceType.VALUE);
     return ConstantFolder.constantFold(logger, this, val);
@@ -830,14 +851,14 @@ class CongruentSets {
    * @param val
    * @return
    */
-  private ArgOrCV tryResolveRef(ComputedValue<Arg> val) {
+  private ArgCV tryResolveRef(ComputedValue<Arg> val) {
     assert(val.isDerefCompVal());
     Arg ref = val.getInput(0);
     for (ArgOrCV v: findCongruentValues(ref)) {
       if (v.isCV()) {
         ArgCV v2 = v.cv();
         if (v2.isArrayMemberRef()) {
-          return new ArgOrCV(ComputedValue.derefArrayMemberRef(v2));
+          return ComputedValue.derefArrayMemberRef(v2);
         }
       }
     }
