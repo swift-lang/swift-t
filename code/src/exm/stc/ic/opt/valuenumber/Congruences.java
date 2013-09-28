@@ -587,6 +587,10 @@ public class Congruences implements ValueState {
     }
   }
   
+  public Arg findCanonical(Arg arg, CongruenceType congType) {
+    return getCongruentSet(congType).findCanonical(arg);
+  }
+
   /**
    * @return canonical location for given value, null if not stored anywhere
    */
@@ -594,7 +598,7 @@ public class Congruences implements ValueState {
   public Arg findCanonical(ArgCV val, CongruenceType congType) {
     return getCongruentSet(congType).findCanonical(val);
   }
-
+  
   public boolean isAvailable(ArgCV val, CongruenceType congType) {
     return findCanonical(val, congType) != null;
   }

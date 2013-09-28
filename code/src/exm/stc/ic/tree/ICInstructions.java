@@ -35,7 +35,6 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.CompileTimeArgs;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
-import exm.stc.common.lang.OpEvaluator;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.PassedVar;
@@ -174,25 +173,6 @@ public class ICInstructions {
       }
       return false;
     }
-  
-    /**
-     *
-     * @param fnName name of enclosing function for error message purposes
-     * @param knownConstants
-     * @return null if we cannot replace all outputs with constants
-     */
-    public abstract Map<Var, Arg> constantFold(
-                    String fnName,
-                    Map<Var, Arg> knownConstants);
-  
-    /**
-     * @param knownConstants
-     * @return an instruction if this can be replaced by another instruction
-     *      using a constant value, null if it cannot be replaced
-     */
-    public abstract Instruction constantReplace(
-                                Map<Var, Arg> knownConstants);
-  
     
     public static class MakeImmRequest {
       public final List<Var> out;
@@ -577,17 +557,6 @@ public class ICInstructions {
     public boolean hasSideEffects() {
       return false;
     }
-  
-    @Override
-    public Map<Var, Arg> constantFold(String fnName,
-                Map<Var, Arg> knownConstants) {
-      return null;
-    }
-  
-    @Override
-    public Instruction constantReplace(Map<Var, Arg> knownConstants) {
-      return null;
-    }
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars, 
@@ -634,6 +603,25 @@ public class ICInstructions {
     @Override
     public String shortOpName() {
       return op.toString().toLowerCase() + "-" + functionName;
+    }
+    
+    /**
+     * @param fnCallOp
+     * @return true if arguments should be local values
+     */
+    public static boolean acceptsLocalValArgs(Opcode fnCallOp) {
+      switch (fnCallOp) {
+        case CALL_CONTROL:
+        case CALL_SYNC:
+        case CALL_LOCAL:
+        case CALL_LOCAL_CONTROL:
+        case CALL_FOREIGN:
+          return false;
+        case CALL_FOREIGN_LOCAL:
+          return true;
+        default:
+          throw new STCRuntimeError("Unexpected op: " + fnCallOp);
+      }
     }
     
     private boolean isCopyFunction() {
@@ -708,8 +696,13 @@ public class ICInstructions {
      * @return true if this instruction calls any of the given special functions
      */
     public boolean isImpl(SpecialFunction ...specials) {
+      return isImpl(this.functionName, specials);
+    }
+    
+    public static boolean isImpl(String functionName,
+                                 SpecialFunction ...specials) {
       for (SpecialFunction special: specials) {
-        if (ForeignFunctions.isSpecialImpl(this.functionName, special)) {
+        if (ForeignFunctions.isSpecialImpl(functionName, special)) {
           return true;
         }
       }
@@ -766,6 +759,27 @@ public class ICInstructions {
                               ComputedValue.ARRAY_SIZE_VAL;
       return ValLoc.buildResult(Opcode.FAKE, subop,
                                 arr.asArg(), size, Closed.YES_NOT_RECURSIVE);
+    }
+
+    /**
+     * Try to constant fold any special functions.
+     * @param cv
+     * @param inputs
+     * @return a value arg if successful, null if not
+     */
+    public static Arg tryConstantFold(ComputedValue<?> cv, List<Arg> inputs) {
+      String functionName = (String)cv.subop();
+      if (isImpl(functionName, SpecialFunction.ARGV)) {
+        Arg argName = inputs.get(0);
+        if (argName.isStringVal()) {
+          String val = CompileTimeArgs.lookup(argName.getStringLit());
+          if (val != null) {
+            // Success!
+            return Arg.createStringLit(val);
+          }
+        }
+      }
+      return null;
     }
     
   }
@@ -979,30 +993,7 @@ public class ICInstructions {
       return (!ForeignFunctions.isPure(functionName)) ||
             this.writesAliasVar() || this.writesMappedVar();
     }
-  
-    @Override
-    public Map<Var, Arg> constantFold(String enclosingFnName,
-                                  Map<Var, Arg> knownConstants) {
-      
-      if (isImpl(SpecialFunction.ARGV)) {
-        // See if argument name is constant
-        Arg argName = knownConstants.get(inputs.get(0).getVar());
-        if (argName != null) {
-          String val = CompileTimeArgs.lookup(argName.getStringLit());
-          if (val != null) {
-            return Collections.singletonMap(outputs.get(0),
-                                             Arg.createStringLit(val));
-          }
-        }
-      }
-      return null;
-    }
-    
-    @Override
-    public Instruction constantReplace(Map<Var, Arg> knownConstants) {
-      return null;
-    }
-    
+
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
                                            boolean waitForClose) {
@@ -1281,30 +1272,6 @@ public class ICInstructions {
       return (!ForeignFunctions.isPure(functionName)) ||
             this.writesAliasVar() || this.writesMappedVar();
     }
-  
-    @Override
-    public Map<Var, Arg> constantFold(String enclosingFnName,
-                                  Map<Var, Arg> knownConstants) {
-      // Replace any variables for which constant values are known
-      ICUtil.replaceArgsInList(knownConstants, inputs);
-      
-      if (isImpl(SpecialFunction.ARGV)) {
-        Arg argName = this.inputs.get(0);
-        if (argName.isStringVal()) {
-          String val = CompileTimeArgs.lookup(argName.getStringLit());
-          if (val != null) {
-            return Collections.singletonMap(outputs.get(0),
-                                             Arg.createStringLit(val));
-          }
-        }
-      }
-      return null;
-    }
-    
-    @Override
-    public Instruction constantReplace(Map<Var, Arg> knownConstants) {
-      return null;
-    }
     
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
@@ -1434,19 +1401,6 @@ public class ICInstructions {
     }
 
     @Override
-    public Map<Var, Arg> constantFold(String fnName,
-        Map<Var, Arg> knownConstants) {
-      // Replace variables for which values are known
-      ICUtil.replaceArgsInList(knownConstants, args);
-      return null;
-    }
-
-    @Override
-    public Instruction constantReplace(Map<Var, Arg> knownConstants) {
-      return null;
-    }
-
-    @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
                                            boolean waitForClose) {
       // Don't support reducing this
@@ -1572,19 +1526,6 @@ public class ICInstructions {
     @Override
     public boolean hasSideEffects() {
       return true;
-    }
-  
-    @Override
-    public Map<Var, Arg> constantFold(String fnName,
-              Map<Var, Arg> knownConstants) {
-      // don't think I can do this?
-      return null;
-    }
-  
-    @Override
-    public Instruction constantReplace(Map<Var, Arg> knownConstants) {
-      // don't think I can do this?
-      return null;
     }
 
     @Override
@@ -1728,19 +1669,6 @@ public class ICInstructions {
     public boolean hasSideEffects() {
       return true;
     }
-  
-    @Override
-    public Map<Var, Arg> constantFold(String fnName,
-                Map<Var, Arg> knownConstants) {
-      // don't think I can do this?
-      return null;
-    }
-  
-    @Override
-    public Instruction constantReplace(Map<Var, Arg> knownConstants) {
-      // don't think I can do this?
-      return null;
-    }
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
@@ -1836,6 +1764,14 @@ public class ICInstructions {
       if (props != null) {
         ICUtil.replaceArgValsInMap(renames, props);
       }
+      
+      // After we replace values, see if we can check assert
+      if (op == Opcode.LOCAL_OP && 
+          (this.subop == BuiltinOpcode.ASSERT || 
+          this.subop == BuiltinOpcode.ASSERT_EQ)) {
+        // TODO: get enclosing function name
+        compileTimeAssertCheck(subop, this.inputs, "...");
+      }
     }
 
     @Override
@@ -1897,48 +1833,14 @@ public class ICInstructions {
       }
     }
 
-    @Override
-    public Map<Var, Arg> constantFold(String fnName,
-                          Map<Var, Arg> knownConstants) {
-      if (this.subop == BuiltinOpcode.ASSERT || 
-          this.subop == BuiltinOpcode.ASSERT_EQ) {
-        compileTimeAssertCheck(subop, this.inputs, knownConstants, fnName);
-      }
-      
-      if (this.output == null) {
-        return null;
-      }
-      
-      // List of constant values for inputs, null if input not const
-      ArrayList<Arg> constInputs = new ArrayList<Arg>(inputs.size());
-      /* First try to replace arguments with constants */
-      for (int i = 0; i < inputs.size(); i++) {
-        Arg in = inputs.get(i);
-        if (in.isVar()) {
-          Arg c = knownConstants.get(in.getVar());
-          constInputs.add(c);
-          if (c != null && op == Opcode.LOCAL_OP) {
-            // can replace local value arg with constant
-            inputs.set(i, c);
-          }
-        } else {
-          constInputs.add(in);
-        }
-      }
-      return Builtin.constantFold(this.subop, this.output, constInputs);
-    }
-
     private static void compileTimeAssertCheck(BuiltinOpcode subop2,
-        List<Arg> inputs2, Map<Var, Arg> knownConstants,
-        String enclosingFnName) {
+        List<Arg> inputs, String enclosingFnName) {
       
-      List<Arg> inputVals = new ArrayList<Arg>(inputs2.size());
+      List<Arg> inputVals = new ArrayList<Arg>(inputs.size());
       // Check that all inputs are available
-      for (Arg input: inputs2) {
+      for (Arg input: inputs) {
         if (input.isConstant()) {
           inputVals.add(input);
-        } else if (knownConstants.containsKey(input.getVar())) {
-          inputVals.add(knownConstants.get(input.getVar()));
         } else {
           // Can't check
           return;
@@ -1952,8 +1854,7 @@ public class ICInstructions {
         assert(cond.isBoolVal());
         if(!cond.getBoolLit()) {
           compileTimeAssertWarn(enclosingFnName, 
-              "constant condition evaluated to false",
-              inputs2.get(1), knownConstants);
+              "constant condition evaluated to false", inputs.get(1));
         }
       } else {
         assert(subop2 == BuiltinOpcode.ASSERT_EQ);
@@ -1966,19 +1867,17 @@ public class ICInstructions {
           if(!a1.equals(a2)) {
             String reason = a1.toString() + " != " + a2.toString();
             Arg msg = inputVals.get(2);
-            compileTimeAssertWarn(enclosingFnName, reason, msg, knownConstants);
+            compileTimeAssertWarn(enclosingFnName, reason, msg);
           }
         }
       }
     }
 
     private static void compileTimeAssertWarn(String enclosingFnName,
-        String reason, Arg assertMsg, Map<Var, Arg> knownConstants) {
+        String reason, Arg assertMsg) {
       String errMessage;
       if (assertMsg.isConstant()) {
         errMessage = assertMsg.getStringLit();
-      } else if (knownConstants.containsKey(assertMsg.getVar())) {
-        errMessage = knownConstants.get(assertMsg.getVar()).getStringLit();
       } else {
         errMessage = "<RUNTIME ERROR MESSAGE>";
       }
@@ -1990,57 +1889,6 @@ public class ICInstructions {
               " and report if this warning is faulty");
     }
 
-    @Override
-    public Instruction constantReplace(Map<Var, Arg> knownConstants) {
-      // can replace short-circuitable operations with direct assignment
-      if (Operators.isShortCircuitable(subop)) {
-        return tryShortCircuit(knownConstants);
-      }
-      return null;
-    }
-
-    private Builtin tryShortCircuit(Map<Var, Arg> knownConstants) {
-      List<Arg> constArgs = new ArrayList<Arg>(2);
-      List<Var> varArgs = new ArrayList<Var>(2);
-      for (Arg in: inputs) {
-        if (in.isConstant()) {
-          constArgs.add(in);
-        } else {
-          Arg constIn = knownConstants.get(in.getVar());
-          if (constIn == null) {
-            varArgs.add(in.getVar());
-          } else {
-            constArgs.add(constIn);
-          }
-        }
-      }
-      if (constArgs.size() == 1) {
-        boolean arg1 = constArgs.get(0).getBoolLit();
-        // Change it to a copy: should make it easier to further optimize
-        if ((subop == BuiltinOpcode.OR && !arg1) ||
-            (subop == BuiltinOpcode.AND && arg1)) {
-          if (op == Opcode.ASYNC_OP) { 
-            return Builtin.createAsync(BuiltinOpcode.COPY_BOOL, 
-                output, varArgs.get(0).asArg().asList());
-          } else {
-            return Builtin.createLocal(BuiltinOpcode.COPY_BOOL, 
-                output, varArgs.get(0).asArg());
-          }
-        } 
-      }
-      return null;
-    }
-    
-    public static Map<Var, Arg> constantFold(BuiltinOpcode op, Var outVar,
-        List<Arg> inputs) {
-      Arg out = OpEvaluator.eval(op, inputs);
-      if (out != null && out.isConstant()) {
-        return Collections.singletonMap(outVar, out);
-      } else {
-        return null;
-      }
-    }
-    
     private static boolean hasLocalVersion(BuiltinOpcode op) {
       return true;
     }

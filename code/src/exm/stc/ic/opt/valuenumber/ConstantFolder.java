@@ -8,7 +8,10 @@ import org.apache.log4j.Logger;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.OpEvaluator;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.Var;
+import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.opt.valuenumber.ComputedValue.RecCV;
+import exm.stc.ic.tree.ICInstructions.CommonFunctionCall;
 import exm.stc.ic.tree.Opcode;
 
 /**
@@ -26,37 +29,88 @@ public class ConstantFolder {
    */
   public static RecCV constantFold(Logger logger, CongruentSets sets,
                                    ComputedValue<RecCV> val) {
-    if (val.op == Opcode.ASYNC_OP || val.op == Opcode.LOCAL_OP) {
-      List<Arg> inputs;
-      if (val.op == Opcode.LOCAL_OP) {
-        inputs = convertToArgs(val);
-      } else {
-        assert(val.op == Opcode.ASYNC_OP);
-        inputs = findFutureValues(sets, val);
-      }
+    switch (val.op) {
+      case ASYNC_OP:
+      case LOCAL_OP:
+        return foldBuiltinOp(logger, sets, val);
+      case IS_MAPPED:
+        return foldIsMapped(val);
+        // TODO: merge over other constantFold() implementations once we can
+        //       replace constant folding pass with this analysis
+      case CALL_CONTROL:
+      case CALL_FOREIGN:
+      case CALL_FOREIGN_LOCAL:
+      case CALL_LOCAL:
+      case CALL_LOCAL_CONTROL:
+      case CALL_SYNC:
+        return foldFunctionCall(logger, sets, val);
+      default:
+        // Can't fold others
+        return null;
+    }
+  }
 
-      if (logger.isTraceEnabled()) {
-        logger.trace("Try constant fold: " + val + " " + inputs);
-      }
-      if (inputs != null) {
-        // constant fold
-        Arg res = OpEvaluator.eval((BuiltinOpcode)val.subop, inputs);
-        if (res != null) {
-          if (logger.isDebugEnabled()) {
-            logger.debug("Constant fold: " + val + " => " + res);
-          }
-          boolean futureResult = val.op != Opcode.LOCAL_OP;
-          return valFromArg(futureResult, res);
+
+  private static RecCV foldBuiltinOp(Logger logger, CongruentSets sets,
+                                     ComputedValue<RecCV> val) {
+    List<Arg> inputs;
+    if (val.op == Opcode.LOCAL_OP) {
+      inputs = convertToArgs(val);
+    } else {
+      assert(val.op == Opcode.ASYNC_OP);
+      inputs = findFutureValues(sets, val);
+    }
+
+    if (logger.isTraceEnabled()) {
+      logger.trace("Try constant fold: " + val + " " + inputs);
+    }
+    if (inputs != null) {
+      // constant fold
+      Arg res = OpEvaluator.eval((BuiltinOpcode)val.subop, inputs);
+      if (res != null) {
+        if (logger.isDebugEnabled()) {
+          logger.debug("Constant fold: " + val + " => " + res);
         }
+        boolean futureResult = val.op != Opcode.LOCAL_OP;
+        return valFromArg(futureResult, res);
       }
-    } else if (val.op == Opcode.IS_MAPPED) {
-      // TODO: merge over other constantFold() implementations once we can
-      //       replace constant folding pass with this analysis
-      // ARGV, etc too
     }
     return null;
   }
   
+
+  private static RecCV foldIsMapped(ComputedValue<RecCV> val) {
+    RecCV fileCV = val.getInput(0);
+    if (fileCV.isArg()) {
+      assert(fileCV.arg().isVar());
+      Var file = fileCV.arg().getVar();
+      if (file.isMapped() != Ternary.MAYBE) {
+        Arg isMapped = Arg.createBoolLit(file.isMapped() == Ternary.TRUE);
+        return new RecCV(isMapped);
+      } 
+    }
+    return null;
+  }
+
+
+  private static RecCV foldFunctionCall(Logger logger, CongruentSets sets,
+      ComputedValue<RecCV> val) {
+    List<Arg> inputs;
+    boolean usesValues = CommonFunctionCall.acceptsLocalValArgs(val.op);
+    if (usesValues) {
+      inputs = convertToArgs(val);
+    } else {
+      inputs = findFutureValues(sets, val);
+    }
+    if (inputs != null) {
+      Arg result = CommonFunctionCall.tryConstantFold(val, inputs);
+      if (result != null) {
+        return valFromArg(!usesValues, result);
+      }
+    }
+    return null;
+  }
+
 
   /**
    * Convert arg representing result of computation (maybe constant)

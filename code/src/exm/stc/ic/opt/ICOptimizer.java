@@ -135,11 +135,6 @@ public class ICOptimizer {
         pipe.addPass(Validate.standardValidator());
       }
       
-      // Constant fold after loop unrolling, since loop unrolling bounds can often
-      // be folded
-      pipe.addPass(new ConstantFold());
-      
-      
       boolean lastHalf = iteration > nIterations * 2;
       
       // Try to hoist variables out of loops, etc

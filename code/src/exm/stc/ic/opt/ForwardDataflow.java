@@ -45,6 +45,7 @@ import exm.stc.ic.opt.InitVariables.InitState;
 import exm.stc.ic.opt.ProgressOpcodes.Category;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
 import exm.stc.ic.opt.valuenumber.ComputedValue;
+import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
 import exm.stc.ic.opt.valuenumber.Congruences;
 import exm.stc.ic.opt.valuenumber.UnifiedValues;
 import exm.stc.ic.opt.valuenumber.ValLoc;
@@ -53,6 +54,7 @@ import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICContinuations.WaitVar;
+import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Instruction.Fetched;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
@@ -411,8 +413,11 @@ public class ForwardDataflow implements OptimizerPass {
       Statement stmt = stmtIt.next();
       if (stmt.type() == StatementType.INSTRUCTION) {
         // Replace vars in instruction
-        replaceCongruent(stmt.instruction(), state, init);
-
+        Instruction inst = stmt.instruction();
+        replaceCongruent(inst, state, init);
+        
+        replaceInstruction(state, stmtIt, inst);
+        
         // Update init state
         InitVariables.updateInitVars(logger, stmt, init, false);
       } else {
@@ -556,6 +561,36 @@ public class ForwardDataflow implements OptimizerPass {
   private static final List<RenameMode> RENAME_MODES =
       Arrays.asList(RenameMode.VALUE, RenameMode.REFERENCE);
   
+  /**
+   * Try to replace instruction with e.g. a store.  This propagates
+   * constants in some cases where propagating the value doesn't work.
+   * 
+   * TODO: currently only does instructions with a single output.
+   * We don't have any const foldable instructions with multiple outputs
+   * yet
+   * @param state
+   * @param stmtIt
+   * @param inst
+   */
+  private void replaceInstruction(Congruences state,
+      ListIterator<Statement> stmtIt, Instruction inst) {
+    if (!inst.hasSideEffects() && inst.getOutputs().size() == 1) {
+      Var output = inst.getOutput(0);
+      if (Types.isScalarFuture(output)) {
+        // Replace a computation with future output with a store
+        Arg val = state.findRetrieveResult(output);
+        if (val != null) {
+          stmtIt.set(ICInstructions.futureSet(output, val));
+        }
+      } else if (Types.isScalarValue(output)) {
+        Arg val = state.findCanonical(output.asArg(), CongruenceType.VALUE);
+        if (val != null && val.isConstant()) {
+          stmtIt.set(ICInstructions.valueSet(output, val));
+        }
+      }
+    }
+  }
+
   private static void replaceCongruentNonRec(Continuation cont,
                               Congruences congruent, InitState init) {
     for (RenameMode mode: RENAME_MODES) {
