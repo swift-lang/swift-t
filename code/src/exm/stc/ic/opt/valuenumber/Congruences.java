@@ -240,17 +240,6 @@ public class Congruences implements ValueState {
       }
     }
     
-    if (congruent.congType == CongruenceType.ALIAS) {
-      // Might need to mark new one as closed.  We don't need to do the
-      // reverse, since if the set we're adding to was marked as closed,
-      // we're done.
-      if (track.isRecursivelyClosed(oldVal.getVar())) {
-        track.close(newVal.getVar(), true);
-      } else if (track.isClosed(oldVal.getVar())) {
-        track.close(newVal.getVar(), false);
-      }
-    }
-    
     congruent.changeCanonical(oldVal, newVal);
   }
 
@@ -344,40 +333,9 @@ public class Congruences implements ValueState {
   public void markClosed(Var var, boolean recursive) {
     if (var.storage() == Alloc.LOCAL) {
       // Don't bother tracking this info: not actually closed
+      return;
     }
     track.close(getCanonicalAlias(var.asArg()), recursive);
-  }
-  
-  public boolean isClosed(Var var) {
-    return isClosed(var.asArg());
-  }
-  
-  public boolean isClosed(Arg varArg) {
-    // Find canonical var for alias, and check if that is closed.
-    if (varArg.isConstant()) {
-      return true;
-    }
-    return track.isClosed(getCanonicalAlias(varArg));
-  }
-  
-  public boolean isRecClosed(Var var) {
-    return isRecClosed(var.asArg());
-  }
-  
-  public boolean isRecClosed(Arg varArg) {
-    if (varArg.isConstant()) {
-      return true;
-    }
-    // Find canonical var for alias, and check if that is closed.
-    return track.isRecursivelyClosed(getCanonicalAlias(varArg));
-  }
-
-  public Set<Var> getClosed() {
-    return closedSet;
-  }
-
-  public Set<Var> getRecursivelyClosed() {
-    return recClosedSet;
   }
   
   /**
@@ -398,7 +356,71 @@ public class Congruences implements ValueState {
       }
     }
   }
- 
+
+  public boolean isClosed(Var var) {
+    return isClosed(var.asArg());
+  }
+  
+  public boolean isClosed(Arg varArg) {
+    return isClosed(varArg, false);
+  }
+  
+  public boolean isRecClosed(Var var) {
+    return isRecClosed(var.asArg());
+  }
+
+  public boolean isRecClosed(Arg varArg) {
+    return isClosed(varArg, true);
+  }
+
+  private boolean isClosed(Arg varArg, boolean recursive) {
+    // Find canonical var for alias, and check if that is closed.
+    if (varArg.isConstant()) {
+      return true;
+    }
+    Var canonicalAlias = getCanonicalAlias(varArg);
+    boolean canonicalClosed;
+    
+    canonicalClosed = isClosedNonAlias(canonicalAlias, recursive);
+    if (canonicalClosed) {
+      // We're done..
+      return true;
+    }
+    
+    // If canonical not closed, need to check if a merged set was closed,
+    // since closed info isn't immediate synchronized with merges
+    for (Arg mergedSet: byAlias.mergedCanonicals(canonicalAlias.asArg())) {
+      assert(mergedSet.isVar());
+      Var merged = mergedSet.getVar();
+      if (isClosedNonAlias(merged, recursive)) {
+        // Mark canonical alias as closed to avoid having to trace back
+        // again like this.
+        track.close(canonicalAlias, recursive);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Check if closed, ignoring any alias info
+   */
+  private boolean isClosedNonAlias(Var var, boolean recursive) {
+    if (recursive) {
+      return track.isRecursivelyClosed(var);
+    } else {
+      return track.isClosed(var);
+    }
+  }
+  
+  public Set<Var> getClosed() {
+    return closedSet;
+  }
+
+  public Set<Var> getRecursivelyClosed() {
+    return recClosedSet;
+  }
+  
   /**  
    * @param mode
    * @return replacements in effect for given rename mode
@@ -531,7 +553,7 @@ public class Congruences implements ValueState {
    * @param to
    * @param from
    * TODO: need to update to use correct canonical alias as they change
-   * TODO: or alternatively use history of changes to search on demand
+   * TODO: or alternatively use history of changes to search on demand?
    */
   public void setDependencies(Var to, List<Var> fromVars) {
     Var toCanon = getCanonicalAlias(to.asArg());

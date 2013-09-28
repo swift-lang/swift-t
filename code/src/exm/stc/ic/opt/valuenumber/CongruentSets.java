@@ -1,8 +1,10 @@
 package exm.stc.ic.opt.valuenumber;
 
 import java.util.AbstractMap;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -16,9 +18,10 @@ import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.OpEvaluator;
-import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.Var;
 import exm.stc.common.util.MultiMap;
+import exm.stc.common.util.Pair;
 import exm.stc.ic.opt.Semantics;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
@@ -722,8 +725,33 @@ class CongruentSets {
     return findCanonical(retrieveVal);
   }
 
+  /**
+   * @return iterator over all previous canonicals merged into this one
+   */
+  public Iterable<Arg> mergedCanonicals(Arg canonical) {
+    List<Arg> allMerged = new ArrayList<Arg>();
+    
+    Deque<Pair<CongruentSets, Arg>> work =
+          new ArrayDeque<Pair<CongruentSets, Arg>>();
+    work.push(Pair.create(this, canonical));
+    
+    while (!work.isEmpty()) {
+      Pair<CongruentSets, Arg> x = work.pop();
+      CongruentSets curr = x.val1;
+      Arg set = x.val2;
+      for (Arg mergedSet: curr.mergedInto.get(set)) {
+        allMerged.add(mergedSet);
+        // Track back those merged into this one
+        work.push(Pair.create(curr, mergedSet));
+      }
+      if (curr.parent != null) {
+        // Track back merges happening in parents
+        work.push(Pair.create(curr.parent, set));
+      }
+    }
+    return allMerged;
+  }
 
-  
   /**
    * Implement Map interface to allow other modules to look up replacements
    * as if they were using a regular Map.
