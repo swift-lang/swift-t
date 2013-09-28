@@ -1717,7 +1717,6 @@ public class TurbineOp extends Instruction {
           // Will assign the reference
           res.add(ValLoc.makeArrayResult(arr, ix, contents, true,
                                          IsAssign.TO_LOCATION));
-          addDerefMemberVals(existing, arr, contents, ix, res);
           return res;
         }
       }
@@ -1750,14 +1749,6 @@ public class TurbineOp extends Instruction {
                                               returnsRef, IsAssign.NO));
         res.add(ValLoc.makeCreateNestedResult(arr, ix, nestedArr,
             returnsRef));
-        
-        if (op == Opcode.ARRAY_CREATE_NESTED_IMM ||
-            op == Opcode.ARRAY_CREATE_BAG) {
-          // No references involved, the instruction returns the nested
-          // array directly
-        } else {
-          addDerefMemberVals(existing, arr, nestedArr, ix, res);
-        }
         return res;
       }
       case COPY_REF: {
@@ -1768,38 +1759,6 @@ public class TurbineOp extends Instruction {
       }
       default:
         return null;
-    }
-  }
-
-  /**
-   * Handle cases where we know what A[i] is, and we're looking
-   * up A[i], but result is going into reference *A[i].  In that
-   * case we know what we'll get when we dereference *A[i].
-   * TODO: in future, want to wrap CV inside CV
-   * @param existing
-   * @param arr
-   * @param memberRef
-   * @param ix
-   * @param res
-   */
-  private void addDerefMemberVals(ValueState existing, Var arr, Var memberRef,
-      Arg ix, List<ValLoc> res) {
-    assert(Types.isMemberReference(memberRef, arr));
-    ArgCV memCV = ComputedValue.arrayCV(arr, ix);
-    // Check to see if we know what result of retrieve ref this will be
-    for (CongruenceType congType: Arrays.asList(CongruenceType.VALUE,
-                                                CongruenceType.ALIAS)) {
-      Arg prev = existing.findCanonical(memCV, congType);
-      if (prev != null) {
-        assert(Types.isMemberType(arr, prev.type()));
-        IsValCopy valCopy = congType == CongruenceType.ALIAS ?
-                            IsValCopy.NO : IsValCopy.YES;
-        // Only mark one output as assigned
-        IsAssign isAssign = congType == CongruenceType.VALUE ?
-                            IsAssign.NO : IsAssign.NO;
-        res.add(ValLoc.derefCompVal(prev.getVar(), memberRef, valCopy,
-                                    isAssign));
-      }
     }
   }
   

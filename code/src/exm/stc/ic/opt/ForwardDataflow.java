@@ -625,10 +625,16 @@ public class ForwardDataflow implements OptimizerPass {
     }
   }
 
-  private static void replaceCongruent(Statement stmt, Congruences congruent,
+  private void replaceCongruent(Instruction inst, Congruences congruent,
                                                             InitState init) {
+    if (logger.isTraceEnabled()) {
+      logger.trace("Instruction before replacement: " + inst);
+    }
     for (RenameMode mode: RENAME_MODES) {
-      stmt.renameVars(congruent.replacements(mode, init), mode);
+      inst.renameVars(congruent.replacements(mode, init), mode);
+    }
+    if (logger.isTraceEnabled()) {
+      logger.trace("Instruction after replacement: " + inst);
     }
   }
   

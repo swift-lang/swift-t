@@ -236,6 +236,10 @@ public class ComputedValue<T> {
     return new ArgCV(Opcode.LOAD_REF, ref.asArg().asList());
   }
   
+  public boolean isDerefCompVal() {
+    return this.op == Opcode.LOAD_REF;
+  }
+  
   /**
    * Computed value to indicate that something is a direct handle
    * to array contents
@@ -295,6 +299,22 @@ public class ComputedValue<T> {
           subop.equals(ComputedValue.REF_TO_ARRAY_CONTENTS));
   }
   
+  /**
+   * Convert a Array Member Ref to an Array Member value.
+   * @return
+   */
+  public ComputedValue<T> derefArrayMemberRef() {
+    assert(isArrayMemberRef());
+    Object newSubop;
+    if (subop.equals(REF_TO_ARRAY_NESTED)) {
+      newSubop = ARRAY_NESTED;
+    } else {
+      assert(subop.equals(REF_TO_ARRAY_CONTENTS));
+      newSubop = ARRAY_CONTENTS;
+    }
+    return new ComputedValue<T>(Opcode.FAKE, newSubop, inputs);
+  }
+
   public boolean isStructMember() {
     return op == Opcode.STRUCT_LOOKUP;
   }

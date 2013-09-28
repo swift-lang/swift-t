@@ -28,6 +28,7 @@ import exm.stc.ic.opt.Semantics;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
 import exm.stc.ic.opt.valuenumber.ComputedValue.RecCV;
+import exm.stc.ic.tree.Opcode;
 import exm.stc.ic.tree.ICTree.GlobalConstants;
 
 /**
@@ -96,10 +97,11 @@ class CongruentSets {
   private final LinkedList<ToMerge> mergeQueue;
   
   /**
-   * List of future vars that may have obtained a constant value,
-   * requiring further processing before returning
+   * List of args that may allow recanonicalization of CVs with
+   * them inside them.
+   * E.g. a future that now has a constant value.
    */
-  private final LinkedList<Var> futureValQueue;
+  private final LinkedList<Arg> recanonicalizeQueue;
   
   private final boolean constShareEnabled;
   private final boolean constFoldEnabled;
@@ -120,7 +122,7 @@ class CongruentSets {
     this.inaccessible = new HashSet<Var>();
     this.contradictions = contradictions;
     this.mergeQueue = new LinkedList<ToMerge>();
-    this.futureValQueue = new LinkedList<Var>();
+    this.recanonicalizeQueue = new LinkedList<Arg>();
     
     if (parent != null) {
       this.constShareEnabled = parent.constShareEnabled;
@@ -180,7 +182,7 @@ class CongruentSets {
     
     // Should not have any outstanding work to complete
     assert(mergeQueue.isEmpty()) : mergeQueue;
-    assert(futureValQueue.isEmpty()) : futureValQueue;
+    assert(recanonicalizeQueue.isEmpty()) : recanonicalizeQueue;
   }
 
   /**
@@ -426,15 +428,9 @@ class CongruentSets {
     }
     if (val.isCV()) {
       ComputedValue<RecCV> val2 = val.cv();
-      if (val2.op().isRetrieve() && canonicalVal.isConstant()) {
-        // If we found out the value of a future, add to queue for
-        // later processing
-        Var future = val2.getInput(0).arg().getVar();
-        futureValQueue.add(future);
-      }
+      checkForRecanonicalization(canonicalVal, val2);
     }
   }
-
 
   /**
    * Replace oldCanonical with newCanonical as canonical member of a set
@@ -453,10 +449,10 @@ class CongruentSets {
 
   private void processQueues(GlobalConstants consts) {
     if (logger.isTraceEnabled() && !mergeQueue.isEmpty() &&
-        !futureValQueue.isEmpty()) {
+        !recanonicalizeQueue.isEmpty()) {
       logger.trace("Processing queues...");
       logger.trace("mergeQueue: " + mergeQueue);
-      logger.trace("futureValQueue: " + futureValQueue);
+      logger.trace("recanonicalizeQueue: " + recanonicalizeQueue);
     }
     Arg oldCanon;
     Arg newCanon;
@@ -476,19 +472,19 @@ class CongruentSets {
           changeCanonicalOnce(consts, oldCanon, newCanon);
         }
       }
-      while (!futureValQueue.isEmpty()) {
-        Var futureWithVal = futureValQueue.removeFirst();
-        updateCanonicalComponents(consts, futureWithVal.asArg(), null);
+      while (!recanonicalizeQueue.isEmpty()) {
+        Arg component = recanonicalizeQueue.removeFirst();
+        updateCanonicalComponents(consts, component, null);
       }
       // Outer loop in case processing one queue results in additions
       // to another
-    } while (!mergeQueue.isEmpty() || !futureValQueue.isEmpty());
+    } while (!mergeQueue.isEmpty() || !recanonicalizeQueue.isEmpty());
   }
   
   /**
    * Merge together two sets.
    * 
-   * This updates mergeQueue and futureValQueue, so caller needs to
+   * This updates mergeQueue and recanonicalizeQueue, so caller needs to
    * process those.
    * @param oldCanon
    * @param newCanon
@@ -713,19 +709,25 @@ class CongruentSets {
     
 
   private RecCV canonicalize(GlobalConstants consts, RecCV result) {
+
     if (result.isCV()) {
       // Then do additional transformations such as constant folding
       ComputedValue<RecCV> resultValue = result.cv();
       if (resultValue.isCopy() || resultValue.isAlias()) {
         // Strip out copy/alias operations, since we can use value directly
-        result = result.cv().getInput(0);  
+        result = result.cv().getInput(0);
+      } else if (resultValue.isDerefCompVal()) {
+        RecCV resolvedRef = tryResolveRef(resultValue);
+        if (resolvedRef != null) {
+          result = resolvedRef;
+        }
       } else if (constFoldEnabled &&
                  this.congType == CongruenceType.VALUE) {
         RecCV constantFolded = tryConstantFold(resultValue);
         if (constantFolded != null) {
           result = constantFolded;
         }
-      }  
+      }
     }
 
     // Replace a constant future with a global constant
@@ -778,12 +780,24 @@ class CongruentSets {
     return newCV;
   }
 
+  /**
+   * Try to constant-fold the expression
+   * @param val
+   * @return
+   */
   private RecCV tryConstantFold(ComputedValue<RecCV> val) {
     assert(constFoldEnabled);
     assert(this.congType == CongruenceType.VALUE);
     return ConstantFolder.constantFold(logger, this, val);
   }
 
+  /**
+   * Try to replace a future with a constant value with a shared
+   * global constant
+   * @param consts
+   * @param result
+   * @return
+   */
   private RecCV tryReplaceGlobalConstant(GlobalConstants consts, RecCV result) {
     assert(constShareEnabled);
     ComputedValue<RecCV> val = result.cv();
@@ -797,6 +811,51 @@ class CongruentSets {
     }
     return result;
   }
+  
+  /**
+   * Try to resolve a reference lookup to the original thing
+   * dereferenced
+   * @param val
+   * @return
+   */
+  private RecCV tryResolveRef(ComputedValue<RecCV> val) {
+    assert(val.isDerefCompVal());
+    RecCV refV = val.getInput(0);
+    if (refV.isArg()) {
+      Arg ref = refV.arg();
+      for (RecCV v: findCongruentValues(ref)) {
+        if (v.isCV()) {
+          ComputedValue<RecCV> v2 = v.cv();
+          if (v2.isArrayMemberRef()) {
+            return new RecCV(v2.derefArrayMemberRef());
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Check if a change to a value might require something else to be
+   * recanonicalized.
+   * @param canonicalVal
+   * @param val
+   */
+  private void checkForRecanonicalization(Arg canonicalVal,
+      ComputedValue<RecCV> val) {
+    if (val.op().isRetrieve() && canonicalVal.isConstant()) {
+      // If we found out the value of a future, add to queue for
+      // later processing
+      Arg future = val.getInput(0).arg();
+      assert(future.isVar());
+      recanonicalizeQueue.add(future);
+    } else if (val.isArrayMemberRef()) {
+      // Might be able to dereference
+      Arg arrayMemberRef = val.getInput(0).arg();
+      recanonicalizeQueue.add(arrayMemberRef);
+    }
+  }
+
   /**
    * @return iterator over all previous canonicals merged into this one
    */
