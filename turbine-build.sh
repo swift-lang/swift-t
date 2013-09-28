@@ -29,8 +29,8 @@ if [ ! -z "$EXM_CRAY" ] ; then
     EXTRA_ARGS+="--enable-custom-mpi"
 fi
 
-if [ ! -z "$ENABLE_PYTHON" ] ; then
-  EXTRA_ARGS+="--enable-python"
+if [ ! -z "$WITH_PYTHON" ] ; then
+  EXTRA_ARGS+="--enable-python --with-python=${WITH_PYTHON}"
 fi
 
 if [ ! -z "$TCL_VERSION" ] ; then

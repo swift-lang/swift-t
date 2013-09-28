@@ -42,7 +42,7 @@ MAKE_PARALLELISM=2
 #EXM_CRAY=1
 
 # Enable python
-ENABLE_PYTHON=1
+#WITH_PYTHON=/usr/lib
 
 # TCL Version
 TCL_VERSION=8.6
