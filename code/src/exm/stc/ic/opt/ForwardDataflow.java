@@ -416,7 +416,7 @@ public class ForwardDataflow implements OptimizerPass {
         Instruction inst = stmt.instruction();
         replaceCongruent(inst, state, init);
         
-        replaceInstruction(state, stmtIt, inst);
+        replaceInstruction(state, init, stmtIt, inst);
         
         // Update init state
         InitVariables.updateInitVars(logger, stmt, init, false);
@@ -572,20 +572,23 @@ public class ForwardDataflow implements OptimizerPass {
    * @param stmtIt
    * @param inst
    */
-  private void replaceInstruction(Congruences state,
+  private void replaceInstruction(Congruences state, InitState init,
       ListIterator<Statement> stmtIt, Instruction inst) {
     if (!inst.hasSideEffects() && inst.getOutputs().size() == 1) {
       Var output = inst.getOutput(0);
-      if (Types.isScalarFuture(output)) {
-        // Replace a computation with future output with a store
-        Arg val = state.findRetrieveResult(output);
-        if (val != null) {
-          stmtIt.set(ICInstructions.futureSet(output, val));
-        }
-      } else if (Types.isScalarValue(output)) {
-        Arg val = state.findCanonical(output.asArg(), CongruenceType.VALUE);
-        if (val != null && val.isConstant()) {
-          stmtIt.set(ICInstructions.valueSet(output, val));
+      if (!InitVariables.varMustBeInitialized(output, true) ||
+          init.isInitialized(output, true)) {
+        if (Types.isScalarFuture(output)) {
+          // Replace a computation with future output with a store
+          Arg val = state.findRetrieveResult(output);
+          if (val != null) {
+            stmtIt.set(ICInstructions.futureSet(output, val));
+          }
+        } else if (Types.isScalarValue(output)) {
+          Arg val = state.findCanonical(output.asArg(), CongruenceType.VALUE);
+          if (val != null && val.isConstant()) {
+            stmtIt.set(ICInstructions.valueSet(output, val));
+          }
         }
       }
     }
