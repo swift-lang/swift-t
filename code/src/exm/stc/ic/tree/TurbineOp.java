@@ -1633,28 +1633,13 @@ public class TurbineOp extends Instruction {
         } else {
           outIsClosed = Closed.YES_NOT_RECURSIVE;
         }
-        
-        List<ValLoc> result = new ArrayList<ValLoc>();
-        
-        ValLoc retrieve;
+
         if (op == Opcode.LOAD_REF) {
           // use standard deref value
-          retrieve = ValLoc.derefCompVal(dst, src.getVar(), IsValCopy.NO);
+          return ValLoc.derefCompVal(dst, src.getVar(), IsValCopy.NO).asList();
         } else {
-          retrieve = vanillaResult(outIsClosed);
+          return vanillaResult(outIsClosed).asList();
         }
-        result.add(retrieve);
-        
-        Opcode cvop = Opcode.assignOpcode(src.futureType());
-        if (cvop == null) {
-          throw new STCRuntimeError("Need assign op for "
-              + src.getVar());
-        }
-        ValLoc assign = ValLoc.buildResult(cvop,
-                  Arrays.asList(dst.asArg()), src, outIsClosed);
-        result.add(assign);
-
-        return result;
       }
       case STORE_REF:
       case STORE_BOOL:
@@ -1672,18 +1657,15 @@ public class TurbineOp extends Instruction {
         Arg dst = getOutput(0).asArg();
         Arg src = getInput(0);
 
-        ValLoc retrieve;
 
         if (op == Opcode.STORE_REF) {
           // Use standard dereference computed value
-          retrieve = ValLoc.derefCompVal(src.getVar(), dst.getVar(),
+          ValLoc retrieve = ValLoc.derefCompVal(src.getVar(), dst.getVar(),
                                              IsValCopy.NO);
+          return Arrays.asList(retrieve, assign);
         } else {
-          retrieve = ValLoc.buildResult(
-              Opcode.retrieveOpcode(dst.futureType()),
-              Arrays.asList(dst), src, Closed.MAYBE_NOT);
+          return assign.asList();
         }
-        return Arrays.asList(retrieve, assign);
       }
       case IS_MAPPED: {
         // Closed because we don't need to wait to check mapping
@@ -1877,7 +1859,8 @@ public class TurbineOp extends Instruction {
   /**
    * Handle cases where we know what A[i] is, and we're looking
    * up A[i], but result is going into reference *A[i].  In that
-   * case we know what we'll get when we dereference *A[i] 
+   * case we know what we'll get when we dereference *A[i].
+   * TODO: in future, want to wrap CV inside CV
    * @param existing
    * @param arr
    * @param memberRef

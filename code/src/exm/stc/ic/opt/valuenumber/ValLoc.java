@@ -74,7 +74,7 @@ public class ValLoc {
     return new ValLoc(value, location, locClosed, IsValCopy.NO);
   }
   
-  public static ValLoc buildResult(Opcode op, String subop, List<Arg> inputs,
+  public static ValLoc buildResult(Opcode op, Object subop, List<Arg> inputs,
                       Arg valLocation, Closed locClosed, IsValCopy valCopy) {
     ArgCV cv = new ArgCV(op, subop, inputs);
     return new ValLoc(cv, valLocation, locClosed, valCopy);
@@ -86,7 +86,7 @@ public class ValLoc {
                        valCopy);
   }
 
-  public static ValLoc buildResult(Opcode op, String subop,
+  public static ValLoc buildResult(Opcode op, Object subop,
       List<Arg> inputs, Arg valLocation, Closed locClosed) {
     return buildResult(op, subop, inputs, valLocation, locClosed,
                        IsValCopy.NO);  
@@ -103,7 +103,7 @@ public class ValLoc {
                        locClosed);
   }
 
-  public static ValLoc buildResult(Opcode op, String subop, Arg input,
+  public static ValLoc buildResult(Opcode op, Object subop, Arg input,
       Arg valLocation, Closed locClosed) {
     return buildResult(op, subop, Arrays.asList(input), valLocation, locClosed);
   }

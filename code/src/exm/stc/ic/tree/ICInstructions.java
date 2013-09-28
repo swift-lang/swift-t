@@ -2032,8 +2032,8 @@ public class ICInstructions {
     }
     
     public static Map<Var, Arg> constantFold(BuiltinOpcode op, Var outVar,
-        List<Arg> constInputs) {
-      Arg out = OpEvaluator.eval(op, constInputs);
+        List<Arg> inputs) {
+      Arg out = OpEvaluator.eval(op, inputs);
       return (out == null) ? null : Collections.singletonMap(outVar, out);
     }
     
@@ -2195,7 +2195,7 @@ public class ICInstructions {
           cvOp = subop;
         }
         
-        return ValLoc.buildResult(this.op, cvOp.name(), cvInputs,
+        return ValLoc.buildResult(this.op, cvOp, cvInputs,
                                 this.output.asArg(), outputClosed(op));
       }
       return null;
@@ -2271,7 +2271,7 @@ public class ICInstructions {
       if (varVal.op() != this.op) {
         return null;
       }
-      BuiltinOpcode aop = BuiltinOpcode.valueOf(varVal.subop());
+      BuiltinOpcode aop = (BuiltinOpcode)varVal.subop();
       if (aop == BuiltinOpcode.PLUS_INT ||
           aop == BuiltinOpcode.MINUS_INT) {
         // Don't handle recursive values (TODO?)
@@ -2339,7 +2339,7 @@ public class ICInstructions {
     private static ValLoc plusCV(Opcode op, Arg arg1, Arg arg2,
         Var output) {
       // TODO: short circuit here e.g. if one arg is 0
-      return ValLoc.buildResult(op, BuiltinOpcode.PLUS_INT.name(),
+      return ValLoc.buildResult(op, BuiltinOpcode.PLUS_INT,
           Arrays.asList(arg1, arg2), output.asArg(), outputClosed(op));
     }
 

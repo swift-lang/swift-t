@@ -470,15 +470,7 @@ public class ForwardDataflow implements OptimizerPass {
 
     // Immediately replace congruent variables
     replaceCongruent(inst, state);
-
-    /*
-     * See if value is already computed somewhere and see if we should replace
-     * variables going forward NOTE: we don't delete any instructions on this
-     * pass, but rather rely on dead code elim to later clean up unneeded
-     * instructions instead
-     */
-    updateCongruent(logger, f, inst, state);
-
+    
     if (logger.isTraceEnabled()) {
       logger.trace("Instruction after updates: " + inst);
     }
@@ -488,6 +480,14 @@ public class ForwardDataflow implements OptimizerPass {
       // as if it was always there
       return;
     }
+    
+    /*
+     * See if value is already computed somewhere and see if we should replace
+     * variables going forward
+     * NOTE: we don't delete any instructions on this pass, but rather rely on
+     * dead code elim to later clean up unneeded instructions instead.
+     */
+    updateCongruent(logger, f, inst, state);
 
     /*
      * Track transitive dependencies of variables. Future passes depend on

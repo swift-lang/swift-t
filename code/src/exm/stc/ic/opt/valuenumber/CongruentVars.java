@@ -18,6 +18,8 @@ import org.apache.log4j.Logger;
 import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.OpEvaluator;
+import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.MultiMap;
@@ -27,10 +29,9 @@ import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
 import exm.stc.ic.opt.valuenumber.ComputedValue.RecCV;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
-import exm.stc.ic.tree.ICInstructions.Builtin;
-import exm.stc.ic.tree.Opcode;
 import exm.stc.ic.tree.ICInstructions.Instruction.ValueState;
 import exm.stc.ic.tree.ICTree.RenameMode;
+import exm.stc.ic.tree.Opcode;
 
 /**
  * Track which variables/values are congruent with each other
@@ -117,12 +118,10 @@ public class CongruentVars implements ValueState {
   }
   
   public boolean update(String errContext, ValLoc resVal) {
-    // TODO: try to constant-fold value here
-    resVal = canonicalize(resVal);
-    
     if (resVal.congType() == CongruenceType.ALIAS) {
       // Update aliases only if congType matches
-      if (!update(errContext, resVal, byAlias)) {
+      if (!update(errContext, resVal.location(), resVal.value(),
+                  byAlias, true)) {
         return false;
       }
     } else {
@@ -138,29 +137,10 @@ public class CongruentVars implements ValueState {
     markClosed(resVal.location(), resVal.locClosed());
     
     // Both alias and value links result in updates to value
-    return update(errContext, resVal, byValue);
+    return update(errContext, resVal.location(), resVal.value(),
+                  byValue, true);
   }
   
-  /**
-   * Do any canonicalization of result value here
-   * @param resVal
-   * @return
-   */
-  private ValLoc canonicalize(ValLoc resVal) {
-    // TODO: constant fold
-    if (resVal.value().op == Opcode.ASYNC_OP ||
-        resVal.value().op == Opcode.LOCAL_OP) {
-      // TODO: constant fold
-      // Builtin.constantFold(op, outVar, constInputs);
-      // TODO: canonicalize
-    }
-    if (resVal.value().op == Opcode.IS_MAPPED) {
-      // TODO
-      // etc
-    }
-    return resVal;
-  }
-
   private CongruentSet getCongruentSet(CongruenceType congType) {
     if (congType == CongruenceType.VALUE) {
       return byValue;
@@ -171,49 +151,215 @@ public class CongruentVars implements ValueState {
   }
 
   /**
-   * Update a congruentSet with a resVal
+   * Update a congruentSet with the information that value is stored
+   * in location
    * @param errContext
-   * @param track 
-   * @param av
-   * @param resVal
+   * @param location
+   * @param value
    * @param congruent
+   * @param addInverses
    * @return
    */
   public boolean update(String errContext,
-            ValLoc resVal, CongruentSet congruent) {
+            Arg location, ArgCV value, CongruentSet congruent,
+            boolean addInverses) {
     // It's possible that locCV is already congruent with something:
     // find canonical location
-    Arg canonicalLoc = congruent.findCanonical(new RecCV(resVal.location()));
+    Arg canonLoc = congruent.findCanonical(new RecCV(location)); 
+    // canonicalize based on existing congruences
+    RecCV canonVal = canonicalize(congruent, value);
+
+    updateCanonical(errContext, canonLoc, canonVal, congruent);
     
-    ArgCV origCV = resVal.value();
-    if (origCV.isCopy() || origCV.isAlias()) {
-      // handle alias/copies directly
-      // we should already have correct set for congruence type.
-      Arg copySrc = congruent.findCanonical(origCV.getInput(0));
-      mergeSets(errContext, resVal, congruent, canonicalLoc, copySrc);
-    } else {
-      // check what val is congruent with
-      RecCV valCV = congruent.convert(origCV);   
-      Arg canonicalFromVal = congruent.findCanonical(valCV);
-      if (canonicalFromVal == null) {
-        // Not congruent to anything via value, just add val to set
-        congruent.addToSet(valCV, canonicalLoc);
-      } else {
-        mergeSets(errContext, resVal, congruent, canonicalLoc, canonicalFromVal);
-      }
+    if (addInverses) {
+      addInverses(errContext, canonLoc, canonVal);
     }
+    
     return true;
   }
 
+  private void addInverses(String errContext, Arg canonLoc, RecCV canonVal) {
+    if (canonVal.isCV() && canonVal.cv().inputs.size() == 1) {
+      ComputedValue<RecCV> cv = canonVal.cv();
+      RecCV input = cv.getInput(0);
+      if (input.isArg()) {
+        Arg invOutput = input.arg();
+        // Only add value congruences to be safe.. may be able to
+        // relax this later e.g. for STORE_REF/LOAD_REF pair (TODO)
+        CongruentSet valueSet = getCongruentSet(CongruenceType.VALUE);
+        if (cv.op().isAssign()) {
+          ArgCV invVal = ComputedValue.retrieveCompVal(canonLoc.getVar());
+          update(errContext, invOutput, invVal, valueSet, false);
+        } else if (cv.op().isRetrieve()) {
+          ArgCV invVal = new ArgCV(Opcode.assignOpcode(invOutput.getVar()),
+                                   canonLoc.asList());
+          update(errContext, invOutput, invVal, valueSet, false);
+        }
+      }
+    }
+  }
+
   /**
-   * Merge two congruence sets
+   * Update post-canonicalization
+   * @param errContext
+   * @param canonLoc
+   * @param canonVal
+   * @param congruent
+   */
+  private void updateCanonical(String errContext, Arg canonLoc, RecCV canonVal,
+      CongruentSet congruent) {
+    if (canonVal.isCV() && (canonVal.cv().isCopy() || canonVal.cv().isAlias())) {
+      // handle alias/copies directly
+      // we should already have correct set for congruence type.
+      Arg copySrc = congruent.findCanonical(canonVal.cv().getInput(0).arg());
+      mergeSets(errContext, canonVal, congruent, canonLoc, copySrc);
+    } else {
+      Arg canonLocFromVal = congruent.findCanonical(canonVal);
+      if (canonLocFromVal == null) {
+        // Not congruent to anything via value, just add val to set
+        congruent.addToSet(canonVal, canonLoc);
+      } else {
+        // Need to merge together two distinct sets
+        mergeSets(errContext, canonVal, congruent, canonLoc, canonLocFromVal);
+      }
+    }
+  }
+
+  /**
+   * Do any canonicalization of result value here, e.g. to implement
+   * constant folding, etc.
+   * @param resVal
+   * @return
+   */
+  private RecCV canonicalize(CongruentSet congruent, ArgCV origVal) {
+    // First replace the args with whatever current canonical values
+    RecCV result = congruent.canonicalizeInputs(origVal);
+    
+    if (result.isCV()) {
+      // Then do additional transformations such as constant folding
+      ComputedValue<RecCV> resultValue = result.cv();
+      if (resultValue.isCopy() || resultValue.isAlias()) {
+        // Copy/alias operation is not needed for RecCV
+        result = result.cv().getInput(0);  
+      } else if (congruent.congType == CongruenceType.VALUE) {
+        RecCV constantFolded = tryConstantFold(congruent, resultValue);
+        if (constantFolded != null) {
+          result = constantFolded;
+        }
+      }      
+    }
+    
+    return result;
+  }
+
+  private RecCV tryConstantFold(CongruentSet congruent,
+                      ComputedValue<RecCV> val) {
+    if (val.op == Opcode.ASYNC_OP || val.op == Opcode.LOCAL_OP) {
+      List<Arg> inputs;
+      if (val.op == Opcode.LOCAL_OP) {
+        inputs = convertToArgs(val);
+      } else {
+        assert(val.op == Opcode.ASYNC_OP);
+        inputs = findFutureValues(val, congruent);
+      }
+
+      if (logger.isTraceEnabled()) {
+        logger.trace("Try constant fold: " + val + " " + inputs);
+      }
+      if (inputs != null) {
+        // constant fold
+        Arg res = OpEvaluator.eval((BuiltinOpcode)val.subop, inputs);
+        if (res != null) {
+          if (logger.isDebugEnabled()) {
+            logger.debug("Constant fold: " + val + " => " + res);
+          }
+          boolean futureResult = val.op != Opcode.LOCAL_OP;
+          return canonicalConstantVal(futureResult, res);
+        }
+      }
+    } else if (val.op == Opcode.IS_MAPPED) {
+      // TODO: merge over other constantFold() implementations once we can
+      //       replace constant folding pass with this analysis
+      // ARGV, etc too
+    }
+    return null;
+  }
+
+  private RecCV canonicalConstantVal(boolean futureResult, Arg constant) {
+    if (!futureResult) {
+      // Can use directly
+      return new RecCV(constant);
+    } else {
+      // Record stored future
+      return new RecCV(Opcode.assignOpcode(constant.futureType()),
+                                    new RecCV(constant).asList());
+    }
+  }
+
+  private List<Arg> convertToArgs(ComputedValue<RecCV> val) {
+    for (RecCV arg: val.inputs) {
+      if (!arg.isArg()) {
+        return null;
+      }
+    }
+    
+    List<Arg> inputs = new ArrayList<Arg>(val.inputs.size());
+    for (RecCV arg: val.inputs) {
+      inputs.add(arg.arg());
+    }
+    return inputs;
+  }
+
+  /**
+   * Try to find constant values of futures  
+   * @param val
+   * @param congruent
+   * @return a list with constants in places with constant values,
+   *      or future values in places with future args.  Returns null
+   *      if we couldn't resolve to args.
+   */
+  private List<Arg> findFutureValues(ComputedValue<RecCV> val,
+                                     CongruentSet congruent) {
+    List<Arg> inputs = new ArrayList<Arg>(val.inputs.size());
+    for (RecCV arg: val.inputs) {
+      if (!arg.isArg()) {
+        return null;
+      }
+      Arg storedConst = findValueOf(congruent, arg);
+      if (storedConst != null && storedConst.isConstant()) {
+        inputs.add(storedConst);
+      } else {
+        inputs.add(arg.arg());
+      }
+    }
+    return inputs;
+  }
+
+  /**
+   * Find if a future has a constant value stored in it
+   * @param congruent
+   * @param arg
+   * @return a value stored to the var, or null
+   */
+  private Arg findValueOf(CongruentSet congruent, RecCV arg) {
+    assert(arg.arg().isVar());
+    // Try to find constant load
+    Opcode retrieveOp = Opcode.retrieveOpcode(arg.arg().getVar());
+    assert(retrieveOp != null);
+    RecCV retrieveVal = new RecCV(retrieveOp, arg.asList());
+    
+    return congruent.findCanonical(retrieveVal);
+  }
+
+  /**
+   * Merge two congruence sets that are newly connected via value
    * @param errContext
    * @param resVal
    * @param congruent
    * @param newLoc representative of set with location just assigned
    * @param oldLoc representative of existing set
    */
-  private void mergeSets(String errContext, ValLoc resVal,
+  private void mergeSets(String errContext, RecCV value,
       CongruentSet congruent, Arg newLoc, Arg oldLoc) {
     if (newLoc.equals(oldLoc)) {
       // Already merged
@@ -222,7 +368,7 @@ public class CongruentVars implements ValueState {
     
     // Found a match!
     if (!checkNoContradiction(errContext, congruent.congType,
-                              resVal, newLoc, oldLoc)) {
+                              value, newLoc, oldLoc)) {
       // Constants don't match, abort!
       congruent.markContradiction(newLoc);
       congruent.markContradiction(oldLoc);
@@ -256,7 +402,9 @@ public class CongruentVars implements ValueState {
     }
     
     if (congruent.congType == CongruenceType.ALIAS) {
-      // Might need to mark new one as closed
+      // Might need to mark new one as closed.  We don't need to do the
+      // reverse, since if the set we're adding to was marked as closed,
+      // we're done.
       if (track.isRecursivelyClosed(oldVal.getVar())) {
         track.close(newVal.getVar(), true);
       } else if (track.isClosed(oldVal.getVar())) {
@@ -268,7 +416,7 @@ public class CongruentVars implements ValueState {
   }
 
   private boolean checkNoContradiction(String errContext,
-    CongruenceType congType, ValLoc resVal, Arg val1, Arg val2) {
+    CongruenceType congType, RecCV value, Arg val1, Arg val2) {
     boolean contradiction = false;
     if (congType == CongruenceType.VALUE) {
       if (val1.isConstant() && val2.isConstant() && !val1.equals(val2)) {
@@ -285,7 +433,7 @@ public class CongruentVars implements ValueState {
     }
     if (contradiction) {
       Logging.uniqueWarn("Invalid code detected during optimization. "
-          + "Conflicting values for " + resVal.value() + ": " + val1 +
+          + "Conflicting values for " + value + ": " + val1 +
           " != " + val2 + " in " + errContext + ".\n"
           + "This may have been caused by a double-write to a variable. "
           + "Please look at any previous warnings emitted by compiler. "
@@ -747,7 +895,7 @@ public class CongruentVars implements ValueState {
     
 
     public Arg findCanonical(ArgCV val) {
-      return findCanonical(convert(val));
+      return findCanonical(canonicalizeInputs(val));
     }
     
     /**
@@ -1037,7 +1185,7 @@ public class CongruentVars implements ValueState {
      * @param cv
      * @return
      */
-    private RecCV convert(ArgCV cv) {
+    private RecCV canonicalizeInputs(ArgCV cv) {
       List<Arg> inputs = cv.getInputs();
       List<RecCV> newInputs = new ArrayList<RecCV>(inputs.size());
       for (Arg input: inputs) {

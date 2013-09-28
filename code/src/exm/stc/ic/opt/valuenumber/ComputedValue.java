@@ -58,12 +58,18 @@ public class ComputedValue<T> {
   };
   
   final Opcode op;
-  final String subop;
+
+  /**
+   * Other identifier to disambiguate within op.  Should
+   * implement equals() and hashcode().
+   * @return
+   */
+  final Object subop;
   final List<T> inputs;
   
   private final int hashCode; // Cache hashcode 
   
-  public ComputedValue(Opcode op, String subop, List<T> inputs) {
+  public ComputedValue(Opcode op, Object subop, List<T> inputs) {
     assert(op != null);
     assert(subop != null);
     assert(inputs != null);
@@ -81,8 +87,8 @@ public class ComputedValue<T> {
   public Opcode op() {
     return op;
   }
-
-  public String subop() {
+  
+  public Object subop() {
     return subop;
   }
 
@@ -332,7 +338,7 @@ public class ComputedValue<T> {
       super(op, inputs);
     }
     
-    public ArgCV(Opcode op, String subop, List<Arg> inputs) {
+    public ArgCV(Opcode op, Object subop, List<Arg> inputs) {
       super(op, subop, inputs);
     }
     
@@ -347,15 +353,18 @@ public class ComputedValue<T> {
       this.arg = null;
     }
     
-    public RecCV(Opcode op, String subop, List<RecCV> inputs) {
+    public RecCV(Opcode op, Object subop, List<RecCV> inputs) {
       this(new ComputedValue<RecCV>(op, subop, inputs));
     }
-
+    
+    public RecCV(Opcode op, List<RecCV> inputs) {
+      this(op, "", inputs);
+    }
     public RecCV(Arg arg) {
       this.cv = null;
       this.arg = arg;
     }
-    
+
     private final ComputedValue<RecCV> cv;
     private final Arg arg;
     
@@ -365,6 +374,10 @@ public class ComputedValue<T> {
     
     public boolean isArg() {
       return arg != null;
+    }
+    
+    public List<RecCV> asList() {
+      return Collections.singletonList(this);
     }
     
     public Arg arg() {

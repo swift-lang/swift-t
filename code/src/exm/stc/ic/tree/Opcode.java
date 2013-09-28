@@ -3,6 +3,7 @@ package exm.stc.ic.tree;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Types.Typed;
 
 public enum Opcode {
   FAKE, // Used for ComputedValue if there isn't a real opcode
@@ -84,10 +85,26 @@ public enum Opcode {
   // Physical copy of file
   COPY_FILE_CONTENTS;
   
-  public static Opcode assignOpcode(Type dstType) {
+  public boolean isAssign() {
+    switch (this) {
+      case STORE_BLOB:
+      case STORE_BOOL:
+      case STORE_FILE:
+      case STORE_FLOAT: 
+      case STORE_INT:
+      case STORE_REF: 
+      case STORE_STRING: 
+      case STORE_VOID:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  public static Opcode assignOpcode(Typed dstType) {
     Opcode op = null;
-    if (Types.isPrimFuture(dstType)) {
-       switch(dstType.primType()) {
+    if (Types.isPrimFuture(dstType.type())) {
+       switch(dstType.type().primType()) {
        case BOOL:
          op = Opcode.STORE_BOOL;
          break;
@@ -118,10 +135,26 @@ public enum Opcode {
     return op;
   }
   
-  public static Opcode retrieveOpcode(Type srcType) {
+  public boolean isRetrieve() {
+    switch (this) {
+    case LOAD_BLOB:
+    case LOAD_BOOL:
+    case LOAD_FILE:
+    case LOAD_FLOAT: 
+    case LOAD_INT:
+    case LOAD_REF:
+    case LOAD_STRING:
+    case LOAD_VOID:
+      return true;
+    default:
+      return false;
+  }
+  }
+
+  public static Opcode retrieveOpcode(Typed srcType) {
     Opcode op;
-    if (Types.isPrimFuture(srcType)) {
-      switch(srcType.primType()) {
+    if (Types.isPrimFuture(srcType.type())) {
+      switch(srcType.type().primType()) {
       case BOOL:
         op = Opcode.LOAD_BOOL;
         break;
@@ -157,9 +190,9 @@ public enum Opcode {
   }
   
 
-  public static Opcode derefOpCode(Type type) {
+  public static Opcode derefOpCode(Typed type) {
     if (Types.isRef(type)) {
-      Type refedType = type.memberType();
+      Type refedType = type.type().memberType();
       if (Types.isPrimFuture(refedType)) {
         switch (refedType.primType()) {
         case BLOB:
