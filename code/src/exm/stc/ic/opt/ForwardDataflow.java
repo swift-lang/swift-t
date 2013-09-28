@@ -122,6 +122,7 @@ public class ForwardDataflow implements OptimizerPass {
   }
 
   private void runPass(Program prog, Function f) {
+    logger.trace("Optimizing function @" + f.getName());
     // First pass finds all congruence classes and expands some instructions
     Map<Block, Congruences> cong;
     cong = findCongruences(prog, f, ExecContext.CONTROL);
@@ -370,7 +371,8 @@ public class ForwardDataflow implements OptimizerPass {
       int stmtIndex, Congruences state, Map<Block, Congruences> result) {
     logger.trace("Recursing on continuation " + cont.getType());
 
-    Congruences contState = state.enterContinuation(cont.inheritsParentVars(), stmtIndex);
+    Congruences contState = state.enterContinuation(cont.inheritsParentVars(),
+                                                    stmtIndex);
     // additional variables may be close once we're inside continuation
     List<BlockingVar> contClosedVars = cont.blockingVars(true);
     if (contClosedVars != null) {
@@ -406,6 +408,13 @@ public class ForwardDataflow implements OptimizerPass {
   private void replaceVals(Block block, Map<Block, Congruences> congruences,
                         InitState init) {
     Congruences state = congruences.get(block);
+
+    if (logger.isTraceEnabled()) {
+      logger.trace("=======================================");
+      logger.trace("Replacing on block " + System.identityHashCode(block)
+                   + ": " + block.getType());
+      state.printTraceInfo(logger);
+    }
     
     // TODO: use closed info when replacing?
     ListIterator<Statement> stmtIt = block.statementIterator();
@@ -461,6 +470,12 @@ public class ForwardDataflow implements OptimizerPass {
   private void inlinePass(Block block, Map<Block, Congruences> cong) {
     Congruences blockState = cong.get(block);
     assert(blockState != null);
+    if (logger.isTraceEnabled()) {
+      logger.trace("=======================================");
+      logger.trace("Inlining on block " + System.identityHashCode(block)
+                   + ": " + block.getType());
+      blockState.printTraceInfo(logger);
+    }
     
     // Use original statement count from when block was constructed
     int origStmtCount = block.getStatements().size();
@@ -506,6 +521,7 @@ public class ForwardDataflow implements OptimizerPass {
       // Remove old and then add new
       contIt.remove();
       block.insertInline(toInline, contIt, block.statementEndIterator());
+      logger.trace("Inlined continuation " + cont.getType());
     }
     return false;
   }
@@ -525,6 +541,10 @@ public class ForwardDataflow implements OptimizerPass {
     if (predicted != null) {
       /* Insert block inline.  This will put iterator past end of
        * inserted code (which is what we want!) */
+      if (logger.isTraceEnabled()) {
+        logger.trace("Inlining conditional at statement index " +
+                     stmtIt.previousIndex());
+      }
       stmtIt.remove();
       block.insertInline(predicted, stmtIt);
       return true;

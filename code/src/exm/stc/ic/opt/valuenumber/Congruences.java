@@ -555,6 +555,7 @@ public class Congruences implements ValueState {
   }
 
   public void printTraceInfo(Logger logger) {
+    logger.trace("State dump for " + System.identityHashCode(this));
     byAlias.printTraceInfo(logger);
     byValue.printTraceInfo(logger);
     track.printTraceInfo(logger);

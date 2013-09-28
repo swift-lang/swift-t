@@ -261,8 +261,8 @@ public class ClosedVarTracker {
     while (curr != null) {
       logger.trace("Closed vars @ ancestor " + height + 
           (curr == this ? "" : " Index " + parentIndex));
-      logger.trace(curr.closed);
-      logger.trace(dependsOn);
+      logger.trace("closed:" + curr.closed);
+      logger.trace("dependsOn: " + dependsOn);
 
       parentIndex = curr.parentStmtIndex;
       curr = curr.parent;
