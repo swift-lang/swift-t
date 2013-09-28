@@ -458,6 +458,12 @@ class CongruentSets {
   }
 
   private void processQueues(GlobalConstants consts) {
+    if (logger.isTraceEnabled() && !mergeQueue.isEmpty() &&
+        !futureValQueue.isEmpty()) {
+      logger.trace("Processing queues...");
+      logger.trace("mergeQueue: " + mergeQueue);
+      logger.trace("futureValQueue: " + futureValQueue);
+    }
     Arg oldCanon;
     Arg newCanon;
     /*
@@ -570,8 +576,12 @@ class CongruentSets {
    */
   private void updateCanonicalComponents(GlobalConstants consts,
                               Arg oldComponent, Arg newComponent) { 
+    assert(newComponent == null || !oldComponent.equals(newComponent)) :
+           oldComponent + " " + newComponent;
     CongruentSets curr = this;
     do {
+      logger.trace("Iterating over components of: " + oldComponent + ": " +
+                    curr.componentIndex.get(oldComponent));
       for (RecCV outerCV: curr.componentIndex.get(oldComponent)) {
         assert(outerCV.isCV());
         RecCV newOuterCV = outerCV;
@@ -583,12 +593,14 @@ class CongruentSets {
         }
         // Then do other canonicalization
         newOuterCV = canonicalize(consts, newOuterCV);
-        if (newOuterCV != outerCV) {
+        if (!newOuterCV.equals(outerCV)) {
           if (logger.isTraceEnabled()) {
             logger.trace("Sub " + oldComponent + " for "
                         + newComponent + " in " + outerCV); 
           }
-          this.componentIndex.put(newComponent, newOuterCV);
+          if (newComponent != null) {
+            addInputIndex(newComponent, newOuterCV);
+          }
           Arg canonical = findCanonical(outerCV);
           if (canonical != null) {
             // Check to see if this CV bridges two sets
@@ -609,7 +621,7 @@ class CongruentSets {
               }
             } else {
               // Add to same set
-              addToSet(consts, newOuterCV, canonical);
+              addSetEntry(newOuterCV, canonical);
             }
             
             if (contradictions.contains(newComponent) &&
@@ -625,10 +637,6 @@ class CongruentSets {
       }
       curr = curr.parent;
     } while (curr != null);
-    
-    // Remove component map in this scope, since we won't use
-    // oldCanonical any more (leave outer scopes untouched)
-    this.componentIndex.remove(oldComponent);
   }
 
   private List<RecCV> replaceInput(List<RecCV> oldInputs,
@@ -655,6 +663,9 @@ class CongruentSets {
    * canonical Arg.
    */
   private void addInputIndex(Arg newInput, RecCV newCV) {
+    if (logger.isTraceEnabled()) {
+      logger.trace("Add component: " + newInput + "=>" + newCV);
+    }
     componentIndex.put(newInput, newCV);
   }
 
