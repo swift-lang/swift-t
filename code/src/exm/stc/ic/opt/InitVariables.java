@@ -201,7 +201,7 @@ public class InitVariables {
     private void updatePartialInitStruct(Instruction inst, Var initVar) {
       assert(inst.op == Opcode.STRUCT_INIT_FIELD) : "Expected STRUCT_INIT_FIELD";
       String field = inst.getInput(0).getStringLit();
-      
+
       List<String> prevUninitFields = uninitStructFields.get(initVar);
       List<String> newUninitFields; 
       StructType st = (StructType)(initVar.type().getImplType());

@@ -412,17 +412,16 @@ public class ForwardDataflow implements OptimizerPass {
       if (stmt.type() == StatementType.INSTRUCTION) {
         // Replace vars in instruction
         replaceCongruent(stmt.instruction(), state, init);
-        
+
         // Update init state
         InitVariables.updateInitVars(logger, stmt, init, false);
       } else {
         assert(stmt.type() == StatementType.CONDITIONAL);
-        // Replace vars recursively in conditional
+        /* Replace vars recursively in conditional.  Init state
+         * is updated in this function */ 
         replaceCongruentNonRec(stmt.conditional(), state, init);
         replaceValsRec(stmt.conditional(), congruences, init);
       }
-
-      InitVariables.updateInitVars(logger, stmt, init, false);
     }
     
     // Replace in cleanups
