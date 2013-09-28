@@ -24,6 +24,7 @@ import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.InvalidWriteException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.ic.opt.valuenumber.ValueNumber;
 import exm.stc.ic.refcount.RefcountPass;
 import exm.stc.ic.tree.ICTree.Program;
 
@@ -32,7 +33,7 @@ public class ICOptimizer {
   /**
    * If true, validate as frequently as possible
    */
-  static final boolean SUPER_DEBUG = true;
+  public static final boolean SUPER_DEBUG = true;
   
   /**
    * Optimize the program and return a new one
@@ -156,14 +157,13 @@ public class ICOptimizer {
         // Towards end, inline explicit waits and disallow reordering
         canReorder = false;
       }
-      // Do forward dataflow after const folding so it won't create any
-      // new constants, etc to be folded
-      pipe.addPass(new ForwardDataflow(canReorder));
+      // ValueNumber is a key pass that reduces a lot of redundancy
+      pipe.addPass(new ValueNumber(canReorder));
       
-      // ForwardDataflow tends to generate most dead code
+      // ValueNumber tends to generate most dead code
       pipe.addPass(new DeadCodeEliminator());
       
-      // ForwardDataflow adds blocking vars to function
+      // ValueNumber adds blocking vars to function
       pipe.addPass(new FunctionSignature());
       
       // Do this after forward dataflow to improve odds of fusing things

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License
  */
-package exm.stc.ic.opt;
+package exm.stc.ic.opt.valuenumber;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,13 +41,16 @@ import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.WrapUtil;
+import exm.stc.ic.opt.ICOptimizer;
+import exm.stc.ic.opt.InitVariables;
 import exm.stc.ic.opt.InitVariables.InitState;
+import exm.stc.ic.opt.OptUtil;
+import exm.stc.ic.opt.OptimizerPass;
+import exm.stc.ic.opt.ProgressOpcodes;
 import exm.stc.ic.opt.ProgressOpcodes.Category;
+import exm.stc.ic.opt.Semantics;
+import exm.stc.ic.opt.TreeWalk;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
-import exm.stc.ic.opt.valuenumber.ComputedValue;
-import exm.stc.ic.opt.valuenumber.Congruences;
-import exm.stc.ic.opt.valuenumber.UnifiedValues;
-import exm.stc.ic.opt.valuenumber.ValLoc;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
@@ -89,7 +92,7 @@ import exm.stc.ic.tree.TurbineOp;
  * of dead code, which can be cleaned up in a pass of the dead code eliminator.
  * 
  */
-public class ForwardDataflow implements OptimizerPass {
+public class ValueNumber implements OptimizerPass {
 
   private Logger logger;
   
@@ -99,7 +102,7 @@ public class ForwardDataflow implements OptimizerPass {
    */
   private boolean reorderingAllowed;
 
-  public ForwardDataflow(boolean reorderingAllowed) {
+  public ValueNumber(boolean reorderingAllowed) {
     this.reorderingAllowed = reorderingAllowed;
   }
 
