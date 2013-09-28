@@ -1227,7 +1227,7 @@ public class CongruentVars implements ValueState {
             }
           } else {
             // Check it was swallowed up into another set
-            Arg newKey = inEffect.get(key1);
+            Arg newKey = inEffect.get(new RecCV(key1));
             assert(newKey != null && !newKey.equals(key1)) :
               " Expected " + key1 + " to be part of another set, but " +
               " was part of " + newKey;
