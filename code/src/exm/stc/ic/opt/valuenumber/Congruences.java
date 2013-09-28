@@ -158,7 +158,7 @@ public class Congruences implements ValueState {
     
     // Check assignment after all other updates, so that any
     // contradictions get propagated correctly
-    markAssigned(consts, resVal);
+    markAssigned(errContext, consts, resVal);
   }
   
   /**
@@ -223,8 +223,9 @@ public class Congruences implements ValueState {
       RecCV input = cv.getInput(0);
       if (input.isArg()) {
         Arg invOutput = input.arg();
-        // Only add value congruences to be safe.. may be able to
-        // relax this later e.g. for STORE_REF/LOAD_REF pair (TODO)
+        // Only add value congruences to be safe.
+        // It might be possible to handle ALIAS congruences, e.g. for
+        // STORE_REF/LOAD_REF pair here later on (TODO)
         if (cv.op().isAssign()) {
           ArgCV invVal = ComputedValue.retrieveCompVal(canonLoc.getVar());
           updateInv(consts, errContext, invOutput, invVal, stmtIndex);
@@ -437,7 +438,7 @@ public class Congruences implements ValueState {
    * @param canonLoc CV representing a single assignment location
    * @param assign
    */
-  private void markAssigned(GlobalConstants consts, ValLoc vl) {
+  private void markAssigned(String errContext, GlobalConstants consts, ValLoc vl) {
     RecCV assigned;
     if (vl.isAssign() == IsAssign.NO) {
       return;
@@ -447,16 +448,18 @@ public class Congruences implements ValueState {
       assigned = new RecCV(location);  
     } else {
       assert(vl.isAssign() == IsAssign.TO_VALUE);
-      // TODO: Need to canonicalize root var by alias and subscripts by value.
-      //       Probably just need to handle each location type separately
-      //       E.g. Values, futures, refs, arrays.  Could model as root
-      //            + subscript
-      assigned = byAlias.canonicalize(consts, vl.value());
+      assigned = canonicalizeAssignValue(consts, vl.value());
     }
     if (maybeAssigned.contains(assigned)) {
       // Potential double assignment: avoid doing any optimizations on
       // the contents of this location.
       logger.debug("Potential double assignment to " + assigned);
+
+      Logging.uniqueWarn("Invalid code detected during optimization. "
+          + "Double assignment to " + printableAssignValue(assigned) + " in " + errContext + ".\n"
+          + "This may have been caused by a double-write to a variable. "
+          + "Please look at any previous warnings emitted by compiler. "
+          + "Otherwise this could indicate a stc bug");
       byAlias.markContradiction(assigned);
       byValue.markContradiction(assigned);
       return;
@@ -469,6 +472,21 @@ public class Congruences implements ValueState {
     // TODO: will need to unify stored state
     // TODO: will need to merge maybeAssigned info upon congruence merges.
     //          E.g. if A[x], A[y] are stored and we find out that x == y
+  }
+
+  private String printableAssignValue(RecCV assigned) {
+    // TODO: more user-friendly string for e.g. arround location
+    return assigned.toString();
+  }
+
+  private RecCV canonicalizeAssignValue(GlobalConstants consts, ArgCV val) {
+    RecCV assigned;
+    // TODO: Need to canonicalize root var by alias and subscripts by value.
+    //       Probably just need to handle each location type separately
+    //       E.g. Values, futures, refs, arrays.  Could model as root
+    //            + subscript
+    assigned = byAlias.canonicalize(consts, val);
+    return assigned;
   }
 
   public void markClosed(Var var, int stmtIndex, boolean recursive) {

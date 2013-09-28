@@ -1636,27 +1636,9 @@ public class TurbineOp extends Instruction {
       case DEREF_INT:
       case DEREF_STRING: 
       case DEREF_FILE: {
-        // Provide this one to indicate that output was assigned
-        ValLoc regular = vanillaResult(Closed.MAYBE_NOT, IsAssign.TO_LOCATION);
-        // Provide standard dereference value
-        // TODO: automatically do inverses in congruence
-        ValLoc inv = ValLoc.derefCompVal(getOutput(0), getInput(0).getVar(),
-                                   IsValCopy.YES, IsAssign.NO);
-        return Arrays.asList(regular, inv);
+        return ValLoc.derefCompVal(getOutput(0), getInput(0).getVar(),
+                                   IsValCopy.YES, IsAssign.NO).asList();
       }
-      /*
-       * TODO: this was previously here to avoid substituting mapped vals.
-       * Congurenes should handle that correctly now.  Delete this soon
-      case DEREF_FILE: {
-        if (getOutput(0).isMapped() == Ternary.FALSE) {
-          return ValLoc.derefCompVal(getOutput(0), getInput(0).getVar(),
-                                     IsValCopy.YES).asList();
-        } else {
-          // Can't use potentially mapped files interchangeably
-          // TODO: still relevant?
-          return null;
-        }
-      }*/
       case STRUCT_INIT_FIELD: {
         ValLoc lookup = ValLoc.makeStructLookupResult(
             getInput(1).getVar(), getOutput(0), getInput(0).getStringLit());

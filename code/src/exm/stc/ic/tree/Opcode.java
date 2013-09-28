@@ -190,6 +190,20 @@ public enum Opcode {
   }
   
 
+  public boolean isDeref() {
+    switch (this) {
+      case DEREF_BLOB:
+      case DEREF_BOOL:
+      case DEREF_FILE:
+      case DEREF_FLOAT:
+      case DEREF_INT:
+      case DEREF_STRING:
+        return true;
+      default:
+        return false;
+    }
+  }
+
   public static Opcode derefOpCode(Typed type) {
     if (Types.isRef(type)) {
       Type refedType = type.type().memberType();

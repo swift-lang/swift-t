@@ -55,9 +55,6 @@ class CongruentSets {
    *  A variable starts off as part of one-element set (itself)
    * @return
    */
-  // TODO: does the canonical need to be a RecCV?
-  //       i.e. are we interested in congruence between abstract
-  //       values that don't map to variables in program?
   private final Map<RecCV, Arg> canonical;
   
   /**
@@ -884,7 +881,9 @@ class CongruentSets {
         boolean output = (congType == CongruenceType.ALIAS);
         if (!initVars.isInitialized(replace.getVar(), output)) {
           // Can't use yet: not initialized
-          // TODO: check alternative canonical vals
+          // TODO: check alternative canonical vals? Would need to be careful
+          //       in doing this as we don't currently fully track the
+          //       order of preference of the alternatives. 
           logger.trace(v + " => " + replace + "(" + congType + ")" +
                         ": NOT INITIALIZED");
           return null;
