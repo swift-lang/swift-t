@@ -395,33 +395,32 @@ class CongruentSets {
 
   /**
    * Replace oldCanonical with newCanonical as canonical member of a set
-   * @param oldCanonical
-   * @param newCanonical
+   * @param oldCanon
+   * @param newCanon
    */
-  public void changeCanonical(Arg oldCanonical,
-                                           Arg newCanonical) {
-    List<ToMerge> consequentMerges;
+  public void changeCanonical(Arg oldCanon, Arg newCanon) {
+    List<ToMerge> moreMerges;
     // Do the initial merge
-    consequentMerges = changeCanonicalOnce(oldCanonical, newCanonical);
+    moreMerges = changeCanonicalOnce(oldCanon, newCanon);
     
     // The common case is that we do the one merge and we're done.
     // However, it's possible that each merge can trigger more merges.
     // Use a work queue here to iteratively process them (recursive
     // function calls would probably be a bad idea since there can be
     // long chains of merges).
-    if (consequentMerges != null && !consequentMerges.isEmpty()) {
+    if (moreMerges != null && !moreMerges.isEmpty()) {
       // Merge in FIFO order
       LinkedList<ToMerge> mergeQ = new LinkedList<ToMerge>();
-      mergeQ.addAll(consequentMerges);
+      mergeQ.addAll(moreMerges);
       while (!mergeQ.isEmpty()) {
         ToMerge merge = mergeQ.pop();
         // recanonicalize in case of changes: may be redundant work
-        oldCanonical = findCanonical(merge.oldSet);
-        newCanonical = findCanonical(merge.newSet);
-        if (!oldCanonical.equals(newCanonical)) {
-          consequentMerges = changeCanonicalOnce(oldCanonical, newCanonical);
-          if (consequentMerges != null) {
-            mergeQ.addAll(consequentMerges);
+        oldCanon = findCanonical(merge.oldSet);
+        newCanon = findCanonical(merge.newSet);
+        if (!oldCanon.equals(newCanon)) {
+          moreMerges = changeCanonicalOnce(oldCanon, newCanon);
+          if (moreMerges != null) {
+            mergeQ.addAll(moreMerges);
           }
         }
       }
@@ -430,58 +429,57 @@ class CongruentSets {
   
   /**
    * Merge together two sets
-   * @param oldCanonical
-   * @param newCanonical
+   * @param oldCanon
+   * @param newCanon
    * 
    * @return list of additional merges that need to happen as a result of
    *      the change in components.  Must return so caller can decide
    *      what to do
    */
-  private List<ToMerge> changeCanonicalOnce(Arg oldCanonical,
-                                           Arg newCanonical) {
-    logger.trace("Merging " + oldCanonical + " into " + newCanonical);
-    assert(!oldCanonical.equals(newCanonical));
+  private List<ToMerge> changeCanonicalOnce(Arg oldCanon, Arg newCanon) {
+    logger.trace("Merging " + oldCanon + " into " + newCanon);
+    assert(!oldCanon.equals(newCanon));
     // Check that types are compatible in sets being merged
-    assert(oldCanonical.type().getImplType().equals(
-           newCanonical.type().getImplType())) : "Types don't match: " +
-           oldCanonical + ":" + oldCanonical.type() +
-            newCanonical + " " + newCanonical.type();  
+    assert(oldCanon.type().getImplType().equals(
+           newCanon.type().getImplType())) : "Types don't match: " +
+           oldCanon + ":" + oldCanon.type() +
+            newCanon + " " + newCanon.type();  
     
     // Handle situation where oldCanonical is part of another RecCV 
-   List<ToMerge> toMerge = updateCanonicalComponents(oldCanonical,
-                                                     newCanonical);
+   List<ToMerge> toMerge = updateCanonicalComponents(oldCanon,
+                                                     newCanon);
     
     // Find all the references to old and add new entry pointing to new
     CongruentSets curr = this;
     do {
-      for (RecCV val: curr.canonicalInv.get(oldCanonical)) {
+      for (RecCV val: curr.canonicalInv.get(oldCanon)) {
         Arg canonicalCheck = findCanonical(val);
         // Confirm that oldCanonical was actually the canonical one
         // This should only be necessary on recursive calls when
         // updating components
-        if (canonicalCheck.equals(oldCanonical)) {
+        if (canonicalCheck.equals(oldCanon)) {
           // val wasn't canonical before, so just need to redirect
           // it to new canonical
-          setCanonicalEntry(val, newCanonical);
+          setCanonicalEntry(val, newCanon);
         }
       }
       curr = curr.parent;
     } while (curr != null);
     // If either set being merged has contradictions, mark both as
     // contradictions
-    if (contradictions.contains(oldCanonical)) {
-      markContradiction(newCanonical);
-    } else if (contradictions.contains(newCanonical)) {
-      markContradiction(oldCanonical);
+    if (contradictions.contains(oldCanon)) {
+      markContradiction(newCanon);
+    } else if (contradictions.contains(newCanon)) {
+      markContradiction(oldCanon);
     }
     
     // Clear out-of-date entries in current scope
     // (leave outer scopes untouched since they're not harmful)
-    this.canonicalInv.remove(oldCanonical);
+    this.canonicalInv.remove(oldCanon);
     
-    this.mergedInto.put(newCanonical, oldCanonical);
+    this.mergedInto.put(newCanon, oldCanon);
     
-    logger.trace("Done merging " + oldCanonical + " into " + newCanonical);
+    logger.trace("Done merging " + oldCanon + " into " + newCanon);
     return toMerge;
   }
 
@@ -537,6 +535,11 @@ class CongruentSets {
           if (newCanonical != null && !newCanonical.equals(canonical)) {
             // Already in a set, mark that we need to merge
             toMerge.add(new ToMerge(canonical, newCanonical));
+            if (logger.isTraceEnabled()) {
+              logger.trace("Merging " + oldComponent + " into " +
+                  newComponent + " causing merging of " + canonical +
+                  " into " + newCanonical);
+            }
           } else {
             // Add to same set
             addToSet(newOuterCV, canonical);
@@ -908,11 +911,6 @@ class CongruentSets {
         logger.trace(v + " => " + replace + "(" + congType + ")");
       }
       return replace;
-    }
-    
-    public boolean isInitialized(Var var) {
-      // TODO Auto-generated method stub
-      return false;
     }
 
     @Override

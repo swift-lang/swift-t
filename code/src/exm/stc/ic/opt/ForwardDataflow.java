@@ -68,19 +68,22 @@ import exm.stc.ic.tree.TurbineOp;
 
 /**
  * This optimisation pass does a range of optimizations. The overarching idea is
- * that we move forward through the IC and keep track of, at each instruction,
- * which variables will be closed, and what values have already been computed.
- * There are several ways we exploit this:
+ * to find congruences class in which different variables or constants are
+ * somehow equal (either aliases for the same data, or having the same value).
+ * We use this information to do constant folding/propagation, and remove
+ * redundant computations and variables by consolidating variables in the same
+ * congruence class.
  * 
- * - If a future is known to be closed, we can retrieve the value and perform
- * operations locally, or we can eliminate a wait - If the same value is
- * computed twice, we can reuse the earlier value - If a value has been inserted
- * into an array, and we retrieve a value from the same index, we can skip the
- * load. Same for struct loads and stores - etc.
+ * The information about aliases is also very useful for finding out which
+ * variables are closed at each point in the program, so we do a closed
+ * variable analysis as part of this pass using the alias info.  This analysis
+ * allows us to do strength reduction of operations, and inline wait statements.
+ * 
+ * Using the propagated constants also allows us to predict branches.  
  * 
  * This optimization pass doesn't remove any instructions: it simply modifies
  * the arguments to each instruction in a way that will hopefully lead a bunch
- * of dead code, which can be cleaned up in a pass of the dead code eliminator
+ * of dead code, which can be cleaned up in a pass of the dead code eliminator.
  * 
  */
 public class ForwardDataflow implements OptimizerPass {

@@ -239,9 +239,7 @@ public class ClosedVarTracker {
   /**
    * Register that variable future depends on all of the variables in the
    * collection, so that if future is closed, then the other variables must be
-   * closed 
-   * TODO: later could allow specification that something is
-   * recursively closed
+   * closed.
    * 
    * @param to
    *          a scalar future

@@ -476,12 +476,11 @@ public class Congruences implements ValueState {
   }
 
   /**
-   * Whether we should track reference count for this var
+   * Whether we should track closed status for this var
    * @param var
    * @return
    */
   private boolean trackClosed(Var var) {
-    // TODO: more precise?
     return var.storage() != Alloc.LOCAL &&
            var.storage() != Alloc.GLOBAL_CONST;
   }
@@ -673,8 +672,6 @@ public class Congruences implements ValueState {
    * from is closed
    * @param to
    * @param from
-   * TODO: need to update to use correct canonical alias as they change
-   * TODO: or alternatively use history of changes to search on demand?
    * TODO: this information can be propagated up the IR tree, since if
    *      A -> B in a wait statement, this implies that in any parent
    *      blocks, that if B is set, then A is set (assuming no
