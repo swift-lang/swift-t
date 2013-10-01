@@ -235,67 +235,73 @@ static inline void
 ADLB_Free_binary_data(adlb_binary_data *buffer);
 
 // Helper macro for packing and unpacking data types with no additional memory
-#define ADLB_PACK_SCALAR(d, result) {                                    \
-  assert(result != NULL);                                                \
-  assert(d != NULL);                                                     \
-  result->data = d;                                                      \
-  result->caller_data = NULL;                                            \
-  result->length = (int)sizeof(*d);                                      \
-  return ADLB_DATA_SUCCESS;                                              \
+#define ADLB_PACK_SCALAR(d, result) {     \
+  assert(result != NULL);                 \
+  assert(d != NULL);                      \
+  result->data = d;                       \
+  result->caller_data = NULL;             \
+  result->length = (int)sizeof(*d);       \
 }
 
 #define ADLB_UNPACK_SCALAR(d, data, length) { \
-  assert(length == (int)sizeof(*d));        \
-  memcpy(d, data, sizeof(*d));              \
-  return ADLB_DATA_SUCCESS;                 \
+  assert(length == (int)sizeof(*d));          \
+  memcpy(d, data, sizeof(*d));                \
 }
 
 static inline adlb_data_code
 ADLB_Pack_integer(const adlb_int_t *d, adlb_binary_data *result)
 {
   ADLB_PACK_SCALAR(d, result);
+  return ADLB_DATA_SUCCESS;
 }
 
 static inline adlb_data_code
 ADLB_Unpack_integer(adlb_int_t *d, const void *data, int length)
 {
   ADLB_UNPACK_SCALAR(d, data, length);
+  return ADLB_DATA_SUCCESS;
 }
 
 static inline adlb_data_code
 ADLB_Pack_ref(const adlb_datum_id *d, adlb_binary_data *result)
 {
   ADLB_PACK_SCALAR(d, result);
+  return ADLB_DATA_SUCCESS;
 }
 
 static inline adlb_data_code
 ADLB_Unpack_ref(adlb_datum_id *d, const void *data, int length)
 {
   ADLB_UNPACK_SCALAR(d, data, length);
+  return ADLB_DATA_SUCCESS;
 }
 
 static inline adlb_data_code
 ADLB_Pack_file_ref(const adlb_file_ref *d, adlb_binary_data *result)
 {
   ADLB_PACK_SCALAR(d, result);
+  return ADLB_DATA_SUCCESS;
 }
 
 static inline adlb_data_code
 ADLB_Unpack_file_ref(adlb_file_ref *d, const void *data, int length)
 {
   ADLB_UNPACK_SCALAR(d, data, length);
+  return ADLB_DATA_SUCCESS;
 }
 
 static inline adlb_data_code
 ADLB_Pack_float(const adlb_float_t *d, adlb_binary_data *result)
 {
   ADLB_PACK_SCALAR(d, result);
+  return ADLB_DATA_SUCCESS;
 }
 
 static inline adlb_data_code
 ADLB_Unpack_float(adlb_float_t *d, const void *data, int length)
 {
   ADLB_UNPACK_SCALAR(d, data, length);
+  return ADLB_DATA_SUCCESS;
 }
 
 static inline adlb_data_code
