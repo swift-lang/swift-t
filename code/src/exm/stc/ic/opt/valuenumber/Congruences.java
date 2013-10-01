@@ -103,11 +103,12 @@ public class Congruences implements ValueState {
          reorderingAllowed);
   }
   
-  public Congruences enterContinuation(boolean varsPassedFromParents,
-          int parentStmtIndex) {
+  public Congruences enterContBlock(boolean varsFromParent,
+                                    int parentStmtIndex) {
     Congruences child = new Congruences(logger, consts, this,
              track.enterContinuation(parentStmtIndex),
-             byValue.makeChild(), byAlias.makeChild(),
+             byValue.makeChild(varsFromParent),
+             byAlias.makeChild(varsFromParent),
              maybeAssigned.makeChild(), reorderingAllowed);
     
     /*
@@ -120,23 +121,9 @@ public class Congruences implements ValueState {
      * - Closed info is sensitive to execution order: need to create new
      *    one per state 
      */
-    
-    // If variables aren't visible in child scope, mark them as unpassable
-    if (!varsPassedFromParents) {
-      for (CongruentSets set: Arrays.asList(child.byValue, child.byAlias)) {
-        set.purgeUnpassableVars();
-      }
-    }
     return child;
   }
-  
 
-  public Congruences enterBlock() {
-    return new Congruences(logger, consts, this, track.enterBlock(),
-     byValue.makeChild(), byAlias.makeChild(), maybeAssigned.makeChild(),
-     reorderingAllowed);
-  }
-  
   public void update(GlobalConstants consts, String errContext,
            ValLoc resVal, int stmtIndex) throws OptUnsafeError {
     if (logger.isTraceEnabled()) {
@@ -396,7 +383,7 @@ public class Congruences implements ValueState {
      
     // Check if accessible (based on passability).
     // Assume new one is accessible
-    if (congruent.inaccessible(oldArg.getVar())) {
+    if (!congruent.isAccessible(oldArg.getVar())) {
        return newArg;
     }
     

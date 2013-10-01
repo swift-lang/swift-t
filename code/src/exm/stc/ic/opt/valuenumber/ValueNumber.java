@@ -387,16 +387,8 @@ public class ValueNumber implements OptimizerPass {
           throws OptUnsafeError {
     logger.trace("Recursing on continuation " + cont.getType());
 
-    Congruences contState = state.enterContinuation(cont.inheritsParentVars(),
-                                                    stmtIndex);
     // additional variables may be close once we're inside continuation
     List<BlockingVar> contClosedVars = cont.blockingVars(true);
-    if (contClosedVars != null) {
-      for (BlockingVar bv : contClosedVars) {
-        int contStmtIndex = 0; // No statements in cont scope
-        contState.markClosed(bv.var, contStmtIndex, bv.recursive);
-      }
-    }
 
     // For conditionals, find variables closed on all branches
     boolean unifyBranches = cont.isExhaustiveSyncConditional();
@@ -404,7 +396,14 @@ public class ValueNumber implements OptimizerPass {
                       new ArrayList<Congruences>() : null;
 
     for (Block contBlock: cont.getBlocks()) {
-      Congruences blockState = contState.enterBlock();
+      Congruences blockState = state.enterContBlock(
+                    cont.inheritsParentVars(), stmtIndex);
+      if (contClosedVars != null) {
+        for (BlockingVar bv : contClosedVars) {
+          int contStmtIndex = 0; // No statements in cont scope
+          blockState.markClosed(bv.var, contStmtIndex, bv.recursive);
+        }
+      }
       findCongruencesRec(prog, fn, contBlock, cont.childContext(execCx),
                          blockState, result);
 

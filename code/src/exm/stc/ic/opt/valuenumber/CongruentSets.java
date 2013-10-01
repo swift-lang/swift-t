@@ -79,9 +79,9 @@ class CongruentSets {
   private final Map<Arg, Set<ArgCV>> componentIndex;
 
   /**
-   * Track variables which are not accessible from parent
+   * Whether unpassable variables are inherited from parent.
    */
-  private final Set<Var> inaccessible;
+  private final boolean varsFromParent;
   
   /**
    * Queue of merges that need to be completed before returning
@@ -103,14 +103,15 @@ class CongruentSets {
    */
   public final CongruenceType congType;
 
-  private CongruentSets(CongruenceType congType, CongruentSets parent) {
+  private CongruentSets(CongruenceType congType, CongruentSets parent,
+                        boolean varsFromParent) {
     this.congType = congType;
     this.parent = parent;
     this.canonical = new HashMap<ArgOrCV, Arg>();
     this.canonicalInv = new MultiMap<Arg, ArgOrCV>();
     this.mergedInto = new MultiMap<Arg, Arg>();
     this.componentIndex = new HashMap<Arg, Set<ArgCV>>();
-    this.inaccessible = new HashSet<Var>();
+    this.varsFromParent = varsFromParent;
     this.mergeQueue = new LinkedList<ToMerge>();
     this.recanonicalizeQueue = new LinkedList<Arg>();
     
@@ -154,8 +155,8 @@ class CongruentSets {
         if (!curr.componentIndex.isEmpty()) {
           logger.trace("Components#" + height + ": " + curr.componentIndex);
         }
-        if (!curr.inaccessible.isEmpty()) {
-          logger.trace("Inaccessible#" + height + ": " + curr.inaccessible);
+        if (!varsFromParent) {
+          logger.trace("Vars not inherited from parent");
         }
         height++;
         curr = curr.parent;
@@ -200,39 +201,15 @@ class CongruentSets {
   }
 
   public static CongruentSets makeRoot(CongruenceType congType) {
-    return new CongruentSets(congType, null);
+    return new CongruentSets(congType, null, true);
   }
   
-  public CongruentSets makeChild() {
-    return new CongruentSets(congType, this);
+  public CongruentSets makeChild(boolean varsFromParent) {
+    return new CongruentSets(congType, this, varsFromParent);
   }
 
-  /**
-   * Called if variables need to be explicitly passed from parent
-   * scope.  We can't do this with some variables.  We need to set
-   * up a barrier to prevent them being substituted into inner scopes
-   * into which they cannot be passed
-   */
-  public void purgeUnpassableVars() {
-    // Look at canonical args in parent scope that might be substituted
-    assert(parent != null);
-    for (Arg canonical: parent.canonical.values()) {
-      if (canonical.isVar() && 
-          !Semantics.canPassToChildTask(canonical.getVar())) {
-        inaccessible.add(canonical.getVar());
-      }
-    }
-  }
-  
-  public boolean inaccessible(Var var) {
-    CongruentSets curr = this;
-    do {
-      if (curr.inaccessible.contains(var)) {
-        return true;
-      }
-      curr = curr.parent;
-    } while (curr != null);
-    return false;
+  private boolean isUnpassable(Arg arg) {
+    return arg.isVar() && !Semantics.canPassToChildTask(arg.getVar());
   }
   
   /**
@@ -299,6 +276,28 @@ class CongruentSets {
     }
   }
   
+  /**
+   * Check if we can actually access a var here
+   * @param var
+   * @return
+   */
+  public boolean isAccessible(Var var) {
+    Arg varArg = var.asArg();
+    if (!isUnpassable(varArg)) {
+      return true;
+    }
+    CongruentSets curr = this;
+    boolean allPassed = true;
+    while (curr != null) {
+      if (canonicalInv.containsKey(varArg)) {
+        return allPassed;
+      }
+      allPassed = allPassed && curr.varsFromParent;
+      curr = curr.parent;
+    }
+    throw new STCRuntimeError("Not found: " + var);
+  }
+
   public Map<Var, Arg> getReplacementMap(InitState init) {
     return new ReplacementMap(init);
   }
@@ -871,6 +870,7 @@ class CongruentSets {
       ArgOrCV cv = new ArgOrCV(v.asArg());
       Arg replace = null;
       CongruentSets curr = CongruentSets.this;
+      boolean allVarsFromParent = true;
       List<CongruentSets> visited = new ArrayList<CongruentSets>();
       do {
         replace = curr.canonical.get(cv);
@@ -878,21 +878,18 @@ class CongruentSets {
           break;
         }
         visited.add(curr);
+        allVarsFromParent = allVarsFromParent && curr.varsFromParent;
         curr = curr.parent;
       } while (curr != null);
       
-      if (replace != null && replace.isVar()) {
-        for (CongruentSets s: visited) {
-          if (s.inaccessible.contains(replace.getVar())) {
-            if (logger.isTraceEnabled()) {
-              logger.trace(v + " => !!" + replace + "(" + congType + ")"
-                    + ": INACCESSIBLE");
-            }
-            // Cannot access variable
-            // TODO: find alternative?
-            return null;
-          }
+      if (replace != null && !allVarsFromParent && isUnpassable(replace)) {
+        if (logger.isTraceEnabled()) {
+          logger.trace(v + " => !!" + replace + "(" + congType + ")"
+                + ": INACCESSIBLE");
         }
+        // Cannot access variable
+        // TODO: find alternative?
+        return null;
       }
       
       if (replace != null && replace.isVar()) {
