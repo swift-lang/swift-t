@@ -231,8 +231,7 @@ public class LocalContext extends Context {
   protected Var createStructFieldTmp(Var struct,
       Type fieldType, String fieldPath, Alloc storage) {
     // Should be unique in context
-    String basename = Var.STRUCT_FIELD_VAR_PREFIX
-        + struct.name() + "_" + fieldPath.replace('.', '_');
+    String basename = Var.structFieldName(struct, fieldPath);
     String name = basename;
     int counter = 1;
     while (lookupDef(name) != null) {

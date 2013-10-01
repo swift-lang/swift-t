@@ -20,8 +20,11 @@ import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.StructType;
+import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.opt.AliasTracker.AliasKey;
@@ -86,6 +89,7 @@ public class RefcountPass implements OptimizerPass {
 
     for (Function f: program.getFunctions()) {
       logger.trace("Entering function " + f.getName());
+      lookupStructArgMembers(logger, f);
       recurseOnBlock(logger, f, f.mainBlock(), new RCTracker(),
           new TopDownInfo());
     }
@@ -132,7 +136,12 @@ public class RefcountPass implements OptimizerPass {
 
   private void recurseOnCont(Logger logger, Function f, Continuation cont,
       TopDownInfo info) {
+    
     for (Block block: cont.getBlocks()) {
+
+      // Workaround for e.g. foreach loops: lookup all struct members 
+      lookupAllStructMembers(block, cont.constructDefinedVars());
+      
       // Build separate copy for each block
 
       TopDownInfo contInfo = info.makeChild(cont);
@@ -725,6 +734,59 @@ public class RefcountPass implements OptimizerPass {
       }
     }
     return null;
+  }
+
+  /**
+   * Workaround for Issue #438: just lookup all struct members at top
+   * so that at least the fields are in scope.
+   * @param logger
+   * @param f
+   */
+  private void lookupStructArgMembers(Logger logger, Function f) {
+    Block block = f.mainBlock();
+    ListIterator<Statement> insertPos = block.statementIterator();
+    for (List<Var> args: Arrays.asList(f.getInputList(), f.getOutputList())) {
+      lookupAllStructMembers(block, insertPos, args);
+    }
+  }
+
+  private void lookupAllStructMembers(Block block, List<Var> args) {
+    // Start inserting lookups at top
+    lookupAllStructMembers(block, block.statementIterator(), args);
+  }
+  
+  private void lookupAllStructMembers(Block block,
+      ListIterator<Statement> insertPos, List<Var> args) {
+    for (Var arg: args) {
+      if (Types.isStruct(arg)) {
+        lookupAllStructMembers(block, insertPos, arg);
+      }
+    }
+  }
+
+  private void lookupAllStructMembers(Block block,
+          ListIterator<Statement> insertPos, Var arg) {
+    assert(Types.isStruct(arg));
+    StructType st = (StructType)arg.type().getImplType();
+    for (StructField field: st.getFields()) {
+      // Fetch field
+      String fieldVarName = block.uniqueVarName(
+                              Var.structFieldName(arg, field.getName()));
+      Var fieldVar = block.declareVariable(field.getType(), fieldVarName,
+                             Alloc.ALIAS, DefType.LOCAL_COMPILER, null);
+      Instruction inst = TurbineOp.structLookup(fieldVar, arg, field.getName());
+      if (logger.isTraceEnabled()) {
+        logger.trace("Added struct loop for arg " + arg + "." + field.getName()
+                     + ": " + inst); 
+      }
+      insertPos.add(inst);
+      inst.setParent(block);
+      
+      // Recurse on all fields
+      if (Types.isStruct(field.getType())) {
+        lookupAllStructMembers(block, insertPos, fieldVar);
+      }
+    }
   }
 
 }

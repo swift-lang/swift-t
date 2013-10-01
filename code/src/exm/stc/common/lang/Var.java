@@ -414,4 +414,15 @@ public class Var implements Comparable<Var>, Typed {
     }
     return null;
   }
+  
+  /**
+   * Choose a name for a struct field var
+   * @param struct
+   * @param fieldPath
+   * @return
+   */
+  public static String structFieldName(Var struct, String fieldPath) {
+    return Var.STRUCT_FIELD_VAR_PREFIX
+        + struct.name() + "_" + fieldPath.replace('.', '_');
+  }
 }
