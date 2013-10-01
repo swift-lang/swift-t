@@ -139,7 +139,9 @@ public class Congruences implements ValueState {
   
   public void update(GlobalConstants consts, String errContext,
            ValLoc resVal, int stmtIndex) throws OptUnsafeError {
-    logger.trace(resVal + " " + resVal.congType());
+    if (logger.isTraceEnabled()) {
+      logger.trace("update: " + resVal + " " + resVal.congType());
+    }
 
     if (resVal.congType() == CongruenceType.ALIAS) {
       // Update aliases only if congType matches

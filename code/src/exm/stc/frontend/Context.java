@@ -142,9 +142,11 @@ public abstract class Context {
   public Var declareVariable(Type type, String name, Alloc scope,
       DefType defType, Var mapping)
               throws DoubleDefineException {
-    logger.trace("context: declareVariable: " +
+    if (logger.isTraceEnabled()) {
+      logger.trace("context: declareVariable: " +
                  type.toString() + " " + name + "<" + scope.toString() + ">"
                  + "<" + defType.toString() + ">");
+    }
 
     Var variable = new Var(type, name, scope, defType, mapping);
     declareVariable(variable);
