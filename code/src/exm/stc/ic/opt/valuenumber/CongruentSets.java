@@ -289,7 +289,7 @@ class CongruentSets {
     CongruentSets curr = this;
     boolean allPassed = true;
     while (curr != null) {
-      if (canonicalInv.containsKey(varArg)) {
+      if (curr.canonicalInv.containsKey(varArg)) {
         return allPassed;
       }
       allPassed = allPassed && curr.varsFromParent;
