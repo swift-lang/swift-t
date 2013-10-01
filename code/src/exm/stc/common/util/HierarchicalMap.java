@@ -60,18 +60,25 @@ public class HierarchicalMap<K, V> implements Map<K, V> {
     return new HierarchicalMap<K,V>(this);
   }
   public boolean containsKey(Object key) {
-    return map.containsKey(key) 
-        || (parent != null && parent.containsKey(key));
+    HierarchicalMap<K, V> curr = this;
+    do {
+      if (curr.map.containsKey(key)) {
+        return true;
+      }
+      curr = curr.parent;
+    } while (curr != null);
+    return false;
   }
 
   public V get(Object key) {
-    if (map.containsKey(key)) {
-      return map.get(key);
-    } else if (parent != null) {
-      return parent.get(key);
-    } else {
-      return null;
-    }
+    HierarchicalMap<K, V> curr = this;
+    do {
+      if (curr.map.containsKey(key)) {
+        return curr.map.get(key);
+      }
+      curr = curr.parent;
+    } while (curr != null);
+    return null;
   }
 
   /**
@@ -138,8 +145,15 @@ public class HierarchicalMap<K, V> implements Map<K, V> {
   }
 
   @Override
-  public boolean isEmpty() {
-    return map.isEmpty() && (parent == null || parent.isEmpty()); 
+  public boolean isEmpty() { 
+    HierarchicalMap<K, V> curr = this;
+    do {
+      if (!curr.map.isEmpty()) {
+        return false;
+      }
+      curr = curr.parent;
+    } while (curr != null);
+    return true;
   }
 
   @Override

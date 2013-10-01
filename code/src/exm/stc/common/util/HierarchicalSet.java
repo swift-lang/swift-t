@@ -18,6 +18,7 @@ package exm.stc.common.util;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Set;
 
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -82,7 +83,14 @@ public class HierarchicalSet<T> implements Set<T> {
 
   @Override
   public boolean contains(Object o) {
-    return set.contains(o) || (parent != null && parent.contains(o));
+    HierarchicalSet<T> curr = this;
+    while (curr != null) {
+      if (curr.set.contains(o)) {
+        return true;
+      }
+      curr = curr.parent;
+    }
+    return false;
   }
   
 
@@ -93,39 +101,19 @@ public class HierarchicalSet<T> implements Set<T> {
 
   @Override
   public boolean isEmpty() {
-    return set.isEmpty() && (parent == null || parent.isEmpty());
+    HierarchicalSet<T> curr = this;
+    while (curr != null) {
+      if (!curr.set.isEmpty()) {
+        return false;
+      }
+      curr = curr.parent;
+    }
+    return true;
   }
 
   @Override
   public Iterator<T> iterator() {
-    return new Iterator<T>() {
-      Iterator<T> parentIterator =
-          parent == null ? null : parent.iterator();
-      Iterator<T> thisIterator 
-          = set.iterator();
-      @Override
-      public boolean hasNext() {
-        return thisIterator.hasNext() ||
-              (parentIterator != null && parentIterator.hasNext());
-      }
-
-      @Override
-      public T next() {
-        if (parentIterator == null) {
-          // No parent, just use inner iterator
-          return thisIterator.next();
-        } else if (thisIterator.hasNext()) {
-          return thisIterator.next();
-        } else {
-          return parentIterator.next();
-        }
-      }
-      @Override
-      public void remove() {
-        throw new STCRuntimeError("not implemented");
-      }
-      
-    };
+    return new HSIt();
   }
 
   @Override
@@ -182,6 +170,54 @@ public class HierarchicalSet<T> implements Set<T> {
       accum.append(i.toString());
     }
     return set.size() > 0;
+  }
+
+  private final class HSIt implements Iterator<T> {
+    
+    private HSIt() {
+      curr = HierarchicalSet.this;
+      currIt = curr.set.iterator();
+    }
+
+    HierarchicalSet<T> curr;
+    Iterator<T> currIt;
+    
+    @Override
+    public boolean hasNext() {
+      if (currIt != null && currIt.hasNext()) {
+        return true;
+      }
+      return advance();
+    }
+  
+    private boolean advance() {
+      if (currIt == null) {
+        return false;
+      }
+      while (!currIt.hasNext()) {
+        curr = curr.parent;
+        if (curr == null) {
+          currIt = null;
+          return false;
+        } else {
+          currIt = curr.set.iterator();
+        }
+      }
+      return true;
+    }
+
+    @Override
+    public T next() {
+      if (advance()) {
+        return currIt.next();
+      }
+      throw new NoSuchElementException();
+    }
+  
+    @Override
+    public void remove() {
+      throw new STCRuntimeError("not implemented");
+    }
   }
 
 }
