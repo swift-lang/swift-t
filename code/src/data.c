@@ -749,8 +749,10 @@ xlb_data_store(adlb_datum_id id, const char *subscript,
     adlb_container *c = &d->data.CONTAINER;
     
     check_verbose(type == c->val_type, ADLB_DATA_ERROR_TYPE,
-        "Type mismatch for container value: expected %s actual %s\n",
-        ADLB_Data_type_tostring(type), ADLB_Data_type_tostring(c->val_type));
+                  "Type mismatch for container value: "
+                  "given: %s required: %s\n",
+                  ADLB_Data_type_tostring(type),
+                  ADLB_Data_type_tostring(c->val_type));
 
     // Does the link already exist?
     adlb_container_val t = NULL;
