@@ -69,6 +69,7 @@ AC_TYPE_INT64_T
 AC_CHECK_FUNCS([memset pow stpcpy strdup strtol uname])
 AC_FUNC_ALLOCA
 AC_FUNC_MALLOC
+AC_FUNC_REALLOC
 
 # Checks for headers
 # Note: Mac OS does not have malloc.h
