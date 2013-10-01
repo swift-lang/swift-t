@@ -26,4 +26,4 @@
     "set <<rank>> [ ::turbine::random_rank WORKER [ adlb::hostmap_lookup <<name>> ] ]"
 ];
 
-(string results[]) hostmap_list() "turbine" "0.5.0" "hostmap_list";
+(string results[]) hostmap_list() "turbine" "0.4.0" "hostmap_list";

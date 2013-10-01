@@ -22,10 +22,10 @@
 #define REDUCTIONS_SWIFT
 
 (float result) array_max_float(float A[])
-"turbine" "0.5.0" "array_max_float";
+"turbine" "0.4.0" "array_max_float";
 
 (float result) array_min_float(float A[])
-"turbine" "0.5.0" "array_min_float";
+"turbine" "0.4.0" "array_min_float";
 
 (int result[]) reduce_sum_integer(int A[][])
 "turbine" "0.0.6" "reduce_sum_integer";
