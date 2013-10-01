@@ -123,7 +123,9 @@ public class ICOptimizer {
         // Only makes sense to do periodically
         pipe.addPass(new PruneFunctions());
       }
-      pipe.addPass(inliner);
+      if (iteration == 0 || iteration == 3 || iteration == nIterations - 2) {
+        pipe.addPass(inliner);
+      }
       
       
       if ((iteration % 3) == 2) {
