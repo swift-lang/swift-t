@@ -1,8 +1,6 @@
 import io;
 import sys;
 
-// SKIP-THIS-TEST
-
 main {
     argv_accept("board", "split1", "split2", "dfsquota");
     updateable_float solved = 0;

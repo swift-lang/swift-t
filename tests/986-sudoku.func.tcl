@@ -1,4 +1,6 @@
 
+package provide sudoku 0.0
+
 # Dummy functions that emulate sudoku app
 namespace eval sudoku {
 
