@@ -27,9 +27,6 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
-import exm.stc.common.Logging;
-import exm.stc.common.Settings;
-import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.CompileTimeArgs;
@@ -53,7 +50,6 @@ import exm.stc.ic.opt.Semantics;
 import exm.stc.ic.opt.valuenumber.ComputedValue;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
-import exm.stc.ic.opt.valuenumber.ComputedValue.ArgOrCV;
 import exm.stc.ic.opt.valuenumber.ValLoc;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
@@ -445,7 +441,6 @@ public class ICInstructions {
      * TODO: is this necessary? can we move logic into Congruences
      */
     public static interface ValueState {
-      public List<ArgOrCV> findCongruent(Arg arg, CongruenceType congType);
       public Arg findCanonical(ArgCV arg, CongruenceType congType);
     }
     
@@ -2013,26 +2008,12 @@ public class ICInstructions {
       }
       
       ValLoc basic = makeBasicComputedValue();
-      
-      List<ValLoc> inferred = makeInferredComputedValues(existing);
-      if (inferred.isEmpty()) {
-        if (basic != null) {
-          return Collections.singletonList(basic);
-        } else {
-          return Collections.emptyList();
-        }
+      if (basic != null) {
+        return basic.asList();
       } else {
-        if (basic == null) {  
-          return inferred;
-        } else {
-          List<ValLoc> res = new ArrayList<ValLoc>(1 + inferred.size());
-          res.add(basic);
-          res.addAll(inferred);
-          return res;
-        }
+        return null;
       }
     }
-
 
     /**
      * Create computed value that describes the output
@@ -2072,148 +2053,6 @@ public class ICInstructions {
       }
       return null;
     }
-
-    private List<ValLoc> makeInferredComputedValues(ValueState cvs) {
-      try {
-        if (!Settings.getBoolean(Settings.OPT_ALGEBRA)) {
-          return Collections.emptyList();
-        }
-      } catch (InvalidOptionException e) {
-        throw new STCRuntimeError(e.getMessage());
-      }
-      switch (subop) {
-        case PLUS_INT:
-        case MINUS_INT:
-        List<ValLoc> inferred = tryAlgebra(cvs);
-        printInferredValues(inferred);
-        return inferred;
-        default:
-          // do nothing
-          return Collections.emptyList();
-      }
-    }
-
-
-    private void printInferredValues(List<ValLoc> inferred) {
-      Logger logger = Logging.getSTCLogger();
-      if (logger.isTraceEnabled()) {
-        StringBuilder sb = new StringBuilder();
-        if (!inferred.isEmpty()){
-          sb.append(this + " => ");
-          for (ValLoc t: inferred) {
-            sb.append(t.location() + " == " + t + ", ");
-          }
-        }
-        logger.trace(sb.toString());
-      }
-    }
-
-
-    private List<ValLoc> tryAlgebra(ValueState cvs) {
-      // do basic algebra, useful for adjacent array indices
-      // TODO: could be more sophisticated, e.g. build operator tree
-      //    and reduce to canonical form
-      Arg in1 = getInput(0);
-      Arg in2 = getInput(1);
-      // Don't handle constant folding here
-
-      Pair<Var, Long> args = convertToCanonicalAdd(subop, in1, in2); 
-      if (args == null) {
-        return Collections.emptyList();
-      }
-      
-      // Now arg1 should be var, arg2 constant
-      List<ArgOrCV> vals = cvs.findCongruent(args.val1.asArg(),
-                                CongruenceType.VALUE);
-      List<ValLoc> res = new ArrayList<ValLoc>(); 
-      for (ArgOrCV val: vals) {
-        if (val.isCV()) {
-          ValLoc newCV = tryAlgebra(args, val.cv());
-          if (newCV != null) {
-            res.add(newCV);
-          }
-        }
-      }
-      return res;
-    }
-
-
-    private ValLoc tryAlgebra(Pair<Var, Long> canonArgs,
-                            ComputedValue<Arg> varVal) {
-      if (varVal.op() != this.op) {
-        return null;
-      }
-      BuiltinOpcode aop = (BuiltinOpcode)varVal.subop();
-      if (aop == BuiltinOpcode.PLUS_INT ||
-          aop == BuiltinOpcode.MINUS_INT) {
-        // Don't handle recursive values (TODO?)
-        Arg arg1 = varVal.getInput(0);
-        Arg arg2 = varVal.getInput(1);
-        Pair<Var, Long> add = convertToCanonicalAdd(aop, arg1, arg2);
-        if (add != null) {
-          // Note that if this instruction computes x = y + c1
-          // and y = z + c2 was computed earlier, then
-          // x = z + c1 + c2
-          long c = canonArgs.val2 + add.val2;
-          if (c == 0) {
-            // Check if additions cancel
-            return ValLoc.makeCopy(this.output, add.val1.asArg(),
-                                   IsAssign.NO);
-          } else {
-            // Otherwise add them together
-            return plusCV(op, add.val1.asArg(), Arg.createIntLit(c),
-                          this.output);
-          }
-        }
-      }
-      return null;
-    }
-
-    
-    private static Pair<Var, Long> convertToCanonicalAdd(BuiltinOpcode aop,
-                                                    Arg in1, Arg in2) {
-      Var varArg;
-      long constArg;
-      if (!(in1.isVar() ^ in2.isVar())) {
-        // Only handle one constant, one var
-        return null;
-      }
-      if (in1.isVar()) {
-        varArg = in1.getVar();
-        constArg = in2.getIntLit();
-        if (aop == BuiltinOpcode.MINUS_INT) {
-          // Convert to addition
-          constArg *= -1;
-        }
-      } else {
-        if (aop == BuiltinOpcode.MINUS_INT) {
-          // Don't handle negated variable
-          return null;
-        }
-        constArg = in1.getIntLit();
-        varArg = in2.getVar();
-      }
-      
-      return Pair.create(varArg, constArg);
-    }
-
-
-    /**
-     * Create computed value for addition
-     * @param op
-     * @param asArg
-     * @param createIntLit
-     * @param output2
-     * @return
-     */
-    private static ValLoc plusCV(Opcode op, Arg arg1, Arg arg2,
-        Var output) {
-      // TODO: short circuit here e.g. if one arg is 0
-      return ValLoc.buildResult(op, BuiltinOpcode.PLUS_INT,
-          Arrays.asList(arg1, arg2), output.asArg(), outputClosed(op),
-          IsAssign.NO);
-    }
-
 
     private static Closed outputClosed(Opcode op) {
       Closed locClosed = op == Opcode.LOCAL_OP ? Closed.YES_NOT_RECURSIVE : Closed.MAYBE_NOT;

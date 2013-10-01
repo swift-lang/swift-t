@@ -165,13 +165,13 @@ public class Congruences implements ValueState {
    * @param isAssign YES if value represents a single-assignment location
    *                and location is the thing stored to that location
    * @param congruent
-   * @param addInverses
+   * @param addConsequential
    * @return
    * @throws OptUnsafeError 
    */
   private void update(GlobalConstants consts, String errContext,
             Arg location, ArgCV value, IsAssign isAssign, 
-            CongruentSets congruent, boolean addInverses, int stmtIndex)
+            CongruentSets congruent, boolean addConsequential, int stmtIndex)
                 throws OptUnsafeError {
     // LocCV may already be in congruent set
     Arg canonLoc = congruent.findCanonical(new ArgOrCV(location)); 
@@ -190,8 +190,9 @@ public class Congruences implements ValueState {
                 canonLocFromVal, canonLoc, isAssign, stmtIndex);
     }
     
-    if (addInverses) {
+    if (addConsequential) {
       addInverses(consts, errContext, canonLoc, canonVal, stmtIndex);
+      addInferred(consts, errContext, congruent, stmtIndex, canonLoc, canonVal);
     }
   }
 
@@ -238,6 +239,17 @@ public class Congruences implements ValueState {
       assert(constVal != null);
       ArgCV invVal = ComputedValue.retrieveCompVal(globalConst);
       updateInv(consts, errContext, constVal, invVal, stmtIndex);
+    }
+  }
+
+  private void addInferred(GlobalConstants consts, String errContext,
+      CongruentSets congruent, int stmtIndex, Arg canonLoc, ArgOrCV canonVal)
+      throws OptUnsafeError {
+    if (canonVal.isCV()) {
+      for (ArgCV extra: Algebra.tryAlgebra(this, canonVal.cv())) {
+        update(consts, errContext, canonLoc, extra, IsAssign.NO,
+               congruent, false, stmtIndex);
+      }
     }
   }
 
@@ -706,7 +718,6 @@ public class Congruences implements ValueState {
     return findCanonical(val, congType) != null;
   }
   
-  @Override
   public List<ArgOrCV> findCongruent(Arg arg, CongruenceType congType) {
     return getCongruentSet(congType).findCongruentValues(arg);
   }

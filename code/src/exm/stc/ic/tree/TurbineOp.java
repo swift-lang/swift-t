@@ -1610,6 +1610,7 @@ public class TurbineOp extends Instruction {
         // Check to see if value of filename is in local value
         ArgCV filenameCV = ValLoc.makeFilenameVal(file, null,
                                                   IsAssign.NO).value();
+        // TODO: move logic to valuenumber pass, stop passing in ValueState
         Arg filenameVal = existing.findCanonical(filenameCV,
                                                  CongruenceType.VALUE);
         if (filenameVal != null) {
