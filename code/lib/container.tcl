@@ -109,6 +109,7 @@ namespace eval turbine {
     # c: the container
     # i: the subscript (any type)
     # d: the data
+    # t: the type
     # outputs: ignored.  To block on this, use turbine::reference
     # Note: assume slot kept open by other process
     proc c_f_insert { c i d t {write_refcount_decrs 1} {write_refcount_incr 1}} {
@@ -118,11 +119,10 @@ namespace eval turbine {
             adlb::write_refcount_incr $c
         }
 
-        rule $i [ list turbine::container_f_insert_body $c $i $d $t $write_refcount_decrs ] \
+        rule $i [ list turbine::c_f_insert_body $c $i $d $t $write_refcount_decrs ] \
             name "CFI-$c-$i"
     }
-
-    proc container_f_insert_body { c i d t write_refcount_decrs } {
+    proc c_f_insert_body { c i d t write_refcount_decrs } {
         set s [ retrieve_decr $i ]
         container_insert $c $s $d $t $write_refcount_decrs
     }
