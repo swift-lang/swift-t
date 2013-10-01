@@ -68,7 +68,7 @@ namespace eval turbine {
       for { set i 0 } { $i < $n } { incr i } {
           set d [ blobutils_get_float $p $i ]
           literal t float $d
-          container_immediate_insert $result $i $t ref
+          container_immediate_insert $result $i $t integer 
       }
       adlb::refcount_incr $result w -1
       adlb::blob_free $input
@@ -91,7 +91,7 @@ namespace eval turbine {
       log "matrix_from_blob_fortran_body: result=<$result> blob=<$b>"
       # Retrieve inputs
       set s       [ blobutils_sizeof_float ]
-      set L       [ retrieve_blob $b ]
+      set L       [ retrieve_decr_blob $b ]
       set p       [ blobutils_cast_int_to_dbl_ptr [ lindex $L 0 ] ]
       set m_value [ retrieve_integer $m ]
       set n_value [ retrieve_integer $n ]
@@ -115,7 +115,7 @@ namespace eval turbine {
           literal t float $d
           set i [ expr {$k % $m_value} ]
           set j [ expr {$k / $m_value} ]
-          container_immediate_insert $c($i) $j $t
+          container_immediate_insert $c($i) $j $t ref
       }
       # Close rows
       for { set i 0 } { $i < $m_value } { incr i } {
