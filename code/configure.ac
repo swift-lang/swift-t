@@ -95,13 +95,16 @@ AC_TYPE_MODE_T
 AC_TYPE_UINT8_T
 AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
+AC_CHECK_TYPES([ptrdiff_t])
 
 # Checks for library functions.
 # Although autoscan 2.68 warns for AC_FUNC_STRNLEN, we do not use it
 # because of known autoconf issues.  We do check for strnlen here:
+AC_FUNC_FORK
+AC_FUNC_MALLOC
+AC_FUNC_REALLOC
 AC_CHECK_FUNCS([gettimeofday memset pow setenv strchr strdup strlen])
 AC_CHECK_FUNCS([strnlen strstr strtol strtoul uname])
-AC_FUNC_MALLOC
 
 # Define templates
 AC_DEFINE([HAVE_STDDEF_H], [], [Do we have stddef.h?])
