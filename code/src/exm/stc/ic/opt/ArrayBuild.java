@@ -94,6 +94,15 @@ public class ArrayBuild extends FunctionOptimizerPass {
     public boolean isModifiedInSubtree() {
       return otherModRec || insertImmRec;
     }
+    
+    @Override
+    public String toString() {
+      return "insertImmHere: " + insertImmHere + " " +
+             "otherModHere: " + otherModHere + " " +
+             "insertImmRec: " + insertImmRec + " " +
+             "otherModRec: " + otherModRec + " " +
+             "insertImmOnce: " + insertImmOnce;
+    }
   }
 
   /**
@@ -148,6 +157,14 @@ public class ArrayBuild extends FunctionOptimizerPass {
     
     // Compute bottom-up properties
     updateInfoBottomUp(logger, block, info, candidates);
+    
+    if (logger.isTraceEnabled()) {
+      logger.trace("Collected info on block: " +
+                  System.identityHashCode(block) + " " + block.getType());
+      for (Var candidate: candidates) {
+        logger.trace(candidate + " => " + info.getEntry(block, candidate));
+      }
+    }
   }
 
   /**
@@ -252,14 +269,23 @@ public class ArrayBuild extends FunctionOptimizerPass {
     for (Var cand: cands) {
       if (!invalid.contains(cand)) {
         BlockVarInfo vi = info.getEntry(block, cand);
+        if (logger.isTraceEnabled()) {
+          logger.trace("Candidate: " + cand + " in block " +
+                  System.identityHashCode(block) + " " + block.getType());
+          logger.trace(vi);
+        }
         if (vi.otherModRec) {
+          logger.trace("Can't optimize due other other inserts!");
           invalid.add(cand);
         } else if (vi.insertImmOnce && vi.insertImmHere) {
           // Optimize here
+          logger.trace("Can optimize!");
           replaceInserts(logger, block, init, cand);
         } else if (vi.insertImmOnce) {
+          logger.trace("Try to optimize in descendant block!");
           // Do nothing: handle in child block
         } else {
+          logger.trace("Optimization not valid!");
           // Invalid: can't do optimization anywhere
           invalid.add(cand);
         }
