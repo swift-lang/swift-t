@@ -37,6 +37,7 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.CompilerBackend.VarDecl;
+import exm.stc.common.Logging;
 import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
@@ -327,8 +328,9 @@ public class ICTree {
           new STCRuntimeError("Overwriting global constant " + name);
     
       Var prev = globalConstsInv.put(val, var);
-      assert(prev == null) :
-          "Duplicate global const for value " + val + " " + prev;
+      // It's ok to have duplicate constants
+      Logging.getSTCLogger().debug("Duplicate global const for value " + val
+                                   + " " + prev);
       
       usedNames.add(name);
       return var;
