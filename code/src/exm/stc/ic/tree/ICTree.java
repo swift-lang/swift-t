@@ -1092,7 +1092,10 @@ public class ICTree {
       
       @Override
       public boolean hasNext() {
-        if (checkMoreStatements()) {
+        if (next != null) {
+          return true;
+        }
+        if (stmtIt != null && checkMoreStatements()) {
           return true;
         }
         return contIt.hasNext();
