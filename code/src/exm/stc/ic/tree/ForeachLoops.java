@@ -5,7 +5,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -26,8 +25,8 @@ import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.util.Counters;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
@@ -80,8 +79,8 @@ public class ForeachLoops {
         List<PassedVar> passedVars, List<Var> keepOpenVars,
         List<RefCount> startIncrements,
         MultiMap<Var, RefCount> constStartIncrements,
-        List<RefCount> endDecrements) {
-      super(loopBody, passedVars, keepOpenVars);      
+        List<RefCount> endDecrements, boolean emptyLoop) {
+      super(loopBody, passedVars, keepOpenVars, emptyLoop);      
       this.loopName = loopName;
       this.loopVar = loopVar;
       this.loopCounterVar = loopCounterVar;
@@ -189,10 +188,10 @@ public class ForeachLoops {
         List<PassedVar> passedVars, List<Var> keepOpenVars,
         List<RefCount> startIncrements, 
         MultiMap<Var, RefCount> constStartIncrements,
-        List<RefCount> endDecrements) {
+        List<RefCount> endDecrements, boolean emptyBody) {
       super(block, loopName, loopVar, loopCounterVar, splitDegree, leafDegree,
           -1, false, passedVars, keepOpenVars, startIncrements, constStartIncrements,
-          endDecrements);
+          endDecrements, emptyBody);
       this.container = container;
       this.containerClosed = arrayClosed;
     }
@@ -207,7 +206,7 @@ public class ForeachLoops {
           container, loopVar, loopCounterVar,
           splitDegree, leafDegree, containerClosed, 
           passedVars, keepOpenVars, startIncrements, 
-          constStartIncrements, endDecrements);
+          constStartIncrements, endDecrements, true);
     }
 
     @Override
@@ -215,7 +214,7 @@ public class ForeachLoops {
       return new ForeachLoop(this.loopBody.clone(), loopName,
         container, loopVar, loopCounterVar, splitDegree, leafDegree,
         containerClosed, passedVars, keepOpenVars, startIncrements, 
-        constStartIncrements, endDecrements);
+        constStartIncrements, endDecrements, false);
     }
 
     @Override
@@ -409,7 +408,8 @@ public class ForeachLoops {
           loopVar, countVar,
           start, end, increment, passedVars, keepOpenVars,
           desiredUnroll, unrolled, splitDegree, leafDegree,
-          startIncrements, constStartIncrements, endDecrements);
+          startIncrements, constStartIncrements, endDecrements,
+          true);
     }
 
     private RangeLoop(Block block, String loopName,
@@ -418,11 +418,11 @@ public class ForeachLoops {
         List<PassedVar> passedVars, List<Var> keepOpenVars,
         int desiredUnroll, boolean unrolled, int splitDegree, int leafDegree,
         List<RefCount> startIncrements, MultiMap<Var, RefCount> constStartIncrements,
-        List<RefCount> endDecrements) {
+        List<RefCount> endDecrements, boolean emptyBody) {
       super(block, loopName, loopVar, loopCounterVar, splitDegree, leafDegree,
           desiredUnroll, unrolled,
           passedVars, keepOpenVars, startIncrements,
-          constStartIncrements, endDecrements);
+          constStartIncrements, endDecrements, emptyBody);
       assert(Types.isIntVal(loopVar));
       assert(start.isImmediateInt());
       assert(end.isImmediateInt());
@@ -448,7 +448,7 @@ public class ForeachLoops {
           start, end, increment,
           passedVars, keepOpenVars, desiredUnroll, unrolled,
           splitDegree, leafDegree, startIncrements, constStartIncrements,
-          endDecrements);
+          endDecrements, !cloneLoopBody);
     }
 
     @Override
@@ -571,7 +571,7 @@ public class ForeachLoops {
         }
 
         if (singleIter) {
-          this.loopBody.declareVariable(loopVar);
+          this.loopBody.addVariable(loopVar);
           this.loopBody.addInstructionFront(ICInstructions.valueSet(loopVar, start));
           return this.loopBody;
         }
@@ -582,11 +582,11 @@ public class ForeachLoops {
     @Override
     public void inlineInto(Block block, Block predictedBranch) {
       // Shift loop variable to body and inline loop body
-      this.loopBody.declareVariable(loopVar);
+      this.loopBody.addVariable(loopVar);
       this.loopBody.addInstructionFront(
           Builtin.createLocal(BuiltinOpcode.COPY_INT, this.loopVar, start));
       if (loopCounterVar != null) {
-        this.loopBody.declareVariable(loopCounterVar);
+        this.loopBody.addVariable(loopCounterVar);
         this.loopBody.addInstructionFront(Builtin.createLocal(
                      BuiltinOpcode.COPY_INT, loopCounterVar, Arg.createIntLit(0)));
       }
@@ -784,13 +784,13 @@ public class ForeachLoops {
           outerBlock.uniqueVarName(vPrefix + ":unrollEnd"),
           Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
 
-      outerBlock.declareVariable(bigIncr);
-      outerBlock.declareVariable(diff);
-      outerBlock.declareVariable(diff2);
-      outerBlock.declareVariable(extra);
-      outerBlock.declareVariable(remainder);
-      outerBlock.declareVariable(remainderStart);
-      outerBlock.declareVariable(unrollEnd);
+      outerBlock.addVariable(bigIncr);
+      outerBlock.addVariable(diff);
+      outerBlock.addVariable(diff2);
+      outerBlock.addVariable(extra);
+      outerBlock.addVariable(remainder);
+      outerBlock.addVariable(remainderStart);
+      outerBlock.addVariable(unrollEnd);
       
       // Generate the code for calculations here.  Constant folding will
       // clean up later in special cases where values known
@@ -823,7 +823,6 @@ public class ForeachLoops {
       // clone body of unrolled multiple times
       Block orig = this.loopBody;
       Arg oldIncr = this.increment;
-      Set<String> createdVarNames = new HashSet<String>();
       Var lastIterLoopVar = null;
       
       for (int i = 0; i < unrollFactor; i++) {
@@ -839,10 +838,9 @@ public class ForeachLoops {
           // E.g. if loop counter is i and unrolling 4x, allocate
           //    i, i@2, i@3, i@4, where i@k = i@(k-1) + step
           String newLoopVarName = outerBlock.uniqueVarName(
-              unrolled.loopVar.name() + "@" + (i + 1), createdVarNames);
+              unrolled.loopVar.name() + "@" + (i + 1));
           currIterLoopVar = new Var(Types.V_INT, newLoopVarName,
               Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
-          createdVarNames.add(newLoopVarName);
           unrolledBody.addVariable(currIterLoopVar);
           unrolledBody.addInstruction(Builtin.createLocal(BuiltinOpcode.PLUS_INT,
               currIterLoopVar, Arrays.asList(Arg.createVar(lastIterLoopVar), oldIncr)));

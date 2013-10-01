@@ -65,7 +65,7 @@ public class LoopUnroller implements OptimizerPass {
       if (cRes.val1) {
         unrolled = true;
         for (Continuation newC: cRes.val2) {
-          block.addContinuation(it, newC);
+          it.add(newC);
         }
       }
     }

@@ -15,8 +15,8 @@
  */
 package exm.stc.ic.opt;
 
+import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.ListIterator;
 
 import org.apache.log4j.Logger;
 
@@ -75,7 +75,7 @@ public class ContinuationFusion extends FunctionOptimizerPass {
   }
 
   private static void fuseNonRecursive(Block block) {
-    ListIterator<Continuation> it = block.continuationIterator();
+    Iterator<Continuation> it = block.continuationIterator();
     
     /* We want to check all pairs of continuations.  
      * Use the simple n^2 algorithm rather than creating any index data
@@ -123,7 +123,7 @@ public class ContinuationFusion extends FunctionOptimizerPass {
    * @param mergeCands
    * @param if1
    */
-  private static void fuseIfStatement(ListIterator<Continuation> it,
+  private static void fuseIfStatement(Iterator<Continuation> it,
       LinkedList<Continuation> mergeCands, IfStatement if1) {
     for (Continuation c2: mergeCands) {
       if (c2.getType() == ContinuationType.IF_STATEMENT) {
@@ -146,7 +146,7 @@ public class ContinuationFusion extends FunctionOptimizerPass {
    * @param mergeCands
    * @param loop1
    */
-  private static void fuseForeachLoop(ListIterator<Continuation> it,
+  private static void fuseForeachLoop(Iterator<Continuation> it,
       LinkedList<Continuation> mergeCands, ForeachLoop loop1) {
     for (Continuation c2: mergeCands) {
       if (c2.getType() == ContinuationType.FOREACH_LOOP) {
@@ -166,7 +166,7 @@ public class ContinuationFusion extends FunctionOptimizerPass {
    * @param mergeCands
    * @param loop1
    */
-  private static void fuseRangeLoop(ListIterator<Continuation> it,
+  private static void fuseRangeLoop(Iterator<Continuation> it,
       LinkedList<Continuation> mergeCands, RangeLoop loop1) {
     for (Continuation c2: mergeCands) {
       if (c2.getType() == ContinuationType.RANGE_LOOP) {

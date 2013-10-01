@@ -68,11 +68,11 @@ public class UniqueVarNames implements OptimizerPass {
    * @param block
    * @param existing existing variables
    */
-  private static void makeVarNamesUnique(Block block, Vars existing,
-      HierarchicalMap<Var, Arg> renames) {
+  private static void makeVarNamesUnique(Function fn,
+      Block block, Vars existing, HierarchicalMap<Var, Arg> renames) {
     for (Var v: block.getVariables()) {
       if (v.defType() != DefType.GLOBAL_CONST) {
-        updateName(block, existing, renames, v);
+        updateName(fn, block, existing, renames, v);
       }
     }
   
@@ -84,7 +84,7 @@ public class UniqueVarNames implements OptimizerPass {
     // Recurse through nested blocks, making sure that all used variable
     // names are added to the usedNames
     for (Continuation c: block.allComplexStatements()) {
-      makeVarNamesUnique(existing, c, renames.makeChildMap());
+      makeVarNamesUnique(fn, existing, c, renames.makeChildMap());
     }
   }
 
@@ -99,15 +99,16 @@ public class UniqueVarNames implements OptimizerPass {
     return newName;
   }
 
-  private static void makeVarNamesUnique(Vars existing,
+  private static void makeVarNamesUnique(Function fn, Vars existing,
                  Continuation cont, HierarchicalMap<Var, Arg> renames) {
     // Update any continuation-defined vars
-    List<Var> constructNewDefinedVars = cont.constructDefinedVars(ContVarDefType.NEW_DEF);
+    List<Var> constructNewDefinedVars =
+                      cont.constructDefinedVars(ContVarDefType.NEW_DEF);
     for (Var v: constructNewDefinedVars) {
       assert(cont.getBlocks().size() == 1) : "Assume continuation with " +
       		"construct defined vars has only one block";
       HashMap<Var, Arg> contVarRenames = new HashMap<Var, Arg>();
-      updateName(cont.getBlocks().get(0), existing, contVarRenames, v);
+      updateName(fn, cont.getBlocks().get(0), existing, contVarRenames, v);
       
       if (contVarRenames.size() > 0) {
         // Update construct vars as required
@@ -115,10 +116,10 @@ public class UniqueVarNames implements OptimizerPass {
         renames.putAll(contVarRenames);
       }
     }
-    fixupVarRedefines(existing, cont, renames);
+    fixupVarRedefines(fn, existing, cont, renames);
     
     for (Block b: cont.getBlocks()) {
-      makeVarNamesUnique(b, existing, renames.makeChildMap());
+      makeVarNamesUnique(fn, b, existing, renames.makeChildMap());
     }
   }
 
@@ -130,11 +131,11 @@ public class UniqueVarNames implements OptimizerPass {
    * @param cont
    * @param renames
    */
-  private static void fixupVarRedefines(Vars existing, Continuation cont,
-          HierarchicalMap<Var, Arg> renames) {
+  private static void fixupVarRedefines(Function fn, Vars existing,
+        Continuation cont, HierarchicalMap<Var, Arg> renames) {
     for (Var redef: cont.constructDefinedVars(ContVarDefType.REDEF)) {
       HashMap<Var, Arg> contVarRenames = new HashMap<Var, Arg>();
-      updateName(cont.getBlocks().get(0), existing, contVarRenames, redef);
+      updateName(fn, cont.getBlocks().get(0), existing, contVarRenames, redef);
 
       if (contVarRenames.size() > 0) {
         // Update construct vars as required
@@ -148,13 +149,13 @@ public class UniqueVarNames implements OptimizerPass {
     }
   }
 
-  static void updateName(Block block, Vars existing,
+  static void updateName(Function fn, Block block, Vars existing,
           Map<Var, Arg> renames, Var var) {
     if (existing.usedNames.contains(var.name())) {
       String newName = chooseNewName(existing.usedNames, var);
       Var newVar = new Var(var.type(), newName,
                       var.storage(), var.defType(), var.mapping());
-      
+      fn.addUsedVarName(newVar);
       
       Arg oldVal = renames.put(var, Arg.createVar(newVar));
       assert(oldVal == null) : "Shadowed variable: " + var.name();
@@ -188,7 +189,8 @@ public class UniqueVarNames implements OptimizerPass {
       declarations.addDeclaration(v);
     }
   
-    makeVarNamesUnique(in.mainBlock(), declarations, new HierarchicalMap<Var, Arg>());
+    makeVarNamesUnique(in, in.mainBlock(), declarations,
+                       new HierarchicalMap<Var, Arg>());
   }
   
   private static class Vars {

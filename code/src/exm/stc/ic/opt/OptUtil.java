@@ -117,7 +117,7 @@ public class OptUtil {
    */
   public static void replaceInstOutput(Block srcBlock,
           Block targetBlock, List<Instruction> instBuffer, Var newOut, Var oldOut) {
-    targetBlock.declareVariable(newOut); // must be declared in new scope
+    targetBlock.addVariable(newOut); // must be declared in new scope
     
     if (Types.isRefTo(oldOut.type(), newOut.type())) {
       Var refVar;

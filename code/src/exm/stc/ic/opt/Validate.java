@@ -134,7 +134,7 @@ public class Validate implements OptimizerPass {
       }
     }
  
-    checkVarReferences(logger, block, declared);
+    checkVarReferences(logger, fn, block, declared);
       
     if (checkCleanups)
       checkCleanups(fn, block);
@@ -156,62 +156,65 @@ public class Validate implements OptimizerPass {
    * @param block
    * @param declared
    */
-  private void checkVarReferences(Logger logger, Block block,
-      Map<String, Var> declared) {
+  private void checkVarReferences(Logger logger, Function f,
+      Block block, Map<String, Var> declared) {
     for (Var v: block.getVariables()) {
       if (v.storage() == Alloc.GLOBAL_CONST) {
-        checkVarReference(declared, v, v);
+        checkVarReference(f, declared, v, v);
       }
       if (v.mapping() != null) {
-        checkVarReference(declared, v.mapping(), v);
+        checkVarReference(f, declared, v.mapping(), v);
       }
     }
     for (Statement stmt: block.getStatements()) {
-      checkVarReferences(declared, stmt);
+      checkVarReferences(f, declared, stmt);
     }
     
     for (Continuation c: block.getContinuations()) {
-      checkVarReferencesCont(declared, c);
+      checkVarReferencesCont(f, declared, c);
     }
     
     for (CleanupAction ca: block.getCleanups()) {
-      checkVarReference(declared, ca.var(), ca);
-      checkVarReferencesInstruction(declared, ca.action());
+      checkVarReference(f, declared, ca.var(), ca);
+      checkVarReferencesInstruction(f, declared, ca.action());
     }
   }
 
-  private void checkVarReferences(Map<String, Var> declared, Statement stmt) {
+  private void checkVarReferences(Function f, Map<String, Var> declared,
+                                  Statement stmt) {
     switch (stmt.type()) {
       case INSTRUCTION:
-        checkVarReferencesInstruction(declared, stmt.instruction());
+        checkVarReferencesInstruction(f, declared, stmt.instruction());
         break;
       case CONDITIONAL:
-        checkVarReferencesCont(declared, stmt.conditional());
+        checkVarReferencesCont(f, declared, stmt.conditional());
         break;
       default:
         throw new STCRuntimeError("Unknown statement type " + stmt.type());
     }
   }
 
-  private void checkVarReferencesCont(Map<String, Var> declared, Continuation c) {
+  private void checkVarReferencesCont(Function f, Map<String, Var> declared,
+                                      Continuation c) {
     for (Var v: c.requiredVars(false)) {
-      checkVarReference(declared, v, c.getType());
+      checkVarReference(f, declared, v, c.getType());
     }
   }
 
-  private void checkVarReferencesInstruction(Map<String, Var> declared, Instruction inst) {
+  private void checkVarReferencesInstruction(Function f, 
+          Map<String, Var> declared, Instruction inst) {
     for (Arg i: inst.getInputs()) {
       if (i.isVar()) {
-        checkVarReference(declared, i.getVar(), inst);
+        checkVarReference(f, declared, i.getVar(), inst);
       }
     }
     for (Var o: inst.getOutputs()) {
-      checkVarReference(declared, o, inst);
+      checkVarReference(f, declared, o, inst);
     }
   }
 
-  private void checkVarReference(Map<String, Var> declared, Var referencedVar,
-                                 Object context) {
+  private void checkVarReference(Function f, Map<String, Var> declared,
+                                 Var referencedVar, Object context) {
     assert(declared.containsKey(referencedVar.name())): referencedVar +
                               " not among declared vars in scope: " + declared;
     Var declaredVar = declared.get(referencedVar.name());
@@ -221,6 +224,7 @@ public class Validate implements OptimizerPass {
               declaredVar.storage() + " " + referencedVar.storage() + " | " +
               declaredVar.defType() + " " + referencedVar.defType() + " | " +
               declaredVar.mapping() + " " + referencedVar.mapping();
+    checkUsed(f, referencedVar);
   }
 
   private void checkCleanups(Function fn, Block block) {
@@ -253,6 +257,7 @@ public class Validate implements OptimizerPass {
 
   private void checkVarUnique(Logger logger, 
           Function fn, Map<String, Var> declared, Var var) {
+    checkUsed(fn, var);
     if (var.defType() == DefType.GLOBAL_CONST) {
       Var declaredGlobal = declared.get(var.name());
       if (declaredGlobal == null) { 
@@ -269,6 +274,12 @@ public class Validate implements OptimizerPass {
     declared.put(var.name(), var);
   }
 
+  private void checkUsed(Function fn, Var var) {
+    assert(var.storage() == Alloc.GLOBAL_CONST || fn.varNameUsed(var.name())) :
+          "Variable name not marked as used " + var + ".\n" +
+          fn.usedVarNames();
+  }
+
   /**
    * Check that parent links are valid
    * @param logger
@@ -278,10 +289,10 @@ public class Validate implements OptimizerPass {
   private void checkParentLinks(Logger logger, Program program, Function fn) {
     Block mainBlock = fn.mainBlock();
     assert(mainBlock.getType() == BlockType.MAIN_BLOCK);
-    checkParentLinks(logger, program, fn, mainBlock);
+    checkParentLinksRec(logger, program, fn, mainBlock);
   }
   
-  private void checkParentLinks(Logger logger, Program prog,
+  private void checkParentLinksRec(Logger logger, Program prog,
           Function fn, Block block) {
     Function fn2 = block.getParentFunction();
     assert(fn2 == fn) : 
@@ -303,6 +314,7 @@ public class Validate implements OptimizerPass {
                            + "\n" + innerBlock 
                            + "\n\n\nis " + innerBlock.getParentCont()
                            + "\n\n\nbut should be: " + c;
+        checkParentLinksRec(logger, prog, fn, innerBlock);
       }
     }
   }

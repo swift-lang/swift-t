@@ -189,6 +189,9 @@ public class ICOptimizer {
         pipe.addPass(Validate.standardValidator());
       
       pipe.runPipeline(logger, prog, iteration);
+      
+      // Cleanup internal indices, etc.
+      prog.cleanup();
     }
   }
 

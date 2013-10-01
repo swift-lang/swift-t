@@ -309,6 +309,12 @@ public class ICTree {
         e.toString());
       }
     }
+
+    public void cleanup() {
+      for (Function f: functions) {
+        f.rebuildUsedVarNames();
+      }
+    }
   }
   
   public static class GlobalConstants {
@@ -522,13 +528,15 @@ public class ICTree {
     private final List<WaitVar> blockingInputs;
 
     private TaskMode mode;
+    
+    private final HashSet<String> usedVarNames;
 
     public Function(String name, List<Var> iList,
         List<Var> oList, TaskMode mode) {
       this(name, iList, Collections.<WaitVar>emptyList(), oList,
            mode, new Block(BlockType.MAIN_BLOCK, null));
     }
-
+      
     public Function(String name, List<Var> iList,
         List<WaitVar> blockingInputs,
         List<Var> oList, TaskMode mode, Block mainBlock) {
@@ -542,8 +550,10 @@ public class ICTree {
       this.oListWriteOnly = new ArrayList<Var>();
       this.mode = mode;
       this.mainBlock = mainBlock;
-      this.mainBlock.setParent(this);
+      this.mainBlock.setParent(this, true); // Rebuild vars later
       this.blockingInputs = new ArrayList<WaitVar>(blockingInputs);
+      this.usedVarNames = new HashSet<String>();
+      rebuildUsedVarNames();
     }
 
 
@@ -666,31 +676,65 @@ public class ICTree {
     public boolean isAsync() {
       return this.mode != TaskMode.SYNC;
     }
+
+
+    /**
+     * Rebuild usedVarNames from scratch based on current IR.
+     */
+    private void rebuildUsedVarNames() {
+      this.usedVarNames.clear();
+      addUsedVarNames(this.iList);
+      addUsedVarNames(this.oList);
+      addUsedVarsRec(mainBlock);
+    }
+
+
+    private void addUsedVarsRec(Block rootBlock) {
+      Deque<Block> work = new ArrayDeque<Block>();
+      work.push(rootBlock);
     
+      while (!work.isEmpty()) {
+        Block b = work.pop();
+        addUsedVarNames(b.getVariables());
+        for (Statement s: b.getStatements()) {
+          if (s.type() == StatementType.CONDITIONAL) {
+            Conditional c = s.conditional();
+            addUsedVarNames(c.constructDefinedVars());
+            work.addAll(c.getBlocks());
+          }
+        }
+        for (Continuation c: b.getContinuations()) {
+          addUsedVarNames(c.constructDefinedVars());
+          work.addAll(c.getBlocks());
+        }
+      }
+    }
+
+
+    public void addUsedVarName(Var var) {
+      this.usedVarNames.add(var.name());
+    }
+
+
+    public void addUsedVarName(String name) {
+      this.usedVarNames.add(name);
+    }
+
+
+    public void addUsedVarNames(List<Var> vars) {
+      for (Var v: vars) {
+        this.usedVarNames.add(v.name());
+      }
+    }
+
+
     public boolean varNameUsed(String name) {
-      // TODO: keep set of used var names here?
-      
-      if (Var.findByName(iList, name) != null ||
-          Var.findByName(oList, name) != null) {
-        return true;
-      }
-      Deque<Block> blocks = new ArrayDeque<Block>();
-      blocks.add(this.mainBlock);
-      while (!blocks.isEmpty()) {
-        Block curr = blocks.pop();
-        if (Var.findByName(curr.variables, name) != null) {
-          return true;
-        }
-        for (Continuation c: curr.allComplexStatements()) {
-          if (Var.findByName(c.constructDefinedVars(), name) != null) {
-            return true;
-          }
-          for (Block inner: c.getBlocks()) {
-            blocks.push(inner);
-          }
-        }
-      }
-      return false;
+      return usedVarNames.contains(name);
+    }
+
+
+    public Set<String> usedVarNames() {
+      return Collections.unmodifiableSet(usedVarNames);
     }
   }
 
@@ -777,8 +821,8 @@ public class ICTree {
       this(BlockType.MAIN_BLOCK, null, parentFunction);
     }
     
-    public Block(BlockType type, Continuation parentCont, Function parentFunction) {
-      this(type, parentCont, parentFunction, new LinkedList<Statement>(),
+    private Block(BlockType type, Continuation parentCont, Function parentFunction) {
+      this(type, parentCont, parentFunction, true, new LinkedList<Statement>(),
           new ArrayList<Var>(), new HashMap<Var, Arg>(), new HashMap<Var, Arg>(),
           new ArrayList<Continuation>(), new ArrayList<CleanupAction>());
     }
@@ -791,12 +835,12 @@ public class ICTree {
      */
     private Block(BlockType type,
         Continuation parentCont, Function parentFunction,
+        boolean emptyBlock,
         LinkedList<Statement> instructions, 
         ArrayList<Var> variables, HashMap<Var, Arg> initReadRefcounts,
         HashMap<Var, Arg> initWriteRefcounts,
         ArrayList<Continuation> conds,
         ArrayList<CleanupAction> cleanupActions) {
-      setParent(type, parentCont, parentFunction);
       this.type = type;
       this.statements = instructions;
       this.variables = variables;
@@ -804,20 +848,71 @@ public class ICTree {
       this.initWriteRefcounts = initWriteRefcounts;
       this.continuations = conds;
       this.cleanupActions = cleanupActions;
+
+      // Set parent at end so it will be updated correctly with vars
+      setParent(type, parentCont, parentFunction, emptyBlock);
     }
 
-    public void setParent(BlockType type, Continuation parentCont,
-        Function parentFunction) {
+    private void setParent(BlockType type, Continuation parentCont,
+        Function parentFunction, boolean emptyBlock) {
       this.parentCont = parentCont;
-      this.parentFunction = parentFunction;
+      if (parentCont == null && parentFunction == null) {
+        // Not yet linked up
+        this.parentFunction = null;
+        this.parentCont = null;
+        return;
+      }
+      assert(parentCont == null || parentFunction == null);
+      if (parentCont != null && parentCont.parent() != null) {
+        // Fill in, otherwise depend on it being filled in later
+        parentFunction = parentCont.parent().getParentFunction();
+      }
+      // Check to see if we need to link children up to function
+      if (parentFunction != null) {
+        if (emptyBlock) {
+          setParentFunction(parentFunction);
+        } else {
+          // Not empty, so do updates necessary for blocks under this one
+          fixParentLinksRec(parentFunction);
+        }
+      }
     }
 
-    public void setParent(Continuation parent) {
-      setParent(type, parent, null);
+    private void setParentFunction(Function parentFunction) {
+      this.parentFunction = parentFunction;
+      parentFunction.addUsedVarNames(this.variables);
+    }
+
+    /**
+     * Update parent function links for all blocks under this one
+     * @param parentFunction
+     */
+    void fixParentLinksRec(Function parentFunction) {
+      Deque<Block> work = new ArrayDeque<Block>();
+      work.push(this);
+      while (!work.isEmpty()) {
+        Block curr = work.pop();
+        curr.setParentFunction(parentFunction);
+        for (Statement stmt: curr.getStatements()) {
+          if (stmt.type() == StatementType.CONDITIONAL) {
+            Conditional cond = stmt.conditional();
+            parentFunction.addUsedVarNames(cond.constructDefinedVars());
+            work.addAll(cond.getBlocks());
+          }
+        }
+        for (Continuation c: curr.getContinuations()) {
+          parentFunction.addUsedVarNames(c.constructDefinedVars());
+          work.addAll(c.getBlocks());
+        }
+      }
+    }
+
+    public void setParent(Continuation parent, boolean newBlock) {
+      setParent(type, parent, null, newBlock);
     }
     
-    public void setParent(Function parent) {
-      setParent(BlockType.MAIN_BLOCK, null, parent);
+    private void setParent(Function parent, boolean newBlock) {
+      setParent(BlockType.MAIN_BLOCK, null, parent, newBlock);
     }
 
     /**
@@ -825,7 +920,7 @@ public class ICTree {
      */
     @Override
     public Block clone() {
-      return this.clone(this.type, this.parentCont, this.parentFunction);
+      return this.clone(this.type, null, null);
     }
     
     public Block clone(Function parentFunction) {
@@ -839,7 +934,7 @@ public class ICTree {
     public Block clone(BlockType newType, Continuation parentCont,
                        Function parentFunction) {
       Block cloned = new Block(newType, parentCont, parentFunction,
-          ICUtil.cloneStatements(this.statements),
+          false, ICUtil.cloneStatements(this.statements),
           new ArrayList<Var>(this.variables),
           new HashMap<Var, Arg>(this.initReadRefcounts),
           new HashMap<Var, Arg>(this.initWriteRefcounts),
@@ -849,17 +944,10 @@ public class ICTree {
         // Add in way that ensures parent link updated
         cloned.addContinuation(c.clone());
       }
-      cloned.fixupStatementParentLinks();
-      return cloned;
-    }
-    
-    /**
-     * Fixup parent links of statements in block
-     */
-    private void fixupStatementParentLinks() {
-      for (Statement stmt: statements) {
-        stmt.setParent(this);
+      for (Statement s: cloned.statements) {
+        s.setParent(cloned);
       }
+      return cloned;
     }
 
     public BlockType getType() {
@@ -912,15 +1000,6 @@ public class ICTree {
       return Collections.unmodifiableList(continuations);
     }
     
-    public ListIterator<Continuation> getContinuationIterator() {
-      return continuations.listIterator();
-    }
-    
-    public void addContinuation(ListIterator<Continuation> it, Continuation c) {
-      it.add(c);
-      c.setParent(this);
-    }
-    
     public Continuation getContinuation(int i) {
       return continuations.get(i);
     }
@@ -931,19 +1010,6 @@ public class ICTree {
 
     public List<Var> getVariables() {
       return Collections.unmodifiableList(variables);
-    }
-
-    public Var declareVariable(Type t, String name,
-        Alloc storage, DefType defType, Var mapping) {
-      assert(mapping == null || Types.isString(mapping.type()));
-      Var v = new Var(t, name, storage, defType, mapping);
-      this.variables.add(v);
-      return v;
-    }
-    
-    public Var declareVariable(Var v) {
-      this.variables.add(v);
-      return v;
     }
 
     public boolean isEmpty() {
@@ -1047,14 +1113,76 @@ public class ICTree {
       }
     }
 
+    /**
+     * @return an iterator over continuations.  Modifications through iterator
+     * will correctly update parent links etc
+     */
     public ListIterator<Continuation> continuationIterator() {
-      return continuations.listIterator();
+      return new ContIt(this.continuations.listIterator());
     }
     
     public ListIterator<Continuation> continuationIterator(int pos) {
-      return continuations.listIterator(pos);
+      return new ContIt(this.continuations.listIterator(pos));
     }
     
+    /**
+     * Wrapper around ListIterator to intercept calls and make sure IR is
+     * consistent, e.g. with parent links.
+     */
+    private final class ContIt implements ListIterator<Continuation> {
+      private ContIt(ListIterator<Continuation> it) {
+        this.it = it;
+      }
+
+      final ListIterator<Continuation> it;
+      @Override
+      public void set(Continuation e) {
+        e.setParent(Block.this);
+        it.set(e);
+      }
+
+      @Override
+      public void remove() {
+        it.remove();
+      }
+
+      @Override
+      public int previousIndex() {
+        return it.previousIndex();
+      }
+
+      @Override
+      public Continuation previous() {
+        return it.previous();
+      }
+
+      @Override
+      public int nextIndex() {
+        return it.nextIndex();
+      }
+
+      @Override
+      public Continuation next() {
+        return it.next();
+      }
+
+      @Override
+      public boolean hasPrevious() {
+        return it.hasPrevious();
+      }
+
+      @Override
+      public boolean hasNext() {
+        return it.hasNext();
+      }
+
+      @Override
+      public void add(Continuation e) {
+        it.add(e);
+        e.setParent(Block.this);
+      }
+    }
+
     public class AllContIt implements Iterator<Continuation>, 
                               Iterable<Continuation>{
       Continuation next = null;
@@ -1248,7 +1376,7 @@ public class ICTree {
         for (Pair<Var, Var> change: changedMappedVars) {
           Var oldV = change.val1;
           Var newV = change.val2;
-          this.variables.add(newV);
+          addVariable(newV);
           renames.put(oldV, Arg.createVar(newV));
         }
       }
@@ -1331,6 +1459,9 @@ public class ICTree {
 
     public void addVariables(List<Var> variables) {
       this.variables.addAll(variables);
+      if (this.parentFunction != null) {
+        this.parentFunction.addUsedVarNames(variables);
+      }
     }
 
     public void addVariable(Var variable) {
@@ -1343,6 +1474,17 @@ public class ICTree {
       } else {
         this.variables.add(variable);
       }
+      if (this.parentFunction != null) {
+        parentFunction.addUsedVarName(variable);
+      }
+    }
+
+    public Var declareVariable(Type t, String name,
+        Alloc storage, DefType defType, Var mapping) {
+      assert(mapping == null || Types.isString(mapping.type()));
+      Var v = new Var(t, name, storage, defType, mapping);
+      addVariable(v);
+      return v;
     }
 
     public void addContinuations(List<? extends Continuation>
@@ -1390,7 +1532,7 @@ public class ICTree {
       for (Var newVar: b.getVariables()) {
         // Check for duplicates (may be duplicate globals)
         if (!varSet.contains(newVar)) {
-          variables.add(newVar);
+          addVariable(newVar);
         }
       }
       
@@ -1488,8 +1630,7 @@ public class ICTree {
       }
       return curr.getParentFunction();
     }
-    
-    
+
     public String uniqueVarName(String prefix) {
       return uniqueVarName(prefix, Collections.<String>emptySet());
     }
@@ -1500,7 +1641,6 @@ public class ICTree {
      * with global constants by providing a prefix or adding global constant
      * names to excluded
      * @param prefix
-     * @param excluded
      * @return
      */
     public String uniqueVarName(String prefix, Set<String> excluded) {
@@ -1511,6 +1651,7 @@ public class ICTree {
         name = prefix + ":" + attempt;
         attempt++;
       }
+      func.addUsedVarName(name);
       return name;
     }
 

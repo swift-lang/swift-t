@@ -95,25 +95,27 @@ public class Conditionals {
   
     public IfStatement(Arg condition) {
       this(condition, new Block(BlockType.THEN_BLOCK, null),
-                          new Block(BlockType.ELSE_BLOCK, null));
+                      new Block(BlockType.ELSE_BLOCK, null), true);
     }
   
-    private IfStatement(Arg condition, Block thenBlock, Block elseBlock) {
+    private IfStatement(Arg condition, Block thenBlock, Block elseBlock,
+                        boolean emptyBlocks) {
       super();
       assert(thenBlock != null);
       assert(elseBlock != null);
       this.condition = condition;
       this.thenBlock = thenBlock;
-      this.thenBlock.setParent(this);
+      this.thenBlock.setParent(this, emptyBlocks);
       // Always have an else block to make more uniform: empty block is then
       // equivalent to no else block
       this.elseBlock = elseBlock;
-      this.elseBlock.setParent(this);
+      this.elseBlock.setParent(this, emptyBlocks);
     }
   
     @Override
     public IfStatement clone() {
-      return new IfStatement(condition, thenBlock.clone(), elseBlock.clone());
+      return new IfStatement(condition, thenBlock.clone(),
+                             elseBlock.clone(), false);
     }
   
     public Block thenBlock() {
@@ -230,34 +232,38 @@ public class Conditionals {
   
     public SwitchStatement(Arg switchVar, List<Integer> caseLabels) {
       this(switchVar, new ArrayList<Integer>(caseLabels),
-          new ArrayList<Block>(), new Block(BlockType.CASE_BLOCK, null));
+          new ArrayList<Block>(), new Block(BlockType.CASE_BLOCK, null),
+          true);
   
       // number of non-default cases
       int caseCount = caseLabels.size();
       for (int i = 0; i < caseCount; i++) {
-        this.caseBlocks.add(new Block(BlockType.CASE_BLOCK, this));
+        Block caseBlock = new Block(BlockType.CASE_BLOCK, this);
+        this.caseBlocks.add(caseBlock);
+        caseBlock.setParent(this, true);
       }
     }
   
     private SwitchStatement(Arg switchVar,
         ArrayList<Integer> caseLabels, ArrayList<Block> caseBlocks,
-        Block defaultBlock) {
+        Block defaultBlock, boolean emptyBlocks) {
       super();
       this.switchVar = switchVar;
       this.caseLabels = caseLabels;
       this.caseBlocks = caseBlocks;
       for (Block caseBlock: caseBlocks) {
-        caseBlock.setParent(this);
+        caseBlock.setParent(this, emptyBlocks);
       }
       this.defaultBlock = defaultBlock;
-      this.defaultBlock.setParent(this);
+      this.defaultBlock.setParent(this, emptyBlocks);
     }
   
     @Override
     public SwitchStatement clone() {
       return new SwitchStatement(switchVar,
           new ArrayList<Integer>(this.caseLabels),
-          ICUtil.cloneBlocks(this.caseBlocks), this.defaultBlock.clone());
+          ICUtil.cloneBlocks(this.caseBlocks), this.defaultBlock.clone(),
+          false);
   
     }
   

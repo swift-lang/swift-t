@@ -49,6 +49,7 @@ import exm.stc.ic.tree.ICInstructions.LoopBreak;
 import exm.stc.ic.tree.ICInstructions.LoopContinue;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
+import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.GenInfo;
 import exm.stc.ic.tree.ICTree.RenameMode;
 import exm.stc.ic.tree.ICTree.Statement;
@@ -83,7 +84,22 @@ public class ICContinuations {
 
     public void setParent(Block parent) {
       assert(parent != null);
+      Function oldParentFunction = this.parent != null ?
+                                    this.parent.getParentFunction() : null;
       this.parent = parent;
+      /*
+       * Update parent function links if needed.  This appraoch used here
+       * should only update info when needed (when a tree is
+       * attached to a different function).
+       */
+      Function parentFunction = this.parent.getParentFunction();
+      if (parentFunction != null && parentFunction != oldParentFunction) {
+        parentFunction.addUsedVarNames(this.constructDefinedVars());
+        for (Block block: getBlocks()) {
+          // Fixup parent links in child blocks
+          block.fixParentLinksRec(parentFunction);
+        }
+      }
     }
     
     public abstract void generate(Logger logger, CompilerBackend gen, GenInfo info);
@@ -316,6 +332,10 @@ public class ICContinuations {
       return outerContext;
     }
     
+    /**
+     * Create a copy of the continuation.  Do not set any
+     * parent links.
+     */
     @Override
     public abstract Continuation clone();
     
@@ -471,10 +491,10 @@ public class ICContinuations {
     protected Block loopBody;
 
     public AbstractLoop(Block loopBody, List<PassedVar> passedVars,
-        List<Var> keepOpenVars) {
+        List<Var> keepOpenVars, boolean emptyLoop) {
       super(passedVars, keepOpenVars);
       this.loopBody = loopBody;
-      this.loopBody.setParent(this);
+      this.loopBody.setParent(this, emptyLoop);
     }
 
     public Block getLoopBody() {
@@ -544,15 +564,16 @@ public class ICContinuations {
             List<Boolean> definedHere, List<Var> initVals, List<PassedVar> passedVars,
             List<Var> keepOpenVars, List<Boolean> blockingVars) {
       this(loopName, new Block(BlockType.LOOP_BODY, null), loopVars,
-          definedHere, initVals, passedVars, keepOpenVars, blockingVars);
+          definedHere, initVals, passedVars, keepOpenVars, blockingVars,
+          true);
     }
 
     private Loop(String loopName, Block loopBody,
         List<Var> loopVars,  List<Boolean> definedHere,
         List<Var> initVals,
         List<PassedVar> passedVars, List<Var> keepOpenVars,
-        List<Boolean> blockingVars) {
-      super(loopBody, passedVars, keepOpenVars);
+        List<Boolean> blockingVars, boolean emptyLoop) {
+      super(loopBody, passedVars, keepOpenVars, emptyLoop);
       this.loopName = loopName;
       this.condVar = loopVars.get(0);
       this.loopVars = new ArrayList<Var>(loopVars);
@@ -577,7 +598,7 @@ public class ICContinuations {
       // Constructor creates copies of variable lists
       Loop cloned = new Loop(loopName, this.loopBody.clone(),
           loopVars, definedHere, initVals,
-          passedVars, keepOpenVars, blockingVars);
+          passedVars, keepOpenVars, blockingVars, false);
 
       // fix up the references to the loopContinue/loopBreak instructions
       Pair<LoopBreak, LoopContinue> insts = cloned.findInstructions();
@@ -824,10 +845,10 @@ public class ICContinuations {
     }
 
 
-    NestedBlock(Block block) {
+    public NestedBlock(Block block) {
       super();
       this.block = block;
-      this.block.setParent(this);
+      this.block.setParent(this, false);
     }
 
     @Override
@@ -1033,16 +1054,13 @@ public class ICContinuations {
                     List<Var> keepOpenVars,
                     WaitMode mode, boolean recursive, TaskMode target,
                     TaskProps props) {
-      this(procName, new Block(BlockType.WAIT_BLOCK, null),
-                        waitVars,
-                        passedVars,
-                        keepOpenVars,
-                         mode, recursive, target, props);
+      this(procName, new Block(BlockType.WAIT_BLOCK, null), true, waitVars,
+           passedVars, keepOpenVars, mode, recursive, target, props);
       assert(this.block.getParentCont() != null);
     }
 
     private WaitStatement(String procName, Block block,
-        List<WaitVar> waitVars, List<PassedVar> passedVars,
+        boolean newBlock, List<WaitVar> waitVars, List<PassedVar> passedVars,
         List<Var> keepOpenVars,
         WaitMode mode, boolean recursive, TaskMode target,
         TaskProps props) {
@@ -1054,7 +1072,7 @@ public class ICContinuations {
       assert(mode != null);
       this.procName = procName;
       this.block = block;
-      this.block.setParent(this);
+      this.block.setParent(this, newBlock);
       this.waitVars = new ArrayList<WaitVar>(waitVars);
       WaitVar.removeDuplicates(this.waitVars);
       this.mode = mode;
@@ -1066,7 +1084,7 @@ public class ICContinuations {
     @Override
     public WaitStatement clone() {
       return new WaitStatement(procName, this.block.clone(),
-          waitVars, passedVars, keepOpenVars,
+          false, waitVars, passedVars, keepOpenVars,
           mode, recursive, target, props.clone());
     }
 
