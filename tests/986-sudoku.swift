@@ -63,7 +63,7 @@ type boardinfo {
 
 // Total squares on board
 (int size) sudoku_board_size () "sudoku" "0.0" [
-    "set size [ sudoku::board_size ]"
+    "set <<size>> [ sudoku::board_size ]"
 ];
 
 () print_board(blob board) "sudoku" "0.0" [

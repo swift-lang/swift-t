@@ -71,8 +71,13 @@ namespace eval sudoku {
 
         set n [ llength $boardl ]
         # puts stderr "${n} new boards at [ clock clicks -milliseconds ]"
-        set tds [ adlb::multicreate {*}[ lrepeat $n [ list blob 1 ] \
-                                                 [ list integer 1 ] ] ]
+        if { $n == 0 } {
+            set tds [ list ]
+        } else {
+            set tds [ adlb::multicreate {*}[ lrepeat $n [ list blob 1 ] \
+                                                     [ list integer 1 ] ] ]
+        }
+
         for { set i 0 } { $i < $n } { incr i } {
             set board [ lindex $boardl $i ]
             set filled [ string length $board ]
