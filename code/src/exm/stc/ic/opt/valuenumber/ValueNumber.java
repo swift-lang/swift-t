@@ -51,6 +51,7 @@ import exm.stc.ic.opt.ProgressOpcodes.Category;
 import exm.stc.ic.opt.Semantics;
 import exm.stc.ic.opt.TreeWalk;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
+import exm.stc.ic.opt.valuenumber.Congruences.OptUnsafeError;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
@@ -127,20 +128,24 @@ public class ValueNumber implements OptimizerPass {
 
   private void runPass(Program prog, Function f) {
     logger.trace("Optimizing function @" + f.getName());
-    // First pass finds all congruence classes and expands some instructions
-    Map<Block, Congruences> cong;
-    cong = findCongruences(prog, f, ExecContext.CONTROL);
-    
-    // Second pass replaces values based on congruence classes
-    replaceVals(f.mainBlock(), cong, InitState.enterFunction(f));
-    
-    // Third pass inlines continuations
-    inlinePass(f.mainBlock(), cong);
-    
+    try {
+      // First pass finds all congruence classes and expands some instructions
+      Map<Block, Congruences> congMap;
+      congMap = findCongruences(prog, f, ExecContext.CONTROL);
+      // Check if we are safe to proceed with optimisation
+  
+      // Second pass replaces values based on congruence classes
+      replaceVals(f.mainBlock(), congMap, InitState.enterFunction(f));
+      
+      // Third pass inlines continuations
+      inlinePass(f.mainBlock(), congMap);
+    } catch (OptUnsafeError e) {
+      logger.debug("Optimization cancelled for function " + f.getName());
+    }
   }
 
   private Congruences initFuncState(Logger logger,
-        GlobalConstants constants, Function f) {
+        GlobalConstants constants, Function f) throws OptUnsafeError {
     Congruences congruent = new Congruences(logger, constants,
                                             reorderingAllowed);
     for (Var v : constants.vars()) {
@@ -285,9 +290,12 @@ public class ValueNumber implements OptimizerPass {
    * @param program
    * @param f
    * @param execCx
+   * @return a map from block to the congruence info for the block.
+   * @throw OptUnsafeError if optimisation isn't safe
+   *      for this function.
    */
   private Map<Block, Congruences> findCongruences(Program program,
-                    Function f, ExecContext execCx) {
+          Function f, ExecContext execCx) throws OptUnsafeError {
     Map<Block, Congruences> result = new HashMap<Block, Congruences>();
     findCongruencesRec(program, f, f.mainBlock(), execCx,
           initFuncState(logger, program.constants(), f), result);
@@ -295,7 +303,8 @@ public class ValueNumber implements OptimizerPass {
   }
   
   private void findCongruencesRec(Program program, Function f, Block block,
-      ExecContext execCx, Congruences state, Map<Block, Congruences> result) {
+      ExecContext execCx, Congruences state, Map<Block, Congruences> result)
+          throws OptUnsafeError {
     result.put(block, state);
     for (Var v : block.getVariables()) {
       if (v.mapping() != null && Types.isFile(v.type())) {
@@ -352,7 +361,7 @@ public class ValueNumber implements OptimizerPass {
 
   private void findCongruencesInst(Program prog, Function f,
       ExecContext execCx, Block block, ListIterator<Statement> stmts,
-      Instruction inst, int stmtIndex, Congruences state) {
+      Instruction inst, int stmtIndex, Congruences state) throws OptUnsafeError {
     
     /*
      * See if value is already computed somewhere and see if we should replace
@@ -374,7 +383,8 @@ public class ValueNumber implements OptimizerPass {
 
   private UnifiedValues findCongruencesContRec(Program prog,
       Function fn, ExecContext execCx, Continuation cont,
-      int stmtIndex, Congruences state, Map<Block, Congruences> result) {
+      int stmtIndex, Congruences state, Map<Block, Congruences> result)
+          throws OptUnsafeError {
     logger.trace("Recursing on continuation " + cont.getType());
 
     Congruences contState = state.enterContinuation(cont.inheritsParentVars(),
@@ -432,7 +442,28 @@ public class ValueNumber implements OptimizerPass {
         Instruction inst = stmt.instruction();
         replaceCongruent(inst, state, init);
         
-        replaceInstruction(state, init, stmtIt, inst);
+        if (!inst.hasSideEffects() && inst.getOutputs().size() == 1) {
+          Var output = inst.getOutput(0);
+          if (!InitVariables.varMustBeInitialized(output, true) ||
+              init.isInitialized(output, true)) {
+            if (Types.isScalarFuture(output)) {
+              // Replace a computation with future output with a store
+              Arg val = state.findRetrieveResult(output);
+              if (val != null) {
+                Instruction futureSet = ICInstructions.futureSet(output, val);
+                stmtIt.set(futureSet);
+                logger.trace("Replaced with " + futureSet);
+              }
+            } else if (Types.isScalarValue(output)) {
+              Arg val = state.findValue(output);
+              if (val != null && val.isConstant()) {
+                Instruction valueSet = ICInstructions.valueSet(output, val);
+                stmtIt.set(valueSet);
+                logger.trace("Replaced with " + valueSet);
+              }
+            }
+          }
+        }
         
         // Update init state
         InitVariables.updateInitVars(logger, stmt, init, false);
@@ -587,43 +618,6 @@ public class ValueNumber implements OptimizerPass {
   private static final List<RenameMode> RENAME_MODES =
       Arrays.asList(RenameMode.VALUE, RenameMode.REFERENCE);
   
-  /**
-   * Try to replace instruction with e.g. a store.  This propagates
-   * constants in some cases where propagating the value doesn't work.
-   * 
-   * TODO: currently only does instructions with a single output.
-   * We don't have any const foldable instructions with multiple outputs
-   * yet
-   * @param state
-   * @param stmtIt
-   * @param inst
-   */
-  private void replaceInstruction(Congruences state, InitState init,
-      ListIterator<Statement> stmtIt, Instruction inst) {
-    if (!inst.hasSideEffects() && inst.getOutputs().size() == 1) {
-      Var output = inst.getOutput(0);
-      if (!InitVariables.varMustBeInitialized(output, true) ||
-          init.isInitialized(output, true)) {
-        if (Types.isScalarFuture(output)) {
-          // Replace a computation with future output with a store
-          Arg val = state.findRetrieveResult(output);
-          if (val != null) {
-            Instruction futureSet = ICInstructions.futureSet(output, val);
-            stmtIt.set(futureSet);
-            logger.trace("Replaced with " + futureSet);
-          }
-        } else if (Types.isScalarValue(output)) {
-          Arg val = state.findValue(output);
-          if (val != null && val.isConstant()) {
-            Instruction valueSet = ICInstructions.valueSet(output, val);
-            stmtIt.set(valueSet);
-            logger.trace("Replaced with " + valueSet);
-          }
-        }
-      }
-    }
-  }
-
   private static void replaceCongruentNonRec(Continuation cont,
                               Congruences congruent, InitState init) {
     for (RenameMode mode: RENAME_MODES) {
@@ -654,7 +648,7 @@ public class ValueNumber implements OptimizerPass {
 
   private static void updateCongruent(Logger logger, GlobalConstants consts,
             Function function, Instruction inst, int stmtIndex,
-            Congruences state) {
+            Congruences state) throws OptUnsafeError {
     List<ValLoc> irs = inst.getResults(state);
     
     if (irs != null) {

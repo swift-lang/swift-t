@@ -84,14 +84,6 @@ class CongruentSets {
   private final Set<Var> inaccessible;
   
   /**
-   * Equivalence classes with contradictions in them: don't substitute!
-   * We will keep growing the equivalence classes (keeping same
-   * representative), but never use them to do substitutions.
-   * This list is shared globally among all CongruentSets in tree. 
-   */
-  private final Set<Arg> contradictions;
-  
-  /**
    * Queue of merges that need to be completed before returning
    */
   private final LinkedList<ToMerge> mergeQueue;
@@ -111,8 +103,7 @@ class CongruentSets {
    */
   public final CongruenceType congType;
 
-  private CongruentSets(CongruenceType congType,
-      CongruentSets parent, Set<Arg> contradictions) {
+  private CongruentSets(CongruenceType congType, CongruentSets parent) {
     this.congType = congType;
     this.parent = parent;
     this.canonical = new HashMap<ArgOrCV, Arg>();
@@ -120,7 +111,6 @@ class CongruentSets {
     this.mergedInto = new MultiMap<Arg, Arg>();
     this.componentIndex = new HashMap<Arg, Set<ArgCV>>();
     this.inaccessible = new HashSet<Var>();
-    this.contradictions = contradictions;
     this.mergeQueue = new LinkedList<ToMerge>();
     this.recanonicalizeQueue = new LinkedList<Arg>();
     
@@ -155,9 +145,6 @@ class CongruentSets {
         } else {
           logger.trace(congType + " cong. class " + e.getKey() + 
                        " => " + e.getValue());
-          if (contradictions.contains(e.getKey())) {
-            logger.trace("CONTRADICTION IN " + e.getKey());
-          }
         }
       }
       // print componentIndex and inaccessible directly
@@ -213,11 +200,11 @@ class CongruentSets {
   }
 
   public static CongruentSets makeRoot(CongruenceType congType) {
-    return new CongruentSets(congType, null, new HashSet<Arg>());
+    return new CongruentSets(congType, null);
   }
   
   public CongruentSets makeChild() {
-    return new CongruentSets(congType, this, contradictions);
+    return new CongruentSets(congType, this);
   }
 
   /**
@@ -315,106 +302,15 @@ class CongruentSets {
   public Map<Var, Arg> getReplacementMap(InitState init) {
     return new ReplacementMap(init);
   }
-  
-  public void markContradiction(Arg arg) {
-
-    assert(arg != null);
-    arg = findCanonical(arg);
-    boolean newContradiction = contradictions.add(arg);
-    
-    if (logger.isTraceEnabled()) {
-      logger.trace("Contradiction for: " + arg + " new " + newContradiction);
-    }
-    
-    if (!newContradiction) {
-      // Don't need to do work: avoid infinite loop
-      return;
-    }
-    
-    // Mark all other possible canonicals in set as contradictions,
-    // since we don't want them to be used in parent or sibling contexts
-    CongruentSets curr = this;
-    do {
-      for (ArgOrCV setMember: curr.canonicalInv.get(arg)) {
-        if (setMember.isArg() && !setMember.arg().equals(arg)) {
-          if (logger.isTraceEnabled()) {
-            logger.trace("Contradiction implication " + arg + " => " +
-                          setMember);
-          }
-          markContradiction(setMember.arg());
-        } else if (setMember.isCV()) {
-          addCVContradictions(setMember.cv());
-        }
-      }
-      curr = curr.parent;
-    } while (curr != null);
-    // Propagate contradiction to components
-    curr = this;
-    do {
-      for (ArgCV cv: curr.lookupComponentIndex(arg)) {
-        if (logger.isTraceEnabled()) {
-          logger.trace("Contradiction implication " + arg + " => " +
-                        cv);
-        }
-        Arg set = findCanonical(new ArgOrCV(cv));
-        if (set != null) {
-          markContradiction(set);
-        }
-      }
-      curr = curr.parent;
-    } while (curr != null);
-  }
-
   /**
-   * Add contradictions flowing from a member of a structure, e.g. array
-   * to the whole array.
-   * @param cv
-   */
-  private void addCVContradictions(ArgCV cv) {
-    for (Arg structure: cv.componentOf()) {
-      logger.trace("MARK: " + structure);
-      markContradiction(structure);
-    }
-  }
-
-  public boolean hasContradiction(Arg val) {
-    return contradictions.contains(findCanonical(val));
-  }
-
-  /**
-   * True if some part of the value is marked as contradictory
-   * @param val
-   * @return
-   */
-  private boolean containsContradictoryArg(ArgOrCV val) {
-    if (val.isArg()) {
-      // Check for 
-      if (contradictions.contains(findCanonical(val.arg()))) {
-        return true;
-      }
-    } else {
-      assert(val.isCV());
-      for (Arg input: val.cv().getInputs()) {
-        if (contradictions.contains(findCanonical(input))) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Return full list of values congruend to arg
+   * Return full list of values congruent to arg
    * @param arg
    * @return
    */
   public List<ArgOrCV> findCongruentValues(Arg arg) {
     CongruentSets curr = this;
     Arg canonical = findCanonical(arg);
-    if (contradictions.contains(arg)) {
-      return Collections.emptyList();
-    }
-
+    
     List<ArgOrCV> res = null;
     
     if (!arg.equals(canonical)) {
@@ -458,19 +354,7 @@ class CongruentSets {
     if (!newEntry) {
       return;
     }
-    if (containsContradictoryArg(val)) {
-      // See if anything contradictory contained in val, if so
-      // conservatively mark this congruence set as containing
-      // a contradiction
-      markContradiction(canonicalVal);
-    }
-    if (contradictions.contains(canonicalVal)) {
-      if (val.isArg()) {
-        markContradiction(val.arg());
-      } else {
-        addCVContradictions(val.cv());
-      }
-    }
+
     if (val.isCV()) {
       checkForRecanonicalization(canonicalVal, val.cv());
     }
@@ -562,13 +446,6 @@ class CongruentSets {
       }
       curr = curr.parent;
     } while (curr != null);
-    // If either set being merged has contradictions, mark both as
-    // contradictions
-    if (contradictions.contains(oldCanon)) {
-      markContradiction(newCanon);
-    } else if (contradictions.contains(newCanon)) {
-      markContradiction(oldCanon);
-    }
     
     // Clear out-of-date entries in current scope
     // (leave outer scopes untouched since they're not harmful)
@@ -677,12 +554,6 @@ class CongruentSets {
           }
         }
       }
-    }
-    
-    if (contradictions.contains(newComponent) &&
-        !contradictions.contains(oldComponent)) {
-      // Propagate contradiction to set
-      markContradiction(canonical);
     }
   }
 
@@ -1009,16 +880,6 @@ class CongruentSets {
         visited.add(curr);
         curr = curr.parent;
       } while (curr != null);
-      
-      // Abort immediately if we have a contradiction
-      if (replace != null && contradictions.contains(replace)) {
-        // Don't do any replacements in sets with contradictions
-        if (logger.isTraceEnabled()) {
-          logger.trace(v + " => !!" + replace + "(" + congType + ")" +
-                ": CONTRADICTION");
-        }
-        return null;
-      }
       
       if (replace != null && replace.isVar()) {
         for (CongruentSets s: visited) {

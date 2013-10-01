@@ -138,7 +138,7 @@ public class Congruences implements ValueState {
   }
   
   public void update(GlobalConstants consts, String errContext,
-                     ValLoc resVal, int stmtIndex) {
+           ValLoc resVal, int stmtIndex) throws OptUnsafeError {
     logger.trace(resVal + " " + resVal.congType());
 
     if (resVal.congType() == CongruenceType.ALIAS) {
@@ -178,11 +178,12 @@ public class Congruences implements ValueState {
    * @param congruent
    * @param addInverses
    * @return
+   * @throws OptUnsafeError 
    */
   private void update(GlobalConstants consts, String errContext,
             Arg location, ArgCV value, IsAssign isAssign, 
-            CongruentSets congruent,
-            boolean addInverses, int stmtIndex) {
+            CongruentSets congruent, boolean addInverses, int stmtIndex)
+                throws OptUnsafeError {
     // LocCV may already be in congruent set
     Arg canonLoc = congruent.findCanonical(new ArgOrCV(location)); 
     // Canonicalize value based on existing congruences
@@ -220,9 +221,11 @@ public class Congruences implements ValueState {
    * @param errContext
    * @param canonLoc
    * @param canonVal
+   * @throws OptUnsafeError 
    */
   private void addInverses(GlobalConstants consts, String errContext,
-                          Arg canonLoc, ArgOrCV canonVal, int stmtIndex) {
+                          Arg canonLoc, ArgOrCV canonVal, int stmtIndex)
+                              throws OptUnsafeError {
     if (canonVal.isCV() && canonVal.cv().inputs.size() == 1) {
       ComputedValue<Arg> cv = canonVal.cv();
       Arg invOutput = cv.getInput(0);
@@ -250,7 +253,8 @@ public class Congruences implements ValueState {
   }
 
   private void updateInv(GlobalConstants consts, String errContext,
-      Arg invOutput, ArgCV invVal, int stmtIndex) {
+      Arg invOutput, ArgCV invVal, int stmtIndex)
+          throws OptUnsafeError {
     CongruentSets valCong = getCongruentSet(CongruenceType.VALUE);
     update(consts, errContext, invOutput, invVal, IsAssign.NO,
            valCong, false, stmtIndex);
@@ -262,22 +266,18 @@ public class Congruences implements ValueState {
    * @param congruent
    * @param newLoc representative of set with location just maybeAssigned
    * @param oldLoc representative of existing set
+   * @throws OptUnsafeError 
    */
   private void mergeSets(String errContext, ArgOrCV value,
       GlobalConstants consts, CongruentSets congruent,
-      Arg oldLoc, Arg newLoc, IsAssign newIsAssign, int stmtIndex) {
+      Arg oldLoc, Arg newLoc, IsAssign newIsAssign, int stmtIndex) throws OptUnsafeError {
     if (newLoc.equals(oldLoc)) {
       // Already merged
       return;
     }
     
-    if (!checkNoContradiction(errContext, congruent.congType,
-        value, newLoc, oldLoc)) {
-      // Mark both sets as in error and do not merge 
-      congruent.markContradiction(newLoc);
-      congruent.markContradiction(oldLoc);
-      return;
-    }
+    checkNoContradiction(errContext, congruent.congType,
+                         value, newLoc, oldLoc);
     
     // Must merge.  Select which is the preferred value
     // (for replacement purposes, etc.)
@@ -318,10 +318,11 @@ public class Congruences implements ValueState {
    * @param value
    * @param val1
    * @param val2
-   * @return
+   * @throw {@link OptUnsafeError} if problem found
    */
-  private boolean checkNoContradiction(String errContext,
-    CongruenceType congType, ArgOrCV value, Arg val1, Arg val2) {
+  private void checkNoContradiction(String errContext,
+    CongruenceType congType, ArgOrCV value, Arg val1, Arg val2) 
+    throws OptUnsafeError {
     boolean contradiction = false;
     if (congType == CongruenceType.VALUE) {
       if (val1.isConstant() && val2.isConstant() && !val1.equals(val2)) {
@@ -343,9 +344,7 @@ public class Congruences implements ValueState {
           + "This may have been caused by a double-write to a variable. "
           + "Please look at any previous warnings emitted by compiler. "
           + "Otherwise this could indicate a stc bug");
-      return false;
-    } else {
-      return true;
+      throw new OptUnsafeError();
     }
   }
 
@@ -437,8 +436,10 @@ public class Congruences implements ValueState {
    * 
    * @param canonLoc CV representing a single assignment location
    * @param assign
+   * @throws OptUnsafeError 
    */
-  private void markAssigned(String errContext, GlobalConstants consts, ValLoc vl) {
+  private void markAssigned(String errContext, GlobalConstants consts,
+                  ValLoc vl) throws OptUnsafeError {
     List<Arg> assigned;
     if (vl.isAssign() == IsAssign.NO) {
       return;
@@ -460,17 +461,7 @@ public class Congruences implements ValueState {
           + "This may have been caused by a double-write to a variable. "
           + "Please look at any previous warnings emitted by compiler. "
           + "Otherwise this could indicate a stc bug");
-      Arg aliasCanon = byAlias.findCanonical(
-                          byAlias.canonicalize(consts, vl.value()));
-      if (aliasCanon != null) {
-        byAlias.markContradiction(aliasCanon);
-      }
-      Arg valCanon = byValue.findCanonical(
-                          byValue.canonicalize(consts, vl.value()));
-      if (valCanon != null) {
-        byValue.markContradiction(valCanon);
-      }
-      return;
+      throw new OptUnsafeError();
     } 
     if (logger.isTraceEnabled()) {
       logger.trace("First assignment to " + assigned);
@@ -707,28 +698,11 @@ public class Congruences implements ValueState {
     if (cvRetrieve == null) {
       return null;
     }
-    Arg val = byValue.findCanonical(consts, cvRetrieve);
-
-    if (val != null && !byValue.hasContradiction(val)) {
-      return val;
-    } else {
-      return null;
-    }
+    return byValue.findCanonical(consts, cvRetrieve);
   }
-  
-  /**
-   * See if the value of a local var is already in scope
-   * Returns nothing if contradiction found!
-   * @param v
-   * @return
-   */
+
   public Arg findValue(Var output) {
-    Arg val = byValue.findCanonical(output.asArg());
-    if (val != null && !byValue.hasContradiction(val)) {
-      return val;
-    } else {
-      return null;
-    }
+    return byValue.findCanonical(output.asArg());
   }
   
   /**
@@ -749,7 +723,8 @@ public class Congruences implements ValueState {
   }
   
   public void addUnifiedValues(GlobalConstants consts, String errContext,
-                                 int stmtIndex, UnifiedValues unified) {
+           int stmtIndex, UnifiedValues unified) 
+               throws OptUnsafeError {
     // TODO: need to refine this merge to compensate for sets being
     //      named differently in child
     for (Var closed: unified.closed) {
@@ -843,5 +818,18 @@ public class Congruences implements ValueState {
     public int size() {
       throw new STCRuntimeError("size() not supported");
     }
+  }
+
+  static class OptUnsafeError extends Exception {
+  
+    private static final long serialVersionUID = 1L;
+  
+    /**
+     * Don't have message: should log problem before throwing exception
+     */
+    OptUnsafeError() {
+      super();
+    }
+    
   }
 }

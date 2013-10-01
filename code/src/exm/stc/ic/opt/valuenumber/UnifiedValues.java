@@ -22,8 +22,9 @@ import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
 import exm.stc.ic.opt.OptUtil;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
-import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgOrCV;
+import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
+import exm.stc.ic.opt.valuenumber.Congruences.OptUnsafeError;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsValCopy;
@@ -64,11 +65,13 @@ public class UnifiedValues {
    * @param state
    * @param branchStates
    * @return
+   * @throws OptUnsafeError 
    */
   public static UnifiedValues unify(Logger logger, GlobalConstants consts,
                  Function fn, boolean reorderingAllowed, int parentStmtIndex,
                  Congruences state, Continuation cont,
-                 List<Congruences> branchStates, List<Block> branchBlocks) {
+                 List<Congruences> branchStates, List<Block> branchBlocks)
+                     throws OptUnsafeError {
     if (logger.isTraceEnabled()) {
       logger.trace("Unifying state from " + branchBlocks.size() +
                    " branches with continuation type " + cont.getType());
@@ -142,13 +145,13 @@ public class UnifiedValues {
    * @param allBranchCVs
    * @param unifiedLocs 
    * @return
+   * @throws OptUnsafeError 
    */
   private static Pair<List<ValLoc>, Boolean> unifyCVs(GlobalConstants consts,
-      Function fn,
-      boolean reorderingAllowed, Block parent, int parentStmtIndex,
-      CongruenceType congType, List<Congruences> branchStates,
-      List<Block> branchBlocks, List<ArgCV> allBranchCVs,
-      Map<List<Arg>, Var> unifiedLocs) {
+    Function fn, boolean reorderingAllowed, Block parent, int parentStmtIndex,
+    CongruenceType congType, List<Congruences> branchStates,
+    List<Block> branchBlocks, List<ArgCV> allBranchCVs,
+    Map<List<Arg>, Var> unifiedLocs) throws OptUnsafeError {
     List<ValLoc> availVals = new ArrayList<ValLoc>();
     
     boolean createdNewBranchCVs = false;
@@ -233,7 +236,7 @@ public class UnifiedValues {
 
   private static Var createUnifyingVar(GlobalConstants consts, Function fn,
       Block parent, List<Congruences> branchStates, List<Block> branchBlocks,
-      List<Arg> locs, Type type) {
+      List<Arg> locs, Type type) throws OptUnsafeError {
     boolean isValue = Types.isPrimValue(type);
     // declare new temporary value in outer block
     Var unifiedLoc;
