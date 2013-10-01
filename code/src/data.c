@@ -1146,6 +1146,8 @@ xlb_data_enumerate(adlb_datum_id id, int count, int offset,
     verbose_error(ADLB_DATA_ERROR_TYPE, "enumeration of <%"PRId64"> with "
             "type %s not supported", id, ADLB_Data_type_tostring(d->type));
   }
+  // Unreachable
+  return ADLB_DATA_ERROR_UNKNOWN;
 }
 
 adlb_data_code
