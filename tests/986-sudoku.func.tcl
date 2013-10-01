@@ -3,6 +3,8 @@ package provide sudoku 0.0
 
 # Dummy functions that emulate sudoku app
 namespace eval sudoku {
+    package require turbine 0.3.0
+    namespace import ::turbine::*
 
     # Total squares on board
     proc board_size { } {
@@ -14,7 +16,7 @@ namespace eval sudoku {
         # to emulate the actual sudoku solver, we assume that the
         # secret solution is a string of all 0's with the length the
         # size of the board
-        return [ adlb::blob_from_string "0" ];
+        return [ adlb::blob_from_string "0" ]
     }
 
     # Check if string is all zeroes
@@ -22,7 +24,7 @@ namespace eval sudoku {
         set n [ string length $str ]
         for { set i 0 } { $i < $n } { incr i } {
             set c [ string index $str $i ]
-            if { $c != 0 }
+            if { $c != 0 } {
                 return 0
             }
         }
@@ -37,7 +39,7 @@ namespace eval sudoku {
             return
         }
 
-        set board_str [ adlb::string_from_blob $board ]
+        set board_str [ ::adlb::blob_to_string $board ]
 
         # build list of candidates based on input
         # Want to make sure that we always end up with a candidate
@@ -93,6 +95,6 @@ namespace eval sudoku {
 
     proc print_board_tcl { board } {
         # String was stored into blob, so just print string repr
-        puts [ adlb::string_from_blob $board ]
+        puts [ ::adlb::blob_to_string $board ]
     }
 }
