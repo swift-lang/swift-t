@@ -395,6 +395,7 @@ public class ComputedValue<T> {
     public ArgOrCV(ArgCV cv) {
       this.cv = cv;
       this.arg = null;
+      this.hashCode = calcHashCode();
     }
     
     public ArgOrCV(Opcode op, Object subop, List<Arg> inputs) {
@@ -407,10 +408,12 @@ public class ComputedValue<T> {
     public ArgOrCV(Arg arg) {
       this.cv = null;
       this.arg = arg;
+      this.hashCode = calcHashCode();
     }
 
     private final ArgCV cv;
     private final Arg arg;
+    private final int hashCode;
     
     public boolean isCV() {
       return cv != null;
@@ -445,6 +448,10 @@ public class ComputedValue<T> {
 
     @Override
     public int hashCode() {
+      return hashCode;
+    }
+    
+    private int calcHashCode() {
       final int prime = 31;
       int result = 1;
       result = prime * result + ((arg == null) ? 0 : arg.hashCode());

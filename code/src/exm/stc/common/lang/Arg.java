@@ -43,6 +43,8 @@ public class Arg implements Comparable<Arg> {
   private final double floatlit;
   private final boolean boollit;
   private final Var var;
+  
+  private final int hashCode;
 
   /**
    * Private constructors so that it can only be build using static builder
@@ -60,6 +62,9 @@ public class Arg implements Comparable<Arg> {
     this.floatlit = floatlit;
     this.boollit = boollit;
     this.var = var;
+    // precalculate hashcode since this is immutable and frequently stored
+    // in maps
+    this.hashCode = calcHashCode();
   }
 
   public static List<Arg> cloneList(List<Arg> inputs) {
@@ -268,6 +273,10 @@ public class Arg implements Comparable<Arg> {
    */
   @Override
   public int hashCode() {
+    return hashCode;
+  }
+  
+  private int calcHashCode() {
     int hash1;
     switch (kind) {
     case INTVAL:
