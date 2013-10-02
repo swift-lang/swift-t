@@ -40,37 +40,44 @@ namespace eval sudoku {
         }
 
         set board_str [ ::adlb::blob_to_string $board ]
+        puts "Working on board: \"${board_str}\""
 
         # build list of candidates based on input
         # Want to make sure that we always end up with a candidate
         # Doesn't matter if we have multiple viable solutions
         set boardl [ list ]
         # Work out max and min number of squares to fill
-        set maxfill [ expr [ board_size ] - [ string length $board ] ]
+        set maxfill [ expr [ board_size ] - [ string length $board_str ] ]
+        puts "maxfill=${maxfill} board=${board_str}"
 
         # Number of bad solutions to generate
-        set badsols [ expr round(rand() * 5) ]
+        # NOTE: test runtime is sensitive to this.
+        #       > 2 leads to exponential growth in solutions
+        #       < 2 leads to exponential decay
+        set badsols [ expr round(rand() * 10) ]
+        puts stderr "Badsols: ${badsols}"
         for { set i 0 } { $i < $badsols } { incr i } {
             # random digit from 0 to 9
             set fillval [ expr round(rand() * 9) ] 
             # random amount of characters to fill in
-            set fillchars [ expr max(1, min($maxfill, round(rand() * 20))) ]
-            set badsol "$board[ string repeat $fillval $fillchars ]"
+            set fillchars [ expr max(1, min($maxfill, round(rand() * 10))) ]
+            set badsol "$board_str[ string repeat $fillval $fillchars ]"
             puts stderr "New solution: $badsol"
             lappend boardl $badsol
         }
 
-        if [ all_zeros $board ] {
+        if [ all_zeros $board_str ] {
+            puts "Was all zeroes"
             # Possible solution, always make sure we add a zero to get
             # correct solution
-            set fillchars [ expr max(1, min($maxfill, round(rand() * 20))) ]
-            set goodsol "$board[ string 0 repeat $fillchars ]"
+            set fillchars [ expr max(1, min($maxfill, round(rand() * 10))) ]
+            set goodsol "$board_str[ string repeat 0 $fillchars ]"
             puts stderr "Partial correct solution: $goodsol"
-            lappend boardl $badsol
+            lappend boardl $goodsol
         }
 
         set n [ llength $boardl ]
-        # puts stderr "${n} new boards at [ clock clicks -milliseconds ]"
+        puts stderr "${n} new boards at [ clock clicks -milliseconds ]"
         if { $n == 0 } {
             set tds [ list ]
         } else {
