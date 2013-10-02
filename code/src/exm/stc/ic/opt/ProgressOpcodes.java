@@ -19,6 +19,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashSet;
 
+import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -86,6 +87,19 @@ public class ProgressOpcodes {
     return blockProgress(rootBlock, Category.NON_PROGRESS);
   }
   
+  public static boolean isNonProgressWorker(Block rootBlock) {
+    // These instructions are all fine to run on worker
+    return isNonProgress(rootBlock);
+  }
+  
+  public static boolean isNonProgress(Block rootBlock, ExecContext cx) {
+    if (cx == ExecContext.CONTROL) {
+      return isNonProgress(rootBlock);
+    } else {
+      return isNonProgressWorker(rootBlock);
+    }
+  }
+  
   /**
    * block
    * @param rootBlock
@@ -131,7 +145,8 @@ public class ProgressOpcodes {
 
   /**
    * Opcodes which we don't consider as making "progress", i.e.
-   * won't enable further work to run
+   * won't enable further work to run.  There are all ok to
+   * use on workers.
    */
   private static HashSet<Opcode> nonProgressOpcodes = initNonProgress();
   

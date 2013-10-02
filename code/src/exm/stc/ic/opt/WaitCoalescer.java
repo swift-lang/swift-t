@@ -367,6 +367,11 @@ public class WaitCoalescer implements OptimizerPass {
       return false;
     }
     
+    return compatibleLocPar(location1, location2, par1, par2);
+  }
+
+  private boolean compatibleLocPar(Arg location1, Arg location2, Arg par1,
+          Arg par2) {
     if (location1 != null && location2 != null) {
       if (!location1.equals(location2)) {
         return false;
@@ -379,12 +384,6 @@ public class WaitCoalescer implements OptimizerPass {
       }
     }
     return true;
-  }
-  
-  private boolean compatibleContexts(WaitStatement w1, ExecContext c1,
-                                     WaitStatement w2, ExecContext c2) {
-    return compatibleContexts(c1, c2, w1.targetLocation(), w2.targetLocation(),
-                              w1.parallelism(), w2.parallelism());
   }
   
   /**
@@ -508,10 +507,10 @@ public class WaitCoalescer implements OptimizerPass {
    */
   private boolean squashWaits(Logger logger, Function fn, WaitStatement wait,
       ExecContext waitContext) {
-    Block block = wait.getBlock();
+    Block waitBlock = wait.getBlock();
     WaitStatement innerWait = null;
     // Can be 0..n sync continuations and 1 async wait
-    for (Continuation c: block.getContinuations()) {
+    for (Continuation c: waitBlock.getContinuations()) {
       if (c.isAsync()) {
         if (c.getType() == ContinuationType.WAIT_STATEMENT) {
           if (innerWait != null) {
@@ -529,29 +528,74 @@ public class WaitCoalescer implements OptimizerPass {
     if (innerWait == null)
       return false;
     
+    return trySquash(logger, wait, waitContext, waitBlock, innerWait);
+  }
+
+  private boolean trySquash(Logger logger, WaitStatement wait,
+          ExecContext waitContext, Block waitBlock, WaitStatement innerWait) {
     ExecContext innerContext = innerWait.childContext(waitContext);
+    
     // Check that locations are compatible
-    if (!compatibleContexts(wait, waitContext, innerWait, innerContext)) {
+    if (!compatibleLocPar(wait.targetLocation(), innerWait.targetLocation(),
+                             wait.parallelism(), innerWait.parallelism())) {
       return false;
+    }
+    
+    // Check that recursiveness matches
+    if (wait.isRecursive() != innerWait.isRecursive()) {
+      return false;
+    }
+    
+    // Check that contexts are compatible 
+    ExecContext possibleMergedContext;
+    if (innerContext == waitContext) {
+      possibleMergedContext = waitContext;
+    } else {
+      if (waitContext == ExecContext.WORKER) {
+        assert(innerContext == ExecContext.CONTROL);
+        // Don't try to move work from worker to control
+        return false;
+      } else {
+        assert(waitContext == ExecContext.CONTROL);
+        assert(innerContext == ExecContext.WORKER);
+        // Inner wait is on worker, try to see if we can
+        // move context of outer wait to worker
+        possibleMergedContext = innerContext;
+      }
     }
     
     // Check that wait variables not defined in this block
     for (WaitVar waitVar: innerWait.getWaitVars()) {
-      if (block.getVariables().contains(waitVar.var)) {
+      if (waitBlock.getVariables().contains(waitVar.var)) {
         return false;
       }
     }
     
-    if (!ProgressOpcodes.isNonProgress(block)) {
+    if (!ProgressOpcodes.isNonProgress(waitBlock, possibleMergedContext)) {
       // Progress might be deferred by squashing
       return false;
     }
+    
     // Pull inner up
     if (logger.isTraceEnabled())
       logger.trace("Squash wait(" + innerWait.getWaitVars() + ")" +
                  " up into wait(" + wait.getWaitVars() + ")");
     wait.addWaitVars(innerWait.getWaitVars());
-    innerWait.inlineInto(block);
+
+    if (innerWait.getMode() == WaitMode.TASK_DISPATCH ||
+            wait.getMode() == WaitMode.TASK_DISPATCH) {
+      // In either case, need to make sure tasks get dispatched
+      wait.setMode(WaitMode.TASK_DISPATCH);
+    }
+    if (possibleMergedContext != waitContext) {
+      if (possibleMergedContext == ExecContext.CONTROL) {
+        wait.setTarget(TaskMode.CONTROL);
+      } else {
+        assert(possibleMergedContext == ExecContext.WORKER);
+        wait.setTarget(TaskMode.WORKER);
+      }
+    }
+    innerWait.inlineInto(waitBlock);
     return true;
   }
 
