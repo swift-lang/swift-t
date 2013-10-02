@@ -1044,7 +1044,7 @@ public class ICContinuations {
      * We can only remove an explicit wait if we know that the variables are
      * already closed*/
     private WaitMode mode;
-    private final boolean recursive;
+    private boolean recursive;
     private TaskMode target;
     
     private final TaskProps props;
@@ -1079,6 +1079,7 @@ public class ICContinuations {
       this.recursive = recursive;
       this.target = target;
       this.props = props.clone();
+      updateRecursive();
     }
 
     @Override
@@ -1253,6 +1254,8 @@ public class ICContinuations {
           it.remove();
         }
       }
+
+      updateRecursive();
     }
 
     @Override
@@ -1295,7 +1298,7 @@ public class ICContinuations {
         WaitVar wv = it.next();
         for (WaitVar r: toRemove) {
           if (r.var.equals(wv.var)) {
-            if (this.recursive && !allRecursive  &&recursionRequired(wv.var)) {
+            if (this.recursive && !allRecursive && recursionRequired(wv.var)) {
               // Do nothing
             } else if (!retainExplicit || r.explicit || !wv.explicit) {
               // Sufficiently explicit
@@ -1304,8 +1307,25 @@ public class ICContinuations {
           }
         }
       }
+
+      updateRecursive();
     }
 
+    /**
+     * Check if we can convert a recursive wait to non-recursive
+     */
+    private void updateRecursive() {
+      if (recursive) {
+        for (WaitVar wv: waitVars) {
+          if (recursionRequired(wv.var)) {
+            return;
+          }
+        }
+        // If we made it here, don't need to recurse
+        recursive = false;
+      }
+    }
+    
     public void inlineInto(Block dstBlock) {
       inlineInto(dstBlock, this.block);
     }
