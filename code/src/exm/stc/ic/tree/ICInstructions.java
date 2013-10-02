@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -800,6 +801,8 @@ public class ICInstructions {
     private final List<Arg> inputs;
     private final List<Boolean> closedInputs; // which inputs are closed
     private final TaskProps props;
+    
+    private final boolean hasUpdateableInputs;
   
     private FunctionCall(Opcode op, String functionName,
         List<Arg> inputs, List<Var> outputs, TaskProps props) {
@@ -822,9 +825,14 @@ public class ICInstructions {
         assert(v != null);
       }
       
+      boolean hasUpdateableInputs = false; 
       for(Arg v: inputs) {
         assert(v != null);
+        if (v.isVar() && Types.isScalarUpdateable(v.getVar())) {
+          hasUpdateableInputs = true;
+        }
       }
+      this.hasUpdateableInputs = hasUpdateableInputs;
     }
     
     public static FunctionCall createFunctionCall(
@@ -923,8 +931,8 @@ public class ICInstructions {
     }
   
     /**
-     * @return function input arguments
-     */
+    * @return function input arguments
+    */
     public List<Arg> getFunctionInputs() {
       return Collections.unmodifiableList(inputs);
     }
@@ -934,13 +942,41 @@ public class ICInstructions {
       return inputs.get(i);
     }
     
+    /**
+    * @return function output arguments
+    */
+    public List<Var> getFunctionOutputs() {
+      return Collections.unmodifiableList(outputs);
+    }
+
+
+    public Var getFunctionOutput(int i) {
+      return outputs.get(i);
+    }
+    
     @Override
     public List<Arg> getInputs() {
       List<Arg> inputVars = new ArrayList<Arg>(inputs);
+      if (treatUpdInputsAsOutputs()) {
+        // Remove updateable inputs from list
+        ListIterator<Arg> it = inputVars.listIterator();
+        while (it.hasNext()) {
+          Arg in = it.next();
+          if (in.isVar() && Types.isScalarUpdateable(in.getVar())) {
+            it.remove();
+          }
+        }
+      }
+      // Need to include any properties as inputs
       inputVars.addAll(props.values());
       return inputVars;
     }
-  
+
+    /**
+     * Return subset of input list which are variables
+     * @param noValues
+     * @return
+     */
     private List<Var> varInputs(boolean noValues) {
       List<Var> varInputs = new ArrayList<Var>();
       for (Arg input: inputs) {
@@ -961,7 +997,26 @@ public class ICInstructions {
 
     @Override
     public List<Var> getOutputs() {
-      return Collections.unmodifiableList(outputs);
+      if (!treatUpdInputsAsOutputs()) {
+        return Collections.unmodifiableList(outputs);
+      } else {
+        List<Var> realOutputs = new ArrayList<Var>();
+        realOutputs.addAll(outputs);
+        addAllUpdateableInputs(realOutputs);
+        return realOutputs;
+      }
+    }
+
+    private boolean treatUpdInputsAsOutputs() {
+      return hasUpdateableInputs && RefCounting.WRITABLE_UPDATEABLE_INARGS;
+    }
+    
+    private void addAllUpdateableInputs(List<Var> realOutputs) {
+      for (Arg in: inputs) {
+        if (in.isVar() && Types.isScalarUpdateable(in.getVar())) {
+          realOutputs.add(in.getVar());
+        }
+      }
     }
 
     @Override
@@ -974,6 +1029,9 @@ public class ICInstructions {
             if (Types.hasReadableSideChannel(o.type())) {
               res.add(o);
             }
+          }
+          if (treatUpdInputsAsOutputs()) {
+            addAllUpdateableInputs(res);
           }
           return res;
         }
@@ -991,6 +1049,10 @@ public class ICInstructions {
                 (f == null || !f.isOutputWriteOnly(i))) {
               res.add(o);
             }
+          }
+
+          if (treatUpdInputsAsOutputs()) {
+            addAllUpdateableInputs(res);
           }
           return res;
         }
@@ -1157,7 +1219,7 @@ public class ICInstructions {
                 readIncr.add(inVar);
               }
               if (Types.isScalarUpdateable(inVar) &&
-                        RefCounting.WRITABLE_UPDATEABLE_INARGS) {
+                  treatUpdInputsAsOutputs()) {
                 writeIncr.add(inVar);
               }
             }

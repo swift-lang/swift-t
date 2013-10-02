@@ -423,7 +423,7 @@ public class FunctionInline implements OptimizerPass {
     List<Var> passIn = new ArrayList<Var>();
     List<Var> outArrays = new ArrayList<Var>();
     
-    assert(fnCall.getOutputs().size() == toInline.getOutputList().size());
+    assert(fnCall.getFunctionOutputs().size() == toInline.getOutputList().size());
     assert(fnCall.getFunctionInputs().size() == toInline.getInputList().size()) :
            fnCall.getFunctionInputs() + " != " + toInline.getInputList() 
              + " for " + fnCall.getFunctionName();
@@ -437,8 +437,8 @@ public class FunctionInline implements OptimizerPass {
       // Remove cleanup actions
       inlineBlock.removeCleanups(inArg);
     }
-    for (int i = 0; i < fnCall.getOutputs().size(); i++) {
-      Var outVar = fnCall.getOutput(i);
+    for (int i = 0; i < fnCall.getFunctionOutputs().size(); i++) {
+      Var outVar = fnCall.getFunctionOutput(i);
       Var outArg = toInline.getOutputList().get(i);
       renames.put(outArg, Arg.createVar(outVar));
       passIn.add(outVar);

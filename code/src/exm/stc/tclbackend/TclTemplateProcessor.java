@@ -53,9 +53,9 @@ public class TclTemplateProcessor {
    
     List<String> inNames = template.getInNames();
     if (template.hasVarArgs()) {
-      assert(inputs.size() >= inNames.size() - 1);
+      assert(inputs.size() >= inNames.size() - 1) : inputs + " " + inNames;
     } else {
-      assert(inNames.size() == inputs.size());
+      assert(inNames.size() == inputs.size()) : inputs + " " + inNames;
     }
     for (int i = 0; i < inNames.size(); i++) {
       String argName = inNames.get(i);
