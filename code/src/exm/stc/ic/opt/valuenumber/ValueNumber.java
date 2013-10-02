@@ -648,7 +648,7 @@ public class ValueNumber implements OptimizerPass {
   private static void updateCongruent(Logger logger, GlobalConstants consts,
             Function function, Instruction inst, int stmtIndex,
             Congruences state) throws OptUnsafeError {
-    List<ValLoc> irs = inst.getResults(state);
+    List<ValLoc> irs = inst.getResults();
     
     if (irs != null) {
       if (logger.isTraceEnabled()) {

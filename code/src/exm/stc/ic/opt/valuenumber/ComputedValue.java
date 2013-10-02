@@ -83,6 +83,10 @@ public class ComputedValue<T> {
   public ComputedValue(Opcode op, List<T> inputs) {
     this(op, "", inputs);
   }
+  
+  public ComputedValue(Opcode op, T input) {
+    this(op, "", Collections.singletonList(input));
+  }
 
 
   public Opcode op() {
@@ -345,6 +349,49 @@ public class ComputedValue<T> {
     return true;
   }
   
+  
+  /**
+   * Filename future
+   * @param file
+   * @return
+   */
+  public static ArgCV filenameCV(Var file) {
+    assert(Types.isFile(file));
+    return new ArgCV(Opcode.GET_FILENAME, file.asArg().asList());
+  }
+  
+  /**
+   * Filename value (the string stored in the filename future)
+   * @param file
+   * @return
+   */
+  public static ArgCV filenameValCV(Var file) {
+    assert(Types.isFile(file));
+    return new ArgCV(Opcode.GET_FILENAME_VAL, file.asArg().asList());
+  }
+
+  /**
+   * Local file name (filename of a local file handle)
+   * @param file
+   * @return
+   */
+  public static ArgCV localFilenameCV(Var file) {
+    assert(Types.isFileVal(file));
+    return new ArgCV(Opcode.GET_LOCAL_FILENAME, file.asArg().asList());
+  }
+  
+  public boolean isFilenameCV() {
+    return op == Opcode.GET_FILENAME;
+  }
+  
+  public boolean isFilenameValCV() {
+    return op == Opcode.GET_FILENAME_VAL;
+  }
+  
+  public boolean isLocalFilenameCV() {
+    return op == Opcode.GET_LOCAL_FILENAME;
+  }
+  
   /**
    * @return the equivalence type of this computed value,
    *         assuming it wasn't copied
@@ -382,6 +429,10 @@ public class ComputedValue<T> {
       super(op, subop, inputs);
     }
     
+    public ArgCV(Opcode op, Arg input) {
+      super(op, Collections.singletonList(input));
+    }
+    
     public ArgCV substituteInputs(List<Arg> newInputs) {
       return new ArgCV(op, subop, newInputs);
     }
@@ -403,8 +454,13 @@ public class ComputedValue<T> {
     }
     
     public ArgOrCV(Opcode op, List<Arg> inputs) {
-      this(op, "", inputs);
+      this(new ArgCV(op, inputs));
     }
+    
+    public ArgOrCV(Opcode op, Arg input) {
+      this(new ArgCV(op, input));
+    }
+    
     public ArgOrCV(Arg arg) {
       this.cv = null;
       this.arg = arg;

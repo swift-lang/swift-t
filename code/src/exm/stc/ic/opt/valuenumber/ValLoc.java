@@ -204,17 +204,16 @@ public class ValLoc {
     assert(Types.isFile(inFile.type()));
     assert(outFilename.isVar());
     assert(Types.isString(outFilename.getVar().type()));
-    return ValLoc.buildResult(Opcode.GET_FILENAME,
-        Arrays.asList(inFile.asArg()), outFilename, Closed.MAYBE_NOT,
-        IsAssign.NO);
+    return build(ComputedValue.filenameCV(inFile),
+                      outFilename, Closed.MAYBE_NOT, IsAssign.NO);
   }
   
-  public static ValLoc makeFilenameVal(Arg file, Arg filenameVal,
+  public static ValLoc makeFilenameVal(Var file, Arg filenameVal,
                                        IsAssign isAssign) {
-    assert(Types.isFile(file.type()));
+    assert(Types.isFile(file));
     assert(filenameVal == null || filenameVal.isImmediateString());
-    return ValLoc.buildResult(Opcode.GET_FILENAME_VAL,
-            file.asList(), filenameVal, Closed.YES_NOT_RECURSIVE, isAssign);
+    return build(ComputedValue.filenameValCV(file),
+                          filenameVal, Closed.YES_NOT_RECURSIVE, isAssign);
   }
 
   public static ValLoc makeFilenameLocal(Arg outFilename, Var inFile,
@@ -222,9 +221,8 @@ public class ValLoc {
     assert(isAssign != IsAssign.TO_VALUE);
     assert(Types.isFileVal(inFile));
     assert(outFilename.isImmediateString());
-    return ValLoc.buildResult(Opcode.GET_LOCAL_FILENAME,
-            inFile.asArg().asList(), outFilename, Closed.YES_NOT_RECURSIVE,
-            isAssign);
+    return build(ComputedValue.localFilenameCV(inFile),
+                        outFilename, Closed.YES_NOT_RECURSIVE, isAssign);
   }
 
   /**

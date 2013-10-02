@@ -195,9 +195,52 @@ class CongruentSets {
       curr = curr.parent;
     } while (curr != null);
     
-    checkCanonicalInv(effective, res);
+    try {
+      checkCanonicalInv(effective, res);
+    } catch (RuntimeException e) {
+      // Dump data structures
+      dumpDataStructures();
+      logger.trace("effective:");
+      logger.trace(effective);
+      logger.trace("effectiveInv:");
+      logger.trace(res);
+      throw e;
+    }
     
     return res;
+  }
+
+  /**
+   * Do raw dump of internal data structures for debugging
+   */
+  private void dumpDataStructures() {
+    logger.trace("Dumping CongruentSets data structures");
+    CongruentSets curr = this;
+    int ancestor = 0;
+    do {
+      logger.trace("=======================");
+      if (ancestor != 0) {
+        logger.trace("ancestor " + ancestor);
+      }
+      logger.trace("congType:");
+      logger.trace(curr.congType);
+      logger.trace("canonical:");
+      logger.trace(curr.canonical);
+      logger.trace("canonicalInv:");
+      logger.trace(curr.canonicalInv);
+      logger.trace("mergedInto:");
+      logger.trace(curr.mergedInto);
+      logger.trace("componentIndex:");
+      logger.trace(curr.componentIndex);
+      logger.trace("varsFromParent:");
+      logger.trace(curr.varsFromParent);
+      logger.trace("mergeQueue:");
+      logger.trace(curr.mergeQueue);
+      logger.trace("recanonicalizeQueue:");
+      logger.trace(curr.recanonicalizeQueue);
+      ancestor++;
+      curr = curr.parent;
+    } while (curr != null);
   }
 
   public static CongruentSets makeRoot(CongruenceType congType) {
@@ -805,6 +848,13 @@ class CongruentSets {
         logger.trace("Enqueue array member ref " + arrayMemberRef);
       }
       recanonicalizeQueue.add(arrayMemberRef);
+    } else if (val.isFilenameValCV()) {
+      // Might be filename somewhere
+      Arg file = val.getInput(0);
+      if (logger.isTraceEnabled()) {
+        logger.trace("Enqueue file for filename val " + file);
+      }
+      recanonicalizeQueue.add(file);
     }
   }
 

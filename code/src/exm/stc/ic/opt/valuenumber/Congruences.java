@@ -25,7 +25,6 @@ import exm.stc.ic.opt.valuenumber.ComputedValue.ArgOrCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
-import exm.stc.ic.tree.ICInstructions.Instruction.ValueState;
 import exm.stc.ic.tree.ICTree.GlobalConstants;
 import exm.stc.ic.tree.ICTree.RenameMode;
 import exm.stc.ic.tree.Opcode;
@@ -58,7 +57,7 @@ import exm.stc.ic.tree.Opcode;
  * TODO: we could more closely link alias and inter-variable
  *       dependency tracking
  */
-public class Congruences implements ValueState {
+public class Congruences {
 
   /* 
    * Arithmetic, etc:
@@ -709,7 +708,6 @@ public class Congruences implements ValueState {
   /**
    * @return canonical location for given value, null if not stored anywhere
    */
-  @Override
   public Arg findCanonical(ArgCV val, CongruenceType congType) {
     return getCongruentSet(congType).findCanonical(consts, val);
   }

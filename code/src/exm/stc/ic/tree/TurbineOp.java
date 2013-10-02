@@ -25,8 +25,6 @@ import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
-import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
-import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
 import exm.stc.ic.opt.valuenumber.ValLoc;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
@@ -1526,7 +1524,7 @@ public class TurbineOp extends Instruction {
   }
 
   @Override
-  public List<ValLoc> getResults(ValueState existing) {
+  public List<ValLoc> getResults() {
     switch(op) {
       case LOAD_BOOL:
       case LOAD_FLOAT:
@@ -1602,31 +1600,16 @@ public class TurbineOp extends Instruction {
         }
       }
       case GET_FILENAME: {
-        List<ValLoc> res = new ArrayList<ValLoc>();
         Arg filename = getOutput(0).asArg();
-        Arg file = getInput(0);
-        res.add(ValLoc.makeFilename(filename, file.getVar()));
-        
-        // Check to see if value of filename is in local value
-        ArgCV filenameCV = ValLoc.makeFilenameVal(file, null,
-                                                  IsAssign.NO).value();
-        // TODO: move logic to valuenumber pass, stop passing in ValueState
-        Arg filenameVal = existing.findCanonical(filenameCV,
-                                                 CongruenceType.VALUE);
-        if (filenameVal != null) {
-          // We know that if we fetch from the output future of this instruction,
-          // we'll get the previously stored filename
-          res.add(ValLoc.buildResult(Opcode.LOAD_STRING, filename.asList(),
-                        filenameVal, Closed.YES_NOT_RECURSIVE, IsAssign.NO));
-        }
-        return res;
+        Var file = getInput(0).getVar();
+        return ValLoc.makeFilename(filename, file).asList();
       }
       case GET_LOCAL_FILENAME: {
         return ValLoc.makeFilenameLocal(getOutput(0).asArg(),
                 getInput(0).getVar(), IsAssign.TO_LOCATION).asList();
       }
       case SET_FILENAME_VAL: {
-        Arg file = getOutput(0).asArg();
+        Var file = getOutput(0);
         Arg val = getInput(0);
         return ValLoc.makeFilenameVal(file, val, IsAssign.TO_VALUE).asList();
       }

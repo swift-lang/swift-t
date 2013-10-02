@@ -8,6 +8,7 @@ import org.apache.log4j.Logger;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.OpEvaluator;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgOrCV;
@@ -44,6 +45,8 @@ public class ConstantFolder {
       case CALL_LOCAL_CONTROL:
       case CALL_SYNC:
         return foldFunctionCall(logger, sets, val);
+      case GET_FILENAME:
+        return foldGetFilename(logger, sets, val);
       default:
         // Can't fold others
         return null;
@@ -173,6 +176,27 @@ public class ConstantFolder {
     return sets.findCanonical(retrieveVal);
   }
 
+  /**
+   * Sometimes filename value is directly initialized.
+   * @param logger
+   * @param sets
+   * @param val
+   * @return
+   */
+  private static ArgOrCV foldGetFilename(Logger logger, CongruentSets sets,
+      ComputedValue<Arg> val) {
+    Var file = val.getInput(0).getVar();
+    Arg filenameValCanon = sets.findCanonical(
+                    new ArgOrCV(ComputedValue.filenameValCV(file)));
+    if (filenameValCanon != null) {
+      // If we know filename of file, then just use that
+      ArgOrCV folded = new ArgOrCV(Opcode.assignOpcode(Types.F_STRING),
+                               filenameValCanon);
+
+      return folded;
+    }
+    return null;
+  }
 
 
 }

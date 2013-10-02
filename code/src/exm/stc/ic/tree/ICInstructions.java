@@ -49,8 +49,6 @@ import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.Semantics;
 import exm.stc.ic.opt.valuenumber.ComputedValue;
-import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
-import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
 import exm.stc.ic.opt.valuenumber.ValLoc;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
@@ -437,22 +435,11 @@ public class ICInstructions {
     }
     
     /**
-     * Limited interface to allow instructions to query what values
-     * are available.
-     * TODO: is this necessary? can we move logic into Congruences
-     */
-    public static interface ValueState {
-      public Arg findCanonical(ArgCV arg, CongruenceType congType);
-    }
-    
-    /**
-     * @param existing already known values (sometimes needed to 
-     *              work out which vales are created by an instruction)
      * @return a list of all values computed by expression.  Each ComputedValue
      *        returned should have the out field set so we know where to find 
      *        it 
      */
-    public abstract List<ValLoc> getResults(ValueState existing);
+    public abstract List<ValLoc> getResults();
     
     @Override
     public Statement cloneStatement() {
@@ -567,7 +554,7 @@ public class ICInstructions {
     }
 
     @Override
-    public List<ValLoc> getResults(ValueState existing) {
+    public List<ValLoc> getResults() {
       return null;
     }
 
@@ -632,7 +619,7 @@ public class ICInstructions {
     }
     
     @Override
-    public List<ValLoc> getResults(ValueState existing) {
+    public List<ValLoc> getResults() {
       if (ForeignFunctions.isPure(functionName)) {
         if (isCopyFunction()) {
           // Handle copy as a special case
@@ -1511,7 +1498,7 @@ public class ICInstructions {
     }
 
     @Override
-    public List<ValLoc> getResults(ValueState existing) {
+    public List<ValLoc> getResults() {
       if (deterministic) {
         List<ValLoc> cvs = new ArrayList<ValLoc>(outFiles.size());
         for (int i = 0; i < outFiles.size(); i++) {
@@ -1661,7 +1648,7 @@ public class ICInstructions {
     }
 
     @Override
-    public List<ValLoc> getResults(ValueState existing) {
+    public List<ValLoc> getResults() {
       // Nothing
       return null;
     }
@@ -1766,7 +1753,7 @@ public class ICInstructions {
     }
    
     @Override
-    public List<ValLoc> getResults(ValueState existing) {
+    public List<ValLoc> getResults() {
       // nothing
       return null;
     }
@@ -2068,7 +2055,7 @@ public class ICInstructions {
     }
     
     @Override
-    public List<ValLoc> getResults(ValueState existing) {
+    public List<ValLoc> getResults() {
       if (this.hasSideEffects()) {
         // Two invocations of this aren't equivalent
         return null;
