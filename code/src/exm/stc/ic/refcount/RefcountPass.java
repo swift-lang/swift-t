@@ -348,6 +348,9 @@ public class RefcountPass implements OptimizerPass {
         // Need to do bookkeeping if this runs in separate task
         for (Var i: fn.getInputList()) {
           increments.readDecr(i);
+          if (Types.isScalarUpdateable(i) && RefCounting.WRITABLE_UPDATEABLE_INARGS) {
+            increments.writeDecr(i);
+          }
         }
         for (PassedVar o: fn.getPassedOutputList()) {
           increments.writeDecr(o.var);

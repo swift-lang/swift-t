@@ -1152,8 +1152,13 @@ public class ICInstructions {
           List<Var> writeIncr = new ArrayList<Var>();
           for (Arg inArg: inputs) {
             if (inArg.isVar()) {
-              if (RefCounting.hasReadRefCount(inArg.getVar())) {
-                readIncr.add(inArg.getVar());
+              Var inVar = inArg.getVar();
+              if (RefCounting.hasReadRefCount(inVar)) {
+                readIncr.add(inVar);
+              }
+              if (Types.isScalarUpdateable(inVar) &&
+                        RefCounting.WRITABLE_UPDATEABLE_INARGS) {
+                writeIncr.add(inVar);
               }
             }
           }

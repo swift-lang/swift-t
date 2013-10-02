@@ -25,7 +25,14 @@ public class RefCounting {
   public static enum RefCountType {
     READERS,
     WRITERS;
-  };
+  }
+
+  /**
+   * Whether an input arg for an updateable var should be writable by
+   * the callee
+   * TODO: does this make sense from language design?
+   */
+  public static final boolean WRITABLE_UPDATEABLE_INARGS = true;
 
   /**
    * Returns true if type can carry a refcount.  Some particular
