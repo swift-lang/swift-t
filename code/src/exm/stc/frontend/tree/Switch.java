@@ -90,7 +90,6 @@ public class Switch {
     // a default
     // case
     List<Integer> caseLabels = new ArrayList<Integer>(caseCount);
-    // TODO: detect duplicate cases?
     Set<Integer> caseLabelSet = new HashSet<Integer>(caseCount);
     
     boolean hasDefault = false;
