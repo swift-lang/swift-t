@@ -160,7 +160,9 @@ public class UnifiedValues {
       // See what is same across all branches
       // TODO: this is imperfect in situations where the canonical
       //       name of a value has been changed in a child branch.
-      //       May need to reverse the change using mergedInto map
+      //       Reverse the change using mergedInto map.  Of course,
+      //       if the same merge has happened in all branches, we want
+      //       to make it happen in the parent too!
       boolean allVals = true;
       boolean allSameLocation = true;
       Closed allClosed = Closed.YES_RECURSIVE;

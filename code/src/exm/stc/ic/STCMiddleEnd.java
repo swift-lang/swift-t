@@ -933,9 +933,6 @@ public class STCMiddleEnd {
         TurbineOp.structInitField(structVar, fieldName, fieldContents));
   }
 
-  /**
-     TODO: Handle updateable globals
-   */
   public void addGlobal(String name, Arg val) {
     assert(val.isConstant());
     program.constants().add(name, val);

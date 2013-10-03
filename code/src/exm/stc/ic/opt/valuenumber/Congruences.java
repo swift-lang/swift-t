@@ -54,19 +54,20 @@ import exm.stc.ic.tree.Opcode;
  * variable is mapped: we can only have one mapped variable in each
  * congruence set, and it must be the canonical member
  *   
- * TODO: we could more closely link alias and inter-variable
- *       dependency tracking
+ * TODO: get arithmetic logic to rerun upon change
+ * TODO: inconsistent sets in child after canonicalization
+ *    -> When we're doing the first walk over the tree, this def.
+ *       shouldn't happen
+ *    -> When we're doing the replacement walk, it isn't necessarily a problem:
+ *       maybe just need to re-lookup canonical to make sure it wasn't
+ *       recanonicalized.
+ * TODO: could more closely link alias and inter-variable dependency tracking
  */
 public class Congruences {
 
-  /* 
-   * Arithmetic, etc:
-   * - TODO: move arithmetic logic into congruence: can chase args through
-   *         canonicalization table.
-   *         -> TODO when to try and do arithmetic?
-   */
   private final Logger logger;
   private final GlobalConstants consts;
+  @SuppressWarnings("unused")
   private final Congruences parent;
   private final ClosedVarTracker track;
   private final CongruentSets byValue;
