@@ -1948,19 +1948,19 @@ public class TurbineOp extends Instruction {
         }
         break;
       }
-      case ARRAY_CREATE_NESTED_IMM: {
+      case ARRAY_CREATE_NESTED_IMM:
+      case ARRAY_CREATE_BAG: {
         // Instruction can give additional refcounts back
-        Var nestedArr = getOutput(0);
+        // TODO: don't allow piggybacking r/w refcounts yet since that might
+        // lead to premature closing of outer array -> premature closing of inner
+        // array
+        Var nested = getOutput(0);
         assert(getInputs().size() == 3);
-        return tryPiggyBackHelper(increments, type, nestedArr, 1, 2);
+        return tryPiggyBackHelper(increments, type, nested, 1, 2);
       }
       case BAG_INSERT: {
         Var bag = getOutput(0);
         return tryPiggyBackHelper(increments, type, bag, 1, -1);
-      }
-      case ARRAY_CREATE_BAG: {
-        // TODO: refcounts for inner bag/ outer arr
-        break;
       }
       default:
         // Do nothing
