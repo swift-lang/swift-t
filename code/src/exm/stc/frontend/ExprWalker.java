@@ -271,7 +271,9 @@ public class ExprWalker {
       copyStructByValue(context, src, dst, new Stack<String>(), new Stack<String>(),
                 src, dst, type);
     } else if (Types.isArray(type)) {
-      copyArrayByValue(context, dst, src);
+      copyContainerByValue(context, dst, src);
+    } else if (Types.isBag(type)) {
+      copyContainerByValue(context, dst, src);
     } else if (Types.isRef(type)) {
       copyRefByValue(context, src, dst, type);
     } else {
@@ -1059,25 +1061,40 @@ public class ExprWalker {
     return snapshot;
   }
 
-  private void copyArrayByValue(Context context, Var dst, Var src) 
+  private void copyContainerByValue(Context context, Var dst, Var src) 
                                                 throws UserException {
-    assert(dst.type().equals(src.type()));
-    assert(Types.isArray(src.type()));
+    assert(src.type().assignableTo(dst.type()));
+    assert(Types.isArray(src) || Types.isBag(src));
     LocalContext copyContext = new LocalContext(context);
     Type t = src.type();
-    Type memType = Types.arrayMemberType(t);
+    Type memType;
+    Type ixType; 
+    Var ix;
+    if (Types.isArray(src)) {
+      memType = Types.arrayMemberType(t);
+      ixType = Types.derefResultType(Types.arrayKeyType(src));
+      ix = copyContext.createLocalValueVariable(ixType);
+    } else {
+      assert(Types.isBag(src));
+      memType= Types.bagElemType(t);
+      ixType = null;
+      ix = null;
+    }
     Var member = copyContext.createAliasVariable(memType);
-    Type ixType = Types.derefResultType(Types.arrayKeyType(src));
-    Var ix = copyContext.createLocalValueVariable(ixType);
-    
+ 
     List<Var> waitVars = Arrays.asList(src);
     backend.startWaitStatement(
-        context.getFunctionContext().constructName("arrcopy-wait"),
+        context.getFunctionContext().constructName(dst.name() + "-copy-wait"),
         waitVars, WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
     backend.startForeachLoop(
-            context.getFunctionContext().constructName("arrcopy"),
+            context.getFunctionContext().constructName(dst.name() + "-copy"),
             src, member, ix, -1, 1, true);
-    backend.arrayInsertImm(dst, Arg.createVar(ix), member);
+    if (Types.isArray(src)) {
+      backend.arrayInsertImm(dst, ix.asArg(), member);
+    } else {
+      assert(Types.isBag(src));
+      backend.bagInsert(dst, member);
+    }
     backend.endForeachLoop();
     backend.endWaitStatement();
   }
@@ -1092,7 +1109,7 @@ public class ExprWalker {
             WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
     Var derefed = varCreator.createTmpAlias(context, dst.type());
     backend.retrieveRef(derefed, src);
-    copyArrayByValue(context, dst, derefed);
+    copyContainerByValue(context, dst, derefed);
     backend.endWaitStatement();
   }
 
