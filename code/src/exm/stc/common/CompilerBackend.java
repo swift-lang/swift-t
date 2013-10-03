@@ -315,7 +315,6 @@ public interface CompilerBackend {
 
   public void bagInsert(Var bag, Var elem, Arg writersDecr);
 
-  // TODO: different # of read/write refs
   public void arrayCreateBag(Var bag, Var arr, Arg ix, Arg callerReadRefs,
                               Arg callerWriteRefs);
 

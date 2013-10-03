@@ -722,7 +722,11 @@ public class ICInstructions {
         Var arr = getOutput(0);
         cvs.add(makeArraySizeCV(arr, Arg.createIntLit(arrSize),
                                 false, IsAssign.NO));
-        // TODO: add array elements up to some limit?
+        // add array elements up to some limit
+        int max_elems = 64;
+        for (int i = 0; i <= (end - start) && i < max_elems; i++) {
+          // TODO: can't represent value_of(A[i]) 
+        }
       }
     }
 

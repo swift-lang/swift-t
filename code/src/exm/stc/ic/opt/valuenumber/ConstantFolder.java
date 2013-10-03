@@ -36,8 +36,6 @@ public class ConstantFolder {
         return foldBuiltinOp(logger, sets, val);
       case IS_MAPPED:
         return foldIsMapped(val);
-        // TODO: merge over other constantFold() implementations once we can
-        //       replace constant folding pass with this analysis
       case CALL_CONTROL:
       case CALL_FOREIGN:
       case CALL_FOREIGN_LOCAL:

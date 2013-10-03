@@ -139,7 +139,6 @@ public class Types {
         return false;
       }
       ArrayType otherA = (ArrayType)other.baseType();
-      // TODO
       // For now, types must exactly match, due to contra/co-variance issues
       // with type parameters. Need to check to see if member types
       // can be converted to other member types
@@ -246,7 +245,6 @@ public class Types {
         return false;
       }
       BagType otherB = (BagType)other.baseType();
-      // TODO
       // For now, types must exactly match, due to contra/co-variance issues
       // with type parameters. Need to check to see if member types
       // can be converted to other member types
@@ -1415,7 +1413,7 @@ public class Types {
 
     @Override
     public String typeName() {
-      // TODO: canonical way to show type?
+      // TODO: canonical way to show function type?
       return toString();
     }
 

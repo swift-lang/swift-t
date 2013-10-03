@@ -334,7 +334,6 @@ public class FunctionInline implements OptimizerPass {
     // Recurse first to avoid visiting newly inlined continuations and doing
     // extra inlining (required to avoid infinite loops of inlining with 
     // recursive functions)
-    // TODO: does this work?
     for (Continuation c: block.getContinuations()) {
       for (Block cb: c.getBlocks()) {
         doInlining(logger, prog, contextFunction, cb, inlineLocations,

@@ -313,7 +313,6 @@ public class Congruences {
 
   /**
    * Check if vals contradict each other.
-   * TODO: will the double assignment checking subsume this?
    * @param errContext
    * @param congType
    * @param value

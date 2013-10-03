@@ -417,23 +417,16 @@ public class RefcountPass implements OptimizerPass {
     }
 
     if (inst.op == Opcode.COPY_REF) {
-      // TODO: Hack to handle COPY_REF
-      // We incremenented refcounts for orig var, now need to decrement
+      // Hack to handle COPY_REF
+      // We incremented refcounts for orig. var, now need to decrement
       // refcount on alias vars
       Var newAlias = inst.getOutput(0);
       increments.readDecr(newAlias);
       increments.writeDecr(newAlias);
     }
 
-    if (inst.op == Opcode.ARRAY_CREATE_NESTED_IMM) {
-      // TODO: Hack to handle fact that the create nested array function
-      // gives us back a read refcount
-      // Var createdArray = inst.getOutput(0);
-      // increments.readDecr(createdArray);
-    }
-
     if (inst.op == Opcode.LOAD_REF) {
-      // TODO: Hack to handle fact that the load_ref will increment
+      // Hack to handle fact that the load_ref will increment
       // reference count of referand
       Var v = inst.getOutput(0);
       increments.readDecr(v);
@@ -462,9 +455,8 @@ public class RefcountPass implements OptimizerPass {
    */
   private void updateIncrementsPassIntoCont(Continuation cont,
       RCTracker increments) {
-    // TODO: handle other than wait
     if (cont.spawnsSingleTask()) {
-      long incr = 1; // TODO: different for other continuations
+      long incr = 1; // TODO: different for other continuations?
       for (Var keepOpen: cont.getKeepOpenVars()) {
         assert (RefCounting.hasWriteRefCount(keepOpen));
 

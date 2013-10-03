@@ -164,8 +164,7 @@ public class ValLoc {
     ArgCV val;
     // TODO: how to handle assigns to array references?
     //       Will need to make sure that everything is respected if
-    //       we created a dereferenced one.  Is an alternative to have
-    //       nested CVs?
+    //       we created a dereferenced one.
     if (refResult) {
       assert(Types.isMemberReference(contents, arr)) :
             "not member ref: " + contents + " " + arr;
