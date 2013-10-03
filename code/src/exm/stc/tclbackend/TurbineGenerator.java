@@ -42,11 +42,11 @@ import exm.stc.common.exceptions.STCFatal;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.ForeignFunctions;
-import exm.stc.common.lang.ForeignFunctions.TclOpTemplate;
 import exm.stc.common.lang.CompileTimeArgs;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.ForeignFunctions;
+import exm.stc.common.lang.ForeignFunctions.TclOpTemplate;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
 import exm.stc.common.lang.PassedVar;
@@ -63,9 +63,10 @@ import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.PrimType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Types.Typed;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.VarCount;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.VarCount;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.tclbackend.Turbine.CacheMode;
@@ -474,15 +475,15 @@ public class TurbineGenerator implements CompilerBackend {
       }
   }
 
-  private TypeName arrayValueType(Var arr, boolean creation) {
-    return arrayValueType(arr.type(), creation);
+  private TypeName arrayKeyType(Var arr, boolean creation) {
+    return refRepresentationType(Types.arrayKeyType(arr), creation);
   }
   
-  private TypeName arrayValueType(Type arrType, boolean creation) {
+  private TypeName arrayValueType(Typed arrType, boolean creation) {
     return refRepresentationType(Types.arrayMemberType(arrType), creation);
   }
   
-  private TypeName bagValueType(Type bagType, boolean creation) {
+  private TypeName bagValueType(Typed bagType, boolean creation) {
     return refRepresentationType(Types.bagElemType(bagType), creation);
   }
   
@@ -959,7 +960,8 @@ public class TurbineGenerator implements CompilerBackend {
     assert(arrayResult.storage() != Alloc.ALIAS);
     TclTree t = Turbine.containerCreateNested(
         varToExpr(arrayResult), varToExpr(array),
-        varToExpr(ix), arrayValueType(arrayResult, true));
+        varToExpr(ix), arrayKeyType(arrayResult, true),
+        arrayValueType(arrayResult, true));
     pointStack.peek().add(t);
   }
 
@@ -974,7 +976,7 @@ public class TurbineGenerator implements CompilerBackend {
     TclTree t = Turbine.containerRefCreateNested(
         varToExpr(arrayResult), varToExpr(arrayRefVar),
         varToExpr(ix), varToExpr(outerArray),
-        refRepresentationType(arrayResult.type().memberType(), false));
+        arrayKeyType(arrayResult, true), arrayValueType(arrayResult, true));
     pointStack.peek().add(t);
   }
 
@@ -991,8 +993,8 @@ public class TurbineGenerator implements CompilerBackend {
     
     TclTree t = Turbine.containerCreateNestedImmIx(
         prefixVar(arrayResult), varToExpr(array), argToExpr(ix),
-        arrayValueType(arrayResult, false), argToExpr(callerReadRefs),
-        argToExpr(callerWriteRefs));
+        arrayKeyType(arrayResult, true), arrayValueType(arrayResult, true),
+        argToExpr(callerReadRefs), argToExpr(callerWriteRefs));
     pointStack.peek().add(t);
   }
 
@@ -1007,7 +1009,24 @@ public class TurbineGenerator implements CompilerBackend {
     TclTree t = Turbine.containerRefCreateNestedImmIx(
         varToExpr(arrayResult), varToExpr(array),
         argToExpr(ix), varToExpr(outerArray),
-        arrayValueType(arrayResult.type(), true));
+        arrayKeyType(arrayResult, true), arrayValueType(arrayResult, true));
+    pointStack.peek().add(t);
+  }
+
+  @Override
+  public void arrayCreateBag(Var bag, Var arr, Arg ix, Arg callerReadRefs,
+      Arg callerWriteRefs) {
+    assert(Types.isBag(bag));
+    assert(bag.storage() == Alloc.ALIAS);
+    assert(Types.isArrayKeyVal(arr, ix));
+    assert(Types.isMemberType(arr, bag));
+    assert(callerReadRefs.isImmediateInt());
+    assert(callerWriteRefs.isImmediateInt());
+    
+    TclTree t = Turbine.containerCreateNestedBag(
+            prefixVar(bag), varToExpr(arr), argToExpr(ix),
+            bagValueType(bag, true),
+            argToExpr(callerReadRefs), argToExpr(callerWriteRefs));
     pointStack.peek().add(t);
   }
 
@@ -1481,20 +1500,6 @@ public class TurbineGenerator implements CompilerBackend {
                                                       argToExpr(val)));
   }
   
-  @Override
-  public void arrayCreateBag(Var bag, Var arr, Arg ix, Arg callerReadRefs,
-      Arg callerWriteRefs) {
-    assert(Types.isBag(bag));
-    assert(bag.storage() == Alloc.ALIAS);
-    assert(Types.isArrayKeyVal(arr, ix));
-    assert(Types.isMemberType(arr, bag));
-    assert(callerReadRefs.isImmediateInt());
-    assert(callerWriteRefs.isImmediateInt());
-    
-    throw new STCRuntimeError("arrayCreateBag not implemented in " +
-    		"turbine generator");
-  }
-
   @Override
   public void latestValue(Var result, Var updateable) {
     assert(Types.isScalarUpdateable(updateable.type()));

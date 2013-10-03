@@ -1,5 +1,4 @@
-// SKIP-THIS-TEST
-// unimplemented feature: append to bag in array
+// Test appending to bag in array
 
 import io;
 
@@ -12,7 +11,6 @@ main {
     A[id(1)] += 4;
 
 
-    // TODO: check results
     foreach bag, i in A {
      foreach elem in bag {
        printf("Elem@%i: %i", i, elem);

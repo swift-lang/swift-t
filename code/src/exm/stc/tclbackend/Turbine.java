@@ -102,6 +102,7 @@ class Turbine {
   private static final Token C_F_CREATE_NESTED = turbFn("c_f_create");
   private static final Token CR_V_CREATE_NESTED = turbFn("cr_v_create");
   private static final Token CR_F_CREATE_NESTED = turbFn("cr_f_create");
+  private static final Token C_V_CREATE_NESTED_BAG = turbFn("create_nested_bag");
   
   // Container lookup
   private static final Token C_LOOKUP_CHECKED = turbFn("container_lookup_checked");
@@ -927,32 +928,41 @@ class Turbine {
   }
 
   public static TclTree containerCreateNested(Value resultVar,
-      Value containerVar, Value indexVar, TypeName valType) {
+      Value containerVar, Value indexVar, TypeName keyType, TypeName valType) {
     return new Command(C_F_CREATE_NESTED, resultVar,
-            containerVar, indexVar, ADLB_INT_TYPE, valType);
+            containerVar, indexVar, keyType, valType);
   }
 
   public static TclTree containerRefCreateNested(Value resultVar,
-      Value containerVar, Value indexVar, Value outerArr, TypeName valType) {
+      Value containerVar, Value indexVar, Value outerArr, TypeName keyType,
+      TypeName valType) {
     return new Command(CR_F_CREATE_NESTED,
           resultVar, containerVar,
-          indexVar, ADLB_INT_TYPE, valType, outerArr, LiteralInt.FALSE);
+          indexVar, keyType, valType, outerArr, LiteralInt.FALSE);
   }
 
   public static TclTree containerRefCreateNestedImmIx(Value resultVar,
       Value containerVar, Expression arrIx, Value outerArr,
-      TypeName valType) {
+      TypeName keyType, TypeName valType) {
     return new Command(CR_V_CREATE_NESTED, resultVar, containerVar,
-        arrIx, ADLB_INT_TYPE, valType, outerArr, LiteralInt.FALSE);
+        arrIx, keyType, valType, outerArr, LiteralInt.FALSE);
   }
 
   public static TclTree containerCreateNestedImmIx(String resultVar,
-      Value containerVar, Expression arrIx, TypeName valType,
-      Expression callerReadRefs, Expression callerWriteRefs) {
+      Value containerVar, Expression arrIx, TypeName keyType,
+      TypeName valType, Expression callerReadRefs, Expression callerWriteRefs) {
     return new SetVariable(resultVar,
         new Square(C_V_CREATE_NESTED,
-            containerVar, arrIx, ADLB_INT_TYPE, valType,
+            containerVar, arrIx, keyType, valType,
             callerReadRefs, callerWriteRefs));
+  }
+  
+  public static TclTree containerCreateNestedBag(String resultVar,
+          Value containerVar, Expression arrIx, TypeName valType,
+          Expression callerReadRefs, Expression callerWriteRefs) {
+        return new SetVariable(resultVar,
+            new Square(C_V_CREATE_NESTED_BAG, containerVar, arrIx, valType,
+                callerReadRefs, callerWriteRefs));
   }
 
 
