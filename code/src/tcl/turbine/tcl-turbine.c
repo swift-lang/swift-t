@@ -675,20 +675,25 @@ static int
 create_autoclose_rule(Tcl_Interp *interp, Tcl_Obj *const objv[],
                       adlb_datum_id wait_on, adlb_datum_id to_close);
 
-/*
-  turbine::create_nested <container> <subscript> <key_type> <val_type>
-              [<caller read refs>] [<caller write refs>]
-              [<outer write decrements>] [<outer read decrements>]
-   caller * refs: how many reference counts to give back to caller
- */
 static int
-Turbine_Create_Nested_Cmd(ClientData cdata, Tcl_Interp *interp,
-                int objc, Tcl_Obj *const objv[])
+Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[], adlb_data_type type)
 {
-  TCL_CONDITION(objc >= 4, "Requires at least 4 args");
+  TCL_CONDITION(type == ADLB_DATA_TYPE_CONTAINER ||
+                type == ADLB_DATA_TYPE_MULTISET,
+                "Must create nested container or multiset, not %s",
+                ADLB_Data_type_tostring(type));
+
+  int min_args;
+  if (type == ADLB_DATA_TYPE_CONTAINER) {
+    min_args = 4;
+  } else {
+    // Multiset
+    min_args = 3;
+  }
+  TCL_CONDITION(objc >= min_args, "Requires at least %d args", min_args);
   adlb_datum_id id;
   char *subscript;
-  adlb_data_type key_type, val_type;
 
   int rc;
   int argpos = 1;
@@ -697,11 +702,22 @@ Turbine_Create_Nested_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   subscript = Tcl_GetString(objv[argpos++]);
 
-  rc = type_from_obj(interp, objv, objv[argpos++], &key_type);
-  TCL_CHECK(rc);
+  adlb_type_extra type_extra;
+  adlb_data_type tmp;
+  if (type == ADLB_DATA_TYPE_CONTAINER) {
+    rc = type_from_obj(interp, objv, objv[argpos++], &tmp);
+    TCL_CHECK(rc);
+    type_extra.CONTAINER.key_type = tmp;
 
-  rc = type_from_obj(interp, objv, objv[argpos++], &val_type);
-  TCL_CHECK(rc);
+    rc = type_from_obj(interp, objv, objv[argpos++], &tmp);
+    TCL_CHECK(rc);
+    type_extra.CONTAINER.val_type = tmp;
+  } else {
+    assert(type == ADLB_DATA_TYPE_MULTISET);
+    rc = type_from_obj(interp, objv, objv[argpos++], &tmp);
+    TCL_CHECK(rc);
+    type_extra.MULTISET.val_type = tmp;
+  }
 
   // Increments for inner container (default no extras)
   adlb_refcounts nested_incr = ADLB_NO_RC;
@@ -732,9 +748,14 @@ Turbine_Create_Nested_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
   TCL_CONDITION(argpos == objc, "Trailing args starting at %i", argpos);
 
-  log_printf("creating nested container <%"PRId64">[%s] (%s->%s)",
-                          id, subscript, ADLB_Data_type_tostring(key_type),
-                          ADLB_Data_type_tostring(val_type));
+  if (type == ADLB_DATA_TYPE_CONTAINER) {
+    log_printf("creating nested container <%"PRId64">[%s] (%s->%s)", id,
+      subscript, ADLB_Data_type_tostring(type_extra.CONTAINER.key_type),
+                 ADLB_Data_type_tostring(type_extra.CONTAINER.val_type));
+  } else {
+    log_printf("creating nested multiset <%"PRId64">[%s] (%s)", id,
+      subscript, ADLB_Data_type_tostring(type_extra.CONTAINER.val_type));
+  }
 
   int xfer_size;
   char *xfer = tcl_adlb_xfer_buffer(&xfer_size);
@@ -742,7 +763,7 @@ Turbine_Create_Nested_Cmd(ClientData cdata, Tcl_Interp *interp,
   bool created;
   int value_len;
   adlb_data_type outer_value_type;
- adlb_code code = ADLB_Insert_atomic(id, subscript, &created,
+  adlb_code code = ADLB_Insert_atomic(id, subscript, &created,
                               xfer, &value_len, &outer_value_type);
   TCL_CONDITION(code == ADLB_SUCCESS, "error in Insert_atomic!");
 
@@ -755,13 +776,12 @@ Turbine_Create_Nested_Cmd(ClientData cdata, Tcl_Interp *interp,
     // Initial write refcount - 1 for container, plus more
     props.read_refcount = 1 + nested_incr.read_refcount;
     props.write_refcount = 1 + nested_incr.write_refcount;
-    code = ADLB_Create_container(ADLB_DATA_ID_NULL, key_type, val_type,
-                               props, &new_id);
-    TCL_CONDITION(code == ADLB_SUCCESS, "Error while creating container");
+    code = ADLB_Create(ADLB_DATA_ID_NULL, type, type_extra, props, &new_id);
+    TCL_CONDITION(code == ADLB_SUCCESS, "Error while creating nested");
 
     code = ADLB_Store(id, subscript, ADLB_DATA_TYPE_REF, &new_id,
                     (int)sizeof(new_id), decr);
-    TCL_CONDITION(code == ADLB_SUCCESS, "Error while inserting container");
+    TCL_CONDITION(code == ADLB_SUCCESS, "Error while inserting nested");
 
     // Set up rule to close container
     rc = create_autoclose_rule(interp, objv, id, new_id);
@@ -818,6 +838,34 @@ Turbine_Create_Nested_Cmd(ClientData cdata, Tcl_Interp *interp,
     Tcl_SetObjResult(interp, result);
     return TCL_OK;
   }
+}
+
+/*
+  turbine::create_nested <container> <subscript> <key_type> <val_type>
+              [<caller read refs>] [<caller write refs>]
+              [<outer write decrements>] [<outer read decrements>]
+   caller * refs: how many reference counts to give back to caller
+ */
+static int
+Turbine_Create_Nested_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  return Turbine_Create_Nested_Impl(cdata, interp, objc, objv,
+                                  ADLB_DATA_TYPE_CONTAINER);
+}
+
+/*
+  turbine::create_nested_bag <container> <subscript> <val_type>
+              [<caller read refs>] [<caller write refs>]
+              [<outer write decrements>] [<outer read decrements>]
+   caller * refs: how many reference counts to give back to caller
+ */
+static int
+Turbine_Create_Nested_Bag_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  return Turbine_Create_Nested_Impl(cdata, interp, objc, objv,
+                                  ADLB_DATA_TYPE_MULTISET);
 }
 
 static int
@@ -1047,6 +1095,7 @@ Tclturbine_Init(Tcl_Interp* interp)
   COMMAND("normalize",   Turbine_Normalize_Cmd);
   COMMAND("worker_loop", Turbine_Worker_Loop_Cmd);
   COMMAND("create_nested", Turbine_Create_Nested_Cmd);
+  COMMAND("create_nested_bag", Turbine_Create_Nested_Bag_Cmd);
   COMMAND("cache_check", Turbine_Cache_Check_Cmd);
   COMMAND("cache_retrieve", Turbine_Cache_Retrieve_Cmd);
   COMMAND("cache_store", Turbine_Cache_Store_Cmd);

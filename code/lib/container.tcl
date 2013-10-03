@@ -23,7 +23,8 @@ namespace eval turbine {
     namespace export container_f_get container_f_insert
     namespace export c_f_lookup
 
-    namespace import ::turbine::c::create_nested
+    namespace import ::turbine::c::create_nested \
+                     ::turbine::c::create_nested_bag
 
     # build array by inserting items into a container starting at 0
     # close: decrement writers count at end
@@ -399,6 +400,17 @@ namespace eval turbine {
                         $caller_read_ref $caller_write_ref \
                         $decr_write $decr_read ]
     }
+    
+    # CVCB
+    # Create bag c[i] inside of container c
+    # c[i] may already exist, if so, that's fine
+    proc c_v_create_bag { c i val_type {caller_read_ref 0} \
+                {caller_write_ref 0} {decr_write 0} {decr_read 0}} {
+      return [ create_nested_bag $c $i $val_type \
+                        $caller_read_ref $caller_write_ref \
+                        $decr_write $decr_read ]
+    }
+
 
     # CFC
     # puts a reference to a nested container at c[i]
