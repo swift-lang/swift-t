@@ -839,7 +839,7 @@ public class ASTWalker {
     
     Var realArray;
     Context outsideLoopContext;
-    if (Types.isArrayRef(arrayVar.type())) {
+    if (Types.isContainerRef(arrayVar)) {
       // If its a reference, wrap a wait() around the loop call
       backend.startWaitStatement(
           fc.getFunctionName() + "-foreach-refwait" + loopNum,
@@ -851,6 +851,7 @@ public class ASTWalker {
                               arrayVar.type().memberType(), false, true);
       backend.retrieveRef(realArray, arrayVar);
     } else {
+      assert(Types.isContainer(arrayVar));
       realArray = arrayVar;
       outsideLoopContext = context;
     }
@@ -891,7 +892,7 @@ public class ASTWalker {
 
     // Wait for array
     backend.endWaitStatement();
-    if (Types.isArrayRef(arrayVar.type())) {
+    if (Types.isContainerRef(arrayVar.type())) {
       // Wait for array ref
       backend.endWaitStatement();
     }

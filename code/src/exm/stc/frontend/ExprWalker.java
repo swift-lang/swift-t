@@ -365,8 +365,8 @@ public class ExprWalker {
       backend.dereferenceFile(dst, src);
     } else if (Types.isBlob(dstType)) {
       backend.dereferenceBlob(dst, src);
-    } else if (Types.isArray(dstType)) {
-      derefThenCopyArray(context, dst, src);
+    } else if (Types.isContainer(dstType)) {
+      derefThenCopyContainer(context, dst, src);
     } else if (Types.isStruct(dstType)) {
       dereferenceStruct(context, dst, src);
     } else {
@@ -867,11 +867,11 @@ public class ExprWalker {
       for (int i = 0; i < waitVars.size(); i++) {
         Var derefVar = derefVars.get(i);
         varCreator.declare(derefVar);
-        if (Types.isArrayRef(waitVars.get(i).type())) {
+        if (Types.isContainerRef(waitVars.get(i).type())) {
           backend.retrieveRef(derefVar, waitVars.get(i));
         } else {
           throw new STCRuntimeError("Don't know how to " +
-              "deref non-array function arg " + derefVar);
+              "deref non-container function arg " + derefVar);
         }
       }
     }
@@ -1099,10 +1099,10 @@ public class ExprWalker {
     backend.endWaitStatement();
   }
 
-  private void derefThenCopyArray(Context context, Var dst, Var src)
+  private void derefThenCopyContainer(Context context, Var dst, Var src)
       throws UserException, UndefinedTypeException {
-    assert(Types.isArrayRef(src));
-    assert(Types.isArray(dst));
+    assert(Types.isContainerRef(src));
+    assert(Types.isRefTo(src, dst));
     String wName = context.getFunctionContext().constructName("copy-wait");
     List<Var> waitVars = Arrays.asList(src);
     backend.startWaitStatement(wName, waitVars,

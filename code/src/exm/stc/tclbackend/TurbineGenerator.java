@@ -1301,17 +1301,13 @@ public class TurbineGenerator implements CompilerBackend {
    */
   private Type arrayLoadCheckTypes(Var oVar, Var arrayVar,
       boolean isReference) {
-    Type memberType;
     // Check that the types of the array variable are correct
     if (isReference) {
-      assert(Types.isArrayRef(arrayVar.type()));
-      Type arrayType = arrayVar.type().memberType();
-      assert(Types.isArray(arrayType));
-      memberType = arrayType.memberType();
+      assert(Types.isArrayRef(arrayVar));
     } else {
       assert(Types.isArray(arrayVar.type()));
-      memberType = arrayVar.type().memberType();
     }
+    Type memberType = Types.arrayMemberType(arrayVar);
 
 
     Type oType = oVar.type();

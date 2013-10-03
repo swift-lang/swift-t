@@ -389,7 +389,7 @@ public class TypeChecker {
     Type resultType;
     if (Types.isPrimFuture(memberType)) {
       resultType = memberType;
-    } else if (Types.isArray(memberType) || Types.isStruct(memberType)) {
+    } else if (Types.isContainer(memberType) || Types.isStruct(memberType)) {
       resultType = new RefType(memberType);
     } else {
       throw new STCRuntimeError("Unexpected array member type"

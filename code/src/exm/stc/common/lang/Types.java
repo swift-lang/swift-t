@@ -1715,6 +1715,10 @@ public class Types {
     return isArray(t) || isBag(t);
   }
   
+  public static boolean isContainerRef(Typed t) {
+    return isArrayRef(t) || isBagRef(t);
+  }
+  
   /**
    * Convenience function to get member type of array or array ref
    */

@@ -241,7 +241,7 @@ public class ForeachLoop {
       throws UserException {
     Type arrayType = TypeChecker.findSingleExprType(context, arrayVarTree);
     for (Type alt: UnionType.getAlternatives(arrayType)) {
-      if (Types.isArray(alt) || Types.isArrayRef(alt) || Types.isBag(alt)) {
+      if (Types.isContainer(alt) || Types.isContainerRef(alt)) {
         return alt;
       }
     }
@@ -250,13 +250,13 @@ public class ForeachLoop {
                 "but got type: " + arrayType.typeName());
   }
 
-  public static Type findElemType(Type arrayType) throws STCRuntimeError {
-    if (Types.isArray(arrayType) || Types.isArrayRef(arrayType)) {
-      return Types.arrayMemberType(arrayType);
-    } else if (Types.isBag(arrayType)) {
-      return Types.bagElemType(arrayType);
+  public static Type findElemType(Type containerType) throws STCRuntimeError {
+    if (Types.isArray(containerType) || Types.isArrayRef(containerType)) {
+      return Types.arrayMemberType(containerType);
+    } else if (Types.isBag(containerType) || Types.isBagRef(containerType)) {
+      return Types.bagElemType(containerType);
     } else {
-      throw new STCRuntimeError("Invalid type " + arrayType);
+      throw new STCRuntimeError("Invalid type " + containerType);
     }
   }
 
