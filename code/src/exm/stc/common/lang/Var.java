@@ -44,6 +44,7 @@ public class Var implements Comparable<Var>, Typed {
   private final Alloc storage;
   private final DefType defType;
   private final Var mapping;
+  private final VarProvenance provenance;
   private final int hashCode; // Cache hashcode
 
   public static final String TMP_VAR_PREFIX = "__t";
@@ -122,6 +123,8 @@ public class Var implements Comparable<Var>, Typed {
     this.defType = defType;
     this.mapping = null;
     this.hashCode = calcHashCode();
+    // TODO: take provenance from caller
+    this.provenance = VarProvenance.unknown();
   }
   
   public Var(Type type, String name,
@@ -133,6 +136,8 @@ public class Var implements Comparable<Var>, Typed {
     assert(mapping == null || Types.isString(mapping.type()));
     this.mapping = mapping;
     this.hashCode = calcHashCode();
+    // TODO: take provenance from caller
+    this.provenance = VarProvenance.unknown();
   }
 
   /**
@@ -210,6 +215,10 @@ public class Var implements Comparable<Var>, Typed {
 
   public Var mapping() {
     return mapping;
+  }
+  
+  public VarProvenance provenance() {
+    return provenance;
   }
 
   /**
@@ -424,5 +433,73 @@ public class Var implements Comparable<Var>, Typed {
   public static String structFieldName(Var struct, String fieldPath) {
     return Var.STRUCT_FIELD_VAR_PREFIX
         + struct.name() + "_" + fieldPath.replace('.', '_');
+  }
+  
+  /**
+   * Track where variable was derived from in source, or from other
+   * variables
+   * TODO: fill in more alternatives and info
+   */
+  public static class VarProvenance {
+    /**
+     * The type of provenance
+     */
+    public final VarProvType type;
+    
+    /**
+     * Source location it is associated with
+     */
+    public final SourceLoc sourceLoc;
+    
+    /**
+     * Any predecessor vars (interpretation depends on type)
+     */
+    public final List<Var> predecessors;
+    
+    private VarProvenance(VarProvType type, SourceLoc sourceLoc,
+                          List<Var> predecessors) {
+      this.type = type;
+      this.sourceLoc = sourceLoc;
+      if (predecessors == null) {
+        this.predecessors = null;
+      } else {
+        // Make a copy
+        this.predecessors = new ArrayList<Var>(predecessors);
+      }
+    }
+    
+    public static VarProvenance unknown() {
+      return new VarProvenance(VarProvType.UNKNOWN, null, null);
+    }
+    
+    public static VarProvenance userVar(SourceLoc loc) {
+      return new VarProvenance(VarProvType.USER_DECLARED, loc, null);
+    }
+    
+  }
+  
+  public static enum VarProvType {
+    UNKNOWN, // Don't know where it came from
+    USER_DECLARED, // Explicitly declared
+    EXPR_TEMPORARY, // Temporary from user expression
+    VALUE_OF, // Value of an existing variable
+    UNIFIED, // Unification of other variables
+    FILENAME_OF, // Filename of existing variable
+    ;
+  }
+  
+  /**
+   * Location in a source file.
+   */
+  public static class SourceLoc {
+    private SourceLoc(String file, int line, int column) {
+      super();
+      this.file = file;
+      this.line = line;
+      this.column = column;
+    }
+    public final String file;
+    public final int line;
+    public final int column;
   }
 }
