@@ -293,7 +293,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
       
       // Update written vars list
       for (Var mod: modOutputs) {
-        if (Types.isArray(mod.type()) || Types.isRef(mod.type())) {
+        if (Types.isContainer(mod.type()) || Types.isRef(mod.type())) {
           boolean modInit = inst.isInitialized(mod);
           if (!modInit && inst.op != Opcode.STORE_REF) {
             modifiedComponents.add(mod);
@@ -309,9 +309,11 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
             Types.isRef(component.type())) : component + " " + inst;
         Var whole = componentAlias.val2;
         Var prev = componentOf.put(component, whole);
-        // shouldn't be component of multiple things
+        if (logger.isTraceEnabled()) {
+          logger.trace(component + " part of whole " + whole);
+        }
         if (prev != null && logger.isTraceEnabled()) {
-          logger.trace(component + " part of (" + prev + ", " + whole + ")");
+          logger.trace(component + " part of " + prev + " and " + whole);
         }
       }
     }

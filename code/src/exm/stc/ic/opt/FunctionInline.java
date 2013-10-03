@@ -40,7 +40,6 @@ import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.TaskMode;
-import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.util.MultiMap;
@@ -442,15 +441,10 @@ public class FunctionInline implements OptimizerPass {
       Var outArg = toInline.getOutputList().get(i);
       renames.put(outArg, Arg.createVar(outVar));
       passIn.add(outVar);
-      if (Types.isArray(outVar.type())) {
-        outArrays.add(outVar);
-      }
 
       // Remove cleanup actions
       inlineBlock.removeCleanups(outArg);
     }
-    
-    // TODO: output arrays inside structs
     
     Block insertBlock;
     ListIterator<Statement> insertPos;

@@ -56,7 +56,7 @@ public class WrapUtil {
    */
   public static Var fetchValueOf(Block block, List<Instruction> instBuffer,
           Var var, String valName) {
-    if (Types.isArray(var)) {
+    if (Types.isContainer(var)) {
       // Don't have value version of array
       return var;
     }
@@ -234,7 +234,7 @@ public class WrapUtil {
     }
     List<Arg> inVals = new ArrayList<Arg>(inputs.size());
     for (Var inArg: inputs) {
-      if (Types.isArray(inArg.type())) {
+      if (Types.isContainer(inArg.type())) {
         // Pass arrays in original representation
         inVals.add(inArg.asArg());
       } else {
@@ -266,7 +266,7 @@ public class WrapUtil {
     }
     List<Var> outVals = new ArrayList<Var>();
     for (Var outArg: outputFutures) {
-      if (Types.isArray(outArg.type()) || Types.isPrimUpdateable(outArg.type())) {
+      if (Types.isContainer(outArg.type()) || Types.isPrimUpdateable(outArg.type())) {
         // Use standard representation
         outVals.add(outArg);
       } else {

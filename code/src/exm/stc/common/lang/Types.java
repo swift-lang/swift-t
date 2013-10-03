@@ -1711,6 +1711,13 @@ public class Types {
   }
 
   /**
+   * @return whether it is a container data structure e.g. an array or multiset
+   */
+  public static boolean isContainer(Typed t) {
+    return isArray(t) || isBag(t);
+  }
+  
+  /**
    * Convenience function to get member type of array or array ref
    */
   public static Type arrayMemberType(Typed arrayT) {

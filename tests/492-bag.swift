@@ -1,6 +1,8 @@
 // SKIP-THIS-TEST
 // unimplemented feature: append to bag in array
 
+import io;
+
 main {
     bag<int> A[];
 
@@ -13,7 +15,7 @@ main {
     // TODO: check results
     foreach bag, i in A {
      foreach elem in bag {
-       trace(i, elem);
+       printf("Elem@%i: %i", i, elem);
      }
     }
 }

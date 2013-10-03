@@ -287,13 +287,8 @@ public class OptUtil {
 
   public static Var fetchForLocalOp(Block block, List<Instruction> instBuffer,
       Var var) {
-    if (Types.isArray(var.type())) {
-      // don't use a different representation for arrays
-      return var;
-    } else {
-      return WrapUtil.fetchValueOf(block, instBuffer, var,
-                               OptUtil.optVPrefix(block, var));
-    }
+    return WrapUtil.fetchValueOf(block, instBuffer, var,
+                             OptUtil.optVPrefix(block, var));
   }
 }
 

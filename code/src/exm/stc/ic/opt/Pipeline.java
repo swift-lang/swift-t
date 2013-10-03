@@ -184,7 +184,7 @@ public class Pipeline extends FunctionOptimizerPass {
       return 1;
     } else if (Types.isPrimValue(t)) {
       return 0;
-    } else if (Types.isArray(t)) {
+    } else if (Types.isContainer(t)) {
       return 1;
     } else if (Types.isStruct(t)) {
       StructType st = (StructType)t.getImplType();

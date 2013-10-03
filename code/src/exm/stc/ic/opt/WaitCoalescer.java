@@ -1087,22 +1087,13 @@ public class WaitCoalescer implements OptimizerPass {
       ListIterator<Statement> currBlockIt,
       Set<Instruction> movedI, Instruction inst) {
     boolean canRelocate = true;
-    ArrayList<Var> keepOpenVars = new ArrayList<Var>();
-    for (Var out: inst.getOutputs()) {
-      if (Types.isArray(out.type())) {
-        keepOpenVars.add(out);
-      } else if (Types.isArrayRef(out.type())) {
-        // Array ref might be from nested array, don't know yet
-        // how to keep parent array open
-        canRelocate = false;
-      }
-    }
     
-    if (currContext == ExecContext.WORKER) {
-      if (inst.getMode() != TaskMode.SYNC) {
-        // Can't push down async tasks to leaf yet
-        canRelocate = false;
-      }
+    if (currContext == ExecContext.WORKER &&
+             inst.getMode() != TaskMode.SYNC) {
+      // Can't push down async tasks to leaf yet due to issues with
+      // spawning tasks from worker.
+      // TODO: possible now?
+      canRelocate = false;
     }
     
     if (canRelocate) {

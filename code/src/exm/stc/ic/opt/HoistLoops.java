@@ -332,7 +332,7 @@ public class HoistLoops implements OptimizerPass {
 
   private static boolean trackDeclares(Var v) {
     // Track declares for variables that can be waited on
-    return (Types.isArray(v.type()) || Types.isPrimFuture(v.type()) ||
+    return (Types.isContainer(v.type()) || Types.isPrimFuture(v.type()) ||
             Types.isRef(v.type()));
   }
 
