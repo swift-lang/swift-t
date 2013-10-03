@@ -1013,8 +1013,7 @@ public class ASTWalker {
   private void iterate(Context context, SwiftAST tree) throws UserException {
     IterateDescriptor loop = IterateDescriptor.fromAST(context, tree);
     
-    //TODO: this is a little funny since the condition expr might be of type int,
-    //    but this will work for time being
+    // Initial iteration should succeed
     Var falseV = varCreator.createTmp(context, Types.F_BOOL);
     backend.assignBool(falseV, Arg.createBoolLit(false));
     
