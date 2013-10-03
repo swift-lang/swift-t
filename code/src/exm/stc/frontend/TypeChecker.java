@@ -672,9 +672,9 @@ public class TypeChecker {
           Type formalArgT, Type argExprT,
           MultiMap<String, Type> tvConstraints)
           throws TypeMismatchException {
-    // TODO: for now handle a few special cases only
     if (Types.isUnion(formalArgT)) {
-      throw new STCRuntimeError("Unions with type var not supported yet");
+      throw new TypeMismatchException(context, "Union type " + formalArgT + 
+                                    " with type variable is not supported");
     } 
     
     if (Types.isRef(argExprT)) {

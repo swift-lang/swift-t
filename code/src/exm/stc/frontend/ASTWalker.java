@@ -612,11 +612,11 @@ public class ASTWalker {
    *   a = 2;
    * }
    * We should not allow any code to be compiled in which a variable is inside
-   * a conditional statement for each is is the condition
-   * TODO: this is a very limited form of deadlock detection.  In
-   *      general we need to check the full variable dependency chain to make
-   *      sure that the variable in the conditional statement isn't dependent
-   *      at all on anything inside the condition
+   * a conditional statement for each is is the condition.
+   * This is a very limited form of deadlock detection.  In
+   *  general we need to check the full variable dependency chain to make
+   *  sure that the variable in the conditional statement isn't dependent
+   *  at all on anything inside the condition
    * @param context
    * @param conditionVar
    * @param branchVU

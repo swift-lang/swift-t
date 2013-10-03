@@ -60,7 +60,6 @@ public class ParsedModule {
     return new ParsedModule(path, tree, lineMapping);
   }
   /**
-   * TODO: consider module naming
    * @param moduleName
    * @return
    * @throws IOException 
