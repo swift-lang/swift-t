@@ -419,7 +419,6 @@ public class FunctionInline implements OptimizerPass {
     // rename function arguments
     Map<Var, Arg> renames = new HashMap<Var, Arg>();
     List<Var> passIn = new ArrayList<Var>();
-    List<Var> outArrays = new ArrayList<Var>();
     
     assert(fnCall.getFunctionOutputs().size() == toInline.getOutputList().size());
     assert(fnCall.getFunctionInputs().size() == toInline.getInputList().size()) :

@@ -252,10 +252,6 @@ public class ForLoopDescriptor {
     assert(update.getType() == ExMParser.FOR_LOOP_UPDATE);
     
     int loopVarCount = init.getChildCount();
-    if (loopVarCount == 0) {
-      throw new STCRuntimeError("Must have at least one loop variable " +
-          " in for loop for now");
-    }
     
     ForLoopDescriptor forLoop = new ForLoopDescriptor(body, cond, 
                                                       loopVarCount);

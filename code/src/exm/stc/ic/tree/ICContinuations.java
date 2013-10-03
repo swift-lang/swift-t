@@ -760,8 +760,51 @@ public class ICContinuations {
 
     @Override
     public boolean isNoop() {
-      // TODO: think about particular conditions that would render it a noop.
-      //
+      // Common case where it would be a noop are where we have nothing
+      // but loop instructions:
+      // retrieve_boolean v_cond cond
+      // if () {
+      //   loop_continue ...
+      // } else {
+      //   loop_break ...
+      //  }
+
+      if (!loopBody.getContinuations().isEmpty() ||
+          loopBody.getStatements().size() != 2) {
+        return false;
+      }
+      // Check first instruction is retrieve_boolean
+      Statement first = loopBody.getStatements().get(0);
+      if (first.type() != StatementType.INSTRUCTION ||
+          first.instruction().op != Opcode.LOAD_BOOL) {
+        // First instruction doesn't match
+        return false;
+      }
+      Statement second = loopBody.getStatements().get(1);
+      if (second.type() != StatementType.CONDITIONAL) {
+        // Second must be conditional
+        return false;
+      }
+      
+      // TODO: need more sophisticated analysis to check if
+      //       operations have side-effect, or if they write
+      //       variables outside of loop, since most loops
+      //       will at a minimum have loop update code even if
+      //       the loop as a whole has no effect
+      Block thenB = second.conditional().getBlocks().get(0);
+      Block elseB = second.conditional().getBlocks().get(1);
+
+      System.err.println(thenB);
+      System.err.println(elseB);
+      if (thenB.getStatements().size() == 1 &&
+          elseB.getStatements().size() == 1) {
+        // Must have loop control instructions
+        // TODO: must ignore comments here
+        assert(thenB.getStatements().get(0).instruction().op ==
+               Opcode.LOOP_CONTINUE);
+        assert(elseB.getStatements().get(0).instruction().op ==
+               Opcode.LOOP_BREAK);  
+      }
       return false;
     }
 
