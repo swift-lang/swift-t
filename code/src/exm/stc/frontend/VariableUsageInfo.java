@@ -212,8 +212,10 @@ public class VariableUsageInfo {
        */
       if (v.isRead() != Ternary.FALSE) {
         // v might be read
-        if (Types.isArray(v.type) && v.maxReadDepth == 0) {
+        if (Types.isArray(v.type)) {
           // ok to refer to entire array if not written
+          // Could do more sophisticated analysis of indices, but best toavoid
+          // emitting too much warning spam
         } else if (Types.isBag(v.type)) {
           // ok not to add anything
         } else if (Types.isStruct(v.type)) {
@@ -226,9 +228,9 @@ public class VariableUsageInfo {
                 "on some code paths", context));
           }
           else if (v.isAssigned() == Ternary.MAYBE) {
-              violations.add(new Violation(ViolationType.WARNING,
-                  "Variable " + v.getName() + " might be read and not written, "
-                + "possibly leading to deadlock", context));
+            violations.add(new Violation(ViolationType.WARNING,
+                "Variable " + v.getName() + " might be read and not written, "
+              + "possibly leading to deadlock", context));
           }
         }
       } else {
@@ -831,7 +833,8 @@ public class VariableUsageInfo {
               result.add(new Violation(ViolationType.ERROR,
                   "Deadlock detected: " + vi.getName() + " is "
                  + " never assigned but is read", context));
-            } else {
+            } else if (assigned != Ternary.FALSE) {
+              // If we might write somebut not all
               result.add(new Violation(ViolationType.WARNING,
                   vi.getName() + " is not guaranteed to be written to"
                   + ", this has potential to cause havoc!", context));
