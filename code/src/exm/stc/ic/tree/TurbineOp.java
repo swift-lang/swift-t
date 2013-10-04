@@ -1675,7 +1675,7 @@ public class TurbineOp extends Instruction {
           res.add(ValLoc.makeArrayResult(arr, key, val, false, IsAssign.TO_VALUE));
         }
         
-        res.add(CommonFunctionCall.makeArraySizeCV(arr,
+        res.add(CommonFunctionCall.makeContainerSizeCV(arr,
                     Arg.createIntLit(elemCount), false, IsAssign.NO));
         return res;
       }

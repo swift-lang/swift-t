@@ -673,7 +673,7 @@ public class ICInstructions {
            isImpl(SpecialFunction.RANGE_STEP))) {
         addRangeCVs(cvs);
       } else if (isImpl(SpecialFunction.SIZE)) {
-          cvs.add(makeArraySizeCV(IsAssign.NO));
+          cvs.add(makeContainerSizeCV(IsAssign.NO));
       }
     }
 
@@ -720,7 +720,7 @@ public class ICInstructions {
         // We can work out array contents 
         long arrSize = Math.max(0, (end - start) / step + 1);
         Var arr = getOutput(0);
-        cvs.add(makeArraySizeCV(arr, Arg.createIntLit(arrSize),
+        cvs.add(makeContainerSizeCV(arr, Arg.createIntLit(arrSize),
                                 false, IsAssign.NO));
         // add array elements up to some limit
         int max_elems = 64;
@@ -730,26 +730,27 @@ public class ICInstructions {
       }
     }
 
-    private ValLoc makeArraySizeCV(IsAssign isAssign) {
+    private ValLoc makeContainerSizeCV(IsAssign isAssign) {
       boolean isFuture;
-      if (Types.isString(getOutput(0))) {
+      if (Types.isInt(getOutput(0))) {
         isFuture = true;
       } else {
         assert(Types.isIntVal(getOutput(0)));
         isFuture = false;
       }
-      return makeArraySizeCV(getInput(0).getVar(), getOutput(0).asArg(),
+      return makeContainerSizeCV(getInput(0).getVar(), getOutput(0).asArg(),
                              isFuture, isAssign);
     }
 
-    static ValLoc makeArraySizeCV(Var arr, Arg size, boolean future,
+    static ValLoc makeContainerSizeCV(Var arr, Arg size, boolean future,
                                   IsAssign isAssign) {
-      assert(Types.isArray(arr.type()));
-      assert(size.isImmediateInt());
+      assert(Types.isContainer(arr.type()));
+      assert((!future && size.isImmediateInt()) ||
+             (future && Types.isInt(size.type())));
       String subop = future ? ComputedValue.ARRAY_SIZE_FUTURE :
                               ComputedValue.ARRAY_SIZE_VAL;
       return ValLoc.buildResult(Opcode.FAKE, subop,
-              arr.asArg(), size, Closed.YES_NOT_RECURSIVE, isAssign);
+              arr.asArg(), size, Closed.MAYBE_NOT, isAssign);
     }
 
 
