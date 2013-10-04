@@ -21,6 +21,7 @@ import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
+import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.OptUtil;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgOrCV;
@@ -247,11 +248,12 @@ public class UnifiedValues {
       unifiedLoc = parent.declareUnmapped(type, 
           OptUtil.optVPrefix(parent, "unified"), Alloc.LOCAL,
           DefType.LOCAL_COMPILER,
-          VarProvenance.unified(Arg.toVarList(locs)));
+          VarProvenance.unified(ICUtil.extractVars(locs)));
     } else {
       unifiedLoc = parent.declareUnmapped(type, 
           OptUtil.optVPrefix(parent, "unified"), Alloc.ALIAS,
-          DefType.LOCAL_COMPILER, VarProvenance.unified(Arg.toVarList(locs)));
+          DefType.LOCAL_COMPILER,
+          VarProvenance.unified(ICUtil.extractVars(locs)));
     }
     
     
