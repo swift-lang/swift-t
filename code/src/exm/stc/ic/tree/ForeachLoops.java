@@ -233,29 +233,25 @@ public class ForeachLoops {
     }
 
     @Override
-    public void setPassedVars(Collection<PassedVar> passedVars) {
-      if (this.isAsync()) {
-        boolean found = false;
-        for (PassedVar passed: passedVars) {
-          if (passed.var.equals(container)) {
-            found = true;
-            break;
-          }
+    public Collection<PassedVar> getAllPassedVars() {
+      // Need to mark container as passed in
+      boolean found = false;
+
+      Collection<PassedVar> regularPassed = this.getPassedVars();
+      for (PassedVar passed: regularPassed) {
+        if (passed.var.equals(container)) {
+          found = true;
+          break;
         }
-        if (found) {
-          super.setPassedVars(passedVars);
-        } else {
-          // TODO: a little hacky but does job for now
-          // Need to pass in array
-          ArrayList<PassedVar> passedPlus = 
-              new ArrayList<PassedVar>(passedVars.size() + 1);
-          passedPlus.addAll(passedVars);
-          passedPlus.add(new PassedVar(container, false));
-          super.setPassedVars(passedPlus);
-          return;
-        }
+      }
+      if (found) {
+        return regularPassed;
       } else {
-        super.setPassedVars(passedVars);
+        // Need to pass in container too
+        List<PassedVar> res = 
+            new ArrayList<PassedVar>(regularPassed.size() + 1);
+        res.add(new PassedVar(container, false));
+        return res;
       }
     }
 

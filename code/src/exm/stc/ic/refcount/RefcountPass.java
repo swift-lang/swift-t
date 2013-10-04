@@ -1,6 +1,7 @@
 package exm.stc.ic.refcount;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashSet;
@@ -207,7 +208,7 @@ public class RefcountPass implements OptimizerPass {
     if (loop.isAsync()) {
       // If we're spawning off, increment once per iteration so that
       // each parallel task has a refcount to work with
-      for (PassedVar v: loop.getPassedVars()) {
+      for (PassedVar v: loop.getAllPassedVars()) {
         if (!v.writeOnly && RefCounting.hasReadRefCount(v.var)) {
           readIncrs.increment(v.var);
         }
@@ -271,6 +272,8 @@ public class RefcountPass implements OptimizerPass {
       logger.trace("==============================");
       logger.trace(increments);
     }
+    
+    reorderContinuations(logger, block);
 
     if (RCUtil.cancelEnabled()) {
       // Move any increment instructions up to this block
@@ -469,6 +472,9 @@ public class RefcountPass implements OptimizerPass {
       for (PassedVar passedIn: cont.getAllPassedVars()) {
         if (!passedIn.writeOnly && RefCounting.hasReadRefCount(passedIn.var)) {
           readIncrTmp.add(passedIn.var);
+          if (cont.getType() == ContinuationType.FOREACH_LOOP) {
+            System.err.println(passedIn.var);
+          }
         }
       }
       for (BlockingVar blockingVar: cont.blockingVars(false)) {
@@ -479,23 +485,33 @@ public class RefcountPass implements OptimizerPass {
       for (Var v: readIncrTmp) {
         increments.readIncr(v, incr);
       }
-    }
-    if (RCUtil.isForeachLoop(cont)) {
+    } else if (RCUtil.isForeachLoop(cont)) {
       AbstractForeachLoop foreach = (AbstractForeachLoop) cont;
       updateIncrementsPassIntoForeach(increments, foreach);
     }
   }
 
-  public void updateIncrementsPassIntoForeach(RCTracker increments,
+  private void updateIncrementsPassIntoForeach(RCTracker increments,
       AbstractForeachLoop foreach) {
     /*
      * We want to make sure that we hold a refcount until we get to this loop:
      * do a switcheroo where we pull an increment into the outer block, and
-     * balance by adding a decrement to loop
+     * balance by adding a decrement to loop.
+     * Key Assumptions:
+     * - All continuations after this one will have variables marked for
+     *    passing explicitly (won't use a variable without consuming rc).
+     * - All variables passed into async foreach loop are in startIncrements.
+     * We achieve this by:
+     * - Reordering continuations so that sync continuations occur
+     *   before async.
+     * - Async continuations require explicit var passing by nature
+     * - TODO: exception? If nested block is tacked onto end
      */
-    for (RefCount rc: foreach.getStartIncrements()) {
-      increments.incr(rc.var, rc.type, 1);
-      foreach.addConstantStartIncrement(rc.var, rc.type, Arg.createIntLit(-1));
+    if (foreach.isAsync()) {
+      for (RefCount rc: foreach.getStartIncrements()) {
+        increments.incr(rc.var, rc.type, 1);
+        foreach.addConstantStartIncrement(rc.var, rc.type, Arg.createIntLit(-1));
+      }
     }
   }
 
@@ -681,7 +697,7 @@ public class RefcountPass implements OptimizerPass {
     }
 
     Set<Var> readIncrTmp = new HashSet<Var>();
-    for (PassedVar passedIn: cont.getPassedVars()) {
+    for (PassedVar passedIn: cont.getAllPassedVars()) {
       if (!passedIn.writeOnly && RefCounting.hasReadRefCount(passedIn.var)) {
         readIncrTmp.add(passedIn.var);
       }
@@ -784,4 +800,24 @@ public class RefcountPass implements OptimizerPass {
     }
   }
 
+  /**
+   * Place sync continuations (which may use var but not require refcount
+   * increment) first to maximize change of being able to piggyback things.
+   */
+  private void reorderContinuations(Logger logger, Block block) {
+    ListIterator<Continuation> cIt = block.continuationIterator();
+    List<Continuation> syncContinuations = new ArrayList<Continuation>();
+    while (cIt.hasNext()) {
+      Continuation cont = cIt.next();
+      if (!cont.isAsync() && !cont.runLast()) {
+        cIt.remove();
+        syncContinuations.add(cont);
+      }
+    }
+    
+    cIt = block.continuationIterator();
+    for (Continuation sync: syncContinuations) {
+      cIt.add(sync);
+    }
+  }
 }

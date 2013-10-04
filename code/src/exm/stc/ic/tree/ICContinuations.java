@@ -435,6 +435,7 @@ public class ICContinuations {
       return Collections.unmodifiableList(this.passedVars);
     }
     
+    @Override
     public Collection<PassedVar> getAllPassedVars() {
       // By default, no extras
       return getPassedVars();
@@ -794,8 +795,6 @@ public class ICContinuations {
       Block thenB = second.conditional().getBlocks().get(0);
       Block elseB = second.conditional().getBlocks().get(1);
 
-      System.err.println(thenB);
-      System.err.println(elseB);
       if (thenB.getStatements().size() == 1 &&
           elseB.getStatements().size() == 1) {
         // Must have loop control instructions
