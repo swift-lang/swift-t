@@ -84,6 +84,8 @@ public interface CompilerBackend {
   public void dereferenceInt(Var target, Var src);
   
   public void dereferenceBool(Var target, Var src);
+  
+  public void dereferenceVoid(Var target, Var src);
 
   public void dereferenceFloat(Var dst, Var src);
   

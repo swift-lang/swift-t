@@ -355,6 +355,8 @@ public class ExprWalker {
     Type dstType = dst.type();
     if (Types.isInt(dstType)) {
       backend.dereferenceInt(dst, src);
+    } else if (Types.isVoid(dstType)) {
+      backend.dereferenceVoid(dst, src);
     } else if (Types.isString(dstType)) {
       backend.dereferenceString(dst, src);
     } else if (Types.isFloat(dstType)) {

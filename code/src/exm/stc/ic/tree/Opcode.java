@@ -17,7 +17,7 @@ public enum Opcode {
   
   // Dereference *prim to prim
   DEREF_INT, DEREF_STRING, DEREF_FLOAT, DEREF_BOOL, DEREF_BLOB,
-  DEREF_FILE, 
+  DEREF_VOID, DEREF_FILE, 
   
   // Copy reference (i.e. create alias)
   COPY_REF,
@@ -198,6 +198,7 @@ public enum Opcode {
       case DEREF_FLOAT:
       case DEREF_INT:
       case DEREF_STRING:
+      case DEREF_VOID:
         return true;
       default:
         return false;
@@ -213,6 +214,8 @@ public enum Opcode {
           return Opcode.DEREF_BLOB;
         case FILE:
           return Opcode.DEREF_FILE;
+        case VOID:
+          return Opcode.DEREF_VOID;
         case BOOL:
           return Opcode.DEREF_BOOL;
         case FLOAT:
@@ -221,8 +224,6 @@ public enum Opcode {
           return Opcode.DEREF_INT;
         case STRING:
           return Opcode.DEREF_STRING;
-        case VOID:
-          throw new STCRuntimeError("Tried to dereference void");
         }
       }
     }

@@ -158,6 +158,7 @@ class Turbine {
   
   // Dereference functions
   private static final Token DEREFERENCE_INTEGER = turbFn("dereference_integer");
+  private static final Token DEREFERENCE_VOID = turbFn("dereference_void");
   private static final Token DEREFERENCE_FLOAT = turbFn("dereference_float");
   private static final Token DEREFERENCE_STRING = turbFn("dereference_string");
   private static final Token DEREFERENCE_BLOB = turbFn("dereference_blob");
@@ -855,6 +856,10 @@ class Turbine {
 
    public static Command dereferenceInteger(Value dstVar, Value refVar) {
      return new Command(DEREFERENCE_INTEGER, dstVar, refVar);
+   }
+   
+   public static Command dereferenceVoid(Value dstVar, Value refVar) {
+     return new Command(DEREFERENCE_VOID, dstVar, refVar);
    }
 
    public static Command dereferenceFloat(Value dstVar, Value refVar) {

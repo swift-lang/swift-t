@@ -608,6 +608,13 @@ public class STCMiddleEnd {
         TurbineOp.dereferenceInt(target, src));
   }
   
+  public void dereferenceVoid(Var target, Var src) {
+    assert(Types.isVoid(target));
+    assert(Types.isVoidRef(src));
+    currBlock().addInstruction(
+        TurbineOp.dereferenceVoid(target, src));
+  }
+
   public void dereferenceBool(Var target, Var src) {
     assert(Types.isBool(target.type()));
     assert(Types.isBoolRef(src));

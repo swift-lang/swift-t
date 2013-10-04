@@ -877,6 +877,15 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
+  public void dereferenceVoid(Var target, Var src) {
+    assert(Types.isVoid(target.type()));
+    assert(Types.isVoidRef(src));
+    Command deref = Turbine.dereferenceVoid(varToExpr(target),
+                                               varToExpr(src));
+    pointStack.peek().add(deref);
+  }
+  
+  @Override
   public void dereferenceBool(Var target, Var src) {
     assert(Types.isBool(target.type()));
     assert(Types.isBoolRef(src));

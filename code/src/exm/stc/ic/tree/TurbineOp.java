@@ -204,6 +204,9 @@ public class TurbineOp extends Instruction {
     case DEREF_INT:
       gen.dereferenceInt(getOutput(0), getInput(0).getVar());
       break;
+    case DEREF_VOID:
+      gen.dereferenceVoid(getOutput(0), getInput(0).getVar());
+      break;
     case DEREF_BOOL:
       gen.dereferenceBool(getOutput(0), getInput(0).getVar());
       break;
@@ -539,6 +542,11 @@ public class TurbineOp extends Instruction {
         target, src.asArg());
   }
   
+  public static Instruction dereferenceVoid(Var target, Var src) {
+    return new TurbineOp(Opcode.DEREF_VOID,
+        target, src.asArg());
+  }
+  
   public static Instruction dereferenceBool(Var target, Var src) {
     return new TurbineOp(Opcode.DEREF_BOOL,
         target, src.asArg());
@@ -797,6 +805,7 @@ public class TurbineOp extends Instruction {
     case STORE_FILE:
     case DEREF_INT:
     case DEREF_BOOL:
+    case DEREF_VOID:
     case DEREF_FLOAT:
     case DEREF_STRING:
     case DEREF_BLOB:
@@ -808,7 +817,7 @@ public class TurbineOp extends Instruction {
     case LOAD_BLOB:
     case LOAD_VOID:
     case LOAD_FILE:
-      return this.writesAliasVar();
+      return false;
       
     case ARRAY_LOOKUP_REF_IMM:
     case ARRAY_LOOKUP_FUTURE:
@@ -1507,6 +1516,7 @@ public class TurbineOp extends Instruction {
     case ARRAY_LOOKUP_REF_IMM:
     case DEREF_INT:
     case DEREF_BOOL:
+    case DEREF_VOID:
     case DEREF_FLOAT:
     case DEREF_STRING:
     case DEREF_BLOB:
@@ -1615,6 +1625,7 @@ public class TurbineOp extends Instruction {
       }
       case DEREF_BLOB:
       case DEREF_BOOL:
+      case DEREF_VOID:
       case DEREF_FLOAT:
       case DEREF_INT:
       case DEREF_STRING: 
@@ -1792,6 +1803,7 @@ public class TurbineOp extends Instruction {
         return Pair.create(readIncr, Arrays.asList(arr));
       }
       case DEREF_BLOB:
+      case DEREF_VOID:
       case DEREF_BOOL:
       case DEREF_FILE:
       case DEREF_FLOAT:
