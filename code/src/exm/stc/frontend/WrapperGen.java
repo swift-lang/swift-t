@@ -104,7 +104,7 @@ public class WrapperGen {
           // OK
         } else if (Types.isPrimUpdateable(alt)) {
           // OK
-        } else if (Types.isArray(alt)) {
+        } else if (Types.isContainer(alt)) {
           // OK
         } else if (!concreteType && 
                 (Types.isWildcard(alt) || Types.isTypeVar(alt))) {
@@ -122,7 +122,7 @@ public class WrapperGen {
       assert(!concreteType || alts.size() == 1) :
           "polymorphic type but concrete expected " + out;
       for (Type alt: alts) {
-        if (Types.isArray(alt)) {
+        if (Types.isContainer(alt)) {
           // OK: will pass in standard repr
         } else if (Types.isPrimUpdateable(alt)) {
           // OK: will pass in standard repr
