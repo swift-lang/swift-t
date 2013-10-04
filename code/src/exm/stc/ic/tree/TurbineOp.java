@@ -817,7 +817,7 @@ public class TurbineOp extends Instruction {
     case LOAD_BLOB:
     case LOAD_VOID:
     case LOAD_FILE:
-      return false;
+      return this.writesAliasVar();
       
     case ARRAY_LOOKUP_REF_IMM:
     case ARRAY_LOOKUP_FUTURE:
