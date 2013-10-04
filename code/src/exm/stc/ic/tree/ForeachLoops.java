@@ -838,7 +838,8 @@ public class ForeachLoops {
           String newLoopVarName = outerBlock.uniqueVarName(
               unrolled.loopVar.name() + "@" + (i + 1));
           currIterLoopVar = new Var(Types.V_INT, newLoopVarName,
-              Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
+              Alloc.LOCAL, DefType.LOCAL_COMPILER,
+              VarProvenance.renamed(unrolled.loopVar));
           unrolledBody.addVariable(currIterLoopVar);
           unrolledBody.addInstruction(Builtin.createLocal(BuiltinOpcode.PLUS_INT,
               currIterLoopVar, Arrays.asList(Arg.createVar(lastIterLoopVar), oldIncr)));
