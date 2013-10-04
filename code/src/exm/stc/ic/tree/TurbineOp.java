@@ -25,6 +25,7 @@ import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
+import exm.stc.ic.opt.OptUtil;
 import exm.stc.ic.opt.valuenumber.ValLoc;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
@@ -1095,7 +1096,7 @@ public class TurbineOp extends Instruction {
       assert(newArr.equals(arr));
       // Output switched from ref to value
       Var refOut = getOutput(0);
-      Var valOut = Var.createDerefTmp(refOut, Alloc.ALIAS);
+      Var valOut = OptUtil.createDerefTmp(refOut, Alloc.ALIAS);
       Instruction newI = arrayLookupImm(valOut, arr, getInput(1));
       return new MakeImmChange(valOut, refOut, newI);
     }
@@ -1138,7 +1139,7 @@ public class TurbineOp extends Instruction {
       Var newStruct = values.get(0).fetched.getVar();
       assert(Types.isRefTo(getInput(0).getVar(), newStruct));
       Var refOut = getOutput(0);
-      Var valOut = Var.createDerefTmp(refOut, Alloc.ALIAS);
+      Var valOut = OptUtil.createDerefTmp(refOut, Alloc.ALIAS);
       String field = getInput(1).getStringLit();
       Instruction newI = structLookup(valOut, newStruct, field);
       return new MakeImmChange(valOut, refOut, newI);
@@ -1248,7 +1249,7 @@ public class TurbineOp extends Instruction {
       // Output type of instruction changed from ref to direct
       // array handle
       assert(Types.isArrayRef(oldResult.type()));
-      Var newOut = Var.createDerefTmp(oldResult, Alloc.ALIAS);
+      Var newOut = OptUtil.createDerefTmp(oldResult, Alloc.ALIAS);
       return new MakeImmChange(newOut, oldResult,
           arrayCreateNestedImm(newOut, oldArray, ix));
     }
@@ -1265,7 +1266,7 @@ public class TurbineOp extends Instruction {
       if (newArr != null && newIx != null) {
         Var oldOut = getOutput(0);
         assert(Types.isArrayRef(oldOut.type()));
-        Var newOut = Var.createDerefTmp(arrResult, Alloc.ALIAS);
+        Var newOut = OptUtil.createDerefTmp(arrResult, Alloc.ALIAS);
         return new MakeImmChange(newOut, oldOut,
             arrayCreateNestedImm(newOut, newArr, newIx));
       } else if (newArr != null && newIx == null) {
@@ -1284,7 +1285,7 @@ public class TurbineOp extends Instruction {
       Var arrResult = getOutput(0);
       assert(Types.isArray(newArr));
       assert(Types.isArrayRef(arrResult.type()));
-      Var newOut3 = Var.createDerefTmp(arrResult, Alloc.ALIAS);
+      Var newOut3 = OptUtil.createDerefTmp(arrResult, Alloc.ALIAS);
       assert(Types.isArrayKeyVal(newArr, ix));
       return new MakeImmChange(newOut3, arrResult,
           arrayCreateNestedImm(newOut3, newArr, getInput(0)));

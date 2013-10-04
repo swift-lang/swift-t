@@ -26,6 +26,7 @@ import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.opt.AliasTracker.AliasKey;
@@ -783,8 +784,9 @@ public class RefcountPass implements OptimizerPass {
       // Fetch field
       String fieldVarName = block.uniqueVarName(
                               Var.structFieldName(arg, field.getName()));
-      Var fieldVar = block.declareVariable(field.getType(), fieldVarName,
-                             Alloc.ALIAS, DefType.LOCAL_COMPILER, null);
+      Var fieldVar = block.declareUnmapped(field.getType(), fieldVarName,
+               Alloc.ALIAS, DefType.LOCAL_COMPILER,
+               VarProvenance.structField(arg, field.getName()));
       Instruction inst = TurbineOp.structLookup(fieldVar, arg, field.getName());
       if (logger.isTraceEnabled()) {
         logger.trace("Added struct loop for arg " + arg + "." + field.getName()

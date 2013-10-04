@@ -31,6 +31,8 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.ic.WrapUtil;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
@@ -127,7 +129,7 @@ public class OptUtil {
         
         refVar = new Var(oldOut.type(),
             oldOut.name(), Alloc.TEMP,
-            oldOut.defType(), oldOut.mapping());
+            oldOut.defType(), oldOut.provenance(), oldOut.mapping());
         
         // Replace variable in block and in buffered instructions
         replaceVarDeclaration(srcBlock, oldOut, refVar);
@@ -290,6 +292,20 @@ public class OptUtil {
     return WrapUtil.fetchValueOf(block, instBuffer, var,
                              OptUtil.optVPrefix(block, var));
   }
+  
+
+  
+  
+  /**
+   * Create dereferenced variable given a reference
+   */
+  public static Var createDerefTmp(Var ref, Alloc storage) {
+    assert(Types.isRef(ref.type()));
+    Var res = new Var(ref.type().memberType(),
+        Var.DEREF_COMPILER_VAR_PREFIX + ref.name(),
+        storage, DefType.LOCAL_COMPILER, 
+        VarProvenance.valueOf(ref));
+    assert(Types.isAssignableRefTo(ref.type(), res.type()));
+    return res;
+  }
 }
-
-

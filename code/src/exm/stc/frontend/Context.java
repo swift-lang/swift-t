@@ -40,6 +40,8 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.SourceLoc;
+import exm.stc.common.lang.Var.VarProvenance;
 
 /**
  * Abstract interface used to track and access contextual information about the
@@ -140,7 +142,7 @@ public abstract class Context {
    * @throws UserException
    */
   public Var declareVariable(Type type, String name, Alloc scope,
-      DefType defType, Var mapping)
+      DefType defType, VarProvenance provenance, Var mapping)
               throws DoubleDefineException {
     if (logger.isTraceEnabled()) {
       logger.trace("context: declareVariable: " +
@@ -148,12 +150,12 @@ public abstract class Context {
                  + "<" + defType.toString() + ">");
     }
 
-    Var variable = new Var(type, name, scope, defType, mapping);
+    Var variable = new Var(type, name, scope, defType, provenance, mapping);
     declareVariable(variable);
     return variable;
   }
 
-  protected Var declareVariable(Var variable)
+  public Var declareVariable(Var variable)
           throws DoubleDefineException {
     String name = variable.name();
     checkNotDefined(name);
@@ -188,7 +190,7 @@ public abstract class Context {
    * @return
    * @throws UserException
    */
-  public abstract Var createAliasVariable(Type type)
+  public abstract Var createTmpAliasVar(Type type)
   throws UserException;
 
   /**
@@ -318,6 +320,17 @@ public abstract class Context {
     return buildLocationString(getInputFile(), getLine(), getColumn(), true);
   }
 
+  public SourceLoc getSourceLoc() {
+    String function;
+    FunctionContext fc = getFunctionContext();
+    if (fc == null) {
+      function = null;
+    } else {
+      function = fc.getFunctionName();
+    }
+    return new SourceLoc(getInputFile(), function, getLine(), getColumn());
+  }
+  
   /**
    * Build a human-readable location string
    * @param inputFile
@@ -391,14 +404,8 @@ public abstract class Context {
     return build.toString();
   }
 
-  abstract protected Var createStructFieldTmp(Var struct,
-      Type fieldType, String fieldPath, Alloc storage);
-
-  public Var createStructFieldTmp(Var struct,
-      Type fieldType, List<String> fieldPath, Alloc storage) {
-    String pathStr = buildPathStr(fieldPath);
-    return createStructFieldTmp(struct, fieldType, pathStr, storage);
-  }
+  abstract public Var createStructFieldTmp(Var struct,
+      Type fieldType, List<String> fieldPath, Alloc storage);
   
   /** Get info about the enclosing function */
   abstract public FunctionContext getFunctionContext();
@@ -406,12 +413,12 @@ public abstract class Context {
   /**
    * 
    * @param type
-   * @param varName name of future this is the value of
+   * @param varName future this is the value of
    * @return
    * @throws UserException
    */
-  abstract public Var createLocalValueVariable(Type type,
-      String varName) throws UserException;
+  abstract public Var createLocalValueVariable(Type type, Var var)
+                                               throws UserException;
 
   public Var createLocalValueVariable(Type type) 
         throws UserException {
@@ -421,10 +428,10 @@ public abstract class Context {
   /**
    * Create filename alias variable (a string future) for a file
    * variable with provided name
-   * @param name name of file variable
+   * @param fileVar file variable
    * @return
    */
-  abstract public Var createFilenameAliasVariable(String name);
+  abstract public Var createFilenameAliasVariable(Var fileVar);
   
   public static enum FnProp {
     APP, COMPOSITE,

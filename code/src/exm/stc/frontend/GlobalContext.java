@@ -34,6 +34,7 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.util.Pair;
 
 /**
@@ -75,8 +76,8 @@ public class GlobalContext extends Context {
   public void defineFunction(String name, FunctionType type) 
       throws UserException {
     checkNotDefined(name);
-    declareVariable(type, name, Alloc.GLOBAL_CONST,
-                    DefType.GLOBAL_CONST, null);
+    declareVariable(type, name, Alloc.GLOBAL_CONST, DefType.GLOBAL_CONST,
+                    VarProvenance.userVar(getSourceLoc()), null);
   }
   
   @Override
@@ -116,13 +117,14 @@ public class GlobalContext extends Context {
    * @throws UserException 
    */
   @Override
-  public Var declareVariable(Type type, String name,
-                       Alloc scope, DefType defType, Var mapping)
+  public Var declareVariable(Type type, String name, Alloc scope,
+          DefType defType, VarProvenance provenance, Var mapping)
                            throws DoubleDefineException {
     // Sanity checks for global scope
     assert(defType == DefType.GLOBAL_CONST);
     assert(scope == Alloc.GLOBAL_CONST);
-    return super.declareVariable(type, name, scope, defType, mapping);
+    return super.declareVariable(type, name, scope, defType, provenance,
+                                 mapping);
   }
 
   @Override
@@ -131,18 +133,18 @@ public class GlobalContext extends Context {
   }
 
   @Override
-  public Var createAliasVariable(Type type) throws UserException {
+  public Var createTmpAliasVar(Type type) throws UserException {
     throw new UnsupportedOperationException("not yet implemented");
   }
 
   @Override
-  public Var createLocalValueVariable(Type type, String varName)
+  public Var createLocalValueVariable(Type type, Var var)
       throws UserException {
     throw new UnsupportedOperationException("not yet implemented");
   }
 
   @Override
-  public Var createFilenameAliasVariable(String name) {
+  public Var createFilenameAliasVariable(Var fileVar) {
     throw new UnsupportedOperationException("not yet implemented");
   }
 
@@ -167,8 +169,8 @@ public class GlobalContext extends Context {
   }
   
   @Override
-  protected Var createStructFieldTmp(Var struct, Type fieldType,
-      String fieldPath, Alloc storage) {
+  public Var createStructFieldTmp(Var struct, Type fieldType,
+      List<String> fieldPath, Alloc storage) {
     throw new UnsupportedOperationException("not yet implemented");
   }
 

@@ -37,6 +37,7 @@ import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.util.Pair;
 import exm.stc.frontend.VariableUsageInfo.Violation;
 import exm.stc.frontend.VariableUsageInfo.ViolationType;
@@ -98,14 +99,14 @@ class VariableUsageAnalyzer {
       argVui.declare(context, i.name(), i.type(), false);
       argVui.assign(context, i.name(), AssignOp.ASSIGN);
       fnContext.declareVariable(i.type(), i.name(), i.storage(), 
-            i.defType(), i.mapping());
+            i.defType(), VarProvenance.unknown(), i.mapping());
     }
     for (Var o: oList) {
       argVui.declare(context, o.name(), o.type(), false);
       // We should assume that return variables will be read
       argVui.read(context, o.name());
       fnContext.declareVariable(o.type(), o.name(), o.storage(), 
-          o.defType(), o.mapping());
+          o.defType(), VarProvenance.unknown(), o.mapping());
     }
 
     // obtain info about variable usage in function by walking tree
@@ -302,8 +303,8 @@ class VariableUsageAnalyzer {
       // Don't retain mapping information in this pass since it might be
       // mapped to a temporary var
       vu.declare(context, var.getName(), var.getType(), var.getMappingExpr() != null);
-      context.declareVariable(var.getType(), var.getName(), 
-              Alloc.STACK, DefType.LOCAL_USER, null);
+      context.declareVariable(var.getType(), var.getName(), Alloc.STACK,
+          DefType.LOCAL_USER, VarProvenance.unknown(), null);
       SwiftAST assignExpr = vd.getVarExpr(i);
       if (assignExpr != null) {
         LogHelper.debug(context, "Variable " + var.getName() + 
@@ -340,7 +341,7 @@ class VariableUsageAnalyzer {
           assert(lVal != null);
           vu.declare(context, lVal.var.name(), lVal.var.type(), false);
           context.declareVariable(lVal.var.type(), lVal.var.name(), 
-                  Alloc.STACK, DefType.LOCAL_USER, null);
+            Alloc.STACK, DefType.LOCAL_USER, VarProvenance.unknown(), null);
         }
         
         singleAssignment(context, vu, lVal, assignments.op);

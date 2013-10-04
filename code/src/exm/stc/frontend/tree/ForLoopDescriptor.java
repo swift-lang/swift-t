@@ -37,6 +37,7 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LocalContext;
 import exm.stc.frontend.LogHelper;
@@ -267,9 +268,9 @@ public class ForLoopDescriptor {
         SwiftAST expr = decl.getVarExpr(0);
         assert(loopVarDesc.getMappingExpr() == null);
         assert(expr != null);  // shouldn't be mapped, enforced by syntax
-        Var loopVar = new Var(loopVarDesc.getType(),
-                loopVarDesc.getName(), Alloc.STACK,
-                DefType.LOCAL_USER, null);
+        Var loopVar = new Var(loopVarDesc.getType(), loopVarDesc.getName(),
+                Alloc.STACK, DefType.LOCAL_USER,
+                VarProvenance.userVar(context.getSourceLoc()));
         forLoop.addLoopVar(loopVar, false, expr);
       } else if (initType == ExMParser.FOR_LOOP_ASSIGN) {
         // Not declaring new variable, using variable from outside loop
@@ -339,9 +340,7 @@ public class ForLoopDescriptor {
     Context bodyContext = new LocalContext(context);
     for (LoopVar lv: this.getLoopVars()) {
       if (!lv.declaredOutsideLoop) {
-        Var v = lv.var;
-        bodyContext.declareVariable(v.type(), v.name(), v.storage(), 
-                                              v.defType(), v.mapping());
+        bodyContext.declareVariable(lv.var);
       }
     }
     return bodyContext;

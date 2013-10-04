@@ -53,6 +53,7 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
@@ -325,21 +326,21 @@ public class ICTree {
     private final HashMap<Arg, Var> globalConstsInv =  new HashMap<Arg, Var>();
     private final HashSet<String> usedNames = new HashSet<String>(); 
 
-    public Var add(String name, Arg val) {
-      Var var = new Var(val.futureType(), name, Alloc.GLOBAL_CONST,
-          DefType.GLOBAL_CONST);
+    public void add(Var var, Arg val) {
+      assert(var.storage() == Alloc.GLOBAL_CONST);
+      assert(var.defType() == DefType.GLOBAL_CONST);
+      assert(var.type().getImplType().equals(val.futureType().getImplType()));
       
       Arg prevVal = globalConsts.put(var, val);
       assert(prevVal == null) :
-          new STCRuntimeError("Overwriting global constant " + name);
+          new STCRuntimeError("Overwriting global constant " + var.name());
     
       Var prev = globalConstsInv.put(val, var);
       // It's ok to have duplicate constants
       Logging.getSTCLogger().debug("Duplicate global const for value " + val
                                    + " " + prev);
       
-      usedNames.add(name);
-      return var;
+      usedNames.add(var.name());
     }
     
     /** 
@@ -394,7 +395,10 @@ public class ICTree {
         seq++;
         name = origname + "-" + seq;
       }
-      return add(name, val);
+      Var var = new Var(val.futureType(), name, Alloc.GLOBAL_CONST,
+                        DefType.GLOBAL_CONST, VarProvenance.optimizerTmp());  
+      add(var, val);
+      return var;
     }
     
     public void remove(Var unused) {
@@ -1362,8 +1366,7 @@ public class ICTree {
               // after the variables containing the mapping string. Remove
               // var declaration here and put it at end of list
               it.remove();
-              var = new Var(var.type(), var.name(), var.storage(),
-                            var.defType(), newMapping.getVar());
+              var = var.replaceMapping(newMapping.getVar());
               
               changedMappedVars.add(Pair.create(original, var));
             }
@@ -1479,10 +1482,15 @@ public class ICTree {
       }
     }
 
-    public Var declareVariable(Type t, String name,
-        Alloc storage, DefType defType, Var mapping) {
+    public Var declareUnmapped(Type t, String name, Alloc storage,
+        DefType defType, VarProvenance provenance) {
+      return declareMapped(t, name, storage, defType, provenance, null);
+    }
+    
+    public Var declareMapped(Type t, String name, Alloc storage,
+          DefType defType, VarProvenance provenance, Var mapping) {
       assert(mapping == null || Types.isString(mapping.type()));
-      Var v = new Var(t, name, storage, defType, mapping);
+      Var v = new Var(t, name, storage, defType, provenance, mapping);
       addVariable(v);
       return v;
     }

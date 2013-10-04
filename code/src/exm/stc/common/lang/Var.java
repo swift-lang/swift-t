@@ -43,8 +43,8 @@ public class Var implements Comparable<Var>, Typed {
   private final String name;
   private final Alloc storage;
   private final DefType defType;
-  private final Var mapping;
   private final VarProvenance provenance;
+  private final Var mapping;
   private final int hashCode; // Cache hashcode
 
   public static final String TMP_VAR_PREFIX = "__t";
@@ -114,21 +114,15 @@ public class Var implements Comparable<Var>, Typed {
     }
   }
 
-  public Var(Type type, String name,
-                  Alloc storage, DefType defType)
+  public Var(Type type, String name, Alloc storage, DefType defType,
+             VarProvenance provenance)
   {
-    this.type = type;
-    this.name = name;
-    this.storage = storage;
-    this.defType = defType;
-    this.mapping = null;
-    this.hashCode = calcHashCode();
-    // TODO: take provenance from caller
-    this.provenance = VarProvenance.unknown();
+    this(type, name, storage, defType, provenance, null);
   }
   
-  public Var(Type type, String name,
-      Alloc storage, DefType defType, Var mapping) {
+  public Var(Type type, String name, Alloc storage, DefType defType,
+             VarProvenance provenance, Var mapping) {
+    assert(provenance != null);
     this.type = type;
     this.name = name;
     this.storage = storage;
@@ -136,8 +130,7 @@ public class Var implements Comparable<Var>, Typed {
     assert(mapping == null || Types.isString(mapping.type()));
     this.mapping = mapping;
     this.hashCode = calcHashCode();
-    // TODO: take provenance from caller
-    this.provenance = VarProvenance.unknown();
+    this.provenance = provenance;
   }
 
   /**
@@ -146,12 +139,22 @@ public class Var implements Comparable<Var>, Typed {
    * @param newType
    * @return
    */
-  public static Var substituteType(Var var, Type newType) {
-    if (newType.equals(var.type)) {
-      return var;
+  public Var substituteType(Type newType) {
+    if (newType.equals(this.type)) {
+      return this;
     } else {
-      return new Var(newType, var.name, var.storage, var.defType, var.mapping);
+      return new Var(newType, name, storage, defType, 
+                     provenance, mapping);
     }
+  }
+  
+  public Var replaceMapping(Var newMapping) {
+    return new Var(type, name, storage, defType, provenance, newMapping);
+  }
+
+  public Var makeRenamed(String newName) {
+    return new Var(type(), newName, storage(), defType(),
+                    VarProvenance.renamed(this), mapping());
   }
 
   @Override
@@ -378,20 +381,6 @@ public class Var implements Comparable<Var>, Typed {
     return res;
   }
   
-  
-  /**
-   * Create dereferenced variable given a reference
-   */
-  public static Var createDerefTmp(Var ref, Alloc storage) {
-    assert(Types.isRef(ref.type()));
-    Var res = new Var(ref.type().memberType(),
-        DEREF_COMPILER_VAR_PREFIX + ref.name(),
-        storage, DefType.LOCAL_COMPILER, 
-        null);
-    assert(Types.isAssignableRefTo(ref.type(), res.type()));
-    return res;
-  }
-  
   public Arg asArg() {
     return Arg.createVar(this);
   }
@@ -438,7 +427,7 @@ public class Var implements Comparable<Var>, Typed {
   /**
    * Track where variable was derived from in source, or from other
    * variables
-   * TODO: fill in more alternatives and info
+   * TODO: can we capture when the optimizer replaces one var with another?
    */
   public static class VarProvenance {
     /**
@@ -456,8 +445,10 @@ public class Var implements Comparable<Var>, Typed {
      */
     public final List<Var> predecessors;
     
+    public final List<String> additional;
+    
     private VarProvenance(VarProvType type, SourceLoc sourceLoc,
-                          List<Var> predecessors) {
+                      List<Var> predecessors, List<String> additional) {
       this.type = type;
       this.sourceLoc = sourceLoc;
       if (predecessors == null) {
@@ -466,14 +457,96 @@ public class Var implements Comparable<Var>, Typed {
         // Make a copy
         this.predecessors = new ArrayList<Var>(predecessors);
       }
+      this.additional = additional;
     }
     
     public static VarProvenance unknown() {
-      return new VarProvenance(VarProvType.UNKNOWN, null, null);
+      return new VarProvenance(VarProvType.UNKNOWN, null, null, null);
     }
     
     public static VarProvenance userVar(SourceLoc loc) {
-      return new VarProvenance(VarProvType.USER_DECLARED, loc, null);
+      return new VarProvenance(VarProvType.USER_DECLARED, loc, null, null);
+    }
+
+    public static VarProvenance exprTmp(SourceLoc loc) {
+      return new VarProvenance(VarProvType.EXPR_TEMPORARY, loc, null, null);
+    }
+
+    public static VarProvenance structField(Var struct, String field) {
+      return structField(struct, Collections.singletonList(field), null);
+    }
+    
+    public static VarProvenance structField(Var struct, List<String> fieldPath,
+                                            SourceLoc sourceLoc) {
+      return new VarProvenance(VarProvType.STRUCT_MEMBER,  sourceLoc,
+                   struct.asList(), new ArrayList<String>(fieldPath));
+    }
+
+    
+    public static VarProvenance valueOf(Var var) {
+      return valueOf(var, null);
+    }
+    
+    public static VarProvenance valueOf(Var var, SourceLoc sourceLoc) {
+      return new VarProvenance(VarProvType.VALUE_OF, sourceLoc,
+                               var.asList(), null);
+    }
+    
+    public static VarProvenance filenameOf(Var var) {
+      return filenameOf(var, null);
+    }
+    
+    public static VarProvenance filenameOf(Var var, SourceLoc sourceLoc) {
+      return new VarProvenance(VarProvType.FILENAME_OF, sourceLoc,
+                               var.asList(), null);
+    }
+
+    public static VarProvenance renamed(Var var) {
+      Var original = var;
+      // Find original before renaming
+      while (original.provenance.type == VarProvType.RENAMED) {
+        original = original.provenance.predecessors.get(0);
+      }
+      
+      return new VarProvenance(VarProvType.RENAMED,
+              original.provenance.sourceLoc, original.asList(), null);
+    }
+
+    public static VarProvenance unified(List<Var> unifiedVars) {
+      return new VarProvenance(VarProvType.UNIFIED, null,
+                 new ArrayList<Var>(unifiedVars), null);
+    }
+
+    public static VarProvenance optimizerTmp() {
+      return new VarProvenance(VarProvType.OPT_TEMPORARY, null, null, null);
+    }
+
+    /**
+     * @return a string describing provenance suitable for logging
+     */
+    public String logFormat() {
+      // TODO: make more attractive
+      // TODO: will need to follow chain of provenance for useful output in
+      // some cases
+      String res = "";
+
+      if (type != VarProvType.USER_DECLARED) {
+        res += type;
+        if (predecessors != null) {
+          res += " " + predecessors;
+        }
+        if (additional != null) {
+          res += " " + additional;
+        }
+      }
+      
+      if (sourceLoc != null) {
+        if (!res.equals("")) {
+          res += " "; 
+        }
+        res += sourceLoc.toString();
+      }
+      return res;
     }
     
   }
@@ -482,9 +555,13 @@ public class Var implements Comparable<Var>, Typed {
     UNKNOWN, // Don't know where it came from
     USER_DECLARED, // Explicitly declared
     EXPR_TEMPORARY, // Temporary from user expression
+    OPT_TEMPORARY, // Temporary inserted by optimizer
     VALUE_OF, // Value of an existing variable
+    // Renamed version of another variable (e.g. to make unique)
+    RENAMED,
     UNIFIED, // Unification of other variables
     FILENAME_OF, // Filename of existing variable
+    STRUCT_MEMBER, // Member of struct
     ;
   }
   
@@ -492,14 +569,26 @@ public class Var implements Comparable<Var>, Typed {
    * Location in a source file.
    */
   public static class SourceLoc {
-    private SourceLoc(String file, int line, int column) {
-      super();
+    public SourceLoc(String file, String func, int line, int column) {
       this.file = file;
+      this.func = func;
       this.line = line;
       this.column = column;
     }
     public final String file;
+    public final String func;
     public final int line;
     public final int column;
+    
+    @Override
+    public String toString() {
+      String res = "";
+      res += this.file + ":";
+      if (this.func != null) {
+        res += this.func + "():";
+      }
+      res += this.line + ":" + this.column;
+      return res;
+    }
   }
 }

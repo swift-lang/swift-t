@@ -27,6 +27,7 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.util.Counters;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
@@ -761,24 +762,25 @@ public class ForeachLoops {
       
       String vPrefix = Var.OPT_VALUE_VAR_PREFIX + loopName;
       String bigStepName = outerBlock.uniqueVarName(vPrefix + ":unrollincr"); 
+      VarProvenance prov = VarProvenance.optimizerTmp();
       Var bigIncr = new Var(Types.V_INT, bigStepName, Alloc.LOCAL,
-                            DefType.LOCAL_COMPILER, null);
+                  DefType.LOCAL_COMPILER, prov);
       Var diff = new Var(Types.V_INT, outerBlock.uniqueVarName(vPrefix + ":diff"),
-                        Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
+                        Alloc.LOCAL, DefType.LOCAL_COMPILER, prov);
       Var diff2 = new Var(Types.V_INT, outerBlock.uniqueVarName(vPrefix + ":diff2"),
-                        Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
+                        Alloc.LOCAL, DefType.LOCAL_COMPILER, prov);
       Var extra = new Var(Types.V_INT,
           outerBlock.uniqueVarName(vPrefix + ":extra"),
-          Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
+          Alloc.LOCAL, DefType.LOCAL_COMPILER, prov);
       Var remainder = new Var(Types.V_INT,
           outerBlock.uniqueVarName(vPrefix + ":rem"),
-          Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
+          Alloc.LOCAL, DefType.LOCAL_COMPILER, prov);
       Var remainderStart = new Var(Types.V_INT,
           outerBlock.uniqueVarName(vPrefix + ":remstart"),
-          Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
+          Alloc.LOCAL, DefType.LOCAL_COMPILER, prov);
       Var unrollEnd = new Var(Types.V_INT,
           outerBlock.uniqueVarName(vPrefix + ":unrollEnd"),
-          Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
+          Alloc.LOCAL, DefType.LOCAL_COMPILER, prov);
 
       outerBlock.addVariable(bigIncr);
       outerBlock.addVariable(diff);

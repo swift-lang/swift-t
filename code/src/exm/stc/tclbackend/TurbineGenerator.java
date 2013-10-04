@@ -335,10 +335,11 @@ public class TurbineGenerator implements CompilerBackend {
       assert(var.mapping() == null || Types.isMappable(t));
       if (var.storage() == Alloc.ALIAS) {
         assert(initReaders == null && initWriters == null);
-        pointStack.peek().add(new Comment("Alias " + var.name() + " with type " +
-                              t.toString() + " was defined"));
         continue;
       }
+      // For now, just add provenance info as a comment
+      pointStack.peek().add(new Comment("Var: " + t.typeName() + " " +
+                prefixVar(var.name()) + " " + var.provenance().logFormat()));
      
       // Check that init refcounts are valid
       assert(RefCounting.hasReadRefCount(var) ^ initReaders == null);
@@ -387,8 +388,6 @@ public class TurbineGenerator implements CompilerBackend {
         pointStack.peek().add(Turbine.allocateStruct(prefixVar(var)));
       } else if (Types.isPrimValue(t)) {
         assert(var.storage() == Alloc.LOCAL);
-        pointStack.peek().add(new Comment("Value " + var.name() + " with type " +
-                              var.type().toString() + " was defined"));
         // don't need to do anything
       } else {
         throw new STCRuntimeError("Code generation not supported for declaration " +

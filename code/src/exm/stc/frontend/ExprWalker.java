@@ -841,7 +841,7 @@ public class ExprWalker {
           waitContext = new LocalContext(context);
         }
         Var derefed;
-        derefed = waitContext.createAliasVariable(expType);
+        derefed = waitContext.createTmpAliasVar(expType);
         waitVars.add(input);
         derefVars.add(derefed);
         realIList.add(derefed);
@@ -1082,7 +1082,7 @@ public class ExprWalker {
       ixType = null;
       ix = null;
     }
-    Var member = copyContext.createAliasVariable(memType);
+    Var member = copyContext.createTmpAliasVar(memType);
  
     List<Var> waitVars = Arrays.asList(src);
     backend.startWaitStatement(

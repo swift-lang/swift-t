@@ -17,6 +17,7 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.opt.AliasTracker;
@@ -208,8 +209,8 @@ public class RCTracker {
         Type elemType = parentType.getFieldTypeByName(fieldName);
         String varName = OptUtil.optVPrefix(block, 
             Var.STRUCT_FIELD_VAR_PREFIX + curr.name() + "_" + fieldName); 
-        child = new Var(elemType, varName, Alloc.ALIAS,
-                        DefType.LOCAL_COMPILER);
+        child = new Var(elemType, varName, Alloc.ALIAS, DefType.LOCAL_COMPILER,
+                        VarProvenance.structField(curr, fieldName));
         createdTemporaries.add(child);
         
         // Must add to block to avoid duplicates later

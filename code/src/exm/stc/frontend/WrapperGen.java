@@ -203,23 +203,25 @@ public class WrapperGen {
     int nIn = concrete.getInputs().size();
     int nOut = concrete.getOutputs().size();
     
-    assert(nIn == wrapper.decl.getInVars().size());
-    assert(nOut == wrapper.decl.getOutVars().size());
+    List<Var> inVars = wrapper.decl.getInVars(context);
+    assert(nIn == inVars.size());
+    List<Var> outVars = wrapper.decl.getOutVars(context);
+    assert(nOut == outVars.size());
     
     List<Var> concreteIn = new ArrayList<Var>(nIn);
     List<Var> concreteOut = new ArrayList<Var>(nOut);
     
     for (int i = 0; i < nIn; i++) {
-      Var in = wrapper.decl.getInVars().get(i);
+      Var in = inVars.get(i);
       Type concreteT = concrete.getInputs().get(i);
-      concreteIn.add(Var.substituteType(in, concreteT));
+      concreteIn.add(in.substituteType(concreteT));
       updateTypeInfo(typeVarBindings, unionBindings, in.type(), concreteT);
     }
     
     for (int i = 0; i < nOut; i++) {
-      Var out = wrapper.decl.getOutVars().get(i);
+      Var out = outVars.get(i);
       Type concreteT = concrete.getOutputs().get(i);
-      concreteOut.add(Var.substituteType(out, concreteT));
+      concreteOut.add(out.substituteType(concreteT));
       updateTypeInfo(typeVarBindings, unionBindings, out.type(), concreteT);
     }
     

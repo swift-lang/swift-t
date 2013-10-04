@@ -65,6 +65,7 @@ import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.StringUtil;
 import exm.stc.common.util.TernaryLogic.Ternary;
@@ -797,7 +798,8 @@ public class ASTWalker {
     if (loop.getCountVarName() != null) {
       Var loopCountVar = varCreator.createVariable(bodyContext,
           Types.F_INT, loop.getCountVarName(), Alloc.STACK,
-          DefType.LOCAL_USER, null);
+          DefType.LOCAL_USER, VarProvenance.userVar(context.getSourceLoc()),
+          null);
       backend.assignInt(loopCountVar, Arg.createVar(counterVal));
     }
     block(bodyContext, loop.getBody());
@@ -878,7 +880,7 @@ public class ASTWalker {
     // If the user's code expects a loop count var, need to create it here
     if (loop.getCountVarName() != null) {
       Var loopCountVar = varCreator.createVariable(loop.getBodyContext(),
-                                                   loop.createCountVar());
+                                     loop.createCountVar(context));
       exprWalker.assign(loopCountVar, Arg.createVar(loop.getLoopCountVal()));
     }
     
@@ -918,6 +920,7 @@ public class ASTWalker {
             varCreator.createVariable(context, lv.var.type(),
                   Var.OUTER_VAR_PREFIX + lv.var.name(),
                   Alloc.ALIAS, DefType.LOCAL_COMPILER,
+                  VarProvenance.userVar(context.getSourceLoc()),
                   lv.var.mapping());
         // Copy turbine ID
         backend.makeAlias(parentAlias, lv.var);
@@ -943,7 +946,8 @@ public class ASTWalker {
     // Start the loop construct with some initial values
     Var condArg = 
         loopIterContext.declareVariable(condType, Var.LOOP_COND_PREFIX + 
-            loopNum, Alloc.TEMP, DefType.INARG, null);
+            loopNum, Alloc.TEMP, DefType.INARG,
+            VarProvenance.exprTmp(context.getSourceLoc()), null);
 
 
 
@@ -1028,9 +1032,9 @@ public class ASTWalker {
     Context iterContext = loop.createIterContext(context);
     
     // Start the loop construct with some initial values
-    Var condArg = 
-      iterContext.declareVariable(Types.F_BOOL, Var.LOOP_COND_PREFIX + 
-            loopNum, Alloc.TEMP, DefType.INARG, null);
+    Var condArg = iterContext.declareVariable(Types.F_BOOL,
+            Var.LOOP_COND_PREFIX + loopNum, Alloc.TEMP, DefType.INARG, 
+            VarProvenance.exprTmp(context.getSourceLoc()), null);
     
     List<Boolean> blockingVars = Arrays.asList(true, false);
     backend.startLoop(loopName, 
@@ -1185,7 +1189,8 @@ public class ASTWalker {
     }
 
     Var var = varCreator.createVariable(context, definedType, 
-        vDesc.getName(), Alloc.STACK, DefType.LOCAL_USER, mappedVar);
+        vDesc.getName(), Alloc.STACK, DefType.LOCAL_USER, 
+        VarProvenance.userVar(context.getSourceLoc()), mappedVar);
     return var;
   }
 
@@ -1553,8 +1558,8 @@ public class ASTWalker {
     FunctionDecl fdecl = FunctionDecl.fromAST(context, function, 
                   inputs, outputs, Collections.<String>emptySet());
     
-    List<Var> iList = fdecl.getInVars();
-    List<Var> oList = fdecl.getOutVars();
+    List<Var> iList = fdecl.getInVars(context);
+    List<Var> oList = fdecl.getOutVars(context);
     
     // Analyse variable usage inside function and annotate AST
     syncFilePos(context, tree);
@@ -1605,8 +1610,8 @@ public class ASTWalker {
     
     FunctionDecl decl = FunctionDecl.fromAST(context, function, inArgsT,
                         outArgsT,   Collections.<String>emptySet());
-    List<Var> outArgs = decl.getOutVars();
-    List<Var> inArgs = decl.getInVars();
+    List<Var> outArgs = decl.getOutVars(context);
+    List<Var> inArgs = decl.getInVars(context);
     
     /* Pass in e.g. location */
     List<Var> realInArgs = new ArrayList<Var>();
@@ -1615,7 +1620,7 @@ public class ASTWalker {
     // Need to pass location arg into task dispatch wait statement
     // Priority is passed implicitly
     Var loc = new Var(Types.V_INT, Var.DEREF_COMPILER_VAR_PREFIX + "location",
-        Alloc.LOCAL, DefType.INARG);
+        Alloc.LOCAL, DefType.INARG, VarProvenance.exprTmp(context.getSourceLoc()));
     realInArgs.add(loc);
     props.put(TaskPropKey.LOCATION, loc.asArg());
     
@@ -2147,7 +2152,8 @@ public class ASTWalker {
       throw new UserException(context, "Can't have mapped global constant");
     }
     Var v = context.declareVariable(vDesc.getType(), vDesc.getName(),
-                   Alloc.GLOBAL_CONST, DefType.GLOBAL_CONST, null);
+                   Alloc.GLOBAL_CONST, DefType.GLOBAL_CONST,
+                   VarProvenance.userVar(context.getSourceLoc()), null);
     
     
     SwiftAST val = vd.getVarExpr(0);
@@ -2168,7 +2174,7 @@ public class ASTWalker {
       if (bval == null) {
         throw new UserException(context, msg);
       }
-      backend.addGlobal(v.name(), Arg.createBoolLit(
+      backend.addGlobal(v, Arg.createBoolLit(
                                   Boolean.parseBoolean(bval)));
       break;
     case INT:
@@ -2176,7 +2182,7 @@ public class ASTWalker {
       if (ival == null) {
         throw new UserException(context, msg);
       }
-      backend.addGlobal(v.name(), Arg.createIntLit(ival));
+      backend.addGlobal(v, Arg.createIntLit(ival));
       break;
     case FLOAT:
       Double fval = Literals.extractFloatLit(context, val);
@@ -2189,14 +2195,14 @@ public class ASTWalker {
         }
       }
       assert(fval != null);
-      backend.addGlobal(v.name(), Arg.createFloatLit(fval));
+      backend.addGlobal(v, Arg.createFloatLit(fval));
       break;
     case STRING:
       String sval = Literals.extractStringLit(context, val);
       if (sval == null) {
         throw new UserException(context, msg);
       }
-      backend.addGlobal(v.name(), Arg.createStringLit(sval));
+      backend.addGlobal(v, Arg.createStringLit(sval));
       break;
     default:
       throw new STCRuntimeError("Unexpect value tree type in "

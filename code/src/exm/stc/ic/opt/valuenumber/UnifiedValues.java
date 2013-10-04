@@ -18,6 +18,7 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
 import exm.stc.ic.opt.OptUtil;
@@ -243,13 +244,14 @@ public class UnifiedValues {
     // declare new temporary value in outer block
     Var unifiedLoc;
     if (isValue) {
-      unifiedLoc = parent.declareVariable(type, 
+      unifiedLoc = parent.declareUnmapped(type, 
           OptUtil.optVPrefix(parent, "unified"), Alloc.LOCAL,
-          DefType.LOCAL_COMPILER, null);
+          DefType.LOCAL_COMPILER,
+          VarProvenance.unified(Arg.toVarList(locs)));
     } else {
-      unifiedLoc = parent.declareVariable(type, 
+      unifiedLoc = parent.declareUnmapped(type, 
           OptUtil.optVPrefix(parent, "unified"), Alloc.ALIAS,
-          DefType.LOCAL_COMPILER, null);
+          DefType.LOCAL_COMPILER, VarProvenance.unified(Arg.toVarList(locs)));
     }
     
     

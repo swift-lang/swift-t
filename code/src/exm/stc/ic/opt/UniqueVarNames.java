@@ -153,8 +153,7 @@ public class UniqueVarNames implements OptimizerPass {
           Map<Var, Arg> renames, Var var) {
     if (existing.usedNames.contains(var.name())) {
       String newName = chooseNewName(existing.usedNames, var);
-      Var newVar = new Var(var.type(), newName,
-                      var.storage(), var.defType(), var.mapping());
+      Var newVar = var.makeRenamed(newName);
       fn.addUsedVarName(newVar);
       
       Arg oldVal = renames.put(var, Arg.createVar(newVar));

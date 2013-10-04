@@ -17,6 +17,7 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.WrapUtil;
 import exm.stc.ic.tree.ICContinuations.WaitVar;
@@ -113,7 +114,8 @@ public class FunctionSignature implements OptimizerPass {
     for (Pair<Var, Var> fv: futValPairs) {
       // declare local stack var and replace argument in 
       Var tmpfuture = new Var(fv.val1.type(), fv.val1.name(),
-                       Alloc.STACK, DefType.LOCAL_USER);
+                       Alloc.STACK, DefType.LOCAL_USER,
+                       VarProvenance.renamed(fv.val1));
       newBlock.renameVars(Collections.singletonMap(fv.val1, tmpfuture.asArg()),
                           RenameMode.REPLACE_VAR, true);
       newBlock.addVariable(tmpfuture);
@@ -179,7 +181,7 @@ public class FunctionSignature implements OptimizerPass {
       // a value var that will have unique name in new context
       String valVarName = OptUtil.optVPrefix(fn.mainBlock(), toSwitch);
       Var valVar = WrapUtil.createValueVar(valVarName,
-                              Types.derefResultType(toSwitch.type()));
+          Types.derefResultType(toSwitch.type()), toSwitch);
       
       futValPairs.add(Pair.create(toSwitch, valVar));
     }

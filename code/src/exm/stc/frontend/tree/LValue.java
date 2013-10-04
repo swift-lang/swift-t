@@ -36,6 +36,7 @@ import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LogHelper;
 import exm.stc.frontend.TypeChecker;
@@ -298,7 +299,8 @@ public class LValue {
       declType = new ArrayType(keyType, declType);
     }
     
-    Var newVar = new Var(declType, this.varName, Alloc.STACK, DefType.LOCAL_USER, null);
+    Var newVar = new Var(declType, this.varName, Alloc.STACK, DefType.LOCAL_USER,
+                         VarProvenance.userVar(context.getSourceLoc()));
     return new LValue(this.tree, newVar, this.indices);
   }
 }

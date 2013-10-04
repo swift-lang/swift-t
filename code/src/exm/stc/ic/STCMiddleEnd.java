@@ -46,10 +46,10 @@ import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.StructType;
-import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
@@ -348,12 +348,10 @@ public class STCMiddleEnd {
     assert(b.getType() == BlockType.LOOP_BODY);
   }
   
-  public void declare(Type type, String name, Alloc storage,
-      DefType defType, Var mapping)
-      throws UndefinedTypeException {
-    assert(mapping == null || Types.isMappable(type));
-    assert(mapping == null || Types.isString(mapping.type()));
-    currBlock().declareVariable(type, name, storage, defType, mapping);
+  public void declare(Var var) throws UndefinedTypeException {
+    assert(var.mapping() == null || Types.isMappable(var));
+    assert(var.mapping() == null || Types.isString(var.mapping()));
+    currBlock().addVariable(var);
   }
 
 
@@ -778,9 +776,9 @@ public class STCMiddleEnd {
       copyFile(block, target, src, false);
     } else {
       assert(targetMapped == Ternary.MAYBE);
-      Var targetMappedV = block.declareVariable(Types.V_BOOL,
+      Var targetMappedV = block.declareUnmapped(Types.V_BOOL,
           block.uniqueVarName(Var.OPT_VAR_PREFIX + "mapped_" + target.name()),
-          Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
+          Alloc.LOCAL, DefType.LOCAL_COMPILER, VarProvenance.optimizerTmp());
       block.addInstruction(TurbineOp.isMapped(targetMappedV, target));
       IfStatement ifMapped = new IfStatement(targetMappedV.asArg());
       block.addStatement(ifMapped);
@@ -799,9 +797,9 @@ public class STCMiddleEnd {
     List<WaitVar> waitVars;
     if (targetMapped) {
       // Wait for target filename and src file
-      targetFilename = block.declareVariable(Types.F_STRING,
+      targetFilename = block.declareUnmapped(Types.F_STRING,
           OptUtil.optFilenamePrefix(block, target),
-          Alloc.ALIAS, DefType.LOCAL_COMPILER, null);
+          Alloc.ALIAS, DefType.LOCAL_COMPILER, VarProvenance.filenameOf(target));
       
       block.addInstruction(TurbineOp.getFileName(targetFilename, target));
       
@@ -821,18 +819,18 @@ public class STCMiddleEnd {
     Block waitBlock = wait.getBlock();
 
     // Retrieve src file info
-    Var srcVal = waitBlock.declareVariable(Types.derefResultType(src),
+    Var srcVal = waitBlock.declareUnmapped(Types.derefResultType(src),
         OptUtil.optVPrefix(waitBlock, src), Alloc.LOCAL,
-        DefType.LOCAL_COMPILER, null);
+        DefType.LOCAL_COMPILER, VarProvenance.valueOf(src));
     waitBlock.addInstruction(TurbineOp.retrieveFile(srcVal, src));
     
     if (targetMapped) {
-      Var targetFilenameVal = waitBlock.declareVariable(Types.V_STRING,
+      Var targetFilenameVal = waitBlock.declareUnmapped(Types.V_STRING,
           OptUtil.optVPrefix(waitBlock, targetFilename), Alloc.LOCAL,
-          DefType.LOCAL_COMPILER, null);
-      Var targetVal = waitBlock.declareVariable(Types.derefResultType(target),
+          DefType.LOCAL_COMPILER, VarProvenance.valueOf(targetFilename));
+      Var targetVal = waitBlock.declareUnmapped(Types.derefResultType(target),
           OptUtil.optVPrefix(waitBlock, target), Alloc.LOCAL,
-          DefType.LOCAL_COMPILER, null);
+          DefType.LOCAL_COMPILER, VarProvenance.valueOf(target));
       
       // Setup local targetfile
       waitBlock.addInstruction(TurbineOp.retrieveString(
@@ -844,9 +842,9 @@ public class STCMiddleEnd {
       waitBlock.addInstruction(TurbineOp.copyFileContents(targetVal, srcVal));
       waitBlock.addInstruction(TurbineOp.assignFile(target, targetVal.asArg()));
     } else {
-      Var srcFilenameVal = waitBlock.declareVariable(Types.V_STRING,
+      Var srcFilenameVal = waitBlock.declareUnmapped(Types.V_STRING,
           OptUtil.optFilenamePrefix(waitBlock, srcVal), Alloc.LOCAL,
-          DefType.LOCAL_COMPILER, null);
+          DefType.LOCAL_COMPILER, VarProvenance.filenameOf(srcVal));
       // Set filename of target to name of source
       waitBlock.addInstruction(TurbineOp.getLocalFileName(srcFilenameVal, srcVal));
       waitBlock.addInstruction(TurbineOp.setFilenameVal(target,
@@ -883,8 +881,9 @@ public class STCMiddleEnd {
         assert(Types.isFile(file)) : "Wrong input type for filename";;
         // Implement as alias lookup, then copy
         String filenameAliasN = OptUtil.optFilenamePrefix(block, file);
-        Var filenameAlias = block.declareVariable(Types.F_STRING,
-            filenameAliasN, Alloc.ALIAS, DefType.LOCAL_COMPILER, null);
+        Var filenameAlias = block.declareUnmapped(Types.F_STRING,
+            filenameAliasN, Alloc.ALIAS, DefType.LOCAL_COMPILER,
+            VarProvenance.filenameOf(file));
         block.addInstruction(TurbineOp.getFileName(filenameAlias, file));
         block.addInstruction(Builtin.createAsync(BuiltinOpcode.COPY_STRING,
                                   filename, filenameAlias.asArg().asList()));
@@ -940,9 +939,9 @@ public class STCMiddleEnd {
         TurbineOp.structInitField(structVar, fieldName, fieldContents));
   }
 
-  public void addGlobal(String name, Arg val) {
+  public void addGlobal(Var var, Arg val) {
     assert(val.isConstant());
-    program.constants().add(name, val);
+    program.constants().add(var, val);
   }
 
   public void initUpdateable(Var updateable, Arg val) {
@@ -1026,7 +1025,7 @@ public class STCMiddleEnd {
     if (isParallel) {
       // declare compiler arg for parallelism
       Var par = new Var(Types.V_INT, Var.DEREF_COMPILER_VAR_PREFIX + "par",
-                        Alloc.LOCAL, DefType.INARG);
+                        Alloc.LOCAL, DefType.INARG, VarProvenance.optimizerTmp());
       realInArgs.add(par);
       props.put(TaskPropKey.PARALLELISM, par.asArg());
 
@@ -1039,7 +1038,7 @@ public class STCMiddleEnd {
     if (isTargetable) {
       // declare compiler arg for target
       Var location = new Var(Types.V_INT, Var.DEREF_COMPILER_VAR_PREFIX + "location",
-          Alloc.LOCAL, DefType.INARG);
+          Alloc.LOCAL, DefType.INARG, VarProvenance.optimizerTmp());
       realInArgs.add(location);
       props.put(TaskPropKey.LOCATION, location.asArg());
     }

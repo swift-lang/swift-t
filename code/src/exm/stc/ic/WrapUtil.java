@@ -27,8 +27,9 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.opt.OptUtil;
@@ -63,7 +64,7 @@ public class WrapUtil {
     Type value_t = Types.derefResultType(var);
     
     if (Types.isPrimUpdateable(var)) {
-      Var value_v = createValueVar(valName, value_t);
+      Var value_v = createValueVar(valName, value_t, var);
       
       block.addVariable(value_v);
       instBuffer.add(TurbineOp.latestValue(value_v, var));
@@ -72,7 +73,7 @@ public class WrapUtil {
       // The result will be a value
       // Use the OPT_VALUE_VAR_PREFIX to make sure we don't clash with
       //  something inserted by the frontend (this caused problems before)
-      Var value_v = createValueVar(valName, value_t);
+      Var value_v = createValueVar(valName, value_t, var);
       block.addVariable(value_v);
       instBuffer.add(ICInstructions.retrieveValueOf(value_v, var));
       
@@ -83,9 +84,9 @@ public class WrapUtil {
       return value_v;
     } else if (Types.isRef(var)) {
       // The result will be an alias
-      Var deref = new Var(value_t,
-          valName,
-          Alloc.ALIAS, DefType.LOCAL_COMPILER, null);
+      Var deref = new Var(value_t, valName,
+          Alloc.ALIAS, DefType.LOCAL_COMPILER,
+          VarProvenance.valueOf(var));
       block.addVariable(deref);
       instBuffer.add(TurbineOp.retrieveRef(deref, var));
       return deref;
@@ -94,9 +95,9 @@ public class WrapUtil {
     }
   }
 
-  public static Var createValueVar(String name, Type type) {
-    Var value_v = new Var(type, name,
-        Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
+  public static Var createValueVar(String name, Type type, Var orig) {
+    Var value_v = new Var(type, name, Alloc.LOCAL, DefType.LOCAL_COMPILER,
+                          VarProvenance.valueOf(orig));
     return value_v;
   }
   
@@ -136,8 +137,9 @@ public class WrapUtil {
         // Must wait on filename of output var
         String name = block.uniqueVarName(Var.WRAP_FILENAME_PREFIX +
                                           out.name());
-        Var filenameTmp = block.declareVariable(Types.F_STRING,
-            name,Alloc.ALIAS, DefType.LOCAL_COMPILER, null);
+        Var filenameTmp = block.declareUnmapped(Types.F_STRING,
+            name, Alloc.ALIAS, DefType.LOCAL_COMPILER,
+            VarProvenance.filenameOf(out));
         initOrGetFileName(block, instInsertIt, filenameTmp, out);
         waitVars.add(new WaitVar(filenameTmp, false));
         filenameVars.put(out, filenameTmp);
@@ -179,9 +181,9 @@ public class WrapUtil {
       
       // Case when not mapped: init with tmp
       Block elseB = ifMapped.elseBlock();
-      Var filenameVal = elseB.declareVariable(Types.V_STRING,
+      Var filenameVal = elseB.declareUnmapped(Types.V_STRING,
           OptUtil.optFilenamePrefix(elseB, file), Alloc.LOCAL,
-          DefType.LOCAL_COMPILER, null);
+          DefType.LOCAL_COMPILER, VarProvenance.filenameOf(file));
       initTemporaryFileName(elseB.statementEndIterator(), file, filenameVal);
       // Get the filename again but can assume mapping initialized
       elseB.addStatement(getFileName);
@@ -192,9 +194,9 @@ public class WrapUtil {
 
   public static Var getIsMapped(Block block,
       ListIterator<? super Instruction> insertPos, Var file) {
-    Var isMapped = block.declareVariable(Types.V_BOOL,
+    Var isMapped = block.declareUnmapped(Types.V_BOOL,
           OptUtil.optVPrefix(block, "mapped_" + file.name()), Alloc.LOCAL,
-          DefType.LOCAL_COMPILER, null);
+          DefType.LOCAL_COMPILER, VarProvenance.optimizerTmp());
     
     insertPos.add(TurbineOp.isMapped(isMapped, file));
     return isMapped;
@@ -286,8 +288,9 @@ public class WrapUtil {
    */
   public static Var declareLocalOutputVar(Block block, Var var,
           String valName) {
-    return block.declareVariable(Types.derefResultType(var.type()),
-        valName, Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
+    return block.declareUnmapped(Types.derefResultType(var.type()),
+        valName, Alloc.LOCAL, DefType.LOCAL_COMPILER,
+        VarProvenance.valueOf(var));
   }
   
 
@@ -406,8 +409,8 @@ public class WrapUtil {
     assert(Types.isFile(fileFut));
     assert(Types.isFileVal(fileVal));
     String filenameVName = OptUtil.optFilenamePrefix(block, fileFut);  
-    Var filenameV = block.declareVariable(Types.V_STRING, filenameVName,
-          Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
+    Var filenameV = block.declareUnmapped(Types.V_STRING, filenameVName,
+          Alloc.LOCAL, DefType.LOCAL_COMPILER, VarProvenance.filenameOf(fileVal));
     instBuffer.add(TurbineOp.getLocalFileName(filenameV, fileVal));
     instBuffer.add(TurbineOp.setFilenameVal(fileFut, filenameV.asArg()));
   }

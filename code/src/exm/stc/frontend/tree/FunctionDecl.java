@@ -34,6 +34,7 @@ import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LocalContext;
 
@@ -187,24 +188,26 @@ public class FunctionDecl {
     
     Type varType = TypeTree.applyArrayMarkers(context, arrMarkers, baseType);
 
-    return new Var(varType, varName, Alloc.STACK, deftype, null);
+    return new Var(varType, varName, Alloc.STACK, deftype,
+                   VarProvenance.userVar(context.getSourceLoc()));
   }
 
-  public List<Var> getInVars() {
+  public List<Var> getInVars(Context context) {
     ArrayList<Var> inVars = new ArrayList<Var>(inNames.size());
     for (int i = 0; i < inNames.size(); i++) {
       Type t = ftype.getInputs().get(i);
-      inVars.add(new Var(t, inNames.get(i), Alloc.STACK,
-                                    DefType.INARG, null));
+      inVars.add(new Var(t, inNames.get(i), Alloc.STACK, DefType.INARG,
+                VarProvenance.userVar(context.getSourceLoc())));
     }
     return inVars;
   }
   
-  public List<Var> getOutVars() {
+  public List<Var> getOutVars(Context context) {
     ArrayList<Var> outVars = new ArrayList<Var>(outNames.size());
     for (int i = 0; i < outNames.size(); i++) {
-      outVars.add(new Var(ftype.getOutputs().get(i), outNames.get(i),
-                             Alloc.STACK, DefType.OUTARG, null));
+      Type outType = ftype.getOutputs().get(i);
+      outVars.add(new Var(outType, outNames.get(i), Alloc.STACK,
+            DefType.OUTARG, VarProvenance.userVar(context.getSourceLoc())));
     }
     return outVars;
   }

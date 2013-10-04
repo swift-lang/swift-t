@@ -29,6 +29,7 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.ic.STCMiddleEnd;
 
 /**
@@ -54,28 +55,27 @@ public class VarCreator {
    * @return
    * @throws UserException
    */
-  public Var createVariable(Context context, Type type, String name,
-      Alloc storage, DefType defType, Var mapping)
-                                                throws UserException {
+  public Var createVariable(Context context, Var var) throws UserException {
 
-    if (mapping != null && (!Types.isMappable(type))) {
-      throw new UserException(context, "Variable " + name + " of type "
-          + type.toString() + " cannot be mapped to " + mapping);
+    if (var.mapping() != null && (!Types.isMappable(var))) {
+      throw new UserException(context, "Variable " + var.name() + " of type "
+          + var.type().toString() + " cannot be mapped to " + var.mapping());
     }
-    Var v;
 
     try {
-      v = context.declareVariable(type, name, storage, defType, mapping);
+      context.declareVariable(var);
     } catch (DoubleDefineException e) {
       throw new DoubleDefineException(context, e.getMessage());
     }
-    initialiseVariable(context, v);
-    return v;
+    initialiseVariable(context, var);
+    return var;
   }
   
-  public Var createVariable(Context context, Var newVar) throws UserException {
-    return createVariable(context, newVar.type(), newVar.name(),
-            newVar.storage(), newVar.defType(), newVar.mapping());
+  public Var createVariable(Context context, Type type, String name,
+      Alloc storage, DefType defType, VarProvenance prov, Var mapping)
+                                                throws UserException {
+    return createVariable(context,
+        new Var(type, name, storage, defType, prov, mapping));
   }
 
   public void initialiseVariable(Context context, Var v)
@@ -95,8 +95,7 @@ public class VarCreator {
    * @throws UndefinedTypeException
    */
   public void declare(Var var) throws UndefinedTypeException {
-    backend.declare(var.type(), var.name(), 
-        var.storage(), var.defType(), var.mapping());
+    backend.declare(var);
   }
 
   private void initialiseStruct(Context context, Var rootStruct,
@@ -181,7 +180,7 @@ public class VarCreator {
     }
     Var tmp;
     if ((!storeInStack) && isAlias) {
-      tmp = context.createAliasVariable(type);
+      tmp = context.createTmpAliasVar(type);
     } else {
       tmp = context.createTmpVar(type, storeInStack);
     }
@@ -222,11 +221,10 @@ public class VarCreator {
    * @throws UserException
    */
   public Var createValueOfVar(Context context, Var future,
-        boolean initialise)
-                                                  throws UserException {
+        boolean initialise) throws UserException {
     assert(Types.isPrimFuture(future.type()));
     Type valType = Types.derefResultType(future.type());
-    Var val = context.createLocalValueVariable(valType, future.name());
+    Var val = context.createLocalValueVariable(valType, future);
     if (initialise) {
       initialiseVariable(context, val);
     }
@@ -241,8 +239,7 @@ public class VarCreator {
   public Var createFilenameAlias(Context context, Var fileVar)
       throws UserException, UndefinedTypeException {
     assert(Types.isFile(fileVar.type()));
-    Var filename = context.createFilenameAliasVariable(
-        fileVar.name());
+    Var filename = context.createFilenameAliasVariable(fileVar);
     initialiseVariable(context, filename);
     return filename;
   }

@@ -32,6 +32,7 @@ import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LocalContext;
 import exm.stc.frontend.TypeChecker;
@@ -97,11 +98,11 @@ public class ForeachLoop {
     return countVarName;
   }
 
-  public Var createCountVar() {
+  public Var createCountVar(Context context) {
     assert(keyType != null);
     assert(countVarName != null);
-    return new Var(keyType, countVarName, Alloc.STACK,
-                   DefType.LOCAL_USER, null);
+    return new Var(keyType, countVarName, Alloc.STACK, DefType.LOCAL_USER,
+                  VarProvenance.userVar(context.getSourceLoc()));
   }
 
   public LocalContext getBodyContext() {
@@ -283,13 +284,11 @@ public class ForeachLoop {
       }
       keyType = Types.arrayKeyType(arrayType);
       Type keyValType = Types.derefResultType(keyType);
-      loopCountVal = context.createLocalValueVariable(keyValType,
-                                                      countVarName);
+
+      Var countVar = createCountVar(context);
+      loopCountVal = context.createLocalValueVariable(keyValType, countVar);
       if (includeIndexFuture) {
-        Var countVar = createCountVar();
-        loopBodyContext.declareVariable(countVar.type(), countVar.name(),
-                                countVar.storage(), countVar.defType(),
-                                countVar.mapping());
+        loopBodyContext.declareVariable(countVar);
       }
     } else {
       loopCountVal = null;
@@ -297,9 +296,9 @@ public class ForeachLoop {
 
     Alloc memberVarStorage = rangeLoop ? Alloc.TEMP : Alloc.ALIAS;
     
-    memberVar = loopBodyContext.declareVariable(
-        findElemType(arrayType), getMemberVarName(),
-        memberVarStorage, DefType.LOCAL_USER, null);
+    memberVar = loopBodyContext.declareVariable(findElemType(arrayType),
+        getMemberVarName(), memberVarStorage, DefType.LOCAL_USER,
+        VarProvenance.userVar(context.getSourceLoc()), null);
     return loopBodyContext;
   }
 }

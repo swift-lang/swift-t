@@ -15,13 +15,14 @@
  */
 package exm.stc.frontend.tree;
 
-import exm.stc.ast.antlr.ExMParser;
 import exm.stc.ast.SwiftAST;
+import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LocalContext;
 
@@ -32,11 +33,10 @@ public class IterateDescriptor {
   private final Var loopVar;
 
   public IterateDescriptor(SwiftAST body, SwiftAST cond, 
-      String loopVarName) {
+      Var loopVar) {
     this.body = body;
     this.cond = cond;
-    this.loopVar = new Var(Types.F_INT, loopVarName, 
-        Alloc.STACK, DefType.INARG, null); 
+    this.loopVar = loopVar; 
   }
   
   public static IterateDescriptor fromAST(Context context, SwiftAST tree) {
@@ -49,8 +49,9 @@ public class IterateDescriptor {
     assert(body.getType() == ExMParser.BLOCK);
     SwiftAST cond = tree.child(2);
     
-    IterateDescriptor iterateLoop = new IterateDescriptor(body, 
-                                                      cond, loopVarName);
+    Var loopVar = new Var(Types.F_INT, loopVarName, Alloc.STACK,
+        DefType.LOCAL_USER, VarProvenance.userVar(context.getSourceLoc()));
+    IterateDescriptor iterateLoop = new IterateDescriptor(body, cond, loopVar);
         
     return iterateLoop;
   }
@@ -69,9 +70,7 @@ public class IterateDescriptor {
   
   public Context createIterContext(Context context) throws UserException {
     Context bodyContext = new LocalContext(context);
-    Var v = loopVar;
-    bodyContext.declareVariable(v.type(), v.name(), v.storage(), 
-                                              v.defType(), v.mapping());
+    bodyContext.declareVariable(loopVar);
     return bodyContext;
   }
 }

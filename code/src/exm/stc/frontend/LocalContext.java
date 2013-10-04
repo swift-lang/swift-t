@@ -29,6 +29,7 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarProvenance;
 
 /**
  * Track context within a function.  New child contexts are created
@@ -85,37 +86,47 @@ public class LocalContext extends Context {
 
       Alloc storage = storeInStack ? 
                   Alloc.STACK : Alloc.TEMP;
-      return declareVariable(type, name, storage, DefType.LOCAL_COMPILER, null);
+      return declareVariable(type, name, storage, DefType.LOCAL_COMPILER, 
+                             VarProvenance.exprTmp(getSourceLoc()), null);
   }
 
   @Override
-  public Var createAliasVariable(Type type) throws UserException {
+  public Var createTmpAliasVar(Type type) throws UserException {
     String name;
     do {
       int counter = getFunctionContext().getCounterVal("alias_var");
       name = Var.ALIAS_VAR_PREFIX + counter;
     } while (lookupDef(name) != null);
 
-    return declareVariable(type, name, Alloc.ALIAS,
-                           DefType.LOCAL_COMPILER, null);
+    return declareVariable(type, name, Alloc.ALIAS, DefType.LOCAL_COMPILER,
+                           VarProvenance.exprTmp(getSourceLoc()), null);
   }
 
   /**
    *
    * @param type
-   * @param varName the name of the variable this is the value of:
+   * @param var the name of the variable this is the value of:
    *    try and work this into the generated name. Can be left as
    *    null
    * @return
    * @throws UserException
    */
   @Override
-  public Var createLocalValueVariable(Type type, String varName)
+  public Var createLocalValueVariable(Type type, Var var)
       throws UserException {
+    String varName; 
+    VarProvenance prov;
+    if (var != null) {
+      prov = VarProvenance.valueOf(var, getSourceLoc());
+      varName = var.name();
+    } else {
+      prov = VarProvenance.exprTmp(getSourceLoc());
+      varName = null;
+    }
     String name = chooseVariableName(Var.LOCAL_VALUE_VAR_PREFIX, varName,
                                     "value_var");
-    return declareVariable(type, name, Alloc.LOCAL,
-                           DefType.LOCAL_COMPILER, null);
+    return declareVariable(type, name, Alloc.LOCAL, DefType.LOCAL_COMPILER,
+                           prov, null);
   }
 
   /**
@@ -144,12 +155,14 @@ public class LocalContext extends Context {
   }
 
   @Override
-  public Var createFilenameAliasVariable(String fileVarName) {
+  public Var createFilenameAliasVariable(Var fileVar) {
+    String fileVarName = fileVar != null ? fileVar.name() : null;
     String name = chooseVariableName(Var.FILENAME_OF_PREFIX,
         fileVarName, "filename_of");
     try {
       return declareVariable(Types.F_STRING, name,
-          Alloc.ALIAS, DefType.LOCAL_COMPILER, null);
+          Alloc.ALIAS, DefType.LOCAL_COMPILER,
+          VarProvenance.filenameOf(fileVar, getSourceLoc()), null);
     } catch (DoubleDefineException e) {
       e.printStackTrace();
       throw new STCRuntimeError("Should be possible to have double defn");
@@ -228,10 +241,11 @@ public class LocalContext extends Context {
    * Called when we want to create a new alias for a structure filed
    */
   @Override
-  protected Var createStructFieldTmp(Var struct,
-      Type fieldType, String fieldPath, Alloc storage) {
+  public Var createStructFieldTmp(Var struct,
+      Type fieldType, List<String> fieldPath, Alloc storage) {
     // Should be unique in context
-    String basename = Var.structFieldName(struct, fieldPath);
+    String pathStr = buildPathStr(fieldPath);
+    String basename = Var.structFieldName(struct, pathStr);
     String name = basename;
     int counter = 1;
     while (lookupDef(name) != null) {
@@ -239,8 +253,10 @@ public class LocalContext extends Context {
       counter++;
     }
     try {
+      VarProvenance prov =
+           VarProvenance.structField(struct, fieldPath, getSourceLoc());
       return declareVariable(fieldType, name, storage, DefType.LOCAL_COMPILER,
-                           null);
+                             prov, null);
     } catch (DoubleDefineException e) {
       e.printStackTrace();
       throw new STCRuntimeError("Shouldn't be possible to have double defn");

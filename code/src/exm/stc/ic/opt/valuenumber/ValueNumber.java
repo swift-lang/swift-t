@@ -38,6 +38,7 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.WrapUtil;
@@ -792,9 +793,10 @@ public class ValueNumber implements OptimizerPass {
     Map<Var, Var> filenameVals = new HashMap<Var, Var>();
     for (Var output: outputs) {
       if (Types.isFile(output) && mapOutVars) {
-        Var filenameVal = insertContext.declareVariable(Types.V_STRING,
-                        OptUtil.optFilenamePrefix(insertContext, output),
-                        Alloc.LOCAL, DefType.LOCAL_COMPILER, null);
+        Var filenameVal = insertContext.declareUnmapped(Types.V_STRING,
+            OptUtil.optFilenamePrefix(insertContext, output),
+            Alloc.LOCAL, DefType.LOCAL_COMPILER,
+            VarProvenance.filenameOf(output));
 
         if (output.isMapped() == Ternary.FALSE) {
           // Initialize unmapped var
@@ -806,9 +808,10 @@ public class ValueNumber implements OptimizerPass {
           assert(output.mapping() != null);
           assert(state.isClosed(output.mapping(), oldStmtIndex))
                : output.mapping() + " not closed @ " + oldStmtIndex;
-          Var filenameAlias = insertContext.declareVariable(Types.F_STRING,
+          Var filenameAlias = insertContext.declareUnmapped(Types.F_STRING,
               OptUtil.optFilenamePrefix(insertContext, output),
-              Alloc.ALIAS, DefType.LOCAL_COMPILER, null);
+              Alloc.ALIAS, DefType.LOCAL_COMPILER,
+              VarProvenance.filenameOf(output));
           insertPoint.add(TurbineOp.getFileName(filenameAlias, output));
           insertPoint.add(TurbineOp.retrieveString(filenameVal, filenameAlias));
         }
