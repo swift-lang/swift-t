@@ -217,6 +217,17 @@ namespace eval turbine {
         copy_integer $v $id
     }
 
+    # DRV
+    # When reference r is closed, set v
+    proc dereference_void { v r } {
+        rule $r "dereference_void_body $v $r" \
+            name "DRV-$v-$r"
+    }
+    proc dereference_void_body { v r } {
+        set id [ acquire_ref $r 1 1 ]
+        copy_void $v $id
+    }
+
     # DRF
     # When reference r is closed, copy its (float) value into v
     proc dereference_float { v r } {
