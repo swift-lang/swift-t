@@ -88,6 +88,10 @@ type external void;
 <K, V> (boolean o) contains(V A[K], K key) "turbine" "0.0.5" "contains"
   [ "set <<o>> [ adlb::exists_sub <<A>> <<key>> ]" ];
 
+@pure
+<T> (int n) bag_size(bag<T> B) "turbine" "0.0.5" "container_size"
+  [ "set <<n>> [ turbine::container_size_local <<B>> ]" ];
+
 // Updateable variables
 (updateable_float o) init_updateable(float i) "turbine" "0.0.2" "init_updateable";
 
