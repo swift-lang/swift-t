@@ -44,5 +44,8 @@ MAKE_PARALLELISM=2
 # Enable python
 #WITH_PYTHON=/usr/lib
 
+# Enable ADLB checkpoint functionality
+#ENABLE_XPT=1
+
 # TCL Version
 TCL_VERSION=8.6

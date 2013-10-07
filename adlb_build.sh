@@ -39,6 +39,10 @@ if [ ! -z "$EXM_CRAY" ]; then
     EXTRA_ARGS+=" --enable-mpi-2"
 fi
 
+if [ ! -z "$ENABLE_XPT" ]; then
+    EXTRA_ARGS+=" --enable-checkpoint"
+fi
+
 ./configure --with-c-utils=${C_UTILS_INST} \
             --prefix=${LB_INST} ${EXTRA_ARGS}
 make clean
