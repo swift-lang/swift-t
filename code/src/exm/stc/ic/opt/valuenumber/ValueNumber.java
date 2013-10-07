@@ -136,10 +136,10 @@ public class ValueNumber implements OptimizerPass {
       // Check if we are safe to proceed with optimisation
   
       // Second pass replaces values based on congruence classes
-      replaceVals(f.mainBlock(), congMap, InitState.enterFunction(f));
+      replaceVals(prog.constants(), f.mainBlock(), congMap, InitState.enterFunction(f));
       
       // Third pass inlines continuations
-      inlinePass(f.mainBlock(), congMap);
+      inlinePass(prog.constants(), f.mainBlock(), congMap);
     } catch (OptUnsafeError e) {
       logger.debug("Optimization cancelled for function " + f.getName());
     }
@@ -325,7 +325,7 @@ public class ValueNumber implements OptimizerPass {
 
         Instruction inst = stmt.instruction();
         if (logger.isTraceEnabled() && inst.op != Opcode.COMMENT) {
-          state.printTraceInfo(logger);
+          state.printTraceInfo(logger, program.constants());
           logger.trace("-----------------------------");
           logger.trace("At instruction: " + inst);
         }
@@ -357,7 +357,7 @@ public class ValueNumber implements OptimizerPass {
                              state, result);
     }
     
-    validateState(state);
+    validateState(program.constants(), state);
   }
 
   private void findCongruencesInst(Program prog, Function f,
@@ -422,15 +422,15 @@ public class ValueNumber implements OptimizerPass {
     }
   }
   
-  private void replaceVals(Block block, Map<Block, Congruences> congruences,
-                        InitState init) {
+  private void replaceVals(GlobalConstants consts, Block block,
+      Map<Block, Congruences> congruences, InitState init) {
     Congruences state = congruences.get(block);
 
     if (logger.isTraceEnabled()) {
       logger.trace("=======================================");
       logger.trace("Replacing on block " + System.identityHashCode(block)
                    + ": " + block.getType());
-      state.printTraceInfo(logger);
+      state.printTraceInfo(logger, consts);
     }
     
     // TODO: ideally, use closed info when replacing to ensure correctness
@@ -472,7 +472,7 @@ public class ValueNumber implements OptimizerPass {
         /* Replace vars recursively in conditional.  Init state
          * is updated in this function */ 
         replaceCongruentNonRec(stmt.conditional(), state, init);
-        replaceValsRec(stmt.conditional(), congruences, init);
+        replaceValsRec(consts, stmt.conditional(), congruences, init);
       }
     }
     
@@ -481,17 +481,17 @@ public class ValueNumber implements OptimizerPass {
     
     for (Continuation cont: block.getContinuations()) {
       replaceCongruentNonRec(cont, state, init);
-      replaceValsRec(cont, congruences, init);
+      replaceValsRec(consts, cont, congruences, init);
     }
   }
 
-  private void replaceValsRec(Continuation cont,
+  private void replaceValsRec(GlobalConstants consts, Continuation cont,
           Map<Block, Congruences> congruences, InitState init) {
     InitState contInit = init.enterContinuation(cont);
     List<InitState> branchInits = new ArrayList<InitState>();
     for (Block contBlock: cont.getBlocks()) {
       InitState branchInit = contInit.enterBlock(contBlock);
-      replaceVals(contBlock, congruences, branchInit);
+      replaceVals(consts, contBlock, congruences, branchInit);
       branchInits.add(branchInit);
     }
     
@@ -505,14 +505,15 @@ public class ValueNumber implements OptimizerPass {
    * @param mainBlock
    * @param cong
    */
-  private void inlinePass(Block block, Map<Block, Congruences> cong) {
+  private void inlinePass(GlobalConstants consts, Block block,
+                          Map<Block, Congruences> cong) {
     Congruences blockState = cong.get(block);
     assert(blockState != null);
     if (logger.isTraceEnabled()) {
       logger.trace("=======================================");
       logger.trace("Inlining on block " + System.identityHashCode(block)
                    + ": " + block.getType());
-      blockState.printTraceInfo(logger);
+      blockState.printTraceInfo(logger, consts);
     }
     
     // Use original statement count from when block was constructed
@@ -523,7 +524,7 @@ public class ValueNumber implements OptimizerPass {
       Statement stmt = stmtIt.next();
       if (stmt.type() == StatementType.CONDITIONAL) {
         // First recurse
-        tryInlineConditional(block, stmtIt, stmt.conditional(), cong);
+        tryInlineConditional(consts, block, stmtIt, stmt.conditional(), cong);
       } else {
         assert(stmt.type() == StatementType.INSTRUCTION);
         // Leave instructions alone
@@ -538,7 +539,7 @@ public class ValueNumber implements OptimizerPass {
     while (contIt.hasNext()) {
       Continuation cont = contIt.next();
       // First recurse
-      inlinePassRecurse(cont, cong);
+      inlinePassRecurse(consts, cont, cong);
       // Then try to inline
       if (cont.isNoop()) {
         contIt.remove();
@@ -564,10 +565,10 @@ public class ValueNumber implements OptimizerPass {
     return false;
   }
 
-  private boolean tryInlineConditional(Block block,
+  private boolean tryInlineConditional(GlobalConstants consts, Block block,
       ListIterator<Statement> stmtIt, Conditional conditional,
       Map<Block, Congruences> cong) {
-    inlinePassRecurse(conditional, cong);
+    inlinePassRecurse(consts, conditional, cong);
     
     // Then see if we can inline
     Block predicted = conditional.branchPredict();
@@ -589,10 +590,10 @@ public class ValueNumber implements OptimizerPass {
     return false;
   }
 
-  private void inlinePassRecurse(Continuation cont,
+  private void inlinePassRecurse(GlobalConstants consts, Continuation cont,
                                  Map<Block, Congruences> cong) {
     for (Block inner: cont.getBlocks()) {
-      inlinePass(inner, cong);
+      inlinePass(consts, inner, cong);
     }
   }
   
@@ -824,9 +825,9 @@ public class ValueNumber implements OptimizerPass {
   /**
    * Do any validations of the state of things
    */
-  private void validateState(Congruences state) {
+  private void validateState(GlobalConstants consts, Congruences state) {
     if (ICOptimizer.SUPER_DEBUG) {
-      state.validate();
+      state.validate(consts);
     }
   }
 }

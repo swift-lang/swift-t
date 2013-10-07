@@ -672,19 +672,19 @@ public class Congruences {
     }
   }
 
-  public void printTraceInfo(Logger logger) {
+  public void printTraceInfo(Logger logger, GlobalConstants consts) {
     logger.trace("State dump for " + System.identityHashCode(this));
-    byAlias.printTraceInfo(logger);
-    byValue.printTraceInfo(logger);
+    byAlias.printTraceInfo(logger, consts);
+    byValue.printTraceInfo(logger, consts);
     track.printTraceInfo(logger);
   }
   
   /**
    * Do any internal validations
    */
-  public void validate() {
-    byAlias.validate();
-    byValue.validate();
+  public void validate(GlobalConstants consts) {
+    byAlias.validate(consts);
+    byValue.validate(consts);
   }
   
   /**
