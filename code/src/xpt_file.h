@@ -31,14 +31,15 @@
 /* State for checkpoint file being written */
 typedef struct {
   FILE *file;
-  int curr_block;
+  uint32_t curr_block; // Number of current block
+  bool empty_block; // Whether current block is empty
 } xlb_xpt_state;
 
 /* Metadata for reading back checkpoint file */
 typedef struct {
   FILE *file;
-  int block_size; // Block size
-  int ranks;      // Number of ranks
+  uint32_t block_size; // Block size
+  uint32_t ranks;      // Number of ranks
 } xlb_xpt_read_state;
 
 /* Setup checkpoint file.  This function should be called by all ranks,
@@ -55,7 +56,7 @@ adlb_code xlb_xpt_next_block(xlb_xpt_state *state);
 
 /* Write a checkpoint record */
 adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,
-                        int val_len);
+                        int val_len, xlb_xpt_state *state);
 
 #endif // __XLB_XPT_H
 #endif // XLB_ENABLE_XPT
