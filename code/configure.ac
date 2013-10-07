@@ -228,8 +228,6 @@ AC_ARG_ENABLE(checkpoint,
                  [Enable checkpoint functionality]),
                  [XLB_ENABLE_XPT="yes"], [])
 AC_MSG_RESULT([checkpoints enabled])
-AC_DEFINE_UNQUOTED(XLB_ENABLE_XPT,
-                   "$XLB_ENABLE_XPT", [Checkpointing enabled: yes/no])
 
 # From now on, make the user put -mpe=mpilog or -mpilog or -log in
 # CFLAGS and LDFLAGS.

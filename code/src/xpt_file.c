@@ -25,6 +25,11 @@
 // Magic number to put at start of blocks;
 static const unsigned char xpt_magic_num = 0x42;
 
+// Functions to select blocks for a rank
+static inline uint32_t first_block(uint32_t rank, uint32_t ranks);
+static inline uint32_t next_block(uint32_t rank, uint32_t ranks,
+                                  uint32_t curr);
+
 static inline adlb_code block_start_seek(const char *filename,
                                          xlb_xpt_state *state);
 static inline adlb_code block_init(xlb_xpt_state *state);
@@ -63,7 +68,8 @@ adlb_code xlb_xpt_init(const char *filename, xlb_xpt_state *state)
   CHECK_MSG(state->file != NULL, "Error opening file %s for write",
             filename);
 
-  state->curr_block = (uint32_t)xlb_comm_rank;
+  state->curr_block = first_block((uint32_t)xlb_comm_rank,
+                                  (uint32_t)xlb_comm_size);
   state->empty_block = true;
   adlb_code rc = block_start_seek(filename, state);
   ADLB_CHECK(rc);
@@ -79,10 +85,22 @@ adlb_code xlb_xpt_init(const char *filename, xlb_xpt_state *state)
   return ADLB_SUCCESS;
 }
 
+static inline uint32_t first_block(uint32_t rank, uint32_t ranks)
+{
+  return rank;
+}
+
+static inline uint32_t next_block(uint32_t rank, uint32_t ranks,
+                                  uint32_t curr)
+{
+  return curr + ranks;
+}
+
 adlb_code xlb_xpt_next_block(xlb_xpt_state *state)
 {
   // Round-robin block allocation for now
-  state->curr_block += (uint32_t)xlb_comm_rank;
+  state->curr_block = next_block((uint32_t)xlb_comm_rank,
+             (uint32_t)xlb_comm_size, state->curr_block);
   adlb_code rc = block_start_seek(NULL, state);
   ADLB_CHECK(rc);
   state->empty_block = true;
@@ -97,7 +115,7 @@ static inline adlb_code block_start_seek(const char *filename,
                                         xlb_xpt_state *state)
 {
   off_t block_start = ((off_t)state->curr_block) * XLB_XPT_BLOCK_SIZE;
-  int rc = fseek(state->file, block_start, SEEK_CUR);
+  int rc = fseek(state->file, block_start, SEEK_SET);
   if (filename != NULL) {
     CHECK_MSG(rc == 0, "Error seeking in checkpoint file %s", filename);
   } else {
@@ -123,6 +141,10 @@ static inline adlb_code xpt_header_write(xlb_xpt_state *state)
   // TODO: more fields
   // TODO: checksum header
   // TODO: what if header overflows first block?
+
+  // Make sure header gets written out
+  int c = fflush(state->file);
+  CHECK_MSG(c != EOF, "Error flushing header");
   return ADLB_SUCCESS;
 }
 
@@ -139,45 +161,6 @@ static inline adlb_code block_init(xlb_xpt_state *state)
   state->empty_block = false;
   return ADLB_SUCCESS;
 }
-
-/*
-  Open a checkpoint file for reading
- */
-adlb_code xlb_xpt_open_read(const char *filename, xlb_xpt_read_state *state)
-{
-  state->file = fopen(filename, "rb");
-  CHECK_MSG(state->file != NULL, "Could not open %s for read", filename);
-  int magic_num = fgetc(state->file);
-  CHECK_MSG(magic_num != xpt_magic_num, "Invalid magic number %i"
-        " at start of checkpoint file %s: may be corrupted or not"
-        " checkpoint", magic_num, filename);
-  // TODO: verify checksum?
-  FREAD_CHECKED_UINT32(state->block_size, state);
-  FREAD_CHECKED_UINT32(state->ranks, state);
-  return ADLB_SUCCESS;
-}
-
-/*
-   Start reading a new block.  Check for magic number. Return error
-   upon corruption.  Set empty to true if block has no contents.
-   This can be because we hit the end of the file, or because we
-   we got a null byte at start of block, indicating (probably) that
-   the block is empty in a sparse file.
- */
-static inline adlb_code block_read_init(xlb_xpt_read_state *state,
-                                        bool *empty)
-{
-  int magic_num = fgetc(state->file);
-  if (magic_num == EOF || magic_num == 0) {
-    *empty = true;
-    return ADLB_SUCCESS;
-  }
-  CHECK_MSG(magic_num != xpt_magic_num, "Invalid magic number %i"
-        " at start of checkpoint block: may be corrupted", magic_num);
-  *empty = false;
-  return ADLB_SUCCESS;
-}
-
 
 /*
   Write a checkpoint log entry in this format:
@@ -262,6 +245,82 @@ adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,
   FWRITE_CHECKED(key_len_enc, 1, key_len_encb, state);
   FWRITE_CHECKED(key, 1, key_len, state);
   FWRITE_CHECKED(val, 1, val_len, state);
+  return ADLB_SUCCESS;
+}
+
+adlb_code xlb_xpt_flush(xlb_xpt_state *state)
+{
+  int rc = fflush(state->file);
+  CHECK_MSG(rc != EOF, "Error flushing checkpoint file");
+
+  return ADLB_SUCCESS;
+}
+
+/*
+  Open a checkpoint file for reading.
+ */
+adlb_code xlb_xpt_open_read(const char *filename, xlb_xpt_read_state *state)
+{
+  state->file = fopen(filename, "rb");
+  CHECK_MSG(state->file != NULL, "Could not open %s for read", filename);
+
+  state->curr_rank = 0;
+  state->curr_block = first_block(state->curr_rank, state->ranks);
+
+  int magic_num = fgetc(state->file);
+  CHECK_MSG(magic_num != xpt_magic_num, "Invalid magic number %i"
+        " at start of checkpoint file %s: may be corrupted or not"
+        " checkpoint", magic_num, filename);
+
+  // TODO: verify checksum?
+  FREAD_CHECKED_UINT32(state->block_size, state);
+  FREAD_CHECKED_UINT32(state->ranks, state);
+  return ADLB_SUCCESS;
+}
+
+adlb_code xlb_xpt_read_select(xlb_xpt_read_state *state, uint32_t rank)
+{
+  CHECK_MSG(rank >= 0 && rank < state->ranks, "Invalid rank: %"PRId32, rank);
+  state->curr_rank = rank;
+  state->curr_block = first_block(state->curr_rank, state->ranks);
+
+  off_t block_start = ((off_t)state->curr_block) * XLB_XPT_BLOCK_SIZE;
+
+  int rc = fseek(state->file, block_start, SEEK_SET);
+  CHECK_MSG(rc == 0, "Error seeking in checkpoint file");
+
+  // Wait until later to init block
+  state->started_block = false; 
+  return ADLB_SUCCESS;
+}
+
+/*
+   Start reading a new block.  Check for magic number. Return error
+   upon corruption.  Set empty to true if block has no contents.
+   This can be because we hit the end of the file, or because we
+   we got a null byte at start of block, indicating (probably) that
+   the block is empty in a sparse file.
+   Called after we seeked to start of block.
+ */
+static inline adlb_code block_read_init(xlb_xpt_read_state *state,
+                                        bool *empty)
+{
+  int magic_num = fgetc(state->file);
+  if (magic_num == EOF || magic_num == 0) {
+    *empty = true;
+    return ADLB_SUCCESS;
+  }
+  CHECK_MSG(magic_num != xpt_magic_num, "Invalid magic number %i"
+        " at start of checkpoint block: may be corrupted", magic_num);
+  *empty = false;
+  return ADLB_SUCCESS;
+}
+
+adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
+               int64_t key_len, void *key, int64_t val_len, void *val)
+{
+  // TODO: implement reading record
+  
   return ADLB_SUCCESS;
 }
 
