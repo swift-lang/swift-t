@@ -21,33 +21,42 @@
 // Magic number to put at start of blocks;
 static const unsigned char xpt_magic_num = 0x42;
 
-static inline adlb_code block_start_seek(const char *xpt_filename,
-                                        xlb_xpt_state *state);
+static inline adlb_code block_start_seek(const char *filename,
+                                         xlb_xpt_state *state);
 static inline bool is_xpt_leader(void);
 static inline adlb_code xpt_header_write(xlb_xpt_state *state);
 
-#define FWRITE_CHECKED(data, size, count, state) {        \
-  int count2 = count;                                     \
-  int fwrc = fwrite(data, size, count2, state->file);     \
-  CHECK_MSG(fwrc == count2, "Error writing checkpoint");  \
+#define FWRITE_CHECKED(data, size, count, state) {          \
+  int count2 = (count);                                     \
+  int fwrc = fwrite((data), (size), count2, (state)->file); \
+  CHECK_MSG(fwrc == count2, "Error writing checkpoint");    \
+}
+
+#define FREAD_CHECKED(data, size, count, state) {         \
+  int count2 = (count);                                   \
+  int frrc = fread((data), (size), count2, (state)->file);\
+  CHECK_MSG(frrc == count2, "Error reading checkpoint");  \
 }
 
 #define FWRITE_CHECKED_INT(val, state) {                  \
   int val2 = val;                                         \
-  FWRITE_CHECKED(&val2, sizeof(val2), 1, state);          \
+  FWRITE_CHECKED(&(val2), sizeof(val2), 1, state);        \
 }
-  
 
-adlb_code xlb_xpt_init(const char *xpt_filename, xlb_xpt_state *state)
+#define FREAD_CHECKED_INT(data, state) {                  \
+  FREAD_CHECKED(&(data), sizeof(int), 1, state);          \
+}
+
+adlb_code xlb_xpt_init(const char *filename, xlb_xpt_state *state)
 {
-  assert(xpt_filename != NULL);
+  assert(filename != NULL);
   assert(state != NULL);
-  state->file = fopen(xpt_filename, "w");
+  state->file = fopen(filename, "w");
   CHECK_MSG(state->file != NULL, "Error opening file %s for write",
-            xpt_filename);
+            filename);
 
   state->curr_block = xlb_comm_rank;
-  adlb_code rc = block_start_seek(xpt_filename, state);
+  adlb_code rc = block_start_seek(filename, state);
   ADLB_CHECK(rc);
 
   // TODO: support other ranks being "leader"
@@ -71,15 +80,15 @@ adlb_code xlb_xpt_next_block(xlb_xpt_state *state)
 
 /*
    Seek to start of block.
-   xpt_filename can be provided for error messages
+   filename can be provided for error messages
  */
-static inline adlb_code block_start_seek(const char *xpt_filename,
+static inline adlb_code block_start_seek(const char *filename,
                                         xlb_xpt_state *state)
 {
   int block_start = state->curr_block * XLB_XPT_BLOCK_SIZE;
   int rc = fseek(state->file, block_start, SEEK_CUR);
-  if (xpt_filename != NULL) {
-    CHECK_MSG(rc == 0, "Error seeking in checkpoint file %s", xpt_filename);
+  if (filename != NULL) {
+    CHECK_MSG(rc == 0, "Error seeking in checkpoint file %s", filename);
   } else {
     CHECK_MSG(rc == 0, "Error seeking in checkpoint file");
   }
@@ -103,9 +112,22 @@ static inline adlb_code xpt_header_write(xlb_xpt_state *state)
   // Write info about structure of checkpoint file
   FWRITE_CHECKED_INT(XLB_XPT_BLOCK_SIZE, state);
   FWRITE_CHECKED_INT(xlb_comm_size, state);
-  FWRITE_CHECKED_INT(xlb_comm_rank, state);
   // TODO: more fields
   // TODO: checksum header
   // TODO: what if header overflows first block?
+  return ADLB_SUCCESS;
+}
+
+adlb_code xlb_xpt_open_read(const char *filename, xlb_xpt_read_state *state)
+{
+  state->file = fopen(filename, "r");
+  CHECK_MSG(state->file != NULL, "Could not open %s for read", filename);
+  int magic_num = fgetc(state->file);
+  CHECK_MSG(magic_num != xpt_magic_num, "Invalid magic number %i"
+        " at start of checkpoint file %s: may be corrupted or not"
+        " checkpoint", magic_num, filename);
+  // TODO: verify checksum?
+  FREAD_CHECKED_INT(state->block_size, state);
+  FREAD_CHECKED_INT(state->ranks, state);
   return ADLB_SUCCESS;
 }
