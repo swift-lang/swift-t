@@ -17,6 +17,10 @@
  * Functions used to write ADLB data checkpoint files.
  */
 
+#ifdef XLB_ENABLE_XPT
+#ifndef __XLB_XPT_H
+#define __XLB_XPT_H
+
 #include <stdio.h>
 
 #include "adlb-defs.h"
@@ -43,8 +47,15 @@ typedef struct {
    header info.  This must be called after xlb is initialized */
 adlb_code xlb_xpt_init(const char *filename, xlb_xpt_state *state);
 
+/* Open existing checkpoint file */
+adlb_code xlb_xpt_open_read(const char *filename, xlb_xpt_read_state *state);
+
 /* Move to next checkpoint block for this rank */
 adlb_code xlb_xpt_next_block(xlb_xpt_state *state);
 
-/* Open existing checkpoint file */
-adlb_code xlb_xpt_open_read(const char *filename, xlb_xpt_read_state *state);
+/* Write a checkpoint record */
+adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,
+                        int val_len);
+
+#endif // __XLB_XPT_H
+#endif // XLB_ENABLE_XPT

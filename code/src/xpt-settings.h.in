@@ -1,0 +1,7 @@
+
+#ifndef XPT_SETTINGS_H
+#define XPT_SETTINGS_H
+
+#define XLB_ENABLE_XPT @XLB_ENABLE_XPT@
+
+#endif

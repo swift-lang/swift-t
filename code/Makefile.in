@@ -106,6 +106,13 @@ ifeq ($(ENABLE_MPE),yes)
         RPATH += -Wl,-rpath -Wl,$(MPE)/lib
 endif
 
+ENABLE_XPT = @XLB_ENABLE_XPT@
+ifeq ($(ENABLE_XPT),yes)
+	CFLAGS += -D XLB_ENABLE_XPT
+        # Need zlib for checkpoint CRC
+        LIBS += -lz
+endif
+
 ### INCLUDES
 
 DIR  :=

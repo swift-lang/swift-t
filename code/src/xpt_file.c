@@ -15,6 +15,9 @@
  */
 #include "xpt_file.h"
 
+#ifdef XLB_ENABLE_XPT
+#include <zlib.h>
+
 #include "checks.h"
 #include "common.h"
 
@@ -26,21 +29,21 @@ static inline adlb_code block_start_seek(const char *filename,
 static inline bool is_xpt_leader(void);
 static inline adlb_code xpt_header_write(xlb_xpt_state *state);
 
-#define FWRITE_CHECKED(data, size, count, state) {          \
-  int count2 = (count);                                     \
-  int fwrc = fwrite((data), (size), count2, (state)->file); \
-  CHECK_MSG(fwrc == count2, "Error writing checkpoint");    \
+#define FWRITE_CHECKED(data, size, count, state) {             \
+  size_t count2 = (size_t)(count);                             \
+  size_t fwrc = fwrite((data), (size), count2, (state)->file); \
+  CHECK_MSG(fwrc == count2, "Error writing checkpoint");       \
 }
 
-#define FREAD_CHECKED(data, size, count, state) {         \
-  int count2 = (count);                                   \
-  int frrc = fread((data), (size), count2, (state)->file);\
-  CHECK_MSG(frrc == count2, "Error reading checkpoint");  \
+#define FREAD_CHECKED(data, size, count, state) {             \
+  size_t count2 = (count);                                    \
+  size_t frrc = fread((data), (size), count2, (state)->file); \
+  CHECK_MSG(frrc == count2, "Error reading checkpoint");      \
 }
 
 #define FWRITE_CHECKED_INT(val, state) {                  \
   int val2 = val;                                         \
-  FWRITE_CHECKED(&(val2), sizeof(val2), 1, state);        \
+  FWRITE_CHECKED(&(val2), sizeof(val2), (size_t)1, state);\
 }
 
 #define FREAD_CHECKED_INT(data, state) {                  \
@@ -131,3 +134,15 @@ adlb_code xlb_xpt_open_read(const char *filename, xlb_xpt_read_state *state)
   FREAD_CHECKED_INT(state->ranks, state);
   return ADLB_SUCCESS;
 }
+
+
+adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,
+                        int val_len)
+{
+  // TODO: first work out checkpoint record length
+  // TODO: then calculate CRC
+  
+  return ADLB_SUCCESS;
+}
+
+#endif // XLB_ENABLE_XPT

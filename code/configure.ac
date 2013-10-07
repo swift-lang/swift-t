@@ -222,6 +222,34 @@ then
 fi
 rm -f mpi_version.cpp.txt
 
+XLB_ENABLE_XPT="no"
+AC_ARG_ENABLE(checkpoint,
+  AS_HELP_STRING([--enable-checkpoint],
+                 [Enable checkpoint functionality]),
+                 [XLB_ENABLE_XPT="yes"], [])
+AC_MSG_RESULT([checkpoints enabled])
+AC_DEFINE_UNQUOTED(XLB_ENABLE_XPT,
+                   "$XLB_ENABLE_XPT", [Checkpointing enabled: yes/no])
+
+# From now on, make the user put -mpe=mpilog or -mpilog or -log in
+# CFLAGS and LDFLAGS.
+# I cannot figure this out. -Justin
+# On the BG/P, with Anthony's install_ibm_qpic, use
+#    CFLAGS='-mpilog'
+#    LDFLAGS='-mpilog -L /dir' where dir contains libmpe.so
+if [[ "${ADLB_ENABLE_MPE}" == "yes" ]]
+then
+    FOUND=0
+    AC_CHECK_FILE(${withval}/lib/libmpe.so, [FOUND=1])
+    if [[ ${FOUND} == 0 ]]
+    then
+        AC_MSG_ERROR([Could not find MPE library!])
+    fi
+fi
+
+AC_SUBST(ADLB_ENABLE_MPE)
+AC_SUBST(XLB_ENABLE_XPT)
+
 AC_CONFIG_FILES(Makefile
                 src/module.mk
                 src/adlb-version.h
