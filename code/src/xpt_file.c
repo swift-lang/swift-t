@@ -18,8 +18,25 @@
 #include "checks.h"
 #include "common.h"
 
+// Magic number to put at start of blocks;
+static const unsigned char xpt_magic_num = 0x42;
+
 static inline adlb_code block_start_seek(const char *xpt_filename,
                                         xlb_xpt_state *state);
+static inline bool is_xpt_leader(void);
+static inline adlb_code xpt_header_write(xlb_xpt_state *state);
+
+#define FWRITE_CHECKED(data, size, count, state) {        \
+  int count2 = count;                                     \
+  int fwrc = fwrite(data, size, count2, state->file);     \
+  CHECK_MSG(fwrc == count2, "Error writing checkpoint");  \
+}
+
+#define FWRITE_CHECKED_INT(val, state) {                  \
+  int val2 = val;                                         \
+  FWRITE_CHECKED(&val2, sizeof(val2), 1, state);          \
+}
+  
 
 adlb_code xlb_xpt_init(const char *xpt_filename, xlb_xpt_state *state)
 {
@@ -32,6 +49,14 @@ adlb_code xlb_xpt_init(const char *xpt_filename, xlb_xpt_state *state)
   state->curr_block = xlb_comm_rank;
   adlb_code rc = block_start_seek(xpt_filename, state);
   ADLB_CHECK(rc);
+
+  // TODO: support other ranks being "leader"
+  if (is_xpt_leader())
+  {
+    rc = xpt_header_write(state);
+    ADLB_CHECK(rc);
+  }
+
   return ADLB_SUCCESS;
 }
 
@@ -58,5 +83,29 @@ static inline adlb_code block_start_seek(const char *xpt_filename,
   } else {
     CHECK_MSG(rc == 0, "Error seeking in checkpoint file");
   }
+  return ADLB_SUCCESS;
+}
+
+static inline bool is_xpt_leader(void)
+{
+  // For now, assume rank 0 is the leader
+  // TODO: more flexibility e.g. if rank 0 doesn't want to checkpoint
+  return (xlb_comm_rank == 0);
+}
+
+static inline adlb_code xpt_header_write(xlb_xpt_state *state)
+{
+  int rc;
+  
+  rc = fputc(xpt_magic_num, state->file);
+  CHECK_MSG(rc == xpt_magic_num, "Error writing checkpoint header");
+  
+  // Write info about structure of checkpoint file
+  FWRITE_CHECKED_INT(XLB_XPT_BLOCK_SIZE, state);
+  FWRITE_CHECKED_INT(xlb_comm_size, state);
+  FWRITE_CHECKED_INT(xlb_comm_rank, state);
+  // TODO: more fields
+  // TODO: checksum header
+  // TODO: what if header overflows first block?
   return ADLB_SUCCESS;
 }

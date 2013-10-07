@@ -29,11 +29,11 @@ typedef struct {
   int curr_block;
 } xlb_xpt_state;
 
-/* Seek to first block in file for this rank.  This must be called after
-   xlb is initialized */
+/* Setup checkpoint file.  This function should be called by all ranks,
+   whether they intend to log checkpoint data or not.  This function will
+   seek to first block in file for this rank.  It will also write any
+   header info.  This must be called after xlb is initialized */
 adlb_code xlb_xpt_init(const char *xpt_filename, xlb_xpt_state *state);
 
 /* Move to next checkpoint block for this rank */
 adlb_code xlb_xpt_next_block(xlb_xpt_state *state);
-
-
