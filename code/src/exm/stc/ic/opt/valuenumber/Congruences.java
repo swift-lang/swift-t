@@ -174,12 +174,12 @@ public class Congruences {
             CongruentSets congruent, boolean addConsequential, int stmtIndex)
                 throws OptUnsafeError {
     // LocCV may already be in congruent set
-    Arg canonLoc = congruent.findCanonical(new ArgOrCV(location)); 
+    Arg canonLoc = congruent.findCanonical(location); 
     // Canonicalize value based on existing congruences
     ArgOrCV canonVal = congruent.canonicalize(consts, value);
   
     // Check if value is already associated with a location
-    Arg canonLocFromVal = congruent.findCanonical(canonVal);
+    Arg canonLocFromVal = congruent.findCanonicalInternal(canonVal);
     if (canonLocFromVal == null) {
       // Handle case where value not congruent to anything yet.
       // Just add val to arg's set
@@ -694,11 +694,7 @@ public class Congruences {
    * @return
    */
   public Arg findRetrieveResult(Var v) {
-    ArgCV cvRetrieve = ComputedValue.retrieveCompVal(v);
-    if (cvRetrieve == null) {
-      return null;
-    }
-    return byValue.findCanonical(consts, cvRetrieve);
+    return byValue.findRetrieveResult(v.asArg());
   }
 
   public Arg findValue(Var output) {

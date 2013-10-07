@@ -262,7 +262,8 @@ class CongruentSets {
    */
   public Arg findCanonical(Arg arg) {
     assert(arg != null);
-    Arg result = findCanonical(new ArgOrCV(arg));
+    // Don't need to canonicalize arg
+    Arg result = findCanonicalInternal(new ArgOrCV(arg));
     assert(result != null) : "Could not find canonical for " + arg;
     return result;
   }
@@ -275,7 +276,7 @@ class CongruentSets {
    * @return
    */
   public Arg findCanonical(GlobalConstants constants, ArgCV val) {
-    return findCanonical(canonicalize(constants, val));
+    return findCanonicalInternal(canonicalize(constants, val));
   }
   
   /**
@@ -283,16 +284,19 @@ class CongruentSets {
    * @param val
    * @return
    */
-  private Arg findCanonicalInternal(ArgCV val) {
-    return findCanonical(new ArgOrCV(val));
+  Arg findCanonicalInternal(ArgCV val) {
+    return findCanonicalInternal(new ArgOrCV(val));
   }
   
   /**
+   * Lookup canonical value of val
    * If val.isArg() and there is not a canonical location, this
    * will update structures to reflect that it's a single-element set.
+   * 
+   * @param val arg or CV with canonicalized inputs
    * @return canonical representative of congruence set, maybe null 
    */
-  public Arg findCanonical(ArgOrCV val) {
+  Arg findCanonicalInternal(ArgOrCV val) {
     Arg canon = null;
     CongruentSets curr = this;
 
@@ -339,6 +343,19 @@ class CongruentSets {
       curr = curr.parent;
     }
     throw new STCRuntimeError("Not found: " + var);
+  }
+
+  /**
+   * Find value of a future
+   * @param var
+   * @return
+   */
+  public Arg findRetrieveResult(Arg var) {
+    assert(var.isVar());
+    Arg canonVar = findCanonical(var);
+    assert(canonVar.isVar());
+    ArgCV cv = ComputedValue.retrieveCompVal(canonVar.getVar());
+    return findCanonicalInternal(cv);
   }
 
   public Map<Var, Arg> getReplacementMap(InitState init) {
@@ -476,7 +493,7 @@ class CongruentSets {
     CongruentSets curr = this;
     do {
       for (ArgOrCV val: curr.canonicalInv.get(oldCanon)) {
-        Arg canonicalCheck = findCanonical(val);
+        Arg canonicalCheck = findCanonicalInternal(val);
         // Confirm that oldCanonical was actually the canonical one
         // This should only be necessary on recursive calls when
         // updating components
@@ -576,7 +593,7 @@ class CongruentSets {
   private void addUpdatedCV(Arg oldComponent, Arg newComponent, ArgOrCV newCV,
                             Arg canonical) {
     // Check to see if this CV bridges two sets
-    Arg newCanonical = findCanonical(newCV);
+    Arg newCanonical = findCanonicalInternal(newCV);
     if (newCanonical != null) {
       if (newCanonical.equals(canonical)) {
         // Add to same set
@@ -942,23 +959,47 @@ class CongruentSets {
         return null;
       }
       
-      if (replace != null && replace.isVar()) {
-        boolean output = (congType == CongruenceType.ALIAS);
-        if (!initVars.isInitialized(replace.getVar(), output)) {
-          // Can't use yet: not initialized
-          // TODO: check alternative canonical vals? Would need to be careful
-          //       in doing this as we don't currently fully track the
-          //       order of preference of the alternatives. 
-          logger.trace(v + " => " + replace + "(" + congType + ")" +
-                        ": NOT INITIALIZED");
-          return null;
-        }
+      if (replace != null && !isInit(replace)) {
+        replace = findAltReplacement(v, replace);
       }
       
       if (logger.isTraceEnabled()) {
         logger.trace(v + " => " + replace + "(" + congType + ")");
       }
       return replace;
+    }
+
+    /**
+     * Find alternative replacement from set given that
+     * replace isn't initialized
+     * @param orig
+     * @param replace
+     * @return
+     */
+    private Arg findAltReplacement(Var orig, Arg replace) {
+      // Check alternative canonical vals using DFS
+      Deque<Arg> replacementStack = new ArrayDeque<Arg>();
+      do {
+        logger.trace(orig + " => " + replace + "(" + congType + ")" +
+                         ": NOT INITIALIZED");
+        List<Arg> alts = mergedInto.get(replace);
+        if (alts.isEmpty()) {
+          // Backtrack
+          replace = replacementStack.pop();
+        } else {
+          replace = alts.get(0);
+          replacementStack.addAll(alts.subList(1, alts.size()));
+        }
+      } while (!isInit(replace));
+      return replace;
+    }
+
+    private boolean isInit(Arg replace) {
+      if (replace.isConstant()) {
+        return true;
+      }
+      boolean output = (congType == CongruenceType.ALIAS);
+      return initVars.isInitialized(replace.getVar(), output);
     }
 
     @Override

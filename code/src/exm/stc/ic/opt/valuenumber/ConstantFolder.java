@@ -11,6 +11,7 @@ import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.TernaryLogic.Ternary;
+import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgOrCV;
 import exm.stc.ic.tree.ICInstructions.CommonFunctionCall;
 import exm.stc.ic.tree.Opcode;
@@ -148,7 +149,7 @@ public class ConstantFolder {
         // For some calling conventions, constants are used
         inputs.add(arg);
       } else {
-        Arg storedConst = findValueOf(sets, arg);
+        Arg storedConst = sets.findRetrieveResult(arg);
         if (storedConst != null && storedConst.isConstant()) {
           inputs.add(storedConst);
         } else {
@@ -157,21 +158,6 @@ public class ConstantFolder {
       }
     }
     return inputs;
-  }
-
-  /**
-   * Find if a future has a constant value stored in it
-   * @param congruent
-   * @param arg
-   * @return a value stored to the var, or null
-   */
-  private static Arg findValueOf(CongruentSets sets, Arg arg) {
-    assert(arg.isVar()) : arg;
-    // Try to find constant load
-    Opcode retrieveOp = Opcode.retrieveOpcode(arg.getVar());
-    assert(retrieveOp != null);
-    ArgOrCV retrieveVal = new ArgOrCV(retrieveOp, arg.asList());
-    return sets.findCanonical(retrieveVal);
   }
 
   /**
@@ -184,8 +170,8 @@ public class ConstantFolder {
   private static ArgOrCV foldGetFilename(Logger logger, CongruentSets sets,
       ComputedValue<Arg> val) {
     Var file = val.getInput(0).getVar();
-    Arg filenameValCanon = sets.findCanonical(
-                    new ArgOrCV(ComputedValue.filenameValCV(file)));
+    ArgCV filenameValCV = ComputedValue.filenameValCV(file);
+    Arg filenameValCanon = sets.findCanonicalInternal(filenameValCV);
     if (filenameValCanon != null) {
       // If we know filename of file, then just use that
       ArgOrCV folded = new ArgOrCV(Opcode.assignOpcode(Types.F_STRING),
