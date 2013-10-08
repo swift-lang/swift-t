@@ -17,4 +17,21 @@
 
 #ifdef XLB_ENABLE_XPT
 
+adlb_code xlb_xpt_index_init(void)
+{
+  return ADLB_ERROR;
+}
+
+adlb_code xlb_xpt_index_lookup(const void *key, int key_len,
+                               xpt_index_entry *res)
+{
+  return ADLB_ERROR;
+}
+
+adlb_code xlb_xpt_index_add(const void *key, int key_len,
+                            const xpt_index_entry *entry)
+{
+  return ADLB_ERROR;
+}
+
 #endif // XLB_ENABLE_XPT
