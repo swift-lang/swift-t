@@ -377,7 +377,7 @@ static inline adlb_code block_read_init(xlb_xpt_read_state *state,
 }
 
 adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
-                   int *key_len, void **key, int *val_len, void **val)
+   int *key_len, void **key, int *val_len, void **val, off_t *val_offset)
 {
   // TODO: implement reading record
   

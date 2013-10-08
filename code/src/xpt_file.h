@@ -92,9 +92,10 @@ adlb_code xlb_xpt_read_select(xlb_xpt_read_state *state, uint32_t rank);
    TODO: way to tell caller how much buffer they need?
   key_len, val_len: length in bytes
   key, val: pointers into buffer for start of key/value data
+  val_offset: file offset for value entry
  */
 adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
-                       int *key_len, void **key, int *val_len, void **val);
+       int *key_len, void **key, int *val_len, void **val, off_t *val_offset);
 
 #endif // __XLB_XPT_FILE_H
 #endif // XLB_ENABLE_XPT

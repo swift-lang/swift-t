@@ -143,11 +143,79 @@ adlb_code adlb_xpt_lookup(const void *key, int key_len, adlb_binary_data *result
   return ADLB_SUCCESS;
 }
 
+/*
+  Open checkpoint file for reading and slurp up all records
+  into our checkpoint index.
+  TODO: will probably need to support some kind of filtering
+ */
 adlb_code adlb_xpt_reload(const char *filename)
 {
-  // TODO: open checkpoint file for reading and slurp up all records
-  // into our checkpoint index.
-  return ADLB_ERROR;
+  adlb_code rc;
+  xlb_xpt_read_state read_state;
+  adlb_buffer buffer = { .data = NULL };
+
+  rc = xlb_xpt_open_read(filename, &read_state);
+  if (rc != ADLB_SUCCESS)
+    goto cleanup_exit;
+
+  // TODO: arbritrary buffer size
+  //      we probably want min(<some sensible amount>,
+  //                           max_index_val_bytes + key_size);
+  buffer.length = 4 * 1024 * 1024;
+  buffer.data = malloc((size_t)buffer.length);
+  CHECK_MSG(buffer.data != NULL, "Error allocating buffer");
+
+  for (uint32_t rank = 0; rank < read_state.ranks; rank++)
+  {
+    rc = xlb_xpt_read_select(&read_state, rank);
+    if (rc != ADLB_SUCCESS)
+      goto cleanup_exit;
+
+    // Read all records for this rank
+    while (true)
+    {
+      void *key_ptr, *val_ptr;
+      int key_len, val_len;
+      off_t val_offset;
+      rc = xlb_xpt_read(&read_state, &buffer, &key_len, &key_ptr,
+                        &val_len, &val_ptr, &val_offset);
+      if (rc == ADLB_NOTHING)
+      {
+        // Last record for this rank
+        break;
+      }
+      // Check for other errors
+      if (rc != ADLB_SUCCESS)
+        goto cleanup_exit;
+      
+      // TODO: check for too big for buffer
+      //       ideally we should at least get key...
+      
+      xpt_index_entry entry;
+      if (val_len > max_index_val_bytes)
+      {
+        entry.in_file = true;
+        entry.FILE_LOCATION.val_offset = val_offset;
+        entry.FILE_LOCATION.val_len = val_len;
+      }
+      else
+      {
+        entry.in_file = false;
+        entry.DATA.data = val_ptr;
+        entry.DATA.caller_data = NULL;
+        entry.DATA.length = val_len;
+      }
+      rc = xlb_xpt_index_add(key_ptr, key_len, &entry);
+    }
+  }
+
+  rc = ADLB_SUCCESS;
+cleanup_exit:
+  if (buffer.data != NULL)
+  {
+    free(buffer.data);
+  }
+  return rc;
 }
 
 #endif // XLB_ENABLE_XPT
