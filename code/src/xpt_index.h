@@ -24,11 +24,6 @@
 #include "adlb-defs.h"
 #include "adlb_types.h"
 
-/*
-  Sets up the in-memory index on servers.
- */
-adlb_code xlb_xpt_index_init(void);
-
 typedef struct
 {
   off_t val_offset;
@@ -46,6 +41,11 @@ typedef struct
     xpt_file_loc FILE_LOCATION;
   };
 } xpt_index_entry;
+
+/*
+  Sets up the in-memory index on servers.
+ */
+adlb_code xlb_xpt_index_init(void);
 
 /*
   Lookup in-memory index by key.

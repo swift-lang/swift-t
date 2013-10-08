@@ -16,6 +16,11 @@
 #include "xpt_file.h"
 
 #ifdef XLB_ENABLE_XPT
+
+#include <limits.h>
+#include <stdbool.h>
+#include <stdint.h>
+
 #include <zlib.h>
 
 #include "checks.h"
@@ -58,6 +63,24 @@ static inline adlb_code xpt_header_write(xlb_xpt_state *state);
 
 #define FREAD_CHECKED_UINT32(data, state) {                 \
   FREAD_CHECKED(&(data), sizeof(uint32_t), 1, state);       \
+}
+
+// Check fread return code, returning ADLB_NOTHING upon eof
+#define CHECK_READ_EOF(code) {                              \
+  if (code != 1)                                            \
+  {                                                         \
+    if (feof(state->file))                                  \
+    {                                                       \
+      return ADLB_NOTHING;                                  \
+    }                                                       \
+    else                                                    \
+    {                                                       \
+      printf("Error reading from checkpoint file: %i",      \
+            ferror(state->file));                           \
+      clearerr(state->file);                                \
+      return ADLB_ERROR;                                    \
+    }                                                       \
+  }                                                         \
 }
 
 adlb_code xlb_xpt_init(const char *filename, xlb_xpt_state *state)
@@ -379,7 +402,63 @@ static inline adlb_code block_read_init(xlb_xpt_read_state *state,
 adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
    int *key_len, void **key, int *val_len, void **val, off_t *val_offset)
 {
-  // TODO: implement reading record
+  size_t frrc;
+  assert(state->file != NULL);
+  assert(buffer->data != NULL);
+  // TODO: advance to next block if necessary
+
+  uint32_t crc;
+  // Buffers for encoded vint values
+  Byte rec_len_enc[VINT_MAX_BYTES];
+  // Length in bytes of encoded vint values
+  int rec_len_encb;
+  int64_t rec_len64, key_len64;
+
+  // Get crc
+  frrc = fread(&crc, sizeof(crc), 1, state->file);
+  CHECK_READ_EOF(frrc);
+
+  off_t rec_offset = ftello(state->file);
+  CHECK_MSG(rec_offset == 0, "Error using ftello");
+
+  // TODO: get record length from file
+  rec_len64 = 0;
+  rec_len_encb = 0;
+  // TODO: sanity checks for record length
+  assert(rec_len64 >= 0 && rec_len64 <= INT_MAX);
+  
+  // TODO: need to handle small buffer case gracefully
+  CHECK_MSG(buffer->length < rec_len64, "Buffer too small: %i v %"PRId64,
+            buffer->length, rec_len64);
+
+  // Load rest of record into caller buffer
+  frrc = fread(buffer->data, 1, (size_t)rec_len64, state->file);
+  CHECK_READ_EOF(frrc);
+
+  // Now we can check crc 
+  uLong crc_calc = crc32(0L, Z_NULL, 0);
+  crc_calc = crc32(crc_calc, rec_len_enc, (uInt)rec_len_encb);
+  crc_calc = crc32(crc_calc, (Byte*)buffer->data, (uInt)rec_len64);
+  if (crc_calc != crc)
+  {
+    // Invalid or corrupted record
+    return ADLB_NOTHING;
+  }
+
+  // CRC check passed: checkpoint record is probably intact
+  int key_len_encb = vint_decode(buffer->data, (int)rec_len64, &key_len64);
+  CHECK_MSG(key_len_encb >= 0, "Error decoding vint for key length");
+  assert(key_len64 >= 0 && key_len64 <= INT_MAX);
+
+  *key_len = (int) key_len64;
+  *val_len = (int) (rec_len64 - (int64_t)key_len_encb - key_len64);
+
+  // Work out relative offsets of key/value data from record start
+  int key_rel = key_len_encb;
+  int val_rel = key_rel + *key_len;
+  *key = buffer->data + key_rel;
+  *val = buffer->data + val_rel;
+  *val_offset = rec_offset + (off_t)val_rel;
   
   return ADLB_SUCCESS;
 }

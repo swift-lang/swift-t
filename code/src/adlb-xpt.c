@@ -158,7 +158,7 @@ adlb_code adlb_xpt_reload(const char *filename)
   if (rc != ADLB_SUCCESS)
     goto cleanup_exit;
 
-  // TODO: arbritrary buffer size
+  // TODO: arbitrary buffer size
   //      we probably want min(<some sensible amount>,
   //                           max_index_val_bytes + key_size);
   buffer.length = 4 * 1024 * 1024;
@@ -208,6 +208,10 @@ adlb_code adlb_xpt_reload(const char *filename)
       rc = xlb_xpt_index_add(key_ptr, key_len, &entry);
     }
   }
+  
+  rc = xlb_xpt_close_read(&read_state);
+  if (rc != ADLB_SUCCESS)
+    goto cleanup_exit;
 
   rc = ADLB_SUCCESS;
 cleanup_exit:

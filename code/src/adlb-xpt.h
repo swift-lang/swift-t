@@ -85,6 +85,9 @@ adlb_code adlb_xpt_lookup(const void *key, int key_len, adlb_binary_data *result
   Reload checkpoint data from file into in-memory index.
   Return error if checkpoint file appears to be invalid.
   If corrupted or partially written entries are encountered, ignore them.
+
+  TODO: currently this should only be called on one node.
+  TODO: add ability to split reload work among ranks
  */
 adlb_code adlb_xpt_reload(const char *filename);
 
