@@ -85,6 +85,16 @@ adlb_code xlb_xpt_init(const char *filename, xlb_xpt_state *state)
   return ADLB_SUCCESS;
 }
 
+adlb_code xlb_xpt_close(xlb_xpt_state *state)
+{
+  assert(state->file != NULL);
+  int rc = fclose(state->file);
+  state->file = NULL;
+  
+  CHECK_MSG(rc == 0, "Error closing checkpoint file");
+  return ADLB_SUCCESS;
+}
+
 static inline uint32_t first_block(uint32_t rank, uint32_t ranks)
 {
   return rank;
@@ -98,6 +108,7 @@ static inline uint32_t next_block(uint32_t rank, uint32_t ranks,
 
 adlb_code xlb_xpt_next_block(xlb_xpt_state *state)
 {
+  assert(state->file != NULL);
   // Round-robin block allocation for now
   state->curr_block = next_block((uint32_t)xlb_comm_rank,
              (uint32_t)xlb_comm_size, state->curr_block);
@@ -114,6 +125,7 @@ adlb_code xlb_xpt_next_block(xlb_xpt_state *state)
 static inline adlb_code block_start_seek(const char *filename,
                                         xlb_xpt_state *state)
 {
+  assert(state->file != NULL);
   off_t block_start = ((off_t)state->curr_block) * XLB_XPT_BLOCK_SIZE;
   int rc = fseek(state->file, block_start, SEEK_SET);
   if (filename != NULL) {
@@ -133,6 +145,7 @@ static inline bool is_xpt_leader(void)
 
 static inline adlb_code xpt_header_write(xlb_xpt_state *state)
 {
+  assert(state->file != NULL);
   adlb_code rc = block_init(state);
   ADLB_CHECK(rc);
   // Write info about structure of checkpoint file
@@ -154,6 +167,7 @@ static inline adlb_code xpt_header_write(xlb_xpt_state *state)
  */
 static inline adlb_code block_init(xlb_xpt_state *state)
 {
+  assert(state->file != NULL);
   assert(state->empty_block);
   int rc;
   rc = fputc(xpt_magic_num, state->file);
@@ -181,6 +195,7 @@ static inline adlb_code block_init(xlb_xpt_state *state)
 adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,
                         int val_len, xlb_xpt_state *state)
 {
+  assert(state->file != NULL);
   assert(key_len >= 0);
   assert(val_len >= 0);
   
@@ -250,6 +265,7 @@ adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,
 
 adlb_code xlb_xpt_flush(xlb_xpt_state *state)
 {
+  assert(state->file != NULL);
   int rc = fflush(state->file);
   CHECK_MSG(rc != EOF, "Error flushing checkpoint file");
 
@@ -278,8 +294,18 @@ adlb_code xlb_xpt_open_read(const char *filename, xlb_xpt_read_state *state)
   return ADLB_SUCCESS;
 }
 
+adlb_code xlb_xpt_close_read(xlb_xpt_read_state *state)
+{
+  assert(state->file != NULL);
+  int rc = fclose(state->file);
+  state->file = NULL;
+  CHECK_MSG(rc != 0, "Error closing checkpoint file");
+  return ADLB_SUCCESS;
+}
+
 adlb_code xlb_xpt_read_select(xlb_xpt_read_state *state, uint32_t rank)
 {
+  assert(state->file != NULL);
   CHECK_MSG(rank >= 0 && rank < state->ranks, "Invalid rank: %"PRId32, rank);
   state->curr_rank = rank;
   state->curr_block = first_block(state->curr_rank, state->ranks);
@@ -305,6 +331,7 @@ adlb_code xlb_xpt_read_select(xlb_xpt_read_state *state, uint32_t rank)
 static inline adlb_code block_read_init(xlb_xpt_read_state *state,
                                         bool *empty)
 {
+  assert(state->file != NULL);
   int magic_num = fgetc(state->file);
   if (magic_num == EOF || magic_num == 0) {
     *empty = true;

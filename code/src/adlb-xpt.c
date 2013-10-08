@@ -16,11 +16,41 @@
 #ifdef XLB_ENABLE_XPT
 #include "adlb-xpt.h"
 
+#include "checks.h"
+#include "xpt_file.h"
+#include "xpt_index.h"
+
+static bool xlb_xpt_initialized = false;
+
+// Checkpoint output state
+static xlb_xpt_state xpt_state;
+
+static adlb_xpt_flush_policy flush_policy;
+static int max_index_val_bytes;
+
 adlb_code adlb_xpt_init(const char *filename, adlb_xpt_flush_policy fp,
                         int max_index_val)
 {
-  // TODO
-  return ADLB_ERROR;
+  adlb_code rc;
+
+  rc = xlb_xpt_init(filename, &xpt_state);
+  ADLB_CHECK(rc);
+  
+  flush_policy = fp;
+  max_index_val_bytes = max_index_val;
+  xlb_xpt_initialized = true;
+  return ADLB_SUCCESS;
+}
+
+adlb_code adlb_xpt_finalize(void)
+{
+  adlb_code rc;
+  xlb_xpt_initialized = false;
+
+  rc = xlb_xpt_close(&xpt_state);
+  ADLB_CHECK(rc);
+
+  return ADLB_SUCCESS;
 }
 
 adlb_code adlb_xpt_write(const void *key, int key_len, const void *val,

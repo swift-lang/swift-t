@@ -53,6 +53,9 @@ typedef struct {
    header info.  This must be called after xlb is initialized */
 adlb_code xlb_xpt_init(const char *filename, xlb_xpt_state *state);
 
+/* Close checkpoint file */
+adlb_code xlb_xpt_close(xlb_xpt_state *state);
+
 /* Move to next checkpoint block for this rank */
 adlb_code xlb_xpt_next_block(xlb_xpt_state *state);
 
@@ -66,6 +69,9 @@ adlb_code xlb_xpt_flush(xlb_xpt_state *state);
 /* Open existing checkpoint file.  Defaults to reading checkpoints
    from rank 0. This can be changed with a call to xlb_xpt_read_select */
 adlb_code xlb_xpt_open_read(const char *filename, xlb_xpt_read_state *state);
+
+/* Close checkpoint read file */
+adlb_code xlb_xpt_close_read(xlb_xpt_read_state *state);
 
 /* Start reading the checkpoint stream of the specified rank. Called after
   the checkpoint file has been opened */

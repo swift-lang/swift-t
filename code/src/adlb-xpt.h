@@ -58,6 +58,11 @@ adlb_code adlb_xpt_init(const char *filename, adlb_xpt_flush_policy fp,
                         int max_index_val);
 
 /*
+  Finalize checkpointing to file.
+ */
+adlb_code adlb_xpt_finalize(void);
+
+/*
   Add a checkpoint to in-memory index.
   Log to file if persist is specified, or if value too large.
 
