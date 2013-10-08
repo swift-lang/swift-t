@@ -32,7 +32,6 @@ adlb_code adlb_xpt_init(const char *filename, adlb_xpt_flush_policy fp,
                         int max_index_val)
 {
   adlb_code rc;
-
   rc = xlb_xpt_init(filename, &xpt_state);
   ADLB_CHECK(rc);
   
@@ -44,6 +43,7 @@ adlb_code adlb_xpt_init(const char *filename, adlb_xpt_flush_policy fp,
 
 adlb_code adlb_xpt_finalize(void)
 {
+  assert(xlb_xpt_initialized);
   adlb_code rc;
   xlb_xpt_initialized = false;
 
@@ -56,23 +56,98 @@ adlb_code adlb_xpt_finalize(void)
 adlb_code adlb_xpt_write(const void *key, int key_len, const void *val,
                         int val_len, adlb_xpt_persist persist)
 {
-  // TODO
-  return ADLB_ERROR;
+  assert(xlb_xpt_initialized);
+  assert(key_len >= 0);
+  assert(val_len >= 0);
+
+  adlb_code rc;
+  bool do_persist = persist != NO_PERSIST;
+  xpt_index_entry entry;
+
+  if (val_len > max_index_val_bytes)
+  {
+    // Too big for memory, must write to file
+    do_persist = true;
+    entry.in_file = true;
+    // Fill in file location upon write
+  }
+  else
+  {
+    // Store data directly in index
+    entry.in_file = false;
+    entry.DATA.data = val;
+    entry.DATA.caller_data = NULL;
+    entry.DATA.length = val_len;
+  }
+
+  if (do_persist)
+  {
+    off_t val_offset;
+    // Must persist entry
+    rc = xlb_xpt_write(key, key_len, val, val_len, &xpt_state,
+                       &val_offset);
+    ADLB_CHECK(rc);
+
+    if (flush_policy == ALWAYS_FLUSH || persist == PERSIST_FLUSH)
+    {
+      rc = xlb_xpt_flush(&xpt_state);
+      ADLB_CHECK(rc);
+    }
+
+    if (entry.in_file)
+    {
+      // Must update entry
+      entry.FILE_LOCATION.val_offset = val_offset;
+      entry.FILE_LOCATION.val_len = val_len;
+    }
+  }
+
+  rc = xlb_xpt_index_add(key, key_len, &entry);
+  ADLB_CHECK(rc);
+  return ADLB_SUCCESS;
 }
 
 adlb_code adlb_xpt_lookup(const void *key, int key_len, adlb_binary_data *result)
 {
-  // TODO
-  return ADLB_ERROR;
+  assert(xlb_xpt_initialized);
+  assert(key != NULL);
+  assert(key_len >= 0);
+  assert(result != NULL);
+
+  adlb_code rc;
+  xpt_index_entry res;
+
+  rc = xlb_xpt_index_lookup(key, key_len, &res);
+  if (rc == ADLB_NOTHING)
+  {
+    return ADLB_NOTHING;
+  }
+  ADLB_CHECK(rc);
+
+  if (res.in_file)
+  {
+    // Allocate buffer that caller should free
+    int val_len = res.FILE_LOCATION.val_len;
+    result->data = result->caller_data = malloc((size_t)val_len);
+    result->length = val_len;
+    CHECK_MSG(result->data != NULL, "Could not allocate buffer");
+
+    rc = xlb_xpt_read_val(res.FILE_LOCATION.val_offset, val_len,
+                          &xpt_state, result->caller_data);
+    ADLB_CHECK(rc);
+  }
+  else
+  {
+    *result = res.DATA;
+  }
+  return ADLB_SUCCESS;
 }
 
 adlb_code adlb_xpt_reload(const char *filename)
 {
-  // TODO
+  // TODO: open checkpoint file for reading and slurp up all records
+  // into our checkpoint index.
   return ADLB_ERROR;
 }
-
-
-
 
 #endif // XLB_ENABLE_XPT

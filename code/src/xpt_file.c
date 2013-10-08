@@ -64,7 +64,7 @@ adlb_code xlb_xpt_init(const char *filename, xlb_xpt_state *state)
 {
   assert(filename != NULL);
   assert(state != NULL);
-  state->file = fopen(filename, "wb");
+  state->file = fopen(filename, "wb+");
   CHECK_MSG(state->file != NULL, "Error opening file %s for write",
             filename);
 
@@ -193,7 +193,7 @@ static inline adlb_code block_init(xlb_xpt_state *state)
   Advances to next block if necessary.
  */
 adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,
-                        int val_len, xlb_xpt_state *state)
+                int val_len, xlb_xpt_state *state, off_t *val_offset)
 {
   assert(state->file != NULL);
   assert(key_len >= 0);
@@ -259,7 +259,40 @@ adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,
   FWRITE_CHECKED(rec_len_enc, 1, rec_len_encb, state);
   FWRITE_CHECKED(key_len_enc, 1, key_len_encb, state);
   FWRITE_CHECKED(key, 1, key_len, state);
+  if (val_offset != NULL)
+  {
+    // Return offset of value in file if needed
+    *val_offset = ftello(state->file);
+    CHECK_MSG(*val_offset >= 0, "Error getting file value offset");
+  }
   FWRITE_CHECKED(val, 1, val_len, state);
+  return ADLB_SUCCESS;
+}
+
+adlb_code xlb_xpt_read_val(off_t val_offset, int val_len,
+                           xlb_xpt_state *state, void *buffer)
+{
+  assert(state->file != NULL);
+  assert(val_len >= 0);
+
+  int rc;
+  fpos_t pos;
+  // Use fgetpos/fsetpos to return file pointer to old position
+  rc = fgetpos(state->file, &pos);
+  CHECK_MSG(rc == 0, "Error using fgetpos on checkpoint file");
+
+  rc = fseeko(state->file, val_offset, SEEK_SET);
+  CHECK_MSG(rc == 0, "Error using fseeko on checkpoint file");
+
+  size_t wrote = fread(buffer, 1, (size_t)val_len, state->file);
+
+  // Reset file position before checking if read was ok
+  rc = fsetpos(state->file, &pos);
+  CHECK_MSG(rc == 0, "Error using fsetpos on checkpoint file");
+  
+  CHECK_MSG(wrote == (size_t)val_len, "Error reading value from "
+                                      "checkpoint file");
+
   return ADLB_SUCCESS;
 }
 

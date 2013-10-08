@@ -59,9 +59,15 @@ adlb_code xlb_xpt_close(xlb_xpt_state *state);
 /* Move to next checkpoint block for this rank */
 adlb_code xlb_xpt_next_block(xlb_xpt_state *state);
 
-/* Write a checkpoint record */
+/* Write a checkpoint record.
+  val_offset: offset of value record in file. */
 adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,
-                        int val_len, xlb_xpt_state *state);
+                int val_len, xlb_xpt_state *state, off_t *val_offset);
+
+/* Read a checkpoint value at a value offset returned by xlb_xpt_write.
+   buffer must be at least val_len in size */
+adlb_code xlb_xpt_read_val(off_t val_offset, int val_len,
+                           xlb_xpt_state *state, void *buffer);
 
 /* Flush checkpoint writes */
 adlb_code xlb_xpt_flush(xlb_xpt_state *state);

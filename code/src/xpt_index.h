@@ -29,6 +29,11 @@
  */
 adlb_code xlb_xpt_index_init(void);
 
+typedef struct
+{
+  off_t val_offset;
+  int val_len;
+} xpt_file_loc;
 
 typedef struct 
 {
@@ -38,12 +43,9 @@ typedef struct
     // Actual data
     adlb_binary_data DATA;
     // OR chunk of current checkpoint file
-    struct {
-      off_t val_offset;
-      int val_len;
-    } FILE_LOCATION;
+    xpt_file_loc FILE_LOCATION;
   };
-} xpt_lookup_res;
+} xpt_index_entry;
 
 /*
   Lookup in-memory index by key.
@@ -53,13 +55,13 @@ typedef struct
   Caller must free any allocated binary data returned in adlb_binary_data.
  */
 adlb_code xlb_xpt_index_lookup(const void *key, int key_len,
-                               xpt_lookup_res *res);
+                               xpt_index_entry *res);
 
 /*
   Add index entry.
  */
-adlb_code xlb_xpt_index_add(const void *key, int key_len, const void *val,
-                           int val_len);
+adlb_code xlb_xpt_index_add(const void *key, int key_len,
+                            const xpt_index_entry *entry);
 
 #endif // __XLB_XPT_INDEX_H
 #endif // XLB_ENABLE_XPT
