@@ -18,8 +18,8 @@
  */
 
 #ifdef XLB_ENABLE_XPT
-#ifndef __XLB_XPT_H
-#define __XLB_XPT_H
+#ifndef __XLB_XPT_FILE_H
+#define __XLB_XPT_FILE_H
 
 #include <stdio.h>
 
@@ -84,5 +84,5 @@ adlb_code xlb_xpt_read_select(xlb_xpt_read_state *state, uint32_t rank);
 adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
                        int *key_len, void **key, int *val_len, void **val);
 
-#endif // __XLB_XPT_H
+#endif // __XLB_XPT_FILE_H
 #endif // XLB_ENABLE_XPT

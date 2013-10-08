@@ -60,6 +60,10 @@ adlb_code adlb_xpt_init(const char *filename, adlb_xpt_flush_policy fp,
 /*
   Add a checkpoint to in-memory index.
   Log to file if persist is specified, or if value too large.
+
+  If not specified, flushing follows flushing policy.
+  Result is flushed to disk if requested, or if value too large to fit
+  in memory (since other nodes may need to lookup result).
  */
 adlb_code adlb_xpt_write(const void *key, int key_len, const void *val,
                         int val_len, adlb_xpt_persist persist);
