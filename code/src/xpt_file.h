@@ -82,7 +82,7 @@ adlb_code xlb_xpt_read_select(xlb_xpt_read_state *state, uint32_t rank);
   key, val: pointers into buffer for start of key/value data
  */
 adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
-               int64_t key_len, void *key, int64_t val_len, void *val);
+                       int *key_len, void **key, int *val_len, void **val);
 
 #endif // __XLB_XPT_H
 #endif // XLB_ENABLE_XPT
