@@ -50,6 +50,8 @@ typedef enum {
 
 /*
   Initialize checkpointing to file.
+  Should be called after ADLB is initialized.
+
   fp: controls the policy used for flushing checkpoint entires to disk
   max_index_val: maximum value size to store in in-memory index. Larger
       values are persisted to file and a reference stored in index.
@@ -76,7 +78,8 @@ adlb_code adlb_xpt_write(const void *key, int key_len, const void *val,
 /*
   Lookup checkpoint for key in in-memory index.
   Result is filled in upon success.  Caller is responsible for freeing
-  any returned memory in result.
+  any returned memory in result.  If a non-caller-owned pointer is returned
+  (e.g. into an internal buffer), it is only valid until the next ADLB call.
   Return ADLB_SUCCESS if found, ADLB_NOTHING if not present
  */
 adlb_code adlb_xpt_lookup(const void *key, int key_len, adlb_binary_data *result);

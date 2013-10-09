@@ -48,7 +48,8 @@ typedef enum
 } adlb_code;
 
 /**
-   Identifier for all ADLB data module user data
+   Identifier for all ADLB data module user data.
+   Negative values are reserved for system functions
  */
 typedef int64_t adlb_datum_id;
 

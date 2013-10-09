@@ -13,36 +13,163 @@
  * See the License for the specific language governing permissions and
  * limitations under the License
  */
-#include "xpt_index.h"
 #ifdef XLB_ENABLE_XPT
+#include "xpt_index.h"
 
+#include <stdio.h>
+
+#include "adlb.h"
+#include "checks.h"
 #include "common.h"
+#include "data.h"
+#include "jenkins-hash.h"
+#include "table.h"
+
+static bool xpt_index_init = false;
+
+static inline adlb_datum_id id_for_rank(int comm_rank);
+static inline adlb_datum_id id_for_server(int server_num);
+static inline adlb_datum_id id_for_hash(uint32_t key_hash);
+static inline uint32_t calc_hash(const void *data, int length);
 
 adlb_code xlb_xpt_index_init(void)
 {
+  adlb_data_code dc;
   if (xlb_am_server)
   {
-    // TODO: setup checkpoint index using sharded container on servers
+    // setup checkpoint index using sharded container on servers
+    adlb_datum_id container_id = id_for_rank(xlb_comm_rank);
+
+    // TODO: need real support for blob key
+    adlb_type_extra extra = { .CONTAINER.key_type = ADLB_DATA_TYPE_BLOB,
+                              .CONTAINER.val_type = ADLB_DATA_TYPE_BLOB };
+    adlb_create_props props = { .read_refcount = 1, .write_refcount = 1,
+                                .permanent = true };
+    dc = xlb_data_create(container_id, ADLB_DATA_TYPE_CONTAINER, &extra,
+                         &props);
+    ADLB_DATA_CHECK(dc);
   }
-  else
-  {
-    // TODO: on client, identify turbine IDs for index
-  }
-  return ADLB_ERROR;
+  xpt_index_init = true;
+  return ADLB_SUCCESS;
 }
 
 adlb_code xlb_xpt_index_lookup(const void *key, int key_len,
                                xpt_index_entry *res)
 {
-  // TODO: lookup checkpoint in container
-  return ADLB_ERROR;
+  assert(xpt_index_init);
+  adlb_datum_id id = id_for_hash(calc_hash(key, key_len));
+
+  adlb_retrieve_rc refcounts = ADLB_RETRIEVE_NO_RC;
+  adlb_data_type type;
+
+  // TODO: limited to ADLB_DATA_MAX by using fixed buffer
+  bool alloced_buffer = false;
+  void *buffer = xfer; 
+  int length;
+  // TODO: need to provide key subscript
+  adlb_code rc = ADLB_Retrieve(id, NULL, refcounts, &type, buffer, &length);
+  CHECK_MSG(rc == ADLB_SUCCESS, "Error looking up checkpoint in container "
+                                "%"PRId64, id);
+  if (length < 0)
+  {
+    // Not present
+    return ADLB_NOTHING;
+  }
+  CHECK_MSG(length >= 1, "Checkpoint index val too small: %i", length);
+
+  // Type flag goes at end of buffer
+  char in_file_flag = ((char*)buffer)[length - 1];
+  if (in_file_flag != 0)
+  {
+    res->in_file = true;
+    // Buffer should just have file location struct and flag
+    assert(length == sizeof(res->FILE_LOCATION) + 1);
+    memcpy(&res->FILE_LOCATION, buffer, sizeof(res->FILE_LOCATION));
+  }
+  else
+  {
+    res->in_file = false;
+    adlb_binary_data *d = &res->DATA;
+    d->length = length - 1; // Account for flag
+    d->data = buffer;
+    // Determine whether caller owns buffer
+    d->caller_data = alloced_buffer ? buffer : NULL;
+  }
+  return ADLB_SUCCESS;
 }
 
 adlb_code xlb_xpt_index_add(const void *key, int key_len,
                             const xpt_index_entry *entry)
 {
-  // TODO: add checkpoint to container
-  return ADLB_ERROR;
+  assert(xpt_index_init);
+  const void *data; // Pointer to binary repr
+  int data_len; // Length of data minus flag
+  char file_flag;
+  if (entry->in_file)
+  {
+    // Use binary struct representation
+    data = &entry->FILE_LOCATION;
+    data_len = (int)sizeof(entry->FILE_LOCATION);
+    file_flag = 1;
+  }
+  else
+  {
+    data = entry->DATA.data;
+    data_len = entry->DATA.length;
+    file_flag = 0;
+  }
+  // Copy data into transfer buffer
+  // TODO: using xfer limits size
+  memcpy(xfer, data, (size_t)data_len);
+  // Set file flag
+  xfer[data_len] = file_flag;
+  int blob_len = data_len + 1;
+
+  adlb_refcounts refcounts = ADLB_NO_RC;
+  adlb_datum_id id = id_for_hash(calc_hash(key, key_len));
+  // TODO: key subscript
+  adlb_code rc = ADLB_Store(id, NULL, ADLB_DATA_TYPE_BLOB,
+            xfer, blob_len, refcounts);
+  
+  // TODO: handle duplicate key gracefully: it is possible for the same
+  //       function to be recomputed, and we need to handle it!
+  CHECK_MSG(rc == ADLB_SUCCESS, "Error storing checkpoint entry");
+
+  return ADLB_SUCCESS;
+}
+
+/*
+  Get the checkpoint container ID for a given server rank.
+ */
+static inline adlb_datum_id id_for_rank(int comm_rank)
+{
+  // Servers come after other ranks
+  int server_num = comm_rank - (xlb_comm_size - xlb_servers);
+  return id_for_server(server_num);
+}
+
+static inline adlb_datum_id id_for_server(int server_num)
+{
+  assert(server_num >= 0 && server_num < xlb_servers);
+  // Use negative numbers that aren't allocated by data_unique
+  // ADLB_Locate will map this id to the right server
+  // Must be negative number in [-xlb_servers, -1] inclusive
+  return -xlb_servers + server_num;
+}
+
+/*
+  Work out checkpoint container ID given key hash
+ */
+static inline adlb_datum_id id_for_hash(uint32_t key_hash)
+{
+  // Must be negative number in [-xlb_servers, -1] inclusive
+  return -(int32_t)(key_hash % (uint32_t)xlb_servers) - 1;
+}
+
+static inline uint32_t calc_hash(const void *data, int length)
+{
+  assert(length >= 0);
+  return bj_hashlittle(data, (size_t)length, 0u);
 }
 
 #endif // XLB_ENABLE_XPT

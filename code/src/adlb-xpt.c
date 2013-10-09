@@ -41,6 +41,9 @@ adlb_code adlb_xpt_init(const char *filename, adlb_xpt_flush_policy fp,
   adlb_code rc;
   rc = xlb_xpt_init(filename, &xpt_state);
   ADLB_CHECK(rc);
+
+  rc = xlb_xpt_index_init();
+  ADLB_CHECK(rc);
   
   flush_policy = fp;
   max_index_val_bytes = max_index_val;
