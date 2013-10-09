@@ -423,9 +423,18 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
 
   // get record length from file  reading byte-by-byte
   rec_len_encb = vint_file_decode(state->file, &rec_len64);
-  CHECK_MSG(rec_len_encb > 0, "Could not decode record length from file");
-  // TODO: sanity checks for record length
-  assert(rec_len64 >= 0 && rec_len64 <= INT_MAX);
+  if (rec_len_encb < 0)
+  {
+    ERR_PRINTF("Could not decode record length from file\n"); 
+    return ADLB_NOTHING;
+  }
+
+  // sanity check for record length
+  if(rec_len64 < 0 || rec_len64 > INT_MAX)
+  {
+    ERR_PRINTF("Out of range record length: %"PRId64"\n", rec_len64);
+    return ADLB_NOTHING;
+  }
   
   // TODO: need to handle small buffer case gracefully
   CHECK_MSG(buffer->length < rec_len64, "Buffer too small: %i v %"PRId64,
@@ -447,11 +456,19 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
 
   // CRC check passed: checkpoint record is probably intact
   int key_len_encb = vint_decode(buffer->data, (int)rec_len64, &key_len64);
-  CHECK_MSG(key_len_encb >= 0, "Error decoding vint for key length");
-  assert(key_len64 >= 0 && key_len64 <= INT_MAX);
+  if (key_len_encb < 0)
+  {
+    ERR_PRINTF("Error decoding vint for key length\n");
+    return ADLB_NOTHING;
+  }
+  if (key_len64 < 0 || key_len64 > INT_MAX)
+  {
+    ERR_PRINTF("Out of range key length: %"PRId64"\n", key_len64);
+    return ADLB_NOTHING;
+  }
 
-  *key_len = (int) key_len64;
-  *val_len = (int) (rec_len64 - (int64_t)key_len_encb - key_len64);
+  *key_len = (int)key_len64;
+  *val_len = (int)(rec_len64 - (int64_t)key_len_encb - key_len64);
 
   // Work out relative offsets of key/value data from record start
   int key_rel = key_len_encb;

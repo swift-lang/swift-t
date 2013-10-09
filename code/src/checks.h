@@ -32,6 +32,9 @@
 
 #define ADLB_IS_ERROR(rc) (rc == ADLB_ERROR)
 
+// printf-like macro for printing error info
+#define ERR_PRINTF(args...) printf(args)
+
 #ifndef NDEBUG
 
 /**
@@ -40,9 +43,9 @@
 */
 #define CHECK_MSG(rc, args...)                  \
   { if (!(rc)) {                                             \
-      printf("CHECK FAILED: %s:%i\n", __FILE__, __LINE__);   \
-      printf(args);                                          \
-      printf("\n");                                          \
+      ERR_PRINTF("CHECK FAILED: %s:%i\n", __FILE__, __LINE__);   \
+      ERR_PRINTF(args);                                          \
+      ERR_PRINTF("\n");                                          \
       return ADLB_ERROR; }}
 
 /**
@@ -51,7 +54,7 @@
  */
 #define MPI_CHECK(rc)  \
   { if (rc != MPI_SUCCESS) { \
-    printf("MPI_CHECK FAILED: %s:%i\n", __FILE__, __LINE__);\
+    ERR_PRINTF("MPI_CHECK FAILED: %s:%i\n", __FILE__, __LINE__);\
     return ADLB_ERROR; }}
 
 /**
@@ -62,7 +65,7 @@
  */
 #define ADLB_CHECK(rc) { \
   if (ADLB_IS_ERROR(rc)) { \
-    printf("ADLB_CHECK FAILED: %s:%s():%i\n", \
+    ERR_PRINTF("ADLB_CHECK FAILED: %s:%s():%i\n", \
            __FILE__, __func__, __LINE__); \
     return rc; }}
 
@@ -72,7 +75,7 @@
  */
 #define ADLB_DATA_CHECK(dc) { \
   if (dc != ADLB_DATA_SUCCESS) { \
-    printf("ADLB_DATA_CHECK FAILED: %s:%i\n", __FILE__, __LINE__); \
+    ERR_PRINTF("ADLB_DATA_CHECK FAILED: %s:%i\n", __FILE__, __LINE__); \
     return ADLB_ERROR; }}
 
 #else
