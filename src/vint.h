@@ -119,35 +119,68 @@ vint_encode(int64_t val, void *buffer)
   return pos;
 }
 
+typedef struct
+{
+  signed char sign; // 1 for +ive, -1 for -ive
+  int64_t accum;
+  int shift; // Bits to shift next byte by
+} vint_dec;
+
+/*
+  Decode first byte of vint.
+  Returns -1 on error, 0 if done, 1 if more to decode
+ */
+static inline int
+vint_decode_start(unsigned char b, vint_dec *dec)
+{
+  dec->sign = ((b & VINT_SIGN_MASK) != 0) ? -1 : 1;
+  dec->accum = b & VINT_6BIT_MASK;
+  dec->shift = 6;
+  return ((b & VINT_MORE_MASK) != 0) ? 1 : 0;
+}
+
+static inline int
+vint_decode_more(unsigned char b, vint_dec *dec)
+{
+  int64_t add = (int64_t)(b & VINT_7BIT_MASK);
+  dec->accum += (add << dec->shift);
+  dec->shift += 7;
+
+  // check for overflow of unsigned part of int64_t
+  if (dec->shift > 63)
+  {
+    return -1;
+  }
+  return ((b & VINT_MORE_MASK) != 0) ? 1 : 0;
+}
+
 static inline int
 vint_decode(void *buffer, int len, int64_t *val)
 {
   unsigned char *buffer2 = buffer;
   if (len < 1)
     return -1;
-  unsigned char b = buffer2[0]; // current byte
-  int64_t sign; // 1 for +ive, -1 for -ive
 
-  sign = ((b & VINT_SIGN_MASK) != 0) ? -1 : 1;
-  int64_t accum = b & VINT_6BIT_MASK;
-
+  vint_dec dec;
+  int dec_rc = vint_decode_start(buffer2[0], &dec);
   int pos = 1; // Byte position
-  int shift = 6; // Bits to shift next byte by
   
-  while ((b & VINT_MORE_MASK) != 0)
+  while (dec_rc == 1)
   {
     if (len <= pos)
     {
       // Too long
       return -1;
     }
-    b = buffer2[pos++];
-    int64_t add = (int64_t)(b & VINT_7BIT_MASK);
-    // TODO: check for overflow
-    accum += (add << shift);
-    shift += 7;
+    dec_rc = vint_decode_more(buffer2[pos++], &dec);
   }
-  *val = accum * sign;
+  if (dec_rc == -1)
+  {
+    // Error encountered
+    return -1;
+  }
+
+  *val = dec.accum * dec.sign;
   return pos;
 }
 
