@@ -32,8 +32,6 @@
 
 #include "adlb-defs.h"
 
-#include "adlb-xpt.h"
-
 #include "version.h"
 
 #define XLB

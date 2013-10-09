@@ -111,6 +111,7 @@ ifeq ($(ENABLE_XPT),yes)
 	CFLAGS += -D XLB_ENABLE_XPT
         # Need zlib for checkpoint CRC
         LIBS += -lz
+        INSTALLED_HEADERS += src/adlb-xpt.h
 endif
 
 ### INCLUDES
