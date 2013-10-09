@@ -449,7 +449,7 @@ public class ValueNumber implements OptimizerPass {
             if (Types.isScalarFuture(output)) {
               // Replace a computation with future output with a store
               Arg val = state.findRetrieveResult(output);
-              if (val != null) {
+              if (val != null && init.isInitialized(val, false)) {
                 Instruction futureSet = ICInstructions.futureSet(output, val);
                 stmtIt.set(futureSet);
                 logger.trace("Replaced with " + futureSet);

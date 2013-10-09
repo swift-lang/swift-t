@@ -248,6 +248,24 @@ public class InitVariables {
     }
 
     /**
+     * Check that arg is initialized for reading
+     */
+    public boolean isInitialized(Arg val, boolean output)
+    {
+      if (val.isVar()) {
+        return isInitialized(val.getVar(), output); 
+      } else {
+        if (output) {
+          throw new STCRuntimeError("Cannot use constant as output: " +
+                                      val);
+        } else {
+          // Constant is always ok for input
+          return true;
+        }
+      }
+    }
+    
+    /**
      * Check that variable is correctly initialized
      * @param var
      * @param output
@@ -297,7 +315,6 @@ public class InitVariables {
    * 
    * @param logger
    * @param fn
-   * @param block
    */
   public static void checkVarInit(Logger logger, Function fn) {
     recurseOnBlock(logger, fn.mainBlock(), InitState.enterFunction(fn), true);
@@ -320,7 +337,6 @@ public class InitVariables {
    * This is the workhorse of this module that traverses the intermediate
    * representation and finds out which variables are initialized 
    * @param logger
-   * @param fn
    * @param state Initialized vars.  Updated if we discover that more vars
    *      are initialized after continuation
    * @param validate if true, validate correct usage of initialized variables.
