@@ -56,9 +56,6 @@ adlb_code xlb_xpt_init(const char *filename, xlb_xpt_state *state);
 /* Close checkpoint file */
 adlb_code xlb_xpt_close(xlb_xpt_state *state);
 
-/* Move to next checkpoint block for this rank */
-adlb_code xlb_xpt_next_block(xlb_xpt_state *state);
-
 /* Write a checkpoint record.
   val_offset: offset of value record in file. */
 adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,

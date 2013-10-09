@@ -37,6 +37,8 @@ static inline uint32_t next_block(uint32_t rank, uint32_t ranks,
 
 static inline adlb_code block_start_seek(const char *filename,
                                          xlb_xpt_state *state);
+static inline adlb_code xlb_xpt_next_block(xlb_xpt_state *state,
+        off_t block_remaining);
 static inline adlb_code block_init(xlb_xpt_state *state);
 static inline adlb_code block_read_init(xlb_xpt_read_state *state,
                                         bool *empty);
@@ -131,8 +133,11 @@ static inline uint32_t next_block(uint32_t rank, uint32_t ranks,
   return curr + ranks;
 }
 
-// We want to keep
-adlb_code xlb_xpt_next_block(xlb_xpt_state *state)
+/* Move to start of next block
+ block_remaining: how many empty bytes at end of curr block?
+ */
+static inline adlb_code xlb_xpt_next_block(xlb_xpt_state *state,
+        off_t block_remaining)
 {
   assert(state->file != NULL);
   // Round-robin block allocation for now
@@ -218,6 +223,8 @@ static inline adlb_code block_init(xlb_xpt_state *state)
 
   Advances to next block if necessary.
 
+  To mark a hole in a block, we put an entry with record_len == 0.
+
   Checkpoint entries can be split across blocks.  In this
   case we will make sure that the checksum and record length
   are in the first block, but the remainder can be split
@@ -273,7 +280,7 @@ adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,
     off_t block_remaining = XLB_XPT_BLOCK_SIZE - (curr_pos - block_start);
     if (rec_total_len >= block_remaining)
     {
-      rc = xlb_xpt_next_block(state);
+      rc = xlb_xpt_next_block(state, block_remaining);
       ADLB_CHECK(rc);
     }
   }
@@ -412,6 +419,22 @@ static inline adlb_code block_read_init(xlb_xpt_read_state *state,
   return ADLB_SUCCESS;
 }
 
+/*
+   Advance to next block.
+ */
+static inline adlb_code block_read_advance(xlb_xpt_read_state *state)
+{
+  assert(state->file != NULL);
+  state->curr_block = next_block(state->curr_rank, state->ranks,
+                                 state->curr_block);
+  off_t block_start = ((off_t)state->curr_block) * state->block_size;
+  int rc = fseek(state->file, block_start, SEEK_SET);
+  CHECK_MSG(rc == 0, "Error seeking to offset %llu in checkpoint file",
+                     (long long unsigned)block_start);
+  state->started_block = false;
+  return ADLB_SUCCESS;
+}
+
 adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
    int *key_len, void **key, int *val_len, void **val, off_t *val_offset)
 {
@@ -419,8 +442,18 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
   assert(state->file != NULL);
   assert(buffer->data != NULL);
 
-  // TODO: advance to next block if necessary
-  // TODO: how to detect if no more data in block?
+  // TODO: advance to next block if remain of block too small for block header...
+  if (!state->started_block)
+  {
+    bool empty;
+    adlb_code rc = block_read_init(state, &empty);
+    ADLB_CHECK(rc);
+    if (empty)
+    {
+      return ADLB_DONE;
+    }
+    state->started_block = true;
+  }
 
   uint32_t crc;
   // Buffers for encoded vint values
@@ -431,6 +464,7 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
 
   // Get crc
   frrc = fread(&crc, sizeof(crc), 1, state->file);
+  // TODO: on error, seek to start of next block in attempt to re-sync?
   CHECK_READ_EOF(frrc);
 
   off_t rec_offset = ftello(state->file);
@@ -440,7 +474,8 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
   rec_len_encb = vint_file_decode(state->file, &rec_len64);
   if (rec_len_encb < 0)
   {
-    ERR_PRINTF("Could not decode record length from file\n"); 
+    ERR_PRINTF("Could not decode record length from file\n");
+    // TODO: seek to start of next block in attempt to re-sync?
     return ADLB_NOTHING;
   }
 
@@ -449,6 +484,13 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
   {
     ERR_PRINTF("Out of range record length: %"PRId64"\n", rec_len64);
     return ADLB_NOTHING;
+  }
+  else if (rec_len64 == 0)
+  {
+    // Zero-length record indicates end of block records
+    adlb_code rc = block_read_advance(state); 
+    ADLB_CHECK(rc);
+    return ADLB_NOTHING; // Caller should call again
   }
   
   // buffer too small: signal caller
