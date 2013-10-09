@@ -43,6 +43,8 @@ typedef enum
  ADLB_NOTHING = -4,
  /** Indicate that caller should retry */
  ADLB_RETRY = -5,
+ /** Indicate something is finished and shouldn't call again */
+ ADLB_DONE = -6,
 } adlb_code;
 
 /**

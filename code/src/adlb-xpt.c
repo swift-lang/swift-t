@@ -172,11 +172,16 @@ adlb_code adlb_xpt_reload(const char *filename)
   buffer.data = malloc((size_t)buffer.length);
   CHECK_MSG(buffer.data != NULL, "Error allocating buffer");
 
+  // TODO: how to split ranks in checkpoint among ranks in current
+  // cluster.
   for (uint32_t rank = 0; rank < read_state.ranks; rank++)
   {
     rc = xpt_reload_rank(filename, &read_state, &buffer, rank);
     if (rc != ADLB_SUCCESS)
-      goto cleanup_exit;
+    {
+      // Continue to next rank upon error
+      ERR_PRINTF("Error reloading records for rank %"PRId32, rank);
+    }
   }
   
   rc = xlb_xpt_close_read(&read_state);

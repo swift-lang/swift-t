@@ -42,6 +42,8 @@ static inline adlb_code block_read_init(xlb_xpt_read_state *state,
                                         bool *empty);
 static inline bool is_xpt_leader(void);
 static inline adlb_code xpt_header_write(xlb_xpt_state *state);
+static inline bool check_crc(xlb_xpt_read_state *state, int rec_len,
+                             uint32_t crc, adlb_buffer *buffer);
 
 #define FWRITE_CHECKED(data, size, count, state) {             \
   size_t count2 = (size_t)(count);                             \
@@ -65,13 +67,13 @@ static inline adlb_code xpt_header_write(xlb_xpt_state *state);
   FREAD_CHECKED(&(data), sizeof(uint32_t), 1, state);       \
 }
 
-// Check fread return code, returning ADLB_NOTHING upon eof
+// Check fread return code, returning ADLB_DONE upon eof
 #define CHECK_READ_EOF(code) {                              \
   if (code != 1)                                            \
   {                                                         \
     if (feof(state->file))                                  \
     {                                                       \
-      return ADLB_NOTHING;                                  \
+      return ADLB_DONE;                                     \
     }                                                       \
     else                                                    \
     {                                                       \
@@ -214,6 +216,11 @@ static inline adlb_code block_init(xlb_xpt_state *state)
   +------------+-------------------------------------+
 
   Advances to next block if necessary.
+
+  Checkpoint entries can be split across blocks.  In this
+  case we will make sure that the checksum and record length
+  are in the first block, but the remainder can be split
+  across blocks.
  */
 adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,
                 int val_len, xlb_xpt_state *state, off_t *val_offset)
@@ -247,9 +254,9 @@ adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,
   crc = crc32(crc, key, (uInt)key_len);
   crc = crc32(crc, val, (uInt)val_len);
 
-  // TODO: split across blocks to avoid space waste and to support
-  //  records larger than single block. For now bail out if record
-  //  too big, and avoid splitting records.
+  // TODO: split across blocks for records larger than single block.
+  // For smaller records want to align to block boundary to make it
+  // more possible to read partially corrupted checkpoint files.
   CHECK_MSG(rec_total_len <= XLB_XPT_BLOCK_SIZE - 1,
             "Record too large for checkpoint block: %"PRId64" v. %i",
             rec_total_len, XLB_XPT_BLOCK_SIZE);
@@ -344,7 +351,7 @@ adlb_code xlb_xpt_open_read(const char *filename, xlb_xpt_read_state *state)
         " at start of checkpoint file %s: may be corrupted or not"
         " checkpoint", magic_num, filename);
 
-  // TODO: verify checksum?
+  // TODO: verify header checksum?
   FREAD_CHECKED_UINT32(state->block_size, state);
   FREAD_CHECKED_UINT32(state->ranks, state);
   return ADLB_SUCCESS;
@@ -409,8 +416,6 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
   // TODO: advance to next block if necessary
   // TODO: how to detect if no more data in block?
 
-
-
   uint32_t crc;
   // Buffers for encoded vint values
   Byte rec_len_enc[VINT_MAX_BYTES];
@@ -425,7 +430,7 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
   off_t rec_offset = ftello(state->file);
   CHECK_MSG(rec_offset == 0, "Error using ftello");
 
-  // get record length from file  reading byte-by-byte
+  // get record length from file reading byte-by-byte
   rec_len_encb = vint_file_decode(state->file, &rec_len64);
   if (rec_len_encb < 0)
   {
@@ -443,9 +448,18 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
   // buffer too small: signal caller
   if(buffer->length < rec_len64)
   {
-    // TODO: consider case where record length is corrupted:
-    //       check CRC by reading manually to avoid danger of
-    //       allocating too-big buffer.
+    // consider case where record length is corrupted: check CRC by
+    // reading directly from file to avoid danger of allocating
+    // too-big buffer.
+    if (!check_crc(state, (int)rec_len64, crc, buffer))
+    {
+      if (feof(state->file))
+      {
+        return ADLB_DONE;
+      }
+      // Bad record
+      return ADLB_NOTHING;
+    }
     // reset position to start of record
     fseeko(state->file, rec_offset - (off_t)sizeof(crc), SEEK_SET);
     *key_len = (int)rec_len64;
@@ -453,6 +467,7 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
   }
 
   // Load rest of record into caller buffer
+  // TODO: handle if rest of record split across blocks
   frrc = fread(buffer->data, 1, (size_t)rec_len64, state->file);
   CHECK_READ_EOF(frrc);
 
@@ -478,6 +493,12 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
     ERR_PRINTF("Out of range key length: %"PRId64"\n", key_len64);
     return ADLB_NOTHING;
   }
+  if (key_len64 > rec_len64 - key_len_encb)
+  {
+    ERR_PRINTF("Key length too long for record: %"PRId64" v. %"PRId64,
+                key_len64, rec_len64);
+    return ADLB_NOTHING;
+  }
 
   *key_len = (int)key_len64;
   *val_len = (int)(rec_len64 - (int64_t)key_len_encb - key_len64);
@@ -490,6 +511,36 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
   *val_offset = rec_offset + (off_t)val_rel;
   
   return ADLB_SUCCESS;
+}
+
+/*
+  Check crc by reading from file
+
+  buffer: buffer to use
+  crc: crc to compare against
+  state: file to read from.  Read position will be moved by rec_len
+        (or to eof)
+  returns true if it matches, false if error encountered
+ */
+static inline bool check_crc(xlb_xpt_read_state *state, int rec_len,
+                    uint32_t crc, adlb_buffer *buffer)
+{
+  int read = 0;
+  uLong crc_calc = crc32(0L, Z_NULL, 0);
+  while (read < rec_len)
+  {
+    // TODO: handle split across blocks
+    int remaining = rec_len - read;
+    size_t to_read = (size_t)(buffer->length < remaining ?
+                              buffer->length : remaining);
+    size_t frrc = fread(buffer->data, 1U, to_read, state->file);
+    if (frrc != to_read)
+    {
+      return false;
+    }
+    crc_calc = crc32(crc_calc, (Byte*)buffer->data, (uInt)to_read);
+  }
+  return (crc_calc == crc);
 }
 
 #endif // XLB_ENABLE_XPT
