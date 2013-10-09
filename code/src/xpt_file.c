@@ -421,9 +421,9 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
   off_t rec_offset = ftello(state->file);
   CHECK_MSG(rec_offset == 0, "Error using ftello");
 
-  // TODO: get record length from file
-  rec_len64 = 0;
-  rec_len_encb = 0;
+  // get record length from file  reading byte-by-byte
+  rec_len_encb = vint_file_decode(state->file, &rec_len64);
+  CHECK_MSG(rec_len_encb > 0, "Could not decode record length from file");
   // TODO: sanity checks for record length
   assert(rec_len64 >= 0 && rec_len64 <= INT_MAX);
   
