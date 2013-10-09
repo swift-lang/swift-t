@@ -40,7 +40,9 @@ typedef enum
  /** Normal shutdown */
  ADLB_SHUTDOWN = -3,
  /** No error but indicate nothing happened */
- ADLB_NOTHING = -4
+ ADLB_NOTHING = -4,
+ /** Indicate that caller should retry */
+ ADLB_RETRY = -5,
 } adlb_code;
 
 /**

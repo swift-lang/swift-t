@@ -405,7 +405,11 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
   size_t frrc;
   assert(state->file != NULL);
   assert(buffer->data != NULL);
+
   // TODO: advance to next block if necessary
+  // TODO: how to detect if no more data in block?
+
+
 
   uint32_t crc;
   // Buffers for encoded vint values
@@ -436,9 +440,17 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
     return ADLB_NOTHING;
   }
   
-  // TODO: need to handle small buffer case gracefully
-  CHECK_MSG(buffer->length < rec_len64, "Buffer too small: %i v %"PRId64,
-            buffer->length, rec_len64);
+  // buffer too small: signal caller
+  if(buffer->length < rec_len64)
+  {
+    // TODO: consider case where record length is corrupted:
+    //       check CRC by reading manually to avoid danger of
+    //       allocating too-big buffer.
+    // reset position to start of record
+    fseeko(state->file, rec_offset - (off_t)sizeof(crc), SEEK_SET);
+    *key_len = (int)rec_len64;
+    return ADLB_RETRY;
+  }
 
   // Load rest of record into caller buffer
   frrc = fread(buffer->data, 1, (size_t)rec_len64, state->file);

@@ -86,10 +86,11 @@ adlb_code xlb_xpt_read_select(xlb_xpt_read_state *state, uint32_t rank);
 /* Read a checkpoint entry.
 
   Returns ADLB_NOTHING if no more valid records for this rank
+  Returns ADLB_RETRY and sets key_len to required buffer size
+    if provided buffer is too small.
   TODO: way to indicate corrupted record?
-
+                    
   buffer: caller-provided buffer used to store data
-   TODO: way to tell caller how much buffer they need?
   key_len, val_len: length in bytes
   key, val: pointers into buffer for start of key/value data
   val_offset: file offset for value entry

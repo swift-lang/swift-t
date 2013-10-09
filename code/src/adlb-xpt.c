@@ -179,17 +179,25 @@ adlb_code adlb_xpt_reload(const char *filename)
       off_t val_offset;
       rc = xlb_xpt_read(&read_state, &buffer, &key_len, &key_ptr,
                         &val_len, &val_ptr, &val_offset);
+      if (rc == ADLB_RETRY)
+      {
+        // Allocate larger buffer to fit
+        buffer.length = key_len;
+        buffer.data = realloc(buffer.data, (size_t)buffer.length);
+        CHECK_MSG(buffer.data != NULL, "Error allocating buffer");
+        rc = xlb_xpt_read(&read_state, &buffer, &key_len, &key_ptr,
+                          &val_len, &val_ptr, &val_offset);
+      }
+
       if (rc == ADLB_NOTHING)
       {
         // Last record for this rank
         break;
       }
-      // Check for other errors
-      if (rc != ADLB_SUCCESS)
+      else if (rc != ADLB_SUCCESS)
+      {
         goto cleanup_exit;
-      
-      // TODO: check for too big for buffer
-      //       ideally we should at least get key...
+      }
       
       xpt_index_entry entry;
       if (val_len > max_index_val_bytes)
