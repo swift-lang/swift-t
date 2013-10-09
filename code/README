@@ -31,6 +31,9 @@ To enable ADLB debug logging:
 To disable logging and enable optimizations:
     --enable-fast
 
+To enable checkpointing functionality (requires zlib):
+    --enable-checkpoint
+
 Contact
 =======
 Justin Wozniak: wozniak@mcs.anl.gov

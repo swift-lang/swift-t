@@ -287,6 +287,7 @@ adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,
   // Write out all data in sequence
   FWRITE_CHECKED_UINT32((uint32_t)crc, state);
   FWRITE_CHECKED(rec_len_enc, 1, rec_len_encb, state);
+  // TODO: handle split of record
   FWRITE_CHECKED(key_len_enc, 1, key_len_encb, state);
   FWRITE_CHECKED(key, 1, key_len, state);
   if (val_offset != NULL)
