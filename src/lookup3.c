@@ -300,8 +300,7 @@ Use for hash table lookup, or anything where one collision in 2^^32 is
 acceptable.  Do NOT use for cryptographic purposes.
 -------------------------------------------------------------------------------
 */
-#if 0
-static uint32_t bj_hashlittle( const void *key, size_t length, uint32_t initval)
+uint32_t bj_hashlittle( const void *key, size_t length, uint32_t initval)
 {
   uint32_t a,b,c;                                          /* internal state */
   union { const void *ptr; size_t i; } u;     /* needed for Mac Powerbook G4 */
@@ -469,7 +468,6 @@ static uint32_t bj_hashlittle( const void *key, size_t length, uint32_t initval)
   final(a,b,c);
   return c;
 }
-#endif
 
 /*
  * hashlittle2: return 2 32-bit hash values

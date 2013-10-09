@@ -32,6 +32,11 @@ void bj_hashlittle2(
   uint32_t   *pc,        /* IN: primary initval, OUT: primary hash */
   uint32_t   *pb);        /* IN: secondary initval, OUT: secondary hash */
 
+uint32_t bj_hashlittle(
+  const void *key,       /* the key to hash */
+  size_t      length,    /* length of the key */
+  uint32_t    initval);  /* Initial val */
+
 /* bj_hashsize(shift) gives a hash table size that is a power of 2, good for bj_hashlittle2.
  * shift values are:
  *
