@@ -131,6 +131,7 @@ static inline uint32_t next_block(uint32_t rank, uint32_t ranks,
   return curr + ranks;
 }
 
+// We want to keep
 adlb_code xlb_xpt_next_block(xlb_xpt_state *state)
 {
   assert(state->file != NULL);
@@ -305,6 +306,10 @@ adlb_code xlb_xpt_read_val(off_t val_offset, int val_len,
 {
   assert(state->file != NULL);
   assert(val_len >= 0);
+
+  // TODO: what if file location is in an older checkpoint file?
+  // TODO: maybe would be better to reread entire record to make sure
+  //       we don't get a corrupted record.
 
   int rc;
   fpos_t pos;

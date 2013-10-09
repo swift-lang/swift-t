@@ -26,6 +26,7 @@
 
 typedef struct
 {
+  // TODO: what if file location is in an older checkpoint file?
   off_t val_offset;
   int val_len;
 } xpt_file_loc;
