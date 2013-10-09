@@ -41,7 +41,7 @@ main()
 
   tree_print(&T);
 
-  cutil_long k;
+  int64_t k;
   void* v;
   while (true)
   {
