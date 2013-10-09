@@ -37,6 +37,7 @@
 #define CUTILS_VINT_H
 
 #include <stdbool.h>
+#include <stdio.h>
 
 #include "c-utils-types.h"
 
@@ -182,6 +183,44 @@ vint_decode(void *buffer, int len, int64_t *val)
 
   *val = dec.accum * dec.sign;
   return pos;
+}
+
+/*
+  Decode vint read from file.
+  Return # of bytes read, or negative on error
+ */
+static inline int
+vint_file_decode(FILE *file, int64_t *val)
+{
+  vint_dec dec;
+  int b = fgetc(file);
+  int read = 1;
+  if (b == EOF)
+  {
+    // Check error indicator
+    return -1;
+  }
+  int dec_rc = vint_decode_start((unsigned char)b, &dec);
+  
+  while (dec_rc == 1)
+  {
+    b = fgetc(file);
+    if (b == EOF)
+    {
+      // Check error indicator
+      return -1;
+    }
+    dec_rc = vint_decode_more((unsigned char)b, &dec);
+    read++;
+  }
+  if (dec_rc == -1)
+  {
+    // Error encountered
+    return -1;
+  }
+
+  *val = dec.accum * dec.sign;
+  return read;
 }
 
 #endif
