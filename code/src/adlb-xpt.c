@@ -20,13 +20,20 @@
 #include "xpt_file.h"
 #include "xpt_index.h"
 
-static bool xlb_xpt_initialized = false;
-
-// Checkpoint output state
+/*
+  Checkpoint module state
+ */
 static xlb_xpt_state xpt_state;
-
+static bool xlb_xpt_initialized = false;
 static adlb_xpt_flush_policy flush_policy;
 static int max_index_val_bytes;
+
+/*
+  Internal functions
+ */
+
+static inline adlb_code xpt_reload_rank(const char *filename,
+        xlb_xpt_read_state *read_state, adlb_buffer *buffer, uint32_t rank);
 
 adlb_code adlb_xpt_init(const char *filename, adlb_xpt_flush_policy fp,
                         int max_index_val)
@@ -167,54 +174,9 @@ adlb_code adlb_xpt_reload(const char *filename)
 
   for (uint32_t rank = 0; rank < read_state.ranks; rank++)
   {
-    rc = xlb_xpt_read_select(&read_state, rank);
+    rc = xpt_reload_rank(filename, &read_state, &buffer, rank);
     if (rc != ADLB_SUCCESS)
       goto cleanup_exit;
-
-    // Read all records for this rank
-    while (true)
-    {
-      void *key_ptr, *val_ptr;
-      int key_len, val_len;
-      off_t val_offset;
-      rc = xlb_xpt_read(&read_state, &buffer, &key_len, &key_ptr,
-                        &val_len, &val_ptr, &val_offset);
-      if (rc == ADLB_RETRY)
-      {
-        // Allocate larger buffer to fit
-        buffer.length = key_len;
-        buffer.data = realloc(buffer.data, (size_t)buffer.length);
-        CHECK_MSG(buffer.data != NULL, "Error allocating buffer");
-        rc = xlb_xpt_read(&read_state, &buffer, &key_len, &key_ptr,
-                          &val_len, &val_ptr, &val_offset);
-      }
-
-      if (rc == ADLB_NOTHING)
-      {
-        // Last record for this rank
-        break;
-      }
-      else if (rc != ADLB_SUCCESS)
-      {
-        goto cleanup_exit;
-      }
-      
-      xpt_index_entry entry;
-      if (val_len > max_index_val_bytes)
-      {
-        entry.in_file = true;
-        entry.FILE_LOCATION.val_offset = val_offset;
-        entry.FILE_LOCATION.val_len = val_len;
-      }
-      else
-      {
-        entry.in_file = false;
-        entry.DATA.data = val_ptr;
-        entry.DATA.caller_data = NULL;
-        entry.DATA.length = val_len;
-      }
-      rc = xlb_xpt_index_add(key_ptr, key_len, &entry);
-    }
   }
   
   rc = xlb_xpt_close_read(&read_state);
@@ -228,6 +190,62 @@ cleanup_exit:
     free(buffer.data);
   }
   return rc;
+}
+
+/*
+  Read the checkpoint data for the specified rank into the in-memory
+  index.  This function may realloc the provided buffer.
+ */
+static inline adlb_code xpt_reload_rank(const char *filename,
+        xlb_xpt_read_state *read_state, adlb_buffer *buffer, uint32_t rank)
+{
+  adlb_code rc;
+  rc = xlb_xpt_read_select(read_state, rank);
+  ADLB_CHECK(rc);
+
+  // Read all records for this rank
+  while (true)
+  {
+    void *key_ptr, *val_ptr;
+    int key_len, val_len;
+    off_t val_offset;
+    rc = xlb_xpt_read(read_state, buffer, &key_len, &key_ptr,
+                      &val_len, &val_ptr, &val_offset);
+    if (rc == ADLB_RETRY)
+    {
+      // Allocate larger buffer to fit
+      buffer->length = key_len;
+      buffer->data = realloc(buffer->data, (size_t)buffer->length);
+      CHECK_MSG(buffer->data != NULL, "Error allocating buffer");
+      rc = xlb_xpt_read(read_state, buffer, &key_len, &key_ptr,
+                        &val_len, &val_ptr, &val_offset);
+    }
+
+    if (rc == ADLB_NOTHING)
+    {
+      // ADLB_NOTHING indicates last valid record for rank
+      return ADLB_NOTHING;
+    }
+    // Handle errors
+    ADLB_CHECK(rc);
+    
+    xpt_index_entry entry;
+    if (val_len > max_index_val_bytes)
+    {
+      entry.in_file = true;
+      entry.FILE_LOCATION.val_offset = val_offset;
+      entry.FILE_LOCATION.val_len = val_len;
+    }
+    else
+    {
+      entry.in_file = false;
+      entry.DATA.data = val_ptr;
+      entry.DATA.caller_data = NULL;
+      entry.DATA.length = val_len;
+    }
+    rc = xlb_xpt_index_add(key_ptr, key_len, &entry);
+    ADLB_CHECK(rc);
+  }
 }
 
 #endif // XLB_ENABLE_XPT
