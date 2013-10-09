@@ -64,7 +64,7 @@ adlb_code adlb_xpt_finalize(void)
 }
 
 adlb_code adlb_xpt_write(const void *key, int key_len, const void *val,
-                        int val_len, adlb_xpt_persist persist)
+                int val_len, adlb_xpt_persist persist, bool index_add)
 {
   assert(xlb_xpt_initialized);
   assert(key_len >= 0);
@@ -74,20 +74,23 @@ adlb_code adlb_xpt_write(const void *key, int key_len, const void *val,
   bool do_persist = persist != NO_PERSIST;
   xpt_index_entry entry;
 
-  if (val_len > max_index_val_bytes)
+  if (index_add)
   {
-    // Too big for memory, must write to file
-    do_persist = true;
-    entry.in_file = true;
-    // Fill in file location upon write
-  }
-  else
-  {
-    // Store data directly in index
-    entry.in_file = false;
-    entry.DATA.data = val;
-    entry.DATA.caller_data = NULL;
-    entry.DATA.length = val_len;
+    if (val_len > max_index_val_bytes)
+    {
+      // Too big for memory, must write to file
+      do_persist = true;
+      entry.in_file = true;
+      // Fill in file location upon write
+    }
+    else
+    {
+      // Store data directly in index
+      entry.in_file = false;
+      entry.DATA.data = val;
+      entry.DATA.caller_data = NULL;
+      entry.DATA.length = val_len;
+    }
   }
 
   if (do_persist)
@@ -104,7 +107,7 @@ adlb_code adlb_xpt_write(const void *key, int key_len, const void *val,
       ADLB_CHECK(rc);
     }
 
-    if (entry.in_file)
+    if (index_add && entry.in_file)
     {
       // Must update entry
       entry.FILE_LOCATION.val_offset = val_offset;
@@ -112,8 +115,11 @@ adlb_code adlb_xpt_write(const void *key, int key_len, const void *val,
     }
   }
 
-  rc = xlb_xpt_index_add(key, key_len, &entry);
-  ADLB_CHECK(rc);
+  if (index_add)
+  {
+    rc = xlb_xpt_index_add(key, key_len, &entry);
+    ADLB_CHECK(rc);
+  }
   return ADLB_SUCCESS;
 }
 
