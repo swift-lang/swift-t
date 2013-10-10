@@ -47,6 +47,8 @@ list_sp_add(struct list_sp* target, const char* key, void* data)
     return NULL;
 
   new_item->key  = strdup(key);
+  if (!new_item->key)
+    return NULL;
 
   new_item->data = data;
   new_item->next = NULL;

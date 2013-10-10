@@ -17,8 +17,8 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
+#include "binkeys.h"
 #include "list_bp.h"
 
 extern struct list_bp*
@@ -35,18 +35,24 @@ list_bp_create()
 
 /**
    Note: duplicates internal copy of key
+   returns null on error.
    @param key Must be non-NULL
  */
 struct list_bp_item*
-list_bp_add(struct list_bp* target, const char* key, void* data)
+list_bp_add(struct list_bp* target, const void* key, size_t key_len,
+            void* data)
 {
   assert(key);
+  assert(key_len >= 0);
 
   struct list_bp_item* new_item = malloc(sizeof(struct list_bp_item));
   if (! new_item)
     return NULL;
 
-  new_item->key  = strdup(key);
+  new_item->key = malloc(key_len);
+  if (!new_item->key)
+    return NULL;
+  memcpy(new_item->key, key, key_len);
 
   new_item->data = data;
   new_item->next = NULL;
@@ -64,14 +70,15 @@ list_bp_add(struct list_bp* target, const char* key, void* data)
   return new_item;
 }
 
+
 bool
-list_bp_set(struct list_bp* target, const char* key,
+list_bp_set(struct list_bp* target, const void* key, size_t key_len,
             void* value, void** old_value)
 {
   for (struct list_bp_item* item = target->head; item;
        item = item->next)
   {
-    if (strcmp(key, item->key) == 0)
+    if (key_match(key, key_len, item))
     {
       *old_value = (char*) item->data;
       item->data = value;
@@ -82,12 +89,14 @@ list_bp_set(struct list_bp* target, const char* key,
 }
 
 bool
-list_bp_pop(struct list_bp* target, char** key, void** data)
+list_bp_pop(struct list_bp* target, void** key, size_t *key_len,
+            void** data)
 {
   if (target->size == 0)
     return false;
 
   *key  = target->head->key;
+  *key_len = target->head->key_len;
   *data = target->head->data;
 
   if (target->size == 1)
@@ -111,13 +120,14 @@ list_bp_pop(struct list_bp* target, char** key, void** data)
           it was provided by the user
  */
 bool
-list_bp_remove(struct list_bp* target, const char* key, void** data)
+list_bp_remove(struct list_bp* target, const void* key, size_t key_len,
+               void** data)
 {
   if (target->size == 0)
     return false;
 
   // Special handling if we match on the first item:
-  if (strcmp(key, target->head->key) == 0)
+  if (key_match(key, key_len, target->head))
   {
     struct list_bp_item* old_head = target->head;
     target->head = old_head->next;
@@ -134,7 +144,7 @@ list_bp_remove(struct list_bp* target, const char* key, void** data)
   for (struct list_bp_item* item = target->head; item->next;
        item = item->next)
   {
-    if (strcmp(key, item->next->key) == 0)
+    if (key_match(key, key_len, item->next))
     {
       struct list_bp_item* old_item = item->next;
       if (target->tail == old_item)
@@ -179,7 +189,8 @@ list_bp_dump(const char* format, const struct list_bp* target)
   for (struct list_bp_item* item = target->head; item;
       item = item->next)
   {
-    printf("(%s,", item->key);
+    printf("(");
+    printf_key(item->key, item->key_len);
     if (strcmp(format, "%s") == 0)
       printf(format, item->data);
     else if (strcmp(format, "%i") == 0)
@@ -198,7 +209,9 @@ list_bp_dumpkeys(const struct list_bp* target)
   for (struct list_bp_item* item = target->head; item;
        item = item->next)
   {
-    printf("(%s)", item->key);
+    printf("(");
+    printf_key(item->key, item->key_len);
+    printf(")");
     if (item->next)
       printf(",");
   }
@@ -211,7 +224,10 @@ list_bp_keys_string_length(const struct list_bp* target)
   size_t result = 0;
   for (struct list_bp_item* item = target->head; item;
        item = item->next)
-    result += strlen(item->key);
+  {
+    // Each byte is two hex digits in string repr.
+    result += item->key_len * 2;
+  }
   return result;
 }
 
@@ -222,7 +238,7 @@ list_bp_keys_tostring(char* result,
   char* p = result;
   for (struct list_bp_item* item = target->head; item;
        item = item->next)
-    p += sprintf(p, "%s ", item->key);
+    p += sprintf_key(p, item->key, item->key_len);
   return (size_t)(p - result);
 }
 
@@ -232,13 +248,13 @@ void list_bp_free(struct list_bp* target)
 }
 
 void list_bp_free_callback(struct list_bp* target,
-                           void (*callback)(char*, void*))
+                           void (*callback)(void*, size_t, void*))
 {
   struct list_bp_item* item = target->head;
   while (item)
   {
     if (callback != NULL)
-      callback(item->key, item->data);
+      callback(item->key, item->key_len, item->data);
 
     struct list_bp_item* next = item->next;
     free(item);
@@ -251,7 +267,9 @@ static char*
 append_pair(char* ptr, struct list_bp_item* item,
             const char* format, const void* data)
 {
-  ptr += sprintf(ptr, "(%s,", item->key);
+  ptr += sprintf(ptr, "(");
+  ptr += sprintf_key(ptr, item->key, item->key_len);
+  ptr += sprintf(ptr, ",");
   ptr += sprintf(ptr, "%s)", (char*) data);
 
   if (item->next)
@@ -284,3 +302,4 @@ size_t list_bp_tostring(char* str, size_t size,
 
   return (size_t)(ptr-str);
 }
+

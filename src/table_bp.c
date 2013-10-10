@@ -19,20 +19,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "table.h" // TODO: for hash_string. remove
+#include "binkeys.h"
 
 #include "table_bp.h"
 #include "c-utils-types.h"
-#include "jenkins-hash.h"
-
-static inline int
-hash_bin(const void* data, int length, int table_size)
-{
-  uint32_t p = bj_hashlittle(data, (size_t)length, 0u);
-
-  int index = (int) (p % (uint32_t)table_size);
-  return index;
-}
 
 /**
    Warning: If this function fails, it may have leaked memory.
@@ -82,7 +72,7 @@ table_bp_free(struct table_bp* target)
 }
 
 void table_bp_free_callback(struct table_bp* target, bool free_root,
-                         void (*callback)(char*, void*))
+                         void (*callback)(void*, size_t, void*))
 {
   for (int i = 0; i < target->capacity; i++)
     list_bp_free_callback(target->array[i], callback);
@@ -120,12 +110,13 @@ table_bp_release(struct table_bp* target)
    Note: duplicates internal copy of key (in list_bp_add())
  */
 bool
-table_bp_add(struct table_bp *target, const char* key, void* data)
+table_bp_add(struct table_bp *target, const void* key, size_t key_len,
+             void* data)
 {
-  int index = hash_string(key, target->capacity);
+  int index = hash_bin(key, key_len, target->capacity);
 
   struct list_bp_item* new_item =
-    list_bp_add(target->array[index], key, data);
+    list_bp_add(target->array[index], key, key_len, data);
 
   if (! new_item)
     return false;
@@ -141,13 +132,13 @@ table_bp_add(struct table_bp *target, const char* key, void* data)
    @return True if found
  */
 bool
-table_bp_set(struct table_bp* target, const char* key,
+table_bp_set(struct table_bp* target, const void* key, size_t key_len,
           void* value, void** old_value)
 {
-  int index = hash_string(key, target->capacity);
+  int index = hash_bin(key, key_len, target->capacity);
 
-  bool result =
-      list_bp_set(target->array[index], key, value, old_value);
+  bool result = list_bp_set(target->array[index], key, key_len, 
+                            value, old_value);
 
   return result;
 }
@@ -160,14 +151,14 @@ table_bp_set(struct table_bp* target, const char* key,
    but the value is NULL
 */
 bool
-table_bp_search(const struct table_bp* table, const char* key,
-             void **value)
+table_bp_search(const struct table_bp* table, const void* key,
+                size_t key_len, void **value)
 {
-  int index = hash_string(key, table->capacity);
+  int index = hash_bin(key, key_len, table->capacity);
 
   for (struct list_bp_item* item = table->array[index]->head; item;
        item = item->next)
-    if (strcmp(key, item->key) == 0) {
+    if (key_match(key, key_len, item) == 0) {
       *value = (void*) item->data;
       return true;
     }
@@ -177,19 +168,21 @@ table_bp_search(const struct table_bp* table, const char* key,
 }
 
 bool
-table_bp_contains(const struct table_bp* table, const char* key)
+table_bp_contains(const struct table_bp* table, const void* key,
+                  size_t key_len)
 {
   void* tmp = NULL;
-  return table_bp_search(table, key, &tmp);
+  return table_bp_search(table, key, key_len, &tmp);
 }
 
 bool
-table_bp_remove(struct table_bp* table, const char* key, void** data)
+table_bp_remove(struct table_bp* table, const void* key, size_t key_len,
+                void** data)
 {
-  int index = hash_string(key, table->capacity);
+  int index = hash_bin(key, key_len, table->capacity);
   struct list_bp* list = table->array[index];
   assert(list != NULL);
-  bool result = list_bp_remove(list, key, data);
+  bool result = list_bp_remove(list, key, key_len, data);
   if (result)
     table->size--;
   return result;
@@ -286,7 +279,8 @@ table_bp_keys_tostring_slice(char* result, const struct table_bp* target,
       }
       if (c >= offset+count && count != -1)
         break;
-      p += sprintf(p, "%s ", (char*) item->key);
+      p += sprintf_key(p, item->key, item->key_len);
+      *(p++) = ' ';
       c++;
     }
   }
