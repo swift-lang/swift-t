@@ -227,7 +227,7 @@ datum_init_multiset(adlb_datum *d, adlb_data_type val_type)
   d->data.MULTISET = xlb_multiset_alloc(val_type);
   check_verbose(d->data.MULTISET != NULL, ADLB_DATA_ERROR_OOM,
                 "Could not allocate multiset: out of memory");
-  
+
   // Multiset structure is filled in, so mark as set
   d->status.set = true;
   return ADLB_DATA_SUCCESS;
@@ -271,7 +271,7 @@ xlb_data_exists(adlb_datum_id id, const char* subscript, bool* result)
   {
     check_verbose(d->type == ADLB_DATA_TYPE_CONTAINER, ADLB_DATA_ERROR_TYPE,
                 "Expected <%"PRId64"> to be container, but had type %i",
-                id, d->type); 
+                id, d->type);
     adlb_container_val t;
     bool data_found = container_lookup(&d->data.CONTAINER, subscript, &t);
     *result = data_found;
@@ -385,7 +385,7 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
     // counts incremented.
     if (!do_gc)
       return ADLB_DATA_SUCCESS;
-    
+
     // Will only hold one refcount on referand per reference in datum
     if (refcounts_scavenged != NULL)
     {
@@ -608,7 +608,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
             ref_type, d->data.CONTAINER.val_type);
     return ADLB_DATA_ERROR_TYPE;
   }
-  
+
   // Is the subscript already pointing to a data identifier?
   adlb_container_val t;
 
@@ -657,7 +657,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
     //  subscriber list
     assert(d->read_refcount >= 2);
     d->read_refcount--;
-    
+
     DEBUG("read_refcount in container_reference: <%"PRId64"> => %i",
           container_id, d->read_refcount);
   }
@@ -681,7 +681,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
 adlb_data_code
 xlb_data_store(adlb_datum_id id, const char *subscript,
           const void* buffer, int length,
-          adlb_data_type type, 
+          adlb_data_type type,
           adlb_refcounts refcount_decr,
           adlb_notif_t *notifications)
 {
@@ -745,9 +745,9 @@ xlb_data_store(adlb_datum_id id, const char *subscript,
     check_verbose(d->type == ADLB_DATA_TYPE_CONTAINER, ADLB_DATA_ERROR_TYPE,
                   "type %s not a container: <%"PRId64">",
                   ADLB_Data_type_tostring(d->type), id);
-    
+
     adlb_container *c = &d->data.CONTAINER;
-    
+
     check_verbose(type == c->val_type, ADLB_DATA_ERROR_TYPE,
                   "Type mismatch for container value: "
                   "given: %s required: %s\n",
@@ -782,7 +782,7 @@ xlb_data_store(adlb_datum_id id, const char *subscript,
       DEBUG("Creating new container entry");
       container_add(c, subscript, entry);
     }
-    
+
     if (type != c->val_type)
     {
       printf("Type mismatch: expected %i actual %i\n",
@@ -803,7 +803,7 @@ xlb_data_store(adlb_datum_id id, const char *subscript,
       free(val_s);
     }
   }
-  
+
   // Handle reference count decrease
   assert(refcount_decr.write_refcount >= 0);
   assert(refcount_decr.read_refcount >= 0);
@@ -916,7 +916,7 @@ xlb_data_retrieve(adlb_datum_id id, const char *subscript,
           DEBUG("SUBSCRIPT CREATED BUT NOT LINKED");
           return ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND;
         }
-        
+
         return ADLB_Pack(t, d->data.CONTAINER.val_type, caller_buffer, result);
       }
       case ADLB_DATA_TYPE_STRUCT:
@@ -965,7 +965,7 @@ static bool container_set(adlb_container *c, const char *key,
 static bool container_lookup(adlb_container *c, const char *key,
                              adlb_container_val *val)
 {
-  return table_search(c->members, key, (void**)val); 
+  return table_search(c->members, key, (void**)val);
 }
 
 static adlb_data_code
@@ -987,7 +987,7 @@ extract_members(adlb_container *cont, int count, int offset,
   adlb_data_code dc;
   struct table* members = cont->members;
   bool use_caller_buf;
-  
+
   dc = ADLB_Init_buf(caller_buffer, output, &use_caller_buf, 65536);
   ADLB_DATA_CHECK(dc);
 
@@ -1039,7 +1039,7 @@ pack_member(adlb_container *cont, struct list_sp_item *item,
     size_t key_len = strlen(k);
     ADLB_Resize_buf(result, result_caller_buffer, *result_pos +
                       (int)VINT_MAX_BYTES + (int)key_len);
-    vint_len = vint_encode((int)key_len, 
+    vint_len = vint_encode((int)key_len,
                     (unsigned char*)result->data + *result_pos);
     *result_pos += vint_len;
     memcpy(result->data + *result_pos, k, key_len);
@@ -1051,7 +1051,7 @@ pack_member(adlb_container *cont, struct list_sp_item *item,
                           result_caller_buffer, result_pos);
     DATA_CHECK(dc);
   }
-  
+
   return ADLB_DATA_SUCCESS;
 }
 
@@ -1091,7 +1091,7 @@ enumerate_slice_size(int offset, int count, int actual_size)
  */
 adlb_data_code
 xlb_data_enumerate(adlb_datum_id id, int count, int offset,
-               bool include_keys, bool include_vals, 
+               bool include_keys, bool include_vals,
                const adlb_buffer *caller_buffer,
                adlb_buffer *data, int* actual,
                adlb_data_type *key_type, adlb_data_type *val_type)
@@ -1128,7 +1128,7 @@ xlb_data_enumerate(adlb_datum_id id, int count, int offset,
         " with type multiset does not have keys to enumerate", id);
     int slice_size = enumerate_slice_size(offset, count,
                               xlb_multiset_size(d->data.MULTISET));
-  
+
     if (include_vals) {
       // Extract members to buffer
       dc = xlb_multiset_extract_slice(d->data.MULTISET, offset, slice_size,
@@ -1159,7 +1159,7 @@ xlb_data_container_size(adlb_datum_id container_id, int* size)
 
   check_verbose(c != NULL, ADLB_DATA_ERROR_NOT_FOUND,
                 "not found: <%"PRId64">", container_id);
-  
+
   switch (c->type)
   {
     case ADLB_DATA_TYPE_CONTAINER:
@@ -1168,7 +1168,7 @@ xlb_data_container_size(adlb_datum_id container_id, int* size)
     case ADLB_DATA_TYPE_MULTISET:
       *size = (int)xlb_multiset_size(c->data.MULTISET);
       return ADLB_DATA_SUCCESS;
-    default: 
+    default:
       printf("not a container or multiset: <%"PRId64">", container_id);
       return ADLB_DATA_ERROR_TYPE;
   }
@@ -1233,7 +1233,7 @@ insert_notifications(adlb_datum *d,
 
   result = table_remove(&container_ix_listeners, s, &data);
   struct list_i *sub_list = data;
-  if (result) 
+  if (result)
   {
     list_i_toints(sub_list, &notify_insert->ranks, &notify_insert->count);
     list_i_free(sub_list);
@@ -1396,7 +1396,7 @@ ADLB_Data_string_totype(const char* type_string,
         }
         return ADLB_ERROR;
       }
-    } 
+    }
   }
 
   return ADLB_ERROR;
@@ -1423,13 +1423,13 @@ const char
     case ADLB_DATA_TYPE_MULTISET:
       return TYPE_NAME_MULTISET;
     case ADLB_DATA_TYPE_REF:
-      return TYPE_NAME_REF; 
+      return TYPE_NAME_REF;
     case ADLB_DATA_TYPE_FILE_REF:
-      return TYPE_NAME_FILE_REF; 
+      return TYPE_NAME_FILE_REF;
     case ADLB_DATA_TYPE_STRUCT:
-      return TYPE_NAME_STRUCT; 
+      return TYPE_NAME_STRUCT;
     case ADLB_DATA_TYPE_NULL:
-      return TYPE_NAME_NULL; 
+      return TYPE_NAME_NULL;
     default:
       return "<invalid type>";
   }
@@ -1475,10 +1475,10 @@ static void free_cref_entry(char *key, void *val)
   assert(key != NULL && val != NULL);
   struct list_l* listeners = val;
   struct list_l_item *curr;
-  
+
   for (curr = listeners->head; curr != NULL; curr = curr->next)
   {
-    printf("UNFILLED CONTAINER REFERENCE %s => <%"PRId64">", key, curr->data);
+    printf("UNFILLED CONTAINER REFERENCE %s => <%"PRId64">\n", key, curr->data);
   }
   list_l_free(listeners);
   free(key);
@@ -1503,13 +1503,13 @@ xlb_data_finalize()
 {
   // First report any leaks or other problems
   report_leaks();
-  
+
   // Secondly free up memory allocated in this module
   table_lp_free_callback(&tds, false, free_td_entry);
 
   table_free_callback(&container_references, false, free_cref_entry);
   table_free_callback(&container_ix_listeners, false, free_ix_l_entry);
-  
+
   table_lp_free_callback(&locked, false, free_locked_entry);
 
   adlb_data_code dc = xlb_struct_finalize();
