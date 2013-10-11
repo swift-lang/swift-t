@@ -4,10 +4,13 @@
 # Usage notes:
 # make V=1 turns on verbose output
 
+ifeq (@ENABLE_DEV@,1)
+	WARN_CONVERSION = -Wconversion
+endif
+
 # Shared object suffix is .so on Linux, .dylib on Mac
 # GCC shared library creation argument:
 #            Linux: -shared; Mac: -dynamiclib
-
 USE_MAC=@USE_MAC@
 ifeq ($(USE_MAC),no)
 USE_XLC = @USE_XLC@
@@ -16,7 +19,7 @@ ifeq ($(USE_XLC),0)
         PIC = -fPIC
         STD = -std=gnu99
         SHARED = -shared
-	WARNS=-Wall -Wconversion
+	WARNS = -Wall $(WARN_CONVERSION)
 else
 #       Using XLC
         PIC = -qpic

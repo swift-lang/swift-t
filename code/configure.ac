@@ -244,9 +244,17 @@ then
         AC_MSG_ERROR([Could not find MPE library!])
     fi
 fi
-
 AC_SUBST(ADLB_ENABLE_MPE)
+
 AC_SUBST(XLB_ENABLE_XPT)
+
+ENABLE_DEV=0
+AC_ARG_ENABLE(dev,
+    AS_HELP_STRING([--enable-dev],
+                   [Turn on more warnings for developers.
+                    Default: disabled]),
+    ENABLE_DEV=1)
+AC_SUBST(ENABLE_DEV)
 
 AC_CONFIG_FILES(Makefile
                 src/module.mk
