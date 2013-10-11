@@ -514,6 +514,14 @@ then
   USE_TCL_LIB_DIR=${USE_TCL}/lib64
 fi
 
+AC_ARG_WITH(tcl-lib-dir,
+    AC_HELP_STRING([--with-tcl-lib-dir],
+                   [directory containing Tcl library]),
+    [
+        USE_TCL_LIB_DIR=${withval}
+        AC_MSG_RESULT([using Tcl lib dir: ${USE_TCL_LIB_DIR}])
+    ])
+
 AC_MSG_CHECKING([for ${LIBTCL} ])
 if [[ ! -r ${USE_TCL_LIB_DIR}/${LIBTCL} ]]
 then
@@ -542,6 +550,7 @@ then
     AC_MSG_ERROR([Could not find tclConfig.sh!])
 fi
 AC_MSG_RESULT([ok])
+AC_MSG_RESULT([using tclConfig.sh in: ${USE_TCL_CFG_DIR}/])
 source ${USE_TCL_CFG_DIR}/tclConfig.sh
 if [[ ${?} != 0 ]]
 then
@@ -566,13 +575,8 @@ else
     fi
 fi
 AC_MSG_RESULT([using Turbine Tcl executable: ${USE_TCLSH}])
-AC_SUBST(USE_TCL)
-AC_SUBST(USE_TCL_LIB_DIR)
-AC_SUBST(USE_TCLSH)
-AC_SUBST(USE_TCLSH_LOCAL)
 
 # Now, allow user to override Tcl include
-
 AC_ARG_WITH(tcl-include,
             AS_HELP_STRING(
                [--with-tcl-include],
@@ -585,6 +589,10 @@ AC_ARG_WITH(tcl-include,
             ],
             [])
 
+AC_SUBST(USE_TCL)
+AC_SUBST(USE_TCL_LIB_DIR)
+AC_SUBST(USE_TCLSH)
+AC_SUBST(USE_TCLSH_LOCAL)
 AC_SUBST(TCL_INCLUDE_SPEC)
 AC_SUBST(TCL_LIB_SPEC)
 
@@ -634,7 +642,8 @@ AC_DEFINE_UNQUOTED(ENABLE_BGP, $ENABLE_BGP,
 ENABLE_DEV=0
 AC_ARG_ENABLE(dev,
     AS_HELP_STRING([--enable-dev],
-                   [Turn on more warnings for developers.]),
+                   [Turn on more warnings for developers.
+                    Default: disabled]),
     ENABLE_DEV=1)
 AC_SUBST(ENABLE_DEV)
 
