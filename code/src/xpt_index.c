@@ -123,8 +123,9 @@ adlb_code xlb_xpt_index_add(const void *key, int key_len,
     data_len = entry->DATA.length;
     file_flag = 0;
   }
-  // Copy data into transfer buffer
+  // Copy data into transfer buffer.
   // Using xfer limits the checkpoint size to ADLB_XPT_MAX == ADLB_DATA_MAX - 1
+  // NOTE: assuming that ADLB_Store doesn't use xfer
   assert(ADLB_XPT_MAX <= ADLB_DATA_MAX - 1);
   memcpy(xfer, data, (size_t)data_len);
   // Set file flag

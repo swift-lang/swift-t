@@ -242,6 +242,9 @@ static inline adlb_code xpt_reload_rank(const char *filename,
     }
     // Handle errors
     ADLB_CHECK(rc);
+
+    CHECK_MSG(val_len <= XLB_XPT_MAX, "Checkpoint entry loaded from file "
+          "bigger than XLB_XPT_MAX: %i vs %i", val_len, XLB_XPT_MAX);
     
     xpt_index_entry entry;
     if (val_len > max_index_val_bytes)
