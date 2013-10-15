@@ -32,7 +32,7 @@
 static inline bool
 bin_key_eq(const void *key1, size_t key1_len, const void *key2, size_t key2_len)
 {
-  return key1_len == key2_len && memcmp(key1, key1, key1_len) == 0;
+  return key1_len == key2_len && memcmp(key1, key2, key1_len) == 0;
 }
 
 /*
