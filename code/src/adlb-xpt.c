@@ -250,6 +250,7 @@ static inline adlb_code xpt_reload_rank(const char *filename,
     if (val_len > max_index_val_bytes)
     {
       entry.in_file = true;
+      entry.FILE_LOCATION.file = filename;
       entry.FILE_LOCATION.val_offset = val_offset;
       entry.FILE_LOCATION.val_len = val_len;
     }

@@ -62,8 +62,10 @@ adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,
                 int val_len, xlb_xpt_state *state, off_t *val_offset);
 
 /* Read a checkpoint value at a value offset returned by xlb_xpt_write.
-   buffer must be at least val_len in size */
-adlb_code xlb_xpt_read_val(off_t val_offset, int val_len,
+   buffer must be at least val_len in size 
+   if file is null, indicates current checkpoint file being written,
+      otherwise open previously written file. */
+adlb_code xlb_xpt_read_val(char *file, off_t val_offset, int val_len,
                            xlb_xpt_state *state, void *buffer);
 
 /* Flush checkpoint writes */

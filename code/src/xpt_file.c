@@ -315,35 +315,44 @@ adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,
   return ADLB_SUCCESS;
 }
 
-adlb_code xlb_xpt_read_val(off_t val_offset, int val_len,
+adlb_code xlb_xpt_read_val(char *file, off_t val_offset, int val_len,
                            xlb_xpt_state *state, void *buffer)
 {
-  assert(state->file != NULL);
-  assert(val_len >= 0);
+  if (file == NULL)
+  {
+    // checkpoint is in file currently being written.
+    assert(state->file != NULL);
+    assert(val_len >= 0);
 
-  // TODO: what if file location is in an older checkpoint file?
-  // TODO: maybe would be better to reread entire record to make sure
-  //       we don't get a corrupted record.
+    // TODO: what if file location is in an older checkpoint file?
+    // TODO: maybe would be better to reread entire record to make sure
+    //       we don't get a corrupted record.
 
-  int rc;
-  fpos_t pos;
-  // Use fgetpos/fsetpos to return file pointer to old position
-  rc = fgetpos(state->file, &pos);
-  CHECK_MSG(rc == 0, "Error using fgetpos on checkpoint file");
+    int rc;
+    fpos_t pos;
+    // Use fgetpos/fsetpos to return file pointer to old position
+    rc = fgetpos(state->file, &pos);
+    CHECK_MSG(rc == 0, "Error using fgetpos on checkpoint file");
 
-  rc = fseeko(state->file, val_offset, SEEK_SET);
-  CHECK_MSG(rc == 0, "Error using fseeko on checkpoint file");
+    rc = fseeko(state->file, val_offset, SEEK_SET);
+    CHECK_MSG(rc == 0, "Error using fseeko on checkpoint file");
 
-  size_t wrote = fread(buffer, 1, (size_t)val_len, state->file);
+    size_t wrote = fread(buffer, 1, (size_t)val_len, state->file);
 
-  // Reset file position before checking if read was ok
-  rc = fsetpos(state->file, &pos);
-  CHECK_MSG(rc == 0, "Error using fsetpos on checkpoint file");
-  
-  CHECK_MSG(wrote == (size_t)val_len, "Error reading value from "
-                                      "checkpoint file");
+    // Reset file position before checking if read was ok
+    rc = fsetpos(state->file, &pos);
+    CHECK_MSG(rc == 0, "Error using fsetpos on checkpoint file");
+    
+    CHECK_MSG(wrote == (size_t)val_len, "Error reading value from "
+                                        "checkpoint file");
 
-  return ADLB_SUCCESS;
+    return ADLB_SUCCESS;
+  }
+  else
+  {
+    CHECK_MSG(false, "DO NOT SUPPORT LOADING FROM OLD FILE %s YET",
+          file);
+  }
 }
 
 adlb_code xlb_xpt_flush(xlb_xpt_state *state)

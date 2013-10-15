@@ -83,6 +83,7 @@ adlb_code xlb_xpt_index_lookup(const void *key, int key_len,
     res->in_file = true;
     // Buffer should just have file location struct and flag
     assert(length == sizeof(res->FILE_LOCATION) + 1);
+    // TODO: lookup filename here
     memcpy(&res->FILE_LOCATION, buffer, sizeof(res->FILE_LOCATION));
   }
   else
@@ -113,6 +114,7 @@ adlb_code xlb_xpt_index_add(const void *key, int key_len,
   if (entry->in_file)
   {
     // Use binary struct representation
+    // TODO: include filename here
     data = &entry->FILE_LOCATION;
     data_len = (int)sizeof(entry->FILE_LOCATION);
     file_flag = 1;
