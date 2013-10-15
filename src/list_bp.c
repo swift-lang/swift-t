@@ -53,6 +53,7 @@ list_bp_add(struct list_bp* target, const void* key, size_t key_len,
   if (!new_item->key)
     return NULL;
   memcpy(new_item->key, key, key_len);
+  new_item->key_len = key_len;
 
   new_item->data = data;
   new_item->next = NULL;

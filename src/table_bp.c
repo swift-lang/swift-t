@@ -158,7 +158,7 @@ table_bp_search(const struct table_bp* table, const void* key,
 
   for (struct list_bp_item* item = table->array[index]->head; item;
        item = item->next)
-    if (list_bp_key_match(key, key_len, item) == 0) {
+    if (list_bp_key_match(key, key_len, item)) {
       *value = (void*) item->data;
       return true;
     }
