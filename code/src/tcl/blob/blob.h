@@ -143,7 +143,7 @@ int blobutils_get_int(int* pointer, int index);
 /**
    Assume blob is array of int32- do array lookup
  */
-int32_t blobutils_get_int32(int32_t* pointer, int index);
+int blobutils_get_int32(int32_t* pointer, int index);
 
 /**
    Assume blob is array of int- do array lookup

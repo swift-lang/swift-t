@@ -230,10 +230,10 @@ blobutils_get_int(int* pointer, int index)
   return pointer[index];
 }
 
-int32_t
+int
 blobutils_get_int32(int32_t* pointer, int index)
 {
-  return pointer[index];
+  return (int) pointer[index];
 }
 
 /**
