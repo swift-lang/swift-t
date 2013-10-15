@@ -799,12 +799,13 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
     DATA_CHECK(dc);
     if (found)
     {
-      DEBUG("Assigning unlinked precreated entry");
       // Assert that this is an UNLINKED entry:
       // TODO: support binary keys
       check_verbose(t == NULL, ADLB_DATA_ERROR_DOUBLE_WRITE,
                     "already exists: <%"PRId64">[%.*s]",
                     id, (int)subscript.length, subscript.key);
+      
+      DEBUG("Assigning unlinked precreated entry");
 
       // Ok- somebody did an Insert_atomic
       adlb_container_val v;
