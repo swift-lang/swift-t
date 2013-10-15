@@ -185,6 +185,20 @@ int ADLB_curr_priority = DEFAULT_PRIORITY;
 /** We only free this if we are the outermost MPI communicator */
 static bool must_comm_free = false;
 
+
+#define CHECK_ADLB_STORE(rc, id) {                                      \
+  TCL_CONDITION(rc != ADLB_REJECTED,                                    \
+                "adlb::store <%"PRId64"> failed: double assign!", id);  \
+  TCL_CONDITION(rc == ADLB_SUCCESS,                                     \
+                "adlb::store <%"PRId64"> failed!", id);                 \
+} 
+
+#define CHECK_ADLB_STORE_SUB(rc, id, sub) {                                  \
+  TCL_CONDITION(rc != ADLB_REJECTED, "<%"PRId64">[\"%.*s\"], double assign!",\
+                  id, (int)sub.length, (const char*)sub.key);                \
+  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64">[\"%.*s\"], double assign!",\
+                  id, (int)sub.length, (const char*)sub.key);                \
+}
 static int
 ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[], bool decr);
@@ -1493,9 +1507,8 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
   // Free if needed
   if (data.data != xfer_buf.data)
     ADLB_Free_binary_data(&data);
-
-  TCL_CONDITION(rc == ADLB_SUCCESS,
-                "adlb::store <%"PRId64"> failed!", id);
+  
+  CHECK_ADLB_STORE(rc, id);
 
   return TCL_OK;
 }
@@ -2220,7 +2233,7 @@ ADLB_Store_Blob_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
 
   rc = ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_BLOB, pointer, length, decr);
-  TCL_CONDITION(rc == ADLB_SUCCESS, "failed!");
+  CHECK_ADLB_STORE(rc, id);
 
   return TCL_OK;
 }
@@ -2262,8 +2275,7 @@ ADLB_Blob_store_floats_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
   rc = ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_BLOB,
                   xfer, length*(int)sizeof(double), decr);
-  TCL_CONDITION(rc == ADLB_SUCCESS,
-                "adlb::store <%"PRId64"> failed!", id);
+  CHECK_ADLB_STORE(rc, id);
 
   return TCL_OK;
 }
@@ -2304,8 +2316,7 @@ ADLB_Blob_store_ints_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
   rc = ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_BLOB,
                   xfer, length*(int)sizeof(int), decr);
-  TCL_CONDITION(rc == ADLB_SUCCESS,
-                "adlb::store <%"PRId64"> failed!", id);
+  CHECK_ADLB_STORE(rc, id);
 
   return TCL_OK;
 }
@@ -2425,8 +2436,7 @@ ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
     ADLB_Free_binary_data(&member);
 
   // TODO: support binary subscript
-  TCL_CONDITION(rc == ADLB_SUCCESS, "failed: <%"PRId64">[\"%.*s\"]\n", id,
-                  (int)subscript.length, (const char*)subscript.key);
+  CHECK_ADLB_STORE_SUB(rc, id, subscript);
   return TCL_OK;
 }
 
