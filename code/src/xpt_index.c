@@ -63,8 +63,6 @@ adlb_code xlb_xpt_index_lookup(const void *key, int key_len,
 
   adlb_retrieve_rc refcounts = ADLB_RETRIEVE_NO_RC;
 
-  // TODO: limited to ADLB_DATA_MAX by using fixed buffer
-  bool alloced_buffer = false;
   void *buffer = xfer; 
   adlb_data_type type;
   int length;
@@ -94,7 +92,7 @@ adlb_code xlb_xpt_index_lookup(const void *key, int key_len,
     d->length = length - 1; // Account for flag
     d->data = buffer;
     // Determine whether caller owns buffer
-    d->caller_data = alloced_buffer ? buffer : NULL;
+    d->caller_data = NULL;
   }
   return ADLB_SUCCESS;
 }
@@ -105,6 +103,10 @@ adlb_code xlb_xpt_index_add(const void *key, int key_len,
   assert(xpt_index_init);
   assert(key != NULL);
   assert(key_len >= 0);
+
+  CHECK_MSG(key_len <= ADLB_XPT_MAX, "Checkpoint data too long: %i vs. %i",
+            key_len, ADLB_XPT_MAX);
+
   const void *data; // Pointer to binary repr
   int data_len; // Length of data minus flag
   char file_flag;
@@ -122,7 +124,8 @@ adlb_code xlb_xpt_index_add(const void *key, int key_len,
     file_flag = 0;
   }
   // Copy data into transfer buffer
-  // TODO: using xfer limits size to ADLB_DATA_MAX
+  // Using xfer limits the checkpoint size to ADLB_XPT_MAX == ADLB_DATA_MAX - 1
+  assert(ADLB_XPT_MAX <= ADLB_DATA_MAX - 1);
   memcpy(xfer, data, (size_t)data_len);
   // Set file flag
   xfer[data_len] = file_flag;

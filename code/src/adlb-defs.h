@@ -248,4 +248,8 @@ typedef enum
 /** Maximum size for a given ADLB transaction */
 #define ADLB_PAYLOAD_MAX ADLB_DATA_MAX
 
+/** Maximum size for ADLB checkpoint value */
+#define ADLB_XPT_MAX (ADLB_DATA_MAX - 1)
+
+
 #endif
