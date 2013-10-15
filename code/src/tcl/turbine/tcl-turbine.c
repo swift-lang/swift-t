@@ -693,14 +693,15 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
   }
   TCL_CONDITION(objc >= min_args, "Requires at least %d args", min_args);
   adlb_datum_id id;
-  char *subscript;
+  adlb_subscript subscript;
 
   int rc;
   int argpos = 1;
   rc = Tcl_GetADLB_ID(interp, objv[argpos++], &id);
   TCL_CHECK(rc)
 
-  subscript = Tcl_GetString(objv[argpos++]);
+  rc = Tcl_GetADLB_Subscript(objv[argpos++], &subscript);
+  TCL_CHECK_MSG(rc, "Invalid subscript argument");
 
   adlb_type_extra type_extra;
   adlb_data_type tmp;

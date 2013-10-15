@@ -45,8 +45,15 @@ typedef enum
 typedef int64_t turbine_transform_id;
 
 typedef struct {
+  char *key;
+  size_t length;
+} turbine_subscript;
+
+static const turbine_subscript TURBINE_NO_SUB = { .key = NULL, .length = 0 };
+
+typedef struct {
   turbine_datum_id td;
-  char *subscript;
+  turbine_subscript subscript;
 } td_sub_pair;
 
 /**

@@ -39,6 +39,7 @@
 #include <list.h>
 #include <log.h>
 #include <table.h>
+#include <table_bp.h>
 #include <table_lp.h>
 #include <tools.h>
 
@@ -142,15 +143,37 @@ struct table_lp td_subscribed;
   TD/subscript pairs to which engine is subscribed.  Key is created using
    write_id_sub_key function
  */
-struct table td_sub_subscribed;
+struct table_bp td_sub_subscribed;
 
 // Maximum length of buffer required for key
 #define ID_SUB_KEY_MAX (ADLB_DATA_SUBSCRIPT_MAX + 30)
-static inline int
-write_id_sub_key(char *buf, turbine_datum_id id, const char *subscript)
+
+// Return size of buffer to use for id/subscript pair.
+// Zero-length buffer if no subscript
+static inline size_t
+id_sub_key_buflen(turbine_subscript subscript)
 {
-  assert(subscript != NULL);
-  return sprintf(buf, "%"PRId64" %s", id, subscript);
+  if (subscript.key == NULL)
+    return 0;
+  size_t res = (sizeof(turbine_datum_id) + subscript.length);
+  assert(res <= ID_SUB_KEY_MAX);
+  return res;
+}
+
+static inline size_t
+write_id_sub_key(char *buf, turbine_datum_id id,
+                 turbine_subscript subscript)
+{
+  assert(subscript.key != NULL);
+  memcpy(buf, &id, sizeof(id));
+  memcpy(&buf[sizeof(id)], subscript.key, subscript.length);
+  return id_sub_key_buflen(subscript);
+}
+
+static inline adlb_subscript sub_convert(turbine_subscript sub)
+{
+  adlb_subscript asub = { .key = sub.key, .length = sub.length };
+  return asub;
 }
 
 #define turbine_check(code) if (code != TURBINE_SUCCESS) return code;
@@ -310,7 +333,7 @@ turbine_engine_init()
   if (!result)
     return TURBINE_ERROR_OOM;
 
-  result = table_init(&td_sub_subscribed, 1024*1024);
+  result = table_bp_init(&td_sub_subscribed, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
 
@@ -441,7 +464,7 @@ transform_free(transform* T)
     for (int i = 0; i < T->input_td_subs; i++)
     {
       // free subscript strings
-      free(T->input_td_sub_list[i].subscript);
+      free(T->input_td_sub_list[i].subscript.key);
     }
     free(T->input_td_sub_list);
   }
@@ -455,14 +478,17 @@ transform_free(transform* T)
  * Return true if subscribed, false if data already set
  */
 static inline turbine_code
-subscribe(adlb_datum_id id, const char *subscript, bool *result)
+subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
 {
-  char id_subscript_key[ID_SUB_KEY_MAX]; // if subscript provided, string key
-  if (subscript != NULL)
+  // if subscript provided, use key
+  size_t id_sub_keylen = id_sub_key_buflen(subscript);
+  char id_sub_key[id_sub_keylen];
+  if (subscript.key != NULL)
   {
-    write_id_sub_key(id_subscript_key, id, subscript);
+    write_id_sub_key(id_sub_key, id, subscript);
     void *tmp;
-    if (table_search(&td_sub_subscribed, id_subscript_key, &tmp))
+    if (table_bp_search(&td_sub_subscribed, id_sub_key, id_sub_keylen,
+                        &tmp))
     {
       *result = true;
       return TURBINE_SUCCESS;
@@ -477,14 +503,14 @@ subscribe(adlb_datum_id id, const char *subscript, bool *result)
     }
   }
   int subscribed;
-  adlb_code rc = ADLB_Subscribe(id, subscript, &subscribed);
+  adlb_code rc = ADLB_Subscribe(id, sub_convert(subscript), &subscribed);
 
   if (rc == (int)ADLB_DATA_ERROR_NOT_FOUND) {
     // Handle case where read_refcount == 0 and write_refcount == 0
     //      => datum was freed and we're good to go
     subscribed = 0;
   } else if (rc != ADLB_SUCCESS) {
-    if (subscript != NULL)
+    if (subscript.key != NULL)
     {
       log_printf("ADLB_Subscribe on <%ld>[\"%s\"] failed with code: %d\n",
                  id, subscript, rc);
@@ -498,8 +524,8 @@ subscribe(adlb_datum_id id, const char *subscript, bool *result)
 
   if (subscribed != 0) {
     // Record it was subscribed
-    if (subscript != NULL)
-      table_add(&td_sub_subscribed, id_subscript_key, (void*)1);
+    if (subscript.key != NULL)
+      table_bp_add(&td_sub_subscribed, id_sub_key, id_sub_keylen, (void*)1);
     else
       table_lp_add(&td_subscribed, id, (void*)1);
   }
@@ -651,11 +677,9 @@ declare_datum(turbine_datum_id id, struct list_l** result)
 {
   assert(initialized);
   // DEBUG_TURBINE("declare: %li\n", id);
-  // TODO: this memory may be leaked
   struct list_l* blocked = list_l_create();
   if (table_lp_contains(&td_blockers, id))
     return TURBINE_ERROR_DOUBLE_DECLARE;
-  // TODO: this memory may be leaked
   table_lp_add(&td_blockers, id, blocked);
   if (result != NULL)
     *result = blocked;
@@ -776,7 +800,7 @@ progress(transform* T, bool* subscribed)
     {
       // Contact server to check if available
       turbine_datum_id td = T->input_td_list[T->blocker];
-      turbine_code tc = subscribe(td, NULL, subscribed);
+      turbine_code tc = subscribe(td, TURBINE_NO_SUB, subscribed);
       if (tc != TURBINE_SUCCESS) {
         return tc;
       }
@@ -913,7 +937,9 @@ transform_tostring(char* output, transform* t)
     td_sub_pair ts = t->input_td_sub_list[i];
     if (blocking)
       append(p, "/");
-    append(p, "%"PRId64"[\"%s\"]", ts.td, ts.subscript);
+    // TODO: support binary subscript
+    append(p, "%"PRId64"[\"%.*s\"]", ts.td, (int)ts.subscript.length,
+           ts.subscript.key);
     if (blocking)
       append(p, "/");
   }
@@ -1037,7 +1063,7 @@ static void turbine_engine_finalize(void)
   // Entries in td_subscribed and td_sub_subscribed are not pointers and don't
   // need to be freed
   table_lp_free_callback(&td_subscribed, false, NULL);
-  table_free_callback(&td_sub_subscribed, false, NULL);
+  table_bp_free_callback(&td_sub_subscribed, false, NULL);
 
 }
 

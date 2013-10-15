@@ -1135,11 +1135,11 @@ ADLB_Exists_Impl(ClientData cdata, Tcl_Interp *interp,
   rc = Tcl_GetADLB_ID(interp, objv[argpos++], &id);
   TCL_CHECK_MSG(rc, "requires a data ID");
 
-  char *subscript = NULL;
+  adlb_subscript subscript = ADLB_NO_SUB;
   if (has_subscript)
   {
-    subscript = Tcl_GetString(objv[argpos++]);
-    TCL_CONDITION(subscript != NULL, "bad subscript argument");
+    rc = Tcl_GetADLB_Subscript(objv[argpos++], &subscript);
+    TCL_CHECK_MSG(rc, "Invalid subscript argument");
   }
 
   adlb_refcounts decr = ADLB_NO_RC;
@@ -1164,8 +1164,9 @@ ADLB_Exists_Impl(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", id);
 
   if (has_subscript)
-    DEBUG_ADLB("adlb::exists <%"PRId64">[%s] => %s",
-               id, subscript, bool2string(b));
+    // TODO: support binary subscript
+    DEBUG_ADLB("adlb::exists <%"PRId64">[%.*s] => %s",
+               id, (int)subscript.length, subscript.key, bool2string(b));
   else
     DEBUG_ADLB("adlb::exists <%"PRId64"> => %s", id, bool2string(b));
 
@@ -1486,7 +1487,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
           "extra trailing arguments starting at argument %i", argpos);
 
   // DEBUG_ADLB("adlb::store: <%"PRId64">=%s", id, data);
-  rc = ADLB_Store(id, NULL, type, data.data, data.length, decr);
+  rc = ADLB_Store(id, ADLB_NO_SUB, type, data.data, data.length, decr);
 
   // Free if needed
   if (data.data != xfer_buf.data)
@@ -1564,7 +1565,7 @@ ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
   int length;
   adlb_retrieve_rc refcounts = ADLB_RETRIEVE_NO_RC;
   refcounts.decr_self.read_refcount = decr_amount;
-  rc = ADLB_Retrieve(id, NULL, refcounts, &type, xfer, &length);
+  rc = ADLB_Retrieve(id, ADLB_NO_SUB, refcounts, &type, xfer, &length);
   TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", id);
   TCL_CONDITION(length >= 0, "adlb::retrieve <%"PRId64"> not found!",
                             id);
@@ -1713,10 +1714,11 @@ ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
   rc = Tcl_GetADLB_ID(interp, objv[argpos++], &id);
   TCL_CHECK_MSG(rc, "requires id!");
 
-  char *subscript = NULL;
+  adlb_subscript subscript = ADLB_NO_SUB;
   if (has_subscript)
   {
-    subscript = Tcl_GetString(objv[argpos++]);
+    rc = Tcl_GetADLB_Subscript(objv[argpos++], &subscript);
+    TCL_CHECK_MSG(rc, "Invalid subscript argument");
   }
 
   adlb_data_type expected_type;
@@ -2042,7 +2044,7 @@ ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
   // Retrieve the blob data
   adlb_data_type type;
   int length;
-  rc = ADLB_Retrieve(id, NULL, refcounts, &type, xfer, &length);
+  rc = ADLB_Retrieve(id, ADLB_NO_SUB, refcounts, &type, xfer, &length);
   TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", id);
   TCL_CONDITION(type == ADLB_DATA_TYPE_BLOB,
                 "type mismatch: expected: %i actual: %i",
@@ -2215,7 +2217,7 @@ ADLB_Store_Blob_Cmd(ClientData cdata, Tcl_Interp *interp,
     TCL_CHECK_MSG(rc, "decr must be int!");
   }
 
-  rc = ADLB_Store(id, NULL, ADLB_DATA_TYPE_BLOB, pointer, length, decr);
+  rc = ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_BLOB, pointer, length, decr);
   TCL_CONDITION(rc == ADLB_SUCCESS, "failed!");
 
   return TCL_OK;
@@ -2256,7 +2258,7 @@ ADLB_Blob_store_floats_Cmd(ClientData cdata, Tcl_Interp *interp,
     TCL_CHECK_MSG(rc, "decr must be int!");
 
   }
-  rc = ADLB_Store(id, NULL, ADLB_DATA_TYPE_BLOB,
+  rc = ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_BLOB,
                   xfer, length*(int)sizeof(double), decr);
   TCL_CONDITION(rc == ADLB_SUCCESS,
                 "adlb::store <%"PRId64"> failed!", id);
@@ -2298,7 +2300,7 @@ ADLB_Blob_store_ints_Cmd(ClientData cdata, Tcl_Interp *interp,
     TCL_CHECK_MSG(rc, "decr must be int!");
 
   }
-  rc = ADLB_Store(id, NULL, ADLB_DATA_TYPE_BLOB,
+  rc = ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_BLOB,
                   xfer, length*(int)sizeof(int), decr);
   TCL_CONDITION(rc == ADLB_SUCCESS,
                 "adlb::store <%"PRId64"> failed!", id);
@@ -2371,7 +2373,9 @@ ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
   int argpos = 1;
   rc = Tcl_GetADLB_ID(interp, objv[argpos++], &id);
   TCL_CHECK(rc);
-  char* subscript = Tcl_GetString(objv[argpos++]);
+  adlb_subscript subscript;
+  rc = Tcl_GetADLB_Subscript(objv[argpos++], &subscript);
+  TCL_CHECK_MSG(rc, "Invalid subscript argument");
 
   Tcl_Obj *member_obj = objv[argpos++];
 
@@ -2385,11 +2389,15 @@ ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
   adlb_binary_data member;
   rc = tcl_obj_to_adlb_data(interp, objv, type, has_extra ? &extra : NULL,
                             member_obj, &xfer_buf, &member);
-  TCL_CHECK_MSG(rc, "adlb::insert <%"PRId64">[%s] failed, could not extract data!",
-                    id, subscript);
 
-  DEBUG_ADLB("adlb::insert <%"PRId64">[\"%s\"]=<%s>",
-               id, subscript, Tcl_GetStringFromObj(member_obj, NULL));
+  // TODO: support binary subscript
+  TCL_CHECK_MSG(rc, "adlb::insert <%"PRId64">[%.*s] failed, could not extract data!",
+                    id, (int)subscript.length, subscript.key);
+
+  // TODO: support binary subscript
+  DEBUG_ADLB("adlb::insert <%"PRId64">[\"%.*s\"]=<%s>",
+               id, (int)subscript.length, subscript.key,
+               Tcl_GetStringFromObj(member_obj, NULL));
 
   adlb_refcounts decr = ADLB_NO_RC;
   if (argpos < objc)
@@ -2413,7 +2421,9 @@ ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
   if (member.data != xfer_buf.data)
     ADLB_Free_binary_data(&member);
 
-  TCL_CONDITION(rc == ADLB_SUCCESS, "failed: <%"PRId64">[\"%s\"]\n", id, subscript);
+  // TODO: support binary subscript
+  TCL_CONDITION(rc == ADLB_SUCCESS, "failed: <%"PRId64">[\"%.*s\"]\n", id,
+                  (int)subscript.length, subscript.key);
   return TCL_OK;
 }
 
@@ -2426,19 +2436,23 @@ ADLB_Insert_Atomic_Cmd(ClientData cdata, Tcl_Interp *interp,
                        int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(3);
+  int rc;
 
   bool b;
   adlb_datum_id id;
   Tcl_GetADLB_ID(interp, objv[1], &id);
-  char* subscript = Tcl_GetString(objv[2]);
+  adlb_subscript subscript;
+  rc = Tcl_GetADLB_Subscript(objv[2], &subscript);
+  TCL_CHECK_MSG(rc, "Invalid subscript argument");
 
-  DEBUG_ADLB("adlb::insert_atomic: <%"PRId64">[\"%s\"]",
-             id, subscript);
-  int rc = ADLB_Insert_atomic(id, subscript, &b, NULL, NULL, NULL);
+  // TODO: support binary subscript
+  DEBUG_ADLB("adlb::insert_atomic: <%"PRId64">[\"%.*s\"]",
+             id, (int)subscript.length, subscript.key);
+  rc = ADLB_Insert_atomic(id, subscript, &b, NULL, NULL, NULL);
 
   TCL_CONDITION(rc == ADLB_SUCCESS,
-                "adlb::insert_atomic: failed: <%"PRId64">[%s]",
-                id, subscript);
+                "adlb::insert_atomic: failed: <%"PRId64">[%.*s]",
+                id, (int)subscript.length, subscript.key);
 
   Tcl_Obj* result = Tcl_NewBooleanObj(b);
   Tcl_SetObjResult(interp, result);
@@ -2457,9 +2471,13 @@ ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
   int rc;
   rc = Tcl_GetADLB_ID(interp, objv[argpos++], &id);
   TCL_CHECK_MSG(rc, "adlb::lookup could not parse given id!");
-  char* subscript = Tcl_GetString(objv[argpos++]);
-
-  TCL_CHECK_MSG((subscript == NULL), "adlb::lookup could not parse subscript!");
+  
+  adlb_subscript subscript;
+  rc = Tcl_GetADLB_Subscript(objv[argpos++], &subscript);
+  TCL_CHECK_MSG(rc, "Invalid subscript argument");
+  
+  DEBUG_ADLB("adlb::lookup <%"PRId64">[\"%.*s\"]",
+               id, (int)subscript.length, subscript.key);
 
   adlb_data_type type;
   int len;
@@ -2499,17 +2517,18 @@ ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
 
   do {
     rc = ADLB_Retrieve(id, subscript, refcounts, &type, xfer, &len);
-    TCL_CONDITION(rc == ADLB_SUCCESS, "lookup failed for: <%"PRId64">[%s]",
-                  id, subscript);
+    TCL_CONDITION(rc == ADLB_SUCCESS, "lookup failed for: <%"PRId64">[%.*s]",
+                  id, (int)subscript.length, subscript.key);
   } while (spin && len < 0);
 
-  TCL_CONDITION(len >= 0, "adlb::lookup <%"PRId64">[\"%s\"] not found",
-                id, subscript);
+  TCL_CONDITION(len >= 0, "adlb::lookup <%"PRId64">[\"%.*s\"] not found",
+                id, (int)subscript.length, subscript.key);
 
   Tcl_Obj* result = NULL;
   adlb_data_to_tcl_obj(interp, objv, id, type, NULL, xfer, len, &result);
-  DEBUG_ADLB("adlb::lookup <%"PRId64">[\"%s\"]=<%s>",
-             id, subscript, Tcl_GetStringFromObj(result, NULL));
+  DEBUG_ADLB("adlb::lookup <%"PRId64">[\"%.*s\"]=<%s>",
+             id, (int)subscript.length, subscript.key,
+             Tcl_GetStringFromObj(result, NULL));
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
@@ -2684,7 +2703,10 @@ ADLB_Container_Reference_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = Tcl_GetADLB_ID(interp, objv[1], &container_id);
   TCL_CHECK_MSG(rc, "adlb::container_reference: "
                 "argument 1 is not a 64-bit integer!");
-  char* subscript = Tcl_GetString(objv[2]);
+  adlb_subscript subscript;
+  rc = Tcl_GetADLB_Subscript(objv[2], &subscript);
+  TCL_CHECK_MSG(rc, "Invalid subscript argument");
+
   adlb_datum_id reference;
   rc = Tcl_GetADLB_ID(interp, objv[3], &reference);
   TCL_CHECK_MSG(rc, "adlb::container_reference: "

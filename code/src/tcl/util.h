@@ -229,5 +229,21 @@ static inline int Tcl_GetPtr(Tcl_Interp *interp, Tcl_Obj *objPtr,
   return TCL_OK;
 }
 
+/*
+  Extract ADLB subscript from string (assume string subscript).
+  Returned subscript will have pointer to Tcl-interp-owned string
+ */
+static inline int Tcl_GetADLB_Subscript(Tcl_Obj *objPtr, adlb_subscript *sub)
+{
+  int keylen;
+  sub->key = Tcl_GetStringFromObj(objPtr, &keylen);
+  if (sub->key == NULL)
+  {
+    // Couldn't extract string
+    return TCL_ERROR;
+  }
+  sub->length = ((size_t)keylen) + 1; // Account for null terminator
+  return TCL_OK;
+}
 
 #endif

@@ -42,6 +42,7 @@ proc rules { } {
 
     # This is not a real Turbine loop
     foreach subscript $L {
+        puts "subscript: $subscript"
         set member [ turbine::container_lookup 1 $subscript ]
         puts "member: $member"
         set s [ turbine::retrieve_string $member ]
