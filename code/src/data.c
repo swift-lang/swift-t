@@ -49,13 +49,13 @@ static struct table_lp tds;
 /**
    Map from "container,subscript" specifier to list of listening references.
  */
-static struct table container_references;
+static struct table_bp container_references;
 
 /**
    Map from "container,subscript" specifier to list of subscribers to that
    subscript.
  */
-static struct table container_ix_listeners;
+static struct table_bp container_ix_listeners;
 
 /**
    Map from adlb_datum_id to int rank if locked
@@ -113,14 +113,26 @@ static void container_add(adlb_container *c, adlb_subscript sub,
 
 static void report_leaks(void);
 
+
 // Maximum length of id/subscript string
 #define ID_SUB_PAIR_MAX \
-  (sizeof(adlb_datum_id) / 3 + ADLB_DATA_SUBSCRIPT_MAX + 1)
-static inline int print_id_sub(char *buf, adlb_datum_id id, adlb_subscript sub)
+  (sizeof(adlb_datum_id) + ADLB_DATA_SUBSCRIPT_MAX + 1)
+
+// Length of buffer for id+subscript.  Will be at most 8 bytes
+// more than ADLB_SUBSCRIPT_MAX
+static inline size_t id_sub_buflen(adlb_subscript sub)
 {
-  // TODO: stop using this approach, doesn't work for binary keys
-  int t = sprintf(buf, "%"PRId64"[%s]", id, sub.key);
-  return t;
+  size_t size = (sizeof(adlb_datum_id) + sub.length);
+  assert(size <= ID_SUB_PAIR_MAX);
+  return size;
+}
+
+static inline size_t write_id_sub(char *buf, adlb_datum_id id,
+                                  adlb_subscript sub)
+{
+  memcpy(buf, &id, sizeof(adlb_datum_id));
+  memcpy(buf + sizeof(adlb_datum_id), sub.key, sub.length);
+  return id_sub_buflen(sub);
 }
 
 /**
@@ -139,8 +151,8 @@ xlb_data_init(int s, int server_num)
   result = table_lp_init(&tds, 1024*1024);
   if (!result)
     return ADLB_DATA_ERROR_OOM;
-  result = table_init(&container_references, 1024*1024);
-  result = table_init(&container_ix_listeners, 1024*1024);
+  result = table_bp_init(&container_references, 1024*1024);
+  result = table_bp_init(&container_ix_listeners, 1024*1024);
   if (!result)
     return ADLB_DATA_ERROR_OOM;
 
@@ -556,18 +568,17 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
             "non-container: <%"PRId64">", subscript.key, id);
 
     // encode container, index and ref type into string
-    char pair[ID_SUB_PAIR_MAX];
-    int length = print_id_sub(pair, id, subscript);
-    assert(length < ID_SUB_PAIR_MAX);
+    char key[id_sub_buflen(subscript)];
+    size_t key_len = write_id_sub(key, id, subscript);
 
     struct list_i* listeners = NULL;
-    bool found = table_search(&container_ix_listeners, pair,
+    bool found = table_bp_search(&container_ix_listeners, key, key_len,
                               (void*)&listeners);
     if (!found)
     {
       // Nobody else has subscribed to this pair yet
       listeners = list_i_create();
-      table_add(&container_ix_listeners, pair, listeners);
+      table_bp_add(&container_ix_listeners, key, key_len, listeners);
     }
     TRACE("Added %i to listeners for %"PRId64"[%s]\n", rank,
         id, subscript);
@@ -642,18 +653,17 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
 
 
   // encode container, index and ref type into string
-  char pair[ID_SUB_PAIR_MAX];
-  int length = print_id_sub(pair, container_id, subscript);
-  assert(length < ID_SUB_PAIR_MAX);
+  char key[id_sub_buflen(subscript)];
+  size_t key_len = write_id_sub(key, container_id, subscript);
 
   struct list_l* listeners = NULL;
-  bool found = table_search(&container_references, pair,
+  bool found = table_bp_search(&container_references, key, key_len,
                             (void*)&listeners);
   if (!found)
   {
     // Nobody else has subscribed to this pair yet
     listeners = list_l_create();
-    table_add(&container_references, pair, listeners);
+    table_bp_add(&container_references, key, key_len, listeners);
   }
   else
   {
@@ -1193,16 +1203,15 @@ insert_notifications(adlb_datum *d,
             bool *garbage_collected)
 {
   // Find, remove, and return any listening container references
-  char s[ID_SUB_PAIR_MAX];
-  int length = print_id_sub(s, container_id, subscript);
-  assert(length < ID_SUB_PAIR_MAX);
+  char s[id_sub_buflen(subscript)];
+  size_t s_len = write_id_sub(s, container_id, subscript);
 
   // Track whether we garbage collected the data
   assert(garbage_collected != NULL);
   *garbage_collected = false;
 
   void *data;
-  bool result = table_remove(&container_references, s, &data);
+  bool result = table_bp_remove(&container_references, s, s_len, &data);
   struct list_l *ref_list = data;
   if (result)
   {
@@ -1239,7 +1248,7 @@ insert_notifications(adlb_datum *d,
     references->count = 0;
   }
 
-  result = table_remove(&container_ix_listeners, s, &data);
+  result = table_bp_remove(&container_ix_listeners, s, s_len, &data);
   struct list_i *sub_list = data;
   if (result)
   {
@@ -1478,7 +1487,7 @@ static void free_td_entry(adlb_datum_id id, void *val)
   }
 }
 
-static void free_cref_entry(char *key, void *val)
+static void free_cref_entry(void *key, size_t key_len, void *val)
 {
   assert(key != NULL && val != NULL);
   struct list_l* listeners = val;
@@ -1486,13 +1495,15 @@ static void free_cref_entry(char *key, void *val)
 
   for (curr = listeners->head; curr != NULL; curr = curr->next)
   {
-    printf("UNFILLED CONTAINER REFERENCE %s => <%"PRId64">\n", key, curr->data);
+    // TODO: support binary key
+    printf("UNFILLED CONTAINER REFERENCE %s => <%"PRId64">\n", key,
+           curr->data);
   }
   list_l_free(listeners);
   free(key);
 }
 
-static void free_ix_l_entry(char *key, void *val)
+static void free_ix_l_entry(void *key, size_t key_len, void *val)
 {
   assert(key != NULL && val != NULL);
   struct list_i* listeners = val;
@@ -1515,8 +1526,8 @@ xlb_data_finalize()
   // Secondly free up memory allocated in this module
   table_lp_free_callback(&tds, false, free_td_entry);
 
-  table_free_callback(&container_references, false, free_cref_entry);
-  table_free_callback(&container_ix_listeners, false, free_ix_l_entry);
+  table_bp_free_callback(&container_references, false, free_cref_entry);
+  table_bp_free_callback(&container_ix_listeners, false, free_ix_l_entry);
 
   table_lp_free_callback(&locked, false, free_locked_entry);
 

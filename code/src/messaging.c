@@ -160,7 +160,7 @@ xlb_pack_id_sub(void *buffer, adlb_datum_id id, adlb_subscript subscript)
 
   if (has_subscript)
   {
-    memcpy(pos, subscript, (size_t)sub_packed_size); 
+    memcpy(pos, subscript.key, (size_t)sub_packed_size); 
     pos += sub_packed_size;
   }
   assert(pos - buffer <= INT_MAX);
@@ -189,7 +189,7 @@ xlb_unpack_id_sub(const void *buffer, adlb_datum_id *id,
   if (has_subscript)
   {
     subscript->key = pos;
-    subscript->length = subscript_packed_len;
+    subscript->length = (size_t)subscript_packed_len;
     pos += subscript_packed_len;
   }
   else

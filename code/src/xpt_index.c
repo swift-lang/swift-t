@@ -57,17 +57,19 @@ adlb_code xlb_xpt_index_lookup(const void *key, int key_len,
                                xpt_index_entry *res)
 {
   assert(xpt_index_init);
+  assert(key != NULL);
+  assert(key_len >= 0);
   adlb_datum_id id = id_for_hash(calc_hash(key, key_len));
+  adlb_subscript subscript = { .key = key, .length = (size_t)key_len };
 
   adlb_retrieve_rc refcounts = ADLB_RETRIEVE_NO_RC;
-  adlb_data_type type;
 
   // TODO: limited to ADLB_DATA_MAX by using fixed buffer
   bool alloced_buffer = false;
   void *buffer = xfer; 
+  adlb_data_type type;
   int length;
-  // TODO: need to provide key subscript
-  adlb_code rc = ADLB_Retrieve(id, NULL, refcounts, &type, buffer, &length);
+  adlb_code rc = ADLB_Retrieve(id, subscript, refcounts, &type, buffer, &length);
   CHECK_MSG(rc == ADLB_SUCCESS, "Error looking up checkpoint in container "
                                 "%"PRId64, id);
   if (length < 0)
@@ -102,6 +104,8 @@ adlb_code xlb_xpt_index_add(const void *key, int key_len,
                             const xpt_index_entry *entry)
 {
   assert(xpt_index_init);
+  assert(key != NULL);
+  assert(key_len >= 0);
   const void *data; // Pointer to binary repr
   int data_len; // Length of data minus flag
   char file_flag;
@@ -127,8 +131,8 @@ adlb_code xlb_xpt_index_add(const void *key, int key_len,
 
   adlb_refcounts refcounts = ADLB_NO_RC;
   adlb_datum_id id = id_for_hash(calc_hash(key, key_len));
-  // TODO: key subscript
-  adlb_code rc = ADLB_Store(id, NULL, ADLB_DATA_TYPE_BLOB,
+  adlb_subscript subscript = { .key = key, .length = (size_t)key_len };
+  adlb_code rc = ADLB_Store(id, subscript, ADLB_DATA_TYPE_BLOB,
             xfer, blob_len, refcounts);
   
   // TODO: handle duplicate key gracefully: it is possible for the same

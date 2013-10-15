@@ -117,7 +117,7 @@ xlb_incr_scav_referand(adlb_datum_storage *d, adlb_data_type type,
   }
 }
 adlb_data_code
-xlb_incr_rc_scav(adlb_datum_id id, const char *subscript,
+xlb_incr_rc_scav(adlb_datum_id id, adlb_subscript subscript,
         const void *ref_data, int ref_data_len, adlb_data_type ref_type,
         adlb_refcounts decr_self, adlb_refcounts incr_referand,
         adlb_ranks *notifications)

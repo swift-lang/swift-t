@@ -641,10 +641,9 @@ handle_exists(int caller)
   RECV(xfer, XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_EXISTS);
   
   adlb_datum_id id;
-  const char *subscript;
-  int sub_strlen;
+  adlb_subscript subscript;
   char *xfer_pos = xfer;
-  xfer_pos += xlb_unpack_id_sub(xfer_pos, &id, &subscript, &sub_strlen);
+  xfer_pos += xlb_unpack_id_sub(xfer_pos, &id, &subscript);
 
   adlb_refcounts decr;
   MSG_UNPACK_BIN(xfer_pos, &decr);
@@ -672,13 +671,14 @@ handle_store(int caller)
 
   assert(hdr.subscript_len >= 0);
   char subscript_buf[hdr.subscript_len];
-  const char *subscript = NULL;
+  adlb_subscript subscript = { .key = NULL, .length = hdr.subscript_len };
   if (hdr.subscript_len > 0)
   {
     RECV(subscript_buf, hdr.subscript_len, MPI_BYTE, caller,
          ADLB_TAG_STORE_SUBSCRIPT);
-    subscript = subscript_buf;
-    DEBUG("Store: <%"PRId64">[\"%s\"]", hdr.id, subscript);
+    subscript.key = subscript_buf;
+    // TODO: support binary subscript
+    DEBUG("Store: <%"PRId64">[\"%s\"]", hdr.id, subscript.key);
   }
   else
   {
@@ -710,7 +710,7 @@ handle_store(int caller)
   if (ADLB_CLIENT_NOTIFIES)
   {
     // process and remove any local notifications for this server
-    xlb_process_local_notif(hdr.id, NULL, &notifs.close_notify);
+    xlb_process_local_notif(hdr.id, ADLB_NO_SUB, &notifs.close_notify);
     xlb_process_local_notif(hdr.id, subscript, &notifs.insert_notify);
 
     // TODO: process reference setting locally if possible.  This is slightly
@@ -772,7 +772,13 @@ handle_retrieve(int caller)
 
   // Interpret xfer buffer as struct
   struct packed_retrieve_hdr *hdr = (struct packed_retrieve_hdr*)xfer;
-  const char *subscript = (hdr->subscript_len <= 0) ? NULL : hdr->subscript;
+  adlb_subscript subscript = ADLB_NO_SUB;
+  if (hdr->subscript_len > 0)
+  {
+   subscript.key = hdr->subscript;
+   subscript.length = (size_t)hdr->subscript_len;
+  }
+
   adlb_refcounts decr_self = hdr->refcounts.decr_self;
   adlb_refcounts incr_referand = hdr->refcounts.incr_referand;
 
@@ -877,11 +883,11 @@ handle_subscribe(int caller)
   RECV(xfer, XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_SUBSCRIBE);
   
   adlb_datum_id id;
-  const char *subscript;
-  int sub_strlen;
-  xlb_unpack_id_sub(xfer, &id, &subscript, &sub_strlen);
+  adlb_subscript subscript;
+  xlb_unpack_id_sub(xfer, &id, &subscript);
 
-  DEBUG("subscribe: <%"PRId64">[%s]", id, subscript);
+  // TODO: support binary keys
+  DEBUG("subscribe: <%"PRId64">[%s]", id, subscript.key);
   struct pack_sub_resp resp;
   int result;
   resp.dc = xlb_data_subscribe(id, subscript, caller, &result);
@@ -923,7 +929,7 @@ handle_refcount_incr(int caller)
   if (dc == ADLB_DATA_SUCCESS && ADLB_CLIENT_NOTIFIES)
   {
     // Remove any notifications that can be handled locally
-    xlb_process_local_notif(msg.id, NULL, &notify_ranks);
+    xlb_process_local_notif(msg.id, ADLB_NO_SUB, &notify_ranks);
     resp.notifs.notify_closed_count = notify_ranks.count;
   }
 
@@ -938,7 +944,7 @@ handle_refcount_incr(int caller)
     }
     else
     {
-      rc = xlb_close_notify(msg.id, NULL, notify_ranks.ranks,
+      rc = xlb_close_notify(msg.id, ADLB_NO_SUB, notify_ranks.ranks,
                         notify_ranks.count);
       ADLB_CHECK(rc);
     }
@@ -955,11 +961,10 @@ handle_insert_atomic(int caller)
 
   RECV(xfer, XFER_SIZE, MPI_CHAR, caller, ADLB_TAG_INSERT_ATOMIC);
 
-  const char *subscript;
-  int sub_strlen;
+  adlb_subscript subscript;
   adlb_datum_id id;
   char *xfer_pos = xfer;
-  xfer_pos += xlb_unpack_id_sub(xfer_pos, &id, &subscript, &sub_strlen);
+  xfer_pos += xlb_unpack_id_sub(xfer_pos, &id, &subscript);
   bool return_value;
   MSG_UNPACK_BIN(xfer_pos, &return_value);
 
@@ -982,7 +987,9 @@ handle_insert_atomic(int caller)
     resp.value_len = value.length;
   }
   
-  DEBUG("Insert_atomic: <%"PRId64">[%s] => %i", id, subscript, resp.created);
+  // TODO: support binary subscript
+  DEBUG("Insert_atomic: <%"PRId64">[%s] => %i", id, subscript.key,
+        resp.created);
 
   // Send response header
   RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
@@ -1054,8 +1061,7 @@ handle_container_reference(int caller)
   RECV(xfer, XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_CONTAINER_REFERENCE);
 
   adlb_datum_id container_id;
-  const char *subscript;
-  int sub_strlen;
+  adlb_subscript subscript;
   adlb_datum_id reference;
   adlb_data_type ref_type;
 
@@ -1064,10 +1070,11 @@ handle_container_reference(int caller)
   MSG_UNPACK_BIN(xfer_read, &ref_type);
   MSG_UNPACK_BIN(xfer_read, &reference);
 
-  xlb_unpack_id_sub(xfer_read, &container_id, &subscript, &sub_strlen);
+  xlb_unpack_id_sub(xfer_read, &container_id, &subscript);
 
+  // TODO: support binary subscript
   DEBUG("Container_reference: <%"PRId64">[%s] => <%"PRId64"> (%i)",
-        container_id, subscript, reference, ref_type);
+        container_id, subscript.key, reference, ref_type);
   
   adlb_binary_data member;
   adlb_data_code dc = xlb_data_container_reference(container_id,
@@ -1248,7 +1255,7 @@ notify_helper(adlb_datum_id id, adlb_ranks *notifications)
   if (notifications->count > 0)
   {
     adlb_code rc;
-    rc = xlb_close_notify(id, NULL, notifications->ranks,
+    rc = xlb_close_notify(id, ADLB_NO_SUB, notifications->ranks,
                           notifications->count);
     ADLB_CHECK(rc);
     xlb_free_ranks(notifications);

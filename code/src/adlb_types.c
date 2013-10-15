@@ -233,7 +233,7 @@ char *ADLB_Data_repr(const adlb_datum_storage *d, adlb_data_type type)
 static char *data_repr_container(const adlb_container *c)
 {
   adlb_data_code dc;
-  struct table* members = c->members;
+  struct table_bp* members = c->members;
   size_t cont_str_len = 1024;
   char *cont_str = malloc(cont_str_len);
   int cont_str_pos = 0;
@@ -247,18 +247,26 @@ static char *data_repr_container(const adlb_container *c)
 
   for (int i = 0; i < members->capacity; i++)
   {
-    struct list_sp* L = members->array[i];
-    for (struct list_sp_item* item = L->head; item;
+    struct list_bp* L = members->array[i];
+    for (struct list_bp_item* item = L->head; item;
          item = item->next)
     {
-      char *key = item->key;
       adlb_container_val v = item->data;
       char *value_s = ADLB_Data_repr(v, c->val_type);
       dc = xlb_resize_str(&cont_str, &cont_str_len, cont_str_pos,
-                     strlen(key) + strlen(value_s) + 7);
+                     (item->key_len - 1) + strlen(value_s) + 7);
       assert(dc == ADLB_DATA_SUCCESS);
-      cont_str_pos += sprintf(&cont_str[cont_str_pos], "\"%s\"={%s} ",
-                              key, value_s);
+      if (c->key_type == ADLB_DATA_TYPE_STRING)
+      {
+        cont_str_pos += sprintf(&cont_str[cont_str_pos], "\"%s\"={%s} ",
+                                (char*)item->key, value_s);
+      }
+      else
+      {
+        // TODO: support binary keys
+        cont_str_pos += sprintf(&cont_str[cont_str_pos], "\"%s\"={%s} ",
+                                (char*)item->key, value_s);
+      }
 
       free(value_s);
     }

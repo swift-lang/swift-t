@@ -83,7 +83,7 @@ xlb_multiset_cleanup(xlb_multiset *set, bool free_root, bool free_mem,
                         adlb_refcounts change, refcount_scavenge scav)
 {
   // Can't support subscripts
-  assert(ADLB_RC_IS_NULL(scav.refcounts) || scav.subscript == NULL);
+  assert(ADLB_RC_IS_NULL(scav.refcounts) || !adlb_has_sub(scav.subscript));
   for (uint i = 0; i < set->chunk_count; i++) {
     xlb_multiset_chunk *chunk = set->chunks[i];
     uint clen = chunk_len(set, i);
@@ -162,6 +162,8 @@ adlb_data_code
 xlb_multiset_extract_slice(xlb_multiset *set, int start, int count,
               const adlb_buffer *caller_buffer, adlb_buffer *output)
 {
+  assert(start >= 0);
+  assert(count >= 0);
   adlb_data_code dc;
   bool use_caller_buf;
 
@@ -181,8 +183,8 @@ xlb_multiset_extract_slice(xlb_multiset *set, int start, int count,
 
 
   // Calculate position of start
-  uint chunk_ix = start / XLB_MULTISET_CHUNK_SIZE;
-  uint pos_in_chunk = start % XLB_MULTISET_CHUNK_SIZE;
+  uint chunk_ix = (uint)start / XLB_MULTISET_CHUNK_SIZE;
+  uint pos_in_chunk = (uint)start % XLB_MULTISET_CHUNK_SIZE;
   while (c < count && chunk_ix < set->chunk_count) {
     xlb_multiset_chunk *chunk = set->chunks[chunk_ix];
     // Find size of current chunk.
@@ -219,7 +221,7 @@ xlb_multiset_repr(xlb_multiset *set, char **repr)
 
   res_pos += sprintf(&res[res_pos], "{");
 
-  for (int chunk_ix = 0; chunk_ix < set->chunk_count; chunk_ix++)
+  for (uint chunk_ix = 0; chunk_ix < set->chunk_count; chunk_ix++)
   {
     xlb_multiset_chunk *chunk = set->chunks[chunk_ix];
     // Find size of current chunk.

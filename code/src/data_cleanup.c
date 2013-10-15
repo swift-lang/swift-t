@@ -3,7 +3,7 @@
 #include "data_structs.h"
 #include "multiset.h"
 #include "refcount.h"
-#include "table.h"
+#include "table_bp.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -44,7 +44,7 @@ xlb_datum_cleanup2(adlb_datum_storage *d, adlb_data_type type,
   else if (type == ADLB_DATA_TYPE_STRUCT)
   {
     int scav_ix = -1; // negative == don't scavenge
-    if (scav.subscript != NULL) 
+    if (adlb_has_sub(scav.subscript)) 
     {
       dc = xlb_struct_str_to_ix(scav.subscript, &scav_ix);
       DATA_CHECK(dc);
@@ -57,7 +57,7 @@ xlb_datum_cleanup2(adlb_datum_storage *d, adlb_data_type type,
     if (!ADLB_RC_IS_NULL(rc_change))
     {
       // Decrement any reference counts required
-      assert(scav.subscript == NULL);
+      assert(!adlb_has_sub(scav.subscript));
       dc = xlb_incr_scav_referand(d, type, rc_change, scav.refcounts);
       DATA_CHECK(dc);
     }
@@ -81,12 +81,12 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
                   adlb_refcounts rc_change, refcount_scavenge scav)
 {
   adlb_data_code dc;
-  struct table* members = container->members;
+  struct table_bp* members = container->members;
   
   for (int i = 0; i < members->capacity; i++)
   {
-    struct list_sp* L = members->array[i];
-    struct list_sp_item* item = L->head;
+    struct list_bp* L = members->array[i];
+    struct list_bp_item* item = L->head;
     while (item != NULL)
     {
       adlb_datum_storage *d = (adlb_datum_storage*)item->data;
@@ -94,8 +94,10 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
       // Value may be null when insert_atomic occurred, but nothing inserted
       if (!ADLB_RC_IS_NULL(rc_change) && d != NULL)
       {
+        adlb_subscript *sub = &scav.subscript;
         bool do_scavenge = !ADLB_RC_IS_NULL(scav.refcounts) && 
-           (scav.subscript == NULL || strcmp(scav.subscript, item->key) == 0);
+           (!adlb_has_sub(*sub) ||
+             list_bp_key_match(sub->key, sub->length, item));
 
         if (do_scavenge)
         {
@@ -126,7 +128,7 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
       }
      
       // Free list node and move to next
-      struct list_sp_item* prev_item = item;
+      struct list_bp_item* prev_item = item;
       item = item->next;
       if (free_mem)
         free(prev_item);
@@ -138,7 +140,7 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
     }
   }
   if (free_mem)
-    table_free(members);
+    table_bp_free(members);
   return ADLB_DATA_SUCCESS;
 }
 
