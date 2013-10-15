@@ -750,12 +750,14 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(argpos == objc, "Trailing args starting at %i", argpos);
 
   if (type == ADLB_DATA_TYPE_CONTAINER) {
-    log_printf("creating nested container <%"PRId64">[%s] (%s->%s)", id,
-      subscript, ADLB_Data_type_tostring(type_extra.CONTAINER.key_type),
-                 ADLB_Data_type_tostring(type_extra.CONTAINER.val_type));
+    log_printf("creating nested container <%"PRId64">[%.*s] (%s->%s)", id,
+      (int)subscript.length, subscript.key,
+      ADLB_Data_type_tostring(type_extra.CONTAINER.key_type),
+      ADLB_Data_type_tostring(type_extra.CONTAINER.val_type));
   } else {
-    log_printf("creating nested multiset <%"PRId64">[%s] (%s)", id,
-      subscript, ADLB_Data_type_tostring(type_extra.CONTAINER.val_type));
+    log_printf("creating nested multiset <%"PRId64">[%.*s] (%s)", id,
+      (int)subscript.length, subscript.key,
+      ADLB_Data_type_tostring(type_extra.CONTAINER.val_type));
   }
 
   int xfer_size;

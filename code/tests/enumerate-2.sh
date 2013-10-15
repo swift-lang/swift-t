@@ -24,6 +24,12 @@ set -x
 bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
 [[ ${?} == 0 ]] || exit 1
 
-grep -q "trace: 0 1" ${OUTPUT} || exit 1
+if grep -q "trace: 0 1" ${OUTPUT} 
+then
+  :
+else
+  #Check other way
+  grep -q "trace: 1 0" ${OUTPUT} || exit 1
+fi
 
 exit 0
