@@ -889,8 +889,15 @@ handle_subscribe(int caller)
   xlb_unpack_id_sub(xfer, &id, &subscript);
 
   // TODO: support binary keys
-  DEBUG("subscribe: <%"PRId64">[%.*s]", id, (int)subscript.length,
-        subscript.key);
+  if (adlb_has_sub(subscript))
+  {
+    DEBUG("subscribe: <%"PRId64">[%.*s]", id, (int)subscript.length,
+          subscript.key);
+  }
+  else
+  {
+    DEBUG("subscribe: <%"PRId64">", id);
+  }
   struct pack_sub_resp resp;
   int result;
   resp.dc = xlb_data_subscribe(id, subscript, caller, &result);
