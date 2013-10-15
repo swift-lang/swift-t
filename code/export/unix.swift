@@ -24,4 +24,9 @@ app (file o) sed(file i, string command)
   "sed" command i @stdout=o;
 }
 
+app (file o) touch()
+{
+  "touch" o;
+}
+
 #endif
