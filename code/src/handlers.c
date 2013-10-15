@@ -671,14 +671,16 @@ handle_store(int caller)
 
   assert(hdr.subscript_len >= 0);
   char subscript_buf[hdr.subscript_len];
-  adlb_subscript subscript = { .key = NULL, .length = hdr.subscript_len };
+  adlb_subscript subscript = { .key = NULL,
+        .length = (size_t)hdr.subscript_len };
   if (hdr.subscript_len > 0)
   {
     RECV(subscript_buf, hdr.subscript_len, MPI_BYTE, caller,
          ADLB_TAG_STORE_SUBSCRIPT);
     subscript.key = subscript_buf;
     // TODO: support binary subscript
-    DEBUG("Store: <%"PRId64">[\"%s\"]", hdr.id, subscript.key);
+    DEBUG("Store: <%"PRId64">[\"%.*s\"]", hdr.id, (int)subscript.length,
+          subscript.key);
   }
   else
   {
@@ -887,7 +889,8 @@ handle_subscribe(int caller)
   xlb_unpack_id_sub(xfer, &id, &subscript);
 
   // TODO: support binary keys
-  DEBUG("subscribe: <%"PRId64">[%s]", id, subscript.key);
+  DEBUG("subscribe: <%"PRId64">[%.*s]", id, (int)subscript.length,
+        subscript.key);
   struct pack_sub_resp resp;
   int result;
   resp.dc = xlb_data_subscribe(id, subscript, caller, &result);
@@ -988,8 +991,8 @@ handle_insert_atomic(int caller)
   }
   
   // TODO: support binary subscript
-  DEBUG("Insert_atomic: <%"PRId64">[%s] => %i", id, subscript.key,
-        resp.created);
+  DEBUG("Insert_atomic: <%"PRId64">[%.*s] => %i", id, (int)subscript.length,
+        subscript.key, resp.created);
 
   // Send response header
   RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
@@ -1073,8 +1076,9 @@ handle_container_reference(int caller)
   xlb_unpack_id_sub(xfer_read, &container_id, &subscript);
 
   // TODO: support binary subscript
-  DEBUG("Container_reference: <%"PRId64">[%s] => <%"PRId64"> (%i)",
-        container_id, subscript.key, reference, ref_type);
+  DEBUG("Container_reference: <%"PRId64">[%.*s] => <%"PRId64"> (%i)",
+        container_id, (int)subscript.length, subscript.key,
+        reference, ref_type);
   
   adlb_binary_data member;
   adlb_data_code dc = xlb_data_container_reference(container_id,

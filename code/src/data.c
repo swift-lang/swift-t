@@ -135,6 +135,16 @@ static inline size_t write_id_sub(char *buf, adlb_datum_id id,
   return id_sub_buflen(sub);
 }
 
+// Extract id and sub from buffer.  Return internal pointer into buffer
+static inline void read_id_sub(const char *buf, size_t buflen,
+        adlb_datum_id *id, adlb_subscript *sub)
+{
+  assert(buflen >= sizeof(*id));
+  memcpy(id, buf, sizeof(*id));
+  sub->length = buflen - sizeof(*id);
+  sub->key = &buf[sizeof(*id)];
+}
+
 /**
    @param s Number of servers
    @param server_num Number amongst servers
@@ -290,8 +300,8 @@ xlb_data_exists(adlb_datum_id id, adlb_subscript subscript, bool* result)
     bool data_found = container_lookup(&d->data.CONTAINER, subscript, &t);
     *result = data_found;
     // TODO: support binary keys
-    DEBUG("Exists: <%"PRId64">[%s] => %s",
-          id, subscript.key, bool2string(*result));
+    DEBUG("Exists: <%"PRId64">[%.*s] => %s", id, (int)subscript.length,
+            subscript.key, bool2string(*result));
   }
   return ADLB_DATA_SUCCESS;
 }
@@ -553,7 +563,8 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
   else
   {
     // TODO: support binary keys
-    DEBUG("data_subscribe(): <%"PRId64">[%s]", id, subscript.key);
+    DEBUG("data_subscribe(): <%"PRId64">[%.*s]", id, (int)subscript.length,
+            subscript.key);
   }
 
   adlb_datum* d = table_lp_search(&tds, id);
@@ -564,8 +575,9 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
   {
     // TODO: support binary keys
     check_verbose(d->type == ADLB_DATA_TYPE_CONTAINER,
-            ADLB_DATA_ERROR_INVALID, "subscribing to subscript %s on "
-            "non-container: <%"PRId64">", subscript.key, id);
+            ADLB_DATA_ERROR_INVALID, "subscribing to subscript %.*s on "
+            "non-container: <%"PRId64">", (int)subscript.length,
+            subscript.key, id);
 
     // encode container, index and ref type into string
     char key[id_sub_buflen(subscript)];
@@ -629,6 +641,8 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
   adlb_container_val t;
 
   bool data_found = container_lookup(&d->data.CONTAINER, subscript, &t);
+  TRACE("lookup container for ref: %"PRId64"[%.*s]: %i", container_id,
+          (int)subscript.length, subscript.key, (int)data_found);
   if (data_found && t != NULL)
   {
     adlb_data_code dc = ADLB_Pack(t, d->data.CONTAINER.val_type,
@@ -644,8 +658,8 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
   // TODO: support binary keys
   check_verbose(d->write_refcount > 0, ADLB_DATA_ERROR_INVALID,
                 "Attempting to subscribe to non-existent subscript\n"
-                "on a closed container:  <%"PRId64">[%s]\n",
-                container_id, subscript.key);
+                "on a closed container:  <%"PRId64">[%.*s]\n",
+                container_id, (int)subscript.length, subscript.key);
   check_verbose(d->read_refcount > 0, ADLB_DATA_ERROR_INVALID,
                 "Container_reference consumes a read reference count, but"
                 "reference count was %d for <%"PRId64">", d->read_refcount,
@@ -659,10 +673,14 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
   struct list_l* listeners = NULL;
   bool found = table_bp_search(&container_references, key, key_len,
                             (void*)&listeners);
+  TRACE("search container_ref %"PRId64"[%.*s]: %i", container_id,
+          (int)subscript.length, subscript.key, (int)found);
   if (!found)
   {
     // Nobody else has subscribed to this pair yet
     listeners = list_l_create();
+    TRACE("add container_ref %"PRId64"[%.*s]", container_id,
+          (int)subscript.length, subscript.key);
     table_bp_add(&container_references, key, key_len, listeners);
   }
   else
@@ -681,9 +699,10 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
   // TODO: support binary keys
   check_verbose(listeners != NULL, ADLB_DATA_ERROR_NULL,
                 "Found null value in listeners table\n"
-                "for:  %"PRId64"[%s]\n", container_id, subscript.key);
+                "for:  %"PRId64"[%.*s]\n", container_id,
+                (int)subscript.length, subscript.key);
 
-  TRACE("Added %"PRId64" to listeners for %"PRId64"[%s]\n", reference,
+  TRACE("Added %"PRId64" to listeners for %"PRId64"[%s]", reference,
         container_id, subscript);
   list_l_unique_insert(listeners, reference);
   result->data = NULL;
@@ -783,10 +802,9 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
       DEBUG("Assigning unlinked precreated entry");
       // Assert that this is an UNLINKED entry:
       // TODO: support binary keys
-      check_verbose(t == NULL,
-                    ADLB_DATA_ERROR_DOUBLE_WRITE,
-                    "already exists: <%"PRId64">[%s]",
-                    id, subscript.key);
+      check_verbose(t == NULL, ADLB_DATA_ERROR_DOUBLE_WRITE,
+                    "already exists: <%"PRId64">[%.*s]",
+                    id, (int)subscript.length, subscript.key);
 
       // Ok- somebody did an Insert_atomic
       adlb_container_val v;
@@ -818,7 +836,8 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
     {
       char *val_s = ADLB_Data_repr(entry, c->val_type);
       // TODO: support binary keys
-      DEBUG("data_store <%"PRId64">[%s]=%s\n", id, subscript.key, val_s);
+      DEBUG("data_store <%"PRId64">[%.*s]=%s\n", id, (int)subscript.length,
+            subscript.key, val_s);
       free(val_s);
     }
   }
@@ -1212,6 +1231,8 @@ insert_notifications(adlb_datum *d,
 
   void *data;
   bool result = table_bp_remove(&container_references, s, s_len, &data);
+  TRACE("remove container_ref %"PRId64"[%.*s]: %i\n", container_id,
+        (int)subscript.length, subscript.key, (int)result);
   struct list_l *ref_list = data;
   if (result)
   {
@@ -1496,8 +1517,11 @@ static void free_cref_entry(void *key, size_t key_len, void *val)
   for (curr = listeners->head; curr != NULL; curr = curr->next)
   {
     // TODO: support binary key
-    printf("UNFILLED CONTAINER REFERENCE %s => <%"PRId64">\n", key,
-           curr->data);
+    adlb_datum_id id;
+    adlb_subscript sub;
+    read_id_sub(key, key_len, &id, &sub);
+    printf("UNFILLED CONTAINER REFERENCE <%"PRId64">[%.*s] => <%"PRId64">\n",
+            id, (int)sub.length, sub.key, curr->data);
   }
   list_l_free(listeners);
   free(key);
