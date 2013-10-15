@@ -21,7 +21,7 @@
 
 namespace eval turbine {
     namespace export container_f_get container_f_insert
-    namespace export c_f_lookup
+    namespace export c_f_lookup deeprule
 
     namespace import ::turbine::c::create_nested \
                      ::turbine::c::create_nested_bag
@@ -411,7 +411,7 @@ namespace eval turbine {
                         $caller_read_ref $caller_write_ref \
                         $decr_write $decr_read ]
     }
-    
+
     # CVCB
     # Create bag c[i] inside of container c
     # c[i] may already exist, if so, that's fine
@@ -563,13 +563,16 @@ namespace eval turbine {
       # allocated_signals: signal variables that were allocated
       set signals [ list ]
       set allocated_signals [ list ]
+      check { [ llength $inputs ] == [ llength $nest_levels ] } \
+        "deeprule: list lengths do not agree: inputs and nest_levels"
+      check { [ llength $inputs ] == [ llength $is_file ] } \
+        "deeprule: list lengths do not agree: inputs and is_file"
       set i 0
       foreach input $inputs {
         set isf [ lindex $is_file $i ]
         set nest_level [ lindex $nest_levels $i ]
-        if { $nest_level < 0 } {
-          error "nest_level $nest_level must be non-negative"
-        }
+        check { $nest_level >= 0 } \
+            "deeprule: negative nest_level: $nest_level"
         if { $nest_level == 0 } {
           # Just need to wait on right thing
           if { $isf } {
