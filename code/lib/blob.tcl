@@ -15,7 +15,7 @@
 
 namespace eval turbine {
 
-    namespace export blob_debug_ints
+    namespace export blob_fmt blob_debug blob_debug_ints
 
   proc blob_size_async { out blob } {
     rule "$blob" "blob_size_body $out $blob" \
@@ -242,4 +242,18 @@ namespace eval turbine {
           puts "  $i: $v"
       }
   }
+
+    proc blob_fmt { b } {
+        return [ format "( <%i> pointer=%X length=%i )" \
+                     [ lindex $b 2 ] [ lindex $b 0 ] [ lindex $b 1 ] ]
+    }
+
+    proc blob_debug { b } {
+        puts [ blob_fmt $b ]
+    }
 }
+
+# Local Variables:
+# mode: tcl
+# tcl-indent-level: 4
+# End:
