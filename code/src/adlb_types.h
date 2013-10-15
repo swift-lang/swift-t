@@ -28,7 +28,7 @@
 #define __ADLB_TYPES_H
 
 #include "adlb-defs.h"
-#include "table.h"
+#include "table_bp.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -67,8 +67,10 @@ typedef struct {
   adlb_data_type_short key_type;
   // type of container values
   adlb_data_type_short val_type;
-  // Map from subscript to member
-  struct table* members;
+  // Map from subscript to member.  Use binary subscripts as keys.
+  // This means that the binary representations of keys needs to
+  // follow expected equality rules.
+  struct table_bp* members;
 } adlb_container;
 
 // Forward declaration of incomplete struct type

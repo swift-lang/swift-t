@@ -26,6 +26,7 @@
 #include <list_i.h>
 #include <list_l.h>
 #include <table.h>
+#include <table_bp.h>
 #include <table_lp.h>
 #include <vint.h>
 
@@ -102,12 +103,12 @@ insert_notifications(adlb_datum *d,
             bool *garbage_collected);
 
 
-static bool container_lookup(adlb_container *c, adlb_subscript key,
+static bool container_lookup(adlb_container *c, adlb_subscript sub,
                              adlb_container_val *val);
-static bool container_set(adlb_container *c, adlb_subscript key,
+static bool container_set(adlb_container *c, adlb_subscript sub,
                               adlb_container_val val,
                               adlb_container_val *prev);
-static void container_add(adlb_container *c, adlb_subscript key,
+static void container_add(adlb_container *c, adlb_subscript sub,
                               adlb_container_val val);
 
 static void report_leaks(void);
@@ -213,7 +214,7 @@ static adlb_data_code
 datum_init_container(adlb_datum *d, adlb_data_type key_type,
                       adlb_data_type val_type)
 {
-  d->data.CONTAINER.members = table_create(1024);
+  d->data.CONTAINER.members = table_bp_create(1024);
   d->data.CONTAINER.key_type = key_type;
   d->data.CONTAINER.val_type = val_type;
 
@@ -951,34 +952,33 @@ xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
 /**
    Helper function to add to container
  */
-static void container_add(adlb_container *c, adlb_subscript key,
+static void container_add(adlb_container *c, adlb_subscript sub,
                               adlb_container_val val)
 {
-  table_add(c->members, key, val);
+  table_bp_add(c->members, sub.key, sub.length, val);
 }
 
 /**
    Helper function to set existing container val
  */
-static bool container_set(adlb_container *c, adlb_subscript key,
+static bool container_set(adlb_container *c, adlb_subscript sub,
                               adlb_container_val val,
                               adlb_container_val *prev)
 {
-  return table_set(c->members, key, val, (void**)prev);
+  return table_bp_set(c->members, sub.key, sub.length, val, (void**)prev);
 }
 
 /**
    Helper function for looking up container
-   TODO: binary subscripts for this and other functions
   */
-static bool container_lookup(adlb_container *c, adlb_subscript key,
+static bool container_lookup(adlb_container *c, adlb_subscript sub,
                              adlb_container_val *val)
 {
-  return table_search(c->members, key, (void**)val);
+  return table_bp_search(c->members, sub.key, sub.length, (void**)val);
 }
 
 static adlb_data_code
-pack_member(adlb_container *cont, struct list_sp_item *item,
+pack_member(adlb_container *cont, struct list_bp_item *item,
             bool include_keys, bool include_vals,
             const adlb_buffer *tmp_buf, adlb_buffer *result,
             bool *result_caller_buffer, int *result_pos);
@@ -994,7 +994,7 @@ extract_members(adlb_container *cont, int count, int offset,
 {
   int c = 0; // Count of members added to result
   adlb_data_code dc;
-  struct table* members = cont->members;
+  struct table_bp* members = cont->members;
   bool use_caller_buf;
 
   dc = ADLB_Init_buf(caller_buffer, output, &use_caller_buf, 65536);
@@ -1010,8 +1010,8 @@ extract_members(adlb_container *cont, int count, int offset,
 
   for (int i = 0; i < members->capacity; i++)
   {
-    struct list_sp* L = members->array[i];
-    for (struct list_sp_item* item = L->head; item;
+    struct list_bp* L = members->array[i];
+    for (struct list_bp_item* item = L->head; item;
          item = item->next)
     {
       if (c < offset)
@@ -1035,7 +1035,7 @@ extract_members(adlb_container *cont, int count, int offset,
 }
 
 static adlb_data_code
-pack_member(adlb_container *cont, struct list_sp_item *item,
+pack_member(adlb_container *cont, struct list_bp_item *item,
             bool include_keys, bool include_vals,
             const adlb_buffer *tmp_buf, adlb_buffer *result,
             bool *result_caller_buffer, int *result_pos)
@@ -1044,14 +1044,13 @@ pack_member(adlb_container *cont, struct list_sp_item *item,
   int vint_len;
   if (include_keys)
   {
-    const char *k = item->key;
-    size_t key_len = strlen(k);
+    size_t key_len = item->key_len; 
     ADLB_Resize_buf(result, result_caller_buffer, *result_pos +
                       (int)VINT_MAX_BYTES + (int)key_len);
     vint_len = vint_encode((int)key_len,
                     (unsigned char*)result->data + *result_pos);
     *result_pos += vint_len;
-    memcpy(result->data + *result_pos, k, key_len);
+    memcpy(result->data + *result_pos, item->key, key_len);
     *result_pos += (int)key_len;
   }
   if (include_vals)
@@ -1136,7 +1135,7 @@ xlb_data_enumerate(adlb_datum_id id, int count, int offset,
     check_verbose(!include_keys, ADLB_DATA_ERROR_TYPE, "<%"PRId64"> "
         " with type multiset does not have keys to enumerate", id);
     int slice_size = enumerate_slice_size(offset, count,
-                              (itn)xlb_multiset_size(d->data.MULTISET));
+                              (int)xlb_multiset_size(d->data.MULTISET));
 
     if (include_vals) {
       // Extract members to buffer
