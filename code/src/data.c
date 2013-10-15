@@ -95,19 +95,19 @@ static adlb_data_code datum_gc(adlb_datum_id id, adlb_datum* d,
 
 static adlb_data_code
 insert_notifications(adlb_datum *d,
-            adlb_datum_id container_id, const char* subscript,
+            adlb_datum_id container_id, adlb_subscript subscript,
             adlb_datum_storage *inserted_value,
             adlb_data_type value_type,
             adlb_datums *references, adlb_ranks *notify_insert,
             bool *garbage_collected);
 
 
-static bool container_lookup(adlb_container *c, const char *key,
+static bool container_lookup(adlb_container *c, adlb_subscript key,
                              adlb_container_val *val);
-static bool container_set(adlb_container *c, const char *key,
+static bool container_set(adlb_container *c, adlb_subscript key,
                               adlb_container_val val,
                               adlb_container_val *prev);
-static void container_add(adlb_container *c, const char *key,
+static void container_add(adlb_container *c, adlb_subscript key,
                               adlb_container_val val);
 
 static void report_leaks(void);
@@ -115,9 +115,10 @@ static void report_leaks(void);
 // Maximum length of id/subscript string
 #define ID_SUB_PAIR_MAX \
   (sizeof(adlb_datum_id) / 3 + ADLB_DATA_SUBSCRIPT_MAX + 1)
-static inline int print_id_sub(char *buf, adlb_datum_id id, const char *sub)
+static inline int print_id_sub(char *buf, adlb_datum_id id, adlb_subscript sub)
 {
-  int t = sprintf(buf, "%"PRId64"[%s]", id, sub);
+  // TODO: stop using this approach, doesn't work for binary keys
+  int t = sprintf(buf, "%"PRId64"[%s]", id, sub.key);
   return t;
 }
 
@@ -254,12 +255,12 @@ datum_init_props(adlb_datum_id id, adlb_datum *d,
 }
 
 adlb_data_code
-xlb_data_exists(adlb_datum_id id, const char* subscript, bool* result)
+xlb_data_exists(adlb_datum_id id, adlb_subscript subscript, bool* result)
 {
   adlb_datum* d = table_lp_search(&tds, id);
 
   // if subscript provided, check that subscript exists
-  if (subscript == NULL)
+  if (!adlb_has_sub(subscript))
   {
       if (d == NULL || !d->status.set)
         *result = false;
@@ -275,8 +276,9 @@ xlb_data_exists(adlb_datum_id id, const char* subscript, bool* result)
     adlb_container_val t;
     bool data_found = container_lookup(&d->data.CONTAINER, subscript, &t);
     *result = data_found;
+    // TODO: support binary keys
     DEBUG("Exists: <%"PRId64">[%s] => %s",
-          id, subscript, bool2string(*result));
+          id, subscript.key, bool2string(*result));
   }
   return ADLB_DATA_SUCCESS;
 }
@@ -528,27 +530,29 @@ xlb_data_unlock(adlb_datum_id id)
    @return ADLB_SUCCESS or ADLB_ERROR
  */
 adlb_data_code
-xlb_data_subscribe(adlb_datum_id id, const char *subscript,
+xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
               int rank, int* result)
 {
-  if (subscript == NULL)
+  if (!adlb_has_sub(subscript))
   {
     DEBUG("data_subscribe(): <%"PRId64">", id);
   }
   else
   {
-    DEBUG("data_subscribe(): <%"PRId64">[%s]", id, subscript);
+    // TODO: support binary keys
+    DEBUG("data_subscribe(): <%"PRId64">[%s]", id, subscript.key);
   }
 
   adlb_datum* d = table_lp_search(&tds, id);
   check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
                 "not found: <%"PRId64">", id);
 
-  if (subscript != NULL)
+  if (adlb_has_sub(subscript))
   {
+    // TODO: support binary keys
     check_verbose(d->type == ADLB_DATA_TYPE_CONTAINER,
             ADLB_DATA_ERROR_INVALID, "subscribing to subscript %s on "
-            "non-container: <%"PRId64">", subscript, id);
+            "non-container: <%"PRId64">", subscript.key, id);
 
     // encode container, index and ref type into string
     char pair[ID_SUB_PAIR_MAX];
@@ -591,7 +595,7 @@ xlb_data_subscribe(adlb_datum_id id, const char *subscript,
     decrementing the read reference count of the container.
  */
 adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
-                                        const char* subscript,
+                                        adlb_subscript subscript,
                                         adlb_datum_id reference,
                                         adlb_data_type ref_type,
                                         const adlb_buffer *caller_buffer,
@@ -625,10 +629,11 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
   result->data = result->caller_data = NULL; // Signal data not found
 
   // Is the container closed?
+  // TODO: support binary keys
   check_verbose(d->write_refcount > 0, ADLB_DATA_ERROR_INVALID,
                 "Attempting to subscribe to non-existent subscript\n"
                 "on a closed container:  <%"PRId64">[%s]\n",
-                container_id, subscript);
+                container_id, subscript.key);
   check_verbose(d->read_refcount > 0, ADLB_DATA_ERROR_INVALID,
                 "Container_reference consumes a read reference count, but"
                 "reference count was %d for <%"PRId64">", d->read_refcount,
@@ -662,9 +667,10 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
           container_id, d->read_refcount);
   }
 
+  // TODO: support binary keys
   check_verbose(listeners != NULL, ADLB_DATA_ERROR_NULL,
                 "Found null value in listeners table\n"
-                "for:  %"PRId64"[%s]\n", container_id, subscript);
+                "for:  %"PRId64"[%s]\n", container_id, subscript.key);
 
   TRACE("Added %"PRId64" to listeners for %"PRId64"[%s]\n", reference,
         container_id, subscript);
@@ -679,7 +685,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
    type: type of data to be assigned
  */
 adlb_data_code
-xlb_data_store(adlb_datum_id id, const char *subscript,
+xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
           const void* buffer, int length,
           adlb_data_type type,
           adlb_refcounts refcount_decr,
@@ -703,7 +709,7 @@ xlb_data_store(adlb_datum_id id, const char *subscript,
   if (d->type == ADLB_DATA_TYPE_MULTISET)
   {
     // Store appends to multiset
-    check_verbose(subscript == NULL, ADLB_DATA_ERROR_TYPE,
+    check_verbose(!adlb_has_sub(subscript), ADLB_DATA_ERROR_TYPE,
                   "Cannot provide subscript when appending to multiset");
     adlb_data_type elem_type = d->data.MULTISET->elem_type;
     check_verbose(type == elem_type, ADLB_DATA_ERROR_TYPE,
@@ -721,7 +727,7 @@ xlb_data_store(adlb_datum_id id, const char *subscript,
       free(val_s);
     }
   }
-  else if (subscript == NULL)
+  else if (!adlb_has_sub(subscript))
   {
     check_verbose(type == d->type, ADLB_DATA_ERROR_TYPE,
             "Type mismatch: expected %s actual %s\n",
@@ -765,10 +771,11 @@ xlb_data_store(adlb_datum_id id, const char *subscript,
     {
       DEBUG("Assigning unlinked precreated entry");
       // Assert that this is an UNLINKED entry:
+      // TODO: support binary keys
       check_verbose(t == NULL,
                     ADLB_DATA_ERROR_DOUBLE_WRITE,
                     "already exists: <%"PRId64">[%s]",
-                    id, subscript);
+                    id, subscript.key);
 
       // Ok- somebody did an Insert_atomic
       adlb_container_val v;
@@ -799,7 +806,8 @@ xlb_data_store(adlb_datum_id id, const char *subscript,
     if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
     {
       char *val_s = ADLB_Data_repr(entry, c->val_type);
-      DEBUG("data_store <%"PRId64">[%s]=%s\n", id, subscript, val_s);
+      // TODO: support binary keys
+      DEBUG("data_store <%"PRId64">[%s]=%s\n", id, subscript.key, val_s);
       free(val_s);
     }
   }
@@ -873,7 +881,7 @@ xlb_data_close(adlb_datum_id id, adlb_datum *d, int** result, int* count)
             ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND if id found, but not subscript
  */
 adlb_data_code
-xlb_data_retrieve(adlb_datum_id id, const char *subscript,
+xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
               adlb_data_type* type,
               const adlb_buffer *caller_buffer,
               adlb_binary_data *result)
@@ -891,7 +899,7 @@ xlb_data_retrieve(adlb_datum_id id, const char *subscript,
     return ADLB_DATA_ERROR_NOT_FOUND;
   }
 
-  if (subscript == NULL)
+  if (!adlb_has_sub(subscript))
   {
     *type = d->type;
     CHECK_SET(id, d);
@@ -943,7 +951,7 @@ xlb_data_retrieve(adlb_datum_id id, const char *subscript,
 /**
    Helper function to add to container
  */
-static void container_add(adlb_container *c, const char *key,
+static void container_add(adlb_container *c, adlb_subscript key,
                               adlb_container_val val)
 {
   table_add(c->members, key, val);
@@ -952,7 +960,7 @@ static void container_add(adlb_container *c, const char *key,
 /**
    Helper function to set existing container val
  */
-static bool container_set(adlb_container *c, const char *key,
+static bool container_set(adlb_container *c, adlb_subscript key,
                               adlb_container_val val,
                               adlb_container_val *prev)
 {
@@ -961,8 +969,9 @@ static bool container_set(adlb_container *c, const char *key,
 
 /**
    Helper function for looking up container
+   TODO: binary subscripts for this and other functions
   */
-static bool container_lookup(adlb_container *c, const char *key,
+static bool container_lookup(adlb_container *c, adlb_subscript key,
                              adlb_container_val *val)
 {
   return table_search(c->members, key, (void**)val);
@@ -1127,7 +1136,7 @@ xlb_data_enumerate(adlb_datum_id id, int count, int offset,
     check_verbose(!include_keys, ADLB_DATA_ERROR_TYPE, "<%"PRId64"> "
         " with type multiset does not have keys to enumerate", id);
     int slice_size = enumerate_slice_size(offset, count,
-                              xlb_multiset_size(d->data.MULTISET));
+                              (itn)xlb_multiset_size(d->data.MULTISET));
 
     if (include_vals) {
       // Extract members to buffer
@@ -1177,7 +1186,7 @@ xlb_data_container_size(adlb_datum_id container_id, int* size)
 static adlb_data_code
 insert_notifications(adlb_datum *d,
             adlb_datum_id container_id,
-            const char* subscript,
+            adlb_subscript subscript,
             adlb_datum_storage *inserted_value,
             adlb_data_type value_type,
             adlb_datums *references,
@@ -1246,7 +1255,7 @@ insert_notifications(adlb_datum *d,
 }
 
 adlb_data_code
-xlb_data_insert_atomic(adlb_datum_id container_id, const char* subscript,
+xlb_data_insert_atomic(adlb_datum_id container_id, adlb_subscript subscript,
                    bool* created, bool *value_present)
 {
   adlb_datum* d = table_lp_search(&tds, container_id);

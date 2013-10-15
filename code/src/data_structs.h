@@ -32,6 +32,6 @@ xlb_struct_incr_referand(adlb_struct *s, adlb_refcounts rc_change);
 char *xlb_struct_repr(adlb_struct *s);
 
 // Convert subscript to struct field ID
-adlb_data_code xlb_struct_str_to_ix(const char *subscript, int *field_ix);
+adlb_data_code xlb_struct_str_to_ix(adlb_subscript subscript, int *field_ix);
 
 #endif // __XLB_DATA_STRUCTS_H

@@ -71,7 +71,7 @@ xlb_set_ref_and_notify(adlb_datum_id id, const void *value, int length,
                          adlb_data_type type);
 
 adlb_code
-xlb_close_notify(adlb_datum_id id, const char *subscript,
+xlb_close_notify(adlb_datum_id id, adlb_subscript subscript,
                    int* ranks, int count);
 
 /*
@@ -79,12 +79,12 @@ xlb_close_notify(adlb_datum_id id, const char *subscript,
    locally.  Frees memory if all removed.
  */
 adlb_code
-xlb_process_local_notif(adlb_datum_id id, const char *subscript,
+xlb_process_local_notif(adlb_datum_id id, adlb_subscript subscript,
                             adlb_ranks *ranks);
 
 adlb_code
 xlb_notify_all(const adlb_notif_t *notifs, adlb_datum_id id,
-           const char *subscript, const void *value, int value_len,
+               adlb_subscript subscript, const void *value, int value_len,
            adlb_data_type value_type);
 
 #endif // ADLB_NOTIFICATIONS_H

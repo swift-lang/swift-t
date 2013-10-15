@@ -162,11 +162,11 @@ setup_hostmap()
   int length = (int) sizeof(u.nodename);
 
   // This may be too big for the stack
-  char* allnames = malloc((xlb_comm_size*length) * sizeof(char));
+  char* allnames = malloc((size_t)(xlb_comm_size*length) * sizeof(char));
 
   char myname[length];
   // This prevents valgrind errors:
-  memset(myname, 0, length);
+  memset(myname, 0, (size_t)length);
   strcpy(myname, u.nodename);
 
   int rc = MPI_Allgather(myname,   length, MPI_CHAR,
@@ -216,7 +216,7 @@ adlb_code
 ADLB_Hostmap_stats(uint* count, uint* name_max)
 {
   struct utsname u;
-  *count = hostmap.size;
+  *count = (uint)hostmap.size;
   *name_max = sizeof(u.nodename);
   return ADLB_SUCCESS;
 }
@@ -259,7 +259,7 @@ ADLB_Hostmap_list(char* output, uint max, uint offset, int* actual)
     {
       if (j++ < offset) continue;
 
-      int t = strlen(item->key);
+      int t = (int)strlen(item->key);
       if (count+t >= max)
         goto done;
       append(p, "%s", item->key);
@@ -607,7 +607,7 @@ adlb_code ADLB_Create_multiset(adlb_datum_id id,
 }
 
 adlb_code
-ADLBP_Exists(adlb_datum_id id, const char *subscript, bool* result,
+ADLBP_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
              adlb_refcounts decr)
 {
   int to_server_rank = ADLB_Locate(id);
@@ -639,7 +639,7 @@ ADLBP_Exists(adlb_datum_id id, const char *subscript, bool* result,
   Receive notification messages from server and process them
  */
 static adlb_code
-process_notifications(adlb_datum_id id, const char *subscript,
+process_notifications(adlb_datum_id id, adlb_subscript subscript,
     const void *data, int data_len, adlb_data_type type,
     const struct packed_notif_counts *counts, int to_server_rank)
 {
@@ -678,7 +678,7 @@ process_notifications(adlb_datum_id id, const char *subscript,
 }
 
 adlb_code
-ADLBP_Store(adlb_datum_id id, const char *subscript, adlb_data_type type,
+ADLBP_Store(adlb_datum_id id, adlb_subscript subscript, adlb_data_type type,
             const void *data, int length, adlb_refcounts refcount_decr)
 {
   adlb_code code;
@@ -690,9 +690,11 @@ ADLBP_Store(adlb_datum_id id, const char *subscript, adlb_data_type type,
             "ADLB_Store(): value too long: %llu\n",
             (long long unsigned) length);
 
-  if (subscript != NULL)
+  if (adlb_has_sub(subscript))
   {
-    DEBUG("ADLB_Store: <%"PRId64">[%s]=%p[%i]", id, subscript, data, length);
+    // TODO: support binary subscript
+    DEBUG("ADLB_Store: <%"PRId64">[%s]=%p[%i]", id,
+            subscript.key, data, length);
   }
   else
   {
@@ -718,16 +720,16 @@ ADLBP_Store(adlb_datum_id id, const char *subscript, adlb_data_type type,
 
   struct packed_store_hdr hdr = { .id = id,
       .type = type,
-      .subscript_len = subscript == NULL ? 0 : (int)strlen(subscript)+1,
+      .subscript_len = adlb_has_sub(subscript) ? (int)subscript.length : 0,
       .refcount_decr = refcount_decr };
   struct packed_store_resp resp;
 
   IRECV(&resp, sizeof(resp), MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE);
   SEND(&hdr, sizeof(struct packed_store_hdr), MPI_BYTE,
        to_server_rank, ADLB_TAG_STORE_HEADER);
-  if (subscript != NULL)
+  if (adlb_has_sub(subscript))
   {
-    SEND(subscript, hdr.subscript_len, MPI_BYTE, to_server_rank,
+    SEND(subscript.key, (int)subscript.length, MPI_BYTE, to_server_rank,
          ADLB_TAG_STORE_SUBSCRIPT);
   }
   SEND(data, length, MPI_BYTE, to_server_rank,
@@ -808,7 +810,7 @@ ADLBP_Refcount_incr(adlb_datum_id id, adlb_refcounts change)
   if (!resp.success)
     return ADLB_ERROR;
 
-  rc = process_notifications(id, NULL,
+  rc = process_notifications(id, ADLB_NO_SUB,
       NULL, 0, ADLB_DATA_TYPE_NULL, &resp.notifs, to_server_rank);
   ADLB_CHECK(rc);
 
@@ -816,7 +818,7 @@ ADLBP_Refcount_incr(adlb_datum_id id, adlb_refcounts change)
 }
 
 adlb_code
-ADLBP_Insert_atomic(adlb_datum_id id, const char *subscript,
+ADLBP_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
                         bool* result, void *data, int *length,
                         adlb_data_type *type)
 {
@@ -825,7 +827,8 @@ ADLBP_Insert_atomic(adlb_datum_id id, const char *subscript,
   MPI_Request request;
   struct packed_insert_atomic_resp resp;
 
-  DEBUG("ADLB_Insert_atomic: <%"PRId64">[\"%s\"]", id, subscript);
+  // TODO: support binary subscript
+  DEBUG("ADLB_Insert_atomic: <%"PRId64">[\"%s\"]", id, subscript.key);
   char *xfer_pos = xfer;
   xfer_pos += xlb_pack_id_sub(xfer_pos, id, subscript);
 
@@ -864,7 +867,7 @@ ADLBP_Insert_atomic(adlb_datum_id id, const char *subscript,
    Setting a negative length indicates data not present
  */
 adlb_code
-ADLBP_Retrieve(adlb_datum_id id, const char *subscript,
+ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
                adlb_retrieve_rc refcounts, adlb_data_type* type,
                void *data, int *length)
 {
@@ -873,7 +876,7 @@ ADLBP_Retrieve(adlb_datum_id id, const char *subscript,
 
   int to_server_rank = ADLB_Locate(id);
 
-  int subscript_len = (subscript == NULL) ? 0 : (int)strlen(subscript) + 1;
+  int subscript_len = adlb_has_sub(subscript) ? (int)subscript.length : 0;
 
   // Stack allocate small buffer
   int hdr_len = (int)sizeof(struct packed_retrieve_hdr) + subscript_len;
@@ -886,7 +889,7 @@ ADLBP_Retrieve(adlb_datum_id id, const char *subscript,
   hdr->subscript_len = subscript_len;
   if (subscript_len > 0)
   {
-    memcpy(hdr->subscript, subscript, (size_t)subscript_len);
+    memcpy(hdr->subscript, subscript.key, (size_t)subscript_len);
   }
 
   struct retrieve_response_hdr resp_hdr;
@@ -1035,7 +1038,7 @@ ADLBP_Container_typeof(adlb_datum_id id, adlb_data_type* key_type,
                              or ADLB_ERROR on error
  */
 adlb_code
-ADLBP_Subscribe(adlb_datum_id id, const char *subscript,
+ADLBP_Subscribe(adlb_datum_id id, adlb_subscript subscript,
                 int* subscribed)
 {
   int to_server_rank;
@@ -1055,13 +1058,15 @@ ADLBP_Subscribe(adlb_datum_id id, const char *subscript,
   if (result.dc == ADLB_DATA_SUCCESS)
   {
     *subscribed = result.subscribed;
-    if (subscript == NULL)
+    if (!adlb_has_sub(subscript))
     {
       DEBUG("ADLB_Subscribe: <%"PRId64"> => %i", id, *subscribed);
     }
     else
     {
-      DEBUG("ADLB_Subscribe: <%"PRId64">[\"%s\"] => %i", id, subscript, *subscribed);
+      // TODO: support binary subscript
+      DEBUG("ADLB_Subscribe: <%"PRId64">[\"%s\"] => %i", id, subscript.key,
+                                                         *subscribed);
     }
     return ADLB_SUCCESS;
   }
@@ -1072,13 +1077,14 @@ ADLBP_Subscribe(adlb_datum_id id, const char *subscript,
   }
   else
   {
-    if (subscript == NULL)
+    if (!adlb_has_sub(subscript))
     {
       DEBUG("ADLB_Subscribe: <%"PRId64"> => error", id);
     }
     else
     {
-      DEBUG("ADLB_Subscribe: <%"PRId64">[\"%s\"] => error", id, subscript);
+      // TODO: support binary subscript
+      DEBUG("ADLB_Subscribe: <%"PRId64">[\"%s\"] => error", id, subscript.key);
     }
     return ADLB_ERROR;
   }
@@ -1089,7 +1095,7 @@ ADLBP_Subscribe(adlb_datum_id id, const char *subscript,
    @return false in subscribed if data is already closed
  */
 adlb_code
-ADLBP_Container_reference(adlb_datum_id id, const char *subscript,
+ADLBP_Container_reference(adlb_datum_id id, adlb_subscript subscript,
                           adlb_datum_id reference,
                           adlb_data_type ref_type)
 {
@@ -1114,8 +1120,9 @@ ADLBP_Container_reference(adlb_datum_id id, const char *subscript,
        ADLB_TAG_CONTAINER_REFERENCE);
   WAIT(&request, &status);
 
+  // TODO: support binary subscript
   DEBUG("ADLB_Container_reference: <%"PRId64">[%s] => <%"PRId64"> (%i)",
-        id, subscript, reference, ref_type);
+        id, subscript.key, reference, ref_type);
 
   if (dc != ADLB_DATA_SUCCESS)
     return ADLB_ERROR;

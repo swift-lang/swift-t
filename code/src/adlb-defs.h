@@ -94,13 +94,26 @@ typedef union {
 
 #define ADLB_TYPE_EXTRA_NULL ((adlb_type_extra) NULL)
 
+// Struct to specify a subscript into e.g. an ADLB data container
+typedef struct {
+  const void *key; // Set key to NULL to indicate no subscript
+  size_t length;
+} adlb_subscript;
+
+const static adlb_subscript ADLB_NO_SUB = { .key = NULL, .length = 0u };
+
+// Check if subscript present
+static inline bool adlb_has_sub(adlb_subscript sub)
+{
+  return sub.key != NULL;
+}
+
 typedef enum
 {
   ADLB_READ_REFCOUNT,
   ADLB_WRITE_REFCOUNT,
   ADLB_READWRITE_REFCOUNT, // Used to specify that op should affect both
 } adlb_refcount_type;
-
 
 // Struct used to hold refcount info
 typedef struct {

@@ -8,15 +8,16 @@
 #define MAX_NOTIF_PAYLOAD (32+ADLB_DATA_SUBSCRIPT_MAX)
 
 // Returns size of payload including null terminator
-static int fill_payload(char *payload, adlb_datum_id id, const char *subscript)
+static int fill_payload(char *payload, adlb_datum_id id, adlb_subscript subscript)
 {
   int strlen;
-  if (subscript == NULL)
+  if (!adlb_has_sub(subscript))
   {
     strlen = sprintf(payload, "close %"PRId64"", id);
   }
   else
   {
+    // TODO: support binary subscript
     strlen = sprintf(payload, "close %"PRId64" %s", id, subscript);
   }
   return strlen + 1;
@@ -101,7 +102,7 @@ adlb_code xlb_set_refs(adlb_datum_id *refs, int refs_count,
 }
 
 adlb_code
-xlb_close_notify(adlb_datum_id id, const char *subscript,
+xlb_close_notify(adlb_datum_id id, adlb_subscript subscript,
                    int* ranks, int count)
 {
   adlb_code rc;
@@ -127,7 +128,7 @@ xlb_close_notify(adlb_datum_id id, const char *subscript,
 }
 
 adlb_code
-xlb_process_local_notif(adlb_datum_id id, const char *subscript,
+xlb_process_local_notif(adlb_datum_id id, adlb_subscript subscript,
                             adlb_ranks *ranks)
 {
   assert(xlb_am_server);
@@ -177,7 +178,7 @@ xlb_set_ref_and_notify(adlb_datum_id id, const void *value, int length,
     rc = xlb_sync(server);
   ADLB_CHECK(rc);
 
-  rc = ADLB_Store(id, NULL, type, value, length, ADLB_WRITE_RC);
+  rc = ADLB_Store(id, ADLB_NO_SUB, type, value, length, ADLB_WRITE_RC);
   ADLB_CHECK(rc);
   TRACE("SET_REFERENCE DONE");
   return ADLB_SUCCESS;
@@ -185,20 +186,20 @@ xlb_set_ref_and_notify(adlb_datum_id id, const void *value, int length,
 
 adlb_code
 xlb_notify_all(const adlb_notif_t *notifs,
-           adlb_datum_id id, const char *subscript,
+           adlb_datum_id id, adlb_subscript subscript,
            const void *value, int value_len,
            adlb_data_type value_type)
 {
   adlb_code rc;
   if (notifs->close_notify.count > 0)
   {
-    rc = xlb_close_notify(id, NULL, notifs->close_notify.ranks,
+    rc = xlb_close_notify(id, ADLB_NO_SUB, notifs->close_notify.ranks,
                  notifs->close_notify.count);
     ADLB_CHECK(rc);
   }
   if (notifs->insert_notify.count > 0)
   {
-    assert(subscript != NULL);
+    assert(adlb_has_sub(subscript));
     rc = xlb_close_notify(id, subscript, notifs->insert_notify.ranks,
                  notifs->insert_notify.count);
     ADLB_CHECK(rc);

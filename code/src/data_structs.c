@@ -352,12 +352,15 @@ xlb_struct_cleanup(adlb_struct *s, bool free_mem,
 }
 
 adlb_data_code
-xlb_struct_str_to_ix(const char *subscript, int *field_ix)
+xlb_struct_str_to_ix(adlb_subscript subscript, int *field_ix)
 {
+  // TODO: use binary repr for subscript?
   char *end;
-  long field_ixl = strtol(subscript, &end, 10);
-  check_verbose(end != subscript && *end == '\0', ADLB_DATA_ERROR_INVALID,
-                "Expected integer subscript for struct: [%s]", subscript);
+  // TODO: unsafe, assuming null terminated
+  long field_ixl = strtol(subscript.key, &end, 10);
+  // TODO: support binary subscript
+  check_verbose(end != subscript.key && *end == '\0', ADLB_DATA_ERROR_INVALID,
+                "Expected integer subscript for struct: [%s]", subscript.key);
   check_verbose(field_ixl >= 0 && field_ixl < INT_MAX,
                 ADLB_DATA_ERROR_INVALID, "Integer subscript for struct"
                 " out of range: [%li]", field_ixl);

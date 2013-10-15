@@ -319,11 +319,11 @@ struct packed_bool_resp
 };
 
 int
-xlb_pack_id_sub(void *buffer, adlb_datum_id id, const char *subscript);
+xlb_pack_id_sub(void *buffer, adlb_datum_id id, adlb_subscript subscript);
 
 int
 xlb_unpack_id_sub(const void *buffer, adlb_datum_id *id,
-                    const char **subscript, int *sub_strlen);
+                  adlb_subscript *subscript);
 
 /**
  * Request for steal

@@ -47,18 +47,18 @@ adlb_data_code xlb_data_create(adlb_datum_id id, adlb_data_type type,
                            const adlb_type_extra *type_extra,
                            const adlb_create_props *props);
 
-adlb_data_code xlb_data_exists(adlb_datum_id id, const char *subscript,
+adlb_data_code xlb_data_exists(adlb_datum_id id, adlb_subscript subscript,
                            bool* result);
 
 adlb_data_code xlb_data_lock(adlb_datum_id id, int rank, bool* result);
 
 adlb_data_code xlb_data_unlock(adlb_datum_id id);
 
-adlb_data_code xlb_data_subscribe(adlb_datum_id id, const char *subscript,
+adlb_data_code xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
                               int rank, int* result);
 
 adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
-                                        const char* subscript,
+                                        adlb_subscript subscript,
                                         adlb_datum_id reference,
                                         adlb_data_type ref_type,
                                         const adlb_buffer *caller_buffer,
@@ -68,7 +68,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
 adlb_data_code xlb_data_container_size(adlb_datum_id container_id,
                                    int* size);
 
-adlb_data_code xlb_data_retrieve(adlb_datum_id id, const char *subscript,
+adlb_data_code xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
                              adlb_data_type* type,
                              const adlb_buffer *caller_buffer,
                              adlb_binary_data *result); 
@@ -80,7 +80,7 @@ xlb_data_enumerate(adlb_datum_id id, int count, int offset,
                adlb_buffer *data, int* actual,
                adlb_data_type *key_type, adlb_data_type *val_type);
 
-adlb_data_code xlb_data_store(adlb_datum_id id, const char *subscript,
+adlb_data_code xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
           const void* buffer, int length, adlb_data_type type,
           adlb_refcounts refcount_decr,
           adlb_notif_t *notifications);
@@ -92,14 +92,14 @@ adlb_data_code xlb_data_store(adlb_datum_id id, const char *subscript,
  */
 typedef struct {
   // Optional: if non-null, only scavenge refcount for this subscript
-  const char *subscript; 
+  adlb_subscript subscript; 
   // how many refcounts to try to acquire on referands
   adlb_refcounts refcounts;
 } refcount_scavenge;
 
 static const refcount_scavenge NO_SCAVENGE = 
-      { .subscript = NULL, .refcounts.read_refcount = 0,
-        .refcounts.write_refcount = 0 };
+      { .subscript.key = NULL, .subscript.length = 0,
+        .refcounts.read_refcount = 0, .refcounts.write_refcount = 0 };
 
 /*
   Modify data reference count
@@ -128,7 +128,7 @@ const char*
 xlb_data_rc_type_tostring(adlb_refcount_type rc_type);
 
 adlb_data_code xlb_data_insert_atomic(adlb_datum_id container_id,
-                                  const char* subscript,
+                                  adlb_subscript subscript,
                                   bool* created, bool *value_present);
 
 adlb_data_code xlb_data_unique(adlb_datum_id* result);

@@ -207,7 +207,7 @@ adlb_code ADLB_Multicreate(ADLB_create_spec *specs, int count)
 }
 
 adlb_code
-ADLB_Exists(adlb_datum_id id, const char *subscript, bool* result,
+ADLB_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
             adlb_refcounts decr)
 {
   int rc = ADLBP_Exists(id, subscript, result, decr);
@@ -215,7 +215,7 @@ ADLB_Exists(adlb_datum_id id, const char *subscript, bool* result,
 }
 
 adlb_code
-ADLB_Store(adlb_datum_id id, const char *subscript,
+ADLB_Store(adlb_datum_id id, adlb_subscript subscript,
                       adlb_data_type type, const void *data, int length,
                       adlb_refcounts refcount_decr)
 {
@@ -226,7 +226,7 @@ ADLB_Store(adlb_datum_id id, const char *subscript,
 }
 
 adlb_code
-ADLB_Retrieve(adlb_datum_id id, const char *subscript,
+ADLB_Retrieve(adlb_datum_id id, adlb_subscript subscript,
       adlb_retrieve_rc refcounts, adlb_data_type* type,
       void *data, int *length)
 {
@@ -260,7 +260,7 @@ ADLB_Refcount_incr(adlb_datum_id id, adlb_refcounts change)
   return ADLBP_Refcount_incr(id, change);
 }
 
-adlb_code ADLB_Insert_atomic(adlb_datum_id id, const char *subscript,
+adlb_code ADLB_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
                        bool* result, void *data, int *length,
                        adlb_data_type *type)
 {
@@ -285,7 +285,7 @@ adlb_code ADLB_Container_typeof(adlb_datum_id id, adlb_data_type* key_type,
 }
 
 adlb_code
-ADLB_Subscribe(adlb_datum_id id, const char *subscript,
+ADLB_Subscribe(adlb_datum_id id, adlb_subscript subscript,
                int* subscribed)
 {
   MPE_LOG(xlb_mpe_wkr_subscribe_start);
@@ -294,7 +294,7 @@ ADLB_Subscribe(adlb_datum_id id, const char *subscript,
   return rc;
 }
 
-adlb_code ADLB_Container_reference(adlb_datum_id id, const char *subscript,
+adlb_code ADLB_Container_reference(adlb_datum_id id, adlb_subscript subscript,
                              adlb_datum_id reference,
                              adlb_data_type ref_type)
 {

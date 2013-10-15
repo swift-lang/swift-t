@@ -136,9 +136,9 @@ adlb_code ADLB_Create_multiset(adlb_datum_id id,
                                 adlb_create_props props,
                                 adlb_datum_id *new_id);
 
-adlb_code ADLBP_Exists(adlb_datum_id id, const char *subscript, bool* result,
+adlb_code ADLBP_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
                        adlb_refcounts decr);
-adlb_code ADLB_Exists(adlb_datum_id id, const char *subscript, bool* result,
+adlb_code ADLB_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
                        adlb_refcounts decr);
 
 /*
@@ -146,10 +146,10 @@ adlb_code ADLB_Exists(adlb_datum_id id, const char *subscript, bool* result,
   data: binary representation
   length: length of binary representation
  */
-adlb_code ADLBP_Store(adlb_datum_id id, const char *subscript,
+adlb_code ADLBP_Store(adlb_datum_id id, adlb_subscript subscript,
                       adlb_data_type type, const void *data, int length,
                       adlb_refcounts refcount_decr);
-adlb_code ADLB_Store(adlb_datum_id id, const char *subscript,
+adlb_code ADLB_Store(adlb_datum_id id, adlb_subscript subscript,
                       adlb_data_type type, const void *data, int length,
                       adlb_refcounts refcount_decr);
 
@@ -164,10 +164,10 @@ adlb_code ADLB_Store(adlb_datum_id id, const char *subscript,
    data: a buffer of at least size ADLB_DATA_MAX
    length: output arg for data size in bytes
  */
-adlb_code ADLBP_Retrieve(adlb_datum_id id, const char *subscript,
+adlb_code ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
       adlb_retrieve_rc refcounts,
       adlb_data_type *type, void *data, int *length);
-adlb_code ADLB_Retrieve(adlb_datum_id id, const char *subscript,
+adlb_code ADLB_Retrieve(adlb_datum_id id, adlb_subscript subscript,
       adlb_retrieve_rc refcounts, adlb_data_type *type, 
       void *data, int *length);
 
@@ -209,10 +209,10 @@ adlb_code ADLB_Refcount_incr(adlb_datum_id id, adlb_refcounts change);
   length: length of existing value, -1 if value not yet present
   type: type of existing value
  */
-adlb_code ADLBP_Insert_atomic(adlb_datum_id id, const char *subscript,
+adlb_code ADLBP_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
                         bool* result, void *data, int *length,
                         adlb_data_type *type);
-adlb_code ADLB_Insert_atomic(adlb_datum_id id, const char *subscript,
+adlb_code ADLB_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
                        bool* result, void *data, int *length,
                        adlb_data_type *type);
 
@@ -220,15 +220,15 @@ adlb_code ADLB_Insert_atomic(adlb_datum_id id, const char *subscript,
   returns: ADLB_SUCCESS if datum found
        ADLB_DATA_ERROR_NOT_FOUND if datum not found (can indicate it was gced)
  */
-adlb_code ADLBP_Subscribe(adlb_datum_id id, const char *subscript,
+adlb_code ADLBP_Subscribe(adlb_datum_id id, adlb_subscript subscript,
                           int* subscribed);
-adlb_code ADLB_Subscribe(adlb_datum_id id, const char *subscript,
+adlb_code ADLB_Subscribe(adlb_datum_id id, adlb_subscript subscript,
                           int* subscribed);
 
-adlb_code ADLBP_Container_reference(adlb_datum_id id, const char *subscript,
+adlb_code ADLBP_Container_reference(adlb_datum_id id, adlb_subscript subscript,
                               adlb_datum_id reference,
                               adlb_data_type ref_type);
-adlb_code ADLB_Container_reference(adlb_datum_id id, const char *subscript,
+adlb_code ADLB_Container_reference(adlb_datum_id id, adlb_subscript subscript,
                              adlb_datum_id reference,
                               adlb_data_type ref_type);
 

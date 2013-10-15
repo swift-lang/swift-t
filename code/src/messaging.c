@@ -146,16 +146,15 @@ xlb_get_tag_name(int tag)
 
  */
 int
-xlb_pack_id_sub(void *buffer, adlb_datum_id id, const char *subscript)
+xlb_pack_id_sub(void *buffer, adlb_datum_id id, adlb_subscript subscript)
 {
   assert(buffer != NULL);
   void *pos = buffer;
 
   MSG_PACK_BIN(pos, id);
 
-  bool has_subscript = subscript != NULL;
-  int sub_packed_size = has_subscript ? 
-                        (int)strlen(subscript) + 1: -1;
+  bool has_subscript = subscript.key != NULL;
+  int sub_packed_size = has_subscript ? (int)subscript.length : -1;
   
   MSG_PACK_BIN(pos, sub_packed_size);
 
@@ -176,7 +175,7 @@ xlb_pack_id_sub(void *buffer, adlb_datum_id id, const char *subscript)
  */
 int
 xlb_unpack_id_sub(const void *buffer, adlb_datum_id *id,
-                    const char **subscript, int *sub_strlen)
+                  adlb_subscript *subscript)
 {
   assert(buffer != NULL);
 
@@ -189,13 +188,13 @@ xlb_unpack_id_sub(const void *buffer, adlb_datum_id *id,
   bool has_subscript = subscript_packed_len > 0;
   if (has_subscript)
   {
-    *sub_strlen = subscript_packed_len - 1;
-    *subscript = pos;
+    subscript->key = pos;
+    subscript->length = subscript_packed_len;
     pos += subscript_packed_len;
   }
   else
   {
-    *subscript = NULL;
+    subscript->key = NULL;
   }
   long length = (pos - buffer);
   assert(length <= INT_MAX);
