@@ -18,7 +18,8 @@ static int fill_payload(char *payload, adlb_datum_id id, adlb_subscript subscrip
   else
   {
     // TODO: support binary subscript
-    strlen = sprintf(payload, "close %"PRId64" %s", id, subscript.key);
+    strlen = sprintf(payload, "close %"PRId64" %.*s", id,
+                     (int)subscript.length, subscript.key);
   }
   return strlen + 1;
 }

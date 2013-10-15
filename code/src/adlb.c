@@ -693,8 +693,8 @@ ADLBP_Store(adlb_datum_id id, adlb_subscript subscript, adlb_data_type type,
   if (adlb_has_sub(subscript))
   {
     // TODO: support binary subscript
-    DEBUG("ADLB_Store: <%"PRId64">[%s]=%p[%i]", id,
-            subscript.key, data, length);
+    DEBUG("ADLB_Store: <%"PRId64">[%.*s]=%p[%i]", id,
+            (int)subscript.length, subscript.key, data, length);
   }
   else
   {
@@ -828,7 +828,8 @@ ADLBP_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
   struct packed_insert_atomic_resp resp;
 
   // TODO: support binary subscript
-  DEBUG("ADLB_Insert_atomic: <%"PRId64">[\"%s\"]", id, subscript.key);
+  DEBUG("ADLB_Insert_atomic: <%"PRId64">[\"%.*s\"]", id,
+        (int)subscript.length, subscript.key);
   char *xfer_pos = xfer;
   xfer_pos += xlb_pack_id_sub(xfer_pos, id, subscript);
 
@@ -1065,8 +1066,8 @@ ADLBP_Subscribe(adlb_datum_id id, adlb_subscript subscript,
     else
     {
       // TODO: support binary subscript
-      DEBUG("ADLB_Subscribe: <%"PRId64">[\"%s\"] => %i", id, subscript.key,
-                                                         *subscribed);
+      DEBUG("ADLB_Subscribe: <%"PRId64">[\"%.*s\"] => %i", id,
+            (int)subscript.length, subscript.key, *subscribed);
     }
     return ADLB_SUCCESS;
   }
@@ -1084,7 +1085,8 @@ ADLBP_Subscribe(adlb_datum_id id, adlb_subscript subscript,
     else
     {
       // TODO: support binary subscript
-      DEBUG("ADLB_Subscribe: <%"PRId64">[\"%s\"] => error", id, subscript.key);
+      DEBUG("ADLB_Subscribe: <%"PRId64">[\"%.*s\"] => error", id,
+            (int)subscript.length, subscript.key);
     }
     return ADLB_ERROR;
   }
@@ -1121,8 +1123,8 @@ ADLBP_Container_reference(adlb_datum_id id, adlb_subscript subscript,
   WAIT(&request, &status);
 
   // TODO: support binary subscript
-  DEBUG("ADLB_Container_reference: <%"PRId64">[%s] => <%"PRId64"> (%i)",
-        id, subscript.key, reference, ref_type);
+  DEBUG("ADLB_Container_reference: <%"PRId64">[%.*s] => <%"PRId64"> (%i)",
+        id, (int)subscript.length, subscript.key, reference, ref_type);
 
   if (dc != ADLB_DATA_SUCCESS)
     return ADLB_ERROR;
