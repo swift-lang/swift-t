@@ -1952,7 +1952,8 @@ enumerate_object(Tcl_Interp *interp, Tcl_Obj *const objv[],
       TCL_CONDITION(key_len <= length - pos,
                     "Truncated/corrupted message received");
       // Key currently must be string
-      key = Tcl_NewStringObj(data + pos, (int)key_len);
+      // TODO: support binary key
+      key = Tcl_NewStringObj(data + pos, (int)key_len - 1);
       pos += (int)key_len;
     }
 

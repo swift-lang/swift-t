@@ -38,6 +38,8 @@ proc rules { } {
     turbine::container_insert 1 "1" 3 string
 
     set L [ adlb::enumerate 1 subscripts all 0 ]
+    # sort to get in non-implementation-dependent order
+    set L [ lsort -integer $L ]
     puts "enumeration: $L"
 
     # This is not a real Turbine loop
