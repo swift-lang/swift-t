@@ -214,6 +214,7 @@ class VariableUsageAnalyzer {
         break;
         
       case ExMParser.WAIT_STATEMENT:
+      case ExMParser.WAIT_DEEP_STATEMENT:
         waitStmt(context, vu, tree);
         break;
         

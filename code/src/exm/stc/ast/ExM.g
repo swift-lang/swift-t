@@ -79,6 +79,7 @@ tokens {
     FOR_LOOP_UPDATE;
     FOR_LOOP_ASSIGN;
     WAIT_STATEMENT;
+    WAIT_DEEP_STATEMENT;
     BLOCK;
     ARRAY;
     ARRAY_LOAD;
@@ -467,6 +468,8 @@ iterate_loop:
 wait_stmt:
         WAIT a=expr_argument_list b=block
             -> ^( WAIT_STATEMENT $a $b)
+    |   WAIT DEEP a=expr_argument_list b=block
+            -> ^( WAIT_DEEP_STATEMENT $a $b)
     ;
 
 declaration_multi:
@@ -785,6 +788,7 @@ FOR: 'for';
 ITERATE: 'iterate';
 UNTIL: 'until';
 WAIT: 'wait';
+DEEP: 'deep';
 TRUE: 'true';
 FALSE: 'false';
 GLOBAL: 'global';

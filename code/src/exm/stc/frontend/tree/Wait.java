@@ -27,21 +27,35 @@ import exm.stc.frontend.Context;
 public class Wait {
   private final ArrayList<SwiftAST> waitExprs;
   private final SwiftAST block;
-  public Wait(ArrayList<SwiftAST> waitExprs, SwiftAST block) {
-    super();
+  private final boolean deepWait;
+  
+  public Wait(ArrayList<SwiftAST> waitExprs, SwiftAST block,
+              boolean deepWait) {
     this.waitExprs = waitExprs;
     this.block = block;
+    this.deepWait = deepWait;
   }
   public List<SwiftAST> getWaitExprs() {
     return Collections.unmodifiableList(waitExprs);
   }
+  
   public SwiftAST getBlock() {
     return block;
   }
   
+  public boolean isDeepWait() {
+    return deepWait;
+  }
+  
   public static Wait fromAST(Context context, SwiftAST tree) 
                                     throws UserException {
-    assert(tree.getType() == ExMParser.WAIT_STATEMENT);
+    boolean deepWait;
+    if (tree.getType() == ExMParser.WAIT_STATEMENT) {
+      deepWait = false;
+    } else {
+      assert(tree.getType() == ExMParser.WAIT_DEEP_STATEMENT);
+      deepWait = true;
+    }
     assert(tree.getChildCount() == 2);
     SwiftAST exprs = tree.child(0);
     SwiftAST block = tree.child(1);
@@ -56,7 +70,7 @@ public class Wait {
     }
     
     
-    return new Wait(waitExprs, block);
+    return new Wait(waitExprs, block, deepWait);
   }
   
 }

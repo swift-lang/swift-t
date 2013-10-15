@@ -424,6 +424,7 @@ public class ASTWalker {
           break;
           
         case ExMParser.WAIT_STATEMENT:
+        case ExMParser.WAIT_DEEP_STATEMENT:
           waitStmt(context, tree);
           break;
           
@@ -533,9 +534,9 @@ public class ASTWalker {
     }
     
     backend.startWaitStatement(
-          context.getFunctionContext().constructName("explicitwait"),
-                      waitEvaled,
-                      WaitMode.WAIT_ONLY, true, false, TaskMode.LOCAL_CONTROL);
+          context.getFunctionContext().constructName("explicit-wait"),
+          waitEvaled, WaitMode.WAIT_ONLY, true, wait.isDeepWait(),
+          TaskMode.LOCAL_CONTROL);
     block(new LocalContext(context), wait.getBlock());
     backend.endWaitStatement();
   }
