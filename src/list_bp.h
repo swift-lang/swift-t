@@ -24,7 +24,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-
+#include "binkeys.h"
 
 struct list_bp_item
 {
