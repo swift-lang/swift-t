@@ -272,7 +272,7 @@ struct packed_store_hdr
  */
 struct packed_store_resp
 {
-  bool success;
+  adlb_data_code dc;
   struct packed_notif_counts notifs;
 };
 

@@ -710,6 +710,8 @@ ADLBP_Store(adlb_datum_id id, adlb_subscript subscript, adlb_data_type type,
     adlb_notif_t notifs = ADLB_NO_NOTIFS;
     dc = xlb_data_store(id, subscript, data, length,
                     type, refcount_decr, &notifs);
+    if (dc == ADLB_DATA_ERROR_DOUBLE_WRITE)
+      return ADLB_REJECTED;
     ADLB_DATA_CHECK(dc);
 
     code = xlb_notify_all(&notifs, id, subscript, data, length, type);
@@ -736,8 +738,9 @@ ADLBP_Store(adlb_datum_id id, adlb_subscript subscript, adlb_data_type type,
        ADLB_TAG_STORE_PAYLOAD);
   WAIT(&request, &status);
 
-  if (!resp.success)
-    return ADLB_ERROR;
+  if (resp.dc == ADLB_DATA_ERROR_DOUBLE_WRITE)
+    return ADLB_REJECTED;
+  ADLB_DATA_CHECK(resp.dc);
 
   code = process_notifications(id, subscript,
       data, length, type, &resp.notifs, to_server_rank);

@@ -35,7 +35,7 @@ typedef enum
 {
  ADLB_SUCCESS  =  1,
  ADLB_ERROR    = -1,
- /** Rejected: e.g., out of memory */
+ /** Rejected: e.g., out of memory, or double-assignment */
  ADLB_REJECTED = -2,
  /** Normal shutdown */
  ADLB_SHUTDOWN = -3,

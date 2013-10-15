@@ -728,9 +728,12 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
                 "not found: <%"PRId64">", id);
 
   // Make sure we are allowed to write this data
-  check_verbose(d->write_refcount > 0,
-                ADLB_DATA_ERROR_DOUBLE_WRITE,
-                "attempt to write closed var: <%"PRId64">", id);
+  if (d->write_refcount <= 0)
+  {
+    // Don't print error by default: caller may want to handle
+    DEBUG("attempt to write closed var: <%"PRId64">", id);
+    return ADLB_DATA_ERROR_DOUBLE_WRITE;
+  }
 
   // Track if we freed datum for error detection
   bool freed_datum = false;
@@ -800,10 +803,14 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
     if (found)
     {
       // Assert that this is an UNLINKED entry:
-      // TODO: support binary keys
-      check_verbose(t == NULL, ADLB_DATA_ERROR_DOUBLE_WRITE,
-            "already exists: <%"PRId64">[%.*s]",
-            id, (int)subscript.length, (const char*)subscript.key);
+      if (t != NULL)
+      {
+        // TODO: support binary keys
+        // Don't print error by default: caller may want to handle
+        DEBUG("already exists: <%"PRId64">[%.*s]", id, (int)subscript.length,
+              (const char*)subscript.key);
+        return ADLB_DATA_ERROR_DOUBLE_WRITE;
+      }
       
       DEBUG("Assigning unlinked precreated entry");
 

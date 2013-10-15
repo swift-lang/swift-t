@@ -40,7 +40,6 @@ adlb_code xlb_xpt_index_init(void)
     // setup checkpoint index using sharded container on servers
     adlb_datum_id container_id = id_for_rank(xlb_comm_rank);
 
-    // TODO: need real support for blob key
     adlb_type_extra extra = { .CONTAINER.key_type = ADLB_DATA_TYPE_BLOB,
                               .CONTAINER.val_type = ADLB_DATA_TYPE_BLOB };
     adlb_create_props props = { .read_refcount = 1, .write_refcount = 1,
@@ -123,7 +122,7 @@ adlb_code xlb_xpt_index_add(const void *key, int key_len,
     file_flag = 0;
   }
   // Copy data into transfer buffer
-  // TODO: using xfer limits size
+  // TODO: using xfer limits size to ADLB_DATA_MAX
   memcpy(xfer, data, (size_t)data_len);
   // Set file flag
   xfer[data_len] = file_flag;
@@ -135,9 +134,10 @@ adlb_code xlb_xpt_index_add(const void *key, int key_len,
   adlb_code rc = ADLB_Store(id, subscript, ADLB_DATA_TYPE_BLOB,
             xfer, blob_len, refcounts);
   
-  // TODO: handle duplicate key gracefully: it is possible for the same
+  // Handle duplicate key gracefully: it is possible for the same
   //       function to be recomputed, and we need to handle it!
-  CHECK_MSG(rc == ADLB_SUCCESS, "Error storing checkpoint entry");
+  CHECK_MSG(rc == ADLB_SUCCESS || rc == ADLB_REJECTED,
+            "Error storing checkpoint entry");
 
   return ADLB_SUCCESS;
 }

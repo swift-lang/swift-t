@@ -704,7 +704,7 @@ handle_store(int caller)
                       hdr.refcount_decr, &notifs);
 
   struct packed_store_resp resp = {
-    .success = (dc == ADLB_DATA_SUCCESS),
+    .dc = dc,
     .notifs.notify_closed_count = 0,
     .notifs.notify_insert_count = 0,
     .notifs.reference_count = 0};
