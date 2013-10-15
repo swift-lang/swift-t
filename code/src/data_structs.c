@@ -361,7 +361,7 @@ xlb_struct_str_to_ix(adlb_subscript subscript, int *field_ix)
   // TODO: support binary subscript
   check_verbose(end != subscript.key && *end == '\0', ADLB_DATA_ERROR_INVALID,
                 "Expected integer subscript for struct: [%.*s]",
-                (int)subscript.length, subscript.key);
+                (int)subscript.length, (const char*)subscript.key);
   check_verbose(field_ixl >= 0 && field_ixl < INT_MAX,
                 ADLB_DATA_ERROR_INVALID, "Integer subscript for struct"
                 " out of range: [%li]", field_ixl);
