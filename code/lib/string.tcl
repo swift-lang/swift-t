@@ -324,7 +324,7 @@ namespace eval turbine {
 
         set type [ container_typeof $container ]
         c::log "string_join_body start"
-        deeprule $container 1 [ list false false ] \
+        deeprule $container 1 0 \
             "string_join_store $result $container $separator"
     }
     # This is called when every entry in container is set
