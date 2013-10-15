@@ -44,14 +44,25 @@ proc rules { } {
     puts "member1: $s1"
     puts "member2: $s2"
 
-    set L [ adlb::enumerate $c subscripts 2 0 ]
-    puts "subscripts: $L"
+    set L1 [ adlb::enumerate $c subscripts 2 0 ]
+    puts "subscripts: [ lsort -integer $L1 ]"
 
-    set L [ adlb::enumerate $c members 2 0 ]
-    puts "members: $L"
+    # Check which order they appear in
+    set swap [ expr [ lindex $L1 0 ] == 1 ]
 
-    set L [ adlb::enumerate $c dict 2 0 ]
-    puts "dict: $L"
+    set L2 [ adlb::enumerate $c members 2 0 ]
+    if { $swap } {
+      puts "members: [ lreverse $L2 ]"
+    } else {
+      puts "members: $L2"
+    }
+
+    set L3 [ adlb::enumerate $c dict 2 0 ]
+    set sorted_L3 [ dict create ]
+    foreach k [ lsort [ dict keys $L3 ] ] {
+      dict append sorted_L3 $k [ dict get $L3 $k ]
+    }
+    puts "dict: $sorted_L3"
 
     set n [ adlb::enumerate $c count all 0 ]
     puts "count: $n"
