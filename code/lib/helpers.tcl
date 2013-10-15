@@ -119,3 +119,8 @@ proc draw { L } {
     set i [ turbine::randint_impl 0 $n ]
     return [ lindex $L $i ]
 }
+
+# Tcl function
+proc cat { args } {
+    return [ join $args " " ]
+}

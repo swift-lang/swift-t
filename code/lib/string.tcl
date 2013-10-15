@@ -20,13 +20,6 @@
 
 namespace eval turbine {
 
-    namespace export cat
-
-    # Tcl function
-    proc cat { args } {
-        return [ join $args " " ]
-    }
-
     # usage: strcat <result> <args>*
     proc strcat { result inputs } {
         rule $inputs "strcat_body $result $inputs" \
