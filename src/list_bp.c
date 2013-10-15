@@ -78,7 +78,7 @@ list_bp_set(struct list_bp* target, const void* key, size_t key_len,
   for (struct list_bp_item* item = target->head; item;
        item = item->next)
   {
-    if (key_match(key, key_len, item))
+    if (list_bp_key_match(key, key_len, item))
     {
       *old_value = (char*) item->data;
       item->data = value;
@@ -127,7 +127,7 @@ list_bp_remove(struct list_bp* target, const void* key, size_t key_len,
     return false;
 
   // Special handling if we match on the first item:
-  if (key_match(key, key_len, target->head))
+  if (list_bp_key_match(key, key_len, target->head))
   {
     struct list_bp_item* old_head = target->head;
     target->head = old_head->next;
@@ -144,7 +144,7 @@ list_bp_remove(struct list_bp* target, const void* key, size_t key_len,
   for (struct list_bp_item* item = target->head; item->next;
        item = item->next)
   {
-    if (key_match(key, key_len, item->next))
+    if (list_bp_key_match(key, key_len, item->next))
     {
       struct list_bp_item* old_item = item->next;
       if (target->tail == old_item)

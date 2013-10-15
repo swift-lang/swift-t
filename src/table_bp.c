@@ -113,7 +113,7 @@ bool
 table_bp_add(struct table_bp *target, const void* key, size_t key_len,
              void* data)
 {
-  int index = hash_bin(key, key_len, target->capacity);
+  int index = bin_key_hash(key, key_len, target->capacity);
 
   struct list_bp_item* new_item =
     list_bp_add(target->array[index], key, key_len, data);
@@ -135,7 +135,7 @@ bool
 table_bp_set(struct table_bp* target, const void* key, size_t key_len,
           void* value, void** old_value)
 {
-  int index = hash_bin(key, key_len, target->capacity);
+  int index = bin_key_hash(key, key_len, target->capacity);
 
   bool result = list_bp_set(target->array[index], key, key_len, 
                             value, old_value);
@@ -154,11 +154,11 @@ bool
 table_bp_search(const struct table_bp* table, const void* key,
                 size_t key_len, void **value)
 {
-  int index = hash_bin(key, key_len, table->capacity);
+  int index = bin_key_hash(key, key_len, table->capacity);
 
   for (struct list_bp_item* item = table->array[index]->head; item;
        item = item->next)
-    if (key_match(key, key_len, item) == 0) {
+    if (list_bp_key_match(key, key_len, item) == 0) {
       *value = (void*) item->data;
       return true;
     }
@@ -179,7 +179,7 @@ bool
 table_bp_remove(struct table_bp* table, const void* key, size_t key_len,
                 void** data)
 {
-  int index = hash_bin(key, key_len, table->capacity);
+  int index = bin_key_hash(key, key_len, table->capacity);
   struct list_bp* list = table->array[index];
   assert(list != NULL);
   bool result = list_bp_remove(list, key, key_len, data);

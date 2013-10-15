@@ -92,8 +92,8 @@ size_t list_bp_tostring(char* str, size_t size,
   Check if key matches item key. Inline for performance
  */
 static inline bool
-key_match(const void *key, size_t key_len, struct list_bp_item *item)
+list_bp_key_match(const void *key, size_t key_len, struct list_bp_item *item)
 {
-  return key_eq(key, key_len, item->key, item->key_len);
+  return bin_key_eq(key, key_len, item->key, item->key_len);
 }
 #endif //__LIST_BP_H
