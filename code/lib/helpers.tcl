@@ -14,14 +14,14 @@
 
 # Shutdown Tcl if condition does not hold
 proc assert { condition msg } {
-    if [ expr {! $condition} ] {
+    if { ! [ uplevel 1 "expr $condition" ] } {
         puts $msg
         exit 1
     }
 }
 
 proc check { condition msg } {
-    if [ expr {! $condition} ] {
+    if { ! [ uplevel 1 "expr $condition" ] } {
         error $msg
     }
 }
