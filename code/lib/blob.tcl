@@ -15,6 +15,8 @@
 
 namespace eval turbine {
 
+    namespace export blob_debug_ints
+
   proc blob_size_async { out blob } {
     rule "$blob" "blob_size_body $out $blob" \
         name "blob_size-$out-$blob"
@@ -68,7 +70,7 @@ namespace eval turbine {
       for { set i 0 } { $i < $n } { incr i } {
           set d [ blobutils_get_float $p $i ]
           literal t float $d
-          container_immediate_insert $result $i $t integer 
+          container_immediate_insert $result $i $t integer
       }
       adlb::refcount_incr $result w -1
       adlb::blob_free $input
@@ -178,6 +180,8 @@ namespace eval turbine {
 
   proc blob_zeroes_float { N } {
 
+      log "blob_zeroes_float($N)"
+
       set length [ expr $N * [blobutils_sizeof_float] ]
       set p [ blobutils_malloc $length ]
 
@@ -229,5 +233,13 @@ namespace eval turbine {
   }
   proc complete_container_continue_body { A action i n } {
       complete_container_continue $A $action [ incr i ] $n
+  }
+
+  proc blob_debug_ints { ptr n } {
+      puts "blob_debug_ints: $ptr $n"
+      for { set i 0 } { $i < $n } { incr i } {
+          set v [ blobutils_get_int $ptr $i ]
+          puts "  $i: $v"
+      }
   }
 }
