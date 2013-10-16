@@ -31,7 +31,7 @@
 static int
 hash_long(int64_t key, int N)
 {
-  return (int)(key % N);
+  return abs((int)(key % N));
 }
 
 bool
