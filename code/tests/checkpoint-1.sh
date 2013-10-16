@@ -27,4 +27,20 @@ ${TESTS}/run-mpi.zsh ${BIN} >& ${OUTPUT}
 
 grep WARNING ${OUTPUT} && exit 1
 
+F1=./checkpoint-1.xpt
+if [[ ! -f $F1 ]]; then
+  echo "$F1 not created"
+  exit 1
+fi
+F1_BYTES=$(wc -c $F1)
+echo "$F1 $F1_BYTES bytes"
+# Sanity check file length
+if [[ $F1_BYTES -lt 1024 ]]; then
+  echo "$F1 size wayyyy too small"
+  exit 1
+fi
+
+# Cleanup on success
+rm $F1
+
 exit 0
