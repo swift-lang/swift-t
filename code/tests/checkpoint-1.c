@@ -66,9 +66,28 @@ void fill_rand_data(char *data, int length)
 
 void test1(MPI_Comm comm);
 
+void test1_reload(MPI_Comm comm, const char *file);
+
 int
-main()
+main(int argc, char **argv)
 {
+  int phase;
+
+  assert(argc == 2);
+  if (strcmp(argv[1], "CREATE_XPT") == 0)
+  {
+    phase = 0;
+  }
+  else if (strcmp(argv[1], "RELOAD_XPT") == 0)
+  {
+    phase = 1;
+  }
+  else
+  {
+    printf("INVALID MODE: %s\n", argv[1]);
+    exit(1);
+  }
+
   int mpi_argc = 0;
   char** mpi_argv = NULL;
 
@@ -86,8 +105,19 @@ main()
   ac = ADLB_Init(1, 2, types, &am_server, comm, &worker_comm);
   assert(ac == ADLB_SUCCESS);
 
-  ac = ADLB_Xpt_init("./checkpoint-1.xpt", ADLB_NO_FLUSH, MAX_INDEX_SIZE);
-  assert(ac == ADLB_SUCCESS);
+  
+  if (phase == 0)
+  {
+    ac = ADLB_Xpt_init("./checkpoint-1.xpt", ADLB_NO_FLUSH, MAX_INDEX_SIZE);
+    assert(ac == ADLB_SUCCESS);
+  }
+  else
+  {
+    // Don't touch existing checkpoint for reload
+    ac = ADLB_Xpt_init("./checkpoint-tmp.xpt", ADLB_PERIODIC_FLUSH,
+                       MAX_INDEX_SIZE);
+    assert(ac == ADLB_SUCCESS);
+  }
 
   if (am_server)
   {
@@ -95,7 +125,14 @@ main()
   }
   else
   {
-    test1(comm);
+    if (phase == 0)
+    {
+      test1(comm);
+    }
+    else
+    {
+      test1_reload(comm, "./checkpoint-1.xpt");
+    }
   }
 
   ADLB_Finalize();
@@ -103,10 +140,10 @@ main()
   return 0;
 }
 
+#define TEST1_REPEATS 100
 
 void test1(MPI_Comm comm)
 {
-  int repeats = 100;
   int my_rank;
   int rc = MPI_Comm_rank(comm, &my_rank);
   assert(rc == MPI_SUCCESS);
@@ -114,7 +151,7 @@ void test1(MPI_Comm comm)
   rc = MPI_Comm_size(comm, &comm_size);
   assert(rc == MPI_SUCCESS);
 
-  for (int repeat = 0; repeat < repeats; repeat++)
+  for (int repeat = 0; repeat < TEST1_REPEATS; repeat++)
   {
     int size = 128;
     char data[size];
@@ -135,4 +172,22 @@ void test1(MPI_Comm comm)
     check_retrieve("Test 1", data, size, data2); 
     ADLB_Free_binary_data(&data2);
   }
+}
+
+void test1_reload(MPI_Comm comm, const char *file)
+{
+  int my_rank;
+  int rc = MPI_Comm_rank(comm, &my_rank);
+  assert(rc == MPI_SUCCESS);
+  int comm_size;
+  rc = MPI_Comm_size(comm, &comm_size);
+  assert(rc == MPI_SUCCESS);
+
+  adlb_code ac;
+
+  // Running on all ranks will do redundant work, but should still be correct.
+  ac = ADLB_Xpt_reload(file);
+  assert(ac == ADLB_SUCCESS);
+
+  // TODO: check that checkpoint reloaded ok
 }

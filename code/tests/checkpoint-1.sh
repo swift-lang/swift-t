@@ -22,7 +22,7 @@ BIN=${THIS%.sh}.x
 OUTPUT=${THIS%.sh}.out
 
 export PROCS=4
-${TESTS}/run-mpi.zsh ${BIN} >& ${OUTPUT}
+${TESTS}/run-mpi.zsh ${BIN} CREATE_XPT >& ${OUTPUT}
 [[ ${?} == 0 ]] || exit 1
 
 grep WARNING ${OUTPUT} && exit 1
@@ -40,7 +40,24 @@ if [[ $F1_BYTES -lt 1024 ]]; then
   exit 1
 fi
 
+${TESTS}/run-mpi.zsh ${BIN} RELOAD_XPT >& ${OUTPUT}
+[[ ${?} == 0 ]] || exit 1
+
+FTMP=./checkpoint-tmp.xpt
+if [[ ! -f $FTMP ]]; then
+  echo "$FTMP not created"
+  exit 1
+fi
+FTMP_BYTES=$(wc -c $F1)
+echo "$FTMP $F1_BYTES bytes"
+# Sanity check file length
+if [[ $FTMP_BYTES -gt 1024 ]]; then
+  echo "$FTMP size too big: should be empty"
+  exit 1
+fi
+
 # Cleanup on success
 rm $F1
+rm $FTMP
 
 exit 0
