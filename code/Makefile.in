@@ -114,7 +114,6 @@ ifeq ($(ENABLE_XPT),yes)
 	CFLAGS += -D XLB_ENABLE_XPT
         # Need zlib for checkpoint CRC
         LIBS += -lz
-        INSTALLED_HEADERS += src/adlb-xpt.h
 endif
 
 ### INCLUDES
@@ -186,6 +185,10 @@ $(ADLB_SO): $(OBJS) $(NLOBJS) lib
 ### INSTALL
 
 INSTALLED_HEADERS = src/adlb.h src/adlb-defs.h src/adlb_types.h
+
+ifeq ($(ENABLE_XPT),yes)
+        INSTALLED_HEADERS += src/adlb-xpt.h
+endif
 
 HAVE_CP_U = @CP_U@
 ifeq ($(HAVE_CP_U),yes)

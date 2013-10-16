@@ -35,7 +35,7 @@ static int max_index_val_bytes;
 static inline adlb_code xpt_reload_rank(const char *filename,
         xlb_xpt_read_state *read_state, adlb_buffer *buffer, uint32_t rank);
 
-adlb_code adlb_xpt_init(const char *filename, adlb_xpt_flush_policy fp,
+adlb_code ADLB_Xpt_init(const char *filename, adlb_xpt_flush_policy fp,
                         int max_index_val)
 {
   adlb_code rc;
@@ -51,7 +51,7 @@ adlb_code adlb_xpt_init(const char *filename, adlb_xpt_flush_policy fp,
   return ADLB_SUCCESS;
 }
 
-adlb_code adlb_xpt_finalize(void)
+adlb_code ADLB_Xpt_finalize(void)
 {
   assert(xlb_xpt_initialized);
   adlb_code rc;
@@ -63,7 +63,7 @@ adlb_code adlb_xpt_finalize(void)
   return ADLB_SUCCESS;
 }
 
-adlb_code adlb_xpt_write(const void *key, int key_len, const void *val,
+adlb_code ADLB_Xpt_write(const void *key, int key_len, const void *val,
                 int val_len, adlb_xpt_persist persist, bool index_add)
 {
   assert(xlb_xpt_initialized);
@@ -71,7 +71,7 @@ adlb_code adlb_xpt_write(const void *key, int key_len, const void *val,
   assert(val_len >= 0);
 
   adlb_code rc;
-  bool do_persist = persist != NO_PERSIST;
+  bool do_persist = persist != ADLB_NO_PERSIST;
   xpt_index_entry entry;
 
   if (index_add)
@@ -101,7 +101,8 @@ adlb_code adlb_xpt_write(const void *key, int key_len, const void *val,
                        &val_offset);
     ADLB_CHECK(rc);
 
-    if (flush_policy == ALWAYS_FLUSH || persist == PERSIST_FLUSH)
+    if (flush_policy == ADLB_ALWAYS_FLUSH ||
+        persist == ADLB_PERSIST_FLUSH)
     {
       rc = xlb_xpt_flush(&xpt_state);
       ADLB_CHECK(rc);
@@ -123,7 +124,7 @@ adlb_code adlb_xpt_write(const void *key, int key_len, const void *val,
   return ADLB_SUCCESS;
 }
 
-adlb_code adlb_xpt_lookup(const void *key, int key_len, adlb_binary_data *result)
+adlb_code ADLB_Xpt_lookup(const void *key, int key_len, adlb_binary_data *result)
 {
   assert(xlb_xpt_initialized);
   assert(key != NULL);
@@ -148,8 +149,8 @@ adlb_code adlb_xpt_lookup(const void *key, int key_len, adlb_binary_data *result
     result->length = val_len;
     CHECK_MSG(result->data != NULL, "Could not allocate buffer");
 
-    rc = xlb_xpt_read_val(res.FILE_LOCATION.val_offset, val_len,
-                          &xpt_state, result->caller_data);
+    rc = xlb_xpt_read_val(res.FILE_LOCATION.file, res.FILE_LOCATION.val_offset,
+                  val_len, &xpt_state, result->caller_data);
     ADLB_CHECK(rc);
   }
   else
@@ -164,7 +165,7 @@ adlb_code adlb_xpt_lookup(const void *key, int key_len, adlb_binary_data *result
   into our checkpoint index.
   TODO: will probably need to support some kind of filtering
  */
-adlb_code adlb_xpt_reload(const char *filename)
+adlb_code ADLB_Xpt_reload(const char *filename)
 {
   adlb_code rc;
   xlb_xpt_read_state read_state;
@@ -243,8 +244,8 @@ static inline adlb_code xpt_reload_rank(const char *filename,
     // Handle errors
     ADLB_CHECK(rc);
 
-    CHECK_MSG(val_len <= XLB_XPT_MAX, "Checkpoint entry loaded from file "
-          "bigger than XLB_XPT_MAX: %i vs %i", val_len, XLB_XPT_MAX);
+    CHECK_MSG(val_len <= ADLB_XPT_MAX, "Checkpoint entry loaded from file "
+          "bigger than ADLB_XPT_MAX: %i vs %i", val_len, ADLB_XPT_MAX);
     
     xpt_index_entry entry;
     if (val_len > max_index_val_bytes)

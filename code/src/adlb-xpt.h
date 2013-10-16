@@ -20,7 +20,6 @@
  * TODO: how to flush/specify flush policy
  */
 
-#ifdef XLB_ENABLE_XPT
 #ifndef __ADLB_XPT_H
 #define __ADLB_XPT_H
 
@@ -31,9 +30,9 @@
   Flush policy to use for checkpointing
  */
 typedef enum {
-  NO_FLUSH,       // Don't explicitly flush
-  PERIODIC_FLUSH, // Flush checkpoints frequently
-  ALWAYS_FLUSH,   // Flush checkpoints on every write
+  ADLB_NO_FLUSH,       // Don't explicitly flush
+  ADLB_PERIODIC_FLUSH, // Flush checkpoints frequently
+  ADLB_ALWAYS_FLUSH,   // Flush checkpoints on every write
 } adlb_xpt_flush_policy;
 
 /*
@@ -41,11 +40,11 @@ typedef enum {
  */
 typedef enum {
   // Only update in-memory index
-  NO_PERSIST,
+  ADLB_NO_PERSIST,
   // Persist to checkpoint file
-  PERSIST,
+  ADLB_PERSIST,
   // Persist to file and flush immediately (e.g. for important data)
-  PERSIST_FLUSH, 
+  ADLB_PERSIST_FLUSH, 
 } adlb_xpt_persist;
 
 /*
@@ -56,13 +55,13 @@ typedef enum {
   max_index_val: maximum value size to store in in-memory index. Larger
       values are persisted to file and a reference stored in index.
  */
-adlb_code adlb_xpt_init(const char *filename, adlb_xpt_flush_policy fp,
+adlb_code ADLB_Xpt_init(const char *filename, adlb_xpt_flush_policy fp,
                         int max_index_val);
 
 /*
   Finalize checkpointing to file.
  */
-adlb_code adlb_xpt_finalize(void);
+adlb_code ADLB_Xpt_finalize(void);
 
 /*
   Add a checkpoint entry
@@ -73,7 +72,7 @@ adlb_code adlb_xpt_finalize(void);
   Result is flushed to disk if requested, or if value too large to fit
   in memory (since other nodes may need to lookup result).
  */
-adlb_code adlb_xpt_write(const void *key, int key_len, const void *val,
+adlb_code ADLB_Xpt_write(const void *key, int key_len, const void *val,
                 int val_len, adlb_xpt_persist persist, bool index_add);
 
 /*
@@ -83,7 +82,7 @@ adlb_code adlb_xpt_write(const void *key, int key_len, const void *val,
   (e.g. into an internal buffer), it is only valid until the next ADLB call.
   Return ADLB_SUCCESS if found, ADLB_NOTHING if not present
  */
-adlb_code adlb_xpt_lookup(const void *key, int key_len, adlb_binary_data *result);
+adlb_code ADLB_Xpt_lookup(const void *key, int key_len, adlb_binary_data *result);
 
 /*
   Reload checkpoint data from file into in-memory index.
@@ -93,7 +92,6 @@ adlb_code adlb_xpt_lookup(const void *key, int key_len, adlb_binary_data *result
   TODO: currently this should only be called on one node.
   TODO: add ability to split reload work among ranks
  */
-adlb_code adlb_xpt_reload(const char *filename);
+adlb_code ADLB_Xpt_reload(const char *filename);
 
 #endif // __ADLB_XPT_H
-#endif // XLB_ENABLE_XPT

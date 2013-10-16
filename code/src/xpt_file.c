@@ -70,11 +70,13 @@ static inline bool check_crc(xlb_xpt_read_state *state, int rec_len,
   FWRITE_CHECKED(buf, sizeof(buf), (size_t)1, state);       \
 }
 
-#define FREAD_CHECKED_UINT32(data, state) {                  \
-  unsigned char buf[4];                                      \
-  FREAD_CHECKED(buf, sizeof(buf), 1, state);                 \
-  data = ((uint32_t)buf[0]) >> 24 + ((uint32_t)buf[1]) >> 16 \
-       + ((uint32_t)buf[2]) >> 8 + (uint32_t)buf[0];         \
+#define FREAD_CHECKED_UINT32(data, state) {                 \
+  unsigned char buf[4];                                     \
+  FREAD_CHECKED(buf, sizeof(buf), 1, state);                \
+  data = (((uint32_t)buf[0]) >> 24) +                       \
+          (((uint32_t)buf[1]) >> 16) +                      \
+          (((uint32_t)buf[2]) >> 8) +                       \
+          (uint32_t)buf[0];                                 \
 }
 
 // Check fread return code, returning ADLB_DONE upon eof
