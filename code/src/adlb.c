@@ -34,6 +34,7 @@
 
 #include "adlb.h"
 #include "adlb-version.h"
+#include "adlb-xpt.h"
 #include "checks.h"
 #include "common.h"
 #include "data.h"
@@ -1265,6 +1266,12 @@ ADLBP_Finalize()
   MPI_Finalized(&flag);
   CHECK_MSG(!flag,
             "ERROR: MPI_Finalize() called before ADLB_Finalize()\n");
+
+#ifdef XLB_ENABLE_XPT
+  // Finalize checkpoints before shutting down data
+  ADLB_Xpt_finalize();
+#endif
+
   xlb_data_finalize();
   if (xlb_comm_rank >= xlb_master_server_rank)
   {

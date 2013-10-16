@@ -53,7 +53,11 @@ adlb_code ADLB_Xpt_init(const char *filename, adlb_xpt_flush_policy fp,
 
 adlb_code ADLB_Xpt_finalize(void)
 {
-  assert(xlb_xpt_initialized);
+  if (!xlb_xpt_initialized)
+  {
+    return ADLB_SUCCESS;
+  }
+
   adlb_code rc;
   xlb_xpt_initialized = false;
 

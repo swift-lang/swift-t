@@ -51,6 +51,8 @@ typedef enum {
   Initialize checkpointing to file.
   Should be called after ADLB is initialized.
 
+  Checkpointing is automatically finalized when ADLB is shutdown.
+
   fp: controls the policy used for flushing checkpoint entires to disk
   max_index_val: maximum value size to store in in-memory index. Larger
       values are persisted to file and a reference stored in index.
@@ -59,7 +61,8 @@ adlb_code ADLB_Xpt_init(const char *filename, adlb_xpt_flush_policy fp,
                         int max_index_val);
 
 /*
-  Finalize checkpointing to file.
+  Finalize checkpointing to file.  If not initialized, this call has
+  no effect.
  */
 adlb_code ADLB_Xpt_finalize(void);
 
