@@ -25,6 +25,7 @@
 
 #include "checks.h"
 #include "common.h"
+#include "debug.h"
 #include "vint.h"
 
 // Magic number to put at start of blocks;
@@ -73,10 +74,10 @@ static inline bool check_crc(xlb_xpt_read_state *state, int rec_len,
 #define FREAD_CHECKED_UINT32(data, state) {                 \
   unsigned char buf[4];                                     \
   FREAD_CHECKED(buf, sizeof(buf), 1, state);                \
-  data = (((uint32_t)buf[0]) >> 24) +                       \
-          (((uint32_t)buf[1]) >> 16) +                      \
-          (((uint32_t)buf[2]) >> 8) +                       \
-          (uint32_t)buf[0];                                 \
+  data = (((uint32_t)buf[0]) << 24) +                       \
+          (((uint32_t)buf[1]) << 16) +                      \
+          (((uint32_t)buf[2]) << 8) +                       \
+          (uint32_t)buf[3];                                 \
 }
 
 // Check fread return code, returning ADLB_DONE upon eof
@@ -166,6 +167,8 @@ static inline adlb_code block_start_seek(const char *filename,
                                         xlb_xpt_state *state)
 {
   assert(state->file != NULL);
+  assert(state->empty_block);
+  DEBUG("Rank %i seeking to start of block %i", xlb_comm_rank, state->curr_block);
   off_t block_start = ((off_t)state->curr_block) * XLB_XPT_BLOCK_SIZE;
   int rc = fseek(state->file, block_start, SEEK_SET);
   if (filename != NULL) {
@@ -283,6 +286,7 @@ adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,
     // check for advance to new block
     off_t block_start = ((off_t)state->curr_block) * XLB_XPT_BLOCK_SIZE;
     off_t curr_pos = ftello(state->file);
+    CHECK_MSG(curr_pos != (off_t)-1, "Error using ftello");
     
     assert(curr_pos > block_start &&
            curr_pos <= block_start + XLB_XPT_BLOCK_SIZE);
@@ -311,7 +315,7 @@ adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,
   {
     // Return offset of value in file if needed
     *val_offset = ftello(state->file);
-    CHECK_MSG(*val_offset >= 0, "Error getting file value offset");
+    CHECK_MSG(*val_offset != (off_t)-1, "Error getting file value offset");
   }
   FWRITE_CHECKED(val, 1, val_len, state);
   return ADLB_SUCCESS;
@@ -385,6 +389,13 @@ adlb_code xlb_xpt_open_read(const char *filename, xlb_xpt_read_state *state)
   // TODO: verify header checksum?
   FREAD_CHECKED_UINT32(state->block_size, state);
   FREAD_CHECKED_UINT32(state->ranks, state);
+
+  CHECK_MSG(state->block_size > 0, "Block size cannot be zero in file %s",
+            filename);
+  CHECK_MSG(state->ranks > 0, "Ranks cannot be zero in file %s",
+            filename);
+  DEBUG("Opened file %s block size %i ranks %i", filename, state->block_size,
+          state->ranks);
   return ADLB_SUCCESS;
 }
 
@@ -428,10 +439,13 @@ static inline adlb_code block_read_init(xlb_xpt_read_state *state,
   assert(state->file != NULL);
   int magic_num = fgetc(state->file);
   if (magic_num == EOF || magic_num == 0) {
+    DEBUG("Past last block in file %d for rank %d", state->curr_block,
+                                                    state->curr_rank);
     *empty = true;
     return ADLB_SUCCESS;
   }
-  CHECK_MSG(magic_num != xpt_magic_num, "Invalid magic number %i"
+
+  CHECK_MSG(magic_num == xpt_magic_num, "Invalid magic number %i"
         " at start of checkpoint block: may be corrupted", magic_num);
   *empty = false;
   return ADLB_SUCCESS;
@@ -443,8 +457,13 @@ static inline adlb_code block_read_init(xlb_xpt_read_state *state,
 static inline adlb_code block_read_advance(xlb_xpt_read_state *state)
 {
   assert(state->file != NULL);
-  state->curr_block = next_block(state->curr_rank, state->ranks,
+  int new_block = next_block(state->curr_rank, state->ranks,
                                  state->curr_block);
+  DEBUG("Moving from block %i to block %i for rank %i/%i", state->curr_block,
+        new_block, state->curr_rank, state->ranks);
+
+  state->curr_block = new_block;
+        
   off_t block_start = ((off_t)state->curr_block) * state->block_size;
   int rc = fseek(state->file, block_start, SEEK_SET);
   CHECK_MSG(rc == 0, "Error seeking to offset %llu in checkpoint file",
@@ -486,7 +505,7 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
   CHECK_READ_EOF(frrc);
 
   off_t rec_offset = ftello(state->file);
-  CHECK_MSG(rec_offset == 0, "Error using ftello");
+  CHECK_MSG(rec_offset != (off_t)-1, "Error using ftello");
 
   // get record length from file reading byte-by-byte
   rec_len_encb = vint_file_decode(state->file, &rec_len64);
@@ -496,6 +515,8 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
     // TODO: seek to start of next block in attempt to re-sync?
     return ADLB_NOTHING;
   }
+
+  DEBUG("Record length %"PRId64, rec_len64);
 
   // sanity check for record length
   if(rec_len64 < 0 || rec_len64 > INT_MAX)
@@ -529,6 +550,7 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
     // reset position to start of record
     fseeko(state->file, rec_offset - (off_t)sizeof(crc), SEEK_SET);
     *key_len = (int)rec_len64;
+    DEBUG("Buffer too small for record");
     return ADLB_RETRY;
   }
 
@@ -565,6 +587,8 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
                 key_len64, rec_len64);
     return ADLB_NOTHING;
   }
+  
+  DEBUG("Key length is %"PRId64, key_len64);
 
   *key_len = (int)key_len64;
   *val_len = (int)(rec_len64 - (int64_t)key_len_encb - key_len64);

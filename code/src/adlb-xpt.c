@@ -17,6 +17,7 @@
 #include "adlb-xpt.h"
 
 #include "checks.h"
+#include "debug.h"
 #include "xpt_file.h"
 #include "xpt_index.h"
 
@@ -190,12 +191,16 @@ adlb_code ADLB_Xpt_reload(const char *filename)
   // cluster.
   for (uint32_t rank = 0; rank < read_state.ranks; rank++)
   {
+    DEBUG("Reloading checkpoints from %s for rank %i\n",
+        filename, rank);
     rc = xpt_reload_rank(filename, &read_state, &buffer, rank);
     if (rc != ADLB_SUCCESS)
     {
       // Continue to next rank upon error
       ERR_PRINTF("Error reloading records for rank %"PRId32, rank);
     }
+    DEBUG("Done reloading checkpoints from %s for rank %i\n",
+        filename, rank);
   }
   
   rc = xlb_xpt_close_read(&read_state);
@@ -240,11 +245,17 @@ static inline adlb_code xpt_reload_rank(const char *filename,
                         &val_len, &val_ptr, &val_offset);
     }
 
-    if (rc == ADLB_NOTHING)
+    if (rc == ADLB_DONE)
     {
       // ADLB_NOTHING indicates last valid record for rank
-      return ADLB_NOTHING;
+      return ADLB_DONE;
     }
+    else if (rc == ADLB_NOTHING)
+    {
+      // Skip this record
+      continue;
+    }
+
     // Handle errors
     ADLB_CHECK(rc);
 
@@ -268,6 +279,8 @@ static inline adlb_code xpt_reload_rank(const char *filename,
     }
     rc = xlb_xpt_index_add(key_ptr, key_len, &entry);
     ADLB_CHECK(rc);
+    DEBUG("Loaded checkpoint for rank %i val_len: %i in_file: %s",
+          rank, (int)val_len, entry.in_file ? "true" : "false");
   }
 }
 
