@@ -58,10 +58,16 @@ void check_retrieve(const char *msg, const void *data, int length,
 
 void fill_rand_data(char *data, int length)
 {
-  for (int i = 0; i < length; i++)
+  // Add parity for verification?
+  int parity = 0;
+  for (int i = 0; i < length - 1; i++)
   {
-    data[i] = (char)rand();
+    int x = rand();
+    data[i] = (char)x;
+
+    parity = abs(parity + x) % 2;
   }
+  data[length] = (char)parity;
 }
 
 void test1(MPI_Comm comm);
@@ -141,6 +147,7 @@ main(int argc, char **argv)
 }
 
 #define TEST1_REPEATS 100
+#define TEST1_VAL_SIZE 128
 
 void test1(MPI_Comm comm)
 {
@@ -151,9 +158,11 @@ void test1(MPI_Comm comm)
   rc = MPI_Comm_size(comm, &comm_size);
   assert(rc == MPI_SUCCESS);
 
+  // TODO: test looking up non-existent entry
+
   for (int repeat = 0; repeat < TEST1_REPEATS; repeat++)
   {
-    int size = 128;
+    int size = TEST1_VAL_SIZE;
     char data[size];
     fill_rand_data(data, size);
     
@@ -189,5 +198,40 @@ void test1_reload(MPI_Comm comm, const char *file)
   ac = ADLB_Xpt_reload(file);
   assert(ac == ADLB_SUCCESS);
 
-  // TODO: check that checkpoint reloaded ok
+  // TODO: get relaod report from _reload, check no errors
+
+  // Check that all checkpoint entries loaded into memory.
+  for (int repeat = 0; repeat < TEST1_REPEATS; repeat++)
+  {
+    // Create unique key
+    int key = my_rank + repeat * comm_size;
+    adlb_binary_data data;
+    ac = ADLB_Xpt_lookup(&key, (int)sizeof(key), &data);
+  
+    if (ac == ADLB_NOTHING)
+    {
+      fprintf(stderr, "entry with key %i not found\n", key);
+      exit(1);
+    }
+    assert(ac == ADLB_SUCCESS);
+   
+    if (data.length != TEST1_VAL_SIZE)
+    {
+      fprintf(stderr, "Value didn't have expected size %i, was %i\n",
+                      TEST1_VAL_SIZE, data.length);
+      exit(1);
+    }
+    int parity = 0;
+    for (int i = 0; i < data.length; i++)
+    {
+      parity = (parity + (int)((char*)data.data)[i]) % 2;
+    }
+    if (parity != 0)
+    {
+      fprintf(stderr, "Parity check for key %i failed\n", key);
+      exit(1);
+    }
+
+    ADLB_Free_binary_data(&data);
+  }
 }
