@@ -181,7 +181,7 @@ xlb_data_create(adlb_datum_id id, adlb_data_type type,
             const adlb_create_props *props)
 {
   TRACE("data_create(%"PRId64")", id);
-  check_verbose(id > 0, ADLB_DATA_ERROR_INVALID,
+  check_verbose(id != ADLB_DATA_ID_NULL, ADLB_DATA_ERROR_INVALID,
                 "ERROR: attempt to create data: id=%"PRId64"\n", id);
 
   DEBUG("Create <%"PRId64"> t:%s r:%i w:%i", id, ADLB_Data_type_tostring(type),
