@@ -6,6 +6,7 @@ TEST_SRC_C += $(DIR)/debug.c
 TEST_SRC_C += $(DIR)/lib-turbine.c
 TEST_SRC_C += $(DIR)/ptasks-1.c
 TEST_SRC_C += $(DIR)/ptasks-bench.c
+TEST_SRC_C += $(DIR)/checkpoint-1.c
 
 ifeq ($(USE_MPE),1)
 	TEST_SRC_C += $(DIR)/mpe-1.c \
