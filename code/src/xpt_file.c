@@ -378,7 +378,7 @@ adlb_code xlb_xpt_open_read(const char *filename, xlb_xpt_read_state *state)
   state->curr_block = first_block(state->curr_rank, state->ranks);
 
   int magic_num = fgetc(state->file);
-  CHECK_MSG(magic_num != xpt_magic_num, "Invalid magic number %i"
+  CHECK_MSG(magic_num == xpt_magic_num, "Invalid magic number %i"
         " at start of checkpoint file %s: may be corrupted or not"
         " checkpoint", magic_num, filename);
 
@@ -393,7 +393,7 @@ adlb_code xlb_xpt_close_read(xlb_xpt_read_state *state)
   assert(state->file != NULL);
   int rc = fclose(state->file);
   state->file = NULL;
-  CHECK_MSG(rc != 0, "Error closing checkpoint file");
+  CHECK_MSG(rc == 0, "Error closing checkpoint file");
   return ADLB_SUCCESS;
 }
 
