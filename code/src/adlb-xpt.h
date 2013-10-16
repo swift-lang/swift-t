@@ -92,7 +92,7 @@ adlb_code ADLB_Xpt_lookup(const void *key, int key_len, adlb_binary_data *result
   Return error if checkpoint file appears to be invalid.
   If corrupted or partially written entries are encountered, ignore them.
 
-  TODO: currently this should only be called on one node.
+  TODO: currently this should only needs to be called on one node.
   TODO: add ability to split reload work among ranks
  */
 adlb_code ADLB_Xpt_reload(const char *filename);
