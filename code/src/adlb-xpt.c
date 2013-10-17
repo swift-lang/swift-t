@@ -34,7 +34,8 @@ static int max_index_val_bytes;
  */
 
 static inline adlb_code xpt_reload_rank(const char *filename,
-        xlb_xpt_read_state *read_state, adlb_buffer *buffer, uint32_t rank);
+        xlb_xpt_read_state *read_state, adlb_buffer *buffer, uint32_t rank,
+        adlb_xpt_load_rank_stats *stats);
 
 adlb_code ADLB_Xpt_init(const char *filename, adlb_xpt_flush_policy fp,
                         int max_index_val)
@@ -170,8 +171,10 @@ adlb_code ADLB_Xpt_lookup(const void *key, int key_len, adlb_binary_data *result
   into our checkpoint index.
   TODO: will probably need to support some kind of filtering
  */
-adlb_code ADLB_Xpt_reload(const char *filename)
+adlb_code ADLB_Xpt_reload(const char *filename, adlb_xpt_load_stats *stats)
 {
+  CHECK_MSG(stats != NULL, "Must provide stats argument");
+
   adlb_code rc;
   xlb_xpt_read_state read_state;
   adlb_buffer buffer = { .data = NULL };
@@ -187,20 +190,29 @@ adlb_code ADLB_Xpt_reload(const char *filename)
   buffer.data = malloc((size_t)buffer.length);
   CHECK_MSG(buffer.data != NULL, "Error allocating buffer");
 
+  const int ranks = read_state.ranks;
+  stats->ranks = ranks;
+  stats->rank_stats = malloc(sizeof(stats->rank_stats[0]) * ranks);
+  CHECK_MSG(stats->rank_stats != NULL, "Out of memory");
+  for (int i = 0; i < ranks; i++)
+  {
+    stats->rank_stats[i].loaded = false;
+  }
   // TODO: how to split ranks in checkpoint among ranks in current
   // cluster.
-  for (uint32_t rank = 0; rank < read_state.ranks; rank++)
+  for (uint32_t rank = 0; rank < ranks; rank++)
   {
-    DEBUG("Reloading checkpoints from %s for rank %i\n",
-        filename, rank);
-    rc = xpt_reload_rank(filename, &read_state, &buffer, rank);
+    DEBUG("Reloading checkpoints from %s for rank %i\n", filename, rank);
+    adlb_xpt_load_rank_stats *rstats = &stats->rank_stats[rank];
+    rc = xpt_reload_rank(filename, &read_state, &buffer, rank, rstats);
     if (rc != ADLB_SUCCESS)
     {
       // Continue to next rank upon error
-      ERR_PRINTF("Error reloading records for rank %"PRId32, rank);
+      ERR_PRINTF("Error reloading records for rank %"PRId32"\n", rank);
     }
-    DEBUG("Done reloading checkpoints from %s for rank %i\n",
-        filename, rank);
+    DEBUG("Done reloading checkpoints from %s for rank %i. "
+          "Valid: %i Invalid: %i\n", filename, rank,
+          rstats->valid, rstats->invalid);
   }
   
   rc = xlb_xpt_close_read(&read_state);
@@ -221,8 +233,13 @@ cleanup_exit:
   index.  This function may realloc the provided buffer.
  */
 static inline adlb_code xpt_reload_rank(const char *filename,
-        xlb_xpt_read_state *read_state, adlb_buffer *buffer, uint32_t rank)
+        xlb_xpt_read_state *read_state, adlb_buffer *buffer, uint32_t rank,
+        adlb_xpt_load_rank_stats *stats)
 {
+  stats->loaded = true;
+  stats->valid = 0;
+  stats->invalid = 0;
+
   adlb_code rc;
   rc = xlb_xpt_read_select(read_state, rank);
   ADLB_CHECK(rc);
@@ -252,16 +269,23 @@ static inline adlb_code xpt_reload_rank(const char *filename,
     }
     else if (rc == ADLB_NOTHING)
     {
+      // TODO: some may not be actual error?
+      stats->invalid++;
       // Skip this record
       continue;
+    } else if (rc != ADLB_SUCCESS)
+    {
+      stats->invalid++;
+      return ADLB_ERROR;
+    }
+    else if (val_len > ADLB_XPT_MAX)
+    {
+      ERR_PRINTF("Checkpoint entry loaded from file "
+          "bigger than ADLB_XPT_MAX: %i vs %i\n", val_len, ADLB_XPT_MAX);
+      stats->invalid++;
+      return ADLB_ERROR;
     }
 
-    // Handle errors
-    ADLB_CHECK(rc);
-
-    CHECK_MSG(val_len <= ADLB_XPT_MAX, "Checkpoint entry loaded from file "
-          "bigger than ADLB_XPT_MAX: %i vs %i", val_len, ADLB_XPT_MAX);
-    
     xpt_index_entry entry;
     if (val_len > max_index_val_bytes)
     {
@@ -281,6 +305,9 @@ static inline adlb_code xpt_reload_rank(const char *filename,
     ADLB_CHECK(rc);
     DEBUG("Loaded checkpoint for rank %i val_len: %i in_file: %s",
           rank, (int)val_len, entry.in_file ? "true" : "false");
+
+    // If we made it this far, should be valid
+    stats->valid++;
   }
 }
 

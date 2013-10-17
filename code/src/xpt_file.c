@@ -583,7 +583,7 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
   }
   if (key_len64 > rec_len64 - key_len_encb)
   {
-    ERR_PRINTF("Key length too long for record: %"PRId64" v. %"PRId64,
+    ERR_PRINTF("Key length too long for record: %"PRId64" v. %"PRId64"\n",
                 key_len64, rec_len64);
     return ADLB_NOTHING;
   }

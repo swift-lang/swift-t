@@ -87,14 +87,27 @@ adlb_code ADLB_Xpt_write(const void *key, int key_len, const void *val,
  */
 adlb_code ADLB_Xpt_lookup(const void *key, int key_len, adlb_binary_data *result);
 
+typedef struct {
+  // True if attempted to load (may have been loaded in other process)
+  bool loaded; 
+  int valid; // Valid checkpoint entries loaded
+  int invalid; // Invalid checkpoint entries found.
+} adlb_xpt_load_rank_stats;
+
+typedef struct {
+  int ranks;
+  adlb_xpt_load_rank_stats *rank_stats; // Array with one entry per rank
+} adlb_xpt_load_stats;
+
 /*
   Reload checkpoint data from file into in-memory index.
   Return error if checkpoint file appears to be invalid.
   If corrupted or partially written entries are encountered, ignore them.
 
+  stats: info about loaded data.  Caller must free arrays.
   TODO: currently this should only needs to be called on one node.
   TODO: add ability to split reload work among ranks
  */
-adlb_code ADLB_Xpt_reload(const char *filename);
+adlb_code ADLB_Xpt_reload(const char *filename, adlb_xpt_load_stats *stats);
 
 #endif // __ADLB_XPT_H
