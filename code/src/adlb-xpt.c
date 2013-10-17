@@ -269,12 +269,15 @@ static inline adlb_code xpt_reload_rank(const char *filename,
     }
     else if (rc == ADLB_NOTHING)
     {
+      DEBUG("Invalid record");
       // ADLB_NOTHING indicates corrupted record
       stats->invalid++;
       // Skip this record
       continue;
-    } else if (rc != ADLB_SUCCESS)
+    }
+    else if (rc != ADLB_SUCCESS)
     {
+      DEBUG("Unrecoverable error reading checkpoints for rank");
       stats->invalid++;
       return ADLB_ERROR;
     }
@@ -302,7 +305,7 @@ static inline adlb_code xpt_reload_rank(const char *filename,
       entry.DATA.length = val_len;
     }
     rc = xlb_xpt_index_add(key_ptr, key_len, &entry);
-    ADLB_CHECK(rc);
+    CHECK_MSG(rc == ADLB_SUCCESS, "Error loading checkpoint into index");
     DEBUG("Loaded checkpoint for rank %i val_len: %i in_file: %s",
           rank, (int)val_len, entry.in_file ? "true" : "false");
 
