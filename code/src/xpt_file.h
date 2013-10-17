@@ -87,7 +87,8 @@ adlb_code xlb_xpt_read_select(xlb_xpt_read_state *state, uint32_t rank);
   Returns ADLB_RETRY and sets key_len to required buffer size
     if provided buffer is too small.
   Returns ADLB_DONE if no more valid records for this rank
-  Returns ADLB_NOTHING if corrupted record encountered
+  Returns ADLB_NOTHING if corrupted record encountered, but can
+                       try to continue
                     
   buffer: caller-provided buffer used to store data
   key_len, val_len: length in bytes

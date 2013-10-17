@@ -264,12 +264,12 @@ static inline adlb_code xpt_reload_rank(const char *filename,
 
     if (rc == ADLB_DONE)
     {
-      // ADLB_NOTHING indicates last valid record for rank
-      return ADLB_DONE;
+      // ADLB_DONE indicates last valid record for rank
+      return ADLB_SUCCESS;
     }
     else if (rc == ADLB_NOTHING)
     {
-      // TODO: some may not be actual error?
+      // ADLB_NOTHING indicates corrupted record
       stats->invalid++;
       // Skip this record
       continue;
