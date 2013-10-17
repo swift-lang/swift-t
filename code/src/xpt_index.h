@@ -39,7 +39,7 @@ typedef struct
     // Actual data
     adlb_binary_data DATA;
     // OR chunk of current checkpoint file
-    xpt_file_loc FILE_LOCATION;
+    xpt_file_loc FILE_LOC;
   };
 } xpt_index_entry;
 

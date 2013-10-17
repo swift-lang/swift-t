@@ -270,7 +270,6 @@ adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,
   // Record length w/o CRC or record length
   int64_t rec_len = (int64_t)key_len_encb + key_len + val_len;
   rec_len_encb = (uInt)vint_encode(rec_len, rec_len_enc);
-  DEBUG("rec_len: %"PRId64" encoded length: %u", rec_len, rec_len_encb);
 
   // Total record length with 32-bit CRC and record length
   int64_t rec_total_len = rec_len + rec_len_encb + 4;
@@ -367,8 +366,8 @@ adlb_code xlb_xpt_read_val(char *file, off_t val_offset, int val_len,
   }
   else
   {
-    CHECK_MSG(false, "DO NOT SUPPORT LOADING FROM OLD FILE %s YET",
-          file);
+    ERR_PRINTF("DO NOT SUPPORT LOADING FROM OLD FILE %s YET\n", file);
+    return ADLB_ERROR;
   }
 }
 

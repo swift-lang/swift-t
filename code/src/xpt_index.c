@@ -23,6 +23,7 @@
 #include "common.h"
 #include "data.h"
 #include "jenkins-hash.h"
+#include "messaging.h"
 #include "table.h"
 
 static bool xpt_index_init = false;
@@ -81,10 +82,38 @@ adlb_code xlb_xpt_index_lookup(const void *key, int key_len,
   if (in_file_flag != 0)
   {
     res->in_file = true;
-    // Buffer should just have file location struct and flag
-    assert(length == sizeof(res->FILE_LOCATION) + 1);
-    // TODO: lookup filename here
-    memcpy(&res->FILE_LOCATION, buffer, sizeof(res->FILE_LOCATION));
+    xpt_file_loc *res_file = &res->FILE_LOC;
+    
+    // Write info to binary buffer
+    char *pos = (char*)buffer;
+    size_t filename_len;
+    CHECK_MSG(length >= sizeof(filename_len), "Buffer not large enough "
+              "for filename len: %d v %zu", length, sizeof(filename_len));
+    MSG_UNPACK_BIN(pos, &filename_len);
+
+    // Check buffer was expected size (members plus in_file byte)
+    int exp_length = (int)(sizeof(filename_len) + filename_len + 
+          sizeof(res_file->val_offset) + sizeof(res_file->val_len) + 1);
+    CHECK_MSG(length == exp_length, "Buffer not expected size: %i vs %i",
+              length, exp_length);
+
+    // Extract filename if needed
+    if (filename_len == 0)
+    {
+      res_file->file = NULL;
+    }
+    else
+    {
+      res_file->file = malloc(filename_len + 1);
+      CHECK_MSG(res_file->file != NULL, "Error allocating filename");
+      memcpy(res_file->file, pos, filename_len);
+      pos += filename_len;
+    }
+
+    MSG_UNPACK_BIN(pos, &res_file->val_offset);
+    MSG_UNPACK_BIN(pos, &res_file->val_len);
+    pos++; // in_file byte
+    assert(pos - (char*)buffer == exp_length);
   }
   else
   {
@@ -105,40 +134,51 @@ adlb_code xlb_xpt_index_add(const void *key, int key_len,
   assert(key != NULL);
   assert(key_len >= 0);
 
-  CHECK_MSG(key_len <= ADLB_XPT_MAX, "Checkpoint data too long: %i vs. %i",
-            key_len, ADLB_XPT_MAX);
-
-  const void *data; // Pointer to binary repr
-  int data_len; // Length of data minus flag
-  char file_flag;
-  if (entry->in_file)
-  {
-    // Use binary struct representation
-    // TODO: include filename here
-    data = &entry->FILE_LOCATION;
-    data_len = (int)sizeof(entry->FILE_LOCATION);
-    file_flag = 1;
-  }
-  else
-  {
-    data = entry->DATA.data;
-    data_len = entry->DATA.length;
-    file_flag = 0;
-  }
-  // Copy data into transfer buffer.
   // Using xfer limits the checkpoint size to ADLB_XPT_MAX == ADLB_DATA_MAX - 1
   // NOTE: assuming that ADLB_Store doesn't use xfer
   assert(ADLB_XPT_MAX <= ADLB_DATA_MAX - 1);
-  memcpy(xfer, data, (size_t)data_len);
-  // Set file flag
-  xfer[data_len] = file_flag;
-  int blob_len = data_len + 1;
+
+  const void *data; // Pointer to binary repr
+  int data_len; // Length of data minus flag
+  if (entry->in_file)
+  {
+    // Write info to binary buffer
+    char *xfer_pos = xfer;
+    size_t filename_len = entry->FILE_LOC.file != NULL ?
+            strlen(entry->FILE_LOC.file) : 0;
+    MSG_PACK_BIN(xfer_pos, filename_len);
+    if (entry->FILE_LOC.file != NULL)
+    {
+      memcpy(xfer_pos, entry->FILE_LOC.file, filename_len);
+      xfer_pos += filename_len;
+    }
+    MSG_PACK_BIN(xfer_pos, entry->FILE_LOC.val_offset);
+    MSG_PACK_BIN(xfer_pos, entry->FILE_LOC.val_len);
+
+    *xfer_pos = (char) 1; // File flag
+    xfer_pos++;
+
+    data = xfer;
+    data_len = xfer_pos - xfer;
+    assert(data_len <= ADLB_XPT_MAX); // Should certainly be smaller
+  }
+  else
+  {
+    CHECK_MSG(entry->DATA.length <= ADLB_XPT_MAX, 
+      "Checkpoint data too long: %i vs. %i", key_len, ADLB_XPT_MAX);
+    // Set file flag
+    memcpy(xfer, entry->DATA.data, (size_t)entry->DATA.length);
+    xfer[entry->DATA.length] = (char)0; // file flag
+
+    data = xfer;
+    data_len = entry->DATA.length + 1;
+  }
 
   adlb_refcounts refcounts = ADLB_NO_RC;
   adlb_datum_id id = id_for_hash(calc_hash(key, key_len));
   adlb_subscript subscript = { .key = key, .length = (size_t)key_len };
   adlb_code rc = ADLB_Store(id, subscript, ADLB_DATA_TYPE_BLOB,
-            xfer, blob_len, refcounts);
+                            data, data_len, refcounts);
   
   // Handle duplicate key gracefully: it is possible for the same
   //       function to be recomputed, and we need to handle it!

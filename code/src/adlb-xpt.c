@@ -117,8 +117,9 @@ adlb_code ADLB_Xpt_write(const void *key, int key_len, const void *val,
     if (index_add && entry.in_file)
     {
       // Must update entry
-      entry.FILE_LOCATION.val_offset = val_offset;
-      entry.FILE_LOCATION.val_len = val_len;
+      entry.FILE_LOC.file = NULL; // NULL means current file
+      entry.FILE_LOC.val_offset = val_offset;
+      entry.FILE_LOC.val_len = val_len;
     }
   }
 
@@ -150,12 +151,12 @@ adlb_code ADLB_Xpt_lookup(const void *key, int key_len, adlb_binary_data *result
   if (res.in_file)
   {
     // Allocate buffer that caller should free
-    int val_len = res.FILE_LOCATION.val_len;
+    int val_len = res.FILE_LOC.val_len;
     result->data = result->caller_data = malloc((size_t)val_len);
     result->length = val_len;
     CHECK_MSG(result->data != NULL, "Could not allocate buffer");
 
-    rc = xlb_xpt_read_val(res.FILE_LOCATION.file, res.FILE_LOCATION.val_offset,
+    rc = xlb_xpt_read_val(res.FILE_LOC.file, res.FILE_LOC.val_offset,
                   val_len, &xpt_state, result->caller_data);
     ADLB_CHECK(rc);
   }
@@ -293,9 +294,9 @@ static inline adlb_code xpt_reload_rank(const char *filename,
     if (val_len > max_index_val_bytes)
     {
       entry.in_file = true;
-      entry.FILE_LOCATION.file = filename;
-      entry.FILE_LOCATION.val_offset = val_offset;
-      entry.FILE_LOCATION.val_len = val_len;
+      entry.FILE_LOC.file = filename;
+      entry.FILE_LOC.val_offset = val_offset;
+      entry.FILE_LOC.val_len = val_len;
     }
     else
     {
