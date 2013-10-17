@@ -43,13 +43,9 @@ void dump_bin(const void *data, int length)
 void check_retrieve(const char *msg, const void *data, int length,
                     adlb_binary_data data2)
 {
-  if (data2.length != length)
-  {
-    fprintf(stderr, "%s: Retrieved checkpoint data length doesn't match: "
-              "%i v %i\n", msg, data2.length, length);
-    exit(1);
-  }
-  
+  CHECK(data2.length == length, "%s: Retrieved checkpoint data length "
+        "doesn't match: %i v %i\n", msg, data2.length, length);
+
   if (memcmp(data2.data, data, length) != 0)
   {
     fprintf(stderr, "%s: Retrieved checkpoint data doesn't match\n", msg);
@@ -164,7 +160,18 @@ main(int argc, char **argv)
 }
 
 #define TEST1_REPEATS 100
-#define TEST1_VAL_SIZE 128
+#define TEST1_VAL_SIZE1 128
+#define TEST1_VAL_SIZE2 (MAX_INDEX_SIZE * 2)
+
+static const int test1_val_sizes[] = { TEST1_VAL_SIZE1, TEST1_VAL_SIZE2 };
+
+#define TEST1_VAL_SIZE_LEN \
+    (sizeof(test1_val_sizes) / sizeof(test1_val_sizes[0]))
+
+static int test1_val_size(int key)
+{
+  return test1_val_sizes[abs(key) % TEST1_VAL_SIZE_LEN];
+}
 
 void test1(MPI_Comm comm)
 {
@@ -179,12 +186,13 @@ void test1(MPI_Comm comm)
 
   for (int repeat = 0; repeat < TEST1_REPEATS; repeat++)
   {
-    int size = TEST1_VAL_SIZE;
-    char data[size];
-    fill_rand_data(data, size);
-    
     // Create unique key
     int key = my_rank + repeat * comm_size;
+   
+    // Create random data
+    int size = test1_val_size(key);
+    char data[size];
+    fill_rand_data(data, size);
 
     adlb_code ac = ADLB_Xpt_write(&key, (int)sizeof(key), data, size,
                         ADLB_PERSIST, true);
@@ -233,7 +241,6 @@ void test1_reload(MPI_Comm comm, const char *file)
     // Only check own ranks since ADLB servers won't have loaded any
     if (rank == my_rank)
     {
-      fprintf(stderr, "%i %i\n", rstats->valid, TEST1_REPEATS);
       CHECK(rstats->valid == TEST1_REPEATS, "Rank %i should have %i "
            "valid records, but had %i", rank, TEST1_REPEATS, rstats->valid);
     }
@@ -247,11 +254,11 @@ void test1_reload(MPI_Comm comm, const char *file)
     adlb_binary_data data;
     ac = ADLB_Xpt_lookup(&key, (int)sizeof(key), &data);
  
-    CHECK(ac != ADLB_NOTHING, "entry with key %i not found\n", key);
-    assert(ac == ADLB_SUCCESS);
-   
-    CHECK(data.length == TEST1_VAL_SIZE, "Value didn't have expected "
-            "size %i, was %i\n", TEST1_VAL_SIZE, data.length);
+    CHECK(ac != ADLB_NOTHING, "entry with key %i not found", key);
+    CHECK(ac == ADLB_SUCCESS, "different error code for key %i: %i", key, ac);
+    int exp_length = test1_val_size(key);
+    CHECK(data.length == exp_length, "Value didn't have expected "
+            "size %i, was %i\n", exp_length, data.length);
 
     bool ok = check_parity((const char*)data.data, data.length);
     CHECK(ok, "Parity check for key %i failed\n", key);
