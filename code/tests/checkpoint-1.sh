@@ -26,7 +26,7 @@ export PROCS=2
 #TODO: change back
 # export PROCS=4
 
-${TESTS}/run-mpi.zsh ${BIN} CREATE_XPT >& ${OUTPUT}
+${TESTS}/run-mpi.zsh ${BIN} CREATE_XPT &> ${OUTPUT}
 [[ ${?} == 0 ]] || exit 1
 
 grep WARNING ${OUTPUT} && exit 1
@@ -44,7 +44,7 @@ if [ $F1_BYTES -lt 1024 ]; then
   exit 1
 fi
 
-${TESTS}/run-mpi.zsh ${BIN} RELOAD_XPT 2>&1 >> ${OUTPUT}
+${TESTS}/run-mpi.zsh ${BIN} RELOAD_XPT >> ${OUTPUT} 2>&1 
 [[ ${?} == 0 ]] || exit 1
 
 FTMP=./checkpoint-tmp.xpt

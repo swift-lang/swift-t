@@ -25,6 +25,13 @@
 
 #define MAX_INDEX_SIZE 512
 
+#define CHECK(cond, fmt, args...)                                     \
+  { if ((!cond)) {                                                    \
+      fprintf(stderr, "CHECK FAILED: %s %s:%i\n", #cond,              \
+              __FILE__, __LINE__);                                    \
+      fprintf(stderr, fmt "\n", args);                                \
+      exit(1); }}
+
 void dump_bin(const void *data, int length)
 {
   for (int i = 0; i < length; i++)
@@ -194,11 +201,25 @@ void test1_reload(MPI_Comm comm, const char *file)
 
   adlb_code ac;
 
-  // Running on all ranks will do redundant work, but should still be correct.
-  ac = ADLB_Xpt_reload(file);
-  assert(ac == ADLB_SUCCESS);
+  adlb_xpt_load_stats stats;
 
-  // TODO: get relaod report from _reload, check no errors
+  // Running on all ranks will do redundant work, but should still be correct.
+  ac = ADLB_Xpt_reload(file, &stats);
+  CHECK(ac == ADLB_SUCCESS, "Error reloading from %s", file);
+
+  // Check reload report is as expected (all entries present)
+  CHECK(stats.ranks == comm_size, "Expected same number of ranks in "
+        "checkpoint as current run: %i vs %i", stats.ranks, comm_size);
+
+  for (int rank = 0; rank < stats.ranks; rank++)
+  {
+    adlb_xpt_load_rank_stats *rstats = &stats.rank_stats[rank];
+    CHECK(rstats->loaded, "Rank %i should be loaded", rank);
+    CHECK(rstats->invalid == 0, "Rank %i has %i invalid "
+          "records", rank, rstats->invalid);
+    CHECK(rstats->valid == TEST1_REPEATS, "Rank %i should have %i valid "
+          "records, but had %i", rank, TEST1_REPEATS, rstats->valid);
+  }
 
   // Check that all checkpoint entries loaded into memory.
   for (int repeat = 0; repeat < TEST1_REPEATS; repeat++)
@@ -207,30 +228,19 @@ void test1_reload(MPI_Comm comm, const char *file)
     int key = my_rank + repeat * comm_size;
     adlb_binary_data data;
     ac = ADLB_Xpt_lookup(&key, (int)sizeof(key), &data);
-  
-    if (ac == ADLB_NOTHING)
-    {
-      fprintf(stderr, "entry with key %i not found\n", key);
-      exit(1);
-    }
+ 
+    CHECK(ac != ADLB_NOTHING, "entry with key %i not found\n", key);
     assert(ac == ADLB_SUCCESS);
    
-    if (data.length != TEST1_VAL_SIZE)
-    {
-      fprintf(stderr, "Value didn't have expected size %i, was %i\n",
-                      TEST1_VAL_SIZE, data.length);
-      exit(1);
-    }
+    CHECK(data.length == TEST1_VAL_SIZE, "Value didn't have expected "
+            "size %i, was %i\n", TEST1_VAL_SIZE, data.length);
+
     int parity = 0;
     for (int i = 0; i < data.length; i++)
     {
       parity = (parity + (int)((char*)data.data)[i]) % 2;
     }
-    if (parity != 0)
-    {
-      fprintf(stderr, "Parity check for key %i failed\n", key);
-      exit(1);
-    }
+    CHECK(parity == 0, "Parity check for key %i failed\n", key);
 
     ADLB_Free_binary_data(&data);
   }
