@@ -26,7 +26,7 @@
 #define MAX_INDEX_SIZE 512
 
 #define CHECK(cond, fmt, args...)                                     \
-  { if ((!cond)) {                                                    \
+  { if (!(cond)) {                                                    \
       fprintf(stderr, "CHECK FAILED: %s %s:%i\n", #cond,              \
               __FILE__, __LINE__);                                    \
       fprintf(stderr, fmt "\n", args);                                \
@@ -215,10 +215,18 @@ void test1_reload(MPI_Comm comm, const char *file)
   {
     adlb_xpt_load_rank_stats *rstats = &stats.rank_stats[rank];
     CHECK(rstats->loaded, "Rank %i should be loaded", rank);
+
+    fprintf(stderr, "Rank: %i Valid: %i, Invalid: %i\n", rank,
+            rstats->valid, rstats->invalid);
     CHECK(rstats->invalid == 0, "Rank %i has %i invalid "
           "records", rank, rstats->invalid);
-    CHECK(rstats->valid == TEST1_REPEATS, "Rank %i should have %i valid "
-          "records, but had %i", rank, TEST1_REPEATS, rstats->valid);
+    // Only check own ranks since ADLB servers won't have loaded any
+    if (rank == my_rank)
+    {
+      fprintf(stderr, "%i %i\n", rstats->valid, TEST1_REPEATS);
+      CHECK(rstats->valid == TEST1_REPEATS, "Rank %i should have %i "
+           "valid records, but had %i", rank, TEST1_REPEATS, rstats->valid);
+    }
   }
 
   // Check that all checkpoint entries loaded into memory.
