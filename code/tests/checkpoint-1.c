@@ -74,7 +74,17 @@ void fill_rand_data(char *data, int length)
 
     parity = abs(parity + x) % 2;
   }
-  data[length] = (char)parity;
+  data[length - 1] = (char)parity;
+}
+
+bool check_parity(const char *data, int length)
+{
+  int parity = 0;
+  for (int i = 0; i < length; i++)
+  {
+    parity = (parity + (int)data[i]) % 2;
+  }
+  return parity == 0;
 }
 
 void test1(MPI_Comm comm);
@@ -243,12 +253,8 @@ void test1_reload(MPI_Comm comm, const char *file)
     CHECK(data.length == TEST1_VAL_SIZE, "Value didn't have expected "
             "size %i, was %i\n", TEST1_VAL_SIZE, data.length);
 
-    int parity = 0;
-    for (int i = 0; i < data.length; i++)
-    {
-      parity = (parity + (int)((char*)data.data)[i]) % 2;
-    }
-    CHECK(parity == 0, "Parity check for key %i failed\n", key);
+    bool ok = check_parity((const char*)data.data, data.length);
+    CHECK(ok, "Parity check for key %i failed\n", key);
 
     ADLB_Free_binary_data(&data);
   }
