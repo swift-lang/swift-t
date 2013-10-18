@@ -121,6 +121,8 @@ adlb_code xlb_xpt_init(const char *filename, xlb_xpt_state *state)
   {
     rc = xpt_header_write(state);
     ADLB_CHECK(rc);
+    DEBUG("Rank %i wrote checkpoint header: %llu bytes", xlb_comm_rank,
+          (long long unsigned)ftello(state->file));
     state->empty_block = false;
   }
 
