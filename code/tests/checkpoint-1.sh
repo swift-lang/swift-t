@@ -21,7 +21,8 @@ THIS=$0
 BIN=${THIS%.sh}.x
 OUTPUT=${THIS%.sh}.out
 
-export PROCS=4
+#TODO: put back
+export PROCS=2
 
 ${TESTS}/run-mpi.zsh ${BIN} CREATE_XPT &> ${OUTPUT}
 [[ ${?} == 0 ]] || exit 1
