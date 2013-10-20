@@ -587,6 +587,8 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
 
     if (sync != xpt_sync_marker)
     {
+      // TODO: need better way to detect end of file.
+
       // Can't do much if sync marker bad, try to continue
       DEBUG("Sync marker at start of record doesn't match expected: %"PRIx32
             " vs %"PRIx32". Proceeding anyway", sync, xpt_sync_marker);
@@ -730,8 +732,11 @@ static adlb_code seek_file_pos(xlb_xpt_read_state *state, xpt_file_pos pos)
     rc = block_read_move(state, pos.block);
     ADLB_CHECK(rc);
   }
+
   // Then seek within block
   off_t off = ((off_t)pos.block) * state->block_size + pos.block_pos;
+  DEBUG("Seek to block offset %"PRIu32" (file offset %llu)", pos.block_pos,
+        (long long unsigned) off);
   int rc2 = fseeko(state->file, off, SEEK_SET);
   if (rc2 != 0)
   {
@@ -755,7 +760,8 @@ static void xpt_read_resync(xlb_xpt_read_state *state,
 {
   adlb_code rc;
   uint32_t curr;
-
+  
+  DEBUG("Attempting to resync with file");
   // Move to previous marker, then seek forward
   rc = seek_file_pos(state, resync_point);
   if (rc != ADLB_SUCCESS)
