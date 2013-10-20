@@ -108,8 +108,12 @@ adlb_code ADLB_Xpt_write(const void *key, int key_len, const void *val,
     ADLB_CHECK(rc);
 
     if (flush_policy == ADLB_ALWAYS_FLUSH ||
-        persist == ADLB_PERSIST_FLUSH)
+        persist == ADLB_PERSIST_FLUSH || 
+        (index_add && entry.in_file))
     {
+      // Flush if requested.  Also flush if we wrote a checkpoint entry 
+      // to disk so that we bdon't have any references to non-flushed
+      // file data in the index
       rc = xlb_xpt_flush(&xpt_state);
       ADLB_CHECK(rc);
     }

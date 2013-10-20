@@ -368,23 +368,39 @@ adlb_code xlb_xpt_read_val(char *file, off_t val_offset, int val_len,
     uint32_t block_pos = (uint32_t) (val_offset % XLB_XPT_BLOCK_SIZE);
     void *buf_pos = buffer;
     size_t left = (size_t)val_len;
+    DEBUG("Reading val %zu bytes @ offset %llu of current file",
+          left, (long long unsigned) val_offset);
     while (left > 0)
     {
       off_t read_offset = block * XLB_XPT_BLOCK_SIZE + block_pos;
       off_t block_left = XLB_XPT_BLOCK_SIZE - block_pos;
       size_t to_read = block_left < val_len ? block_left : val_len;
 
-      size_t read = pread(state->fd, buf_pos, to_read, read_offset);
-      CHECK_MSG(read == to_read, "Error reading back checkpoint value: "
-                "%d: %s", errno, strerror(errno));
-            
-      left -= to_read;
-      buf_pos += to_read;
+      DEBUG("Read val chunk: %zu bytes @ %llu", to_read, 
+            (long long unsigned)read_offset);
+
+      if (to_read > 0)
+      {
+        size_t read = pread(state->fd, buf_pos, to_read, read_offset);
+        if (read == 0)
+        {
+          ERR_PRINTF("Trying to read checkpoint value that is past end "
+                     "of file: %zu bytes @ offset %llu\n", to_read, 
+                     (long long unsigned)read_offset);
+          return ADLB_ERROR;
+        }
+        CHECK_MSG(read == to_read, "Error reading back checkpoint value: "
+                  "%d: %s", errno, strerror(errno));
+              
+        left -= to_read;
+        buf_pos += to_read;
+      }
 
       if (block_left == to_read)
       {
         // advance to next block
         block = next_block((uint32_t)xlb_comm_size, block);
+        DEBUG("Reading val: move to next block %"PRIu32, block);
         block_pos = 0;
       }
     }
