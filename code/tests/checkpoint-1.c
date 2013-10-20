@@ -22,6 +22,7 @@
 
 #include <adlb.h>
 #include <adlb-xpt.h>
+#include <jenkins-hash.h>
 
 #define MAX_INDEX_SIZE 512
 
@@ -170,7 +171,8 @@ static const int test1_val_sizes[] = { TEST1_VAL_SIZE1, TEST1_VAL_SIZE2 };
 
 static int test1_val_size(int key)
 {
-  return test1_val_sizes[abs(key) % TEST1_VAL_SIZE_LEN];
+  uint32_t hash = bj_hashlittle(&key, sizeof(key), 0);
+  return test1_val_sizes[hash % TEST1_VAL_SIZE_LEN];
 }
 
 void test1(MPI_Comm comm)
