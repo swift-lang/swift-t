@@ -28,12 +28,16 @@
 
 /* 4MB blocks.  TODO: not hardcoded */
 #define XLB_XPT_BLOCK_SIZE (4 * 1024 * 1024)
+#define XLB_XPT_BUFFER_SIZE (128 * 1024)
 
 /* State for checkpoint file being written */
 typedef struct {
-  FILE *file;
+  int fd; // File descriptor for file being written
   uint32_t curr_block; // Number of current block
-  bool empty_block; // Whether current block is empty
+  off_t curr_block_start; // Offset of current block in file
+  uint32_t curr_block_pos; // Position in current block that has been written
+  unsigned char *buffer; // buffer of size XLB_XPT_BUFFER_SIZE
+  size_t buffer_used; // Amount of buffer currently used
 } xlb_xpt_state;
 
 /* Metadata for reading back checkpoint file */
@@ -42,9 +46,12 @@ typedef struct {
   uint32_t block_size; // Block size
   uint32_t ranks;      // Number of ranks
   uint32_t curr_rank;  // Log from current rank being read
-  
+ 
+  // Position in file, must be maintained to be in sync with file object
   uint32_t curr_block;
-  bool started_block; // Whether we started reading the block
+  uint32_t curr_block_pos;
+
+
 } xlb_xpt_read_state;
 
 /* Setup checkpoint file.  This function should be called by all ranks,
