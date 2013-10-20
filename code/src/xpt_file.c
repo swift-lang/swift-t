@@ -95,7 +95,7 @@ adlb_code xlb_xpt_init(const char *filename, xlb_xpt_state *state)
   assert(state != NULL);
   // Open file for reading and writing
   // TODO: if file already exists from previous one, this won't truncate
-  state->fd = open(filename, O_RDWR | O_CREAT);
+  state->fd = open(filename, O_RDWR | O_CREAT, S_IRWXU);
   CHECK_MSG(state->fd != -1, "Error opening file %s for write. "
         "Error code %i. %s", filename, errno, strerror(errno));
 
@@ -488,15 +488,14 @@ adlb_code xlb_xpt_read_select(xlb_xpt_read_state *state, uint32_t rank)
   DEBUG("Select rank %"PRIu32" for reading", rank);
   CHECK_MSG(rank >= 0 && rank < state->ranks, "Invalid rank: %"PRId32, rank);
   state->curr_rank = rank;
-  state->curr_block = first_block(state->curr_rank, state->ranks);
-
-  off_t block_start = ((off_t)state->curr_block) * XLB_XPT_BLOCK_SIZE;
-
-  int rc = fseek(state->file, block_start, SEEK_SET);
-  CHECK_MSG(rc == 0, "Error seeking in checkpoint file");
-
-  // Wait until later to check magic number
-  state->curr_block_pos = 0; 
+  uint32_t rank_block1 = first_block(state->curr_rank, state->ranks);
+  adlb_code rc = block_read_move(state, rank_block1);
+  if (rc != ADLB_SUCCESS)
+  {
+    ERR_PRINTF("Error moving to start of first block %"PRIu32" for rank %i\n",
+                rank_block1, rank);
+    return rc;
+  }
   return ADLB_SUCCESS;
 }
 
@@ -929,6 +928,8 @@ static inline adlb_code blkread(xlb_xpt_read_state *state, void *buf,
                                  size_t length)
 {
   assert(state->file != NULL);
+  assert(state->curr_block_pos >= 0);
+  assert(state->curr_block_pos <= state->block_size);
   while (length > 0)
   {
     size_t block_left = state->block_size - state->curr_block_pos;
@@ -966,6 +967,8 @@ static inline adlb_code blkread(xlb_xpt_read_state *state, void *buf,
 static inline adlb_code blkgetc(xlb_xpt_read_state *state, unsigned char *c)
 {
   assert(state->file != NULL);
+  assert(state->curr_block_pos >= 0);
+  assert(state->curr_block_pos <= state->block_size);
   if (state->curr_block_pos >= state->block_size)
   {
     adlb_code ac = block_read_advance(state);
