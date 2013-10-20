@@ -24,12 +24,15 @@ OUTPUT=${THIS%.sh}.out
 #TODO: put back
 export PROCS=2
 
+F1=./checkpoint-1.xpt
+FTMP=./checkpoint-tmp.xpt
+rm -f $F1 $FTMP # TODO: shouldn't need to remove
+
 ${TESTS}/run-mpi.zsh ${BIN} CREATE_XPT &> ${OUTPUT}
 [[ ${?} == 0 ]] || exit 1
 
 grep WARNING ${OUTPUT} && exit 1
 
-F1=./checkpoint-1.xpt
 if [[ ! -f $F1 ]]; then
   echo "$F1 not created"
   exit 1
@@ -45,7 +48,6 @@ fi
 ${TESTS}/run-mpi.zsh ${BIN} RELOAD_XPT >> ${OUTPUT} 2>&1 
 [[ ${?} == 0 ]] || exit 1
 
-FTMP=./checkpoint-tmp.xpt
 if [[ ! -f $FTMP ]]; then
   echo "$FTMP not created"
   exit 1
