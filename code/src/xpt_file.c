@@ -78,7 +78,8 @@ static inline adlb_code blkread_vint(xlb_xpt_read_state *state,
 
 static inline off_t xpt_file_offset(xlb_xpt_state *state,
                                     bool after_buffered);
-static xpt_file_pos get_file_pos (xlb_xpt_read_state *state);
+static xpt_file_pos xpt_read_pos (const xlb_xpt_read_state *state);
+static off_t xpt_read_offset(const xlb_xpt_read_state *state);
 static adlb_code seek_file_pos(xlb_xpt_read_state *state, xpt_file_pos pos);
 static inline adlb_code flush_buffers(xlb_xpt_state *state);
 
@@ -653,9 +654,8 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
     int rec_len_encb;
     int64_t rec_len64, key_len64;
 
-    xpt_file_pos record_start = get_file_pos(state);
-    off_t rec_offset = ((off_t)state->curr_block) * state->block_size +
-                        state->curr_block_pos;
+    xpt_file_pos record_start = xpt_read_pos(state);
+    off_t rec_offset = xpt_read_offset(state);
 
     // sync marker comes before record
     uint32_t sync = 12345;
@@ -673,7 +673,7 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
     }
     
     // I we resync, it should be from this position after prev sync marker
-    xpt_file_pos resync_pos = get_file_pos(state);
+    xpt_file_pos resync_pos = xpt_read_pos(state);
 
     // Get crc
     rc = blkread_uint32(state, &crc);
@@ -732,6 +732,8 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
       return ADLB_RETRY;
     }
 
+    off_t data_offset = xpt_read_offset(state);
+
     // Load rest of record into caller buffer
     rc = blkread(state, buffer->data, (size_t)rec_len64);
     if (rc != ADLB_SUCCESS)
@@ -787,18 +789,27 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
     int val_rel = key_rel + *key_len;
     *key = buffer->data + key_rel;
     *val = buffer->data + val_rel;
-    *val_offset = rec_offset + (off_t)val_rel;
+    *val_offset = data_offset + (off_t)val_rel;
     
     return ADLB_SUCCESS;
   }
 }
 
-static xpt_file_pos get_file_pos(xlb_xpt_read_state *state)
+static xpt_file_pos xpt_read_pos(const xlb_xpt_read_state *state)
 {
   xpt_file_pos pos;
   pos.block = state->curr_block;
   pos.block_pos = state->curr_block_pos;
   return pos;
+}
+
+/*
+  Calculate the current offset in file being read.
+ */
+static off_t xpt_read_offset(const xlb_xpt_read_state *state)
+{
+  off_t block_off = ((off_t)state->curr_block) * state->block_size;
+  return block_off + state->curr_block_pos;
 }
 
 static adlb_code seek_file_pos(xlb_xpt_read_state *state, xpt_file_pos pos)
