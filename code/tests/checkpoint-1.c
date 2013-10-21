@@ -264,6 +264,7 @@ void test1_reload(MPI_Comm comm, const char *file)
 
     bool ok = check_parity((const char*)data.data, data.length);
     CHECK(ok, "Parity check for key %i failed\n", key);
+    dump_bin(data.data, data.length);
 
     ADLB_Free_binary_data(&data);
   }
