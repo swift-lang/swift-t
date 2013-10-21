@@ -107,6 +107,7 @@ adlb_code xlb_xpt_index_lookup(const void *key, int key_len,
       res_file->file = malloc(filename_len + 1);
       CHECK_MSG(res_file->file != NULL, "Error allocating filename");
       memcpy(res_file->file, pos, filename_len);
+      res_file->file[filename_len] = '\0';
       pos += filename_len;
     }
 

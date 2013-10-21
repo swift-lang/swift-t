@@ -50,8 +50,6 @@ typedef struct {
   // Position in file, must be maintained to be in sync with file object
   uint32_t curr_block;
   uint32_t curr_block_pos;
-
-
 } xlb_xpt_read_state;
 
 /* Setup checkpoint file.  This function should be called by all ranks,
@@ -79,8 +77,9 @@ adlb_code xlb_xpt_read_val(char *file, off_t val_offset, int val_len,
 adlb_code xlb_xpt_flush(xlb_xpt_state *state);
 
 /* Open existing checkpoint file.  Defaults to reading checkpoints
-   from rank 0. This can be changed with a call to xlb_xpt_read_select */
-adlb_code xlb_xpt_open_read(const char *filename, xlb_xpt_read_state *state);
+   from rank 0. This can be changed with a call to xlb_xpt_read_select.
+ */
+adlb_code xlb_xpt_open_read(xlb_xpt_read_state *state, const char *filename);
 
 /* Close checkpoint read file */
 adlb_code xlb_xpt_close_read(xlb_xpt_read_state *state);

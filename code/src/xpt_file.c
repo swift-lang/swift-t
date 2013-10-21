@@ -62,9 +62,12 @@ static inline adlb_code bufwrite(xlb_xpt_state *state,
                   const void *data, size_t length);
 static inline adlb_code bufwrite_uint32(xlb_xpt_state *state,
                                      uint32_t val);
+static inline adlb_code checked_fread(FILE *file, void *buf, size_t length);
 static inline adlb_code blkgetc(xlb_xpt_read_state *state, unsigned char *c);
 static inline adlb_code blkread(xlb_xpt_read_state *state, void *buf,
                                  size_t length);
+static inline uint32_t parse_uint32(unsigned char buf[4]);
+static inline adlb_code checked_fread_uint32(FILE *file, uint32_t *data);
 static inline adlb_code blkread_uint32(xlb_xpt_read_state *state,
                                        uint32_t *data);
 static inline adlb_code blkread_vint(xlb_xpt_read_state *state,
@@ -78,13 +81,14 @@ static adlb_code seek_file_pos(xlb_xpt_read_state *state, xpt_file_pos pos);
 static inline adlb_code flush_buffers(xlb_xpt_state *state);
 
 static inline bool is_xpt_leader(void);
-static inline adlb_code xpt_header_read(bool read_hdr,
-            xlb_xpt_read_state *state, const char *filename);
+static inline adlb_code xpt_header_read(xlb_xpt_read_state *state,
+                                        const char *filename);
 static inline adlb_code xpt_header_write(xlb_xpt_state *state);
 static inline bool check_crc(xlb_xpt_read_state *state, int rec_len,
                              uint32_t crc, adlb_buffer *buffer);
 static void xpt_read_resync(xlb_xpt_read_state *state,
                             xpt_file_pos resync_point);
+static inline adlb_code seek_read(xlb_xpt_read_state *state, off_t offset);
 static inline adlb_code block_read_advance(xlb_xpt_read_state *state);
 static inline adlb_code block_read_move(xlb_xpt_read_state *state,
                         uint32_t new_block);
@@ -355,14 +359,13 @@ adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,
 adlb_code xlb_xpt_read_val(char *file, off_t val_offset, int val_len,
                            xlb_xpt_state *state, void *buffer)
 {
+  // TODO: it would be better to reread entire record to make sure
+  //       we don't get a corrupted record.
   if (file == NULL)
   {
     // checkpoint is in file currently being written.
     assert(is_init(state));
     assert(val_len >= 0);
-
-    // TODO: it would be better to reread entire record to make sure
-    //       we don't get a corrupted record.
     
     uint32_t block = (uint32_t) (val_offset / XLB_XPT_BLOCK_SIZE);
     uint32_t block_pos = (uint32_t) (val_offset % XLB_XPT_BLOCK_SIZE);
@@ -409,12 +412,38 @@ adlb_code xlb_xpt_read_val(char *file, off_t val_offset, int val_len,
   }
   else
   {
-    ERR_PRINTF("DO NOT SUPPORT LOADING FROM OLD FILE %s YET\n", file);
-    // TODO: open file for read
-    // TODO: read_blocked primitive
-    // fseek(fileptr, val_offset);
-    // adlb_code ac = read_blocked(fileptr, buffer, val_len);
-    return ADLB_ERROR;
+    // TODO: cache file handle?
+    adlb_code ac;
+    xlb_xpt_read_state rstate;
+    DEBUG("Reading value: %i bytes at offset %llu in file %s", val_len,
+          (long long unsigned)val_offset, file);
+
+    ac = xlb_xpt_open_read(&rstate, file);
+    ADLB_CHECK(ac);
+
+    // NOTE: if we hit error, make sure we close file before returning
+    ac = seek_read(&rstate, val_offset);
+
+    if (ac == ADLB_SUCCESS)
+    {
+      ac = blkread(&rstate, buffer, val_len);
+      if (ac != ADLB_SUCCESS)
+      {
+        ERR_PRINTF("Error reading %i bytes at offset %llu in file %s\n",
+              val_len, (long long unsigned)val_offset, file);
+      }
+    }
+    else
+    {
+      ERR_PRINTF("Error seeking to %llu in file %s\n",
+            (long long unsigned)val_offset, file);
+    }
+   
+    // Close before checking if read was successful
+    adlb_code ac2 = xlb_xpt_close_read(&rstate);
+    ADLB_CHECK(ac2);
+
+    return ac;
   }
 }
 
@@ -436,13 +465,13 @@ adlb_code xlb_xpt_flush(xlb_xpt_state *state)
 /*
   Open a checkpoint file for reading.
  */
-adlb_code xlb_xpt_open_read(const char *filename, xlb_xpt_read_state *state)
+adlb_code xlb_xpt_open_read(xlb_xpt_read_state *state, const char *filename)
 {
   state->file = fopen(filename, "rb");
   CHECK_MSG(state->file != NULL, "Could not open %s for read", filename);
 
   state->curr_rank = 0;
-  state->curr_block = first_block(state->curr_rank, state->ranks);
+  state->curr_block = 0;
   state->curr_block_pos = 0;
 
   int magic_num = fgetc(state->file);
@@ -451,8 +480,9 @@ adlb_code xlb_xpt_open_read(const char *filename, xlb_xpt_read_state *state)
         " checkpoint", magic_num, filename);
   state->curr_block_pos++;
 
-  adlb_code rc = xpt_header_read(true, state, filename);
+  adlb_code rc = xpt_header_read(state, filename);
   ADLB_CHECK(rc)
+  
   DEBUG("Opened file %s block size %i ranks %i", filename, state->block_size,
           state->ranks);
   return ADLB_SUCCESS;
@@ -463,29 +493,25 @@ adlb_code xlb_xpt_open_read(const char *filename, xlb_xpt_read_state *state)
   file (seek to start, then check magic number before calling this).
   read_hdr: if true, read values and check.  If false, just move past header 
  */
-static inline adlb_code xpt_header_read(bool read_hdr,
-            xlb_xpt_read_state *state, const char *filename)
+static inline adlb_code xpt_header_read(xlb_xpt_read_state *state,
+                                        const char *filename)
 {
-  uint32_t block_size, ranks;
-  // TODO: verify header checksum?
+  /* 
+   * Use fread instead of blkread since blkread assumes that
+   * block_size, etc. parameters are initialized. THe header
+   * should all be in first block of file.
+   */
   adlb_code rc;
-  rc = blkread_uint32(state, &block_size);
+  rc = checked_fread_uint32(state->file, &state->block_size);
   CHECK_MSG(rc == ADLB_SUCCESS, "Error reading header");
-  rc = blkread_uint32(state, &ranks);
+  rc = checked_fread_uint32(state->file, &state->ranks);
   CHECK_MSG(rc == ADLB_SUCCESS, "Error reading header");
-  if (read_hdr)
-  {
-    state->block_size = block_size;
-    state->ranks = ranks;
-    CHECK_MSG(state->block_size > 0, "Block size cannot be zero in file %s",
-              filename);
-    CHECK_MSG(state->ranks > 0, "Ranks cannot be zero in file %s",
-              filename);
-  }
-  else
-  {
-    DEBUG("Skipped header for rank %i", state->curr_rank);
-  }
+
+  CHECK_MSG(state->block_size > 0, "Block size cannot be zero in file %s",
+            filename);
+  CHECK_MSG(state->ranks > 0, "Ranks cannot be zero in file %s",
+            filename);
+  // TODO: header checksum?
   return ADLB_SUCCESS;
 }
 
@@ -506,7 +532,12 @@ adlb_code xlb_xpt_read_select(xlb_xpt_read_state *state, uint32_t rank)
   state->curr_rank = rank;
   uint32_t rank_block1 = first_block(state->curr_rank, state->ranks);
   adlb_code rc = block_read_move(state, rank_block1);
-  if (rc != ADLB_SUCCESS)
+  if (rc == ADLB_DONE)
+  {
+    DEBUG("No entries for rank %i\n", rank);
+    return rc;
+  }
+  else if (rc != ADLB_SUCCESS)
   {
     ERR_PRINTF("Error moving to start of first block %"PRIu32" for rank %i\n",
                 rank_block1, rank);
@@ -532,11 +563,15 @@ static inline adlb_code block_read_advance(xlb_xpt_read_state *state)
   return block_read_move(state, new_block);
 }
 
+/*
+  Move to start of new block, checking magic number to make sure it is
+  filled.  Return ADLB_DONE if we hit end of checkpoints for current rank.
+ */
 static inline adlb_code block_read_move(xlb_xpt_read_state *state,
                         uint32_t new_block)
 {
-  DEBUG("Moving from block %i to block %i for rank %i/%i", state->curr_block,
-        new_block, state->curr_rank, state->ranks);
+  DEBUG("Moving from block %i to block %i for rank %i (%i total)",
+        state->curr_block, new_block, state->curr_rank, state->ranks);
   state->curr_block = new_block;
   state->curr_block_pos = 0;
         
@@ -569,11 +604,36 @@ static inline adlb_code block_read_move(xlb_xpt_read_state *state,
   if (state->curr_block == 0)
   {
     // Move past file header
-    adlb_code rc = xpt_header_read(false, state, NULL);
+    adlb_code rc = xpt_header_read(state, NULL);
     ADLB_CHECK(rc);
   }
   return ADLB_SUCCESS;
 
+}
+
+/*
+  Seek the read pointer to a particular point in the file
+ */
+static inline adlb_code seek_read(xlb_xpt_read_state *state, off_t offset)
+{
+  assert(state->file != NULL);
+  int rc = fseek(state->file, offset, SEEK_SET);
+  if (rc != 0)
+  {
+    if (feof(state->file))
+    {
+      return ADLB_DONE;
+    }
+    else
+    {
+      ERR_PRINTF("Error seeking to offset %llu in checkpoint file\n",
+                     (long long unsigned)offset);
+      return ADLB_ERROR;
+    }
+  }
+  state->curr_block = (uint32_t)(offset / state->block_size);
+  state->curr_block_pos = (uint32_t)(offset % state->block_size);
+  return ADLB_SUCCESS;
 }
 
 adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
@@ -596,11 +656,12 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
                         state->curr_block_pos;
 
     // sync marker comes before record
-    uint32_t sync;
+    uint32_t sync = 12345;
     rc = blkread_uint32(state, &sync);
     if (rc != ADLB_SUCCESS)
       return rc;
-
+    
+    DEBUG("%"PRIu32, sync);
     if (sync != xpt_sync_marker)
     {
       // TODO: need better way to detect end of file.
@@ -946,18 +1007,38 @@ static inline off_t xpt_file_offset(xlb_xpt_state *state,
   }
 }
 
+static inline adlb_code checked_fread(FILE *file, void *buf, size_t length)
+{
+  assert(file != NULL);
+  size_t frrc = fread(buf, 1, length, file);
+  
+  if (frrc == length)
+    return ADLB_SUCCESS;
+ 
+ if (feof(file))
+    return ADLB_DONE;
+
+  ERR_PRINTF("Error reading from checkpoint file: %i\n", ferror(file));
+  return ADLB_ERROR;
+}
+
+/*
+  Read data that may be split across non-contiguous blocks in file.
+ */
 static inline adlb_code blkread(xlb_xpt_read_state *state, void *buf,
                                  size_t length)
 {
   assert(state->file != NULL);
   assert(state->curr_block_pos >= 0);
   assert(state->curr_block_pos <= state->block_size);
+  
+  adlb_code ac;
   while (length > 0)
   {
     size_t block_left = state->block_size - state->curr_block_pos;
     if (block_left <= 0)
     {
-      adlb_code ac = block_read_advance(state);
+      ac = block_read_advance(state);
       if (ac != ADLB_SUCCESS)
         return ac;
       block_left = state->block_size - state->curr_block_pos;
@@ -965,19 +1046,9 @@ static inline adlb_code blkread(xlb_xpt_read_state *state, void *buf,
     }
 
     size_t read_length = block_left < length ? block_left : length;
-    size_t frrc = fread(buf, 1, read_length, state->file);
-    
-    if (frrc != read_length)
-    {
-      if (feof(state->file))
-        return ADLB_DONE;
-      else
-      {
-        printf("Error reading from checkpoint file: %i\n",
-              ferror((state)->file));
-        return ADLB_ERROR;
-      }
-    }
+    ac = checked_fread(state->file, buf, read_length);
+    if (ac != ADLB_SUCCESS)
+      return ac;
 
     state->curr_block_pos += read_length;
     length -= read_length;
@@ -1016,19 +1087,37 @@ static inline adlb_code blkgetc(xlb_xpt_read_state *state, unsigned char *c)
   return ADLB_SUCCESS;
 }
 
+static inline uint32_t parse_uint32(unsigned char buf[4])
+{
+  return (((uint32_t)buf[0]) << 24) +
+            (((uint32_t)buf[1]) << 16) +
+            (((uint32_t)buf[2]) << 8) +
+            (uint32_t)buf[3];
+}
+
+static inline adlb_code checked_fread_uint32(FILE *file, uint32_t *data)
+{
+  unsigned char buf[sizeof(uint32_t)];
+  adlb_code rc = checked_fread(file, buf, sizeof(buf));
+
+  if (rc != ADLB_SUCCESS)
+    return rc;
+
+  *data = parse_uint32(buf);
+  return ADLB_SUCCESS;
+}
+
 static inline adlb_code blkread_uint32(xlb_xpt_read_state *state,
                                        uint32_t *data)
 {
-  unsigned char buf[4];
+  unsigned char buf[sizeof(uint32_t)];
   adlb_code rc = blkread(state, buf, sizeof(buf));
 
   if (rc != ADLB_SUCCESS)
     return rc;
 
-  *data = (((uint32_t)buf[0]) << 24) +
-          (((uint32_t)buf[1]) << 16) +
-          (((uint32_t)buf[2]) << 8) +
-          (uint32_t)buf[3];
+  *data = parse_uint32(buf);
+  printf("%"PRIu32"\n", *data);
   return ADLB_SUCCESS;
 }
 

@@ -184,7 +184,7 @@ adlb_code ADLB_Xpt_reload(const char *filename, adlb_xpt_load_stats *stats)
   xlb_xpt_read_state read_state;
   adlb_buffer buffer = { .data = NULL };
 
-  rc = xlb_xpt_open_read(filename, &read_state);
+  rc = xlb_xpt_open_read(&read_state, filename);
   if (rc != ADLB_SUCCESS)
     goto cleanup_exit;
 
