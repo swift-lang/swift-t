@@ -35,10 +35,14 @@
 
 void dump_bin(const void *data, int length)
 {
+  char buf[length*2+2];
   for (int i = 0; i < length; i++)
   {
-    fprintf(stderr, "%02x", (int)((unsigned char*)data)[i]);
+    sprintf(&buf[2*i], "%02x", (int)((unsigned char*)data)[i]);
   }
+  buf[length*2] = '\n';
+  buf[length*2+1] = '\0';
+  fputs(buf, stderr);
 }
 
 void check_retrieve(const char *msg, const void *data, int length,
@@ -196,6 +200,9 @@ void test1(MPI_Comm comm)
     char data[size];
     fill_rand_data(data, size);
 
+    fprintf(stderr, "entry %i: ", key);
+    dump_bin(data, size);
+
     adlb_code ac = ADLB_Xpt_write(&key, (int)sizeof(key), data, size,
                         ADLB_PERSIST, true);
     assert(ac == ADLB_SUCCESS);
@@ -263,8 +270,12 @@ void test1_reload(MPI_Comm comm, const char *file)
             "size %i, was %i\n", exp_length, data.length);
 
     bool ok = check_parity((const char*)data.data, data.length);
+    if (!ok)
+    {
+      fprintf(stderr, "entry %i: ", key);
+      dump_bin(data.data, data.length);
+    }
     CHECK(ok, "Parity check for key %i failed\n", key);
-    dump_bin(data.data, data.length);
 
     ADLB_Free_binary_data(&data);
   }
