@@ -661,7 +661,6 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
     if (rc != ADLB_SUCCESS)
       return rc;
     
-    DEBUG("%"PRIu32, sync);
     if (sync != xpt_sync_marker)
     {
       // TODO: need better way to detect end of file.
@@ -1117,7 +1116,6 @@ static inline adlb_code blkread_uint32(xlb_xpt_read_state *state,
     return rc;
 
   *data = parse_uint32(buf);
-  printf("%"PRIu32"\n", *data);
   return ADLB_SUCCESS;
 }
 
