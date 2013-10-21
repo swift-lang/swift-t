@@ -21,8 +21,7 @@ THIS=$0
 BIN=${THIS%.sh}.x
 OUTPUT=${THIS%.sh}.out
 
-#TODO: put back
-export PROCS=2
+export PROCS=4
 
 F1=./checkpoint-1.xpt
 FTMP=./checkpoint-tmp.xpt
