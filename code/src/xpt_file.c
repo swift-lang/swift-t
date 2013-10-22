@@ -227,6 +227,8 @@ static inline adlb_code flush_buffers(xlb_xpt_state *state)
 
     if (write_size > 0)
     {
+      DEBUG("pwrite %zu bytes @ %llu", write_size,
+            (long long unsigned)curr_pos);
       ssize_t pwc = pwrite(state->fd, buf_pos, write_size, curr_pos);
       CHECK_MSG(pwc == write_size, "Error writing to checkpoint file at "
               "offset %llu", (long long unsigned)curr_pos);
@@ -407,6 +409,7 @@ static adlb_code write_entry(xlb_xpt_state *state,
     {
       // Return offset of value in file if needed
       *val_offset = xpt_file_offset(state, true);
+      TRACE("val_offset=%llu", (long long unsigned)*val_offset);
     }
 
     rc = bufwrite(state, val, val_len);
@@ -430,14 +433,15 @@ adlb_code xlb_xpt_read_val(char *file, off_t val_offset, int val_len,
     uint32_t block = (uint32_t) (val_offset / XLB_XPT_BLOCK_SIZE);
     uint32_t block_pos = (uint32_t) (val_offset % XLB_XPT_BLOCK_SIZE);
     void *buf_pos = buffer;
-    size_t left = (size_t)val_len;
+    size_t val_remaining = (size_t)val_len;
     DEBUG("Reading val %zu bytes @ offset %llu of current file",
-          left, (long long unsigned) val_offset);
-    while (left > 0)
+          val_remaining , (long long unsigned) val_offset);
+    while (val_remaining > 0)
     {
-      off_t read_offset = block * XLB_XPT_BLOCK_SIZE + block_pos;
+      off_t read_offset = ((off_t)block) * XLB_XPT_BLOCK_SIZE + block_pos;
       off_t block_left = XLB_XPT_BLOCK_SIZE - block_pos;
-      size_t to_read = block_left < val_len ? block_left : val_len;
+      size_t to_read = block_left < val_remaining ?
+                       block_left : val_remaining ;
 
       DEBUG("Read val chunk: %zu bytes @ %llu", to_read, 
             (long long unsigned)read_offset);
@@ -450,12 +454,12 @@ adlb_code xlb_xpt_read_val(char *file, off_t val_offset, int val_len,
         if (read < to_read)
         {
           ERR_PRINTF("Trying to read checkpoint value that is past end "
-                     "of file: %zu bytes @ offset %llu\n", to_read, 
-                     (long long unsigned)read_offset);
+               "of file: %zu bytes @ offset %llu, only could read %zu\n",
+                to_read, (long long unsigned)read_offset, read);
           return ADLB_ERROR;
         }
               
-        left -= to_read;
+        val_remaining -= to_read;
         buf_pos += to_read;
       }
 
@@ -464,7 +468,7 @@ adlb_code xlb_xpt_read_val(char *file, off_t val_offset, int val_len,
         // advance to next block
         block = next_block((uint32_t)xlb_comm_size, block);
         DEBUG("Reading val: move to next block %"PRIu32, block);
-        block_pos = 0;
+        block_pos = 1; // Skip magic number
       }
     }
 
@@ -731,7 +735,6 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
       DEBUG("Sync marker at start of record doesn't match expected: %"PRIx32
             " vs %"PRIx32". Proceeding anyway", sync, xpt_sync_marker);
     }
-    
 
     // Get crc
     rc = blkread_uint32(state, &crc);
@@ -1087,22 +1090,16 @@ static inline off_t xpt_file_offset(xlb_xpt_state *state,
  */
 static xpt_file_pos file_pos_add(xpt_file_pos pos, uint32_t add)
 {
-  while (add > 0)
+  assert(pos.block_pos < XLB_XPT_BLOCK_SIZE);
+  while (pos.block_pos + add >= XLB_XPT_BLOCK_SIZE)
   {
-    // Move to next blocks
-    uint32_t block_left = XLB_XPT_BLOCK_SIZE - pos.block_pos;
-    uint32_t advance = block_left < add ? block_left : add;
-    if (advance <= block_left)
-    {
-      pos.block_pos += advance;
-    }
-    else
-    {
-      pos.block = next_block((uint32_t)xlb_comm_size, pos.block);
-      pos.block_pos = 2;
-    }
-    add -= advance;
+    // Move to next block
+    pos.block = next_block((uint32_t)xlb_comm_size, pos.block);
+    pos.block_pos = 0;
+    size_t block_left = XLB_XPT_BLOCK_SIZE - pos.block_pos;
+    add -= block_left;
   }
+  pos.block_pos += add;
   return pos;
 }
 
