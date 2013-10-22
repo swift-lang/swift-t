@@ -214,6 +214,8 @@ static inline adlb_code flush_buffers(xlb_xpt_state *state)
   assert(is_init(state));
   assert(state->buffer_used <= XLB_XPT_BUFFER_SIZE);
   assert(state->curr_block_pos < XLB_XPT_BLOCK_SIZE);
+  DEBUG("Flushing buffers: %zu bytes at file offset %llu", state->buffer_used,
+          (long long unsigned)xpt_file_offset(state, false));
 
   const unsigned char *buf_pos = state->buffer;
   size_t buf_left = state->buffer_used;
@@ -443,15 +445,15 @@ adlb_code xlb_xpt_read_val(char *file, off_t val_offset, int val_len,
       if (to_read > 0)
       {
         size_t read = pread(state->fd, buf_pos, to_read, read_offset);
-        if (read == 0)
+        CHECK_MSG(read >= 0, "Error reading back checkpoint value: "
+                  "%d: %s", errno, strerror(errno));
+        if (read < to_read)
         {
           ERR_PRINTF("Trying to read checkpoint value that is past end "
                      "of file: %zu bytes @ offset %llu\n", to_read, 
                      (long long unsigned)read_offset);
           return ADLB_ERROR;
         }
-        CHECK_MSG(read == to_read, "Error reading back checkpoint value: "
-                  "%d: %s", errno, strerror(errno));
               
         left -= to_read;
         buf_pos += to_read;
@@ -1006,6 +1008,9 @@ static inline adlb_code bufwrite(xlb_xpt_state *state,
   while (length > 0)
   {
     size_t buffer_left = XLB_XPT_BUFFER_SIZE - state->buffer_used;
+    DEBUG("Buffer size: %i, buffer used: %zu buffer left: %zu",
+          XLB_XPT_BUFFER_SIZE, state->buffer_used, buffer_left);
+
     if (buffer_left == 0)
     {
       // Make space
@@ -1025,24 +1030,26 @@ static inline adlb_code bufwrite(xlb_xpt_state *state,
       // Only append rest of block
       write_size = XLB_XPT_BLOCK_SIZE - state->curr_block_pos - state->buffer_used;
     }
-
+    
+    TRACE("Append %zu bytes to write buffer (%zu already used)", write_size,
+          state->buffer_used);
     memcpy(state->buffer + state->buffer_used, data, write_size);
-
-    data += write_size;
-    length -= write_size;
+    
+    // Update buffer size before calling flush_buffers
+    state->buffer_used += write_size;
 
     if (write_size == buffer_left)
     {
       adlb_code ac = flush_buffers(state);
       ADLB_CHECK(ac);
     }
-    else
+    
+    data += write_size;
+    length -= write_size;
+    
+    if (append_magic_num)
     {
-      state->buffer_used += write_size;
-      if (append_magic_num)
-      {
-        state->buffer[state->buffer_used++] = xpt_magic_num;
-      }
+      state->buffer[state->buffer_used++] = xpt_magic_num;
     }
   }
   return ADLB_SUCCESS;
