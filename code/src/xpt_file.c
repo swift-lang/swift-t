@@ -269,8 +269,7 @@ static inline adlb_code block_move(uint32_t block,
 {
   assert(is_init(state));
 
-  DEBUG("Rank %i moving to start of block %i", xlb_comm_rank,
-        state->curr_block);
+  DEBUG("Rank %i moving to start of block %i", xlb_comm_rank, block);
   state->curr_block = block;
   state->curr_block_start = ((off_t)block) * XLB_XPT_BLOCK_SIZE;
   state->curr_block_pos = 0;
