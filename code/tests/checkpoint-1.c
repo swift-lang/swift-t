@@ -202,8 +202,11 @@ void test1(MPI_Comm comm)
     char data[size];
     fill_rand_data(data, size);
 
+    /*
+    Uncomment to dump data for debugging
     fprintf(stderr, "entry %i: ", key);
     dump_bin(data, size);
+    */
 
     adlb_code ac = ADLB_Xpt_write(&key, (int)sizeof(key), data, size,
                         ADLB_PERSIST, true);
