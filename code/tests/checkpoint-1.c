@@ -24,7 +24,7 @@
 #include <adlb-xpt.h>
 #include <jenkins-hash.h>
 
-#define MAX_INDEX_SIZE 512
+#define MAX_INDEX_SIZE (64 * 1024)
 
 #define CHECK(cond, fmt, args...)                                     \
   { if (!(cond)) {                                                    \
@@ -164,7 +164,9 @@ main(int argc, char **argv)
   return 0;
 }
 
-#define TEST1_REPEATS 100
+
+// Enough repeats to have several blocks per rank
+#define TEST1_REPEATS 1000
 #define TEST1_VAL_SIZE1 128
 #define TEST1_VAL_SIZE2 (MAX_INDEX_SIZE * 2)
 
