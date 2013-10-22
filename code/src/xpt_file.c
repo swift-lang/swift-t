@@ -39,6 +39,12 @@ static const unsigned char xpt_magic_num = 0x42;
 // Sync marker to put at start of records
 static const uint32_t xpt_sync_marker = 0x5F1C0B73;
 
+/*
+ *Length of end-of-file marker record:
+ * Sync marker, CRC marker, zero record length
+ */
+#define EOF_REC_BYTES (2*sizeof(uint32_t) + vint_bytes(0))
+
 typedef struct
 {
   uint32_t block;
@@ -73,12 +79,15 @@ static inline adlb_code checked_fread_uint32(xlb_xpt_read_state *state,
 static inline adlb_code blkread_uint32(xlb_xpt_read_state *state,
                                        uint32_t *data);
 static inline adlb_code blkread_vint(xlb_xpt_read_state *state,
-                       int64_t *data, int *consumed);
+                int64_t *data, unsigned char *encoded, int *consumed);
 
 
+static xpt_file_pos file_pos_add(xpt_file_pos pos, uint32_t add);
+static xpt_file_pos xpt_get_file_pos(xlb_xpt_state *state,
+                                    bool after_buffered);
 static inline off_t xpt_file_offset(xlb_xpt_state *state,
                                     bool after_buffered);
-static xpt_file_pos xpt_read_pos (const xlb_xpt_read_state *state);
+static xpt_file_pos xpt_read_pos(const xlb_xpt_read_state *state);
 static off_t xpt_read_offset(const xlb_xpt_read_state *state);
 static adlb_code seek_file_pos(xlb_xpt_read_state *state, xpt_file_pos pos);
 static inline adlb_code flush_buffers(xlb_xpt_state *state);
@@ -87,6 +96,10 @@ static inline bool is_xpt_leader(void);
 static inline adlb_code xpt_header_read(xlb_xpt_read_state *state,
                                         const char *filename);
 static inline adlb_code xpt_header_write(xlb_xpt_state *state);
+static adlb_code write_entry(xlb_xpt_state *state,
+    int64_t rec_len, const void *key, int key_len,
+    const void *key_len_enc, int key_len_encb,
+    const void *val, int val_len, off_t *val_offset);
 static inline bool check_crc(xlb_xpt_read_state *state, int rec_len,
                              uint32_t crc, adlb_buffer *buffer);
 static void xpt_read_resync(xlb_xpt_read_state *state,
@@ -132,6 +145,24 @@ static inline bool is_init(xlb_xpt_state *state)
 adlb_code xlb_xpt_close(xlb_xpt_state *state)
 {
   assert(is_init(state));
+  /* 
+   * Need to mark end of file.  Several cases must be considered to
+   * allow reader to correctly distinguish end of this rank's checkpoints
+   * vs. file corruption.
+   * - If we are at the start of an empty block -> do nothing, block is empty
+   * - If we are in middle of block -> write special zero-length record
+   * - If we are at the end of a block, with not enough space for
+   *    the zero length record -> do nothing.  Don't start new block
+   */
+  xpt_file_pos pos = xpt_get_file_pos(state, true);
+  assert(pos.block_pos <= XLB_XPT_BLOCK_SIZE);
+  if (pos.block_pos > 0 &&
+    (XLB_XPT_BLOCK_SIZE - pos.block_pos) >= EOF_REC_BYTES)
+  {
+    // Write zero length record as marker
+    write_entry(state, 0, NULL, 0, NULL, 0, NULL, 0, NULL);
+  }
+
   adlb_code code = xlb_xpt_flush(state);
   ADLB_CHECK(code);
 
@@ -303,33 +334,55 @@ adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,
   assert(key_len >= 0);
   assert(val_len >= 0);
   
-  adlb_code rc;
-
-  // Buffers for encoded vint values
+  // Buffer for encoded vint
   Byte key_len_enc[VINT_MAX_BYTES];
-  Byte rec_len_enc[VINT_MAX_BYTES];
-  // Length in bytes of encoded vint values
-  uInt key_len_encb, rec_len_encb;
+  // Length in bytes of encoded vint
+  uInt key_len_encb;
 
   // encode key_len using variable-length int format
   key_len_encb = (uInt)vint_encode((int64_t)key_len, key_len_enc);
 
   // Record length w/o CRC or record length
   int64_t rec_len = (int64_t)key_len_encb + key_len + val_len;
+  return write_entry(state, rec_len, key, key_len, key_len_enc,
+      key_len_encb, val, val_len, val_offset);
+}
+
+/*
+  Internal function to actually write entry to file.
+  rec_len: if null, write "empty" entry as end of file marker
+ */
+static adlb_code write_entry(xlb_xpt_state *state,
+    int64_t rec_len, const void *key, int key_len,
+    const void *key_len_enc, int key_len_encb,
+    const void *val, int val_len, off_t *val_offset)
+{
+  assert(rec_len >= 0);
+  // Buffer for encoded vint
+  Byte rec_len_enc[VINT_MAX_BYTES];
+  // Length in bytes of encoded vint
+  uInt rec_len_encb;
+
   rec_len_encb = (uInt)vint_encode(rec_len, rec_len_enc);
+
+  bool empty_record = (rec_len == 0);
 
   // Calculate CRC from components
   uLong crc = crc32(0L, Z_NULL, 0);
   crc = crc32(crc, rec_len_enc, rec_len_encb);
-  crc = crc32(crc, key_len_enc, key_len_encb);
-  crc = crc32(crc, key, (uInt)key_len);
-  crc = crc32(crc, val, (uInt)val_len);
+  if (!empty_record)
+  {
+    crc = crc32(crc, key_len_enc, key_len_encb);
+    crc = crc32(crc, key, (uInt)key_len);
+    crc = crc32(crc, val, (uInt)val_len);
+  }
 
   TRACE("CRC: %lx", crc);
 
   DEBUG("Writing checkpoint entry at offset %llu", (long long unsigned)
           xpt_file_offset(state, true)); 
-  
+
+  adlb_code rc;
   // Write out all data in sequence
   // First write sync marker
   rc = bufwrite_uint32(state, xpt_sync_marker);
@@ -341,20 +394,23 @@ adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,
   rc = bufwrite(state, rec_len_enc, rec_len_encb);
   ADLB_CHECK(rc);
 
-  rc = bufwrite(state, key_len_enc, key_len_encb);
-  ADLB_CHECK(rc);
-
-  rc = bufwrite(state, key, key_len);
-  ADLB_CHECK(rc);
-
-  if (val_offset != NULL)
+  if (!empty_record)
   {
-    // Return offset of value in file if needed
-    *val_offset = xpt_file_offset(state, true);
-  }
+    rc = bufwrite(state, key_len_enc, key_len_encb);
+    ADLB_CHECK(rc);
 
-  rc = bufwrite(state, val, val_len);
-  ADLB_CHECK(rc);
+    rc = bufwrite(state, key, key_len);
+    ADLB_CHECK(rc);
+
+    if (val_offset != NULL)
+    {
+      // Return offset of value in file if needed
+      *val_offset = xpt_file_offset(state, true);
+    }
+
+    rc = bufwrite(state, val, val_len);
+    ADLB_CHECK(rc);
+  }
 
   return ADLB_SUCCESS;
 }
@@ -650,30 +706,31 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
     assert(buffer->data != NULL);
 
     uint32_t crc;
+    uLong crc_calc;
+
     // Length in bytes of encoded vint values
     int rec_len_encb;
     int64_t rec_len64, key_len64;
 
     xpt_file_pos record_start = xpt_read_pos(state);
     off_t rec_offset = xpt_read_offset(state);
+    
+    // If we resync, it should be 1 bytes offset from prev sync marker
+    xpt_file_pos resync_pos = file_pos_add(xpt_read_pos(state), 1);
 
     // sync marker comes before record
-    uint32_t sync = 12345;
+    uint32_t sync;
     rc = blkread_uint32(state, &sync);
     if (rc != ADLB_SUCCESS)
       return rc;
     
     if (sync != xpt_sync_marker)
     {
-      // TODO: need better way to detect end of file.
-
       // Can't do much if sync marker bad, try to continue
       DEBUG("Sync marker at start of record doesn't match expected: %"PRIx32
             " vs %"PRIx32". Proceeding anyway", sync, xpt_sync_marker);
     }
     
-    // I we resync, it should be from this position after prev sync marker
-    xpt_file_pos resync_pos = xpt_read_pos(state);
 
     // Get crc
     rc = blkread_uint32(state, &crc);
@@ -682,8 +739,9 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
     
     DEBUG("Reading entry at offset %llu", (long long unsigned)rec_offset);
 
+    Byte rec_len_enc[VINT_MAX_BYTES];
     // get record length from file reading byte-by-byte
-    rc = blkread_vint(state, &rec_len64, &rec_len_encb);
+    rc = blkread_vint(state, &rec_len64, rec_len_enc, &rec_len_encb);
     if (rc != ADLB_SUCCESS)
     {
       // distinguish between read error and decode error
@@ -708,6 +766,32 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
       
       xpt_read_resync(state, resync_pos);
       return ADLB_NOTHING;
+    }
+   
+    // Reconstitute encoded vint for crc check
+    uInt tmp = (uInt)vint_encode(rec_len64, rec_len_enc);
+    assert(tmp == rec_len_encb);
+
+    // Zero-length record indicates end of file.
+    // NOTE: if we had a small hole at end of block that CRC+rec len
+    // doesn't fit in, we would have detected end of file earlier when
+    // trying to advance to next blok
+    if (rec_len64 == 0)
+    {
+      // check crc of encoded record
+      crc_calc = crc32(0L, Z_NULL, 0);
+      crc_calc = crc32(crc_calc, rec_len_enc, (uInt)rec_len_encb);
+      if (crc_calc != crc)
+      {
+        ERR_PRINTF("CRC check failed for record at offset %llu\n",
+                    (long long unsigned)(rec_offset - sizeof(crc)));
+        ERR_PRINTF("Computed CRC32: %lx Expected CRC32: %lx\n",
+                (unsigned long)crc_calc, (unsigned long)crc);
+        xpt_read_resync(state, resync_pos);
+        return ADLB_NOTHING;
+      }
+      // This appears to be a valid end of file marker
+      return ADLB_DONE;
     }
   
     // buffer too small: signal caller
@@ -739,13 +823,8 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
     if (rc != ADLB_SUCCESS)
       return rc;
 
-    // Reconstitute encoded vint for crc check
-    Byte rec_len_enc[VINT_MAX_BYTES];
-    uInt tmp = (uInt)vint_encode(rec_len64, rec_len_enc);
-    assert(tmp == rec_len_encb);
-
     // Now we can check crc 
-    uLong crc_calc = crc32(0L, Z_NULL, 0);
+    crc_calc = crc32(0L, Z_NULL, 0);
     crc_calc = crc32(crc_calc, rec_len_enc, (uInt)rec_len_encb);
     crc_calc = crc32(crc_calc, (Byte*)buffer->data, (uInt)rec_len64);
     if (crc_calc != crc)
@@ -754,6 +833,7 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
                   (long long unsigned)(rec_offset - sizeof(crc)));
       ERR_PRINTF("Computed CRC32: %lx Expected CRC32: %lx\n",
               (unsigned long)crc_calc, (unsigned long)crc);
+      xpt_read_resync(state, resync_pos);
       return ADLB_NOTHING;
     }
 
@@ -982,41 +1062,57 @@ static inline adlb_code bufwrite_uint32(xlb_xpt_state *state,
   return bufwrite(state, buf, 4);
 }
 
-
 static inline off_t xpt_file_offset(xlb_xpt_state *state,
           bool after_buffered)
 {
+  xpt_file_pos pos = xpt_get_file_pos(state, after_buffered);
+
+  return ((off_t)pos.block * XLB_XPT_BLOCK_SIZE) + pos.block_pos;
+}
+
+/*
+  Find the position add bytes offset from pos, accounting for
+  blocking scheme.
+ */
+static xpt_file_pos file_pos_add(xpt_file_pos pos, uint32_t add)
+{
+  while (add > 0)
+  {
+    // Move to next blocks
+    uint32_t block_left = XLB_XPT_BLOCK_SIZE - pos.block_pos;
+    uint32_t advance = block_left < add ? block_left : add;
+    if (advance <= block_left)
+    {
+      pos.block_pos += advance;
+    }
+    else
+    {
+      pos.block = next_block((uint32_t)xlb_comm_size, pos.block);
+      pos.block_pos = 2;
+    }
+    add -= advance;
+  }
+  return pos;
+}
+
+static xpt_file_pos xpt_get_file_pos(xlb_xpt_state *state,
+                                    bool after_buffered)
+{
+  xpt_file_pos result;
   if (after_buffered)
   {
     // May be in next block
-    uint32_t block = state->curr_block;
-    uint32_t block_pos = state->curr_block_pos;
-    uint32_t buf_left = (uint32_t)state->buffer_used;
-
-    while (buf_left > 0)
-    {
-      // Move to next blocks
-      uint32_t block_left = XLB_XPT_BLOCK_SIZE - block_pos;
-      uint32_t advance = block_left < buf_left ? block_left : buf_left;
-      if (advance <= block_left)
-      {
-        block_pos += advance;
-      }
-      else
-      {
-        block = next_block((uint32_t)xlb_comm_size, block);
-        block_pos = 0;
-      }
-      buf_left -= advance;
-    }
-
-    return ((off_t)block * XLB_XPT_BLOCK_SIZE) + block_pos;
+    xpt_file_pos before_buffered = { .block = state->curr_block,
+                         .block_pos = state->curr_block_pos };
+    result = file_pos_add(before_buffered, (uint32_t)state->buffer_used); 
   }
   else
   {
     // Before buffered data
-    return state->curr_block_start + state->curr_block_pos;
+    result.block = state->curr_block;
+    result.block_pos = state->curr_block_pos;
   }
+  return result;
 }
 
 /*
@@ -1147,9 +1243,11 @@ static inline adlb_code blkread_uint32(xlb_xpt_read_state *state,
   Try to decode vint from file.
   If I/O error encountered, set consumed to -1.
   Otherwise set to actual consumed bytes
+  encoded: buffer of VINT_MAX_BYTES to collect actual data read.
+          May be NULL.
  */
 static inline adlb_code blkread_vint(xlb_xpt_read_state *state,
-                            int64_t *data, int *consumed)
+                int64_t *data, unsigned char *encoded, int *consumed)
 {
   adlb_code rc;
   unsigned char b;
@@ -1162,6 +1260,9 @@ static inline adlb_code blkread_vint(xlb_xpt_read_state *state,
     *consumed = -1;
     return rc;
   }
+
+  if (encoded != NULL)
+    encoded[0] = b;
   *consumed = 1;
 
   vic = vint_decode_start(b, &vi);
@@ -1176,7 +1277,9 @@ static inline adlb_code blkread_vint(xlb_xpt_read_state *state,
       *consumed = -1;
       return rc;
     }
-    
+
+    if (encoded != NULL)
+      encoded[*consumed] = b;
     (*consumed)++;
     vic = vint_decode_more(b, &vi);
     if (vic == -1)
