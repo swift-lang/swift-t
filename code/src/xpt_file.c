@@ -997,6 +997,8 @@ static inline bool check_crc(xlb_xpt_read_state *state, int rec_len,
 static inline adlb_code bufwrite(xlb_xpt_state *state,
                   const void *data, size_t length)
 {
+  DEBUG("bufwrite %zu bytes", length);
+
   if (state->curr_block_pos == 0 && state->buffer_used == 0)
   {
     // Make sure magic number gets written in case where buffer
@@ -1021,17 +1023,18 @@ static inline adlb_code bufwrite(xlb_xpt_state *state,
    
     bool append_magic_num = false;
     size_t write_size = buffer_left < length ? buffer_left : length;
-    if (state->curr_block_pos + state->buffer_used + write_size
-          > XLB_XPT_BLOCK_SIZE)
+
+    xpt_file_pos after_buf_pos = xpt_get_file_pos(state, true);
+    if (after_buf_pos.block_pos + write_size > XLB_XPT_BLOCK_SIZE)
     {
       // Make sure magic number gets written in case where buffer doesn't
       // align with block start
       append_magic_num = true;
       // Only append rest of block
-      write_size = XLB_XPT_BLOCK_SIZE - state->curr_block_pos - state->buffer_used;
+      write_size = XLB_XPT_BLOCK_SIZE - after_buf_pos.block_pos;
     }
     
-    TRACE("Append %zu bytes to write buffer (%zu already used)", write_size,
+    DEBUG("Append %zu bytes to write buffer (%zu already used)", write_size,
           state->buffer_used);
     memcpy(state->buffer + state->buffer_used, data, write_size);
     
@@ -1049,6 +1052,8 @@ static inline adlb_code bufwrite(xlb_xpt_state *state,
     
     if (append_magic_num)
     {
+      // Previous logic should guarantee buffers not full
+      assert(state->buffer_used < XLB_XPT_BUFFER_SIZE);
       state->buffer[state->buffer_used++] = xpt_magic_num;
     }
   }
