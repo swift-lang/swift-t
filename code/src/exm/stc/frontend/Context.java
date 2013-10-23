@@ -411,6 +411,15 @@ public abstract class Context {
   abstract public FunctionContext getFunctionContext();
 
   /**
+   * Shortcut method for getFunctionContext().constructName()
+   * @param constructType
+   * @return
+   */
+  public String constructName(String constructType) {
+    return getFunctionContext().constructName(constructType);
+  }
+
+  /**
    * 
    * @param type
    * @param varName future this is the value of
@@ -440,6 +449,7 @@ public abstract class Context {
     PARALLEL, /** if this is a parallel task */
     TARGETABLE, /** if this is targetable */
     DEPRECATED, /** Warn if user uses function */
+    CHECKPOINTED, /** Whether results should be checkpointed */
   }
   
   /**

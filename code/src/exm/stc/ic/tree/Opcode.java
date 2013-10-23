@@ -83,7 +83,10 @@ public enum Opcode {
   // Manage local files
   INIT_LOCAL_OUTPUT_FILE, GET_LOCAL_FILENAME,
   // Physical copy of file
-  COPY_FILE_CONTENTS;
+  COPY_FILE_CONTENTS,
+  
+  // Lookup and write checkpoints
+  LOOKUP_CHECKPOINT, WRITE_CHECKPOINT;
   
   public boolean isAssign() {
     switch (this) {

@@ -42,6 +42,7 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.exceptions.VariableUsageException;
 import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Checkpointing;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
@@ -1326,7 +1327,7 @@ public class ASTWalker {
     
     // Read annotations at end of child list
     for (; pos < tree.getChildCount(); pos++) {
-      handleFunctionAnnotation(context, function, tree.child(pos),
+      handleFunctionAnnotation(context, function, fdecl, tree.child(pos),
                                 inlineTcl != null);
     }
 
@@ -1378,13 +1379,14 @@ public class ASTWalker {
 
 
   private void handleFunctionAnnotation(Context context, String function,
+      FunctionDecl fdecl,
       SwiftAST annotTree, boolean hasLocalVersion) throws UserException {
     assert(annotTree.getType() == ExMParser.ANNOTATION);
     
     assert(annotTree.getChildCount() > 0);
     String key = annotTree.child(0).getText();
     if (annotTree.getChildCount() == 1) { 
-      registerFunctionAnnotation(context, function, key);
+      registerFunctionAnnotation(context, function, fdecl, key);
     } else {
       assert(annotTree.getChildCount() == 2);
       String val = annotTree.child(1).getText();
@@ -1449,7 +1451,7 @@ public class ASTWalker {
    * @throws UserException 
    */
   private void registerFunctionAnnotation(Context context, String function,
-                  String annotation) throws UserException {
+        FunctionDecl fdecl, String annotation) throws UserException {
     if (annotation.equals(Annotations.FN_ASSERTION)) {
       ForeignFunctions.addAssertVariable(function);
     } else if (annotation.equals(Annotations.FN_PURE)) {
@@ -1464,6 +1466,11 @@ public class ASTWalker {
       context.setFunctionProperty(function, FnProp.PARALLEL);
     } else if (annotation.equals(Annotations.FN_DEPRECATED)) {
       context.setFunctionProperty(function, FnProp.DEPRECATED);
+    } else if (annotation.equals(Annotations.FN_CHECKPOINT)) {
+      Checkpointing.checkCanCheckpoint(context, function,
+                                       fdecl.getFunctionType());
+      
+      context.setFunctionProperty(function, FnProp.CHECKPOINTED);
     } else {
       throw new InvalidAnnotationException(context, "function", annotation, false);
     }
@@ -1516,7 +1523,7 @@ public class ASTWalker {
       if (annotation.equals(Annotations.FN_SYNC)) {
         async = false;
       } else {
-        registerFunctionAnnotation(context, function, annotation);
+        registerFunctionAnnotation(context, function, fdecl, annotation);
       }
     }
     

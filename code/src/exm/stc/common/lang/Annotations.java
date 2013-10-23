@@ -33,6 +33,7 @@ public class Annotations {
   public static final String FN_DISPATCH = "dispatch";
   public static final String FN_PAR = "par";
   public static final String FN_DEPRECATED = "deprecated";
+  public static final String FN_CHECKPOINT = "checkpoint";
 
   public static final String FNCALL_PAR = "par";
   public static final String FNCALL_LOCATION = "location";

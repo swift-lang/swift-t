@@ -27,6 +27,7 @@ import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Logging;
 import exm.stc.common.Settings;
+import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.InvalidAnnotationException;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -823,7 +824,7 @@ public class ExprWalker {
       throws UndefinedTypeException, UserException {
 
     // The expected types might not be same as current input types, work out
-    // what we need to do to make theme the same
+    // what we need to do to make them the same
     ArrayList<Var> realIList = new ArrayList<Var>(iList.size());
     ArrayList<Var> derefVars = new ArrayList<Var>();
     ArrayList<Var> waitVars = new ArrayList<Var>();
@@ -878,10 +879,128 @@ public class ExprWalker {
       }
     }
 
-    backendFunctionCall(context, function, concrete, oList, realIList, props);
+    boolean checkpointed =
+        context.hasFunctionProp(function, FnProp.CHECKPOINTED);
 
+    if (checkpointed) {
+      // TODO: check if checkpointing enabled at runtime
+      Arg checkpointingEnabled = Arg.TRUE;    
+      backend.startIfStatement(checkpointingEnabled, true);
+      checkpointedFunctionCall(context, function, concrete, oList,
+                               realIList, props);
+      backend.startElseBlock();
+      backendFunctionCall(context, function, concrete, oList, realIList, props);
+      backend.endIfStatement();
+    } else {
+      backendFunctionCall(context, function, concrete, oList, realIList, props);
+    }
     if (waitContext != null) {
       backend.endWaitStatement();
+    }
+  }
+
+
+  private void checkpointedFunctionCall(Context context, String function,
+      FunctionType concrete, List<Var> oList, List<Var> iList,
+      TaskProps props) throws UserException {
+    
+    /*
+     * wait (checkpoint_key_futures) {
+     *   checkpoint_key = lookup(checkpoint_key_futures)
+     *   checkpoint_exists, vals = lookup_checkpoint(checkpoint_key)
+     *   if (checkpoint_exists) {
+     *     ... Set output variables
+     *     ... Done
+     *   } else {
+     *     ... call function
+     *     wait (output_futures) {
+     *       output_vals = lookup(output_futures)
+     *       write_checkpoint(checkpoint_key, output_vals)
+     *     }
+     *   }
+     * }
+     */
+
+    List<Var> checkpointKeyFutures = iList; // TODO: right?
+    // Need to wait for lookup key before checking if checkpoint exists
+    backend.startWaitStatement(
+        context.constructName(function + "-checkpoint-wait"),
+        checkpointKeyFutures, WaitMode.WAIT_ONLY,
+        false, true, TaskMode.LOCAL);
+    List<Arg> checkpointKey = lookupCheckpointKey(context,
+                                                  checkpointKeyFutures);
+    
+   // TODO: nicer names for vars?
+    Var existingVal = varCreator.createTmpLocalVal(context, Types.V_BLOB);
+    Var checkpointExists = varCreator.createTmpLocalVal(context,
+                                                     Types.V_BOOL);
+    backend.lookupCheckpoint(checkpointExists,
+                             existingVal, checkpointKey);
+    backend.startIfStatement(checkpointExists.asArg(), true);
+    setVarsFromCheckpoint(context, oList, existingVal);
+    backend.startElseBlock();
+    
+    // checkpoint output values once set
+    List<Var> checkpointVal = oList; // TODO: right?
+    backend.startWaitStatement(
+        context.constructName(function + "-checkpoint-wait"),
+        checkpointVal, WaitMode.WAIT_ONLY, false, true, TaskMode.LOCAL);
+    
+    // Lookup checkpoint key again since variable might not be able to be
+    // passed through wait.  Rely on optimizer to clean up redundancy
+    checkpointKey = lookupCheckpointKey(context, checkpointKeyFutures);
+    List<Arg> checkpointVal1 = new ArrayList<Arg>(checkpointVal.size());
+    // TODO: lookup values
+    for (Var cv: checkpointVal) {
+      if (cv.storage() == Alloc.LOCAL) {
+        checkpointVal1.add(cv.asArg());  
+      } else {
+        checkpointVal1.add(varCreator.fetchValueOf(context, cv).asArg());
+      }
+    }
+    backend.writeCheckpoint(checkpointKey, checkpointVal1);
+    
+    backend.endWaitStatement();
+    backend.endIfStatement(); // Close else block
+  }
+
+  private List<Arg> lookupCheckpointKey(Context context,
+      List<Var> checkpointKeyFutures) throws UserException,
+      UndefinedTypeException, DoubleDefineException {
+    List<Arg> checkpointKey = new ArrayList<Arg>(checkpointKeyFutures.size());
+    for (Var k: checkpointKeyFutures) {
+      // Need to be values to form key
+      if (k.storage() == Alloc.LOCAL) {
+        checkpointKey.add(k.asArg());
+      } else {
+        // TODO: currently only handles scalar keys.
+        checkpointKey.add(varCreator.fetchValueOf(context, k).asArg()); 
+      }
+    }
+    return checkpointKey;
+  }
+  
+  private void setVarsFromCheckpoint(Context context,
+      List<Var> functionOutputs, Var checkpointVal) throws UserException {
+    assert(Types.isBlobVal(checkpointVal));
+    List<Var> values = new ArrayList<Var>();
+    for (Var functionOutput: functionOutputs) {
+      if (functionOutput.storage() == Alloc.LOCAL) {
+        values.add(functionOutput);
+      } else {
+        values.add(varCreator.createValueOfVar(context, functionOutput));
+      }
+    }
+    
+    backend.extractCheckpointValues(values, checkpointVal);
+    
+    assert(values.size() == functionOutputs.size());
+    for (int i = 0; i < values.size(); i++) {
+      Var value = values.get(i);
+      Var functionOutput = functionOutputs.get(i);
+      if (!value.equals(functionOutput)) {
+        assign(functionOutput, value.asArg());
+      }
     }
   }
 
@@ -895,8 +1014,8 @@ public class ExprWalker {
    * @throws UserException 
    */
   private void backendFunctionCall(Context context, String function,
-      FunctionType concrete,
-      List<Var> oList, ArrayList<Var> iList, TaskProps props) throws UserException {
+      FunctionType concrete, List<Var> oList, List<Var> iList,
+      TaskProps props) throws UserException {
     props.assertInternalTypesValid();
     FunctionType def = context.lookupFunction(function);
     
@@ -945,9 +1064,9 @@ public class ExprWalker {
    * @param props
    * @throws UserException
    */
-  public void backendCallWrapped(Context context, String function,
+  private void backendCallWrapped(Context context, String function,
       FunctionType concrete,
-      List<Var> oList, ArrayList<Var> iList, TaskProps props)
+      List<Var> oList, List<Var> iList, TaskProps props)
       throws UserException {
     String wrapperFnName; // The name of the wrapper to call
     if (context.hasFunctionProp(function, FnProp.WRAPPED_BUILTIN)) {

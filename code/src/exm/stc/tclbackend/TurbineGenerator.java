@@ -2667,4 +2667,14 @@ public class TurbineGenerator implements CompilerBackend {
     pointStack.pop();
     loopNameStack.pop();
   }
+
+  @Override
+  public void writeCheckpoint(List<Arg> key, List<Arg> val) {
+    throw new STCRuntimeError("writeCheckpoint not implemented");
+  }
+
+  @Override
+  public void lookupCheckpoint(Var checkpointExists, Var value, List<Arg> key) {
+    throw new STCRuntimeError("lookupCheckpoint not implemented");
+  }
 }

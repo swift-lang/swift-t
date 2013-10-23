@@ -329,6 +329,17 @@ public class TurbineOp extends Instruction {
     case COPY_FILE_CONTENTS:
       gen.copyFileContents(getOutput(0), getInput(0).getVar());
       break;
+    case WRITE_CHECKPOINT: {
+      // Need to unpack key and value args first
+      int keyEntries = (int)getInput(0).getIntLit();
+      gen.writeCheckpoint(inputs.subList(1, keyEntries + 1),
+                          inputs.subList(keyEntries + 1, inputs.size()));
+      break;
+    }
+    case LOOKUP_CHECKPOINT: {
+      gen.lookupCheckpoint(getOutput(0), getOutput(1), getInputs());
+      break;
+    }
     default:
       throw new STCRuntimeError("didn't expect to see op " +
                 op.toString() + " here");
@@ -729,6 +740,21 @@ public class TurbineOp extends Instruction {
                          outFilename, isMapped);
   }
 
+  public static Instruction writeCheckpoint(List<Arg> instArgs) {
+    assert(instArgs.get(0).getKind() == ArgKind.INTVAL);
+    long numKeys = instArgs.get(0).getIntLit();
+    assert(instArgs.size() >= numKeys + 1);
+    return new TurbineOp(Opcode.WRITE_CHECKPOINT, Var.NONE, instArgs);
+  }
+
+  public static Instruction lookupCheckpoint(Var checkpointExists, Var value,
+      List<Arg> key) {
+    assert(Types.isBoolVal(checkpointExists));
+    assert(Types.isBlobVal(value));
+    return new TurbineOp(Opcode.LOOKUP_CHECKPOINT,
+        Arrays.asList(checkpointExists, value), key);
+  }
+
   @Override
   public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
     if (mode == RenameMode.VALUE) {
@@ -880,9 +906,14 @@ public class TurbineOp extends Instruction {
     case FREE_BLOB:
     case DECR_LOCAL_FILE_REF:
       /*
-       * Reference counting ops can have sideeffect
+       * Reference counting ops can have side-effect
        */
       return true;
+    case WRITE_CHECKPOINT:
+      // Writing checkpoint is a side-effect
+      return true;
+    case LOOKUP_CHECKPOINT:
+      return false;
     default:
       throw new STCRuntimeError("Need to add opcode " + op.toString()
           + " to hasSideEffects");
@@ -1503,6 +1534,8 @@ public class TurbineOp extends Instruction {
     case INIT_LOCAL_OUTPUT_FILE:
     case ARRAY_BUILD:
     case BAG_INSERT:
+    case LOOKUP_CHECKPOINT:
+    case WRITE_CHECKPOINT:
       return TaskMode.SYNC;
     
     case ARRAY_DEREF_INSERT_IMM:
@@ -1751,6 +1784,9 @@ public class TurbineOp extends Instruction {
         Var srcRef = getInput(0).getVar();
         res.add(ValLoc.makeAlias(getOutput(0), srcRef));
         return res;
+      }
+      case LOOKUP_CHECKPOINT: {
+        return vanillaResult(Closed.YES_NOT_RECURSIVE, IsAssign.NO).asList();
       }
       default:
         return null;

@@ -1094,4 +1094,24 @@ public class STCMiddleEnd {
     
     waitBlock.addInstructions(instBuffer);
   }
+
+  public void writeCheckpoint(List<Arg> key, List<Arg> val) {
+    List<Arg> instArgs = new ArrayList<Arg>(key.size() + val.size() + 1);
+    instArgs.add(Arg.createIntLit(key.size()));
+    instArgs.addAll(key);
+    instArgs.addAll(val);
+    currBlock().addInstruction(TurbineOp.writeCheckpoint(instArgs));
+  }
+
+  public void lookupCheckpoint(Var checkpointExists, Var value,
+                               List<Arg> key) {
+    currBlock().addInstruction(
+        TurbineOp.lookupCheckpoint(checkpointExists, value, key));
+  }
+
+  public void extractCheckpointValues(List<Var> values, Var checkpointVal) {
+    assert(Types.isBlob(checkpointVal));
+    // TODO Auto-generated method stub
+    throw new STCRuntimeError("extractCheckpointValues not implemented");
+  }
 }

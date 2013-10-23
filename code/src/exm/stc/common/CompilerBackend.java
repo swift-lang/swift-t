@@ -516,4 +516,9 @@ public interface CompilerBackend {
    */
   public void loopBreak(List<Var> loopUsedVars, List<Var> keepOpenVars);
   public void endLoop();
+
+  public void writeCheckpoint(List<Arg> key, List<Arg> val);
+
+  public void lookupCheckpoint(Var checkpointExists,
+                               Var value, List<Arg> key);
 }
