@@ -960,8 +960,9 @@ public class ExprWalker {
     }
     backend.writeCheckpoint(checkpointKey, checkpointVal1);
     
-    backend.endWaitStatement();
+    backend.endWaitStatement(); // Close wait for values
     backend.endIfStatement(); // Close else block
+    backend.endWaitStatement(); // Close wait for keys
   }
 
   private List<Arg> lookupCheckpointKey(Context context,

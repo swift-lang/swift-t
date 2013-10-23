@@ -196,15 +196,15 @@ public class STCMiddleEnd {
   }
 
   public void startElseBlock() {
-    // Should still be then, else, finally and top level procedure
-    assert(blockStack.size() >= 4);
+    // Should still be then, else and top level procedure
+    assert(blockStack.size() >= 3);
     assert(currBlock().getType() == BlockType.THEN_BLOCK);
     blockStack.pop();
   }
 
   public void endIfStatement() {
-    // Should still be finally and enclosing block
-    assert(blockStack.size() >= 2);
+    // Should still be enclosing block
+    assert(blockStack.size() >= 1);
     assert(currBlock().getType() == BlockType.ELSE_BLOCK ||
         currBlock().getType() == BlockType.THEN_BLOCK);
     blockStack.pop();
@@ -264,8 +264,8 @@ public class STCMiddleEnd {
 
   public void endCase() {
     logger.trace("endCase() stack size:" + blockStack.size());
-    // case, finally, enclosing at minimum
-    assert(blockStack.size() >= 2);
+    // case enclosing at minimum
+    assert(blockStack.size() >= 1);
     assert(currBlock().getType() == BlockType.CASE_BLOCK);
     blockStack.pop();
   }
