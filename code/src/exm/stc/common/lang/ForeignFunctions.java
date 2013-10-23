@@ -120,7 +120,7 @@ public class ForeignFunctions {
    * Check if a given function is an implementation of any of the given
    *  special functions
    * @param function
-   * @param special
+   * @param specials
    * @return
    */
   public static boolean isSpecialImpl(String function,

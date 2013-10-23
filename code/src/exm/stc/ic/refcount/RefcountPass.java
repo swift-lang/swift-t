@@ -754,6 +754,7 @@ public class RefcountPass implements OptimizerPass {
    * @param logger
    * @param f
    */
+  @SuppressWarnings("unchecked")
   private void lookupStructArgMembers(Logger logger, Function f) {
     Block block = f.mainBlock();
     ListIterator<Statement> insertPos = block.statementIterator();

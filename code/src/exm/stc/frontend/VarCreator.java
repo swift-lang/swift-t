@@ -49,9 +49,7 @@ public class VarCreator {
 
   /**
    * @param context
-   * @param type
-   * @param name
-   * @param storage
+   * @param var
    * @return
    * @throws UserException
    */

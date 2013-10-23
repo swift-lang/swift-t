@@ -63,7 +63,6 @@ public class ComputedValue<T> {
   /**
    * Other identifier to disambiguate within op.  Should
    * implement equals() and hashcode().
-   * @return
    */
   final Object subop;
   final List<T> inputs;
@@ -233,7 +232,6 @@ public class ComputedValue<T> {
   /**
    * Computed value representing result of dereference ref
    * @param ref
-   * @param copied if it is a copy of the original
    */
   public static ArgCV derefCompVal(Var ref) {
     assert(Types.isRef(ref));

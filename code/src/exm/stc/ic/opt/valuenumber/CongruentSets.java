@@ -54,7 +54,6 @@ class CongruentSets {
    * Representative of set should always be an arg (variable or constant
    *  if appropriate)
    *  A variable starts off as part of one-element set (itself)
-   * @return
    */
   private final Map<ArgOrCV, Arg> canonical;
   
@@ -752,7 +751,7 @@ class CongruentSets {
    * Do any canonicalization of result value here, e.g. to implement
    * constant folding, etc.
    * @param consts 
-   * @param resVal
+   * @param origVal
    * @return
    */
   public ArgOrCV canonicalize(GlobalConstants consts, ArgCV origVal) {

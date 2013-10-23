@@ -47,7 +47,6 @@ public class STCompiler {
    * This function contains the high-level logic orchestrating the different
    * passes of the compiler
    * @param inputFile
-   * @param input
    * @param output
    * @param icOutput
    */

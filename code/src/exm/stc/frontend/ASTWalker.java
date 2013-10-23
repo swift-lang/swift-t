@@ -127,8 +127,6 @@ public class ASTWalker {
   /**
    * Walk the AST and make calls to backend to generate lower level code.
    * This function is called to start the walk at the top level file
-   * @param backend
-   * @param tree
    * @throws UserException
    */
   public void walk(String mainFilePath, boolean preprocessed) throws UserException {

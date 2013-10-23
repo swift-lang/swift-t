@@ -115,7 +115,6 @@ public class RCTracker {
   /**
    * In case where a variable is part of multiple structs, canonicalize the
    * paths so we can merge refcount operations
-   * @param block
    */
   public void canonicalize() {
     for (RefCountType rcType: RefcountPass.RC_TYPES) {

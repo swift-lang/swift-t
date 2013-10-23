@@ -390,7 +390,6 @@ public class ICInstructions {
     
     /**
      * Return true if var is initialized by instruction
-     * @param inst
      * @param var
      * @return
      */
@@ -678,7 +677,6 @@ public class ICInstructions {
     }
 
     /**
-     * @param inputFile
      * @return true if this instruction calls any of the given special functions
      */
     public boolean isImpl(SpecialFunction ...specials) {
@@ -758,7 +756,7 @@ public class ICInstructions {
      * Check if we should try to constant fold. To enable constant
      * folding for a funciton it needs ot have an entry here and
      * in tryConstantFold()
-     * @param op
+     * @param cv
      * @return
      */
     public static boolean canConstantFold(ComputedValue<?> cv) {

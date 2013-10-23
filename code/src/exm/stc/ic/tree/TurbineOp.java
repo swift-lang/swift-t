@@ -340,6 +340,10 @@ public class TurbineOp extends Instruction {
       gen.lookupCheckpoint(getOutput(0), getOutput(1), getInputs());
       break;
     }
+    case EXTRACT_CHECKPOINT_VALUES: {
+      gen.extractCheckpointValues(getOutputs(), getInput(0));
+      break;
+    }
     default:
       throw new STCRuntimeError("didn't expect to see op " +
                 op.toString() + " here");
@@ -753,6 +757,12 @@ public class TurbineOp extends Instruction {
     assert(Types.isBlobVal(value));
     return new TurbineOp(Opcode.LOOKUP_CHECKPOINT,
         Arrays.asList(checkpointExists, value), key);
+  }
+
+  public static Instruction extractCheckpointValues(List<Var> values,
+                                                     Arg packedValues) {
+    return new TurbineOp(Opcode.EXTRACT_CHECKPOINT_VALUES, values,
+                          packedValues); 
   }
 
   @Override
@@ -1536,6 +1546,7 @@ public class TurbineOp extends Instruction {
     case BAG_INSERT:
     case LOOKUP_CHECKPOINT:
     case WRITE_CHECKPOINT:
+    case EXTRACT_CHECKPOINT_VALUES:
       return TaskMode.SYNC;
     
     case ARRAY_DEREF_INSERT_IMM:
@@ -1785,8 +1796,16 @@ public class TurbineOp extends Instruction {
         res.add(ValLoc.makeAlias(getOutput(0), srcRef));
         return res;
       }
-      case LOOKUP_CHECKPOINT: {
+      case LOOKUP_CHECKPOINT:
         return vanillaResult(Closed.YES_NOT_RECURSIVE, IsAssign.NO).asList();
+      case EXTRACT_CHECKPOINT_VALUES: {
+        List<ValLoc> res = new ArrayList<ValLoc>(outputs.size()); 
+        for (int i = 0; i < outputs.size(); i++) {
+          Var out = outputs.get(i);
+          res.add(ValLoc.buildResult(Opcode.EXTRACT_CHECKPOINT_VALUES, 
+                   (Object)i, getInput(0).asList(), out.asArg(),
+                   Closed.YES_RECURSIVE, IsValCopy.NO, IsAssign.NO));
+        }
       }
       default:
         return null;

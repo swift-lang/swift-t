@@ -119,7 +119,7 @@ public class ValLoc {
    * Make copy of ValLoc to reflect that location was copied
    * to somewhere  
    * @param copiedTo
-   * @param immediateCopy if copy happens immediately
+   * @param copyMode if copy happens immediately
    * @param copyType method of copying (i.e. whether it is an alias) 
    * @return
    */
@@ -155,7 +155,6 @@ public class ValLoc {
    * @param ix
    * @param contents
    * @param refResult if contents is ref
-   * @param substitutable 
    * @return
    */
   public static ValLoc makeArrayResult(Var arr, Arg ix, Var contents,
@@ -226,7 +225,7 @@ public class ValLoc {
 
   /**
    * ValLoc representing result of dereference ref
-   * @param contents of ref
+   * @param v contents of ref
    * @param ref
    * @param copied if it is a copy of the original
    * @param isAssign

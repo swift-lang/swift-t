@@ -135,7 +135,6 @@ public class Var implements Comparable<Var>, Typed {
 
   /**
    * Create new variable with different type, but same everything else
-   * @param var
    * @param newType
    * @return
    */

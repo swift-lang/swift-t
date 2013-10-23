@@ -1816,7 +1816,7 @@ public class Types {
   /**
    * Return true if the type is one that we can subscribe to
    * the final value of 
-   * @param waitExprType
+   * @param type
    * @return
    */
   public static boolean canWaitForFinalize(Typed type) {
@@ -2046,7 +2046,7 @@ public class Types {
   /**
    * Returns true if the variable requires initialization before
    * being used in input context
-   * @param output
+   * @param input
    * @return
    */
   public static boolean inputRequiresInitialization(Var input) {

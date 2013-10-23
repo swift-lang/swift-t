@@ -152,9 +152,8 @@ public class WrapUtil {
    * Get the filename for a file, initializing it to a temporary value in
    * the case where it's not mapped.
    * @param block
-   * @param filename: alias to be initialized
+   * @param filename alias to be initialized
    * @param file
-   * @return
    */
   public static void initOrGetFileName(Block block,
             ListIterator<Statement> insertPos, Var filename, Var file) {

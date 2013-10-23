@@ -2677,4 +2677,9 @@ public class TurbineGenerator implements CompilerBackend {
   public void lookupCheckpoint(Var checkpointExists, Var value, List<Arg> key) {
     throw new STCRuntimeError("lookupCheckpoint not implemented");
   }
+
+  @Override
+  public void extractCheckpointValues(List<Var> unpacked, Arg packed) {
+    throw new STCRuntimeError("extractCheckpointValues not implemented");
+  }
 }

@@ -139,7 +139,7 @@ public abstract class Context {
    * @param defType
    * @param mapping
    * @return
-   * @throws UserException
+   * @throws DoubleDefineException
    */
   public Var declareVariable(Type type, String name, Alloc scope,
       DefType defType, VarProvenance provenance, Var mapping)
@@ -422,7 +422,7 @@ public abstract class Context {
   /**
    * 
    * @param type
-   * @param varName future this is the value of
+   * @param var future this is the value of
    * @return
    * @throws UserException
    */

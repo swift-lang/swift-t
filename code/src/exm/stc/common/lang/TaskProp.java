@@ -38,7 +38,7 @@ public class TaskProp {
 
     /**
      * Get value.  If key not present or null, return default
-     * @param target
+     * @param key
      * @return
      */
     public Arg getWithDefault(TaskPropKey key) {
@@ -59,7 +59,7 @@ public class TaskProp {
 
     /**
      * Make copy with only specified keys
-     * @param priority
+     * @param keys
      * @return
      */
     public TaskProps filter(TaskPropKey... keys) {

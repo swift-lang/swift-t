@@ -18,15 +18,14 @@ package exm.stc.common;
 import java.util.Collections;
 import java.util.List;
 
-import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Redirects;
-import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.RefCounting.RefCountType;
+import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.StructType;
@@ -57,7 +56,6 @@ public interface CompilerBackend {
   
   /**
    * Declare and initialize a number of variables
-   * @throws UndefinedTypeException
    */
   public void declare(List<VarDecl> decls);
 
@@ -480,7 +478,6 @@ public interface CompilerBackend {
    *    tcl code can have a nice name for the block)
    * @param waitVars
    * @param usedVars any variables which are read or written inside block
-   * @param mode what guarantees wait statement should provide
    * @param target if true, wait until all contents of arrays/structs
    *                   (recursively) are closed
    * @param props controls where asynchronous execution occurs
@@ -521,4 +518,6 @@ public interface CompilerBackend {
 
   public void lookupCheckpoint(Var checkpointExists,
                                Var value, List<Arg> key);
+
+  public void extractCheckpointValues(List<Var> unpacked, Arg packed);
 }

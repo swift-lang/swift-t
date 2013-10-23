@@ -10,7 +10,6 @@ public class Checkpointing {
    * Check if we can checkpoint function with these inputs and outputs
    * @param functionName name, for any error messages
    * @param ftype
-   * @return
    */
   public static void checkCanCheckpoint(Context context,
         String functionName, FunctionType ftype) 

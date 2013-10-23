@@ -109,7 +109,7 @@ public class AliasTracker {
    * Add a var and corresponding path, update data structures to be consistent
    * @param var
    * @param path path, which should have at least one element
-   * @param replaceNull if a root was updated, and we should override the
+   * @param replacePath if a root was updated, and we should override the
    *              previous entry in varToPath in event of a conflict
    */
   public void addVarPath(Var var, AliasKey path, AliasKey replacePath) {

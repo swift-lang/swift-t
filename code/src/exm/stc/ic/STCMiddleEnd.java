@@ -1109,9 +1109,9 @@ public class STCMiddleEnd {
         TurbineOp.lookupCheckpoint(checkpointExists, value, key));
   }
 
-  public void extractCheckpointValues(List<Var> values, Var checkpointVal) {
-    assert(Types.isBlob(checkpointVal));
-    // TODO Auto-generated method stub
-    throw new STCRuntimeError("extractCheckpointValues not implemented");
+  public void extractCheckpointValues(List<Var> values, Var packedValues) {
+    assert(Types.isBlobVal(packedValues));
+    currBlock().addInstruction(
+        TurbineOp.extractCheckpointValues(values, packedValues.asArg()));
   }
 }

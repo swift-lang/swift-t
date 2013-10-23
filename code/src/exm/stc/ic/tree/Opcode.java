@@ -86,7 +86,7 @@ public enum Opcode {
   COPY_FILE_CONTENTS,
   
   // Lookup and write checkpoints
-  LOOKUP_CHECKPOINT, WRITE_CHECKPOINT;
+  LOOKUP_CHECKPOINT, WRITE_CHECKPOINT, EXTRACT_CHECKPOINT_VALUES;
   
   public boolean isAssign() {
     switch (this) {

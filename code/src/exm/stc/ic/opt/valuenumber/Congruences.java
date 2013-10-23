@@ -166,7 +166,6 @@ public class Congruences {
    *                and location is the thing stored to that location
    * @param congruent
    * @param addConsequential
-   * @return
    * @throws OptUnsafeError 
    */
   private void update(GlobalConstants consts, String errContext,
@@ -766,7 +765,7 @@ public class Congruences {
    * Add in closedness dependency: if to is closed, implies
    * from is closed
    * @param to
-   * @param from
+   * @param fromVars
    * TODO: this information can be propagated up the IR tree, since if
    *      A -> B in a wait statement, this implies that in any parent
    *      blocks, that if B is set, then A is set (assuming no

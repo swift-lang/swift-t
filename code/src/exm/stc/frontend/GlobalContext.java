@@ -114,7 +114,7 @@ public class GlobalContext extends Context {
   
   /**
      Declare a global variable
-   * @throws UserException 
+   * @throws DoubleDefineException 
    */
   @Override
   public Var declareVariable(Type type, String name, Alloc scope,

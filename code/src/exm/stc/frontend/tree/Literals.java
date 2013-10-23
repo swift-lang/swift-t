@@ -111,7 +111,6 @@ public class Literals {
   /**
    * Interpret an integer literal as a float literal, warning
    * if this would result in loss of precision
-   * @param value an integer literal string
    * @return
    */
   public static double interpretIntAsFloat(Context context, long longval) {
