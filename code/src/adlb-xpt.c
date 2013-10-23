@@ -247,6 +247,11 @@ static inline adlb_code xpt_reload_rank(const char *filename,
 
   adlb_code rc;
   rc = xlb_xpt_read_select(read_state, rank);
+  if (rc == ADLB_DONE)
+  {
+    // OK but no entries
+    return ADLB_SUCCESS;
+  }
   ADLB_CHECK(rc);
 
   // Read all records for this rank

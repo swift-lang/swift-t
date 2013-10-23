@@ -50,6 +50,7 @@ typedef struct {
   // Position in file, must be maintained to be in sync with file object
   uint32_t curr_block;
   uint32_t curr_block_pos;
+  bool end_of_stream; // End of entries for current rank
 } xlb_xpt_read_state;
 
 /* Setup checkpoint file.  This function should be called by all ranks,

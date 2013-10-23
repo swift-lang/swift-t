@@ -537,6 +537,7 @@ adlb_code xlb_xpt_open_read(xlb_xpt_read_state *state, const char *filename)
   state->curr_rank = 0;
   state->curr_block = 0;
   state->curr_block_pos = 0;
+  state->end_of_stream = false;
 
   int magic_num = fgetc(state->file);
   CHECK_MSG(magic_num == xpt_magic_num, "Invalid magic number %i"
@@ -645,12 +646,14 @@ static inline adlb_code block_read_move(xlb_xpt_read_state *state,
   {
     if (feof(state->file))
     {
+      state->end_of_stream = true;
       return ADLB_DONE;
     }
     else
     {
       ERR_PRINTF("Error seeking to offset %llu in checkpoint file\n",
                      (long long unsigned)block_start);
+      state->end_of_stream = true;
       return ADLB_ERROR;
     }
   }
@@ -660,11 +663,14 @@ static inline adlb_code block_read_move(xlb_xpt_read_state *state,
   if (magic_num == EOF || magic_num == 0) {
     DEBUG("Past last block in file %i for rank %i", state->curr_block,
                                                     state->curr_rank);
+    state->end_of_stream = true;
     return ADLB_DONE;
   }
 
   CHECK_MSG(magic_num == xpt_magic_num, "Invalid magic number %i"
         " at start of checkpoint block: may be corrupted", magic_num);
+
+  state->end_of_stream = false; // Not at end of stream
   if (state->curr_block == 0)
   {
     // Move past file header
@@ -903,7 +909,8 @@ static adlb_code seek_file_pos(xlb_xpt_read_state *state, xpt_file_pos pos)
   {
     // First move to correct block
     rc = block_read_move(state, pos.block);
-    ADLB_CHECK(rc);
+    if (rc != ADLB_SUCCESS)
+      return rc;
   }
 
   // Then seek within block
@@ -915,6 +922,7 @@ static adlb_code seek_file_pos(xlb_xpt_read_state *state, xpt_file_pos pos)
   {
     ERR_PRINTF("Error seeking to offset %llu in file\n",
                (long long unsigned)off);
+    state->end_of_stream = true;
     return ADLB_ERROR;
   }
   state->curr_block_pos = pos.block_pos;
@@ -1157,6 +1165,9 @@ static inline adlb_code blkread(xlb_xpt_read_state *state, void *buf,
   assert(state->file != NULL);
   assert(state->curr_block_pos >= 0);
   assert(state->curr_block_pos <= state->block_size);
+
+  if (state->end_of_stream)
+    return ADLB_DONE;
   
   adlb_code ac;
   while (length > 0)
@@ -1173,8 +1184,14 @@ static inline adlb_code blkread(xlb_xpt_read_state *state, void *buf,
 
     size_t read_length = block_left < length ? block_left : length;
     ac = checked_fread(state, buf, read_length);
-    if (ac != ADLB_SUCCESS)
+    if (ac == ADLB_DONE)
+    {
+      state->end_of_stream = true;
+    }
+    else if (ac != ADLB_SUCCESS)
+    {
       return ac;
+    }
 
     length -= read_length;
     buf += read_length;
@@ -1187,6 +1204,10 @@ static inline adlb_code blkgetc(xlb_xpt_read_state *state, unsigned char *c)
   assert(state->file != NULL);
   assert(state->curr_block_pos >= 0);
   assert(state->curr_block_pos <= state->block_size);
+    
+  if (state->end_of_stream)
+    return ADLB_DONE;
+
   if (state->curr_block_pos >= state->block_size)
   {
     adlb_code ac = block_read_advance(state);
@@ -1196,6 +1217,7 @@ static inline adlb_code blkgetc(xlb_xpt_read_state *state, unsigned char *c)
   int c2 = fgetc(state->file);
   if (c2 == EOF)
   {
+    state->end_of_stream = true;
     if (feof(state->file))
     {
       return ADLB_DONE;
