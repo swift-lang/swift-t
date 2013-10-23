@@ -923,6 +923,7 @@ public class TurbineOp extends Instruction {
       // Writing checkpoint is a side-effect
       return true;
     case LOOKUP_CHECKPOINT:
+    case EXTRACT_CHECKPOINT_VALUES:
       return false;
     default:
       throw new STCRuntimeError("Need to add opcode " + op.toString()
@@ -1797,15 +1798,16 @@ public class TurbineOp extends Instruction {
         return res;
       }
       case LOOKUP_CHECKPOINT:
-        return vanillaResult(Closed.YES_NOT_RECURSIVE, IsAssign.NO).asList();
       case EXTRACT_CHECKPOINT_VALUES: {
+        // Both have multiple outputs
         List<ValLoc> res = new ArrayList<ValLoc>(outputs.size()); 
         for (int i = 0; i < outputs.size(); i++) {
           Var out = outputs.get(i);
-          res.add(ValLoc.buildResult(Opcode.EXTRACT_CHECKPOINT_VALUES, 
+          res.add(ValLoc.buildResult(op, 
                    (Object)i, getInput(0).asList(), out.asArg(),
                    Closed.YES_RECURSIVE, IsValCopy.NO, IsAssign.NO));
         }
+        return res;
       }
       default:
         return null;
