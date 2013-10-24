@@ -222,6 +222,13 @@ class Turbine {
   // Special values
   public static final LiteralInt VOID_DUMMY_VAL = new LiteralInt(12345);
 
+  // Checkpointing
+  public static Token XPT_WRITE = adlbFn("xpt_write");
+  public static Token XPT_LOOKUP = adlbFn("lookup");
+  public static Token XPT_NO_PERSIST = new Token("no_persist");
+  public static Token XPT_PERSIST = new Token("persist");
+  public static Token XPT_PERSIST_FLUSH = new Token("persist_flush");
+  
   // Misc
   private static final Token TURBINE_LOG = turbFn("c::log");
   private static final Token ARGV_ADD_CONSTANT = turbFn("argv_add_constant");
@@ -1307,4 +1314,37 @@ class Turbine {
     return new Command(TURBINE_LOG, logMsg);
   }
 
+  public static Command xptInit() {
+    // TODO
+    return null;
+  }
+  
+  /**
+   * Both lists are alternating types and values, allowing them to
+   * be serialized with the correct type
+   * @param keyExprs
+   * @param valExprs
+   * @return
+   */
+  public static Command xptWrite(List<Expression> keyExprs,
+                                 List<Expression> valExprs) {
+    Expression indexAdd = LiteralInt.FALSE;
+    Command cmd = new Command(XPT_WRITE, Arrays.asList(
+        new TclList(keyExprs), new TclList(valExprs), XPT_PERSIST, indexAdd));
+    return cmd;
+  }
+  
+  /**
+   * Both lists are alternating types and values, allowing them to
+   * be serialized with the correct type
+   * @param keyExprs
+   * @param valExprs
+   * @return
+   */
+  public static Command xptLookup(String existsVarName, String resultVarName,
+                                  List<Expression> keyExprs) {
+    Command cmd = new Command(XPT_LOOKUP, Arrays.asList(new Token(existsVarName),
+                        new Token(resultVarName), new TclList(keyExprs)));
+    return cmd;
+  }
 }

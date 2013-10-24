@@ -147,6 +147,22 @@ public class TurbineGenerator implements CompilerBackend {
   Deque<Sequence> pointStack = new ArrayDeque<Sequence>();
   
   /**
+   * Shortcut for current sequence in pointStack
+   * @return
+   */
+  private Sequence point() {
+    return pointStack.peek();
+  }  
+  
+  /**
+   * Shortcut to add to current point in TclTree
+   * @return
+   */
+  private void pointAdd(TclTree cmd) {
+    point().add(cmd);
+  }
+  
+  /**
    * Stack for name of loop functions
    */
   Deque<String> loopNameStack = new ArrayDeque<String>();
@@ -338,7 +354,7 @@ public class TurbineGenerator implements CompilerBackend {
         continue;
       }
       // For now, just add provenance info as a comment
-      pointStack.peek().add(new Comment("Var: " + t.typeName() + " " +
+      pointAdd(new Comment("Var: " + t.typeName() + " " +
                 prefixVar(var.name()) + " " + var.provenance().logFormat()));
      
       // Check that init refcounts are valid
@@ -348,7 +364,7 @@ public class TurbineGenerator implements CompilerBackend {
       if (var.storage() == Alloc.GLOBAL_CONST) {
         // If global, it should already be in TCL global scope, just need to
         // make sure that we've imported it
-        pointStack.peek().add(Turbine.makeTCLGlobal(prefixVar(var)));
+        pointAdd(Turbine.makeTCLGlobal(prefixVar(var)));
         continue;
       }
       
@@ -385,7 +401,7 @@ public class TurbineGenerator implements CompilerBackend {
         batchedVarNames.add(tclVarName);
       } else if (Types.isStruct(t)) {
         // don't allocate in data store
-        pointStack.peek().add(Turbine.allocateStruct(prefixVar(var)));
+        pointAdd(Turbine.allocateStruct(prefixVar(var)));
       } else if (Types.isPrimValue(t)) {
         assert(var.storage() == Alloc.LOCAL);
         // don't need to do anything
@@ -396,7 +412,7 @@ public class TurbineGenerator implements CompilerBackend {
     }
     
     if (!batched.isEmpty()) {
-      pointStack.peek().add(Turbine.batchDeclare(batchedVarNames, batched));
+      pointAdd(Turbine.batchDeclare(batchedVarNames, batched));
 
       // Log in small batches to avoid turbine log limitations
       // and overly long lines
@@ -411,7 +427,7 @@ public class TurbineGenerator implements CompilerBackend {
           logExprs.add(new Token(">"));
         }
         TclString msg = new TclString(logExprs, ExprContext.VALUE_STRING);
-        pointStack.peek().add(Turbine.log(msg));
+        pointAdd(Turbine.log(msg));
       }
     }
     
@@ -427,32 +443,36 @@ public class TurbineGenerator implements CompilerBackend {
       if (decl.var.storage() == Alloc.STACK && !noStackVars()) {
         Command s = Turbine.storeInStack(decl.var.name(), prefixVar(decl.var));
         // Store the name->TD in the stack
-        pointStack.peek().add(s);
+        pointAdd(s);
       }
     }
   }
 
+  private TypeName adlbPrimType(PrimType pt) {
+    switch (pt) {
+      case INT:
+      case BOOL:
+      case VOID:
+        return Turbine.ADLB_INT_TYPE;
+      case BLOB:
+        return Turbine.ADLB_BLOB_TYPE;
+      case FLOAT:
+        return Turbine.ADLB_FLOAT_TYPE;
+      case STRING:
+        return Turbine.ADLB_STRING_TYPE;
+      default:
+        throw new STCRuntimeError("Unknown ADLB representation for "
+            + pt);
+    }
+  }
+  
   /**
    * @param t
    * @return ADLB representation type
    */
   private TypeName representationType(Type t, boolean creation) {
     if (Types.isScalarFuture(t) || Types.isScalarUpdateable(t)) {
-      switch (t.primType()) {
-        case INT:
-        case BOOL:
-        case VOID:
-          return Turbine.ADLB_INT_TYPE;
-        case BLOB:
-          return Turbine.ADLB_BLOB_TYPE;
-        case FLOAT:
-          return Turbine.ADLB_FLOAT_TYPE;
-        case STRING:
-          return Turbine.ADLB_STRING_TYPE;
-        default:
-          throw new STCRuntimeError("Unknown ADLB representation for "
-              + t);
-      }
+      return adlbPrimType(t.primType());
     } else if (Types.isRef(t)) {
       return refRepresentationType(t.memberType(), creation);
     } else if (Types.isArray(t)) {
@@ -474,6 +494,21 @@ public class TurbineGenerator implements CompilerBackend {
       }
   }
 
+  /**
+   * Representation type for value if stored into data store
+   * @param t
+   * @param creation
+   * @return
+   */
+  private TypeName valRepresentationType(Type t) {
+    if (Types.isScalarValue(t)) {
+      return adlbPrimType(t.primType());
+    } else {
+      // TODO: array values, etc.
+      throw new STCRuntimeError("Unknown ADLB representation type for " + t);
+    }
+  }
+
   private TypeName arrayKeyType(Var arr, boolean creation) {
     return refRepresentationType(Types.arrayKeyType(arr), creation);
   }
@@ -489,7 +524,7 @@ public class TurbineGenerator implements CompilerBackend {
   private void allocateFile(Var var, Arg initReaders) {
     Value mapExpr = (var.mapping() == null) ? 
                     null : varToExpr(var.mapping());
-    pointStack.peek().add(
+    pointAdd(
         Turbine.allocateFile(mapExpr, prefixVar(var),
                              argToExpr(initReaders)));
   }
@@ -533,14 +568,14 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isRef(target.type()));
     assert(target.type().memberType().equals(src.type()));
     if (Types.isStructRef((target.type()))) {
-      pointStack.peek().add(Turbine.structRefSet(
+      pointAdd(Turbine.structRefSet(
           varToExpr(target), varToExpr(src),
           structTypeName(target.type(), false)));
     } else if (Types.isFileRef(target.type())) {
-    	pointStack.peek().add(Turbine.fileRefSet(
+    	pointAdd(Turbine.fileRefSet(
     	          varToExpr(target), varToExpr(src)));
     } else {
-      pointStack.peek().add(Turbine.refSet(
+      pointAdd(Turbine.refSet(
           varToExpr(target), varToExpr(src)));
     }
   }
@@ -550,7 +585,7 @@ public class TurbineGenerator implements CompilerBackend {
   public void makeAlias(Var dst, Var src) {
     assert(src.type().equals(dst.type()));
     assert(dst.storage() == Alloc.ALIAS);
-    pointStack.peek().add(new SetVariable(prefixVar(dst),
+    pointAdd(new SetVariable(prefixVar(dst),
         varToExpr(src)));
   }
 
@@ -562,7 +597,7 @@ public class TurbineGenerator implements CompilerBackend {
           + " but was " + target.type().toString());
     }
 
-    pointStack.peek().add(Turbine.integerSet(
+    pointAdd(Turbine.integerSet(
         varToExpr(target), argToExpr(src)));
   }
 
@@ -572,10 +607,10 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isInt(source.type()));
     assert(decr.isImmediateInt());
     if (decr.equals(Arg.ZERO)) {
-      pointStack.peek().add(Turbine.integerGet(prefixVar(target),
+      pointAdd(Turbine.integerGet(prefixVar(target),
                                   varToExpr(source)));
     } else {
-      pointStack.peek().add(Turbine.integerDecrGet(prefixVar(target),
+      pointAdd(Turbine.integerDecrGet(prefixVar(target),
                             varToExpr(source), argToExpr(decr)));
     }
   }
@@ -588,7 +623,7 @@ public class TurbineGenerator implements CompilerBackend {
           + " but was " + target.type().toString());
     }
 
-    pointStack.peek().add(Turbine.integerSet(
+    pointAdd(Turbine.integerSet(
         varToExpr(target), argToExpr(src)));
   }
 
@@ -599,10 +634,10 @@ public class TurbineGenerator implements CompilerBackend {
 
     assert(decr.isImmediateInt());
     if (decr.equals(Arg.ZERO)) {
-      pointStack.peek().add(Turbine.integerGet(prefixVar(target),
+      pointAdd(Turbine.integerGet(prefixVar(target),
           varToExpr(source)));
     } else {
-      pointStack.peek().add(Turbine.integerDecrGet(prefixVar(target),
+      pointAdd(Turbine.integerDecrGet(prefixVar(target),
           varToExpr(source), argToExpr(decr)));
     }
   }
@@ -611,7 +646,7 @@ public class TurbineGenerator implements CompilerBackend {
   public void assignVoid(Var target, Arg src) {
     assert(Types.isVoid(target.type()));
     assert(Types.isVoidVal(src.type()));
-    pointStack.peek().add(Turbine.voidSet(varToExpr(target)));
+    pointAdd(Turbine.voidSet(varToExpr(target)));
   }
 
   @Override
@@ -621,7 +656,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(decr.isImmediateInt());
     
     // Don't actually need to retrieve value as it has no contents
-    pointStack.peek().add(new SetVariable(prefixVar(target),
+    pointAdd(new SetVariable(prefixVar(target),
                           Turbine.VOID_DUMMY_VAL));
 
     if (!decr.equals(Arg.ZERO)) {
@@ -637,7 +672,7 @@ public class TurbineGenerator implements CompilerBackend {
           + " but was " + target.type().toString());
     }
 
-    pointStack.peek().add(Turbine.floatSet(
+    pointAdd(Turbine.floatSet(
           varToExpr(target), argToExpr(src)));
   }
 
@@ -648,10 +683,10 @@ public class TurbineGenerator implements CompilerBackend {
 
     assert(decr.isImmediateInt());
     if (decr.equals(Arg.ZERO)) {
-      pointStack.peek().add(Turbine.floatGet(prefixVar(target),
+      pointAdd(Turbine.floatGet(prefixVar(target),
                                                     varToExpr(source)));
     } else {
-      pointStack.peek().add(Turbine.floatDecrGet(prefixVar(target),
+      pointAdd(Turbine.floatDecrGet(prefixVar(target),
           varToExpr(source), argToExpr(decr)));
     }
   }
@@ -664,7 +699,7 @@ public class TurbineGenerator implements CompilerBackend {
           + " but was " + target.type().toString());
     }
 
-    pointStack.peek().add(Turbine.stringSet(
+    pointAdd(Turbine.stringSet(
         varToExpr(target), argToExpr(src)));
   }
 
@@ -674,10 +709,10 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isStringVal(target));
     assert(decr.isImmediateInt());
     if (decr.equals(Arg.ZERO)) {
-      pointStack.peek().add(Turbine.stringGet(prefixVar(target),
+      pointAdd(Turbine.stringGet(prefixVar(target),
                                                       varToExpr(source)));
     } else {
-      pointStack.peek().add(Turbine.stringDecrGet(prefixVar(target),
+      pointAdd(Turbine.stringDecrGet(prefixVar(target),
           varToExpr(source), argToExpr(decr)));
     }
   }
@@ -686,7 +721,7 @@ public class TurbineGenerator implements CompilerBackend {
   public void assignBlob(Var target, Arg src) {
     assert(Types.isBlob(target.type()));
     assert(src.isImmediateBlob());
-    pointStack.peek().add(Turbine.blobSet(varToExpr(target),
+    pointAdd(Turbine.blobSet(varToExpr(target),
                                           argToExpr(src)));
   }
 
@@ -696,10 +731,10 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isBlob(src.type()));
     assert(decr.isImmediateInt());
     if (decr.equals(Arg.ZERO)) {
-      pointStack.peek().add(Turbine.blobGet(prefixVar(target),
+      pointAdd(Turbine.blobGet(prefixVar(target),
                                                   varToExpr(src)));
     } else {
-      pointStack.peek().add(Turbine.blobDecrGet(prefixVar(target),
+      pointAdd(Turbine.blobDecrGet(prefixVar(target),
                                       varToExpr(src), argToExpr(decr)));
     }
   }
@@ -707,14 +742,14 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void freeBlob(Var blobVal) {
     assert(Types.isBlobVal(blobVal));
-    pointStack.peek().add(Turbine.freeLocalBlob(varToExpr(blobVal)));
+    pointAdd(Turbine.freeLocalBlob(varToExpr(blobVal)));
   }
 
   @Override
   public void assignFile(Var target, Arg src) {
     assert(Types.isFile(target.type()));
     assert(Types.isFileVal(src.type()));
-    pointStack.peek().add(Turbine.fileSet(varToExpr(target),
+    pointAdd(Turbine.fileSet(varToExpr(target),
                             prefixVar(src.getVar())));
   }
 
@@ -724,9 +759,9 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isFileVal(target));
     assert(decr.isImmediateInt());
     if (decr.equals(Arg.ZERO)) {
-      pointStack.peek().add(Turbine.fileGet(prefixVar(target), varToExpr(src)));
+      pointAdd(Turbine.fileGet(prefixVar(target), varToExpr(src)));
     } else {
-      pointStack.peek().add(Turbine.fileDecrGet(prefixVar(target),
+      pointAdd(Turbine.fileDecrGet(prefixVar(target),
           varToExpr(src), argToExpr(decr)));
     }
   }
@@ -734,7 +769,7 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void decrLocalFileRef(Var localFile) {
     assert(Types.isFileVal(localFile));
-    pointStack.peek().add(Turbine.decrLocalFileRef(prefixVar(localFile)));
+    pointAdd(Turbine.decrLocalFileRef(prefixVar(localFile)));
   }
   
   @Override
@@ -745,14 +780,14 @@ public class TurbineGenerator implements CompilerBackend {
     
     SetVariable cmd = new SetVariable(prefixVar(filename),
                           Turbine.getFileName(varToExpr(file)));
-    pointStack.peek().add(cmd);
+    pointAdd(cmd);
   }
   
   @Override
   public void getLocalFileName(Var filename, Var file) {
     assert(Types.isStringVal(filename));
     assert(Types.isFileVal(file));
-    pointStack.peek().add(new SetVariable(prefixVar(filename),
+    pointAdd(new SetVariable(prefixVar(filename),
                         Turbine.localFilePath(varToExpr(file))));
   }
   
@@ -760,7 +795,7 @@ public class TurbineGenerator implements CompilerBackend {
   public void isMapped(Var isMapped, Var file) {
     assert(Types.isFile(file));
     assert(Types.isBoolVal(isMapped));
-    pointStack.peek().add(Turbine.isMapped(prefixVar(isMapped),
+    pointAdd(Turbine.isMapped(prefixVar(isMapped),
                                            varToExpr(file)));
   }
   
@@ -768,14 +803,14 @@ public class TurbineGenerator implements CompilerBackend {
   public void setFilenameVal(Var file, Arg filenameVal) {
     assert(Types.isFile(file.type()));
     assert(filenameVal.isImmediateString());
-    pointStack.peek().add(Turbine.setFilenameVal(varToExpr(file),
+    pointAdd(Turbine.setFilenameVal(varToExpr(file),
               argToExpr(filenameVal)));
   }
   
   @Override
   public void chooseTmpFilename(Var filenameVal) {
     assert(Types.isStringVal(filenameVal));
-    pointStack.peek().add(Turbine.mkTemp(prefixVar(filenameVal)));
+    pointAdd(Turbine.mkTemp(prefixVar(filenameVal)));
   }
 
   @Override
@@ -796,14 +831,14 @@ public class TurbineGenerator implements CompilerBackend {
     
     if (isMapped.isBoolVal()) {
       if (isMapped.getBoolLit()) {
-        pointStack.peek().append(ifMapped);  
+        point().append(ifMapped);  
       } else {
-        pointStack.peek().append(ifUnmapped);
+        point().append(ifUnmapped);
       }
     } else {
-      pointStack.peek().add(new If(argToExpr(isMapped), ifMapped, ifUnmapped)); 
+      pointAdd(new If(argToExpr(isMapped), ifMapped, ifUnmapped)); 
     }
-    pointStack.peek().add(Turbine.createLocalFile(prefixVar(localFile),
+    pointAdd(Turbine.createLocalFile(prefixVar(localFile),
              argToExpr(filenameVal), new Value(TCLTMP_INIT_REFCOUNT)));
   }
   
@@ -817,7 +852,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(srcKind.supportsPhysicalCopy());
     if (dstKind == FileKind.LOCAL_FS &&
         srcKind == FileKind.LOCAL_FS) {
-      pointStack.peek().add(Turbine.copyFileContents(varToExpr(dst),
+      pointAdd(Turbine.copyFileContents(varToExpr(dst),
                                                      varToExpr(src)));
     } else {
       throw new STCRuntimeError("Don't know how to copy " + srcKind + " -> "
@@ -833,7 +868,7 @@ public class TurbineGenerator implements CompilerBackend {
       argExpr.add(argToExpr(a));
     }
 
-    pointStack.peek().add(BuiltinOps.genLocalOpTcl(op, out, in, argExpr));
+    pointAdd(BuiltinOps.genLocalOpTcl(op, out, in, argExpr));
   }
   
   @Override
@@ -872,7 +907,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isIntRef(src));
     Command deref = Turbine.dereferenceInteger(varToExpr(target),
                                                varToExpr(src));
-    pointStack.peek().add(deref);
+    pointAdd(deref);
   }
 
   @Override
@@ -881,7 +916,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isVoidRef(src));
     Command deref = Turbine.dereferenceVoid(varToExpr(target),
                                                varToExpr(src));
-    pointStack.peek().add(deref);
+    pointAdd(deref);
   }
   
   @Override
@@ -890,7 +925,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isBoolRef(src));
     Command deref = Turbine.dereferenceInteger(varToExpr(target),
                                                varToExpr(src));
-    pointStack.peek().add(deref);
+    pointAdd(deref);
   }
 
   @Override
@@ -899,7 +934,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isFloatRef(src));
     Command deref = Turbine.dereferenceFloat(varToExpr(target),
                                              varToExpr(src));
-    pointStack.peek().add(deref);
+    pointAdd(deref);
   }
 
   @Override
@@ -908,7 +943,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isStringRef(src));
     Command deref = Turbine.dereferenceString(varToExpr(target), 
                                               varToExpr(src));
-    pointStack.peek().add(deref);
+    pointAdd(deref);
   }
 
   @Override
@@ -916,7 +951,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isBlob(target));
     assert(Types.isBlobRef(src));
     Command deref = Turbine.dereferenceBlob(varToExpr(target), varToExpr(src));
-    pointStack.peek().add(deref);
+    pointAdd(deref);
   }
   
   @Override
@@ -925,7 +960,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isFileRef(src));
     Command deref = Turbine.dereferenceFile(varToExpr(target),
                                             varToExpr(src));
-    pointStack.peek().add(deref);
+    pointAdd(deref);
   }
 
   @Override
@@ -956,7 +991,7 @@ public class TurbineGenerator implements CompilerBackend {
                                     argToExpr(decr));
       }
     }
-    pointStack.peek().add(deref);
+    pointAdd(deref);
   }
 
   @Override
@@ -970,7 +1005,7 @@ public class TurbineGenerator implements CompilerBackend {
         varToExpr(arrayResult), varToExpr(array),
         varToExpr(ix), arrayKeyType(arrayResult, true),
         arrayValueType(arrayResult, true));
-    pointStack.peek().add(t);
+    pointAdd(t);
   }
 
   @Override
@@ -985,7 +1020,7 @@ public class TurbineGenerator implements CompilerBackend {
         varToExpr(arrayResult), varToExpr(arrayRefVar),
         varToExpr(ix), varToExpr(outerArray),
         arrayKeyType(arrayResult, true), arrayValueType(arrayResult, true));
-    pointStack.peek().add(t);
+    pointAdd(t);
   }
 
 
@@ -1003,7 +1038,7 @@ public class TurbineGenerator implements CompilerBackend {
         prefixVar(arrayResult), varToExpr(array), argToExpr(ix),
         arrayKeyType(arrayResult, true), arrayValueType(arrayResult, true),
         argToExpr(callerReadRefs), argToExpr(callerWriteRefs));
-    pointStack.peek().add(t);
+    pointAdd(t);
   }
 
   @Override
@@ -1018,7 +1053,7 @@ public class TurbineGenerator implements CompilerBackend {
         varToExpr(arrayResult), varToExpr(array),
         argToExpr(ix), varToExpr(outerArray),
         arrayKeyType(arrayResult, true), arrayValueType(arrayResult, true));
-    pointStack.peek().add(t);
+    pointAdd(t);
   }
 
   @Override
@@ -1035,7 +1070,7 @@ public class TurbineGenerator implements CompilerBackend {
             prefixVar(bag), varToExpr(arr), argToExpr(ix),
             bagValueType(bag, true),
             argToExpr(callerReadRefs), argToExpr(callerWriteRefs));
-    pointStack.peek().add(t);
+    pointAdd(t);
   }
 
   @Override
@@ -1079,7 +1114,7 @@ public class TurbineGenerator implements CompilerBackend {
     funcArgs.add(iList);
     funcArgs.addAll(Turbine.ruleKeywordArgs(target, parExpr));
     Command c = new Command(tclFunction, funcArgs);
-    pointStack.peek().add(c);
+    pointAdd(c);
     
     clearPriority(priority);
   }
@@ -1094,7 +1129,7 @@ public class TurbineGenerator implements CompilerBackend {
                                                         inputs, outputs);
     
     Command cmd = new Command(result.toArray(new TclTree[result.size()]));
-    pointStack.peek().add(cmd);
+    pointAdd(cmd);
   }
 
   
@@ -1128,7 +1163,7 @@ public class TurbineGenerator implements CompilerBackend {
       
       Sequence rule = Turbine.rule(function, blockOn, action, mode,
                        execContextStack.peek(), buildRuleProps(props));
-      pointStack.peek().append(rule);
+      point().append(rule);
       
     } else if (mode == TaskMode.SYNC) {
       // Calling synchronously, can't guarantee anything blocks
@@ -1137,7 +1172,7 @@ public class TurbineGenerator implements CompilerBackend {
       List<Expression> inVars = TclUtil.argsToExpr(inputs);
       List<Expression> outVars = TclUtil.varsToExpr(outputs);
       
-      pointStack.peek().add(Turbine.callFunctionSync(
+      pointAdd(Turbine.callFunctionSync(
           swiftFuncName, outVars, inVars));
     } else {
       throw new STCRuntimeError("Unexpected mode: " + mode);
@@ -1176,7 +1211,7 @@ public class TurbineGenerator implements CompilerBackend {
         // Use temporary variable to avoid double evaluation
         ArrayInfo ai = new ArrayInfo(arg.type());
         String unpackTmp = TCLTMP_UNPACKED + argNum;
-        pointStack.peek().add(new SetVariable(unpackTmp, Turbine.unpackArray(
+        pointAdd(new SetVariable(unpackTmp, Turbine.unpackArray(
                                 argToExpr(arg), ai.nesting,
                                 Types.isFile(ai.baseType))));  
         argExpr = new Expand(new Value(unpackTmp));
@@ -1194,8 +1229,8 @@ public class TurbineGenerator implements CompilerBackend {
     logMsg.add(Turbine.execKeywordOpts(stdinFilename, stdoutFilename,
                                        stderrFilename));
     
-    pointStack.peek().add(Turbine.turbineLog(logMsg));
-    pointStack.peek().add(Turbine.exec(cmd, stdinFilename,
+    pointAdd(Turbine.turbineLog(logMsg));
+    pointAdd(Turbine.exec(cmd, stdinFilename,
                 stdoutFilename, stderrFilename, tclArgs));
         
     // Handle closing of outputs
@@ -1213,21 +1248,21 @@ public class TurbineGenerator implements CompilerBackend {
 
   private void clearPriority(Arg priority) {
     if (priority != null) {
-      pointStack.peek().add(Turbine.resetPriority());
+      pointAdd(Turbine.resetPriority());
     }
   }
 
   private void setPriority(Arg priority) {
     if (priority != null) {
       logger.trace("priority: " + priority);
-      pointStack.peek().add(Turbine.setPriority(argToExpr(priority)));
+      pointAdd(Turbine.setPriority(argToExpr(priority)));
     }
   }
 
   @Override
   public void structInitField(Var structVar, String fieldName,
       Var fieldContents) {
-    pointStack.peek().add(
+    pointAdd(
         Turbine.structInsert(prefixVar(structVar),
             fieldName, varToExpr(fieldContents)));
   }
@@ -1241,7 +1276,7 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void structLookup(Var alias, Var structVar,
         String structField) {
-    pointStack.peek().add(
+    pointAdd(
         Turbine.structLookupFieldID(varToExpr(structVar),
             structField, prefixVar(alias)));
   }
@@ -1255,7 +1290,7 @@ public class TurbineGenerator implements CompilerBackend {
     StructType structType = (StructType)structVar.type().memberType();
     int fieldID = structTypes.getFieldID(structType, structField);
     
-    pointStack.peek().add(
+    pointAdd(
         Turbine.structRefLookupFieldID(varToExpr(structVar),
             fieldID, varToExpr(alias),
             refRepresentationType(alias.type().memberType(), false)));
@@ -1272,7 +1307,7 @@ public class TurbineGenerator implements CompilerBackend {
     Command getRef = Turbine.arrayLookupComputed(varToExpr(oVar), 
         refRepresentationType(oVar.type().memberType(), false),
         varToExpr(arrayVar), varToExpr(indexVar), isArrayRef);
-    pointStack.peek().add(getRef);
+    pointAdd(getRef);
   }
 
   @Override
@@ -1287,14 +1322,14 @@ public class TurbineGenerator implements CompilerBackend {
           varToExpr(arrayVar),
           argToExpr(arrIx), isArrayRef);
 
-    pointStack.peek().add(getRef);
+    pointAdd(getRef);
   }
 
   @Override
   public void arrayLookupImm(Var oVar, Var arrayVar, Arg arrIx) {
     assert(Types.isArrayKeyVal(arrayVar, arrIx));
     assert(oVar.type().equals(Types.arrayMemberType(arrayVar.type())));
-     pointStack.peek().add(Turbine.arrayLookupImm(
+     pointAdd(Turbine.arrayLookupImm(
          prefixVar(oVar),
          varToExpr(arrayVar),
          argToExpr(arrIx)));
@@ -1347,7 +1382,7 @@ public class TurbineGenerator implements CompilerBackend {
         varToExpr(ix), argToExpr(writersDecr),
         arrayValueType(array, false));
 
-    pointStack.peek().add(r);
+    pointAdd(r);
   }
   
   @Override
@@ -1364,7 +1399,7 @@ public class TurbineGenerator implements CompilerBackend {
         varToExpr(ix), argToExpr(writersDecr),
         arrayValueType(array, false));
 
-    pointStack.peek().add(r);
+    pointAdd(r);
   }
 
   @Override
@@ -1378,7 +1413,7 @@ public class TurbineGenerator implements CompilerBackend {
         varToExpr(ix), varToExpr(outerArray),
         arrayValueType(array, false));
 
-    pointStack.peek().add(r);
+    pointAdd(r);
   }
   
   @Override
@@ -1395,7 +1430,7 @@ public class TurbineGenerator implements CompilerBackend {
         varToExpr(ix), varToExpr(outerArray),
         arrayValueType(array, false));
 
-    pointStack.peek().add(r);
+    pointAdd(r);
   }
 
   @Override
@@ -1414,7 +1449,7 @@ public class TurbineGenerator implements CompilerBackend {
       keyExprs.add(argToExpr(key));
       valExprs.add(varToExpr(val));
     }
-    pointStack.peek().add(
+    pointAdd(
         Turbine.arrayBuild(varToExpr(array), keyExprs, valExprs, true,
                            arrayValueType(array, false)));
   }
@@ -1430,7 +1465,7 @@ public class TurbineGenerator implements CompilerBackend {
         varToExpr(member), varToExpr(array),
         argToExpr(arrIx), argToExpr(writersDecr),
         arrayValueType(array, false));
-    pointStack.peek().add(r);
+    pointAdd(r);
   }
   
   
@@ -1446,7 +1481,7 @@ public class TurbineGenerator implements CompilerBackend {
         varToExpr(member), varToExpr(array),
         argToExpr(arrIx), argToExpr(writersDecr),
         arrayValueType(array, false));
-    pointStack.peek().add(r);
+    pointAdd(r);
   }
 
   @Override
@@ -1460,7 +1495,7 @@ public class TurbineGenerator implements CompilerBackend {
         varToExpr(member), varToExpr(array),
         argToExpr(arrIx), varToExpr(outerArray),
         arrayValueType(array, false));
-    pointStack.peek().add(r);
+    pointAdd(r);
   }
   
   @Override
@@ -1481,13 +1516,13 @@ public class TurbineGenerator implements CompilerBackend {
         varToExpr(member), varToExpr(array),
         argToExpr(arrIx), varToExpr(outerArray),
         arrayValueType(array, false));
-    pointStack.peek().add(r);
+    pointAdd(r);
   }
 
   @Override
   public void bagInsert(Var bag, Var elem, Arg writersDecr) {
     assert(Types.isBagElem(bag, elem));
-    pointStack.peek().add(Turbine.bagAppend(varToExpr(bag),
+    pointAdd(Turbine.bagAppend(varToExpr(bag),
           refRepresentationType(elem.type(), false), varToExpr(elem),
           argToExpr(writersDecr)));
   }
@@ -1500,7 +1535,7 @@ public class TurbineGenerator implements CompilerBackend {
           " not yet supported");
     }
     assert(val.isImmediateFloat());
-    pointStack.peek().add(Turbine.updateableFloatInit(varToExpr(updateable),
+    pointAdd(Turbine.updateableFloatInit(varToExpr(updateable),
                                                       argToExpr(val)));
   }
   
@@ -1515,7 +1550,7 @@ public class TurbineGenerator implements CompilerBackend {
               + " not yet supported");
     }
     // get with caching disabled
-    pointStack.peek().add(Turbine.floatGet(prefixVar(result),
+    pointAdd(Turbine.floatGet(prefixVar(result),
                           varToExpr(updateable), CacheMode.UNCACHED));
   }
 
@@ -1526,7 +1561,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(updateable.type().primType() == val.type().primType());
     assert(updateMode != null);
     String builtinName = getUpdateBuiltin(updateMode);
-    pointStack.peek().add(new Command(builtinName, Arrays.asList(
+    pointAdd(new Command(builtinName, Arrays.asList(
                   (Expression)varToExpr(updateable), varToExpr(val))));
   }
 
@@ -1560,7 +1595,7 @@ public class TurbineGenerator implements CompilerBackend {
     }
     assert(updateMode != null);
     String builtinName = getUpdateBuiltin(updateMode) + "_impl";
-    pointStack.peek().add(new Command(builtinName, Arrays.asList(
+    pointAdd(new Command(builtinName, Arrays.asList(
         (Expression)varToExpr(updateable), argToExpr(val))));
   }
 
@@ -1574,9 +1609,9 @@ public class TurbineGenerator implements CompilerBackend {
       if (!requiredPackages.contains(pv))
       {
         PackageRequire pr = new PackageRequire(pkg, version);
-        pointStack.peek().add(pr);
+        pointAdd(pr);
         requiredPackages.add(pv);
-        pointStack.peek().add(new Command(""));
+        pointAdd(new Command(""));
       }
     }
   }
@@ -1614,7 +1649,7 @@ public class TurbineGenerator implements CompilerBackend {
     args.addAll(inputs);
 
     // This better be the bottom
-    Sequence point = pointStack.peek();
+    Sequence point = point();
 
     Sequence s = new Sequence();
     Proc proc = new Proc(prefixedFunctionName,
@@ -1669,7 +1704,7 @@ public class TurbineGenerator implements CompilerBackend {
       TclTree[] t = Turbine.createStackFrame(StackFrameType.NESTED);
       block.add(t);
     }
-    Sequence point = pointStack.peek();
+    Sequence point = point();
     point.add(block);
     pointStack.push(block);
   }
@@ -1681,7 +1716,7 @@ public class TurbineGenerator implements CompilerBackend {
 
     @Override
     public void addComment(String comment) {
-      pointStack.peek().add(new Comment(comment));
+      pointAdd(new Comment(comment));
     }
 
   /** NOT UPDATED */
@@ -1712,7 +1747,7 @@ public class TurbineGenerator implements CompilerBackend {
 
     If i = new If(argToExpr(condition),
         thenBlock, elseBlock);
-    pointStack.peek().add(i);
+    pointAdd(i);
 
     if (hasElse) {
        // Put it on the stack so it can be fetched when we start else block
@@ -1830,11 +1865,11 @@ public class TurbineGenerator implements CompilerBackend {
 
         Sequence rule = Turbine.deepRule(uniqueName, waitFor, depths,
               isFile, action, mode, execContextStack.peek(), ruleProps);
-        pointStack.peek().append(rule);
+        point().append(rule);
 
       } else {
         // Whether we can enqueue rules locally
-        pointStack.peek().append(Turbine.rule(uniqueName,
+        point().append(Turbine.rule(uniqueName,
             waitFor, action, mode, execContextStack.peek(), ruleProps));
       }
       
@@ -1862,11 +1897,11 @@ public class TurbineGenerator implements CompilerBackend {
      * @param vars
      */
     private void incrementReaders(List<Var> vars, Expression incr) {
-      pointStack.peek().append(buildIncReaders(vars, incr, false));
+      point().append(buildIncReaders(vars, incr, false));
     }
 
     private void decrementReaders(List<Var> vars, Expression decr) {
-      pointStack.peek().append(buildIncReaders(vars, decr, true));
+      point().append(buildIncReaders(vars, decr, true));
     }
 
     /**
@@ -1928,7 +1963,7 @@ public class TurbineGenerator implements CompilerBackend {
               TclExpr.mult(new LiteralInt(vc.count), incr)));
         }
       }
-      pointStack.peek().append(seq);
+      point().append(seq);
     }
 
     private void decrementWriters(List<Var> vars,
@@ -1947,7 +1982,7 @@ public class TurbineGenerator implements CompilerBackend {
               TclExpr.mult(new LiteralInt(vc.count), decr)));
         }
       }
-      pointStack.peek().append(seq);
+      point().append(seq);
     }
 
     private List<Expression> buildAction(String procName, List<Expression> args) {
@@ -2016,7 +2051,7 @@ public class TurbineGenerator implements CompilerBackend {
 
     Switch sw = new Switch(argToExpr(switchVar),
         caseLabels, hasDefault, caseBodies);
-    pointStack.peek().add(sw);
+    pointAdd(sw);
 
     for (int c = 1; c <= casecount; c++) {
       // Push case in reverse order so we can pop off as we add cases
@@ -2064,7 +2099,7 @@ public class TurbineGenerator implements CompilerBackend {
 
     if (splitDegree <= 0) {
       // Load container contents and increment refcounts
-      pointStack.peek().add(Turbine.containerContents(contentsVar,
+      pointAdd(Turbine.containerContents(contentsVar,
                           varToExpr(container), haveKeys));
       Value tclDict = new Value(contentsVar);
       Expression containerSize = Turbine.dictSize(tclDict);
@@ -2079,7 +2114,7 @@ public class TurbineGenerator implements CompilerBackend {
   private void handleForeachContainerRefcounts(List<RefCount> perIterIncrs,
       MultiMap<Var, RefCount> constIncrs, Expression containerSize) {
     if (!perIterIncrs.isEmpty()) {
-      pointStack.peek().add(new SetVariable(TCLTMP_ITERS, 
+      pointAdd(new SetVariable(TCLTMP_ITERS, 
                                       containerSize));
  
       handleRefcounts(constIncrs, perIterIncrs, Value.numericValue(TCLTMP_ITERS), false);
@@ -2091,7 +2126,7 @@ public class TurbineGenerator implements CompilerBackend {
       List<PassedVar> usedVars, List<RefCount> perIterIncrs,
       MultiMap<Var, RefCount> constIncrs) {
     // load array size
-    pointStack.peek().add(Turbine.containerSize(TCLTMP_CONTAINER_SIZE,
+    pointAdd(Turbine.containerSize(TCLTMP_CONTAINER_SIZE,
                                       varToExpr(arrayVar)));
     Value containerSize = Value.numericValue(TCLTMP_CONTAINER_SIZE);
     
@@ -2109,20 +2144,20 @@ public class TurbineGenerator implements CompilerBackend {
 
     // need to find the length of this split since that is what the turbine
     //  call wants
-    pointStack.peek().add(new SetVariable(TCLTMP_SPLITLEN,
+    pointAdd(new SetVariable(TCLTMP_SPLITLEN,
             new TclExpr(Value.numericValue(TCLTMP_RANGE_HI), TclExpr.MINUS,
                         Value.numericValue(TCLTMP_RANGE_LO), TclExpr.PLUS,
                         LiteralInt.ONE)));
     
     // load the subcontainer
-    pointStack.peek().add(Turbine.containerContents(contentsVar,
+    pointAdd(Turbine.containerContents(contentsVar,
         varToExpr(arrayVar), haveKeys, Value.numericValue(TCLTMP_SPLITLEN),
         TCLTMP_RANGE_LO_V));
   }
 
   private void startForeachInner(
       Value arrayContents, Var memberVar, Var loopCountVar) {
-    Sequence curr = pointStack.peek();
+    Sequence curr = point();
     boolean haveKeys = loopCountVar != null;
     Sequence loopBody = new Sequence();
 
@@ -2173,7 +2208,7 @@ public class TurbineGenerator implements CompilerBackend {
 
     if (!perIterIncrs.isEmpty()) {
       // Increment references by # of iterations
-      pointStack.peek().add(new SetVariable(TCLTMP_ITERSTOTAL,
+      pointAdd(new SetVariable(TCLTMP_ITERSTOTAL,
                        rangeItersLeft(startE, endE, incrE)));
       
       Value itersTotal = Value.numericValue(TCLTMP_ITERSTOTAL);
@@ -2205,7 +2240,7 @@ public class TurbineGenerator implements CompilerBackend {
     Sequence loopBody = new Sequence();
     String loopVarName = prefixVar(loopVar);
     ForLoop tclLoop = new ForLoop(loopVarName, startE, endE, incrE, loopBody);
-    pointStack.peek().add(tclLoop);
+    pointAdd(tclLoop);
     pointStack.push(loopBody);
   }
 
@@ -2271,7 +2306,7 @@ public class TurbineGenerator implements CompilerBackend {
           usedTclFunctionNames, commonFormalArgs, inner));
     
     // Call outer directly
-    pointStack.peek().add(new Command(outerProcName, outerCallArgs));
+    pointAdd(new Command(outerProcName, outerCallArgs));
 
 
     // itersLeft = ceil( (hi - lo + 1) /(double) inc))
@@ -2433,7 +2468,7 @@ public class TurbineGenerator implements CompilerBackend {
   private void endRangeSplit(List<RefCount> perIterDecrements) {
     if (!perIterDecrements.isEmpty()) {
       // Decrement # of iterations executed in inner block
-      pointStack.peek().add(new SetVariable(TCLTMP_ITERS, 
+      pointAdd(new SetVariable(TCLTMP_ITERS, 
                    rangeItersLeft(Value.numericValue(TCLTMP_RANGE_LO),
                                   Value.numericValue(TCLTMP_RANGE_HI),
                                   Value.numericValue(TCLTMP_RANGE_INC))));
@@ -2608,7 +2643,7 @@ public class TurbineGenerator implements CompilerBackend {
 
     String uniqueLoopName = uniqueTCLFunctionName(loopName);
 
-    pointStack.peek().add(Turbine.loopRule(
+    pointAdd(Turbine.loopRule(
         uniqueLoopName, firstIterArgs, blockingVals, execContextStack.peek()));
 
     Sequence loopBody = new Sequence();
@@ -2651,7 +2686,7 @@ public class TurbineGenerator implements CompilerBackend {
         blockingVals.add(varToExpr(newVals.get(i)));
       }
     }
-    pointStack.peek().add(Turbine.loopRule(loopName,
+    pointAdd(Turbine.loopRule(loopName,
         nextIterArgs, blockingVals, execContextStack.peek()));
   }
 
@@ -2670,12 +2705,33 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void writeCheckpoint(List<Arg> key, List<Arg> val) {
-    throw new STCRuntimeError("writeCheckpoint not implemented");
+    //TODO: call xpt startup in init
+
+    // need to pass in values, along with types for serialization
+    List<Expression> keyExprs = makeTypeValList(key);
+    List<Expression> valExprs = makeTypeValList(val);
+    
+    pointAdd(Turbine.xptWrite(keyExprs, valExprs));
+  }
+
+  /**
+   * Make a list of values, with each value preceded by the ADLB type
+   * @param key
+   * @return
+   */
+  private List<Expression> makeTypeValList(List<Arg> key) {
+    List<Expression> keyExprs = new ArrayList<Expression>(key.size()*2);
+    for (Arg k: key) {
+      keyExprs.add(valRepresentationType(k.type()));
+      keyExprs.add(argToExpr(k));
+    }
+    return keyExprs;
   }
 
   @Override
   public void lookupCheckpoint(Var checkpointExists, Var value, List<Arg> key) {
-    throw new STCRuntimeError("lookupCheckpoint not implemented");
+    pointAdd(Turbine.xptLookup(prefixVar(checkpointExists), prefixVar(value),
+                                    makeTypeValList(key)));
   }
 
   @Override
