@@ -52,6 +52,7 @@
 #include <adlb.h>
 #include <adlb-defs.h>
 #include <adlb_types.h>
+#include <adlb-xpt.h>
 
 #include <log.h>
 
@@ -2969,6 +2970,89 @@ ADLB_Enable_Read_Refcount_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
+  usage: adlb::xpt_write <key blob> <val blob> <persist mode> <index add>
+  persist mode: no_persist, persist, or persist_flush: whether/how to
+                persist to file
+  index add: int interpreted as boolean: whether to add to index
+ */
+static int
+ADLB_Xpt_Write_Cmd(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(5);
+  int rc;
+  adlb_code ac;
+
+  adlb_datum_id tmp;
+  adlb_blob_t key_blob, val_blob;
+  rc = extract_tcl_blob(interp, objv, objv[1], &key_blob, &tmp);
+  TCL_CHECK(rc);
+  
+  rc = extract_tcl_blob(interp, objv, objv[2], &val_blob, &tmp);
+  TCL_CHECK(rc);
+
+  adlb_xpt_persist persist_mode;
+  const char *persist_mode_s = Tcl_GetString(objv[3]);
+  if (strcmp(persist_mode_s, "no_persist") == 0)
+  {
+    persist_mode = ADLB_NO_PERSIST;
+  }
+  else if (strcmp(persist_mode_s, "persist") == 0)
+  {
+    persist_mode = ADLB_PERSIST;
+  }
+  else if (strcmp(persist_mode_s, "persist_flush") == 0)
+  {
+    persist_mode = ADLB_PERSIST_FLUSH;
+  }
+  else
+  {
+    TCL_RETURN_ERROR("Invalid persist mode: %s", persist_mode_s);
+  }
+
+
+  int index_add_i;
+  rc = Tcl_GetBooleanFromObj(interp, objv[4], &index_add_i);
+  TCL_CHECK(rc);
+  bool index_add = (index_add_i != 0);
+ 
+  ac = ADLB_Xpt_write(key_blob.value, key_blob.length, val_blob.value,
+                      val_blob.length, persist_mode, index_add);
+
+  return TCL_OK;
+}
+
+/**
+  usage: TODO
+ */
+static int
+ADLB_Xpt_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[])
+{
+  return TCL_OK;
+}
+
+/**
+  usage: TODO
+ */
+static int
+ADLB_Xpt_Pack_Cmd(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[])
+{
+  return TCL_OK;
+}
+
+/**
+  usage: TODO
+ */
+static int
+ADLB_Xpt_Unpack_Cmd(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[])
+{
+  return TCL_OK;
+}
+
+/**
    usage: adlb::fail
  */
 static int
@@ -3118,6 +3202,8 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("container_size",      ADLB_Container_Size_Cmd);
   COMMAND("xpt_write", ADLB_Xpt_Write_Cmd);
   COMMAND("xpt_lookup", ADLB_Xpt_Lookup_Cmd);
+  COMMAND("xpt_pack", ADLB_Xpt_Pack_Cmd);
+  COMMAND("xpt_unpack", ADLB_Xpt_Unpack_Cmd);
   COMMAND("fail",      ADLB_Fail_Cmd);
   COMMAND("abort",     ADLB_Abort_Cmd);
   COMMAND("finalize",  ADLB_Finalize_Cmd);
