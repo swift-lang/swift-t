@@ -104,9 +104,17 @@ public class Square extends Expression
   }
 
   public static Square fnCall(String fnName, Expression... args) {
-    Expression newE[] = new Expression[args.length + 1];
+    return fnCall(new Token(fnName), args);
+  }
+  
+  public static Square fnCall(Token fn, Expression... args) {
+    return fnCall(fn, Arrays.asList(args));
+  }
+  
+  public static Square fnCall(Token fn, List<Expression> args) {
+    Expression newE[] = new Expression[args.size() + 1];
 
-    newE[0] = new Token(fnName);
+    newE[0] = fn;
     int i = 1;
     for (Expression arg: args) {
       newE[i] = arg;

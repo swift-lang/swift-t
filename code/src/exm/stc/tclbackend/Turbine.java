@@ -224,7 +224,9 @@ class Turbine {
 
   // Checkpointing
   public static Token XPT_WRITE = adlbFn("xpt_write");
-  public static Token XPT_LOOKUP = adlbFn("lookup");
+  public static Token XPT_LOOKUP = adlbFn("xpt_lookup");
+  public static Token XPT_PACK = adlbFn("xpt_pack");
+  public static Token XPT_UNPACK = adlbFn("xpt_unpack");
   public static Token XPT_NO_PERSIST = new Token("no_persist");
   public static Token XPT_PERSIST = new Token("persist");
   public static Token XPT_PERSIST_FLUSH = new Token("persist_flush");
@@ -1314,6 +1316,30 @@ class Turbine {
     return new Command(TURBINE_LOG, logMsg);
   }
 
+  
+  /**
+   * @param unpacked List of alternating types/values 
+   */
+  public static Expression xptPack(List<Expression> unpacked) {
+    return Square.fnCall(XPT_PACK, unpacked);
+  }
+  
+  /**
+   * @param unpacked List of variable names
+   * @param packed 
+   * @param types List of types
+   */
+  public static Command xptUnpack(List<String> unpacked,
+              Expression packed, List<TypeName> types) {
+    List<Expression> unpackArgs = new ArrayList<Expression>();
+    for (String unpackedVar: unpacked) {
+      unpackArgs.add(new Token(unpackedVar));
+    }
+    unpackArgs.add(packed);
+    unpackArgs.addAll(types);
+    return new Command(XPT_UNPACK, unpackArgs);
+  }
+  
   public static Command xptInit() {
     // TODO
     return null;
@@ -1322,29 +1348,26 @@ class Turbine {
   /**
    * Both lists are alternating types and values, allowing them to
    * be serialized with the correct type
-   * @param keyExprs
-   * @param valExprs
+   * @param packedKey
+   * @param packedVal
    * @return
    */
-  public static Command xptWrite(List<Expression> keyExprs,
-                                 List<Expression> valExprs) {
+  public static Command xptWrite(Expression packedKey,
+                                   Expression packedVal) {
     Expression indexAdd = LiteralInt.FALSE;
-    Command cmd = new Command(XPT_WRITE, Arrays.asList(
-        new TclList(keyExprs), new TclList(valExprs), XPT_PERSIST, indexAdd));
-    return cmd;
+    return new Command(XPT_WRITE, Arrays.asList(packedKey, packedVal,
+                        XPT_PERSIST, indexAdd));
   }
   
   /**
-   * Both lists are alternating types and values, allowing them to
-   * be serialized with the correct type
-   * @param keyExprs
-   * @param valExprs
+   * @param existsVarName
+   * @param resultVarName
+   * @param packedKey
    * @return
    */
   public static Command xptLookup(String existsVarName, String resultVarName,
-                                  List<Expression> keyExprs) {
-    Command cmd = new Command(XPT_LOOKUP, Arrays.asList(new Token(existsVarName),
-                        new Token(resultVarName), new TclList(keyExprs)));
-    return cmd;
+                                  Expression packedKey) {
+    return new Command(XPT_LOOKUP, Arrays.asList(new Token(existsVarName),
+                        new Token(resultVarName), packedKey));
   }
 }

@@ -156,7 +156,6 @@ public class TurbineGenerator implements CompilerBackend {
   
   /**
    * Shortcut to add to current point in TclTree
-   * @return
    */
   private void pointAdd(TclTree cmd) {
     point().add(cmd);
@@ -2706,12 +2705,31 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void writeCheckpoint(List<Arg> key, List<Arg> val) {
     //TODO: call xpt startup in init
+    // TODO: free blob?
+    // Pack keys and values into binary, then write checkpoint
+    pointAdd(Turbine.xptWrite(xptPack(key), xptPack(val)));
+  }
 
-    // need to pass in values, along with types for serialization
-    List<Expression> keyExprs = makeTypeValList(key);
-    List<Expression> valExprs = makeTypeValList(val);
-    
-    pointAdd(Turbine.xptWrite(keyExprs, valExprs));
+  @Override
+  public void lookupCheckpoint(Var checkpointExists, Var value, List<Arg> key) {
+    // TODO: free blob?
+    pointAdd(Turbine.xptLookup(prefixVar(checkpointExists),
+                               prefixVar(value), xptPack(key)));
+  }
+
+  @Override
+  public void extractCheckpointValues(List<Var> unpacked, Arg packed) {
+    List<String> unpackedVarNames = new ArrayList<String>(unpacked.size());
+    List<TypeName> types = new ArrayList<TypeName>();
+    for (Var unpackedVar: unpacked) {
+      unpackedVarNames.add(prefixVar(unpackedVar));
+      types.add(valRepresentationType(unpackedVar.type()));
+    }
+    pointAdd(Turbine.xptUnpack(unpackedVarNames, argToExpr(packed), types));
+  }
+
+  private Expression xptPack(List<Arg> data) {
+    return Turbine.xptPack(makeTypeValList(data));
   }
 
   /**
@@ -2726,16 +2744,5 @@ public class TurbineGenerator implements CompilerBackend {
       keyExprs.add(argToExpr(k));
     }
     return keyExprs;
-  }
-
-  @Override
-  public void lookupCheckpoint(Var checkpointExists, Var value, List<Arg> key) {
-    pointAdd(Turbine.xptLookup(prefixVar(checkpointExists), prefixVar(value),
-                                    makeTypeValList(key)));
-  }
-
-  @Override
-  public void extractCheckpointValues(List<Var> unpacked, Arg packed) {
-    throw new STCRuntimeError("extractCheckpointValues not implemented");
   }
 }
