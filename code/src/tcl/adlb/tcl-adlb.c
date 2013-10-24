@@ -3116,6 +3116,8 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("container_typeof",    ADLB_Container_Typeof_Cmd);
   COMMAND("container_reference", ADLB_Container_Reference_Cmd);
   COMMAND("container_size",      ADLB_Container_Size_Cmd);
+  COMMAND("xpt_write", ADLB_Xpt_Write_Cmd);
+  COMMAND("xpt_lookup", ADLB_Xpt_Lookup_Cmd);
   COMMAND("fail",      ADLB_Fail_Cmd);
   COMMAND("abort",     ADLB_Abort_Cmd);
   COMMAND("finalize",  ADLB_Finalize_Cmd);
