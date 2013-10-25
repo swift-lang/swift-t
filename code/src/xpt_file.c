@@ -227,7 +227,7 @@ static inline adlb_code flush_buffers(xlb_xpt_state *state)
 
     if (write_size > 0)
     {
-      DEBUG("pwrite %zu bytes @ %llu", write_size,
+      TRACE("pwrite %zu bytes @ %llu", write_size,
             (long long unsigned)curr_pos);
       ssize_t pwc = pwrite(state->fd, buf_pos, write_size, curr_pos);
       CHECK_MSG(pwc == write_size, "Error writing to checkpoint file at "
@@ -1008,7 +1008,7 @@ static inline bool check_crc(xlb_xpt_read_state *state, int rec_len,
 static inline adlb_code bufwrite(xlb_xpt_state *state,
                   const void *data, size_t length)
 {
-  DEBUG("bufwrite %zu bytes", length);
+  TRACE("bufwrite %zu bytes", length);
 
   if (state->curr_block_pos == 0 && state->buffer_used == 0)
   {
@@ -1021,7 +1021,7 @@ static inline adlb_code bufwrite(xlb_xpt_state *state,
   while (length > 0)
   {
     size_t buffer_left = XLB_XPT_BUFFER_SIZE - state->buffer_used;
-    DEBUG("Buffer size: %i, buffer used: %zu buffer left: %zu",
+    TRACE("Buffer size: %i, buffer used: %zu buffer left: %zu",
           XLB_XPT_BUFFER_SIZE, state->buffer_used, buffer_left);
 
     if (buffer_left == 0)
@@ -1045,7 +1045,7 @@ static inline adlb_code bufwrite(xlb_xpt_state *state,
       write_size = XLB_XPT_BLOCK_SIZE - after_buf_pos.block_pos;
     }
     
-    DEBUG("Append %zu bytes to write buffer (%zu already used)", write_size,
+    TRACE("Append %zu bytes to write buffer (%zu already used)", write_size,
           state->buffer_used);
     memcpy(state->buffer + state->buffer_used, data, write_size);
     
