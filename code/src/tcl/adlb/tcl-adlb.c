@@ -2993,6 +2993,62 @@ ADLB_Enable_Read_Refcount_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
+  Usage: adlb::xpt_init <filename> <flush policy> <max index val size>
+  filename: the filename of the checkpoint file
+  flush policy: no_flush, periodic_flush, or always_flush
+  max index val size: maximum size of value to store in index
+ */
+static int
+ADLB_Xpt_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(4);
+
+  const char *filename = Tcl_GetString(objv[1]);
+  const char *flush_policy_s = Tcl_GetString(objv[2]);
+  adlb_xpt_flush_policy flush_policy;
+  if (strcmp(flush_policy_s, "no_flush"))
+  {
+    flush_policy = ADLB_NO_FLUSH;
+  }
+  else if (strcmp(flush_policy_s, "periodic_flush"))
+  {
+    flush_policy = ADLB_PERIODIC_FLUSH;
+  }
+  else if (strcmp(flush_policy_s, "always_flush"))
+  {
+
+    flush_policy = ADLB_ALWAYS_FLUSH;
+  }
+  else
+  {
+    TCL_RETURN_ERROR("Invalid flush policy: %s", flush_policy_s);
+  }
+
+  int max_index_val;
+  int rc = Tcl_GetIntFromObj(interp, objv[3], &max_index_val);
+  TCL_CHECK(rc);
+
+  adlb_code ac = ADLB_Xpt_init(filename, flush_policy, max_index_val);
+  TCL_CONDITION(ac == ADLB_SUCCESS,
+                "Error while initializing checkpointing");
+  return TCL_OK;
+}
+
+/**
+  Usage: adlb::xpt_finalize
+ */
+static int
+ADLB_Xpt_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+  adlb_code ac = ADLB_Xpt_finalize();
+  TCL_CONDITION(ac == ADLB_SUCCESS, "Error while finalizing checkpointing");
+  return TCL_OK;
+}
+
+/**
   usage: adlb::xpt_write <key blob> <val blob> <persist mode> <index add>
   persist mode: no_persist, persist, or persist_flush: whether/how to
                 persist to file
@@ -3143,7 +3199,7 @@ ADLB_Xpt_Pack_Cmd(ClientData cdata, Tcl_Interp *interp,
     }
   }
 
-  Tcl_Obj *packedBlob = build_tcl_blob(packed.data, packed.length,
+  Tcl_Obj *packedBlob = build_tcl_blob(packed.data, xfer_pos,
                                    ADLB_DATA_ID_NULL);
   Tcl_SetObjResult(interp, packedBlob);
   return TCL_OK;
@@ -3354,6 +3410,8 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("container_typeof",    ADLB_Container_Typeof_Cmd);
   COMMAND("container_reference", ADLB_Container_Reference_Cmd);
   COMMAND("container_size",      ADLB_Container_Size_Cmd);
+  COMMAND("xpt_init", ADLB_Xpt_Init_Cmd);
+  COMMAND("xpt_finalize", ADLB_Xpt_Finalize_Cmd);
   COMMAND("xpt_write", ADLB_Xpt_Write_Cmd);
   COMMAND("xpt_lookup", ADLB_Xpt_Lookup_Cmd);
   COMMAND("xpt_pack", ADLB_Xpt_Pack_Cmd);
