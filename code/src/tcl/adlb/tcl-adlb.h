@@ -39,7 +39,8 @@ int type_from_obj_extra(Tcl_Interp *interp, Tcl_Obj *const objv[],
 int
 tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
       adlb_data_type type, const adlb_type_extra *extra,
-      Tcl_Obj *obj, adlb_datum_storage *result);
+      Tcl_Obj *obj, bool own_pointers,
+      adlb_datum_storage *result, bool *alloced);
 
 int
 tcl_obj_to_bin(Tcl_Interp *interp, Tcl_Obj *const objv[],

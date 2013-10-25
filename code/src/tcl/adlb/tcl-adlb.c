@@ -1210,13 +1210,21 @@ ADLB_Exists_Sub_Cmd(ClientData cdata, Tcl_Interp *interp,
   return ADLB_Exists_Impl(cdata, interp, objc, objv, true);
 }
 
+/*
+  Convert a tcl object to the ADLB representation.
+  own_pointers: whether we want to own any memory allocated
+  result: the result
+  alloced: whether memory was allocated that must be freed with
+           ADLB_Free_storage
+ */
 int
 tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
   adlb_data_type type, const adlb_type_extra *extra,
-  Tcl_Obj *obj, adlb_datum_storage *result)
+  Tcl_Obj *obj, bool own_pointers,
+  adlb_datum_storage *result, bool *alloced)
 {
-  // TODO: flag whether caller must free?
   int rc;
+  *alloced = false; // Most don't allocate data
   switch (type)
   {
     case ADLB_DATA_TYPE_INTEGER:
@@ -1240,6 +1248,12 @@ tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
       result->STRING.length++; // Account for null byte
       TCL_CONDITION(result->STRING.length < ADLB_DATA_MAX,
           "adlb: string too long (%i bytes)", result->STRING.length);
+      if (own_pointers)
+      {
+        result->STRING.value = strdup(result->STRING.value);
+        TCL_CONDITION(result->STRING.value != NULL,
+                      "Error allocating memory");
+      }
       return TCL_OK;
     case ADLB_DATA_TYPE_BLOB:
     {
@@ -1247,6 +1261,13 @@ tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
       // Take list-based blob representation
       int rc = extract_tcl_blob(interp, objv, obj, &result->BLOB, &tmp_id);
       TCL_CHECK(rc);
+      if (own_pointers)
+      {
+        void *tmp = malloc(result->BLOB.length);
+        TCL_CONDITION(tmp != NULL, "Error allocating memory");
+        memcpy(tmp, result->BLOB.value, result->BLOB.length);
+        result->BLOB.value = tmp;
+      }
       return TCL_OK;
     }
     case ADLB_DATA_TYPE_STRUCT:
@@ -1255,6 +1276,7 @@ tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
                                     "dict to struct")
       int rc = tcl_dict_to_adlb_struct(interp, objv, obj,
              extra->STRUCT.struct_type, &result->STRUCT);
+      *alloced = true;
       TCL_CHECK(rc);
       return TCL_OK;
     }
@@ -1308,12 +1330,21 @@ tcl_obj_to_bin(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
   // temporary storage on stack
   adlb_datum_storage tmp;
-
-  rc = tcl_obj_to_adlb_data(interp, objv, type, extra, obj, &tmp);
+  bool alloced;
+  rc = tcl_obj_to_adlb_data(interp, objv, type, extra, obj, false,
+                            &tmp, &alloced);
   TCL_CHECK(rc);
 
   // Make sure data is serialized in contiguous memory
   adlb_data_code dc = ADLB_Pack(&tmp, type, caller_buffer, result);
+
+  if (alloced)
+  {
+    // Free memory before checking for errors
+    adlb_data_code dc2 = ADLB_Free_storage(&tmp, type);
+    TCL_CONDITION(dc2 == ADLB_DATA_SUCCESS, "Error freeing storage");
+  }
+
   TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
                 "Error packing data type %i into buffer", type);
 
@@ -1402,6 +1433,9 @@ packed_struct_to_tcl_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
   return TCL_OK;
 }
 
+/*
+  Note that result must be freed by caller
+ */
 static int
 tcl_dict_to_adlb_struct(Tcl_Interp *interp, Tcl_Obj *const objv[],
                          Tcl_Obj *dict, adlb_struct_type struct_type,
@@ -1433,8 +1467,10 @@ tcl_dict_to_adlb_struct(Tcl_Interp *interp, Tcl_Obj *const objv[],
     // TODO: Don't support nested elements with extra type info
     adlb_datum_storage *field = &(*result)->data[i];
     adlb_type_extra type_extra = ADLB_TYPE_EXTRA_NULL;
+    bool alloced;
+    // Need to own memory in allocated object so we can free correctly
     rc = tcl_obj_to_adlb_data(interp, objv, f->field_types[i],
-                              &type_extra, curr, field);
+                      &type_extra, curr, true, field, &alloced);
     TCL_CHECK(rc);
   }
 
@@ -3085,8 +3121,9 @@ ADLB_Xpt_Pack_Cmd(ClientData cdata, Tcl_Interp *interp,
     TCL_CHECK(rc);
     
     adlb_datum_storage data;
+    bool alloced;
     rc = tcl_obj_to_adlb_data(interp, objv, type, &extra, objv[elem * 2 + 1],
-                              &data);
+                              false, &data, &alloced);
     TCL_CHECK(rc);
 
     // pack incrementally into buffer
@@ -3094,7 +3131,12 @@ ADLB_Xpt_Pack_Cmd(ClientData cdata, Tcl_Interp *interp,
     TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error packing checkpoint data "
                   "with type %s into buffer", Tcl_GetString(objv[elem*2]));
 
-    // TODO: free buffer if needed
+    if (alloced)
+    {
+      // Free memory before checking for errors
+      dc = ADLB_Free_storage(&data, type);
+      TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error freeing storage");
+    }
 
   }
 
