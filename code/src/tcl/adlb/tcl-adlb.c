@@ -3078,6 +3078,7 @@ static int
 ADLB_Xpt_Pack_Cmd(ClientData cdata, Tcl_Interp *interp,
                    int objc, Tcl_Obj *const objv[])
 {
+  // TODO: use ADLB_Pack_buffer
   return TCL_OK;
 }
 
