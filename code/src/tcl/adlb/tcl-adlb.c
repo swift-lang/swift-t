@@ -3105,7 +3105,7 @@ ADLB_Xpt_Pack_Cmd(ClientData cdata, Tcl_Interp *interp,
   int rc;
   adlb_data_code dc;
   TCL_CONDITION(objc % 2 == 1, "Arguments must be paired types and values");
-  int elemCount = objc / 2;
+  int elemCount = (objc - 1) / 2;
 
   adlb_buffer packed;
   int xfer_pos = 0;
@@ -3114,16 +3114,19 @@ ADLB_Xpt_Pack_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   for (int elem = 0; elem < elemCount; elem++)
   {
+    Tcl_Obj *typeO = objv[elem * 2 + 1];
+    Tcl_Obj *val = objv[elem * 2 + 2];
+
     adlb_data_type type;
     bool has_extra;
     adlb_type_extra extra;
-    rc = type_from_obj_extra(interp, objv, objv[elem * 2], &type,
+    rc = type_from_obj_extra(interp, objv, typeO, &type,
                              &has_extra, &extra);
     TCL_CHECK(rc);
     
     adlb_datum_storage data;
     bool alloced;
-    rc = tcl_obj_to_adlb_data(interp, objv, type, &extra, objv[elem * 2 + 1],
+    rc = tcl_obj_to_adlb_data(interp, objv, type, &extra, val,
                               false, &data, &alloced);
     TCL_CHECK(rc);
 
