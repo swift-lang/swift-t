@@ -3171,6 +3171,8 @@ ADLB_Xpt_Unpack_Cmd(ClientData cdata, Tcl_Interp *interp,
   {
     Tcl_Obj *varName = objv[field + 1];
     Tcl_Obj *typeO = objv[field * 2 + 3];
+
+    // Get type of object
     adlb_data_type type;
     bool has_extra;
     adlb_type_extra extra;
@@ -3178,6 +3180,7 @@ ADLB_Xpt_Unpack_Cmd(ClientData cdata, Tcl_Interp *interp,
                          &has_extra, &extra);
     TCL_CHECK(rc);
 
+    // Unpack next entry from buffer
     const void *entry;
     int entry_length;
     adlb_data_code dc = ADLB_Unpack_buffer(packed.value, packed.length,
@@ -3192,6 +3195,7 @@ ADLB_Xpt_Unpack_Cmd(ClientData cdata, Tcl_Interp *interp,
           type, &extra, entry, entry_length, &obj);
     TCL_CHECK(rc);
     
+    // Store result into location caller requested
     obj = Tcl_ObjSetVar2(interp, varName, NULL, obj, EMPTY_FLAG);
     TCL_CONDITION(obj != NULL, "error setting field %s",
                   Tcl_GetString(varName));
