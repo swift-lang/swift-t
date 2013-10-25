@@ -940,6 +940,8 @@ public class ExprWalker {
     setVarsFromCheckpoint(context, oList, existingVal);
     backend.startElseBlock();
     
+    // Actually call function
+    backendFunctionCall(context, function, concrete, oList, iList, props);
     // checkpoint output values once set
     List<Var> checkpointVal = oList; // TODO: right?
     backend.startWaitStatement(
