@@ -29,6 +29,12 @@ static bool xlb_xpt_initialized = false;
 static adlb_xpt_flush_policy flush_policy;
 static int max_index_val_bytes;
 
+// Interval to flush checkpoint entries (TODO: configurable)
+#define FLUSH_INTERVAL_S 30
+
+// If we're periodically flushing, last flush time from MPI_Wtime
+static double last_flush_time;
+
 /*
   Internal functions
  */
@@ -36,6 +42,8 @@ static int max_index_val_bytes;
 static inline adlb_code xpt_reload_rank(const char *filename,
         xlb_xpt_read_state *read_state, adlb_buffer *buffer, uint32_t rank,
         adlb_xpt_load_rank_stats *stats);
+
+static adlb_code xpt_check_flush(void);
 
 adlb_code ADLB_Xpt_init(const char *filename, adlb_xpt_flush_policy fp,
                         int max_index_val)
@@ -50,6 +58,11 @@ adlb_code ADLB_Xpt_init(const char *filename, adlb_xpt_flush_policy fp,
   flush_policy = fp;
   max_index_val_bytes = max_index_val;
   xlb_xpt_initialized = true;
+
+  if (flush_policy == ADLB_PERIODIC_FLUSH)
+  {
+    last_flush_time = MPI_Wtime();
+  }
   return ADLB_SUCCESS;
 }
 
@@ -112,7 +125,7 @@ adlb_code ADLB_Xpt_write(const void *key, int key_len, const void *val,
         (index_add && entry.in_file))
     {
       // Flush if requested.  Also flush if we wrote a checkpoint entry 
-      // to disk so that we bdon't have any references to non-flushed
+      // to disk so that we don't have any references to non-flushed
       // file data in the index
       rc = xlb_xpt_flush(&xpt_state);
       ADLB_CHECK(rc);
@@ -132,6 +145,10 @@ adlb_code ADLB_Xpt_write(const void *key, int key_len, const void *val,
     rc = xlb_xpt_index_add(key, key_len, &entry);
     ADLB_CHECK(rc);
   }
+
+  // Check periodically
+  rc = xpt_check_flush();
+  ADLB_CHECK(rc);
   return ADLB_SUCCESS;
 }
 
@@ -141,8 +158,13 @@ adlb_code ADLB_Xpt_lookup(const void *key, int key_len, adlb_binary_data *result
   assert(key != NULL);
   assert(key_len >= 0);
   assert(result != NULL);
-
+  
   adlb_code rc;
+
+  // Check periodically
+  rc = xpt_check_flush();
+  ADLB_CHECK(rc);
+
   xpt_index_entry res;
 
   rc = xlb_xpt_index_lookup(key, key_len, &res);
@@ -322,6 +344,26 @@ static inline adlb_code xpt_reload_rank(const char *filename,
     // If we made it this far, should be valid
     stats->valid++;
   }
+}
+
+
+/*
+  Flush if needed
+ */
+static adlb_code xpt_check_flush(void)
+{
+  assert(xlb_xpt_initialized);
+  if (flush_policy == ADLB_PERIODIC_FLUSH && xpt_state.buffer_used > 0)
+  {
+    double now = MPI_Wtime();
+    if (now - last_flush_time > FLUSH_INTERVAL_S)
+    {
+      adlb_code ac = xlb_xpt_flush(&xpt_state);
+      ADLB_CHECK(ac);
+    }
+    last_flush_time = now;
+  }
+  return ADLB_SUCCESS;
 }
 
 #endif // XLB_ENABLE_XPT

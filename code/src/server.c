@@ -76,7 +76,6 @@ static inline void update_cached_time()
   xlb_time_approx_now = MPI_Wtime();
 }
 
-
 /** Workers that have called ADLB_Shutdown() */
 struct list_i workers_shutdown;
 
