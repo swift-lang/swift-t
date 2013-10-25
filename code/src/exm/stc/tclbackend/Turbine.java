@@ -1360,14 +1360,24 @@ class Turbine {
   }
   
   /**
+   * @param resultVarName
+   * @param packedKey
+   * @return
+   */
+  public static Expression xptLookupExpr(String resultVarName,
+                                           Expression packedKey) {
+    return Square.fnCall(XPT_LOOKUP, packedKey, new Token(resultVarName));
+  }
+  
+  /**
    * @param existsVarName
    * @param resultVarName
    * @param packedKey
    * @return
    */
-  public static Command xptLookup(String existsVarName, String resultVarName,
-                                  Expression packedKey) {
-    return new Command(XPT_LOOKUP, Arrays.asList(new Token(existsVarName),
-                        new Token(resultVarName), packedKey));
+  public static SetVariable xptLookupStmt(String existsVarName,
+          String resultVarName, Expression packedKey) {
+    return new SetVariable(existsVarName,
+                            xptLookupExpr(resultVarName, packedKey));
   }
 }

@@ -2713,7 +2713,7 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void lookupCheckpoint(Var checkpointExists, Var value, List<Arg> key) {
     // TODO: free blob?
-    pointAdd(Turbine.xptLookup(prefixVar(checkpointExists),
+    pointAdd(Turbine.xptLookupStmt(prefixVar(checkpointExists),
                                prefixVar(value), xptPack(key)));
   }
 
