@@ -422,7 +422,6 @@ ADLB_Init_buf(const adlb_buffer *caller_buffer,
                              bool *using_caller_buf, int init_length)
 {
   assert(curr_buffer != NULL);
-  assert(using_caller_buf != NULL);
   bool buf_provided = caller_buffer != NULL;
   assert(!buf_provided || caller_buffer->length >= 0);
 
@@ -430,12 +429,14 @@ ADLB_Init_buf(const adlb_buffer *caller_buffer,
   {
     curr_buffer->data = malloc((size_t)init_length);
     curr_buffer->length = init_length;
-    *using_caller_buf = false;
+    if (using_caller_buf != NULL)
+      *using_caller_buf = false;
   }
   else
   {
     *curr_buffer = *caller_buffer;
-    *using_caller_buf = true;
+    if (using_caller_buf != NULL)
+      *using_caller_buf = true;
   }
 
   return ADLB_DATA_SUCCESS;
