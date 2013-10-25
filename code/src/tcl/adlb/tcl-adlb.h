@@ -37,14 +37,18 @@ int type_from_obj_extra(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
 
 int
-adlb_data_to_tcl_obj(Tcl_Interp *interp, Tcl_Obj *const objv[], adlb_datum_id id,
-                adlb_data_type type, const adlb_type_extra *extra,
-                const void *data, int length, Tcl_Obj** result);
+tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
+      adlb_data_type type, const adlb_type_extra *extra,
+      Tcl_Obj *obj, adlb_datum_storage *result);
 
 int
-tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
+tcl_obj_to_bin(Tcl_Interp *interp, Tcl_Obj *const objv[],
                 adlb_data_type type, const adlb_type_extra *extra,
                 Tcl_Obj *obj, const adlb_buffer *caller_buffer,
                 adlb_binary_data* result);
+int
+adlb_data_to_tcl_obj(Tcl_Interp *interp, Tcl_Obj *const objv[], adlb_datum_id id,
+                adlb_data_type type, const adlb_type_extra *extra,
+                const void *data, int length, Tcl_Obj** result);
 
 #endif

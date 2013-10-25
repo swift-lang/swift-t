@@ -624,7 +624,7 @@ tcl_obj_to_binary(Tcl_Interp* interp, Tcl_Obj *const objv[],
 {
   adlb_binary_data data;
 
-  int rc = tcl_obj_to_adlb_data(interp, objv, type, extra, obj, NULL, &data);
+  int rc = tcl_obj_to_bin(interp, objv, type, extra, obj, NULL, &data);
   TCL_CHECK_MSG(rc, "failed serializing tcl object to ADLB <%"PRId64">: \"%s\"",
                     td, Tcl_GetString(obj));
 

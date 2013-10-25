@@ -166,10 +166,9 @@ packed_struct_to_tcl_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
                          const void *data, int length,
                          const adlb_type_extra *extra, Tcl_Obj **result);
 static int
-tcl_dict_to_packed_struct(Tcl_Interp *interp, Tcl_Obj *const objv[],
+tcl_dict_to_adlb_struct(Tcl_Interp *interp, Tcl_Obj *const objv[],
                          Tcl_Obj *dict, adlb_struct_type struct_type,
-                         const adlb_buffer *caller_buffer,
-                         adlb_binary_data* result);
+                         adlb_struct **result);
 
 #define DEFAULT_PRIORITY 0
 
@@ -1211,64 +1210,52 @@ ADLB_Exists_Sub_Cmd(ClientData cdata, Tcl_Interp *interp,
   return ADLB_Exists_Impl(cdata, interp, objc, objv, true);
 }
 
-/**
-  Take a Tcl object and an ADLB type and extract the binary representation
-  type: adlb data type code
-  caller_buffer: optional static buffer to use
-  result: serialized result data.  Either has malloced buffer,
-          or pointer to caller_buffer->data
- */
 int
 tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
-                adlb_data_type type, const adlb_type_extra *extra,
-                Tcl_Obj *obj, const adlb_buffer *caller_buffer,
-                adlb_binary_data* result)
+  adlb_data_type type, const adlb_type_extra *extra,
+  Tcl_Obj *obj, adlb_datum_storage *result)
 {
+  // TODO: flag whether caller must free?
   int rc;
-
-  // temporary storage on stack
-  adlb_datum_storage tmp;
   switch (type)
   {
     case ADLB_DATA_TYPE_INTEGER:
-      rc = Tcl_GetADLBInt(interp, obj, &tmp.INTEGER);
+      rc = Tcl_GetADLBInt(interp, obj, &result->INTEGER);
       TCL_CHECK_MSG(rc, "adlb extract int from %s failed!", Tcl_GetString(obj));
-      break;
+      return TCL_OK;
     case ADLB_DATA_TYPE_REF:
-      rc = Tcl_GetADLB_ID(interp, obj, &tmp.REF);
+      rc = Tcl_GetADLB_ID(interp, obj, &result->REF);
       TCL_CHECK_MSG(rc, "adlb extract int from %s failed!",
                       Tcl_GetString(obj));
-      break;
+      return TCL_OK;
     case ADLB_DATA_TYPE_FLOAT:
-      rc = Tcl_GetDoubleFromObj(interp, obj, &tmp.FLOAT);
+      rc = Tcl_GetDoubleFromObj(interp, obj, &result->FLOAT);
       TCL_CHECK_MSG(rc, "adlb extract double from %s failed!",
                       Tcl_GetString(obj));
-      break;
+      return TCL_OK;
     case ADLB_DATA_TYPE_STRING:
-      tmp.STRING.value = Tcl_GetStringFromObj(obj, &tmp.STRING.length);
+      result->STRING.value = Tcl_GetStringFromObj(obj, &result->STRING.length);
       TCL_CONDITION(result != NULL, "adlb extract string from %p failed!",
                       obj);
-      tmp.STRING.length++; // Account for null byte
-      TCL_CONDITION(tmp.STRING.length < ADLB_DATA_MAX,
-          "adlb: string too long (%i bytes)", tmp.STRING.length);
-      break;
+      result->STRING.length++; // Account for null byte
+      TCL_CONDITION(result->STRING.length < ADLB_DATA_MAX,
+          "adlb: string too long (%i bytes)", result->STRING.length);
+      return TCL_OK;
     case ADLB_DATA_TYPE_BLOB:
     {
       adlb_datum_id tmp_id;
       // Take list-based blob representation
-      int rc = extract_tcl_blob(interp, objv, obj, &tmp.BLOB, &tmp_id);
+      int rc = extract_tcl_blob(interp, objv, obj, &result->BLOB, &tmp_id);
       TCL_CHECK(rc);
-      break;
+      return TCL_OK;
     }
     case ADLB_DATA_TYPE_STRUCT:
     {
       TCL_CONDITION(extra != NULL, "Must specify struct type to convert"
                                     "dict to struct")
-      int rc = tcl_dict_to_packed_struct(interp, objv, obj,
-                                         extra->STRUCT.struct_type,
-                                         caller_buffer, result);
+      int rc = tcl_dict_to_adlb_struct(interp, objv, obj,
+             extra->STRUCT.struct_type, &result->STRUCT);
       TCL_CHECK(rc);
-      // DONE!
       return TCL_OK;
     }
     case ADLB_DATA_TYPE_FILE_REF:
@@ -1282,23 +1269,48 @@ tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
       TCL_CONDITION(fr_count == FILE_REF_ELEMS, "Expected 3-element list as ADLB file "
                      "representation, but instead got %d-element list: %s",
                      fr_count, Tcl_GetString(obj));
-      rc = Tcl_GetADLB_ID(interp, fr_elems[FILE_REF_STATUS], &tmp.FILE_REF.status_id);
+      rc = Tcl_GetADLB_ID(interp, fr_elems[FILE_REF_STATUS],
+                          &result->FILE_REF.status_id);
       TCL_CHECK_MSG(rc, "adlb extract ID from %s failed!",
                       Tcl_GetString(fr_elems[FILE_REF_STATUS]));
-      rc = Tcl_GetADLB_ID(interp, fr_elems[FILE_REF_FILENAME], &tmp.FILE_REF.filename_id);
+      rc = Tcl_GetADLB_ID(interp, fr_elems[FILE_REF_FILENAME],
+                          &result->FILE_REF.filename_id);
       TCL_CHECK_MSG(rc, "adlb extract ID from %s failed!",
                       Tcl_GetString(fr_elems[FILE_REF_FILENAME]));
       int tmp_mapped;
       rc = Tcl_GetIntFromObj(interp, fr_elems[FILE_REF_MAPPED], &tmp_mapped);
       TCL_CHECK_MSG(rc, "adlb extract bool from %s failed!",
                       Tcl_GetString(fr_elems[FILE_REF_MAPPED]));
-      tmp.FILE_REF.mapped = tmp_mapped != 0;
-      break;
+      result->FILE_REF.mapped = tmp_mapped != 0;
+      return TCL_OK;
     }
     default:
       printf("unknown type %i!\n", type);
       return TCL_ERROR;
   }
+  return TCL_OK;
+}
+
+/**
+  Take a Tcl object and an ADLB type and extract the binary representation
+  type: adlb data type code
+  caller_buffer: optional static buffer to use
+  result: serialized result data.  Either has malloced buffer,
+          or pointer to caller_buffer->data
+ */
+int
+tcl_obj_to_bin(Tcl_Interp *interp, Tcl_Obj *const objv[],
+                adlb_data_type type, const adlb_type_extra *extra,
+                Tcl_Obj *obj, const adlb_buffer *caller_buffer,
+                adlb_binary_data* result)
+{
+  int rc;
+
+  // temporary storage on stack
+  adlb_datum_storage tmp;
+
+  rc = tcl_obj_to_adlb_data(interp, objv, type, extra, obj, &tmp);
+  TCL_CHECK(rc);
 
   // Make sure data is serialized in contiguous memory
   adlb_data_code dc = ADLB_Pack(&tmp, type, caller_buffer, result);
@@ -1391,31 +1403,18 @@ packed_struct_to_tcl_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
 }
 
 static int
-tcl_dict_to_packed_struct(Tcl_Interp *interp, Tcl_Obj *const objv[],
+tcl_dict_to_adlb_struct(Tcl_Interp *interp, Tcl_Obj *const objv[],
                          Tcl_Obj *dict, adlb_struct_type struct_type,
-                         const adlb_buffer *caller_buffer,
-                         adlb_binary_data* result)
+                         adlb_struct **result)
 {
   int rc;
-  adlb_data_code dc;
 
   ADLB_STRUCT_TYPE_CHECK(struct_type);
   adlb_struct_format *f = &adlb_struct_formats.types[struct_type];
 
-
-  adlb_buffer buf;
-  // Use double pointer since caller_data may be changed
-  adlb_packed_struct_hdr **hdr = (adlb_packed_struct_hdr**)&buf.data;
-
-  bool using_caller_buffer;
-  // TODO: would be nice to be able to make more direct use of other functions
-  // Pack the struct into a buffer
-  int hdr_len = (int)sizeof(**hdr) + f->field_count *
-                (int)sizeof((*hdr)->field_offsets[0]);
-  ADLB_Init_buf(caller_buffer, &buf, &using_caller_buffer, hdr_len);
-
-  (*hdr)->type = struct_type;
-  int pos = hdr_len;
+  *result = malloc(sizeof(adlb_struct) +
+                   sizeof(adlb_datum_storage) * f->field_count);
+  (*result)->type = struct_type;
 
   for (int i = 0; i < f->field_count; i++)
   {
@@ -1431,26 +1430,14 @@ tcl_dict_to_packed_struct(Tcl_Interp *interp, Tcl_Obj *const objv[],
             Tcl_GetString(curr));
       curr = val;
     }
-    // Get binary version of field
-    adlb_binary_data field_data;
     // TODO: Don't support nested elements with extra type info
-    rc = tcl_obj_to_adlb_data(interp, objv, f->field_types[i], NULL,
-                    curr, NULL, &field_data);
+    adlb_datum_storage *field = &(*result)->data[i];
+    adlb_type_extra type_extra = ADLB_TYPE_EXTRA_NULL;
+    rc = tcl_obj_to_adlb_data(interp, objv, f->field_types[i],
+                              &type_extra, curr, field);
     TCL_CHECK(rc);
-
-    // Append field to buffer and mark offset
-    (*hdr)->field_offsets[i] = pos;
-    dc = ADLB_Resize_buf(&buf, &using_caller_buffer, pos + field_data.length);
-    TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error resizing buffer");
-    memcpy(&buf.data[pos], field_data.data, (size_t)field_data.length);
-    pos += field_data.length;
-
-
-    ADLB_Free_binary_data(&field_data);
   }
 
-  result->data = result->caller_data = buf.data;
-  result->length = pos;
   return TCL_OK;
 }
 
@@ -1483,7 +1470,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CHECK(rc);
 
   adlb_binary_data data;
-  rc = tcl_obj_to_adlb_data(interp, objv, type, has_extra ? &extra : NULL,
+  rc = tcl_obj_to_bin(interp, objv, type, has_extra ? &extra : NULL,
                             objv[argpos++], &xfer_buf, &data);
   TCL_CHECK_MSG(rc, "<%"PRId64"> failed, could not extract data!", id);
 
@@ -2401,7 +2388,7 @@ ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CHECK(rc);
 
   adlb_binary_data member;
-  rc = tcl_obj_to_adlb_data(interp, objv, type, has_extra ? &extra : NULL,
+  rc = tcl_obj_to_bin(interp, objv, type, has_extra ? &extra : NULL,
                             member_obj, &xfer_buf, &member);
 
   // TODO: support binary subscript
@@ -3072,13 +3059,48 @@ ADLB_Xpt_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-  usage: TODO
+  usage: adlb::xpt_pack (<type> <value>)*
  */
 static int
 ADLB_Xpt_Pack_Cmd(ClientData cdata, Tcl_Interp *interp,
                    int objc, Tcl_Obj *const objv[])
 {
-  // TODO: use ADLB_Pack_buffer
+  int rc;
+  adlb_data_code dc;
+  TCL_CONDITION(objc % 2 == 1, "Arguments must be paired types and values");
+  int elemCount = objc / 2;
+
+  adlb_buffer packed;
+  int xfer_pos = 0;
+  dc = ADLB_Init_buf(NULL, &packed, NULL, 2048);
+  TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error initializing buffer");
+
+  for (int elem = 0; elem < elemCount; elem++)
+  {
+    adlb_data_type type;
+    bool has_extra;
+    adlb_type_extra extra;
+    rc = type_from_obj_extra(interp, objv, objv[elem * 2], &type,
+                             &has_extra, &extra);
+    TCL_CHECK(rc);
+    
+    adlb_datum_storage data;
+    rc = tcl_obj_to_adlb_data(interp, objv, type, &extra, objv[elem * 2 + 1],
+                              &data);
+    TCL_CHECK(rc);
+
+    // pack incrementally into buffer
+    dc = ADLB_Pack_buffer(&data, type, NULL, &packed, NULL, &xfer_pos);
+    TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error packing checkpoint data "
+                  "with type %s into buffer", Tcl_GetString(objv[elem*2]));
+
+    // TODO: free buffer if needed
+
+  }
+
+  Tcl_Obj *packedBlob = build_tcl_blob(packed.data, packed.length,
+                                   ADLB_DATA_ID_NULL);
+  Tcl_SetObjResult(interp, packedBlob);
   return TCL_OK;
 }
 
