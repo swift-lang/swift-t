@@ -60,7 +60,7 @@ static inline int vint_encode(int64_t val, void *buffer);
 /*
   Decode a vint.  Returns number of bytes read, or negative on an error
  */
-static inline int vint_decode(void *buffer, int len, int64_t *val);
+static inline int vint_decode(const void *buffer, int len, int64_t *val);
 
 
 
@@ -156,9 +156,9 @@ vint_decode_more(unsigned char b, vint_dec *dec)
 }
 
 static inline int
-vint_decode(void *buffer, int len, int64_t *val)
+vint_decode(const void *buffer, int len, int64_t *val)
 {
-  unsigned char *buffer2 = buffer;
+  const unsigned char *buffer2 = buffer;
   if (len < 1)
     return -1;
 
