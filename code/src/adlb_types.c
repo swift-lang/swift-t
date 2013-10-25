@@ -10,7 +10,9 @@
 #include <vint.h>
 
 #include "adlb.h"
+#include "checks.h"
 #include "data_cleanup.h"
+#include "data_internal.h"
 #include "data_structs.h"
 #include "multiset.h"
 
@@ -83,6 +85,41 @@ ADLB_Pack_buffer(const adlb_datum_storage *d, adlb_data_type type,
   if (packed.data != tmp_buf->data)
     ADLB_Free_binary_data(&packed);
 
+  return ADLB_DATA_SUCCESS;
+}
+
+adlb_data_code
+ADLB_Unpack_buffer(const void *buffer, int length, int *pos,
+                   const void **entry, int *entry_length)
+{
+  assert(buffer != NULL);
+  assert(length >= 0);
+  assert(pos != NULL);
+  assert(*pos >= 0);
+  assert(entry != NULL);
+  assert(entry_length != NULL);
+
+  if (*pos == length)
+  {
+    return ADLB_DATA_DONE;
+  }
+  int64_t entry_length64;
+  int vint_len = vint_decode(buffer + *pos, length - *pos,
+                             &entry_length64);
+  check_verbose(vint_len >= 1, ADLB_DATA_ERROR_INVALID,
+      "Error decoding entry length when unpacking buffer");
+  check_verbose(entry_length64 >= 0, ADLB_DATA_ERROR_INVALID,
+       "Packed buffer entry length < 0");
+  check_verbose(entry_length64 <= INT_MAX, ADLB_DATA_ERROR_INVALID,
+       "Packed buffer encode entry length too long for int: %"PRId64,
+       entry_length64);
+  int remaining = length - *pos - vint_len;
+  check_verbose(entry_length64 <= remaining,
+        ADLB_DATA_ERROR_INVALID, "Decoded entry less than remaining data "
+        "in buffer: %d remains, length %"PRId64, remaining, entry_length64);
+  *entry_length = (int)entry_length64;
+  *entry = buffer + *pos + vint_len;
+  *pos += vint_len + *entry_length;
   return ADLB_DATA_SUCCESS;
 }
 

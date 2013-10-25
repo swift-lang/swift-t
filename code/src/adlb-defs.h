@@ -226,6 +226,8 @@ typedef enum
   ADLB_DATA_ERROR_LIMIT,
   /** Caller-provided buffer too small */
   ADLB_DATA_BUFFER_TOO_SMALL,
+  /** Finished */
+  ADLB_DATA_DONE,
   /** Unknown error */
   ADLB_DATA_ERROR_UNKNOWN,
 } adlb_data_code;

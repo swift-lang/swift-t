@@ -201,6 +201,22 @@ adlb_data_code
 ADLB_Unpack(adlb_datum_storage *d, adlb_data_type type,
             const void *buffer, int length);
 
+/*
+  Helper to unpack data from buffer.  This will simply
+  find the packed data for the next item in the buffer and
+  advance the read position
+  buffer, length: buffer packed with ADLB_Pack_buffer
+  pos: input/output.  Caller provides current read position in buffer,
+        this function sets it to the start of the next entry
+  entry, entry_length: output. packed field data
+  returns: ADLB_DATA_SUCCESS when field successfully returned,
+           ADLB_DONE when exhausted,
+           ADLB_DATA_INVALID if not able to decode
+ */
+adlb_data_code
+ADLB_Unpack_buffer(const void *buffer, int length, int *pos,
+                   const void **entry, int *entry_length);
+
 /**
    Functions to pack and unpack data from buffers.
    This are in header so they can be inlined if necessary
