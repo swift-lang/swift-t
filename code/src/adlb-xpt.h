@@ -16,8 +16,6 @@
 
 /**
  * Application interface for creating and looking up checkpoints.
- * TODO: this is just a sketch now
- * TODO: how to flush/specify flush policy
  */
 
 #ifndef __ADLB_XPT_H
