@@ -3081,7 +3081,8 @@ ADLB_Xpt_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
     TCL_CONDITION(tclVal != NULL, "Error building blob");
     tclVal = Tcl_ObjSetVar2(interp, objv[2], NULL,
                            tclVal, EMPTY_FLAG);
-    TCL_CONDITION(tclVal != NULL, "Error setting output argument");
+    TCL_CONDITION(tclVal != NULL, "Error setting output argument %s",
+                  Tcl_GetString(objv[2]));
 
   }
   else if (found)
@@ -3137,7 +3138,6 @@ ADLB_Xpt_Pack_Cmd(ClientData cdata, Tcl_Interp *interp,
       dc = ADLB_Free_storage(&data, type);
       TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error freeing storage");
     }
-
   }
 
   Tcl_Obj *packedBlob = build_tcl_blob(packed.data, packed.length,
@@ -3147,12 +3147,55 @@ ADLB_Xpt_Pack_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-  usage: TODO
+  usage: adlb::xpt_unpack (<var name>)* <packed data> (<var type>)
+  packed data: tcl blob format
+  var type: ADLB types for the packed fields
+  The number of var names and types must match
  */
 static int
 ADLB_Xpt_Unpack_Cmd(ClientData cdata, Tcl_Interp *interp,
                    int objc, Tcl_Obj *const objv[])
 {
+  TCL_CONDITION(objc >= 2, "Must have at least 1 arg");
+  TCL_CONDITION(objc % 2 == 0, "Must have paired var names and types");
+  int rc;
+  int fieldCount = (objc - 2) / 2;
+  
+  adlb_blob_t packed;
+  adlb_datum_id tmpid;
+  rc = extract_tcl_blob(interp, objv, objv[2], &packed, &tmpid);
+  TCL_CHECK(rc);
+  int packed_pos = 0;
+
+  for (int field = 0; field < fieldCount; field++)
+  {
+    Tcl_Obj *varName = objv[field + 1];
+    Tcl_Obj *typeO = objv[field * 2 + 3];
+    adlb_data_type type;
+    bool has_extra;
+    adlb_type_extra extra;
+    rc = type_from_obj_extra(interp, objv, typeO, &type,
+                         &has_extra, &extra);
+    TCL_CHECK(rc);
+
+    const void *entry;
+    int entry_length;
+    adlb_data_code dc = ADLB_Unpack_buffer(packed.value, packed.length,
+          &packed_pos, &entry, &entry_length);
+    TCL_CONDITION(dc != ADLB_DATA_DONE, "Hit end of buffer after unpacking "
+               "%i/%i fields", field, fieldCount); 
+    TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error unpacking field %i "
+            "from buffer", field);
+
+    Tcl_Obj *obj;
+    rc = adlb_data_to_tcl_obj(interp, objv, ADLB_DATA_ID_NULL,
+          type, &extra, entry, entry_length, &obj);
+    TCL_CHECK(rc);
+    
+    obj = Tcl_ObjSetVar2(interp, varName, NULL, obj, EMPTY_FLAG);
+    TCL_CONDITION(obj != NULL, "error setting field %s",
+                  Tcl_GetString(varName));
+  }
   return TCL_OK;
 }
 
