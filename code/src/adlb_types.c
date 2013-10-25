@@ -82,7 +82,7 @@ ADLB_Pack_buffer(const adlb_datum_storage *d, adlb_data_type type,
   *output_pos += packed.length;
   
   // Free any malloced temporary memory
-  if (packed.data != tmp_buf->data)
+  if (tmp_buf != NULL && packed.data != tmp_buf->data)
     ADLB_Free_binary_data(&packed);
 
   return ADLB_DATA_SUCCESS;

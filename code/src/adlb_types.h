@@ -456,7 +456,7 @@ ADLB_Resize_buf(adlb_buffer *buf, bool *using_caller_buf, int min_length)
     }
     // If caller-provided buffer, have to allocate new, otherwise
     // resize current
-    if (*using_caller_buf)
+    if (using_caller_buf != NULL && *using_caller_buf)
     {
       void *old_data = buf->data;
       buf->data = malloc((size_t)buf->length);
