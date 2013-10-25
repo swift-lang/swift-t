@@ -3010,7 +3010,6 @@ ADLB_Xpt_Write_Cmd(ClientData cdata, Tcl_Interp *interp,
     TCL_RETURN_ERROR("Invalid persist mode: %s", persist_mode_s);
   }
 
-
   int index_add_i;
   rc = Tcl_GetBooleanFromObj(interp, objv[4], &index_add_i);
   TCL_CHECK(rc);
@@ -3018,17 +3017,57 @@ ADLB_Xpt_Write_Cmd(ClientData cdata, Tcl_Interp *interp,
  
   ac = ADLB_Xpt_write(key_blob.value, key_blob.length, val_blob.value,
                       val_blob.length, persist_mode, index_add);
-
+  TCL_CONDITION(ac == ADLB_SUCCESS, "Error writing checkpoint");
   return TCL_OK;
 }
 
 /**
-  usage: TODO
+  usage: adlb::xpt_lookup <checkpoint key> [ <checkpoint value> ]
+  return value: bool indicating whether checkpoint exists
+  checkpoint value: name of variable for packed value of checkpoint
+                    as blob
+  checkpoint key: packed checkpoint key as blob
  */
 static int
 ADLB_Xpt_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
                    int objc, Tcl_Obj *const objv[])
 {
+  TCL_CONDITION(objc == 2 || objc == 3, "Must provide 1 or 2 arguments" );
+  int rc;
+  adlb_code ac;
+
+  adlb_datum_id tmp;
+  adlb_blob_t key;
+  rc = extract_tcl_blob(interp, objv, objv[1], &key, &tmp);
+  TCL_CHECK(rc);
+ 
+  adlb_binary_data val;
+  ac = ADLB_Xpt_lookup(key.value, key.length, &val);
+  TCL_CONDITION(ac == ADLB_SUCCESS || ac == ADLB_NOTHING,
+                "Error looking up checkpoint");
+  bool found = (ac == ADLB_SUCCESS);
+ 
+  bool outArgProvided = (objc > 2);
+
+  if (found && outArgProvided)
+  {
+    // put into Tcl blob and put in variable caller requested
+    ADLB_Own_data(NULL, &val); // Make sure we own memory
+    Tcl_Obj *tclVal = build_tcl_blob(val.caller_data, val.length,
+                                     ADLB_DATA_ID_NULL);
+    TCL_CONDITION(tclVal != NULL, "Error building blob");
+    tclVal = Tcl_ObjSetVar2(interp, objv[2], NULL,
+                           tclVal, EMPTY_FLAG);
+    TCL_CONDITION(tclVal != NULL, "Error setting output argument");
+
+  }
+  else if (found)
+  {
+    // Not returning, so free memory
+    ADLB_Free_binary_data(&val);
+  }
+
+  Tcl_SetObjResult(interp, Tcl_NewIntObj(found));
   return TCL_OK;
 }
 
