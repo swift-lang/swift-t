@@ -223,10 +223,56 @@ class Turbine {
   public static final LiteralInt VOID_DUMMY_VAL = new LiteralInt(12345);
 
   // Checkpointing
+  public static Token XPT_INIT = adlbFn("xpt_init");
+  public static Token XPT_FINALIZE = adlbFn("xpt_finalize");
   public static Token XPT_WRITE = adlbFn("xpt_write");
   public static Token XPT_LOOKUP = adlbFn("xpt_lookup");
   public static Token XPT_PACK = adlbFn("xpt_pack");
   public static Token XPT_UNPACK = adlbFn("xpt_unpack");
+  
+  // Checkpointing options
+  public static enum XptFlushPolicy {
+    NO_FLUSH,
+    PERIODIC_FLUSH,
+    ALWAYS_FLUSH;
+    
+    public Token toToken() {
+      switch (this) {
+        case NO_FLUSH:
+          return XPT_NO_FLUSH;
+        case PERIODIC_FLUSH:
+          return XPT_PERIODIC_FLUSH;
+        case ALWAYS_FLUSH:
+          return XPT_ALWAYS_FLUSH;
+        default:
+          throw new STCRuntimeError("Unknown flush policy " + this);
+      }
+    }
+  }
+
+  public static Token XPT_NO_FLUSH = new Token("no_flush");
+  public static Token XPT_PERIODIC_FLUSH = new Token("periodic_flush");
+  public static Token XPT_ALWAYS_FLUSH = new Token("always_flush");
+  
+  public static enum XptPersist {
+    NO_PERSIST,
+    PERSIST,
+    PERSIST_FLUSH;
+    
+    public Token toToken() {
+      switch (this) {
+        case NO_PERSIST:
+          return XPT_NO_PERSIST;
+        case PERSIST:
+          return XPT_PERSIST;
+        case PERSIST_FLUSH:
+          return XPT_PERSIST_FLUSH;
+        default:
+          throw new STCRuntimeError("Unknown XptPersist: " + this);
+      }
+    }
+  }
+  
   public static Token XPT_NO_PERSIST = new Token("no_persist");
   public static Token XPT_PERSIST = new Token("persist");
   public static Token XPT_PERSIST_FLUSH = new Token("persist_flush");
@@ -1005,7 +1051,7 @@ class Turbine {
    */
   public static TclTree incrRef(Expression var, Expression change) {
     try {
-      if (Settings.getBoolean(Settings.EXPERIMENTAL_REFCOUNTING)) {
+      if (Settings.getBoolean(Settings.ENABLE_REFCOUNTING)) {
         if (change == null) {
           return new Command(REFCOUNT_INCR, var);
         } else {
@@ -1027,7 +1073,7 @@ class Turbine {
    */
   public static TclTree decrRef(Expression var, Expression change) {
     try {
-      if (Settings.getBoolean(Settings.EXPERIMENTAL_REFCOUNTING)) {
+      if (Settings.getBoolean(Settings.ENABLE_REFCOUNTING)) {
         if (change == null) {
           return new Command(REFCOUNT_DECR, var);
         } else {
@@ -1057,7 +1103,7 @@ class Turbine {
    */
   public static TclTree incrFileRef(Expression var, Expression change) {
     try {
-      if (Settings.getBoolean(Settings.EXPERIMENTAL_REFCOUNTING)) {
+      if (Settings.getBoolean(Settings.ENABLE_REFCOUNTING)) {
         if (change == null) {
           return new Command(FILE_REFCOUNT_INCR, var);
         } else {
@@ -1073,7 +1119,7 @@ class Turbine {
 
   public static TclTree decrFileRef(Expression var, Expression change) {
     try {
-      if (Settings.getBoolean(Settings.EXPERIMENTAL_REFCOUNTING)) {
+      if (Settings.getBoolean(Settings.ENABLE_REFCOUNTING)) {
         if (change == null) {
           return new Command(FILE_REFCOUNT_DECR, var);
         } else {
@@ -1340,9 +1386,15 @@ class Turbine {
     return new Command(XPT_UNPACK, unpackArgs);
   }
   
-  public static Command xptInit() {
-    // TODO
-    return null;
+  public static Command xptInit(Expression filename,
+            XptFlushPolicy flushPolicy, Expression maxIndexValSize) {
+    return new Command(XPT_INIT, filename, flushPolicy.toToken(),
+                                  maxIndexValSize);
+  }
+  
+  
+  public static Command xptFinalize() {
+    return new Command(XPT_FINALIZE);
   }
   
   /**
@@ -1350,13 +1402,15 @@ class Turbine {
    * be serialized with the correct type
    * @param packedKey
    * @param packedVal
+   * @param persist how to persist
+   * @param indexAdd whether to add to index
    * @return
    */
   public static Command xptWrite(Expression packedKey,
-                                   Expression packedVal) {
-    Expression indexAdd = LiteralInt.FALSE;
+             Expression packedVal, XptPersist persist,
+             Expression indexAdd) {
     return new Command(XPT_WRITE, Arrays.asList(packedKey, packedVal,
-                        XPT_PERSIST, indexAdd));
+                        persist.toToken(), indexAdd));
   }
   
   /**

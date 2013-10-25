@@ -1,6 +1,8 @@
 package exm.stc.common.lang;
 
+import exm.stc.common.Settings;
 import exm.stc.common.exceptions.TypeMismatchException;
+import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.frontend.Context;
 
@@ -13,7 +15,12 @@ public class Checkpointing {
    */
   public static void checkCanCheckpoint(Context context,
         String functionName, FunctionType ftype) 
-            throws TypeMismatchException {
+            throws TypeMismatchException, UserException {
     // TODO: should we be able to checkpoint all types?
+    
+    if (!Settings.getBoolean(Settings.EXPERIMENTAL_CHECKPOINTING)) {
+      throw new UserException(context, "STC checkpointing feature " + 
+                                         "not enabled");
+    }
   }
 }

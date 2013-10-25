@@ -123,7 +123,11 @@ function get_compiler_opt_name() {
                     return 0
                     ;;
         refcounting)
-                    echo "stc.exp.refcounting"
+                    echo "stc.refcounting"
+                    return 0
+                    ;;
+        checkpointing)
+                    echo "stc.exp.checkpointing"
                     return 0
                     ;;
         auto-declare)
