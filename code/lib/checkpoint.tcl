@@ -22,6 +22,12 @@ namespace eval turbine {
   #  old checkpoints but not writing fresh ones (R)
   variable xpt_mode
 
+  # Don't wrap xpt_write or xpt_lookup
+  namespace import ::adlb::xpt_write ::adlb::xpt_lookup
+
+  namespace export xpt_init xpt_write_enabled xpt_write \
+               xpt_lookup_enabled xpt_lookup xpt_finalize
+
   # Initialize checkpointing, getting settings from environment
   # Environment variables are:
   # TURBINE_XPT_FILE: file to log to
@@ -79,6 +85,42 @@ namespace eval turbine {
         set xpt_mode W
       } else {
         set xpt_mode DISABLED
+      }
+    }
+  }
+
+  # Return true if we are actually keeping an index of checkpoints
+  proc xpt_lookup_enabled { } {
+    variable xpt_mode
+    switch $xpt_mode {
+      R -
+      RW {
+        return 1
+      }
+      W -
+      DISABLED {
+        return 0
+      }
+      default {
+        error "Unknown checkpoint mode $xpt_mode"
+      }
+    }
+  }
+
+  # Return true if we are logging data 
+  proc xpt_write_enabled { } {
+    variable xpt_mode
+    switch $xpt_mode {
+      W -
+      RW {
+        return 1
+      }
+      R -
+      DISABLED {
+        return 0
+      }
+      default {
+        error "Unknown checkpoint mode $xpt_mode"
       }
     }
   }
