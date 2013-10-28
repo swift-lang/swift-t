@@ -1,4 +1,4 @@
-// SKIP-THIS-TEST
+// Basic test for checkpointing
 
 main {
  
