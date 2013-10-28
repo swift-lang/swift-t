@@ -76,8 +76,7 @@ namespace eval turbine {
     if { [ llength $xpt_reload ] > 0 } {
       if { $xpt_filename != "" } {
         set xpt_mode RW
-      }
-      else {
+      } else {
         set xpt_mode R
       }
     } else {
