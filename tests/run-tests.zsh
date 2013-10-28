@@ -183,14 +183,6 @@ run_test()
   ARGS=""
   ARGS_FILE=${TEST_PATH}.args
 
-  # Set up the test
-  if [ -x ${STC_TESTS_DIR}/${SETUP_SCRIPT} ]
-  then
-    pushd $STC_TESTS_DIR
-    print "executing: $( basename ${SETUP_SCRIPT} )"
-    ./${SETUP_SCRIPT} >& ${SETUP_OUTPUT} || return 1
-    popd
-  fi
 
   # Get test command-line arguments
   if [ -r ${ARGS_FILE} ]
@@ -201,9 +193,25 @@ run_test()
   # Run the test from within the test directory
   print "running:   $( basename ${TCL_FILE} )"
   pushd $STC_TESTS_DIR
-  ${RUN_TEST} ${TCL_FILE} ${TURBINE_OUTPUT} ${ARGS}
+  
+  # Run in subshell to allow setting environment variables without
+  # affecting other tests.  Return values 0=OK, 1=TEST FAILED, 2=SETUP FAILED
+  (
+    if [ -f ${STC_TESTS_DIR}/${SETUP_SCRIPT} ]
+    then
+      print "sourcing:  $( basename ${SETUP_SCRIPT} )"
+      source ./${SETUP_SCRIPT} >& ${SETUP_OUTPUT} || return 2
+    fi
+    ${RUN_TEST} ${TCL_FILE} ${TURBINE_OUTPUT} ${ARGS} || return 1
+  )
   EXIT_CODE=${?}
   popd
+
+  if [ $EXIT_CODE = 2 ]
+  then
+    echo "Setup script failed"
+    return 1
+  fi
 
   if grep -F -q "THIS-TEST-SHOULD-NOT-RUN" ${SWIFT_FILE}
   then
