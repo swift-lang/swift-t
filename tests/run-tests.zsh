@@ -191,7 +191,6 @@ run_test()
   fi
 
   # Run the test from within the test directory
-  print "running:   $( basename ${TCL_FILE} )"
   pushd $STC_TESTS_DIR
   
   # Run in subshell to allow setting environment variables without
@@ -202,6 +201,7 @@ run_test()
       print "sourcing:  $( basename ${SETUP_SCRIPT} )"
       source ./${SETUP_SCRIPT} >& ${SETUP_OUTPUT} || return 2
     fi
+    print "running:   $( basename ${TCL_FILE} )"
     ${RUN_TEST} ${TCL_FILE} ${TURBINE_OUTPUT} ${ARGS} || return 1
   )
   EXIT_CODE=${?}

@@ -225,8 +225,10 @@ class Turbine {
   // Checkpointing
   public static Token XPT_INIT = turbFn("xpt_init");
   public static Token XPT_FINALIZE = turbFn("xpt_finalize");
-  public static Token XPT_WRITE = adlbFn("xpt_write");
-  public static Token XPT_LOOKUP = adlbFn("xpt_lookup");
+  public static Token XPT_WRITE = turbFn("xpt_write");
+  public static Token XPT_WRITE_ENABLED = turbFn("xpt_write_enabled");
+  public static Token XPT_LOOKUP = turbFn("xpt_lookup");
+  public static Token XPT_LOOKUP_ENABLED = turbFn("xpt_lookup_enabled");
   public static Token XPT_PACK = adlbFn("xpt_pack");
   public static Token XPT_UNPACK = adlbFn("xpt_unpack");
   
@@ -1394,6 +1396,15 @@ class Turbine {
     return new Command(XPT_FINALIZE);
   }
   
+  
+   public static Expression xptWriteEnabled() {
+     return Square.fnCall(XPT_WRITE_ENABLED);
+   }
+   
+   public static Expression xptLookupEnabled() {
+     return Square.fnCall(XPT_LOOKUP_ENABLED);
+   }
+  
   /**
    * Both lists are alternating types and values, allowing them to
    * be serialized with the correct type
@@ -1409,7 +1420,7 @@ class Turbine {
     return new Command(XPT_WRITE, Arrays.asList(packedKey, packedVal,
                         persist.toToken(), indexAdd));
   }
-  
+
   /**
    * @param resultVarName
    * @param packedKey
