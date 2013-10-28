@@ -223,8 +223,8 @@ class Turbine {
   public static final LiteralInt VOID_DUMMY_VAL = new LiteralInt(12345);
 
   // Checkpointing
-  public static Token XPT_INIT = adlbFn("xpt_init");
-  public static Token XPT_FINALIZE = adlbFn("xpt_finalize");
+  public static Token XPT_INIT = turbFn("xpt_init");
+  public static Token XPT_FINALIZE = turbFn("xpt_finalize");
   public static Token XPT_WRITE = adlbFn("xpt_write");
   public static Token XPT_LOOKUP = adlbFn("xpt_lookup");
   public static Token XPT_PACK = adlbFn("xpt_pack");
@@ -1385,10 +1385,8 @@ class Turbine {
     return new Command(XPT_UNPACK, unpackArgs);
   }
   
-  public static Command xptInit(Expression filename,
-            XptFlushPolicy flushPolicy, Expression maxIndexValSize) {
-    return new Command(XPT_INIT, filename, flushPolicy.toToken(),
-                                  maxIndexValSize);
+  public static Command xptInit() {
+    return new Command(XPT_INIT);
   }
   
   

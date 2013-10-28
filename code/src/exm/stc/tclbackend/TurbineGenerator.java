@@ -73,7 +73,6 @@ import exm.stc.tclbackend.Turbine.CacheMode;
 import exm.stc.tclbackend.Turbine.RuleProps;
 import exm.stc.tclbackend.Turbine.StackFrameType;
 import exm.stc.tclbackend.Turbine.TypeName;
-import exm.stc.tclbackend.Turbine.XptFlushPolicy;
 import exm.stc.tclbackend.Turbine.XptPersist;
 import exm.stc.tclbackend.tree.Command;
 import exm.stc.tclbackend.tree.Comment;
@@ -269,9 +268,7 @@ public class TurbineGenerator implements CompilerBackend {
       
       if (Settings.getBoolean(Settings.EXPERIMENTAL_CHECKPOINTING)) {
         // TODO: better parameters
-        tree.add(Turbine.xptInit(new TclString("test.xpt"),
-                XptFlushPolicy.PERIODIC_FLUSH,
-                new LiteralInt(1024 * 1024)));
+        tree.add(Turbine.xptInit());
       }
       
       // Initialize struct types
