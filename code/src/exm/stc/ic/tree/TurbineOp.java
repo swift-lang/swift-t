@@ -329,21 +329,18 @@ public class TurbineOp extends Instruction {
     case COPY_FILE_CONTENTS:
       gen.copyFileContents(getOutput(0), getInput(0).getVar());
       break;
-    case WRITE_CHECKPOINT: {
-      // Need to unpack key and value args first
-      int keyEntries = (int)getInput(0).getIntLit();
-      gen.writeCheckpoint(inputs.subList(1, keyEntries + 1),
-                          inputs.subList(keyEntries + 1, inputs.size()));
+    case WRITE_CHECKPOINT:
+      gen.writeCheckpoint(getInput(0), getInput(1));
       break;
-    }
-    case LOOKUP_CHECKPOINT: {
-      gen.lookupCheckpoint(getOutput(0), getOutput(1), getInputs());
+    case LOOKUP_CHECKPOINT:
+      gen.lookupCheckpoint(getOutput(0), getOutput(1), getInput(0));
       break;
-    }
-    case EXTRACT_CHECKPOINT_VALUES: {
-      gen.extractCheckpointValues(getOutputs(), getInput(0));
+    case PACK_VALUES:
+      gen.packValues(getOutput(0), getInputs());
       break;
-    }
+    case UNPACK_VALUES:
+      gen.unpackValues(getOutputs(), getInput(0));
+      break;
     default:
       throw new STCRuntimeError("didn't expect to see op " +
                 op.toString() + " here");
@@ -744,25 +741,33 @@ public class TurbineOp extends Instruction {
                          outFilename, isMapped);
   }
 
-  public static Instruction writeCheckpoint(List<Arg> instArgs) {
-    assert(instArgs.get(0).getKind() == ArgKind.INTVAL);
-    long numKeys = instArgs.get(0).getIntLit();
-    assert(instArgs.size() >= numKeys + 1);
-    return new TurbineOp(Opcode.WRITE_CHECKPOINT, Var.NONE, instArgs);
+  public static Instruction writeCheckpoint(Arg key, Arg value) {
+    assert(Types.isBlobVal(key.type()));
+    assert(Types.isBlobVal(value.type()));
+    return new TurbineOp(Opcode.WRITE_CHECKPOINT, Var.NONE, key, value);
   }
 
   public static Instruction lookupCheckpoint(Var checkpointExists, Var value,
-      List<Arg> key) {
+      Arg key) {
     assert(Types.isBoolVal(checkpointExists));
     assert(Types.isBlobVal(value));
+    assert(Types.isBlobVal(key.type()));
     return new TurbineOp(Opcode.LOOKUP_CHECKPOINT,
         Arrays.asList(checkpointExists, value), key);
   }
 
-  public static Instruction extractCheckpointValues(List<Var> values,
-                                                     Arg packedValues) {
-    return new TurbineOp(Opcode.EXTRACT_CHECKPOINT_VALUES, values,
-                          packedValues); 
+  public static Instruction packValues(Var packedValues, List<Arg> values) {
+    for (Arg val: values) {
+      assert(val.isConstant() || val.getVar().storage() == Alloc.LOCAL);
+    }
+    return new TurbineOp(Opcode.PACK_VALUES, packedValues.asList(), values); 
+  }
+  
+  public static Instruction unpackValues(List<Var> values, Arg packedValues) {
+    for (Var val: values) {
+      assert(val.storage() == Alloc.LOCAL);
+    }
+    return new TurbineOp(Opcode.UNPACK_VALUES, values, packedValues); 
   }
 
   @Override
@@ -923,7 +928,8 @@ public class TurbineOp extends Instruction {
       // Writing checkpoint is a side-effect
       return true;
     case LOOKUP_CHECKPOINT:
-    case EXTRACT_CHECKPOINT_VALUES:
+    case PACK_VALUES:
+    case UNPACK_VALUES:
       return false;
     default:
       throw new STCRuntimeError("Need to add opcode " + op.toString()
@@ -1547,7 +1553,8 @@ public class TurbineOp extends Instruction {
     case BAG_INSERT:
     case LOOKUP_CHECKPOINT:
     case WRITE_CHECKPOINT:
-    case EXTRACT_CHECKPOINT_VALUES:
+    case PACK_VALUES:
+    case UNPACK_VALUES:
       return TaskMode.SYNC;
     
     case ARRAY_DEREF_INSERT_IMM:
@@ -1798,7 +1805,7 @@ public class TurbineOp extends Instruction {
         return res;
       }
       case LOOKUP_CHECKPOINT:
-      case EXTRACT_CHECKPOINT_VALUES: {
+      case UNPACK_VALUES: {
         // Both have multiple outputs
         List<ValLoc> res = new ArrayList<ValLoc>(outputs.size()); 
         for (int i = 0; i < outputs.size(); i++) {
@@ -1809,6 +1816,8 @@ public class TurbineOp extends Instruction {
         }
         return res;
       }
+      case PACK_VALUES:
+        return vanillaResult(Closed.YES_NOT_RECURSIVE, IsAssign.NO).asList();
       default:
         return null;
     }

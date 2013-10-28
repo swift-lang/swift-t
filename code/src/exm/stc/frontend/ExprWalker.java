@@ -929,13 +929,17 @@ public class ExprWalker {
         false, true, TaskMode.LOCAL);
     List<Arg> checkpointKey = lookupCheckpointKey(context,
                                                   checkpointKeyFutures);
+    Var keyBlob = varCreator.createTmpLocalVal(context, Types.V_BLOB);
+    backend.packValues(keyBlob, checkpointKey);
     
    // TODO: nicer names for vars?
     Var existingVal = varCreator.createTmpLocalVal(context, Types.V_BLOB);
     Var checkpointExists = varCreator.createTmpLocalVal(context,
                                                      Types.V_BOOL);
-    backend.lookupCheckpoint(checkpointExists,
-                             existingVal, checkpointKey);
+    
+    backend.lookupCheckpoint(checkpointExists, existingVal, keyBlob.asArg());
+    backend.freeBlob(keyBlob);
+    
     backend.startIfStatement(checkpointExists.asArg(), true);
     setVarsFromCheckpoint(context, oList, existingVal);
     backend.startElseBlock();
@@ -952,7 +956,9 @@ public class ExprWalker {
     // passed through wait.  Rely on optimizer to clean up redundancy
     checkpointKey = lookupCheckpointKey(context, checkpointKeyFutures);
     List<Arg> checkpointVal1 = new ArrayList<Arg>(checkpointVal.size());
-    // TODO: lookup values
+    // TODO: more descriptive name
+    Var keyBlob2 = varCreator.createTmpLocalVal(context, Types.V_BLOB);
+    
     for (Var cv: checkpointVal) {
       if (cv.storage() == Alloc.LOCAL) {
         checkpointVal1.add(cv.asArg());  
@@ -960,7 +966,15 @@ public class ExprWalker {
         checkpointVal1.add(varCreator.fetchValueOf(context, cv).asArg());
       }
     }
-    backend.writeCheckpoint(checkpointKey, checkpointVal1);
+    Var valBlob = varCreator.createTmpLocalVal(context, Types.V_BLOB);
+    
+    backend.packValues(keyBlob2, checkpointKey);
+    backend.packValues(valBlob, checkpointVal1);
+    
+    backend.writeCheckpoint(keyBlob2.asArg(), valBlob.asArg());
+    
+    backend.freeBlob(keyBlob2);
+    backend.freeBlob(valBlob);
     
     backend.endWaitStatement(); // Close wait for values
     backend.endIfStatement(); // Close else block
@@ -995,7 +1009,7 @@ public class ExprWalker {
       }
     }
     
-    backend.extractCheckpointValues(values, checkpointVal);
+    backend.unpackValues(values, checkpointVal);
     
     assert(values.size() == functionOutputs.size());
     for (int i = 0; i < values.size(); i++) {

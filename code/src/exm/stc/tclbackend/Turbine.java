@@ -1362,7 +1362,6 @@ class Turbine {
     return new Command(TURBINE_LOG, logMsg);
   }
 
-  
   /**
    * @param unpacked List of alternating types/values 
    */

@@ -2717,22 +2717,36 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void writeCheckpoint(List<Arg> key, List<Arg> val) {
-    // TODO: free blob?
-    // Pack keys and values into binary, then write checkpoint
-    pointAdd(Turbine.xptWrite(xptPack(key), xptPack(val),
+  public void writeCheckpoint(Arg key, Arg val) {
+    // Write checkpoint with binary keys
+    // Want to persist data to disk.
+    // Don't need to store new entries in index
+    pointAdd(Turbine.xptWrite(argToExpr(key), argToExpr(val),
                   XptPersist.PERSIST, LiteralInt.FALSE));
   }
 
   @Override
-  public void lookupCheckpoint(Var checkpointExists, Var value, List<Arg> key) {
-    // TODO: free blob?
+  public void lookupCheckpoint(Var checkpointExists, Var value, Arg key) {
+    assert(Types.isBoolVal(checkpointExists));
+    assert(Types.isBlobVal(key.type()));
+    assert(Types.isBlobVal(value));
     pointAdd(Turbine.xptLookupStmt(prefixVar(checkpointExists),
-                               prefixVar(value), xptPack(key)));
+                               prefixVar(value), argToExpr(key)));
   }
 
   @Override
-  public void extractCheckpointValues(List<Var> unpacked, Arg packed) {
+  public void packValues(Var packed, List<Arg> unpacked) {
+    assert(Types.isBlobVal(packed));
+    for (Arg u: unpacked) {
+      assert(u.isConstant() || u.getVar().storage() == Alloc.LOCAL);
+    }
+    // Need to pass type names to packing routine
+    List<Expression> exprs = makeTypeValList(unpacked);
+    pointAdd(new SetVariable(prefixVar(packed), Turbine.xptPack(exprs)));
+  }
+  
+  @Override
+  public void unpackValues(List<Var> unpacked, Arg packed) {
     List<String> unpackedVarNames = new ArrayList<String>(unpacked.size());
     List<TypeName> types = new ArrayList<TypeName>();
     for (Var unpackedVar: unpacked) {
@@ -2740,10 +2754,6 @@ public class TurbineGenerator implements CompilerBackend {
       types.add(valRepresentationType(unpackedVar.type()));
     }
     pointAdd(Turbine.xptUnpack(unpackedVarNames, argToExpr(packed), types));
-  }
-
-  private Expression xptPack(List<Arg> data) {
-    return Turbine.xptPack(makeTypeValList(data));
   }
 
   /**

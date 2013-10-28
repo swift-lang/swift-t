@@ -748,7 +748,7 @@ public class STCMiddleEnd {
   
   public void freeBlob(Var blobVal) {
     assert(Types.isBlobVal(blobVal));
-    currBlock().addInstruction(TurbineOp.freeBlob(blobVal));
+    currBlock().addCleanup(blobVal, TurbineOp.freeBlob(blobVal));
   }
 
   public void assignFile(Var target, Arg src) {
@@ -1095,23 +1095,28 @@ public class STCMiddleEnd {
     waitBlock.addInstructions(instBuffer);
   }
 
-  public void writeCheckpoint(List<Arg> key, List<Arg> val) {
-    List<Arg> instArgs = new ArrayList<Arg>(key.size() + val.size() + 1);
-    instArgs.add(Arg.createIntLit(key.size()));
-    instArgs.addAll(key);
-    instArgs.addAll(val);
-    currBlock().addInstruction(TurbineOp.writeCheckpoint(instArgs));
+  public void writeCheckpoint(Arg key, Arg val) {
+    assert(Types.isBlobVal(key.type()));
+    assert(Types.isBlobVal(val.type()));
+    currBlock().addInstruction(TurbineOp.writeCheckpoint(key, val));
   }
 
   public void lookupCheckpoint(Var checkpointExists, Var value,
-                               List<Arg> key) {
+                               Arg key) {
+    assert(Types.isBlobVal(key.type()));
     currBlock().addInstruction(
         TurbineOp.lookupCheckpoint(checkpointExists, value, key));
   }
 
-  public void extractCheckpointValues(List<Var> values, Var packedValues) {
+  public void packValues(Var packedValues, List<Arg> values) {
     assert(Types.isBlobVal(packedValues));
     currBlock().addInstruction(
-        TurbineOp.extractCheckpointValues(values, packedValues.asArg()));
+        TurbineOp.packValues(packedValues, values));
+  }
+  
+  public void unpackValues(List<Var> values, Var packedValues) {
+    assert(Types.isBlobVal(packedValues));
+    currBlock().addInstruction(
+        TurbineOp.unpackValues(values, packedValues.asArg()));
   }
 }

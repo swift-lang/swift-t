@@ -514,10 +514,11 @@ public interface CompilerBackend {
   public void loopBreak(List<Var> loopUsedVars, List<Var> keepOpenVars);
   public void endLoop();
 
-  public void writeCheckpoint(List<Arg> key, List<Arg> val);
+  public void writeCheckpoint(Arg key, Arg val);
 
-  public void lookupCheckpoint(Var checkpointExists,
-                               Var value, List<Arg> key);
+  public void lookupCheckpoint(Var checkpointExists, Var value, Arg key);
 
-  public void extractCheckpointValues(List<Var> unpacked, Arg packed);
+  public void packValues(Var packed, List<Arg> unpacked);
+  
+  public void unpackValues(List<Var> unpacked, Arg packed);
 }
