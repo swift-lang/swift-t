@@ -16,11 +16,18 @@
 # Functions for checkpointing
 namespace eval turbine {
 
+  # Can be DISABLED, W, RW, depending on whether we are doing nothing
+  #  with checkpoints (DISABLED), writing checkpoints for a fresh run (W),
+  #  or reading/writing checkpoints after a restore (RW)
+  variable xpt_mode
+
   # Initialize checkpointing, getting settings from environment
   proc xpt_init { } {
     # TODO: get from env vars 
     set xpt_filename "tmp.xpt"
     set flush_mode periodic_flush
+
+    # TODO: look for checkpoint_restore
     
     # Default to 1mb
     set max_index_val [ expr 1024 * 1024 ]

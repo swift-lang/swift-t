@@ -2994,7 +2994,8 @@ ADLB_Enable_Read_Refcount_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 /**
   Usage: adlb::xpt_init <filename> <flush policy> <max index val size>
-  filename: the filename of the checkpoint file
+  filename: the filename of the checkpoint file.  If empty string, checkpointing to file
+            not initialized
   flush policy: no_flush, periodic_flush, or always_flush
   max index val size: maximum size of value to store in index
  */
@@ -3005,6 +3006,9 @@ ADLB_Xpt_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_ARGS(4);
 
   const char *filename = Tcl_GetString(objv[1]);
+  if (strlen(filename) == 0) {
+    filename = NULL; // ADLB interface takes null instead of empty string
+  }
   const char *flush_policy_s = Tcl_GetString(objv[2]);
   adlb_xpt_flush_policy flush_policy;
   if (strcmp(flush_policy_s, "no_flush"))

@@ -138,8 +138,7 @@ main(int argc, char **argv)
   else
   {
     // Don't touch existing checkpoint for reload
-    ac = ADLB_Xpt_init("./checkpoint-tmp.xpt", ADLB_PERIODIC_FLUSH,
-                       MAX_INDEX_SIZE);
+    ac = ADLB_Xpt_init(NULL, ADLB_PERIODIC_FLUSH, MAX_INDEX_SIZE);
     assert(ac == ADLB_SUCCESS);
   }
 
