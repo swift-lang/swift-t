@@ -51,6 +51,7 @@ set items [ eval list -load $libtclturbine \
                 -source sys.tcl        \
                 -source blob.tcl       \
                 -source location.tcl   \
+                -source checkpoint.tcl \
                 -source helpers.tcl ]
 
 puts [ eval ::pkg::create $metadata $items ]
