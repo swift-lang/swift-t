@@ -26,6 +26,7 @@
  */
 static xlb_xpt_state xpt_state;
 static bool xlb_xpt_initialized = false;
+static bool xlb_xpt_write_enabled = false;
 static adlb_xpt_flush_policy flush_policy;
 static int max_index_val_bytes;
 
@@ -49,8 +50,16 @@ adlb_code ADLB_Xpt_init(const char *filename, adlb_xpt_flush_policy fp,
                         int max_index_val)
 {
   adlb_code rc;
-  rc = xlb_xpt_init(filename, &xpt_state);
-  ADLB_CHECK(rc);
+  if (filename != NULL)
+  {
+    rc = xlb_xpt_write_init(filename, &xpt_state);
+    ADLB_CHECK(rc);
+    xlb_xpt_write_enabled = true;
+  }
+  else
+  {
+    xlb_xpt_write_enabled = false;
+  }
 
   rc = xlb_xpt_index_init();
   ADLB_CHECK(rc);
@@ -76,8 +85,11 @@ adlb_code ADLB_Xpt_finalize(void)
   adlb_code rc;
   xlb_xpt_initialized = false;
 
-  rc = xlb_xpt_close(&xpt_state);
-  ADLB_CHECK(rc);
+  if (xlb_xpt_write_enabled)
+  {
+    rc = xlb_xpt_write_close(&xpt_state);
+    ADLB_CHECK(rc);
+  }
 
   return ADLB_SUCCESS;
 }
@@ -92,6 +104,9 @@ adlb_code ADLB_Xpt_write(const void *key, int key_len, const void *val,
   adlb_code rc;
   bool do_persist = persist != ADLB_NO_PERSIST;
   xpt_index_entry entry;
+  
+  CHECK_MSG(xlb_xpt_write_enabled || !do_persist, "Writing to checkpoint "
+            "was not enabled, cannot write a checkpoint entry");
 
   if (index_add)
   {
@@ -101,6 +116,9 @@ adlb_code ADLB_Xpt_write(const void *key, int key_len, const void *val,
       do_persist = true;
       entry.in_file = true;
       // Fill in file location upon write
+      CHECK_MSG(xlb_xpt_write_enabled, "%i > %i Checkpoint value size exceeded "
+                "maximum size for checkpoint index, but writing to file "
+                "not enabled", val_len, max_index_val_bytes);
     }
     else
     {
@@ -353,6 +371,11 @@ static inline adlb_code xpt_reload_rank(const char *filename,
 static adlb_code xpt_check_flush(void)
 {
   assert(xlb_xpt_initialized);
+  if (!xlb_xpt_write_enabled)
+  {
+    return ADLB_SUCCESS;
+  }
+
   if (flush_policy == ADLB_PERIODIC_FLUSH && xpt_state.buffer_used > 0)
   {
     double now = MPI_Wtime();

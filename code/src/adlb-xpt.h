@@ -51,6 +51,7 @@ typedef enum {
 
   Checkpointing is automatically finalized when ADLB is shutdown.
 
+  filename: checkpoint filename.  If NULL, writing to file is disabled
   fp: controls the policy used for flushing checkpoint entires to disk
   max_index_val: maximum value size to store in in-memory index. Larger
       values are persisted to file and a reference stored in index.

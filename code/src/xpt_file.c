@@ -109,7 +109,7 @@ static inline adlb_code block_read_advance(xlb_xpt_read_state *state);
 static inline adlb_code block_read_move(xlb_xpt_read_state *state,
                         uint32_t new_block);
 
-adlb_code xlb_xpt_init(const char *filename, xlb_xpt_state *state)
+adlb_code xlb_xpt_write_init(const char *filename, xlb_xpt_state *state)
 {
   assert(filename != NULL);
   assert(state != NULL);
@@ -142,7 +142,7 @@ static inline bool is_init(xlb_xpt_state *state)
   return state->fd >= 0;
 }
 
-adlb_code xlb_xpt_close(xlb_xpt_state *state)
+adlb_code xlb_xpt_write_close(xlb_xpt_state *state)
 {
   assert(is_init(state));
   /* 

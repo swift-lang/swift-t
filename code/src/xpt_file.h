@@ -57,10 +57,10 @@ typedef struct {
    whether they intend to log checkpoint data or not.  This function will
    seek to first block in file for this rank.  It will also write any
    header info.  This must be called after xlb is initialized */
-adlb_code xlb_xpt_init(const char *filename, xlb_xpt_state *state);
+adlb_code xlb_xpt_write_init(const char *filename, xlb_xpt_state *state);
 
 /* Close checkpoint file */
-adlb_code xlb_xpt_close(xlb_xpt_state *state);
+adlb_code xlb_xpt_write_close(xlb_xpt_state *state);
 
 /* Write a checkpoint record.
   val_offset: offset of value record in file. */
