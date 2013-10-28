@@ -43,7 +43,8 @@ namespace eval turbine {
       set xpt_filename $::env(TURBINE_XPT_FILE)
     }
     if [ info exists ::env(TURBINE_XPT_RESTORE) ] {
-      set xpt_restore [ split $::env(TURBINE_XPT_RESTORE) ":" ]
+      # must qualify split to avoid clash with turbine::split
+      set xpt_restore [ ::split $::env(TURBINE_XPT_RESTORE) ":" ]
     }
     if [ info exists ::env(TURBINE_XPT_FLUSH) ] {
       set flush_mode $::env(TURBINE_XPT_FLUSH)
