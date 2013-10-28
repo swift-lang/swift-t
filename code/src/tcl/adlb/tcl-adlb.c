@@ -3267,6 +3267,54 @@ ADLB_Xpt_Unpack_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
+  usage: adlb::xpt_reload <checkpoint file name>
+  returns: statistics about reload.  Dict with "ranks" containing total
+            number of ranks.  An entry is added for each rank that was
+            reloaded (no entry present if not loaded by this process).
+            Each rank entry is a dict with statistics: valid and
+            invalid counts.
+ */
+static int
+ADLB_Xpt_Reload_Cmd(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+  const char *filename = Tcl_GetString(objv[1]);
+
+  adlb_code ac;
+  adlb_xpt_load_stats stats;
+  ac = ADLB_Xpt_reload(filename, &stats);
+  TCL_CONDITION(ac == ADLB_SUCCESS, "Error reloading checkpoint from file %s",
+                filename);
+
+  Tcl_Obj *stat_dict = Tcl_NewDictObj();
+
+  Tcl_DictObjPut(interp, stat_dict, Tcl_NewStringObj("ranks", -1),
+                                     Tcl_NewIntObj(stats.ranks));
+
+  Tcl_Obj *valid_key = Tcl_NewStringObj("valid", -1);
+  Tcl_Obj *invalid_key = Tcl_NewStringObj("invalid", -1);
+  for (int i = 0; i < stats.ranks; i++)
+  {
+    adlb_xpt_load_rank_stats *rstats = &stats.rank_stats[i];
+    if (rstats->loaded)
+    {
+      Tcl_Obj *rank_dict = Tcl_NewDictObj();
+      Tcl_DictObjPut(interp, stat_dict, Tcl_NewIntObj(i), rank_dict);
+      Tcl_DictObjPut(interp, rank_dict, valid_key,
+                     Tcl_NewIntObj(rstats->valid));
+      Tcl_DictObjPut(interp, rank_dict, invalid_key,
+                     Tcl_NewIntObj(rstats->invalid));
+    }
+  }
+
+  free(stats.rank_stats);
+  
+  Tcl_SetObjResult(interp, stat_dict);
+  return TCL_OK;
+}
+
+/**
    usage: adlb::fail
  */
 static int
@@ -3420,6 +3468,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("xpt_lookup", ADLB_Xpt_Lookup_Cmd);
   COMMAND("xpt_pack", ADLB_Xpt_Pack_Cmd);
   COMMAND("xpt_unpack", ADLB_Xpt_Unpack_Cmd);
+  COMMAND("xpt_reload", ADLB_Xpt_Reload_Cmd);
   COMMAND("fail",      ADLB_Fail_Cmd);
   COMMAND("abort",     ADLB_Abort_Cmd);
   COMMAND("finalize",  ADLB_Finalize_Cmd);

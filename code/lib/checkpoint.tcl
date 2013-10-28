@@ -18,14 +18,14 @@ namespace eval turbine {
 
   # Can be DISABLED, R, W, RW, depending on whether we are doing nothing
   #  with checkpoints (DISABLED), writing checkpoints for a fresh run (W),
-  #  or reading/writing checkpoints after a restore (RW), or reading
+  #  or reading/writing checkpoints after a reload (RW), or reading
   #  old checkpoints but not writing fresh ones (R)
   variable xpt_mode
 
   # Initialize checkpointing, getting settings from environment
   # Environment variables are:
   # TURBINE_XPT_FILE: file to log to
-  # TURBINE_XPT_RESTORE: colon-separated list of files to restore
+  # TURBINE_XPT_RELOAD: colon-separated list of files to reload
   # TURBINE_XPT_FLUSH: flush mode
   # TURBINE_XPT_INDEX_MAX: max size in bytes
   proc xpt_init { } {
@@ -36,15 +36,15 @@ namespace eval turbine {
     # Default to 1mb
     set xpt_index_max [ expr 1024 * 1024 ]
     set xpt_filename ""
-    # xpt_restore is list of files to restore
-    set xpt_restore [ list ]
+    # xpt_reload is list of files to reload
+    set xpt_reload [ list ]
 
     if [ info exists ::env(TURBINE_XPT_FILE) ] {
       set xpt_filename $::env(TURBINE_XPT_FILE)
     }
-    if [ info exists ::env(TURBINE_XPT_RESTORE) ] {
+    if [ info exists ::env(TURBINE_XPT_RELOAD) ] {
       # must qualify split to avoid clash with turbine::split
-      set xpt_restore [ ::split $::env(TURBINE_XPT_RESTORE) ":" ]
+      set xpt_reload [ ::split $::env(TURBINE_XPT_RELOAD) ":" ]
     }
     if [ info exists ::env(TURBINE_XPT_FLUSH) ] {
       set flush_mode $::env(TURBINE_XPT_FLUSH)
@@ -58,13 +58,16 @@ namespace eval turbine {
 
     adlb::xpt_init $xpt_filename $flush_mode $xpt_index_max
 
-    foreach restore_file $xpt_restore {
-      # TODO: other args for xpt_restore?
-      adlb::xpt_restore $restore_file
+    foreach reload_file $xpt_reload {
+      log "Reloading checkpoint file $reload_file"
+      set reload_stats [ adlb::xpt_reload $reload_file ]
+      log "Finished reloading checkpoint file $reload_file"
+      # TODO: print stats in nicer format
+      log "Reload stats for $reload_file: $reload_stats"
     }
 
     #Determine mode based on what was provided
-    if { [ llength $xpt_restore ] > 0 } {
+    if { [ llength $xpt_reload ] > 0 } {
       if { $xpt_filename != "" } {
         set xpt_mode RW
       }
@@ -78,10 +81,6 @@ namespace eval turbine {
         set xpt_mode DISABLED
       }
     }
-  }
-
-  proc xpt_restore {} {
-    variable xpt_mode
   }
 
   proc xpt_finalize { } {
