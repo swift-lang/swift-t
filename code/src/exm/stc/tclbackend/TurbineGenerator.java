@@ -266,8 +266,7 @@ public class TurbineGenerator implements CompilerBackend {
         tree.add(Turbine.enableReferenceCounting());
       }
       
-      if (Settings.getBoolean(Settings.EXPERIMENTAL_CHECKPOINTING)) {
-        // TODO: better parameters
+      if (Settings.getBoolean(Settings.ENABLE_CHECKPOINTING)) {
         tree.add(Turbine.xptInit());
       }
       
@@ -283,8 +282,7 @@ public class TurbineGenerator implements CompilerBackend {
                                           " " + CONSTINIT_FUNCTION_NAME));
       tree.add(new Command("turbine::finalize"));
   
-      if (Settings.getBoolean(Settings.EXPERIMENTAL_CHECKPOINTING)) {
-        // TODO: better parameters
+      if (Settings.getBoolean(Settings.ENABLE_CHECKPOINTING)) {
         tree.add(Turbine.xptFinalize());
       }
     } catch (InvalidOptionException e) {

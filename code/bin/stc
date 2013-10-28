@@ -127,7 +127,7 @@ function get_compiler_opt_name() {
                     return 0
                     ;;
         checkpointing)
-                    echo "stc.exp.checkpointing"
+                    echo "stc.checkpointing"
                     return 0
                     ;;
         auto-declare)

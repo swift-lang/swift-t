@@ -92,8 +92,7 @@ public class Settings
   public static final String TURBINE_NO_STACK_VARS = "stc.codegen.no-stack-vars";
 
   public static final String ENABLE_REFCOUNTING = "stc.refcounting";
-  public static final String EXPERIMENTAL_CHECKPOINTING =
-                                                        "stc.exp.checkpointing";
+  public static final String ENABLE_CHECKPOINTING = "stc.checkpointing";
   
   public static final String AUTO_DECLARE = "stc.auto-declare";
   
@@ -173,7 +172,7 @@ public class Settings
     defaults.setProperty(OPT_ARRAY_BUILD, "true");
     defaults.setProperty(OPT_MAX_ITERATIONS, "10");
     defaults.setProperty(ENABLE_REFCOUNTING, "true");
-    defaults.setProperty(EXPERIMENTAL_CHECKPOINTING, "false");
+    defaults.setProperty(ENABLE_CHECKPOINTING, "true");
     defaults.setProperty(AUTO_DECLARE, "true");
     defaults.setProperty(PROFILE_STC, "false");
     defaults.setProperty(LOG_FILE, "");
@@ -315,7 +314,7 @@ public class Settings
     getBoolean(TURBINE_NO_STACK);
     getBoolean(TURBINE_NO_STACK_VARS);
     getBoolean(ENABLE_REFCOUNTING);
-    getBoolean(EXPERIMENTAL_CHECKPOINTING);
+    getBoolean(ENABLE_CHECKPOINTING);
     getBoolean(AUTO_DECLARE);
     getBoolean(COMPILER_DEBUG);
     getBoolean(PROFILE_STC);

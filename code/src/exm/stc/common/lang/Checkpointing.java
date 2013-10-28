@@ -18,7 +18,7 @@ public class Checkpointing {
             throws TypeMismatchException, UserException {
     // TODO: should we be able to checkpoint all types?
     
-    if (!Settings.getBoolean(Settings.EXPERIMENTAL_CHECKPOINTING)) {
+    if (!Settings.getBoolean(Settings.ENABLE_CHECKPOINTING)) {
       throw new UserException(context, "STC checkpointing feature " + 
                                          "not enabled");
     }
