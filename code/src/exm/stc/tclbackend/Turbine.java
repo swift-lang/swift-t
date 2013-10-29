@@ -1185,6 +1185,18 @@ class Turbine {
     return new SetVariable(resultVar, new Square(
               CONTAINER_ENUMERATE, arr, mode, start, len));
   }
+  
+  /**
+   * Get all of container
+   * @param resultVar
+   * @param arr
+   * @return
+   */
+  public static SetVariable containerContents(String resultVar,
+          Value arr) {
+    return containerContents(resultVar, arr, true, new LiteralInt(0),
+                              new LiteralInt(-1));  
+  }
 
   public static Command turbineLog(String msg) {
     return new Command(TURBINE_LOG, new TclString(msg, true));
@@ -1340,8 +1352,20 @@ class Turbine {
   public static Command arrayBuild(Value array, 
       List<Expression> arrKeyExprs, List<Expression> arrValExprs,
       boolean close, TypeName valType) {
-    return new Command(ARRAY_KV_BUILD, array, new TclList(arrKeyExprs),
-         new TclList(arrValExprs), LiteralInt.boolValue(close), valType);
+    List<Pair<Expression, Expression>> kvs =
+              new ArrayList<Pair<Expression, Expression>>();
+    for (int i = 0; i < arrKeyExprs.size(); i++) {
+      Expression k = arrKeyExprs.get(i);
+      Expression v = arrValExprs.get(i);
+      kvs.add(Pair.create(k, v));
+    }
+    return arrayBuild(array, Dict.dictCreate(kvs), close, valType);
+  }
+
+  public static Command arrayBuild(Value array, Expression kvDict,
+          boolean close, TypeName valType) {
+    return new Command(ARRAY_KV_BUILD, array, kvDict,
+                        LiteralInt.boolValue(close), valType);
   }
   
   public static Command batchDeclare(List<String> batchedVarNames,

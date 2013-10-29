@@ -410,7 +410,7 @@ public class TurbineGenerator implements CompilerBackend {
       } else if (Types.isStruct(t)) {
         // don't allocate in data store
         pointAdd(Turbine.allocateStruct(prefixVar(var)));
-      } else if (Types.isPrimValue(t)) {
+      } else if (Types.isPrimValue(t) || Types.isContainerLocal(t)) {
         assert(var.storage() == Alloc.LOCAL);
         // don't need to do anything
       } else {
@@ -776,14 +776,23 @@ public class TurbineGenerator implements CompilerBackend {
   
   @Override
   public void assignArray(Var target, Arg src) {
-    // TODO
-    throw new STCRuntimeError("Not implemented yet");
+    assert(Types.isArray(target));
+    assert(Types.isArrayLocal(src.type()));
+    
+    // TODO: assert k/v types match
+    pointAdd(Turbine.arrayBuild(varToExpr(target), argToExpr(src), true,
+             representationType(Types.arrayMemberType(target), false)));
   }
 
   @Override
   public void retrieveArray(Var target, Var src, Arg decr) {
-    // TODO
-    throw new STCRuntimeError("Not implemented yet");
+    assert(Types.isArray(src));
+    assert(Types.isArrayLocal(target));
+    assert(decr.isImmediateInt());
+    
+    // TODO: assert k/v types match 
+    // TODO: decrement reference
+    pointAdd(Turbine.containerContents(prefixVar(target), varToExpr(src)));
   }
   
   @Override
