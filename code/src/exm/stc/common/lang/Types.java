@@ -41,18 +41,31 @@ import exm.stc.common.lang.Var.Alloc;
 public class Types {
 
   public static class ArrayType extends Type {
+    private final boolean local; // If stored locally
     private final Type keyType;
     private final Type memberType;
 
-    public ArrayType(Type keyType, Type memberType) {
-      super();
+    public ArrayType(boolean local, Type keyType, Type memberType) {
+      this.local = local;
       this.keyType = keyType;
       this.memberType = memberType;
+    }
+    
+    public static ArrayType sharedArray(Type keyType, Type memberType) {
+      return new ArrayType(false, keyType, memberType);
+    }
+    
+    public static ArrayType localArray(Type keyType, Type memberType) {
+      return new ArrayType(true, keyType, memberType);
     }
 
     @Override
     public StructureType structureType() {
-      return StructureType.ARRAY;
+      if (local) {
+        return StructureType.ARRAY_LOCAL;
+      } else {
+        return StructureType.ARRAY;
+      }
     }
 
     public Type keyType() {
@@ -67,12 +80,20 @@ public class Types {
 
     @Override
     public String toString() {
-      return memberType.toString() + "[" + keyType + "]";
+      if (local) {
+        return memberType.toString() + "$[" + keyType + "]";
+      } else {
+        return memberType.toString() + "[" + keyType + "]";
+      }
     }
 
     @Override
     public String typeName() {
-      return memberType.typeName() + "["  + keyType + "]";
+      if (local) {
+        return memberType.typeName() + "$["  + keyType + "]";
+      } else {
+        return memberType.typeName() + "["  + keyType + "]";
+      }
     }
 
     @Override
@@ -85,24 +106,27 @@ public class Types {
         return false;
       }
       ArrayType otherT = (ArrayType) other;
-      return otherT.memberType.equals(memberType) &&
+      return otherT.local == this.local &&
+              otherT.memberType.equals(memberType) &&
               otherT.keyType.equals(keyType);
     }
 
     @Override
     public int hashCode() {
-      return memberType.hashCode() + 13 * ArrayType.class.hashCode();
+      return memberType.hashCode() + 13 * 
+            (ArrayType.class.hashCode() + 13 * (local ? 0 : 1));
     }
 
     @Override
     public Type bindTypeVars(Map<String, Type> vals) {
-      return new ArrayType(keyType.bindTypeVars(vals),
+      return new ArrayType(local, keyType.bindTypeVars(vals),
                            memberType.bindTypeVars(vals));
     }
 
     @Override
     public Map<String, Type> matchTypeVars(Type concrete) {
-      if (Types.isArray(concrete)) {
+      if ((!local && isArray(concrete)) ||
+           (local && isArrayLocal(concrete))) {
         ArrayType concreteArray = (ArrayType)concrete.baseType();
         Map<String, Type> m1, m2;
         m1 = memberType.matchTypeVars(concreteArray.memberType);
@@ -124,18 +148,19 @@ public class Types {
     
     @Override
     public Type concretize(Type concrete) {
-      assert(isArray(concrete));
+      assert((isArray(this) && isArray(concrete)) ||
+              (isArrayLocal(this) && isArrayLocal(concrete)));
       ArrayType concreteArray = (ArrayType)concrete.baseType();
       Type cMember = memberType.concretize(concreteArray.memberType());
       Type cKey = keyType.concretize(concreteArray.keyType);
       if (cMember == this.memberType && cKey == this.keyType)
         return this;
-      return new ArrayType(cKey, cMember);
+      return new ArrayType(this.local, cKey, cMember);
     }
 
     @Override
     public boolean assignableTo(Type other) {
-      if (!isArray(other)) {
+      if (!isArray(other) && !isArrayLocal(other)) {
         return false;
       }
       ArrayType otherA = (ArrayType)other.baseType();
@@ -161,7 +186,7 @@ public class Types {
       else if (implMember == null || implKey == null)
         return null;
       else
-        return new ArrayType(implKey, implMember);
+        return new ArrayType(local, implKey, implMember);
     }
   }
 
@@ -169,13 +194,24 @@ public class Types {
    * Unordered set of data which allows duplicates
    */
   public static class BagType extends Type {
+
+    private final boolean local; // If stored locally
     public static final String BAG = "bag";
     private final Type elemType;
 
-    public BagType(Type elemType) {
+    public BagType(boolean local, Type elemType) {
+      this.local = local;
       this.elemType = elemType;
     }
-
+    
+    public static BagType sharedBag(Type memberType) {
+      return new BagType(false, memberType);
+    }
+    
+    public static BagType localBag(Type memberType) {
+      return new BagType(true, memberType);
+    }
+    
     @Override
     public StructureType structureType() {
       return StructureType.BAG;
@@ -189,12 +225,20 @@ public class Types {
 
     @Override
     public String toString() {
-      return BAG + "<" + elemType.toString() + ">";
+      if (local) {
+        return BAG + "$<" + elemType.toString() + ">";
+      } else {
+        return BAG + "<" + elemType.toString() + ">";
+      }
     }
 
     @Override
     public String typeName() {
-      return BAG + "<" + elemType.typeName() + ">";
+      if (local) {
+        return BAG + "$<" + elemType.typeName() + ">";
+      } else {
+        return BAG + "<" + elemType.typeName() + ">";
+      }
     }
 
     @Override
@@ -207,22 +251,25 @@ public class Types {
         return false;
       }
       BagType otherT = (BagType) other;
-      return otherT.elemType.equals(elemType);
+      return this.local == otherT.local && 
+              otherT.elemType.equals(elemType);
     }
 
     @Override
     public int hashCode() {
-      return elemType.hashCode() + 31 * BagType.class.hashCode();
+      return local ? 0 : 1 + 31 * 
+              (elemType.hashCode() + 31 * BagType.class.hashCode());
     }
 
     @Override
     public Type bindTypeVars(Map<String, Type> vals) {
-      return new BagType(elemType.bindTypeVars(vals));
+      return new BagType(local, elemType.bindTypeVars(vals));
     }
 
     @Override
     public Map<String, Type> matchTypeVars(Type concrete) {
-      if (Types.isBag(concrete)) {
+      if ((!local && isBag(concrete))||
+           (local && isBagLocal(concrete))   ) {
         BagType concreteBag = (BagType)concrete.baseType();
         return elemType.matchTypeVars(concreteBag.elemType);
       }
@@ -231,17 +278,18 @@ public class Types {
     
     @Override
     public Type concretize(Type concrete) {
-      assert(isBag(concrete));
+      assert((!local && isBag(concrete)) ||
+              (local && isBagLocal(concrete)));
       BagType concreteBag = (BagType)concrete.baseType();
       Type cElem = elemType.concretize(concreteBag.memberType());
       if (cElem == this.elemType)
         return this;
-      return new BagType(cElem);
+      return new BagType(local, cElem);
     }
 
     @Override
     public boolean assignableTo(Type other) {
-      if (!isBag(other)) {
+      if (!isBag(other) && !isBagLocal(other)) {
         return false;
       }
       BagType otherB = (BagType)other.baseType();
@@ -263,7 +311,7 @@ public class Types {
       if (implElem == elemType)
         return this;
       else
-        return new BagType(implElem);
+        return new BagType(local, implElem);
     }
   }
   
@@ -1182,8 +1230,8 @@ public class Types {
     SCALAR_VALUE,
     FILE_FUTURE,
     FILE_VALUE,
-    ARRAY,
-    BAG,
+    ARRAY, ARRAY_LOCAL,
+    BAG, BAG_LOCAL,
     /** Reference is only used internally in compiler */
     REFERENCE,
     STRUCT,
@@ -1455,7 +1503,7 @@ public class Types {
     
     @Override
     public Type concretize(Type concrete) {
-      assert(Types.isFunction(concrete));
+      assert(isFunction(concrete));
       FunctionType concreteF = (FunctionType)concrete;
       
       List<Type> concreteIn = new ArrayList<Type>(inputs.size());
@@ -1690,42 +1738,66 @@ public class Types {
     return t.type().structureType() == StructureType.ARRAY;
   }
 
+  public static boolean isArrayLocal(Typed t) {
+    return t.type().structureType() == StructureType.ARRAY_LOCAL;
+  }
+  
   /**
    * Convenience function to check if a type is a reference to an array
    * @param t
    * @return
    */
   public static boolean isArrayRef(Typed t) {
-    return isRef(t) && Types.isArray(t.type().memberType());
+    return isRef(t) && isArray(t.type().memberType());
+  }
+
+  public static boolean isArrayLocalRef(Typed t) {
+    return isRef(t) && isArrayLocal(t.type().memberType());
   }
   
   public static boolean isBag(Typed t) {
     return t.type().structureType() == StructureType.BAG;
   }
   
+  public static boolean isBagLocal(Typed t) {
+    return t.type().structureType() == StructureType.BAG_LOCAL;
+  }
+  
   public static boolean isBagRef(Typed t) {
-    return isRef(t) &&
-        t.type().memberType().structureType() == StructureType.BAG;
+    return isRef(t) && isBag(t.type().memberType());
+  }
+  
+  public static boolean isBagLocalRef(Typed t) {
+    return isRef(t) && isBagLocal(t.type().memberType());
   }
 
   /**
-   * @return whether it is a container data structure e.g. an array or multiset
+   * @return whether it is a shared container data structure
+   *          e.g. an array or multiset
    */
   public static boolean isContainer(Typed t) {
     return isArray(t) || isBag(t);
+  }
+  
+  public static boolean isContainerLocal(Typed t) {
+    return isArrayLocal(t) || isBagLocal(t);
   }
   
   public static boolean isContainerRef(Typed t) {
     return isArrayRef(t) || isBagRef(t);
   }
   
+  public static boolean isContainerLocalRef(Typed t) {
+    return isArrayLocalRef(t) || isBagLocalRef(t);
+  }
+  
   /**
    * Convenience function to get member type of array or array ref
    */
   public static Type arrayMemberType(Typed arrayT) {
-    if (isArray(arrayT)) {
+    if (isArray(arrayT) || isArrayLocal(arrayT)) {
       return arrayT.type().memberType();
-    } else if (isArrayRef(arrayT)) {
+    } else if (isArrayRef(arrayT) || isArrayLocalRef(arrayT)) {
       return arrayT.type().memberType().memberType();
     } else {
       throw new STCRuntimeError("called arrayMemberType on non-array"
@@ -1734,9 +1806,9 @@ public class Types {
   }
 
   public static Type bagElemType(Typed t) {
-    if (isBag(t)) {
+    if (isBag(t) || isBagLocal(t)) {
       return t.type().memberType();
-    } else if (isBagRef(t)) {
+    } else if (isBagRef(t) || isBagLocalRef(t)) {
       return t.type().memberType().memberType();
     } else {
       throw new STCRuntimeError("called bagElemType on non-array"
@@ -1771,10 +1843,10 @@ public class Types {
   }
 
   public static Type arrayKeyType(Typed arr) {
-    if (Types.isArray(arr)) {
+    if (isArray(arr) || isArrayLocal(arr)) {
       return ((ArrayType)arr.type().baseType()).keyType;
     } else {
-      assert(Types.isArrayRef(arr)) : arr.type();
+      assert(isArrayRef(arr)) : arr.type();
       return ((ArrayType)arr.type().baseType().memberType()).keyType;
     }
   }
@@ -1821,7 +1893,7 @@ public class Types {
    */
   public static boolean canWaitForFinalize(Typed type) {
     return isFuture(type) || isPrimUpdateable(type) ||
-           isArray(type);
+            isArray(type);
   }
   
   /**
@@ -2051,7 +2123,7 @@ public class Types {
    */
   public static boolean inputRequiresInitialization(Var input) {
     return input.storage() == Alloc.ALIAS 
-        || Types.isPrimUpdateable(input)
+        || isPrimUpdateable(input)
         || isStruct(input); // Need to load all struct members
   }
   
@@ -2129,7 +2201,7 @@ public class Types {
     boolean sawWildcard = true;
     Set<Type> intersection = null;
     for (Type argType: types) {
-      if (Types.isWildcard(argType)) {
+      if (isWildcard(argType)) {
         // do nothing
         sawWildcard = true;
       } else if (intersection == null) {

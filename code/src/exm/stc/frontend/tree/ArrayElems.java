@@ -114,7 +114,7 @@ public class ArrayElems {
     for (Type keyAlt: possibleKeyTypes) {
       if (Types.isValidArrayKey(keyAlt)) {
         for (Type valAlt: possibleValTypes) {
-          possibleArrayTypes.add(new ArrayType(keyAlt, valAlt));
+          possibleArrayTypes.add(ArrayType.sharedArray(keyAlt, valAlt));
         }
       }
     }

@@ -296,7 +296,7 @@ public class LValue {
       if (Types.isUnion(keyType)) {
         keyType = UnionType.getAlternatives(keyType).get(0);
       }
-      declType = new ArrayType(keyType, declType);
+      declType = ArrayType.sharedArray(keyType, declType);
     }
     
     Var newVar = new Var(declType, this.varName, Alloc.STACK, DefType.LOCAL_USER,

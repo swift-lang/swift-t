@@ -66,7 +66,7 @@ public class TypeTree {
       SwiftAST arrayT = markers.get(i);
       assert(arrayT.getType() == ExMParser.ARRAY);
       Type keyType = getArrayKeyType(context, arrayT);
-      resultType = new ArrayType(keyType, resultType);
+      resultType = ArrayType.sharedArray(keyType, resultType);
     }
     return resultType;
   }
@@ -132,7 +132,7 @@ public class TypeTree {
     assert(typeT.getType() == ExMParser.ID);
     String typeName = typeT.getText();
     if (typeName.equals(BagType.BAG)) {
-      return new BagType(paramT);
+      return BagType.sharedBag(paramT);
     } else {
       throw new TypeMismatchException(typeName + 
            " is not the name of a type that can accept a <...> parameter");
