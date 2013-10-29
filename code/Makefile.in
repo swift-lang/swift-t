@@ -104,7 +104,7 @@ MPE = @USE_MPE@
 MPE_FLAGS  = @MPE_FLAGS@
 ifeq ($(ENABLE_MPE),yes)
 	CFLAGS += -D ENABLE_MPE $(MPE_FLAGS) -I $(MPE)/include
-	LDFLAGS += -mpilog
+	LDFLAGS += # -mpilog
 	LIBS += -L $(MPE)/lib -l mpe
         RPATH += -Wl,-rpath -Wl,$(MPE)/lib
 endif
@@ -184,7 +184,8 @@ $(ADLB_SO): $(OBJS) $(NLOBJS) lib
 
 ### INSTALL
 
-INSTALLED_HEADERS = src/adlb.h src/adlb-defs.h src/adlb_types.h
+INSTALLED_HEADERS = src/adlb.h src/adlb-defs.h \
+	            src/adlb_types.h src/adlb-xpt.h
 
 ifeq ($(ENABLE_XPT),yes)
         INSTALLED_HEADERS += src/adlb-xpt.h
