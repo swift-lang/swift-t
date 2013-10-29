@@ -49,18 +49,18 @@ namespace eval turbine {
     # build array by inserting items into a container starting at 0
     # close: decrement writers count at end
     # val_type: type of array values
-    proc array_kv_build { c keys vals close val_type } {
-      set n [ llength $keys ]
+    proc array_kv_build { c kv_dict close val_type } {
+      set n [ dict size $kv_dict ]
       log "array_kv_build: <$c> $n elems, close $close"
       if { $n > 0 } {
-        for { set i 0 } { $i < $n } { incr i } {
-          set key [ lindex $keys $i ]
-          set val [ lindex $vals $i ]
+        set i 0
+        dict for { key val } {
           set drops 0
           if { [ expr {$close && $i == $n - 1 } ] } {
             set drops 1
           }
           adlb::insert $c $key $val $val_type $drops
+          incr i
         }
       } else {
         adlb::write_refcount_decr $c
