@@ -37,6 +37,10 @@ if [ ! -z "$TCL_VERSION" ] ; then
   EXTRA_ARGS+="--with-tcl-version=$TCL_VERSION"
 fi
 
+if [ ! -z "$DISABLE_XPT" ]; then
+    EXTRA_ARGS+=" --enable-checkpoint=no"
+fi
+
 ./configure --with-adlb=${LB_INST} \
             ${CRAY_ARGS} \
             --with-mpi=${MPICH_INST} \

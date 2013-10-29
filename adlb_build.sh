@@ -39,8 +39,8 @@ if [ ! -z "$EXM_CRAY" ]; then
     EXTRA_ARGS+=" --enable-mpi-2"
 fi
 
-if [ ! -z "$ENABLE_XPT" ]; then
-    EXTRA_ARGS+=" --enable-checkpoint"
+if [ ! -z "$DISABLE_XPT" ]; then
+    EXTRA_ARGS+=" --enable-checkpoint=no"
 fi
 
 ./configure --with-c-utils=${C_UTILS_INST} \
