@@ -881,7 +881,7 @@ public class ASTWalker {
     if (loop.getCountVarName() != null) {
       Var loopCountVar = varCreator.createVariable(loop.getBodyContext(),
                                      loop.createCountVar(context));
-      exprWalker.assign(loopCountVar, Arg.createVar(loop.getLoopCountVal()));
+      exprWalker.assign(loopCountVar, loop.getLoopCountVal().asArg());
     }
     
     block(loopBodyContext, loop.getBody());

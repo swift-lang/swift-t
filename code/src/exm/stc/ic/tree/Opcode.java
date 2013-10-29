@@ -15,6 +15,10 @@ public enum Opcode {
   LOAD_INT, LOAD_STRING, LOAD_FLOAT, LOAD_BOOL, LOAD_REF,
   LOAD_BLOB, LOAD_VOID, LOAD_FILE,
   
+  // Load and store container contents (TODO: recursively?)
+  STORE_ARRAY, STORE_BAG,
+  LOAD_ARRAY, LOAD_BAG, 
+  
   // Dereference *prim to prim
   DEREF_INT, DEREF_STRING, DEREF_FLOAT, DEREF_BOOL, DEREF_BLOB,
   DEREF_VOID, DEREF_FILE, 
@@ -101,6 +105,8 @@ public enum Opcode {
       case STORE_REF: 
       case STORE_STRING: 
       case STORE_VOID:
+      case STORE_ARRAY:
+      case STORE_BAG:
         return true;
       default:
         return false;
@@ -137,6 +143,10 @@ public enum Opcode {
        }
     } else if (Types.isRef(dstType)) {
       op = Opcode.STORE_REF;
+    } else if (Types.isArray(dstType)) {
+      op = Opcode.STORE_ARRAY;
+    } else if (Types.isBag(dstType)) {
+      op = Opcode.STORE_BAG;
     }
     return op;
   }
@@ -151,6 +161,8 @@ public enum Opcode {
     case LOAD_REF:
     case LOAD_STRING:
     case LOAD_VOID:
+    case LOAD_ARRAY:
+    case LOAD_BAG:
       return true;
     default:
       return false;
@@ -189,6 +201,10 @@ public enum Opcode {
 
     } else if (Types.isRef(srcType)) {
       op = Opcode.LOAD_REF;
+    } else if (Types.isArray(srcType)) {
+      op = Opcode.LOAD_ARRAY;
+    } else if (Types.isBag(srcType)) {
+      op = Opcode.LOAD_BAG;
     } else {
       op = null;
     }

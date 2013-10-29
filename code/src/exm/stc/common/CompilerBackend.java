@@ -140,7 +140,14 @@ public interface CompilerBackend {
 
   public void retrieveFile(Var target, Var src, Arg decr);
   
+  public void assignArray(Var target, Arg src);
 
+  public void retrieveArray(Var target, Var src, Arg decr);
+  
+  public void assignBag(Var target, Arg src);
+
+  public void retrieveBag(Var target, Var src, Arg decr);
+  
   /**
    * Used to cleanup local file if needed
    * @param fileVal

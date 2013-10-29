@@ -214,7 +214,11 @@ public class Types {
     
     @Override
     public StructureType structureType() {
-      return StructureType.BAG;
+      if (local) {
+        return StructureType.BAG_LOCAL;
+      } else {
+        return StructureType.BAG;
+      }
     }
     
     @Override
@@ -2067,6 +2071,12 @@ public class Types {
       return new FileValueType(t.type().fileKind());
     } else if (isRef(t)) {
       return t.type().baseType().memberType();
+    } else if (isArray(t)) {
+      ArrayType at = (ArrayType)t.type().getImplType();
+      return new ArrayType(true, at.keyType(), at.memberType());
+    } else if (isBag(t)) {
+      BagType bt = (BagType)t.type().getImplType();
+      return new BagType(true, bt.memberType());
     } else {
       throw new STCRuntimeError(t.type() + " can't be dereferenced");
     }

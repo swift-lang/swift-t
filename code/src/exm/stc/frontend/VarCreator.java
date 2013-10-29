@@ -220,8 +220,8 @@ public class VarCreator {
    */
   public Var createValueOfVar(Context context, Var future,
         boolean initialise) throws UserException {
-    assert(Types.isPrimFuture(future.type()));
     Type valType = Types.derefResultType(future.type());
+    assert(valType != null) : future.type() + " could not be derefed"; 
     Var val = context.createLocalValueVariable(valType, future);
     if (initialise) {
       initialiseVariable(context, val);
@@ -254,35 +254,44 @@ public class VarCreator {
    */
   public Var fetchValueOf(Context context, Var future) 
       throws UserException, UndefinedTypeException, DoubleDefineException {
-    assert(Types.isPrimFuture(future.type()));
     Type futureType = future.type();
     Var val = createValueOfVar(context, future);
-    switch (futureType.primType()) {
-    case BOOL:
-      backend.retrieveBool(val, future);
-      break;
-    case INT:
-      backend.retrieveInt(val, future);
-      break;
-    case STRING:
-      backend.retrieveString(val, future);
-      break;
-    case FLOAT:
-      backend.retrieveFloat(val, future);
-      break;
-    case BLOB:
-      backend.retrieveBlob(val, future);
-      break;
-    case VOID:
-      backend.retrieveVoid(val, future);
-      break;
-    case FILE:
-      backend.retrieveFile(val, future);
-      break;
-    default:
-      throw new STCRuntimeError("Don't know how to retrieve value of "
-          + " type " + futureType.typeName() + " for variable " 
-          + future.name());
+    if (Types.isPrimFuture(future.type())) {
+      switch (futureType.primType()) {
+      case BOOL:
+        backend.retrieveBool(val, future);
+        break;
+      case INT:
+        backend.retrieveInt(val, future);
+        break;
+      case STRING:
+        backend.retrieveString(val, future);
+        break;
+      case FLOAT:
+        backend.retrieveFloat(val, future);
+        break;
+      case BLOB:
+        backend.retrieveBlob(val, future);
+        break;
+      case VOID:
+        backend.retrieveVoid(val, future);
+        break;
+      case FILE:
+        backend.retrieveFile(val, future);
+        break;
+      default:
+        throw new STCRuntimeError("Don't know how to retrieve value of "
+            + " type " + futureType.typeName() + " for variable " 
+            + future.name());
+      }
+    } else if (Types.isArray(future)) {
+      // TODO: recursively?
+      backend.retrieveArray(val, future);
+    } else if (Types.isBag(future)) {
+      // TODO: recursively?
+      backend.retrieveBag(val, future);
+    } else {
+      throw new STCRuntimeError("Don't know how to fetch " + futureType);
     }
     
     return val;

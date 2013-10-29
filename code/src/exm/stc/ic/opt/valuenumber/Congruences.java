@@ -226,8 +226,9 @@ public class Congruences {
         ArgCV invVal = ComputedValue.retrieveCompVal(canonLoc.getVar());
         updateInv(consts, errContext, invOutput, invVal, stmtIndex);
       } else if (cv.op().isRetrieve()) {
-        ArgCV invVal = new ArgCV(Opcode.assignOpcode(invOutput.getVar()),
-                                 canonLoc.asList());
+        Opcode invOp = Opcode.assignOpcode(invOutput.getVar());
+        assert(invOp != null);
+        ArgCV invVal = new ArgCV(invOp, canonLoc.asList());
         updateInv(consts, errContext, invOutput, invVal, stmtIndex);
       }
     } else if (canonVal.isArg() && canonVal.arg().isVar() &&

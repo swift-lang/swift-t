@@ -14,9 +14,9 @@ main {
 
   a, A, abag = arrayf(10, [blob_from_string("hello"),
                            blob_from_string("world")]);
-  assertEquals(a, 10 + 6, "a");
-  assertEquals(A[0], 6.0, "A[0]");
-  assertEquals(bag_size(abag), 2, "bag_size(abag)");
+  assertEqual(a, 10 + 6, "a");
+  assertEqual(A[0], 6.0, "A[0]");
+  assertEqual(bag_size(abag), 2, "bag_size(abag)");
 }
 
 

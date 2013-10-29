@@ -378,36 +378,43 @@ public class ExprWalker {
   }
 
   public void assign(Var dst, Arg src) {
-    assert(Types.isPrimValue(src.type()));
-    assert(Types.isPrimFuture(dst.type()));
     assert(src.type().assignableTo(Types.derefResultType(dst.type()))) :
                       dst + " = " + src;
-    switch (src.type().primType()) {
-      case INT:
-        backend.assignInt(dst, src);
-        break;
-      case BOOL:
-        backend.assignBool(dst, src);
-        break;
-      case FLOAT:
-        backend.assignFloat(dst, src);
-        break;
-      case STRING:
-        backend.assignString(dst, src);
-        break;
-      case BLOB:
-        backend.assignBlob(dst, src);
-        break;
-      case VOID:
-        backend.assignVoid(dst, src);
-        break;
-      case FILE:
-        backend.assignFile(dst, src);
-        break;
-      default:
-        throw new STCRuntimeError("assigning from type " + src.type()
-                + " not supported internally");
+    if (Types.isPrimFuture(dst)) {
+      switch (src.type().primType()) {
+        case INT:
+          backend.assignInt(dst, src);
+          break;
+        case BOOL:
+          backend.assignBool(dst, src);
+          break;
+        case FLOAT:
+          backend.assignFloat(dst, src);
+          break;
+        case STRING:
+          backend.assignString(dst, src);
+          break;
+        case BLOB:
+          backend.assignBlob(dst, src);
+          break;
+        case VOID:
+          backend.assignVoid(dst, src);
+          break;
+        case FILE:
+          backend.assignFile(dst, src);
+          break;
+        default:
+          throw new STCRuntimeError("assigning from type " + src.type()
+                  + " not supported internally");
+      }
+    } else if (Types.isArray(dst)) {
+      backend.assignArray(dst, src);
+    } else if (Types.isBag(dst)) {
+      backend.assignBag(dst, src);
+    } else {
+      throw new STCRuntimeError("Can't assign: " + dst);
     }
+    
   }
 
   private void callOperator(Context context, SwiftAST tree, 

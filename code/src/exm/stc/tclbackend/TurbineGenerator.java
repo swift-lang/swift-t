@@ -773,6 +773,30 @@ public class TurbineGenerator implements CompilerBackend {
           varToExpr(src), argToExpr(decr)));
     }
   }
+  
+  @Override
+  public void assignArray(Var target, Arg src) {
+    // TODO
+    throw new STCRuntimeError("Not implemented yet");
+  }
+
+  @Override
+  public void retrieveArray(Var target, Var src, Arg decr) {
+    // TODO
+    throw new STCRuntimeError("Not implemented yet");
+  }
+  
+  @Override
+  public void assignBag(Var target, Arg src) {
+    // TODO
+    throw new STCRuntimeError("Not implemented yet");
+  }
+
+  @Override
+  public void retrieveBag(Var target, Var src, Arg decr) {
+    // TODO
+    throw new STCRuntimeError("Not implemented yet");
+  }
 
   @Override
   public void decrLocalFileRef(Var localFile) {

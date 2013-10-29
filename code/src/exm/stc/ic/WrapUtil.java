@@ -90,6 +90,19 @@ public class WrapUtil {
       block.addVariable(deref);
       instBuffer.add(TurbineOp.retrieveRef(deref, var));
       return deref;
+    } else if (Types.isContainer(var)) {
+      Var deref = new Var(value_t, valName,
+          Alloc.LOCAL, DefType.LOCAL_COMPILER,
+          VarProvenance.valueOf(var));
+      block.addVariable(deref);
+      // TODO: recursively fetch members?
+      if (Types.isArray(var)) {
+        instBuffer.add(TurbineOp.retrieveArray(deref, var)); 
+      } else {
+        assert(Types.isBag(var));
+        instBuffer.add(TurbineOp.retrieveBag(deref, var));
+      }
+      return deref;
     } else {
       throw new STCRuntimeError("shouldn't be possible to get here");
     }

@@ -855,6 +855,30 @@ public class STCMiddleEnd {
     }
   }
   
+  public void assignArray(Var target, Arg src) {
+    assert(Types.isArray(target.type()));
+    assert(Types.isArrayLocal(src.type()));
+    currBlock().addInstruction(TurbineOp.assignArray(target, src));
+  }
+
+  public void retrieveArray(Var target, Var src) {
+    assert(Types.isArray(src.type()));
+    assert(Types.isArrayLocal(target));
+    currBlock().addInstruction(TurbineOp.retrieveArray(target, src));
+  }
+  
+  public void assignBag(Var target, Arg src) {
+    assert(Types.isBag(target.type())) : target;
+    assert(Types.isBagLocal(src.type())) : src.type();
+    currBlock().addInstruction(TurbineOp.assignBag(target, src));
+  }
+  
+  public void retrieveBag(Var target, Var src) {
+    assert(Types.isBag(src.type()));
+    assert(Types.isBagLocal(target));
+    currBlock().addInstruction(TurbineOp.retrieveBag(target, src));
+  }
+  
   public void decrLocalFileRef(Var fileVal) {
     assert(Types.isFileVal(fileVal));
     currBlock().addCleanup(fileVal, TurbineOp.decrLocalFileRef(fileVal));

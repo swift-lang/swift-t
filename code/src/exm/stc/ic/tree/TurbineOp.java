@@ -121,6 +121,12 @@ public class TurbineOp extends Instruction {
     case STORE_REF:
       gen.assignReference(getOutput(0), getInput(0).getVar());
       break;
+    case STORE_ARRAY:
+      gen.assignArray(getOutput(0), getInput(0));
+      break;
+    case STORE_BAG:
+      gen.assignBag(getOutput(0), getInput(0));
+      break;
     case ARRAY_LOOKUP_FUTURE:
       gen.arrayLookupFuture(getOutput(0), 
           getInput(0).getVar(), getInput(1).getVar(), false);
@@ -277,6 +283,14 @@ public class TurbineOp extends Instruction {
     case LOAD_FILE:
       gen.retrieveFile(getOutput(0), getInput(0).getVar(),
           getInputs().size() == 2 ? getInput(1) : Arg.ZERO);
+      break;
+    case LOAD_ARRAY:
+      gen.retrieveArray(getOutput(0), getInput(0).getVar(),
+              getInputs().size() == 2 ? getInput(1) : Arg.ZERO);
+      break;
+    case LOAD_BAG:
+      gen.retrieveBag(getOutput(0), getInput(0).getVar(),
+              getInputs().size() == 2 ? getInput(1) : Arg.ZERO);
       break;
     case FREE_BLOB:
       gen.freeBlob(getOutput(0));
@@ -502,6 +516,14 @@ public class TurbineOp extends Instruction {
   public static Instruction assignFile(Var target, Arg src) {
     return new TurbineOp(Opcode.STORE_FILE, target, src);
   }
+  
+  public static Instruction assignArray(Var target, Arg src) {
+    return new TurbineOp(Opcode.STORE_ARRAY, target, src);
+  }
+  
+  public static Instruction assignBag(Var target, Arg src) {
+    return new TurbineOp(Opcode.STORE_BAG, target, src);
+  }
 
   public static Instruction retrieveString(Var target, Var source) {
     return new TurbineOp(Opcode.LOAD_STRING, target, source.asArg());
@@ -529,6 +551,14 @@ public class TurbineOp extends Instruction {
 
   public static Instruction retrieveFile(Var target, Var source) {
     return new TurbineOp(Opcode.LOAD_FILE, target, source.asArg());
+  }
+  
+  public static Instruction retrieveArray(Var target, Var source) {
+    return new TurbineOp(Opcode.LOAD_ARRAY, target, source.asArg());
+  }
+  
+  public static Instruction retrieveBag(Var target, Var source) {
+    return new TurbineOp(Opcode.LOAD_BAG, target, source.asArg());
   }
   
   public static Instruction freeBlob(Var blobVal) {
@@ -845,6 +875,8 @@ public class TurbineOp extends Instruction {
     case STORE_BLOB:
     case STORE_VOID:
     case STORE_FILE:
+    case STORE_ARRAY:
+    case STORE_BAG:
     case DEREF_INT:
     case DEREF_BOOL:
     case DEREF_VOID:
@@ -859,6 +891,8 @@ public class TurbineOp extends Instruction {
     case LOAD_BLOB:
     case LOAD_VOID:
     case LOAD_FILE:
+    case LOAD_ARRAY:
+    case LOAD_BAG:
       return this.writesAliasVar();
       
     case ARRAY_LOOKUP_REF_IMM:
@@ -1516,6 +1550,8 @@ public class TurbineOp extends Instruction {
     case STORE_STRING:
     case STORE_BLOB:
     case STORE_FILE:
+    case STORE_ARRAY:
+    case STORE_BAG:
     case LOAD_INT:
     case LOAD_BOOL:
     case LOAD_VOID:
@@ -1523,6 +1559,8 @@ public class TurbineOp extends Instruction {
     case LOAD_STRING:
     case LOAD_BLOB:
     case LOAD_FILE:
+    case LOAD_ARRAY:
+    case LOAD_BAG:
     case UPDATE_INCR:
     case UPDATE_MIN:
     case UPDATE_SCALE:
@@ -1596,7 +1634,9 @@ public class TurbineOp extends Instruction {
       case LOAD_STRING: 
       case LOAD_BLOB: 
       case LOAD_VOID: 
-      case LOAD_FILE: {
+      case LOAD_FILE:
+      case LOAD_ARRAY:
+      case LOAD_BAG: {
         // retrieve* is invertible
         Arg src = getInput(0);
         Var dst = getOutput(0);
@@ -1627,7 +1667,9 @@ public class TurbineOp extends Instruction {
       case STORE_STRING: 
       case STORE_BLOB: 
       case STORE_VOID:
-      case STORE_FILE: {
+      case STORE_FILE:
+      case STORE_ARRAY:
+      case STORE_BAG: {
 
         // add assign so we can avoid recreating future 
         // (closed b/c this instruction closes val immediately)
@@ -1995,7 +2037,9 @@ public class TurbineOp extends Instruction {
       case LOAD_INT:
       case LOAD_REF:
       case LOAD_STRING:
-      case LOAD_VOID: {
+      case LOAD_VOID: 
+      case LOAD_ARRAY:
+      case LOAD_BAG: {
         Var inVar = getInput(0).getVar();
         if (type == RefCountType.READERS) {
           long amt = increments.getCount(inVar);
