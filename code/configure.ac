@@ -222,11 +222,21 @@ then
 fi
 rm -f mpi_version.cpp.txt
 
-XLB_ENABLE_XPT="no"
+XLB_ENABLE_XPT=yes
 AC_ARG_ENABLE(checkpoint,
   AS_HELP_STRING([--enable-checkpoint],
-                 [Enable checkpoint functionality]),
-                 [XLB_ENABLE_XPT="yes"], [])
+                 [Enable checkpoint functionality (on by default)]),
+                 [
+      if [[ "$enableval" == yes ]]
+      then
+        XLB_ENABLE_XPT=yes
+      elif [[ "$enableval" == no ]]
+      then
+        XLB_ENABLE_XPT=no
+      else
+        echo "Invalid enable-checkpoint value: $enableval"
+        exit 1
+      fi], [])
 AC_MSG_RESULT([checkpoints enabled])
 
 # From now on, make the user put -mpe=mpilog or -mpilog or -log in
