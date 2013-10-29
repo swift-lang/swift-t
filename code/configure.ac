@@ -331,6 +331,30 @@ fi
 AC_SUBST(USE_MPE)
 AC_SUBST(ENABLE_MPE)
 
+AC_ARG_ENABLE(checkpoint,
+     AS_HELP_STRING(
+                    [--enable-checkpoint],
+                    [Enable Turbine support for ADLB checkpointing (enabled by default)]), [
+      if [[ "$enableval" == yes ]]
+      then
+        ENABLE_XPT=yes
+      elif [[ "$enableval" == no ]]
+      then
+        ENABLE_XPT=no
+      else
+        echo "Invalid enable-checkpoint value: $enableval"
+        exit 1
+      fi
+    ], [])
+if [[ ${ENABLE_XPT} == yes ]]
+then
+    AC_MSG_RESULT([Checkpointing enabled]);
+else
+    AC_MSG_RESULT([Checkpointing disabled]);
+fi
+AC_SUBST(ENABLE_XPT)
+
+
 USE_ADLB=0
 AC_ARG_WITH(adlb,
     AS_HELP_STRING(

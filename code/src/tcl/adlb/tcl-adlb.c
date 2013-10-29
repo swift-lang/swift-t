@@ -52,7 +52,9 @@
 #include <adlb.h>
 #include <adlb-defs.h>
 #include <adlb_types.h>
+#ifndef ENABLE_XPT
 #include <adlb-xpt.h>
+#endif
 
 #include <log.h>
 
@@ -3005,6 +3007,7 @@ ADLB_Xpt_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(4);
 
+#ifndef ENABLE_XPT
   const char *filename = Tcl_GetString(objv[1]);
   if (strlen(filename) == 0) {
     filename = NULL; // ADLB interface takes null instead of empty string
@@ -3037,6 +3040,10 @@ ADLB_Xpt_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(ac == ADLB_SUCCESS,
                 "Error while initializing checkpointing");
   return TCL_OK;
+#else
+  TCL_RETURN_ERROR("Checkpointing not enabled");
+  return TCL_ERROR;
+#endif
 }
 
 /**
@@ -3046,10 +3053,15 @@ static int
 ADLB_Xpt_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
                    int objc, Tcl_Obj *const objv[])
 {
+#ifndef ENABLE_XPT
   TCL_ARGS(1);
   adlb_code ac = ADLB_Xpt_finalize();
   TCL_CONDITION(ac == ADLB_SUCCESS, "Error while finalizing checkpointing");
   return TCL_OK;
+#else
+  TCL_RETURN_ERROR("Checkpointing not enabled");
+  return TCL_ERROR;
+#endif
 }
 
 /**
@@ -3062,6 +3074,7 @@ static int
 ADLB_Xpt_Write_Cmd(ClientData cdata, Tcl_Interp *interp,
                    int objc, Tcl_Obj *const objv[])
 {
+#ifndef ENABLE_XPT
   TCL_ARGS(5);
   int rc;
   adlb_code ac;
@@ -3102,6 +3115,10 @@ ADLB_Xpt_Write_Cmd(ClientData cdata, Tcl_Interp *interp,
                       val_blob.length, persist_mode, index_add);
   TCL_CONDITION(ac == ADLB_SUCCESS, "Error writing checkpoint");
   return TCL_OK;
+#else
+  TCL_RETURN_ERROR("Checkpointing not enabled");
+  return TCL_ERROR;
+#endif
 }
 
 /**
@@ -3115,6 +3132,7 @@ static int
 ADLB_Xpt_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
                    int objc, Tcl_Obj *const objv[])
 {
+#ifndef ENABLE_XPT
   TCL_CONDITION(objc == 2 || objc == 3, "Must provide 1 or 2 arguments" );
   int rc;
   adlb_code ac;
@@ -3153,6 +3171,10 @@ ADLB_Xpt_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   Tcl_SetObjResult(interp, Tcl_NewIntObj(found));
   return TCL_OK;
+#else
+  TCL_RETURN_ERROR("Checkpointing not enabled");
+  return TCL_ERROR;
+#endif
 }
 
 /**
@@ -3278,6 +3300,7 @@ static int
 ADLB_Xpt_Reload_Cmd(ClientData cdata, Tcl_Interp *interp,
                    int objc, Tcl_Obj *const objv[])
 {
+#ifndef ENABLE_XPT
   TCL_ARGS(2);
   const char *filename = Tcl_GetString(objv[1]);
 
@@ -3312,6 +3335,10 @@ ADLB_Xpt_Reload_Cmd(ClientData cdata, Tcl_Interp *interp,
   
   Tcl_SetObjResult(interp, stat_dict);
   return TCL_OK;
+#else
+  TCL_RETURN_ERROR("Checkpointing not enabled");
+  return TCL_ERROR;
+#endif
 }
 
 /**
