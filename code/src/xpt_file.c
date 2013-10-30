@@ -490,8 +490,8 @@ adlb_code xlb_xpt_read_val_r(xlb_xpt_read_state *state, off_t val_offset,
 
   ac = blkread(state, buffer, val_len);
   CHECK_MSG(ac == ADLB_SUCCESS, "Error reading %i bytes at offset "
-          "%llu in file %s\n", val_len,
-          (long long unsigned)val_offset, state->filename);
+          "%llu in file %s (%i)", val_len,
+          (long long unsigned)val_offset, state->filename, (int)ac);
  
   return ADLB_SUCCESS;
 }
@@ -683,17 +683,22 @@ static inline adlb_code seek_read(xlb_xpt_read_state *state, off_t offset)
   {
     if (feof(state->file))
     {
+      ERR_PRINTF("Hit EOF seeking to offset %llu in checkpoint file\n",
+                     (long long unsigned)offset);
+      state->end_of_stream = true;
       return ADLB_DONE;
     }
     else
     {
       ERR_PRINTF("Error seeking to offset %llu in checkpoint file\n",
                      (long long unsigned)offset);
+      state->end_of_stream = true;
       return ADLB_ERROR;
     }
   }
   state->curr_block = (uint32_t)(offset / state->block_size);
   state->curr_block_pos = (uint32_t)(offset % state->block_size);
+  state->end_of_stream = false;
   return ADLB_SUCCESS;
 }
 
@@ -1141,7 +1146,10 @@ static inline adlb_code checked_fread(xlb_xpt_read_state *state, void *buf,
   }
  
  if (feof(state->file))
+ {
+    DEBUG("Hit end of file in checked_fread");
     return ADLB_DONE;
+ }
 
   ERR_PRINTF("Error reading from checkpoint file: %i\n", ferror(state->file));
   return ADLB_ERROR;
