@@ -481,28 +481,19 @@ adlb_code xlb_xpt_read_val_r(xlb_xpt_read_state *state, off_t val_offset,
   // TODO: it would be better to reread entire record to make sure
   //       we don't get a corrupted record.
   adlb_code ac;
-  DEBUG("Read %p", state);
   DEBUG("Reading value: %i bytes at offset %llu in file %s", val_len,
         (long long unsigned)val_offset, state->filename);
 
   ac = seek_read(state, val_offset);
-
-  if (ac == ADLB_SUCCESS)
-  {
-    ac = blkread(state, buffer, val_len);
-    if (ac != ADLB_SUCCESS)
-    {
-      ERR_PRINTF("Error reading %i bytes at offset %llu in file %s\n",
-            val_len, (long long unsigned)val_offset, state->filename);
-    }
-  }
-  else
-  {
-    ERR_PRINTF("Error seeking to %llu in file %s\n",
+  CHECK_MSG(ac == ADLB_SUCCESS, "Error seeking to %llu in file %s\n",
           (long long unsigned)val_offset, state->filename);
-  }
+
+  ac = blkread(state, buffer, val_len);
+  CHECK_MSG(ac == ADLB_SUCCESS, "Error reading %i bytes at offset "
+          "%llu in file %s\n", val_len,
+          (long long unsigned)val_offset, state->filename);
  
-  return ac;
+  return ADLB_SUCCESS;
 }
 
 adlb_code xlb_xpt_flush(xlb_xpt_state *state)
