@@ -419,96 +419,90 @@ static adlb_code write_entry(xlb_xpt_state *state,
   return ADLB_SUCCESS;
 }
 
-adlb_code xlb_xpt_read_val(char *file, off_t val_offset, int val_len,
-                           xlb_xpt_state *state, void *buffer)
+adlb_code xlb_xpt_read_val_w(xlb_xpt_state *state, off_t val_offset,
+                            int val_len, void *buffer)
 {
   // TODO: it would be better to reread entire record to make sure
   //       we don't get a corrupted record.
-  if (file == NULL)
+  // checkpoint is in file currently being written.
+  assert(is_init(state));
+  assert(val_len >= 0);
+  
+  uint32_t block = (uint32_t) (val_offset / XLB_XPT_BLOCK_SIZE);
+  uint32_t block_pos = (uint32_t) (val_offset % XLB_XPT_BLOCK_SIZE);
+  void *buf_pos = buffer;
+  size_t val_remaining = (size_t)val_len;
+  DEBUG("Reading val %zu bytes @ offset %llu of current file",
+        val_remaining , (long long unsigned) val_offset);
+  while (val_remaining > 0)
   {
-    // checkpoint is in file currently being written.
-    assert(is_init(state));
-    assert(val_len >= 0);
-    
-    uint32_t block = (uint32_t) (val_offset / XLB_XPT_BLOCK_SIZE);
-    uint32_t block_pos = (uint32_t) (val_offset % XLB_XPT_BLOCK_SIZE);
-    void *buf_pos = buffer;
-    size_t val_remaining = (size_t)val_len;
-    DEBUG("Reading val %zu bytes @ offset %llu of current file",
-          val_remaining , (long long unsigned) val_offset);
-    while (val_remaining > 0)
+    off_t read_offset = ((off_t)block) * XLB_XPT_BLOCK_SIZE + block_pos;
+    off_t block_left = XLB_XPT_BLOCK_SIZE - block_pos;
+    size_t to_read = block_left < val_remaining ?
+                     block_left : val_remaining ;
+
+    DEBUG("Read val chunk: %zu bytes @ %llu", to_read, 
+          (long long unsigned)read_offset);
+
+    if (to_read > 0)
     {
-      off_t read_offset = ((off_t)block) * XLB_XPT_BLOCK_SIZE + block_pos;
-      off_t block_left = XLB_XPT_BLOCK_SIZE - block_pos;
-      size_t to_read = block_left < val_remaining ?
-                       block_left : val_remaining ;
-
-      DEBUG("Read val chunk: %zu bytes @ %llu", to_read, 
-            (long long unsigned)read_offset);
-
-      if (to_read > 0)
+      size_t read = pread(state->fd, buf_pos, to_read, read_offset);
+      CHECK_MSG(read >= 0, "Error reading back checkpoint value: "
+                "%d: %s", errno, strerror(errno));
+      if (read < to_read)
       {
-        size_t read = pread(state->fd, buf_pos, to_read, read_offset);
-        CHECK_MSG(read >= 0, "Error reading back checkpoint value: "
-                  "%d: %s", errno, strerror(errno));
-        if (read < to_read)
-        {
-          ERR_PRINTF("Trying to read checkpoint value that is past end "
-               "of file: %zu bytes @ offset %llu, only could read %zu\n",
-                to_read, (long long unsigned)read_offset, read);
-          return ADLB_ERROR;
-        }
-              
-        val_remaining -= to_read;
-        buf_pos += to_read;
+        ERR_PRINTF("Trying to read checkpoint value that is past end "
+             "of file: %zu bytes @ offset %llu, only could read %zu\n",
+              to_read, (long long unsigned)read_offset, read);
+        return ADLB_ERROR;
       }
-
-      if (block_left == to_read)
-      {
-        // advance to next block
-        block = next_block((uint32_t)xlb_comm_size, block);
-        DEBUG("Reading val: move to next block %"PRIu32, block);
-        block_pos = 1; // Skip magic number
-      }
+            
+      val_remaining -= to_read;
+      buf_pos += to_read;
     }
 
-    return ADLB_SUCCESS;
+    if (block_left == to_read)
+    {
+      // advance to next block
+      block = next_block((uint32_t)xlb_comm_size, block);
+      DEBUG("Reading val: move to next block %"PRIu32, block);
+      block_pos = 1; // Skip magic number
+    }
+  }
+
+  return ADLB_SUCCESS;
+}
+
+
+adlb_code xlb_xpt_read_val_r(xlb_xpt_read_state *state, off_t val_offset,
+                            int val_len, void *buffer)
+{
+  assert(state != NULL);
+  // TODO: it would be better to reread entire record to make sure
+  //       we don't get a corrupted record.
+  adlb_code ac;
+  DEBUG("Read %p", state);
+  DEBUG("Reading value: %i bytes at offset %llu in file %s", val_len,
+        (long long unsigned)val_offset, state->filename);
+
+  ac = seek_read(state, val_offset);
+
+  if (ac == ADLB_SUCCESS)
+  {
+    ac = blkread(state, buffer, val_len);
+    if (ac != ADLB_SUCCESS)
+    {
+      ERR_PRINTF("Error reading %i bytes at offset %llu in file %s\n",
+            val_len, (long long unsigned)val_offset, state->filename);
+    }
   }
   else
   {
-    // TODO: cache file handle?
-    adlb_code ac;
-    xlb_xpt_read_state rstate;
-    DEBUG("Reading value: %i bytes at offset %llu in file %s", val_len,
-          (long long unsigned)val_offset, file);
-
-    ac = xlb_xpt_open_read(&rstate, file);
-    ADLB_CHECK(ac);
-
-    // NOTE: if we hit error, make sure we close file before returning
-    ac = seek_read(&rstate, val_offset);
-
-    if (ac == ADLB_SUCCESS)
-    {
-      ac = blkread(&rstate, buffer, val_len);
-      if (ac != ADLB_SUCCESS)
-      {
-        ERR_PRINTF("Error reading %i bytes at offset %llu in file %s\n",
-              val_len, (long long unsigned)val_offset, file);
-      }
-    }
-    else
-    {
-      ERR_PRINTF("Error seeking to %llu in file %s\n",
-            (long long unsigned)val_offset, file);
-    }
-   
-    // Close before checking if read was successful
-    adlb_code ac2 = xlb_xpt_close_read(&rstate);
-    ADLB_CHECK(ac2);
-
-    return ac;
+    ERR_PRINTF("Error seeking to %llu in file %s\n",
+          (long long unsigned)val_offset, state->filename);
   }
+ 
+  return ac;
 }
 
 adlb_code xlb_xpt_flush(xlb_xpt_state *state)
@@ -550,6 +544,8 @@ adlb_code xlb_xpt_open_read(xlb_xpt_read_state *state, const char *filename)
   
   DEBUG("Opened file %s block size %i ranks %i", filename, state->block_size,
           state->ranks);
+  state->filename = strdup(filename);
+  DEBUG("Opened %p name: %s", state, filename);
   return ADLB_SUCCESS;
 }
 
@@ -583,6 +579,10 @@ static inline adlb_code xpt_header_read(xlb_xpt_read_state *state,
 adlb_code xlb_xpt_close_read(xlb_xpt_read_state *state)
 {
   assert(state->file != NULL);
+
+  free(state->filename);
+  state->filename = NULL;
+
   int rc = fclose(state->file);
   state->file = NULL;
   CHECK_MSG(rc == 0, "Error closing checkpoint file");

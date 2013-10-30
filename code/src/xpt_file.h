@@ -43,6 +43,7 @@ typedef struct {
 /* Metadata for reading back checkpoint file */
 typedef struct {
   FILE *file;
+  char *filename; // Filename
   uint32_t block_size; // Block size
   uint32_t ranks;      // Number of ranks
   uint32_t curr_rank;  // Log from current rank being read
@@ -67,12 +68,17 @@ adlb_code xlb_xpt_write_close(xlb_xpt_state *state);
 adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,
                 int val_len, xlb_xpt_state *state, off_t *val_offset);
 
-/* Read a checkpoint value at a value offset returned by xlb_xpt_write.
+/* Read a checkpoint value from the file being written, 
+   The value offset must match that returned by xlb_xpt_write.
    buffer must be at least val_len in size 
    if file is null, indicates current checkpoint file being written,
       otherwise open previously written file. */
-adlb_code xlb_xpt_read_val(char *file, off_t val_offset, int val_len,
-                           xlb_xpt_state *state, void *buffer);
+adlb_code xlb_xpt_read_val_w(xlb_xpt_state *state, off_t val_offset,
+                int val_len, void *buffer);
+
+/* Read a checkpoint value from a file open for reading */
+adlb_code xlb_xpt_read_val_r(xlb_xpt_read_state *state, off_t val_offset,
+                int val_len, void *buffer);
 
 /* Flush checkpoint writes */
 adlb_code xlb_xpt_flush(xlb_xpt_state *state);

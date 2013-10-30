@@ -16,6 +16,8 @@
 #ifdef XLB_ENABLE_XPT
 #include "adlb-xpt.h"
 
+#include <table.h>
+
 #include "checks.h"
 #include "debug.h"
 #include "xpt_file.h"
@@ -29,6 +31,9 @@ static bool xlb_xpt_initialized = false;
 static bool xlb_xpt_write_enabled = false;
 static adlb_xpt_flush_policy flush_policy;
 static int max_index_val_bytes;
+
+// Open files for reading
+struct table xpt_open_read;
 
 // Interval to flush checkpoint entries (TODO: configurable)
 #define FLUSH_INTERVAL_S 30
@@ -45,6 +50,10 @@ static inline adlb_code xpt_reload_rank(const char *filename,
         adlb_xpt_load_rank_stats *stats);
 
 static adlb_code xpt_check_flush(void);
+
+static adlb_code cached_open_read(xlb_xpt_read_state **state,
+                                  const char *filename);
+static void free_open_read(char *key, void *read_state);
 
 adlb_code ADLB_Xpt_init(const char *filename, adlb_xpt_flush_policy fp,
                         int max_index_val)
@@ -72,6 +81,8 @@ adlb_code ADLB_Xpt_init(const char *filename, adlb_xpt_flush_policy fp,
   {
     last_flush_time = MPI_Wtime();
   }
+
+  table_init(&xpt_open_read, 128);
   return ADLB_SUCCESS;
 }
 
@@ -199,9 +210,27 @@ adlb_code ADLB_Xpt_lookup(const void *key, int key_len, adlb_binary_data *result
     result->data = result->caller_data = malloc((size_t)val_len);
     result->length = val_len;
     CHECK_MSG(result->data != NULL, "Could not allocate buffer");
-
-    rc = xlb_xpt_read_val(res.FILE_LOC.file, res.FILE_LOC.val_offset,
-                  val_len, &xpt_state, result->caller_data);
+  
+    if (res.FILE_LOC.file == NULL)
+    {
+      CHECK_MSG(xlb_xpt_write_enabled, "No checkpoint file currently open "
+                "for writing");
+      // Read from file being written
+      rc = xlb_xpt_read_val_w(&xpt_state, res.FILE_LOC.val_offset,
+                            val_len, result->caller_data);
+      ADLB_CHECK(rc);
+    }
+    else
+    {
+      // Read from file
+      xlb_xpt_read_state *rstate;
+      rc = cached_open_read(&rstate, res.FILE_LOC.file);
+      CHECK_MSG(rc == ADLB_SUCCESS, "Couldn't open file %s to read checkpoint value",
+                res.FILE_LOC.file);
+      rc = xlb_xpt_read_val_r(rstate, res.FILE_LOC.val_offset,
+                            val_len, result->caller_data);
+      ADLB_CHECK(rc);
+    }
     ADLB_CHECK(rc);
   }
   else
@@ -212,19 +241,50 @@ adlb_code ADLB_Xpt_lookup(const void *key, int key_len, adlb_binary_data *result
 }
 
 /*
+  If already open, return previous handle to file.
+  Otherwise, open file for reading, store in xpt_open_read for reuse.
+ */
+static adlb_code cached_open_read(xlb_xpt_read_state **state,
+                                  const char *filename)
+{
+  xlb_xpt_read_state *tmp;
+  if (table_search(&xpt_open_read, filename, (void**)&tmp))
+  {
+    DEBUG("Found existing handle for file %s: %p", filename, tmp);
+    *state = tmp;
+    return ADLB_SUCCESS;
+  }
+
+  tmp = malloc(sizeof(xlb_xpt_read_state));
+  CHECK_MSG(tmp != NULL, "Error allocating memory");
+  adlb_code rc = xlb_xpt_open_read(tmp, filename);
+  if (rc != ADLB_SUCCESS)
+  {
+    free(tmp);
+  }
+  ADLB_CHECK(rc);
+  table_add(&xpt_open_read, filename, tmp);
+  *state = tmp;
+  DEBUG("Created new handle for file %s: %p", filename, tmp);
+  return ADLB_SUCCESS;
+}
+
+/*
   Open checkpoint file for reading and slurp up all records
   into our checkpoint index.
   TODO: will probably need to support some kind of filtering
  */
 adlb_code ADLB_Xpt_reload(const char *filename, adlb_xpt_load_stats *stats)
 {
+  CHECK_MSG(xlb_xpt_initialized, "Checkpointing must be initialized "
+                                 "before reloading");
   CHECK_MSG(stats != NULL, "Must provide stats argument");
 
   adlb_code rc;
-  xlb_xpt_read_state read_state;
+  xlb_xpt_read_state *read_state;
   adlb_buffer buffer = { .data = NULL };
 
-  rc = xlb_xpt_open_read(&read_state, filename);
+  rc = cached_open_read(&read_state, filename);
   if (rc != ADLB_SUCCESS)
     goto cleanup_exit;
 
@@ -235,7 +295,7 @@ adlb_code ADLB_Xpt_reload(const char *filename, adlb_xpt_load_stats *stats)
   buffer.data = malloc((size_t)buffer.length);
   CHECK_MSG(buffer.data != NULL, "Error allocating buffer");
 
-  const int ranks = read_state.ranks;
+  const int ranks = read_state->ranks;
   stats->ranks = ranks;
   stats->rank_stats = malloc(sizeof(stats->rank_stats[0]) * ranks);
   CHECK_MSG(stats->rank_stats != NULL, "Out of memory");
@@ -249,7 +309,7 @@ adlb_code ADLB_Xpt_reload(const char *filename, adlb_xpt_load_stats *stats)
   {
     DEBUG("Reloading checkpoints from %s for rank %i\n", filename, rank);
     adlb_xpt_load_rank_stats *rstats = &stats->rank_stats[rank];
-    rc = xpt_reload_rank(filename, &read_state, &buffer, rank, rstats);
+    rc = xpt_reload_rank(filename, read_state, &buffer, rank, rstats);
     if (rc != ADLB_SUCCESS)
     {
       // Continue to next rank upon error
@@ -259,10 +319,6 @@ adlb_code ADLB_Xpt_reload(const char *filename, adlb_xpt_load_stats *stats)
           "Valid: %i Invalid: %i\n", filename, rank,
           rstats->valid, rstats->invalid);
   }
-  
-  rc = xlb_xpt_close_read(&read_state);
-  if (rc != ADLB_SUCCESS)
-    goto cleanup_exit;
 
   rc = ADLB_SUCCESS;
 cleanup_exit:
@@ -364,13 +420,14 @@ static inline adlb_code xpt_reload_rank(const char *filename,
   }
 }
 
-
 /*
   Flush if needed
  */
 static adlb_code xpt_check_flush(void)
 {
   assert(xlb_xpt_initialized);
+  adlb_code ac;
+
   if (!xlb_xpt_write_enabled)
   {
     return ADLB_SUCCESS;
@@ -381,12 +438,27 @@ static adlb_code xpt_check_flush(void)
     double now = MPI_Wtime();
     if (now - last_flush_time > FLUSH_INTERVAL_S)
     {
-      adlb_code ac = xlb_xpt_flush(&xpt_state);
+      ac = xlb_xpt_flush(&xpt_state);
       ADLB_CHECK(ac);
     }
     last_flush_time = now;
   }
+
+  // Cleanup any files open for reading
+  table_free_callback(&xpt_open_read, false, free_open_read);
   return ADLB_SUCCESS;
+}
+
+static void free_open_read(char *key, void *read_state)
+{
+  adlb_code ac = xlb_xpt_close_read(read_state);
+  if (ac != ADLB_SUCCESS)
+  {
+    ERR_PRINTF("Error while closing checkpoint file %s\n", key);
+  }
+  
+  free(key);
+  free(read_state);
 }
 
 #endif // XLB_ENABLE_XPT
