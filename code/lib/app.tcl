@@ -46,8 +46,20 @@ namespace eval turbine {
     }
     log "shell: $cmd $args $stdin_src $stdout_dst $stderr_dst"
     exec $cmd {*}$args $stdin_src $stdout_dst $stderr_dst
+
+    # Issue #501
+    # exec_coaster $cmd {*}$args $stdin_src $stdout_dst $stderr_dst
   }
 
+    # Issue #501
+    # proc exec_coaster { args } { 
+    #     global auto_path
+    #     puts "ap: $auto_path"
+    #     puts "exec_coaster: $args"
+    #     package require coaster 0.0
+    #     exit 1
+    # }  
+    
   # Alternative implementation
   proc ensure_directory_exists2 { f } {
     set dirname [ file dirname $f ]
