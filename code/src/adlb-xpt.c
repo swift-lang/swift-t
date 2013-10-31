@@ -55,6 +55,9 @@ static adlb_code cached_open_read(xlb_xpt_read_state **state,
                                   const char *filename);
 static void free_open_read(char *key, void *read_state);
 
+static adlb_code read_file_val(xpt_file_loc *file_loc,
+                                 void *buffer, int val_len);
+
 adlb_code ADLB_Xpt_init(const char *filename, adlb_xpt_flush_policy fp,
                         int max_index_val)
 {
@@ -203,6 +206,7 @@ adlb_code ADLB_Xpt_lookup(const void *key, int key_len, adlb_binary_data *result
   }
   ADLB_CHECK(rc);
 
+  rc = ADLB_ERROR; // Should be set on one of below branches
   if (res.in_file)
   {
     // Allocate buffer that caller should free
@@ -210,34 +214,47 @@ adlb_code ADLB_Xpt_lookup(const void *key, int key_len, adlb_binary_data *result
     result->data = result->caller_data = malloc((size_t)val_len);
     result->length = val_len;
     CHECK_MSG(result->data != NULL, "Could not allocate buffer");
-  
-    if (res.FILE_LOC.file == NULL)
+    
+    rc = read_file_val(&res.FILE_LOC, result->caller_data, val_len);
+    // Make sure memory is freed before returning
+    if (res.FILE_LOC.file != NULL)
     {
-      CHECK_MSG(xlb_xpt_write_enabled, "No checkpoint file currently open "
-                "for writing");
-      // Read from file being written
-      rc = xlb_xpt_read_val_w(&xpt_state, res.FILE_LOC.val_offset,
-                            val_len, result->caller_data);
-      ADLB_CHECK(rc);
+      free(res.FILE_LOC.file);
     }
-    else
-    {
-      // Read from file
-      xlb_xpt_read_state *rstate;
-      rc = cached_open_read(&rstate, res.FILE_LOC.file);
-      CHECK_MSG(rc == ADLB_SUCCESS, "Couldn't open file %s to read checkpoint value",
-                res.FILE_LOC.file);
-      rc = xlb_xpt_read_val_r(rstate, res.FILE_LOC.val_offset,
-                            val_len, result->caller_data);
-      ADLB_CHECK(rc);
-    }
-    ADLB_CHECK(rc);
+    return rc;
   }
   else
   {
     *result = res.DATA;
+    return ADLB_SUCCESS;
   }
-  return ADLB_SUCCESS;
+}
+
+/*
+  Read value from file at given location
+ */
+static adlb_code read_file_val(xpt_file_loc *file_loc,
+                                 void *buffer, int val_len)
+{
+  adlb_code rc; 
+  if (file_loc->file == NULL)
+  {
+    CHECK_MSG(xlb_xpt_write_enabled, "No checkpoint file currently open "
+              "for writing");
+    // Read from file being written
+    return xlb_xpt_read_val_w(&xpt_state, file_loc->val_offset,
+                              val_len, buffer);
+  }
+  else
+  {
+    // Read from file
+    xlb_xpt_read_state *rstate;
+    rc = cached_open_read(&rstate, file_loc->file);
+    CHECK_MSG(rc == ADLB_SUCCESS, "Couldn't open file %s to read "
+              "checkpoint value\n", file_loc->file)
+    return xlb_xpt_read_val_r(rstate, file_loc->val_offset,
+                              val_len, buffer);
+  }
 }
 
 /*
