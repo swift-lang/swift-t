@@ -215,6 +215,10 @@ run_test()
 
   if grep -F -q "THIS-TEST-SHOULD-NOT-RUN" ${SWIFT_FILE}
   then
+    if [ $EXIT_CODE = 0 ]
+    then
+      echo "Should have failed at runtime, but succeeded"
+    fi
     # This test was intended to fail at run time
     EXIT_CODE=$(( ! EXIT_CODE ))
   else
