@@ -797,23 +797,25 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
     adlb_container_val t = NULL;
     bool found = container_lookup(c, subscript, &t);
 
+    if (found && t != NULL)
+    {
+      // If present, must be an UNLINKED entry:
+      // TODO: support binary keys
+      // Don't print error by default: caller may want to handle
+      DEBUG("already exists: <%"PRId64">[%.*s]", id, (int)subscript.length,
+            (const char*)subscript.key);
+      return ADLB_DATA_ERROR_DOUBLE_WRITE;
+   } 
+
+    
+    // Now we are guaranteed to succeed
     adlb_datum_storage *entry = malloc(sizeof(adlb_datum_storage));
     adlb_data_code dc = ADLB_Unpack(entry, c->val_type, buffer, length);
     DATA_CHECK(dc);
+
     if (found)
     {
-      // Assert that this is an UNLINKED entry:
-      if (t != NULL)
-      {
-        // TODO: support binary keys
-        // Don't print error by default: caller may want to handle
-        DEBUG("already exists: <%"PRId64">[%.*s]", id, (int)subscript.length,
-              (const char*)subscript.key);
-        return ADLB_DATA_ERROR_DOUBLE_WRITE;
-      }
-      
       DEBUG("Assigning unlinked precreated entry");
-
       // Ok- somebody did an Insert_atomic
       adlb_container_val v;
       // Reset entry
@@ -825,13 +827,6 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
     {
       DEBUG("Creating new container entry");
       container_add(c, subscript, entry);
-    }
-
-    if (type != c->val_type)
-    {
-      printf("Type mismatch: expected %i actual %i\n",
-            type, c->val_type);
-      return ADLB_DATA_ERROR_TYPE;
     }
 
     dc = insert_notifications(d, id, subscript, entry, c->val_type,
@@ -992,6 +987,7 @@ xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
 static void container_add(adlb_container *c, adlb_subscript sub,
                               adlb_container_val val)
 {
+  TRACE("Adding %p to %p", val, c);
   table_bp_add(c->members, sub.key, sub.length, val);
 }
 

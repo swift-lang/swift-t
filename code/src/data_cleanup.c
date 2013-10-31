@@ -1,6 +1,7 @@
 #include "data_cleanup.h"
 
 #include "data_structs.h"
+#include "debug.h"
 #include "multiset.h"
 #include "refcount.h"
 #include "table_bp.h"
@@ -82,7 +83,8 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
 {
   adlb_data_code dc;
   struct table_bp* members = container->members;
-  
+
+  TRACE("Freeing container %p", container);
   for (int i = 0; i < members->capacity; i++)
   {
     struct list_bp* L = members->array[i];
@@ -91,6 +93,7 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
     {
       adlb_datum_storage *d = (adlb_datum_storage*)item->data;
       
+      TRACE("Freeing %p in %p", d, container);
       // Value may be null when insert_atomic occurred, but nothing inserted
       if (!ADLB_RC_IS_NULL(rc_change) && d != NULL)
       {
