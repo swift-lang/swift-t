@@ -1267,7 +1267,7 @@ class Turbine {
     if (stderrFilename != null) {
       keywordOpts.add(Pair.create("stderr", stderrFilename));
     }
-    Dict kwOpts = Dict.dictCreateSE(keywordOpts);
+    Dict kwOpts = Dict.dictCreateSE(false, keywordOpts);
     return kwOpts;
   }
   
@@ -1359,7 +1359,7 @@ class Turbine {
       Expression v = arrValExprs.get(i);
       kvs.add(Pair.create(k, v));
     }
-    return arrayBuild(array, Dict.dictCreate(kvs), close, valType);
+    return arrayBuild(array, Dict.dictCreate(true, kvs), close, valType);
   }
 
   public static Command arrayBuild(Value array, Expression kvDict,

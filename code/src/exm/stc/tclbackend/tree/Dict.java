@@ -27,12 +27,12 @@ public class Dict extends Square {
    * construct valid opbjects
    * @param tokens
    */
-  private Dict(Expression... tokens) {
+  private Dict(List<Expression> tokens) {
     super(tokens);
   }
 
 
-  public static Dict dictCreateSS(
+  public static Dict dictCreateSS(boolean checkDupes,
       Collection<Pair<String, String>> elems) {
     List<Pair<Expression, Expression>> exprs =
       new ArrayList<Pair<Expression, Expression>>(elems.size());
@@ -40,11 +40,11 @@ public class Dict extends Square {
       exprs.add(Pair.<Expression, Expression>create(
             new TclString(elem.val1, true), new TclString(elem.val2, true)));
     }
-    return dictCreate(exprs);
+    return dictCreate(checkDupes, exprs);
   }
   
   
-  public static Dict dictCreateSE(
+  public static Dict dictCreateSE(boolean checkDupes,
       Collection<Pair<String, Expression>> elems) {
     List<Pair<Expression, Expression>> exprs =
       new ArrayList<Pair<Expression, Expression>>(elems.size());
@@ -52,18 +52,22 @@ public class Dict extends Square {
       exprs.add(Pair.<Expression, Expression>create(
                   new TclString(elem.val1, true), elem.val2));
     }
-    return dictCreate(exprs);
+    return dictCreate(checkDupes, exprs);
   }
   
-  public static Dict dictCreate(
+  public static Dict dictCreate(boolean checkDupes,
         Collection<Pair<Expression, Expression>> elems) {
-    Expression exprs[] = new Expression[elems.size() * 2 + 2];
-    exprs[0] = new Token("dict");
-    exprs[1] = new Token("create");
-    int pos = 2;
+    List<Expression> exprs = new ArrayList<Expression>(elems.size() * 2 + 2);
+    if (checkDupes) {
+      exprs.add(new Token("::adlb::dict_create"));
+    } else {
+      // Standard TCL version doesn't check for duplicates
+      exprs.add(new Token("dict"));
+      exprs.add(new Token("create")); 
+    }
     for (Pair<? extends Expression, Expression> elem: elems) {
-      exprs[pos++] = elem.val1;
-      exprs[pos++] = elem.val2;
+      exprs.add(elem.val1);
+      exprs.add(elem.val2);
     }
     
     return new Dict(exprs);
