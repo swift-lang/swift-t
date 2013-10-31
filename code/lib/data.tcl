@@ -506,6 +506,26 @@ namespace eval turbine {
       return [ retrieve_blob_string $id 1 ]
     }
 
+    proc multi_retrieve_decr { ids args } {
+      set result [ list ]
+
+      foreach id $ids {
+        lappend result [ adlb::retrieve_decr $id {*}$args ]
+      }
+
+      return $result
+    }
+    
+    proc multi_retrieve_kv_decr { ids args } {
+      set result [ dict create ]
+
+      dict for {key id} $ids {
+        dict append result $key [ adlb::retrieve_decr $id {*}$args ]
+      }
+
+      return $result
+    }
+
     proc create_container { id key_type val_type {read_refcount 1} \
                           {write_refcount 1} {permanent 0}} {
         return [ adlb::create $id container $key_type $val_type \
