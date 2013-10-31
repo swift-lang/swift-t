@@ -259,6 +259,9 @@ void test1_reload(MPI_Comm comm, const char *file)
     }
   }
 
+  free(stats.rank_stats);
+  stats.rank_stats = NULL;
+
   // Check that all checkpoint entries loaded into memory.
   for (int repeat = 0; repeat < TEST1_REPEATS; repeat++)
   {
