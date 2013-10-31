@@ -67,6 +67,30 @@ namespace eval turbine {
       }
     }
 
+    # build array from values
+    proc array_kv_build2 { c kv_dict close val_type } {
+      set n [ dict size $kv_dict ]
+      set typel [ list $val_type 1 1 ]
+
+      set elems [ adlb::multicreate [ lrepeat $n $typel ] ]
+      log "array_kv_build2: <$c> $n elems, close $close"
+      if { $n > 0 } {
+        set i 0
+        dict for { key val } $kv_dict {
+          set drops 0
+          if { [ expr {$close && $i == $n - 1 } ] } {
+            set drops 1
+          }
+          set elem [ lindex $elems $i ]
+          adlb::store $elem $val_type $val
+          adlb::insert $c $key $elem $val_type $drops
+          incr i
+        }
+      } else {
+        adlb::write_refcount_decr $c
+      }
+    }
+
     # Just like adlb::container_reference but add logging
     # Note that container_reference always consumes a read reference count
     proc container_reference { c i r type } {
