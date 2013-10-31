@@ -54,7 +54,7 @@ namespace eval turbine {
       log "array_kv_build: <$c> $n elems, close $close"
       if { $n > 0 } {
         set i 0
-        dict for { key val } {
+        dict for { key val } $kv_dict {
           set drops 0
           if { [ expr {$close && $i == $n - 1 } ] } {
             set drops 1
