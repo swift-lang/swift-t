@@ -411,7 +411,7 @@ public class LValWalker {
 
     Var keyVal = varCreator.fetchValueOf(context, key);
 
-    Type bagType = Types.arrayMemberType(derefArr);
+    Type bagType = Types.containerElemType(derefArr);
     assert (Types.isBag(bagType));
     Var bag = varCreator.createTmpAlias(context, bagType);
     // create or get nested bag instruction
@@ -564,7 +564,7 @@ public class LValWalker {
     // inserted
     Var stmtResultVar = elem;
 
-    Type elemType = Types.bagElemType(bag);
+    Type elemType = Types.containerElemType(bag);
     
     boolean bagRef = Types.isBagRef(bag);
     boolean elemRef = Types.isRefTo(elem, elemType); 

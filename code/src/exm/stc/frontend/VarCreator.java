@@ -221,7 +221,7 @@ public class VarCreator {
   public Var createValueOfVar(Context context, Var future,
         boolean initialise) throws UserException {
     Type valType = Types.derefResultType(future.type());
-    assert(valType != null) : future.type() + " could not be derefed"; 
+    assert(valType != null) : future.type() + " could not be derefed";
     Var val = context.createLocalValueVariable(valType, future);
     if (initialise) {
       initialiseVariable(context, val);
@@ -294,6 +294,15 @@ public class VarCreator {
       throw new STCRuntimeError("Don't know how to fetch " + futureType);
     }
     
+    return val;
+  }
+
+  public Var fetchContainerValues(Context context, Var c)
+          throws UserException {
+    assert(Types.isContainer(c));
+    Type unpackedT = Types.unpackedContainerType(c.type());
+    Var val = context.createLocalValueVariable(unpackedT, c);
+    backend.retrieveRecursive(val, c);
     return val;
   }
   

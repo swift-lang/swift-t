@@ -1798,30 +1798,23 @@ public class Types {
   /**
    * Convenience function to get member type of array or array ref
    */
-  public static Type arrayMemberType(Typed arrayT) {
-    if (isArray(arrayT) || isArrayLocal(arrayT)) {
-      return arrayT.type().memberType();
-    } else if (isArrayRef(arrayT) || isArrayLocalRef(arrayT)) {
-      return arrayT.type().memberType().memberType();
-    } else {
-      throw new STCRuntimeError("called arrayMemberType on non-array"
-          + " type " + arrayT.toString());
-    }
-  }
-
-  public static Type bagElemType(Typed t) {
-    if (isBag(t) || isBagLocal(t)) {
+  public static Type containerElemType(Typed t) {
+    if (isArray(t) || isArrayLocal(t)) {
+      return t.type().memberType();
+    } else if (isArrayRef(t) || isArrayLocalRef(t)) {
+      return t.type().memberType().memberType();
+    } else if (isBag(t) || isBagLocal(t)) {
       return t.type().memberType();
     } else if (isBagRef(t) || isBagLocalRef(t)) {
       return t.type().memberType().memberType();
     } else {
-      throw new STCRuntimeError("called bagElemType on non-array"
-                                      + " type " + t.toString());
+      throw new STCRuntimeError("called containerElemType on non-container"
+          + " type " + t.toString());
     }
   }
 
   public static boolean isMemberType(Typed arr, Typed member) {
-    Type memberType = arrayMemberType(arr.type());
+    Type memberType = containerElemType(arr.type());
     return (member.type().assignableTo(memberType));
   }
   
@@ -1836,7 +1829,7 @@ public class Types {
   public static boolean isMemberReference(Typed member,
                                           Typed arr) 
           throws STCRuntimeError{
-    Type memberType = arrayMemberType(arr);
+    Type memberType = containerElemType(arr);
     if (memberType.equals(member.type())) {
       return false;
     } else if (isRefTo(member, memberType)) {
@@ -1886,7 +1879,7 @@ public class Types {
   }
 
   public static boolean isBagElem(Typed bag, Typed elem) {
-    return elem.type().assignableTo(bagElemType(bag));
+    return elem.type().assignableTo(containerElemType(bag));
   }
 
   /**
@@ -2079,6 +2072,30 @@ public class Types {
       return new BagType(true, bt.memberType());
     } else {
       throw new STCRuntimeError(t.type() + " can't be dereferenced");
+    }
+  }
+  
+  /**
+   * Work out type of container variable if we extract all
+   * values into local variables
+   * @param t
+   * @return
+   */
+  public static Type unpackedContainerType(Typed t) {
+    assert(Types.isContainer(t));
+    Type elemType = Types.containerElemType(t);
+    Type elemValType;
+    if (Types.isContainer(elemType)) {
+      elemValType = unpackedContainerType(elemType);
+    } else {
+      elemValType = Types.derefResultType(elemType);
+    }
+    if (Types.isArray(t)) {
+      ArrayType at = (ArrayType)t.type().getImplType();
+      return new ArrayType(true, at.keyType(), elemValType);
+    } else {
+      assert(Types.isBag(t));
+      return new BagType(true, elemValType);
     }
   }
   

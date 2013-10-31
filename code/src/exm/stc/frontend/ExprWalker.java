@@ -591,7 +591,7 @@ public class ExprWalker {
     for (Type altType: UnionType.getAlternatives(arrExprType)) {
       assert(Types.isArray(altType) || Types.isArrayRef(altType));
       Type lookupRes = TypeChecker.dereferenceResultType(
-                                Types.arrayMemberType(altType));
+                                Types.containerElemType(altType));
       if (lookupRes.equals(oVar.type())) {
         arrType = altType;
         break;
@@ -605,7 +605,7 @@ public class ExprWalker {
     // Evaluate the array
     Var arrayVar = eval(context, arrayTree, arrType, false, renames);
 
-    Type memberType = Types.arrayMemberType(arrType);
+    Type memberType = Types.containerElemType(arrType);
 
     // Any integer expression can index into array
     SwiftAST arrayIndexTree = tree.child(1);
@@ -795,7 +795,7 @@ public class ExprWalker {
     assert(arrType.assignableTo(oVar.type()));
 
     Type keyType = Types.arrayKeyType(oVar);
-    Type valType = Types.arrayMemberType(oVar);
+    Type valType = Types.containerElemType(oVar);
 
     // Evaluate all the values
     List<Var> vals = new ArrayList<Var>(ae.getElemCount());
@@ -930,14 +930,12 @@ public class ExprWalker {
 
     List<Var> checkpointKeyFutures = iList; // TODO: right?
     // Need to wait for lookup key before checking if checkpoint exists
+    // Do recursive wait to get container contents
     backend.startWaitStatement(
         context.constructName(function + "-checkpoint-wait"),
         checkpointKeyFutures, WaitMode.WAIT_ONLY,
         false, true, TaskMode.LOCAL);
-    List<Arg> checkpointKey = lookupCheckpointKey(context,
-                                                  checkpointKeyFutures);
-    Var keyBlob = varCreator.createTmpLocalVal(context, Types.V_BLOB);
-    backend.packValues(keyBlob, checkpointKey);
+    Var keyBlob = packCheckpointData(context, checkpointKeyFutures);
     
    // TODO: nicer names for vars?
     Var existingVal = varCreator.createTmpLocalVal(context, Types.V_BLOB);
@@ -945,7 +943,6 @@ public class ExprWalker {
                                                      Types.V_BOOL);
     
     backend.lookupCheckpoint(checkpointExists, existingVal, keyBlob.asArg());
-    backend.freeBlob(keyBlob);
     
     backend.startIfStatement(checkpointExists.asArg(), true);
     setVarsFromCheckpoint(context, oList, existingVal);
@@ -961,47 +958,53 @@ public class ExprWalker {
     
     // Lookup checkpoint key again since variable might not be able to be
     // passed through wait.  Rely on optimizer to clean up redundancy
-    checkpointKey = lookupCheckpointKey(context, checkpointKeyFutures);
-    List<Arg> checkpointVal1 = new ArrayList<Arg>(checkpointVal.size());
-    // TODO: more descriptive name
-    Var keyBlob2 = varCreator.createTmpLocalVal(context, Types.V_BLOB);
-    
-    for (Var cv: checkpointVal) {
-      if (cv.storage() == Alloc.LOCAL) {
-        checkpointVal1.add(cv.asArg());  
-      } else {
-        checkpointVal1.add(varCreator.fetchValueOf(context, cv).asArg());
-      }
-    }
-    Var valBlob = varCreator.createTmpLocalVal(context, Types.V_BLOB);
-    
-    backend.packValues(keyBlob2, checkpointKey);
-    backend.packValues(valBlob, checkpointVal1);
+    Var keyBlob2 = packCheckpointData(context, checkpointKeyFutures);
+
+    Var valBlob = packCheckpointData(context, checkpointVal);
     
     backend.writeCheckpoint(keyBlob2.asArg(), valBlob.asArg());
-    
-    backend.freeBlob(keyBlob2);
-    backend.freeBlob(valBlob);
     
     backend.endWaitStatement(); // Close wait for values
     backend.endIfStatement(); // Close else block
     backend.endWaitStatement(); // Close wait for keys
   }
 
-  private List<Arg> lookupCheckpointKey(Context context,
-      List<Var> checkpointKeyFutures) throws UserException,
+  /**
+   * Take set of (recursively closed) variables and create a
+   * unique key from their values.
+   * @param context
+   * @param vars
+   * @return
+   * @throws UserException
+   * @throws UndefinedTypeException
+   * @throws DoubleDefineException
+   */
+  private Var packCheckpointData(Context context,
+      List<Var> vars) throws UserException,
       UndefinedTypeException, DoubleDefineException {
-    List<Arg> checkpointKey = new ArrayList<Arg>(checkpointKeyFutures.size());
-    for (Var k: checkpointKeyFutures) {
+    List<Arg> elems = new ArrayList<Arg>(vars.size());
+    for (Var v: vars) {
       // Need to be values to form key
-      if (k.storage() == Alloc.LOCAL) {
-        checkpointKey.add(k.asArg());
+      if (v.storage() == Alloc.LOCAL) {
+        elems.add(v.asArg());
       } else {
-        // TODO: currently only handles scalar keys.
-        checkpointKey.add(varCreator.fetchValueOf(context, k).asArg()); 
+        Var fetched;
+        if (Types.isContainer(v)) {
+          // Recursively fetch to get nested lists/dicts
+          fetched = varCreator.fetchContainerValues(context, v);
+        } else {
+          fetched = varCreator.fetchValueOf(context, v);
+        }
+        elems.add(fetched.asArg());
       }
     }
-    return checkpointKey;
+    
+    Var blob = varCreator.createTmpLocalVal(context, Types.V_BLOB);
+    backend.packValues(blob, elems);
+    
+    // Make sure it gets freed at end of block
+    backend.freeBlob(blob);
+    return blob;
   }
   
   private void setVarsFromCheckpoint(Context context,
@@ -1216,12 +1219,12 @@ public class ExprWalker {
     Type ixType; 
     Var ix;
     if (Types.isArray(src)) {
-      memType = Types.arrayMemberType(t);
+      memType = Types.containerElemType(t);
       ixType = Types.derefResultType(Types.arrayKeyType(src));
       ix = copyContext.createLocalValueVariable(ixType);
     } else {
       assert(Types.isBag(src));
-      memType= Types.bagElemType(t);
+      memType= Types.containerElemType(t);
       ixType = null;
       ix = null;
     }

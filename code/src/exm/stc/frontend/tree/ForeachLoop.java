@@ -253,9 +253,9 @@ public class ForeachLoop {
 
   public static Type findElemType(Type containerType) throws STCRuntimeError {
     if (Types.isArray(containerType) || Types.isArrayRef(containerType)) {
-      return Types.arrayMemberType(containerType);
+      return Types.containerElemType(containerType);
     } else if (Types.isBag(containerType) || Types.isBagRef(containerType)) {
-      return Types.bagElemType(containerType);
+      return Types.containerElemType(containerType);
     } else {
       throw new STCRuntimeError("Invalid type " + containerType);
     }

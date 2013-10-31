@@ -144,7 +144,7 @@ public class TypeChecker {
       List<Type> resultAlts = new ArrayList<Type>();
       for (Type arrAlt: UnionType.getAlternatives(arrType)) {
         if (Types.isArray(arrAlt) || Types.isArrayRef(arrAlt)) {
-          Type memberType = Types.arrayMemberType(arrAlt);
+          Type memberType = Types.containerElemType(arrAlt);
 
           // Depending on the member type of the array, the result type might be
           // the actual member type, or a reference to the member type
@@ -837,7 +837,7 @@ public class TypeChecker {
       targetLValType = lValType;
     } else {
       assert(op == AssignOp.APPEND);
-      targetLValType = Types.bagElemType(lValType);
+      targetLValType = Types.containerElemType(lValType);
     }
     
     for (Type altRValType: UnionType.getAlternatives(rValType)) {

@@ -522,11 +522,11 @@ public class TurbineGenerator implements CompilerBackend {
   }
   
   private TypeName arrayValueType(Typed arrType, boolean creation) {
-    return refRepresentationType(Types.arrayMemberType(arrType), creation);
+    return refRepresentationType(Types.containerElemType(arrType), creation);
   }
   
   private TypeName bagValueType(Typed bagType, boolean creation) {
-    return refRepresentationType(Types.bagElemType(bagType), creation);
+    return refRepresentationType(Types.containerElemType(bagType), creation);
   }
   
   private void allocateFile(Var var, Arg initReaders) {
@@ -781,7 +781,7 @@ public class TurbineGenerator implements CompilerBackend {
     
     // TODO: assert k/v types match
     pointAdd(Turbine.arrayBuild(varToExpr(target), argToExpr(src), true,
-             representationType(Types.arrayMemberType(target), false)));
+             representationType(Types.containerElemType(target), false)));
   }
 
   @Override
@@ -1369,7 +1369,7 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void arrayLookupImm(Var oVar, Var arrayVar, Arg arrIx) {
     assert(Types.isArrayKeyVal(arrayVar, arrIx));
-    assert(oVar.type().equals(Types.arrayMemberType(arrayVar.type())));
+    assert(oVar.type().equals(Types.containerElemType(arrayVar.type())));
      pointAdd(Turbine.arrayLookupImm(
          prefixVar(oVar),
          varToExpr(arrayVar),
@@ -1391,7 +1391,7 @@ public class TurbineGenerator implements CompilerBackend {
     } else {
       assert(Types.isArray(arrayVar.type()));
     }
-    Type memberType = Types.arrayMemberType(arrayVar);
+    Type memberType = Types.containerElemType(arrayVar);
 
 
     Type oType = oVar.type();
@@ -1414,7 +1414,7 @@ public class TurbineGenerator implements CompilerBackend {
   public void arrayInsertFuture(Var array, Var ix, Var member,
                                 Arg writersDecr) {
     assert(Types.isArray(array.type()));
-    assert(member.type().assignableTo(Types.arrayMemberType(array.type())));
+    assert(member.type().assignableTo(Types.containerElemType(array.type())));
     assert(writersDecr.isImmediateInt());
     assert(Types.isArrayKeyFuture(array, ix));
 
@@ -1433,7 +1433,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isArrayKeyFuture(array, ix));
     assert(writersDecr.isImmediateInt());
     assert(Types.isAssignableRefTo(member.type(),
-                                   Types.arrayMemberType(array.type())));
+                                   Types.containerElemType(array.type())));
     
     Command r = Turbine.arrayDerefStoreComputed(
         varToExpr(member), varToExpr(array),
@@ -1448,7 +1448,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isArrayRef(array.type()));
     assert(Types.isArray(outerArray.type()));
     assert(Types.isArrayKeyFuture(array, ix));
-    assert(member.type().assignableTo(Types.arrayMemberType(array.type())));
+    assert(member.type().assignableTo(Types.containerElemType(array.type())));
     Command r = Turbine.arrayRefStoreComputed(
         varToExpr(member), varToExpr(array),
         varToExpr(ix), varToExpr(outerArray),
@@ -1464,7 +1464,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isArray(outerArray.type()));
     assert(Types.isArrayKeyFuture(array, ix));
     assert(Types.isAssignableRefTo(member.type(),
-                                   Types.arrayMemberType(array.type())));
+                                   Types.containerElemType(array.type())));
     
     Command r = Turbine.arrayRefDerefStoreComputed(
         varToExpr(member), varToExpr(array),
@@ -1517,7 +1517,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(writersDecr.isImmediateInt());
     // Check that we get the right thing when we dereference it
     assert(Types.isAssignableRefTo(member.type(),
-                                   Types.arrayMemberType(array.type())));
+                                   Types.containerElemType(array.type())));
     Command r = Turbine.arrayDerefStore(
         varToExpr(member), varToExpr(array),
         argToExpr(arrIx), argToExpr(writersDecr),
@@ -1531,7 +1531,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isArrayRef(array.type()));
     assert(Types.isArray(outerArray.type()));
     assert(Types.isArrayKeyVal(array, arrIx));
-    assert(member.type().assignableTo(Types.arrayMemberType(array.type())));
+    assert(member.type().assignableTo(Types.containerElemType(array.type())));
     Command r = Turbine.arrayRefStoreImmediate(
         varToExpr(member), varToExpr(array),
         argToExpr(arrIx), varToExpr(outerArray),
@@ -1548,7 +1548,7 @@ public class TurbineGenerator implements CompilerBackend {
     Type memberType = array.type().memberType().memberType();
     // Check that we get the right thing when we dereference it
     assert(Types.isAssignableRefTo(member.type(),
-                                   Types.arrayMemberType(array.type())));
+                                   Types.containerElemType(array.type())));
     if (!member.type().memberType().equals(memberType)) {
       throw new STCRuntimeError("Type mismatch when trying to store " +
           "from variable " + member.toString() + " into array " + array.toString());

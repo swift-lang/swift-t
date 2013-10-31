@@ -449,7 +449,7 @@ public class STCMiddleEnd {
       Var member) {
     assert(Types.isArray(array.type()));
     assert(Types.isArrayKeyFuture(array, ix));
-    assert(member.type().assignableTo(Types.arrayMemberType(array.type())));
+    assert(member.type().assignableTo(Types.containerElemType(array.type())));
     currBlock().addInstruction(
         TurbineOp.arrayInsertFuture(array, ix, member));
   }
@@ -457,7 +457,7 @@ public class STCMiddleEnd {
   public void arrayDerefInsertFuture(Var array, Var ix,
       Var member) {
     assert(Types.isAssignableRefTo(member.type(),
-                                   Types.arrayMemberType(array.type())));
+                                   Types.containerElemType(array.type())));
     assert(Types.isArrayKeyFuture(array, ix));
     currBlock().addInstruction(
         TurbineOp.arrayDerefInsertFuture(array, ix, member));
@@ -467,7 +467,7 @@ public class STCMiddleEnd {
       Var array, Var ix, Var member) {
     assert(Types.isArrayKeyFuture(array, ix));
     assert(Types.isArrayRef(array.type()));
-    assert(member.type().assignableTo(Types.arrayMemberType(array.type())));
+    assert(member.type().assignableTo(Types.containerElemType(array.type())));
     currBlock().addInstruction(
         TurbineOp.arrayRefInsertFuture(outerArray, array, ix, member));
   }
@@ -477,7 +477,7 @@ public class STCMiddleEnd {
     assert(Types.isArrayKeyFuture(array, ix));
     assert(Types.isArrayRef(array.type()));
     assert(Types.isAssignableRefTo(member.type(),
-                                   Types.arrayMemberType(array.type())));
+                                   Types.containerElemType(array.type())));
     currBlock().addInstruction(
         TurbineOp.arrayRefDerefInsertFuture(outerArray, array, ix, member));
   }
@@ -503,7 +503,7 @@ public class STCMiddleEnd {
   public void arrayInsertImm(Var array, Arg ix, Var member) {
     assert(Types.isArray(array.type()));
     assert(Types.isArrayKeyVal(array, ix));
-    assert(member.type().assignableTo(Types.arrayMemberType(array.type())));
+    assert(member.type().assignableTo(Types.containerElemType(array.type())));
     currBlock().addInstruction(
         TurbineOp.arrayInsertImm(array, ix, member));
   }
@@ -512,7 +512,7 @@ public class STCMiddleEnd {
     assert(Types.isArray(array.type()));
     assert(Types.isArrayKeyVal(array, ix));
     assert(Types.isAssignableRefTo(member.type(),
-                                   Types.arrayMemberType(array.type())));
+                                   Types.containerElemType(array.type())));
     currBlock().addInstruction(
         TurbineOp.arrayDerefInsertImm(array, ix, member));
   }
@@ -521,7 +521,7 @@ public class STCMiddleEnd {
           Arg ix, Var member) {
     assert(Types.isArrayKeyVal(array, ix));
     assert(Types.isArrayRef(array.type()));
-    assert(member.type().assignableTo(Types.arrayMemberType(array.type())));
+    assert(member.type().assignableTo(Types.containerElemType(array.type())));
     currBlock().addInstruction(
         TurbineOp.arrayRefInsertImm(outerArray, array, ix, member));
   }
@@ -531,7 +531,7 @@ public class STCMiddleEnd {
     assert(Types.isArrayKeyVal(array, ix));
     assert(Types.isArrayRef(array.type()));
     assert(Types.isAssignableRefTo(member.type(),
-                 Types.arrayMemberType(array.type())));
+                 Types.containerElemType(array.type())));
     currBlock().addInstruction(
         TurbineOp.arrayRefDerefInsertImm(outerArray, array, ix, member));
   }
@@ -879,6 +879,12 @@ public class STCMiddleEnd {
     currBlock().addInstruction(TurbineOp.retrieveBag(target, src));
   }
   
+  public void retrieveRecursive(Var val, Var future) {
+    assert(Types.unpackedContainerType(future).assignableTo(val.type()));
+    throw new STCRuntimeError("Not implemented: retrieve " +
+                future + " to " + val);
+  }
+
   public void decrLocalFileRef(Var fileVal) {
     assert(Types.isFileVal(fileVal));
     currBlock().addCleanup(fileVal, TurbineOp.decrLocalFileRef(fileVal));
