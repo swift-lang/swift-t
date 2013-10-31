@@ -3342,6 +3342,44 @@ ADLB_Xpt_Reload_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
+   Same as builtin dict create except don't allow duplicates.
+   usage: adlb::dict_create key1 val1 key2 val2 ...
+ */
+static int
+ADLB_Dict_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
+               int objc, Tcl_Obj *const objv[])
+{
+  Tcl_Obj *dict = Tcl_NewDictObj();
+
+  TCL_CONDITION(objc % 2 == 1, "Must have even number of args "
+      "(matching keys and values): got odd number %i", objc - 1);
+
+  int rc;
+
+  for (int i = 1; i < objc; i += 2)
+  {
+    Tcl_Obj *key = objv[i];
+    Tcl_Obj *val = objv[i + 1];
+    if (i != 1)
+    {
+      // CHeck for duplicates
+      Tcl_Obj *old_val;
+      rc = Tcl_DictObjGet(interp, dict, key, &old_val);
+      TCL_CHECK(rc);
+
+      TCL_CONDITION(old_val == NULL, "Tried to create dictionary with "
+            "duplicate values \"%s\" and \"%s\" for key \"%s\"",
+            Tcl_GetString(old_val), Tcl_GetString(val), Tcl_GetString(key));
+    }
+      
+    rc = Tcl_DictObjPut(interp, dict, key, val);
+    TCL_CHECK(rc);
+  }
+  Tcl_SetObjResult(interp, dict);
+  return TCL_OK;
+}
+
+/**
    usage: adlb::fail
  */
 static int
@@ -3496,6 +3534,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("xpt_pack", ADLB_Xpt_Pack_Cmd);
   COMMAND("xpt_unpack", ADLB_Xpt_Unpack_Cmd);
   COMMAND("xpt_reload", ADLB_Xpt_Reload_Cmd);
+  COMMAND("dict_create", ADLB_Dict_Create_Cmd);
   COMMAND("fail",      ADLB_Fail_Cmd);
   COMMAND("abort",     ADLB_Abort_Cmd);
   COMMAND("finalize",  ADLB_Finalize_Cmd);
