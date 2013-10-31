@@ -714,6 +714,13 @@ namespace eval turbine {
             read_refcount_decr $signal
         }
     }
+
+    # Given an ADLB container/bag/etc, retrieve values of everything
+    # inside container.  Unpack into a dict or list as appropriate
+    # types: list of nested types, from outer container to inner value
+    proc enumerate_rec { container types } {
+      error "enumerate_rec not implemented"
+    }
 }
 
 # Local Variables:
