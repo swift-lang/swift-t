@@ -767,7 +767,7 @@ namespace eval turbine {
       set member_type [ lindex $types [ expr {$depth + 1} ] ]
       set recurse [ expr {$depth < [ llength $types ] - 1} ]
 
-      switch $type {
+      switch $container_type {
         container {
           set vals [ adlb::enumerate $container dict 0 all $read_decr ]
           if { $recurse } {
