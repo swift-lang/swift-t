@@ -46,6 +46,24 @@ namespace eval turbine {
       }
     }
 
+    proc swift_array_build { c elems var_type } { 
+        set n [ llength $elems ]
+        log "array_build: <$c> elems: $n"
+        set L [ list ] 
+        for { set i 0 } { $i < $n } { incr i } { 
+            set item [ lindex $elems $i ] 
+            puts "item: $item"
+            if [ string equal $var_type "file" ] { 
+                set f [ turbine::input_file_local $item ]
+                set td [ lindex $f 1 ]
+            } else { 
+                literal td $var_type $item
+            }
+            lappend L $td
+        }
+        array_build $c $L 0 ref
+    }
+
     # build array by inserting items into a container starting at 0
     # close: decrement writers count at end
     # val_type: type of array values
