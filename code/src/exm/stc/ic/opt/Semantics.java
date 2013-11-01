@@ -21,6 +21,9 @@ public class Semantics {
       // The current scheme for managing temporary files doesn't
       // allow copying a file value across task boundaries
       return false;
+    } else if (Types.isContainerLocal(t)) {
+      // Depends on contents
+      return canPassToChildTask(Types.containerElemType(t));
     } else {
       return true;
     }        

@@ -310,6 +310,7 @@ public class VarCreator {
     Type unpackedT = Types.unpackedContainerType(c.type());
     Var val = createValueVar(context, unpackedT, c, true);
     backend.retrieveRecursive(val, c);
+    // TODO: recursively free e.g. blobs in list
     return val;
   }
   
