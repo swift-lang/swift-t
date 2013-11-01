@@ -769,7 +769,7 @@ namespace eval turbine {
 
       switch $container_type {
         container {
-          set vals [ adlb::enumerate $container dict 0 all $read_decr ]
+          set vals [ adlb::enumerate $container dict all 0 $read_decr ]
           if { $recurse } {
             set result_dict [ dict create ]
             dict for { key subcontainer } $vals {
@@ -782,7 +782,7 @@ namespace eval turbine {
           }
         }
         multiset {
-          set vals [ adlb::enumerate $container members 0 all $read_decr ]
+          set vals [ adlb::enumerate $container members all 0 $read_decr ]
           if { $recurse } {
             set result_list [ list ]
             foreach subcontainer $vals {
