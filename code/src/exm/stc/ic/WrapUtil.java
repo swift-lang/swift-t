@@ -47,8 +47,16 @@ import exm.stc.ic.tree.TurbineOp;
  *
  */
 public class WrapUtil {
-  
+
   /**
+   * TODO: should more fetch recursively?
+   */
+  public static Var fetchValueOf(Block block, List<Instruction> instBuffer,
+          Var var, String valName) {
+    return fetchValueOf(block, instBuffer, var, valName, false);
+  }
+  /**
+
    * Fetch the value of a variable
    * @param block
    * @param instBuffer append fetch instruction to this list
@@ -56,15 +64,17 @@ public class WrapUtil {
    * @return variable holding value
    */
   public static Var fetchValueOf(Block block, List<Instruction> instBuffer,
-          Var var, String valName) {
-    if (Types.isContainer(var)) {
-      // Don't have value version of array
-      return var;
+          Var var, String valName, boolean recursive) {
+    
+    Type valueT;
+    if (recursive && Types.isContainer(var)) {
+      valueT = Types.unpackedContainerType(var);
+    } else {
+      valueT = Types.derefResultType(var);
     }
-    Type value_t = Types.derefResultType(var);
     
     if (Types.isPrimUpdateable(var)) {
-      Var value_v = createValueVar(valName, value_t, var);
+      Var value_v = createValueVar(valName, valueT, var);
       
       block.addVariable(value_v);
       instBuffer.add(TurbineOp.latestValue(value_v, var));
@@ -73,25 +83,32 @@ public class WrapUtil {
       // The result will be a value
       // Use the OPT_VALUE_VAR_PREFIX to make sure we don't clash with
       //  something inserted by the frontend (this caused problems before)
-      Var value_v = createValueVar(valName, value_t, var);
+      Var value_v = createValueVar(valName, valueT, var);
       block.addVariable(value_v);
       instBuffer.add(ICInstructions.retrieveValueOf(value_v, var));
       
       // Add cleanup action if needed
-      if (Types.isBlobVal(value_t)) {
+      if (Types.isBlobVal(valueT)) {
         block.addCleanup(value_v, TurbineOp.freeBlob(value_v));
       }
       return value_v;
     } else if (Types.isRef(var)) {
       // The result will be an alias
-      Var deref = new Var(value_t, valName,
+      Var deref = new Var(valueT, valName,
           Alloc.ALIAS, DefType.LOCAL_COMPILER,
           VarProvenance.valueOf(var));
       block.addVariable(deref);
       instBuffer.add(TurbineOp.retrieveRef(deref, var));
       return deref;
-    } else if (Types.isContainer(var)) {
-      Var deref = new Var(value_t, valName,
+    } else if (Types.isContainer(var) && recursive) {
+      Var deref = new Var(valueT, valName,
+              Alloc.ALIAS, DefType.LOCAL_COMPILER,
+              VarProvenance.valueOf(var));
+      block.addVariable(deref);
+      instBuffer.add(TurbineOp.retrieveRecursive(deref, var));
+      return deref;
+    } else if (Types.isContainer(var) && !recursive) { 
+      Var deref = new Var(valueT, valName,
           Alloc.LOCAL, DefType.LOCAL_COMPILER,
           VarProvenance.valueOf(var));
       block.addVariable(deref);

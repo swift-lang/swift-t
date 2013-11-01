@@ -18,6 +18,7 @@ public enum Opcode {
   // Load and store container contents (TODO: recursively?)
   STORE_ARRAY, STORE_BAG,
   LOAD_ARRAY, LOAD_BAG, 
+  LOAD_RECURSIVE,
   
   // Dereference *prim to prim
   DEREF_INT, DEREF_STRING, DEREF_FLOAT, DEREF_BOOL, DEREF_BLOB,
@@ -163,6 +164,7 @@ public enum Opcode {
     case LOAD_VOID:
     case LOAD_ARRAY:
     case LOAD_BAG:
+    case LOAD_RECURSIVE:
       return true;
     default:
       return false;
@@ -170,6 +172,11 @@ public enum Opcode {
   }
 
   public static Opcode retrieveOpcode(Typed srcType) {
+    return retrieveOpcode(srcType, false);
+  }
+  
+  public static Opcode retrieveOpcode(Typed srcType,
+                                        boolean recursive) {
     Opcode op;
     if (Types.isPrimFuture(srcType.type())) {
       switch(srcType.type().primType()) {
@@ -202,9 +209,17 @@ public enum Opcode {
     } else if (Types.isRef(srcType)) {
       op = Opcode.LOAD_REF;
     } else if (Types.isArray(srcType)) {
-      op = Opcode.LOAD_ARRAY;
+      if (recursive) {
+        op = Opcode.LOAD_RECURSIVE;
+      } else {
+        op = Opcode.LOAD_ARRAY;
+      }
     } else if (Types.isBag(srcType)) {
-      op = Opcode.LOAD_BAG;
+      if (recursive) {
+        op = Opcode.LOAD_RECURSIVE;
+      } else {
+        op = Opcode.LOAD_BAG;
+      }
     } else {
       op = null;
     }

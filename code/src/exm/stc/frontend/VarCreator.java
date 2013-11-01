@@ -222,6 +222,13 @@ public class VarCreator {
         boolean initialise) throws UserException {
     Type valType = Types.derefResultType(future.type());
     assert(valType != null) : future.type() + " could not be derefed";
+    Var val = createValueVar(context, valType, future, initialise);
+    return val;
+  }
+
+  private Var createValueVar(Context context, Type valType, Var future,
+          boolean initialise) throws UserException, UndefinedTypeException,
+          DoubleDefineException {
     Var val = context.createLocalValueVariable(valType, future);
     if (initialise) {
       initialiseVariable(context, val);
@@ -301,7 +308,7 @@ public class VarCreator {
           throws UserException {
     assert(Types.isContainer(c));
     Type unpackedT = Types.unpackedContainerType(c.type());
-    Var val = context.createLocalValueVariable(unpackedT, c);
+    Var val = createValueVar(context, unpackedT, c, true);
     backend.retrieveRecursive(val, c);
     return val;
   }

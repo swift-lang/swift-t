@@ -170,6 +170,7 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.LOAD_FILE);
     opcodes.add(Opcode.LOAD_ARRAY);
     opcodes.add(Opcode.LOAD_BAG);
+    opcodes.add(Opcode.LOAD_RECURSIVE);
     opcodes.add(Opcode.GET_FILENAME);
     opcodes.add(Opcode.GET_LOCAL_FILENAME);
     opcodes.add(Opcode.IS_MAPPED);
@@ -222,6 +223,7 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.LOAD_FILE);
     opcodes.add(Opcode.LOAD_ARRAY);
     opcodes.add(Opcode.LOAD_BAG);
+    opcodes.add(Opcode.LOAD_RECURSIVE);
     opcodes.add(Opcode.ARRAY_CREATE_NESTED_IMM);
     opcodes.add(Opcode.ARRAY_INSERT_FUTURE);
     opcodes.add(Opcode.ARRAY_DEREF_INSERT_FUTURE);

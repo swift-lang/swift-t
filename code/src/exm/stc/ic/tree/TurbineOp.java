@@ -292,6 +292,10 @@ public class TurbineOp extends Instruction {
       gen.retrieveBag(getOutput(0), getInput(0).getVar(),
               getInputs().size() == 2 ? getInput(1) : Arg.ZERO);
       break;
+    case LOAD_RECURSIVE:
+      gen.retrieveRecursive(getOutput(0), getInput(0).getVar(),
+              getInputs().size() == 2 ? getInput(1) : Arg.ZERO);
+      break;
     case FREE_BLOB:
       gen.freeBlob(getOutput(0));
       break;
@@ -559,6 +563,10 @@ public class TurbineOp extends Instruction {
   
   public static Instruction retrieveBag(Var target, Var source) {
     return new TurbineOp(Opcode.LOAD_BAG, target, source.asArg());
+  }
+  
+  public static Instruction retrieveRecursive(Var target, Var src) {
+    return new TurbineOp(Opcode.LOAD_RECURSIVE, target, src.asArg());
   }
   
   public static Instruction freeBlob(Var blobVal) {
@@ -893,6 +901,7 @@ public class TurbineOp extends Instruction {
     case LOAD_FILE:
     case LOAD_ARRAY:
     case LOAD_BAG:
+    case LOAD_RECURSIVE:
       return this.writesAliasVar();
       
     case ARRAY_LOOKUP_REF_IMM:
@@ -1561,6 +1570,7 @@ public class TurbineOp extends Instruction {
     case LOAD_FILE:
     case LOAD_ARRAY:
     case LOAD_BAG:
+    case LOAD_RECURSIVE:
     case UPDATE_INCR:
     case UPDATE_MIN:
     case UPDATE_SCALE:
@@ -1636,14 +1646,10 @@ public class TurbineOp extends Instruction {
       case LOAD_VOID: 
       case LOAD_FILE:
       case LOAD_ARRAY:
-      case LOAD_BAG: {
-        // retrieve* is invertible
+      case LOAD_BAG: 
+      case LOAD_RECURSIVE: {
         Arg src = getInput(0);
         Var dst = getOutput(0);
-        if (Types.isPrimUpdateable(src.getVar().type())) {
-          // Don't try to optimize lookups of updateables
-          return null;
-        }
 
         Closed outIsClosed;
         if (op == Opcode.LOAD_REF) {
@@ -2039,7 +2045,8 @@ public class TurbineOp extends Instruction {
       case LOAD_STRING:
       case LOAD_VOID: 
       case LOAD_ARRAY:
-      case LOAD_BAG: {
+      case LOAD_BAG: 
+      case LOAD_RECURSIVE: {
         Var inVar = getInput(0).getVar();
         if (type == RefCountType.READERS) {
           long amt = increments.getCount(inVar);
@@ -2297,5 +2304,6 @@ public class TurbineOp extends Instruction {
                             getRCType(this.op), getRCAmount(this));
     }
   }
+
 
 }

@@ -806,6 +806,24 @@ public class TurbineGenerator implements CompilerBackend {
     // TODO
     throw new STCRuntimeError("Not implemented yet");
   }
+  
+
+  @Override
+  public void retrieveRecursive(Var target, Var src, Arg decr) {
+    assert(Types.isContainer(src));
+    assert(Types.isContainerLocal(target));
+    assert(Types.unpackedContainerType(src).assignableTo(target.type()));
+
+    List<TypeName> typeList = new ArrayList<TypeName>();
+    Type curr = src.type();
+    do {
+      typeList.add(representationType(curr, false));
+      curr = Types.containerElemType(curr);
+    } while (Types.isContainer(curr));
+    
+    pointAdd(Turbine.retrieveRec(prefixVar(target), typeList,
+              varToExpr(src), argToExpr(decr)));
+  }
 
   @Override
   public void decrLocalFileRef(Var localFile) {
@@ -2783,6 +2801,12 @@ public class TurbineGenerator implements CompilerBackend {
       assert(u.isConstant() || u.getVar().storage() == Alloc.LOCAL);
     }
     // Need to pass type names to packing routine
+    // TODO: need to handle packing local lists/dicts
+    for (Arg a: unpacked) {
+      if (Types.isContainerLocal(a.type())) {
+        throw new STCRuntimeError("Unimplemented: packing " + a.type());
+      }
+    }
     List<Expression> exprs = makeTypeValList(unpacked);
     pointAdd(new SetVariable(prefixVar(packed), Turbine.xptPack(exprs)));
   }

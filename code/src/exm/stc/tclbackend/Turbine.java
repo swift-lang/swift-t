@@ -117,6 +117,7 @@ class Turbine {
   private static final Token RETRIEVE_FLOAT = turbFn("retrieve_float");
   private static final Token RETRIEVE_STRING = turbFn("retrieve_string");
   private static final Token RETRIEVE_BLOB = turbFn("retrieve_blob");
+  private static final Token RETRIEVE_REC = turbFn("retrieve_rec");
   private static final Token ACQUIRE_REF = turbFn("acquire_ref");
   private static final Token ACQUIRE_FILE_REF = turbFn("acquire_file_ref");
   private static final Token ACQUIRE_STRUCT_REF = turbFn("acquire_struct");
@@ -540,6 +541,18 @@ class Turbine {
   public static SetVariable fileDecrGet(String target, Value src,
       Expression decr) {
     return new SetVariable(target, new Square(GET_FILE, src, decr));
+  }
+
+  /**
+   * Recursively retrieve container/bag contents
+   * typeList: list of types from outer container to inner vale
+   */
+  public static SetVariable retrieveRec(String target,
+          List<TypeName> typeList, Value src, Expression decr) {
+    Square fnCall = Square.fnCall(RETRIEVE_REC, src, new TclList(typeList),
+                                  LiteralInt.ZERO, decr);
+            
+    return new SetVariable(target, fnCall);
   }
 
   private static Value tclRuleType (TaskMode t) {

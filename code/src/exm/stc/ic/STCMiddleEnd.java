@@ -879,10 +879,12 @@ public class STCMiddleEnd {
     currBlock().addInstruction(TurbineOp.retrieveBag(target, src));
   }
   
-  public void retrieveRecursive(Var val, Var future) {
-    assert(Types.unpackedContainerType(future).assignableTo(val.type()));
-    throw new STCRuntimeError("Not implemented: retrieve " +
-                future + " to " + val);
+  public void retrieveRecursive(Var target, Var src) {
+    assert(Types.isContainer(src));
+    assert(Types.isContainerLocal(target));
+    assert(Types.unpackedContainerType(src).assignableTo(target.type()));
+
+    currBlock().addInstruction(TurbineOp.retrieveRecursive(target, src));
   }
 
   public void decrLocalFileRef(Var fileVal) {

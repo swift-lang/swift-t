@@ -148,6 +148,8 @@ public interface CompilerBackend {
 
   public void retrieveBag(Var target, Var src, Arg decr);
   
+  public void retrieveRecursive(Var target, Var src, Arg decr);
+
   /**
    * Used to cleanup local file if needed
    * @param fileVal
