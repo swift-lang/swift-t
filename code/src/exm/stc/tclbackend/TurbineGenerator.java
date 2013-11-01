@@ -778,8 +778,10 @@ public class TurbineGenerator implements CompilerBackend {
   public void assignArray(Var target, Arg src) {
     assert(Types.isArray(target));
     assert(Types.isArrayLocal(src.type()));
-    
-    // TODO: assert k/v types match
+    assert(Types.containerElemType(src.type()).assignableTo(
+              Types.containerElemType(target)));
+    assert(Types.arrayKeyType(src.type()).assignableTo(
+            Types.arrayKeyType(target.type())));
     pointAdd(Turbine.arrayBuild(varToExpr(target), argToExpr(src), true,
              representationType(Types.containerElemType(target), false)));
   }
@@ -788,22 +790,31 @@ public class TurbineGenerator implements CompilerBackend {
   public void retrieveArray(Var target, Var src, Arg decr) {
     assert(Types.isArray(src));
     assert(Types.isArrayLocal(target));
+    assert(Types.containerElemType(src).assignableTo(
+                    Types.containerElemType(target)));
+
+    assert(Types.arrayKeyType(src.type()).assignableTo(
+            Types.arrayKeyType(target.type())));  
     assert(decr.isImmediateInt());
     
-    // TODO: assert k/v types match 
     // TODO: decrement reference
     pointAdd(Turbine.containerContents(prefixVar(target), varToExpr(src)));
   }
   
   @Override
   public void assignBag(Var target, Arg src) {
-    // TODO
-    throw new STCRuntimeError("Not implemented yet");
+    assert(Types.isBag(target));
+    assert(Types.isBagLocal(src.type()));
+    assert(Types.containerElemType(src.type()).assignableTo(
+              Types.containerElemType(target)));    throw new STCRuntimeError("Not implemented yet");
   }
 
   @Override
   public void retrieveBag(Var target, Var src, Arg decr) {
-    // TODO
+    assert(Types.isBag(src));
+    assert(Types.isBagLocal(target));
+    assert(Types.containerElemType(src).assignableTo(
+                    Types.containerElemType(target)));
     throw new STCRuntimeError("Not implemented yet");
   }
   

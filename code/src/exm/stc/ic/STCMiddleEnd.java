@@ -868,8 +868,10 @@ public class STCMiddleEnd {
   }
   
   public void assignBag(Var target, Arg src) {
-    assert(Types.isBag(target.type())) : target;
+    assert(Types.isBag(target)) : target;
     assert(Types.isBagLocal(src.type())) : src.type();
+    assert(Types.containerElemType(src.type()).assignableTo(
+              Types.containerElemType(target)));
     currBlock().addInstruction(TurbineOp.assignBag(target, src));
   }
   

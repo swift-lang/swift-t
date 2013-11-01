@@ -1904,7 +1904,7 @@ public class TurbineOp extends Instruction {
     switch (op) {
       case STORE_REF:
         return Pair.create(getInput(0).getVar().asList(), Var.NONE);
-      case ARRAY_BUILD: {
+      case ARRAY_BUILD:{
         List<Var> readIncr = new ArrayList<Var>(getInputs().size() / 2);
         for (int i = 0; i < getInputs().size() / 2; i++) {
           // Skip keys and only get values
@@ -1916,6 +1916,13 @@ public class TurbineOp extends Instruction {
         }
         Var arr = getOutput(0);
         return Pair.create(readIncr, Arrays.asList(arr));
+      }
+      case STORE_BAG:
+      case STORE_ARRAY: {
+        // Inputs stored into array need to have refcount incremented
+        // This finalizes array so will consume refcount
+        return Pair.create(getInput(0).getVar().asList(),
+                            getOutput(0).asList());
       }
       case DEREF_BLOB:
       case DEREF_VOID:
