@@ -836,14 +836,15 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isContainerLocal(target));
     assert(Types.unpackedContainerType(src).assignableTo(target.type()));
 
-    List<TypeName> typeList = nestedTypeList(src.type(), false, false);
+    List<TypeName> typeList = nestedTypeList(src.type(), false, false, true);
     
     pointAdd(Turbine.enumerateRec(prefixVar(target), typeList,
               varToExpr(src), argToExpr(decr)));
   }
 
   private List<TypeName> nestedTypeList(Type type,
-            boolean includeKeyTypes, boolean valueType) {
+            boolean includeKeyTypes, boolean valueType,
+            boolean includeBaseType) {
     List<TypeName> typeList = new ArrayList<TypeName>();
     Type curr = type;
     do {
@@ -862,6 +863,17 @@ public class TurbineGenerator implements CompilerBackend {
       
       curr = Types.containerElemType(curr);
     } while (Types.isContainer(curr));
+    
+    if (includeBaseType) {
+      TypeName reprType;
+      if (valueType) {
+        reprType = valRepresentationType(curr); 
+      } else {
+        reprType = representationType(curr, false);
+      }
+      typeList.add(reprType);
+    }
+    
     return typeList;
   }
 
@@ -2856,7 +2868,7 @@ public class TurbineGenerator implements CompilerBackend {
     List<Expression> result = new ArrayList<Expression>();
     for (Arg val: vals) {
       if (Types.isContainerLocal(val.type())) {
-        result.addAll(nestedTypeList(val.type(), true, true)); 
+        result.addAll(nestedTypeList(val.type(), true, true, true)); 
       } else {
         result.add(valRepresentationType(val.type()));
       }
