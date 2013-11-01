@@ -739,8 +739,44 @@ namespace eval turbine {
     # Given an ADLB container/bag/etc, retrieve values of everything
     # inside container.  Unpack into a dict or list as appropriate
     # types: list of nested types, from outer container to inner value
-    proc enumerate_rec { container types } {
-      error "enumerate_rec not implemented"
+    #
+    # Consumes read refcounts from outer container
+    proc enumerate_rec { container types {depth 0} {read_decr 0}} {
+      set container_type [ lindex $types $depth ]
+      set member_type [ lindex $types [ expr {$depth + 1} ] ]
+      set recurse [ expr {$depth < [ llength $types ] - 1} ]
+
+      switch $type {
+        container {
+          set vals [ adlb::enumerate $container dict 0 all $read_decr ]
+          if { $recurse } {
+            set result_dict [ dict create ]
+            dict for { key subcontainer } $vals {
+              dict append result_dict $key [ enumerate_rec $subcontainer \
+                    $type [ expr {$depth + 1} ] 0 ]
+            }
+            return $result_dict
+          } else {
+            return [ multi_retrieve_kv $vals CACHED $member_type ]
+          }
+        }
+        multiset {
+          set vals [ adlb::enumerate $container members 0 all $read_decr ]
+          if { $recurse } {
+            set result_list [ list ]
+            foreach subcontainer $vals {
+              lappend result_dict [ enumerate_rec $subcontainer \
+                                    $type [ expr {$depth + 1} ] 0 ]
+            }
+            return $result_list
+          } else {
+            return [ multi_retrieve $vals CACHED $member_type ]
+          }
+        }
+        default {
+          error "Expected container type to enumerate: $type"
+        }
+      }
     }
 }
 

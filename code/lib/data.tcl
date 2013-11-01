@@ -504,22 +504,69 @@ namespace eval turbine {
     proc retrieve_decr_blob_string { id } {
       return [ retrieve_blob_string $id 1 ]
     }
-
-    proc multi_retrieve_decr { ids args } {
+    
+    proc multi_retrieve { ids {cachemode CACHED} args } {
       set result [ list ]
-
       foreach id $ids {
-        lappend result [ adlb::retrieve_decr $id {*}$args ]
+        if { [ string equal $cachemode CACHED ] &&
+              [ c::cache_check $id ] } {
+          set val [ c::cache_retrieve $id ]
+        } else {
+          set val [ adlb::retrieve $id {*}$args ]
+        }
+        lappend result $val
       }
 
       return $result
     }
     
-    proc multi_retrieve_kv_decr { ids args } {
+    proc multi_retrieve_kv { ids {cachemode CACHED} args } {
       set result [ dict create ]
 
       dict for {key id} $ids {
-        dict append result $key [ adlb::retrieve_decr $id {*}$args ]
+        if { [ string equal $cachemode CACHED ] &&
+              [ c::cache_check $id ] } {
+          set val [ c::cache_retrieve $id ]
+        } else {
+          set val [ adlb::retrieve $id $type {*}$args ]
+        }
+        dict append result $key $val
+      }
+
+      return $result
+    }
+
+    proc multi_retrieve_decr { ids decr {cachemode CACHED} args } {
+      set result [ list ]
+
+      foreach id $ids {
+        if { [ string equal $cachemode CACHED ] &&
+              [ c::cache_check $id ] } {
+          set val [ c::cache_retrieve $id ]
+          read_refcount_decr $id $decr
+        }
+        else {
+          set val [ adlb::retrieve_decr $id $decr {*}$args ]
+        }
+        lappend result $val
+      }
+
+      return $result
+    }
+    
+    proc multi_retrieve_kv_decr { ids decr {cachemode CACHED} args } {
+      set result [ dict create ]
+
+      dict for {key id} $ids {
+        if { [ string equal $cachemode CACHED ] &&
+              [ c::cache_check $id ] } {
+          set val [ c::cache_retrieve $id ]
+          read_refcount_decr $id $decr
+        }
+        else {
+          set val [ adlb::retrieve_decr $id $decr {*}$args ]
+        }
+        dict append result $key $val
       }
 
       return $result
