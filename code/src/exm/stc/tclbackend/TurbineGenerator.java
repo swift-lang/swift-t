@@ -57,7 +57,7 @@ import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.ArrayInfo;
+import exm.stc.common.lang.Types.NestedContainerInfo;
 import exm.stc.common.lang.Types.FileKind;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.PrimType;
@@ -838,7 +838,7 @@ public class TurbineGenerator implements CompilerBackend {
 
     List<TypeName> typeList = nestedTypeList(src.type(), false, false);
     
-    pointAdd(Turbine.retrieveRec(prefixVar(target), typeList,
+    pointAdd(Turbine.enumerateRec(prefixVar(target), typeList,
               varToExpr(src), argToExpr(decr)));
   }
 
@@ -1308,7 +1308,7 @@ public class TurbineGenerator implements CompilerBackend {
       if (Types.isArray(arg.type())) {
         // Special case: expand arrays to list
         // Use temporary variable to avoid double evaluation
-        ArrayInfo ai = new ArrayInfo(arg.type());
+        NestedContainerInfo ai = new NestedContainerInfo(arg.type());
         String unpackTmp = TCLTMP_UNPACKED + argNum;
         pointAdd(new SetVariable(unpackTmp, Turbine.unpackArray(
                                 argToExpr(arg), ai.nesting,
@@ -1922,8 +1922,8 @@ public class TurbineGenerator implements CompilerBackend {
       for (Var w: waitVars) {
         if (recursive) {
           Type baseType = w.type();
-          if (Types.isArray(w.type())) {
-            baseType = new ArrayInfo(w.type()).baseType;
+          if (Types.isArray(w.type()) || Types.isBag(w.type())) {
+            baseType = new NestedContainerInfo(w.type()).baseType;
             useDeepWait = true;
           }
           if (Types.isPrimFuture(baseType)) {
@@ -1952,7 +1952,7 @@ public class TurbineGenerator implements CompilerBackend {
           Type waitVarType = waitVars.get(i).type();
           Type baseType;
           if (Types.isArray(waitVarType)) {
-            ArrayInfo ai = new ArrayInfo(waitVarType);
+            NestedContainerInfo ai = new NestedContainerInfo(waitVarType);
             depths[i] = ai.nesting;
             baseType = ai.baseType;
           } else {

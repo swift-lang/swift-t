@@ -111,14 +111,14 @@ class Turbine {
   private static final Token C_F_LOOKUP = turbFn("c_f_lookup");
   private static final TclTree CR_V_LOOKUP = turbFn("cr_v_lookup");
   private static final Token CR_F_LOOKUP = turbFn("cr_f_lookup");
-  private static final Token CONTAINER_ENUMERATE = adlbFn("enumerate");
+  private static final Token ENUMERATE = adlbFn("enumerate");
+  private static final Token ENUMERATE_REC = turbFn("enumerate_rec");
   
   // Retrieve functions
   private static final Token RETRIEVE_INTEGER = turbFn("retrieve_integer");
   private static final Token RETRIEVE_FLOAT = turbFn("retrieve_float");
   private static final Token RETRIEVE_STRING = turbFn("retrieve_string");
   private static final Token RETRIEVE_BLOB = turbFn("retrieve_blob");
-  private static final Token RETRIEVE_REC = turbFn("retrieve_rec");
   private static final Token ACQUIRE_REF = turbFn("acquire_ref");
   private static final Token ACQUIRE_FILE_REF = turbFn("acquire_file_ref");
   private static final Token ACQUIRE_STRUCT_REF = turbFn("acquire_struct");
@@ -545,12 +545,12 @@ class Turbine {
   }
 
   /**
-   * Recursively retrieve container/bag contents
+   * Recursively enumerate container/bag contents
    * typeList: list of types from outer container to inner vale
    */
-  public static SetVariable retrieveRec(String target,
+  public static SetVariable enumerateRec(String target,
           List<TypeName> typeList, Value src, Expression decr) {
-    Square fnCall = Square.fnCall(RETRIEVE_REC, src, new TclList(typeList),
+    Square fnCall = Square.fnCall(ENUMERATE_REC, src, new TclList(typeList),
                                   LiteralInt.ZERO, decr);
             
     return new SetVariable(target, fnCall);
@@ -1164,7 +1164,7 @@ class Turbine {
   public static SetVariable containerSize(String resultVar,
         Value arr) {
     return new SetVariable(resultVar, new Square(
-        CONTAINER_ENUMERATE, arr, new Token("count"), new Token("all"),
+        ENUMERATE, arr, new Token("count"), new Token("all"),
                                       new LiteralInt(0)));
   }
 
@@ -1202,9 +1202,9 @@ class Turbine {
     Token mode = includeKeys ? new Token("dict") : new Token("members");
     Expression enumE;
     if (readDecr != null) {
-      enumE = new Square(CONTAINER_ENUMERATE, arr, mode, start, len, readDecr);
+      enumE = new Square(ENUMERATE, arr, mode, start, len, readDecr);
     } else {
-      enumE = new Square(CONTAINER_ENUMERATE, arr, mode, start, len);
+      enumE = new Square(ENUMERATE, arr, mode, start, len);
     }
     return new SetVariable(resultVar, enumE);
   }

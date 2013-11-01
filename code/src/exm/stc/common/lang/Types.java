@@ -2170,8 +2170,8 @@ public class Types {
    * More convenient way of representing array types for some analysies
    *
    */
-  public static class ArrayInfo {
-    public ArrayInfo(Type baseType, int nesting) {
+  public static class NestedContainerInfo {
+    public NestedContainerInfo(Type baseType, int nesting) {
       super();
       this.baseType = baseType;
       this.nesting = nesting;
@@ -2180,11 +2180,11 @@ public class Types {
      * Construct from regular SwiftType
      * @param type
      */
-    public ArrayInfo(Type type) {
-      assert(type.structureType() == StructureType.ARRAY);
+    public NestedContainerInfo(Type type) {
+      assert(isContainer(type));
       int depth = 0;
-      while (type.structureType() == StructureType.ARRAY) {
-        type = type.memberType();
+      while (isContainer(type)) {
+        type = containerElemType(type);
         depth++;
       }
       this.nesting = depth;
