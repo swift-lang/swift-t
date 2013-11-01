@@ -54,8 +54,11 @@ namespace eval turbine {
             set item [ lindex $elems $i ] 
             puts "item: $item"
             if [ string equal $var_type "file" ] { 
-                set f [ turbine::input_file_local $item ]
-                set td [ lindex $f 1 ]
+                turbine::allocate_file2 f "" 1
+                set s [ literal string $item ]
+                puts "f: $f"
+                turbine::input_file [ list $f ] $s
+                set td $f
             } else { 
                 literal td $var_type $item
             }
