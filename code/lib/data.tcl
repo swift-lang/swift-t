@@ -26,7 +26,6 @@ namespace eval turbine {
         create_float   store_float                    \
         retrieve_float retrieve_decr_float            \
         create_void    store_void                     \
-        create_file    store_file                     \
         create_blob    store_blob                     \
         retrieve_blob retrieve_decr_blob              \
         create_ref     store_ref                      \
@@ -563,5 +562,4 @@ namespace eval turbine {
         set result [ string range $s $i end ]
         return $result
     }
-
 }
