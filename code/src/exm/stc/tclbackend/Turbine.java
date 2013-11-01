@@ -1202,9 +1202,9 @@ class Turbine {
     Token mode = includeKeys ? new Token("dict") : new Token("members");
     Expression enumE;
     if (readDecr != null) {
-      enumE = new Square(ENUMERATE, arr, mode, start, len, readDecr);
+      enumE = new Square(ENUMERATE, arr, mode, len, start, readDecr);
     } else {
-      enumE = new Square(ENUMERATE, arr, mode, start, len);
+      enumE = new Square(ENUMERATE, arr, mode, len, start);
     }
     return new SetVariable(resultVar, enumE);
   }

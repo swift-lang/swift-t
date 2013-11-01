@@ -2249,9 +2249,8 @@ public class TurbineGenerator implements CompilerBackend {
                         LiteralInt.ONE)));
     
     // load the subcontainer
-    pointAdd(Turbine.enumerate(contentsVar,
-        varToExpr(arrayVar), haveKeys, Value.numericValue(TCLTMP_SPLITLEN),
-        TCLTMP_RANGE_LO_V));
+    pointAdd(Turbine.enumerate(contentsVar, varToExpr(arrayVar),
+        haveKeys, TCLTMP_RANGE_LO_V, Value.numericValue(TCLTMP_SPLITLEN)));
   }
 
   private void startForeachInner(
