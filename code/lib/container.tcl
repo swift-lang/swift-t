@@ -111,6 +111,27 @@ namespace eval turbine {
         adlb::write_refcount_decr $c
       }
     }
+    
+    
+    # build multiset by inserting items into a container starting at 0
+    # close: decrement writers count at end
+    # val_type: type of array values
+    proc multiset_build { ms elems close val_type } {
+      set n [ llength $elems ]
+      log "multiset_build: <$ms> $n elems, close $close"
+      if { $n > 0 } {
+        for { set i 0 } { $i < $n } { incr i } {
+          set elem [ lindex $elems $i ]
+          set drops 0
+          if { [ expr {$close && $i == $n - 1 } ] } {
+            set drops 1
+          }
+          adlb::store $ms $elem $val_type $drops
+        }
+      } else {
+        adlb::write_refcount_decr $ms
+      }
+    }
 
     # Just like adlb::container_reference but add logging
     # Note that container_reference always consumes a read reference count

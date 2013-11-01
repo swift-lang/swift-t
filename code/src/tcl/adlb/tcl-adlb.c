@@ -3186,25 +3186,38 @@ ADLB_Xpt_Pack_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   int rc;
   adlb_data_code dc;
-  TCL_CONDITION(objc % 2 == 1, "Arguments must be paired types and values");
-  int elemCount = (objc - 1) / 2;
 
   adlb_buffer packed;
   int xfer_pos = 0;
   dc = ADLB_Init_buf(NULL, &packed, NULL, 2048);
   TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error initializing buffer");
 
-  for (int elem = 0; elem < elemCount; elem++)
+  int argpos = 1;
+  while (argpos < objc)
   {
-    Tcl_Obj *typeO = objv[elem * 2 + 1];
-    Tcl_Obj *val = objv[elem * 2 + 2];
-
+    Tcl_Obj *typeO = objv[argpos++];
     adlb_data_type type;
     bool has_extra;
     adlb_type_extra extra;
     rc = type_from_obj_extra(interp, objv, typeO, &type,
                              &has_extra, &extra);
     TCL_CHECK(rc);
+
+    switch (type)
+    {
+      case ADLB_DATA_TYPE_CONTAINER:
+      case ADLB_DATA_TYPE_MULTISET:
+        TCL_RETURN_ERROR("TODO: pack structures");
+      default:
+        // no special handling
+        break;
+    }
+    
+    
+    TCL_CONDITION(argpos < objc,
+                  "Last argument missing value");
+    Tcl_Obj *val = objv[argpos++];
+
     
     adlb_datum_storage data;
     bool alloced;
@@ -3215,7 +3228,7 @@ ADLB_Xpt_Pack_Cmd(ClientData cdata, Tcl_Interp *interp,
     // pack incrementally into buffer
     dc = ADLB_Pack_buffer(&data, type, NULL, &packed, NULL, &xfer_pos);
     TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error packing checkpoint data "
-                  "with type %s into buffer", Tcl_GetString(objv[elem*2]));
+                  "with type %s into buffer", Tcl_GetString(typeO));
 
     if (alloced)
     {
