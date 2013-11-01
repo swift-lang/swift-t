@@ -511,6 +511,10 @@ public class TurbineGenerator implements CompilerBackend {
   private TypeName valRepresentationType(Type t) {
     if (Types.isScalarValue(t)) {
       return adlbPrimType(t.primType());
+    } else if (Types.isArrayLocal(t)) {
+      return Turbine.ADLB_CONTAINER_TYPE;
+    } else if (Types.isBagLocal(t)) {
+      return Turbine.ADLB_MULTISET_TYPE;
     } else {
       // TODO: array values, etc.
       throw new STCRuntimeError("Unknown ADLB representation type for " + t);
@@ -797,8 +801,8 @@ public class TurbineGenerator implements CompilerBackend {
             Types.arrayKeyType(target.type())));  
     assert(decr.isImmediateInt());
     
-    // TODO: decrement reference
-    pointAdd(Turbine.containerContents(prefixVar(target), varToExpr(src)));
+    pointAdd(Turbine.enumerateAll(prefixVar(target), varToExpr(src), true,
+            argToExpr(decr)));
   }
   
   @Override
@@ -806,16 +810,23 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isBag(target));
     assert(Types.isBagLocal(src.type()));
     assert(Types.containerElemType(src.type()).assignableTo(
-              Types.containerElemType(target)));    throw new STCRuntimeError("Not implemented yet");
+              Types.containerElemType(target)));    
+
+    TypeName elemType = representationType(Types.containerElemType(target),
+                                          false);
+    pointAdd(Turbine.multisetBuild(varToExpr(target), argToExpr(src),
+                                   true, elemType));
   }
 
   @Override
   public void retrieveBag(Var target, Var src, Arg decr) {
     assert(Types.isBag(src));
     assert(Types.isBagLocal(target));
+    assert(decr.isImmediateInt());
     assert(Types.containerElemType(src).assignableTo(
                     Types.containerElemType(target)));
-    throw new STCRuntimeError("Not implemented yet");
+    pointAdd(Turbine.enumerateAll(prefixVar(target), varToExpr(src),
+                                       false, argToExpr(decr)));
   }
   
 
@@ -825,15 +836,33 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isContainerLocal(target));
     assert(Types.unpackedContainerType(src).assignableTo(target.type()));
 
-    List<TypeName> typeList = new ArrayList<TypeName>();
-    Type curr = src.type();
-    do {
-      typeList.add(representationType(curr, false));
-      curr = Types.containerElemType(curr);
-    } while (Types.isContainer(curr));
+    List<TypeName> typeList = nestedTypeList(src.type(), false, false);
     
     pointAdd(Turbine.retrieveRec(prefixVar(target), typeList,
               varToExpr(src), argToExpr(decr)));
+  }
+
+  private List<TypeName> nestedTypeList(Type type,
+            boolean includeKeyTypes, boolean valueType) {
+    List<TypeName> typeList = new ArrayList<TypeName>();
+    Type curr = type;
+    do {
+      TypeName reprType;
+      if (valueType) {
+        reprType = valRepresentationType(curr);
+      } else {
+        reprType = representationType(curr, false);
+      }
+      typeList.add(reprType);
+      if (includeKeyTypes && Types.isArray(curr)) {
+        // Include key type if requested
+        typeList.add(representationType(Types.arrayKeyType(
+                curr), false));
+      }
+      
+      curr = Types.containerElemType(curr);
+    } while (Types.isContainer(curr));
+    return typeList;
   }
 
   @Override
@@ -2169,7 +2198,7 @@ public class TurbineGenerator implements CompilerBackend {
 
     if (splitDegree <= 0) {
       // Load container contents and increment refcounts
-      pointAdd(Turbine.containerContents(contentsVar,
+      pointAdd(Turbine.enumerateAll(contentsVar,
                           varToExpr(container), haveKeys));
       Value tclDict = new Value(contentsVar);
       Expression containerSize = Turbine.dictSize(tclDict);
@@ -2220,7 +2249,7 @@ public class TurbineGenerator implements CompilerBackend {
                         LiteralInt.ONE)));
     
     // load the subcontainer
-    pointAdd(Turbine.containerContents(contentsVar,
+    pointAdd(Turbine.enumerate(contentsVar,
         varToExpr(arrayVar), haveKeys, Value.numericValue(TCLTMP_SPLITLEN),
         TCLTMP_RANGE_LO_V));
   }
@@ -2811,17 +2840,32 @@ public class TurbineGenerator implements CompilerBackend {
     for (Arg u: unpacked) {
       assert(u.isConstant() || u.getVar().storage() == Alloc.LOCAL);
     }
+    
     // Need to pass type names to packing routine
-    // TODO: need to handle packing local lists/dicts
-    for (Arg a: unpacked) {
-      if (Types.isContainerLocal(a.type())) {
-        throw new STCRuntimeError("Unimplemented: packing " + a.type());
-      }
-    }
     List<Expression> exprs = makeTypeValList(unpacked);
     pointAdd(new SetVariable(prefixVar(packed), Turbine.xptPack(exprs)));
   }
   
+  /**
+   * Make a list of values, with each value preceded by the ADLB type.
+   * For compound ADLB types, we have multiple expressions to describe
+   * the "layers" of the type.
+   * @param vals
+   * @return
+   */
+  private List<Expression> makeTypeValList(List<Arg> vals) {
+    List<Expression> result = new ArrayList<Expression>();
+    for (Arg val: vals) {
+      if (Types.isContainerLocal(val.type())) {
+        result.addAll(nestedTypeList(val.type(), true, true)); 
+      } else {
+        result.add(valRepresentationType(val.type()));
+      }
+      result.add(argToExpr(val));
+    }
+    return result;
+  }
+
   @Override
   public void unpackValues(List<Var> unpacked, Arg packed) {
     List<String> unpackedVarNames = new ArrayList<String>(unpacked.size());
@@ -2831,19 +2875,5 @@ public class TurbineGenerator implements CompilerBackend {
       types.add(valRepresentationType(unpackedVar.type()));
     }
     pointAdd(Turbine.xptUnpack(unpackedVarNames, argToExpr(packed), types));
-  }
-
-  /**
-   * Make a list of values, with each value preceded by the ADLB type
-   * @param key
-   * @return
-   */
-  private List<Expression> makeTypeValList(List<Arg> key) {
-    List<Expression> keyExprs = new ArrayList<Expression>(key.size()*2);
-    for (Arg k: key) {
-      keyExprs.add(valRepresentationType(k.type()));
-      keyExprs.add(argToExpr(k));
-    }
-    return keyExprs;
   }
 }

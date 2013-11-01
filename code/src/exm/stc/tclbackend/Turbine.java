@@ -96,6 +96,7 @@ class Turbine {
   private static final Token CR_V_DEREF_INSERT = turbFn("cr_v_insert_r");
   private static final Token CR_F_DEREF_INSERT = turbFn("cr_f_insert_r");
   private static final Token ARRAY_KV_BUILD = turbFn("array_kv_build");
+  private static final Token MULTISET_BUILD = turbFn("multiset_build");
   
   // Container nested creation
   private static final Token C_V_CREATE_NESTED = turbFn("create_nested");
@@ -1149,21 +1150,6 @@ class Turbine {
   }
 
 
-  /**
-   * Get entire contents of container
-   * @param resultVar
-   * @param arr
-   * @param includeKeys
-   * @return
-   */
-  public static SetVariable containerContents(String resultVar,
-                        Value arr, boolean includeKeys) {
-    Token mode = includeKeys ? new Token("dict") : new Token("members");
-    return new SetVariable(resultVar, new Square(
-            CONTAINER_ENUMERATE, arr, mode, new Token("all"),
-                                          new LiteralInt(0)));
-  }
-  
   public static  Expression dictSize(Value tclDict) {
     Expression containerSize = Square.fnCall("dict",  new Token("size"), tclDict);
     return containerSize;
@@ -1183,6 +1169,24 @@ class Turbine {
   }
 
   /**
+   * Get entire contents of container
+   * @param resultVar
+   * @param arr
+   * @param includeKeys
+   * @return
+   */
+  public static SetVariable enumerateAll(String resultVar,
+            Value arr, boolean includeKeys, Expression readDecr) {
+    return enumerate(resultVar, arr, includeKeys, 
+            new LiteralInt(0), new Token("all"), readDecr);
+  }
+  
+  public static SetVariable enumerateAll(String resultVar,
+          Value arr, boolean includeKeys) {
+    return enumerateAll(resultVar, arr, includeKeys, null);
+  }
+
+  /**
    * Retrieve partial contents of container from start to end inclusive
    * start to end are not the logical array indices, but rather physical indices
    * @param resultVar
@@ -1192,12 +1196,24 @@ class Turbine {
    * @param len
    * @return
    */
-  public static SetVariable containerContents(String resultVar,
-          Value arr, boolean includeKeys, Expression start, Expression len) {
+  public static SetVariable enumerate(String resultVar,
+          Value arr, boolean includeKeys, Expression start, Expression len,
+          Expression readDecr) {
     Token mode = includeKeys ? new Token("dict") : new Token("members");
-    return new SetVariable(resultVar, new Square(
-              CONTAINER_ENUMERATE, arr, mode, start, len));
+    Expression enumE;
+    if (readDecr != null) {
+      enumE = new Square(CONTAINER_ENUMERATE, arr, mode, start, len, readDecr);
+    } else {
+      enumE = new Square(CONTAINER_ENUMERATE, arr, mode, start, len);
+    }
+    return new SetVariable(resultVar, enumE);
   }
+  
+  public static SetVariable enumerate(String resultVar,
+          Value arr, boolean includeKeys, Expression start, Expression len) {
+    return enumerate(resultVar, arr, includeKeys, start, len, null);
+  }
+  
   
   /**
    * Get all of container
@@ -1205,12 +1221,10 @@ class Turbine {
    * @param arr
    * @return
    */
-  public static SetVariable containerContents(String resultVar,
+  public static SetVariable enumerateAll(String resultVar,
           Value arr) {
-    return containerContents(resultVar, arr, true, new LiteralInt(0),
-                              new LiteralInt(-1));  
+    return enumerateAll(resultVar, arr, true);  
   }
-
   public static Command turbineLog(String msg) {
     return new Command(TURBINE_LOG, new TclString(msg, true));
   }
@@ -1378,6 +1392,13 @@ class Turbine {
   public static Command arrayBuild(Value array, Expression kvDict,
           boolean close, TypeName valType) {
     return new Command(ARRAY_KV_BUILD, array, kvDict,
+                        LiteralInt.boolValue(close), valType);
+  }
+  
+
+  public static Command multisetBuild(Value multiset, Expression list,
+          boolean close, TypeName valType) {
+    return new Command(MULTISET_BUILD, multiset, list,
                         LiteralInt.boolValue(close), valType);
   }
   
