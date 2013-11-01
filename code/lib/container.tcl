@@ -773,7 +773,6 @@ namespace eval turbine {
       switch $container_type {
         container {
           set vals [ adlb::enumerate $container dict all 0 $read_decr ]
-          puts "ENUMERATED: $vals"
           if { $recurse } {
             set result_dict [ dict create ]
             dict for { key subcontainer } $vals {

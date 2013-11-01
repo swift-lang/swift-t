@@ -3177,6 +3177,54 @@ ADLB_Xpt_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
 #endif
 }
 
+
+/*
+   Pack a TCL container value represented as a TCL dict or array.
+   Handles nesting.
+   argpos: updated to consume multiple type names from command line
+ */
+static int
+pack_container(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
+                int *argpos, adlb_data_type outer_type)
+{
+  int rc;
+
+  /* slurp up relevant data types: get all nested containers plus the
+   * value type.
+   */
+  int types_size = 16;
+  adlb_data_type *types = malloc(sizeof(adlb_data_type) * types_size);
+  TCL_CONDITION(types != NULL, "Error allocating memory");
+  int nesting = 0;
+  adlb_data_type curr = outer_type;
+  while (curr == ADLB_DATA_TYPE_CONTAINER ||
+         curr == ADLB_DATA_TYPE_MULTISET)
+  {
+    adlb_data_type next;
+    bool has_extra;
+    adlb_type_extra extra;
+    rc = type_from_obj_extra(interp, objv, objv[*argpos], &next,
+                             &has_extra, &extra);
+    TCL_CHECK(rc);
+    
+    if (types_size < nesting)
+    {
+      types_size *= 2;
+      types = realloc(types, sizeof(adlb_data_type) * types_size);
+      TCL_CONDITION(types != NULL, "Error allocating memory");
+    }
+    types[nesting++] = curr;
+    curr = next;
+    (*argpos)++;
+  }
+  
+  // TODO: call recursive function to iterate through containers
+  //      and pack
+
+  free(types);
+  TCL_RETURN_ERROR("TODO: pack structures");
+}
+
 /**
   usage: adlb::xpt_pack (<type> <value>)*
  */
@@ -3207,7 +3255,8 @@ ADLB_Xpt_Pack_Cmd(ClientData cdata, Tcl_Interp *interp,
     {
       case ADLB_DATA_TYPE_CONTAINER:
       case ADLB_DATA_TYPE_MULTISET:
-        TCL_RETURN_ERROR("TODO: pack structures");
+        rc = pack_container(interp, objc, objv, &argpos, type);
+        TCL_CHECK(rc);
       default:
         // no special handling
         break;
