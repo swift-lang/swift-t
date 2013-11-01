@@ -765,16 +765,20 @@ namespace eval turbine {
     proc enumerate_rec { container types {depth 0} {read_decr 0}} {
       set container_type [ lindex $types $depth ]
       set member_type [ lindex $types [ expr {$depth + 1} ] ]
-      set recurse [ expr {$depth < [ llength $types ] - 1} ]
+      # If there are more than two entries left in the type list
+      # (the leaf type, and another container type), we will
+      # recurse to handle that.
+      set recurse [ expr {$depth < [ llength $types ] - 2} ]
 
       switch $container_type {
         container {
           set vals [ adlb::enumerate $container dict all 0 $read_decr ]
+          puts "ENUMERATED: $vals"
           if { $recurse } {
             set result_dict [ dict create ]
             dict for { key subcontainer } $vals {
               dict append result_dict $key [ enumerate_rec $subcontainer \
-                    $type [ expr {$depth + 1} ] 0 ]
+                    $types [ expr {$depth + 1} ] 0 ]
             }
             return $result_dict
           } else {
@@ -787,7 +791,7 @@ namespace eval turbine {
             set result_list [ list ]
             foreach subcontainer $vals {
               lappend result_dict [ enumerate_rec $subcontainer \
-                                    $type [ expr {$depth + 1} ] 0 ]
+                                    $types [ expr {$depth + 1} ] 0 ]
             }
             return $result_list
           } else {
@@ -795,7 +799,7 @@ namespace eval turbine {
           }
         }
         default {
-          error "Expected container type to enumerate: $type"
+          error "Expected container type to enumerate: $container_type"
         }
       }
     }

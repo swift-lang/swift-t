@@ -528,7 +528,6 @@ namespace eval turbine {
               [ c::cache_check $id ] } {
           set val [ c::cache_retrieve $id ]
         } else {
-          puts "args: {$args}"
           set val [ adlb::retrieve $id {*}$args ]
         }
         dict append result $key $val
