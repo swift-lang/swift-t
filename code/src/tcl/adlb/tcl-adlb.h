@@ -26,7 +26,7 @@ extern int ADLB_curr_priority;
 extern int adlb_comm_rank;
 
 /* Return a pointer to a shared buffer */
-char *tcl_adlb_xfer_buffer(int *buf_size);
+char *tcl_adlb_xfer_buffer(uint64_t *buf_size);
 
 int type_from_obj(Tcl_Interp *interp, Tcl_Obj *const objv[],
                          Tcl_Obj* obj, adlb_data_type *type);

@@ -54,6 +54,7 @@ TEST_SRC_TCL := $(DIR)/error.tcl               \
                 $(DIR)/blob1.tcl               \
                 $(DIR)/blob2.tcl               \
                 $(DIR)/blob3.tcl               \
+                $(DIR)/blob-big.tcl            \
                 $(DIR)/argv.tcl                \
                 $(DIR)/unpack.tcl              \
                 $(DIR)/send_rule.tcl           \

@@ -105,12 +105,12 @@ static MPI_Comm worker_comm;
 /** If the controlling code passed us a communicator, it is here */
 long adlb_comm_ptr = 0;
 
-static char xfer[ADLB_DATA_MAX];
-static const adlb_buffer xfer_buf = { .data = xfer, .length = ADLB_DATA_MAX };
+static char xfer[ADLB_PAYLOAD_MAX];
+static const adlb_buffer xfer_buf = { .data = xfer, .length = ADLB_PAYLOAD_MAX };
 
 /* Return a pointer to a shared transfer buffer */
-char *tcl_adlb_xfer_buffer(int *buf_size) {
-  *buf_size = ADLB_DATA_MAX;
+char *tcl_adlb_xfer_buffer(uint64_t *buf_size) {
+  *buf_size = ADLB_PAYLOAD_MAX;
   return xfer;
 }
 /**
@@ -2143,7 +2143,9 @@ static int extract_tcl_blob(Tcl_Interp *interp, Tcl_Obj *const objv[],
   rc = Tcl_GetPtr(interp, elems[0], &blob->value);
   TCL_CHECK_MSG(rc, "Error extracting pointer from %s", Tcl_GetString(elems[0]));
 
-  rc = Tcl_GetIntFromObj(interp, elems[1], &blob->length);
+  Tcl_WideInt wint;
+  rc = Tcl_GetWideIntFromObj(interp, elems[1], &wint);
+  blob->length = wint;
   TCL_CHECK_MSG(rc, "Error extracting blob length from %s",
                 Tcl_GetString(elems[1]));
   if (elem_count == 2)

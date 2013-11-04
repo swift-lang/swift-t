@@ -760,7 +760,7 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
       ADLB_Data_type_tostring(type_extra.CONTAINER.val_type));
   }
 
-  int xfer_size;
+  uint64_t xfer_size;
   char *xfer = tcl_adlb_xfer_buffer(&xfer_size);
 
   bool created;

@@ -48,23 +48,25 @@ namespace eval turbine {
 
     proc swift_array_build { c elems var_type } { 
         set n [ llength $elems ]
-        log "array_build: <$c> elems: $n"
+        log "swift_array_build: <$c> elems: $n var_type: $var_type"
         set L [ list ] 
-        for { set i 0 } { $i < $n } { incr i } { 
-            set item [ lindex $elems $i ] 
-            puts "item: $item"
-            if [ string equal $var_type "file" ] { 
-                turbine::allocate_file2 f "" 1
-                set s [ literal string $item ]
-                puts "f: $f"
-                turbine::input_file [ list $f ] $s
-                set td $f
-            } else { 
-                literal td $var_type $item
+        if [ string equal $var_type "file" ] { 
+            set type "file_ref"
+            for { set i 0 } { $i < $n } { incr i } { 
+                set item [ lindex $elems $i ] 
+                literal filename_td string $item 
+                turbine::allocate_file2 td $filename_td 1 0
+                lappend L $td
             }
-            lappend L $td
+        } else { 
+            set type "ref"
+            for { set i 0 } { $i < $n } { incr i } { 
+                set item [ lindex $elems $i ] 
+                literal td $var_type $item
+                lappend L $td
+            }            
         }
-        array_build $c $L 0 ref
+        array_build $c $L 0 $type
     }
 
     # build array by inserting items into a container starting at 0
