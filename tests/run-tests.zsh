@@ -306,7 +306,7 @@ report_stats_and_exit()
 
   print ""
   print -- "--"
-  if (( EXIT_CODE !=0 ))
+  if (( EXIT_CODE != 0 ))
   then
     print "Caught signal: terminating early"
   fi
