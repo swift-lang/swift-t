@@ -54,12 +54,13 @@ TEST_SRC_TCL := $(DIR)/error.tcl               \
                 $(DIR)/blob1.tcl               \
                 $(DIR)/blob2.tcl               \
                 $(DIR)/blob3.tcl               \
-                $(DIR)/blob-big.tcl            \
                 $(DIR)/argv.tcl                \
                 $(DIR)/unpack.tcl              \
                 $(DIR)/send_rule.tcl           \
                 $(DIR)/deep_rule.tcl           \
                 $(DIR)/deep_rule-2.tcl         \
+
+#                 $(DIR)/blob-big.tcl            \
 
 ifeq ($(USE_MPE),1)
 	TEST_SRC_TCL += $(DIR)/mpe-3.tcl
