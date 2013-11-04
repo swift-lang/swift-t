@@ -5,12 +5,12 @@ import unix;
 (file o[]) task(file i, int n) "turbine" "0.1"
 [
 """
-puts "task()...";
-exec ./316-array-build.task.sh <<n>>;
-set L [ glob test-316-*.data ];
-turbine::swift_array_build <<o>> $L file;
+set f [ swift_filename <<i>> ]
+exec ./317-array-build.task.sh $f <<n>>;
+set L [ glob test-317-*.data ];
+swift_array_build <<o>> $L file;
 """
-];  
+ ];
 
 main
 {
