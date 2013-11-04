@@ -1,6 +1,13 @@
-#!/bin/bash
+#!/bin/bash -eu
 
-N=$1
+INPUT=$1
+N=$2
+
+if [[ ! -f ${INPUT} ]]
+then 
+  echo "File not found: ${INPUT}"
+  exit 1
+fi
 
 for (( i=0 ; $i < $N ; i++ ))
 do
