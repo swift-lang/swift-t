@@ -703,11 +703,11 @@ turbine_code turbine_pop(turbine_action_type* action_type,
 
   // Debugging
   DEBUG_TURBINE("pop: transform:   {%"PRId64"}", T->id);
-  DEBUG_TURBINE("     action:      {%"PRId64"} %s: %s", id, T->name,
+  DEBUG_TURBINE("     action:      {%"PRId64"} %s: %s", *id, T->name,
                                                             T->action);
-  DEBUG_TURBINE("     priority:    {%"PRId64"} => %i",  id, T->priority);
-  DEBUG_TURBINE("     target:      {%"PRId64"} => %i",  id, T->target);
-  DEBUG_TURBINE("     parallelism: {%"PRId64"} => %i",  id, T->parallelism);
+  DEBUG_TURBINE("     priority:    {%"PRId64"} => %i",  *id, T->priority);
+  DEBUG_TURBINE("     target:      {%"PRId64"} => %i",  *id, T->target);
+  DEBUG_TURBINE("     parallelism: {%"PRId64"} => %i",  *id, T->parallelism);
 
   // Copy outputs
   *action_type = T->action_type;
