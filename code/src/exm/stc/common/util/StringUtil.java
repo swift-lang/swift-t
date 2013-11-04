@@ -102,5 +102,49 @@ public class StringUtil {
     List<String> result = Arrays.asList(args);
     return result;
   }
-
+  
+  /**
+     Like String.trim(), but does not drop newlines.  
+     Thus correct for Tcl code.
+   */
+  public static String tclTrim(String s)
+  {
+    if (s.length() == 0) return s;
+    // First, skip over leading spaces and tabs
+    int i = 0;
+    while (true)
+    {
+      if (i == s.length()) break;
+      char c = s.charAt(i);
+      if (c != ' ' && c != '\t') break;
+      i++;
+    }
+    // Next, drop trailing spaces and tabs
+    int j = s.length()-1;
+    if (j < 0) j = 0;
+    while (j >= 0)
+    {
+      if (j <= i) break;
+      char c = s.charAt(j);
+      if (c != ' ' && c != '\t') break;
+      j--;
+    }
+    if (j < i) return "";
+    return s.substring(i,j+1);
+  }
+  
+  /* 
+  // Test for tclTrim(): use with od -c to check 
+  public static void main(String[] args)
+  {
+    String[] cases = new String[] { "", "x", " x", "x ", " x ", 
+                                    " x y ", 
+                                    " \n\t x y \t\n \n" }; 
+    for (String s : cases)
+    {
+      s = tclTrim(s);
+      System.out.print("[" + s + "]");
+    }
+  }
+  */
 }

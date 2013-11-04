@@ -20,12 +20,13 @@ import java.util.HashMap;
 import java.util.List;
 
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.Type;
-import exm.stc.common.lang.Var;
 import exm.stc.common.lang.ForeignFunctions.TclOpTemplate;
 import exm.stc.common.lang.ForeignFunctions.TemplateElem;
 import exm.stc.common.lang.ForeignFunctions.TemplateElem.ElemKind;
+import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Var;
+import exm.stc.common.util.StringUtil;
 import exm.stc.tclbackend.tree.Expression;
 import exm.stc.tclbackend.tree.TclTree;
 import exm.stc.tclbackend.tree.Token;
@@ -76,7 +77,7 @@ public class TclTemplateProcessor {
     // Now fill in template 
     for (TemplateElem elem: template.getElems()) {
       if (elem.getKind() == ElemKind.TEXT) {
-        String tok = elem.getText().trim();
+        String tok = StringUtil.tclTrim(elem.getText());
         if (tok.length() > 0) {
           result.add(new Token(tok));
         }
