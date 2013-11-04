@@ -22,6 +22,7 @@
 namespace eval turbine {
     namespace export container_f_get container_f_insert
     namespace export c_f_lookup deeprule
+    namespace export swift_array_build
 
     namespace import ::turbine::c::create_nested \
                      ::turbine::c::create_nested_bag

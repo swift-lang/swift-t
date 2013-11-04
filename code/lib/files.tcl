@@ -19,7 +19,14 @@
 
 namespace eval turbine {
     namespace export get_file_status get_file_path is_file_mapped \
-                     filename2 copy_file close_file file_read file_write
+                     filename2 copy_file close_file file_read file_write \
+                     swift_filename
+    proc swift_filename { file_handle } { 
+        set result [ lindex $file_handle 0 ]
+        log "swift_filename: $file_handle -> $result"
+        return $result
+    }
+
     # Extract file status future from handle
     proc get_file_status { file_handle } {
       return [ lindex $file_handle 0 ]
