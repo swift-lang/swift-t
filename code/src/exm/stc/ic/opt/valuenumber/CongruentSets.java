@@ -719,7 +719,7 @@ class CongruentSets {
         if (inEffectInv.containsKey(key1)) {
           //System.err.println(key1 + " IN EFFECT");
           // Canonical is currently in effect
-          for (ArgOrCV val: e.getValue()) {
+          // for (ArgOrCV val: e.getValue()) {
             
             /*TODO: disabled checks since in various corner cases we can
              * have things in different sets without producing incorrect
@@ -731,7 +731,7 @@ class CongruentSets {
              *                                + key1 + " vs. " + key2; 
              */
                      
-          }
+          // }
         } else {
           // Check it was swallowed up into another set
           /* TODO: disabled this check too
