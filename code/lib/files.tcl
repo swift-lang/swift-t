@@ -288,6 +288,18 @@ namespace eval turbine {
        lset local_f 1 [ expr {[ lindex $local_f 1 ] + 1} ]
        store_void [ get_file_status $f ]
     }
+    
+    proc incr_local_file_refcount { varname } {
+        upvar 1 $varname v
+        set old_refcount [ lindex $v 1 ]
+        set new_refcount [ expr {$old_refcount + 1} ]
+        
+        if [ expr $old_refcount <= 0  ] {
+          error "Trying to increment reference count from zero or negative: \
+                    [ local_file_path $v ]"
+        }
+        lset v 1 $new_refcount
+    }
 
     proc decr_local_file_refcount { varname } {
         upvar 1 $varname v
