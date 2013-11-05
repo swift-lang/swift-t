@@ -81,6 +81,7 @@ check_versions()
 }
 
 #define HOSTNAME_MAX 128
+static void report_debug_ranks(void);
 static bool setup_hostmap(void);
 
 static inline int get_next_server();
@@ -143,6 +144,7 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
     ADLB_CHECK(code);
   }
 
+  report_debug_ranks();
   setup_hostmap();
 
   srandom((unsigned int)xlb_comm_rank+1);
@@ -153,9 +155,27 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
   return ADLB_SUCCESS;
 }
 
+static void
+report_debug_ranks()
+{
+  int debug_ranks;
+  getenv_integer("ADLB_DEBUG_RANKS", 0, &debug_ranks);
+  if (!debug_ranks) return;
+
+  struct utsname u;
+  uname(&u);
+
+  printf("ADLB_DEBUG_RANKS: rank: %i nodename: %s\n",
+         xlb_comm_rank, u.nodename);
+}
+
 static bool
 setup_hostmap()
 {
+  int disable_hostmap;
+  getenv_integer("ADLB_DISABLE_HOSTMAP", 0, &disable_hostmap);
+  if (disable_hostmap) return true;
+
   struct utsname u;
   uname(&u);
 
