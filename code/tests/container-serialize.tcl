@@ -27,6 +27,24 @@ proc test_retrieve { } {
     set c1_check [ adlb::retrieve $c1 ]
     puts "c1_check: $c1_check"
     #TODO: check it's a 3 element dict
+    
+    if { [ dict size $c1_check ] != 3 } {
+        error "c1 entries [ dict size $c1_check ] expected 3"
+    }
+    
+    set c1_1 [ dict get $c1_check 1 ]
+    set c1_2 [ dict get $c1_check 2 ]
+    set c1_3 [ dict get $c1_check 3 ]
+
+    if { $c1_1 != "val1" } {
+        error "c1\[1\] $c1_1"
+    }
+    if { $c1_2 != "val2" } {
+        error "c1\[2\] $c1_2"
+    }
+    if { $c1_3 != "val3" } {
+        error "c1\[3\] $c1_3"
+    }
 }
 
 proc test_store { } {
@@ -38,18 +56,29 @@ proc test_store { } {
 
     set c2_size [ adlb::container_size $c2 ]
 
-    set c2_0 [ adlb::lookup $c2 0 ]
     set c2_1 [ adlb::lookup $c2 1 ]
     set c2_2 [ adlb::lookup $c2 2 ]
+    set c2_3 [ adlb::lookup $c2 3 ]
 
     #TODO: check c2 parameters
     puts "c2_size: $c2_size elems: \[ $c2_0 $c2_1 $c2_2 \]"
 
+    if { $c2_size != 3 } {
+        error "c2 entries $c2_size expected 3"
+    }
+    if { $c2_1 != "val1" } {
+        error "c2\[1\] $c2_1"
+    }
+    if { $c2_2 != "val2" } {
+        error "c2\[2\] $c2_2"
+    }
+    if { $c2_3 != "val3" } {
+        error "c2\[3\] $c2_3"
+    }
 }
 
 proc rules { } {
    test_retrieve
-   # TODO: store doesn't work yet
    #test_store
 }
 
