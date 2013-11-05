@@ -1236,8 +1236,8 @@ public class TurbineGenerator implements CompilerBackend {
     TclOpTemplate template = ForeignFunctions.getInlineTemplate(functionName);
     assert(template != null);
     
-    List<TclTree> result = TclTemplateProcessor.processTemplate(template,
-                                                        inputs, outputs);
+    List<TclTree> result = TclTemplateProcessor.processTemplate(
+                        functionName, template, inputs, outputs);
     
     Command cmd = new Command(result.toArray(new TclTree[result.size()]));
     pointAdd(cmd);

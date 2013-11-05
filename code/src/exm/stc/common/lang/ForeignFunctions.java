@@ -260,6 +260,7 @@ public class ForeignFunctions {
       TEXT,
       VARIABLE,
       DEREF_VARIABLE,
+      REF_VARIABLE,
     }
     
     private final ElemKind kind;
@@ -275,12 +276,8 @@ public class ForeignFunctions {
       return new TemplateElem(ElemKind.TEXT, text);
     }
     
-    public static TemplateElem createVar(String varName, boolean deref) {
-      if (deref) {
-        return new TemplateElem(ElemKind.DEREF_VARIABLE, varName);
-      } else {
-        return new TemplateElem(ElemKind.VARIABLE, varName);
-      }
+    public static TemplateElem createVar(String varName, ElemKind kind) {
+      return new TemplateElem(kind, varName);
     }
     
     public ElemKind getKind() {
@@ -296,7 +293,8 @@ public class ForeignFunctions {
     }
     
     public String getVarName() {
-      if (kind == ElemKind.VARIABLE || kind == ElemKind.DEREF_VARIABLE) {
+      if (kind == ElemKind.VARIABLE || kind == ElemKind.DEREF_VARIABLE ||
+          kind == ElemKind.REF_VARIABLE) {
         return contents;
       } else {
         throw new STCRuntimeError("not var, was: " + kind); 
@@ -308,6 +306,8 @@ public class ForeignFunctions {
         return contents;
       } else if (kind == ElemKind.DEREF_VARIABLE) {
         return "$" + contents;
+      } else if (kind == ElemKind.REF_VARIABLE) {
+        return "&" + contents;
       } else {
         assert(kind == ElemKind.TEXT);
         return "\"" + contents + "\"";
@@ -392,7 +392,8 @@ public class ForeignFunctions {
       List<String> badNames = new ArrayList<String>();
       for (TemplateElem elem: elems) {
         if (elem.getKind() == ElemKind.VARIABLE ||
-            elem.getKind() == ElemKind.DEREF_VARIABLE) {
+            elem.getKind() == ElemKind.DEREF_VARIABLE ||
+            elem.getKind() == ElemKind.REF_VARIABLE) {
           String varName = elem.getVarName();
           if (!outNames.contains(varName) && 
               !inNames.contains(varName)) {

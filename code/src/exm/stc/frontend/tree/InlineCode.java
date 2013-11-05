@@ -19,6 +19,7 @@ import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.ForeignFunctions.TclOpTemplate;
 import exm.stc.common.lang.ForeignFunctions.TemplateElem;
+import exm.stc.common.lang.ForeignFunctions.TemplateElem.ElemKind;
 import exm.stc.frontend.Context;
 
 public class InlineCode {
@@ -38,7 +39,7 @@ public class InlineCode {
     StringBuilder currTok = new StringBuilder();
     StringBuilder currVar = null;
     boolean inVar = false;
-    boolean inDerefVar = false;
+    ElemKind inVarKind = null;
     for (int i = 0; i < in.length(); i++) {
       char c = in.charAt(i);
       if (inVar) {
@@ -48,7 +49,7 @@ public class InlineCode {
           if (i < in.length() - 1 || in.charAt(i+1) == '>') {
             i++; // Move past second >
             template.addElem(TemplateElem.createVar(currVar.toString(),
-                                                    inDerefVar));
+                                                    inVarKind));
             currVar = null;
             currTok = new StringBuilder();
             inVar = false;
@@ -65,14 +66,17 @@ public class InlineCode {
                                   "template string \"" + in + "\"");
         }
       } else {
-        if ((c == '<' && i < in.length() - 1 && in.charAt(i+1) == '<') ||
-            (c == '$' && i < in.length() - 2 && in.charAt(i+1) == '<' &&
-             in.charAt(i+2) == '<')) {
+        if (nextTok(in, i, "<<") || 
+            nextTok(in, i, "$<<") ||
+            nextTok(in, i, "&<<")) {
           if (c == '$') {
-            inDerefVar = true;
+            inVarKind = ElemKind.DEREF_VARIABLE;
             i++; // Skip $
+          } else if (c == '&') {
+            inVarKind = ElemKind.REF_VARIABLE;
+            i++; // Skip &
           } else {
-            inDerefVar = false;
+            inVarKind = ElemKind.VARIABLE;
           }
           i++; // Skip <
           while (i < in.length() - 1 && in.charAt(i+1) == '<') {
@@ -112,5 +116,13 @@ public class InlineCode {
       }
     }
     return template;
+  }
+  
+  public static boolean nextTok(String input, int pos, String tok) {
+    if (input.length() - pos < tok.length()) {
+      return false;
+    } else {
+      return input.substring(pos, pos + tok.length()).equals(tok);
+    }
   }
 }
