@@ -88,7 +88,7 @@ fi
 
 START=$( date +%s )
 
-[[ ${PROCS} != 0 ]] || abort "PROCS==0"
+[[ ${PROCS} != 0 ]] || abort "PROCS==0 - specify the process count!"
 
 RUN=$( date_path )
 
