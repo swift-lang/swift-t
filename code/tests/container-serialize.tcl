@@ -16,7 +16,7 @@
 
 package require turbine 0.0.1
 
-proc test_retrieve { } {
+proc test_retrieve_container { } {
     # Check looking up
 
     set c1 [ adlb::create $::adlb::NULL_ID container integer string ]
@@ -47,7 +47,40 @@ proc test_retrieve { } {
     }
 }
 
-proc test_store { } {
+proc test_retrieve_multiset { } {
+    # Check looking up
+
+    set m1 [ adlb::create $::adlb::NULL_ID multiset string ]
+    adlb::store $m1 string "val1" 0
+    adlb::store $m1 string "val2" 0
+    adlb::store $m1 string "val3" 
+    
+    set m1_check [ adlb::retrieve $m1 ]
+    puts "m1_check: $m1_check"
+    #TODO: check it's a 3 element list
+    
+    if { [ llength $m1_check ] != 3 } {
+        error "m1 entries [ llength $m1_check ] expected 3"
+    }
+    
+    set m1_check [ lsort $m1_check ]
+
+    set m1_1 [ lindex $m1_check 0 ]
+    set m1_2 [ lindex $m1_check 1 ]
+    set m1_3 [ lindex $m1_check 2 ]
+
+    if { $m1_1 != "val1" } {
+        error "m1\[1\] $c1_1"
+    }
+    if { $m1_2 != "val2" } {
+        error "m1\[2\] $c1_2"
+    }
+    if { $m1_3 != "val3" } {
+        error "m1\[3\] $c1_3"
+    }
+}
+
+proc test_store_container { } {
     # Check we can store dict to ADLB container
     set c2_val [ dict create 1 val1 2 val2 3 val3 ]
     set c2 [ adlb::create $::adlb::NULL_ID container integer string ]
@@ -77,9 +110,43 @@ proc test_store { } {
     }
 }
 
+proc test_store_multiset { } {
+    # Check we can store list to ADLB multiset
+    set m2_val [ list val1 val2 val3 ]
+    set m2 [ adlb::create $::adlb::NULL_ID multiset string ]
+    #TODO: need to store rather than append
+    #TODO: extra type info
+    adlb::store $m2 container $m2_val
+
+    set m2_size [ adlb::container_size $m2 ]
+
+    set m2_check [ lsort [ adlb::enumerate $m2 members all 0 ] [
+    set m2_0 [ lindex $m2_check 0 ]
+    set m2_1 [ lindex $m2_check 1 ]
+    set m2_2 [ lindex $m2_check 2 ]
+
+    #TODO: check c2 parameters
+    puts "m2_size: $m2_size elems: \[ $m2_0 $m2_1 $m2_2 \]"
+
+    if { $m2_size != 3 } {
+        error "m2 entries $m2_size expected 3"
+    }
+    if { $m2_0 != "val1" } {
+        error "m2\[0\] $m2_0"
+    }
+    if { $m2_1 != "val2" } {
+        error "m2\[1\] $m2_1"
+    }
+    if { $m2_2 != "val3" } {
+        error "m2\[2\] $m2_2"
+    }
+}
+
 proc rules { } {
-   test_retrieve
-   #test_store
+   test_retrieve_container
+   test_retrieve_multiset
+   #test_store_container
+   #test_store_multiset
 }
 
 turbine::defaults
