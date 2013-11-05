@@ -168,6 +168,14 @@ packed_struct_to_tcl_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
                          const void *data, int length,
                          const adlb_type_extra *extra, Tcl_Obj **result);
 static int
+packed_multiset_to_list(Tcl_Interp *interp, Tcl_Obj *const objv[],
+                         const void *data, int length,
+                         const adlb_type_extra *extra, Tcl_Obj **result);
+static int
+packed_container_to_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
+                         const void *data, int length,
+                         const adlb_type_extra *extra, Tcl_Obj **result);
+static int
 tcl_dict_to_adlb_struct(Tcl_Interp *interp, Tcl_Obj *const objv[],
                          Tcl_Obj *dict, adlb_struct_type struct_type,
                          adlb_struct **result);
@@ -1308,6 +1316,9 @@ tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
       result->FILE_REF.mapped = tmp_mapped != 0;
       return TCL_OK;
     }
+    case ADLB_DATA_TYPE_CONTAINER:
+    case ADLB_DATA_TYPE_MULTISET:
+        // TODO: pack with ADLB_Pack_container*, etc.
     default:
       printf("unknown type %i!\n", type);
       return TCL_ERROR;
@@ -1477,6 +1488,160 @@ tcl_dict_to_adlb_struct(Tcl_Interp *interp, Tcl_Obj *const objv[],
   }
 
   return TCL_OK;
+}
+
+static int
+packed_container_to_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
+                         const void *data, int length,
+                         const adlb_type_extra *extra, Tcl_Obj **result)
+{
+  Tcl_Obj **arr = NULL;
+  int pos = 0;
+  adlb_data_type key_type, val_type;
+  int entries;
+  int rc = TCL_OK;
+
+  adlb_data_code dc;
+
+  dc = ADLB_Unpack_container_hdr(data, length, &pos, &entries,
+                                 &key_type, &val_type);
+  TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error parsing packed data header");
+
+  if (extra != NULL)
+  {
+    TCL_CONDITION(val_type == extra->CONTAINER.val_type, "Packed value "
+          "type doesn't match expected: %s vs. %s",
+          ADLB_Data_type_tostring(val_type),
+          ADLB_Data_type_tostring(extra->CONTAINER.val_type));
+    TCL_CONDITION(key_type == extra->CONTAINER.key_type, "Packed key "
+          "type doesn't match expected: %s vs. %s",
+          ADLB_Data_type_tostring(key_type),
+          ADLB_Data_type_tostring(extra->CONTAINER.key_type));
+  }
+
+
+  Tcl_Obj *dict = Tcl_NewDictObj();
+  for (int i = 0; i < entries; i++)
+  {
+    const void *key, *val;
+    int key_len, val_len;
+    dc = ADLB_Unpack_container_entry(key_type, val_type, data, length, &pos,
+                                &key, &key_len, &val, &val_len);
+    if (dc != ADLB_DATA_SUCCESS)
+    {
+      tcl_condition_failed(interp, objv[0], 
+            "Error parsing packed container entry");
+      goto exit_func;
+    }
+    
+    Tcl_Obj *key_obj, *val_obj;
+    // TODO: interpreting key as string; support binary keys
+    
+    rc = adlb_data_to_tcl_obj(interp, objv, ADLB_DATA_ID_NULL, val_type,
+            NULL, val, val_len, &val_obj);
+    if (rc != TCL_OK)
+    {
+      tcl_condition_failed(interp, objv[0], 
+            "Error constructing Tcl object for packed container val");
+      goto exit_func;
+    }
+
+    key_obj = Tcl_NewStringObj(key, key_len - 1);
+    rc = Tcl_DictObjPut(interp, dict, key_obj, val_obj);
+    if (rc != TCL_OK)
+    {
+      Tcl_DecrRefCount(key_obj);
+      Tcl_DecrRefCount(val_obj);
+      tcl_condition_failed(interp, objv[0], 
+            "Error adding entry to dict");
+      goto exit_func;
+
+    }
+  }
+
+  rc = TCL_OK;
+exit_func:
+  if (rc == TCL_OK)
+  {
+    Tcl_SetObjResult(interp, dict);
+    free(arr);
+  }
+  else
+  {
+    Tcl_DecrRefCount(dict);
+  }
+
+  return rc;
+}
+
+static int
+packed_multiset_to_list(Tcl_Interp *interp, Tcl_Obj *const objv[],
+                         const void *data, int length,
+                         const adlb_type_extra *extra, Tcl_Obj **result)
+{
+  Tcl_Obj **arr = NULL;
+  int pos = 0;
+  adlb_data_type elem_type;
+  int entry = 0; // Track how many entries we've inserted
+  int entries;
+  int rc = TCL_OK;
+
+  adlb_data_code dc;
+
+  dc = ADLB_Unpack_multiset_hdr(data, length, &pos, &entries, &elem_type);
+  TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error parsing packed data header");
+
+  if (extra != NULL)
+  {
+    TCL_CONDITION(elem_type == extra->MULTISET.val_type, "Packed element "
+          "type doesn't match expected: %s vs. %s",
+          ADLB_Data_type_tostring(elem_type),
+          ADLB_Data_type_tostring(extra->MULTISET.val_type));
+  }
+
+
+  arr = malloc(sizeof(Tcl_Obj*) * entries);
+  for (entry = 0; entry < entries; entry++)
+  {
+    const void *elem;
+    int elem_len;
+    dc = ADLB_Unpack_multiset_entry(elem_type, data, length, &pos,
+                                    &elem, &elem_len);
+    if (dc != ADLB_DATA_SUCCESS)
+    {
+      tcl_condition_failed(interp, objv[0], 
+            "Error parsing packed multiset entry");
+      goto exit_func;
+    }
+
+    rc = adlb_data_to_tcl_obj(interp, objv, ADLB_DATA_ID_NULL, elem_type,
+            NULL, elem, elem_len, &arr[entry]);
+    if (rc != TCL_OK)
+    {
+      tcl_condition_failed(interp, objv[0], 
+            "Error constructing Tcl object for packed multiset entry");
+      goto exit_func;
+    }
+  }
+
+  rc = TCL_OK;
+exit_func:
+  if (rc == TCL_OK)
+  {
+    Tcl_SetObjResult(interp, Tcl_NewListObj(entries, arr));
+    free(arr);
+  }
+  else if (arr != NULL)
+  {
+    // Free any added entries
+    for (int i = 0; i < entry - 1; i++)
+    {
+      Tcl_DecrRefCount(arr[i]);
+    }
+    free(arr);
+  }
+
+  return rc;
 }
 
 
@@ -1701,6 +1866,10 @@ adlb_data_to_tcl_obj(Tcl_Interp *interp, Tcl_Obj *const objv[], adlb_datum_id id
     case ADLB_DATA_TYPE_STRUCT:
       return packed_struct_to_tcl_dict(interp, objv, data, length,
                                        extra, result);
+    case ADLB_DATA_TYPE_CONTAINER:
+      return packed_container_to_dict(interp, objv, data, length, extra, result);
+    case ADLB_DATA_TYPE_MULTISET:
+      return packed_multiset_to_list(interp, objv, data, length, extra, result);
     default:
       *result = NULL;
       TCL_CONDITION(false, "unsupported type: %s(%i)",
