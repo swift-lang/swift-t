@@ -31,6 +31,7 @@
 #include "table_bp.h"
 
 #include <assert.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -104,12 +105,12 @@ typedef adlb_datum_storage* adlb_container_val;
 /* Pointer to an array of datums */
 typedef struct {
   adlb_datum_storage *arr;
-  uint count;
+  uint32_t count;
 } slice_chunk_t;
 
 typedef struct {
-  uint chunk_count;
-  uint item_count;
+  uint32_t chunk_count;
+  uint32_t item_count;
   slice_chunk_t chunks[];
 } adlb_slice_t;
 
@@ -190,7 +191,7 @@ ADLB_Append_buffer(adlb_data_type type, const void *data, int length,
   tmp_buf: temporary storage that datum may be serialized into if
            needed
   output: the output buffer to append to
-  output_caller_buffer: set to false if we allocate a new buffer,   
+  output_caller_buffer: set to false if we allocate a new buffer,
                         untouched otherwise
   output_pos: current offset into output buffer, which is updated
             for any appended data

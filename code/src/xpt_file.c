@@ -13,6 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License
  */
+
+// Needed for pread() on BlueWaters:
+#define _XOPEN_SOURCE 500
 #include "xpt_file.h"
 
 #ifdef XLB_ENABLE_XPT
@@ -145,7 +148,7 @@ static inline bool is_init(xlb_xpt_state *state)
 adlb_code xlb_xpt_write_close(xlb_xpt_state *state)
 {
   assert(is_init(state));
-  /* 
+  /*
    * Need to mark end of file.  Several cases must be considered to
    * allow reader to correctly distinguish end of this rank's checkpoints
    * vs. file corruption.
@@ -171,7 +174,7 @@ adlb_code xlb_xpt_write_close(xlb_xpt_state *state)
 
   free(state->buffer);
   state->buffer = NULL;
-  
+
   CHECK_MSG(rc == 0, "Error closing checkpoint file: Error code %i %s",
               errno, strerror(errno));
   return ADLB_SUCCESS;
@@ -195,7 +198,7 @@ static inline adlb_code xlb_xpt_next_block(xlb_xpt_state *state,
 {
   assert(is_init(state));
 
-  // Make sure contents written to file  
+  // Make sure contents written to file
   if (state->buffer_used > 0)
   {
     adlb_code code = flush_buffers(state);
@@ -232,7 +235,7 @@ static inline adlb_code flush_buffers(xlb_xpt_state *state)
       ssize_t pwc = pwrite(state->fd, buf_pos, write_size, curr_pos);
       CHECK_MSG(pwc == write_size, "Error writing to checkpoint file at "
               "offset %llu", (long long unsigned)curr_pos);
-              
+
       buf_pos += write_size;
       buf_left -= write_size;
     }
@@ -268,7 +271,7 @@ static inline adlb_code block_move_next(xlb_xpt_state *state)
    Move to start of block.
    filename can be provided for error messages
  */
-static inline adlb_code block_move(uint32_t block, 
+static inline adlb_code block_move(uint32_t block,
         const char *filename, xlb_xpt_state *state)
 {
   assert(is_init(state));
@@ -336,7 +339,7 @@ adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,
   assert(is_init(state));
   assert(key_len >= 0);
   assert(val_len >= 0);
-  
+
   // Buffer for encoded vint
   Byte key_len_enc[VINT_MAX_BYTES];
   // Length in bytes of encoded vint
@@ -383,7 +386,7 @@ static adlb_code write_entry(xlb_xpt_state *state,
   TRACE("CRC: %lx", crc);
 
   DEBUG("Writing checkpoint entry at offset %llu", (long long unsigned)
-          xpt_file_offset(state, true)); 
+          xpt_file_offset(state, true));
 
   adlb_code rc;
   // Write out all data in sequence
@@ -427,7 +430,7 @@ adlb_code xlb_xpt_read_val_w(xlb_xpt_state *state, off_t val_offset,
   // checkpoint is in file currently being written.
   assert(is_init(state));
   assert(val_len >= 0);
-  
+
   uint32_t block = (uint32_t) (val_offset / XLB_XPT_BLOCK_SIZE);
   uint32_t block_pos = (uint32_t) (val_offset % XLB_XPT_BLOCK_SIZE);
   void *buf_pos = buffer;
@@ -441,7 +444,7 @@ adlb_code xlb_xpt_read_val_w(xlb_xpt_state *state, off_t val_offset,
     size_t to_read = block_left < val_remaining ?
                      block_left : val_remaining ;
 
-    DEBUG("Read val chunk: %zu bytes @ %llu", to_read, 
+    DEBUG("Read val chunk: %zu bytes @ %llu", to_read,
           (long long unsigned)read_offset);
 
     if (to_read > 0)
@@ -456,7 +459,7 @@ adlb_code xlb_xpt_read_val_w(xlb_xpt_state *state, off_t val_offset,
               to_read, (long long unsigned)read_offset, read);
         return ADLB_ERROR;
       }
-            
+
       val_remaining -= to_read;
       buf_pos += to_read;
     }
@@ -492,7 +495,7 @@ adlb_code xlb_xpt_read_val_r(xlb_xpt_read_state *state, off_t val_offset,
   CHECK_MSG(ac == ADLB_SUCCESS, "Error reading %i bytes at offset "
           "%llu in file %s (%i)", val_len,
           (long long unsigned)val_offset, state->filename, (int)ac);
- 
+
   return ADLB_SUCCESS;
 }
 
@@ -532,7 +535,7 @@ adlb_code xlb_xpt_open_read(xlb_xpt_read_state *state, const char *filename)
 
   adlb_code rc = xpt_header_read(state, filename);
   ADLB_CHECK(rc)
-  
+
   DEBUG("Opened file %s block size %i ranks %i", filename, state->block_size,
           state->ranks);
   state->filename = strdup(filename);
@@ -543,12 +546,12 @@ adlb_code xlb_xpt_open_read(xlb_xpt_read_state *state, const char *filename)
 /*
   Read header from current position in file, assuming we're byte 2 of
   file (seek to start, then check magic number before calling this).
-  read_hdr: if true, read values and check.  If false, just move past header 
+  read_hdr: if true, read values and check.  If false, just move past header
  */
 static inline adlb_code xpt_header_read(xlb_xpt_read_state *state,
                                         const char *filename)
 {
-  /* 
+  /*
    * Use fread instead of blkread since blkread assumes that
    * block_size, etc. parameters are initialized. THe header
    * should all be in first block of file.
@@ -630,7 +633,7 @@ static inline adlb_code block_read_move(xlb_xpt_read_state *state,
         state->curr_block, new_block, state->curr_rank, state->ranks);
   state->curr_block = new_block;
   state->curr_block_pos = 0;
-        
+
   off_t block_start = ((off_t)state->curr_block) * state->block_size;
   int rc = fseek(state->file, block_start, SEEK_SET);
   if (rc != 0)
@@ -706,7 +709,7 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
    int *key_len, void **key, int *val_len, void **val, off_t *val_offset)
 {
 
-  while (true) // Retry loop 
+  while (true) // Retry loop
   {
     adlb_code rc;
     assert(state->file != NULL);
@@ -721,7 +724,7 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
 
     xpt_file_pos record_start = xpt_read_pos(state);
     off_t rec_offset = xpt_read_offset(state);
-    
+
     // If we resync, it should be 1 bytes offset from prev sync marker
     xpt_file_pos resync_pos = file_pos_add(xpt_read_pos(state), 1);
 
@@ -730,7 +733,7 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
     rc = blkread_uint32(state, &sync);
     if (rc != ADLB_SUCCESS)
       return rc;
-    
+
     if (sync != xpt_sync_marker)
     {
       // Can't do much if sync marker bad, try to continue
@@ -742,7 +745,7 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
     rc = blkread_uint32(state, &crc);
     if (rc != ADLB_SUCCESS)
       return rc;
-    
+
     DEBUG("Reading entry at offset %llu", (long long unsigned)rec_offset);
 
     Byte rec_len_enc[VINT_MAX_BYTES];
@@ -752,7 +755,7 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
     {
       // distinguish between read error and decode error
       ERR_PRINTF("Could not decode record length from file\n");
-      
+
       if (rec_len_encb > 0)
       {
         // Decoding error rather than I/O error
@@ -769,11 +772,11 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
     if(rec_len64 < 0 || rec_len64 > INT_MAX)
     {
       ERR_PRINTF("Out of range record length: %"PRId64"\n", rec_len64);
-      
+
       xpt_read_resync(state, resync_pos);
       return ADLB_NOTHING;
     }
-   
+
     // Reconstitute encoded vint for crc check
     uInt tmp = (uInt)vint_encode(rec_len64, rec_len_enc);
     assert(tmp == rec_len_encb);
@@ -799,7 +802,7 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
       // This appears to be a valid end of file marker
       return ADLB_DONE;
     }
-  
+
     // buffer too small: signal caller
     if (buffer->length < rec_len64)
     {
@@ -829,7 +832,7 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
     if (rc != ADLB_SUCCESS)
       return rc;
 
-    // Now we can check crc 
+    // Now we can check crc
     crc_calc = crc32(0L, Z_NULL, 0);
     crc_calc = crc32(crc_calc, rec_len_enc, (uInt)rec_len_encb);
     crc_calc = crc32(crc_calc, (Byte*)buffer->data, (uInt)rec_len64);
@@ -864,7 +867,7 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
       xpt_read_resync(state, resync_pos);
       return ADLB_NOTHING;
     }
-    
+
     DEBUG("Key length is %"PRId64, key_len64);
 
     *key_len = (int)key_len64;
@@ -876,7 +879,7 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
     *key = buffer->data + key_rel;
     *val = buffer->data + val_rel;
     *val_offset = data_offset + (off_t)val_rel;
-    
+
     return ADLB_SUCCESS;
   }
 }
@@ -937,7 +940,7 @@ static void xpt_read_resync(xlb_xpt_read_state *state,
 {
   adlb_code rc;
   uint32_t curr;
-  
+
   DEBUG("Attempting to resync with file");
   // Move to previous marker, then seek forward
   rc = seek_file_pos(state, resync_point);
@@ -955,7 +958,7 @@ static void xpt_read_resync(xlb_xpt_read_state *state,
     rc = blkread(state, &next_byte, 1);
     if (rc != ADLB_SUCCESS)
       return;
-    
+
     // Big-endian order
     curr = (curr << 8) + next_byte;
   }
@@ -1027,7 +1030,7 @@ static inline adlb_code bufwrite(xlb_xpt_state *state,
       ADLB_CHECK(ac);
       continue;
     }
-   
+
     bool append_magic_num = false;
     size_t write_size = buffer_left < length ? buffer_left : length;
 
@@ -1040,11 +1043,11 @@ static inline adlb_code bufwrite(xlb_xpt_state *state,
       // Only append rest of block
       write_size = XLB_XPT_BLOCK_SIZE - after_buf_pos.block_pos;
     }
-    
+
     TRACE("Append %zu bytes to write buffer (%zu already used)", write_size,
           state->buffer_used);
     memcpy(state->buffer + state->buffer_used, data, write_size);
-    
+
     // Update buffer size before calling flush_buffers
     state->buffer_used += write_size;
 
@@ -1053,10 +1056,10 @@ static inline adlb_code bufwrite(xlb_xpt_state *state,
       adlb_code ac = flush_buffers(state);
       ADLB_CHECK(ac);
     }
-    
+
     data += write_size;
     length -= write_size;
-    
+
     if (append_magic_num)
     {
       // Previous logic should guarantee buffers not full
@@ -1116,7 +1119,7 @@ static xpt_file_pos xpt_get_file_pos(xlb_xpt_state *state,
     // May be in next block
     xpt_file_pos before_buffered = { .block = state->curr_block,
                          .block_pos = state->curr_block_pos };
-    result = file_pos_add(before_buffered, (uint32_t)state->buffer_used); 
+    result = file_pos_add(before_buffered, (uint32_t)state->buffer_used);
   }
   else
   {
@@ -1144,7 +1147,7 @@ static inline adlb_code checked_fread(xlb_xpt_read_state *state, void *buf,
   {
     return ADLB_SUCCESS;
   }
- 
+
  if (feof(state->file))
  {
     DEBUG("Hit end of file in checked_fread");
@@ -1167,7 +1170,7 @@ static inline adlb_code blkread(xlb_xpt_read_state *state, void *buf,
 
   if (state->end_of_stream)
     return ADLB_DONE;
-  
+
   adlb_code ac;
   while (length > 0)
   {
@@ -1203,7 +1206,7 @@ static inline adlb_code blkgetc(xlb_xpt_read_state *state, unsigned char *c)
   assert(state->file != NULL);
   assert(state->curr_block_pos >= 0);
   assert(state->curr_block_pos <= state->block_size);
-    
+
   if (state->end_of_stream)
     return ADLB_DONE;
 
