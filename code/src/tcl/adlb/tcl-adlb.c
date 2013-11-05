@@ -3332,7 +3332,7 @@ ADLB_Xpt_Unpack_Cmd(ClientData cdata, Tcl_Interp *interp,
     // Unpack next entry from buffer
     const void *entry;
     int entry_length;
-    adlb_data_code dc = ADLB_Unpack_buffer(packed.value, packed.length,
+    adlb_data_code dc = ADLB_Unpack_buffer(type, packed.value, packed.length,
           &packed_pos, &entry, &entry_length);
     TCL_CONDITION(dc != ADLB_DATA_DONE, "Hit end of buffer after unpacking "
                "%i/%i fields", field, fieldCount); 
