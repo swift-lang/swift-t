@@ -23,6 +23,7 @@ ADLB_Pack(const adlb_datum_storage *d, adlb_data_type type,
           const adlb_buffer *caller_buffer,
           adlb_binary_data *result)
 {
+  adlb_data_code dc;
   switch (type)
   {
     case ADLB_DATA_TYPE_INTEGER:
@@ -40,13 +41,30 @@ ADLB_Pack(const adlb_datum_storage *d, adlb_data_type type,
     case ADLB_DATA_TYPE_STRUCT:
       return ADLB_Pack_struct(d->STRUCT, caller_buffer, result);
     case ADLB_DATA_TYPE_CONTAINER:
-      verbose_error(ADLB_DATA_ERROR_TYPE,
-        "Serialization of containers not yet supported!\n");
-      break;
-    case ADLB_DATA_TYPE_MULTISET:
-      verbose_error(ADLB_DATA_ERROR_TYPE,
-        "Serialization of multisets not yet supported!\n");
-      break;
+    case ADLB_DATA_TYPE_MULTISET: {
+      // Use ADLB_Pack_buffer implementation for these compound types
+      // since we need to accumulate data at the end of the buffer
+      adlb_buffer res;
+      bool use_caller_buf;
+      if (caller_buffer == NULL)
+      {
+        res.data = NULL;
+        res.length = 0;
+        use_caller_buf = false;
+      }
+      else
+      {
+        res = *caller_buffer;
+        use_caller_buf = true;
+      }
+      int pos = 0;
+      dc = ADLB_Pack_buffer(d, type, NULL, &res, &use_caller_buf, &pos);
+      DATA_CHECK(dc);
+      result->data = result->caller_data = res.data;
+      result->length = res.length;
+      
+      return ADLB_DATA_SUCCESS; 
+    }
     default:
       verbose_error(ADLB_DATA_ERROR_TYPE,
         "Cannot serialize unknown type %i!\n", type);
@@ -62,6 +80,39 @@ ADLB_Pack_buffer(const adlb_datum_storage *d, adlb_data_type type,
 {
   adlb_data_code dc;
 
+  // Some types are implemented by appending to buffer anyway
+  if (type == ADLB_DATA_TYPE_CONTAINER ||
+      type == ADLB_DATA_TYPE_MULTISET)
+  {
+    // Reserve space at front to prefix serialized size in bytes
+    int required = *output_pos + (int)VINT_MAX_BYTES;
+    dc = ADLB_Resize_buf(output, output_caller_buffer, required);
+    DATA_CHECK(dc);
+
+    int start_pos = *output_pos;
+    memset(output->data + start_pos, 0, VINT_MAX_BYTES);
+    *output_pos += VINT_MAX_BYTES;
+    if (type == ADLB_DATA_TYPE_CONTAINER)
+    {
+      dc = ADLB_Pack_container(&d->CONTAINER, tmp_buf, output,
+                              output_caller_buffer, output_pos);
+      DATA_CHECK(dc);
+    }
+    else
+    {
+      assert(type == ADLB_DATA_TYPE_MULTISET);
+      dc = ADLB_Pack_multiset(d->MULTISET, tmp_buf, output,
+                              output_caller_buffer, output_pos);
+      DATA_CHECK(dc);
+    }
+
+    // Add in actual size to reserved place
+    int serialized_len = *output_pos - start_pos;
+    vint_encode(serialized_len, output->data + start_pos);
+
+    return ADLB_DATA_SUCCESS;
+  }
+
   // Get binary representation of datum
   adlb_binary_data packed;
   dc = ADLB_Pack(d, type, tmp_buf, &packed); 
@@ -69,7 +120,8 @@ ADLB_Pack_buffer(const adlb_datum_storage *d, adlb_data_type type,
 
   // Check buffer large enough for this member
   int required_size = *output_pos + (int)VINT_MAX_BYTES + packed.length;
-  ADLB_Resize_buf(output, output_caller_buffer, required_size);
+  dc = ADLB_Resize_buf(output, output_caller_buffer, required_size);
+  DATA_CHECK(dc);
 
   // Prefix with length of member
   int vint_len = vint_encode(packed.length, output->data + *output_pos);
@@ -85,6 +137,93 @@ ADLB_Pack_buffer(const adlb_datum_storage *d, adlb_data_type type,
   if (tmp_buf != NULL && packed.data != tmp_buf->data)
     ADLB_Free_binary_data(&packed);
 
+  return ADLB_DATA_SUCCESS;
+}
+
+adlb_data_code
+ADLB_Pack_container(const adlb_container *container,
+          const adlb_buffer *tmp_buf, adlb_buffer *output,
+          bool *output_caller_buffer, int *output_pos)
+{
+  int dc;
+  int required = *output_pos + (int)VINT_MAX_BYTES;
+  dc = ADLB_Resize_buf(output, output_caller_buffer, required);
+  DATA_CHECK(dc);
+
+  const struct table_bp *members = container->members;
+  int vint_len = vint_encode(members->size, output->data + *output_pos);
+  assert(vint_len >= 1);
+  *output_pos += vint_len;
+
+  int appended = 0;
+
+  for (int i = 0; i < members->capacity; i++)
+  {
+    struct list_bp* L = members->array[i];
+    struct list_bp_item* item = L->head;
+    while (item != NULL)
+    {
+      // append key; append val
+      required = *output_pos + (int)VINT_MAX_BYTES + item->key_len;
+      dc = ADLB_Resize_buf(output, output_caller_buffer, required);
+      DATA_CHECK(dc);
+
+      int vint_len = vint_encode(item->key_len, output->data + *output_pos);
+      assert(vint_len >= 1);
+      *output_pos += vint_len;
+      memcpy(output->data + *output_pos, item->key, item->key_len);
+      *output_pos += item->key_len;
+
+      dc = ADLB_Pack_buffer(item->data, container->val_type,
+              tmp_buf, output, output_caller_buffer, output_pos);
+      DATA_CHECK(dc);
+
+      appended++;
+      item = item->next;
+    }
+  }
+  
+  // Check that the number we appended matches
+  assert(appended == members->size);
+  return ADLB_DATA_SUCCESS;
+}
+
+adlb_data_code
+ADLB_Pack_multiset(adlb_multiset_ptr ms,
+          const adlb_buffer *tmp_buf, adlb_buffer *output,
+          bool *output_caller_buffer, int *output_pos)
+{
+  int dc;
+  int required = *output_pos + (int)VINT_MAX_BYTES;
+  dc = ADLB_Resize_buf(output, output_caller_buffer, required);
+  DATA_CHECK(dc);
+
+  int64_t size = xlb_multiset_size(ms);
+  int vint_len = vint_encode(size, output->data + *output_pos);
+  assert(vint_len >= 1);
+  *output_pos += vint_len;
+
+  int appended = 0;
+
+  for (uint i = 0; i < ms->chunk_count; i++)
+  {
+    xlb_multiset_chunk *chunk = ms->chunks[i];
+    uint chunk_len = (i == ms->chunk_count - 1) ?
+          ms->last_chunk_elems : XLB_MULTISET_CHUNK_SIZE;
+    
+    for (uint j = 0; j < chunk_len; j++)
+    {
+      // append value
+      dc = ADLB_Pack_buffer(&chunk->arr[j], ms->elem_type,
+              tmp_buf, output, output_caller_buffer, output_pos);
+      DATA_CHECK(dc);
+
+      appended++;
+    }
+  }
+
+  // Check that the number we appended matches
+  assert(appended == size);
   return ADLB_DATA_SUCCESS;
 }
 
@@ -147,6 +286,7 @@ adlb_data_code ADLB_Unpack(adlb_datum_storage *d, adlb_data_type type,
     case ADLB_DATA_TYPE_CONTAINER:
     case ADLB_DATA_TYPE_MULTISET:
       // closed- do nothing
+      // TODO: unpack these
       printf("Cannot unpack type: %i\n", type);
       return ADLB_DATA_ERROR_INVALID;
       break;

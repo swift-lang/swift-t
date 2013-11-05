@@ -23,6 +23,10 @@ typedef struct adlb_multiset_s {
   uint last_chunk_elems; // Number of actual data items
 } xlb_multiset;
 
+struct xlb_multiset_chunk_s {
+  adlb_datum_storage arr[XLB_MULTISET_CHUNK_SIZE];
+};
+
 
 xlb_multiset *xlb_multiset_alloc(adlb_data_type elem_type);
 

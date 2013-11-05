@@ -8,10 +8,6 @@
 #include "data_cleanup.h"
 #include "data_internal.h"
 
-struct xlb_multiset_chunk_s {
-  adlb_datum_storage arr[XLB_MULTISET_CHUNK_SIZE];
-};
-
 xlb_multiset *xlb_multiset_alloc(adlb_data_type elem_type)
 {
   xlb_multiset *m;

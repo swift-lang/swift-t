@@ -167,6 +167,16 @@ ADLB_Pack(const adlb_datum_storage *d, adlb_data_type type,
           const adlb_buffer *caller_buffer,
           adlb_binary_data *result);
 
+adlb_data_code
+ADLB_Pack_container(const adlb_container *container,
+          const adlb_buffer *tmp_buf, adlb_buffer *output,
+          bool *output_caller_buffer, int *output_pos);
+
+adlb_data_code
+ADLB_Pack_multiset(adlb_multiset_ptr ms,
+          const adlb_buffer *tmp_buf, adlb_buffer *output,
+          bool *output_caller_buffer, int *output_pos);
+
 /*
   Pack a datum into a buffer, prefixing with size stored as vint,
   so that contiguously stored datums can be correctly extracted.
@@ -456,7 +466,7 @@ ADLB_Resize_buf(adlb_buffer *buf, bool *using_caller_buf, int min_length)
     }
     // If caller-provided buffer, have to allocate new, otherwise
     // resize current
-    if (using_caller_buf != NULL && *using_caller_buf)
+    if (buf->length == 0 || (using_caller_buf != NULL && *using_caller_buf))
     {
       void *old_data = buf->data;
       buf->data = malloc((size_t)buf->length);
