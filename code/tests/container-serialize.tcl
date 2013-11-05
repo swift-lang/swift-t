@@ -26,8 +26,7 @@ proc test_retrieve_container { } {
     
     set c1_check [ adlb::retrieve $c1 ]
     puts "c1_check: $c1_check"
-    #TODO: check it's a 3 element dict
-    
+
     if { [ dict size $c1_check ] != 3 } {
         error "c1 entries [ dict size $c1_check ] expected 3"
     }
@@ -57,7 +56,6 @@ proc test_retrieve_multiset { } {
     
     set m1_check [ adlb::retrieve $m1 ]
     puts "m1_check: $m1_check"
-    #TODO: check it's a 3 element list
     
     if { [ llength $m1_check ] != 3 } {
         error "m1 entries [ llength $m1_check ] expected 3"
@@ -93,7 +91,6 @@ proc test_store_container { } {
     set c2_2 [ adlb::lookup $c2 2 ]
     set c2_3 [ adlb::lookup $c2 3 ]
 
-    #TODO: check c2 parameters
     puts "c2_size: $c2_size elems: \[ $c2_0 $c2_1 $c2_2 \]"
 
     if { $c2_size != 3 } {
@@ -125,7 +122,6 @@ proc test_store_multiset { } {
     set m2_1 [ lindex $m2_check 1 ]
     set m2_2 [ lindex $m2_check 2 ]
 
-    #TODO: check c2 parameters
     puts "m2_size: $m2_size elems: \[ $m2_0 $m2_1 $m2_2 \]"
 
     if { $m2_size != 3 } {
