@@ -67,6 +67,8 @@ struct table hostmap;
 
 static inline int choose_data_server();
 
+static int disable_hostmap;
+
 static void
 check_versions()
 {
@@ -172,7 +174,6 @@ report_debug_ranks()
 static bool
 setup_hostmap()
 {
-  int disable_hostmap;
   getenv_integer("ADLB_DISABLE_HOSTMAP", 0, &disable_hostmap);
   if (disable_hostmap) return true;
 
@@ -236,6 +237,8 @@ ADLB_Version(version* output)
 adlb_code
 ADLB_Hostmap_stats(uint* count, uint* name_max)
 {
+  CHECK_MSG(!disable_hostmap,
+            "ADLB_Hostmap_stats: hostmap is disabled!");
   struct utsname u;
   *count = (uint)hostmap.size;
   *name_max = sizeof(u.nodename);
@@ -246,6 +249,8 @@ adlb_code
 ADLB_Hostmap_lookup(const char* name, int count,
                     int* output, int* actual)
 {
+  CHECK_MSG(!disable_hostmap,
+             "ADLB_Hostmap_lookup: hostmap is disabled!");
   struct list_i* L;
   bool b = table_search(&hostmap, name, (void*) &L);
   if (!b)
@@ -264,6 +269,8 @@ ADLB_Hostmap_lookup(const char* name, int count,
 adlb_code
 ADLB_Hostmap_list(char* output, uint max, uint offset, int* actual)
 {
+  CHECK_MSG(!disable_hostmap,
+               "ADLB_Hostmap_list: hostmap is disabled!");
   // Number of chars written
   int count = 0;
   // Number of hostnames written
@@ -1339,6 +1346,7 @@ ADLBP_Finalize()
 static void
 free_hostmap()
 {
+  if (disable_hostmap) return;
   for (int i = 0; i < hostmap.capacity; i++)
   {
     struct list_sp* S = hostmap.array[i];
