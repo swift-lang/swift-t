@@ -189,7 +189,7 @@ xlb_multiset_extract_slice(xlb_multiset *set, int start, int count,
     while (c < count && pos_in_chunk < chunk_elems) {
       // Append element to buffer
       adlb_datum_storage *elem = &chunk->arr[pos_in_chunk];
-      dc = ADLB_Pack_buffer(elem, elem_type, &tmp_buf,
+      dc = ADLB_Pack_buffer(elem, elem_type, true, &tmp_buf,
                 output, &use_caller_buf, &output_pos);
       DATA_CHECK(dc);
       c++;

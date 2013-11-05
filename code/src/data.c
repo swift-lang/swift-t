@@ -1074,22 +1074,16 @@ pack_member(adlb_container *cont, struct list_bp_item *item,
             bool *result_caller_buffer, int *result_pos)
 {
   adlb_data_code dc;
-  int vint_len;
   if (include_keys)
   {
-    size_t key_len = item->key_len; 
-    ADLB_Resize_buf(result, result_caller_buffer, *result_pos +
-                      (int)VINT_MAX_BYTES + (int)key_len);
-    vint_len = vint_encode((int)key_len,
-                    (unsigned char*)result->data + *result_pos);
-    *result_pos += vint_len;
-    memcpy(result->data + *result_pos, item->key, key_len);
-    *result_pos += (int)key_len;
+    dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL, item->key, item->key_len,
+                        true, result, result_caller_buffer, result_pos);
+    DATA_CHECK(dc);
   }
   if (include_vals)
   {
-    dc = ADLB_Pack_buffer(item->data, cont->val_type, tmp_buf, result,
-                          result_caller_buffer, result_pos);
+    dc = ADLB_Pack_buffer(item->data, cont->val_type, true,
+                tmp_buf, result, result_caller_buffer, result_pos);
     DATA_CHECK(dc);
   }
 

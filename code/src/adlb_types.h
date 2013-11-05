@@ -176,15 +176,17 @@ ADLB_Pack(const adlb_datum_storage *d, adlb_data_type type,
  */
 adlb_data_code
 ADLB_Append_buffer(adlb_data_type type, const void *data, int length,
-        adlb_buffer *output, bool *output_caller_buffer, int *output_pos);
+        bool prefix_len, adlb_buffer *output, bool *output_caller_buffer,
+        int *output_pos);
 
 
 /*
-  Pack a datum into a buffer, prefixing with size stored as vint,
-  so that contiguously stored datums can be correctly extracted.
+  Pack a datum into a buffer.
   This will use tmp_buf as temporary storage if needed, and resize
   output if needed.
 
+  prefix_len: include prefix with size stored as vint, so that
+      contiguously stored datums can be correctly extracted.
   tmp_buf: temporary storage that datum may be serialized into if
            needed
   output: the output buffer to append to
@@ -195,7 +197,7 @@ ADLB_Append_buffer(adlb_data_type type, const void *data, int length,
  */
 adlb_data_code
 ADLB_Pack_buffer(const adlb_datum_storage *d, adlb_data_type type,
-        const adlb_buffer *tmp_buf, adlb_buffer *output,
+        bool prefix_len, const adlb_buffer *tmp_buf, adlb_buffer *output,
         bool *output_caller_buffer, int *output_pos);
 
 /*
