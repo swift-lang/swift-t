@@ -331,6 +331,7 @@ fi
 AC_SUBST(USE_MPE)
 AC_SUBST(ENABLE_MPE)
 
+ENABLE_XPT=yes
 AC_ARG_ENABLE(checkpoint,
      AS_HELP_STRING(
                     [--enable-checkpoint],
@@ -353,7 +354,6 @@ else
     AC_MSG_RESULT([Checkpointing disabled]);
 fi
 AC_SUBST(ENABLE_XPT)
-
 
 USE_ADLB=0
 AC_ARG_WITH(adlb,
