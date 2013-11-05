@@ -455,6 +455,12 @@ The normal Turbine environment variables are honored, plus the
 * Compile c-utils with gcc
 * Configure ADLB with mpixlc and +--enable-xlc --enable-mpi-2+
 * Configure Turbine with bgxlc and +--enable-xlc+
+* Run: (+make+ issue)
++
+----
+make src/util/debug.h
+make
+----
 
 *Quirks:*
 
@@ -466,6 +472,35 @@ bug when applied to Tcl's +StrToD.c+.  Compiling this file with +-O3+ fixes
 the problem.
 
 == Cray
+
+=== Blue Waters 
+
+Blue Waters is a Cray XE6/XK7 at the University of Illinois at
+Urbana-Champaign. 
+
+==== Build procedure
+
+*As of:*  11/05/2013
+
+Cray systems do not use +mpicc+.  We set +CC=gcc+ and use compiler
+flags to configure the MPI library.
+
+* Configure ADLB with:
++
+----
+./configure --prefix=/path/to/lb --with-c-utils=/path/to/c-utils
+CC=gcc
+CFLAGS=-I/opt/cray/mpt/default/gni/mpich2-gnu/47/include
+LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/47/lib -lmpich"
+--enable-mpi-2
+----
++
+* In the Turbine configure step, replace the +--with-mpi+ option with:
++
+----
+--enable-custom-mpi --with-mpi=/opt/cray/mpt/default/gni/mpich2-gnu/47
+----
+
 
 === Beagle
 
