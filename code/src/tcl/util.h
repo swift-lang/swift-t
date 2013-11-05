@@ -146,6 +146,18 @@ Tcl_Obj* tcl_list_from_array_ints(Tcl_Interp *interp,
     return TCL_ERROR;                                            \
   }
 
+/**
+   Print error message and jump to label
+   Requires Tcl_Interp interp and Tcl_Obj* objv in scope
+ */
+#define TCL_ERROR_GOTO(label, format, args...)                   \
+  {                                                              \
+    tcl_condition_failed(interp, objv[0], format, ## args);      \
+    goto label;                                                  \
+  }
+
+  
+
 /*
    Tcl checks follow.  Note that these are disabled by NDEBUG.
    Thus, they should never do anything in a correct Turbine program.
@@ -164,6 +176,12 @@ Tcl_Obj* tcl_list_from_array_ints(Tcl_Interp *interp,
     TCL_RETURN_ERROR(format, ## args);                            \
   }
 
+#define TCL_CHECK_MSG_GOTO(rc, label, format, args...)            \
+  if (rc != TCL_OK) {                                             \
+    TCL_ERROR_GOTO(label, format, ## args);                       \
+  }
+
+
 /**
    If condition is false, return a Tcl error
    Disabled by NDEBUG
@@ -174,11 +192,19 @@ Tcl_Obj* tcl_list_from_array_ints(Tcl_Interp *interp,
     TCL_RETURN_ERROR(format, ## args);                           \
   }
 
+#define TCL_CONDITION_GOTO(condition, label, format, args...)    \
+  if (!(condition)) {                                            \
+    TCL_ERROR_GOTO(label, format, ## args);                      \
+  }
+
 #else
 
 #define TCL_CHECK(rc) ((void)(rc))
 #define TCL_CHECK_MSG(rc, format, args...) ((void)(rc))
+#define TCL_CHECK_MSG_GOTO(rc, label, format, args...) ((void)(rc))
 #define TCL_CONDITION(condition, format, args...) ((void)(condition))
+#define TCL_CONDITION_GOTO(condition, label, format, args...) \
+                      ((void)(condition))
 
 #endif
 
