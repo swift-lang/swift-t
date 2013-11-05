@@ -41,6 +41,7 @@ TEST_SRC_TCL := $(DIR)/error.tcl               \
                 $(DIR)/container-enumerate.tcl \
                 $(DIR)/container-close-1.tcl   \
                 $(DIR)/container-close-2.tcl   \
+                $(DIR)/container-serialize.tcl \
                 $(DIR)/container-sum.tcl       \
                 $(DIR)/container-sum2.tcl      \
                 $(DIR)/string_split.tcl        \
