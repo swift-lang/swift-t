@@ -21,7 +21,8 @@ namespace eval turbine {
     namespace export get_file_status get_file_path is_file_mapped \
                      filename2 copy_file close_file file_read file_write \
                      swift_filename
-    proc swift_filename { file_handle } { 
+    proc swift_filename { file_handle } {
+        incr_local_file_refcount file_handle
         set result [ lindex $file_handle 0 ]
         log "swift_filename: $file_handle -> $result"
         return $result
@@ -288,12 +289,12 @@ namespace eval turbine {
        lset local_f 1 [ expr {[ lindex $local_f 1 ] + 1} ]
        store_void [ get_file_status $f ]
     }
-    
+
     proc incr_local_file_refcount { varname } {
-        upvar 1 $varname v
+        upvar $varname v
         set old_refcount [ lindex $v 1 ]
         set new_refcount [ expr {$old_refcount + 1} ]
-        
+
         if [ expr $old_refcount <= 0  ] {
           error "Trying to increment reference count from zero or negative: \
                     [ local_file_path $v ]"
