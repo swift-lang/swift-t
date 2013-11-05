@@ -167,16 +167,6 @@ ADLB_Pack(const adlb_datum_storage *d, adlb_data_type type,
           const adlb_buffer *caller_buffer,
           adlb_binary_data *result);
 
-adlb_data_code
-ADLB_Pack_container(const adlb_container *container,
-          const adlb_buffer *tmp_buf, adlb_buffer *output,
-          bool *output_caller_buffer, int *output_pos);
-
-adlb_data_code
-ADLB_Pack_multiset(adlb_multiset_ptr ms,
-          const adlb_buffer *tmp_buf, adlb_buffer *output,
-          bool *output_caller_buffer, int *output_pos);
-
 /*
   Pack a datum into a buffer, prefixing with size stored as vint,
   so that contiguously stored datums can be correctly extracted.
@@ -216,6 +206,7 @@ ADLB_Unpack(adlb_datum_storage *d, adlb_data_type type,
   find the packed data for the next item in the buffer and
   advance the read position
   buffer, length: buffer packed with ADLB_Pack_buffer
+  type: data type, or ADLB_DATA_TYPE_NULL if uninterpreted
   pos: input/output.  Caller provides current read position in buffer,
         this function sets it to the start of the next entry
   entry, entry_length: output. packed field data
@@ -224,8 +215,9 @@ ADLB_Unpack(adlb_datum_storage *d, adlb_data_type type,
            ADLB_DATA_INVALID if not able to decode
  */
 adlb_data_code
-ADLB_Unpack_buffer(const void *buffer, int length, int *pos,
-                   const void **entry, int *entry_length);
+ADLB_Unpack_buffer(adlb_data_type type,
+        const void *buffer, int length, int *pos,
+        const void **entry, int *entry_length);
 
 /**
    Functions to pack and unpack data from buffers.
@@ -397,6 +389,23 @@ ADLB_Unpack_blob(adlb_blob_t *b, void *data, int length, bool copy)
   return ADLB_DATA_SUCCESS;
 }
 
+adlb_data_code
+ADLB_Pack_container(const adlb_container *container,
+          const adlb_buffer *tmp_buf, adlb_buffer *output,
+          bool *output_caller_buffer, int *output_pos);
+
+adlb_data_code
+ADLB_Unpack_container(adlb_container *container,
+                      const void *data, int length);
+
+adlb_data_code
+ADLB_Pack_multiset(const adlb_multiset_ptr ms,
+          const adlb_buffer *tmp_buf, adlb_buffer *output,
+          bool *output_caller_buffer, int *output_pos);
+
+adlb_data_code
+ADLB_Unpack_multiset(adlb_multiset_ptr *ms,
+          const void *data, int length);
 
 // Header used for metadata about serialization
 // The remainder of buffer has struct fields stored in order

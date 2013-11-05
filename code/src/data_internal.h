@@ -10,6 +10,8 @@
 #include "data.h"
 
 
+#define CONTAINER_INIT_CAPACITY 1024
+
 /**
    Status vector for Turbine variables
  */

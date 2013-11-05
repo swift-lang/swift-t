@@ -236,7 +236,7 @@ static adlb_data_code
 datum_init_container(adlb_datum *d, adlb_data_type key_type,
                       adlb_data_type val_type)
 {
-  d->data.CONTAINER.members = table_bp_create(1024);
+  d->data.CONTAINER.members = table_bp_create(CONTAINER_INIT_CAPACITY);
   d->data.CONTAINER.key_type = key_type;
   d->data.CONTAINER.val_type = val_type;
 
