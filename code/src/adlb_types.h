@@ -399,6 +399,17 @@ ADLB_Unpack_container(adlb_container *container,
                       const void *data, int length);
 
 adlb_data_code
+ADLB_Unpack_container_hdr(const void *data, int length, int *pos,
+        int *entries, adlb_data_type *key_type, adlb_data_type *val_type);
+
+adlb_data_code
+ADLB_Unpack_container_entry(adlb_data_type key_type,
+          adlb_data_type val_type,
+          const void *data, int length, int *pos,
+          const void **key, int *key_len,
+          const void **val, int *val_len);
+
+adlb_data_code
 ADLB_Pack_multiset(const adlb_multiset_ptr ms,
           const adlb_buffer *tmp_buf, adlb_buffer *output,
           bool *output_caller_buffer, int *output_pos);
@@ -406,6 +417,15 @@ ADLB_Pack_multiset(const adlb_multiset_ptr ms,
 adlb_data_code
 ADLB_Unpack_multiset(adlb_multiset_ptr *ms,
           const void *data, int length);
+
+adlb_data_code
+ADLB_Unpack_multiset_hdr(const void *data, int length, int *pos,
+                int *entries, adlb_data_type *elem_type);
+
+adlb_data_code
+ADLB_Unpack_multiset_entry(adlb_data_type elem_type,
+          const void *data, int length, int *pos,
+          const void **elem, int *elem_len);
 
 // Header used for metadata about serialization
 // The remainder of buffer has struct fields stored in order

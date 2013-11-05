@@ -329,52 +329,29 @@ ADLB_Unpack_container(adlb_container *container,
 
   adlb_data_code dc;
   int pos = 0;
-  int vint_len;
+  int entries;
+  adlb_data_type key_type, val_type;
 
-  // Extract key and value types
-  int64_t key_type64, val_type64;
+  dc = ADLB_Unpack_container_hdr(data, length, &pos,
+        &entries, &key_type, &val_type);
+  DATA_CHECK(dc);
 
-  vint_len = vint_decode(data + pos, length - pos, &key_type64);
-  assert(vint_len >= 1);
-  pos += vint_len;
-  check_verbose(key_type64 == (adlb_data_type_short)key_type64,
-              ADLB_DATA_ERROR_INVALID,
-              "Key type is out of range: %"PRId64, key_type64);
-  container->key_type = (adlb_data_type_short)key_type64;
-  
-  vint_len = vint_decode(data + pos, length - pos, &val_type64);
-  assert(vint_len >= 1);
-  pos += vint_len;
-  check_verbose(val_type64 == (adlb_data_type_short)val_type64,
-              ADLB_DATA_ERROR_INVALID,
-              "Key type is out of range: %"PRId64, val_type64);
-  container->val_type = (adlb_data_type_short)val_type64;
- 
-  // Find number of entries
-  int64_t entries;
-  vint_len = vint_decode(data, length, &entries);
-  check_verbose(vint_len >= 0, ADLB_DATA_ERROR_INVALID,
-                "Could not extract container entry count");
-  pos += vint_len;
-
+  container->key_type = key_type;
+  container->val_type = val_type;
   container->members = table_bp_create(CONTAINER_INIT_CAPACITY);
   for (int i = 0; i < entries; i++)
   {
     // unpack key/value pair and add to container
     const void *key, *val;
     int key_len, val_len;
-    dc = ADLB_Unpack_buffer(ADLB_DATA_TYPE_NULL, data, length,
-                    &pos, &key, &key_len);
+    dc = ADLB_Unpack_container_entry(key_type, val_type,
+          data, length, &pos, &key, &key_len, &val, &val_len);
     DATA_CHECK(dc);
-    
-    dc = ADLB_Unpack_buffer(ADLB_DATA_TYPE_NULL, data, length,
-                    &pos, &val, &val_len);
-    DATA_CHECK(dc);
-    
+
     adlb_datum_storage *d = malloc(sizeof(adlb_datum_storage));
     check_verbose(d != NULL, ADLB_DATA_ERROR_OOM,
                   "error allocating memory");
-    dc = ADLB_Unpack(d, container->val_type, val, val_len);
+    dc = ADLB_Unpack(d, val_type, val, val_len);
     DATA_CHECK(dc);
 
     bool ok = table_bp_add(container->members, key, key_len, d);
@@ -384,6 +361,57 @@ ADLB_Unpack_container(adlb_container *container,
   return ADLB_DATA_SUCCESS;
 }
 
+adlb_data_code
+ADLB_Unpack_container_hdr(const void *data, int length, int *pos,
+        int *entries, adlb_data_type *key_type, adlb_data_type *val_type)
+{
+  int vint_len;
+  int64_t key_type64;
+  vint_len = vint_decode(data + *pos, length - *pos, &key_type64);
+  assert(vint_len >= 1);
+  *pos += vint_len;
+  *key_type = (adlb_data_type)key_type64; 
+  check_verbose(key_type64 == *key_type, ADLB_DATA_ERROR_INVALID,
+              "Container key type is out of range: %"PRId64, key_type64);
+  
+  int64_t val_type64;
+  vint_len = vint_decode(data + *pos, length - *pos, &val_type64);
+  assert(vint_len >= 1);
+  *pos += vint_len;
+  *val_type = (adlb_data_type)val_type64; 
+  check_verbose(val_type64 == *val_type, ADLB_DATA_ERROR_INVALID,
+              "Container val type is out of range: %"PRId64, val_type64);
+
+  int64_t entries64;
+  vint_len = vint_decode(data + *pos, length, &entries64);
+  check_verbose(vint_len >= 0, ADLB_DATA_ERROR_INVALID,
+                "Could not extract multiset entry count");
+  check_verbose(entries64 >= 0 && entries64 <= INT_MAX,
+      ADLB_DATA_ERROR_INVALID, "Entries out of range: %"PRId64, entries64);
+  *entries = (int)entries64;
+  *pos += vint_len;
+  
+  return ADLB_DATA_SUCCESS;
+
+}
+
+adlb_data_code
+ADLB_Unpack_container_entry(adlb_data_type key_type,
+          adlb_data_type val_type,
+          const void *data, int length, int *pos,
+          const void **key, int *key_len,
+          const void **val, int *val_len)
+{
+  int dc;
+  dc = ADLB_Unpack_buffer(ADLB_DATA_TYPE_NULL, data, length,
+                  pos, key, key_len);
+  DATA_CHECK(dc);
+  
+  dc = ADLB_Unpack_buffer(ADLB_DATA_TYPE_NULL, data, length,
+                  pos, val, val_len);
+  DATA_CHECK(dc);
+  return ADLB_DATA_SUCCESS;
+}
 
 adlb_data_code
 ADLB_Unpack_multiset(adlb_multiset_ptr *ms,
@@ -394,29 +422,21 @@ ADLB_Unpack_multiset(adlb_multiset_ptr *ms,
 
   adlb_data_code dc;
   int pos = 0;
-  int vint_len;
-  int64_t elem_type64;
-  vint_len = vint_decode(data + pos, length - pos, &elem_type64);
-  assert(vint_len >= 1);
-  pos += vint_len;
-  check_verbose(elem_type64 == (adlb_data_type)elem_type64,
-              ADLB_DATA_ERROR_INVALID,
-              "Multiset elem type is out of range: %"PRId64, elem_type64);
-  
-  int64_t entries;
-  vint_len = vint_decode(data, length, &entries);
-  check_verbose(vint_len >= 0, ADLB_DATA_ERROR_INVALID,
-                "Could not extract multiset entry count");
-  pos += vint_len;
-  
-  *ms = xlb_multiset_alloc((adlb_data_type)elem_type64);
+
+  int entries;
+  adlb_data_type elem_type;
+  dc = ADLB_Unpack_multiset_hdr(data, length, &pos,
+                                &entries, &elem_type);
+  DATA_CHECK(dc);
+
+  *ms = xlb_multiset_alloc(elem_type);
   for (int i = 0; i < entries; i++)
   {
     // unpack elem and add it
     const void *elem;
     int elem_len;
-    dc = ADLB_Unpack_buffer(ADLB_DATA_TYPE_NULL, data, length,
-                    &pos, &elem, &elem_len);
+    dc = ADLB_Unpack_multiset_entry(elem_type, data, length,
+                                    &pos, &elem, &elem_len);
     DATA_CHECK(dc);
     
     dc = xlb_multiset_add(*ms, elem, elem_len, NULL);
@@ -424,6 +444,43 @@ ADLB_Unpack_multiset(adlb_multiset_ptr *ms,
   }
 
   return ADLB_DATA_SUCCESS;
+}
+
+adlb_data_code
+ADLB_Unpack_multiset_hdr(const void *data, int length, int *pos,
+                int *entries, adlb_data_type *elem_type)
+{
+  int vint_len;
+  int64_t elem_type64;
+  vint_len = vint_decode(data + *pos, length - *pos, &elem_type64);
+  assert(vint_len >= 1);
+  *pos += vint_len;
+  *elem_type = (adlb_data_type)elem_type64; 
+  check_verbose(elem_type64 == *elem_type, ADLB_DATA_ERROR_INVALID,
+              "Multiset elem type is out of range: %"PRId64, elem_type64);
+
+  int64_t entries64;
+  vint_len = vint_decode(data + *pos, length, &entries64);
+  check_verbose(vint_len >= 0, ADLB_DATA_ERROR_INVALID,
+                "Could not extract multiset entry count");
+  check_verbose(entries64 >= 0 && entries64 <= INT_MAX,
+      ADLB_DATA_ERROR_INVALID, "Entries out of range: %"PRId64, entries64);
+  *entries = (int)entries64;
+  *pos += vint_len;
+  
+  return ADLB_DATA_SUCCESS;
+}
+
+/*
+  Unpack value from buffer
+ */
+adlb_data_code
+ADLB_Unpack_multiset_entry(adlb_data_type elem_type,
+          const void *data, int length, int *pos,
+          const void **elem, int *elem_len)
+{
+  return ADLB_Unpack_buffer(elem_type, data, length,
+                            pos, elem, elem_len);
 }
 
 /* Free the memory associated with datum contents */
