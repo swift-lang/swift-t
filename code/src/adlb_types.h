@@ -166,6 +166,18 @@ adlb_data_code
 ADLB_Pack(const adlb_datum_storage *d, adlb_data_type type,
           const adlb_buffer *caller_buffer,
           adlb_binary_data *result);
+/*
+  Append data to a buffer, prefixing with size stored as vint,
+  so that contiguously stored entries can be correctly extracted.
+  This will use tmp_buf as temporary storage if needed, and resize
+  output if needed.
+  type: this must be provided if data is to interpreted as a particular
+        ADLB data type upon decoding.
+ */
+adlb_data_code
+ADLB_Append_buffer(adlb_data_type type, const void *data, int length,
+        adlb_buffer *output, bool *output_caller_buffer, int *output_pos);
+
 
 /*
   Pack a datum into a buffer, prefixing with size stored as vint,
@@ -185,6 +197,12 @@ adlb_data_code
 ADLB_Pack_buffer(const adlb_datum_storage *d, adlb_data_type type,
         const adlb_buffer *tmp_buf, adlb_buffer *output,
         bool *output_caller_buffer, int *output_pos);
+
+/*
+  Whether we pad the vint size to VINT_MAX_BYTES when appending
+  to buffer;
+ */
+bool ADLB_pack_pad_size(adlb_data_type type);
 
 /*
    Take ownership of data, allocing new buffer if needed
@@ -389,10 +407,19 @@ ADLB_Unpack_blob(adlb_blob_t *b, void *data, int length, bool copy)
   return ADLB_DATA_SUCCESS;
 }
 
+/*
+  Multiset is packed with a header, then a series of entries.
+  Each entry is a key and value packed with ADLB_Append_buffer.
+ */
 adlb_data_code
 ADLB_Pack_container(const adlb_container *container,
           const adlb_buffer *tmp_buf, adlb_buffer *output,
           bool *output_caller_buffer, int *output_pos);
+
+adlb_data_code
+ADLB_Pack_container_hdr(int elems, adlb_data_type key_type,
+        adlb_data_type val_type, adlb_buffer *output,
+        bool *output_caller_buffer, int *output_pos);
 
 adlb_data_code
 ADLB_Unpack_container(adlb_container *container,
@@ -409,10 +436,18 @@ ADLB_Unpack_container_entry(adlb_data_type key_type,
           const void **key, int *key_len,
           const void **val, int *val_len);
 
+/*
+  Multiset is packed with a header, then a series of
+  entries.  Each entry is packed with ADLB_Append_buffer.
+ */
 adlb_data_code
 ADLB_Pack_multiset(const adlb_multiset_ptr ms,
           const adlb_buffer *tmp_buf, adlb_buffer *output,
           bool *output_caller_buffer, int *output_pos);
+
+adlb_data_code
+ADLB_Pack_multiset_hdr(int elems, adlb_data_type elem_type,
+    adlb_buffer *output, bool *output_caller_buffer, int *output_pos);
 
 adlb_data_code
 ADLB_Unpack_multiset(adlb_multiset_ptr *ms,
