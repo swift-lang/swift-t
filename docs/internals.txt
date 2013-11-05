@@ -409,7 +409,7 @@ rule input_list action name "myfunction" type $turbine::WORK location 4 parallel
 Turbine will make up a default name
 +type+:: +LOCAL+, +CONTROL+, or +WORK+.  Default is +CONTROL+
 +parallelism+:: Number of processes to use for an MPI parallel task.  Default is 1.
-+location+:: Send action to this MPI rank.  Default is any available process based on +type+ (+$adlb::RANK_ANY+)
++target+:: Send action to this MPI rank.  Default is any available process based on +type+ (+$adlb::RANK_ANY+)
 
 ==== Semantics
 
