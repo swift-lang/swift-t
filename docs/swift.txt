@@ -1546,8 +1546,13 @@ turbine ...
 +
 The seed is recorded in the log.
 
++ADLB_DEBUG_RANKS=1+:: Enable a report showing the rank, hostname, 
+and mode of each process. 
+
 +ADLB_DEBUG_HOSTMAP=1+:: Enable a report showing the hostmap, which
 maps hostnames to ranks for use with the location functionality.
+
++ADLB_DISABLE_HOSTMAP=1+:: Prevent the hostmap from being constructed.
 
 === Configuration
 
