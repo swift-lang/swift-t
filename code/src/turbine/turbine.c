@@ -103,7 +103,6 @@ static size_t bitfield_size(int inputs);
 static inline bool input_td_closed(transform *T, int i);
 static inline void mark_input_td_closed(transform *T, int i);
 static inline bool input_td_sub_closed(transform *T, int i);
-static inline void mark_input_td_sub_closed(transform *T, int i);
 
 // Finalize engine
 static void turbine_engine_finalize(void);
@@ -973,11 +972,13 @@ mark_input_td_closed(transform *T, int i)
   T->closed_inputs[i / 8] |= mask;
 }
 
+/*
 static inline void
 mark_input_td_sub_closed(transform *T, int i)
 {
   mark_input_td_closed(T, i + T->input_tds);
 }
+*/
 
 static size_t
 bitfield_size(int inputs) {
