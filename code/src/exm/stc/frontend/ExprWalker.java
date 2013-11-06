@@ -1041,6 +1041,10 @@ public class ExprWalker {
     for (Var functionOutput: functionOutputs) {
       if (functionOutput.storage() == Alloc.LOCAL) {
         values.add(functionOutput);
+      } else if (Types.isContainer(functionOutput)) {
+        Type unpackedT = Types.unpackedContainerType(functionOutput);
+        values.add(varCreator.createValueVar(context, unpackedT,
+                                             functionOutput, true));
       } else {
         values.add(varCreator.createValueOfVar(context, functionOutput));
       }
@@ -1053,7 +1057,11 @@ public class ExprWalker {
       Var value = values.get(i);
       Var functionOutput = functionOutputs.get(i);
       if (!value.equals(functionOutput)) {
-        assign(functionOutput, value.asArg());
+        if (Types.isContainer(functionOutput)) {
+          backend.storeRecursive(functionOutput, value.asArg());
+        } else {
+          assign(functionOutput, value.asArg());
+        }
       }
     }
   }

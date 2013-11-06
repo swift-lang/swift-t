@@ -226,7 +226,7 @@ public class VarCreator {
     return val;
   }
 
-  private Var createValueVar(Context context, Type valType, Var future,
+  public Var createValueVar(Context context, Type valType, Var future,
           boolean initialise) throws UserException, UndefinedTypeException,
           DoubleDefineException {
     Var val = context.createLocalValueVariable(valType, future);

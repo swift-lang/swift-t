@@ -148,6 +148,8 @@ public interface CompilerBackend {
 
   public void retrieveBag(Var target, Var src, Arg decr);
   
+  public void assignRecursive(Var target, Arg src);
+  
   public void retrieveRecursive(Var target, Var src, Arg decr);
 
   /**

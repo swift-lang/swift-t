@@ -858,12 +858,16 @@ public class STCMiddleEnd {
   public void assignArray(Var target, Arg src) {
     assert(Types.isArray(target.type()));
     assert(Types.isArrayLocal(src.type()));
+    assert(Types.containerElemType(src.type()).assignableTo(
+              Types.containerElemType(target)));
     currBlock().addInstruction(TurbineOp.assignArray(target, src));
   }
 
   public void retrieveArray(Var target, Var src) {
     assert(Types.isArray(src.type()));
     assert(Types.isArrayLocal(target));
+    assert(Types.containerElemType(src.type()).assignableTo(
+              Types.containerElemType(target)));
     currBlock().addInstruction(TurbineOp.retrieveArray(target, src));
   }
   
@@ -878,7 +882,17 @@ public class STCMiddleEnd {
   public void retrieveBag(Var target, Var src) {
     assert(Types.isBag(src.type()));
     assert(Types.isBagLocal(target));
+    assert(Types.containerElemType(src.type()).assignableTo(
+              Types.containerElemType(target)));
     currBlock().addInstruction(TurbineOp.retrieveBag(target, src));
+  }
+  
+  public void storeRecursive(Var target, Arg src) {
+    assert(Types.isContainer(target));
+    assert(Types.isContainerLocal(src.type()));
+    assert(src.type().assignableTo(
+            Types.unpackedContainerType(target)));
+    currBlock().addInstruction(TurbineOp.storeRecursive(target, src));
   }
   
   public void retrieveRecursive(Var target, Var src) {

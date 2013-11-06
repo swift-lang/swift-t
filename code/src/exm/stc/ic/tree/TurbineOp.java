@@ -127,6 +127,9 @@ public class TurbineOp extends Instruction {
     case STORE_BAG:
       gen.assignBag(getOutput(0), getInput(0));
       break;
+    case STORE_RECURSIVE:
+      gen.assignRecursive(getOutput(0), getInput(0));
+      break;
     case ARRAY_LOOKUP_FUTURE:
       gen.arrayLookupFuture(getOutput(0), 
           getInput(0).getVar(), getInput(1).getVar(), false);
@@ -571,6 +574,10 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.LOAD_BAG, target, source.asArg());
   }
   
+  public static Instruction storeRecursive(Var target, Arg src) {
+    return new TurbineOp(Opcode.STORE_RECURSIVE, target, src);
+  }
+  
   public static Instruction retrieveRecursive(Var target, Var src) {
     return new TurbineOp(Opcode.LOAD_RECURSIVE, target, src.asArg());
   }
@@ -899,6 +906,7 @@ public class TurbineOp extends Instruction {
     case STORE_FILE:
     case STORE_ARRAY:
     case STORE_BAG:
+    case STORE_RECURSIVE:
     case DEREF_INT:
     case DEREF_BOOL:
     case DEREF_VOID:
@@ -1577,6 +1585,7 @@ public class TurbineOp extends Instruction {
     case STORE_FILE:
     case STORE_ARRAY:
     case STORE_BAG:
+    case STORE_RECURSIVE:
     case LOAD_INT:
     case LOAD_BOOL:
     case LOAD_VOID:
@@ -1693,7 +1702,8 @@ public class TurbineOp extends Instruction {
       case STORE_VOID:
       case STORE_FILE:
       case STORE_ARRAY:
-      case STORE_BAG: {
+      case STORE_BAG:
+      case STORE_RECURSIVE: {
 
         // add assign so we can avoid recreating future 
         // (closed b/c this instruction closes val immediately)
@@ -1936,7 +1946,8 @@ public class TurbineOp extends Instruction {
         return Pair.create(readIncr, Arrays.asList(arr));
       }
       case STORE_BAG:
-      case STORE_ARRAY: {
+      case STORE_ARRAY: 
+      case STORE_RECURSIVE: {
         // Inputs stored into array need to have refcount incremented
         // This finalizes array so will consume refcount
         return Pair.create(getInput(0).getVar().asList(),

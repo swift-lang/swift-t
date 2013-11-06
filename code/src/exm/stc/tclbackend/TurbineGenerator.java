@@ -89,6 +89,7 @@ import exm.stc.tclbackend.tree.PackageRequire;
 import exm.stc.tclbackend.tree.Proc;
 import exm.stc.tclbackend.tree.Sequence;
 import exm.stc.tclbackend.tree.SetVariable;
+import exm.stc.tclbackend.tree.Square;
 import exm.stc.tclbackend.tree.Switch;
 import exm.stc.tclbackend.tree.TclExpr;
 import exm.stc.tclbackend.tree.TclList;
@@ -829,7 +830,18 @@ public class TurbineGenerator implements CompilerBackend {
                                        false, argToExpr(decr)));
   }
   
+  @Override
+  public void assignRecursive(Var target, Arg src) {
+    assert(Types.isContainer(target));
+    assert(Types.isContainerLocal(src.type()));
+    assert(src.type().assignableTo(
+              Types.unpackedContainerType(target)));    
 
+    // TODO: call once implemented
+    pointAdd(Square.fnCall("error",
+        new TclString("Recursive store not implemented")));
+  }
+  
   @Override
   public void retrieveRecursive(Var target, Var src, Arg decr) {
     assert(Types.isContainer(src));
