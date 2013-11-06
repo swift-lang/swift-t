@@ -3879,7 +3879,7 @@ ADLB_Xpt_Unpack_Cmd(ClientData cdata, Tcl_Interp *interp,
 
     Tcl_Obj *obj;
     rc = adlb_data_to_tcl_obj(interp, objv, ADLB_DATA_ID_NULL,
-          type, &extra, entry, entry_length, &obj);
+          type, has_extra ? &extra : NULL, entry, entry_length, &obj);
     TCL_CHECK(rc);
     
     // Store result into location caller requested
