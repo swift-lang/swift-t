@@ -80,6 +80,17 @@ static struct rbtree* parallel_work;
 // Track number of parallel tasks
 int64_t xlb_workq_parallel_task_count;
 
+typedef struct {
+  int64_t targeted; /** Number of targeted tasks added to queue */
+  int64_t single; /** Untargeted serial added to queue */
+  /** Number stolen (will be counted as added to other server's queue) */
+  int64_t single_stolen;
+  int64_t parallel; /** Parallel tasks added to queue */
+  int64_t parallel_stolen;
+} work_type_counters;
+
+static work_type_counters *perf_counters;
+
 void
 xlb_workq_init(int work_types)
 {
@@ -96,6 +107,25 @@ xlb_workq_init(int work_types)
   {
     rbtree_init(&typed_work[i]);
     rbtree_init(&parallel_work[i]);
+  }
+
+  if (xlb_perf_counters_enabled)
+  {
+    DEBUG("PERF COUNTERS ENABLED");
+    perf_counters = malloc(sizeof(*perf_counters) * (size_t)work_types);
+    valgrind_assert(perf_counters != NULL);
+    for (int i = 0; i < work_types; i++)
+    {
+      perf_counters[i].targeted = 0;
+      perf_counters[i].single = 0;
+      perf_counters[i].single_stolen = 0;
+      perf_counters[i].parallel = 0;
+      perf_counters[i].parallel_stolen = 0;
+    }
+  }
+  else
+  {
+    perf_counters = NULL;
   }
 }
 
@@ -128,6 +158,10 @@ xlb_workq_add(int type, int putter, int priority, int answer,
     TRACE("xlb_workq_add(): single-process");
     struct rbtree* T = &typed_work[type];
     rbtree_add(T, -priority, wu);
+    if (xlb_perf_counters_enabled)
+    {
+      perf_counters[type].single++;
+    }
   }
   else if (parallelism > 1)
   {
@@ -137,6 +171,10 @@ xlb_workq_add(int type, int putter, int priority, int answer,
     TRACE("rbtree_add: wu: %p key: %i\n", wu, -priority);
     rbtree_add(T, -priority, wu);
     xlb_workq_parallel_task_count++;
+    if (xlb_perf_counters_enabled)
+    {
+      perf_counters[type].parallel++;
+    }
   }
   else
   {
@@ -154,6 +192,10 @@ xlb_workq_add(int type, int putter, int priority, int answer,
     }
     heap* H = &A[type];
     heap_add(H, -priority, wu);
+    if (xlb_perf_counters_enabled)
+    {
+      perf_counters[type].targeted++;
+    }
   }
 }
 
@@ -349,6 +391,12 @@ xlb_workq_steal(int max_memory, const int *steal_type_counts,
         code = xlb_workq_steal_type(&(parallel_work[t]), par_to_send, cb);
         xlb_workq_parallel_task_count -= par_to_send;
         ADLB_CHECK(code);
+        
+        if (xlb_perf_counters_enabled)
+        {
+          perf_counters[t].single_stolen += single_to_send;
+          perf_counters[t].parallel_stolen += par_to_send;
+        }
       }
     }
   }
@@ -415,6 +463,28 @@ wu_targeted_clear_callback(int key, void *val)
   free(A);
 }
 
+void xlb_print_workq_perf_counters(void)
+{
+  if (!xlb_perf_counters_enabled)
+  {
+    return;
+  }
+
+  for (int t = 0; t < xlb_types_size; t++)
+  {
+    fprintf(stderr, "COUNTER: type_%i_targeted_tasks=%"PRId64"\n",
+            t, perf_counters[t].targeted);
+    fprintf(stderr, "COUNTER: type_%i_single_tasks=%"PRId64"\n",
+            t, perf_counters[t].single);
+    fprintf(stderr, "COUNTER: type_%i_single_tasks_stolen=%"PRId64"\n",
+            t, perf_counters[t].single_stolen);
+    fprintf(stderr, "COUNTER: type_%i_parallel_tasks=%"PRId64"\n",
+            t, perf_counters[t].parallel);
+    fprintf(stderr, "COUNTER: type_%i_parallel_tasks_stolen=%"PRId64"\n",
+            t, perf_counters[t].parallel_stolen);
+  }
+}
+
 void
 xlb_workq_finalize()
 {
@@ -447,5 +517,10 @@ xlb_workq_finalize()
   free(parallel_work);
   parallel_work = NULL;
 
+  if (xlb_perf_counters_enabled)
+  {
+    free(perf_counters);
+    perf_counters = NULL;
+  }
   TRACE_END;
 }

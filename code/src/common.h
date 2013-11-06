@@ -60,6 +60,9 @@ extern int* xlb_types;
 /** Whether read refcounting and memory freeing is enabled */
 extern bool xlb_read_refcount_enabled;
 
+/** Whether to maintain performance counters */
+extern bool xlb_perf_counters_enabled;
+
 extern double max_malloc;
 
 extern MPI_Comm adlb_comm, adlb_server_comm, adlb_worker_comm;

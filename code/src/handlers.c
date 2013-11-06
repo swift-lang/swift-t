@@ -66,9 +66,6 @@ static handler handlers[MAX_HANDLERS];
 /** Count how many handlers have been registered */
 static int handler_count = 0;
 
-/** Whether to maintain performance counters */
-static bool perf_counters_enabled;
-
 /** Count how many calls to each handler */
 static int64_t handler_counters[MAX_HANDLERS];
 
@@ -131,9 +128,6 @@ xlb_handlers_init(void)
 {
   MPI_Comm_rank(adlb_comm, &mpi_rank);
 
-  perf_counters_enabled = false;
-  xlb_env_boolean("ADLB_PERF_COUNTERS", &perf_counters_enabled);
-
   memset(handlers, '\0', MAX_HANDLERS*sizeof(handler));
 
   register_handler(ADLB_TAG_SYNC_REQUEST, handle_sync);
@@ -188,7 +182,7 @@ xlb_handle(adlb_tag tag, int caller)
 
   MPE_LOG(xlb_mpe_svr_busy_start);
 
-  if (perf_counters_enabled)
+  if (xlb_perf_counters_enabled)
   {
     handler_counters[tag]++;
   }
@@ -201,9 +195,9 @@ xlb_handle(adlb_tag tag, int caller)
   return result;
 }
 
-void xlb_print_perf_counters(void)
+void xlb_print_handler_counters(void)
 {
-  if (!perf_counters_enabled)
+  if (!xlb_perf_counters_enabled)
   {
     return;
   }

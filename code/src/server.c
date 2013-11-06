@@ -225,8 +225,10 @@ ADLB_Server(long max_memory)
 
     check_steal();
   }
-  server_shutdown();
+
+  // Print stats, then cleanup all modules
   print_final_stats();
+  server_shutdown();
 
   TRACE_END;
   return ADLB_SUCCESS;
@@ -633,6 +635,7 @@ static inline void print_final_stats()
   }
 
   // Print other performance counters
-  xlb_print_perf_counters();
+  xlb_print_handler_counters();
+  xlb_print_workq_perf_counters();
 }
 

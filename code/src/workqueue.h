@@ -121,6 +121,8 @@ void xlb_workq_type_counts(int *types, int size);
 
 void work_unit_free(xlb_work_unit* wu);
 
+void xlb_print_workq_perf_counters(void);
+
 void xlb_workq_finalize(void);
 
 #endif

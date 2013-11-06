@@ -125,6 +125,10 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
   rc = MPI_Comm_group(adlb_comm, &adlb_group);
   assert(rc == MPI_SUCCESS);
 
+  // Set this correctly before initializing other modules
+  xlb_perf_counters_enabled = false;
+  xlb_env_boolean("ADLB_PERF_COUNTERS", &xlb_perf_counters_enabled);
+
   xlb_am_server = (xlb_comm_rank >= xlb_workers);
   if (!xlb_am_server)
   {
