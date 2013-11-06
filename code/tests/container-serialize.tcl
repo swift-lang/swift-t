@@ -104,6 +104,31 @@ proc test_store_container { } {
     if { $c2_3 != "val3" } {
         error "c2\[3\] $c2_3"
     }
+    
+   
+    # Check we can store references
+    set id1 [ turbine::create_integer $::adlb::NULL_ID ]
+    set id2 [ turbine::create_integer $::adlb::NULL_ID ]
+    set c3_val [ dict create 1 $id1 2 $id2 ]
+    set c3 [ adlb::create $::adlb::NULL_ID container integer ref ]
+    adlb::store $c3 container integer ref $c3_val
+
+    set c3_size [ adlb::container_size $c3 ]
+
+    set c3_1 [ adlb::lookup $c3 1 ]
+    set c3_2 [ adlb::lookup $c3 2 ]
+
+    puts "c3_size: $c3_size elems: \[ $c3_1 $c3_2 \]"
+
+    if { $c3_size != 2 } {
+        error "c3 entries $c3_size expected 2"
+    }
+    if { $c3_1 != $id1 } {
+        error "c3\[1\] $c3_1"
+    }
+    if { $c3_2 != $id2 } {
+        error "c3\[2\] $c3_2"
+    }
 }
 
 proc test_store_multiset { } {
