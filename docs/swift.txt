@@ -1519,6 +1519,9 @@ Swift (<<Turbine_information, Turbine information>>).
 +ADLB_PRINT_TIME=1+:: Enable a short report of total elapsed time (via
 +MPI_Wtime()+)
 
++ADLB_PERF_COUNTERS=1+::
+Enable performance counters (printed at end of execution):
+
 +ADLB_EXHAUST_TIME+::
 Time in seconds taken by ADLB task servers to shut down.  May include
 a decimal point.  Default 0.1 .  In very large runs, this may be set to
@@ -1527,6 +1530,11 @@ a decimal point.  Default 0.1 .  In very large runs, this may be set to
 +ADLB_REPORT_LEAKS=1+::
 Enable reporting of any unfreed data in ADLB data store at end of
 execution.
+
++ADLB_TRACE=true+::
++ADLB_DEBUG=true+::
+To print DEBUG/TRACE level information for ADLB (if ADLB was compiled
+with it enabled)
 
 +TURBINE_LAUNCH_OPTIONS+::
 Provide other arguments to +mpiexec+, such as a machine file, etc.
