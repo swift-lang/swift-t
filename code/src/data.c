@@ -747,7 +747,7 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
     adlb_data_type elem_type = d->data.MULTISET->elem_type;
     check_verbose(type == elem_type, ADLB_DATA_ERROR_TYPE,
             "Type mismatch for multiset val: expected %s actual %s\n",
-            ADLB_Data_type_tostring(type), ADLB_Data_type_tostring(elem_type));
+            ADLB_Data_type_tostring(elem_type), ADLB_Data_type_tostring(type));
     // Handle addition to multiset
     const adlb_datum_storage *elem;
     dc = xlb_multiset_add(d->data.MULTISET, buffer, length, &elem);
