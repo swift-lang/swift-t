@@ -786,6 +786,7 @@ public class TurbineGenerator implements CompilerBackend {
               Types.containerElemType(target)));
     assert(Types.arrayKeyType(src.type()).assignableTo(
             Types.arrayKeyType(target.type())));
+    // TODO: use adlb::store to store all at once
     pointAdd(Turbine.arrayBuild(varToExpr(target), argToExpr(src), true,
              representationType(Types.containerElemType(target), false)));
   }
@@ -1562,6 +1563,8 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isArray(array.type()));
     assert(keys.size() == vals.size());
     int elemCount = keys.size();
+    
+    // TODO: use adlb::store to store all at once
     
     List<Expression> keyExprs = new ArrayList<Expression>(elemCount * 2);
     List<Expression> valExprs = new ArrayList<Expression>(elemCount);
