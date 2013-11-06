@@ -855,14 +855,15 @@ public class TurbineGenerator implements CompilerBackend {
         reprType = representationType(curr, false);
       }
       typeList.add(reprType);
-      if (includeKeyTypes && Types.isArray(curr)) {
+      if (includeKeyTypes &&
+          (Types.isArray(curr) || Types.isArrayLocal(curr))) {
         // Include key type if requested
         typeList.add(representationType(Types.arrayKeyType(
                 curr), false));
       }
       
       curr = Types.containerElemType(curr);
-    } while (Types.isContainer(curr));
+    } while (Types.isContainer(curr) || Types.isContainerLocal(curr));
     
     if (includeBaseType) {
       TypeName reprType;
