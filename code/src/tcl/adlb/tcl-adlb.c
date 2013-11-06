@@ -3688,13 +3688,12 @@ container_pack_typeinfo(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
    * value type.
    */
   int types_size = 16;
+  int len = 0;
   adlb_data_type *type_arr = malloc(sizeof(adlb_data_type) * types_size);
   TCL_CONDITION(type_arr != NULL, "Error allocating memory");
 
   adlb_type_extra **extras = malloc(sizeof(adlb_type_extra*) * types_size);
   TCL_CONDITION_GOTO(extras != NULL, exit_err, "Error allocating memory");
-
-  int len = 0;
   int to_consume = 1; // Min additional number that must be consumed
 
   // Must consume at least the outermost type
@@ -3836,14 +3835,14 @@ ADLB_Xpt_Unpack_Cmd(ClientData cdata, Tcl_Interp *interp,
   
   adlb_blob_t packed;
   adlb_datum_id tmpid;
-  rc = extract_tcl_blob(interp, objv, objv[2], &packed, &tmpid);
+  rc = extract_tcl_blob(interp, objv, objv[fieldCount + 1], &packed, &tmpid);
   TCL_CHECK(rc);
   int packed_pos = 0;
 
   for (int field = 0; field < fieldCount; field++)
   {
     Tcl_Obj *varName = objv[field + 1];
-    Tcl_Obj *typeO = objv[field * 2 + 3];
+    Tcl_Obj *typeO = objv[field + fieldCount + 2];
 
     // Get type of object
     adlb_data_type type;
