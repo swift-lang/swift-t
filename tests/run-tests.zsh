@@ -179,6 +179,8 @@ run_test()
   EXP_OUTPUT=${TEST_PATH}.exp
   TURBINE_OUTPUT=${TCL_FILE%.tcl}.out
   export TURBINE_OUTPUT
+  TURBINE_XPT_RELOAD_OUTPUT=${TCL_FILE%.tcl}.reload.out
+  export TURBINE_XPT_RELOAD_OUTPUT
 
   ARGS=""
   ARGS_FILE=${TEST_PATH}.args
@@ -203,6 +205,15 @@ run_test()
     fi
     print "running:   $( basename ${TCL_FILE} )"
     ${RUN_TEST} ${TCL_FILE} ${TURBINE_OUTPUT} ${ARGS} || return 1
+
+    if [ ! -z "${TURBINE_XPT_FILE}" ]
+    then
+      print "rerunning with checkpoint: ${TURBINE_XPT_FILE}"
+      export TURBINE_XPT_RELOAD="${TURBINE_XPT_FILE}"
+      unset TURBINE_XPT_FILE
+      ${RUN_TEST} ${TCL_FILE} ${TURBINE_XPT_RELOAD_OUTPUT} ${ARGS} || return 1
+      # Test reload from checkpoint file
+    fi
   )
   EXIT_CODE=${?}
   popd

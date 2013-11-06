@@ -1,10 +1,14 @@
 #!/bin/bash
 
 F_COUNT=`grep -F 'f executed' ${TURBINE_OUTPUT} | wc -l`
+F_R_COUNT=`grep -F 'f executed' ${TURBINE_XPT_RELOAD_OUTPUT} | wc -l`
 F_EXP=103
 G_COUNT=`grep -F 'g executed' ${TURBINE_OUTPUT} | wc -l`
+G_R_COUNT=`grep -F 'g executed' ${TURBINE_XPT_RELOAD_OUTPUT} | wc -l`
 G_EXP=101
 H_COUNT=`grep -F 'h executed' ${TURBINE_OUTPUT} | wc -l`
+H_R_COUNT=`grep -F 'h executed' ${TURBINE_XPT_RELOAD_OUTPUT} | wc -l`
+G_EXP=101
 H_EXP=101
 
 if [ ${F_COUNT} -ne ${F_EXP} ]; then
@@ -19,5 +23,20 @@ fi
 
 if [ ${H_COUNT} -ne ${H_EXP} ]; then
     echo "Expected f to execute ${H_EXP} times in ${TURBINE_OUTPUT}, but saw ${H_COUNT}"
+    exit 1
+fi
+
+if [ ${F_R_COUNT} -ne 0 ]; then
+    echo "Reran f ${F_R_COUNT}: should have been restored from checkpoint"
+    exit 1
+fi
+
+if [ ${G_R_COUNT} -ne 0 ]; then
+    echo "Reran f ${G_R_COUNT}: should have been restored from checkpoint"
+    exit 1
+fi
+
+if [ ${H_R_COUNT} -ne 0 ]; then
+    echo "Reran f ${H_R_COUNT}: should have been restored from checkpoint"
     exit 1
 fi
