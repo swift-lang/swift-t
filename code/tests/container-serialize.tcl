@@ -82,8 +82,7 @@ proc test_store_container { } {
     # Check we can store dict to ADLB container
     set c2_val [ dict create 1 val1 2 val2 3 val3 ]
     set c2 [ adlb::create $::adlb::NULL_ID container integer string ]
-    adlb::store $c2 container $c2_val
-    #TODO: extra type info adlb::store $c2 container integer string $c2_val
+    adlb::store $c2 container integer string $c2_val
 
     set c2_size [ adlb::container_size $c2 ]
 
@@ -91,7 +90,7 @@ proc test_store_container { } {
     set c2_2 [ adlb::lookup $c2 2 ]
     set c2_3 [ adlb::lookup $c2 3 ]
 
-    puts "c2_size: $c2_size elems: \[ $c2_0 $c2_1 $c2_2 \]"
+    puts "c2_size: $c2_size elems: \[ $c2_1 $c2_2 $c2_3 \]"
 
     if { $c2_size != 3 } {
         error "c2 entries $c2_size expected 3"
@@ -111,9 +110,9 @@ proc test_store_multiset { } {
     # Check we can store list to ADLB multiset
     set m2_val [ list val1 val2 val3 ]
     set m2 [ adlb::create $::adlb::NULL_ID multiset string ]
+
     #TODO: need to store rather than append
-    #TODO: extra type info
-    adlb::store $m2 container $m2_val
+    adlb::store $m2 multiset string $m2_val
 
     set m2_size [ adlb::container_size $m2 ]
 
@@ -141,7 +140,8 @@ proc test_store_multiset { } {
 proc rules { } {
    test_retrieve_container
    test_retrieve_multiset
-   #test_store_container
+   test_store_container
+   # TODO: doesn't pass yet
    #test_store_multiset
 }
 

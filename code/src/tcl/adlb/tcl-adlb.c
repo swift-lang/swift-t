@@ -201,6 +201,10 @@ tcl_dict_to_packed_container(Tcl_Interp *interp, Tcl_Obj *const objv[],
         const compound_type types, int ctype_pos, Tcl_Obj *dict,
         adlb_buffer *output, bool *output_caller_buf, int *output_pos);
 
+static int
+get_compound_type(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
+                int *argpos, compound_type *types);
+
 static void
 free_compound_type(compound_type *types);
 
@@ -208,6 +212,12 @@ static inline int
 compound_type_next(Tcl_Interp *interp, Tcl_Obj *const objv[],
       const compound_type types, int *ctype_pos,
       adlb_data_type *type, const adlb_type_extra **extra);
+
+static int
+tcl_obj_to_bin_compound(Tcl_Interp *interp, Tcl_Obj *const objv[],
+                const compound_type types,
+                Tcl_Obj *obj, const adlb_buffer *caller_buffer,
+                adlb_binary_data* result);
 
 static int
 tcl_obj_bin_append(Tcl_Interp *interp, Tcl_Obj *const objv[],
@@ -1409,6 +1419,32 @@ compound_type_next(Tcl_Interp *interp, Tcl_Obj *const objv[],
   return TCL_OK;
 }
 
+static int
+tcl_obj_to_bin_compound(Tcl_Interp *interp, Tcl_Obj *const objv[],
+                const compound_type types,
+                Tcl_Obj *obj, const adlb_buffer *caller_buffer,
+                adlb_binary_data* result)
+{
+  adlb_data_code dc;
+  int rc;
+
+  adlb_buffer packed;
+  int pos = 0;
+  bool using_caller_buf;
+
+  // Caller blob needs to own data, so don't provide a static buffer
+  dc = ADLB_Init_buf(caller_buffer, &packed, &using_caller_buf, 2048);
+  TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error initializing buffer");
+
+  rc = tcl_obj_bin_append(interp, objv, types, 0, obj, false,
+                          &packed, &using_caller_buf, &pos);
+  TCL_CHECK(rc);
+
+  result->data = result->caller_data = packed.data;
+  result->length = pos;
+  return TCL_OK;
+}
+
 /*
   Append binary representation of Tcl object to buffer
   types: full ADLB type of data for serialization
@@ -1998,12 +2034,32 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
                          &has_extra, &extra);
   TCL_CHECK(rc);
 
-  // TODO: get container type, etc.
+  adlb_binary_data data; // The data to send
+  if (type == ADLB_DATA_TYPE_CONTAINER ||
+      type == ADLB_DATA_TYPE_MULTISET)
+  {
+    // Handle non-straightforward cases where we need additional type info
+    argpos--; // Rewind so type can be reprocessed
+    compound_type compound_type;
+    rc = get_compound_type(interp, objc, objv, &argpos, &compound_type);
+    TCL_CHECK(rc);
 
-  adlb_binary_data data;
-  rc = tcl_obj_to_bin(interp, objv, type, has_extra ? &extra : NULL,
-                            objv[argpos++], &xfer_buf, &data);
-  TCL_CHECK_MSG(rc, "<%"PRId64"> failed, could not extract data!", id);
+    Tcl_Obj *obj = objv[argpos++];
+    // Straightforward case with no nested type info
+    rc = tcl_obj_to_bin_compound(interp, objv, compound_type,
+                                 obj, &xfer_buf, &data);
+    TCL_CHECK_MSG(rc, "<%"PRId64"> failed, could not extract data from %s!",
+                  id, Tcl_GetString(obj));
+  }
+  else
+  {
+    Tcl_Obj *obj = objv[argpos++];
+    // Straightforward case with no nested type info
+    rc = tcl_obj_to_bin(interp, objv, type, has_extra ? &extra : NULL,
+                        obj, &xfer_buf, &data);
+    TCL_CHECK_MSG(rc, "<%"PRId64"> failed, could not extract data from %s!",
+                  id, Tcl_GetString(obj));
+  }
 
   // Handle optional refcount spec
   adlb_refcounts decr = ADLB_WRITE_RC; // default is to decr writers
@@ -3684,7 +3740,7 @@ ADLB_Xpt_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
    argpos: updated to consume multiple type names from command line
  */
 static int
-container_pack_typeinfo(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
+get_compound_type(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
                 int *argpos, compound_type *types)
 {
   int rc;
@@ -3800,7 +3856,7 @@ ADLB_Xpt_Pack_Cmd(ClientData cdata, Tcl_Interp *interp,
   {
     // We might need to pack compound types
     compound_type compound_type;
-    rc = container_pack_typeinfo(interp, objc, objv, &argpos,
+    rc = get_compound_type(interp, objc, objv, &argpos,
                                  &compound_type);
     TCL_CHECK(rc);
 
