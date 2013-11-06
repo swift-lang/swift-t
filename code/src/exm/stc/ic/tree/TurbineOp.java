@@ -2126,7 +2126,7 @@ public class TurbineOp extends Instruction {
       }
       case BAG_INSERT: {
         Var bag = getOutput(0);
-        return tryPiggyBackHelper(increments, type, bag, 1, -1);
+        return tryPiggyBackHelper(increments, type, bag, -1, 1);
       }
       default:
         // Do nothing
