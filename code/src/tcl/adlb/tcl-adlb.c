@@ -3790,6 +3790,7 @@ ADLB_Xpt_Pack_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error initializing buffer");
 
   int argpos = 1;
+  int field = 0;
   while (argpos < objc)
   {
     // We might need to pack compound types
@@ -3802,6 +3803,8 @@ ADLB_Xpt_Pack_Cmd(ClientData cdata, Tcl_Interp *interp,
                   "Last argument missing value");
     Tcl_Obj *val = objv[argpos++];
 
+    DEBUG_TURBINE("Packing entry #%i type %s @ byte %i", field,
+                  ADLB_Data_type_tostring(compound_type.types[0]), pos);
    
     // pack incrementally into buffer
     int ctype_pos = 0;
@@ -3810,6 +3813,7 @@ ADLB_Xpt_Pack_Cmd(ClientData cdata, Tcl_Interp *interp,
     TCL_CHECK(rc);
 
     free_compound_type(&compound_type);
+    field++;
   }
 
   Tcl_Obj *packedBlob = build_tcl_blob(packed.data, pos,
@@ -3837,6 +3841,7 @@ ADLB_Xpt_Unpack_Cmd(ClientData cdata, Tcl_Interp *interp,
   adlb_datum_id tmpid;
   rc = extract_tcl_blob(interp, objv, objv[fieldCount + 1], &packed, &tmpid);
   TCL_CHECK(rc);
+
   int packed_pos = 0;
 
   for (int field = 0; field < fieldCount; field++)
@@ -3844,6 +3849,9 @@ ADLB_Xpt_Unpack_Cmd(ClientData cdata, Tcl_Interp *interp,
     Tcl_Obj *varName = objv[field + 1];
     Tcl_Obj *typeO = objv[field + fieldCount + 2];
 
+    DEBUG_TURBINE("Unpacking entry #%i type %s @ byte %i from blob %p "
+                "[%i bytes]", field, Tcl_GetString(typeO), packed_pos,
+                packed.value, packed.length);
     // Get type of object
     adlb_data_type type;
     bool has_extra;
