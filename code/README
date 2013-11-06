@@ -34,6 +34,21 @@ To disable logging and enable optimizations:
 To enable checkpointing functionality (requires zlib):
     --enable-checkpoint
 
+Environment variables
+---------------------
+To enable performance counters (printed at end of execution):
+    ADLB_PERF_COUNTERS=true
+
+To print overall execution time:
+    ADLB_PRINT_TIME=true
+
+To print unfreed data at end of execution:
+    ADLB_REPORT_LEAKS=true
+
+To print DEBUG/TRACE level information (if compiled with it enabled):
+    ADLB_TRACE=true
+    ADLB_DEBUG=true
+
 Contact
 =======
 Justin Wozniak: wozniak@mcs.anl.gov
