@@ -775,7 +775,7 @@ namespace eval turbine {
 
       switch $container_type {
         container {
-          set vals [ adlb::enumerate $container dict all 0 $read_decr ]
+          set vals [ adlb::enumerate $container dict all 0 0 ]
           if { $recurse } {
             set result_dict [ dict create ]
             dict for { key subcontainer } $vals {
@@ -786,9 +786,11 @@ namespace eval turbine {
           } else {
             return [ multi_retrieve_kv $vals CACHED $member_type ]
           }
+          # Decrement at end to avoid freeing members
+          adlb::read_refcount_decr $container $read_decr
         }
         multiset {
-          set vals [ adlb::enumerate $container members all 0 $read_decr ]
+          set vals [ adlb::enumerate $container members all 0 0 ]
           if { $recurse } {
             set result_list [ list ]
             foreach subcontainer $vals {
@@ -799,6 +801,7 @@ namespace eval turbine {
           } else {
             return [ multi_retrieve $vals CACHED $member_type ]
           }
+          adlb::read_refcount_decr $container $read_decr
         }
         default {
           error "Expected container type to enumerate: $container_type"
