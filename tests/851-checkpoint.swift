@@ -1,5 +1,5 @@
 // Test checkpointing for data structures
-// SKIP-THIS-TEST
+// TODO: read back checkpoint values
 
 import assert;
 import math;
