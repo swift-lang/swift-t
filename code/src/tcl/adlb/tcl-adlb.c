@@ -1361,7 +1361,10 @@ tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
     }
     case ADLB_DATA_TYPE_CONTAINER:
     case ADLB_DATA_TYPE_MULTISET:
-        // TODO: pack with ADLB_Pack_container*, etc.
+        // Containers/multiset packed directly to binary
+      TCL_RETURN_ERROR("Type %s should be packed directly to binary\n",
+          ADLB_Data_type_tostring(type));
+      return TCL_ERROR;   
     default:
       printf("unknown type %i!\n", type);
       return TCL_ERROR;
@@ -1438,18 +1441,20 @@ tcl_obj_bin_append(Tcl_Interp *interp, Tcl_Obj *const objv[],
       TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error resizing");
 
       memset(output->data + start_pos, 0, VINT_MAX_BYTES);
-      *output_pos += VINT_MAX_BYTES;
+      (*output_pos) += VINT_MAX_BYTES;
     }
 
     if (type == ADLB_DATA_TYPE_CONTAINER)
     {
-      return tcl_dict_to_packed_container(interp, objv, types, ctype_pos,
+      rc = tcl_dict_to_packed_container(interp, objv, types, ctype_pos,
                   obj, output, output_caller_buf, output_pos);
+      TCL_CHECK(rc);
     }
     else if (type == ADLB_DATA_TYPE_MULTISET)
     {
-      return tcl_list_to_packed_multiset(interp, objv, types, ctype_pos, obj,
+      rc = tcl_list_to_packed_multiset(interp, objv, types, ctype_pos, obj,
                   output, output_caller_buf, output_pos);
+      TCL_CHECK(rc);
     }
     else
     {
@@ -1459,9 +1464,9 @@ tcl_obj_bin_append(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
     if (prefix_len)
     {
+      int packed_len = *output_pos - start_pos - VINT_MAX_BYTES;
       // Add int to spot we reserved
-      vint_encode(*output_pos - start_pos - VINT_MAX_BYTES,
-                  output->data + start_pos);
+      vint_encode(packed_len, output->data + start_pos);
     }
   }
   else
@@ -3803,7 +3808,7 @@ ADLB_Xpt_Pack_Cmd(ClientData cdata, Tcl_Interp *interp,
                   "Last argument missing value");
     Tcl_Obj *val = objv[argpos++];
 
-    DEBUG_TURBINE("Packing entry #%i type %s @ byte %i", field,
+    DEBUG_ADLB("Packing entry #%i type %s @ byte %i", field,
                   ADLB_Data_type_tostring(compound_type.types[0]), pos);
    
     // pack incrementally into buffer
@@ -3849,9 +3854,6 @@ ADLB_Xpt_Unpack_Cmd(ClientData cdata, Tcl_Interp *interp,
     Tcl_Obj *varName = objv[field + 1];
     Tcl_Obj *typeO = objv[field + fieldCount + 2];
 
-    DEBUG_TURBINE("Unpacking entry #%i type %s @ byte %i from blob %p "
-                "[%i bytes]", field, Tcl_GetString(typeO), packed_pos,
-                packed.value, packed.length);
     // Get type of object
     adlb_data_type type;
     bool has_extra;
@@ -3869,6 +3871,11 @@ ADLB_Xpt_Unpack_Cmd(ClientData cdata, Tcl_Interp *interp,
                "%i/%i fields", field, fieldCount); 
     TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error unpacking field %i "
             "from buffer", field);
+    
+    DEBUG_ADLB("Unpacking entry #%i type %s @ byte %i from blob %p "
+                "[%i bytes] entry: offset %li [%i bytes]", field,
+                ADLB_Data_type_tostring(type), packed_pos, packed.value,
+                packed.length, entry - packed.value, entry_length);
 
     Tcl_Obj *obj;
     rc = adlb_data_to_tcl_obj(interp, objv, ADLB_DATA_ID_NULL,
