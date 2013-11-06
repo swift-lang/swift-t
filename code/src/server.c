@@ -623,12 +623,16 @@ server_shutdown()
 /* Print out any final statistics, if enabled */
 static inline void print_final_stats()
 {
-  const char *print_time_opt = getenv("ADLB_PRINT_TIME");
-  if (print_time_opt != NULL)
+  bool print_time = false;
+  xlb_env_boolean("ADLB_PRINT_TIME", &print_time);
+  if (print_time)
   {
     double xlb_end_time = MPI_Wtime();
     double xlb_elapsed_time = xlb_end_time - xlb_start_time;
     printf("ADLB Total Elapsed Time: %.3lf\n", xlb_elapsed_time);
   }
+
+  // Print other performance counters
+  xlb_print_perf_counters();
 }
 

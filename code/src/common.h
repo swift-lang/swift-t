@@ -96,7 +96,6 @@ int xlb_type_index(int work_type);
    and true for a non-zero number or true (case-insensitive)
    if empty or zero-length string, val is unmodified
 
-   found: this indicates whether the environment variable was found
  */
 adlb_code xlb_env_boolean(const char *env_var, bool *val);
 

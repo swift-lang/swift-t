@@ -50,5 +50,6 @@ adlb_code xlb_check_parallel_tasks(int work_type);
 adlb_code xlb_put_targeted_local(int type, int putter, int priority,
            int answer, int target, const void* payload, int length);
 
+void xlb_print_perf_counters(void);
 
 #endif
