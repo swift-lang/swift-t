@@ -31,13 +31,14 @@ main {
 // Single scalar arg
 @checkpoint
 (int o) f (int i) {
+    trace("f executed");
     o = i + 1;
 }
 
 // Single scalar arg, multiple outputs
 @checkpoint
 (int o1, int o2) g (int i) "turbine" "0.0" [
-  "lassign [ list [ expr <<i>> + 1 ] [ expr <<i>> + 2 ] ] <<o1>> <<o2>>"
+  "puts {g executed}; lassign [ list [ expr <<i>> + 1 ] [ expr <<i>> + 2 ] ] <<o1>> <<o2>>"
 ];
 
 import blob;
@@ -45,5 +46,6 @@ import string;
 // Multiple scalar args, including blob
 @checkpoint
 (int o) h (int i, string s, blob b) {
+  trace("h executed");
   o = i + blob_size(b) + strlen(s);
 }
