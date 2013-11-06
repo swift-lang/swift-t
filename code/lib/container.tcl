@@ -135,6 +135,100 @@ namespace eval turbine {
         adlb::write_refcount_decr $ms
       }
     }
+    
+    proc type_create_slice { outer_type type_list start_pos } {
+      switch $outer_type {
+        container {
+          # Include key and value types
+          return [ lrange $type_list $start_pos [ expr {$start_pos + 2} ]
+        }
+        multiset {
+          # Include value type
+          return [ lrange $type_list $start_pos [ expr {$start_pos + 1} ]
+        }
+        default {
+          return [ list $outer_type ]
+        }
+      }
+    }
+
+    # Recursively build a nested ADLB structure with containers/multisets/etc
+    # types: list of types from outer to inner. 
+    #        key/value types are both included in list
+    # types_pos: current position in types list
+    proc build_rec { id cval types {types_pos 0} {write_decr 1}} {
+      log "build_rec: <$id>"
+      set outer_type [ lindex $types $types_pos ]
+      
+      # If there are more than two entries left in the type list
+      # (the leaf type, and another container type), we will
+      # recurse to handle that.
+      
+      switch $outer_type {
+        container {
+          set n [ dict size $cval ]
+          if { $n > 0 } {
+            set i 0
+            dict for { key val } $cval {
+              set key_type_pos [ expr {$types_pos + 1} ]
+              set key_type [ lindex $types $key_type_pos ]
+              set val_type_pos [ expr {$types_pos + 2} ]
+              set val_type [ lindex $types $val_type_pos ]
+              
+              # TODO: extra appropriate slice of types depending on value type
+              set create_types [ type_create_slice $val_type $types $val_type_pos ]
+              set val_id [ adlb::create $::adlb::NULL_ID {*}$create_types 1 1 ]
+
+              # build inner data structure
+              build_rec $val_id $val $types $val_type_pos 1
+
+              set write_decr_now 0
+              if { [ expr {$write_decr && $i == $n - 1 } ] } {
+                set write_decr_now $write_decr
+              }
+              adlb::insert $id $key $val_id ref $write_decr_now
+              incr i
+            }
+          } else {
+            adlb::write_refcount_decr $id $write_decr
+          }
+        }
+        multiset {
+          set n [ llength $cval ]
+          if { $n > 0 } {
+            set i 0
+            foreach val $cval {
+              set val_type_pos [ expr {$types_pos + 1} ]
+              set val_type [ lindex $types $val_type_pos ]
+              
+              # TODO: extra appropriate slice of types depending on value type
+              set create_types [ type_create_slice $val_type $types $val_type_pos ]
+              set val_id [ adlb::create $::adlb::NULL_ID {*}$create_types 1 1 ]
+
+              # build inner data structure
+              build_rec $val_id $val $types $val_type_pos 1
+
+              set write_decr_now 0
+              if { [ expr {$write_decr && $i == $n - 1 } ] } {
+                set write_decr_now $write_decr
+              }
+              adlb::store $id ref $val_id $write_decr_now
+              incr i
+            }
+          } else {
+            adlb::write_refcount_decr $id $write_decr
+          }
+        }
+        default {
+          if [ expr {$types_pos + 1 == [ llength $types ]} ] {
+            # Don't need to recurse: just store
+            adlb::store $id $outer_type $cval
+          } else {
+            error "Expected container type to enumerate: $outer_type"
+          }
+        }
+      }
+    }
 
     # Just like adlb::container_reference but add logging
     # Note that container_reference always consumes a read reference count
