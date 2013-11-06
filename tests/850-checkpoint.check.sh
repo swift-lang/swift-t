@@ -1,13 +1,13 @@
 #!/bin/bash
 
-F_COUNT=`grep -F 'f executed' ${TURBINE_OUTPUT} | wc -l`
-F_R_COUNT=`grep -F 'f executed' ${TURBINE_XPT_RELOAD_OUTPUT} | wc -l`
+F_COUNT=`grep -F 'trace: f executed' ${TURBINE_OUTPUT} | wc -l`
+F_R_COUNT=`grep -F 'trace: f executed' ${TURBINE_XPT_RELOAD_OUTPUT} | wc -l`
 F_EXP=103
-G_COUNT=`grep -F 'g executed' ${TURBINE_OUTPUT} | wc -l`
-G_R_COUNT=`grep -F 'g executed' ${TURBINE_XPT_RELOAD_OUTPUT} | wc -l`
+G_COUNT=`grep -F 'trace: g executed' ${TURBINE_OUTPUT} | wc -l`
+G_R_COUNT=`grep -F 'trace: g executed' ${TURBINE_XPT_RELOAD_OUTPUT} | wc -l`
 G_EXP=101
-H_COUNT=`grep -F 'h executed' ${TURBINE_OUTPUT} | wc -l`
-H_R_COUNT=`grep -F 'h executed' ${TURBINE_XPT_RELOAD_OUTPUT} | wc -l`
+H_COUNT=`grep -F 'trace: h executed' ${TURBINE_OUTPUT} | wc -l`
+H_R_COUNT=`grep -F 'trace: h executed' ${TURBINE_XPT_RELOAD_OUTPUT} | wc -l`
 G_EXP=101
 H_EXP=101
 

@@ -1,7 +1,8 @@
 import assert;
 
+// SKIP-O3-TEST
+
 // Basic test for checkpointing
-// SKIP-THIS-TEST
 
 main {
  
@@ -32,14 +33,14 @@ main {
 // Single scalar arg
 @checkpoint
 (int o) f (int i) {
-    trace("f executed");
+    trace("f executed args: " + fromint(i));
     o = i + 1;
 }
 
 // Single scalar arg, multiple outputs
 @checkpoint
 (int o1, int o2) g (int i) "turbine" "0.0" [
-  "puts {g executed}; lassign [ list [ expr <<i>> + 1 ] [ expr <<i>> + 2 ] ] <<o1>> <<o2>>"
+  "puts \"trace: g executed args: <<i>>\"; lassign [ list [ expr <<i>> + 1 ] [ expr <<i>> + 2 ] ] <<o1>> <<o2>>"
 ];
 
 import blob;
@@ -47,6 +48,6 @@ import string;
 // Multiple scalar args, including blob
 @checkpoint
 (int o) h (int i, string s, blob b) {
-  trace("h executed");
+  trace("h executed args: " + fromint(i));
   o = i + blob_size(b) + strlen(s);
 }
