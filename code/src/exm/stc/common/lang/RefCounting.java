@@ -53,6 +53,8 @@ public class RefCounting {
   public static boolean mayHaveReadRefcount(Type type) {
     if (Types.isPrimValue(type)) {
       return false;
+    } else if (Types.isContainerLocal(type)) {
+      return false;
     }
     return true;
   }
