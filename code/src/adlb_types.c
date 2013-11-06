@@ -331,7 +331,7 @@ ADLB_Unpack_buffer(adlb_data_type type,
   assert(entry != NULL);
   assert(entry_length != NULL);
 
-  if (*pos == length)
+  if (*pos >= length)
   {
     return ADLB_DATA_DONE;
   }
@@ -345,6 +345,8 @@ ADLB_Unpack_buffer(adlb_data_type type,
   check_verbose(entry_length64 <= INT_MAX, ADLB_DATA_ERROR_INVALID,
        "Packed buffer encode entry length too long for int: %"PRId64,
        entry_length64);
+  
+  DEBUG("Entry length: %"PRId64, entry_length64);
 
   int vint_padded_len = ADLB_pack_pad_size(type) ? VINT_MAX_BYTES : vint_len;
   int remaining = length - *pos - vint_padded_len;
@@ -439,7 +441,8 @@ ADLB_Unpack_container_hdr(const void *data, int length, int *pos,
   int vint_len;
   int64_t key_type64;
   vint_len = vint_decode(data + *pos, length - *pos, &key_type64);
-  assert(vint_len >= 1);
+  check_verbose(vint_len >= 1, ADLB_DATA_ERROR_INVALID,
+                "Could not decode vint for key type (%i)", vint_len);
   *pos += vint_len;
   *key_type = (adlb_data_type)key_type64; 
   check_verbose(key_type64 == *key_type, ADLB_DATA_ERROR_INVALID,
@@ -447,7 +450,8 @@ ADLB_Unpack_container_hdr(const void *data, int length, int *pos,
   
   int64_t val_type64;
   vint_len = vint_decode(data + *pos, length - *pos, &val_type64);
-  assert(vint_len >= 1);
+  check_verbose(vint_len >= 1, ADLB_DATA_ERROR_INVALID,
+                "Could not decode vint for value type (%i)", vint_len);
   *pos += vint_len;
   *val_type = (adlb_data_type)val_type64; 
   check_verbose(val_type64 == *val_type, ADLB_DATA_ERROR_INVALID,
@@ -456,7 +460,7 @@ ADLB_Unpack_container_hdr(const void *data, int length, int *pos,
   int64_t entries64;
   vint_len = vint_decode(data + *pos, length, &entries64);
   check_verbose(vint_len >= 0, ADLB_DATA_ERROR_INVALID,
-                "Could not extract multiset entry count");
+                "Could not extract multiset entry count (%i)", vint_len);
   check_verbose(entries64 >= 0 && entries64 <= INT_MAX,
       ADLB_DATA_ERROR_INVALID, "Entries out of range: %"PRId64, entries64);
   *entries = (int)entries64;
