@@ -59,6 +59,7 @@ namespace eval turbine {
     # param s Number of ADLB servers
     proc init { engines servers } {
 
+        assert_control_sanity $engines $servers 
         setup_log_string
 
         variable error_code
@@ -82,6 +83,8 @@ namespace eval turbine {
         } else {
             adlb::init $servers $types
         }
+        assert_sufficient_procs 
+
         c::init [ adlb::amserver ] [ adlb::rank ] [ adlb::size ]
 
         setup_mode $engines $servers
@@ -94,15 +97,24 @@ namespace eval turbine {
         argv_init
     }
 
+    proc assert_control_sanity { n_engines n_adlb_servers } { 
+        if { $n_engines <= 0 } {
+            error "ERROR: ENGINES==0"
+        }
+        if { $n_adlb_servers <= 0 } {
+            error "ERROR: SERVERS==0"
+        }
+    }
+
     proc setup_mode { engines servers } {
 
         variable n_adlb_servers
         variable n_engines
         variable n_workers
+        
         set n_adlb_servers $servers
         set n_engines $engines
         set n_workers [ expr {[ adlb::size ] - $servers - $engines} ]
-
 
         variable mode
 	variable is_engine
@@ -120,32 +132,29 @@ namespace eval turbine {
 
         log "MODE: $mode"
         if { [ adlb::rank ] == 0 } {
-            set first_worker $n_engines
-            set first_server [ expr [adlb::size] - $n_adlb_servers ]
-            set last_worker  [ expr $first_server - 1 ]
-            set last_server  [ expr [adlb::size] - 1 ]
-            log [ cat "ENGINES: $n_engines" \
-                      "RANKS: 0 - [ expr $first_worker - 1 ]" ]
-            log [ cat "WORKERS: $n_workers" \
-                      "RANKS: $first_worker - $last_worker" ]
-            log [ cat "SERVERS: $n_adlb_servers" \
-                      "RANKS: $first_server - $last_server" ]
-            set adlb_procs [ adlb::size ]
-            if { $adlb_procs < 3 } {
-              puts "ERROR: too few Turbine processes specified by user:\
-                    $adlb_procs, must be at least 3"
-              exit 1
-            }
-
-            if { $n_adlb_servers <= 0 } {
-                puts "ERROR: SERVERS==0"
-                exit 1
-            }
-            if { $n_workers <= 0 } {
-                puts "ERROR: WORKERS==0"
-                exit 1
-            }
+            log_rank_layout      $n_engines $n_workers $n_adlb_servers
+            assert_sufficient_procs
         }
+    }
+
+    proc assert_sufficient_procs { } { 
+        if { [ adlb::size ] < 3 } {
+            error "Too few Turbine processes specified by user:\
+                    [adlb::size], must be at least 3"
+        }
+    }
+
+    proc log_rank_layout { n_engines n_workers n_adlb_servers } { 
+        set first_worker $n_engines
+        set first_server [ expr [adlb::size] - $n_adlb_servers ]
+        set last_worker  [ expr $first_server - 1 ]
+        set last_server  [ expr [adlb::size] - 1 ]
+        log [ cat "ENGINES: $n_engines" \
+                  "RANKS: 0 - [ expr $first_worker - 1 ]" ]
+        log [ cat "WORKERS: $n_workers" \
+                  "RANKS: $first_worker - $last_worker" ]
+        log [ cat "SERVERS: $n_adlb_servers" \
+                  "RANKS: $first_server - $last_server" ]
     }
 
     proc start { args } {
