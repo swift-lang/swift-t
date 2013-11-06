@@ -2140,7 +2140,9 @@ public class TurbineGenerator implements CompilerBackend {
             exprs.add(new Token("void"));
           } else {
             throw new STCRuntimeError("Don't know how to pass var " + v);
-          }
+          } 
+        } else if (Types.isContainerLocal(t)) {
+          exprs.add(varToExpr(v));
         } else {
           throw new STCRuntimeError("Don't know how to pass var with type "
               + v);
