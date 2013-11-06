@@ -1976,7 +1976,7 @@ public class TurbineGenerator implements CompilerBackend {
         for (int i = 0; i < waitVars.size(); i++) {
           Type waitVarType = waitVars.get(i).type();
           Type baseType;
-          if (Types.isArray(waitVarType)) {
+          if (Types.isContainer(waitVarType)) {
             NestedContainerInfo ai = new NestedContainerInfo(waitVarType);
             depths[i] = ai.nesting;
             baseType = ai.baseType;
