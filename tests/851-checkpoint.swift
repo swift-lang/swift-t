@@ -1,6 +1,4 @@
 // Test checkpointing for data structures
-// SKIP-THIS-TEST
-
 import assert;
 import math;
 import stats;
@@ -22,7 +20,7 @@ main {
 
 @checkpoint
 (int a, float A[], bag<int> abag) arrayf (int b, blob B[]) {
-
+  trace("arrayf executed args: " + fromint(b));
   foreach x, i in B {
     A[i] = itof(blob_size(x));
     abag += blob_size(x);

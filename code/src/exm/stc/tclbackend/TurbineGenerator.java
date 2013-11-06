@@ -57,9 +57,9 @@ import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.NestedContainerInfo;
 import exm.stc.common.lang.Types.FileKind;
 import exm.stc.common.lang.Types.FunctionType;
+import exm.stc.common.lang.Types.NestedContainerInfo;
 import exm.stc.common.lang.Types.PrimType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.Type;
@@ -89,7 +89,6 @@ import exm.stc.tclbackend.tree.PackageRequire;
 import exm.stc.tclbackend.tree.Proc;
 import exm.stc.tclbackend.tree.Sequence;
 import exm.stc.tclbackend.tree.SetVariable;
-import exm.stc.tclbackend.tree.Square;
 import exm.stc.tclbackend.tree.Switch;
 import exm.stc.tclbackend.tree.TclExpr;
 import exm.stc.tclbackend.tree.TclList;
@@ -837,9 +836,10 @@ public class TurbineGenerator implements CompilerBackend {
     assert(src.type().assignableTo(
               Types.unpackedContainerType(target)));    
 
-    // TODO: call once implemented
-    pointAdd(Square.fnCall("error",
-        new TclString("Recursive store not implemented")));
+    // TODO: move to Turbine.java
+    List<TypeName> typeList = nestedTypeList(target.type(), true, false, true); 
+    pointAdd(new Command("turbine::build_rec", Arrays.asList(
+         varToExpr(target), argToExpr(src), new TclList(typeList))));
   }
   
   @Override
