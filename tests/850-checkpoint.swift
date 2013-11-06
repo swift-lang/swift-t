@@ -1,6 +1,7 @@
 import assert;
 
 // Basic test for checkpointing
+// SKIP-O3-TEST
 main {
  
   trace(f(1));
