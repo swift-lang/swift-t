@@ -52,7 +52,7 @@
 #include <adlb.h>
 #include <adlb-defs.h>
 #include <adlb_types.h>
-#ifndef ENABLE_XPT
+#ifdef ENABLE_XPT
 #include <adlb-xpt.h>
 #endif
 
@@ -149,8 +149,8 @@ static struct {
  */
 typedef struct {
   int len;
-  const adlb_data_type *types; /* E.g. container and nested types */
-  const adlb_type_extra *const*extras; /* E.g. for struct subtype */
+  adlb_data_type *types; /* E.g. container and nested types */
+  adlb_type_extra **extras; /* E.g. for struct subtype */
 } compound_type;
 
 static void set_namespace_constants(Tcl_Interp* interp);
@@ -200,6 +200,9 @@ static int
 tcl_dict_to_packed_container(Tcl_Interp *interp, Tcl_Obj *const objv[],
         const compound_type types, int *ctype_pos, Tcl_Obj *dict,
         adlb_buffer *output, bool *output_caller_buf, int *output_pos);
+
+static void
+free_compound_type(compound_type *types);
 
 static inline int
 compound_type_next(Tcl_Interp *interp, Tcl_Obj *const objv[],
@@ -1366,6 +1369,27 @@ tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
   return TCL_OK;
 }
 
+static void
+free_compound_type(compound_type *types)
+{
+  assert(types != NULL);
+  if (types->types != NULL)
+  {
+    free(types->types);
+  }
+  if (types->extras != NULL)
+  {
+    for (int i = 0; i < types->len; i++)
+    {
+      if (types->extras[i] != NULL)
+      {
+        free(types->extras[i]);
+      }
+    }
+    free(types->extras);
+  }
+}
+
 /* Consume next entry from compound_type */
 static inline int
 compound_type_next(Tcl_Interp *interp, Tcl_Obj *const objv[],
@@ -1373,7 +1397,9 @@ compound_type_next(Tcl_Interp *interp, Tcl_Obj *const objv[],
       adlb_data_type *type, const adlb_type_extra **extra)
 {
   TCL_CONDITION(*ctype_pos < types.len,
-              "Consumed past end of compound type info");
+          "Consumed past end of compound type info (%i/%i)",
+          *ctype_pos, types.len);
+
   *type = types.types[*ctype_pos];
   *extra = types.extras == NULL ?  NULL : types.extras[*ctype_pos];
   (*ctype_pos)++;
@@ -1397,6 +1423,7 @@ tcl_obj_bin_append(Tcl_Interp *interp, Tcl_Obj *const objv[],
   int rc;
   adlb_data_type type;
   const adlb_type_extra *extra;
+
   rc = compound_type_next(interp, objv, types, ctype_pos, &type, &extra);
   TCL_CHECK(rc);
 
@@ -1482,8 +1509,10 @@ tcl_obj_bin_append2(Tcl_Interp *interp, Tcl_Obj *const objv[],
         adlb_buffer *output, bool *output_caller_buf,
         int *output_pos)
 {
+  // NOTE: it's ok to remove const qualifier since it isn't
+  //       modified by called function.
   compound_type ct = { .len = 1, .types = &type,
-        .extras = extra == NULL ? NULL : &extra };
+        .extras = (extra == NULL) ? NULL : (adlb_type_extra**)&extra };
   int ct_pos = 1;
   return tcl_obj_bin_append(interp, objv, ct, &ct_pos, obj,
              false, output, output_caller_buf, output_pos);
@@ -1560,11 +1589,6 @@ tcl_dict_to_packed_container(Tcl_Interp *interp, Tcl_Obj *const objv[],
   int rc;
   adlb_data_code dc;
 
-  adlb_data_type type;
-  const adlb_type_extra *extra;
-  rc = compound_type_next(interp, objv, types, ctype_pos, &type, &extra);
-  TCL_CHECK(rc);
-
   int entries;
   rc = Tcl_DictObjSize(interp, dict, &entries);
   TCL_CHECK(rc);
@@ -1617,6 +1641,7 @@ tcl_dict_to_packed_container(Tcl_Interp *interp, Tcl_Obj *const objv[],
     
     // Recursively serialize value (which may be a compound type such as
     //  a list or a dict)
+    (*ctype_pos)--; // Value type needs to be first
     rc = tcl_obj_bin_append(interp, objv, types, ctype_pos,
                 val, true, output, output_caller_buf, output_pos);
     TCL_CHECK_MSG_GOTO(rc, exit_err, "Error serializing dict val");
@@ -1635,18 +1660,22 @@ tcl_list_to_packed_multiset(Tcl_Interp *interp, Tcl_Obj *const objv[],
 {
   int rc;
   adlb_data_code dc;
-  
-  adlb_data_type type;
-  const adlb_type_extra *extra;
-  rc = compound_type_next(interp, objv, types, ctype_pos, &type, &extra);
-  TCL_CHECK(rc);
 
   int listc;
   Tcl_Obj **listv;
   rc = Tcl_ListObjGetElements(interp, list, &listc, &listv);
   TCL_CHECK(rc);
+  
+  
+  adlb_data_type elem_type;
+  const adlb_type_extra *elem_extra;
 
-  adlb_data_type elem_type = extra->MULTISET.val_type;
+  // Elem might be a compound type: we consume that info later
+  rc = compound_type_next(interp, objv, types, ctype_pos,
+                          &elem_type, &elem_extra);
+  TCL_CHECK(rc);
+
+
   dc = ADLB_Pack_multiset_hdr(listc, elem_type, output, output_caller_buf,
                               output_pos);
   TCL_CONDITION_GOTO(dc == ADLB_DATA_SUCCESS, exit_err,
@@ -3472,7 +3501,7 @@ ADLB_Xpt_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(4);
 
-#ifndef ENABLE_XPT
+#ifdef ENABLE_XPT
   const char *filename = Tcl_GetString(objv[1]);
   if (strlen(filename) == 0) {
     filename = NULL; // ADLB interface takes null instead of empty string
@@ -3518,7 +3547,7 @@ static int
 ADLB_Xpt_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
                    int objc, Tcl_Obj *const objv[])
 {
-#ifndef ENABLE_XPT
+#ifdef ENABLE_XPT
   TCL_ARGS(1);
   adlb_code ac = ADLB_Xpt_finalize();
   TCL_CONDITION(ac == ADLB_SUCCESS, "Error while finalizing checkpointing");
@@ -3539,7 +3568,7 @@ static int
 ADLB_Xpt_Write_Cmd(ClientData cdata, Tcl_Interp *interp,
                    int objc, Tcl_Obj *const objv[])
 {
-#ifndef ENABLE_XPT
+#ifdef ENABLE_XPT
   TCL_ARGS(5);
   int rc;
   adlb_code ac;
@@ -3597,7 +3626,7 @@ static int
 ADLB_Xpt_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
                    int objc, Tcl_Obj *const objv[])
 {
-#ifndef ENABLE_XPT
+#ifdef ENABLE_XPT
   TCL_CONDITION(objc == 2 || objc == 3, "Must provide 1 or 2 arguments" );
   int rc;
   adlb_code ac;
@@ -3645,13 +3674,13 @@ ADLB_Xpt_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 /*
    Pack a TCL container value represented as a TCL dict or array.
-   Handles nesting.
+   Handles nesting
+   Consturct compound type from Tcl arguments .
    argpos: updated to consume multiple type names from command line
  */
 static int
 container_pack_typeinfo(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
-                int *argpos, adlb_data_type outer_type,
-                adlb_data_type **types, int *nesting)
+                int *argpos, compound_type *types)
 {
   int rc;
 
@@ -3659,32 +3688,89 @@ container_pack_typeinfo(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
    * value type.
    */
   int types_size = 16;
-  *types = malloc(sizeof(adlb_data_type) * types_size);
-  TCL_CONDITION(types != NULL, "Error allocating memory");
-  *nesting = 0;
-  adlb_data_type curr = outer_type;
-  while (curr == ADLB_DATA_TYPE_CONTAINER ||
-         curr == ADLB_DATA_TYPE_MULTISET)
-  {
-    adlb_data_type next;
-    bool has_extra;
-    adlb_type_extra extra;
-    rc = type_from_obj_extra(interp, objv, objv[*argpos], &next,
-                             &has_extra, &extra);
-    TCL_CHECK(rc);
+  adlb_data_type *type_arr = malloc(sizeof(adlb_data_type) * types_size);
+  TCL_CONDITION(type_arr != NULL, "Error allocating memory");
+
+  adlb_type_extra **extras = malloc(sizeof(adlb_type_extra*) * types_size);
+  TCL_CONDITION_GOTO(extras != NULL, exit_err, "Error allocating memory");
+
+  int len = 0;
+  int to_consume = 1; // Min additional number that must be consumed
+
+  // Must consume at least the outermost type
+  while (to_consume > 0) {
+    TCL_CONDITION_GOTO(*argpos < objc, exit_err,
+                       "Consumed past end of arguments");
     
-    if (types_size < *nesting)
+    if (types_size <= len)
     {
       types_size *= 2;
-      *types = realloc(*types, sizeof(adlb_data_type) * types_size);
-      TCL_CONDITION(*types != NULL, "Error allocating memory");
+      type_arr = realloc(type_arr, sizeof(adlb_data_type) * types_size);
+      TCL_CONDITION_GOTO(type_arr != NULL, exit_err,
+                        "Error allocating memory");
+      
+      extras = realloc(extras, sizeof(adlb_type_extra*) * types_size);
+      TCL_CONDITION_GOTO(extras != NULL, exit_err,
+                        "Error allocating memory");
     }
-    (*types)[(*nesting)++] = curr;
-    curr = next;
+
+    adlb_data_type curr;
+    bool has_extra;
+    adlb_type_extra extra;
+    rc = type_from_obj_extra(interp, objv, objv[*argpos], &curr,
+                             &has_extra, &extra);
+    TCL_CHECK_GOTO(rc, exit_err);
+    
+    type_arr[len] = curr;
+   
+    if (has_extra)
+    {
+      extras[len] = malloc(sizeof(adlb_type_extra));
+      *(extras[len]) = extra;
+    }
+    else
+    {
+      extras[len] = NULL;
+    }
+
+    // Make sure we consume more types
+    switch (curr)
+    {
+      case ADLB_DATA_TYPE_CONTAINER:
+        assert(to_consume == 1);
+        to_consume = 2; // Key and val
+        break;
+      case ADLB_DATA_TYPE_MULTISET:
+        assert(to_consume == 1);
+        to_consume = 1; // Val
+        break;
+      default:
+        to_consume--;
+        break;
+    }
+
+    len++;
     (*argpos)++;
   }
 
+  types->types = type_arr;
+  types->extras = extras;
+  types->len = len;
   return TCL_OK;
+exit_err:
+  if (type_arr != NULL)
+  {
+    free(type_arr);
+  }
+  if (extras != NULL)
+  {
+    for (int i = 0; i < len; i++)
+    {
+      free(extras[i]);
+    }
+    free(extras);
+  }
+  return TCL_ERROR;
 }
 
 /**
@@ -3707,42 +3793,24 @@ ADLB_Xpt_Pack_Cmd(ClientData cdata, Tcl_Interp *interp,
   int argpos = 1;
   while (argpos < objc)
   {
-    Tcl_Obj *typeO = objv[argpos++];
-    adlb_data_type type;
-    bool has_extra;
-    adlb_type_extra extra;
-    rc = type_from_obj_extra(interp, objv, typeO, &type,
-                             &has_extra, &extra);
+    // We might need to pack compound types
+    compound_type compound_type;
+    rc = container_pack_typeinfo(interp, objc, objv, &argpos,
+                                 &compound_type);
     TCL_CHECK(rc);
 
-    adlb_data_type *nested_types = NULL;
-    int nesting = 0;
-
-    switch (type)
-    {
-      case ADLB_DATA_TYPE_CONTAINER:
-      case ADLB_DATA_TYPE_MULTISET:
-        rc = container_pack_typeinfo(interp, objc, objv, &argpos, type,
-                      &nested_types, &nesting);
-        TCL_CHECK(rc);
-      default:
-        // no special handling
-        break;
-    }
-    
-    // TODO: need way to pass additional container info into
-    //      tcl_obj_bin_append
-    
     TCL_CONDITION(argpos < objc,
                   "Last argument missing value");
     Tcl_Obj *val = objv[argpos++];
 
    
-    // TODO: use tcl_obj_bin_append interface
     // pack incrementally into buffer
-    rc = tcl_obj_bin_append2(interp, objv, type, has_extra ? &extra : NULL,
+    int ctype_pos = 0;
+    rc = tcl_obj_bin_append(interp, objv, compound_type, &ctype_pos,
             val, true, &packed, &using_caller_buf, &pos);
     TCL_CHECK(rc);
+
+    free_compound_type(&compound_type);
   }
 
   Tcl_Obj *packedBlob = build_tcl_blob(packed.data, pos,
@@ -3820,7 +3888,7 @@ static int
 ADLB_Xpt_Reload_Cmd(ClientData cdata, Tcl_Interp *interp,
                    int objc, Tcl_Obj *const objv[])
 {
-#ifndef ENABLE_XPT
+#ifdef ENABLE_XPT
   TCL_ARGS(2);
   const char *filename = Tcl_GetString(objv[1]);
 

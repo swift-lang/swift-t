@@ -166,6 +166,7 @@ Tcl_Obj* tcl_list_from_array_ints(Tcl_Interp *interp,
 
 #define TCL_CHECK(rc) { if (rc != TCL_OK) { return TCL_ERROR; }}
 
+#define TCL_CHECK_GOTO(rc, label) { if (rc != TCL_OK) { goto label; }}
 
 /**
    If rc is not TCL_OK, return a Tcl error
