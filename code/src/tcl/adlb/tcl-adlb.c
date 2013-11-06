@@ -144,6 +144,15 @@ static struct {
                 adlb_struct_formats.types[st].initialized,  \
                 "Struct type %i not registered with Tcl ADLB module", st);
 
+/*
+  Represent full type of a data structure
+ */
+typedef struct {
+  int len;
+  const adlb_data_type *types; /* E.g. container and nested types */
+  const adlb_type_extra *const*extras; /* E.g. for struct subtype */
+} compound_type;
+
 static void set_namespace_constants(Tcl_Interp* interp);
 
 static int refcount_mode(Tcl_Interp *interp, Tcl_Obj *const objv[],
@@ -179,25 +188,38 @@ packed_multiset_to_list(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
 static int
 tcl_list_to_packed_multiset(Tcl_Interp *interp, Tcl_Obj *const objv[],
-                const adlb_type_extra *extra,
-                Tcl_Obj *list, adlb_buffer *output, bool *output_caller_buf,
-                int *output_pos);
+        const compound_type types, int *ctype_pos, Tcl_Obj *list,
+        adlb_buffer *output, bool *output_caller_buf, int *output_pos);
+
 static int
 packed_container_to_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
-                         const void *data, int length,
-                         const adlb_type_extra *extra, Tcl_Obj **result);
+       const void *data, int length,
+       const adlb_type_extra *extra, Tcl_Obj **result);
+
 static int
 tcl_dict_to_packed_container(Tcl_Interp *interp, Tcl_Obj *const objv[],
-                const adlb_type_extra *extra,
-                Tcl_Obj *dict, adlb_buffer *output, bool *output_caller_buf,
-                int *output_pos);
+        const compound_type types, int *ctype_pos, Tcl_Obj *dict,
+        adlb_buffer *output, bool *output_caller_buf, int *output_pos);
 
-int
+static inline int
+compound_type_next(Tcl_Interp *interp, Tcl_Obj *const objv[],
+      const compound_type types, int *ctype_pos,
+      adlb_data_type *type, const adlb_type_extra **extra);
+
+static int
 tcl_obj_bin_append(Tcl_Interp *interp, Tcl_Obj *const objv[],
-                adlb_data_type type, const adlb_type_extra *extra,
-                Tcl_Obj *obj, bool prefix_len,
-                adlb_buffer *output, bool *output_caller_buf,
-                int *output_pos);
+        const compound_type types, int *ctype_pos,
+        Tcl_Obj *obj, bool prefix_len,
+        adlb_buffer *output, bool *output_caller_buf,
+        int *output_pos);
+
+static int
+tcl_obj_bin_append2(Tcl_Interp *interp, Tcl_Obj *const objv[],
+        adlb_data_type type, const adlb_type_extra *extra,
+        Tcl_Obj *obj, bool prefix_len,
+        adlb_buffer *output, bool *output_caller_buf,
+        int *output_pos);
+
 #define DEFAULT_PRIORITY 0
 
 /* current priority for rule */
@@ -1344,14 +1366,40 @@ tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
   return TCL_OK;
 }
 
-int
+/* Consume next entry from compound_type */
+static inline int
+compound_type_next(Tcl_Interp *interp, Tcl_Obj *const objv[],
+      const compound_type types, int *ctype_pos,
+      adlb_data_type *type, const adlb_type_extra **extra)
+{
+  TCL_CONDITION(*ctype_pos < types.len,
+              "Consumed past end of compound type info");
+  *type = types.types[*ctype_pos];
+  *extra = types.extras == NULL ?  NULL : types.extras[*ctype_pos];
+  (*ctype_pos)++;
+  return TCL_OK;
+}
+
+/*
+  Append binary representation of Tcl object to buffer
+  types: full ADLB type of data for serialization
+  ctype_pos: current position into types (in case of nested types).
+          This is advanced as type entries are processed.
+            
+ */
+static int
 tcl_obj_bin_append(Tcl_Interp *interp, Tcl_Obj *const objv[],
-                adlb_data_type type, const adlb_type_extra *extra,
-                Tcl_Obj *obj, bool prefix_len,
-                adlb_buffer *output, bool *output_caller_buf,
-                int *output_pos)
+        const compound_type types, int *ctype_pos,
+        Tcl_Obj *obj, bool prefix_len,
+        adlb_buffer *output, bool *output_caller_buf,
+        int *output_pos)
 {
   int rc;
+  adlb_data_type type;
+  const adlb_type_extra *extra;
+  rc = compound_type_next(interp, objv, types, ctype_pos, &type, &extra);
+  TCL_CHECK(rc);
+
   // Some serialization routines know how to append to buffer
   if (ADLB_pack_pad_size(type))
   {
@@ -1366,14 +1414,15 @@ tcl_obj_bin_append(Tcl_Interp *interp, Tcl_Obj *const objv[],
       *output_pos += VINT_MAX_BYTES;
     }
 
+    // These functions are responsible for advancing ctype_pos further
     if (type == ADLB_DATA_TYPE_CONTAINER)
     {
-      return tcl_dict_to_packed_container(interp, objv, extra, obj,
-                  output, output_caller_buf, output_pos);
+      return tcl_dict_to_packed_container(interp, objv, types, ctype_pos,
+                  obj, output, output_caller_buf, output_pos);
     }
     else if (type == ADLB_DATA_TYPE_MULTISET)
     {
-      return tcl_list_to_packed_multiset(interp, objv, extra, obj,
+      return tcl_list_to_packed_multiset(interp, objv, types, ctype_pos, obj,
                   output, output_caller_buf, output_pos);
     }
     else
@@ -1426,6 +1475,20 @@ tcl_obj_bin_append(Tcl_Interp *interp, Tcl_Obj *const objv[],
   return TCL_OK;
 }
 
+static int
+tcl_obj_bin_append2(Tcl_Interp *interp, Tcl_Obj *const objv[],
+        adlb_data_type type, const adlb_type_extra *extra,
+        Tcl_Obj *obj, bool prefix_len,
+        adlb_buffer *output, bool *output_caller_buf,
+        int *output_pos)
+{
+  compound_type ct = { .len = 1, .types = &type,
+        .extras = extra == NULL ? NULL : &extra };
+  int ct_pos = 1;
+  return tcl_obj_bin_append(interp, objv, ct, &ct_pos, obj,
+             false, output, output_caller_buf, output_pos);
+}
+
 /**
   Take a Tcl object and an ADLB type and extract the binary representation
   type: adlb data type code
@@ -1452,8 +1515,8 @@ tcl_obj_to_bin(Tcl_Interp *interp, Tcl_Obj *const objv[],
     dc = ADLB_Init_buf(caller_buffer, &buf,
                                       &using_caller_buf, 128);
     TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error initializing buffer");
-
-    rc = tcl_obj_bin_append(interp, objv, type, extra, obj,
+    
+    rc = tcl_obj_bin_append2(interp, objv, type, extra, obj,
                             false, &buf, &using_caller_buf, &pos);
     TCL_CHECK(rc);
 
@@ -1491,19 +1554,35 @@ tcl_obj_to_bin(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
 static int
 tcl_dict_to_packed_container(Tcl_Interp *interp, Tcl_Obj *const objv[],
-                const adlb_type_extra *extra,
-                Tcl_Obj *dict, adlb_buffer *output, bool *output_caller_buf,
-                int *output_pos)
+        const compound_type types, int *ctype_pos, Tcl_Obj *dict,
+        adlb_buffer *output, bool *output_caller_buf, int *output_pos)
 {
-  TCL_CONDITION(extra != NULL, "Need key/val type info to pack container");
   int rc;
   adlb_data_code dc;
+
+  adlb_data_type type;
+  const adlb_type_extra *extra;
+  rc = compound_type_next(interp, objv, types, ctype_pos, &type, &extra);
+  TCL_CHECK(rc);
+
   int entries;
   rc = Tcl_DictObjSize(interp, dict, &entries);
   TCL_CHECK(rc);
 
-  adlb_data_type key_type = extra->CONTAINER.key_type;
-  adlb_data_type val_type = extra->CONTAINER.val_type;
+  adlb_data_type key_type, val_type;
+  const adlb_type_extra *key_extra, *val_extra;
+
+  // Note: assuming key isn't a compound type, because we don't
+  //       consume additional type info for key
+  rc = compound_type_next(interp, objv, types, ctype_pos,
+                          &key_type, &key_extra);
+  TCL_CHECK(rc);
+ 
+  // Val might be a compound type: we consume that info later
+  rc = compound_type_next(interp, objv, types, ctype_pos,
+                          &val_type, &val_extra);
+  TCL_CHECK(rc);
+
   dc = ADLB_Pack_container_hdr(entries, key_type, val_type, output,
                                 output_caller_buf, output_pos);
   TCL_CONDITION_GOTO(dc == ADLB_DATA_SUCCESS, exit_err,
@@ -1535,16 +1614,12 @@ tcl_dict_to_packed_container(Tcl_Interp *interp, Tcl_Obj *const objv[],
                     true, output, output_caller_buf, output_pos); 
     TCL_CONDITION_GOTO(dc == ADLB_DATA_SUCCESS, exit_err,
                        "Error appending to buffer");
-
-    adlb_binary_data val_data;
-    rc = tcl_obj_to_bin(interp, objv, val_type, NULL,
-                        val, NULL, &val_data);
-    TCL_CHECK_MSG_GOTO(rc, exit_err, "Error serializing multiset elem");
-
-    dc = ADLB_Append_buffer(val_type, val_data.data, val_data.length,
-                          true, output, output_caller_buf, output_pos); 
-    TCL_CONDITION_GOTO(dc == ADLB_DATA_SUCCESS, exit_err,
-                       "Error appending to buffer");
+    
+    // Recursively serialize value (which may be a compound type such as
+    //  a list or a dict)
+    rc = tcl_obj_bin_append(interp, objv, types, ctype_pos,
+                val, true, output, output_caller_buf, output_pos);
+    TCL_CHECK_MSG_GOTO(rc, exit_err, "Error serializing dict val");
   }
 
   return TCL_OK;
@@ -1554,14 +1629,17 @@ exit_err:
 
 int
 tcl_list_to_packed_multiset(Tcl_Interp *interp, Tcl_Obj *const objv[],
-                const adlb_type_extra *extra,
-                Tcl_Obj *list, adlb_buffer *output, bool *output_caller_buf,
-                int *output_pos)
+        const compound_type types, int *ctype_pos,
+        Tcl_Obj *list, adlb_buffer *output, bool *output_caller_buf,
+        int *output_pos)
 {
-  TCL_CONDITION(extra != NULL, "Need element type info to pack multiset");
-
   int rc;
   adlb_data_code dc;
+  
+  adlb_data_type type;
+  const adlb_type_extra *extra;
+  rc = compound_type_next(interp, objv, types, ctype_pos, &type, &extra);
+  TCL_CHECK(rc);
 
   int listc;
   Tcl_Obj **listv;
@@ -1571,24 +1649,16 @@ tcl_list_to_packed_multiset(Tcl_Interp *interp, Tcl_Obj *const objv[],
   adlb_data_type elem_type = extra->MULTISET.val_type;
   dc = ADLB_Pack_multiset_hdr(listc, elem_type, output, output_caller_buf,
                               output_pos);
-  TCL_CHECK_MSG_GOTO(rc, exit_err, "Error serializing multiset header");
+  TCL_CONDITION_GOTO(dc == ADLB_DATA_SUCCESS, exit_err,
+                     "Error serializing multiset header");
 
   for (int i = 0; i < listc; i++)
   {
     Tcl_Obj *elem = listv[i];
-    adlb_binary_data elem_data;
 
-    // Support writing at end of buffer
-    rc = tcl_obj_to_bin(interp, objv, elem_type, NULL,
-                        elem, NULL, &elem_data);
+    rc = tcl_obj_bin_append(interp, objv, types, ctype_pos,
+                elem, true, output, output_caller_buf, output_pos);
     TCL_CHECK_MSG_GOTO(rc, exit_err, "Error serializing multiset elem");
-
-    dc = ADLB_Append_buffer(elem_type, elem_data.data, elem_data.length,
-                          true, output, output_caller_buf, output_pos); 
-    TCL_CONDITION_GOTO(dc == ADLB_DATA_SUCCESS, exit_err,
-                       "Error appending to buffer");
-
-    ADLB_Free_binary_data(&elem_data);
   }
   
   return TCL_OK;
@@ -3667,9 +3737,10 @@ ADLB_Xpt_Pack_Cmd(ClientData cdata, Tcl_Interp *interp,
                   "Last argument missing value");
     Tcl_Obj *val = objv[argpos++];
 
-    
+   
+    // TODO: use tcl_obj_bin_append interface
     // pack incrementally into buffer
-    rc = tcl_obj_bin_append(interp, objv, type, has_extra ? &extra : NULL,
+    rc = tcl_obj_bin_append2(interp, objv, type, has_extra ? &extra : NULL,
             val, true, &packed, &using_caller_buf, &pos);
     TCL_CHECK(rc);
   }
