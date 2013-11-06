@@ -36,6 +36,22 @@
 }
 
 {
+  tcl-alloc-3
+  Memcheck:Leak
+  fun:malloc
+  fun:GetBlocks
+  fun:TclpAlloc
+  ...
+}
+
+{ 
+  tcl-thread-alloc-1
+  fun:malloc
+  fun:TclThreadAllocObj 
+  ...
+}
+
+{
   tcl-realloc-1
   Memcheck:Leak
   fun:realloc
