@@ -3,6 +3,7 @@ import assert;
 import math;
 import stats;
 import blob;
+import string;
 
 main {
 
@@ -15,6 +16,17 @@ main {
   assertEqual(a, 10 + 6, "a");
   assertEqual(A[0], 6.0, "A[0]");
   assertEqual(bag_size(abag), 2, "bag_size(abag)");
+
+  bag<int> baga[], ibag;
+  baga[0] = ibag;
+  baga[1] = ibag;
+  ibag += 1;
+  ibag += 2;
+  ibag += 2;
+  
+  foreach slist in g(baga) {
+    trace("slist: " + string_join(slist, ", "));
+  }
 }
 
 
@@ -26,4 +38,13 @@ main {
     abag += blob_size(x);
   }
   a = b + round(sum_float(A)/itof(size(A)));
+}
+
+@checkpoint
+(bag<string[]> o) g (bag<int> i[]) {
+  trace("g executed");
+  o += [fromint(bag_size(i[0]))];
+  o += ["1", "2", "3"];
+  o += ["4", "5", "6"];
+  o += ["7", "8", "9"];
 }
