@@ -347,6 +347,12 @@ public class TurbineOp extends Instruction {
     case COPY_FILE_CONTENTS:
       gen.copyFileContents(getOutput(0), getInput(0).getVar());
       break;
+    case CHECKPOINT_WRITE_ENABLED:
+      gen.checkpointWriteEnabled(getOutput(0));
+      break;
+    case CHECKPOINT_LOOKUP_ENABLED:
+      gen.checkpointLookupEnabled(getOutput(0));
+      break;
     case WRITE_CHECKPOINT:
       gen.writeCheckpoint(getInput(0), getInput(1));
       break;
@@ -778,6 +784,14 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.INIT_LOCAL_OUTPUT_FILE, localOutFile.asList(),
                          outFilename, isMapped);
   }
+  
+  public static Instruction checkpointLookupEnabled(Var v) {
+    return new TurbineOp(Opcode.CHECKPOINT_LOOKUP_ENABLED, v);
+  }
+  
+  public static Instruction checkpointWriteEnabled(Var v) {
+    return new TurbineOp(Opcode.CHECKPOINT_WRITE_ENABLED, v);
+  }
 
   public static Instruction writeCheckpoint(Arg key, Arg value) {
     assert(Types.isBlobVal(key.type()));
@@ -973,6 +987,8 @@ public class TurbineOp extends Instruction {
     case LOOKUP_CHECKPOINT:
     case PACK_VALUES:
     case UNPACK_VALUES:
+    case CHECKPOINT_WRITE_ENABLED:
+    case CHECKPOINT_LOOKUP_ENABLED:
       return false;
     default:
       throw new STCRuntimeError("Need to add opcode " + op.toString()
@@ -1599,6 +1615,8 @@ public class TurbineOp extends Instruction {
     case INIT_LOCAL_OUTPUT_FILE:
     case ARRAY_BUILD:
     case BAG_INSERT:
+    case CHECKPOINT_WRITE_ENABLED:
+    case CHECKPOINT_LOOKUP_ENABLED:
     case LOOKUP_CHECKPOINT:
     case WRITE_CHECKPOINT:
     case PACK_VALUES:
@@ -2311,6 +2329,4 @@ public class TurbineOp extends Instruction {
                             getRCType(this.op), getRCAmount(this));
     }
   }
-
-
 }

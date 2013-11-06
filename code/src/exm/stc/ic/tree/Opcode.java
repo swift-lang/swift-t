@@ -91,6 +91,7 @@ public enum Opcode {
   COPY_FILE_CONTENTS,
   
   // Lookup and write checkpoints
+  CHECKPOINT_WRITE_ENABLED, CHECKPOINT_LOOKUP_ENABLED,
   LOOKUP_CHECKPOINT, WRITE_CHECKPOINT,
   
   // Pack and unpack values into blob

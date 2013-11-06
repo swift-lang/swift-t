@@ -890,13 +890,16 @@ public class ExprWalker {
         context.hasFunctionProp(function, FnProp.CHECKPOINTED);
 
     if (checkpointed) {
-      // TODO: check if checkpointing enabled at runtime
-      Arg checkpointingEnabled = Arg.TRUE;    
-      backend.startIfStatement(checkpointingEnabled, true);
+
+      Var lookupEnabled = varCreator.createTmpLocalVal(context, Types.V_BOOL);
+      backend.checkpointLookupEnabled(lookupEnabled);
+      
+      backend.startIfStatement(lookupEnabled.asArg(), true);
       checkpointedFunctionCall(context, function, concrete, oList,
-                               realIList, props);
+                               realIList, props, true);
       backend.startElseBlock();
-      backendFunctionCall(context, function, concrete, oList, realIList, props);
+      checkpointedFunctionCall(context, function, concrete, oList,
+                                realIList, props, false);
       backend.endIfStatement();
     } else {
       backendFunctionCall(context, function, concrete, oList, realIList, props);
@@ -909,7 +912,7 @@ public class ExprWalker {
 
   private void checkpointedFunctionCall(Context context, String function,
       FunctionType concrete, List<Var> oList, List<Var> iList,
-      TaskProps props) throws UserException {
+      TaskProps props, boolean lookupCheckpoint) throws UserException {
     
     /*
      * wait (checkpoint_key_futures) {
@@ -929,32 +932,53 @@ public class ExprWalker {
      */
 
     List<Var> checkpointKeyFutures = iList; // TODO: right?
-    // Need to wait for lookup key before checking if checkpoint exists
-    // Do recursive wait to get container contents
-    backend.startWaitStatement(
-        context.constructName(function + "-checkpoint-wait"),
-        checkpointKeyFutures, WaitMode.WAIT_ONLY,
-        false, true, TaskMode.LOCAL);
-    Var keyBlob = packCheckpointData(context, checkpointKeyFutures);
     
-   // TODO: nicer names for vars?
-    Var existingVal = varCreator.createTmpLocalVal(context, Types.V_BLOB);
-    Var checkpointExists = varCreator.createTmpLocalVal(context,
-                                                     Types.V_BOOL);
-    
-    backend.lookupCheckpoint(checkpointExists, existingVal, keyBlob.asArg());
-    
-    backend.startIfStatement(checkpointExists.asArg(), true);
-    setVarsFromCheckpoint(context, oList, existingVal);
-    backend.startElseBlock();
-    
+    if (lookupCheckpoint)
+    {
+      // Need to wait for lookup key before checking if checkpoint exists
+      // Do recursive wait to get container contents
+      backend.startWaitStatement(
+          context.constructName(function + "-checkpoint-wait"),
+          checkpointKeyFutures, WaitMode.WAIT_ONLY,
+          false, true, TaskMode.LOCAL);
+      Var keyBlob = packCheckpointData(context, checkpointKeyFutures);
+      
+     // TODO: nicer names for vars?
+      Var existingVal = varCreator.createTmpLocalVal(context, Types.V_BLOB);
+      Var checkpointExists = varCreator.createTmpLocalVal(context,
+                                                       Types.V_BOOL);
+      
+      backend.lookupCheckpoint(checkpointExists, existingVal, keyBlob.asArg());
+      
+      backend.startIfStatement(checkpointExists.asArg(), true);
+      setVarsFromCheckpoint(context, oList, existingVal);
+      backend.startElseBlock();
+    }
+      
     // Actually call function
     backendFunctionCall(context, function, concrete, oList, iList, props);
+    
+
+    Var writeEnabled = varCreator.createTmpLocalVal(context, Types.V_BOOL);
+    backend.checkpointWriteEnabled(writeEnabled);
+    
+    backend.startIfStatement(writeEnabled.asArg(), false);
     // checkpoint output values once set
     List<Var> checkpointVal = oList; // TODO: right?
+    
+    List<Var> waitVals;
+    if (lookupCheckpoint) {
+      // Already waited for inputs
+      waitVals = checkpointVal;
+    } else {
+      // Didn't wait for inputs
+      waitVals = new ArrayList<Var>();
+      waitVals.addAll(checkpointKeyFutures);
+      waitVals.addAll(checkpointVal);
+    }
     backend.startWaitStatement(
         context.constructName(function + "-checkpoint-wait"),
-        checkpointVal, WaitMode.WAIT_ONLY, false, true, TaskMode.LOCAL);
+        waitVals, WaitMode.WAIT_ONLY, false, true, TaskMode.LOCAL);
     
     // Lookup checkpoint key again since variable might not be able to be
     // passed through wait.  Rely on optimizer to clean up redundancy
@@ -963,10 +987,13 @@ public class ExprWalker {
     Var valBlob = packCheckpointData(context, checkpointVal);
     
     backend.writeCheckpoint(keyBlob2.asArg(), valBlob.asArg());
-    
     backend.endWaitStatement(); // Close wait for values
-    backend.endIfStatement(); // Close else block
-    backend.endWaitStatement(); // Close wait for keys
+    backend.endIfStatement(); // Close if for write enabled
+    if (lookupCheckpoint)
+    {
+      backend.endIfStatement(); // Close else block
+      backend.endWaitStatement(); // Close wait for keys
+    }
   }
 
   /**

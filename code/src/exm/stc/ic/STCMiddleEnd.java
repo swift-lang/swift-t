@@ -1129,6 +1129,19 @@ public class STCMiddleEnd {
     waitBlock.addInstructions(instBuffer);
   }
 
+  public void checkpointWriteEnabled(Var v) {
+    assert(Types.isBoolVal(v));
+    currBlock().addInstruction(
+            TurbineOp.checkpointWriteEnabled(v));
+  }
+  
+  public void checkpointLookupEnabled(Var v) {
+    assert(Types.isBoolVal(v));
+    currBlock().addInstruction(
+            TurbineOp.checkpointLookupEnabled(v));
+  }
+
+
   public void writeCheckpoint(Arg key, Arg val) {
     assert(Types.isBlobVal(key.type()));
     assert(Types.isBlobVal(val.type()));

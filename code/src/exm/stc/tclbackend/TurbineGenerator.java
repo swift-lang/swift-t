@@ -2815,17 +2815,22 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
+  public void checkpointLookupEnabled(Var out) {
+    pointAdd(new SetVariable(prefixVar(out), Turbine.xptLookupEnabled()));
+  }
+  
+  @Override
+  public void checkpointWriteEnabled(Var out) {
+    pointAdd(new SetVariable(prefixVar(out), Turbine.xptWriteEnabled()));
+  }
+  
+  @Override
   public void writeCheckpoint(Arg key, Arg val) {
     // Write checkpoint with binary keys
     // Want to persist data to disk.
     // Don't need to store new entries in index.
-    Sequence thenBlock = new Sequence();
-    
-    // Allow runtime disabling of checkpoint writing
-    If ifStmt = new If(Turbine.xptWriteEnabled(), thenBlock);
-    thenBlock.add(Turbine.xptWrite(argToExpr(key), argToExpr(val),
+    pointAdd(Turbine.xptWrite(argToExpr(key), argToExpr(val),
                   XptPersist.PERSIST, LiteralInt.FALSE));
-    pointAdd(ifStmt);
   }
 
   @Override
@@ -2834,16 +2839,8 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isBlobVal(key.type()));
     assert(Types.isBlobVal(value));
     
-    Sequence thenBlock = new Sequence();
-    Sequence elseBlock = new Sequence();
-    If ifEnabled = new If(Turbine.xptLookupEnabled(),
-                                   thenBlock, elseBlock);
-    thenBlock.add(Turbine.xptLookupStmt(prefixVar(checkpointExists),
+    pointAdd(Turbine.xptLookupStmt(prefixVar(checkpointExists),
             prefixVar(value), argToExpr(key)));
-    // If not enabled, lookup will never succeed
-    elseBlock.add(new SetVariable(prefixVar(checkpointExists),
-                                   LiteralInt.FALSE));
-    pointAdd(ifEnabled);
   }
 
   @Override
