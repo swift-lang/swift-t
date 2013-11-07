@@ -941,7 +941,8 @@ public class ExprWalker {
           context.constructName(function + "-checkpoint-wait"),
           checkpointKeyFutures, WaitMode.WAIT_ONLY,
           false, true, TaskMode.LOCAL);
-      Var keyBlob = packCheckpointData(context, checkpointKeyFutures);
+      Var keyBlob = packCheckpointKey(context, function,
+                                       checkpointKeyFutures);
       
      // TODO: nicer names for vars?
       Var existingVal = varCreator.createTmpLocalVal(context, Types.V_BLOB);
@@ -982,9 +983,9 @@ public class ExprWalker {
     
     // Lookup checkpoint key again since variable might not be able to be
     // passed through wait.  Rely on optimizer to clean up redundancy
-    Var keyBlob2 = packCheckpointData(context, checkpointKeyFutures);
+    Var keyBlob2 = packCheckpointKey(context, function, checkpointKeyFutures);
 
-    Var valBlob = packCheckpointData(context, checkpointVal);
+    Var valBlob = packCheckpointVal(context, checkpointVal);
     
     backend.writeCheckpoint(keyBlob2.asArg(), valBlob.asArg());
     backend.endWaitStatement(); // Close wait for values
@@ -996,6 +997,17 @@ public class ExprWalker {
     }
   }
 
+  private Var packCheckpointKey(Context context,
+      String functionName, List<Var> vars) throws UserException,
+      UndefinedTypeException, DoubleDefineException {
+    return packCheckpointData(context, functionName, vars);
+  }
+  
+  private Var packCheckpointVal(Context context, List<Var> vars)
+       throws UserException, UndefinedTypeException, DoubleDefineException {
+    return packCheckpointData(context, null, vars);
+  }
+  
   /**
    * Take set of (recursively closed) variables and create a
    * unique key from their values.
@@ -1007,9 +1019,15 @@ public class ExprWalker {
    * @throws DoubleDefineException
    */
   private Var packCheckpointData(Context context,
-      List<Var> vars) throws UserException,
+      String functionName, List<Var> vars) throws UserException,
       UndefinedTypeException, DoubleDefineException {
     List<Arg> elems = new ArrayList<Arg>(vars.size());
+    
+    if (functionName != null) {
+      // Prefix with function name
+      elems.add(Arg.createStringLit(functionName)); 
+    }
+    
     for (Var v: vars) {
       // Need to be values to form key
       if (v.storage() == Alloc.LOCAL) {
