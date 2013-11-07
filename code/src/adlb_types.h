@@ -32,6 +32,7 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -285,7 +286,12 @@ ADLB_Free_binary_data(adlb_binary_data *buffer);
 }
 
 #define ADLB_UNPACK_SCALAR(d, data, length) { \
-  assert(length == (int)sizeof(*d));          \
+  if (length != (int)sizeof(*d))              \
+  {                                           \
+    printf("Could not unpack: expected length " \
+        "%zu actual length %i", sizeof(*d), length); \
+    return ADLB_DATA_ERROR_INVALID;           \
+  }                                           \
   memcpy(d, data, sizeof(*d));                \
 }
 
@@ -364,7 +370,9 @@ static inline adlb_data_code
 ADLB_Unpack_string(adlb_string_t *s, void *data, int length, bool copy)
 {
   // Must be null-terminated
-  assert(length >= 1 && ((char*)data)[length-1] == '\0');
+  if (length < 1 || ((char*)data)[length-1] != '\0')
+    return ADLB_DATA_ERROR_INVALID;
+
   if (copy)
   {
     s->value = malloc((size_t)length);
@@ -395,7 +403,6 @@ ADLB_Pack_blob(const adlb_blob_t *b, adlb_binary_data *result)
 static inline adlb_data_code
 ADLB_Unpack_blob(adlb_blob_t *b, void *data, int length, bool copy)
 {
-  // Must be null-terminated
   assert(length >= 0);
   if (copy)
   {
