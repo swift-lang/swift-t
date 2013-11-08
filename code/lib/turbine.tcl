@@ -274,7 +274,8 @@ namespace eval turbine {
         }
     }
 
-    # Error handling
+    # Default error handling for any errors
+    # Provides stack trace - useful for internal errors
     # msg: A Tcl error message
     # e: A Tcl error dict
     proc fail { msg d } {
@@ -290,6 +291,18 @@ namespace eval turbine {
             puts "CALLING adlb::abort"
             adlb::abort
         }
+    }
+
+    # Preferred error handling for known user errors
+    # Does not provide a stack trace - nice for users
+    # Used by top-level try/trap
+    proc abort { msg } {
+        variable language
+        puts ""
+        puts "$language: $msg"
+        puts ""
+        puts "$language: killing MPI job..."
+        adlb::abort
     }
 
     proc turbine_workers { } {

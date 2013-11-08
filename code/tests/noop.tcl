@@ -26,7 +26,7 @@ try {
     turbine::start rules
     turbine::finalize
 } trap {TURBINE ERROR} {msg} {
-    puts "$turbine::language error: $msg"
+    turbine::abort $msg
 }
 
 puts OK
