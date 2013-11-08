@@ -502,10 +502,11 @@ AC_ARG_WITH(tclsh-local,
     [])
 
 # Set default Tcl version:
-export TCL_VERSION=8.5
+export TCL_VERSION=8.6
 
 AC_ARG_WITH(tcl-version,
-    AS_HELP_STRING([--with-tcl-version], [Tcl version. Default is 8.5]),
+    AS_HELP_STRING([--with-tcl-version],
+                   [Tcl version. Default and minimum is 8.6]),
     [
         TCL_VERSION=${withval}
     ]
