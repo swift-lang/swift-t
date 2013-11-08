@@ -25,6 +25,7 @@
 #define TOOLS_H
 
 #include <assert.h>
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -35,19 +36,54 @@ int array_length(void** array);
 #define vappend(string, args...) \
   string += vsprintf(string, format, ap)
 
-static inline int min_integer(int i1, int i2)
+static inline int
+min_integer(int i1, int i2)
 {
   if (i1 < i2)
     return i1;
   return i2;
 }
 
-static inline int max_integer(int i1, int i2)
+static inline int
+max_integer(int i1, int i2)
 {
   if (i1 > i2)
     return i1;
   return i2;
 }
+
+static inline int64_t
+min_int64(int64_t i1, int64_t i2)
+{
+  if (i1 < i2)
+    return i1;
+  return i2;
+}
+
+static inline int64_t
+max_int64(int64_t i1, int64_t i2)
+{
+  if (i1 > i2)
+    return i1;
+  return i2;
+}
+
+static inline uint64_t
+min_uint64(uint64_t i1, uint64_t i2)
+{
+  if (i1 < i2)
+    return i1;
+  return i2;
+}
+
+static inline uint64_t
+max_uint64(uint64_t i1, uint64_t i2)
+{
+  if (i1 > i2)
+    return i1;
+  return i2;
+}
+
 
 #define bool2string(b) (b ? "true" : "false" )
 
