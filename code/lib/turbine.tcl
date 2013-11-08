@@ -55,6 +55,11 @@ namespace eval turbine {
     variable language
     set language Turbine
 
+    # The Turbine Tcl error code
+    # Catches known errors from Turbine libraries via Tcl return/catch
+    variable error_code
+    set error_code 10
+
     # User function
     # param e Number of engines
     # param s Number of ADLB servers
@@ -62,8 +67,9 @@ namespace eval turbine {
 
         variable language
 
-        if { [ llength $args ] < 2 } \
-            "use: turbine::init <engines> <servers> \[<language>\]"
+        if { [ llength $args ] < 2 } {
+            error "use: turbine::init <engines> <servers> \[<language>\]"
+        }
         set engines [ lindex $args 0 ]
         set servers [ lindex $args 1 ]
         if { [ llength $args ] > 2 } {
@@ -189,12 +195,16 @@ namespace eval turbine {
 
     proc enter_mode { rules engine_startup } {
 
-        variable mode
-        switch $mode {
-            ENGINE  { engine $rules $engine_startup }
-            SERVER  { adlb::server }
-            WORKER  { worker }
-            default { error "UNKNOWN MODE: $mode" }
+        try {
+            variable mode
+            switch $mode {
+                ENGINE  { engine $rules $engine_startup }
+                SERVER  { adlb::server }
+                WORKER  { worker }
+                default { error "UNKNOWN MODE: $mode" }
+            }
+        } trap {TURBINE ERROR} {msg} {
+            turbine::abort $msg
         }
     }
 
@@ -275,7 +285,8 @@ namespace eval turbine {
     }
 
     # Default error handling for any errors
-    # Provides stack trace - useful for internal errors
+    # Provides stack trace if error code is not turbine::error_code
+    #    Thus useful for internal errors
     # msg: A Tcl error message
     # e: A Tcl error dict
     proc fail { msg d } {
