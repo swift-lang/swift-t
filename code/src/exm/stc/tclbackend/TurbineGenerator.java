@@ -260,7 +260,7 @@ public class TurbineGenerator implements CompilerBackend {
   public void turbineStartup()
   {
     tree.add(new Command("turbine::defaults"));
-    tree.add(new Command("turbine::init $engines $servers"));
+    tree.add(new Command("turbine::init $engines $servers \"Swift\""));
     try {
       if (Settings.getBoolean(Settings.ENABLE_REFCOUNTING)) {
         tree.add(Turbine.enableReferenceCounting());
