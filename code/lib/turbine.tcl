@@ -59,7 +59,7 @@ namespace eval turbine {
     # param s Number of ADLB servers
     proc init { engines servers } {
 
-        assert_control_sanity $engines $servers 
+        assert_control_sanity $engines $servers
         setup_log_string
 
         variable error_code
@@ -83,7 +83,7 @@ namespace eval turbine {
         } else {
             adlb::init $servers $types
         }
-        assert_sufficient_procs 
+        assert_sufficient_procs
 
         c::init [ adlb::amserver ] [ adlb::rank ] [ adlb::size ]
 
@@ -97,7 +97,7 @@ namespace eval turbine {
         argv_init
     }
 
-    proc assert_control_sanity { n_engines n_adlb_servers } { 
+    proc assert_control_sanity { n_engines n_adlb_servers } {
         if { $n_engines <= 0 } {
             error "ERROR: ENGINES==0"
         }
@@ -108,13 +108,13 @@ namespace eval turbine {
 
     proc setup_mode { engines servers } {
 
-        variable n_adlb_servers
         variable n_engines
         variable n_workers
-        
-        set n_adlb_servers $servers
+        variable n_adlb_servers
+
         set n_engines $engines
         set n_workers [ expr {[ adlb::size ] - $servers - $engines} ]
+        set n_adlb_servers $servers
 
         variable mode
 	variable is_engine
@@ -132,19 +132,23 @@ namespace eval turbine {
 
         log "MODE: $mode"
         if { [ adlb::rank ] == 0 } {
-            log_rank_layout      $n_engines $n_workers $n_adlb_servers
-            assert_sufficient_procs
+            log_rank_layout
         }
     }
 
-    proc assert_sufficient_procs { } { 
+    proc assert_sufficient_procs { } {
         if { [ adlb::size ] < 3 } {
             error "Too few Turbine processes specified by user:\
                     [adlb::size], must be at least 3"
         }
     }
 
-    proc log_rank_layout { n_engines n_workers n_adlb_servers } { 
+    proc log_rank_layout { } {
+
+        variable n_engines
+        variable n_workers
+        variable n_adlb_servers
+
         set first_worker $n_engines
         set first_server [ expr [adlb::size] - $n_adlb_servers ]
         set last_worker  [ expr $first_server - 1 ]
@@ -155,6 +159,10 @@ namespace eval turbine {
                   "RANKS: $first_worker - $last_worker" ]
         log [ cat "SERVERS: $n_adlb_servers" \
                   "RANKS: $first_server - $last_server" ]
+
+        if { $n_workers <= 0 } {
+            error "No workers!"
+        }
     }
 
     proc start { args } {
