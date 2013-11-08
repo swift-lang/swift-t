@@ -312,7 +312,7 @@ fi
 AC_MSG_RESULT([${MPI_IMPL}])
 AC_SUBST(MPI_IMPL)
 
-# We assume the libmpe.so is in the ADLB directory
+# We assume libmpe.so is in the MPE/lib directory
 # See Turbine - Build for explanation
 ENABLE_MPE=0
 USE_MPE=0
