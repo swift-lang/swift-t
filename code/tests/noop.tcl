@@ -20,10 +20,14 @@ package require turbine 0.0.1
 # No rules
 proc rules { } { }
 
-turbine::defaults
-turbine::init $engines $servers
-turbine::start rules
-turbine::finalize
+try {
+    turbine::defaults
+    turbine::init $engines $servers "Swift"
+    turbine::start rules
+    turbine::finalize
+} trap {TURBINE ERROR} {msg} {
+    puts "$turbine::language error: $msg"
+}
 
 puts OK
 

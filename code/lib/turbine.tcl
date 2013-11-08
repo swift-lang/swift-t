@@ -47,23 +47,31 @@ namespace eval turbine {
     # How to display string values in the log
     variable log_string_mode
 
-    # The Turbine Tcl error code
-    # Catches known errors from Turbine libraries via Tcl return/catch
-    variable error_code
-
     # Whether read reference counting is enabled.  Default to off
     variable read_refcounting_on
+
+    # The language driving the run (default Turbine, may be Swift)
+    # Used for error messages
+    variable language
+    set language Turbine
 
     # User function
     # param e Number of engines
     # param s Number of ADLB servers
-    proc init { engines servers } {
+    proc init { args } {
+
+        variable language
+
+        if { [ llength $args ] < 2 } \
+            "use: turbine::init <engines> <servers> \[<language>\]"
+        set engines [ lindex $args 0 ]
+        set servers [ lindex $args 1 ]
+        if { [ llength $args ] > 2 } {
+            set language [ lindex $args 2 ]
+        }
 
         assert_control_sanity $engines $servers
         setup_log_string
-
-        variable error_code
-        set error_code 10
 
         reset_priority
 
@@ -161,7 +169,7 @@ namespace eval turbine {
                   "RANKS: $first_server - $last_server" ]
 
         if { $n_workers <= 0 } {
-            error "No workers!"
+            throw {TURBINE ERROR} "No workers!"
         }
     }
 
