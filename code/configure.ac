@@ -239,23 +239,6 @@ AC_ARG_ENABLE(checkpoint,
       fi], [])
 AC_MSG_RESULT([checkpoints enabled])
 
-# From now on, make the user put -mpe=mpilog or -mpilog or -log in
-# CFLAGS and LDFLAGS.
-# I cannot figure this out. -Justin
-# On the BG/P, with Anthony's install_ibm_qpic, use
-#    CFLAGS='-mpilog'
-#    LDFLAGS='-mpilog -L /dir' where dir contains libmpe.so
-if [[ "${ADLB_ENABLE_MPE}" == "yes" ]]
-then
-    FOUND=0
-    AC_CHECK_FILE(${withval}/lib/libmpe.so, [FOUND=1])
-    if [[ ${FOUND} == 0 ]]
-    then
-        AC_MSG_ERROR([Could not find MPE library!])
-    fi
-fi
-AC_SUBST(ADLB_ENABLE_MPE)
-
 AC_SUBST(XLB_ENABLE_XPT)
 
 ENABLE_DEV=0
