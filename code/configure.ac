@@ -109,11 +109,8 @@ AC_MSG_RESULT([using MPE: ${ADLB_ENABLE_MPE}])
 if [[ "${ADLB_ENABLE_MPE}" == "yes" ]]
 then
     FOUND=0
-    AC_CHECK_FILE(${withval}/lib/libmpe.so, [FOUND=1])
-    if [[ ${FOUND} == 0 ]]
-    then
-        AC_MSG_ERROR([Could not find MPE library!])
-    fi
+    AC_CHECK_FILE(${withval}/lib/libmpe.so,,
+                  AC_MSG_ERROR([Could not find MPE library!]))
 fi
 
 AC_SUBST(ADLB_ENABLE_MPE)
