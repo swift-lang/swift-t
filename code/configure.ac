@@ -325,7 +325,8 @@ AC_ARG_WITH(mpe,
 if [[ ${USE_MPE} != 0 ]]
 then
     AC_MSG_RESULT([Enabling MPE]);
-    AC_CHECK_FILE(${USE_MPE}/${LIBMPE})
+    AC_CHECK_FILE(${USE_MPE}/lib/${LIBMPE},,
+                  AC_MSG_ERROR([Could not find MPE!]))
     AC_DEFINE_UNQUOTED(ENABLE_MPE,ENABLE_MPE,[Enables MPE])
 fi
 AC_SUBST(USE_MPE)
