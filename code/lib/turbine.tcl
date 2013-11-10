@@ -175,7 +175,7 @@ namespace eval turbine {
                   "RANKS: $first_server - $last_server" ]
 
         if { $n_workers <= 0 } {
-            throw {TURBINE ERROR} "No workers!"
+            turbine_error "No workers!"
         }
     }
 
@@ -194,18 +194,38 @@ namespace eval turbine {
     }
 
     proc enter_mode { rules engine_startup } {
-
-        try {
-            variable mode
-            switch $mode {
-                ENGINE  { engine $rules $engine_startup }
-                SERVER  { adlb::server }
-                WORKER  { worker }
-                default { error "UNKNOWN MODE: $mode" }
-            }
-        } trap {TURBINE ERROR} {msg} {
-            turbine::abort $msg
+        global tcl_version
+        if { $tcl_version >= 8.6 } {
+          try {
+            enter_mode_unchecked $rules $engine_startup
+          } trap {TURBINE ERROR} {msg} {
+              turbine::abort $msg
+          }
+        } else {
+          enter_mode_unchecked $rules $engine_startup
         }
+    }
+
+    # Inner function without error trapping
+    proc enter_mode_unchecked { rules engine_startup } {
+        variable mode
+        switch $mode {
+            ENGINE  { engine $rules $engine_startup }
+            SERVER  { adlb::server }
+            WORKER  { worker }
+            default { error "UNKNOWN MODE: $mode" }
+        }
+    }
+
+    # Signal error that is caused by problem in user code
+    # I.e. that shouldn't include a stacktrace
+    proc turbine_error { msg } {
+        global tcl_version
+      if { $tcl_version >= 8.6 } {
+        throw {TURBINE ERROR} $msg
+      } else {
+        error $msg
+      }
     }
 
     # Turbine logging contains string values (possibly long)
