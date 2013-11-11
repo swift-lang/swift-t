@@ -516,10 +516,12 @@ public class TurbineGenerator implements CompilerBackend {
       return Turbine.ADLB_CONTAINER_TYPE;
     } else if (Types.isBagLocal(t)) {
       return Turbine.ADLB_MULTISET_TYPE;
-    } else if (Types.isFuture(t) || Types.isContainer(t) ||
+    } else if (Types.isFile(t)) {
+      return Turbine.ADLB_FILE_REF_TYPE;
+    } else if (Types.isScalarFuture(t) || Types.isContainer(t) ||
                Types.isRef(t)) {
       // Local handle to remote data
-      return Turbine.ADLB_REF_TYPE;
+      return Turbine.ADLB_REF_TYPE; 
     } else if (Types.isStruct(t)) {
       return structTypeName(t, true);
     } else {
@@ -1595,7 +1597,8 @@ public class TurbineGenerator implements CompilerBackend {
    */
   private Command arrayBuild(Var array, Expression dict) {
     TypeName keyType = representationType(Types.arrayKeyType(array), false);
-    TypeName valType = valRepresentationType(Types.containerElemType(array));
+    Type valType2 = Types.containerElemType(array);
+    TypeName valType = valRepresentationType(valType2);
 
     return Turbine.arrayBuild(varToExpr(array), dict, LiteralInt.ONE,
                 keyType, Collections.singletonList(valType));
