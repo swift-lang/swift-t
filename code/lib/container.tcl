@@ -46,22 +46,23 @@ namespace eval turbine {
         log "swift_array_build: <$c> elems: $n var_type: $var_type"
         if [ string equal $var_type "file" ] {
             set L [ list ] 
-            set filename_tds [ adlb::multicreate [ lrepeat $n [ list string ] ]
+            set filename_tds [ adlb::multicreate {*}[ lrepeat \
+                                      $n [ list string ] ] ]
             set type "file_ref"
             for { set i 0 } { $i < $n } { incr i } { 
-                set item [ lindex $elems $i ] 
+                set elem [ lindex $elems $i ] 
                 set filename_td [ lindex $filename_tds $i ]
-                store_string 
+                store_string $filename_td $elem
                 turbine::allocate_file2 td $filename_td 1 0
                 lappend L $td
             }
         } else { 
             set type "ref"
-            set L [ adlb::multicreate [ lrepeat $n [ list $type ] ]
+            set L [ adlb::multicreate {*}[ lrepeat $n [ list $type ] ] ]
             for { set i 0 } { $i < $n } { incr i } { 
-                set item [ lindex $elems $i ] 
+                set elem [ lindex $elems $i ] 
                 set td [ lindex $L $i ]
-                adlb::store $td $var_type $item
+                adlb::store $td $var_type $elem
             }            
         }
         array_build $c $L 1 $type

@@ -1161,7 +1161,7 @@ ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
 /**
    usage: adlb::multicreate [list of variable specs]*
    each list contains:
-          <id> <type> [<extra for type>]
+          <type> [<extra for type>]
           [ <read_refcount> [ <write_refcount> [ <permanent> ] ] ]
    returns a list of newly created ids
 */
