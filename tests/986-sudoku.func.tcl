@@ -36,6 +36,7 @@ namespace eval sudoku {
 
         if { $solved > 0.0 } {
             turbine::log "solved elsewhere!"
+            adlb::write_refcount_decr $output
             return
         }
 
@@ -102,6 +103,8 @@ namespace eval sudoku {
             turbine::container_insert $output $i $struct struct0
         }
 
+        adlb::write_refcount_decr $output
+        
         turbine::log "sudoku_step_body done => $output"
     }
 
