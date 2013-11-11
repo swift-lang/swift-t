@@ -86,7 +86,7 @@ type external void;
   [ "set <<n>> [ turbine::container_size_local <<A>> ]" ];
 @pure
 <K, V> (boolean o) contains(V A[K], K key) "turbine" "0.0.5" "contains"
-  [ "set <<o>> [ adlb::exists_sub <<A>> <<key>> ]" ];
+  [ "set <<o>> [ adlb::exists_sub <<A>> <<key>> 1 ]" ];
 
 @pure @implements=size
 <T> (int n) bag_size(bag<T> B) "turbine" "0.0.5" "container_size"
