@@ -1894,6 +1894,9 @@ public class TurbineOp extends Instruction {
       }
       case PACK_VALUES:
         return vanillaResult(Closed.YES_NOT_RECURSIVE, IsAssign.NO).asList();
+      case CHECKPOINT_LOOKUP_ENABLED:
+      case CHECKPOINT_WRITE_ENABLED:
+        return vanillaResult(Closed.YES_NOT_RECURSIVE, IsAssign.NO).asList();
       default:
         return null;
     }
