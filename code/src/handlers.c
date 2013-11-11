@@ -1452,7 +1452,7 @@ refcount_decr_helper(adlb_datum_id id, adlb_refcounts decr)
 {
   if (!ADLB_RC_IS_NULL(decr))
   {
-    adlb_notif_ranks notify;
+    adlb_notif_ranks notify = ADLB_NO_NOTIF_RANKS;
     adlb_data_code dc;
     dc = xlb_data_reference_count(id, adlb_rc_negate(decr), NO_SCAVENGE,
                               NULL, NULL, &notify);
