@@ -397,8 +397,8 @@ public class TurbineGenerator implements CompilerBackend {
         createArgs.add(representationType(t, true));
         // Subscript and value type for containers only
         if (Types.isArray(t)) {
-          createArgs.add(Turbine.ADLB_INT_TYPE); // key
-          createArgs.add(arrayValueType(t,true)); // value
+          createArgs.add(arrayKeyType(t, true)); // key
+          createArgs.add(arrayValueType(t, true)); // value
         } else if (Types.isBag(t)) {
           createArgs.add(bagValueType(t, true));
         }
@@ -527,8 +527,8 @@ public class TurbineGenerator implements CompilerBackend {
     }
   }
 
-  private TypeName arrayKeyType(Var arr, boolean creation) {
-    return refRepresentationType(Types.arrayKeyType(arr), creation);
+  private TypeName arrayKeyType(Typed arr, boolean creation) {
+    return representationType(Types.arrayKeyType(arr), creation);
   }
   
   private TypeName arrayValueType(Typed arrType, boolean creation) {
