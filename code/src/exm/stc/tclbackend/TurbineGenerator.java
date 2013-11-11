@@ -24,6 +24,7 @@ import java.io.File;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -76,6 +77,7 @@ import exm.stc.tclbackend.Turbine.TypeName;
 import exm.stc.tclbackend.Turbine.XptPersist;
 import exm.stc.tclbackend.tree.Command;
 import exm.stc.tclbackend.tree.Comment;
+import exm.stc.tclbackend.tree.Dict;
 import exm.stc.tclbackend.tree.DictFor;
 import exm.stc.tclbackend.tree.Expand;
 import exm.stc.tclbackend.tree.Expression;
@@ -515,8 +517,10 @@ public class TurbineGenerator implements CompilerBackend {
       return Turbine.ADLB_CONTAINER_TYPE;
     } else if (Types.isBagLocal(t)) {
       return Turbine.ADLB_MULTISET_TYPE;
+    } else if (Types.isFuture(t) || Types.isContainer(t)) {
+      // Local handle to remote data
+      return Turbine.ADLB_REF_TYPE;
     } else {
-      // TODO: array values, etc.
       throw new STCRuntimeError("Unknown ADLB representation type for " + t);
     }
   }
@@ -786,9 +790,8 @@ public class TurbineGenerator implements CompilerBackend {
               Types.containerElemType(target)));
     assert(Types.arrayKeyType(src.type()).assignableTo(
             Types.arrayKeyType(target.type())));
-    // TODO: use adlb::store to store all at once
-    pointAdd(Turbine.arrayBuild(varToExpr(target), argToExpr(src), true,
-             representationType(Types.containerElemType(target), false)));
+    
+    pointAdd(arrayBuild(target, argToExpr(src)));
   }
 
   @Override
@@ -815,8 +818,8 @@ public class TurbineGenerator implements CompilerBackend {
 
     TypeName elemType = representationType(Types.containerElemType(target),
                                           false);
-    pointAdd(Turbine.multisetBuild(varToExpr(target), argToExpr(src),
-                                   true, elemType));
+    pointAdd(Turbine.multisetBuild(varToExpr(target), argToExpr(src), LiteralInt.ONE,
+                                   Collections.singletonList(elemType)));
   }
 
   @Override
@@ -1563,22 +1566,37 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isArray(array.type()));
     assert(keys.size() == vals.size());
     int elemCount = keys.size();
+
     
-    // TODO: use adlb::store to store all at once
-    
-    List<Expression> keyExprs = new ArrayList<Expression>(elemCount * 2);
-    List<Expression> valExprs = new ArrayList<Expression>(elemCount);
+    List<Pair<Expression, Expression>> kvExprs = 
+        new ArrayList<Pair<Expression, Expression>>(elemCount);
     for (int i = 0; i < elemCount; i++) {
       Arg key = keys.get(i);
       Var val = vals.get(i);
       assert(Types.isMemberType(array, val));
       assert(Types.isArrayKeyVal(array, key));
-      keyExprs.add(argToExpr(key));
-      valExprs.add(varToExpr(val));
+      kvExprs.add(Pair.<Expression, Expression>create(
+                  argToExpr(key), varToExpr(val)));
     }
-    pointAdd(
-        Turbine.arrayBuild(varToExpr(array), keyExprs, valExprs, true,
-                           arrayValueType(array, false)));
+
+    Dict dict = Dict.dictCreate(true, kvExprs);
+    
+    
+    pointAdd(arrayBuild(array, dict));
+  }
+
+  /**
+   * Helper function to generate arrayBuild call given a Tcl expression
+   * that is a dict
+   * @param array
+   * @param dict
+   */
+  private Command arrayBuild(Var array, Expression dict) {
+    TypeName keyType = representationType(Types.arrayKeyType(array), false);
+    TypeName valType = valRepresentationType(Types.containerElemType(array));
+
+    return Turbine.arrayBuild(varToExpr(array), dict, LiteralInt.ONE,
+                keyType, Collections.singletonList(valType));
   }
   
   @Override

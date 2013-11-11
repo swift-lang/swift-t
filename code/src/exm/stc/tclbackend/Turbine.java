@@ -1044,7 +1044,9 @@ class Turbine {
 
   public static TclTree bagAppend(Value bag, TypeName elemType,
                                   Value elem, Expression decr) {
-    return new Command(adlbFn("store"), bag, elemType, elem, decr);
+    // Append to arbitrary subscript
+    return new Command(adlbFn("insert"), bag, new TclString(""),
+                       elem, elemType, decr);
   }
   
   public static TclTree incrWriters(Value arr, Expression incr) {
@@ -1378,7 +1380,7 @@ class Turbine {
   
   public static Command arrayBuild(Value array, 
       List<Expression> arrKeyExprs, List<Expression> arrValExprs,
-      boolean close, TypeName valType) {
+      Expression writeDecr, TypeName keyType, List<TypeName> valType) {
     List<Pair<Expression, Expression>> kvs =
               new ArrayList<Pair<Expression, Expression>>();
     for (int i = 0; i < arrKeyExprs.size(); i++) {
@@ -1386,20 +1388,25 @@ class Turbine {
       Expression v = arrValExprs.get(i);
       kvs.add(Pair.create(k, v));
     }
-    return arrayBuild(array, Dict.dictCreate(true, kvs), close, valType);
+    return arrayBuild(array, Dict.dictCreate(true, kvs), writeDecr,
+                      keyType, valType);
   }
 
   public static Command arrayBuild(Value array, Expression kvDict,
-          boolean close, TypeName valType) {
-    return new Command(ARRAY_KV_BUILD, array, kvDict,
-                        LiteralInt.boolValue(close), valType);
+          Expression writeDecr, TypeName keyType, List<TypeName> valType) {
+    List<Expression> argList = new ArrayList<Expression>();
+    argList.addAll(Arrays.asList(array, kvDict, writeDecr, keyType));
+    argList.addAll(valType);
+    return new Command(ARRAY_KV_BUILD, argList);
   }
   
 
   public static Command multisetBuild(Value multiset, Expression list,
-          boolean close, TypeName valType) {
-    return new Command(MULTISET_BUILD, multiset, list,
-                        LiteralInt.boolValue(close), valType);
+          Expression writeDecr, List<TypeName> valType) {
+    List<Expression> argList = new ArrayList<Expression>();
+    argList.addAll(Arrays.asList(multiset, list, writeDecr));
+    argList.addAll(valType);
+    return new Command(MULTISET_BUILD, argList);
   }
   
   public static Command batchDeclare(List<String> batchedVarNames,
