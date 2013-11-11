@@ -3378,16 +3378,19 @@ ADLB_Write_Refcount_Incr_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_CONDITION((objc == 2 || objc == 3),
                 "requires 1 or 2 args!");
-
+  int rc;
   adlb_datum_id container_id;
   Tcl_GetADLB_ID(interp, objv[1], &container_id);
 
   adlb_refcounts incr = ADLB_WRITE_RC;
   if (objc == 3)
-    Tcl_GetIntFromObj(interp, objv[2], &incr.write_refcount);
+  {
+    rc = Tcl_GetIntFromObj(interp, objv[2], &incr.write_refcount);
+    TCL_CHECK_MSG(rc, "Error extracting reference count");
+  }
 
   // DEBUG_ADLB("adlb::write_refcount_incr: <%"PRId64">", container_id);
-  int rc = ADLB_Refcount_incr(container_id, incr);
+  rc = ADLB_Refcount_incr(container_id, incr);
 
   if (rc != ADLB_SUCCESS)
     return TCL_ERROR;
@@ -3403,17 +3406,21 @@ ADLB_Write_Refcount_Decr_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_CONDITION((objc == 2 || objc == 3),
                 "requires 1 or 2 args!");
-
+  int rc;
   adlb_datum_id container_id;
-  Tcl_GetADLB_ID(interp, objv[1], &container_id);
+  rc = Tcl_GetADLB_ID(interp, objv[1], &container_id);
+  TCL_CHECK(rc);
 
   int decr_w = 1;
   if (objc == 3)
-    Tcl_GetIntFromObj(interp, objv[2], &decr_w);
+  {
+    rc = Tcl_GetIntFromObj(interp, objv[2], &decr_w);
+    TCL_CHECK_MSG(rc, "Error extracting reference count");
+  }
 
   // DEBUG_ADLB("adlb::write_refcount_decr: <%"PRId64">", container_id);
   adlb_refcounts decr = { .read_refcount = 0, .write_refcount = -decr_w };
-  int rc = ADLB_Refcount_incr(container_id, decr);
+  rc = ADLB_Refcount_incr(container_id, decr);
 
   if (rc != ADLB_SUCCESS)
     return TCL_ERROR;
