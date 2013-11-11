@@ -1,7 +1,5 @@
 import assert;
 
-// SKIP-O3-TEST
-
 // Basic test for checkpointing
 
 main {
