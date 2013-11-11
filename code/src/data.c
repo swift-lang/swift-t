@@ -739,10 +739,30 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
   bool freed_datum = false;
 
   adlb_data_code dc;
-  if (d->type == ADLB_DATA_TYPE_MULTISET)
+  if (!adlb_has_sub(subscript))
   {
-    // Store appends to multiset
-    check_verbose(!adlb_has_sub(subscript), ADLB_DATA_ERROR_TYPE,
+    check_verbose(type == d->type, ADLB_DATA_ERROR_TYPE,
+            "Type mismatch: expected %s actual %s\n",
+            ADLB_Data_type_tostring(type), ADLB_Data_type_tostring(d->type));
+
+    // Handle store to top-level datum
+    dc = ADLB_Unpack(&d->data, d->type, buffer, length);
+    DATA_CHECK(dc);
+    d->status.set = true;
+    // TODO: if this was a container, need to handle reference notifications
+
+    if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
+    {
+      char *val_s = ADLB_Data_repr(&d->data, d->type);
+      DEBUG("data_store <%"PRId64">=%s\n", id, val_s);
+      free(val_s);
+    }
+  }
+  else if (d->type == ADLB_DATA_TYPE_MULTISET)
+  {
+    // Any subscript appends to multiset
+    assert(adlb_has_sub(subscript));
+    check_verbose(adlb_has_sub(subscript), ADLB_DATA_ERROR_TYPE,
                   "Cannot provide subscript when appending to multiset");
     adlb_data_type elem_type = d->data.MULTISET->elem_type;
     check_verbose(type == elem_type, ADLB_DATA_ERROR_TYPE,
@@ -760,29 +780,11 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
       free(val_s);
     }
   }
-  else if (!adlb_has_sub(subscript))
-  {
-    check_verbose(type == d->type, ADLB_DATA_ERROR_TYPE,
-            "Type mismatch: expected %s actual %s\n",
-            ADLB_Data_type_tostring(type), ADLB_Data_type_tostring(d->type));
-
-    // Handle store to top-level datum
-    dc = ADLB_Unpack(&d->data, d->type, buffer, length);
-    DATA_CHECK(dc);
-    d->status.set = true;
-
-    if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
-    {
-      char *val_s = ADLB_Data_repr(&d->data, d->type);
-      DEBUG("data_store <%"PRId64">=%s\n", id, val_s);
-      free(val_s);
-    }
-  }
   else
   {
     // Handle insert
     check_verbose(d->type == ADLB_DATA_TYPE_CONTAINER, ADLB_DATA_ERROR_TYPE,
-                  "type %s not a container: <%"PRId64">",
+                  "insert to type %s not supported: <%"PRId64">",
                   ADLB_Data_type_tostring(d->type), id);
 
     adlb_container *c = &d->data.CONTAINER;

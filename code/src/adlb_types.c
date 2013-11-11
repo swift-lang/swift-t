@@ -346,8 +346,6 @@ ADLB_Unpack_buffer(adlb_data_type type,
        "Packed buffer encode entry length too long for int: %"PRId64,
        entry_length64);
   
-  DEBUG("Entry length: %"PRId64, entry_length64);
-
   int vint_padded_len = ADLB_pack_pad_size(type) ? VINT_MAX_BYTES : vint_len;
   int remaining = length - *pos - vint_padded_len;
   check_verbose(entry_length64 <= remaining,
