@@ -777,7 +777,7 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
             ADLB_Data_type_tostring(type), ADLB_Data_type_tostring(d->type));
 
     // Handle store to top-level datum
-    dc = ADLB_Unpack(&d->data, d->type, buffer, length);
+    dc = ADLB_Unpack2(&d->data, d->type, buffer, length, false);
     DATA_CHECK(dc);
     d->status.set = true;
 

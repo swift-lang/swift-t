@@ -218,11 +218,20 @@ ADLB_Own_data(const adlb_buffer *caller_buffer, adlb_binary_data *data);
 /*
    Unpack data from buffer into adlb_datum_storage, allocating new
    memory if necessary.  The unpacked data won't hold any pointers
-   into the buffer.
+   into the buffer.  Compound data types are initialized
  */
 adlb_data_code
 ADLB_Unpack(adlb_datum_storage *d, adlb_data_type type,
             const void *buffer, int length);
+
+/*
+  Same as ADLB_Unpack2, except optionally we can specify that
+  compound data types (containers, etc) that support incremental
+  appends were pre-initialized and shouldn't be reinitialized
+ */
+adlb_data_code
+ADLB_Unpack2(adlb_datum_storage *d, adlb_data_type type,
+            const void *buffer, int length, bool init_compound);
 
 /*
   Helper to unpack data from buffer.  This will simply
@@ -432,9 +441,13 @@ ADLB_Pack_container_hdr(int elems, adlb_data_type key_type,
         adlb_data_type val_type, adlb_buffer *output,
         bool *output_caller_buffer, int *output_pos);
 
+/*
+ init_cont: if true, initialize new container
+            if not, insert into existing container
+ */
 adlb_data_code
 ADLB_Unpack_container(adlb_container *container,
-                      const void *data, int length);
+                      const void *data, int length, bool init_cont);
 
 adlb_data_code
 ADLB_Unpack_container_hdr(const void *data, int length, int *pos,
@@ -462,7 +475,7 @@ ADLB_Pack_multiset_hdr(int elems, adlb_data_type elem_type,
 
 adlb_data_code
 ADLB_Unpack_multiset(adlb_multiset_ptr *ms,
-          const void *data, int length);
+          const void *data, int length, bool init_ms);
 
 adlb_data_code
 ADLB_Unpack_multiset_hdr(const void *data, int length, int *pos,

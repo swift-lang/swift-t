@@ -358,7 +358,13 @@ ADLB_Unpack_buffer(adlb_data_type type,
 }
 
 adlb_data_code ADLB_Unpack(adlb_datum_storage *d, adlb_data_type type,
-                            const void *buffer, int length)
+                          const void *buffer, int length)
+{
+  return ADLB_Unpack2(d, type, buffer, length, true);
+}
+
+adlb_data_code ADLB_Unpack2(adlb_datum_storage *d, adlb_data_type type,
+        const void *buffer, int length, bool init_compound)
 {
   switch (type)
   {
@@ -379,9 +385,11 @@ adlb_data_code ADLB_Unpack(adlb_datum_storage *d, adlb_data_type type,
     case ADLB_DATA_TYPE_STRUCT:
       return ADLB_Unpack_struct(&d->STRUCT, buffer, length);
     case ADLB_DATA_TYPE_CONTAINER:
-      return ADLB_Unpack_container(&d->CONTAINER, buffer, length);
+      return ADLB_Unpack_container(&d->CONTAINER, buffer, length,
+                                   init_compound);
     case ADLB_DATA_TYPE_MULTISET:
-      return ADLB_Unpack_multiset(&d->MULTISET, buffer, length);
+      return ADLB_Unpack_multiset(&d->MULTISET, buffer, length,
+                                  init_compound);
     default:
       printf("data_store(): unknown type: %i\n", type);
       return ADLB_DATA_ERROR_INVALID;
@@ -392,7 +400,7 @@ adlb_data_code ADLB_Unpack(adlb_datum_storage *d, adlb_data_type type,
 
 adlb_data_code
 ADLB_Unpack_container(adlb_container *container,
-              const void *data, int length)
+      const void *data, int length, bool init_cont)
 {
   assert(container != NULL);
   assert(data != NULL);
@@ -406,9 +414,23 @@ ADLB_Unpack_container(adlb_container *container,
         &entries, &key_type, &val_type);
   DATA_CHECK(dc);
 
-  container->key_type = key_type;
-  container->val_type = val_type;
-  container->members = table_bp_create(CONTAINER_INIT_CAPACITY);
+  if (init_cont)
+  {
+    container->key_type = key_type;
+    container->val_type = val_type;
+    container->members = table_bp_create(CONTAINER_INIT_CAPACITY);
+  }
+  else
+  {
+    assert(container->members != NULL);
+    check_verbose(container->key_type == key_type &&
+         container->val_type == val_type, ADLB_DATA_ERROR_TYPE,
+        "Unpacked container type does not match: expected %s[%s] vs. %s[%s]",
+        ADLB_Data_type_tostring(container->val_type),
+        ADLB_Data_type_tostring(container->key_type),
+        ADLB_Data_type_tostring(val_type), ADLB_Data_type_tostring(key_type));
+  }
+
   for (int i = 0; i < entries; i++)
   {
     // unpack key/value pair and add to container
@@ -424,6 +446,7 @@ ADLB_Unpack_container(adlb_container *container,
     dc = ADLB_Unpack(d, val_type, val, val_len);
     DATA_CHECK(dc);
 
+    // TODO: handle case where key already exists
     bool ok = table_bp_add(container->members, key, key_len, d);
     check_verbose(ok, ADLB_DATA_ERROR_OOM, "Error adding to container");
   }
@@ -491,7 +514,7 @@ ADLB_Unpack_container_entry(adlb_data_type key_type,
 
 adlb_data_code
 ADLB_Unpack_multiset(adlb_multiset_ptr *ms,
-                const void *data, int length)
+                const void *data, int length, bool init_ms)
 {
   assert(ms != NULL);
   assert(data != NULL);
@@ -504,8 +527,21 @@ ADLB_Unpack_multiset(adlb_multiset_ptr *ms,
   dc = ADLB_Unpack_multiset_hdr(data, length, &pos,
                                 &entries, &elem_type);
   DATA_CHECK(dc);
+  
+  if (init_ms)
+  {
+    *ms = xlb_multiset_alloc(elem_type);
+  }
+  else
+  {
+    assert(*ms != NULL);
+    assert((*ms)->elem_type == elem_type);
+    check_verbose((*ms)->elem_type == elem_type, ADLB_DATA_ERROR_TYPE,
+        "Unpacked multiset elem type does not match: expected %s vs. %s",
+        ADLB_Data_type_tostring((*ms)->elem_type),
+        ADLB_Data_type_tostring(elem_type));
+  }
 
-  *ms = xlb_multiset_alloc(elem_type);
   for (int i = 0; i < entries; i++)
   {
     // unpack elem and add it
