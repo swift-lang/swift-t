@@ -2050,6 +2050,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
                                  obj, &xfer_buf, &data);
     TCL_CHECK_MSG(rc, "<%"PRId64"> failed, could not extract data from %s!",
                   id, Tcl_GetString(obj));
+    free_compound_type(&compound_type);
   }
   else
   {
