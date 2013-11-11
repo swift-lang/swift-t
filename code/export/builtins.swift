@@ -83,14 +83,14 @@ type external void;
   [ "turbine::range_work <<res>> <<start>> <<end>> <<step>>" ];
 @pure @implements=size
 <T> (int n) size(T A[]) "turbine" "0.0.5" "container_size"
-  [ "set <<n>> [ turbine::container_size_local <<A>> ]" ];
+  [ "set <<n>> [ turbine::container_size_local <<A>> 1 ]" ];
 @pure
 <K, V> (boolean o) contains(V A[K], K key) "turbine" "0.0.5" "contains"
   [ "set <<o>> [ adlb::exists_sub <<A>> <<key>> 1 ]" ];
 
 @pure @implements=size
 <T> (int n) bag_size(bag<T> B) "turbine" "0.0.5" "container_size"
-  [ "set <<n>> [ turbine::container_size_local <<B>> ]" ];
+  [ "set <<n>> [ turbine::container_size_local <<B>> 1 ]" ];
 
 // Updateable variables
 (updateable_float o) init_updateable(float i) "turbine" "0.0.2" "init_updateable";

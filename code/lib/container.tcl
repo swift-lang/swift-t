@@ -648,8 +648,8 @@ namespace eval turbine {
         store_integer $result $sz
     }
 
-    proc container_size_local { container } {
-      return [ adlb::container_size $container ]
+    proc container_size_local { container {read_decr 0} } {
+      return [ adlb::container_size $container $read_decr ]
     }
 
     # When container c and integer i are closed,
