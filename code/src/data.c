@@ -1316,7 +1316,10 @@ check_subscript_notifications(adlb_datum_id container_id,
 
 /*
   Process the notifications once we've extracted lists
-  value_buffer/value_len: data must be provided if ref_list is set
+  value_buffer/value_len: data must be provided if ref_list is set.
+        This memory should have a lifetime matching that of the
+        whole notification data structure (i.e. we don't make a
+        copy of it and store a pointer in there)
  */
 static adlb_data_code
 insert_notifications2(adlb_datum *d,
@@ -1404,16 +1407,24 @@ insert_notifications_all(adlb_datum *d, adlb_datum_id id,
           // Pack container value to binary value if needed
           dc = ADLB_Pack(val, c->val_type, NULL, &val_data);
           DATA_CHECK(dc);
+
+          // Take ownership of data in case it is freed
+          dc = ADLB_Own_data(NULL, &val_data);
+          DATA_CHECK(dc);
+
+          // Mark that caller should free
+          if (notify->to_free_length == notify->to_free_size)
+          {
+            notify->to_free_size = notify->to_free_size == 0 ? 
+                    64 : notify->to_free_size * 2;
+            DATA_REALLOC(notify->to_free, notify->to_free_size);
+          }
+          notify->to_free[notify->to_free_length++] = val_data.caller_data;
         }
         dc = insert_notifications2(d, id, sub, c->val_type, item->data,
                       val_data.data, val_data.length, ref_list, sub_list,
                       notify, garbage_collected);
         DATA_CHECK(dc);
-       
-        if (ref_list != NULL)
-        {
-          ADLB_Free_binary_data(&val_data);
-        }
 
         if (*garbage_collected)
         {

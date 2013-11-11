@@ -210,6 +210,7 @@ bool ADLB_pack_pad_size(adlb_data_type type);
 
 /*
    Take ownership of data, allocing new buffer if needed
+   caller_buffer: optional space to store data, can be NULL
  */
 static inline adlb_data_code
 ADLB_Own_data(const adlb_buffer *caller_buffer, adlb_binary_data *data);

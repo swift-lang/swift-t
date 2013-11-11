@@ -74,13 +74,15 @@ typedef struct {
   // (may be NULL)
   void **to_free;
   int to_free_length;
+  int to_free_size; // Allocated length
 } adlb_notif_t;
 
 #define ADLB_NO_NOTIF_RANKS { .count = 0, .notifs = NULL }
 #define ADLB_NO_DATUMS { .count = 0, .data = NULL }
 #define ADLB_NO_NOTIFS { .notify = ADLB_NO_NOTIF_RANKS,  \
                          .references = ADLB_NO_DATUMS,   \
-                         .to_free = NULL, .to_free_length = 0}
+                         .to_free = NULL, .to_free_length = 0, \
+                         .to_free_size = 0 }
 
 void xlb_free_notif(adlb_notif_t *notifs);
 void xlb_free_ranks(adlb_notif_ranks *ranks);
