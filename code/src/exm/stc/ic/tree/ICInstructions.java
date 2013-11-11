@@ -573,19 +573,169 @@ public class ICInstructions {
   
   public static abstract class CommonFunctionCall extends Instruction {
     protected final String functionName;
+    protected final List<Var> outputs;
+    protected final List<Arg> inputs;
+    protected final TaskProps props;
     
-    public CommonFunctionCall(Opcode op, String functionName) {
+    private final boolean hasUpdateableInputs;
+    
+    public CommonFunctionCall(Opcode op, String functionName,
+        List<Var> outputs, List<Arg> inputs, TaskProps props) {
       super(op);
       this.functionName = functionName;
+      this.outputs = new ArrayList<Var>(outputs);
+      this.inputs = new ArrayList<Arg>(inputs);
+      this.props = props;
+      
+
+      boolean hasUpdateableInputs = false; 
+      for(Arg v: inputs) {
+        assert(v != null);
+        if (v.isVar() && Types.isScalarUpdateable(v.getVar())) {
+          hasUpdateableInputs = true;
+        }
+      }
+      this.hasUpdateableInputs = hasUpdateableInputs;
     }
 
     public String functionName() {
       return functionName;
     }
     
+    /**
+    * @return function input arguments
+    */
+    public List<Arg> getFunctionInputs() {
+      return Collections.unmodifiableList(inputs);
+    }
+
+
+    public Arg getFunctionInput(int i) {
+      return inputs.get(i);
+    }
+    
+    /**
+    * @return function output arguments
+    */
+    public List<Var> getFunctionOutputs() {
+      return Collections.unmodifiableList(outputs);
+    }
+
+
+    public Var getFunctionOutput(int i) {
+      return outputs.get(i);
+    }
+    
+    @Override
+    public List<Arg> getInputs() {
+      List<Arg> inputVars = new ArrayList<Arg>(inputs);
+      if (treatUpdInputsAsOutputs()) {
+        // Remove updateable inputs from list
+        ListIterator<Arg> it = inputVars.listIterator();
+        while (it.hasNext()) {
+          Arg in = it.next();
+          if (in.isVar() && Types.isScalarUpdateable(in.getVar())) {
+            it.remove();
+          }
+        }
+      }
+      // Need to include any properties as inputs
+      if (props != null) {
+        inputVars.addAll(props.values());
+      }
+      return inputVars;
+    }
+
+    /**
+     * Return subset of input list which are variables
+     * @param noValues
+     * @return
+     */
+    protected List<Var> varInputs(boolean noValues) {
+      List<Var> varInputs = new ArrayList<Var>();
+      for (Arg input: inputs) {
+        if (input.isVar()) {
+          if (!noValues || !Types.isPrimValue(input.type())) {
+            varInputs.add(input.getVar());
+          }
+        }
+      }
+      return varInputs;
+    }
+
+    @Override
+    public List<Var> getOutputs() {
+      if (!treatUpdInputsAsOutputs()) {
+        return Collections.unmodifiableList(outputs);
+      } else {
+        List<Var> realOutputs = new ArrayList<Var>();
+        realOutputs.addAll(outputs);
+        addAllUpdateableInputs(realOutputs);
+        return realOutputs;
+      }
+    }
+
+    private void addAllUpdateableInputs(List<Var> realOutputs) {
+      for (Arg in: inputs) {
+        if (in.isVar() && Types.isScalarUpdateable(in.getVar())) {
+          realOutputs.add(in.getVar());
+        }
+      }
+    }
+
+    @Override
+    public List<Var> getReadOutputs(Map<String, Function> fns) {
+      switch (op) {
+        case CALL_FOREIGN: 
+        case CALL_FOREIGN_LOCAL: {
+          List<Var> res = new ArrayList<Var>();
+          // Only some output types might be read
+          for (Var o: outputs) {
+            if (Types.hasReadableSideChannel(o.type())) {
+              res.add(o);
+            }
+          }
+          if (treatUpdInputsAsOutputs()) {
+            addAllUpdateableInputs(res);
+          }
+          return res;
+        }
+        case CALL_LOCAL:
+        case CALL_LOCAL_CONTROL:
+        case CALL_SYNC:
+        case CALL_CONTROL: {
+          List<Var> res = new ArrayList<Var>();
+          Function f = fns == null ? null : fns.get(this.functionName);
+          for (int i = 0; i < outputs.size(); i++) {
+            Var o = outputs.get(i);
+
+            // Check to see if function might read the output
+            if (Types.hasReadableSideChannel(o.type()) &&
+                (f == null || !f.isOutputWriteOnly(i))) {
+              res.add(o);
+            }
+          }
+
+          if (treatUpdInputsAsOutputs()) {
+            addAllUpdateableInputs(res);
+          }
+          return res;
+        }
+        default:
+          throw new STCRuntimeError("unexpected op: " + op);
+      }
+    }
+
+    
     @Override
     public String shortOpName() {
       return op.toString().toLowerCase() + "-" + functionName;
+    }
+    
+    @Override
+    public TaskProps getTaskProps() {
+      // Return null if not found
+      return props;
     }
     
     /**
@@ -615,6 +765,12 @@ public class ICInstructions {
         return true;
       }
       return false;
+    }
+
+    @Override
+    public boolean hasSideEffects() {
+      return (!ForeignFunctions.isPure(functionName)) ||
+            this.writesAliasVar() || this.writesMappedVar();
     }
     
     @Override
@@ -783,29 +939,91 @@ public class ICInstructions {
       }
       return null;
     }
+
+    @Override
+    public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
+      if (mode == RenameMode.REPLACE_VAR || mode == RenameMode.REFERENCE) {
+        ICUtil.replaceVarsInList(renames, outputs, false);
+      }
+      ICUtil.replaceArgsInList(renames, inputs, false);
+      if (props != null) {
+        ICUtil.replaceArgValsInMap(renames, props);
+      }
+    }
     
+    private boolean treatUpdInputsAsOutputs() {
+      return hasUpdateableInputs && RefCounting.WRITABLE_UPDATEABLE_INARGS;
+    }
+
+    @Override
+    public Pair<List<Var>, List<Var>> getIncrVars(Map<String, Function> functions) {
+      switch (op) { 
+        case CALL_FOREIGN:
+        case CALL_FOREIGN_LOCAL:
+        case CALL_CONTROL:
+        case CALL_LOCAL:
+        case CALL_LOCAL_CONTROL: {
+          List<Var> readIncr = new ArrayList<Var>();
+          List<Var> writeIncr = new ArrayList<Var>();
+          for (Arg inArg: inputs) {
+            if (inArg.isVar()) {
+              Var inVar = inArg.getVar();
+              if (RefCounting.hasReadRefCount(inVar)) {
+                readIncr.add(inVar);
+              }
+              if (Types.isScalarUpdateable(inVar) &&
+                  treatUpdInputsAsOutputs()) {
+                writeIncr.add(inVar);
+              }
+            }
+          }
+          for (int i = 0; i < outputs.size(); i++) {
+            Var outVar = outputs.get(i);
+            if (RefCounting.hasWriteRefCount(outVar)) {
+              writeIncr.add(outVar);
+            }
+            boolean readRC = false;
+            if (op != Opcode.CALL_FOREIGN &&
+                op != Opcode.CALL_FOREIGN_LOCAL) {              
+              Function f = functions.get(this.functionName);
+              boolean writeOnly = f.isOutputWriteOnly(i);
+              
+              // keep read references to output vars
+              if (!writeOnly && RefCounting.hasReadRefCount(outVar)) {
+                readRC = true;
+              }
+            }
+            if (Types.isFile(outVar)) {
+              // Need read refcount for filename
+              readRC = true;
+            }
+            if (readRC && RefCounting.hasReadRefCount(outVar)) {
+              readIncr.add(outVar);
+            }
+          }
+          return Pair.create(readIncr, writeIncr);
+        }
+        case CALL_SYNC:
+          // Sync calls must acquire their own references
+          return super.getIncrVars();
+        default:
+          throw new STCRuntimeError("Unexpected function type: " + op);
+      }
+    }
   }
   
   public static class FunctionCall extends CommonFunctionCall {
-    private final List<Var> outputs;
-    private final List<Arg> inputs;
     private final List<Boolean> closedInputs; // which inputs are closed
-    private final TaskProps props;
-    
-    private final boolean hasUpdateableInputs;
   
     private FunctionCall(Opcode op, String functionName,
-        List<Arg> inputs, List<Var> outputs, TaskProps props) {
-      super(op, functionName);
+        List<Var> outputs, List<Arg> inputs, TaskProps props) {
+      super(op, functionName, outputs, inputs, props);
       if (op != Opcode.CALL_FOREIGN && op != Opcode.CALL_CONTROL &&
           op != Opcode.CALL_SYNC && op != Opcode.CALL_LOCAL &&
           op != Opcode.CALL_LOCAL_CONTROL) {
         throw new STCRuntimeError("Tried to create function call"
             + " instruction with invalid opcode");
       }
-      this.props = props;
-      this.outputs = new ArrayList<Var>(outputs);
-      this.inputs = new ArrayList<Arg>(inputs);
       this.closedInputs = new ArrayList<Boolean>(inputs.size());
       for (int i = 0; i < inputs.size(); i++) {
         this.closedInputs.add(false);
@@ -814,19 +1032,10 @@ public class ICInstructions {
       for(Var v: outputs) {
         assert(v != null);
       }
-      
-      boolean hasUpdateableInputs = false; 
-      for(Arg v: inputs) {
-        assert(v != null);
-        if (v.isVar() && Types.isScalarUpdateable(v.getVar())) {
-          hasUpdateableInputs = true;
-        }
-      }
-      this.hasUpdateableInputs = hasUpdateableInputs;
     }
     
     public static FunctionCall createFunctionCall(
-        String functionName, List<Arg> inputs, List<Var> outputs,
+        String functionName, List<Var> outputs, List<Arg> inputs,
         TaskMode mode, TaskProps props) {
       Opcode op;
       if (mode == TaskMode.SYNC) {
@@ -840,14 +1049,14 @@ public class ICInstructions {
       } else {
         throw new STCRuntimeError("Task mode " + mode + " not yet supported");
       }
-      return new FunctionCall(op, functionName, inputs, outputs, props);
+      return new FunctionCall(op, functionName, outputs, inputs, props);
     }
   
     public static FunctionCall createBuiltinCall(
-        String functionName, List<Arg> inputs, List<Var> outputs,
+        String functionName, List<Var> outputs, List<Arg> inputs,
         TaskProps props) {
       return new FunctionCall(Opcode.CALL_FOREIGN, functionName,
-          inputs, outputs, props);
+          outputs, inputs, props);
     }
   
     @Override
@@ -906,157 +1115,7 @@ public class ICInstructions {
         throw new STCRuntimeError("Huh?");
       }
     }
-  
-    @Override
-    public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
-      if (mode == RenameMode.REPLACE_VAR || mode == RenameMode.REFERENCE) {
-        ICUtil.replaceVarsInList(renames, outputs, false);
-      }
-      ICUtil.replaceArgsInList(renames, inputs, false);
-      ICUtil.replaceArgValsInMap(renames, props);
-    }
-  
-    public String getFunctionName() {
-      return this.functionName;
-    }
-  
-    /**
-    * @return function input arguments
-    */
-    public List<Arg> getFunctionInputs() {
-      return Collections.unmodifiableList(inputs);
-    }
-
-
-    public Arg getFunctionInput(int i) {
-      return inputs.get(i);
-    }
-    
-    /**
-    * @return function output arguments
-    */
-    public List<Var> getFunctionOutputs() {
-      return Collections.unmodifiableList(outputs);
-    }
-
-
-    public Var getFunctionOutput(int i) {
-      return outputs.get(i);
-    }
-    
-    @Override
-    public List<Arg> getInputs() {
-      List<Arg> inputVars = new ArrayList<Arg>(inputs);
-      if (treatUpdInputsAsOutputs()) {
-        // Remove updateable inputs from list
-        ListIterator<Arg> it = inputVars.listIterator();
-        while (it.hasNext()) {
-          Arg in = it.next();
-          if (in.isVar() && Types.isScalarUpdateable(in.getVar())) {
-            it.remove();
-          }
-        }
-      }
-      // Need to include any properties as inputs
-      inputVars.addAll(props.values());
-      return inputVars;
-    }
-
-    /**
-     * Return subset of input list which are variables
-     * @param noValues
-     * @return
-     */
-    private List<Var> varInputs(boolean noValues) {
-      List<Var> varInputs = new ArrayList<Var>();
-      for (Arg input: inputs) {
-        if (input.isVar()) {
-          if (!noValues || !Types.isPrimValue(input.type())) {
-            varInputs.add(input.getVar());
-          }
-        }
-      }
-      return varInputs;
-    }
-
-    @Override
-    public TaskProps getTaskProps() {
-      // Return null if not found
-      return props;
-    }
-
-    @Override
-    public List<Var> getOutputs() {
-      if (!treatUpdInputsAsOutputs()) {
-        return Collections.unmodifiableList(outputs);
-      } else {
-        List<Var> realOutputs = new ArrayList<Var>();
-        realOutputs.addAll(outputs);
-        addAllUpdateableInputs(realOutputs);
-        return realOutputs;
-      }
-    }
-
-    private boolean treatUpdInputsAsOutputs() {
-      return hasUpdateableInputs && RefCounting.WRITABLE_UPDATEABLE_INARGS;
-    }
-    
-    private void addAllUpdateableInputs(List<Var> realOutputs) {
-      for (Arg in: inputs) {
-        if (in.isVar() && Types.isScalarUpdateable(in.getVar())) {
-          realOutputs.add(in.getVar());
-        }
-      }
-    }
-
-    @Override
-    public List<Var> getReadOutputs(Map<String, Function> fns) {
-      switch (op) {
-        case CALL_FOREIGN: {
-          List<Var> res = new ArrayList<Var>();
-          // Only some output types might be read
-          for (Var o: outputs) {
-            if (Types.hasReadableSideChannel(o.type())) {
-              res.add(o);
-            }
-          }
-          if (treatUpdInputsAsOutputs()) {
-            addAllUpdateableInputs(res);
-          }
-          return res;
-        }
-        case CALL_LOCAL:
-        case CALL_LOCAL_CONTROL:
-        case CALL_SYNC:
-        case CALL_CONTROL: {
-          List<Var> res = new ArrayList<Var>();
-          Function f = fns == null ? null : fns.get(this.functionName);
-          for (int i = 0; i < outputs.size(); i++) {
-            Var o = outputs.get(i);
-
-            // Check to see if function might read the output
-            if (Types.hasReadableSideChannel(o.type()) &&
-                (f == null || !f.isOutputWriteOnly(i))) {
-              res.add(o);
-            }
-          }
-
-          if (treatUpdInputsAsOutputs()) {
-            addAllUpdateableInputs(res);
-          }
-          return res;
-        }
-        default:
-          throw new STCRuntimeError("unexpected op: " + op);
-      }
-    }
-
-    @Override
-    public boolean hasSideEffects() {
-      return (!ForeignFunctions.isPure(functionName)) ||
-            this.writesAliasVar() || this.writesMappedVar();
-    }
-
+ 
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
                                            boolean waitForClose) {
@@ -1193,57 +1252,6 @@ public class ICInstructions {
       return blocksOn;
     }
     
-    @Override
-    public Pair<List<Var>, List<Var>> getIncrVars(Map<String, Function> functions) {
-      switch (op) { 
-        case CALL_FOREIGN:
-        case CALL_CONTROL:
-        case CALL_LOCAL:
-        case CALL_LOCAL_CONTROL: {
-          List<Var> readIncr = new ArrayList<Var>();
-          List<Var> writeIncr = new ArrayList<Var>();
-          for (Arg inArg: inputs) {
-            if (inArg.isVar()) {
-              Var inVar = inArg.getVar();
-              if (RefCounting.hasReadRefCount(inVar)) {
-                readIncr.add(inVar);
-              }
-              if (Types.isScalarUpdateable(inVar) &&
-                  treatUpdInputsAsOutputs()) {
-                writeIncr.add(inVar);
-              }
-            }
-          }
-          for (int i = 0; i < outputs.size(); i++) {
-            Var outVar = outputs.get(i);
-            if (RefCounting.hasWriteRefCount(outVar)) {
-              writeIncr.add(outVar);
-            }
-            boolean readRC = false;
-            if (op != Opcode.CALL_FOREIGN) {              
-              Function f = functions.get(this.functionName);
-              boolean writeOnly = f.isOutputWriteOnly(i);
-              
-              // keep read references to output vars
-              if (!writeOnly && RefCounting.hasReadRefCount(outVar)) {
-                readRC = true;
-              }
-            }
-            if (Types.isFile(outVar)) {
-              // Need read refcount for filename
-              readRC = true;
-            }
-            if (readRC && RefCounting.hasReadRefCount(outVar)) {
-              readIncr.add(outVar);
-            }
-          }
-          return Pair.create(readIncr, writeIncr);
-        }
-        default:
-          // Return default
-          return super.getIncrVars();
-      }
-    }
       
     @Override
     public TaskMode getMode() {
@@ -1267,22 +1275,17 @@ public class ICInstructions {
     public Instruction clone() {
       // Variables are immutable so just need to clone lists
       return new FunctionCall(op, functionName, 
-          new ArrayList<Arg>(inputs), new ArrayList<Var>(outputs),
+          new ArrayList<Var>(outputs), new ArrayList<Arg>(inputs),
           props.clone());
     }
   }
   
   public static class LocalFunctionCall extends CommonFunctionCall {
-    private final List<Var> outputs;
-    private final List<Arg> inputs;
   
     public LocalFunctionCall(String functionName,
         List<Arg> inputs, List<Var> outputs) {
-      super(Opcode.CALL_FOREIGN_LOCAL, functionName);
-      this.outputs = new ArrayList<Var>();
-      this.outputs.addAll(outputs);
-      this.inputs = new ArrayList<Arg>();
-      this.inputs.addAll(inputs);
+      super(Opcode.CALL_FOREIGN_LOCAL, functionName, 
+            outputs, inputs, null);
       for(Var v: outputs) {
         assert(v != null);
       }
@@ -1301,29 +1304,6 @@ public class ICInstructions {
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       gen.builtinLocalFunctionCall(functionName, inputs, outputs);
     }
-  
-    @Override
-    public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
-      if (mode == RenameMode.REFERENCE || mode == RenameMode.REPLACE_VAR) {
-        ICUtil.replaceVarsInList(renames, outputs, false);
-      }
-      ICUtil.replaceArgsInList(renames, inputs);
-    }
-  
-    public String getFunctionName() {
-      return this.functionName;
-    }
-  
-    @Override
-    public List<Arg> getInputs() {
-      return Collections.unmodifiableList(inputs);
-    }
-  
-    @Override
-    public List<Var> getOutputs() {
-      return Collections.unmodifiableList(outputs);
-    }
-
     
     @SuppressWarnings("unchecked")
     @Override
@@ -1333,12 +1313,6 @@ public class ICInstructions {
         return Arrays.asList(Pair.create(getOutput(0), InitType.FULL));
       }
       return Collections.emptyList();
-    }
-    
-    @Override
-    public boolean hasSideEffects() {
-      return (!ForeignFunctions.isPure(functionName)) ||
-            this.writesAliasVar() || this.writesMappedVar();
     }
     
     @Override
@@ -1373,17 +1347,6 @@ public class ICInstructions {
       // Variables are immutable so just need to clone lists
       return new LocalFunctionCall(functionName, 
           new ArrayList<Arg>(inputs), new ArrayList<Var>(outputs));
-    }
-
-    @Override
-    public List<Var> getWriteIncrVars() {
-      // Range is special case where output array modified
-      if (isImpl(SpecialFunction.RANGE) ||
-          isImpl(SpecialFunction.RANGE_STEP)) {
-        // Array output must be incremented
-        return Arrays.asList(getOutput(0));
-      }
-      return Var.NONE;
     }
   }
   

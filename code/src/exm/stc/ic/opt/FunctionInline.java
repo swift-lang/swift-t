@@ -374,21 +374,21 @@ public class FunctionInline implements OptimizerPass {
       MultiMap<String, String> inlineLocations, Map<String, Function> toInline,
       Set<String> alwaysInline, Set<Pair<String, String>> blacklist,
       ListIterator<Statement> it, FunctionCall fcall) {
-    if (toInline.containsKey(fcall.getFunctionName()) ||
-            alwaysInline.contains(fcall.getFunctionName())) {
+    if (toInline.containsKey(fcall.functionName()) ||
+            alwaysInline.contains(fcall.functionName())) {
       boolean canInlineHere;
       if (inlineLocations == null) {
         canInlineHere = true;
       } else {
         // Check that location is marked for inlining
-        List<String> inlineCallers = inlineLocations.get(fcall.getFunctionName());
+        List<String> inlineCallers = inlineLocations.get(fcall.functionName());
         canInlineHere = inlineCallers.contains(contextFunction.getName());
       }
       if (canInlineHere) {
         // Do the inlining.  Note that the iterator will be positioned
         // after any newly inlined instructions.
         inlineCall(logger, prog, contextFunction, block, it, fcall,
-                   toInline.get(fcall.getFunctionName()),
+                   toInline.get(fcall.functionName()),
                    alwaysInline, blacklist);
       }
     }
@@ -423,7 +423,7 @@ public class FunctionInline implements OptimizerPass {
     assert(fnCall.getFunctionOutputs().size() == toInline.getOutputList().size());
     assert(fnCall.getFunctionInputs().size() == toInline.getInputList().size()) :
            fnCall.getFunctionInputs() + " != " + toInline.getInputList() 
-             + " for " + fnCall.getFunctionName();
+             + " for " + fnCall.functionName();
     for (int i = 0; i < fnCall.getFunctionInputs().size(); i++) {
       Arg inputVal = fnCall.getFunctionInput(i);
       Var inArg = toInline.getInputList().get(i);
@@ -489,13 +489,13 @@ public class FunctionInline implements OptimizerPass {
     
     // Do the insertion
     insertBlock.insertInline(inlineBlock, insertPos);
-    logger.debug("Call to function " + fnCall.getFunctionName() +
+    logger.debug("Call to function " + fnCall.functionName() +
           " inlined into " + contextFunction.getName());
     
     // Prevent repeated inlinings
-    if (!alwaysInline.contains(fnCall.getFunctionName())) {
+    if (!alwaysInline.contains(fnCall.functionName())) {
       blacklist.add(Pair.create(contextFunction.getName(),
-                              fnCall.getFunctionName())); 
+                              fnCall.functionName())); 
     }
   }
 
@@ -568,7 +568,7 @@ public class FunctionInline implements OptimizerPass {
     public void visit(Logger logger, Function functionContext,
                                       Instruction inst) {
       if (isFunctionCall(inst)) {
-        String calledFunction = ((FunctionCall)inst).getFunctionName();
+        String calledFunction = ((FunctionCall)inst).functionName();
         functionUsages.put(calledFunction, functionContext.getName());
       }
       

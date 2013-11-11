@@ -56,7 +56,8 @@ public class ProgressOpcodes {
     if (isCheapWorkerOpcode(i.op)) {
       return true;
     } else if (i.op == Opcode.CALL_FOREIGN_LOCAL) {
-      TaskMode fnMode = ForeignFunctions.getTaskMode(((LocalFunctionCall)i).getFunctionName());
+      String fnName = ((LocalFunctionCall)i).functionName();
+      TaskMode fnMode = ForeignFunctions.getTaskMode(fnName);
       if (fnMode == TaskMode.LOCAL) {
         return true;
       }

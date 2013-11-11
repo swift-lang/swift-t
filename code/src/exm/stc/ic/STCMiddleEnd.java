@@ -371,7 +371,7 @@ public class STCMiddleEnd {
     props.assertInternalTypesValid();
     currBlock().addInstruction(
         FunctionCall.createBuiltinCall(
-            function, Var.asArgList(inputs), outputs, props));
+            function, outputs, Var.asArgList(inputs), props));
   }
   
   public void builtinLocalFunctionCall(String functionName,
@@ -385,7 +385,7 @@ public class STCMiddleEnd {
     props.assertInternalTypesValid();
     currBlock().addInstruction(
           FunctionCall.createFunctionCall(
-              function, inputs, outputs, mode, props));
+              function, outputs, inputs, mode, props));
   }
 
   public void runExternal(String cmd, List<Arg> args, List<Arg> inFiles,

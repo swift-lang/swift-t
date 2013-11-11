@@ -157,7 +157,7 @@ public class FunctionSignature implements OptimizerPass {
     }
     
     FunctionCall callNew = FunctionCall.createFunctionCall(newFunctionName,
-                            callInputs, fn.getOutputList(), fn.mode(), null);
+                            fn.getOutputList(), callInputs, fn.mode(), null);
     main.addInstruction(callNew);
     return main;
   }
