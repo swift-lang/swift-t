@@ -334,16 +334,15 @@ public class TurbineGenerator implements CompilerBackend {
     return result;
   }
   
-  private TypeName structTypeName(Type type, boolean creation) {
+  private TypeName structTypeName(Type type, boolean includeSubtype) {
     assert(Types.isStruct(type));
-    if (creation) {
-      // Don't include subtype
-      return Turbine.ADLB_STRUCT_REF_TYPE;
-    } else {
-      // Need to include subtype
+    if (includeSubtype) {
       int structTypeId = structTypes.getIDForType((StructType)type);
       // Form type name through concatenation
       return Turbine.structTypeName(structTypeId);
+    } else {
+      // Don't include subtype
+      return Turbine.ADLB_STRUCT_REF_TYPE;
     }
   }
 
@@ -496,7 +495,7 @@ public class TurbineGenerator implements CompilerBackend {
 
   private TypeName refRepresentationType(Type memberType, boolean creation) {
       if (Types.isStruct(memberType)) {
-        return structTypeName(memberType, creation);
+        return structTypeName(memberType, !creation);
       } else if (Types.isFile(memberType)) {
     	return Turbine.ADLB_FILE_REF_TYPE;
       } else {
@@ -517,9 +516,12 @@ public class TurbineGenerator implements CompilerBackend {
       return Turbine.ADLB_CONTAINER_TYPE;
     } else if (Types.isBagLocal(t)) {
       return Turbine.ADLB_MULTISET_TYPE;
-    } else if (Types.isFuture(t) || Types.isContainer(t)) {
+    } else if (Types.isFuture(t) || Types.isContainer(t) ||
+               Types.isRef(t)) {
       // Local handle to remote data
       return Turbine.ADLB_REF_TYPE;
+    } else if (Types.isStruct(t)) {
+      return structTypeName(t, true);
     } else {
       throw new STCRuntimeError("Unknown ADLB representation type for " + t);
     }
