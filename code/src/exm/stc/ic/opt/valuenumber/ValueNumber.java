@@ -352,8 +352,9 @@ public class ValueNumber implements OptimizerPass {
       }
     }
     
+    int stmtCount = block.getStatements().size();
     for (Continuation cont: block.getContinuations()) {
-      findCongruencesContRec(program, f, execCx, cont, stmts.previousIndex(),
+      findCongruencesContRec(program, f, execCx, cont, stmtCount,
                              state, result);
     }
     
@@ -542,10 +543,12 @@ public class ValueNumber implements OptimizerPass {
       inlinePassRecurse(consts, cont, cong);
       // Then try to inline
       if (cont.isNoop()) {
+        logger.trace("Removed noop continuation " + cont.getType());
         contIt.remove();
       } else if (tryInlineContinuation(block, cont, contIt,
                                        closedVars, recClosedVars)) {
         // Success!  Will now iterate over rest
+        logger.trace("Inlined continuation " + cont.getType());
       }
     }
   }

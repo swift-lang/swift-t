@@ -53,6 +53,7 @@ public class ClosedVarTracker {
 
   private ClosedVarTracker(Logger logger, boolean useTransitiveDeps,
       ClosedVarTracker parent, int parentStmtIndex) {
+    assert(parentStmtIndex >= 0);
     this.logger = logger;
     this.useTransitiveDeps = useTransitiveDeps;
     this.parent = parent;
@@ -117,6 +118,11 @@ public class ClosedVarTracker {
 
     
   public ClosedEntry getClosedEntry(Var var, boolean recursive, int stmtIndex) {
+    if (logger.isTraceEnabled()) {
+      logger.trace("getClosedEntry(" + var.name() + "@" + stmtIndex +
+                  " rec: " + recursive); 
+    }
+    
     ClosedEntry ce = getDirectClosedEntry(var, recursive, stmtIndex);
 
     if (ce != null && ce.matches(recursive, stmtIndex)) {
@@ -143,7 +149,7 @@ public class ClosedVarTracker {
       if (!visited.contains(predecessor)) {
         ClosedEntry predCE = getDirectClosedEntry(predecessor, false,
                                                   stmtIndex);
-        if (ce != null) {
+        if (predCE != null) {
           assert(predCE.matches(recursive, stmtIndex));
           // Copy over entry to this variable
           closed.put(var, predCE);
@@ -182,6 +188,7 @@ public class ClosedVarTracker {
         logger.trace(var + " " + ce + " vs " + recursive + ", " + currStmtIndex);
         // Check that statement index and recursiveness is right
         if (ce.matches(recursive, currStmtIndex)) {
+          logger.trace("Matches!");
           if (curr == this) {
             return ce;
           } else {
@@ -283,7 +290,7 @@ public class ClosedVarTracker {
     
 
     public boolean matches(boolean recursive, int stmtIndex) {
-      return this.stmtIndex <= stmtIndex &&
+      return this.stmtIndex < stmtIndex &&
                   (!recursive || this.recursive);
     }
     /**
