@@ -27,124 +27,97 @@ namespace eval turbine {
     namespace import ::turbine::c::create_nested \
                      ::turbine::c::create_nested_bag
 
-    # build array by inserting items into a container starting at 0
-    # close: decrement writers count at end
-    # val_type: type of array values
-    proc array_build { c elems close val_type } {
-      set n [ llength $elems ]
-      log "array_build: <$c> $n elems, close $close"
-      if { $n > 0 } {
-        for { set i 0 } { $i < $n } { incr i } {
-          set elem [ lindex $elems $i ]
-          set drops 0
-          if { [ expr {$close && $i == $n - 1 } ] } {
-            set drops 1
-          }
-          adlb::insert $c $i $elem $val_type $drops
-        }
-      } else {
-        adlb::write_refcount_decr $c
+    # build integer keyed array by inserting items into a container
+    # starting at 0
+    # write_decr: decrement writers count
+    # args: type of array values, passed to adlb::store
+    proc array_build { c vals write_decr args } {
+      set kv_dict [ dict create ]
+      set i 0
+      foreach val $vals {
+        dict append kv_dict $i $val
+        incr i
       }
+      array_kv_build $c $kv_dict $write_decr integer {*}$args
     }
 
     proc swift_array_build { c elems var_type } { 
         set n [ llength $elems ]
         log "swift_array_build: <$c> elems: $n var_type: $var_type"
-        set L [ list ] 
-        if [ string equal $var_type "file" ] { 
+        if [ string equal $var_type "file" ] {
+            set L [ list ] 
+            set filename_tds [ adlb::multicreate [ lrepeat $n [ list string ] ]
             set type "file_ref"
             for { set i 0 } { $i < $n } { incr i } { 
                 set item [ lindex $elems $i ] 
-                literal filename_td string $item 
+                set filename_td [ lindex $filename_tds $i ]
+                store_string 
                 turbine::allocate_file2 td $filename_td 1 0
                 lappend L $td
             }
         } else { 
             set type "ref"
+            set L [ adlb::multicreate [ lrepeat $n [ list $type ] ]
             for { set i 0 } { $i < $n } { incr i } { 
                 set item [ lindex $elems $i ] 
-                literal td $var_type $item
-                lappend L $td
+                set td [ lindex $L $i ]
+                adlb::store $td $var_type $item
             }            
         }
-        array_build $c $L 0 $type
+        array_build $c $L 1 $type
     }
 
     # build array by inserting items into a container starting at 0
-    # close: decrement writers count at end
-    # val_type: type of array values
-    proc array_kv_build { c kv_dict close val_type } {
-      set n [ dict size $kv_dict ]
-      log "array_kv_build: <$c> $n elems, close $close"
-      if { $n > 0 } {
-        set i 0
-        dict for { key val } $kv_dict {
-          set drops 0
-          if { [ expr {$close && $i == $n - 1 } ] } {
-            set drops 1
-          }
-          adlb::insert $c $key $val $val_type $drops
-          incr i
-        }
-      } else {
-        adlb::write_refcount_decr $c
-      }
+    # write_decr: decrement writers count
+    # key_type: array key type
+    # args: type of array values, passed to adlb::store
+    proc array_kv_build { c kv_dict write_decr key_type args } {
+      log "array_kv_build: <$c> [ dict size $kv_dict ] elems, write_decr $write_decr"
+      adlb::store $c container $key_type {*}$args $kv_dict $write_decr
     }
 
     # build array from values
-    proc array_kv_build2 { c kv_dict close val_type } {
+    # write_decr: decrement writers count
+    # key_type: array key type
+    # args: type of array values, passed to adlb::store
+    proc array_kv_build2 { c kv_dict write_decr key_type args } {
       set n [ dict size $kv_dict ]
-      set typel [ list $val_type 1 1 ]
+      set typel $args
+      # Add decr to list
+      lappend typel 1 1
 
-      set elems [ adlb::multicreate [ lrepeat $n $typel ] ]
-      log "array_kv_build2: <$c> $n elems, close $close"
-      if { $n > 0 } {
-        set i 0
-        dict for { key val } $kv_dict {
-          set drops 0
-          if { [ expr {$close && $i == $n - 1 } ] } {
-            set drops 1
-          }
-          set elem [ lindex $elems $i ]
-          adlb::store $elem $val_type $val
-          adlb::insert $c $key $elem $val_type $drops
-          incr i
-        }
-      } else {
-        adlb::write_refcount_decr $c
+      set elems [ adlb::multicreate {*}[ lrepeat $n $typel ] ]
+      log "array_kv_build2: <$c> [ dict size $kv_dict ] elems, write_decr $write_decr"
+      set kv_dict2 [ dict create ]
+      set i 0
+      dict for { key val } $kv_dict {
+        set elem [ lindex $elems $i ]
+        adlb::store $elem $val_type $val
+        dict append kv_dict2 $key $elem
+        incr i
       }
+      array_kv_build $c $kv_dict2 $write_decr $key_type {*}$args
     }
     
     
     # build multiset by inserting items into a container starting at 0
-    # close: decrement writers count at end
-    # val_type: type of array values
-    proc multiset_build { ms elems close val_type } {
+    # write_decr: decrement writers count
+    # args: type of multiset elems, passed to adlb::store
+    proc multiset_build { ms elems write_decr args } {
       set n [ llength $elems ]
-      log "multiset_build: <$ms> $n elems, close $close"
-      if { $n > 0 } {
-        for { set i 0 } { $i < $n } { incr i } {
-          set elem [ lindex $elems $i ]
-          set drops 0
-          if { [ expr {$close && $i == $n - 1 } ] } {
-            set drops 1
-          }
-          adlb::store $ms $elem $val_type $drops
-        }
-      } else {
-        adlb::write_refcount_decr $ms
-      }
+      log "multiset_build: <$ms> $n elems, write_decr $write_decr"
+      adlb::store $ms multiset {*}$args $elems $write_decr
     }
     
     proc type_create_slice { outer_type type_list start_pos } {
       switch $outer_type {
         container {
           # Include key and value types
-          return [ lrange $type_list $start_pos [ expr {$start_pos + 2} ]
+          return [ lrange $type_list $start_pos [ expr {$start_pos + 2} ] ]
         }
         multiset {
           # Include value type
-          return [ lrange $type_list $start_pos [ expr {$start_pos + 1} ]
+          return [ lrange $type_list $start_pos [ expr {$start_pos + 1} ] ]
         }
         default {
           return [ list $outer_type ]
@@ -167,57 +140,51 @@ namespace eval turbine {
       switch $outer_type {
         container {
           set n [ dict size $cval ]
-          if { $n > 0 } {
-            set i 0
-            dict for { key val } $cval {
-              set key_type_pos [ expr {$types_pos + 1} ]
-              set key_type [ lindex $types $key_type_pos ]
-              set val_type_pos [ expr {$types_pos + 2} ]
-              set val_type [ lindex $types $val_type_pos ]
-              
-              # TODO: extra appropriate slice of types depending on value type
-              set create_types [ type_create_slice $val_type $types $val_type_pos ]
-              set val_id [ adlb::create $::adlb::NULL_ID {*}$create_types 1 1 ]
+          set key_type_pos [ expr {$types_pos + 1} ]
+          set key_type [ lindex $types $key_type_pos ]
+          set val_type_pos [ expr {$types_pos + 2} ]
+          set val_type [ lindex $types $val_type_pos ]
+          # appropriate slice of types depending on value type
+          set create_types [ type_create_slice $val_type $types $val_type_pos ]
+          # initial refcounts
+          lappend create_types 1 1
+          set val_ids [ adlb::multicreate {*}[ lrepeat $n $create_types ] ]
+          set val_dict [ dict create ]
 
-              # build inner data structure
-              build_rec $val_id $val $types $val_type_pos 1
+          set i 0
+          dict for { key val } $cval {
+            set val_id [ lindex $val_ids $i ]
 
-              set write_decr_now 0
-              if { [ expr {$write_decr && $i == $n - 1 } ] } {
-                set write_decr_now $write_decr
-              }
-              adlb::insert $id $key $val_id ref $write_decr_now
-              incr i
-            }
-          } else {
-            adlb::write_refcount_decr $id $write_decr
+            # build inner data structure
+            build_rec $val_id $val $types $val_type_pos 1
+            
+            dict append val_dict $key $val_id
+            incr i
           }
+          # Store values all at once
+          adlb::store $id container $key_type ref $val_dict $write_decr
         }
         multiset {
           set n [ llength $cval ]
-          if { $n > 0 } {
-            set i 0
-            foreach val $cval {
-              set val_type_pos [ expr {$types_pos + 1} ]
-              set val_type [ lindex $types $val_type_pos ]
-              
-              # TODO: extra appropriate slice of types depending on value type
-              set create_types [ type_create_slice $val_type $types $val_type_pos ]
-              set val_id [ adlb::create $::adlb::NULL_ID {*}$create_types 1 1 ]
+          set val_type_pos [ expr {$types_pos + 1} ]
+          set val_type [ lindex $types $val_type_pos ]
+          # appropriate slice of types depending on value type
+          set create_types [ type_create_slice $val_type $types $val_type_pos ]
+          # initial refcounts
+          lappend create_types 1 1
+          set val_ids [ adlb::multicreate {*}[ lrepeat $n $create_types ] ]
 
-              # build inner data structure
-              build_rec $val_id $val $types $val_type_pos 1
+          set i 0
+          foreach val $cval {
+            set val_id [ lindex $val_ids $i ]
 
-              set write_decr_now 0
-              if { [ expr {$write_decr && $i == $n - 1 } ] } {
-                set write_decr_now $write_decr
-              }
-              adlb::store $id ref $val_id $write_decr_now
-              incr i
-            }
-          } else {
-            adlb::write_refcount_decr $id $write_decr
+            # build inner data structure
+            build_rec $val_id $val $types $val_type_pos 1
+
+            incr i
           }
+          # Store values all at once
+          adlb::store $id multiset ref $val_ids $write_decr
         }
         default {
           if [ expr {$types_pos + 1 == [ llength $types ]} ] {

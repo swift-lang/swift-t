@@ -136,7 +136,7 @@ proc test_store_multiset { } {
     set m2_val [ list val1 val2 val3 ]
     set m2 [ adlb::create $::adlb::NULL_ID multiset string ]
 
-    #TODO: need to store rather than append
+    # Store whole list to multiset
     adlb::store $m2 multiset string $m2_val
 
     set m2_size [ adlb::container_size $m2 ]
@@ -166,8 +166,7 @@ proc rules { } {
    test_retrieve_container
    test_retrieve_multiset
    test_store_container
-   # TODO: doesn't pass yet
-   #test_store_multiset
+   test_store_multiset
 }
 
 turbine::defaults
