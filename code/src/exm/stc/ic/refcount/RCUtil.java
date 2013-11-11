@@ -8,6 +8,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.Var;
 import exm.stc.ic.opt.AliasTracker.AliasKey;
+import exm.stc.ic.refcount.RCTracker.RCDir;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICTree.Block;
@@ -66,11 +67,20 @@ public class RCUtil {
                          RefCountType rcType,
                          boolean noIncrements, boolean noDecrements) {
     // Check that all refcounts are zero
-    for (Entry<AliasKey, Long> e : increments.rcIter(rcType)) {
-      if ((noIncrements && e.getValue() > 0) ||
-          (noDecrements && e.getValue() < 0)) {
-        throw new STCRuntimeError("Refcount " + rcType  + " not 0 after pass "
-                   + e.toString() + " in block " + block);
+    if (noIncrements) {
+      for (Entry<AliasKey, Long> e : increments.rcIter(rcType, RCDir.INCR)) {
+        if (e.getValue() != 0) {
+          throw new STCRuntimeError("Refcount " + rcType  + " incr not 0 "
+                + "after pass " + e.toString() + " in block " + block);
+        }
+      }
+    }
+    if (noDecrements) {
+      for (Entry<AliasKey, Long> e : increments.rcIter(rcType, RCDir.DECR)) {
+        if (e.getValue() != 0) {
+          throw new STCRuntimeError("Refcount " + rcType  + " decr not 0 "
+                + "after pass " + e.toString() + " in block " + block);
+        }
       }
     }
   }

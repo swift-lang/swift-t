@@ -31,6 +31,7 @@ import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.opt.AliasTracker.AliasKey;
 import exm.stc.ic.opt.OptimizerPass;
+import exm.stc.ic.refcount.RCTracker.RCDir;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ForeachLoops.AbstractForeachLoop;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
@@ -282,17 +283,7 @@ public class RefcountPass implements OptimizerPass {
       pullUpRefIncrements(block, increments);
     }
 
-    for (RefCountType rcType: RC_TYPES) {
-      // Add decrements to block
-      placer.placeDecrements(logger, fn, block, increments, rcType);
-
-      // Add any remaining increments
-      placer
-          .placeIncrements(block, increments, rcType, parentAssignedAliasVars);
-
-      // Verify we didn't miss any
-      RCUtil.checkRCZero(block, increments, rcType, true, true);
-    }
+    placer.placeAll(logger, fn, block, increments, parentAssignedAliasVars);
   }
 
   /**
@@ -633,7 +624,8 @@ public class RefcountPass implements OptimizerPass {
             RefCountType rcType = RefCountOp.getRCType(inst.op);
             if (amountArg.isIntVal()) {
               long amount = amountArg.getIntLit();
-              if (increments.getCount(rcType, v) != 0) {
+              if (increments.getCount(rcType, v, RCDir.INCR) != 0 ||
+                  increments.getCount(rcType, v, RCDir.DECR) != 0) {
                 // Check already being manipulated in this block
                 increments.incr(v, rcType, amount);
                 it.remove();

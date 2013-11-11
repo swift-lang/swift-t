@@ -1129,6 +1129,10 @@ public class ICTree {
       return new ContIt(this.continuations.listIterator(pos));
     }
     
+    public ListIterator<Continuation> continuationEndIterator() {
+      return continuationIterator(continuations.size());
+    }
+    
     /**
      * Wrapper around ListIterator to intercept calls and make sure IR is
      * consistent, e.g. with parent links.

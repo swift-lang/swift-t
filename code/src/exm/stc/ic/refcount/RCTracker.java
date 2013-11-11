@@ -5,25 +5,25 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import exm.stc.common.lang.RefCounting;
-import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Var;
 import exm.stc.common.lang.RefCounting.RefCountType;
+import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.StructType;
-import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.StructType.StructField;
-import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.opt.AliasTracker;
-import exm.stc.ic.opt.OptUtil;
 import exm.stc.ic.opt.AliasTracker.Alias;
 import exm.stc.ic.opt.AliasTracker.AliasKey;
+import exm.stc.ic.opt.OptUtil;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
 
@@ -33,14 +33,41 @@ import exm.stc.ic.tree.ICTree.Block;
 public class RCTracker {
   
   /**
+   * Direction of change (increment or decrement)
+   */
+  public static enum RCDir {
+    INCR,
+    DECR;
+    
+    public static RCDir fromAmount(long amount) {
+      if (amount >= 0) {
+        return INCR;
+      } else {
+        return DECR;
+      }
+    }
+  };
+  
+  /**
    * Current read increments per var
    */
   private final Counters<AliasKey> readIncrements;
   
   /**
+   * Current read decrements per var (negative numbers)
+   */
+  private final Counters<AliasKey> readDecrements;
+  
+  /**
    * Current write increments per var
    */
   private final Counters<AliasKey> writeIncrements;
+  
+  /**
+   * Current write decrements per var (negative numbers)
+   */
+  private final Counters<AliasKey> writeDecrements;
+  
   private final AliasTracker aliases;
   
   /**
@@ -54,7 +81,9 @@ public class RCTracker {
   
   public RCTracker(AliasTracker parentAliases) {
     this.readIncrements =  new Counters<AliasKey>();
+    this.readDecrements =  new Counters<AliasKey>();
     this.writeIncrements =  new Counters<AliasKey>();
+    this.writeDecrements =  new Counters<AliasKey>();
     if (parentAliases != null) {
       this.aliases = parentAliases.makeChild();
     } else {
@@ -104,12 +133,13 @@ public class RCTracker {
    * @param changes
    * @param rcType
    */
-  public void merge(Counters<Var> changes, RefCountType rcType) {
+  public void merge(Counters<Var> changes, RefCountType rcType,
+                    RCDir dir) {
     Counters<AliasKey> changes2 = new Counters<AliasKey>();
     for (Entry<Var, Long> e: changes.entries()) {
       changes2.add(getCountKey(e.getKey()), e.getValue());
-    }
-    getCounters(rcType).merge(changes2);
+    } 
+    getCounters(rcType, dir).merge(changes2);
   }
 
   /**
@@ -118,40 +148,51 @@ public class RCTracker {
    */
   public void canonicalize() {
     for (RefCountType rcType: RefcountPass.RC_TYPES) {
-      Iterator<Entry<AliasKey, Long>> it = rcIter(rcType).iterator();
-      // Add these back in at end
-      List<Pair<AliasKey, Long>> toAdd = 
-                                new ArrayList<Pair<AliasKey,Long>>();
-      while (it.hasNext()) {
-        Entry<AliasKey, Long> e = it.next();
-        
-        // Canonicalize key by finding var, and then finding first path
-        // that a var is a part of
-        AliasKey currKey = e.getKey();
-        Var v = getRefCountVar(null, currKey, false);
-        if (v != null) {
-          AliasKey canonKey = getCountKey(v);
-          if (!canonKey.equals(currKey)) {
-            // Replace with canonical
-            it.remove();
-            toAdd.add(Pair.create(canonKey, e.getValue()));
+      for (RCDir dir: RCDir.values()) {
+        Iterator<Entry<AliasKey, Long>> it =
+                          rcIter(rcType, dir).iterator();
+        // Add these back in at end
+        List<Pair<AliasKey, Long>> toAdd = 
+                                  new ArrayList<Pair<AliasKey,Long>>();
+        while (it.hasNext()) {
+          Entry<AliasKey, Long> e = it.next();
+          
+          // Canonicalize key by finding var, and then finding first path
+          // that a var is a part of
+          AliasKey currKey = e.getKey();
+          Var v = getRefCountVar(null, currKey, false);
+          if (v != null) {
+            AliasKey canonKey = getCountKey(v);
+            if (!canonKey.equals(currKey)) {
+              // Replace with canonical
+              it.remove();
+              toAdd.add(Pair.create(canonKey, e.getValue()));
+            }
           }
         }
-      }
-      
-      
-      for (Pair<AliasKey, Long> e: toAdd) {
-        incrKey(e.val1, rcType, e.val2, e.val1.type());
+        
+        
+        for (Pair<AliasKey, Long> e: toAdd) {
+          incrKey(e.val1, rcType, e.val2, e.val1.type());
+        }
       }
     }
   }
   
-  private Counters<AliasKey> getCounters(RefCountType rcType) {
+  private Counters<AliasKey> getCounters(RefCountType rcType, RCDir dir) {
     if (rcType == RefCountType.READERS) {
-      return readIncrements;
+      if (dir == RCDir.INCR) {
+        return readIncrements;
+      } else {
+        return readDecrements;
+      }
     } else {
       assert(rcType == RefCountType.WRITERS);
-      return writeIncrements;
+      if (dir == RCDir.INCR) {
+        return writeIncrements;
+      } else {
+        return writeDecrements;
+      }
     }
   }
   
@@ -161,16 +202,18 @@ public class RCTracker {
    * @param rcType
    * @return
    */
-  public Counters<Var> getVarCandidates(Block block, RefCountType rcType) {
+  public Counters<Var> getVarCandidates(Block block, RefCountType rcType,
+                                        RCDir dir) {
     Counters<Var> result = new Counters<Var>();
-    for (Entry<AliasKey, Long> e: rcIter(rcType)) {
+    for (Entry<AliasKey, Long> e: rcIter(rcType, dir)) {
       result.add(getRefCountVar(block, e.getKey(), true), e.getValue());
     }
     return result;
   }
 
-  public Iterable<Entry<AliasKey, Long>> rcIter(RefCountType rcType) {
-    return getCounters(rcType).entries();
+  public Iterable<Entry<AliasKey, Long>> rcIter(RefCountType rcType,
+                                                RCDir dir) {
+    return getCounters(rcType, dir).entries();
   }
 
   public Var getRefCountVar(Block block, AliasKey key,
@@ -221,28 +264,37 @@ public class RCTracker {
     return curr;
   }
 
+  public void reset(RefCountType rcType, Var v, RCDir dir) {
+    getCounters(rcType, dir).reset(getCountKey(v));
+  }
+  
   public void reset(RefCountType rcType, Var v) {
-    getCounters(rcType).reset(getCountKey(v));
+    for (RCDir dir: RCDir.values()) {
+      getCounters(rcType, dir).reset(getCountKey(v));
+    }
   }
 
-  public void resetAll(RefCountType rcType, Collection<? extends Var> vars) {
+  public void resetAll(RefCountType rcType, Collection<? extends Var> vars,
+                       RCDir dir) {
     for (Var var: vars) {
-      reset(rcType, var);
+      reset(rcType, var, dir);
     }
   }
   
   public void resetAll() {
     for (RefCountType rcType: RefcountPass.RC_TYPES) {
-      getCounters(rcType).resetAll();
+      for (RCDir dir: RCDir.values()) {
+        getCounters(rcType, dir).resetAll();
+      }
     }
   }
 
-  public long getCount(RefCountType rcType, AliasKey k) {
-    return getCounters(rcType).getCount(k);
+  public long getCount(RefCountType rcType, AliasKey k, RCDir dir) {
+    return getCounters(rcType, dir).getCount(k);
   }
   
-  public long getCount(RefCountType rcType, Var v) {
-    return getCount(rcType, getCountKey(v));
+  public long getCount(RefCountType rcType, Var v, RCDir dir) {
+    return getCount(rcType, getCountKey(v), dir);
   }
 
   void readIncr(Var var) {
@@ -276,13 +328,36 @@ public class RCTracker {
   void writeIncr(Var var, long amount) {
     incr(var, RefCountType.WRITERS, amount);
   }
+
+  public void cancel(Var var, RefCountType rcType, long amount) {
+    cancel(getCountKey(var), rcType, amount);
+  }
   
+  public void cancel(AliasKey key, RefCountType rcType,
+                    long amount) {
+    RCDir dir = RCDir.fromAmount(-amount);
+    Counters<AliasKey> counters = getCounters(rcType, dir);
+    
+    long oldCount = counters.add(key, amount) - amount;
+    // Check we don't overshoot
+    if (oldCount < 0) {
+      assert(oldCount + amount <= 0) : oldCount + " + " + amount;
+    } else {
+      assert(oldCount + amount >= 0) : oldCount + " + " + amount;
+    }
+  }
+
   void incr(Var var, RefCountType rcType, long amount) {
     if (Types.isStruct(var.type())) {
       incrStructMembers(var, rcType, amount);
     } else if (RefCounting.hasRefCount(var, rcType)) {
-      getCounters(rcType).add(getCountKey(var), amount);
+      AliasKey key = getCountKey(var);
+      incr(key, rcType, amount);
     }
+  }
+
+  private void incr(AliasKey key, RefCountType rcType, long amount) {
+    getCounters(rcType, RCDir.fromAmount(amount)).add(key, amount);
   }
 
   void decr(Var var, RefCountType type, long amount) {
@@ -306,7 +381,7 @@ public class RCTracker {
       if ((var != null && RefCounting.hasRefCount(var, rcType)) ||
           (var == null &&
            RefCounting.mayHaveRefcount(varType, rcType))) {
-        getCounters(rcType).add(key, amount);
+        incr(key, rcType, amount);
       }
     }
   }
