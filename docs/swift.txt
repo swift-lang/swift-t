@@ -388,6 +388,20 @@ This feature is implemented by calling GNU +mktemp+ with suffix
 Currently Swift/T assumes that the file system is shared among
 all nodes.
 
+[NOTE]
+======
+The syntax
+----
+file f<"f.txt"> = g();
+----
+is allowed but
+----
+file f<"f.txt">=g();
+----
+results in a parse error: the +>=+ sequence is tokenized as
+_greater-than-or-equal-to_.
+======
+
 === Blobs
 
 Blobs represent native byte data.  They are primarily used to pass
