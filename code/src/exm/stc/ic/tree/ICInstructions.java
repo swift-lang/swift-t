@@ -993,10 +993,6 @@ public class ICInstructions {
                 readRC = true;
               }
             }
-            if (Types.isFile(outVar)) {
-              // Need read refcount for filename
-              readRC = true;
-            }
             if (readRC && RefCounting.hasReadRefCount(outVar)) {
               readIncr.add(outVar);
             }
