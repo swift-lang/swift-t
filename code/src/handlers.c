@@ -119,7 +119,7 @@ static adlb_code
 send_notification_work(int caller, 
         void *response, size_t response_len,
         struct packed_notif_counts *inner_struct,
-        const adlb_notif_t *notifs);
+        const adlb_notif_t *notifs, bool use_xfer);
 
 static adlb_code
 refcount_decr_helper(adlb_datum_id id, adlb_refcounts decr);
@@ -757,7 +757,7 @@ handle_store(int caller)
     
     // Send remaining to client
     adlb_code rc = send_notification_work(caller, &resp, sizeof(resp),
-                     &resp.notifs, &notifs);
+                     &resp.notifs, &notifs, false);
     ADLB_CHECK(rc);
   }
   else
@@ -781,7 +781,7 @@ handle_store(int caller)
   Finish filling in response with info about notifications,
   then send to caller including additional notification work.
   
-  Will use xfer buffer.
+  Will use xfer buffer as scratch space if use_xfer is true.
   response/response_len: pointer to response struct to be sent
   inner_struct: struct inside outer struct to be updated before sending
   
@@ -790,7 +790,7 @@ static adlb_code
 send_notification_work(int caller, 
         void *response, size_t response_len,
         struct packed_notif_counts *inner_struct,
-        const adlb_notif_t *notifs)
+        const adlb_notif_t *notifs, bool use_xfer)
 {
   // will send remaining to client
   int notify_count = notifs->notify.count;
@@ -802,11 +802,28 @@ send_notification_work(int caller,
    their index in the buffer.
    */
   adlb_data_code dc;
+
+  /*
+   * Allocate some scratch space on stack.
+   */
+  int tmp_buf_size = 1024;
+  char tmp_buf_data[tmp_buf_size];
+  adlb_buffer static_buf;
+  if (use_xfer)
+  {
+    static_buf = xfer_buf;
+  }
+  else
+  {
+    static_buf.data = tmp_buf_data;
+    static_buf.length = tmp_buf_size;
+  }
+  bool using_static_buf = true;
+  
   adlb_buffer extra_data;
-  bool using_xfer;
   int extra_pos = 0;
 
-  dc = ADLB_Init_buf(&xfer_buf, &extra_data, &using_xfer, 0);
+  dc = ADLB_Init_buf(&static_buf, &extra_data, &using_static_buf, 0);
   ADLB_DATA_CHECK(dc);
 
   int extra_data_count = 0;
@@ -837,7 +854,7 @@ send_notification_work(int caller,
 
         // pack into extra data
         dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL,rank->subscript.key,
-            rank->subscript.length, true, &extra_data, &using_xfer,
+            rank->subscript.length, true, &extra_data, &using_static_buf,
             &extra_pos);
         ADLB_DATA_CHECK(dc);
        
@@ -870,7 +887,7 @@ send_notification_work(int caller,
     {
       packed_refs[i].val_data = extra_data_count;
       dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL, ref->value,
-          ref->value_len, true, &extra_data, &using_xfer,
+          ref->value_len, true, &extra_data, &using_static_buf,
           &extra_pos);
       ADLB_DATA_CHECK(dc);
       
@@ -890,8 +907,7 @@ send_notification_work(int caller,
   if (extra_pos > 0)
   {
     assert(extra_data_count > 0);
-    SEND(extra_data.data, extra_data.length, MPI_BYTE,
-          caller, ADLB_TAG_RESPONSE);
+    SEND(extra_data.data, extra_pos, MPI_BYTE, caller, ADLB_TAG_RESPONSE);
   }
   if (notify_count > 0)
   {
@@ -904,7 +920,7 @@ send_notification_work(int caller,
          caller, ADLB_TAG_RESPONSE);
   }
 
-  if (!using_xfer)
+  if (!using_static_buf)
   {
     free(extra_data.data);
   }
@@ -952,7 +968,7 @@ handle_retrieve(int caller)
    
     if (dc == ADLB_DATA_SUCCESS)
     {
-      adlb_notif_ranks notify;
+      adlb_notif_ranks notify = ADLB_NO_NOTIF_RANKS;
       dc = xlb_incr_rc_scav(hdr->id, subscript,
                                result.data, result.length,
                                type, decr_self, incr_referand, &notify);
@@ -1103,7 +1119,7 @@ handle_refcount_incr(int caller)
     send_notifs.notify.notifs = notify_ranks.notifs;
     send_notifs.notify.count = notify_ranks.count;
     rc = send_notification_work(caller, &resp, sizeof(resp),
-            &resp.notifs, &send_notifs);
+            &resp.notifs, &send_notifs, true);
     ADLB_CHECK(rc);
   }
   else 
@@ -1254,7 +1270,7 @@ handle_container_reference(int caller)
       dc = ADLB_Own_data(NULL, &member);
       assert(dc == ADLB_DATA_SUCCESS);
 
-      adlb_notif_ranks notify;
+      adlb_notif_ranks notify = ADLB_NO_NOTIF_RANKS;
       adlb_refcounts self_decr = ADLB_READ_RC;
       adlb_refcounts referand_incr = ADLB_READ_RC;
       // container_reference must consume a read reference, and we need

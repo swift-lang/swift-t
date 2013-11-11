@@ -777,9 +777,9 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
     {
       // TODO: deserialize container value
       // TODO; append to to_free list
-      dc = insert_notifications_all(&d->data.CONTAINER, id,
+      /*dc = insert_notifications_all(&d->data.CONTAINER, id,
                 notifications, &freed_datum);
-      DATA_CHECK(dc);
+      DATA_CHECK(dc);*/
     }
   }
   else if (d->type == ADLB_DATA_TYPE_MULTISET)
