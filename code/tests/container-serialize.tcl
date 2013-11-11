@@ -50,9 +50,9 @@ proc test_retrieve_multiset { } {
     # Check looking up
 
     set m1 [ adlb::create $::adlb::NULL_ID multiset string ]
-    adlb::store $m1 string "val1" 0
-    adlb::store $m1 string "val2" 0
-    adlb::store $m1 string "val3" 
+    adlb::insert $m1 "" "val1" string 0
+    adlb::insert $m1 "" "val2" string 0
+    adlb::insert $m1 "" "val3" string 
     
     set m1_check [ adlb::retrieve $m1 ]
     puts "m1_check: $m1_check"
@@ -141,7 +141,7 @@ proc test_store_multiset { } {
 
     set m2_size [ adlb::container_size $m2 ]
 
-    set m2_check [ lsort [ adlb::enumerate $m2 members all 0 ] [
+    set m2_check [ lsort [ adlb::enumerate $m2 members all 0 ] ]
     set m2_0 [ lindex $m2_check 0 ]
     set m2_1 [ lindex $m2_check 1 ]
     set m2_2 [ lindex $m2_check 2 ]
