@@ -1335,7 +1335,7 @@ tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
     }
     case ADLB_DATA_TYPE_STRUCT:
     {
-      TCL_CONDITION(extra != NULL, "Must specify struct type to convert"
+      TCL_CONDITION(extra != NULL, "Must specify struct type to convert "
                                     "dict to struct")
       int rc = tcl_dict_to_adlb_struct(interp, objv, obj,
              extra->STRUCT.struct_type, &result->STRUCT);
