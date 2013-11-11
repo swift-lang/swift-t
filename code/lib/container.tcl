@@ -46,8 +46,9 @@ namespace eval turbine {
         log "swift_array_build: <$c> elems: $n var_type: $var_type"
         if [ string equal $var_type "file" ] {
             set L [ list ] 
+            # Mass create filename tds.  Requires 2 initial read refcounts
             set filename_tds [ adlb::multicreate {*}[ lrepeat \
-                                      $n [ list string ] ] ]
+                                      $n [ list string 2 ] ] ]
             set type "file_ref"
             for { set i 0 } { $i < $n } { incr i } { 
                 set elem [ lindex $elems $i ] 
