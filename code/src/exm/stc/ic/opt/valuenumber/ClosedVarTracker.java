@@ -2,6 +2,7 @@ package exm.stc.ic.opt.valuenumber;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashSet;
@@ -41,15 +42,13 @@ public class ClosedVarTracker {
    * Multimap of var1 -> [ var2, var3]
    * 
    * There should only be an entry in here if var1 is not closed An entry here
-   * means that var1 will be closed only after var2 and var3 are closed (e.g.
-   * if var1 = var2 + var3)
+   * means that var2 or var3 being closed implies that var1 is closed
    * 
    * We maintain this data structure because it lets us infer which variables
    * will be closed if we block on a given variable
    * TODO: recursive dependencies?
    */
   private final MultiMap<Var, Var> dependsOn;
-
 
   private ClosedVarTracker(Logger logger, boolean useTransitiveDeps,
       ClosedVarTracker parent, int parentStmtIndex) {
@@ -107,27 +106,21 @@ public class ClosedVarTracker {
       return Collections.unmodifiableSet(closed.keySet());
     }
   }
-
-  public boolean isClosed(Var var, boolean recursive, int stmtIndex) {
-    ClosedEntry ce = getClosedEntry(var, recursive, stmtIndex);
-    if (ce != null && ce.matches(recursive, stmtIndex)) {
-      return true;
-    }
-    return false;
-  }
-
     
-  public ClosedEntry getClosedEntry(Var var, boolean recursive, int stmtIndex) {
+  public ClosedEntry getClosedEntry(Var var, boolean recursive, int stmtIndex,
+      AliasFinder aliases) {
     if (logger.isTraceEnabled()) {
-      logger.trace("getClosedEntry(" + var.name() + "@" + stmtIndex +
+      logger.trace("getClosedEntry(" + var.name() + ")@" + stmtIndex +
                   " rec: " + recursive); 
     }
     
-    ClosedEntry ce = getDirectClosedEntry(var, recursive, stmtIndex);
-
-    if (ce != null && ce.matches(recursive, stmtIndex)) {
-      // Only stop search here if we didn't find anything
-      return ce;
+    List<Var> varAliases = aliases.getAliasesOf(var);
+    ClosedEntry ce = getDirectClosedEntry(varAliases, recursive, stmtIndex);
+    if (ce != null) {
+      if (ce.matches(recursive, stmtIndex)) {
+        // Only stop search here if we didn't find anything
+        return ce;
+      }
     }
     
     // Didn't find anything about this variable directly
@@ -135,32 +128,48 @@ public class ClosedVarTracker {
     if (recursive || useTransitiveDeps) {
       // Don't track dependencies for recursion, and don't do
       // inference if not allowed
-      return ce;
+      return null;
     }
     
     Deque<Var> depStack = new ArrayDeque<Var>();
-    depStack.addAll(directDeps(var));
+    for (Var varAlias: varAliases) {
+      depStack.addAll(directDeps(varAlias));
+    }
     
     // Avoid visiting same variables multiple times
     Set<Var> visited = new HashSet<Var>();
     visited.add(var);
     while (!depStack.isEmpty()) {
       Var predecessor = depStack.pop();
+      if (logger.isTraceEnabled()) {
+        logger.trace("Checking predecessor: " + predecessor);
+      }
       if (!visited.contains(predecessor)) {
-        ClosedEntry predCE = getDirectClosedEntry(predecessor, false,
+        List<Var> predAliases = aliases.getAliasesOf(predecessor);
+        ClosedEntry predCE = getDirectClosedEntry(predAliases, false,
                                                   stmtIndex);
-        if (predCE != null) {
-          assert(predCE.matches(recursive, stmtIndex));
+        if (predCE != null && predCE.matches(recursive, stmtIndex)) {
           // Copy over entry to this variable
+          if (logger.isTraceEnabled()) {
+            logger.trace("Inferred: " + predecessor + " closed => "
+                         + var + " closed"); 
+          }
           closed.put(var, predCE);
           return predCE;
         }
-        depStack.addAll(directDeps(predecessor));
+        for (Var predAlias: predAliases) { 
+          depStack.addAll(directDeps(predAlias));
+        }
       }
     }
     return null;
   }
 
+  /**
+   * Return direct dependencies from var
+   * @param var
+   * @return
+   */
   private List<Var> directDeps(Var var) {
     ClosedVarTracker curr = this;
     List<Var> res = new ArrayList<Var>();
@@ -172,30 +181,33 @@ public class ClosedVarTracker {
   }
 
   /**
-   * Check if variable is directly closed.
+   * Check if one of a set of variables is directly closed.
    * Returns a matching entry 
-   * @param var
+   * @param vars
    * @param recursive
    * @param stmtIndex
    * @return
    */
-  private ClosedEntry getDirectClosedEntry(Var var, boolean recursive, int stmtIndex) {
+  private ClosedEntry getDirectClosedEntry(Collection<Var> vars,
+      boolean recursive, int stmtIndex) {
     // Walk up to root, checking if this var is closed.
     ClosedVarTracker curr = this;
     int currStmtIndex = stmtIndex;
     while (curr != null) {
-      for (ClosedEntry ce: curr.closed.get(var)) {
-        logger.trace(var + " " + ce + " vs " + recursive + ", " + currStmtIndex);
-        // Check that statement index and recursiveness is right
-        if (ce.matches(recursive, currStmtIndex)) {
-          logger.trace("Matches!");
-          if (curr == this) {
-            return ce;
-          } else {
-            // Record in this scope for future lookups
-            ClosedEntry origScopeEntry = new ClosedEntry(0, ce.recursive);
-            closed.put(var, origScopeEntry);
-            return origScopeEntry;
+      for (Var var: vars) {
+        for (ClosedEntry ce: curr.closed.get(var)) {
+          logger.trace(var + " " + ce + " vs " + recursive + ", " + currStmtIndex);
+          // Check that statement index and recursiveness is right
+          if (ce.matches(recursive, currStmtIndex)) {
+            logger.trace("Matches!");
+            if (curr == this) {
+              return ce;
+            } else {
+              // Record in this scope for future lookups
+              ClosedEntry origScopeEntry = new ClosedEntry(0, ce.recursive);
+              close(var, origScopeEntry);
+              return origScopeEntry;
+            }
           }
         }
       }
@@ -217,7 +229,7 @@ public class ClosedVarTracker {
 
   public void close(Var var, ClosedEntry ce) {
     if (logger.isTraceEnabled())
-      logger.trace(var + " is closed");
+      logger.trace(var + " is closed: " + ce);
     
     closed.put(var, ce);
     
@@ -246,21 +258,21 @@ public class ClosedVarTracker {
   }
 
   /**
-   * Register that variable future depends on all of the variables in the
-   * collection, so that if future is closed, then the other variables must be
-   * closed.
+   * Register that variable future depends on another variable.
+   * I.e. we can infer that if to is closed, then from is closed
    * 
-   * @param to
-   *          a scalar future
-   * @param from
-   *          more scalar futures
+   * @param to a future
+   * @param from another future.
    */
   public void setDependency(Var to, Var from) {
     assert (!Types.isPrimValue(to.type()));
     assert (!Types.isPrimValue(from.type()));
     assert (!useTransitiveDeps) : "Tracking transitive dependencies "
         + "unsafe until reordering disabled";
-    dependsOn.put(to, from);
+    if (logger.isTraceEnabled()) {
+      logger.trace("Set dependency: " + from + " => " + to);
+    }
+    dependsOn.put(from, to);
   }
 
   public void printTraceInfo(Logger logger) {
@@ -299,5 +311,14 @@ public class ClosedVarTracker {
     public String toString() {
       return (recursive ? "REC_CLOSED" : "CLOSED") + "@" + stmtIndex;
     }
+  }
+  
+  public static interface AliasFinder {
+    /**
+     * Return list of aliases of var, including var itself
+     * @param var
+     * @return
+     */
+    public List<Var> getAliasesOf(Var var);
   }
 }

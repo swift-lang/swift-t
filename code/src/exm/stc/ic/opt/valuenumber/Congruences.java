@@ -1,6 +1,7 @@
 package exm.stc.ic.opt.valuenumber;
 
 import java.util.AbstractSet;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -19,6 +20,7 @@ import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.opt.InitVariables.InitState;
+import exm.stc.ic.opt.valuenumber.ClosedVarTracker.AliasFinder;
 import exm.stc.ic.opt.valuenumber.ClosedVarTracker.ClosedEntry;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgOrCV;
@@ -61,9 +63,8 @@ import exm.stc.ic.tree.Opcode;
  *    -> When we're doing the replacement walk, it isn't necessarily a problem:
  *       maybe just need to re-lookup canonical to make sure it wasn't
  *       recanonicalized.
- * TODO: could more closely link alias and inter-variable dependency tracking
  */
-public class Congruences {
+public class Congruences implements AliasFinder {
 
   private final Logger logger;
   private final GlobalConstants consts;
@@ -560,34 +561,17 @@ public class Congruences {
     Var canonicalAlias = getCanonicalAlias(varArg);
     
     ClosedEntry ce;
-    ce = isClosedNonAlias(canonicalAlias, stmtIndex, recursive);
+    ce = track.getClosedEntry(canonicalAlias, recursive, stmtIndex, this);
     if (logger.isTraceEnabled()) {
       logger.trace("Closed " + varArg + "(" + canonicalAlias + "): " + ce);
     }
-    if (ce != null && ce.matches(recursive, stmtIndex)) {
-      // We're done..
-      logger.trace(varArg + " closed @ " + ce.stmtIndex);
-      return true;
-    }
-    
-    // If canonical not closed, need to check if a merged set was closed,
-    // since closed info isn't immediately synchronized with merges
-    for (Arg mergedSet: byAlias.allMergedCanonicals(canonicalAlias.asArg())) {
-      assert(mergedSet.isVar());
-      Var merged = mergedSet.getVar();
-      isClosedNonAlias(merged, stmtIndex, recursive);
-      if (logger.isTraceEnabled()) {
-        logger.trace("Closed " + varArg + "(" + mergedSet + "): " + ce);
-      }
-      if (ce != null) {
-        // Mark canonical alias as closed to avoid having to trace back
-        // again like this.
-        track.close(canonicalAlias, ce);
-        if (ce.matches(recursive, stmtIndex)) {
-          logger.trace(varArg + " closed @ " + ce.stmtIndex +
-                       " via " + merged);
-          return true;
-        }
+    if (ce != null) {
+      // Mark as closed to avoid having to trace back again like this.
+      track.close(canonicalAlias, ce);
+      if (ce.matches(recursive, stmtIndex)) {
+        logger.trace(varArg + "/" + canonicalAlias + " closed @ "
+                   + ce.stmtIndex);
+        return true;
       }
     }
     return false;
@@ -601,16 +585,6 @@ public class Congruences {
   private boolean trackClosed(Var var) {
     return var.storage() != Alloc.LOCAL &&
            var.storage() != Alloc.GLOBAL_CONST;
-  }
-
-  /**
-   * Check if closed, ignoring any alias info.
-   * Returns best closed entry we could find.  Caller is responsible
-   * for checking.
-   */
-  private ClosedEntry isClosedNonAlias(Var var, int stmtIndex,
-                                       boolean recursive) {
-    return track.getClosedEntry(var, recursive, stmtIndex);
   }
   
   public Set<Var> getClosed(int stmtIndex) {
@@ -714,6 +688,21 @@ public class Congruences {
   
   public List<ArgOrCV> findCongruent(Arg arg, CongruenceType congType) {
     return getCongruentSet(congType).findCongruentValues(arg);
+  }
+  
+
+  public List<Var> getAliasesOf(Var var) {
+    List<Var> result = new ArrayList<Var>();
+    Arg canonical = byAlias.findCanonical(var.asArg());
+    if (canonical.isVar()) {
+      result.add(canonical.getVar());
+    }
+    for (Arg alias: byAlias.allMergedCanonicals(canonical)) {
+      if (alias.isVar()) {
+        result.add(alias.getVar());
+      }
+    }
+    return result;
   }
   
   public void addUnifiedValues(GlobalConstants consts, String errContext,
