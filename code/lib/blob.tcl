@@ -70,7 +70,7 @@ namespace eval turbine {
       for { set i 0 } { $i < $n } { incr i } {
           set d [ blobutils_get_float $p $i ]
           literal t float $d
-          container_immediate_insert $result $i $t integer
+          container_immediate_insert $result $i $t ref
       }
       adlb::refcount_incr $result w -1
       adlb::blob_free $input
