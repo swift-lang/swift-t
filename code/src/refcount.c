@@ -27,12 +27,13 @@ adlb_data_code xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change)
   int server = ADLB_Locate(id);
   if (server == xlb_comm_rank)
   {
-    adlb_ranks notify = ADLB_NO_RANKS;
+    adlb_notif_ranks notify = ADLB_NO_NOTIF_RANKS;
     adlb_data_code dc = xlb_data_reference_count(id, change,
             NO_SCAVENGE, NULL, NULL, &notify);
     // TODO: handle notifications here if needed for some reason
     check_verbose(notify.count == 0, ADLB_DATA_ERROR_UNKNOWN,
-        "Internal error: don't server->server write refcount decrements");
+        "Internal error: don't support server->server write "
+        "refcount decrements");
     return dc;
   }
   else
@@ -120,7 +121,7 @@ adlb_data_code
 xlb_incr_rc_scav(adlb_datum_id id, adlb_subscript subscript,
         const void *ref_data, int ref_data_len, adlb_data_type ref_type,
         adlb_refcounts decr_self, adlb_refcounts incr_referand,
-        adlb_ranks *notifications)
+        adlb_notif_ranks *notifications)
 {
   assert(ADLB_RC_NONNEGATIVE(incr_referand));
   adlb_data_code dc;

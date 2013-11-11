@@ -90,7 +90,7 @@ static adlb_data_code
 datum_init_multiset(adlb_datum *d, adlb_data_type val_type);
 
 static adlb_data_code
-xlb_data_close(adlb_datum_id id, adlb_datum *d, int** result, int* count);
+xlb_data_close(adlb_datum_id id, adlb_datum *d, adlb_notif_ranks *notify);
 static adlb_data_code datum_gc(adlb_datum_id id, adlb_datum* d,
            refcount_scavenge scav);
 
@@ -98,9 +98,19 @@ static adlb_data_code
 insert_notifications(adlb_datum *d,
             adlb_datum_id container_id, adlb_subscript subscript,
             adlb_datum_storage *inserted_value,
+            const void *value_buffer, int value_len,
             adlb_data_type value_type,
-            adlb_datums *references, adlb_ranks *notify_insert,
+            adlb_notif_t *notify,
             bool *garbage_collected);
+
+static inline
+adlb_data_code append_refs(const struct list_l *subscribers,
+          adlb_ref_data *references, adlb_data_type type,
+          const void *value, int value_len); 
+
+static inline
+adlb_data_code append_notifs(const struct list_i *listeners,
+                   adlb_subscript sub, adlb_notif_ranks *notify);
 
 
 static bool container_lookup(adlb_container *c, adlb_subscript sub,
@@ -369,7 +379,7 @@ adlb_data_code
 xlb_data_reference_count(adlb_datum_id id, adlb_refcounts change,
           refcount_scavenge scav, bool *garbage_collected,
           adlb_refcounts *refcounts_scavenged,
-          adlb_ranks *notifications)
+          adlb_notif_ranks *notifications)
 {
   adlb_datum* d;
   adlb_data_code dc = xlb_datum_lookup(id, &d);
@@ -382,10 +392,8 @@ adlb_data_code
 xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
           adlb_refcounts change, refcount_scavenge scav,
           bool *garbage_collected, adlb_refcounts *refcounts_scavenged,
-          adlb_ranks *notifications)
+          adlb_notif_ranks *notifications)
 {
-  // default: no notification needed
-  notifications->count = 0;
   // default: didn't garbage collect
   if (garbage_collected != NULL)
     *garbage_collected = false;
@@ -451,7 +459,7 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
     d->write_refcount += write_incr;
     if (d->write_refcount == 0) {
       adlb_data_code dc;
-      dc = xlb_data_close(id, d, &notifications->ranks, &notifications->count);
+      dc = xlb_data_close(id, d, notifications);
       DATA_CHECK(dc);
     }
     DEBUG("write_refcount: <%"PRId64"> => %i", id, d->write_refcount);
@@ -722,6 +730,12 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
           adlb_notif_t *notifications)
 {
   assert(length >= 0);
+  
+  // Initialize notifications to empty to be sure
+  notifications->notify.count = 0;
+  notifications->references.count = 0;
+  notifications->to_free = NULL;
+  notifications->to_free_length = 0;
 
   adlb_datum* d = table_lp_search(&tds, id);
   check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
@@ -749,13 +763,23 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
     dc = ADLB_Unpack(&d->data, d->type, buffer, length);
     DATA_CHECK(dc);
     d->status.set = true;
-    // TODO: if this was a container, need to handle reference notifications
 
     if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
     {
       char *val_s = ADLB_Data_repr(&d->data, d->type);
       DEBUG("data_store <%"PRId64">=%s\n", id, val_s);
       free(val_s);
+    }
+    
+    // If this was a container, need to handle reference notifications
+    // TODO: need to pass back subscripts and data for references
+    if (type == ADLB_DATA_TYPE_CONTAINER)
+    {
+      // TODO: deserialize container value
+      // TODO; append to to_free list
+      dc = insert_notifications_all(&d->data.CONTAINER, id,
+                notifications, &freed_datum);
+      DATA_CHECK(dc);
     }
   }
   else if (d->type == ADLB_DATA_TYPE_MULTISET)
@@ -831,9 +855,9 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
       container_add(c, subscript, entry);
     }
 
-    dc = insert_notifications(d, id, subscript, entry, c->val_type,
-                              &notifications->references,
-                              &notifications->insert_notify, &freed_datum);
+    dc = insert_notifications(d, id, subscript, entry, 
+              buffer, length, c->val_type,
+              notifications, &freed_datum);
     DATA_CHECK(dc);
 
 
@@ -860,7 +884,7 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
                                             -refcount_decr.read_refcount : 0,
                             .write_refcount = -refcount_decr.write_refcount };
     dc = xlb_rc_impl(d, id, incr, NO_SCAVENGE,
-                               NULL, NULL, &notifications->close_notify);
+                     NULL, NULL, &notifications->notify);
     DATA_CHECK(dc);
   }
 
@@ -874,14 +898,14 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
    Caller must free result
  */
 static adlb_data_code
-xlb_data_close(adlb_datum_id id, adlb_datum *d, int** result, int* count)
+xlb_data_close(adlb_datum_id id, adlb_datum *d, adlb_notif_ranks *notify)
 {
   assert(d != NULL);
-  list_i_toints(&d->listeners, result, count);
-  DEBUG("data_close: <%"PRId64"> listeners: %i", id, *count);
+  adlb_subscript no_subscript = ADLB_NO_SUB;
+  DEBUG("data_close: <%"PRId64"> listeners: %i", id, d->listeners.size);
+  adlb_data_code dc = append_notifs(&d->listeners, no_subscript, notify);
+  DATA_CHECK(dc);
   list_i_clear(&d->listeners);
-
-  // TODO: add check here for any hanging container_reference entries
 
   TRACE_END;
   return ADLB_DATA_SUCCESS;
@@ -1216,11 +1240,13 @@ insert_notifications(adlb_datum *d,
             adlb_datum_id container_id,
             adlb_subscript subscript,
             adlb_datum_storage *inserted_value,
+            const void *value_buffer, int value_len,
             adlb_data_type value_type,
-            adlb_datums *references,
-            adlb_ranks *notify_insert,
+            adlb_notif_t *notify,
             bool *garbage_collected)
 {
+  adlb_data_code dc;
+
   // Find, remove, and return any listening container references
   char s[id_sub_buflen(subscript)];
   size_t s_len = write_id_sub(s, container_id, subscript);
@@ -1236,8 +1262,12 @@ insert_notifications(adlb_datum *d,
   struct list_l *ref_list = data;
   if (result)
   {
+    adlb_ref_data *references = &notify->references;
     adlb_data_code dc;
-    list_l_tolongs(ref_list, &references->ids, &references->count);
+    
+    dc = append_refs(ref_list, &notify->references, value_type,
+                     value_buffer, value_len);
+    DATA_CHECK(dc);
     list_l_free(ref_list);
 
     if (xlb_read_refcount_enabled)
@@ -1255,7 +1285,7 @@ insert_notifications(adlb_datum *d,
 
       // Now that references are incremented on ref variables,
       // no longer need read reference for waiters on this index
-      adlb_ranks tmp = ADLB_NO_RANKS;
+      adlb_notif_ranks tmp = ADLB_NO_NOTIF_RANKS;
       adlb_refcounts read_decr = { .read_refcount = -1,
                                    .write_refcount = 0 };
       dc = xlb_rc_impl(d, container_id, read_decr, NO_SCAVENGE,
@@ -1264,22 +1294,90 @@ insert_notifications(adlb_datum *d,
       assert(tmp.count == 0);
     }
   }
-  else
-  {
-    references->count = 0;
-  }
 
   result = table_bp_remove(&container_ix_listeners, s, s_len, &data);
   struct list_i *sub_list = data;
-  if (result)
+  if (result && sub_list->size > 0)
   {
-    list_i_toints(sub_list, &notify_insert->ranks, &notify_insert->count);
+    dc = append_notifs(sub_list, subscript, &notify->notify);
+    DATA_CHECK(dc);
     list_i_free(sub_list);
+  }
+  return ADLB_DATA_SUCCESS;
+}
+
+static inline
+adlb_data_code append_refs(const struct list_l *subscribers,
+          adlb_ref_data *references, adlb_data_type type,
+          const void *value, int value_len)
+{
+  int nrefs = subscribers->size;
+  if (nrefs > 0)
+  {
+    // append reference data
+    if (references->count == 0)
+    {
+      references->data = malloc(sizeof(references->data[0]) * nrefs);
+      check_verbose(references->data != NULL, ADLB_DATA_ERROR_OOM,
+                    "out of memory");
+    }
+    else
+    {
+      references->data = realloc(references->data,
+             sizeof(references->data[0]) * nrefs);
+      check_verbose(references->data != NULL, ADLB_DATA_ERROR_OOM,
+                    "out of memory");
+    }
+
+    struct list_l_item *node = subscribers->head;
+    for (int i = 0; i < nrefs; i++)
+    {
+      assert(node != NULL); // Shouldn't fail if size was ok
+      adlb_ref_datum *ref = &references->data[i + references->count];
+      ref->id = node->data;
+      ref->type = type;
+      ref->value = value;
+      ref->value_len = value_len;
+      node = node->next;
+    }
+    references->count += nrefs;
+  }
+
+  return ADLB_DATA_SUCCESS;
+}
+
+static inline
+adlb_data_code append_notifs(const struct list_i *listeners,
+                   adlb_subscript sub, adlb_notif_ranks *notify)
+{
+  assert(notify->count >= 0);
+  int nlisteners = listeners->size;
+  assert(nlisteners >= 0);
+  if (nlisteners == 0)
+    return ADLB_DATA_SUCCESS;
+
+  if (notify->count == 0)
+  {
+    notify->notifs = malloc(sizeof(notify->notifs[0]) * nlisteners);
+    check_verbose(notify->notifs != NULL, ADLB_DATA_ERROR_OOM, "out of memory");
   }
   else
   {
-    notify_insert->count = 0;
+    notify->notifs = realloc(notify->notifs, sizeof(notify->notifs[0]) *
+                            (notify->count + nlisteners));
+    check_verbose(notify->notifs != NULL, ADLB_DATA_ERROR_OOM, "out of memory");
   }
+
+  struct list_i_item *node = listeners->head;
+  for (int i = 0; i < nlisteners; i++)
+  {
+    assert(node != NULL); // If null, list size was wrong
+    adlb_notif_rank *nrank = &notify->notifs[i + notify->count];
+    nrank->rank = node->data;
+    nrank->subscript = sub;
+    node = node->next;
+  }
+  notify->count += nlisteners;
   return ADLB_DATA_SUCCESS;
 }
 

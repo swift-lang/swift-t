@@ -232,9 +232,23 @@ struct packed_enumerate_result
 
 struct packed_notif_counts
 {
-  int notify_closed_count;
-  int notify_insert_count;
+  int notify_count;
   int reference_count;
+  int extra_data_count;
+  int extra_data_bytes;
+};
+
+struct packed_notif
+{
+  int rank; // Rank to notify
+  int subscript_data; // index of extra data item, -1 for no subscript
+};
+
+struct packed_reference
+{
+  adlb_datum_id id; // ID to set
+  adlb_data_type type;
+  int val_data; // index of extra data item
 };
 
 /**

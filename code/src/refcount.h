@@ -35,6 +35,6 @@ adlb_data_code
 xlb_incr_rc_scav(adlb_datum_id id, adlb_subscript subscript,
         const void *ref_data, int ref_data_len, adlb_data_type ref_type,
         adlb_refcounts decr_self, adlb_refcounts incr_referand,
-        adlb_ranks *notifications);
+        adlb_notif_ranks *notifications);
 
 #endif // __XLB_REFCOUNT_H

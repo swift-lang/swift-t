@@ -57,26 +57,33 @@ static adlb_code notify_nonlocal(int target, int server,
 
 void xlb_free_notif(adlb_notif_t *notifs)
 {
-  xlb_free_ranks(&notifs->close_notify);
-  xlb_free_ranks(&notifs->insert_notify);
+  xlb_free_ranks(&notifs->notify);
   xlb_free_datums(&notifs->references);
-}
-
-void xlb_free_ranks(adlb_ranks *ranks)
-{
-  if (ranks->ranks != NULL)
+  for (int i = 0; i < notifs->to_free_length; i++)
   {
-    free(ranks->ranks);
-    ranks->ranks = NULL;
+    free(notifs->to_free[i]);
+  }
+  if (notifs->to_free != NULL)
+  {
+    free(notifs->to_free);
   }
 }
 
-void xlb_free_datums(adlb_datums *datums)
+void xlb_free_ranks(adlb_notif_ranks *ranks)
 {
-  if (datums->ids != NULL)
+  if (ranks->notifs != NULL)
   {
-    free(datums->ids);
-    datums->ids = NULL;
+    free(ranks->notifs);
+    ranks->notifs = NULL;
+  }
+}
+
+void xlb_free_datums(adlb_ref_data *datums)
+{
+  if (datums->data != NULL)
+  {
+    free(datums->data);
+    datums->data = NULL;
   }
 }
 
@@ -88,40 +95,49 @@ void xlb_free_datums(adlb_datums *datums)
           positive indicates it should be parsed to integer
    value: string value to set references to.
  */
-adlb_code xlb_set_refs(adlb_datum_id *refs, int refs_count,
-                         const char *value, int value_len,
-                         adlb_data_type type)
+adlb_code xlb_set_refs(const adlb_ref_data *refs)
 {
   adlb_code rc;
-  for (int i = 0; i < refs_count; i++)
+  for (int i = 0; i < refs->count; i++)
   {
-    TRACE("Notifying reference %"PRId64"\n", refs[i]);
-    rc = xlb_set_ref_and_notify(refs[i], value, value_len, type);
+    const adlb_ref_datum *ref = &refs->data[i];
+    TRACE("Notifying reference %"PRId64" (%s)\n", ref->id,
+          ADLB_Data_type_tostring(ref->type));
+    rc = xlb_set_ref_and_notify(ref->id, ref->value, ref->value_len,
+                                ref->type);
     ADLB_CHECK(rc);
   }
   return ADLB_SUCCESS;
 }
 
 adlb_code
-xlb_close_notify(adlb_datum_id id, adlb_subscript subscript,
-                   int* ranks, int count)
+xlb_close_notify(adlb_datum_id id, const adlb_notif_ranks *ranks)
 {
   adlb_code rc;
   char payload[MAX_NOTIF_PAYLOAD];
-  int length = fill_payload(payload, id, subscript);
+  int payload_len = 0;
+  adlb_subscript last_subscript = ADLB_NO_SUB;
 
-  for (int i = 0; i < count; i++)
+  for (int i = 0; i < ranks->count; i++)
   {
-    int target = ranks[i];
+    adlb_notif_rank *notif = &ranks->notifs[i];
+    
+    if (i == 0 || notif->subscript.key != last_subscript.key ||
+                  notif->subscript.length != last_subscript.length)
+    {
+      // Skip refilling payload if possible 
+      payload_len = fill_payload(payload, id, notif->subscript);
+    }
+    int target = notif->rank;
     int server = xlb_map_to_server(target);
     if (xlb_am_server && server == xlb_comm_rank)
     {
-      rc = notify_local(target, payload, length);
+      rc = notify_local(target, payload, payload_len);
       ADLB_CHECK(rc);
     }
     else
     {
-      rc = notify_nonlocal(target, server, payload, length);
+      rc = notify_nonlocal(target, server, payload, payload_len);
       ADLB_CHECK(rc);
     }
   }
@@ -129,27 +145,36 @@ xlb_close_notify(adlb_datum_id id, adlb_subscript subscript,
 }
 
 adlb_code
-xlb_process_local_notif(adlb_datum_id id, adlb_subscript subscript,
-                            adlb_ranks *ranks)
+xlb_process_local_notif(adlb_datum_id id, adlb_notif_ranks *ranks)
 {
   assert(xlb_am_server);
   if (ranks->count == 0)
     return ADLB_SUCCESS;
 
   char payload[MAX_NOTIF_PAYLOAD];
-  int length = fill_payload(payload, id, subscript);
+  int payload_len = 0;
+  adlb_subscript last_subscript = ADLB_NO_SUB;
 
   int i = 0;
   while (i < ranks->count)
   {
-    int target = ranks->ranks[i];
+    adlb_notif_rank *notif = &ranks->notifs[i];
+    
+    if (i == 0 || notif->subscript.key != last_subscript.key ||
+                  notif->subscript.length != last_subscript.length)
+    {
+      // Skip refilling payload if possible 
+      payload_len = fill_payload(payload, id, notif->subscript);
+    }
+
+    int target = notif->rank;
     int server = xlb_map_to_server(target);
     if (server == xlb_comm_rank)
     {
       // Swap with last and shorten array
-      int rc = notify_local(target, payload, length);
+      int rc = notify_local(target, payload, payload_len);
       ADLB_CHECK(rc);
-      ranks->ranks[i] = ranks->ranks[ranks->count - 1];
+      ranks->notifs[i] = ranks->notifs[ranks->count - 1];
       ranks->count--;
     }
     else
@@ -159,10 +184,10 @@ xlb_process_local_notif(adlb_datum_id id, adlb_subscript subscript,
   }
 
   // Free memory if we managed to remove some
-  if (ranks->count == 0 && ranks->ranks != NULL)
+  if (ranks->count == 0 && ranks->notifs != NULL)
   {
-    free(ranks->ranks);
-    ranks->ranks = NULL;
+    free(ranks->notifs);
+    ranks->notifs = NULL;
   }
   return ADLB_SUCCESS;
 }
@@ -186,32 +211,18 @@ xlb_set_ref_and_notify(adlb_datum_id id, const void *value, int length,
 }
 
 adlb_code
-xlb_notify_all(const adlb_notif_t *notifs,
-           adlb_datum_id id, adlb_subscript subscript,
-           const void *value, int value_len,
-           adlb_data_type value_type)
+xlb_notify_all(const adlb_notif_t *notifs, adlb_datum_id id)
 {
   adlb_code rc;
-  if (notifs->close_notify.count > 0)
+  if (notifs->notify.count > 0)
   {
-    rc = xlb_close_notify(id, ADLB_NO_SUB, notifs->close_notify.ranks,
-                 notifs->close_notify.count);
-    ADLB_CHECK(rc);
-  }
-  if (notifs->insert_notify.count > 0)
-  {
-    assert(adlb_has_sub(subscript));
-    rc = xlb_close_notify(id, subscript, notifs->insert_notify.ranks,
-                 notifs->insert_notify.count);
+    rc = xlb_close_notify(id, &notifs->notify);
     ADLB_CHECK(rc);
   }
   if (notifs->references.count > 0)
   {
-    assert(value != NULL);
     // TODO: handle other types
-    rc = xlb_set_refs(notifs->references.ids,
-                   notifs->references.count, value, value_len,
-                   value_type);
+    rc = xlb_set_refs(&notifs->references);
     ADLB_CHECK(rc);
   } 
   return ADLB_SUCCESS;

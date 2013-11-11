@@ -113,7 +113,13 @@ static inline adlb_code send_no_work(int worker);
 static inline bool check_workqueue(int caller, int type);
 
 static adlb_code
-notify_helper(adlb_datum_id id, adlb_ranks *notifications);
+notify_helper(adlb_datum_id id, adlb_notif_ranks *notifications);
+
+static adlb_code
+send_notification_work(int caller, 
+        void *response, size_t response_len,
+        struct packed_notif_counts *inner_struct,
+        const adlb_notif_t *notifs);
 
 static adlb_code
 refcount_decr_helper(adlb_datum_id id, adlb_refcounts decr);
@@ -602,7 +608,6 @@ handle_create(int caller)
   struct packed_create_response resp = { .dc = dc, .id = id };
   RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
 
-
   // DEBUG("CREATE: <%"PRId64"> %s\n", id, (char*) work_buf);
   TRACE("ADLB_TAG_CREATE done\n");
   MPE_LOG(xlb_mpe_svr_create_end);
@@ -726,57 +731,41 @@ handle_store(int caller)
 
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
 
-  int dc = xlb_data_store(hdr.id, subscript, xfer, length, hdr.type,
-                      hdr.refcount_decr, &notifs);
+  adlb_data_code dc = xlb_data_store(hdr.id, subscript, xfer, length,
+                      hdr.type, hdr.refcount_decr, &notifs);
 
   struct packed_store_resp resp = {
     .dc = dc,
-    .notifs.notify_closed_count = 0,
-    .notifs.notify_insert_count = 0,
-    .notifs.reference_count = 0};
-
-  if (ADLB_CLIENT_NOTIFIES)
+    .notifs.notify_count = 0,
+    .notifs.reference_count = 0,
+    .notifs.extra_data_count = 0,
+    .notifs.extra_data_bytes = 0};
+  // Can handle notifications on client or on server
+  if (dc != ADLB_DATA_SUCCESS)
+  {
+    // Send failure return code
+    RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+  }
+  else if (ADLB_CLIENT_NOTIFIES)
   {
     // process and remove any local notifications for this server
-    xlb_process_local_notif(hdr.id, ADLB_NO_SUB, &notifs.close_notify);
-    xlb_process_local_notif(hdr.id, subscript, &notifs.insert_notify);
+    xlb_process_local_notif(hdr.id, &notifs.notify);
 
     // TODO: process reference setting locally if possible.  This is slightly
     // more complex as we might want to pass the notification work for the
     // set references back to the client
-
-    // will send remaining to client
-    resp.notifs.notify_closed_count = notifs.close_notify.count;
-    resp.notifs.notify_insert_count = notifs.insert_notify.count;
-    resp.notifs.reference_count = notifs.references.count;
-  }
-
-  RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
-
-  // Can handle notifications on client or on server
-  if (ADLB_CLIENT_NOTIFIES)
-  {
-    if (notifs.close_notify.count > 0)
-    {
-      SEND(notifs.close_notify.ranks, notifs.close_notify.count,
-           MPI_INT, caller, ADLB_TAG_RESPONSE);
-    }
-    if (notifs.insert_notify.count > 0)
-    {
-      SEND(notifs.insert_notify.ranks, notifs.insert_notify.count,
-           MPI_INT, caller, ADLB_TAG_RESPONSE);
-    }
-    if (notifs.references.count > 0)
-    {
-      SEND(notifs.references.ids, (int)sizeof(adlb_datum_id) 
-          * notifs.references.count, MPI_BYTE, caller, ADLB_TAG_RESPONSE);
-    }
+    
+    // Send remaining to client
+    adlb_code rc = send_notification_work(caller, &resp, sizeof(resp),
+                     &resp.notifs, &notifs);
+    ADLB_CHECK(rc);
   }
   else
   {
-    // send notifications by self
-    adlb_code rc = xlb_notify_all(&notifs, hdr.id, subscript, xfer, length,
-                              hdr.type);
+    // ADLB_CLIENT_NOTIFIES is not set:  send notifications by self
+    RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+
+    adlb_code rc = xlb_notify_all(&notifs, hdr.id);
     ADLB_CHECK(rc);
   }
 
@@ -786,6 +775,143 @@ handle_store(int caller)
   MPE_LOG(xlb_mpe_svr_store_end);
 
   return ADLB_SUCCESS;
+}
+
+/*
+  Finish filling in response with info about notifications,
+  then send to caller including additional notification work.
+  
+  Will use xfer buffer.
+  response/response_len: pointer to response struct to be sent
+  inner_struct: struct inside outer struct to be updated before sending
+  
+ */
+static adlb_code
+send_notification_work(int caller, 
+        void *response, size_t response_len,
+        struct packed_notif_counts *inner_struct,
+        const adlb_notif_t *notifs)
+{
+  // will send remaining to client
+  int notify_count = notifs->notify.count;
+  int refs_count = notifs->references.count;
+
+  /*
+   We need to send subscripts and values back to client, so we pack them
+   all into a buffer, and send them back.  We can then reference them by
+   their index in the buffer.
+   */
+  adlb_data_code dc;
+  adlb_buffer extra_data;
+  bool using_xfer;
+  int extra_pos = 0;
+
+  dc = ADLB_Init_buf(&xfer_buf, &extra_data, &using_xfer, 0);
+  ADLB_DATA_CHECK(dc);
+
+  int extra_data_count = 0;
+  struct packed_notif *packed_notifs =
+              malloc(sizeof(struct packed_notif) * notify_count);
+  struct packed_reference *packed_refs =
+              malloc(sizeof(struct packed_reference) * refs_count);
+
+  // Track last subscript so we don't send redundant subscripts
+  const adlb_subscript *last_subscript = NULL;
+
+  for (int i = 0; i < notify_count; i++)
+  {
+    adlb_notif_rank *rank = &notifs->notify.notifs[i];
+    packed_notifs[i].rank = rank->rank;
+    if (adlb_has_sub(rank->subscript))
+    {
+      if (last_subscript != NULL &&
+          last_subscript->key == rank->subscript.key &&
+          last_subscript->length == rank->subscript.length)
+      {
+        // Same as last
+        packed_notifs[i].subscript_data = extra_data_count - 1;
+      }
+      else
+      {
+        packed_notifs[i].subscript_data = extra_data_count;
+
+        // pack into extra data
+        dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL,rank->subscript.key,
+            rank->subscript.length, true, &extra_data, &using_xfer,
+            &extra_pos);
+        ADLB_DATA_CHECK(dc);
+       
+        last_subscript = &rank->subscript;
+        extra_data_count++;
+      }
+    }
+    else
+    {
+      packed_notifs[i].subscript_data = -1; // No subscript
+    }
+  }
+
+  // Track last value so we don't send redundant values
+  const void *last_value = NULL;
+  int last_value_len;
+  for (int i = 0; i < refs_count; i++)
+  {
+    adlb_ref_datum *ref = &notifs->references.data[i];
+    packed_refs[i].id = ref->id;
+    packed_refs[i].type = ref->type;
+    if (last_value != NULL &&
+        last_value == ref->value &&
+        last_value_len == ref->value_len)
+    {
+      // Same as last
+      packed_refs[i].val_data = extra_data_count - 1;
+    }
+    else
+    {
+      packed_refs[i].val_data = extra_data_count;
+      dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL, ref->value,
+          ref->value_len, true, &extra_data, &using_xfer,
+          &extra_pos);
+      ADLB_DATA_CHECK(dc);
+      
+      last_value = ref->value;
+      last_value_len = ref->value_len;
+      extra_data_count++;
+    }
+  }
+
+  // Fill in data and send response header
+  inner_struct->notify_count = notify_count;
+  inner_struct->reference_count = refs_count;
+  inner_struct->extra_data_count = extra_data_count;
+  inner_struct->extra_data_bytes = extra_pos;
+  RSEND(response, (int)response_len, MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+
+  if (extra_pos > 0)
+  {
+    assert(extra_data_count > 0);
+    SEND(extra_data.data, extra_data.length, MPI_BYTE,
+          caller, ADLB_TAG_RESPONSE);
+  }
+  if (notify_count > 0)
+  {
+    SEND(packed_notifs, notify_count * sizeof(packed_notifs[0]),
+         MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+  }
+  if (refs_count > 0)
+  {
+    SEND(packed_refs, refs_count * sizeof(packed_refs[0]), MPI_BYTE,
+         caller, ADLB_TAG_RESPONSE);
+  }
+
+  if (!using_xfer)
+  {
+    free(extra_data.data);
+  }
+  
+  free(packed_notifs);
+  free(packed_refs);
+  return ADLB_DATA_SUCCESS;
 }
 
 static adlb_code
@@ -826,7 +952,7 @@ handle_retrieve(int caller)
    
     if (dc == ADLB_DATA_SUCCESS)
     {
-      adlb_ranks notify;
+      adlb_notif_ranks notify;
       dc = xlb_incr_rc_scav(hdr->id, subscript,
                                result.data, result.length,
                                type, decr_self, incr_referand, &notify);
@@ -948,42 +1074,44 @@ handle_refcount_incr(int caller)
 
   DEBUG("Refcount_incr: <%"PRId64"> READ %i WRITE %i", msg.id,
         msg.change.read_refcount, msg.change.write_refcount);
-
-  adlb_ranks notify_ranks = ADLB_NO_RANKS;
+  
+  adlb_notif_ranks notify_ranks = ADLB_NO_NOTIF_RANKS;
   adlb_data_code dc = xlb_data_reference_count(msg.id, msg.change, NO_SCAVENGE,
                                            NULL, NULL, &notify_ranks);
 
   DEBUG("data_reference_count => %i", dc);
 
-
   struct packed_refcount_resp resp = {
       .success = (dc == ADLB_DATA_SUCCESS),
-      .notifs.notify_closed_count = 0,
-      .notifs.notify_insert_count = 0,
-      .notifs.reference_count = 0};
+      .notifs.notify_count = 0,
+      .notifs.reference_count = 0,
+      .notifs.extra_data_count = 0,
+      .notifs.extra_data_bytes = 0};
 
-  if (dc == ADLB_DATA_SUCCESS && ADLB_CLIENT_NOTIFIES)
+  if (dc != ADLB_DATA_SUCCESS)
+  {
+    RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+  }
+  else if (ADLB_CLIENT_NOTIFIES)
   {
     // Remove any notifications that can be handled locally
-    xlb_process_local_notif(msg.id, ADLB_NO_SUB, &notify_ranks);
-    resp.notifs.notify_closed_count = notify_ranks.count;
+    xlb_process_local_notif(msg.id, &notify_ranks);
+    resp.notifs.notify_count = notify_ranks.count;
+    
+    // Send work back to client
+    adlb_notif_t send_notifs = ADLB_NO_NOTIFS;
+    send_notifs.notify.notifs = notify_ranks.notifs;
+    send_notifs.notify.count = notify_ranks.count;
+    rc = send_notification_work(caller, &resp, sizeof(resp),
+            &resp.notifs, &send_notifs);
+    ADLB_CHECK(rc);
   }
-
-  RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
-
-  if (dc == ADLB_DATA_SUCCESS && notify_ranks.count > 0)
+  else 
   {
-    if (ADLB_CLIENT_NOTIFIES)
-    {
-      SEND(notify_ranks.ranks, notify_ranks.count,
-             MPI_INT, caller, ADLB_TAG_RESPONSE);
-    }
-    else
-    {
-      rc = xlb_close_notify(msg.id, ADLB_NO_SUB, notify_ranks.ranks,
-                        notify_ranks.count);
-      ADLB_CHECK(rc);
-    }
+    // Handle on server
+    RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+    rc = xlb_close_notify(msg.id, &notify_ranks);
+    ADLB_CHECK(rc);
   }
   
   xlb_free_ranks(&notify_ranks);
@@ -1126,7 +1254,7 @@ handle_container_reference(int caller)
       dc = ADLB_Own_data(NULL, &member);
       assert(dc == ADLB_DATA_SUCCESS);
 
-      adlb_ranks notify;
+      adlb_notif_ranks notify;
       adlb_refcounts self_decr = ADLB_READ_RC;
       adlb_refcounts referand_incr = ADLB_READ_RC;
       // container_reference must consume a read reference, and we need
@@ -1287,13 +1415,12 @@ static adlb_code find_req_bytes(int *bytes, int caller, adlb_tag tag) {
   TODO: option to offload to client
  */
 static adlb_code
-notify_helper(adlb_datum_id id, adlb_ranks *notifications)
+notify_helper(adlb_datum_id id, adlb_notif_ranks *notifications)
 {
   if (notifications->count > 0)
   {
     adlb_code rc;
-    rc = xlb_close_notify(id, ADLB_NO_SUB, notifications->ranks,
-                          notifications->count);
+    rc = xlb_close_notify(id, notifications);
     ADLB_CHECK(rc);
     xlb_free_ranks(notifications);
   }
@@ -1309,7 +1436,7 @@ refcount_decr_helper(adlb_datum_id id, adlb_refcounts decr)
 {
   if (!ADLB_RC_IS_NULL(decr))
   {
-    adlb_ranks notify;
+    adlb_notif_ranks notify;
     adlb_data_code dc;
     dc = xlb_data_reference_count(id, adlb_rc_negate(decr), NO_SCAVENGE,
                               NULL, NULL, &notify);
