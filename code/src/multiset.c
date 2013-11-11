@@ -46,19 +46,20 @@ adlb_data_code xlb_multiset_add(xlb_multiset *set, const void *data,
   xlb_multiset_chunk *chunk = NULL;
   if (set->last_chunk_elems >= XLB_MULTISET_CHUNK_SIZE)
   {
-    // TODO: use proper alloc for adlb
-    if (set->chunk_arr_size == 0) {
-      // resize chunk pointer array if needed
-      set->chunk_arr_size = 1; // Start off with a small array
-      set->chunks = malloc(set->chunk_arr_size * sizeof(set->chunks[0]));
-    }
-    else if (set->chunk_arr_size == set->chunk_count)
+
+    if (set->chunk_arr_size == set->chunk_count)
     {
       // resize chunk pointer array if needed
-      set->chunk_arr_size = set->chunk_arr_size * 2;
-      set->chunks = realloc(set->chunks, set->chunk_arr_size *
-                                         sizeof(set->chunks[0]));
+      if (set->chunk_arr_size == 0) {
+        set->chunk_arr_size = 1; // Start off with a small array
+      }
+      else
+      {
+        set->chunk_arr_size = set->chunk_arr_size * 2;
+      }
+      DATA_REALLOC(set->chunks, set->chunk_arr_size);
     }
+
     chunk = malloc(sizeof(xlb_multiset_chunk));
     set->chunks[set->chunk_count++] = chunk;
     set->last_chunk_elems = 0;

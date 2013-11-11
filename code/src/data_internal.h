@@ -68,6 +68,14 @@ typedef struct
     (void) (condition);
 #endif
 
+
+// Helper macro to create/resize an array.  Given NULL, realloc() allocates
+// the initial array.  On error, return ADLB_DATA_ERROR_OOM
+#define DATA_REALLOC(array, new_count) {                               \
+  array = realloc((array), sizeof((array)[0]) * (new_count));          \
+  check_verbose(array != NULL, ADLB_DATA_ERROR_OOM, "out of memory");  \
+}
+
 adlb_data_code
 xlb_datum_lookup(adlb_datum_id id, adlb_datum **d);
 
@@ -103,10 +111,7 @@ xlb_resize_str(char **str, size_t *curr_size, int pos, size_t needed)
     if (new_size < total_needed)
       new_size = total_needed + 1024;
 
-    char *new = realloc(*str, new_size);
-    if (new == NULL)
-      return ADLB_DATA_ERROR_OOM;
-    *str = new;
+    DATA_REALLOC(*str, new_size);
     *curr_size = new_size;
   }
   return ADLB_DATA_SUCCESS;

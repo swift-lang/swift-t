@@ -54,7 +54,7 @@ const char *xlb_struct_type_name(adlb_struct_type type)
 }
 
 
-static inline void resize_struct_types(adlb_struct_type new_type)
+static inline adlb_data_code resize_struct_types(adlb_struct_type new_type)
 {
   if (new_type >= struct_types_size)
   {
@@ -66,15 +66,8 @@ static inline void resize_struct_types(adlb_struct_type new_type)
       // Make big enough to fit
       struct_types_size = new_type + 1;
     }
-    if (struct_types == NULL)
-    {
-      struct_types = malloc(sizeof(*struct_types) * (size_t)struct_types_size);
-    }
-    else
-    {
-      struct_types = realloc(struct_types, sizeof(*struct_types) *
-                                            (size_t)struct_types_size);
-    }
+
+    DATA_REALLOC(struct_types, struct_types_size);
 
     for (int i = old_size; i < struct_types_size; i++)
     {
@@ -82,6 +75,7 @@ static inline void resize_struct_types(adlb_struct_type new_type)
       struct_types[i].initialized = false;
     }
   }
+  return ADLB_DATA_SUCCESS;
 }
 
 adlb_data_code ADLB_Declare_struct_type(adlb_struct_type type,
@@ -90,6 +84,7 @@ adlb_data_code ADLB_Declare_struct_type(adlb_struct_type type,
                     const adlb_data_type *field_types,
                     const char **field_names)
 {
+  adlb_data_code dc;
   check_verbose(type >= 0, ADLB_DATA_ERROR_INVALID,
         "Struct type id %i was negative", type);
   assert(field_count >= 0);
@@ -98,7 +93,8 @@ adlb_data_code ADLB_Declare_struct_type(adlb_struct_type type,
   assert(field_names != NULL);
 
   // Check array big enough
-  resize_struct_types(type);
+  dc = resize_struct_types(type);
+  DATA_CHECK(dc);
 
   struct_type_info *t = &struct_types[type];
   check_verbose(!t->initialized, ADLB_DATA_ERROR_INVALID,
