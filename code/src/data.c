@@ -1332,8 +1332,7 @@ insert_notifications2(adlb_datum *d,
   adlb_data_code dc;
   if (ref_list != NULL)
   {
-    adlb_ref_data *references = &notify->references;
-    
+    int nreferences = ref_list->size;
     dc = append_refs(ref_list, &notify->references, value_type,
                      value_buffer, value_len);
     DATA_CHECK(dc);
@@ -1347,7 +1346,7 @@ insert_notifications2(adlb_datum *d,
       //       write reference?
       // the referenced variables need refcount incremented, since we're
       // going to create a new reference to them
-      adlb_refcounts referand_incr = { .read_refcount = references->count,
+      adlb_refcounts referand_incr = { .read_refcount = nreferences,
                                        .write_refcount = 0 };
       dc = xlb_incr_referand(value, value_type, referand_incr);
       DATA_CHECK(dc);
