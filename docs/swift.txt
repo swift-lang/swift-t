@@ -13,7 +13,7 @@ Settings:
 :miscellaneous.newline: \n
 
 = Swift/T Guide
-v0.4.0, July 2013
+v0.5.0, November 2013
 
 The Swift/Turbine Compiler (STC) allows you to write Swift programs
 and run them using Turbine.
@@ -43,7 +43,7 @@ Other MPI implementations are <<Build_settings, supported>> as well.
 Swift/T attempts to use MPI 3.0 functionality by default.
 To disable this, configure ADLB and Turbine with +--enable-mpi-2+.
 +
-2. Install or locate Tcl 8.5 or 8.6
+2. Install Tcl 8.6
 +
 Cf. http://www.tcl.tk[Tcl web site]
 +
@@ -54,7 +54,7 @@ Cf. http://swig.org[SWIG web site]
 4. Obtain the package
 +
 ----
-wget http://www.mcs.anl.gov/exm/local/downloads/exm-0.4.0.tar.gz
+wget http://www.mcs.anl.gov/exm/local/downloads/exm-0.5.0.tar.gz
 ----
 +
 Cf. http://www.mcs.anl.gov/exm/local/downloads/downloads.html[Swift/T Downloads]
@@ -381,6 +381,9 @@ trace("Temporary filename is: " + filename(tmp));
 
 Temporary files are created as necessary if unmapped files are
 written to.  For example, the file +tmp+ in the above code snippet.
+This feature is implemented by calling GNU +mktemp+ with suffix
++.turbine+; thus, the directory is set with environment variable
++TMPDIR+ which defaults to +/tmp+.
 
 Currently Swift/T assumes that the file system is shared among
 all nodes.
@@ -821,7 +824,7 @@ If a function is described below an *Import:* label, be sure to
 +size(A[]) -> int+:: Obtain the size of array +A+
 +contains(A[], key) -> boolean+:: Test that future +A[key]+ exists.
 This function blocks until +A+ is closed.  Consumers of +A[key]+ may
-block again until +A[key]+ is stored. 
+block again until +A[key]+ is stored.
 
 === Type conversion
 
@@ -894,16 +897,16 @@ Hash the string to a 32-bit integer
 +sprintf(string format, int|float|string|boolean...)+::
 As +sprintf()+ in C
 
-+string_join(string A[], string separator) -> string+:: 
++string_join(string A[], string separator) -> string+::
 Join strings in +A+ with given separator.  The separator may be the
 empty string
 
 === Math
 
 +max|min_integer(int,int) -> int+:: Obtain maximum or minimum integer,
-respectively  
+respectively
 +max|min_float(float,float) -> float+:: Obtain maximum or minimum float,
-respectively  
+respectively
 +pow_integer(int b,int x)+:: Obtain b^x^
 +pow_float(float b,float x)+:: Obtain b^x^
 
@@ -1019,7 +1022,7 @@ filesystem is checked for the given file name
 +input_file(string) -> file+:: Alias for +input()+
 +input_url(string) -> file+:: Obtain a +file+.  Some
 automatic operations and optimizations are disabled
-+urlname(file) -> string+::   Obtain the name of a file created with 
++urlname(file) -> string+::   Obtain the name of a file created with
 +input_url()+
 
 *Import:* +files+
@@ -1640,5 +1643,6 @@ for information about specific systems with Turbine installations.
 ////
 Local Variables:
 mode: doc
+eval: (auto-fill-mode 1)
 End:
 ////
