@@ -43,6 +43,7 @@ import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.GenInfo;
 import exm.stc.ic.tree.ICTree.RenameMode;
+import exm.stc.ic.tree.TurbineOp.RefCountOp.RCDir;
 
 /**
  * Module to encapsulate the multiple styles of foreach loop in the IC
@@ -152,11 +153,11 @@ public class ForeachLoops {
      * 
      * @param increments
      * @param type
-     * @param decrement if true, try to piggyback decrements, if false, increments
+     * @param dir whether to piggyback decrements or increments
      * @return list of vars for which increments were piggybacked
      */
     public List<Var> tryPiggyBack(Counters<Var> increments, RefCountType type,
-        boolean decrement) {
+                                  RCDir dir) {
       List<Var> result = new ArrayList<Var>();
       for (RefCount startIncr: startIncrements) {
         // Only consider piggybacking where we already are modifying
@@ -164,8 +165,8 @@ public class ForeachLoops {
         // TODO: could change read and write counts in single operation
         if (startIncr.type == type) {
           long incr = increments.getCount(startIncr.var);
-          if ((decrement && incr < 0) ||
-              (!decrement && incr > 0)) {
+          if ((dir == RCDir.DECR && incr < 0) ||
+              (dir == RCDir.INCR && incr > 0)) {
             addConstantStartIncrement(startIncr.var, type, Arg.createIntLit(incr));
             result.add(startIncr.var);
           }

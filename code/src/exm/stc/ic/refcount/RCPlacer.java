@@ -425,7 +425,7 @@ public class RCPlacer {
 
   private void piggybackDecrementsOnInstructions(Logger logger, Function fn,
       Block block, final RCTracker tracker, final RefCountType rcType) {
-    // Initially all increments are candidates for piggybacking
+    // Initially all decrements are candidates for piggybacking
     final Counters<Var> candidates =
         tracker.getVarCandidates(block, rcType, RCDir.DECR);
 
@@ -439,7 +439,7 @@ public class RCPlacer {
 
       if (RCUtil.isAsyncForeachLoop(cont)) {
         AbstractForeachLoop loop = (AbstractForeachLoop) cont;
-        List<Var> piggybacked = loop.tryPiggyBack(candidates, rcType, true);
+        List<Var> piggybacked = loop.tryPiggyBack(candidates, rcType, RCDir.DECR);
         
         for (Var pv: piggybacked) {
           logger.trace("Piggybacked on foreach: " + pv + " " + rcType + " " +
@@ -468,6 +468,9 @@ public class RCPlacer {
           Instruction inst = stmt.instruction();
           List<Var> piggybacked = inst.tryPiggyback(candidates, rcType);
           
+          if (piggybacked.size() > 0 && logger.isTraceEnabled()) {
+            logger.trace("Piggybacked " + piggybacked + " decr on " + inst);
+          }
           candidates.resetAll(piggybacked);
           successful.addAll(piggybacked);
           
@@ -649,6 +652,9 @@ public class RCPlacer {
   
   private void removeCandidate(Var var, RCTracker tracker,
       Set<AliasKey> keySet, Set<Var> varSet) {
+    if (logger.isTraceEnabled()) {
+      logger.trace("Remove candidate " + var.name());
+    }
     if (keySet != null) {
       keySet.remove(tracker.getCountKey(var));
     }

@@ -452,27 +452,28 @@ public class RefcountPass implements OptimizerPass {
       RCTracker increments) {
     if (cont.spawnsSingleTask()) {
       long incr = 1;  // Increment once per task
+
+      // Track those already added
+      Set<Var> alreadyAdded = new HashSet<Var>();
+      
       for (Var keepOpen: cont.getKeepOpenVars()) {
         assert (RefCounting.hasWriteRefCount(keepOpen));
-
+        alreadyAdded.add(keepOpen);
         increments.writeIncr(keepOpen, incr);
       }
 
-      // Avoid duplicate read increments
-      Set<Var> readIncrTmp = new HashSet<Var>();
-
       for (PassedVar passedIn: cont.getAllPassedVars()) {
+        logger.trace(cont.getType() + ": passedIn: " + passedIn.var.name());
         if (!passedIn.writeOnly && RefCounting.hasReadRefCount(passedIn.var)) {
-          readIncrTmp.add(passedIn.var);
+          increments.readIncr(passedIn.var, incr);
+          alreadyAdded.add(passedIn.var);
         }
       }
       for (BlockingVar blockingVar: cont.blockingVars(false)) {
-        if (RefCounting.hasReadRefCount(blockingVar.var)) {
-          readIncrTmp.add(blockingVar.var);
+        if (RefCounting.hasReadRefCount(blockingVar.var) &&
+             !alreadyAdded.contains(blockingVar.var)) {
+          increments.readIncr(blockingVar.var, incr);
         }
-      }
-      for (Var v: readIncrTmp) {
-        increments.readIncr(v, incr);
       }
     } else if (RCUtil.isForeachLoop(cont)) {
       AbstractForeachLoop foreach = (AbstractForeachLoop) cont;
@@ -734,6 +735,8 @@ public class RefcountPass implements OptimizerPass {
             long toRemoveAmount = toRemove.getCount(rcType, v, RCDir.INCR);
             assert (toRemoveAmount <= amount && toRemoveAmount >= 0);
             if (toRemoveAmount > 0) {
+              logger.trace("hoisted " + v.name() + ":" + rcType + " +"
+                            + toRemoveAmount);
               it.remove();
               if (toRemoveAmount < amount) {
                 // Need to replace with reduced refcount
@@ -794,6 +797,8 @@ public class RefcountPass implements OptimizerPass {
           long amount = amountArg.getIntLit();
           // Ensure both positive
           long toRemoveAmount = -1 * toRemove.getCount(rcType, v, RCDir.DECR);
+          logger.trace("hoisted " + v.name() + ":" + rcType + " -"
+                  + toRemoveAmount);
           assert (toRemoveAmount >= 0 && toRemoveAmount <= amount);
           if (toRemoveAmount > 0) {
             it.remove();
@@ -850,26 +855,26 @@ public class RefcountPass implements OptimizerPass {
   private void addDecrementsAsyncCont(Continuation cont, RCTracker increments) {
     long amount = 1;
 
+    Set<Var> alreadyAdded = new HashSet<Var>();
     for (Var keepOpen: cont.getKeepOpenVars()) {
       increments.writeDecr(keepOpen, amount);
+      alreadyAdded.add(keepOpen);
     }
 
-    Set<Var> readIncrTmp = new HashSet<Var>();
     for (PassedVar passedIn: cont.getAllPassedVars()) {
+      logger.trace(cont.getType() + ": DECR passedIn: " + passedIn.var.name());
       if (!passedIn.writeOnly && RefCounting.hasReadRefCount(passedIn.var)) {
-        readIncrTmp.add(passedIn.var);
+        increments.readDecr(passedIn.var, amount);
+        alreadyAdded.add(passedIn.var);
       }
     }
 
-    // Hold read reference for wait var
+    // Hold read reference for wait var if not already present
     for (BlockingVar blockingVar: cont.blockingVars(false)) {
-      if (RefCounting.hasReadRefCount(blockingVar.var)) {
-        readIncrTmp.add(blockingVar.var);
+      if (RefCounting.hasReadRefCount(blockingVar.var) &&
+          !alreadyAdded.contains(blockingVar.var)) {
+        increments.readDecr(blockingVar.var, amount);
       }
-    }
-
-    for (Var v: readIncrTmp) {
-      increments.readDecr(v, amount);
     }
   }
 
