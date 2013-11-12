@@ -56,6 +56,7 @@ typedef struct
   unsigned char payload[]; 
 } xlb_work_unit;
 
+
 void xlb_workq_init(int work_types);
 
 xlb_work_unit_id xlb_workq_unique(void);
@@ -124,5 +125,59 @@ void work_unit_free(xlb_work_unit* wu);
 void xlb_print_workq_perf_counters(void);
 
 void xlb_workq_finalize(void);
+
+
+typedef struct {
+  /** Number of targeted tasks added to work queue */
+  int64_t targeted_enqueued;
+
+  /** Number of targeted tasks bypassing work queue */
+  int64_t targeted_bypass;
+  
+  /** Untargeted serial added to work queue */
+  int64_t single_enqueued;
+  
+  /** Number of untargeted serial tasks bypassing work queue */
+  int64_t single_bypass;
+
+  /** Number stolen (will be counted as added to other server's queue) */
+  int64_t single_stolen;
+
+  /** Parallel tasks added to work queue */
+  int64_t parallel_enqueued;
+  
+  /** Number of parallel tasks bypassing work queue */
+  int64_t parallel_bypass;
+
+  /** Parallel tasks stolen */
+  int64_t parallel_stolen;
+} work_type_counters;
+
+extern work_type_counters *xlb_task_counters;
+
+/*
+ * Mark that a task bypassed the work queue for performance counters.
+ * Inline because it is very small and called frequently
+ */
+static inline void xlb_task_bypass_count(int type, bool targeted,
+                                    bool parallel)
+{
+  if (xlb_perf_counters_enabled)
+  {
+    work_type_counters *tc = &xlb_task_counters[type];
+    if (targeted)
+    {
+      tc->targeted_bypass++;
+    }
+    else if (parallel)
+    {
+      tc->parallel_bypass++;
+    }
+    else
+    {
+      tc->single_bypass++;
+    }
+  }
+}
 
 #endif

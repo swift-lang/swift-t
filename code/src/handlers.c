@@ -297,6 +297,11 @@ put(int type, int putter, int priority, int answer, int target,
         assert(worker == target);
         redirect_work(type, putter, priority, answer, target,
                       length, worker);
+
+        if (xlb_perf_counters_enabled)
+        {
+          xlb_task_bypass_count(type, true, false);
+        }
         return ADLB_SUCCESS;
       }
     }
@@ -307,6 +312,10 @@ put(int type, int putter, int priority, int answer, int target,
       {
         redirect_work(type, putter, priority, answer, target,
                       length, worker);
+        if (xlb_perf_counters_enabled)
+        {
+          xlb_task_bypass_count(type, false, false);
+        }
         return ADLB_SUCCESS;
       }
     }

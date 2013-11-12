@@ -80,16 +80,7 @@ static struct rbtree* parallel_work;
 // Track number of parallel tasks
 int64_t xlb_workq_parallel_task_count;
 
-typedef struct {
-  int64_t targeted; /** Number of targeted tasks added to queue */
-  int64_t single; /** Untargeted serial added to queue */
-  /** Number stolen (will be counted as added to other server's queue) */
-  int64_t single_stolen;
-  int64_t parallel; /** Parallel tasks added to queue */
-  int64_t parallel_stolen;
-} work_type_counters;
-
-static work_type_counters *perf_counters;
+work_type_counters *xlb_task_counters;
 
 void
 xlb_workq_init(int work_types)
@@ -112,20 +103,24 @@ xlb_workq_init(int work_types)
   if (xlb_perf_counters_enabled)
   {
     DEBUG("PERF COUNTERS ENABLED");
-    perf_counters = malloc(sizeof(*perf_counters) * (size_t)work_types);
-    valgrind_assert(perf_counters != NULL);
+    xlb_task_counters = malloc(sizeof(*xlb_task_counters) *
+                               (size_t)work_types);
+    valgrind_assert(xlb_task_counters != NULL);
     for (int i = 0; i < work_types; i++)
     {
-      perf_counters[i].targeted = 0;
-      perf_counters[i].single = 0;
-      perf_counters[i].single_stolen = 0;
-      perf_counters[i].parallel = 0;
-      perf_counters[i].parallel_stolen = 0;
+      xlb_task_counters[i].targeted_enqueued = 0;
+      xlb_task_counters[i].targeted_bypass = 0;
+      xlb_task_counters[i].single_enqueued = 0;
+      xlb_task_counters[i].single_bypass = 0;
+      xlb_task_counters[i].single_stolen = 0;
+      xlb_task_counters[i].parallel_enqueued = 0;
+      xlb_task_counters[i].parallel_bypass = 0;
+      xlb_task_counters[i].parallel_stolen = 0;
     }
   }
   else
   {
-    perf_counters = NULL;
+    xlb_task_counters = NULL;
   }
 }
 
@@ -160,7 +155,7 @@ xlb_workq_add(int type, int putter, int priority, int answer,
     rbtree_add(T, -priority, wu);
     if (xlb_perf_counters_enabled)
     {
-      perf_counters[type].single++;
+      xlb_task_counters[type].single_enqueued++;
     }
   }
   else if (parallelism > 1)
@@ -173,7 +168,7 @@ xlb_workq_add(int type, int putter, int priority, int answer,
     xlb_workq_parallel_task_count++;
     if (xlb_perf_counters_enabled)
     {
-      perf_counters[type].parallel++;
+      xlb_task_counters[type].parallel_enqueued++;
     }
   }
   else
@@ -194,7 +189,7 @@ xlb_workq_add(int type, int putter, int priority, int answer,
     heap_add(H, -priority, wu);
     if (xlb_perf_counters_enabled)
     {
-      perf_counters[type].targeted++;
+      xlb_task_counters[type].targeted_enqueued++;
     }
   }
 }
@@ -394,8 +389,8 @@ xlb_workq_steal(int max_memory, const int *steal_type_counts,
         
         if (xlb_perf_counters_enabled)
         {
-          perf_counters[t].single_stolen += single_to_send;
-          perf_counters[t].parallel_stolen += par_to_send;
+          xlb_task_counters[t].single_stolen += single_to_send;
+          xlb_task_counters[t].parallel_stolen += par_to_send;
         }
       }
     }
@@ -472,16 +467,40 @@ void xlb_print_workq_perf_counters(void)
 
   for (int t = 0; t < xlb_types_size; t++)
   {
-    fprintf(stderr, "COUNTER: type_%i_targeted_tasks=%"PRId64"\n",
-            t, perf_counters[t].targeted);
-    fprintf(stderr, "COUNTER: type_%i_single_tasks=%"PRId64"\n",
-            t, perf_counters[t].single);
-    fprintf(stderr, "COUNTER: type_%i_single_tasks_stolen=%"PRId64"\n",
-            t, perf_counters[t].single_stolen);
-    fprintf(stderr, "COUNTER: type_%i_parallel_tasks=%"PRId64"\n",
-            t, perf_counters[t].parallel);
-    fprintf(stderr, "COUNTER: type_%i_parallel_tasks_stolen=%"PRId64"\n",
-            t, perf_counters[t].parallel_stolen);
+    work_type_counters *c = &xlb_task_counters[t];
+    /*
+     * Print collected and derived stats:
+     * total: total tasks passing through this server
+     * net: total tasks, minus those passed to other servers,
+     *      so that summing net gives actual tasks in whole system
+     */
+
+    fprintf(stderr, "COUNTER: tasktype_%i_targeted_total=%"PRId64"\n",
+            t, c->targeted_enqueued + c->targeted_bypass);
+    fprintf(stderr, "COUNTER: tasktype_%i_targeted_enqueued=%"PRId64"\n",
+            t, c->targeted_enqueued);
+    fprintf(stderr, "COUNTER: tasktype_%i_targeted_bypass=%"PRId64"\n",
+            t, c->targeted_bypass);
+    fprintf(stderr, "COUNTER: tasktype_%i_single_total=%"PRId64"\n",
+            t, c->single_enqueued + c->single_bypass);
+    fprintf(stderr, "COUNTER: tasktype_%i_single_net=%"PRId64"\n",
+            t, c->single_enqueued + c->single_bypass - c->single_stolen);
+    fprintf(stderr, "COUNTER: tasktype_%i_single_enqueued=%"PRId64"\n",
+            t, c->single_enqueued);
+    fprintf(stderr, "COUNTER: tasktype_%i_single_bypass=%"PRId64"\n",
+            t, c->single_bypass);
+    fprintf(stderr, "COUNTER: tasktype_%i_single_stolen=%"PRId64"\n",
+            t, c->single_stolen);
+    fprintf(stderr, "COUNTER: tasktype_%i_parallel_total=%"PRId64"\n",
+            t, c->parallel_enqueued + c->parallel_bypass);
+    fprintf(stderr, "COUNTER: tasktype_%i_parallel_net=%"PRId64"\n",
+            t, c->parallel_enqueued + c->parallel_bypass - c->parallel_stolen);
+    fprintf(stderr, "COUNTER: tasktype_%i_parallel_enqueued=%"PRId64"\n",
+            t, c->parallel_enqueued);
+    fprintf(stderr, "COUNTER: tasktype_%i_parallel_bypass=%"PRId64"\n",
+            t, c->parallel_bypass);
+    fprintf(stderr, "COUNTER: tasktype_%i_parallel_stolen=%"PRId64"\n",
+            t, c->parallel_stolen);
   }
 }
 
@@ -519,8 +538,8 @@ xlb_workq_finalize()
 
   if (xlb_perf_counters_enabled)
   {
-    free(perf_counters);
-    perf_counters = NULL;
+    free(xlb_task_counters);
+    xlb_task_counters = NULL;
   }
   TRACE_END;
 }
