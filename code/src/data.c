@@ -686,7 +686,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
         "on a closed container:  <%"PRId64">[%.*s]\n",
         container_id, (int)subscript.length, (const char*)subscript.key);
   check_verbose(d->read_refcount > 0, ADLB_DATA_ERROR_INVALID,
-        "Container_reference consumes a read reference count, but"
+        "Container_reference consumes a read reference count, but "
         "reference count was %d for <%"PRId64">", d->read_refcount,
         container_id);
 
@@ -714,11 +714,13 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
     // There should be at least 2 read refcounts: one for
     //  this call to container_reference, and one for the
     //  subscriber list
-    assert(d->read_refcount >= 2);
-    d->read_refcount--;
-
-    DEBUG("read_refcount in container_reference: <%"PRId64"> => %i",
+    if (xlb_read_refcount_enabled) {
+      assert(d->read_refcount >= 2);
+      d->read_refcount--;
+      
+      DEBUG("read_refcount in container_reference: <%"PRId64"> => %i",
           container_id, d->read_refcount);
+    }
   }
 
   // TODO: support binary keys
