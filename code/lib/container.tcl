@@ -44,11 +44,17 @@ namespace eval turbine {
     proc swift_array_build { c elems var_type } { 
         set n [ llength $elems ]
         log "swift_array_build: <$c> elems: $n var_type: $var_type"
+
         if [ string equal $var_type "file" ] {
             set L [ list ] 
             # Mass create filename tds.  Requires 2 initial read refcounts
-            set filename_tds [ adlb::multicreate {*}[ lrepeat \
+            if { $n > 0 } {
+              set filename_tds [ adlb::multicreate {*}[ lrepeat \
                                       $n [ list string 2 ] ] ]
+            } else {
+              # Avoid lrepeat not support 0 repeats in tcl < 8.6
+              set filename_tds [ list ]
+            }
             set type "file_ref"
             for { set i 0 } { $i < $n } { incr i } { 
                 set elem [ lindex $elems $i ] 
@@ -59,7 +65,12 @@ namespace eval turbine {
             }
         } else { 
             set type "ref"
-            set L [ adlb::multicreate {*}[ lrepeat $n [ list $type ] ] ]
+            if { $n > 0 } {
+              set L [ adlb::multicreate {*}[ lrepeat $n [ list $type ] ] ]
+            } else {
+              # Avoid lrepeat not support 0 repeats in tcl < 8.6
+              set L [ list ]
+            }
             for { set i 0 } { $i < $n } { incr i } { 
                 set elem [ lindex $elems $i ] 
                 set td [ lindex $L $i ]
@@ -87,8 +98,13 @@ namespace eval turbine {
       set typel $args
       # Add decr to list
       lappend typel 1 1
-
-      set elems [ adlb::multicreate {*}[ lrepeat $n $typel ] ]
+      
+      if { $n > 0 } {
+        set elems [ adlb::multicreate {*}[ lrepeat $n $typel ] ]
+      } else {
+        # Avoid lrepeat not support 0 repeats in tcl < 8.6
+        set elems [ list ]
+      }
       log "array_kv_build2: <$c> [ dict size $kv_dict ] elems, write_decr $write_decr"
       set kv_dict2 [ dict create ]
       set i 0
@@ -150,7 +166,12 @@ namespace eval turbine {
           set create_types [ type_create_slice $val_type $types $val_type_pos ]
           # initial refcounts
           lappend create_types 1 1
-          set val_ids [ adlb::multicreate {*}[ lrepeat $n $create_types ] ]
+          if { $n > 0 } {
+            set val_ids [ adlb::multicreate {*}[ lrepeat $n $create_types ] ]
+          } else {
+            # Avoid lrepeat not support 0 repeats in tcl < 8.6
+            set val_ids [ list ]
+          }
           set val_dict [ dict create ]
 
           set i 0
@@ -174,7 +195,12 @@ namespace eval turbine {
           set create_types [ type_create_slice $val_type $types $val_type_pos ]
           # initial refcounts
           lappend create_types 1 1
-          set val_ids [ adlb::multicreate {*}[ lrepeat $n $create_types ] ]
+          if { $n > 0 } {
+            set val_ids [ adlb::multicreate {*}[ lrepeat $n $create_types ] ]
+          } else {
+            # Avoid lrepeat not support 0 repeats in tcl < 8.6
+            set val_ids [ list ]
+          }
 
           set i 0
           foreach val $cval {
