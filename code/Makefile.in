@@ -426,6 +426,13 @@ install.txt: $(PACKAGE) $(BINS) $(EXPORTS) $(SCRIPTS)
 	$(E) ( svn info | grep Revision ; true ) >> $(@) 2>&1
 	$(E) cp $(CP_ARGS) $(@) $(INSTALL_PREFIX)
 
+### Autoconf sanity:
+
+Makefile: configure.ac
+	@echo "Configuration is not up to date!"
+	@echo "Run ./setup.sh and ./configure again."
+	@exit 1
+
 ### CLEAN
 
 clean::
