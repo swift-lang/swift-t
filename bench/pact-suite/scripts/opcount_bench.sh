@@ -59,6 +59,7 @@ fi
 
 time=$benchname.time$UNIQUIFIER
 counts=$benchname.counts$UNIQUIFIER
+out=$benchname.out$UNIQUIFIER
 PROCS=4
 
 if [[ ! -z "$PACT_PAR" ]] ; then
@@ -70,11 +71,17 @@ if [[ $mode == TIME ]]; then
   export TURBINE_LOG=0
   export TURBINE_DEBUG=0
   export ADLB_DEBUG=0
-  /usr/bin/time -o $time turbine -n$PROCS $tcl "$@"
+  export ADLB_PRINT_TIME=true
+  time turbine -n$PROCS $tcl "$@" &> $out
   rc=$?
+  grep 'ADLB Total Elapsed Time' $out > $time
   cat $time
 elif [[ $mode == OPCOUNT ]]; then
-  time turbine -n$PROCS $tcl "$@" | $scriptdir/opcounts.py > $counts
+  export ADLB_PRINT_TIME=true
+  export ADLB_PERF_COUNTERS=true
+  time turbine -n$PROCS $tcl "$@" &> $out
+  time turbine -n$PROCS $tcl "$@" &> $out 
+  $scriptdir/opcounts.py < $out > $counts
   rc=$?
   cat $counts
 else

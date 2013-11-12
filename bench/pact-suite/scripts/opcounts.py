@@ -3,7 +3,8 @@ import fileinput
 import re
 import sys
 
-adlb_op_re = re.compile(r"ADLB: handle: caller=(\d*) (\w*)\(\d*\)$")
+#adlb_op_re = re.compile(r"ADLB: handle: caller=(\d*) (\w*)\(\d*\)$")
+adlb_op_perf_count = re.compile(r"COUNTER: ([^=]*)=(\d*)$")
 hang_check = re.compile(r"WAITING TRANSFORMS: ")
 trace = re.compile(r"trace:.*")
 
@@ -24,15 +25,18 @@ for line in fileinput.input():
   if trace.match(line):
     sys.stderr.write(line)
   
-  match = adlb_op_re.search(line)
+  match = adlb_op_perf_count.search(line)
   if match:
-    caller = int(match.group(1))
-    op = match.group(2)
+    op = match.group(1)
+    count = int(match.group(2))
     if debug:
-      print "caller: %d op: %s" % (caller, op)
+      print "op: %s count: %d" % (op, count)
 
     prev_count = opcounts.get(op, 0)
-    opcounts[op] = prev_count + 1
+    opcounts[op] = prev_count + count
+
+if (len(opcounts) == 0):
+  print >> sys.stderr, 'No counter output found, is ADLB_PERF_COUNTERS enabled'
 
 sorted_opcounts = sorted(opcounts.items())
 
