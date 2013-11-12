@@ -1015,6 +1015,10 @@ public class ICTree {
     public List<Var> getVariables() {
       return Collections.unmodifiableList(variables);
     }
+    
+    public boolean declaredHere(Var var) {
+      return variables.contains(var);
+    }
 
     public boolean isEmpty() {
       if (!continuations.isEmpty())

@@ -211,6 +211,13 @@ public class RCTracker {
     return result;
   }
 
+  /**
+   * Get iterator over reference counts.  Modifying this will affect
+   * underlying map.
+   * @param rcType
+   * @param dir
+   * @return
+   */
   public Iterable<Entry<AliasKey, Long>> rcIter(RefCountType rcType,
                                                 RCDir dir) {
     return getCounters(rcType, dir).entries();
@@ -352,11 +359,18 @@ public class RCTracker {
       incrStructMembers(var, rcType, amount);
     } else if (RefCounting.hasRefCount(var, rcType)) {
       AliasKey key = getCountKey(var);
-      incr(key, rcType, amount);
+      incrDirect(key, rcType, amount);
     }
   }
 
-  private void incr(AliasKey key, RefCountType rcType, long amount) {
+  /**
+   * Increment a key directly, without trying to parse out structs
+   * This should only be used if the key has already been validated.
+   * @param key
+   * @param rcType
+   * @param amount
+   */
+  void incrDirect(AliasKey key, RefCountType rcType, long amount) {
     getCounters(rcType, RCDir.fromAmount(amount)).add(key, amount);
   }
 
@@ -381,7 +395,7 @@ public class RCTracker {
       if ((var != null && RefCounting.hasRefCount(var, rcType)) ||
           (var == null &&
            RefCounting.mayHaveRefcount(varType, rcType))) {
-        incr(key, rcType, amount);
+        incrDirect(key, rcType, amount);
       }
     }
   }

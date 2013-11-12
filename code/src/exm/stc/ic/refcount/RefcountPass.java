@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -279,7 +280,7 @@ public class RefcountPass implements OptimizerPass {
     if (RCUtil.cancelEnabled()) {
       // Move any increment instructions up to this block
       // if they can be combined with increments here
-      pullUpRefIncrements(block, increments, true);
+      pullUpRefIncrements(block, increments);
     }
 
     placer.placeAll(logger, fn, block, increments, parentAssignedAliasVars);
@@ -571,48 +572,117 @@ public class RefcountPass implements OptimizerPass {
    * that increments can safely be done earlier, so if a child wait increments
    * something, then we can just do it here.
    * 
+   * We always pull up reference increments if possible in the hope we can
+   * cancel them or find a better place put them.  This means that increments
+   * will "float" up to the topmost block if possible. We can't really
+   * do worse than the explicit increment.
+   * 
    * @param block
    * @param increments
    * @param rootBlock if this is the root block we're pulling increments into
    */
-  private void pullUpRefIncrements(Block block, RCTracker increments,
-                                    boolean rootBlock) {
-
-    if (!rootBlock) {
-      findPullupIncrements(block, increments);
-    }
-    
-    for (Statement stmt: block.getStatements()) {
+  private void pullUpRefIncrements(Block rootBlock, RCTracker increment) {
+    for (Statement stmt: rootBlock.getStatements()) {
       if (stmt.type() == StatementType.CONDITIONAL) {
-        Conditional cond = stmt.conditional();
-        if (cond.isExhaustiveSyncConditional()) {
-          // TODO: handle conditionals: find increments on every branch
-        }
+        pullUpRefIncrements(stmt.conditional(), increment);
       } else {
         assert(stmt.type() == StatementType.INSTRUCTION);
+        // Do nothing
       }
     }
     
-    for (Continuation cont: block.getContinuations()) {
-      if (cont.executesBlockOnce()) {
-        for (Block inner: cont.getBlocks()) {
-          pullUpRefIncrements(inner, increments, false);
-        }
-      }
+    for (Continuation cont: rootBlock.getContinuations()) {
+      pullUpRefIncrements(cont, increment);
     }
    }
 
+  private void pullUpRefIncrements(Continuation cont, RCTracker increment) {
+    if (cont.executesBlockOnce()) {
+      for (Block inner: cont.getBlocks()) {
+        findPullupIncrements(inner, increment, true);
+        if (!cont.isAsync() && !cont.runLast()) {
+          findPullupDecrements(inner, increment, true);
+        }
+      }
+    } else if (cont.isExhaustiveSyncConditional()) {
+      // Find increments that occur on every branch
+      pullUpBranches(cont.getBlocks(), !cont.runLast(), increment);
+    }
+    
+  }
+
   /**
    * Remove positive constant increment instructions from block and update
-   * counters. This is only done for instructions that were being incremented or
-   * decremented already
+   * counters.
    * 
-   * @param innerBlock
+   * @param branches blocks that cover execution paths mutually exclusively and
+   *                 exhaustively
+   * @param runsBeforeCleanups if the continuation executes synchronously before
+   *                          cleanups
    * @param increments
    *          counters for a block
    */
-  private void findPullupIncrements(Block innerBlock, RCTracker increments) {
-    ListIterator<Statement> it = innerBlock.statementIterator();
+  private void pullUpBranches(List<Block> branches, boolean runsBeforeCleanups,
+                                    RCTracker increments) {
+    RCTracker allBranchIncrements = new RCTracker(increments.getAliases());
+    
+    // Find intersection of increments before removing anything
+    findPullupIncrements(branches.get(0), allBranchIncrements, false);
+    findPullupDecrements(branches.get(0), allBranchIncrements, false);
+    
+    for (int i = 1; i < branches.size(); i++) {
+      Block branch = branches.get(i);
+      RCTracker tmpBranchIncrements = new RCTracker(increments.getAliases());
+      findPullupIncrements(branch, tmpBranchIncrements, false);
+      findPullupDecrements(branch, tmpBranchIncrements, false);  
+      
+      // Check for intersection
+      for (RefCountType rcType: RefcountPass.RC_TYPES) {
+        for (RCDir dir: RCDir.values()) {
+          Iterator<Entry<AliasKey, Long>> it;
+          it = allBranchIncrements.rcIter(rcType, dir).iterator();
+          while (it.hasNext()) {
+            Entry<AliasKey, Long> e = it.next();
+            AliasKey key = e.getKey();
+            long amount1 = e.getValue();
+            long amount2 = tmpBranchIncrements.getCount(rcType, key, dir);
+            // Update to minimum of the two
+            if (amount2 == 0) {
+              it.remove();
+            } else if (dir == RCDir.INCR){
+              assert(amount1 > 0);
+              assert(amount2 > 0);
+              e.setValue(Math.min(amount1, amount2));
+            } else {
+              assert(dir == RCDir.DECR);
+              assert(amount1 < 0);
+              assert(amount2 < 0);
+              e.setValue(Math.max(amount1, amount2));
+            }
+          }
+        }
+      }
+    }
+
+    // Remove increments from blocks
+    for (Block branch: branches) {
+      removePullupIncrements(branch, allBranchIncrements);
+      removePullupDecrements(branch, allBranchIncrements);
+    }
+      
+    // Apply changes to parent increments
+    for (RefCountType rcType: RefcountPass.RC_TYPES) {
+      for (RCDir dir: RCDir.values()) {
+        for (Entry<AliasKey, Long> e: allBranchIncrements.rcIter(rcType, dir)) {
+          increments.incrDirect(e.getKey(), rcType, e.getValue());
+        }
+      }
+    }
+  }
+
+  private void findPullupIncrements(Block block, RCTracker increments,
+                              boolean removeInstructions) {
+    ListIterator<Statement> it = block.statementIterator();
     while (it.hasNext()) {
       Statement stmt = it.next();
       switch (stmt.type()) {
@@ -624,15 +694,13 @@ public class RefcountPass implements OptimizerPass {
             RefCountType rcType = RefCountOp.getRCType(inst.op);
             if (amountArg.isIntVal()) {
               long amount = amountArg.getIntLit();
-              if (increments.getCount(rcType, v, RCDir.INCR) != 0 ||
-                  increments.getCount(rcType, v, RCDir.DECR) != 0) {
+              if (!block.declaredHere(v)) {
                 // Check already being manipulated in this block
-                // TODO: change to pull-up by default, subject to it
-                //       not being declared in this block?
-                //  This makes sense since we can't do any worse than
-                //  the explicit increment at the head of the block
+                // Pull-up by default, if declared outside this block
                 increments.incr(v, rcType, amount);
-                it.remove();
+                if (removeInstructions) {
+                  it.remove();
+                }
               }
             }
           }
@@ -646,7 +714,53 @@ public class RefcountPass implements OptimizerPass {
       }
     }
   }
-
+  
+  private void removePullupIncrements(Block block, RCTracker toRemove) {
+    ListIterator<Statement> it = block.statementIterator();
+    while (it.hasNext()) {
+      Statement stmt = it.next();
+      switch (stmt.type()) {
+      case INSTRUCTION: {
+        Instruction inst = stmt.instruction();
+        if (RefCountOp.isIncrement(inst.op)) {
+          Var v = RefCountOp.getRCTarget(inst);
+          Arg amountArg = RefCountOp.getRCAmount(inst);
+          RefCountType rcType = RefCountOp.getRCType(inst.op);
+          if (amountArg.isIntVal()) {
+            long amount = amountArg.getIntLit();
+            long toRemoveAmount = toRemove.getCount(rcType, v, RCDir.INCR);
+            assert (toRemoveAmount <= amount && toRemoveAmount >= 0);
+            if (toRemoveAmount > 0) {
+              it.remove();
+              if (toRemoveAmount < amount) {
+                // Need to replace with reduced refcount
+                Arg newAmount = Arg.createIntLit(amount - toRemoveAmount);
+                it.add(RefCountOp.incrRef(rcType, v, newAmount));
+              }
+            }
+          }
+        }
+        break;
+      }
+      case CONDITIONAL:
+        // Don't try to aggregate these increments here
+        break;
+      default:
+        throw new STCRuntimeError("Unknown statement type " + stmt.type());
+      }
+    }
+  }
+  
+  
+  private void findPullupDecrements(Block block, RCTracker increments,
+      boolean removeInstructions) {
+    // TODO: not implemented
+  }
+  
+  private void removePullupDecrements(Block block, RCTracker toRemove) {
+    // TODO: not implemented
+  }
+  
   /**
    * Add decrements that have to happen for continuation inside block
    * 
