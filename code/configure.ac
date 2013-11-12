@@ -643,7 +643,7 @@ then
     USE_TCLSH=$( maint/find-tcl.zsh ${USE_TCL} )
     if [[ ${?} != 0 ]]
     then
-        AC_MSG_ERROR([Could not find Tcl ${TCL_VERSION} binary!])
+        AC_MSG_ERROR([Could not find Tcl ${TCL_VERSION} binary in ${USE_TCL}!])
     fi
     USE_TCLSH_LOCAL=${USE_TCLSH}
 else
