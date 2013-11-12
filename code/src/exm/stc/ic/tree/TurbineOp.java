@@ -2225,33 +2225,49 @@ public class TurbineOp extends Instruction {
    */
   public static class RefCountOp extends TurbineOp {
     
-    private RefCountOp(Var target, boolean increment, RefCountType type, Arg amount) {
-      super(getRefCountOp(increment, type), Var.NONE,
+    /**
+     * Direction of change (increment or decrement)
+     */
+    public static enum RCDir {
+      INCR,
+      DECR;
+      
+      public static RCDir fromAmount(long amount) {
+        if (amount >= 0) {
+          return INCR;
+        } else {
+          return DECR;
+        }
+      }
+    };
+    
+    public RefCountOp(Var target, RCDir dir, RefCountType type, Arg amount) {
+      super(getRefCountOp(dir, type), Var.NONE,
             Arrays.asList(target.asArg(), amount));
     }
     
     public static RefCountOp decrWriters(Var target, Arg amount) {
-      return new RefCountOp(target, false, RefCountType.WRITERS, amount);
+      return new RefCountOp(target, RCDir.DECR, RefCountType.WRITERS, amount);
     }
     
     public static RefCountOp incrWriters(Var target, Arg amount) {
-      return new RefCountOp(target, true, RefCountType.WRITERS, amount);
+      return new RefCountOp(target, RCDir.INCR, RefCountType.WRITERS, amount);
     }
     
     public static RefCountOp decrRef(Var target, Arg amount) {
-      return new RefCountOp(target, false, RefCountType.READERS, amount);
+      return new RefCountOp(target, RCDir.DECR, RefCountType.READERS, amount);
     }
     
     public static RefCountOp incrRef(Var target, Arg amount) {
-      return new RefCountOp(target, false, RefCountType.READERS, amount);
+      return new RefCountOp(target, RCDir.INCR, RefCountType.READERS, amount);
     }
     
     public static RefCountOp decrRef(RefCountType rcType, Var v, Arg amount) {
-      return new RefCountOp(v, false, rcType, amount);
+      return new RefCountOp(v, RCDir.DECR, rcType, amount);
     }
     
     public static RefCountOp incrRef(RefCountType rcType, Var v, Arg amount) {
-      return new RefCountOp(v, true, rcType, amount);
+      return new RefCountOp(v, RCDir.INCR, rcType, amount);
     }
     
     public static RefCountType getRCType(Opcode op) {
@@ -2276,20 +2292,31 @@ public class TurbineOp extends Instruction {
     
     
     
-    private static Opcode getRefCountOp(boolean increment, RefCountType type) {
+    private static Opcode getRefCountOp(RCDir dir, RefCountType type) {
       if (type == RefCountType.READERS) {
-        if (increment) {
+        if (dir == RCDir.INCR) {
           return Opcode.INCR_READERS;
         } else {
+          assert(dir == RCDir.DECR);
           return Opcode.DECR_READERS;
         }
       } else {
         assert(type == RefCountType.WRITERS);
-        if (increment) {
+        if (dir == RCDir.INCR) {
           return Opcode.INCR_WRITERS;
         } else {
+          assert(dir == RCDir.DECR);
           return Opcode.DECR_WRITERS;
         }
+      }
+    }
+    
+    private static RCDir getRefcountDir(Opcode op) {
+      if (isIncrement(op)) {
+        return RCDir.INCR;
+      } else {
+        assert(isDecrement(op));
+        return RCDir.DECR;
       }
     }
 
@@ -2339,7 +2366,7 @@ public class TurbineOp extends Instruction {
 
     @Override
     public Instruction clone() {
-      return new RefCountOp(getRCTarget(this), isIncrement(this.op),
+      return new RefCountOp(getRCTarget(this), getRefcountDir(this.op),
                             getRCType(this.op), getRCAmount(this));
     }
   }

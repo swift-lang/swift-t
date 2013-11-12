@@ -28,7 +28,6 @@ import exm.stc.common.util.Sets;
 import exm.stc.ic.opt.AliasTracker.AliasKey;
 import exm.stc.ic.opt.TreeWalk;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
-import exm.stc.ic.refcount.RCTracker.RCDir;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ForeachLoops.AbstractForeachLoop;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -40,6 +39,7 @@ import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Statement;
 import exm.stc.ic.tree.ICTree.StatementType;
 import exm.stc.ic.tree.TurbineOp.RefCountOp;
+import exm.stc.ic.tree.TurbineOp.RefCountOp.RCDir;
 
 /**
  * Functions to insert reference count operations in IC tree.  There are a number

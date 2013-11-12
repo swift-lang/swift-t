@@ -32,7 +32,6 @@ import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.opt.AliasTracker.AliasKey;
 import exm.stc.ic.opt.OptimizerPass;
-import exm.stc.ic.refcount.RCTracker.RCDir;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ForeachLoops.AbstractForeachLoop;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
@@ -51,13 +50,14 @@ import exm.stc.ic.tree.ICTree.StatementType;
 import exm.stc.ic.tree.Opcode;
 import exm.stc.ic.tree.TurbineOp;
 import exm.stc.ic.tree.TurbineOp.RefCountOp;
+import exm.stc.ic.tree.TurbineOp.RefCountOp.RCDir;
 
 /**
  * Eliminate, merge and otherwise reduce read/write reference counting
  * operations. Run as a post-processing step.
  * 
- * TODO: push down refcount decrement operations? Are there real situations
- * where this helps?
+ * Additional unimplemented ideas:
+ * - Pushing down reference decrements to blocks where they can be merged
  */
 public class RefcountPass implements OptimizerPass {
 
@@ -628,7 +628,9 @@ public class RefcountPass implements OptimizerPass {
     
     // Find intersection of increments before removing anything
     findPullupIncrements(branches.get(0), allBranchIncrements, false);
-    findPullupDecrements(branches.get(0), allBranchIncrements, false);
+    if (!runsBeforeCleanups) {
+      findPullupDecrements(branches.get(0), allBranchIncrements, false);
+    }
     
     for (int i = 1; i < branches.size(); i++) {
       Block branch = branches.get(i);
@@ -647,7 +649,7 @@ public class RefcountPass implements OptimizerPass {
             long amount1 = e.getValue();
             long amount2 = tmpBranchIncrements.getCount(rcType, key, dir);
             // Update to minimum of the two
-            if (amount2 == 0) {
+            if (amount1 == 0 || amount2 == 0) {
               it.remove();
             } else if (dir == RCDir.INCR){
               assert(amount1 > 0);
@@ -667,7 +669,9 @@ public class RefcountPass implements OptimizerPass {
     // Remove increments from blocks
     for (Block branch: branches) {
       removePullupIncrements(branch, allBranchIncrements);
-      removePullupDecrements(branch, allBranchIncrements);
+      if (!runsBeforeCleanups) {
+        removePullupDecrements(branch, allBranchIncrements);
+      }
     }
       
     // Apply changes to parent increments
@@ -754,11 +758,56 @@ public class RefcountPass implements OptimizerPass {
   
   private void findPullupDecrements(Block block, RCTracker increments,
       boolean removeInstructions) {
-    // TODO: not implemented
+    ListIterator<CleanupAction> it = block.cleanupIterator();
+    while (it.hasNext()) {
+      CleanupAction ca = it.next();
+      Instruction inst = ca.action();
+      if (RefCountOp.isDecrement(inst.op)) {
+        Var v = RefCountOp.getRCTarget(inst);
+        Arg amountArg = RefCountOp.getRCAmount(inst);
+        RefCountType rcType = RefCountOp.getRCType(inst.op);
+        if (amountArg.isIntVal()) {
+          long amount = amountArg.getIntLit();
+          assert(amount >= 0);
+          if (!block.declaredHere(v)) {
+            // Check already being manipulated in this block
+            // Pull-up by default, if declared outside this block
+            increments.incr(v, rcType, -amount);
+            if (removeInstructions) {
+              it.remove();
+            }
+          }
+        }
+      }
+    }
   }
   
   private void removePullupDecrements(Block block, RCTracker toRemove) {
-    // TODO: not implemented
+    ListIterator<CleanupAction> it = block.cleanupIterator();
+    while (it.hasNext()) {
+      CleanupAction ca = it.next();
+      Instruction inst = ca.action();
+      if (RefCountOp.isDecrement(inst.op)) {
+        Var v = RefCountOp.getRCTarget(inst);
+        Arg amountArg = RefCountOp.getRCAmount(inst);
+        RefCountType rcType = RefCountOp.getRCType(inst.op);
+        if (amountArg.isIntVal()) {
+          long amount = amountArg.getIntLit();
+          // Ensure both positive
+          long toRemoveAmount = -1 * toRemove.getCount(rcType, v, RCDir.DECR);
+          assert (toRemoveAmount >= 0 && toRemoveAmount <= amount);
+          if (toRemoveAmount > 0) {
+            it.remove();
+            if (toRemoveAmount < amount) {
+              // Need to replace with reduced refcount
+              Arg newAmount = Arg.createIntLit(amount - toRemoveAmount);
+              Instruction newDecr = RefCountOp.decrRef(rcType, v, newAmount);
+              it.add(new CleanupAction(ca.var(), newDecr));
+            }
+          }
+        }
+      }
+    }
   }
   
   /**

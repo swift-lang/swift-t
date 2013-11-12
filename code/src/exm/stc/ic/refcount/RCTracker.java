@@ -26,27 +26,12 @@ import exm.stc.ic.opt.AliasTracker.AliasKey;
 import exm.stc.ic.opt.OptUtil;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
+import exm.stc.ic.tree.TurbineOp.RefCountOp.RCDir;
 
 /**
  * Class to keep track of information relevant to refcount pass
  */
 public class RCTracker {
-  
-  /**
-   * Direction of change (increment or decrement)
-   */
-  public static enum RCDir {
-    INCR,
-    DECR;
-    
-    public static RCDir fromAmount(long amount) {
-      if (amount >= 0) {
-        return INCR;
-      } else {
-        return DECR;
-      }
-    }
-  };
   
   /**
    * Current read increments per var
