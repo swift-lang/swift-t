@@ -25,5 +25,7 @@ bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
 [[ ${?} == 0 ]] || exit 1
 
 grep -q "(2,2,howdy,3.14)" ${OUTPUT} || exit 1
+grep -q "Hello World" ${OUTPUT} || exit 1
+grep -q "Void was set" ${OUTPUT} || exit 1
 
 exit 0

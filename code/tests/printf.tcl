@@ -34,7 +34,17 @@ proc rules { } {
     turbine::store_string  14 "howdy"
     turbine::store_float   15 3.1415
 
+    # Test without output
     turbine::printf "" [ list 13 11 12 14 15 ]
+   
+    # Test with output
+    turbine::create_void    16
+    turbine::create_string  17
+    turbine::store_string 17 "Hello World"
+    turbine::printf [ list 16 ] [ list 17 ]
+
+    # Check void was set
+    turbine::c::rule "17" "puts {Void was set}" type $turbine::CONTROL
 }
 
 turbine::defaults
