@@ -291,13 +291,11 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
         }
       }
       
-      // Update written vars list
+      // Update any components that were modified
       for (Var mod: modOutputs) {
-        if (Types.isContainer(mod.type()) || Types.isRef(mod.type())) {
-          boolean modInit = inst.isInitialized(mod);
-          if (!modInit && inst.op != Opcode.STORE_REF) {
-            modifiedComponents.add(mod);
-          }
+        boolean modInit = inst.isInitialized(mod);
+        if (!modInit && inst.op != Opcode.STORE_REF) {
+          modifiedComponents.add(mod);
         }
       }
       

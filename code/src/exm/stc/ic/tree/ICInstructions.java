@@ -769,8 +769,7 @@ public class ICInstructions {
 
     @Override
     public boolean hasSideEffects() {
-      return (!ForeignFunctions.isPure(functionName)) ||
-            this.writesAliasVar() || this.writesMappedVar();
+      return (!ForeignFunctions.isPure(functionName));
     }
     
     @Override
@@ -1853,12 +1852,7 @@ public class ICInstructions {
     
     @Override
     public boolean hasSideEffects() {
-      if (op == Opcode.LOCAL_OP) {
-        return Operators.isImpure(subop);
-      } else {
-        return Operators.isImpure(subop) || this.writesAliasVar()
-            || this.writesMappedVar();
-      }
+      return Operators.isImpure(subop);
     }
 
     private static void compileTimeAssertCheck(BuiltinOpcode subop2,

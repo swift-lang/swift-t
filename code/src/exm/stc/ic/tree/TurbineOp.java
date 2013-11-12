@@ -871,7 +871,7 @@ public class TurbineOp extends Instruction {
     /* The direct container write functions only mutate their output 
      * argument */
     case STRUCT_INIT_FIELD:
-      return this.writesAliasVar();
+      return false;
       
     case ARRAY_BUILD:
     case ARRAY_INSERT_FUTURE:
@@ -924,7 +924,7 @@ public class TurbineOp extends Instruction {
     case LOAD_ARRAY:
     case LOAD_BAG:
     case LOAD_RECURSIVE:
-      return this.writesAliasVar();
+      return false;
       
     case ARRAY_LOOKUP_REF_IMM:
     case ARRAY_LOOKUP_FUTURE:
