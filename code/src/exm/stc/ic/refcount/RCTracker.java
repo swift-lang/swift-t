@@ -420,8 +420,10 @@ public class RCTracker {
   
   @Override
   public String toString() {
-    return "Read: " + readIncrements + 
-           "\n    Write: " + writeIncrements +
+    return "ReadIncr: " + readIncrements +
+            "\n    ReadDecr: " + readDecrements +
+           "\n    WriteIncr: " + writeIncrements +
+           "\n    WriteDecr: " + writeDecrements +
            "\n    " + aliases;
   }
 }
