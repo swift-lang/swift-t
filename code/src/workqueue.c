@@ -475,31 +475,31 @@ void xlb_print_workq_perf_counters(void)
      *      so that summing net gives actual tasks in whole system
      */
 
-    fprintf(stderr, "COUNTER: tasktype_%i_targeted_total=%"PRId64"\n",
+    PRINT_COUNTER("worktype_%i_targeted_total=%"PRId64"\n",
             t, c->targeted_enqueued + c->targeted_bypass);
-    fprintf(stderr, "COUNTER: tasktype_%i_targeted_enqueued=%"PRId64"\n",
+    PRINT_COUNTER("worktype_%i_targeted_enqueued=%"PRId64"\n",
             t, c->targeted_enqueued);
-    fprintf(stderr, "COUNTER: tasktype_%i_targeted_bypass=%"PRId64"\n",
+    PRINT_COUNTER("worktype_%i_targeted_bypass=%"PRId64"\n",
             t, c->targeted_bypass);
-    fprintf(stderr, "COUNTER: tasktype_%i_single_total=%"PRId64"\n",
+    PRINT_COUNTER("worktype_%i_single_total=%"PRId64"\n",
             t, c->single_enqueued + c->single_bypass);
-    fprintf(stderr, "COUNTER: tasktype_%i_single_net=%"PRId64"\n",
+    PRINT_COUNTER("worktype_%i_single_net=%"PRId64"\n",
             t, c->single_enqueued + c->single_bypass - c->single_stolen);
-    fprintf(stderr, "COUNTER: tasktype_%i_single_enqueued=%"PRId64"\n",
+    PRINT_COUNTER("worktype_%i_single_enqueued=%"PRId64"\n",
             t, c->single_enqueued);
-    fprintf(stderr, "COUNTER: tasktype_%i_single_bypass=%"PRId64"\n",
+    PRINT_COUNTER("worktype_%i_single_bypass=%"PRId64"\n",
             t, c->single_bypass);
-    fprintf(stderr, "COUNTER: tasktype_%i_single_stolen=%"PRId64"\n",
+    PRINT_COUNTER("worktype_%i_single_stolen=%"PRId64"\n",
             t, c->single_stolen);
-    fprintf(stderr, "COUNTER: tasktype_%i_parallel_total=%"PRId64"\n",
+    PRINT_COUNTER("worktype_%i_parallel_total=%"PRId64"\n",
             t, c->parallel_enqueued + c->parallel_bypass);
-    fprintf(stderr, "COUNTER: tasktype_%i_parallel_net=%"PRId64"\n",
+    PRINT_COUNTER("worktype_%i_parallel_net=%"PRId64"\n",
             t, c->parallel_enqueued + c->parallel_bypass - c->parallel_stolen);
-    fprintf(stderr, "COUNTER: tasktype_%i_parallel_enqueued=%"PRId64"\n",
+    PRINT_COUNTER("worktype_%i_parallel_enqueued=%"PRId64"\n",
             t, c->parallel_enqueued);
-    fprintf(stderr, "COUNTER: tasktype_%i_parallel_bypass=%"PRId64"\n",
+    PRINT_COUNTER("worktype_%i_parallel_bypass=%"PRId64"\n",
             t, c->parallel_bypass);
-    fprintf(stderr, "COUNTER: tasktype_%i_parallel_stolen=%"PRId64"\n",
+    PRINT_COUNTER("worktype_%i_parallel_stolen=%"PRId64"\n",
             t, c->parallel_stolen);
   }
 }

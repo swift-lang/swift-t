@@ -116,4 +116,10 @@ adlb_code debug_check_environment(void);
 /** Print that we are exiting a function */
 #define TRACE_END   TRACE("%s() done.", __func__)
 
+#define PRINT_COUNTER(format, args...)                    \
+  { if (xlb_perf_counters_enabled) {                      \
+      printf("[%d] COUNTER: " format "\n", xlb_comm_rank, \
+            ## args);                                     \
+  } }
+
 #endif

@@ -212,7 +212,7 @@ void xlb_print_handler_counters(void)
   {
     if (handlers[tag] != NULL)
     {
-      fprintf(stderr, "COUNTER: %s=%"PRId64"\n",
+      PRINT_COUNTER("%s=%"PRId64"\n",
               xlb_get_tag_name(tag), handler_counters[tag]);
     }
   }
