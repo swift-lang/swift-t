@@ -464,9 +464,6 @@ public class RefcountPass implements OptimizerPass {
       for (PassedVar passedIn: cont.getAllPassedVars()) {
         if (!passedIn.writeOnly && RefCounting.hasReadRefCount(passedIn.var)) {
           readIncrTmp.add(passedIn.var);
-          if (cont.getType() == ContinuationType.FOREACH_LOOP) {
-            System.err.println(passedIn.var);
-          }
         }
       }
       for (BlockingVar blockingVar: cont.blockingVars(false)) {
@@ -628,7 +625,7 @@ public class RefcountPass implements OptimizerPass {
     
     // Find intersection of increments before removing anything
     findPullupIncrements(branches.get(0), allBranchIncrements, false);
-    if (!runsBeforeCleanups) {
+    if (runsBeforeCleanups) {
       findPullupDecrements(branches.get(0), allBranchIncrements, false);
     }
     
@@ -636,7 +633,9 @@ public class RefcountPass implements OptimizerPass {
       Block branch = branches.get(i);
       RCTracker tmpBranchIncrements = new RCTracker(increments.getAliases());
       findPullupIncrements(branch, tmpBranchIncrements, false);
-      findPullupDecrements(branch, tmpBranchIncrements, false);  
+      if (runsBeforeCleanups) {
+        findPullupDecrements(branch, tmpBranchIncrements, false);
+      }
       
       // Check for intersection
       for (RefCountType rcType: RefcountPass.RC_TYPES) {
@@ -669,11 +668,11 @@ public class RefcountPass implements OptimizerPass {
     // Remove increments from blocks
     for (Block branch: branches) {
       removePullupIncrements(branch, allBranchIncrements);
-      if (!runsBeforeCleanups) {
+      if (runsBeforeCleanups) {
         removePullupDecrements(branch, allBranchIncrements);
       }
     }
-      
+    
     // Apply changes to parent increments
     for (RefCountType rcType: RefcountPass.RC_TYPES) {
       for (RCDir dir: RCDir.values()) {
