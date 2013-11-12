@@ -95,8 +95,8 @@ namespace eval turbine {
       set s       [ blobutils_sizeof_float ]
       set L       [ retrieve_decr_blob $b ]
       set p       [ blobutils_cast_int_to_dbl_ptr [ lindex $L 0 ] ]
-      set m_value [ retrieve_integer $m ]
-      set n_value [ retrieve_integer $n ]
+      set m_value [ retrieve_decr_integer $m ]
+      set n_value [ retrieve_decr_integer $n ]
       set length  [ lindex $L 1 ]
 
       # total = m x n
