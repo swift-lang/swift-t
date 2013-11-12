@@ -60,6 +60,11 @@ public class Conditionals {
     }
     
     @Override
+    public boolean executesBlockOnce() {
+      return false;
+    }
+    
+    @Override
     public boolean isNoop() {
       for (Block b: getBlocks()) {
         if (!b.isEmpty()) {

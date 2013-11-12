@@ -350,6 +350,12 @@ public class ICContinuations {
       return runLast;
     }
 
+    /**
+     * If every block is executed exactly once
+     * @return
+     */
+    public abstract boolean executesBlockOnce();
+
     public abstract boolean isLoop();
 
     /**
@@ -512,6 +518,11 @@ public class ICContinuations {
       return false;
     }
 
+    @Override
+    public boolean executesBlockOnce() {
+      return false;
+    }
+    
     @Override
     public List<Block> getBlocks() {
       return Arrays.asList(loopBody);
@@ -940,6 +951,11 @@ public class ICContinuations {
     public boolean isConditional() {
       return false;
     }
+    
+    @Override
+    public boolean executesBlockOnce() {
+      return true;
+    }
 
     @Override
     protected void replaceConstructVars(Map<Var, Arg> renames, 
@@ -1242,6 +1258,11 @@ public class ICContinuations {
     @Override
     public boolean isConditional() {
       return false;
+    }
+    
+    @Override
+    public boolean executesBlockOnce() {
+      return true;
     }
 
     @Override

@@ -38,7 +38,6 @@ import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICContinuations.Loop;
-import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.LoopBreak;
 import exm.stc.ic.tree.ICTree.Block;
@@ -280,7 +279,7 @@ public class RefcountPass implements OptimizerPass {
     if (RCUtil.cancelEnabled()) {
       // Move any increment instructions up to this block
       // if they can be combined with increments here
-      pullUpRefIncrements(block, increments);
+      pullUpRefIncrements(block, increments, true);
     }
 
     placer.placeAll(logger, fn, block, increments, parentAssignedAliasVars);
@@ -451,7 +450,7 @@ public class RefcountPass implements OptimizerPass {
   private void updateIncrementsPassIntoCont(Continuation cont,
       RCTracker increments) {
     if (cont.spawnsSingleTask()) {
-      long incr = 1; // TODO: different for other continuations?
+      long incr = 1;  // Increment once per task
       for (Var keepOpen: cont.getKeepOpenVars()) {
         assert (RefCounting.hasWriteRefCount(keepOpen));
 
@@ -486,18 +485,9 @@ public class RefcountPass implements OptimizerPass {
   private void updateIncrementsPassIntoForeach(RCTracker increments,
       AbstractForeachLoop foreach) {
     /*
-     * We want to make sure that we hold a refcount until we get to this loop:
-     * do a switcheroo where we pull an increment into the outer block, and
-     * balance by adding a decrement to loop.
-     * Key Assumptions:
-     * - All continuations after this one will have variables marked for
-     *    passing explicitly (won't use a variable without consuming rc).
-     * - All variables passed into async foreach loop are in startIncrements.
-     * We achieve this by:
-     * - Reordering continuations so that sync continuations occur
-     *   before async.
-     * - Async continuations require explicit var passing by nature
-     * - TODO: exception? If nested block is tacked onto end
+     * Hold a refcount until we get to this loop: do a switcheroo where 
+     * we pull an increment into the outer block, and balance by adding
+     * a decrement to loop.
      */
     if (foreach.isAsync()) {
       for (RefCount rc: foreach.getStartIncrements()) {
@@ -581,26 +571,36 @@ public class RefcountPass implements OptimizerPass {
    * that increments can safely be done earlier, so if a child wait increments
    * something, then we can just do it here.
    * 
-   * @param rootBlock
+   * @param block
    * @param increments
+   * @param rootBlock if this is the root block we're pulling increments into
    */
-  private void pullUpRefIncrements(Block rootBlock, RCTracker increments) {
-    Deque<Block> blockStack = new ArrayDeque<Block>();
-    blockStack.push(rootBlock);
+  private void pullUpRefIncrements(Block block, RCTracker increments,
+                                    boolean rootBlock) {
 
-    while (!blockStack.isEmpty()) {
-      Block block = blockStack.pop();
-
+    if (!rootBlock) {
       findPullupIncrements(block, increments);
-
-      for (Continuation cont: block.getContinuations()) {
-        // Only enter wait statements since the block is executed exactly once
-        if (cont.getType() == ContinuationType.WAIT_STATEMENT) {
-          blockStack.push(((WaitStatement) cont).getBlock());
+    }
+    
+    for (Statement stmt: block.getStatements()) {
+      if (stmt.type() == StatementType.CONDITIONAL) {
+        Conditional cond = stmt.conditional();
+        if (cond.isExhaustiveSyncConditional()) {
+          // TODO: handle conditionals: find increments on every branch
+        }
+      } else {
+        assert(stmt.type() == StatementType.INSTRUCTION);
+      }
+    }
+    
+    for (Continuation cont: block.getContinuations()) {
+      if (cont.executesBlockOnce()) {
+        for (Block inner: cont.getBlocks()) {
+          pullUpRefIncrements(inner, increments, false);
         }
       }
     }
-  }
+   }
 
   /**
    * Remove positive constant increment instructions from block and update
@@ -627,6 +627,10 @@ public class RefcountPass implements OptimizerPass {
               if (increments.getCount(rcType, v, RCDir.INCR) != 0 ||
                   increments.getCount(rcType, v, RCDir.DECR) != 0) {
                 // Check already being manipulated in this block
+                // TODO: change to pull-up by default, subject to it
+                //       not being declared in this block?
+                //  This makes sense since we can't do any worse than
+                //  the explicit increment at the head of the block
                 increments.incr(v, rcType, amount);
                 it.remove();
               }
@@ -635,8 +639,7 @@ public class RefcountPass implements OptimizerPass {
           break;
         }
         case CONDITIONAL:
-          // Don't try to aggregate these increments.
-          // TODO: later could try to find increments occurring on all branches
+          // Don't try to aggregate these increments here
           break;
         default:
           throw new STCRuntimeError("Unknown statement type " + stmt.type());
@@ -797,7 +800,7 @@ public class RefcountPass implements OptimizerPass {
 
   /**
    * Place sync continuations (which may use var but not require refcount
-   * increment) first to maximize change of being able to piggyback things.
+   * increment) first to maximize chance of being able to piggyback things.
    */
   private void reorderContinuations(Logger logger, Block block) {
     ListIterator<Continuation> cIt = block.continuationIterator();
