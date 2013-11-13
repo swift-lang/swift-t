@@ -36,7 +36,8 @@ void mystore(adlb_datum_id id, long val) {
     int *ranks;
     int count;
     //printf("<%ld> = %ld\n", id, val);
-    ADLB_Store(id, &val, sizeof(long), true, &ranks, &count);
+    ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_INTEGER,
+               &val, sizeof(long), ADLB_WRITE_RC);
     if (count > 0) {
       char buf[128];
       int len = sprintf(buf, "close %ld", id);
@@ -79,7 +80,7 @@ void spawnfib2(adlb_datum_id *f1, adlb_datum_id *f2, int N1, int N2) {
 // True if already present
 bool subscribe(adlb_datum_id id) {
   int subscribed;
-  adlb_code code = ADLB_Subscribe(id, &subscribed);
+  adlb_code code = ADLB_Subscribe(id, ADLB_NO_SUB, &subscribed);
   assert(code == ADLB_SUCCESS);
   return subscribed == 0;
 }
@@ -88,7 +89,8 @@ long getnum(adlb_datum_id id) {
           long result_val;
           adlb_data_type t;
           int l;
-          adlb_code code = ADLB_Retrieve(id, &t, 1, &result_val, &l);
+          adlb_code code = ADLB_Retrieve(id, ADLB_NO_SUB, ADLB_RETRIEVE_READ_RC,
+                                         &t, &result_val, &l);
           assert(code == ADLB_SUCCESS);
           //printf("Got <%ld> = %ld\n", id, result_val);
           return result_val;
