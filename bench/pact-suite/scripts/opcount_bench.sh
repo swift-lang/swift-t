@@ -34,7 +34,8 @@ ic=$TMPDIR/$benchname.ic
 
 STC_FLAGS=
 if [[ ! -z "$NO_REFCOUNT" && "$NO_REFCOUNT" -ne 0 ]]; then
-  STC_FLAGS+=-trefcounting
+  echo "Disabling refcounting"
+  STC_FLAGS+="-trefcounting"
 fi
 if [[ $benchprefix == annealing-exm ]]; then
   STC_FLAGS+=" -I /home/tga/ExM/scicolsim.git/src"
