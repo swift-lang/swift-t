@@ -100,7 +100,9 @@ typedef struct {
   size_t length;
 } adlb_subscript;
 
-const static adlb_subscript ADLB_NO_SUB = { .key = NULL, .length = 0u };
+const static adlb_subscript ADLB_NO_SUB = { 
+    NULL, /* key */
+    0u, /* length */};
 
 // Check if subscript present
 static inline bool adlb_has_sub(adlb_subscript sub)
@@ -122,16 +124,16 @@ typedef struct {
 } adlb_refcounts;
 
 const static adlb_refcounts ADLB_NO_RC =
-  { .read_refcount = 0, .write_refcount = 0 };
+  { 0 /* read_refcount */, 0 /* write_refcount */ };
 
 const static adlb_refcounts ADLB_READ_RC =
-  { .read_refcount = 1, .write_refcount = 0 };
+  { 1 /*read_refcount */, 0 /* write_refcount */ };
 
 const static adlb_refcounts ADLB_WRITE_RC =
-  { .read_refcount = 0, .write_refcount = 1 };
+  { 0 /* read_refcount */, 1 /* write_refcount */ };
 
 const static adlb_refcounts ADLB_READWRITE_RC =
-  { .read_refcount = 1, .write_refcount = 1 };
+  { 1 /* read_refcount */, 1 /* write_refcount */ };
 
 #define ADLB_RC_IS_NULL(rc) \
     ((rc).read_refcount == 0 && (rc).write_refcount == 0)
@@ -150,8 +152,8 @@ const static adlb_refcounts ADLB_READWRITE_RC =
 
 static inline adlb_refcounts adlb_rc_negate(adlb_refcounts rc)
 {
-  adlb_refcounts result = { .read_refcount = -rc.read_refcount,
-                            .write_refcount = -rc.write_refcount };
+  adlb_refcounts result = { -rc.read_refcount, /* read_refcount */
+                            -rc.write_refcount /* write_refcount */ };
   return result;
 }
 
@@ -165,8 +167,11 @@ typedef struct
 } adlb_create_props;
 
 // Default settings for new variables
-#define DEFAULT_CREATE_PROPS \
-    { .read_refcount = 1, .write_refcount = 1, .permanent = false }
+const static adlb_create_props DEFAULT_CREATE_PROPS = {
+  1, /* read_refcount */
+  1, /* write_refcount */
+  false, /* permanent */
+};
 
 // Information for new variable creation
 typedef struct {
@@ -189,9 +194,11 @@ typedef struct
   adlb_refcounts incr_referand;
 } adlb_retrieve_rc;
 
-const static adlb_retrieve_rc ADLB_RETRIEVE_NO_RC =
-    { .decr_self.read_refcount = 0, .decr_self.write_refcount = 0,
-      .incr_referand.read_refcount = 0, .incr_referand.write_refcount = 0 };
+const static adlb_retrieve_rc ADLB_RETRIEVE_NO_RC = { 
+      { 0, 0 }, /* decr_self read and write refcounts */
+      { 0, 0 }, /* incr_reference read and write refcounts */
+};
+      
 
 
 /**
@@ -252,6 +259,5 @@ typedef enum
 
 /** Maximum size for ADLB checkpoint value */
 #define ADLB_XPT_MAX (ADLB_DATA_MAX - 1)
-
 
 #endif
