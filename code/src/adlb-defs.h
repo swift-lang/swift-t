@@ -198,7 +198,18 @@ const static adlb_retrieve_rc ADLB_RETRIEVE_NO_RC = {
       { 0, 0 }, /* decr_self read and write refcounts */
       { 0, 0 }, /* incr_reference read and write refcounts */
 };
-      
+
+// Read a value variable
+const static adlb_retrieve_rc ADLB_RETRIEVE_READ_RC = { 
+      { 1, 0 }, /* decr_self read and write refcounts */
+      { 0, 0 }, /* incr_reference read and write refcounts */
+};
+
+// Read a reference variable and acquire reference to referand
+const static adlb_retrieve_rc ADLB_RETRIEVE_ACQUIRE_RC = { 
+      { 1, 0 }, /* decr_self read and write refcounts */
+      { 1, 0 }, /* incr_reference read and write refcounts */
+};
 
 
 /**
