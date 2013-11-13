@@ -61,7 +61,7 @@ fi
 time=$benchname.time$UNIQUIFIER
 counts=$benchname.counts$UNIQUIFIER
 out=$benchname.out$UNIQUIFIER
-PROCS=4
+PROCS=8
 
 if [[ ! -z "$PACT_PAR" ]] ; then
   PROCS=$PACT_PAR
