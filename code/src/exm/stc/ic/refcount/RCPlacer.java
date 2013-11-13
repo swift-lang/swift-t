@@ -134,28 +134,38 @@ public class RCPlacer {
         Var var = increments.getRefCountVar(block, e.getKey(), true);
         Arg amount = Arg.createIntLit(e.getValue() * -1);
         block.addCleanup(var, RefCountOp.decrRef(rcType, var, amount));
-        e.setValue(0L); // Clear entry
       }
     }
+    
+    // Clear out all decrements
+    increments.resetAll(RCDir.DECR);
   }
 
   /**
    * Insert all reference increments and decrements in place
    * 
+   * @param stmt the statement to insert before or after
+   *              null indicates end of the block
    * @param stmtIt
    * @param increments
    */
-  public void dumpIncrements(Instruction inst, Block block,
+  public void dumpIncrements(Statement stmt, Block block,
       ListIterator<Statement> stmtIt, RCTracker increments) {
-    
     for (RefCountType rcType: RefcountPass.RC_TYPES) {
       for (Entry<AliasKey, Long> e: increments.rcIter(rcType, RCDir.INCR)) {
         Var var = increments.getRefCountVar(block, e.getKey(), true);
+        assert(var != null);
         Long incr = e.getValue();
         assert(incr >= 0);
         if (incr > 0) {
-          boolean varInit = inst.isInitialized(var);
-          if (inst != null && !(var.storage() == Alloc.ALIAS && varInit)) {
+          boolean varInit = stmt != null &&
+                   stmt.type() == StatementType.INSTRUCTION && 
+                   stmt.instruction().isInitialized(var);
+          // TODO: what if not initialized in a conditional? Should insert
+          //        before
+          if (stmt != null &&
+                  (stmt.type() == StatementType.INSTRUCTION &&
+                  !(var.storage() == Alloc.ALIAS && varInit))) {
             insertIncrBefore(block, stmtIt, var, incr, rcType);
           } else {
             insertIncrAfter(block, stmtIt, var, incr, rcType);
@@ -167,7 +177,7 @@ public class RCPlacer {
     }
   
     // Clear out all increments
-    increments.resetAll();
+    increments.resetAll(RCDir.INCR);
   }
 
   /**

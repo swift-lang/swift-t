@@ -274,10 +274,14 @@ public class RCTracker {
   }
   
   public void resetAll() {
+    for (RCDir dir: RCDir.values()) {
+      resetAll(dir);
+    }
+  }
+  
+  public void resetAll(RCDir dir) {
     for (RefCountType rcType: RefcountPass.RC_TYPES) {
-      for (RCDir dir: RCDir.values()) {
-        getCounters(rcType, dir).resetAll();
-      }
+      getCounters(rcType, dir).resetAll();
     }
   }
 

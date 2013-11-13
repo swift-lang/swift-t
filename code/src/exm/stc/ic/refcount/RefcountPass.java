@@ -298,15 +298,13 @@ public class RefcountPass implements OptimizerPass {
     ListIterator<Statement> stmtIt = block.statementIterator();
     while (stmtIt.hasNext()) {
       Statement stmt = stmtIt.next();
-      Instruction inst;
       switch (stmt.type()) {
         case INSTRUCTION:
-          inst = stmt.instruction();
+          Instruction inst = stmt.instruction();
           updateCountsInstruction(inst, increments);
           increments.updateForInstruction(inst);
           break;
         case CONDITIONAL:
-          inst = null;
           updateIncrementsPassIntoCont(stmt.conditional(), increments);
           break;
         default:
@@ -314,7 +312,7 @@ public class RefcountPass implements OptimizerPass {
       }
 
       if (!RCUtil.cancelEnabled()) {
-        placer.dumpIncrements(inst, block, stmtIt, increments);
+        placer.dumpIncrements(stmt, block, stmtIt, increments);
       }
     }
     for (Continuation cont: block.getContinuations()) {
@@ -336,6 +334,7 @@ public class RefcountPass implements OptimizerPass {
    */
   private void countBlockDecrements(Function fn, Block block,
       RCTracker increments) {
+
     // If this is main block of function, add passed in
     if (block.getType() == BlockType.MAIN_BLOCK) {
       assert (block == fn.mainBlock());
@@ -371,24 +370,23 @@ public class RefcountPass implements OptimizerPass {
       }
     }
 
-    if (RCUtil.cancelEnabled()) {
-      ListIterator<CleanupAction> caIt = block.cleanupIterator();
-      while (caIt.hasNext()) {
-        CleanupAction ca = caIt.next();
-        Instruction action = ca.action();
-        if (RefCountOp.isRefcountOp(action.op) &&
-            RefCountOp.isDecrement(action.op)) {
-          Var decrVar = RefCountOp.getRCTarget(action);
-          Arg amount = RefCountOp.getRCAmount(action);
-          if (amount.isIntVal()) {
-            // Remove instructions where counts is integer value
-            RefCountType rcType = RefCountOp.getRCType(action.op);
-            increments.decr(decrVar, rcType, amount.getIntLit());
-            caIt.remove();
-          }
+    ListIterator<CleanupAction> caIt = block.cleanupIterator();
+    while (caIt.hasNext()) {
+      CleanupAction ca = caIt.next();
+      Instruction action = ca.action();
+      if (RefCountOp.isRefcountOp(action.op) &&
+          RefCountOp.isDecrement(action.op)) {
+        Var decrVar = RefCountOp.getRCTarget(action);
+        Arg amount = RefCountOp.getRCAmount(action);
+        if (amount.isIntVal()) {
+          // Remove instructions where counts is integer value
+          RefCountType rcType = RefCountOp.getRCType(action.op);
+          increments.decr(decrVar, rcType, amount.getIntLit());
+          caIt.remove();
         }
       }
     }
+
     if (!RCUtil.cancelEnabled()) {
       placer.dumpDecrements(block, increments);
     }
@@ -862,7 +860,6 @@ public class RefcountPass implements OptimizerPass {
     }
 
     for (PassedVar passedIn: cont.getAllPassedVars()) {
-      logger.trace(cont.getType() + ": DECR passedIn: " + passedIn.var.name());
       if (!passedIn.writeOnly && RefCounting.hasReadRefCount(passedIn.var)) {
         increments.readDecr(passedIn.var, amount);
         alreadyAdded.add(passedIn.var);

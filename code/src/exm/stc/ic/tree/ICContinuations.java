@@ -424,6 +424,15 @@ public class ICContinuations {
       this.recursive = recursive;
       this.explicit = explicit;
     }
+    
+    public String toString() {
+      String out = var.name();
+      if (recursive)
+        out += " RECURSIVE";
+      if (explicit)
+        out += " EXPLICIT";
+      return out;
+    }
   }
   
   public static abstract class AsyncContinuation extends Continuation {
