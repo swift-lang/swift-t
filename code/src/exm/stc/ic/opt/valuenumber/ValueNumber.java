@@ -29,6 +29,8 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Settings;
+import exm.stc.common.exceptions.InvalidOptionException;
+import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
@@ -103,9 +105,20 @@ public class ValueNumber implements OptimizerPass {
    * that future passes won't try reordering.
    */
   private boolean reorderingAllowed;
+  
+  /**
+   * True if we should try to infer which variables are closed/finalized
+   */
+  private boolean finalizedVarEnabled;
 
   public ValueNumber(boolean reorderingAllowed) {
     this.reorderingAllowed = reorderingAllowed;
+
+    try {
+      finalizedVarEnabled = Settings.getBoolean(Settings.OPT_FINALIZED_VAR);
+    } catch (InvalidOptionException e) {
+      throw new STCRuntimeError(e.getMessage());
+    }
   }
 
   @Override
@@ -115,7 +128,7 @@ public class ValueNumber implements OptimizerPass {
 
   @Override
   public String getConfigEnabledKey() {
-    return Settings.OPT_FORWARD_DATAFLOW;
+    return Settings.OPT_VALUE_NUMBER;
   }
 
   @Override
@@ -161,8 +174,10 @@ public class ValueNumber implements OptimizerPass {
       }
     }
     
-    for (WaitVar wv : f.blockingInputs()) {
-      congruent.markClosed(wv.var, 0, false);
+    if (finalizedVarEnabled) {
+      for (WaitVar wv : f.blockingInputs()) {
+        congruent.markClosed(wv.var, 0, false);
+      }
     }
     return congruent;
   }
@@ -373,13 +388,16 @@ public class ValueNumber implements OptimizerPass {
      */
     updateCongruent(logger, prog.constants(), f, inst, stmtIndex, state);
 
-    updateTransitiveDeps(prog, inst, state);
-
-    for (Var out: inst.getClosedOutputs()) {
-      if (logger.isTraceEnabled()) {
-        logger.trace("Output " + out.name() + " is closed");
+    
+    if (finalizedVarEnabled) {
+      updateTransitiveDeps(prog, inst, state);
+  
+      for (Var out: inst.getClosedOutputs()) {
+        if (logger.isTraceEnabled()) {
+          logger.trace("Output " + out.name() + " is closed");
+        }
+        state.markClosed(out, stmtIndex, false);
       }
-      state.markClosed(out, stmtIndex, false);
     }
   }
 
@@ -390,7 +408,10 @@ public class ValueNumber implements OptimizerPass {
     logger.trace("Recursing on continuation " + cont.getType());
 
     // additional variables may be close once we're inside continuation
-    List<BlockingVar> contClosedVars = cont.blockingVars(true);
+    List<BlockingVar> contClosedVars = null;
+    if (finalizedVarEnabled) {
+      contClosedVars = cont.blockingVars(true);
+    }
 
     // For conditionals, find variables closed on all branches
     boolean unifyBranches = cont.isExhaustiveSyncConditional();
@@ -533,8 +554,16 @@ public class ValueNumber implements OptimizerPass {
     }
 
     // Block state will reflect closed vars as of end of block
-    Set<Var> closedVars = blockState.getClosed(origStmtCount);
-    Set<Var> recClosedVars = blockState.getRecursivelyClosed(origStmtCount);
+    Set<Var> closedVars; 
+    Set<Var> recClosedVars;
+    
+    if (finalizedVarEnabled) {
+      recClosedVars = blockState.getRecursivelyClosed(origStmtCount);
+      closedVars = blockState.getClosed(origStmtCount);
+    } else {
+      recClosedVars = Collections.emptySet();
+      closedVars = Collections.emptySet();
+    }
     
     ListIterator<Continuation> contIt = block.continuationIterator();
     while (contIt.hasNext()) {
@@ -602,6 +631,7 @@ public class ValueNumber implements OptimizerPass {
   
   private void updateTransitiveDeps(Program prog, Instruction inst,
       Congruences state) {
+    
     /*
      * Track transitive dependencies of variables. Future passes depend on
      * explicit dependencies and may not correctly handling transitive deps.
@@ -679,9 +709,13 @@ public class ValueNumber implements OptimizerPass {
    *          instruction
    * @return
    */
-  private static boolean switchToImmediate(Logger logger, Function fn,
+  private boolean switchToImmediate(Logger logger, Function fn,
       ExecContext execCx, Block block, Congruences state,
       Instruction inst, ListIterator<Statement> stmts, int stmtIndex) {
+    if (!finalizedVarEnabled) {
+      return false;
+    }
+    
     // First see if we can replace some futures with values
     MakeImmRequest req = inst.canMakeImmediate(state.getClosed(stmtIndex), false);
 

@@ -50,7 +50,8 @@ public class Settings
   public static final String OPT_SHARED_CONSTANTS = "stc.opt.shared-constants";
   public static final String OPT_FLATTEN_NESTED = "stc.opt.flatten-nested";
   public static final String OPT_DEAD_CODE_ELIM = "stc.opt.dead-code-elim";
-  public static final String OPT_FORWARD_DATAFLOW = "stc.opt.forward-dataflow";
+  public static final String OPT_VALUE_NUMBER = "stc.opt.value-number";
+  public static final String OPT_FINALIZED_VAR = "stc.opt.finalized-var";
   public static final String OPT_ALGEBRA = "stc.opt.algebra";
   public static final String OPT_EXPAND_DATAFLOW_OPS = "stc.opt.expand-dataflow-ops";
   public static final String OPT_WAIT_COALESCE = "stc.opt.wait-coalesce";
@@ -156,7 +157,8 @@ public class Settings
     defaults.setProperty(OPT_EXPAND_LOOP_THRESHOLD_INSTS, "256");
     defaults.setProperty(OPT_UNROLL_LOOP_THRESHOLD_INSTS, "192");
     defaults.setProperty(OPT_DISABLE_ASSERTS, "false");
-    defaults.setProperty(OPT_FORWARD_DATAFLOW, "true");
+    defaults.setProperty(OPT_VALUE_NUMBER, "true");
+    defaults.setProperty(OPT_FINALIZED_VAR, "true");
     defaults.setProperty(OPT_ALGEBRA, "false");
     defaults.setProperty(OPT_EXPAND_DATAFLOW_OPS, "true");
     defaults.setProperty(OPT_WAIT_COALESCE, "true");
@@ -290,7 +292,8 @@ public class Settings
     getBoolean(OPT_CONSTANT_FOLD);
     getBoolean(OPT_DEAD_CODE_ELIM);
     getBoolean(OPT_DISABLE_ASSERTS);
-    getBoolean(OPT_FORWARD_DATAFLOW);
+    getBoolean(OPT_VALUE_NUMBER);
+    getBoolean(OPT_FINALIZED_VAR);
     getBoolean(OPT_ALGEBRA);
     getBoolean(OPT_EXPAND_DATAFLOW_OPS);
     getBoolean(OPT_WAIT_COALESCE);

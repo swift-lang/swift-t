@@ -49,16 +49,19 @@ COMPILER OPTION NAMES
 
 Optimization passes:
 -------------------
-constant-fold: propagate constants and do compile-time evaluation of
-      expressions
 dead-code-elim: eliminate unused variables, instructions and branches
       (this must be enabled for most other passes to be useful)
-shared-constants: lift all constants into shared global constant region
-      and share instances of same value
 flatten-nested: flatten nested blocks
-forward-dataflow: forward dataflow analysis to eliminate common
+value-number: value numbering analysis to eliminate common
       subexpressions, optimize array lookups, eliminate redundant
-      loads and stores, etc
+      loads and stores, etc.  value-number has several further
+      extensions that can be enabled
+finalized-var: extension to value-number that detects finalized
+      variables and simplified instructions/statements accordingly
+constant-fold: extension to value-number that propagates constants
+        and does compile-time evaluation of expressions
+shared-constants: extension to value-number that lifts constants
+     into shared global constant region for reuse
 unroll-loops: unroll loops with @unroll annotation
 expand-loops: expand small loops with fixed bounds
 full-unroll: aggressively unroll loops based on code size heuristic
