@@ -49,15 +49,16 @@ int main(int argc, char *argv[])
   rc = ADLB_Init(num_servers, 1, type_vect, &am_server, MPI_COMM_WORLD, &app_comm);
   if ( !am_server ) /* application process */
   {
-    printf("[%i] I AM SERVER!", my_world_rank);
+    printf("[%i] I AM NOT SERVER!\n", my_world_rank);
     MPI_Comm_rank( app_comm, &my_app_rank );
   }
 
-  rc = MPI_Barrier( MPI_COMM_WORLD );
+  //rc = MPI_Barrier( MPI_COMM_WORLD );
   start_time = MPI_Wtime();
 
   if ( am_server )
   {
+    printf("[%i] I AM SERVER!\n", my_world_rank);
     ADLB_Server(3000000);
   }
   else

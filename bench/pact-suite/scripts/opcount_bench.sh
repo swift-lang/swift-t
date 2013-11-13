@@ -33,8 +33,8 @@ out=$TMPDIR/$benchname.out
 ic=$TMPDIR/$benchname.ic
 
 STC_FLAGS=
-if [[ ! -z "$REFCOUNT" && "$REFCOUNT" -ne 0 ]]; then
-  STC_FLAGS+=-Trefcounting
+if [[ ! -z "$NO_REFCOUNT" && "$NO_REFCOUNT" -ne 0 ]]; then
+  STC_FLAGS+=-trefcounting
 fi
 if [[ $benchprefix == annealing-exm ]]; then
   STC_FLAGS+=" -I /home/tga/ExM/scicolsim.git/src"
@@ -74,19 +74,39 @@ if [[ $mode == TIME ]]; then
   export ADLB_PRINT_TIME=true
   time turbine -n$PROCS $tcl "$@" &> $out
   rc=$?
-  grep 'ADLB Total Elapsed Time' $out > $time
-  cat $time
+  if [[ $rc == 0 ]]
+  then
+    grep 'ADLB Total Elapsed Time' $out > $time
+    cat $time
+  else
+    echo "Error: return code $rc"
+    exit $rc
+  fi
 elif [[ $mode == OPCOUNT ]]; then
+  export DEBUG=0
+  export TURBINE_LOG=0
+  export TURBINE_DEBUG=0
+  export ADLB_DEBUG=0
   export ADLB_PRINT_TIME=true
   export ADLB_PERF_COUNTERS=true
-  time turbine -n$PROCS $tcl "$@" &> $out
   time turbine -n$PROCS $tcl "$@" &> $out 
-  $scriptdir/opcounts.py < $out > $counts
   rc=$?
-  cat $counts
+  if [[ $rc == 0 ]]
+  then
+  $scriptdir/opcounts.py < $out > $counts
+    cat $counts
+  else
+    echo "Error: return code $rc"
+    exit $rc
+  fi
 else
   time turbine -n$PROCS $tcl "$@"
   rc=$?
+  if [[ $rc != 0 ]]
+  then
+    echo "Error: return code $rc"
+    exit $rc
+  fi
 fi
 
 if [ "$?" -ne 0 ]; then
