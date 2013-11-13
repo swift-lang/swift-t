@@ -510,7 +510,7 @@ class Turbine {
   }
    
   public static SetVariable structRefGet(String target, Value variable) {
-    return fileRefDecrGet(target, variable, LiteralInt.ZERO);
+    return structRefDecrGet(target, variable, LiteralInt.ZERO);
   }
     
   public static SetVariable structRefDecrGet(String target, Value variable,
