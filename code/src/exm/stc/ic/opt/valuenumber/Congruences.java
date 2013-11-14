@@ -509,11 +509,25 @@ public class Congruences implements AliasFinder {
   }
 
   public void markClosed(Var var, int stmtIndex, boolean recursive) {
+    markClosed(var, false, stmtIndex, recursive);
+  }
+  
+  public void markClosedBlockStart(Var var, boolean recursive) {
+    markClosed(var, true, -1, recursive);
+  }
+  
+  private void markClosed(Var var, boolean blockStart, int stmtIndex, boolean recursive) {
     if (!trackClosed(var)) {
       // Don't bother tracking this info: not actually closed
       return;
     }
-    track.close(getCanonicalAlias(var.asArg()), stmtIndex, recursive);
+
+    Var canonical = getCanonicalAlias(var.asArg());
+    if (blockStart) {
+      track.closeBlockStart(canonical, recursive);
+    } else {
+      track.close(canonical, stmtIndex, recursive);
+    }
   }
   
   /**
@@ -550,6 +564,13 @@ public class Congruences implements AliasFinder {
     return isClosed(varArg, stmtIndex, true);
   }
 
+  /**
+   * Check if variable is closed before a given statement starts executing
+   * @param varArg
+   * @param stmtIndex
+   * @param recursive
+   * @return
+   */
   private boolean isClosed(Arg varArg, int stmtIndex, boolean recursive) {
     // Find canonical var for alias, and check if that is closed.
     if (varArg.isConstant() || !trackClosed(varArg.getVar())) {

@@ -107,6 +107,17 @@ public class ClosedVarTracker {
     }
   }
     
+  
+  /**
+   * Check if variable was closed before a given statement index
+   * Note that this is not inclusive: if the variable is closed by
+   * the statement, this isn't a match.
+   * @param var
+   * @param recursive
+   * @param stmtIndex
+   * @param aliases
+   * @return
+   */
   public ClosedEntry getClosedEntry(Var var, boolean recursive, int stmtIndex,
       AliasFinder aliases) {
     if (logger.isTraceEnabled()) {
@@ -204,7 +215,7 @@ public class ClosedVarTracker {
               return ce;
             } else {
               // Record in this scope for future lookups
-              ClosedEntry origScopeEntry = new ClosedEntry(0, ce.recursive);
+              ClosedEntry origScopeEntry = ClosedEntry.blockStart(ce.recursive);
               close(var, origScopeEntry);
               return origScopeEntry;
             }
@@ -219,12 +230,21 @@ public class ClosedVarTracker {
   }
 
   /**
-   * Called when we enter a construct that blocked on v
+   * Called to mark that var is closed
    * 
    * @param var
    */
   public void close(Var var, int stmtIndex, boolean recursive) {
     close(var, new ClosedEntry(stmtIndex, recursive));
+  }
+  
+  /**
+   * If closed from before the first statement of block executes
+   * @param var
+   * @param recursive
+   */
+  public void closeBlockStart(Var var, boolean recursive) {
+    close(var, ClosedEntry.blockStart(recursive));
   }
 
   public void close(Var var, ClosedEntry ce) {
@@ -290,18 +310,29 @@ public class ClosedVarTracker {
       height++;
     }
   }
-  
+ 
   public static class ClosedEntry {
     private ClosedEntry(int stmtIndex, boolean recursive) {
       this.stmtIndex = stmtIndex;
       this.recursive = recursive;
     }
+    
+    /** stmtIndex: the variable is closed atall statements after this index */
     final int stmtIndex;
     final boolean recursive;
     
-    
+    /**
+     * Create one showing that it is closed at the block start
+     * @param recursive
+     * @return
+     */
+    private static ClosedEntry blockStart(boolean recursive) {
+      return new ClosedEntry(-1, recursive);
+    }
 
     public boolean matches(boolean recursive, int stmtIndex) {
+      // Using -1 for block start guarantees that it's initialized
+      // for all statements in block
       return this.stmtIndex < stmtIndex &&
                   (!recursive || this.recursive);
     }

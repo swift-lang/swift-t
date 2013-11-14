@@ -176,7 +176,7 @@ public class ValueNumber implements OptimizerPass {
     
     if (finalizedVarEnabled) {
       for (WaitVar wv : f.blockingInputs()) {
-        congruent.markClosed(wv.var, 0, false);
+        congruent.markClosedBlockStart(wv.var, false);
       }
     }
     return congruent;
@@ -422,9 +422,8 @@ public class ValueNumber implements OptimizerPass {
       Congruences blockState = state.enterContBlock(
                     cont.inheritsParentVars(), stmtIndex);
       if (contClosedVars != null) {
-        for (BlockingVar bv : contClosedVars) {
-          int contStmtIndex = 0; // No statements in cont scope
-          blockState.markClosed(bv.var, contStmtIndex, bv.recursive);
+        for (BlockingVar bv: contClosedVars) {
+          blockState.markClosedBlockStart(bv.var, bv.recursive);
         }
       }
       findCongruencesRec(prog, fn, contBlock, cont.childContext(execCx),
@@ -533,8 +532,8 @@ public class ValueNumber implements OptimizerPass {
     assert(blockState != null);
     if (logger.isTraceEnabled()) {
       logger.trace("=======================================");
-      logger.trace("Inlining on block " + System.identityHashCode(block)
-                   + ": " + block.getType());
+      logger.trace("Inlining statements on block " + 
+                    System.identityHashCode(block) + ": " + block.getType());
       blockState.printTraceInfo(logger, consts);
     }
     
@@ -565,11 +564,22 @@ public class ValueNumber implements OptimizerPass {
       closedVars = Collections.emptySet();
     }
     
+    if (logger.isTraceEnabled()) {
+      logger.trace("=======================================");
+      logger.trace("Inlining continuations on block " + 
+                    System.identityHashCode(block) + ": " + block.getType());
+      blockState.printTraceInfo(logger, consts);
+    }
     ListIterator<Continuation> contIt = block.continuationIterator();
     while (contIt.hasNext()) {
       Continuation cont = contIt.next();
       // First recurse
       inlinePassRecurse(consts, cont, cong);
+      
+      if (logger.isTraceEnabled()) {
+        logger.trace("Return to block " +  System.identityHashCode(block) + 
+                    " checking " + cont.getType());
+      }
       // Then try to inline
       if (cont.isNoop()) {
         logger.trace("Removed noop continuation " + cont.getType());
