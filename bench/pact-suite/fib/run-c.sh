@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-if [[ ! $# -eq 3 ]]; then
+if [[ ! $# -eq 2 ]]; then
   echo "usage $0 <n> <sleeptime>"
   exit 1
 fi
