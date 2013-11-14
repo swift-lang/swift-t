@@ -64,6 +64,7 @@ int main(int argc, char *argv[])
   else
   {                                 
     if (argc != 4) {
+      printf("Got %i args\n", argc -1);
       printf("usage: %s <N> <M> <sleeptime> \n", argv[0]);
       ADLB_Fail(-1);
     }
