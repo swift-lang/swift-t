@@ -959,35 +959,30 @@ Turbine_Debug_On_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(1);
-  bool enabled;
-#ifdef ENABLE_DEBUG_TCL_TURBINE
-  enabled = 1;
-#else
-  enabled = 0;
-#endif
+  bool enabled = turbine_debug_enabled;
   Tcl_SetObjResult(interp, Tcl_NewIntObj(enabled));
   return TCL_OK;
 }
 
-#ifdef ENABLE_DEBUG_TCL_TURBINE
 static int
 Turbine_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
-  char* msg = Tcl_GetString(objv[1]);
-  DEBUG_TCL_TURBINE("%s", msg);
-  return TCL_OK;
+  // Only print if debug enabled.  Note that compiler
+  // will be able to eliminate dead code if debugging is disabled
+  // at compile time
+  if (turbine_debug_enabled)
+  {
+    char* msg = Tcl_GetString(objv[1]);
+    DEBUG_TCL_TURBINE("%s", msg);
+    return TCL_OK;
+  }
+  else
+  {
+    return TCL_OK;
+  }
 }
-#else // Debug output is disabled
-static int
-Turbine_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
-                  int objc, Tcl_Obj *const objv[])
-{
-  // This is a noop
-  return TCL_OK;
-}
-#endif
 
 /*
   Convert decimal string to int

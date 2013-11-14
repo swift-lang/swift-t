@@ -33,7 +33,7 @@
 #include "src/util/debug.h"
 
 static bool  initialized = false;
-static bool  enabled = true;
+bool  turbine_debug_enabled = true;
 static char* buffer = NULL;
 static size_t buffer_size;
 
@@ -53,7 +53,7 @@ turbine_debug_init()
   if (s != NULL)
     if (strcmp(s, "0") == 0)
     {
-      enabled = false;
+      turbine_debug_enabled = false;
       return;
     }
   buffer_size = (size_t)(32*KB);
@@ -83,7 +83,7 @@ __attribute__ ((format (printf, 2, 3)))
 void
 turbine_debug(const char* token, const char* format, ...)
 {
-  if (!enabled)
+  if (!turbine_debug_enabled)
     return;
   assert(initialized);
 
