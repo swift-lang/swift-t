@@ -12,6 +12,7 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.Settings;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
@@ -157,7 +158,8 @@ public class FunctionSignature implements OptimizerPass {
     }
     
     FunctionCall callNew = FunctionCall.createFunctionCall(newFunctionName,
-                            fn.getOutputList(), callInputs, fn.mode(), null);
+                            fn.getOutputList(), callInputs, fn.mode(),
+                            new TaskProps());
     main.addInstruction(callNew);
     return main;
   }

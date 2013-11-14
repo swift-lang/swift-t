@@ -538,12 +538,19 @@ public class ICTree {
     public Function(String name, List<Var> iList,
         List<Var> oList, TaskMode mode) {
       this(name, iList, Collections.<WaitVar>emptyList(), oList,
-           mode, new Block(BlockType.MAIN_BLOCK, null));
+           mode, new Block(BlockType.MAIN_BLOCK, null), true);
+    }
+    
+    public Function(String name, List<Var> iList,
+            List<WaitVar> blockingInputs,
+            List<Var> oList, TaskMode mode, Block mainBlock) {
+      this(name, iList, blockingInputs, oList, mode, mainBlock, false);
     }
       
-    public Function(String name, List<Var> iList,
+    private Function(String name, List<Var> iList,
         List<WaitVar> blockingInputs,
-        List<Var> oList, TaskMode mode, Block mainBlock) {
+        List<Var> oList, TaskMode mode, Block mainBlock,
+        boolean emptyBlock) {
       if (mainBlock.getType() != BlockType.MAIN_BLOCK) {
         throw new STCRuntimeError("Expected main block " +
         "for function to be tagged as such");
@@ -557,7 +564,7 @@ public class ICTree {
       this.blockingInputs = new ArrayList<WaitVar>(blockingInputs);
       this.usedVarNames = new HashSet<String>();
 
-      this.mainBlock.setParent(this, true); // Rebuild vars later
+      this.mainBlock.setParent(this, emptyBlock); // Rebuild vars later
       rebuildUsedVarNames();
     }
 
@@ -609,6 +616,7 @@ public class ICTree {
     public Block swapBlock(Block newBlock) {
       Block old = this.mainBlock;
       this.mainBlock = newBlock;
+      this.mainBlock.setParent(this, false);
       return old;
     }
 
@@ -916,7 +924,7 @@ public class ICTree {
       setParent(type, parent, null, newBlock);
     }
     
-    private void setParent(Function parent, boolean newBlock) {
+    public void setParent(Function parent, boolean newBlock) {
       setParent(BlockType.MAIN_BLOCK, null, parent, newBlock);
     }
 
