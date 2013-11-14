@@ -32,10 +32,10 @@ tcl=$TMPDIR/$benchname.tcl
 out=$TMPDIR/$benchname.out
 ic=$TMPDIR/$benchname.ic
 
-STC_FLAGS=
+STC_FLAGS=${STC_FLAGS} # Can be set in env
 if [[ ! -z "$NO_REFCOUNT" && "$NO_REFCOUNT" -ne 0 ]]; then
   echo "Disabling refcounting"
-  STC_FLAGS+="-trefcounting"
+  STC_FLAGS+=" -trefcounting"
 fi
 if [[ $benchprefix == annealing-exm ]]; then
   STC_FLAGS+=" -I $HOME/ExM/scicolsim.git/src"
