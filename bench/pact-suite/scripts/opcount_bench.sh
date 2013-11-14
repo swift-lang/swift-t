@@ -38,8 +38,8 @@ if [[ ! -z "$NO_REFCOUNT" && "$NO_REFCOUNT" -ne 0 ]]; then
   STC_FLAGS+="-trefcounting"
 fi
 if [[ $benchprefix == annealing-exm ]]; then
-  STC_FLAGS+=" -I /home/tga/ExM/scicolsim.git/src"
-  export TURBINE_USER_LIB="/home/tga/ExM/scicolsim.git/lib"
+  STC_FLAGS+=" -I $HOME/ExM/scicolsim.git/src"
+  export TURBINE_USER_LIB="$HOME/ExM/scicolsim.git/lib"
 fi
 stc -O$opt -C$ic $STC_FLAGS $swift $tcl
 rc=$?
@@ -59,7 +59,7 @@ if [[ ! -z "$PACT_TRIAL" ]] ; then
 fi
 
 if [[ ! -z "$CPU_PROF" ]] ; then
-  export LD_PRELOAD=/home/tga/ExM/inst/gperftools/lib/libprofiler.so
+  export LD_PRELOAD=$HOME/ExM/inst/gperftools/lib/libprofiler.so
   export CPUPROFILE=$benchname.prof$UNIQUIFIER
 fi
 
