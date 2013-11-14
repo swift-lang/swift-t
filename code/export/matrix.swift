@@ -23,11 +23,10 @@ vector_print(float x[], int rows)
 vector_print_integer(int x[], int rows)
 {
   int i;
-  void t;
   printf("vector rows: %i", rows) =>
     for (i = 0; i < rows; i = i+1)
   {
-    t = printf("vpi: row %i: %i", i, x[i]);
+    printf("vpi: row %i: %i", i, x[i]);
   };
   wait(i) { v = make_void(); }
 }
