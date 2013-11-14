@@ -58,6 +58,11 @@ if [[ ! -z "$PACT_TRIAL" ]] ; then
   UNIQUIFIER=.$PACT_TRIAL
 fi
 
+if [[ ! -z "$CPU_PROF" ]] ; then
+  export LD_PRELOAD=/home/tga/ExM/inst/gperftools/lib/libprofiler.so
+  export CPUPROFILE=$benchname.prof$UNIQUIFIER
+fi
+
 time=$benchname.time$UNIQUIFIER
 counts=$benchname.counts$UNIQUIFIER
 out=$benchname.out$UNIQUIFIER

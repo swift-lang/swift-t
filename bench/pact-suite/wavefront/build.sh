@@ -1,5 +1,5 @@
 #!/bin/bash
-INST=/home/tim/ExM/inst
+INST=/home/tga/ExM/inst
 LB=$INST/lb
 CUTILS=$INST/c-utils
 MPICH=$INST/mpich2
