@@ -198,6 +198,8 @@ public class ValueNumber implements OptimizerPass {
       return;
     }
 
+    logger.trace("liftWait() on " + f.getName());
+    
     Block main = f.mainBlock();
     List<WaitVar> blockingVariables;
     blockingVariables = findBlockingVariables(logger, program, f, main);
@@ -233,7 +235,7 @@ public class ValueNumber implements OptimizerPass {
      * needed to make progress
      */
 
-    if (ProgressOpcodes.blockProgress(block, Category.NON_PROGRESS)) {
+    if (!ProgressOpcodes.blockProgress(block, Category.NON_PROGRESS)) {
       // An instruction in block may make progress without any waits
       return null;
     }

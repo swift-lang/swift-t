@@ -554,9 +554,10 @@ public class ICTree {
       this.oListWriteOnly = new ArrayList<Var>();
       this.mode = mode;
       this.mainBlock = mainBlock;
-      this.mainBlock.setParent(this, true); // Rebuild vars later
       this.blockingInputs = new ArrayList<WaitVar>(blockingInputs);
       this.usedVarNames = new HashSet<String>();
+
+      this.mainBlock.setParent(this, true); // Rebuild vars later
       rebuildUsedVarNames();
     }
 

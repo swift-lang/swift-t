@@ -102,9 +102,8 @@ public class ProgressOpcodes {
   }
   
   /**
-   * block
    * @param rootBlock
-   * @return
+   * @return true if the block makes progress of the specified type
    */
   public static boolean blockProgress(Block rootBlock, Category type) {
     Deque<Block> stack = new ArrayDeque<Block>();

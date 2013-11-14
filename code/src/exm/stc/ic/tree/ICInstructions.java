@@ -1023,6 +1023,7 @@ public class ICInstructions {
       for (int i = 0; i < inputs.size(); i++) {
         this.closedInputs.add(false);
       }
+      assert(props != null);
       
       for(Var v: outputs) {
         assert(v != null);
