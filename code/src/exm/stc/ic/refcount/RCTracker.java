@@ -8,6 +8,9 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
+
+import exm.stc.common.Logging;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.Types;
@@ -260,7 +263,7 @@ public class RCTracker {
     getCounters(rcType, dir).reset(getCountKey(v));
   }
   
-  public void reset(RefCountType rcType, Var v) {
+  private void reset(RefCountType rcType, Var v) {
     for (RCDir dir: RCDir.values()) {
       getCounters(rcType, dir).reset(getCountKey(v));
     }
@@ -334,12 +337,18 @@ public class RCTracker {
     RCDir dir = RCDir.fromAmount(-amount);
     Counters<AliasKey> counters = getCounters(rcType, dir);
     
-    long oldCount = counters.add(key, amount) - amount;
+    long newCount = counters.add(key, amount);
+    long oldCount = newCount - amount;
+    Logger logger = Logging.getSTCLogger();
+    if (logger.isTraceEnabled()) {
+      logger.trace("Cancelled " + key + " " + rcType + " "
+                   + dir + " old: " + oldCount + " new: " + newCount);
+    }
     // Check we don't overshoot
     if (oldCount < 0) {
-      assert(oldCount + amount <= 0) : oldCount + " + " + amount;
+      assert(newCount <= 0) : oldCount + " + " + amount;
     } else {
-      assert(oldCount + amount >= 0) : oldCount + " + " + amount;
+      assert(newCount >= 0) : oldCount + " + " + amount;
     }
   }
 

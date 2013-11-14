@@ -506,7 +506,7 @@ public class RCPlacer {
     // Update main increments map
     for (Var v : successful) {
       assert(v != null);
-      tracker.reset(rcType, v);
+      tracker.reset(rcType, v, RCDir.DECR);
     }
   }
 
@@ -772,6 +772,12 @@ public class RCPlacer {
 
   private void addIncrementsAtTop(Block block, RCTracker increments,
       RefCountType rcType, Set<Var> parentAssignedAliasVars) {
+    if (logger.isTraceEnabled()) {
+      logger.trace("Leftover increments to add at top:");
+      logger.trace("==============================");
+      logger.trace(increments);
+    }
+    
     // Next try to just put at top of block
     Iterator<Entry<AliasKey, Long>> it =
         increments.rcIter(rcType, RCDir.INCR).iterator();
@@ -863,7 +869,7 @@ public class RCPlacer {
     if (incr > 0) {
       insertIncrAfter(block, stmtIt, out, incr, rcType);
     }
-    increments.reset(rcType, out);
+    increments.reset(rcType, out, RCDir.INCR);
   }
 
   /**
