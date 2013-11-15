@@ -559,8 +559,6 @@ AC_ARG_WITH(tcl-lib-dir,
     [
         USE_TCL_LIB_DIR=${withval}
         AC_MSG_RESULT([using Tcl lib dir: ${USE_TCL_LIB_DIR}])
-    ],
-    [
     ])
 
 if [[ ${TCL_VERSION} != 0 ]]
