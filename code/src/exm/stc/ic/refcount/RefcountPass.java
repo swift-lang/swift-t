@@ -154,9 +154,11 @@ public class RefcountPass implements OptimizerPass {
 
       recurseOnBlock(logger, f, block, increments, contInfo);
     }
-    // Do any additional work for continuation
+    
+
+    // Try to batch increments for foreach loop
     if (RCUtil.isForeachLoop(cont)) {
-      postProcessForeachLoop(cont);
+      postprocessForeach((AbstractForeachLoop)cont);
     }
   }
 
@@ -185,7 +187,7 @@ public class RefcountPass implements OptimizerPass {
 
     countBlockDecrements(fn, block, increments);
 
-    if (RCUtil.cancelEnabled()) {
+    if (RCUtil.mergeEnabled()) {
       // Second put saved refcounts back into IC
       placeRefcounts(logger, fn, block, increments,
           parentInfo.initAliasVars);
@@ -193,17 +195,16 @@ public class RefcountPass implements OptimizerPass {
 
     addTemporaryStructFields(block, increments, parentInfo);
   }
+  
 
   /**
    * Handle foreach loop as special case where we want to increment <# of
    * iterations> * <needed increments inside loop> before loop.
    * 
-   * This function will work out if it can pull out increments from foreach loop
-   * body
+   * If the batching optimization is enabled, this function will work out
+   * if it can pull out increments from foreach loop body
    */
-  private void postProcessForeachLoop(Continuation c) {
-    AbstractForeachLoop loop = (AbstractForeachLoop) c;
-
+  private void postprocessForeach(AbstractForeachLoop loop) {
     Counters<Var> readIncrs = new Counters<Var>();
     Counters<Var> writeIncrs = new Counters<Var>();
 
@@ -221,7 +222,25 @@ public class RefcountPass implements OptimizerPass {
         }
       }
     }
+    
+    if (RCUtil.batchEnabled()) {
+      // Optionally try to batch increments from body
+      removeIncrementsForeachBody(loop, readIncrs, writeIncrs);
+    }
 
+    for (Entry<Var, Long> read: readIncrs.entries()) {
+      loop.addStartIncrement(new RefCount(read.getKey(), RefCountType.READERS,
+          Arg.createIntLit(read.getValue())));
+    }
+
+    for (Entry<Var, Long> write: writeIncrs.entries()) {
+      loop.addStartIncrement(new RefCount(write.getKey(), RefCountType.WRITERS,
+          Arg.createIntLit(write.getValue())));
+    }
+  }
+
+  private void removeIncrementsForeachBody(AbstractForeachLoop loop,
+      Counters<Var> readIncrs, Counters<Var> writeIncrs) {
     // Now see if we can pull some increments out of top of block
     Block loopBody = loop.getLoopBody();
     ListIterator<Statement> it = loopBody.statementIterator();
@@ -249,17 +268,8 @@ public class RefcountPass implements OptimizerPass {
         it.remove();
       }
     }
-
-    for (Entry<Var, Long> read: readIncrs.entries()) {
-      loop.addStartIncrement(new RefCount(read.getKey(), RefCountType.READERS,
-          Arg.createIntLit(read.getValue())));
-    }
-
-    for (Entry<Var, Long> write: writeIncrs.entries()) {
-      loop.addStartIncrement(new RefCount(write.getKey(), RefCountType.WRITERS,
-          Arg.createIntLit(write.getValue())));
-    }
   }
+
 
   private void placeRefcounts(Logger logger, Function fn, Block block,
       RCTracker increments, Set<Var> parentAssignedAliasVars) {
@@ -277,11 +287,9 @@ public class RefcountPass implements OptimizerPass {
     
     reorderContinuations(logger, block);
 
-    if (RCUtil.cancelEnabled()) {
-      // Move any increment instructions up to this block
-      // if they can be combined with increments here
-      pullUpRefIncrements(block, increments);
-    }
+    // Move any increment instructions up to this block
+    // if they can be combined with increments here
+    pullUpRefIncrements(block, increments);
 
     placer.placeAll(logger, fn, block, increments, parentAssignedAliasVars);
   }
@@ -311,13 +319,13 @@ public class RefcountPass implements OptimizerPass {
           throw new STCRuntimeError("Unknown statement type " + stmt.type());
       }
 
-      if (!RCUtil.cancelEnabled()) {
+      if (!RCUtil.mergeEnabled()) {
         placer.dumpIncrements(stmt, block, stmtIt, increments);
       }
     }
     for (Continuation cont: block.getContinuations()) {
       updateIncrementsPassIntoCont(cont, increments);
-      if (!RCUtil.cancelEnabled()) {
+      if (!RCUtil.mergeEnabled()) {
         placer.dumpIncrements(null, block, block.statementEndIterator(),
             increments);
       }
@@ -387,7 +395,7 @@ public class RefcountPass implements OptimizerPass {
       }
     }
 
-    if (!RCUtil.cancelEnabled()) {
+    if (!RCUtil.mergeEnabled()) {
       placer.dumpDecrements(block, increments);
     }
   }
@@ -578,6 +586,10 @@ public class RefcountPass implements OptimizerPass {
    * @param rootBlock if this is the root block we're pulling increments into
    */
   private void pullUpRefIncrements(Block rootBlock, RCTracker increment) {
+    if (!RCUtil.hoistEnabled()) {
+      return;
+    }
+    
     for (Statement stmt: rootBlock.getStatements()) {
       if (stmt.type() == StatementType.CONDITIONAL) {
         pullUpRefIncrements(stmt.conditional(), increment);

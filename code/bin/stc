@@ -26,7 +26,9 @@ COMPILER_OPTS=()
 O0_OPTS=()
 O1_OPTS=("constant-fold" "dead-code-elim" "value-number" "finalized-var"
          "flatten-nested" "shared-constants" "unroll-loops"
-         "controlflow-fusion" "cancel-refcounts" "piggyback-refcounts")
+         "controlflow-fusion"
+         "merge-refcounts" "cancel-refcounts" "piggyback-refcounts"
+         "batch-refcounts" "hoist-refcounts")
 O2_OPTS=("expand-dataflow-ops" "wait-coalesce" "hoisting" "expand-loops"
          "function-signature" "array-build")
 O3_OPTS=("pipeline" "function-inline" "reorder-insts" "algebra" "full-unroll")
@@ -104,13 +106,22 @@ function get_compiler_opt_name() {
         full-unroll) echo "stc.opt.full-unroll"
                     return 0
                     ;;
+        array-build) echo "stc.opt.array-build"
+                    return 0
+                    ;;
+        merge-refcounts) echo "stc.opt.merge-refcounts"
+                    return 0
+                    ;;
         cancel-refcounts) echo "stc.opt.cancel-refcounts"
+                    return 0
+                    ;;
+        batch-refcounts) echo "stc.opt.batch-refcounts"
                     return 0
                     ;;
         piggyback-refcounts) echo "stc.opt.piggyback-refcounts"
                     return 0
                     ;;
-        array-build) echo "stc.opt.array-build"
+        hoist-refcounts) echo "stc.opt.hoist-refcounts"
                     return 0
                     ;;
         array-switcheroo) echo "stc.array-ref-switcheroo"

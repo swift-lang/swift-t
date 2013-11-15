@@ -88,18 +88,16 @@ public class RCPlacer {
    */
   private void placeDecrements(Logger logger, Function fn, Block block,
       RCTracker increments, RefCountType type) {
-    if (RCUtil.piggybackEnabled()) {
-      // First try to piggyback on variable declarations
-      piggybackDecrementsOnDeclarations(logger, fn, block, increments, type);
-  
-      // Then see if we can do the decrement on top of another operation
-      piggybackDecrementsOnInstructions(logger, fn, block, increments, type);
-    }
+    // First try to piggyback on variable declarations
+    piggybackDecrementsOnDeclarations(logger, fn, block, increments, type);
+
+    // Then see if we can do the decrement on top of another operation
+    piggybackDecrementsOnInstructions(logger, fn, block, increments, type);
   
     if (block.getType() != BlockType.MAIN_BLOCK
         && RCUtil.isForeachLoop(block.getParentCont())) {
       // Add remaining decrements to foreach loop where they can be batched
-      addDecrementsToForeachLoop(block, increments, type);
+      batchDecrementsForeach(block, increments, type);
     }
   
     // Add remaining decrements as cleanups at end of block
@@ -118,10 +116,9 @@ public class RCPlacer {
    */
   private void placeIncrements(Block block, RCTracker increments,
       RefCountType rcType, Set<Var> parentAssignedAliasVars) {
-    if (RCUtil.piggybackEnabled()) {
-      // First try to piggy-back onto var declarations
-      piggybackIncrementsOnDeclarations(block, increments, rcType);
-    }
+    // First try to piggy-back onto var declarations
+    piggybackIncrementsOnDeclarations(block, increments, rcType);
+
     // If we can't piggyback, put them at top of block before any tasks are
     // spawned
     addIncrementsAtTop(block, increments, rcType, parentAssignedAliasVars);
@@ -193,6 +190,10 @@ public class RCPlacer {
    */
   private void cancelIncrements(Logger logger, Function fn, Block block,
       RCTracker tracker, RefCountType rcType) {
+    if (!RCUtil.cancelEnabled()) {
+      return;
+    }
+
     // Set of keys that we might be able to cancel
     Set<AliasKey> cancelCandidates = new HashSet<AliasKey>();
     
@@ -396,6 +397,10 @@ public class RCPlacer {
    */
   private void piggybackDecrementsOnDeclarations(Logger logger, Function fn,
       Block block, final RCTracker tracker, final RefCountType rcType) {
+    if (!RCUtil.piggybackEnabled()) {
+      return;
+    }
+    
     final Set<AliasKey> immDecrCandidates = Sets.createSet(
                         block.getVariables().size());
     for (Var blockVar : block.getVariables()) {
@@ -435,6 +440,10 @@ public class RCPlacer {
 
   private void piggybackDecrementsOnInstructions(Logger logger, Function fn,
       Block block, final RCTracker tracker, final RefCountType rcType) {
+    if (!RCUtil.piggybackEnabled()) {
+      return;
+    }
+    
     // Initially all decrements are candidates for piggybacking
     final Counters<Var> candidates =
         tracker.getVarCandidates(block, rcType, RCDir.DECR);
@@ -672,7 +681,7 @@ public class RCPlacer {
       varSet.remove(var);
     }
   }
-
+    
   /**
    * Foreach loops have different method for handling decrements: we add them to
    * the parent continuation
@@ -681,8 +690,12 @@ public class RCPlacer {
    * @param increments
    * @param type
    */
-  private void addDecrementsToForeachLoop(Block block,
+  private void batchDecrementsForeach(Block block,
       RCTracker increments, RefCountType type) {
+    if (!RCUtil.batchEnabled()) {
+      return;
+    }
+    
     assert (block.getType() != BlockType.MAIN_BLOCK);
     Continuation parent = block.getParentCont();
     AbstractForeachLoop loop = (AbstractForeachLoop) parent;
@@ -829,7 +842,7 @@ public class RCPlacer {
    * @param cond
    * @return
    */
-  public Set<Var> findConditionalInitAliases(Conditional cond) {
+  private Set<Var> findConditionalInitAliases(Conditional cond) {
     Set<Var> initAllBranches; 
     if (cond.isExhaustiveSyncConditional()) {
       List<Set<Var>> branchesInit = new ArrayList<Set<Var>>();
@@ -861,7 +874,7 @@ public class RCPlacer {
     return result;
   }
 
-  public void addIncrForVar(Block block, RCTracker increments,
+  private void addIncrForVar(Block block, RCTracker increments,
       RefCountType rcType, ListIterator<Statement> stmtIt, Var out) {
     // Alias var must be set at this point, insert refcount instruction
     long incr = increments.getCount(rcType, out, RCDir.INCR);
@@ -883,6 +896,10 @@ public class RCPlacer {
    */
   private void piggybackIncrementsOnDeclarations(Block block,
                 RCTracker increments, RefCountType rcType) {
+    if (!RCUtil.piggybackEnabled()) {
+      return;
+    }
+    
     for (Var blockVar : block.getVariables()) {
       if (blockVar.storage() != Alloc.ALIAS) {
         long incr = increments.getCount(rcType, blockVar, RCDir.INCR);

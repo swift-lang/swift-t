@@ -38,6 +38,14 @@ public class RCUtil {
         && !cont.constructDefinedVars().contains(var);
   }
   
+  static boolean mergeEnabled() {
+    try {
+      return Settings.getBoolean(Settings.OPT_MERGE_REFCOUNTS);
+    } catch (InvalidOptionException e) {
+      throw new STCRuntimeError(e.getMessage());
+    }
+  }
+  
   static boolean cancelEnabled() {
     try {
       return Settings.getBoolean(Settings.OPT_CANCEL_REFCOUNTS);
@@ -45,7 +53,7 @@ public class RCUtil {
       throw new STCRuntimeError(e.getMessage());
     }
   }
-
+  
   static boolean piggybackEnabled() {
     try {
       return Settings.getBoolean(Settings.OPT_PIGGYBACK_REFCOUNTS);
@@ -53,7 +61,22 @@ public class RCUtil {
       throw new STCRuntimeError(e.getMessage());
     }
   }
-  
+
+  static boolean batchEnabled() {
+    try {
+      return Settings.getBoolean(Settings.OPT_BATCH_REFCOUNTS);
+    } catch (InvalidOptionException e) {
+      throw new STCRuntimeError(e.getMessage());
+    }
+  }
+
+  static boolean hoistEnabled() {
+    try {
+      return Settings.getBoolean(Settings.OPT_HOIST_REFCOUNTS);
+    } catch (InvalidOptionException e) {
+      throw new STCRuntimeError(e.getMessage());
+    }
+  }
 
   /**
    * Check reference counts are all set to zero

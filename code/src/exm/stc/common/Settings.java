@@ -85,10 +85,15 @@ public class Settings
                             "stc.opt.unroll-loop-threshold-insts";
   public static final String OPT_HOIST = "stc.opt.hoist";
   public static final String OPT_REORDER_INSTS = "stc.opt.reorder-insts";
+  public static final String OPT_ARRAY_BUILD = "stc.opt.array-build";
+  
+  public static final String OPT_MERGE_REFCOUNTS = "stc.opt.merge-refcounts";
   public static final String OPT_CANCEL_REFCOUNTS = "stc.opt.cancel-refcounts";
   public static final String OPT_PIGGYBACK_REFCOUNTS = "stc.opt.piggyback-refcounts";
+  public static final String OPT_BATCH_REFCOUNTS = "stc.opt.batch-refcounts";
+  public static final String OPT_HOIST_REFCOUNTS = "stc.opt.hoist-refcounts";
+  
   public static final String OPT_MAX_ITERATIONS = "stc.opt.max-iterations";
-  public static final String OPT_ARRAY_BUILD = "stc.opt.array-build";
   public static final String TURBINE_NO_STACK = "stc.codegen.no-stack";
   public static final String TURBINE_NO_STACK_VARS = "stc.codegen.no-stack-vars";
 
@@ -169,9 +174,12 @@ public class Settings
     defaults.setProperty(OPT_FUNCTION_INLINE_THRESHOLD, "500");
     defaults.setProperty(OPT_HOIST, "true");
     defaults.setProperty(OPT_REORDER_INSTS, "false");
+    defaults.setProperty(OPT_ARRAY_BUILD, "true");
+    defaults.setProperty(OPT_MERGE_REFCOUNTS, "true");
     defaults.setProperty(OPT_CANCEL_REFCOUNTS, "true");
     defaults.setProperty(OPT_PIGGYBACK_REFCOUNTS, "true");
-    defaults.setProperty(OPT_ARRAY_BUILD, "true");
+    defaults.setProperty(OPT_BATCH_REFCOUNTS, "true");
+    defaults.setProperty(OPT_HOIST_REFCOUNTS, "true");
     defaults.setProperty(OPT_MAX_ITERATIONS, "10");
     defaults.setProperty(ENABLE_REFCOUNTING, "true");
     defaults.setProperty(ENABLE_CHECKPOINTING, "true");
@@ -301,8 +309,6 @@ public class Settings
     getBoolean(OPT_CONTROLFLOW_FUSION);
     getBoolean(OPT_FUNCTION_INLINE);
     getBoolean(OPT_FUNCTION_SIGNATURE);
-    getBoolean(OPT_CANCEL_REFCOUNTS);
-    getBoolean(OPT_PIGGYBACK_REFCOUNTS);
     getBoolean(OPT_HOIST);
     getBoolean(OPT_REORDER_INSTS);
     getLong(OPT_FUNCTION_INLINE_THRESHOLD);
@@ -314,6 +320,11 @@ public class Settings
     getLong(OPT_UNROLL_LOOP_THRESHOLD_ITERS);
     getLong(OPT_EXPAND_LOOP_THRESHOLD_INSTS);
     getLong(OPT_UNROLL_LOOP_THRESHOLD_INSTS);
+    getBoolean(OPT_MERGE_REFCOUNTS);
+    getBoolean(OPT_CANCEL_REFCOUNTS);
+    getBoolean(OPT_PIGGYBACK_REFCOUNTS);
+    getBoolean(OPT_BATCH_REFCOUNTS);
+    getBoolean(OPT_HOIST_REFCOUNTS);
     getBoolean(TURBINE_NO_STACK);
     getBoolean(TURBINE_NO_STACK_VARS);
     getBoolean(ENABLE_REFCOUNTING);
