@@ -16,25 +16,25 @@ fi
 
 EXTRA_ARGS=
 if [ ! -z "$EXM_OPT_BUILD" ]; then
-    EXTRA_ARGS+="--enable-fast"
+    EXTRA_ARGS+=" --enable-fast"
 fi
 
 if [ ! -z "$ENABLE_MPE" ]; then
-    EXTRA_ARGS+="--with-mpe"
+    EXTRA_ARGS+=" --with-mpe"
 fi
 
 if [ ! -z "$EXM_CRAY" ] ; then
     export CC=gcc
     export CFLAGS="-g -O2"
-    EXTRA_ARGS+="--enable-custom-mpi"
+    EXTRA_ARGS+=" --enable-custom-mpi"
 fi
 
 if [ ! -z "$WITH_PYTHON" ] ; then
-  EXTRA_ARGS+="--enable-python --with-python=${WITH_PYTHON}"
+  EXTRA_ARGS+=" --enable-python --with-python=${WITH_PYTHON}"
 fi
 
 if [ ! -z "$TCL_VERSION" ] ; then
-  EXTRA_ARGS+="--with-tcl-version=$TCL_VERSION"
+  EXTRA_ARGS+=" --with-tcl-version=$TCL_VERSION"
 fi
 
 if [ ! -z "$DISABLE_XPT" ]; then
