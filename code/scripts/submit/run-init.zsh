@@ -93,8 +93,15 @@ START=$( date +%s )
 RUN=$( date_path )
 
 # Create the directory in which to run
-export TURBINE_OUTPUT=${TURBINE_OUTPUT_ROOT}/${RUN}
-declare TURBINE_OUTPUT
+if [ -z "$TURBINE_OUTPUT" ]
+then
+  export TURBINE_OUTPUT=${TURBINE_OUTPUT_ROOT}/${RUN}
+  declare TURBINE_OUTPUT
+else
+  export TURBINE_OUTPUT
+  declare TURBINE_OUTPUT
+fi
+
 print ${TURBINE_OUTPUT} > ${OUTPUT_TOKEN_FILE}
 mkdir -p ${TURBINE_OUTPUT}
 
