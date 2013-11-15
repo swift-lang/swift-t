@@ -46,6 +46,7 @@ import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.GlobalConstants;
 import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.Statement;
+import exm.stc.ic.tree.Opcode;
 
 /**
  * Fix up passInVars and keepOpenVars in IC.  Perform validation
@@ -295,10 +296,12 @@ public class FixupVariables implements OptimizerPass {
       blockVars.add(v);
       visible.add(v);
     }
-
+    
+    List<Pair<Var, Var>> createdAliases = new ArrayList<Pair<Var, Var>>();
+    
     // Work out which variables are read/writte which aren't locally declared
     Result result = new Result();
-    findBlockNeeded(block, result, aliases);
+    findBlockNeeded(block, result, aliases, createdAliases);
     
     for (Continuation c : block.allComplexStatements()) {
       fixupContinuationRec(logger, function, execCx, c,
@@ -306,6 +309,15 @@ public class FixupVariables implements OptimizerPass {
               blockVars, result, updateLists);
     }
 
+    
+    // TODO: Partial fix for copy_refed variable that is then written
+    for (Pair<Var, Var> a: createdAliases) {
+      if (result.written.contains(a.val2)) {
+        result.addWritten(a.val1, aliases);
+      }
+    }
+    
+    // Get ready to return to outer scope
     // Outer scopes don't have anything to do with vars declared here
     result.removeReadWrite(blockVars);
     
@@ -325,9 +337,10 @@ public class FixupVariables implements OptimizerPass {
    * @param block
    * @param result accumulate needed vars
    * @param aliases 
+   * @param createdAliases 
    */
   private static void findBlockNeeded(Block block, Result result,
-                                      AliasTracker aliases) {
+                    AliasTracker aliases, List<Pair<Var, Var>> createdAliases) {
     for (Var v: block.getVariables()) {
       if (v.mapping() != null) {
         result.addRead(v.mapping());
@@ -351,6 +364,14 @@ public class FixupVariables implements OptimizerPass {
             result.addRead(read);
           }
           result.addWritten(i.getOutputs(), aliases);
+          
+          
+          // TODO: hack to get around aliasing issues
+          if (i.op == Opcode.COPY_REF) {
+            createdAliases.add(Pair.create(i.getInput(0).getVar(),
+                                           i.getOutput(0)));
+          }
+          
           break;
         }
         case CONDITIONAL: {

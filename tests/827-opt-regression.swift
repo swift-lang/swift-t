@@ -4,7 +4,8 @@
 main () {
 
   int A[];
-
+  
+  // Reference count of A drops to zero prematurely
   A = f([0,1,2,3], 0);
 
   trace(A[0], A[1], A[2]);
