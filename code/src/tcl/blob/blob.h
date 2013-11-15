@@ -91,14 +91,16 @@ int blobutils_sizeof_float(void);
    If not given, void* is assumed
  */
 void* blobutils_cast_to_ptr(int i);
+void* blobutils_cast_int64_to_ptr(int64_t i);
 
-void** blobutils_cast_ptr_to_ptrptr(void* p);
-char** blobutils_cast_ptr_to_char_ptrptr(void* p);
+void** blobutils_cast_to_ptrptr(void* p);
+char** blobutils_cast_to_char_ptrptr(void* p);
 
 void* blobutils_cast_string_to_ptr(char* s);
 
-int  blobutils_cast_to_int(void* p);
-long blobutils_cast_to_long(void* p);
+int     blobutils_cast_to_int(void* p);
+long    blobutils_cast_to_long(void* p);
+int64_t blobutils_cast_to_int64(void* p);
 
       int*    blobutils_cast_int_to_int_ptr      (int i);
 const int*    blobutils_cast_int_to_const_int_ptr(int i);
@@ -167,5 +169,7 @@ bool blobutils_read(const char* input, turbine_blob* blob);
  */
 void blobutils_turbine_run_output_blob(ptrdiff_t output,
                                        ptrdiff_t p, int length);
+
+void* blobutils_strdup(char* s);
 
 #endif

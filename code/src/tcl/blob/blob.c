@@ -107,14 +107,20 @@ blobutils_cast_to_ptr(int i)
   return (void*) (size_t)i;
 }
 
+void*
+blobutils_cast_int64_to_ptr(int64_t i)
+{
+  return (void*) i;
+}
+
 void**
-blobutils_cast_ptr_to_ptrptr(void* p)
+blobutils_cast_to_ptrptr(void* p)
 {
   return (void**) p;
 }
 
 char**
-blobutils_cast_ptr_to_char_ptrptr(void* p)
+blobutils_cast_to_char_ptrptr(void* p)
 {
   return (char**) p;
 }
@@ -144,6 +150,12 @@ blobutils_cast_to_long(void* p)
   return result;
 }
 
+int64_t
+blobutils_cast_to_int64(void* p)
+{
+  int64_t result = (int64_t) p;
+  return result;
+}
 
 int*
 blobutils_cast_int_to_int_ptr(int i)
@@ -355,4 +367,11 @@ blobutils_turbine_run_output_blob(ptrdiff_t output,
                                   ptrdiff_t p, int length)
 {
   memcpy((void*) output, (void*) p, length);
+}
+
+void*
+blobutils_strdup(char* s)
+{
+  char * t = strdup(s);
+  return t;
 }
