@@ -6,7 +6,9 @@ source ${THISDIR}/build-vars.sh
 
 rm -rf ${TURBINE_INST}
 if [ -f Makefile ]; then
-    make clean
+    # Disabled due to Turbine configure check
+    #make clean
+    :
 fi
 
 if [ -z "$SKIP_AUTOTOOLS" ]; then
