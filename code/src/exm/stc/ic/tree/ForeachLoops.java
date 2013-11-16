@@ -290,6 +290,9 @@ public class ForeachLoops {
       sb.append(" in " + container.name() + " ");
       ICUtil.prettyPrintVarInfo(sb, passedVars, keepOpenVars);
       prettyPrintIncrs(sb);
+      sb.append(" /* ");
+      sb.append(this.loopName);
+      sb.append("*/");
       sb.append(" {\n");
       loopBody.prettyPrint(sb, currentIndent + indent);
       sb.append(currentIndent + "}\n");
@@ -495,6 +498,9 @@ public class ForeachLoops {
       }
       ICUtil.prettyPrintVarInfo(sb, passedVars, keepOpenVars);
       prettyPrintIncrs(sb);
+      sb.append(" /* ");
+      sb.append(this.loopName);
+      sb.append("*/");
       sb.append(" {\n");
       loopBody.prettyPrint(sb, currentIndent + indent);
       sb.append(currentIndent + "}\n");
@@ -685,6 +691,7 @@ public class ForeachLoops {
           }
         } 
         if (!fullUnroll) {
+          logger.trace("Full unrolled not enabled");
           return NO_UNROLL;
         }
         
