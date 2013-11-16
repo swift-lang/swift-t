@@ -1,11 +1,14 @@
--O0 -T flatten-nested 
--O0 -T constant-fold -T dead-code-elim -T shared-constants
--O0 -T constant-fold -T dead-code-elim -T shared-constants -T forward-dataflow
+-O0 
+-O0 -T value-number -T dead-code-elim
+-O0 -T value-number -T dead-code-elim -T shared-constants -T constant-fold
+-O0 -T value-number -T dead-code-elim -T shared-constants -T constant-fold -T finalized-var
+-O0 -T value-number -T dead-code-elim -T shared-constants -T constant-fold -T finalized-var -T controlflow-fusion
+-O0 -T value-number -T dead-code-elim -T shared-constants -T constant-fold -T finalized-var -T controlflow-fusion
 -O1
 -O1 -T expand-dataflow-ops
 -O1 -T expand-dataflow-ops -T expand-loops
 -O1 -T expand-dataflow-ops -T expand-loops -T hoisting
 -O2
+-O2 -T function-inline
 -O2 -T function-inline -T pipeline
--O2 -T function-inline -T pipeline -T reorder-insts  -T algebra
 -O2 -T function-inline -T pipeline -T reorder-insts  -T algebra -T full-unroll

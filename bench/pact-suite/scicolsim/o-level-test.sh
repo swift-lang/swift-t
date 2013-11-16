@@ -16,15 +16,38 @@ for i in `seq $n`; do
   TCL=annealing-exm.olevel$i.tcl
   stc $olevel -C annealing-exm.olevel$i.ic -I $SCS/src $SCS/src/annealing-exm.swift $TCL 
 
-  export TURBINE_USER_LIB=$SCS 
-  export TURBINE_DEBUG=0
-  export ADLB_DEBUG=1
-  export TURBINE_LOG=0
-  turbine -n6 $TCL \
-              --graph_file=movie_graph.txt \
+  if [[ $? -ne 0 ]]; then
+    echo "FAILED COMPILE $i"
+    exit 1
+  fi
+  # FROM PACT'13 PAPER
+  #ARGS='--graph_file=movie_graph.txt \
+  #            --annealingcycles=25 \
+  #            --evoreruns=100 --reruns_per_task=1 \
+  #            --minrange=58 --maxrange=58 \
+  #            --n_epochs=1 --n_steps=1'
+
+  ARGS='--graph_file=movie_graph.txt \
               --annealingcycles=25 \
               --evoreruns=100 --reruns_per_task=1 \
-              --minrange=58 --maxrange=58 \
-              --n_epochs=1 --n_steps=1 | ../scripts/opcounts.py | tee annealing-exm.olevel$i.counts
+              --minrange=58 --maxrange=108 --rangeinc=50 \
+              --n_epochs=1 --n_steps=1'
+
+  export TURBINE_USER_LIB=$SCS 
+  export TURBINE_DEBUG=0
+  export ADLB_DEBUG=0
+  export TURBINE_LOG=0
+  export ADLB_PERF_COUNTERS=1
+  export ADLB_PRINT_TIME=1
+  PF=annealing-exm.olevel$i
+  OUT=$PF.out
+  COUNTS=$PF.counts
+  turbine -n6 $TCL $ARGS 2>&1 | tee $OUT
+  if [[ $? -eq 0 ]]; then
+    echo "SUCCESS"
+    ../scripts/opcounts.py  < $OUT > $COUNTS
+  else 
+    echo "ERROR!"
+  fi 
   i=$(($i+1))
 done < o-levels.txt
