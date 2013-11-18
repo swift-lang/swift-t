@@ -170,7 +170,6 @@ xlb_requestqueue_size()
   return table_ip_size(&targets);
 }
 
-/*
 void requestqueue_type_counts(int* types, int size) {
   assert(size >= xlb_types_size);
   for (int t = 0; t < xlb_types_size; t++) {
@@ -178,7 +177,6 @@ void requestqueue_type_counts(int* types, int size) {
     types[t] = L->size;
   }
 }
-*/
 
 int
 xlb_requestqueue_get(xlb_request_pair* r, int max)

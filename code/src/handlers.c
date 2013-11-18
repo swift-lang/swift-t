@@ -1384,9 +1384,19 @@ handle_check_idle(int caller)
   bool idle = xlb_server_check_idle_local(false, new_check_attempt);
   DEBUG("handle_check_idle: %s", bool2string(idle));
   SEND(&idle, sizeof(idle), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+
+  if (idle)
+  {
+    int request_counts[xlb_types_size];
+    requestqueue_type_counts(request_counts, xlb_types_size);
+    SEND(request_counts, xlb_types_size, MPI_INT, caller, ADLB_TAG_RESPONSE);
+
+    int untargeted_work_counts[xlb_types_size];
+    xlb_workq_type_counts(untargeted_work_counts, xlb_types_size);
+    SEND(untargeted_work_counts, xlb_types_size, MPI_INT, caller, ADLB_TAG_RESPONSE);
+  }
   return ADLB_SUCCESS;
 }
-
 /**
    The calling worker rank is shutting down
  */

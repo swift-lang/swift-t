@@ -114,6 +114,7 @@ adlb_code xlb_workq_steal(int max_memory, const int *steal_type_counts,
 
 /* present should be an array of size >= number of request types
  * it is filled in with the counts of types
+ * Does not include targeted work.
  * types: array to be filled in
  * size: size of the array (greater than num of work types)
  * ntypes: returns number of elements filled in

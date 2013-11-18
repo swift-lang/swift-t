@@ -590,19 +590,69 @@ servers_idle()
   DEBUG("Master server initiating idle check attempt #%"PRId64,
         xlb_idle_check_attempt);
 
+  // Arrays containing request and work counts from all servers
+  // The counts from each server are stored contiguously
+  int *request_counts = malloc(sizeof(int) * xlb_types_size * xlb_servers);
+  int *work_counts = malloc(sizeof(int) * xlb_types_size * xlb_servers);
+  // First fill in counts from this server
+  requestqueue_type_counts(request_counts, xlb_types_size);
+  xlb_workq_type_counts(work_counts, xlb_types_size);
+  
   int rc;
+  bool all_idle = true;
   for (int rank = xlb_master_server_rank+1; rank < xlb_comm_size;
        rank++)
   {
+    int server_num = rank - xlb_master_server_rank;
     bool idle;
     rc = xlb_sync(rank);
     ASSERT(rc == ADLB_SUCCESS);
-    rc = ADLB_Server_idle(rank, xlb_idle_check_attempt, &idle);
+    int *req_subarray = &request_counts[xlb_types_size * server_num];
+    int *work_subarray = &work_counts[xlb_types_size * server_num];
+    rc = ADLB_Server_idle(rank, xlb_idle_check_attempt, &idle,
+                          req_subarray, work_subarray);
     ASSERT(rc == ADLB_SUCCESS);
     if (! idle)
-      return false;
+    {
+      all_idle = false;
+      // Break so we can cleanup allocations
+      break;
+    }
   }
-  return true;
+
+  // Check to see if work stealing could match work to requests
+  if (all_idle)
+  {
+    for (int t = 0; t < xlb_types_size; t++)
+    {
+      int has_requests = -1;
+      int has_work = -1;
+      for (int server = 0; server < xlb_servers; server++)
+      {
+        if (request_counts[t + server * xlb_types_size] > 0)
+        {
+          has_requests = server;
+        }
+        if (work_counts[t + server * xlb_types_size] > 0)
+        {
+          has_work = server;
+        }
+      }
+      if (has_requests != -1 && has_work != -1)
+      {
+        // We have requests and work that could be matched up -
+        // not actually idle
+        DEBUG("Unmatched work of type %i. Work is on server %i. "
+              "Requests are on server %i", t, has_work, has_requests);
+        all_idle = false;
+        break;
+      }
+    }
+  }
+
+  free(request_counts);
+  free(work_counts);
+  return all_idle;
 }
 
 static void

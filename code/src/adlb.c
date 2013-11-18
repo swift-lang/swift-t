@@ -1312,15 +1312,30 @@ ADLBP_Unlock(adlb_datum_id id)
 
 /**
    Is the server at rank idle?
+
+   check_attempt: attempt number from master server of checking for idle
+   result: true if idle
+   request_counts: must be array large enough to hold ntypes. Filled in
+        if idle with # of requests for each type
+   untargeted_work_counts: must be array large enough to hold ntypes,
+        Filled in if idle with # of tasks for each type
  */
 adlb_code
-ADLB_Server_idle(int rank, int64_t check_attempt, bool* result)
+ADLB_Server_idle(int rank, int64_t check_attempt, bool* result,
+                 int *request_counts, int *untargeted_work_counts)
 {
   MPI_Request request;
   MPI_Status status;
   IRECV(result, sizeof(result), MPI_BYTE, rank, ADLB_TAG_RESPONSE);
   SEND(&check_attempt, sizeof(check_attempt), MPI_BYTE, rank, ADLB_TAG_CHECK_IDLE);
   WAIT(&request, &status);
+
+  if (result)
+  {
+    RECV(request_counts, xlb_types_size, MPI_INT, rank, ADLB_TAG_RESPONSE);
+    RECV(untargeted_work_counts, xlb_types_size, MPI_INT, rank,
+         ADLB_TAG_RESPONSE);
+  }
   return ADLB_SUCCESS;
 }
 
