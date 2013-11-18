@@ -1,6 +1,3 @@
-
-// SKIP- THIS-TEST : currently cannot handle input <<i>> (#563)
-
 import io;
 
 (file o[]) task(file i, int n) "turbine" "0.1"
