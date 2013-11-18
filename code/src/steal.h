@@ -27,14 +27,47 @@
 
 #include <stdbool.h>
 
+#include "backoffs.h"
+
 // The number of work units to send at a time
 #define XLB_STEAL_CHUNK_SIZE 16
+
+/**
+   When was the last time we tried to steal?  In seconds.
+   Updated by steal()
+ */
+extern double xlb_steal_last;
+
+extern int xlb_failed_steals_since_backoff;
 
 /**
    Are there any other servers?
    Are we allowed to steal yet?
  */
-bool xlb_steal_allowed(void);
+static inline bool
+xlb_steal_allowed(void)
+{
+  if (xlb_servers == 1)
+    // No other servers
+    return false;
+  double t = xlb_approx_time();
+
+  // Somewhat adaptive backoff approach where we do bursts of polling
+  double interval;
+  if (xlb_failed_steals_since_backoff == xlb_servers)
+  {
+    interval = xlb_steal_backoff;
+    xlb_failed_steals_since_backoff = 0;
+  }
+  else
+  {
+    interval = xlb_steal_rate_limit;
+  }
+  if (t - xlb_steal_last < interval)
+    // Too soon to try again
+    return false;
+  return true;
+}
 
 /**
    Issue sync() and steal.

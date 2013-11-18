@@ -405,8 +405,6 @@ xlb_serve_server(int source, bool *server_sync_retry)
   return rc;
 }
 
-double xlb_steal_last = 0.0;
-
 /**
    Steal work
    Operates at intervals defined by xlb_steal_backoff

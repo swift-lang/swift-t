@@ -36,6 +36,7 @@
 // All backoffs in seconds
 #if SPEED == SLOW
        double xlb_max_idle          = 10;
+       double xlb_steal_rate_limit  = 8;
        double xlb_steal_backoff     = 8;
 static double backoff_server_max    = 2;
 static int    backoff_server_no_delay_attempts  = 0;
@@ -48,6 +49,7 @@ static double backoff_sync          = 1;
 static double backoff_sync_rejected = 1;
 #elif SPEED == MEDIUM
        double xlb_max_idle          = 4;
+       double xlb_steal_rate_limit  = 0.5;
        double xlb_steal_backoff     = 0.5;
 static double backoff_server_max    = 0.001;
 static int    backoff_server_no_delay_attempts  = 0;
@@ -60,7 +62,16 @@ static double backoff_sync          = 0.01;
 static double backoff_sync_rejected = 0.01;
 #elif SPEED == FAST
        double xlb_max_idle          = 0.1;
-       double xlb_steal_backoff     = 0.01;
+/*
+   Rate-limit steals.  The rate needs to be slow enough so that we don't
+   overwhelm other servers that could be doing more useful work.
+   xlb_steal_rate_limit: absolute maximum rate.  If we can serve 200k
+            requests per sec per server, 500us would mean that at most
+            1/100 requests were work-stealing requests.
+   xlb_steal_backoff: take a break from stealing after trying #servers times
+ */
+       double xlb_steal_rate_limit  = 0.0005;
+       double xlb_steal_backoff     = 0.02;
 static double backoff_server_max    = 0.000001;
 static int    backoff_server_no_delay_attempts  = 1024;
 static int    backoff_server_min_delay_attempts = 4;

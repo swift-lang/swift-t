@@ -36,6 +36,9 @@
 #include "sync.h"
 #include "steal.h"
 
+double xlb_steal_last = 0.0;
+int xlb_failed_steals_since_backoff = 0;
+
 /**
    Target: another server
  */
@@ -46,19 +49,6 @@ get_target_server(int* result)
   {
     *result = xlb_random_server();
   } while (*result == xlb_comm_rank);
-}
-
-bool
-xlb_steal_allowed()
-{
-  if (xlb_servers == 1)
-    // No other servers
-    return false;
-  double t = xlb_approx_time();
-  if (t - xlb_steal_last < xlb_steal_backoff)
-    // Too soon to try again
-    return false;
-  return true;
 }
 
 static inline adlb_code steal_sync(int target, int max_memory);
@@ -118,6 +108,16 @@ xlb_steal(bool* result)
 
   // Record the time of this steal attempt
   xlb_steal_last = MPI_Wtime();
+
+  // Update failed steals
+  if (*result)
+  {
+    xlb_failed_steals_since_backoff = 0;
+  }
+  else
+  {
+    xlb_failed_steals_since_backoff++;
+  }
 
   end:
   TRACE_END;
