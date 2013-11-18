@@ -56,6 +56,8 @@ out "void turbine_debug(const char* token, " \
 
 out "void turbine_debug_finalize(void);\n\n"
 
+# stdbool.h needed for bool type
+outln "#include <stdbool.h>"
 outln "#ifndef NDEBUG"
 outln "extern bool turbine_debug_enabled;"
 outln "#else"
