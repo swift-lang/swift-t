@@ -47,7 +47,10 @@
 adlb_code xlb_sync(int target);
 
 
-// Allow special varieties of sync
+/* 
+  More flexible version of xlb_sync.  See xlb_sync and packed_sync
+  data header for details.
+ */
 adlb_code xlb_sync2(int target, const struct packed_sync *hdr);
 
 typedef struct {

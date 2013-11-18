@@ -126,7 +126,9 @@ xlb_steal(bool* result)
 }
 
 /*
-  Send steal request and sync with server
+  Send steal request and sync with server.
+  Note that this can add requests to the pending_sync list that
+  will need to be handled.
  */
 static inline adlb_code
 steal_sync(int target, int max_memory)

@@ -211,11 +211,6 @@ ADLB_Server(long max_memory)
     code = serve_several();
     ADLB_CHECK(code);
 
-    // serve_several should have handled all pending syncs, but
-    // defensively check here to avoid potential deadlock
-    code = xlb_handle_pending_syncs();
-    ADLB_CHECK(code);
-
     update_cached_time(); // Periodically refresh timestamp
 
     code = xlb_check_parallel_tasks(0);
@@ -431,6 +426,11 @@ check_steal(void)
   bool b;
   int rc = xlb_steal(&b);
   ADLB_CHECK(rc);
+
+  // xlb_steal may have added pending syncs
+  rc = xlb_handle_pending_syncs();
+  ADLB_CHECK(rc);
+
   if (b)
   {
     TRACE("check_steal(): rechecking...");

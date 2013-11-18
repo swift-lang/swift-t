@@ -38,7 +38,10 @@ bool xlb_steal_allowed(void);
 
 /**
    Issue sync() and steal.
-   @return result true if stole something, else false
+
+   Note that this may add sync requests to the xlb_pending_syncs list,
+   which must be handled by the caller.
+   @param result true if stole something, else false
  */
 adlb_code xlb_steal(bool* result);
 
