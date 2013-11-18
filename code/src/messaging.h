@@ -345,6 +345,7 @@ xlb_unpack_id_sub(const void *buffer, adlb_datum_id *id,
 struct packed_steal
 {
   int max_memory;
+  int64_t idle_check_attempt; // Sender's last idle check number
   int work_type_counts[]; // Sender's count of each work type
 };
 

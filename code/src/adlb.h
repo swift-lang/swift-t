@@ -264,7 +264,7 @@ adlb_code ADLB_Data_string_totype(const char* type_string,
 
 const char *ADLB_Data_type_tostring(adlb_data_type type);
 
-adlb_code ADLB_Server_idle(int rank, bool* result);
+adlb_code ADLB_Server_idle(int rank, int64_t check_attempt, bool* result);
 adlb_code ADLB_Server_shutdown(int rank);
 
 adlb_code ADLBP_Finalize(void);

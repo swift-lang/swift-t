@@ -28,6 +28,8 @@
 /** Time of last activity: used to determine shutdown */
 extern double xlb_time_last_action;
 
+extern int64_t xlb_idle_check_attempt;
+
 /** Are we currently trying to sync with another server?
     Prevents nested syncs, which we do not support */
 extern bool xlb_server_sync_in_progress;
@@ -49,7 +51,11 @@ adlb_code xlb_serve_server(int source, bool *server_sync_retry);
 
 adlb_code xlb_shutdown_worker(int worker);
 
-bool xlb_server_check_idle_local(void);
+/*
+  master: if we're the master server
+  check_attempt: if not master, the check_attempt number received
+ */
+bool xlb_server_check_idle_local(bool master, int64_t check_attempt);
 
 extern bool xlb_server_shutting_down;
 

@@ -1314,12 +1314,12 @@ ADLBP_Unlock(adlb_datum_id id)
    Is the server at rank idle?
  */
 adlb_code
-ADLB_Server_idle(int rank, bool* result)
+ADLB_Server_idle(int rank, int64_t check_attempt, bool* result)
 {
   MPI_Request request;
   MPI_Status status;
   IRECV(result, sizeof(result), MPI_BYTE, rank, ADLB_TAG_RESPONSE);
-  SEND_TAG(rank, ADLB_TAG_CHECK_IDLE);
+  SEND(&check_attempt, sizeof(check_attempt), MPI_BYTE, rank, ADLB_TAG_CHECK_IDLE);
   WAIT(&request, &status);
   return ADLB_SUCCESS;
 }

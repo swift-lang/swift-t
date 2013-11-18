@@ -136,13 +136,14 @@ steal_sync(int target, int max_memory)
   // Need to give server information about which work types we have:
   // we only want to steal work types where the other server has more
   // of them than us.
-  struct packed_sync *req = malloc(PACKED_SYNC_SIZE);
+  char req_storage[PACKED_SYNC_SIZE]; // Temporary stack storage for struct
+  struct packed_sync *req = (struct packed_sync *)req_storage;
   req->mode = ADLB_SYNC_STEAL;
   req->steal.max_memory = max_memory;
+  req->steal.idle_check_attempt = xlb_idle_check_attempt;
   xlb_workq_type_counts(req->steal.work_type_counts, xlb_types_size);
 
   adlb_code code = xlb_sync2(target, req);
-  free(req);
   DEBUG("[%i] synced with %i, receiving steal response", xlb_comm_rank, target);
   return code; 
 }
@@ -176,7 +177,7 @@ typedef struct {
   xlb_work_unit **work_units;
   size_t size;
   size_t max_size;
-  int stole_count;
+  int stole_count; /* Total number stolen */
 } steal_cb_state;
 
 
@@ -281,6 +282,18 @@ xlb_handle_steal(int caller, const struct packed_steal *req)
 
   free(state.work_units);
 
+  if (state.stole_count > 0)
+  {
+    // Update idle check attempt if needed to account for work being
+    // moved around.
+    int64_t thief_idle_check_attempt = req->idle_check_attempt;
+    if (thief_idle_check_attempt > xlb_idle_check_attempt)
+    {
+      DEBUG("Update idle check attempt from thief: %"PRId64,
+            thief_idle_check_attempt);
+      xlb_idle_check_attempt = thief_idle_check_attempt;
+    }
+  }
   STATS("LOST: %i", state.stole_count);
   // MPE_INFO(xlb_mpe_svr_info, "LOST: %i TO: %i", state.stole_count, caller);
 

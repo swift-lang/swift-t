@@ -229,11 +229,11 @@ handle_sync(int caller)
 {
   MPE_LOG(xlb_mpe_svr_sync_start);
   MPI_Status status;
-  struct packed_sync *hdr = malloc(PACKED_SYNC_SIZE);
+  char hdr_storage[PACKED_SYNC_SIZE]; // Temporary stack storage for struct
+  struct packed_sync *hdr = (struct packed_sync *)hdr_storage;
   RECV(hdr, (int)PACKED_SYNC_SIZE, MPI_BYTE, caller, ADLB_TAG_SYNC_REQUEST);
 
   adlb_code rc = xlb_handle_accepted_sync(caller, hdr, NULL);
-  free(hdr);
   ADLB_CHECK(rc);
   MPE_LOG(xlb_mpe_svr_sync_end);
   return rc;
@@ -1378,8 +1378,10 @@ static adlb_code
 handle_check_idle(int caller)
 {
   MPI_Status status;
-  RECV_TAG(caller, ADLB_TAG_CHECK_IDLE);
-  bool idle = xlb_server_check_idle_local();
+  int64_t new_check_attempt;
+  RECV(&new_check_attempt, sizeof(new_check_attempt), MPI_BYTE,
+       caller, ADLB_TAG_CHECK_IDLE);
+  bool idle = xlb_server_check_idle_local(false, new_check_attempt);
   DEBUG("handle_check_idle: %s", bool2string(idle));
   SEND(&idle, sizeof(idle), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
   return ADLB_SUCCESS;
