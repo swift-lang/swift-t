@@ -50,9 +50,12 @@ namespace eval turbine {
         set cmd [string triml $cmd "coaster"]
         exec_coaster $cmd $stdin_src $stdout_dst $stderr_dst {*}$args
     } else {
+        set start [ clock milliseconds ]
         exec $cmd {*}$args $stdin_src $stdout_dst $stderr_dst
+        set stop [ clock milliseconds ]
+        set duration [ format "%0.3f" [ expr ($stop-$start)/1000.0 ] ]
+        log "shell command duration: $duration"
     }
-
   }
 
     #Issue #501
