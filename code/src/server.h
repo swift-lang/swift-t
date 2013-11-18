@@ -51,7 +51,7 @@ adlb_code xlb_shutdown_worker(int worker);
 
 bool xlb_server_check_idle_local(void);
 
-bool xlb_server_shutting_down(void);
+extern bool xlb_server_shutting_down;
 
 adlb_code xlb_server_shutdown(void);
 

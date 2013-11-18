@@ -82,7 +82,7 @@ struct list_i workers_shutdown;
 bool xlb_server_sync_in_progress = false;
 
 /** Is this server shutting down? */
-static bool shutting_down;
+bool xlb_server_shutting_down;
 
 /** Was this server failed? */
 static bool failed = false;
@@ -116,7 +116,7 @@ xlb_server_init()
 {
   TRACE_START;
 
-  shutting_down = false;
+  xlb_server_shutting_down = false;
 
   list_i_init(&workers_shutdown);
   xlb_requestqueue_init();
@@ -177,7 +177,7 @@ xlb_map_to_server(int rank)
 
 static adlb_code serve_several(void);
 static inline bool master_server(void);
-static inline void check_idle(void);
+static inline bool check_idle(void);
 static adlb_code server_shutdown(void);
 static inline adlb_code check_steal(void);
 static inline void print_final_stats();
@@ -198,11 +198,9 @@ ADLB_Server(long max_memory)
   update_cached_time(); // Initial timestamp
   while (true)
   {
-    if (shutting_down)
+    if (xlb_server_shutting_down)
       break;
-    if (master_server())
-      check_idle();
-    if (shutting_down)
+    if (master_server() && check_idle())
       break;
 
     update_cached_time(); // Periodically refresh timestamp
@@ -271,6 +269,11 @@ serve_several()
     }
     else
     {
+      // Check for shutdown
+      if (xlb_server_shutting_down)
+      {
+        return ADLB_SUCCESS;
+      }
       // Backoff
       bool slept;
       bool again = xlb_backoff_server(curr_server_backoff, &slept);
@@ -500,22 +503,23 @@ static void shutdown_all_servers(void);
    Master server uses this to check for shutdown condition
    @return true when idle
  */
-static inline void
+static inline bool 
 check_idle()
 {
   if (! xlb_server_check_idle_local())
     // This server is not idle long enough...
-    return;
+    return false;
 
   DEBUG("check_idle(): checking other servers...");
 
   // Issue idle check RPCs...
   if (! servers_idle())
     // Some server is still not idle...
-    return;
+    return false;
 
 
   shutdown_all_servers();
+  return true;
 }
 
 bool
@@ -560,7 +564,7 @@ shutdown_all_servers()
 {
   TRACE_START;
   MPE_LOG(xlb_mpe_dmn_shutdown_start)
-  shutting_down = true;
+  xlb_server_shutting_down = true;
   for (int rank = xlb_master_server_rank+1; rank < xlb_comm_size;
        rank++)
   {
@@ -598,14 +602,8 @@ adlb_code
 xlb_server_shutdown()
 {
   TRACE_START;
-  shutting_down = true;
+  xlb_server_shutting_down = true;
   return ADLB_SUCCESS;
-}
-
-bool
-xlb_server_shutting_down()
-{
-  return shutting_down;
 }
 
 /**

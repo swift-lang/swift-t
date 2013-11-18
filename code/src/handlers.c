@@ -1404,10 +1404,13 @@ static adlb_code
 handle_shutdown_server(int caller)
 {
   MPE_LOG(xlb_mpe_svr_shutdown_start);
+  MPI_Status status;
+  RECV_TAG(caller, ADLB_TAG_SHUTDOWN_SERVER);
+
   // caller is a server
   xlb_server_shutdown();
   MPE_LOG(xlb_mpe_svr_shutdown_end);
-  return ADLB_SUCCESS;
+  return ADLB_DONE;
 }
 
 static adlb_code

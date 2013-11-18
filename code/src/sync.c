@@ -90,8 +90,18 @@ xlb_sync2(int target, const struct packed_sync *hdr)
   // When true, break the loop
   bool done = false;
 
-  // Send initial request:
-  send_sync(target, hdr);
+  if (!xlb_server_shutting_down)
+  {
+    // Send initial request:
+    send_sync(target, hdr);
+  }
+  else
+  {
+    // Check that we're not due to shut down because of a previously
+    // received shutdown message before going into sync loop
+    done = true;
+    rc = ADLB_SHUTDOWN;
+  }
 
   while (!done)
   {
