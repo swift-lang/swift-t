@@ -100,6 +100,7 @@ import exm.stc.tclbackend.tree.TclTree;
 import exm.stc.tclbackend.tree.Text;
 import exm.stc.tclbackend.tree.Token;
 import exm.stc.tclbackend.tree.Value;
+import exm.stc.tclbackend.tree.WhileLoop;
 import exm.stc.ui.ExitCode;
 
 public class TurbineGenerator implements CompilerBackend {
@@ -125,6 +126,8 @@ public class TurbineGenerator implements CompilerBackend {
   private static final String TCLTMP_ITERS = "tcltmp:iters";
   private static final String TCLTMP_UNPACKED = "tcltmp:unpacked";
   private static final String TCLTMP_INIT_REFCOUNT = "tcltmp:init_rc";
+  private static final String TCLTMP_SPLIT_START = "tcltmp:splitstart";
+  private static final String TCLTMP_SKIP = "tcltmp:skip";
   
   private static final String MAIN_FUNCTION_NAME = "swift:main";
   private static final String CONSTINIT_FUNCTION_NAME = "swift:constants";
@@ -2420,15 +2423,16 @@ public class TurbineGenerator implements CompilerBackend {
     for (PassedVar pv: passedVars) {
       commonFormalArgs.add(prefixVar(pv.var.name()));
     }
-    commonFormalArgs.add(TCLTMP_RANGE_LO);
-    commonFormalArgs.add(TCLTMP_RANGE_HI);
-    commonFormalArgs.add(TCLTMP_RANGE_INC);
-    List<String> outerFormalArgs = new ArrayList<String>(commonFormalArgs);
-    
 
     Value loVal = Value.numericValue(TCLTMP_RANGE_LO);
     Value hiVal = Value.numericValue(TCLTMP_RANGE_HI);
     Value incVal = Value.numericValue(TCLTMP_RANGE_INC);
+    
+    commonFormalArgs.add(loVal.variable());
+    commonFormalArgs.add(hiVal.variable());
+    commonFormalArgs.add(incVal.variable());
+    List<String> outerFormalArgs = new ArrayList<String>(commonFormalArgs);
+    
 
     List<Expression> commonArgs = new ArrayList<Expression>();
     commonArgs.add(Turbine.LOCAL_STACK_VAL);
@@ -2460,38 +2464,70 @@ public class TurbineGenerator implements CompilerBackend {
     pointAdd(new Command(outerProcName, outerCallArgs));
 
 
-    // itersLeft = ceil( (hi - lo + 1) /(double) inc))
-    // ==> itersLeft = ( (hi - lo) / inc ) + 1
-    outer.add(new SetVariable(TCLTMP_ITERSLEFT,
-              rangeItersLeft(Value.numericValue(TCLTMP_RANGE_LO),
-                             Value.numericValue(TCLTMP_RANGE_HI),
-                             Value.numericValue(TCLTMP_RANGE_INC))));
+
+    Expression done = new TclExpr(loVal, TclExpr.GT, hiVal);
+    If finishedIf = new If(done, false);
+    finishedIf.thenBlock().add(Command.returnCommand());
+    outer.add(finishedIf);
+    
+
+    // While loop to allow us to process smaller chunks here
+    WhileLoop iter = new WhileLoop(LiteralInt.ONE);
+    outer.add(iter);
 
     Value itersLeft = Value.numericValue(TCLTMP_ITERSLEFT);
-    Expression done = new TclExpr(itersLeft,
-                                  TclExpr.LTE, LiteralInt.ZERO);
-    Sequence thenDoneB = new Sequence();
-    If finishedIf = new If(done, thenDoneB);
-    thenDoneB.add(new Command("return"));
-    outer.add(finishedIf);
+    iter.loopBody().add(new SetVariable(itersLeft.variable(),
+              rangeItersLeft(loVal, hiVal, incVal)));
 
     Expression doneSplitting = new TclExpr(itersLeft,
-                        TclExpr.LTE, new LiteralInt(leafDegree));
+            TclExpr.LTE, new LiteralInt(leafDegree));
+    If splitIf = new If(doneSplitting, true);
+    iter.loopBody().add(splitIf);
+    
+    
     // if (iters < splitFactor) then <call inner> else <split more>
-    Sequence thenNoSplitB = new Sequence();
-    Sequence elseSplitB = new Sequence();
-    If splitIf = new If(doneSplitting, thenNoSplitB, elseSplitB);
-    outer.add(splitIf);
+    splitIf.thenBlock().add(new Command(innerProcName, innerCallArgs));
+    splitIf.thenBlock().add(Command.returnCommand());
+    
+    splitIf.elseBlock().append(rangeDoSplit(splitDegree, leafDegree,
+            loVal, hiVal, incVal,
+            outerProcName, commonArgs, itersLeft));
 
-    thenNoSplitB.add(new Command(innerProcName, innerCallArgs));
 
-    Sequence splitBody = new Sequence();
-    String splitStart = "tcltmp:splitstart";
-    String skip = "tcltmp:skip";
+    pointStack.push(inner);
+  }
+
+  /**
+   * Spawn off n - 1 splits of the loop.  Update loVar and hiVar to reflect
+   *    the size of the remaining split to be executed here.
+   *  
+   * @param splitDegree
+   * @param leafDegree
+   * @param loVar var containing low index of loop upon entry to generated code.
+   *          Will be reassigned by this code to a lower split range
+   * @param hiVar var containing high index of loop upon entry to generated code.
+   *          Will be reassigned by this code to a lower split range
+   * @param incVar var containing increment of loop upon entry to generated code.
+   * @param itersLeft Number of iterations left for loop
+   * @param outerProcName proc to call for loop body
+   * @param commonArgs first args for function call.  Also append
+   *                    lo, hi and inc for inner loop
+   * @return
+   */
+  private Sequence rangeDoSplit(int splitDegree, int leafDegree,
+          Value lo, Value hi, Value inc, String outerProcName,
+          List<Expression> commonArgs, Value itersLeft) {
+    Value splitStart = Value.numericValue(TCLTMP_SPLIT_START);
+    Value skip = Value.numericValue(TCLTMP_SKIP);
+    Value splitEnd = Value.numericValue(TCLTMP_SPLITEND);
+    
+
+    Sequence result = new Sequence();
+
     // skip = max(splitFactor,  ceil(iters /(float) splitfactor))
     // skip = max(splitFactor,  ((iters - 1) /(int) splitfactor) + 1)
-    elseSplitB.add(new SetVariable(skip, 
-        TclExpr.mult(Value.numericValue(TCLTMP_RANGE_INC),
+    result.add(new SetVariable(skip.variable(), 
+        TclExpr.mult(inc,
           TclExpr.max(new LiteralInt(leafDegree),
             TclExpr.group(
                 TclExpr.paren(
@@ -2499,38 +2535,40 @@ public class TurbineGenerator implements CompilerBackend {
                         LiteralInt.ONE),
                      TclExpr.DIV,  new LiteralInt(splitDegree)),
                 TclExpr.PLUS, LiteralInt.ONE)))));
-        
-        /*new Token(
-          String.format("(%s - 1) / %d ) + 1",
-                  ,
-                  splitDegree, */
 
-    ForLoop splitLoop = new ForLoop(splitStart, loVal,
-            hiVal, Value.numericValue(skip), splitBody);
-    elseSplitB.add(splitLoop);
+    // Save first iteration to execute here
+    TclExpr iter2Start = new TclExpr(true, Arrays.asList(
+                                     lo, TclExpr.PLUS, skip));
+    ForLoop splitLoop = new ForLoop(splitStart.variable(),
+                                    iter2Start, hi, skip);
+    result.add(splitLoop);
+    result.add(new SetVariable(hi.variable(), new TclExpr(true,
+            TclExpr.group(lo, TclExpr.PLUS, skip,
+                            TclExpr.MINUS, LiteralInt.ONE))));
 
-
+    // splitEnd = min(hi, start + skip - 1)
+    TclExpr splitEndExpr = new TclExpr(
+        TclExpr.min(hi,
+          TclExpr.group(splitStart, TclExpr.PLUS,
+                        skip, TclExpr.MINUS,
+                        LiteralInt.ONE)));
+    splitLoop.loopBody().add(new SetVariable(splitEnd.variable(), splitEndExpr));
+    
     ArrayList<Expression> outerRecCall = new ArrayList<Expression>();
     outerRecCall.add(new Token(outerProcName));
     outerRecCall.addAll(commonArgs);
-    outerRecCall.add(Value.numericValue(splitStart));
-    // splitEnd = min(hi, start + skip - 1)
-    
-    TclExpr splitEndExpr = new TclExpr(
-        TclExpr.min(Value.numericValue(TCLTMP_RANGE_HI),
-          TclExpr.group(Value.numericValue(splitStart), TclExpr.PLUS,
-                        Value.numericValue(skip), TclExpr.MINUS,
-                        LiteralInt.ONE)));
-    splitBody.add(new SetVariable(TCLTMP_SPLITEND, splitEndExpr));
-    
-    outerRecCall.add(Value.numericValue(TCLTMP_SPLITEND));
-    outerRecCall.add(incVal);
+    outerRecCall.add(splitStart);
+    outerRecCall.add(splitEnd);
+    outerRecCall.add(inc);
 
-    splitBody.add(Turbine.rule(outerProcName, new ArrayList<Value>(0),
+    splitLoop.loopBody().add(Turbine.rule(outerProcName, new ArrayList<Value>(0),
                     outerRecCall, TaskMode.CONTROL, 
                     execContextStack.peek(), RuleProps.DEFAULT));
+    
+    
+    // TODO: add update range expressions
 
-    pointStack.push(inner);
+    return result;
   }
 
   /**

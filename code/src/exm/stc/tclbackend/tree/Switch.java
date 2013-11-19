@@ -19,7 +19,7 @@ import java.util.List;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 
-public class Switch extends Sequence {
+public class Switch extends TclTree {
   final TclTree condition;
   final List<Integer> caseLabels;
   final boolean hasDefault;

@@ -16,7 +16,6 @@
 
 package exm.stc.tclbackend.tree;
 
-import exm.stc.common.exceptions.STCRuntimeError;
 
 /**
  * If-then construct
@@ -24,25 +23,20 @@ import exm.stc.common.exceptions.STCRuntimeError;
  *
  * @author wozniak
  * */
-public class If extends Sequence
+public class If extends TclTree
 {
-  TclTree condition;
+  private TclTree condition;
+  private Sequence thenBlock;
+  private Sequence elseBlock;
 
-  public If(TclTree condition, TclTree thenBlock, TclTree elseBlock)
+  public If(TclTree condition, Sequence thenBlock, Sequence elseBlock)
   {
     this.condition = condition;
-    members.add(thenBlock);
-    if (elseBlock != null) {
-      members.add(elseBlock);
-    }
+    this.thenBlock = thenBlock;
+    this.elseBlock = elseBlock;
   }
 
-  public If(String condition, TclTree thenBlock)
-  {
-    this(new Token(condition), thenBlock, null);
-  }
-
-  public If(Expression condition, TclTree thenBlock)
+  public If(Expression condition, Sequence thenBlock)
   {
     this((TclTree) condition, thenBlock, null);
   }
@@ -50,31 +44,33 @@ public class If extends Sequence
   /**
      The user must do an add() later to set the then-block
    */
-  public If(Expression condition)
+  public If(Expression condition, boolean hasElse)
   {
-    this((TclTree) condition, null, null);
+    this((TclTree) condition, new Sequence(),
+             hasElse ? new Sequence() : null);
+  }
+  
+  public Sequence thenBlock() {
+    return thenBlock;
+  }
+  
+  public Sequence elseBlock() {
+    return elseBlock;
   }
 
   @Override
   public void appendTo(StringBuilder sb)
   {
-    if (members.size() < 1) {
-      throw new STCRuntimeError("if: no then block found");
-    } else if (members.size() > 2) {
-      throw new STCRuntimeError("if: additional block found after " +
-                                       "else block");
-    }
+
     indent(sb);
     sb.append("if { ");
     condition.appendTo(sb);
     sb.append(" } ");
     // then block
-    TclTree thenBlock = members.get(0);
     thenBlock.setIndentation(indentation);
     thenBlock.appendToAsBlock(sb);
-    if (members.size() == 2) {
+    if (elseBlock != null) {
       sb.append(" else ");
-      TclTree elseBlock = members.get(1);
       // else block
       elseBlock.setIndentation(indentation);
       elseBlock.appendToAsBlock(sb);

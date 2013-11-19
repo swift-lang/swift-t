@@ -19,13 +19,18 @@ package exm.stc.tclbackend.tree;
  * Loop over a range
  *
  */
-public class ForLoop extends Sequence {
+public class ForLoop extends TclTree {
   private String loopVar;
-  private TclTree loopBody;
+  private Sequence loopBody;
   private Expression start;
   private Expression end; 
   private Expression incr; 
 
+  public ForLoop(String loopVar, Expression start, Expression end, 
+          Expression incr) {
+    this(loopVar, start, end, incr, new Sequence());
+  }
+  
   /**
    * 
    * @param loopVar
@@ -36,16 +41,19 @@ public class ForLoop extends Sequence {
    * @param loopBody
    */
   public ForLoop(String loopVar, Expression start, Expression end, 
-      Expression incr, TclTree loopBody)
+      Expression incr, Sequence loopBody)
   {
     this.loopVar = loopVar;
     this.start = start;
     this.end = end;
     this.incr = incr;
     this.loopBody = loopBody;
-    members.add(loopBody);
   }
 
+  public Sequence loopBody() {
+    return loopBody;
+  }
+  
   @Override
   public void appendTo(StringBuilder sb)
   { 

@@ -42,6 +42,10 @@ public class Value extends Expression
     this(variable, false, false);
   }
   
+  public String variable() {
+    return this.variable;
+  }
+  
   public static Value numericValue(String variable) {
     return new Value(variable, false, true);
   }

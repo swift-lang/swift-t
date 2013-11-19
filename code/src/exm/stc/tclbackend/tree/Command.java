@@ -48,6 +48,10 @@ public class Command extends TclTree
     for (String s : strings)
       tokens.add(new Token(s));
   }
+  
+  public static Command returnCommand() {
+    return new Command("return");
+  }
 
   @Override
   public void appendTo(StringBuilder sb)
