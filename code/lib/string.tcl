@@ -354,7 +354,7 @@ namespace eval turbine {
         set type [ container_typeof $container ]
         set N  [ adlb::container_size $container ]
         c::log "string_from_floats_body start"
-        deeprule $container 1 [ list false false ] \
+        deeprule $container 1 [ list false ] \
             "string_from_floats_store $result $container"
     }
     # This is called when every entry in container is set
