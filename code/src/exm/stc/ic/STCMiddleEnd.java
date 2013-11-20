@@ -81,7 +81,7 @@ import exm.stc.ic.tree.TurbineOp;
 /**
  * This class can be used to create the intermediate representation for a 
  * program.  The intermediate representation is built up by calling methods
- * on this class in sequence.  Once the IR is built up, it can be optimised,
+ * on this class in body.  Once the IR is built up, it can be optimised,
  * or it can be "replayed" with the regenerate method in order to 
  * do the final code generation.
  */

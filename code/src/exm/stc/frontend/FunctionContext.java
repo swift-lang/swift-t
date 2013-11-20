@@ -33,7 +33,7 @@ public class FunctionContext {
 
   /**
    * For any given string key, return integers
-   * in a sequence starting from 0
+   * in a body starting from 0
    * @param counterName
    * @return
    */

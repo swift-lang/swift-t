@@ -349,9 +349,9 @@ public class ICUtil {
   }
   
   /** 
-   * Replace the current instruction with the provided sequence
+   * Replace the current instruction with the provided body
    * After this is done, next() will return the instruction after
-   * the inserted sequence
+   * the inserted body
    */
   public static void replaceInsts(
               Block block,
@@ -388,12 +388,16 @@ public class ICUtil {
    */
   public static List<Var> extractVars(Collection<Arg> args) {
     ArrayList<Var> res = new ArrayList<Var>();
+    addVars(res, args);
+    return res;
+  }
+
+  public static void addVars(Collection<Var> res, Collection<Arg> args) {
     for (Arg a: args) {
       if (a.isVar()) {
         res.add(a.getVar());
       }
     }
-    return res;
   }
 
   public static <T> List<T> filterNulls(Collection<T> list) {

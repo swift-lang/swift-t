@@ -762,7 +762,8 @@ public class ICTree {
     FOREACH_BODY,
     WAIT_BLOCK,
     LOOP_BODY,
-    RANGELOOP_BODY
+    RANGELOOP_BODY,
+    ASYNC_EXEC_CONTINUATION,
   }
 
   public static class CleanupAction {

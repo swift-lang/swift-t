@@ -25,11 +25,13 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -43,6 +45,7 @@ import exm.stc.common.exceptions.STCFatal;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.CompileTimeArgs;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ExecContext;
@@ -153,7 +156,7 @@ public class TurbineGenerator implements CompilerBackend {
   Deque<Sequence> pointStack = new ArrayDeque<Sequence>();
   
   /**
-   * Shortcut for current sequence in pointStack
+   * Shortcut for current body in pointStack
    * @return
    */
   private Sequence point() {
@@ -1783,8 +1786,8 @@ public class TurbineGenerator implements CompilerBackend {
                                      TaskMode mode)
   throws UserException
   {
-    List<String> outputs = prefixVars(Var.nameList(oList));
-    List<String> inputs  = prefixVars(Var.nameList(iList));
+    List<String> outputs = prefixVars(oList);
+    List<String> inputs  = prefixVars(iList);
     // System.out.println("function" + functionName);
     boolean isMain = functionName.equals(Constants.MAIN_FUNCTION);
     String prefixedFunctionName = null;
@@ -1962,11 +1965,8 @@ public class TurbineGenerator implements CompilerBackend {
         args.add(prefixVar(v));
       }
 
-      Sequence constructProc = new Sequence();
-
       String uniqueName = uniqueTCLFunctionName(procName);
-      Proc proc = new Proc(uniqueName, usedTclFunctionNames, args,
-                                                    constructProc);
+      Proc proc = new Proc(uniqueName, usedTclFunctionNames, args);
       tree.add(proc);
 
       boolean useDeepWait = false; // True if we have to use special wait impl. 
@@ -2026,7 +2026,7 @@ public class TurbineGenerator implements CompilerBackend {
             waitFor, action, mode, execContextStack.peek(), ruleProps));
       }
       
-      pointStack.push(constructProc);
+      pointStack.push(proc.getBody());
       
       ExecContext newExecContext;
       if (mode == TaskMode.WORKER) {
@@ -2769,10 +2769,9 @@ public class TurbineGenerator implements CompilerBackend {
     return TclNamer.prefixVar(var.name());
   }
 
-  private static List<String> prefixVars(List<String> vlist) {
-    return TclNamer.prefixVars(vlist);
+  private static List<String> prefixVars(List<Var> vars) {
+    return TclNamer.prefixVars(vars);
   }
-
 
   private boolean noStackVars() {
     boolean no_stack_vars;
@@ -2895,6 +2894,73 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void checkpointLookupEnabled(Var out) {
     pointAdd(new SetVariable(prefixVar(out), Turbine.xptLookupEnabled()));
+  }
+  
+
+  @Override
+  public void startAsyncExec(String procName, List<Var> passIn, 
+      AsyncExecutor executor, List<Var> taskOutputs,
+      List<Arg> taskArgs, Map<String, Arg> taskProps) {
+
+    // Pass in context variables
+    List<String> continuationArgs = new ArrayList<String>();
+    List<Expression> continuationArgVals = new ArrayList<Expression>();
+    for (Var passVar: passIn) {
+      continuationArgs.add(prefixVar(passVar));
+      continuationArgVals.add(varToExpr(passVar));
+    }
+    
+    // Setup proc
+    String uniqueName = uniqueTCLFunctionName(procName);
+    Proc proc = new Proc(uniqueName, usedTclFunctionNames, continuationArgs);
+    tree.add(proc);
+    
+    List<Token> outVarNames = new ArrayList<Token>(taskOutputs.size());
+    for (Var taskOutput: taskOutputs) {
+      outVarNames.add(new Token(prefixVar(taskOutput)));
+    }
+    
+    List<Expression> taskArgExprs = new ArrayList<Expression>(taskArgs.size());
+    for (Arg taskArg: taskArgs) {
+      taskArgExprs.add(argToExpr(taskArg));
+    }
+    
+    List<Pair<String, Expression>> taskPropExprs =
+        new ArrayList<Pair<String,Expression>>(taskProps.size());
+    for (Entry<String, Arg> e: taskProps.entrySet()) {
+      taskPropExprs.add(Pair.create(e.getKey(), argToExpr(e.getValue())));
+    }
+    
+    // Put properties into alphabetical order
+    Collections.sort(taskPropExprs,
+        new Comparator<Pair<String, Expression>> () {
+      public int compare(Pair<String, Expression> a,
+          Pair<String, Expression> b) {
+        return a.val1.compareTo(b.val1);
+      }
+    });
+     
+    
+    List<Expression> continuation = new ArrayList<Expression>();
+    continuation.add(new Token(uniqueName));
+    continuation.addAll(continuationArgVals);
+    
+    // TODO: proper output
+    Command exec = new Command("turbine::async_exec", Arrays.asList(
+        new Token(executor.toString()), new TclList(outVarNames),
+        new TclList(taskArgExprs), Dict.dictCreateSE(true, taskPropExprs),
+        new TclList(continuation)));
+    pointStack.peek().add(exec);
+    
+
+    
+    // Enter proc body for further code generation
+    pointStack.push(proc.getBody());
+  }
+  
+  public void endAsyncExec() {
+    assert(pointStack.size() >= 2);
+    pointStack.pop();
   }
   
   @Override

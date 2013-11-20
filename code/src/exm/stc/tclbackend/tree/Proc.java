@@ -26,7 +26,7 @@ public class Proc extends TclTree
 {
   String name;
   List<String> args;
-  Sequence sequence;
+  Sequence body;
 
   /**
    * 
@@ -34,17 +34,26 @@ public class Proc extends TclTree
    * @param usedFunctionNames used to ensure we're not generating duplicate 
    *                          functions
    * @param args
-   * @param sequence
+   * @param body
    */
   public Proc(String name, Set<String> usedFunctionNames,
-                          List<String> args, Sequence sequence)
+                          List<String> args, Sequence body)
   {
     assert(!usedFunctionNames.contains(name));
     checkTclFunctionName(name);
     usedFunctionNames.add(name);
     this.name = name;
     this.args = args;
-    this.sequence = sequence;
+    this.body = body;
+  }
+  
+  public Proc(String name, Set<String> usedFunctionNames,
+      List<String> args) {
+    this(name, usedFunctionNames, args, new Sequence());
+  }
+  
+  public Sequence getBody() {
+    return body;
   }
 
   /**
@@ -72,8 +81,8 @@ public class Proc extends TclTree
     sb.append(" { ");
     sb.append(StringUtil.concat(args));
     sb.append(" } {\n");
-    sequence.setIndentation(indentation+indentWidth);
-    sequence.appendTo(sb);
+    body.setIndentation(indentation+indentWidth);
+    body.appendTo(sb);
     sb.append("}\n\n");
   }
 }

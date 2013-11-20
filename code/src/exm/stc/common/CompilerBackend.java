@@ -17,9 +17,11 @@ package exm.stc.common;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.PassedVar;
@@ -500,6 +502,20 @@ public interface CompilerBackend {
 
   public void endWaitStatement();
 
+  /**
+   * Start asynchronous execution construct that encloses code block
+   * that runs as continuation.
+   * @param procName
+   * @param executor
+   * @param taskOutputs
+   * @param taskArgs
+   * @param taskProps
+   */
+  public void startAsyncExec(String procName, List<Var> passIn, 
+      AsyncExecutor executor, List<Var> taskOutputs,
+      List<Arg> taskArgs, Map<String, Arg> taskProps);
+  
+  public void endAsyncExec();
   
   /**
    * 
@@ -536,4 +552,5 @@ public interface CompilerBackend {
   public void packValues(Var packed, List<Arg> unpacked);
   
   public void unpackValues(List<Var> unpacked, Arg packed);
+
 }

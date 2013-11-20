@@ -21,9 +21,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -35,6 +37,7 @@ import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgKind;
+import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.TaskMode;
@@ -389,7 +392,9 @@ public class ICContinuations {
     FOREACH_LOOP,
     RANGE_LOOP,
     LOOP,
-    WAIT_STATEMENT
+    WAIT_STATEMENT,
+    ASYNC_EXEC,
+    ;
   }
 
   /**
@@ -1099,7 +1104,6 @@ public class ICContinuations {
   /**
    * A new construct that blocks on a list of variables (blockVars),
    * and only runs the contents once all of those variables are closed
-   *
    */
   public static class WaitStatement extends AsyncContinuation {
     /** Label name to use in final generated code */
@@ -1460,5 +1464,201 @@ public class ICContinuations {
       }
     }
   }
+  
+  /**
+   * A new construct that dispatches a task to an asynchronous executor,
+   * which runs the provided block once execution is finished.
+   */
+  public static class AsyncExec extends AsyncContinuation {
+    /** Label name to use in final generated code */
+    private final String procName;
+    private final Block block;
 
+    /**
+     * Executor that it will execute on
+     */
+    private final AsyncExecutor executor;
+    
+    /**
+     * Output variables assigned by task, generally
+     * local values
+     */
+    private final List<Var> taskOutputs;
+    
+    /**
+     * Arguments that describe task
+     */
+    private final List<Arg> taskArgs;
+    
+    /**
+     * Key-value properties to pass to executor
+     */
+    private final Map<String, Arg> taskProps;
+    
+    /**
+     * If the task should be treated as having side effects
+     */
+    private final boolean hasSideEffects;
+
+    public AsyncExec(String procName, AsyncExecutor executor,
+                    List<PassedVar> passedVars, List<Var> keepOpenVars,
+                    List<Var> taskOutputs,
+                    List<Arg> taskArgs, Map<String, Arg> taskProps,
+                    boolean hasSideEffects) {
+      this(procName, new Block(BlockType.ASYNC_EXEC_CONTINUATION, null),
+          true, executor, passedVars, keepOpenVars, taskOutputs,
+          taskArgs, taskProps, hasSideEffects);
+      assert(this.block.getParentCont() != null);
+    }
+
+    private AsyncExec(String procName, Block block, boolean newBlock,
+        AsyncExecutor executor,
+        List<PassedVar> passedVars, List<Var> keepOpenVars,
+        List<Var> taskOutputs, 
+        List<Arg> taskArgs, Map<String, Arg> taskProps,
+        boolean hasSideEffects) {
+      super(passedVars, keepOpenVars);
+      assert(passedVars != null);
+      assert(keepOpenVars != null);
+      assert(executor != null);
+      assert(taskArgs != null);
+      assert(taskProps != null);
+      this.procName = procName;
+      this.block = block;
+      this.block.setParent(this, newBlock);
+      this.executor = executor;
+      this.taskOutputs = new ArrayList<Var>(taskOutputs);
+      this.taskArgs = new ArrayList<Arg>(taskArgs);
+      this.taskProps = new HashMap<String, Arg>(taskProps);
+      this.hasSideEffects = hasSideEffects;
+    }
+
+    @Override
+    public AsyncExec clone() {
+      return new AsyncExec(procName, this.block.clone(),
+          false, executor, passedVars, keepOpenVars,
+          taskOutputs, taskArgs, taskProps, hasSideEffects);
+    }
+
+    public Block getBlock() {
+      return block;
+    }
+
+    @Override
+    public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
+      gen.startAsyncExec(procName, PassedVar.extractVars(passedVars),
+                          executor, taskOutputs, taskArgs, taskProps);
+      this.block.generate(logger, gen, info);
+      gen.endAsyncExec();
+      throw new STCRuntimeError("Not implemented");
+    }
+
+    @Override
+    public void prettyPrint(StringBuilder sb, String currentIndent) {
+      String newIndent = currentIndent + indent;
+      sb.append(currentIndent + "async_exec ");
+      sb.append(executor.toString());
+      sb.append(" (");
+      ICUtil.prettyPrintVarList(sb, taskOutputs);
+      sb.append(") (");
+      ICUtil.prettyPrintArgList(sb, taskArgs);
+      if (!taskProps.isEmpty()) {
+        sb.append(",");
+        for (Entry<String, Arg> e: taskProps.entrySet()) {
+          sb.append("\"");
+          sb.append(e.getKey());
+          sb.append("\"=");
+          sb.append(e.getValue().toString());
+        }
+      }
+      sb.append(") ");
+      sb.append("/*" + procName + "*/ " );
+      ICUtil.prettyPrintVarInfo(sb, passedVars, keepOpenVars);
+      sb.append(" {\n");
+      block.prettyPrint(sb, newIndent);
+      sb.append(currentIndent + "}\n");
+    }
+
+    @Override
+    public List<Block> getBlocks() {
+      return Arrays.asList(block);
+    }
+
+    @Override
+    public void replaceConstructVars_(Map<Var, Arg> renames, 
+                                      RenameMode mode) {
+      if (mode == RenameMode.REFERENCE ||
+          mode == RenameMode.REPLACE_VAR)
+      {
+        ICUtil.replaceVarsInList(renames, taskOutputs, false);
+      }
+      ICUtil.replaceArgsInList(renames, taskArgs, false);
+      ICUtil.replaceArgValsInMap(renames, taskProps);
+    }
+    @Override
+    public ContinuationType getType() {
+      return ContinuationType.ASYNC_EXEC;
+    }
+
+    @Override
+    public boolean isAsync() {
+      return true;
+    }
+    
+    @Override
+    public boolean spawnsSingleTask() {
+      return true;
+    }
+    
+    @Override
+    public boolean isLoop() {
+      return false;
+    }
+    
+    @Override
+    public boolean isConditional() {
+      return false;
+    }
+    
+    @Override
+    public boolean executesBlockOnce() {
+      return true;
+    }
+
+    @Override
+    public Collection<Var> requiredVars(boolean forDeadCodeElim) {
+      ArrayList<Var> res = new ArrayList<Var>();
+      ICUtil.addVars(res, this.taskArgs);
+      ICUtil.addVars(res, this.taskProps.values());
+      return res; // can later eliminate waitVars, etc
+    }
+
+    @Override
+    public void removeVars_(Set<Var> removeVars) {
+      // Nothing: arguments shouldn't be removed
+    }
+
+    @Override
+    public boolean isNoop() {
+      return !hasSideEffects && this.block.isEmpty();
+    }
+
+    @Override
+    public Block tryInline(Set<Var> closedVars, Set<Var> recClosedVars,
+        boolean keepExplicitDependencies) {
+      // Can't inline since the task needs to execute
+      return null;
+    }
+
+    @Override
+    public List<BlockingVar> blockingVars(boolean includeConstructDefined) {
+      return Collections.emptyList();
+    }
+
+    @Override
+    public ExecContext childContext(ExecContext outerContext) {
+      // Continuation should run in same context;
+      return outerContext;
+    }
+  }
 }

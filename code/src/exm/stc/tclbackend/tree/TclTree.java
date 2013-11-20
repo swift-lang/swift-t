@@ -34,7 +34,7 @@ public abstract class TclTree
   public abstract void appendTo(StringBuilder sb);
 
   /**
-   * Append the sequence to the StringBuilder inside
+   * Append the body to the StringBuilder inside
    * curly braces.
    * @param sb
    */

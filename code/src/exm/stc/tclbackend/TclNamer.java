@@ -94,10 +94,10 @@ public class TclNamer {
     }
   }
 
-  public static List<String> prefixVars(List<String> vlist) {
+  public static List<String> prefixVars(List<Var> vlist) {
     ArrayList<String> result = new ArrayList<String>(vlist.size());
-    for (String v: vlist) {
-      result.add(prefixVar(v));
+    for (Var v: vlist) {
+      result.add(prefixVar(v.name()));
     }
     return result;
   }

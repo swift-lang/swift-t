@@ -338,7 +338,7 @@ public class ValueNumber implements OptimizerPass {
       Statement stmt = stmts.next();
       
       if (stmt.type() == StatementType.INSTRUCTION) {
-        /* First try to see if we can expand instruction sequence */
+        /* First try to see if we can expand instruction body */
 
         Instruction inst = stmt.instruction();
         if (logger.isTraceEnabled() && inst.op != Opcode.COMMENT) {
@@ -350,7 +350,7 @@ public class ValueNumber implements OptimizerPass {
         if (switchToImmediate(logger, f, execCx, block, state, inst, stmts,
                               stmtIndex)) {
           /*
-           * We switched the instruction for a new sequence of instructions. 
+           * We switched the instruction for a new body of instructions. 
            * Restart iteration and *don't* increment statement index to account.
            */
           continue;
@@ -735,7 +735,7 @@ public class ValueNumber implements OptimizerPass {
       return false;
     }
     
-    // Create replacement sequence
+    // Create replacement body
     Block insertContext;
     ListIterator<Statement> insertPoint;
     boolean noWaitRequired = req.mode == TaskMode.LOCAL
@@ -775,7 +775,7 @@ public class ValueNumber implements OptimizerPass {
                            outFetched, req.out, req.mapOutVars);
 
     if (logger.isTraceEnabled()) {
-      logger.trace("Replacing instruction <" + inst + "> with sequence "
+      logger.trace("Replacing instruction <" + inst + "> with body "
           + alt.toString());
     }
 
