@@ -169,7 +169,7 @@ public class LValue {
   }
 
   /**
-   * @return the first body of struct_path in the indicies
+   * @return the first sequence of struct_path in the indicies
    */
   public List<String> structPath() {
     List<String> structPath = new ArrayList<String>();

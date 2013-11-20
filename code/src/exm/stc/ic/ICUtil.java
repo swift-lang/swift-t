@@ -349,9 +349,9 @@ public class ICUtil {
   }
   
   /** 
-   * Replace the current instruction with the provided body
+   * Replace the current instruction with the provided sequence
    * After this is done, next() will return the instruction after
-   * the inserted body
+   * the inserted sequence
    */
   public static void replaceInsts(
               Block block,

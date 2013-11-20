@@ -156,7 +156,7 @@ public class TurbineGenerator implements CompilerBackend {
   Deque<Sequence> pointStack = new ArrayDeque<Sequence>();
   
   /**
-   * Shortcut for current body in pointStack
+   * Shortcut for current sequence in pointStack
    * @return
    */
   private Sequence point() {

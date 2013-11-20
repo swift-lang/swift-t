@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Line after line body of Tcl code
+ * Line after line sequence of Tcl code
  * @author wozniak
  * */
 public class Sequence extends TclTree
