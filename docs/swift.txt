@@ -1423,11 +1423,14 @@ the answer was: 104
 
 As coded here, both R and Swift report the value of +a+.
 
-NOTE: To use this, Turbine must be configured with +--enable-R+ before
+NOTE: To use this, Turbine must be configured with +--enable-r+ before
  compiling.  This feature is implemented by linking to R as a shared
  library, enabling better performance than calling the +R+ program
  (which may be done by using a normal Swift
- <<app_functions,app function>>).
+ <<app_functions,app function>>).  When installing R, be sure to
+ include the +devel+ package.  You may need to set the environment
+ variable +R_HOME+ to the directory containing the R installation.
+ For the APT package, this is +/usr/lib/R+.
 
 [[Optimizations]]
 == Optimizations
