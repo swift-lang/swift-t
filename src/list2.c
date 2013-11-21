@@ -60,32 +60,6 @@ list2_add(struct list2* target, void* data)
   return new_item;
 }
 
-/**
-  Alternative interface allowing caller to provide list node
- */
-void
-list2_add_item(struct list2* target, struct list2_item* new_item)
-{
-  assert(target != NULL);
-  new_item->next = NULL;
-  new_item->prev = target->tail;
-
-  // Already loaded target->tail, so check that for emptiness
-  if (target->tail == NULL)
-  {
-    // Empty list case
-    target->head = new_item;
-  }
-  else
-  {
-    // Non-empty list case
-    target->tail->next = new_item;
-  }
-
-  target->tail = new_item;
-  target->size++;
-}
-
 void*
 list2_pop(struct list2* target)
 {
@@ -95,29 +69,6 @@ list2_pop(struct list2* target)
   void* result = item->data;
   free(item);
   return result;
-}
-
-struct list2_item* list2_pop_item(struct list2* target)
-{
-  struct list2_item* item = target->head;
-  if (item == NULL)
-    return NULL;
-
-  // Code for special case of unlinking head
-  target->head = item->next;
-  if (target->tail == item)
-  {
-    // Tail case - no next - must be only entry in list
-    target->tail = NULL;
-  }
-  else
-  {
-    // Non-tail case - must have next. Next is now head
-    item->next->prev = NULL;
-  }
-
-  target->size--;
-  return item;
 }
 
 void
@@ -148,3 +99,4 @@ list2_remove_item(struct list2* target, struct list2_item* item)
   }
   target->size--;
 }
+
