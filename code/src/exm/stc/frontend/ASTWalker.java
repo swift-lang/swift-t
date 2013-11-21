@@ -55,6 +55,7 @@ import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.ArrayType;
 import exm.stc.common.lang.Types.NestedContainerInfo;
 import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Types.FileKind;
@@ -1988,8 +1989,12 @@ public class ASTWalker {
       assert(filenameFuture != null);
       localInput = varCreator.fetchValueOf(context, filenameFuture);
     } else if (Types.isArray(in.type())) {
-      // Pass array reference directly
-      localInput = in;
+      // Unpack to flat representation
+      NestedContainerInfo ci = new NestedContainerInfo(in.type());
+      Type memberValType = Types.derefResultType(ci.baseType);
+      Type localInType =  new ArrayType(true, Types.F_INT, memberValType);
+      localInput = varCreator.createValueVar(context, localInType, in, true);
+      backend.unpackArrayToFlat(localInput, in.asArg());
     } else {
       localInput = varCreator.fetchValueOf(context, in);
     }

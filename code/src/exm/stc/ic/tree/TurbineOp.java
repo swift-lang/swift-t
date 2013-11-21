@@ -368,6 +368,9 @@ public class TurbineOp extends Instruction {
     case UNPACK_VALUES:
       gen.unpackValues(getOutputs(), getInput(0));
       break;
+    case UNPACK_ARRAY_TO_FLAT:
+      gen.unpackArrayToFlat(getOutput(0), getInput(0));
+      break;
     default:
       throw new STCRuntimeError("didn't expect to see op " +
                 op.toString() + " here");
@@ -829,6 +832,10 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.UNPACK_VALUES, values, packedValues); 
   }
 
+  public static Instruction unpackArrayToFlat(Var flatLocalArray, Arg inputArray) {
+    return new TurbineOp(Opcode.UNPACK_ARRAY_TO_FLAT, flatLocalArray, inputArray); 
+  }
+  
   @Override
   public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
     if (mode == RenameMode.VALUE) {
@@ -995,6 +1002,7 @@ public class TurbineOp extends Instruction {
     case LOOKUP_CHECKPOINT:
     case PACK_VALUES:
     case UNPACK_VALUES:
+    case UNPACK_ARRAY_TO_FLAT:
     case CHECKPOINT_WRITE_ENABLED:
     case CHECKPOINT_LOOKUP_ENABLED:
       return false;
@@ -1630,6 +1638,7 @@ public class TurbineOp extends Instruction {
     case WRITE_CHECKPOINT:
     case PACK_VALUES:
     case UNPACK_VALUES:
+    case UNPACK_ARRAY_TO_FLAT:
       return TaskMode.SYNC;
     
     case ARRAY_DEREF_INSERT_IMM:
@@ -1896,6 +1905,8 @@ public class TurbineOp extends Instruction {
         return vanillaResult(Closed.YES_NOT_RECURSIVE, IsAssign.NO).asList();
       case CHECKPOINT_LOOKUP_ENABLED:
       case CHECKPOINT_WRITE_ENABLED:
+        return vanillaResult(Closed.YES_NOT_RECURSIVE, IsAssign.NO).asList();
+      case UNPACK_ARRAY_TO_FLAT:
         return vanillaResult(Closed.YES_NOT_RECURSIVE, IsAssign.NO).asList();
       default:
         return null;

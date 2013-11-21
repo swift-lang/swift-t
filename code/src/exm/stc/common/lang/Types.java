@@ -2181,16 +2181,16 @@ public class Types {
    *
    */
   public static class NestedContainerInfo {
-    public NestedContainerInfo(Type baseType, int nesting) {
+    public NestedContainerInfo(Typed baseType, int nesting) {
       super();
-      this.baseType = baseType;
+      this.baseType = baseType.type();
       this.nesting = nesting;
     }
     /**
      * Construct from regular SwiftType
      * @param type
      */
-    public NestedContainerInfo(Type type) {
+    public NestedContainerInfo(Typed type) {
       assert(isContainer(type));
       int depth = 0;
       while (isContainer(type)) {
@@ -2198,7 +2198,7 @@ public class Types {
         depth++;
       }
       this.nesting = depth;
-      this.baseType = type;
+      this.baseType = type.type();
     }
     
     public final Type baseType; 

@@ -82,7 +82,6 @@ import exm.stc.tclbackend.tree.Command;
 import exm.stc.tclbackend.tree.Comment;
 import exm.stc.tclbackend.tree.Dict;
 import exm.stc.tclbackend.tree.DictFor;
-import exm.stc.tclbackend.tree.Expand;
 import exm.stc.tclbackend.tree.Expression;
 import exm.stc.tclbackend.tree.Expression.ExprContext;
 import exm.stc.tclbackend.tree.ForEach;
@@ -127,7 +126,6 @@ public class TurbineGenerator implements CompilerBackend {
   private static final String TCLTMP_ITERSLEFT = "tcltmp:itersleft";
   private static final String TCLTMP_ITERSTOTAL = "tcltmp:iterstotal";
   private static final String TCLTMP_ITERS = "tcltmp:iters";
-  private static final String TCLTMP_UNPACKED = "tcltmp:unpacked";
   private static final String TCLTMP_INIT_REFCOUNT = "tcltmp:init_rc";
   private static final String TCLTMP_SPLIT_START = "tcltmp:splitstart";
   private static final String TCLTMP_SKIP = "tcltmp:skip";
@@ -1343,19 +1341,9 @@ public class TurbineGenerator implements CompilerBackend {
     
     for (int argNum = 0; argNum < args.size(); argNum++) {
       Arg arg = args.get(argNum);
-      Expression argExpr;
-      if (Types.isArray(arg.type())) {
-        // Special case: expand arrays to list
-        // Use temporary variable to avoid double evaluation
-        NestedContainerInfo ai = new NestedContainerInfo(arg.type());
-        String unpackTmp = TCLTMP_UNPACKED + argNum;
-        pointAdd(new SetVariable(unpackTmp, Turbine.unpackArray(
-                                argToExpr(arg), ai.nesting,
-                                Types.isFile(ai.baseType))));  
-        argExpr = new Expand(new Value(unpackTmp));
-      } else {
-        argExpr = argToExpr(arg);
-      }
+      // Should only accept local arguments
+      assert(arg.isConstant() || arg.getVar().storage() == Alloc.LOCAL);
+      Expression argExpr = argToExpr(arg);
       tclArgs.add(argExpr);
       logMsg.add(argExpr);
     }
@@ -1383,7 +1371,7 @@ public class TurbineGenerator implements CompilerBackend {
       }
     }
   }
-
+  
   private void clearPriority(Arg priority) {
     if (priority != null) {
       pointAdd(Turbine.resetPriority());
@@ -3034,4 +3022,27 @@ public class TurbineGenerator implements CompilerBackend {
     }
     pointAdd(Turbine.xptUnpack(unpackedVarNames, argToExpr(packed), types));
   }
+  
+  @Override
+  public void unpackArrayToFlat(Var flatLocalArray, Arg inputArray) {
+    // TODO: other container types?
+    assert(Types.isArray(inputArray.type()));
+    NestedContainerInfo c = new NestedContainerInfo(inputArray.type());
+    assert(Types.isArrayLocal(flatLocalArray));
+    Type memberValT = Types.derefResultType(c.baseType);
+    assert(memberValT.assignableTo(Types.containerElemType(flatLocalArray)));
+    
+    pointStack.peek().add(new SetVariable(prefixVar(flatLocalArray),
+        unpackArrayInternal(inputArray)));
+  }
+
+  private Expression unpackArrayInternal(Arg arg) {
+    NestedContainerInfo ai = new NestedContainerInfo(arg.type());
+    Expression unpackArrayExpr = Turbine.unpackArray(
+                            argToExpr(arg), ai.nesting,
+                            Types.isFile(ai.baseType));
+    return unpackArrayExpr;
+  }
+  
+  
 }

@@ -95,7 +95,11 @@ public enum Opcode {
   LOOKUP_CHECKPOINT, WRITE_CHECKPOINT,
   
   // Pack and unpack values into blob
-  PACK_VALUES, UNPACK_VALUES;
+  PACK_VALUES, UNPACK_VALUES,
+  
+  // Unpack array into flat representation
+  UNPACK_ARRAY_TO_FLAT,
+  ;
   
   public boolean isAssign() {
     switch (this) {

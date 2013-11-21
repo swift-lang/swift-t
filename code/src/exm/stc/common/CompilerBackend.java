@@ -555,4 +555,11 @@ public interface CompilerBackend {
   
   public void unpackValues(List<Var> unpacked, Arg packed);
 
+  /**
+   * Unpack a nested array into a local flat array 
+   * @param flatLocalArray
+   * @param inputArray
+   */
+  public void unpackArrayToFlat(Var flatLocalArray, Arg inputArray);
+
 }

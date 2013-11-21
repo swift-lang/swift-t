@@ -46,7 +46,9 @@ import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
+import exm.stc.common.lang.Types.NestedContainerInfo;
 import exm.stc.common.lang.Types.StructType;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
@@ -1198,5 +1200,17 @@ public class STCMiddleEnd {
     assert(Types.isBlobVal(packedValues));
     currBlock().addInstruction(
         TurbineOp.unpackValues(values, packedValues.asArg()));
+  }
+
+  public void unpackArrayToFlat(Var flatLocalArray, Arg inputArray) {
+    // TODO: other container types?
+    assert(Types.isArray(inputArray.type()));
+    NestedContainerInfo c = new NestedContainerInfo(inputArray.type());
+    assert(Types.isArrayLocal(flatLocalArray));
+    Type memberValT = Types.derefResultType(c.baseType);
+    assert(memberValT.assignableTo(Types.containerElemType(flatLocalArray)));
+    
+    currBlock().addInstruction(
+        TurbineOp.unpackArrayToFlat(flatLocalArray, inputArray));
   }
 }
