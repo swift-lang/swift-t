@@ -137,7 +137,7 @@ public class Validate implements OptimizerPass {
     checkVarReferences(logger, fn, block, declared);
       
     if (checkCleanups)
-      checkCleanups(fn, block);
+      checkCleanups(logger, fn, block);
     
     for (Continuation c: block.getContinuations()) {
       for (Var v: c.constructDefinedVars(ContVarDefType.NEW_DEF)) {
@@ -227,7 +227,7 @@ public class Validate implements OptimizerPass {
     checkUsed(f, referencedVar);
   }
 
-  private void checkCleanups(Function fn, Block block) {
+  private void checkCleanups(Logger logger, Function fn, Block block) {
     Set<Var> blockVars = new HashSet<Var>(block.getVariables());
     
     if (block.getType() == BlockType.MAIN_BLOCK) {
@@ -247,8 +247,9 @@ public class Validate implements OptimizerPass {
         throw new STCRuntimeError("Didn't expect to see reference " +
         		                        "counting operations yet: " + ca);
       }
+      // TODO: might indicate error sometimes?
       if (!blockVars.contains(ca.var())) {
-        throw new STCRuntimeError("Cleanup action for var not defined in " +
+        logger.debug("Cleanup action for var not defined in " +
             "block: " + ca.var() + " in function " + fn.getName() + ". " +
             " Valid variables are: " + blockVars); 
       }

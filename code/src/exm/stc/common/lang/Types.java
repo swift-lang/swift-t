@@ -2166,6 +2166,16 @@ public class Types {
         || isFileVal(output);
   }
   
+  /**
+   * If the variable must be assigned before being used as input.
+   * E.g. a non-future
+   * @param var
+   * @return
+   */
+  public static boolean assignBeforeRead(Var var) {
+    return var.storage() == Alloc.LOCAL;
+  }
+  
   /** 
    * More convenient way of representing array types for some analysies
    *

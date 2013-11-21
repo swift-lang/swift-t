@@ -221,7 +221,7 @@ public class ICContinuations {
       return Var.NONE;
     }
     
-    public List<Var> constructDefinedVars() {
+    public final List<Var> constructDefinedVars() {
       // In most cases don't care about redefs
       return constructDefinedVars(ContVarDefType.NEW_DEF);
     }
@@ -401,16 +401,22 @@ public class ICContinuations {
    * Categorization of vars defined inside continuations
    */
   public static enum ContVarDefType {
-    ANY, // All variables defined or redefined inside construct
+    ANY_DEF, // All variables defined or redefined inside construct
     NEW_DEF, // Doesn't shadow outer variables
-    REDEF,;  // Redefines value of variable from outer scope
+    REDEF, // Redefines value of variable from outer scope
+    INIT, // Initializes existing variable or defines new var
+    ;  
 
     public boolean includesRedefs() {
-      return this == ANY || this == REDEF;
+      return this == ANY_DEF || this == REDEF || this == INIT;
     }
     
     public boolean includesNewDefs() {
-      return this == ANY || this == NEW_DEF;
+      return this == ANY_DEF || this == NEW_DEF || this == INIT;
+    }
+    
+    public boolean includesInitOnly() {
+      return this == INIT;
     }
   }
   
@@ -1660,6 +1666,22 @@ public class ICContinuations {
     public ExecContext childContext(ExecContext outerContext) {
       // Continuation should run in same context;
       return outerContext;
+    }
+
+    @Override
+    public List<Var> constructDefinedVars(ContVarDefType type) {
+      
+      if (type.includesInitOnly()) {
+        List<Var> assigned = new ArrayList<Var>();
+        for (Var taskOutput: taskOutputs) {
+          if (Types.assignBeforeRead(taskOutput)) {
+            assigned.add(taskOutput);
+          }
+        }
+        return assigned;
+      } else {
+        return Var.NONE;
+      }
     }
   }
 }

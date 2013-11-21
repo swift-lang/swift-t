@@ -15,12 +15,12 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
 import exm.stc.ic.ICUtil;
+import exm.stc.ic.tree.ICContinuations.ContVarDefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.CommonFunctionCall;
 import exm.stc.ic.tree.ICInstructions.Instruction;
@@ -91,11 +91,12 @@ public class InitVariables {
     public InitState enterContinuation(Continuation cont) {
       InitState contState = makeChild();
 
-      for (Var v: cont.constructDefinedVars()) {
+      for (Var v: cont.constructDefinedVars(ContVarDefType.INIT)) {
         if (varMustBeInitialized(v, false)) {
           contState.initVars.add(v);
         }
         if (assignBeforeRead(v)) {
+          System.err.println(v);
           contState.assignedVals.add(v);
         }
       }
@@ -298,8 +299,8 @@ public class InitVariables {
     private void assertAssigned(Object context, Var inVar) {
       if (assignBeforeRead(inVar)
           && !assignedVals.contains(inVar)) {
-        throw new STCRuntimeError("Var " + inVar + " was an unassigned value " +
-                                 " read in instruction " + context.toString());
+        throw new STCRuntimeError("Var " + inVar + " was an unassigned value" +
+                       " read in " + context.toString());
       }
     }
     
@@ -355,13 +356,18 @@ public class InitVariables {
       }
     }
     if (validate && c.isAsync()) {
-      // If alias var passed to async continuation, must be initialized
+      List<Var> init = c.constructDefinedVars(ContVarDefType.INIT);
+      
+      // Vars passed to async continuation must generally be initialized
       for (PassedVar pv: c.getPassedVars()) {
         state.assertInitialized(c.getType(), pv.var, false);
-        state.assertAssigned(c.getType(), pv.var);
+        
+        // If not assigned by construct, must be assigned
+        if (Types.assignBeforeRead(pv.var) && !init.contains(pv.var)) {
+          state.assertAssigned(c.getType(), pv.var);
+        }
       }
     }
-
     
     if (validate || InitState.canUnifyBranches(c)) {
       recurseOnContinuation(logger, state, c, validate);
@@ -447,7 +453,7 @@ public class InitVariables {
   }
   
   public static boolean assignBeforeRead(Var v) {
-    return v.storage() == Alloc.LOCAL;
+    return Types.assignBeforeRead(v);
   }
 
   public static boolean varMustBeInitialized(Var v, boolean output) {
