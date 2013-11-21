@@ -47,5 +47,8 @@ MAKE_PARALLELISM=2
 # Disable ADLB checkpoint functionality
 #DISABLE_XPT=1
 
+# Enable developer mode (extra warnings)
+EXM_DEV=1
+
 # TCL Version
 TCL_VERSION=8.6

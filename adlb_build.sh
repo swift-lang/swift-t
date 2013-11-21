@@ -43,6 +43,10 @@ if [ ! -z "$DISABLE_XPT" ]; then
     EXTRA_ARGS+=" --enable-checkpoint=no"
 fi
 
+if [[ ! -z "$EXM_DEV" && "$EXM_DEV" != 0 ]]; then
+  EXTRA_ARGS+=" --enable-dev"
+fi
+
 ./configure --with-c-utils=${C_UTILS_INST} \
             --prefix=${LB_INST} ${EXTRA_ARGS}
 make clean
