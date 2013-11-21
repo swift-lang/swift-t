@@ -47,7 +47,7 @@ typedef struct {
   heap_entry_t *array;
   size_t size;
   size_t malloced_size;
-} heap;
+} heap_t;
 
 // The heap test case uses calls that are checkable at compile
 // time, resulting in warnings.  Allow user to disable the assert()s.
@@ -58,7 +58,7 @@ typedef struct {
 #endif
 
 static inline void
-heap_init(heap *heap, size_t init_capacity)
+heap_init(heap_t *heap, size_t init_capacity)
 {
   assert(init_capacity > 0);
   if(!(heap->array = 
@@ -72,7 +72,7 @@ heap_init(heap *heap, size_t init_capacity)
 }
 
 static inline void
-heap_clear_callback(heap *heap, void (*cb)(heap_key_t, heap_val_t))
+heap_clear_callback(heap_t *heap, void (*cb)(heap_key_t, heap_val_t))
 {
   if (cb != NULL)
   {
@@ -87,20 +87,20 @@ heap_clear_callback(heap *heap, void (*cb)(heap_key_t, heap_val_t))
 }
 
 static inline void
-heap_clear(heap *heap)
+heap_clear(heap_t *heap)
 {
   heap_clear_callback(heap, NULL);
 }
 
-static inline heap*
+static inline heap_t*
 heap_create(size_t init_capacity) {
-  heap* result = malloc(sizeof(heap));
+  heap_t* result = malloc(sizeof(heap_t));
   heap_init(result, init_capacity);
   return result;
 }
 
 static inline void
-heap_check(heap *heap) {
+heap_check(heap_t *heap) {
   heap_ix_t i;
   for (i = 0; i < heap->size; i++) {
     heap_key_t k = heap->array[i].key;
@@ -121,21 +121,21 @@ heap_check(heap *heap) {
   }
 }
 
-static inline heap_ix_t heap_size(heap *heap) {
+static inline heap_ix_t heap_size(heap_t *heap) {
   return heap->size;
 }
 
-static inline heap_entry_t heap_root(heap *heap) {
+static inline heap_entry_t heap_root(heap_t *heap) {
   assert(heap->size > 0);
   return heap->array[0];
 }
 
-static inline heap_key_t heap_root_key(heap *heap) {
+static inline heap_key_t heap_root_key(heap_t *heap) {
   assert(heap->size > 0);
   return heap->array[0].key;
 }
 
-static inline heap_val_t heap_root_val(heap *heap) {
+static inline heap_val_t heap_root_val(heap_t *heap) {
   assert(heap->size > 0);
   return heap->array[0].val;
 }
@@ -146,7 +146,7 @@ static inline heap_val_t heap_root_val(heap *heap) {
  * i, which may be greater than its children, then
  * sift down the entry at i.
  */
-static inline void heap_sift_down(heap *heap, heap_ix_t i) {
+static inline void heap_sift_down(heap_t *heap, heap_ix_t i) {
   assert(heap->size > i);
   heap_entry_t entry = heap->array[i];
   heap_key_t key = entry.key;
@@ -181,7 +181,7 @@ static inline void heap_sift_down(heap *heap, heap_ix_t i) {
 /*
  * Remove the root of the heap and 
  */
-static inline void heap_del_root(heap *heap)
+static inline void heap_del_root(heap_t *heap)
 {
   /* Shrink by one */
   heap->size--;
@@ -196,7 +196,7 @@ static inline void heap_del_root(heap *heap)
 /* Increase the key of an entry in the heap.  This may cause it to
  * need to be moved down the heap.  Keep on swapping it down until
  * it is resolved */
-static inline void heap_increase_key(heap *heap, heap_ix_t i, heap_key_t newkey) {
+static inline void heap_increase_key(heap_t *heap, heap_ix_t i, heap_key_t newkey) {
   assert(heap->size > i);
   heap_entry_t *entry = &(heap->array[i]);
 
@@ -210,7 +210,7 @@ static inline void heap_increase_key(heap *heap, heap_ix_t i, heap_key_t newkey)
  * heap property, except A[i] might have key < its parent.
  * Sift up A[i] until it is a heap again
  */
-static inline void heap_sift_up(heap *heap, heap_ix_t i) {
+static inline void heap_sift_up(heap_t *heap, heap_ix_t i) {
   assert(heap->size > i);
   heap_entry_t entry, parent;
   entry = heap->array[i];
@@ -229,7 +229,7 @@ static inline void heap_sift_up(heap *heap, heap_ix_t i) {
 }
 
 static inline void
-heap_expand(heap *heap, size_t needed_size)
+heap_expand(heap_t *heap, size_t needed_size)
 {
   size_t new_size;
   /* Expand the array if needed */
@@ -248,7 +248,7 @@ heap_expand(heap *heap, size_t needed_size)
 }
 
 static inline void
-heap_add_entry(heap *heap, heap_entry_t entry) {
+heap_add_entry(heap_t *heap, heap_entry_t entry) {
   /* Make sure big enough */
   heap_expand(heap, heap->size + 1);
 
@@ -261,7 +261,7 @@ heap_add_entry(heap *heap, heap_entry_t entry) {
 }
 
 static inline void
-heap_add(heap *heap, heap_key_t k, heap_val_t v)
+heap_add(heap_t *heap, heap_key_t k, heap_val_t v)
 {
   heap_entry_t entry = {k, v};
   heap_add_entry(heap, entry);
@@ -270,7 +270,7 @@ heap_add(heap *heap, heap_key_t k, heap_val_t v)
 /* Decrease the key of an entry in the heap.  This may cause it to
  * need to be moved up the heap. */
 static inline void
-heap_decrease_key(heap *heap, heap_ix_t i, heap_key_t newkey)
+heap_decrease_key(heap_t *heap, heap_ix_t i, heap_key_t newkey)
 {
   heap_entry_t *entry = &(heap->array[i]);
   HEAP_ASSERT(newkey <= entry->key);

@@ -125,13 +125,13 @@ random_draw(float* p, int length)
   double r = (double) random();
   double max = (double) RAND_MAX;
   double target = r/max;
-  int index = -1;
+  int ix = -1;
   do
   {
-    index++;
-    weight += p[index];
-  } while (weight < target && index < length - 1);
-  return index;
+    ix++;
+    weight += p[ix];
+  } while (weight < target && ix < length - 1);
+  return ix;
 }
 
 /** Called when the check_msg() condition fails */

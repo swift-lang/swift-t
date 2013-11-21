@@ -44,8 +44,8 @@ bin_key_hash(const void* data, size_t length, int table_size)
 {
   uint32_t p = bj_hashlittle(data, length, 0u);
 
-  int index = (int) (p % (uint32_t)table_size);
-  return index;
+  int ix = (int) (p % (uint32_t)table_size);
+  return ix;
 }
 
 /*
