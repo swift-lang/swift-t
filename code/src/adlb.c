@@ -101,6 +101,7 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
   check_versions();
   int rc;
   rc = MPI_Initialized(&initialized);
+  MPI_CHECK(rc);
   CHECK_MSG(initialized, "ADLB: MPI is not initialized!\n");
 
   xlb_start_time = MPI_Wtime();
@@ -108,7 +109,9 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
   adlb_comm = comm;
 
   rc = MPI_Comm_size(comm, &xlb_comm_size);
+  MPI_CHECK(rc);
   rc = MPI_Comm_rank(comm, &xlb_comm_rank);
+  MPI_CHECK(rc);
 
   xlb_msg_init();
 
@@ -146,7 +149,7 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
     xlb_my_server = ADLB_RANK_NULL;
     MPI_Comm_split(adlb_comm, 1, xlb_comm_rank-xlb_workers,
                    &adlb_server_comm);
-    adlb_code code = xlb_server_init();
+    code = xlb_server_init();
     ADLB_CHECK(code);
   }
 
@@ -685,14 +688,14 @@ process_notifications(adlb_datum_id id,
   if (counts->extra_data_bytes > 0)
   {
     int bytes = counts->extra_data_bytes;
-
+    assert(bytes >= 0);
     if (bytes <= XFER_SIZE)
     {
       extra_data = xfer;
     }
     else
     {
-      extra_data = malloc(bytes);
+      extra_data = malloc((size_t)bytes);
       CHECK_MSG(extra_data != NULL, "out of memory");
     }
 
@@ -701,7 +704,7 @@ process_notifications(adlb_datum_id id,
     // Locate the separate data entries in the buffer
     extra_data_count = counts->extra_data_count;
     assert(extra_data_count >= 0);
-    extra_data_ptrs = malloc(sizeof(extra_data_ptrs[0]) * extra_data_count);
+    extra_data_ptrs = malloc(sizeof(extra_data_ptrs[0]) * (size_t)extra_data_count);
     CHECK_MSG(extra_data_ptrs != NULL, "out of memory");
     int pos = 0;
     for (int i = 0; i < extra_data_count; i++)
@@ -730,8 +733,10 @@ process_notifications(adlb_datum_id id,
       assert(tmp[i].subscript_data >= 0 &&
              tmp[i].subscript_data < extra_data_count);
       adlb_binary_data *data = &extra_data_ptrs[tmp[i].subscript_data];
+      assert(data->data != NULL);
+      assert(data->length >= 0);
       not.notify.notifs[i].subscript.key = data->data;
-      not.notify.notifs[i].subscript.length = data->length;
+      not.notify.notifs[i].subscript.length = (size_t)data->length;
     }
     free(tmp);
   }

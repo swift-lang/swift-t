@@ -100,22 +100,7 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
   needed: the amount which we want to append to the string
  */
 // Check string buffer is big enough for needed chars + a terminating null byte
-static inline adlb_data_code
-xlb_resize_str(char **str, size_t *curr_size, int pos, size_t needed)
-{
-  assert(pos >= 0);
-  size_t total_needed = ((size_t)pos) + needed + 1;
-  if (total_needed > *curr_size)
-  {
-    size_t new_size = *curr_size + 1024;
-    if (new_size < total_needed)
-      new_size = total_needed + 1024;
-
-    DATA_REALLOC(*str, new_size);
-    *curr_size = new_size;
-  }
-  return ADLB_DATA_SUCCESS;
-}
-
+adlb_data_code
+xlb_resize_str(char **str, size_t *curr_size, int pos, size_t needed);
 
 #endif // __XLB_DATA_INTERNAL_H

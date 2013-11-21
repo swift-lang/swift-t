@@ -120,12 +120,12 @@ insert_notifications2(adlb_datum *d,
       struct list_l *ref_list, struct list_i *sub_list,
       adlb_notif_t *notify, bool *garbage_collected);
 
-static inline
+static 
 adlb_data_code append_refs(const struct list_l *subscribers,
           adlb_ref_data *references, adlb_data_type type,
           const void *value, int value_len); 
 
-static inline
+static 
 adlb_data_code append_notifs(const struct list_i *listeners,
                    adlb_subscript sub, adlb_notif_ranks *notify);
 
@@ -147,14 +147,14 @@ static void report_leaks(void);
 
 // Length of buffer for id+subscript.  Will be at most 8 bytes
 // more than ADLB_SUBSCRIPT_MAX
-static inline size_t id_sub_buflen(adlb_subscript sub)
+static size_t id_sub_buflen(adlb_subscript sub)
 {
   size_t size = (sizeof(adlb_datum_id) + sub.length);
   assert(size <= ID_SUB_PAIR_MAX);
   return size;
 }
 
-static inline size_t write_id_sub(char *buf, adlb_datum_id id,
+static size_t write_id_sub(char *buf, adlb_datum_id id,
                                   adlb_subscript sub)
 {
   memcpy(buf, &id, sizeof(adlb_datum_id));
@@ -163,7 +163,7 @@ static inline size_t write_id_sub(char *buf, adlb_datum_id id,
 }
 
 // Extract id and sub from buffer.  Return internal pointer into buffer
-static inline void read_id_sub(const char *buf, size_t buflen,
+static void read_id_sub(const char *buf, size_t buflen,
         adlb_datum_id *id, adlb_subscript *sub)
 {
   assert(buflen >= sizeof(*id));
@@ -855,7 +855,7 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
     
     // Now we are guaranteed to succeed
     adlb_datum_storage *entry = malloc(sizeof(adlb_datum_storage));
-    adlb_data_code dc = ADLB_Unpack(entry, c->val_type, buffer, length);
+    dc = ADLB_Unpack(entry, c->val_type, buffer, length);
     DATA_CHECK(dc);
 
     if (found)
@@ -1121,7 +1121,8 @@ pack_member(adlb_container *cont, struct list_bp_item *item,
   adlb_data_code dc;
   if (include_keys)
   {
-    dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL, item->key, item->key_len,
+    assert(item->key_len <= INT_MAX);
+    dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL, item->key, (int)item->key_len,
                         true, result, result_caller_buffer, result_pos);
     DATA_CHECK(dc);
   }
@@ -1439,7 +1440,7 @@ insert_notifications_all(adlb_datum *d, adlb_datum_id id,
   return ADLB_DATA_SUCCESS;
 }
 
-static inline
+static 
 adlb_data_code append_refs(const struct list_l *subscribers,
           adlb_ref_data *references, adlb_data_type type,
           const void *value, int value_len)
@@ -1448,7 +1449,7 @@ adlb_data_code append_refs(const struct list_l *subscribers,
   if (nrefs > 0)
   {
     // append reference data
-    DATA_REALLOC(references->data, nrefs + references->count);
+    DATA_REALLOC(references->data, (size_t)(nrefs + references->count));
 
     struct list_l_item *node = subscribers->head;
     for (int i = 0; i < nrefs; i++)
@@ -1467,7 +1468,7 @@ adlb_data_code append_refs(const struct list_l *subscribers,
   return ADLB_DATA_SUCCESS;
 }
 
-static inline
+static 
 adlb_data_code append_notifs(const struct list_i *listeners,
                    adlb_subscript sub, adlb_notif_ranks *notify)
 {
@@ -1477,7 +1478,7 @@ adlb_data_code append_notifs(const struct list_i *listeners,
   if (nlisteners == 0)
     return ADLB_DATA_SUCCESS;
 
-  DATA_REALLOC(notify->notifs, notify->count + nlisteners);
+  DATA_REALLOC(notify->notifs, (size_t)(notify->count + nlisteners));
 
   struct list_i_item *node = listeners->head;
   for (int i = 0; i < nlisteners; i++)

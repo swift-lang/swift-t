@@ -174,18 +174,18 @@ xlb_workq_add(int type, int putter, int priority, int answer,
   else
   {
     // Targeted task
-    heap* A = table_ip_search(&targeted_work, target_rank);
+    heap_t* A = table_ip_search(&targeted_work, target_rank);
     if (A == NULL)
     {
-      A = malloc((size_t)xlb_types_size * sizeof(heap));
+      A = malloc((size_t)xlb_types_size * sizeof(heap_t));
       table_ip_add(&targeted_work, target_rank, A);
       for (int i = 0; i < xlb_types_size; i++)
       {
-        heap* H = &A[i];
+        heap_t* H = &A[i];
         heap_init(H, 8);
       }
     }
-    heap* H = &A[type];
+    heap_t* H = &A[type];
     heap_add(H, -priority, wu);
     if (xlb_perf_counters_enabled)
     {
@@ -199,7 +199,7 @@ xlb_workq_add(int type, int putter, int priority, int answer,
    structures
  */
 static inline xlb_work_unit*
-pop_targeted(heap* H, int target)
+pop_targeted(heap_t* H, int target)
 {
   xlb_work_unit* result = heap_root_val(H);
   DEBUG("xlb_workq_get(): targeted: %"PRId64"", result->id);
@@ -214,11 +214,11 @@ xlb_workq_get(int target, int type)
 
   xlb_work_unit* wu = NULL;
 
-  heap* A = table_ip_search(&targeted_work, target);
+  heap_t* A = table_ip_search(&targeted_work, target);
   if (A != NULL)
   {
     // Targeted work was found
-    heap* H = &A[type];
+    heap_t* H = &A[type];
     if (heap_size(H) != 0)
     {
       wu = pop_targeted(H, target);
@@ -312,18 +312,7 @@ pop_parallel_cb(struct rbtree_node* node, void* user_data)
   return false;
 }
 
-/*
-static inline int
-rand_choose(float *weights, int length) {
-  if (length == 1) {
-    return 0;
-  } else {
-    return random_draw(weights, length);
-  }
-}
-*/
-
-static inline adlb_code
+static adlb_code
 xlb_workq_steal_type(struct rbtree *q, int num,
                       xlb_workq_steal_callback cb)
 {
@@ -433,11 +422,11 @@ wu_heap_clear_callback(heap_key_t k, heap_val_t v)
 static void
 wu_targeted_clear_callback(int key, void *val)
 {
-  heap* A = val;
+  heap_t* A = val;
 
   for (int i = 0; i < xlb_types_size; i++)
   {
-    heap* H = &A[i];
+    heap_t* H = &A[i];
     if (H->size > 0)
     {
       printf("WARNING: server contains targeted work that was never "

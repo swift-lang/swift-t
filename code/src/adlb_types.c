@@ -501,12 +501,13 @@ ADLB_Unpack_container_entry(adlb_data_type key_type,
           const void **key, int *key_len,
           const void **val, int *val_len)
 {
+  // Key data not stored in typed way
   int dc;
   dc = ADLB_Unpack_buffer(ADLB_DATA_TYPE_NULL, data, length,
                   pos, key, key_len);
   DATA_CHECK(dc);
   
-  dc = ADLB_Unpack_buffer(ADLB_DATA_TYPE_NULL, data, length,
+  dc = ADLB_Unpack_buffer(val_type, data, length,
                   pos, val, val_len);
   DATA_CHECK(dc);
   return ADLB_DATA_SUCCESS;
@@ -746,4 +747,21 @@ static char *data_repr_container(const adlb_container *c)
   }
   cont_str[cont_str_pos] = '\0';
   return cont_str;
+}
+
+adlb_data_code
+xlb_resize_str(char **str, size_t *curr_size, int pos, size_t needed)
+{
+  assert(pos >= 0);
+  size_t total_needed = ((size_t)pos) + needed + 1;
+  if (total_needed > *curr_size)
+  {
+    size_t new_size = *curr_size + 1024;
+    if (new_size < total_needed)
+      new_size = total_needed + 1024;
+
+    DATA_REALLOC(*str, new_size);
+    *curr_size = new_size;
+  }
+  return ADLB_DATA_SUCCESS;
 }

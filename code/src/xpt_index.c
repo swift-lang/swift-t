@@ -140,7 +140,7 @@ adlb_code xlb_xpt_index_add(const void *key, int key_len,
   assert(ADLB_XPT_MAX <= ADLB_DATA_MAX - 1);
 
   const void *data; // Pointer to binary repr
-  int data_len; // Length of data minus flag
+  long data_len; // Length of data minus flag
   if (entry->in_file)
   {
     // Write info to binary buffer
@@ -174,12 +174,12 @@ adlb_code xlb_xpt_index_add(const void *key, int key_len,
     data = xfer;
     data_len = entry->DATA.length + 1;
   }
-
   adlb_refcounts refcounts = ADLB_NO_RC;
   adlb_datum_id id = id_for_hash(calc_hash(key, key_len));
   adlb_subscript subscript = { .key = key, .length = (size_t)key_len };
+  assert(data_len <= INT_MAX);
   adlb_code rc = ADLB_Store(id, subscript, ADLB_DATA_TYPE_BLOB,
-                            data, data_len, refcounts);
+                            data, (int)data_len, refcounts);
   
   // Handle duplicate key gracefully: it is possible for the same
   //       function to be recomputed, and we need to handle it!
@@ -211,12 +211,14 @@ static inline adlb_datum_id id_for_server(int server_num)
 /*
   Work out checkpoint container ID given key hash
  */
+__attribute__((always_inline))
 static inline adlb_datum_id id_for_hash(uint32_t key_hash)
 {
   // Must be negative number in [-xlb_servers, -1] inclusive
   return -(int32_t)(key_hash % (uint32_t)xlb_servers) - 1;
 }
 
+__attribute__((always_inline))
 static inline uint32_t calc_hash(const void *data, int length)
 {
   assert(length >= 0);

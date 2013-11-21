@@ -74,7 +74,7 @@ typedef struct {
   // (may be NULL)
   void **to_free;
   int to_free_length;
-  int to_free_size; // Allocated length
+  size_t to_free_size; // Allocated length
 } adlb_notif_t;
 
 #define ADLB_NO_NOTIF_RANKS { .count = 0, .notifs = NULL }

@@ -81,24 +81,24 @@ char* xlb_get_tag_name(int tag);
 
 #define SEND(data,length,type,rank,tag) { \
   TRACE_MPI("SEND(to=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
-  int rc = MPI_Send(data,length,type,rank,tag,adlb_comm); \
-  MPI_CHECK(rc); }
+  int _rc = MPI_Send(data,length,type,rank,tag,adlb_comm); \
+  MPI_CHECK(_rc); }
 
 #define RSEND(data,length,type,rank,tag) { \
   TRACE_MPI("RSEND(to=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
-  int rc = MPI_Rsend(data,length,type,rank,tag,adlb_comm); \
-  MPI_CHECK(rc); }
+  int _rc = MPI_Rsend(data,length,type,rank,tag,adlb_comm); \
+  MPI_CHECK(_rc); }
 
 #define SSEND(data,length,type,rank,tag) { \
   TRACE_MPI("SSEND(to=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
-  int rc = MPI_Ssend(data,length,type,rank,tag,adlb_comm); \
+  int _rc = MPI_Ssend(data,length,type,rank,tag,adlb_comm); \
   TRACE_MPI("SSENT"); \
-  MPI_CHECK(rc); }
+  MPI_CHECK(_rc); }
 
 #define ISEND(data,length,type,rank,tag,req) { \
   TRACE_MPI("ISEND(to=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
-  int rc = MPI_Isend(data,length,type,rank,tag,adlb_comm,req); \
-  MPI_CHECK(rc); }
+  int _rc = MPI_Isend(data,length,type,rank,tag,adlb_comm,req); \
+  MPI_CHECK(_rc); }
 
 
 #define RECV(data,length,type,rank,tag) \
@@ -106,26 +106,26 @@ char* xlb_get_tag_name(int tag);
 
 #define RECV_STATUS(data,length,type,rank,tag,status_ptr) { \
   TRACE_MPI("RECV(from=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
-  int rc = MPI_Recv(data,length,type,rank,tag, \
+  int _rc = MPI_Recv(data,length,type,rank,tag, \
                     adlb_comm,status_ptr); \
   TRACE_MPI("RECVD"); \
-  MPI_CHECK(rc); }
+  MPI_CHECK(_rc); }
 
 #define IRECV(data,length,type,rank,tag) { \
   TRACE_MPI("IRECV(from=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
-  int rc = MPI_Irecv(data,length,type,rank,tag, \
+  int _rc = MPI_Irecv(data,length,type,rank,tag, \
                      adlb_comm,&request); \
-  MPI_CHECK(rc); }
+  MPI_CHECK(_rc); }
 
 // We don't TRACE this
 #define IPROBE(target,tag,flag,status) { \
-    int rc = MPI_Iprobe(target,tag,adlb_comm,flag,status); \
-    MPI_CHECK(rc); }
+    int _rc = MPI_Iprobe(target,tag,adlb_comm,flag,status); \
+    MPI_CHECK(_rc); }
 
 #define WAIT(r,s) { \
   TRACE_MPI("WAIT"); \
-  int rc = MPI_Wait(r,s); \
-  MPI_CHECK(rc); \
+  int _rc = MPI_Wait(r,s); \
+  MPI_CHECK(_rc); \
   TRACE_MPI("WAITED"); }
 
 /** Simplify cases when only a tag is sent */

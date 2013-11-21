@@ -5,7 +5,8 @@
 # make V=1 turns on verbose output
 
 ifeq (@ENABLE_DEV@,1)
-	WARN_CONVERSION = -Wconversion
+	WARN_EXTRA = -Wconversion -Wshadow \
+                          -Winline -Wunreachable-code
 endif
 
 # Shared object suffix is .so on Linux, .dylib on Mac
@@ -19,7 +20,7 @@ ifeq ($(USE_XLC),0)
         PIC = -fPIC
         STD = -std=gnu99
         SHARED = -shared
-	WARNS = -Wall $(WARN_CONVERSION)
+	WARNS = -Wall $(WARN_EXTRA)
 else
 #       Using XLC
         PIC = -qpic

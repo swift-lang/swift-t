@@ -78,7 +78,7 @@ extern double xlb_start_time;
 #define XFER_SIZE (ADLB_PAYLOAD_MAX)
 /** Reusable transfer buffer */
 extern char xfer[];
-const static adlb_buffer xfer_buf = { .data = xfer, .length = XFER_SIZE };
+static const adlb_buffer xfer_buf = { .data = xfer, .length = XFER_SIZE };
 
 int xlb_random_server(void);
 

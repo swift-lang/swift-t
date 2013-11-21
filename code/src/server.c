@@ -114,13 +114,16 @@ static adlb_code setup_idle_time(void);
 
 static inline int xlb_server_number(int rank);
 
+__attribute__((always_inline))
 static inline adlb_code xlb_poll(int source, bool prefer_sync, MPI_Status *req_status);
 
 // Service request from queue
+__attribute__((always_inline))
 static inline adlb_code
 xlb_handle_pending(MPI_Status *status, bool *sync_rejected);
 
 // Handle pending sync requests
+__attribute__((always_inline))
 static inline adlb_code
 xlb_handle_pending_syncs();
 
@@ -195,7 +198,8 @@ xlb_map_to_server(int rank)
   return w + xlb_workers;
 }
 
-static adlb_code serve_several(void);
+__attribute__((always_inline))
+static inline adlb_code serve_several(void);
 static inline bool master_server(void);
 static inline bool check_idle(void);
 static adlb_code server_shutdown(void);
@@ -258,7 +262,7 @@ static int curr_server_backoff = 0;
    excessive CPU.  We use an adaptive algorithm that backs off
    more if the queue has been empty recently.
  */
-static adlb_code
+static inline adlb_code
 serve_several()
 {
   int reqs = 0; // count of requests served
@@ -411,14 +415,14 @@ xlb_serve_one(int source, bool *sync_rejected)
 }
 
 adlb_code
-xlb_serve_server(int source, bool *server_sync_retry)
+xlb_serve_server(int source, bool *sync_rejected)
 {
   TRACE_START;
   DEBUG("\t serve_server: [%i] serving %i", xlb_comm_rank, source);
   int rc = ADLB_NOTHING;
   while (true)
   {
-    rc = xlb_serve_one(source, server_sync_retry);
+    rc = xlb_serve_one(source, sync_rejected);
     ADLB_CHECK(rc);
     if (rc != ADLB_NOTHING) break;
     // Don't backoff - want to unblock other server ASAP
@@ -592,8 +596,10 @@ servers_idle()
 
   // Arrays containing request and work counts from all servers
   // The counts from each server are stored contiguously
-  int *request_counts = malloc(sizeof(int) * xlb_types_size * xlb_servers);
-  int *work_counts = malloc(sizeof(int) * xlb_types_size * xlb_servers);
+  int *request_counts = malloc(sizeof(int) *
+                              (size_t)(xlb_types_size * xlb_servers));
+  int *work_counts = malloc(sizeof(int) *
+                              (size_t)(xlb_types_size * xlb_servers));
   // First fill in counts from this server
   requestqueue_type_counts(request_counts, xlb_types_size);
   xlb_workq_type_counts(work_counts, xlb_types_size);

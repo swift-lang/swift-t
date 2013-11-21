@@ -100,7 +100,7 @@ typedef struct {
   size_t length;
 } adlb_subscript;
 
-const static adlb_subscript ADLB_NO_SUB = { 
+static const adlb_subscript ADLB_NO_SUB = { 
     NULL, /* key */
     0u, /* length */};
 
@@ -123,16 +123,16 @@ typedef struct {
   int write_refcount;
 } adlb_refcounts;
 
-const static adlb_refcounts ADLB_NO_RC =
+static const adlb_refcounts ADLB_NO_RC =
   { 0 /* read_refcount */, 0 /* write_refcount */ };
 
-const static adlb_refcounts ADLB_READ_RC =
+static const adlb_refcounts ADLB_READ_RC =
   { 1 /*read_refcount */, 0 /* write_refcount */ };
 
-const static adlb_refcounts ADLB_WRITE_RC =
+static const adlb_refcounts ADLB_WRITE_RC =
   { 0 /* read_refcount */, 1 /* write_refcount */ };
 
-const static adlb_refcounts ADLB_READWRITE_RC =
+static const adlb_refcounts ADLB_READWRITE_RC =
   { 1 /* read_refcount */, 1 /* write_refcount */ };
 
 #define ADLB_RC_IS_NULL(rc) \
@@ -167,7 +167,7 @@ typedef struct
 } adlb_create_props;
 
 // Default settings for new variables
-const static adlb_create_props DEFAULT_CREATE_PROPS = {
+static const adlb_create_props DEFAULT_CREATE_PROPS = {
   1, /* read_refcount */
   1, /* write_refcount */
   false, /* permanent */
@@ -194,19 +194,19 @@ typedef struct
   adlb_refcounts incr_referand;
 } adlb_retrieve_rc;
 
-const static adlb_retrieve_rc ADLB_RETRIEVE_NO_RC = { 
+static const adlb_retrieve_rc ADLB_RETRIEVE_NO_RC = { 
       { 0, 0 }, /* decr_self read and write refcounts */
       { 0, 0 }, /* incr_reference read and write refcounts */
 };
 
 // Read a value variable
-const static adlb_retrieve_rc ADLB_RETRIEVE_READ_RC = { 
+static const adlb_retrieve_rc ADLB_RETRIEVE_READ_RC = { 
       { 1, 0 }, /* decr_self read and write refcounts */
       { 0, 0 }, /* incr_reference read and write refcounts */
 };
 
 // Read a reference variable and acquire reference to referand
-const static adlb_retrieve_rc ADLB_RETRIEVE_ACQUIRE_RC = { 
+static const adlb_retrieve_rc ADLB_RETRIEVE_ACQUIRE_RC = { 
       { 1, 0 }, /* decr_self read and write refcounts */
       { 1, 0 }, /* incr_reference read and write refcounts */
 };
