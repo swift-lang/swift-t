@@ -23,7 +23,7 @@ namespace eval turbine {
     # A single output can optionally be provided, which is a void
     # variable used to signal that printing is complete
     proc printf { outputs inputs  } {
-        set signal [ lindex $outputs 0 ] 
+        set signal [ lindex $outputs 0 ]
         rule $inputs "printf_body {$signal} $inputs" name "printf"
     }
     proc printf_body { signal args } {
@@ -31,7 +31,12 @@ namespace eval turbine {
         foreach a $args {
             lappend L [ retrieve_decr $a ]
         }
-        set s [ eval format $L ]
+        if { [ catch { set s [ eval format $L ] } ] } {
+            set fmt [ lindex $L 0 ]
+            turbine_error \
+                [ format "error in printf(): format: \"%s\"" $fmt ]
+        }
+
         puts $s
 
         if { ! [ string equal $signal "" ] } {
@@ -44,7 +49,12 @@ namespace eval turbine {
         foreach a $args {
             lappend L $a
         }
-        set s [ eval format $L ]
+        if { [ catch { set s [ eval format $L ] } ] } {
+            set fmt [ lindex $L 0 ]
+            turbine_error \
+                [ format "error in printf(): format: \"%s\"" $fmt ]
+        }
+
         puts $s
         return 0
     }
