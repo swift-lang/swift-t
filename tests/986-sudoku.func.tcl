@@ -94,7 +94,10 @@ namespace eval sudoku {
             # Set the blob
             set board_td [ lindex $tds [ expr 2 * $i ] ]
             set filled_td [ lindex $tds [ expr 2 * $i + 1 ] ]
-            turbine::store_blob $board_td [ adlb::blob_from_string $board ]
+            set board_blob [ adlb::blob_from_string $board ]
+            turbine::store_blob $board_td $board_blob
+            adlb::local_blob_free $board_blob
+            unset board_blob
             turbine::store_integer $filled_td $filled
 
             set struct [ dict create "board" $board_td "filledSquares" $filled_td ]
