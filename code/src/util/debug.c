@@ -33,9 +33,13 @@
 #include "src/util/debug.h"
 
 static bool  initialized = false;
-bool  turbine_debug_enabled = true;
 static char* buffer = NULL;
 static size_t buffer_size;
+
+#ifndef NDEBUG
+// Use variable to switch on/off at runtime
+bool  turbine_debug_enabled = true;
+#endif
 
 void
 turbine_debug_init()
@@ -53,7 +57,9 @@ turbine_debug_init()
   if (s != NULL)
     if (strcmp(s, "0") == 0)
     {
+      #ifndef NDEBUG
       turbine_debug_enabled = false;
+      #endif
       return;
     }
   buffer_size = (size_t)(32*KB);
