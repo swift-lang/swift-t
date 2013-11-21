@@ -321,17 +321,27 @@ put(int type, int putter, int priority, int answer, int target,
  
   // Store this work unit on this server
   DEBUG("server storing work...");
-  SEND(&mpi_rank, 1, MPI_INT, putter, ADLB_TAG_RESPONSE_PUT);
 
-  xlb_work_unit *work = work_unit_alloc((size_t)length);
+  MPI_Request req;
 
-  if (inline_data != NULL)
+  xlb_work_unit *work = NULL;
+  if (inline_data == NULL) 
   {
-    memcpy(work->payload, inline_data, (size_t)length);
+    // Set up receive for payload into work unit
+    work = work_unit_alloc((size_t)length);
+    IRECV2(work->payload, length, MPI_BYTE, putter, ADLB_TAG_WORK, &req);
+    SEND(&mpi_rank, 1, MPI_INT, putter, ADLB_TAG_RESPONSE_PUT);
+    // Wait to receive data
+    WAIT(&req, &status);
   }
   else
   {
-    RECV(work->payload, length, MPI_BYTE, putter, ADLB_TAG_WORK);
+    int resp = ADLB_SUCCESS;
+    ISEND(&resp, 1, MPI_INT, putter, ADLB_TAG_RESPONSE_PUT, &req);
+    // Copy data while waiting for message
+    work = work_unit_alloc((size_t)length);
+    memcpy(work->payload, inline_data, (size_t)length);
+    WAIT(&req, &status);
   }
 
   DEBUG("work unit: x%i %s ", parallelism, work->payload);
@@ -434,15 +444,20 @@ static inline adlb_code send_matched_work(int type, int putter,
   }
   else
   {
+    MPI_Request req;
+    MPI_Status status;
     int response = ADLB_SUCCESS;
     // Let putter know we've got it from here
-    SEND(&response, 1, MPI_INT, putter, ADLB_TAG_RESPONSE_PUT);
+    IRSEND(&response, 1, MPI_INT, putter, ADLB_TAG_RESPONSE_PUT, &req);
 
     // Sent to matched
     code = send_work(worker, XLB_WORK_UNIT_ID_NULL, type, answer,
                      inline_data, length, 1);                                  
     ADLB_CHECK(code);
+
+    WAIT(&req, &status);
   }
+
   return ADLB_SUCCESS;
 }
 
@@ -648,6 +663,9 @@ send_work(int worker, xlb_work_unit_id wuid, int type, int answer,
   TRACE("payload_source: %i", g.payload_source);
   g.type = type;
   g.parallelism = parallelism;
+
+  MPI_Request req;
+  MPI_Status status;
 
   SEND(&g, sizeof(g), MPI_BYTE, worker, ADLB_TAG_RESPONSE_GET);
   SEND(payload, length, MPI_BYTE, worker, ADLB_TAG_WORK);

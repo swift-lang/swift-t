@@ -93,6 +93,10 @@ char* xlb_get_tag_name(int tag);
   int _rc = MPI_Isend(data,length,type,rank,tag,adlb_comm,req); \
   MPI_CHECK(_rc); }
 
+#define IRSEND(data,length,type,rank,tag,req) { \
+  TRACE_MPI("IRSEND(to=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
+  int _rc = MPI_Irsend(data,length,type,rank,tag,adlb_comm,req); \
+  MPI_CHECK(_rc); }
 
 #define RECV(data,length,type,rank,tag) \
         RECV_STATUS(data,length,type,rank,tag,&status)
@@ -104,10 +108,13 @@ char* xlb_get_tag_name(int tag);
   TRACE_MPI("RECVD"); \
   MPI_CHECK(_rc); }
 
-#define IRECV(data,length,type,rank,tag) { \
+#define IRECV(data,length,type,rank,tag) \
+      IRECV2(data, length, type, rank, tag, &request);
+
+#define IRECV2(data,length,type,rank,tag,req) { \
   TRACE_MPI("IRECV(from=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
   int _rc = MPI_Irecv(data,length,type,rank,tag, \
-                     adlb_comm,&request); \
+                     adlb_comm,req); \
   MPI_CHECK(_rc); }
 
 // We don't TRACE this
