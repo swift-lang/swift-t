@@ -51,16 +51,18 @@ get_target_server(int* result)
   } while (*result == xlb_comm_rank);
 }
 
-static inline adlb_code steal_sync(int target, int max_memory);
+static adlb_code steal_sync(int target, int max_memory);
 
-static inline adlb_code steal_payloads(int target, int count);
+static inline adlb_code steal_payloads(int target, int count,
+               int *single_count, int *par_count);
 
 adlb_code
-xlb_steal(bool* result)
+xlb_steal(bool* stole_single, bool *stole_par)
 {
   adlb_code rc;
   int target;
-  *result = false;
+  *stole_single = false;
+  *stole_par = false;
 
   TRACE_START;
   MPE_LOG(xlb_mpe_dmn_steal_start);
@@ -79,7 +81,7 @@ xlb_steal(bool* result)
         ADLB_TAG_RESPONSE_STEAL_COUNT);
 
   int max_memory = 1;
-  int total = 0;
+  int total_single = 0, total_par = 0;
   rc = steal_sync(target, max_memory);
   if (rc == ADLB_SHUTDOWN)
     goto end;
@@ -91,9 +93,11 @@ xlb_steal(bool* result)
   while (true) {
     WAIT(&request, &status);
     if (hdr.count > 0) {
-      rc = steal_payloads(target, hdr.count);
+      int single, par;
+      rc = steal_payloads(target, hdr.count, &single, &par);
       ADLB_CHECK(rc);
-      total += hdr.count;
+      total_single += single;
+      total_par += par;
     }
     if (hdr.last)
       break;
@@ -102,15 +106,16 @@ xlb_steal(bool* result)
           ADLB_TAG_RESPONSE_STEAL_COUNT);
   }
   
-  DEBUG("[%i] stole %i tasks from %i", xlb_comm_rank, total, target);
-  // MPE_INFO(xlb_mpe_svr_info, "STOLE: %i FROM: %i", total, target);
-  *result = total > 0;
+  DEBUG("[%i] stole %i tasks from %i", xlb_comm_rank, hdr.count, target);
+  // MPE_INFO(xlb_mpe_svr_info, "STOLE: %i FROM: %i", hdr.count, target);
+  *stole_single = (total_single > 0);
+  *stole_par = (total_par > 0);
 
   // Record the time of this steal attempt
   xlb_steal_last = MPI_Wtime();
 
   // Update failed steals
-  if (*result)
+  if (hdr.count > 0)
   {
     xlb_failed_steals_since_backoff = 0;
   }
@@ -130,7 +135,7 @@ xlb_steal(bool* result)
   Note that this can add requests to the pending_sync list that
   will need to be handled.
  */
-static inline adlb_code
+static adlb_code
 steal_sync(int target, int max_memory)
 {
   // Need to give server information about which work types we have:
@@ -149,7 +154,8 @@ steal_sync(int target, int max_memory)
 }
 
 static inline adlb_code
-steal_payloads(int target, int count)
+steal_payloads(int target, int count,
+               int *single_count, int *par_count)
 {
   assert(count > 0);
   MPI_Status status;
@@ -157,7 +163,7 @@ steal_payloads(int target, int count)
   struct packed_put* wus = malloc((size_t)length);
   valgrind_assert(wus);
   RECV(wus, length, MPI_BYTE, target, ADLB_TAG_RESPONSE_STEAL);
-
+  int single = 0, par = 0;
   for (int i = 0; i < count; i++)
   {
     xlb_work_unit *work = work_unit_alloc((size_t)wus[i].length);
@@ -166,9 +172,20 @@ steal_payloads(int target, int count)
     xlb_workq_add(wus[i].type, wus[i].putter, wus[i].priority,
                   wus[i].answer, wus[i].target, wus[i].length,
                   wus[i].parallelism, work);
+    if (wus[i].parallelism > 1)
+    {
+      par++;
+    }
+    else
+    {
+      single++;
+    }
   }
   free(wus);
   DEBUG("[%i] received batch size %i", xlb_comm_rank, count);
+
+  *single_count = single;
+  *par_count = par;
   return ADLB_SUCCESS;
 }
 
@@ -197,17 +214,17 @@ send_steal_batch(steal_cb_state *batch, bool finish)
   if (count == 0)
     return ADLB_SUCCESS;
 
-  struct packed_put puts[count];
+  struct packed_put packed[count];
   for (int i = 0; i < count; i++)
   {
-    xlb_pack_work_unit(&(puts[i]), batch->work_units[i]);
+    xlb_pack_work_unit(&(packed[i]), batch->work_units[i]);
   }
  
   // Store requests for wait
   MPI_Request reqs[count + 1];
 
   DEBUG("[%i] sending batch size %zu", xlb_comm_rank, batch->size);
-  ISEND(puts, (int)sizeof(puts[0]) * count, MPI_BYTE,
+  ISEND(packed, (int)sizeof(packed[0]) * count, MPI_BYTE,
        batch->stealer_rank, ADLB_TAG_RESPONSE_STEAL, &reqs[0]);
 
   for (int i = 0; i < count; i++)

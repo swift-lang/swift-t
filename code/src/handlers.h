@@ -40,10 +40,6 @@ bool xlb_handler_valid(adlb_tag tag);
 
 adlb_code xlb_handle(adlb_tag tag, int from_rank);
 
-void xlb_recheck_queues();
-
-adlb_code xlb_check_parallel_tasks(int work_type);
-
 /** 
    Targeted put for local target
 */
@@ -51,5 +47,10 @@ adlb_code xlb_put_targeted_local(int type, int putter, int priority,
            int answer, int target, const void* payload, int length);
 
 void xlb_print_handler_counters(void);
+
+adlb_code xlb_recheck_queues(void);
+adlb_code xlb_recheck_parallel_queues(void);
+
+adlb_code send_parallel_work_unit(int *workers, xlb_work_unit *wu);
 
 #endif

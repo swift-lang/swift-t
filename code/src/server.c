@@ -216,11 +216,6 @@ ADLB_Server(long max_memory)
 
     update_cached_time(); // Periodically refresh timestamp
 
-    code = xlb_check_parallel_tasks(0);
-    ADLB_CHECK(code);
-    // code = check_parallel_tasks(1);
-    // ADLB_CHECK(code);
-
     check_steal();
   }
 
@@ -435,20 +430,39 @@ check_steal(void)
 
   // Steal...
   TRACE_START;
-  bool b;
-  int rc = xlb_steal(&b);
+  adlb_code rc = xlb_steal_match();
+  TRACE_END;
+  return rc;
+}
+
+
+adlb_code xlb_steal_match(void)
+{
+  DEBUG("Attempting steal");
+  bool stole_single, stole_par;
+  int rc = xlb_steal(&stole_single, &stole_par);
   ADLB_CHECK(rc);
+  DEBUG("Completed steal stole_single: %i stole_par: %i",
+          (int)stole_single, (int)stole_par);
 
   // xlb_steal may have added pending syncs
   rc = xlb_handle_pending_syncs();
   ADLB_CHECK(rc);
 
-  if (b)
+  // Try to match stolen tasks
+  if (stole_single)
   {
-    TRACE("check_steal(): rechecking...");
-    xlb_recheck_queues();
+    TRACE("After steal rechecking single-worker...");
+    rc = xlb_recheck_queues();
+    ADLB_CHECK(rc);
   }
-  TRACE_END;
+  if (stole_par)
+  {
+    TRACE("After steal rechecking parallel...");
+    rc = xlb_recheck_parallel_queues();
+    ADLB_CHECK(rc);
+  }
+
   return ADLB_SUCCESS;
 }
 

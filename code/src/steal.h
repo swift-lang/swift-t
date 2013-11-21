@@ -81,9 +81,10 @@ xlb_steal_allowed(void)
 
    Note that this may add sync requests to the xlb_pending_syncs list,
    which must be handled by the caller.
-   @param result true if stole something, else false
+   @param stole_single true if stole single-worker task, else false
+   @param stole_par true if stole parallel task, else false
  */
-adlb_code xlb_steal(bool* result);
+adlb_code xlb_steal(bool* stole_single, bool *stole_par);
 
 /**
    Handle an accepted steal request
