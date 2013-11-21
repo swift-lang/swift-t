@@ -425,8 +425,8 @@ static adlb_code attempt_match_par_work(int type,
   if (xlb_requestqueue_parallel_workers(type, parallelism,
                                          parallel_workers))
   {
-    code = send_parallel_work(parallel_workers, -1, type,
-      answer, payload, length, parallelism);
+    code = send_parallel_work(parallel_workers, XLB_WORK_UNIT_ID_NULL,
+      type, answer, payload, length, parallelism);
     ADLB_CHECK(code);
     if (xlb_perf_counters_enabled)
     {
