@@ -1540,12 +1540,16 @@ Swift (<<Turbine_information, Turbine information>>).
 +MPI_Wtime()+)
 
 +ADLB_PERF_COUNTERS=1+::
-Enable performance counters (printed at end of execution):
+Enable performance counters (printed at end of execution).  The
+link:internals.html[Swift/T internals guide] has information
+about interpreting the output.
 
 +ADLB_EXHAUST_TIME+::
 Time in seconds taken by ADLB task servers to shut down.  May include
-a decimal point.  Default 0.1 .  In very large runs, this may be set to
-5 to ensure correctness.
+a decimal point.  Default 0.1 .  Setting this lower will reduce
+delay in detection exhaustion.  Setting this higher will reduce
+overhead due to failed exhaust checks.  The default setting is
+almost always adequate.
 
 +ADLB_REPORT_LEAKS=1+::
 Enable reporting of any unfreed data in ADLB data store at end of
