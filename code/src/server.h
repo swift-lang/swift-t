@@ -78,13 +78,6 @@ double xlb_approx_time(void);
  */
 adlb_code xlb_steal_match();
 
-
-/**
-  Try to match parallel tasks between work queue and reqeust queue
-  matched: whether we matched anything of the type
- */
-adlb_code xlb_check_parallel_tasks(int work_type, bool *matched);
-
 /**
    @param rank rank of worker belonging to this server
    @return unique number for each of my workers, e.g. to use in array.

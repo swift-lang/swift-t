@@ -128,6 +128,9 @@ static inline adlb_code send_matched_work(int type, int putter,
       int priority, int answer, bool targeted,
       int worker, int length, const void *inline_data);
 
+static inline adlb_code xlb_check_parallel_tasks(int work_type,
+                                                 bool *matched);
+
 static inline adlb_code redirect_work(int type, int putter,
                                       int priority, int answer,
                                       int worker, int length);
@@ -635,9 +638,10 @@ xlb_recheck_queues(void)
 }
 
 /**
-   Try to release a parallel task after adding to request queue
+  Try to match parallel tasks between work queue and reqeust queue
+  matched: whether we matched anything of the type
  */
-adlb_code
+static adlb_code
 xlb_check_parallel_tasks(int type, bool *matched)
 {
   TRACE_START;
