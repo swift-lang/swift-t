@@ -267,14 +267,15 @@ serve_several()
 {
   int exit_points = 0;
   int reqs = 0;
+  bool other_servers = (xlb_servers > 1);
   while (exit_points < xlb_loop_threshold)
   {
     MPI_Status req_status;
     adlb_code code;
     // Prioritize server-to-server syncs to avoid blocking other servers
-    bool prefer_sync = (reqs % XLB_SERVER_SYNC_CHECK_FREQ == 0);
+    bool prefer_sync = other_servers &&
+          (reqs % XLB_SERVER_SYNC_CHECK_FREQ == 0);
     code = xlb_poll(MPI_ANY_SOURCE, prefer_sync, &req_status);
-    ADLB_CHECK(code);
     if (code == ADLB_SUCCESS)
     {
       code = xlb_handle_pending(&req_status, NULL);
@@ -290,7 +291,7 @@ serve_several()
       exit_points += xlb_loop_request_points;
       reqs++;
     }
-    else
+    else if (code == ADLB_NOTHING)
     {
       // Check for shutdown
       if (xlb_server_shutting_down)
@@ -310,6 +311,10 @@ serve_several()
         exit_points += xlb_loop_poll_points;
       // Back off more
       curr_server_backoff++;
+    }
+    else
+    {
+      ADLB_CHECK(code);
     }
   }
 
