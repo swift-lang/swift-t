@@ -10,4 +10,13 @@ public enum AsyncExecutor {
   public String toString() {
     return this.name().toLowerCase();
   }
+  
+  /**
+   * @param s
+   * @return null if not valid executor
+   */
+  static public AsyncExecutor fromUserString(String s)
+      throws IllegalArgumentException {
+    return AsyncExecutor.valueOf(s.toUpperCase());
+  }
 }

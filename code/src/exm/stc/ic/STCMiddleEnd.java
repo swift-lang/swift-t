@@ -38,6 +38,7 @@ import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.TaskMode;
@@ -59,6 +60,7 @@ import exm.stc.ic.tree.Conditionals.IfStatement;
 import exm.stc.ic.tree.Conditionals.SwitchStatement;
 import exm.stc.ic.tree.ForeachLoops.ForeachLoop;
 import exm.stc.ic.tree.ForeachLoops.RangeLoop;
+import exm.stc.ic.tree.ICContinuations.AsyncExec;
 import exm.stc.ic.tree.ICContinuations.Loop;
 import exm.stc.ic.tree.ICContinuations.NestedBlock;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
@@ -346,6 +348,23 @@ public class STCMiddleEnd {
     Block b = blockStack.pop();
     loopStack.pop();
     assert(b.getType() == BlockType.LOOP_BODY);
+  }
+  
+  public void startAsyncExec(String procName, 
+      AsyncExecutor executor, List<Var> taskOutputs,
+      List<Arg> taskArgs, Map<String, Arg> taskProps,
+      boolean hasSideEffects) {
+    
+    AsyncExec stmt = new AsyncExec(procName, executor, PassedVar.NONE,
+          Var.NONE, taskOutputs, taskArgs, taskProps, hasSideEffects);
+    currBlock().addContinuation(stmt);
+    
+    blockStack.push(stmt.getBlock());
+  }
+  
+  public void endAsyncExec() {
+    assert(currBlock().getType() == BlockType.ASYNC_EXEC_CONTINUATION);
+    blockStack.pop();
   }
   
   public void declare(Var var) throws UndefinedTypeException {

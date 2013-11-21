@@ -42,6 +42,7 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.exceptions.VariableUsageException;
 import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.Checkpointing;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ForeignFunctions;
@@ -67,6 +68,7 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
+import exm.stc.common.util.Out;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.StringUtil;
 import exm.stc.common.util.TernaryLogic.Ternary;
@@ -1532,19 +1534,67 @@ public class ASTWalker {
     }
   }
 
+  /**
+   * Extract function annotations for Swift function
+   * @param context
+   * @param tree
+   * @param firstChild
+   * @return
+   * @throws InvalidAnnotationException 
+   */
   private List<String> extractFunctionAnnotations(Context context,
-          SwiftAST tree, int firstChild) throws InvalidAnnotationException {
+      SwiftAST tree, int firstChild) throws InvalidAnnotationException {
+    return extractFunctionAnnotations(context, tree, firstChild,
+            false, new Out<AsyncExecutor>());
+  }
+  private List<String> extractAppFunctionAnnotations(Context context,
+      SwiftAST tree, int firstChild,  Out<AsyncExecutor> exec)
+          throws InvalidAnnotationException {
+    return extractFunctionAnnotations(context, tree, firstChild,
+              true, exec);
+  }
+  
+  /**
+   * Extract function annotations for Swift or app function
+   * @param context
+   * @param tree
+   * @param firstChild
+   * @return
+   * @throws InvalidAnnotationException
+   */
+  private List<String> extractFunctionAnnotations(Context context,
+          SwiftAST tree, int firstChild, boolean appFn,
+          Out<AsyncExecutor> exec)
+              throws InvalidAnnotationException {
+    exec.val = null;
+    
     List<String> annotations = new ArrayList<String>();
     for (SwiftAST subtree: tree.children(firstChild)) {
       syncFilePos(context, subtree);
       assert(subtree.getType() == ExMParser.ANNOTATION);
       assert(subtree.getChildCount() == 1 || subtree.getChildCount() == 2);
       String annotation = subtree.child(0).getText();
-      if (subtree.getChildCount() == 2) {
-        throw new InvalidAnnotationException(context, "Function defn",
-                                             annotation, true);
+      if (subtree.getChildCount() == 1) {
+        annotations.add(annotation);
+      } else {
+        assert(subtree.getChildCount() == 2);
+        String value = subtree.child(1).getText();
+        if (appFn && Annotations.FN_DISPATCH.equals(annotation)) {
+          try {
+            if (exec.val != null) {
+              throw new InvalidAnnotationException(context,
+                              "Repeated annotation " + annotation);
+            }
+            exec.val = AsyncExecutor.fromUserString(value);
+          } catch (IllegalArgumentException e) {
+            throw new InvalidAnnotationException(context,
+                "Unknown dispatch option: " + value);
+          }
+        } else {
+          throw new InvalidAnnotationException(context, "function definition",
+              annotation, true);
+        } 
       }
-      annotations.add(annotation);
     }
     return annotations;
   }
@@ -1632,7 +1682,10 @@ public class ASTWalker {
     
     
     syncFilePos(context, tree);
-    List<String> annotations = extractFunctionAnnotations(context, tree, 4);
+    Out<AsyncExecutor> exec = new Out<AsyncExecutor>();
+    List<String> annotations = 
+        extractAppFunctionAnnotations(context, tree, 4, exec);
+    
     syncFilePos(context, tree);
     boolean hasSideEffects = true, deterministic = false;
     for (String annotation: annotations) {
@@ -1656,7 +1709,7 @@ public class ASTWalker {
     
     backend.startFunction(function, outArgs, realInArgs, TaskMode.SYNC);
     genAppFunctionBody(appContext, appBodyT, inArgs, outArgs, 
-                       hasSideEffects, deterministic, props);
+                       hasSideEffects, deterministic, exec.val, props);
     backend.endFunction();
   }
 
@@ -1667,13 +1720,15 @@ public class ASTWalker {
    * @param outArgs output arguments for app
    * @param hasSideEffects
    * @param deterministic
+   * @param val 
    * @param props 
    * @throws UserException
    */
   private void genAppFunctionBody(Context context, SwiftAST appBody,
           List<Var> inArgs, List<Var> outArgs,
           boolean hasSideEffects,
-          boolean deterministic, TaskProps props) throws UserException {
+          boolean deterministic, AsyncExecutor asyncExec,
+          TaskProps props) throws UserException {
     //TODO: don't yet handle situation where user is naughty and
     //    uses output variable in expression context
     assert(appBody.getType() == ExMParser.APP_BODY);
@@ -1741,8 +1796,15 @@ public class ASTWalker {
       }
     }
     
-    backend.runExternal(appName, localArgs, localInFiles, localOutputs,
+    if (asyncExec == null) {
+      backend.runExternal(appName, localArgs, localInFiles, localOutputs,
                         localRedirects, hasSideEffects, deterministic);
+    } else {
+      String aeName = context.constructName("async-exec");
+      backend.startAsyncExec(aeName, asyncExec, localOutputs, localArgs,
+                    Collections.<String, Arg>emptyMap(), !deterministic);
+      // Rest of code executes in continuation after execution finishes
+    }
     
     for (int i = 0; i < outArgs.size(); i++) {
       Var output = outArgs.get(i);
@@ -1758,6 +1820,10 @@ public class ASTWalker {
         assert(Types.isVoid(output.type()));
         backend.assignVoid(output, Arg.createVar(localOutput));
       }
+    }
+    
+    if (asyncExec != null) {
+      backend.endAsyncExec();
     }
     backend.endWaitStatement();
     if (openedEvalWait) {
