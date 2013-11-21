@@ -455,7 +455,7 @@ namespace eval turbine {
         set b [ adlb::blob_from_string $value ]
         adlb::store $id blob $b
         # Free memory
-        adlb::blob_free $b
+        adlb::local_blob_free $b
     }
 
     # Retrieve and cache blob
