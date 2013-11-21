@@ -21,7 +21,9 @@
  *  Tim Armstrong, 2012
  */
 
+#include <stdbool.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <math.h>
@@ -34,9 +36,11 @@
 #define heap_min(X, Y) ( (X) < (Y) ? (X) : (Y))
 #define heap_max(X, Y) ( (X) > (Y) ? (X) : (Y))
 
+#define HEAP_MIN_SIZE 16
+
 typedef int   heap_key_t;
 typedef void* heap_val_t;
-typedef size_t heap_ix_t;
+typedef uint32_t heap_ix_t;
 
 typedef struct {
   heap_key_t key;
@@ -45,8 +49,8 @@ typedef struct {
 
 typedef struct {
   heap_entry_t *array;
-  size_t size;
-  size_t malloced_size;
+  uint32_t size;
+  uint32_t malloced_size;
 } heap_t;
 
 // The heap test case uses calls that are checkable at compile
@@ -57,18 +61,31 @@ typedef struct {
 #define HEAP_ASSERT(x) // noop
 #endif
 
-static inline void
-heap_init(heap_t *heap, size_t init_capacity)
+static inline bool
+heap_init(heap_t *heap, uint32_t init_capacity)
 {
-  assert(init_capacity > 0);
-  if(!(heap->array = 
-          malloc(sizeof(heap_entry_t) * init_capacity))) {
-    fprintf(stderr, "Could not malloc\n");
-    exit(EXIT_FAILURE);
+  if (init_capacity == 0)
+  {
+    heap->array = NULL;
+  }
+  else
+  {
+    heap->array = 
+            malloc(sizeof(heap_entry_t) * init_capacity);
+    if (heap->array == NULL) {
+      return false;
+    }
   }
 
   heap->size = 0;
   heap->malloced_size = init_capacity;
+  return true;
+}
+
+static inline bool
+heap_init_empty(heap_t *heap)
+{
+  return heap_init(heap, 0);
 }
 
 static inline void
@@ -93,7 +110,7 @@ heap_clear(heap_t *heap)
 }
 
 static inline heap_t*
-heap_create(size_t init_capacity) {
+heap_create(uint32_t init_capacity) {
   heap_t* result = malloc(sizeof(heap_t));
   heap_init(result, init_capacity);
   return result;
@@ -228,29 +245,45 @@ static inline void heap_sift_up(heap_t *heap, heap_ix_t i) {
   heap->array[i] = entry;
 }
 
-static inline void
-heap_expand(heap_t *heap, size_t needed_size)
+/*
+  returns: true on success, false on memory allocation error
+ */
+static inline bool
+heap_expand(heap_t *heap, uint32_t needed_size)
 {
-  size_t new_size;
   /* Expand the array if needed */
   assert(heap->size <= heap->malloced_size);
   if (heap->malloced_size < needed_size) {
     /* need to expand - expand  1.5x (rounded up) */
-    new_size = heap_min(needed_size, ((heap->malloced_size * 3 - 1) / 2) + 1);
-    if ( (heap->array = realloc( heap->array, sizeof(heap_entry_t) * new_size))  == NULL) {
-      printf("Could not realloc %lu for heap array\n",
-             (unsigned long) new_size);
-      exit(EXIT_FAILURE);
+    unsigned int new_size = (heap->malloced_size * 3) / 2 + 1;
+    if (new_size < needed_size) {
+      new_size = needed_size;
+    }
+    if (new_size < HEAP_MIN_SIZE)
+    {
+      new_size = HEAP_MIN_SIZE;
+    }
+    
+    heap->array = realloc(heap->array, sizeof(heap_entry_t) * new_size);
+    if (heap->array == NULL) {
+      return false;
     }
 
     heap->malloced_size = new_size;
   }
+  return true;
 }
 
-static inline void
+/*
+  Add new entry to heap
+  returns: true on success, false on memory allocation error
+ */
+static inline bool
 heap_add_entry(heap_t *heap, heap_entry_t entry) {
   /* Make sure big enough */
-  heap_expand(heap, heap->size + 1);
+  bool ok = heap_expand(heap, heap->size + 1);
+  if (!ok)
+    return false;
 
   /* Add to end of the array */
   heap->array[heap->size] = entry;
@@ -258,13 +291,14 @@ heap_add_entry(heap_t *heap, heap_entry_t entry) {
 
   /* Rearrange so it a heap again */
   heap_sift_up(heap, heap->size -1);
+  return true;
 }
 
-static inline void
+static inline bool
 heap_add(heap_t *heap, heap_key_t k, heap_val_t v)
 {
   heap_entry_t entry = {k, v};
-  heap_add_entry(heap, entry);
+  return heap_add_entry(heap, entry);
 }
 
 /* Decrease the key of an entry in the heap.  This may cause it to
