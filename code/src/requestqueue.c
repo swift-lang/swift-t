@@ -51,6 +51,13 @@ static int request_queue_size;
 /** Type-indexed array of list of request object */
 static struct list2* type_requests;
 
+/** Cache list nodes to avoid malloc/free calls on critical path */
+static struct {
+  struct list2_item **free_array;
+  int free_array_size; // Size of free array
+  int nfree; // Number of items in free array
+} list2_node_pool;
+
 /** Table of ranks requesting work so we can match targeted work to them. 
     We only store ranks belonging to this server, since targeted work for
     other ranks won't arrive here.  We store pointers to the respective
@@ -65,6 +72,11 @@ __attribute__((always_inline))
 static inline void remove_types_entry(int type, struct list2_item *item);
 static inline void invalidate_request(request *R);
 static inline void free_request(request *R);
+
+/** Node pool functions */
+static inline struct list2_item *alloc_list2_node(void);
+static inline void free_list2_node(struct list2_item *node);
+static inline void free_list2_node_pool(void);
 
 adlb_code
 xlb_requestqueue_init(int my_workers)
@@ -82,6 +94,19 @@ xlb_requestqueue_init(int my_workers)
   CHECK_MSG(type_requests != NULL, "error allocating memory");
   for (int i = 0; i < xlb_types_size; i++)
     list2_init(&type_requests[i]);
+
+  // Assume one request per node - otherwise fallback to malloc/free
+  // Allocate ahead of time to get non-fragmented memory
+  list2_node_pool.free_array =
+          malloc(sizeof(list2_node_pool.free_array[0]) * (size_t)my_workers);
+  list2_node_pool.free_array_size = my_workers;
+  list2_node_pool.nfree = my_workers;
+  for (int i = 0; i < list2_node_pool.free_array_size; i++)
+  {
+    struct list2_item *item = malloc(sizeof(struct list2_item));
+    CHECK_MSG(item != NULL, "error allocating memory");
+    list2_node_pool.free_array[i] = item;
+  }
 
   request_queue_size = 0;
   return ADLB_SUCCESS;
@@ -110,12 +135,16 @@ xlb_requestqueue_add(int rank, int type)
   }
   
   struct list2* L = &type_requests[type];
-  struct list2_item* item = list2_add(L, R);
+
+  struct list2_item* item = alloc_list2_node();
+  CHECK_MSG(item != NULL, "out of memory");
 
   R->rank = rank;
   R->type = type;
   R->item = item;
+  item->data = R;
 
+  list2_add_item(L, item);
   request_queue_size++;
   return ADLB_SUCCESS;
 }
@@ -166,14 +195,16 @@ static inline void free_request(request *R)
  */
 static int pop_rank(struct list2 *type_list)
 {
-  request* R = list2_pop(type_list);
-  if (R == NULL)
+  struct list2_item *item = list2_pop_item(type_list);
+  if (item == NULL)
   {
     return ADLB_RANK_NULL;
   }
+  request* R = (request*)item->data;
   int rank = R->rank;
   
   // Release memory:
+  free_list2_node(item);
   free_request(R);
   
   request_queue_size--;
@@ -201,7 +232,6 @@ xlb_requestqueue_matches_target(int target_rank, int type)
   }
   return ADLB_RANK_NULL;
 }
-
 
 int
 xlb_requestqueue_matches_type(int type)
@@ -315,6 +345,8 @@ xlb_requestqueue_shutdown()
   // Free now-empty structures
   free(type_requests);
   free(targets);
+
+  free_list2_node_pool();
 }
 
 static adlb_code
@@ -332,3 +364,42 @@ shutdown_rank(int rank)
   SEND(&g, sizeof(g), MPI_BYTE, rank, ADLB_TAG_RESPONSE_GET);
   return ADLB_SUCCESS;
 }
+
+static inline struct list2_item *alloc_list2_node(void)
+{
+  if (list2_node_pool.nfree > 0)
+  {
+    list2_node_pool.nfree--;
+    return list2_node_pool.free_array[list2_node_pool.nfree];
+  }
+  else
+  {
+    return malloc(sizeof(struct list2_item));
+  }
+}
+
+static inline void free_list2_node(struct list2_item *node)
+{
+  if (list2_node_pool.nfree == list2_node_pool.free_array_size)
+  {
+    free(node);
+  }
+  else
+  {
+    list2_node_pool.free_array[list2_node_pool.nfree++] = node;
+  }
+}
+
+static inline void free_list2_node_pool(void)
+{
+  for (int i = 0; i < list2_node_pool.nfree; i++)
+  {
+    free(list2_node_pool.free_array[i]);
+  }
+
+  free(list2_node_pool.free_array);
+  list2_node_pool.free_array = NULL;
+  list2_node_pool.free_array_size = 0;
+  list2_node_pool.nfree = 0;
+}
+
