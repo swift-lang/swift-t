@@ -50,8 +50,6 @@ void xlb_msg_init(void);
  */
 void xlb_msg_finalize(void);
 
-#ifndef NDEBUG
-
 /**
    Set a string name for debugging MPI message tags
  */
@@ -61,11 +59,6 @@ void xlb_add_tag_name(int tag, char* name);
    Lookup string name for debugging MPI message tags
  */
 char* xlb_get_tag_name(int tag);
-
-#else
-#define xlb_add_tag_name(tag,name) // noop
-#define xlb_get_tag_name(tag)      // noop
-#endif
 
 /*
    All of these client/handler functions (adlb.c,handlers.c,etc.)
