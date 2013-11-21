@@ -160,7 +160,7 @@ class Turbine {
   private static final Token RULE_KEYWORD_TARGET = new Token("target");
   
   // Async task execution
-  private static final Token ASYNC_EXEC = turbFn("async_exec");
+  private static final Token ASYNC_EXEC_COASTERS = turbFn("async_exec_coasters");
 
   // Dereference functions
   private static final Token DEREFERENCE_INTEGER = turbFn("dereference_integer");
@@ -1446,8 +1446,17 @@ class Turbine {
       List<Token> outVarNames, List<Expression> taskArgExprs,
       List<Pair<String, Expression>> taskPropExprs,
       List<Expression> continuation) {
+    Token execCmd;
+    switch (executor) {
+      case COASTERS:
+        execCmd = ASYNC_EXEC_COASTERS;
+        break;
+      default:
+        throw new STCRuntimeError("code generation not implemented for "
+                                + "async executor " + executor);
+    }
+    
     List<Expression> execArgs = new ArrayList<Expression>();
-    execArgs.add(new Token(executor.toString()));
     execArgs.add(new TclList(outVarNames));
     execArgs.add(new TclList(taskArgExprs));
     execArgs.add(Dict.dictCreateSE(true, taskPropExprs));
@@ -1455,8 +1464,7 @@ class Turbine {
       execArgs.add(new TclList(continuation));
     }
     
-    Command exec = new Command(ASYNC_EXEC, execArgs);
-    return exec;
+    return new Command(execCmd, execArgs);
   }
   
   /**
