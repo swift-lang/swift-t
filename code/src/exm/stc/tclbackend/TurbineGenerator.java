@@ -1344,15 +1344,7 @@ public class TurbineGenerator implements CompilerBackend {
       Arg arg = args.get(argNum);
       // Should only accept local arguments
       assert(arg.isConstant() || arg.getVar().storage() == Alloc.LOCAL);
-      Expression argExpr;
-      
-      if (Types.isContainerLocal(arg.type())) {
-        // Expand list
-        argExpr = new Expand(argToExpr(arg));
-      } else {
-        // Plain argument
-        argExpr = argToExpr(arg);
-      }
+      Expression argExpr = cmdLineArgExpr(arg);
       tclArgs.add(argExpr);
       logMsg.add(argExpr);
     }
@@ -1378,6 +1370,21 @@ public class TurbineGenerator implements CompilerBackend {
       } else {
         throw new STCRuntimeError("Invalid app output type: " + o);
       }
+    }
+  }
+
+  /**
+   * 
+   * @param arg
+   * @return Expression appropriate for app command line (e.g. expanding arrays)
+   */
+  private Expression cmdLineArgExpr(Arg arg) {
+    if (Types.isContainerLocal(arg.type())) {
+      // Expand list
+      return new Expand(argToExpr(arg));
+    } else {
+      // Plain argument
+      return argToExpr(arg);
     }
   }
   
@@ -2923,8 +2930,13 @@ public class TurbineGenerator implements CompilerBackend {
     }
     
     List<Expression> taskArgExprs = new ArrayList<Expression>(taskArgs.size());
-    for (Arg taskArg: taskArgs) {
-      taskArgExprs.add(argToExpr(taskArg));
+    for (Arg taskArg: taskArgs) { 
+      // May need to expand args onto command line
+      if (executor.isCommandLine()) {
+        taskArgExprs.add(cmdLineArgExpr(taskArg));
+      } else {
+        taskArgExprs.add(argToExpr(taskArg));
+      }
     }
     
     List<Pair<String, Expression>> taskPropExprs =

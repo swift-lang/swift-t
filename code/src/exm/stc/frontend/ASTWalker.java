@@ -1804,6 +1804,9 @@ public class ASTWalker {
       String aeName = context.constructName("async-exec");
       Map<String, Arg> taskProps = new HashMap<String, Arg>();
       localRedirects.addProps(taskProps);
+      
+      // TODO: nicer solution?
+      localArgs.add(0, Arg.createStringLit(appName));
       backend.startAsyncExec(aeName, asyncExec, localOutputs, localArgs,
                     taskProps, !deterministic);
       // Rest of code executes in continuation after execution finishes
