@@ -265,12 +265,9 @@ static int curr_server_backoff = 0;
 static inline adlb_code
 serve_several()
 {
-  int reqs = 0; // count of requests served
-  int total_polls = 0; // total polls
-  int sleeps = 0;
-  while (reqs < xlb_loop_max_requests &&
-         total_polls < xlb_loop_max_polls &&
-         sleeps < xlb_loop_max_sleeps)
+  int exit_points = 0;
+  int reqs = 0;
+  while (exit_points < xlb_loop_threshold)
   {
     MPI_Status req_status;
     adlb_code code;
@@ -282,7 +279,6 @@ serve_several()
     {
       code = xlb_handle_pending(&req_status, NULL);
       ADLB_CHECK(code);
-      reqs++;
 
       // Previous request may have resulted in pending sync requests
       code = xlb_handle_pending_syncs();
@@ -290,6 +286,9 @@ serve_several()
 
       // Back off less on each successful request
       curr_server_backoff /= 2;
+
+      exit_points += xlb_loop_request_points;
+      reqs++;
     }
     else
     {
@@ -304,12 +303,14 @@ serve_several()
       // If we reach max backoff, exit
       if (!again)
         break;
+      
       if (slept)
-        sleeps++;
+        exit_points += xlb_loop_sleep_points;
+      else
+        exit_points += xlb_loop_poll_points;
       // Back off more
       curr_server_backoff++;
     }
-    total_polls++;
   }
 
   return reqs > 0 ? ADLB_SUCCESS : ADLB_NOTHING;

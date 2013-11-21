@@ -27,6 +27,13 @@
 
 #include <stdbool.h>
 
+// Progress speeds:
+#define BACKOFF_SLOW   0 // for fine-tuned debugging
+#define BACKOFF_MEDIUM 1 // good for use with valgrind
+#define BACKOFF_FAST   2 // normal - do not use with valgrind (thrashes)
+#define BACKOFF_SPEED  BACKOFF_FAST
+
+
 /**
    Time after which to exit because idle
    Default: May be overridden by ADLB_EXHAUST_TIME
@@ -44,14 +51,29 @@ extern double xlb_steal_backoff;
  */
 extern double xlb_steal_rate_limit;
 
-// Maximum requests to serve before yielding to main server loop
-extern int xlb_loop_max_requests;
+#if BACKOFF_SPEED == BACKOFF_SLOW
+// Threshold for main server request loop yield to main loop
+static const int xlb_loop_threshold = 1;
 
-// Maximum polls before yielding to main server loop
-extern int xlb_loop_max_polls;
+// How much request counts towards threshold
+static const int xlb_loop_request_points = 1;
 
-// Maximum sleeps before yielding to main server loop
-extern int xlb_loop_max_sleeps;
+// How much an unsuccessful poll counts towards threshold
+static const int xlb_loop_poll_points = 1;
+
+// How much a sleep counts towards threshold
+static const int xlb_loop_sleep_points = 1;
+#elif BACKOFF_SPEED == BACKOFF_MEDIUM
+static const int xlb_loop_threshold = 16;
+static const int xlb_loop_request_points = 1;
+static const int xlb_loop_poll_points = 1;
+static const int xlb_loop_sleep_points = 1;
+#elif BACKOFF_SPEED == BACKOFF_FAST
+static const int xlb_loop_threshold = 10000;
+static const int xlb_loop_request_points = 100;
+static const int xlb_loop_poll_points = 1;
+static const int xlb_loop_sleep_points = 1000;
+#endif 
 
 /**
    Backoff while in server loop

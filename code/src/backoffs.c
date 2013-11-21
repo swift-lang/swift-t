@@ -28,13 +28,8 @@
 #include "backoffs.h"
 #include "tools.h"
 
-// Progress speeds:
-#define SLOW   0 // for fine-tuned debugging
-#define MEDIUM 1 // good for use with valgrind
-#define FAST   2 // normal - do not use with valgrind (thrashes)
-#define SPEED  FAST
 // All backoffs in seconds
-#if SPEED == SLOW
+#if BACKOFF_SPEED == BACKOFF_SLOW
        double xlb_max_idle          = 10;
        double xlb_steal_rate_limit  = 8;
        double xlb_steal_backoff     = 8;
@@ -42,12 +37,13 @@ static double backoff_server_max    = 2;
 static int    backoff_server_no_delay_attempts  = 0;
 static int    backoff_server_min_delay_attempts = 1;
 static int    backoff_server_exp_delay_attempts = 0;
-       int    xlb_loop_max_requests = 1;
-       int    xlb_loop_max_polls    = 1;
-       int    xlb_loop_max_sleeps   = 10;
+       int    xlb_loop_threshold      = 1;
+       int    xlb_loop_request_points = 1;
+       int    xlb_loop_poll_points    = 1;
+       int    xlb_loop_sleep_points   = 1;
 static double backoff_sync          = 1;
 static double backoff_sync_rejected = 1;
-#elif SPEED == MEDIUM
+#elif BACKOFF_SPEED == BACKOFF_MEDIUM
        double xlb_max_idle          = 4;
        double xlb_steal_rate_limit  = 0.5;
        double xlb_steal_backoff     = 0.5;
@@ -55,12 +51,9 @@ static double backoff_server_max    = 0.001;
 static int    backoff_server_no_delay_attempts  = 0;
 static int    backoff_server_min_delay_attempts = 1;
 static int    backoff_server_exp_delay_attempts = 0;
-       int    xlb_loop_max_requests = 16;
-       int    xlb_loop_max_polls    = 16;
-       int    xlb_loop_max_sleeps   = 10;
 static double backoff_sync          = 0.01;
 static double backoff_sync_rejected = 0.01;
-#elif SPEED == FAST
+#elif BACKOFF_SPEED == BACKOFF_FAST
        double xlb_max_idle          = 0.1;
 /*
    Rate-limit steals.  The rate needs to be slow enough so that we don't
@@ -76,9 +69,6 @@ static double backoff_server_max    = 0.000001;
 static int    backoff_server_no_delay_attempts  = 1024;
 static int    backoff_server_min_delay_attempts = 4;
 static int    backoff_server_exp_delay_attempts = 4;
-       int    xlb_loop_max_requests = 128;
-       int    xlb_loop_max_polls    = 10000;
-       int    xlb_loop_max_sleeps   = 100;
 static double backoff_sync          = 0.00001;
 static double backoff_sync_rejected = 0.0001;
 #endif
