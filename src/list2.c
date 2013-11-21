@@ -56,24 +56,34 @@ list2_add(struct list2* target, void* data)
     return NULL;
 
   new_item->data = data;
-  new_item->next = NULL;
+  list2_add_item(target, new_item);
+  return new_item;
+}
 
-  if (target->size == 0)
+/**
+  Alternative interface allowing caller to provide list node
+ */
+void
+list2_add_item(struct list2* target, struct list2_item* new_item)
+{
+  assert(target != NULL);
+  new_item->next = NULL;
+  new_item->prev = target->tail;
+
+  // Already loaded target->tail, so check that for emptiness
+  if (target->tail == NULL)
   {
+    // Empty list case
     target->head = new_item;
-    target->tail = new_item;
-    new_item->prev = NULL;
   }
   else
   {
-    new_item->prev = target->tail;
+    // Non-empty list case
     target->tail->next = new_item;
   }
 
   target->tail = new_item;
   target->size++;
-
-  return new_item;
 }
 
 void*
@@ -81,31 +91,60 @@ list2_pop(struct list2* target)
 {
   if (target->size == 0)
     return NULL;
-  struct list2_item* item = target->head;
+  struct list2_item* item = list2_pop_item(target);
   void* result = item->data;
-  list2_remove_item(target, item);
   free(item);
   return result;
+}
+
+struct list2_item* list2_pop_item(struct list2* target)
+{
+  struct list2_item* item = target->head;
+  if (item == NULL)
+    return NULL;
+
+  // Code for special case of unlinking head
+  target->head = item->next;
+  if (target->tail == item)
+  {
+    // Tail case - no next - must be only entry in list
+    target->tail = NULL;
+  }
+  else
+  {
+    // Non-tail case - must have next. Next is now head
+    item->next->prev = NULL;
+  }
+
+  target->size--;
+  return item;
 }
 
 void
 list2_remove_item(struct list2* target, struct list2_item* item)
 {
   assert(target->size > 0);
-  if (target->size == 1)
-  {
-    target->head = NULL;
-    target->tail = NULL;
-    target->size = 0;
-    return;
-  }
+  
   if (target->head == item)
+  {
+    // head case - no prev
     target->head = item->next;
-  if (target->tail == item)
-    target->tail = item->prev;
-  if (item->prev != NULL)
+  }
+  else
+  {
+    // non-head case - has prev
     item->prev->next = item->next;
-  if (item->next != NULL)
+  }
+
+  if (target->tail == item)
+  {
+    // tail case - no next
+    target->tail = item->prev;
+  }
+  else
+  {
+    // non-tail case - has next
     item->next->prev = item->prev;
+  }
   target->size--;
 }
