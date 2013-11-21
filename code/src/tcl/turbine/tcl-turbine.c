@@ -757,7 +757,7 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
   } else {
     log_printf("creating nested multiset <%"PRId64">[%.*s] (%s)", id,
       (int)subscript.length, subscript.key,
-      ADLB_Data_type_tostring(type_extra.CONTAINER.val_type));
+      ADLB_Data_type_tostring(type_extra.MULTISET.val_type));
   }
 
   uint64_t xfer_size;
