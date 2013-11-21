@@ -1330,7 +1330,7 @@ ADLB_Server_idle(int rank, int64_t check_attempt, bool* result,
   SEND(&check_attempt, sizeof(check_attempt), MPI_BYTE, rank, ADLB_TAG_CHECK_IDLE);
   WAIT(&request, &status);
 
-  if (result)
+  if (*result)
   {
     RECV(request_counts, xlb_types_size, MPI_INT, rank, ADLB_TAG_RESPONSE);
     RECV(untargeted_work_counts, xlb_types_size, MPI_INT, rank,

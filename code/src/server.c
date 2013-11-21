@@ -660,6 +660,7 @@ shutdown_all_servers()
 {
   TRACE_START;
   MPE_LOG(xlb_mpe_dmn_shutdown_start)
+  DEBUG("Initiating server shutdown");
   xlb_server_shutting_down = true;
   for (int rank = xlb_master_server_rank+1; rank < xlb_comm_size;
        rank++)

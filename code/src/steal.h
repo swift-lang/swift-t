@@ -54,10 +54,11 @@ xlb_steal_allowed(void)
 
   // Somewhat adaptive backoff approach where we do bursts of polling
   double interval;
-  if (xlb_failed_steals_since_backoff == xlb_servers)
+
+  bool backoff = (xlb_failed_steals_since_backoff == xlb_servers);
+  if (backoff)
   {
     interval = xlb_steal_backoff;
-    xlb_failed_steals_since_backoff = 0;
   }
   else
   {
@@ -66,6 +67,12 @@ xlb_steal_allowed(void)
   if (t - xlb_steal_last < interval)
     // Too soon to try again
     return false;
+
+  if (backoff)
+  {
+    // Backoff expired, reset
+    xlb_failed_steals_since_backoff = 0;
+  }
   return true;
 }
 
