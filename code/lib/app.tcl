@@ -35,73 +35,75 @@ namespace eval turbine {
       set stdin_src "<[ dict get $kwopts stdin ]"
     }
     if { [ dict exists $kwopts stdout ] } {
-        set dst [ dict get $kwopts stdout ]
-        ensure_directory_exists2 $dst
-        set stdout_dst ">$dst"
+      set dst [ dict get $kwopts stdout ]
+      ensure_directory_exists2 $dst
+      set stdout_dst ">$dst"
     }
     if { [ dict exists $kwopts stderr ] } {
-        set dst [ dict get $kwopts stderr ]
-        ensure_directory_exists2 $dst
-        set stderr_dst "2>$dst"
+      set dst [ dict get $kwopts stderr ]
+      ensure_directory_exists2 $dst
+      set stderr_dst "2>$dst"
     }
     log "shell: $cmd $args $stdin_src $stdout_dst $stderr_dst"
 
+    # TODO: remove this - STC will call a coasters-specific launch function
+    #       directly
     if {[string match "coaster*" $cmd]} {
-        set cmd [string triml $cmd "coaster"]
-        exec_coaster $cmd $stdin_src $stdout_dst $stderr_dst {*}$args
+      set cmd [string triml $cmd "coaster"]
+      exec_coaster $cmd $stdin_src $stdout_dst $stderr_dst {*}$args
     } else {
-        set start [ clock milliseconds ]
-        exec $cmd {*}$args $stdin_src $stdout_dst $stderr_dst
-        set stop [ clock milliseconds ]
-        set duration [ format "%0.3f" [ expr ($stop-$start)/1000.0 ] ]
-        log "shell command duration: $duration"
+      set start [ clock milliseconds ]
+      exec $cmd {*}$args $stdin_src $stdout_dst $stderr_dst
+      set stop [ clock milliseconds ]
+      set duration [ format "%0.3f" [ expr ($stop-$start)/1000.0 ] ]
+      log "shell command duration: $duration"
     }
   }
 
-    #Issue #501
-    proc exec_coaster { cmd stdin_src stdout_dst stderr_dst args} {
-        log "exec_coaster: cmd : $cmd"
-        log "exec_coaster: args : $args"
+  #Issue #501
+  proc exec_coaster { cmd stdin_src stdout_dst stderr_dst args} {
+    log "exec_coaster: cmd : $cmd"
+    log "exec_coaster: args : $args"
 
-        set stdout_dst [string trim $stdout_dst <>]
-        if { $stdout_dst == "@stdout" } {
-            log "exec_coaster : stdout not defined, setting to empty"
-            set stdout_dst ""
-        }
-        log "exec_coaster: stdout_dst : $stdout_dst"
-
-        set stderr_dst [string trim $stderr_dst 2>]
-        if { $stderr_dst == "2>@stderr" } {
-            log "exec_coaster : stdout not defined, setting to empty"
-            set stderr_dst ""
-        }
-        log "exec_coaster: stderr_dst : $stderr_dst"
-
-        package require coaster 0.0
-
-        set loop_ptr [CoasterSWIGLoopCreate]
-        set client_ptr [CoasterSWIGClientCreate $loop_ptr 140.221.8.81:34959]
-        set x [CoasterSWIGClientSettings $client_ptr "SLOTS=1,MAX_NODES=1,JOBS_PER_NODE=2,WORKER_MANAGER=passive"]
-        log "exec_coaster: Error code from CoasterSWIGClientSettings $x"
-
-        # Job stuff
-        set job1 [CoasterSWIGJobCreate $cmd]
-
-        #CoasterSWIGJobSettings job_obj dir args attributes env_vars stdout_loc stderr_loc"
-        log "exec_coaster : CoasterSWIGJobSettings $job1 \"\" $args \"\" \"\" $stdout_dst $stderr_dst "
-        set rcode [CoasterSWIGJobSettings $job1 "" $args "" "" $stdout_dst $stderr_dst]
-
-        set rcode [CoasterSWIGSubmitJob $client_ptr $job1]
-        log "exec_coaster: Job1 submitted"
-
-        log "exec_coaster: Waiting for Job1"
-        set rcode [CoasterSWIGWaitForJob $client_ptr $job1]
-        log "exec_coaster: Job1 complete"
-
-        set rcode [CoasterSWIGClientDestroy $client_ptr]
-
-        set rcode [CoasterSWIGLoopDestroy $loop_ptr]
+    set stdout_dst [string trim $stdout_dst <>]
+    if { $stdout_dst == "@stdout" } {
+      log "exec_coaster : stdout not defined, setting to empty"
+      set stdout_dst ""
     }
+    log "exec_coaster: stdout_dst : $stdout_dst"
+
+    set stderr_dst [string trim $stderr_dst 2>]
+    if { $stderr_dst == "2>@stderr" } {
+      log "exec_coaster : stdout not defined, setting to empty"
+      set stderr_dst ""
+    }
+    log "exec_coaster: stderr_dst : $stderr_dst"
+
+    package require coaster 0.0
+
+    set loop_ptr [CoasterSWIGLoopCreate]
+    set client_ptr [CoasterSWIGClientCreate $loop_ptr 140.221.8.81:34959]
+    set x [CoasterSWIGClientSettings $client_ptr "SLOTS=1,MAX_NODES=1,JOBS_PER_NODE=2,WORKER_MANAGER=passive"]
+    log "exec_coaster: Error code from CoasterSWIGClientSettings $x"
+
+    # Job stuff
+    set job1 [CoasterSWIGJobCreate $cmd]
+
+    #CoasterSWIGJobSettings job_obj dir args attributes env_vars stdout_loc stderr_loc"
+    log "exec_coaster : CoasterSWIGJobSettings $job1 \"\" $args \"\" \"\" $stdout_dst $stderr_dst "
+    set rcode [CoasterSWIGJobSettings $job1 "" $args "" "" $stdout_dst $stderr_dst]
+
+    set rcode [CoasterSWIGSubmitJob $client_ptr $job1]
+    log "exec_coaster: Job1 submitted"
+
+    log "exec_coaster: Waiting for Job1"
+    set rcode [CoasterSWIGWaitForJob $client_ptr $job1]
+    log "exec_coaster: Job1 complete"
+
+    set rcode [CoasterSWIGClientDestroy $client_ptr]
+
+    set rcode [CoasterSWIGLoopDestroy $loop_ptr]
+  }
 
   # Alternative implementation
   proc ensure_directory_exists2 { f } {
