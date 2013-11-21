@@ -18,5 +18,5 @@
 int
 main()
 {
-  return launch_ptasks_bench("tests/ptasks-bench.tcl");
+  return launch_ptasks_bench("tests/ptasks-stress.tcl");
 }
