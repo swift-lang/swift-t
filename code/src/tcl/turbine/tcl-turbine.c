@@ -698,7 +698,7 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
   int rc;
   int argpos = 1;
   rc = Tcl_GetADLB_ID(interp, objv[argpos++], &id);
-  TCL_CHECK(rc)
+  TCL_CHECK(rc);
 
   rc = Tcl_GetADLB_Subscript(objv[argpos++], &subscript);
   TCL_CHECK_MSG(rc, "Invalid subscript argument");

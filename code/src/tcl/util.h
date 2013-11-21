@@ -201,6 +201,7 @@ Tcl_Obj* tcl_list_from_array_ints(Tcl_Interp *interp,
 #else
 
 #define TCL_CHECK(rc) ((void)(rc))
+#define TCL_CHECK_GOTO(rc, label) ((void)(rc))
 #define TCL_CHECK_MSG(rc, format, args...) ((void)(rc))
 #define TCL_CHECK_MSG_GOTO(rc, label, format, args...) ((void)(rc))
 #define TCL_CONDITION(condition, format, args...) ((void)(condition))
