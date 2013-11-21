@@ -52,6 +52,10 @@ public class Proc extends TclTree
     this(name, usedFunctionNames, args, new Sequence());
   }
   
+  public String name() {
+    return name;
+  }
+
   public Sequence getBody() {
     return body;
   }

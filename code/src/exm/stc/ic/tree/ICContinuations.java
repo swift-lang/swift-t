@@ -1546,11 +1546,12 @@ public class ICContinuations {
 
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
+      boolean hasContinuation = !this.block.isEmpty();
       gen.startAsyncExec(procName, PassedVar.extractVars(passedVars),
-                          executor, taskOutputs, taskArgs, taskProps);
+                          executor, taskOutputs, taskArgs, taskProps,
+                          hasContinuation);
       this.block.generate(logger, gen, info);
-      gen.endAsyncExec();
-      throw new STCRuntimeError("Not implemented");
+      gen.endAsyncExec(hasContinuation);
     }
 
     @Override

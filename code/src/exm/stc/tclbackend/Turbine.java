@@ -23,6 +23,7 @@ import java.util.List;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.Location;
 import exm.stc.common.lang.TaskMode;
@@ -158,6 +159,9 @@ class Turbine {
   private static final Token RULE_KEYWORD_TYPE = new Token("type");
   private static final Token RULE_KEYWORD_TARGET = new Token("target");
   
+  // Async task execution
+  private static final Token ASYNC_EXEC = turbFn("async_exec");
+
   // Dereference functions
   private static final Token DEREFERENCE_INTEGER = turbFn("dereference_integer");
   private static final Token DEREFERENCE_VOID = turbFn("dereference_void");
@@ -1429,6 +1433,32 @@ class Turbine {
     return new Command(TURBINE_LOG, logMsg);
   }
 
+  /**
+   * 
+   * @param executor
+   * @param outVarNames
+   * @param taskArgExprs
+   * @param taskPropExprs
+   * @param continuation may be null if no continuation to call
+   * @return
+   */
+  public static Command asyncExec(AsyncExecutor executor,
+      List<Token> outVarNames, List<Expression> taskArgExprs,
+      List<Pair<String, Expression>> taskPropExprs,
+      List<Expression> continuation) {
+    List<Expression> execArgs = new ArrayList<Expression>();
+    execArgs.add(new Token(executor.toString()));
+    execArgs.add(new TclList(outVarNames));
+    execArgs.add(new TclList(taskArgExprs));
+    execArgs.add(Dict.dictCreateSE(true, taskPropExprs));
+    if (continuation != null && !continuation.isEmpty()) {
+      execArgs.add(new TclList(continuation));
+    }
+    
+    Command exec = new Command(ASYNC_EXEC, execArgs);
+    return exec;
+  }
+  
   /**
    * @param unpacked List of alternating types/values 
    */

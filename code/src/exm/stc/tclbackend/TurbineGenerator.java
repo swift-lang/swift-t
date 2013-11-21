@@ -2900,21 +2900,26 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void startAsyncExec(String procName, List<Var> passIn, 
       AsyncExecutor executor, List<Var> taskOutputs,
-      List<Arg> taskArgs, Map<String, Arg> taskProps) {
-
-    // Pass in context variables
+      List<Arg> taskArgs, Map<String, Arg> taskProps,
+      boolean hasContinuation) {
+    
+    Proc proc = null;
     List<String> continuationArgs = new ArrayList<String>();
     List<Expression> continuationArgVals = new ArrayList<Expression>();
-    for (Var passVar: passIn) {
-      continuationArgs.add(prefixVar(passVar));
-      continuationArgVals.add(varToExpr(passVar));
+    
+    if (hasContinuation) {
+      // Setup proc for continuation
+      String uniqueName = uniqueTCLFunctionName(procName);
+      proc = new Proc(uniqueName, usedTclFunctionNames, continuationArgs);
+      tree.add(proc);
+
+      // Pass in context variables
+      for (Var passVar: passIn) {
+        continuationArgs.add(prefixVar(passVar));
+        continuationArgVals.add(varToExpr(passVar));
+      }
     }
-    
-    // Setup proc
-    String uniqueName = uniqueTCLFunctionName(procName);
-    Proc proc = new Proc(uniqueName, usedTclFunctionNames, continuationArgs);
-    tree.add(proc);
-    
+      
     List<Token> outVarNames = new ArrayList<Token>(taskOutputs.size());
     for (Var taskOutput: taskOutputs) {
       outVarNames.add(new Token(prefixVar(taskOutput)));
@@ -2939,28 +2944,28 @@ public class TurbineGenerator implements CompilerBackend {
         return a.val1.compareTo(b.val1);
       }
     });
-     
-    
-    List<Expression> continuation = new ArrayList<Expression>();
-    continuation.add(new Token(uniqueName));
-    continuation.addAll(continuationArgVals);
-    
-    // TODO: proper output
-    Command exec = new Command("turbine::async_exec", Arrays.asList(
-        new Token(executor.toString()), new TclList(outVarNames),
-        new TclList(taskArgExprs), Dict.dictCreateSE(true, taskPropExprs),
-        new TclList(continuation)));
-    pointStack.peek().add(exec);
-    
 
+    List<Expression> continuation = null;
+    if (hasContinuation) {
+      continuation = new ArrayList<Expression>();
+      continuation.add(new Token(proc.name()));
+      continuation.addAll(continuationArgVals);
+    }
     
-    // Enter proc body for further code generation
-    pointStack.push(proc.getBody());
+    pointStack.peek().add(Turbine.asyncExec(executor, outVarNames, taskArgExprs,
+                                    taskPropExprs, continuation));
+
+    if (hasContinuation) {
+      // Enter proc body for code generation of continuation
+      pointStack.push(proc.getBody());
+    }
   }
   
-  public void endAsyncExec() {
-    assert(pointStack.size() >= 2);
-    pointStack.pop();
+  public void endAsyncExec(boolean hasContinuation) {
+    if (hasContinuation) {
+      assert(pointStack.size() >= 2);
+      pointStack.pop();
+    }
   }
   
   @Override
