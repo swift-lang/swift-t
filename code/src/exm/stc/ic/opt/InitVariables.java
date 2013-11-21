@@ -96,7 +96,6 @@ public class InitVariables {
           contState.initVars.add(v);
         }
         if (assignBeforeRead(v)) {
-          System.err.println(v);
           contState.assignedVals.add(v);
         }
       }

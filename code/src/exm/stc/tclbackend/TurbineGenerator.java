@@ -82,6 +82,7 @@ import exm.stc.tclbackend.tree.Command;
 import exm.stc.tclbackend.tree.Comment;
 import exm.stc.tclbackend.tree.Dict;
 import exm.stc.tclbackend.tree.DictFor;
+import exm.stc.tclbackend.tree.Expand;
 import exm.stc.tclbackend.tree.Expression;
 import exm.stc.tclbackend.tree.Expression.ExprContext;
 import exm.stc.tclbackend.tree.ForEach;
@@ -1343,7 +1344,15 @@ public class TurbineGenerator implements CompilerBackend {
       Arg arg = args.get(argNum);
       // Should only accept local arguments
       assert(arg.isConstant() || arg.getVar().storage() == Alloc.LOCAL);
-      Expression argExpr = argToExpr(arg);
+      Expression argExpr;
+      
+      if (Types.isContainerLocal(arg.type())) {
+        // Expand list
+        argExpr = new Expand(argToExpr(arg));
+      } else {
+        // Plain argument
+        argExpr = argToExpr(arg);
+      }
       tclArgs.add(argExpr);
       logMsg.add(argExpr);
     }
