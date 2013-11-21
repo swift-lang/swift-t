@@ -38,7 +38,7 @@ static void task_error(Tcl_Interp* interp, int tcl_rc, char* command);
   log_printf("TURBINE_WORKER_SERVICE: " format, ## args)
 
 turbine_code
-turbine_worker_loop(Tcl_Interp* interp, void* buffer, int buffer_size,
+turbine_worker_loop(Tcl_Interp* interp, void* buffer, size_t buffer_size,
                     int work_type)
 {
   int rc;

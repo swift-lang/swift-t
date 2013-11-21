@@ -123,7 +123,7 @@ static struct table_lp blob_cache;
 typedef struct {
   bool initialized;
   char *name;
-  int field_count;
+  unsigned int field_count;
   adlb_data_type *field_types;
   char **field_names;
   // Each field has an array of field names representing nesting
@@ -170,7 +170,7 @@ static void struct_format_init(void);
 static int struct_format_finalize(void);
 static int add_struct_format(Tcl_Interp *interp, Tcl_Obj *const objv[],
             adlb_struct_type type_id, const char *type_name,
-            int field_count, const adlb_data_type *field_types,
+            unsigned int field_count, const adlb_data_type *field_types,
             const char **field_names);
 static int
 packed_struct_to_tcl_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
@@ -378,7 +378,7 @@ static int struct_format_finalize(void)
     {
       free(f->name);
       free(f->field_types);
-      for (int j = 0; j < f->field_count; j++)
+      for (unsigned int j = 0; j < f->field_count; j++)
       {
         for (int k = 0; k <= f->field_nest_level[j]; k++)
         {
@@ -404,12 +404,11 @@ static int struct_format_finalize(void)
 
 static int add_struct_format(Tcl_Interp *interp, Tcl_Obj *const objv[],
             adlb_struct_type type_id, const char *type_name,
-            int field_count, const adlb_data_type *field_types,
+            unsigned int field_count, const adlb_data_type *field_types,
             const char **field_names)
 {
   assert(adlb_struct_formats.types != NULL); // Check init
   TCL_CONDITION(type_id >= 0, "Struct type id must be non-negative");
-  assert(field_count >= 0);
 
   if (adlb_struct_formats.types_len <= type_id)
   {
@@ -433,14 +432,14 @@ static int add_struct_format(Tcl_Interp *interp, Tcl_Obj *const objv[],
   t->name = strdup(type_name);
   TCL_MALLOC_CHECK(t->name);
   t->field_count = field_count;
-  t->field_types = malloc(sizeof(t->field_types[0]) * (size_t)field_count);
+  t->field_types = malloc(sizeof(t->field_types[0]) * field_count);
   TCL_MALLOC_CHECK(t->field_types);
   t->field_nest_level = malloc(sizeof(t->field_nest_level[0]) *
-                              (size_t)field_count);
+                               field_count);
   TCL_MALLOC_CHECK(t->field_nest_level);
-  t->field_names = malloc(sizeof(t->field_names[0]) * (size_t)field_count);
+  t->field_names = malloc(sizeof(t->field_names[0]) * field_count);
   TCL_MALLOC_CHECK(t->field_names);
-  t->field_parts = malloc(sizeof(t->field_parts[0]) * (size_t)field_count);
+  t->field_parts = malloc(sizeof(t->field_parts[0]) * field_count);
   TCL_MALLOC_CHECK(t->field_parts);
 
   for (int i = 0; i < field_count; i++)
@@ -530,8 +529,8 @@ ADLB_Declare_Struct_Type_Cmd(ClientData cdata, Tcl_Interp *interp,
     TCL_CHECK(rc);
   }
 
-  rc = add_struct_format(interp, objv, type_id, type_name, field_count,
-                         field_types, field_names);
+  rc = add_struct_format(interp, objv, type_id, type_name,
+                (unsigned int)field_count, field_types, field_names);
   TCL_CHECK(rc);
 
   adlb_data_code dc = ADLB_Declare_struct_type(type_id, type_name, field_count,
@@ -704,7 +703,8 @@ ADLB_Hostmap_List_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   free(buffer);
 
-  Tcl_Obj* result = Tcl_NewListObj(count, names);
+  assert(count <= INT_MAX);
+  Tcl_Obj* result = Tcl_NewListObj((int)count, names);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
@@ -1326,9 +1326,10 @@ tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
       TCL_CHECK(rc);
       if (own_pointers)
       {
-        void *tmp = malloc(result->BLOB.length);
+        assert(result->BLOB.length >= 0);
+        void *tmp = malloc((size_t)result->BLOB.length);
         TCL_CONDITION(tmp != NULL, "Error allocating memory");
-        memcpy(tmp, result->BLOB.value, result->BLOB.length);
+        memcpy(tmp, result->BLOB.value, (size_t)result->BLOB.length);
         result->BLOB.value = tmp;
       }
       return TCL_OK;
@@ -1473,11 +1474,11 @@ tcl_obj_bin_append(Tcl_Interp *interp, Tcl_Obj *const objv[],
     if (prefix_len)
     {
       adlb_data_code dc = ADLB_Resize_buf(output, output_caller_buf,
-                                        start_pos + VINT_MAX_BYTES);
+                                        start_pos + (int)VINT_MAX_BYTES);
       TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error resizing");
 
       memset(output->data + start_pos, 0, VINT_MAX_BYTES);
-      (*output_pos) += VINT_MAX_BYTES;
+      (*output_pos) += (int)VINT_MAX_BYTES;
     }
 
     if (type == ADLB_DATA_TYPE_CONTAINER)
@@ -1500,7 +1501,7 @@ tcl_obj_bin_append(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
     if (prefix_len)
     {
-      int packed_len = *output_pos - start_pos - VINT_MAX_BYTES;
+      int packed_len = *output_pos - start_pos - (int)VINT_MAX_BYTES;
       // Add int to spot we reserved
       vint_encode(packed_len, output->data + start_pos);
     }
@@ -1960,7 +1961,8 @@ packed_multiset_to_list(Tcl_Interp *interp, Tcl_Obj *const objv[],
   }
 
 
-  arr = malloc(sizeof(Tcl_Obj*) * entries);
+  assert(entries >= 0); 
+  arr = malloc(sizeof(Tcl_Obj*) * (size_t)entries);
   for (entry = 0; entry < entries; entry++)
   {
     const void *elem;
@@ -2699,6 +2701,7 @@ static int extract_tcl_blob(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
   Tcl_WideInt wint;
   rc = Tcl_GetWideIntFromObj(interp, elems[1], &wint);
+  // TODO: this truncates it back down to int: what is intended?
   blob->length = wint;
   TCL_CHECK_MSG(rc, "Error extracting blob length from %s",
                 Tcl_GetString(elems[1]));
@@ -3756,7 +3759,7 @@ get_compound_type(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
   /* slurp up relevant data types: get all nested containers plus the
    * value type.
    */
-  int types_size = 16;
+  size_t types_size = 16;
   int len = 0;
   adlb_data_type *type_arr = malloc(sizeof(adlb_data_type) * types_size);
   TCL_CONDITION(type_arr != NULL, "Error allocating memory");
