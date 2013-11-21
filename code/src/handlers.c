@@ -485,6 +485,7 @@ redirect_work(int type, int putter, int priority, int answer,
 static adlb_code
 handle_get(int caller)
 {
+  adlb_code code;
   int type;
   MPI_Status status;
 
@@ -515,7 +516,11 @@ handle_get(int caller)
   DEBUG("stole?: %i", stole);
 
   if (!found_work)
-    xlb_requestqueue_add(caller, type);
+  {
+    code = xlb_requestqueue_add(caller, type);
+    ADLB_CHECK(code);
+  }
+
   if (stole)
   {
     DEBUG("handle_get(): steal worked: rechecking...");
@@ -584,12 +589,12 @@ xlb_recheck_queues()
   TRACE_START;
 
   int N = xlb_requestqueue_size();
-  xlb_request_pair* r = malloc((size_t)N*sizeof(xlb_request_pair));
+  xlb_request_entry* r = malloc((size_t)N*sizeof(xlb_request_entry));
   N = xlb_requestqueue_get(r, N);
 
   for (int i = 0; i < N; i++)
     if (check_workqueue(r[i].rank, r[i].type))
-      xlb_requestqueue_remove(r[i].rank);
+      xlb_requestqueue_remove(&r[i]);
 
   free(r);
   TRACE_END;
@@ -663,9 +668,6 @@ send_work(int worker, xlb_work_unit_id wuid, int type, int answer,
   TRACE("payload_source: %i", g.payload_source);
   g.type = type;
   g.parallelism = parallelism;
-
-  MPI_Request req;
-  MPI_Status status;
 
   SEND(&g, sizeof(g), MPI_BYTE, worker, ADLB_TAG_RESPONSE_GET);
   SEND(payload, length, MPI_BYTE, worker, ADLB_TAG_WORK);

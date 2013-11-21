@@ -37,9 +37,10 @@ extern bool xlb_server_sync_in_progress;
 /** Did we just get rejected when attempting to server sync? */
 extern bool server_sync_retry;
 
-adlb_code xlb_server_init(void);
+// Number of workers associated with this server
+extern int xlb_my_workers;
 
-int xlb_map_to_server(int worker);
+adlb_code xlb_server_init(void);
 
 // ADLB_Server prototype is in adlb.h
 
@@ -71,5 +72,40 @@ adlb_code xlb_server_failed(bool* aborted, int* code);
 
 // Get approximate time, updated frequently by server loop
 double xlb_approx_time(void);
+
+/**
+   @param rank rank of worker belonging to this server
+   @return unique number for each of my workers, e.g. to use in array.
+           Does not validate that rank is valid
+ */
+static inline int
+xlb_my_worker_ix(int rank)
+{
+  return rank / xlb_servers;
+}
+
+static inline bool
+xlb_is_server(int rank)
+{
+  if (rank > xlb_comm_size - xlb_servers)
+    return true;
+  return false;
+}
+
+/**
+   @param rank of worker
+   @return rank of server for this worker rank
+ */
+static inline int
+xlb_map_to_server(int rank)
+{
+  if (xlb_is_server(rank))
+    return rank;
+  valgrind_assert(rank >= 0);
+  valgrind_assert(rank < xlb_comm_size);
+  int w = rank % xlb_servers;
+  return w + xlb_workers;
+}
+
 
 #endif

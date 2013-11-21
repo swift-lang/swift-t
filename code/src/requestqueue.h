@@ -33,11 +33,12 @@ typedef struct
 {
   int rank;
   int type;
-} xlb_request_pair;
+  void *_internal; /* Internal pointer, caller should not touch */
+} xlb_request_entry;
 
-void xlb_requestqueue_init(void);
+adlb_code xlb_requestqueue_init(int my_workers);
 
-void xlb_requestqueue_add(int rank, int type);
+adlb_code xlb_requestqueue_add(int rank, int type);
 
 int xlb_requestqueue_matches_target(int target_rank, int type);
 
@@ -60,14 +61,18 @@ bool xlb_requestqueue_parallel_workers(int type, int parallelism,
                                    int* result);
 
 /**
-   @param r Where to write output request_pairs.
-            Must be preallocated to max*sizeof(request_pair)
+   @param r Where to write output request_entrys.
+            Must be preallocated to max*sizeof(request_entry)
    @param max Maximal number of request_pairs to return
    @return Actual number of request_pairs returned
  */
-int xlb_requestqueue_get(xlb_request_pair* r, int max);
+int xlb_requestqueue_get(xlb_request_entry* r, int max);
 
-void xlb_requestqueue_remove(int worker_rank);
+/**
+  Remove an entry from the request queue
+  This should not be called twice for the same entry.
+ */
+void xlb_requestqueue_remove(xlb_request_entry *e);
 
 void xlb_requestqueue_shutdown(void);
 

@@ -42,6 +42,7 @@
 #include "debug.h"
 #include "messaging.h"
 #include "requestqueue.h"
+#include "server.h"
 #include "workqueue.h"
 
 
@@ -53,11 +54,24 @@
 static xlb_work_unit_id unique = 1;
 
 /**
-   Map from target rank to type array of priority heap -
-   heap sorted by negative priority.
+   Heaps for target rank/type combinations, heap sorted by negative priority.
+   This only include worker ranks that belong to this server.
+   You can obtain the heap for a rank with targeted_work_ix(rank, type)
    Only contains targeted work
 */
-static struct table_ip targeted_work;
+static heap_t *targeted_work;
+
+static inline int targeted_work_entries(int work_types, int my_workers)
+{
+  return work_types * my_workers;
+}
+
+static inline int targeted_work_ix(int rank, adlb_data_type type)
+{
+  return xlb_my_worker_ix(rank) * xlb_types_size + (int)type;
+}
+
+// Calculate index for one of my workers
 
 /**
    typed_work
@@ -82,13 +96,21 @@ int64_t xlb_workq_parallel_task_count;
 
 work_type_counters *xlb_task_counters;
 
-void
-xlb_workq_init(int work_types)
+adlb_code
+xlb_workq_init(int work_types, int my_workers)
 {
   assert(work_types >= 1);
   DEBUG("xlb_workq_init(work_types=%i)", work_types);
-  bool b = table_ip_init(&targeted_work, 128);
-  valgrind_assert(b);
+
+  int targeted_entries = targeted_work_entries(work_types, my_workers);
+  targeted_work = malloc(sizeof(heap_t) * (size_t)targeted_entries);
+  valgrind_assert(targeted_work != NULL);
+  for (int i = 0; i < targeted_entries; i++)
+  {
+    bool ok = heap_init_empty(&targeted_work[i]);
+    CHECK_MSG(ok, "Could not allocate memory for heap");
+  }
+
   typed_work = malloc(sizeof(struct rbtree) * (size_t)work_types);
   valgrind_assert(typed_work != NULL);
   parallel_work = malloc(sizeof(struct rbtree) * (size_t)work_types);
@@ -122,6 +144,8 @@ xlb_workq_init(int work_types)
   {
     xlb_task_counters = NULL;
   }
+
+  return ADLB_SUCCESS;
 }
 
 xlb_work_unit_id
@@ -130,7 +154,7 @@ xlb_workq_unique()
   return unique++;
 }
 
-void
+adlb_code
 xlb_workq_add(int type, int putter, int priority, int answer,
               int target_rank, int length, int parallelism,
               xlb_work_unit* wu)
@@ -173,25 +197,16 @@ xlb_workq_add(int type, int putter, int priority, int answer,
   }
   else
   {
-    // Targeted task
-    heap_t* A = table_ip_search(&targeted_work, target_rank);
-    if (A == NULL)
-    {
-      A = malloc((size_t)xlb_types_size * sizeof(heap_t));
-      table_ip_add(&targeted_work, target_rank, A);
-      for (int i = 0; i < xlb_types_size; i++)
-      {
-        heap_t* H = &A[i];
-        heap_init(H, 8);
-      }
-    }
-    heap_t* H = &A[type];
-    heap_add(H, -priority, wu);
+    heap_t* H = &targeted_work[targeted_work_ix(target_rank, type)];
+    bool b = heap_add(H, -priority, wu);
+    CHECK_MSG(b, "out of memory expanding heap");
+
     if (xlb_perf_counters_enabled)
     {
       xlb_task_counters[type].targeted_enqueued++;
     }
   }
+  return ADLB_SUCCESS;
 }
 
 /**
@@ -204,6 +219,11 @@ pop_targeted(heap_t* H, int target)
   xlb_work_unit* result = heap_root_val(H);
   DEBUG("xlb_workq_get(): targeted: %"PRId64"", result->id);
   heap_del_root(H);
+  if (heap_size(H) == 0)
+  {
+    // Free storage for empty heaps
+    heap_clear(H);
+  }
   return result;
 }
 
@@ -214,16 +234,12 @@ xlb_workq_get(int target, int type)
 
   xlb_work_unit* wu = NULL;
 
-  heap_t* A = table_ip_search(&targeted_work, target);
-  if (A != NULL)
+  // Targeted work was found
+  heap_t* H = &targeted_work[targeted_work_ix(target, type)];
+  if (heap_size(H) != 0)
   {
-    // Targeted work was found
-    heap_t* H = &A[type];
-    if (heap_size(H) != 0)
-    {
-      wu = pop_targeted(H, target);
-      return wu;
-    }
+    wu = pop_targeted(H, target);
+    return wu;
   }
 
   // Select untargeted work
@@ -420,31 +436,22 @@ wu_heap_clear_callback(heap_key_t k, heap_val_t v)
 }
 
 static void
-wu_targeted_clear_callback(int key, void *val)
+targeted_heap_clear(heap_t *H)
 {
-  heap_t* A = val;
-
-  for (int i = 0; i < xlb_types_size; i++)
+  if (H->size > 0)
   {
-    heap_t* H = &A[i];
-    if (H->size > 0)
+    printf("WARNING: server contains targeted work that was never "
+           "received by target!\n");
+    for (int j = 0; j < H->size; j++)
     {
-      printf("WARNING: server contains targeted work that was never "
-             "received by target!\n");
-      for (int j = 0; j < H->size; j++)
-      {
-        xlb_work_unit *wu = H->array[j].val;
-        printf("  Targeted work: type: %i target rank: %i\n",
-                    wu->type, wu->target);
-      }
+      xlb_work_unit *wu = H->array[j].val;
+      printf("  Targeted work: type: %i target rank: %i\n",
+                  wu->type, wu->target);
     }
-    
-    // free the work unit
-    heap_clear_callback(H, wu_heap_clear_callback);
   }
-
-  // Free the array of heaps
-  free(A);
+  
+  // free the work unit
+  heap_clear_callback(H, wu_heap_clear_callback);
 }
 
 void xlb_print_workq_perf_counters(void)
@@ -499,7 +506,13 @@ xlb_workq_finalize()
   TRACE_START;
 
   // Clear up targeted_work
-  table_ip_free_callback(&targeted_work, false, wu_targeted_clear_callback);
+  int targeted_entries = targeted_work_entries(xlb_types_size, xlb_my_workers);
+  for (int i = 0; i < targeted_entries; i++)
+  {
+    targeted_heap_clear(&targeted_work[i]);
+  }
+  free(targeted_work);
+  targeted_work = NULL;
 
   // Clear up typed_work
   for (int i = 0; i < xlb_types_size; i++)

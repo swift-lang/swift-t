@@ -59,7 +59,7 @@ typedef struct
 } xlb_work_unit;
 
 
-void xlb_workq_init(int work_types);
+adlb_code xlb_workq_init(int work_types, int my_workers);
 
 xlb_work_unit_id xlb_workq_unique(void);
 
@@ -73,7 +73,7 @@ static inline xlb_work_unit *work_unit_alloc(size_t payload_length)
 /*
  * Initialize work unit fields and add to queue
  */
-void xlb_workq_add(int type, int putter, int priority, int answer,
+adlb_code xlb_workq_add(int type, int putter, int priority, int answer,
                    int target, int length, int parallelism,
                    xlb_work_unit *wu);
 

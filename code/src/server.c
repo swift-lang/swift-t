@@ -50,7 +50,7 @@
 #define XLB_SERVER_SYNC_CHECK_FREQ 16
 
 /** Number of workers associated with this server */
-static int xlb_my_workers;
+int xlb_my_workers;
 
 /** Track time of last action */
 double xlb_time_last_action;
@@ -138,20 +138,10 @@ adlb_code
 xlb_server_init()
 {
   TRACE_START;
+  adlb_code code;
 
   xlb_server_shutting_down = false;
-
-  list_i_init(&workers_shutdown);
-  xlb_requestqueue_init();
-  xlb_workq_init(xlb_types_size);
-  xlb_data_init(xlb_servers, xlb_server_number(xlb_comm_rank));
-  adlb_code code = setup_idle_time();
-  ADLB_CHECK(code);
-  // Set a default value for now:
-  mm_set_max(mm_default, 10*MB);
-  xlb_handlers_init();
-  xlb_time_last_action = MPI_Wtime();
-
+  
   // Add up xlb_my_workers:
   // printf("SERVER for ranks: ");
   xlb_my_workers = 0;
@@ -164,16 +154,22 @@ xlb_server_init()
     }
   }
   // printf("\n");
+
+  list_i_init(&workers_shutdown);
+  code = xlb_requestqueue_init(xlb_my_workers);
+  ADLB_CHECK(code);
+  code = xlb_workq_init(xlb_types_size, xlb_my_workers);
+  ADLB_CHECK(code);
+  xlb_data_init(xlb_servers, xlb_server_number(xlb_comm_rank));
+  code = setup_idle_time();
+  ADLB_CHECK(code);
+  // Set a default value for now:
+  mm_set_max(mm_default, 10*MB);
+  xlb_handlers_init();
+  xlb_time_last_action = MPI_Wtime();
+
   TRACE_END
   return ADLB_SUCCESS;
-}
-
-static inline bool
-xlb_is_server(int rank)
-{
-  if (rank > xlb_comm_size - xlb_servers)
-    return true;
-  return false;
 }
 
 // return the number of the server (0 is first server)
@@ -181,21 +177,6 @@ static inline int
 xlb_server_number(int rank)
 {
   return rank - (xlb_comm_size - xlb_servers);
-}
-
-/**
-   @param rank of worker
-   @return rank of server for this worker rank
- */
-int
-xlb_map_to_server(int rank)
-{
-  if (xlb_is_server(rank))
-    return rank;
-  valgrind_assert(rank >= 0);
-  valgrind_assert(rank < xlb_comm_size);
-  int w = rank % xlb_servers;
-  return w + xlb_workers;
 }
 
 __attribute__((always_inline))
