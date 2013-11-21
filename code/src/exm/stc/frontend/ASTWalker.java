@@ -1801,8 +1801,10 @@ public class ASTWalker {
                         localRedirects, hasSideEffects, deterministic);
     } else {
       String aeName = context.constructName("async-exec");
+      Map<String, Arg> taskProps = new HashMap<String, Arg>();
+      localRedirects.addProps(taskProps);
       backend.startAsyncExec(aeName, asyncExec, localOutputs, localArgs,
-                    Collections.<String, Arg>emptyMap(), !deterministic);
+                    taskProps, !deterministic);
       // Rest of code executes in continuation after execution finishes
     }
     

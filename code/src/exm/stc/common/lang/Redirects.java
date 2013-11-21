@@ -17,6 +17,7 @@ package exm.stc.common.lang;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Represents possible input/output redirections for a command line call
@@ -24,6 +25,13 @@ import java.util.List;
  *
  */
 public class Redirects<T> {
+  /**
+   * Keys to use when storing redirects in map
+   */
+  public static final String STDIN_KEY = "stdin";
+  public static final String STDOUT_KEY = "stdout";
+  public static final String STDERR_KEY = "stderr";
+
   public Redirects() {
     // Initialize to null
   }
@@ -88,4 +96,22 @@ public class Redirects<T> {
   public T stdin = null;
   public T stdout = null;
   public T stderr = null;
+  
+  /**
+   * Fill map with any present using keys "stdin" "stdout" "stderr"
+   * @param taskProps
+   */
+  public void addProps(Map<String, T> taskProps) {
+    if (stdin != null) {
+      taskProps.put(STDIN_KEY, stdin);
+    }
+    
+    if (stdout != null) {
+      taskProps.put(STDOUT_KEY, stdout);
+    }
+    
+    if (stderr != null) {
+      taskProps.put(STDERR_KEY, stderr);
+    }
+  }
 }
