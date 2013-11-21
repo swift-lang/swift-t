@@ -435,7 +435,10 @@ check_steal(void)
   return rc;
 }
 
-
+/*
+  Carry out everyything required for a steal attempt, including matching
+  of newly acquired tasks if neededd
+ */
 adlb_code xlb_steal_match(void)
 {
   DEBUG("Attempting steal");

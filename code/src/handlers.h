@@ -36,9 +36,9 @@ void xlb_handlers_init(void);
 /**
    Just check that this is a tag known to the handlers
  */
-bool xlb_handler_valid(adlb_tag tag);
+static inline bool xlb_handler_valid(adlb_tag tag);
 
-adlb_code xlb_handle(adlb_tag tag, int from_rank);
+static inline adlb_code xlb_handle(adlb_tag tag, int from_rank);
 
 /** 
    Targeted put for local target
@@ -52,5 +52,46 @@ adlb_code xlb_recheck_queues(void);
 adlb_code xlb_recheck_parallel_queues(void);
 
 adlb_code send_parallel_work_unit(int *workers, xlb_work_unit *wu);
+
+/*
+  Inlined functions (performance-critical to server loop)
+ */
+#include "mpe-tools.h"
+
+/** Type definition of all handler functions */
+typedef adlb_code (*xlb_handler)(int caller);
+
+/** Maximal number of handlers that may be registered */
+#define XLB_MAX_HANDLERS XLB_MAX_TAGS
+
+extern xlb_handler handlers[];
+extern int64_t handler_counters[];
+
+static inline bool
+xlb_handler_valid(adlb_tag tag)
+{
+  return (tag >= 0) && (tag < XLB_MAX_HANDLERS) && (handlers[tag] != NULL);
+}
+
+static inline adlb_code
+xlb_handle(adlb_tag tag, int caller)
+{
+  CHECK_MSG(xlb_handler_valid(tag), "handle(): invalid tag: %i", tag);
+  DEBUG("handle: caller=%i %s", caller, xlb_get_tag_name(tag));
+
+  MPE_LOG(xlb_mpe_svr_busy_start);
+
+  if (xlb_perf_counters_enabled)
+  {
+    handler_counters[tag]++;
+  }
+
+  // Call handler:
+  adlb_code result = handlers[tag](caller);
+
+  MPE_LOG(xlb_mpe_svr_busy_end);
+
+  return result;
+}
 
 #endif

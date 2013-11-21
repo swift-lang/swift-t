@@ -10,18 +10,18 @@
 // Returns size of payload including null terminator
 static int fill_payload(char *payload, adlb_datum_id id, adlb_subscript subscript)
 {
-  int strlen;
+  int len_str;
   if (!adlb_has_sub(subscript))
   {
-    strlen = sprintf(payload, "close %"PRId64"", id);
+    len_str = sprintf(payload, "close %"PRId64"", id);
   }
   else
   {
     // TODO: support binary subscript
-    strlen = sprintf(payload, "close %"PRId64" %.*s", id,
+    len_str = sprintf(payload, "close %"PRId64" %.*s", id,
              (int)subscript.length, (const char*)subscript.key);
   }
-  return strlen + 1;
+  return len_str + 1;
 }
 
 static adlb_code notify_local(int target, const char *payload, int length)

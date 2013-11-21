@@ -54,25 +54,19 @@
 #include "tools.h"
 #include "workqueue.h"
 
-/** Type definition of all handler functions */
-typedef adlb_code (*handler)(int caller);
-
-/** Maximal number of handlers that may be registered */
-#define MAX_HANDLERS XLB_MAX_TAGS
-
 /** Map from incoming message tag to handler function */
-static handler handlers[MAX_HANDLERS];
+xlb_handler handlers[XLB_MAX_HANDLERS];
 
 /** Count how many handlers have been registered */
 static int handler_count = 0;
 
 /** Count how many calls to each handler */
-static int64_t handler_counters[MAX_HANDLERS];
+int64_t handler_counters[XLB_MAX_HANDLERS];
 
 /** Copy of this processes' MPI rank */
 static int mpi_rank;
 
-static void register_handler(adlb_tag tag, handler h);
+static void register_handler(adlb_tag tag, xlb_handler h);
 
 static adlb_code handle_sync(int caller);
 static adlb_code handle_put(int caller);
@@ -128,8 +122,7 @@ static inline adlb_code send_matched_work(int type, int putter,
       int priority, int answer, bool targeted,
       int worker, int length, const void *inline_data);
 
-static inline adlb_code xlb_check_parallel_tasks(int work_type,
-                                                 bool *matched);
+static inline adlb_code xlb_check_parallel_tasks(int work_type);
 
 static inline adlb_code redirect_work(int type, int putter,
                                       int priority, int answer,
@@ -158,7 +151,7 @@ xlb_handlers_init(void)
 {
   MPI_Comm_rank(adlb_comm, &mpi_rank);
 
-  memset(handlers, '\0', MAX_HANDLERS*sizeof(handler));
+  memset(handlers, '\0', XLB_MAX_HANDLERS*sizeof(xlb_handler));
 
   register_handler(ADLB_TAG_SYNC_REQUEST, handle_sync);
   register_handler(ADLB_TAG_PUT, handle_put);
@@ -187,42 +180,12 @@ xlb_handlers_init(void)
 }
 
 static void
-register_handler(adlb_tag tag, handler h)
+register_handler(adlb_tag tag, xlb_handler h)
 {
   handlers[tag] = h;
   handler_count++;
-  valgrind_assert(handler_count < MAX_HANDLERS);
+  valgrind_assert(handler_count < XLB_MAX_HANDLERS);
   handler_counters[tag] = 0;
-}
-
-bool
-xlb_handler_valid(adlb_tag tag)
-{
-  if (tag >= 0)
-    return true;
-  return false;
-}
-
-adlb_code
-xlb_handle(adlb_tag tag, int caller)
-{
-  CHECK_MSG(xlb_handler_valid(tag), "handle(): invalid tag: %i", tag);
-  CHECK_MSG(handlers[tag] != NULL, "handle(): invalid tag: %i", tag);
-  DEBUG("handle: caller=%i %s", caller, xlb_get_tag_name(tag));
-
-  MPE_LOG(xlb_mpe_svr_busy_start);
-
-  if (xlb_perf_counters_enabled)
-  {
-    handler_counters[tag]++;
-  }
-
-  // Call handler:
-  adlb_code result = handlers[tag](caller);
-
-  MPE_LOG(xlb_mpe_svr_busy_end);
-
-  return result;
 }
 
 void xlb_print_handler_counters(void)
@@ -232,7 +195,7 @@ void xlb_print_handler_counters(void)
     return;
   }
 
-  for (int tag = 0; tag < MAX_HANDLERS; tag++)
+  for (int tag = 0; tag < XLB_MAX_HANDLERS; tag++)
   {
     if (handlers[tag] != NULL)
     {
@@ -318,8 +281,7 @@ put(int type, int putter, int priority, int answer, int target,
     if (matched == ADLB_SUCCESS)
       // Redirected ok
       return ADLB_SUCCESS;
-    else if (matched != ADLB_NOTHING)
-      ADLB_CHECK(matched);
+    ADLB_CHECK(matched);
   }
  
   // Store this work unit on this server
@@ -359,10 +321,7 @@ put(int type, int putter, int priority, int answer, int target,
       work_unit_free(work);
       return ADLB_SUCCESS;
     }
-    else if (code != ADLB_NOTHING)
-    {
-      ADLB_CHECK(code);
-    }
+    ADLB_CHECK(code);
   }
 
   code = xlb_workq_add(type, putter, priority, answer, target,
@@ -555,9 +514,11 @@ handle_get(int caller)
   // New request might allow us to release a parallel task
   if (xlb_workq_parallel_tasks() > 0)
   {
-    code = xlb_check_parallel_tasks(type, &matched);
-    ADLB_CHECK(code);
-    if (matched) goto end;
+    code = xlb_check_parallel_tasks(type);
+    if (code == ADLB_SUCCESS)
+      goto end;
+    else if (code != ADLB_NOTHING)
+      ADLB_CHECK(code);
   }
 
   if (!stealing && xlb_steal_allowed())
@@ -639,16 +600,15 @@ xlb_recheck_queues(void)
 
 /**
   Try to match parallel tasks between work queue and reqeust queue
-  matched: whether we matched anything of the type
+  return ADLB_SUCCESS if any matches, ADLB_NOTHING if no matches
  */
 static adlb_code
-xlb_check_parallel_tasks(int type, bool *matched)
+xlb_check_parallel_tasks(int type)
 {
   TRACE_START;
   xlb_work_unit* wu;
   int* ranks = NULL;
   adlb_code result = ADLB_SUCCESS;
-  *matched = false;
 
   TRACE("\t tasks: %"PRId64"\n", xlb_workq_parallel_tasks());
 
@@ -661,15 +621,18 @@ xlb_check_parallel_tasks(int type, bool *matched)
 
   bool found = xlb_workq_pop_parallel(&wu, &ranks, type);
   if (! found)
-    return ADLB_NOTHING;
+  {
+    result = ADLB_NOTHING;
+    goto end;
+  }
   
-  *matched = true;
   result = send_parallel_work_unit(ranks, wu);
   ADLB_CHECK(result);
 
   free(ranks);
   work_unit_free(wu);
 
+  result = ADLB_SUCCESS;
   end:
   TRACE_END;
   return result;
@@ -680,9 +643,9 @@ adlb_code xlb_recheck_parallel_queues(void)
   TRACE("check_steal(): rechecking parallel...");
   for (int t = 0; t < xlb_types_size; t++)
   {
-    bool tmp;
-    adlb_code rc = xlb_check_parallel_tasks(t, &tmp);
-    ADLB_CHECK(rc);
+    adlb_code rc = xlb_check_parallel_tasks(t);
+    if (rc != ADLB_SUCCESS && rc != ADLB_NOTHING)
+      ADLB_CHECK(rc);
   }
   return ADLB_SUCCESS;
 }
