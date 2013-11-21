@@ -146,8 +146,14 @@ char* xlb_get_tag_name(int tag);
     buf_pos += sizeof(*var);               \
   }
 
+
+// Maximum number of bytes to append to put request.
+// This is an optimization to allow sending small tasks
+// without an extra round-trip
+#define PUT_INLINE_DATA_MAX 512
+
 /**
-   Simple struct for message packing
+   Put request
  */
 struct packed_put
 {
@@ -158,7 +164,14 @@ struct packed_put
   int target;
   int length;
   int parallelism;
+  bool has_inline_data;
+  char inline_data[]; /* Put small tasks here */
 };
+
+#define PACKED_PUT_SIZE(inline_data_len) \
+        (sizeof(struct packed_put) + inline_data_len)
+
+#define PACKED_PUT_MAX (PACKED_PUT_SIZE(PUT_INLINE_DATA_MAX))
 
 /**
    Simple struct for message packing

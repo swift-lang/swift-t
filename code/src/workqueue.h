@@ -31,6 +31,8 @@
 
 typedef int64_t xlb_work_unit_id;
 
+#define XLB_WORK_UNIT_ID_NULL (-1)
+
 typedef struct
 {
   /** Unique ID wrt this server */

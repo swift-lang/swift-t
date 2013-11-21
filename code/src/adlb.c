@@ -316,8 +316,7 @@ ADLBP_Put(const void* payload, int length, int target, int answer,
 {
   MPI_Status status;
   MPI_Request request;
-  /* In a redirect, we send the payload to a worker */
-  int payload_dest;
+  int response;
 
   DEBUG("ADLB_Put: target=%i x%i %s",
         target, parallelism, (char*) payload);
@@ -340,30 +339,60 @@ ADLBP_Put(const void* payload, int length, int target, int answer,
     CHECK_MSG(target >= 0 && target < xlb_comm_size,
         "ADLB_Put(): invalid target rank: %i", target);
 
-  struct packed_put p;
-  p.type = type;
-  p.priority = priority;
-  p.putter = xlb_comm_rank;
-  p.answer = answer;
-  p.target = target;
-  p.length = length;
-  p.parallelism = parallelism;
 
-  IRECV(&payload_dest, 1, MPI_INT, to_server, ADLB_TAG_RESPONSE_PUT);
-  SEND(&p, sizeof(p), MPI_BYTE, to_server, ADLB_TAG_PUT);
+  int inline_data_len;
+  if (length <= PUT_INLINE_DATA_MAX)
+  {
+    inline_data_len = length;
+  }
+  else
+  {
+    inline_data_len = 0;
+  }
+
+  char p_storage[PACKED_PUT_MAX];
+  size_t p_size = PACKED_PUT_SIZE((size_t)inline_data_len);
+  struct packed_put *p = (struct packed_put*)p_storage;
+  p->type = type;
+  p->priority = priority;
+  p->putter = xlb_comm_rank;
+  p->answer = answer;
+  p->target = target;
+  p->length = length;
+  p->parallelism = parallelism;
+  p->has_inline_data = inline_data_len > 0;
+  if (p->has_inline_data)
+  {
+    memcpy(p->inline_data, payload, (size_t)inline_data_len);
+  }
+
+  IRECV(&response, 1, MPI_INT, to_server, ADLB_TAG_RESPONSE_PUT);
+  SEND(p, p_size, MPI_BYTE, to_server, ADLB_TAG_PUT);
+
   WAIT(&request, &status);
-  if (payload_dest == ADLB_REJECTED)
+  if (response == ADLB_REJECTED)
   {
  //    to_server_rank = next_server++;
 //    if (next_server >= (master_server_rank+num_servers))
 //      next_server = master_server_rank;
-    return payload_dest;
+    return response;
   }
 
-  DEBUG("ADLB_Put: payload to: %i", payload_dest);
-  if (payload_dest == ADLB_RANK_NULL)
-    return ADLB_ERROR;
-  SSEND(payload, length, MPI_BYTE, payload_dest, ADLB_TAG_WORK);
+  if (p->has_inline_data)
+  {
+    // Successfully sent: just check response
+    ADLB_CHECK(response);
+  }
+  else
+  {
+    int payload_dest = response;
+    // Still need to send payload
+    // In a redirect, we send the payload to a worker
+    DEBUG("ADLB_Put: payload to: %i", payload_dest);
+    if (payload_dest == ADLB_RANK_NULL)
+      return ADLB_ERROR;
+    SSEND(payload, length, MPI_BYTE, payload_dest, ADLB_TAG_WORK);
+  }
   TRACE("ADLB_Put: DONE");
 
   return ADLB_SUCCESS;

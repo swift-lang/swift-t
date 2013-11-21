@@ -110,6 +110,22 @@ static inline adlb_code send_work(int worker, xlb_work_unit_id wuid, int type,
 
 static inline adlb_code send_no_work(int worker);
 
+static adlb_code put(int type, int putter, int priority, int answer,
+         int target, int length, int parallelism, const void *data);
+
+static inline adlb_code attempt_match_work(int type, int putter,
+      int priority, int answer, int target, int length, int parallelism,
+      const void *inline_data);
+
+static inline adlb_code send_matched_work(int type, int putter,
+      int priority, int answer, bool targeted,
+      int worker, int length, const void *inline_data);
+
+static inline adlb_code redirect_work(int type, int putter,
+                                      int priority, int answer,
+                                      int worker, int length);
+
+
 static inline bool check_workqueue(int caller, int type);
 
 static adlb_code
@@ -241,28 +257,37 @@ handle_sync(int caller)
 
 
 
-static adlb_code put(int type, int putter, int priority, int answer,
-                     int target, int length, int parallelism);
-
 static adlb_code
 handle_put(int caller)
 {
-  struct packed_put p;
   MPI_Status status;
 
   MPE_LOG(xlb_mpe_svr_put_start);
 
-  RECV(&p, sizeof(p), MPI_BYTE, caller, ADLB_TAG_PUT);
-  mpi_recv_sanity(&status, MPI_BYTE, sizeof(p));
-
+  char req_buf[PACKED_PUT_MAX];
+  RECV(req_buf, PACKED_PUT_MAX, MPI_BYTE, caller, ADLB_TAG_PUT);
+  struct packed_put *p = (struct packed_put*)req_buf;
+  
+#ifdef NDEBUG
+  // Sanity check size
+  if (p->has_inline_data)
+  {
+    int msg_size;
+    int mc = MPI_Get_count(&status, MPI_BYTE, &msg_size);
+    assert(mc == MPI_SUCCESS);
+    int inline_data_recvd = msg_size - PACKED_PUT_SIZE(0);
+    assert(inline_data_recvd == p->length);
+  }
+#endif
+  const void *inline_data = p->has_inline_data ? p->inline_data : NULL;
   adlb_code rc;
-  rc = put(p.type, p.putter, p.priority, p.answer, p.target,
-               p.length, p.parallelism);
+  rc = put(p->type, p->putter, p->priority, p->answer, p->target,
+           p->length, p->parallelism, inline_data);
   ADLB_CHECK(rc);
 
   while (true)
   {
-    rc = xlb_check_parallel_tasks(p.type);
+    rc = xlb_check_parallel_tasks(p->type);
     ADLB_CHECK(rc);
     if (rc == ADLB_NOTHING)
       break;
@@ -273,61 +298,44 @@ handle_put(int caller)
   return ADLB_SUCCESS;
 }
 
-static inline adlb_code redirect_work(int type, int putter,
-                                      int priority, int answer,
-                                      int target,
-                                      int length, int worker);
-
+/*
+  Handle a put 
+  inline_data: if task data already available here, otherwise NULL
+ */
 static adlb_code
 put(int type, int putter, int priority, int answer, int target,
-    int length, int parallelism)
+    int length, int parallelism, const void *inline_data)
 {
   MPI_Status status;
-  int worker;
   assert(length >= 0);
-  if (parallelism == 1)
+
+  // Try to match to a request immediately
+  adlb_code matched = attempt_match_work(type, putter,
+      priority, answer, target, length, parallelism, inline_data);
+  if (matched == ADLB_SUCCESS)
   {
-    // Attempt to redirect work unit to another worker
-    if (target >= 0)
-    {
-      CHECK_MSG(target < xlb_comm_size, "Invalid target: %i", target);
-      worker = xlb_requestqueue_matches_target(target, type);
-      if (worker != ADLB_RANK_NULL)
-      {
-        assert(worker == target);
-        redirect_work(type, putter, priority, answer, target,
-                      length, worker);
-
-        if (xlb_perf_counters_enabled)
-        {
-          xlb_task_bypass_count(type, true, false);
-        }
-        return ADLB_SUCCESS;
-      }
-    }
-    else
-    {
-      worker = xlb_requestqueue_matches_type(type);
-      if (worker != ADLB_RANK_NULL)
-      {
-        redirect_work(type, putter, priority, answer, target,
-                      length, worker);
-        if (xlb_perf_counters_enabled)
-        {
-          xlb_task_bypass_count(type, false, false);
-        }
-        return ADLB_SUCCESS;
-      }
-    }
+    // Redirected ok
+    return ADLB_SUCCESS;
   }
-
+  ADLB_CHECK(matched);
+ 
   // Store this work unit on this server
   DEBUG("server storing work...");
   SEND(&mpi_rank, 1, MPI_INT, putter, ADLB_TAG_RESPONSE_PUT);
 
   xlb_work_unit *work = work_unit_alloc((size_t)length);
-  RECV(work->payload, length, MPI_BYTE, putter, ADLB_TAG_WORK);
-  DEBUG("work unit: x%i %s ", parallelism, xfer);
+
+  if (inline_data != NULL)
+  {
+    memcpy(work->payload, inline_data, (size_t)length);
+  }
+  else
+  {
+    RECV(work->payload, length, MPI_BYTE, putter, ADLB_TAG_WORK);
+  }
+
+  DEBUG("work unit: x%i %s ", parallelism, work->payload);
+
   xlb_workq_add(type, putter, priority, answer, target,
                 length, parallelism, work);
 
@@ -365,12 +373,85 @@ adlb_code xlb_put_targeted_local(int type, int putter, int priority,
 
   return ADLB_SUCCESS;
 }
+
+
+/*
+  Attempt to match work.  Return ADLB_NOTHING if couldn't redirect,
+  ADLB_SUCCESS on successful redirect, ADLB_ERROR on error.
+
+  inline_data: non-null if we already have task body
+ */
+static adlb_code attempt_match_work(int type, int putter,
+      int priority, int answer, int target, int length, int parallelism,
+      const void *inline_data)
+{
+  if (parallelism > 1)
+  {
+    // Don't try to redirect parallel work
+    return ADLB_NOTHING;
+  }
+
+  bool targeted = (target >= 0);
+  int worker;
+  // Attempt to redirect work unit to another worker
+  if (targeted)
+  {
+    CHECK_MSG(target < xlb_comm_size, "Invalid target: %i", target);
+    worker = xlb_requestqueue_matches_target(target, type);
+    if (worker == ADLB_RANK_NULL)
+    {
+      return ADLB_NOTHING;
+    }
+    assert(worker == target);
+  }
+  else
+  {
+    worker = xlb_requestqueue_matches_type(type);
+    if (worker == ADLB_RANK_NULL)
+    {
+      return ADLB_NOTHING;
+    }
+  }
+
+  return send_matched_work(type, putter, priority, answer, targeted,
+          worker, length, inline_data);
+}
+
+static inline adlb_code send_matched_work(int type, int putter,
+      int priority, int answer, bool targeted,
+      int worker, int length, const void *inline_data)
+{
+  adlb_code code;
+  if (xlb_perf_counters_enabled)
+  {
+    xlb_task_bypass_count(type, targeted, false);
+  }
+
+  if (inline_data == NULL)
+  {
+    code = redirect_work(type, putter, priority, answer, worker, length);
+    ADLB_CHECK(code);
+  }
+  else
+  {
+    int response = ADLB_SUCCESS;
+    // Let putter know we've got it from here
+    SEND(&response, 1, MPI_INT, putter, ADLB_TAG_RESPONSE_PUT);
+
+    // Sent to matched
+    code = send_work(worker, XLB_WORK_UNIT_ID_NULL, type, answer,
+                     inline_data, length, 1);                                  
+    ADLB_CHECK(code);
+  }
+  return ADLB_SUCCESS;
+}
+
 /**
    Set up direct transfer from putter to worker
  */
 static inline adlb_code
 redirect_work(int type, int putter, int priority, int answer,
-              int target, int length, int worker)
+              int worker, int length)
 {
   DEBUG("redirect: %i->%i", putter, worker);
   struct packed_get_response g;
