@@ -55,6 +55,8 @@ fi
             --prefix=${TURBINE_INST} \
             ${EXTRA_ARGS}
 #            --disable-log
+
+make clean
 make package -j ${MAKE_PARALLELISM}
 make install
 #make test_results
