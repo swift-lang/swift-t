@@ -276,14 +276,14 @@ handle_put(int caller)
   RECV(req_buf, PACKED_PUT_MAX, MPI_BYTE, caller, ADLB_TAG_PUT);
   struct packed_put *p = (struct packed_put*)req_buf;
   
-#ifdef NDEBUG
+#ifndef NDEBUG
   // Sanity check size
   if (p->has_inline_data)
   {
     int msg_size;
     int mc = MPI_Get_count(&status, MPI_BYTE, &msg_size);
     assert(mc == MPI_SUCCESS);
-    int inline_data_recvd = msg_size - PACKED_PUT_SIZE(0);
+    int inline_data_recvd = msg_size - (int)PACKED_PUT_SIZE(0);
     assert(inline_data_recvd == p->length);
   }
 #endif
