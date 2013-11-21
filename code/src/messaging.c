@@ -31,8 +31,6 @@
 #include "debug.h"
 #include "messaging.h"
 
-#ifndef NDEBUG
-
 /** Tag names: just for debugging */
 static char* tag_names[XLB_MAX_TAGS];
 
@@ -41,24 +39,18 @@ static size_t tag_prefix_length;
 
 static void add_tags(void);
 
-#endif
-
 void
 xlb_msg_init(void)
 {
-  // This is all just debugging
-#ifndef NDEBUG
   tag_prefix = "ADLB_TAG_";
   tag_prefix_length = strlen(tag_prefix);
   memset(tag_names, '\0', sizeof(tag_names));
   add_tags();
-#endif
 }
 
 void
 xlb_msg_finalize(void)
 {
-#ifndef NDEBUG
   for (int i = 0; i < XLB_MAX_TAGS; i++)
   {
     if (tag_names[i] != NULL)
@@ -67,10 +59,7 @@ xlb_msg_finalize(void)
       tag_names[i] = NULL;
     }
   }
-#endif
 }
-
-#ifndef NDEBUG
 
 #define add_tag(tag) xlb_add_tag_name(tag, #tag)
 
@@ -200,5 +189,3 @@ xlb_unpack_id_sub(const void *buffer, adlb_datum_id *id,
   assert(length <= INT_MAX);
   return (int)length;
 }
-
-#endif
