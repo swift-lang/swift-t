@@ -452,7 +452,10 @@ namespace eval turbine {
 
     proc store_blob_string { id value } {
         log "store_blob_string: <$id>=[ log_string $value ]"
-        adlb::store $id blob [ adlb::blob_from_string $value ]
+        set b [ adlb::blob_from_string $value ]
+        adlb::store $id blob $b
+        # Free memory
+        adlb::blob_free $b
     }
 
     # Retrieve and cache blob
