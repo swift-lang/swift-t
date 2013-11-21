@@ -21,7 +21,7 @@
 #include "heap.h"
 
 int main() {
-  heap h;
+  heap_t h;
 
   heap_init(&h, 128);
 
@@ -59,5 +59,12 @@ int main() {
     heap_check(&h);
     heap_del_root(&h);
   }
+
+  heap_clear(&h);
+
+  // Regression test for heap resize from zero
+  heap_init_empty(&h);
+  heap_add(&h, 1, (void*)1234);
+  assert(h.malloced_size > 0 && h.array != NULL);
   printf("DONE\n");
 }
