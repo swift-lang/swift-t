@@ -613,7 +613,7 @@ public class Congruences implements AliasFinder {
   }
 
   public Set<Var> getRecursivelyClosed(int stmtIndex) {
-    return new ClosedSet(stmtIndex, false);
+    return new ClosedSet(stmtIndex, true);
   }
   
   /**
