@@ -24,6 +24,7 @@ import java.util.Map;
 
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
+import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
@@ -31,7 +32,7 @@ import exm.stc.common.exceptions.UndefinedOperatorException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Operators;
-import exm.stc.common.lang.Operators.BuiltinOpcode;
+import exm.stc.common.lang.Operators.Op;
 import exm.stc.common.lang.Operators.OpType;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ArrayType;
@@ -231,62 +232,47 @@ public class TypeChecker {
 
   private static ExprType findOperatorResultType(Context context, SwiftAST tree)
       throws TypeMismatchException, UserException {
-    String opName = extractOpName(tree);
-
     ArrayList<Type> argTypes = new ArrayList<Type>();
 
-    List<BuiltinOpcode> opcodes = getBuiltInFromOpTree(context, tree, argTypes);
-    assert(opcodes != null);
-    assert(opcodes.size() > 0);
+    List<Op> ops = getOpsFromTree(context, tree, argTypes);
+    assert(ops != null);
+    assert(ops.size() > 0);
     
     // Handle possibility of multiple return types
-    List<Type> alternatives = new ArrayList<Type>(opcodes.size());
-    for (BuiltinOpcode opcode: opcodes) {
-      OpType opType = Operators.getBuiltinOpType(opcode);
-      assert(opType != null);
-      
-      checkOp(context, opName, opType, argTypes);
-      alternatives.add(new ScalarFutureType(opType.out));
+    List<Type> alternatives = new ArrayList<Type>(ops.size());
+    for (Op op: ops) {
+      alternatives.add(new ScalarFutureType(op.type.out));
     }
     return new ExprType(UnionType.makeUnion(alternatives));
   }
-
-  private static void checkOp(Context context, String opName, OpType opType,
-      ArrayList<Type> argTypes) throws TypeMismatchException {
-    if (opType.in.length != argTypes.size()) {
-      throw new STCRuntimeError("Op " +
-            opName + " expected "
-            + opType.in.length + " arguments but " +
-            + argTypes.size() + " were in AST");
-    }
- 
-    // TODO: maybe not needed?  Keep now to find internal errors?
-    for (int i = 0; i < argTypes.size(); i++) {
-      Type exp = new ScalarFutureType(opType.in[i]);
-      Type act = argTypes.get(i);
-      if (!act.assignableTo(exp)) {
-        throw new TypeMismatchException(context, "Expected type " +
-            exp.toString() + " in argument " + i + " to operator " +
-            opName + " but found type "
-            + act.toString());
- 
-      }
-    }
-  }
-
-  public static BuiltinOpcode getBuiltInFromOpTree(Context context,
-      SwiftAST tree, Type outType) throws TypeMismatchException, UserException {
-    List<BuiltinOpcode> ops = getBuiltInFromOpTree(context, tree, outType, null);
-    assert(ops.size() != 0); // Should be caught earlier
-    if (ops.size() > 1) {
-      LogHelper.debug(context, "Ambiguous operator: " + ops);
-    }
-    return ops.get(0);
+  
+  /**
+   * Get a list of possible matches
+   * @param context
+   * @param tree
+   * @param argTypes
+   * @return
+   * @throws UserException
+   */
+  public static List<Op> getOpsFromTree(Context context,
+      SwiftAST tree, List<Type> argTypes) throws UserException {
+    return getOpsFromTree(context, tree, null, argTypes, false);
   }
   
-  public static List<BuiltinOpcode> getBuiltInFromOpTree(Context context,
-      SwiftAST tree, List<Type> argTypes) throws TypeMismatchException, UserException {
-    return getBuiltInFromOpTree(context, tree, null, argTypes);
+  /**
+   * Get the final operator match using output argument info
+   * @param context
+   * @param tree
+   * @param outType
+   * @return
+   * @throws UserException
+   */
+  public static Op getOpFromTree(Context context,
+      SwiftAST tree, Type outType) throws UserException {
+    List<Op> matches = getOpsFromTree(context, tree, outType,
+                                            null, true);
+    assert(matches.size() > 0);
+    return matches.get(0);
   }
 
   /**
@@ -295,51 +281,87 @@ public class TypeChecker {
    * @param tree
    * @param expectedResult
    * @param outType if not null, only return operators with this output type
-   * @param argTypes Put the argument types of the operator in this list if not null
-   * @return the possible builtin operator codes
-   * @throws TypeMismatchException
-   * @throws UserException
+   * @param outArgTypes Put the argument types of the operator in this list if not null
+   * @param expectUnambig at this stage, expect operator not to be ambiguous - log
+   *              debug message if it is
+   * @return at least one builtin operator  
+   * @throws TypeMismatchException if no matches possible
    */
-  private static List<BuiltinOpcode> getBuiltInFromOpTree(Context context,
-          SwiftAST tree, Type outType, List<Type> argTypes)
-          throws TypeMismatchException, UserException {
+  private static List<Op> getOpsFromTree(Context context,
+          SwiftAST tree, Type outType, List<Type> outArgTypes,
+          boolean expectUnambig)
+          throws UserException {
     assert(tree.getType() == ExMParser.OPERATOR);
     assert(tree.getChildCount() >= 1);
     int opTok = tree.child(0).getType();
     String opName = extractOpName(tree);
  
-    List<Type> possibleAllArgTypes = findOperatorArgTypes(context,
-                                        tree, opName, argTypes);
-                                
-    if (possibleAllArgTypes.isEmpty()) {
-      throw new TypeMismatchException(context, "Incompatible types for "
-          + "arguments to operator " + opName + ": " + argTypes + ". "
-          + "Types for all arguments must match.");
+    List<Type> argTypes = findOperatorArgTypes(context, tree, opName);
+    
+    if (outArgTypes != null) {
+      // Store for caller
+      outArgTypes.clear();
+      outArgTypes.addAll(argTypes);
     }
-    ArrayList<BuiltinOpcode> ops = new ArrayList<BuiltinOpcode>();
-    for (Type allArgType: possibleAllArgTypes) {
-      BuiltinOpcode op = Operators.getArithBuiltin(allArgType, opTok);
-      if (op != null) {
+    
+    // Track operators that matched
+    List<Op> matched = new ArrayList<Op>();
+    
+    for (Op candidate: Operators.getOps(opTok)) {
+      // TODO: check input types
+      OpType opType = candidate.type;
+      
+      if (opOutputMatches(outType, opType) &&
+          opInputsMatch(argTypes, opType)) {
+        matched.add(candidate);
+      }
+    }
+    
+
+    if (matched.size() > 1) {
+      // Hope to match exactly one operator
+      List<String> typeNames = new ArrayList<String>();
+      for (Type argType: argTypes) {
+        typeNames.add(argType.typeName());
+      }
+      if (matched.size() == 0) {
+        // Error - no matches
+        String msg = "Operator " + opName + " not supported for these input "
+                   + "types : " + typeNames.toString();
         if (outType != null) {
-          OpType opType = Operators.getBuiltinOpType(op);
-          if (new ScalarFutureType(opType.out).equals(outType) ) {
-            ops.add(op);
-          }
-        } else {
-          ops.add(op);
+          msg += " and output type " + outType;
         }
+        throw new UndefinedOperatorException(context, msg);
+      } else if (expectUnambig) {
+        // Ambiguous operator - might be of interest
+        assert(matched.size() > 1);
+        Logging.getSTCLogger().debug("Ambiguous operator " + opName +
+                    " for arg types " + typeNames + ".  Matched: " +
+                    matched.toString());
+      }
+    } 
+    
+    return matched;
+  }
+
+  private static boolean opInputsMatch(List<Type> argTypes, OpType opType) {
+    if (argTypes.size() != opType.in.size()) {
+      return false;
+    }
+    
+    for (int i = 0; i < argTypes.size(); i++) {
+      ScalarFutureType inFT = new ScalarFutureType(opType.in.get(i));
+      if (!argTypes.get(i).assignableTo(inFT)) {
+        return false;
       }
     }
-    if (ops.isEmpty()) {
-      String msg = "Operator " + opName + " not supported for any of these possible " + 
-          "input types:" + possibleAllArgTypes.toString();
-      if (outType != null) {
-        msg += " and output type " + outType;
-      }
-      throw new UndefinedOperatorException(context,
-          msg);
-    }
-    return ops;
+    return true;
+  }
+
+  private static boolean opOutputMatches(Type outType, OpType opType) {
+    return outType == null || 
+        (opType.out != null && 
+        new ScalarFutureType(opType.out).assignableTo(outType));
   }
 
 
@@ -357,7 +379,7 @@ public class TypeChecker {
    * @throws UserException
    */
   private static List<Type> findOperatorArgTypes(Context context, SwiftAST tree,
-      String opName, List<Type> argTypes)
+                                                String opName)
           throws TypeMismatchException, UserException {
     
     int argcount = tree.getChildCount() - 1;
@@ -366,15 +388,13 @@ public class TypeChecker {
           "provided no arguments to operator " +
           opName);
     }
-    if (argTypes == null) {
-      argTypes = new ArrayList<Type>(argcount);
-    }
+    
+    List<Type> argTypes = new ArrayList<Type>(argcount);
     for (SwiftAST argTree: tree.children(1)) {
       argTypes.add(findSingleExprType(context, argTree));
     }
 
-    // We assume that all arguments to operator should have same type.
-    return Types.typeIntersection(argTypes);
+    return argTypes;
   }
 
   /**

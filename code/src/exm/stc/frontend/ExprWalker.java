@@ -42,9 +42,8 @@ import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
 import exm.stc.common.lang.Intrinsics;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
-import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
-import exm.stc.common.lang.Operators.OpType;
+import exm.stc.common.lang.Operators.Op;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.TaskProp;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
@@ -419,33 +418,28 @@ public class ExprWalker {
 
   private void callOperator(Context context, SwiftAST tree, 
       Var out, Map<String, String> renames) throws UserException {
-    String op = tree.child(0).getText();
+    String opName = tree.child(0).getText();
     int op_argcount = tree.getChildCount() - 1;
 
     // Use the AST token label to find the actual operator
-    BuiltinOpcode opcode = TypeChecker.getBuiltInFromOpTree(context, tree,
-                                                            out.type());
-    assert(opcode != null);
+    Op op = TypeChecker.getOpFromTree(context, tree, out.type());
     
-    OpType optype = Operators.getBuiltinOpType(opcode);
-    assert(optype != null);
-    
-    int argcount = optype.in.length;
+    int argcount = op.type.in.size();
 
     if (op_argcount != argcount) {
-      throw new STCRuntimeError("Operator " + op + " has " + op_argcount
-          + " arguments in AST, but expected" + argcount);
+      throw new STCRuntimeError("Operator " + opName + " has " + op_argcount
+                             + " arguments in AST, but expected" + argcount);
     }
 
     ArrayList<Arg> iList = new ArrayList<Arg>(argcount);
     for (int i = 0; i < op_argcount; i++) {
-      Type type = new ScalarFutureType(optype.in[i]);
+      Type type = new ScalarFutureType(op.type.in.get(i));
 
       // Store into temporary variables
       Var arg = eval(context, tree.child(i + 1), type, false, renames);
       iList.add(Arg.createVar(arg));
     }
-    backend.asyncOp(opcode, out, iList);
+    backend.asyncOp(op.code, out, iList);
   }
   
 

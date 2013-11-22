@@ -16,8 +16,10 @@
 package exm.stc.common.lang;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -25,8 +27,7 @@ import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Types.PrimType;
-import exm.stc.common.lang.Types.ScalarFutureType;
-import exm.stc.common.lang.Types.Type;
+import exm.stc.common.util.MultiMap;
 import exm.stc.frontend.Context;
 
 public class Operators {
@@ -50,10 +51,10 @@ public class Operators {
     LOG, EXP, SQRT, IS_NAN,
     ASSERT_EQ, ASSERT, SPRINTF,
   }
-
-  /** Map of <number type> -> ( <token type> -> <internal opcode> ) */
-  private static final Map<Type, Map<Integer, BuiltinOpcode>> arithOps = 
-                    new HashMap<Type, Map<Integer, BuiltinOpcode>>();
+  
+  /** Map of <token type> -> [(<operator type>, <internal opcode> )] */
+  private static final MultiMap<Integer, Op> arithOps =
+                                          new MultiMap<Integer, Op>();
   
   /** Types of operations */
   private static final Map<BuiltinOpcode, OpType> optypes = 
@@ -65,85 +66,82 @@ public class Operators {
   }
 
   /**
-   * Load mapping from AST tags and arg types to actual op codes 
+   * Load mapping from AST tags and arg types to actual op codes
+   * 
+   * NOTE: order of insertion into list will determine preference in
+   * case of multiple possible matches
    */
   private static void fillArithOps() {
-    for (PrimType numType : Arrays.asList(PrimType.FLOAT, PrimType.INT,
+    for (PrimType numType : Arrays.asList(PrimType.INT, PrimType.FLOAT,
         PrimType.STRING, PrimType.BOOL)) {
       String opTypeName = getOpTypeName(numType);
-      HashMap<Integer, BuiltinOpcode> opMapping = new HashMap<Integer, BuiltinOpcode>();
-
-
+      
       OpType relOpType = new OpType(PrimType.BOOL, numType, numType);
       OpType closedOpType = new OpType(numType, numType, numType);
       
       // Want equality tests for all primitives
       BuiltinOpcode eq = BuiltinOpcode.valueOf("EQ_" + opTypeName);
-      opMapping.put(ExMParser.EQUALS, eq);
-      optypes.put(eq, relOpType);
+      registerOperator(ExMParser.EQUALS, eq, relOpType);
       BuiltinOpcode neq = BuiltinOpcode.valueOf("NEQ_" + opTypeName);
-      opMapping.put(ExMParser.NEQUALS, neq);
-      optypes.put(neq, relOpType);
+      registerOperator(ExMParser.NEQUALS, neq, relOpType);
 
       if (numType == PrimType.STRING) {
-        opMapping.put(ExMParser.PLUS, BuiltinOpcode.STRCAT);
-        optypes.put(BuiltinOpcode.STRCAT, closedOpType);
-        opMapping.put(ExMParser.DIV, BuiltinOpcode.DIRCAT);
-        optypes.put(BuiltinOpcode.DIRCAT, closedOpType);
+        registerOperator(ExMParser.PLUS, BuiltinOpcode.STRCAT, closedOpType);
+        registerOperator(ExMParser.DIV, BuiltinOpcode.DIRCAT, closedOpType);
       }
 
       if (numType == PrimType.INT) {
-        opMapping.put(ExMParser.INTDIV, BuiltinOpcode.DIV_INT);
-        optypes.put(BuiltinOpcode.DIV_INT, closedOpType);
-        opMapping.put(ExMParser.MOD, BuiltinOpcode.MOD_INT);
-        optypes.put(BuiltinOpcode.MOD_INT, closedOpType);
+        registerOperator(ExMParser.INTDIV, BuiltinOpcode.DIV_INT, closedOpType);
+        registerOperator(ExMParser.MOD, BuiltinOpcode.MOD_INT, closedOpType);
       } else if (numType == PrimType.FLOAT) {
-        opMapping.put(ExMParser.DIV, BuiltinOpcode.DIV_FLOAT);
-        optypes.put(BuiltinOpcode.DIV_FLOAT, closedOpType);
+        registerOperator(ExMParser.DIV, BuiltinOpcode.DIV_FLOAT, closedOpType);
       }
 
       OpType closeUnaryOpType = new OpType(numType, numType);
       if (numType == PrimType.INT || numType == PrimType.FLOAT) {
         BuiltinOpcode plus = BuiltinOpcode.valueOf("PLUS_" + opTypeName);
-        opMapping.put(ExMParser.PLUS, plus);
-        optypes.put(plus, closedOpType);
+        registerOperator(ExMParser.PLUS, plus, closedOpType);
+        
         BuiltinOpcode minus = BuiltinOpcode.valueOf("MINUS_" + opTypeName);
-        opMapping.put(ExMParser.MINUS, minus);
-        optypes.put(minus, closedOpType);
+        registerOperator(ExMParser.MINUS, minus, closedOpType);
+        
         BuiltinOpcode mult = BuiltinOpcode.valueOf("MULT_" + opTypeName);
-        opMapping.put(ExMParser.MULT, mult);
-        optypes.put(mult, closedOpType);
+        registerOperator(ExMParser.MULT, mult, closedOpType);
+        
         BuiltinOpcode negate = BuiltinOpcode.valueOf("NEGATE_" + opTypeName);
-        opMapping.put(ExMParser.NEGATE, negate);
-        optypes.put(negate, closeUnaryOpType);
+        registerOperator(ExMParser.NEGATE, negate, closeUnaryOpType);
+        
         BuiltinOpcode gt = BuiltinOpcode.valueOf("GT_" + opTypeName);
-        opMapping.put(ExMParser.GT, gt);
-        optypes.put(gt, relOpType);
+        registerOperator(ExMParser.GT, gt, relOpType);
+        
         BuiltinOpcode gte = BuiltinOpcode.valueOf("GTE_" + opTypeName);
-        opMapping.put(ExMParser.GTE, gte);
-        optypes.put(gte, relOpType);
+        registerOperator(ExMParser.GTE, gte, relOpType);
+        
         BuiltinOpcode lt = BuiltinOpcode.valueOf("LT_" + opTypeName);
-        opMapping.put(ExMParser.LT, lt);
-        optypes.put(lt, relOpType);
+        registerOperator(ExMParser.LT, lt, relOpType);
+
         BuiltinOpcode lte = BuiltinOpcode.valueOf("LTE_" + opTypeName);
-        opMapping.put(ExMParser.LTE, lte);
-        optypes.put(lte, relOpType);
+        registerOperator(ExMParser.LTE, lte, relOpType);
+
         BuiltinOpcode pow = BuiltinOpcode.valueOf("POW_" + opTypeName);
-        opMapping.put(ExMParser.POW, pow);
-        optypes.put(pow, new OpType(PrimType.FLOAT, numType, numType));
+        registerOperator(ExMParser.POW, pow,
+                          new OpType(PrimType.FLOAT, numType, numType));
       }
 
       if (numType == PrimType.BOOL) {
-        opMapping.put(ExMParser.NOT, BuiltinOpcode.NOT);
-        optypes.put(BuiltinOpcode.NOT, closeUnaryOpType);
-        opMapping.put(ExMParser.AND, BuiltinOpcode.AND);
-        optypes.put(BuiltinOpcode.AND, closedOpType);
-        opMapping.put(ExMParser.OR, BuiltinOpcode.OR);
-        optypes.put(BuiltinOpcode.OR, closedOpType);
+        registerOperator(ExMParser.NOT, BuiltinOpcode.NOT, closeUnaryOpType);
+        
+        registerOperator(ExMParser.AND, BuiltinOpcode.AND, closedOpType);
+        
+        registerOperator(ExMParser.OR, BuiltinOpcode.OR, closedOpType);
       }
-
-      arithOps.put(new ScalarFutureType(numType), opMapping);
     }
+  }
+
+  private static void registerOperator(int token, BuiltinOpcode opCode,
+                                       OpType opType) {
+    optypes.put(opCode, opType);
+    arithOps.put(token, new Op(opCode, opType));
   }
 
   private static String getOpTypeName(PrimType numType) {
@@ -161,12 +159,13 @@ public class Operators {
     }
   }
 
-  public static BuiltinOpcode getArithBuiltin(Type argType, int tokenType) {
-    Map<Integer, BuiltinOpcode> mp = arithOps.get(argType);
-    if (mp == null) {
-      return null;
-    }
-    return mp.get(tokenType);
+  /**
+   * @param tokenType
+   * @param argTypes
+   * @return list of possible operators, empty list if not 
+   */
+  public static List<Op> getOps(int tokenType) {
+    return arithOps.get(tokenType);
   }
   
   public static OpType getBuiltinOpType(BuiltinOpcode op) {
@@ -256,14 +255,37 @@ public class Operators {
     flippedOps.put(BuiltinOpcode.GTE_INT, BuiltinOpcode.LTE_INT);
   }
   
+  public static class Op {
+    public Op(BuiltinOpcode code, OpType type) {
+      this.code = code;
+      this.type = type;
+    }
+    public final BuiltinOpcode code;
+    public final OpType type;
+    
+    @Override
+    public String toString() {
+      return this.code + ": " + this.type;
+    }
+  }
+
   /** represent type of builtin operators */
   public static class OpType {
     public final PrimType out;
-    public final PrimType in[];
-    private OpType(PrimType out, PrimType... in) {
-      super();
+    public final List<PrimType> in;
+    
+    private OpType(PrimType out, PrimType ...in) {
+      this(out, Arrays.asList(in));
+    }
+    
+    private OpType(PrimType out, List<PrimType> in) {
       this.out = out;
-      this.in = in;
+      this.in = Collections.unmodifiableList(in);
+    }
+    
+    @Override
+    public String toString() {
+      return this.in.toString() + " => " + this.out.toString();
     }
   }
 
