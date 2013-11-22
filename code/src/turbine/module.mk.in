@@ -5,3 +5,4 @@ TURBINE_SRC += $(DIR)/turbine.c
 TURBINE_SRC += $(DIR)/cache.c
 TURBINE_SRC += $(DIR)/run.c
 TURBINE_SRC += $(DIR)/worker.c
+TURBINE_SRC += $(DIR)/async_exec.c
