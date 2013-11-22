@@ -10,10 +10,6 @@
 #include "data.h"
 #include "data_internal.h"
 
-
-// Decrement reference count of given id
-adlb_data_code xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change);
-
 /* Modify refcount of referenced items */
 adlb_data_code
 xlb_incr_referand(adlb_datum_storage *d,

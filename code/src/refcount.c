@@ -10,7 +10,12 @@
 #include "multiset.h"
 #include "sync.h"
 
-adlb_data_code xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change)
+// Decrement reference count of given id
+// TODO: maintain buffer of deferred refcount operations, 
+//       pass up stack to be handled in bulk
+static adlb_data_code xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change);
+
+static adlb_data_code xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change)
 {
   assert(xlb_am_server); // Only makes sense to run on server
 
