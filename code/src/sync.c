@@ -244,7 +244,7 @@ static inline adlb_code msg_from_other_server(int other_server, int target,
 adlb_code xlb_handle_accepted_sync(int rank, const struct packed_sync *hdr,
                                bool *server_sync_rejected)
 {
-  static int response = 1;
+  const int response = 1;
   SEND(&response, 1, MPI_INT, rank, ADLB_TAG_SYNC_RESPONSE);
 
   int mode = hdr->mode;
@@ -257,6 +257,34 @@ adlb_code xlb_handle_accepted_sync(int rank, const struct packed_sync *hdr,
   {
     // Respond to steal
     code = xlb_handle_steal(rank, &hdr->steal);
+  }
+  else if (mode == ADLB_SYNC_REFCOUNT)
+  {
+    /*
+      TODO: 
+      We defer handling of server->server refcounts to avoid potential
+      deadlocks if the refcount decrement triggers a cycle of reference
+      count decrements between servers and a deadlock.  Deferring
+      processing also has the benefit of giving the fastest possible
+      response to the other servers.  One downside is that we can't pass
+      errors all the way back to the caller - we will simply report them
+      and continue.
+
+      Rules about safety of deferring refcounts:
+       -> refcount increments - need to apply increment before processing
+            any operation that could decrement refcount
+       -> read refcount decrements - safe to defer indefinitely,
+            but delays freeing memory
+       -> write refcount decrements - safe to defer indefinitely, 
+            but will delay notifications
+     */
+    
+    // TODO: copy increment to list of deferred increments
+    //const struct packed_incr *incr = &hdr->incr;
+
+    // Then we're done - already sent sync response to caller
+    printf("TODO: implement refcount sync\n");
+    return ADLB_ERROR;
   }
   else
   {

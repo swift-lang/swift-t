@@ -53,6 +53,7 @@ adlb_code xlb_sync(int target);
  */
 adlb_code xlb_sync2(int target, const struct packed_sync *hdr);
 
+// TODO: modify to also store deferred reference counts
 typedef struct {
   int rank;
   struct packed_sync *hdr;

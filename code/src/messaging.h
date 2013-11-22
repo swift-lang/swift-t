@@ -69,7 +69,7 @@ char* xlb_get_tag_name(int tag);
    Thus, we use these macros to ease reading the message protocols
    This also allows us to wrap each call with TRACE_MPI()
         for message debugging
-   Note that the rc (return code) used here is in a nested scope
+   Note that the _rc (return code) used here is in a nested scope
  */
 
 #define SEND(data,length,type,rank,tag) { \
@@ -370,10 +370,14 @@ struct packed_steal_resp
   bool last; // whether last set of stolen work
 };
 
+/**
+ Sync can contain various types of control messages
+ */
 typedef enum
 {
   ADLB_SYNC_REQUEST, // Sync for a regular request
   ADLB_SYNC_STEAL, // Trying to steal work
+  ADLB_SYNC_REFCOUNT, // Modify reference count
 } adlb_sync_mode;
 
 struct packed_sync
@@ -381,6 +385,7 @@ struct packed_sync
   adlb_sync_mode mode;
   union
   {
+    struct packed_incr incr;   // if refcount increment
     struct packed_steal steal; // if steal
   };
 };

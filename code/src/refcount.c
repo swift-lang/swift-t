@@ -38,7 +38,14 @@ adlb_data_code xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change)
   }
   else
   {
-    rc = xlb_sync(server);
+    /*
+    TODO: switch to sync-based refcount
+    struct packed_sync sync_msg;
+    sync_msg.mode = ADLB_SYNC_REFCOUNT;
+    sync_msg.incr.id = id;
+    sync_msg.incr.change = change;
+    return xlb_sync2(server, &sync_msg);
+     */
     if (rc != ADLB_SUCCESS)
       return ADLB_DATA_ERROR_UNKNOWN;
     rc = ADLB_Refcount_incr(id, change);
