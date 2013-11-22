@@ -28,6 +28,7 @@ The tests are numbered for lexical sorting by shell glob.
 200::       Conditionals, recursion, expressions
 300::       Arrays, structs
 400::       For loops
+        480: Key functions on arrays
 500::       Types
         560: files
         580: foreach
