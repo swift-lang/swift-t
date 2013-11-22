@@ -1806,8 +1806,8 @@ public class ASTWalker {
       localRedirects.addProps(taskProps);
       
       // TODO: nicer solution?
-      localArgs.add(0, Arg.createStringLit(appName));
-      backend.startAsyncExec(aeName, asyncExec, localOutputs, localArgs,
+      backend.startAsyncExec(aeName, asyncExec, appName,
+                    localOutputs, localArgs,
                     taskProps, !deterministic);
       // Rest of code executes in continuation after execution finishes
     }

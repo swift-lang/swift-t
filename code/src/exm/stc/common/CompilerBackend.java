@@ -507,13 +507,14 @@ public interface CompilerBackend {
    * that runs as continuation.
    * @param procName
    * @param executor
+   * @param cmdName 
    * @param taskOutputs
    * @param taskArgs
    * @param taskProps
    * @param hasContinuation true if we have a continuation to run after task
    */
   public void startAsyncExec(String procName, List<Var> passIn, 
-      AsyncExecutor executor, List<Var> taskOutputs,
+      AsyncExecutor executor, String cmdName, List<Var> taskOutputs,
       List<Arg> taskArgs, Map<String, Arg> taskProps,
       boolean hasContinuation);
   

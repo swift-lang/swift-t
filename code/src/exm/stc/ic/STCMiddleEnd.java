@@ -353,12 +353,13 @@ public class STCMiddleEnd {
   }
   
   public void startAsyncExec(String procName, 
-      AsyncExecutor executor, List<Var> taskOutputs,
+      AsyncExecutor executor, String cmdName, List<Var> taskOutputs,
       List<Arg> taskArgs, Map<String, Arg> taskProps,
       boolean hasSideEffects) {
     
-    AsyncExec stmt = new AsyncExec(procName, executor, PassedVar.NONE,
-          Var.NONE, taskOutputs, taskArgs, taskProps, hasSideEffects);
+    AsyncExec stmt = new AsyncExec(procName, executor, cmdName,
+          PassedVar.NONE, Var.NONE,
+          taskOutputs, taskArgs, taskProps, hasSideEffects);
     currBlock().addContinuation(stmt);
     
     blockStack.push(stmt.getBlock());

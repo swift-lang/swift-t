@@ -2903,7 +2903,7 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void startAsyncExec(String procName, List<Var> passIn, 
-      AsyncExecutor executor, List<Var> taskOutputs,
+      AsyncExecutor executor, String cmdName, List<Var> taskOutputs,
       List<Arg> taskArgs, Map<String, Arg> taskProps,
       boolean hasContinuation) {
     
@@ -2961,8 +2961,8 @@ public class TurbineGenerator implements CompilerBackend {
       continuation.addAll(continuationArgVals);
     }
     
-    pointStack.peek().add(Turbine.asyncExec(executor, outVarNames, taskArgExprs,
-                                    taskPropExprs, continuation));
+    pointStack.peek().add(Turbine.asyncExec(executor, cmdName,
+                  outVarNames, taskArgExprs, taskPropExprs, continuation));
 
     if (hasContinuation) {
       // Enter proc body for code generation of continuation

@@ -1486,6 +1486,11 @@ public class ICContinuations {
     private final AsyncExecutor executor;
     
     /**
+     * Name of command for executor
+     */
+    private final String cmdName;
+    
+    /**
      * Output variables assigned by task, generally
      * local values
      */
@@ -1507,19 +1512,18 @@ public class ICContinuations {
     private final boolean hasSideEffects;
 
     public AsyncExec(String procName, AsyncExecutor executor,
-                    List<PassedVar> passedVars, List<Var> keepOpenVars,
-                    List<Var> taskOutputs,
-                    List<Arg> taskArgs, Map<String, Arg> taskProps,
-                    boolean hasSideEffects) {
+          String cmdName, List<PassedVar> passedVars, List<Var> keepOpenVars,
+          List<Var> taskOutputs, List<Arg> taskArgs,
+          Map<String, Arg> taskProps, boolean hasSideEffects) {
       this(procName, new Block(BlockType.ASYNC_EXEC_CONTINUATION, null),
-          true, executor, passedVars, keepOpenVars, taskOutputs,
+          true, executor, cmdName, passedVars, keepOpenVars, taskOutputs,
           taskArgs, taskProps, hasSideEffects);
       assert(this.block.getParentCont() != null);
     }
 
     private AsyncExec(String procName, Block block, boolean newBlock,
         AsyncExecutor executor,
-        List<PassedVar> passedVars, List<Var> keepOpenVars,
+        String cmdName, List<PassedVar> passedVars, List<Var> keepOpenVars,
         List<Var> taskOutputs, 
         List<Arg> taskArgs, Map<String, Arg> taskProps,
         boolean hasSideEffects) {
@@ -1533,6 +1537,7 @@ public class ICContinuations {
       this.block = block;
       this.block.setParent(this, newBlock);
       this.executor = executor;
+      this.cmdName = cmdName;
       this.taskOutputs = new ArrayList<Var>(taskOutputs);
       this.taskArgs = new ArrayList<Arg>(taskArgs);
       this.taskProps = new HashMap<String, Arg>(taskProps);
@@ -1542,7 +1547,7 @@ public class ICContinuations {
     @Override
     public AsyncExec clone() {
       return new AsyncExec(procName, this.block.clone(),
-          false, executor, passedVars, keepOpenVars,
+          false, executor, cmdName, passedVars, keepOpenVars,
           taskOutputs, taskArgs, taskProps, hasSideEffects);
     }
 
@@ -1554,8 +1559,8 @@ public class ICContinuations {
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       boolean hasContinuation = !this.block.isEmpty();
       gen.startAsyncExec(procName, PassedVar.extractVars(passedVars),
-                          executor, taskOutputs, taskArgs, taskProps,
-                          hasContinuation);
+          executor, cmdName, taskOutputs, taskArgs, taskProps,
+          hasContinuation);
       this.block.generate(logger, gen, info);
       gen.endAsyncExec(hasContinuation);
     }
@@ -1565,6 +1570,8 @@ public class ICContinuations {
       String newIndent = currentIndent + indent;
       sb.append(currentIndent + "async_exec ");
       sb.append(executor.toString());
+      sb.append(" ");
+      sb.append(cmdName);
       sb.append(" (");
       ICUtil.prettyPrintVarList(sb, taskOutputs);
       sb.append(") (");

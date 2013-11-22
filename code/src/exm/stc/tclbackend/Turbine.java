@@ -1436,6 +1436,7 @@ class Turbine {
   /**
    * 
    * @param executor
+   * @param cmdName 
    * @param outVarNames
    * @param taskArgExprs
    * @param taskPropExprs
@@ -1443,7 +1444,7 @@ class Turbine {
    * @return
    */
   public static Command asyncExec(AsyncExecutor executor,
-      List<Token> outVarNames, List<Expression> taskArgExprs,
+      String cmdName, List<Token> outVarNames, List<Expression> taskArgExprs,
       List<Pair<String, Expression>> taskPropExprs,
       List<Expression> continuation) {
     Token execCmd;
@@ -1457,6 +1458,7 @@ class Turbine {
     }
     
     List<Expression> execArgs = new ArrayList<Expression>();
+    execArgs.add(new TclString(cmdName, true));
     execArgs.add(new TclList(outVarNames));
     execArgs.add(new TclList(taskArgExprs));
     execArgs.add(Dict.dictCreateSE(true, taskPropExprs));
