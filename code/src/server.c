@@ -334,26 +334,26 @@ xlb_handle_pending(MPI_Status* status)
 static inline adlb_code
 xlb_handle_pending_syncs(void)
 {
-  xlb_pending *pending;
   int rc;
   adlb_data_code dc;
 
+  xlb_pending_kind kind;
+  int rank;
+  struct packed_sync *hdr;
+
   // Handle outstanding sync requests
-  while ((rc = xlb_peek_pending(&pending)) == ADLB_SUCCESS)
+  while ((rc = xlb_pop_pending(&kind, &rank, &hdr)) == ADLB_SUCCESS)
   {
-    xlb_pending_kind kind = pending->kind;
-    int rank = pending->rank;
     DEBUG("server_sync: [%d] handling deferred sync from %d",
           xlb_comm_rank, rank);
     switch (kind)
     {
       case PENDING_SYNC:
-        rc = xlb_handle_accepted_sync(rank, &pending->hdr, false);
+        rc = xlb_handle_accepted_sync(rank, hdr, false);
         ADLB_CHECK(rc);
         break;
       case PENDING_RC:
-        dc = xlb_incr_rc_local(pending->hdr.incr.id,
-                             pending->hdr.incr.change, true);
+        dc = xlb_incr_rc_local(hdr->incr.id, hdr->incr.change, true);
         CHECK_MSG(dc == ADLB_DATA_SUCCESS, "unexpected error in refcount");
         break;
       default:
@@ -361,9 +361,8 @@ xlb_handle_pending_syncs(void)
         return ADLB_ERROR;
     }
 
-    // Remove from queue
-    rc = xlb_pop_pending();
-    ADLB_CHECK(rc);
+    // Clean up memory
+    free(hdr);
   }
   ADLB_CHECK(rc); // Check that not error instead of ADLB_NOTHING
   

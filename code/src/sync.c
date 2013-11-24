@@ -325,7 +325,9 @@ static adlb_code add_pending(xlb_pending_kind kind, int rank,
   xlb_pending *entry = &xlb_pending_syncs[xlb_pending_sync_count++];
   entry->kind = kind;
   entry->rank = rank;
-  memcpy(&entry->hdr, hdr, PACKED_SYNC_SIZE);
+  entry->hdr = malloc(PACKED_SYNC_SIZE);
+  CHECK_MSG(entry->hdr != NULL, "could not allocate memory");
+  memcpy(entry->hdr, hdr, PACKED_SYNC_SIZE);
   return ADLB_SUCCESS;
 }
 

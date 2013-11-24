@@ -60,11 +60,10 @@ typedef enum {
   PENDING_RC,   // Have accepted but need to do refcount
 } xlb_pending_kind;
 
-// TODO: modify to also store deferred reference counts
 typedef struct {
   xlb_pending_kind kind; 
   int rank;
-  struct packed_sync hdr;
+  struct packed_sync *hdr; // Header to be freed later
 } xlb_pending;
 
 adlb_code xlb_handle_accepted_sync(int rank, const struct packed_sync *hdr,
@@ -82,27 +81,25 @@ extern int xlb_pending_sync_size; // Malloced sized
 #define PENDING_SYNC_INIT_SIZE 1024
 
 /*
+  Remove the pending sync from the list.
   returns ADLB_NOTHING if not found, otherwise sets arguments
+  Caller is responsible for freeing hdr
  */
-static inline adlb_code xlb_peek_pending(xlb_pending **pending)
-{
-  if (xlb_pending_sync_count == 0)
-    return ADLB_NOTHING;
- 
-  *pending = &xlb_pending_syncs[xlb_pending_sync_count - 1];
-
-  return ADLB_SUCCESS;
-}
-
 __attribute__((always_inline))
-static inline adlb_code xlb_pop_pending(void)
+static inline adlb_code xlb_pop_pending(xlb_pending_kind *kind,
+                            int *rank, struct packed_sync **hdr)
 {
   if (xlb_pending_sync_count == 0)
     return ADLB_NOTHING;
   
+  xlb_pending *pending = &xlb_pending_syncs[xlb_pending_sync_count - 1];
+
+  *kind = pending->kind;
+  *rank = pending->rank;
+  *hdr = pending->hdr;
+
   xlb_pending_sync_count--;
   DEBUG("POP: %d left", xlb_pending_sync_count);
-
   if (xlb_pending_sync_size > PENDING_SYNC_INIT_SIZE &&
       xlb_pending_sync_count < (xlb_pending_sync_size / 4))
   {
