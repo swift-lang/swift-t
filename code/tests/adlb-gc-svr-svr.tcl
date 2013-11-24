@@ -33,7 +33,6 @@ proc build_chain { chain_length head } {
     # on same
     set gap [ expr int(floor(rand() * 3)) ]
     set x [ expr $prev + $gap + 1 ]
-    puts "CREATE $x HEAD $head"
     adlb::create $x ref
     adlb::store $prev ref $x
     set prev $x
