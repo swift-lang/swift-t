@@ -22,29 +22,29 @@ adlb::enable_read_refcount
 
 if { ! [ adlb::amserver ] } {
   # Datum ids on two different servers
-  set x1 1
-  set x2 2
-  set x3 3
-  set x4 4
+  set head 1
+  set tail 2
 
   # Note: just two should be sufficient, but make test a little tougher
   # by having multiple cross-server references
-  adlb::create $x1 ref
-  adlb::create $x2 ref
-  adlb::create $x3 ref
-  adlb::create $x4 integer
+  adlb::create $head ref
+  adlb::create $tail integer
 
   # Chain them together
-  adlb::store $x1 ref $x2
-  adlb::store $x2 ref $x3
-  adlb::store $x3 ref $x4
-  adlb::store $x4 integer 42
+  set prev $head
+  for { set x 3 } { $x < 128 } { incr x } {
+    adlb::create $x ref
+    adlb::store $prev ref $x
+    set prev $x
+  }
+  adlb::store $prev ref $tail
+  adlb::store $tail integer 42
 
   # Now each should have read refcount
   
   # Set reference count of first in chain to 0 to trigger destruction of all
   # With server->server reference counting bug, we'll see a deadlock
-  adlb::refcount_incr $x1 r -1
+  adlb::refcount_incr $head r -1
 } else {
   adlb::server
 }

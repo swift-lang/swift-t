@@ -22,17 +22,32 @@ OUTPUT=${THIS%.sh}.out
 # Shouldn't leak any memory
 export ADLB_LEAK_CHECK=true
 
+# Force reallocation code paths
+export ADLB_DEBUG_SYNC_BUFFER_SIZE=4
+
 # Test fails with deadlock - time limit it
 TIME_LIMIT=10
 
-timeout $TIME_LIMIT bin/turbine -l -n 3 ${SCRIPT} >& ${OUTPUT}
-RC=${?}
-if [[ ${RC} == 124 ]]; then
+bin/turbine -l -n 3 ${SCRIPT} &> ${OUTPUT} &
+pid=$!
+for i in `seq $TIME_LIMIT`; do
+  sleep 1
+  if ps -p $pid &> /dev/null ; then
+    :
+  else
+    break
+  fi
+done
+
+if ps -p $pid &> /dev/null ; then
   echo "${TIME_LIMIT}s time limit expired"
-  exit 1
+  exit 1  
 fi
 
+wait $pid
+RC=${?}
 [[ ${RC} == 0 ]] || exit 1
 
 grep -q "LEAK" ${OUTPUT} && exit 1
+
 exit 0
