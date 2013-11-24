@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 
 set -e
+branch_subrepos="c-utils lb turbine stc"
+nonbranch_subrepos="dev"
+subrepos="$branch_subrepos $nonbranch_subrepos"
 
-for subrepo in c-utils lb turbine stc
+for subrepo in $branch_subrepos
 do
   echo Updating $subrepo        
   pushd $subrepo > /dev/null
@@ -44,8 +47,19 @@ do
   popd > /dev/null
 done
 
-echo "Updating dev"
-pushd dev > /dev/null
+for subrepo in $nonbranch_subrepos
+do
+  echo "Updating $subrepo"
+  pushd $subrepo > /dev/null
   git checkout master
   git svn rebase
+  popd > /dev/null
+done
+
+
+echo "Updating swift-t"
+pushd swift-t > /dev/null
+  git checkout master
+  git pull --rebase origin master
 popd > /dev/null
+
