@@ -57,7 +57,7 @@ if { ! [ adlb::amserver ] } {
     set chain_length 16
     # Allow for gaps in chain ids so we can have random gaps and self-increments
     set chain_id_spacing 4096
-    set chains 100
+    set chains 500
     set tasks [ list ]
     for { set i 0 } { $i < $chains } { incr i } {
       # Assign each chain contiguous ids so they're distributed over servers
@@ -80,12 +80,14 @@ if { ! [ adlb::amserver ] } {
   # Just execute tasks
   while { 1 } { 
     set cmd [ adlb::get 0 answer_rank ]
-    if { [ string equal $cmd "ADLB_SHUTDOWN" ] } break
+    if { [ string length $cmd ] == 0 } break
     eval $cmd
   }
 } else {
   adlb::server
 }
+
+puts "Rank [ adlb::rank ] done!"
 
 adlb::finalize 1
 

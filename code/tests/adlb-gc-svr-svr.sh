@@ -25,15 +25,19 @@ export ADLB_LEAK_CHECK=true
 # Force reallocation code paths
 export ADLB_DEBUG_SYNC_BUFFER_SIZE=1
 
+# Print out interesting info
+export ADLB_PRINT_TIME=true
+export ADLB_PERF_COUNTERS=true
+
 # Test failed with deadlock - time limit it
-TIME_LIMIT=30
+TIME_LIMIT=120
 
 bin/turbine -l -n 8 ${SCRIPT} &> ${OUTPUT} &
 pid=$!
 for i in `seq $TIME_LIMIT`; do
   sleep 1
   if ps -p $pid &> /dev/null ; then
-    :
+    echo "Woke up... pid $pid still running"
   else
     break
   fi
