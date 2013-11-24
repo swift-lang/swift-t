@@ -66,16 +66,17 @@ xlb_msg_finalize(void)
 void
 add_tags()
 {
-  add_tag(ADLB_TAG_SYNC_REQUEST);
-  add_tag(ADLB_TAG_RESPONSE_STEAL_COUNT);
+  add_tag(ADLB_TAG_NULL);
+
+  /// tags incoming to server
   add_tag(ADLB_TAG_PUT);
-  add_tag(ADLB_TAG_RESPONSE_PUT);
-  add_tag(ADLB_TAG_WORK);
   add_tag(ADLB_TAG_GET);
-  add_tag(ADLB_TAG_RESPONSE_GET);
   add_tag(ADLB_TAG_IGET);
+
+  // data operations
   add_tag(ADLB_TAG_CREATE_HEADER);
   add_tag(ADLB_TAG_MULTICREATE);
+  add_tag(ADLB_TAG_CREATE_PAYLOAD);
   add_tag(ADLB_TAG_EXISTS);
   add_tag(ADLB_TAG_STORE_HEADER);
   add_tag(ADLB_TAG_STORE_SUBSCRIPT);
@@ -83,6 +84,7 @@ add_tags()
   add_tag(ADLB_TAG_RETRIEVE);
   add_tag(ADLB_TAG_ENUMERATE);
   add_tag(ADLB_TAG_SUBSCRIBE);
+  add_tag(ADLB_TAG_PERMANENT);
   add_tag(ADLB_TAG_REFCOUNT_INCR);
   add_tag(ADLB_TAG_INSERT_ATOMIC);
   add_tag(ADLB_TAG_UNIQUE);
@@ -92,11 +94,23 @@ add_tags()
   add_tag(ADLB_TAG_CONTAINER_SIZE);
   add_tag(ADLB_TAG_LOCK);
   add_tag(ADLB_TAG_UNLOCK);
+  add_tag(ADLB_TAG_SYNC_REQUEST);
   add_tag(ADLB_TAG_CHECK_IDLE);
-  add_tag(ADLB_TAG_RESPONSE);
   add_tag(ADLB_TAG_SHUTDOWN_WORKER);
   add_tag(ADLB_TAG_SHUTDOWN_SERVER);
+
+  // outgoing tags (server should not receive as request)
+  add_tag(ADLB_TAG_RESPONSE);
+  add_tag(ADLB_TAG_RESPONSE_PUT);
+  add_tag(ADLB_TAG_RESPONSE_GET);
+  add_tag(ADLB_TAG_RESPONSE_STEAL_COUNT);
+  add_tag(ADLB_TAG_RESPONSE_STEAL);
+  add_tag(ADLB_TAG_SYNC_RESPONSE);
+  add_tag(ADLB_TAG_WORKUNIT);
   add_tag(ADLB_TAG_FAIL);
+  
+  /// tags that may be to/from server/worker
+  add_tag(ADLB_TAG_WORK);
 }
 
 void
@@ -120,10 +134,18 @@ xlb_add_tag_name(int tag, char* name)
     DEBUG("TAG: %i => %s", tag, name);
 }
 
-char*
+const char*
 xlb_get_tag_name(int tag)
 {
-  return tag_names[tag];
+  if (tag >= 0 || tag < XLB_MAX_TAGS)
+  {
+    char *name = tag_names[tag];
+    if (name != NULL)
+    {
+      return name;
+    }
+  }
+  return "<UNKNOWN TAG NAME>";
 }
 
 

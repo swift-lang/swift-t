@@ -58,7 +58,7 @@ void xlb_add_tag_name(int tag, char* name);
 /**
    Lookup string name for debugging MPI message tags
  */
-char* xlb_get_tag_name(int tag);
+const char* xlb_get_tag_name(int tag);
 
 /*
    All of these client/handler functions (adlb.c,handlers.c,etc.)

@@ -76,7 +76,8 @@ xlb_handler_valid(adlb_tag tag)
 static inline adlb_code
 xlb_handle(adlb_tag tag, int caller)
 {
-  CHECK_MSG(xlb_handler_valid(tag), "handle(): invalid tag: %i", tag);
+  CHECK_MSG(xlb_handler_valid(tag), "handle(): invalid tag: %i (%s)",
+            tag, xlb_get_tag_name(tag));
   DEBUG("handle: caller=%i %s", caller, xlb_get_tag_name(tag));
 
   MPE_LOG(xlb_mpe_svr_busy_start);
