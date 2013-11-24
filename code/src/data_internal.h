@@ -62,10 +62,31 @@ typedef struct
     }                                                         \
   }
 
+#if ENABLE_LOG_TRACE
+// Include traceback
+#define DATA_CHECK(rc) \
+  { adlb_data_code _rc = (rc);                              \
+    if (_rc != ADLB_DATA_SUCCESS) {                         \
+      printf("ADLB DATA CHECK FAILED: %s:%s:%i\n",          \
+         __FUNCTION__, __FILE__, __LINE__);                 \
+      return _rc;                                           \
+  }}
+#else
+// Just return
+#define DATA_CHECK(rc) \
+  { adlb_data_code _rc = (rc);                              \
+    if (_rc != ADLB_DATA_SUCCESS) {                         \
+      return _rc;                                           \
+  }}
+
+#endif
+
 #else
 // Make this a noop if NDEBUG is set (for performance)
 #define check_verbose(condition, code, format, args...) \
-    (void) (condition);
+    ((void) (condition));
+
+#define DATA_CHECK(rc) ((void) (condition));
 #endif
 
 

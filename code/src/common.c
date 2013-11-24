@@ -33,6 +33,8 @@
 
 #include "common.h"
 
+#include "checks.h"
+
 char xfer[XFER_SIZE];
 
 int xlb_comm_size;
@@ -128,5 +130,25 @@ adlb_code xlb_env_boolean(const char *env_var, bool *val)
     return ADLB_ERROR;
   }
 
+  return ADLB_NOTHING;
+}
+
+adlb_code xlb_env_long(const char *env_var, long *val)
+{
+  char *s = getenv(env_var);
+  if (s == NULL || strlen(s) == 0)
+  {
+    // Undefined or empty: leave val untouched
+    return ADLB_NOTHING;
+  }
+
+  // Try to parse as number
+  char *end = NULL;
+  long tmp_val = strtol(s, &end, 10);
+  CHECK_MSG(end != NULL && end != s && *end == '\0',
+        "Invalid env var \"%s\": not a long int", s)
+
+  // Whole string was number
+  *val = tmp_val;
   return ADLB_SUCCESS;
 }

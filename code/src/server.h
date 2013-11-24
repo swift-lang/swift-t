@@ -48,7 +48,7 @@ adlb_code xlb_server_init(void);
    This process has accepted a sync from a calling server
    Handle the actual RPC here
  */
-adlb_code xlb_serve_server(int source, bool *sync_rejected);
+adlb_code xlb_serve_server(int source);
 
 adlb_code xlb_shutdown_worker(int worker);
 

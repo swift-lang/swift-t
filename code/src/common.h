@@ -102,4 +102,9 @@ int xlb_type_index(int work_type);
  */
 adlb_code xlb_env_boolean(const char *env_var, bool *val);
 
+/**
+    Get long int from env var.  If not present, val is unmodified
+ */
+adlb_code xlb_env_long(const char *env_var, long *val);
+
 #endif

@@ -88,9 +88,4 @@ bool xlb_backoff_server(int attempt, bool *slept);
  */
 void xlb_backoff_sync(void);
 
-/**
-   Backoff during sync() spin loop after rejection
- */
-void xlb_backoff_sync_rejected(void);
-
 #endif

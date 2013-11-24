@@ -42,7 +42,6 @@ static int    backoff_server_exp_delay_attempts = 0;
        int    xlb_loop_poll_points    = 1;
        int    xlb_loop_sleep_points   = 1;
 static double backoff_sync          = 1;
-static double backoff_sync_rejected = 1;
 #elif BACKOFF_SPEED == BACKOFF_MEDIUM
        double xlb_max_idle          = 4;
        double xlb_steal_rate_limit  = 0.5;
@@ -52,7 +51,6 @@ static int    backoff_server_no_delay_attempts  = 0;
 static int    backoff_server_min_delay_attempts = 1;
 static int    backoff_server_exp_delay_attempts = 0;
 static double backoff_sync          = 0.01;
-static double backoff_sync_rejected = 0.01;
 #elif BACKOFF_SPEED == BACKOFF_FAST
        double xlb_max_idle          = 0.1;
 /*
@@ -70,7 +68,6 @@ static int    backoff_server_no_delay_attempts  = 1024;
 static int    backoff_server_min_delay_attempts = 4;
 static int    backoff_server_exp_delay_attempts = 4;
 static double backoff_sync          = 0.00001;
-static double backoff_sync_rejected = 0.0001;
 #endif
 
 #define BACKOFF_SERVER_TOTAL_ATTEMPTS \
@@ -114,10 +111,4 @@ void
 xlb_backoff_sync()
 {
   time_delay(backoff_sync);
-}
-
-void
-xlb_backoff_sync_rejected()
-{
-  time_delay(backoff_sync_rejected);
 }

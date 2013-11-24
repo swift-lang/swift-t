@@ -6,13 +6,15 @@
 #include "adlb.h"
 #include "common.h"
 #include "data_cleanup.h"
+#include "data_internal.h"
 #include "data_structs.h"
 #include "multiset.h"
 #include "sync.h"
 
-// Decrement reference count of given id
 // TODO: maintain buffer of deferred refcount operations, 
 //       pass up stack to be handled in bulk
+
+/* Decrement reference count of given id from the server */
 static adlb_data_code xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change);
 
 static adlb_data_code xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change)
@@ -28,36 +30,40 @@ static adlb_data_code xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change)
   if (ADLB_RC_IS_NULL(change))
     return ADLB_DATA_SUCCESS;
 
-  int rc = ADLB_DATA_SUCCESS;
   int server = ADLB_Locate(id);
   if (server == xlb_comm_rank)
   {
-    adlb_notif_ranks notify = ADLB_NO_NOTIF_RANKS;
-    adlb_data_code dc = xlb_data_reference_count(id, change,
-            NO_SCAVENGE, NULL, NULL, &notify);
-    // TODO: handle notifications here if needed for some reason
-    check_verbose(notify.count == 0, ADLB_DATA_ERROR_UNKNOWN,
-        "Internal error: don't support server->server write "
-        "refcount decrements");
-    return dc;
+    adlb_data_code dc = xlb_incr_rc_local(id, change, false);
+    DATA_CHECK(dc);
   }
   else
   {
-    /*
-    TODO: switch to sync-based refcount
     struct packed_sync sync_msg;
     sync_msg.mode = ADLB_SYNC_REFCOUNT;
     sync_msg.incr.id = id;
     sync_msg.incr.change = change;
-    return xlb_sync2(server, &sync_msg);
-     */
-    if (rc != ADLB_SUCCESS)
-      return ADLB_DATA_ERROR_UNKNOWN;
-    rc = ADLB_Refcount_incr(id, change);
-    if (rc != ADLB_SUCCESS)
-      return ADLB_DATA_ERROR_UNKNOWN;
-    return ADLB_DATA_SUCCESS;
+    adlb_code code = xlb_sync2(server, &sync_msg);
+    check_verbose(code == ADLB_SUCCESS, ADLB_DATA_ERROR_UNKNOWN,
+                  "Error syncing for refcount");
   }
+  return ADLB_DATA_SUCCESS;
+}
+
+adlb_data_code xlb_incr_rc_local(adlb_datum_id id, adlb_refcounts change,
+                                 bool suppress_errors)
+{
+  adlb_notif_ranks notify = ADLB_NO_NOTIF_RANKS;
+  adlb_data_code dc = xlb_data_reference_count(id, change,
+          NO_SCAVENGE, NULL, NULL, &notify);
+  ADLB_DATA_CHECK(dc);
+  // handle notifications here if needed for some reason
+  if (!xlb_notif_ranks_empty(&notify))
+  {
+    adlb_code rc = xlb_close_notify(id, &notify);
+    check_verbose(rc == ADLB_SUCCESS, ADLB_DATA_ERROR_UNKNOWN,
+        "Error processing notifications for <%"PRId64">", id);
+  }
+  return ADLB_DATA_SUCCESS;
 }
 
 adlb_data_code

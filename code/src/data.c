@@ -425,7 +425,7 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
 
   bool do_gc = d->read_refcount + read_incr <= 0 &&
                d->write_refcount + write_incr <= 0;
-
+  
   if (!ADLB_RC_IS_NULL(scav.refcounts))
   {
     // Don't go through with decrement if caller wants to scavenge refcounts

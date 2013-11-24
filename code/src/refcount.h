@@ -10,6 +10,13 @@
 #include "data.h"
 #include "data_internal.h"
 
+/* Modify reference count of locally stored datum.
+   Send any consequent notifications or messages.
+   suppress_errors: if true, just log any errors */
+adlb_data_code
+xlb_incr_rc_local(adlb_datum_id id, adlb_refcounts change,
+                  bool suppress_errors);
+
 /* Modify refcount of referenced items */
 adlb_data_code
 xlb_incr_referand(adlb_datum_storage *d,

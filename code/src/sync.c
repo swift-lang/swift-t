@@ -31,6 +31,7 @@
 #include "debug.h"
 #include "messaging.h"
 #include "mpe-tools.h"
+#include "refcount.h"
 #include "server.h"
 #include "steal.h"
 #include "sync.h"
@@ -39,26 +40,60 @@ static inline adlb_code send_sync(int target, const struct packed_sync *hdr);
 static inline adlb_code msg_from_target(int target,
                                   const struct packed_sync *hdr, bool* done);
 static inline adlb_code msg_from_other_server(int other_server, 
-                  int target, const struct packed_sync *my_hdr,
-                  xlb_pending_sync *pending_syncs, int *pending_sync_count);
+                  int target, const struct packed_sync *my_hdr);
 static inline adlb_code msg_shutdown(bool* done);
 
-// Number of pending sync requests to store before rejecting
-#define PENDING_SYNC_BUFFER_SIZE 1024
+static adlb_code add_pending(xlb_pending_kind kind, int rank,
+                             const struct packed_sync *hdr);
 
 // IDs of servers with pending sync requests
-xlb_pending_sync xlb_pending_syncs[PENDING_SYNC_BUFFER_SIZE];
+xlb_pending *xlb_pending_syncs = NULL;
 int xlb_pending_sync_count = 0;
+int xlb_pending_sync_size = 0; // Malloced sized
+
+adlb_code
+xlb_sync_init(void)
+{
+  xlb_pending_sync_size = PENDING_SYNC_INIT_SIZE;
+
+  // Optionally have different min size - otherwise we won't cover the
+  // resizing cases in testing`
+  long tmp;
+  adlb_code rc = xlb_env_long("ADLB_DEBUG_SYNC_BUFFER_SIZE", &tmp);
+  ADLB_CHECK(rc);
+
+  if (rc != ADLB_NOTHING)
+  {
+    assert(tmp > 0 && tmp <= INT_MAX);
+    xlb_pending_sync_size = (int)tmp;
+  }
+
+  xlb_pending_sync_count = 0;
+  xlb_pending_syncs = malloc(sizeof(xlb_pending_syncs[0]) *
+                                (size_t)xlb_pending_sync_size);
+  CHECK_MSG(xlb_pending_syncs != NULL, "could not allocate memory");
+  return ADLB_SUCCESS;
+}
+
+void xlb_sync_finalize(void)
+{
+  free(xlb_pending_syncs);
+  xlb_pending_sync_count = 0;
+  xlb_pending_sync_size = 0;
+}
+
 
 adlb_code
 xlb_sync(int target)
 {
-  struct packed_sync *hdr = malloc(PACKED_SYNC_SIZE);
+  char hdr_storage[PACKED_SYNC_SIZE];
+  struct packed_sync *hdr = (struct packed_sync *)hdr_storage;
+#ifndef NDEBUG
+  // Avoid send uninitialized bytes for memory checking tools
   memset(hdr, 0, PACKED_SYNC_SIZE);
+#endif
   hdr->mode = ADLB_SYNC_REQUEST;
-  adlb_code code = xlb_sync2(target, hdr);
-  free(hdr);
-  return code;
+  return xlb_sync2(target, hdr);
 }
 
 /*
@@ -116,8 +151,7 @@ xlb_sync2(int target, const struct packed_sync *hdr)
 
     IPROBE(MPI_ANY_SOURCE, ADLB_TAG_SYNC_REQUEST, &flag2, &status2);
     if (flag2)
-      msg_from_other_server(status2.MPI_SOURCE, target, hdr,
-                            xlb_pending_syncs, &xlb_pending_sync_count);
+      msg_from_other_server(status2.MPI_SOURCE, target, hdr);
 
     IPROBE(MPI_ANY_SOURCE, ADLB_TAG_SHUTDOWN_SERVER, &flag3,
            &status3);
@@ -135,6 +169,7 @@ xlb_sync2(int target, const struct packed_sync *hdr)
     }
   }
 
+  DEBUG("server_sync: [%d] sync with %d successful", xlb_comm_rank, target);
   xlb_server_sync_in_progress = false;
   TRACE_END;
   MPE_LOG(xlb_mpe_dmn_sync_end);
@@ -159,31 +194,25 @@ msg_from_target(int target, const struct packed_sync *hdr, bool* done)
   TRACE_START;
   int response;
   RECV(&response, 1, MPI_INT, target, ADLB_TAG_SYNC_RESPONSE);
-  if (response)
-  {
-    // Accepted
-    DEBUG("server_sync: [%d] sync accepted by %d.", xlb_comm_rank, target);
-    *done = true;
-  }
-  else
-  {
-    // Rejected
-    DEBUG("server_sync: [%d] sync rejected by %d.  retrying...",
-           xlb_comm_rank, target);
-    send_sync(target, hdr);
-  }
+  CHECK_MSG(response, "Unexpected sync response: %i", response);
+  // Accepted
+  DEBUG("server_sync: [%d] sync accepted by %d.", xlb_comm_rank, target);
+  *done = true;
   TRACE_END
   return ADLB_SUCCESS;
 }
 
 static inline adlb_code msg_from_other_server(int other_server, int target,
-                  const struct packed_sync *my_hdr,
-                  xlb_pending_sync *pending_syncs, int *pending_sync_count)
+                  const struct packed_sync *my_hdr)
 {
   TRACE_START;
   MPI_Status status;
+  adlb_code code;
 
-  struct packed_sync *other_hdr = malloc(PACKED_SYNC_SIZE);
+  // Store on stack - skip malloc
+  char hdr_storage[PACKED_SYNC_SIZE];
+  struct packed_sync *other_hdr = (struct packed_sync *)hdr_storage;
+
   RECV(other_hdr, (int)PACKED_SYNC_SIZE, MPI_BYTE, other_server, ADLB_TAG_SYNC_REQUEST);
 
   /* Serve another server
@@ -196,53 +225,27 @@ static inline adlb_code msg_from_other_server(int other_server, int target,
     // accept incoming sync
     DEBUG("server_sync: [%d] interrupted by incoming sync request from %d",
                         xlb_comm_rank, other_server);
-    bool server_sync_rejected = false;
     
-    xlb_handle_accepted_sync(other_server, other_hdr, &server_sync_rejected);
-
-    if (other_server == target && server_sync_rejected)
-    {
-      // In this case, the interrupting server is our sync target
-      // It detected the collision and rejected this process
-      // Try again
-      DEBUG("server_sync: [%d] sync rejected earlier retrying sync with %d...",
-                        xlb_comm_rank, other_server);
-      xlb_backoff_sync_rejected();
-      send_sync(target, my_hdr);
-    }
+    code = xlb_handle_accepted_sync(other_server, other_hdr, true);
+    ADLB_CHECK(code);
   }
   else
   {
-    // Don't handle right away, either defer or reject
-    if (*pending_sync_count < PENDING_SYNC_BUFFER_SIZE) {
-      // Store sync request so we can later service it
-      DEBUG("server_sync: [%d] deferring incoming sync request from %d.  "
-            "%d deferred sync requests", xlb_comm_rank, other_server, *pending_sync_count);
-      pending_syncs[*pending_sync_count].rank = other_server;
-      pending_syncs[*pending_sync_count].hdr = other_hdr;
-      other_hdr = NULL; // Lose reference
-      (*pending_sync_count)++;
-    }
-    else
-    {
-      int response = 0;
-      DEBUG("server_sync: [%d] rejecting incoming sync request from %d",
-                                        xlb_comm_rank, other_server);
-      SEND(&response, 1, MPI_INT, other_server,
-           ADLB_TAG_SYNC_RESPONSE);
-    }
+    // Don't handle right away, defer it
+    code = add_pending(PENDING_SYNC, other_server, other_hdr);
+    ADLB_CHECK(code);
   }
-  if (other_hdr != NULL)
-    free(other_hdr);
   TRACE_END;
   return ADLB_SUCCESS;
 }
 
 /*
   One we have accepted sync, do whatever processing needed to service
+  hdr: header data.  Must copy to take ownership
+  defer_svr_ops: true if we should defer any potential server->server ops
  */
 adlb_code xlb_handle_accepted_sync(int rank, const struct packed_sync *hdr,
-                               bool *server_sync_rejected)
+            bool defer_svr_ops)
 {
   const int response = 1;
   SEND(&response, 1, MPI_INT, rank, ADLB_TAG_SYNC_RESPONSE);
@@ -251,7 +254,7 @@ adlb_code xlb_handle_accepted_sync(int rank, const struct packed_sync *hdr,
   adlb_code code = ADLB_ERROR;
   if (mode == ADLB_SYNC_REQUEST)
   {
-    code = xlb_serve_server(rank, server_sync_rejected);
+    code = xlb_serve_server(rank);
   }
   else if (mode == ADLB_SYNC_STEAL)
   {
@@ -261,7 +264,6 @@ adlb_code xlb_handle_accepted_sync(int rank, const struct packed_sync *hdr,
   else if (mode == ADLB_SYNC_REFCOUNT)
   {
     /*
-      TODO: 
       We defer handling of server->server refcounts to avoid potential
       deadlocks if the refcount decrement triggers a cycle of reference
       count decrements between servers and a deadlock.  Deferring
@@ -278,13 +280,21 @@ adlb_code xlb_handle_accepted_sync(int rank, const struct packed_sync *hdr,
        -> write refcount decrements - safe to defer indefinitely, 
             but will delay notifications
      */
-    
-    // TODO: copy increment to list of deferred increments
-    //const struct packed_incr *incr = &hdr->incr;
-
+    if (defer_svr_ops)
+    {
+      DEBUG("Defer refcount for <%"PRId64">", hdr->incr.id);
+      code = add_pending(PENDING_SYNC, rank, hdr);
+      ADLB_CHECK(code);
+    }
+    else
+    {
+      DEBUG("Update refcount now for <%"PRId64">", hdr->incr.id);
+      adlb_data_code dc = xlb_incr_rc_local(hdr->incr.id,
+                                  hdr->incr.change, true);
+      CHECK_MSG(dc == ADLB_DATA_SUCCESS, "Unexpected error in refcount");
+    }
     // Then we're done - already sent sync response to caller
-    printf("TODO: implement refcount sync\n");
-    return ADLB_ERROR;
+    return ADLB_SUCCESS;
   }
   else
   {
@@ -292,6 +302,31 @@ adlb_code xlb_handle_accepted_sync(int rank, const struct packed_sync *hdr,
     return ADLB_ERROR;
   }
   return code;
+}
+
+/*
+  Add pending sync
+  hdr: sync header.  This function will make a copy of it
+  returns: ADLB_SUCCESS, or ADLB_ERROR on unexpected error
+ */
+static adlb_code add_pending(xlb_pending_kind kind, int rank,
+                             const struct packed_sync *hdr)
+{
+  assert(xlb_pending_sync_count <= xlb_pending_sync_size);
+  if (xlb_pending_sync_count == xlb_pending_sync_size)
+  {
+    xlb_pending_sync_size *= 2;
+    DEBUG("Resizing to accommodate %i pending", xlb_pending_sync_size);
+    xlb_pending_syncs = realloc(xlb_pending_syncs,
+                      sizeof(xlb_pending_syncs[0]) * (size_t)xlb_pending_sync_size);
+    CHECK_MSG(xlb_pending_syncs != NULL, "could not allocate memory");
+  }
+  
+  xlb_pending *entry = &xlb_pending_syncs[xlb_pending_sync_count++];
+  entry->kind = kind;
+  entry->rank = rank;
+  memcpy(&entry->hdr, hdr, PACKED_SYNC_SIZE);
+  return ADLB_SUCCESS;
 }
 
 static inline adlb_code

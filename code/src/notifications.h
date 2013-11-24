@@ -77,6 +77,16 @@ typedef struct {
   size_t to_free_size; // Allocated length
 } adlb_notif_t;
 
+static inline bool xlb_notif_ranks_empty(adlb_notif_ranks *notif)
+{
+  return notif->count == 0;
+}
+
+static inline bool xlb_notif_empty(adlb_notif_t *notif)
+{
+  return notif->notify.count == 0 && notif->references.count != 0;
+}
+
 #define ADLB_NO_NOTIF_RANKS { .count = 0, .notifs = NULL }
 #define ADLB_NO_DATUMS { .count = 0, .data = NULL }
 #define ADLB_NO_NOTIFS { .notify = ADLB_NO_NOTIF_RANKS,  \

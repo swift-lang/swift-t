@@ -40,6 +40,7 @@
 #include "handlers.h"
 #include "messaging.h"
 #include "mpe-tools.h"
+#include "refcount.h"
 #include "requestqueue.h"
 #include "server.h"
 #include "steal.h"
@@ -120,19 +121,18 @@ static inline adlb_code xlb_poll(int source, bool prefer_sync, MPI_Status *req_s
 // Service request from queue
 __attribute__((always_inline))
 static inline adlb_code
-xlb_handle_pending(MPI_Status *status, bool *sync_rejected);
+xlb_handle_pending(MPI_Status *status);
 
-// Handle pending sync requests
+// Handle pending sync requests, etc
 __attribute__((always_inline))
 static inline adlb_code
-xlb_handle_pending_syncs();
+xlb_handle_pending_syncs(void);
 
 /**
    Serve a single request then return
    @param source MPI rank of allowable client: usually MPI_ANY_SOURCE unless syncing
-   @param sync_rejected: set to true if we got a sync rejected message
  */
-static inline adlb_code xlb_serve_one(int source, bool *sync_rejected);
+static inline adlb_code xlb_serve_one(int source);
 
 adlb_code
 xlb_server_init()
@@ -167,6 +167,9 @@ xlb_server_init()
   mm_set_max(mm_default, 10*MB);
   xlb_handlers_init();
   xlb_time_last_action = MPI_Wtime();
+  
+  code = xlb_sync_init();
+  ADLB_CHECK(code);
 
   TRACE_END
   return ADLB_SUCCESS;
@@ -254,7 +257,7 @@ serve_several()
     code = xlb_poll(MPI_ANY_SOURCE, prefer_sync, &req_status);
     if (code == ADLB_SUCCESS)
     {
-      code = xlb_handle_pending(&req_status, NULL);
+      code = xlb_handle_pending(&req_status);
       ADLB_CHECK(code);
 
       // Previous request may have resulted in pending sync requests
@@ -317,23 +320,8 @@ xlb_poll(int source, bool prefer_sync, MPI_Status *req_status)
 }
 
 static inline adlb_code
-xlb_handle_pending(MPI_Status* status, bool *sync_rejected)
+xlb_handle_pending(MPI_Status* status)
 {
-  if (status->MPI_TAG == ADLB_TAG_SYNC_RESPONSE)
-  {
-    // Corner case: this process is trying to sync with source
-    // Source is rejecting the sync request
-    int response;
-    RECV_STATUS(&response, 1, MPI_INT, status->MPI_SOURCE,
-                ADLB_TAG_SYNC_RESPONSE, status);
-    assert(response == 0);
-    if (sync_rejected != NULL)
-      *sync_rejected = true;
-    DEBUG("server_sync: [%d] sync rejected", xlb_comm_rank);
-    TRACE_END;
-    return ADLB_NOTHING;
-  }
-
   // Call appropriate RPC handler:
   adlb_code rc = xlb_handle(status->MPI_TAG, status->MPI_SOURCE);
 
@@ -344,40 +332,46 @@ xlb_handle_pending(MPI_Status* status, bool *sync_rejected)
 }
 
 static inline adlb_code
-xlb_handle_pending_syncs()
+xlb_handle_pending_syncs(void)
 {
-  if (xlb_pending_sync_count > 0)
+  xlb_pending *pending;
+  int rc;
+  adlb_data_code dc;
+
+  // Handle outstanding sync requests
+  while ((rc = xlb_peek_pending(&pending)) == ADLB_SUCCESS)
   {
-    // Handle outstanding sync requests
-    for (int i = 0; i < xlb_pending_sync_count; i++)
+    xlb_pending_kind kind = pending->kind;
+    int rank = pending->rank;
+    DEBUG("server_sync: [%d] handling deferred sync from %d",
+          xlb_comm_rank, rank);
+    switch (kind)
     {
-      int rank = xlb_pending_syncs[i].rank;
-      DEBUG("server_sync: [%d] handling deferred sync %d from %d",
-          xlb_comm_rank, i, rank);
-      adlb_code code = xlb_handle_accepted_sync(rank,
-                     xlb_pending_syncs[i].hdr, NULL);
-      if (code == ADLB_SUCCESS)
-      {
-        free(xlb_pending_syncs[i].hdr);
-      }
-      else
-      {
-        // Update pending syncs to avoid corrupted state
-        if (i > 0)
-          for (int j = 0; j < xlb_pending_sync_count - i; j++) {
-            xlb_pending_syncs[j] = xlb_pending_syncs[j + i];
-          }
-        xlb_pending_sync_count -= i;
-        return code;
-      }
+      case PENDING_SYNC:
+        rc = xlb_handle_accepted_sync(rank, &pending->hdr, false);
+        ADLB_CHECK(rc);
+        break;
+      case PENDING_RC:
+        dc = xlb_incr_rc_local(pending->hdr.incr.id,
+                             pending->hdr.incr.change, true);
+        CHECK_MSG(dc == ADLB_DATA_SUCCESS, "unexpected error in refcount");
+        break;
+      default:
+        ERR_PRINTF("Unexpected pending sync kind %i\n", kind);
+        return ADLB_ERROR;
     }
-    xlb_pending_sync_count = 0;
+
+    // Remove from queue
+    rc = xlb_pop_pending();
+    ADLB_CHECK(rc);
   }
+  ADLB_CHECK(rc); // Check that not error instead of ADLB_NOTHING
+  
   return ADLB_SUCCESS;
 }
 
 static inline adlb_code
-xlb_serve_one(int source, bool *sync_rejected)
+xlb_serve_one(int source)
 {
   TRACE_START;
   if (source > 0)
@@ -389,7 +383,7 @@ xlb_serve_one(int source, bool *sync_rejected)
   if (code == ADLB_NOTHING)
     return ADLB_NOTHING;
 
-  int rc = xlb_handle_pending(&status, sync_rejected);
+  int rc = xlb_handle_pending(&status);
 
   TRACE_END;
 
@@ -397,14 +391,14 @@ xlb_serve_one(int source, bool *sync_rejected)
 }
 
 adlb_code
-xlb_serve_server(int source, bool *sync_rejected)
+xlb_serve_server(int source)
 {
   TRACE_START;
   DEBUG("\t serve_server: [%i] serving %i", xlb_comm_rank, source);
   int rc = ADLB_NOTHING;
   while (true)
   {
-    rc = xlb_serve_one(source, sync_rejected);
+    rc = xlb_serve_one(source);
     ADLB_CHECK(rc);
     if (rc != ADLB_NOTHING) break;
     // Don't backoff - want to unblock other server ASAP
@@ -722,6 +716,7 @@ server_shutdown()
   DEBUG("server down.");
   xlb_requestqueue_shutdown();
   xlb_workq_finalize();
+  xlb_sync_finalize();
   return ADLB_SUCCESS;
 }
 

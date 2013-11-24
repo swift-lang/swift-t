@@ -108,6 +108,7 @@ static const refcount_scavenge NO_SCAVENGE =
                             items.  If *refcounts_scavenged is filled
                             with 0, this means we weren't successful and
                             didn't modify any reference counts
+  garbage_collected/refcounts_scavenged: can be NULL
  */
 adlb_data_code xlb_data_reference_count(adlb_datum_id id,
                 adlb_refcounts change,
@@ -134,7 +135,5 @@ adlb_data_code xlb_data_insert_atomic(adlb_datum_id container_id,
 adlb_data_code xlb_data_unique(adlb_datum_id* result);
 
 adlb_data_code xlb_data_finalize(void);
-
-#define DATA_CHECK(rc) { if (rc != ADLB_DATA_SUCCESS) return rc; }
 
 #endif

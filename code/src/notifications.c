@@ -221,7 +221,6 @@ xlb_notify_all(const adlb_notif_t *notifs, adlb_datum_id id)
   }
   if (notifs->references.count > 0)
   {
-    // TODO: handle other types
     rc = xlb_set_refs(&notifs->references);
     ADLB_CHECK(rc);
   } 
