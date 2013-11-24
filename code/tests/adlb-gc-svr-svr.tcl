@@ -17,34 +17,73 @@ package require turbine 0.4.0
 
 
 turbine::defaults
-adlb::init 2 1
+# Three servers
+adlb::init 3 1
 adlb::enable_read_refcount
 
-if { ! [ adlb::amserver ] } {
-  # Datum ids on two different servers
-  set head 1
-  set tail 2
-
-  # Note: just two should be sufficient, but make test a little tougher
-  # by having multiple cross-server references
+proc build_chain { chain_length head } {
+  puts "build_chain: $chain_length <$head>" 
+  # Select chain of references across different servers
   adlb::create $head ref
-  adlb::create $tail integer
 
   # Chain them together
   set prev $head
-  for { set x 3 } { $x < 128 } { incr x } {
+  for { set i 0 } { $i < [ expr $chain_length - 2 ] } { incr i } {
+    # Random gaps to get them in different servers, and some neighbours
+    # on same
+    set gap [ expr int(floor(rand() * 3)) ]
+    set x [ expr $prev + $gap + 1 ]
+    puts "CREATE $x HEAD $head"
     adlb::create $x ref
     adlb::store $prev ref $x
     set prev $x
   }
+  set tail [ expr $prev + 1 ]
+  adlb::create $tail integer
   adlb::store $prev ref $tail
   adlb::store $tail integer 42
 
   # Now each should have read refcount
-  
-  # Set reference count of first in chain to 0 to trigger destruction of all
-  # With server->server reference counting bug, we'll see a deadlock
-  adlb::refcount_incr $head r -1
+}
+
+
+if { ! [ adlb::amserver ] } {
+  if { [ adlb::rank ] == 0 } {
+    # This rank sets up data for test. Having a single rank set up the
+    # data allows us free use of the ID space
+
+    # Seed RNG with constant for reproducibility
+    expr srand(12345)
+
+    set chain_length 16
+    # Allow for gaps in chain ids so we can have random gaps and self-increments
+    set chain_id_spacing 4096
+    set chains 100
+    set tasks [ list ]
+    for { set i 0 } { $i < $chains } { incr i } {
+      # Assign each chain contiguous ids so they're distributed over servers
+      set head [ expr $i * $chain_id_spacing  + 1 ]
+      puts "Chain head: $head"
+      build_chain $chain_length $head
+      
+      # Task will set reference count of first in chain to 0 to trigger
+      # destruction of all # With old server->server reference counting
+      # bug, we saw a deadlock in all cases.  # Now we hope to trigger
+      # some more complex bugs with storm of decrements
+      lappend tasks "adlb::read_refcount_decr $head"
+    }
+    
+    foreach task $tasks {
+      adlb::put $adlb::RANK_ANY 0 $task 0 1
+    }
+  }
+
+  # Just execute tasks
+  while { 1 } { 
+    set cmd [ adlb::get 0 answer_rank ]
+    if { [ string equal $cmd "ADLB_SHUTDOWN" ] } break
+    eval $cmd
+  }
 } else {
   adlb::server
 }

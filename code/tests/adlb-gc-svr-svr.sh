@@ -23,12 +23,12 @@ OUTPUT=${THIS%.sh}.out
 export ADLB_LEAK_CHECK=true
 
 # Force reallocation code paths
-export ADLB_DEBUG_SYNC_BUFFER_SIZE=4
+export ADLB_DEBUG_SYNC_BUFFER_SIZE=1
 
-# Test fails with deadlock - time limit it
-TIME_LIMIT=10
+# Test failed with deadlock - time limit it
+TIME_LIMIT=30
 
-bin/turbine -l -n 3 ${SCRIPT} &> ${OUTPUT} &
+bin/turbine -l -n 8 ${SCRIPT} &> ${OUTPUT} &
 pid=$!
 for i in `seq $TIME_LIMIT`; do
   sleep 1
