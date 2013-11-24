@@ -56,8 +56,8 @@ adlb_code xlb_sync(int target);
 adlb_code xlb_sync2(int target, const struct packed_sync *hdr);
 
 typedef enum {
-  PENDING_SYNC, // Have not yet accepted
-  PENDING_RC,   // Have accepted but need to do refcount
+  DEFERRED_SYNC, // Have not yet accepted
+  ACCEPTED_RC,   // Have accepted but need to do refcount
 } xlb_pending_kind;
 
 typedef struct {
@@ -66,8 +66,8 @@ typedef struct {
   struct packed_sync *hdr; // Header to be freed later
 } xlb_pending;
 
-adlb_code xlb_handle_accepted_sync(int rank, const struct packed_sync *hdr,
-                                   bool defer_svr_ops);
+adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
+                          bool defer_svr_ops);
 
 // Inline functions to make it quick to check for pending sync requests
 

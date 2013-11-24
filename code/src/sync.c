@@ -46,7 +46,14 @@ static inline adlb_code msg_shutdown(bool* done);
 static adlb_code add_pending(xlb_pending_kind kind, int rank,
                              const struct packed_sync *hdr);
 
-// IDs of servers with pending sync requests
+static inline bool is_simple_sync(adlb_sync_mode mode);
+
+// Pending sync requests that we deferred
+/*
+  TODO: need to change to FIFO in case refcount incr is followed by decr:
+  processing in LIFO order could result in premature free.  Maybe use
+  ring buffer.
+ */
 xlb_pending *xlb_pending_syncs = NULL;
 int xlb_pending_sync_count = 0;
 int xlb_pending_sync_size = 0; // Malloced sized
@@ -105,6 +112,8 @@ xlb_sync(int target)
       request in xlb_pending_syncs to process later, or rejects it
    3) The master server tells this process to shut down
    These numbers correspond to the variables in the function
+
+   TODO: update perf counters based on requests here
  */
 adlb_code
 xlb_sync2(int target, const struct packed_sync *hdr)
@@ -137,6 +146,9 @@ xlb_sync2(int target, const struct packed_sync *hdr)
     done = true;
     rc = ADLB_SHUTDOWN;
   }
+  
+  DEBUG("server_sync: [%d] waiting for sync response from %d",
+                        xlb_comm_rank, target);
 
   while (!done)
   {
@@ -202,6 +214,15 @@ msg_from_target(int target, const struct packed_sync *hdr, bool* done)
   return ADLB_SUCCESS;
 }
 
+/*
+  Sync types where we have no interaction with caller beyond the sync
+  acceptance.
+ */
+static inline bool is_simple_sync(adlb_sync_mode mode)
+{
+  return mode == ADLB_SYNC_STEAL;
+}
+
 static inline adlb_code msg_from_other_server(int other_server, int target,
                   const struct packed_sync *my_hdr)
 {
@@ -219,20 +240,21 @@ static inline adlb_code msg_from_other_server(int other_server, int target,
    * We need to avoid the case of circular deadlock, e.g. where A is waiting
    * to serve B, which is waiting to serve C, which is waiting to serve A, 
    * so don't serve lower ranked servers until we've finished our
-   * sync request */
-  if (other_server > xlb_comm_rank)
+   * sync request.  An exception is sync where we don't need to response
+   * or receive any further data from the other server. */
+  if (other_server > xlb_comm_rank || is_simple_sync(other_hdr->mode))
   {
     // accept incoming sync
     DEBUG("server_sync: [%d] interrupted by incoming sync request from %d",
                         xlb_comm_rank, other_server);
     
-    code = xlb_handle_accepted_sync(other_server, other_hdr, true);
+    code = xlb_accept_sync(other_server, other_hdr, true);
     ADLB_CHECK(code);
   }
   else
   {
     // Don't handle right away, defer it
-    code = add_pending(PENDING_SYNC, other_server, other_hdr);
+    code = add_pending(DEFERRED_SYNC, other_server, other_hdr);
     ADLB_CHECK(code);
   }
   TRACE_END;
@@ -240,18 +262,20 @@ static inline adlb_code msg_from_other_server(int other_server, int target,
 }
 
 /*
-  One we have accepted sync, do whatever processing needed to service
+  One we are ready to accept sync, do whatever processing needed to service
   hdr: header data.  Must copy to take ownership
   defer_svr_ops: true if we should defer any potential server->server ops
  */
-adlb_code xlb_handle_accepted_sync(int rank, const struct packed_sync *hdr,
-            bool defer_svr_ops)
+adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
+                          bool defer_svr_ops)
 {
-  const int response = 1;
-  SEND(&response, 1, MPI_INT, rank, ADLB_TAG_SYNC_RESPONSE);
-
-  int mode = hdr->mode;
+  adlb_sync_mode mode = hdr->mode;
   adlb_code code = ADLB_ERROR;
+
+  // Notify the caller
+  const int accepted_response = 1;
+  SEND(&accepted_response, 1, MPI_INT, rank, ADLB_TAG_SYNC_RESPONSE);
+
   if (mode == ADLB_SYNC_REQUEST)
   {
     code = xlb_serve_server(rank);
@@ -280,10 +304,11 @@ adlb_code xlb_handle_accepted_sync(int rank, const struct packed_sync *hdr,
        -> write refcount decrements - safe to defer indefinitely, 
             but will delay notifications
      */
+
     if (defer_svr_ops)
     {
       DEBUG("Defer refcount for <%"PRId64">", hdr->incr.id);
-      code = add_pending(PENDING_SYNC, rank, hdr);
+      code = add_pending(ACCEPTED_RC, rank, hdr);
       ADLB_CHECK(code);
     }
     else

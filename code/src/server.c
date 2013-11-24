@@ -348,11 +348,11 @@ xlb_handle_pending_syncs(void)
           xlb_comm_rank, rank);
     switch (kind)
     {
-      case PENDING_SYNC:
-        rc = xlb_handle_accepted_sync(rank, hdr, false);
+      case DEFERRED_SYNC:
+        rc = xlb_accept_sync(rank, hdr, false);
         ADLB_CHECK(rc);
         break;
-      case PENDING_RC:
+      case ACCEPTED_RC:
         dc = xlb_incr_rc_local(hdr->incr.id, hdr->incr.change, true);
         CHECK_MSG(dc == ADLB_DATA_SUCCESS, "unexpected error in refcount");
         break;

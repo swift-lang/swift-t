@@ -220,7 +220,7 @@ handle_sync(int caller)
   struct packed_sync *hdr = (struct packed_sync *)hdr_storage;
   RECV(hdr, (int)PACKED_SYNC_SIZE, MPI_BYTE, caller, ADLB_TAG_SYNC_REQUEST);
 
-  adlb_code rc = xlb_handle_accepted_sync(caller, hdr, false);
+  adlb_code rc = xlb_accept_sync(caller, hdr, false);
   ADLB_CHECK(rc);
   MPE_LOG(xlb_mpe_svr_sync_end);
   return rc;
