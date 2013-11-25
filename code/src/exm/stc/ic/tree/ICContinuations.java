@@ -210,6 +210,15 @@ public class ICContinuations {
       assert(!isAsync());
       return Collections.emptyList();
     }
+    
+    /**
+     * Return list of variables closed inside continuation.  At a minimum this
+     * is a superset of blockingVars.
+     */
+    public List<BlockingVar> closedVars(Set<Var> closed, Set<Var> recClosed) {
+      // Default implementation is blocking vars
+      return blockingVars(true);
+    }
 
     /**
      * Return list of variables that are defined by construct and
@@ -883,6 +892,21 @@ public class ICContinuations {
           res.add(new BlockingVar(initVals.get(i), false, false));
           if (includeConstructDefined) {
             res.add(new BlockingVar(loopVars.get(i), false, true));
+          }
+        }
+      }
+      return res;
+    }
+
+    public List<BlockingVar> closedVars(Set<Var> closed, Set<Var> recClosed) {
+      // Always includes blocking vars
+      List<BlockingVar> res = blockingVars(true);
+      for (int i = 0; i < loopVars.size(); i++) {
+        // Check for variables that are closed
+        if (!blockingVars.get(i)) {
+          Var init = initVals.get(i);
+          if (closed.contains(init) && loopContinue.isLoopVarClosed(i)) {
+            res.add(new BlockingVar(loopVars.get(i), false, false));
           }
         }
       }

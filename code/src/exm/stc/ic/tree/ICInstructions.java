@@ -1671,6 +1671,11 @@ public class ICInstructions {
     }
     
 
+    public boolean isLoopVarClosed(int i) {
+      return closedVars.get(i);
+    }
+
+
     @Override
     public TaskMode getMode() {
       return TaskMode.CONTROL;

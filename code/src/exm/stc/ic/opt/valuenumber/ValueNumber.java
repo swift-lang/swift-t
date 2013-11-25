@@ -462,7 +462,8 @@ public class ValueNumber implements OptimizerPass {
     // additional variables may be close once we're inside continuation
     List<BlockingVar> contClosedVars = null;
     if (finalizedVarEnabled) {
-      contClosedVars = cont.blockingVars(true);
+      contClosedVars = cont.closedVars(state.getClosed(stmtIndex),
+                                       state.getRecursivelyClosed(stmtIndex));
     }
 
     // For conditionals, find variables closed on all branches
