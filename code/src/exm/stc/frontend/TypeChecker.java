@@ -318,7 +318,7 @@ public class TypeChecker {
     }
     
 
-    if (matched.size() > 1) {
+    if (matched.size() != 1) {
       // Hope to match exactly one operator
       List<String> typeNames = new ArrayList<String>();
       for (Type argType: argTypes) {
