@@ -1492,6 +1492,35 @@ public class ICInstructions {
     private final ArrayList<Var> newLoopVars;
     private final ArrayList<Var> loopUsedVars;
     private final ArrayList<Boolean> blockingVars;
+    private final ArrayList<Boolean> closedVars;
+
+    public LoopContinue(List<Var> newLoopVars, 
+                        List<Var> loopUsedVars,
+                        List<Boolean> blockingVars,
+                        List<Boolean> closedVars) {
+      super(Opcode.LOOP_CONTINUE);
+      this.newLoopVars = new ArrayList<Var>(newLoopVars);
+      this.loopUsedVars = new ArrayList<Var>(loopUsedVars);
+      this.blockingVars = new ArrayList<Boolean>(blockingVars);
+      this.closedVars = new ArrayList<Boolean>(closedVars);
+    }
+    
+
+    public LoopContinue(List<Var> newLoopVars, 
+                        List<Var> loopUsedVars,
+                        List<Boolean> blockingVars) {
+      this(newLoopVars, loopUsedVars, blockingVars,
+           initClosedVars(newLoopVars.size(), false));
+    }
+
+    private static List<Boolean> initClosedVars(int length, boolean val) {
+      ArrayList<Boolean> res = new ArrayList<Boolean>(length);
+      for (int i = 0; i < length; i++) {
+        res.add(val);
+      }
+      return res;
+    }
+
 
     @Override
     public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
@@ -1526,13 +1555,29 @@ public class ICInstructions {
       ICUtil.prettyPrintVarList(sb, this.loopUsedVars);
       sb.append("] #blocking[");
       ICUtil.prettyPrintList(sb, this.blockingVars);
+      sb.append("] #closed[");
+      ICUtil.prettyPrintList(sb, this.closedVars);
       sb.append("]");
       return sb.toString();
     }
   
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
-      gen.loopContinue(this.newLoopVars, this.loopUsedVars, this.blockingVars);
+      List<Boolean> waitFor = new ArrayList<Boolean>(this.blockingVars.size());
+      // See if we need to block on all inputs
+      Set<Var> alreadySeen = new HashSet<Var>();
+      
+      for (int i = 0; i < this.blockingVars.size(); i++) {
+        // Add those that we need to wait for and that aren't closed
+        Var var = this.newLoopVars.get(i);
+        boolean mustWait = this.blockingVars.get(i) && !this.closedVars.get(i);
+        boolean newMustWait = mustWait && !alreadySeen.contains(var);
+        waitFor.add(newMustWait);
+        if (newMustWait) {
+          alreadySeen.add(var);
+        }
+      }
+      gen.loopContinue(this.newLoopVars, this.loopUsedVars, waitFor);
     }
   
     @Override
@@ -1559,25 +1604,37 @@ public class ICInstructions {
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
                                            boolean waitForClose) {
-      // See if we need to block on all inputs
-      Set<Var> alreadyDone = new HashSet<Var>();
+      // Variables we need to wait for to make immediate
+      List<Var> waitForInputs = new ArrayList<Var>();
+      
       for (int i = 0; i < this.newLoopVars.size(); i++) {
+        Var v = this.newLoopVars.get(i);
+        if (closedVars.contains(v)) {
+          // Mark as closed
+          this.closedVars.set(i, true);
+        }
+        
         if (this.blockingVars.get(i)) {
-          Var v = this.newLoopVars.get(i);
-          if (closedVars.contains(v)) {
-            // Don't need to block
-            this.blockingVars.set(i, false);
-          } else if (alreadyDone.contains(v)) {
-            // In case of repeated elements
-            this.blockingVars.set(i, false);
-          } else {
-            alreadyDone.add(v);
+          if (this.closedVars.get(i) || waitForClose) {
+              // Would be nice to have closed
+              waitForInputs.add(v);
           }
         }
       }
-      return null;
+
+      return new MakeImmRequest(
+          Collections.<Var>emptyList(),
+          waitForInputs,
+          TaskMode.LOCAL, false, false);
     }
     
+    @Override
+    public MakeImmChange makeImmediate(List<Fetched<Var>> outVals,
+        List<Fetched<Arg>> inValues) {
+      // TODO: we waited for vars, for now don't actually change instruction
+      return new MakeImmChange(this);
+    }
+
     @Override
     public List<Var> getReadIncrVars() {
       // Increment variables passed to next iter
@@ -1600,15 +1657,6 @@ public class ICInstructions {
       loopUsedVars.addAll(variables);
     }
     
-    public LoopContinue(List<Var> newLoopVars, 
-                        List<Var> loopUsedVars,
-                        List<Boolean> blockingVars) {
-      super(Opcode.LOOP_CONTINUE);
-      this.newLoopVars = new ArrayList<Var>(newLoopVars);
-      this.loopUsedVars = new ArrayList<Var>(loopUsedVars);
-      this.blockingVars = new ArrayList<Boolean>(blockingVars);
-    }
-
     @Override
     public List<ValLoc> getResults() {
       // Nothing
@@ -1617,9 +1665,8 @@ public class ICInstructions {
 
     @Override
     public Instruction clone() {
-      return new LoopContinue(new ArrayList<Var>(newLoopVars), 
-          new ArrayList<Var>(loopUsedVars),
-          new ArrayList<Boolean>(blockingVars));
+      return new LoopContinue(newLoopVars, loopUsedVars,
+                              blockingVars, closedVars);
     }
   }
   
