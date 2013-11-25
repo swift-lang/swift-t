@@ -1588,6 +1588,13 @@ public class ICInstructions {
       for (Var v: newLoopVars) {
         res.add(v.asArg());
       }
+      
+      for (Var uv: loopUsedVars) {
+        Arg uva = uv.asArg();
+        if (!res.contains(uva)) {
+          res.add(uva);
+        }
+      }
       return res;
     }
   
