@@ -942,15 +942,16 @@ public class ICContinuations {
       // Always includes blocking vars
       List<BlockingVar> res = blockingVars(true);
       for (int i = 0; i < loopVars.size(); i++) {
+        Var init = initVals.get(i);
         // Check for variables that are closed
+        
+        if (!closedInitVals.get(i) && closed.contains(init)) {
+          closedInitVals.set(i, true); // Record for later
+        }
         if (!blockingVars.get(i)) {
-          Var init = initVals.get(i);
-          if (closed.contains(init)) {
-            closedInitVals.set(i, true); // Record for later
-            if (loopContinue.isLoopVarClosed(i)) {
-              // Always closed when loop body starts running
-              res.add(new BlockingVar(loopVars.get(i), false, false));
-            }
+          if (loopContinue.isLoopVarClosed(i) && closedInitVals.get(i)) {
+            // Always closed when loop body starts running
+            res.add(new BlockingVar(loopVars.get(i), false, false));
           }
         }
       }
