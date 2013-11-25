@@ -2802,7 +2802,7 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void startLoop(String loopName, List<Var> loopVars,
       List<Boolean> definedHere, List<Var> initVals, List<Var> usedVariables,
-      List<Var> keepOpenVars, List<Boolean> blockingVars) {
+      List<Var> keepOpenVars, List<Var> initWaitVars) {
 
     // call rule to start the loop, pass in initVals, usedVariables
     ArrayList<String> loopFnArgs = new ArrayList<String>();
@@ -2825,12 +2825,8 @@ public class TurbineGenerator implements CompilerBackend {
 
     // See which values the loop should block on
     ArrayList<Value> blockingVals = new ArrayList<Value>();
-    assert(blockingVars.size() == initVals.size());
-    for (int i = 0; i < blockingVars.size(); i++) {
-      Var iv = initVals.get(i);
-      if (blockingVars.get(i)) {
-        blockingVals.add(varToExpr(iv));
-      }
+    for (Var initWaitVar: initWaitVars) {
+      blockingVals.add(varToExpr(initWaitVar));
     }
 
     String uniqueLoopName = uniqueTCLFunctionName(loopName);

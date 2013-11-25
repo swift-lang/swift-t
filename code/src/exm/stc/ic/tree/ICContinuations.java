@@ -598,22 +598,37 @@ public class ICContinuations {
     private LoopBreak loopBreak;
 
     private LoopContinue loopContinue;
-    private final ArrayList<Boolean> blockingVars;
-
+    
+    /** Which vars must be closed before executing loop body */
+    private final List<Boolean> blockingVars;
+    
+    /** Which initial vals are closed */
+    private final List<Boolean> closedInitVals;
 
     public Loop(String loopName, List<Var> loopVars,
-            List<Boolean> definedHere, List<Var> initVals, List<PassedVar> passedVars,
-            List<Var> keepOpenVars, List<Boolean> blockingVars) {
+            List<Boolean> definedHere, List<Var> initVals,
+            List<PassedVar> passedVars, List<Var> keepOpenVars,
+            List<Boolean> blockingVars) {
       this(loopName, new Block(BlockType.LOOP_BODY, null), loopVars,
           definedHere, initVals, passedVars, keepOpenVars, blockingVars,
-          true);
+          newBoolList(initVals.size(), false), true);
+    }
+
+    private static List<Boolean> newBoolList(int size, boolean b) {
+      ArrayList<Boolean> res = new ArrayList<Boolean>(size);
+      for (int i = 0; i < size; i++) {
+        res.add(b);
+      }
+      return res;
+
     }
 
     private Loop(String loopName, Block loopBody,
         List<Var> loopVars,  List<Boolean> definedHere,
         List<Var> initVals,
         List<PassedVar> passedVars, List<Var> keepOpenVars,
-        List<Boolean> blockingVars, boolean emptyLoop) {
+        List<Boolean> blockingVars, List<Boolean> closedInitVals,
+        boolean emptyLoop) {
       super(loopBody, passedVars, keepOpenVars, emptyLoop);
       this.loopName = loopName;
       this.condVar = loopVars.get(0);
@@ -621,9 +636,11 @@ public class ICContinuations {
       this.definedHere = new ArrayList<Boolean>(definedHere);
       this.initVals = new ArrayList<Var>(initVals);
       this.blockingVars = new ArrayList<Boolean>(blockingVars);
+      this.closedInitVals = new ArrayList<Boolean>(closedInitVals);
       assert(loopVars.size() == definedHere.size());
       assert(loopVars.size() == initVals.size());
       assert(loopVars.size() == blockingVars.size());
+      assert(loopVars.size() == closedInitVals.size());
       for (int i = 0; i < loopVars.size(); i++) {
         Var loopV = loopVars.get(i);
         Var initV = initVals.get(i);
@@ -639,7 +656,8 @@ public class ICContinuations {
       // Constructor creates copies of variable lists
       Loop cloned = new Loop(loopName, this.loopBody.clone(),
           loopVars, definedHere, initVals,
-          passedVars, keepOpenVars, blockingVars, false);
+          passedVars, keepOpenVars, blockingVars,
+          closedInitVals, false);
 
       // fix up the references to the loopContinue/loopBreak instructions
       Pair<LoopBreak, LoopContinue> insts = cloned.findInstructions();
@@ -693,6 +711,10 @@ public class ICContinuations {
     public ContinuationType getType() {
       return ContinuationType.LOOP;
     }
+    
+    public String loopName() {
+      return loopName;
+    }
 
     @Override
     public boolean isAsync() {
@@ -728,8 +750,15 @@ public class ICContinuations {
 
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
+      List<BlockingVar> unclosedInit = unclosedBlockingInitVals();
+      List<Var> initWait = new ArrayList<Var>(unclosedInit.size());
+      for (BlockingVar init: unclosedInit) {
+        // TODO: support recursive waits?
+        initWait.add(init.var);
+      }
       gen.startLoop(loopName, loopVars, definedHere, initVals,
-                    PassedVar.extractVars(passedVars), keepOpenVars, blockingVars);
+                    PassedVar.extractVars(passedVars), keepOpenVars,
+                    initWait);
       this.loopBody.generate(logger, gen, info);
       gen.endLoop();
     }
@@ -764,6 +793,17 @@ public class ICContinuations {
         }
         sb.append(" #blockon[");
         ICUtil.prettyPrintVarList(sb, blockon);
+        sb.append("]");
+      }
+      if (closedInitVals.contains(true)) {
+        List<Var> closedInit = new ArrayList<Var>();
+        for (int i = 0; i < loopVars.size(); i++) {
+          if (closedInitVals.get(i)) {
+            closedInit.add(initVals.get(i));
+          }
+        }
+        sb.append(" #closedinit[");
+        ICUtil.prettyPrintVarList(sb, closedInit);
         sb.append("]");
       }
       sb.append(" {\n");
@@ -905,9 +945,27 @@ public class ICContinuations {
         // Check for variables that are closed
         if (!blockingVars.get(i)) {
           Var init = initVals.get(i);
-          if (closed.contains(init) && loopContinue.isLoopVarClosed(i)) {
-            res.add(new BlockingVar(loopVars.get(i), false, false));
+          if (closed.contains(init)) {
+            closedInitVals.set(i, true); // Record for later
+            if (loopContinue.isLoopVarClosed(i)) {
+              // Always closed when loop body starts running
+              res.add(new BlockingVar(loopVars.get(i), false, false));
+            }
           }
+        }
+      }
+      return res;
+    }
+    
+    /**
+     * @return vars that are blocking but where initial value isn't
+     *        closed outside of wait, forcing us to wait for them 
+     */
+    public List<BlockingVar> unclosedBlockingInitVals() {
+      List<BlockingVar> res = new ArrayList<BlockingVar>();
+      for (int i = 0; i < loopVars.size(); i++) {
+        if (blockingVars.get(i) && !closedInitVals.get(i)) {
+          res.add(new BlockingVar(initVals.get(i), false, false));
         }
       }
       return res;

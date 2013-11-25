@@ -527,11 +527,11 @@ public interface CompilerBackend {
    * @param initVals initial values for loop variables
    * @param usedVariables
    * @param keepOpenVars
-   * @param blockingVars
+   * @param initWaitVars values to wait for before executing first iteration
    */
   public void startLoop(String loopName, List<Var> loopVars,
       List<Boolean> definedHere, List<Var> initVals, List<Var> usedVariables,
-      List<Var> keepOpenVars, List<Boolean> blockingVars);
+      List<Var> keepOpenVars, List<Var> initWaitVars);
   
   public void loopContinue(List<Var> newVals,
       List<Var> usedVariables,

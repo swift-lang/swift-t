@@ -172,7 +172,8 @@ public class ValueNumber implements OptimizerPass {
         
         ValLoc assign = ComputedValue.assignComputedVal(v, val,
                                                 IsAssign.TO_LOCATION);
-        congruent.update(constants, f.getName(), assign, 0);
+        int stmtIndex = -1;
+        congruent.update(constants, f.getName(), assign, stmtIndex);
       }
     }
     

@@ -162,6 +162,10 @@ public class ICOptimizer {
       // ValueNumber is a key pass that reduces a lot of redundancy
       pipe.addPass(new ValueNumber(canReorder));
       
+      // This loop optimization depends on info updated by ValueNumber,
+      // but can generate dead code
+      pipe.addPass(new LoopSimplify());
+      
       // ValueNumber tends to generate most dead code
       pipe.addPass(new DeadCodeEliminator());
       
