@@ -1522,7 +1522,10 @@ public class ICInstructions {
       return res;
     }
 
-
+    public void setBlocking(int i, boolean b) {
+      this.blockingVars.set(i, b);
+    }
+    
     @Override
     public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
       ICUtil.replaceVarsInList(renames, newLoopVars, false);
@@ -1689,6 +1692,7 @@ public class ICInstructions {
       return new LoopContinue(newLoopVars, loopUsedVars,
                               blockingVars, closedVars);
     }
+
   }
   
   public static class LoopBreak extends Instruction {

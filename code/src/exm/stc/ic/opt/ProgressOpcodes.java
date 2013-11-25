@@ -179,6 +179,7 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.COMMENT);
     opcodes.add(Opcode.STRUCT_INIT_FIELD);
     opcodes.add(Opcode.STRUCT_LOOKUP);
+    opcodes.add(Opcode.LOOP_BREAK);
     return opcodes;
   }
   
@@ -265,6 +266,9 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.CALL_LOCAL);
     opcodes.add(Opcode.CALL_LOCAL_CONTROL);
     opcodes.add(Opcode.CALL_FOREIGN);
+
+    // Breaking from loop is cheap
+    opcodes.add(Opcode.LOOP_BREAK);
     return opcodes;
   }
 }

@@ -697,6 +697,18 @@ public class ICContinuations {
       return true;
     }
 
+    public void setBlockingInput(Var var) {
+      for (int i = 0; i < loopVars.size(); i++) {
+        if (loopVars.get(i).equals(var)) {
+          blockingVars.set(i, true);
+          this.loopContinue.setBlocking(i, true);
+          break;
+        }
+      }
+      throw new STCRuntimeError("Loop var not found: " + var + " in " +
+                    loopVars);
+    }
+
     public void setLoopBreak(LoopBreak loopBreak) {
       this.loopBreak = loopBreak;
     }

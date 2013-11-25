@@ -59,6 +59,8 @@ import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
+import exm.stc.ic.tree.ICContinuations.ContinuationType;
+import exm.stc.ic.tree.ICContinuations.Loop;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICContinuations.WaitVar;
 import exm.stc.ic.tree.ICInstructions;
@@ -136,7 +138,7 @@ public class ValueNumber implements OptimizerPass {
     this.logger = logger;
     for (Function f: prog.getFunctions()) {
       runPass(prog, f);
-      liftWait(logger, prog, f);
+      liftWaitRec(logger, prog, f, f.mainBlock());
     }
   }
 
@@ -182,6 +184,18 @@ public class ValueNumber implements OptimizerPass {
     return congruent;
   }
 
+  private void liftWaitRec(Logger logger, Program prog, Function f,
+                           Block block) {
+    // First apply to this block
+    liftWait(logger, prog, f, block);
+    
+    for (Continuation c: block.allComplexStatements()) {
+      for (Block inner: c.getBlocks()) {
+        liftWaitRec(logger, prog, f, inner);
+      }
+    }
+  }
+
   /**
    * If we have something of the below form, can just block on a as far of
    * function call protocol (..) f (a, b, c) { wait (a) {
@@ -192,30 +206,66 @@ public class ValueNumber implements OptimizerPass {
    * @param program
    * @param f
    */
-  private static void liftWait(Logger logger, Program program, Function f) {
-    if (!f.isAsync()) {
-      // Can only do this optimization if the function runs asynchronously
-      return;
+  private static void liftWait(Logger logger, Program program, Function f,
+                               Block block) {
+    // Check if we can attempt
+    switch (block.getType()) {
+      case MAIN_BLOCK: {
+        // Can do this optimization if the function runs asynchronously: proceed
+        assert(block == f.mainBlock());
+        if (!f.isAsync()) {
+          return;
+        }
+        break;
+      }
+      case LOOP_BODY:
+        // Can do this optimization
+        assert(block.getParentCont().getType() == ContinuationType.LOOP);
+        break;
+      default:
+        // Doesn't apply
+        return;
     }
 
-    logger.trace("liftWait() on " + f.getName());
+    logger.trace("liftWait() on " + f.getName() + " " + block.getType());
     
-    Block main = f.mainBlock();
     List<WaitVar> blockingVariables;
-    blockingVariables = findBlockingVariables(logger, program, f, main);
+    blockingVariables = findBlockingVariables(logger, program, f, block);
 
     if (blockingVariables != null) {
-      List<Var> locals = f.getInputList();
-      if (logger.isTraceEnabled()) {
-        logger.trace("Blocking " + f.getName() + ": " + blockingVariables);
-      }
-      for (WaitVar wv : blockingVariables) {
-        boolean isConst = (wv.var.defType() == DefType.GLOBAL_CONST);
-        // Global constants are already set
-        if (!isConst && locals.contains(wv.var)) {
-          // Check if a non-arg
-          f.addBlockingInput(wv);
+      // Apply changes
+      logger.trace("blockingVariables: " + blockingVariables);
+      
+      switch (block.getType()) {
+        case MAIN_BLOCK: {
+          List<Var> locals = f.getInputList();
+          if (logger.isTraceEnabled()) {
+            logger.trace("Blocking " + f.getName() + ": " + blockingVariables);
+          }
+          for (WaitVar wv : blockingVariables) {
+            boolean isConst = (wv.var.defType() == DefType.GLOBAL_CONST);
+            // Global constants are already set
+            if (!isConst && locals.contains(wv.var)) {
+              // Check if a non-arg
+              f.addBlockingInput(wv);
+            }
+          }
+          break;
         }
+        case LOOP_BODY: {
+          Loop loop = (Loop)block.getParentCont();
+          List<Var> loopVars = loop.getLoopVars();
+          for (WaitVar wv: blockingVariables) {
+            boolean isConst = (wv.var.defType() == DefType.GLOBAL_CONST);
+            // Global constants are already set
+            if (!isConst && loopVars.contains(wv.var)) {
+              loop.setBlockingInput(wv.var);
+            }
+          }
+          break;
+        }
+        default:
+          throw new STCRuntimeError("Unexpected: " + block.getType());
       }
     }
   }
