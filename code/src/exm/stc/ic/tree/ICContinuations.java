@@ -938,6 +938,14 @@ public class ICContinuations {
       return res;
     }
 
+    /**
+     * Loop stores information about which vars are closed
+     * @return
+     */
+    public List<BlockingVar> closedVars() {
+      return closedVars(Collections.<Var>emptySet(), Collections.<Var>emptySet());
+    }
+    
     public List<BlockingVar> closedVars(Set<Var> closed, Set<Var> recClosed) {
       // Always includes blocking vars
       List<BlockingVar> res = blockingVars(true);
@@ -972,6 +980,13 @@ public class ICContinuations {
       return res;
     }
     
+    public void setInitClosed(Var initVal, boolean recursive) {
+      // TODO: ignores recursive
+      int index = initVals.indexOf(initVal);
+      assert(index >= 0) : initVal;
+      closedInitVals.set(index, true);
+    }
+
     @Override
     public void setPassedVars(Collection<PassedVar> passedVars) {
       super.setPassedVars(passedVars);
@@ -1003,6 +1018,11 @@ public class ICContinuations {
     @Override
     public ExecContext childContext(ExecContext outerContext) {
       return outerContext;
+    }
+
+    public Object closedInitVals() {
+      // TODO Auto-generated method stub
+      return null;
     }
 
   }

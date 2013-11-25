@@ -7,11 +7,14 @@ import java.util.ListIterator;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend.WaitMode;
+import exm.stc.common.Settings;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.TaskProp.TaskProps;
+import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
+import exm.stc.ic.WrapUtil;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -42,8 +45,7 @@ public class LoopSimplify extends FunctionOptimizerPass {
 
   @Override
   public String getConfigEnabledKey() {
-    // TODO Auto-generated method stub
-    return null;
+    return Settings.OPT_LOOP_SIMPLIFY;
   }
 
   @Override
@@ -103,6 +105,7 @@ public class LoopSimplify extends FunctionOptimizerPass {
       } else {
         waitVars.add(new WaitVar(bv.var, bv.explicit));
       }
+      loop.setInitClosed(bv.var, bv.recursive);
     }
     
     Continuation inner = loop;
@@ -129,9 +132,66 @@ public class LoopSimplify extends FunctionOptimizerPass {
     return wrapper;
   }
 
+  /**
+   * In cases where variable is closed upon starting loop iterations,
+   * switch to passing as value
+   *  
+   * @param logger
+   * @param loop
+   */
   private void optimizeLoop(Logger logger, Loop loop) {
-    // TODO: place wait around entire loop
-    // TODO: find cases where both initial value and update value are closed
+    
+    List<BlockingVar> closedVars = loop.closedVars();
+    if (closedVars.isEmpty()) {
+      return;
+    }
+    
+    boolean replacedAll = true;
+    
+    Block outerBlock = loop.parent();
+    // To put before loop entry point
+    List<Statement> outerFetches = null; //TODO
+    List<Var> outerFetched = new ArrayList<Var>();
+    
+    // TODO: locate block with loop_continue
+    Block innerBlock = null;
+    // To put before loop_continue instruction
+    List<Statement> innerFetches = null; //TODO
+    List<Var> innerFetched = new ArrayList<Var>();
+    
+    for (BlockingVar closedVar: closedVars) {
+      if (replaceLoopVarWithVal(closedVar.var)) {
+        // TODO: add instructions before loop and at loop_continue
+        //       to fetch values
+        outerFetched.add(fetchLoopVar(closedVar, outerBlock, outerFetches));
+        innerFetched.add(fetchLoopVar(closedVar, innerBlock, innerFetches));
+        
+        // TODO: Add instruction at top of loop body to store value.
+        //       Replace loop var?
+      } else {
+        replacedAll = false;
+      }
+    }
   }
 
+  private Var fetchLoopVar(BlockingVar closedVar, Block targetBlock,
+      List<Statement> fetches) {
+    assert(replaceLoopVarWithVal(closedVar.var));
+    String valName = OptUtil.optVPrefix(targetBlock, closedVar.var);
+    return WrapUtil.fetchValueOf(targetBlock, fetches, closedVar.var,
+                                 valName, closedVar.recursive);
+  }
+
+  /**
+   * Whether we should attempt to replace the original loop var with a vlue
+   * equivalent
+   * @param var
+   * @return
+   */
+  private static boolean replaceLoopVarWithVal(Var var) {
+    // TODO: more types, e.g. arrays?
+    // TODO: start with just scalars
+    // TODO: the passing to child task isn't really necessary if we can replace all
+    return Types.isScalarFuture(var) && Semantics.canPassToChildTask(var);
+  }
 }

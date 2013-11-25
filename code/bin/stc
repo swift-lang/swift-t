@@ -32,7 +32,7 @@ O1_OPTS=("constant-fold" "dead-code-elim" "value-number" "finalized-var"
 O2_OPTS=("expand-dataflow-ops" "wait-coalesce" "hoisting" "expand-loops"
          "function-signature" "array-build")
 O3_OPTS=("pipeline" "function-inline" "reorder-insts" "algebra" "full-unroll")
-EXPERIMENTAL_OPTS=()
+EXPERIMENTAL_OPTS=("loop-simplify")
 
 # OUTPUT_MODE= turbine or cpp
 OUTPUT_MODE=turbine
@@ -107,6 +107,9 @@ function get_compiler_opt_name() {
                     return 0
                     ;;
         array-build) echo "stc.opt.array-build"
+                    return 0
+                    ;;
+        loop-simplify) echo "stc.opt.loop-simplify"
                     return 0
                     ;;
         merge-refcounts) echo "stc.opt.merge-refcounts"

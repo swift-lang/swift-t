@@ -51,7 +51,7 @@ public class WrapUtil {
   /**
    * TODO: should more fetch recursively?
    */
-  public static Var fetchValueOf(Block block, List<Instruction> instBuffer,
+  public static Var fetchValueOf(Block block, List<? super Instruction> instBuffer,
           Var var, String valName) {
     return fetchValueOf(block, instBuffer, var, valName, false);
   }
@@ -63,7 +63,7 @@ public class WrapUtil {
    * @param var the variable to fetch the value of
    * @return variable holding value
    */
-  public static Var fetchValueOf(Block block, List<Instruction> instBuffer,
+  public static Var fetchValueOf(Block block, List<? super Instruction> instBuffer,
           Var var, String valName, boolean recursive) {
     
     Type valueT;

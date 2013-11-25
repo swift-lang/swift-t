@@ -86,6 +86,7 @@ public class Settings
   public static final String OPT_HOIST = "stc.opt.hoist";
   public static final String OPT_REORDER_INSTS = "stc.opt.reorder-insts";
   public static final String OPT_ARRAY_BUILD = "stc.opt.array-build";
+  public static final String OPT_LOOP_SIMPLIFY = "stc.opt.loop-simplify";
   
   public static final String OPT_MERGE_REFCOUNTS = "stc.opt.merge-refcounts";
   public static final String OPT_CANCEL_REFCOUNTS = "stc.opt.cancel-refcounts";
@@ -175,6 +176,7 @@ public class Settings
     defaults.setProperty(OPT_HOIST, "true");
     defaults.setProperty(OPT_REORDER_INSTS, "false");
     defaults.setProperty(OPT_ARRAY_BUILD, "true");
+    defaults.setProperty(OPT_LOOP_SIMPLIFY, "false");
     defaults.setProperty(OPT_MERGE_REFCOUNTS, "true");
     defaults.setProperty(OPT_CANCEL_REFCOUNTS, "true");
     defaults.setProperty(OPT_PIGGYBACK_REFCOUNTS, "true");
@@ -316,6 +318,7 @@ public class Settings
     getBoolean(OPT_EXPAND_LOOPS);
     getBoolean(OPT_FULL_UNROLL);
     getBoolean(OPT_ARRAY_BUILD);
+    getBoolean(OPT_LOOP_SIMPLIFY);
     getLong(OPT_EXPAND_LOOP_THRESHOLD_ITERS);
     getLong(OPT_UNROLL_LOOP_THRESHOLD_ITERS);
     getLong(OPT_EXPAND_LOOP_THRESHOLD_INSTS);
