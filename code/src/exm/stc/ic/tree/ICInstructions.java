@@ -28,6 +28,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
+import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.CompileTimeArgs;
@@ -1615,17 +1616,30 @@ public class ICInstructions {
         }
         
         if (this.blockingVars.get(i)) {
-          if (this.closedVars.get(i) || waitForClose) {
+          if (this.closedVars.get(i)) {
+            // TODO: if we were actually changing instruction,
+            //      could request value here.  Since we're not changing,
+            //      requesting value and doing nothing with it would result
+            //      in infinite loop
+          } else if (waitForClose) {
               // Would be nice to have closed
               waitForInputs.add(v);
-          }
+          } 
         }
       }
+      
+      Logging.getSTCLogger().trace("loopBreak waitForInputs:" + waitForInputs);
 
-      return new MakeImmRequest(
-          Collections.<Var>emptyList(),
-          waitForInputs,
-          TaskMode.LOCAL, false, false);
+      // TODO: not actually changing instruction - only change if
+      //      there are additional things we want to wait for
+      if (waitForInputs.isEmpty()) {
+        return null;
+      } else {
+        return new MakeImmRequest(
+            Collections.<Var>emptyList(),
+            waitForInputs,
+            TaskMode.LOCAL, false, false);
+      }
     }
     
     @Override

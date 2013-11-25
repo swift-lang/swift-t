@@ -41,6 +41,7 @@ import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.MultiMap.LinkedListFactory;
 import exm.stc.common.util.MultiMap.ListFactory;
@@ -202,18 +203,21 @@ public class WaitCoalescer implements OptimizerPass {
   @Override
   public void optimize(Logger logger, Program prog) {
     for (Function f: prog.getFunctions()) {
-      rearrangeWaits(logger, prog, f, f.mainBlock(), ExecContext.CONTROL);
+      HierarchicalSet<Var> waitedFor = new HierarchicalSet<Var>();
+      waitedFor.addAll(WaitVar.asVarList(f.blockingInputs()));
+      rearrangeWaits(logger, prog, f, f.mainBlock(), ExecContext.CONTROL,
+                     waitedFor);
     }
   }
 
   public boolean rearrangeWaits(Logger logger, Program prog, Function fn,
-                                Block block, ExecContext currContext) {
+      Block block, ExecContext currContext, HierarchicalSet<Var> waitedFor) {
     boolean exploded = false;
     logger.trace("Entering function " + fn.getName());
     try {
       if (doExplode && Settings.getBoolean(Settings.OPT_EXPAND_DATAFLOW_OPS)) {
         logger.trace("Exploding Function Calls...");
-        exploded = explodeFuncCalls(logger, fn, currContext, block);
+        exploded = explodeFuncCalls(logger, fn, currContext, block, waitedFor);
       }
     } catch (InvalidOptionException e) {
       throw new STCRuntimeError(e.getMessage());
@@ -242,12 +246,13 @@ public class WaitCoalescer implements OptimizerPass {
     
     // Recurse on child blocks
     boolean recChanged = rearrangeWaitsRec(logger, prog, fn, block,
-                                           currContext);
+                                           currContext, waitedFor);
     return exploded || merged || pushedDown || recChanged;
   }
 
   private boolean rearrangeWaitsRec(Logger logger, Program prog,
-                  Function fn, Block block, ExecContext currContext) {
+                  Function fn, Block block, ExecContext currContext,
+                  HierarchicalSet<Var> waitedFor) {
     // List of waits to inline (to avoid modifying continuations while
     //          iterating over them)
     List<WaitStatement> toInline = new ArrayList<WaitStatement>();
@@ -256,8 +261,14 @@ public class WaitCoalescer implements OptimizerPass {
     
     for (Continuation c: block.allComplexStatements()) {
       ExecContext newContext = c.childContext(currContext);
+      HierarchicalSet<Var> newWaitedFor = waitedFor.makeChild();
+      for (BlockingVar v: c.blockingVars(true)) {
+        newWaitedFor.add(v.var);
+      }
+      
       for (Block childB: c.getBlocks()) {
-        if (rearrangeWaits(logger, prog, fn, childB, newContext)) {
+        if (rearrangeWaits(logger, prog, fn, childB,
+                           newContext, newWaitedFor)) {
           changed = true;
         }
       }
@@ -393,14 +404,15 @@ public class WaitCoalescer implements OptimizerPass {
    * @return
    */
   private static boolean explodeFuncCalls(Logger logger, Function fn,
-        ExecContext execCx, Block block) {
+        ExecContext execCx, Block block, HierarchicalSet<Var> waitedFor) {
     boolean changed = false;
     ListIterator<Statement> it = block.statementIterator();
     while (it.hasNext()) {
       Statement stmt = it.next();
       // Only handle instructions: don't recurse here
       if (stmt.type() == StatementType.INSTRUCTION) {
-        if (tryExplode(logger, fn, execCx, block, it, stmt.instruction())) {
+        if (tryExplode(logger, fn, execCx, block, it, stmt.instruction(),
+                       waitedFor)) {
           changed = true;
         } 
       }
@@ -416,13 +428,14 @@ public class WaitCoalescer implements OptimizerPass {
    * @param block
    * @param it
    * @param inst
+   * @param waitedFor any vars waited for, e.g. in outer exploded.  This prevents
+   *      infinite cycles of exploding if we didn't change instruction
    * @return true if exploded
    */
   private static boolean tryExplode(Logger logger, Function fn,
         ExecContext execCx, Block block, ListIterator<Statement> it,
-        Instruction inst) {
-    MakeImmRequest req = inst.canMakeImmediate(
-                            Collections.<Var>emptySet(), true);
+        Instruction inst, HierarchicalSet<Var> waitedFor) {
+    MakeImmRequest req = inst.canMakeImmediate(waitedFor, true);
     if (req != null && req.in.size() > 0) {
       if (logger.isTraceEnabled()) {
         logger.trace("Exploding " + inst + " in function " + fn.getName());

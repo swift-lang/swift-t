@@ -830,10 +830,12 @@ public class ICContinuations {
           elseB.getStatements().size() == 1) {
         // Must have loop control instructions
         // TODO: must ignore comments here
-        assert(thenB.getStatements().get(0).instruction().op ==
-               Opcode.LOOP_CONTINUE);
-        assert(elseB.getStatements().get(0).instruction().op ==
-               Opcode.LOOP_BREAK);  
+        if(thenB.getStatements().get(0).instruction().op ==
+               Opcode.LOOP_CONTINUE && 
+           elseB.getStatements().get(0).instruction().op ==
+               Opcode.LOOP_BREAK) {
+          // TODO?
+        }
       }
       return false;
     }
