@@ -19,6 +19,9 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashSet;
 
+import org.apache.log4j.Logger;
+
+import exm.stc.common.Logging;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.TaskMode;
@@ -106,6 +109,7 @@ public class ProgressOpcodes {
    * @return true if the block makes progress of the specified type
    */
   public static boolean blockProgress(Block rootBlock, Category type) {
+    Logger logger = Logging.getSTCLogger();
     Deque<Block> stack = new ArrayDeque<Block>();
     stack.add(rootBlock);
     while (!stack.isEmpty()) {
@@ -116,15 +120,24 @@ public class ProgressOpcodes {
           Instruction i = stmt.instruction();
           if (type == Category.CHEAP) {
             if (!isCheapOpcode(i.op)) {
+              if (logger.isTraceEnabled()) {
+                logger.trace("progress instruction found: " + i);
+              }
               return false;
             }
           } else if (type == Category.CHEAP_WORKER) {
             if (!isCheapWorkerInst(i)) {
+              if (logger.isTraceEnabled()) {
+                logger.trace("progress instruction found: " + i);
+              }
               return false;
             }
           } else {
             assert(type == Category.NON_PROGRESS);
             if (!isNonProgressOpcode(i.op)) {
+              if (logger.isTraceEnabled()) {
+                logger.trace("progress instruction found: " + i);
+              }
               return false;
             }
           }
