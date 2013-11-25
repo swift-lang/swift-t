@@ -590,7 +590,7 @@ public class ICContinuations {
     private final List<Var> loopVars;
     // Whether loop var is defined here (instead of defined outside loop)
     private final List<Boolean> definedHere;
-    private final List<Var> initVals;
+    private final List<Arg> initVals;
 
     /*
      * Have handles to the termination instructions
@@ -606,7 +606,7 @@ public class ICContinuations {
     private final List<Boolean> closedInitVals;
 
     public Loop(String loopName, List<Var> loopVars,
-            List<Boolean> definedHere, List<Var> initVals,
+            List<Boolean> definedHere, List<Arg> initVals,
             List<PassedVar> passedVars, List<Var> keepOpenVars,
             List<Boolean> blockingVars) {
       this(loopName, new Block(BlockType.LOOP_BODY, null), loopVars,
@@ -625,7 +625,7 @@ public class ICContinuations {
 
     private Loop(String loopName, Block loopBody,
         List<Var> loopVars,  List<Boolean> definedHere,
-        List<Var> initVals,
+        List<Arg> initVals,
         List<PassedVar> passedVars, List<Var> keepOpenVars,
         List<Boolean> blockingVars, List<Boolean> closedInitVals,
         boolean emptyLoop) {
@@ -634,7 +634,7 @@ public class ICContinuations {
       this.condVar = loopVars.get(0);
       this.loopVars = new ArrayList<Var>(loopVars);
       this.definedHere = new ArrayList<Boolean>(definedHere);
-      this.initVals = new ArrayList<Var>(initVals);
+      this.initVals = new ArrayList<Arg>(initVals);
       this.blockingVars = new ArrayList<Boolean>(blockingVars);
       this.closedInitVals = new ArrayList<Boolean>(closedInitVals);
       assert(loopVars.size() == definedHere.size());
@@ -643,7 +643,7 @@ public class ICContinuations {
       assert(loopVars.size() == closedInitVals.size());
       for (int i = 0; i < loopVars.size(); i++) {
         Var loopV = loopVars.get(i);
-        Var initV = initVals.get(i);
+        Arg initV = initVals.get(i);
         if (!loopV.type().equals(initV.type())) {
           throw new STCRuntimeError("loop variable " + loopV.toString()
               + " is given init value of wrong type: " + initV.toString());
@@ -660,13 +660,14 @@ public class ICContinuations {
           closedInitVals, false);
 
       // fix up the references to the loopContinue/loopBreak instructions
-      Pair<LoopBreak, LoopContinue> insts = cloned.findInstructions();
-      cloned.setLoopBreak(insts.val1);
-      cloned.setLoopContinue(insts.val2);
+      LoopInstructions insts = cloned.findInstructions();
+      cloned.setLoopBreak(insts.breakInst);
+      cloned.setLoopContinue(insts.continueInst);
       return cloned;
     }
 
-    private Pair<LoopBreak, LoopContinue> findInstructions() {
+    public LoopInstructions findInstructions() {
+      Block breakInstBlock = null, continueInstBlock = null;
       LoopBreak breakInst = null;
       LoopContinue continueInst = null;
       Deque<Block> blocks = new ArrayDeque<Block>();
@@ -681,10 +682,12 @@ public class ICContinuations {
               assert(breakInst == null): "duplicate instructions: " + breakInst
                       + " and \n" + inst;
               breakInst = (LoopBreak)inst;
+              breakInstBlock = curr;
             } else if (inst.op == Opcode.LOOP_CONTINUE) {
               assert(continueInst == null): "duplicate instructions: " + continueInst
                       + " and \n" + inst;
               continueInst = (LoopContinue)inst;
+              continueInstBlock = curr;
             }
           }
         }
@@ -702,9 +705,10 @@ public class ICContinuations {
       
       assert(breakInst != null) : "No loop break for loop\n" + this;
       assert(continueInst != null) : "No loop continue for loop\n" + this;
-      
-      Pair<LoopBreak, LoopContinue> insts = Pair.create(breakInst, continueInst);
-      return insts;
+      assert(breakInstBlock != null);
+      assert(continueInstBlock != null);
+      return new LoopInstructions(breakInstBlock, breakInst,
+                                  continueInstBlock, continueInst);
     }
 
     @Override
@@ -772,14 +776,14 @@ public class ICContinuations {
       boolean first = true;
       for (int i = 0; i < loopVars.size(); i++) {
         Var loopV = loopVars.get(i);
-        Var initV = initVals.get(i);
+        Arg initV = initVals.get(i);
         if (first) {
           first = false;
         } else {
           sb.append(", ");
         }
         sb.append(loopV.type().typeName() + " " + loopV.name() + "="
-            + initV.name());
+            + initV.toString());
       }
 
       sb.append(")\n" + currentIndent + indent + indent);
@@ -796,14 +800,14 @@ public class ICContinuations {
         sb.append("]");
       }
       if (closedInitVals.contains(true)) {
-        List<Var> closedInit = new ArrayList<Var>();
+        List<Arg> closedInit = new ArrayList<Arg>();
         for (int i = 0; i < loopVars.size(); i++) {
           if (closedInitVals.get(i)) {
             closedInit.add(initVals.get(i));
           }
         }
         sb.append(" #closedinit[");
-        ICUtil.prettyPrintVarList(sb, closedInit);
+        ICUtil.prettyPrintArgList(sb, closedInit);
         sb.append("]");
       }
       sb.append(" {\n");
@@ -814,7 +818,7 @@ public class ICContinuations {
     @Override
     public void replaceConstructVars_(Map<Var, Arg> renames,
                                       RenameMode mode) {
-      ICUtil.replaceVarsInList(renames, initVals, false);
+      ICUtil.replaceArgsInList(renames, initVals, false);
       if (mode == RenameMode.REPLACE_VAR) {
         ICUtil.replaceVarsInList(renames, loopVars, false);
       }
@@ -836,15 +840,21 @@ public class ICContinuations {
     public Collection<Var> requiredVars(boolean forDeadCodeElim) {
       Collection<Var> res = new ArrayList<Var>(
           super.requiredVars(forDeadCodeElim));
-      res.addAll(initVals);
+      for (Arg initVal: initVals) {
+        if (initVal.isVar()) {
+          res.add(initVal.getVar());
+        }
+      }
       return res;
     }
 
     @Override
     public void removeVars_(Set<Var> removeVars) {
       // check it isn't removing initial values
-      for (Var v: this.initVals) {
-        checkNotRemoved(v, removeVars);
+      for (Arg initVal: this.initVals) {
+        if (initVal.isVar()) {
+          checkNotRemoved(initVal.getVar(), removeVars);
+        }
       }
       for (Var v: this.loopVars) {
         checkNotRemoved(v, removeVars);
@@ -928,8 +938,9 @@ public class ICContinuations {
     public List<BlockingVar> blockingVars(boolean includeConstructDefined) {
       ArrayList<BlockingVar> res = new ArrayList<BlockingVar>();
       for (int i = 0; i < loopVars.size(); i++) {
-        if (blockingVars.get(i)) {
-          res.add(new BlockingVar(initVals.get(i), false, false));
+        Arg initVal = initVals.get(i);
+        if (blockingVars.get(i) && initVal.isVar()) {
+          res.add(new BlockingVar(initVal.getVar(), false, false));
           if (includeConstructDefined) {
             res.add(new BlockingVar(loopVars.get(i), false, true));
           }
@@ -940,20 +951,29 @@ public class ICContinuations {
 
     /**
      * Loop stores information about which vars are closed
-     * @return
+     * @return list of loop variables that are closed before launching
+     *         loop iteration
      */
-    public List<BlockingVar> closedVars() {
-      return closedVars(Collections.<Var>emptySet(), Collections.<Var>emptySet());
+    public List<BlockingVar> closedLoopVars() {
+      List<BlockingVar> res = new ArrayList<BlockingVar>();
+      for (int i = 0; i < loopVars.size(); i++) {
+        if (loopContinue.isLoopVarClosed(i) && closedInitVals.get(i)) {
+          // Always closed when loop body starts running
+          res.add(new BlockingVar(loopVars.get(i), false, false));
+        }
+      }
+      return res;
     }
     
     public List<BlockingVar> closedVars(Set<Var> closed, Set<Var> recClosed) {
       // Always includes blocking vars
       List<BlockingVar> res = blockingVars(true);
       for (int i = 0; i < loopVars.size(); i++) {
-        Var init = initVals.get(i);
+        Arg init = initVals.get(i);
         // Check for variables that are closed
         
-        if (!closedInitVals.get(i) && closed.contains(init)) {
+        if (!closedInitVals.get(i) && init.isVar()
+             && closed.contains(init.getVar())) {
           closedInitVals.set(i, true); // Record for later
         }
         if (!blockingVars.get(i)) {
@@ -973,8 +993,9 @@ public class ICContinuations {
     public List<BlockingVar> unclosedBlockingInitVals() {
       List<BlockingVar> res = new ArrayList<BlockingVar>();
       for (int i = 0; i < loopVars.size(); i++) {
-        if (blockingVars.get(i) && !closedInitVals.get(i)) {
-          res.add(new BlockingVar(initVals.get(i), false, false));
+        Arg initVal = initVals.get(i);
+        if (blockingVars.get(i) && initVal.isVar() && !closedInitVals.get(i)) {
+          res.add(new BlockingVar(initVal.getVar(), false, false));
         }
       }
       return res;
@@ -1004,14 +1025,16 @@ public class ICContinuations {
       // Initial vals of loop vars are also passed in
       List<PassedVar> result = new ArrayList<PassedVar>();
       result.addAll(passedVars);
-      for (Var initVal: initVals) {
-        result.add(new PassedVar(initVal, false));
+      for (Arg initVal: initVals) {
+        if (initVal.isVar()) {
+          result.add(new PassedVar(initVal.getVar(), false));
+        }
       }
       return result;
     }
     
     
-    public Var getInitCond() {
+    public Arg getInitCond() {
       return this.initVals.get(0);
     }
     
@@ -1020,13 +1043,40 @@ public class ICContinuations {
       return outerContext;
     }
 
-    public Object closedInitVals() {
-      // TODO Auto-generated method stub
-      return null;
+    /**
+     * Initial value of loop variable
+     * @param var
+     * @return
+     */
+    public Arg getInitVal(Var var) {
+      int index = loopVars.indexOf(var);
+      assert(index >= 0) : var + " " + loopVars;
+      return initVals.get(index);
+    }
+
+    public Arg getUpdateVal(Var var) {
+      int index = loopVars.indexOf(var);
+      assert(index >= 0) : var + " " + loopVars;
+      return loopContinue.getNewLoopVar(index);
     }
 
   }
   
+  public static class LoopInstructions {
+    private LoopInstructions(Block breakInstBlock, LoopBreak breakInst,
+        Block continueInstBlock, LoopContinue continueInst) {
+      super();
+      this.breakInstBlock = breakInstBlock;
+      this.breakInst = breakInst;
+      this.continueInstBlock = continueInstBlock;
+      this.continueInst = continueInst;
+    }
+    public final Block breakInstBlock;
+    public final LoopBreak breakInst;
+    public final Block continueInstBlock;
+    public final LoopContinue continueInst;
+  }
+
   public static class NestedBlock extends Continuation {
     private final Block block;
 

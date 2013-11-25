@@ -28,7 +28,6 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
-import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.CompileTimeArgs;
@@ -1490,24 +1489,24 @@ public class ICInstructions {
   }
   
   public static class LoopContinue extends Instruction {
-    private final ArrayList<Var> newLoopVars;
+    private final ArrayList<Arg> newLoopVars;
     private final ArrayList<Var> loopUsedVars;
     private final ArrayList<Boolean> blockingVars;
     private final ArrayList<Boolean> closedVars;
 
-    public LoopContinue(List<Var> newLoopVars, 
+    public LoopContinue(List<Arg> newLoopVars, 
                         List<Var> loopUsedVars,
                         List<Boolean> blockingVars,
                         List<Boolean> closedVars) {
       super(Opcode.LOOP_CONTINUE);
-      this.newLoopVars = new ArrayList<Var>(newLoopVars);
+      this.newLoopVars = new ArrayList<Arg>(newLoopVars);
       this.loopUsedVars = new ArrayList<Var>(loopUsedVars);
       this.blockingVars = new ArrayList<Boolean>(blockingVars);
       this.closedVars = new ArrayList<Boolean>(closedVars);
     }
     
 
-    public LoopContinue(List<Var> newLoopVars, 
+    public LoopContinue(List<Arg> newLoopVars, 
                         List<Var> loopUsedVars,
                         List<Boolean> blockingVars) {
       this(newLoopVars, loopUsedVars, blockingVars,
@@ -1528,7 +1527,7 @@ public class ICInstructions {
     
     @Override
     public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
-      ICUtil.replaceVarsInList(renames, newLoopVars, false);
+      ICUtil.replaceArgsInList(renames, newLoopVars, false);
       if (mode == RenameMode.REFERENCE || mode == RenameMode.REPLACE_VAR) {
         ICUtil.replaceVarsInList(renames, loopUsedVars, true);
       }
@@ -1545,16 +1544,8 @@ public class ICInstructions {
     public String toString() {
       StringBuilder sb = new StringBuilder();
       sb.append(this.op.toString().toLowerCase());
-      boolean first = true;
       sb.append(" [");
-      for (Var v: this.newLoopVars) {
-        if (first) {
-          first = false;
-        } else {
-          sb.append(' ');
-        }
-        sb.append(v.name());
-      }
+      ICUtil.prettyPrintArgList(sb, this.newLoopVars);
       sb.append("] #passin[");
       ICUtil.prettyPrintVarList(sb, this.loopUsedVars);
       sb.append("] #blocking[");
@@ -1573,23 +1564,28 @@ public class ICInstructions {
       
       for (int i = 0; i < this.blockingVars.size(); i++) {
         // Add those that we need to wait for and that aren't closed
-        Var var = this.newLoopVars.get(i);
-        boolean mustWait = this.blockingVars.get(i) && !this.closedVars.get(i);
-        boolean newMustWait = mustWait && !alreadySeen.contains(var);
+        Arg initVal = this.newLoopVars.get(i);
+        boolean mustWait = initVal.isVar() && this.blockingVars.get(i)
+                                           && !this.closedVars.get(i);
+        boolean newMustWait = mustWait && !alreadySeen.contains(initVal.getVar());
         waitFor.add(newMustWait);
         if (newMustWait) {
-          alreadySeen.add(var);
+          alreadySeen.add(initVal.getVar());
         }
       }
       gen.loopContinue(this.newLoopVars, this.loopUsedVars, waitFor);
     }
   
+    public Arg getNewLoopVar(int i) {
+      return newLoopVars.get(i);
+    }
+    
     @Override
     public List<Arg> getInputs() {
       // need to make sure that these variables are avail in scope
       ArrayList<Arg> res = new ArrayList<Arg>(newLoopVars.size());
-      for (Var v: newLoopVars) {
-        res.add(v.asArg());
+      for (Arg v: newLoopVars) {
+        res.add(v);
       }
       
       for (Var uv: loopUsedVars) {
@@ -1619,8 +1615,8 @@ public class ICInstructions {
       List<Var> waitForInputs = new ArrayList<Var>();
       
       for (int i = 0; i < this.newLoopVars.size(); i++) {
-        Var v = this.newLoopVars.get(i);
-        if (closedVars.contains(v)) {
+        Arg v = this.newLoopVars.get(i);
+        if (v.isConstant() || closedVars.contains(v.getVar())) {
           // Mark as closed
           this.closedVars.set(i, true);
         }
@@ -1631,15 +1627,13 @@ public class ICInstructions {
             //      could request value here.  Since we're not changing,
             //      requesting value and doing nothing with it would result
             //      in infinite loop
-          } else if (waitForClose) {
+          } else if (waitForClose && v.isVar()) {
               // Would be nice to have closed
-              waitForInputs.add(v);
+              waitForInputs.add(v.getVar());
           } 
         }
       }
       
-      Logging.getSTCLogger().trace("loopBreak waitForInputs:" + waitForInputs);
-
       // TODO: not actually changing instruction - only change if
       //      there are additional things we want to wait for
       if (waitForInputs.isEmpty()) {
@@ -1662,7 +1656,7 @@ public class ICInstructions {
     @Override
     public List<Var> getReadIncrVars() {
       // Increment variables passed to next iter
-      return Collections.unmodifiableList(newLoopVars);
+      return Collections.unmodifiableList(ICUtil.extractVars(newLoopVars));
     }
 
     @Override

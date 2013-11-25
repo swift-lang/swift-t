@@ -324,7 +324,7 @@ public class STCMiddleEnd {
   }
 
   public void startLoop(String loopName, List<Var> loopVars,
-      List<Boolean> definedHere, List<Var> initVals,
+      List<Boolean> definedHere, List<Arg> initVals,
       List<Boolean> blockingVars) {
     Loop loop = new Loop(loopName, loopVars, definedHere, initVals,
                          PassedVar.NONE, Var.NONE, blockingVars);
@@ -333,7 +333,7 @@ public class STCMiddleEnd {
     loopStack.push(loop);
   }
 
-  public void loopContinue(List<Var> newVals, 
+  public void loopContinue(List<Arg> newVals, 
                            List<Boolean> blockingVars) {
     LoopContinue inst = new LoopContinue(newVals, Var.NONE, blockingVars);
     currBlock().addInstruction(inst);

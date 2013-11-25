@@ -20,8 +20,10 @@ import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICContinuations.Loop;
+import exm.stc.ic.tree.ICContinuations.LoopInstructions;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICContinuations.WaitVar;
+import exm.stc.ic.tree.ICInstructions.LoopContinue;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Statement;
@@ -75,6 +77,9 @@ public class LoopSimplify extends FunctionOptimizerPass {
         if (wrapper != null) {
           // Replace loop with wrapper
           contIt.set(wrapper);
+          cont = wrapper; // Want to recurse on this
+        } else {
+          optimizeLoop(logger, loop);
         }
       }
       
@@ -141,7 +146,7 @@ public class LoopSimplify extends FunctionOptimizerPass {
    */
   private void optimizeLoop(Logger logger, Loop loop) {
     
-    List<BlockingVar> closedVars = loop.closedVars();
+    List<BlockingVar> closedVars = loop.closedLoopVars();
     if (closedVars.isEmpty()) {
       return;
     }
@@ -150,36 +155,82 @@ public class LoopSimplify extends FunctionOptimizerPass {
     
     Block outerBlock = loop.parent();
     // To put before loop entry point
-    List<Statement> outerFetches = null; //TODO
+    ListIterator<Statement> outerInsertPoint = outerBlock.statementIterator();
+    List<Statement> outerFetches = new ArrayList<Statement>();
     List<Var> outerFetched = new ArrayList<Var>();
     
-    // TODO: locate block with loop_continue
-    Block innerBlock = null;
+    // locate block with loop_continue
+    LoopInstructions insts = loop.findInstructions();
+    Block innerBlock = insts.continueInstBlock;
+    ListIterator<Statement> innerInsertPoint = findLoopContinueInsertPoint(
+                                            insts.continueInst, innerBlock);
+    
     // To put before loop_continue instruction
-    List<Statement> innerFetches = null; //TODO
+    List<Statement> innerFetches = new ArrayList<Statement>();
     List<Var> innerFetched = new ArrayList<Var>();
     
     for (BlockingVar closedVar: closedVars) {
       if (replaceLoopVarWithVal(closedVar.var)) {
-        // TODO: add instructions before loop and at loop_continue
-        //       to fetch values
-        outerFetched.add(fetchLoopVar(closedVar, outerBlock, outerFetches));
-        innerFetched.add(fetchLoopVar(closedVar, innerBlock, innerFetches));
+        // Should be vars, otherwise it doesn't make sense to try to replace
+        Var init = loop.getInitVal(closedVar.var).getVar();
+        Var subsequent = loop.getUpdateVal(closedVar.var).getVar();
+
+        // add instructions before loop and at loop_continue to fetch values        
+        outerFetched.add(fetchLoopVar(init, closedVar.recursive, outerBlock,
+                                      outerFetches));
+        innerFetched.add(fetchLoopVar(subsequent, closedVar.recursive,
+                                      innerBlock, innerFetches));
+        
+        // place inner and outer instructions
+        placeAndClear(outerInsertPoint, outerFetches);
+        placeAndClear(innerInsertPoint, innerFetches);
         
         // TODO: Add instruction at top of loop body to store value.
-        //       Replace loop var?
+        // TODO: replace and fix up loop vars
       } else {
         replacedAll = false;
       }
     }
   }
 
-  private Var fetchLoopVar(BlockingVar closedVar, Block targetBlock,
+  /**
+   * Position the loop iterator before the loop continue instructions
+   * @param insts
+   * @param innerBlock
+   * @return
+   */
+  private ListIterator<Statement> findLoopContinueInsertPoint(
+      LoopContinue continueInst, Block block) {
+    ListIterator<Statement> it = block.statementIterator();
+    boolean found = false;
+    while (it.hasNext()) {
+      Statement stmt = it.next();
+      if (stmt == continueInst) {
+        found = true;
+        it.previous(); // Move to before the loop continue
+        break;
+      }
+    }
+    assert(found) : "Could not find loop continue " + continueInst +
+                     " in block" + block;
+    return it;
+  }
+
+  private void placeAndClear(ListIterator<Statement> insertPoint,
+                             List<Statement> fetches) {
+    // TODO Auto-generated method stub
+    for (Statement fetch: fetches) {
+      insertPoint.add(fetch);
+    }
+    fetches.clear();
+  }
+
+  private Var fetchLoopVar(Var var, boolean recursive, Block targetBlock,
       List<Statement> fetches) {
-    assert(replaceLoopVarWithVal(closedVar.var));
-    String valName = OptUtil.optVPrefix(targetBlock, closedVar.var);
-    return WrapUtil.fetchValueOf(targetBlock, fetches, closedVar.var,
-                                 valName, closedVar.recursive);
+    assert(replaceLoopVarWithVal(var));
+    String valName = OptUtil.optVPrefix(targetBlock, var);
+    return WrapUtil.fetchValueOf(targetBlock, fetches, var,
+                                 valName, recursive);
   }
 
   /**

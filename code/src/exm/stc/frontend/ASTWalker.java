@@ -907,8 +907,12 @@ public class ASTWalker {
     ForLoopDescriptor forLoop = ForLoopDescriptor.fromAST(context, tree);
     
     // Evaluate initial values of loop vars
-    List<Var> initVals = evalLoopVarExprs(context, forLoop, 
-                                                  forLoop.getInitExprs());
+    List<Arg> initVals = new ArrayList<Arg>();
+    
+    for (Var initVal: evalLoopVarExprs(context, forLoop,
+                                       forLoop.getInitExprs())) {
+      initVals.add(initVal.asArg());
+    }
     
     FunctionContext fc = context.getFunctionContext();
     int loopNum = fc.getCounterVal("forloop");
@@ -942,7 +946,7 @@ public class ASTWalker {
     HashMap<String, String> initRenames = new HashMap<String, String>();
     for (int i = 0; i < forLoop.loopVarCount(); i++) {
       initRenames.put(forLoop.getLoopVars().get(i).var.name(), 
-            initVals.get(i).name());
+            initVals.get(i).getVar().name());
     }
     Var initCond = exprWalker.eval(context, forLoop.getCondition(), condType, true, initRenames);
     
@@ -968,7 +972,7 @@ public class ASTWalker {
     blockingVector.add(true); // block on condition
     blockingVector.addAll(forLoop.blockingLoopVarVector());
     
-    initVals.add(0, initCond);
+    initVals.add(0, initCond.asArg());
     
     backend.startLoop(loopName, loopVars, definedHere, initVals, 
                       blockingVector);
@@ -987,17 +991,20 @@ public class ASTWalker {
     
     forLoop.validateUpdates(loopBodyContext);
     //evaluate update expressions
-    List<Var> newLoopVars = evalLoopVarExprs(loopBodyContext, forLoop, 
-                                                forLoop.getUpdateRules());
+    List<Arg> newLoopVars = new ArrayList<Arg>();
+    for (Var newLoopVar: evalLoopVarExprs(loopBodyContext, forLoop, 
+                                          forLoop.getUpdateRules())) {
+      newLoopVars.add(newLoopVar.asArg());
+    }
     
     HashMap<String, String> nextRenames = new HashMap<String, String>();
     for (int i = 0; i < forLoop.loopVarCount(); i++) {
       nextRenames.put(forLoop.getLoopVars().get(i).var.name(), 
-            newLoopVars.get(i).name());
+                       newLoopVars.get(i).getVar().name());
     }
     Var nextCond = exprWalker.eval(loopBodyContext, 
               forLoop.getCondition(), condType, true, nextRenames);
-    newLoopVars.add(0, nextCond);
+    newLoopVars.add(0, nextCond.asArg());
     backend.loopContinue(newLoopVars, blockingVector);
     backend.startElseBlock();
     // Terminate loop, clean up open arrays and copy out final vals 
@@ -1042,7 +1049,7 @@ public class ASTWalker {
     List<Boolean> blockingVars = Arrays.asList(true, false);
     backend.startLoop(loopName, 
         Arrays.asList(condArg, loop.getLoopVar()), Arrays.asList(true, true),
-        Arrays.asList(falseV, zero), blockingVars);
+        Arrays.asList(falseV.asArg(), zero.asArg()), blockingVars);
     
     // get value of condVar
     Var condVal = varCreator.fetchValueOf(iterContext, condArg); 
@@ -1072,7 +1079,8 @@ public class ASTWalker {
     backend.asyncOp(BuiltinOpcode.PLUS_INT, nextCounter, 
         Arrays.asList(Arg.createVar(loop.getLoopVar()), Arg.createVar(one)));
     
-    backend.loopContinue(Arrays.asList(nextCond, nextCounter), blockingVars);
+    backend.loopContinue(Arrays.asList(nextCond.asArg(), nextCounter.asArg()),
+                         blockingVars);
 
     backend.endIfStatement();
     backend.endLoop();

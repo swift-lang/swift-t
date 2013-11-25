@@ -2801,20 +2801,20 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void startLoop(String loopName, List<Var> loopVars,
-      List<Boolean> definedHere, List<Var> initVals, List<Var> usedVariables,
+      List<Boolean> definedHere, List<Arg> initVals, List<Var> usedVariables,
       List<Var> keepOpenVars, List<Var> initWaitVars) {
 
     // call rule to start the loop, pass in initVals, usedVariables
     ArrayList<String> loopFnArgs = new ArrayList<String>();
-    ArrayList<Value> firstIterArgs = new ArrayList<Value>();
+    ArrayList<Expression> firstIterArgs = new ArrayList<Expression>();
     loopFnArgs.add(Turbine.LOCAL_STACK_NAME);
     firstIterArgs.add(Turbine.LOCAL_STACK_VAL);
 
     for (Var arg: loopVars) {
       loopFnArgs.add(prefixVar(arg));
     }
-    for (Var init: initVals) {
-      firstIterArgs.add(varToExpr(init));
+    for (Arg init: initVals) {
+      firstIterArgs.add(argToExpr(init));
     }
 
     for (Var uv: usedVariables) {
@@ -2854,15 +2854,15 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void loopContinue(List<Var> newVals,
+  public void loopContinue(List<Arg> newVals,
          List<Var> usedVariables,
          List<Boolean> blockingVars) {
-    ArrayList<Value> nextIterArgs = new ArrayList<Value>();
+    ArrayList<Expression> nextIterArgs = new ArrayList<Expression>();
     String loopName = loopNameStack.peek();
     nextIterArgs.add(Turbine.LOCAL_STACK_VAL);
 
-    for (Var v: newVals) {
-      nextIterArgs.add(varToExpr(v));
+    for (Arg v: newVals) {
+      nextIterArgs.add(argToExpr(v));
     }
     for (Var v: usedVariables) {
       nextIterArgs.add(varToExpr(v));
@@ -2870,8 +2870,9 @@ public class TurbineGenerator implements CompilerBackend {
     ArrayList<Value> blockingVals = new ArrayList<Value>();
     assert(newVals.size() == blockingVars.size());
     for (int i = 0; i < newVals.size(); i++) {
-      if (blockingVars.get(i)) {
-        blockingVals.add(varToExpr(newVals.get(i)));
+      Arg newVal = newVals.get(i);
+      if (blockingVars.get(i) && newVal.isVar()) {
+        blockingVals.add(varToExpr(newVal.getVar()));
       }
     }
     pointAdd(Turbine.loopRule(loopName,

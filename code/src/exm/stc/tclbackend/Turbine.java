@@ -826,14 +826,14 @@ class Turbine {
   }
   
   public static Sequence loopRule(String symbol,
-      List<Value> args, List<? extends Expression> blockOn,
+      List<? extends Expression> args, List<? extends Expression> blockOn,
       ExecContext execCx) {
     // Assume executes on control for now
     assert (execCx == ExecContext.CONTROL);
     
     List<Expression> action = new ArrayList<Expression>();
     action.add(new Token(symbol));
-    for (Value arg: args) {
+    for (Expression arg: args) {
       action.add(arg);
     }
     return ruleHelper(symbol, blockOn, action, TaskMode.CONTROL, 
