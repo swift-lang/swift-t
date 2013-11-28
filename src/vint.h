@@ -194,7 +194,7 @@ vint_file_decode(FILE *file, int64_t *val)
 {
   vint_dec dec;
   int b = fgetc(file);
-  int read = 1;
+  int bytes_read = 1;
   if (b == EOF)
   {
     // Check error indicator
@@ -211,7 +211,7 @@ vint_file_decode(FILE *file, int64_t *val)
       return -1;
     }
     dec_rc = vint_decode_more((unsigned char)b, &dec);
-    read++;
+    bytes_read++;
   }
   if (dec_rc == -1)
   {
@@ -220,7 +220,7 @@ vint_file_decode(FILE *file, int64_t *val)
   }
 
   *val = dec.accum * dec.sign;
-  return read;
+  return bytes_read;
 }
 
 #endif
