@@ -48,7 +48,6 @@ typedef struct table_bp
 
 #define TABLE_BP_DEFAULT_LOAD_FACTOR 0.75
 
-
 /*
   Macro for iterating over table entries.  This handles the simple case
   of iterating over all valid table entries with no modifications.
