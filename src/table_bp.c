@@ -544,9 +544,11 @@ table_bp_expand(table_bp *T)
   }
   
   free(T->array);
+  //printf("Resized from %i to %i (size %i)\n", T->capacity,new_capacity, T->size);
   T->array = new_array;
   T->capacity = new_capacity;
   T->resize_threshold = calc_resize_threshold(T);
+  //printf("New resize threshold %i\n", T->resize_threshold);
   return true;
 }
 
