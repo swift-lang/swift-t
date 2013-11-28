@@ -2543,10 +2543,12 @@ enumerate_object(Tcl_Interp *interp, Tcl_Obj *const objv[],
     {
       int64_t key_len;
       consumed = vint_decode(data + pos, length - pos, &key_len);
-      TCL_CONDITION(consumed >= 1, "Corrupted message received");
+      TCL_CONDITION(consumed >= 1, "Corrupted message received: bad key "
+                    "length for record %i/%i", i+1, records);
       pos += consumed;
-      TCL_CONDITION(key_len <= length - pos,
-                    "Truncated/corrupted message received");
+      TCL_CONDITION(key_len <= length - pos, "Truncated/corrupted "
+            "message received, key for record %i/%i extends beyond end "
+            "of data", i + 1, records);
       // Key currently must be string
       // TODO: support binary key
       key = Tcl_NewStringObj(data + pos, (int)key_len - 1);
@@ -2557,10 +2559,12 @@ enumerate_object(Tcl_Interp *interp, Tcl_Obj *const objv[],
     {
       int64_t val_len;
       consumed = vint_decode(data + pos, length - pos, &val_len);
-      TCL_CONDITION(consumed >= 1, "Corrupted message received");
+      TCL_CONDITION(consumed >= 1, "Corrupted message received: bad "
+            "value length for record %i/%i", i + 1, records);
       pos += consumed;
-      TCL_CONDITION(val_len <= length - pos,
-                    "Truncated/corrupted message received");
+      TCL_CONDITION(val_len <= length - pos, "Truncated/corrupted "
+            "message received, key for record %i/%i extends beyond end "
+            "of data", i + 1, records);
       rc = adlb_data_to_tcl_obj(interp, objv, id, kv_type.CONTAINER.val_type,
                 NULL, data + pos, (int)val_len, &val);
 
