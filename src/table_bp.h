@@ -22,62 +22,90 @@
 
 #include <stdbool.h>
 
-#include "list_bp.h"
 
-struct table_bp
+typedef struct table_bp_entry table_bp_entry;
+
+struct table_bp_entry
 {
-  struct list_bp** array;
-  int capacity;
-  int size;
+  void* key; // NULL indicates empty entry
+  size_t key_len;
+  void* data; // NULL is valid data
+  table_bp_entry *next;
 };
 
-bool table_bp_init(struct table_bp* target, int capacity);
+typedef struct table_bp
+{
+  table_bp_entry *array;
+  int capacity;
+  int size;
+  float load_factor;
+  int resize_threshold; // Resize if > this size
+} table_bp;
 
-struct table_bp* table_bp_create(int capacity);
+bool table_bp_init(table_bp* target, int capacity, float load_factor);
 
-bool table_bp_add(struct table_bp *target, const void* key,
+table_bp* table_bp_create(int capacity);
+
+bool table_bp_add(table_bp *target, const void* key,
                   size_t key_len, void* data);
 
-bool table_bp_set(struct table_bp* target, const void* key,
+bool table_bp_set(table_bp* target, const void* key,
                   size_t key_len, void* value, void** old_value);
 
-bool table_bp_search(const struct table_bp* target, const void* key,
+bool table_bp_search(const table_bp* target, const void* key,
                   size_t key_len, void **value);
 
-bool table_bp_contains(const struct table_bp* table, const void* key,
+bool table_bp_contains(const table_bp* table, const void* key,
                   size_t key_len);
 
-bool table_bp_remove(struct table_bp* table, const void* key,
+bool table_bp_remove(table_bp* table, const void* key,
                   size_t key_len, void** data);
 
-void table_bp_dump(const char* format, const struct table_bp* target);
+void table_bp_dump(const char* format, const table_bp* target);
 
 /*
   Free data structure, and callback function with key and value
  */
-void table_bp_free_callback(struct table_bp* target, bool free_root,
+void table_bp_free_callback(table_bp* target, bool free_root,
                             void (*callback)(void*, size_t, void*));
 
-void table_bp_free(struct table_bp* target);
+void table_bp_free(table_bp* target);
 
-void table_bp_destroy(struct table_bp* target);
+void table_bp_destroy(table_bp* target);
 
-void table_bp_release(struct table_bp* target);
+void table_bp_release(table_bp* target);
 
 size_t table_bp_keys_string(char** result,
-                            const struct table_bp* target);
+                            const table_bp* target);
 
 size_t table_bp_keys_string_slice(char** result,
-                            const struct table_bp* target,
+                            const table_bp* target,
                             int count, int offset);
 
 size_t table_bp_keys_tostring(char* result,
-                              const struct table_bp* target);
+                              const table_bp* target);
 
 size_t table_bp_keys_tostring_slice(char* result,
-                              const struct table_bp* target,
+                              const table_bp* target,
                               int count, int offset);
 
-void  table_bp_dumpkeys(const struct table_bp* target);
+void  table_bp_dumpkeys(const table_bp* target);
 
+/*
+  If the entry contains data
+ */
+static inline bool
+table_bp_entry_valid(table_bp_entry *e)
+{
+  return e->key != NULL;
+}
+
+/*
+  Check if key matches item key. Inline for performance
+ */
+static inline bool
+table_bp_key_match(const void *key, size_t key_len, table_bp_entry *e)
+{
+  return table_bp_entry_valid(e) && bin_key_eq(key, key_len, e->key, e->key_len);
+}
 #endif // __TABLE_BP_H
