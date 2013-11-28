@@ -29,7 +29,9 @@ typedef struct table_bp_entry table_bp_entry;
 
 struct table_bp_entry
 {
-  void* key; // NULL indicates empty entry
+  // NULL key indicates empty entry.  Entry entries should only be used
+  // to mark empty hash table buckets
+  void* key;
   size_t key_len;
   void* data; // NULL is valid data
   table_bp_entry *next;
@@ -45,6 +47,17 @@ typedef struct table_bp
 } table_bp;
 
 #define TABLE_BP_DEFAULT_LOAD_FACTOR 0.75
+
+
+/*
+  Macro for iterating over table entries.  This handles the simple case
+  of iterating over all valid table entries with no modifications.
+ */
+#define TABLE_BP_FOREACH(T, item) \
+  for (int __i = 0; __i < T->capacity; __i++) \
+    if (table_bp_entry_valid(&T->array[__i])) \
+      for (table_bp_entry *item = &T->array[__i]; item != NULL; \
+           item = item->next)
 
 bool table_bp_init(table_bp* target, int capacity);
 

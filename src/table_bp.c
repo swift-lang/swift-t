@@ -38,6 +38,10 @@ static bool bucket_add_head(table_bp_entry *head,
 static bool bucket_add_tail(table_bp_entry *head,
             table_bp_entry *entry, bool copy_entry);
 
+static table_bp_entry *
+table_bp_locate_entry(const table_bp *T, const void *key, size_t key_len,
+                      table_bp_entry **prev);
+
 static void
 table_bp_remove_entry(table_bp_entry *e, table_bp_entry *prev);
 
@@ -309,6 +313,32 @@ table_bp_add(table_bp *target, const void* key, size_t key_len,
   }
 }
 
+/*
+  Find entry in table matching key
+  prev: if provided, filled with previous entry
+  returns: NULL if not found
+ */
+static table_bp_entry *
+table_bp_locate_entry(const table_bp *T, const void *key, size_t key_len,
+                      table_bp_entry **prev)
+{
+  int index = bin_key_hash(key, key_len, T->capacity);
+  table_bp_entry *prev_e = NULL;
+  for (table_bp_entry *e = &T->array[index]; e != NULL; e = e->next)
+  {
+    if (table_bp_key_match(key, key_len, e))
+    {
+      if (prev != NULL)
+      {
+        *prev = prev_e;
+      }
+      return e;
+    }
+    prev_e = e;
+  }
+  return NULL;
+}
+
 /**
    If found, caller is responsible for old_value -
           it was provided by the user
@@ -318,16 +348,12 @@ bool
 table_bp_set(table_bp* target, const void* key, size_t key_len,
           void* value, void** old_value)
 {
-  int index = bin_key_hash(key, key_len, target->capacity);
-
-  for (table_bp_entry *e = &target->array[index]; e != NULL; e = e->next)
+  table_bp_entry *e = table_bp_locate_entry(target, key, key_len, NULL);
+  if (e != NULL)
   {
-    if (table_bp_key_match(key, key_len, e))
-    {
-      *old_value = e->data;
-      e->data = value;
-      return true;
-    }
+    *old_value = e->data;
+    e->data = value;
+    return true;
   }
 
   return false;
@@ -344,18 +370,18 @@ bool
 table_bp_search(const table_bp* table, const void* key,
                 size_t key_len, void **value)
 {
-  int index = bin_key_hash(key, key_len, table->capacity);
+  table_bp_entry *e = table_bp_locate_entry(table, key, key_len, NULL);
 
-  for (table_bp_entry *e = &table->array[index]; e != NULL; e = e->next)
+  if (e != NULL)
   {
-    if (table_bp_key_match(key, key_len, e)) {
-      *value = e->data;
-      return true;
-    }
+    *value = e->data;
+    return true;
   }
-
-  *value = NULL;
-  return false;
+  else
+  {
+    *value = NULL;
+    return false;
+  }
 }
 
 bool
@@ -400,22 +426,18 @@ bool
 table_bp_remove(table_bp* table, const void* key, size_t key_len,
                 void** data)
 {
-  int index = bin_key_hash(key, key_len, table->capacity);
-  table_bp_entry *head = &table->array[index];
-  table_bp_entry *prev = NULL;
-  for (table_bp_entry *e = head; e != NULL; e = e->next)
+  table_bp_entry *prev;
+  table_bp_entry *e = table_bp_locate_entry(table, key, key_len, &prev);
+  if (e != NULL)
   {
-    if (table_bp_key_match(key, key_len, e))
-    {
-      *data = e->data; // Store data for caller
-      free(e->key);
+    *data = e->data; // Store data for caller
+    free(e->key);
 
-      table_bp_remove_entry(e, prev); 
-      table->size--;
-      return true;
-    }
-    prev = e;
+    table_bp_remove_entry(e, prev); 
+    table->size--;
+    return true;
   }
+
   return false;
 }
 
@@ -642,21 +664,16 @@ table_bp_keys_tostring_slice(char* result, const table_bp* target,
   int c = 0;
   char* p = result;
   p[0] = '\0';
-  for (int i = 0; i < target->capacity; i++)
-  {
-    table_bp_entry *head = &target->array[i];
-    for (table_bp_entry *item = head; item; item = item->next)
-    {
-      if (c < offset) {
-        c++;
-        continue;
-      }
-      if (c >= offset+count && count != -1)
-        break;
-      p += sprintf_key(p, item->key, item->key_len);
-      *(p++) = ' ';
+  TABLE_BP_FOREACH(target, item) {
+    if (c < offset) {
       c++;
+      continue;
     }
+    if (c >= offset+count && count != -1)
+      break;
+    p += sprintf_key(p, item->key, item->key_len);
+    *(p++) = ' ';
+    c++;
   }
   return (size_t)(p-result);
 }
