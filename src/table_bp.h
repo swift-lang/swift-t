@@ -27,11 +27,16 @@
 
 typedef struct table_bp_entry table_bp_entry;
 
+#define TABLE_BP_INVALID_KEY ((void*)0x1)
+
 struct table_bp_entry
 {
-  // NULL key indicates empty entry.  Entry entries should only be used
-  // to mark empty hash table buckets
-  void* key;
+  /* key_len == 0 and __key = TABLE_BP_INVALID_KEY indicates empty entry
+   *.Entry entries should only be used to mark empty hash table buckets. */
+  
+  /* We sometimes store key inline in pointer.  Use table_bp_get_key to
+   * access the value of the key correctly */
+  void* __key; 
   size_t key_len;
   void* data; // NULL is valid data
   table_bp_entry *next;
@@ -50,7 +55,7 @@ typedef struct table_bp
 
 /*
   Macro for iterating over table entries.  This handles the simple case
-  of iterating over all valid table entries with no modifications.
+  of iterating over all valid table entries with no modifications.  
  */
 #define TABLE_BP_FOREACH(T, item) \
   for (int __i = 0; __i < T->capacity; __i++) \
@@ -88,7 +93,7 @@ void table_bp_dump(const char* format, const table_bp* target);
   Free data structure, and callback function with key and value
  */
 void table_bp_free_callback(table_bp* target, bool free_root,
-                            void (*callback)(void*, size_t, void*));
+                            void (*callback)(const void*, size_t, void*));
 
 void table_bp_free(table_bp* target);
 
@@ -113,20 +118,55 @@ size_t table_bp_keys_tostring_slice(char* result,
 void  table_bp_dumpkeys(const table_bp* target);
 
 /*
+  As an optimisation, we store the key in the pointer field if it's
+  small enough to fit
+  returns: whether we store key inline in pointer
+ */
+static inline bool table_bp_inline_key(size_t key_len)
+{
+  return key_len <= sizeof(void*);
+}
+
+/*
+   Get key from a valid entry
+ */
+static inline const void *table_bp_get_key(const table_bp_entry *e)
+{
+  if (table_bp_inline_key(e->key_len))
+  {
+    // Pointer itself holds data
+    return &e->__key;
+  }
+  else
+  {
+    return e->__key;
+  }
+}
+
+static void table_bp_clear_entry(table_bp_entry *entry)
+{
+  entry->__key = TABLE_BP_INVALID_KEY;
+  entry->key_len = 0;
+  entry->data = NULL;
+  entry->next = NULL;
+}
+
+/*
   If the entry contains data
  */
 static inline bool
 table_bp_entry_valid(const table_bp_entry *e)
 {
-  return e->key != NULL;
+  return e->key_len > 0 || e->__key != TABLE_BP_INVALID_KEY;
 }
 
 /*
   Check if key matches item key. Inline for performance
+  Entry must be valid entry
  */
 static inline bool
 table_bp_key_match(const void *key, size_t key_len, const table_bp_entry *e)
 {
-  return table_bp_entry_valid(e) && bin_key_eq(key, key_len, e->key, e->key_len);
+  return bin_key_eq(key, key_len, table_bp_get_key(e), e->key_len);
 }
 #endif // __TABLE_BP_H
