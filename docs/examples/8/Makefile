@@ -3,7 +3,7 @@ all: prog-f90 prog-cxx pkgIndex.tcl prog-swift.tcl
 
 ### Settings:
 
-TCL = $(HOME)/sfw/tcl-8.6.0
+TCL = $(HOME)/sfw/tcl-8.6.1
 
 FFLAGS = -ffree-form -std=f2003 -cpp -I . -fPIC -fmax-errors=3 -g
 
@@ -91,8 +91,9 @@ run: all
 ### Clean:
 
 clean:
-	@rm -fv *.mod CppWrappers.* .fortwrap
+	@rm -fv *.mod CppWrappers.* .fortwrap InterfaceDefs.h
 	@rm -fv prog-f90 prog-cxx *.o
 	@rm -fv $(FORTWRAP_OUT) func_wrap.cxx
+	@rm -fv pkgIndex.tcl
 
 .PHONY: all clean

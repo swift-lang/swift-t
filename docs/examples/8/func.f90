@@ -22,6 +22,7 @@ contains
     array%s(i) = v
   end subroutine
 
+  ! SNIPPET 1
   subroutine func(argc, argv, output)
 
     implicit none
@@ -29,6 +30,7 @@ contains
     integer, intent(in) :: argc
     type (string_array) :: argv
     double precision, intent(out) :: output
+    ! SNIPPET END
 
     integer i
 

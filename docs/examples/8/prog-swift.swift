@@ -1,10 +1,12 @@
 
 import io;
 
+// SNIPPET 1
 (float v) func(string A[]) "f" "0.0"
 [
   "set <<v>> [ func <<A>> ]"
 ];
+// SNIPPET END
 
 main
 {
