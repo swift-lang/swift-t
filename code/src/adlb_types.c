@@ -201,7 +201,8 @@ ADLB_Pack_container(const adlb_container *container,
     dc = ADLB_Resize_buf(output, output_caller_buffer, required);
     DATA_CHECK(dc);
 
-    dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL, item->key, item->key_len,
+    dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL,
+          table_bp_get_key(item), item->key_len,
           true, output, output_caller_buffer, output_pos);
     DATA_CHECK(dc);
 
@@ -724,13 +725,13 @@ static char *data_repr_container(const adlb_container *c)
     if (c->key_type == ADLB_DATA_TYPE_STRING)
     {
       cont_str_pos += sprintf(&cont_str[cont_str_pos], "\"%s\"={%s} ",
-                              (char*)item->key, value_s);
+                              (char*)table_bp_get_key(item), value_s);
     }
     else
     {
       // TODO: support binary keys
       cont_str_pos += sprintf(&cont_str[cont_str_pos], "\"%s\"={%s} ",
-                              (char*)item->key, value_s);
+                              (char*)table_bp_get_key(item), value_s);
     }
 
     free(value_s);

@@ -131,8 +131,11 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
           DATA_CHECK(dc);
           free(d);
         }
-        assert(item->key != NULL);
-        free(item->key);
+        if (!table_bp_inline_key(item))
+        {
+          assert(item->__key != NULL);
+          free(item->__key);
+        }
       }
      
       // Free list node and move to next

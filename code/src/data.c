@@ -1123,8 +1123,9 @@ pack_member(adlb_container *cont, table_bp_entry *item,
   if (include_keys)
   {
     assert(item->key_len <= INT_MAX);
-    dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL, item->key, (int)item->key_len,
-                        true, result, result_caller_buffer, result_pos);
+    dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL, 
+            table_bp_get_key(item), (int)item->key_len,
+            true, result, result_caller_buffer, result_pos);
     DATA_CHECK(dc);
   }
   if (include_vals)
@@ -1389,7 +1390,8 @@ insert_notifications_all(adlb_datum *d, adlb_datum_id id,
   struct table_bp* members = c->members;
   TABLE_BP_FOREACH(members, item)
   {
-    adlb_subscript sub = { .key = item->key, .length = item->key_len };
+    adlb_subscript sub = { .key = table_bp_get_key(item),
+                           .length = item->key_len };
 
     // Find, remove, and return any listeners/references
     struct list_l *ref_list = NULL;
