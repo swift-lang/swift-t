@@ -32,7 +32,7 @@ typedef struct table_bp_entry table_bp_entry;
 struct table_bp_entry
 {
   /* key_len == 0 and __key = TABLE_BP_INVALID_KEY indicates empty entry
-   *.Entry entries should only be used to mark empty hash table buckets. */
+   *.Entry entries are only used to mark empty hash table buckets. */
   
   /* We sometimes store key inline in pointer.  Use table_bp_get_key to
    * access the value of the key correctly */

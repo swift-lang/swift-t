@@ -30,15 +30,21 @@
 static const float table_bp_expand_factor = 2.0;
 
 static void
-table_bp_dump2(const char* format, const table_bp* target, bool include_vals);
+table_bp_dump2(const char* format, const table_bp* target,
+               bool include_vals);
 
-static bool bucket_add_head(table_bp_entry *head,
-            void* key, size_t key_len, void* data);
+static table_bp_entry*
+find_bucket(const table_bp* T, const void* key, size_t key_len);
 
-static bool bucket_add_tail(table_bp_entry *head,
-            table_bp_entry *entry, bool copy_entry);
+static bool 
+bucket_add_head(table_bp_entry *head, void* key, size_t key_len,
+                void* data);
 
-static table_bp_entry *
+static bool
+bucket_add_tail(table_bp_entry *head, table_bp_entry *entry,
+                bool copy_entry);
+
+static table_bp_entry*
 table_bp_locate_entry(const table_bp *T, const void *key, size_t key_len,
                       table_bp_entry **prev);
 
@@ -129,12 +135,18 @@ void table_bp_free_callback(table_bp* target, bool free_root,
 {
   for (int i = 0; i < target->capacity; i++)
   {
-    bool head = true;
-    table_bp_entry *e = &target->array[i];
-    if (table_bp_entry_valid(e))
+    table_bp_entry *head = &target->array[i];
+    if (table_bp_entry_valid(head))
     {
-      for (; e != NULL; e = e->next)
+      // Store next pointer to allow freeing entry
+      bool is_head;
+      table_bp_entry *e, *next;
+      for (e = head, next = head->next, is_head = true;
+           e != NULL;
+           e = next, is_head = false)
       {
+        next = e->next; // Store next right away
+
         if (callback != NULL)
           callback(table_bp_get_key(e->__key), e->key_len, e->data);
 
@@ -142,11 +154,10 @@ void table_bp_free_callback(table_bp* target, bool free_root,
         {
           free(e->__key);
         }
-        if (!head) {
+        if (!is_head) {
           // head is stored in array, rest were malloced separately
           free(e);
         }
-        head = false;
       }
     }
   }
@@ -169,23 +180,29 @@ table_bp_destroy(table_bp* target)
 {
   for (int i = 0; i < target->capacity; i++)
   {
-    bool head = true;
-    for (table_bp_entry *e = &target->array[i]; e != NULL; e = e->next)
+    table_bp_entry *head = &target->array[i];
+    if (table_bp_entry_valid(head))
     {
-      if (table_bp_entry_valid(e))
+      // Store next pointer to allow freeing entry
+      bool is_head;
+      table_bp_entry *e, *next;
+      for (e = head, next = head->next, is_head = true;
+           e != NULL;
+           e = next, is_head = false)
       {
-        // Entry was valid
+        next = e->next; // Store next right away
+
         if (!table_bp_inline_key(e->key_len))
         {
           free(e->__key);
         }
         free(e->data);
+
+        if (!is_head)
+        {
+         free(e);
+        }
       }
-      if (!head)
-      {
-       free(e);
-      }
-      head = false;
     }
   }
 
@@ -200,12 +217,23 @@ table_bp_release(table_bp* target)
 }
 
 
+/**
+  Return the head of the appropriate bucket for the key
+ */
+static table_bp_entry*
+find_bucket(const table_bp* T, const void* key, size_t key_len)
+{
+  int index = bin_key_hash(key, key_len, T->capacity);
+  return &T->array[index];
+}
+
 /*
  Add at head
  key: appropriate representation with inlining
  */
-static bool bucket_add_head(table_bp_entry *head,
-            void* key, size_t key_len, void* data)
+static bool 
+bucket_add_head(table_bp_entry *head, void* key, size_t key_len,  
+                void* data)
 {
   if (table_bp_entry_valid(head))
   {
@@ -229,12 +257,12 @@ static bool bucket_add_head(table_bp_entry *head,
 
 /**
   Add at end of bucket chain
-  copy_entry: if true, allocate new entry,
-              otherwise reuse provided entry or free
-              
+  copy_entry: if true, allocate new entry, otherwise reuse provided
+    entry or free it.  In no case do we copy the key or data memory.
  */
-static bool bucket_add_tail(table_bp_entry *head,
-            table_bp_entry *entry, bool copy_entry)
+static bool
+bucket_add_tail(table_bp_entry *head, table_bp_entry *entry,
+                bool copy_entry)
 {
   if (table_bp_entry_valid(head))
   {
@@ -289,14 +317,12 @@ table_bp_add(table_bp *target, const void* key, size_t key_len,
     if (!ok)
       return false;
   }
-  int index = bin_key_hash(key, key_len, target->capacity);
 
   /* 
    * Add at head of list to avoid traversing list.  This means that in
    * case of duplicate keys, the newest is returned
    */
-  table_bp_entry *head = &target->array[index];
-
+  table_bp_entry *head = find_bucket(target, key, key_len);
   
   void *key_repr;
   
@@ -338,9 +364,8 @@ static table_bp_entry *
 table_bp_locate_entry(const table_bp *T, const void *key, size_t key_len,
                       table_bp_entry **prev)
 {
-  int index = bin_key_hash(key, key_len, T->capacity);
   table_bp_entry *prev_e = NULL;
-  table_bp_entry *head = &T->array[index];
+  table_bp_entry *head = find_bucket(T, key, key_len);
   if (!table_bp_entry_valid(head)) // Empty bucket
     return NULL;
 
