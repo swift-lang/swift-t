@@ -2,7 +2,6 @@
 
 # Usage: snippet.pl <snippet number> <files...>
 
-
 BEGIN {
 
     # The snippet number we are looking for
