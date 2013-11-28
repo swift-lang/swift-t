@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 
-z_member_count=$(grep 'z member' $TURBINE_OUTPUT | wc -l)
+z_member_count=$(grep -E 'z member: [0-9]+' $TURBINE_OUTPUT | wc -l)
 z_member_exp=2000
 
 if [[ "$z_member_count" != $z_member_exp ]]; then
