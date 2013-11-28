@@ -14,14 +14,15 @@
  * limitations under the License
  */
 
+#include "table_bp.h"
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "binkeys.h"
-
-#include "table_bp.h"
+#include "list_bp.h"
 #include "c-utils-types.h"
 
 
@@ -31,17 +32,27 @@ static const float table_bp_expand_factor = 2.0;
 static void
 table_bp_dump2(const char* format, const table_bp* target, bool include_vals);
 
-static bool table_bp_item_add_head(table_bp_item *head,
+static bool bucket_add_head(table_bp_entry *head,
             void* key, size_t key_len, void* data);
 
-static bool table_bp_item_add_tail(table_bp_item *head,
-            table_bp_item *entry, bool copy_entry);
+static bool bucket_add_tail(table_bp_entry *head,
+            table_bp_entry *entry, bool copy_entry);
 
 static void
 table_bp_remove_entry(table_bp_entry *e, table_bp_entry *prev);
 
 static bool
 table_bp_expand(table_bp *T);
+
+static size_t
+bucket_keys_string_length(const table_bp_entry *head);
+
+static size_t
+bucket_keys_tostring(char *result, const table_bp_entry *head);
+
+static size_t
+bucket_tostring(char *result, size_t size, const char *format,
+                const table_bp_entry *head);
 
 static void init_entry(table_bp_entry *entry)
 {
@@ -51,23 +62,29 @@ static void init_entry(table_bp_entry *entry)
   entry->next = NULL;
 }
 
-static void
-update_resize_threshold(table_bp *T)
+static int
+calc_resize_threshold(table_bp *T)
 {
-  T->resize_threshold = (int)(capacity * load_factor);
+  return (int)((float)T->capacity * T->load_factor);
+}
+
+bool table_bp_init(table_bp* target, int capacity)
+{
+  return table_bp_init_custom(target, capacity,
+                              TABLE_BP_DEFAULT_LOAD_FACTOR);
 }
 
 /**
    
 */
 bool
-table_bp_init(table_bp* target, int capacity, float load_factor)
+table_bp_init_custom(table_bp* target, int capacity, float load_factor)
 {
   assert(capacity >= 1);
   target->size = 0;
   target->capacity = capacity;
   target->load_factor = load_factor;
-  update_resize_threshold(&target);
+  target->resize_threshold = calc_resize_threshold(target);
 
   target->array = malloc(sizeof(target->array[0]) * (size_t)capacity);
   if (!target->array)
@@ -145,17 +162,19 @@ table_bp_destroy(table_bp* target)
     bool head = true;
     for (table_bp_entry *e = &target->array[i]; e != NULL; e = e->next)
     {
-      if (e->key != NULL)
+      if (table_bp_entry_valid(e))
       {
         // Entry was valid
-        free(item->key);
-        free(item->data);
-        item->key = item->data = NULL;
+        free(e->key);
+        free(e->data);
+        e->key = NULL;
+        e->data = NULL;
       }
       if (!head)
       {
        free(e);
       }
+      head = false;
     }
   }
 
@@ -170,7 +189,7 @@ table_bp_release(table_bp* target)
 }
 
 
-static bool table_bp_item_add_head(table_bp_item *head,
+static bool bucket_add_head(table_bp_entry *head,
             void* key, size_t key_len, void* data)
 {
   if (table_bp_entry_valid(head))
@@ -199,15 +218,15 @@ static bool table_bp_item_add_head(table_bp_item *head,
               otherwise reuse provided entry or free
               
  */
-static bool table_bp_item_add_tail(table_bp_item *head,
-            table_bp_item *entry, bool copy_entry)
+static bool bucket_add_tail(table_bp_entry *head,
+            table_bp_entry *entry, bool copy_entry)
 {
   if (table_bp_entry_valid(head))
   {
     // Head occupied: find tail and add
     if (copy_entry)
     {
-      table_bp_item *new_entry = malloc(sizeof(*entry));
+      table_bp_entry *new_entry = malloc(sizeof(*entry));
       if (new_entry == NULL)
       {
         return false;
@@ -228,13 +247,13 @@ static bool table_bp_item_add_tail(table_bp_item *head,
   {
     assert(head->next == NULL); // Check no dangling
     // Empty list case
-    memcpy(head, e, sizeof(*head));
+    memcpy(head, entry, sizeof(*head));
     head->next = NULL;
 
     if (!copy_entry)
     {
       // Don't need memory since we copied to head
-      free(e);
+      free(entry);
     }
   }
 
@@ -271,7 +290,7 @@ table_bp_add(table_bp *target, const void* key, size_t key_len,
   }
   memcpy(key_copy, key, key_len);
 
-  bool ok = table_bp_item_add_head(head, key_copy, key_len, data);
+  bool ok = bucket_add_head(head, key_copy, key_len, data);
   if (ok)
   {
     target->size++;
@@ -321,12 +340,13 @@ table_bp_search(const table_bp* table, const void* key,
 {
   int index = bin_key_hash(key, key_len, table->capacity);
 
-  for (table_bp_entry *e = &target->array[index]; e != NULL; e = e->next)
+  for (table_bp_entry *e = &table->array[index]; e != NULL; e = e->next)
   {
     if (table_bp_key_match(key, key_len, e)) {
       *value = e->data;
       return true;
     }
+  }
 
   *value = NULL;
   return false;
@@ -375,11 +395,12 @@ table_bp_remove(table_bp* table, const void* key, size_t key_len,
                 void** data)
 {
   int index = bin_key_hash(key, key_len, table->capacity);
-  table_bp_entry *head = &target->array[index];
+  table_bp_entry *head = &table->array[index];
   table_bp_entry *prev = NULL;
   for (table_bp_entry *e = head; e != NULL; e = e->next)
   {
-    if (table_bp_key_match(key, key_len, e)) {
+    if (table_bp_key_match(key, key_len, e))
+    {
       *data = e->data; // Store data for caller
       free(e->key);
 
@@ -398,7 +419,7 @@ table_bp_remove(table_bp* table, const void* key, size_t key_len,
 static bool
 table_bp_expand(table_bp *T)
 {
-  int new_capacity = table_bp_expand_factor * T->capacity;
+  int new_capacity = (int)(table_bp_expand_factor * (float)T->capacity);
   assert(new_capacity > T->capacity);
   table_bp_entry *new_array = malloc(sizeof(T->array[0]) *
                                      (size_t)new_capacity);
@@ -408,16 +429,15 @@ table_bp_expand(table_bp *T)
     return false;
   }
   
-  
   for (int i = 0; i < new_capacity; i++)
   {
     init_entry(&new_array[i]);
   }
   
   // Rehash and move all entries from old table
-  for (int i = 0; i < target->capacity; i++)
+  for (int i = 0; i < T->capacity; i++)
   {
-    table_bp_entry *head = &target->array[i];
+    table_bp_entry *head = &T->array[i];
     if (!table_bp_entry_valid(head))
     {
       assert(head->next == NULL);
@@ -429,15 +449,19 @@ table_bp_expand(table_bp *T)
     {
       // all entries should be valid if we get here
       assert(table_bp_entry_valid(e));
-      int new_ix = bin_key_hash(key, key_len, new_capacity);
-      bool ok = table_bp_item_add_tail(&new_array[new_ix], e, is_head);
+      int new_ix = bin_key_hash(e->key, e->key_len, new_capacity);
+
+      // Add at tail of new buckets to preserve insert order.
+      // This requires traversing list, but collisions should be fairly
+      // few, especially in enlarged table.
+      bool ok = bucket_add_tail(&new_array[new_ix], e, is_head);
       if (!ok)
       {
         // TODO: how to handle? we're in an awkward state in the middle
         //  of moving entries.
         //  It's unlikely that this will happen.  It is impossible if
-        //  we're doubling the size of the array since we don't need to
-        //  allocate any memory then.
+        //  we're doubling the size of the array since no list heads will
+        //  be demoted to non-heads
         return false;
       }
 
@@ -448,7 +472,7 @@ table_bp_expand(table_bp *T)
   free(T->array);
   T->array = new_array;
   T->capacity = new_capacity;
-  update_resize_threshold(T); 
+  T->resize_threshold = calc_resize_threshold(T);
   return true;
 }
 
@@ -469,6 +493,7 @@ table_bp_dumpkeys(const table_bp* target)
 
 static void
 table_bp_dump2(const char *format, const table_bp* target, bool include_vals)
+{
   printf("{\n");
   for (int i = 0; i < target->capacity; i++)
   {
@@ -486,7 +511,7 @@ table_bp_dump2(const char *format, const table_bp* target, bool include_vals)
       printf_key(e->key, e->key_len);
       if (include_vals)
       {
-        printf(", %s)", (char*) data);
+        printf(", %s)", (char*) e->data);
       }
       else
       {
@@ -500,13 +525,31 @@ table_bp_dump2(const char *format, const table_bp* target, bool include_vals)
   printf("}\n");
 }
 
+static size_t
+bucket_keys_string_length(const table_bp_entry *head)
+{
+  size_t result = 0;
+
+  // Check for non-empty bucket
+  if (table_bp_entry_valid(head))
+  {
+    for (const table_bp_entry *e = head; e != NULL; e = e->next)
+    {
+      // Each byte is two hex digits in string repr.
+      // Plus separator char
+      result += e->key_len * 2 + 1;
+    }
+  }
+  return result;
+}
 
 size_t
 table_bp_keys_string_length(const table_bp* target)
 {
   size_t result = 0;
   for (int i = 0; i < target->capacity; i++)
-    result += list_bp_keys_string_length(target->array[i]);
+    // String length plus separator
+    result += bucket_keys_string_length(&target->array[i]);
   return result;
 }
 
@@ -534,12 +577,54 @@ table_bp_keys_string_slice(char** result,
   return length;
 }
 
+static size_t
+bucket_keys_tostring(char *result, const table_bp_entry *head)
+{
+  if (!table_bp_entry_valid(head)) // Empty bucket
+    return 0;
+  char *p = result;
+  for (const table_bp_entry *e = head; e != NULL; e = e->next)
+  {
+    // Each byte is two hex digits in string repr.
+    result += sprintf_key(p, e->key, e->key_len);
+    p[0] = ' ';
+    p++;
+  }
+  return (size_t)(p - result);
+}
+
+static size_t
+bucket_tostring(char *result, size_t size, const char *format,
+                const table_bp_entry *head)
+{
+  if (size <= 2)
+  {
+    return 0;
+  }
+  char* p = result;
+  
+  p += sprintf(p, "[");
+
+  // Check for empty bucket
+  if (table_bp_entry_valid(head))
+  {
+    for (const table_bp_entry *item = head; item; item = item->next)
+    {
+      p = bp_append_pair(p, item->key, item->key_len, format,
+                         item->data, item->next != NULL);
+    }
+  }
+  p += sprintf(p, "]");
+
+  return (size_t)(p - result);
+}
+
 size_t
 table_bp_keys_tostring(char* result, const table_bp* target)
 {
   char* p = result;
   for (int i = 0; i < target->capacity; i++)
-    p += list_bp_keys_tostring(p, target->array[i]);
+    p += bucket_keys_tostring(p, &target->array[i]);
   return (size_t)(p-result);
 }
 
@@ -553,8 +638,8 @@ table_bp_keys_tostring_slice(char* result, const table_bp* target,
   p[0] = '\0';
   for (int i = 0; i < target->capacity; i++)
   {
-    struct list_bp* L = target->array[i];
-    for (struct list_bp_item* item = L->head; item; item = item->next)
+    table_bp_entry *head = &target->array[i];
+    for (table_bp_entry *item = head; item; item = item->next)
     {
       if (c < offset) {
         c++;
@@ -581,8 +666,8 @@ size_t
 table_bp_tostring(char* output, size_t size,
                char* format, const table_bp* target)
 {
-  size_t   error = size+1;
-  char* ptr   = output;
+  size_t error = size+1;
+  char* ptr = output;
   int i;
   ptr += sprintf(output, "{\n");
 
@@ -590,7 +675,7 @@ table_bp_tostring(char* output, size_t size,
 
   for (i = 0; i < target->capacity; i++)
   {
-    size_t r = list_bp_tostring(s, size, format, target->array[i]);
+    size_t r = bucket_tostring(s, size, format, &target->array[i]);
     if (((size_t)(ptr-output)) + r + 2 < size)
       ptr += sprintf(ptr, "%s\n", s);
     else

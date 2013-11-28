@@ -21,7 +21,9 @@
 #define __TABLE_BP_H
 
 #include <stdbool.h>
+#include <stddef.h>
 
+#include "binkeys.h"
 
 typedef struct table_bp_entry table_bp_entry;
 
@@ -42,7 +44,11 @@ typedef struct table_bp
   int resize_threshold; // Resize if > this size
 } table_bp;
 
-bool table_bp_init(table_bp* target, int capacity, float load_factor);
+#define TABLE_BP_DEFAULT_LOAD_FACTOR 0.75
+
+bool table_bp_init(table_bp* target, int capacity);
+
+bool table_bp_init_custom(table_bp* target, int capacity, float load_factor);
 
 table_bp* table_bp_create(int capacity);
 
@@ -95,7 +101,7 @@ void  table_bp_dumpkeys(const table_bp* target);
   If the entry contains data
  */
 static inline bool
-table_bp_entry_valid(table_bp_entry *e)
+table_bp_entry_valid(const table_bp_entry *e)
 {
   return e->key != NULL;
 }
@@ -104,7 +110,7 @@ table_bp_entry_valid(table_bp_entry *e)
   Check if key matches item key. Inline for performance
  */
 static inline bool
-table_bp_key_match(const void *key, size_t key_len, table_bp_entry *e)
+table_bp_key_match(const void *key, size_t key_len, const table_bp_entry *e)
 {
   return table_bp_entry_valid(e) && bin_key_eq(key, key_len, e->key, e->key_len);
 }

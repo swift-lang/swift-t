@@ -88,6 +88,10 @@ size_t list_bp_tostring(char* str, size_t size,
                      const char* format,
                      const struct list_bp* target);
 
+char*
+bp_append_pair(char* ptr, const void *key, size_t key_len,
+            const char* format, const void* data, bool next);
+
 /*
   Check if key matches item key. Inline for performance
  */

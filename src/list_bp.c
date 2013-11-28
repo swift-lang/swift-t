@@ -227,7 +227,7 @@ list_bp_keys_string_length(const struct list_bp* target)
        item = item->next)
   {
     // Each byte is two hex digits in string repr.
-    result += item->key_len * 2;
+    result += item->key_len * 2 + 1;
   }
   return result;
 }
@@ -239,7 +239,11 @@ list_bp_keys_tostring(char* result,
   char* p = result;
   for (struct list_bp_item* item = target->head; item;
        item = item->next)
+  {
     p += sprintf_key(p, item->key, item->key_len);
+    p[0] = ' ';
+    p++;
+  }
   return (size_t)(p - result);
 }
 
@@ -264,16 +268,16 @@ void list_bp_free_callback(struct list_bp* target,
   free(target);
 }
 
-static char*
-append_pair(char* ptr, struct list_bp_item* item,
-            const char* format, const void* data)
+char*
+bp_append_pair(char* ptr, const void *key, size_t key_len,
+            const char* format, const void* data, bool next)
 {
   ptr += sprintf(ptr, "(");
-  ptr += sprintf_key(ptr, item->key, item->key_len);
+  ptr += sprintf_key(ptr, key, key_len);
   ptr += sprintf(ptr, ",");
   ptr += sprintf(ptr, "%s)", (char*) data);
 
-  if (item->next)
+  if (next)
     ptr += sprintf(ptr, ",");
   return ptr;
 }
@@ -298,7 +302,8 @@ size_t list_bp_tostring(char* str, size_t size,
   for (struct list_bp_item* item = target->head;
        item && ptr-str < size;
        item = item->next)
-    ptr = append_pair(ptr, item, format, item->data);
+    ptr = bp_append_pair(ptr, item->key, item->key_len, format,
+                          item->data, item->next != NULL);
   sprintf(ptr, "]");
 
   return (size_t)(ptr-str);
