@@ -58,9 +58,9 @@ typedef struct table_bp
   of iterating over all valid table entries with no modifications.  
  */
 #define TABLE_BP_FOREACH(T, item) \
-  for (int __i = 0; __i < T->capacity; __i++) \
-    if (table_bp_entry_valid(&T->array[__i])) \
-      for (table_bp_entry *item = &T->array[__i]; item != NULL; \
+  for (int __i = 0; __i < (T)->capacity; __i++) \
+    if (table_bp_entry_valid(&((T)->array[__i]))) \
+      for (table_bp_entry *item = &((T)->array[__i]); item != NULL; \
            item = item->next)
 
 bool table_bp_init(table_bp* target, int capacity);
