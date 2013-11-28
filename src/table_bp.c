@@ -519,8 +519,12 @@ table_bp_expand(table_bp *T)
     }
 
     bool is_head = true;
-    for (table_bp_entry *e = head; e != NULL; e = e->next)
+    table_bp_entry *e, *next;
+    for (e = head; e != NULL; e = next)
     {
+     // Store right away since e might be modified upon adding to new list
+      next = e->next;
+
       // all entries should be valid if we get here
       assert(table_bp_entry_valid(e));
       int new_ix = bin_key_hash(table_bp_get_key(e), e->key_len, new_capacity);
