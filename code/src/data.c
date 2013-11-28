@@ -1062,7 +1062,7 @@ pack_member(adlb_container *cont, table_bp_entry *item,
             bool *result_caller_buffer, int *result_pos);
 
 /**
-   Extract the table members into a big string
+   Extract the table members into a buffer
  */
 static adlb_data_code
 extract_members(adlb_container *cont, int count, int offset,
@@ -1070,7 +1070,7 @@ extract_members(adlb_container *cont, int count, int offset,
                 const adlb_buffer *caller_buffer,
                 adlb_buffer *output)
 {
-  int c = 0; // Count of members added to result
+  int c = 0; // Count of members seen
   adlb_data_code dc;
   struct table_bp* members = cont->members;
   bool use_caller_buf;
@@ -1086,32 +1086,25 @@ extract_members(adlb_container *cont, int count, int offset,
 
   int output_pos = 0; // Amount of output used
 
-  for (int i = 0; i < members->capacity; i++)
+  TABLE_BP_FOREACH(members, item)
   {
-    table_bp_entry *head = &members->array[i];
-    if (!table_bp_entry_valid(head))
+    if (c < offset)
     {
-      // Empty bucket
-      break;
-    }
-
-    for (table_bp_entry *item = head; item;
-         item = item->next)
-    {
-      if (c < offset)
-      {
-        c++;
-        continue;
-      }
-      if (c >= count+offset && count != -1)
-        break;
-      dc = pack_member(cont, item, include_keys, include_vals, &tmp_buf,
-                       output, &use_caller_buf, &output_pos);
-      DATA_CHECK(dc);
       c++;
+      continue;
     }
+    if (c >= count+offset && count != -1)
+    {
+      goto extract_members_done;
+    }
+    dc = pack_member(cont, item, include_keys, include_vals, &tmp_buf,
+                     output, &use_caller_buf, &output_pos);
+    DATA_CHECK(dc);
+    c++;
   }
 
+
+extract_members_done:
   // Mark actual length of output
   output->length = output_pos;
   TRACE("extract_members: output_length: %i\n", output->length);
