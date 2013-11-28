@@ -1056,7 +1056,7 @@ static bool container_lookup(adlb_container *c, adlb_subscript sub,
 }
 
 static adlb_data_code
-pack_member(adlb_container *cont, struct list_bp_item *item,
+pack_member(adlb_container *cont, table_bp_entry *item,
             bool include_keys, bool include_vals,
             const adlb_buffer *tmp_buf, adlb_buffer *result,
             bool *result_caller_buffer, int *result_pos);
@@ -1088,8 +1088,7 @@ extract_members(adlb_container *cont, int count, int offset,
 
   for (int i = 0; i < members->capacity; i++)
   {
-    struct list_bp* L = members->array[i];
-    for (struct list_bp_item* item = L->head; item;
+    for (table_bp_entry *item = &members->array[i]; item;
          item = item->next)
     {
       if (c < offset)
@@ -1113,7 +1112,7 @@ extract_members(adlb_container *cont, int count, int offset,
 }
 
 static adlb_data_code
-pack_member(adlb_container *cont, struct list_bp_item *item,
+pack_member(adlb_container *cont, table_bp_entry *item,
             bool include_keys, bool include_vals,
             const adlb_buffer *tmp_buf, adlb_buffer *result,
             bool *result_caller_buffer, int *result_pos)
@@ -1388,8 +1387,7 @@ insert_notifications_all(adlb_datum *d, adlb_datum_id id,
   struct table_bp* members = c->members;
   for (int i = 0; i < members->capacity; i++)
   {
-    struct list_bp* L = members->array[i];
-    for (struct list_bp_item* item = L->head; item;
+    for (table_bp_entry *item = &members->array[i]; item;
          item = item->next)
     {
       adlb_subscript sub = { .key = item->key, .length = item->key_len };

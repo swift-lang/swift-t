@@ -87,8 +87,8 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
   TRACE("Freeing container %p", container);
   for (int i = 0; i < members->capacity; i++)
   {
-    struct list_bp* L = members->array[i];
-    struct list_bp_item* item = L->head;
+    table_bp_entry* head = &members->array[i];
+    table_bp_entry* item = head;
     while (item != NULL)
     {
       adlb_datum_storage *d = (adlb_datum_storage*)item->data;
@@ -100,7 +100,7 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
         adlb_subscript *sub = &scav.subscript;
         bool do_scavenge = !ADLB_RC_IS_NULL(scav.refcounts) && 
            (!adlb_has_sub(*sub) ||
-             list_bp_key_match(sub->key, sub->length, item));
+             table_bp_key_match(sub->key, sub->length, item));
 
         if (do_scavenge)
         {
@@ -131,15 +131,10 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
       }
      
       // Free list node and move to next
-      struct list_bp_item* prev_item = item;
+      table_bp_entry* prev_item = item;
       item = item->next;
-      if (free_mem)
+      if (free_mem && prev_item != head) // Head is part of array
         free(prev_item);
-    }
-    if (free_mem)
-    {
-      members->array[i]->head = NULL;
-      members->array[i]->size = 0;
     }
   }
   if (free_mem)

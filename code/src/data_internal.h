@@ -9,8 +9,11 @@
 #include "adlb_types.h"
 #include "data.h"
 
-
-#define CONTAINER_INIT_CAPACITY 1024
+/**
+ * Set initial capacity to be fairly small since in practice most
+ * containers are small.  Container will expand.
+ */
+#define CONTAINER_INIT_CAPACITY 32
 
 /**
    Status vector for Turbine variables

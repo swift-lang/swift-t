@@ -196,8 +196,7 @@ ADLB_Pack_container(const adlb_container *container,
 
   for (int i = 0; i < members->capacity; i++)
   {
-    struct list_bp* L = members->array[i];
-    struct list_bp_item* item = L->head;
+    table_bp_entry *item = &members->array[i];
     while (item != NULL)
     {
       // append key; append val
@@ -721,8 +720,7 @@ static char *data_repr_container(const adlb_container *c)
 
   for (int i = 0; i < members->capacity; i++)
   {
-    struct list_bp* L = members->array[i];
-    for (struct list_bp_item* item = L->head; item;
+    for (table_bp_entry *item = &members->array[i]; item;
          item = item->next)
     {
       adlb_container_val v = item->data;
