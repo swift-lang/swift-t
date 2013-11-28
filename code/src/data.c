@@ -1088,20 +1088,22 @@ extract_members(adlb_container *cont, int count, int offset,
 
   TABLE_BP_FOREACH(members, item)
   {
-    if (c < offset)
+    if (c >= offset)
     {
-      c++;
-      continue;
+      if (c >= count+offset && count != -1)
+      {
+        TRACE("Got %i/%i items, done\n", c+1, count);
+        goto extract_members_done;
+      }
+      dc = pack_member(cont, item, include_keys, include_vals, &tmp_buf,
+                       output, &use_caller_buf, &output_pos);
+      DATA_CHECK(dc);
     }
-    if (c >= count+offset && count != -1)
-    {
-      goto extract_members_done;
-    }
-    dc = pack_member(cont, item, include_keys, include_vals, &tmp_buf,
-                     output, &use_caller_buf, &output_pos);
-    DATA_CHECK(dc);
     c++;
   }
+
+  // Should have found requested number
+  assert(c - offset == count);
 
 
 extract_members_done:
