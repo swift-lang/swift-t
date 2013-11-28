@@ -88,6 +88,11 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
   for (int i = 0; i < members->capacity; i++)
   {
     table_bp_entry* head = &members->array[i];
+    if (!table_bp_entry_valid(head))
+    {
+      // Empty bucket
+      continue;
+    }
     table_bp_entry* item = head;
     while (item != NULL)
     {

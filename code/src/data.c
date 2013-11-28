@@ -1088,7 +1088,14 @@ extract_members(adlb_container *cont, int count, int offset,
 
   for (int i = 0; i < members->capacity; i++)
   {
-    for (table_bp_entry *item = &members->array[i]; item;
+    table_bp_entry *head = &members->array[i];
+    if (!table_bp_entry_valid(head))
+    {
+      // Empty bucket
+      break;
+    }
+
+    for (table_bp_entry *item = head; item;
          item = item->next)
     {
       if (c < offset)
@@ -1117,6 +1124,8 @@ pack_member(adlb_container *cont, table_bp_entry *item,
             const adlb_buffer *tmp_buf, adlb_buffer *result,
             bool *result_caller_buffer, int *result_pos)
 {
+  assert(table_bp_entry_valid(item));
+
   adlb_data_code dc;
   if (include_keys)
   {

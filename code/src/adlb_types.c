@@ -187,34 +187,30 @@ ADLB_Pack_container(const adlb_container *container,
 {
   int dc;
 
-  const struct table_bp *members = container->members;
+  const table_bp *members = container->members;
   dc = ADLB_Pack_container_hdr(members->size, container->key_type,
       container->val_type, output, output_caller_buffer, output_pos);
   DATA_CHECK(dc);
   
   int appended = 0;
 
-  for (int i = 0; i < members->capacity; i++)
+  TABLE_BP_FOREACH(members, item)
   {
-    table_bp_entry *item = &members->array[i];
-    while (item != NULL)
-    {
-      // append key; append val
-      int required = *output_pos + (int)VINT_MAX_BYTES + item->key_len;
-      dc = ADLB_Resize_buf(output, output_caller_buffer, required);
-      DATA_CHECK(dc);
+    // append key; append val
+    int required = *output_pos + (int)VINT_MAX_BYTES + item->key_len;
+    dc = ADLB_Resize_buf(output, output_caller_buffer, required);
+    DATA_CHECK(dc);
 
-      dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL, item->key, item->key_len,
-            true, output, output_caller_buffer, output_pos);
-      DATA_CHECK(dc);
+    dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL, item->key, item->key_len,
+          true, output, output_caller_buffer, output_pos);
+    DATA_CHECK(dc);
 
-      dc = ADLB_Pack_buffer(item->data, container->val_type,
-              true, tmp_buf, output, output_caller_buffer, output_pos);
-      DATA_CHECK(dc);
+    dc = ADLB_Pack_buffer(item->data, container->val_type,
+            true, tmp_buf, output, output_caller_buffer, output_pos);
+    DATA_CHECK(dc);
 
-      appended++;
-      item = item->next;
-    }
+    appended++;
+    item = item->next;
   }
  
   // Check that the number we appended matches
@@ -706,7 +702,7 @@ char *ADLB_Data_repr(const adlb_datum_storage *d, adlb_data_type type)
 static char *data_repr_container(const adlb_container *c)
 {
   adlb_data_code dc;
-  struct table_bp* members = c->members;
+  table_bp* members = c->members;
   size_t cont_str_len = 1024;
   char *cont_str = malloc(cont_str_len);
   int cont_str_pos = 0;
@@ -718,30 +714,26 @@ static char *data_repr_container(const adlb_container *c)
   assert(dc == ADLB_DATA_SUCCESS);
   cont_str_pos += sprintf(&cont_str[cont_str_pos], "%s=>%s: ", kts, vts);
 
-  for (int i = 0; i < members->capacity; i++)
+  TABLE_BP_FOREACH(members, item)
   {
-    for (table_bp_entry *item = &members->array[i]; item;
-         item = item->next)
+    adlb_container_val v = item->data;
+    char *value_s = ADLB_Data_repr(v, c->val_type);
+    dc = xlb_resize_str(&cont_str, &cont_str_len, cont_str_pos,
+                   (item->key_len - 1) + strlen(value_s) + 7);
+    assert(dc == ADLB_DATA_SUCCESS);
+    if (c->key_type == ADLB_DATA_TYPE_STRING)
     {
-      adlb_container_val v = item->data;
-      char *value_s = ADLB_Data_repr(v, c->val_type);
-      dc = xlb_resize_str(&cont_str, &cont_str_len, cont_str_pos,
-                     (item->key_len - 1) + strlen(value_s) + 7);
-      assert(dc == ADLB_DATA_SUCCESS);
-      if (c->key_type == ADLB_DATA_TYPE_STRING)
-      {
-        cont_str_pos += sprintf(&cont_str[cont_str_pos], "\"%s\"={%s} ",
-                                (char*)item->key, value_s);
-      }
-      else
-      {
-        // TODO: support binary keys
-        cont_str_pos += sprintf(&cont_str[cont_str_pos], "\"%s\"={%s} ",
-                                (char*)item->key, value_s);
-      }
-
-      free(value_s);
+      cont_str_pos += sprintf(&cont_str[cont_str_pos], "\"%s\"={%s} ",
+                              (char*)item->key, value_s);
     }
+    else
+    {
+      // TODO: support binary keys
+      cont_str_pos += sprintf(&cont_str[cont_str_pos], "\"%s\"={%s} ",
+                              (char*)item->key, value_s);
+    }
+
+    free(value_s);
   }
   cont_str[cont_str_pos] = '\0';
   return cont_str;
