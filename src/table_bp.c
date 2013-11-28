@@ -518,9 +518,9 @@ table_bp_expand(table_bp *T)
       continue; // Bucket was empty
     }
 
-    bool is_head = true;
+    bool is_head;
     table_bp_entry *e, *next;
-    for (e = head; e != NULL; e = next)
+    for (e = head, is_head = true; e != NULL; e = next, is_head = false)
     {
      // Store right away since e might be modified upon adding to new list
       next = e->next;
@@ -542,17 +542,13 @@ table_bp_expand(table_bp *T)
         //  be demoted to non-heads
         return false;
       }
-
-      is_head = false;
     }
   }
   
   free(T->array);
-  //printf("Resized from %i to %i (size %i)\n", T->capacity,new_capacity, T->size);
   T->array = new_array;
   T->capacity = new_capacity;
   T->resize_threshold = calc_resize_threshold(T);
-  //printf("New resize threshold %i\n", T->resize_threshold);
   return true;
 }
 
