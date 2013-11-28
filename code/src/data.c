@@ -1062,7 +1062,9 @@ pack_member(adlb_container *cont, table_bp_entry *item,
             bool *result_caller_buffer, int *result_pos);
 
 /**
-   Extract the table members into a buffer
+   Extract the table members into a buffer.
+   count: -1 for all past offset, or the exact expected count based
+        on the array size.
  */
 static adlb_data_code
 extract_members(adlb_container *cont, int count, int offset,
@@ -1102,9 +1104,15 @@ extract_members(adlb_container *cont, int count, int offset,
     c++;
   }
 
+  TRACE("Got %i/%i entries at offset %i table size %i\n", c-offset, count,
+                offset, members->size);
   // Should have found requested number
-  assert(c - offset == count);
-
+  if (count != -1 && c - offset != count)
+  {
+    DEBUG("Warning: did not get expected count when enumerating array. "
+          "Got %i/%i entries at offset %i table size %i\n",
+          c-offset, count, offset, members->size);
+  }
 
 extract_members_done:
   // Mark actual length of output
