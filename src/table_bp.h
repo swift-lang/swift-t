@@ -52,6 +52,9 @@ bool table_bp_init_custom(table_bp* target, int capacity, float load_factor);
 
 table_bp* table_bp_create(int capacity);
 
+table_bp*
+table_bp_create_custom(int capacity, float load_factor);
+
 bool table_bp_add(table_bp *target, const void* key,
                   size_t key_len, void* data);
 

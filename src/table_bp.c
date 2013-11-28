@@ -102,11 +102,17 @@ table_bp_init_custom(table_bp* target, int capacity, float load_factor)
 table_bp*
 table_bp_create(int capacity)
 {
+  return table_bp_create_custom(capacity, TABLE_BP_DEFAULT_LOAD_FACTOR);
+}
+
+table_bp*
+table_bp_create_custom(int capacity, float load_factor)
+{
   table_bp* new_table =  malloc(sizeof(const table_bp));
   if (! new_table)
     return NULL;
 
-  bool result = table_bp_init(new_table, capacity);
+  bool result = table_bp_init_custom(new_table, capacity, load_factor);
   if (!result)
   {
     free(new_table);
