@@ -1387,53 +1387,49 @@ insert_notifications_all(adlb_datum *d, adlb_datum_id id,
 {
   adlb_data_code dc;
   struct table_bp* members = c->members;
-  for (int i = 0; i < members->capacity; i++)
+  TABLE_BP_FOREACH(members, item)
   {
-    for (table_bp_entry *item = &members->array[i]; item;
-         item = item->next)
+    adlb_subscript sub = { .key = item->key, .length = item->key_len };
+
+    // Find, remove, and return any listeners/references
+    struct list_l *ref_list = NULL;
+    struct list_i *sub_list = NULL;
+    dc = check_subscript_notifications(id, sub, &ref_list, &sub_list);
+    DATA_CHECK(dc);
+
+    if (ref_list != NULL || sub_list != NULL)
     {
-      adlb_subscript sub = { .key = item->key, .length = item->key_len };
-
-      // Find, remove, and return any listeners/references
-      struct list_l *ref_list = NULL;
-      struct list_i *sub_list = NULL;
-      dc = check_subscript_notifications(id, sub, &ref_list, &sub_list);
-      DATA_CHECK(dc);
-
-      if (ref_list != NULL || sub_list != NULL)
+      adlb_container_val val = item->data;
+      adlb_binary_data val_data;
+      if (ref_list != NULL)
       {
-        adlb_container_val val = item->data;
-        adlb_binary_data val_data;
-        if (ref_list != NULL)
-        {
-          // Pack container value to binary value if needed
-          dc = ADLB_Pack(val, c->val_type, NULL, &val_data);
-          DATA_CHECK(dc);
-
-          // Take ownership of data in case it is freed
-          dc = ADLB_Own_data(NULL, &val_data);
-          DATA_CHECK(dc);
-
-          // Mark that caller should free
-          if (notify->to_free_length == notify->to_free_size)
-          {
-            notify->to_free_size = notify->to_free_size == 0 ? 
-                    64 : notify->to_free_size * 2;
-            DATA_REALLOC(notify->to_free, notify->to_free_size);
-          }
-          notify->to_free[notify->to_free_length++] = val_data.caller_data;
-        }
-        dc = insert_notifications2(d, id, sub, c->val_type, item->data,
-                      val_data.data, val_data.length, ref_list, sub_list,
-                      notify, garbage_collected);
+        // Pack container value to binary value if needed
+        dc = ADLB_Pack(val, c->val_type, NULL, &val_data);
         DATA_CHECK(dc);
 
-        if (*garbage_collected)
+        // Take ownership of data in case it is freed
+        dc = ADLB_Own_data(NULL, &val_data);
+        DATA_CHECK(dc);
+
+        // Mark that caller should free
+        if (notify->to_free_length == notify->to_free_size)
         {
-          // We just processed the last pending notification for the
-          // container: we're done!
-          return ADLB_DATA_SUCCESS;
+          notify->to_free_size = notify->to_free_size == 0 ? 
+                  64 : notify->to_free_size * 2;
+          DATA_REALLOC(notify->to_free, notify->to_free_size);
         }
+        notify->to_free[notify->to_free_length++] = val_data.caller_data;
+      }
+      dc = insert_notifications2(d, id, sub, c->val_type, item->data,
+                    val_data.data, val_data.length, ref_list, sub_list,
+                    notify, garbage_collected);
+      DATA_CHECK(dc);
+
+      if (*garbage_collected)
+      {
+        // We just processed the last pending notification for the
+        // container: we're done!
+        return ADLB_DATA_SUCCESS;
       }
     }
   }

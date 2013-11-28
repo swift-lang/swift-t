@@ -141,6 +141,10 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
       if (free_mem && prev_item != head) // Head is part of array
         free(prev_item);
     }
+
+    // Mark bucket empty
+    head->key = NULL;
+    head->next = NULL;
   }
   if (free_mem)
     table_bp_free(members);
