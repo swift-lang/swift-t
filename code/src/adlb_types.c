@@ -211,7 +211,6 @@ ADLB_Pack_container(const adlb_container *container,
     DATA_CHECK(dc);
 
     appended++;
-    item = item->next;
   }
  
   // Check that the number we appended matches
