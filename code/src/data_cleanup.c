@@ -93,9 +93,14 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
       // Empty bucket
       continue;
     }
-    table_bp_entry* item = head;
-    while (item != NULL)
+
+    // Keep next pointer to allow freeing of item
+    table_bp_entry* item, *next;
+    for (item = head, next = head->next; item != NULL;
+         item = next)
     {
+      next = item->next; // Store next pointer immediately
+
       adlb_datum_storage *d = (adlb_datum_storage*)item->data;
       
       TRACE("Freeing %p in %p", d, container);
@@ -131,7 +136,7 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
           DATA_CHECK(dc);
           free(d);
         }
-        if (!table_bp_inline_key(item))
+        if (!table_bp_inline_key(item->key_len))
         {
           assert(item->__key != NULL);
           free(item->__key);
@@ -139,10 +144,8 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
       }
      
       // Free list node and move to next
-      table_bp_entry* prev_item = item;
-      item = item->next;
-      if (free_mem && prev_item != head) // Head is part of array
-        free(prev_item);
+      if (free_mem && item != head) // Head is part of array
+        free(item);
     }
 
     // Mark bucket empty
