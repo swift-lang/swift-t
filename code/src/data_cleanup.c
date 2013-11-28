@@ -143,8 +143,7 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
     }
 
     // Mark bucket empty
-    head->key = NULL;
-    head->next = NULL;
+    table_bp_clear_entry(head);
   }
   if (free_mem)
     table_bp_free(members);

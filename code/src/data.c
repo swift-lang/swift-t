@@ -1714,7 +1714,7 @@ static void free_td_entry(adlb_datum_id id, void *val)
   }
 }
 
-static void free_cref_entry(void *key, size_t key_len, void *val)
+static void free_cref_entry(const void *key, size_t key_len, void *val)
 {
   assert(key != NULL && val != NULL);
   struct list_l* listeners = val;
@@ -1730,15 +1730,13 @@ static void free_cref_entry(void *key, size_t key_len, void *val)
             id, (int)sub.length, (const char*)sub.key, curr->data);
   }
   list_l_free(listeners);
-  free(key);
 }
 
-static void free_ix_l_entry(void *key, size_t key_len, void *val)
+static void free_ix_l_entry(const void *key, size_t key_len, void *val)
 {
   assert(key != NULL && val != NULL);
   struct list_i* listeners = val;
   list_i_free(listeners);
-  free(key);
 }
 
 static void free_locked_entry(int64_t key, void *val)
