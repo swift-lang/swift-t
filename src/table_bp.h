@@ -143,7 +143,7 @@ static inline const void *table_bp_get_key(const table_bp_entry *e)
   }
 }
 
-static void table_bp_clear_entry(table_bp_entry *entry)
+static inline void table_bp_clear_entry(table_bp_entry *entry)
 {
   entry->__key = TABLE_BP_INVALID_KEY;
   entry->key_len = 0;
