@@ -96,15 +96,11 @@ int main() {
     void *val = (void*)((long)j);
     ok = table_bp_add(&T, key, key_len, val);
     assert(ok);
-
-    // Check iteration works;
-    int count = 0;
-    TABLE_BP_FOREACH(&T, item)
-    {
-      count++;
-    }
-    printf("i=%i count=%i\n", i, count);
-    assert(count == i + 1);
+    
+    void *search_val;
+    ok = table_bp_search(&T, key, key_len, &search_val);
+    assert(ok);
+    assert(val == search_val);
   }
   assert(T.size == N);
 

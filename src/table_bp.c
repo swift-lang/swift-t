@@ -148,7 +148,7 @@ void table_bp_free_callback(table_bp* target, bool free_root,
         next = e->next; // Store next right away
 
         if (callback != NULL)
-          callback(table_bp_get_key(e->__key), e->key_len, e->data);
+          callback(table_bp_get_key(e), e->key_len, e->data);
 
         if (!table_bp_inline_key(e->key_len))
         {
