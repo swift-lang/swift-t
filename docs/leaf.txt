@@ -375,12 +375,64 @@ This produces:
 include::examples/4/test-mvm-swift.out[]
 ----
 
+=== Complete example 5: Calling Fortran with +argc/argv+
+
+It may be desirable to call an existing Fortran _program_ from Swift
+with as little modification as possible.  This example considers the
+case that the Swift program will construct an array of strings to pass
+to the Fortran code.  The Fortran program is minimally modified by
+removing its "open code" and exposing a function that accepts an array
+of strings instead of using Fortran builtins
++command_argument_count()+ and +get_command_argument()+.
+
+Consider the Fortran function +func()+ (+func.f90+):
+----
+include::examples/5/func-snip-1.f90[]
+----
+
+The +argc/argv+ is stored in a +string_array+, defined in the top of
++func.f90+.
+
+This data structure is constructed and filled by the program
++prog-f90.f90+ as follows:
+
+----
+include::examples/5/prog-f90-snip-1.f90[]
+----
+
+To call this function from Swift, follow the +Makefile+.  (You may
+need to set the Tcl directory.)
+
+1. We first wrap the Fortran with FortWrap to produce C\++ wrappers.
+Note that FortWrap wraps the Fortran type +string_array+ with a C\++
+class (an example of how to use the class directly from C\++ is
+provided in +prog-cxx.cxx+).
+
+2. We wrap the generated C\++ header (+FortWrap.h+) with SWIG.
+
+3. We compile everything.
+
+4. A Tcl function (+func.tcl+) is used to retrieve the string array
+from Swift and create an output buffer for the output double.
+
+5. We call the function from Swift using the simple syntax:
++
+----
+include::examples/5/prog-swift-snip-1.swift[]
+----
+
+6. We run with:
++
+----
+include::examples/5/run.sh[]
+----
+
 == Advanced mode
 
 In this mode, the user provides the Swift/T runtime with dataflow
 information so that more complex operations may be performed.
 
-=== Complete example 5: Leaf task with dataflow
+=== Complete example 6: Leaf task with dataflow
 
 When using the advanced syntax, the final argument is the name of a
 Tcl function:
@@ -393,7 +445,7 @@ Turbine +rule+ statement to schedule real leaf work when +i+ is set.
 
 Consider the following Tcl code (+f.tcl+):
 ----
-include::examples/5/f.tcl[]
+include::examples/6/f.tcl[]
 ----
 In this case, Tcl function +f_impl+ is the _implementation_: the
 actual code the user desires to call.  This may be an existing Tcl
@@ -417,7 +469,7 @@ executed, and so on.
 This Tcl code is called by the following simple Swift/T test
 (+test-f.swift+):
 ----
-include::examples/5/test-f.swift[]
+include::examples/6/test-f.swift[]
 ----
 
 For more information about the APIs used to store/retrieve Swift/T
@@ -430,7 +482,7 @@ installation directory.  The Swift headers are in +turbine/export+ and
 their Tcl implementations are in +turbine/lib+.  This is a good way to
 find out what else may be done.
 
-=== Complete example 6: Calling an MPI library
+=== Complete example 7: Calling an MPI library
 
 Calling an existing MPI library is similar to calling any other C
 code.  In this example, we will show how to obtain the new
@@ -441,7 +493,7 @@ Swift/T on an MPI-3 implementation such as MPICH 3.0.
 
 Consider the  following MPI library function (+f.c+):
 ----
-include::examples/6/f-snip-1.c[]
+include::examples/7/f-snip-1.c[]
 ----
 
 This function accepts an MPI communicator +comm+ freshly created for
@@ -456,7 +508,7 @@ communication.  Point-to-point messaging and collectives (such as
 
 We desire to call this from Swift as (+test-f.swift+):
 ----
-include::examples/6/test-f.swift[]
+include::examples/7/test-f.swift[]
 ----
 
 In the declaration, +@par+ allows us to call the function as a
@@ -464,7 +516,7 @@ parallel function.  At call time, we use +@par=2+.
 
 We wrap this function with SWIG and a Swift/T interface/body:
 ----
-include::examples/6/f.tcl[]
+include::examples/7/f.tcl[]
 ----
 
 This differs from the single-process task (example 5) in that it
@@ -478,12 +530,12 @@ result.
 
 At run time, ensure Turbine has enough workers to run the user task:
 ----
-include::examples/6/run-f.sh[]
+include::examples/7/run-f.sh[]
 ----
 
 == Calling Swift/T from native code
 
-=== Complete example 7: Calling Swift/T from C
+=== Complete example 8: Calling Swift/T from C
 
 Swift/T itself may be called from native code as a library.
 
@@ -513,75 +565,23 @@ The Swift script is a normal Swift script except for the call to
 (+test-f.swift+):
 
 ----
-include::examples/7/test-f.swift[]
+include::examples/8/test-f.swift[]
 ----
 
 The controller MPI program is run as: (+run.sh+):
 
 ----
-include::examples/7/run.sh[]
+include::examples/8/run.sh[]
 ----
 
 producing:
 
 ----
-include::examples/7/output.txt[]
+include::examples/8/output.txt[]
 ----
 
 Note that only rank 0 in the Swift/T communicator has access to the
 +output+ data.
-
-=== Complete example 8: Calling Fortran with +argc/argv+
-
-It may be desirable to call an existing Fortran _program_ from Swift
-with as little modification as possible.  This example considers the
-case that the Swift program will construct an array of strings to pass
-to the Fortran code.  The Fortran program is minimally modified by
-removing its "open code" and exposing a function that accepts an array
-of strings instead of using Fortran builtins
-+command_argument_count()+ and +get_command_argument()+.
-
-Consider the Fortran function +func()+ (+func.f90+):
-----
-include::examples/8/func-snip-1.f90[]
-----
-
-The +argc/argv+ is stored in a +string_array+, defined in the top of
-+func.f90+.
-
-This data structure is constructed and filled by the program
-+prog-f90.f90+ as follows:
-
-----
-include::examples/8/prog-f90-snip-1.f90[]
-----
-
-To call this function from Swift, follow the +Makefile+.  (You may
-need to set the Tcl directory.)
-
-1. We first wrap the Fortran with FortWrap to produce C\++ wrappers.
-Note that FortWrap wraps the Fortran type +string_array+ with a C\++
-class (an example of how to use the class directly from C\++ is
-provided in +prog-cxx.cxx+).
-
-2. We wrap the generated C\++ header (+FortWrap.h+) with SWIG.
-
-3. We compile everything.
-
-4. A Tcl function (+func.tcl+) is used to retrieve the string array
-from Swift and create an output buffer for the output double.
-
-5. We call the function from Swift using the simple syntax:
-+
-----
-include::examples/8/prog-swift-snip-1.swift[]
-----
-
-6. We run with:
-+
-----
-include::examples/8/run.sh[]
-----
 
 ////
 Local Variables:

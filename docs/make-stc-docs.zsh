@@ -14,10 +14,10 @@ snip()
   examples/snippet.pl -n=${N} ${FILE} > ${OUTPUT}
 }
 
-snip 1 examples/6/f.c
-snip 1 examples/8/func.f90
-snip 1 examples/8/prog-f90.f90
-snip 1 examples/8/prog-swift.swift
+snip 1 examples/5/func.f90
+snip 1 examples/5/prog-f90.f90
+snip 1 examples/5/prog-swift.swift
+snip 1 examples/7/f.c
 
 uptodate swift.html swift.txt || \
 asciidoc --attribute stylesheet=${PWD}/swift.css swift.txt

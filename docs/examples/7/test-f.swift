@@ -1,12 +1,10 @@
 
-import blob;
 import io;
-import sys;
+
+@par @dispatch=WORKER (float z) f(int k) "f" "0.0" "f_tcl";
 
 main
 {
-  printf("args: %s", args());
-  string s = "MY_OUTPUT";
-  blob b = blob_from_string(s);
-  turbine_run_output_blob(b);
+  float z = @par=2 f(3);
+  printf("z: %0.3f", z);
 }

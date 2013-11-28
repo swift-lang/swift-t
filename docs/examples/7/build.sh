@@ -1,27 +1,18 @@
-#!/bin/bash -ex
+#!/bin/sh -ex
 
 MPICC=$( which mpicc )
 MPI=$( dirname $( dirname ${MPICC} ) )
 
-TURBINE=$( which turbine )
-TURBINE_HOME=$( dirname $( dirname ${TURBINE} ) )
-TURBINE_INCLUDE=${TURBINE_HOME}/include
-TURBINE_LIB=${TURBINE_HOME}/lib
+TCLSH=$( which tclsh )
+TCL_HOME=$( dirname $( dirname ${TCLSH} ) )
+TCL_INCLUDE=${TCL_HOME}/include
 
-# Obtain Turbine build configuration
-source ${TURBINE_HOME}/scripts/turbine-config.sh
+swig -I${MPI}/include f.i
 
-TCL_INCLUDE=${TCL}/include
-C_UTILS_INCLUDE=${C_UTILS}/include
-ADLB_INCLUDE=${ADLB}/include
+${MPICC} -c -fPIC -I . f.c
+${MPICC} -c -fPIC -I ${TCL_INCLUDE} f_wrap.c
+${MPICC} -shared -o libf.so f_wrap.o f.o
+tclsh make-package.tcl > pkgIndex.tcl
 
-INCLUDES="-I . -I ${TURBINE_INCLUDE} -I ${TCL_INCLUDE} "
-INCLUDES+="-I ${C_UTILS_INCLUDE} -I ${ADLB_INCLUDE}"
-
-stc -r ${PWD} -r ${TURBINE_LIB} test-f.swift test-f.tcl
-
-${MPICC} -c ${INCLUDES} controller.c
-${MPICC} -o controller.x controller.o \
-  -L ${TURBINE_LIB} -l tclturbine \
-  -Wl,-rpath -Wl,${TURBINE_LIB}
+stc -r ${PWD} test-f.swift test-f.tcl
 
