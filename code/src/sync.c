@@ -43,20 +43,21 @@ static inline adlb_code msg_from_other_server(int other_server,
                   int target, const struct packed_sync *my_hdr);
 static inline adlb_code msg_shutdown(bool* done);
 
-static adlb_code add_pending(xlb_pending_kind kind, int rank,
+static adlb_code enqueue_pending(xlb_pending_kind kind, int rank,
                              const struct packed_sync *hdr);
 
 static inline bool is_simple_sync(adlb_sync_mode mode);
 
-// Pending sync requests that we deferred
 /*
-  TODO: need to change to FIFO in case refcount incr is followed by decr:
-  processing in LIFO order could result in premature free.  Maybe use
-  ring buffer.
+  Pending sync requests that we deferred
+  Implemented with FIFO ring buffer since we need FIFO in case refcount
+  incr is followed by decr: processing in LIFO order could result in
+  premature free.
  */
 xlb_pending *xlb_pending_syncs = NULL;
 int xlb_pending_sync_count = 0;
-int xlb_pending_sync_size = 0; // Malloced sized
+int xlb_pending_sync_head = 0;
+int xlb_pending_sync_size = 0; // Malloced size
 
 adlb_code
 xlb_sync_init(void)
@@ -76,6 +77,7 @@ xlb_sync_init(void)
   }
 
   xlb_pending_sync_count = 0;
+  xlb_pending_sync_head = 0;
   xlb_pending_syncs = malloc(sizeof(xlb_pending_syncs[0]) *
                                 (size_t)xlb_pending_sync_size);
   CHECK_MSG(xlb_pending_syncs != NULL, "could not allocate memory");
@@ -254,7 +256,7 @@ static inline adlb_code msg_from_other_server(int other_server, int target,
   else
   {
     // Don't handle right away, defer it
-    code = add_pending(DEFERRED_SYNC, other_server, other_hdr);
+    code = enqueue_pending(DEFERRED_SYNC, other_server, other_hdr);
     ADLB_CHECK(code);
   }
   TRACE_END;
@@ -308,7 +310,7 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
     if (defer_svr_ops)
     {
       DEBUG("Defer refcount for <%"PRId64">", hdr->incr.id);
-      code = add_pending(ACCEPTED_RC, rank, hdr);
+      code = enqueue_pending(ACCEPTED_RC, rank, hdr);
       ADLB_CHECK(code);
     }
     else
@@ -334,7 +336,7 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
   hdr: sync header.  This function will make a copy of it
   returns: ADLB_SUCCESS, or ADLB_ERROR on unexpected error
  */
-static adlb_code add_pending(xlb_pending_kind kind, int rank,
+static adlb_code enqueue_pending(xlb_pending_kind kind, int rank,
                              const struct packed_sync *hdr)
 {
   assert(xlb_pending_sync_count <= xlb_pending_sync_size);
@@ -345,14 +347,80 @@ static adlb_code add_pending(xlb_pending_kind kind, int rank,
     xlb_pending_syncs = realloc(xlb_pending_syncs,
                       sizeof(xlb_pending_syncs[0]) * (size_t)xlb_pending_sync_size);
     CHECK_MSG(xlb_pending_syncs != NULL, "could not allocate memory");
+    /* Entries are in: [head..count) ++ [0..head)
+     * Copy [0..head) to [count..count+head) to account for new size
+     * End result is all entries in [head..head+count] */
+    if (xlb_pending_sync_head != 0)
+    {
+      memcpy(&xlb_pending_syncs[xlb_pending_sync_count], xlb_pending_syncs,
+            sizeof(xlb_pending_syncs[0]) * (size_t)xlb_pending_sync_head);
+    }
   }
-  
-  xlb_pending *entry = &xlb_pending_syncs[xlb_pending_sync_count++];
+ 
+  int tail = (xlb_pending_sync_head + xlb_pending_sync_count)
+             % xlb_pending_sync_size;
+  xlb_pending *entry = &xlb_pending_syncs[tail];
   entry->kind = kind;
   entry->rank = rank;
   entry->hdr = malloc(PACKED_SYNC_SIZE);
   CHECK_MSG(entry->hdr != NULL, "could not allocate memory");
   memcpy(entry->hdr, hdr, PACKED_SYNC_SIZE);
+  xlb_pending_sync_count++;
+  return ADLB_SUCCESS;
+}
+
+
+// Shrink to half of previous size
+adlb_code xlb_pending_shrink(void)
+{
+  // Short names for readability
+  const int new_size = xlb_pending_sync_size / 2;
+  const int old_size = xlb_pending_sync_size;
+  const int count = xlb_pending_sync_count;
+  const int head = xlb_pending_sync_head;
+  assert(head <= old_size);
+  assert(count <= new_size);
+  /* 
+    Need to pack into smaller new array
+    Entries are in [head..head+count).
+  */
+  if (head + count > new_size)
+  {
+    if (head + count > old_size)
+    {
+      /*
+        If wrapped around, we have [head..old_size) ++ [0..nwrapped)
+
+        Move [0..nwrapped) to [count-nwrapped..count) and
+             [head..old_size) to [0..count-nwrapped)
+        Destination will be unused bc. nwrapped <= head bc. in this case
+        we're using less than half of the array.
+      */
+      int nwrapped = (head + count) % old_size;
+      // Use memmove since might overlap
+      memmove(&xlb_pending_syncs[count-nwrapped], xlb_pending_syncs,
+              sizeof(xlb_pending_syncs[0]) * (size_t)nwrapped);
+      memcpy(xlb_pending_syncs, &xlb_pending_syncs[head],
+              sizeof(xlb_pending_syncs[0]) * (size_t)(count - nwrapped));
+      xlb_pending_sync_head = 0;
+    }
+    else
+    {
+      // No wrapping, but past end of new array.
+      // Just move to front with memmove since might overlap
+      memmove(xlb_pending_syncs, &xlb_pending_syncs[head],
+              sizeof(xlb_pending_syncs[0]) * (size_t)count);
+      xlb_pending_sync_head = 0;
+    }
+  }
+
+  xlb_pending_sync_size = new_size;
+  xlb_pending_syncs = realloc(xlb_pending_syncs,
+    sizeof(xlb_pending_syncs[0]) * (size_t)xlb_pending_sync_size);
+
+  // realloc shouldn't really fail when shrinking
+  assert(xlb_pending_syncs != NULL);
+
   return ADLB_SUCCESS;
 }
 

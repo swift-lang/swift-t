@@ -342,7 +342,7 @@ xlb_handle_pending_syncs(void)
   struct packed_sync *hdr;
 
   // Handle outstanding sync requests
-  while ((rc = xlb_pop_pending(&kind, &rank, &hdr)) == ADLB_SUCCESS)
+  while ((rc = xlb_dequeue_pending(&kind, &rank, &hdr)) == ADLB_SUCCESS)
   {
     DEBUG("server_sync: [%d] handling deferred sync from %d",
           xlb_comm_rank, rank);

@@ -72,43 +72,44 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
 // Inline functions to make it quick to check for pending sync requests
 
 // Info about pending sync requests: where sync request has been received
-// but we haven't responded yet
-extern xlb_pending *xlb_pending_syncs; // Array
+// but we haven't responded yet.
+extern xlb_pending *xlb_pending_syncs; // Array for ring buffer
+extern int xlb_pending_sync_head; // Head of ring buffer
 extern int xlb_pending_sync_count; // Valid entries in array
-extern int xlb_pending_sync_size; // Malloced sized
+extern int xlb_pending_sync_size; // Malloced size
 
 // Initial size of pending sync array
 #define PENDING_SYNC_INIT_SIZE 1024
 
+adlb_code xlb_pending_shrink(void);
+
 /*
-  Remove the pending sync from the list.
+  Remove the pending sync from the list (FIFO order)
   returns ADLB_NOTHING if not found, otherwise sets arguments
   Caller is responsible for freeing hdr
  */
 __attribute__((always_inline))
-static inline adlb_code xlb_pop_pending(xlb_pending_kind *kind,
+static inline adlb_code xlb_dequeue_pending(xlb_pending_kind *kind,
                             int *rank, struct packed_sync **hdr)
 {
   if (xlb_pending_sync_count == 0)
     return ADLB_NOTHING;
   
-  xlb_pending *pending = &xlb_pending_syncs[xlb_pending_sync_count - 1];
+  xlb_pending *pending = &xlb_pending_syncs[xlb_pending_sync_head];
 
   *kind = pending->kind;
   *rank = pending->rank;
   *hdr = pending->hdr;
 
   xlb_pending_sync_count--;
+  xlb_pending_sync_head = (xlb_pending_sync_head + 1) %
+                           xlb_pending_sync_size;
   DEBUG("POP: %d left", xlb_pending_sync_count);
   if (xlb_pending_sync_size > PENDING_SYNC_INIT_SIZE &&
       xlb_pending_sync_count < (xlb_pending_sync_size / 4))
   {
-    // Shrink
-    xlb_pending_sync_size = xlb_pending_sync_size / 2;
-    xlb_pending_syncs = realloc(xlb_pending_syncs,
-      sizeof(xlb_pending_syncs[0]) * (size_t)xlb_pending_sync_size);
-    // realloc shouldn't really fail when shrinking
-    assert(xlb_pending_syncs != NULL);
+    adlb_code code = xlb_pending_shrink();
+    ADLB_CHECK(code);
   }
 
   return ADLB_SUCCESS;
