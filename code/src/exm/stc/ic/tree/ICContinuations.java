@@ -1060,6 +1060,21 @@ public class ICContinuations {
       return loopContinue.getNewLoopVar(index);
     }
 
+    public void replaceLoopVar(Var oldLoopVar, Var newLoopVar, Arg initVal,
+                   Arg updateVal, boolean blocking) {
+      int index = loopVars.indexOf(oldLoopVar);
+      assert(index >= 0) : oldLoopVar + " " + loopVars;
+      assert(initVal.type().assignableTo(newLoopVar.type()));
+      assert(updateVal.type().assignableTo(newLoopVar.type()));
+      loopVars.set(index, newLoopVar);
+      initVals.set(index, initVal);
+      blockingVars.set(index, blocking);
+      
+      // Reset closed info to be safe 
+      closedInitVals.set(index, false);
+      loopContinue.setLoopVarClosed(index, false);
+    }
+
   }
   
   public static class LoopInstructions {

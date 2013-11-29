@@ -1521,6 +1521,11 @@ public class ICInstructions {
       return res;
     }
 
+    public void setNewLoopVar(int index, Arg newVal) {
+      this.newLoopVars.set(index, newVal);
+    }
+
+
     public void setBlocking(int i, boolean b) {
       this.blockingVars.set(i, b);
     }
@@ -1667,6 +1672,11 @@ public class ICInstructions {
 
     public boolean isLoopVarClosed(int i) {
       return closedVars.get(i);
+    }
+
+
+    public void setLoopVarClosed(int i, boolean value) {
+      closedVars.set(i, value);
     }
 
 

@@ -14,8 +14,12 @@ import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.ic.WrapUtil;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
+import exm.stc.ic.tree.ICInstructions;
+import exm.stc.ic.tree.TurbineOp;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
@@ -151,7 +155,8 @@ public class LoopSimplify extends FunctionOptimizerPass {
       return;
     }
     
-    boolean replacedAll = true;
+    boolean replacedAllLoopVars =
+          (closedVars.size() == loop.getLoopVars().size());
     
     Block outerBlock = loop.parent();
     // To put before loop entry point
@@ -176,21 +181,39 @@ public class LoopSimplify extends FunctionOptimizerPass {
         Var subsequent = loop.getUpdateVal(closedVar.var).getVar();
 
         // add instructions before loop and at loop_continue to fetch values        
-        outerFetched.add(fetchLoopVar(init, closedVar.recursive, outerBlock,
-                                      outerFetches));
-        innerFetched.add(fetchLoopVar(subsequent, closedVar.recursive,
-                                      innerBlock, innerFetches));
+        Var outerFetchedV = fetchLoopVar(init, closedVar.recursive, outerBlock,
+                                      outerFetches);
+        Var innerFetchedV = fetchLoopVar(subsequent, closedVar.recursive,
+                                      innerBlock, innerFetches);
+        outerFetched.add(outerFetchedV);
+        innerFetched.add(innerFetchedV);
         
         // place inner and outer instructions
         placeAndClear(outerInsertPoint, outerFetches);
         placeAndClear(innerInsertPoint, innerFetches);
-        
-        // TODO: Add instruction at top of loop body to store value.
-        // TODO: replace and fix up loop vars
+
+        // replace the loop var with the new one
+        Var oldLoopVar = closedVar.var;
+        Var newLoopVar = new Var(outerFetchedV.type(),
+            OptUtil.optVPrefix(outerBlock, oldLoopVar),
+            outerFetchedV.storage(), DefType.LOCAL_COMPILER,
+            VarProvenance.valueOf(oldLoopVar));
+        loop.replaceLoopVar(oldLoopVar, newLoopVar, outerFetchedV.asArg(),
+                            innerFetchedV.asArg(), true);
+
+        /*
+         * Move declaration of old var to loop body and assign so code is
+         * still valid.  Other passes should optimise this out later.
+         */
+        loop.getLoopBody().addVariable(oldLoopVar);
+        loop.getLoopBody().addInstructionFront(
+            ICInstructions.futureSet(oldLoopVar, newLoopVar.asArg()));
       } else {
-        replacedAll = false;
+        replacedAllLoopVars = false;
       }
     }
+    
+    // TODO: if we replaced all, what furthe roptimisations do we do?
   }
 
   /**
@@ -218,7 +241,6 @@ public class LoopSimplify extends FunctionOptimizerPass {
 
   private void placeAndClear(ListIterator<Statement> insertPoint,
                              List<Statement> fetches) {
-    // TODO Auto-generated method stub
     for (Statement fetch: fetches) {
       insertPoint.add(fetch);
     }
