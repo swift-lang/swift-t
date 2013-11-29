@@ -761,11 +761,38 @@ public class ICContinuations {
         // TODO: support recursive waits?
         initWait.add(init.var);
       }
+      
+      boolean simpleLoop = allBlockingClosed() && loopContinueSynchronous();
+      
       gen.startLoop(loopName, loopVars, definedHere, initVals,
                     PassedVar.extractVars(passedVars), keepOpenVars,
-                    initWait, allBlockingClosed());
+                    initWait, simpleLoop);
       this.loopBody.generate(logger, gen, info);
       gen.endLoop();
+    }
+
+    /**
+     * Check if the loop continue construct executes synchronously with
+     * the loop body.
+     * @return
+     */
+    private boolean loopContinueSynchronous() {
+      // Check to see if there is a wait between here and the loop continue
+      LoopInstructions insts = findInstructions();
+      // Scan back to see if continue block executes synchronously
+      Block curr = insts.continueInstBlock;
+      while (curr != this.loopBody) {
+        assert(curr != null);
+        
+        
+        Continuation cont = curr.getParentCont();
+        assert(cont != null);
+        if (cont.isAsync()) {
+          return false;
+        }
+        curr = cont.parent();
+      }
+      return true;
     }
 
     @Override

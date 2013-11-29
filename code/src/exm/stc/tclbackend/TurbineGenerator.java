@@ -150,17 +150,23 @@ public class TurbineGenerator implements CompilerBackend {
   Sequence globInit = new Sequence();
 
   /**
-     Stack for previous values of point
+     Stack for previous values of point.
+     First entry is the sequence
+     Second entry is a list of things to add at end of sequence
    */
-  Deque<Sequence> pointStack = new ArrayDeque<Sequence>();
-  
+  Deque<Pair<Sequence, Sequence>> pointStack = new ArrayDeque<Pair<Sequence, Sequence>>();
+
   /**
    * Shortcut for current sequence in pointStack
    * @return
    */
   private Sequence point() {
-    return pointStack.peek();
+    return pointStack.peek().val1;
   }  
+  
+  private void pointPush(Sequence point) {
+    pointStack.push(Pair.create(point, new Sequence()));
+  }
   
   /**
    * Shortcut to add to current point in TclTree
@@ -168,6 +174,25 @@ public class TurbineGenerator implements CompilerBackend {
   private void pointAdd(TclTree cmd) {
     point().add(cmd);
   }
+  
+  /**
+   * cmd will be added to point end upon popping
+   * @param cmd
+   */
+  private void pointAddEnd(TclTree cmd) {
+    pointStack.peek().val2.add(cmd);
+  }  
+
+  /**
+   * Remove current sequence after adding any deferred commands
+   * @return
+   */
+  private Sequence pointPop() {
+    Pair<Sequence, Sequence> p = pointStack.pop();
+    p.val1.append(p.val2); // Add in things destined for end of point
+    return p.val1;
+  }
+
   
   
   /**
@@ -203,7 +228,7 @@ public class TurbineGenerator implements CompilerBackend {
   {
     this.logger = logger;
     this.timestamp = timestamp;
-    pointStack.push(tree);
+    pointPush(tree);
     
     execContextStack.push(ExecContext.CONTROL);
 
@@ -311,6 +336,40 @@ public class TurbineGenerator implements CompilerBackend {
     return seq;
   }
   
+  /**
+   * Check that we finished code generation in a valid state
+   */
+  public void finalizeTree() {
+    pointPop();
+    assert(pointStack.isEmpty());
+  }
+
+  /**
+     Generate and return Tcl from  our internal TclTree
+   */
+  @Override
+  public String code() {
+    finalizeTree();
+      
+    StringBuilder sb = new StringBuilder(10*1024);
+    try
+    {
+      tree.appendTo(sb);
+    }
+    catch (Exception e)
+    {
+      System.out.println("CODE GENERATOR INTERNAL ERROR");
+      System.out.println(e.getMessage());
+      e.printStackTrace();
+      System.out.println("code generated before error:");
+      System.out.println(sb);
+      System.out.println("exiting");
+      throw new STCFatal(ExitCode.ERROR_INTERNAL.code());
+    }
+    return sb.toString();
+  }
+
+    
   @Override
   public void declareStructType(StructType st) {
     structTypes.newType(st);
@@ -1848,18 +1907,16 @@ public class TurbineGenerator implements CompilerBackend {
       }
     }
 
-    pointStack.push(s);
+    pointPush(s);
   }
 
-    @Override
-    public void endFunction()
-  {
-    pointStack.pop();
+  @Override
+  public void endFunction() {
+    pointPop();
   }
 
-    @Override
-    public void startNestedBlock()
-  {
+  @Override
+  public void startNestedBlock() {
     Sequence block = new Sequence();
     if (!noStack()) {
       TclTree[] t = Turbine.createStackFrame(StackFrameType.NESTED);
@@ -1867,29 +1924,27 @@ public class TurbineGenerator implements CompilerBackend {
     }
     Sequence point = point();
     point.add(block);
-    pointStack.push(block);
+    pointPush(block);
   }
 
-    @Override
-    public void endNestedBlock() {
-    pointStack.pop();
+  @Override
+  public void endNestedBlock() {
+    pointPop();
   }
 
-    @Override
-    public void addComment(String comment) {
-      pointAdd(new Comment(comment));
-    }
+  @Override
+  public void addComment(String comment) {
+    pointAdd(new Comment(comment));
+  }
 
-  /** NOT UPDATED */
 
   /**
    * @param condition the variable name to branch based on
    * @param hasElse whether there will be an else clause ie. whether startElseBlock()
    *                will be called later for this if statement
    */
-    @Override
-    public void startIfStatement(Arg condition, boolean hasElse)
-  {
+  @Override
+  public void startIfStatement(Arg condition, boolean hasElse) {
     logger.trace("startIfStatement()...");
     assert(condition != null);
     assert(!condition.isVar()
@@ -1912,22 +1967,21 @@ public class TurbineGenerator implements CompilerBackend {
 
     if (hasElse) {
        // Put it on the stack so it can be fetched when we start else block
-      pointStack.push(elseBlock);
+      pointPush(elseBlock);
     }
-    pointStack.push(thenBlock);
+    pointPush(thenBlock);
   }
 
   @Override
-    public void startElseBlock() {
+  public void startElseBlock() {
       logger.trace("startElseBlock()...");
-    pointStack.pop(); // Remove then block
+    pointPop(); // Remove then block
   }
 
-    @Override
-    public void endIfStatement()
-  {
+  @Override
+  public void endIfStatement() {
     logger.trace("endIfStatement()...");
-    pointStack.pop();
+    pointPop();
   }
 
     @Override
@@ -2031,7 +2085,7 @@ public class TurbineGenerator implements CompilerBackend {
             waitFor, action, mode, execContextStack.peek(), ruleProps));
       }
       
-      pointStack.push(proc.getBody());
+      pointPush(proc.getBody());
       
       ExecContext newExecContext;
       if (mode == TaskMode.WORKER) {
@@ -2047,7 +2101,7 @@ public class TurbineGenerator implements CompilerBackend {
 
     private void endAsync() {
       execContextStack.pop();
-      pointStack.pop();
+      pointPop();
     }
 
     /**
@@ -2215,7 +2269,7 @@ public class TurbineGenerator implements CompilerBackend {
 
     for (int c = 1; c <= casecount; c++) {
       // Push case in reverse order so we can pop off as we add cases
-      pointStack.push(caseBodies.get(casecount - c));
+      pointPush(caseBodies.get(casecount - c));
     }
   }
 
@@ -2223,7 +2277,7 @@ public class TurbineGenerator implements CompilerBackend {
     public void endCase() {
     logger.trace("endCase()...");
     // Pop the body of the last case statement off the stack
-    pointStack.pop();
+    pointPop();
 
   }
 
@@ -2332,7 +2386,7 @@ public class TurbineGenerator implements CompilerBackend {
       tclLoop = new ForEach(new Token(tclMemberVar), arrayContents, loopBody);
     }
     curr.add(tclLoop);
-    pointStack.push(loopBody);
+    pointPush(loopBody);
   }
 
 
@@ -2340,7 +2394,7 @@ public class TurbineGenerator implements CompilerBackend {
   public void endForeachLoop(int splitDegree, boolean arrayClosed, 
                   List<RefCount> perIterDecrements) {
     assert(pointStack.size() >= 2);
-    pointStack.pop(); // tclloop body
+    pointPop(); // tclloop body
     if (splitDegree > 0) {
       endRangeSplit(perIterDecrements);
     }
@@ -2387,7 +2441,7 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void endRangeLoop(int splitDegree, List<RefCount> perIterDecrements) {
     assert(pointStack.size() >= 2);
-    pointStack.pop(); // for loop body
+    pointPop(); // for loop body
 
     if (splitDegree > 0) {
       endRangeSplit(perIterDecrements);
@@ -2400,7 +2454,7 @@ public class TurbineGenerator implements CompilerBackend {
     String loopVarName = prefixVar(loopVar);
     ForLoop tclLoop = new ForLoop(loopVarName, startE, endE, incrE, loopBody);
     pointAdd(tclLoop);
-    pointStack.push(loopBody);
+    pointPush(loopBody);
   }
 
   /**
@@ -2499,7 +2553,7 @@ public class TurbineGenerator implements CompilerBackend {
             outerProcName, commonArgs, itersLeft));
 
 
-    pointStack.push(inner);
+    pointPush(inner);
   }
 
   /**
@@ -2669,7 +2723,7 @@ public class TurbineGenerator implements CompilerBackend {
       Value iters = Value.numericValue(TCLTMP_ITERS);
       handleRefcounts(null, perIterDecrements, iters, true);
     }
-    pointStack.pop(); // inner proc body
+    pointPop(); // inner proc body
   }
 
   @Override
@@ -2708,31 +2762,6 @@ public class TurbineGenerator implements CompilerBackend {
     globInit.add(Turbine.allocatePermanent(tclName, typePrefix));
     globInit.add(setCmd);
   }
-
-  /**
-     Generate and return Tcl from  our internal TclTree
-   */
-    @Override
-    public String code()
-  {
-    StringBuilder sb = new StringBuilder(10*1024);
-    try
-    {
-      tree.appendTo(sb);
-    }
-    catch (Exception e)
-    {
-      System.out.println("CODE GENERATOR INTERNAL ERROR");
-      System.out.println(e.getMessage());
-      e.printStackTrace();
-      System.out.println("code generated before error:");
-      System.out.println(sb);
-      System.out.println("exiting");
-      throw new STCFatal(ExitCode.ERROR_INTERNAL.code());
-    }
-    return sb.toString();
-  }
-
 
   private static Value varToExpr(Var v) {
     return TclUtil.varToExpr(v);
@@ -2804,9 +2833,9 @@ public class TurbineGenerator implements CompilerBackend {
   public void startLoop(String loopName, List<Var> loopVars,
       List<Boolean> definedHere, List<Arg> initVals, List<Var> usedVariables,
       List<Var> keepOpenVars, List<Var> initWaitVars,
-      boolean execImmediate) {
+      boolean simpleLoop) {
 
-    assert(initWaitVars.isEmpty() || !execImmediate);
+    assert(initWaitVars.isEmpty() || !simpleLoop);
     List<String> tclLoopVars = new ArrayList<String>(); 
     // call rule to start the loop, pass in initVals, usedVariables
     ArrayList<String> loopFnArgs = new ArrayList<String>();
@@ -2843,18 +2872,17 @@ public class TurbineGenerator implements CompilerBackend {
     Proc loopProc = new Proc(uniqueLoopName, usedTclFunctionNames, loopFnArgs);
     tree.add(loopProc);
     
-    if (execImmediate) {
+    if (simpleLoop) {
       // Implement execution of loop body immediately with while loop 
       WhileLoop iterFor = new WhileLoop(LiteralInt.ONE);
       loopProc.getBody().add(iterFor);
-      pointStack.push(iterFor.loopBody());
+      pointPush(iterFor.loopBody());
     } else {
       // add loop body to pointstack, loop to loop stack
-      pointStack.push(loopProc.getBody());
+      pointPush(loopProc.getBody());
     }
 
-    loopStack.push(new EnclosingLoop(uniqueLoopName, execImmediate,
-                                     tclLoopVars));
+    loopStack.push(new EnclosingLoop(uniqueLoopName, simpleLoop, tclLoopVars));
   }
 
   private String uniqueTCLFunctionName(String tclFunctionName) {
@@ -2874,7 +2902,7 @@ public class TurbineGenerator implements CompilerBackend {
     ArrayList<Expression> nextIterArgs = new ArrayList<Expression>();
     EnclosingLoop context = loopStack.peek();
     
-    if (context.execImmediate) {
+    if (context.simpleLoop) {
       assert(blockingVars.indexOf(true) == -1);
       assert(context.tclLoopVarNames.size() == newVals.size());
       // Just assign variables for next iteration
@@ -2910,9 +2938,9 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void loopBreak(List<Var> loopUsedVars, List<Var> keepOpenVars) {
     EnclosingLoop context = loopStack.peek();
-    if (context.execImmediate) {
-      // Break out of while loop
-      pointAdd(Command.breakCommand());
+    if (context.simpleLoop) {
+      // Break out of while loop after cleanups execute
+      pointAddEnd(Command.breakCommand());
     } else {
       // Nothing: will fall out of function
     }
@@ -2922,10 +2950,10 @@ public class TurbineGenerator implements CompilerBackend {
   public void endLoop() {
     assert(pointStack.size() >= 2);
     assert(loopStack.size() > 0);
-    pointStack.pop();
+    pointPop();
     loopStack.pop();
   }
-
+  
   @Override
   public void checkpointLookupEnabled(Var out) {
     pointAdd(new SetVariable(prefixVar(out), Turbine.xptLookupEnabled()));
@@ -2992,19 +3020,19 @@ public class TurbineGenerator implements CompilerBackend {
       continuation.addAll(continuationArgVals);
     }
     
-    pointStack.peek().add(Turbine.asyncExec(executor, cmdName,
+    pointAdd(Turbine.asyncExec(executor, cmdName,
                   outVarNames, taskArgExprs, taskPropExprs, continuation));
 
     if (hasContinuation) {
       // Enter proc body for code generation of continuation
-      pointStack.push(proc.getBody());
+      pointPush(proc.getBody());
     }
   }
   
   public void endAsyncExec(boolean hasContinuation) {
     if (hasContinuation) {
       assert(pointStack.size() >= 2);
-      pointStack.pop();
+      pointPop();
     }
   }
   
@@ -3084,8 +3112,8 @@ public class TurbineGenerator implements CompilerBackend {
     Type memberValT = Types.derefResultType(c.baseType);
     assert(memberValT.assignableTo(Types.containerElemType(flatLocalArray)));
     
-    pointStack.peek().add(new SetVariable(prefixVar(flatLocalArray),
-        unpackArrayInternal(inputArray)));
+    pointAdd(new SetVariable(prefixVar(flatLocalArray),
+                              unpackArrayInternal(inputArray)));
   }
 
   private Expression unpackArrayInternal(Arg arg) {
@@ -3097,14 +3125,14 @@ public class TurbineGenerator implements CompilerBackend {
   }
   
   private static class EnclosingLoop {
-    private EnclosingLoop(String loopName, boolean execImmediate,
+    private EnclosingLoop(String loopName, boolean simpleLoop,
         List<String> tclLoopVarNames) {
       this.loopName = loopName;
-      this.execImmediate = execImmediate;
+      this.simpleLoop = simpleLoop;
       this.tclLoopVarNames = tclLoopVarNames;
     }
     public final String loopName;
-    public final boolean execImmediate;
+    public final boolean simpleLoop;
     public final List<String> tclLoopVarNames;
   }
 }
