@@ -586,6 +586,7 @@ turbine_rule(const char* name,
 
   if (subscribed)
   {
+    assert(T != NULL);
     table_lp_add(&transforms_waiting, *id, T);
   }
   else
@@ -610,7 +611,11 @@ rule_inputs(transform* T)
     turbine_datum_id id = T->input_td_list[i];
     struct list_l* L = table_lp_search(&td_blockers, id);
     if (L == NULL)
-      declare_datum(id, &L);
+    {
+      turbine_code code = declare_datum(id, &L);
+      turbine_check(code);
+    }
+    // TODO: we might add duplicate entries if id appears multiple times
     list_l_add(L, T->id);
   }
   // TODO: do same for pairs
@@ -627,8 +632,12 @@ add_to_ready(struct list* tmp)
   while ((T = list_poll(tmp)))
   {
     void* c = table_lp_remove(&transforms_waiting, T->id);
-    ASSERT(c != NULL);
-    list_add(&transforms_ready, T);
+    if (c != NULL)
+    {
+      // TODO: c can be null if there were two entries in the blockers
+      //      list for that transform.  Handle here for now
+      list_add(&transforms_ready, T);
+    }
   }
 }
 
@@ -747,7 +756,7 @@ turbine_close(turbine_datum_id id)
     transform* T = table_lp_search(&transforms_waiting, transform_id);
     if (!T)
       continue;
-
+  
     // update closed vector
     for (int i = T->blocker; i < T->input_tds; i++) {
       if (T->input_td_list[i] == id) {
