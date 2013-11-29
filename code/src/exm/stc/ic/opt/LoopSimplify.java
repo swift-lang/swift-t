@@ -156,9 +156,6 @@ public class LoopSimplify extends FunctionOptimizerPass {
       return;
     }
     
-    boolean replacedAllLoopVars =
-          (closedVars.size() == loop.getLoopVars().size());
-    
     Block outerBlock = loop.parent();
     // To put before loop entry point
     ListIterator<Statement> outerInsertPoint = outerBlock.statementIterator();
@@ -211,12 +208,8 @@ public class LoopSimplify extends FunctionOptimizerPass {
         loop.getLoopBody().addVariable(oldLoopVar);
         loop.getLoopBody().addInstructionFront(
             ICInstructions.futureSet(oldLoopVar, newLoopVar.asArg()));
-      } else {
-        replacedAllLoopVars = false;
       }
     }
-    
-    // TODO: if we replaced all, what further optimisations do we do?
   }
 
   /**

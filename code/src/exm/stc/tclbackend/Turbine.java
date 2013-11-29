@@ -836,7 +836,7 @@ class Turbine {
     for (Expression arg: args) {
       action.add(arg);
     }
-    return ruleHelper(symbol, blockOn, action, TaskMode.LOCAL, 
+    return ruleHelper(symbol, blockOn, action, TaskMode.CONTROL, 
                       execCx, RuleProps.DEFAULT);
   }
 

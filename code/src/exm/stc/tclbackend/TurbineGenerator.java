@@ -169,10 +169,11 @@ public class TurbineGenerator implements CompilerBackend {
     point().add(cmd);
   }
   
+  
   /**
-   * Stack for name of loop functions
+   * Stack for (name, execImmediate) of loop functions
    */
-  Deque<String> loopNameStack = new ArrayDeque<String>();
+  Deque<EnclosingLoop> loopStack = new ArrayDeque<EnclosingLoop>();
 
   /**
    * Stack for what context we're in. 
@@ -2802,16 +2803,21 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void startLoop(String loopName, List<Var> loopVars,
       List<Boolean> definedHere, List<Arg> initVals, List<Var> usedVariables,
-      List<Var> keepOpenVars, List<Var> initWaitVars) {
+      List<Var> keepOpenVars, List<Var> initWaitVars,
+      boolean execImmediate) {
 
+    assert(initWaitVars.isEmpty() || !execImmediate);
+    List<String> tclLoopVars = new ArrayList<String>(); 
     // call rule to start the loop, pass in initVals, usedVariables
     ArrayList<String> loopFnArgs = new ArrayList<String>();
     ArrayList<Expression> firstIterArgs = new ArrayList<Expression>();
     loopFnArgs.add(Turbine.LOCAL_STACK_NAME);
     firstIterArgs.add(Turbine.LOCAL_STACK_VAL);
 
-    for (Var arg: loopVars) {
-      loopFnArgs.add(prefixVar(arg));
+    for (Var loopVar: loopVars) {
+      String tclVar = prefixVar(loopVar);
+      loopFnArgs.add(tclVar);
+      tclLoopVars.add(tclVar);
     }
     for (Arg init: initVals) {
       firstIterArgs.add(argToExpr(init));
@@ -2834,13 +2840,21 @@ public class TurbineGenerator implements CompilerBackend {
     pointAdd(Turbine.loopRule(
         uniqueLoopName, firstIterArgs, blockingVals, execContextStack.peek()));
 
-    Sequence loopBody = new Sequence();
-    Proc loopProc = new Proc(uniqueLoopName, usedTclFunctionNames,
-                                            loopFnArgs, loopBody);
+    Proc loopProc = new Proc(uniqueLoopName, usedTclFunctionNames, loopFnArgs);
     tree.add(loopProc);
-    // add loop body to pointstack, loop to loop stack
-    pointStack.push(loopBody);
-    loopNameStack.push(uniqueLoopName);
+    
+    if (execImmediate) {
+      // Implement execution of loop body immediately with while loop 
+      WhileLoop iterFor = new WhileLoop(LiteralInt.ONE);
+      loopProc.getBody().add(iterFor);
+      pointStack.push(iterFor.loopBody());
+    } else {
+      // add loop body to pointstack, loop to loop stack
+      pointStack.push(loopProc.getBody());
+    }
+
+    loopStack.push(new EnclosingLoop(uniqueLoopName, execImmediate,
+                                     tclLoopVars));
   }
 
   private String uniqueTCLFunctionName(String tclFunctionName) {
@@ -2858,38 +2872,58 @@ public class TurbineGenerator implements CompilerBackend {
          List<Var> usedVariables,
          List<Boolean> blockingVars) {
     ArrayList<Expression> nextIterArgs = new ArrayList<Expression>();
-    String loopName = loopNameStack.peek();
-    nextIterArgs.add(Turbine.LOCAL_STACK_VAL);
-
-    for (Arg v: newVals) {
-      nextIterArgs.add(argToExpr(v));
-    }
-    for (Var v: usedVariables) {
-      nextIterArgs.add(varToExpr(v));
-    }
-    ArrayList<Value> blockingVals = new ArrayList<Value>();
-    assert(newVals.size() == blockingVars.size());
-    for (int i = 0; i < newVals.size(); i++) {
-      Arg newVal = newVals.get(i);
-      if (blockingVars.get(i) && newVal.isVar()) {
-        blockingVals.add(varToExpr(newVal.getVar()));
+    EnclosingLoop context = loopStack.peek();
+    
+    if (context.execImmediate) {
+      assert(blockingVars.indexOf(true) == -1);
+      assert(context.tclLoopVarNames.size() == newVals.size());
+      // Just assign variables for next iteration
+      for (int i = 0; i < context.tclLoopVarNames.size(); i++) {
+        String tclLoopVar = context.tclLoopVarNames.get(i);
+        Expression newVal = argToExpr(newVals.get(i));
+        pointAdd(new SetVariable(tclLoopVar, newVal));
       }
+      
+    } else {
+      // Setup rule call to execute next iteration later
+      nextIterArgs.add(Turbine.LOCAL_STACK_VAL);
+
+      for (Arg v: newVals) {
+        nextIterArgs.add(argToExpr(v));
+      }
+      for (Var v: usedVariables) {
+        nextIterArgs.add(varToExpr(v));
+      }
+      ArrayList<Value> blockingVals = new ArrayList<Value>();
+      assert(newVals.size() == blockingVars.size());
+      for (int i = 0; i < newVals.size(); i++) {
+        Arg newVal = newVals.get(i);
+        if (blockingVars.get(i) && newVal.isVar()) {
+          blockingVals.add(varToExpr(newVal.getVar()));
+        }
+      }
+      pointAdd(Turbine.loopRule(context.loopName,
+          nextIterArgs, blockingVals, execContextStack.peek())); 
     }
-    pointAdd(Turbine.loopRule(loopName,
-        nextIterArgs, blockingVals, execContextStack.peek()));
   }
 
   @Override
   public void loopBreak(List<Var> loopUsedVars, List<Var> keepOpenVars) {
-    // Note: this is no-op now
+    EnclosingLoop context = loopStack.peek();
+    if (context.execImmediate) {
+      // Break out of while loop
+      pointAdd(Command.breakCommand());
+    } else {
+      // Nothing: will fall out of function
+    }
   }
 
   @Override
   public void endLoop() {
     assert(pointStack.size() >= 2);
-    assert(loopNameStack.size() > 0);
+    assert(loopStack.size() > 0);
     pointStack.pop();
-    loopNameStack.pop();
+    loopStack.pop();
   }
 
   @Override
@@ -3062,5 +3096,15 @@ public class TurbineGenerator implements CompilerBackend {
     return unpackArrayExpr;
   }
   
-  
+  private static class EnclosingLoop {
+    private EnclosingLoop(String loopName, boolean execImmediate,
+        List<String> tclLoopVarNames) {
+      this.loopName = loopName;
+      this.execImmediate = execImmediate;
+      this.tclLoopVarNames = tclLoopVarNames;
+    }
+    public final String loopName;
+    public final boolean execImmediate;
+    public final List<String> tclLoopVarNames;
+  }
 }

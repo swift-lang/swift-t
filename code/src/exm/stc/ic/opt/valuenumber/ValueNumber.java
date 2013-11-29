@@ -284,6 +284,8 @@ public class ValueNumber implements OptimizerPass {
      * TODO: could exploit the information we have in getBlockingInputs() to
      * explore dependencies between variables and work out which variables are
      * needed to make progress
+     * 
+     * TODO: this is necessary for optimizing some for loops, e.g. test 900
      */
 
     if (!ProgressOpcodes.blockProgress(block, Category.NON_PROGRESS)) {

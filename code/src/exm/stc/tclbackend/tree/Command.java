@@ -52,6 +52,11 @@ public class Command extends TclTree
   public static Command returnCommand() {
     return new Command("return");
   }
+  
+
+  public static Command breakCommand() {
+    return new Command("break");
+  }
 
   @Override
   public void appendTo(StringBuilder sb)
