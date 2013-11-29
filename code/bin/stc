@@ -30,9 +30,9 @@ O1_OPTS=("constant-fold" "dead-code-elim" "value-number" "finalized-var"
          "merge-refcounts" "cancel-refcounts" "piggyback-refcounts"
          "batch-refcounts" "hoist-refcounts")
 O2_OPTS=("expand-dataflow-ops" "wait-coalesce" "hoisting" "expand-loops"
-         "function-signature" "array-build")
+         "function-signature" "array-build" "loop-simplify")
 O3_OPTS=("pipeline" "function-inline" "reorder-insts" "algebra" "full-unroll")
-EXPERIMENTAL_OPTS=("loop-simplify")
+EXPERIMENTAL_OPTS=()
 
 # OUTPUT_MODE= turbine or cpp
 OUTPUT_MODE=turbine

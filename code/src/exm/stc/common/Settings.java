@@ -176,7 +176,7 @@ public class Settings
     defaults.setProperty(OPT_HOIST, "true");
     defaults.setProperty(OPT_REORDER_INSTS, "false");
     defaults.setProperty(OPT_ARRAY_BUILD, "true");
-    defaults.setProperty(OPT_LOOP_SIMPLIFY, "false");
+    defaults.setProperty(OPT_LOOP_SIMPLIFY, "true");
     defaults.setProperty(OPT_MERGE_REFCOUNTS, "true");
     defaults.setProperty(OPT_CANCEL_REFCOUNTS, "true");
     defaults.setProperty(OPT_PIGGYBACK_REFCOUNTS, "true");
