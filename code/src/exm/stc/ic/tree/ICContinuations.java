@@ -1042,7 +1042,7 @@ public class ICContinuations {
       return true;
     }
 
-    public void setInitClosed(Var initVal, boolean recursive) {
+    public void setInitClosed(Arg initVal, boolean recursive) {
       // TODO: ignores recursive
       int index = initVals.indexOf(initVal);
       assert(index >= 0) : initVal;

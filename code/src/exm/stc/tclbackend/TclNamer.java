@@ -41,6 +41,8 @@ public class TclNamer {
   private static final String TCL_FILENAME_OF_PREFIX = "filename:";
   private static final String TCL_WRAP_FILENAME_OF_PREFIX = "wfilename:";
   private static final String TCL_COMPILER_ARG_PREFIX = "ca:";
+  public static final String TCL_TMP_LOOP_COND = "t:loopcond";
+  public static final String TCL_NEXTITER_PREFIX = "nextiter:";
   
   public static String prefixVar(String varname) {
     // Replace the internal names of temporary variables with

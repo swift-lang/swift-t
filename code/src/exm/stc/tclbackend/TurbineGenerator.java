@@ -183,6 +183,10 @@ public class TurbineGenerator implements CompilerBackend {
     pointStack.peek().val2.add(cmd);
   }  
 
+  private void pointAppendEnd(Sequence seq) {
+    pointStack.peek().val2.append(seq);
+  }
+  
   /**
    * Remove current sequence after adding any deferred commands
    * @return
@@ -2872,10 +2876,25 @@ public class TurbineGenerator implements CompilerBackend {
     tree.add(loopProc);
     
     if (simpleLoop) {
-      // Implement execution of loop body immediately with while loop 
-      WhileLoop iterFor = new WhileLoop(LiteralInt.ONE);
+      // Implement execution of loop body immediately with while loop
+      Value loopCond = new Value(TclNamer.TCL_TMP_LOOP_COND);
+      WhileLoop iterFor = new WhileLoop(loopCond);
+      loopProc.getBody().add(
+          new SetVariable(loopCond.variable(), LiteralInt.TRUE));
       loopProc.getBody().add(iterFor);
       pointPush(iterFor.loopBody());
+      
+      // Update loop variables for next iteration
+      If updateVars = new If(loopCond, false);
+      pointAddEnd(updateVars);
+      for (int i = 0; i < loopVars.size(); i++) {
+        Var loopVar = loopVars.get(i);
+        String tclLoopVar = prefixVar(loopVar);
+        Value nextLoopVar = new Value(
+              TclNamer.TCL_NEXTITER_PREFIX + tclLoopVar);
+        updateVars.thenBlock().add(new SetVariable(tclLoopVar, nextLoopVar));
+      }
+      
     } else {
       // add loop body to pointstack, loop to loop stack
       pointPush(loopProc.getBody());
@@ -2900,18 +2919,16 @@ public class TurbineGenerator implements CompilerBackend {
          List<Boolean> blockingVars) {
     ArrayList<Expression> nextIterArgs = new ArrayList<Expression>();
     EnclosingLoop context = loopStack.peek();
+    assert(context.tclLoopVarNames.size() == newVals.size());
     
     if (context.simpleLoop) {
       assert(blockingVars.indexOf(true) == -1) : newVals + " " + blockingVars;
-      assert(context.tclLoopVarNames.size() == newVals.size());
       // Just assign variables for next iteration
       for (int i = 0; i < context.tclLoopVarNames.size(); i++) {
-        String tclLoopVar = context.tclLoopVarNames.get(i);
-        Expression newVal = argToExpr(newVals.get(i));
-        // Assign after rest of code in loop to avoid using wrong value
-        pointAddEnd(new SetVariable(tclLoopVar, newVal));
+        String tclLoopVarName = context.tclLoopVarNames.get(i);
+        String nextLoopVar = TclNamer.TCL_NEXTITER_PREFIX + tclLoopVarName;
+        pointAdd(new SetVariable(nextLoopVar, argToExpr(newVals.get(i))));
       }
-      
     } else {
       // Setup rule call to execute next iteration later
       nextIterArgs.add(Turbine.LOCAL_STACK_VAL);
@@ -2940,7 +2957,8 @@ public class TurbineGenerator implements CompilerBackend {
     EnclosingLoop context = loopStack.peek();
     if (context.simpleLoop) {
       // Break out of while loop after cleanups execute
-      pointAddEnd(Command.breakCommand());
+      Value loopCond = new Value(TclNamer.TCL_TMP_LOOP_COND);
+      pointAdd(new SetVariable(loopCond.variable(), LiteralInt.FALSE));
     } else {
       // Nothing: will fall out of function
     }

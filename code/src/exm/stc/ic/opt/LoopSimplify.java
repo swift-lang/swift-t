@@ -115,7 +115,7 @@ public class LoopSimplify extends FunctionOptimizerPass {
       } else {
         waitVars.add(new WaitVar(bv.var, bv.explicit));
       }
-      loop.setInitClosed(bv.var, bv.recursive);
+      loop.setInitClosed(bv.var.asArg(), bv.recursive);
     }
     
     Continuation inner = loop;
