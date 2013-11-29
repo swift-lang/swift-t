@@ -10,6 +10,7 @@ import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.PassedVar;
+import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
@@ -198,8 +199,10 @@ public class LoopSimplify extends FunctionOptimizerPass {
             OptUtil.optVPrefix(outerBlock, oldLoopVar),
             outerFetchedV.storage(), DefType.LOCAL_COMPILER,
             VarProvenance.valueOf(oldLoopVar));
+        boolean blockOn = RefCounting.hasWriteRefCount(newLoopVar) &&
+                          loop.isBlocking(oldLoopVar);
         loop.replaceLoopVar(oldLoopVar, newLoopVar, outerFetchedV.asArg(),
-                            innerFetchedV.asArg(), true);
+                            innerFetchedV.asArg(), blockOn);
 
         /*
          * Move declaration of old var to loop body and assign so code is
@@ -213,7 +216,7 @@ public class LoopSimplify extends FunctionOptimizerPass {
       }
     }
     
-    // TODO: if we replaced all, what furthe roptimisations do we do?
+    // TODO: if we replaced all, what further optimisations do we do?
   }
 
   /**
