@@ -10,7 +10,6 @@ import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.PassedVar;
-import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
@@ -19,8 +18,6 @@ import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.ic.WrapUtil;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
-import exm.stc.ic.tree.ICInstructions;
-import exm.stc.ic.tree.TurbineOp;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
@@ -28,6 +25,7 @@ import exm.stc.ic.tree.ICContinuations.Loop;
 import exm.stc.ic.tree.ICContinuations.LoopInstructions;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICContinuations.WaitVar;
+import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.LoopContinue;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
@@ -158,7 +156,7 @@ public class LoopSimplify extends FunctionOptimizerPass {
     
     Block outerBlock = loop.parent();
     // To put before loop entry point
-    ListIterator<Statement> outerInsertPoint = outerBlock.statementIterator();
+    ListIterator<Statement> outerInsertPoint = outerBlock.statementEndIterator();
     List<Statement> outerFetches = new ArrayList<Statement>();
     List<Var> outerFetched = new ArrayList<Var>();
     
