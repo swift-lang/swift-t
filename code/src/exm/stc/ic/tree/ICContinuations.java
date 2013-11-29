@@ -40,7 +40,6 @@ import exm.stc.common.lang.Arg.ArgKind;
 import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.PassedVar;
-import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
@@ -1035,7 +1034,7 @@ public class ICContinuations {
     private boolean allBlockingClosed() {
       for (int i = 0; i < loopVars.size(); i++) {
         Var loopVar = loopVars.get(i);
-        if (RefCounting.hasWriteRefCount(loopVar) && blockingVars.get(i) &&
+        if (Types.canWaitForFinalize(loopVar) && blockingVars.get(i) &&
             (!closedInitVals.get(i) || !loopContinue.isLoopVarClosed(i))) {
           return false;
         }

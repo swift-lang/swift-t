@@ -2834,8 +2834,7 @@ public class TurbineGenerator implements CompilerBackend {
       List<Boolean> definedHere, List<Arg> initVals, List<Var> usedVariables,
       List<Var> keepOpenVars, List<Var> initWaitVars,
       boolean simpleLoop) {
-
-    assert(initWaitVars.isEmpty() || !simpleLoop);
+    assert(initWaitVars.isEmpty() || !simpleLoop) : initWaitVars;
     List<String> tclLoopVars = new ArrayList<String>(); 
     // call rule to start the loop, pass in initVals, usedVariables
     ArrayList<String> loopFnArgs = new ArrayList<String>();
@@ -2903,13 +2902,14 @@ public class TurbineGenerator implements CompilerBackend {
     EnclosingLoop context = loopStack.peek();
     
     if (context.simpleLoop) {
-      assert(blockingVars.indexOf(true) == -1);
+      assert(blockingVars.indexOf(true) == -1) : newVals + " " + blockingVars;
       assert(context.tclLoopVarNames.size() == newVals.size());
       // Just assign variables for next iteration
       for (int i = 0; i < context.tclLoopVarNames.size(); i++) {
         String tclLoopVar = context.tclLoopVarNames.get(i);
         Expression newVal = argToExpr(newVals.get(i));
-        pointAdd(new SetVariable(tclLoopVar, newVal));
+        // Assign after rest of code in loop to avoid using wrong value
+        pointAddEnd(new SetVariable(tclLoopVar, newVal));
       }
       
     } else {

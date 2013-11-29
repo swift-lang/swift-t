@@ -196,7 +196,7 @@ public class LoopSimplify extends FunctionOptimizerPass {
             OptUtil.optVPrefix(outerBlock, oldLoopVar),
             outerFetchedV.storage(), DefType.LOCAL_COMPILER,
             VarProvenance.valueOf(oldLoopVar));
-        boolean blockOn = RefCounting.hasWriteRefCount(newLoopVar) &&
+        boolean blockOn = Types.canWaitForFinalize(newLoopVar) &&
                           loop.isBlocking(oldLoopVar);
         loop.replaceLoopVar(oldLoopVar, newLoopVar, outerFetchedV.asArg(),
                             innerFetchedV.asArg(), blockOn);

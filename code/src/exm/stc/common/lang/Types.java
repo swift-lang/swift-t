@@ -1890,7 +1890,7 @@ public class Types {
    */
   public static boolean canWaitForFinalize(Typed type) {
     return isFuture(type) || isPrimUpdateable(type) ||
-            isArray(type);
+            isContainer(type);
   }
   
   /**
