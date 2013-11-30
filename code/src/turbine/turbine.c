@@ -132,6 +132,13 @@ struct list transforms_ready;
  */
 struct table_lp td_blockers;
 
+
+/**
+   ID/subscript pairs blocking transforms
+   Map from ID/subscript pair to list of transforms
+ */
+struct table_bp td_sub_blockers;
+
 /**
   TDs to which this engine has subscribed, used to avoid
   subscribing multiple times
@@ -327,12 +334,16 @@ turbine_engine_init()
   result = table_lp_init(&td_blockers, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
+  
+  result = table_bp_init(&td_sub_blockers, 1024); // Will expand
+  if (!result)
+    return TURBINE_ERROR_OOM;
 
   result = table_lp_init(&td_subscribed, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
 
-  result = table_bp_init(&td_sub_subscribed, 1024*1024);
+  result = table_bp_init(&td_sub_subscribed, 1024); // Will expand
   if (!result)
     return TURBINE_ERROR_OOM;
 
@@ -600,11 +611,14 @@ turbine_rule(const char* name,
   return TURBINE_SUCCESS;
 }
 
-static inline turbine_code declare_datum(turbine_datum_id id,
-                                         struct list_l** result);
+static inline turbine_code add_rule_blocker(turbine_datum_id id,
+                                         turbine_transform_id transform);
 
+static inline turbine_code add_rule_blocker_sub(void *id_sub_key,
+        size_t id_sub_keylen, turbine_transform_id transform);
 /**
-   Record that this transform is blocked by its inputs
+   Record that this transform is blocked by its inputs.  Do not yet
+   subscribe to any inputs
 */
 static inline turbine_code
 rule_inputs(transform* T)
@@ -612,17 +626,25 @@ rule_inputs(transform* T)
   for (int i = 0; i < T->input_tds; i++)
   {
     turbine_datum_id id = T->input_td_list[i];
-    struct list_l* L = table_lp_search(&td_blockers, id);
-    if (L == NULL)
-    {
-      turbine_code code = declare_datum(id, &L);
-      turbine_check_verbose(code);
-    }
-    // TODO: we might add duplicate entries if id appears multiple times
-    list_l_add(L, T->id);
+    // TODO: we might add duplicate list entries if id appears multiple
+    //       times. This is currently handled upon removal from list
+    turbine_code code = add_rule_blocker(id, T->id);
+    turbine_check_verbose(code);
   }
-  // TODO: do same for pairs
 
+  for (int i = 0; i < T->input_td_subs; i++)
+  {
+    td_sub_pair *td_sub = &T->input_td_sub_list[i];
+    size_t id_sub_keylen = id_sub_key_buflen(td_sub->subscript);
+    char id_sub_key[id_sub_keylen];
+    assert(td_sub->subscript.key != NULL);
+    write_id_sub_key(id_sub_key, td_sub->td, td_sub->subscript);
+    // TODO: we might add duplicate list entries if id appears multiple
+    //      times. This is currently handled upon removal from list
+    turbine_code code = add_rule_blocker_sub(id_sub_key, id_sub_keylen,
+                                             T->id);
+    turbine_check_verbose(code);
+  }
   return TURBINE_SUCCESS;
 }
 
@@ -683,19 +705,40 @@ turbine_rules_push()
 
 /**
    Declare a new data id
-   @param result If non-NULL, return the new blocked list here
+   @param result return the new blocked list here
  */
 static inline turbine_code
-declare_datum(turbine_datum_id id, struct list_l** result)
+add_rule_blocker(turbine_datum_id id, turbine_transform_id transform)
 {
   assert(initialized);
   // DEBUG_TURBINE("declare: %li\n", id);
-  struct list_l* blocked = list_l_create();
-  if (table_lp_contains(&td_blockers, id))
-    return TURBINE_ERROR_DOUBLE_DECLARE;
-  table_lp_add(&td_blockers, id, blocked);
-  if (result != NULL)
-    *result = blocked;
+  struct list_l* blocked = table_lp_search(&td_blockers, id);
+  if (blocked == NULL)
+  {
+    blocked = list_l_create();
+    table_lp_add(&td_blockers, id, blocked);
+  }
+  list_l_add(blocked, transform);
+  return TURBINE_SUCCESS;
+}
+
+/*
+  Same as add_rule_blocker, but with subscript.
+ */
+static inline turbine_code add_rule_blocker_sub(void *id_sub_key,
+        size_t id_sub_keylen, turbine_transform_id transform)
+{
+  assert(initialized);
+  // DEBUG_TURBINE("declare: %li\n", id);
+  struct list_l* blocked;
+  bool found = table_bp_search(&td_sub_blockers, id_sub_key,
+                         id_sub_keylen, (void**)&blocked);
+  if (!found)
+  {
+    blocked = list_l_create();
+    table_bp_add(&td_sub_blockers, id_sub_key, id_sub_keylen, blocked);
+  }
+  list_l_add(blocked, transform);
   return TURBINE_SUCCESS;
 }
 
@@ -1051,6 +1094,7 @@ info_waiting()
 // Callbacks to free data
 static void tbl_free_transform_cb(turbine_transform_id key, void *T);
 static void tbl_free_blockers_cb(turbine_datum_id key, void *L);
+static void tbl_free_sub_blockers_cb(const void *key, size_t key_len, void *L);
 static void list_free_transform_cb(void *T);
 
 void
@@ -1074,6 +1118,7 @@ static void turbine_engine_finalize(void)
   table_lp_free_callback(&transforms_waiting, false, tbl_free_transform_cb);
   list_clear_callback(&transforms_ready, list_free_transform_cb);
   table_lp_free_callback(&td_blockers, false, tbl_free_blockers_cb);
+  table_bp_free_callback(&td_sub_blockers, false, tbl_free_sub_blockers_cb);
 
   // Entries in td_subscribed and td_sub_subscribed are not pointers and don't
   // need to be freed
@@ -1093,6 +1138,11 @@ static void list_free_transform_cb(void *T)
 }
 
 static void tbl_free_blockers_cb(turbine_datum_id key, void *L)
+{
+  list_l_free((struct list_l*)L);
+}
+
+static void tbl_free_sub_blockers_cb(const void *key, size_t key_len, void *L)
 {
   list_l_free((struct list_l*)L);
 }
