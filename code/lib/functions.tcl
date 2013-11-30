@@ -174,7 +174,7 @@ namespace eval turbine {
 
             set prio [ get_priority ]
             adlb::put $::adlb::RANK_ANY $WORK_TYPE(CONTROL) \
-                "command priority: $prio range_work $c $s $e 1" \
+                "priority_command $prio range_work $c $s $e 1" \
                 $prio 1
         }
         # close container
