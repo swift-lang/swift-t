@@ -542,7 +542,7 @@ namespace eval turbine {
     proc multi_retrieve_decr { ids decr {cachemode CACHED} args } {
       set result [ list ]
 
-      foreach id $ids {
+      /oreach id $ids {
         if { [ string equal $cachemode CACHED ] &&
               [ c::cache_check $id ] } {
           set val [ c::cache_retrieve $id ]
