@@ -103,6 +103,12 @@ static size_t bitfield_size(int inputs);
 static inline bool input_td_closed(transform *T, int i);
 static inline void mark_input_td_closed(transform *T, int i);
 static inline bool input_td_sub_closed(transform *T, int i);
+static inline void mark_input_td_sub_closed(transform *T, int i);
+
+// Update transforms after close
+static turbine_code
+turbine_close_update(struct list_l *blocked, turbine_datum_id id,
+                     const void *subscript, size_t subscript_len);
 
 // Finalize engine
 static void turbine_engine_finalize(void);
@@ -132,7 +138,6 @@ struct list transforms_ready;
  */
 struct table_lp td_blockers;
 
-
 /**
    ID/subscript pairs blocking transforms
    Map from ID/subscript pair to list of transforms
@@ -157,23 +162,23 @@ struct table_bp td_sub_subscribed;
 // Return size of buffer to use for id/subscript pair.
 // Zero-length buffer if no subscript
 static inline size_t
-id_sub_key_buflen(turbine_subscript subscript)
+id_sub_key_buflen(const void *subscript, size_t length)
 {
-  if (subscript.key == NULL)
+  if (subscript == NULL)
     return 0;
-  size_t res = (sizeof(turbine_datum_id) + subscript.length);
+  size_t res = (sizeof(turbine_datum_id) + length);
   assert(res <= ID_SUB_KEY_MAX);
   return res;
 }
 
 static inline size_t
 write_id_sub_key(char *buf, turbine_datum_id id,
-                 turbine_subscript subscript)
+                 const void *subscript, size_t length)
 {
-  assert(subscript.key != NULL);
+  assert(subscript != NULL);
   memcpy(buf, &id, sizeof(id));
-  memcpy(&buf[sizeof(id)], subscript.key, subscript.length);
-  return id_sub_key_buflen(subscript);
+  memcpy(&buf[sizeof(id)], subscript, length);
+  return id_sub_key_buflen(subscript, length);
 }
 
 static inline adlb_subscript sub_convert(turbine_subscript sub)
@@ -491,11 +496,11 @@ static inline turbine_code
 subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
 {
   // if subscript provided, use key
-  size_t id_sub_keylen = id_sub_key_buflen(subscript);
+  size_t id_sub_keylen = id_sub_key_buflen(subscript.key, subscript.length);
   char id_sub_key[id_sub_keylen];
   if (subscript.key != NULL)
   {
-    write_id_sub_key(id_sub_key, id, subscript);
+    write_id_sub_key(id_sub_key, id, subscript.key, subscript.length);
     void *tmp;
     if (table_bp_search(&td_sub_subscribed, id_sub_key, id_sub_keylen,
                         &tmp))
@@ -635,10 +640,12 @@ rule_inputs(transform* T)
   for (int i = 0; i < T->input_td_subs; i++)
   {
     td_sub_pair *td_sub = &T->input_td_sub_list[i];
-    size_t id_sub_keylen = id_sub_key_buflen(td_sub->subscript);
+    size_t id_sub_keylen = id_sub_key_buflen(td_sub->subscript.key,
+                                             td_sub->subscript.length);
     char id_sub_key[id_sub_keylen];
     assert(td_sub->subscript.key != NULL);
-    write_id_sub_key(id_sub_key, td_sub->td, td_sub->subscript);
+    write_id_sub_key(id_sub_key, td_sub->td, td_sub->subscript.key,
+                     td_sub->subscript.length);
     // TODO: we might add duplicate list entries if id appears multiple
     //      times. This is currently handled upon removal from list
     turbine_code code = add_rule_blocker_sub(id_sub_key, id_sub_keylen,
@@ -793,23 +800,72 @@ turbine_close(turbine_datum_id id)
     // We don't have any rules that block on this td
     return TURBINE_SUCCESS;
 
+  return turbine_close_update(L, id, NULL, 0);
+}
+
+turbine_code turbine_sub_close(turbine_datum_id id, const void *subscript,
+                               size_t subscript_len)
+{
+  size_t key_len = id_sub_key_buflen(subscript, subscript_len);
+  char key[key_len];
+  write_id_sub_key(key, id, subscript, subscript_len);
+  
+  struct list_l* L;
+  
+  bool found = table_bp_remove(&td_sub_blockers, key, key_len, (void**)&L);
+  if (!found)
+    // We don't have any rules that block on this td
+    return TURBINE_SUCCESS;
+
+  return turbine_close_update(L, id, subscript, subscript_len);
+}
+
+/*
+  Update transforms after having one of blockers removed.
+  blocked: list of transforms with blocker remoed
+  id: id of data
+  subscript: optional subscript
+ */
+static turbine_code
+turbine_close_update(struct list_l *blocked, turbine_datum_id id,
+                     const void *subscript, size_t subscript_len)
+{
   // Temporary holding spot for transforms moving into ready list
   struct list tmp;
   list_init(&tmp);
 
   // Try to make progress on those transforms
-  for (struct list_l_item* item = L->head; item; item = item->next)
+  for (struct list_l_item* item = blocked->head; item; item = item->next)
   {
     turbine_transform_id transform_id = item->data;
     transform* T = table_lp_search(&transforms_waiting, transform_id);
     if (!T)
       continue;
-  
+ 
     // update closed vector
-    for (int i = T->blocker; i < T->input_tds; i++) {
-      if (T->input_td_list[i] == id) {
-        mark_input_td_closed(T, i);
+    if (subscript == NULL)
+    {
+      for (int i = T->blocker; i < T->input_tds; i++) {
+        if (T->input_td_list[i] == id) {
+          mark_input_td_closed(T, i);
+        }
       }
+    }
+    else
+    {
+      if (T->blocker >= T->input_tds)
+      {
+        for (int i = T->blocker - T->input_tds; i < T->input_td_subs; i++)
+        {
+          td_sub_pair *tdsub = &T->input_td_sub_list[i];
+          turbine_subscript *sub = &tdsub->subscript;
+          if (tdsub->td == id && sub->length == subscript_len
+              && memcmp(sub->key, subscript, subscript_len) == 0)
+          {
+            mark_input_td_sub_closed(T, i);
+          }
+        }
+      }  
     }
 
     bool subscribed;
@@ -825,16 +881,9 @@ turbine_close(turbine_datum_id id)
   }
 
 
-  list_l_free(L); // No longer need list
+  list_l_free(blocked); // No longer need list
 
   add_to_ready(&tmp);
-
-  return TURBINE_SUCCESS;
-}
-
-turbine_code turbine_sub_close(turbine_datum_id id, const char *subscript)
-{
-  // TODO: handle close notification
 
   return TURBINE_SUCCESS;
 }
@@ -1029,13 +1078,11 @@ mark_input_td_closed(transform *T, int i)
   T->closed_inputs[i / 8] |= mask;
 }
 
-/*
 static inline void
 mark_input_td_sub_closed(transform *T, int i)
 {
   mark_input_td_closed(T, i + T->input_tds);
 }
-*/
 
 static size_t
 bitfield_size(int inputs) {

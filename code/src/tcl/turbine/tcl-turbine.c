@@ -501,8 +501,9 @@ Turbine_Close_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
   else
   {
-    const char *sub = Tcl_GetString(objv[2]);
-    turbine_code code = turbine_sub_close(id, sub);
+    int length;
+    const char *sub = Tcl_GetStringFromObj(objv[2], &length);
+    turbine_code code = turbine_sub_close(id, sub, (size_t) length);
     TCL_CONDITION(code == TURBINE_SUCCESS,
                   "could not close %"PRId64"[\"%s\"]", id, sub);
   }
