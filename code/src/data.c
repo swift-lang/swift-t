@@ -130,6 +130,7 @@ adlb_data_code append_notifs(const struct list_i *listeners,
                    adlb_subscript sub, adlb_notif_ranks *notify);
 
 
+static bool container_contains(adlb_container *c, adlb_subscript sub);
 static bool container_lookup(adlb_container *c, adlb_subscript sub,
                              adlb_container_val *val);
 static bool container_set(adlb_container *c, adlb_subscript sub,
@@ -595,6 +596,7 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
   adlb_datum* d = table_lp_search(&tds, id);
   check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
                 "not found: <%"PRId64">", id);
+  bool subscribed;
 
   if (adlb_has_sub(subscript))
   {
@@ -603,37 +605,47 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
             ADLB_DATA_ERROR_INVALID, "subscribing to subscript %.*s on "
             "non-container: <%"PRId64">", (int)subscript.length,
             (const char*)subscript.key, id);
-
-    // encode container, index and ref type into string
-    char key[id_sub_buflen(subscript)];
-    size_t key_len = write_id_sub(key, id, subscript);
-
-    struct list_i* listeners = NULL;
-    bool found = table_bp_search(&container_ix_listeners, key, key_len,
-                              (void*)&listeners);
-    if (!found)
+    
+    if (container_contains(&d->data.CONTAINER, subscript))
     {
-      // Nobody else has subscribed to this pair yet
-      listeners = list_i_create();
-      table_bp_add(&container_ix_listeners, key, key_len, listeners);
+      subscribed = false;
     }
-    TRACE("Added %i to listeners for %"PRId64"[%s]\n", rank,
-        id, subscript);
-    list_i_unique_insert(listeners, rank);
+    else
+    {
+      // encode container, index and ref type into string
+      char key[id_sub_buflen(subscript)];
+      size_t key_len = write_id_sub(key, id, subscript);
+
+      struct list_i* listeners = NULL;
+      bool found = table_bp_search(&container_ix_listeners, key, key_len,
+                                (void*)&listeners);
+      if (!found)
+      {
+        // Nobody else has subscribed to this pair yet
+        listeners = list_i_create();
+        table_bp_add(&container_ix_listeners, key, key_len, listeners);
+      }
+      TRACE("Added %i to listeners for %"PRId64"[%.*s]\n", rank,
+          id, (int)subscript.length, (const char*)subscript.key);
+      list_i_unique_insert(listeners, rank);
+      subscribed = true;
+    }
   }
   else
   {
     // No subscript, so subscribing to top-level datum
     if (d->write_refcount == 0)
     {
-      *result = 0;
+      subscribed = false;
     }
     else
     {
       list_i_unique_insert(&d->listeners, rank);
-      *result = 1;
+      subscribed = true;
     }
   }
+
+  *result = subscribed ? 1 : 0;
   return ADLB_DATA_SUCCESS;
 }
 
@@ -1044,6 +1056,12 @@ static bool container_set(adlb_container *c, adlb_subscript sub,
                               adlb_container_val *prev)
 {
   return table_bp_set(c->members, sub.key, sub.length, val, (void**)prev);
+}
+
+static bool container_contains(adlb_container *c, adlb_subscript sub)
+{
+  adlb_container_val tmp;
+  return container_lookup(c, sub, &tmp);
 }
 
 /**
