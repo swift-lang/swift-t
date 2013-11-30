@@ -505,6 +505,7 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
     if (table_bp_search(&td_sub_subscribed, id_sub_key, id_sub_keylen,
                         &tmp))
     {
+      DEBUG_TURBINE("Already subscribed");
       *result = true;
       return TURBINE_SUCCESS;
     }
@@ -792,6 +793,7 @@ turbine_code turbine_pop(turbine_action_type* action_type,
 turbine_code
 turbine_close(turbine_datum_id id)
 {
+  DEBUG_TURBINE("turbine_close(<%"PRId64">", id);
   // Record no longer subscribed
   table_lp_remove(&td_subscribed, id);
 
@@ -802,12 +804,15 @@ turbine_close(turbine_datum_id id)
     // We don't have any rules that block on this td
     return TURBINE_SUCCESS;
 
+  DEBUG_TURBINE("%i blocked", L->size);
   return turbine_close_update(L, id, NULL, 0);
 }
 
 turbine_code turbine_sub_close(turbine_datum_id id, const void *subscript,
                                size_t subscript_len)
 {
+  DEBUG_TURBINE("turbine_sub_close(<%"PRId64">[\"%.*s\"])", id,
+                (int)subscript_len, (const char*)subscript);
   size_t key_len = id_sub_key_buflen(subscript, subscript_len);
   char key[key_len];
   write_id_sub_key(key, id, subscript, subscript_len);
@@ -819,6 +824,8 @@ turbine_code turbine_sub_close(turbine_datum_id id, const void *subscript,
     // We don't have any rules that block on this td
     return TURBINE_SUCCESS;
 
+  DEBUG_TURBINE("%i blocked", L->size);
+  // TODO: support binary subscript
   return turbine_close_update(L, id, subscript, subscript_len);
 }
 
