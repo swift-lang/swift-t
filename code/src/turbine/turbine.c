@@ -869,19 +869,23 @@ turbine_close_update(struct list_l *blocked, turbine_datum_id id,
     {
       DEBUG_TURBINE("Update {%"PRId64"} for subscript close: <%"PRId64">",
                     T->id, id);
+      // Check to see which ones remain to be checked
+      int first_td_sub;
       if (T->blocker >= T->input_tds)
+        first_td_sub = T->blocker - T->input_tds;
+      else
+        first_td_sub = 0;
+
+      for (int i = first_td_sub; i < T->input_td_subs; i++)
       {
-        for (int i = T->blocker - T->input_tds; i < T->input_td_subs; i++)
+        td_sub_pair *tdsub = &T->input_td_sub_list[i];
+        turbine_subscript *sub = &tdsub->subscript;
+        if (tdsub->td == id && sub->length == subscript_len
+            && memcmp(sub->key, subscript, subscript_len) == 0)
         {
-          td_sub_pair *tdsub = &T->input_td_sub_list[i];
-          turbine_subscript *sub = &tdsub->subscript;
-          if (tdsub->td == id && sub->length == subscript_len
-              && memcmp(sub->key, subscript, subscript_len) == 0)
-          {
-            mark_input_td_sub_closed(T, i);
-          }
+          mark_input_td_sub_closed(T, i);
         }
-      }  
+      }
     }
 
     bool subscribed;
