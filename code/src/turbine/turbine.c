@@ -546,7 +546,7 @@ static int transform_tostring(char* output,
 #endif
 
 static inline turbine_code progress(transform* T, bool* subscribed);
-static inline void rule_inputs(transform* T);
+static inline turbine_code rule_inputs(transform* T);
 
 turbine_code
 turbine_rule(const char* name,
@@ -559,22 +559,25 @@ turbine_rule(const char* name,
              int parallelism,
              turbine_transform_id* id)
 {
+  turbine_code tc;
+
   if (!turbine_engine_initialized)
     return TURBINE_ERROR_UNINITIALIZED;
   transform* T = NULL;
-  turbine_code code = transform_create(name, input_tds, input_td_list,
+  tc = transform_create(name, input_tds, input_td_list,
                                        input_td_subs, input_td_sub_list,
                                        action_type, action,
                                        priority, target, parallelism,
                                        &T);
 
-  turbine_check(code);
+  turbine_check(tc);
   *id = T->id;
 
-  rule_inputs(T);
+  tc = rule_inputs(T);
+  turbine_check(tc);
 
   bool subscribed;
-  turbine_code tc = progress(T, &subscribed);
+  tc = progress(T, &subscribed);
   if (tc != TURBINE_SUCCESS)
   {
     DEBUG_TURBINE("turbine_rule failed:\n");
@@ -603,7 +606,7 @@ static inline turbine_code declare_datum(turbine_datum_id id,
 /**
    Record that this transform is blocked by its inputs
 */
-static inline void
+static inline turbine_code
 rule_inputs(transform* T)
 {
   for (int i = 0; i < T->input_tds; i++)
@@ -613,12 +616,14 @@ rule_inputs(transform* T)
     if (L == NULL)
     {
       turbine_code code = declare_datum(id, &L);
-      turbine_check(code);
+      turbine_check_verbose(code);
     }
     // TODO: we might add duplicate entries if id appears multiple times
     list_l_add(L, T->id);
   }
   // TODO: do same for pairs
+
+  return TURBINE_SUCCESS;
 }
 
 /**
