@@ -65,6 +65,12 @@
 #define TURBINE_ADLB_WORK_TYPE_WORK 0
 #define TURBINE_ADLB_WORK_TYPE_CONTROL 1
 
+static int
+turbine_extract_ids(Tcl_Interp* interp, Tcl_Obj *const objv[],
+            Tcl_Obj* list, int max,
+            turbine_datum_id* ids, int* id_count,
+            td_sub_pair* id_subs, int* id_sub_count);
+
 /**
    @see TURBINE_CHECK
 */
@@ -275,11 +281,10 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp* interp,
 
   // Get the input list - done last so we can report name on error
   // TODO: also support id/subscript pairs
-  rc = turbine_tcl_long_array(interp, objv[1],
-                              TCL_TURBINE_MAX_INPUTS,
-                              input_list, &inputs);
-  TCL_CHECK_MSG(rc, "could not parse inputs list as integers:\n"
-                "in rule: <%"PRId64"> %s inputs: \"%s\"",
+  rc = turbine_extract_ids(interp, objv, objv[1], TCL_TURBINE_MAX_INPUTS,
+              input_list, &inputs, input_pair_list, &input_pairs);
+  TCL_CHECK_MSG(rc, "could not parse inputs list as ids or id/subscript "
+                "pairs:\n in rule: <%"PRId64"> %s inputs: \"%s\"",
                 id, opts.name, Tcl_GetString(objv[1]));
 
   turbine_code code =
@@ -1048,6 +1053,61 @@ Turbine_StrInt_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   Tcl_SetObjResult(interp, Tcl_NewWideIntObj(val));
   return TCL_OK;
+}
+
+/*
+  Extract IDs and ID/Sub pairs
+ */
+static int
+turbine_extract_ids(Tcl_Interp* interp, Tcl_Obj *const objv[],
+            Tcl_Obj* list, int max,
+            turbine_datum_id* ids, int* id_count,
+            td_sub_pair* id_subs, int* id_sub_count)
+{
+  Tcl_Obj** entry;
+  int n;
+  int code = Tcl_ListObjGetElements(interp, list, &n, &entry);
+  assert(code == TCL_OK);
+  TCL_CONDITION(n < max, "Rule IDs exceed supported max: %i > %i",
+                n, max);
+  assert(sizeof(Tcl_WideInt) == sizeof(turbine_datum_id));
+  for (int i = 0; i < n; i++)
+  {
+    Tcl_Obj *obj = entry[i];
+    // First try to interpret as ID
+    code = Tcl_GetWideIntFromObj(interp, obj,
+                                (Tcl_WideInt*)&ids[*id_count]);
+    if (code == TCL_OK)
+    {
+      (*id_count)++;
+    }
+    else
+    {
+      // Try to interpret as id/sub pair
+      Tcl_Obj** id_pair_list;
+      int id_pair_llen;
+      code = Tcl_ListObjGetElements(interp, obj, &id_pair_llen, &id_pair_list);
+      TCL_CONDITION(code == TCL_OK && id_pair_llen == 2, "Could not "
+              "interpret %s as id or id/subscript pair", Tcl_GetString(obj));
+      turbine_datum_id id;
+      char *subscript;
+      int subscript_strlen;
+      code = Tcl_GetWideIntFromObj(interp, id_pair_list[0],
+                                  (Tcl_WideInt*)&id);
+      TCL_CONDITION(code == TCL_OK, "Could not interpret %s as "
+            "id/subscript pair", Tcl_GetString(obj));
+      subscript = Tcl_GetStringFromObj(id_pair_list[1], &subscript_strlen);
+      size_t subscript_len = (size_t)subscript_strlen + 1;
+      td_sub_pair *pair = &id_subs[(*id_sub_count)++];
+      pair->td = id;
+      pair->subscript.key = malloc(subscript_len);
+      TCL_CONDITION(pair->subscript.key != NULL,
+                    "Could not allocate memory");
+      memcpy(pair->subscript.key, subscript, subscript_len);
+      pair->subscript.length = subscript_len;
+    }
+  }
+  return TURBINE_SUCCESS;
 }
 
 /**
