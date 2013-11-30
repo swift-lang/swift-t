@@ -109,7 +109,12 @@ namespace eval turbine {
             }
             close {
                 set id [ lindex $msg 1 ]
-                turbine::c::close $id
+                if { [ llength $msg ] > 2 } {
+                  set sub [ lindex $msg 2 ]
+                  turbine::c::close $id $sub
+                } else {
+                  turbine::c::close $id
+                }
             }
             rule {
                 turbine::c::rule {*}[ lrange $msg 1 end ]
