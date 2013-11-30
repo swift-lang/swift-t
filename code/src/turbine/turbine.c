@@ -505,7 +505,9 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
     if (table_bp_search(&td_sub_subscribed, id_sub_key, id_sub_keylen,
                         &tmp))
     {
-      DEBUG_TURBINE("Already subscribed");
+      // TODO: support binary subscript
+      DEBUG_TURBINE("Already subscribed: <%"PRId64">[\"%.*s\"]",
+                      id, (int)subscript.length, subscript.key);
       *result = true;
       return TURBINE_SUCCESS;
     }
@@ -520,7 +522,7 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
   }
   int subscribed;
   adlb_code rc = ADLB_Subscribe(id, sub_convert(subscript), &subscribed);
-
+  
   if (rc == (int)ADLB_DATA_ERROR_NOT_FOUND) {
     // Handle case where read_refcount == 0 and write_refcount == 0
     //      => datum was freed and we're good to go
@@ -537,6 +539,8 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
     }
     return rc; // Turbine codes are same as ADLB data codes
   }
+
+  DEBUG_TURBINE("ADLB_Subscribe: %i", subscribed);
 
   if (subscribed != 0) {
     // Record it was subscribed
@@ -794,7 +798,7 @@ turbine_code turbine_pop(turbine_action_type* action_type,
 turbine_code
 turbine_close(turbine_datum_id id)
 {
-  DEBUG_TURBINE("turbine_close(<%"PRId64">", id);
+  DEBUG_TURBINE("turbine_close(<%"PRId64">)", id);
   // Record no longer subscribed
   table_lp_remove(&td_subscribed, id);
 
