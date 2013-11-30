@@ -721,7 +721,8 @@ static inline turbine_code
 add_rule_blocker(turbine_datum_id id, turbine_transform_id transform)
 {
   assert(initialized);
-  // DEBUG_TURBINE("declare: %li\n", id);
+  DEBUG_TURBINE("add_rule_blocker for {%"PRId64"}: <%"PRId64">",
+                transform, id);
   struct list_l* blocked = table_lp_search(&td_blockers, id);
   if (blocked == NULL)
   {
@@ -739,7 +740,7 @@ static inline turbine_code add_rule_blocker_sub(void *id_sub_key,
         size_t id_sub_keylen, turbine_transform_id transform)
 {
   assert(initialized);
-  // DEBUG_TURBINE("declare: %li\n", id);
+  DEBUG_TURBINE("add_rule_blocker_sub for {%"PRId64"}", transform);
   struct list_l* blocked;
   bool found = table_bp_search(&td_sub_blockers, id_sub_key,
                          id_sub_keylen, (void**)&blocked);
@@ -824,7 +825,6 @@ turbine_code turbine_sub_close(turbine_datum_id id, const void *subscript,
     // We don't have any rules that block on this td
     return TURBINE_SUCCESS;
 
-  DEBUG_TURBINE("%i blocked", L->size);
   // TODO: support binary subscript
   return turbine_close_update(L, id, subscript, subscript_len);
 }

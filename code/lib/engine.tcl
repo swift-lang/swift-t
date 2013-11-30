@@ -73,7 +73,7 @@ namespace eval turbine {
             2 { # $turbine::CONTROL
                 set prio [ get_priority ]
                 put $target $WORK_TYPE(CONTROL) \
-                    "command priority: $prio $action" \
+                    "priority_command $prio $action" \
                     $prio $parallelism
             }
             3 { # $turbine::WORK
@@ -94,29 +94,35 @@ namespace eval turbine {
 
         set complete_rank $answer_rank
 
-        set header [ lindex $msg 0 ]
+        set hdr_end [ string wordend $msg 0 ]
+        set header [ string range $msg 0 [ expr $hdr_end - 1 ] ]
+        set cmd_start [ expr $hdr_end + 1 ]
+        set msg_len [ string length $msg ]
         # show header
         switch $header {
             command {
-                set command [ lrange $msg 1 end ]
-                if { [ string equal [ lindex $command 0 ] \
-                                    "priority:" ] } {
-                    set_priority [ lindex $command 1 ]
-                    set command [ lrange $command 2 end ]
-                }
-                debug "engine eval: $command"
-                eval $command
+                eval [ string range $msg $cmd_start $msg_len ]
+            }
+            priority_command {
+                set prio_end [ string wordend $msg $cmd_start ] 
+                set prio [ string range $msg $cmd_start [ expr $prio_end - 1 ] ]
+                set_priority $prio 
+                eval [ string range $msg [ expr $prio_end + 1 ] $msg_len ]
             }
             close {
-                set id [ lindex $msg 1 ]
-                if { [ llength $msg ] > 2 } {
-                  set sub [ lindex $msg 2 ]
+                # expect ID as first argument, then any subsequent
+                # text is subscript
+                set id_end [ string wordend $msg $cmd_start ]
+                set id [ string range $msg $cmd_start [ expr $id_end - 1 ] ]
+                if { $msg_len > $id_end } {
+                  set sub [ string range $msg [ expr $id_end + 1 ] $msg_len ]
                   turbine::c::close $id $sub
                 } else {
                   turbine::c::close $id
                 }
             }
             rule {
+                # Use list tokenisation rules
                 turbine::c::rule {*}[ lrange $msg 1 end ]
             }
             default {

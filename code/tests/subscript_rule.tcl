@@ -54,7 +54,7 @@ proc main {  } {
                     "all_closed $C C" type $turbine::CONTROL
 
     # Deferred insert
-    turbine::rule [ list "$C 1" ] "container_insert $C 2 \"brown\" string; \
+    turbine::rule [ list "$C 1" ] "container_insert $C 2 \"brown\" string ; \
                                 adlb::write_refcount_decr $C" \
                                 type $turbine::CONTROL
     container_insert $C 1 "quick" string
