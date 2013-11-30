@@ -605,11 +605,13 @@ turbine_rule(const char* name,
 
   if (subscribed)
   {
+    DEBUG_TURBINE("waiting: {%"PRId64"}", *id);
     assert(T != NULL);
     table_lp_add(&transforms_waiting, *id, T);
   }
   else
   {
+    DEBUG_TURBINE("ready: {%"PRId64"}", *id);
     list_add(&transforms_ready, T);
   }
 
@@ -845,6 +847,7 @@ turbine_close_update(struct list_l *blocked, turbine_datum_id id,
     // update closed vector
     if (subscript == NULL)
     {
+      DEBUG_TURBINE("Update {%"PRId64"} for close: <%"PRId64">", T->id, id);
       for (int i = T->blocker; i < T->input_tds; i++) {
         if (T->input_td_list[i] == id) {
           mark_input_td_closed(T, i);
@@ -853,6 +856,8 @@ turbine_close_update(struct list_l *blocked, turbine_datum_id id,
     }
     else
     {
+      DEBUG_TURBINE("Update {%"PRId64"} for subscript close: <%"PRId64">",
+                    T->id, id);
       if (T->blocker >= T->input_tds)
       {
         for (int i = T->blocker - T->input_tds; i < T->input_td_subs; i++)
