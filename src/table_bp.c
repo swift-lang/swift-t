@@ -329,6 +329,8 @@ table_bp_add(table_bp *target, const void* key, size_t key_len,
   if (table_bp_inline_key(key_len))
   {
     // Store inline
+    // Initialize to avoid clash with invalid value
+    key_repr = 0;
     memcpy(&key_repr, key, key_len);
   }
   else
