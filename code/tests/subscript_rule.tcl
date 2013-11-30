@@ -20,9 +20,9 @@ proc all_closed { C id } {
   if { [ dict size $contents] != 3 } {
     error "$id: Expected 3 entries: $contents"
   }
-  if [ expr [ dict get $contents 1 ] != "quick" || \
-            [ dict get $contents 2 ] != "brown" || \
-            [ dict get $contents 3 ] != "fox" ] {
+  if { ! [ string equal [ dict get $contents 1 ] "quick" ] || \
+       ! [ string equal [ dict get $contents 2 ] "brown" ] || \
+       ! [ string equal [ dict get $contents 3 ] "fox" ] } {
     error "$id: Dictionary contents not as expected: $contents"
   }
     
