@@ -154,6 +154,10 @@ class Turbine {
   private static final Token ADLB_SPAWN = adlbFn("spawn");
   private static final LiteralInt TURBINE_NULL_RULE = new LiteralInt(-1);
   
+  // Rule command names
+  private static final Token RULE_COMMAND = new Token("command");
+  private static final Token RULE_PRIORITY_COMMAND = new Token("priority_command");
+  
   // Keyword arg names for rule
   private static final Token RULE_KEYWORD_PAR = new Token("parallelism");
   private static final Token RULE_KEYWORD_TYPE = new Token("type");
@@ -671,10 +675,11 @@ class Turbine {
       taskTokens.addAll(action);
     } else {
       assert(type == TaskMode.CONTROL);
-      taskTokens.add(new Token("command"));
-      if (props.priority != null) {
+      if (props.priority == null) {
+        taskTokens.add(RULE_COMMAND);
+      } else {
         assert(priorityVar != null);
-        taskTokens.add(new Token("priority:"));
+        taskTokens.add(RULE_PRIORITY_COMMAND);
         taskTokens.add(priorityVar);
       }
       taskTokens.addAll(action);
