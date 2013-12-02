@@ -102,7 +102,8 @@ turbine_code turbine_close(turbine_datum_id id);
   Should be called when turbine engine is notified that an id/subscript
   is closed
  */
-turbine_code turbine_sub_close(turbine_datum_id id, const char *subscript);
+turbine_code turbine_sub_close(turbine_datum_id id, const void *subscript,
+                               size_t subscript_len);
 
 /*
   action_type: this is TURBINE_ACTION_NULL if no ready actions.

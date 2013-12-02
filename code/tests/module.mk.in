@@ -62,6 +62,7 @@ TEST_SRC_TCL := $(DIR)/error.tcl               \
                 $(DIR)/send_rule.tcl           \
                 $(DIR)/deep_rule.tcl           \
                 $(DIR)/deep_rule-2.tcl         \
+                $(DIR)/subscript_rule.tcl      \
 
 #                 $(DIR)/blob-big.tcl            \
 

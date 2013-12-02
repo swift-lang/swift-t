@@ -103,6 +103,12 @@ static size_t bitfield_size(int inputs);
 static inline bool input_td_closed(transform *T, int i);
 static inline void mark_input_td_closed(transform *T, int i);
 static inline bool input_td_sub_closed(transform *T, int i);
+static inline void mark_input_td_sub_closed(transform *T, int i);
+
+// Update transforms after close
+static turbine_code
+turbine_close_update(struct list_l *blocked, turbine_datum_id id,
+                     const void *subscript, size_t subscript_len);
 
 // Finalize engine
 static void turbine_engine_finalize(void);
@@ -133,6 +139,12 @@ struct list transforms_ready;
 struct table_lp td_blockers;
 
 /**
+   ID/subscript pairs blocking transforms
+   Map from ID/subscript pair to list of transforms
+ */
+struct table_bp td_sub_blockers;
+
+/**
   TDs to which this engine has subscribed, used to avoid
   subscribing multiple times
  */
@@ -150,23 +162,23 @@ struct table_bp td_sub_subscribed;
 // Return size of buffer to use for id/subscript pair.
 // Zero-length buffer if no subscript
 static inline size_t
-id_sub_key_buflen(turbine_subscript subscript)
+id_sub_key_buflen(const void *subscript, size_t length)
 {
-  if (subscript.key == NULL)
+  if (subscript == NULL)
     return 0;
-  size_t res = (sizeof(turbine_datum_id) + subscript.length);
+  size_t res = (sizeof(turbine_datum_id) + length);
   assert(res <= ID_SUB_KEY_MAX);
   return res;
 }
 
 static inline size_t
 write_id_sub_key(char *buf, turbine_datum_id id,
-                 turbine_subscript subscript)
+                 const void *subscript, size_t length)
 {
-  assert(subscript.key != NULL);
+  assert(subscript != NULL);
   memcpy(buf, &id, sizeof(id));
-  memcpy(&buf[sizeof(id)], subscript.key, subscript.length);
-  return id_sub_key_buflen(subscript);
+  memcpy(&buf[sizeof(id)], subscript, length);
+  return id_sub_key_buflen(subscript, length);
 }
 
 static inline adlb_subscript sub_convert(turbine_subscript sub)
@@ -327,12 +339,16 @@ turbine_engine_init()
   result = table_lp_init(&td_blockers, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
+  
+  result = table_bp_init(&td_sub_blockers, 1024); // Will expand
+  if (!result)
+    return TURBINE_ERROR_OOM;
 
   result = table_lp_init(&td_subscribed, 1024*1024);
   if (!result)
     return TURBINE_ERROR_OOM;
 
-  result = table_bp_init(&td_sub_subscribed, 1024*1024);
+  result = table_bp_init(&td_sub_subscribed, 1024); // Will expand
   if (!result)
     return TURBINE_ERROR_OOM;
 
@@ -480,15 +496,18 @@ static inline turbine_code
 subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
 {
   // if subscript provided, use key
-  size_t id_sub_keylen = id_sub_key_buflen(subscript);
+  size_t id_sub_keylen = id_sub_key_buflen(subscript.key, subscript.length);
   char id_sub_key[id_sub_keylen];
   if (subscript.key != NULL)
   {
-    write_id_sub_key(id_sub_key, id, subscript);
+    write_id_sub_key(id_sub_key, id, subscript.key, subscript.length);
     void *tmp;
     if (table_bp_search(&td_sub_subscribed, id_sub_key, id_sub_keylen,
                         &tmp))
     {
+      // TODO: support binary subscript
+      DEBUG_TURBINE("Already subscribed: <%"PRId64">[\"%.*s\"]",
+                      id, (int)subscript.length, subscript.key);
       *result = true;
       return TURBINE_SUCCESS;
     }
@@ -503,7 +522,7 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
   }
   int subscribed;
   adlb_code rc = ADLB_Subscribe(id, sub_convert(subscript), &subscribed);
-
+  
   if (rc == (int)ADLB_DATA_ERROR_NOT_FOUND) {
     // Handle case where read_refcount == 0 and write_refcount == 0
     //      => datum was freed and we're good to go
@@ -520,6 +539,8 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
     }
     return rc; // Turbine codes are same as ADLB data codes
   }
+
+  DEBUG_TURBINE("ADLB_Subscribe: %i", subscribed);
 
   if (subscribed != 0) {
     // Record it was subscribed
@@ -546,7 +567,7 @@ static int transform_tostring(char* output,
 #endif
 
 static inline turbine_code progress(transform* T, bool* subscribed);
-static inline void rule_inputs(transform* T);
+static inline turbine_code rule_inputs(transform* T);
 
 turbine_code
 turbine_rule(const char* name,
@@ -559,22 +580,25 @@ turbine_rule(const char* name,
              int parallelism,
              turbine_transform_id* id)
 {
+  turbine_code tc;
+
   if (!turbine_engine_initialized)
     return TURBINE_ERROR_UNINITIALIZED;
   transform* T = NULL;
-  turbine_code code = transform_create(name, input_tds, input_td_list,
+  tc = transform_create(name, input_tds, input_td_list,
                                        input_td_subs, input_td_sub_list,
                                        action_type, action,
                                        priority, target, parallelism,
                                        &T);
 
-  turbine_check(code);
+  turbine_check(tc);
   *id = T->id;
 
-  rule_inputs(T);
+  tc = rule_inputs(T);
+  turbine_check(tc);
 
   bool subscribed;
-  turbine_code tc = progress(T, &subscribed);
+  tc = progress(T, &subscribed);
   if (tc != TURBINE_SUCCESS)
   {
     DEBUG_TURBINE("turbine_rule failed:\n");
@@ -586,39 +610,56 @@ turbine_rule(const char* name,
 
   if (subscribed)
   {
+    DEBUG_TURBINE("waiting: {%"PRId64"}", *id);
     assert(T != NULL);
     table_lp_add(&transforms_waiting, *id, T);
   }
   else
   {
+    DEBUG_TURBINE("ready: {%"PRId64"}", *id);
     list_add(&transforms_ready, T);
   }
 
   return TURBINE_SUCCESS;
 }
 
-static inline turbine_code declare_datum(turbine_datum_id id,
-                                         struct list_l** result);
+static inline turbine_code add_rule_blocker(turbine_datum_id id,
+                                         turbine_transform_id transform);
 
+static inline turbine_code add_rule_blocker_sub(void *id_sub_key,
+        size_t id_sub_keylen, turbine_transform_id transform);
 /**
-   Record that this transform is blocked by its inputs
+   Record that this transform is blocked by its inputs.  Do not yet
+   subscribe to any inputs
 */
-static inline void
+static inline turbine_code
 rule_inputs(transform* T)
 {
   for (int i = 0; i < T->input_tds; i++)
   {
     turbine_datum_id id = T->input_td_list[i];
-    struct list_l* L = table_lp_search(&td_blockers, id);
-    if (L == NULL)
-    {
-      turbine_code code = declare_datum(id, &L);
-      turbine_check(code);
-    }
-    // TODO: we might add duplicate entries if id appears multiple times
-    list_l_add(L, T->id);
+    // TODO: we might add duplicate list entries if id appears multiple
+    //       times. This is currently handled upon removal from list
+    turbine_code code = add_rule_blocker(id, T->id);
+    turbine_check_verbose(code);
   }
-  // TODO: do same for pairs
+
+  for (int i = 0; i < T->input_td_subs; i++)
+  {
+    td_sub_pair *td_sub = &T->input_td_sub_list[i];
+    size_t id_sub_keylen = id_sub_key_buflen(td_sub->subscript.key,
+                                             td_sub->subscript.length);
+    char id_sub_key[id_sub_keylen];
+    assert(td_sub->subscript.key != NULL);
+    write_id_sub_key(id_sub_key, td_sub->td, td_sub->subscript.key,
+                     td_sub->subscript.length);
+    // TODO: we might add duplicate list entries if id appears multiple
+    //      times. This is currently handled upon removal from list
+    turbine_code code = add_rule_blocker_sub(id_sub_key, id_sub_keylen,
+                                             T->id);
+    turbine_check_verbose(code);
+  }
+  return TURBINE_SUCCESS;
 }
 
 /**
@@ -678,19 +719,41 @@ turbine_rules_push()
 
 /**
    Declare a new data id
-   @param result If non-NULL, return the new blocked list here
+   @param result return the new blocked list here
  */
 static inline turbine_code
-declare_datum(turbine_datum_id id, struct list_l** result)
+add_rule_blocker(turbine_datum_id id, turbine_transform_id transform)
 {
   assert(initialized);
-  // DEBUG_TURBINE("declare: %li\n", id);
-  struct list_l* blocked = list_l_create();
-  if (table_lp_contains(&td_blockers, id))
-    return TURBINE_ERROR_DOUBLE_DECLARE;
-  table_lp_add(&td_blockers, id, blocked);
-  if (result != NULL)
-    *result = blocked;
+  DEBUG_TURBINE("add_rule_blocker for {%"PRId64"}: <%"PRId64">",
+                transform, id);
+  struct list_l* blocked = table_lp_search(&td_blockers, id);
+  if (blocked == NULL)
+  {
+    blocked = list_l_create();
+    table_lp_add(&td_blockers, id, blocked);
+  }
+  list_l_add(blocked, transform);
+  return TURBINE_SUCCESS;
+}
+
+/*
+  Same as add_rule_blocker, but with subscript.
+ */
+static inline turbine_code add_rule_blocker_sub(void *id_sub_key,
+        size_t id_sub_keylen, turbine_transform_id transform)
+{
+  assert(initialized);
+  DEBUG_TURBINE("add_rule_blocker_sub for {%"PRId64"}", transform);
+  struct list_l* blocked;
+  bool found = table_bp_search(&td_sub_blockers, id_sub_key,
+                         id_sub_keylen, (void**)&blocked);
+  if (!found)
+  {
+    blocked = list_l_create();
+    table_bp_add(&td_sub_blockers, id_sub_key, id_sub_keylen, blocked);
+  }
+  list_l_add(blocked, transform);
   return TURBINE_SUCCESS;
 }
 
@@ -735,6 +798,7 @@ turbine_code turbine_pop(turbine_action_type* action_type,
 turbine_code
 turbine_close(turbine_datum_id id)
 {
+  DEBUG_TURBINE("turbine_close(<%"PRId64">)", id);
   // Record no longer subscribed
   table_lp_remove(&td_subscribed, id);
 
@@ -745,22 +809,82 @@ turbine_close(turbine_datum_id id)
     // We don't have any rules that block on this td
     return TURBINE_SUCCESS;
 
+  DEBUG_TURBINE("%i blocked", L->size);
+  return turbine_close_update(L, id, NULL, 0);
+}
+
+turbine_code turbine_sub_close(turbine_datum_id id, const void *subscript,
+                               size_t subscript_len)
+{
+  DEBUG_TURBINE("turbine_sub_close(<%"PRId64">[\"%.*s\"])", id,
+                (int)subscript_len, (const char*)subscript);
+  size_t key_len = id_sub_key_buflen(subscript, subscript_len);
+  char key[key_len];
+  write_id_sub_key(key, id, subscript, subscript_len);
+  
+  struct list_l* L;
+  
+  bool found = table_bp_remove(&td_sub_blockers, key, key_len, (void**)&L);
+  if (!found)
+    // We don't have any rules that block on this td
+    return TURBINE_SUCCESS;
+
+  // TODO: support binary subscript
+  return turbine_close_update(L, id, subscript, subscript_len);
+}
+
+/*
+  Update transforms after having one of blockers removed.
+  blocked: list of transforms with blocker remoed
+  id: id of data
+  subscript: optional subscript
+ */
+static turbine_code
+turbine_close_update(struct list_l *blocked, turbine_datum_id id,
+                     const void *subscript, size_t subscript_len)
+{
   // Temporary holding spot for transforms moving into ready list
   struct list tmp;
   list_init(&tmp);
 
   // Try to make progress on those transforms
-  for (struct list_l_item* item = L->head; item; item = item->next)
+  for (struct list_l_item* item = blocked->head; item; item = item->next)
   {
     turbine_transform_id transform_id = item->data;
     transform* T = table_lp_search(&transforms_waiting, transform_id);
     if (!T)
       continue;
-  
+ 
     // update closed vector
-    for (int i = T->blocker; i < T->input_tds; i++) {
-      if (T->input_td_list[i] == id) {
-        mark_input_td_closed(T, i);
+    if (subscript == NULL)
+    {
+      DEBUG_TURBINE("Update {%"PRId64"} for close: <%"PRId64">", T->id, id);
+      for (int i = T->blocker; i < T->input_tds; i++) {
+        if (T->input_td_list[i] == id) {
+          mark_input_td_closed(T, i);
+        }
+      }
+    }
+    else
+    {
+      DEBUG_TURBINE("Update {%"PRId64"} for subscript close: <%"PRId64">",
+                    T->id, id);
+      // Check to see which ones remain to be checked
+      int first_td_sub;
+      if (T->blocker >= T->input_tds)
+        first_td_sub = T->blocker - T->input_tds;
+      else
+        first_td_sub = 0;
+
+      for (int i = first_td_sub; i < T->input_td_subs; i++)
+      {
+        td_sub_pair *tdsub = &T->input_td_sub_list[i];
+        turbine_subscript *sub = &tdsub->subscript;
+        if (tdsub->td == id && sub->length == subscript_len
+            && memcmp(sub->key, subscript, subscript_len) == 0)
+        {
+          mark_input_td_sub_closed(T, i);
+        }
       }
     }
 
@@ -777,16 +901,9 @@ turbine_close(turbine_datum_id id)
   }
 
 
-  list_l_free(L); // No longer need list
+  list_l_free(blocked); // No longer need list
 
   add_to_ready(&tmp);
-
-  return TURBINE_SUCCESS;
-}
-
-turbine_code turbine_sub_close(turbine_datum_id id, const char *subscript)
-{
-  // TODO: handle close notification
 
   return TURBINE_SUCCESS;
 }
@@ -981,13 +1098,11 @@ mark_input_td_closed(transform *T, int i)
   T->closed_inputs[i / 8] |= mask;
 }
 
-/*
 static inline void
 mark_input_td_sub_closed(transform *T, int i)
 {
   mark_input_td_closed(T, i + T->input_tds);
 }
-*/
 
 static size_t
 bitfield_size(int inputs) {
@@ -1046,6 +1161,7 @@ info_waiting()
 // Callbacks to free data
 static void tbl_free_transform_cb(turbine_transform_id key, void *T);
 static void tbl_free_blockers_cb(turbine_datum_id key, void *L);
+static void tbl_free_sub_blockers_cb(const void *key, size_t key_len, void *L);
 static void list_free_transform_cb(void *T);
 
 void
@@ -1069,6 +1185,7 @@ static void turbine_engine_finalize(void)
   table_lp_free_callback(&transforms_waiting, false, tbl_free_transform_cb);
   list_clear_callback(&transforms_ready, list_free_transform_cb);
   table_lp_free_callback(&td_blockers, false, tbl_free_blockers_cb);
+  table_bp_free_callback(&td_sub_blockers, false, tbl_free_sub_blockers_cb);
 
   // Entries in td_subscribed and td_sub_subscribed are not pointers and don't
   // need to be freed
@@ -1088,6 +1205,11 @@ static void list_free_transform_cb(void *T)
 }
 
 static void tbl_free_blockers_cb(turbine_datum_id key, void *L)
+{
+  list_l_free((struct list_l*)L);
+}
+
+static void tbl_free_sub_blockers_cb(const void *key, size_t key_len, void *L)
 {
   list_l_free((struct list_l*)L);
 }
