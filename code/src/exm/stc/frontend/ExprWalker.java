@@ -246,7 +246,7 @@ public class ExprWalker {
   public void copyByValue(Context context, Var src, Var dst,
       Type type) throws UserException {
     if (Types.isInt(type)) {
-      backend.asyncOp(BuiltinOpcode.COPY_INT, dst,src.asArg().asList());
+      backend.asyncOp(BuiltinOpcode.COPY_INT, dst, src.asArg().asList());
     } else if (Types.isString(type)) {
       backend.asyncOp(BuiltinOpcode.COPY_STRING, dst,src.asArg().asList());
     } else if (Types.isFloat(type)) {
@@ -352,21 +352,24 @@ public class ExprWalker {
     assert(Types.isRef(src.type()));
     assert(Types.isAssignableRefTo(src.type(), dst.type()));
   
+    Var backendDst = VarRepr.backendVar(dst);
+    Var backendSrc = VarRepr.backendVar(src);
+    
     Type dstType = dst.type();
     if (Types.isInt(dstType)) {
-      backend.dereferenceInt(dst, src);
+      backend.dereferenceInt(backendDst, backendSrc);
     } else if (Types.isVoid(dstType)) {
-      backend.dereferenceVoid(dst, src);
+      backend.dereferenceVoid(backendDst, backendSrc);
     } else if (Types.isString(dstType)) {
-      backend.dereferenceString(dst, src);
+      backend.dereferenceString(backendDst, backendSrc);
     } else if (Types.isFloat(dstType)) {
-      backend.dereferenceFloat(dst, src);
+      backend.dereferenceFloat(backendDst, backendSrc);
     } else if (Types.isBool(dstType)) {
-      backend.dereferenceBool(dst, src);
+      backend.dereferenceBool(backendDst, backendSrc);
     } else if (Types.isFile(dstType)) {
-      backend.dereferenceFile(dst, src);
+      backend.dereferenceFile(backendDst, backendSrc);
     } else if (Types.isBlob(dstType)) {
-      backend.dereferenceBlob(dst, src);
+      backend.dereferenceBlob(backendDst, backendSrc);
     } else if (Types.isContainer(dstType)) {
       derefThenCopyContainer(context, dst, src);
     } else if (Types.isStruct(dstType)) {
@@ -1258,6 +1261,13 @@ public class ExprWalker {
     return snapshot;
   }
 
+  /**
+   * TODO: optimized copy?
+   * @param context
+   * @param dst
+   * @param src
+   * @throws UserException
+   */
   private void copyContainerByValue(Context context, Var dst, Var src) 
                                                 throws UserException {
     assert(src.type().assignableTo(dst.type()));
@@ -1305,7 +1315,7 @@ public class ExprWalker {
     backend.startWaitStatement(wName, VarRepr.backendVars(waitVars),
             WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
     Var derefed = varCreator.createTmpAlias(context, dst.type());
-    backend.retrieveRef(derefed, src);
+    backend.retrieveRef(VarRepr.backendVar(derefed), VarRepr.backendVar(src));
     copyContainerByValue(context, dst, derefed);
     backend.endWaitStatement();
   }
@@ -1371,7 +1381,8 @@ public class ExprWalker {
                     false, false, TaskMode.LOCAL);
     Var rValDerefed = varCreator.createTmp(context, 
             src.type().memberType(), false, true);
-    backend.retrieveRef(rValDerefed, src);
+    backend.retrieveRef(VarRepr.backendVar(rValDerefed),
+                        VarRepr.backendVar(src));
     copyByValue(context, rValDerefed, dst, dst.type());
     backend.endWaitStatement();
   } 
