@@ -169,7 +169,7 @@ public class ValLoc {
             "not member ref: " + contents + " " + arr;
       val = ComputedValue.arrayRefCV(arr, ix);
     } else {
-      assert(Types.isMemberType(arr, contents)) :
+      assert(Types.isElemType(arr, contents)) :
             "not member: " + contents + " " + arr;
       val = ComputedValue.arrayCV(arr, ix);
     }
@@ -184,7 +184,7 @@ public class ValLoc {
     if (refResult) {
       val = ComputedValue.arrayRefNestedCV(arr, ix);
     } else {
-      assert(contents == null || Types.isMemberType(arr, contents)) :
+      assert(contents == null || Types.isElemType(arr, contents)) :
             "not member: " + contents + " " + arr;
       val = ComputedValue.arrayNestedCV(arr, ix);
     }

@@ -421,7 +421,7 @@ public class TurbineOp extends Instruction {
       Arg ix, Var member) {
     assert(Types.isArray(array));
     assert(Types.isArrayKeyVal(array, ix));
-    assert(Types.isMemberType(array, member));
+    assert(Types.isElemType(array, member));
     return new TurbineOp(Opcode.ARRAY_INSERT_IMM,
                           array, ix, member.asArg());
   }

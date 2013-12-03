@@ -870,7 +870,7 @@ public class ExprWalker {
       // wait statement
       for (int i = 0; i < waitVars.size(); i++) {
         Var derefVar = derefVars.get(i);
-        varCreator.declare(derefVar);
+        varCreator.backendInit(derefVar);
         if (Types.isContainerRef(waitVars.get(i).type())) {
           backend.retrieveRef(derefVar, waitVars.get(i));
         } else {

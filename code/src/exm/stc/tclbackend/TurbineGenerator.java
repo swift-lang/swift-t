@@ -1263,7 +1263,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isBag(bag));
     assert(bag.storage() == Alloc.ALIAS);
     assert(Types.isArrayKeyVal(arr, ix));
-    assert(Types.isMemberType(arr, bag));
+    assert(Types.isElemType(arr, bag));
     assert(callerReadRefs.isImmediateInt());
     assert(callerWriteRefs.isImmediateInt());
     
@@ -1651,7 +1651,7 @@ public class TurbineGenerator implements CompilerBackend {
     for (int i = 0; i < elemCount; i++) {
       Arg key = keys.get(i);
       Var val = vals.get(i);
-      assert(Types.isMemberType(array, val));
+      assert(Types.isElemType(array, val));
       assert(Types.isArrayKeyVal(array, key));
       kvExprs.add(Pair.<Expression, Expression>create(
                   argToExpr(key), varToExpr(val)));
@@ -1683,7 +1683,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isArray(array.type()));
     assert(Types.isArrayKeyVal(array, arrIx));
     assert(writersDecr.isImmediateInt());
-    assert(Types.isMemberType(array, member));
+    assert(Types.isElemType(array, member));
     
     Command r = Turbine.arrayStoreImmediate(
         varToExpr(member), varToExpr(array),
@@ -2302,7 +2302,7 @@ public class TurbineGenerator implements CompilerBackend {
     if (Types.isArray(container)) {
       assert(!haveKeys || 
             Types.isArrayKeyVal(container, loopCountVar.asArg()));
-      assert(Types.isMemberType(container, memberVar));
+      assert(Types.isElemType(container, memberVar));
     } else {
       assert(Types.isBag(container));
       assert(!haveKeys);

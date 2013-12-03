@@ -1351,9 +1351,10 @@ public class ASTWalker {
     }
     
     context.defineFunction(function, ft);
+    FunctionType backendFT = VarRepresentations.backendFnType(ft);
     if (impl != null) {
       context.setFunctionProperty(function, FnProp.BUILTIN);
-      backend.defineBuiltinFunction(function, ft, impl);
+      backend.defineBuiltinFunction(function, backendFT, impl);
     } else {
       if (inlineTcl == null) {
         throw new UserException(context, "Must provide TCL implementation or " +
@@ -1369,7 +1370,7 @@ public class ASTWalker {
       }
       
       // Defer generation of wrapper until it is called
-      wrapper.saveWrapper(function, ft, fdecl,
+      wrapper.saveWrapper(function, backendFT, fdecl,
                           taskMode, isParallel, isTargetable);
     }
   }
@@ -1626,6 +1627,15 @@ public class ASTWalker {
     List<Var> iList = fdecl.getInVars(context);
     List<Var> oList = fdecl.getOutVars(context);
     
+    List<Var> backendIList = new ArrayList<Var>(iList.size());
+    List<Var> backendOList = new ArrayList<Var>(oList.size());
+    for (Var input: iList) {
+      backendIList.add(VarRepresentations.backendVar(input));
+    }
+    for (Var output: oList) {
+      backendOList.add(VarRepresentations.backendVar(output));
+    }
+    
     // Analyse variable usage inside function and annotate AST
     syncFilePos(context, tree);
     varAnalyzer.analyzeVariableUsage(context, lineMap(), function,
@@ -1637,7 +1647,7 @@ public class ASTWalker {
     
     TaskMode mode = context.hasFunctionProp(function, FnProp.SYNC) ?
                           TaskMode.SYNC : TaskMode.CONTROL;
-    backend.startFunction(function, oList, iList, mode);
+    backend.startFunction(function, backendOList, backendIList, mode);
     block(functionContext, block);
     backend.endFunction();
 
@@ -1678,15 +1688,23 @@ public class ASTWalker {
     List<Var> outArgs = decl.getOutVars(context);
     List<Var> inArgs = decl.getInVars(context);
     
+    List<Var> backendOutArgs = new ArrayList<Var>(outArgs.size());
+    for (Var outArg: outArgs) {
+      backendOutArgs.add(VarRepresentations.backendVar(outArg));
+    }
+    
     /* Pass in e.g. location */
-    List<Var> realInArgs = new ArrayList<Var>();
-    realInArgs.addAll(inArgs);
+    List<Var> backendInArgs = new ArrayList<Var>();
+    for (Var inArg: inArgs) {
+      backendInArgs.add(VarRepresentations.backendVar(inArg));
+    } 
+
     TaskProps props = new TaskProps();
     // Need to pass location arg into task dispatch wait statement
     // Priority is passed implicitly
     Var loc = new Var(Types.V_INT, Var.DEREF_COMPILER_VAR_PREFIX + "location",
         Alloc.LOCAL, DefType.INARG, VarProvenance.exprTmp(context.getSourceLoc()));
-    realInArgs.add(loc);
+    backendInArgs.add(loc);
     props.put(TaskPropKey.LOCATION, loc.asArg());
     
     
@@ -1716,7 +1734,7 @@ public class ASTWalker {
     appContext.addDeclaredVariables(inArgs);
     
     
-    backend.startFunction(function, outArgs, realInArgs, TaskMode.SYNC);
+    backend.startFunction(function, backendOutArgs, backendInArgs, TaskMode.SYNC);
     genAppFunctionBody(appContext, appBodyT, inArgs, outArgs, 
                        hasSideEffects, deterministic, exec.val, props);
     backend.endFunction();
@@ -2221,7 +2239,7 @@ public class ASTWalker {
 
     StructType newType = new StructType(typeName, fields);
     context.defineType(typeName, newType);
-    backend.defineStructType(newType);
+    backend.defineStructType((StructType)VarRepresentations.backendType(newType));
     LogHelper.debug(context, "Defined new type called " + typeName + ": "
         + newType.toString());
   }

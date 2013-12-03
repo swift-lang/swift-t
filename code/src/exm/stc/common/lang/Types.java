@@ -188,6 +188,10 @@ public class Types {
       else
         return new ArrayType(local, implKey, implMember);
     }
+
+    public Type substituteElemType(Type newElem) {
+      return new ArrayType(local, keyType, newElem);
+    }
   }
 
   /**
@@ -316,6 +320,10 @@ public class Types {
         return this;
       else
         return new BagType(local, implElem);
+    }
+
+    public Type substituteElemType(Type newElem) {
+      return new BagType(local, newElem);
     }
   }
   
@@ -1813,9 +1821,30 @@ public class Types {
     }
   }
 
-  public static boolean isMemberType(Typed arr, Typed member) {
-    Type memberType = containerElemType(arr.type());
-    return (member.type().assignableTo(memberType));
+  public static boolean isElemType(Typed cont, Typed elem) {
+    Type memberType = containerElemType(cont.type());
+    return (elem.type().assignableTo(memberType));
+  }
+  
+  public static Type substituteElemType(Typed cont, Type newElem) {
+    boolean isRef = isRef(cont);
+    if (isRef) {
+      cont = cont.type().memberType();
+    }
+    
+    Type newCont;
+    if (isArray(cont) || isArrayLocal(cont)) {
+      newCont = ((ArrayType)cont).substituteElemType(newElem);
+    } else {
+      assert(isBag(cont) || isBagLocal(cont));
+      newCont = ((BagType)cont).substituteElemType(newElem);
+    }
+    
+    if (isRef) {
+      return new RefType(newCont);
+    } else {
+      return newCont;
+    }
   }
   
   /**

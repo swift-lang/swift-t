@@ -437,7 +437,7 @@ public class ArrayBuild extends FunctionOptimizerPass {
             Arg key = inst.getInput(0);
             Arg val = inst.getInput(1);
             assert(Types.isArrayKeyVal(arr, key));
-            assert(Types.isMemberType(arr, val.getVar()));
+            assert(Types.isElemType(arr, val.getVar()));
             keys.add(key);
             vals.add(val);
           }

@@ -143,8 +143,7 @@ public class STCMiddleEnd {
   public void defineBuiltinFunction(String name,
                                     FunctionType fType,
                                     TclFunRef impl)
-  throws UserException
-  {
+  throws UserException {
     assert(blockStack.size() == 0);
     assert(currFunction == null);
     BuiltinFunction bf = new BuiltinFunction(name, fType, impl);
@@ -516,7 +515,7 @@ public class STCMiddleEnd {
       assert(Types.isArrayKeyVal(array, key));
     }
     for (Var val: vals) {
-      assert(Types.isMemberType(array, val));
+      assert(Types.isElemType(array, val));
     }
     currBlock().addInstruction(
         TurbineOp.arrayBuild(array, keys, Arg.fromVarList(vals)));

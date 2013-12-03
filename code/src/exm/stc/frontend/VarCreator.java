@@ -27,8 +27,8 @@ import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.ic.STCMiddleEnd;
 
@@ -79,7 +79,7 @@ public class VarCreator {
   public void initialiseVariable(Context context, Var v)
       throws UndefinedTypeException, DoubleDefineException {
     if (!Types.isStruct(v.type())) {
-      declare(v);
+      backendInit(v);
     } else {
       // Need to handle structs specially because they have lots of nested
       // variables created at declaration time
@@ -88,12 +88,13 @@ public class VarCreator {
   }
 
   /**
-   * Convenience function to declare var in backend 
+   * Convenience function to declare var in backend with appropriate
+   * converted type
    * @param var
    * @throws UndefinedTypeException
    */
-  public void declare(Var var) throws UndefinedTypeException {
-    backend.declare(var);
+  public void backendInit(Var var) throws UndefinedTypeException {
+    backend.declare(VarRepresentations.backendVar(var));
   }
 
   private void initialiseStruct(Context context, Var rootStruct,
@@ -101,7 +102,7 @@ public class VarCreator {
       throws UndefinedTypeException, DoubleDefineException {
     assert(Types.isStruct(structToInit.type()));
     
-    declare(structToInit);
+    backendInit(structToInit);
     
     if (structToInit.storage() == Alloc.ALIAS) {
       // Skip recursive initialisation if its just an alias
@@ -191,7 +192,7 @@ public class VarCreator {
         throws UserException {
     assert(Types.isPrimValue(type));
     Var val = context.createLocalValueVariable(type);
-    declare(val);
+    backendInit(val);
     return val;
   }
   
@@ -200,7 +201,7 @@ public class VarCreator {
                   Alloc storage) throws UndefinedTypeException {
     Var tmp = context.createStructFieldTmp(rootStruct, memType,
           fieldPath, storage);
-    declare(tmp);
+    backendInit(tmp);
     return tmp;
   }
 
