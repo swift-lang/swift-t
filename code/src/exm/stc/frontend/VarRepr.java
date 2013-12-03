@@ -49,7 +49,7 @@ public class VarRepr {
     type = type.getImplType();
     
     // TODO: also need to search recursively through structs, refs, etc
-    if (Types.isContainer(type)) {
+    if (Types.isContainer(type) || Types.isContainerRef(type)) {
       Type elemType = Types.containerElemType(type);
       if (storeRefInContainer(elemType)) {
         type = Types.substituteElemType(type, new RefType(elemType));

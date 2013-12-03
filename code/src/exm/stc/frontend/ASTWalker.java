@@ -716,7 +716,7 @@ public class ASTWalker {
 
     LogHelper.trace(context, "switch: " + 
             sw.getCaseBodies().size() + " cases");
-    backend.startSwitch(Arg.createVar(switchVal), sw.getCaseLabels(),
+    backend.startSwitch(VarRepr.backendArg(switchVal), sw.getCaseLabels(),
                                                          sw.hasDefault());
     for (SwiftAST caseBody : sw.getCaseBodies()) {
       block(new LocalContext(waitContext), caseBody);
@@ -1777,7 +1777,7 @@ public class ASTWalker {
     // use wait to wait for data then dispatch task to worker
     String waitName = context.getFunctionContext().constructName("app-leaf");
     // do deep wait for array args
-    backend.startWaitStatement(waitName, waitVars,
+    backend.startWaitStatement(waitName, VarRepr.backendVars(waitVars),
         WaitMode.TASK_DISPATCH, false, true, TaskMode.WORKER, props);
     // On worker, just execute the required command directly
     Pair<List<Arg>, Redirects<Arg>> retrieved = retrieveAppArgs(context,
