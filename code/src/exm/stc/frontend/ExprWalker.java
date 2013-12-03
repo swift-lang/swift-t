@@ -888,7 +888,7 @@ public class ExprWalker {
       Var lookupEnabled = varCreator.createTmpLocalVal(context, Types.V_BOOL);
       backend.checkpointLookupEnabled(lookupEnabled);
       
-      backend.startIfStatement(lookupEnabled.asArg(), true);
+      backend.startIfStatement(VarRepr.backendArg(lookupEnabled), true);
       checkpointedFunctionCall(context, function, concrete, oList,
                                realIList, props, true);
       backend.startElseBlock();
@@ -945,7 +945,7 @@ public class ExprWalker {
       
       backend.lookupCheckpoint(checkpointExists, existingVal, keyBlob.asArg());
       
-      backend.startIfStatement(checkpointExists.asArg(), true);
+      backend.startIfStatement(VarRepr.backendArg(checkpointExists), true);
       setVarsFromCheckpoint(context, oList, existingVal);
       backend.startElseBlock();
     }
@@ -957,7 +957,7 @@ public class ExprWalker {
     Var writeEnabled = varCreator.createTmpLocalVal(context, Types.V_BOOL);
     backend.checkpointWriteEnabled(writeEnabled);
     
-    backend.startIfStatement(writeEnabled.asArg(), false);
+    backend.startIfStatement(VarRepr.backendArg(writeEnabled), false);
     // checkpoint output values once set
     List<Var> checkpointVal = oList; // TODO: right?
     

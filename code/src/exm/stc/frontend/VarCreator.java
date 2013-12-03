@@ -94,7 +94,7 @@ public class VarCreator {
    * @throws UndefinedTypeException
    */
   public void backendInit(Var var) throws UndefinedTypeException {
-    backend.declare(VarRepresentations.backendVar(var));
+    backend.declare(VarRepr.backendVar(var));
   }
 
   private void initialiseStruct(Context context, Var rootStruct,

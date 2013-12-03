@@ -1,5 +1,6 @@
 package exm.stc.frontend;
 
+import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.RefType;
@@ -14,10 +15,14 @@ import exm.stc.common.lang.Var;
  * actual implementation or optimisation.  We also have the option
  * of representing the same logical variable in different ways.
  */
-public class VarRepresentations {
+public class VarRepr {
   
   public static Var backendVar(Var frontendVar) {
     return frontendVar.substituteType(backendType(frontendVar.type()));
+  }
+  
+  public static Arg backendArg(Var frontendVar) {
+    return backendVar(frontendVar).asArg();
   }
   
   /**

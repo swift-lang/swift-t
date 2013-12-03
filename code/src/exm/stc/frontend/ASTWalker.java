@@ -595,7 +595,8 @@ public class ASTWalker {
 
     Context waitContext = new LocalContext(context);
     Var condVal = varCreator.fetchValueOf(waitContext, conditionVar);
-    backend.startIfStatement(Arg.createVar(condVal), ifStmt.hasElse());
+    backend.startIfStatement(VarRepr.backendArg(condVal),
+                             ifStmt.hasElse());
     block(new LocalContext(waitContext), ifStmt.getThenBlock());
 
     if (ifStmt.hasElse()) {
@@ -979,7 +980,7 @@ public class ASTWalker {
     Var condVal = varCreator.fetchValueOf(loopIterContext, condArg);
     
     // branch depending on if loop should start
-    backend.startIfStatement(Arg.createVar(condVal), true);
+    backend.startIfStatement(VarRepr.backendArg(condVal), true);
     
     // Create new context for loop body to execute when condition passes
     Context loopBodyContext = new LocalContext(loopIterContext);
@@ -1052,7 +1053,7 @@ public class ASTWalker {
     // get value of condVar
     Var condVal = varCreator.fetchValueOf(iterContext, condArg); 
     
-    backend.startIfStatement(Arg.createVar(condVal), true);
+    backend.startIfStatement(VarRepr.backendArg(condVal), true);
     backend.loopBreak();
     backend.startElseBlock();
     Context bodyContext = new LocalContext(iterContext);
@@ -1346,7 +1347,7 @@ public class ASTWalker {
     }
     
     context.defineFunction(function, ft);
-    FunctionType backendFT = VarRepresentations.backendFnType(ft);
+    FunctionType backendFT = VarRepr.backendFnType(ft);
     if (impl != null) {
       context.setFunctionProperty(function, FnProp.BUILTIN);
       backend.defineBuiltinFunction(function, backendFT, impl);
@@ -1625,10 +1626,10 @@ public class ASTWalker {
     List<Var> backendIList = new ArrayList<Var>(iList.size());
     List<Var> backendOList = new ArrayList<Var>(oList.size());
     for (Var input: iList) {
-      backendIList.add(VarRepresentations.backendVar(input));
+      backendIList.add(VarRepr.backendVar(input));
     }
     for (Var output: oList) {
-      backendOList.add(VarRepresentations.backendVar(output));
+      backendOList.add(VarRepr.backendVar(output));
     }
     
     // Analyse variable usage inside function and annotate AST
@@ -1685,13 +1686,13 @@ public class ASTWalker {
     
     List<Var> backendOutArgs = new ArrayList<Var>(outArgs.size());
     for (Var outArg: outArgs) {
-      backendOutArgs.add(VarRepresentations.backendVar(outArg));
+      backendOutArgs.add(VarRepr.backendVar(outArg));
     }
     
     /* Pass in e.g. location */
     List<Var> backendInArgs = new ArrayList<Var>();
     for (Var inArg: inArgs) {
-      backendInArgs.add(VarRepresentations.backendVar(inArg));
+      backendInArgs.add(VarRepr.backendVar(inArg));
     } 
 
     TaskProps props = new TaskProps();
@@ -2234,7 +2235,7 @@ public class ASTWalker {
 
     StructType newType = new StructType(typeName, fields);
     context.defineType(typeName, newType);
-    backend.defineStructType((StructType)VarRepresentations.backendType(newType));
+    backend.defineStructType((StructType)VarRepr.backendType(newType));
     LogHelper.debug(context, "Defined new type called " + typeName + ": "
         + newType.toString());
   }
