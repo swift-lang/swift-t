@@ -390,9 +390,7 @@ public class ASTWalker {
           // Set up nested stack frame
 
           backend.startNestedBlock();
-          backend.addComment("start of block@" + context.getFileLine());
           block(nestedContext, tree);
-          backend.addComment("end of block@" + context.getFileLine());
           backend.endNestedBlock();
           break;
 
@@ -1263,9 +1261,6 @@ public class ASTWalker {
     SwiftAST expr = tree.child(0);
 
     ExprType exprType = TypeChecker.findExprType(context, expr);
-    backend.addComment("Swift l." + context.getLine() + " evaluating "
-        + " expression and throwing away " + exprType.elems() +
-        " results");
 
     // Need to create throwaway temporaries for return values
     List<Var> oList = new ArrayList<Var>();

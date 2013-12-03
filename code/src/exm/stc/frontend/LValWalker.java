@@ -77,8 +77,6 @@ public class LValWalker {
       if (walkMode != WalkMode.ONLY_DECLARATIONS) {
         // the variable we will evaluate expression into
         context.syncFilePos(lVal.tree, lineMapping);
-        backend.addComment("Swift l." + context.getLine()
-            + ": assigning expression to " + lVal.toString());
 
         // First do typechecking
         Type lValType = lVal.getType(context);
