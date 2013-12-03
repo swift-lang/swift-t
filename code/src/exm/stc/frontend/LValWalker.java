@@ -396,8 +396,9 @@ public class LValWalker {
     }
 
     backend.startWaitStatement(
-        context.getFunctionContext().constructName("bag-create-wait"),
-        waitVars, WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
+        context.constructName("bag-create-wait"),
+        VarRepr.backendVars(waitVars), WaitMode.WAIT_ONLY,
+        false, false, TaskMode.LOCAL);
 
     Var derefArr; // Plain array (not reference);
     if (Types.isArrayRef(arr)) {
@@ -582,7 +583,7 @@ public class LValWalker {
         waitVars.add(elem);
       }
           
-      backend.startWaitStatement(waitName, waitVars,
+      backend.startWaitStatement(waitName,VarRepr.backendVars(waitVars),
              WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
       
       if (bagRef) {

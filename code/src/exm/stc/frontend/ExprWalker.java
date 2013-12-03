@@ -508,8 +508,9 @@ public class ExprWalker {
         propFutures.add(Pair.create(ann, future));
       }
       
-      backend.startWaitStatement(context.getFunctionContext().constructName("ann-wait"), 
-                        waitVars, WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
+      backend.startWaitStatement(context.constructName("ann-wait"),
+              VarRepr.backendVars(waitVars),
+              WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
       openedWait = true;
       callContext = new LocalContext(context);
       for (Pair<TaskPropKey,Var> x: propFutures) {
@@ -861,8 +862,8 @@ public class ExprWalker {
       
       // Only want to maintain priority for wait
       TaskProps waitProps = props.filter(TaskPropKey.PRIORITY);
-      backend.startWaitStatement(
-           fc.constructName("call-" + function), waitVars, WaitMode.WAIT_ONLY,
+      backend.startWaitStatement( fc.constructName("call-" + function),
+           VarRepr.backendVars(waitVars), WaitMode.WAIT_ONLY,
            false, false, TaskMode.LOCAL_CONTROL, waitProps);
 
       assert(waitVars.size() == derefVars.size());
@@ -933,7 +934,7 @@ public class ExprWalker {
       // Do recursive wait to get container contents
       backend.startWaitStatement(
           context.constructName(function + "-checkpoint-wait"),
-          checkpointKeyFutures, WaitMode.WAIT_ONLY,
+          VarRepr.backendVars(checkpointKeyFutures), WaitMode.WAIT_ONLY,
           false, true, TaskMode.LOCAL);
       Var keyBlob = packCheckpointKey(context, function,
                                        checkpointKeyFutures);
@@ -973,7 +974,8 @@ public class ExprWalker {
     }
     backend.startWaitStatement(
         context.constructName(function + "-checkpoint-wait"),
-        waitVals, WaitMode.WAIT_ONLY, false, true, TaskMode.LOCAL);
+        VarRepr.backendVars(waitVals), WaitMode.WAIT_ONLY,
+        false, true, TaskMode.LOCAL);
     
     // Lookup checkpoint key again since variable might not be able to be
     // passed through wait.  Rely on optimizer to clean up redundancy
@@ -1277,10 +1279,10 @@ public class ExprWalker {
     }
     Var member = copyContext.createTmpAliasVar(memType);
  
-    List<Var> waitVars = Arrays.asList(src);
     backend.startWaitStatement(
         context.getFunctionContext().constructName(dst.name() + "-copy-wait"),
-        waitVars, WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
+        VarRepr.backendVar(src).asList(), WaitMode.WAIT_ONLY,
+        false, false, TaskMode.LOCAL);
     backend.startForeachLoop(
             context.getFunctionContext().constructName(dst.name() + "-copy"),
             src, member, ix, -1, 1, true);
@@ -1300,7 +1302,7 @@ public class ExprWalker {
     assert(Types.isRefTo(src, dst));
     String wName = context.getFunctionContext().constructName("copy-wait");
     List<Var> waitVars = Arrays.asList(src);
-    backend.startWaitStatement(wName, waitVars,
+    backend.startWaitStatement(wName, VarRepr.backendVars(waitVars),
             WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
     Var derefed = varCreator.createTmpAlias(context, dst.type());
     backend.retrieveRef(derefed, src);
@@ -1342,9 +1344,9 @@ public class ExprWalker {
 
   private void copyRefByValue(Context context, Var src, Var dst, Type type)
       throws UserException, UndefinedTypeException {
-    backend.startWaitStatement(
-        context.getFunctionContext().constructName("copy-ref-wait"),
-        src.asList(), WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
+    backend.startWaitStatement(context.constructName("copy-ref-wait"),
+        VarRepr.backendVar(src).asList(), WaitMode.WAIT_ONLY,
+        false, false, TaskMode.LOCAL);
     Var srcVal = varCreator.createTmpAlias(context, type.memberType());
     backend.retrieveRef(srcVal, src);
     backend.assignReference(dst, srcVal);
@@ -1364,9 +1366,8 @@ public class ExprWalker {
   private void dereferenceStruct(Context context, Var dst, Var src)
       throws UserException, UndefinedTypeException {
     List<Var> waitVars = Arrays.asList(src);
-    backend.startWaitStatement( 
-                    context.getFunctionContext().constructName("copystruct"), 
-                    waitVars, WaitMode.WAIT_ONLY,
+    backend.startWaitStatement( context.constructName("copystruct"), 
+                    VarRepr.backendVars(waitVars), WaitMode.WAIT_ONLY,
                     false, false, TaskMode.LOCAL);
     Var rValDerefed = varCreator.createTmp(context, 
             src.type().memberType(), false, true);

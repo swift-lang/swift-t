@@ -1,5 +1,8 @@
 package exm.stc.frontend;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -16,11 +19,19 @@ import exm.stc.common.lang.Var;
  * of representing the same logical variable in different ways.
  */
 public class VarRepr {
-  
+
   public static Var backendVar(Var frontendVar) {
     return frontendVar.substituteType(backendType(frontendVar.type()));
   }
-  
+
+  public static List<Var> backendVars(List<Var> frontendVars) {
+    ArrayList<Var> result = new ArrayList<Var>(frontendVars.size());
+    for (Var v: frontendVars) {
+      result.add(backendVar(v));
+    }
+    return result;
+  }
+
   public static Arg backendArg(Var frontendVar) {
     return backendVar(frontendVar).asArg();
   }
@@ -37,7 +48,7 @@ public class VarRepr {
     // Remove any subtype info, etc
     type = type.getImplType();
     
-    // TODO: also need to search recursively through structs, etc
+    // TODO: also need to search recursively through structs, refs, etc
     if (Types.isContainer(type)) {
       Type elemType = Types.containerElemType(type);
       if (storeRefInContainer(elemType)) {
