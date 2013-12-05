@@ -85,7 +85,7 @@ public class WrapUtil {
       //  something inserted by the frontend (this caused problems before)
       Var value_v = createValueVar(valName, valueT, var);
       block.addVariable(value_v);
-      instBuffer.add(ICInstructions.retrieveValueOf(value_v, var));
+      instBuffer.add(ICInstructions.retrievePrim(value_v, var));
       
       // Add cleanup action if needed
       if (Types.isBlobVal(valueT)) {
@@ -428,7 +428,7 @@ public class WrapUtil {
         if (Types.isFile(outArg) && setOutVarMapping) {
           setFilenameFromFileVal(block, instBuffer, outArg, outVal);
         }
-        instBuffer.add(ICInstructions.futureSet(outArg, outVal.asArg()));
+        instBuffer.add(ICInstructions.storePrim(outArg, outVal.asArg()));
       }
     }
   }

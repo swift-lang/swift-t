@@ -81,15 +81,7 @@ public interface CompilerBackend {
    */
   public void assignReference(Var target, Var src);
 
-  public void dereferenceInt(Var target, Var src);
-  
-  public void dereferenceBool(Var target, Var src);
-  
-  public void dereferenceVoid(Var target, Var src);
-
-  public void dereferenceFloat(Var dst, Var src);
-  
-  public void dereferenceBlob(Var dst, Var src);
+  public void dereferenceScalar(Var target, Var src);
   
   public void dereferenceFile(Var dst, Var src);
 
@@ -102,36 +94,19 @@ public interface CompilerBackend {
    */
   public void makeAlias(Var dst, Var src);
 
-  public void dereferenceString (Var target, Var src);
-
-  /**assignInt, which can take a value variable or a literal int in oparg
-   */
-  public void assignInt(Var target, Arg src);
-  public void retrieveInt(Var target, Var source, Arg decr);
-
-  public void assignVoid(Var target, Arg src);
   /**
-   * Used to represent dataflow dependency.  Sets target to
-   * arbitrary value
+   * Assign a scalar value to a future.
+   * @param src a value variable or a literal int in oparg
+   */
+  public void assignScalar(Var target, Arg src);
+  
+  /**
+   * Retrieve a scalar value from a future
    * @param target
    * @param source
+   * @param decr
    */
-  public void retrieveVoid(Var target, Var source, Arg decr);
-  
-  public void assignFloat(Var target, Arg src);
-  public void retrieveFloat(Var target, Var source, Arg decr);
-
-  /** assignString, which can take a value variable or a literal int in oparg
-   */
-  public void assignString(Var target, Arg src);
-
-  public void retrieveString(Var target, Var source, Arg decr);
-  
-  public void assignBool(Var target, Arg src);
-  public void retrieveBool(Var target, Var source, Arg decr);
-
-  public void assignBlob(Var target, Arg src);
-  public void retrieveBlob(Var target, Var src, Arg decr);
+  public void retrieveScalar(Var target, Var source, Arg decr);
   
   /**
    * Set file object.  Increment local file ref count

@@ -36,6 +36,15 @@ public class VarRepr {
     return backendVar(frontendVar).asArg();
   }
   
+  public static Arg backendArg(Arg frontendArg) {
+    if (frontendArg.isVar()) {
+      return backendArg(frontendArg.getVar());
+    } else {
+      // Constants don't change
+      return frontendArg;
+    }
+  }
+  
   /**
    * Convert a frontend logical type used for typechecking and user-facing
    * messages to a backend type used for implementation 

@@ -1,6 +1,5 @@
 package exm.stc.ic.tree;
 
-import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.Typed;
@@ -10,10 +9,8 @@ public enum Opcode {
   COMMENT, // Comment in IR
   
   // Load and store primitives from value to future
-  STORE_INT, STORE_STRING, STORE_FLOAT, STORE_BOOL, STORE_REF,
-  STORE_BLOB, STORE_VOID, STORE_FILE,
-  LOAD_INT, LOAD_STRING, LOAD_FLOAT, LOAD_BOOL, LOAD_REF,
-  LOAD_BLOB, LOAD_VOID, LOAD_FILE,
+  STORE_SCALAR, STORE_FILE, STORE_REF,
+  LOAD_SCALAR, LOAD_FILE, LOAD_REF,
   
   // Load and store container contents (TODO: recursively?)
   STORE_ARRAY, STORE_BAG,
@@ -21,8 +18,7 @@ public enum Opcode {
   STORE_RECURSIVE, LOAD_RECURSIVE,
   
   // Dereference *prim to prim
-  DEREF_INT, DEREF_STRING, DEREF_FLOAT, DEREF_BOOL, DEREF_BLOB,
-  DEREF_VOID, DEREF_FILE, 
+  DEREF_SCALAR, DEREF_FILE, 
   
   // Copy reference (i.e. create alias)
   COPY_REF,
@@ -103,14 +99,8 @@ public enum Opcode {
   
   public boolean isAssign() {
     switch (this) {
-      case STORE_BLOB:
-      case STORE_BOOL:
+      case STORE_SCALAR:
       case STORE_FILE:
-      case STORE_FLOAT: 
-      case STORE_INT:
-      case STORE_REF: 
-      case STORE_STRING: 
-      case STORE_VOID:
       case STORE_ARRAY:
       case STORE_BAG:
       case STORE_RECURSIVE:
@@ -126,32 +116,10 @@ public enum Opcode {
   
   public static Opcode assignOpcode(Typed dstType, boolean recursive) {
     Opcode op = null;
-    if (Types.isPrimFuture(dstType.type())) {
-       switch(dstType.type().primType()) {
-       case BOOL:
-         op = Opcode.STORE_BOOL;
-         break;
-       case INT:
-         op = Opcode.STORE_INT;
-         break;
-       case FLOAT:
-         op = Opcode.STORE_FLOAT;
-         break;
-       case STRING:
-         op = Opcode.STORE_STRING;
-         break;
-       case BLOB:
-         op = Opcode.STORE_BLOB;
-         break;
-       case VOID:
-         op = Opcode.STORE_VOID;
-         break;
-       case FILE:
-         op = Opcode.STORE_FILE;
-         break;
-       default:
-         throw new STCRuntimeError("don't know how to assign " + dstType);
-       }
+    if (Types.isScalarFuture(dstType)) {
+      op = Opcode.STORE_SCALAR;
+    } else if (Types.isFile(dstType)) {
+      op = Opcode.STORE_FILE;
     } else if (Types.isRef(dstType)) {
       op = Opcode.STORE_REF;
     } else if (Types.isArray(dstType)) {
@@ -172,14 +140,9 @@ public enum Opcode {
   
   public boolean isRetrieve() {
     switch (this) {
-    case LOAD_BLOB:
-    case LOAD_BOOL:
+    case LOAD_SCALAR:
     case LOAD_FILE:
-    case LOAD_FLOAT: 
-    case LOAD_INT:
     case LOAD_REF:
-    case LOAD_STRING:
-    case LOAD_VOID:
     case LOAD_ARRAY:
     case LOAD_BAG:
     case LOAD_RECURSIVE:
@@ -196,34 +159,10 @@ public enum Opcode {
   public static Opcode retrieveOpcode(Typed srcType,
                                         boolean recursive) {
     Opcode op;
-    if (Types.isPrimFuture(srcType.type())) {
-      switch(srcType.type().primType()) {
-      case BOOL:
-        op = Opcode.LOAD_BOOL;
-        break;
-      case INT:
-        op = Opcode.LOAD_INT;
-        break;
-      case FLOAT:
-        op = Opcode.LOAD_FLOAT;
-        break;
-      case STRING:
-        op = Opcode.LOAD_STRING;
-        break;
-      case BLOB:
-        op = Opcode.LOAD_BLOB;
-        break;
-      case VOID:
-        op = Opcode.LOAD_VOID;
-        break;
-      case FILE:
-        op = Opcode.LOAD_FILE;
-        break;
-      default:
-        // Can't retrieve other types
-        op = null;
-      }
-
+    if (Types.isScalarFuture(srcType)) {
+      op = Opcode.LOAD_SCALAR;
+    } else if (Types.isFile(srcType)) {
+      op = Opcode.LOAD_FILE;
     } else if (Types.isRef(srcType)) {
       op = Opcode.LOAD_REF;
     } else if (Types.isArray(srcType)) {
@@ -247,13 +186,8 @@ public enum Opcode {
 
   public boolean isDeref() {
     switch (this) {
-      case DEREF_BLOB:
-      case DEREF_BOOL:
+      case DEREF_SCALAR:
       case DEREF_FILE:
-      case DEREF_FLOAT:
-      case DEREF_INT:
-      case DEREF_STRING:
-      case DEREF_VOID:
         return true;
       default:
         return false;
@@ -263,23 +197,10 @@ public enum Opcode {
   public static Opcode derefOpCode(Typed type) {
     if (Types.isRef(type)) {
       Type refedType = type.type().memberType();
-      if (Types.isPrimFuture(refedType)) {
-        switch (refedType.primType()) {
-        case BLOB:
-          return Opcode.DEREF_BLOB;
-        case FILE:
-          return Opcode.DEREF_FILE;
-        case VOID:
-          return Opcode.DEREF_VOID;
-        case BOOL:
-          return Opcode.DEREF_BOOL;
-        case FLOAT:
-          return Opcode.DEREF_FLOAT;
-        case INT:
-          return Opcode.DEREF_INT;
-        case STRING:
-          return Opcode.DEREF_STRING;
-        }
+      if (Types.isScalarFuture(refedType)) {
+        return Opcode.DEREF_SCALAR;
+      } else if (Types.isFile(refedType)) {
+        return Opcode.DEREF_FILE;
       }
     }
     return null;

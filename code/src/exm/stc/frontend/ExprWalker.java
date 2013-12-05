@@ -356,20 +356,10 @@ public class ExprWalker {
     Var backendSrc = VarRepr.backendVar(src);
     
     Type dstType = dst.type();
-    if (Types.isInt(dstType)) {
-      backend.dereferenceInt(backendDst, backendSrc);
-    } else if (Types.isVoid(dstType)) {
-      backend.dereferenceVoid(backendDst, backendSrc);
-    } else if (Types.isString(dstType)) {
-      backend.dereferenceString(backendDst, backendSrc);
-    } else if (Types.isFloat(dstType)) {
-      backend.dereferenceFloat(backendDst, backendSrc);
-    } else if (Types.isBool(dstType)) {
-      backend.dereferenceBool(backendDst, backendSrc);
+    if (Types.isScalarFuture(dstType)) {
+      backend.dereferenceScalar(backendDst, backendSrc);
     } else if (Types.isFile(dstType)) {
       backend.dereferenceFile(backendDst, backendSrc);
-    } else if (Types.isBlob(dstType)) {
-      backend.dereferenceBlob(backendDst, backendSrc);
     } else if (Types.isContainer(dstType)) {
       derefThenCopyContainer(context, dst, src);
     } else if (Types.isStruct(dstType)) {
@@ -382,41 +372,63 @@ public class ExprWalker {
   public void assign(Var dst, Arg src) {
     assert(src.type().assignableTo(Types.derefResultType(dst.type()))) :
                       dst + " = " + src;
-    if (Types.isPrimFuture(dst)) {
-      switch (src.type().primType()) {
-        case INT:
-          backend.assignInt(dst, src);
-          break;
-        case BOOL:
-          backend.assignBool(dst, src);
-          break;
-        case FLOAT:
-          backend.assignFloat(dst, src);
-          break;
-        case STRING:
-          backend.assignString(dst, src);
-          break;
-        case BLOB:
-          backend.assignBlob(dst, src);
-          break;
-        case VOID:
-          backend.assignVoid(dst, src);
-          break;
-        case FILE:
-          backend.assignFile(dst, src);
-          break;
-        default:
-          throw new STCRuntimeError("assigning from type " + src.type()
-                  + " not supported internally");
-      }
+    Var backendDst = VarRepr.backendVar(dst);
+    Arg backendSrc = VarRepr.backendArg(src);
+    if (Types.isScalarFuture(dst)) {
+      backend.assignScalar(backendDst, backendSrc);
+    } else if (Types.isFile(dst)) {
+      backend.assignFile(backendDst, backendSrc);
     } else if (Types.isArray(dst)) {
-      backend.assignArray(dst, src);
+      backend.assignArray(backendDst, backendSrc);
     } else if (Types.isBag(dst)) {
-      backend.assignBag(dst, src);
+      backend.assignBag(backendDst, backendSrc);
     } else {
       throw new STCRuntimeError("Can't assign: " + dst);
     }
-    
+  }
+  
+  public void retrieve(Var dst, Var src) {
+    Var backendDst = VarRepr.backendVar(dst);
+    Var backendSrc = VarRepr.backendVar(src);
+    if (Types.isScalarFuture(src)) {
+      backend.retrieveScalar(backendDst, backendSrc);
+    } else if (Types.isFile(src)) {
+      backend.retrieveFile(backendDst, backendSrc);
+    } else if (Types.isArray(src)) {
+      // TODO: recursively?
+      backend.retrieveArray(backendDst, backendSrc);
+    } else if (Types.isBag(src)) {
+      // TODO: recursively?
+      backend.retrieveBag(backendDst, backendSrc);
+    } else {
+      throw new STCRuntimeError("Don't know how to fetch " + src);
+    }
+  }
+
+  /**
+   * Create a value variable and retrieve value of future into it
+   * @param context
+   * @param future
+   * @return
+   * @throws UserException
+   * @throws UndefinedTypeException
+   * @throws DoubleDefineException
+   */
+  public Var retrieveToVar(Context context, Var future) 
+      throws UserException, UndefinedTypeException, DoubleDefineException {
+    Var val = varCreator.createValueOfVar(context, future);
+    retrieve(val, future);
+    return val;
+  }
+
+  public Var retrieveContainerValues(Context context, Var c)
+          throws UserException {
+    assert(Types.isContainer(c));
+    Type unpackedT = Types.unpackedContainerType(c.type());
+    Var val = varCreator.createValueVar(context, unpackedT, c, true);
+    backend.retrieveRecursive(VarRepr.backendVar(val), VarRepr.backendVar(c));
+    // TODO: recursively free e.g. blobs in list
+    return val;
   }
 
   private void callOperator(Context context, SwiftAST tree, 
@@ -517,7 +529,7 @@ public class ExprWalker {
       openedWait = true;
       callContext = new LocalContext(context);
       for (Pair<TaskPropKey,Var> x: propFutures) {
-        Var value = varCreator.fetchValueOf(callContext,
+        Var value = retrieveToVar(callContext,
                                             x.val2);
         propVals.put(x.val1, value.asArg());
       }
@@ -1035,9 +1047,9 @@ public class ExprWalker {
         Var fetched;
         if (Types.isContainer(v)) {
           // Recursively fetch to get nested lists/dicts
-          fetched = varCreator.fetchContainerValues(context, v);
+          fetched = retrieveContainerValues(context, v);
         } else {
-          fetched = varCreator.fetchValueOf(context, v);
+          fetched = retrieveToVar(context, v);
         }
         elems.add(fetched.asArg());
       }
@@ -1191,62 +1203,61 @@ public class ExprWalker {
 
 
   private void assignIntLit(Context context, SwiftAST tree,
-                            Var oVar, Long value)
- throws UserException {
-   LogHelper.trace(context, oVar.toString()+"="+value);
-   if(Types.isInt(oVar.type())) {
-     backend.assignInt(oVar, Arg.createIntLit(value));
-   } else if (Types.isFloat(oVar.type())) {
-     double floatval = Literals.interpretIntAsFloat(context, value);
-     backend.assignFloat(oVar, Arg.createFloatLit(floatval));
-     
+                            Var dst, Long val)
+                                  throws UserException {
+   LogHelper.trace(context, dst.toString()+"="+val);
+   if (Types.isInt(dst)) {
+     backend.assignScalar(VarRepr.backendVar(dst), Arg.createIntLit(val));
    } else {
-     assert false : "assignIntLit to variable" + oVar;
+     assert(Types.isFloat(dst)) : dst; 
+     double fVal = Literals.interpretIntAsFloat(context, val);
+     backend.assignScalar(VarRepr.backendVar(dst), Arg.createFloatLit(fVal));
    }
   }
 
-  private void assignBoolLit(Context context, SwiftAST tree, Var oVar,
-      String value) throws UserException {
-   assert(Types.isBool(oVar.type()));
-   backend.assignBool(oVar, Arg.createBoolLit(Boolean.parseBoolean(value)));
+  private void assignBoolLit(Context context, SwiftAST tree, Var dst,
+      String val) throws UserException {
+   assert(Types.isBool(dst));
+   backend.assignScalar(VarRepr.backendVar(dst),
+           Arg.createBoolLit(Boolean.parseBoolean(val)));
   }
 
-  private void assignFloatLit(Context context, SwiftAST tree, Var oVar) 
+  private void assignFloatLit(Context context, SwiftAST tree, Var dst) 
   throws UserException {
-   assert(Types.isFloat(oVar.type()));
+   assert(Types.isFloat(dst));
    double val = Literals.extractFloatLit(context, tree);
-   backend.assignFloat(oVar, Arg.createFloatLit(val));
+   backend.assignScalar(VarRepr.backendVar(dst), Arg.createFloatLit(val));
   }
 
-  private void assignStringLit(Context context, SwiftAST tree, Var oVar,
-      String value) throws UserException {
-    assert(Types.isString(oVar.type()));
-    backend.assignString(oVar, Arg.createStringLit(value));
+  private void assignStringLit(Context context, SwiftAST tree, Var dst,
+      String val) throws UserException {
+    assert(Types.isString(dst));
+    backend.assignScalar(VarRepr.backendVar(dst), Arg.createStringLit(val));
   }
 
-  private void assignVariable(Context context, Var oVar,
-      Var src) throws UserException {
-    if (Types.isPrimUpdateable(src.type())) {
+  private void assignVariable(Context context, Var dst, Var src)
+                                  throws UserException {
+    if (Types.isPrimUpdateable(src)) {
       Var snapshot = snapshotUpdateable(context, src);
       src = snapshot;
     }
     
-    Type srctype = src.type();
-    Type dsttype = oVar.type();
-    TypeChecker.checkCopy(context, srctype, dsttype);
+    Type srcType = src.type();
+    Type dstType = dst.type();
+    TypeChecker.checkCopy(context, srcType, dstType);
 
-    copyByValue(context, src, oVar, srctype);
+    copyByValue(context, src, dst, srcType);
   }
 
   private Var snapshotUpdateable(Context context, Var src)
       throws UserException, UndefinedTypeException {
-    assert(Types.isPrimUpdateable(src.type()));
+    assert(Types.isPrimUpdateable(src));
     // Create a future alias to the updateable type so that
     // types match
-    Var val = varCreator.createTmpLocalVal(context,
-        ScalarUpdateableType.asScalarValue(src.type()));
+    Var backendVal = VarRepr.backendVar(varCreator.createTmpLocalVal(context,
+                          ScalarUpdateableType.asScalarValue(src.type())));
 
-    backend.latestValue(val, src);
+    backend.latestValue(backendVal, src);
     /* Create a future with a snapshot of the value of the updateable
      * By making the retrieve and store explicit the optimizer should be
      * able to optimize out the future in many cases
@@ -1257,7 +1268,7 @@ public class ExprWalker {
     if (!src.type().equals(Types.UP_FLOAT)) {
       throw new STCRuntimeError(src.type() + " not yet supported");
     }
-    backend.assignFloat(snapshot, Arg.createVar(val));
+    backend.assignScalar(VarRepr.backendVar(snapshot), backendVal.asArg());
     return snapshot;
   }
 

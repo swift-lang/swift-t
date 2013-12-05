@@ -527,7 +527,7 @@ public class ValueNumber implements OptimizerPass {
               // Replace a computation with future output with a store
               Arg val = state.findRetrieveResult(output);
               if (val != null && init.isInitialized(val, false)) {
-                Instruction futureSet = ICInstructions.futureSet(output, val);
+                Instruction futureSet = ICInstructions.storePrim(output, val);
                 stmtIt.set(futureSet);
                 logger.trace("Replaced with " + futureSet);
               }
@@ -917,7 +917,7 @@ public class ValueNumber implements OptimizerPass {
               Alloc.ALIAS, DefType.LOCAL_COMPILER,
               VarProvenance.filenameOf(output));
           insertPoint.add(TurbineOp.getFileName(filenameAlias, output));
-          insertPoint.add(TurbineOp.retrieveString(filenameVal, filenameAlias));
+          insertPoint.add(TurbineOp.retrieveScalar(filenameVal, filenameAlias));
         }
         filenameVals.put(output, filenameVal);
       }

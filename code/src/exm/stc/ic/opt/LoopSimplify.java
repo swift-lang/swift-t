@@ -205,7 +205,7 @@ public class LoopSimplify extends FunctionOptimizerPass {
          */
         loop.getLoopBody().addVariable(oldLoopVar);
         loop.getLoopBody().addInstructionFront(
-            ICInstructions.futureSet(oldLoopVar, newLoopVar.asArg()));
+            ICInstructions.storePrim(oldLoopVar, newLoopVar.asArg()));
       }
     }
   }

@@ -21,10 +21,11 @@ import java.util.List;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Types.Typed;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.tclbackend.tree.TclString;
 
-public class Arg implements Comparable<Arg> {
+public class Arg implements Comparable<Arg>, Typed {
   public static final Arg ZERO = Arg.createIntLit(0);
   public static final Arg ONE = Arg.createIntLit(1);
   public static final Arg TRUE = Arg.createBoolLit(true);

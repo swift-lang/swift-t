@@ -97,23 +97,8 @@ public class TurbineOp extends Instruction {
   public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
     // Recreate calls that were used to generate this instruction
     switch (op) {
-    case STORE_INT:
-      gen.assignInt(getOutput(0), getInput(0));
-      break;
-    case STORE_BOOL:
-      gen.assignBool(getOutput(0), getInput(0));
-      break;
-    case STORE_VOID:
-      gen.assignVoid(getOutput(0), getInput(0));
-      break;
-    case STORE_FLOAT:
-      gen.assignFloat(getOutput(0), getInput(0));
-      break;
-    case STORE_STRING:
-      gen.assignString(getOutput(0), getInput(0));
-      break;
-    case STORE_BLOB:
-      gen.assignBlob(getOutput(0), getInput(0));
+    case STORE_SCALAR:
+      gen.assignScalar(getOutput(0), getInput(0));
       break;
     case STORE_FILE:
       gen.assignFile(getOutput(0), getInput(0));
@@ -211,23 +196,8 @@ public class TurbineOp extends Instruction {
       gen.structInitField(getOutput(0), getInput(0).getStringLit(),
                        getInput(1).getVar());
       break;
-    case DEREF_INT:
-      gen.dereferenceInt(getOutput(0), getInput(0).getVar());
-      break;
-    case DEREF_VOID:
-      gen.dereferenceVoid(getOutput(0), getInput(0).getVar());
-      break;
-    case DEREF_BOOL:
-      gen.dereferenceBool(getOutput(0), getInput(0).getVar());
-      break;
-    case DEREF_FLOAT:
-      gen.dereferenceFloat(getOutput(0), getInput(0).getVar());
-      break;
-    case DEREF_STRING:
-      gen.dereferenceString(getOutput(0), getInput(0).getVar());
-      break;
-    case DEREF_BLOB:
-      gen.dereferenceBlob(getOutput(0), getInput(0).getVar());
+    case DEREF_SCALAR:
+      gen.dereferenceScalar(getOutput(0), getInput(0).getVar());
       break;
     case DEREF_FILE:
       gen.dereferenceFile(getOutput(0), getInput(0).getVar());
@@ -259,28 +229,8 @@ public class TurbineOp extends Instruction {
       gen.arrayCreateBag(getOutput(0), getOutput(1), getInput(0),
                          getInput(1), getInput(2));
       break;
-    case LOAD_INT:
-      gen.retrieveInt(getOutput(0), getInput(0).getVar(),
-          getInputs().size() == 2 ? getInput(1) : Arg.ZERO);
-      break;
-    case LOAD_STRING:
-      gen.retrieveString(getOutput(0), getInput(0).getVar(),
-          getInputs().size() == 2 ? getInput(1) : Arg.ZERO);
-      break;
-    case LOAD_BOOL:
-      gen.retrieveBool(getOutput(0), getInput(0).getVar(),
-          getInputs().size() == 2 ? getInput(1) : Arg.ZERO);
-      break;
-    case LOAD_VOID:
-      gen.retrieveVoid(getOutput(0), getInput(0).getVar(),
-          getInputs().size() == 2 ? getInput(1) : Arg.ZERO);
-      break;
-    case LOAD_FLOAT:
-      gen.retrieveFloat(getOutput(0), getInput(0).getVar(),
-          getInputs().size() == 2 ? getInput(1) : Arg.ZERO);
-      break;  
-    case LOAD_BLOB:
-      gen.retrieveBlob(getOutput(0), getInput(0).getVar(),
+    case LOAD_SCALAR:
+      gen.retrieveScalar(getOutput(0), getInput(0).getVar(),
           getInputs().size() == 2 ? getInput(1) : Arg.ZERO);
       break;
     case LOAD_FILE:
@@ -505,30 +455,10 @@ public class TurbineOp extends Instruction {
             Arg.createStringLit(fieldName));
   }
 
-  public static Instruction assignInt(Var target, Arg src) {
-    return new TurbineOp(Opcode.STORE_INT, target, src);
+  public static Instruction assignScalar(Var target, Arg src) {
+    return new TurbineOp(Opcode.STORE_SCALAR, target, src);
   }
 
-  public static Instruction assignBool(Var target, Arg src) {
-    return new TurbineOp(Opcode.STORE_BOOL, target, src);
-  }
-
-  public static Instruction assignVoid(Var target, Arg src) {
-    return new TurbineOp(Opcode.STORE_VOID, target, src);
-  }
-
-  public static Instruction assignFloat(Var target, Arg src) {
-    return new TurbineOp(Opcode.STORE_FLOAT, target, src);
-  }
-
-  public static Instruction assignString(Var target, Arg src) {
-    return new TurbineOp(Opcode.STORE_STRING, target, src);
-  }
-
-  public static Instruction assignBlob(Var target, Arg src) {
-    return new TurbineOp(Opcode.STORE_BLOB, target, src);
-  }
-  
   public static Instruction assignFile(Var target, Arg src) {
     return new TurbineOp(Opcode.STORE_FILE, target, src);
   }
@@ -541,30 +471,10 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.STORE_BAG, target, src);
   }
 
-  public static Instruction retrieveString(Var target, Var source) {
-    return new TurbineOp(Opcode.LOAD_STRING, target, source.asArg());
-  }
-
-  public static Instruction retrieveInt(Var target, Var source) {
-    return new TurbineOp(Opcode.LOAD_INT, target, source.asArg());
-  }
-
-  public static Instruction retrieveBool(Var target, Var source) {
-    return new TurbineOp(Opcode.LOAD_BOOL, target, source.asArg());
-  }
-
-  public static Instruction retrieveVoid(Var target, Var source) {
-    return new TurbineOp(Opcode.LOAD_VOID, target, source.asArg());
+  public static Instruction retrieveScalar(Var target, Var source) {
+    return new TurbineOp(Opcode.LOAD_SCALAR, target, source.asArg());
   }
   
-  public static Instruction retrieveFloat(Var target, Var source) {
-    return new TurbineOp(Opcode.LOAD_FLOAT, target, source.asArg());
-  }
-  
-  public static Instruction retrieveBlob(Var target, Var source) {
-    return new TurbineOp(Opcode.LOAD_BLOB, target, source.asArg());
-  }
-
   public static Instruction retrieveFile(Var target, Var source) {
     return new TurbineOp(Opcode.LOAD_FILE, target, source.asArg());
   }
@@ -604,34 +514,8 @@ public class TurbineOp extends Instruction {
         target, src.asArg());
   }
 
-  public static Instruction dereferenceInt(Var target, Var src) {
-    return new TurbineOp(Opcode.DEREF_INT,
-        target, src.asArg());
-  }
-  
-  public static Instruction dereferenceVoid(Var target, Var src) {
-    return new TurbineOp(Opcode.DEREF_VOID,
-        target, src.asArg());
-  }
-  
-  public static Instruction dereferenceBool(Var target, Var src) {
-    return new TurbineOp(Opcode.DEREF_BOOL,
-        target, src.asArg());
-  }
-
-  public static Instruction dereferenceFloat(Var target, Var src) {
-    return new TurbineOp(Opcode.DEREF_FLOAT,
-        target, src.asArg());
-  }
-
-  public static Instruction dereferenceString(Var target, Var src) {
-    return new TurbineOp(Opcode.DEREF_STRING,
-        target, src.asArg());
-  }
-
-  public static Instruction dereferenceBlob(Var target, Var src) {
-    return new TurbineOp(Opcode.DEREF_BLOB,
-        target, src.asArg());
+  public static Instruction dereferenceScalar(Var target, Var src) {
+    return new TurbineOp(Opcode.DEREF_SCALAR, target, src.asArg());
   }
   
   public static Instruction dereferenceFile(Var target, Var src) {
@@ -904,29 +788,14 @@ public class TurbineOp extends Instruction {
     case INIT_UPDATEABLE_FLOAT:
       return true;
     
-    case STORE_INT:
-    case STORE_BOOL:
-    case STORE_FLOAT:
-    case STORE_STRING:
-    case STORE_BLOB:
-    case STORE_VOID:
+    case STORE_SCALAR:
     case STORE_FILE:
     case STORE_ARRAY:
     case STORE_BAG:
     case STORE_RECURSIVE:
-    case DEREF_INT:
-    case DEREF_BOOL:
-    case DEREF_VOID:
-    case DEREF_FLOAT:
-    case DEREF_STRING:
-    case DEREF_BLOB:
+    case DEREF_SCALAR:
     case DEREF_FILE:
-    case LOAD_INT:
-    case LOAD_BOOL:
-    case LOAD_FLOAT:
-    case LOAD_STRING:
-    case LOAD_BLOB:
-    case LOAD_VOID:
+    case LOAD_SCALAR:
     case LOAD_FILE:
     case LOAD_ARRAY:
     case LOAD_BAG:
@@ -1584,22 +1453,12 @@ public class TurbineOp extends Instruction {
   @Override
   public TaskMode getMode() {
     switch (op) {
-    case STORE_INT:
-    case STORE_BOOL:
-    case STORE_VOID:
-    case STORE_FLOAT:
-    case STORE_STRING:
-    case STORE_BLOB:
+    case STORE_SCALAR:
     case STORE_FILE:
     case STORE_ARRAY:
     case STORE_BAG:
     case STORE_RECURSIVE:
-    case LOAD_INT:
-    case LOAD_BOOL:
-    case LOAD_VOID:
-    case LOAD_FLOAT:
-    case LOAD_STRING:
-    case LOAD_BLOB:
+    case LOAD_SCALAR:
     case LOAD_FILE:
     case LOAD_ARRAY:
     case LOAD_BAG:
@@ -1651,12 +1510,7 @@ public class TurbineOp extends Instruction {
     case ARRAYREF_LOOKUP_FUTURE:
     case ARRAYREF_LOOKUP_IMM:
     case ARRAY_LOOKUP_REF_IMM:
-    case DEREF_INT:
-    case DEREF_BOOL:
-    case DEREF_VOID:
-    case DEREF_FLOAT:
-    case DEREF_STRING:
-    case DEREF_BLOB:
+    case DEREF_SCALAR:
     case DEREF_FILE:
     case STRUCTREF_LOOKUP:
     case ARRAY_LOOKUP_FUTURE:
@@ -1673,13 +1527,8 @@ public class TurbineOp extends Instruction {
   @Override
   public List<ValLoc> getResults() {
     switch(op) {
-      case LOAD_BOOL:
-      case LOAD_FLOAT:
-      case LOAD_INT:
-      case LOAD_REF:
-      case LOAD_STRING: 
-      case LOAD_BLOB: 
-      case LOAD_VOID: 
+      case LOAD_SCALAR:
+      case LOAD_REF: 
       case LOAD_FILE:
       case LOAD_ARRAY:
       case LOAD_BAG: 
@@ -1703,12 +1552,7 @@ public class TurbineOp extends Instruction {
         }
       }
       case STORE_REF:
-      case STORE_BOOL:
-      case STORE_FLOAT:
-      case STORE_INT:
-      case STORE_STRING: 
-      case STORE_BLOB: 
-      case STORE_VOID:
+      case STORE_SCALAR:
       case STORE_FILE:
       case STORE_ARRAY:
       case STORE_BAG:
@@ -1761,12 +1605,7 @@ public class TurbineOp extends Instruction {
         Arg val = getInput(0);
         return ValLoc.makeFilenameVal(file, val, IsAssign.TO_VALUE).asList();
       }
-      case DEREF_BLOB:
-      case DEREF_BOOL:
-      case DEREF_VOID:
-      case DEREF_FLOAT:
-      case DEREF_INT:
-      case DEREF_STRING: 
+      case DEREF_SCALAR: 
       case DEREF_FILE: {
         return ValLoc.derefCompVal(getOutput(0), getInput(0).getVar(),
                                    IsValCopy.YES, IsAssign.NO).asList();
@@ -1967,13 +1806,8 @@ public class TurbineOp extends Instruction {
         return Pair.create(getInput(0).getVar().asList(),
                             getOutput(0).asList());
       }
-      case DEREF_BLOB:
-      case DEREF_VOID:
-      case DEREF_BOOL:
-      case DEREF_FILE:
-      case DEREF_FLOAT:
-      case DEREF_INT:
-      case DEREF_STRING: {
+      case DEREF_SCALAR:
+      case DEREF_FILE: {
         // Increment refcount of ref var
         return Pair.create(Arrays.asList(getInput(0).getVar()),
                            Var.NONE);
@@ -2086,14 +1920,9 @@ public class TurbineOp extends Instruction {
   @Override
   public List<Var> tryPiggyback(Counters<Var> increments, RefCountType type) {
     switch (op) {
-      case LOAD_BLOB:
-      case LOAD_BOOL:
+      case LOAD_SCALAR:
       case LOAD_FILE:
-      case LOAD_FLOAT:
-      case LOAD_INT:
-      case LOAD_REF:
-      case LOAD_STRING:
-      case LOAD_VOID: 
+      case LOAD_REF: 
       case LOAD_ARRAY:
       case LOAD_BAG: 
       case LOAD_RECURSIVE: {

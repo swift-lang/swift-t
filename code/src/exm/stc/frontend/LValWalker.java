@@ -408,7 +408,7 @@ public class LValWalker {
       derefArr = arr;
     }
 
-    Var keyVal = varCreator.fetchValueOf(context, key);
+    Var keyVal = exprWalker.retrieveToVar(context, key);
 
     Type bagType = Types.containerElemType(derefArr);
     assert (Types.isBag(bagType));

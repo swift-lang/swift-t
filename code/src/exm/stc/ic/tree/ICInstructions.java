@@ -2209,57 +2209,27 @@ public class ICInstructions {
         + " assign " + value.toString() + " to " + dst.toString());
   }
 
- 
-  public static Instruction retrieveValueOf(Var dst, Var src) {
-    assert(Types.isPrimValue(dst.type()));
-    assert(Types.isPrimFuture(src.type())
-            || Types.isPrimUpdateable(src.type()));
-    switch (src.type().primType()) {
-      case BOOL:
-        return TurbineOp.retrieveBool(dst, src);
-      case INT:
-        return TurbineOp.retrieveInt(dst, src);
-      case FLOAT:
-        return TurbineOp.retrieveFloat(dst, src);
-      case STRING:
-        return TurbineOp.retrieveString(dst, src);
-      case BLOB:
-        return TurbineOp.retrieveBlob(dst, src);
-      case VOID:
-        return TurbineOp.retrieveVoid(dst, src);
-      case FILE:
-        return TurbineOp.retrieveFile(dst, src);
-      default:
-        throw new STCRuntimeError("method to retrieve " +
-              src.type().typeName() + " is not known yet");
+  public static Instruction retrievePrim(Var dst, Var src) {
+    assert(Types.isPrimValue(dst));
+    assert(Types.isPrimFuture(src));
+    if (Types.isScalarFuture(src)) {
+      return TurbineOp.retrieveScalar(dst, src);
+    } else if (Types.isFile(src)) {
+      return TurbineOp.retrieveFile(dst, src);
+    } else {
+      throw new STCRuntimeError("method to retrieve " +
+            src.type().typeName() + " is not known yet");
     }
   }
 
-  public static Instruction futureSet(Var dst, Arg src) {
-    assert(Types.isPrimFuture(dst.type()));
-    switch (dst.type().primType()) {
-    case BOOL:
-      assert(src.isImmediateBool());
-      return TurbineOp.assignBool(dst, src);
-    case INT:
-      assert(src.isImmediateInt());
-      return TurbineOp.assignInt(dst, src);
-    case FLOAT:
-      assert(src.isImmediateFloat());
-      return TurbineOp.assignFloat(dst, src);
-    case STRING:
-      assert(src.isImmediateString());
-      return TurbineOp.assignString(dst, src);
-    case BLOB:
-      assert(src.isImmediateBlob());
-      return TurbineOp.assignBlob(dst, src);
-    case VOID:
-      assert(src.isVar() && Types.isVoidVal(src.getVar()));
-      return TurbineOp.assignVoid(dst, src);
-    case FILE:
-      assert(src.isVar() && Types.isFileVal(src.getVar()));
+  public static Instruction storePrim(Var dst, Arg src) {
+    assert(Types.isPrimFuture(dst));
+    assert(src.type().assignableTo(Types.derefResultType(dst)));
+    if (Types.isScalarFuture(dst)) {
+      return TurbineOp.assignScalar(dst, src);
+    } else if (Types.isFile(dst)) {
       return TurbineOp.assignFile(dst, src);
-    default:
+    } else {
       throw new STCRuntimeError("method to set " +
           dst.type().typeName() + " is not known yet");
     }

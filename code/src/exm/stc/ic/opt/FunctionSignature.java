@@ -121,7 +121,7 @@ public class FunctionSignature implements OptimizerPass {
                           RenameMode.REPLACE_VAR, true);
       newBlock.addVariable(tmpfuture);
       Instruction store = 
-              ICInstructions.futureSet(tmpfuture, fv.val2.asArg());
+              ICInstructions.storePrim(tmpfuture, fv.val2.asArg());
       newBlock.addInstructionFront(store);
     }
     

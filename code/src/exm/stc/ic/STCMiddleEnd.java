@@ -619,49 +619,14 @@ public class STCMiddleEnd {
         TurbineOp.addressOf(target, src));
   }
 
-
-  public void dereferenceInt(Var target, Var src) {
-    assert(Types.isInt(target.type()));
-    assert(Types.isIntRef(src));
+  public void dereferenceScalar(Var dst, Var src) {
+    assert(Types.isScalarFuture(dst));
+    assert(Types.isRef(src));
+    assert(src.type().memberType().assignableTo(dst.type()));
     currBlock().addInstruction(
-        TurbineOp.dereferenceInt(target, src));
+        TurbineOp.dereferenceScalar(dst, src));
   }
   
-  public void dereferenceVoid(Var target, Var src) {
-    assert(Types.isVoid(target));
-    assert(Types.isVoidRef(src));
-    currBlock().addInstruction(
-        TurbineOp.dereferenceVoid(target, src));
-  }
-
-  public void dereferenceBool(Var target, Var src) {
-    assert(Types.isBool(target.type()));
-    assert(Types.isBoolRef(src));
-    currBlock().addInstruction(
-        TurbineOp.dereferenceBool(target, src));
-  }
-
-  public void dereferenceFloat(Var target, Var src) {
-    assert(Types.isFloat(target.type()));
-    assert(Types.isFloatRef(src));
-    currBlock().addInstruction(
-        TurbineOp.dereferenceFloat(target, src));
-  }
-
-  public void dereferenceString(Var target, Var src) {
-    assert(Types.isString(target.type()));
-    assert(Types.isStringRef(src));
-    currBlock().addInstruction(
-        TurbineOp.dereferenceString(target, src));
-  }
-
-  public void dereferenceBlob(Var target, Var src) {
-    assert(Types.isBlob(target.type()));
-    assert(Types.isBlobRef(src));
-    currBlock().addInstruction(
-        TurbineOp.dereferenceBlob(target, src));
-  }
-
   public void dereferenceFile(Var target, Var src) {
     assert(Types.isFile(target.type()));
     assert(Types.isFileRef(src));
@@ -684,89 +649,21 @@ public class STCMiddleEnd {
         TurbineOp.copyRef(dst, src));
   }
 
-  public void assignInt(Var target, Arg src) {
-    assert(Types.isInt(target.type())): target;
-    assert(src.isImmediateInt()): src;
-    currBlock().addInstruction(
-        TurbineOp.assignInt(target, src));
-  }
-
-  public void retrieveInt(Var target, Var source) {
-    assert(Types.isIntVal(target));
-    assert(Types.isInt(source.type()));
-    currBlock().addInstruction(
-        TurbineOp.retrieveInt(target, source));
-  }
-
-  public void assignBool(Var target, Arg src) {
-    assert(Types.isBool(target.type()));
-    assert(src.isImmediateBool());
-    currBlock().addInstruction(
-        TurbineOp.assignBool(target, src));
-  }
-
-  public void retrieveBool(Var target, Var source) {
-    assert(Types.isBoolVal(target));
-    assert(Types.isBool(source.type()));
-    currBlock().addInstruction(
-        TurbineOp.retrieveBool(target, source));
+  public void retrieveScalar(Var dst, Var src) {
+    assert(Types.isScalarValue(dst));
+    assert(Types.isScalarFuture(src.type()));
+    assert(Types.derefResultType(src).assignableTo(dst.type()));
+    currBlock().addInstruction(TurbineOp.retrieveScalar(dst, src));
   }
   
-  public void assignVoid(Var target, Arg src) {
-    assert(Types.isVoid(target.type()));
-    assert(Types.isVoidVal(src.type()));
-    currBlock().addInstruction(TurbineOp.assignVoid(target, src));
+  public void assignScalar(Var dst, Arg src) {
+    assert(Types.isScalarFuture(dst));
+    assert(Types.isScalarValue(src));
+    assert(src.type().assignableTo(Types.derefResultType(dst)));
+    
+    currBlock().addInstruction(TurbineOp.assignScalar(dst, src));
   }
-
-  public void retrieveVoid(Var target, Var source) {
-    assert(Types.isVoidVal(target));
-    assert(Types.isVoid(source.type()));
-    currBlock().addInstruction(
-        TurbineOp.retrieveVoid(target, source));
-  }
-
-  public void assignFloat(Var target, Arg src) {
-    assert(Types.isFloat(target.type()));
-    assert(src.isImmediateFloat());
-    currBlock().addInstruction(
-        TurbineOp.assignFloat(target, src));
-  }
-
-  public void retrieveFloat(Var target, Var source) {
-    assert(Types.isFloatVal(target));
-    assert(Types.isFloat(source.type()));
-    currBlock().addInstruction(
-        TurbineOp.retrieveFloat(target, source));
-  }
-
-  public void assignString(Var target, Arg src) {
-    assert(Types.isString(target.type()));
-    assert(src.isImmediateString());
-    currBlock().addInstruction(
-        TurbineOp.assignString(target, src));
-  }
-
-  public void retrieveString(Var target, Var source) {
-    assert(Types.isStringVal(target));
-    assert(Types.isString(source.type()));
-    currBlock().addInstruction(
-        TurbineOp.retrieveString(target, source));
-  }
-  
-  public void assignBlob(Var target, Arg src) {
-    assert(Types.isBlob(target.type()));
-    assert(src.isImmediateBlob());
-    currBlock().addInstruction(
-        TurbineOp.assignBlob(target, src));
-  }
-  
-  public void retrieveBlob(Var target, Var src) {
-    assert(Types.isBlobVal(target));
-    assert(Types.isBlob(src.type()));
-    currBlock().addInstruction(
-        TurbineOp.retrieveBlob(target, src));
-  }
-  
+    
   public void freeBlob(Var blobVal) {
     assert(Types.isBlobVal(blobVal));
     currBlock().addCleanup(blobVal, TurbineOp.freeBlob(blobVal));
@@ -854,7 +751,7 @@ public class STCMiddleEnd {
           DefType.LOCAL_COMPILER, VarProvenance.valueOf(target));
       
       // Setup local targetfile
-      waitBlock.addInstruction(TurbineOp.retrieveString(
+      waitBlock.addInstruction(TurbineOp.retrieveScalar(
               targetFilenameVal, targetFilename));
       waitBlock.addInstruction(TurbineOp.initLocalOutFile(
               targetVal, targetFilenameVal.asArg(), Arg.TRUE));

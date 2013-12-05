@@ -594,7 +594,7 @@ public class ASTWalker {
                 WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
 
     Context waitContext = new LocalContext(context);
-    Var condVal = varCreator.fetchValueOf(waitContext, conditionVar);
+    Var condVal = exprWalker.retrieveToVar(waitContext, conditionVar);
     backend.startIfStatement(VarRepr.backendArg(condVal),
                              ifStmt.hasElse());
     block(new LocalContext(waitContext), ifStmt.getThenBlock());
@@ -712,7 +712,7 @@ public class ASTWalker {
     Var switchVal = varCreator.createValueOfVar(waitContext,
                                                      switchVar); 
 
-    backend.retrieveInt(switchVal, switchVar);
+    exprWalker.retrieve(switchVal, switchVar);
 
     LogHelper.trace(context, "switch: " + 
             sw.getCaseBodies().size() + " cases");
@@ -759,7 +759,7 @@ public class ASTWalker {
     } else {
       // Inefficient but constant folding will clean up
       step = varCreator.createTmp(context, Types.F_INT);
-      backend.assignInt(step, Arg.createIntLit(1));
+      exprWalker.assign(step, Arg.ONE);
     }
     FunctionContext fc = context.getFunctionContext();
     int loopNum = fc.getCounterVal("foreach-range");
@@ -770,9 +770,9 @@ public class ASTWalker {
              VarRepr.backendVars(rangeBounds), WaitMode.WAIT_ONLY, false,
              false, TaskMode.LOCAL_CONTROL);
     Context waitContext = new LocalContext(context);
-    Var startVal = varCreator.fetchValueOf(waitContext, start);
-    Var endVal = varCreator.fetchValueOf(waitContext, end);
-    Var stepVal = varCreator.fetchValueOf(waitContext, step);
+    Var startVal = exprWalker.retrieveToVar(waitContext, start);
+    Var endVal = exprWalker.retrieveToVar(waitContext, end);
+    Var stepVal = exprWalker.retrieveToVar(waitContext, step);
     Context bodyContext = loop.setupLoopBodyContext(waitContext, true, false);
     
     // The per-iteration value of the range
@@ -796,13 +796,13 @@ public class ASTWalker {
     // We have the current value, but need to put it in a future in case user
     //  code refers to it
     varCreator.initialiseVariable(bodyContext, loop.getMemberVar());
-    backend.assignInt(loop.getMemberVar(), Arg.createVar(memberVal));
+    exprWalker.assign(loop.getMemberVar(), memberVal.asArg());
     if (loop.getCountVarName() != null) {
       Var loopCountVar = varCreator.createVariable(bodyContext,
           Types.F_INT, loop.getCountVarName(), Alloc.STACK,
           DefType.LOCAL_USER, VarProvenance.userVar(context.getSourceLoc()),
           null);
-      backend.assignInt(loopCountVar, Arg.createVar(counterVal));
+      exprWalker.assign(loopCountVar, counterVal.asArg());
     }
     block(bodyContext, loop.getBody());
     if (!loop.isSyncLoop()) {
@@ -977,7 +977,7 @@ public class ASTWalker {
                       blockingVector);
     
     // get value of condVar
-    Var condVal = varCreator.fetchValueOf(loopIterContext, condArg);
+    Var condVal = exprWalker.retrieveToVar(loopIterContext, condArg);
     
     // branch depending on if loop should start
     backend.startIfStatement(VarRepr.backendArg(condVal), true);
@@ -1029,10 +1029,10 @@ public class ASTWalker {
     
     // Initial iteration should succeed
     Var falseV = varCreator.createTmp(context, Types.F_BOOL);
-    backend.assignBool(falseV, Arg.createBoolLit(false));
+    exprWalker.assign(falseV, Arg.FALSE);
     
     Var zero = varCreator.createTmp(context, Types.F_INT);
-    backend.assignInt(zero, Arg.createIntLit(0));
+    exprWalker.assign(zero, Arg.ZERO);
     
     FunctionContext fc = context.getFunctionContext();
     int loopNum = fc.getCounterVal("iterate");
@@ -1051,7 +1051,7 @@ public class ASTWalker {
         Arrays.asList(falseV.asArg(), zero.asArg()), blockingVars);
     
     // get value of condVar
-    Var condVal = varCreator.fetchValueOf(iterContext, condArg); 
+    Var condVal = exprWalker.retrieveToVar(iterContext, condArg); 
     
     backend.startIfStatement(VarRepr.backendArg(condVal), true);
     backend.loopBreak();
@@ -1074,7 +1074,7 @@ public class ASTWalker {
                                       Types.F_INT);
     Var one = varCreator.createTmp(bodyContext, Types.F_INT);
 
-    backend.assignInt(one, Arg.createIntLit(1));
+    exprWalker.assign(one, Arg.ONE);
     backend.asyncOp(BuiltinOpcode.PLUS_INT, nextCounter, 
         Arrays.asList(Arg.createVar(loop.getLoopVar()), Arg.createVar(one)));
     
@@ -1790,7 +1790,7 @@ public class ASTWalker {
     List<Arg> localInFiles = new ArrayList<Arg>();
     for (Var inArg: inArgs) {
       if (Types.isFile(inArg.type())) {
-        Var localInputFile = varCreator.fetchValueOf(context, inArg);
+        Var localInputFile = exprWalker.retrieveToVar(context, inArg);
         localInFiles.add(Arg.createVar(localInputFile));
       }
     }
@@ -1803,7 +1803,7 @@ public class ASTWalker {
       Arg localOutputFileName = null;
       if (Types.isFile(output.type())) {
         localOutputFileName = Arg.createVar(
-            varCreator.fetchValueOf(context, fileNames.get(output.name())));
+            exprWalker.retrieveToVar(context, fileNames.get(output.name())));
 
         // Initialize the output with a filename
         backend.initLocalOutFile(localOutput, localOutputFileName, output);
@@ -1837,7 +1837,7 @@ public class ASTWalker {
         }
       } else {
         assert(Types.isVoid(output.type()));
-        backend.assignVoid(output, Arg.createVar(localOutput));
+        exprWalker.assign(output, localOutput.asArg());
       }
     }
     
@@ -2003,7 +2003,7 @@ public class ASTWalker {
     if (Types.isFile(in.type())) {
       Var filenameFuture = fileNames.get(in.name());
       assert(filenameFuture != null);
-      localInput = varCreator.fetchValueOf(context, filenameFuture);
+      localInput = exprWalker.retrieveToVar(context, filenameFuture);
     } else if (Types.isArray(in.type())) {
       // Unpack to flat representation
       NestedContainerInfo ci = new NestedContainerInfo(in.type());
@@ -2012,7 +2012,7 @@ public class ASTWalker {
       localInput = varCreator.createValueVar(context, localInType, in, true);
       backend.unpackArrayToFlat(localInput, in.asArg());
     } else {
-      localInput = varCreator.fetchValueOf(context, in);
+      localInput = exprWalker.retrieveToVar(context, in);
     }
     return localInput;
   }

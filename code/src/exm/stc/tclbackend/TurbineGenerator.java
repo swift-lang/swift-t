@@ -182,10 +182,6 @@ public class TurbineGenerator implements CompilerBackend {
   private void pointAddEnd(TclTree cmd) {
     pointStack.peek().val2.add(cmd);
   }  
-
-  private void pointAppendEnd(Sequence seq) {
-    pointStack.peek().val2.append(seq);
-  }
   
   /**
    * Remove current sequence after adding any deferred commands
@@ -671,6 +667,37 @@ public class TurbineGenerator implements CompilerBackend {
 
 
   @Override
+  public void retrieveRef(Var target, Var src, Arg decr) {
+    assert(Types.isRef(src.type()));
+    assert(Types.isAssignableRefTo(src.type(), target.type()));
+    assert(decr.isImmediateInt());
+    TclTree deref;
+    if (Types.isStructRef(src.type())) {
+      if (decr.equals(Arg.ZERO)) {
+        deref = Turbine.structRefGet(prefixVar(target), varToExpr(src));
+      } else {
+        deref = Turbine.structRefDecrGet(prefixVar(target), varToExpr(src),
+                                      argToExpr(decr));
+      }
+    } else if (Types.isFileRef(src.type())) {
+      if (decr.equals(Arg.ZERO)) {
+        deref = Turbine.fileRefGet(prefixVar(target), varToExpr(src));
+      } else {
+        deref = Turbine.fileRefDecrGet(prefixVar(target), varToExpr(src),
+            argToExpr(decr));
+      }
+    } else {
+      if (decr.equals(Arg.ZERO)) {
+        deref = Turbine.refGet(prefixVar(target), varToExpr(src));
+      } else {
+        deref = Turbine.refDecrGet(prefixVar(target), varToExpr(src),
+                                    argToExpr(decr));
+      }
+    }
+    pointAdd(deref);
+  }
+
+  @Override
   public void makeAlias(Var dst, Var src) {
     assert(src.type().equals(dst.type()));
     assert(dst.storage() == Alloc.ALIAS);
@@ -679,152 +706,123 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void assignInt(Var target, Arg src) {
-    assert(src.isImmediateInt());
-    if (!Types.isInt(target.type())) {
-      throw new STCRuntimeError("Expected variable to be int, "
-          + " but was " + target.type().toString());
-    }
-
-    pointAdd(Turbine.integerSet(
-        varToExpr(target), argToExpr(src)));
-  }
-
-  @Override
-  public void retrieveInt(Var target, Var source, Arg decr) {
-    assert(Types.isIntVal(target));
-    assert(Types.isInt(source.type()));
-    assert(decr.isImmediateInt());
-    if (decr.equals(Arg.ZERO)) {
-      pointAdd(Turbine.integerGet(prefixVar(target),
-                                  varToExpr(source)));
-    } else {
-      pointAdd(Turbine.integerDecrGet(prefixVar(target),
-                            varToExpr(source), argToExpr(decr)));
-    }
-  }
-
-  @Override
-  public void assignBool(Var target, Arg src) {
-    assert(src.isImmediateBool());
-    if (!Types.isBool(target.type())) {
-      throw new STCRuntimeError("Expected variable to be bool, "
-          + " but was " + target.type().toString());
-    }
-
-    pointAdd(Turbine.integerSet(
-        varToExpr(target), argToExpr(src)));
-  }
-
-  @Override
-  public void retrieveBool(Var target, Var source, Arg decr) {
-    assert(Types.isBoolVal(target));
-    assert(Types.isBool(source.type()));
-
-    assert(decr.isImmediateInt());
-    if (decr.equals(Arg.ZERO)) {
-      pointAdd(Turbine.integerGet(prefixVar(target),
-          varToExpr(source)));
-    } else {
-      pointAdd(Turbine.integerDecrGet(prefixVar(target),
-          varToExpr(source), argToExpr(decr)));
+  public void assignScalar(Var dst, Arg src) {
+    assert(Types.isScalarFuture(dst));
+    assert(Types.isScalarValue(src));
+    assert(src.type().assignableTo(Types.derefResultType(dst)));
+    
+    PrimType primType = src.type().getImplType().primType();
+    switch (primType) {
+      case BLOB:
+        pointAdd(Turbine.blobSet(varToExpr(dst), argToExpr(src)));
+        break;
+      case FLOAT:
+        pointAdd(Turbine.floatSet(varToExpr(dst), argToExpr(src)));
+        break;
+      case BOOL:
+      case INT:
+        // Bool and int are represented internally as integers
+        pointAdd(Turbine.integerSet(varToExpr(dst), argToExpr(src)));
+        break;
+      case STRING:
+        pointAdd(Turbine.stringSet(varToExpr(dst), argToExpr(src)));
+        break;
+      case VOID:
+        // Don't need to provide input value to void
+        pointAdd(Turbine.voidSet(varToExpr(dst)));
+        break;
+      default:
+        throw new STCRuntimeError("Unknown or non-scalar prim type "
+                                   + primType);
     }
   }
-  
-  @Override
-  public void assignVoid(Var target, Arg src) {
-    assert(Types.isVoid(target.type()));
-    assert(Types.isVoidVal(src.type()));
-    pointAdd(Turbine.voidSet(varToExpr(target)));
-  }
 
   @Override
-  public void retrieveVoid(Var target, Var source, Arg decr) {
-    assert(Types.isVoidVal(target));
-    assert(Types.isVoid(source.type()));
+  public void retrieveScalar(Var dst, Var src, Arg decr) {
+    assert(Types.isScalarValue(dst));
+    assert(Types.isScalarFuture(src.type()));
+    assert(Types.derefResultType(src).assignableTo(dst.type()));
     assert(decr.isImmediateInt());
     
-    // Don't actually need to retrieve value as it has no contents
-    pointAdd(new SetVariable(prefixVar(target),
-                          Turbine.VOID_DUMMY_VAL));
+    PrimType primType = dst.type().getImplType().primType();
+    boolean hasDecrement = !decr.equals(Arg.ZERO);
+    switch (primType) {
+      case BLOB:
+        if (hasDecrement) {
+          pointAdd(Turbine.blobDecrGet(prefixVar(dst), varToExpr(src),
+                                      argToExpr(decr)));
+        } else {
+          pointAdd(Turbine.blobGet(prefixVar(dst), varToExpr(src)));
+        }
+        break;
+      case FLOAT:
+        if (hasDecrement) {
+          pointAdd(Turbine.floatDecrGet(prefixVar(dst), varToExpr(src),
+                                      argToExpr(decr)));
+        } else {
+          pointAdd(Turbine.floatGet(prefixVar(dst), varToExpr(src)));
+        }
+        break;
+      case BOOL:
+      case INT:
+        // Bool and int are represented internally as integers
+        if (hasDecrement) {
+          pointAdd(Turbine.integerDecrGet(prefixVar(dst), varToExpr(src),
+                                      argToExpr(decr)));
+        } else {
+          pointAdd(Turbine.integerGet(prefixVar(dst), varToExpr(src)));
+        }
+        break;
+      case STRING:
+        if (hasDecrement) {
+          pointAdd(Turbine.stringDecrGet(prefixVar(dst), varToExpr(src),
+              argToExpr(decr)));
+        } else {
+          pointAdd(Turbine.stringGet(prefixVar(dst), varToExpr(src)));
+        }
+        break;
+      case VOID:
+        // Don't actually need to retrieve value as it has no contents
+        pointAdd(new SetVariable(prefixVar(dst), Turbine.VOID_DUMMY_VAL));
 
-    if (!decr.equals(Arg.ZERO)) {
-      decrRef(source, decr);
+        if (hasDecrement) {
+          decrRef(src, decr);
+        }
+        break;
+      default:
+        throw new STCRuntimeError("Unknown or non-scalar prim type "
+                                   + primType);
     }
   }
 
   @Override
-  public void assignFloat(Var target, Arg src) {
-    assert(src.isImmediateFloat());
-    if (!Types.isFloat(target.type())) {
-      throw new STCRuntimeError("Expected variable to be float, "
-          + " but was " + target.type().toString());
-    }
-
-    pointAdd(Turbine.floatSet(
-          varToExpr(target), argToExpr(src)));
-  }
-
-  @Override
-  public void retrieveFloat(Var target, Var source, Arg decr) {
-    assert(Types.isFloatVal(target));
-    assert(Types.isFloat(source));
-
-    assert(decr.isImmediateInt());
-    if (decr.equals(Arg.ZERO)) {
-      pointAdd(Turbine.floatGet(prefixVar(target),
-                                                    varToExpr(source)));
-    } else {
-      pointAdd(Turbine.floatDecrGet(prefixVar(target),
-          varToExpr(source), argToExpr(decr)));
-    }
-  }
-
-  @Override
-  public void assignString(Var target, Arg src) {
-    assert(src.isImmediateString());
-    if (!Types.isString(target.type())) {
-      throw new STCRuntimeError("Expected variable to be string, "
-          + " but was " + target.type().toString());
-    }
-
-    pointAdd(Turbine.stringSet(
-        varToExpr(target), argToExpr(src)));
-  }
-
-  @Override
-  public void retrieveString(Var target, Var source, Arg decr) {
-    assert(Types.isString(source));
-    assert(Types.isStringVal(target));
-    assert(decr.isImmediateInt());
-    if (decr.equals(Arg.ZERO)) {
-      pointAdd(Turbine.stringGet(prefixVar(target),
-                                                      varToExpr(source)));
-    } else {
-      pointAdd(Turbine.stringDecrGet(prefixVar(target),
-          varToExpr(source), argToExpr(decr)));
-    }
-  }
-
-  @Override
-  public void assignBlob(Var target, Arg src) {
-    assert(Types.isBlob(target.type()));
-    assert(src.isImmediateBlob());
-    pointAdd(Turbine.blobSet(varToExpr(target),
-                                          argToExpr(src)));
-  }
-
-  @Override
-  public void retrieveBlob(Var target, Var src, Arg decr) {
-    assert(Types.isBlobVal(target));
-    assert(Types.isBlob(src.type()));
-    assert(decr.isImmediateInt());
-    if (decr.equals(Arg.ZERO)) {
-      pointAdd(Turbine.blobGet(prefixVar(target),
-                                                  varToExpr(src)));
-    } else {
-      pointAdd(Turbine.blobDecrGet(prefixVar(target),
-                                      varToExpr(src), argToExpr(decr)));
+  public void dereferenceScalar(Var dst, Var src) {
+    assert(Types.isScalarFuture(dst));
+    assert(Types.isRef(src));
+    assert(src.type().memberType().assignableTo(dst.type()));
+    
+    PrimType primType = dst.type().getImplType().primType();
+    switch (primType) {
+      case BLOB:
+        pointAdd(Turbine.dereferenceBlob(varToExpr(dst), varToExpr(src)));
+        break;
+      case FLOAT:
+        pointAdd(Turbine.dereferenceFloat(varToExpr(dst), varToExpr(src)));
+        break;
+      case BOOL:
+      case INT:
+        // Bool and int are represented by int
+        pointAdd(Turbine.dereferenceInteger(varToExpr(dst), varToExpr(src)));
+        break;
+      case STRING:
+        pointAdd(Turbine.dereferenceString(varToExpr(dst), varToExpr(src)));
+        break;
+      case VOID:
+        pointAdd(Turbine.dereferenceVoid(varToExpr(dst), varToExpr(src)));
+        break;
+      default:
+        throw new STCRuntimeError("Unknown or non-scalar prim type "
+                                   + primType);
     }
   }
 
@@ -855,6 +853,15 @@ public class TurbineGenerator implements CompilerBackend {
     }
   }
   
+  @Override
+  public void dereferenceFile(Var target, Var src) {
+    assert(Types.isFile(target));
+    assert(Types.isFileRef(src));
+    Command deref = Turbine.dereferenceFile(varToExpr(target),
+                                            varToExpr(src));
+    pointAdd(deref);
+  }
+
   @Override
   public void assignArray(Var target, Arg src) {
     assert(Types.isArray(target));
@@ -1100,99 +1107,6 @@ public class TurbineGenerator implements CompilerBackend {
 
     builtinFunctionCall("operator: " + op.toString(), fn, 
                         in, outL, props);
-  }
-
-  @Override
-  public void dereferenceInt(Var target, Var src) {
-    assert(Types.isInt(target.type()));
-    assert(Types.isIntRef(src));
-    Command deref = Turbine.dereferenceInteger(varToExpr(target),
-                                               varToExpr(src));
-    pointAdd(deref);
-  }
-
-  @Override
-  public void dereferenceVoid(Var target, Var src) {
-    assert(Types.isVoid(target.type()));
-    assert(Types.isVoidRef(src));
-    Command deref = Turbine.dereferenceVoid(varToExpr(target),
-                                               varToExpr(src));
-    pointAdd(deref);
-  }
-  
-  @Override
-  public void dereferenceBool(Var target, Var src) {
-    assert(Types.isBool(target.type()));
-    assert(Types.isBoolRef(src));
-    Command deref = Turbine.dereferenceInteger(varToExpr(target),
-                                               varToExpr(src));
-    pointAdd(deref);
-  }
-
-  @Override
-  public void dereferenceFloat(Var target, Var src) {
-    assert(Types.isFloat(target));
-    assert(Types.isFloatRef(src));
-    Command deref = Turbine.dereferenceFloat(varToExpr(target),
-                                             varToExpr(src));
-    pointAdd(deref);
-  }
-
-  @Override
-  public void dereferenceString(Var target, Var src) {
-    assert(Types.isString(target));
-    assert(Types.isStringRef(src));
-    Command deref = Turbine.dereferenceString(varToExpr(target), 
-                                              varToExpr(src));
-    pointAdd(deref);
-  }
-
-  @Override
-  public void dereferenceBlob(Var target, Var src) {
-    assert(Types.isBlob(target));
-    assert(Types.isBlobRef(src));
-    Command deref = Turbine.dereferenceBlob(varToExpr(target), varToExpr(src));
-    pointAdd(deref);
-  }
-  
-  @Override
-  public void dereferenceFile(Var target, Var src) {
-    assert(Types.isFile(target));
-    assert(Types.isFileRef(src));
-    Command deref = Turbine.dereferenceFile(varToExpr(target),
-                                            varToExpr(src));
-    pointAdd(deref);
-  }
-
-  @Override
-  public void retrieveRef(Var target, Var src, Arg decr) {
-    assert(Types.isRef(src.type()));
-    assert(Types.isAssignableRefTo(src.type(), target.type()));
-    assert(decr.isImmediateInt());
-    TclTree deref;
-    if (Types.isStructRef(src.type())) {
-      if (decr.equals(Arg.ZERO)) {
-        deref = Turbine.structRefGet(prefixVar(target), varToExpr(src));
-      } else {
-        deref = Turbine.structRefDecrGet(prefixVar(target), varToExpr(src),
-                                      argToExpr(decr));
-      }
-    } else if (Types.isFileRef(src.type())) {
-      if (decr.equals(Arg.ZERO)) {
-        deref = Turbine.fileRefGet(prefixVar(target), varToExpr(src));
-      } else {
-        deref = Turbine.fileRefDecrGet(prefixVar(target), varToExpr(src),
-            argToExpr(decr));
-      }
-    } else {
-      if (decr.equals(Arg.ZERO)) {
-        deref = Turbine.refGet(prefixVar(target), varToExpr(src));
-      } else {
-        deref = Turbine.refDecrGet(prefixVar(target), varToExpr(src),
-                                    argToExpr(decr));
-      }
-    }
-    pointAdd(deref);
   }
 
   @Override

@@ -906,7 +906,8 @@ public class ICContinuations {
       // Check first instruction is retrieve_boolean
       Statement first = loopBody.getStatements().get(0);
       if (first.type() != StatementType.INSTRUCTION ||
-          first.instruction().op != Opcode.LOAD_BOOL) {
+          first.instruction().op != Opcode.LOAD_SCALAR ||
+          !Types.isBoolVal(first.instruction().getOutput(0))) {
         // First instruction doesn't match
         return false;
       }
