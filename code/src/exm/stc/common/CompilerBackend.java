@@ -230,12 +230,6 @@ public interface CompilerBackend {
   public void structInitField(Var structVar, String fieldName,
                                           Var fieldContents);
 
-  public void arrayLookupFuture(Var oVar, Var arrayVar,
-      Var indexVar, boolean isArrayRef);
-
-  public void arrayLookupRefImm(Var oVar, Var arrayVar,
-      Arg arrayIndex, boolean isArrayRef);
-  
   /**
    * Direct lookup of array without any blocking at all.  This is only
    * safe to use if we know the array is closed, or if we know that the
@@ -244,32 +238,40 @@ public interface CompilerBackend {
    * @param arrayVar
    * @param arrayIndex
    */
-  public void arrayLookupImm(Var oVar, Var arrayVar,
+  public void arrayRetrieve(Var oVar, Var arrayVar,
       Arg arrayIndex);
 
-  public void arrayInsertFuture(Var array,
+  public void arrayCopyOutImm(Var oVar, Var arrayVar, Arg arrayIndex);
+
+  public void arrayCopyOutFuture(Var oVar, Var arrayVar, Var indexVar);
+  
+  public void arrayRefCopyOutImm(Var oVar, Var arrayVar, Arg arrayIndex);
+
+  public void arrayRefCopyOutFuture(Var oVar, Var arrayVar, Var indexVar);
+
+  public void arrayStoreFuture(Var array,
       Var ix, Var member, Arg writersDecr);
   
 
-  public void arrayDerefInsertFuture(Var array,
+  public void arrayCopyInFuture(Var array,
       Var ix, Var member, Arg writersDecr);
   
-  public void arrayRefInsertFuture(Var outerArray,
+  public void arrayRefStoreFuture(Var outerArray,
       Var array, Var ix, Var member);
   
-  public void arrayRefDerefInsertFuture(Var outerArray,
+  public void arrayRefCopyInFuture(Var outerArray,
       Var array, Var ix, Var member);
 
-  public void arrayInsertImm(Var array, Arg ix, Var member,
+  public void arrayStore(Var array, Arg ix, Var member,
       Arg writersDecr);
 
-  public void arrayDerefInsertImm(Var array, Arg ix, Var member,
+  public void arrayCopyInImm(Var array, Arg ix, Var member,
       Arg writersDecr);
   
-  public void arrayRefInsertImm(Var outerArray, 
+  public void arrayRefStoreImm(Var outerArray, 
       Var array, Arg ix, Var member);
   
-  public void arrayRefDerefInsertImm(Var outerArray, 
+  public void arrayRefCopyInImm(Var outerArray, 
       Var array, Arg ix, Var member);
 
 

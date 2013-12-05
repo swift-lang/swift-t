@@ -221,18 +221,18 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.LOAD_ARRAY);
     opcodes.add(Opcode.LOAD_BAG);
     opcodes.add(Opcode.LOAD_RECURSIVE);
-    opcodes.add(Opcode.ARRAY_CREATE_NESTED_IMM);
-    opcodes.add(Opcode.ARRAY_INSERT_FUTURE);
-    opcodes.add(Opcode.ARRAY_DEREF_INSERT_FUTURE);
-    opcodes.add(Opcode.ARRAY_LOOKUP_FUTURE);
-    opcodes.add(Opcode.ARRAY_INSERT_IMM);
-    opcodes.add(Opcode.ARRAY_DEREF_INSERT_IMM);
-    opcodes.add(Opcode.ARRAY_LOOKUP_IMM);
-    opcodes.add(Opcode.ARRAY_LOOKUP_REF_IMM);
-    opcodes.add(Opcode.ARRAYREF_INSERT_IMM);
-    opcodes.add(Opcode.ARRAYREF_DEREF_INSERT_IMM);
-    opcodes.add(Opcode.ARRAYREF_INSERT_FUTURE);
-    opcodes.add(Opcode.ARRAYREF_DEREF_INSERT_FUTURE);
+    opcodes.add(Opcode.ARR_CREATE_NESTED_IMM);
+    opcodes.add(Opcode.ARR_STORE_FUTURE);
+    opcodes.add(Opcode.ARR_COPY_IN_FUTURE);
+    opcodes.add(Opcode.ARR_COPY_OUT_FUTURE);
+    opcodes.add(Opcode.ARR_STORE);
+    opcodes.add(Opcode.ARR_COPY_IN_IMM);
+    opcodes.add(Opcode.ARR_RETRIEVE);
+    opcodes.add(Opcode.ARR_COPY_OUT_IMM);
+    opcodes.add(Opcode.AREF_STORE_IMM);
+    opcodes.add(Opcode.AREF_COPY_IN_IMM);
+    opcodes.add(Opcode.AREF_STORE_FUTURE);
+    opcodes.add(Opcode.AREF_COPY_IN_FUTURE);
     opcodes.add(Opcode.BAG_INSERT);
     opcodes.add(Opcode.ARRAY_CREATE_BAG);
     opcodes.add(Opcode.COPY_REF);
@@ -249,12 +249,12 @@ public class ProgressOpcodes {
     HashSet<Opcode> opcodes = initCheapWorker();
 
     opcodes.add(Opcode.CALL_LOCAL_CONTROL);
-    opcodes.add(Opcode.ARRAY_CREATE_NESTED_FUTURE);
-    opcodes.add(Opcode.ARRAYREF_CREATE_NESTED_IMM);
-    opcodes.add(Opcode.ARRAYREF_CREATE_NESTED_FUTURE);
-    opcodes.add(Opcode.ARRAYREF_INSERT_FUTURE);
-    opcodes.add(Opcode.ARRAYREF_LOOKUP_FUTURE);
-    opcodes.add(Opcode.ARRAYREF_LOOKUP_IMM);
+    opcodes.add(Opcode.ARR_CREATE_NESTED_FUTURE);
+    opcodes.add(Opcode.AREF_CREATE_NESTED_IMM);
+    opcodes.add(Opcode.AREF_CREATE_NESTED_FUTURE);
+    opcodes.add(Opcode.AREF_STORE_FUTURE);
+    opcodes.add(Opcode.AREF_COPY_OUT_FUTURE);
+    opcodes.add(Opcode.AREF_COPY_OUT_IMM);
     
     // Spawning tasks is cheap
     opcodes.add(Opcode.ASYNC_OP);

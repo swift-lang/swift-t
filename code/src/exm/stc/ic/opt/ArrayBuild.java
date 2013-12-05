@@ -182,7 +182,7 @@ public class ArrayBuild extends FunctionOptimizerPass {
 
   private void updateInfo(Block block, InfoMap info, Instruction inst,
                           Set<Var> candidates) {
-    if (inst.op == Opcode.ARRAY_INSERT_IMM) {
+    if (inst.op == Opcode.ARR_STORE) {
       Var arr = inst.getOutput(0);
       if (candidates.contains(arr)) {
         BlockVarInfo entry = info.getEntry(block, arr);
@@ -431,7 +431,7 @@ public class ArrayBuild extends FunctionOptimizerPass {
       Statement stmt = it.next();
       if (stmt.type() == StatementType.INSTRUCTION) {
         Instruction inst = stmt.instruction();
-        if (inst.op == Opcode.ARRAY_INSERT_IMM) {
+        if (inst.op == Opcode.ARR_STORE) {
           if (inst.getOutput(0).equals(arr)) {
             it.remove();
             Arg key = inst.getInput(0);

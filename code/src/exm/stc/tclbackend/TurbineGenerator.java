@@ -1416,84 +1416,89 @@ public class TurbineGenerator implements CompilerBackend {
             refRepresentationType(alias.type().memberType(), false)));
   }
 
-
   @Override
-  public void arrayLookupFuture(Var oVar, Var arrayVar, Var indexVar,
-        boolean isArrayRef) {
-    arrayLoadCheckTypes(oVar, arrayVar, isArrayRef);
-    assert(Types.isArrayKeyFuture(arrayVar, indexVar));
-    assert(Types.isRef(oVar.type()));
-    // Nested arrays - oVar should be a reference type
-    Command getRef = Turbine.arrayLookupComputed(varToExpr(oVar), 
-        refRepresentationType(oVar.type().memberType(), false),
-        varToExpr(arrayVar), varToExpr(indexVar), isArrayRef);
-    pointAdd(getRef);
+  public void arrayRetrieve(Var oVar, Var arrayVar, Arg arrIx) {
+    assert(Types.isArrayKeyVal(arrayVar, arrIx));
+    assert(Types.isElemValType(arrayVar, oVar));
+    pointAdd(Turbine.arrayLookupImm(prefixVar(oVar), varToExpr(arrayVar),
+             argToExpr(arrIx)));
   }
 
   @Override
-  public void arrayLookupRefImm(Var oVar, Var arrayVar, Arg arrIx,
-        boolean isArrayRef) {
+  public void arrayCopyOutImm(Var oVar, Var arrayVar, Arg arrIx) {
     assert(Types.isArrayKeyVal(arrayVar, arrIx));
+    assert(Types.isArray(arrayVar));
+    assert(Types.isElemType(arrayVar, oVar));
     
-    arrayLoadCheckTypes(oVar, arrayVar, isArrayRef);
     Command getRef = Turbine.arrayLookupImmIx(
           varToExpr(oVar),
           arrayValueType(arrayVar.type(), false),
           varToExpr(arrayVar),
-          argToExpr(arrIx), isArrayRef);
+          argToExpr(arrIx), false);
 
+    pointAdd(getRef);
+  }
+  
+  @Override
+  public void arrayCopyOutFuture(Var oVar, Var arrayVar, Var indexVar) {
+    assert(Types.isArrayKeyFuture(arrayVar, indexVar));
+    assert(Types.isArray(arrayVar));
+    assert(Types.isElemType(arrayVar, oVar));
+    // Nested arrays - oVar should be a reference type
+    Command getRef = Turbine.arrayLookupComputed(varToExpr(oVar), 
+        refRepresentationType(oVar.type().memberType(), false),
+        varToExpr(arrayVar), varToExpr(indexVar), false);
+    pointAdd(getRef);
+  }
+  
+
+  @Override
+  public void arrayRefCopyOutImm(Var oVar, Var arrayVar, Arg arrIx) {
+    assert(Types.isArrayKeyVal(arrayVar, arrIx));
+    assert(Types.isArrayRef(arrayVar));
+    assert(Types.isElemType(arrayVar, oVar));
+
+    Command getRef = Turbine.arrayLookupImmIx(
+          varToExpr(oVar),
+          arrayValueType(arrayVar.type(), false),
+          varToExpr(arrayVar),
+          argToExpr(arrIx), true);
+
+    pointAdd(getRef);
+  }
+  
+  @Override
+  public void arrayRefCopyOutFuture(Var oVar, Var arrayVar, Var indexVar) {
+    assert(Types.isArrayRef(arrayVar));
+    assert(Types.isElemType(arrayVar, oVar));
+    assert(Types.isArrayKeyFuture(arrayVar, indexVar));
+    
+    // Nested arrays - oVar should be a reference type
+    Command getRef = Turbine.arrayLookupComputed(varToExpr(oVar), 
+        refRepresentationType(oVar.type().memberType(), false),
+        varToExpr(arrayVar), varToExpr(indexVar), true);
     pointAdd(getRef);
   }
 
   @Override
-  public void arrayLookupImm(Var oVar, Var arrayVar, Arg arrIx) {
-    assert(Types.isArrayKeyVal(arrayVar, arrIx));
-    assert(oVar.type().equals(Types.containerElemType(arrayVar.type())));
-     pointAdd(Turbine.arrayLookupImm(
-         prefixVar(oVar),
-         varToExpr(arrayVar),
-         argToExpr(arrIx)));
-  }
-
-  /**
-   * Make sure that types are valid for array load invocation
-   * @param oVar The variable the result of the array should go into
-   * @param arrayVar
-   * @param isReference
-   * @return the member type of the array
-   */
-  private Type arrayLoadCheckTypes(Var oVar, Var arrayVar,
-      boolean isReference) {
-    // Check that the types of the array variable are correct
-    if (isReference) {
-      assert(Types.isArrayRef(arrayVar));
-    } else {
-      assert(Types.isArray(arrayVar.type()));
-    }
-    Type memberType = Types.containerElemType(arrayVar);
-
-
-    Type oType = oVar.type();
-    if (!Types.isRef(oType)) {
-      throw new STCRuntimeError("Output variable for " +
-          "array lookup should be a reference " +
-          " but had type " + oType.toString());
-    }
-    if (!oType.memberType().equals(memberType)) {
-      throw new STCRuntimeError("Output variable for "
-          +" array lookup should be reference to "
-          + memberType.toString() + ", but was reference to"
-          + oType.memberType().toString());
-    }
-
-    return memberType;
+  public void arrayStore(Var array, Arg arrIx, Var member, Arg writersDecr) {
+    assert(Types.isArray(array.type()));
+    assert(Types.isArrayKeyVal(array, arrIx));
+    assert(writersDecr.isImmediateInt());
+    assert(Types.isElemValType(array, member));
+    
+    Command r = Turbine.arrayStoreImmediate(
+        varToExpr(member), varToExpr(array),
+        argToExpr(arrIx), argToExpr(writersDecr),
+        arrayValueType(array, false));
+    pointAdd(r);
   }
 
   @Override
-  public void arrayInsertFuture(Var array, Var ix, Var member,
+  public void arrayStoreFuture(Var array, Var ix, Var member,
                                 Arg writersDecr) {
-    assert(Types.isArray(array.type()));
-    assert(member.type().assignableTo(Types.containerElemType(array.type())));
+    assert(Types.isArray(array));
+    assert(Types.isElemValType(array, member));
     assert(writersDecr.isImmediateInt());
     assert(Types.isArrayKeyFuture(array, ix));
 
@@ -1506,13 +1511,54 @@ public class TurbineGenerator implements CompilerBackend {
   }
   
   @Override
-  public void arrayDerefInsertFuture(Var array, Var ix, Var member,
+  public void arrayRefStoreImm(Var outerArray, Var array, Arg arrIx,
+                                Var member) {
+    assert(Types.isArrayRef(array.type()));
+    assert(Types.isArray(outerArray.type()));
+    assert(Types.isArrayKeyVal(array, arrIx));
+    assert(Types.isElemValType(array, member));
+    
+    Command r = Turbine.arrayRefStoreImmediate(
+        varToExpr(member), varToExpr(array),
+        argToExpr(arrIx), varToExpr(outerArray),
+        arrayValueType(array, false));
+    pointAdd(r);
+  }
+
+  @Override
+  public void arrayRefStoreFuture(Var outerArray, Var array, Var ix, Var member) {
+    assert(Types.isArrayRef(array.type()));
+    assert(Types.isArray(outerArray.type()));
+    assert(Types.isArrayKeyFuture(array, ix));
+    assert(Types.isElemValType(array, member));
+    Command r = Turbine.arrayRefStoreComputed(
+        varToExpr(member), varToExpr(array),
+        varToExpr(ix), varToExpr(outerArray),
+        arrayValueType(array, false));
+  
+    pointAdd(r);
+  }
+
+  @Override
+  public void arrayCopyInImm(Var array, Arg arrIx, Var member, Arg writersDecr) {
+    assert(Types.isArray(array.type()));
+    assert(Types.isArrayKeyVal(array, arrIx));
+    assert(writersDecr.isImmediateInt());
+    assert(Types.isElemType(array, member));
+    Command r = Turbine.arrayDerefStore(
+        varToExpr(member), varToExpr(array),
+        argToExpr(arrIx), argToExpr(writersDecr),
+        arrayValueType(array, false));
+    pointAdd(r);
+  }
+
+  @Override
+  public void arrayCopyInFuture(Var array, Var ix, Var member,
                                 Arg writersDecr) {
     assert(Types.isArray(array.type()));
     assert(Types.isArrayKeyFuture(array, ix));
     assert(writersDecr.isImmediateInt());
-    assert(Types.isAssignableRefTo(member.type(),
-                                   Types.containerElemType(array.type())));
+    assert(Types.isElemType(array, member));
     
     Command r = Turbine.arrayDerefStoreComputed(
         varToExpr(member), varToExpr(array),
@@ -1523,28 +1569,28 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void arrayRefInsertFuture(Var outerArray, Var array, Var ix, Var member) {
+  public void arrayRefCopyInImm(Var outerArray, Var array, Arg arrIx,
+                                     Var member) {
     assert(Types.isArrayRef(array.type()));
     assert(Types.isArray(outerArray.type()));
-    assert(Types.isArrayKeyFuture(array, ix));
-    assert(member.type().assignableTo(Types.containerElemType(array.type())));
-    Command r = Turbine.arrayRefStoreComputed(
+    assert(Types.isArrayKeyVal(array, arrIx));
+    assert(Types.isElemType(array, member));
+    
+    Command r = Turbine.arrayRefDerefStore(
         varToExpr(member), varToExpr(array),
-        varToExpr(ix), varToExpr(outerArray),
+        argToExpr(arrIx), varToExpr(outerArray),
         arrayValueType(array, false));
-
     pointAdd(r);
   }
-  
+
   @Override
-  public void arrayRefDerefInsertFuture(Var outerArray, Var array, Var ix,
+  public void arrayRefCopyInFuture(Var outerArray, Var array, Var ix,
                                         Var member) {
     assert(Types.isArrayRef(array.type()));
     assert(Types.isArray(outerArray.type()));
     assert(Types.isArrayKeyFuture(array, ix));
-    assert(Types.isAssignableRefTo(member.type(),
-                                   Types.containerElemType(array.type())));
-    
+    assert(Types.isElemType(array, member));
+
     Command r = Turbine.arrayRefDerefStoreComputed(
         varToExpr(member), varToExpr(array),
         varToExpr(ix), varToExpr(outerArray),
@@ -1592,71 +1638,6 @@ public class TurbineGenerator implements CompilerBackend {
                 keyType, Collections.singletonList(valType));
   }
   
-  @Override
-  public void arrayInsertImm(Var array, Arg arrIx, Var member, Arg writersDecr) {
-    assert(Types.isArray(array.type()));
-    assert(Types.isArrayKeyVal(array, arrIx));
-    assert(writersDecr.isImmediateInt());
-    assert(Types.isElemType(array, member));
-    
-    Command r = Turbine.arrayStoreImmediate(
-        varToExpr(member), varToExpr(array),
-        argToExpr(arrIx), argToExpr(writersDecr),
-        arrayValueType(array, false));
-    pointAdd(r);
-  }
-  
-  
-  @Override
-  public void arrayDerefInsertImm(Var array, Arg arrIx, Var member, Arg writersDecr) {
-    assert(Types.isArray(array.type()));
-    assert(Types.isArrayKeyVal(array, arrIx));
-    assert(writersDecr.isImmediateInt());
-    // Check that we get the right thing when we dereference it
-    assert(Types.isAssignableRefTo(member.type(),
-                                   Types.containerElemType(array.type())));
-    Command r = Turbine.arrayDerefStore(
-        varToExpr(member), varToExpr(array),
-        argToExpr(arrIx), argToExpr(writersDecr),
-        arrayValueType(array, false));
-    pointAdd(r);
-  }
-
-  @Override
-  public void arrayRefInsertImm(Var outerArray, Var array, Arg arrIx,
-                                Var member) {
-    assert(Types.isArrayRef(array.type()));
-    assert(Types.isArray(outerArray.type()));
-    assert(Types.isArrayKeyVal(array, arrIx));
-    assert(member.type().assignableTo(Types.containerElemType(array.type())));
-    Command r = Turbine.arrayRefStoreImmediate(
-        varToExpr(member), varToExpr(array),
-        argToExpr(arrIx), varToExpr(outerArray),
-        arrayValueType(array, false));
-    pointAdd(r);
-  }
-  
-  @Override
-  public void arrayRefDerefInsertImm(Var outerArray, Var array, Arg arrIx,
-                                     Var member) {
-    assert(Types.isArrayRef(array.type()));
-    assert(Types.isArray(outerArray.type()));
-    assert(Types.isArrayKeyVal(array, arrIx));
-    Type memberType = array.type().memberType().memberType();
-    // Check that we get the right thing when we dereference it
-    assert(Types.isAssignableRefTo(member.type(),
-                                   Types.containerElemType(array.type())));
-    if (!member.type().memberType().equals(memberType)) {
-      throw new STCRuntimeError("Type mismatch when trying to store " +
-          "from variable " + member.toString() + " into array " + array.toString());
-    }
-    Command r = Turbine.arrayRefDerefStore(
-        varToExpr(member), varToExpr(array),
-        argToExpr(arrIx), varToExpr(outerArray),
-        arrayValueType(array, false));
-    pointAdd(r);
-  }
-
   @Override
   public void bagInsert(Var bag, Var elem, Arg writersDecr) {
     assert(Types.isBagElem(bag, elem));

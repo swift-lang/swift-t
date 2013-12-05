@@ -115,59 +115,57 @@ public class TurbineOp extends Instruction {
     case STORE_RECURSIVE:
       gen.assignRecursive(getOutput(0), getInput(0));
       break;
-    case ARRAY_LOOKUP_FUTURE:
-      gen.arrayLookupFuture(getOutput(0), 
-          getInput(0).getVar(), getInput(1).getVar(), false);
-      break;
-    case ARRAYREF_LOOKUP_FUTURE:
-      gen.arrayLookupFuture(getOutput(0), 
-          getInput(0).getVar(), getInput(1).getVar(), true);
-      break;
-    case ARRAY_LOOKUP_REF_IMM:
-      gen.arrayLookupRefImm(getOutput(0), getInput(0).getVar(),
-                            getInput(1), false);
-      break;
-    case ARRAY_LOOKUP_IMM:
-      gen.arrayLookupImm(getOutput(0), getInput(0).getVar(),
+    case ARR_RETRIEVE:
+      gen.arrayRetrieve(getOutput(0), getInput(0).getVar(),
                          getInput(1));
       break;
-    case ARRAYREF_LOOKUP_IMM:
-      gen.arrayLookupRefImm(getOutput(0), getInput(0).getVar(),
-                            getInput(1), true);
+    case ARR_COPY_OUT_IMM:
+      gen.arrayCopyOutImm(getOutput(0), getInput(0).getVar(), getInput(1));
       break;
-    case ARRAY_INSERT_FUTURE:
-      gen.arrayInsertFuture(getOutput(0), getInput(0).getVar(),
-                            getInput(1).getVar(),
-                            getInputs().size() == 3 ? getInput(2) : Arg.ONE);
+    case ARR_COPY_OUT_FUTURE:
+      gen.arrayCopyOutFuture(getOutput(0), getInput(0).getVar(),
+                             getInput(1).getVar());
       break;
-    case ARRAY_DEREF_INSERT_FUTURE:
-      gen.arrayDerefInsertFuture(getOutput(0), getInput(0).getVar(),
-                            getInput(1).getVar(),
-                            getInputs().size() == 3 ? getInput(2) : Arg.ONE);
+    case AREF_COPY_OUT_IMM:
+      gen.arrayCopyOutImm(getOutput(0), getInput(0).getVar(), getInput(1));
       break;
-    case ARRAY_INSERT_IMM:
-      gen.arrayInsertImm(getOutput(0), getInput(0), getInput(1).getVar(),
+    case AREF_COPY_OUT_FUTURE:
+      gen.arrayCopyOutFuture(getOutput(0), getInput(0).getVar(),
+                             getInput(1).getVar());
+      break;
+    case ARR_STORE:
+      gen.arrayStore(getOutput(0), getInput(0), getInput(1).getVar(),
           getInputs().size() == 3 ? getInput(2) : Arg.ZERO);
       break;
-    case ARRAY_DEREF_INSERT_IMM:
-      gen.arrayDerefInsertImm(getOutput(0), getInput(0), getInput(1).getVar(),
+    case ARR_STORE_FUTURE:
+      gen.arrayStoreFuture(getOutput(0), getInput(0).getVar(),
+                            getInput(1).getVar(),
+                            getInputs().size() == 3 ? getInput(2) : Arg.ONE);
+      break;
+    case AREF_STORE_IMM:
+      gen.arrayRefStoreImm(getOutput(0),
+          getOutput(1), getInput(0), getInput(1).getVar());
+      break;
+    case AREF_STORE_FUTURE:
+      gen.arrayRefStoreFuture(getOutput(0),
+          getOutput(1), getInput(0).getVar(), getInput(1).getVar());
+      break;
+    case ARR_COPY_IN_IMM:
+      gen.arrayCopyInImm(getOutput(0), getInput(0), getInput(1).getVar(),
           getInputs().size() == 3 ? getInput(2) : Arg.ONE);
       break;
-    case ARRAYREF_INSERT_FUTURE:
-      gen.arrayRefInsertFuture(getOutput(0),
-          getOutput(1), getInput(0).getVar(), getInput(1).getVar());
+    case ARR_COPY_IN_FUTURE:
+      gen.arrayCopyInFuture(getOutput(0), getInput(0).getVar(),
+                            getInput(1).getVar(),
+                            getInputs().size() == 3 ? getInput(2) : Arg.ONE);
       break;
-    case ARRAYREF_DEREF_INSERT_FUTURE:
-      gen.arrayRefDerefInsertFuture(getOutput(0),
-          getOutput(1), getInput(0).getVar(), getInput(1).getVar());
-      break;
-    case ARRAYREF_INSERT_IMM:
-      gen.arrayRefInsertImm(getOutput(0),
+    case AREF_COPY_IN_IMM:
+      gen.arrayRefCopyInImm(getOutput(0),
           getOutput(1), getInput(0), getInput(1).getVar());
       break;
-    case ARRAYREF_DEREF_INSERT_IMM:
-      gen.arrayRefDerefInsertImm(getOutput(0),
-          getOutput(1), getInput(0), getInput(1).getVar());
+    case AREF_COPY_IN_FUTURE:
+      gen.arrayRefCopyInFuture(getOutput(0),
+          getOutput(1), getInput(0).getVar(), getInput(1).getVar());
       break;
     case ARRAY_BUILD: {
       assert (getInputs().size() % 2 == 0);
@@ -209,19 +207,19 @@ public class TurbineOp extends Instruction {
     case COPY_REF:
       gen.makeAlias(getOutput(0), getInput(0).getVar());
       break;
-    case ARRAY_CREATE_NESTED_FUTURE:
+    case ARR_CREATE_NESTED_FUTURE:
       gen.arrayCreateNestedFuture(getOutput(0), getOutput(1), 
                                   getInput(0).getVar());
       break;
-    case ARRAYREF_CREATE_NESTED_FUTURE:
+    case AREF_CREATE_NESTED_FUTURE:
       gen.arrayRefCreateNestedFuture(getOutput(0), getOutput(1), getOutput(2),
                                      getInput(0).getVar());
       break;
-    case ARRAYREF_CREATE_NESTED_IMM:
+    case AREF_CREATE_NESTED_IMM:
       gen.arrayRefCreateNestedImm(getOutput(0), getOutput(1), getOutput(2),
                                   getInput(0));
       break;
-    case ARRAY_CREATE_NESTED_IMM:
+    case ARR_CREATE_NESTED_IMM:
       gen.arrayCreateNestedImm(getOutput(0), getOutput(1), getInput(0),
                                getInput(1), getInput(2));
       break;
@@ -330,31 +328,31 @@ public class TurbineOp extends Instruction {
 
   public static Instruction arrayRetrieve(Var oVar, Var arrayVar,
                                             Arg arrayIndex) {
-    return new TurbineOp(Opcode.ARRAY_LOOKUP_IMM,
+    return new TurbineOp(Opcode.ARR_RETRIEVE,
         oVar, arrayVar.asArg(), arrayIndex);
   }
 
   public static Instruction arrayRefCopyOutImm(Var oVar,
       Var arrayVar, Arg arrayIndex) {
-    return new TurbineOp(Opcode.ARRAYREF_LOOKUP_IMM,
+    return new TurbineOp(Opcode.AREF_COPY_OUT_IMM,
         oVar, arrayVar.asArg(), arrayIndex);
   }
 
   public static Instruction arrayCopyOutImm(Var oVar, Var arrayVar,
       Arg arrayIndex) {
-    return new TurbineOp(Opcode.ARRAY_LOOKUP_REF_IMM,
+    return new TurbineOp(Opcode.ARR_COPY_OUT_IMM,
         oVar, arrayVar.asArg(), arrayIndex);
   }
 
   public static TurbineOp arrayCopyOutFuture(Var oVar, Var arrayVar,
       Var indexVar) {
-    return new TurbineOp(Opcode.ARRAY_LOOKUP_FUTURE,
+    return new TurbineOp(Opcode.ARR_COPY_OUT_FUTURE,
         oVar, arrayVar.asArg(), indexVar.asArg());
   }
 
   public static TurbineOp arrayRefCopyOutFuture(Var oVar, Var arrayRefVar,
       Var indexVar) {
-    return new TurbineOp(Opcode.ARRAYREF_LOOKUP_FUTURE, oVar,
+    return new TurbineOp(Opcode.AREF_COPY_OUT_FUTURE, oVar,
                           arrayRefVar.asArg(), indexVar.asArg());
   }
 
@@ -363,52 +361,52 @@ public class TurbineOp extends Instruction {
     assert(Types.isArray(array));
     assert(Types.isArrayKeyVal(array, ix));
     assert(Types.isElemType(array, member));
-    return new TurbineOp(Opcode.ARRAY_INSERT_IMM,
+    return new TurbineOp(Opcode.ARR_STORE,
                           array, ix, member.asArg());
   }
 
   public static Instruction arrayStoreFuture(Var array,
       Var ix, Var member) {
-    return new TurbineOp(Opcode.ARRAY_INSERT_FUTURE,
+    return new TurbineOp(Opcode.ARR_STORE_FUTURE,
             array, ix.asArg(),
             member.asArg());
   }
 
   public static Instruction arrayRefStoreImm(Var outerArray,
       Var array, Arg ix, Var member) {
-    return new TurbineOp(Opcode.ARRAYREF_INSERT_IMM,
+    return new TurbineOp(Opcode.AREF_STORE_IMM,
         Arrays.asList(outerArray, array),
         ix, member.asArg());
   }
 
   public static Instruction arrayRefStoreFuture(Var outerArray,
       Var array, Var ix, Var member) {
-    return new TurbineOp(Opcode.ARRAYREF_INSERT_FUTURE,
+    return new TurbineOp(Opcode.AREF_STORE_FUTURE,
         Arrays.asList(outerArray, array), ix.asArg(), member.asArg());
   }
 
   public static Instruction arrayCopyInImm(Var array,
       Arg ix, Var member) {
-    return new TurbineOp(Opcode.ARRAY_DEREF_INSERT_IMM,
+    return new TurbineOp(Opcode.ARR_COPY_IN_IMM,
                          array, ix, member.asArg());
   }
 
   public static Instruction arrayCopyInFuture(Var array,
       Var ix, Var member) {
-    return new TurbineOp(Opcode.ARRAY_DEREF_INSERT_FUTURE,
+    return new TurbineOp(Opcode.ARR_COPY_IN_FUTURE,
             array, ix.asArg(), member.asArg());
   }
 
   public static Instruction arrayRefCopyInImm(Var outerArray,
       Var array, Arg ix, Var member) {
-    return new TurbineOp(Opcode.ARRAYREF_DEREF_INSERT_IMM,
+    return new TurbineOp(Opcode.AREF_COPY_IN_IMM,
         Arrays.asList(outerArray, array),
         ix, member.asArg());
   }
   
   public static Instruction arrayRefCopyInFuture(Var outerArray,
       Var array, Var ix, Var member) {
-    return new TurbineOp(Opcode.ARRAYREF_DEREF_INSERT_FUTURE,
+    return new TurbineOp(Opcode.AREF_COPY_IN_FUTURE,
         Arrays.asList(outerArray, array),
         ix.asArg(), member.asArg());
   }
@@ -535,7 +533,7 @@ public class TurbineOp extends Instruction {
     assert(Types.isArray(array.type()));
     assert(Types.isArrayKeyFuture(array, ix));
     // Both arrays are modified, so outputs
-    return new TurbineOp(Opcode.ARRAY_CREATE_NESTED_FUTURE,
+    return new TurbineOp(Opcode.ARR_CREATE_NESTED_FUTURE,
         Arrays.asList(arrayResult, array), ix.asArg());
   }
 
@@ -544,7 +542,7 @@ public class TurbineOp extends Instruction {
     assert(Types.isArrayKeyVal(arrayVar, arrIx));
     assert(arrayResult.storage() == Alloc.ALIAS);
     // Both arrays are modified, so outputs
-    return new TurbineOp(Opcode.ARRAY_CREATE_NESTED_IMM,
+    return new TurbineOp(Opcode.ARR_CREATE_NESTED_IMM,
         Arrays.asList(arrayResult, arrayVar),
         arrIx, Arg.ZERO, Arg.ZERO);
   }
@@ -558,7 +556,7 @@ public class TurbineOp extends Instruction {
     assert(Types.isArrayKeyFuture(array, ix));
     // Returns nested array, modifies outer array and
     // reference counts outmost array
-    return new TurbineOp(Opcode.ARRAYREF_CREATE_NESTED_FUTURE,
+    return new TurbineOp(Opcode.AREF_CREATE_NESTED_FUTURE,
         Arrays.asList(arrayResult, outerArr, array),
         ix.asArg());
   }
@@ -570,7 +568,7 @@ public class TurbineOp extends Instruction {
     assert(Types.isArrayRef(array.type())): array;
     assert(Types.isArray(outerArray.type())): outerArray;
     assert(Types.isArrayKeyVal(array, ix));
-    return new TurbineOp(Opcode.ARRAYREF_CREATE_NESTED_IMM,
+    return new TurbineOp(Opcode.AREF_CREATE_NESTED_IMM,
         // Returns nested array, modifies outer array and
         // reference counts outmost array
         Arrays.asList(arrayResult, outerArray, array),
@@ -759,14 +757,14 @@ public class TurbineOp extends Instruction {
       return false;
       
     case ARRAY_BUILD:
-    case ARRAY_INSERT_FUTURE:
-    case ARRAY_DEREF_INSERT_FUTURE:
-    case ARRAY_INSERT_IMM:
-    case ARRAY_DEREF_INSERT_IMM:
-    case ARRAYREF_INSERT_FUTURE:
-    case ARRAYREF_DEREF_INSERT_FUTURE:
-    case ARRAYREF_INSERT_IMM:
-    case ARRAYREF_DEREF_INSERT_IMM:
+    case ARR_STORE_FUTURE:
+    case ARR_COPY_IN_FUTURE:
+    case ARR_STORE:
+    case ARR_COPY_IN_IMM:
+    case AREF_STORE_FUTURE:
+    case AREF_COPY_IN_FUTURE:
+    case AREF_STORE_IMM:
+    case AREF_COPY_IN_IMM:
       // Effect can be tracked back to original array
       return false;
 
@@ -796,10 +794,10 @@ public class TurbineOp extends Instruction {
     case LOAD_RECURSIVE:
       return false;
       
-    case ARRAY_LOOKUP_REF_IMM:
-    case ARRAY_LOOKUP_FUTURE:
-    case ARRAYREF_LOOKUP_FUTURE:
-    case ARRAYREF_LOOKUP_IMM:
+    case ARR_COPY_OUT_IMM:
+    case ARR_COPY_OUT_FUTURE:
+    case AREF_COPY_OUT_FUTURE:
+    case AREF_COPY_OUT_IMM:
       return false;
 
     case GET_FILENAME:
@@ -836,16 +834,16 @@ public class TurbineOp extends Instruction {
     case STORE_REF:
     case COPY_REF:
     case STRUCTREF_LOOKUP:
-    case ARRAY_LOOKUP_IMM:
+    case ARR_RETRIEVE:
     case LATEST_VALUE:
         // Always has alias as output because the instructions initialises
         // the aliases
         return false;
         
-    case ARRAY_CREATE_NESTED_FUTURE:
-    case ARRAYREF_CREATE_NESTED_FUTURE:
-    case ARRAY_CREATE_NESTED_IMM:
-    case ARRAYREF_CREATE_NESTED_IMM:
+    case ARR_CREATE_NESTED_FUTURE:
+    case AREF_CREATE_NESTED_FUTURE:
+    case ARR_CREATE_NESTED_IMM:
+    case AREF_CREATE_NESTED_IMM:
     case ARRAY_CREATE_BAG:
         /* It might seem like these nested creation primitives have a 
          * side-effect, but for optimisation purposes they can be treated as 
@@ -910,7 +908,7 @@ public class TurbineOp extends Instruction {
     boolean insertRefWaitForClose = waitForClose;
     // Try to take advantage of closed variables 
     switch (op) {
-    case ARRAY_LOOKUP_REF_IMM: {
+    case ARR_COPY_OUT_IMM: {
       // If array is closed or this index already inserted,
       // don't need to block on array.  
       // NOTE: could try to reduce other forms to this in one step,
@@ -924,14 +922,14 @@ public class TurbineOp extends Instruction {
       }
       break;
     }
-    case ARRAY_LOOKUP_FUTURE: {
+    case ARR_COPY_OUT_FUTURE: {
       Var index = getInput(1).getVar();
       if (waitForClose || closedVars.contains(index)) {
         return new MakeImmRequest(null, Arrays.asList(index));
       }
       break;
     }
-    case ARRAYREF_LOOKUP_FUTURE: {
+    case AREF_COPY_OUT_FUTURE: {
       Var arr = getInput(0).getVar();
       Var ix = getInput(1).getVar();
       // We will take either the index or the dereferenced array
@@ -941,7 +939,7 @@ public class TurbineOp extends Instruction {
       }
       break;
     }
-    case ARRAYREF_LOOKUP_IMM: {
+    case AREF_COPY_OUT_IMM: {
       // Could skip using reference
       Var arrRef = getInput(0).getVar();
       if (waitForClose || closedVars.contains(arrRef)) {
@@ -956,7 +954,7 @@ public class TurbineOp extends Instruction {
       }
       break;  
     }
-    case ARRAY_DEREF_INSERT_IMM: {
+    case ARR_COPY_IN_IMM: {
       // See if we can get deref arg
       Var mem = getInput(1).getVar();
       List<Var> vs = mkImmVarList(waitForClose, closedVars, mem.asList());
@@ -965,15 +963,15 @@ public class TurbineOp extends Instruction {
       }
       break;
     }
-    case ARRAY_INSERT_FUTURE:
-    case ARRAY_DEREF_INSERT_FUTURE: {
+    case ARR_STORE_FUTURE:
+    case ARR_COPY_IN_FUTURE: {
       Var ix = getInput(0).getVar();
       Var val = getInput(1).getVar();
       List<Var> vs;
-      if (op == Opcode.ARRAY_INSERT_FUTURE) {
+      if (op == Opcode.ARR_STORE_FUTURE) {
         vs = ix.asList();
       } else { 
-        assert(op == Opcode.ARRAY_DEREF_INSERT_FUTURE);
+        assert(op == Opcode.ARR_COPY_IN_FUTURE);
         vs = Arrays.asList(ix, val);
       }
       vs = mkImmVarList(waitForClose, closedVars, vs);
@@ -982,15 +980,15 @@ public class TurbineOp extends Instruction {
       }
       break;
     }
-    case ARRAYREF_INSERT_IMM: 
-    case ARRAYREF_DEREF_INSERT_IMM: {
+    case AREF_STORE_IMM: 
+    case AREF_COPY_IN_IMM: {
       List<Var> vs;
       Var innerArrRef = getOutput(1);
       Var mem = getInput(1).getVar();
-      if (op == Opcode.ARRAYREF_INSERT_IMM) {
+      if (op == Opcode.AREF_STORE_IMM) {
         vs = innerArrRef.asList();
       } else {
-        assert(op == Opcode.ARRAYREF_DEREF_INSERT_IMM);
+        assert(op == Opcode.AREF_COPY_IN_IMM);
         vs = Arrays.asList(innerArrRef, mem);
       }
       vs = mkImmVarList(insertRefWaitForClose, closedVars, vs);
@@ -1000,16 +998,16 @@ public class TurbineOp extends Instruction {
       }
       break;
     }
-    case ARRAYREF_INSERT_FUTURE: 
-    case ARRAYREF_DEREF_INSERT_FUTURE: {
+    case AREF_STORE_FUTURE: 
+    case AREF_COPY_IN_FUTURE: {
       Var innerArrRef = getOutput(1);
       Var ix = getInput(0).getVar();
       Var mem = getInput(1).getVar();
       List<Var> req;
-      if (op == Opcode.ARRAYREF_INSERT_FUTURE) {
+      if (op == Opcode.AREF_STORE_FUTURE) {
         req = Arrays.asList(innerArrRef, ix);
       } else {
-        assert(op == Opcode.ARRAYREF_DEREF_INSERT_FUTURE);
+        assert(op == Opcode.AREF_COPY_IN_FUTURE);
         req = Arrays.asList(innerArrRef, ix, mem);
       }
       // We will take either the index or the dereferenced array
@@ -1019,7 +1017,7 @@ public class TurbineOp extends Instruction {
       }
       break;
     }
-    case ARRAY_CREATE_NESTED_FUTURE: {
+    case ARR_CREATE_NESTED_FUTURE: {
       // Try to get immediate index
       Var ix = getInput(0).getVar();
       if (waitForClose || closedVars.contains(ix)) {
@@ -1027,14 +1025,14 @@ public class TurbineOp extends Instruction {
       }
       break;
     }
-    case ARRAYREF_CREATE_NESTED_IMM: {
+    case AREF_CREATE_NESTED_IMM: {
       Var arrRef = getOutput(2);
       if (waitForClose || closedVars.contains(arrRef)) {
         return new MakeImmRequest(null, Arrays.asList(arrRef));
       }
       break;
     }
-    case ARRAYREF_CREATE_NESTED_FUTURE: {
+    case AREF_CREATE_NESTED_FUTURE: {
       Var arrRef = getOutput(2);
       Var ix = getInput(0).getVar();
       List<Var> req5 = mkImmVarList(waitForClose, closedVars, arrRef, ix);
@@ -1074,7 +1072,7 @@ public class TurbineOp extends Instruction {
   public Instruction.MakeImmChange makeImmediate(List<Instruction.Fetched<Var>> out,
                                      List<Instruction.Fetched<Arg>> values) {
     switch (op) {
-    case ARRAY_LOOKUP_REF_IMM: {
+    case ARR_COPY_OUT_IMM: {
       assert(values.size() == 1);
       // Input should be unchanged
       Var arr = getInput(0).getVar();
@@ -1086,13 +1084,13 @@ public class TurbineOp extends Instruction {
       Instruction newI = arrayRetrieve(valOut, arr, getInput(1));
       return new MakeImmChange(valOut, refOut, newI);
     }
-    case ARRAY_LOOKUP_FUTURE: {
+    case ARR_COPY_OUT_FUTURE: {
       assert(values.size() == 1);
       Arg newIx = values.get(0).fetched;
       return new MakeImmChange(
               arrayCopyOutImm(getOutput(0), getInput(0).getVar(), newIx));
     }
-    case ARRAYREF_LOOKUP_FUTURE: {
+    case AREF_COPY_OUT_FUTURE: {
       assert(values.size() == 1 || values.size() == 2);
       Var mem = getOutput(0); 
       Var arrRef = getInput(0).getVar();
@@ -1112,7 +1110,7 @@ public class TurbineOp extends Instruction {
       }
       return new MakeImmChange(inst);
     }
-    case ARRAYREF_LOOKUP_IMM: {
+    case AREF_COPY_OUT_IMM: {
       assert(values.size() == 1);
       // Switch from ref to plain array
       Var newArr = values.get(0).fetched.getVar();
@@ -1130,19 +1128,19 @@ public class TurbineOp extends Instruction {
       Instruction newI = structLookup(valOut, newStruct, field);
       return new MakeImmChange(valOut, refOut, newI);
     }
-    case ARRAY_DEREF_INSERT_IMM: {
+    case ARR_COPY_IN_IMM: {
       assert(values.size() == 1);
       Var derefMember = values.get(0).fetched.getVar();
       return new MakeImmChange(
           arrayStore(getOutput(0), getInput(0), derefMember));
     }
-    case ARRAY_INSERT_FUTURE: {
+    case ARR_STORE_FUTURE: {
       assert(values.size() == 1);
       Arg fetchedIx = values.get(0).fetched;
       return new MakeImmChange(
           arrayStore(getOutput(0), fetchedIx, getInput(1).getVar()));
     }
-    case ARRAY_DEREF_INSERT_FUTURE: {
+    case ARR_COPY_IN_FUTURE: {
       Var arr = getOutput(0);
       Var ix = getInput(0).getVar();
       Var mem = getInput(1).getVar();
@@ -1159,14 +1157,14 @@ public class TurbineOp extends Instruction {
       }
       return new MakeImmChange(inst);
     }
-    case ARRAYREF_INSERT_IMM: {
+    case AREF_STORE_IMM: {
       assert(values.size() == 1);
       Var newOut = values.get(0).fetched.getVar();
       // Switch from ref to plain array
       return new MakeImmChange(arrayStore(
           newOut, getInput(0), getInput(1).getVar()));
     }
-    case ARRAYREF_DEREF_INSERT_IMM: {
+    case AREF_COPY_IN_IMM: {
       Var outerArrRef = getOutput(0);
       Var innerArrRef = getOutput(1);
       Arg ix = getInput(0);
@@ -1185,8 +1183,8 @@ public class TurbineOp extends Instruction {
       
       return new MakeImmChange(newI);
     }
-    case ARRAYREF_INSERT_FUTURE:
-    case ARRAYREF_DEREF_INSERT_FUTURE: {
+    case AREF_STORE_FUTURE:
+    case AREF_COPY_IN_FUTURE: {
       Var outerArr = getOutput(0);
       Var arrRef = getOutput(1);
       Var ix = getInput(0).getVar();
@@ -1198,9 +1196,9 @@ public class TurbineOp extends Instruction {
       Var derefMem = Fetched.findFetchedVar(values, mem);
       
       Instruction inst;
-      if (derefMem != null || op == Opcode.ARRAYREF_INSERT_FUTURE) {
+      if (derefMem != null || op == Opcode.AREF_STORE_FUTURE) {
         if (derefMem != null) {
-          assert(op == Opcode.ARRAYREF_DEREF_INSERT_FUTURE);
+          assert(op == Opcode.AREF_COPY_IN_FUTURE);
           // It was dereferenced
           mem = derefMem;
         }
@@ -1214,7 +1212,7 @@ public class TurbineOp extends Instruction {
           inst = arrayRefCopyInFuture(outerArr, arrRef, ix, mem);
         }
       } else {
-        assert(op == Opcode.ARRAYREF_DEREF_INSERT_FUTURE);
+        assert(op == Opcode.AREF_COPY_IN_FUTURE);
         if (newArr != null && newIx != null) {
           inst = arrayCopyInImm(newArr, newIx, mem);
         } else if (newArr != null && newIx == null) {
@@ -1226,7 +1224,7 @@ public class TurbineOp extends Instruction {
       }
       return new MakeImmChange(inst);
     }
-    case ARRAY_CREATE_NESTED_FUTURE: {
+    case ARR_CREATE_NESTED_FUTURE: {
       assert(values.size() == 1);
       Arg ix = values.get(0).fetched;
       Var oldResult = getOutput(0);
@@ -1239,7 +1237,7 @@ public class TurbineOp extends Instruction {
       return new MakeImmChange(newOut, oldResult,
           arrayCreateNestedImm(newOut, oldArray, ix));
     }
-    case ARRAYREF_CREATE_NESTED_FUTURE: {
+    case AREF_CREATE_NESTED_FUTURE: {
       assert(values.size() == 1 || values.size() == 2);
       Var arrResult = getOutput(0);
       Var outerArr = getOutput(1);
@@ -1264,7 +1262,7 @@ public class TurbineOp extends Instruction {
             arrayRefCreateNestedImmIx(arrResult, outerArr, arrRef, newIx));
       }
     }
-    case ARRAYREF_CREATE_NESTED_IMM: {
+    case AREF_CREATE_NESTED_IMM: {
       assert(values.size() == 1);
       Var newArr = values.get(0).fetched.getVar();
       Arg ix = getInput(0);
@@ -1313,8 +1311,8 @@ public class TurbineOp extends Instruction {
     switch (op) {
       case LOAD_REF:
       case COPY_REF:
-      case ARRAY_LOOKUP_IMM:
-      case ARRAY_CREATE_NESTED_IMM:
+      case ARR_RETRIEVE:
+      case ARR_CREATE_NESTED_IMM:
       case ARRAY_CREATE_BAG:
       case GET_FILENAME:
       case STRUCT_LOOKUP:
@@ -1343,16 +1341,16 @@ public class TurbineOp extends Instruction {
    */
   public List<Var> getReadOutputs(Map<String, Function> fns) {
     switch (op) {
-    case ARRAY_CREATE_NESTED_IMM:
-    case ARRAY_CREATE_NESTED_FUTURE:
+    case ARR_CREATE_NESTED_IMM:
+    case ARR_CREATE_NESTED_FUTURE:
       // In create_nested instructions the 
       // second array being inserted into is needed
       return Arrays.asList(getOutput(1));
     case ARRAY_CREATE_BAG:
       // the array being inserted into
       return getOutput(1).asList();
-    case ARRAYREF_CREATE_NESTED_IMM:
-    case ARRAYREF_CREATE_NESTED_FUTURE:
+    case AREF_CREATE_NESTED_IMM:
+    case AREF_CREATE_NESTED_FUTURE:
       // In ref_create_nested instructions the 
       // second array being inserted into is needed
       return Arrays.asList(getOutput(2));
@@ -1363,17 +1361,17 @@ public class TurbineOp extends Instruction {
   
   public List<Var> getModifiedOutputs() {
     switch (op) {
-    case ARRAY_CREATE_NESTED_IMM:
-    case ARRAY_CREATE_NESTED_FUTURE:
-    case ARRAYREF_CREATE_NESTED_IMM:
-    case ARRAYREF_CREATE_NESTED_FUTURE:
+    case ARR_CREATE_NESTED_IMM:
+    case ARR_CREATE_NESTED_FUTURE:
+    case AREF_CREATE_NESTED_IMM:
+    case AREF_CREATE_NESTED_FUTURE:
     case ARRAY_CREATE_BAG:
       // In create_nested instructions only the 
       // first output (the created array) is needed
       return Collections.singletonList(getOutput(0));
 
-    case ARRAYREF_INSERT_FUTURE:
-    case ARRAYREF_INSERT_IMM:
+    case AREF_STORE_FUTURE:
+    case AREF_STORE_IMM:
       // In the arrayref_insert instructions, the first output
       // is a reference to an outer array that is kept open but not
       // modified
@@ -1388,21 +1386,21 @@ public class TurbineOp extends Instruction {
    */
   public List<Var> getPiecewiseAssignedOutputs() {
     switch (op) {
-      case ARRAY_INSERT_FUTURE:
-      case ARRAY_DEREF_INSERT_FUTURE:
-      case ARRAY_INSERT_IMM:
-      case ARRAY_DEREF_INSERT_IMM:
-      case ARRAYREF_INSERT_FUTURE:
-      case ARRAYREF_DEREF_INSERT_FUTURE:
-      case ARRAYREF_INSERT_IMM:
-      case ARRAYREF_DEREF_INSERT_IMM:
+      case ARR_STORE_FUTURE:
+      case ARR_COPY_IN_FUTURE:
+      case ARR_STORE:
+      case ARR_COPY_IN_IMM:
+      case AREF_STORE_FUTURE:
+      case AREF_COPY_IN_FUTURE:
+      case AREF_STORE_IMM:
+      case AREF_COPY_IN_IMM:
         // All outputs are piecewise assigned
         return getOutputs();
-      case ARRAY_CREATE_NESTED_FUTURE:
-      case ARRAY_CREATE_NESTED_IMM:
+      case ARR_CREATE_NESTED_FUTURE:
+      case ARR_CREATE_NESTED_IMM:
       case ARRAY_CREATE_BAG:
-      case ARRAYREF_CREATE_NESTED_FUTURE:
-      case ARRAYREF_CREATE_NESTED_IMM: {
+      case AREF_CREATE_NESTED_FUTURE:
+      case AREF_CREATE_NESTED_IMM: {
         // All arrays except the newly created array; 
         List<Var> outputs = getOutputs();
         return outputs.subList(1, outputs.size());
@@ -1465,10 +1463,10 @@ public class TurbineOp extends Instruction {
     case UPDATE_SCALE_IMM:
     case INIT_UPDATEABLE_FLOAT:
     case LATEST_VALUE:
-    case ARRAY_INSERT_IMM:
+    case ARR_STORE:
     case STRUCT_INIT_FIELD:
     case STRUCT_LOOKUP:
-    case ARRAY_CREATE_NESTED_IMM:
+    case ARR_CREATE_NESTED_IMM:
     case ARRAY_CREATE_BAG:
     case STORE_REF:
     case LOAD_REF:
@@ -1478,7 +1476,7 @@ public class TurbineOp extends Instruction {
     case GET_LOCAL_FILENAME:
     case IS_MAPPED:
     case COPY_FILE_CONTENTS:
-    case ARRAY_LOOKUP_IMM:
+    case ARR_RETRIEVE:
     case COPY_REF:
     case CHOOSE_TMP_FILENAME:
     case SET_FILENAME_VAL:
@@ -1494,23 +1492,23 @@ public class TurbineOp extends Instruction {
     case UNPACK_ARRAY_TO_FLAT:
       return TaskMode.SYNC;
     
-    case ARRAY_DEREF_INSERT_IMM:
-    case ARRAY_INSERT_FUTURE:
-    case ARRAY_DEREF_INSERT_FUTURE:
-    case ARRAYREF_INSERT_FUTURE:
-    case ARRAYREF_DEREF_INSERT_FUTURE:
-    case ARRAYREF_INSERT_IMM:
-    case ARRAYREF_DEREF_INSERT_IMM:
-    case ARRAYREF_LOOKUP_FUTURE:
-    case ARRAYREF_LOOKUP_IMM:
-    case ARRAY_LOOKUP_REF_IMM:
+    case ARR_COPY_IN_IMM:
+    case ARR_STORE_FUTURE:
+    case ARR_COPY_IN_FUTURE:
+    case AREF_STORE_FUTURE:
+    case AREF_COPY_IN_FUTURE:
+    case AREF_STORE_IMM:
+    case AREF_COPY_IN_IMM:
+    case AREF_COPY_OUT_FUTURE:
+    case AREF_COPY_OUT_IMM:
+    case ARR_COPY_OUT_IMM:
     case DEREF_SCALAR:
     case DEREF_FILE:
     case STRUCTREF_LOOKUP:
-    case ARRAY_LOOKUP_FUTURE:
-    case ARRAYREF_CREATE_NESTED_FUTURE:
-    case ARRAY_CREATE_NESTED_FUTURE:
-    case ARRAYREF_CREATE_NESTED_IMM:
+    case ARR_COPY_OUT_FUTURE:
+    case AREF_CREATE_NESTED_FUTURE:
+    case ARR_CREATE_NESTED_FUTURE:
+    case AREF_CREATE_NESTED_IMM:
       return TaskMode.LOCAL;
     default:
       throw new STCRuntimeError("Need to add opcode " + op.toString()
@@ -1614,31 +1612,31 @@ public class TurbineOp extends Instruction {
             getOutput(0), getInput(0).getVar(), getInput(1).getStringLit());
         return lookup.asList(); 
       }
-      case ARRAY_INSERT_IMM:
-      case ARRAY_DEREF_INSERT_IMM:
-      case ARRAY_INSERT_FUTURE:
-      case ARRAY_DEREF_INSERT_FUTURE:
-      case ARRAYREF_INSERT_IMM:
-      case ARRAYREF_DEREF_INSERT_IMM: 
-      case ARRAYREF_INSERT_FUTURE:
-      case ARRAYREF_DEREF_INSERT_FUTURE: {
+      case ARR_STORE:
+      case ARR_COPY_IN_IMM:
+      case ARR_STORE_FUTURE:
+      case ARR_COPY_IN_FUTURE:
+      case AREF_STORE_IMM:
+      case AREF_COPY_IN_IMM: 
+      case AREF_STORE_FUTURE:
+      case AREF_COPY_IN_FUTURE: {
         // STORE <out array> <in index> <in var>
         // STORE  <in outer array> <out array> <in index> <in var>
         Var arr;
-        if (op == Opcode.ARRAYREF_INSERT_FUTURE ||
-            op == Opcode.ARRAYREF_INSERT_IMM ||
-            op == Opcode.ARRAYREF_DEREF_INSERT_FUTURE ||
-            op == Opcode.ARRAYREF_DEREF_INSERT_IMM) {
+        if (op == Opcode.AREF_STORE_FUTURE ||
+            op == Opcode.AREF_STORE_IMM ||
+            op == Opcode.AREF_COPY_IN_FUTURE ||
+            op == Opcode.AREF_COPY_IN_IMM) {
           arr = getOutput(1);
         } else {
           arr = getOutput(0);
         }
         Arg ix = getInput(0);
         Var member = getInput(1).getVar();
-        boolean insertingRef = (op == Opcode.ARRAYREF_DEREF_INSERT_FUTURE ||
-                                op == Opcode.ARRAYREF_DEREF_INSERT_IMM ||
-                                op == Opcode.ARRAY_DEREF_INSERT_FUTURE ||
-                                op == Opcode.ARRAY_DEREF_INSERT_IMM);
+        boolean insertingRef = (op == Opcode.AREF_COPY_IN_FUTURE ||
+                                op == Opcode.AREF_COPY_IN_IMM ||
+                                op == Opcode.ARR_COPY_IN_FUTURE ||
+                                op == Opcode.ARR_COPY_IN_IMM);
         return Arrays.asList(ValLoc.makeArrayResult(arr, ix, member,
                                        insertingRef, IsAssign.TO_VALUE));
       }
@@ -1661,18 +1659,18 @@ public class TurbineOp extends Instruction {
                     Arg.createIntLit(elemCount), false, IsAssign.NO));
         return res;
       }
-      case ARRAY_LOOKUP_IMM:
-      case ARRAY_LOOKUP_REF_IMM:
-      case ARRAY_LOOKUP_FUTURE:
-      case ARRAYREF_LOOKUP_FUTURE:
-      case ARRAYREF_LOOKUP_IMM: {
+      case ARR_RETRIEVE:
+      case ARR_COPY_OUT_IMM:
+      case ARR_COPY_OUT_FUTURE:
+      case AREF_COPY_OUT_FUTURE:
+      case AREF_COPY_OUT_IMM: {
         // LOAD <out var> <in array> <in index>
         Var arr = getInput(0).getVar();
         Arg ix = getInput(1);
         Var contents = getOutput(0);
         
 
-        if (op == Opcode.ARRAY_LOOKUP_IMM) {
+        if (op == Opcode.ARR_RETRIEVE) {
           // This just retrieves the item immediately
           return Arrays.asList(ValLoc.makeArrayResult(arr, ix, contents, false,
                                                       IsAssign.NO));
@@ -1685,10 +1683,10 @@ public class TurbineOp extends Instruction {
           return res;
         }
       }
-      case ARRAY_CREATE_NESTED_FUTURE:
-      case ARRAY_CREATE_NESTED_IMM:
-      case ARRAYREF_CREATE_NESTED_FUTURE:
-      case ARRAYREF_CREATE_NESTED_IMM: 
+      case ARR_CREATE_NESTED_FUTURE:
+      case ARR_CREATE_NESTED_IMM:
+      case AREF_CREATE_NESTED_FUTURE:
+      case AREF_CREATE_NESTED_IMM: 
       case ARRAY_CREATE_BAG: {
         // CREATE_NESTED <out inner array> <in array> <in index>
         // OR
@@ -1697,8 +1695,8 @@ public class TurbineOp extends Instruction {
         // CREATE_BAG <out inner bag> <in array> <in index> 
         Var nestedArr = getOutput(0);
         Var arr;
-        if (op == Opcode.ARRAYREF_CREATE_NESTED_FUTURE ||
-            op == Opcode.ARRAYREF_CREATE_NESTED_IMM) {
+        if (op == Opcode.AREF_CREATE_NESTED_FUTURE ||
+            op == Opcode.AREF_CREATE_NESTED_IMM) {
           arr = getOutput(2);
         } else {
           arr = getOutput(1);
@@ -1706,7 +1704,7 @@ public class TurbineOp extends Instruction {
         Arg ix = getInput(0);
         List<ValLoc> res = new ArrayList<ValLoc>();
         
-        boolean returnsRef = op != Opcode.ARRAY_CREATE_NESTED_IMM &&
+        boolean returnsRef = op != Opcode.ARR_CREATE_NESTED_IMM &&
                              op != Opcode.ARRAY_CREATE_BAG;
         // Mark as not substitutable since this op may have
         // side-effect of creating array
@@ -1806,44 +1804,44 @@ public class TurbineOp extends Instruction {
         return Pair.create(Arrays.asList(getInput(0).getVar()),
                            Var.NONE);
       }
-      case ARRAYREF_LOOKUP_FUTURE:
-      case ARRAY_LOOKUP_FUTURE: {
+      case AREF_COPY_OUT_FUTURE:
+      case ARR_COPY_OUT_FUTURE: {
         // Array and index
         return Pair.create(
                 Arrays.asList(getInput(0).getVar(), getInput(1).getVar()),
                 Var.NONE);
       }
-      case ARRAYREF_LOOKUP_IMM:
-      case ARRAY_LOOKUP_REF_IMM: {
+      case AREF_COPY_OUT_IMM:
+      case ARR_COPY_OUT_IMM: {
         // Array only
         return Pair.create(
                   Arrays.asList(getInput(0).getVar()),
                   Var.NONE);
       }
-      case ARRAY_INSERT_IMM: {
+      case ARR_STORE: {
         Var mem = getInput(1).getVar();
         // Increment reference to member
         return Pair.create(Arrays.asList(mem), Var.NONE);
       }
-      case ARRAY_DEREF_INSERT_IMM: {
+      case ARR_COPY_IN_IMM: {
         // Increment reference to member ref
         // Increment writers count on array
         Var mem = getInput(1).getVar();
         return Pair.create(Arrays.asList(mem),
                            Arrays.asList(getOutput(0)));
       }
-      case ARRAY_INSERT_FUTURE: 
-      case ARRAY_DEREF_INSERT_FUTURE: {
+      case ARR_STORE_FUTURE: 
+      case ARR_COPY_IN_FUTURE: {
         // Increment reference to member/member ref and index future
         // Increment writers count on array
         return Pair.create(Arrays.asList(
                 getInput(0).getVar(), getInput(1).getVar()),
                 Arrays.asList(getOutput(0)));
       }
-      case ARRAYREF_INSERT_IMM:
-      case ARRAYREF_DEREF_INSERT_IMM:
-      case ARRAYREF_INSERT_FUTURE: 
-      case ARRAYREF_DEREF_INSERT_FUTURE: {
+      case AREF_STORE_IMM:
+      case AREF_COPY_IN_IMM:
+      case AREF_STORE_FUTURE: 
+      case AREF_COPY_IN_FUTURE: {
         Arg ix = getInput(0);
         Var mem = getInput(1).getVar();
         Var outerArr = getOutput(0);
@@ -1851,18 +1849,18 @@ public class TurbineOp extends Instruction {
         List<Var> readers = new ArrayList<Var>(3);
         readers.add(mem);
         readers.add(arrayRef);
-        if (op == Opcode.ARRAYREF_INSERT_FUTURE ||
-            op == Opcode.ARRAYREF_DEREF_INSERT_FUTURE) {
+        if (op == Opcode.AREF_STORE_FUTURE ||
+            op == Opcode.AREF_COPY_IN_FUTURE) {
           readers.add(ix.getVar());
         } else {
-          assert(op == Opcode.ARRAYREF_INSERT_IMM ||
-                 op == Opcode.ARRAYREF_DEREF_INSERT_IMM);
+          assert(op == Opcode.AREF_STORE_IMM ||
+                 op == Opcode.AREF_COPY_IN_IMM);
         }
         // Maintain slots on outer array
         return Pair.create(readers,
                 Arrays.asList(outerArr));
       }
-      case ARRAY_CREATE_NESTED_FUTURE: {
+      case ARR_CREATE_NESTED_FUTURE: {
         Var srcArray = getOutput(1);
         Var ix = getInput(0).getVar();
         return Pair.create(ix.asList(), srcArray.asList());
@@ -1871,18 +1869,18 @@ public class TurbineOp extends Instruction {
         return Pair.create(Arrays.asList(getInput(0).getVar()),
                            Var.NONE);
       }
-      case ARRAYREF_CREATE_NESTED_IMM:
-      case ARRAYREF_CREATE_NESTED_FUTURE: {
+      case AREF_CREATE_NESTED_IMM:
+      case AREF_CREATE_NESTED_FUTURE: {
         Var outerArr = getOutput(1);
         assert(Types.isArray(outerArr.type())): outerArr + " " + this;
         assert(Types.isArray(outerArr.type().memberType()));
         Var arr = getOutput(2);
         Arg ixArg = getInput(0);
         List<Var> readVars;
-        if (op == Opcode.ARRAYREF_CREATE_NESTED_IMM) {
+        if (op == Opcode.AREF_CREATE_NESTED_IMM) {
           readVars = Arrays.asList(arr);
         } else {
-          assert(op == Opcode.ARRAYREF_CREATE_NESTED_FUTURE);
+          assert(op == Opcode.AREF_CREATE_NESTED_FUTURE);
           readVars = Arrays.asList(arr, ixArg.getVar());
         }
         return Pair.create(readVars,
@@ -1933,17 +1931,17 @@ public class TurbineOp extends Instruction {
         }
         break;
       }
-      case ARRAY_INSERT_IMM:
-      case ARRAY_DEREF_INSERT_IMM: 
-      case ARRAY_INSERT_FUTURE: 
-      case ARRAY_DEREF_INSERT_FUTURE: {
+      case ARR_STORE:
+      case ARR_COPY_IN_IMM: 
+      case ARR_STORE_FUTURE: 
+      case ARR_COPY_IN_FUTURE: {
         Var arr = getOutput(0);
         if (type == RefCountType.WRITERS) {
           long amt = increments.getCount(arr);
           if (amt < 0) {
             assert(getInputs().size() == 2);
             // All except the fully immediate version decrement by 1 by default
-            int defaultDecr = op == Opcode.ARRAY_INSERT_IMM ? 0 : 1;
+            int defaultDecr = op == Opcode.ARR_STORE ? 0 : 1;
             Arg decrArg = Arg.createIntLit(amt * -1 + defaultDecr);
             this.inputs = Arrays.asList(getInput(0), getInput(1), decrArg);
             return arr.asList();
@@ -1951,7 +1949,7 @@ public class TurbineOp extends Instruction {
         }
         break;
       }
-      case ARRAY_CREATE_NESTED_IMM:
+      case ARR_CREATE_NESTED_IMM:
       case ARRAY_CREATE_BAG: {
         // Instruction can give additional refcounts back
         // TODO: don't allow piggybacking r/w refcounts yet since that might
@@ -2012,13 +2010,13 @@ public class TurbineOp extends Instruction {
   
   public Pair<Var, Var> getComponentAlias() {
     switch (op) {
-      case ARRAY_CREATE_NESTED_IMM:
-      case ARRAY_CREATE_NESTED_FUTURE:
+      case ARR_CREATE_NESTED_IMM:
+      case ARR_CREATE_NESTED_FUTURE:
       case ARRAY_CREATE_BAG:
         // From inner object to immediately enclosing
         return Pair.create(getOutput(0), getOutput(1));
-      case ARRAYREF_CREATE_NESTED_IMM:
-      case ARRAYREF_CREATE_NESTED_FUTURE:
+      case AREF_CREATE_NESTED_IMM:
+      case AREF_CREATE_NESTED_FUTURE:
         // From inner array to immediately enclosing
         return Pair.create(getOutput(0), getOutput(2));
       case LOAD_REF:
@@ -2041,10 +2039,10 @@ public class TurbineOp extends Instruction {
 
   public boolean isIdempotent() {
     switch (op) {
-      case ARRAY_CREATE_NESTED_FUTURE:
-      case ARRAY_CREATE_NESTED_IMM:
-      case ARRAYREF_CREATE_NESTED_FUTURE:
-      case ARRAYREF_CREATE_NESTED_IMM:
+      case ARR_CREATE_NESTED_FUTURE:
+      case ARR_CREATE_NESTED_IMM:
+      case AREF_CREATE_NESTED_FUTURE:
+      case AREF_CREATE_NESTED_IMM:
       case ARRAY_CREATE_BAG:
         return true;
       default:
