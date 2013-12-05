@@ -3,8 +3,11 @@ package exm.stc.frontend;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map.Entry;
 
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.TaskProp.TaskPropKey;
+import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.RefType;
@@ -61,6 +64,14 @@ public class VarRepr {
       result.add(backendArg(v));
     }
     return result;
+  }
+  
+  public static TaskProps backendProps(TaskProps props) {
+    TaskProps res = new TaskProps();
+    for (Entry<TaskPropKey, Arg> e: props.entrySet()) {
+      res.put(e.getKey(), backendArg(e.getValue()));
+    }
+    return res;
   }
   
   /**

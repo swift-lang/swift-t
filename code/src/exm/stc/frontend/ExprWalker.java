@@ -319,12 +319,14 @@ public class ExprWalker {
       } else {
         result = outVar;
       }
-      backend.structRefLookup(result, structVar, fieldName);
+      backend.structRefLookup(VarRepr.backendVar(result),
+                              VarRepr.backendVar(structVar), fieldName);
     } else {
       assert(Types.isStruct(structVar.type()));
       result = varCreator.createStructFieldTmp(context, 
           rootStruct, memType, fieldPath, Alloc.ALIAS);
-      backend.structLookup(result, structVar, fieldName);
+      backend.structLookup(VarRepr.backendVar(result), 
+                           VarRepr.backendVar(structVar), fieldName);
     }
 
     // If necessary, copy result to outVar
@@ -650,36 +652,38 @@ public class ExprWalker {
     }
 
     // The direct result of the array lookup
-    Var lookupIntoVar;
+    Var lookupDst;
     boolean doDereference;
     if (memberType.equals(oVar.type())) {
       // Need to dereference into temporary var
-      lookupIntoVar = varCreator.createTmp(context, 
+      lookupDst = varCreator.createTmp(context, 
               new RefType(memberType));
       doDereference = true;
     } else {
       assert(Types.isAssignableRefTo(oVar.type(), memberType));
-      lookupIntoVar = oVar;
+      lookupDst = oVar;
       doDereference = false;
     }
 
     Long arrayIndex = Literals.extractIntLit(context, 
                                           arrayIndexTree);
+    Var backendArray = VarRepr.backendVar(arrayVar);
+    Var backendLookupDst = VarRepr.backendVar(lookupDst);
     if (arrayIndex != null) {
       // Handle the special case where the index is a constant.
-      backend.arrayLookupRefImm(lookupIntoVar, arrayVar, 
-          Arg.createIntLit(arrayIndex), Types.isArrayRef(arrType));
+      backend.arrayLookupRefImm(backendLookupDst,
+          backendArray, Arg.createIntLit(arrayIndex), Types.isArrayRef(arrType));
     } else {
       // Handle the general case where the index must be computed
       Var indexVar = eval(context, arrayIndexTree,
                           Types.arrayKeyType(arrayVar), false, renames);
-      backend.arrayLookupFuture(lookupIntoVar, arrayVar, indexVar,
-                                Types.isArrayRef(arrType));
+      backend.arrayLookupFuture(backendLookupDst, backendArray,
+            VarRepr.backendVar(indexVar), Types.isArrayRef(arrType));
     }
     // Do the dereference down here so that it is generated in a more logical
     // order
     if (doDereference) {
-      dereference(context, oVar, lookupIntoVar);
+      dereference(context, VarRepr.backendVar(oVar), backendLookupDst);
     }
   }
 
@@ -819,7 +823,8 @@ public class ExprWalker {
     if (impl == null) {
       throw new STCRuntimeError("could not find implementation for " + fn);
     }
-    backend.builtinFunctionCall(impl, inArgs, Arrays.asList(oVar));
+    backend.builtinFunctionCall(impl, VarRepr.backendVars(inArgs),
+                                VarRepr.backendVars(oVar));
   }
 
   /**
@@ -851,21 +856,23 @@ public class ExprWalker {
     if (ae.hasKeys()) {
       // If user specified keys, they will be futures so we can't use
       // arrayBuild operation.
-      List<Var> keyFutures = new ArrayList<Var>(ae.getElemCount());
+      List<Var> backendKeys = new ArrayList<Var>(ae.getElemCount());
       for (SwiftAST key: ae.getKeys()) {
-        keyFutures.add(eval(context, key, keyType, false, renames));
+        backendKeys.add(VarRepr.backendVar(eval(context, key, keyType, false, renames)));
       }
       for (int i = 0; i < ae.getElemCount(); i++) {
-        backend.arrayInsertFuture(oVar, keyFutures.get(i), vals.get(i));
+        backend.arrayInsertFuture(VarRepr.backendVar(oVar), backendKeys.get(i),
+                                  VarRepr.backendVar(vals.get(i)));
       }
     } else {
       // We know keys ahead of time, use arrayBuild operation
       assert(Types.isInt(keyType));
-      List<Arg> keys = new ArrayList<Arg>(ae.getElemCount());
+      List<Arg> backendKeys = new ArrayList<Arg>(ae.getElemCount());
       for (int i = 0; i < ae.getElemCount(); i++) {
-        keys.add(Arg.createIntLit(i));
+        backendKeys.add(Arg.createIntLit(i));
       }
-      backend.arrayBuild(oVar, keys, vals);
+      backend.arrayBuild(VarRepr.backendVar(oVar), backendKeys,
+                         VarRepr.backendVars(vals));
     }
     
   }
@@ -914,7 +921,8 @@ public class ExprWalker {
       TaskProps waitProps = props.filter(TaskPropKey.PRIORITY);
       backend.startWaitStatement( fc.constructName("call-" + function),
            VarRepr.backendVars(waitVars), WaitMode.WAIT_ONLY,
-           false, false, TaskMode.LOCAL_CONTROL, waitProps);
+           false, false, TaskMode.LOCAL_CONTROL,
+           VarRepr.backendProps(waitProps));
 
       assert(waitVars.size() == derefVars.size());
       // Generate code to fetch actual array IDs  inside
@@ -936,10 +944,11 @@ public class ExprWalker {
 
     if (checkpointed) {
 
-      Var lookupEnabled = varCreator.createTmpLocalVal(context, Types.V_BOOL);
+      Var lookupEnabled = VarRepr.backendVar(
+                varCreator.createTmpLocalVal(context, Types.V_BOOL));
       backend.checkpointLookupEnabled(lookupEnabled);
       
-      backend.startIfStatement(VarRepr.backendArg(lookupEnabled), true);
+      backend.startIfStatement(lookupEnabled.asArg(), true);
       checkpointedFunctionCall(context, function, concrete, oList,
                                realIList, props, true);
       backend.startElseBlock();
@@ -1160,9 +1169,11 @@ public class ExprWalker {
     List<Var> backendIList = VarRepr.backendVars(iList);
     List<Var> backendOList = VarRepr.backendVars(oList);
     
+    TaskProps backendProps = VarRepr.backendProps(props);
     if (context.isIntrinsic(function)) {
       IntrinsicFunction intF = context.lookupIntrinsic(function);
-      backend.intrinsicCall(intF, backendIList, backendOList, props);
+      backend.intrinsicCall(intF, backendIList, backendOList,
+                            backendProps);
     } else if (context.hasFunctionProp(function, FnProp.BUILTIN)) {
       if (ForeignFunctions.hasOpEquiv(function)) {
         assert(oList.size() <= 1);
@@ -1170,9 +1181,11 @@ public class ExprWalker {
                    null : backendOList.get(0));
 
         backend.asyncOp(ForeignFunctions.getOpEquiv(function), backendOut, 
-                        Arg.fromVarList(backendIList), props);
+                        Arg.fromVarList(backendIList),
+                        backendProps);
       } else {
-        backend.builtinFunctionCall(function, backendIList, backendOList, props);
+        backend.builtinFunctionCall(function, backendIList, backendOList,
+                                    backendProps);
       }
     } else if (context.hasFunctionProp(function, FnProp.COMPOSITE)) {
       TaskMode mode;
@@ -1182,10 +1195,10 @@ public class ExprWalker {
         mode = TaskMode.CONTROL;
       }
       backend.functionCall(function, Var.asArgList(backendIList), backendOList,
-                           mode, props);
+                           mode, backendProps);
     } else {
       backendCallWrapped(context, function, concrete, backendOList,
-                         backendIList, props);
+                         backendIList, backendProps);
     }
   }
 
@@ -1243,7 +1256,8 @@ public class ExprWalker {
     // Only priority property is used directly in sync instruction,
     // but other properties are useful to have here so that the optimizer
     // can replace instruction with local version and correct props
-    backend.functionCall(wrapperFnName, realInputs, backendOList, mode, props);
+    backend.functionCall(wrapperFnName, realInputs, backendOList, mode,
+                         VarRepr.backendProps(props));
   }
 
 
@@ -1317,7 +1331,8 @@ public class ExprWalker {
   }
 
   /**
-   * TODO: optimized copy?
+   * TODO: optimized copy where we emit a single instruction that
+   * is later expanded to the loop?
    * @param context
    * @param dst
    * @param src
@@ -1348,14 +1363,18 @@ public class ExprWalker {
         context.getFunctionContext().constructName(dst.name() + "-copy-wait"),
         VarRepr.backendVar(src).asList(), WaitMode.WAIT_ONLY,
         false, false, TaskMode.LOCAL);
+    Var backendSrc = VarRepr.backendVar(src);
+    Var backendDst = VarRepr.backendVar(dst);
+    Var backendMember = VarRepr.backendVar(member);
+    Var backendIx = VarRepr.backendVar(ix);
     backend.startForeachLoop(
             context.getFunctionContext().constructName(dst.name() + "-copy"),
-            src, member, ix, -1, 1, true);
+            backendSrc, backendMember, backendIx, -1, 1, true);
     if (Types.isArray(src)) {
-      backend.arrayInsertImm(dst, ix.asArg(), member);
+      backend.arrayInsertImm(backendDst, backendIx.asArg(), backendMember);
     } else {
       assert(Types.isBag(src));
-      backend.bagInsert(dst, member);
+      backend.bagInsert(backendDst, backendMember);
     }
     backend.endForeachLoop();
     backend.endWaitStatement();

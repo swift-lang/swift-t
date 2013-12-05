@@ -123,7 +123,8 @@ public class VarCreator {
         } else {
           initialiseVariable(context, tmp);
         }
-        backend.structInitField(structToInit, f.getName(), tmp);
+        backend.structInitField(VarRepr.backendVar(structToInit), f.getName(),
+                                VarRepr.backendVar(tmp));
         path.pop();
       }
     }

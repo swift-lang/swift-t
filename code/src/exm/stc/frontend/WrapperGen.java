@@ -233,9 +233,9 @@ public class WrapperGen {
     checkInlineTclTypes(context, wrapper.function, concrete, true);
     
     backend.generateWrappedBuiltin(chosenName, wrapper.function,
-            concrete, concreteOut,
-            concreteIn, wrapper.taskMode, wrapper.isParallel,
-            wrapper.isTargetable);
+          VarRepr.backendFnType(concrete), VarRepr.backendVars(concreteOut),
+          VarRepr.backendVars(concreteIn), wrapper.taskMode, wrapper.isParallel,
+          wrapper.isTargetable);
     
     // Save for later use
     GeneratedWrapper genWrapper = new GeneratedWrapper(chosenName, concrete);
