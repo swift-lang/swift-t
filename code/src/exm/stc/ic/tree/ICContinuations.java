@@ -40,6 +40,7 @@ import exm.stc.common.lang.Arg.ArgKind;
 import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.PassedVar;
+import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
@@ -1652,10 +1653,8 @@ public class ICContinuations {
       if (!recursive) {
         return false;
       }
-      if (Types.isPrimFuture(wv.type())) {
-        return false;
-      }
-      return true;
+      // Check if we actually need recursion
+      return RefCounting.recursiveClosePossible(wv);
     }
 
     @Override

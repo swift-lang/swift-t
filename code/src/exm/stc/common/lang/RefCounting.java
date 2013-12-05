@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Types.Typed;
 import exm.stc.common.lang.Var.DefType;
 
 public class RefCounting {
@@ -116,4 +117,25 @@ public class RefCounting {
     }
     return res;
   }
+  
+  
+  /**
+   * @param wv
+   * @return true if there is a distinction between closing and recursive
+   *              closing for variable.  Note: this errs on the side of saying
+   *              true.
+   */
+  public static boolean recursiveClosePossible(Typed typed) {
+    if (Types.isPrimFuture(typed) || Types.isPrimUpdateable(typed)) {
+      return false;
+    } else if (Types.isContainer(typed)) {
+      // If it's a reference to another variable, recursive close is possible
+      return Types.isRef(Types.containerElemType(typed));
+    } else if (Types.isRef(typed)) {
+      return true;
+    }
+    // Err on side of saying true
+    return true;
+  }
+
 }
