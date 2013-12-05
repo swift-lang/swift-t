@@ -1857,27 +1857,6 @@ public class Types {
     }
   }
   
-  /**
-   * @param member
-   * @param arr
-   * @return true if member is a reference to the member type of arr,
-   *          false if it is the same as member type of arr
-   * @throws STCRuntimeError if member can't be a member or ref to 
-   *                                      member of array
-   */
-  public static boolean isMemberReference(Typed member,
-                                          Typed arr) 
-          throws STCRuntimeError{
-    Type memberType = containerElemType(arr);
-    if (memberType.equals(member.type())) {
-      return false;
-    } else if (isRefTo(member, memberType)) {
-      return true;
-    }
-    throw new STCRuntimeError("Inconsistent types: array of type " 
-        + arr.type() + " with member of type " + member.type());
-  }
-
   public static Type arrayKeyType(Typed arr) {
     if (isArray(arr) || isArrayLocal(arr)) {
       return ((ArrayType)arr.type().baseType()).keyType;

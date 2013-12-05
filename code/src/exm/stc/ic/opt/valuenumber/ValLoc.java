@@ -160,11 +160,8 @@ public class ValLoc {
   public static ValLoc makeArrayResult(Var arr, Arg ix,
           Arg contents, boolean valResult, IsAssign isAssign) {
     ArgCV val;
-    // TODO: how to handle assigns to array references?
-    //       Will need to make sure that everything is respected if
-    //       we created a dereferenced one.
     if (valResult) {
-      assert(Types.isElemValType(contents, arr)) :
+      assert(Types.isElemValType(arr, contents)) :
             "not member val: " + contents + " " + arr;
       val = ComputedValue.arrayValCV(arr, ix);
     } else {
@@ -176,15 +173,15 @@ public class ValLoc {
   }
   
   public static ValLoc makeCreateNestedResult(Var arr, Arg ix, Var contents,
-      boolean refResult) {
+      boolean nonRefResult) {
     Arg contentsArg = contents == null ? null : Arg.createVar(contents);
     ArgCV val;
-    if (refResult) {
-      val = ComputedValue.arrayRefNestedCV(arr, ix);
-    } else {
+    if (nonRefResult) {
       assert(contents == null || Types.isElemType(arr, contents)) :
-            "not member: " + contents + " " + arr;
+        "not member: " + contents + " " + arr;
       val = ComputedValue.arrayNestedCV(arr, ix);
+    } else {
+      val = ComputedValue.arrayRefNestedCV(arr, ix);
     }
     return ValLoc.build(val, contentsArg, Closed.MAYBE_NOT, IsAssign.NO);
   }

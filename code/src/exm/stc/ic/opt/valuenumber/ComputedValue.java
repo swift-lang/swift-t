@@ -268,7 +268,7 @@ public class ComputedValue<T> {
 
   public static ArgCV arrayRefNestedCV(Var arr, Arg ix) {
     return new ArgCV(Opcode.FAKE, 
-        ComputedValue.REF_TO_ARRAY_NESTED, Arrays.asList(arr.asArg(), ix));
+        ComputedValue.ARRAY_NESTED_REF, Arrays.asList(arr.asArg(), ix));
   }
 
   public static ArgCV arrayNestedCV(Var arr, Arg ix) {
@@ -296,7 +296,7 @@ public class ComputedValue<T> {
   
   public boolean isArrayMemberRef() {
     return (op == Opcode.FAKE && 
-          subop.equals(ComputedValue.REF_TO_ARRAY_NESTED)) ||
+          subop.equals(ComputedValue.ARRAY_NESTED_REF)) ||
         (op == Opcode.FAKE &&
           subop.equals(ComputedValue.ARRAY_ELEM_VALUE));
   }
@@ -308,7 +308,7 @@ public class ComputedValue<T> {
   public static ArgCV derefArrayMemberRef(ArgCV memRef) {
     assert(memRef.isArrayMemberRef());
     Object newSubop;
-    if (memRef.subop.equals(REF_TO_ARRAY_NESTED)) {
+    if (memRef.subop.equals(ARRAY_NESTED_REF)) {
       newSubop = ARRAY_NESTED;
     } else {
       assert(memRef.subop.equals(ARRAY_ELEM_VALUE));
@@ -410,7 +410,7 @@ public class ComputedValue<T> {
   public static final String ARRAY_ELEM_COPY = "array_elem_copy";
   public static final String ARRAY_ELEM_VALUE = "array_elem_value";
   public static final String ARRAY_NESTED = "autocreated_nested";
-  public static final String REF_TO_ARRAY_NESTED = "ref_to_autocreated_nested";
+  public static final String ARRAY_NESTED_REF = "autocreated_nested_ref";
   public static final String COPY_OF = "copy_of";
   public static final String ALIAS_OF = "alias_of";
 

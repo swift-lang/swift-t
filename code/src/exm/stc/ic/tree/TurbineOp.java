@@ -1624,12 +1624,12 @@ public class TurbineOp extends Instruction {
         return lookup.asList(); 
       }
       case ARR_STORE:
-      case ARR_COPY_IN_IMM:
       case ARR_STORE_FUTURE:
-      case ARR_COPY_IN_FUTURE:
       case AREF_STORE_IMM:
-      case AREF_COPY_IN_IMM: 
       case AREF_STORE_FUTURE:
+      case ARR_COPY_IN_IMM:
+      case ARR_COPY_IN_FUTURE:
+      case AREF_COPY_IN_IMM: 
       case AREF_COPY_IN_FUTURE: {
         // STORE <out array> <in index> <in var>
         // STORE  <in outer array> <out array> <in index> <in var>
@@ -1644,12 +1644,9 @@ public class TurbineOp extends Instruction {
         }
         Arg ix = getInput(0);
         Arg member = getInput(1);
-        boolean insertingRef = (op == Opcode.AREF_COPY_IN_FUTURE ||
-                                op == Opcode.AREF_COPY_IN_IMM ||
-                                op == Opcode.ARR_COPY_IN_FUTURE ||
-                                op == Opcode.ARR_COPY_IN_IMM);
+        boolean insertingVal = isArrayValStore(op);
         return Arrays.asList(ValLoc.makeArrayResult(arr, ix, member,
-                                       insertingRef, IsAssign.TO_VALUE));
+                                       insertingVal, IsAssign.TO_VALUE));
       }
       case ARRAY_BUILD: {
         Var arr = getOutput(0);
@@ -1663,7 +1660,7 @@ public class TurbineOp extends Instruction {
         for (int i = 0; i < elemCount; i++) {
           Arg key = getInput(2 * i);
           Arg val = getInput(2 * i + 1);
-          res.add(ValLoc.makeArrayResult(arr, key, val, false,
+          res.add(ValLoc.makeArrayResult(arr, key, val, true,
                                          IsAssign.TO_VALUE));
         }
         
@@ -1685,14 +1682,12 @@ public class TurbineOp extends Instruction {
         if (op == Opcode.ARR_RETRIEVE) {
           // This just retrieves the item immediately
           return ValLoc.makeArrayResult(arr, ix, contents.asArg(),
-                                         false, IsAssign.NO).asList();
+                                         true, IsAssign.NO).asList();
         } else {
-          assert (Types.isMemberReference(contents, arr));
-          List<ValLoc> res = new ArrayList<ValLoc>();
+          assert (Types.isElemType(arr, contents));
           // Will assign the reference
-          res.add(ValLoc.makeArrayResult(arr, ix, contents.asArg(), true,
-                                         IsAssign.TO_LOCATION));
-          return res;
+          return ValLoc.makeArrayResult(arr, ix, contents.asArg(), false,
+                                         IsAssign.TO_LOCATION).asList();
         }
       }
       case ARR_CREATE_NESTED_FUTURE:
@@ -1721,9 +1716,9 @@ public class TurbineOp extends Instruction {
         // Mark as not substitutable since this op may have
         // side-effect of creating array
         res.add(ValLoc.makeArrayResult(arr, ix, nestedArr.asArg(),
-                                              returnsRef, IsAssign.NO));
+                                              !returnsRef, IsAssign.NO));
         res.add(ValLoc.makeCreateNestedResult(arr, ix, nestedArr,
-            returnsRef));
+                                              !returnsRef));
         return res;
       }
       case COPY_REF: {
@@ -1755,7 +1750,18 @@ public class TurbineOp extends Instruction {
         return null;
     }
   }
-  
+
+  private boolean isArrayValStore(Opcode op) {
+    switch (op) {
+      case ARR_STORE:
+      case ARR_STORE_FUTURE:
+      case AREF_STORE_IMM:
+      case AREF_STORE_FUTURE:
+        return true;
+      default:
+        return false;
+    }
+  }
   /**
    * Create the "standard" computed value
    * assume 1 output arg
