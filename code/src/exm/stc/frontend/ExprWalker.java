@@ -1381,10 +1381,10 @@ public class ExprWalker {
             context.getFunctionContext().constructName(dst.name() + "-copy"),
             backendSrc, backendMember, backendIx, -1, 1, true);
     if (Types.isArray(src)) {
-      backend.arrayStore(backendDst, backendIx.asArg(), backendMember);
+      backend.arrayStore(backendDst, backendIx.asArg(), backendMember.asArg());
     } else {
       assert(Types.isBag(src));
-      backend.bagInsert(backendDst, backendMember);
+      backend.bagInsert(backendDst, backendMember.asArg());
     }
     backend.endForeachLoop();
     backend.endWaitStatement();

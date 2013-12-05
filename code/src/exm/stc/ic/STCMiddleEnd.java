@@ -472,14 +472,14 @@ public class STCMiddleEnd {
           TurbineOp.arrayRefCopyOutFuture(oVar, arrayVar, indexVar));
   }
 
-  public void arrayStore(Var array, Arg ix, Var member) {
+  public void arrayStore(Var array, Arg ix, Arg member) {
     assert(Types.isArray(array.type()));
     assert(Types.isArrayKeyVal(array, ix));
     assert(Types.isElemValType(array, member)) : member + " " + array;
     currBlock().addInstruction(TurbineOp.arrayStore(array, ix, member));
   }
 
-  public void arrayStoreFuture(Var array, Var ixVar, Var member) {
+  public void arrayStoreFuture(Var array, Var ixVar, Arg member) {
     assert(Types.isArray(array.type()));
     assert(Types.isArrayKeyFuture(array, ixVar));
     assert(Types.isElemType(array, member)) : member + " " + array;
@@ -487,7 +487,7 @@ public class STCMiddleEnd {
   }
 
   public void arrayRefStoreImm(Var outerArray, Var array,
-                                Arg ix, Var member) {
+                                Arg ix, Arg member) {
     assert(Types.isArrayRef(array.type()));
     assert(Types.isArrayKeyVal(array, ix));
     assert(Types.isElemType(array, member)) : member + " " + array;
@@ -496,7 +496,7 @@ public class STCMiddleEnd {
   }
 
   public void arrayRefStoreFuture(Var outerArray, Var array,
-                                   Var ixVar, Var member) {
+                                   Var ixVar, Arg member) {
     assert(Types.isArrayRef(array.type()));
     assert(Types.isArrayKeyFuture(array, ixVar));
     assert(Types.isElemType(array, member)) : member + " " + array;
@@ -599,7 +599,7 @@ public class STCMiddleEnd {
                                       arrayResult, outerArr, array, ix));
   }
   
-  public void bagInsert(Var bag, Var elem) {
+  public void bagInsert(Var bag, Arg elem) {
     assert(Types.isBag(bag));
     assert(Types.isBagElem(bag, elem));
     currBlock().addInstruction(TurbineOp.bagInsert(bag, elem, Arg.ZERO));

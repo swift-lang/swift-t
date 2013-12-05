@@ -180,7 +180,7 @@ public class TurbineOp extends Instruction {
       break;
     }
     case BAG_INSERT:
-      gen.bagInsert(getOutput(0), getInput(0).getVar(), getInput(1));
+      gen.bagInsert(getOutput(0), getInput(0), getInput(1));
       break;
     case STRUCT_LOOKUP:
       gen.structLookup(getOutput(0), getInput(0).getVar(),
@@ -357,32 +357,30 @@ public class TurbineOp extends Instruction {
   }
 
   public static Instruction arrayStore(Var array,
-      Arg ix, Var member) {
+      Arg ix, Arg member) {
     assert(Types.isArray(array));
     assert(Types.isArrayKeyVal(array, ix));
     assert(Types.isElemType(array, member));
-    return new TurbineOp(Opcode.ARR_STORE,
-                          array, ix, member.asArg());
+    return new TurbineOp(Opcode.ARR_STORE, array, ix, member);
   }
 
   public static Instruction arrayStoreFuture(Var array,
-      Var ix, Var member) {
+      Var ix, Arg member) {
     return new TurbineOp(Opcode.ARR_STORE_FUTURE,
-            array, ix.asArg(),
-            member.asArg());
+            array, ix.asArg(), member);
   }
 
   public static Instruction arrayRefStoreImm(Var outerArray,
-      Var array, Arg ix, Var member) {
+      Var array, Arg ix, Arg member) {
     return new TurbineOp(Opcode.AREF_STORE_IMM,
         Arrays.asList(outerArray, array),
-        ix, member.asArg());
+        ix, member);
   }
 
   public static Instruction arrayRefStoreFuture(Var outerArray,
-      Var array, Var ix, Var member) {
+      Var array, Var ix, Arg member) {
     return new TurbineOp(Opcode.AREF_STORE_FUTURE,
-        Arrays.asList(outerArray, array), ix.asArg(), member.asArg());
+        Arrays.asList(outerArray, array), ix.asArg(), member);
   }
 
   public static Instruction arrayCopyInImm(Var array,
@@ -391,10 +389,9 @@ public class TurbineOp extends Instruction {
                          array, ix, member.asArg());
   }
 
-  public static Instruction arrayCopyInFuture(Var array,
-      Var ix, Var member) {
-    return new TurbineOp(Opcode.ARR_COPY_IN_FUTURE,
-            array, ix.asArg(), member.asArg());
+  public static Instruction arrayCopyInFuture(Var array, Var ix, Var member) {
+    return new TurbineOp(Opcode.ARR_COPY_IN_FUTURE, array, ix.asArg(),
+                          member.asArg());
   }
 
   public static Instruction arrayRefCopyInImm(Var outerArray,
@@ -423,10 +420,10 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.ARRAY_BUILD, array.asList(), inputs);
   }
 
-  public static Instruction bagInsert(Var bag, Var elem, Arg writersDecr) {
+  public static Instruction bagInsert(Var bag, Arg elem, Arg writersDecr) {
     assert(Types.isBagElem(bag, elem));
     assert(writersDecr.isImmediateInt());
-    return new TurbineOp(Opcode.BAG_INSERT, bag, elem.asArg(), writersDecr);
+    return new TurbineOp(Opcode.BAG_INSERT, bag, elem, writersDecr);
   }
   
   public static Instruction structInitField(Var structVar,
@@ -1130,7 +1127,7 @@ public class TurbineOp extends Instruction {
     }
     case ARR_COPY_IN_IMM: {
       assert(values.size() == 1);
-      Var derefMember = values.get(0).fetched.getVar();
+      Arg derefMember = values.get(0).fetched;
       return new MakeImmChange(
           arrayStore(getOutput(0), getInput(0), derefMember));
     }
@@ -1138,14 +1135,14 @@ public class TurbineOp extends Instruction {
       assert(values.size() == 1);
       Arg fetchedIx = values.get(0).fetched;
       return new MakeImmChange(
-          arrayStore(getOutput(0), fetchedIx, getInput(1).getVar()));
+          arrayStore(getOutput(0), fetchedIx, getInput(1)));
     }
     case ARR_COPY_IN_FUTURE: {
       Var arr = getOutput(0);
       Var ix = getInput(0).getVar();
       Var mem = getInput(1).getVar();
       Arg newIx = Fetched.findFetched(values, ix);
-      Var newMem = Fetched.findFetchedVar(values, mem);
+      Arg newMem = Fetched.findFetched(values, mem);
       Instruction inst;
       if (newIx != null && newMem != null) {
         inst = arrayStore(arr, newIx, newMem);
@@ -1153,7 +1150,7 @@ public class TurbineOp extends Instruction {
         inst = arrayCopyInImm(arr, newIx, mem); 
       } else {
         assert(newIx == null && newMem != null);
-        inst = arrayCopyInFuture(arr, ix, newMem);
+        inst = arrayStoreFuture(arr, ix, newMem);
       }
       return new MakeImmChange(inst);
     }
@@ -1161,8 +1158,7 @@ public class TurbineOp extends Instruction {
       assert(values.size() == 1);
       Var newOut = values.get(0).fetched.getVar();
       // Switch from ref to plain array
-      return new MakeImmChange(arrayStore(
-          newOut, getInput(0), getInput(1).getVar()));
+      return new MakeImmChange(arrayStore(newOut, getInput(0), getInput(1)));
     }
     case AREF_COPY_IN_IMM: {
       Var outerArrRef = getOutput(0);
@@ -1170,7 +1166,7 @@ public class TurbineOp extends Instruction {
       Arg ix = getInput(0);
       Var mem = getInput(1).getVar();
       Var newArr = Fetched.findFetchedVar(values, innerArrRef);
-      Var newMem = Fetched.findFetchedVar(values, mem);
+      Arg newMem = Fetched.findFetched(values, mem);
       Instruction newI;
       if (newArr != null && newMem != null) {
         newI = arrayStore(newArr, ix, newMem);
@@ -1178,7 +1174,7 @@ public class TurbineOp extends Instruction {
         newI = arrayCopyInImm(newArr, ix, mem);
       } else {
         assert(newArr == null && newMem != null);
-        newI = arrayRefCopyInImm(outerArrRef, innerArrRef, ix, newMem);
+        newI = arrayRefStoreImm(outerArrRef, innerArrRef, ix, newMem);
       }
       
       return new MakeImmChange(newI);
@@ -1188,38 +1184,43 @@ public class TurbineOp extends Instruction {
       Var outerArr = getOutput(0);
       Var arrRef = getOutput(1);
       Var ix = getInput(0).getVar();
-      Var mem = getInput(1).getVar();
+      Arg mem = getInput(1);
       
       // Various combinations are possible
       Var newArr = Fetched.findFetchedVar(values, arrRef);
       Arg newIx = Fetched.findFetched(values, ix);
-      Var derefMem = Fetched.findFetchedVar(values, mem);
+      Arg derefMem = null;
+      if (mem.isVar()) {
+        Fetched.findFetched(values, mem.getVar());
+      }
       
       Instruction inst;
       if (derefMem != null || op == Opcode.AREF_STORE_FUTURE) {
-        if (derefMem != null) {
+        if (derefMem == null) {
           assert(op == Opcode.AREF_COPY_IN_FUTURE);
           // It was dereferenced
-          mem = derefMem;
+          derefMem = mem;
         }
         if (newArr != null && newIx != null) {
-          inst = arrayStore(newArr, newIx, mem);
+          inst = arrayStore(newArr, newIx, derefMem);
         } else if (newArr != null && newIx == null) {
-          inst = arrayCopyInFuture(newArr, ix, mem);
+          inst = arrayStoreFuture(newArr, ix, derefMem);
         } else if (newArr == null && newIx != null) {
-          inst = arrayRefCopyInImm(outerArr, arrRef, newIx, mem);
+          inst = arrayRefStoreImm(outerArr, arrRef, newIx, derefMem);
         } else {
-          inst = arrayRefCopyInFuture(outerArr, arrRef, ix, mem);
+          assert(newArr == null && newIx == null);
+          inst = arrayRefStoreFuture(outerArr, arrRef, ix, derefMem);
         }
       } else {
+        Var memVar = mem.getVar();
         assert(op == Opcode.AREF_COPY_IN_FUTURE);
         if (newArr != null && newIx != null) {
-          inst = arrayCopyInImm(newArr, newIx, mem);
+          inst = arrayCopyInImm(newArr, newIx, memVar);
         } else if (newArr != null && newIx == null) {
-          inst = arrayCopyInFuture(newArr, ix, mem);
+          inst = arrayCopyInFuture(newArr, ix, memVar);
         } else {
           assert(newArr == null && newIx != null);
-          inst = arrayRefCopyInImm(outerArr, arrRef, newIx, mem);
+          inst = arrayRefCopyInImm(outerArr, arrRef, newIx, memVar);
         }
       }
       return new MakeImmChange(inst);

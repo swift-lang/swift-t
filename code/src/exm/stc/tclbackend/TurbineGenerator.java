@@ -1639,10 +1639,10 @@ public class TurbineGenerator implements CompilerBackend {
   }
   
   @Override
-  public void bagInsert(Var bag, Var elem, Arg writersDecr) {
+  public void bagInsert(Var bag, Arg elem, Arg writersDecr) {
     assert(Types.isBagElem(bag, elem));
     pointAdd(Turbine.bagAppend(varToExpr(bag),
-          refRepresentationType(elem.type(), false), varToExpr(elem),
+          representationType(elem.type(), false), argToExpr(elem),
           argToExpr(writersDecr)));
   }
   

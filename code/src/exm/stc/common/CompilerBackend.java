@@ -303,7 +303,7 @@ public interface CompilerBackend {
   public void arrayRefCreateNestedImm(Var arrayResult,
       Var outerArray, Var array, Arg ix);
 
-  public void bagInsert(Var bag, Var elem, Arg writersDecr);
+  public void bagInsert(Var bag, Arg elem, Arg writersDecr);
 
   public void arrayCreateBag(Var bag, Var arr, Arg ix, Arg callerReadRefs,
                               Arg callerWriteRefs);

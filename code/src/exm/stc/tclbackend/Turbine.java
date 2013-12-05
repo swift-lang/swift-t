@@ -1052,7 +1052,7 @@ class Turbine {
 
 
   public static TclTree bagAppend(Value bag, TypeName elemType,
-                                  Value elem, Expression decr) {
+                                   Expression elem, Expression decr) {
     // Append to arbitrary subscript
     return new Command(adlbFn("insert"), bag, new TclString(""),
                        elem, elemType, decr);

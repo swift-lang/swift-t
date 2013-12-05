@@ -539,7 +539,7 @@ public class LValWalker {
       Var backendOuter = VarRepr.backendVar(outermostArray);
       if (rValIsVal) {
         backend.arrayRefStoreImm(backendOuter, backendArr, ixArg,
-                                  backendMember);
+                                  backendMember.asArg());
       } else {
         // This should only be run when assigning to nested array
         backend.arrayRefCopyInImm(backendOuter, backendArr,
@@ -548,7 +548,7 @@ public class LValWalker {
     } else {
       assert(!isArrayRef);
       if (rValIsVal) {
-        backend.arrayStore(backendArr, ixArg, backendMember);
+        backend.arrayStore(backendArr, ixArg, backendMember.asArg());
       } else {
         backend.arrayCopyInImm(backendArr, ixArg, backendMember);
       }
@@ -564,7 +564,7 @@ public class LValWalker {
       Var backendOuter = VarRepr.backendVar(outermostArray);
       if (rValIsVal) {
         backend.arrayRefStoreFuture(backendOuter, backendArr, 
-                                     backendIx, backendMember);
+                                     backendIx, backendMember.asArg());
       } else {
         backend.arrayRefCopyInFuture(backendOuter, backendArr, 
                                         backendIx, backendMember);
@@ -572,7 +572,7 @@ public class LValWalker {
     } else {
       assert(!isArrayRef);
       if (rValIsVal) {
-        backend.arrayStoreFuture(backendArr, backendIx, backendMember);
+        backend.arrayStoreFuture(backendArr, backendIx, backendMember.asArg());
       } else {
         backend.arrayCopyInFuture(backendArr, backendIx, backendMember);
       }
@@ -639,7 +639,7 @@ public class LValWalker {
     }
     
     // Do the actual insert
-    backend.bagInsert(VarRepr.backendVar(bag), VarRepr.backendVar(elem));
+    backend.bagInsert(VarRepr.backendVar(bag), VarRepr.backendArg(elem));
     
     if (openWait) {
       backend.endWaitStatement();
