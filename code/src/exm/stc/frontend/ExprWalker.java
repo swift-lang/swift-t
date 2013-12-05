@@ -654,15 +654,15 @@ public class ExprWalker {
     // The direct result of the array lookup
     Var lookupDst;
     boolean doDereference;
-    if (memberType.equals(oVar.type())) {
+    if (memberType.assignableTo(oVar.type())) {
+      lookupDst = oVar;
+      doDereference = false;
+    } else {
       // Need to dereference into temporary var
       lookupDst = varCreator.createTmp(context, 
               new RefType(memberType));
       doDereference = true;
-    } else {
-      assert(Types.isAssignableRefTo(oVar.type(), memberType));
-      lookupDst = oVar;
-      doDereference = false;
+      throw new STCRuntimeError("Dead branch?");
     }
 
     Long arrayIndex = Literals.extractIntLit(context, 

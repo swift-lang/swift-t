@@ -117,48 +117,9 @@ public class TypeChecker {
     case ExMParser.OPERATOR:
       return findOperatorResultType(context, tree);
     case ExMParser.STRUCT_LOAD:
-      ExprType structTypeL = findExprType(context, tree.child(0));
-      String fieldName = tree.child(1).getText();
-      if (structTypeL.elems() != 1) {
-        throw new TypeMismatchException(context,
-            "Trying to lookup field on return value of function with"
-                + " zero or multiple return values");
-      }
-      Type structType = structTypeL.get(0);
-      Type fieldType;
-      fieldType = findStructFieldType(context, fieldName, structType);
-      
-
-      if (fieldType == null) {
-        throw new TypeMismatchException(context, "No field called " + fieldName
-            + " in structure type " + ((StructType) structType).getTypeName());
-      }
-      if (Types.isStruct(structType)) {
-        // Look up immediately
-        return new ExprType(fieldType);
-      } else { assert(Types.isStructRef(structType));
-        // Will get copy
-        return new ExprType(VarRepr.fieldRepr(fieldType));
-      }
-
+      return structLoad(context, tree);
     case ExMParser.ARRAY_LOAD:
-      Type arrType = findSingleExprType(context, tree.child(0));
-
-      List<Type> resultAlts = new ArrayList<Type>();
-      for (Type arrAlt: UnionType.getAlternatives(arrType)) {
-        if (Types.isArray(arrAlt) || Types.isArrayRef(arrAlt)) {
-          Type memberType = Types.containerElemType(arrAlt);
-
-          // Depending on the member type of the array, the result type might be
-          // the actual member type, or a reference to the member type
-          resultAlts.add(VarRepr.fieldRepr(memberType));
-        } else {
-          throw new TypeMismatchException(context,
-              "Trying to index into non-array expression of type "
-                  + arrType.toString());
-        }
-      }
-      return new ExprType(UnionType.makeUnion(resultAlts));
+      return arrayLoad(context, tree);
     case ExMParser.ARRAY_RANGE: {
       // Check the arguments for type validity
       ArrayRange ar = ArrayRange.fromAST(context, tree);
@@ -175,6 +136,7 @@ public class TypeChecker {
           + LogHelper.tokName(token));
     }
   }
+
 
   /**
    * Find the type of a particular field
@@ -805,6 +767,55 @@ public class TypeChecker {
     return res;
   }
 
+  private static ExprType arrayLoad(Context context, SwiftAST tree)
+          throws UserException, TypeMismatchException {
+    Type arrType = findSingleExprType(context, tree.child(0));
+  
+    List<Type> resultAlts = new ArrayList<Type>();
+    for (Type arrAlt: UnionType.getAlternatives(arrType)) {
+      if (Types.isArray(arrAlt) || Types.isArrayRef(arrAlt)) {
+        Type memberType = Types.containerElemType(arrAlt);
+  
+        // Depending on the member type of the array, the result type might be
+        // the actual member type, or a reference to the member type
+        Type resultAlt = VarRepr.fieldRepr(memberType);
+        resultAlts.add(resultAlt);
+      } else {
+        throw new TypeMismatchException(context,
+            "Trying to index into non-array expression of type "
+                + arrType.toString());
+      }
+    }
+    return new ExprType(UnionType.makeUnion(resultAlts));
+  }
+
+  private static ExprType structLoad(Context context, SwiftAST tree)
+          throws UserException, TypeMismatchException {
+    ExprType structTypeL = findExprType(context, tree.child(0));
+    String fieldName = tree.child(1).getText();
+    if (structTypeL.elems() != 1) {
+      throw new TypeMismatchException(context,
+          "Trying to lookup field on return value of function with"
+              + " zero or multiple return values");
+    }
+    Type structType = structTypeL.get(0);
+    Type fieldType;
+    fieldType = findStructFieldType(context, fieldName, structType);
+    
+
+    if (fieldType == null) {
+      throw new TypeMismatchException(context, "No field called " + fieldName
+          + " in structure type " + ((StructType) structType).getTypeName());
+    }
+    if (Types.isStruct(structType)) {
+      // Look up immediately
+      return new ExprType(fieldType);
+    } else { assert(Types.isStructRef(structType));
+      // Will get copy
+      return new ExprType(VarRepr.fieldRepr(fieldType));
+    }
+  }
+  
   public static void checkCopy(Context context, Type srctype, Type dsttype)
       throws TypeMismatchException {
     if (!(srctype.assignableTo(dsttype) &&

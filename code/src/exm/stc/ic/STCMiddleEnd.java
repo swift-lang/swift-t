@@ -444,7 +444,7 @@ public class STCMiddleEnd {
 
   public void arrayCopyOutImm(Var oVar, Var arrayVar, Arg arrIx) {
     assert(Types.isArrayKeyVal(arrayVar, arrIx));
-    assert(Types.isElemType(arrayVar, oVar));
+    assert(Types.isElemType(arrayVar, oVar)) : arrayVar + " " + oVar;
     currBlock().addInstruction(
           TurbineOp.arrayCopyOutImm(oVar, arrayVar, arrIx));
   }
