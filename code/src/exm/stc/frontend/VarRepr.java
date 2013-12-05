@@ -22,6 +22,7 @@ import exm.stc.common.lang.Var;
 public class VarRepr {
 
   public static Var backendVar(Var frontendVar) {
+    assert(frontendVar != null);
     return frontendVar.substituteType(backendType(frontendVar.type()));
   }
   

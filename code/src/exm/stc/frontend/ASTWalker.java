@@ -780,7 +780,8 @@ public class ASTWalker {
     Var counterVal = loop.getLoopCountVal();
     
     backend.startRangeLoop(fc.getFunctionName() + "-range" + loopNum,
-            VarRepr.backendVar(memberVal), VarRepr.backendVar(counterVal),
+            VarRepr.backendVar(memberVal), 
+            (counterVal == null) ? null : VarRepr.backendVar(counterVal),
             VarRepr.backendArg(startVal), VarRepr.backendArg(endVal), 
             VarRepr.backendArg(stepVal),
             loop.getDesiredUnroll(), loop.getSplitDegree(),
@@ -867,9 +868,11 @@ public class ASTWalker {
     loop.setupLoopBodyContext(outsideLoopContext, false, false);
     Context loopBodyContext = loop.getBodyContext();
 
+    Var loopCountVal = loop.getLoopCountVal();
+    
     backend.startForeachLoop(fc.getFunctionName() + "-foreach" + loopNum,
         VarRepr.backendVar(realArray), VarRepr.backendVar(loop.getMemberVar()),
-        VarRepr.backendVar(loop.getLoopCountVal()),
+        loopCountVal == null ? null : VarRepr.backendVar(loopCountVal),
         loop.getSplitDegree(), loop.getLeafDegree(), true);
     // May need to spawn off each iteration as task - use wait for this
     if (!loop.isSyncLoop()) {
