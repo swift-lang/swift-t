@@ -383,8 +383,8 @@ public class ArrayBuild extends FunctionOptimizerPass {
       }
     }
     for (Arg val: vals) {
-      assert(val.isVar());
-      if (InitVariables.varMustBeInitialized(val.getVar(), false)) {
+      if (val.isVar() && 
+          InitVariables.varMustBeInitialized(val.getVar(), false)) {
         // Must init alias
         if (!outerInit.initVars.contains(val.getVar())) {
           needsInit.add(val.getVar());
@@ -437,7 +437,7 @@ public class ArrayBuild extends FunctionOptimizerPass {
             Arg key = inst.getInput(0);
             Arg val = inst.getInput(1);
             assert(Types.isArrayKeyVal(arr, key));
-            assert(Types.isElemType(arr, val.getVar()));
+            assert(Types.isElemValType(arr, val));
             keys.add(key);
             vals.add(val);
           }
