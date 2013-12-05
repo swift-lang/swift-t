@@ -157,9 +157,8 @@ public class ValLoc {
    * @param refResult if contents is ref
    * @return
    */
-  public static ValLoc makeArrayResult(Var arr, Arg ix, Var contents,
-        boolean refResult, IsAssign isAssign) {
-    Arg contentsArg = contents.asArg();
+  public static ValLoc makeArrayResult(Var arr, Arg ix,
+          Arg contents, boolean refResult, IsAssign isAssign) {
     ArgCV val;
     // TODO: how to handle assigns to array references?
     //       Will need to make sure that everything is respected if
@@ -173,8 +172,7 @@ public class ValLoc {
             "not member: " + contents + " " + arr;
       val = ComputedValue.arrayCV(arr, ix);
     }
-    return new ValLoc(val, contentsArg, Closed.MAYBE_NOT, IsValCopy.NO,
-                       isAssign);
+    return new ValLoc(val, contents, Closed.MAYBE_NOT, IsValCopy.NO, isAssign);
   }
   
   public static ValLoc makeCreateNestedResult(Var arr, Arg ix, Var contents,

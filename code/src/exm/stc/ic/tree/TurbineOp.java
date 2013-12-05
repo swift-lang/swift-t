@@ -360,18 +360,25 @@ public class TurbineOp extends Instruction {
       Arg ix, Arg member) {
     assert(Types.isArray(array));
     assert(Types.isArrayKeyVal(array, ix));
-    assert(Types.isElemType(array, member));
+    assert(Types.isElemValType(array, member)) :
+      array + " " + member + " " + member.type();
     return new TurbineOp(Opcode.ARR_STORE, array, ix, member);
   }
 
   public static Instruction arrayStoreFuture(Var array,
       Var ix, Arg member) {
+    assert(Types.isArray(array));
+    assert(Types.isArrayKeyFuture(array, ix));
+    assert(Types.isElemValType(array, member));
     return new TurbineOp(Opcode.ARR_STORE_FUTURE,
             array, ix.asArg(), member);
   }
 
   public static Instruction arrayRefStoreImm(Var outerArray,
       Var array, Arg ix, Arg member) {
+    assert(Types.isArrayRef(array));
+    assert(Types.isArrayKeyVal(array, ix));
+    assert(Types.isElemValType(array, member));
     return new TurbineOp(Opcode.AREF_STORE_IMM,
         Arrays.asList(outerArray, array),
         ix, member);
@@ -379,6 +386,9 @@ public class TurbineOp extends Instruction {
 
   public static Instruction arrayRefStoreFuture(Var outerArray,
       Var array, Var ix, Arg member) {
+    assert(Types.isArrayRef(array));
+    assert(Types.isArrayKeyFuture(array, ix));
+    assert(Types.isElemValType(array, member));
     return new TurbineOp(Opcode.AREF_STORE_FUTURE,
         Arrays.asList(outerArray, array), ix.asArg(), member);
   }
@@ -1633,7 +1643,7 @@ public class TurbineOp extends Instruction {
           arr = getOutput(0);
         }
         Arg ix = getInput(0);
-        Var member = getInput(1).getVar();
+        Arg member = getInput(1);
         boolean insertingRef = (op == Opcode.AREF_COPY_IN_FUTURE ||
                                 op == Opcode.AREF_COPY_IN_IMM ||
                                 op == Opcode.ARR_COPY_IN_FUTURE ||
@@ -1652,8 +1662,9 @@ public class TurbineOp extends Instruction {
         int elemCount = getInputs().size() / 2;
         for (int i = 0; i < elemCount; i++) {
           Arg key = getInput(2 * i);
-          Var val = getInput(2 * i + 1).getVar();
-          res.add(ValLoc.makeArrayResult(arr, key, val, false, IsAssign.TO_VALUE));
+          Arg val = getInput(2 * i + 1);
+          res.add(ValLoc.makeArrayResult(arr, key, val, false,
+                                         IsAssign.TO_VALUE));
         }
         
         res.add(CommonFunctionCall.makeContainerSizeCV(arr,
@@ -1673,13 +1684,13 @@ public class TurbineOp extends Instruction {
 
         if (op == Opcode.ARR_RETRIEVE) {
           // This just retrieves the item immediately
-          return Arrays.asList(ValLoc.makeArrayResult(arr, ix, contents, false,
-                                                      IsAssign.NO));
+          return ValLoc.makeArrayResult(arr, ix, contents.asArg(),
+                                         false, IsAssign.NO).asList();
         } else {
           assert (Types.isMemberReference(contents, arr));
           List<ValLoc> res = new ArrayList<ValLoc>();
           // Will assign the reference
-          res.add(ValLoc.makeArrayResult(arr, ix, contents, true,
+          res.add(ValLoc.makeArrayResult(arr, ix, contents.asArg(), true,
                                          IsAssign.TO_LOCATION));
           return res;
         }
@@ -1709,7 +1720,7 @@ public class TurbineOp extends Instruction {
                              op != Opcode.ARRAY_CREATE_BAG;
         // Mark as not substitutable since this op may have
         // side-effect of creating array
-        res.add(ValLoc.makeArrayResult(arr, ix, nestedArr,
+        res.add(ValLoc.makeArrayResult(arr, ix, nestedArr.asArg(),
                                               returnsRef, IsAssign.NO));
         res.add(ValLoc.makeCreateNestedResult(arr, ix, nestedArr,
             returnsRef));
