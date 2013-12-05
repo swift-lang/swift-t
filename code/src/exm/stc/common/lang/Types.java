@@ -1826,8 +1826,14 @@ public class Types {
   }
 
   public static boolean isElemType(Typed cont, Typed elem) {
-    Type memberType = containerElemType(cont.type());
-    return (elem.type().assignableTo(memberType));
+    Type expected = containerElemType(cont.type());
+    return (elem.type().assignableTo(expected));
+  }
+  
+
+  public static boolean isElemValType(Typed cont, Typed elem) {
+    Type expected = containerElemValType(cont.type());
+    return (elem.type().assignableTo(expected));
   }
   
   public static Type substituteElemType(Typed cont, Type newElem) {

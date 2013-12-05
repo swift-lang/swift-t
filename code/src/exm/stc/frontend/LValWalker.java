@@ -343,7 +343,15 @@ public class LValWalker {
     final Var arr = lval.var;
 
     // Find or create variable to store expression result
-    boolean rValIsRef = Types.isRef(rValVar);
+    
+    // Work out whether we store or copy in result.
+    // E.g. if we store ints inline in container, storage type is int,
+    //      and we can store directly if we have a $int, or copy if we have
+    //      an int rval
+    Type elemStorageType = VarRepr.fieldRepr(Types.containerElemType(arr));
+    boolean rValIsVal = rValVar.type().assignableTo(
+                        Types.derefResultType(elemStorageType));
+    assert(rValIsVal || rValVar.type().assignableTo(elemStorageType));
 
     // We know what variable the result will go into now
     // Now need to work out the index and generate code to insert the
@@ -360,12 +368,12 @@ public class LValWalker {
     if (Types.isInt(keyType) && literal != null) {
       long arrIx = literal;
       // Add this variable to array
-      backendArrayInsert(arr, arrIx, rValVar, isArrayRef, rValIsRef, outerArray);
+      backendArrayInsert(arr, arrIx, rValVar, isArrayRef, rValIsVal, outerArray);
     } else {
       // Handle the general case where the index must be computed
       Var indexVar = exprWalker.eval(context, indexExpr, keyType, false, null);
-      backendArrayInsert(arr, indexVar, rValVar, isArrayRef, rValIsRef,
-          outerArray);
+      backendArrayInsert(arr, indexVar, rValVar, isArrayRef, rValIsVal,
+                         outerArray);
     }
 
   }
@@ -522,51 +530,51 @@ public class LValWalker {
   }
 
   private void backendArrayInsert(final Var arr, long ix, Var member,
-              boolean isArrayRef, boolean rvalIsRef, Var outermostArray) {
+              boolean isArrayRef, boolean rValIsVal, Var outermostArray) {
     Var backendArr = VarRepr.backendVar(arr);
     Var backendMember = VarRepr.backendVar(member);
     Arg ixArg = Arg.createIntLit(ix);
     if (isArrayRef) {
       // This should only be run when assigning to nested array
       Var backendOuter = VarRepr.backendVar(outermostArray);
-      if (rvalIsRef) {
-        // This should only be run when assigning to nested array
-        backend.arrayRefDerefInsertImm(backendOuter, backendArr,
-                                       ixArg, backendMember);
-      } else {
-        backend.arrayRefInsertImm(backendOuter, backendArr, ixArg,
+      if (rValIsVal) {
+        backend.arrayRefStoreImm(backendOuter, backendArr, ixArg,
                                   backendMember);
+      } else {
+        // This should only be run when assigning to nested array
+        backend.arrayRefCopyInImm(backendOuter, backendArr,
+                                       ixArg, backendMember);
       }
     } else {
       assert(!isArrayRef);
-      if (rvalIsRef) {
-        backend.arrayDerefInsertImm(backendArr, ixArg, backendMember);
+      if (rValIsVal) {
+        backend.arrayStore(backendArr, ixArg, backendMember);
       } else {
-        backend.arrayInsertImm(backendArr, ixArg, backendMember);
+        backend.arrayCopyInImm(backendArr, ixArg, backendMember);
       }
     }
   }
   
   private void backendArrayInsert(Var arr, Var ix, Var member,
-      boolean isArrayRef, boolean rvalIsRef, Var outermostArray) {
+      boolean isArrayRef, boolean rValIsVal, Var outermostArray) {
     Var backendArr = VarRepr.backendVar(arr);
     Var backendIx = VarRepr.backendVar(ix);
     Var backendMember = VarRepr.backendVar(member);
     if (isArrayRef) {
       Var backendOuter = VarRepr.backendVar(outermostArray);
-      if (rvalIsRef) {
-        backend.arrayRefDerefInsertFuture(backendOuter, backendArr, 
-                                        backendIx, backendMember);
-      } else {
-        backend.arrayRefInsertFuture(backendOuter, backendArr, 
+      if (rValIsVal) {
+        backend.arrayRefStoreFuture(backendOuter, backendArr, 
                                      backendIx, backendMember);
+      } else {
+        backend.arrayRefCopyInFuture(backendOuter, backendArr, 
+                                        backendIx, backendMember);
       }
     } else {
       assert(!isArrayRef);
-      if (rvalIsRef) {
-        backend.arrayDerefInsertFuture(backendArr, backendIx, backendMember);
+      if (rValIsVal) {
+        backend.arrayStoreFuture(backendArr, backendIx, backendMember);
       } else {
-        backend.arrayInsertFuture(backendArr, backendIx, backendMember);
+        backend.arrayCopyInFuture(backendArr, backendIx, backendMember);
       }
     }
   }

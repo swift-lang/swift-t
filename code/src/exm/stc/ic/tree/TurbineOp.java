@@ -328,46 +328,37 @@ public class TurbineOp extends Instruction {
 
   }
 
-  public static TurbineOp arrayRefLookupFuture(Var oVar, Var arrayRefVar,
-      Var indexVar) {
-    return new TurbineOp(Opcode.ARRAYREF_LOOKUP_FUTURE, oVar,
-                          arrayRefVar.asArg(), indexVar.asArg());
+  public static Instruction arrayRetrieve(Var oVar, Var arrayVar,
+                                            Arg arrayIndex) {
+    return new TurbineOp(Opcode.ARRAY_LOOKUP_IMM,
+        oVar, arrayVar.asArg(), arrayIndex);
   }
 
-  public static TurbineOp arrayLookupFuture(Var oVar, Var arrayVar,
+  public static Instruction arrayRefCopyOutImm(Var oVar,
+      Var arrayVar, Arg arrayIndex) {
+    return new TurbineOp(Opcode.ARRAYREF_LOOKUP_IMM,
+        oVar, arrayVar.asArg(), arrayIndex);
+  }
+
+  public static Instruction arrayCopyOutImm(Var oVar, Var arrayVar,
+      Arg arrayIndex) {
+    return new TurbineOp(Opcode.ARRAY_LOOKUP_REF_IMM,
+        oVar, arrayVar.asArg(), arrayIndex);
+  }
+
+  public static TurbineOp arrayCopyOutFuture(Var oVar, Var arrayVar,
       Var indexVar) {
     return new TurbineOp(Opcode.ARRAY_LOOKUP_FUTURE,
         oVar, arrayVar.asArg(), indexVar.asArg());
   }
 
-  public static Instruction arrayInsertFuture(Var array,
-      Var ix, Var member) {
-    return new TurbineOp(Opcode.ARRAY_INSERT_FUTURE,
-            array, ix.asArg(),
-            member.asArg());
-  }
-  
-  public static Instruction arrayDerefInsertFuture(Var array,
-      Var ix, Var member) {
-    return new TurbineOp(Opcode.ARRAY_DEREF_INSERT_FUTURE,
-            array, ix.asArg(),
-            member.asArg());
+  public static TurbineOp arrayRefCopyOutFuture(Var oVar, Var arrayRefVar,
+      Var indexVar) {
+    return new TurbineOp(Opcode.ARRAYREF_LOOKUP_FUTURE, oVar,
+                          arrayRefVar.asArg(), indexVar.asArg());
   }
 
-  public static Instruction arrayRefInsertFuture(Var outerArray,
-      Var array, Var ix, Var member) {
-    return new TurbineOp(Opcode.ARRAYREF_INSERT_FUTURE,
-        Arrays.asList(outerArray, array), ix.asArg(), member.asArg());
-  }
-  
-  public static Instruction arrayRefDerefInsertFuture(Var outerArray,
-      Var array, Var ix, Var member) {
-    return new TurbineOp(Opcode.ARRAYREF_DEREF_INSERT_FUTURE,
-        Arrays.asList(outerArray, array),
-        ix.asArg(), member.asArg());
-  }
-  
-  public static Instruction arrayInsertImm(Var array,
+  public static Instruction arrayStore(Var array,
       Arg ix, Var member) {
     assert(Types.isArray(array));
     assert(Types.isArrayKeyVal(array, ix));
@@ -375,43 +366,51 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.ARRAY_INSERT_IMM,
                           array, ix, member.asArg());
   }
-  
-  public static Instruction arrayDerefInsertImm(Var array,
-      Arg ix, Var member) {
-    return new TurbineOp(Opcode.ARRAY_DEREF_INSERT_IMM,
-                         array, ix, member.asArg());
+
+  public static Instruction arrayStoreFuture(Var array,
+      Var ix, Var member) {
+    return new TurbineOp(Opcode.ARRAY_INSERT_FUTURE,
+            array, ix.asArg(),
+            member.asArg());
   }
 
-  public static Instruction arrayRefInsertImm(Var outerArray,
+  public static Instruction arrayRefStoreImm(Var outerArray,
       Var array, Arg ix, Var member) {
     return new TurbineOp(Opcode.ARRAYREF_INSERT_IMM,
         Arrays.asList(outerArray, array),
         ix, member.asArg());
   }
-  
-  public static Instruction arrayRefDerefInsertImm(Var outerArray,
+
+  public static Instruction arrayRefStoreFuture(Var outerArray,
+      Var array, Var ix, Var member) {
+    return new TurbineOp(Opcode.ARRAYREF_INSERT_FUTURE,
+        Arrays.asList(outerArray, array), ix.asArg(), member.asArg());
+  }
+
+  public static Instruction arrayCopyInImm(Var array,
+      Arg ix, Var member) {
+    return new TurbineOp(Opcode.ARRAY_DEREF_INSERT_IMM,
+                         array, ix, member.asArg());
+  }
+
+  public static Instruction arrayCopyInFuture(Var array,
+      Var ix, Var member) {
+    return new TurbineOp(Opcode.ARRAY_DEREF_INSERT_FUTURE,
+            array, ix.asArg(), member.asArg());
+  }
+
+  public static Instruction arrayRefCopyInImm(Var outerArray,
       Var array, Arg ix, Var member) {
     return new TurbineOp(Opcode.ARRAYREF_DEREF_INSERT_IMM,
         Arrays.asList(outerArray, array),
         ix, member.asArg());
   }
-
-  public static Instruction arrayRefLookupImm(Var oVar,
-      Var arrayVar, Arg arrayIndex) {
-    return new TurbineOp(Opcode.ARRAYREF_LOOKUP_IMM,
-        oVar, arrayVar.asArg(), arrayIndex);
-  }
-
-  public static Instruction arrayLookupRefImm(Var oVar, Var arrayVar,
-      Arg arrayIndex) {
-    return new TurbineOp(Opcode.ARRAY_LOOKUP_REF_IMM,
-        oVar, arrayVar.asArg(), arrayIndex);
-  }
   
-  public static Instruction arrayLookupImm(Var oVar, Var arrayVar,
-      Arg arrayIndex) {
-    return new TurbineOp(Opcode.ARRAY_LOOKUP_IMM,
-        oVar, arrayVar.asArg(), arrayIndex);
+  public static Instruction arrayRefCopyInFuture(Var outerArray,
+      Var array, Var ix, Var member) {
+    return new TurbineOp(Opcode.ARRAYREF_DEREF_INSERT_FUTURE,
+        Arrays.asList(outerArray, array),
+        ix.asArg(), member.asArg());
   }
 
   public static Instruction arrayBuild(Var array, List<Arg> keys, List<Arg> vals) {
@@ -1084,14 +1083,14 @@ public class TurbineOp extends Instruction {
       // Output switched from ref to value
       Var refOut = getOutput(0);
       Var valOut = OptUtil.createDerefTmp(refOut, Alloc.ALIAS);
-      Instruction newI = arrayLookupImm(valOut, arr, getInput(1));
+      Instruction newI = arrayRetrieve(valOut, arr, getInput(1));
       return new MakeImmChange(valOut, refOut, newI);
     }
     case ARRAY_LOOKUP_FUTURE: {
       assert(values.size() == 1);
       Arg newIx = values.get(0).fetched;
       return new MakeImmChange(
-              arrayLookupRefImm(getOutput(0), getInput(0).getVar(), newIx));
+              arrayCopyOutImm(getOutput(0), getInput(0).getVar(), newIx));
     }
     case ARRAYREF_LOOKUP_FUTURE: {
       assert(values.size() == 1 || values.size() == 2);
@@ -1104,12 +1103,12 @@ public class TurbineOp extends Instruction {
       Instruction inst;
       // Could be either array ref, index, or both
       if (newIx != null && newArr != null) {
-        inst = arrayLookupRefImm(mem, newArr, newIx);
+        inst = arrayCopyOutImm(mem, newArr, newIx);
       } else if (newIx != null && newArr == null){
-        inst = arrayRefLookupImm(mem, arrRef, newIx);
+        inst = arrayRefCopyOutImm(mem, arrRef, newIx);
       } else { 
         assert(newIx == null && newArr != null);
-        inst = arrayLookupFuture(mem, newArr, ix);
+        inst = arrayCopyOutFuture(mem, newArr, ix);
       }
       return new MakeImmChange(inst);
     }
@@ -1118,7 +1117,7 @@ public class TurbineOp extends Instruction {
       // Switch from ref to plain array
       Var newArr = values.get(0).fetched.getVar();
       return new MakeImmChange(
-          arrayLookupRefImm(getOutput(0), newArr, getInput(1)));
+          arrayCopyOutImm(getOutput(0), newArr, getInput(1)));
     }
     case STRUCTREF_LOOKUP: {
       assert(values.size() == 1);
@@ -1135,13 +1134,13 @@ public class TurbineOp extends Instruction {
       assert(values.size() == 1);
       Var derefMember = values.get(0).fetched.getVar();
       return new MakeImmChange(
-          arrayInsertImm(getOutput(0), getInput(0), derefMember));
+          arrayStore(getOutput(0), getInput(0), derefMember));
     }
     case ARRAY_INSERT_FUTURE: {
       assert(values.size() == 1);
       Arg fetchedIx = values.get(0).fetched;
       return new MakeImmChange(
-          arrayInsertImm(getOutput(0), fetchedIx, getInput(1).getVar()));
+          arrayStore(getOutput(0), fetchedIx, getInput(1).getVar()));
     }
     case ARRAY_DEREF_INSERT_FUTURE: {
       Var arr = getOutput(0);
@@ -1151,12 +1150,12 @@ public class TurbineOp extends Instruction {
       Var newMem = Fetched.findFetchedVar(values, mem);
       Instruction inst;
       if (newIx != null && newMem != null) {
-        inst = arrayInsertImm(arr, newIx, newMem);
+        inst = arrayStore(arr, newIx, newMem);
       } else if (newIx != null && newMem == null) {
-        inst = arrayDerefInsertImm(arr, newIx, mem); 
+        inst = arrayCopyInImm(arr, newIx, mem); 
       } else {
         assert(newIx == null && newMem != null);
-        inst = arrayInsertFuture(arr, ix, newMem);
+        inst = arrayCopyInFuture(arr, ix, newMem);
       }
       return new MakeImmChange(inst);
     }
@@ -1164,7 +1163,7 @@ public class TurbineOp extends Instruction {
       assert(values.size() == 1);
       Var newOut = values.get(0).fetched.getVar();
       // Switch from ref to plain array
-      return new MakeImmChange(arrayInsertImm(
+      return new MakeImmChange(arrayStore(
           newOut, getInput(0), getInput(1).getVar()));
     }
     case ARRAYREF_DEREF_INSERT_IMM: {
@@ -1176,12 +1175,12 @@ public class TurbineOp extends Instruction {
       Var newMem = Fetched.findFetchedVar(values, mem);
       Instruction newI;
       if (newArr != null && newMem != null) {
-        newI = arrayInsertImm(newArr, ix, newMem);
+        newI = arrayStore(newArr, ix, newMem);
       } else if (newArr != null && newMem == null) {
-        newI = arrayDerefInsertImm(newArr, ix, mem);
+        newI = arrayCopyInImm(newArr, ix, mem);
       } else {
         assert(newArr == null && newMem != null);
-        newI = arrayRefInsertImm(outerArrRef, innerArrRef, ix, newMem);
+        newI = arrayRefCopyInImm(outerArrRef, innerArrRef, ix, newMem);
       }
       
       return new MakeImmChange(newI);
@@ -1206,23 +1205,23 @@ public class TurbineOp extends Instruction {
           mem = derefMem;
         }
         if (newArr != null && newIx != null) {
-          inst = arrayInsertImm(newArr, newIx, mem);
+          inst = arrayStore(newArr, newIx, mem);
         } else if (newArr != null && newIx == null) {
-          inst = arrayInsertFuture(newArr, ix, mem);
+          inst = arrayCopyInFuture(newArr, ix, mem);
         } else if (newArr == null && newIx != null) {
-          inst = arrayRefInsertImm(outerArr, arrRef, newIx, mem);
+          inst = arrayRefCopyInImm(outerArr, arrRef, newIx, mem);
         } else {
-          inst = arrayRefInsertFuture(outerArr, arrRef, ix, mem);
+          inst = arrayRefCopyInFuture(outerArr, arrRef, ix, mem);
         }
       } else {
         assert(op == Opcode.ARRAYREF_DEREF_INSERT_FUTURE);
         if (newArr != null && newIx != null) {
-          inst = arrayDerefInsertImm(newArr, newIx, mem);
+          inst = arrayCopyInImm(newArr, newIx, mem);
         } else if (newArr != null && newIx == null) {
-          inst = arrayDerefInsertFuture(newArr, ix, mem);
+          inst = arrayCopyInFuture(newArr, ix, mem);
         } else {
           assert(newArr == null && newIx != null);
-          inst = arrayRefDerefInsertImm(outerArr, arrRef, newIx, mem);
+          inst = arrayRefCopyInImm(outerArr, arrRef, newIx, mem);
         }
       }
       return new MakeImmChange(inst);

@@ -671,14 +671,24 @@ public class ExprWalker {
     Var backendLookupDst = VarRepr.backendVar(lookupDst);
     if (arrayIndex != null) {
       // Handle the special case where the index is a constant.
-      backend.arrayLookupRefImm(backendLookupDst,
-          backendArray, Arg.createIntLit(arrayIndex), Types.isArrayRef(arrType));
+      if (Types.isArrayRef(arrType)) {
+        backend.arrayRefCopyOutImm(backendLookupDst,
+            backendArray, Arg.createIntLit(arrayIndex));
+      } else {
+        backend.arrayCopyOutImm(backendLookupDst,
+                backendArray, Arg.createIntLit(arrayIndex));
+      }
     } else {
       // Handle the general case where the index must be computed
       Var indexVar = eval(context, arrayIndexTree,
                           Types.arrayKeyType(arrayVar), false, renames);
-      backend.arrayLookupFuture(backendLookupDst, backendArray,
-            VarRepr.backendVar(indexVar), Types.isArrayRef(arrType));
+      if (Types.isArrayRef(arrType)) {
+        backend.arrayRefCopyOutFuture(backendLookupDst, backendArray,
+              VarRepr.backendVar(indexVar));
+      } else {
+        backend.arrayCopyOutFuture(backendLookupDst, backendArray,
+                VarRepr.backendVar(indexVar));
+      }
     }
     // Do the dereference down here so that it is generated in a more logical
     // order
@@ -861,7 +871,7 @@ public class ExprWalker {
         backendKeys.add(VarRepr.backendVar(eval(context, key, keyType, false, renames)));
       }
       for (int i = 0; i < ae.getElemCount(); i++) {
-        backend.arrayInsertFuture(VarRepr.backendVar(oVar), backendKeys.get(i),
+        backend.arrayCopyInFuture(VarRepr.backendVar(oVar), backendKeys.get(i),
                                   VarRepr.backendVar(vals.get(i)));
       }
     } else {
@@ -1371,7 +1381,7 @@ public class ExprWalker {
             context.getFunctionContext().constructName(dst.name() + "-copy"),
             backendSrc, backendMember, backendIx, -1, 1, true);
     if (Types.isArray(src)) {
-      backend.arrayInsertImm(backendDst, backendIx.asArg(), backendMember);
+      backend.arrayStore(backendDst, backendIx.asArg(), backendMember);
     } else {
       assert(Types.isBag(src));
       backend.bagInsert(backendDst, backendMember);
