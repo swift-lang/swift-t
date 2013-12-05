@@ -554,8 +554,8 @@ class Turbine {
       Expression decrWriters, Expression decrReaders) {
     List<Expression> args = new ArrayList<Expression>();
     args.add(dst);
-    args.add(src);
     args.addAll(dstTypeInfo);
+    args.add(src);
     if (decrWriters != null) {
       args.add(decrWriters);
     }
