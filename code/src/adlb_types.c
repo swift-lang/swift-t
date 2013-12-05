@@ -72,7 +72,7 @@ ADLB_Pack(const adlb_datum_storage *d, adlb_data_type type,
                             &pos);
       DATA_CHECK(dc);
       result->data = result->caller_data = res.data;
-      result->length = res.length;
+      result->length = pos;
       
       return ADLB_DATA_SUCCESS; 
     }
@@ -212,6 +212,10 @@ ADLB_Pack_container(const adlb_container *container,
 
     appended++;
   }
+
+  DEBUG("Packed container:  entries: %i, key: %s, val: %s, bytes: %d",
+        members->size, ADLB_Data_type_tostring(container->key_type), 
+        ADLB_Data_type_tostring(container->val_type), *output_pos);
  
   // Check that the number we appended matches
   assert(appended == members->size);
@@ -240,7 +244,7 @@ ADLB_Pack_container_hdr(int elems, adlb_data_type key_type,
   vint_len = vint_encode(elems, output->data + *output_pos);
   assert(vint_len >= 1);
   *output_pos += vint_len;
-  DEBUG("Pack container:  entries: %i, key: %s, val: %s, pos: %d",
+  TRACE("Pack container:  entries: %i, key: %s, val: %s, pos: %d",
         elems, ADLB_Data_type_tostring(key_type), 
         ADLB_Data_type_tostring(val_type), *output_pos);
   return ADLB_DATA_SUCCESS;
