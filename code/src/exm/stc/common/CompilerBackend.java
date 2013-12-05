@@ -250,26 +250,26 @@ public interface CompilerBackend {
   public void arrayRefCopyOutFuture(Var oVar, Var arrayVar, Var indexVar);
 
   public void arrayStoreFuture(Var array,
-      Var ix, Var member, Arg writersDecr);
+      Var ix, Arg member, Arg writersDecr);
   
 
   public void arrayCopyInFuture(Var array,
       Var ix, Var member, Arg writersDecr);
   
   public void arrayRefStoreFuture(Var outerArray,
-      Var array, Var ix, Var member);
+      Var array, Var ix, Arg member);
   
   public void arrayRefCopyInFuture(Var outerArray,
       Var array, Var ix, Var member);
 
-  public void arrayStore(Var array, Arg ix, Var member,
+  public void arrayStore(Var array, Arg ix, Arg member,
       Arg writersDecr);
 
   public void arrayCopyInImm(Var array, Arg ix, Var member,
       Arg writersDecr);
   
   public void arrayRefStoreImm(Var outerArray, 
-      Var array, Arg ix, Var member);
+      Var array, Arg ix, Arg member);
   
   public void arrayRefCopyInImm(Var outerArray, 
       Var array, Arg ix, Var member);

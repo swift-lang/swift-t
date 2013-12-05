@@ -1488,21 +1488,21 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void arrayStore(Var array, Arg arrIx, Var member, Arg writersDecr) {
+  public void arrayStore(Var array, Arg arrIx, Arg member, Arg writersDecr) {
     assert(Types.isArray(array.type()));
     assert(Types.isArrayKeyVal(array, arrIx));
     assert(writersDecr.isImmediateInt());
     assert(Types.isElemValType(array, member));
     
     Command r = Turbine.arrayStoreImmediate(
-        varToExpr(member), varToExpr(array),
+        argToExpr(member), varToExpr(array),
         argToExpr(arrIx), argToExpr(writersDecr),
         arrayValueType(array, false));
     pointAdd(r);
   }
 
   @Override
-  public void arrayStoreFuture(Var array, Var ix, Var member,
+  public void arrayStoreFuture(Var array, Var ix, Arg member,
                                 Arg writersDecr) {
     assert(Types.isArray(array));
     assert(Types.isElemValType(array, member));
@@ -1510,7 +1510,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isArrayKeyFuture(array, ix));
 
     Command r = Turbine.arrayStoreComputed(
-        varToExpr(member), varToExpr(array),
+        argToExpr(member), varToExpr(array),
         varToExpr(ix), argToExpr(writersDecr),
         arrayValueType(array, false));
 
@@ -1519,27 +1519,27 @@ public class TurbineGenerator implements CompilerBackend {
   
   @Override
   public void arrayRefStoreImm(Var outerArray, Var array, Arg arrIx,
-                                Var member) {
+                               Arg member) {
     assert(Types.isArrayRef(array.type()));
     assert(Types.isArray(outerArray.type()));
     assert(Types.isArrayKeyVal(array, arrIx));
     assert(Types.isElemValType(array, member));
     
     Command r = Turbine.arrayRefStoreImmediate(
-        varToExpr(member), varToExpr(array),
+        argToExpr(member), varToExpr(array),
         argToExpr(arrIx), varToExpr(outerArray),
         arrayValueType(array, false));
     pointAdd(r);
   }
 
   @Override
-  public void arrayRefStoreFuture(Var outerArray, Var array, Var ix, Var member) {
+  public void arrayRefStoreFuture(Var outerArray, Var array, Var ix, Arg member) {
     assert(Types.isArrayRef(array.type()));
     assert(Types.isArray(outerArray.type()));
     assert(Types.isArrayKeyFuture(array, ix));
     assert(Types.isElemValType(array, member));
     Command r = Turbine.arrayRefStoreComputed(
-        varToExpr(member), varToExpr(array),
+        argToExpr(member), varToExpr(array),
         varToExpr(ix), varToExpr(outerArray),
         arrayValueType(array, false));
   

@@ -133,21 +133,21 @@ public class TurbineOp extends Instruction {
                              getInput(1).getVar());
       break;
     case ARR_STORE:
-      gen.arrayStore(getOutput(0), getInput(0), getInput(1).getVar(),
+      gen.arrayStore(getOutput(0), getInput(0), getInput(1),
           getInputs().size() == 3 ? getInput(2) : Arg.ZERO);
       break;
     case ARR_STORE_FUTURE:
       gen.arrayStoreFuture(getOutput(0), getInput(0).getVar(),
-                            getInput(1).getVar(),
+                            getInput(1),
                             getInputs().size() == 3 ? getInput(2) : Arg.ONE);
       break;
     case AREF_STORE_IMM:
       gen.arrayRefStoreImm(getOutput(0),
-          getOutput(1), getInput(0), getInput(1).getVar());
+          getOutput(1), getInput(0), getInput(1));
       break;
     case AREF_STORE_FUTURE:
       gen.arrayRefStoreFuture(getOutput(0),
-          getOutput(1), getInput(0).getVar(), getInput(1).getVar());
+          getOutput(1), getInput(0).getVar(), getInput(1));
       break;
     case ARR_COPY_IN_IMM:
       gen.arrayCopyInImm(getOutput(0), getInput(0), getInput(1).getVar(),
@@ -1896,9 +1896,15 @@ public class TurbineOp extends Instruction {
                   Var.NONE);
       }
       case ARR_STORE: {
-        Var mem = getInput(1).getVar();
-        // Increment reference to member
-        return Pair.create(Arrays.asList(mem), Var.NONE);
+        Arg mem = getInput(1);
+        // Increment reference to memberif needed
+        List<Var> readIncr;
+        if (mem.isVar() && RefCounting.hasReadRefCount(mem.getVar())) {
+          readIncr = mem.getVar().asList(); 
+        } else {
+          readIncr = Var.NONE;
+        }
+        return Pair.create(readIncr, Var.NONE);
       }
       case ARR_COPY_IN_IMM: {
         // Increment reference to member ref

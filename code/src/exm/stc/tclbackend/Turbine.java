@@ -997,7 +997,7 @@ class Turbine {
      return new Command(DEREFERENCE_FILE, dstVar, refVar);
    }
 
-  public static Command arrayStoreImmediate(Value srcVar, Value arrayVar,
+  public static Command arrayStoreImmediate(Expression srcVar, Value arrayVar,
                               Expression arrayIndex, Expression writersDecr,
                               TypeName valType) {
     return new Command(C_V_INSERT, arrayVar, arrayIndex, srcVar,
@@ -1017,7 +1017,7 @@ class Turbine {
         valType, writersDecr, LiteralInt.FALSE);
   }
 
-  public static Command arrayStoreComputed(Value srcVar, Value arrayVar,
+  public static Command arrayStoreComputed(Expression srcVar, Value arrayVar,
       Value indexVar, Expression writersDecr,
                                   TypeName valType) {
     // Don't increment writers count, this is done in IC
@@ -1025,16 +1025,16 @@ class Turbine {
                                     writersDecr, LiteralInt.FALSE);
   }
 
-  public static Command arrayRefStoreImmediate(Value srcVar, Value arrayVar,
-      Expression arrayIndex, Value outerArray,
+  public static Command arrayRefStoreImmediate(Expression srcVar,
+      Value arrayVar, Expression arrayIndex, Value outerArray,
       TypeName valType) {
     return new Command(CR_V_INSERT, arrayVar, arrayIndex, srcVar,
                     valType,  outerArray, LiteralInt.FALSE);
   }
 
 
-  public static Command arrayRefStoreComputed(Value srcVar, Value arrayVar,
-      Value indexVar, Value outerArray, TypeName valType) {
+  public static Command arrayRefStoreComputed(Expression srcVar,
+      Value arrayVar, Value indexVar, Value outerArray, TypeName valType) {
     return new Command(CR_F_INSERT, arrayVar, indexVar, srcVar,
         valType, outerArray, LiteralInt.FALSE);
   }
