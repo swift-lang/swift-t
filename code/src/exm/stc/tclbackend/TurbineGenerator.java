@@ -920,10 +920,9 @@ public class TurbineGenerator implements CompilerBackend {
     assert(src.type().assignableTo(
               Types.unpackedContainerType(target)));    
 
-    // TODO: move to Turbine.java
-    List<TypeName> typeList = recursiveTypeList(target.type(), false, true, true); 
-    pointAdd(new Command("turbine::build_rec", Arrays.asList(
-         varToExpr(target), argToExpr(src), new TclList(typeList))));
+    List<TypeName> typeList = recursiveTypeList(target.type(), false, true,
+                                                true, true); 
+    pointAdd(Turbine.buildRec(typeList, varToExpr(target), argToExpr(src)));
   }
   
   @Override
@@ -932,42 +931,16 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isContainerLocal(target));
     assert(Types.unpackedContainerType(src).assignableTo(target.type()));
 
-    List<TypeName> typeList = recursiveTypeList(src.type(), false, false, true);
+    List<TypeName> typeList =
+        recursiveTypeList(src.type(), false, false, true, true);
     
     pointAdd(Turbine.enumerateRec(prefixVar(target), typeList,
               varToExpr(src), argToExpr(decr)));
   }
 
-  private List<TypeName> typeList(Type type,
-            boolean valueType, boolean includeKeyTypes,
-            boolean includeBaseType, boolean recursive) {
-    if (recursive) {
-      return recursiveTypeList(type, valueType, includeKeyTypes,
-                               includeBaseType);
-    } else {
-      return typeList(type, valueType, includeKeyTypes, includeBaseType);
-    }
-  }
-    
-  private List<TypeName> typeList(Type type, boolean valueType, 
-      boolean includeKeyType, boolean includeValType) {
-    ArrayList<TypeName> typeList = new ArrayList<TypeName>();
-    typeList.add(reprTypeHelper(valueType, type));
-    if (Types.isContainer(type) || Types.isContainerLocal(type)) {
-      if (Types.isArray(type) || Types.isArrayLocal(type)) {
-        typeList.add(representationType(Types.arrayKeyType(
-            type), false));
-      }
-      
-      // Add elem type
-      typeList.add(reprTypeHelper(valueType, Types.containerElemType(type)));
-    }
-    return typeList;
-  }
-
   private List<TypeName> recursiveTypeList(Type type,
         boolean valueType, boolean includeKeyTypes,
-        boolean includeBaseType) {
+        boolean includeBaseType, boolean followRefs) {
     List<TypeName> typeList = new ArrayList<TypeName>();
     Type curr = type;
     do {
@@ -980,7 +953,8 @@ public class TurbineGenerator implements CompilerBackend {
       }
       
       curr = Types.containerElemType(curr);
-    } while (Types.isContainer(curr) || Types.isContainerLocal(curr));
+    } while ((Types.isContainer(curr) || Types.isContainerLocal(curr)) ||
+             (followRefs && Types.isRef(curr)));
     
     if (includeBaseType) {
       typeList.add(reprTypeHelper(valueType, curr));
@@ -1672,7 +1646,8 @@ public class TurbineGenerator implements CompilerBackend {
     pointAdd(Turbine.retrieveAcquire(tmpVal.variable(), varToExpr(src),
                                simpleReprType, incrReferand, LiteralInt.ONE));
     
-    List<TypeName> fullReprType = typeList(dst.type(), true, true, true, false);
+    List<TypeName> fullReprType = recursiveTypeList(dst.type(), false, true,
+                                                    true, false);
     pointAdd(Turbine.adlbStore(varToExpr(dst), tmpVal, fullReprType));
   }
   
@@ -3049,7 +3024,7 @@ public class TurbineGenerator implements CompilerBackend {
     List<Expression> result = new ArrayList<Expression>();
     for (Arg val: vals) {
       if (Types.isContainerLocal(val.type())) {
-        result.addAll(recursiveTypeList(val.type(), true, true, true)); 
+        result.addAll(recursiveTypeList(val.type(), true, true, true, true)); 
       } else {
         result.add(valRepresentationType(val.type()));
       }

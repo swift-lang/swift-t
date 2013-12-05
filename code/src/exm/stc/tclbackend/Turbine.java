@@ -98,6 +98,7 @@ class Turbine {
   private static final Token CR_F_DEREF_INSERT = turbFn("cr_f_insert_r");
   private static final Token ARRAY_KV_BUILD = turbFn("array_kv_build");
   private static final Token MULTISET_BUILD = turbFn("multiset_build");
+  private static final Token BUILD_REC = turbFn("build_rec");
   
   // Container nested creation
   private static final Token C_V_CREATE_NESTED = turbFn("create_nested");
@@ -1457,6 +1458,12 @@ class Turbine {
     return new Command(MULTISET_BUILD, argList);
   }
   
+  public static Command buildRec(List<TypeName> typeList, Value target,
+      Expression src) {
+    return new Command(BUILD_REC, Arrays.asList(
+         target, src, new TclList(typeList)));
+  }
+
   public static Command batchDeclare(List<String> batchedVarNames,
       List<TclList> batched) {
     ArrayList<Expression> exprs = new ArrayList<Expression>();
