@@ -283,6 +283,21 @@ public interface CompilerBackend {
    */
   public void arrayBuild(Var array, List<Arg> keys, List<Var> vals);
 
+
+  /**
+   * Copy non-closed container asynchronously
+   * @param dst
+   * @param src
+   */
+  public void asyncCopyContainer(Var dst, Var src);
+
+  /**
+   * Copy closed container synchronously
+   * @param dst
+   * @param src
+   */
+  public void syncCopyContainer(Var dst, Var src);
+  
   public void arrayCreateNestedFuture(Var arrayResult,
       Var array, Var ix);
 

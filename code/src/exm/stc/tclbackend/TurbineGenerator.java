@@ -921,7 +921,7 @@ public class TurbineGenerator implements CompilerBackend {
               Types.unpackedContainerType(target)));    
 
     // TODO: move to Turbine.java
-    List<TypeName> typeList = nestedTypeList(target.type(), true, false, true); 
+    List<TypeName> typeList = recursiveTypeList(target.type(), true, false, true); 
     pointAdd(new Command("turbine::build_rec", Arrays.asList(
          varToExpr(target), argToExpr(src), new TclList(typeList))));
   }
@@ -932,15 +932,21 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isContainerLocal(target));
     assert(Types.unpackedContainerType(src).assignableTo(target.type()));
 
-    List<TypeName> typeList = nestedTypeList(src.type(), false, false, true);
+    List<TypeName> typeList = recursiveTypeList(src.type(), false, false, true);
     
     pointAdd(Turbine.enumerateRec(prefixVar(target), typeList,
               varToExpr(src), argToExpr(decr)));
   }
 
-  private List<TypeName> nestedTypeList(Type type,
+  private List<TypeName> recursiveTypeList(Type type,
             boolean includeKeyTypes, boolean valueType,
             boolean includeBaseType) {
+    return typeList(type, includeKeyTypes, valueType, includeBaseType, true);
+  }
+    
+  private List<TypeName> typeList(Type type,
+        boolean includeKeyTypes, boolean valueType,
+        boolean includeBaseType, boolean recursive) {
     List<TypeName> typeList = new ArrayList<TypeName>();
     Type curr = type;
     do {
@@ -959,7 +965,8 @@ public class TurbineGenerator implements CompilerBackend {
       }
       
       curr = Types.containerElemType(curr);
-    } while (Types.isContainer(curr) || Types.isContainerLocal(curr));
+    } while (recursive &&
+        (Types.isContainer(curr) || Types.isContainerLocal(curr)));
     
     if (includeBaseType) {
       TypeName reprType;
@@ -1619,10 +1626,38 @@ public class TurbineGenerator implements CompilerBackend {
 
     Dict dict = Dict.dictCreate(true, kvExprs);
     
-    
     pointAdd(arrayBuild(array, dict));
   }
+  
+  public void asyncCopyContainer(Var dst, Var src) {
+    assert(Types.isContainer(dst));
+    assert(src.type().assignableTo(dst.type()));
+    
+    startAsync("copy-" + src.name() + "_" + dst.name(),
+               src.asList(), src.asList(), false,
+               TaskMode.LOCAL, new TaskProps());
+    syncCopyContainer(dst, src);
+    endAsync();
+  }
+  
+  public void syncCopyContainer(Var dst, Var src) {
+    assert(Types.isContainer(dst));
+    assert(src.type().assignableTo(dst.type()));
+    // Implement as load followed by store
+    Value tmpVal = new Value(TCLTMP_ARRAY_CONTENTS);
+    
+    Type elemType = Types.containerElemType(dst);
+    boolean refElems = Types.isRef(elemType);
+    Expression incrReferand = refElems ? LiteralInt.ONE : LiteralInt.ZERO;
 
+    TypeName simpleReprType = representationType(src.type(), false);
+    pointAdd(Turbine.retrieveAcquire(tmpVal.variable(), varToExpr(src),
+                               simpleReprType, incrReferand, LiteralInt.ONE));
+    
+    List<TypeName> fullReprType = typeList(dst.type(), true, true, true, false);
+    pointAdd(Turbine.adlbStore(varToExpr(dst), tmpVal, fullReprType));
+  }
+  
   /**
    * Helper function to generate arrayBuild call given a Tcl expression
    * that is a dict
@@ -2996,7 +3031,7 @@ public class TurbineGenerator implements CompilerBackend {
     List<Expression> result = new ArrayList<Expression>();
     for (Arg val: vals) {
       if (Types.isContainerLocal(val.type())) {
-        result.addAll(nestedTypeList(val.type(), true, true, true)); 
+        result.addAll(recursiveTypeList(val.type(), true, true, true)); 
       } else {
         result.add(valRepresentationType(val.type()));
       }

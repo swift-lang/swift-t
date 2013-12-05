@@ -1355,42 +1355,8 @@ public class ExprWalker {
                                                 throws UserException {
     assert(src.type().assignableTo(dst.type()));
     assert(Types.isArray(src) || Types.isBag(src));
-    LocalContext copyContext = new LocalContext(context);
-    Type t = src.type();
-    Type memType;
-    Type ixType; 
-    Var ix;
-    if (Types.isArray(src)) {
-      memType = Types.containerElemType(t);
-      ixType = Types.derefResultType(Types.arrayKeyType(src));
-      ix = copyContext.createLocalValueVariable(ixType);
-    } else {
-      assert(Types.isBag(src));
-      memType= Types.containerElemType(t);
-      ixType = null;
-      ix = null;
-    }
-    Var member = copyContext.createTmpAliasVar(memType);
- 
-    backend.startWaitStatement(
-        context.getFunctionContext().constructName(dst.name() + "-copy-wait"),
-        VarRepr.backendVar(src).asList(), WaitMode.WAIT_ONLY,
-        false, false, TaskMode.LOCAL);
-    Var backendSrc = VarRepr.backendVar(src);
-    Var backendDst = VarRepr.backendVar(dst);
-    Var backendMember = VarRepr.backendVar(member);
-    Var backendIx = VarRepr.backendVar(ix);
-    backend.startForeachLoop(
-            context.getFunctionContext().constructName(dst.name() + "-copy"),
-            backendSrc, backendMember, backendIx, -1, 1, true);
-    if (Types.isArray(src)) {
-      backend.arrayStore(backendDst, backendIx.asArg(), backendMember.asArg());
-    } else {
-      assert(Types.isBag(src));
-      backend.bagInsert(backendDst, backendMember.asArg());
-    }
-    backend.endForeachLoop();
-    backend.endWaitStatement();
+    backend.asyncCopyContainer(VarRepr.backendVar(dst),
+                               VarRepr.backendVar(src));
   }
 
   private void derefThenCopyContainer(Context context, Var dst, Var src)

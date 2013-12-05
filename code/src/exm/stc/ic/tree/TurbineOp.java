@@ -178,6 +178,14 @@ public class TurbineOp extends Instruction {
       gen.arrayBuild(getOutput(0), keys, vals);
       break;
     }
+    case ASYNC_COPY_CONTAINER: {
+      gen.asyncCopyContainer(getOutput(0), getInput(0).getVar());
+      break;
+    }
+    case SYNC_COPY_CONTAINER: {
+      gen.syncCopyContainer(getOutput(0), getInput(0).getVar());
+      break;
+    }
     case BAG_INSERT:
       gen.bagInsert(getOutput(0), getInput(0), getInput(1));
       break;
@@ -427,6 +435,19 @@ public class TurbineOp extends Instruction {
       inputs.add(vals.get(i));
     }
     return new TurbineOp(Opcode.ARRAY_BUILD, array.asList(), inputs);
+  }
+  
+  public static Instruction asyncCopyContainer(Var dst, Var src) {
+    assert(Types.isContainer(dst));
+    assert(src.type().assignableTo(dst.type()));
+    return new TurbineOp(Opcode.ASYNC_COPY_CONTAINER, dst, src.asArg());
+  }
+  
+  public static Instruction syncCopyContainer(Var dst, Var src) {
+    assert(Types.isContainer(dst));
+    assert(src.type().assignableTo(dst.type()));
+
+    return new TurbineOp(Opcode.SYNC_COPY_CONTAINER, dst, src.asArg());
   }
 
   public static Instruction bagInsert(Var bag, Arg elem, Arg writersDecr) {
@@ -771,6 +792,8 @@ public class TurbineOp extends Instruction {
     case AREF_COPY_IN_FUTURE:
     case AREF_STORE_IMM:
     case AREF_COPY_IN_IMM:
+    case SYNC_COPY_CONTAINER:
+    case ASYNC_COPY_CONTAINER:
       // Effect can be tracked back to original array
       return false;
 
@@ -1047,6 +1070,20 @@ public class TurbineOp extends Instruction {
       }
       break;
     }
+    case ASYNC_COPY_CONTAINER: {
+      // See if we can get closed container
+      List<Var> req = mkImmVarList(waitForClose, closedVars,
+                                   getInput(0).getVar());
+      if (req.size() > 0) {
+        return new MakeImmRequest(null, req);
+      }
+      break;
+    }
+    case SYNC_COPY_CONTAINER: {
+      // TODO: would be nice to switch to array_store if we already have
+      //       loaded array value
+      break;
+    }
     case UPDATE_INCR:
     case UPDATE_MIN:
     case UPDATE_SCALE:
@@ -1286,6 +1323,16 @@ public class TurbineOp extends Instruction {
       return new MakeImmChange(newOut3, arrResult,
           arrayCreateNestedImm(newOut3, newArr, getInput(0)));
     }
+    case ASYNC_COPY_CONTAINER: {
+      // Array is closed: replace with sync version
+      return new MakeImmChange(
+          syncCopyContainer(getOutput(0), getInput(0).getVar()));
+    }
+    case SYNC_COPY_CONTAINER: {
+      // TODO: would be nice to switch to array_store if we already have
+      //       loaded array value
+      break;
+    }
     case UPDATE_INCR:
     case UPDATE_MIN:
     case UPDATE_SCALE: {
@@ -1494,6 +1541,7 @@ public class TurbineOp extends Instruction {
     case SET_FILENAME_VAL:
     case INIT_LOCAL_OUTPUT_FILE:
     case ARRAY_BUILD:
+    case SYNC_COPY_CONTAINER:
     case BAG_INSERT:
     case CHECKPOINT_WRITE_ENABLED:
     case CHECKPOINT_LOOKUP_ENABLED:
@@ -1521,6 +1569,7 @@ public class TurbineOp extends Instruction {
     case AREF_CREATE_NESTED_FUTURE:
     case ARR_CREATE_NESTED_FUTURE:
     case AREF_CREATE_NESTED_IMM:
+    case ASYNC_COPY_CONTAINER:
       return TaskMode.LOCAL;
     default:
       throw new STCRuntimeError("Need to add opcode " + op.toString()
@@ -1722,11 +1771,14 @@ public class TurbineOp extends Instruction {
                                               !returnsRef));
         return res;
       }
+      case SYNC_COPY_CONTAINER: 
+      case ASYNC_COPY_CONTAINER: {
+        return ValLoc.makeCopy(getOutput(0), getInput(0),
+                               IsAssign.TO_LOCATION).asList();
+      }
       case COPY_REF: {
-        List<ValLoc> res = new ArrayList<ValLoc>();
         Var srcRef = getInput(0).getVar();
-        res.add(ValLoc.makeAlias(getOutput(0), srcRef));
-        return res;
+        return ValLoc.makeAlias(getOutput(0), srcRef).asList();
       }
       case LOOKUP_CHECKPOINT:
       case UNPACK_VALUES: {
@@ -1776,7 +1828,7 @@ public class TurbineOp extends Instruction {
 
   @Override
   public List<Var> getClosedOutputs() {
-    if (op == Opcode.ARRAY_BUILD) {
+    if (op == Opcode.ARRAY_BUILD || op == Opcode.SYNC_COPY_CONTAINER) {
       // Output array should be closed
       return Collections.singletonList(getOutput(0));
     } else if (op == Opcode.STORE_REF) {
@@ -1796,7 +1848,7 @@ public class TurbineOp extends Instruction {
     switch (op) {
       case STORE_REF:
         return Pair.create(getInput(0).getVar().asList(), Var.NONE);
-      case ARRAY_BUILD:{
+      case ARRAY_BUILD: {
         List<Var> readIncr = new ArrayList<Var>(getInputs().size() / 2);
         for (int i = 0; i < getInputs().size() / 2; i++) {
           // Skip keys and only get values
@@ -1809,6 +1861,12 @@ public class TurbineOp extends Instruction {
         Var arr = getOutput(0);
         return Pair.create(readIncr, Arrays.asList(arr));
       }
+      case ASYNC_COPY_CONTAINER:
+      case SYNC_COPY_CONTAINER:
+        // Need to pass in refcount for array to be copied, and write
+        // refcount for assigned array
+        return Pair.create(getInput(0).getVar().asList(),
+                           getOutput(0).asList());
       case STORE_BAG:
       case STORE_ARRAY: 
       case STORE_RECURSIVE: {
@@ -2221,4 +2279,5 @@ public class TurbineOp extends Instruction {
                             getRCType(this.op), getRCAmount(this));
     }
   }
+
 }

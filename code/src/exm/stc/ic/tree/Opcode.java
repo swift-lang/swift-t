@@ -53,6 +53,9 @@ public enum Opcode {
   ARR_COPY_OUT_IMM, ARR_COPY_OUT_FUTURE,
   AREF_COPY_OUT_IMM, AREF_COPY_OUT_FUTURE,
   
+  // Copy containers
+  ASYNC_COPY_CONTAINER, SYNC_COPY_CONTAINER,
+  
   // Create full array in one shot
   ARRAY_BUILD,
   

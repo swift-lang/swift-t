@@ -123,6 +123,8 @@ class Turbine {
   private static final Token ACQUIRE_REF = turbFn("acquire_ref");
   private static final Token ACQUIRE_FILE_REF = turbFn("acquire_file_ref");
   private static final Token ACQUIRE_STRUCT_REF = turbFn("acquire_struct");
+  private static final Token ADLB_ACQUIRE_REF = adlbFn("acquire_ref");
+  private static final Token ADLB_STORE = adlbFn("store");
   private static final Token CACHED = new Token("CACHED");
   private static final Token UNCACHED_MODE = new Token("UNCACHED");
   
@@ -525,6 +527,43 @@ class Turbine {
                                          Expression decr) {
     return new SetVariable(target, new Square(ACQUIRE_STRUCT_REF, variable,
                                                  LiteralInt.ONE, decr));
+  }
+  
+  /**
+   * General-purpose acquire primitive
+   * @param dst
+   * @param src
+   * @param srcType type of src
+   * @param incrReferand
+   * @param decr
+   * @return
+   */
+  public static SetVariable retrieveAcquire(String dst, Value src,
+      TypeName srcType, Expression incrReferand, Expression decr) {
+    return new SetVariable(dst,
+        new Square(ADLB_ACQUIRE_REF, src, srcType, incrReferand, decr));
+  }
+  
+  public static Command adlbStore(Value dst, Expression src,
+      List<TypeName> dstTypeInfo) {
+    return adlbStore(dst, src, dstTypeInfo, null, null);
+  }
+  
+  public static Command adlbStore(Value dst, Expression src,
+      List<TypeName> dstTypeInfo,
+      Expression decrWriters, Expression decrReaders) {
+    List<Expression> args = new ArrayList<Expression>();
+    args.add(dst);
+    args.add(src);
+    args.addAll(dstTypeInfo);
+    if (decrWriters != null) {
+      args.add(decrWriters);
+    }
+    if (decrReaders != null) {
+      assert(decrWriters != null); 
+      args.add(decrReaders);
+    }
+    return new Command(ADLB_STORE, args);
   }
 
   public static SetVariable integerDecrGet(String target, Value src,

@@ -600,6 +600,12 @@ public class STCMiddleEnd {
                                       arrayResult, outerArr, array, ix));
   }
   
+  public void asyncCopyContainer(Var dst, Var src) {
+    assert(Types.isContainer(src));
+    assert(src.type().assignableTo(dst.type()));
+    currBlock().addInstruction(TurbineOp.asyncCopyContainer(dst, src));
+  }
+
   public void bagInsert(Var bag, Arg elem) {
     assert(Types.isBag(bag));
     assert(Types.isBagElem(bag, elem));
