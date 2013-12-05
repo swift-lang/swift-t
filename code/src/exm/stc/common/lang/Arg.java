@@ -272,6 +272,14 @@ public class Arg implements Comparable<Arg>, Typed {
   }
 
   /**
+   * Translate to string with type info
+   * @return
+   */
+  public String toStringTyped() {
+    return toString() + ":" + this.type().typeName();
+  }
+
+  /**
    * Define hashCode and equals so this can be used as key in hash table
    */
   @Override

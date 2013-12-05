@@ -475,7 +475,8 @@ public class STCMiddleEnd {
   public void arrayStore(Var array, Arg ix, Arg member) {
     assert(Types.isArray(array.type()));
     assert(Types.isArrayKeyVal(array, ix));
-    assert(Types.isElemValType(array, member)) : member + " " + array;
+    assert(Types.isElemValType(array, member)) :
+            member.toStringTyped() + " " + array;
     currBlock().addInstruction(TurbineOp.arrayStore(array, ix, member));
   }
 

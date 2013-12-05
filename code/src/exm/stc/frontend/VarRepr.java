@@ -97,17 +97,29 @@ public class VarRepr {
     assert(type.isConcrete()) : type;
     
     // Remove any subtype info, etc
-    type = type.getImplType();
-    
-    // TODO: also need to search recursively through structs, refs, etc
+    return backendTypeInternal(type.getImplType());
+  }
+
+  /**
+   * Internal backend type
+   * @param type a type that has had implType applied already
+   * @return
+   */
+  private static Type backendTypeInternal(Type type) {
+    // TODO: also need to search recursively through structs, etc
     if (Types.isContainer(type) || Types.isContainerRef(type)) {
-      Type elemType = Types.containerElemType(type);
-      if (storeRefInContainer(elemType)) {
-        type = Types.substituteElemType(type, new RefType(elemType));
+      Type frontendElemType = Types.containerElemType(type);
+      Type backendElemType = backendTypeInternal(frontendElemType);
+      if (storeRefInContainer(backendElemType)) {
+        type = Types.substituteElemType(type, new RefType(backendElemType));
+      }
+    } else if (Types.isRef(type)) {
+      Type frontendDerefT = type.memberType();
+      Type backendDerefT = backendType(frontendDerefT);
+      if (!frontendDerefT.equals(backendDerefT)) {
+        return new RefType(backendDerefT);
       }
     }
-    
-    // Default is the same
     return type;
   }
   

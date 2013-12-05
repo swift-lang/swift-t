@@ -639,8 +639,6 @@ public class ExprWalker {
     // Evaluate the array
     Var arrayVar = eval(context, arrayTree, arrType, false, renames);
 
-    Type memberType = Types.containerElemType(arrType);
-
     // Any integer expression can index into array
     SwiftAST arrayIndexTree = tree.child(1);
     Type indexType = TypeChecker.findSingleExprType(context, arrayIndexTree);
@@ -651,31 +649,36 @@ public class ExprWalker {
           + "expression was " + indexType.typeName());
     }
 
-    // The direct result of the array lookup
-    Var lookupDst;
-    boolean doDereference;
-    if (memberType.assignableTo(oVar.type())) {
-      lookupDst = oVar;
-      doDereference = false;
-    } else {
-      // Need to dereference into temporary var
-      lookupDst = varCreator.createTmp(context, 
-              new RefType(memberType));
-      doDereference = true;
-      throw new STCRuntimeError("Dead branch?");
-    }
-
-    Long arrayIndex = Literals.extractIntLit(context, 
-                                          arrayIndexTree);
     Var backendArray = VarRepr.backendVar(arrayVar);
-    Var backendLookupDst = VarRepr.backendVar(lookupDst);
+    Type backendElemType = Types.containerElemType(backendArray);
+    Var backendOVar = VarRepr.backendVar(oVar);
+    
+    // The direct output of the array op
+    Var copyDst;
+    boolean mustDereference;
+    if (backendElemType.assignableTo(backendOVar.type())) {
+      // Want to copy out
+      copyDst = oVar;
+      mustDereference = false;
+    } else {
+      assert(Types.isRefTo(backendElemType, backendOVar)) :
+            backendElemType + " => " + backendOVar;
+      // Need to dereference into temporary var
+      copyDst = varCreator.createTmp(context,
+              new RefType(Types.containerElemType(arrayVar)));
+      mustDereference = true;
+    }
+    
+
+    Var backendCopyDst = VarRepr.backendVar(copyDst);
+    Long arrayIndex = Literals.extractIntLit(context, arrayIndexTree);
     if (arrayIndex != null) {
       // Handle the special case where the index is a constant.
       if (Types.isArrayRef(arrType)) {
-        backend.arrayRefCopyOutImm(backendLookupDst,
+        backend.arrayRefCopyOutImm(backendCopyDst,
             backendArray, Arg.createIntLit(arrayIndex));
       } else {
-        backend.arrayCopyOutImm(backendLookupDst,
+        backend.arrayCopyOutImm(backendCopyDst,
                 backendArray, Arg.createIntLit(arrayIndex));
       }
     } else {
@@ -683,17 +686,17 @@ public class ExprWalker {
       Var indexVar = eval(context, arrayIndexTree,
                           Types.arrayKeyType(arrayVar), false, renames);
       if (Types.isArrayRef(arrType)) {
-        backend.arrayRefCopyOutFuture(backendLookupDst, backendArray,
+        backend.arrayRefCopyOutFuture(backendCopyDst, backendArray,
               VarRepr.backendVar(indexVar));
       } else {
-        backend.arrayCopyOutFuture(backendLookupDst, backendArray,
+        backend.arrayCopyOutFuture(backendCopyDst, backendArray,
                 VarRepr.backendVar(indexVar));
       }
     }
     // Do the dereference down here so that it is generated in a more logical
     // order
-    if (doDereference) {
-      dereference(context, VarRepr.backendVar(oVar), backendLookupDst);
+    if (mustDereference) {
+      dereference(context, oVar, copyDst);
     }
   }
 
