@@ -154,23 +154,23 @@ public class ValLoc {
    * @param arr
    * @param ix
    * @param contents
-   * @param refResult if contents is ref
+   * @param refResult if contents is of value type of elem
    * @return
    */
   public static ValLoc makeArrayResult(Var arr, Arg ix,
-          Arg contents, boolean refResult, IsAssign isAssign) {
+          Arg contents, boolean valResult, IsAssign isAssign) {
     ArgCV val;
     // TODO: how to handle assigns to array references?
     //       Will need to make sure that everything is respected if
     //       we created a dereferenced one.
-    if (refResult) {
-      assert(Types.isMemberReference(contents, arr)) :
-            "not member ref: " + contents + " " + arr;
-      val = ComputedValue.arrayRefCV(arr, ix);
+    if (valResult) {
+      assert(Types.isElemValType(contents, arr)) :
+            "not member val: " + contents + " " + arr;
+      val = ComputedValue.arrayValCV(arr, ix);
     } else {
       assert(Types.isElemType(arr, contents)) :
             "not member: " + contents + " " + arr;
-      val = ComputedValue.arrayCV(arr, ix);
+      val = ComputedValue.arrayValCopyCV(arr, ix);
     }
     return new ValLoc(val, contents, Closed.MAYBE_NOT, IsValCopy.NO, isAssign);
   }

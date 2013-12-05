@@ -249,8 +249,8 @@ public class ComputedValue<T> {
    * @param ix
    * @return
    */
-  public static ArgCV arrayCV(Var arr, Arg ix) {
-    return new ArgCV(Opcode.FAKE, ComputedValue.ARRAY_CONTENTS,
+  public static ArgCV arrayValCopyCV(Var arr, Arg ix) {
+    return new ArgCV(Opcode.FAKE, ComputedValue.ARRAY_ELEM_COPY,
                               Arrays.asList(arr.asArg(), ix));
   }
 
@@ -261,9 +261,9 @@ public class ComputedValue<T> {
    * @param ix
    * @return
    */
-  public static ArgCV arrayRefCV(Var arr, Arg ix) {
+  public static ArgCV arrayValCV(Var arr, Arg ix) {
     return new ArgCV(Opcode.FAKE,
-        ComputedValue.REF_TO_ARRAY_CONTENTS, Arrays.asList(arr.asArg(), ix));
+        ComputedValue.ARRAY_ELEM_VALUE, Arrays.asList(arr.asArg(), ix));
   }
 
   public static ArgCV arrayRefNestedCV(Var arr, Arg ix) {
@@ -291,14 +291,14 @@ public class ComputedValue<T> {
   
   public boolean isArrayMember() {
     return (op == Opcode.FAKE && subop.equals(ComputedValue.ARRAY_NESTED)) ||
-           (op == Opcode.FAKE && subop.equals(ComputedValue.ARRAY_CONTENTS));
+           (op == Opcode.FAKE && subop.equals(ComputedValue.ARRAY_ELEM_COPY));
   }
   
   public boolean isArrayMemberRef() {
     return (op == Opcode.FAKE && 
           subop.equals(ComputedValue.REF_TO_ARRAY_NESTED)) ||
         (op == Opcode.FAKE &&
-          subop.equals(ComputedValue.REF_TO_ARRAY_CONTENTS));
+          subop.equals(ComputedValue.ARRAY_ELEM_VALUE));
   }
   
   /**
@@ -311,8 +311,8 @@ public class ComputedValue<T> {
     if (memRef.subop.equals(REF_TO_ARRAY_NESTED)) {
       newSubop = ARRAY_NESTED;
     } else {
-      assert(memRef.subop.equals(REF_TO_ARRAY_CONTENTS));
-      newSubop = ARRAY_CONTENTS;
+      assert(memRef.subop.equals(ARRAY_ELEM_VALUE));
+      newSubop = ARRAY_ELEM_COPY;
     }
     return new ArgCV(Opcode.FAKE, newSubop, memRef.inputs);
   }
@@ -407,8 +407,8 @@ public class ComputedValue<T> {
   /* Special subop strings to use with fake opcode */
   public static final String ARRAY_SIZE_FUTURE = "array_size_future";
   public static final String ARRAY_SIZE_VAL = "array_size_val";
-  public static final String ARRAY_CONTENTS = "array_contents";
-  public static final String REF_TO_ARRAY_CONTENTS = "ref_to_array_contents";
+  public static final String ARRAY_ELEM_COPY = "array_elem_copy";
+  public static final String ARRAY_ELEM_VALUE = "array_elem_value";
   public static final String ARRAY_NESTED = "autocreated_nested";
   public static final String REF_TO_ARRAY_NESTED = "ref_to_autocreated_nested";
   public static final String COPY_OF = "copy_of";
