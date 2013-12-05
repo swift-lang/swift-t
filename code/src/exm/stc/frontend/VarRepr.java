@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
 
+import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
@@ -46,6 +47,18 @@ public class VarRepr {
   }
   
   public static Arg backendArg(Arg frontendArg) {
+    return backendArg(frontendArg, false);
+  }
+  
+  public static Arg backendArg(Arg frontendArg,
+            boolean passThroughNulls) {
+    if (frontendArg == null) {
+      if (passThroughNulls) {
+        return null;
+      } else {
+        throw new STCRuntimeError("argument was null");
+      }
+    }
     if (frontendArg.isVar()) {
       return backendArg(frontendArg.getVar());
     } else {

@@ -1817,9 +1817,9 @@ public class ASTWalker {
     List<Var> beLocalOutputs = VarRepr.backendVars(localOutputs);
     List<Arg> beLocalInfiles = VarRepr.backendArgs(localInFiles);
     Redirects<Arg> beLocalRedirects = new Redirects<Arg>(
-                VarRepr.backendArg(localRedirects.stdin),
-                VarRepr.backendArg(localRedirects.stdout),
-                VarRepr.backendArg(localRedirects.stderr));
+                VarRepr.backendArg(localRedirects.stdin, true),
+                VarRepr.backendArg(localRedirects.stdout, true),
+                VarRepr.backendArg(localRedirects.stderr, true));
     if (asyncExec == null) {
       backend.runExternal(appName, beLocalArgs, beLocalInfiles, beLocalOutputs,
                         beLocalRedirects, hasSideEffects, deterministic);
