@@ -599,11 +599,11 @@ public class TurbineGenerator implements CompilerBackend {
   }
   
   private TypeName arrayValueType(Typed arrType, boolean creation) {
-    return refRepresentationType(Types.containerElemType(arrType), creation);
+    return representationType(Types.containerElemType(arrType), creation);
   }
   
   private TypeName bagValueType(Typed bagType, boolean creation) {
-    return refRepresentationType(Types.containerElemType(bagType), creation);
+    return representationType(Types.containerElemType(bagType), creation);
   }
   
   private void allocateFile(Var var, Arg initReaders) {
