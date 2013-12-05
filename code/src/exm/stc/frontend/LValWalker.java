@@ -301,9 +301,9 @@ public class LValWalker {
       Var next = varCreator.createStructFieldTmp(context, rootVar,
           lval.getType(context, i + 1), currPath, Alloc.ALIAS);
 
-      backend.structLookup(next, curr, fieldPath.get(i));
-      LogHelper
-          .trace(context, "Lookup " + curr.name() + "." + fieldPath.get(i));
+      backend.structLookup(VarRepr.backendVar(next), VarRepr.backendVar(curr),
+                           fieldPath.get(i));
+      LogHelper.trace(context, "Lookup " + curr + "." + fieldPath.get(i));
       curr = next;
     }
     LValue newTarget = new LValue(lval, lval.tree, curr, lval.indices.subList(
@@ -403,7 +403,8 @@ public class LValWalker {
     Var derefArr; // Plain array (not reference);
     if (Types.isArrayRef(arr)) {
       derefArr = varCreator.createTmpAlias(context, Types.derefResultType(arr));
-      exprWalker.retrieveRef(derefArr, arr);
+      exprWalker.retrieveRef(VarRepr.backendVar(derefArr),
+                             VarRepr.backendVar(arr));
     } else {
       derefArr = arr;
     }
@@ -414,7 +415,8 @@ public class LValWalker {
     assert (Types.isBag(bagType));
     Var bag = varCreator.createTmpAlias(context, bagType);
     // create or get nested bag instruction
-    backend.arrayCreateBag(bag, derefArr, keyVal.asArg());
+    backend.arrayCreateBag(VarRepr.backendVar(bag),
+        VarRepr.backendVar(derefArr), VarRepr.backendArg(keyVal));
     backendBagAppend(context, bag, elem);
 
     backend.endWaitStatement();
@@ -441,16 +443,19 @@ public class LValWalker {
     Var mVar; // Variable for member we're looking up
     if (Types.isArray(memberType)) {
       Long literal = Literals.extractIntLit(context, indexExpr);
+      Var backendLValArr = VarRepr.backendVar(lvalArr);
       if (literal != null) {
         long arrIx = literal;
         // Add this variable to array
         if (Types.isArray(lvalArr.type())) {
           mVar = varCreator.createTmpAlias(context, memberType);
-          backend.arrayCreateNestedImm(mVar, lvalArr, Arg.createIntLit(arrIx));
+          backend.arrayCreateNestedImm(VarRepr.backendVar(mVar),
+              backendLValArr, Arg.createIntLit(arrIx));
         } else {
           assert (Types.isArrayRef(lvalArr.type()));
           mVar = varCreator.createTmp(context, new RefType(memberType));
-          backend.arrayRefCreateNestedImm(mVar, lval.getOuterArray(), lvalArr,
+          backend.arrayRefCreateNestedImm(VarRepr.backendVar(mVar),
+              VarRepr.backendVar(lval.getOuterArray()), backendLValArr,
               Arg.createIntLit(arrIx));
         }
 
@@ -459,12 +464,15 @@ public class LValWalker {
         mVar = varCreator.createTmp(context, new RefType(memberType));
         Var indexVar = evalKey(context, lvalArr, indexExpr);
 
+        Var backendIx = VarRepr.backendVar(indexVar);
         if (Types.isArray(lvalArr.type())) {
-          backend.arrayCreateNestedFuture(mVar, lvalArr, indexVar);
+          backend.arrayCreateNestedFuture(VarRepr.backendVar(mVar),
+                                        backendLValArr, backendIx);
         } else {
           assert (Types.isArrayRef(lvalArr.type()));
-          backend.arrayRefCreateNestedFuture(mVar, lval.getOuterArray(),
-              lvalArr, indexVar);
+          backend.arrayRefCreateNestedFuture(VarRepr.backendVar(mVar),
+              VarRepr.backendVar(lval.getOuterArray()), backendLValArr,
+              backendIx);
         }
       }
     } else {
@@ -515,35 +523,51 @@ public class LValWalker {
 
   private void backendArrayInsert(final Var arr, long ix, Var member,
               boolean isArrayRef, boolean rvalIsRef, Var outermostArray) {
-    if (isArrayRef && rvalIsRef) {
+    Var backendArr = VarRepr.backendVar(arr);
+    Var backendMember = VarRepr.backendVar(member);
+    Arg ixArg = Arg.createIntLit(ix);
+    if (isArrayRef) {
       // This should only be run when assigning to nested array
-      backend.arrayRefDerefInsertImm(outermostArray, arr,
-                         Arg.createIntLit(ix), member);
-    } else if (isArrayRef && !rvalIsRef) {
-      // This should only be run when assigning to nested array
-      backend.arrayRefInsertImm(outermostArray, arr, Arg.createIntLit(ix),
-                                member);
-    } else if (!isArrayRef && rvalIsRef) {
-      backend.arrayDerefInsertImm(arr, Arg.createIntLit(ix),  member);
+      Var backendOuter = VarRepr.backendVar(outermostArray);
+      if (rvalIsRef) {
+        // This should only be run when assigning to nested array
+        backend.arrayRefDerefInsertImm(backendOuter, backendArr,
+                                       ixArg, backendMember);
+      } else {
+        backend.arrayRefInsertImm(backendOuter, backendArr, ixArg,
+                                  backendMember);
+      }
     } else {
-      assert(!isArrayRef && !rvalIsRef);
-      backend.arrayInsertImm(arr, Arg.createIntLit(ix),  member);
+      assert(!isArrayRef);
+      if (rvalIsRef) {
+        backend.arrayDerefInsertImm(backendArr, ixArg, backendMember);
+      } else {
+        backend.arrayInsertImm(backendArr, ixArg, backendMember);
+      }
     }
   }
   
   private void backendArrayInsert(Var arr, Var ix, Var member,
       boolean isArrayRef, boolean rvalIsRef, Var outermostArray) {
-    if (isArrayRef && rvalIsRef) {
-      backend.arrayRefDerefInsertFuture(outermostArray, arr, 
-                                        ix, member);
-    } else if (isArrayRef && !rvalIsRef) {
-      backend.arrayRefInsertFuture(outermostArray, arr, 
-                                        ix, member);
-    } else if (!isArrayRef && rvalIsRef) {
-      backend.arrayDerefInsertFuture(arr, ix, member);
+    Var backendArr = VarRepr.backendVar(arr);
+    Var backendIx = VarRepr.backendVar(ix);
+    Var backendMember = VarRepr.backendVar(member);
+    if (isArrayRef) {
+      Var backendOuter = VarRepr.backendVar(outermostArray);
+      if (rvalIsRef) {
+        backend.arrayRefDerefInsertFuture(backendOuter, backendArr, 
+                                        backendIx, backendMember);
+      } else {
+        backend.arrayRefInsertFuture(backendOuter, backendArr, 
+                                     backendIx, backendMember);
+      }
     } else {
-      assert(!isArrayRef && !rvalIsRef);
-      backend.arrayInsertFuture(arr, ix, member);
+      assert(!isArrayRef);
+      if (rvalIsRef) {
+        backend.arrayDerefInsertFuture(backendArr, backendIx, backendMember);
+      } else {
+        backend.arrayInsertFuture(backendArr, backendIx, backendMember);
+      }
     }
   }
 
@@ -590,7 +614,8 @@ public class LValWalker {
         // Dereference and use in place
         Var derefedBag = varCreator.createTmpAlias(context,
                                Types.derefResultType(bag));
-        exprWalker.retrieveRef(derefedBag, bag);
+        exprWalker.retrieveRef(VarRepr.backendVar(derefedBag),
+                               VarRepr.backendVar(bag));
         bag = derefedBag;
       }
       if (elemRef) {
@@ -599,13 +624,14 @@ public class LValWalker {
         
         // Dereference and use in place of old var
         Var derefedElem = varCreator.createTmpAlias(context, elemType);
-        exprWalker.retrieveRef(derefedElem, elem);
+        exprWalker.retrieveRef(VarRepr.backendVar(derefedElem),
+                               VarRepr.backendVar(elem));
         elem = derefedElem;
       }
     }
     
     // Do the actual insert
-    backend.bagInsert(bag, elem);
+    backend.bagInsert(VarRepr.backendVar(bag), VarRepr.backendVar(elem));
     
     if (openWait) {
       backend.endWaitStatement();
