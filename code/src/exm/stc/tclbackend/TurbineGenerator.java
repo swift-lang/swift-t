@@ -1426,7 +1426,7 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void arrayCopyOutImm(Var oVar, Var arrayVar, Arg arrIx) {
     assert(Types.isArrayKeyVal(arrayVar, arrIx));
-    assert(Types.isArray(arrayVar));
+    assert(Types.isArray(arrayVar)) : arrayVar;
     assert(Types.isElemType(arrayVar, oVar));
     
     Command getRef = Turbine.arrayLookupImmIx(

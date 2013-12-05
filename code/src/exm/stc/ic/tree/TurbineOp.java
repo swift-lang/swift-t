@@ -126,10 +126,10 @@ public class TurbineOp extends Instruction {
                              getInput(1).getVar());
       break;
     case AREF_COPY_OUT_IMM:
-      gen.arrayCopyOutImm(getOutput(0), getInput(0).getVar(), getInput(1));
+      gen.arrayRefCopyOutImm(getOutput(0), getInput(0).getVar(), getInput(1));
       break;
     case AREF_COPY_OUT_FUTURE:
-      gen.arrayCopyOutFuture(getOutput(0), getInput(0).getVar(),
+      gen.arrayRefCopyOutFuture(getOutput(0), getInput(0).getVar(),
                              getInput(1).getVar());
       break;
     case ARR_STORE:
