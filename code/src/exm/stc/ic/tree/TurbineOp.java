@@ -537,6 +537,51 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.STORE_REF, target, src.asArg());
   }
 
+  /**
+   * Helper to generate appropriate store instruction for any type
+   * if possible
+   * @param dst
+   * @param src
+   * @return
+   */
+  public static Instruction storeAny(Var dst, Arg src) {
+    assert(src.type().assignableTo(Types.derefResultType(dst)));
+    if (Types.isRef(dst)) {
+      assert(src.isVar());
+      return storeRef(dst, src.getVar());
+    } else if (Types.isPrimFuture(dst)) {
+      // Regular store?
+      return storePrim(dst, src);
+    } else if (Types.isArray(dst)) {
+      assert(src.isVar());
+      return assignArray(dst, src);
+    } else if (Types.isBag(dst)) {
+      assert(src.isVar());
+      return assignBag(dst, src);
+    } else {
+      throw new STCRuntimeError("Don't know how to store to " + dst);
+    }
+  }
+  
+  /**
+   * Helper to generate appropriate instruction for primitive type
+   * @param dst
+   * @param src
+   * @return
+   */
+  public static Instruction storePrim(Var dst, Arg src) {
+    assert(Types.isPrimFuture(dst));
+    assert(src.type().assignableTo(Types.derefResultType(dst)));
+    if (Types.isScalarFuture(dst)) {
+      return assignScalar(dst, src);
+    } else if (Types.isFile(dst)) {
+      return assignFile(dst, src);
+    } else {
+      throw new STCRuntimeError("method to set " +
+          dst.type().typeName() + " is not known yet");
+    }
+  }
+  
   public static Instruction derefScalar(Var target, Var src) {
     return new TurbineOp(Opcode.DEREF_SCALAR, target, src.asArg());
   }

@@ -22,13 +22,13 @@ import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.WrapUtil;
 import exm.stc.ic.tree.ICContinuations.WaitVar;
-import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.FunctionCall;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.RenameMode;
+import exm.stc.ic.tree.TurbineOp;
 
 /**
  * Optimize function signature
@@ -121,7 +121,7 @@ public class FunctionSignature implements OptimizerPass {
                           RenameMode.REPLACE_VAR, true);
       newBlock.addVariable(tmpfuture);
       Instruction store = 
-              ICInstructions.storePrim(tmpfuture, fv.val2.asArg());
+          TurbineOp.storePrim(tmpfuture, fv.val2.asArg());
       newBlock.addInstructionFront(store);
     }
     

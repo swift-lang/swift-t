@@ -528,7 +528,7 @@ public class ValueNumber implements OptimizerPass {
               // Replace a computation with future output with a store
               Arg val = state.findRetrieveResult(output);
               if (val != null && init.isInitialized(val, false)) {
-                Instruction futureSet = ICInstructions.storePrim(output, val);
+                Instruction futureSet = TurbineOp.storePrim(output, val);
                 stmtIt.set(futureSet);
                 logger.trace("Replaced with " + futureSet);
               }

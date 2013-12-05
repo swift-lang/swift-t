@@ -121,28 +121,31 @@ public class OptUtil {
    */
   public static void replaceInstOutput(Block srcBlock,
           Block targetBlock, List<Instruction> instBuffer, Var newOut, Var oldOut) {
-    if (Types.isRefTo(oldOut.type(), newOut.type())) {
-      Var refVar;
+    boolean isDerefResult = 
+        Types.derefResultType(oldOut).assignableTo(newOut.type());
+    if (isDerefResult) {
+      Var oldOutReplacement;
       if (oldOut.storage() == Alloc.ALIAS) {
         // Will need to initialise variable in this scope as before we
         // were relying on instruction to initialise it
         
-        refVar = new Var(oldOut.type(),
+        oldOutReplacement = new Var(oldOut.type(),
             oldOut.name(), Alloc.TEMP,
             oldOut.defType(), oldOut.provenance(), oldOut.mapping());
         
         // Replace variable in block and in buffered instructions
-        replaceVarDeclaration(srcBlock, oldOut, refVar);
+        replaceVarDeclaration(srcBlock, oldOut, oldOutReplacement);
         
         Map<Var, Arg> renames = Collections.singletonMap(
-                                oldOut, Arg.createVar(refVar));
+                                oldOut, Arg.createVar(oldOutReplacement));
         for (Instruction inst: instBuffer) {
           inst.renameVars(renames, RenameMode.REPLACE_VAR);
         }
       } else {
-        refVar = oldOut;
+        oldOutReplacement = oldOut;
       }
-      instBuffer.add(TurbineOp.storeRef(refVar, newOut));
+
+      instBuffer.add(TurbineOp.storeAny(oldOutReplacement, newOut.asArg()));
     } else {
       throw new STCRuntimeError("Tried to replace instruction"
           + " output var " + oldOut + " with " + newOut + ": this doesn't make sense"

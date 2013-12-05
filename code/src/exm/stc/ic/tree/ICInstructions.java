@@ -2232,19 +2232,6 @@ public class ICInstructions {
             src.type().typeName() + " is not known yet");
     }
   }
-
-  public static Instruction storePrim(Var dst, Arg src) {
-    assert(Types.isPrimFuture(dst));
-    assert(src.type().assignableTo(Types.derefResultType(dst)));
-    if (Types.isScalarFuture(dst)) {
-      return TurbineOp.assignScalar(dst, src);
-    } else if (Types.isFile(dst)) {
-      return TurbineOp.assignFile(dst, src);
-    } else {
-      throw new STCRuntimeError("method to set " +
-          dst.type().typeName() + " is not known yet");
-    }
-  }
   
   private static String formatFunctionCall(Opcode op, 
       String functionName, List<Var> outputs, List<Arg> inputs) {

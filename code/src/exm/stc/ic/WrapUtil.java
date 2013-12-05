@@ -427,7 +427,7 @@ public class WrapUtil {
         if (Types.isFile(outArg) && setOutVarMapping) {
           setFilenameFromFileVal(block, instBuffer, outArg, outVal);
         }
-        instBuffer.add(ICInstructions.storePrim(outArg, outVal.asArg()));
+        instBuffer.add(TurbineOp.storePrim(outArg, outVal.asArg()));
       }
     }
   }
