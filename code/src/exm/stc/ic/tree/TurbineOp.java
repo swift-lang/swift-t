@@ -25,7 +25,6 @@ import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
-import exm.stc.ic.opt.OptUtil;
 import exm.stc.ic.opt.valuenumber.ValLoc;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
@@ -1076,8 +1075,9 @@ public class TurbineOp extends Instruction {
   }
 
   @Override
-  public Instruction.MakeImmChange makeImmediate(List<Instruction.Fetched<Var>> out,
-                                     List<Instruction.Fetched<Arg>> values) {
+  public MakeImmChange makeImmediate(VarCreator creator,
+                                     List<Fetched<Var>> out,
+                                     List<Fetched<Arg>> values) {
     switch (op) {
     case ARR_COPY_OUT_IMM: {
       assert(values.size() == 1);
@@ -1086,10 +1086,11 @@ public class TurbineOp extends Instruction {
       Var newArr = values.get(0).fetched.getVar();
       assert(newArr.equals(arr));
       // Output switched from ref to value
-      Var refOut = getOutput(0);
-      Var valOut = OptUtil.createDerefTmp(refOut, Alloc.ALIAS);
+      // TODO: update to reflect that ref is not internal repr
+      Var origOut = getOutput(0);
+      Var valOut = creator.createDerefTmp(origOut);
       Instruction newI = arrayRetrieve(valOut, arr, getInput(1));
-      return new MakeImmChange(valOut, refOut, newI);
+      return new MakeImmChange(valOut, origOut, newI);
     }
     case ARR_COPY_OUT_FUTURE: {
       assert(values.size() == 1);
@@ -1130,7 +1131,7 @@ public class TurbineOp extends Instruction {
       Var newStruct = values.get(0).fetched.getVar();
       assert(Types.isRefTo(getInput(0).getVar(), newStruct));
       Var refOut = getOutput(0);
-      Var valOut = OptUtil.createDerefTmp(refOut, Alloc.ALIAS);
+      Var valOut = creator.createDerefTmp(refOut);
       String field = getInput(1).getStringLit();
       Instruction newI = structLookup(valOut, newStruct, field);
       return new MakeImmChange(valOut, refOut, newI);
@@ -1244,7 +1245,7 @@ public class TurbineOp extends Instruction {
       // Output type of instruction changed from ref to direct
       // array handle
       assert(Types.isArrayRef(oldResult.type()));
-      Var newOut = OptUtil.createDerefTmp(oldResult, Alloc.ALIAS);
+      Var newOut = creator.createDerefTmp(oldResult);
       return new MakeImmChange(newOut, oldResult,
           arrayCreateNestedImm(newOut, oldArray, ix));
     }
@@ -1261,7 +1262,7 @@ public class TurbineOp extends Instruction {
       if (newArr != null && newIx != null) {
         Var oldOut = getOutput(0);
         assert(Types.isArrayRef(oldOut.type()));
-        Var newOut = OptUtil.createDerefTmp(arrResult, Alloc.ALIAS);
+        Var newOut = creator.createDerefTmp(arrResult);
         return new MakeImmChange(newOut, oldOut,
             arrayCreateNestedImm(newOut, newArr, newIx));
       } else if (newArr != null && newIx == null) {
@@ -1280,7 +1281,7 @@ public class TurbineOp extends Instruction {
       Var arrResult = getOutput(0);
       assert(Types.isArray(newArr));
       assert(Types.isArrayRef(arrResult.type()));
-      Var newOut3 = OptUtil.createDerefTmp(arrResult, Alloc.ALIAS);
+      Var newOut3 = creator.createDerefTmp(arrResult);
       assert(Types.isArrayKeyVal(newArr, ix));
       return new MakeImmChange(newOut3, arrResult,
           arrayCreateNestedImm(newOut3, newArr, getInput(0)));

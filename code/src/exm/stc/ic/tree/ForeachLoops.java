@@ -768,7 +768,7 @@ public class ForeachLoops {
       logger.debug("Unrolling range loop " + this.loopName 
                         + " " + desiredUnroll + " times ");
       
-      String vPrefix = Var.OPT_VALUE_VAR_PREFIX + loopName;
+      String vPrefix = Var.VALUEOF_VAR_PREFIX + loopName;
       String bigStepName = outerBlock.uniqueVarName(vPrefix + ":unrollincr"); 
       VarProvenance prov = VarProvenance.optimizerTmp();
       Var bigIncr = new Var(Types.V_INT, bigStepName, Alloc.LOCAL,

@@ -29,6 +29,7 @@ import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
@@ -37,6 +38,7 @@ import exm.stc.ic.WrapUtil;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
+import exm.stc.ic.tree.ICInstructions.Instruction.VarCreator;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.RenameMode;
@@ -55,7 +57,7 @@ public class OptUtil {
   }
   
   public static String optVPrefix(Block b, String name) {
-    return b.uniqueVarName(Var.OPT_VALUE_VAR_PREFIX + name);
+    return b.uniqueVarName(Var.joinPrefix(Var.VALUEOF_VAR_PREFIX, name));
   }
   
   public static String optFilenamePrefix(Block b, Var v) {
@@ -63,7 +65,7 @@ public class OptUtil {
   }
   
   public static String optFilenamePrefix(Block b, String name) {
-    return b.uniqueVarName(Var.OPT_FILENAME_PREFIX + name);
+    return b.uniqueVarName(Var.joinPrefix(Var.OPT_FILENAME_PREFIX, name));
   }
   
   /**
@@ -119,8 +121,6 @@ public class OptUtil {
    */
   public static void replaceInstOutput(Block srcBlock,
           Block targetBlock, List<Instruction> instBuffer, Var newOut, Var oldOut) {
-    targetBlock.addVariable(newOut); // must be declared in new scope
-    
     if (Types.isRefTo(oldOut.type(), newOut.type())) {
       Var refVar;
       if (oldOut.storage() == Alloc.ALIAS) {
@@ -296,20 +296,40 @@ public class OptUtil {
     return WrapUtil.fetchValueOf(block, instBuffer, var,
                              OptUtil.optVPrefix(block, var));
   }
-  
 
-  
+  public static class OptVarCreator implements VarCreator {
+    public OptVarCreator(Block block) {
+      this.block = block;
+    }
+
+    private final Block block;
+    
+    @Override
+    public Var createDerefTmp(Var toDeref) {
+      return OptUtil.createDerefTmp(block, toDeref);
+    }
+    
+  }
   
   /**
    * Create dereferenced variable given a reference
    */
-  public static Var createDerefTmp(Var ref, Alloc storage) {
-    assert(Types.isRef(ref.type()));
-    Var res = new Var(ref.type().memberType(),
-        Var.DEREF_COMPILER_VAR_PREFIX + ref.name(),
+  public static Var createDerefTmp(Block block, Var toDeref) {
+    Alloc storage;
+    if (Types.isRef(toDeref.type())) {
+      storage = Alloc.ALIAS;
+    } else {
+      storage = Alloc.LOCAL;
+    }
+    
+    Type resType = Types.derefResultType(toDeref);
+    String name = block.uniqueVarName(
+        Var.joinPrefix(Var.VALUEOF_VAR_PREFIX, toDeref.name()));
+    Var res = new Var(resType, name,
         storage, DefType.LOCAL_COMPILER, 
-        VarProvenance.valueOf(ref));
-    assert(Types.isAssignableRefTo(ref.type(), res.type()));
+        VarProvenance.valueOf(toDeref));
+
+    block.addVariable(res);
     return res;
   }
 }

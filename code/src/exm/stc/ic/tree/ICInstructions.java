@@ -201,6 +201,13 @@ public class ICInstructions {
       }
     }
     
+    /**
+     * Interface to let instruction logic create variables
+     */
+    public interface VarCreator {
+      public Var createDerefTmp(Var toDeref);
+    }
+
     public static class MakeImmChange {
       /** Optional: if the output variable of op changed */
       public final Var newOut;
@@ -344,9 +351,10 @@ public class ICInstructions {
      * @param inValues any input values loaded
      * @return
      */
-    public MakeImmChange makeImmediate(List<Fetched<Var>> outVals,
+    public MakeImmChange makeImmediate(VarCreator creator,
+                                       List<Fetched<Var>> outVals,
                                        List<Fetched<Arg>> inValues) {
-      throw new STCRuntimeError("makeImmediate not valid on " + type());
+      throw new STCRuntimeError("makeImmediate not valid  on " + type());
     }
 
     /**
@@ -1165,7 +1173,8 @@ public class ICInstructions {
     }
     
     @Override
-    public MakeImmChange makeImmediate(List<Fetched<Var>> outVars, 
+    public MakeImmChange makeImmediate(VarCreator creator,
+                                       List<Fetched<Var>> outVars, 
                                        List<Fetched<Arg>> values) {
       // Discard non-future inputs.  These are things like priorities or
       // targets which do not need to be retained for the local version
@@ -1435,7 +1444,8 @@ public class ICInstructions {
     }
 
     @Override
-    public MakeImmChange makeImmediate(List<Fetched<Var>> outVals,
+    public MakeImmChange makeImmediate(VarCreator creator,
+                                       List<Fetched<Var>> outVals,
                                        List<Fetched<Arg>> inValues) {
       // Already immediate
       return null;
@@ -1651,7 +1661,8 @@ public class ICInstructions {
     }
     
     @Override
-    public MakeImmChange makeImmediate(List<Fetched<Var>> outVals,
+    public MakeImmChange makeImmediate(VarCreator creator,
+        List<Fetched<Var>> outVals,
         List<Fetched<Arg>> inValues) {
       // TODO: we waited for vars, for now don't actually change instruction
       return new MakeImmChange(this);
@@ -2041,7 +2052,8 @@ public class ICInstructions {
     }
 
     @Override
-    public MakeImmChange makeImmediate(List<Fetched<Var>> newOut,
+    public MakeImmChange makeImmediate(VarCreator creator,
+                                       List<Fetched<Var>> newOut,
                                        List<Fetched<Arg>> newIn) {
       if (op == Opcode.LOCAL_OP) {
         throw new STCRuntimeError("Already immediate!");

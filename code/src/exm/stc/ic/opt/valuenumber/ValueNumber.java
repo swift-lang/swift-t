@@ -48,6 +48,7 @@ import exm.stc.ic.opt.ICOptimizer;
 import exm.stc.ic.opt.InitVariables;
 import exm.stc.ic.opt.InitVariables.InitState;
 import exm.stc.ic.opt.OptUtil;
+import exm.stc.ic.opt.OptUtil.OptVarCreator;
 import exm.stc.ic.opt.OptimizerPass;
 import exm.stc.ic.opt.ProgressOpcodes;
 import exm.stc.ic.opt.ProgressOpcodes.Category;
@@ -824,7 +825,8 @@ public class ValueNumber implements OptimizerPass {
     List<Var> outFetched = OptUtil.createLocalOpOutputVars(insertContext,
                       insertPoint, req.out, filenameVals, req.mapOutVars);
     MakeImmChange change;
-    change = inst.makeImmediate(Fetched.makeList(req.out, outFetched), inVals);
+    change = inst.makeImmediate(new OptVarCreator(block),
+          Fetched.makeList(req.out, outFetched), inVals);
     OptUtil.fixupImmChange(block, insertContext, inst, change, alt,
                            outFetched, req.out, req.mapOutVars);
 

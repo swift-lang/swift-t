@@ -1690,7 +1690,7 @@ public class ASTWalker {
     TaskProps props = new TaskProps();
     // Need to pass location arg into task dispatch wait statement
     // Priority is passed implicitly
-    Var loc = new Var(Types.V_INT, Var.DEREF_COMPILER_VAR_PREFIX + "location",
+    Var loc = new Var(Types.V_INT, Var.VALUEOF_VAR_PREFIX + "location",
         Alloc.LOCAL, DefType.INARG, VarProvenance.exprTmp(context.getSourceLoc()));
     backendInArgs.add(loc);
     props.put(TaskPropKey.LOCATION, loc.asArg());

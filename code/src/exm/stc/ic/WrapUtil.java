@@ -374,7 +374,7 @@ public class WrapUtil {
       assert(outFilename != null) : "Expected filename in map for " + outFut;
       Var outFilenameVal;
       if (Types.isString(outFilename)) {
-        String valName = block.uniqueVarName(Var.OPT_VALUE_VAR_PREFIX +
+        String valName = block.uniqueVarName(Var.VALUEOF_VAR_PREFIX +
                                            outFilename.name());
         outFilenameVal = WrapUtil.fetchValueOf(block, instBuffer,
                                                  outFilename, valName);

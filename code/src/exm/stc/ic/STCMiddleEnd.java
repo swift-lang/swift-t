@@ -979,7 +979,7 @@ public class STCMiddleEnd {
     TaskProps props = new TaskProps();
     if (isParallel) {
       // declare compiler arg for parallelism
-      Var par = new Var(Types.V_INT, Var.DEREF_COMPILER_VAR_PREFIX + "par",
+      Var par = new Var(Types.V_INT, Var.VALUEOF_VAR_PREFIX + "par",
                         Alloc.LOCAL, DefType.INARG, VarProvenance.optimizerTmp());
       realInArgs.add(par);
       props.put(TaskPropKey.PARALLELISM, par.asArg());
@@ -992,7 +992,7 @@ public class STCMiddleEnd {
     
     if (isTargetable) {
       // declare compiler arg for target
-      Var location = new Var(Types.V_INT, Var.DEREF_COMPILER_VAR_PREFIX + "location",
+      Var location = new Var(Types.V_INT, Var.VALUEOF_VAR_PREFIX + "location",
           Alloc.LOCAL, DefType.INARG, VarProvenance.optimizerTmp());
       realInArgs.add(location);
       props.put(TaskPropKey.LOCATION, location.asArg());

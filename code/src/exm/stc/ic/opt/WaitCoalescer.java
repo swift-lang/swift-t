@@ -50,6 +50,7 @@ import exm.stc.common.util.Sets;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.WrapUtil;
 import exm.stc.ic.opt.OptUtil.InstOrCont;
+import exm.stc.ic.opt.OptUtil.OptVarCreator;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
@@ -489,6 +490,7 @@ public class WaitCoalescer implements OptimizerPass {
                               instBuffer, true, req.mapOutVars); 
       
       MakeImmChange change = inst.makeImmediate(
+                                  new OptVarCreator(wait.getBlock()),
                                   Fetched.makeList(req.out, localOutputs),
                                   Fetched.makeList(req.in, inVals));
       OptUtil.fixupImmChange(block, wait.getBlock(), inst, change, instBuffer,

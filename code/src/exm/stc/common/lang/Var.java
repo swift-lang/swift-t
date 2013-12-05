@@ -47,23 +47,22 @@ public class Var implements Comparable<Var>, Typed {
   private final Var mapping;
   private final int hashCode; // Cache hashcode
 
-  public static final String TMP_VAR_PREFIX = "__t";
-  public static final String ALIAS_VAR_PREFIX = "__alias";
-  public static final String STRUCT_FIELD_VAR_PREFIX = "__sf_";
-  public static final String LOCAL_VALUE_VAR_PREFIX = "__v_";
-  public static final String FILENAME_OF_PREFIX = "__filename_";
-  public static final String WRAP_FILENAME_PREFIX = "__wfilename_";
+  public static final String TMP_VAR_PREFIX = "__t:";
+  public static final String ALIAS_VAR_PREFIX = "__alias:";
+  public static final String STRUCT_FIELD_VAR_PREFIX = "__sf:";
+  public static final String LOCAL_VALUE_VAR_PREFIX = "__v:";
+  public static final String FILENAME_OF_PREFIX = "__filename:";
+  public static final String WRAP_FILENAME_PREFIX = "__wfilename:";
   /* Separate prefixes to avoid name clashes for optimizer 
    *    inserted variables */
-  public static final String OPT_VAR_PREFIX = "__o_";
-  public static final String OPT_VALUE_VAR_PREFIX = "__ov_";
-  public static final String OPT_FILENAME_PREFIX = "__of_";
-  public static final String LOOP_INDEX_VAR_PREFIX = "__i";
-  public static final String GLOBAL_CONST_VAR_PREFIX = "__c";
-  public static final String DEREF_COMPILER_VAR_PREFIX = "__dr_";
-  public static final String COMPILER_ARG_PREFIX = "__ca_";
-  public static final String LOOP_COND_PREFIX = "__xcond";
-  public static final String OUTER_VAR_PREFIX = "__outer";
+  public static final String OPT_VAR_PREFIX = "__o:";
+  public static final String OPT_FILENAME_PREFIX = "__of:";
+  public static final String LOOP_INDEX_VAR_PREFIX = "__i:";
+  public static final String GLOBAL_CONST_VAR_PREFIX = "__c:";
+  public static final String VALUEOF_VAR_PREFIX = "__v:";
+  public static final String COMPILER_ARG_PREFIX = "__ca:";
+  public static final String LOOP_COND_PREFIX = "__xcond:";
+  public static final String OUTER_VAR_PREFIX = "__outer:";
   
   // Convenience constant
   public static final List<Var> NONE = Collections.emptyList();
@@ -421,6 +420,19 @@ public class Var implements Comparable<Var>, Typed {
   public static String structFieldName(Var struct, String fieldPath) {
     return Var.STRUCT_FIELD_VAR_PREFIX
         + struct.name() + "_" + fieldPath.replace('.', '_');
+  }
+  
+  /**
+   * Create neated prefixed vars
+   * @param prefix
+   * @param name
+   * @return
+   */
+  public static String joinPrefix(String prefix, String name) {
+    if (name.startsWith("__")) {
+      name = name.substring(2);
+    }
+    return prefix + name;
   }
   
   /**
