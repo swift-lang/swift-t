@@ -1173,7 +1173,7 @@ public class ExprWalker {
         backend.asyncOp(ForeignFunctions.getOpEquiv(function), backendOut, 
                         Arg.fromVarList(backendIList), props);
       } else {
-        backend.builtinFunctionCall(function, backendOList, oList, props);
+        backend.builtinFunctionCall(function, backendIList, backendOList, props);
       }
     } else if (context.hasFunctionProp(function, FnProp.COMPOSITE)) {
       TaskMode mode;
