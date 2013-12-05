@@ -1164,7 +1164,8 @@ public class ASTWalker {
           throw new STCRuntimeError("Don't yet support non-constant" +
                   " initialisers for updateable variables");
         }
-        backend.initUpdateable(var, Arg.createFloatLit(initVal));
+        backend.initUpdateable(VarRepr.backendVar(var),
+                               Arg.createFloatLit(initVal));
       } else {
         throw new STCRuntimeError("Non-float updateables not yet" +
                 " implemented for type " + var.type());
@@ -1279,7 +1280,8 @@ public class ASTWalker {
     Update up = Update.fromAST(context, tree);
     Type exprType = up.typecheck(context);
     Var evaled = exprWalker.eval(context, up.getExpr(), exprType, false, null);
-    backend.update(up.getTarget(), up.getMode(), evaled);
+    backend.update(VarRepr.backendVar(up.getTarget()), up.getMode(),
+                   VarRepr.backendVar(evaled));
   }
 
   private void defineBuiltinFunction(Context context, SwiftAST tree)
@@ -1805,22 +1807,30 @@ public class ASTWalker {
             exprWalker.retrieveToVar(context, fileNames.get(output.name())));
 
         // Initialize the output with a filename
-        backend.initLocalOutFile(localOutput, localOutputFileName, output);
+        backend.initLocalOutFile(VarRepr.backendVar(localOutput),
+                                 VarRepr.backendArg(localOutputFileName),
+                                 VarRepr.backendVar(output));
       }
     }
     
+    List<Arg> beLocalArgs = VarRepr.backendArgs(localArgs);
+    List<Var> beLocalOutputs = VarRepr.backendVars(localOutputs);
+    List<Arg> beLocalInfiles = VarRepr.backendArgs(localInFiles);
+    Redirects<Arg> beLocalRedirects = new Redirects<Arg>(
+                VarRepr.backendArg(localRedirects.stdin),
+                VarRepr.backendArg(localRedirects.stdout),
+                VarRepr.backendArg(localRedirects.stderr));
     if (asyncExec == null) {
-      backend.runExternal(appName, localArgs, localInFiles, localOutputs,
-                        localRedirects, hasSideEffects, deterministic);
+      backend.runExternal(appName, beLocalArgs, beLocalInfiles, beLocalOutputs,
+                        beLocalRedirects, hasSideEffects, deterministic);
     } else {
       String aeName = context.constructName("async-exec");
       Map<String, Arg> taskProps = new HashMap<String, Arg>();
-      localRedirects.addProps(taskProps);
+      beLocalRedirects.addProps(taskProps);
       
-      // TODO: nicer solution?
       backend.startAsyncExec(aeName, asyncExec, appName,
-                    localOutputs, localArgs,
-                    taskProps, !deterministic);
+          beLocalOutputs, beLocalArgs,
+          taskProps, !deterministic);
       // Rest of code executes in continuation after execution finishes
     }
     
@@ -2009,7 +2019,8 @@ public class ASTWalker {
       Type memberValType = Types.derefResultType(ci.baseType);
       Type localInType =  new ArrayType(true, Types.F_INT, memberValType);
       localInput = varCreator.createValueVar(context, localInType, in, true);
-      backend.unpackArrayToFlat(localInput, in.asArg());
+      backend.unpackArrayToFlat(VarRepr.backendVar(localInput),
+                                VarRepr.backendArg(in));
     } else {
       localInput = exprWalker.retrieveToVar(context, in);
     }
@@ -2150,9 +2161,11 @@ public class ASTWalker {
     if (fileVar.defType() == DefType.OUTARG &&
         fileVar.type().fileKind().supportsTmpImmediate()) {
       // If output may be unmapped, need to assign file name
-      backend.getFileName(filenameFuture, fileVar, true);
+      backend.getFileName(VarRepr.backendVar(filenameFuture),
+                          VarRepr.backendVar(fileVar), true);
     } else {
-      backend.getFileName(filenameFuture, fileVar, false);
+      backend.getFileName(VarRepr.backendVar(filenameFuture),
+                          VarRepr.backendVar(fileVar), false);
     }
     waitVars.add(filenameFuture);
     if (fileVar.defType() != DefType.OUTARG) {
@@ -2263,21 +2276,23 @@ public class ASTWalker {
     
     String msg = "Don't support non-literal "
         + "expressions for global constants";
+
+    Var backendVar = VarRepr.backendVar(v);
     switch (v.type().primType()) {
     case BOOL:
       String bval = Literals.extractBoolLit(context, val);
       if (bval == null) {
         throw new UserException(context, msg);
       }
-      backend.addGlobal(v, Arg.createBoolLit(
-                                  Boolean.parseBoolean(bval)));
+      backend.addGlobal(backendVar, Arg.createBoolLit(
+                                        Boolean.parseBoolean(bval)));
       break;
     case INT:
       Long ival = Literals.extractIntLit(context, val);
       if (ival == null) {
         throw new UserException(context, msg);
       }
-      backend.addGlobal(v, Arg.createIntLit(ival));
+      backend.addGlobal(backendVar, Arg.createIntLit(ival));
       break;
     case FLOAT:
       Double fval = Literals.extractFloatLit(context, val);
@@ -2290,14 +2305,14 @@ public class ASTWalker {
         }
       }
       assert(fval != null);
-      backend.addGlobal(v, Arg.createFloatLit(fval));
+      backend.addGlobal(backendVar, Arg.createFloatLit(fval));
       break;
     case STRING:
       String sval = Literals.extractStringLit(context, val);
       if (sval == null) {
         throw new UserException(context, msg);
       }
-      backend.addGlobal(v, Arg.createStringLit(sval));
+      backend.addGlobal(backendVar, Arg.createStringLit(sval));
       break;
     default:
       throw new STCRuntimeError("Unexpect value tree type in "

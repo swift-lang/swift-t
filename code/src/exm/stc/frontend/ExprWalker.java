@@ -632,21 +632,7 @@ public class ExprWalker {
     // Work out the type of the array so we know the type of the temp var
     SwiftAST arrayTree = tree.child(0);
     Type arrExprType = TypeChecker.findSingleExprType(context, arrayTree);
-    Type arrType = null;
-    
-    for (Type altType: UnionType.getAlternatives(arrExprType)) {
-      assert(Types.isArray(altType) || Types.isArrayRef(altType));
-      Type lookupRes = TypeChecker.dereferenceResultType(
-                                Types.containerElemType(altType));
-      if (lookupRes.equals(oVar.type())) {
-        arrType = altType;
-        break;
-      }
-    }
-    if (arrType == null) {
-      throw new STCRuntimeError("No viable array type for lookup up "
-              + arrExprType + " into " + oVar);
-    }
+    Type arrType = chooseArrayTypeForLookup(oVar, arrExprType);
 
     // Evaluate the array
     Var arrayVar = eval(context, arrayTree, arrType, false, renames);
@@ -695,6 +681,19 @@ public class ExprWalker {
     if (doDereference) {
       dereference(context, oVar, lookupIntoVar);
     }
+  }
+
+  private Type chooseArrayTypeForLookup(Var oVar, Type arrExprType) {
+    for (Type altType: UnionType.getAlternatives(arrExprType)) {
+      assert(Types.isArray(altType) || Types.isArrayRef(altType));
+      Type lookupRes = VarRepr.fieldRepr(
+                                Types.containerElemType(altType));
+      if (lookupRes.equals(oVar.type())) {
+        return altType;
+      }
+    }
+    throw new STCRuntimeError("No viable array type for lookup up "
+              + arrExprType + " into " + oVar);
   }
   
 

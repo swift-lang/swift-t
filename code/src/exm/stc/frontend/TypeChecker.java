@@ -134,9 +134,11 @@ public class TypeChecker {
             + " in structure type " + ((StructType) structType).getTypeName());
       }
       if (Types.isStruct(structType)) {
+        // Look up immediately
         return new ExprType(fieldType);
       } else { assert(Types.isStructRef(structType));
-        return new ExprType(dereferenceResultType(fieldType));
+        // Will get copy
+        return new ExprType(VarRepr.fieldRepr(fieldType));
       }
 
     case ExMParser.ARRAY_LOAD:
@@ -149,7 +151,7 @@ public class TypeChecker {
 
           // Depending on the member type of the array, the result type might be
           // the actual member type, or a reference to the member type
-          resultAlts.add(dereferenceResultType(memberType));
+          resultAlts.add(VarRepr.fieldRepr(memberType));
         } else {
           throw new TypeMismatchException(context,
               "Trying to index into non-array expression of type "
@@ -395,27 +397,6 @@ public class TypeChecker {
     }
 
     return argTypes;
-  }
-
-  /**
-   * The type of the internal variable that will be created from an array
-   * dereference
-   *
-   * @param memberType
-   *          the type of array memebrs for the array being dereferenced
-   * @return
-   */
-  public static Type dereferenceResultType(Type memberType) {
-    Type resultType;
-    if (Types.isPrimFuture(memberType)) {
-      resultType = memberType;
-    } else if (Types.isContainer(memberType) || Types.isStruct(memberType)) {
-      resultType = new RefType(memberType);
-    } else {
-      throw new STCRuntimeError("Unexpected array member type"
-          + memberType.toString());
-    }
-    return resultType;
   }
 
   private static TypeMismatchException argumentTypeException(Context context,

@@ -106,4 +106,21 @@ public class VarRepr {
     // TODO: translate input and output arg types
     return frontendType;
   }
+  
+
+  /**
+   * The type of internal storage used for a Swift type when stored in a
+   * container.
+   *
+   * @param memberType
+   *          the type of array members for the array being dereferenced
+   * @return
+   */
+  public static Type fieldRepr(Type memberType) {
+    if (storeRefInContainer(memberType)) {
+      return new RefType(memberType);
+    } else {
+      return memberType;
+    }
+  }
 }
