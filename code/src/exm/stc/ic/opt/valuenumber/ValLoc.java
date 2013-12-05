@@ -177,10 +177,12 @@ public class ValLoc {
     Arg contentsArg = contents == null ? null : Arg.createVar(contents);
     ArgCV val;
     if (nonRefResult) {
-      assert(contents == null || Types.isElemType(arr, contents)) :
-        "not member: " + contents + " " + arr;
+      assert(contents == null || Types.isElemValType(arr, contents)) :
+        "not elem: " + contents + " " + arr;
       val = ComputedValue.arrayNestedCV(arr, ix);
     } else {
+      assert(contents == null || Types.isElemType(arr, contents)) :
+        "not elem: " + contents + " " + arr;
       val = ComputedValue.arrayRefNestedCV(arr, ix);
     }
     return ValLoc.build(val, contentsArg, Closed.MAYBE_NOT, IsAssign.NO);
