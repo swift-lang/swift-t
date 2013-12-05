@@ -522,9 +522,11 @@ public class STCMiddleEnd {
   }
   
   public void arrayInsertImm(Var array, Arg ix, Var member) {
+    // TODO: need copy version?  DerefInsert?
     assert(Types.isArray(array.type()));
     assert(Types.isArrayKeyVal(array, ix));
-    assert(member.type().assignableTo(Types.containerElemType(array.type())));
+    assert(member.type().assignableTo(Types.containerElemValType(array))) :
+          member + " " + array;
     currBlock().addInstruction(
         TurbineOp.arrayInsertImm(array, ix, member));
   }
@@ -532,8 +534,7 @@ public class STCMiddleEnd {
   public void arrayDerefInsertImm(Var array, Arg ix, Var member) {
     assert(Types.isArray(array.type()));
     assert(Types.isArrayKeyVal(array, ix));
-    assert(Types.isAssignableRefTo(member.type(),
-                                   Types.containerElemType(array.type())));
+    assert(member.type().assignableTo(Types.containerElemType(array.type())));
     currBlock().addInstruction(
         TurbineOp.arrayDerefInsertImm(array, ix, member));
   }

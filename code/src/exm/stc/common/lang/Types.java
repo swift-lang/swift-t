@@ -1820,6 +1820,10 @@ public class Types {
           + " type " + t.toString());
     }
   }
+  
+  public static Type containerElemValType(Typed t) {
+    return derefResultType(containerElemType(t));
+  }
 
   public static boolean isElemType(Typed cont, Typed elem) {
     Type memberType = containerElemType(cont.type());
