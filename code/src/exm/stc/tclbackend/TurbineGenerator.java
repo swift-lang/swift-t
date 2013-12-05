@@ -1626,7 +1626,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(src.type().assignableTo(dst.type()));
     
     startAsync("copy-" + src.name() + "_" + dst.name(),
-               src.asList(), src.asList(), false,
+               src.asList(), Arrays.asList(src, dst), false,
                TaskMode.LOCAL, new TaskProps());
     syncCopyContainer(dst, src);
     endAsync();
