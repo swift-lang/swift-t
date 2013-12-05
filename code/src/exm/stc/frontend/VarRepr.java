@@ -1,6 +1,7 @@
 package exm.stc.frontend;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import exm.stc.common.lang.Arg;
@@ -23,7 +24,11 @@ public class VarRepr {
   public static Var backendVar(Var frontendVar) {
     return frontendVar.substituteType(backendType(frontendVar.type()));
   }
-
+  
+  public static List<Var> backendVars(Var ...frontendVars) {
+    return backendVars(Arrays.asList(frontendVars));
+  }
+  
   public static List<Var> backendVars(List<Var> frontendVars) {
     ArrayList<Var> result = new ArrayList<Var>(frontendVars.size());
     for (Var v: frontendVars) {
@@ -43,6 +48,18 @@ public class VarRepr {
       // Constants don't change
       return frontendArg;
     }
+  }
+  
+  public static List<Arg> backendArgs(Arg ...frontendArgs) {
+    return backendArgs(Arrays.asList(frontendArgs));
+  }
+  
+  public static List<Arg> backendArgs(List<Arg> frontendArgs) {
+    ArrayList<Arg> result = new ArrayList<Arg>(frontendArgs.size());
+    for (Arg v: frontendArgs) {
+      result.add(backendArg(v));
+    }
+    return result;
   }
   
   /**

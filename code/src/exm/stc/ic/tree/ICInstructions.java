@@ -1645,8 +1645,7 @@ public class ICInstructions {
         return null;
       } else {
         return new MakeImmRequest(
-            Collections.<Var>emptyList(),
-            waitForInputs,
+            Var.NONE, waitForInputs,
             TaskMode.LOCAL, false, false);
       }
     }

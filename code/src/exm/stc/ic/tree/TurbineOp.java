@@ -509,29 +509,24 @@ public class TurbineOp extends Instruction {
                                                      fileVal.asArg());
   }
 
-  public static Instruction addressOf(Var target, Var src) {
-    return new TurbineOp(Opcode.STORE_REF,
-        target, src.asArg());
+  public static Instruction storeRef(Var target, Var src) {
+    return new TurbineOp(Opcode.STORE_REF, target, src.asArg());
   }
 
-  public static Instruction dereferenceScalar(Var target, Var src) {
+  public static Instruction derefScalar(Var target, Var src) {
     return new TurbineOp(Opcode.DEREF_SCALAR, target, src.asArg());
   }
   
-  public static Instruction dereferenceFile(Var target, Var src) {
-    return new TurbineOp(Opcode.DEREF_FILE,
-        target, src.asArg());
+  public static Instruction derefFile(Var target, Var src) {
+    return new TurbineOp(Opcode.DEREF_FILE, target, src.asArg());
   }
   
   public static Instruction retrieveRef(Var target, Var src) {
-    return new TurbineOp(Opcode.LOAD_REF,
-        target, src.asArg());
+    return new TurbineOp(Opcode.LOAD_REF, target, src.asArg());
   }
   
   public static Instruction copyRef(Var dst, Var src) {
-    return new TurbineOp(Opcode.COPY_REF,
-        dst, src.asArg());
-        
+    return new TurbineOp(Opcode.COPY_REF, dst, src.asArg());
   }
 
   public static Instruction arrayCreateNestedFuture(Var arrayResult,

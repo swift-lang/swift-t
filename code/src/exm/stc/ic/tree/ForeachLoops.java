@@ -345,7 +345,7 @@ public class ForeachLoops {
                 Arrays.asList(loopVar)
               : Arrays.asList(loopCounterVar, loopVar);
       } else {
-        return Collections.emptyList();
+        return Var.NONE;
       }
     }
 
@@ -655,7 +655,7 @@ public class ForeachLoops {
           return Arrays.asList(loopVar);
         }
       } else {
-        return Collections.emptyList();
+        return Var.NONE;
       }
     }
 

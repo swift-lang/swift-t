@@ -147,11 +147,11 @@ public class WrapUtil {
       List<Var> inArgs, List<Var> outArgs, boolean mapOutFiles) {
     if (inArgs == null) {
       // Gracefully handle null as empty list
-      inArgs = Collections.emptyList();
+      inArgs = Var.NONE;
     }
     if (outArgs == null) {
       // Gracefully handle null as empty list
-      outArgs = Collections.emptyList();
+      outArgs = Var.NONE;
     }
     
     List<WaitVar> waitVars = new ArrayList<WaitVar>(inArgs.size());
@@ -261,7 +261,7 @@ public class WrapUtil {
       List<Instruction> instBuffer, boolean uniquifyNames) {
     if (inputs == null) {
       // Gracefully handle null as empty list
-      inputs = Collections.emptyList();
+      inputs = Var.NONE;
     }
     List<Arg> inVals = new ArrayList<Arg>(inputs.size());
     for (Var inArg: inputs) {
@@ -293,7 +293,7 @@ public class WrapUtil {
       List<Instruction> instBuffer, boolean uniquifyNames, boolean mapOutFiles) {
     if (outputFutures == null) {
       // Gracefully handle null as empty list
-      outputFutures = Collections.emptyList();
+      outputFutures = Var.NONE;
     }
     List<Var> outVals = new ArrayList<Var>();
     for (Var outArg: outputFutures) {

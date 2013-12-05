@@ -31,6 +31,8 @@ public class Arg implements Comparable<Arg>, Typed {
   public static final Arg TRUE = Arg.createBoolLit(true);
   public static final Arg FALSE = Arg.createBoolLit(false);
   
+  public static final List<Arg> NONE = Collections.emptyList();
+  
   
   public static enum ArgKind {
     INTVAL, FLOATVAL, STRINGVAL, BOOLVAL, VAR

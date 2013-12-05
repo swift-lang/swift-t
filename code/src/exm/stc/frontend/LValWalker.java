@@ -403,7 +403,7 @@ public class LValWalker {
     Var derefArr; // Plain array (not reference);
     if (Types.isArrayRef(arr)) {
       derefArr = varCreator.createTmpAlias(context, Types.derefResultType(arr));
-      backend.retrieveRef(derefArr, arr);
+      exprWalker.retrieveRef(derefArr, arr);
     } else {
       derefArr = arr;
     }
@@ -590,7 +590,7 @@ public class LValWalker {
         // Dereference and use in place
         Var derefedBag = varCreator.createTmpAlias(context,
                                Types.derefResultType(bag));
-        backend.retrieveRef(derefedBag, bag);
+        exprWalker.retrieveRef(derefedBag, bag);
         bag = derefedBag;
       }
       if (elemRef) {
@@ -599,7 +599,7 @@ public class LValWalker {
         
         // Dereference and use in place of old var
         Var derefedElem = varCreator.createTmpAlias(context, elemType);
-        backend.retrieveRef(derefedElem, elem);
+        exprWalker.retrieveRef(derefedElem, elem);
         elem = derefedElem;
       }
     }

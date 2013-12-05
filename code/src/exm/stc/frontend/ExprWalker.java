@@ -245,31 +245,34 @@ public class ExprWalker {
    */
   public void copyByValue(Context context, Var src, Var dst,
       Type type) throws UserException {
+    Var backendSrc = VarRepr.backendVar(src);
+    Var backendDst = VarRepr.backendVar(dst);
+    List<Arg> backendSrcList = backendSrc.asArg().asList();
     if (Types.isInt(type)) {
-      backend.asyncOp(BuiltinOpcode.COPY_INT, dst, src.asArg().asList());
+      backend.asyncOp(BuiltinOpcode.COPY_INT, backendDst, backendSrcList);
     } else if (Types.isString(type)) {
-      backend.asyncOp(BuiltinOpcode.COPY_STRING, dst,src.asArg().asList());
+      backend.asyncOp(BuiltinOpcode.COPY_STRING, backendDst, backendSrcList);
     } else if (Types.isFloat(type)) {
-      backend.asyncOp(BuiltinOpcode.COPY_FLOAT, dst, src.asArg().asList());
+      backend.asyncOp(BuiltinOpcode.COPY_FLOAT, backendDst, backendSrcList);
     } else if (Types.isBool(type)) {
-      backend.asyncOp(BuiltinOpcode.COPY_BOOL, dst, src.asArg().asList());
+      backend.asyncOp(BuiltinOpcode.COPY_BOOL, backendDst, backendSrcList);
     } else if (Types.isBlob(type)) {
-      backend.asyncOp(BuiltinOpcode.COPY_BLOB, dst, src.asArg().asList());
+      backend.asyncOp(BuiltinOpcode.COPY_BLOB, backendDst, backendSrcList);
     } else if (Types.isVoid(type)) {
       // Sort of silly, but might be needed
-      backend.asyncOp(BuiltinOpcode.COPY_VOID, dst, src.asArg().asList());
+      backend.asyncOp(BuiltinOpcode.COPY_VOID, backendDst, backendSrcList);
     } else if (Types.isFile(type)) {
       if (dst.isMapped() == Ternary.FALSE || 
           dst.type().fileKind().supportsPhysicalCopy()) {
-          backend.copyFile(dst, src);
+          backend.copyFile(backendDst, backendSrc);
       } else {
         throw new TypeMismatchException("Do not support physical copy " +
             "to (possibly) mapped variable " + dst.name() + " with " +
             "type " + dst.type().typeName());       
       }
     } else if (Types.isStruct(type)) {
-      copyStructByValue(context, src, dst, new Stack<String>(), new Stack<String>(),
-                src, dst, type);
+      copyStructByValue(context, src, dst, new Stack<String>(),
+                        new Stack<String>(), src, dst, type);
     } else if (Types.isArray(type)) {
       copyContainerByValue(context, dst, src);
     } else if (Types.isBag(type)) {
@@ -357,9 +360,9 @@ public class ExprWalker {
     
     Type dstType = dst.type();
     if (Types.isScalarFuture(dstType)) {
-      backend.dereferenceScalar(backendDst, backendSrc);
+      backend.derefScalar(backendDst, backendSrc);
     } else if (Types.isFile(dstType)) {
-      backend.dereferenceFile(backendDst, backendSrc);
+      backend.derefFile(backendDst, backendSrc);
     } else if (Types.isContainer(dstType)) {
       derefThenCopyContainer(context, dst, src);
     } else if (Types.isStruct(dstType)) {
@@ -430,6 +433,40 @@ public class ExprWalker {
     // TODO: recursively free e.g. blobs in list
     return val;
   }
+  
+  public void retrieveRef(Var dst, Var src) {
+    backend.retrieveRef(VarRepr.backendVar(dst), VarRepr.backendVar(src));
+  }
+  
+  public void assignRef(Var dst, Var src) {
+    backend.assignRef(VarRepr.backendVar(dst), VarRepr.backendVar(src));
+  }
+
+  /**
+   * Create a future of the appropriate type for the argument 
+   * @param bodyContext
+   * @param value
+   * @return
+   * @throws UserException
+   * @throws UndefinedTypeException
+   */
+  public Var assignToVar(Context bodyContext, Arg value)
+      throws UserException, UndefinedTypeException {
+    assert(value.isConstant() || value.getVar().storage() == Alloc.LOCAL);
+    Var result = varCreator.createTmp(bodyContext, value.futureType());
+    assign(result, value);
+    return result;
+  }
+  
+  /**
+   * emit intermediate code for an async op
+   * @param op
+   * @param out
+   * @param inputs
+   */
+  public void asyncOp(BuiltinOpcode op, Var out, List<Arg> inputs) {
+    backend.asyncOp(op, VarRepr.backendVar(out), VarRepr.backendArgs(inputs));
+  }
 
   private void callOperator(Context context, SwiftAST tree, 
       Var out, Map<String, String> renames) throws UserException {
@@ -454,9 +491,8 @@ public class ExprWalker {
       Var arg = eval(context, tree.child(i + 1), type, false, renames);
       iList.add(Arg.createVar(arg));
     }
-    backend.asyncOp(op.code, out, iList);
+    asyncOp(op.code, out, iList);
   }
-  
 
   /**
    * Generate code for a call to a function, where the arguments might be
@@ -888,7 +924,7 @@ public class ExprWalker {
         Var derefVar = derefVars.get(i);
         varCreator.backendInit(derefVar);
         if (Types.isContainerRef(waitVars.get(i).type())) {
-          backend.retrieveRef(derefVar, waitVars.get(i));
+          retrieveRef(derefVar, waitVars.get(i));
         } else {
           throw new STCRuntimeError("Don't know how to " +
               "deref non-container function arg " + derefVar);
@@ -1056,10 +1092,11 @@ public class ExprWalker {
     }
     
     Var blob = varCreator.createTmpLocalVal(context, Types.V_BLOB);
-    backend.packValues(blob, elems);
+    Var backendBlob = VarRepr.backendVar(blob);
+    backend.packValues(backendBlob, VarRepr.backendArgs(elems));
     
     // Make sure it gets freed at end of block
-    backend.freeBlob(blob);
+    backend.freeBlob(backendBlob);
     return blob;
   }
   
@@ -1079,7 +1116,8 @@ public class ExprWalker {
       }
     }
     
-    backend.unpackValues(values, checkpointVal);
+    backend.unpackValues(VarRepr.backendVars(values),
+                         VarRepr.backendVar(checkpointVal));
     
     assert(values.size() == functionOutputs.size());
     for (int i = 0; i < values.size(); i++) {
@@ -1087,7 +1125,8 @@ public class ExprWalker {
       Var functionOutput = functionOutputs.get(i);
       if (!value.equals(functionOutput)) {
         if (Types.isContainer(functionOutput)) {
-          backend.storeRecursive(functionOutput, value.asArg());
+          backend.storeRecursive(VarRepr.backendVar(functionOutput),
+                                 VarRepr.backendArg(value));
         } else {
           assign(functionOutput, value.asArg());
         }
@@ -1119,18 +1158,22 @@ public class ExprWalker {
       LogHelper.warn(context, "Call to deprecated function: " + function);
     }
     
+    List<Var> backendIList = VarRepr.backendVars(iList);
+    List<Var> backendOList = VarRepr.backendVars(oList);
+    
     if (context.isIntrinsic(function)) {
       IntrinsicFunction intF = context.lookupIntrinsic(function);
-      backend.intrinsicCall(intF, iList, oList, props);
+      backend.intrinsicCall(intF, backendIList, backendOList, props);
     } else if (context.hasFunctionProp(function, FnProp.BUILTIN)) {
       if (ForeignFunctions.hasOpEquiv(function)) {
         assert(oList.size() <= 1);
-        Var out = oList.size() == 0 ? null : oList.get(0);
+        Var backendOut = (backendOList.size() == 0 ?
+                   null : backendOList.get(0));
 
-        backend.asyncOp(ForeignFunctions.getOpEquiv(function), out, 
-                        Arg.fromVarList(iList), props);
+        backend.asyncOp(ForeignFunctions.getOpEquiv(function), backendOut, 
+                        Arg.fromVarList(backendIList), props);
       } else {
-        backend.builtinFunctionCall(function, iList, oList, props);
+        backend.builtinFunctionCall(function, backendOList, oList, props);
       }
     } else if (context.hasFunctionProp(function, FnProp.COMPOSITE)) {
       TaskMode mode;
@@ -1139,9 +1182,11 @@ public class ExprWalker {
       } else {
         mode = TaskMode.CONTROL;
       }
-      backend.functionCall(function, Var.asArgList(iList), oList, mode, props);
+      backend.functionCall(function, Var.asArgList(backendIList), backendOList,
+                           mode, props);
     } else {
-      backendCallWrapped(context, function, concrete, oList, iList, props);
+      backendCallWrapped(context, function, concrete, backendOList,
+                         backendIList, props);
     }
   }
 
@@ -1150,26 +1195,27 @@ public class ExprWalker {
    * @param context
    * @param function
    * @param concrete
-   * @param oList
-   * @param iList
+   * @param backendOList
+   * @param backendIList
    * @param props
    * @throws UserException
    */
   private void backendCallWrapped(Context context, String function,
       FunctionType concrete,
-      List<Var> oList, List<Var> iList, TaskProps props)
+      List<Var> backendOList, List<Var> backendIList, TaskProps props)
       throws UserException {
     String wrapperFnName; // The name of the wrapper to call
     if (context.hasFunctionProp(function, FnProp.WRAPPED_BUILTIN)) {
       // Wrapper may need to be generated
-      wrapperFnName = wrappers.generateWrapper(context, function, concrete);
+      wrapperFnName = wrappers.generateWrapper(context, function,
+                                  VarRepr.backendFnType(concrete));
     } else {
       assert(context.hasFunctionProp(function, FnProp.APP));
       // Wrapper has same name for apps
       wrapperFnName = function;
     }
     List<Arg> realInputs = new ArrayList<Arg>();
-    for (Var in: iList) {
+    for (Var in: backendIList) {
       realInputs.add(in.asArg());
     }
   
@@ -1183,12 +1229,12 @@ public class ExprWalker {
         throw new UserException(context, "Parallelism not specified for " +
             "call to parallel function " + function);
       }
-      realInputs.add(par);
+      realInputs.add(VarRepr.backendArg(par));
     }
     if (context.hasFunctionProp(function, FnProp.TARGETABLE)) {
       // Target is optional but we have to pass something in
       Arg target = props.getWithDefault(TaskPropKey.LOCATION);
-      realInputs.add(target);
+      realInputs.add(VarRepr.backendArg(target));
     }
     
     // Other code always creates sync wrapper
@@ -1198,7 +1244,7 @@ public class ExprWalker {
     // Only priority property is used directly in sync instruction,
     // but other properties are useful to have here so that the optimizer
     // can replace instruction with local version and correct props
-    backend.functionCall(wrapperFnName, realInputs, oList, mode, props);
+    backend.functionCall(wrapperFnName, realInputs, backendOList, mode, props);
   }
 
 
@@ -1207,32 +1253,31 @@ public class ExprWalker {
                                   throws UserException {
    LogHelper.trace(context, dst.toString()+"="+val);
    if (Types.isInt(dst)) {
-     backend.assignScalar(VarRepr.backendVar(dst), Arg.createIntLit(val));
+     assign(dst, Arg.createIntLit(val));
    } else {
      assert(Types.isFloat(dst)) : dst; 
      double fVal = Literals.interpretIntAsFloat(context, val);
-     backend.assignScalar(VarRepr.backendVar(dst), Arg.createFloatLit(fVal));
+     assign(dst, Arg.createFloatLit(fVal));
    }
   }
 
   private void assignBoolLit(Context context, SwiftAST tree, Var dst,
       String val) throws UserException {
    assert(Types.isBool(dst));
-   backend.assignScalar(VarRepr.backendVar(dst),
-           Arg.createBoolLit(Boolean.parseBoolean(val)));
+   assign(dst, Arg.createBoolLit(Boolean.parseBoolean(val)));
   }
 
   private void assignFloatLit(Context context, SwiftAST tree, Var dst) 
   throws UserException {
    assert(Types.isFloat(dst));
    double val = Literals.extractFloatLit(context, tree);
-   backend.assignScalar(VarRepr.backendVar(dst), Arg.createFloatLit(val));
+   assign(dst, Arg.createFloatLit(val));
   }
 
   private void assignStringLit(Context context, SwiftAST tree, Var dst,
       String val) throws UserException {
     assert(Types.isString(dst));
-    backend.assignScalar(VarRepr.backendVar(dst), Arg.createStringLit(val));
+    assign(dst, Arg.createStringLit(val));
   }
 
   private void assignVariable(Context context, Var dst, Var src)
@@ -1254,21 +1299,21 @@ public class ExprWalker {
     assert(Types.isPrimUpdateable(src));
     // Create a future alias to the updateable type so that
     // types match
-    Var backendVal = VarRepr.backendVar(varCreator.createTmpLocalVal(context,
-                          ScalarUpdateableType.asScalarValue(src.type())));
+    Var val = varCreator.createTmpLocalVal(context,
+                          ScalarUpdateableType.asScalarValue(src.type()));
+    Var backendVal = VarRepr.backendVar(val);
 
     backend.latestValue(backendVal, src);
+
+    if (!src.type().assignableTo(Types.UP_FLOAT)) {
+      throw new STCRuntimeError(src.type() + " not yet supported");
+    }
+
     /* Create a future with a snapshot of the value of the updateable
      * By making the retrieve and store explicit the optimizer should be
      * able to optimize out the future in many cases
      */
-    Var snapshot = varCreator.createTmp(context,
-        ScalarUpdateableType.asScalarFuture(src.type()));
-
-    if (!src.type().equals(Types.UP_FLOAT)) {
-      throw new STCRuntimeError(src.type() + " not yet supported");
-    }
-    backend.assignScalar(VarRepr.backendVar(snapshot), backendVal.asArg());
+    Var snapshot = assignToVar(context, val.asArg());
     return snapshot;
   }
 
@@ -1326,7 +1371,7 @@ public class ExprWalker {
     backend.startWaitStatement(wName, VarRepr.backendVars(waitVars),
             WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
     Var derefed = varCreator.createTmpAlias(context, dst.type());
-    backend.retrieveRef(VarRepr.backendVar(derefed), VarRepr.backendVar(src));
+    retrieveRef(derefed, src);
     copyContainerByValue(context, dst, derefed);
     backend.endWaitStatement();
   }
@@ -1369,8 +1414,8 @@ public class ExprWalker {
         VarRepr.backendVar(src).asList(), WaitMode.WAIT_ONLY,
         false, false, TaskMode.LOCAL);
     Var srcVal = varCreator.createTmpAlias(context, type.memberType());
-    backend.retrieveRef(srcVal, src);
-    backend.assignReference(dst, srcVal);
+    retrieveRef(srcVal, src);
+    assignRef(dst, srcVal);
     backend.endWaitStatement();
   }
 
@@ -1392,8 +1437,7 @@ public class ExprWalker {
                     false, false, TaskMode.LOCAL);
     Var rValDerefed = varCreator.createTmp(context, 
             src.type().memberType(), false, true);
-    backend.retrieveRef(VarRepr.backendVar(rValDerefed),
-                        VarRepr.backendVar(src));
+    retrieveRef(rValDerefed, src);
     copyByValue(context, rValDerefed, dst, dst.type());
     backend.endWaitStatement();
   } 

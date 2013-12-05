@@ -758,8 +758,7 @@ public class ASTWalker {
       step = exprWalker.eval(context, range.getStep(), Types.F_INT, false, null);
     } else {
       // Inefficient but constant folding will clean up
-      step = varCreator.createTmp(context, Types.F_INT);
-      exprWalker.assign(step, Arg.ONE);
+      step = exprWalker.assignToVar(context, Arg.ONE);
     }
     FunctionContext fc = context.getFunctionContext();
     int loopNum = fc.getCounterVal("foreach-range");
@@ -781,16 +780,15 @@ public class ASTWalker {
     Var counterVal = loop.getLoopCountVal();
     
     backend.startRangeLoop(fc.getFunctionName() + "-range" + loopNum,
-            memberVal, counterVal,
-            Arg.createVar(startVal), Arg.createVar(endVal), 
-            Arg.createVar(stepVal),
+            VarRepr.backendVar(memberVal), VarRepr.backendVar(counterVal),
+            VarRepr.backendArg(startVal), VarRepr.backendArg(endVal), 
+            VarRepr.backendArg(stepVal),
             loop.getDesiredUnroll(), loop.getSplitDegree(),
             loop.getLeafDegree());
     // Need to spawn off task per iteration
     if (!loop.isSyncLoop()) {
       backend.startWaitStatement(fc.getFunctionName() + "range-iter" + loopNum,
-          Collections.<Var>emptyList(),
-          WaitMode.TASK_DISPATCH, false, false, TaskMode.CONTROL);
+          Var.NONE, WaitMode.TASK_DISPATCH, false, false, TaskMode.CONTROL);
     }
     
     // We have the current value, but need to put it in a future in case user
@@ -853,7 +851,7 @@ public class ASTWalker {
       outsideLoopContext = new LocalContext(context);
       realArray = varCreator.createTmp(outsideLoopContext,
                               arrayVar.type().memberType(), false, true);
-      backend.retrieveRef(realArray, arrayVar);
+      exprWalker.retrieveRef(realArray, arrayVar);
     } else {
       assert(Types.isContainer(arrayVar));
       realArray = arrayVar;
@@ -870,14 +868,14 @@ public class ASTWalker {
     Context loopBodyContext = loop.getBodyContext();
 
     backend.startForeachLoop(fc.getFunctionName() + "-foreach" + loopNum,
-        realArray, loop.getMemberVar(), loop.getLoopCountVal(),
+        VarRepr.backendVar(realArray), VarRepr.backendVar(loop.getMemberVar()),
+        VarRepr.backendVar(loop.getLoopCountVal()),
         loop.getSplitDegree(), loop.getLeafDegree(), true);
     // May need to spawn off each iteration as task - use wait for this
     if (!loop.isSyncLoop()) {
       backend.startWaitStatement(
           fc.getFunctionName() + "-foreach-spawn" + loopNum,
-          Collections.<Var>emptyList(),
-          WaitMode.TASK_DISPATCH, false, false, TaskMode.CONTROL);
+          Var.NONE, WaitMode.TASK_DISPATCH, false, false, TaskMode.CONTROL);
     }
     // If the user's code expects a loop count var, need to create it here
     if (loop.getCountVarName() != null) {
@@ -901,7 +899,7 @@ public class ASTWalker {
       backend.endWaitStatement();
     }
   }
-
+  
   private void forLoop(Context context, SwiftAST tree) throws UserException {
     ForLoopDescriptor forLoop = ForLoopDescriptor.fromAST(context, tree);
     
@@ -929,7 +927,8 @@ public class ASTWalker {
                   VarProvenance.userVar(context.getSourceLoc()),
                   lv.var.mapping());
         // Copy turbine ID
-        backend.makeAlias(parentAlias, lv.var);
+        backend.makeAlias(VarRepr.backendVar(parentAlias),
+                          VarRepr.backendVar(lv.var));
         parentLoopVarAliases.put(lv.var.name(), parentAlias);
       }
     }
@@ -973,8 +972,8 @@ public class ASTWalker {
     
     initVals.add(0, initCond.asArg());
     
-    backend.startLoop(loopName, loopVars, definedHere, initVals, 
-                      blockingVector);
+    backend.startLoop(loopName, VarRepr.backendVars(loopVars), definedHere,
+                      VarRepr.backendArgs(initVals), blockingVector);
     
     // get value of condVar
     Var condVal = exprWalker.retrieveToVar(loopIterContext, condArg);
@@ -1004,7 +1003,7 @@ public class ASTWalker {
     Var nextCond = exprWalker.eval(loopBodyContext, 
               forLoop.getCondition(), condType, true, nextRenames);
     newLoopVars.add(0, nextCond.asArg());
-    backend.loopContinue(newLoopVars, blockingVector);
+    backend.loopContinue(VarRepr.backendArgs(newLoopVars), blockingVector);
     backend.startElseBlock();
     // Terminate loop, clean up open arrays and copy out final vals 
     // of loop vars
@@ -1028,11 +1027,8 @@ public class ASTWalker {
     IterateDescriptor loop = IterateDescriptor.fromAST(context, tree);
     
     // Initial iteration should succeed
-    Var falseV = varCreator.createTmp(context, Types.F_BOOL);
-    exprWalker.assign(falseV, Arg.FALSE);
-    
-    Var zero = varCreator.createTmp(context, Types.F_INT);
-    exprWalker.assign(zero, Arg.ZERO);
+    Var falseV = exprWalker.assignToVar(context, Arg.FALSE);
+    Var zero = exprWalker.assignToVar(context, Arg.ZERO);
     
     FunctionContext fc = context.getFunctionContext();
     int loopNum = fc.getCounterVal("iterate");
@@ -1047,8 +1043,9 @@ public class ASTWalker {
     
     List<Boolean> blockingVars = Arrays.asList(true, false);
     backend.startLoop(loopName, 
-        Arrays.asList(condArg, loop.getLoopVar()), Arrays.asList(true, true),
-        Arrays.asList(falseV.asArg(), zero.asArg()), blockingVars);
+        VarRepr.backendVars(condArg, loop.getLoopVar()),
+        Arrays.asList(true, true),
+        VarRepr.backendArgs(falseV.asArg(), zero.asArg()), blockingVars);
     
     // get value of condVar
     Var condVal = exprWalker.retrieveToVar(iterContext, condArg); 
@@ -1072,19 +1069,18 @@ public class ASTWalker {
     
     Var nextCounter = varCreator.createTmp(bodyContext,
                                       Types.F_INT);
-    Var one = varCreator.createTmp(bodyContext, Types.F_INT);
 
-    exprWalker.assign(one, Arg.ONE);
-    backend.asyncOp(BuiltinOpcode.PLUS_INT, nextCounter, 
-        Arrays.asList(Arg.createVar(loop.getLoopVar()), Arg.createVar(one)));
+    Var one = exprWalker.assignToVar(bodyContext, Arg.ONE);
+    exprWalker.asyncOp(BuiltinOpcode.PLUS_INT, nextCounter, Arrays.asList(
+                      loop.getLoopVar().asArg(), one.asArg()));
     
-    backend.loopContinue(Arrays.asList(nextCond.asArg(), nextCounter.asArg()),
-                         blockingVars);
+    backend.loopContinue(
+        VarRepr.backendArgs(nextCond.asArg(), nextCounter.asArg()),
+        blockingVars);
 
     backend.endIfStatement();
     backend.endLoop();
   }
-
 
   private ArrayList<Var> evalLoopVarExprs(Context context,
       ForLoopDescriptor forLoop, Map<String, SwiftAST> loopVarExprs)
@@ -1829,11 +1825,11 @@ public class ASTWalker {
       Var output = outArgs.get(i);
       Var localOutput = localOutputs.get(i);
       if (Types.isFile(output.type())) {
-        backend.assignFile(output, Arg.createVar(localOutput));
+        exprWalker.assign(output, Arg.createVar(localOutput));
         if (output.isMapped() != Ternary.TRUE &&
             output.type().fileKind().supportsTmpImmediate()) {
           // Cleanup temporary local file if needed
-          backend.decrLocalFileRef(localOutput); 
+          backend.decrLocalFileRef(VarRepr.backendVar(localOutput)); 
         }
       } else {
         assert(Types.isVoid(output.type()));
@@ -2086,8 +2082,7 @@ public class ASTWalker {
           // Replace old arg with dereferenced version
           Var derefedArg = varCreator.createTmpAlias(context,
                               Types.derefResultType(oldArg));
-          backend.retrieveRef(VarRepr.backendVar(derefedArg),
-                              VarRepr.backendVar(oldArg));
+          exprWalker.retrieveRef(derefedArg, oldArg);
           args.set(i, derefedArg);
         }
       }

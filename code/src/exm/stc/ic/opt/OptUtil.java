@@ -142,7 +142,7 @@ public class OptUtil {
       } else {
         refVar = oldOut;
       }
-      instBuffer.add(TurbineOp.addressOf(refVar, newOut));
+      instBuffer.add(TurbineOp.storeRef(refVar, newOut));
     } else {
       throw new STCRuntimeError("Tried to replace instruction"
           + " output var " + oldOut + " with " + newOut + ": this doesn't make sense"

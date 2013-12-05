@@ -614,32 +614,30 @@ public class STCMiddleEnd {
     currBlock().addInstruction(TurbineOp.arrayCreateBag(bag, arr, key));
   }
 
-  public void assignReference(Var target, Var src) {
+  public void assignRef(Var target, Var src) {
     currBlock().addInstruction(
-        TurbineOp.addressOf(target, src));
+        TurbineOp.storeRef(target, src));
   }
 
-  public void dereferenceScalar(Var dst, Var src) {
+  public void derefScalar(Var dst, Var src) {
     assert(Types.isScalarFuture(dst));
     assert(Types.isRef(src));
     assert(src.type().memberType().assignableTo(dst.type()));
     currBlock().addInstruction(
-        TurbineOp.dereferenceScalar(dst, src));
+        TurbineOp.derefScalar(dst, src));
   }
   
-  public void dereferenceFile(Var target, Var src) {
+  public void derefFile(Var target, Var src) {
     assert(Types.isFile(target.type()));
     assert(Types.isFileRef(src));
     currBlock().addInstruction(
-        TurbineOp.dereferenceFile(target, src));
+        TurbineOp.derefFile(target, src));
   }
   
   public void retrieveRef(Var target, Var src) {
     assert(Types.isRef(src.type()));
     assert(Types.isAssignableRefTo(src.type(), target.type()));
-    currBlock().addInstruction(
-        TurbineOp.retrieveRef(target, src));
-
+    currBlock().addInstruction(TurbineOp.retrieveRef(target, src));
   }
   
   public void makeAlias(Var dst, Var src) {
@@ -824,13 +822,6 @@ public class STCMiddleEnd {
   public void decrLocalFileRef(Var fileVal) {
     assert(Types.isFileVal(fileVal));
     currBlock().addCleanup(fileVal, TurbineOp.decrLocalFileRef(fileVal));
-  }
-  
-  public void localOp(BuiltinOpcode op, Var out, List<Arg> in) {
-    if (out != null) {
-      assert(Types.isPrimValue(out.type()));
-    }
-    currBlock().addInstruction(Builtin.createLocal(op, out, in));
   }
   
   public void intrinsicCall(IntrinsicFunction intF, List<Var> iList,
