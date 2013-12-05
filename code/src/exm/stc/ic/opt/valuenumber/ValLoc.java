@@ -162,11 +162,11 @@ public class ValLoc {
     ArgCV val;
     if (valResult) {
       assert(Types.isElemValType(arr, contents)) :
-            "not member val: " + contents + " " + arr;
+            "not member val: " + contents.toStringTyped() + " " + arr;
       val = ComputedValue.arrayValCV(arr, ix);
     } else {
       assert(Types.isElemType(arr, contents)) :
-            "not member: " + contents + " " + arr;
+            "not member: " + contents.toStringTyped() + " " + arr;
       val = ComputedValue.arrayValCopyCV(arr, ix);
     }
     return new ValLoc(val, contents, Closed.MAYBE_NOT, IsValCopy.NO, isAssign);

@@ -1761,14 +1761,14 @@ public class TurbineOp extends Instruction {
         Arg ix = getInput(0);
         List<ValLoc> res = new ArrayList<ValLoc>();
         
-        boolean returnsRef = op != Opcode.ARR_CREATE_NESTED_IMM &&
-                             op != Opcode.ARRAY_CREATE_BAG;
+        boolean returnsNonRef = op == Opcode.ARR_CREATE_NESTED_IMM ||
+                                op == Opcode.ARRAY_CREATE_BAG;
         // Mark as not substitutable since this op may have
         // side-effect of creating array
         res.add(ValLoc.makeArrayResult(arr, ix, nestedArr.asArg(),
-                                              !returnsRef, IsAssign.NO));
+                                              returnsNonRef, IsAssign.NO));
         res.add(ValLoc.makeCreateNestedResult(arr, ix, nestedArr,
-                                              !returnsRef));
+                                              returnsNonRef));
         return res;
       }
       case SYNC_COPY_CONTAINER: 

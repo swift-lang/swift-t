@@ -866,28 +866,65 @@ public class ExprWalker {
       vals.add(eval(context, val, valType, false, renames));
     }
     
+    Var backendOVar = VarRepr.backendVar(oVar);
+    boolean elemIsRef = VarRepr.storeRefInContainer(Types.containerElemType(oVar));
+    /* We can only use arrayBuild operation if we have the keys and values in
+     * the appropriate format for the internal container representation.
+     * If user specified keys, they will be futures so we can't use them here.
+     * If the container representation stores values inline, can't use 
+     * those either. */
     if (ae.hasKeys()) {
-      // If user specified keys, they will be futures so we can't use
-      // arrayBuild operation.
       List<Var> backendKeys = new ArrayList<Var>(ae.getElemCount());
       for (SwiftAST key: ae.getKeys()) {
-        backendKeys.add(VarRepr.backendVar(eval(context, key, keyType, false, renames)));
+        Var keyVar = eval(context, key, keyType, false, renames);
+        backendKeys.add(VarRepr.backendVar(keyVar));
       }
+      
       for (int i = 0; i < ae.getElemCount(); i++) {
-        backend.arrayCopyInFuture(VarRepr.backendVar(oVar), backendKeys.get(i),
-                                  VarRepr.backendVar(vals.get(i)));
+        Var backendVal = VarRepr.backendVar(vals.get(i));
+        if (elemIsRef) {
+          // Store reference to future
+          backend.arrayStoreFuture(backendOVar, backendKeys.get(i),
+                                   backendVal.asArg());
+        } else {
+          // Must copy from future into container
+          backend.arrayCopyInFuture(backendOVar, backendKeys.get(i),
+                                    backendVal);
+        }
       }
     } else {
-      // We know keys ahead of time, use arrayBuild operation
+      assert(!ae.hasKeys());
       assert(Types.isInt(keyType));
-      List<Arg> backendKeys = new ArrayList<Arg>(ae.getElemCount());
-      for (int i = 0; i < ae.getElemCount(); i++) {
-        backendKeys.add(Arg.createIntLit(i));
+      List<Arg> backendKeys = arrayElemsDefaultKeys(ae);
+      if (elemIsRef) {
+        // We know keys ahead of time and elem storage format matches our
+        // input variables, use arrayBuild operation
+        backend.arrayBuild(backendOVar, backendKeys,
+                           VarRepr.backendVars(vals));
+      } else {
+        for (int i = 0; i < ae.getElemCount(); i++) {
+          Var backendVal = VarRepr.backendVar(vals.get(i));
+          if (elemIsRef) {
+            // Store reference to future
+            backend.arrayStore(backendOVar, backendKeys.get(i),
+                                     backendVal.asArg());
+          } else {
+            // Must copy from future into container
+            backend.arrayCopyInImm(backendOVar, backendKeys.get(i),
+                                   backendVal);
+          }
+        }
       }
-      backend.arrayBuild(VarRepr.backendVar(oVar), backendKeys,
-                         VarRepr.backendVars(vals));
     }
     
+  }
+
+  private List<Arg> arrayElemsDefaultKeys(ArrayElems ae) {
+    List<Arg> backendKeys = new ArrayList<Arg>(ae.getElemCount());
+    for (int i = 0; i < ae.getElemCount(); i++) {
+      backendKeys.add(Arg.createIntLit(i));
+    }
+    return backendKeys;
   }
 
   private void callFunction(Context context, String function,

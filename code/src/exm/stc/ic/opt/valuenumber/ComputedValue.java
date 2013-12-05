@@ -291,14 +291,14 @@ public class ComputedValue<T> {
   
   public boolean isArrayMember() {
     return (op == Opcode.FAKE && subop.equals(ComputedValue.ARRAY_NESTED)) ||
-           (op == Opcode.FAKE && subop.equals(ComputedValue.ARRAY_ELEM_COPY));
+           (op == Opcode.FAKE && subop.equals(ComputedValue.ARRAY_ELEM_VALUE));
   }
   
   public boolean isArrayMemberRef() {
     return (op == Opcode.FAKE && 
           subop.equals(ComputedValue.ARRAY_NESTED_REF)) ||
         (op == Opcode.FAKE &&
-          subop.equals(ComputedValue.ARRAY_ELEM_VALUE));
+          subop.equals(ComputedValue.ARRAY_ELEM_COPY));
   }
   
   /**
@@ -311,8 +311,8 @@ public class ComputedValue<T> {
     if (memRef.subop.equals(ARRAY_NESTED_REF)) {
       newSubop = ARRAY_NESTED;
     } else {
-      assert(memRef.subop.equals(ARRAY_ELEM_VALUE));
-      newSubop = ARRAY_ELEM_COPY;
+      assert(memRef.subop.equals(ARRAY_ELEM_COPY));
+      newSubop = ARRAY_ELEM_VALUE;
     }
     return new ArgCV(Opcode.FAKE, newSubop, memRef.inputs);
   }
