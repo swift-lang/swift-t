@@ -287,13 +287,10 @@ ADLB_Hostmap_list(char* output, uint max, uint offset, int* actual)
   // Counter for offset
   int j = 0;
 
-  for (int i = 0; i < hostmap.capacity; i++)
+  TABLE_FOREACH(&hostmap, item)
   {
-    for (struct list_sp_item* item = hostmap.array[i]->head; item;
-         item = item->next)
+    if (j++ >= offset)
     {
-      if (j++ < offset) continue;
-
       int t = (int)strlen(item->key);
       if (count+t >= max)
         goto done;
@@ -367,7 +364,7 @@ ADLBP_Put(const void* payload, int length, int target, int answer,
   }
 
   IRECV(&response, 1, MPI_INT, to_server, ADLB_TAG_RESPONSE_PUT);
-  SEND(p, p_size, MPI_BYTE, to_server, ADLB_TAG_PUT);
+  SEND(p, (int)p_size, MPI_BYTE, to_server, ADLB_TAG_PUT);
 
   WAIT(&request, &status);
   if (response == ADLB_REJECTED)
@@ -1465,18 +1462,25 @@ free_hostmap()
   if (disable_hostmap) return;
   for (int i = 0; i < hostmap.capacity; i++)
   {
-    struct list_sp* S = hostmap.array[i];
-    while (true)
+    table_entry *e, *next;
+    bool is_head;
+    
+    for (e = &hostmap.array[i], is_head = true; e != NULL;
+         e = next, is_head = false)
     {
-      char* name;
-      struct list_i* L;
-      bool b = list_sp_pop(S, &name, (void*) &L);
-      if (!b)
-        break;
+      next = e->next; // get next pointer before freeing
+
+      char* name = e->key;
+      struct list_i* L = e->data;
       free(name);
       list_i_free(L);
+      
+      if (is_head)
+      {
+        // Free unless inline in array
+        free(e);
+      }
     }
-    list_sp_free(S);
   }
   table_release(&hostmap);
 }
