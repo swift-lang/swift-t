@@ -1040,13 +1040,13 @@ public class TurbineOp extends Instruction {
     case ARR_STORE_FUTURE:
     case ARR_COPY_IN_FUTURE: {
       Var ix = getInput(0).getVar();
-      Var val = getInput(1).getVar();
+      Arg val = getInput(1);
       List<Var> vs;
       if (op == Opcode.ARR_STORE_FUTURE) {
         vs = ix.asList();
       } else { 
         assert(op == Opcode.ARR_COPY_IN_FUTURE);
-        vs = Arrays.asList(ix, val);
+        vs = Arrays.asList(ix, val.getVar());
       }
       vs = mkImmVarList(waitForClose, closedVars, vs);
       if (vs.size() > 0) {
@@ -1058,12 +1058,12 @@ public class TurbineOp extends Instruction {
     case AREF_COPY_IN_IMM: {
       List<Var> vs;
       Var innerArrRef = getOutput(1);
-      Var mem = getInput(1).getVar();
+      Arg mem = getInput(1);
       if (op == Opcode.AREF_STORE_IMM) {
         vs = innerArrRef.asList();
       } else {
         assert(op == Opcode.AREF_COPY_IN_IMM);
-        vs = Arrays.asList(innerArrRef, mem);
+        vs = Arrays.asList(innerArrRef, mem.getVar());
       }
       vs = mkImmVarList(insertRefWaitForClose, closedVars, vs);
       
@@ -1076,13 +1076,13 @@ public class TurbineOp extends Instruction {
     case AREF_COPY_IN_FUTURE: {
       Var innerArrRef = getOutput(1);
       Var ix = getInput(0).getVar();
-      Var mem = getInput(1).getVar();
+      Arg mem = getInput(1);
       List<Var> req;
       if (op == Opcode.AREF_STORE_FUTURE) {
         req = Arrays.asList(innerArrRef, ix);
       } else {
         assert(op == Opcode.AREF_COPY_IN_FUTURE);
-        req = Arrays.asList(innerArrRef, ix, mem);
+        req = Arrays.asList(innerArrRef, ix, mem.getVar());
       }
       // We will take either the index or the dereferenced array
       req = mkImmVarList(insertRefWaitForClose, closedVars, req);
