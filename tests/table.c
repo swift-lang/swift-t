@@ -16,18 +16,18 @@
 
 #include <stdio.h>
 
-#include <table_bp.h>
+#include <table.h>
 #include <assert.h>
 
 static size_t make_key(char *out, int n);
-static void null_cb(const void *k, size_t kl, void *v);
+static void null_cb(const char *k, void *v);
 
 int main() {
 
-  table_bp T;
+  struct table T;
   bool ok;
 
-  ok = table_bp_init(&T, 4);
+  ok = table_init(&T, 4);
   assert(ok);
 
   // force expand several times
@@ -35,15 +35,15 @@ int main() {
   for (int i = 0; i < N; i++)
   {
     char key[128];
-    size_t key_len = make_key(key, i);
+    make_key(key, i);
 
     void *val = (void*)(long)i;
-    ok = table_bp_add(&T, key, key_len, val);
+    ok = table_add(&T, key, val);
     assert(ok);
 
     // Check iteration works;
     int count = 0;
-    TABLE_BP_FOREACH(&T, item)
+    TABLE_FOREACH(&T, item)
     {
       count++;
     }
@@ -57,11 +57,11 @@ int main() {
     // Lookup in different order
     int j = ((i*29) + 30) % N;
     char key[128];
-    size_t key_len = make_key(key, j);
+    make_key(key, j);
     void *val;
-    bool found = table_bp_search(&T, key, key_len, &val);
+    bool found = table_search(&T, key, &val);
     assert(found);
-    printf("Search: %.*s=%li\n", (int)key_len, key, (long)val);
+    printf("Search: %s=%li\n", key, (long)val);
     assert(((long)val) == j);
   }
   assert(T.size == N);
@@ -71,41 +71,41 @@ int main() {
     // Remove in different order
     int j = ((i*29) + 5) % N;
     char key[128];
-    size_t key_len = make_key(key, j);
+    make_key(key, j);
     void *val;
-    bool found = table_bp_remove(&T, key, key_len, &val);
+    bool found = table_remove(&T, key, &val);
     assert(found);
-    printf("Remove: %.*s=%li\n", (int)key_len, key, (long)val);
+    printf("Remove: %s=%li\n", key, (long)val);
     assert(((long)val) == j);
   }
   assert(T.size == 0);
 
   // Free
-  table_bp_free_callback(&T, false, NULL);
+  table_free_callback(&T, false, NULL);
   
   // Rebuild
   N = 128;
   // Force many hash collisions
-  table_bp_init_custom(&T, 2, 1000.0);
+  table_init_custom(&T, 2, 1000.0);
   for (int i = 0; i < N; i++)
   {
     int j = ((i*9) + 12) % 16;
     char key[128];
-    size_t key_len = make_key(key, j);
+    make_key(key, j);
 
     void *val = (void*)((long)j);
-    ok = table_bp_add(&T, key, key_len, val);
+    ok = table_add(&T, key, val);
     assert(ok);
     
     void *search_val;
-    ok = table_bp_search(&T, key, key_len, &search_val);
+    ok = table_search(&T, key, &search_val);
     assert(ok);
     assert(val == search_val);
   }
   assert(T.size == N);
 
   // This should free all memory
-  table_bp_free_callback(&T, false, null_cb);
+  table_free_callback(&T, false, null_cb);
 
   printf("DONE\n");
 }
@@ -113,13 +113,11 @@ int main() {
 static size_t make_key(char *out, int n)
 {
   size_t key_len = (size_t) sprintf(out, "key%i", n);
-  // remove null terminator, since it shouldn't depend on it
-  out[key_len] = ' ';
   return key_len;
 }
 
 
-static void null_cb(const void *k, size_t kl, void *v)
+static void null_cb(const char *k, void *v)
 {
   // Do nothing
 }
