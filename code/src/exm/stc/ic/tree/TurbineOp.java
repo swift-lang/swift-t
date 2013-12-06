@@ -1922,7 +1922,7 @@ public class TurbineOp extends Instruction {
                            getOutput(0).asList());
       case STORE_BAG:
       case STORE_ARRAY: 
-      case STORE_RECURSIVE: {
+      case STORE_RECURSIVE: { 
         // Inputs stored into array need to have refcount incremented
         // This finalizes array so will consume refcount
         return Pair.create(getInput(0).getVar().asList(),
@@ -1970,21 +1970,31 @@ public class TurbineOp extends Instruction {
       case ARR_COPY_IN_FUTURE: {
         // Increment reference to member/member ref and index future
         // Increment writers count on array
-        return Pair.create(Arrays.asList(
-                getInput(0).getVar(), getInput(1).getVar()),
-                Arrays.asList(getOutput(0)));
+        Var arr = getInput(0).getVar();
+        Arg mem = getInput(1);
+
+        List<Var> readIncr;
+        if (mem.isVar() && RefCounting.hasReadRefCount(mem.getVar())) {
+          readIncr = Arrays.asList(arr, mem.getVar());
+        } else {
+          readIncr = arr.asList();
+        }
+        return Pair.create(readIncr, Arrays.asList(getOutput(0)));
       }
       case AREF_STORE_IMM:
       case AREF_COPY_IN_IMM:
       case AREF_STORE_FUTURE: 
       case AREF_COPY_IN_FUTURE: {
         Arg ix = getInput(0);
-        Var mem = getInput(1).getVar();
+        Arg mem = getInput(1);
         Var outerArr = getOutput(0);
         Var arrayRef = getOutput(1);
         List<Var> readers = new ArrayList<Var>(3);
-        readers.add(mem);
         readers.add(arrayRef);
+        if (mem.isVar() && RefCounting.hasReadRefCount(mem.getVar())) {
+          readers.add(mem.getVar());
+        }
+
         if (op == Opcode.AREF_STORE_FUTURE ||
             op == Opcode.AREF_COPY_IN_FUTURE) {
           readers.add(ix.getVar());
