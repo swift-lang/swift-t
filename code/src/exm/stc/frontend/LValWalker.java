@@ -349,9 +349,11 @@ public class LValWalker {
     //      and we can store directly if we have a $int, or copy if we have
     //      an int rval
     Type elemStorageType = VarRepr.fieldRepr(Types.containerElemType(arr));
-    boolean rValIsVal = rValVar.type().assignableTo(
-                        Types.derefResultType(elemStorageType));
-    assert(rValIsVal || rValVar.type().assignableTo(elemStorageType));
+    boolean rValDeref = !rValVar.type().assignableTo(elemStorageType);
+    if (rValDeref) {
+      assert(rValVar.type().assignableTo(
+                             Types.derefResultType(elemStorageType)));
+    }
 
     // We know what variable the result will go into now
     // Now need to work out the index and generate code to insert the
@@ -368,11 +370,11 @@ public class LValWalker {
     if (Types.isInt(keyType) && literal != null) {
       long arrIx = literal;
       // Add this variable to array
-      backendArrayInsert(arr, arrIx, rValVar, isArrayRef, rValIsVal, outerArray);
+      backendArrayInsert(arr, arrIx, rValVar, isArrayRef, rValDeref, outerArray);
     } else {
       // Handle the general case where the index must be computed
       Var indexVar = exprWalker.eval(context, indexExpr, keyType, false, null);
-      backendArrayInsert(arr, indexVar, rValVar, isArrayRef, rValIsVal,
+      backendArrayInsert(arr, indexVar, rValVar, isArrayRef, rValDeref,
                          outerArray);
     }
 
