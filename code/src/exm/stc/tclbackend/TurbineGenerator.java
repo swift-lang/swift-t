@@ -1599,7 +1599,7 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void arrayBuild(Var array, List<Arg> keys, List<Var> vals) {
+  public void arrayBuild(Var array, List<Arg> keys, List<Arg> vals) {
     assert(Types.isArray(array.type()));
     assert(keys.size() == vals.size());
     int elemCount = keys.size();
@@ -1609,11 +1609,11 @@ public class TurbineGenerator implements CompilerBackend {
         new ArrayList<Pair<Expression, Expression>>(elemCount);
     for (int i = 0; i < elemCount; i++) {
       Arg key = keys.get(i);
-      Var val = vals.get(i);
-      assert(Types.isElemType(array, val));
+      Arg val = vals.get(i);
+      assert(Types.isElemValType(array, val));
       assert(Types.isArrayKeyVal(array, key));
       kvExprs.add(Pair.<Expression, Expression>create(
-                  argToExpr(key), varToExpr(val)));
+                  argToExpr(key), argToExpr(val)));
     }
 
     Dict dict = Dict.dictCreate(true, kvExprs);
@@ -1660,7 +1660,7 @@ public class TurbineGenerator implements CompilerBackend {
   private Command arrayBuild(Var array, Expression dict) {
     TypeName keyType = representationType(Types.arrayKeyType(array), false);
     Type valType2 = Types.containerElemType(array);
-    TypeName valType = valRepresentationType(valType2);
+    TypeName valType = representationType(valType2, false);
 
     return Turbine.arrayBuild(varToExpr(array), dict, LiteralInt.ONE,
                 keyType, Collections.singletonList(valType));

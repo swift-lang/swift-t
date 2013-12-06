@@ -281,7 +281,7 @@ public interface CompilerBackend {
    * @param keys
    * @param vals
    */
-  public void arrayBuild(Var array, List<Arg> keys, List<Var> vals);
+  public void arrayBuild(Var array, List<Arg> keys, List<Arg> vals);
 
 
   /**

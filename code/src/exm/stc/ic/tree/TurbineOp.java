@@ -170,10 +170,10 @@ public class TurbineOp extends Instruction {
       assert (getInputs().size() % 2 == 0);
       int elemCount = getInputs().size() / 2;
       List<Arg> keys = new ArrayList<Arg>(elemCount);
-      List<Var> vals = new ArrayList<Var>(elemCount);
+      List<Arg> vals = new ArrayList<Arg>(elemCount);
       for (int i = 0; i < elemCount; i++) {
         keys.add(getInput(i * 2));
-        vals.add(getInput(i * 2 + 1).getVar());
+        vals.add(getInput(i * 2 + 1));
       }
       gen.arrayBuild(getOutput(0), keys, vals);
       break;
@@ -1415,14 +1415,22 @@ public class TurbineOp extends Instruction {
     switch (op) {
       case LOAD_REF:
       case COPY_REF:
-      case ARR_RETRIEVE:
       case ARR_CREATE_NESTED_IMM:
       case ARRAY_CREATE_BAG:
       case GET_FILENAME:
-      case STRUCT_LOOKUP:
         // Initialises alias
         return Arrays.asList(Pair.create(getOutput(0), InitType.FULL));
-        
+
+      case ARR_RETRIEVE:
+      case STRUCT_LOOKUP: {
+        // May initialise alias if we're looking up a reference
+        Var output = getOutput(0);
+        if (output.storage() == Alloc.ALIAS) {
+          return Arrays.asList(Pair.create(output, InitType.FULL));
+        } else {
+          return Collections.emptyList();
+        }
+      }
 
       case INIT_UPDATEABLE_FLOAT:
         // Initializes updateable
@@ -1899,7 +1907,7 @@ public class TurbineOp extends Instruction {
           // Skip keys and only get values
           Arg elem = getInput(i * 2 + 1);
           // Container gets reference to member
-          if (RefCounting.hasReadRefCount(elem.getVar())) {
+          if (elem.isVar() && RefCounting.hasReadRefCount(elem.getVar())) {
             readIncr.add(elem.getVar());
           }
         }
