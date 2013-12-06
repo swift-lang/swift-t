@@ -18,28 +18,48 @@
 #define HASHTABLE_H
 
 #include <stdbool.h>
+#include <stddef.h>
 
-#include "list_sp.h"
+typedef struct table_entry table_entry;
 
 struct table
 {
-  struct list_sp** array;
+  struct table_entry* array;
   int capacity;
   int size;
+  float load_factor;
+  int resize_threshold; // Resize if > this size
 };
 
-// inline int quickhash_string_hash(char* key, int capacity);
-int hash_string(const char* key, int capacity);
+struct table_entry
+{
+  char *key; 
+  void* data; // NULL is valid data
+  table_entry *next;
+};
 
-/**
-   Compress SHA-1 down to a smaller address space,
-   namely, 4 bytes.
-*/
-int SHA1_mod(char* data);
+#define TABLE_DEFAULT_LOAD_FACTOR 0.75
+
+/*
+  Macro for iterating over table entries.  This handles the simple case
+  of iterating over all valid table entries with no modifications.  
+ */
+#define TABLE_FOREACH(T, item) \
+  for (int __i = 0; __i < (T)->capacity; __i++) \
+    if (table_entry_valid(&((T)->array[__i]))) \
+      for (table_entry *item = &((T)->array[__i]); item != NULL; \
+           item = item->next)
+
+int hash_string(const char* key, int capacity);
 
 bool table_init(struct table* target, int capacity);
 
+bool table_init_custom(struct table* target, int capacity,
+                       float load_factor);
+
 struct table* table_create(int capacity);
+
+struct table* table_create_custom(int capacity, float load_factor);
 
 bool table_add(struct table *target,
                const char* key, void* data);
@@ -60,7 +80,7 @@ void table_dump(const char* format, const struct table* target);
   Free data structure, and callback function with key and value
  */
 void table_free_callback(struct table* target, bool free_root,
-                         void (*callback)(char*, void*));
+                         void (*callback)(const char*, void*));
 
 void table_free(struct table* target);
 
@@ -82,4 +102,29 @@ size_t table_keys_tostring_slice(char* result,
 
 void  table_dumpkeys(const struct table* target);
 
+static inline void table_clear_entry(table_entry *entry)
+{
+  entry->key = NULL;
+  entry->data = NULL;
+  entry->next = NULL;
+}
+
+/*
+  If the entry contains data
+ */
+static inline bool
+table_entry_valid(const table_entry *e)
+{
+  return e->key != NULL;
+}
+
+/*
+  Check if key matches item key. Inline for performance
+  Entry must be valid entry
+ */
+static inline bool
+table_key_match(const char *key, const table_entry *e)
+{
+  return strcmp(key, e->key) == 0;
+}
 #endif

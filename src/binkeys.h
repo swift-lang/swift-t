@@ -40,7 +40,7 @@ bin_key_eq(const void *key1, size_t key1_len, const void *key2, size_t key2_len)
   Inline in header for performance
  */
 static inline int
-bin_key_hash(const void* data, size_t length, int table_size)
+binkey_hash(const void* data, size_t length, int table_size)
 {
   uint32_t p = bj_hashlittle(data, length, 0u);
 
@@ -51,11 +51,11 @@ bin_key_hash(const void* data, size_t length, int table_size)
 /*
   Print key in hex format a la printf.  Not very efficient, for debugging
  */
-int printf_key(const void *key, size_t key_len);
+int binkey_printf(const void *key, size_t key_len);
 
 /*
   Print key in hex format a la sprintf.  Not very efficient, for debugging
  */
-int sprintf_key(char *str, const void *key, size_t key_len);
+int binkey_sprintf(char *str, const void *key, size_t key_len);
 
 #endif // __CUTILS_BINKEYS

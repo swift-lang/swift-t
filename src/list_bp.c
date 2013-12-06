@@ -191,7 +191,7 @@ list_bp_dump(const char* format, const struct list_bp* target)
       item = item->next)
   {
     printf("(");
-    printf_key(item->key, item->key_len);
+    binkey_printf(item->key, item->key_len);
     if (strcmp(format, "%s") == 0)
       printf(format, item->data);
     else if (strcmp(format, "%i") == 0)
@@ -211,7 +211,7 @@ list_bp_dumpkeys(const struct list_bp* target)
        item = item->next)
   {
     printf("(");
-    printf_key(item->key, item->key_len);
+    binkey_printf(item->key, item->key_len);
     printf(")");
     if (item->next)
       printf(",");
@@ -240,7 +240,7 @@ list_bp_keys_tostring(char* result,
   for (struct list_bp_item* item = target->head; item;
        item = item->next)
   {
-    p += sprintf_key(p, item->key, item->key_len);
+    p += binkey_sprintf(p, item->key, item->key_len);
     p[0] = ' ';
     p++;
   }
@@ -273,7 +273,7 @@ bp_append_pair(char* ptr, const void *key, size_t key_len,
             const char* format, const void* data, bool next)
 {
   ptr += sprintf(ptr, "(");
-  ptr += sprintf_key(ptr, key, key_len);
+  ptr += binkey_sprintf(ptr, key, key_len);
   ptr += sprintf(ptr, ",");
   ptr += sprintf(ptr, "%s)", (char*) data);
 

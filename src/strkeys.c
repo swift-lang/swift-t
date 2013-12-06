@@ -14,32 +14,19 @@
  * limitations under the License
  */
 
-#include "binkeys.h"
-#include <stdio.h>
+#include "strkeys.h"
 
-int binkey_printf(const void *key, size_t key_len)
+char*
+strkey_append_pair(char* str, char *key,
+            const char* format, const void* data,
+            bool has_next)
 {
-  for (size_t i = 0; i < key_len; i++)
-  {
-    unsigned char b = ((unsigned char*)key)[i];
-    int rc = printf("%hhX", b);
-    if (rc < 0)
-      return rc;
-  }
-  return (int)key_len;
-}
+  char *ptr = str;
 
-int binkey_sprintf(char *str, const void *key, size_t key_len)
-{
-  int pos = 0;
-  for (size_t i = 0; i < key_len; i++)
-  {
-    unsigned char b = ((unsigned char*)key)[i];
-    int rc = sprintf(&str[pos], "%hhX", b);
-    if (rc < 0)
-      return rc;
-    pos += rc; 
-  }
-  return pos;
-}
+  ptr += sprintf(ptr, "(%s,", key);
+  ptr += sprintf(ptr, "%s)", (char*) data);
 
+  if (has_next)
+    ptr += sprintf(ptr, ",");
+  return ptr;
+}

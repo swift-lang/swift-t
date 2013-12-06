@@ -19,36 +19,52 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "strkeys.h"
 #include "table.h"
 #include "c-utils-types.h"
 #include "jenkins-hash.h"
 
-int
-hash_string(const char* data, int table_size)
+// Double in size for now
+static const float table_expand_factor = 2.0;
+
+static void
+table_dump2(const char* format, const struct table* target,
+               bool include_vals);
+
+static table_entry*
+find_bucket(const struct table* T, const char* key, size_t *key_strlen);
+
+static bool 
+bucket_add_head(table_entry *head, char* key, void* data);
+
+static bool
+bucket_add_tail(table_entry *head, table_entry *entry,
+                bool copy_entry);
+
+static table_entry*
+table_locate_entry(const struct table *T, const char *key,
+                   table_entry **prev);
+
+static void
+table_remove_entry(table_entry *e, table_entry *prev);
+
+static bool
+table_expand(struct table *T);
+
+static size_t
+bucket_keys_string_length(const table_entry *head);
+
+static size_t
+bucket_keys_tostring(char *result, const table_entry *head);
+
+static size_t
+bucket_tostring(char *result, size_t size, const char *format,
+                const table_entry *head);
+
+static int
+calc_resize_threshold(struct table *T)
 {
-  uint32_t p = 0;
-  uint32_t q = 0;
-  size_t length = strlen(data);
-  bj_hashlittle2(data, length, &p, &q);
-
-  int index = (int) (p % (uint32_t)table_size);
-  return index;
-}
-
-int64_t
-hash_string_long(const char* data)
-{
-  uint32_t p, q;
-  size_t length = strlen(data);
-  bj_hashlittle2(data, length, &p, &q);
-
-  int64_t result = 0;
-
-  result += p;
-
-  // printf("hash_string %s -> %i \n", data, index);
-
-  return result;
+  return (int)((float)T->capacity * T->load_factor);
 }
 
 /**
@@ -57,23 +73,27 @@ hash_string_long(const char* data)
 bool
 table_init(struct table* target, int capacity)
 {
+  return table_init_custom(target, capacity, TABLE_DEFAULT_LOAD_FACTOR);
+}
+
+bool
+table_init_custom(struct table* target, int capacity, float load_factor)
+{
   assert(capacity >= 1);
   target->size     = 0;
   target->capacity = capacity;
+  target->load_factor = load_factor;
+  target->resize_threshold = calc_resize_threshold(target);
 
-  target->array = malloc(sizeof(struct list_sp*) * (size_t)capacity);
+  target->array = malloc(sizeof(target->array[0]) * (size_t)capacity);
   if (!target->array)
   {
-    free(target);
     return false;
   }
 
   for (int i = 0; i < capacity; i++)
   {
-    struct list_sp* new_list_sp = list_sp_create();
-    if (! new_list_sp)
-      return false;
-    target->array[i] = new_list_sp;
+    table_clear_entry(&target->array[i]);
   }
   return true;
 }
@@ -81,13 +101,22 @@ table_init(struct table* target, int capacity)
 struct table*
 table_create(int capacity)
 {
+  return table_create_custom(capacity, TABLE_DEFAULT_LOAD_FACTOR);
+}
+
+struct table*
+table_create_custom(int capacity, float load_factor)
+{
   struct table* new_table =  malloc(sizeof(const struct table));
   if (! new_table)
     return NULL;
 
   bool result = table_init(new_table, capacity);
   if (!result)
+  {
+    free(new_table);
     return NULL;
+  }
 
   return new_table;
 }
@@ -99,10 +128,33 @@ table_free(struct table* target)
 }
 
 void table_free_callback(struct table* target, bool free_root,
-                         void (*callback)(char*, void*))
+                         void (*callback)(const char*, void*))
 {
   for (int i = 0; i < target->capacity; i++)
-    list_sp_free_callback(target->array[i], callback);
+  {
+    table_entry *head = &target->array[i];
+    if (table_entry_valid(head))
+    {
+      // Store next pointer to allow freeing entry
+      bool is_head;
+      table_entry *e, *next;
+      for (e = head, next = head->next, is_head = true;
+           e != NULL;
+           e = next, is_head = false)
+      {
+        next = e->next; // Store next right away
+
+        if (callback != NULL)
+          callback(e->key, e->data);
+
+        free(e->key);
+        if (!is_head) {
+          // head is stored in array, rest were malloced separately
+          free(e);
+        }
+      }
+    }
+  }
 
   free(target->array);
 
@@ -121,7 +173,29 @@ void
 table_destroy(struct table* target)
 {
   for (int i = 0; i < target->capacity; i++)
-    list_sp_destroy(target->array[i]);
+  {
+    table_entry *head = &target->array[i];
+    if (table_entry_valid(head))
+    {
+      // Store next pointer to allow freeing entry
+      bool is_head;
+      table_entry *e, *next;
+      for (e = head, next = head->next, is_head = true;
+           e != NULL;
+           e = next, is_head = false)
+      {
+        next = e->next; // Store next right away
+
+        free(e->key);
+        free(e->data);
+
+        if (!is_head)
+        {
+         free(e);
+        }
+      }
+    }
+  }
 
   free(target->array);
   free(target);
@@ -134,22 +208,158 @@ table_release(struct table* target)
 }
 
 /**
+  Return the head of the appropriate bucket for the key
+  key_strlen: return key string length
+ */
+static table_entry*
+find_bucket(const struct table* T, const char* key, size_t *key_strlen)
+{
+  int index = strkey_hash2(key, T->capacity, key_strlen);
+  return &T->array[index];
+}
+
+/*
+ Add at head
+ key: appropriate representation with inlining
+ */
+static bool 
+bucket_add_head(table_entry *head, char* key, void* data)
+{
+  if (table_entry_valid(head))
+  {
+    // Head occupied: replace head with this one
+    table_entry *e = malloc(sizeof(table_entry));
+    if (e == NULL)
+    {
+      return false;
+    }
+    // Copy current head to e
+    memcpy(e, head, sizeof(*e));
+    head->next = e;
+  }
+
+  // Put new data in head
+  head->key = key;
+  head->data = data;
+  return true;
+}
+
+/**
+  Add at end of bucket chain
+  copy_entry: if true, allocate new entry, otherwise reuse provided
+    entry or free it.  In no case do we copy the key or data memory.
+ */
+static bool
+bucket_add_tail(table_entry *head, table_entry *entry, bool copy_entry)
+{
+  if (table_entry_valid(head))
+  {
+    // Head occupied: find tail and add
+    if (copy_entry)
+    {
+      table_entry *new_entry = malloc(sizeof(*entry));
+      if (new_entry == NULL)
+      {
+        return false;
+      }
+      memcpy(new_entry, entry, sizeof(*entry));
+      entry = new_entry;
+    }
+
+    table_entry *tail = head; // Find tail of list
+    while (tail->next != NULL)
+    {
+      tail = tail->next;
+    }
+    tail->next = entry;
+    entry->next = NULL;
+  }
+  else
+  {
+    assert(head->next == NULL); // Check no dangling
+    // Empty list case
+    memcpy(head, entry, sizeof(*head));
+    head->next = NULL;
+
+    if (!copy_entry)
+    {
+      // Don't need memory since we copied to head
+      free(entry);
+    }
+  }
+
+  return true;
+}
+
+/**
    Note: duplicates internal copy of key (in list_sp_add())
  */
 bool
 table_add(struct table *target, const char* key, void* data)
 {
-  int index = hash_string(key, target->capacity);
+  // Check to resize hash table
+  if (target->size >= target->resize_threshold)
+  {
+    bool ok = table_expand(target);
+    if (!ok)
+      return false;
+  }
 
-  struct list_sp_item* new_item =
-    list_sp_add(target->array[index], key, data);
-
-  if (! new_item)
+  /* 
+   * Add at head of list to avoid traversing list.  This means that in
+   * case of duplicate keys, the newest is returned
+   */
+  size_t key_strlen;
+  table_entry *head = find_bucket(target, key, &key_strlen);
+    
+  char *key_repr = malloc(key_strlen + 1);
+  if (key_repr == NULL)
+  {
     return false;
+  }
+  memcpy(key_repr, key, key_strlen + 1);
 
-  target->size++;
+  bool ok = bucket_add_head(head, key_repr, data);
+  if (ok)
+  {
+    target->size++;
+    return true;
+  }
+  else
+  {
+    // Free allocated key
+    free(key_repr);
+    return false;
+  }
+}
 
-  return true;
+/*
+  Find entry in table matching key
+  prev: if provided, filled with previous entry
+  returns: NULL if not found
+ */
+static table_entry *
+table_locate_entry(const struct table *T, const char *key, table_entry **prev)
+{
+  table_entry *prev_e = NULL;
+  size_t key_strlen;
+  table_entry *head = find_bucket(T, key, &key_strlen);
+  if (!table_entry_valid(head)) // Empty bucket
+    return NULL;
+
+  for (table_entry *e = head; e != NULL; e = e->next)
+  {
+    if (table_key_match(key, e))
+    {
+      if (prev != NULL)
+      {
+        *prev = prev_e;
+      }
+      return e;
+    }
+    prev_e = e;
+  }
+  return NULL;
 }
 
 /**
@@ -161,12 +371,15 @@ bool
 table_set(struct table* target, const char* key,
           void* value, void** old_value)
 {
-  int index = hash_string(key, target->capacity);
+  table_entry *e = table_locate_entry(target, key, NULL);
+  if (e != NULL)
+  {
+    *old_value = e->data;
+    e->data = value;
+    return true;
+  }
 
-  bool result =
-      list_sp_set(target->array[index], key, value, old_value);
-
-  return result;
+  return false;
 }
 
 /**
@@ -180,17 +393,18 @@ bool
 table_search(const struct table* table, const char* key,
              void **value)
 {
-  int index = hash_string(key, table->capacity);
+  table_entry *e = table_locate_entry(table, key, NULL);
 
-  for (struct list_sp_item* item = table->array[index]->head; item;
-       item = item->next)
-    if (strcmp(key, item->key) == 0) {
-      *value = (void*) item->data;
-      return true;
-    }
-
-  *value = NULL;
-  return false;
+  if (e != NULL)
+  {
+    *value = e->data;
+    return true;
+  }
+  else
+  {
+    *value = NULL;
+    return false;
+  }
 }
 
 bool
@@ -200,46 +414,192 @@ table_contains(const struct table* table, const char* key)
   return table_search(table, key, &tmp);
 }
 
+/*
+ Unlink and free entry if needed
+ prev: previous entry, or NULL if list head
+ */
+static void
+table_remove_entry(table_entry *e, table_entry *prev)
+{
+  if (prev == NULL)
+  {
+    // Removing head of list
+    if (e->next == NULL)
+    {
+      // List is now empty - reset
+      table_clear_entry(e);
+    }
+    else
+    {
+      // Promote other entry to head
+      table_entry *next = e->next;
+      memcpy(e, next, sizeof(*e));
+      free(next);
+    }
+  }
+  else
+  {
+    prev->next = e->next;
+    free(e); // Was malloced separately
+  }
+}
+
 bool
 table_remove(struct table* table, const char* key, void** data)
 {
-  int index = hash_string(key, table->capacity);
-  struct list_sp* list = table->array[index];
-  assert(list != NULL);
-  bool result = list_sp_remove(list, key, data);
-  if (result)
+  table_entry *prev;
+  table_entry *e = table_locate_entry(table, key, &prev);
+  if (e != NULL)
+  {
+    *data = e->data; // Store data for caller
+    free(e->key);
+
+    table_remove_entry(e, prev); 
     table->size--;
-  return result;
+    return true;
+  }
+
+  return false;
+}
+
+/**
+   Resize hash table to be larger
+ */
+static bool
+table_expand(struct table *T)
+{
+  int new_capacity = (int)(table_expand_factor * (float)T->capacity);
+  assert(new_capacity > T->capacity);
+  table_entry *new_array = malloc(sizeof(T->array[0]) *
+                                     (size_t)new_capacity);
+
+  if (new_array == NULL)
+  {
+    return false;
+  }
+  
+  for (int i = 0; i < new_capacity; i++)
+  {
+    table_clear_entry(&new_array[i]);
+  }
+  
+  // Rehash and move all entries from old table
+  for (int i = 0; i < T->capacity; i++)
+  {
+    table_entry *head = &T->array[i];
+    if (!table_entry_valid(head))
+    {
+      assert(head->next == NULL);
+      continue; // Bucket was empty
+    }
+
+    bool is_head;
+    table_entry *e, *next;
+    for (e = head, is_head = true; e != NULL; e = next, is_head = false)
+    {
+     // Store right away since e might be modified upon adding to new list
+      next = e->next;
+
+      // all entries should be valid if we get here
+      assert(table_entry_valid(e));
+      size_t key_strlen;
+      int new_ix = strkey_hash2(e->key, new_capacity, &key_strlen);
+
+      // Add at tail of new buckets to preserve insert order.
+      // This requires traversing list, but collisions should be fairly
+      // few, especially in enlarged table.
+      bool ok = bucket_add_tail(&new_array[new_ix], e, is_head);
+      if (!ok)
+      {
+        // TODO: how to handle? we're in an awkward state in the middle
+        //  of moving entries.
+        //  It's unlikely that this will happen.  It is impossible if
+        //  we're doubling the size of the array since no list heads will
+        //  be demoted to non-heads
+        return false;
+      }
+    }
+  }
+  
+  free(T->array);
+  T->array = new_array;
+  T->capacity = new_capacity;
+  T->resize_threshold = calc_resize_threshold(T);
+  return true;
 }
 
 /** format specifies the output format for the data items
+  TODO: format ignored
  */
 void
 table_dump(const char* format, const struct table* target)
 {
-  char s[200];
-  int i;
-  printf("{\n");
-  for (i = 0; i < target->capacity; i++)
-    if (target->array[i]->size > 0)
-    {
-      list_sp_tostring(s, 200, "%s", target->array[i]);
-      printf("%i: %s \n", i, s);
-    }
-  printf("}\n");
+  table_dump2(format, target, true);
 }
 
 void
 table_dumpkeys(const struct table* target)
 {
+  table_dump2(NULL, target, false);
+}
+
+static void
+table_dump2(const char *format, const struct table* target, bool include_vals)
+{
   printf("{\n");
   for (int i = 0; i < target->capacity; i++)
-    if (target->array[i]->size)
+  {
+    table_entry *head = &target->array[i];
+    if (!table_entry_valid(head))
     {
-      printf("%i:", i);
-      list_sp_dumpkeys(target->array[i]);
+      // Skip empty buckets
+      continue;
     }
+    printf("%i: ", i);
+
+    for (table_entry *e = head; e != NULL; e = e->next)
+    {
+      printf("(");
+      printf("%s", e->key);
+      if (include_vals)
+      {
+        printf(", ");
+        if (format == NULL)
+        {
+          // Print pointer by default
+          printf("%p", e->data);
+        }
+        else
+        {
+          printf(format, e->data);
+        }
+      }
+      printf(")");
+
+      if (e->next != NULL)
+        printf(", ");
+    }
+    printf("\n");
+  }
   printf("}\n");
+}
+
+static size_t
+bucket_keys_string_length(const table_entry *head)
+{
+  size_t result = 0;
+
+  // Check for non-empty bucket
+  if (table_entry_valid(head))
+  {
+    for (const table_entry *e = head; e != NULL; e = e->next)
+    {
+      // Each byte is two hex digits in string repr.
+      // Plus separator char
+      result += strlen(e->key);
+    }
+  }
+  return result;
 }
 
 size_t
@@ -247,7 +607,7 @@ table_keys_string_length(const struct table* target)
 {
   size_t result = 0;
   for (int i = 0; i < target->capacity; i++)
-    result += list_sp_keys_string_length(target->array[i]);
+    result += bucket_keys_string_length(&target->array[i]);
   return result;
 }
 
@@ -275,12 +635,49 @@ table_keys_string_slice(char** result,
   return length;
 }
 
+static size_t
+bucket_keys_tostring(char *result, const table_entry *head)
+{
+  if (!table_entry_valid(head)) // Empty bucket
+    return 0;
+  char *p = result;
+  for (const table_entry *e = head; e != NULL; e = e->next)
+    p += sprintf(p, "%s ", e->key);
+  return (size_t)(p - result);
+}
+
+static size_t
+bucket_tostring(char *result, size_t size, const char *format,
+                const table_entry *head)
+{
+  if (size <= 2)
+  {
+    return 0;
+  }
+  char* p = result;
+  
+  p += sprintf(p, "[");
+
+  // Check for empty bucket
+  if (table_entry_valid(head))
+  {
+    for (const table_entry *item = head; item; item = item->next)
+    {
+      p = strkey_append_pair(p, item->key, format, item->data,
+                             item->next != NULL);
+    }
+  }
+  p += sprintf(p, "]");
+
+  return (size_t)(p - result);
+}
+
 size_t
 table_keys_tostring(char* result, const struct table* target)
 {
   char* p = result;
   for (int i = 0; i < target->capacity; i++)
-    p += list_sp_keys_tostring(p, target->array[i]);
+    p += bucket_keys_tostring(p, &target->array[i]);
   return (size_t)(p-result);
 }
 
@@ -292,25 +689,20 @@ table_keys_tostring_slice(char* result, const struct table* target,
   int c = 0;
   char* p = result;
   p[0] = '\0';
-  for (int i = 0; i < target->capacity; i++)
-  {
-    struct list_sp* L = target->array[i];
-    for (struct list_sp_item* item = L->head; item; item = item->next)
-    {
-      if (c < offset) {
-        c++;
-        continue;
-      }
-      if (c >= offset+count && count != -1)
-        break;
-      p += sprintf(p, "%s ", (char*) item->key);
+  TABLE_FOREACH(target, item) {
+    if (c < offset) {
       c++;
+      continue;
     }
+    if (c >= offset+count && count != -1)
+      break;
+    p += sprintf(p, "%s ", item->key);
+    c++;
   }
   return (size_t)(p-result);
 }
 
-/** Dump list_sp to string as in snprintf()
+/** Dump table_sp to string as in snprintf()
     size must be greater than 2.
     format specifies the output format for the data items
     internally allocates O(size) memory
@@ -321,8 +713,8 @@ size_t
 table_tostring(char* output, size_t size,
                char* format, const struct table* target)
 {
-  size_t   error = size+1;
-  char* ptr   = output;
+  size_t error = size+1;
+  char* ptr = output;
   int i;
   ptr += sprintf(output, "{\n");
 
@@ -330,7 +722,7 @@ table_tostring(char* output, size_t size,
 
   for (i = 0; i < target->capacity; i++)
   {
-    size_t r = list_sp_tostring(s, size, format, target->array[i]);
+    size_t r = bucket_tostring(s, size, format, &target->array[i]);
     if (((size_t)(ptr-output)) + r + 2 < size)
       ptr += sprintf(ptr, "%s\n", s);
     else

@@ -21,6 +21,8 @@
 
 #include "list_sp.h"
 
+#include "strkeys.h"
+
 extern struct list_sp*
 list_sp_create()
 {
@@ -249,17 +251,6 @@ void list_sp_free_callback(struct list_sp* target,
   free(target);
 }
 
-static char*
-append_pair(char* ptr, struct list_sp_item* item,
-            const char* format, const void* data)
-{
-  ptr += sprintf(ptr, "(%s,", item->key);
-  ptr += sprintf(ptr, "%s)", (char*) data);
-
-  if (item->next)
-    ptr += sprintf(ptr, ",");
-  return ptr;
-}
 
 /** Dump list_sp to string a la snprintf()
     size must be greater than 2.
@@ -281,7 +272,8 @@ size_t list_sp_tostring(char* str, size_t size,
   for (struct list_sp_item* item = target->head;
        item && ptr-str < size;
        item = item->next)
-    ptr = append_pair(ptr, item, format, item->data);
+    ptr = strkey_append_pair(ptr, item->key, format, item->data,
+                             item->next != NULL);
   sprintf(ptr, "]");
 
   return (size_t)(ptr-str);

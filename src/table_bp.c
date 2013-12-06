@@ -25,7 +25,6 @@
 #include "list_bp.h"
 #include "c-utils-types.h"
 
-
 // Double in size for now
 static const float table_bp_expand_factor = 2.0;
 
@@ -216,14 +215,13 @@ table_bp_release(table_bp* target)
   free(target->array);
 }
 
-
 /**
   Return the head of the appropriate bucket for the key
  */
 static table_bp_entry*
 find_bucket(const table_bp* T, const void* key, size_t key_len)
 {
-  int index = bin_key_hash(key, key_len, T->capacity);
+  int index = binkey_hash(key, key_len, T->capacity);
   return &T->array[index];
 }
 
@@ -351,6 +349,7 @@ table_bp_add(table_bp *target, const void* key, size_t key_len,
   }
   else
   {
+    // Free allocated key
     if (!table_bp_inline_key(key_len))
       free(key_repr);
     return false;
@@ -529,7 +528,7 @@ table_bp_expand(table_bp *T)
 
       // all entries should be valid if we get here
       assert(table_bp_entry_valid(e));
-      int new_ix = bin_key_hash(table_bp_get_key(e), e->key_len, new_capacity);
+      int new_ix = binkey_hash(table_bp_get_key(e), e->key_len, new_capacity);
 
       // Add at tail of new buckets to preserve insert order.
       // This requires traversing list, but collisions should be fairly
@@ -555,7 +554,6 @@ table_bp_expand(table_bp *T)
 }
 
 /** format specifies the output format for the data items
-  TODO: format ignored
  */
 void
 table_bp_dump(const char* format, const table_bp* target)
@@ -576,7 +574,7 @@ table_bp_dump2(const char *format, const table_bp* target, bool include_vals)
   for (int i = 0; i < target->capacity; i++)
   {
     table_bp_entry *head = &target->array[i];
-    if (!table_bp_entry_valid(head) && head->next == NULL)
+    if (!table_bp_entry_valid(head))
     {
       // Skip empty buckets
       continue;
@@ -586,15 +584,22 @@ table_bp_dump2(const char *format, const table_bp* target, bool include_vals)
     for (table_bp_entry *e = head; e != NULL; e = e->next)
     {
       printf("(");
-      printf_key(table_bp_get_key(e), e->key_len);
+      binkey_printf(table_bp_get_key(e), e->key_len);
       if (include_vals)
       {
-        printf(", %s)", (char*) e->data);
+        printf(", ");
+        if (format == NULL)
+        {
+          // Print pointer by default
+          printf("%p", e->data);
+        }
+        else
+        {
+          printf(format, e->data);
+        }
       }
-      else
-      {
-        printf(")");
-      }
+      printf(")");
+
       if (e->next != NULL)
         printf(", ");
     }
@@ -664,7 +669,7 @@ bucket_keys_tostring(char *result, const table_bp_entry *head)
   for (const table_bp_entry *e = head; e != NULL; e = e->next)
   {
     // Each byte is two hex digits in string repr.
-    result += sprintf_key(p, table_bp_get_key(e), e->key_len);
+    result += binkey_sprintf(p, table_bp_get_key(e), e->key_len);
     p[0] = ' ';
     p++;
   }
@@ -721,14 +726,14 @@ table_bp_keys_tostring_slice(char* result, const table_bp* target,
     }
     if (c >= offset+count && count != -1)
       break;
-    p += sprintf_key(p, table_bp_get_key(item), item->key_len);
+    p += binkey_sprintf(p, table_bp_get_key(item), item->key_len);
     *(p++) = ' ';
     c++;
   }
   return (size_t)(p-result);
 }
 
-/** Dump list_bp to string as in snprintf()
+/** Dump table_bp to string as in snprintf()
     size must be greater than 2.
     format specifies the output format for the data items
     internally allocates O(size) memory
