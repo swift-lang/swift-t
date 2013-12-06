@@ -1462,23 +1462,27 @@ free_hostmap()
   if (disable_hostmap) return;
   for (int i = 0; i < hostmap.capacity; i++)
   {
-    table_entry *e, *next;
-    bool is_head;
-    
-    for (e = &hostmap.array[i], is_head = true; e != NULL;
-         e = next, is_head = false)
+    table_entry *head = &hostmap.array[i];
+    if (table_entry_valid(head))
     {
-      next = e->next; // get next pointer before freeing
-
-      char* name = e->key;
-      struct list_i* L = e->data;
-      free(name);
-      list_i_free(L);
+      table_entry *e, *next;
+      bool is_head;
       
-      if (is_head)
+      for (e = head, is_head = true; e != NULL;
+           e = next, is_head = false)
       {
-        // Free unless inline in array
-        free(e);
+        next = e->next; // get next pointer before freeing
+
+        char* name = e->key;
+        struct list_i* L = e->data;
+        free(name);
+        list_i_free(L);
+        
+        if (!is_head)
+        {
+          // Free unless inline in array
+          free(e);
+        }
       }
     }
   }
