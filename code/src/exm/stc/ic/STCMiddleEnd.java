@@ -283,13 +283,12 @@ public class STCMiddleEnd {
           int splitDegree, int leafDegree, boolean arrayClosed) {
     assert(Types.isArray(container.type()) || Types.isBag(container.type())):
           "foreach loop over bad type: " + container.toString(); 
+    assert(Types.isElemValType(container, memberVar));
     if (Types.isArray(container)) {
-      assert(container.type().memberType().equals(memberVar.type()));
       assert(loopCountVar == null || 
           Types.isArrayKeyVal(container, loopCountVar.asArg()));
     } else {
       assert(Types.isBag(container));
-      assert(Types.isBagElem(container, memberVar));
       assert(loopCountVar == null);
     }
     ForeachLoop loop = new ForeachLoop(loopName,

@@ -133,6 +133,9 @@ public class VarRepr {
     if (Types.isContainer(type) || Types.isBlob(type)) {
       // Typically large types are stored separately
       return true;
+    } else if (Types.isFile(type)) {
+      // File is actually reference to two things
+      return true;
     } else {
       return false;
     }

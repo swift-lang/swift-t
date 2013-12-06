@@ -535,8 +535,7 @@ public class TurbineGenerator implements CompilerBackend {
       case STRING:
         return Turbine.ADLB_STRING_TYPE;
       default:
-        throw new STCRuntimeError("Unknown ADLB representation for "
-            + pt);
+        throw new STCRuntimeError("Unknown ADLB representation for " + pt);
     }
   }
   
@@ -2219,18 +2218,17 @@ public class TurbineGenerator implements CompilerBackend {
         Var loopCountVar, int splitDegree, int leafDegree, boolean arrayClosed,
         List<PassedVar> passedVars, List<RefCount> perIterIncrs, 
         MultiMap<Var, RefCount> constIncrs) {
-
     boolean haveKeys = loopCountVar != null;
     
     if (Types.isArray(container)) {
       assert(!haveKeys || 
             Types.isArrayKeyVal(container, loopCountVar.asArg()));
-      assert(Types.isElemType(container, memberVar));
     } else {
       assert(Types.isBag(container));
       assert(!haveKeys);
-      assert(Types.isBagElem(container, memberVar));
     }
+
+    assert(Types.isElemValType(container, memberVar));
 
     if (!arrayClosed) {
       throw new STCRuntimeError("Loops over open containers not yet supported");
