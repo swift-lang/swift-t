@@ -551,7 +551,7 @@ public class STCMiddleEnd {
       assert(Types.isArrayKeyVal(array, key));
     }
     for (Var val: vals) {
-      assert(Types.isElemType(array, val));
+      assert(Types.isElemValType(array, val));
     }
     currBlock().addInstruction(
         TurbineOp.arrayBuild(array, keys, Arg.fromVarList(vals)));
