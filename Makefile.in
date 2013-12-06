@@ -176,7 +176,7 @@ test_results: $(TEST_RESULTS)
 $(TESTS): %.x: %.o $(EXMCUTILS) install.txt
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(PIC) $(LDFLAGS) $(<) \
-                   -L$(INSTALL_LIB) -l exmcutils \
+                   -L$(INSTALL_LIB) -lexmcutils \
                    -o $(@) \
                    $(RPATH)
 
