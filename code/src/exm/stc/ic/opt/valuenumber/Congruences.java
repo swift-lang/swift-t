@@ -340,7 +340,8 @@ public class Congruences implements AliasFinder {
     }
     if (contradiction) {
       Logging.uniqueWarn("Invalid code detected during optimization. "
-          + "Conflicting values for " + value + ": " + val1 +
+          + "Conflicting values congruence type " + congType + " "
+          + value + ": " + val1 +
           " != " + val2 + " in " + errContext + ".\n"
           + "This may have been caused by a double-write to a variable. "
           + "Please look at any previous warnings emitted by compiler. "
@@ -495,7 +496,7 @@ public class Congruences implements AliasFinder {
     //  (e.g. root var by alias and subscripts by value)
     // TODO: will need to recanonicalize?
     
-    if (val.isArrayMember() || val.isArrayMemberRef()) {
+    if (val.isArrayMemberVal() || val.isArrayMemberRef()) {
       Arg arr = byAlias.findCanonical(val.getInput(0));
       Arg ix = byValue.findCanonical(val.getInput(1));
       return Arrays.asList(arr, ix);

@@ -24,6 +24,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Types.Typed;
 import exm.stc.common.lang.Var;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
@@ -262,8 +263,22 @@ public class ComputedValue<T> {
    * @return
    */
   public static ArgCV arrayValCV(Var arr, Arg ix) {
-    return new ArgCV(Opcode.FAKE,
-        ComputedValue.ARRAY_ELEM_VALUE, Arrays.asList(arr.asArg(), ix));
+    String subop = arrayValSubop(arr);
+    return new ArgCV(Opcode.FAKE, subop, Arrays.asList(arr.asArg(), ix));
+  }
+
+  /**
+   * We have different subops depending on array type, in order to distinguish
+   * between the casees where alias and value congruence occur.
+   * @param arrType
+   * @return
+   */
+  private static String arrayValSubop(Typed arrType) {
+    if (Types.isRef(Types.containerElemType(arrType))) {
+      return ARRAY_ELEM_VALUE_REF;  
+    } else {
+      return ARRAY_ELEM_VALUE_SCALAR;
+    }
   }
 
   public static ArgCV arrayRefNestedCV(Var arr, Arg ix) {
@@ -289,9 +304,27 @@ public class ComputedValue<T> {
     return this.op == Opcode.FAKE && this.subop.equals(ALIAS_OF); 
   }
   
-  public boolean isArrayMember() {
+  public boolean isArrayMemberVal() {
+    return isArrayMemberValScalar() || isArrayMemberValRef();
+  }
+  
+  /**
+   * If it represents an array member that is a reference to something
+   * @return
+   */
+  public boolean isArrayMemberValRef() {
     return (op == Opcode.FAKE && subop.equals(ComputedValue.ARRAY_NESTED)) ||
-           (op == Opcode.FAKE && subop.equals(ComputedValue.ARRAY_ELEM_VALUE));
+           (op == Opcode.FAKE &&
+                         subop.equals(ComputedValue.ARRAY_ELEM_VALUE_REF));
+  }
+  
+  /**
+   * If it represents a scalar array member
+   * @return
+   */
+  public boolean isArrayMemberValScalar() {
+    return (op == Opcode.FAKE &&
+            subop.equals(ComputedValue.ARRAY_ELEM_VALUE_SCALAR));
   }
   
   public boolean isArrayMemberRef() {
@@ -312,14 +345,14 @@ public class ComputedValue<T> {
       newSubop = ARRAY_NESTED;
     } else {
       assert(memRef.subop.equals(ARRAY_ELEM_COPY));
-      newSubop = ARRAY_ELEM_VALUE;
+      newSubop = arrayValSubop(memRef.getInput(0));
     }
     return new ArgCV(Opcode.FAKE, newSubop, memRef.inputs);
   }
 
 
   public List<T> componentOf() {
-    if (isArrayMember() || isArrayMemberRef()) {
+    if (isArrayMemberValRef() || isArrayMemberRef()) {
       return Collections.singletonList(inputs.get(0));
     } else if (isCopy() || isAlias()) {
       return Collections.singletonList(inputs.get(0));
@@ -395,9 +428,12 @@ public class ComputedValue<T> {
    *         assuming it wasn't copied
    */
   public CongruenceType congType() {
-    if (isAlias() || isArrayMember() ||
-        op == Opcode.LOAD_REF || isStructMember() ||
+    if (isAlias() || op == Opcode.LOAD_REF ||
         op == Opcode.GET_FILENAME) {
+      return CongruenceType.ALIAS;
+    } else if (isArrayMemberValRef()) {
+      return CongruenceType.ALIAS;
+    } else if (isStructMember()) { 
       return CongruenceType.ALIAS;
     }
     // Assume value equivalence unless otherwise known
@@ -408,7 +444,16 @@ public class ComputedValue<T> {
   public static final String ARRAY_SIZE_FUTURE = "array_size_future";
   public static final String ARRAY_SIZE_VAL = "array_size_val";
   public static final String ARRAY_ELEM_COPY = "array_elem_copy";
-  public static final String ARRAY_ELEM_VALUE = "array_elem_value";
+  
+  /**
+   * Value of array element when scalar
+   */
+  public static final String ARRAY_ELEM_VALUE_SCALAR = "array_elem_value_scalar";
+  /**
+   * Value of array element when reference to something else
+   */
+  public static final String ARRAY_ELEM_VALUE_REF = "array_elem_value_ref";
+  
   public static final String ARRAY_NESTED = "autocreated_nested";
   public static final String ARRAY_NESTED_REF = "autocreated_nested_ref";
   public static final String COPY_OF = "copy_of";
