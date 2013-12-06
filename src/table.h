@@ -51,8 +51,6 @@ struct table_entry
       for (table_entry *item = &((T)->array[__i]); item != NULL; \
            item = item->next)
 
-int hash_string(const char* key, int capacity);
-
 bool table_init(struct table* target, int capacity);
 
 bool table_init_custom(struct table* target, int capacity,
