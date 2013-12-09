@@ -21,9 +21,9 @@
  *       Author: wozniak
  * */
 
+#include <ctype.h>
 #include <math.h>
 #include <stdarg.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -212,6 +212,57 @@ getenv_ulong(const char* name, unsigned long dflt,
   if (n != 1)
     return false;
   return true;
+}
+
+bool
+xlb_env_boolean(const char *env_var, bool dflt, bool *result)
+{
+  char* s = getenv(env_var);
+  if (s == NULL || strlen(s) == 0)
+  {
+    // Undefined or empty: return default
+    *result = dflt;
+    return true;
+  }
+
+  // Try to parse as number
+  char* end = NULL;
+  long num_val = strtol(s, &end, 10);
+  if (end != NULL && end != s && *end == '\0')
+  {
+    // Whole string was number
+    *result = (num_val != 0);
+    return true;
+  }
+
+  // Try to parse as true/false
+  size_t length = strlen(s);
+  // should not be longer than 5 characters "false"
+  const int max_length = 5;
+  if (length > max_length)
+    goto error;
+
+  // Convert to lower case
+  char lower_s[8];
+  for (int i = 0; i < length; i++)
+    lower_s[i] = (char) tolower(s[i]);
+
+  lower_s[length] = '\0';
+
+  if (strcmp(lower_s, "true") == 0)
+    *result = true;
+  else if (strcmp(lower_s, "false") == 0)
+    *result = false;
+  else
+    goto error;
+
+  // Successful return:
+  return true;
+
+  error:
+  printf("Invalid boolean environment variable value: %s=\"%s\"\n",
+         env_var, s);
+  return false;
 }
 
 /**

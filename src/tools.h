@@ -24,9 +24,10 @@
 #ifndef TOOLS_H
 #define TOOLS_H
 
+
+#include <stdbool.h>
 #include <assert.h>
 #include <inttypes.h>
-#include <stdbool.h>
 #include <stdlib.h>
 
 int array_length(void** array);
@@ -214,6 +215,15 @@ bool getenv_integer(const char* name, int dflt, int* result);
  */
 bool getenv_ulong(const char* name, unsigned long dflt,
                   unsigned long* result);
+
+/**
+   Receive a true/false setting by env var, which is
+   false if "0", or false (case-insensitive),
+   and true for a non-zero number or true (case-insensitive)
+   If not found, return default value
+   @return True, false if string could not be converted to boolean
+ */
+bool xlb_env_boolean(const char *env_var, bool dflt, bool *result);
 
 /**
    Shuffle array A in-place
