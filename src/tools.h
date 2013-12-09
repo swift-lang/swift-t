@@ -223,7 +223,7 @@ bool getenv_ulong(const char* name, unsigned long dflt,
    If not found, return default value
    @return True, false if string could not be converted to boolean
  */
-bool xlb_env_boolean(const char *env_var, bool dflt, bool *result);
+bool getenv_boolean(const char *env_var, bool dflt, bool *result);
 
 /**
    Shuffle array A in-place

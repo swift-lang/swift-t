@@ -215,7 +215,7 @@ getenv_ulong(const char* name, unsigned long dflt,
 }
 
 bool
-xlb_env_boolean(const char *env_var, bool dflt, bool *result)
+getenv_boolean(const char *env_var, bool dflt, bool *result)
 {
   char* s = getenv(env_var);
   if (s == NULL || strlen(s) == 0)
