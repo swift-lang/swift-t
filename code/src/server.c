@@ -722,8 +722,8 @@ server_shutdown()
 /* Print out any final statistics, if enabled */
 static inline void print_final_stats()
 {
-  bool print_time = false;
-  xlb_env_boolean("ADLB_PRINT_TIME", &print_time);
+  bool print_time;
+  getenv_boolean("ADLB_PRINT_TIME", false, &print_time);
   if (print_time)
   {
     double xlb_end_time = MPI_Wtime();
@@ -735,4 +735,3 @@ static inline void print_final_stats()
   xlb_print_handler_counters();
   xlb_print_workq_perf_counters();
 }
-

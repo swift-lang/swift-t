@@ -18,9 +18,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "debug.h"
+#include <tools.h>
 
 #include "checks.h"
+#include "debug.h"
 
 // NOTE: DEBUG and TRACE are disabled by default by macros:
 //       Cf. debug.h
@@ -30,15 +31,19 @@ bool xlb_trace_enabled = true;
 adlb_code
 debug_check_environment()
 {
-  adlb_code code;
+  bool rc;
     
-  // Get from environment.  Use above values if not specified by
-  // environment variable
-  code = xlb_env_boolean("ADLB_TRACE", &xlb_trace_enabled);
-  ADLB_CHECK(code);
+  // Note that getenv_boolean() prints a warning message on
+  //      invalid input
 
-  code = xlb_env_boolean("ADLB_DEBUG", &xlb_debug_enabled);
-  ADLB_CHECK(code);
-  
+  // Use above values if not specified by environment variable
+  rc = getenv_boolean("ADLB_TRACE",  xlb_debug_enabled,
+                      &xlb_trace_enabled);
+  if (!rc) return ADLB_ERROR;
+
+  rc = getenv_boolean("ADLB_DEBUG", xlb_trace_enabled,
+                      &xlb_debug_enabled);
+  if (!rc) return ADLB_ERROR;
+
   return ADLB_SUCCESS;
 }

@@ -94,15 +94,6 @@ double xlb_wtime(void);
 int xlb_type_index(int work_type);
 
 /**
-   Receive a true/false setting by env var, which is
-   false if "0", or false (case-insensitive),
-   and true for a non-zero number or true (case-insensitive)
-   if empty or zero-length string, val is unmodified
-
- */
-adlb_code xlb_env_boolean(const char *env_var, bool *val);
-
-/**
     Get long int from env var.  If not present, val is unmodified
  */
 adlb_code xlb_env_long(const char *env_var, long *val);

@@ -1797,9 +1797,8 @@ xlb_data_finalize()
 static void
 report_leaks()
 {
-  bool report_leaks_setting = false;
-  // Ignore invalid environment variables, can't do much at this stage
-  xlb_env_boolean("ADLB_REPORT_LEAKS", &report_leaks_setting);
+  bool report_leaks_setting;
+  getenv_boolean("ADLB_REPORT_LEAKS", false, &report_leaks_setting);
 
   for (int i = 0; i < tds.capacity; i++)
   {

@@ -78,61 +78,6 @@ xlb_type_index(int work_type)
   return -1;
 }
 
-
-adlb_code xlb_env_boolean(const char *env_var, bool *val)
-{
-  char *s = getenv(env_var);
-  if (s == NULL || strlen(s) == 0)
-  {
-    // Undefined or empty: leave val untouched
-    return ADLB_SUCCESS;
-  }
-
-  // Try to parse as number
-  char *end = NULL;
-  long num_val = strtol(s, &end, 10);
-  if (end != NULL && end != s && *end == '\0')
-  {
-    // Whole string was number
-    *val = (num_val != 0);
-    return ADLB_SUCCESS;
-  }
- 
-  // Try to parse as true/false
-  size_t len = strlen(s);
-  // should not be longer than 5 characters "false"
-  const int max_len = 5;
-  if (len > max_len)
-  {
-    printf("Invalid boolean environment var: %s=\"%s\"\n", env_var, s);
-    return ADLB_ERROR;
-  }
- 
-  // Convert to lower case
-  char lower_s[len+1];
-  for (int i = 0; i < len; i++)
-  {
-    lower_s[i] = (char)tolower(s[i]);
-  }
-  lower_s[len] = '\0';
-  
-  if (strcmp(lower_s, "true") == 0)
-  {
-    *val = true;
-  }
-  else if (strcmp(lower_s, "false") == 0)
-  {
-    *val = false;
-  }
-  else
-  {
-    printf("Invalid boolean environment var: %s=\"%s\"\n", env_var, s);
-    return ADLB_ERROR;
-  }
-
-  return ADLB_NOTHING;
-}
-
 adlb_code xlb_env_long(const char *env_var, long *val)
 {
   char *s = getenv(env_var);

@@ -42,6 +42,8 @@
 extern bool xlb_debug_enabled;
 /** Is ADLB_TRACE enabled? */
 extern bool xlb_trace_enabled;
+/** Is ADLB_DEBUG_GC enabled? */
+extern bool xlb_debug_gc_enabled;
 
 /**
    Check environment to see if user disabled ADLB_DEBUG, ADLB_TRACE
