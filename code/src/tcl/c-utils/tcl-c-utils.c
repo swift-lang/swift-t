@@ -33,8 +33,8 @@
 
 #include <tcl.h>
 
-// The c-utils hashtable
-#include <table.h>
+// string hash function
+#include <strkeys.h>
 
 #include "src/tcl/util.h"
 
@@ -66,7 +66,7 @@ c_utils_hash_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   char* s = Tcl_GetString(objv[1]);
 
-  int hash = hash_string(s, INT_MAX);
+  int hash = strkey_hash(s, INT_MAX);
 
   Tcl_Obj* result = Tcl_NewLongObj(hash);
   Tcl_SetObjResult(interp, result);

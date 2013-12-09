@@ -116,7 +116,7 @@ ifeq ($(filter $(MPI_LIB_DIR),$(SYSTEM_LIBS)),)
   MPI_LIB += -L$(MPI_LIB_DIR)
 endif
 MPI_LIB	+= -l$(MPI_LIB_NAME)
-           # -l mpl # Needed for older MPICH
+           # -lmpl # Needed for older MPICH
 
 LAUNCHER = @USE_LAUNCHER@
 
@@ -161,14 +161,14 @@ endif
 
 # LIBS: links to ADLB, c-utils, MPE, and MPI
 LIBS :=
-LIBS += -L$(ADLB)/lib -l adlb
-LIBS += -L$(C_UTILS)/lib -l exmcutils
+LIBS += -L$(ADLB)/lib -ladlb
+LIBS += -L$(C_UTILS)/lib -lexmcutils
 ifeq ($(filter $(TCL_LIB_DIR),$(SYSTEM_LIBS)),)
 	LIBS += -L$(TCL_LIB_DIR)
 endif
 LIBS += -l$(TCL_LIB_NAME)
 ifeq ($(ENABLE_MPE),1)
-	LIBS += -L$(USE_MPE)/lib -l mpe
+	LIBS += -L$(USE_MPE)/lib -lmpe
 endif
 LIBS += $(MPI_LIB)
 ifeq ($(HAVE_PYTHON),1)
@@ -333,8 +333,8 @@ $(TEST_BINS): %.x: %.o install.txt
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(<) \
         $(MAC_FLAT) \
-	-L$(INSTALL_LIB) -l tclturbine \
-	$(LIBS) -L $(TCL_LIB_DIR) -l $(TCL_LIB_NAME) \
+	-L$(INSTALL_LIB) -ltclturbine \
+	$(LIBS) -L $(TCL_LIB_DIR) -l$(TCL_LIB_NAME) \
 	$(RPATHS) \
 	-o $(@)
 
