@@ -60,6 +60,9 @@ adlb_code xlb_xpt_index_lookup(const void *key, int key_len,
 
 /*
   Add index entry.
+
+  entry: the entry to add.  This function doesn't modify or store any
+         pointers from this entry.
  */
 adlb_code xlb_xpt_index_add(const void *key, int key_len,
                             const xpt_index_entry *entry);

@@ -312,7 +312,7 @@ adlb_code ADLB_Xpt_reload(const char *filename, adlb_xpt_load_stats *stats)
   buffer.data = malloc((size_t)buffer.length);
   CHECK_MSG(buffer.data != NULL, "Error allocating buffer");
 
-  const int ranks = read_state->ranks;
+  const uint32_t ranks = read_state->ranks;
   stats->ranks = ranks;
   stats->rank_stats = malloc(sizeof(stats->rank_stats[0]) * ranks);
   CHECK_MSG(stats->rank_stats != NULL, "Out of memory");
@@ -416,7 +416,9 @@ static inline adlb_code xpt_reload_rank(const char *filename,
     if (val_len > max_index_val_bytes)
     {
       entry.in_file = true;
-      entry.FILE_LOC.file = filename;
+      // TODO: would prefer not to strip const, but this is safe since
+      //       xlb_xpt_index_add doesn't borrow pointer
+      entry.FILE_LOC.file = (char*)filename;
       entry.FILE_LOC.val_offset = val_offset;
       entry.FILE_LOC.val_len = val_len;
     }

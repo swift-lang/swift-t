@@ -94,7 +94,7 @@ typedef struct {
 } adlb_xpt_load_rank_stats;
 
 typedef struct {
-  int ranks;
+  uint32_t ranks;
   adlb_xpt_load_rank_stats *rank_stats; // Array with one entry per rank
 } adlb_xpt_load_stats;
 
