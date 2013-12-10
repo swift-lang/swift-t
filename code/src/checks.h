@@ -23,8 +23,12 @@
  *
  *  Various macros for easier error checking and reporting
  *
- *  The ASSERT macros never report an error message in a correct
- *  program: thus, they may be disabled by NDEBUG for performance
+ *  The CHECK macros handle errors that may be triggered by a user,
+ *  such as double writes.  They automate and simplify error messages
+ *  and return codes to create error stack traces.
+ *
+ *  The ASSERT macros handle internal assertions for XLB:
+ *  thus, they may be disabled by NDEBUG for performance.
  * */
 
 #ifndef CHECKS_H
