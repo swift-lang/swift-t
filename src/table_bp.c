@@ -760,7 +760,10 @@ table_bp_tostring(char* output, size_t size,
     if (((size_t)(ptr-output)) + r + 2 < size)
       ptr += sprintf(ptr, "%s\n", s);
     else
+    {
+      free(s);
       return error;
+    }
   }
   sprintf(ptr, "}\n");
 

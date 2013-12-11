@@ -60,8 +60,7 @@ struct table* table_create(int capacity);
 
 struct table* table_create_custom(int capacity, float load_factor);
 
-bool table_add(struct table *target,
-               const char* key, void* data);
+bool table_add(struct table *target, const char* key, void *value);
 
 bool table_set(struct table* target, const char* key,
                void* value, void** old_value);
@@ -72,8 +71,6 @@ bool table_search(const struct table* target, const char* key,
 bool table_contains(const struct table* table, const char* key);
 
 bool table_remove(struct table* table, const char* key, void** data);
-
-void table_dump(const char* format, const struct table* target);
 
 /*
   Free data structure, and callback function with key and value
@@ -87,6 +84,12 @@ void table_destroy(struct table* target);
 
 void table_release(struct table* target);
 
+void table_dump(const char* format, const struct table* target);
+
+size_t
+table_tostring(char* output, size_t size,
+               char* format, const struct table* target);
+
 size_t table_keys_string(char** result, const struct table* target);
 
 size_t table_keys_string_slice(char** result,
@@ -99,7 +102,7 @@ size_t table_keys_tostring_slice(char* result,
                               const struct table* target,
                               int count, int offset);
 
-void  table_dumpkeys(const struct table* target);
+void table_dumpkeys(const struct table* target);
 
 static inline void table_clear_entry(table_entry *entry)
 {

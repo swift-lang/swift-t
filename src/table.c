@@ -292,7 +292,7 @@ bucket_add_tail(table_entry *head, table_entry *entry, bool copy_entry)
 }
 
 /**
-   Note: duplicates internal copy of key (in list_sp_add())
+   Note: duplicates internal copy of key
  */
 bool
 table_add(struct table *target, const char* key, void* data)
@@ -529,7 +529,6 @@ table_expand(struct table *T)
 }
 
 /** format specifies the output format for the data items
-  TODO: format ignored
  */
 void
 table_dump(const char* format, const struct table* target)
@@ -726,7 +725,10 @@ table_tostring(char* output, size_t size,
     if (((size_t)(ptr-output)) + r + 2 < size)
       ptr += sprintf(ptr, "%s\n", s);
     else
+    {
+      free(s);
       return error;
+    }
   }
   sprintf(ptr, "}\n");
 
