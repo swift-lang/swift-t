@@ -66,8 +66,7 @@ static inline adlb_data_code resize_struct_types(adlb_struct_type new_type)
       // Make big enough to fit
       struct_types_size = new_type + 1;
     }
-
-    DATA_REALLOC(struct_types, struct_types_size);
+    DATA_REALLOC(struct_types, (uint32_t)struct_types_size);
 
     for (int i = old_size; i < struct_types_size; i++)
     {
