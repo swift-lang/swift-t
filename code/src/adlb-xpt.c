@@ -53,7 +53,7 @@ static adlb_code xpt_check_flush(void);
 
 static adlb_code cached_open_read(xlb_xpt_read_state **state,
                                   const char *filename);
-static void free_open_read(char *key, void *read_state);
+static void free_open_read(const char *key, void *read_state);
 
 static adlb_code read_file_val(xpt_file_loc *file_loc,
                                  void *buffer, int val_len);
@@ -468,7 +468,7 @@ static adlb_code xpt_check_flush(void)
   return ADLB_SUCCESS;
 }
 
-static void free_open_read(char *key, void *read_state)
+static void free_open_read(const char *key, void *read_state)
 {
   adlb_code ac = xlb_xpt_close_read(read_state);
   if (ac != ADLB_SUCCESS)
@@ -476,7 +476,6 @@ static void free_open_read(char *key, void *read_state)
     ERR_PRINTF("Error while closing checkpoint file %s\n", key);
   }
   
-  free(key);
   free(read_state);
 }
 

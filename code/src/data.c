@@ -308,7 +308,8 @@ datum_init_props(adlb_datum_id id, adlb_datum *d,
 adlb_data_code
 xlb_data_exists(adlb_datum_id id, adlb_subscript subscript, bool* result)
 {
-  adlb_datum* d = table_lp_search(&tds, id);
+  adlb_datum* d;
+  table_lp_search(&tds, id, (void**)&d);
 
   // if subscript provided, check that subscript exists
   if (!adlb_has_sub(subscript))
@@ -321,6 +322,9 @@ xlb_data_exists(adlb_datum_id id, adlb_subscript subscript, bool* result)
   }
   else
   {
+    check_verbose(d != NULL, ADLB_DATA_ERROR_INVALID,
+        "<%"PRId64"> does not exist, can't check existence of subscript",
+        id);
     check_verbose(d->type == ADLB_DATA_TYPE_CONTAINER, ADLB_DATA_ERROR_TYPE,
                 "Expected <%"PRId64"> to be container, but had type %i",
                 id, d->type);
@@ -340,9 +344,11 @@ xlb_data_typeof(adlb_datum_id id, adlb_data_type* type)
   check_verbose(id != ADLB_DATA_ID_NULL, ADLB_DATA_ERROR_NULL,
                 "given ADLB_DATA_ID_NULL");
 
-  adlb_datum* d = table_lp_search(&tds, id);
-  check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
+  adlb_datum* d;
+  bool found = table_lp_search(&tds, id, (void**)&d);
+  check_verbose(found, ADLB_DATA_ERROR_NOT_FOUND,
                 "not found: <%"PRId64">", id);
+  assert(d != NULL);
 
   *type = d->type;
   DEBUG("typeof: <%"PRId64"> => %i", id, *type);
@@ -357,9 +363,11 @@ adlb_data_code
 xlb_data_container_typeof(adlb_datum_id id, adlb_data_type* key_type,
                                         adlb_data_type* val_type)
 {
-  adlb_datum* d = table_lp_search(&tds, id);
-  check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
+  adlb_datum* d;
+  bool found = table_lp_search(&tds, id, (void**)&d);
+  check_verbose(found, ADLB_DATA_ERROR_NOT_FOUND,
                 "not found: <%"PRId64">", id);
+  assert(d != NULL);
 
   adlb_data_type t = d->type;
   check_verbose(t == ADLB_DATA_TYPE_CONTAINER, ADLB_DATA_ERROR_TYPE,
@@ -371,9 +379,11 @@ xlb_data_container_typeof(adlb_datum_id id, adlb_data_type* key_type,
 }
 
 adlb_data_code xlb_data_permanent(adlb_datum_id id) {
-  adlb_datum* d = table_lp_search(&tds, id);
-  check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
+  adlb_datum* d;
+  bool found = table_lp_search(&tds, id, (void**)&d);
+  check_verbose(found, ADLB_DATA_ERROR_NOT_FOUND,
                 "not found: <%"PRId64">", id);
+  assert(d != NULL);
   d->status. permanent = true;
   return ADLB_DATA_SUCCESS;
 }
@@ -381,9 +391,10 @@ adlb_data_code xlb_data_permanent(adlb_datum_id id) {
 adlb_data_code
 xlb_datum_lookup(adlb_datum_id id, adlb_datum **d)
 {
-  *d= table_lp_search(&tds, id);
-  check_verbose(*d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
+  bool found = table_lp_search(&tds, id, (void**)d);
+  check_verbose(found, ADLB_DATA_ERROR_NOT_FOUND,
                 "not found: <%"PRId64">", id);
+  assert(*d != NULL);
   return ADLB_DATA_SUCCESS;
 }
 
@@ -517,7 +528,11 @@ datum_gc(adlb_datum_id id, adlb_datum* d,
   check_verbose(d->listeners.size == 0, ADLB_DATA_ERROR_TYPE,
                 "%i listeners for garbage collected td <%"PRId64">",
                 d->listeners.size, id);
-  table_lp_remove(&tds, id);
+
+  void *tmp;
+  table_lp_remove(&tds, id, &tmp);
+  assert(tmp == d);
+
   free(d);
   return ADLB_DATA_SUCCESS;
 }
@@ -542,11 +557,13 @@ xlb_data_referand_refcount(const void *data, int length,
 adlb_data_code
 xlb_data_lock(adlb_datum_id id, int rank, bool* result)
 {
-  adlb_datum* d = table_lp_search(&tds, id);
-  check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
+  adlb_datum* d;
+  bool found = table_lp_search(&tds, id, (void**)&d);
+  check_verbose(found, ADLB_DATA_ERROR_NOT_FOUND,
                 "not found: <%"PRId64">", id);
+  assert(d != NULL);
 
-  if (table_lp_search(&locked, id))
+  if (table_lp_contains(&locked, id))
   {
     *result = false;
     return ADLB_DATA_SUCCESS;
@@ -565,8 +582,9 @@ xlb_data_lock(adlb_datum_id id, int rank, bool* result)
 adlb_data_code
 xlb_data_unlock(adlb_datum_id id)
 {
-  int* r = table_lp_remove(&locked, id);
-  check_verbose(r != NULL, ADLB_DATA_ERROR_NOT_FOUND,
+  int* r;
+  bool found = table_lp_remove(&locked, id, (void**)&r);
+  check_verbose(found, ADLB_DATA_ERROR_NOT_FOUND,
                 "not found: <%"PRId64">", id);
   free(r);
   return ADLB_DATA_SUCCESS;
@@ -593,9 +611,12 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
             (const char*)subscript.key);
   }
 
-  adlb_datum* d = table_lp_search(&tds, id);
-  check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
+  adlb_datum* d;
+  bool found = table_lp_search(&tds, id, (void**)&d);
+  check_verbose(found, ADLB_DATA_ERROR_NOT_FOUND,
                 "not found: <%"PRId64">", id);
+  assert(d != NULL);
+
   bool subscribed;
 
   if (adlb_has_sub(subscript))
@@ -617,7 +638,7 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
       size_t key_len = write_id_sub(key, id, subscript);
 
       struct list_i* listeners = NULL;
-      bool found = table_bp_search(&container_ix_listeners, key, key_len,
+      found = table_bp_search(&container_ix_listeners, key, key_len,
                                 (void*)&listeners);
       if (!found)
       {
@@ -663,9 +684,11 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
                                         adlb_binary_data *result)
 {
   // Check that container_id is an initialized container
-  adlb_datum* d = table_lp_search(&tds, container_id);
-  check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
+  adlb_datum* d;
+  bool found = table_lp_search(&tds, container_id, (void**)&d);
+  check_verbose(found, ADLB_DATA_ERROR_NOT_FOUND,
                 "not found: <%"PRId64">", container_id);
+  assert(d != NULL);
 
   if (ref_type != d->data.CONTAINER.val_type)
   {
@@ -708,7 +731,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
   size_t key_len = write_id_sub(key, container_id, subscript);
 
   struct list_l* listeners = NULL;
-  bool found = table_bp_search(&container_references, key, key_len,
+  found = table_bp_search(&container_references, key, key_len,
                             (void*)&listeners);
   TRACE("search container_ref %"PRId64"[%.*s]: %i", container_id,
           (int)subscript.length, subscript.key, (int)found);
@@ -768,9 +791,11 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
   notifications->to_free = NULL;
   notifications->to_free_length = 0;
 
-  adlb_datum* d = table_lp_search(&tds, id);
-  check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
+  adlb_datum* d;
+  bool found = table_lp_search(&tds, id, (void**)&d);
+  check_verbose(found, ADLB_DATA_ERROR_NOT_FOUND,
                 "not found: <%"PRId64">", id);
+  assert(d != NULL);
 
   // Make sure we are allowed to write this data
   if (d->write_refcount <= 0)
@@ -852,7 +877,7 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
 
     // Does the link already exist?
     adlb_container_val t = NULL;
-    bool found = container_lookup(c, subscript, &t);
+    found = container_lookup(c, subscript, &t);
 
     if (found && t != NULL)
     {
@@ -982,12 +1007,14 @@ xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
 
   result->data = result->caller_data = NULL;
 
-  adlb_datum* d = table_lp_search(&tds, id);
-  if (d == NULL)
+  adlb_datum* d;
+  bool found = table_lp_search(&tds, id, (void**)&d);
+  if (!found)
   {
     TRACE("data_retrieve(%"PRId64"): NOT FOUND", id);
     return ADLB_DATA_ERROR_NOT_FOUND;
   }
+  assert(d != NULL);
 
   if (!adlb_has_sub(subscript))
   {
@@ -1003,7 +1030,7 @@ xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
         *type = d->data.CONTAINER.val_type;
 
         adlb_container_val t;
-        bool found = container_lookup(&d->data.CONTAINER, subscript, &t);
+        found = container_lookup(&d->data.CONTAINER, subscript, &t);
         if (!found)
         {
           DEBUG("SUBSCRIPT NOT FOUND");
@@ -1209,10 +1236,12 @@ xlb_data_enumerate(adlb_datum_id id, int count, int offset,
 {
   TRACE("data_enumerate(%"PRId64")", id);
   adlb_data_code dc;
-  adlb_datum* d = table_lp_search(&tds, id);
+  adlb_datum* d;
+  bool found = table_lp_search(&tds, id, (void**)&d);
 
-  check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
+  check_verbose(found, ADLB_DATA_ERROR_NOT_FOUND,
                 "not found: <%"PRId64">", id);
+  assert(d != NULL);
   if (d->type == ADLB_DATA_TYPE_CONTAINER)
   {
     int slice_size = enumerate_slice_size(offset, count,
@@ -1266,10 +1295,12 @@ xlb_data_enumerate(adlb_datum_id id, int count, int offset,
 adlb_data_code
 xlb_data_container_size(adlb_datum_id container_id, int* size)
 {
-  adlb_datum* c = table_lp_search(&tds, container_id);
+  adlb_datum* c;
+  bool found = table_lp_search(&tds, container_id, (void**)&c);
 
-  check_verbose(c != NULL, ADLB_DATA_ERROR_NOT_FOUND,
+  check_verbose(found, ADLB_DATA_ERROR_NOT_FOUND,
                 "not found: <%"PRId64">", container_id);
+  assert(c != NULL);
 
   switch (c->type)
   {
@@ -1523,9 +1554,11 @@ adlb_data_code
 xlb_data_insert_atomic(adlb_datum_id container_id, adlb_subscript subscript,
                    bool* created, bool *value_present)
 {
-  adlb_datum* d = table_lp_search(&tds, container_id);
-  check_verbose(d != NULL, ADLB_DATA_ERROR_NOT_FOUND,
+  adlb_datum* d;
+  bool found = table_lp_search(&tds, container_id, (void**)&d);
+  check_verbose(found, ADLB_DATA_ERROR_NOT_FOUND,
                 "container not found: <%"PRId64">", container_id);
+  assert(d != NULL);
   check_verbose(d->type == ADLB_DATA_TYPE_CONTAINER,
                 ADLB_DATA_ERROR_TYPE,
                 "not a container: <%"PRId64">", container_id);
@@ -1800,34 +1833,30 @@ report_leaks()
   bool report_leaks_setting;
   getenv_boolean("ADLB_REPORT_LEAKS", false, &report_leaks_setting);
 
-  for (int i = 0; i < tds.capacity; i++)
+  TABLE_LP_FOREACH(&tds, item)
   {
-    struct list_lp* L = &tds.array[i];
-    for (struct list_lp_item* item = L->head; item; item = item->next)
+    adlb_datum *d = item->data;
+    if (d == NULL || !d->status.permanent)
     {
-      adlb_datum *d = item->data;
-      if (d == NULL || !d->status.permanent)
+      if (d->status.set)
       {
-        if (d->status.set)
+        DEBUG("LEAK: %"PRId64"", item->key);
+        if (report_leaks_setting)
         {
-          DEBUG("LEAK: %"PRId64"", item->key);
-          if (report_leaks_setting)
-          {
-            char *repr = ADLB_Data_repr(&d->data, d->type);
-            printf("LEAK DETECTED: <%"PRId64"> t:%s r:%i w:%i v:%s\n",
-                  item->key, ADLB_Data_type_tostring(d->type),
-                  d->read_refcount, d->write_refcount,
-                  repr);
-            free(repr);
-          }
+          char *repr = ADLB_Data_repr(&d->data, d->type);
+          printf("LEAK DETECTED: <%"PRId64"> t:%s r:%i w:%i v:%s\n",
+                item->key, ADLB_Data_type_tostring(d->type),
+                d->read_refcount, d->write_refcount,
+                repr);
+          free(repr);
         }
-        else
+      }
+      else
+      {
+        DEBUG("UNSET VARIABLE: %"PRId64"", item->key);
+        if (report_leaks_setting)
         {
-          DEBUG("UNSET VARIABLE: %"PRId64"", item->key);
-          if (report_leaks_setting)
-          {
-            printf("UNSET VARIABLE DETECTED: <%"PRId64">\n", item->key);
-          }
+          printf("UNSET VARIABLE DETECTED: <%"PRId64">\n", item->key);
         }
       }
     }
