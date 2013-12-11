@@ -331,24 +331,28 @@ turbine_engine_init()
   if (!initialized)
     return TURBINE_ERROR_UNINITIALIZED;
 
+  // Initialize tables to size that will probably not need to be
+  // expanded, but is not excessively large
+  const int table_init_capacity = 65536;
+
   bool result;
-  result = table_lp_init(&transforms_waiting, 1024*1024);
+  result = table_lp_init(&transforms_waiting, table_init_capacity); 
   if (!result)
     return TURBINE_ERROR_OOM;
 
-  result = table_lp_init(&td_blockers, 1024*1024);
+  result = table_lp_init(&td_blockers, table_init_capacity); 
   if (!result)
     return TURBINE_ERROR_OOM;
   
-  result = table_bp_init(&td_sub_blockers, 1024); // Will expand
+  result = table_bp_init(&td_sub_blockers, table_init_capacity); 
   if (!result)
     return TURBINE_ERROR_OOM;
 
-  result = table_lp_init(&td_subscribed, 1024*1024);
+  result = table_lp_init(&td_subscribed, table_init_capacity); 
   if (!result)
     return TURBINE_ERROR_OOM;
 
-  result = table_bp_init(&td_sub_subscribed, 1024); // Will expand
+  result = table_bp_init(&td_sub_subscribed, table_init_capacity); 
   if (!result)
     return TURBINE_ERROR_OOM;
 
@@ -514,7 +518,7 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
   }
   else
   {
-    if (table_lp_search(&td_subscribed, id) != NULL) {
+    if (table_lp_contains(&td_subscribed, id)) {
       // Already subscribed
       *result = true;
       return TURBINE_SUCCESS;
@@ -672,7 +676,8 @@ add_to_ready(struct list* tmp)
   transform* T;
   while ((T = list_poll(tmp)))
   {
-    void* c = table_lp_remove(&transforms_waiting, T->id);
+    void* c;
+    table_lp_remove(&transforms_waiting, T->id, &c);
     if (c != NULL)
     {
       // TODO: c can be null if there were two entries in the blockers
@@ -693,24 +698,22 @@ turbine_rules_push()
   struct list tmp;
   list_init(&tmp);
 
-  for (int i = 0; i < transforms_waiting.capacity; i++)
-    for (struct list_lp_item* item = transforms_waiting.array[i].head;
-         item; item = item->next)
-    {
-      transform* T = item->data;
-      assert(T);
-      bool subscribed;
-      turbine_code tc = progress(T, &subscribed);
-      if (tc != TURBINE_SUCCESS) {
-        return tc;
-      }
-
-      if (!subscribed)
-      {
-        DEBUG_TURBINE("not subscribed on: %"PRId64"\n", T->id);
-        list_add(&tmp, T);
-      }
+  TABLE_LP_FOREACH(&transforms_waiting, item)
+  {
+    transform* T = item->data;
+    assert(T);
+    bool subscribed;
+    turbine_code tc = progress(T, &subscribed);
+    if (tc != TURBINE_SUCCESS) {
+      return tc;
     }
+
+    if (!subscribed)
+    {
+      DEBUG_TURBINE("not subscribed on: %"PRId64"\n", T->id);
+      list_add(&tmp, T);
+    }
+  }
 
   add_to_ready(&tmp);
 
@@ -727,7 +730,8 @@ add_rule_blocker(turbine_datum_id id, turbine_transform_id transform)
   assert(initialized);
   DEBUG_TURBINE("add_rule_blocker for {%"PRId64"}: <%"PRId64">",
                 transform, id);
-  struct list_l* blocked = table_lp_search(&td_blockers, id);
+  struct list_l* blocked;
+  table_lp_search(&td_blockers, id, (void**)&blocked);
   if (blocked == NULL)
   {
     blocked = list_l_create();
@@ -800,12 +804,14 @@ turbine_close(turbine_datum_id id)
 {
   DEBUG_TURBINE("turbine_close(<%"PRId64">)", id);
   // Record no longer subscribed
-  table_lp_remove(&td_subscribed, id);
+  void *tmp;
+  table_lp_remove(&td_subscribed, id, &tmp);
 
   // Remove from table transforms that this td was blocking
   // Will need to free list later
-  struct list_l* L = table_lp_remove(&td_blockers, id);
-  if (L == NULL)
+  struct list_l* L;
+  bool found = table_lp_remove(&td_blockers, id, (void**)&L);
+  if (!found)
     // We don't have any rules that block on this td
     return TURBINE_SUCCESS;
 
@@ -851,8 +857,11 @@ turbine_close_update(struct list_l *blocked, turbine_datum_id id,
   for (struct list_l_item* item = blocked->head; item; item = item->next)
   {
     turbine_transform_id transform_id = item->data;
-    transform* T = table_lp_search(&transforms_waiting, transform_id);
-    if (!T)
+    transform* T;
+    
+    bool found = table_lp_search(&transforms_waiting, transform_id,
+                                 (void**)&T);
+    if (!found)
       continue;
  
     // update closed vector
@@ -1145,17 +1154,15 @@ info_waiting()
 {
   printf("WAITING TRANSFORMS: %i\n", transforms_waiting.size);
   char buffer[1024];
-  for (int i = 0; i < transforms_waiting.capacity; i++)
-    for (struct list_lp_item* item = transforms_waiting.array[i].head;
-         item; item = item->next)
-    {
-      transform* t = item->data;
-      char id_string[24];
-      sprintf(id_string, "{%"PRId64"}", t->id);
-      int c = sprintf(buffer, "%10s ", id_string);
-      transform_tostring(buffer+c, t);
-      printf("TRANSFORM: %s\n", buffer);
-    }
+  TABLE_LP_FOREACH(&transforms_waiting, item)
+  {
+    transform* t = item->data;
+    char id_string[24];
+    sprintf(id_string, "{%"PRId64"}", t->id);
+    int c = sprintf(buffer, "%10s ", id_string);
+    transform_tostring(buffer+c, t);
+    printf("TRANSFORM: %s\n", buffer);
+  }
 }
 
 // Callbacks to free data
