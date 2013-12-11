@@ -15,6 +15,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <table_bp.h>
 #include <assert.h>
@@ -103,6 +104,16 @@ int main() {
     assert(val == search_val);
   }
   assert(T.size == N);
+  
+  // Try printing
+  printf("\n\ntable_bp_dump:\n");
+  table_bp_dump("%p", &T);
+  printf("\n\ntable_bp_dump_keys:\n");
+  table_bp_dumpkeys(&T);
+  char *str;
+  table_bp_keys_string(&str, &T);
+  printf("\n\ntable_bp_keys_string:\n%s\n", str);
+  free(str);
 
   // This should free all memory
   table_bp_free_callback(&T, false, null_cb);

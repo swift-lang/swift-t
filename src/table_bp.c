@@ -639,9 +639,9 @@ table_bp_keys_string_length(const table_bp* target)
 size_t
 table_bp_keys_string(char** result, const table_bp* target)
 {
+  // Allocate required memory
   size_t length = table_bp_keys_string_length(target);
-  // Allocate size for each key and a space after each one
-  *result = malloc(length + (size_t)(target->size+1));
+  *result = malloc(length + 1);
   // Update length with actual usage
   length = table_bp_keys_tostring(*result, target);
   return length;
@@ -669,10 +669,11 @@ bucket_keys_tostring(char *result, const table_bp_entry *head)
   for (const table_bp_entry *e = head; e != NULL; e = e->next)
   {
     // Each byte is two hex digits in string repr.
-    result += binkey_sprintf(p, table_bp_get_key(e), e->key_len);
+    p += binkey_sprintf(p, table_bp_get_key(e), e->key_len);
     p[0] = ' ';
     p++;
   }
+  p[0] = '\0'; // Make sure null terminated
   return (size_t)(p - result);
 }
 
@@ -706,6 +707,8 @@ size_t
 table_bp_keys_tostring(char* result, const table_bp* target)
 {
   char* p = result;
+  // Null terminate in case empty
+  p[0] = '\0';
   for (int i = 0; i < target->capacity; i++)
     p += bucket_keys_tostring(p, &target->array[i]);
   return (size_t)(p-result);

@@ -15,6 +15,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <table.h>
 #include <assert.h>
@@ -104,6 +105,16 @@ int main() {
   }
   assert(T.size == N);
 
+  // Try printing
+  printf("\n\ntable_dump:\n");
+  table_dump("%p", &T);
+  printf("\n\ntable_dump_keys:\n");
+  table_dumpkeys(&T);
+  char *str;
+  table_keys_string(&str, &T);
+  printf("\n\ntable_keys_string:\n%s\n", str);
+  free(str);
+  
   // This should free all memory
   table_free_callback(&T, false, null_cb);
 
