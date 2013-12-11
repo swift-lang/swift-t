@@ -21,9 +21,8 @@
  *      Author: wozniak
  */
 
-#include <assert.h>
-
 #define _GNU_SOURCE // for asprintf
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

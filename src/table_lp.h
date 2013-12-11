@@ -29,7 +29,6 @@
 #include <stdbool.h>
 
 #include "c-utils-types.h"
-#include "list_lp.h"
 
 typedef struct table_lp_entry table_lp_entry;
 typedef struct table_lp_bucket table_lp_bucket;
