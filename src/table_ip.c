@@ -49,13 +49,51 @@ table_ip_init(struct table_ip* target, int capacity)
 struct table_ip*
 table_ip_create(int capacity)
 {
-  struct table_ip *new_table = NULL;
+  struct table_ip *new_table = malloc(sizeof(struct table_ip));;
+  if (! new_table)
+    return NULL;
 
-  new_table = (struct table_ip*) malloc(sizeof(struct table_ip));
-
-  table_ip_init(new_table, capacity);
+  bool result = table_ip_init(new_table, capacity);
+  if (!result)
+  {
+    free(new_table);
+    return NULL;
+  }
 
   return new_table;
+}
+
+void
+table_ip_free(struct table_ip* target)
+{
+  table_ip_free_callback(target, true, NULL);
+}
+
+void table_ip_free_callback(struct table_ip* target, bool free_root,
+                    void (*callback)(int, void*))
+{
+  for (int i = 0; i < target->capacity; i++)
+    list_ip_free_callback(&target->array[i], false, callback);
+  free(target->array);
+  if (free_root)
+  {
+    free(target);
+  }
+  else
+  {
+    target->array = NULL;
+    target->size = 0;
+  }
+}
+
+void
+table_ip_destroy(struct table_ip* target)
+{
+  for (int i = 0; i < target->capacity; i++)
+    list_ip_destroy(&target->array[i]);
+
+  free(target->array);
+  free(target);
 }
 
 int
@@ -101,40 +139,6 @@ table_ip_remove(struct table_ip* target, int key)
     target->size--;
   return result;
 }
-
-void
-table_ip_free(struct table_ip* target)
-{
-  table_ip_free_callback(target, true, NULL);
-}
-
-void table_ip_free_callback(struct table_ip* target, bool free_root,
-                    void (*callback)(int, void*))
-{
-  for (int i = 0; i < target->capacity; i++)
-    list_ip_free_callback(&target->array[i], false, callback);
-  free(target->array);
-  if (free_root)
-  {
-    free(target);
-  }
-  else
-  {
-    target->array = NULL;
-    target->size = 0;
-  }
-}
-
-void
-table_ip_destroy(struct table_ip* target)
-{
-  for (int i = 0; i < target->capacity; i++)
-    list_ip_destroy(&target->array[i]);
-
-  free(target->array);
-  free(target);
-}
-
 /**
    @param format specifies the output format for the data items
  */
@@ -185,6 +189,7 @@ size_t table_ip_tostring(char* str, size_t size,
   return (size_t)(ptr-str);
 }
 
+// TODO: move to test
 #ifdef DEBUG_TABLE_IP
 
 int

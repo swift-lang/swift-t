@@ -91,6 +91,11 @@ table_lp_destroy(struct table_lp* target)
 {
   table_lp_free_callback(target, true, NULL);
 }
+void
+table_lp_free(struct table_lp* target)
+{
+  table_lp_free_callback(target, true, NULL);
+}
 
 void table_lp_free_callback(struct table_lp* target, bool free_root,
                             void (*callback)(int64_t, void*))
@@ -113,6 +118,12 @@ void
 table_lp_release(struct table_lp* target)
 {
   free(target->array);
+}
+
+int
+table_lp_size(struct table_lp* target)
+{
+  return target->size;
 }
 
 /**
@@ -167,7 +178,8 @@ table_lp_remove(struct table_lp* table, int64_t key)
 {
   int index = hash_long(key, table->capacity);
   void* result = list_lp_remove(&table->array[index], key);
-  table->size--;
+  if (result != NULL)
+    table->size--;
   return result;
 }
 
@@ -242,6 +254,7 @@ size_t table_lp_tostring(char* str, size_t size,
   return (size_t)(ptr-str);
 }
 
+// TODO: move to test
 #ifdef DEBUG_LTABLE
 
 int
