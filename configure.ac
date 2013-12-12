@@ -73,11 +73,31 @@ AC_CACHE_CHECK([for cp that supports -u], [ac_cv_path_cp_u],
 AC_SUBST([CP_U], [$ac_cv_path_cp_u])
 [[ -r cp_u.token ]] && rm cp_u.token
 
-ENABLE_SHARED=
+ENABLE_SHARED=1
 AC_ARG_ENABLE(shared,
-     [  --enable-shared         Enable shared library ],
-        ENABLE_SHARED=1)
+     [  --enable-shared         Enable shared library. Default: yes ],
+     [
+       if test "$enableval" = no ; then
+         ENABLE_SHARED=0
+       fi
+    ])
 AC_SUBST(ENABLE_SHARED)
+
+ENABLE_STATIC=1
+AC_ARG_ENABLE(static,
+     [  --enable-static         Enable static library. Default: yes ],
+     [
+       if test "$enableval" = no ; then
+         ENABLE_STATIC=0
+       fi
+    ])
+AC_SUBST(ENABLE_STATIC)
+if [[ "$ENABLE_STATIC" = 1 ]]; then
+  # Need ar and ranlib to link
+  AC_CHECK_PROG(AR, ar, ar, AC_MSG_ERROR(Cannot find ar))
+  AC_PROG_RANLIB
+fi
+
 
 ENABLE_FAST=
 AC_ARG_ENABLE(fast,

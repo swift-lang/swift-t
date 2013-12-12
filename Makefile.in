@@ -21,20 +21,25 @@ else
   SHARED = -dynamiclib -flat_namespace
 endif
 
-EXMCUTILS_SO = libexmcutils.$(SO_SUFFIX)
-
 ENABLE_SHARED = @ENABLE_SHARED@
+ENABLE_STATIC = @ENABLE_STATIC@
 
-# Name the main product:
+# Name the main products:
+EXM_CUTILS_SO = lib/libexmcutils.$(SO_SUFFIX)
+EXM_CUTILS_A = lib/libexmcutils.a
+
+EXM_CUTILS_LIBS = 
 ifeq ($(ENABLE_SHARED),1)
-	EXMCUTILS = lib/$(EXMCUTILS_SO)
-else
-	EXMCUTILS = lib/libexmcutils.a
+	EXM_CUTILS_LIBS += $(EXM_CUTILS_SO)
+endif
+
+ifeq ($(ENABLE_STATIC),1)
+	EXM_CUTILS_LIBS += $(EXM_CUTILS_A)
 endif
 
 all: exmcutils
 
-exmcutils: $(EXMCUTILS)
+exmcutils: $(EXM_CUTILS_LIBS)
 
 srcdir = @srcdir@
 
@@ -83,13 +88,16 @@ CC = @CC@
 CFLAGS := @CFLAGS@
 CFLAGS += -I $(srcdir) -I $(srcdir)/src -std=gnu99 -Wall
 CFLAGS += -Wconversion
-
 ifeq ($(ENABLE_SHARED),1)
 	PIC = -fPIC
 	CFLAGS += $(PIC)
 endif
 
 RPATH = -Wl,-rpath -Wl,$(INSTALL_LIB)
+
+AR      = @AR@
+ARFLAGS = cr
+RANLIB  = @RANLIB@
 
 ### DEPENDENCIES
 
@@ -127,9 +135,7 @@ deps_contents.txt:
 
 ### LINK
 
-ifeq ($(ENABLE_SHARED),1)
-
-$(EXMCUTILS): $(OBJS)
+$(EXM_CUTILS_SO): $(OBJS)
 	$(Q) "  LINK		$@"
 #       This line causes a false autoscan warning on token 'install'
 	$(E) install -d lib
@@ -137,14 +143,11 @@ $(EXMCUTILS): $(OBJS)
 #       Touch this so re-installation has the correct source directory
 	$(E) touch source.txt
 
-else
-
-$(EXMCUTILS): $(OBJS)
+$(EXM_CUTILS_A): $(OBJS)
 	$(Q) "  AR		$@"
 	$(E) install -d lib
-	$(E) ar rcs $(@) $(OBJS)
-
-endif
+	$(E) $(AR) $(ARFLAGS) $(@) $(OBJS)
+	$(E) $(RANLIB) $(@)
 
 ### TEST
 
@@ -173,7 +176,7 @@ test_results: $(TEST_RESULTS)
 	$(E) $(<) > $(*).tmp 2>&1
 	$(E) mv $(*).tmp $(@) 2>&1
 
-$(TESTS): %.x: %.o $(EXMCUTILS) install.txt
+$(TESTS): %.x: %.o $(EXM_CUTILS_LIBS) install.txt
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(PIC) $(LDFLAGS) $(<) \
                    -L$(INSTALL_LIB) -lexmcutils \
@@ -191,7 +194,7 @@ endif
 
 PROVENANCE = version.txt source.txt config.log
 
-$(INSTALL_PREFIX)/install.txt: $(EXMCUTILS)
+$(INSTALL_PREFIX)/install.txt: $(EXM_CUTILS_LIBS)
 	@echo
 	$(Q) "  INSTALL: $(INSTALL_PREFIX)"
 	$(E) touch install.txt
@@ -205,7 +208,7 @@ $(INSTALL_PREFIX)/install.txt: $(EXMCUTILS)
 #       Install the headers and library
 	$(E) cp $(CP_ARGS) c-utils-config.h $(INSTALL_INCLUDE)
 	$(E) cp $(CP_ARGS) src/*.h $(INSTALL_INCLUDE)
-	$(E) cp $(CP_ARGS) $(EXMCUTILS) $(INSTALL_LIB)
+	$(E) cp $(CP_ARGS) $(EXM_CUTILS_LIBS) $(INSTALL_LIB)
 #       Finally, copy in the token install.txt file
 	$(E) cp $(CP_ARGS) install.txt $(@)
 
@@ -219,7 +222,7 @@ clean:
 	$(Q) "  CLEAN:"
 	$(E) rm -fv $(DEPS) deps_contents.txt
 	$(E) rm -fv src/*.o
-	$(E) rm -fv $(EXMCUTILS)
+	$(E) rm -fv $(EXM_CUTILS_SO) $(EXM_CUTILS_A)
 	$(E) rm -fv $(TESTS) $(TEST_DEPS) $(TEST_OBJS)
 
 distclean: clean
