@@ -47,6 +47,10 @@ if [[ ! -z "$EXM_DEV" && "$EXM_DEV" != 0 ]]; then
   EXTRA_ARGS+=" --enable-dev"
 fi
 
+if [[ ! -z "$TURBINE_STATIC" && "$TURBINE_STATIC" != 0 ]]; then
+  EXTRA_ARGS+=" --enable-static"
+fi
+
 ./configure --with-adlb=${LB_INST} \
             ${CRAY_ARGS} \
             --with-mpi=${MPICH_INST} \

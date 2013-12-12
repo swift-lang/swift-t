@@ -52,3 +52,6 @@ EXM_DEV=1
 
 # TCL Version
 TCL_VERSION=8.6
+
+# Enable Turbine static linking
+TURBINE_STATIC=0
