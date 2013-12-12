@@ -61,6 +61,6 @@ fi
 #            --disable-log
 
 make clean
-make package -j ${MAKE_PARALLELISM}
+make -j ${MAKE_PARALLELISM}
 make install
 #make test_results
