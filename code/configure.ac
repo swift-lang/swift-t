@@ -60,8 +60,6 @@ echo "using CC=$( which ${CC} )"
 
 # Checks for programs
 AC_PROG_CC
-AC_CHECK_PROG(AR, ar)
-AC_PROG_RANLIB
 
 AC_TYPE_INT64_T
 
@@ -238,6 +236,32 @@ AC_MSG_RESULT([checkpoints enabled])
 
 AC_SUBST(XLB_ENABLE_XPT)
 
+ENABLE_SHARED=1
+AC_ARG_ENABLE(shared,
+     [  --enable-shared         Enable shared library. Default: yes ],
+     [
+       if test "$enableval" = no ; then
+         ENABLE_SHARED=0
+       fi
+    ])
+AC_SUBST(ENABLE_SHARED)
+
+ENABLE_STATIC=1
+AC_ARG_ENABLE(static,
+     [  --enable-static         Enable static library. Default: yes ],
+     [
+       if test "$enableval" = no ; then
+         ENABLE_STATIC=0
+       fi
+    ])
+AC_SUBST(ENABLE_STATIC)
+
+if [[ "$ENABLE_STATIC" = 1 ]]; then
+  # Need ar and ranlib to link
+  AC_CHECK_PROG(AR, ar, ar, AC_MSG_ERROR(Cannot find ar))
+  AC_PROG_RANLIB
+fi
+
 ENABLE_DEV=0
 AC_ARG_ENABLE(dev,
     AS_HELP_STRING([--enable-dev],
@@ -245,6 +269,7 @@ AC_ARG_ENABLE(dev,
                     Default: disabled]),
     ENABLE_DEV=1)
 AC_SUBST(ENABLE_DEV)
+
 
 AC_CONFIG_FILES(Makefile
                 src/module.mk

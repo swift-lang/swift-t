@@ -40,9 +40,20 @@ endif
 # Products:
 ADLB_A  = lib/libadlb.a
 ADLB_SO = lib/libadlb.$(SO_SUFFIX)
-ADLB = $(ADLB_SO)
+ADLB_LIBS = 
 
-all: $(ADLB)
+ENABLE_SHARED = @ENABLE_SHARED@
+ENABLE_STATIC = @ENABLE_STATIC@
+
+ifeq ($(ENABLE_SHARED),1)
+	ADLB_LIBS += $(ADLB_SO)
+endif
+
+ifeq ($(ENABLE_STATIC),1)
+	ADLB_LIBS += $(ADLB_A)
+endif
+
+all: $(ADLB_LIBS)
 
 # Support GNU DESTDIR for Debian, etc.
 # Cf. http://www.gnu.org/prep/standards/html_node/DESTDIR.html
@@ -202,7 +213,7 @@ PROVENANCE = version.txt source.txt config.log
 
 install: $(INSTALL_TOKEN)
 
-$(INSTALL_TOKEN): $(ADLB) $(INSTALLED_HEADERS)
+$(INSTALL_TOKEN): $(ADLB_LIBS) $(INSTALLED_HEADERS)
 	$(Q)
 	$(Q) "  INSTALL	$(INSTALL_PREFIX)"
 	$(E) mkdir -pv $(INSTALL_ETC)
@@ -210,7 +221,7 @@ $(INSTALL_TOKEN): $(ADLB) $(INSTALLED_HEADERS)
 	$(E) mkdir -pv $(INSTALL_LIB)
 	$(E) cp $(CP_ARGS) $(PROVENANCE) $(INSTALL_ETC)
 	$(E) cp $(CP_ARGS) $(INSTALLED_HEADERS) $(INSTALL_INCLUDE)
-	$(E) cp $(CP_ARGS) $(ADLB) $(INSTALL_LIB)
+	$(E) cp $(CP_ARGS) $(ADLB_LIBS) $(INSTALL_LIB)
 	$(E) touch $(INSTALL_ETC)/install.txt
 	$(Q)
 
@@ -229,7 +240,7 @@ TAGS: deps.txt
 
 clean:
 	$(Q) "  CLEAN"
-	$(E) rm -fv $(OBJS) $(ADLB) $(DEPS)
+	$(E) rm -fv $(OBJS) $(ADLB_A) $(ADLB_SO) $(DEPS)
 
 distclean: clean
 	@rm -fv Makefile **/*.mk
