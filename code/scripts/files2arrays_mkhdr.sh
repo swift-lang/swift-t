@@ -25,21 +25,26 @@ do
 done
 echo
 
-echo "static const char *file2array_data[] = {"
-for arrname in "${arrnames[@]}"
-do
-  echo "  $arrname, "
-done
-echo "};"
-echo
-
-echo "static const size_t file2array_data_lens[] = {"
-for arrname in "${arrnames[@]}"
-do
-  echo "  ${arrname}_len, "
-done
-echo "};"
-echo
-
+# Arrays indexing above variables
+data_arr=file2array_data
+len_arr=${data_arr}_lens
+name_arr=${data_arr}_names
+echo "static const char *${data_arr}[${count}];"
+echo "static size_t ${len_arr}[${count}];"
+echo "static const char *${name_arr}[${count}];"
 echo "static const size_t file2array_data_len = $count;"
+echo
 
+# Generate initializer function for arrays
+echo "static inline void file2array_data_init(void) {"
+
+i=0
+for arrname in "${arrnames[@]}"
+do
+  echo "  ${data_arr}[${i}] = $arrname;"
+  echo "  ${len_arr}[${i}] = ${arrname}_len;"
+  echo "  ${name_arr}[${i}] = \"${arrname}\";"
+  i=$(($i + 1))
+done
+echo "}"
+echo

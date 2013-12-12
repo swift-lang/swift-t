@@ -104,15 +104,20 @@ Tclturbine_InitStatic(Tcl_Interp *interp)
     fprintf(stderr, "Error initializing Tcl Turbine C package\n");
     return rc;
   }
+
+  // Initialize list of data
+  file2array_data_init();
   
   for (int i = 0; i < file2array_data_len; i++)
   {
     // These are null terminated strings so we can use directly
     const char *tcl_src = file2array_data[i];
+    // fprintf(stderr, "Eval %s\n", file2array_data_names[i]);
     int rc = Tcl_Eval(interp, tcl_src);
     if (rc != TCL_OK)
     {
-      fprintf(stderr, "Error while loading Tcl source file\n");
+      fprintf(stderr, "Error while loading Tcl source file (%s)\n",
+                      file2array_data_names[i]);
       return rc;
     }
   }
