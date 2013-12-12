@@ -81,6 +81,9 @@ TCL_TURBINE_SO = lib/libtclturbine.$(SO_SUFFIX)
 # Static library
 TCL_TURBINE_A = lib/libtclturbine.a
 
+# Static library for Tcl source
+TCL_SRC_A := lib/libtclturbinesrc.a
+
 ENABLE_SHARED = @ENABLE_SHARED@
 ENABLE_STATIC = @ENABLE_STATIC@
 
@@ -341,7 +344,6 @@ ifeq ($(ENABLE_STATIC),0)
 	@exit 1
 endif
 	$(Q) "  AR		$(@)"
-	$(E) install -d lib
 	$(E) $(AR) $(ARFLAGS) $(@) $(TURBINE_OBJS)
 	$(E) $(RANLIB) $(@)
 
@@ -357,6 +359,24 @@ endif
              $(RPATHS) \
              $(MAC_NAME)
 
+### TCL SOURCE LINKING
+# Compilation and linking to get Tcl source as C arrays
+TCL_SRC_C := $(patsubst %.tcl, %_tcl.c, $(TCL_SRC))
+TCL_SRC_O := $(patsubst %.c, %.o, $(TCL_SRC_C))
+TCL_SRC_H := src/tclturbinesrc.h
+
+$(TCL_SRC_H) $(TCL_SRC_C): $(TCL_SRC)
+	$(Q) "  FILES2ARRAYS $(TCL_SRC_H) $(TCL_SRC_C)"
+	$(E) scripts/files2arrays.sh 's/\.tcl/_tcl.c/' $(TCL_SRC) | \
+	  scripts/files2arrays_mkhdr.sh > $(TCL_SRC_H)
+
+# Regular .o compilation rule generates .o files
+
+$(TCL_SRC_A): $(TCL_SRC_O)
+	$(Q) "  AR		$(@)"
+	$(E) $(AR) $(ARFLAGS) $(@) $(TCL_SRC_O)
+	$(E) $(RANLIB) $(@)
+
 ### LINK EXECUTABLES
 
 executables: $(TURBINE_EXECUTABLES)
@@ -365,6 +385,7 @@ executables: $(TURBINE_EXECUTABLES)
 # List out static libs.  If A depends on B, A must come first.
 STATIC_LIBS =
 STATIC_LIBS += $(TCL_TURBINE_A)
+STATIC_LIBS += $(TCL_SRC_A)
 STATIC_LIBS += $(ADLB)/lib/libadlb.a
 STATIC_LIBS += $(C_UTILS)/lib/libexmcutils.a
 #TODO: Tcl doesn't provide static library by default
@@ -379,7 +400,7 @@ STATIC_LIB_DEPS = -lz -lpthread
 # Binary executables - link from .o
 # Link statically where possible by adding static libs explicitly
 # TODO: option to use dynamic if preferred
-$(TURBINE_EXECUTABLES): %.x: %.o ${STATIC_LIBS}
+$(TURBINE_EXECUTABLES): %.x: %.o ${STATIC_LIBS} ${TCL_SRC_H}
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(<) $(STATIC_LIBS) \
         $(MAC_FLAT) $(STATIC_LIB_DEPS) \
@@ -527,6 +548,7 @@ clean::
 	@rm -fv  $(TEST_BINS) $(TEST_OBJS) $(TEST_OUTPUT)
 	@rm -fv  $(TEST_RESULTS)
 	@rm -fv  $(TURBINE_OBJS)
+	@rm -fv  $(TURBINE_SRC_A) $(TCL_SRC_H) $(TCL_SRC_C) $(TCL_SRC_O)
 	@rm -fvr tests/data
 
 # Clean *.result files that did not succeed

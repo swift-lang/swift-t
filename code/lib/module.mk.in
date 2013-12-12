@@ -36,20 +36,3 @@ $(PACKAGE): lib/make-package.tcl $(TCL_TURBINE_SO) \
 	     USE_MAC=@USE_MAC@ \
              $(TCLSH_LOCAL) $(<) > lib/pkgIndex.tcl
 
-### Compilation and linking to get Tcl source as C arrays
-TCL_SRC_C := $(patsubst %.tcl, %_tcl.c, $(TCL_SRC))
-TCL_SRC_O := $(patsubst %.c, %.o, $(TCL_SRC_C))
-TCL_SRC_A := $(DIR)/libtclturbinesrc.a
-TCL_SRC_H := $(DIR)/tclturbinesrc.h
-
-$(TCL_SRC_A): $(TCL_SRC_O)
-	$(Q) "  AR		$(@)"
-	$(E) install -d $(DIR)
-	$(E) $(AR) $(ARFLAGS) $(@) $(TCL_SRC_O)
-	$(E) $(RANLIB) $(@)
-
-$(TCL_SRC_H) $(TCL_SRC_C): $(TCL_SRC)
-	$(Q) "  FILES2ARRAYS $(TCL_SRC_H) $(TCL_SRC_C)"
-	$(E) scripts/files2arrays.sh 's/\.tcl/_tcl.c/' $(TCL_SRC) | \
-	  scripts/files2arrays_mkhdr.sh > $(TCL_SRC_H)
-

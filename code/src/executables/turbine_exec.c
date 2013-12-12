@@ -29,6 +29,7 @@
 
 #include "src/turbine/turbine.h"
 #include "src/tcl/turbine/tcl-turbine.h"
+#include "src/tclturbinesrc.h"
 
 static void
 register_packages(void);
@@ -98,7 +99,23 @@ Tclturbine_InitStatic(Tcl_Interp *interp)
   //fprintf(stderr, "Callback to init static package tclturbine\n");
   int rc = Tclturbine_Init(interp);
   //fprintf(stderr, "Inited static package tclturbine\n");
-  // TODO: eval tcl source files
+  if (rc != TCL_OK)
+  {
+    fprintf(stderr, "Error initializing Tcl Turbine C package\n");
+    return rc;
+  }
+  
+  for (int i = 0; i < file2array_data_len; i++)
+  {
+    // These are null terminated strings so we can use directly
+    const char *tcl_src = file2array_data[i];
+    int rc = Tcl_Eval(interp, tcl_src);
+    if (rc != TCL_OK)
+    {
+      fprintf(stderr, "Error while loading Tcl source file\n");
+      return rc;
+    }
+  }
   return rc;
 }
 
