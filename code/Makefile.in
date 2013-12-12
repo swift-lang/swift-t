@@ -3,6 +3,7 @@ TURBINE_VERSION = @TURBINE_VERSION@
 
 PACKAGE = lib/pkgIndex.tcl
 PACKAGE_STATIC = libstatic/pkgIndex.tcl
+ENABLED_PACKAGES :=
 
 BUILD_ALL_TARGETS = libs
 # BUILD_ALL_TARGETS = libs executables
@@ -10,11 +11,13 @@ BUILD_ALL_TARGETS = libs
 ifeq ($(ENABLE_SHARED),1)
 # Shared libraries are required for tcl package
   BUILD_ALL_TARGETS += package
+  ENABLED_PACKAGES += package
 endif
 
 ifeq ($(ENABLE_STATIC),1)
 # Shared libraries are required for tcl package
   BUILD_ALL_TARGETS += package_static
+  ENABLED_PACKAGES += package_static
 endif
 
 all: $(BUILD_ALL_TARGETS)
@@ -503,7 +506,7 @@ EXPORTS = $(shell ls export/*.swift )
 SCRIPTS = $(shell ls scripts/*.zsh scripts/*.sh scripts/*.tcl \
 	             $(SCRIPTS_SUBMIT) )
 
-install.txt: $(PACKAGE) $(PACKAGE_STATIC) $(BINS) $(EXPORTS) $(SCRIPTS)
+install.txt: $(ENABLED_PACKAGES) $(BINS) $(EXPORTS) $(SCRIPTS)
 #       Note: this is re-run if anything changes
 	@echo
 	$(Q) "  INSTALL		$(INSTALL_PREFIX)"

@@ -1,4 +1,7 @@
 
 DIR := src/executables
 
-TURBINE_EXECUTABLE_SRC += $(DIR)/turbine_exec.c
+# This executable currently assumes static linking
+ifeq ($(ENABLE_STATIC),1)
+  TURBINE_EXECUTABLE_SRC += $(DIR)/turbine_exec.c
+endif
