@@ -29,10 +29,7 @@
 
 #include "src/turbine/turbine.h"
 #include "src/tcl/turbine/tcl-turbine.h"
-#include "src/tclturbinesrc.h"
-
-static void
-register_packages(void);
+#include "src/tcl/static-pkg/static-pkg.h"
 
 int
 main(int argc, char **argv)
@@ -71,7 +68,7 @@ main(int argc, char **argv)
   Tcl_Init(interp);
   
   // Make packages available to all interpreters
-  register_packages();
+  register_tcl_turbine_static_pkg();
 
   turbine_code rc;
   rc = turbine_run_interp(MPI_COMM_NULL, script, script_argc, script_argv,
@@ -90,45 +87,4 @@ main(int argc, char **argv)
                 script, code_name, rc);
     return 2;
   }
-}
-
-// Wrapper to initialize C module and tcl source files
-int
-Tclturbine_InitStatic(Tcl_Interp *interp)
-{
-  //fprintf(stderr, "Callback to init static package tclturbine\n");
-  int rc = Tclturbine_Init(interp);
-  //fprintf(stderr, "Inited static package tclturbine\n");
-  if (rc != TCL_OK)
-  {
-    fprintf(stderr, "Error initializing Tcl Turbine C package\n");
-    return rc;
-  }
-
-  // Initialize list of data
-  file2array_data_init();
-  
-  for (int i = 0; i < file2array_data_len; i++)
-  {
-    // These are null terminated strings so we can use directly
-    const char *tcl_src = file2array_data[i];
-    // fprintf(stderr, "Eval %s\n", file2array_data_names[i]);
-    int rc = Tcl_Eval(interp, tcl_src);
-    if (rc != TCL_OK)
-    {
-      fprintf(stderr, "Error while loading Tcl source file (%s)\n",
-                      file2array_data_names[i]);
-      return rc;
-    }
-  }
-  return rc;
-}
-
-/*
-  Register but do not initialize statically linked packages
- */
-static void
-register_packages(void)
-{
-  Tcl_StaticPackage(NULL, "turbine", Tclturbine_InitStatic, Tclturbine_InitStatic);
 }
