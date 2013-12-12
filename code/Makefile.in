@@ -1,6 +1,9 @@
 
 TURBINE_VERSION = @TURBINE_VERSION@
 
+ENABLE_SHARED = @ENABLE_SHARED@
+ENABLE_STATIC = @ENABLE_STATIC@
+
 PACKAGE = lib/pkgIndex.tcl
 PACKAGE_STATIC = libstatic/pkgIndex.tcl
 ENABLED_PACKAGES :=
@@ -11,13 +14,13 @@ BUILD_ALL_TARGETS = libs
 ifeq ($(ENABLE_SHARED),1)
 # Shared libraries are required for tcl package
   BUILD_ALL_TARGETS += package
-  ENABLED_PACKAGES += package
+  ENABLED_PACKAGES += $(PACKAGE)
 endif
 
 ifeq ($(ENABLE_STATIC),1)
 # Shared libraries are required for tcl package
   BUILD_ALL_TARGETS += package_static
-  ENABLED_PACKAGES += package_static
+  ENABLED_PACKAGES += $(PACKAGE_STATIC)
 endif
 
 all: $(BUILD_ALL_TARGETS)
@@ -86,9 +89,6 @@ TCL_TURBINE_A = lib/libtclturbine.a
 
 # Static library for Tcl source
 STATIC_PKG_SRC_A := lib/libtclturbinesrc.a
-
-ENABLE_SHARED = @ENABLE_SHARED@
-ENABLE_STATIC = @ENABLE_STATIC@
 
 TCL_TURBINE_LIBS :=
 ifeq ($(ENABLE_SHARED),1)
@@ -248,6 +248,7 @@ endif
 DIR :=
 TURBINE_SRC :=
 TCL_TURBINE_SRC :=
+STATIC_PKG_SRC :=
 TURBINE_EXECUTABLE_SRC := 
 include src/turbine/module.mk
 include src/util/module.mk
@@ -277,11 +278,18 @@ TURBINE_OBJS = $(patsubst %.c, %.o, $(TURBINE_SRC))
 TURBINE_EXECUTABLE_OBJS = $(patsubst %.c, %.o, $(TURBINE_EXECUTABLE_SRC))
 TURBINE_EXECUTABLES := $(patsubst %.c, %.x, $(TURBINE_EXECUTABLE_SRC))
 
+STATIC_PKG_SRC_FROM_TCL := $(patsubst %.tcl, %_tcl.c, $(TCL_SRC))
+STATIC_PKG_SRC += $(STATIC_PKG_SRC_FROM_TCL)
+STATIC_PKG_SRC_O := $(patsubst %.c, %.o, $(STATIC_PKG_SRC))
+STATIC_PKG_SRC_H := src/tcl/static-pkg/tcl-turbine-src.h
+
 ### DEPENDENCIES
 
 TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC))
 
 TURBINE_EXECUTABLE_DEPS := $(patsubst %.c, %.d, $(TURBINE_EXECUTABLE_SRC))
+
+STATIC_PKG_DEPS := $(patsubst %.c, %.d, $(STATIC_PKG_SRC))
 
 TEST_SRC :=
 include tests/module.mk
@@ -291,7 +299,7 @@ TEST_DEPS := $(patsubst %.c, %.d, $(TEST_SRC))
 # Remember that having a bad #include can cause dependency
 # file generation to fail silently
 # Solution: use target check_includes
-DEPS := $(TURBINE_DEPS) $(TURBINE_EXECUTABLE_DEPS) $(TEST_DEPS)
+DEPS := $(TURBINE_DEPS) $(TURBINE_EXECUTABLE_DEPS) $(TEST_DEPS) $(STATIC_PKG_DEPS)
 
 deps: $(DEPS)
 
@@ -352,7 +360,7 @@ endif
 	$(E) $(RANLIB) $(@)
 
 $(TCL_TURBINE_SO): $(TURBINE_OBJS)
-ifeq ($(ENABLE_SHARED),0	)
+ifeq ($(ENABLE_SHARED),0)
 	@echo "Shared libraries were disabled, cannot build target!"
 	@exit 1
 endif
@@ -365,14 +373,17 @@ endif
 
 ### TCL SOURCE LINKING
 # Compilation and linking to get Tcl source as C arrays
-STATIC_PKG_SRC_C := $(patsubst %.tcl, %_tcl.c, $(TCL_SRC))
-STATIC_PKG_SRC_O := $(patsubst %.c, %.o, $(STATIC_PKG_SRC_C))
-STATIC_PKG_SRC_H := src/tcl/static-pkg/tcl-turbine-src.h
 
-$(STATIC_PKG_SRC_H) $(STATIC_PKG_SRC_C): $(TCL_SRC)
-	$(Q) "  FILES2ARRAYS $(STATIC_PKG_SRC_H) $(STATIC_PKG_SRC_C)"
-	$(E) scripts/files2arrays.sh 's/\.tcl/_tcl.c/' $(TCL_SRC) | \
-	  scripts/files2arrays_mkhdr.sh > $(STATIC_PKG_SRC_H)
+F2A := scripts/file2array.sh
+F2A_MKHDR := scripts/files2arrays_mkhdr.sh
+
+$(STATIC_PKG_SRC_FROM_TCL): %_tcl.c : %.tcl $(F2A)
+	$(Q) "  FILE2ARRAY $(@)"
+	$(E) $(F2A) $< "turbine_lib_$(shell basename $< | sed 's/[\.-]/_/g')" > $(@)
+
+$(STATIC_PKG_SRC_H): $(STATIC_PKG_SRC_FROM_TCL) $(F2A_MKHDR)
+	$(Q) " MKHDR $(@)"
+	$(E) $(F2A_MKHDR) turbine_lib_src $(STATIC_PKG_SRC_FROM_TCL) > $(@)
 
 # Regular .o compilation rule generates .o files
 
@@ -496,9 +507,12 @@ DIRECTORIES = $(INSTALL_PREFIX) $(INSTALL_BIN) $(INSTALL_ETC)     \
               $(INSTALL_EXPORT) $(INSTALL_INCLUDE) $(INSTALL_LIB) \
 	      $(INSTALL_LIBSTATIC) $(INSTALL_SCRIPTS)
 
-TURBINE_HEADERS = src/turbine/turbine.h      \
+TURBINE_HEADERS := src/turbine/turbine.h      \
                   src/turbine/turbine-defs.h \
                   src/tcl/blob/blob.h
+ifeq ($(ENABLE_STATIC),1)
+  TURBINE_HEADERS += $(STATIC_PKG_SRC_H)
+endif
 
 BINS    = $(shell ls bin/turbine \
                      bin/turbine-write-doubles \
@@ -507,7 +521,7 @@ EXPORTS = $(shell ls export/*.swift )
 SCRIPTS = $(shell ls scripts/*.zsh scripts/*.sh scripts/*.tcl \
 	             $(SCRIPTS_SUBMIT) )
 
-install.txt: $(ENABLED_PACKAGES) $(BINS) $(EXPORTS) $(SCRIPTS)
+install.txt: $(ENABLED_PACKAGES) $(BINS) $(EXPORTS) $(SCRIPTS) $(TURBINE_HEADERS)
 #       Note: this is re-run if anything changes
 	@echo
 	$(Q) "  INSTALL		$(INSTALL_PREFIX)"
@@ -518,9 +532,14 @@ install.txt: $(ENABLED_PACKAGES) $(BINS) $(EXPORTS) $(SCRIPTS)
 	$(E) cp $(CP_ARGS) $(PROVENANCE) $(INSTALL_ETC)
 #       Copy Turbine items
 	$(E) cp $(CP_ARGS) $(BINS)               $(INSTALL_BIN)
+ifeq ($(ENABLE_SHARED),1)
 	$(E) cp $(CP_ARGS) lib/*.tcl             $(INSTALL_LIB)
 	$(E) cp $(CP_ARGS) lib/*.$(SO_SUFFIX)    $(INSTALL_LIB)
+endif
+ifeq ($(ENABLE_STATIC),1)
+	$(E) cp $(CP_ARGS) lib/*.a               $(INSTALL_LIB)
 	$(E) cp $(CP_ARGS) libstatic/*.tcl       $(INSTALL_LIBSTATIC)
+endif
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(SCRIPTS) $(INSTALL_PREFIX)
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(EXPORTS) $(INSTALL_PREFIX)
 	$(E) cp $(CP_ARGS) $(TURBINE_HEADERS)    $(INSTALL_INCLUDE)
@@ -552,7 +571,7 @@ clean::
 	@rm -fv  $(TEST_BINS) $(TEST_OBJS) $(TEST_OUTPUT)
 	@rm -fv  $(TEST_RESULTS)
 	@rm -fv  $(TURBINE_OBJS)
-	@rm -fv  $(TURBINE_SRC_A) $(STATIC_PKG_SRC_H) $(STATIC_PKG_SRC_C) $(STATIC_PKG_SRC_O)
+	@rm -fv  $(TURBINE_SRC_A) $(STATIC_PKG_SRC_O)
 	@rm -fvr tests/data
 
 # Clean *.result files that did not succeed

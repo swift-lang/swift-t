@@ -11,7 +11,7 @@ shift;
 for infile in "$@"
 do
   outfile=$( echo "$infile" | sed "$regex" )
-  arrname="file2array_$(echo "$(basename $infile)" | sed 's/[\.-]/_/g')"
+  arrname="file2array_$(basename "$infile" | sed 's/[\.-]/_/g')"
   arrnames+=" $arrname"
   $script_dir/file2array.sh $infile $arrname > $outfile
   

@@ -33,18 +33,18 @@ Tclturbine_InitStatic(Tcl_Interp *interp)
   }
 
   // Initialize list of data
-  file2array_data_init();
+  turbine_lib_src_init();
   
-  for (int i = 0; i < file2array_data_len; i++)
+  for (int i = 0; i < turbine_lib_src_len; i++)
   {
     // These are null terminated strings so we can use directly
-    const char *tcl_src = file2array_data[i];
-    // fprintf(stderr, "Eval %s\n", file2array_data_names[i]);
+    const char *tcl_src = turbine_lib_src[i];
+    // fprintf(stderr, "Eval %s\n", turbine_lib_src_data_names[i]);
     int rc = Tcl_Eval(interp, tcl_src);
     if (rc != TCL_OK)
     {
       fprintf(stderr, "Error while loading Tcl source file (%s)\n",
-                      file2array_data_names[i]);
+                      turbine_lib_src_filenames[i]);
       return rc;
     }
   }

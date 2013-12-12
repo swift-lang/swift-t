@@ -1,12 +1,20 @@
 #!/usr/bin/env bash
-# Create C header with arrays containing references to all variable names
-# Reads list of file names from stdin
+# Create C header with an array containing references to all variable names
+# Usage: files2arrays_mkhdr <C array name> <file2array files>
+
+master_arr=$1
+shift
 
 count=0
 arrnames=()
-while read arrname
+filenames=()
+for file in "$@"
 do
+  # Extract array name from FILE2ARRAY comment
+  arrname=$(sed -rn 's/^.*\/\*FILE2ARRAY:([a-zA-Z_0-9]*):(.*)\*\/.*$/\1/p' $file)
   arrnames=( "${arrnames[@]}" "${arrname}" )
+  filename=$(sed -rn 's/^.*\/\*FILE2ARRAY:([a-zA-Z_0-9]*):(.*)\*\/.*$/\2/p' $file)
+  filenames=( "${filenames[@]}" "${filename}" )
   # Output variable name for header
   count=$((count + 1))
 done
@@ -26,22 +34,30 @@ done
 echo
 
 # Arrays indexing above variables
-data_arr=file2array_data
-len_arr=${data_arr}_lens
-name_arr=${data_arr}_names
-echo "static const char *${data_arr}[${count}];"
+len_arr=${master_arr}_lens
+name_arr=${master_arr}_names
+echo "static const char *${master_arr}[${count}];"
 echo "static size_t ${len_arr}[${count}];"
 echo "static const char *${name_arr}[${count}];"
-echo "static const size_t file2array_data_len = $count;"
+echo "static const size_t ${master_arr}_len = $count;"
+echo
+
+# List of filenames
+echo "static const char *${master_arr}_filenames[] = {"
+for filename in "${filenames[@]}"
+do
+  echo "  \"$filename\","
+done
+echo "};"
 echo
 
 # Generate initializer function for arrays
-echo "static inline void file2array_data_init(void) {"
+echo "static inline void ${master_arr}_init(void) {"
 
 i=0
 for arrname in "${arrnames[@]}"
 do
-  echo "  ${data_arr}[${i}] = $arrname;"
+  echo "  ${master_arr}[${i}] = $arrname;"
   echo "  ${len_arr}[${i}] = ${arrname}_len;"
   echo "  ${name_arr}[${i}] = \"${arrname}\";"
   i=$(($i + 1))

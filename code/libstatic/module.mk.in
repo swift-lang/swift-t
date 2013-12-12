@@ -2,7 +2,7 @@
 DIR := libstatic
 
 # Builds the Turbine Tcl package
-$(PACKAGE_STATIC): $(DIR)/make-package.tcl $(TCL_TURBINE_A) $(TCL_SRC_A)
+$(PACKAGE_STATIC): $(DIR)/make-package.tcl $(TCL_TURBINE_A) $(STATIC_PKG_SRC_A)
 	$(Q) "  TCL		$(@)"
 	$(E) TURBINE_VERSION=$(TURBINE_VERSION) \
              USE_MPE=@USE_MPE@ \
