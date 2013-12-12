@@ -3,7 +3,7 @@ TURBINE_VERSION = @TURBINE_VERSION@
 
 PACKAGE = lib/pkgIndex.tcl
 
-all: package
+all: package executables
 
 turbine: $(TURBINE)
 
@@ -207,6 +207,7 @@ endif
 DIR :=
 TURBINE_SRC :=
 TCL_TURBINE_SRC :=
+TURBINE_EXECUTABLE_SRC := 
 include src/turbine/module.mk
 include src/util/module.mk
 include src/tcl/module.mk
@@ -229,9 +230,13 @@ TURBINE_SRC += $(TCL_R_SRC)
 TURBINE_SRC += $(TCL_TURBINE_SRC)
 TURBINE_OBJS = $(patsubst %.c, %.o, $(TURBINE_SRC))
 
+TURBINE_EXECUTABLE_OBJS = $(patsubst %.c, %.o, $(TURBINE_EXECUTABLE_SRC))
+
 ### DEPENDENCIES
 
 TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC))
+
+TURBINE_EXECUTABLE_DEPS := $(patsubst %.c, %.d, $(TURBINE_EXECUTABLE_SRC))
 
 TEST_SRC :=
 include tests/module.mk
@@ -241,7 +246,7 @@ TEST_DEPS := $(patsubst %.c, %.d, $(TEST_SRC))
 # Remember that having a bad #include can cause dependency
 # file generation to fail silently
 # Solution: use target check_includes
-DEPS := $(TURBINE_DEPS) $(TEST_DEPS)
+DEPS := $(TURBINE_DEPS) $(TURBINE_EXECUTABLE_DEPS) $(TEST_DEPS)
 
 deps: $(DEPS)
 
@@ -304,6 +309,24 @@ $(TCL_TURBINE_SO): $(TURBINE_OBJS)
              $(LIBS) \
              $(RPATHS) \
              $(MAC_NAME)
+
+### LINK EXECUTABLES
+
+TURBINE_EXECUTABLES := $(patsubst %.c, , $(TURBINE_EXECUTABLE_SRC))
+
+executables: $(TURBINE_EXECUTABLES)
+
+$(TURBINE_EXECUTABLES) : %: %.c
+# Binary executables in the test suite
+$(TURBINE_EXECUTABLES): %: %.o install.txt
+	$(Q) "  LINK		$(@)"
+	$(E) $(CC) $(<) \
+        $(MAC_FLAT) \
+	-L$(INSTALL_LIB) -ltclturbine \
+	$(LIBS) -L $(TCL_LIB_DIR) -l$(TCL_LIB_NAME) \
+	$(RPATHS) \
+	-o $(@)
+
 
 ### TESTS
 
