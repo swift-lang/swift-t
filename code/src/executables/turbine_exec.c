@@ -14,11 +14,24 @@
  * limitations under the License
  */
 
+/**
+  Alternative launcher program that can be used in place of tclsh
+  to launch a Tcl script.  Avoids need to dynamically load libraries.
+
+  Tim Armstrong - Dec 11 2013
+ */
+
+
 #include <mpi.h>
+#include <tcl.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "src/turbine/turbine.h"
+#include "src/tcl/turbine/tcl-turbine.h"
+
+static void
+register_packages(Tcl_Interp *interp);
 
 int
 main(int argc, char **argv)
@@ -52,8 +65,14 @@ main(int argc, char **argv)
     }
   }
 
+  // Create Tcl interpreter:
+  Tcl_Interp* interp = Tcl_CreateInterp();
+  Tcl_Init(interp);
+  register_packages(interp);
+
   turbine_code rc;
-  rc = turbine_run(MPI_COMM_WORLD, script, script_argc, script_argv, NULL);
+  rc = turbine_run_interp(MPI_COMM_NULL, script, script_argc, script_argv,
+                          NULL, interp);
   free(script_argv);
 
   if (rc == TURBINE_SUCCESS)
@@ -68,4 +87,25 @@ main(int argc, char **argv)
                 script, code_name, rc);
     return 2;
   }
+}
+
+int
+__Tclturbine_Init(Tcl_Interp *interp)
+{
+  fprintf(stderr, "Loading static package tclturbine\n");
+  int rc = Tclturbine_Init(interp);
+  fprintf(stderr, "Loaded static package tclturbine\n");
+  return rc;
+}
+
+/*
+  Register but do not initialize statically linked packages
+ */
+static void
+register_packages(Tcl_Interp *interp)
+{
+  /*
+    TODO: contrary to docs, init function never seems to be called
+   */
+  Tcl_StaticPackage(interp, "turbine", __Tclturbine_Init, __Tclturbine_Init);
 }

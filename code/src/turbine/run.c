@@ -34,6 +34,11 @@
 // From turbine
 #include "src/turbine/turbine.h"
 
+/*
+  Run a Tcl script in a turbine instance
+  comm: communicator to use, MPI_COMM_NULL if there is no enclosing MPI
+        context, in which case we will initialize MPI
+ */
 turbine_code
 turbine_run(MPI_Comm comm, char* script_file,
             int argc, char** argv, char* output)
@@ -50,13 +55,16 @@ turbine_run_interp(MPI_Comm comm, char* script_file,
                    int argc, char** argv, char* output,
                    Tcl_Interp* interp)
 {
-  // Store communicator pointer in Tcl variable for turbine::init
-  MPI_Comm* comm_ptr = &comm;
-  Tcl_Obj* TURBINE_ADLB_COMM =
-      Tcl_NewStringObj("TURBINE_ADLB_COMM", -1);
-  Tcl_Obj* adlb_comm_ptr = Tcl_NewLongObj((long) comm_ptr);
-  Tcl_ObjSetVar2(interp, TURBINE_ADLB_COMM, NULL, adlb_comm_ptr, 0);
-
+  if (comm != MPI_COMM_NULL)
+  {
+    // Store communicator pointer in Tcl variable for turbine::init
+    MPI_Comm* comm_ptr = &comm;
+    Tcl_Obj* TURBINE_ADLB_COMM =
+        Tcl_NewStringObj("TURBINE_ADLB_COMM", -1);
+    Tcl_Obj* adlb_comm_ptr = Tcl_NewLongObj((long) comm_ptr);
+    Tcl_ObjSetVar2(interp, TURBINE_ADLB_COMM, NULL, adlb_comm_ptr, 0);
+  }
+  
   // Render argc/argv for Tcl
   tcl_set_integer(interp, "argc", argc);
   Tcl_Obj* argv_obj     = Tcl_NewStringObj("argv", -1);
@@ -72,7 +80,7 @@ turbine_run_interp(MPI_Comm comm, char* script_file,
 
   // Read the user script
   char* script = slurp(script_file);
-
+  
   // Run the user script
   int rc = Tcl_Eval(interp, script);
 

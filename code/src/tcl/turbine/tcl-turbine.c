@@ -1130,6 +1130,7 @@ int Blob_Init(Tcl_Interp* interp);
 int DLLEXPORT
 Tclturbine_Init(Tcl_Interp* interp)
 {
+  printf("INITING\n");
   if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL)
     return TCL_ERROR;
 

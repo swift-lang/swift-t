@@ -768,6 +768,7 @@ AC_CONFIG_FILES(
         src/tcl/python/module.mk
         src/tcl/r/module.mk
         src/tcl/turbine/module.mk
+        src/executables/module.mk
         lib/module.mk
         scripts/submit/module.mk
         scripts/submit/cobalt/module.mk

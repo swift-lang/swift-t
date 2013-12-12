@@ -3,7 +3,8 @@ TURBINE_VERSION = @TURBINE_VERSION@
 
 PACKAGE = lib/pkgIndex.tcl
 
-BUILD_ALL_TARGETS = libs executables
+BUILD_ALL_TARGETS = libs
+# BUILD_ALL_TARGETS = libs executables
 
 ifeq ($(ENABLE_SHARED),1)
 # Shared libraries are required for tcl package
@@ -241,6 +242,7 @@ include src/tcl/r/module.mk
 include src/tcl/turbine/module.mk
 include lib/module.mk
 include scripts/submit/module.mk
+include src/executables/module.mk
 
 TURBINE_SRC += $(TCL_ADLB_SRC)
 TURBINE_SRC += $(TCL_C_UTILS_SRC)
@@ -252,7 +254,7 @@ TURBINE_SRC += $(TCL_TURBINE_SRC)
 TURBINE_OBJS = $(patsubst %.c, %.o, $(TURBINE_SRC))
 
 TURBINE_EXECUTABLE_OBJS = $(patsubst %.c, %.o, $(TURBINE_EXECUTABLE_SRC))
-TURBINE_EXECUTABLES := $(patsubst %.c, %, $(TURBINE_EXECUTABLE_SRC))
+TURBINE_EXECUTABLES := $(patsubst %.c, %.x, $(TURBINE_EXECUTABLE_SRC))
 
 ### DEPENDENCIES
 
@@ -362,7 +364,7 @@ STATIC_LIB_DEPS = -lz -lpthread
 # Binary executables - link from .o
 # Link statically where possible by adding static libs explicitly
 # TODO: option to use dynamic if preferred
-$(TURBINE_EXECUTABLES): %: %.o ${STATIC_LIBS}
+$(TURBINE_EXECUTABLES): %.x: %.o ${STATIC_LIBS}
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(<) $(STATIC_LIBS) \
         $(MAC_FLAT) $(STATIC_LIB_DEPS) \
