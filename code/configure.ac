@@ -725,6 +725,34 @@ AC_ARG_ENABLE(dev,
     ENABLE_DEV=1)
 AC_SUBST(ENABLE_DEV)
 
+ENABLE_SHARED=1
+AC_ARG_ENABLE(shared,
+    AS_HELP_STRING([--enable-shared],
+                   [Builds shared libraries.
+                    Required to build dynamically loadable Tcl package.
+                    Default: enabled]),
+    [
+       if test "$enableval" = no ; then
+         ENABLE_SHARED=0
+       fi
+    ],
+    [
+    ])
+AC_SUBST(ENABLE_SHARED)
+
+ENABLE_STATIC=1
+AC_ARG_ENABLE(static,
+    AS_HELP_STRING([--enable-static],
+                   [Default: enabled]),
+    [
+       if test "$enableval" = no ; then
+         ENABLE_STATIC=0
+       fi
+    ],
+    [
+    ])
+AC_SUBST(ENABLE_STATIC)
+
 # We take system libraries out of arguments to the linker (#546)
 ldconfig -v 2>/dev/null | grep -vP '\t' | cut -d : -f 1 > system-libs.txt
 

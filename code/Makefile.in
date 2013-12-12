@@ -3,7 +3,14 @@ TURBINE_VERSION = @TURBINE_VERSION@
 
 PACKAGE = lib/pkgIndex.tcl
 
-all: package executables
+BUILD_ALL_TARGETS = libs executables
+
+ifeq ($(ENABLE_SHARED),1)
+# Shared libraries are required for tcl package
+  BUILD_ALL_TARGETS += package
+endif
+
+all: $(BUILD_ALL_TARGETS)
 
 turbine: $(TURBINE)
 
@@ -61,10 +68,22 @@ endif
 
 TCL_TURBINE_SO = lib/libtclturbine.$(SO_SUFFIX)
 
-# Used only for testing:
-TURBINE_A = lib/libturbine.a
+# Static library
+TCL_TURBINE_A = lib/libtclturbine.a
 
-tcl_turbine: $(TCL_TURBINE_SO)
+ENABLE_SHARED = @ENABLE_SHARED@
+ENABLE_STATIC = @ENABLE_STATIC@
+
+TCL_TURBINE_LIBS =
+ifeq ($(ENABLE_SHARED),1)
+  TCL_TURBINE_LIBS += $(TCL_TURBINE_SO)
+endif
+
+ifeq ($(ENABLE_STATIC),1)
+  TCL_TURBINE_LIBS += $(TCL_TURBINE_A)
+endif
+
+libs: $(TCL_TURBINE_LIBS)
 
 srcdir = @srcdir@
 
@@ -144,7 +163,9 @@ USE_R  = @USE_R@
 CFLAGS += $(STD)
 CFLAGS += -g
 CFLAGS += $(WARNS)
-CFLAGS += $(PIC)
+ifeq ($(ENABLE_SHARED),1)
+  CFLAGS += $(PIC)
+endif
 # This is referenced in lookup3.c - may want to drop this for speed
 CFLAGS += -D VALGRIND
 CFLAGS += -I $(C_UTILS)/include
@@ -231,6 +252,7 @@ TURBINE_SRC += $(TCL_TURBINE_SRC)
 TURBINE_OBJS = $(patsubst %.c, %.o, $(TURBINE_SRC))
 
 TURBINE_EXECUTABLE_OBJS = $(patsubst %.c, %.o, $(TURBINE_EXECUTABLE_SRC))
+TURBINE_EXECUTABLES := $(patsubst %.c, %, $(TURBINE_EXECUTABLE_SRC))
 
 ### DEPENDENCIES
 
@@ -297,12 +319,20 @@ TAGS: deps.txt
 ### LINK
 
 # This rule produces a false autoscan message on token 'install'
-$(TURBINE_A): $(TURBINE_OBJS)
+$(TCL_TURBINE_A): $(TURBINE_OBJS)
+ifeq ($(ENABLE_STATIC),0)
+	@echo "Static libraries were disabled, cannot build target!"
+	@exit 1
+endif
 	$(Q) "  AR		$(@)"
 	$(E) install -d lib
 	$(E) ar rcs $(@) $(TURBINE_OBJS)
 
 $(TCL_TURBINE_SO): $(TURBINE_OBJS)
+ifeq ($(ENABLE_SHARED),0)
+	@echo "Shared libraries were disabled, cannot build target!"
+	@exit 1
+endif
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(SHARED) $(LDFLAGS) -o $(@) \
              $(TURBINE_OBJS) \
@@ -312,21 +342,33 @@ $(TCL_TURBINE_SO): $(TURBINE_OBJS)
 
 ### LINK EXECUTABLES
 
-TURBINE_EXECUTABLES := $(patsubst %.c, , $(TURBINE_EXECUTABLE_SRC))
-
 executables: $(TURBINE_EXECUTABLES)
 
-$(TURBINE_EXECUTABLES) : %: %.c
-# Binary executables in the test suite
-$(TURBINE_EXECUTABLES): %: %.o install.txt
+# TODO: get configure to check if static libraries are present
+# List out static libs.  If A depends on B, A must come first.
+STATIC_LIBS =
+STATIC_LIBS += $(TCL_TURBINE_A)
+STATIC_LIBS += $(ADLB)/lib/libadlb.a
+STATIC_LIBS += $(C_UTILS)/lib/libexmcutils.a
+#TODO: Tcl doesn't provide static library by default
+#STATIC_LIBS += $(TCL_LIB_DIR)
+STATIC_LIBS += ${MPI_LIB_DIR}/libmpich.a
+STATIC_LIBS += ${MPI_LIB_DIR}/libmpl.a
+
+# Transitive shared library dependencies
+# TODO: more elegant solution
+STATIC_LIB_DEPS = -lz -lpthread
+
+# Binary executables - link from .o
+# Link statically where possible by adding static libs explicitly
+# TODO: option to use dynamic if preferred
+$(TURBINE_EXECUTABLES): %: %.o ${STATIC_LIBS}
 	$(Q) "  LINK		$(@)"
-	$(E) $(CC) $(<) \
-        $(MAC_FLAT) \
-	-L$(INSTALL_LIB) -ltclturbine \
+	$(E) $(CC) $(<) $(STATIC_LIBS) \
+        $(MAC_FLAT) $(STATIC_LIB_DEPS) \
 	$(LIBS) -L $(TCL_LIB_DIR) -l$(TCL_LIB_NAME) \
 	$(RPATHS) \
 	-o $(@)
-
 
 ### TESTS
 
