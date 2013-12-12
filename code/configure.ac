@@ -753,6 +753,12 @@ AC_ARG_ENABLE(static,
     ])
 AC_SUBST(ENABLE_STATIC)
 
+if [[ "$ENABLE_STATIC" = 1 ]]; then
+  # Need ar and ranlib to link
+  AC_CHECK_PROG(AR, ar, ar, AC_MSG_ERROR(Cannot find ar))
+  AC_PROG_RANLIB
+fi
+
 # We take system libraries out of arguments to the linker (#546)
 ldconfig -v 2>/dev/null | grep -vP '\t' | cut -d : -f 1 > system-libs.txt
 

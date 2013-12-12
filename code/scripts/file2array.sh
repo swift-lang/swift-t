@@ -10,6 +10,8 @@ fi
 infile=$1
 arrname=$2
 
+echo "#include <stddef.h>" # For size_t
+echo
 echo "const char $arrname[] = {"
 xxd -i < $infile
 echo "};"

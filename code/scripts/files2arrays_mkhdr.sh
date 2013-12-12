@@ -11,6 +11,9 @@ do
   count=$((count + 1))
 done
 
+echo "#include <stddef.h>" # For size_t
+echo
+
 # Print out header file
 for arrname in "${arrnames[@]}"
 do

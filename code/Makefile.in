@@ -122,6 +122,10 @@ ifeq ($(USE_XLC),1)
 	CFLAGS += -qpack_semantic=gnu
 endif
 
+AR      = @AR@
+ARFLAGS = cr
+RANLIB  = @RANLIB@
+
 C_UTILS = @USE_C_UTILS@
 
 TCL := @USE_TCL@
@@ -338,10 +342,11 @@ ifeq ($(ENABLE_STATIC),0)
 endif
 	$(Q) "  AR		$(@)"
 	$(E) install -d lib
-	$(E) ar rcs $(@) $(TURBINE_OBJS)
+	$(E) $(AR) $(ARFLAGS) $(@) $(TURBINE_OBJS)
+	$(E) $(RANLIB) $(@)
 
 $(TCL_TURBINE_SO): $(TURBINE_OBJS)
-ifeq ($(ENABLE_SHARED),0)
+ifeq ($(ENABLE_SHARED),0	)
 	@echo "Shared libraries were disabled, cannot build target!"
 	@exit 1
 endif
