@@ -2723,8 +2723,9 @@ static int extract_tcl_blob(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
 static int uncache_blob(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
                         adlb_datum_id id, bool *found_in_cache) {
-  void* blob = table_lp_remove(&blob_cache, id);
-  *found_in_cache = blob != NULL;
+  void* blob;
+  
+  *found_in_cache = table_lp_remove(&blob_cache, id, &blob);
   if (*found_in_cache)
   {
     free(blob);
@@ -3986,7 +3987,7 @@ ADLB_Xpt_Reload_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_Obj *stat_dict = Tcl_NewDictObj();
 
   Tcl_DictObjPut(interp, stat_dict, Tcl_NewStringObj("ranks", -1),
-                                     Tcl_NewIntObj(stats.ranks));
+                                     Tcl_NewWideIntObj(stats.ranks));
 
   Tcl_Obj *valid_key = Tcl_NewStringObj("valid", -1);
   Tcl_Obj *invalid_key = Tcl_NewStringObj("invalid", -1);

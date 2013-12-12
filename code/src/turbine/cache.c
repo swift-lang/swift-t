@@ -105,8 +105,9 @@ turbine_cache_retrieve(turbine_datum_id td,
   // then turbine_cache_check() will miss
 
   DEBUG_CACHE("retrieve: <%li>", td);
-  struct entry* e = table_lp_search(&entries, td);
-  if (e == NULL)
+  struct entry* e;
+  bool found = table_lp_search(&entries, td, (void**)&e);
+  if (!found)
     return TURBINE_ERROR_NOT_FOUND;
   *type   = e->type;
   *result = e->data;
@@ -208,7 +209,11 @@ cache_replace(turbine_datum_id td, turbine_type type,
   DEBUG_CACHE("cache_replace(): LRU victim: <%li>", e->td);
   // Remove the victim from cache data structures
   rbtree_remove_node(&lru, node);
-  table_lp_remove(&entries, e->td);
+
+  void *tmp;
+  table_lp_remove(&entries, e->td, &tmp);
+  assert(tmp == e);
+
   assert(e->length >= 0);
   memory += (unsigned long)e->length;
   free(e->data);
@@ -251,13 +256,11 @@ turbine_cache_finalize()
     // This process is not an engine/worker
     return;
   DEBUG_CACHE("finalize");
-  for (int i = 0; i < entries.capacity; i++)
-    for (struct list_lp_item* item = entries.array[i].head; item;
-        item = item->next)
-    {
-      struct entry* e = (struct entry*) item->data;
-      free(e->data);
-    }
+  TABLE_LP_FOREACH(&entries, item)
+  {
+    struct entry* e = (struct entry*) item->data;
+    free(e->data);
+  }
   table_lp_delete(&entries);
   table_lp_release(&entries);
   rbtree_clear(&lru);

@@ -725,6 +725,40 @@ AC_ARG_ENABLE(dev,
     ENABLE_DEV=1)
 AC_SUBST(ENABLE_DEV)
 
+ENABLE_SHARED=1
+AC_ARG_ENABLE(shared,
+    AS_HELP_STRING([--enable-shared],
+                   [Builds shared libraries.
+                    Required to build dynamically loadable Tcl package.
+                    Default: enabled]),
+    [
+       if test "$enableval" = no ; then
+         ENABLE_SHARED=0
+       fi
+    ],
+    [
+    ])
+AC_SUBST(ENABLE_SHARED)
+
+ENABLE_STATIC=0
+AC_ARG_ENABLE(static,
+    AS_HELP_STRING([--enable-static],
+                   [Default: disabled]),
+    [
+       if test "$enableval" = yes ; then
+         ENABLE_STATIC=1
+       fi
+    ],
+    [
+    ])
+AC_SUBST(ENABLE_STATIC)
+
+if [[ "$ENABLE_STATIC" = 1 ]]; then
+  # Need ar and ranlib to link
+  AC_CHECK_PROG(AR, ar, ar, AC_MSG_ERROR(Cannot find ar))
+  AC_PROG_RANLIB
+fi
+
 # We take system libraries out of arguments to the linker (#546)
 ldconfig -v 2>/dev/null | grep -vP '\t' | cut -d : -f 1 > system-libs.txt
 
@@ -740,7 +774,9 @@ AC_CONFIG_FILES(
         src/tcl/python/module.mk
         src/tcl/r/module.mk
         src/tcl/turbine/module.mk
+        src/executables/module.mk
         lib/module.mk
+        libstatic/module.mk
         scripts/submit/module.mk
         scripts/submit/cobalt/module.mk
         scripts/submit/cray/module.mk

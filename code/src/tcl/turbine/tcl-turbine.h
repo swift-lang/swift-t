@@ -23,4 +23,7 @@
 #define TCL_TURBINE_MAX_OUTPUTS  128
 #define TCL_TURBINE_READY_COUNT  1024
 
+int DLLEXPORT
+Tclturbine_Init(Tcl_Interp* interp);
+
 #endif

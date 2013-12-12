@@ -32,6 +32,7 @@ $(PACKAGE): lib/make-package.tcl $(TCL_TURBINE_SO) \
             $(TCL_SRC)
 	$(Q) "  TCL		$(@)"
 	$(E) TURBINE_VERSION=$(TURBINE_VERSION) \
-             USE_MPE=@USE_MPE@ \
+	     USE_MPE=@USE_MPE@ \
 	     USE_MAC=@USE_MAC@ \
              $(TCLSH_LOCAL) $(<) > lib/pkgIndex.tcl
+
