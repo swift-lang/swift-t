@@ -31,7 +31,7 @@
 #include "src/tcl/turbine/tcl-turbine.h"
 
 static void
-register_packages(Tcl_Interp *interp);
+register_packages(void);
 
 int
 main(int argc, char **argv)
@@ -68,7 +68,9 @@ main(int argc, char **argv)
   // Create Tcl interpreter:
   Tcl_Interp* interp = Tcl_CreateInterp();
   Tcl_Init(interp);
-  register_packages(interp);
+  
+  // Make packages available to all interpreters
+  register_packages();
 
   turbine_code rc;
   rc = turbine_run_interp(MPI_COMM_NULL, script, script_argc, script_argv,
@@ -89,12 +91,14 @@ main(int argc, char **argv)
   }
 }
 
+// Wrapper to initialize C module and tcl source files
 int
-__Tclturbine_Init(Tcl_Interp *interp)
+Tclturbine_InitStatic(Tcl_Interp *interp)
 {
-  fprintf(stderr, "Loading static package tclturbine\n");
+  //fprintf(stderr, "Callback to init static package tclturbine\n");
   int rc = Tclturbine_Init(interp);
-  fprintf(stderr, "Loaded static package tclturbine\n");
+  //fprintf(stderr, "Inited static package tclturbine\n");
+  // TODO: eval tcl source files
   return rc;
 }
 
@@ -102,10 +106,7 @@ __Tclturbine_Init(Tcl_Interp *interp)
   Register but do not initialize statically linked packages
  */
 static void
-register_packages(Tcl_Interp *interp)
+register_packages(void)
 {
-  /*
-    TODO: contrary to docs, init function never seems to be called
-   */
-  Tcl_StaticPackage(interp, "turbine", __Tclturbine_Init, __Tclturbine_Init);
+  Tcl_StaticPackage(NULL, "turbine", Tclturbine_InitStatic, Tclturbine_InitStatic);
 }

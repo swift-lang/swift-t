@@ -1,0 +1,10 @@
+
+DIR := libstatic
+
+# Builds the Turbine Tcl package
+$(PACKAGE_STATIC): $(DIR)/make-package.tcl $(TCL_TURBINE_A)
+	$(Q) "  TCL		$(@)"
+	$(E) TURBINE_VERSION=$(TURBINE_VERSION) \
+             USE_MPE=@USE_MPE@ \
+	     USE_MAC=@USE_MAC@ \
+             $(TCLSH_LOCAL) $(<) > libstatic/pkgIndex.tcl

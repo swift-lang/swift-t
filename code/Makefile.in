@@ -2,6 +2,7 @@
 TURBINE_VERSION = @TURBINE_VERSION@
 
 PACKAGE = lib/pkgIndex.tcl
+PACKAGE_STATIC = libstatic/pkgIndex.tcl
 
 BUILD_ALL_TARGETS = libs
 # BUILD_ALL_TARGETS = libs executables
@@ -11,11 +12,18 @@ ifeq ($(ENABLE_SHARED),1)
   BUILD_ALL_TARGETS += package
 endif
 
+ifeq ($(ENABLE_STATIC),1)
+# Shared libraries are required for tcl package
+  BUILD_ALL_TARGETS += package_static
+endif
+
 all: $(BUILD_ALL_TARGETS)
 
 turbine: $(TURBINE)
 
 package: $(PACKAGE)
+
+package_static: $(PACKAGE_STATIC)
 
 USE_MAC = @USE_MAC@
 
@@ -24,6 +32,7 @@ INSTALL_BIN     = $(INSTALL_PREFIX)/bin
 INSTALL_ETC     = $(INSTALL_PREFIX)/etc
 INSTALL_INCLUDE = $(INSTALL_PREFIX)/include
 INSTALL_LIB     = $(INSTALL_PREFIX)/lib
+INSTALL_LIBSTATIC = $(INSTALL_PREFIX)/libstatic
 INSTALL_SCRIPTS = $(INSTALL_PREFIX)/scripts
 INSTALL_EXPORT  = $(INSTALL_PREFIX)/export
 # The submit scripts are loaded from their respective module.mk files
@@ -75,7 +84,7 @@ TCL_TURBINE_A = lib/libtclturbine.a
 ENABLE_SHARED = @ENABLE_SHARED@
 ENABLE_STATIC = @ENABLE_STATIC@
 
-TCL_TURBINE_LIBS =
+TCL_TURBINE_LIBS :=
 ifeq ($(ENABLE_SHARED),1)
   TCL_TURBINE_LIBS += $(TCL_TURBINE_SO)
 endif
@@ -241,6 +250,7 @@ include src/tcl/python/module.mk
 include src/tcl/r/module.mk
 include src/tcl/turbine/module.mk
 include lib/module.mk
+include libstatic/module.mk
 include scripts/submit/module.mk
 include src/executables/module.mk
 
@@ -454,7 +464,7 @@ install: install.txt
 # Installed files:
 DIRECTORIES = $(INSTALL_PREFIX) $(INSTALL_BIN) $(INSTALL_ETC)     \
               $(INSTALL_EXPORT) $(INSTALL_INCLUDE) $(INSTALL_LIB) \
-	      $(INSTALL_SCRIPTS)
+	      $(INSTALL_LIBSTATIC) $(INSTALL_SCRIPTS)
 
 TURBINE_HEADERS = src/turbine/turbine.h      \
                   src/turbine/turbine-defs.h \
@@ -467,7 +477,7 @@ EXPORTS = $(shell ls export/*.swift )
 SCRIPTS = $(shell ls scripts/*.zsh scripts/*.sh scripts/*.tcl \
 	             $(SCRIPTS_SUBMIT) )
 
-install.txt: $(PACKAGE) $(BINS) $(EXPORTS) $(SCRIPTS)
+install.txt: $(PACKAGE) $(PACKAGE_STATIC) $(BINS) $(EXPORTS) $(SCRIPTS)
 #       Note: this is re-run if anything changes
 	@echo
 	$(Q) "  INSTALL		$(INSTALL_PREFIX)"
@@ -480,6 +490,7 @@ install.txt: $(PACKAGE) $(BINS) $(EXPORTS) $(SCRIPTS)
 	$(E) cp $(CP_ARGS) $(BINS)               $(INSTALL_BIN)
 	$(E) cp $(CP_ARGS) lib/*.tcl             $(INSTALL_LIB)
 	$(E) cp $(CP_ARGS) lib/*.$(SO_SUFFIX)    $(INSTALL_LIB)
+	$(E) cp $(CP_ARGS) libstatic/*.tcl       $(INSTALL_LIBSTATIC)
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(SCRIPTS) $(INSTALL_PREFIX)
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(EXPORTS) $(INSTALL_PREFIX)
 	$(E) cp $(CP_ARGS) $(TURBINE_HEADERS)    $(INSTALL_INCLUDE)
@@ -505,7 +516,7 @@ Makefile: configure.ac
 clean::
 	@echo
 	@echo "  CLEAN"
-	@rm -fv  $(PACKAGE) install.txt
+	@rm -fv  $(PACKAGE) $(PACKAGE_STATIC) install.txt
 	@rm -fv  $(TURBINE_A) $(TCL_TURBINE_SO)
 	@rm -fv  $(DEPS) $(TEST_DEPS) deps.txt deps_contents.txt TAGS
 	@rm -fv  $(TEST_BINS) $(TEST_OBJS) $(TEST_OUTPUT)

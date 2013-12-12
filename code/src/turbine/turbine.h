@@ -58,7 +58,8 @@ typedef struct {
 
 /**
    If the user parallel task is being released, this
-   will be set to the communicator to use.
+   
+   if (rc will be set to the communicator to use.
    If task is not parallel, this is MPI_COMM_SELF
 */
 extern MPI_Comm turbine_task_comm;
@@ -116,6 +117,12 @@ turbine_code turbine_pop(turbine_action_type* action_type,
                          char** action, int* priority, int* target,
                          int* parallelism);
 
+#define TURBINE_CODE_STRING_MAX 64
+
+/*
+  Convert code to string.
+  output: buffer of at least TURBINE_CODE_STRING_MAX bytes
+ */
 int turbine_code_tostring(char* output, turbine_code code);
 
 void turbine_finalize(void);

@@ -195,7 +195,7 @@ static inline adlb_subscript sub_convert(turbine_subscript sub)
 #define turbine_check_verbose_impl(code, file, line)    \
   { if (code != TURBINE_SUCCESS)                        \
     {                                                   \
-      char output[64];                                  \
+      char output[TURBINE_CODE_STRING_MAX];             \
       turbine_code_tostring(output, code);              \
       printf("turbine error: %s\n", output);            \
       printf("\t at: %s:%i\n", file, line);             \
@@ -972,7 +972,7 @@ progress(transform* T, bool* subscribed)
 
 /**
    @param output Should point to good storage for output,
-   at least 64 chars
+   at least TURBINE_CODE_STRING_MAX chars
    @return Number of characters written
 */
 int
