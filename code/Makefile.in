@@ -423,21 +423,23 @@ STATIC_LIBS += $(ADLB)/lib/libadlb.a
 STATIC_LIBS += $(C_UTILS)/lib/libexmcutils.a
 #TODO: Tcl doesn't provide static library by default
 #STATIC_LIBS += $(TCL_LIB_DIR)
+# TODO: support more than just Mpich
 STATIC_LIBS += ${MPI_LIB_DIR}/libmpich.a
 STATIC_LIBS += ${MPI_LIB_DIR}/libmpl.a
 
 # Transitive shared library dependencies
 # TODO: more elegant solution
-STATIC_LIB_DEPS = -lz -lpthread
+STATIC_LIB_DEPS = -lz -lpthread -lm -ldl
 
 # Binary executables - link from .o
 # Link statically where possible by adding static libs explicitly
 # TODO: option to use dynamic if preferred
 $(TURBINE_EXECUTABLES): %: %.o ${STATIC_LIBS} ${STATIC_PKG_RESOURCE_H}
 	$(Q) "  LINK		$(@)"
-	$(E) $(CC) $(<) $(STATIC_LIBS) \
-        $(MAC_FLAT) $(STATIC_LIB_DEPS) \
+	$(E) $(CC) $(<) $(STATIC_LIBS) $(LDFLAGS) \
+        $(MAC_FLAT) \
 	$(LIBS) -L $(TCL_LIB_DIR) -l$(TCL_LIB_NAME) \
+       	$(STATIC_LIB_DEPS) \
 	$(RPATHS) \
 	-o $(@)
 
