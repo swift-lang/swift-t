@@ -501,6 +501,36 @@ AC_ARG_WITH(tclsh-local,
     ],
     [])
 
+ENABLE_SHARED=1
+AC_ARG_ENABLE(shared,
+    AS_HELP_STRING([--enable-shared],
+                   [Builds shared libraries.
+                    Required to build dynamically loadable Tcl package.
+                    Default: enabled]),
+    [
+       if test "$enableval" = no ; then
+         ENABLE_SHARED=0
+       fi
+    ])
+AC_SUBST(ENABLE_SHARED)
+
+ENABLE_STATIC=0
+AC_ARG_ENABLE(static,
+    AS_HELP_STRING([--enable-static],
+                   [Default: disabled]),
+    [
+       if test "$enableval" = yes ; then
+         ENABLE_STATIC=1
+       fi
+    ])
+AC_SUBST(ENABLE_STATIC)
+
+if [[ "$ENABLE_STATIC" = 1 ]]; then
+  # Need ar and ranlib to link
+  AC_CHECK_PROG(AR, ar, ar, AC_MSG_ERROR(Cannot find ar))
+  AC_PROG_RANLIB
+fi
+
 # In order from most to least preferred
 TCL_VERSION_PREFS="8.6 8.5"
 
@@ -567,8 +597,18 @@ then
   TCL_VERSION_PREFS=${TCL_VERSION}
 fi
 
-USE_TCL_LIB_SO=
-USE_TCL_LIB_A=
+# Can always use static Tcl library
+TCL_LIB_SUFFIX_PREFS="a"
+if [[ ${ENABLE_SHARED} != 0 ]]
+then
+  # Can use shared library in this case
+  TCL_LIB_SUFFIX_PREFS="${SO_SUFFIX} ${TCL_LIB_SUFFIX_PREFS}"
+fi
+
+
+# Locate one or both variant of libtcl
+USE_LIBTCL_A=
+USE_LIBTCL_SO=
 
 # Check in order from most to least preferred
 for TCLVER in ${TCL_VERSION_PREFS}
@@ -580,24 +620,41 @@ do
   else
     LIB_DIR_OPTS="${USE_TCL_LIB_DIR}"
   fi
-  
-  for LIB_DIR in ${LIB_DIR_OPTS}
+ 
+  for TCL_LIB_SUFFIX in ${TCL_LIB_SUFFIX_PREFS}
   do
-    LIBTCL=libtcl${TCLVER}.${SO_SUFFIX}
-    AC_MSG_CHECKING([for Tcl library at ${LIB_DIR}/${LIBTCL}])
-    if [[ -r ${LIB_DIR}/${LIBTCL} ]]
-    then
-      AC_MSG_RESULT([exists!])
-      TCL_VERSION=${TCLVER}
-      USE_TCL_LIB_DIR=${LIB_DIR}
-      break 2
-    else
-      AC_MSG_RESULT([no])
-    fi
+    for LIB_DIR in ${LIB_DIR_OPTS}
+    do
+      LIBTCL_PREFIX=libtcl${TCLVER}
+      LIBTCL=${LIBTCL_PREFIX}.${TCL_LIB_SUFFIX}
+      AC_MSG_CHECKING([for Tcl library at ${LIB_DIR}/${LIBTCL}])
+      if [[ -r ${LIB_DIR}/${LIBTCL} ]]
+      then
+        AC_MSG_RESULT([exists!])
+        TCL_VERSION=${TCLVER}
+        USE_TCL_LIB_DIR=${LIB_DIR}
+
+        # We found the library - work out which variants are present
+        MAYBE_LIBTCL_SO="${LIB_DIR}/${LIBTCL_PREFIX}.${SO_SUFFIX}"
+        MAYBE_LIBTCL_A="${LIB_DIR}/${LIBTCL_PREFIX}.a"
+        echo $MAYBE_LIBTCL_SO $MAYBE_LIBTCL_A
+        if [[ -r "${MAYBE_LIBTCL_SO}" ]]
+        then
+          USE_LIBTCL_SO="${MAYBE_LIBTCL_SO}"
+        fi
+        if [[ -r "${MAYBE_LIBTCL_A}" ]]
+        then
+          USE_LIBTCL_A="${MAYBE_LIBTCL_A}"
+        fi
+        break 2
+      else
+        AC_MSG_RESULT([no])
+      fi
+    done
   done
 done
 
-if [[ ! -r ${USE_TCL_LIB_DIR}/${LIBTCL} ]]
+if [[ -z "${USE_LIBTCL_A}" -a -z "${USE_LIBTCL_SO}" ]]
 then
     AC_MSG_ERROR([could not find libtcl!])
 fi
@@ -671,12 +728,12 @@ AC_ARG_WITH(tcl-include,
 
 AC_SUBST(USE_TCL)
 AC_SUBST(USE_TCL_LIB_DIR)
+AC_SUBST(USE_LIBTCL_A)
+AC_SUBST(USE_LIBTCL_SO)
 AC_SUBST(USE_TCLSH)
 AC_SUBST(USE_TCLSH_LOCAL)
 AC_SUBST(TCL_INCLUDE_SPEC)
 AC_SUBST(TCL_LIB_SPEC)
-AC_SUBST(USE_TCL_LIB_SO)
-AC_SUBST(USE_TCL_LIB_A)
 
 DISABLE_LOG=0
 AC_ARG_ENABLE(log,
@@ -728,36 +785,6 @@ AC_ARG_ENABLE(dev,
                     Default: disabled]),
     ENABLE_DEV=1)
 AC_SUBST(ENABLE_DEV)
-
-ENABLE_SHARED=1
-AC_ARG_ENABLE(shared,
-    AS_HELP_STRING([--enable-shared],
-                   [Builds shared libraries.
-                    Required to build dynamically loadable Tcl package.
-                    Default: enabled]),
-    [
-       if test "$enableval" = no ; then
-         ENABLE_SHARED=0
-       fi
-    ])
-AC_SUBST(ENABLE_SHARED)
-
-ENABLE_STATIC=0
-AC_ARG_ENABLE(static,
-    AS_HELP_STRING([--enable-static],
-                   [Default: disabled]),
-    [
-       if test "$enableval" = yes ; then
-         ENABLE_STATIC=1
-       fi
-    ])
-AC_SUBST(ENABLE_STATIC)
-
-if [[ "$ENABLE_STATIC" = 1 ]]; then
-  # Need ar and ranlib to link
-  AC_CHECK_PROG(AR, ar, ar, AC_MSG_ERROR(Cannot find ar))
-  AC_PROG_RANLIB
-fi
 
 # We take system libraries out of arguments to the linker (#546)
 ldconfig -v 2>/dev/null | grep -vP '\t' | cut -d : -f 1 > system-libs.txt
