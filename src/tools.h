@@ -30,6 +30,14 @@
 #include <inttypes.h>
 #include <stdlib.h>
 
+// This only works in GCC:
+#ifdef __GNUC__
+/** Ease suppression of unused variable warnings */
+#define unused __attribute__ ((unused))
+#else
+#define unused
+#endif
+
 int array_length(void** array);
 
 #define append(string,  args...) \
