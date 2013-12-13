@@ -29,9 +29,6 @@ MAKE_PARALLELISM=2
 
 # Build options: uncomment to enable
 
-# Run auto-tools before each build
-RUN_AUTOTOOLS=1
-
 # Optimized build
 #EXM_OPT_BUILD=1
 
@@ -63,17 +60,27 @@ TURBINE_STATIC=0
 # Do full static build (default is dynamic)
 EXM_STATIC_BUILD=0
 
-# Update from SVN in each source directory
-SVN_UPDATE=${SVN_UPDATE:-0}
-
 # How to call Ant
 ANT=ant
+
+# Ant arguments for STC build
+STC_ANT_ARGS=""
+
+#+================================+
+#| Default build behavior         |
+#+================================+
+# These options control the default behavior of each build script, e.g.
+# the extent to which it does a rebuild from scratch. These variables are
+# overridden when you run other scripts like rebuild_all.sh.
+
+# Run auto-tools before each build
+RUN_AUTOTOOLS=${RUN_AUTOTOOLS:-1}
+
+# Update from SVN in each source directory
+SVN_UPDATE=${SVN_UPDATE:-0}
 
 # Do a "make clean" or "ant clean"
 MAKE_CLEAN=${MAKE_CLEAN:-1}
 
 # Run configure
 CONFIGURE=${CONFIGURE:-1}
-
-# Ant arguments for STC build
-STC_ANT_ARGS=""
