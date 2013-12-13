@@ -144,6 +144,8 @@ TCL_VERSION := @TCL_VERSION@
 TCLSH := @USE_TCLSH@
 TCL_LIB_DIR := @USE_TCL_LIB_DIR@
 TCL_LIB_NAME := tcl$(TCL_VERSION)
+TCL_LIB_SO := $(TCL_LIB_DIR)/lib$(TCL_LIB_NAME).$(SO_SUFFIX)
+TCL_LIB_A := $(TCL_LIB_DIR)/lib$(TCL_LIB_NAME).a
 TCLSH_LOCAL := @USE_TCLSH_LOCAL@
 
 MACHINE = @USE_MACHINE@
@@ -431,15 +433,29 @@ STATIC_LIBS += ${MPI_LIB_DIR}/libmpl.a
 # TODO: more elegant solution
 STATIC_LIB_DEPS = -lz -lpthread -lm -ldl
 
+# Extract list of symbols provided by Tcl library and converts them
+# to the format expected by ld's dynamic-list option.
+# Note that 
+# TODO: unused
+TCL_API_SYMBOLS := libtcl_symbols.txt
+TCL_API_SYMBOLS_LD := libtcl_symbols_ld.txt
+$(TCL_API_SYMBOLS) : $(TCL_LIB_A)
+	nm -g -A --defined-only $(TCL_LIB_A) | \
+	  cut -d " " -f 3 > $(TCL_API_SYMBOLS)
+
+$(TCL_API_SYMBOLS_LD) : $(TCL_API_SYMBOLS)
+	@echo "{" > $(@)
+	$(E) awk '{ print $$1 ";" }' < $(TCL_API_SYMBOLS) >> $(@)
+	@echo "};" >> $(@)
+
 # Export Tcl API symbols to link with dynamically loaded modules.
 # Needed to support dynamically loading Tcl modules from our binary
-# TODO: more selective export, it currently re-exports everything
-LD_TCL_SYMBOL_EXPORT = -Wl,--export-dynamic
+LD_TCL_SYMBOL_EXPORT = -Wl,--export-dynamic -Wl,--dynamic-list=$(TCL_API_SYMBOLS_LD)
 
 # Binary executables - link from .o
 # Link statically where possible by adding static libs explicitly
 # TODO: option to use dynamic if preferred
-$(TURBINE_EXECUTABLES): %: %.o ${STATIC_LIBS} ${STATIC_PKG_RESOURCE_H}
+$(TURBINE_EXECUTABLES): %: %.o ${STATIC_LIBS} ${STATIC_PKG_RESOURCE_H} $(TCL_API_SYMBOLS_LD)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(<) $(STATIC_LIBS) $(LDFLAGS) $(LD_TCL_SYMBOL_EXPORT) \
         $(MAC_FLAT) \
