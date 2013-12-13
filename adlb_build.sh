@@ -6,8 +6,14 @@ THISDIR=`dirname $0`
 source ${THISDIR}/build-vars.sh
 
 export CC=mpicc
-if [ -f Makefile ]; then
+if (( MAKE_CLEAN )); then
+  if [ -f Makefile ]; then
     make clean
+  fi
+fi
+
+if (( SVN_UPDATE )); then
+  svn update
 fi
 
 if (( SKIP_AUTOTOOLS )); then
@@ -52,8 +58,12 @@ if [[ ! -z "$EXM_DEV" && "$EXM_DEV" != 0 ]]; then
   EXTRA_ARGS+=" --enable-dev"
 fi
 
-./configure --with-c-utils=${C_UTILS_INST} \
-            --prefix=${LB_INST} ${EXTRA_ARGS}
-make clean
+if (( CONFIGURE )); then
+  ./configure --with-c-utils=${C_UTILS_INST} \
+              --prefix=${LB_INST} ${EXTRA_ARGS}
+fi
+if (( MAKE_CLEAN )); then
+  make clean
+fi
 make -j ${MAKE_PARALLELISM}
 make install

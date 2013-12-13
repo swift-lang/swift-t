@@ -5,10 +5,16 @@ set -x
 THISDIR=`dirname $0`
 source ${THISDIR}/build-vars.sh
 
-set -e
-if [ -f Makefile ]; then
+if (( MAKE_CLEAN )); then
+  if [ -f Makefile ]; then
     make clean
+  fi
 fi
+
+if (( SVN_UPDATE )); then
+  svn update
+fi
+
 EXTRA_ARGS=
 if (( EXM_OPT_BUILD )); then
     EXTRA_ARGS+="--enable-fast"
@@ -20,7 +26,7 @@ if (( ! SKIP_AUTOTOOLS )); then
 fi
 
 if (( EXM_DEBUG_BUILD )); then
-   export CFLAGS="-g -O0" 
+   export CFLAGS="-g -O0"
 fi
 
 if (( EXM_CRAY )); then
@@ -32,6 +38,8 @@ if (( EXM_CRAY )); then
   export CFLAGS="-g -O2"
 fi
 
-./configure --enable-shared --prefix=${C_UTILS_INST} ${EXTRA_ARGS}
+if (( CONFIGURE )); then
+  ./configure --enable-shared --prefix=${C_UTILS_INST} ${EXTRA_ARGS}
+fi
 make -j ${MAKE_PARALLELISM}
 make install

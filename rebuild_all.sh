@@ -21,10 +21,16 @@ if [ ! -z "$ENABLE_MPE" ]; then
 fi
 
 cd ${LB}
-${DEV_DIR}/adlb_build.sh 
+${DEV_DIR}/adlb_build.sh
 
 cd ${TURBINE}
 ${DEV_DIR}/turbine-build.sh
 
 cd ${STC}
-ant clean && ant
+if (( SVN_UPDATE )); then
+  svn update
+fi
+if (( MAKE_CLEAN )); then
+  ant clean
+fi
+ant ${STC_ANT_ARGS}

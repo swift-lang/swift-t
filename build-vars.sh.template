@@ -59,3 +59,18 @@ TURBINE_STATIC=0
 
 # Do full static build (default is dynamic)
 EXM_STATIC_BUILD=0
+
+# Update from SVN in each source directory
+SVN_UPDATE=${SVN_UPDATE:-0}
+
+# Do a "make clean" or "ant clean"
+MAKE_CLEAN=${MAKE_CLEAN:-1}
+
+# Run configure
+CONFIGURE=${CONFIGURE:-1}
+
+# How to call Ant
+ANT=ant
+
+# Ant arguments for STC build
+STC_ANT_ARGS=""

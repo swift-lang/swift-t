@@ -11,6 +11,10 @@ if [ -f Makefile ]; then
     :
 fi
 
+if (( SVN_UPDATE )); then
+  svn update
+fi
+
 if [ -z "$SKIP_AUTOTOOLS" ]; then
   rm -rf ./config.status ./autom4te.cache
   ./setup.sh
@@ -62,16 +66,20 @@ if (( TURBINE_STATIC )); then
   EXTRA_ARGS+=" --enable-static"
 fi
 
-./configure --with-adlb=${LB_INST} \
-            ${CRAY_ARGS} \
-            --with-mpi=${MPICH_INST} \
-            --with-tcl=${TCL_INST} \
-            --with-c-utils=${C_UTILS_INST} \
-            --prefix=${TURBINE_INST} \
-            ${EXTRA_ARGS}
-#            --disable-log
+if (( CONFIGURE )); then
+  ./configure --with-adlb=${LB_INST} \
+              ${CRAY_ARGS} \
+              --with-mpi=${MPICH_INST} \
+              --with-tcl=${TCL_INST} \
+              --with-c-utils=${C_UTILS_INST} \
+              --prefix=${TURBINE_INST} \
+              ${EXTRA_ARGS}
+#             --disable-log
+fi
 
-make clean
+if (( MAKE_CLEAN )); then
+  make clean
+fi
 make -j ${MAKE_PARALLELISM}
 make install
 #make test_results
