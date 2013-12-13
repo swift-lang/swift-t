@@ -80,7 +80,12 @@ turbine_run_interp(MPI_Comm comm, char* script_file,
 
   // Read the user script
   char* script = slurp(script_file);
-  
+ 
+  if (script == NULL)
+  {
+    printf("turbine_run(): Could not load script: %s\n", script_file);
+    return TURBINE_ERROR_INVALID;
+  }
   // Run the user script
   int rc = Tcl_Eval(interp, script);
 
