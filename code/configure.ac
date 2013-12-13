@@ -735,8 +735,6 @@ AC_ARG_ENABLE(shared,
        if test "$enableval" = no ; then
          ENABLE_SHARED=0
        fi
-    ],
-    [
     ])
 AC_SUBST(ENABLE_SHARED)
 
@@ -748,8 +746,6 @@ AC_ARG_ENABLE(static,
        if test "$enableval" = yes ; then
          ENABLE_STATIC=1
        fi
-    ],
-    [
     ])
 AC_SUBST(ENABLE_STATIC)
 
