@@ -1,3 +1,6 @@
+# Shared variables that control behaviour of build scripts 
+# Module build scripts, including fast-build.sh, rebuild_all.sh, etc
+
 THISDIR=`dirname $0`
 DEV_DIR=`cd ${THISDIR}; pwd`
 
@@ -26,8 +29,8 @@ MAKE_PARALLELISM=2
 
 # Build options: uncomment to enable
 
-# Skip auto-tools (use existing configure script)
-#SKIP_AUTOTOOLS=1
+# Run auto-tools before each build
+RUN_AUTOTOOLS=1
 
 # Optimized build
 #EXM_OPT_BUILD=1
@@ -63,14 +66,14 @@ EXM_STATIC_BUILD=0
 # Update from SVN in each source directory
 SVN_UPDATE=${SVN_UPDATE:-0}
 
+# How to call Ant
+ANT=ant
+
 # Do a "make clean" or "ant clean"
 MAKE_CLEAN=${MAKE_CLEAN:-1}
 
 # Run configure
 CONFIGURE=${CONFIGURE:-1}
-
-# How to call Ant
-ANT=ant
 
 # Ant arguments for STC build
 STC_ANT_ARGS=""

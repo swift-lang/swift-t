@@ -16,7 +16,7 @@ if (( SVN_UPDATE )); then
   svn update
 fi
 
-if (( SKIP_AUTOTOOLS )); then
+if (( RUN_AUTOTOOLS )); then
   rm -rf ./config.status ./autom4te.cache
   ./setup.sh
 fi

@@ -20,7 +20,7 @@ if (( EXM_OPT_BUILD )); then
     EXTRA_ARGS+="--enable-fast"
 fi
 
-if (( ! SKIP_AUTOTOOLS )); then
+if (( RUN_AUTOTOOLS )); then
   rm -rf ./config.status ./autom4te.cache
   ./setup.sh
 fi

@@ -12,29 +12,10 @@ if [ ! -f ${BUILDVARS} ] ; then
 fi
 source ${BUILDVARS}
 
+# Override build behaviour
+export RUN_AUTOTOOLS=0
+export CONFIGURE=0
+export MAKE_CLEAN=0
+export SVN_UPDATE=0
 
-cd ${C_UTILS}
-echo
-echo "Building c-utils"
-echo "================"
-make && make install
-
-cd ${LB}
-echo
-echo "Building lb"
-echo "================"
-make -j ${MAKE_PARALLELISM}
-make install
-
-cd ${TURBINE}
-echo
-echo "Building Turbine"
-echo "================"
-make -j ${MAKE_PARALLELISM}
-make install
-
-cd ${STC}
-echo
-echo "Building STC"
-echo "================"
-ant
+source ${THISDIR}/build-all.sh
