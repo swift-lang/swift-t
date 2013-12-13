@@ -29,6 +29,10 @@ if (( EXM_DEBUG_BUILD )); then
    export CFLAGS="-g -O0"
 fi
 
+if (( EXM_STATIC_BUILD )); then
+  EXTRA_ARGS+=" --disable-shared"
+fi
+
 if (( EXM_CRAY )); then
   if (( EXM_STATIC_BUILD )); then
     export CC=cc

@@ -29,17 +29,18 @@ if (( ENABLE_MPE )); then
     EXTRA_ARGS+=" --with-mpe"
 fi
 
+if (( EXM_STATIC_BUILD )); then
+  EXTRA_ARGS+=" --disable-shared"
+  # Have to enable turbine static consequentially
+  TURBINE_STATIC=1
+fi
+
 if (( EXM_CRAY )); then
   if (( EXM_STATIC_BUILD )); then
     export CC=cc
     EXTRA_ARGS+=" --enable-custom-mpi"
     # Force static to make sure all dependencies are picked up
-    export LDFLAGS="-static"
-    # Can't build shared object with static flag
-    EXTRA_ARGS+=" --disable-shared"
-
-    # Have to enable turbine static consequentially
-    TURBINE_STATIC=1
+    #export LDFLAGS="-static"
   else
     export CC=gcc
   fi

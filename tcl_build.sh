@@ -18,10 +18,17 @@ fi
 if (( EXM_CRAY && EXM_STATIC_BUILD )); then
   # Setup C compiler for static buildon cray
   export CC=cc
-  export LDFLAGS="-static"
+
+  # TODO: can't do full static build yet since tcl wants to --export-dynamic
+  #export LDFLAGS="-static"
 fi
 
 cd unix
+
+if [ -f Makefile ]; then
+  make distclean
+fi
+
 ./configure --prefix=${TCL_INST} ${EXTRA_ARGS}
 make -j ${MAKE_PARALLELISM}
 make install
