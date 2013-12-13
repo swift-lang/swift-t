@@ -82,16 +82,19 @@ else
 	SHARED = -dynamiclib $(MAC_FLAT)
 endif
 
-TCL_TURBINE_SO = lib/libtclturbine.$(SO_SUFFIX)
+TCL_TURBINE_LIB := tclturbine
+TCL_TURBINE_SO = lib/lib$(TCL_TURBINE_LIB).$(SO_SUFFIX)
 
 # Static library
-TCL_TURBINE_A = lib/libtclturbine.a
+TCL_TURBINE_A = lib/lib$(TCL_TURBINE_LIB).a
 
 # Static library for static-linking specific functions
-STATIC_PKG_A := lib/libtclturbinestatic.a
+STATIC_PKG_LIB := tclturbinestatic
+STATIC_PKG_A := lib/lib$(STATIC_PKG_LIB).a
 
 # Static library for resources like Tcl source
-STATIC_PKG_RESOURCE_A := lib/libtclturbineres.a
+STATIC_PKG_RESOURCE_LIB := tclturbinestaticres
+STATIC_PKG_RESOURCE_A := lib/lib$(STATIC_PKG_RESOURCE_LIB).a
 
 TCL_TURBINE_LIBS :=
 ifeq ($(ENABLE_SHARED),1)
@@ -417,50 +420,40 @@ executables: $(TURBINE_EXECUTABLES)
 
 # TODO: get configure to check if static libraries are present
 # List out static libs.  If A depends on B, A must come first.
-STATIC_LIBS =
+# These are provided to linker first, so take precedence over
+# any dynamic versions of the libraries that may also be mentioned
+STATIC_LIBS :=
 STATIC_LIBS += $(STATIC_PKG_A)
-STATIC_LIBS += $(TCL_TURBINE_A)
 STATIC_LIBS += $(STATIC_PKG_RESOURCE_A)
+STATIC_LIBS += $(TCL_TURBINE_A)
 STATIC_LIBS += $(ADLB)/lib/libadlb.a
 STATIC_LIBS += $(C_UTILS)/lib/libexmcutils.a
-#TODO: Tcl doesn't provide static library by default
-#STATIC_LIBS += $(TCL_LIB_DIR)
+STATIC_LIBS += $(TCL_LIB_A)
 # TODO: support more than just Mpich
 STATIC_LIBS += ${MPI_LIB_DIR}/libmpich.a
 STATIC_LIBS += ${MPI_LIB_DIR}/libmpl.a
 
 # Transitive shared library dependencies
 # TODO: more elegant solution
-STATIC_LIB_DEPS = -lz -lpthread -lm -ldl
-
-# Extract list of symbols provided by Tcl library and converts them
-# to the format expected by ld's dynamic-list option.
-# Note that 
-# TODO: unused
-TCL_API_SYMBOLS := libtcl_symbols.txt
-TCL_API_SYMBOLS_LD := libtcl_symbols_ld.txt
-$(TCL_API_SYMBOLS) : $(TCL_LIB_A)
-	nm -g -A --defined-only $(TCL_LIB_A) | \
-	  cut -d " " -f 3 > $(TCL_API_SYMBOLS)
-
-$(TCL_API_SYMBOLS_LD) : $(TCL_API_SYMBOLS)
-	@echo "{" > $(@)
-	$(E) awk '{ print $$1 ";" }' < $(TCL_API_SYMBOLS) >> $(@)
-	@echo "};" >> $(@)
+STATIC_LIB_SHARED_DEPS = -lpthread -ldl -lm
+STATIC_LIB_STATIC_DEPS = -lz 
 
 # Export Tcl API symbols to link with dynamically loaded modules.
 # Needed to support dynamically loading Tcl modules from our binary
-LD_TCL_SYMBOL_EXPORT = -Wl,--export-dynamic -Wl,--dynamic-list=$(TCL_API_SYMBOLS_LD)
+# NOTE: can prevent symbols being re-exported from libraries, e.g. 
+#	-Wl,--exclude-libs,c
+LD_EXEC_SYMBOL_EXPORT = -Wl,--export-dynamic
 
 # Binary executables - link from .o
-# Link statically where possible by adding static libs explicitly
-# TODO: option to use dynamic if preferred
+# Currently builds a dynamically linked executable 
+# Link statically where possible by adding static libs explicitly.
+#   Static libs must be compiled with -fPIC or -fPIE
 $(TURBINE_EXECUTABLES): %: %.o ${STATIC_LIBS} ${STATIC_PKG_RESOURCE_H} $(TCL_API_SYMBOLS_LD)
 	$(Q) "  LINK		$(@)"
-	$(E) $(CC) $(<) $(STATIC_LIBS) $(LDFLAGS) $(LD_TCL_SYMBOL_EXPORT) \
+	$(E) $(CC) $(<) $(LDFLAGS) $(LD_EXEC_SYMBOL_EXPORT) $(STATIC_LIBS) \
+	-Wl,-Bstatic $(STATIC_LIB_STATIC_DEPS) -Wl,-Bdynamic $(STATIC_LIB_SHARED_DEPS) \
         $(MAC_FLAT) \
-	$(LIBS) -L $(TCL_LIB_DIR) -l$(TCL_LIB_NAME) \
-       	$(STATIC_LIB_DEPS) \
+	$(LIBS) \
 	$(RPATHS) \
 	-o $(@)
 
