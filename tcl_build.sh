@@ -22,6 +22,6 @@ if (( EXM_CRAY && EXM_STATIC_BUILD )); then
 fi
 
 cd unix
-./configure --prefix=${TCL_INST} 
+./configure --prefix=${TCL_INST} ${EXTRA_ARGS}
 make -j ${MAKE_PARALLELISM}
 make install
