@@ -14,4 +14,4 @@ export RUN_AUTOTOOLS=1
 export CONFIGURE=1
 export MAKE_CLEAN=1
 
-source ${THISDIR}/build-all.sh
+source ${THISDIR}/internal-build-all.sh

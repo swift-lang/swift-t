@@ -18,4 +18,4 @@ export CONFIGURE=0
 export MAKE_CLEAN=0
 export SVN_UPDATE=0
 
-source ${THISDIR}/build-all.sh
+source ${THISDIR}/internal-build-all.sh
