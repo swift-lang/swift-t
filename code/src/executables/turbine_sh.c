@@ -23,7 +23,6 @@
 
 
 #include <mpi.h>
-#include <tcl.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -41,39 +40,20 @@ main(int argc, char **argv)
   }
   
   // Get script from first argument
-  char *script = argv[1];
+  char *script_file = argv[1];
 
-  int script_argc = argc - 1;
-  char **script_argv = malloc(sizeof(char*) * (size_t)script_argc);
-  if (script_argv == NULL)
+  // Pass remaining arguments minus script to turbine_run
+  for (int i = 1; i < argc - 1; i++)
   {
-    fprintf(stderr, "Error allocating memory\n");
-    return 1;
+    argv[i] = argv[i+1];
   }
-  for (int i = 0; i < script_argc; i++)
-  {
-    if (i == 0)
-    {
-      script_argv[i] = argv[0];
-    }
-    else
-    {
-      // Skip script name
-      script_argv[i] = argv[i + 1];
-    }
-  }
+  argc--;
 
-  // Create Tcl interpreter:
-  Tcl_Interp* interp = Tcl_CreateInterp();
-  Tcl_Init(interp);
-  
   // Make packages available to all interpreters
   register_tcl_turbine_static_pkg();
 
   turbine_code rc;
-  rc = turbine_run_interp(MPI_COMM_NULL, script, script_argc, script_argv,
-                          NULL, interp);
-  free(script_argv);
+  rc = turbine_run(MPI_COMM_NULL, script_file, argc, argv, NULL);
 
   if (rc == TURBINE_SUCCESS)
   {
@@ -83,8 +63,8 @@ main(int argc, char **argv)
   {
     char code_name[64];
     turbine_code_tostring(code_name, rc);
-    fprintf(stderr, "Error executing script %s: turbine error %s (%i)\n",
-                script, code_name, rc);
+    fprintf(stderr, "Error executing script file %s: turbine error "
+                    "%s (%i)\n", script_file, code_name, rc);
     return 2;
   }
 }
