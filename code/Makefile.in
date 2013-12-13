@@ -219,7 +219,9 @@ endif
 LIBS += $(MPI_LIB)
 ifeq ($(HAVE_PYTHON),1)
 	ifneq ($(USE_PYTHON_LIBDIR),0)
-		LIBS += -L$(USE_PYTHON_LIBDIR)
+		ifneq ($(USE_PYTHON_LIBDIR),)
+			LIBS += -L$(USE_PYTHON_LIBDIR)
+		endif
 	endif
 	LIBS += -l$(USE_PYTHON_NAME)
 endif
@@ -254,7 +256,7 @@ DIR :=
 TURBINE_SRC :=
 TCL_TURBINE_SRC :=
 STATIC_PKG_SRC :=
-TURBINE_EXECUTABLE_SRC := 
+TURBINE_EXECUTABLE_SRC :=
 include src/turbine/module.mk
 include src/util/module.mk
 include src/tcl/module.mk
