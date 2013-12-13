@@ -10,36 +10,41 @@ if [ -f Makefile ]; then
     make clean
 fi
 
-if [ -z "$SKIP_AUTOTOOLS" ]; then
+if (( SKIP_AUTOTOOLS )); then
   rm -rf ./config.status ./autom4te.cache
   ./setup.sh
 fi
 
 EXTRA_ARGS=
-if [ ! -z "$EXM_OPT_BUILD" ]; then
+if (( EXM_OPT_BUILD )); then
     EXTRA_ARGS+="--enable-fast "
 fi
 
-if [ ! -z "$EXM_DEBUG_BUILD" ]; then
+if (( EXM_DEBUG_BUILD )); then
     EXTRA_ARGS+="--enable-log-debug "
 fi
 
-if [ ! -z "$EXM_TRACE_BUILD" ]; then
+if (( EXM_TRACE_BUILD )); then
     EXTRA_ARGS+="--enable-log-trace "
 fi
 
-if [ ! -z "$ENABLE_MPE" ]; then
+if (( ENABLE_MPE )); then
     EXTRA_ARGS+="--with-mpe=${MPE_INST} "
 fi
 
-if [ ! -z "$EXM_CRAY" ]; then
+if (( EXM_CRAY )); then
+  if (( EXM_STATIC_BUILD )); then
+    export CC="cc"
+    export CFLAGS="-g -O2"
+  else
     export CC="gcc"
     export CFLAGS="-g -O2 -I${MPICH_INST}/include"
     export LDFLAGS="-L${MPICH_INST}/lib -lmpich"
-    EXTRA_ARGS+=" --enable-mpi-2"
+  fi
+  EXTRA_ARGS+=" --enable-mpi-2"
 fi
 
-if [ ! -z "$DISABLE_XPT" ]; then
+if (( DISABLE_XPT )); then
     EXTRA_ARGS+=" --enable-checkpoint=no"
 fi
 

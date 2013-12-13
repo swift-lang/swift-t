@@ -17,37 +17,48 @@ if [ -z "$SKIP_AUTOTOOLS" ]; then
 fi
 
 EXTRA_ARGS=
-if [ ! -z "$EXM_OPT_BUILD" ]; then
+if (( EXM_OPT_BUILD )); then
     EXTRA_ARGS+=" --enable-fast"
 fi
 
-if [ ! -z "$ENABLE_MPE" ]; then
+if (( ENABLE_MPE )); then
     EXTRA_ARGS+=" --with-mpe"
 fi
 
-if [ ! -z "$EXM_CRAY" ] ; then
-    export CC=gcc
-    export CFLAGS="-g -O2"
+if (( EXM_CRAY )); then
+  if (( EXM_STATIC_BUILD )); then
+    export CC=cc
     EXTRA_ARGS+=" --enable-custom-mpi"
+    # Force static to make sure all dependencies are picked up
+    export LDFLAGS="-static"
+    # Can't build shared object with static flag
+    EXTRA_ARGS+=" --disable-shared"
+
+    # Have to enable turbine static consequentially
+    TURBINE_STATIC=1
+  else
+    export CC=gcc
+  fi
+  EXTRA_ARGS+=" --enable-custom-mpi"
 fi
 
-if [ ! -z "$WITH_PYTHON" ] ; then
+if (( WITH_PYTHON )); then
   EXTRA_ARGS+=" --enable-python --with-python=${WITH_PYTHON}"
 fi
 
-if [ ! -z "$TCL_VERSION" ] ; then
+if (( TCL_VERSION )); then
   EXTRA_ARGS+=" --with-tcl-version=$TCL_VERSION"
 fi
 
-if [ ! -z "$DISABLE_XPT" ]; then
+if (( DISABLE_XPT )); then
     EXTRA_ARGS+=" --enable-checkpoint=no"
 fi
 
-if [[ ! -z "$EXM_DEV" && "$EXM_DEV" != 0 ]]; then
+if (( EXM_DEV )); then
   EXTRA_ARGS+=" --enable-dev"
 fi
 
-if [[ ! -z "$TURBINE_STATIC" && "$TURBINE_STATIC" != 0 ]]; then
+if (( TURBINE_STATIC )); then
   EXTRA_ARGS+=" --enable-static"
 fi
 

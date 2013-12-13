@@ -9,9 +9,16 @@ set -x
 THISDIR=`dirname $0`
 source ${THISDIR}/build-vars.sh
 
-if [ ! -z "$EXM_CRAY" ]; then
-    export CC=cc
-    export CFLAGS="-dynamic -g -O2"
+EXTRA_ARGS=""
+
+if (( EXM_STATIC_BUILD )); then
+  EXTRA_ARGS+=" --disable-shared"
+fi
+
+if (( EXM_CRAY && EXM_STATIC_BUILD )); then
+  # Setup C compiler for static buildon cray
+  export CC=cc
+  export LDFLAGS="-static"
 fi
 
 cd unix

@@ -7,11 +7,11 @@ source ${THISDIR}/build-vars.sh
 
 CONF_FLAGS=
 
-if [ ! -z "$MPICH2_SOCK" ]; then
+if (( MPICH2_SOCK )); then
   CONF_FLAGS+=" --with-device=ch3:sock"
 fi
 
-if [ -z "$ENABLE_FORTRAN" ]; then
+if (( ENABLE_FORTRAN )) then
   CONF_FLAGS+=" --disable-f77 --disable-fc"
 fi
 

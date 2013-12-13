@@ -10,22 +10,26 @@ if [ -f Makefile ]; then
     make clean
 fi
 EXTRA_ARGS=
-if [ ! -z "$EXM_OPT_BUILD" ]; then
+if (( EXM_OPT_BUILD )); then
     EXTRA_ARGS+="--enable-fast"
 fi
 
-if [ -z "$SKIP_AUTOTOOLS" ]; then
+if (( ! SKIP_AUTOTOOLS )); then
   rm -rf ./config.status ./autom4te.cache
   ./setup.sh
 fi
 
-if [ ! -z "$EXM_DEBUG_BUILD" ]; then
+if (( EXM_DEBUG_BUILD )); then
    export CFLAGS="-g -O0" 
 fi
 
-if [ ! -z "$EXM_CRAY" ] ; then
+if (( EXM_CRAY )); then
+  if (( EXM_STATIC_BUILD )); then
+    export CC=cc
+  else
     export CC=gcc
-    export CFLAGS="-g -O2"
+  fi
+  export CFLAGS="-g -O2"
 fi
 
 ./configure --enable-shared --prefix=${C_UTILS_INST} ${EXTRA_ARGS}

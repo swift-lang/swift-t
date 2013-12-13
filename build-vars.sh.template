@@ -38,7 +38,8 @@ MAKE_PARALLELISM=2
 # ENable MPE
 #ENABLE_MPE=1
 
-# Cray systems
+# Cray systems.  Will perform a dynamic or static build depending on
+# EXM_BUILD_STATIC
 #EXM_CRAY=1
 
 # Enable python
@@ -55,3 +56,6 @@ TCL_VERSION=8.6
 
 # Enable Turbine static linking
 TURBINE_STATIC=0
+
+# Do full static build (default is dynamic)
+EXM_STATIC_BUILD=0
