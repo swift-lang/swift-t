@@ -235,6 +235,20 @@ ifeq ($(HAVE_R),1)
 	LIBS += -L$(R_LIB) -lR
 endif
 
+# Transitive shared library dependencies, e.g. if we link against libtcl*.a
+# TODO: more elegant solution
+TRANSITIVE_LIB_DEPS_SHARED := -lpthread -ldl -lm
+# Static dependencies are those where we generally can use the static
+# library version even when dynamically linking a binary
+TRANSITIVE_LIB_DEPS_STATIC := -lz 
+TRANSITIVE_LIB_DEPS := $(TRANSITIVE_LIB_DEPS_SHARED) \
+		       $(TRANSITIVE_LIB_DEPS_STATIC)
+
+# If we are using libtcl*.a, need to always include these libraries
+ifeq ($(strip $(TCL_LIB_SO)),)
+	LIBS += $(TRANSITIVE_LIB_DEPS)
+endif
+
 dirname = $(patsubst %/,%,$(dir $(1)))
 
 RPATHS :=
@@ -431,15 +445,14 @@ STATIC_LIBS += $(C_UTILS)/lib/libexmcutils.a
 ifneq ($(strip $(TCL_LIB_A)),)
 	STATIC_LIBS += $(TCL_LIB_A)
 endif
-
 # TODO: support more than just Mpich
 STATIC_LIBS += ${MPI_LIB_DIR}/libmpich.a
 STATIC_LIBS += ${MPI_LIB_DIR}/libmpl.a
 
 # Transitive shared library dependencies
 # TODO: more elegant solution
-STATIC_LIB_SHARED_DEPS = -lpthread -ldl -lm
-STATIC_LIB_STATIC_DEPS = -lz 
+TRANSITIVE_LIB_DEPS_SHARED = -lpthread -ldl -lm
+TRANSITIVE_LIB_DEPS_STATIC = -lz 
 
 # Export Tcl API symbols to link with dynamically loaded modules.
 # Needed to support dynamically loading Tcl modules from our binary
@@ -454,7 +467,8 @@ LD_EXEC_SYMBOL_EXPORT = -Wl,--export-dynamic
 $(TURBINE_EXECUTABLES): %: %.o ${STATIC_LIBS} ${STATIC_PKG_RESOURCE_H} $(TCL_API_SYMBOLS_LD)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(<) $(LDFLAGS) $(LD_EXEC_SYMBOL_EXPORT) $(STATIC_LIBS) \
-	-Wl,-Bstatic $(STATIC_LIB_STATIC_DEPS) -Wl,-Bdynamic $(STATIC_LIB_SHARED_DEPS) \
+	-Wl,-Bstatic $(TRANSITIVE_LIB_DEPS_STATIC) -Wl,-Bdynamic \
+	$(TRANSITIVE_LIB_DEPS_SHARED) \
         $(MAC_FLAT) \
 	$(LIBS) \
 	$(RPATHS) \
