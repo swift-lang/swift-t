@@ -18,7 +18,7 @@ export MPI=@USE_MPI@
 export MPI_LIB=@USE_MPI_LIB_DIR@
 export TURBINE_LAUNCHER=@USE_LAUNCHER@
 
-export TURBINE_EXEC=${TURBINE_HOME}/bin/turbine_exec.x
+export TURBINE_SH=${TURBINE_HOME}/bin/turbine_sh
 
 TCLLIBPATH=
 if [[ -n ${TURBINE_USER_LIB:-} ]] ; then
@@ -28,7 +28,7 @@ fi
 if (( TURBINE_STATIC_EXEC ))
 then
   # Use statically linked executable and package
-  TCL_RUN=${TURBINE_EXEC}
+  export TCLSH=${TURBINE_SH}
   TCLLIBPATH+="${TURBINE_HOME}/libstatic"
 else
   # Use regular tclsh plus Turbine Tcl package
@@ -37,7 +37,6 @@ else
     echo "Could not find tclsh!"
     return 1
   fi
-  TCL_RUN=${TCLSH}
   TCLLIBPATH+="${TURBINE_HOME}/lib"
 fi
 

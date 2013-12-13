@@ -94,7 +94,7 @@ report_version()
   then
     echo " installed from: $( cat ${SOURCE_TXT} )"
   fi
-  echo " using Tcl script launcher: ${TCL_RUN}"
+  echo " using Tcl: ${TCLSH}"
 }
 
 if (( REPORT_VERSION ))
@@ -160,5 +160,5 @@ then
 fi
 
 # Allow user to insert valgrind
-${TURBINE_LAUNCHER} ${OPTIONS} ${VALGRIND} ${TCL_RUN} ${PROGRAM} ${ARGS}
+${TURBINE_LAUNCHER} ${OPTIONS} ${VALGRIND} ${TCLSH} ${PROGRAM} ${ARGS}
 # Exit code returned by shell script
