@@ -31,8 +31,9 @@ LINE_PREFIX=
 MACHINE_FILE=0
 REPORT_VERSION=0
 VERBOSE=0
+TURBINE_STATIC_EXEC=0
 
-while getopts "f:hln:vV" OPTION
+while getopts "f:hln:vVX" OPTION
 do
   case ${OPTION} in
     f)
@@ -53,6 +54,9 @@ do
     V)
       VERBOSE=1
       ;;
+    X)
+      TURBINE_STATIC_EXEC=1
+      ;;
     \?)
       # Bash already reported an error
       exit 1
@@ -71,6 +75,8 @@ then
   TURBINE_HOME=$( cd ${TURBINE_BIN}/.. ; /bin/pwd )
 fi
 
+export TURBINE_STATIC_EXEC
+
 # Load Turbine configuration settings
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 if [[ ${?} != 0 ]]
@@ -88,7 +94,7 @@ report_version()
   then
     echo " installed from: $( cat ${SOURCE_TXT} )"
   fi
-  echo " using Tcl: ${TCLSH}"
+  echo " using Tcl script launcher: ${TCL_RUN}"
 }
 
 if (( REPORT_VERSION ))
@@ -154,5 +160,5 @@ then
 fi
 
 # Allow user to insert valgrind
-${TURBINE_LAUNCHER} ${OPTIONS} ${VALGRIND} ${TCLSH} ${PROGRAM} ${ARGS}
+${TURBINE_LAUNCHER} ${OPTIONS} ${VALGRIND} ${TCL_RUN} ${PROGRAM} ${ARGS}
 # Exit code returned by shell script

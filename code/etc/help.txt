@@ -16,6 +16,9 @@ OPTIONS
   -n <procs>
       set number of processes
 
+  -X
+      use statically linked executable instead of tclsh 
+
   -v
       report version number
 

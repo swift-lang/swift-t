@@ -1,5 +1,9 @@
 
 # BASH-formatted setup script processed by turbine/configure
+#
+# Influential environment variables include:
+# TURBINE_USER_LIB - directory for user library code
+# TURBINE_STATIC_EXEC - if true, try to use statically linked executable
 
 TURBINE_HOME=@prefix@
 TURBINE_VERSION=@TURBINE_VERSION@
@@ -14,18 +18,31 @@ export MPI=@USE_MPI@
 export MPI_LIB=@USE_MPI_LIB_DIR@
 export TURBINE_LAUNCHER=@USE_LAUNCHER@
 
+export TURBINE_EXEC=${TURBINE_HOME}/bin/turbine_exec.x
+
 TCLLIBPATH=
 if [[ -n ${TURBINE_USER_LIB:-} ]] ; then
   TCLLIBPATH="${TURBINE_USER_LIB} "
 fi
-TCLLIBPATH+="${TURBINE_HOME}/lib"
+
+if (( TURBINE_STATIC_EXEC ))
+then
+  # Use statically linked executable and package
+  TCL_RUN=${TURBINE_EXEC}
+  TCLLIBPATH+="${TURBINE_HOME}/libstatic"
+else
+  # Use regular tclsh plus Turbine Tcl package
+  if [[ ${TCLSH} == "" ]]
+  then
+    echo "Could not find tclsh!"
+    return 1
+  fi
+  TCL_RUN=${TCLSH}
+  TCLLIBPATH+="${TURBINE_HOME}/lib"
+fi
+
 export TCLLIBPATH
 
-if [[ ${TCLSH} == "" ]]
-then
-  echo "Could not find tclsh!"
-  return 1
-fi
 
 export TURBINE_MACHINE=@USE_MACHINE@
 
