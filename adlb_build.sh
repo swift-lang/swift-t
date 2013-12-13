@@ -58,7 +58,7 @@ if (( DISABLE_XPT )); then
     EXTRA_ARGS+=" --enable-checkpoint=no"
 fi
 
-if [[ ! -z "$EXM_DEV" && "$EXM_DEV" != 0 ]]; then
+if (( EXM_DEV )); then
   EXTRA_ARGS+=" --enable-dev"
 fi
 

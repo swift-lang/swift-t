@@ -16,11 +16,14 @@ if (( EXM_STATIC_BUILD )); then
 fi
 
 if (( EXM_CRAY && EXM_STATIC_BUILD )); then
-  # Setup C compiler for static buildon cray
+  # Setup C compiler for static build on cray
   export CC=cc
 
-  # TODO: can't do full static build yet since tcl wants to --export-dynamic
-  #export LDFLAGS="-static"
+  # Tclsh needs to export dynamic symbols.  We can't get this to work
+  # with static system libraries without modifying the Tcl build scripts,
+  # so we will dynamically link tclsh even though we intend to later
+  # build static binaries with the libtcl*.a static library.
+  export LDFLAGS="-dynamic"
 fi
 
 cd unix

@@ -15,7 +15,7 @@ if (( SVN_UPDATE )); then
   svn update
 fi
 
-if [ -z "$SKIP_AUTOTOOLS" ]; then
+if (( ! SKIP_AUTOTOOLS )); then
   rm -rf ./config.status ./autom4te.cache
   ./setup.sh
 fi
@@ -47,11 +47,11 @@ if (( EXM_CRAY )); then
   EXTRA_ARGS+=" --enable-custom-mpi"
 fi
 
-if (( WITH_PYTHON )); then
+if [ ! -z "$WITH_PYTHON" ]; then
   EXTRA_ARGS+=" --enable-python --with-python=${WITH_PYTHON}"
 fi
 
-if (( TCL_VERSION )); then
+if [ ! -z "$TCL_VERSION" ]; then
   EXTRA_ARGS+=" --with-tcl-version=$TCL_VERSION"
 fi
 
