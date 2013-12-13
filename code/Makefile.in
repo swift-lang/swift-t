@@ -8,7 +8,7 @@ PACKAGE = lib/pkgIndex.tcl
 PACKAGE_STATIC = libstatic/pkgIndex.tcl
 ENABLED_PACKAGES :=
 
-BUILD_ALL_TARGETS = libs
+BUILD_ALL_TARGETS = libs executables
 # BUILD_ALL_TARGETS = libs executables
 
 ifeq ($(ENABLE_SHARED),1)
