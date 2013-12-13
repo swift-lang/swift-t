@@ -221,11 +221,11 @@ namespace eval turbine {
     # I.e. that shouldn't include a stacktrace
     proc turbine_error { msg } {
         global tcl_version
-      if { $tcl_version >= 8.6 } {
-        throw {TURBINE ERROR} $msg
-      } else {
-        error $msg
-      }
+        if { $tcl_version >= 8.6 } {
+            throw {TURBINE ERROR} $msg
+        } else {
+            error $msg
+        }
     }
 
     # Turbine logging contains string values (possibly long)
@@ -430,5 +430,9 @@ namespace eval turbine {
                 [ get_priority ] 1
         }
     }
-
 }
+
+# Local Variables:
+# mode: tcl
+# tcl-indent-level: 4
+# End:

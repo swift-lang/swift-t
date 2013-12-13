@@ -123,6 +123,7 @@ namespace eval turbine {
       for { set i 0 } { $i < $m_value } { incr i } {
           adlb::refcount_incr $c($i) w -1
       }
+
       # Close result
       adlb::refcount_incr $result w -1
       # Release cached blob
