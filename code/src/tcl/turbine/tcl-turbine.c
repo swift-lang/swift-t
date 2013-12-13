@@ -981,7 +981,7 @@ Turbine_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
   // at compile time
   if (turbine_debug_enabled)
   {
-    char* msg = Tcl_GetString(objv[1]);
+    unused char* msg = Tcl_GetString(objv[1]);
     DEBUG_TCL_TURBINE("%s", msg);
     return TCL_OK;
   }
