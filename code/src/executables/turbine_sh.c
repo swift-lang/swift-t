@@ -61,7 +61,7 @@ main(int argc, char **argv)
   }
   else
   {
-    char code_name[64];
+    char code_name[TURBINE_CODE_STRING_MAX];
     turbine_code_tostring(code_name, rc);
     fprintf(stderr, "Error executing script file %s: turbine error "
                     "%s (%i)\n", script_file, code_name, rc);
