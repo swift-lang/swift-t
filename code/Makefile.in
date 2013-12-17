@@ -460,6 +460,14 @@ TRANSITIVE_LIB_DEPS_STATIC = -lz
 #	-Wl,--exclude-libs,c
 LD_EXEC_SYMBOL_EXPORT = -Wl,--export-dynamic
 
+MKSTATIC := scripts/staticapp/mkstatic.tcl
+MKSTATIC_TEMPLATE := scripts/staticapp/mkstatic.c.template
+
+# Rule to build from manifest in simplest case (no resources)
+%.c: %.manifest $(MKSTATIC) $(MKSTATIC_TEMPLATE)
+	$(Q) "  MKSTATIC	$(@)"
+	$(E) $(TCLSH_LOCAL) $(MKSTATIC) $< -c $(@)
+
 # Binary executables - link from .o
 # Currently builds a dynamically linked executable 
 # Link statically where possible by adding static libs explicitly.

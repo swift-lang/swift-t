@@ -47,7 +47,24 @@ main(int argc, char **argv)
   @TCL_STATIC_PKG_CALLS@
 
   turbine_code rc;
-  rc = turbine_run_string(MPI_COMM_NULL, @MAIN_SCRIPT_STRING@, argc, argv, NULL);
+  char *script_file = NULL;
+  if (@MAIN_SCRIPT_STRING@ != NULL)
+  {
+    rc = turbine_run_string(MPI_COMM_NULL, @MAIN_SCRIPT_STRING@, argc, argv, NULL, NULL);
+  }
+  else
+  {
+    // Get script from first argument
+    script_file = argv[1];
+
+    // Pass remaining arguments minus script to turbine_run
+    for (int i = 1; i < argc - 1; i++)
+    {
+      argv[i] = argv[i+1];
+    }
+    argc--;
+    rc = turbine_run(MPI_COMM_NULL, script_file, argc, argv, NULL);
+  }
 
   if (rc == TURBINE_SUCCESS)
   {
@@ -57,8 +74,14 @@ main(int argc, char **argv)
   {
     char code_name[TURBINE_CODE_STRING_MAX];
     turbine_code_tostring(code_name, rc);
-    fprintf(stderr, "Error executing script file %s: turbine error "
-                    "%s (%i)\n", script_file, code_name, rc);
+    if (script_file != NULL)
+    {
+      fprintf(stderr, "Error executing script file %s: turbine error "
+                      "%s (%i)\n", script_file, code_name, rc);
+    } else {
+      fprintf(stderr, "Error executing script: turbine error "
+                      "%s (%i)\n", code_name, rc);
+    }
     return 2;
   }
 }

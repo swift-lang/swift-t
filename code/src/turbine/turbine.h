@@ -130,6 +130,10 @@ void turbine_finalize(void);
 turbine_code turbine_run(MPI_Comm comm, char* script_file,
                          int argc, char** argv, char* output);
 
+/*
+  Run script stored in C string.
+  interp: if not null, use this interpreter.  If null, create a fresh one
+ */
 turbine_code turbine_run_string(MPI_Comm comm, const char* script,
                                 int argc, char** argv, char* output,
                                 Tcl_Interp* interp);
