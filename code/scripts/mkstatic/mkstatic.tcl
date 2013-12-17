@@ -16,7 +16,6 @@ proc main { } {
 
   # TODO: compile/link options?
   set usage "mkstatic.tcl <manifest file> \[-c <output c file> \] \
-        \[-p <pkgIndex.tcl file> \] \
         \[--deps <dependency include for C output> <c output file for deps> \]\
         \[--link-deps <dependency include for linking> <link target> \]\
         \[--link-objs: print list of link objects to stdout \]\
@@ -37,7 +36,6 @@ proc main { } {
   set link_deps_target ""
   set print_link_objs 0
   set print_link_flags 0
-  set pkg_index ""
   set resource_var_prefix "turbine_app_resources"
   global verbose_setting
   set verbose_setting 0
@@ -54,11 +52,6 @@ proc main { } {
           incr argi
           set c_output_file [ lindex $::argv $argi ]
           nonempty $c_output_file "Expected non-empty argument to -c"
-        }
-        -p {
-          incr argi
-          set pkg_index [ lindex $::argv $argi ]
-          nonempty $pkg_index "Expected non-empty argument to -p"
         }
         -r {
           incr argi
@@ -125,11 +118,6 @@ proc main { } {
 
   if { [ string length $c_output_file ] > 0 } {
     fill_c_template $manifest_dict $resource_var_prefix $c_output_file
-  }
-  
-  if { [ string length $pkg_index ] > 0 } {
-    gen_pkg_index $pkg_index [ dict get $manifest_dict pkg_name ] \
-                             [ dict get $manifest_dict pkg_version ]
   }
 }
 
@@ -265,8 +253,13 @@ proc fill_c_template { manifest_dict resource_var_prefix c_output_file } {
   global INIT_PKGS_FN
   global MAIN_SCRIPT_STRING
   set pkg_name [ dict get $manifest_dict pkg_name ]
-  if { [ string length $pkg_name ] == 0 } {
-    set pkg_name "TurbineAppMainPackage"
+  set pkg_version [ dict get $manifest_dict pkg_version ]
+ 
+ if { [ string length $pkg_name ] == 0 } {
+    set pkg_name "TurbineUserPackage"
+  }
+  if { [ string length $pkg_version ] == 0 } {
+    set pkg_version "0.0"
   }
 
   set c_template_filename \
@@ -308,8 +301,17 @@ proc fill_c_template { manifest_dict resource_var_prefix c_output_file } {
           }
         }
         TCL_STATIC_PKG_CALLS {
-          puts -nonewline $c_output "Tcl_StaticPackage\(NULL, \
+          puts $c_output "Tcl_StaticPackage\(NULL, \
                 \"${pkg_name}\", ${INIT_PKGS_FN}, ${INIT_PKGS_FN}\);"
+          puts $c_output "  int _rc;"
+          puts $c_output "  _rc = Tcl_Eval(interp, \n\
+                \"[pkg_ifneeded $pkg_name $pkg_version]\");"
+          puts $c_output "  if (_rc != TCL_OK) {"
+          puts $c_output "    fprintf(stderr, \
+                        \"Could not initialize $pkg_name\");"
+          puts $c_output "    Tcl_Eval(interp, \"puts \$errorInfo\");"
+          puts $c_output "    exit(1);"
+          puts $c_output "  }"
         }
         USER_PKG_INIT {
           # Code to init C plus Tcl code for module
@@ -345,6 +347,10 @@ proc fill_c_template { manifest_dict resource_var_prefix c_output_file } {
                         in $c_output: $errorInfo"
             }
           }
+        }
+        MAIN_SCRIPT_FILE {
+          # Output main script file name, or "" if not present
+          puts -nonewline $c_output [ dict get $manifest_dict main_script ]
         }
         RESOURCE_DECLS {
           # iterate through resource files, output declarations
@@ -403,16 +409,8 @@ proc static_pkg_init_code { outf init_fn_name lib_init_fns \
   puts $outf "}"
 }
 
-proc gen_pkg_index { pkg_index_file pkg_name pkg_version } {
-  if { [ string length $pkg_name ] == 0 ||
-       [ string length $pkg_version ] == 0 } {
-    user_err "Must provide package name and version to generate package index"
-  }
-  set output [ open $pkg_index_file w ]
-  puts $output \
-    "package ifneeded $pkg_name $pkg_version {load {} $pkg_name}"
-  close $output
-  verbose_msg "Created Tcl package index at $pkg_index_file"
+proc pkg_ifneeded { pkg_name pkg_version } {
+  return "package ifneeded {$pkg_name} {$pkg_version} {load {} {$pkg_name}}"
 }
 
 proc print_link_info { outfile manifest_dict link_objs link_flags } {

@@ -804,7 +804,6 @@ AC_CONFIG_FILES(
         src/tcl/turbine/module.mk
         src/executables/module.mk
         lib/module.mk
-        libstatic/module.mk
         scripts/submit/module.mk
         scripts/submit/cobalt/module.mk
         scripts/submit/cray/module.mk

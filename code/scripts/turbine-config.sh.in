@@ -26,11 +26,10 @@ fi
 
 if (( TURBINE_STATIC_EXEC ))
 then
-  # Use statically linked executable and package
+  # Use statically linked executable with builtin Turbine package
   export TCLSH=${TURBINE_SH}
-  TCLLIBPATH+="${TURBINE_HOME}/libstatic"
 else
-  # Use regular tclsh plus Turbine Tcl package
+  # Use regular tclsh plus loadable Turbine Tcl package
   if [[ ${TCLSH} == "" ]]
   then
     echo "Could not find tclsh!"

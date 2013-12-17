@@ -18,6 +18,7 @@
 #include "static-pkg.h"
 #include "src/tcl/static-pkg/tcl-turbine-src.h"
 #include "src/tcl/turbine/tcl-turbine.h"
+#include "src/turbine/turbine-version.h"
 
 // Wrapper to initialize C module and tcl source files
 static int
@@ -54,8 +55,17 @@ Tclturbine_InitStatic(Tcl_Interp *interp)
 /*
   Register but do not initialize statically linked packages
  */
-void
-register_tcl_turbine_static_pkg(void)
+int
+register_tcl_turbine_static_pkg(Tcl_Interp *interp)
 {
-  Tcl_StaticPackage(NULL, "turbine", Tclturbine_InitStatic, Tclturbine_InitStatic);
+  Tcl_StaticPackage(NULL, "turbine", Tclturbine_InitStatic,
+                                       Tclturbine_InitStatic);
+  int rc = Tcl_Eval(interp, "package ifneeded turbine "
+              "{" TURBINE_VERSION "} {load {} turbine}");
+  if (rc != TCL_OK)
+  {
+    Tcl_Eval(interp, "puts $errorInfo");
+    return rc;
+  }
+  return TCL_OK;
 }

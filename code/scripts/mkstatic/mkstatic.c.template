@@ -45,17 +45,35 @@ static const char @MAIN_SCRIPT_STRING@[];
 int
 main(int argc, char **argv)
 {
-  // Make packages available to all interpreters
-  register_tcl_turbine_static_pkg();
+  int tcl_rc;
+  Tcl_Interp *interp = Tcl_CreateInterp();
+  
+  tcl_rc = Tcl_Init(interp);
+  if (tcl_rc != TCL_OK)
+  {
+    fprintf(stderr, "Unexpected error initializing Tcl Interpreter:\n");
+    Tcl_Eval(interp, "puts $errorInfo");
+    exit(1);
+  }
 
-  // E.g. Tcl_StaticPackage(NULL, "turbine", UserLib_InitStatic, UserLib_InitStatic);
+  // Make packages available to all interpreters
+  tcl_rc = register_tcl_turbine_static_pkg(interp);
+  if (tcl_rc != TCL_OK)
+  {
+    fprintf(stderr, "Unexpected error initializing Turbine packages:\n");
+    Tcl_Eval(interp, "puts $errorInfo");
+    exit(1);
+  }
+
+  // E.g. Tcl_StaticPackage(interp, "turbine", UserLib_InitStatic, UserLib_InitStatic);
   @TCL_STATIC_PKG_CALLS@
 
-  turbine_code rc;
+  turbine_code tc;
   char *script_file = NULL;
   if (has_main_string)
   {
-    rc = turbine_run_string(MPI_COMM_NULL, @MAIN_SCRIPT_STRING@, argc, argv, NULL, NULL);
+    tc = turbine_run_string(MPI_COMM_NULL, @MAIN_SCRIPT_STRING@,
+                            argc, argv, NULL, interp);
   }
   else
   {
@@ -68,27 +86,31 @@ main(int argc, char **argv)
       argv[i] = argv[i+1];
     }
     argc--;
-    rc = turbine_run(MPI_COMM_NULL, script_file, argc, argv, NULL);
+    tc = turbine_run_interp(MPI_COMM_NULL, script_file, argc, argv, NULL,
+                            interp);
   }
 
-  if (rc == TURBINE_SUCCESS)
+  if (tc == TURBINE_SUCCESS)
   {
     return 0;
   }
   else
   {
     char code_name[TURBINE_CODE_STRING_MAX];
-    turbine_code_tostring(code_name, rc);
+    turbine_code_tostring(code_name, tc);
     if (script_file != NULL)
     {
       fprintf(stderr, "Error executing script file %s: turbine error "
-                      "%s (%i)\n", script_file, code_name, rc);
+                      "%s (%i)\n", script_file, code_name, tc);
     } else {
-      fprintf(stderr, "Error executing script: turbine error "
-                      "%s (%i)\n", code_name, rc);
+      fprintf(stderr, "Error executing compiled in main script "
+                      "(source %s): turbine error %s (%i)\n",
+                      "@MAIN_SCRIPT_FILE@", code_name, tc);
     }
+    Tcl_Eval(interp, "puts $errorInfo");
     return 2;
   }
+  return 0;
 }
 
 // Binary data for Tcl main script

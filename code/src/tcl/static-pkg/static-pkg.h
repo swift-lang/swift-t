@@ -19,6 +19,6 @@
 
 #include <tcl.h>
 
-void register_tcl_turbine_static_pkg(void);
+int register_tcl_turbine_static_pkg(Tcl_Interp *interp);
 
 #endif //__TURBINE_STATIC_PACKAGE_H__
