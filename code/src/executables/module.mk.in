@@ -3,5 +3,5 @@ DIR := src/executables
 
 # This executable currently assumes static linking
 ifeq ($(ENABLE_STATIC),1)
-  TURBINE_EXECUTABLE_SRC += $(DIR)/turbine_sh.c
+  TURBINE_EXECUTABLE_MANIFESTS += $(DIR)/turbine_sh.manifest
 endif

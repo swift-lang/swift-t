@@ -278,7 +278,8 @@ DIR :=
 TURBINE_SRC :=
 TCL_TURBINE_SRC :=
 STATIC_PKG_SRC :=
-TURBINE_EXECUTABLE_SRC :=
+TURBINE_EXECUTABLE_MANIFESTS :=
+
 include src/turbine/module.mk
 include src/util/module.mk
 include src/tcl/module.mk
@@ -310,6 +311,7 @@ STATIC_PKG_RESOURCE_C := $(patsubst %.tcl, %_tcl.c, $(TCL_SRC))
 STATIC_PKG_RESOURCE_O := $(patsubst %.c, %.o, $(STATIC_PKG_RESOURCE_C))
 STATIC_PKG_RESOURCE_H := src/tcl/static-pkg/tcl-turbine-src.h
 
+TURBINE_EXECUTABLE_SRC := $(patsubst %.manifest, %.c, $(TURBINE_EXECUTABLE_MANIFESTS))
 TURBINE_EXECUTABLE_OBJS = $(patsubst %.c, %.o, $(TURBINE_EXECUTABLE_SRC))
 TURBINE_EXECUTABLES := $(patsubst %.c, %, $(TURBINE_EXECUTABLE_SRC))
 
@@ -318,6 +320,10 @@ TURBINE_EXECUTABLES := $(patsubst %.c, %, $(TURBINE_EXECUTABLE_SRC))
 TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC))
 
 TURBINE_EXECUTABLE_DEPS := $(patsubst %.c, %.d, $(TURBINE_EXECUTABLE_SRC))
+TURBINE_EXECUTABLE_DEPS += $(patsubst %.manifest, %.manifest.d, \
+			     $(TURBINE_EXECUTABLE_MANIFESTS))
+TURBINE_EXECUTABLE_DEPS += $(patsubst %.manifest, %.x.d, \
+			     $(TURBINE_EXECUTABLE_MANIFESTS))
 
 STATIC_PKG_DEPS := $(patsubst %.c, %.d, $(STATIC_PKG_SRC))
 
@@ -326,6 +332,7 @@ TEST_SRC :=
 include tests/module.mk
 TEST_DEPS := $(patsubst %.c, %.d, $(TEST_SRC))
 TEST_DEPS += $(patsubst %.manifest, %.manifest.d, $(TEST_SRC_MANIFEST))
+TEST_DEPS += $(patsubst %.manifest, %.x.d, $(TEST_SRC_MANIFEST))
 
 # Dependency files:
 # Remember that having a bad #include can cause dependency
@@ -467,10 +474,24 @@ LD_EXEC_SYMBOL_EXPORT = -Wl,--export-dynamic
 
 # Rule to build C source file based on manifest
 # Also create deps file so it can be correctly recreated upon change.
-%.c: %.manifest $(MKSTATIC) $(MKSTATIC_TEMPLATE)
+%.c: %.manifest %.manifest.d %.x.d $(MKSTATIC) $(MKSTATIC_TEMPLATE)
 	$(Q) "  MKSTATIC	$(@)"
 	$(E) $(TCLSH_LOCAL) $(MKSTATIC) $< -c $(@) \
-	      --deps $(patsubst %.manifest, %.manifest.d, $<)
+	      --link-deps $(patsubst %.manifest, %.x.d, $<) \
+			  $(patsubst %.manifest, %.x, $<)
+
+%.manifest.d: %.manifest $(MKSTATIC) $(MKSTATIC_TEMPLATE)
+	$(Q) "  MKSTATIC_DEPS	$(@)"
+	$(E) $(TCLSH_LOCAL) $(MKSTATIC) $< \
+	  --deps $(@) $(patsubst %.manifest, %.c, $<)
+
+# Dependency rules for executable with .x or no extension
+%.x.d: %.manifest $(MKSTATIC) $(MKSTATIC_TEMPLATE)
+	$(Q) "  LINK_DEPS	$(@)"
+	$(E) $(TCLSH_LOCAL) $(MKSTATIC) $< --link-deps $(@) \
+			  $(patsubst %.manifest, %.x, $<)
+	$(E) $(TCLSH_LOCAL) $(MKSTATIC) $< --link-deps $(@) \
+			  $(patsubst %.manifest, %, $<)
 
 %/pkgIndex.tcl: %.manifest $(MKSTATIC)
 	$(Q) "  MKSTATIC	$(@)"
@@ -482,6 +503,7 @@ LD_EXEC_SYMBOL_EXPORT = -Wl,--export-dynamic
 # Currently builds a dynamically linked executable 
 # Link statically where possible by adding static libs explicitly.
 #   Static libs must be compiled with -fPIC or -fPIE
+# TODO: linker flags from manifest
 $(TURBINE_EXECUTABLES): %: %.o ${STATIC_LIBS} ${STATIC_PKG_RESOURCE_H} $(TCL_API_SYMBOLS_LD)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(<) $(LDFLAGS) $(LD_EXEC_SYMBOL_EXPORT) $(STATIC_LIBS) \
@@ -496,8 +518,6 @@ $(TURBINE_EXECUTABLES): %: %.o ${STATIC_LIBS} ${STATIC_PKG_RESOURCE_H} $(TCL_API
 
 # Test cases in C as objects
 TEST_OBJS = $(patsubst %.c, %.o, $(TEST_SRC_C))
-# Test cases in C as dependency files
-TEST_DEPS = $(patsubst %.c, %.d, $(TEST_SRC_C))
 # Test cases in C compiled to binary
 TEST_BINS = $(patsubst %.c, %.x, $(TEST_SRC_C))
 # Test case results
@@ -516,6 +536,7 @@ tests: $(TEST_BINS)
 test_results: $(TEST_RESULTS)
 
 # Binary executables in the test suite
+# TODO: get linker flags from manifest if present
 $(TEST_BINS): %.x: %.o install.txt $(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(<) $(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A) \

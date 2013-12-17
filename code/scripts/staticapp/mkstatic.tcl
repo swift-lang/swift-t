@@ -14,21 +14,23 @@ proc main { } {
   # TODO: compile/link options?
   set usage "mkstatic.tcl <manifest file> \[-c <output c file> \] \
         \[-p <pkgIndex.tcl file> \] \
-        \[--deps <dependency include for C output> \]\
-        \[--link-deps <dependency include for linking executable> \]\
+        \[--deps <dependency include for C output> <c output file for deps> \]\
+        \[--link-deps <dependency include for linking> <link target> \]\
         \[--link-objs: print list of link objects to stdout \]\
         \[--link-flags: print list of linker library flags to stdout \]\
         \[-r <non-default resource var name> \] \
         -v: verbose messages to report on process \
         -h: help \n\
-        Notes: \n
-        * --link-objs are printed before --link-flags if both provided"
+        Notes: \n\
+        -> --link-objs are printed before --link-flags if both provided"
 
   set non_flag_args [ list ]
 
   set c_output_file ""
   set deps_output_file ""
+  set deps_c_output_file ""
   set link_deps_output_file ""
+  set link_deps_target ""
   set print_link_objs 0
   set print_link_flags 0
   set pkg_index ""
@@ -62,11 +64,18 @@ proc main { } {
           incr argi
           set deps_output_file [ lindex $::argv $argi ]
           nonempty $deps_output_file "Expected non-empty argument to --deps"
+          incr argi
+          set deps_c_output_file [ lindex $::argv $argi ]
+          nonempty $deps_c_output_file \
+                "Expected second non-empty argument to --deps"
         }
         --link-deps {
           incr argi
           set link_deps_output_file [ lindex $::argv $argi ]
           nonempty $link_deps_output_file "Expected non-empty argument to --link-deps"
+          incr argi
+          set link_deps_target [ lindex $::argv $argi ]
+          nonempty $link_deps_target "Expected second non-empty argument to --link-deps"
         }
         --link-objs {
           set print_link_objs 1
@@ -97,17 +106,13 @@ proc main { } {
  
   # generate deps file if needed
   if { [ string length $deps_output_file ] > 0 } {
-    if { [ string length $c_output_file ] == 0 } {
-      user_err "Specify C output file to generate alongside deps"
-    }
-    write_deps_file $manifest_dict $deps_output_file $c_output_file
+    write_deps_file $manifest_dict $deps_output_file $deps_c_output_file
   }
 
   print_link_info stdout $manifest_dict $print_link_objs $print_link_flags
   
   if { [ string length $link_deps_output_file ] > 0 } {
-    user_err "Link dependency generation not supported"
-    write_link_deps_file $manifest_dict $link_deps_output_file
+    write_link_deps_file $manifest_dict $link_deps_output_file $link_deps_target
   }
 
   if { [ string length $c_output_file ] > 0 } {
@@ -412,6 +417,13 @@ proc print_link_info { outfile manifest_dict link_objs link_flags } {
     # Print newline
     puts $outfile ""
   }
+}
+
+proc write_link_deps_file  { manifest_dict output_file link_target_file } {
+  set output [ open $output_file w ]
+  set objs [ dict get $manifest_dict lib_objects ]
+  puts $output "$output_file $link_target_file : $objs"
+  close $output
 }
 
 proc nonempty { var msg } {
