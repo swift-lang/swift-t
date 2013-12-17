@@ -5,24 +5,25 @@
 # Manifest info: required to generate .c file and pkgIndex.tcl
 # ------------------------------------------------------------
 
-# Name of Tcl package
-# A directory with pkgIndex.tcl is optionally created by processing tool
+# Name and version of Tcl package
 pkg_name = user_stuff
 pkg_version = 0.1
-
-# lib scripts are executed before main script
-lib_script = user_stuff1.tcl
-lib_script = user_stuff2.tcl
 
 # C function names to initialise Tcl modules
 lib_init = other_stuff_init
 lib_init = user_stuff_init
 lib_init = mysharedlib_init
 
-# headers for user Tcl code
+# lib scripts are executed in specified order, before main_script and
+# after lib_inits
+lib_script = user_stuff1.tcl
+lib_script = user_stuff2.tcl
+
+# headers for user Tcl code, e.g. lib_init functions
 lib_include = user_stuff.h
 
-# main scripts
+# main script. If provided, always runs this main script.  Otherwise
+# script file is specified as first command line argument (like tclsh)
 main_script = user_script.tcl
 
 # Build info follows: required to compile and link executable
