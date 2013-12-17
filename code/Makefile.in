@@ -96,15 +96,15 @@ STATIC_PKG_A := lib/lib$(STATIC_PKG_LIB).a
 STATIC_PKG_RESOURCE_LIB := tclturbinestaticres
 STATIC_PKG_RESOURCE_A := lib/lib$(STATIC_PKG_RESOURCE_LIB).a
 
-TCL_TURBINE_LIBS :=
+# Resource libs are used in all builds
+TCL_TURBINE_LIBS := $(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A)
+
 ifeq ($(ENABLE_SHARED),1)
   TCL_TURBINE_LIBS += $(TCL_TURBINE_SO)
 endif
 
 ifeq ($(ENABLE_STATIC),1)
   TCL_TURBINE_LIBS += $(TCL_TURBINE_A)
-  TCL_TURBINE_LIBS += $(STATIC_PKG_A)
-  TCL_TURBINE_LIBS += $(STATIC_PKG_RESOURCE_A)
 endif
 
 libs: $(TCL_TURBINE_LIBS)
@@ -604,6 +604,7 @@ DIRECTORIES = $(INSTALL_PREFIX) $(INSTALL_BIN) $(INSTALL_ETC)     \
 
 TURBINE_HEADERS := src/turbine/turbine.h      \
 		  src/tcl/turbine/tcl-turbine.h \
+		  src/tcl/static-pkg/static-pkg.h \
                   src/turbine/turbine-defs.h \
                   src/tcl/blob/blob.h
 ifeq ($(ENABLE_STATIC),1)
@@ -679,6 +680,7 @@ distclean:: clean
 	@rm -fv Makefile **/*.mk
 	@rm -fv src/turbine/turbine-version.h
 	@rm -fv scripts/turbine-config.sh
+	@rm -fv scripts/turbine-build-config.sh
 	@rm -fv system-libs.txt
 
 .PHONY: clean install package test_results

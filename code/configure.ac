@@ -812,6 +812,7 @@ AC_CONFIG_FILES(
         scripts/submit/pbs/module.mk
         scripts/submit/slurm/module.mk
         scripts/turbine-config.sh
+        scripts/turbine-build-config.sh
         tests/module.mk
         tests/runbin.zsh
 	Makefile
