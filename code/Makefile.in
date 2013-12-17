@@ -410,8 +410,8 @@ endif
 ### TCL SOURCE LINKING
 # Compilation and linking to get Tcl source as C arrays
 
-F2A := scripts/file2array.sh
-F2A_MKHDR := scripts/files2arrays_mkhdr.sh
+F2A := scripts/staticapp/file2array.sh
+F2A_MKHDR := scripts/staticapp/files2arrays_mkhdr.sh
 
 $(STATIC_PKG_RESOURCE_C): %_tcl.c : %.tcl $(F2A)
 	$(Q) "  FILE2ARRAY $(@)"

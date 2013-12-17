@@ -12,8 +12,16 @@ for file in "$@"
 do
   # Extract array name from FILE2ARRAY comment
   arrname=$(sed -rn 's/^.*\/\*FILE2ARRAY:([a-zA-Z_0-9]*):(.*)\*\/.*$/\1/p' $file)
+  if [ -z "$arrname" ]; then
+    echo "Could not extract array name from $file" >&2
+    exit 1
+  fi
   arrnames=( "${arrnames[@]}" "${arrname}" )
   filename=$(sed -rn 's/^.*\/\*FILE2ARRAY:([a-zA-Z_0-9]*):(.*)\*\/.*$/\2/p' $file)
+  if [ -z "$filename" ]; then
+    echo "Could not extract file name from $file"  >&2
+    exit 1
+  fi
   filenames=( "${filenames[@]}" "${filename}" )
   # Output variable name for header
   count=$((count + 1))
