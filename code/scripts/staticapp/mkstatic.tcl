@@ -19,6 +19,7 @@ proc main { } {
         \[--link-objs: print list of link objects to stdout \]\
         \[--link-flags: print list of linker library flags to stdout \]\
         \[-r <non-default resource var name> \] \
+        --ignore-no-manifest: if no manifest present, assume empty manifest \
         -v: verbose messages to report on process \
         -h: help \n\
         Notes: \n\
@@ -37,6 +38,7 @@ proc main { } {
   set resource_var_prefix "turbine_app_resources"
   global verbose_setting
   set verbose_setting 0
+  set ignore_no_manifest 0
 
   for { set argi 0 } { $argi < $::argc } { incr argi } {
     set arg [ lindex $::argv $argi ]
@@ -83,6 +85,9 @@ proc main { } {
         --link-flags {
           set print_link_flags 1
         }
+        --ignore-no-manifest {
+          set ignore_no_manifest 1
+        }
         -h {
           puts $usage
           exit 0
@@ -102,7 +107,7 @@ proc main { } {
   }
   set manifest_filename [ lindex $non_flag_args 0 ]
 
-  set manifest_dict [ read_manifest $manifest_filename ]
+  set manifest_dict [ read_manifest $manifest_filename $ignore_no_manifest ]
  
   # generate deps file if needed
   if { [ string length $deps_output_file ] > 0 } {
@@ -142,7 +147,7 @@ proc setonce { varname val } {
 # All file paths in manifest are relative to the directory containing
 # the manifest file: filenames in returned dictionary for files that
 # are to be processed by this script are updated to account.
-proc read_manifest { manifest_filename } {
+proc read_manifest { manifest_filename ignore_no_manifest } {
   # Initial values of things that may be specified by manifest file
   set manifest_dir [ file dirname $manifest_filename ]
 
@@ -168,57 +173,65 @@ proc read_manifest { manifest_filename } {
   # This goes last on link command
   set linker_libs ""
 
-  set manifest [open $manifest_filename]
-  while {[gets $manifest line] >= 0} {
-    set line [ string trimleft $line ]
-    if { [ string length $line ] == 0 ||
-         [ string index $line 0 ] == "#" } {
-      # comment or empty line
-      continue
-    }
-    set eq_index [ string first "=" $line ]
-    if { $eq_index < 0 } {
-      user_err "Expected = sign in manifest file line"
-    }
-    # Remove whitespace from key
-    set key [ string trim [ string range $line 0 [ expr $eq_index - 1 ] ] ]
-    # Keep whitespace for value in case it's significant - can be stripped later
-    set val [ string range $line [ expr $eq_index + 1 ] [ string length $line ] ] 
-    set trimmed_val [ string trim $val ]
-    #puts "Key: \"$key\" Val: \"$val\""
+  set have_manifest [ file exists $manifest_filename ]
 
-    switch $key {
-      pkg_name {
-        setonce pkg_name $trimmed_val
-      }
-      pkg_version {
-        setonce pkg_version $trimmed_val
-      }
-      main_script {
-        setonce main_script [ file join $manifest_dir $trimmed_val ]
-      }
-      lib_script {
-        lappend lib_scripts [ file join $manifest_dir $trimmed_val ]
-      }
-      lib_init {
-        lappend lib_init_fns $trimmed_val
-      }
-      lib_include {
-        lappend lib_includes $trimmed_val
-      }
-      lib_object {
-        lappend lib_objects $trimmed_val
-      }
-      linker_libs {
-        set linker_libs "$linker_libs $trimmed_val"
-      }
-      default {
-        user_err "Unknown key in manifest file: \"$key\""
-      }
-    }
+  if { ! $have_manifest && ! $ignore_no_manifest } {
+    user_err "Manifest file \"$manifest_filename\" not present"
   }
 
-  close $manifest
+  if { $have_manifest } {
+    set manifest [open $manifest_filename]
+    while {[gets $manifest line] >= 0} {
+      set line [ string trimleft $line ]
+      if { [ string length $line ] == 0 ||
+           [ string index $line 0 ] == "#" } {
+        # comment or empty line
+        continue
+      }
+      set eq_index [ string first "=" $line ]
+      if { $eq_index < 0 } {
+        user_err "Expected = sign in manifest file line"
+      }
+      # Remove whitespace from key
+      set key [ string trim [ string range $line 0 [ expr $eq_index - 1 ] ] ]
+      # Keep whitespace for value in case it's significant - can be stripped later
+      set val [ string range $line [ expr $eq_index + 1 ] [ string length $line ] ] 
+      set trimmed_val [ string trim $val ]
+      #puts "Key: \"$key\" Val: \"$val\""
+
+      switch $key {
+        pkg_name {
+          setonce pkg_name $trimmed_val
+        }
+        pkg_version {
+          setonce pkg_version $trimmed_val
+        }
+        main_script {
+          setonce main_script [ file join $manifest_dir $trimmed_val ]
+        }
+        lib_script {
+          lappend lib_scripts [ file join $manifest_dir $trimmed_val ]
+        }
+        lib_init {
+          lappend lib_init_fns $trimmed_val
+        }
+        lib_include {
+          lappend lib_includes $trimmed_val
+        }
+        lib_object {
+          lappend lib_objects $trimmed_val
+        }
+        linker_libs {
+          set linker_libs "$linker_libs $trimmed_val"
+        }
+        default {
+          user_err "Unknown key in manifest file: \"$key\""
+        }
+      }
+    }
+
+    close $manifest
+  }
 
   return [ dict create manifest_dir $manifest_dir \
             pkg_name $pkg_name pkg_version $pkg_version \
