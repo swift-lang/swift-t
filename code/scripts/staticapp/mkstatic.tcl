@@ -11,6 +11,7 @@ set MAIN_SCRIPT_STRING "__turbine_tcl_main"
 
 proc main { } {
   global SCRIPT_DIR
+
   # TODO: compile/link options?
   set usage "mkstatic.tcl <manifest file> \[-c <output c file> \] \
         \[-p <pkgIndex.tcl file> \] \

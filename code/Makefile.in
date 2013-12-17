@@ -152,6 +152,7 @@ TCL_LIB_A := @USE_LIBTCL_A@
 TCLSH_LOCAL := @USE_TCLSH_LOCAL@
 
 MKSTATIC := scripts/staticapp/mkstatic.tcl
+MKSTATIC_RUN := $(TCLSH_LOCAL) $(MKSTATIC)
 MKSTATIC_TEMPLATE := scripts/staticapp/mkstatic.c.template
 
 MACHINE = @USE_MACHINE@
@@ -476,37 +477,39 @@ LD_EXEC_SYMBOL_EXPORT = -Wl,--export-dynamic
 # Also create deps file so it can be correctly recreated upon change.
 %.c: %.manifest %.manifest.d %.x.d $(MKSTATIC) $(MKSTATIC_TEMPLATE)
 	$(Q) "  MKSTATIC	$(@)"
-	$(E) $(TCLSH_LOCAL) $(MKSTATIC) $< -c $(@) \
+	$(E) $(MKSTATIC_RUN) $< -c $(@) \
 	      --link-deps $(patsubst %.manifest, %.x.d, $<) \
 			  $(patsubst %.manifest, %.x, $<)
 
 %.manifest.d: %.manifest $(MKSTATIC) $(MKSTATIC_TEMPLATE)
 	$(Q) "  MKSTATIC_DEPS	$(@)"
-	$(E) $(TCLSH_LOCAL) $(MKSTATIC) $< \
+	$(E) $(MKSTATIC_RUN) $< \
 	  --deps $(@) $(patsubst %.manifest, %.c, $<)
 
 # Dependency rules for executable with .x or no extension
 %.x.d: %.manifest $(MKSTATIC) $(MKSTATIC_TEMPLATE)
 	$(Q) "  LINK_DEPS	$(@)"
-	$(E) $(TCLSH_LOCAL) $(MKSTATIC) $< --link-deps $(@) \
+	$(E) $(MKSTATIC_RUN) $< --link-deps $(@) \
 			  $(patsubst %.manifest, %.x, $<)
-	$(E) $(TCLSH_LOCAL) $(MKSTATIC) $< --link-deps $(@) \
+	$(E) $(MKSTATIC_RUN) $< --link-deps $(@) \
 			  $(patsubst %.manifest, %, $<)
 
 %/pkgIndex.tcl: %.manifest $(MKSTATIC)
 	$(Q) "  MKSTATIC	$(@)"
 	$(E) mkdir -p $(shell dirname $(@))
-	$(E) $(TCLSH_LOCAL) $(MKSTATIC) $< -p $(@)
+	$(E) $(MKSTATIC_RUN) $< -p $(@)
 
 
 # Binary executables - link from .o
 # Currently builds a dynamically linked executable 
 # Link statically where possible by adding static libs explicitly.
 #   Static libs must be compiled with -fPIC or -fPIE
-# TODO: linker flags from manifest
 $(TURBINE_EXECUTABLES): %: %.o ${STATIC_LIBS} ${STATIC_PKG_RESOURCE_H} $(TCL_API_SYMBOLS_LD)
 	$(Q) "  LINK		$(@)"
-	$(E) $(CC) $(<) $(LDFLAGS) $(LD_EXEC_SYMBOL_EXPORT) $(STATIC_LIBS) \
+	$(E) $(CC) $(<) $(LDFLAGS) $(LD_EXEC_SYMBOL_EXPORT) \
+	$(shell $(MKSTATIC_RUN) "$(@).manifest" --ignore-no-manifest --link-objs) \
+	$(STATIC_LIBS) \
+	$(shell $(MKSTATIC_RUN) "$(@).manifest" --ignore-no-manifest --link-flags) \
 	-Wl,-Bstatic $(TRANSITIVE_LIB_DEPS_STATIC) -Wl,-Bdynamic \
 	$(TRANSITIVE_LIB_DEPS_SHARED) \
         $(MAC_FLAT) \
@@ -536,11 +539,13 @@ tests: $(TEST_BINS)
 test_results: $(TEST_RESULTS)
 
 # Binary executables in the test suite
-# TODO: get linker flags from manifest if present
 $(TEST_BINS): %.x: %.o install.txt $(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A)
 	$(Q) "  LINK		$(@)"
-	$(E) $(CC) $(<) $(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A) \
+	$(E) $(CC) $(<) \
+	$(shell $(MKSTATIC_RUN) "$(@).manifest" --ignore-no-manifest --link-objs) \
+	$(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A) \
         $(MAC_FLAT) \
+	$(shell $(MKSTATIC_RUN) "$(@).manifest" --ignore-no-manifest --link-flags) \
 	-L$(INSTALL_LIB) -ltclturbine \
 	$(LIBS) -L $(TCL_LIB_DIR) -l$(TCL_LIB_NAME) \
 	$(RPATHS) \
