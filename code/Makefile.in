@@ -131,7 +131,7 @@ CC = @CC@
 CFLAGS := @CFLAGS@
 
 # Set includes
-CFLAGS += -I . -I src/turbine
+CFLAGS += -I . -I src/turbine -I src/tcl/turbine -I src/tcl/static-pkg/
 ifeq ($(USE_XLC),1)
 	CFLAGS += -qpack_semantic=gnu
 endif
@@ -603,6 +603,7 @@ DIRECTORIES = $(INSTALL_PREFIX) $(INSTALL_BIN) $(INSTALL_ETC)     \
 	      $(INSTALL_LIBSTATIC) $(INSTALL_SCRIPTS)
 
 TURBINE_HEADERS := src/turbine/turbine.h      \
+		  src/tcl/turbine/tcl-turbine.h \
                   src/turbine/turbine-defs.h \
                   src/tcl/blob/blob.h
 ifeq ($(ENABLE_STATIC),1)

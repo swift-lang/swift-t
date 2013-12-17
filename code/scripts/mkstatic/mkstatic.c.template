@@ -22,13 +22,15 @@
  */
 
 
-#include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "src/turbine/turbine.h"
-#include "src/tcl/turbine/tcl-turbine.h"
-#include "src/tcl/static-pkg/static-pkg.h"
+#include <tcl.h>
+#include <mpi.h>
+
+#include <turbine.h>
+#include <tcl-turbine.h>
+#include <static-pkg.h>
 
 @USER_HEADERS@
 

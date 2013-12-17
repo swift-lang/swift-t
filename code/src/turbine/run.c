@@ -26,6 +26,8 @@
 
 #include <tcl.h>
 
+#include <mpi.h>
+
 // From c-utils
 #include <tools.h>
 
