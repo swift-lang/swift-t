@@ -3,25 +3,29 @@
 # an appropriate C main program.
 
 set SCRIPT_DIR [ file dirname [ info script ] ]
+set F2A [ file join $SCRIPT_DIR "file2array.sh" ]
+
 
 set INIT_PKGS_FN "InitAllPackages"
-set MAIN_SCRIPT_STRING "turbine_main_script"
+set MAIN_SCRIPT_STRING "__turbine_tcl_main"
 
 proc main { } {
   global SCRIPT_DIR
   # TODO: compile/link options?
   set usage "mkstatic.tcl <manifest file> \[-c <output c file> \] \
-            \[-p <pkgIndex.tcl file> \] \[-h <tcl code resource header> \] \
-            \[-r <non-default resource var name> \] \
-            -R: generate resource files for lib_script entries
-            -v: verbose messages to report on process"
+        \[-p <pkgIndex.tcl file> \] \
+        \[--deps <make dependency include for generated C code> \]\
+        \[--link-deps <make dependency include for linking executable> \]\
+        \[-r <non-default resource var name> \] \
+        -v: verbose messages to report on process \
+        -h: help"
 
   set non_flag_args [ list ]
 
   set c_output_file ""
-  set resource_header ""
+  set deps_output_file ""
+  set link_deps_output_file ""
   set pkg_index ""
-  set gen_resources 0
   set resource_var_prefix "turbine_app_resources"
   global verbose_setting
   set verbose_setting 0
@@ -43,18 +47,27 @@ proc main { } {
           set pkg_index [ lindex $::argv $argi ]
           nonempty $pkg_index "Expected non-empty argument to -p"
         }
-        -h {
-          incr argi
-          set resource_header [ lindex $::argv $argi ]
-          nonempty $resource_header "Expected non-empty argument to -h"
-        }
         -r {
           incr argi
           set resource_var_prefix [ lindex $::argv $argi ]
           nonempty $resource_var_prefix "Expected non-empty argument to -r"
         }
-        -R {
-          set gen_resources 1
+        --deps {
+          incr argi
+          set deps_output_file [ lindex $::argv $argi ]
+          nonempty $deps_output_file "Expected non-empty argument to --deps"
+        }
+        --link-deps {
+          incr argi
+          set link_deps_output_file [ lindex $::argv $argi ]
+          nonempty $link_deps_output_file "Expected non-empty argument to --link-deps"
+        }
+        -h {
+          puts $usage
+          exit 0
+        }
+        default {
+          user_err "Unknown flag $arg"
         }
       }
     } else {
@@ -70,20 +83,21 @@ proc main { } {
 
   set manifest_dict [ read_manifest $manifest_filename ]
  
-  # TODO: generate deps file if appropriate
-
-  # generate resource files if requested
-  if { $gen_resources } {
-    if { [ string length $resource_header ] == 0 } {
-      user_err "Must provide resource header to generate resource files"
+  # generate deps file if needed
+  if { [ string length $deps_output_file ] > 0 } {
+    if { [ string length $c_output_file ] == 0 } {
+      user_err "Specify C output file to generate alongside deps"
     }
-    gen_resource_files [ dict get $manifest_dict lib_scripts ] \
-                       $resource_header $resource_var_prefix
+    write_deps_file $manifest_dict $deps_output_file $c_output_file
+  }
+  
+  if { [ string length $link_deps_output_file ] > 0 } {
+    user_err "Link dependency generation not supported"
+    write_link_deps_file $manifest_dict $link_deps_output_file
   }
 
   if { [ string length $c_output_file ] > 0 } {
-    fill_c_template $manifest_dict $resource_header $resource_var_prefix\
-                    $c_output_file
+    fill_c_template $manifest_dict $resource_var_prefix $c_output_file
   }
   
   if { [ string length $pkg_index ] > 0 } {
@@ -205,8 +219,24 @@ proc read_manifest { manifest_filename } {
             CFLAGS $CFLAGS LDFLAGS $LDFLAGS ]
 }
 
-proc fill_c_template { manifest_dict resource_hdr resource_var_prefix \
-                       c_output_file } {
+proc write_deps_file { manifest_dict deps_output_file c_output_file } {
+  set deps_output [ open $deps_output_file w ]
+  puts -nonewline $deps_output "$deps_output_file $c_output_file :"
+  set all_scripts [ dict get $manifest_dict lib_scripts ]
+  set main_script [ dict get $manifest_dict main_script ]
+  if { $main_script != "" } {
+    lappend all_scripts $main_script
+  }
+  
+  foreach script $all_scripts {
+    puts -nonewline $deps_output " $script"
+  }
+
+  puts $deps_output ""
+  close $deps_output
+}
+
+proc fill_c_template { manifest_dict resource_var_prefix c_output_file } {
   global SCRIPT_DIR
   global INIT_PKGS_FN
   global MAIN_SCRIPT_STRING
@@ -221,13 +251,11 @@ proc fill_c_template { manifest_dict resource_hdr resource_var_prefix \
   set c_output [ open $c_output_file w ]
 
   set lib_scripts [ dict get $manifest_dict lib_scripts ]
-  set have_resources [ \
-        expr {[ llength $lib_scripts ] > 0} ]
-  if { $have_resources } {
-    if { [ string length $resource_hdr ] == 0 } {
-      user_err "Must provide resource header to generate output C file\
-            with resources: $lib_scripts"
-    }
+  set lib_script_vars [ list ]
+  foreach lib_script $lib_scripts {
+    regsub -all "\[\.-\]" [ file tail $lib_script ] "_" lib_script_var
+    set lib_script_var "__turbine_tcl_lib_src_$lib_script_var"
+    lappend lib_script_vars $lib_script_var
   }
 
   puts $c_output "/* AUTOGENERATED FROM $c_template_filename */\n"
@@ -254,9 +282,6 @@ proc fill_c_template { manifest_dict resource_hdr resource_var_prefix \
           foreach hdr [ dict get $manifest_dict lib_includes ] {
             puts $c_output "#include <$hdr>"
           }
-          if { $have_resources } {
-            puts $c_output "#include \"$resource_hdr\""
-          }
         }
         TCL_STATIC_PKG_CALLS {
           puts -nonewline $c_output "Tcl_StaticPackage\(NULL, \
@@ -267,11 +292,7 @@ proc fill_c_template { manifest_dict resource_hdr resource_var_prefix \
           static_pkg_init_code $c_output \
               $INIT_PKGS_FN \
               [ dict get $manifest_dict lib_init_fns ] \
-              $have_resources \
-              "${resource_var_prefix}" \
-              "${resource_var_prefix}_len" \
-              "${resource_var_prefix}_init" \
-              "${resource_var_prefix}_filenames"
+              $lib_script_vars $lib_scripts
         }
         MAIN_SCRIPT_STRING {
           puts -nonewline $c_output $MAIN_SCRIPT_STRING 
@@ -286,15 +307,37 @@ proc fill_c_template { manifest_dict resource_hdr resource_var_prefix \
         }
         MAIN_SCRIPT_DATA {
           # Put main script data in output C file
-          global SCRIPT_DIR
+          global F2A
           set main_script [ dict get $manifest_dict main_script ]
           if { [ string length $main_script ] == 0 } {
             # Output placeholder
-            puts $c_output "const char $MAIN_SCRIPT_STRING\[\] = {0x0};"
+            puts $c_output "static const char $MAIN_SCRIPT_STRING\[\] = {0x0};"
           } else {
-            set rc [ catch { exec -ignorestderr \
-                [ file join $SCRIPT_DIR "file2array.sh" ] \
-                $main_script $MAIN_SCRIPT_STRING >@ $c_output } ]
+            # TODO: support static specifier
+            set rc [ catch { exec -ignorestderr $F2A \
+                -v $MAIN_SCRIPT_STRING -m "static const" $main_script \
+                                                        >@ $c_output } ]
+            if { $rc } {
+              user_err "Error converting tcl file $main_script to C array\
+                        in $c_output: $errorInfo"
+            }
+          }
+        }
+        RESOURCE_DECLS {
+          # iterate through resource files, output declarations
+          foreach lib_script_var $lib_script_vars {
+            puts $c_output "static const char $lib_script_var\[\];"
+          }
+        }
+        RESOURCE_DATA {
+          global F2A
+          foreach lib_script_var $lib_script_vars lib_script $lib_scripts {
+            set rc [ catch { exec -ignorestderr $F2A -v $lib_script_var \
+                     -m "static const" $lib_script >@${c_output} } ]
+            if { $rc } {
+              user_err "Error converting tcl file $lib_script to C array:\
+                        $errorInfo"
+            }
           }
         }
         default {
@@ -313,8 +356,7 @@ proc fill_c_template { manifest_dict resource_hdr resource_var_prefix \
 
 # Generate C function to initialize static package
 proc static_pkg_init_code { outf init_fn_name lib_init_fns \
-      have_resources resource_var resource_var_len resource_var_init \
-      resource_var_files } {
+                            resource_vars resource_files } {
   puts $outf "static int $init_fn_name\(Tcl_Interp *interp\) {"
   puts $outf "  int rc = TCL_OK;"
   foreach {lib_init_fn} $lib_init_fns {
@@ -324,58 +366,18 @@ proc static_pkg_init_code { outf init_fn_name lib_init_fns \
     puts $outf "    return rc;"
     puts $outf "  }"
   }
-  
-  if { $have_resources } {
-    puts $outf "  $resource_var_init\(\);"
-    puts $outf "  for (int i = 0; i < $resource_var_len; i++ ) {"
-    puts $outf "    const char *tclcode = $resource_var\[i\];"
-    puts $outf "    rc = Tcl_Eval\(interp, tclcode\);"
-    puts $outf "    if \(rc != TCL_OK\) {"
-    puts $outf "      fprintf\(stderr, \"Error while loading Tcl file %s\\n\","
-    puts $outf "        $resource_var_files\[i\]\);"
-    puts $outf "      return rc;"
-    puts $outf "    }"
+ 
+  foreach var $resource_vars resource_file $resource_files {
+    puts $outf "  rc = Tcl_Eval\(interp, $var\);"
+    puts $outf "  if \(rc != TCL_OK\) {"
+    puts $outf "    fprintf\(stderr, \"Error while loading Tcl code\
+                    originally from file %s\\n\","
+    puts $outf "                     \"$resource_file\"\);"
+    puts $outf "    return rc;"
     puts $outf "  }"
   }
   puts $outf "  return rc;"
   puts $outf "}"
-}
-
-proc gen_resource_files { lib_scripts resource_header \
-                          resource_var_prefix } {
-  global SCRIPT_DIR
-
-  set lib_script_cs [ list ]
-  foreach lib_script $lib_scripts {
-    set lsl [ string length $lib_script ]
-    if { [ string range $lib_script [ expr { $lsl - 4 } ] $lsl ] \
-                                    == ".tcl" } {
-      set lib_script_c \
-        "[ string range ${lib_script}_tcl.c 0 [ expr {$lsl-5} ] ]_tcl.c"
-    } else {
-      set lib_script_c $lib_script.c
-    }
-    lappend lib_script_cs $lib_script_c
-    
-    regsub -all "\[\.-\]" [ file tail $lib_script ] "_" lib_script_var
-    set rc [ catch { exec -ignorestderr \
-          [ file join $SCRIPT_DIR "file2array.sh" ] \
-          $lib_script $lib_script_var > $lib_script_c } ]
-    if { $rc } {
-      user_err "Error converting tcl file $lib_script to C array\
-                in $lib_script_c: $errorInfo"
-    }
-    verbose_msg "Created C resource file at $lib_script_c"
-  }
-
-  set rc [ catch { exec -ignorestderr \
-        [ file join $SCRIPT_DIR "files2arrays_mkhdr.sh" ] \
-        $resource_var_prefix {*}$lib_script_cs > $resource_header  } ]
-  if { $rc } {
-    user_err "building index of C resource files ($lib_script_cs =>\
-              $resource_header) failed"
-  }
-  verbose_msg "Created resource header at $resource_header"
 }
 
 proc gen_pkg_index { pkg_index_file pkg_name pkg_version } {

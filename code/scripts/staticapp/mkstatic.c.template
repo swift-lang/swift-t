@@ -32,11 +32,13 @@
 
 @USER_HEADERS@
 
+static const bool has_main_string = @HAS_MAIN_SCRIPT_STRING@;
+static const char @MAIN_SCRIPT_STRING@[];
+
+@RESOURCE_DECLS@
+
 // E.g. code similar to Tclturbine_InitStatic to load lib and src
 @USER_PKG_INIT@
-
-static const bool has_main_string = @HAS_MAIN_SCRIPT_STRING@;
-const char @MAIN_SCRIPT_STRING@[];
 
 int
 main(int argc, char **argv)
@@ -89,3 +91,6 @@ main(int argc, char **argv)
 
 // Binary data for Tcl main script
 @MAIN_SCRIPT_DATA@
+
+// Binary data for resources
+@RESOURCE_DATA@

@@ -13,7 +13,7 @@ do
   outfile=$( echo "$infile" | sed "$regex" )
   arrname="file2array_$(basename "$infile" | sed 's/[\.-]/_/g')"
   arrnames+=" $arrname"
-  $script_dir/file2array.sh $infile $arrname > $outfile
+  $script_dir/file2array.sh -a $arrname $infile > $outfile
   
   echo $arrname
 done

@@ -321,9 +321,11 @@ TURBINE_EXECUTABLE_DEPS := $(patsubst %.c, %.d, $(TURBINE_EXECUTABLE_SRC))
 
 STATIC_PKG_DEPS := $(patsubst %.c, %.d, $(STATIC_PKG_SRC))
 
+TEST_SRC_MANIFEST :=
 TEST_SRC :=
 include tests/module.mk
 TEST_DEPS := $(patsubst %.c, %.d, $(TEST_SRC))
+TEST_DEPS += $(patsubst %.manifest, %.manifest.d, $(TEST_SRC_MANIFEST))
 
 # Dependency files:
 # Remember that having a bad #include can cause dependency
@@ -418,7 +420,7 @@ F2A_MKHDR := scripts/staticapp/files2arrays_mkhdr.sh
 
 $(STATIC_PKG_RESOURCE_C): %_tcl.c : %.tcl $(F2A)
 	$(Q) "  FILE2ARRAY $(@)"
-	$(E) $(F2A) $< "turbine_lib_$(shell basename $< | sed 's/[\.-]/_/g')" > $(@)
+	$(E) $(F2A) -v "turbine_lib_$(shell basename $< | sed 's/[\.-]/_/g')" $< > $(@)
 
 $(STATIC_PKG_RESOURCE_H): $(STATIC_PKG_RESOURCE_C) $(F2A_MKHDR)
 	$(Q) " MKHDR $(@)"
@@ -464,9 +466,15 @@ TRANSITIVE_LIB_DEPS_STATIC = -lz
 LD_EXEC_SYMBOL_EXPORT = -Wl,--export-dynamic
 
 # Rule to build from manifest in simplest case (no resources)
+# TODO: change logic for combined resource file (mkstatic script, 
+#	  file2array_mkhdr must handle multiple comments)
+#	%.res.h %.res.c %.res.d <- resources  (note: build .d deps file for this depending on resource input and manifest file)
+#	%.x <- %.res.o %.o (build rule - might need to have .res.o
+#			    regardless of whether resources present)
 %.c: %.manifest $(MKSTATIC) $(MKSTATIC_TEMPLATE)
 	$(Q) "  MKSTATIC	$(@)"
-	$(E) $(TCLSH_LOCAL) $(MKSTATIC) $< -c $(@) -h $(patsubst %.c, %.h, $(@))
+	$(E) $(TCLSH_LOCAL) $(MKSTATIC) $< -c $(@) \
+	      --deps $(patsubst %.manifest, %.manifest.d, $<)
 
 # Binary executables - link from .o
 # Currently builds a dynamically linked executable 

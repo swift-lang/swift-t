@@ -11,7 +11,7 @@ pkg_name = staticapp-1
 pkg_version = 0.1
 
 # lib scripts are executed before main script
-#lib_script = staticapp-1-lib.tcl
+lib_script = staticapp-1-lib.tcl
 
 # C function names to initialise Tcl modules
 # TODO: test linking C functions

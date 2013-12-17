@@ -10,21 +10,57 @@
 #
 # /*FILE2ARRAY:<c array variable name>:<input file>*/
 #
-if [ $# != 2 ]
-then
-  echo "Usage: $0 <input file> <c array variable name>"
+set -e
+
+arrname=""
+modifiers=""
+
+usage () {
+  echo "Usage: $0 [ -v <c array variable name> ] [ -m <array variable modifiers> ]\
+ <input file> " >&2
   exit 1
-fi
+}
+
+while getopts "v:m:" opt; do
+  case $opt in 
+    v) 
+      if [[ $arrname != "" ]]; then
+        echo "-v specified twice" >&2
+        usage
+      fi
+      arrname=$OPTARG
+      ;;
+    m)
+      if [[ $modifiers != "" ]]; then
+        echo "-m specified twice" >&2
+        usage
+      fi
+      modifiers=$OPTARG
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      usage
+  esac
+done
+shift $((OPTIND - 1))
+
 infile=$1
-arrname=$2
+if [[ $# > 1 ]]; then
+  echo "Too many remaining arguments: $@" >&2
+  usage
+fi
+
+if [ -z "$modifiers" ]; then
+  # Default is const with global linking visibility
+  modifiers="const"
+fi
 
 echo "/*FILE2ARRAY:$arrname:$infile*/"
 echo "#include <stddef.h>" # For size_t
 echo
 echo "const char $arrname[] = {"
-xxd -i < $infile
-echo ", 0x0"
+(cat $infile && head -c 1 /dev/zero ) | xxd -i 
 echo "};"
 
 echo "/* Size without added null byte */"
-echo "const size_t ${arrname}_len = sizeof(${arrname}) - 1;"
+echo "$modifiers size_t ${arrname}_len = sizeof(${arrname}) - 1;"
