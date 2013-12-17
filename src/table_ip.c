@@ -142,11 +142,14 @@ table_ip_clear(table_ip* target)
     table_ip_bucket *b = &target->array[i];
     if (table_ip_bucket_valid(b))
     {
+      bool is_head;
       table_ip_entry *e, *next;
-      for (e = &b->head; e != NULL; e = next) {
+      for (e = &b->head, is_head = true; e != NULL;
+           e = next, is_head = false) {
         next = e->next;
-
-        free(e);
+        
+        if (!is_head)
+          free(e);
       }
       b->valid = false;
     }
@@ -209,9 +212,7 @@ void table_ip_free_callback(table_ip* target, bool free_root,
           next = e->next;
           callback(e->key, e->data);
           if (!is_head)
-          {
             free(e);
-          }
         }
         b->valid = false;
       }

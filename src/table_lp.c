@@ -141,12 +141,15 @@ table_lp_clear(table_lp* target)
   {
     table_lp_bucket *b = &target->array[i];
     if (table_lp_bucket_valid(b))
-    {
+    { 
+      bool is_head;
       table_lp_entry *e, *next;
-      for (e = &b->head; e != NULL; e = next) {
+      for (e = &b->head, is_head = true; e != NULL;
+           e = next, is_head = false) {
         next = e->next;
 
-        free(e);
+        if (!is_head)
+          free(e);
       }
       b->valid = false;
     }
@@ -209,9 +212,7 @@ void table_lp_free_callback(table_lp* target, bool free_root,
           next = e->next;
           callback(e->key, e->data);
           if (!is_head)
-          {
             free(e);
-          }
         }
         b->valid = false;
       }
