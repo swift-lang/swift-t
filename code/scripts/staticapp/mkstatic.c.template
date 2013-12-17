@@ -35,7 +35,8 @@
 // E.g. code similar to Tclturbine_InitStatic to load lib and src
 @USER_PKG_INIT@
 
-static const char *@MAIN_SCRIPT_STRING@;
+static const bool has_main_string = @HAS_MAIN_SCRIPT_STRING@;
+const char @MAIN_SCRIPT_STRING@[];
 
 int
 main(int argc, char **argv)
@@ -48,7 +49,7 @@ main(int argc, char **argv)
 
   turbine_code rc;
   char *script_file = NULL;
-  if (@MAIN_SCRIPT_STRING@ != NULL)
+  if (has_main_string)
   {
     rc = turbine_run_string(MPI_COMM_NULL, @MAIN_SCRIPT_STRING@, argc, argv, NULL, NULL);
   }

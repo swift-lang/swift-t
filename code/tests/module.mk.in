@@ -69,3 +69,7 @@ TEST_SRC_TCL := $(DIR)/error.tcl               \
 ifeq ($(USE_MPE),1)
 	TEST_SRC_TCL += $(DIR)/mpe-3.tcl
 endif
+
+TEST_SRC_MANIFEST += $(DIR)/staticapp-1.manifest
+
+TEST_SRC_C += $(patsubst %.manifest, %.c, $(TEST_SRC_MANIFEST))

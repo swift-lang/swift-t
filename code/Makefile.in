@@ -151,6 +151,9 @@ TCL_LIB_SO := @USE_LIBTCL_SO@
 TCL_LIB_A := @USE_LIBTCL_A@
 TCLSH_LOCAL := @USE_TCLSH_LOCAL@
 
+MKSTATIC := scripts/staticapp/mkstatic.tcl
+MKSTATIC_TEMPLATE := scripts/staticapp/mkstatic.c.template
+
 MACHINE = @USE_MACHINE@
 
 # On some systems, the user will use mpicc,
@@ -460,13 +463,10 @@ TRANSITIVE_LIB_DEPS_STATIC = -lz
 #	-Wl,--exclude-libs,c
 LD_EXEC_SYMBOL_EXPORT = -Wl,--export-dynamic
 
-MKSTATIC := scripts/staticapp/mkstatic.tcl
-MKSTATIC_TEMPLATE := scripts/staticapp/mkstatic.c.template
-
 # Rule to build from manifest in simplest case (no resources)
 %.c: %.manifest $(MKSTATIC) $(MKSTATIC_TEMPLATE)
 	$(Q) "  MKSTATIC	$(@)"
-	$(E) $(TCLSH_LOCAL) $(MKSTATIC) $< -c $(@)
+	$(E) $(TCLSH_LOCAL) $(MKSTATIC) $< -c $(@) -h $(patsubst %.c, %.h, $(@))
 
 # Binary executables - link from .o
 # Currently builds a dynamically linked executable 
@@ -506,9 +506,9 @@ tests: $(TEST_BINS)
 test_results: $(TEST_RESULTS)
 
 # Binary executables in the test suite
-$(TEST_BINS): %.x: %.o install.txt
+$(TEST_BINS): %.x: %.o install.txt $(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A)
 	$(Q) "  LINK		$(@)"
-	$(E) $(CC) $(<) \
+	$(E) $(CC) $(<) $(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A) \
         $(MAC_FLAT) \
 	-L$(INSTALL_LIB) -ltclturbine \
 	$(LIBS) -L $(TCL_LIB_DIR) -l$(TCL_LIB_NAME) \

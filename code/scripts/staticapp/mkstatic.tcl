@@ -18,12 +18,11 @@ proc main { } {
 
   set non_flag_args [ list ]
 
-  # TODO: proper arg processing
   set c_output_file ""
   set resource_header ""
   set pkg_index ""
   set gen_resources 0
-  set resource_var_prefix ""
+  set resource_var_prefix "turbine_app_resources"
   global verbose_setting
   set verbose_setting 0
 
@@ -277,13 +276,21 @@ proc fill_c_template { manifest_dict resource_hdr resource_var_prefix \
         MAIN_SCRIPT_STRING {
           puts -nonewline $c_output $MAIN_SCRIPT_STRING 
         }
+        HAS_MAIN_SCRIPT_STRING {
+          set main_script [ dict get $manifest_dict main_script ]
+          if { [ string length $main_script ] > 0 } {
+            puts -nonewline $c_output true
+          } else {
+            puts -nonewline $c_output false
+          }
+        }
         MAIN_SCRIPT_DATA {
           # Put main script data in output C file
           global SCRIPT_DIR
-          # TODO: fixup paths from manifest file
           set main_script [ dict get $manifest_dict main_script ]
           if { [ string length $main_script ] == 0 } {
-            puts $c_output "static const char *$MAIN_SCRIPT_STRING = NULL;"
+            # Output placeholder
+            puts $c_output "const char $MAIN_SCRIPT_STRING\[\] = {0x0};"
           } else {
             set rc [ catch { exec -ignorestderr \
                 [ file join $SCRIPT_DIR "file2array.sh" ] \
