@@ -34,7 +34,4 @@ lib_object = other_stuff.o
 
 # lib shared object (linked against - not preferred).
 # This goes last on link command
-linker_libs = -lm -L/home/blah/mysharedlib-lmysharedlib
-CFLAGS = 
-# linker flags - appear before arguments to linker
-LDFLAGS =
+linker_libs = -lm -L/home/blah/mysharedlib -lmysharedlib

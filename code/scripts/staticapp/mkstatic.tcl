@@ -14,17 +14,23 @@ proc main { } {
   # TODO: compile/link options?
   set usage "mkstatic.tcl <manifest file> \[-c <output c file> \] \
         \[-p <pkgIndex.tcl file> \] \
-        \[--deps <make dependency include for generated C code> \]\
-        \[--link-deps <make dependency include for linking executable> \]\
+        \[--deps <dependency include for C output> \]\
+        \[--link-deps <dependency include for linking executable> \]\
+        \[--link-objs: print list of link objects to stdout \]\
+        \[--link-flags: print list of linker library flags to stdout \]\
         \[-r <non-default resource var name> \] \
         -v: verbose messages to report on process \
-        -h: help"
+        -h: help \n\
+        Notes: \n
+        * --link-objs are printed before --link-flags if both provided"
 
   set non_flag_args [ list ]
 
   set c_output_file ""
   set deps_output_file ""
   set link_deps_output_file ""
+  set print_link_objs 0
+  set print_link_flags 0
   set pkg_index ""
   set resource_var_prefix "turbine_app_resources"
   global verbose_setting
@@ -62,6 +68,12 @@ proc main { } {
           set link_deps_output_file [ lindex $::argv $argi ]
           nonempty $link_deps_output_file "Expected non-empty argument to --link-deps"
         }
+        --link-objs {
+          set print_link_objs 1
+        }
+        --link-flags {
+          set print_link_flags 1
+        }
         -h {
           puts $usage
           exit 0
@@ -90,6 +102,8 @@ proc main { } {
     }
     write_deps_file $manifest_dict $deps_output_file $c_output_file
   }
+
+  print_link_info stdout $manifest_dict $print_link_objs $print_link_flags
   
   if { [ string length $link_deps_output_file ] > 0 } {
     user_err "Link dependency generation not supported"
@@ -149,10 +163,6 @@ proc read_manifest { manifest_filename } {
   # This goes last on link command
   set linker_libs ""
 
-  # Compiler/linker flags
-  set CFLAGS ""
-  set LDFLAGS ""
-
   set manifest [open $manifest_filename]
   while {[gets $manifest line] >= 0} {
     set line [ string trimleft $line ]
@@ -197,12 +207,6 @@ proc read_manifest { manifest_filename } {
       linker_libs {
         set linker_libs "$linker_libs $trimmed_val"
       }
-      CFLAGS {
-        set CFLAGS "$CFLAGS $trimmed_val"
-      }
-      LDFLAGS {
-        set LDFLAGS "$LDFLAGS $trimmed_val"
-      }
       default {
         user_err "Unknown key in manifest file: \"$key\""
       }
@@ -215,8 +219,7 @@ proc read_manifest { manifest_filename } {
             pkg_name $pkg_name pkg_version $pkg_version \
             main_script $main_script lib_scripts $lib_scripts \
             lib_init_fns $lib_init_fns lib_includes $lib_includes \
-            lib_objects $lib_objects linker_libs $linker_libs \
-            CFLAGS $CFLAGS LDFLAGS $LDFLAGS ]
+            lib_objects $lib_objects linker_libs $linker_libs ]
 }
 
 proc write_deps_file { manifest_dict deps_output_file c_output_file } {
@@ -389,6 +392,26 @@ proc gen_pkg_index { pkg_index_file pkg_name pkg_version } {
     "package ifneeded $pkg_name $pkg_version {load {} $pkg_name}"
   close $output
   verbose_msg "Created Tcl package index at $pkg_index_file"
+}
+
+proc print_link_info { outfile manifest_dict link_objs link_flags } {
+  if { $link_objs } {
+    puts -nonewline $outfile [ string trim \
+        [ dict get $manifest_dict lib_objects ] ]
+  }
+  
+  if { $link_flags } {
+    if { $link_objs } {
+      puts -nonewline $outfile  " "
+    }
+    puts -nonewline $outfile [ string trim \
+        [ dict get $manifest_dict linker_libs ] ]
+  }
+
+  if { $link_objs || $link_flags } {
+    # Print newline
+    puts $outfile ""
+  }
 }
 
 proc nonempty { var msg } {
