@@ -151,9 +151,9 @@ TCL_LIB_SO := @USE_LIBTCL_SO@
 TCL_LIB_A := @USE_LIBTCL_A@
 TCLSH_LOCAL := @USE_TCLSH_LOCAL@
 
-MKSTATIC := scripts/staticapp/mkstatic.tcl
+MKSTATIC := scripts/mkstatic/mkstatic.tcl
 MKSTATIC_RUN := $(TCLSH_LOCAL) $(MKSTATIC)
-MKSTATIC_TEMPLATE := scripts/staticapp/mkstatic.c.template
+MKSTATIC_TEMPLATE := scripts/mkstatic/mkstatic.c.template
 
 MACHINE = @USE_MACHINE@
 
@@ -423,8 +423,8 @@ endif
 ### TCL SOURCE LINKING
 # Compilation and linking to get Tcl source as C arrays
 
-F2A := scripts/staticapp/file2array.sh
-F2A_MKHDR := scripts/staticapp/files2arrays_mkhdr.sh
+F2A := scripts/mkstatic/file2array.sh
+F2A_MKHDR := scripts/mkstatic/files2arrays_mkhdr.sh
 
 $(STATIC_PKG_RESOURCE_C): %_tcl.c : %.tcl $(F2A)
 	$(Q) "  FILE2ARRAY $(@)"
@@ -615,7 +615,7 @@ BINS    = $(shell ls bin/turbine \
           $(TURBINE_EXECUTABLES)
 EXPORTS = $(shell ls export/*.swift )
 SCRIPTS = $(shell ls scripts/*.zsh scripts/*.sh scripts/*.tcl \
-	             $(SCRIPTS_SUBMIT) )
+		     scripts/mkstatic/* $(SCRIPTS_SUBMIT) )
 
 install.txt: $(ENABLED_PACKAGES) $(BINS) $(EXPORTS) $(SCRIPTS) $(TURBINE_HEADERS)
 #       Note: this is re-run if anything changes

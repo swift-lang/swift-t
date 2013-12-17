@@ -1,3 +1,5 @@
+#!/usr/bin/env tclsh
+
 # Tcl script to generate entry point C code for statically linked 
 # application.  Uses template C code and manifest file to output
 # an appropriate C main program.
