@@ -71,5 +71,6 @@ ifeq ($(USE_MPE),1)
 endif
 
 TEST_SRC_MANIFEST += $(DIR)/staticapp-1.manifest
+$(DIR)/staticapp-1.result: $(DIR)/staticapp-1/pkgIndex.tcl
 
 TEST_SRC_C += $(patsubst %.manifest, %.c, $(TEST_SRC_MANIFEST))

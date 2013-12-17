@@ -465,16 +465,18 @@ TRANSITIVE_LIB_DEPS_STATIC = -lz
 #	-Wl,--exclude-libs,c
 LD_EXEC_SYMBOL_EXPORT = -Wl,--export-dynamic
 
-# Rule to build from manifest in simplest case (no resources)
-# TODO: change logic for combined resource file (mkstatic script, 
-#	  file2array_mkhdr must handle multiple comments)
-#	%.res.h %.res.c %.res.d <- resources  (note: build .d deps file for this depending on resource input and manifest file)
-#	%.x <- %.res.o %.o (build rule - might need to have .res.o
-#			    regardless of whether resources present)
+# Rule to build C source file based on manifest
+# Also create deps file so it can be correctly recreated upon change.
 %.c: %.manifest $(MKSTATIC) $(MKSTATIC_TEMPLATE)
 	$(Q) "  MKSTATIC	$(@)"
 	$(E) $(TCLSH_LOCAL) $(MKSTATIC) $< -c $(@) \
 	      --deps $(patsubst %.manifest, %.manifest.d, $<)
+
+%/pkgIndex.tcl: %.manifest $(MKSTATIC)
+	$(Q) "  MKSTATIC	$(@)"
+	$(E) mkdir -p $(shell dirname $(@))
+	$(E) $(TCLSH_LOCAL) $(MKSTATIC) $< -p $(@)
+
 
 # Binary executables - link from .o
 # Currently builds a dynamically linked executable 

@@ -14,14 +14,15 @@
 # limitations under the License
 
 THIS=$0
-SCRIPT=${THIS%.sh}.tcl
+BIN=${THIS%.sh}.x
 OUTPUT=${THIS%.sh}.out
-
-source $( dirname $0 )/setup.sh > ${OUTPUT} 2>&1
+TESTS=$( dirname $0 )
+source ${TESTS}/setup.sh > ${OUTPUT} 2>&1
 
 set -x
+export TURBINE_USER_LIB=${THIS%.sh}/
 
-bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
+${TESTS}/run-mpi.zsh ${BIN} >& ${OUTPUT}
 [[ ${?} == 0 ]] || exit 1
 
 for i in `seq 0 19`; do

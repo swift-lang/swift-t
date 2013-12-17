@@ -15,6 +15,8 @@
 # Basic main file for statically linked app
 
 package require turbine 0.4
+package require staticapp-1 0.1
+
 
 proc rules { } {
     for { set i 0 } { $i < 10 } { incr i } {

@@ -313,7 +313,6 @@ proc fill_c_template { manifest_dict resource_var_prefix c_output_file } {
             # Output placeholder
             puts $c_output "static const char $MAIN_SCRIPT_STRING\[\] = {0x0};"
           } else {
-            # TODO: support static specifier
             set rc [ catch { exec -ignorestderr $F2A \
                 -v $MAIN_SCRIPT_STRING -m "static const" $main_script \
                                                         >@ $c_output } ]
@@ -389,7 +388,7 @@ proc gen_pkg_index { pkg_index_file pkg_name pkg_version } {
   puts $output \
     "package ifneeded $pkg_name $pkg_version {load {} $pkg_name}"
   close $output
-  verbose_msg"Created Tcl package index at $pkg_index_file"
+  verbose_msg "Created Tcl package index at $pkg_index_file"
 }
 
 proc nonempty { var msg } {

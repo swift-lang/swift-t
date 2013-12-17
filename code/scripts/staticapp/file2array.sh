@@ -58,7 +58,7 @@ fi
 echo "/*FILE2ARRAY:$arrname:$infile*/"
 echo "#include <stddef.h>" # For size_t
 echo
-echo "const char $arrname[] = {"
+echo "$modifiers char $arrname[] = {"
 (cat $infile && head -c 1 /dev/zero ) | xxd -i 
 echo "};"
 
