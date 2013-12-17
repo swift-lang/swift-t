@@ -43,11 +43,8 @@ turbine_code
 turbine_run(MPI_Comm comm, char* script_file,
             int argc, char** argv, char* output)
 {
-  // Create Tcl interpreter:
-  Tcl_Interp* interp = Tcl_CreateInterp();
-  Tcl_Init(interp);
   return turbine_run_interp(comm, script_file, argc, argv, output,
-                            interp);
+                            NULL);
 }
 
 turbine_code
@@ -86,6 +83,24 @@ turbine_run_interp(MPI_Comm comm, char* script_file,
     printf("turbine_run(): Could not load script: %s\n", script_file);
     return TURBINE_ERROR_INVALID;
   }
+
+  int rc =  turbine_run_string(comm, script, argc, argv, output, interp);
+  free(script);
+  return rc;
+}
+
+turbine_code turbine_run_string(MPI_Comm comm, const char* script,
+                                int argc, char** argv, char* output,
+                                Tcl_Interp* interp)
+{
+  bool created_interp = false;
+  if (interp == NULL)
+  {
+    // Create Tcl interpreter:
+    interp = Tcl_CreateInterp();
+    Tcl_Init(interp);
+    created_interp = true;
+  }
   // Run the user script
   int rc = Tcl_Eval(interp, script);
 
@@ -100,10 +115,12 @@ turbine_run_interp(MPI_Comm comm, char* script_file,
     printf("turbine_run(): Tcl error: %s\n", msg_string);
     return TURBINE_ERROR_UNKNOWN;
   }
-
-  // Clean up
-  Tcl_DeleteInterp(interp);
-  free(script);
+  
+  if (created_interp)
+  {
+    // Clean up
+    Tcl_DeleteInterp(interp);
+  }
 
   return TURBINE_SUCCESS;
 }

@@ -130,8 +130,13 @@ void turbine_finalize(void);
 turbine_code turbine_run(MPI_Comm comm, char* script_file,
                          int argc, char** argv, char* output);
 
+turbine_code turbine_run_string(MPI_Comm comm, const char* script,
+                                int argc, char** argv, char* output,
+                                Tcl_Interp* interp);
+
 turbine_code turbine_run_interp(MPI_Comm comm, char* script_file,
                                 int argc, char** argv, char* output,
                                 Tcl_Interp* interp);
+
 
 #endif
