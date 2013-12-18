@@ -298,7 +298,7 @@ proc locate_all_lib_src { tcl_version init_lib_dirs other_lib_dirs } {
   # Process with init lib dirs first, others after
   set all_lib_src [ list ]
   foreach lib_dir [ concat $init_lib_dirs $other_lib_dirs ] {
-    set lib_src [ locate_lib_src $tcl_version $init_lib_dir ]
+    set lib_src [ locate_lib_src $tcl_version $lib_dir ]
     lappend all_lib_src {*}$lib_src
   }
   return $all_lib_src
@@ -307,6 +307,15 @@ proc locate_all_lib_src { tcl_version init_lib_dirs other_lib_dirs } {
 proc locate_lib_src { tcl_version lib_dir } {
   nonempty $tcl_version "Must specify Tcl version to locate libraries\
                          in directories"
+  set check_dirs [ list $lib_dir [ file join $lib_dir "tcl${tcl_version}" ] ]
+  foreach check_dir $check_dirs {
+    verbose_msg "Checking lib directory $check_dir for .tcl files"
+    # TODO: check root for tc files 
+    # TODO: put init.tcl first
+    # TODO: check subdirectories thereof for pkgIndex.tcl files
+  }
+  # TODO: how to set $dir var for pkgIndex.tcl files
+  error "not implemented"
 }
 
 proc write_deps_file { manifest_dict deps_output_file c_output_file } {
