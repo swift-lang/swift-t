@@ -42,13 +42,25 @@ static const char @MAIN_SCRIPT_STRING@[];
 // E.g. code similar to Tclturbine_InitStatic to load lib and src
 @USER_PKG_INIT@
 
+static int MkStatic_Tcl_Init(Tcl_Interp *interp)
+{
+  if (!(@SKIP_TCL_INIT@))
+  {
+    int rc = Tcl_Init(interp);
+    if (rc != TCL_OK)
+      return rc;
+  }
+  @TCL_LIB_INIT@
+  return TCL_OK;
+}
+
 int
 main(int argc, char **argv)
 {
   int tcl_rc;
   Tcl_Interp *interp = Tcl_CreateInterp();
-  
-  tcl_rc = Tcl_Init(interp);
+ 
+  tcl_rc = MkStatic_Tcl_Init(interp);
   if (tcl_rc != TCL_OK)
   {
     fprintf(stderr, "Unexpected error initializing Tcl Interpreter:\n");

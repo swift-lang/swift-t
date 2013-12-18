@@ -78,7 +78,13 @@ echo "/*FILE2ARRAY:$arrname:$infile*/"
 echo "#include <stddef.h>" # For size_t
 echo
 echo "$modifiers char $arrname[] = {"
-(cat $infile && head -c 1 /dev/zero ) | xxd -i 
+data=$(mktemp)
+if ! (cat $infile && head -c 1 /dev/zero ) > $data; then
+  rm $data
+  exit 1
+fi
+xxd -i < $data
+rm $data
 echo "};"
 
 echo "/* Size without added null byte */"

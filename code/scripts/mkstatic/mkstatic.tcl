@@ -21,24 +21,41 @@
 set SCRIPT_DIR [ file dirname [ info script ] ]
 set F2A [ file join $SCRIPT_DIR "file2array.sh" ]
 
-
 set INIT_PKGS_FN "InitAllPackages"
 set MAIN_SCRIPT_STRING "__turbine_tcl_main"
+
+# list of output files to remove on error
+set cleanup_error_files [ list ]
 
 proc main { } {
   global SCRIPT_DIR
 
-  # TODO: compile/link options?
-  set usage "mkstatic.tcl <manifest file> \[-c <output c file> \] \
-        \[--deps <dependency include for C output> <c output file for deps> \]\
-        \[--link-deps <dependency include for linking> <link target> \]\
-        \[--link-objs: print list of link objects to stdout \]\
-        \[--link-flags: print list of linker library flags to stdout \]\
-        \[-r <non-default resource var name> \] \
-        --ignore-no-manifest: if no manifest present, assume empty manifest \
-        -v: verbose messages to report on process \
-        -h: help \n\
+  set usage "mkstatic.tcl <manifest file> \[-c <output c file>\]\
+        \[--include-init-lib <lib directory with Tcl built-ins>\]\
+        \[--include-lib <Tcl lib directory with modules/source to include\]\
+        \[--tcl-version <Tcl version number for lib selection>\]\
+        \[--deps <dependency include for C output> <c output file for deps>\]\
+        \[--link-deps <dependency include for linking> <link target>\]\
+        \[--link-objs: print list of link objects to stdout\]\
+        \[--link-flags: print list of linker library flags to stdout\]\
+        \[-r <non-default resource var name>\]\
+        \[--ignore-no-manifest: if no manifest present, assume empty manifest\]\
+        \[-v: verbose messages to report on process\]\
+        \[-h: help\]\n\
+        \n\
         Notes: \n\
+        -> --include-lib and --include-init-lib behave similarly:\n\
+          - both evaluate Tcl source files in the root of the directory,\
+            and pkgIndex.tcl files in subdirectories, for later loading.\n\
+          - both also look in \${dir}/tcl\${TCL_VERSION}.  This means that\
+            --tcl-version must be specified \n\
+          - both evaluate init.tcl, if present, before other files\n\
+          - --include-init-lib can be specified only once, and those libraries\
+            are loaded first \n\
+          - --include-init-lib causes the regular Tcl_Init initialization to be\
+            skipped, allowing Tcl builtin libraries to be compiled into the\
+            result binary \n\
+        -> multiple -l flags can be provided to include multiple directories\n\
         -> --link-objs are printed before --link-flags if both provided"
 
   set non_flag_args [ list ]
@@ -54,6 +71,10 @@ proc main { } {
   global verbose_setting
   set verbose_setting 0
   set ignore_no_manifest 0
+  set skip_tcl_init 0
+  set init_lib_dirs [ list ]
+  set other_lib_dirs [ list ]
+  set tcl_version ""
 
   for { set argi 0 } { $argi < $::argc } { incr argi } {
     set arg [ lindex $::argv $argi ]
@@ -80,6 +101,27 @@ proc main { } {
           set deps_c_output_file [ lindex $::argv $argi ]
           nonempty $deps_c_output_file \
                 "Expected second non-empty argument to --deps"
+        }
+        --include-lib -
+        --include-init-lib {
+          incr argi
+          set lib_dir_arg [ lindex $::argv $argi ]
+          nonempty $lib_dir_arg "Expected second non-empty argument to $arg"
+
+          if { $arg == "--include-init-lib" } {
+            if { [ llength $init_lib_dirs ] > 0 } {
+              user_err "$arg specified more than once"
+            }
+            lappend init_lib_dirs $lib_dir_arg
+            set skip_tcl_init 1
+          } else {
+            lappend other_lib_dirs $lib_dir_arg
+          }
+        }
+        --tcl-version {
+          incr argi
+          set tcl_version [ lindex $::argv $argi ]
+          nonempty $tcl_version "Expected second non-empty argument to $arg"
         }
         --link-deps {
           incr argi
@@ -119,9 +161,14 @@ proc main { } {
 
   set manifest_dict [ read_manifest $manifest_filename $ignore_no_manifest ]
  
+  set init_lib_src [ locate_all_lib_src $tcl_version $init_lib_dirs \
+                                     $other_lib_dirs ]
+
   # generate deps file if needed
   if { [ string length $deps_output_file ] > 0 } {
-    write_deps_file $manifest_dict $deps_output_file $deps_c_output_file
+    #TODO: write_deps_file should include libs
+    write_deps_file $manifest_dict $skip_tcl_init $init_lib_src \
+                    $deps_output_file $deps_c_output_file
   }
 
   print_link_info stdout $manifest_dict $print_link_objs $print_link_flags
@@ -131,12 +178,14 @@ proc main { } {
   }
 
   if { [ string length $c_output_file ] > 0 } {
-    fill_c_template $manifest_dict $resource_var_prefix $c_output_file
+    fill_c_template $manifest_dict $skip_tcl_init $init_lib_src \
+                    $resource_var_prefix $c_output_file
   }
 }
 
 proc user_err { msg } {
   puts stderr "error: $msg"
+  cleanup_on_error
   exit 1
 }
 
@@ -245,8 +294,23 @@ proc read_manifest { manifest_filename ignore_no_manifest } {
             lib_objects $lib_objects linker_libs $linker_libs ]
 }
 
+proc locate_all_lib_src { tcl_version init_lib_dirs other_lib_dirs } {
+  # Process with init lib dirs first, others after
+  set all_lib_src [ list ]
+  foreach lib_dir [ concat $init_lib_dirs $other_lib_dirs ] {
+    set lib_src [ locate_lib_src $tcl_version $init_lib_dir ]
+    lappend all_lib_src {*}$lib_src
+  }
+  return $all_lib_src
+}
+
+proc locate_lib_src { tcl_version lib_dir } {
+  nonempty $tcl_version "Must specify Tcl version to locate libraries\
+                         in directories"
+}
+
 proc write_deps_file { manifest_dict deps_output_file c_output_file } {
-  set deps_output [ open $deps_output_file w ]
+  set deps_output [ open_output_file $deps_output_file ]
   puts -nonewline $deps_output "$deps_output_file $c_output_file :"
   set all_scripts [ dict get $manifest_dict lib_scripts ]
   set main_script [ dict get $manifest_dict main_script ]
@@ -262,10 +326,25 @@ proc write_deps_file { manifest_dict deps_output_file c_output_file } {
   close $deps_output
 }
 
-proc fill_c_template { manifest_dict resource_var_prefix c_output_file } {
+proc varname_from_file { fname used_names } {
+  regsub -all "\[\.-\]" [ file tail $fname ] "_" basename
+  set basename "__turbine_tcl_lib_src_$basename"
+  set name $basename
+  set attempt 0
+  while { [ lsearch $used_names $name ] >= 0 } {
+    incr attempt
+    set name "${basename}_${attempt}"
+  }
+  return $name
+}
+
+proc fill_c_template { manifest_dict skip_tcl_init init_lib_src \
+                      resource_var_prefix c_output_file } {
   global SCRIPT_DIR
   global INIT_PKGS_FN
   global MAIN_SCRIPT_STRING
+  global F2A
+
   set pkg_name [ dict get $manifest_dict pkg_name ]
   set pkg_version [ dict get $manifest_dict pkg_version ]
  
@@ -279,15 +358,27 @@ proc fill_c_template { manifest_dict resource_var_prefix c_output_file } {
   set c_template_filename \
     [ file join $SCRIPT_DIR "mkstatic.c.template" ]
   set c_template [ open $c_template_filename ]
-  set c_output [ open $c_output_file w ]
+  set c_output [ open_output_file $c_output_file ]
+
+  set all_vars [ list ]
+  
+  set init_lib_src_vars [ list ]
+  foreach src_file $init_lib_src {
+    set init_lib_src_var [ varname_from_file $src_file $all_vars ]
+    lappend init_lib_src_vars $init_lib_src_var
+    lappend all_vars $init_lib_src_var
+  }
 
   set lib_scripts [ dict get $manifest_dict lib_scripts ]
   set lib_script_vars [ list ]
   foreach lib_script $lib_scripts {
-    regsub -all "\[\.-\]" [ file tail $lib_script ] "_" lib_script_var
-    set lib_script_var "__turbine_tcl_lib_src_$lib_script_var"
-    lappend lib_script_vars $lib_script_var
+    set lib_script_var [ varname_from_file $lib_script $all_vars ]
+    lappend lib_script_vars $lib_script_var 
+    lappend all_vars $lib_script_var
   }
+
+  set all_src_vars [ concat $init_lib_src_vars $lib_script_vars ]
+  set all_src_files [ concat $init_lib_src $lib_scripts ]
 
   puts $c_output "/* AUTOGENERATED FROM $c_template_filename */\n"
 
@@ -314,6 +405,15 @@ proc fill_c_template { manifest_dict resource_var_prefix c_output_file } {
             puts $c_output "#include <$hdr>"
           }
         }
+        SKIP_TCL_INIT {
+          # Output integer to use as truth value
+          puts -nonewline $c_output $skip_tcl_init
+        }
+        TCL_LIB_INIT {
+          foreach src_file $init_lib_src {
+            error "Not implemented"
+          }
+        }
         TCL_STATIC_PKG_CALLS {
           puts $c_output "Tcl_StaticPackage\(NULL, \
                 \"${pkg_name}\", ${INIT_PKGS_FN}, ${INIT_PKGS_FN}\);"
@@ -323,7 +423,7 @@ proc fill_c_template { manifest_dict resource_var_prefix c_output_file } {
           puts $c_output "  if (_rc != TCL_OK) {"
           puts $c_output "    fprintf(stderr, \
                         \"Could not initialize $pkg_name\");"
-          puts $c_output "    Tcl_Eval(interp, \"puts \$errorInfo\");"
+          puts $c_output "    Tcl_Eval(interp, \"puts \$::errorInfo\");"
           puts $c_output "    exit(1);"
           puts $c_output "  }"
         }
@@ -347,7 +447,6 @@ proc fill_c_template { manifest_dict resource_var_prefix c_output_file } {
         }
         MAIN_SCRIPT_DATA {
           # Put main script data in output C file
-          global F2A
           set main_script [ dict get $manifest_dict main_script ]
           if { [ string length $main_script ] == 0 } {
             # Output placeholder
@@ -357,8 +456,8 @@ proc fill_c_template { manifest_dict resource_var_prefix c_output_file } {
                 -v $MAIN_SCRIPT_STRING -m "static const" $main_script \
                                                         >@ $c_output } ]
             if { $rc } {
-              user_err "Error converting tcl file $main_script to C array\
-                        in $c_output: $errorInfo"
+              user_err "could not convert tcl file $main_script to C array\
+                        in $c_output_file"
             }
           }
         }
@@ -368,18 +467,16 @@ proc fill_c_template { manifest_dict resource_var_prefix c_output_file } {
         }
         RESOURCE_DECLS {
           # iterate through resource files, output declarations
-          foreach lib_script_var $lib_script_vars {
+          foreach var $all_src_vars {
             puts $c_output "static const char $lib_script_var\[\];"
           }
         }
         RESOURCE_DATA {
-          global F2A
-          foreach lib_script_var $lib_script_vars lib_script $lib_scripts {
-            set rc [ catch { exec -ignorestderr $F2A -v $lib_script_var \
-                     -m "static const" $lib_script >@${c_output} } ]
+          foreach src_var $all_src_vars src_file $all_src_files {
+            set rc [ catch { exec -ignorestderr $F2A -v $src_var \
+                     -m "static const" $src_file >@${c_output} } ]
             if { $rc } {
-              user_err "Error converting tcl file $lib_script to C array:\
-                        $errorInfo"
+              user_err "could not convert tcl file $src_file to C array"
             }
           }
         }
@@ -448,7 +545,7 @@ proc print_link_info { outfile manifest_dict link_objs link_flags } {
 }
 
 proc write_link_deps_file  { manifest_dict output_file link_target_file } {
-  set output [ open $output_file w ]
+  set output [ open_output_file $output_file ]
   set objs [ dict get $manifest_dict lib_objects ]
   puts $output "$output_file $link_target_file : $objs"
   close $output
@@ -467,4 +564,27 @@ proc verbose_msg { msg } {
   }
 }
 
-main
+# Open script output file and register in case of error
+proc open_output_file { path } {
+  set fd [ open $path w ]
+  add_cleanup_file [ list $fd $path ]
+  return $fd
+}
+
+proc add_cleanup_file { path } {
+  global cleanup_error_files
+  lappend cleanup_error_files $path
+}
+
+proc cleanup_on_error { } {
+  global cleanup_error_files
+  foreach cleanup_file $cleanup_error_files {
+    file delete $cleanup_file
+  }
+  set cleanup_error_files [ list ]
+}
+
+if { [ catch main ] } {
+  cleanup_on_error
+  puts stderr "$::errorInfo"
+}
