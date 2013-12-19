@@ -67,7 +67,7 @@ proc main { } {
   set link_deps_target ""
   set print_link_objs 0
   set print_link_flags 0
-  set resource_var_prefix "turbine_app_resources"
+  set resource_var_prefix "__turbine_tcl_resource_"
   global verbose_setting
   set verbose_setting 0
   set ignore_no_manifest 0
@@ -167,7 +167,7 @@ proc main { } {
   # generate deps file if needed
   if { [ string length $deps_output_file ] > 0 } {
     #TODO: write_deps_file should include libs
-    write_deps_file $manifest_dict $skip_tcl_init $init_lib_src \
+    write_deps_file $manifest_dict $init_lib_src \
                     $deps_output_file $deps_c_output_file
   }
 
@@ -344,7 +344,8 @@ proc locate_lib_src { tcl_version lib_dir } {
   return [ concat $init_tcls $other_tcls ]
 }
 
-proc write_deps_file { manifest_dict deps_output_file c_output_file } {
+proc write_deps_file { manifest_dict init_lib_src deps_output_file \
+                       c_output_file } {
   set deps_output [ open_output_file $deps_output_file ]
   puts -nonewline $deps_output "$deps_output_file $c_output_file :"
   set all_scripts [ dict get $manifest_dict lib_scripts ]
@@ -352,6 +353,7 @@ proc write_deps_file { manifest_dict deps_output_file c_output_file } {
   if { $main_script != "" } {
     lappend all_scripts $main_script
   }
+  lappend all_scripts {*}$init_lib_src
   
   foreach script $all_scripts {
     puts -nonewline $deps_output " $script"
@@ -361,19 +363,23 @@ proc write_deps_file { manifest_dict deps_output_file c_output_file } {
   close $deps_output
 }
 
-proc varname_from_file { fname used_names } {
+proc varname_from_file { var_prefix fname used_names } {
   regsub -all "\[\.-\]" [ file tail $fname ] "_" basename
-  set basename "__turbine_tcl_lib_src_$basename"
+  set basename "${var_prefix}${basename}"
   set name $basename
   set attempt 0
   while { [ lsearch $used_names $name ] >= 0 } {
     incr attempt
     set name "${basename}_${attempt}"
   }
-  puts "$fname => $name"
   return $name
 }
 
+# Fill in C template
+# manifest_dict: data from manifest file
+# skip_tcl_init: if true, skip regular Tcl_Init function
+# init_lib_src: library files to load in order after initializing interp
+# resource_var_prefix: prefix to apply to resource vars
 proc fill_c_template { manifest_dict skip_tcl_init init_lib_src \
                       resource_var_prefix c_output_file } {
   global SCRIPT_DIR
@@ -400,7 +406,8 @@ proc fill_c_template { manifest_dict skip_tcl_init init_lib_src \
   
   set init_lib_src_vars [ list ]
   foreach src_file $init_lib_src {
-    set init_lib_src_var [ varname_from_file $src_file $all_vars ]
+    set init_lib_src_var [ varname_from_file $resource_var_prefix \
+                                             $src_file $all_vars ]
     lappend init_lib_src_vars $init_lib_src_var
     lappend all_vars $init_lib_src_var
   }
@@ -408,7 +415,8 @@ proc fill_c_template { manifest_dict skip_tcl_init init_lib_src \
   set lib_scripts [ dict get $manifest_dict lib_scripts ]
   set lib_script_vars [ list ]
   foreach lib_script $lib_scripts {
-    set lib_script_var [ varname_from_file $lib_script $all_vars ]
+    set lib_script_var [ varname_from_file $resource_var_prefix \
+                                           $lib_script $all_vars ]
     lappend lib_script_vars $lib_script_var 
     lappend all_vars $lib_script_var
   }
@@ -446,7 +454,7 @@ proc fill_c_template { manifest_dict skip_tcl_init init_lib_src \
           puts -nonewline $c_output $skip_tcl_init
         }
         TCL_LIB_INIT {
-          tcl_lib_init $c_output $lib_init_src
+          tcl_lib_init $c_output $init_lib_src_vars $init_lib_src
         }
         REGISTER_USER_PKGS {
           register_pkg $c_output $pkg_name $pkg_version $INIT_PKGS_FN
@@ -491,12 +499,14 @@ proc fill_c_template { manifest_dict skip_tcl_init init_lib_src \
         }
         RESOURCE_DECLS {
           # iterate through resource files, output declarations
-          foreach var $all_src_vars {
-            puts $c_output "static const char $var\[\];"
+          foreach var $all_src_vars src_file $all_src_files {
+            puts $c_output "static const char $var\[\];\
+                            /* $src_file */"
           }
         }
         RESOURCE_DATA {
           foreach src_var $all_src_vars src_file $all_src_files {
+            puts $c_output "/* data from $src_file */"
             set rc [ catch { exec -ignorestderr $F2A -v $src_var \
                      -m "static const" $src_file >@${c_output} } ]
             if { $rc } {
@@ -518,22 +528,22 @@ proc fill_c_template { manifest_dict skip_tcl_init init_lib_src \
   verbose_msg "Created C main file at $c_output_file"
 }
 
-proc tcl_lib_init { outf lib_init_src } {
-  # Move to new line
-  puts $outf ""
+proc tcl_lib_init { outf init_lib_vars init_lib_src } {
 
-  foreach src_file $init_lib_src {
+  foreach var $init_lib_vars src_file $init_lib_src {
+    # Move to new line
+    puts $outf ""
+
     # set $dir var that pkgIndex.tcl expect to point to pkg
     # directory containing loadable package
     if { [ file tail $src_file ] == "pkgIndex.tcl" } {
       puts $outf "  Tcl_SetVar(interp, \"dir\",\
                       \"[file dirname $src_file]\", 0);"
     }
-    
+    eval_resource_var $outf $var $src_file
   }
   # Clear dir variable in case it was set
   puts $outf "  Tcl_UnsetVar(interp, \"dir\", 0);"
-  error "Not implemented"
 }
 
 proc register_pkg { outf pkg_name pkg_version init_pkg_fn } {
@@ -564,16 +574,23 @@ proc user_pkg_init_code { outf init_fn_name lib_init_fns \
   }
  
   foreach var $resource_vars resource_file $resource_files {
-    puts $outf "  rc = Tcl_Eval\(interp, $var\);"
-    puts $outf "  if \(rc != TCL_OK\) {"
-    puts $outf "    fprintf\(stderr, \"Error while loading Tcl code\
-                    originally from file %s\\n\","
-    puts $outf "                     \"$resource_file\"\);"
-    puts $outf "    return rc;"
-    puts $outf "  }"
+    eval_resource_var $outf $var $resource_file
   }
   puts $outf "  return rc;"
   puts $outf "}"
+}
+
+# generate code to evaluate resource variable and return TCL return code
+# from C function upon failure
+proc eval_resource_var { outf var resource_file } {
+  puts $outf "  rc = Tcl_Eval\(interp, $var\);"
+  puts $outf "  if \(rc != TCL_OK\) {"
+  puts $outf "    fprintf\(stderr, \"Error while loading Tcl code\
+                  originally from file %s:\\n\","
+  puts $outf "                     \"$resource_file\"\);"
+  puts $outf "    Tcl_Eval(interp, \"puts \$::errorInfo\");"
+  puts $outf "    return rc;"
+  puts $outf "  }"
 }
 
 proc pkg_ifneeded { pkg_name pkg_version } {

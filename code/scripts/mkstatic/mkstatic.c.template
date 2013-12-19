@@ -44,7 +44,8 @@ static const char @MAIN_SCRIPT_STRING@[];
 
 static int MkStatic_Tcl_Init(Tcl_Interp *interp)
 {
-  if (!(@SKIP_TCL_INIT@))
+  int skip_tcl_init = (@SKIP_TCL_INIT@);
+  if (!skip_tcl_init)
   {
     int rc = Tcl_Init(interp);
     if (rc != TCL_OK)
