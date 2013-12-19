@@ -549,6 +549,7 @@ proc tcl_lib_init { outf init_lib_vars init_lib_src } {
 proc register_pkg { outf pkg_name pkg_version init_pkg_fn } {
   puts $outf "Tcl_StaticPackage\(NULL, \
         \"${pkg_name}\", ${init_pkg_fn}, ${init_pkg_fn}\);"
+  puts $outf "  {"
   puts $outf "  int _rc;"
   puts $outf "  _rc = Tcl_Eval(interp, \n\
         \"[pkg_ifneeded $pkg_name $pkg_version]\");"
@@ -557,6 +558,7 @@ proc register_pkg { outf pkg_name pkg_version init_pkg_fn } {
                 \"Could not initialize $pkg_name\");"
   puts $outf "    Tcl_Eval(interp, \"puts \$::errorInfo\");"
   puts $outf "    exit(1);"
+  puts $outf "  }"
   puts $outf "  }"
 }
 
@@ -583,13 +585,15 @@ proc user_pkg_init_code { outf init_fn_name lib_init_fns \
 # generate code to evaluate resource variable and return TCL return code
 # from C function upon failure
 proc eval_resource_var { outf var resource_file } {
-  puts $outf "  rc = Tcl_Eval\(interp, $var\);"
-  puts $outf "  if \(rc != TCL_OK\) {"
+  puts $outf "  {"
+  puts $outf "  int _rc = Tcl_Eval\(interp, $var\);"
+  puts $outf "  if \(_rc != TCL_OK\) {"
   puts $outf "    fprintf\(stderr, \"Error while loading Tcl code\
                   originally from file %s:\\n\","
   puts $outf "                     \"$resource_file\"\);"
   puts $outf "    Tcl_Eval(interp, \"puts \$::errorInfo\");"
-  puts $outf "    return rc;"
+  puts $outf "    return _rc;"
+  puts $outf "  }"
   puts $outf "  }"
 }
 
