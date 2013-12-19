@@ -301,21 +301,47 @@ proc locate_all_lib_src { tcl_version init_lib_dirs other_lib_dirs } {
     set lib_src [ locate_lib_src $tcl_version $lib_dir ]
     lappend all_lib_src {*}$lib_src
   }
+  verbose_msg "Will include following lib source files: $all_lib_src"
   return $all_lib_src
 }
 
 proc locate_lib_src { tcl_version lib_dir } {
   nonempty $tcl_version "Must specify Tcl version to locate libraries\
                          in directories"
-  set check_dirs [ list $lib_dir [ file join $lib_dir "tcl${tcl_version}" ] ]
+  if { ! [ file isdirectory $lib_dir ] } {
+    user_err "library directory $lib_dir does not exist"
+  }
+  # In the Tcl layouts with version-specific subdirectories, that is where
+  # the base Tcl functionality is: check those first.
+  set check_dirs [ list [ file join $lib_dir "tcl${tcl_version}" ] $lib_dir ]
+  set init_tcls [ list ]
+  set other_tcls [ list ]
   foreach check_dir $check_dirs {
     verbose_msg "Checking lib directory $check_dir for .tcl files"
-    # TODO: check root for tc files 
-    # TODO: put init.tcl first
-    # TODO: check subdirectories thereof for pkgIndex.tcl files
+    if { ! [ file isdirectory $check_dir ] } {
+      continue
+    }
+    foreach tcl_file [ glob -nocomplain -directory $check_dir "*.tcl" ] {
+      set basename [ file tail $tcl_file ]
+      if { $basename == "init.tcl" } {
+        verbose_msg "Found Tcl init file $tcl_file"
+        lappend init_tcls $tcl_file
+      } else {
+        verbose_msg "Found Tcl lib file $tcl_file"
+        lappend other_tcls $tcl_file
+      }
+    }
+    # check subdirectories thereof for pkgIndex.tcl files used to setup
+    # packages for later loading
+    foreach subdir [ glob -nocomplain -directory $check_dir -type d "*" ] {
+      set maybe_pkgindex [ file join $subdir "pkgIndex.tcl" ]
+      if [ file exists $maybe_pkgindex ] {
+        verbose_msg "Found Tcl package index file $maybe_pkgindex"
+        lappend other_tcls $maybe_pkgindex
+      }
+    }
   }
-  # TODO: how to set $dir var for pkgIndex.tcl files
-  error "not implemented"
+  return [ concat $init_tcls $other_tcls ]
 }
 
 proc write_deps_file { manifest_dict deps_output_file c_output_file } {
@@ -420,6 +446,7 @@ proc fill_c_template { manifest_dict skip_tcl_init init_lib_src \
         }
         TCL_LIB_INIT {
           foreach src_file $init_lib_src {
+            # TODO: set $dir var for pkgIndex.tcl files to source directory
             error "Not implemented"
           }
         }
