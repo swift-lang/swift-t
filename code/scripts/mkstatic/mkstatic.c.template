@@ -78,7 +78,7 @@ main(int argc, char **argv)
   }
 
   // E.g. Tcl_StaticPackage(interp, "turbine", UserLib_InitStatic, UserLib_InitStatic);
-  @TCL_STATIC_PKG_CALLS@
+  @REGISTER_USER_PKGS@
 
   turbine_code tc;
   char *script_file = NULL;

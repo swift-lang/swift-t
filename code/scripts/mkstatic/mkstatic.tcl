@@ -370,6 +370,7 @@ proc varname_from_file { fname used_names } {
     incr attempt
     set name "${basename}_${attempt}"
   }
+  puts "$fname => $name"
   return $name
 }
 
@@ -445,27 +446,14 @@ proc fill_c_template { manifest_dict skip_tcl_init init_lib_src \
           puts -nonewline $c_output $skip_tcl_init
         }
         TCL_LIB_INIT {
-          foreach src_file $init_lib_src {
-            # TODO: set $dir var for pkgIndex.tcl files to source directory
-            error "Not implemented"
-          }
+          tcl_lib_init $c_output $lib_init_src
         }
-        TCL_STATIC_PKG_CALLS {
-          puts $c_output "Tcl_StaticPackage\(NULL, \
-                \"${pkg_name}\", ${INIT_PKGS_FN}, ${INIT_PKGS_FN}\);"
-          puts $c_output "  int _rc;"
-          puts $c_output "  _rc = Tcl_Eval(interp, \n\
-                \"[pkg_ifneeded $pkg_name $pkg_version]\");"
-          puts $c_output "  if (_rc != TCL_OK) {"
-          puts $c_output "    fprintf(stderr, \
-                        \"Could not initialize $pkg_name\");"
-          puts $c_output "    Tcl_Eval(interp, \"puts \$::errorInfo\");"
-          puts $c_output "    exit(1);"
-          puts $c_output "  }"
+        REGISTER_USER_PKGS {
+          register_pkg $c_output $pkg_name $pkg_version $INIT_PKGS_FN
         }
         USER_PKG_INIT {
           # Code to init C plus Tcl code for module
-          static_pkg_init_code $c_output \
+          user_pkg_init_code $c_output \
               $INIT_PKGS_FN \
               [ dict get $manifest_dict lib_init_fns ] \
               $lib_script_vars $lib_scripts
@@ -504,7 +492,7 @@ proc fill_c_template { manifest_dict skip_tcl_init init_lib_src \
         RESOURCE_DECLS {
           # iterate through resource files, output declarations
           foreach var $all_src_vars {
-            puts $c_output "static const char $lib_script_var\[\];"
+            puts $c_output "static const char $var\[\];"
           }
         }
         RESOURCE_DATA {
@@ -530,8 +518,40 @@ proc fill_c_template { manifest_dict skip_tcl_init init_lib_src \
   verbose_msg "Created C main file at $c_output_file"
 }
 
+proc tcl_lib_init { outf lib_init_src } {
+  # Move to new line
+  puts $outf ""
+
+  foreach src_file $init_lib_src {
+    # set $dir var that pkgIndex.tcl expect to point to pkg
+    # directory containing loadable package
+    if { [ file tail $src_file ] == "pkgIndex.tcl" } {
+      puts $outf "  Tcl_SetVar(interp, \"dir\",\
+                      \"[file dirname $src_file]\", 0);"
+    }
+    
+  }
+  # Clear dir variable in case it was set
+  puts $outf "  Tcl_UnsetVar(interp, \"dir\", 0);"
+  error "Not implemented"
+}
+
+proc register_pkg { outf pkg_name pkg_version init_pkg_fn } {
+  puts $outf "Tcl_StaticPackage\(NULL, \
+        \"${pkg_name}\", ${init_pkg_fn}, ${init_pkg_fn}\);"
+  puts $outf "  int _rc;"
+  puts $outf "  _rc = Tcl_Eval(interp, \n\
+        \"[pkg_ifneeded $pkg_name $pkg_version]\");"
+  puts $outf "  if (_rc != TCL_OK) {"
+  puts $outf "    fprintf(stderr, \
+                \"Could not initialize $pkg_name\");"
+  puts $outf "    Tcl_Eval(interp, \"puts \$::errorInfo\");"
+  puts $outf "    exit(1);"
+  puts $outf "  }"
+}
+
 # Generate C function to initialize static package
-proc static_pkg_init_code { outf init_fn_name lib_init_fns \
+proc user_pkg_init_code { outf init_fn_name lib_init_fns \
                             resource_vars resource_files } {
   puts $outf "static int $init_fn_name\(Tcl_Interp *interp\) {"
   puts $outf "  int rc = TCL_OK;"
