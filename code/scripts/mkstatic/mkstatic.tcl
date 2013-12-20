@@ -363,8 +363,10 @@ proc locate_lib_src { tcl_version lib_dir } {
     foreach subdir [ glob -nocomplain -directory $check_dir -type d "*" ] {
       set maybe_pkgindex [ file join $subdir "pkgIndex.tcl" ]
       if [ file exists $maybe_pkgindex ] {
-        # TODO: preload packages?
         verbose_msg "Found Tcl package index file $maybe_pkgindex"
+
+        # TODO: don't do anything with analysis yet
+        pkgindex_analyse $maybe_pkgindex
         lappend tcls $maybe_pkgindex
       }
     }
@@ -372,6 +374,91 @@ proc locate_lib_src { tcl_version lib_dir } {
 
   # Sort according to order for tcl version
   return [ lsort -command [ list lib_init_order $tcl_version ] $tcls ]
+}
+
+proc pkgindex_analyse { f } {
+  set pkgs_info [ pkgindex_tryload $f ]
+  
+  foreach pkg_info $pkgs_info {
+    lassign $pkg_info name version init_script
+    set res [ pkg_analyse $name $version $init_script ]
+    if { $res != "" } {
+      verbose_msg "Analysis of $f successful: $res"
+    } else {
+      verbose_msg "Could not analyse init script for $name $version:\n$init_script\n"
+    }
+  }
+}
+
+# Analyse a package.
+# Return empty string if not successful
+# Return list of source command args if successful
+proc pkg_analyse { name version init_script } {
+  # TODO: naive parsing into commands that may give incorrect results
+  # sometimes, # but should be good enough for 99% of cases (we can
+  # just revert to doing nothing in cases where it doesn't work)
+  set subs [ list "\\\n" " " ";" "\n" ]
+  set init_script_cmds [ split [ string map $subs $init_script ] "\n" ]
+  set source_args [ list ]
+  foreach cmd $init_script_cmds {
+    set cmd [ string trim $cmd ]
+    if { [ string length $cmd ] == 0 } {
+      continue
+    }
+    
+    if { ! [ string is list $cmd ] } {
+      # Could not tokenise command
+      return ""
+    }
+
+    set cmdname [ lindex $cmd 0 ]
+    if { $cmdname == "source" } {
+      lappend source_args [ lrange $cmd 1 [ llength $cmd ] ]
+    } else {
+      # Don't know about this command
+      verbose_msg "Don't know about $cmdname"
+      return ""
+    }
+  }
+  return $source_args
+}
+
+proc pkgindex_tryload { f } {
+  set int [ interp create -safe ]
+
+  set share_procs [ list pkgindex_tryload_child ]
+  foreach share_proc $share_procs {
+    interp alias $int $share_proc  {} $share_proc 
+  }
+ 
+  set res [ interp eval $int "
+    return \[ pkgindex_tryload_child $f \]
+  "]
+
+  interp delete $int
+  return $res
+}
+
+# Load a pkgindex file and return a list of info about packages loaded.
+# Each list entry is a sublist with (name, version, init script)
+proc pkgindex_tryload_child { f } {
+  set dir [ file dir $f ]
+  set before_names [ package names ]
+
+  source $f
+
+  set loaded_pkgs [ list ]
+  foreach name [ package names ] {
+    if { [ lsearch -exact $before_names $name ] < 0 } {
+      # this was newly loaded by the pkgIndex.tcl file
+      foreach version [ package versions $name ] {
+        set script [ package ifneeded $name $version ]
+        lappend loaded_pkgs [ list $name $version $script ]
+      }
+    }
+  }
+
+  return $loaded_pkgs
 }
 
 proc lib_init_order { tcl_version file1 file2 } {
