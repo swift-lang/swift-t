@@ -333,9 +333,13 @@ proc locate_lib_src { tcl_version lib_dir } {
   # In the Tcl layouts with version-specific subdirectories, that is where
   # the base Tcl functionality is: check those first.
   lappend check_dirs [ file join $lib_dir "tcl${tcl_version}" ]
+  
   # Loadable Tcl modules are in a version-specific subdirectory.
   # We can load any modules with the same major version and equal or
   # lower minor version
+  # Might be in major-version subdir
+  lappend check_dirs [ file join $lib_dir "tcl${tcl_version_major}" ]
+  # Might be in major-version/minor-version subdir
   for { set minor $tcl_version_minor } { $minor >= 0 } { incr minor -1 } {
     lappend check_dirs [ file join $lib_dir "tcl${tcl_version_major}" \
                                    "${tcl_version_major}.${minor}" ]

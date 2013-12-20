@@ -582,10 +582,9 @@ AC_ARG_WITH(tcl-version,
 
 USE_TCL_LIB_DIR=0
 
-
 AC_ARG_WITH(tcl-lib-dir,
     AC_HELP_STRING([--with-tcl-lib-dir],
-                   [directory containing Tcl library]),
+                   [directory containing Tcl shared library]),
     [
         USE_TCL_LIB_DIR=${withval}
         AC_MSG_RESULT([using Tcl lib dir: ${USE_TCL_LIB_DIR}])
@@ -726,8 +725,62 @@ AC_ARG_WITH(tcl-include,
             ],
             [])
 
+AC_MSG_CHECKING([for Tcl system library directory with init.tcl])
+USE_TCL_SYSLIB_DIR=
+AC_ARG_WITH(tcl-syslib-dir,
+      AS_HELP_STRING(
+        [[--with-tcl-syslib-dir],
+         [tcl system library directory.  Must contain init.tcl in \
+          root or tcl${TCL_VERSION} subdirectory]]),
+        [USE_TCL_SYSLIB_DIR="${withval}"])
+
+if [[ -z "${USE_TCL_SYSLIB_DIR}" ]]
+then
+  # Put script in file as way to get tclsh to crash on invalid script
+  tmp_script=$(mktemp)
+  echo 'puts [[ info library ]]' > ${tmp_script}
+  # Try to find out the library directory from tclsh
+  USE_TCL_SYSLIB_DIR=$( ${USE_TCLSH} $tmp_script )
+  TCLSH_EXIT=$?
+  rm $tmp_script
+  if [[ $? != 0 ]]; then
+    AC_MSG_ERROR([tcl-syslib-dir not provided and could not determine \
+                  system library location by invoking ${USE_TCLSH}])
+  fi
+fi
+
+if [[ ! -d "${USE_TCL_SYSLIB_DIR}" ]]
+then
+  AC_MSG_ERROR([Error finding tcl-syslib-dir: ${USE_TCL_SYSLIB_DIR} \
+               not a directory])
+fi
+
+INIT_TCL_FOUND=0
+# Try to locate init.tcl.  In some layouts it's in the root, in others
+# it's in the tcl${TCL_VERSION} subdirectory
+for syslib_dir in "${USE_TCL_SYSLIB_DIR}" \
+                  "${USE_TCL_SYSLIB_DIR}/tcl${TCL_VERSION}"
+do
+  MAYBE_INIT_TCL="${syslib_dir}/init.tcl"
+  if [[ -f ${MAYBE_INIT_TCL} ]]
+  then
+    INIT_TCL_FOUND=1
+    AC_MSG_RESULT([yes])
+    AC_MSG_RESULT([Found init.tcl: ${MAYBE_INIT_TCL}])
+  fi
+done
+
+if (( ! INIT_TCL_FOUND ))
+then
+  AC_MSG_ERROR([could not locate init.tcl under ${USER_TCL_SYSLIB_DIR}:\
+          appears not to be a legimitate Tcl system library directory])
+fi
+
+AC_MSG_RESULT([using Tcl system library directory: ${USE_TCL_SYSLIB_DIR}])
+
 AC_SUBST(USE_TCL)
 AC_SUBST(USE_TCL_LIB_DIR)
+AC_SUBST(USE_TCL_SYSLIB_DIR)
 AC_SUBST(USE_LIBTCL_A)
 AC_SUBST(USE_LIBTCL_SO)
 AC_SUBST(USE_TCLSH)
