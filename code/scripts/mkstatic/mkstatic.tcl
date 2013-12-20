@@ -31,7 +31,7 @@ proc main { } {
   global SCRIPT_DIR
 
   set usage "mkstatic.tcl <manifest file> \[-c <output c file>\]\
-        \[--include-init-lib <lib directory with Tcl built-ins>\]\
+        \[--include-sys-lib <lib directory with Tcl built-ins>\]\
         \[--include-lib <Tcl lib directory with modules/source to include\]\
         \[--tcl-version <Tcl version number for lib selection>\]\
         \[--deps <dependency include for C output> <c output file for deps>\]\
@@ -44,15 +44,15 @@ proc main { } {
         \[-h: help\]\n\
         \n\
         Notes: \n\
-        -> --include-lib and --include-init-lib behave similarly:\n\
+        -> --include-lib and --include-sys-lib behave similarly:\n\
           - both evaluate Tcl source files in the root of the directory,\
             and pkgIndex.tcl files in subdirectories, for later loading.\n\
           - both also look in \${dir}/tcl\${TCL_VERSION}.  This means that\
             --tcl-version must be specified \n\
           - both evaluate init.tcl, if present, before other files\n\
-          - --include-init-lib can be specified only once, and those libraries\
+          - --include-sys-lib can be specified only once, and those libraries\
             are loaded first \n\
-          - --include-init-lib causes the regular Tcl_Init initialization to be\
+          - --include-sys-lib causes the regular Tcl_Init initialization to be\
             skipped, allowing Tcl builtin libraries to be compiled into the\
             result binary \n\
         -> multiple -l flags can be provided to include multiple directories\n\
@@ -72,7 +72,7 @@ proc main { } {
   set verbose_setting 0
   set ignore_no_manifest 0
   set skip_tcl_init 0
-  set init_lib_dirs [ list ]
+  set sys_lib_dirs [ list ]
   set other_lib_dirs [ list ]
   set tcl_version ""
 
@@ -103,16 +103,16 @@ proc main { } {
                 "Expected second non-empty argument to --deps"
         }
         --include-lib -
-        --include-init-lib {
+        --include-sys-lib {
           incr argi
           set lib_dir_arg [ lindex $::argv $argi ]
           nonempty $lib_dir_arg "Expected second non-empty argument to $arg"
 
-          if { $arg == "--include-init-lib" } {
-            if { [ llength $init_lib_dirs ] > 0 } {
+          if { $arg == "--include-sys-lib" } {
+            if { [ llength $sys_lib_dirs ] > 0 } {
               user_err "$arg specified more than once"
             }
-            lappend init_lib_dirs $lib_dir_arg
+            lappend sys_lib_dirs $lib_dir_arg
             set skip_tcl_init 1
           } else {
             lappend other_lib_dirs $lib_dir_arg
@@ -161,12 +161,12 @@ proc main { } {
 
   set manifest_dict [ read_manifest $manifest_filename $ignore_no_manifest ]
  
-  set init_lib_src [ locate_all_lib_src $tcl_version $init_lib_dirs \
-                                     $other_lib_dirs ]
+  set all_lib_src [ locate_all_lib_src $tcl_version $sys_lib_dirs \
+                                        $other_lib_dirs ]
 
   # generate deps file if needed
   if { [ string length $deps_output_file ] > 0 } {
-    write_deps_file $manifest_dict $init_lib_src \
+    write_deps_file $manifest_dict $all_lib_src \
                     $deps_output_file $deps_c_output_file
   }
 
@@ -177,7 +177,7 @@ proc main { } {
   }
 
   if { [ string length $c_output_file ] > 0 } {
-    fill_c_template $manifest_dict $tcl_version $skip_tcl_init $init_lib_src \
+    fill_c_template $manifest_dict $tcl_version $skip_tcl_init $all_lib_src \
                     $resource_var_prefix $c_output_file
   }
 }
@@ -301,10 +301,10 @@ proc read_manifest { manifest_filename ignore_no_manifest } {
 # - Plain Tcl source files with .tcl extensions to be evaled
 # - Tcl packages with pkgIndex.tcl files to be indexed
 # - Tcl modules with .tm extensions to be bundled and loaded on demand
-proc locate_all_lib_src { tcl_version init_lib_dirs other_lib_dirs } {
+proc locate_all_lib_src { tcl_version sys_lib_dirs other_lib_dirs } {
   # Process with init lib dirs first, others after
   set all_lib_src [ list ]
-  foreach lib_dir [ concat $init_lib_dirs $other_lib_dirs ] {
+  foreach lib_dir [ concat $sys_lib_dirs $other_lib_dirs ] {
     set lib_src [ locate_lib_src $tcl_version $lib_dir ]
     lappend all_lib_src {*}$lib_src
   }
@@ -348,7 +348,7 @@ proc locate_lib_src { tcl_version lib_dir } {
 
   set tcls [ list ]
   foreach check_dir $check_dirs {
-    verbose_msg "Checking lib directory $check_dir for .tcl files"
+    verbose_msg "Checking lib directory $check_dir for .tcl and .tm files"
     if { ! [ file isdirectory $check_dir ] } {
       continue
     }
