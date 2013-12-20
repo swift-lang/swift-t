@@ -44,7 +44,8 @@ static const char @MAIN_SCRIPT_STRING@[];
 
 /*
   Initialize a fresh Tcl interpreter with all libraries.
-  In principle this could be used to initialize child interpreters
+  This can be used to initialize child interpreters too.
+  For this purpose this function is declared in the mkstatic.h header.
  */
 int MkStatic_Tcl_Init(Tcl_Interp *interp)
 {
