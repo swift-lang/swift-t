@@ -580,7 +580,7 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init init_lib_src \
           # TODO: Ctrl-D in .tm file not handled right - .tm files can
           # in theory use it as a separator to append binary data at end
           # of file. It is not clear if such .tm files occur in the wild
-          # and the Tcl standard library doesn't include any
+          # and the Tcl standard library doesn't include any as of writing
           foreach src_var $all_src_vars src_file $all_src_files {
             puts $c_output "/* data from $src_file */"
             set rc [ catch { exec -ignorestderr $F2A -v $src_var \
@@ -635,8 +635,8 @@ proc tcl_custom_preinit { outf skip_tcl_init tcl_version } {
     }
   }
 
-  # Set library search path to empty list
-  # TODO: should set to init library path
+  # Set library search path to empty list since we're providing builtin
+  # libraries
   puts $outf "  Tcl_ObjSetVar2(interp, Tcl_NewStringObj(\"tcl_library\", -1),\
                 NULL, Tcl_NewListObj(0, NULL), 0);"
 }
