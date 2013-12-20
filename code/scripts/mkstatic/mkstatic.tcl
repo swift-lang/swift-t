@@ -378,12 +378,13 @@ proc locate_lib_src { tcl_version lib_dir } {
       if [ file exists $maybe_pkgindex ] {
         verbose_msg "Found Tcl package index file $maybe_pkgindex"
 
-        set pkgindex_info [ pkgindex_analyse $maybe_pkgindex ]
-        if { "$pkgindex_info" != "" } {
-          lassign $pkgindex_info pkg_name pkg_version pkg_files
-          lappend found [ list PACKAGE $pkg_name $pkg_version {*}$pkg_files ]
+        set pkgindex_infos [ pkgindex_analyse $maybe_pkgindex ]
+        if { [ llength $pkgindex_infos ] > 0 } {
+          foreach pkg_info $pkgindex_infos {
+            lappend found [ list PACKAGE {*}$pkg_info ]
+          }
         } else {
-          # Just load the index at started
+          # Just load the index at startup
           lappend found [ list FILE $maybe_pkgindex ]
         }
       }
@@ -394,21 +395,27 @@ proc locate_lib_src { tcl_version lib_dir } {
   return [ lsort -command [ list lib_init_order $tcl_version ] $found ]
 }
 
+# Try to analyse pkgIndex.tcl file to see what source files it loads
+# Returns: a list of source-only packages (i.e. ones which just source
+#           Tcl files to load). Only returned if *all* packages are
+#           source-only, otherwise return empty list
+# Each list entry is of form: (package_name, package_version, (src_file)*
 proc pkgindex_analyse { f } {
   set pkgs_info [ pkgindex_tryload $f ]
-  
+  set src_packages [ list ] 
   foreach pkg_info $pkgs_info {
     lassign $pkg_info name version init_script
-    set res [ pkg_analyse $name $version $init_script ]
-    if { $res != "" } {
-      verbose_msg "Analysis of $f successful: $res"
+    set src_files [ pkg_analyse $name $version $init_script ]
+    if { [ llength $src_files ] > 0 } {
+      verbose_msg "$f had a source-only package: $name $version with\
+                   files $src_files"
+      lappend src_packages [ list $name $version {*}$src_files ]
     } else {
       verbose_msg "Could not analyse init script for $name $version:\n$init_script\n"
+      return ""
     }
   }
-  
-  #TODO: actually return something
-  return ""
+  return $src_packages
 }
 
 # return index in core module list, or -1 if not present
@@ -495,6 +502,7 @@ proc pkg_analyse { name version init_script } {
       lappend source_args [ lrange $cmd 1 [ llength $cmd ] ]
     } else {
       # Don't know about this command
+      # TODO: we could also analyse tclPkgSetup command
       verbose_msg "Don't know about $cmdname"
       return ""
     }
@@ -878,7 +886,7 @@ proc tm_package_version { src_file } {
   return $module_parts 
 }
 proc pkg_init_fn_name { pkg_name version } {
-  regsub -all "\." ${version} "_" version2
+  regsub -all {\.} ${version} "_" version2
   return "init_${pkg_name}_${version2}"
 }
 
