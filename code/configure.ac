@@ -738,8 +738,9 @@ if [[ -z "${USE_TCL_SYSLIB_DIR}" ]]
 then
   # Put script in file as way to get tclsh to crash on invalid script
   tmp_script=$(mktemp)
-  echo 'puts [[ info library ]]' > ${tmp_script}
+
   # Try to find out the library directory from tclsh
+  echo 'puts [[ file dir [ info library ] ]]' > ${tmp_script}
   USE_TCL_SYSLIB_DIR=$( ${USE_TCLSH} $tmp_script )
   TCLSH_EXIT=$?
   rm $tmp_script
