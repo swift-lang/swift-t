@@ -641,6 +641,7 @@ proc tcl_custom_preinit { outf skip_tcl_init tcl_version } {
 # pkgIndex.tcl files are handled specially
 proc tcl_lib_init { outf init_lib_vars init_lib_src } {
 
+  puts $outf ""
   foreach var $init_lib_vars src_file $init_lib_src {
     # Move to new line
     puts $outf ""
@@ -697,7 +698,7 @@ proc register_pkg { outf pkg_name pkg_version init_pkg_fn } {
   puts $outf "  if (register_static_pkg(interp, \"$pkg_name\", \
                     \"$pkg_version\", $init_pkg_fn) != TCL_OK) {"
   # register_static_pkg prints error message
-  puts $outf "    exit(1);"
+  puts $outf "    return TCL_ERROR;"
   puts $outf "  }"
 }
 
