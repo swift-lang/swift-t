@@ -39,17 +39,38 @@ Tclturbine_InitStatic(Tcl_Interp *interp)
   for (int i = 0; i < turbine_lib_src_len; i++)
   {
     // These are null terminated strings so we can use directly
-    const char *tcl_src = turbine_lib_src[i];
-    // fprintf(stderr, "Eval %s\n", turbine_lib_src_data_names[i]);
-    int rc = Tcl_Eval(interp, tcl_src);
+    int rc = tcl_eval_bundled_file(interp, turbine_lib_src[i],
+                                   (int)turbine_lib_src_lens[i],
+                                   turbine_lib_src_filenames[i]);
     if (rc != TCL_OK)
     {
-      fprintf(stderr, "Error while loading Tcl source file (%s)\n",
-                      turbine_lib_src_filenames[i]);
-      return rc;
+      return TCL_ERROR;
     }
   }
   return rc;
+}
+
+int register_static_pkg(Tcl_Interp *interp, const char *package,
+                        const char *version, Tcl_PackageInitProc *init)
+{
+  // Use same name for "load" command
+  const char *load_pkg = package;
+  Tcl_StaticPackage(NULL, load_pkg, init, init);
+
+  Tcl_Obj *script = Tcl_ObjPrintf(
+        "package ifneeded {%s} {%s} { load {} {%s} }",
+        package, version, load_pkg);
+  Tcl_IncrRefCount(script);
+  int rc = Tcl_EvalObjEx(interp, script, 0);
+  Tcl_DecrRefCount(script);
+  if (rc != TCL_OK)
+  {
+    fprintf(stderr, "Error initializing Tcl package %s %s", package,
+                    version);
+    Tcl_Eval(interp, "puts $errorInfo");
+    return rc;
+  }
+  return TCL_OK;
 }
 
 /*
@@ -58,14 +79,22 @@ Tclturbine_InitStatic(Tcl_Interp *interp)
 int
 register_tcl_turbine_static_pkg(Tcl_Interp *interp)
 {
-  Tcl_StaticPackage(NULL, "turbine", Tclturbine_InitStatic,
-                                       Tclturbine_InitStatic);
-  int rc = Tcl_Eval(interp, "package ifneeded turbine "
-              "{" TURBINE_VERSION "} {load {} turbine}");
-  if (rc != TCL_OK)
-  {
-    Tcl_Eval(interp, "puts $errorInfo");
-    return rc;
+  return register_static_pkg(interp, "turbine", TURBINE_VERSION,
+                             Tclturbine_InitStatic);
+}
+
+
+int tcl_eval_bundled_file(Tcl_Interp *interp, const char *script,
+                          int script_bytes, const char *srcfile)
+{
+  int rc;
+  rc = Tcl_EvalEx(interp, script, script_bytes, 0);
+
+  if (rc != TCL_OK) {
+    fprintf(stderr, "Error while loading Tcl code originally from file %s:\n",
+                     srcfile);
+    Tcl_Eval(interp, "puts $::errorInfo");
+    return TCL_ERROR;
   }
   return TCL_OK;
 }

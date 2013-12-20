@@ -318,34 +318,69 @@ proc locate_lib_src { tcl_version lib_dir } {
   # In the Tcl layouts with version-specific subdirectories, that is where
   # the base Tcl functionality is: check those first.
   set check_dirs [ list [ file join $lib_dir "tcl${tcl_version}" ] $lib_dir ]
-  set init_tcls [ list ]
-  set other_tcls [ list ]
+  set ordered_tcls [ list ]
   foreach check_dir $check_dirs {
     verbose_msg "Checking lib directory $check_dir for .tcl files"
     if { ! [ file isdirectory $check_dir ] } {
       continue
     }
+
+    set checkdir_tcls [ list ]
+
     foreach tcl_file [ glob -nocomplain -directory $check_dir "*.tcl" ] {
-      set basename [ file tail $tcl_file ]
-      if { $basename == "init.tcl" } {
-        verbose_msg "Found Tcl init file $tcl_file"
-        lappend init_tcls $tcl_file
-      } else {
-        verbose_msg "Found Tcl lib file $tcl_file"
-        lappend other_tcls $tcl_file
-      }
+      verbose_msg "Found Tcl lib file $tcl_file"
+      lappend checkdir_tcls $tcl_file
     }
+
     # check subdirectories thereof for pkgIndex.tcl files used to setup
     # packages for later loading
     foreach subdir [ glob -nocomplain -directory $check_dir -type d "*" ] {
       set maybe_pkgindex [ file join $subdir "pkgIndex.tcl" ]
       if [ file exists $maybe_pkgindex ] {
+        # TODO: preload packages?
         verbose_msg "Found Tcl package index file $maybe_pkgindex"
-        lappend other_tcls $maybe_pkgindex
+        lappend checkdir_tcls $maybe_pkgindex
       }
     }
+
+    # Implement order within subdirectory
+    set ordered_tcls [ concat $ordered_tcls [ lsort \
+        -command [ list lib_init_order $tcl_version ] $checkdir_tcls ] ]
   }
-  return [ concat $init_tcls $other_tcls ]
+
+  # Sort according to order for tcl version
+  return $ordered_tcls 
+}
+
+proc lib_init_order { tcl_version file1 file2 } {
+  if [ string equal $file1 $file2 ] {
+    return 0
+  }
+  set basename1 [ file tail $file1 ]
+  set basename2 [ file tail $file2 ]
+
+  
+  # Prioritize scripts in correct order:
+  # - First basic initialization
+  # - Then setup package/module subsystem and register packages
+  set priorities [ list "init.tcl" "package.tcl" "pkgIndex.tcl" "tm.tcl" ]
+
+  foreach x $priorities {
+    if { $basename1 == $x } {
+      return -1
+    } elseif { $basename2 == $x } {
+      return 1
+    }
+  } 
+  # If not a special name, alphabetical order of basename
+  set basename_compare [ string compare $basename1 $basename2 ]
+
+  if { $basename_compare != 0 } {
+    return $basename_compare
+  }
+
+  # Otherwise check directory name (e.g. for pkgIndex.tcl)
+  return [ string compare [ file dir $file1 ] [ file dir $file2 ] ]
 }
 
 proc write_deps_file { manifest_dict init_lib_src deps_output_file \
@@ -458,7 +493,7 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init init_lib_src \
           puts -nonewline $c_output $skip_tcl_init
         }
         TCL_CUSTOM_PRE_INIT {
-          tcl_custom_preinit $c_output $tcl_version
+          tcl_custom_preinit $c_output $skip_tcl_init $tcl_version
         }
         TCL_LIB_INIT {
           tcl_lib_init $c_output $init_lib_src_vars $init_lib_src
@@ -509,6 +544,7 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init init_lib_src \
           foreach var $all_src_vars src_file $all_src_files {
             puts $c_output "static const char $var\[\];\
                             /* $src_file */"
+            puts $c_output "static const size_t ${var}_len;"
           }
         }
         RESOURCE_DATA {
@@ -538,31 +574,36 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init init_lib_src \
 # Set any required variables in interpreter prior to running init.tcl
 # script.  These variables aren't officially documented, so we'll check
 # the Tcl version to see if it's one we've encountered before
-proc tcl_custom_preinit { outf tcl_version } {
-  if { [ string length $tcl_version ] == 0 } {
-    user_err "Tcl version required when including init lib"
-  }
+proc tcl_custom_preinit { outf skip_tcl_init tcl_version } {
 
-  if { ! [ catch [ package vcompare $tcl_version 0 ] ] } {
-    user_err "Invalid version number: \"$tcl_version\""
-  }
-  
-  # Versions that we've tested with
-  set min_ver 8.5
-  set max_ver 8.6
-  if { [ package vcompare $tcl_version $min_ver ] < 0 } {
-    user_warn "Do not officially support including initialization library\
-               for Tcl version $tcl_version < $min_ver. This may work but\
-               do not be surprised if Tcl initialization fails!"
-  }
-  
-  if { [ package vcompare $tcl_version $max_ver ] > 0 } {
-    user_warn "Do not officially support including initialization library\
-               for Tcl version $tcl_version > $max_ver. This may work but\
-               do not be surprised if Tcl initialization fails!"
+  if { $skip_tcl_init } {
+    # Regular Tcl init not happening- check we can support this
+    if { [ string length $tcl_version ] == 0 } {
+      user_err "Tcl version required when including init lib"
+    }
+
+    if { ! [ catch [ package vcompare $tcl_version 0 ] ] } {
+      user_err "Invalid version number: \"$tcl_version\""
+    }
+    
+    # Versions that we've tested with
+    set min_ver 8.5
+    set max_ver 8.6
+    if { [ package vcompare $tcl_version $min_ver ] < 0 } {
+      user_warn "Do not officially support including initialization library\
+                 for Tcl version $tcl_version < $min_ver. This may work but\
+                 do not be surprised if Tcl initialization fails!"
+    }
+    
+    if { [ package vcompare $tcl_version $max_ver ] > 0 } {
+      user_warn "Do not officially support including initialization library\
+                 for Tcl version $tcl_version > $max_ver. This may work but\
+                 do not be surprised if Tcl initialization fails!"
+    }
   }
 
   # Set library search path to empty list
+  # TODO: should set to init library path
   puts $outf "  Tcl_ObjSetVar2(interp, Tcl_NewStringObj(\"tcl_library\", -1),\
                 NULL, Tcl_NewListObj(0, NULL), 0);"
 }
@@ -588,18 +629,13 @@ proc tcl_lib_init { outf init_lib_vars init_lib_src } {
 }
 
 proc register_pkg { outf pkg_name pkg_version init_pkg_fn } {
-  puts $outf "Tcl_StaticPackage\(NULL, \
-        \"${pkg_name}\", ${init_pkg_fn}, ${init_pkg_fn}\);"
-  puts $outf "  {"
-  puts $outf "  int _rc;"
-  puts $outf "  _rc = Tcl_Eval(interp, \n\
-        \"[pkg_ifneeded $pkg_name $pkg_version]\");"
-  puts $outf "  if (_rc != TCL_OK) {"
-  puts $outf "    fprintf(stderr, \
-                \"Could not initialize $pkg_name\");"
-  puts $outf "    Tcl_Eval(interp, \"puts \$::errorInfo\");"
+  # use static-pkg library function
+  # move to new line
+  puts $outf ""
+  puts $outf "  if (register_static_pkg(interp, \"$pkg_name\", \
+                    \"$pkg_version\", $init_pkg_fn) != TCL_OK) {"
+  # register_static_pkg prints error message
   puts $outf "    exit(1);"
-  puts $outf "  }"
   puts $outf "  }"
 }
 
@@ -624,22 +660,14 @@ proc user_pkg_init_code { outf init_fn_name lib_init_fns \
 }
 
 # generate code to evaluate resource variable and return TCL return code
-# from C function upon failure
+# from C function upon failure. Assumes that there is a matching var,
+# ${var}_len that has length of source
 proc eval_resource_var { outf var resource_file } {
-  puts $outf "  {"
-  puts $outf "  int _rc = Tcl_Eval\(interp, $var\);"
-  puts $outf "  if \(_rc != TCL_OK\) {"
-  puts $outf "    fprintf\(stderr, \"Error while loading Tcl code\
-                  originally from file %s:\\n\","
-  puts $outf "                     \"$resource_file\"\);"
-  puts $outf "    Tcl_Eval(interp, \"puts \$::errorInfo\");"
-  puts $outf "    return _rc;"
+  puts $outf "  if \(tcl_eval_bundled_file(interp, $var, (int)${var}_len, \
+                              \"$resource_file\") != TCL_OK) {"
+  # Error info printing handled in function
+  puts $outf "    return TCL_ERROR;"
   puts $outf "  }"
-  puts $outf "  }"
-}
-
-proc pkg_ifneeded { pkg_name pkg_version } {
-  return "package ifneeded {$pkg_name} {$pkg_version} {load {} {$pkg_name}}"
 }
 
 proc print_link_info { outfile manifest_dict link_objs link_flags } {

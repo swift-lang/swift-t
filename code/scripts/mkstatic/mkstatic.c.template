@@ -39,7 +39,7 @@ static const char @MAIN_SCRIPT_STRING@[];
 
 @RESOURCE_DECLS@
 
-// E.g. code similar to Tclturbine_InitStatic to load lib and src
+// Functions to initialize user packages
 @USER_PKG_INIT@
 
 static int MkStatic_Tcl_Init(Tcl_Interp *interp)
@@ -63,27 +63,23 @@ static int MkStatic_Tcl_Init(Tcl_Interp *interp)
 int
 main(int argc, char **argv)
 {
-  int tcl_rc;
   Tcl_Interp *interp = Tcl_CreateInterp();
  
-  tcl_rc = MkStatic_Tcl_Init(interp);
-  if (tcl_rc != TCL_OK)
+  if (MkStatic_Tcl_Init(interp) != TCL_OK)
   {
     fprintf(stderr, "Unexpected error initializing Tcl Interpreter:\n");
     Tcl_Eval(interp, "puts $errorInfo");
     exit(1);
   }
 
-  // Make packages available to all interpreters
-  tcl_rc = register_tcl_turbine_static_pkg(interp);
-  if (tcl_rc != TCL_OK)
+  // Make Turbine package available to interpreter
+  if (register_tcl_turbine_static_pkg(interp) != TCL_OK)
   {
-    fprintf(stderr, "Unexpected error initializing Turbine packages:\n");
-    Tcl_Eval(interp, "puts $errorInfo");
+    // Error info already printed by function
     exit(1);
   }
 
-  // E.g. Tcl_StaticPackage(interp, "turbine", UserLib_InitStatic, UserLib_InitStatic);
+  // Setup user packages to be loaded with package require
   @REGISTER_USER_PKGS@
 
   turbine_code tc;
