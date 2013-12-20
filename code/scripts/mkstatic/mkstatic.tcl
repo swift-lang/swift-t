@@ -298,6 +298,10 @@ proc read_manifest { manifest_filename ignore_no_manifest } {
             lib_objects $lib_objects linker_libs $linker_libs ]
 }
 
+# Find Tcl source files that should be loaded in directory, including:
+# - Plain Tcl source files with .tcl extensions to be evaled
+# - Tcl packages with pkgIndex.tcl files to be indexed
+# - Tcl modules with .tm extensions to be bundled and loaded on demand
 proc locate_all_lib_src { tcl_version init_lib_dirs other_lib_dirs } {
   # Process with init lib dirs first, others after
   set all_lib_src [ list ]
@@ -385,7 +389,7 @@ proc lib_init_order { tcl_version file1 file2 } {
   # - First basic initialization
   # - Then setup package/module subsystem and register packages
   set priorities [ list "init.tcl" "package.tcl" "pkgIndex.tcl" "tm.tcl" ]
-
+  # TODO: prioritize tm files after tm.tcl - change to regexp
   foreach x $priorities {
     if { $basename1 == $x } {
       return -1
@@ -569,6 +573,10 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init init_lib_src \
           }
         }
         RESOURCE_DATA {
+          # TODO: Ctrl-D in .tm file not handled right - .tm files can
+          # in theory use it as a separator to append binary data at end
+          # of file. It is not clear if such .tm files occur in the wild
+          # and the Tcl standard library doesn't include any
           foreach src_var $all_src_vars src_file $all_src_files {
             puts $c_output "/* data from $src_file */"
             set rc [ catch { exec -ignorestderr $F2A -v $src_var \
@@ -637,16 +645,49 @@ proc tcl_lib_init { outf init_lib_vars init_lib_src } {
     # Move to new line
     puts $outf ""
 
-    # set $dir var that pkgIndex.tcl expect to point to pkg
-    # directory containing loadable package
-    if { [ file tail $src_file ] == "pkgIndex.tcl" } {
-      puts $outf "  Tcl_SetVar(interp, \"dir\",\
-                      \"[file dirname $src_file]\", 0);"
+    set basename [ file tail $src_file ]
+    set extension [ file extension $basename ]
+    if { $extension == ".tcl" } {
+      # .tcl files get evaluated immediately
+
+      if { $basename == "pkgIndex.tcl" } {
+        # set $dir var that pkgIndex.tcl expect to point to pkg
+        # directory containing loadable package
+        puts $outf "  Tcl_SetVar(interp, \"dir\",\
+                        \"[file dirname $src_file]\", 0);"
+      }
+      eval_resource_var $outf $var $src_file
+    } elseif { $extension == ".tm" } {
+      # .tm modules are registered to be loaded on demand
+      lassign [ tm_package_version $src_file ] tm_package tm_version
+      register_pkg $outf $tm_package $tm_version \
+                         [ tm_init_fn_name $var ]
+    } else {
+      error "Unexpected tcl file extension: $extension for $src_file"
     }
-    eval_resource_var $outf $var $src_file
   }
   # Clear dir variable in case it was set
   puts $outf "  Tcl_UnsetVar(interp, \"dir\", 0);"
+}
+
+# Parse into package name and version, return as list
+proc tm_package_version { src_file } {
+  set basename [ file tail $src_file ]
+  set ext [ file extension $basename ] 
+  if { $ext != ".tm" } {
+    error "Expected .tm extension for $basename"
+  }
+  set module_name [ file rootname $basename ]
+  # module_name is of form ${package_name}-${package_version}
+  set module_parts [ split $module_name "-" ]
+  if { [ llength $module_parts ] != 2 } { 
+    error "Expected .tm name \"$module_name\" to consist of name-version\
+          with no other \"-\" separators"
+  }
+  return $module_parts 
+}
+proc tm_init_fn_name { tm_file_var } {
+  return "__tm_init_${tm_file_var}"
 }
 
 proc register_pkg { outf pkg_name pkg_version init_pkg_fn } {
