@@ -301,6 +301,12 @@ proc read_manifest { manifest_filename ignore_no_manifest } {
 # - Plain Tcl source files with .tcl extensions to be evaled
 # - Tcl packages with pkgIndex.tcl files to be indexed
 # - Tcl modules with .tm extensions to be bundled and loaded on demand
+# 
+# Result is list of lists.  Each list has two forms:
+# FILE src_file
+# PACKAGE name version (src_file)*
+# The first is a .tcl file that should be sourced at startup
+# The second is a package that should be registered at startup for later loading
 proc locate_all_lib_src { tcl_version sys_lib_dirs other_lib_dirs } {
   # Process with init lib dirs first, others after
   set all_lib_src [ list ]
@@ -346,16 +352,23 @@ proc locate_lib_src { tcl_version lib_dir } {
   }
   lappend check_dirs $lib_dir
 
-  set tcls [ list ]
+  # Accumulate libs in found
+  set found [ list ]
   foreach check_dir $check_dirs {
     verbose_msg "Checking lib directory $check_dir for .tcl and .tm files"
     if { ! [ file isdirectory $check_dir ] } {
       continue
     }
 
-    foreach tcl_file [ glob -nocomplain -directory $check_dir "*.tcl" "*.tm" ] {
+    foreach tcl_file [ glob -nocomplain -directory $check_dir "*.tcl" ] {
       verbose_msg "Found Tcl lib file $tcl_file"
-      lappend tcls $tcl_file
+      lappend found [ list FILE $tcl_file ]
+    }
+    
+    foreach tcl_file [ glob -nocomplain -directory $check_dir "*.tm" ] {
+      verbose_msg "Found Tcl module lib file $tcl_file"
+      lassign [ tm_package_version $tcl_file ] tm_package tm_version
+      lappend found [ list PACKAGE $tm_package $tm_version $tcl_file ]
     }
 
     # check subdirectories thereof for pkgIndex.tcl files used to setup
@@ -365,15 +378,20 @@ proc locate_lib_src { tcl_version lib_dir } {
       if [ file exists $maybe_pkgindex ] {
         verbose_msg "Found Tcl package index file $maybe_pkgindex"
 
-        # TODO: don't do anything with analysis yet
-        pkgindex_analyse $maybe_pkgindex
-        lappend tcls $maybe_pkgindex
+        set pkgindex_info [ pkgindex_analyse $maybe_pkgindex ]
+        if { "$pkgindex_info" != "" } {
+          lassign $pkgindex_info pkg_name pkg_version pkg_files
+          lappend found [ list PACKAGE $pkg_name $pkg_version {*}$pkg_files ]
+        } else {
+          # Just load the index at started
+          lappend found [ list FILE $maybe_pkgindex ]
+        }
       }
     }
   }
 
   # Sort according to order for tcl version
-  return [ lsort -command [ list lib_init_order $tcl_version ] $tcls ]
+  return [ lsort -command [ list lib_init_order $tcl_version ] $found ]
 }
 
 proc pkgindex_analyse { f } {
@@ -388,7 +406,68 @@ proc pkgindex_analyse { f } {
       verbose_msg "Could not analyse init script for $name $version:\n$init_script\n"
     }
   }
+  
+  #TODO: actually return something
+  return ""
 }
+
+# return index in core module list, or -1 if not present
+proc core_module_ix { lib } {
+  if { [ lindex $lib 0 ] != "FILE" } {
+    return -1;
+  }
+  set basename [ file tail [ lindex $lib 1 ] ]
+  set core_modules [ list init.tcl package.tcl tm.tcl ]
+  return [ lsearch -exact $core_modules $basename ]
+}
+
+proc lib_init_order { tcl_version lib1 lib2 } {
+  # Prioritize scripts in correct order:
+  # - First basic initialization
+  set lib_type1 [ lindex $lib1 0 ]
+  set lib_type2 [ lindex $lib2 0 ]
+
+  set core_ix1 [ core_module_ix $lib1 ]
+  set core_ix2 [ core_module_ix $lib2 ]
+
+  if { $core_ix1 >= 0 } {
+    if { $core_ix2 >= 0 && $core_ix2 <= $core_ix1 } {
+      return 1 
+    } else {
+      return -1
+    }
+  } elseif { $core_ix2 >= 0 } {
+    return 1
+  }
+ 
+  # Then setup package/module subsystem and register packages/modules
+  if { $lib_type1 == "PACKAGE" } {
+    if { $lib_type2 == "PACKAGE" } {
+      # Break ties based on package name and version
+      return [ string compare $lib1 $lib2 ]
+    } else {
+      return -1
+    }
+  } elseif { $lib_type2 == "PACKAGE" } {
+    return 1
+  }
+  
+  # Then load other scripts in some deterministic order
+  set file1 [ lindex $lib1 1 ]
+  set file2 [ lindex $lib2 1 ]
+  set basename1 [ file tail $file1 ]
+  set basename2 [ file tail $file2 ]
+
+  # If not a special name, alphabetical order of basename
+  set basename_compare [ string compare $basename1 $basename2 ]
+  if { $basename_compare != 0 } {
+    return $basename_compare
+  }
+
+  # Otherwise check directory name (e.g. for pkgIndex.tcl)
+  return [ string compare [ file dir $file1 ] [ file dir $file2 ] ]
+}
+
 
 # Analyse a package.
 # Return empty string if not successful
@@ -461,40 +540,6 @@ proc pkgindex_tryload_child { f } {
   return $loaded_pkgs
 }
 
-proc lib_init_order { tcl_version file1 file2 } {
-  if [ string equal $file1 $file2 ] {
-    return 0
-  }
-  set basename1 [ file tail $file1 ]
-  set basename2 [ file tail $file2 ]
-
-  
-  # Prioritize scripts in correct order:
-  # - First basic initialization
-  # - Then setup package/module subsystem and register packages/modules
-  # - Then load other scripts
-
-  # Use regular expressions to match
-  set priorities [ list {^init\.tcl$} {^package\.tcl$} {^tm\.tcl$} \
-                        {^.*\.tm$} {^pkgIndex\.tcl$} ]
-  foreach re $priorities {
-    if { [ regexp $re $basename1 ] } {
-      return -1
-    } elseif { [ regexp $re $basename2 ] } {
-      return 1
-    }
-  } 
-  # If not a special name, alphabetical order of basename
-  set basename_compare [ string compare $basename1 $basename2 ]
-
-  if { $basename_compare != 0 } {
-    return $basename_compare
-  }
-
-  # Otherwise check directory name (e.g. for pkgIndex.tcl)
-  return [ string compare [ file dir $file1 ] [ file dir $file2 ] ]
-}
-
 proc write_deps_file { manifest_dict init_lib_src deps_output_file \
                        c_output_file } {
   set deps_output [ open_output_file $deps_output_file ]
@@ -504,7 +549,18 @@ proc write_deps_file { manifest_dict init_lib_src deps_output_file \
   if { $main_script != "" } {
     lappend all_scripts $main_script
   }
-  lappend all_scripts {*}$init_lib_src
+  
+  foreach lib $init_lib_src {
+    set lib_type [ lindex $lib 0 ]
+    if { $lib_type == "FILE" } {
+      lappend all_scripts [ lindex $lib 1 ]
+    } elseif { $lib_type == "PACKAGE" } {
+      set scripts [ lrange $lib 3 [ llength $lib ] ]
+      lappend all_scripts {*}scripts
+    } else {
+      error "unexpected type $lib_type in $lib"
+    }
+  }
   
   foreach script $all_scripts {
     puts -nonewline $deps_output " $script"
@@ -558,13 +614,34 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init init_lib_src \
   set c_output [ open_output_file $c_output_file ]
 
   set all_vars [ list ]
-  
+
+  # List of package info: {name version}
+  # Empty list/string if not a package
+  set init_lib_package_info [ list ]
   set init_lib_src_vars [ list ]
-  foreach src_file $init_lib_src {
-    set init_lib_src_var [ varname_from_file $resource_var_prefix \
-                                             $src_file $all_vars ]
-    lappend init_lib_src_vars $init_lib_src_var
-    lappend all_vars $init_lib_src_var
+  set init_lib_src_files [ list ]
+  # TODO: will need to track packages separately
+  foreach lib $init_lib_src {
+    set lib_type [ lindex $lib 0 ]
+    if { $lib_type == "FILE" } {
+      set src_files [ list [ lindex $lib 1 ] ]
+      set package_info ""
+    } elseif { $lib_type == "PACKAGE" } {
+      set src_files [ lrange $lib 3 [ llength $lib ] ]
+      set package_info [ list [ lindex $lib 1 ] [ lindex $lib 2 ] ] 
+    } else {
+      error "Unexpected lib type $lib_type in $lib"
+    }
+    set src_vars [ list ]
+    foreach src_file $src_files {
+      set src_var [ varname_from_file $resource_var_prefix \
+                                      $src_file $all_vars ]
+      lappend src_vars $src_var 
+      lappend all_vars $src_var
+    }
+    lappend init_lib_package_info $package_info
+    lappend init_lib_src_files $src_files
+    lappend init_lib_src_vars $src_vars
   }
 
   set lib_scripts [ dict get $manifest_dict lib_scripts ]
@@ -576,8 +653,8 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init init_lib_src \
     lappend all_vars $lib_script_var
   }
 
-  set all_src_vars [ concat $init_lib_src_vars $lib_script_vars ]
-  set all_src_files [ concat $init_lib_src $lib_scripts ]
+  set all_src_vars [ concat $init_lib_src_vars {*}$lib_script_vars ]
+  set all_src_files [ concat $init_lib_src_files {*}$lib_scripts ]
 
   puts $c_output "/* AUTOGENERATED FROM $c_template_filename */\n"
 
@@ -612,7 +689,8 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init init_lib_src \
           tcl_custom_preinit $c_output $skip_tcl_init $tcl_version
         }
         TCL_LIB_INIT {
-          tcl_lib_init $c_output $init_lib_src_vars $init_lib_src
+          tcl_lib_init $c_output $init_lib_package_info $init_lib_src_vars \
+                       $init_lib_src_files
         }
         REGISTER_USER_PKGS {
           register_pkg $c_output $pkg_name $pkg_version $INIT_PKGS_FN
@@ -620,7 +698,8 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init init_lib_src \
         PKG_INIT_FNS {
           # Functions to init C plus Tcl code for modules
           # Generate needed init functions for library modules
-          gen_lib_init_fns $c_output $init_lib_src_vars $init_lib_src
+          gen_lib_init_fns $c_output $init_lib_package_info \
+                           $init_lib_src_vars $init_lib_src_files
 
           # Initialize package with user code
           gen_pkg_init_fn $c_output \
@@ -733,48 +812,49 @@ proc tcl_custom_preinit { outf skip_tcl_init tcl_version } {
 }
 
 # Generate init functions for Tcl library modules
-proc gen_lib_init_fns { outf init_lib_vars init_lib_src } {
+proc gen_lib_init_fns { outf package_infos init_lib_vars init_lib_src } {
   puts $outf ""
-  foreach var $init_lib_vars src_file $init_lib_src {
-    set extension [ file extension $src_file ]
-
-    if { $extension == ".tm" } {
-      # .tm modules are registered to be loaded on demand
-      lassign [ tm_package_version $src_file ] tm_package tm_version
-      gen_pkg_init_fn $outf [ tm_init_fn_name $src_file ] [ list ] \
-                      [ list $var ] [ list $src_file ]
+  foreach package_info $package_infos vars $init_lib_vars \
+          src_files $init_lib_src {
+    if { [ llength $package_info ] == 0 } {
+      # not a package
+      continue
     }
+
+    # Packages are registered to be loaded on demand: need init function
+    lassign $package_info pkg_name pkg_version
+    gen_pkg_init_fn $outf [ pkg_init_fn_name $pkg_name $pkg_version ] \
+                    [ list ] $vars $src_files
   }
 }
 
 # Run the specified library scripts in the interpreter
 # pkgIndex.tcl files are handled specially
-proc tcl_lib_init { outf init_lib_vars init_lib_src } {
+proc tcl_lib_init { outf package_infos init_lib_vars init_lib_src } {
 
   puts $outf ""
-  foreach var $init_lib_vars src_file $init_lib_src {
+  foreach package_info $package_infos vars $init_lib_vars \
+          src_files $init_lib_src {
     # Move to new line
     puts $outf ""
 
-    set basename [ file tail $src_file ]
-    set extension [ file extension $basename ]
-    if { $extension == ".tcl" } {
-      # .tcl files get evaluated immediately
-
-      if { $basename == "pkgIndex.tcl" } {
-        # set $dir var that pkgIndex.tcl expect to point to pkg
-        # directory containing loadable package
-        puts $outf "  Tcl_SetVar(interp, \"dir\",\
-                        \"[file dirname $src_file]\", 0);"
+    if { [ llength $package_info ] == 0 } {
+      # Plain source files get evaluated immediately
+      foreach var $vars src_file $src_files {
+        set basename [ file tail $src_file ]
+        if { $basename == "pkgIndex.tcl" } {
+          # set $dir var that pkgIndex.tcl expect to point to pkg
+          # directory containing loadable package
+          puts $outf "  Tcl_SetVar(interp, \"dir\",\
+                          \"[file dirname $src_file]\", 0);"
+        }
+        eval_resource_var $outf $var $src_file
       }
-      eval_resource_var $outf $var $src_file
-    } elseif { $extension == ".tm" } {
-      # .tm modules are registered to be loaded on demand
-      lassign [ tm_package_version $src_file ] tm_package tm_version
-      register_pkg $outf $tm_package $tm_version \
-                         [ tm_init_fn_name $src_file ]
     } else {
-      error "Unexpected tcl file extension: $extension for $src_file"
+      lassign $package_info pkg_name version
+      # Packages are registered to be loaded on demand
+      register_pkg $outf $pkg_name $version \
+                         [ pkg_init_fn_name $pkg_name $version ]
     }
   }
   # Clear dir variable in case it was set
@@ -797,8 +877,9 @@ proc tm_package_version { src_file } {
   }
   return $module_parts 
 }
-proc tm_init_fn_name { tm_file } {
-  return "init_[ file_base_varname $tm_file ]"
+proc pkg_init_fn_name { pkg_name version } {
+  regsub -all "\." ${version} "_" version2
+  return "init_${pkg_name}_${version2}"
 }
 
 proc register_pkg { outf pkg_name pkg_version init_pkg_fn } {
