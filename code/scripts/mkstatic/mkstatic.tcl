@@ -343,18 +343,16 @@ proc locate_lib_src { tcl_version lib_dir } {
   }
   lappend check_dirs $lib_dir
 
-  set ordered_tcls [ list ]
+  set tcls [ list ]
   foreach check_dir $check_dirs {
     verbose_msg "Checking lib directory $check_dir for .tcl files"
     if { ! [ file isdirectory $check_dir ] } {
       continue
     }
 
-    set checkdir_tcls [ list ]
-
     foreach tcl_file [ glob -nocomplain -directory $check_dir "*.tcl" "*.tm" ] {
       verbose_msg "Found Tcl lib file $tcl_file"
-      lappend checkdir_tcls $tcl_file
+      lappend tcls $tcl_file
     }
 
     # check subdirectories thereof for pkgIndex.tcl files used to setup
@@ -364,17 +362,13 @@ proc locate_lib_src { tcl_version lib_dir } {
       if [ file exists $maybe_pkgindex ] {
         # TODO: preload packages?
         verbose_msg "Found Tcl package index file $maybe_pkgindex"
-        lappend checkdir_tcls $maybe_pkgindex
+        lappend tcls $maybe_pkgindex
       }
     }
-
-    # Implement order within subdirectory
-    set ordered_tcls [ concat $ordered_tcls [ lsort \
-        -command [ list lib_init_order $tcl_version ] $checkdir_tcls ] ]
   }
 
   # Sort according to order for tcl version
-  return $ordered_tcls 
+  return [ lsort -command [ list lib_init_order $tcl_version ] $tcls ]
 }
 
 proc lib_init_order { tcl_version file1 file2 } {
@@ -387,13 +381,16 @@ proc lib_init_order { tcl_version file1 file2 } {
   
   # Prioritize scripts in correct order:
   # - First basic initialization
-  # - Then setup package/module subsystem and register packages
-  set priorities [ list "init.tcl" "package.tcl" "pkgIndex.tcl" "tm.tcl" ]
-  # TODO: prioritize tm files after tm.tcl - change to regexp
-  foreach x $priorities {
-    if { $basename1 == $x } {
+  # - Then setup package/module subsystem and register packages/modules
+  # - Then load other scripts
+
+  # Use regular expressions to match
+  set priorities [ list {^init\.tcl$} {^package\.tcl$} {^tm\.tcl$} \
+                        {^.*\.tm$} {^pkgIndex\.tcl$} ]
+  foreach re $priorities {
+    if { [ regexp $re $basename1 ] } {
       return -1
-    } elseif { $basename2 == $x } {
+    } elseif { [ regexp $re $basename2 ] } {
       return 1
     }
   } 
