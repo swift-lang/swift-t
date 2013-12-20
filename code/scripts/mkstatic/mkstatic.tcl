@@ -166,7 +166,6 @@ proc main { } {
 
   # generate deps file if needed
   if { [ string length $deps_output_file ] > 0 } {
-    #TODO: write_deps_file should include libs
     write_deps_file $manifest_dict $init_lib_src \
                     $deps_output_file $deps_c_output_file
   }
@@ -424,9 +423,13 @@ proc write_deps_file { manifest_dict init_lib_src deps_output_file \
   close $deps_output
 }
 
+proc file_base_varname { fname } {
+  regsub -all "\[\.-\]" [ file tail $fname ] "_" result
+  return $result
+}
+
 proc varname_from_file { var_prefix fname used_names } {
-  regsub -all "\[\.-\]" [ file tail $fname ] "_" basename
-  set basename "${var_prefix}${basename}"
+  set basename "${var_prefix}[ file_base_varname ${fname} ]"
   set name $basename
   set attempt 0
   while { [ lsearch $used_names $name ] >= 0 } {
@@ -523,9 +526,13 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init init_lib_src \
         REGISTER_USER_PKGS {
           register_pkg $c_output $pkg_name $pkg_version $INIT_PKGS_FN
         }
-        USER_PKG_INIT {
-          # Code to init C plus Tcl code for module
-          user_pkg_init_code $c_output \
+        PKG_INIT_FNS {
+          # Functions to init C plus Tcl code for modules
+          # Generate needed init functions for library modules
+          gen_lib_init_fns $c_output $init_lib_src_vars $init_lib_src
+
+          # Initialize package with user code
+          gen_pkg_init_fn $c_output \
               $INIT_PKGS_FN \
               [ dict get $manifest_dict lib_init_fns ] \
               $lib_script_vars $lib_scripts
@@ -634,6 +641,21 @@ proc tcl_custom_preinit { outf skip_tcl_init tcl_version } {
                 NULL, Tcl_NewListObj(0, NULL), 0);"
 }
 
+# Generate init functions for Tcl library modules
+proc gen_lib_init_fns { outf init_lib_vars init_lib_src } {
+  puts $outf ""
+  foreach var $init_lib_vars src_file $init_lib_src {
+    set extension [ file extension $src_file ]
+
+    if { $extension == ".tm" } {
+      # .tm modules are registered to be loaded on demand
+      lassign [ tm_package_version $src_file ] tm_package tm_version
+      gen_pkg_init_fn $outf [ tm_init_fn_name $src_file ] [ list ] \
+                      [ list $var ] [ list $src_file ]
+    }
+  }
+}
+
 # Run the specified library scripts in the interpreter
 # pkgIndex.tcl files are handled specially
 proc tcl_lib_init { outf init_lib_vars init_lib_src } {
@@ -659,7 +681,7 @@ proc tcl_lib_init { outf init_lib_vars init_lib_src } {
       # .tm modules are registered to be loaded on demand
       lassign [ tm_package_version $src_file ] tm_package tm_version
       register_pkg $outf $tm_package $tm_version \
-                         [ tm_init_fn_name $var ]
+                         [ tm_init_fn_name $src_file ]
     } else {
       error "Unexpected tcl file extension: $extension for $src_file"
     }
@@ -684,8 +706,8 @@ proc tm_package_version { src_file } {
   }
   return $module_parts 
 }
-proc tm_init_fn_name { tm_file_var } {
-  return "__tm_init_${tm_file_var}"
+proc tm_init_fn_name { tm_file } {
+  return "init_[ file_base_varname $tm_file ]"
 }
 
 proc register_pkg { outf pkg_name pkg_version init_pkg_fn } {
@@ -700,7 +722,7 @@ proc register_pkg { outf pkg_name pkg_version init_pkg_fn } {
 }
 
 # Generate C function to initialize static package
-proc user_pkg_init_code { outf init_fn_name lib_init_fns \
+proc gen_pkg_init_fn { outf init_fn_name lib_init_fns \
                             resource_vars resource_files } {
   puts $outf "static int $init_fn_name\(Tcl_Interp *interp\) {"
   puts $outf "  int rc = TCL_OK;"

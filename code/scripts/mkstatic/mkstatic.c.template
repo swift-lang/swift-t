@@ -39,8 +39,8 @@ static const char @MAIN_SCRIPT_STRING@[];
 
 @RESOURCE_DECLS@
 
-// Functions to initialize user packages
-@USER_PKG_INIT@
+// Functions to initialize packages
+@PKG_INIT_FNS@
 
 /*
   Initialize a fresh Tcl interpreter with all libraries.
