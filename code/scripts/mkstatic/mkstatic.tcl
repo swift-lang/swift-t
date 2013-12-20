@@ -312,12 +312,33 @@ proc locate_all_lib_src { tcl_version init_lib_dirs other_lib_dirs } {
 proc locate_lib_src { tcl_version lib_dir } {
   nonempty $tcl_version "Must specify Tcl version to locate libraries\
                          in directories. Provided lib dir: $lib_dir"
+
+  set tcl_version_parts [ split $tcl_version "." ]
+  set tcl_version_major [ lindex $tcl_version_parts 0 ]
+  set tcl_version_minor [ lindex $tcl_version_parts 1 ]
+  if { ! [ string is integer -strict $tcl_version_major ] ||
+       ! [ string is integer -strict $tcl_version_minor ] } {
+    user_err "Expected integral major and minor components in tcl \
+              version: $tcl_version"
+  }
+
   if { ! [ file isdirectory $lib_dir ] } {
     user_err "library directory $lib_dir does not exist"
   }
+
+  set check_dirs [ list ]
   # In the Tcl layouts with version-specific subdirectories, that is where
   # the base Tcl functionality is: check those first.
-  set check_dirs [ list [ file join $lib_dir "tcl${tcl_version}" ] $lib_dir ]
+  lappend check_dirs [ file join $lib_dir "tcl${tcl_version}" ]
+  # Loadable Tcl modules are in a version-specific subdirectory.
+  # We can load any modules with the same major version and equal or
+  # lower minor version
+  for { set minor $tcl_version_minor } { $minor >= 0 } { incr minor -1 } {
+    lappend check_dirs [ file join $lib_dir "tcl${tcl_version_major}" \
+                                   "${tcl_version_major}.${minor}" ]
+  }
+  lappend check_dirs $lib_dir
+
   set ordered_tcls [ list ]
   foreach check_dir $check_dirs {
     verbose_msg "Checking lib directory $check_dir for .tcl files"
@@ -327,7 +348,7 @@ proc locate_lib_src { tcl_version lib_dir } {
 
     set checkdir_tcls [ list ]
 
-    foreach tcl_file [ glob -nocomplain -directory $check_dir "*.tcl" ] {
+    foreach tcl_file [ glob -nocomplain -directory $check_dir "*.tcl" "*.tm" ] {
       verbose_msg "Found Tcl lib file $tcl_file"
       lappend checkdir_tcls $tcl_file
     }
