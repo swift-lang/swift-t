@@ -51,6 +51,11 @@ static int MkStatic_Tcl_Init(Tcl_Interp *interp)
     if (rc != TCL_OK)
       return rc;
   }
+  else
+  {
+    // Do any setup required before running init scripts
+    @TCL_CUSTOM_PRE_INIT@
+  }
   @TCL_LIB_INIT@
   return TCL_OK;
 }

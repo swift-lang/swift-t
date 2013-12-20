@@ -178,7 +178,7 @@ proc main { } {
   }
 
   if { [ string length $c_output_file ] > 0 } {
-    fill_c_template $manifest_dict $skip_tcl_init $init_lib_src \
+    fill_c_template $manifest_dict $tcl_version $skip_tcl_init $init_lib_src \
                     $resource_var_prefix $c_output_file
   }
 }
@@ -187,6 +187,10 @@ proc user_err { msg } {
   puts stderr "error: $msg"
   cleanup_on_error
   exit 1
+}
+
+proc user_warn { msg } {
+  puts stderr "warning: $msg"
 }
 
 proc setonce { varname val } {
@@ -307,7 +311,7 @@ proc locate_all_lib_src { tcl_version init_lib_dirs other_lib_dirs } {
 
 proc locate_lib_src { tcl_version lib_dir } {
   nonempty $tcl_version "Must specify Tcl version to locate libraries\
-                         in directories"
+                         in directories. Provided lib dir: $lib_dir"
   if { ! [ file isdirectory $lib_dir ] } {
     user_err "library directory $lib_dir does not exist"
   }
@@ -380,7 +384,7 @@ proc varname_from_file { var_prefix fname used_names } {
 # skip_tcl_init: if true, skip regular Tcl_Init function
 # init_lib_src: library files to load in order after initializing interp
 # resource_var_prefix: prefix to apply to resource vars
-proc fill_c_template { manifest_dict skip_tcl_init init_lib_src \
+proc fill_c_template { manifest_dict tcl_version skip_tcl_init init_lib_src \
                       resource_var_prefix c_output_file } {
   global SCRIPT_DIR
   global INIT_PKGS_FN
@@ -452,6 +456,9 @@ proc fill_c_template { manifest_dict skip_tcl_init init_lib_src \
         SKIP_TCL_INIT {
           # Output integer to use as truth value
           puts -nonewline $c_output $skip_tcl_init
+        }
+        TCL_CUSTOM_PRE_INIT {
+          tcl_custom_preinit $c_output $tcl_version
         }
         TCL_LIB_INIT {
           tcl_lib_init $c_output $init_lib_src_vars $init_lib_src
@@ -528,6 +535,40 @@ proc fill_c_template { manifest_dict skip_tcl_init init_lib_src \
   verbose_msg "Created C main file at $c_output_file"
 }
 
+# Set any required variables in interpreter prior to running init.tcl
+# script.  These variables aren't officially documented, so we'll check
+# the Tcl version to see if it's one we've encountered before
+proc tcl_custom_preinit { outf tcl_version } {
+  if { [ string length $tcl_version ] == 0 } {
+    user_err "Tcl version required when including init lib"
+  }
+
+  if { ! [ catch [ package vcompare $tcl_version 0 ] ] } {
+    user_err "Invalid version number: \"$tcl_version\""
+  }
+  
+  # Versions that we've tested with
+  set min_ver 8.5
+  set max_ver 8.6
+  if { [ package vcompare $tcl_version $min_ver ] < 0 } {
+    user_warn "Do not officially support including initialization library\
+               for Tcl version $tcl_version < $min_ver. This may work but\
+               do not be surprised if Tcl initialization fails!"
+  }
+  
+  if { [ package vcompare $tcl_version $max_ver ] > 0 } {
+    user_warn "Do not officially support including initialization library\
+               for Tcl version $tcl_version > $max_ver. This may work but\
+               do not be surprised if Tcl initialization fails!"
+  }
+
+  # Set library search path to empty list
+  puts $outf "  Tcl_ObjSetVar2(interp, Tcl_NewStringObj(\"tcl_library\", -1),\
+                NULL, Tcl_NewListObj(0, NULL), 0);"
+}
+
+# Run the specified library scripts in the interpreter
+# pkgIndex.tcl files are handled specially
 proc tcl_lib_init { outf init_lib_vars init_lib_src } {
 
   foreach var $init_lib_vars src_file $init_lib_src {
