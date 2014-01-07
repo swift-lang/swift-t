@@ -40,10 +40,11 @@ main()
   char** mpi_argv = NULL;
   MPI_Init(&mpi_argc, &mpi_argv);
   int types[2] = {0, 1};
+  int nservers = 1;
   int am_server;
   MPI_Comm adlb_comm = MPI_COMM_WORLD;
   MPI_Comm worker_comm;
-  ADLB_Init(2, 2, types, &am_server, adlb_comm, &worker_comm);
+  ADLB_Init(nservers, 2, types, &am_server, adlb_comm, &worker_comm);
 
   int tasks_per_worker = 1;
 
