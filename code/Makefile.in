@@ -40,7 +40,7 @@ endif
 # Products:
 ADLB_A  = lib/libadlb.a
 ADLB_SO = lib/libadlb.$(SO_SUFFIX)
-ADLB_LIBS = 
+ADLB_LIBS =
 
 ENABLE_SHARED = @ENABLE_SHARED@
 ENABLE_STATIC = @ENABLE_STATIC@
@@ -238,7 +238,7 @@ TAGS: deps.txt
 
 ### CLEAN
 
-clean:
+clean::
 	$(Q) "  CLEAN"
 	$(E) rm -fv $(OBJS) $(ADLB_A) $(ADLB_SO) $(DEPS)
 
