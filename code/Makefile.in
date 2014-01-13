@@ -26,7 +26,7 @@ all: $(BUILD_ALL_TARGETS)
 
 turbine: $(TURBINE)
 
-package: $(PACKAGE)
+package: $(PACKAGE) libs
 
 package_static: libs_static
 
@@ -416,10 +416,6 @@ endif
              $(MAC_NAME)
 
 $(STATIC_PKG_A): $(STATIC_PKG_OBJS)
-ifeq ($(ENABLE_STATIC),0)
-	@echo "Static libraries were disabled, cannot build target!"
-	@exit 1
-endif
 	$(Q) "  AR		$(@)"
 	$(E) $(AR) $(ARFLAGS) $(@) $(STATIC_PKG_OBJS)
 	$(E) $(RANLIB) $(@)

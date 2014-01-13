@@ -525,11 +525,9 @@ AC_ARG_ENABLE(static,
     ])
 AC_SUBST(ENABLE_STATIC)
 
-if [[ "$ENABLE_STATIC" = 1 ]]; then
-  # Need ar and ranlib to link
-  AC_CHECK_PROG(AR, ar, ar, AC_MSG_ERROR(Cannot find ar))
-  AC_PROG_RANLIB
-fi
+# Need ar and ranlib to build static libraries
+AC_CHECK_PROG(AR, ar, ar, AC_MSG_ERROR(Cannot find ar))
+AC_PROG_RANLIB
 
 # In order from most to least preferred
 TCL_VERSION_PREFS="8.6 8.5"
