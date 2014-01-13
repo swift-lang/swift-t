@@ -150,6 +150,13 @@ blobutils_cast_to_long(void* p)
   return result;
 }
 
+long long
+blobutils_cast_to_long_long(void* p)
+{
+  long long result = (long long) p;
+  return result;
+}
+
 int64_t
 blobutils_cast_to_int64(void* p)
 {
