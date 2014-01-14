@@ -176,9 +176,18 @@ proc main { } {
     write_link_deps_file $manifest_dict $link_deps_output_file $link_deps_target
   }
 
+  if { $skip_tcl_init } {
+    if { [ llength $sys_lib_dirs ] == 0 } {
+      error "Internal error: zero-length sys_lib_dirs"
+    } elseif { [ llength $sys_lib_dirs ] > 1 } {
+      error "Internal error: multiple sys_lib_dirs"
+    }
+    set sys_lib_dir [ lindex $sys_lib_dirs 0 ]
+  }
+
   if { [ string length $c_output_file ] > 0 } {
-    fill_c_template $manifest_dict $tcl_version $skip_tcl_init $all_lib_src \
-                    $resource_var_prefix $c_output_file
+    fill_c_template $manifest_dict $tcl_version $skip_tcl_init $sys_lib_dir \
+                    $all_lib_src $resource_var_prefix $c_output_file
   }
 }
 
@@ -599,7 +608,8 @@ proc varname_from_file { var_prefix fname used_names } {
 # skip_tcl_init: if true, skip regular Tcl_Init function
 # init_lib_src: library files to load in order after initializing interp
 # resource_var_prefix: prefix to apply to resource vars
-proc fill_c_template { manifest_dict tcl_version skip_tcl_init init_lib_src \
+proc fill_c_template { manifest_dict tcl_version skip_tcl_init sys_lib_dir \
+                      init_lib_src \
                       resource_var_prefix c_output_file } {
   global SCRIPT_DIR
   global INIT_PKGS_FN
@@ -694,11 +704,11 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init init_lib_src \
           puts -nonewline $c_output $skip_tcl_init
         }
         TCL_CUSTOM_PRE_INIT {
-          tcl_custom_preinit $c_output $skip_tcl_init $tcl_version
+          tcl_custom_preinit $c_output $skip_tcl_init $tcl_version $sys_lib_dir
         }
         TCL_LIB_INIT {
           tcl_lib_init $c_output $init_lib_package_info $init_lib_src_vars \
-                       $init_lib_src_files
+                       $init_lib_src_files $skip_tcl_init $sys_lib_dir
         }
         REGISTER_USER_PKGS {
           register_pkg $c_output $pkg_name $pkg_version $INIT_PKGS_FN
@@ -785,7 +795,7 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init init_lib_src \
 # Set any required variables in interpreter prior to running init.tcl
 # script.  These variables aren't officially documented, so we'll check
 # the Tcl version to see if it's one we've encountered before
-proc tcl_custom_preinit { outf skip_tcl_init tcl_version } {
+proc tcl_custom_preinit { outf skip_tcl_init tcl_version sys_lib_dir } {
 
   if { $skip_tcl_init } {
     # Regular Tcl init not happening- check we can support this
@@ -813,10 +823,28 @@ proc tcl_custom_preinit { outf skip_tcl_init tcl_version } {
     }
   }
 
-  # Set library search path to empty list since we're providing builtin
-  # libraries
+  # Set library search path to tcl system library directory
   puts $outf "  Tcl_ObjSetVar2(interp, Tcl_NewStringObj(\"tcl_library\", -1),\
-                NULL, Tcl_NewListObj(0, NULL), 0);"
+                NULL, Tcl_NewStringObj(\"\", -1), 0);"
+}
+
+# Helper to put Tcl_Eval call into output C code
+proc tcl_eval { outf script } {
+  set script [ string map { "\n" "\\n\\\n" "\"" "\\\"" } $script ]
+  puts $outf "  Tcl_Eval(interp, \"$script\");"
+}
+
+proc tcl_custom_postinit { outf skip_tcl_init sys_lib_dir } {
+  if { $skip_tcl_init } {
+    # Reset auto_path to just including user libraries
+    tcl_eval $outf {
+      if {[info exists env(TCLLIBPATH)]} {
+          set auto_path $env(TCLLIBPATH)
+      } else {
+          set auto_path ""
+      }
+    }
+  }
 }
 
 # Generate init functions for Tcl library modules
@@ -838,7 +866,8 @@ proc gen_lib_init_fns { outf package_infos init_lib_vars init_lib_src } {
 
 # Run the specified library scripts in the interpreter
 # pkgIndex.tcl files are handled specially
-proc tcl_lib_init { outf package_infos init_lib_vars init_lib_src } {
+proc tcl_lib_init { outf package_infos init_lib_vars init_lib_src \
+                    skip_tcl_init sys_lib_dir } {
 
   puts $outf ""
   foreach package_info $package_infos vars $init_lib_vars \
@@ -857,6 +886,9 @@ proc tcl_lib_init { outf package_infos init_lib_vars init_lib_src } {
                           \"[file dirname $src_file]\", 0);"
         }
         eval_resource_var $outf $var $src_file
+        if { [ file tail $src_file ] == "init.tcl" } {
+          tcl_custom_postinit $outf $skip_tcl_init $sys_lib_dir
+        }
       }
     } else {
       lassign $package_info pkg_name version
