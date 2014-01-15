@@ -1506,7 +1506,7 @@ limited by the following factors:
 
 === Invocation
 
-The general form of a Turbine invocation for STC-generated
+The form of a Turbine invocation for STC-generated
 +program.tcl+ is:
 
 ----
@@ -1523,6 +1523,10 @@ Turbine accepts the following arguments:
 +-n <procs>+:: The total number of Turbine MPI processes
 +-v+:: Report the Turbine version number
 +-V+:: Make the Turbine launch script verbose
++-x+:: Use turbine_sh launcher with compiled-in libraries instead of tclsh
+       (reduces number of files that must be read from file system)
++-X+:: In place of of program.tcl, run standalone Turbine executable
+        (e.g. created by <<mkstatic,mkstatic.tcl>>)
 
 The user controls the Turbine run time configuration through
 environment variables:
@@ -1660,6 +1664,19 @@ for information about specific systems with Turbine installations.
    (or the value of +ADLB_EXHAUST_TIME+) from the Turbine run time
    due to the ADLB shutdown protocol, which does not start until the
    system is idle for that amount of time.
+5. Reduce the number of program files that must be read off the
+   filesystem.  This is particularly useful for parallel file systems
+   and large scale applications.  In increasing order of effectiveness,
+   you can:
+** use the turbine_sh launcher in place of tclsh in submit script,
+   or by specifying the +-x+ argument to +turbine+
+** Use <<mkstatic,mkstatic.tcl>> to create a standalone executable with
+   the Tcl main script and Tcl library code compiled in, and compiled
+   code statically linked.
+
+[[mkstatic]]
+=== Building standalone executables with mkstatic.tcl
+TODO
 
 ////
 Local Variables:
