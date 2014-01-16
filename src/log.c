@@ -47,14 +47,12 @@ log_enabled(bool b)
   enabled = b;
 }
 
+static void log_cleanup(void);
+
 bool
 log_file_set(const char* f)
 {
-  // First, clean up previous file:
-  if (filename != NULL)
-    free(filename);
-  if (output != stdout)
-    fclose(output);
+  log_cleanup();
 
   filename = strdup(f);
   output = fopen(filename, "w");
@@ -117,6 +115,17 @@ log_printf(char* format, ...)
   fprintf(output, "%*.3f %s\n", precision, t, line);
 }
 
+static void
+log_cleanup()
+{
+  if (filename != NULL)
+    free(filename);
+  if (output != stdout)
+    fclose(output);
+}
+
 void
 log_finalize()
-{}
+{
+  log_cleanup();
+}
