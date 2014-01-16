@@ -37,7 +37,12 @@ static char* buffer = NULL;
 static size_t buffer_size;
 
 #ifndef NDEBUG
-// Use variable to switch on/off at runtime
+/**
+   Use variable to switch debugging on/off at runtime to avoid
+   use of preprocessor.
+   Note that compiler will be able to eliminate dead code if
+   debugging is disabled at compile time.
+ */
 bool  turbine_debug_enabled = true;
 #endif
 
