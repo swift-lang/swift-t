@@ -43,14 +43,6 @@ exmcutils: $(EXM_CUTILS_LIBS)
 
 srcdir = @srcdir@
 
-# Auto-detect that we are building a Debian package
-ifneq ($(DEB_BUILD_ARCH),)
-  # For Debian, we put ourselves in /usr
-  USRDIR =
-else
-  USRDIR =
-endif
-
 # Support GNU DESTDIR for Debian, etc.
 # Cf. http://www.gnu.org/prep/standards/html_node/DESTDIR.html
 ifeq ($(DESTDIR),)
@@ -60,9 +52,9 @@ ifeq ($(DESTDIR),)
   INSTALL_LIB     = $(INSTALL_PREFIX)/lib
 else
   INSTALL_PREFIX  = $(DESTDIR)
-  INSTALL_ETC     = $(DESTDIR)/etc$(SUBDIR)
-  INSTALL_INCLUDE = $(DESTDIR)/include$(SUBDIR)
-  INSTALL_LIB     = $(DESTDIR)/lib$(SUBDIR)
+  INSTALL_ETC     = $(DESTDIR)/etc
+  INSTALL_INCLUDE = $(DESTDIR)/include
+  INSTALL_LIB     = $(DESTDIR)/lib
 endif
 
 ifeq ($(V),1)
@@ -94,8 +86,7 @@ dirname = $(patsubst %/,%,$(dir $(1)))
 
 CC = @CC@
 CFLAGS := @CFLAGS@
-CFLAGS += -I $(srcdir) -I $(srcdir)/src -std=gnu99
-CFLAGS += -Wall -Wconversion
+CFLAGS += -I $(srcdir) -I $(srcdir)/src -std=gnu99 -Wall
 CFLAGS += -Wconversion
 ifeq ($(ENABLE_SHARED),1)
 	PIC = -fPIC
@@ -205,7 +196,6 @@ PROVENANCE = version.txt source.txt config.log
 
 $(INSTALL_PREFIX)/install.txt: $(EXM_CUTILS_LIBS)
 	@echo
-	printenv | sort
 	$(Q) "  INSTALL: $(INSTALL_PREFIX)"
 	$(E) touch install.txt
 #       Set up directories
