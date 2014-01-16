@@ -150,7 +150,7 @@ TCLSH := @USE_TCLSH@
 TCL_LIB_DIR := @USE_TCL_LIB_DIR@
 TCL_SYSLIB_DIR := @USE_TCL_SYSLIB_DIR@
 TCL_LIB_NAME := tcl$(TCL_VERSION)
-TCL_LIB_SO := @USE_LIBTCL_SO@ 
+TCL_LIB_SO := @USE_LIBTCL_SO@
 TCL_LIB_A := @USE_LIBTCL_A@
 TCLSH_LOCAL := @USE_TCLSH_LOCAL@
 
@@ -249,7 +249,7 @@ endif
 TRANSITIVE_LIB_DEPS_SHARED := -lpthread -ldl -lm
 # Static dependencies are those where we generally can use the static
 # library version even when dynamically linking a binary
-TRANSITIVE_LIB_DEPS_STATIC := -lz 
+TRANSITIVE_LIB_DEPS_STATIC := -lz
 TRANSITIVE_LIB_DEPS := $(TRANSITIVE_LIB_DEPS_SHARED) \
 		       $(TRANSITIVE_LIB_DEPS_STATIC)
 
@@ -464,11 +464,11 @@ STATIC_LIBS += ${MPI_LIB_DIR}/libmpl.a
 # Transitive shared library dependencies
 # TODO: more elegant solution
 TRANSITIVE_LIB_DEPS_SHARED = -lpthread -ldl -lm
-TRANSITIVE_LIB_DEPS_STATIC = -lz 
+TRANSITIVE_LIB_DEPS_STATIC = -lz
 
 # Export Tcl API symbols to link with dynamically loaded modules.
 # Needed to support dynamically loading Tcl modules from our binary
-# NOTE: can prevent symbols being re-exported from libraries, e.g. 
+# NOTE: can prevent symbols being re-exported from libraries, e.g.
 #	-Wl,--exclude-libs,c
 LD_EXEC_SYMBOL_EXPORT = -Wl,--export-dynamic
 
@@ -494,7 +494,7 @@ LD_EXEC_SYMBOL_EXPORT = -Wl,--export-dynamic
 			  $(patsubst %.manifest, %, $<)
 
 # Binary executables - link from .o
-# Currently builds a dynamically linked executable 
+# Currently builds a dynamically linked executable
 # Link statically where possible by adding static libs explicitly.
 #   Static libs must be compiled with -fPIC or -fPIE
 $(TURBINE_EXECUTABLES): %: %.o ${STATIC_LIBS} ${STATIC_PKG_RESOURCE_H} $(TCL_API_SYMBOLS_LD)
@@ -641,8 +641,10 @@ install.txt: $(ENABLED_PACKAGES) $(BINS) $(EXPORTS) $(SCRIPTS) $(TURBINE_HEADERS
 ### Autoconf sanity:
 
 Makefile: configure.ac
+	@echo
 	@echo "Configuration is not up to date!"
 	@echo "Run ./setup.sh and ./configure again."
+	@echo
 	@exit 1
 
 ### CLEAN
