@@ -26,11 +26,17 @@
 
 #include <stdbool.h>
 
-void   log_init(void);
+void log_init(void);
 
-void   log_enabled(bool b);
+void log_enabled(bool b);
 
-void   log_normalize(void);
+/**
+   Set log output file
+   @return True on success, else false
+ */
+bool log_file_set(const char* f);
+
+void log_normalize(void);
 
 /**
     Time in seconds since last log_normalize().

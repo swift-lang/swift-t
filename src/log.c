@@ -21,6 +21,7 @@
  *      Author: wozniak
  */
 
+#include <stdlib.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -29,10 +30,8 @@
 
 #include "src/log.h"
 
-/**
-   TODO: allow user to set this
-*/
 FILE* output;
+char* filename = NULL;
 double log_start = 0;
 bool enabled = true;
 
@@ -46,6 +45,25 @@ void
 log_enabled(bool b)
 {
   enabled = b;
+}
+
+bool
+log_file_set(const char* f)
+{
+  // First, clean up previous file:
+  if (filename != NULL)
+    free(filename);
+  if (output != stdout)
+    fclose(output);
+
+  filename = strdup(f);
+  output = fopen(filename, "w");
+  if (output == NULL)
+  {
+    output = stdout;
+    return false;
+  }
+  return true;
 }
 
 double
