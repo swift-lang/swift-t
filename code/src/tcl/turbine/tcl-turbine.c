@@ -109,6 +109,8 @@ static void set_namespace_constants(Tcl_Interp* interp);
 
 static Tcl_Obj *SPAWN_RULE_CMD;
 
+static void log_setup(void);
+
 static int
 Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
                  int objc, Tcl_Obj *const objv[])
@@ -136,15 +138,28 @@ Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   // Name of Tcl command
   SPAWN_RULE_CMD = Tcl_NewStringObj("::turbine::spawn_rule", -1);
 
+  log_setup();
+
+  return TCL_OK;
+}
+
+static void
+log_setup(void)
+{
   log_init();
   log_normalize();
 
   // Did the user disable logging?
-  char* s = getenv("TURBINE_LOG");
-  if (s != NULL && strcmp(s, "0") == 0)
+  int enabled;
+  getenv_integer("TURBINE_LOG", 1, &enabled);
+  if (!enabled)
     log_enabled(false);
-
-  return TCL_OK;
+  if (enabled)
+  {
+    char* s = getenv("TURBINE_LOG_FILE");
+    if (s != NULL && strlen(s) > 0)
+      log_file_set(s);
+  }
 }
 
 static void
@@ -976,9 +991,7 @@ Turbine_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
-  // Only print if debug enabled.  Note that compiler
-  // will be able to eliminate dead code if debugging is disabled
-  // at compile time
+
   if (turbine_debug_enabled)
   {
     unused char* msg = Tcl_GetString(objv[1]);
