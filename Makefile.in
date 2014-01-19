@@ -28,7 +28,7 @@ ENABLE_STATIC = @ENABLE_STATIC@
 EXM_CUTILS_SO = lib/libexmcutils.$(SO_SUFFIX)
 EXM_CUTILS_A = lib/libexmcutils.a
 
-EXM_CUTILS_LIBS = 
+EXM_CUTILS_LIBS =
 ifeq ($(ENABLE_SHARED),1)
 	EXM_CUTILS_LIBS += $(EXM_CUTILS_SO)
 endif
@@ -40,6 +40,13 @@ endif
 all: exmcutils
 
 exmcutils: $(EXM_CUTILS_LIBS)
+
+Makefile: configure.ac Makefile.in
+	@echo
+	@echo "Configuration is not up to date!"
+	@echo "Run ./setup.sh and ./configure again."
+	@echo
+	@exit 1
 
 srcdir = @srcdir@
 
