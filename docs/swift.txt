@@ -1538,7 +1538,17 @@ environment variables:
 The remaining processes are workers.  These values are available to
 Swift (<<Turbine_information, Turbine information>>).
 
-+TURBINE_LOG=0+:: Disable logging
++TURBINE_LOG=0+:: Disable logging. +TURBINE_LOG=1+ or unset enables
+logging, assuming logging was not disabled at configure time.  Logging
+goes to tandard output by default.
+
++TURBINE_LOG_FILE=<file>+:: Set log file location.  Defaults to
+standard output.
+
++TURBINE_LOG_RANKS=1+:: Using +turbine -l+ or equivalent prepend the
+MPI rank number to each output line.  This works with typical MPICH or
+OpenMPI systems, however, this is not available on some systems, so
+set this to emulate the rank output on such systems.
 
 +ADLB_PRINT_TIME=1+:: Enable a short report of total elapsed time (via
 +MPI_Wtime()+)
