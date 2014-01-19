@@ -30,10 +30,15 @@
 
 #include "src/log.h"
 
-FILE* output;
-char* filename = NULL;
-double log_start = 0;
-bool enabled = true;
+static FILE* output;
+static char* filename = NULL;
+static double log_start = 0;
+static bool enabled = true;
+
+/** If true, prepend an MPI-like rank identifier */
+static bool rank_enabled;
+/** If rank_enabled, this is our rank */
+static int  rank;
 
 void
 log_init()
@@ -62,6 +67,13 @@ log_file_set(const char* f)
     return false;
   }
   return true;
+}
+
+void
+log_rank_set(int r)
+{
+  rank_enabled = true;
+  rank = r;
 }
 
 double
@@ -104,15 +116,16 @@ log_printf(char* format, ...)
     return;
 
   double t = log_time();
-
-  static char line[1024];
   va_list ap;
   va_start(ap, format);
+  static char line[1024];
   vsnprintf(line, 1024, format, ap);
-  va_end(ap);
-
   int precision = t > 10000 ? 15 : 8;
-  fprintf(output, "%*.3f %s\n", precision, t, line);
+  if (! rank_enabled)
+    fprintf(output, "%*.3f %s\n", precision, t, line);
+  else
+    fprintf(output, "[%i] %*.3f %s\n", rank, precision, t, line);
+  va_end(ap);
 }
 
 static void

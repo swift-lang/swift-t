@@ -36,6 +36,13 @@ void log_enabled(bool b);
  */
 bool log_file_set(const char* f);
 
+/**
+   Prepend this number to each output line (emulating mpiexec -l).
+   For systems that do not support this themselves.
+   (This is unnecessary for normal MPICH, OpenMPI systems
+*/
+void log_rank_set(int rank);
+
 void log_normalize(void);
 
 /**
