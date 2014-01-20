@@ -30,7 +30,7 @@ MPE='@USE_MPE@'
 # Turbine that user code may reference
 TURBINE_INCLUDES="-I${TURBINE_HOME}/include -I${C_UTILS}/include \
                   -I${ADLB}/include ${TCL_INCLUDE_SPEC}"
-if [ ! -z "$MPI_INCLUDE" && "$MPI_INCLUDE" != 0 ]; then
+if [ ! -z "$MPI_INCLUDE" -a "$MPI_INCLUDE" != 0 ]; then
   TURBINE_INCLUDES+=" -I$MPI_INCLUDE"
 fi
 
@@ -41,7 +41,7 @@ TURBINE_LIBS="-L${TURBINE_HOME}/lib \
               -L${ADLB}/lib -ladlb \
               -L${C_UTILS}/lib -lexmcutils \
               ${TCL_LIB_SPEC} ${TCL_LIB_SPEC_EXTRA}"
-if [ ! -z "$MPI_LIB_DIR" && "$MPI_LIB_DIR" != 0 ]; then
+if [ ! -z "$MPI_LIB_DIR" -a "$MPI_LIB_DIR" != 0 ]; then
   TURBINE_LIBS+=" -L$MPI_LIB_DIR"
 fi
 TURBINE_LIBS+=" -l${MPI_LIB_NAME}"
