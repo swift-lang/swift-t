@@ -452,31 +452,40 @@ The normal Turbine environment variables are honored, plus the
 
 ===== Build procedure
 
-* Compile c-utils with gcc
-* Configure ADLB with mpixlc and +--enable-xlc --enable-mpi-2+
-* Configure Turbine with bgxlc and +--enable-xlc+
-* Run: (+make+ issue)
-+
-----
-make src/util/debug.h
-make
-----
-
-*Quirks:*
+*Tcl:*
 
 The GCC installation does not support shared libraries.  Thus, you
-must compile Tcl with bgxlc.
+must compile Tcl with +bgxlc+.  You must modify the Makefile to use
++bgxlc+ arguments: +-qpic+, +-qmkshrobj+.  You must link with
++-qnostaticlink+.
 
 You may get errors that say +wrong digit+.  This is apparently a bgxlc
 bug when applied to Tcl's +StrToD.c+.  Compiling this file with +-O3+ fixes
 the problem.
 
+* Compile c-utils with gcc
+* Configure ADLB with +mpicc+ and +--enable-mpi-2+
+* Configure Turbine
+
+*External scripting:*
+
+* Python
+** Configure Python with BGXLC
+** Configure R with GCC as usual
+** Run with:
++
+----
+turbine-cobalt-run.zsh -e
+*R_HOME=$HOME/Public/sfw/ppc64/R-3.0.2/lib64/R -e
+*LD_LIBRARY_PATH=$HOME/Public/sfw/ppc64/R-3.0.2/lib64/R/lib
+----
+
 == Cray
 
-=== Blue Waters 
+=== Blue Waters
 
 Blue Waters is a Cray XE6/XK7 at the University of Illinois at
-Urbana-Champaign. 
+Urbana-Champaign.
 
 ==== Build procedure
 
@@ -504,12 +513,12 @@ LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/47/lib -lmpich"
 ==== Submitting jobs
 Submitting jobs on Blue Waters is largely the same with with other Cray
 systems. One difference is that the size of the job is specified using a
-different notation.  
+different notation.
 
 Blue Waters requires the submit script to specify job size using
 different directives to other Cray systems.  It does *not* support the
 'mpp' directives: trying to use an 'mpp' directive may cause your job
-to be rejected or stuck in the queue. The correct directive is: 
+to be rejected or stuck in the queue. The correct directive is:
 ----
 #PBS -l nodes=1:ppn=32
 ----
@@ -529,7 +538,7 @@ QUEUE=normal BLUE_WATERS=true PPN=32 turbine-aprun-run.zsh -n 32 helloworld.tcl
 * Switch programming env to use gcc.
 ----
 module unload PrgEnv-cray
-module load PrgEnv-gnu 
+module load PrgEnv-gnu
 ----
 * Load module with latest Oracle Java JDK 7+
 ----
@@ -582,7 +591,7 @@ EXM_MPI=/opt/cray/mpt/default/gni/mpich2-gnu/48
 # Need to use gcc (mpicc doesn't exist on Cray)
 EXM_MPICC=`which gcc`
 
-# Custom MPI 
+# Custom MPI
 EXM_CUSTOM_MPI=1
 
 # Since we're not using mpicc wrapper, add CC options for MPI libraries
