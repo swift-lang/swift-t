@@ -19,7 +19,11 @@
 
 # usage:
 #  turbine-aprun-run.zsh -n <PROCS> [-e <ENV>]* [-o <OUTPUT>] -t <WALLTIME>
+#                        [-x] [-X]
 #                           <SCRIPT> [<ARG>]*
+#
+# -x: if provide, program is executable rather than Tcl script
+# -X: use turbine_sh launcher instead of tclsh
 
 # Environment variables that may be set:
 # QUEUE: The queue name to use
@@ -50,6 +54,8 @@ then
 fi
 # declare TURBINE_HOME
 
+# run-init.zsh assumes -e is set
+set -e
 source ${TURBINE_HOME}/scripts/submit/run-init.zsh
 
 [[ -f ${SCRIPT} ]] || abort "Could not find script: ${SCRIPT}"

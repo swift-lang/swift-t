@@ -29,6 +29,8 @@ source ${TURBINE_HOME}/scripts/helpers.zsh
 # Defaults:
 export PROCS=0
 SETTINGS=0
+USE_TCLSH=1 # Use tclsh to launch script
+export TURBINE_STATIC_EXEC=0 # Use turbine_sh instead of tclsh
 export WALLTIME=${WALLTIME:-00:15:00}
 TURBINE_OUTPUT_ROOT=${HOME}/turbine-output
 export VERBOSE=0
@@ -42,7 +44,7 @@ typeset -T ENV env
 env=()
 
 # Get options
-while getopts "d:e:n:o:s:t:V" OPTION
+while getopts "d:e:n:o:s:t:VxX" OPTION
  do
   case ${OPTION}
    in
@@ -61,6 +63,12 @@ while getopts "d:e:n:o:s:t:V" OPTION
       ;;
     V)
       VERBOSE=1
+      ;;
+    x)
+      USE_TCLSH=0
+      ;;
+    X)
+      export TURBINE_STATIC_EXEC=1
       ;;
     *)
       print "abort"
@@ -84,6 +92,11 @@ if [[ ${SETTINGS} != 0 ]]
 then
   declare SETTINGS
   source ${SETTINGS}
+fi
+
+if (( ! USE_TCLSH ))
+then
+  export TCLSH=""
 fi
 
 START=$( date +%s )
