@@ -31,7 +31,10 @@ define(`getenv', `esyscmd(printf -- "$`$1'")')
 ### Set the job size using appropriate directives for this system
 ifelse(getenv(BLUE_WATERS), `true',
 ### Blue Waters mode
+ifelse(getenv(BLUE_WATERS_FEATURE), `',
 #PBS -l nodes=getenv(NODES):ppn=getenv(PPN),
+#PBS -l nodes=getenv(NODES):ppn=getenv(PPN):getenv(BLUE_WATERS_FEATURE)
+),
 ### Default aprun mode
 #PBS -l mppwidth=getenv(PROCS)
 #PBS -l mppnppn=getenv(PPN))
