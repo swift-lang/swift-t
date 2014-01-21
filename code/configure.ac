@@ -80,6 +80,8 @@ AC_HEADER_STDBOOL
 AC_C_INLINE
 AC_C_RESTRICT
 
+
+m4_include([m4/ax_check_zlib.m4])
 AX_CHECK_ZLIB([],
               AC_MSG_ERROR([Could not find zlib!]))
 CFLAGS="${CFLAGS} -I${ZLIB_HOME}/include"
