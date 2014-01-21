@@ -93,17 +93,16 @@ START=$( date +%s )
 RUN=$( date_path )
 
 # Create the directory in which to run
-if [ -z "$TURBINE_OUTPUT" ]
+if ! (( ${+TURBINE_OUTPUT} ))
 then
   export TURBINE_OUTPUT=${TURBINE_OUTPUT_ROOT}/${RUN}
-  declare TURBINE_OUTPUT
 else
   export TURBINE_OUTPUT
-  declare TURBINE_OUTPUT
 fi
-
-print ${TURBINE_OUTPUT} > ${OUTPUT_TOKEN_FILE}
-mkdir -p ${TURBINE_OUTPUT}
+declare TURBINE_OUTPUT
 
 # All output from job, including error stream
 export OUTPUT_FILE=${TURBINE_OUTPUT}/output.txt
+
+print ${TURBINE_OUTPUT} > ${OUTPUT_TOKEN_FILE}
+mkdir -p ${TURBINE_OUTPUT}
