@@ -463,6 +463,8 @@ You may get errors that say +wrong digit+.  This is apparently a bgxlc
 bug when applied to Tcl's +StrToD.c+.  Compiling this file with +-O3+ fixes
 the problem.
 
+Put +/bgsys/drivers/ppcfloor/comm/gcc/bin+ in your +PATH+.
+
 * Compile c-utils with gcc
 * Configure ADLB with +mpicc+ and +--enable-mpi-2+
 * Configure Turbine
@@ -471,13 +473,12 @@ the problem.
 
 * Python
 ** Configure Python with BGXLC
+* R
 ** Configure R with GCC as usual
 ** Run with:
 +
 ----
-turbine-cobalt-run.zsh -e
-*R_HOME=$HOME/Public/sfw/ppc64/R-3.0.2/lib64/R -e
-*LD_LIBRARY_PATH=$HOME/Public/sfw/ppc64/R-3.0.2/lib64/R/lib
+turbine-cobalt-run.zsh -e R_HOME=/path/to/R/lib64/R -e LD_LIBRARY_PATH=/path/to/R/lib64/R/lib
 ----
 
 == Cray
