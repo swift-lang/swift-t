@@ -35,6 +35,8 @@
 #          will be created, reported, and used
 #          (default ~/turbine-output)
 # TURBINE_OUTPUT: Directory in which to place output
+# MPICH_CUSTOM_RANK_ORDER: executable that prints Mpich rank order file
+#          to standard output, for MPICH_RANK_REORDER_METHOD=3
 
 # Runs job in TURBINE_OUTPUT
 # Pipes output and error to TURBINE_OUTPUT/output.txt
@@ -74,6 +76,20 @@ declare   SCRIPT PPN TURBINE_OUTPUT WALLTIME
 export NODES=$(( PROCS/PPN ))
 (( PROCS % PPN )) && (( NODES++ )) || true
 declare NODES
+
+# Setup custom rank order
+if [ ! -z "${MPICH_CUSTOM_RANK_ORDER}" ]
+then
+  if [ ! -x "${MPICH_CUSTOM_RANK_ORDER}" ]
+  then
+    echo "Expected MPICH_CUSTOM_RANK_ORDER=${MPICH_CUSTOM_RANK_ORDER} to \
+          be an executable file.  Aborting."
+    exit 1
+  fi
+  
+  ${MPICH_CUSTOM_RANK_ORDER} ${NODES} > ${TURBINE_OUTPUT}/MPICH_RANK_ORDER
+  export MPICH_RANK_REORDER_METHOD=3
+fi
 
 # Filter the template to create the PBS submit script
 TURBINE_APRUN_M4=${TURBINE_HOME}/scripts/submit/cray/turbine-aprun.sh.m4
