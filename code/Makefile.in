@@ -97,6 +97,8 @@ AR      = @AR@
 ARFLAGS = cr
 RANLIB  = @RANLIB@
 
+ZLIB = @ZLIB_HOME@
+
 C_UTILS = @USE_C_UTILS@
 
 INCLUDES = -I . -I src -I $(C_UTILS)/include
@@ -109,7 +111,9 @@ endif
 
 LIBS := -L $(C_UTILS)/lib -lexmcutils
 
-RPATH := -Wl,-rpath -Wl,$(C_UTILS)/lib
+RPATH :=
+RPATH += -Wl,-rpath -Wl,$(C_UTILS)/lib
+RPATH += -Wl,-rpath -Wl,$(ZLIB)/lib
 
 ENABLE_MPE = @ADLB_ENABLE_MPE@
 MPE = @USE_MPE@

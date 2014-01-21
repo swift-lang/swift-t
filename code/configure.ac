@@ -9,6 +9,7 @@ define([adlb_version],
 
 AC_INIT([XLB], [adlb_version()], [wozniak@mcs.anl.gov])
 AC_PREREQ(2.63)
+AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_HEADER(config.h src/mpe-settings.h)
 
@@ -78,6 +79,11 @@ AC_HEADER_STDBOOL
 # Checks for compiler features
 AC_C_INLINE
 AC_C_RESTRICT
+
+AX_CHECK_ZLIB([],
+              AC_MSG_ERROR([Could not find zlib!]))
+CFLAGS="${CFLAGS} -I${ZLIB_HOME}/include"
+AC_SUBST(ZLIB_HOME)
 
 # We prefer to use cp -u for installation
 AC_CACHE_CHECK([for cp that supports -u], [ac_cv_path_cp_u],
