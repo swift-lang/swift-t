@@ -267,11 +267,11 @@ AC_ARG_WITH(mpi-lib-name,
 # Now check MPI settings
 
 AC_CHECK_FILE(${USE_MPI_LIB_DIR},
-              [], [AC_MSG_ERROR(Could not find directory ${withval})])
+              [], [AC_MSG_ERROR(Could not find directory ${USE_MPI_LIB_DIR})])
 
 AC_CHECK_FILE(${USE_MPI_INCLUDE}/mpi.h,
               [],
-              [AC_MSG_ERROR([Could not find mpi.h in ${withval}])])
+              [AC_MSG_ERROR([Could not find mpi.h in ${USE_MPI_INCLUDE}])])
 
 MPI_LIB=${USE_MPI_LIB_DIR}/lib${USE_MPI_LIB_NAME}.${SO_SUFFIX}
 AC_CHECK_FILE(${MPI_LIB},
@@ -610,14 +610,14 @@ USE_LIBTCL_SO=
 # Check in order from most to least preferred
 for TCLVER in ${TCL_VERSION_PREFS}
 do
-  
+
   if [[ ${USE_TCL_LIB_DIR} == 0 ]]
   then
     LIB_DIR_OPTS="${USE_TCL}/lib ${USE_TCL}/lib64"
   else
     LIB_DIR_OPTS="${USE_TCL_LIB_DIR}"
   fi
- 
+
   for TCL_LIB_SUFFIX in ${TCL_LIB_SUFFIX_PREFS}
   do
     for LIB_DIR in ${LIB_DIR_OPTS}
