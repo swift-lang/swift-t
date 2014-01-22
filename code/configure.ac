@@ -7,13 +7,13 @@
 define([adlb_version],
     regexp(esyscmd(cat version.txt),[\([.0-9]*\)],[\1]))
 
+m4_include([m4/ifblank.m4])
+
 AC_INIT([XLB], [adlb_version()], [wozniak@mcs.anl.gov])
 AC_PREREQ(2.63)
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_HEADER(config.h src/mpe-settings.h)
-
-m4_include([m4/ifblank.m4])
 
 ADLB_VERSION=adlb_version()
 AC_MSG_RESULT([ADLB/X version: ${ADLB_VERSION}])
