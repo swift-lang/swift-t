@@ -46,5 +46,5 @@ ant ${STC_ANT_ARGS}
 
 if [ ! -z "$STC_INST" ]
 then
-  ant -Ddist.dir=$STC_INST install
+  ant -Ddist.dir=$STC_INST -Dturbine.home=${TURBINE_INST} install
 fi
