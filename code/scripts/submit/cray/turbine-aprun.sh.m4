@@ -75,6 +75,7 @@ ADLB_SERVERS=${ADLB_SERVERS:-1}
 
 export ADLB_DEBUG_RANKS=getenv(ADLB_DEBUG_RANKS)
 export ADLB_PRINT_TIME=getenv(ADLB_PRINT_TIME)
+export MPICH_RANK_REORDER_METHOD=getenv(MPICH_RANK_REORDER_METHOD)
 
 # Output header
 echo "Turbine: turbine-aprun.sh"
