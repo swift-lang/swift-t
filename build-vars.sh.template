@@ -15,6 +15,7 @@ MPE_INST=${INST}/mpe
 LB_INST=${INST}/lb
 C_UTILS_INST=${INST}/c-utils
 TURBINE_INST=${INST}/turbine
+STC_INST=${INST}/stc
 
 # Source locations
 # Modify to match your layout if you do not have full svn repo checked out

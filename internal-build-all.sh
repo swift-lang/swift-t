@@ -43,3 +43,8 @@ if (( MAKE_CLEAN )); then
   ant clean
 fi
 ant ${STC_ANT_ARGS}
+
+if [ ! -z "$STC_INST" ]
+then
+  ant -Ddist.dir=$STC_INST install
+fi
