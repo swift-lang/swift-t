@@ -13,6 +13,8 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([.])
 AC_CONFIG_HEADER(config.h src/mpe-settings.h)
 
+m4_include([m4/ifblank.m4])
+
 ADLB_VERSION=adlb_version()
 AC_MSG_RESULT([ADLB/X version: ${ADLB_VERSION}])
 AC_SUBST(ADLB_VERSION)
