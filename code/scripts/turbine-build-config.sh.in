@@ -5,7 +5,7 @@
 
 TURBINE_HOME='@prefix@'
 TURBINE_VERSION='@TURBINE_VERSION@'
-C_UTILS='@USE_C_UTILS@'
+C_UTILS_HOME='@USE_C_UTILS@'
 TCL_HOME='@USE_TCL@'
 TCL_VERSION='@TCL_VERSION@'
 TCL_LIB_DIR='@USE_TCL_LIB_DIR@'
@@ -15,7 +15,7 @@ TCL_LIB_SPEC='@TCL_LIB_SPEC@'
 TCL_LIB_SPEC_EXTRA='@TCL_LIB_SPEC_EXTRA@'
 TCL_INCLUDE_SPEC='@TCL_INCLUDE_SPEC@'
 TCLSH='@USE_TCLSH@'
-ADLB='@USE_ADLB@'
+ADLB_HOME='@USE_ADLB@'
 
 MPI_INCLUDE='@USE_MPI_INCLUDE@'
 # Only one of the following is used
@@ -28,8 +28,8 @@ MPE='@USE_MPE@'
 
 # TURBINE_INCLUDES has the flags for all non-system dependencies of 
 # Turbine that user code may reference
-TURBINE_INCLUDES="-I${TURBINE_HOME}/include -I${C_UTILS}/include \
-                  -I${ADLB}/include ${TCL_INCLUDE_SPEC}"
+TURBINE_INCLUDES="-I${TURBINE_HOME}/include -I${C_UTILS_HOME}/include \
+                  -I${ADLB_HOME}/include ${TCL_INCLUDE_SPEC}"
 if [ ! -z "$MPI_INCLUDE" -a "$MPI_INCLUDE" != 0 ]; then
   TURBINE_INCLUDES+=" -I$MPI_INCLUDE"
 fi
@@ -38,8 +38,8 @@ fi
 # Turbine that user code may reference
 TURBINE_LIBS="-L${TURBINE_HOME}/lib \
               -ltclturbinestatic -ltclturbinestaticres -ltclturbine \
-              -L${ADLB}/lib -ladlb \
-              -L${C_UTILS}/lib -lexmcutils \
+              -L${ADLB_HOME}/lib -ladlb \
+              -L${C_UTILS_HOME}/lib -lexmcutils \
               ${TCL_LIB_SPEC} ${TCL_LIB_SPEC_EXTRA}"
 if [ ! -z "$MPI_LIB_DIR" -a "$MPI_LIB_DIR" != 0 ]; then
   TURBINE_LIBS+=" -L$MPI_LIB_DIR"
