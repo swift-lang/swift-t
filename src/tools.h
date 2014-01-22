@@ -234,6 +234,14 @@ bool getenv_ulong(const char* name, unsigned long dflt,
 bool getenv_boolean(const char *env_var, bool dflt, bool *result);
 
 /**
+   Convert environment variable value to double
+   If not found, return default value
+   @param dflt The default value
+   @return True, false if string could not be converted to double
+ */
+bool getenv_double(const char* name, double dflt, double* result);
+
+/**
    Shuffle array A in-place
  */
 void shuffle(long* A, int count);

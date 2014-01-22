@@ -265,6 +265,21 @@ getenv_boolean(const char *env_var, bool dflt, bool *result)
   return false;
 }
 
+bool
+getenv_double(const char* name, double dflt, double* result)
+{
+  char* v = getenv(name);
+  if (v == NULL || strlen(v) == 0)
+  {
+    *result = dflt;
+    return true;
+  }
+  int n = sscanf(v, "%lf", result);
+  if (n != 1)
+    return false;
+  return true;
+}
+
 /**
 
  */
