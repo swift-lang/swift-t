@@ -56,11 +56,7 @@ then
 fi
 # declare TURBINE_HOME
 
-# run-init.zsh assumes -e is set
-set -e
 source ${TURBINE_HOME}/scripts/submit/run-init.zsh
-
-[[ -f ${SCRIPT} ]] || abort "Could not find script: ${SCRIPT}"
 
 # Set SCRIPT_NAME, make PROGRAM an absolute path
 export SCRIPT_NAME=$( basename ${SCRIPT} )
@@ -86,7 +82,7 @@ then
           be an executable file.  Aborting."
     exit 1
   fi
-  
+
   ${MPICH_CUSTOM_RANK_ORDER} ${NODES} > ${TURBINE_OUTPUT}/MPICH_RANK_ORDER
   export MPICH_RANK_REORDER_METHOD=3
 fi
@@ -104,6 +100,12 @@ print "wrote: ${TURBINE_APRUN}"
 
 QUEUE_ARG=""
 [[ ${QUEUE} != "" ]] && QUEUE_ARG="-q ${QUEUE}"
+
+for kv in ${env}
+do
+  print "user environment variable: ${kv}"
+  export ${kv}
+done
 
 qsub ${=QUEUE_ARG} ${=QSUB_OPTS} ${TURBINE_OUTPUT}/turbine-aprun.sh
 # Return exit code from qsub

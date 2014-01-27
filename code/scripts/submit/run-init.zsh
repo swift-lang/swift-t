@@ -20,19 +20,19 @@
 # Used to process command line arguments, initialize basic settings
 # before launching qsub
 
-# We assume the shell calling this is running with option -e
-#    to catch errors
+set -e
 
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 source ${TURBINE_HOME}/scripts/helpers.zsh
 
 # Defaults:
-export PROCS=0
-SETTINGS=0
 USE_TCLSH=1 # Use tclsh to launch script
 export TURBINE_STATIC_EXEC=0 # Use turbine_sh instead of tclsh
-export WALLTIME=${WALLTIME:-00:15:00}
+INIT_SCRIPT=0
+export PROCS=0
 TURBINE_OUTPUT_ROOT=${HOME}/turbine-output
+SETTINGS=0
+export WALLTIME=${WALLTIME:-00:15:00}
 export VERBOSE=0
 export PPN=${PPN:-1}
 
@@ -44,15 +44,19 @@ typeset -T ENV env
 env=()
 
 # Get options
-while getopts "d:e:n:o:s:t:VxX" OPTION
+while getopts "d:e:i:n:o:s:t:VxX" OPTION
  do
   case ${OPTION}
    in
     d)
       OUTPUT_TOKEN_FILE=${OPTARG}
       ;;
-    e) env+=${OPTARG}
+    e)
+      env+=${OPTARG}
       ;;
+    i)
+       INIT_SCRIPT=${OPTARG}
+       ;;
     n) PROCS=${OPTARG}
       ;;
     o) TURBINE_OUTPUT_ROOT=${OPTARG}
@@ -94,6 +98,8 @@ then
   source ${SETTINGS}
 fi
 
+[[ -f ${SCRIPT} ]] || abort "Could not find script: ${SCRIPT}"
+
 if (( ! USE_TCLSH ))
 then
   export TCLSH=""
@@ -119,3 +125,14 @@ export OUTPUT_FILE=${TURBINE_OUTPUT}/output.txt
 
 print ${TURBINE_OUTPUT} > ${OUTPUT_TOKEN_FILE}
 mkdir -p ${TURBINE_OUTPUT}
+
+if [[ ${INIT_SCRIPT} != 0 ]]
+then
+  print "executing: ${INIT_SCRIPT}"
+  if ! ${INIT_SCRIPT}
+  then
+    print "script failed: ${INIT_SCRIPT}"
+    return 1
+  fi
+  print "done: ${INIT_SCRIPT}"
+fi

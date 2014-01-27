@@ -46,7 +46,6 @@ LOG_FILE=${TURBINE_OUTPUT}/turbine-pbs.log
 
 print "SCRIPT:            ${SCRIPT}" >> ${LOG_FILE}
 SCRIPT_NAME=$( basename ${SCRIPT} )
-[[ -f ${SCRIPT} ]] || abort "script not found: ${SCRIPT}"
 cp ${SCRIPT} ${TURBINE_OUTPUT}
 export PROGRAM=${TURBINE_OUTPUT}/${SCRIPT_NAME}
 
