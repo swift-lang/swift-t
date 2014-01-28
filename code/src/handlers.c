@@ -69,6 +69,7 @@ static int mpi_rank;
 static void register_handler(adlb_tag tag, xlb_handler h);
 
 static adlb_code handle_sync(int caller);
+static adlb_code handle_sync_response(int caller);
 static adlb_code handle_put(int caller);
 static adlb_code handle_get(int caller);
 static adlb_code handle_iget(int caller);
@@ -154,6 +155,7 @@ xlb_handlers_init(void)
   memset(handlers, '\0', XLB_MAX_HANDLERS*sizeof(xlb_handler));
 
   register_handler(ADLB_TAG_SYNC_REQUEST, handle_sync);
+  register_handler(ADLB_TAG_SYNC_RESPONSE, handle_sync_response);
   register_handler(ADLB_TAG_PUT, handle_put);
   register_handler(ADLB_TAG_GET, handle_get);
   register_handler(ADLB_TAG_IGET, handle_iget);
@@ -226,7 +228,17 @@ handle_sync(int caller)
   return rc;
 }
 
-
+/**
+   Incoming sync response was received but not in sync mode.  This can
+   occur if we aborted a sync attempt due to receiving a shutdown signal.
+   Ignore the sync response in this case.
+ */
+static adlb_code handle_sync_response(int caller)
+{
+  MPI_Status status;
+  RECV_TAG(caller, ADLB_TAG_SYNC_RESPONSE);
+  return ADLB_SUCCESS;
+}
 
 static adlb_code
 handle_put(int caller)
