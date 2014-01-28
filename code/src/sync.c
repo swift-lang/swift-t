@@ -41,7 +41,7 @@ static inline adlb_code msg_from_target(int target,
                                   const struct packed_sync *hdr, bool* done);
 static inline adlb_code msg_from_other_server(int other_server, 
                   int target, const struct packed_sync *my_hdr);
-static inline adlb_code msg_shutdown(bool* done);
+static inline adlb_code msg_shutdown(int sync_target, bool* done);
 
 static adlb_code enqueue_pending(xlb_pending_kind kind, int rank,
                              const struct packed_sync *hdr);
@@ -171,9 +171,8 @@ xlb_sync2(int target, const struct packed_sync *hdr)
            &status3);
     if (flag3)
     {
-      msg_shutdown(&done);
+      msg_shutdown(target, &done);
       rc = ADLB_SHUTDOWN;
-      // TODO: break here?
     }
 
     if (!flag1 && !flag2 && !flag3)
@@ -425,10 +424,16 @@ adlb_code xlb_pending_shrink(void)
 }
 
 static inline adlb_code
-msg_shutdown(bool* done)
+msg_shutdown(int sync_target, bool* done)
 {
   TRACE_START;
   DEBUG("server_sync: [%d] cancelled by shutdown!", xlb_comm_rank);
+
+  // We're not going to follow up the sync request with an actual
+  // request.  To avoid the target getting stuck waiting for work,
+  // We send them a dummy piece of work.
+  SEND_TAG(sync_target, ADLB_TAG_DO_NOTHING);
+
   *done = true;
   TRACE_END;
   return ADLB_SUCCESS;

@@ -70,6 +70,7 @@ static void register_handler(adlb_tag tag, xlb_handler h);
 
 static adlb_code handle_sync(int caller);
 static adlb_code handle_sync_response(int caller);
+static adlb_code handle_do_nothing(int caller);
 static adlb_code handle_put(int caller);
 static adlb_code handle_get(int caller);
 static adlb_code handle_iget(int caller);
@@ -156,6 +157,7 @@ xlb_handlers_init(void)
 
   register_handler(ADLB_TAG_SYNC_REQUEST, handle_sync);
   register_handler(ADLB_TAG_SYNC_RESPONSE, handle_sync_response);
+  register_handler(ADLB_TAG_DO_NOTHING, handle_do_nothing);
   register_handler(ADLB_TAG_PUT, handle_put);
   register_handler(ADLB_TAG_GET, handle_get);
   register_handler(ADLB_TAG_IGET, handle_iget);
@@ -237,6 +239,16 @@ static adlb_code handle_sync_response(int caller)
 {
   MPI_Status status;
   RECV_TAG(caller, ADLB_TAG_SYNC_RESPONSE);
+  return ADLB_SUCCESS;
+}
+
+/**
+  Placeholder request: do nothing.
+ */
+static adlb_code handle_do_nothing(int caller)
+{
+  MPI_Status status;
+  RECV_TAG(caller, ADLB_TAG_DO_NOTHING);
   return ADLB_SUCCESS;
 }
 
