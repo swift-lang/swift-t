@@ -41,7 +41,7 @@ static inline adlb_code msg_from_target(int target,
                                   const struct packed_sync *hdr, bool* done);
 static inline adlb_code msg_from_other_server(int other_server, 
                   int target, const struct packed_sync *my_hdr);
-static inline adlb_code msg_shutdown(int sync_target, bool* done);
+static inline adlb_code msg_shutdown(adlb_sync_mode mode, int sync_target, bool* done);
 
 static adlb_code enqueue_pending(xlb_pending_kind kind, int rank,
                              const struct packed_sync *hdr);
@@ -171,7 +171,7 @@ xlb_sync2(int target, const struct packed_sync *hdr)
            &status3);
     if (flag3)
     {
-      msg_shutdown(target, &done);
+      msg_shutdown(hdr->mode, target, &done);
       rc = ADLB_SHUTDOWN;
     }
 
@@ -424,15 +424,32 @@ adlb_code xlb_pending_shrink(void)
 }
 
 static inline adlb_code
-msg_shutdown(int sync_target, bool* done)
+msg_shutdown(adlb_sync_mode mode, int sync_target, bool* done)
 {
   TRACE_START;
   DEBUG("server_sync: [%d] cancelled by shutdown!", xlb_comm_rank);
 
-  // We're not going to follow up the sync request with an actual
-  // request.  To avoid the target getting stuck waiting for work,
-  // We send them a dummy piece of work.
-  SEND_TAG(sync_target, ADLB_TAG_DO_NOTHING);
+  if (mode == ADLB_SYNC_REQUEST)
+  {
+    /* We're not going to follow up the sync request with an actual
+     * request.  To avoid the target getting stuck waiting for work,
+     * We send them a dummy piece of work. */
+    SEND_TAG(sync_target, ADLB_TAG_DO_NOTHING);
+  }
+  else if (mode == ADLB_SYNC_STEAL)
+  {
+    // Don't do anything, target doesn't expect response from this rank.
+    // There also won't be any work in system given we're shutting down
+  }
+  else if (mode == ADLB_SYNC_REFCOUNT)
+  {
+    // Don't do anything, target doesn't expect response from this rank.
+  }
+  else
+  {
+    ERR_PRINTF("Unexpected sync mode %i\n", (int)mode);
+    return ADLB_ERROR;
+  }
 
   *done = true;
   TRACE_END;
