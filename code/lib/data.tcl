@@ -209,7 +209,8 @@ namespace eval turbine {
     }
 
     proc retrieve_integer { id {cachemode CACHED} {decrref 0} } {
-        if { [ string equal $cachemode CACHED ] && [ c::cache_check $id ] } {
+        set cache [ string equal $cachemode CACHED ]
+        if { $cache && [ c::cache_check $id ] } {
             set result [ c::cache_retrieve $id ]
             if { $decrref } {
               read_refcount_decr $id
@@ -219,6 +220,10 @@ namespace eval turbine {
               set result [ adlb::retrieve_decr $id $decrref integer ]
             } else {
               set result [ adlb::retrieve $id integer ]
+            }
+
+            if { $cache } {
+              c::cache_store $id integer $result
             }
         }
         debug "retrieve: <$id>=$result"
@@ -242,7 +247,8 @@ namespace eval turbine {
     }
 
     proc retrieve_ref { id {cachemode CACHED} {decrref 0} } {
-        if { [ string equal $cachemode CACHED ] && [ c::cache_check $id ] } {
+        set cache [ string equal $cachemode CACHED ]
+        if { $cache && [ c::cache_check $id ] } {
             set result [ c::cache_retrieve $id ]
             if { $decrref } {
               read_refcount_decr $id
@@ -252,6 +258,9 @@ namespace eval turbine {
               set result [ adlb::retrieve_decr $id $decrref ref ]
             } else {
               set result [ adlb::retrieve $id ref ]
+            }
+            if { $cache } {
+              c::cache_store $id integer $result
             }
         }
         debug "retrieve: <$id>=$result"
@@ -281,7 +290,8 @@ namespace eval turbine {
     }
 
     proc retrieve_file_ref { id {cachemode CACHED} {decrref 0} } {
-        if { [ string equal $cachemode CACHED ] && [ c::cache_check $id ] } {
+        set cache [ string equal $cachemode CACHED ]
+        if { $cache && [ c::cache_check $id ] } {
             set result [ c::cache_retrieve $id ]
             if { $decrref } {
               read_file_refcount_decr $id
@@ -291,6 +301,10 @@ namespace eval turbine {
               set result [ adlb::retrieve_decr $id $decrref file_ref ]
             } else {
               set result [ adlb::retrieve $id file_ref ]
+            }
+
+            if { $cache } {
+              c::cache_store $id integer $result
             }
         }
         debug "retrieve: <$id>=$result"
@@ -322,7 +336,8 @@ namespace eval turbine {
     }
 
     proc retrieve_struct { id {cachemode CACHED} {decrref 0} } {
-        if { [ string equal $cachemode CACHED ] && [ c::cache_check $id ] } {
+        set cache [ string equal $cachemode CACHED ]
+        if { $cache && [ c::cache_check $id ] } {
             set result [ c::cache_retrieve $id ]
             if { $decrref } {
               read_structcount_decr $id
@@ -332,6 +347,10 @@ namespace eval turbine {
               set result [ adlb::retrieve_decr $id $decrref struct ]
             } else {
               set result [ adlb::retrieve $id struct ]
+            }
+            
+            if { $cache } {
+              c::cache_store $id integer $result
             }
         }
         debug "retrieve: <$id>=$result"
@@ -368,7 +387,8 @@ namespace eval turbine {
     }
 
     proc retrieve_float { id {cachemode CACHED} {decrref 0} } {
-        if { [ string equal $cachemode CACHED ] && [ c::cache_check $id ] } {
+        set cache [ string equal $cachemode CACHED ]
+        if { $cache && [ c::cache_check $id ] } {
             set result [ c::cache_retrieve $id ]
             if { $decrref } {
               read_refcount_decr $id
@@ -378,6 +398,10 @@ namespace eval turbine {
               set result [ adlb::retrieve_decr $id $decrref float ]
             } else {
               set result [ adlb::retrieve $id float ]
+            }
+            
+            if { $cache } {
+              c::cache_store $id integer $result
             }
         }
         debug "retrieve: <$id>=$result"
@@ -400,7 +424,8 @@ namespace eval turbine {
     }
 
     proc retrieve_string { id {cachemode CACHED} {decrref 0} } {
-        if { [ string equal $cachemode CACHED ] && [ c::cache_check $id ] } {
+        set cache [ string equal $cachemode CACHED ]
+        if { $cache && [ c::cache_check $id ] } {
             set result [ c::cache_retrieve $id ]
             if { $decrref } {
               read_refcount_decr $id
@@ -410,6 +435,10 @@ namespace eval turbine {
               set result [ adlb::retrieve_decr $id $decrref string ]
             } else {
               set result [ adlb::retrieve $id string ]
+            }
+
+            if { $cache } {
+              c::cache_store $id integer $result
             }
         }
         debug "retrieve: <$id>=[ log_string $result ]"
