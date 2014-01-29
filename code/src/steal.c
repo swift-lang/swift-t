@@ -166,6 +166,7 @@ steal_payloads(int target, int count,
   int single = 0, par = 0;
   for (int i = 0; i < count; i++)
   {
+    assert(wus[i].length > 0);
     xlb_work_unit *work = work_unit_alloc((size_t)wus[i].length);
     RECV(work->payload, wus[i].length, MPI_BYTE, target,
          ADLB_TAG_RESPONSE_STEAL);

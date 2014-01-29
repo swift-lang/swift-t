@@ -238,7 +238,8 @@ handle_sync(int caller)
 static adlb_code handle_sync_response(int caller)
 {
   MPI_Status status;
-  RECV_TAG(caller, ADLB_TAG_SYNC_RESPONSE);
+  int response;
+  RECV(&response, 1, MPI_INT, caller, ADLB_TAG_SYNC_RESPONSE);
   return ADLB_SUCCESS;
 }
 
