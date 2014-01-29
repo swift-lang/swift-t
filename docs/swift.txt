@@ -1687,8 +1687,59 @@ for information about specific systems with Turbine installations.
 
 [[mkstatic]]
 === Building standalone executables with mkstatic.tcl
-TODO
+It is possible to build a fully self-contained executable, including
+all Tcl scripts and compiled code, provided that all dependencies support
+static linking.  If not, it is also possible to build an executable with
+a subset of Tcl scripts and code linked in, providing some performance
+benefits.
 
+1. Configure c-utils, lb, and turbine with the +--enable-static+ option,
+   then build to obtain static libraries.  To build a fully standalone
+   executable, you will also need to build a static version of Tcl
+   (with the +--disable-shared+ configure option), and static versions
+   of any other libraries your own code needs to link with, such
+   as your MPI distribution or application code.
+2. Compile your Swift script, e.g. +my.swift+ with +stc+ to a Tcl
+   script, e.g. +my.tcl+.
+3. Write a manifest file, e.g. +my.manifest+, that describes the
+   resources to be bundled.
+   See scripts/mkstatic/example.manifest in the Turbine install directory
+   for examples and descriptions of all the the possible settings.  Note
+   that an empty manifest file corresponds to the +turbine_sh+ utility,
+   which is a replacement for +tclsh+ with required Turbine libraries
+   statically linked in.
+4. Invoke +mkstatic.tcl+ (found under script/mkstatic/mkstatic.tcl in
+   the Turbine installation) to translate your Tcl script to a C main
+   program with Tcl source code included.  The minimal invocation is
+   +mkstatic.tcl my.manifest -c my_main.c+.  You will likely wish
+   to include Tcl system libraries with
+   +--include-sys-lib /home/example/tcl-install/lib --tcl-version 8.6+.
+   The Tcl system library directory is the one that contains +init.tcl+
+5. Link together the compiled code into a final executable using your
+  compiler or linker.  The details vary depending on the compiler:
+  we will assume +gcc+.  +mkstatic.tcl+ can help by outputting some of
+  the required link flags, e.g.
+  +mkstatic.tcl my.manifest --link-objs --link-flags+.  Turbine also
+  provides a helper bash script, +turbine-build-config.sh+, that can
+  be sourced to obtain link flags for Swift/T dependencies from the
+  +TURBINE_INCLUDES+ variable.
+  Note that, in the case of static linking, if *libA* depends on *libB*,
+  then the *-lA* flag must precede *-lB* on the command line.  To
+  actually do the linking, there are two further cases to consider:
+** If building a fully static executable, you can
+  provide the +-static+ flag, plus all object files, plus +-L+
+  and +-l+ flags for all required library directories and libraries.
+  E.g. +gcc -static script_main.c file1.o file2.o -L/path/to/lib/dir -lsomething ... etc ...+.
+  TODO: note, need additional flags from mkstatic.
+** If you are building an executable that depends on one or more shared
+  libraries, you will need to provide the +-dynamic+ flag, and then
+  ensure that static libraries are linked statically.  If a shared
+  version of a library is available, +gcc+ will use that in preference
+  to a static version.  You can override this behaviour by specifying
+  +-Wl,-Bstatic+ on the command line before the flags for the libraries
+  you wish to statically link, then +-Wl,-Bdynamic+ to reset to
+  dynamic linking for any libraries after those.
+  
 ////
 Local Variables:
 mode: doc
