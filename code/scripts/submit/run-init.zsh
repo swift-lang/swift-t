@@ -30,7 +30,10 @@ USE_TCLSH=1 # Use tclsh to launch script
 export TURBINE_STATIC_EXEC=0 # Use turbine_sh instead of tclsh
 INIT_SCRIPT=0
 export PROCS=0
-TURBINE_OUTPUT_ROOT=${HOME}/turbine-output
+if (( ! ${+TURBINE_OUTPUT_ROOT} ))
+then
+  TURBINE_OUTPUT_ROOT=${HOME}/turbine-output
+fi
 SETTINGS=0
 export WALLTIME=${WALLTIME:-00:15:00}
 export VERBOSE=0
@@ -112,7 +115,7 @@ START=$( date +%s )
 RUN=$( date_path )
 
 # Create the directory in which to run
-if ! (( ${+TURBINE_OUTPUT} ))
+if (( ! ${+TURBINE_OUTPUT} ))
 then
   export TURBINE_OUTPUT=${TURBINE_OUTPUT_ROOT}/${RUN}
 else
