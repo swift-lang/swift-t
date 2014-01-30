@@ -23,7 +23,7 @@ changecom(`dnl')#!/bin/bash -e
 # This simply does environment variable substition when m4 runs
 define(`getenv', `esyscmd(printf -- "$`$1'")')
 
-#PBS -N TURBINE
+#PBS -N Swift
 #PBS -q getenv(QUEUE)
 #PBS -l walltime=getenv(WALLTIME)
 #PBS -o getenv(OUTPUT_FILE)
@@ -31,7 +31,10 @@ define(`getenv', `esyscmd(printf -- "$`$1'")')
 ### Set the job size using appropriate directives for this system
 ifelse(getenv(BLUE_WATERS), `true',
 ### Blue Waters mode
+ifelse(getenv(BLUE_WATERS_FEATURE), `',
 #PBS -l nodes=getenv(NODES):ppn=getenv(PPN),
+#PBS -l nodes=getenv(NODES):ppn=getenv(PPN):getenv(BLUE_WATERS_FEATURE)
+),
 ### Default aprun mode
 #PBS -l mppwidth=getenv(PROCS)
 #PBS -l mppnppn=getenv(PPN))
@@ -72,6 +75,7 @@ ADLB_SERVERS=${ADLB_SERVERS:-1}
 
 export ADLB_DEBUG_RANKS=getenv(ADLB_DEBUG_RANKS)
 export ADLB_PRINT_TIME=getenv(ADLB_PRINT_TIME)
+export MPICH_RANK_REORDER_METHOD=getenv(MPICH_RANK_REORDER_METHOD)
 
 # Output header
 echo "Turbine: turbine-aprun.sh"

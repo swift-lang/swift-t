@@ -53,7 +53,6 @@ OUTPUT_FILE=${TURBINE_OUTPUT}/output.txt
 
 print "SCRIPT:            ${SCRIPT}" >> ${LOG_FILE}
 SCRIPT_NAME=$( basename ${SCRIPT} )
-[[ -f ${SCRIPT} ]] || abort "script not found: ${SCRIPT}"
 cp ${SCRIPT} ${TURBINE_OUTPUT}
 
 JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt

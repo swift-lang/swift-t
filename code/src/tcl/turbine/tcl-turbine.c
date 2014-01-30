@@ -109,6 +109,8 @@ static void set_namespace_constants(Tcl_Interp* interp);
 
 static Tcl_Obj *SPAWN_RULE_CMD;
 
+static int log_setup(int rank);
+
 static int
 Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
                  int objc, Tcl_Obj *const objv[])
@@ -136,12 +138,43 @@ Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   // Name of Tcl command
   SPAWN_RULE_CMD = Tcl_NewStringObj("::turbine::spawn_rule", -1);
 
+  log_setup(rank);
+
+  return TCL_OK;
+}
+
+/**
+   @return Tcl error code
+*/
+static int
+log_setup(int rank)
+{
   log_init();
   log_normalize();
 
   // Did the user disable logging?
-  char* s = getenv("TURBINE_LOG");
-  if (s != NULL && strcmp(s, "0") == 0)
+  int enabled;
+  getenv_integer("TURBINE_LOG", 1, &enabled);
+  if (enabled)
+  {
+    // Should we use a specific log file?
+    char* filename = getenv("TURBINE_LOG_FILE");
+    if (filename != NULL && strlen(filename) > 0)
+    {
+      bool b = log_file_set(filename);
+      if (!b)
+      {
+        printf("Could not set log file: %s", filename);
+        return TCL_ERROR;
+      }
+    }
+    // Should we prepend the MPI rank (emulate "mpiexec -l")?
+    int log_rank_enabled;
+    getenv_integer("TURBINE_LOG_RANKS", 0, &log_rank_enabled);
+    if (log_rank_enabled)
+      log_rank_set(rank);
+  }
+  else
     log_enabled(false);
 
   return TCL_OK;
@@ -976,12 +1009,10 @@ Turbine_Debug_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
-  // Only print if debug enabled.  Note that compiler
-  // will be able to eliminate dead code if debugging is disabled
-  // at compile time
+
   if (turbine_debug_enabled)
   {
-    char* msg = Tcl_GetString(objv[1]);
+    unused char* msg = Tcl_GetString(objv[1]);
     DEBUG_TCL_TURBINE("%s", msg);
     return TCL_OK;
   }

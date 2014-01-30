@@ -19,7 +19,11 @@
 
 # usage:
 #  turbine-aprun-run.zsh -n <PROCS> [-e <ENV>]* [-o <OUTPUT>] -t <WALLTIME>
+#                        [-x] [-X]
 #                           <SCRIPT> [<ARG>]*
+#
+# -x: if provide, program is executable rather than Tcl script
+# -X: use turbine_sh launcher instead of tclsh
 
 # Environment variables that may be set:
 # QUEUE: The queue name to use
@@ -31,6 +35,8 @@
 #          will be created, reported, and used
 #          (default ~/turbine-output)
 # TURBINE_OUTPUT: Directory in which to place output
+# MPICH_CUSTOM_RANK_ORDER: executable that prints Mpich rank order file
+#          to standard output, for MPICH_RANK_REORDER_METHOD=3
 
 # Runs job in TURBINE_OUTPUT
 # Pipes output and error to TURBINE_OUTPUT/output.txt
@@ -52,8 +58,6 @@ fi
 
 source ${TURBINE_HOME}/scripts/submit/run-init.zsh
 
-[[ -f ${SCRIPT} ]] || abort "Could not find script: ${SCRIPT}"
-
 # Set SCRIPT_NAME, make PROGRAM an absolute path
 export SCRIPT_NAME=$( basename ${SCRIPT} )
 pushd $( dirname ${SCRIPT} ) >& /dev/null
@@ -69,6 +73,20 @@ export NODES=$(( PROCS/PPN ))
 (( PROCS % PPN )) && (( NODES++ )) || true
 declare NODES
 
+# Setup custom rank order
+if [ ! -z "${MPICH_CUSTOM_RANK_ORDER}" ]
+then
+  if [ ! -x "${MPICH_CUSTOM_RANK_ORDER}" ]
+  then
+    echo "Expected MPICH_CUSTOM_RANK_ORDER=${MPICH_CUSTOM_RANK_ORDER} to \
+          be an executable file.  Aborting."
+    exit 1
+  fi
+
+  ${MPICH_CUSTOM_RANK_ORDER} ${NODES} > ${TURBINE_OUTPUT}/MPICH_RANK_ORDER
+  export MPICH_RANK_REORDER_METHOD=3
+fi
+
 # Filter the template to create the PBS submit script
 TURBINE_APRUN_M4=${TURBINE_HOME}/scripts/submit/cray/turbine-aprun.sh.m4
 TURBINE_APRUN=${TURBINE_OUTPUT}/turbine-aprun.sh
@@ -82,6 +100,12 @@ print "wrote: ${TURBINE_APRUN}"
 
 QUEUE_ARG=""
 [[ ${QUEUE} != "" ]] && QUEUE_ARG="-q ${QUEUE}"
+
+for kv in ${env}
+do
+  print "user environment variable: ${kv}"
+  export ${kv}
+done
 
 qsub ${=QUEUE_ARG} ${=QSUB_OPTS} ${TURBINE_OUTPUT}/turbine-aprun.sh
 # Return exit code from qsub

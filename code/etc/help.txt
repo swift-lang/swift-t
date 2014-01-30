@@ -1,6 +1,13 @@
 USAGE
 
-     turbine [<opts>*] <program.tcl> [<args>*]
+     turbine [<opts>*] <program> [<args>*]
+
+DESCRIPTION
+    
+     Run a Turbine program.
+
+     By default <program> is assumed to be a Tcl script, but if -x is
+     specified, an executable can be provided instead.
 
 OPTIONS
 
@@ -15,6 +22,12 @@ OPTIONS
 
   -n <procs>
       set number of processes
+
+  -x 
+     program is an executable rather than tcl script 
+
+  -X
+      use statically linked Turbine library
 
   -v
       report version number

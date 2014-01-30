@@ -12,15 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# MAKE-PACKAGE.TCL
-# Generates the Turbine Tcl package
+# Basic main file for statically linked app
 
-set turbine_version $env(TURBINE_VERSION)
-set use_mpe         $env(USE_MPE)
-set use_mac         $env(USE_MAC)
+package require turbine 0.4
+package require staticapp-1 0.1
 
-# Create package index for statically linked Tcl package. This is mainly
-# a placeholder to satisfy user code that requires turbine, since we
-# initialize the Tcl C module and evaluate Tcl source files through
-# other means
-puts [ list package ifneeded turbine $turbine_version [ list load {} turbine ] ]
+
+proc rules { } {
+    for { set i 0 } { $i < 10 } { incr i } {
+      turbine::rule "" "helloworld $i" type $::turbine::WORK
+    }
+    
+    for { set i 10 } { $i < 20 } { incr i } {
+      turbine::rule "" "helloworld $i" type $::turbine::CONTROL
+    }
+}
+
+turbine::defaults
+turbine::init $engines $servers
+turbine::start rules
+turbine::finalize
+
+puts OK
+
+# Help Tcl free memory
+proc exit args {}

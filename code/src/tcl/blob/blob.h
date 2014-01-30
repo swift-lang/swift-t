@@ -100,6 +100,7 @@ void* blobutils_cast_string_to_ptr(char* s);
 
 int     blobutils_cast_to_int(void* p);
 long    blobutils_cast_to_long(void* p);
+long long blobutils_cast_to_long_long(void* p);
 int64_t blobutils_cast_to_int64(void* p);
 
       int*    blobutils_cast_int_to_int_ptr      (int i);

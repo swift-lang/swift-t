@@ -1,11 +1,13 @@
 
 TURBINE_VERSION = @TURBINE_VERSION@
 
+ENABLE_SHARED = @ENABLE_SHARED@
+ENABLE_STATIC = @ENABLE_STATIC@
+
 PACKAGE = lib/pkgIndex.tcl
-PACKAGE_STATIC = libstatic/pkgIndex.tcl
 ENABLED_PACKAGES :=
 
-BUILD_ALL_TARGETS = libs
+BUILD_ALL_TARGETS = libs executables
 # BUILD_ALL_TARGETS = libs executables
 
 ifeq ($(ENABLE_SHARED),1)
@@ -24,9 +26,9 @@ all: $(BUILD_ALL_TARGETS)
 
 turbine: $(TURBINE)
 
-package: $(PACKAGE)
+package: $(PACKAGE) libs
 
-package_static: $(PACKAGE_STATIC)
+package_static: libs_static
 
 USE_MAC = @USE_MAC@
 
@@ -35,7 +37,6 @@ INSTALL_BIN     = $(INSTALL_PREFIX)/bin
 INSTALL_ETC     = $(INSTALL_PREFIX)/etc
 INSTALL_INCLUDE = $(INSTALL_PREFIX)/include
 INSTALL_LIB     = $(INSTALL_PREFIX)/lib
-INSTALL_LIBSTATIC = $(INSTALL_PREFIX)/libstatic
 INSTALL_SCRIPTS = $(INSTALL_PREFIX)/scripts
 INSTALL_EXPORT  = $(INSTALL_PREFIX)/export
 # The submit scripts are loaded from their respective module.mk files
@@ -79,18 +80,25 @@ else
 	SHARED = -dynamiclib $(MAC_FLAT)
 endif
 
-TCL_TURBINE_SO = lib/libtclturbine.$(SO_SUFFIX)
+TCL_TURBINE_LIB := tclturbine
+TCL_TURBINE_SO = lib/lib$(TCL_TURBINE_LIB).$(SO_SUFFIX)
 
 # Static library
-TCL_TURBINE_A = lib/libtclturbine.a
+TCL_TURBINE_A = lib/lib$(TCL_TURBINE_LIB).a
 
-# Static library for Tcl source
-TCL_SRC_A := lib/libtclturbinesrc.a
+# Static library for static-linking specific functions
+STATIC_PKG_LIB := tclturbinestatic
+STATIC_PKG_A := lib/lib$(STATIC_PKG_LIB).a
 
-ENABLE_SHARED = @ENABLE_SHARED@
-ENABLE_STATIC = @ENABLE_STATIC@
+# Static library for resources like Tcl source
+STATIC_PKG_RESOURCE_LIB := tclturbinestaticres
+STATIC_PKG_RESOURCE_A := lib/lib$(STATIC_PKG_RESOURCE_LIB).a
 
-TCL_TURBINE_LIBS :=
+# Resource libs are used in all builds
+TCL_TURBINE_LIBS := $(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A)
+TCL_TURBINE_STATIC_LIBS := $(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A) \
+                           $(TCL_TURBINE_A)
+
 ifeq ($(ENABLE_SHARED),1)
   TCL_TURBINE_LIBS += $(TCL_TURBINE_SO)
 endif
@@ -100,6 +108,8 @@ ifeq ($(ENABLE_STATIC),1)
 endif
 
 libs: $(TCL_TURBINE_LIBS)
+
+libs_static: $(TCL_TURBINE_STATIC_LIBS)
 
 srcdir = @srcdir@
 
@@ -123,7 +133,7 @@ CC = @CC@
 CFLAGS := @CFLAGS@
 
 # Set includes
-CFLAGS += -I . -I src/turbine
+CFLAGS += -I . -I src/turbine -I src/tcl/turbine -I src/tcl/static-pkg/
 ifeq ($(USE_XLC),1)
 	CFLAGS += -qpack_semantic=gnu
 endif
@@ -138,8 +148,17 @@ TCL := @USE_TCL@
 TCL_VERSION := @TCL_VERSION@
 TCLSH := @USE_TCLSH@
 TCL_LIB_DIR := @USE_TCL_LIB_DIR@
+TCL_SYSLIB_DIR := @USE_TCL_SYSLIB_DIR@
 TCL_LIB_NAME := tcl$(TCL_VERSION)
+TCL_LIB_SO := @USE_LIBTCL_SO@
+TCL_LIB_A := @USE_LIBTCL_A@
 TCLSH_LOCAL := @USE_TCLSH_LOCAL@
+
+MKSTATIC := scripts/mkstatic/mkstatic.tcl
+MKSTATIC_TEMPLATE := scripts/mkstatic/mkstatic.c.template
+# Bundle Tcl system libraries using mkstatic
+MKSTATIC_FLAGS := --include-sys-lib ${TCL_SYSLIB_DIR} --tcl-version ${TCL_VERSION}
+MKSTATIC_RUN := $(TCLSH_LOCAL) $(MKSTATIC) $(MKSTATIC_FLAGS)
 
 MACHINE = @USE_MACHINE@
 
@@ -214,13 +233,29 @@ endif
 LIBS += $(MPI_LIB)
 ifeq ($(HAVE_PYTHON),1)
 	ifneq ($(USE_PYTHON_LIBDIR),0)
-		LIBS += -L$(USE_PYTHON_LIBDIR)
+		ifneq ($(USE_PYTHON_LIBDIR),)
+			LIBS += -L$(USE_PYTHON_LIBDIR)
+		endif
 	endif
 	LIBS += -l$(USE_PYTHON_NAME)
 endif
 ifeq ($(HAVE_R),1)
 	R_LIB = $(USE_R)/lib
 	LIBS += -L$(R_LIB) -lR
+endif
+
+# Transitive shared library dependencies, e.g. if we link against libtcl*.a
+# TODO: more elegant solution
+TRANSITIVE_LIB_DEPS_SHARED := -lpthread -ldl -lm
+# Static dependencies are those where we generally can use the static
+# library version even when dynamically linking a binary
+TRANSITIVE_LIB_DEPS_STATIC := -lz
+TRANSITIVE_LIB_DEPS := $(TRANSITIVE_LIB_DEPS_SHARED) \
+		       $(TRANSITIVE_LIB_DEPS_STATIC)
+
+# If we are using libtcl*.a, need to always include these libraries
+ifeq ($(strip $(TCL_LIB_SO)),)
+	LIBS += $(TRANSITIVE_LIB_DEPS)
 endif
 
 dirname = $(patsubst %/,%,$(dir $(1)))
@@ -248,7 +283,9 @@ endif
 DIR :=
 TURBINE_SRC :=
 TCL_TURBINE_SRC :=
-TURBINE_EXECUTABLE_SRC := 
+STATIC_PKG_SRC :=
+TURBINE_EXECUTABLE_MANIFESTS :=
+
 include src/turbine/module.mk
 include src/util/module.mk
 include src/tcl/module.mk
@@ -258,9 +295,9 @@ include src/tcl/blob/module.mk
 include src/tcl/mpe/module.mk
 include src/tcl/python/module.mk
 include src/tcl/r/module.mk
+include src/tcl/static-pkg/module.mk
 include src/tcl/turbine/module.mk
 include lib/module.mk
-include libstatic/module.mk
 include scripts/submit/module.mk
 include src/executables/module.mk
 
@@ -273,24 +310,40 @@ TURBINE_SRC += $(TCL_R_SRC)
 TURBINE_SRC += $(TCL_TURBINE_SRC)
 TURBINE_OBJS = $(patsubst %.c, %.o, $(TURBINE_SRC))
 
+STATIC_PKG_OBJS = $(patsubst %.c, %.o, $(STATIC_PKG_SRC))
+
+STATIC_PKG_RESOURCE_C := $(patsubst %.tcl, %_tcl.c, $(TCL_SRC))
+STATIC_PKG_RESOURCE_O := $(patsubst %.c, %.o, $(STATIC_PKG_RESOURCE_C))
+STATIC_PKG_RESOURCE_H := src/tcl/static-pkg/tcl-turbine-src.h
+
+TURBINE_EXECUTABLE_SRC := $(patsubst %.manifest, %.c, $(TURBINE_EXECUTABLE_MANIFESTS))
 TURBINE_EXECUTABLE_OBJS = $(patsubst %.c, %.o, $(TURBINE_EXECUTABLE_SRC))
-TURBINE_EXECUTABLES := $(patsubst %.c, %.x, $(TURBINE_EXECUTABLE_SRC))
+TURBINE_EXECUTABLES := $(patsubst %.c, %, $(TURBINE_EXECUTABLE_SRC))
 
 ### DEPENDENCIES
 
 TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC))
 
 TURBINE_EXECUTABLE_DEPS := $(patsubst %.c, %.d, $(TURBINE_EXECUTABLE_SRC))
+TURBINE_EXECUTABLE_DEPS += $(patsubst %.manifest, %.manifest.d, \
+			     $(TURBINE_EXECUTABLE_MANIFESTS))
+TURBINE_EXECUTABLE_DEPS += $(patsubst %.manifest, %.x.d, \
+			     $(TURBINE_EXECUTABLE_MANIFESTS))
 
+STATIC_PKG_DEPS := $(patsubst %.c, %.d, $(STATIC_PKG_SRC))
+
+TEST_SRC_MANIFEST :=
 TEST_SRC :=
 include tests/module.mk
 TEST_DEPS := $(patsubst %.c, %.d, $(TEST_SRC))
+TEST_DEPS += $(patsubst %.manifest, %.manifest.d, $(TEST_SRC_MANIFEST))
+TEST_DEPS += $(patsubst %.manifest, %.x.d, $(TEST_SRC_MANIFEST))
 
 # Dependency files:
 # Remember that having a bad #include can cause dependency
 # file generation to fail silently
 # Solution: use target check_includes
-DEPS := $(TURBINE_DEPS) $(TURBINE_EXECUTABLE_DEPS) $(TEST_DEPS)
+DEPS := $(TURBINE_DEPS) $(TURBINE_EXECUTABLE_DEPS) $(TEST_DEPS) $(STATIC_PKG_DEPS)
 
 deps: $(DEPS)
 
@@ -351,7 +404,7 @@ endif
 	$(E) $(RANLIB) $(@)
 
 $(TCL_TURBINE_SO): $(TURBINE_OBJS)
-ifeq ($(ENABLE_SHARED),0	)
+ifeq ($(ENABLE_SHARED),0)
 	@echo "Shared libraries were disabled, cannot build target!"
 	@exit 1
 endif
@@ -362,22 +415,32 @@ endif
              $(RPATHS) \
              $(MAC_NAME)
 
+$(STATIC_PKG_A): $(STATIC_PKG_OBJS)
+	$(Q) "  AR		$(@)"
+	$(E) $(AR) $(ARFLAGS) $(@) $(STATIC_PKG_OBJS)
+	$(E) $(RANLIB) $(@)
+
 ### TCL SOURCE LINKING
 # Compilation and linking to get Tcl source as C arrays
-TCL_SRC_C := $(patsubst %.tcl, %_tcl.c, $(TCL_SRC))
-TCL_SRC_O := $(patsubst %.c, %.o, $(TCL_SRC_C))
-TCL_SRC_H := src/tclturbinesrc.h
 
-$(TCL_SRC_H) $(TCL_SRC_C): $(TCL_SRC)
-	$(Q) "  FILES2ARRAYS $(TCL_SRC_H) $(TCL_SRC_C)"
-	$(E) scripts/files2arrays.sh 's/\.tcl/_tcl.c/' $(TCL_SRC) | \
-	  scripts/files2arrays_mkhdr.sh > $(TCL_SRC_H)
+F2A := scripts/mkstatic/file2array.sh
+F2A_MKHDR := scripts/mkstatic/files2arrays_mkhdr.sh
+
+$(STATIC_PKG_RESOURCE_C): %_tcl.c : %.tcl $(F2A)
+	$(Q) "  FILE2ARRAY $(@)"
+	$(E) $(F2A) -v "turbine_lib_$(shell basename $< | sed 's/[\.-]/_/g')" $< > "$(@).tmp"
+	mv "$(@).tmp" $(@)
+
+$(STATIC_PKG_RESOURCE_H): $(STATIC_PKG_RESOURCE_C) $(F2A_MKHDR)
+	$(Q) " MKHDR $(@)"
+	$(E) $(F2A_MKHDR) -v turbine_lib_src $(STATIC_PKG_RESOURCE_C) > $(@).tmp
+	mv "$(@).tmp" $(@)
 
 # Regular .o compilation rule generates .o files
 
-$(TCL_SRC_A): $(TCL_SRC_O)
+$(STATIC_PKG_RESOURCE_A): $(STATIC_PKG_RESOURCE_O)
 	$(Q) "  AR		$(@)"
-	$(E) $(AR) $(ARFLAGS) $(@) $(TCL_SRC_O)
+	$(E) $(AR) $(ARFLAGS) $(@) $(STATIC_PKG_RESOURCE_O)
 	$(E) $(RANLIB) $(@)
 
 ### LINK EXECUTABLES
@@ -386,28 +449,64 @@ executables: $(TURBINE_EXECUTABLES)
 
 # TODO: get configure to check if static libraries are present
 # List out static libs.  If A depends on B, A must come first.
-STATIC_LIBS =
-STATIC_LIBS += $(TCL_TURBINE_A)
-STATIC_LIBS += $(TCL_SRC_A)
+# These are provided to linker first, so take precedence over
+# any dynamic versions of the libraries that may also be mentioned
+STATIC_LIBS := ${TCL_TURBINE_STATIC_LIBS}
 STATIC_LIBS += $(ADLB)/lib/libadlb.a
 STATIC_LIBS += $(C_UTILS)/lib/libexmcutils.a
-#TODO: Tcl doesn't provide static library by default
-#STATIC_LIBS += $(TCL_LIB_DIR)
+ifneq ($(strip $(TCL_LIB_A)),)
+	STATIC_LIBS += $(TCL_LIB_A)
+endif
+# TODO: support more than just Mpich
 STATIC_LIBS += ${MPI_LIB_DIR}/libmpich.a
 STATIC_LIBS += ${MPI_LIB_DIR}/libmpl.a
 
 # Transitive shared library dependencies
 # TODO: more elegant solution
-STATIC_LIB_DEPS = -lz -lpthread
+TRANSITIVE_LIB_DEPS_SHARED = -lpthread -ldl -lm
+TRANSITIVE_LIB_DEPS_STATIC = -lz
+
+# Export Tcl API symbols to link with dynamically loaded modules.
+# Needed to support dynamically loading Tcl modules from our binary
+# NOTE: can prevent symbols being re-exported from libraries, e.g.
+#	-Wl,--exclude-libs,c
+LD_EXEC_SYMBOL_EXPORT = -Wl,--export-dynamic
+
+# Rule to build C source file based on manifest
+# Also create deps file so it can be correctly recreated upon change.
+%.c: %.manifest %.manifest.d %.x.d $(MKSTATIC) $(MKSTATIC_TEMPLATE)
+	$(Q) "  MKSTATIC	$(@)"
+	$(E) $(MKSTATIC_RUN) $< -c $(@) \
+	      --link-deps $(patsubst %.manifest, %.x.d, $<) \
+			  $(patsubst %.manifest, %.x, $<)
+
+%.manifest.d: %.manifest $(MKSTATIC) $(MKSTATIC_TEMPLATE)
+	$(Q) "  MKSTATIC_DEPS	$(@)"
+	$(E) $(MKSTATIC_RUN) $< \
+	  --deps $(@) $(patsubst %.manifest, %.c, $<)
+
+# Dependency rules for executable with .x or no extension
+%.x.d: %.manifest $(MKSTATIC) $(MKSTATIC_TEMPLATE)
+	$(Q) "  LINK_DEPS	$(@)"
+	$(E) $(MKSTATIC_RUN) $< --link-deps $(@) \
+			  $(patsubst %.manifest, %.x, $<)
+	$(E) $(MKSTATIC_RUN) $< --link-deps $(@) \
+			  $(patsubst %.manifest, %, $<)
 
 # Binary executables - link from .o
-# Link statically where possible by adding static libs explicitly
-# TODO: option to use dynamic if preferred
-$(TURBINE_EXECUTABLES): %.x: %.o ${STATIC_LIBS} ${TCL_SRC_H}
+# Currently builds a dynamically linked executable
+# Link statically where possible by adding static libs explicitly.
+#   Static libs must be compiled with -fPIC or -fPIE
+$(TURBINE_EXECUTABLES): %: %.o ${STATIC_LIBS} ${STATIC_PKG_RESOURCE_H} $(TCL_API_SYMBOLS_LD)
 	$(Q) "  LINK		$(@)"
-	$(E) $(CC) $(<) $(STATIC_LIBS) \
-        $(MAC_FLAT) $(STATIC_LIB_DEPS) \
-	$(LIBS) -L $(TCL_LIB_DIR) -l$(TCL_LIB_NAME) \
+	$(E) $(CC) $(<) $(LDFLAGS) $(LD_EXEC_SYMBOL_EXPORT) \
+	$(shell $(MKSTATIC_RUN) "$(@).manifest" --ignore-no-manifest --link-objs) \
+	$(STATIC_LIBS) \
+	$(shell $(MKSTATIC_RUN) "$(@).manifest" --ignore-no-manifest --link-flags) \
+	-Wl,-Bstatic $(TRANSITIVE_LIB_DEPS_STATIC) -Wl,-Bdynamic \
+	$(TRANSITIVE_LIB_DEPS_SHARED) \
+        $(MAC_FLAT) \
+	$(LIBS) \
 	$(RPATHS) \
 	-o $(@)
 
@@ -415,8 +514,6 @@ $(TURBINE_EXECUTABLES): %.x: %.o ${STATIC_LIBS} ${TCL_SRC_H}
 
 # Test cases in C as objects
 TEST_OBJS = $(patsubst %.c, %.o, $(TEST_SRC_C))
-# Test cases in C as dependency files
-TEST_DEPS = $(patsubst %.c, %.d, $(TEST_SRC_C))
 # Test cases in C compiled to binary
 TEST_BINS = $(patsubst %.c, %.x, $(TEST_SRC_C))
 # Test case results
@@ -435,10 +532,13 @@ tests: $(TEST_BINS)
 test_results: $(TEST_RESULTS)
 
 # Binary executables in the test suite
-$(TEST_BINS): %.x: %.o install.txt
+$(TEST_BINS): %.x: %.o install.txt $(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(<) \
+	$(shell $(MKSTATIC_RUN) "$(@).manifest" --ignore-no-manifest --link-objs) \
+	$(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A) \
         $(MAC_FLAT) \
+	$(shell $(MKSTATIC_RUN) "$(@).manifest" --ignore-no-manifest --link-flags) \
 	-L$(INSTALL_LIB) -ltclturbine \
 	$(LIBS) -L $(TCL_LIB_DIR) -l$(TCL_LIB_NAME) \
 	$(RPATHS) \
@@ -493,20 +593,26 @@ install: install.txt
 # Installed files:
 DIRECTORIES = $(INSTALL_PREFIX) $(INSTALL_BIN) $(INSTALL_ETC)     \
               $(INSTALL_EXPORT) $(INSTALL_INCLUDE) $(INSTALL_LIB) \
-	      $(INSTALL_LIBSTATIC) $(INSTALL_SCRIPTS)
+	      $(INSTALL_SCRIPTS)
 
-TURBINE_HEADERS = src/turbine/turbine.h      \
+TURBINE_HEADERS := src/turbine/turbine.h      \
+		  src/tcl/turbine/tcl-turbine.h \
+		  src/tcl/static-pkg/static-pkg.h \
                   src/turbine/turbine-defs.h \
                   src/tcl/blob/blob.h
+ifeq ($(ENABLE_STATIC),1)
+  TURBINE_HEADERS += $(STATIC_PKG_RESOURCE_H)
+endif
 
 BINS    = $(shell ls bin/turbine \
                      bin/turbine-write-doubles \
-                     bin/turbine-read-doubles )
+                     bin/turbine-read-doubles ) \
+          $(TURBINE_EXECUTABLES)
 EXPORTS = $(shell ls export/*.swift )
 SCRIPTS = $(shell ls scripts/*.zsh scripts/*.sh scripts/*.tcl \
-	             $(SCRIPTS_SUBMIT) )
+		     scripts/mkstatic/* $(SCRIPTS_SUBMIT) )
 
-install.txt: $(ENABLED_PACKAGES) $(BINS) $(EXPORTS) $(SCRIPTS)
+install.txt: $(ENABLED_PACKAGES) $(BINS) $(EXPORTS) $(SCRIPTS) $(TURBINE_HEADERS)
 #       Note: this is re-run if anything changes
 	@echo
 	$(Q) "  INSTALL		$(INSTALL_PREFIX)"
@@ -518,8 +624,7 @@ install.txt: $(ENABLED_PACKAGES) $(BINS) $(EXPORTS) $(SCRIPTS)
 #       Copy Turbine items
 	$(E) cp $(CP_ARGS) $(BINS)               $(INSTALL_BIN)
 	$(E) cp $(CP_ARGS) lib/*.tcl             $(INSTALL_LIB)
-	$(E) cp $(CP_ARGS) lib/*.$(SO_SUFFIX)    $(INSTALL_LIB)
-	$(E) cp $(CP_ARGS) libstatic/*.tcl       $(INSTALL_LIBSTATIC)
+	$(E) cp $(CP_ARGS) $(TCL_TURBINE_LIBS)    $(INSTALL_LIB)
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(SCRIPTS) $(INSTALL_PREFIX)
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(EXPORTS) $(INSTALL_PREFIX)
 	$(E) cp $(CP_ARGS) $(TURBINE_HEADERS)    $(INSTALL_INCLUDE)
@@ -536,8 +641,10 @@ install.txt: $(ENABLED_PACKAGES) $(BINS) $(EXPORTS) $(SCRIPTS)
 ### Autoconf sanity:
 
 Makefile: configure.ac
+	@echo
 	@echo "Configuration is not up to date!"
 	@echo "Run ./setup.sh and ./configure again."
+	@echo
 	@exit 1
 
 ### CLEAN
@@ -545,13 +652,14 @@ Makefile: configure.ac
 clean::
 	@echo
 	@echo "  CLEAN"
-	@rm -fv  $(PACKAGE) $(PACKAGE_STATIC) install.txt
-	@rm -fv  $(TURBINE_A) $(TCL_TURBINE_SO)
+	@rm -fv  $(PACKAGE) install.txt
+	@rm -fv  $(TCL_TURBINE_A) $(TCL_TURBINE_SO)
+	@rm -fv  $(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A)
 	@rm -fv  $(DEPS) $(TEST_DEPS) deps.txt deps_contents.txt TAGS
 	@rm -fv  $(TEST_BINS) $(TEST_OBJS) $(TEST_OUTPUT)
 	@rm -fv  $(TEST_RESULTS)
-	@rm -fv  $(TURBINE_OBJS)
-	@rm -fv  $(TURBINE_SRC_A) $(TCL_SRC_H) $(TCL_SRC_C) $(TCL_SRC_O)
+	@rm -fv  $(TURBINE_OBJS) $(STATIC_PACKAGE_OBJS)
+	@rm -fv  $(TURBINE_SRC_A) $(STATIC_PKG_RESOURCE_O)
 	@rm -fvr tests/data
 
 # Clean *.result files that did not succeed
@@ -562,6 +670,7 @@ distclean:: clean
 	@rm -fv Makefile **/*.mk
 	@rm -fv src/turbine/turbine-version.h
 	@rm -fv scripts/turbine-config.sh
+	@rm -fv scripts/turbine-build-config.sh
 	@rm -fv system-libs.txt
 
 .PHONY: clean install package test_results
