@@ -794,6 +794,7 @@ public class ASTWalker {
     
     // We have the current value, but need to put it in a future in case user
     //  code refers to it
+
     varCreator.initialiseVariable(bodyContext, loop.getMemberVar());
     exprWalker.assign(loop.getMemberVar(), memberVal.asArg());
     if (loop.getCountVarName() != null) {
@@ -869,11 +870,18 @@ public class ASTWalker {
     Context loopBodyContext = loop.getBodyContext();
 
     Var loopCountVal = loop.getLoopCountVal();
-    
+
+    Var backendMemberVal = VarRepr.backendVar(loop.getMemberVal());
     backend.startForeachLoop(fc.getFunctionName() + "-foreach" + loopNum,
-        VarRepr.backendVar(realArray), VarRepr.backendVar(loop.getMemberVar()),
+        VarRepr.backendVar(realArray), backendMemberVal,
         loopCountVal == null ? null : VarRepr.backendVar(loopCountVal),
         loop.getSplitDegree(), loop.getLeafDegree(), true);
+    
+    varCreator.initialiseVariable(loopBodyContext, loop.getMemberVar());
+    backend.assignScalar(VarRepr.backendVar(loop.getMemberVar()),
+                         backendMemberVal.asArg());
+    
+    
     // May need to spawn off each iteration as task - use wait for this
     if (!loop.isSyncLoop()) {
       backend.startWaitStatement(

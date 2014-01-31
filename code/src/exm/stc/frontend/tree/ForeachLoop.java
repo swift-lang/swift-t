@@ -36,6 +36,7 @@ import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LocalContext;
 import exm.stc.frontend.TypeChecker;
+import exm.stc.frontend.VarRepr;
 
 public class ForeachLoop {
   private static final int DEFAULT_SPLIT_DEGREE = 16;
@@ -48,7 +49,11 @@ public class ForeachLoop {
   private LocalContext loopBodyContext = null;
   private Var loopCountVal = null;
   private Type keyType = null;
+  
+  /** Array member var as future */ 
   private Var memberVar = null;
+  /** Array member value */
+  private Var memberVal = null;
   private final ArrayList<String> annotations;
   private int unroll = 1;
   private int splitDegree = DEFAULT_SPLIT_DEGREE;
@@ -76,6 +81,10 @@ public class ForeachLoop {
 
   public Var getMemberVar() {
     return memberVar;
+  }
+  
+  public Var getMemberVal() {
+    return memberVal;
   }
 
   public Var getLoopCountVal() {
@@ -294,11 +303,16 @@ public class ForeachLoop {
       loopCountVal = null;
     }
 
-    Alloc memberVarStorage = rangeLoop ? Alloc.TEMP : Alloc.ALIAS;
-    
+    // MemberVar is the logical future type for user code
     memberVar = loopBodyContext.declareVariable(findElemType(arrayType),
-        getMemberVarName(), memberVarStorage, DefType.LOCAL_USER,
+        getMemberVarName(), Alloc.TEMP, DefType.LOCAL_USER,
         VarProvenance.userVar(context.getSourceLoc()), null);
+
+    // This is the value type that we'll use internally too
+    Type memberValType = Types.derefResultType(
+              VarRepr.fieldRepr(memberVar.type()));
+    memberVal = loopBodyContext.createLocalValueVariable(
+                                   memberValType, memberVar);
     return loopBodyContext;
   }
 }

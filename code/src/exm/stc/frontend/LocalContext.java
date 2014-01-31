@@ -123,9 +123,16 @@ public class LocalContext extends Context {
       prov = VarProvenance.exprTmp(getSourceLoc());
       varName = null;
     }
+    Alloc storage;
+    if (Types.isPrimValue(type)) {
+      storage = Alloc.LOCAL;
+    } else {
+      storage = Alloc.ALIAS;
+    }
+    
     String name = chooseVariableName(Var.LOCAL_VALUE_VAR_PREFIX, varName,
                                     "value_var");
-    return declareVariable(type, name, Alloc.LOCAL, DefType.LOCAL_COMPILER,
+    return declareVariable(type, name, storage, DefType.LOCAL_COMPILER,
                            prov, null);
   }
 
