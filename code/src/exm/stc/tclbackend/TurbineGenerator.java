@@ -1473,7 +1473,7 @@ public class TurbineGenerator implements CompilerBackend {
     
     // Nested arrays - oVar should be a reference type
     Command getRef = Turbine.arrayLookupComputed(varToExpr(oVar), 
-        refRepresentationType(oVar.type().memberType(), false),
+        representationType(oVar.type(), false),
         varToExpr(arrayVar), varToExpr(indexVar), true);
     pointAdd(getRef);
   }
