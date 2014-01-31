@@ -292,10 +292,6 @@ public class OptUtil {
 
   public static Var fetchForLocalOp(Block block, List<Instruction> instBuffer,
       Var var) {
-    if (Types.isContainer(var)) {
-      // TODO: fetch value eventually
-      return var;
-    }
     return WrapUtil.fetchValueOf(block, instBuffer, var,
                              OptUtil.optVPrefix(block, var));
   }
