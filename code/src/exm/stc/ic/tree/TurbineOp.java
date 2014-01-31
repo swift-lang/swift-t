@@ -451,7 +451,7 @@ public class TurbineOp extends Instruction {
   }
 
   public static Instruction bagInsert(Var bag, Arg elem, Arg writersDecr) {
-    assert(Types.isBagElem(bag, elem));
+    assert(Types.isElemValType(bag, elem));
     assert(writersDecr.isImmediateInt());
     return new TurbineOp(Opcode.BAG_INSERT, bag, elem, writersDecr);
   }

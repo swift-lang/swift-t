@@ -1667,9 +1667,9 @@ public class TurbineGenerator implements CompilerBackend {
   
   @Override
   public void bagInsert(Var bag, Arg elem, Arg writersDecr) {
-    assert(Types.isBagElem(bag, elem));
+    assert(Types.isElemValType(bag, elem));
     pointAdd(Turbine.bagAppend(varToExpr(bag),
-          representationType(elem.type(), false), argToExpr(elem),
+          arrayValueType(bag, false), argToExpr(elem),
           argToExpr(writersDecr)));
   }
   

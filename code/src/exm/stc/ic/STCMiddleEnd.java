@@ -607,7 +607,7 @@ public class STCMiddleEnd {
 
   public void bagInsert(Var bag, Arg elem) {
     assert(Types.isBag(bag));
-    assert(Types.isBagElem(bag, elem));
+    assert(Types.isElemValType(bag, elem)) : bag + " " + elem + ":" + elem.type();
     currBlock().addInstruction(TurbineOp.bagInsert(bag, elem, Arg.ZERO));
   }
 
