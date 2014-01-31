@@ -909,7 +909,8 @@ public class ICInstructions {
 
     static ValLoc makeContainerSizeCV(Var arr, Arg size, boolean future,
                                   IsAssign isAssign) {
-      assert(Types.isContainer(arr.type()));
+      assert(Types.isContainer(arr) ||
+             Types.isContainerLocal(arr)) : arr;
       assert((!future && size.isImmediateInt()) ||
              (future && Types.isInt(size.type())));
       String subop = future ? ComputedValue.ARRAY_SIZE_FUTURE :
