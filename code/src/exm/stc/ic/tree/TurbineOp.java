@@ -1284,14 +1284,14 @@ public class TurbineOp extends Instruction {
       Arg newIx = Fetched.findFetched(values, ix);
       Arg derefMem = null;
       if (mem.isVar()) {
-        Fetched.findFetched(values, mem.getVar());
+        derefMem = Fetched.findFetched(values, mem.getVar());
       }
       
       Instruction inst;
       if (derefMem != null || op == Opcode.AREF_STORE_FUTURE) {
         if (derefMem == null) {
-          assert(op == Opcode.AREF_COPY_IN_FUTURE);
-          // It was dereferenced
+          assert(op == Opcode.AREF_STORE_FUTURE);
+          // It was already dereferenced
           derefMem = mem;
         }
         if (newArr != null && newIx != null) {
@@ -1312,7 +1312,8 @@ public class TurbineOp extends Instruction {
         } else if (newArr != null && newIx == null) {
           inst = arrayCopyInFuture(newArr, ix, memVar);
         } else {
-          assert(newArr == null && newIx != null);
+          assert(newArr == null && newIx != null) :
+                 this + " | " + newArr + " " + newIx;
           inst = arrayRefCopyInImm(outerArr, arrRef, newIx, memVar);
         }
       }

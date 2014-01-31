@@ -817,6 +817,10 @@ public class ValueNumber implements OptimizerPass {
     List<Instruction> alt = new ArrayList<Instruction>();
     List<Fetched<Arg>> inVals = fetchInputsForSwitch(state, req,
                                     insertContext, noWaitRequired, alt);
+    if (logger.isTraceEnabled()) {
+      logger.trace("Fetched " + inVals + " for " + inst
+                 + " req.in: " + req.in);
+    }
     
     // Need filenames for output file values
     Map<Var, Var> filenameVals = loadOutputFileNames(state, stmtIndex,

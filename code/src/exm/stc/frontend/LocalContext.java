@@ -124,7 +124,7 @@ public class LocalContext extends Context {
       varName = null;
     }
     Alloc storage;
-    if (Types.isPrimValue(type)) {
+    if (Types.isPrimValue(type) || Types.isContainerLocal(type)) {
       storage = Alloc.LOCAL;
     } else {
       storage = Alloc.ALIAS;

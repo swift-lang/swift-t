@@ -871,16 +871,26 @@ public class ASTWalker {
 
     Var loopCountVal = loop.getLoopCountVal();
 
-    Var backendMemberVal = VarRepr.backendVar(loop.getMemberVal());
+    boolean memberIsVal = (loop.getMemberVal() != null);
+    Var backendIterVar = null;
+    if (memberIsVal) {
+      backendIterVar = VarRepr.backendVar(loop.getMemberVal());
+    } else {
+      backendIterVar = VarRepr.backendVar(loop.getMemberVar());
+    }
+    
     backend.startForeachLoop(fc.getFunctionName() + "-foreach" + loopNum,
-        VarRepr.backendVar(realArray), backendMemberVal,
-        loopCountVal == null ? null : VarRepr.backendVar(loopCountVal),
-        loop.getSplitDegree(), loop.getLeafDegree(), true);
+            VarRepr.backendVar(realArray), backendIterVar,
+            loopCountVal == null ? null : VarRepr.backendVar(loopCountVal),
+            loop.getSplitDegree(), loop.getLeafDegree(), true);
+
     
-    varCreator.initialiseVariable(loopBodyContext, loop.getMemberVar());
-    backend.assignScalar(VarRepr.backendVar(loop.getMemberVar()),
-                         backendMemberVal.asArg());
-    
+    if (memberIsVal) {
+      // Need to store to value that will be referenced by later generated code
+      varCreator.initialiseVariable(loopBodyContext, loop.getMemberVar());
+      exprWalker.assign(VarRepr.backendVar(loop.getMemberVar()),
+                        backendIterVar.asArg());
+    }
     
     // May need to spawn off each iteration as task - use wait for this
     if (!loop.isSyncLoop()) {

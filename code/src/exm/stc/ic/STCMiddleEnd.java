@@ -659,7 +659,7 @@ public class STCMiddleEnd {
   }
   
   public void assignScalar(Var dst, Arg src) {
-    assert(Types.isScalarFuture(dst));
+    assert(Types.isScalarFuture(dst)) : dst;
     assert(Types.isScalarValue(src));
     assert(src.type().assignableTo(Types.derefResultType(dst)));
     
@@ -776,8 +776,8 @@ public class STCMiddleEnd {
   }
   
   public void assignArray(Var target, Arg src) {
-    assert(Types.isArray(target.type()));
-    assert(Types.isArrayLocal(src.type()));
+    assert(Types.isArray(target.type())) : target;
+    assert(Types.isArrayLocal(src.type())) : src + " " + src.type();
     assert(Types.containerElemType(src.type()).assignableTo(
               Types.containerElemType(target)));
     currBlock().addInstruction(TurbineOp.assignArray(target, src));

@@ -328,6 +328,10 @@ public class ICInstructions {
         Arg res = findFetched(fetched, v);
         return (res == null) ? null : res.getVar(); 
       }
+      
+      public String toString() {
+        return "Fetched: " + original.toString() + " => " + fetched.toString();
+      }
     }
     
     /**

@@ -2084,10 +2084,10 @@ public class Types {
       return t.type().baseType().memberType();
     } else if (isArray(t)) {
       ArrayType at = (ArrayType)t.type().getImplType();
-      return new ArrayType(true, at.keyType(), at.memberType());
+      return ArrayType.localArray(at.keyType(), at.memberType());
     } else if (isBag(t)) {
       BagType bt = (BagType)t.type().getImplType();
-      return new BagType(true, bt.memberType());
+      return BagType.localBag(bt.memberType());
     } else {
       throw new STCRuntimeError(t.type() + " can't be dereferenced");
     }

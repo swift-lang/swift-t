@@ -309,10 +309,14 @@ public class ForeachLoop {
         VarProvenance.userVar(context.getSourceLoc()), null);
 
     // This is the value type that we'll use internally too
-    Type memberValType = Types.derefResultType(
-              VarRepr.fieldRepr(memberVar.type()));
-    memberVal = loopBodyContext.createLocalValueVariable(
-                                   memberValType, memberVar);
+    Type memberValRepr = VarRepr.fieldRepr(memberVar.type());
+    if (Types.isRef(memberValRepr)) {
+      memberVal = null;
+    } else {
+      Type memberValType = Types.derefResultType(memberValRepr);
+      memberVal = loopBodyContext.createLocalValueVariable(
+                                     memberValType, memberVar);
+    }
     return loopBodyContext;
   }
 }
