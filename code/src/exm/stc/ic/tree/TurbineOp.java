@@ -2020,7 +2020,7 @@ public class TurbineOp extends Instruction {
       case AREF_CREATE_NESTED_FUTURE: {
         Var outerArr = getOutput(1);
         assert(Types.isArray(outerArr.type())): outerArr + " " + this;
-        assert(Types.isArray(outerArr.type().memberType()));
+        assert(Types.isArrayRef(outerArr.type().memberType())) : outerArr;
         Var arr = getOutput(2);
         Arg ixArg = getInput(0);
         List<Var> readVars;
