@@ -383,11 +383,16 @@ public class ArrayBuild extends FunctionOptimizerPass {
       }
     }
     for (Arg val: vals) {
-      if (val.isVar() && 
-          InitVariables.varMustBeInitialized(val.getVar(), false)) {
-        // Must init alias
-        if (!outerInit.initVars.contains(val.getVar())) {
-          needsInit.add(val.getVar());
+      if (val.isVar()) {
+        Var var = val.getVar(); 
+       if (InitVariables.assignBeforeRead(var) &&
+           !outerInit.assignedVals.contains(var)) {
+         // Must assign value
+         needsInit.add(var);         
+       } else if (InitVariables.varMustBeInitialized(var, false) &&
+           !outerInit.initVars.contains(var)) {
+          // Must init alias
+          needsInit.add(var);
         }
       }
     }
