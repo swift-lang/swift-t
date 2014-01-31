@@ -103,6 +103,11 @@ public class ArrayBuild extends FunctionOptimizerPass {
              "otherModRec: " + otherModRec + " " +
              "insertImmOnce: " + insertImmOnce;
     }
+
+    public boolean noInserts() {
+      return !insertImmHere && !otherModHere &&
+             !insertImmRec && !otherModRec;
+    }
   }
 
   /**
@@ -277,8 +282,10 @@ public class ArrayBuild extends FunctionOptimizerPass {
         if (vi.otherModRec) {
           logger.trace("Can't optimize due other other inserts!");
           invalid.add(cand);
-        } else if (vi.insertImmOnce && vi.insertImmHere) {
-          // Optimize here
+        } else if ((vi.insertImmOnce && vi.insertImmHere) ||
+                    vi.noInserts()) {
+          // Optimize here: cases where only inserted in this block,
+          // or no inserts at all
           logger.trace("Can optimize!");
           replaceInserts(logger, block, init, cand);
         } else if (vi.insertImmOnce) {
