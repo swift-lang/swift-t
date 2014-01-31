@@ -992,7 +992,7 @@ public class TurbineOp extends Instruction {
       if (closedVars.contains(arr)) {
         // Don't request to wait for close - whole array doesn't need to be
         // closed
-        return new MakeImmRequest(null, Arrays.<Var>asList(arr));
+        return new MakeImmRequest(null, Collections.<Var>emptyList());
       }
       break;
     }
@@ -1162,11 +1162,9 @@ public class TurbineOp extends Instruction {
                                      List<Fetched<Arg>> values) {
     switch (op) {
     case ARR_COPY_OUT_IMM: {
-      assert(values.size() == 1);
+      assert(values.size() == 0);
       // Input should be unchanged
       Var arr = getInput(0).getVar();
-      Var newArr = values.get(0).fetched.getVar();
-      assert(newArr.equals(arr)) : arr + " " + newArr;
       // Output switched from ref to value
       // TODO: update to reflect that ref is not internal repr
       Var origOut = getOutput(0);
