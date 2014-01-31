@@ -115,13 +115,14 @@ namespace eval turbine {
         set r_value [ ::split $s_value $d_value ]
         set n [ llength $r_value ]
         log "split: $s_value on: $d_value tokens: $n"
+
+        set toks [ list ]
         for { set i 0 } { $i < $n } { incr i } {
             set v [ lindex $r_value $i ]
-            literal split_token string $v
-            container_insert $result $i $split_token ref
+            lappend toks $v
         }
-        # close container
-        adlb::write_refcount_decr $result
+
+        array_build $result $toks 1 string
     }
 
     proc sprintf { result inputs } {
