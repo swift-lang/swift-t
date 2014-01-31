@@ -264,14 +264,14 @@ public class WrapUtil {
     }
     List<Arg> inVals = new ArrayList<Arg>(inputs.size());
     for (Var inArg: inputs) {
-      if (Types.isContainer(inArg.type())) {
+  /*    if (Types.isContainer(inArg.type())) {
         // Pass arrays in original representation
         inVals.add(inArg.asArg());
-      } else {
+      } else {*/
         String name = valName(block, inArg, uniquifyNames);
         inVals.add(WrapUtil.fetchValueOf(block, instBuffer,
             inArg, name).asArg());
-      }
+      /*}*/
     }
     return inVals;
   }
