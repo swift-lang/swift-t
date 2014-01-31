@@ -318,32 +318,28 @@ namespace eval turbine {
     }
 
     proc string_join { result inputs } {
-        rule $inputs "string_join_body $result $inputs" \
+        set container [ lindex $inputs 0 ]
+        set separator [ lindex $inputs 1 ]
+        rule $inputs "string_join_body $result $container $separator" \
             name "string_join-$result"
     }
-    proc string_join_body { result container separator } {
-
-        set type [ container_typeof $container ]
-        c::log "string_join_body start"
-        deeprule $container 1 0 \
-            "string_join_store $result $container $separator"
-    }
+    
     # This is called when every entry in container is set
-    proc string_join_store { result container separator } {
+    proc string_join_body { result container separator } {
         set separator_value [ retrieve_decr_string $separator ]
+        set container_val [ adlb::enumerate $container dict all 0 1 ]
+        store_string $result [ string_join_impl $container_val $separator ]
+    }
+    
+    proc string_join_impl { container separator } {
         set A [ list ]
-        # TODO: borrow refcount directly from container
-        set read_decr 0
-        set contents [ adlb::enumerate $container dict all 0 $read_decr ]
-        set sorted_keys [ lsort -integer [ dict keys $contents ] ]
+        puts "cont: $container"
+        set sorted_keys [ lsort -integer [ dict keys $container ] ]
+        puts "Keys: $sorted_keys cont: $container"
         foreach i $sorted_keys {
-            set td [ dict get $contents $i ]
-            set v  [ retrieve_string $td ]
-            lappend A $v
+            lappend A [ dict get $container $i ]
         }
-        read_refcount_decr $container
-        set s [ join $A $separator_value ]
-        store_string $result $s
+        return [ join $A $separator ]
     }
 
     proc string_from_floats { result input } {
