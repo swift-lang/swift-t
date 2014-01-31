@@ -296,7 +296,7 @@ public class WrapUtil {
     }
     List<Var> outVals = new ArrayList<Var>();
     for (Var outArg: outputFutures) {
-      if (Types.isContainer(outArg.type()) || Types.isPrimUpdateable(outArg.type())) {
+      if (Types.isPrimUpdateable(outArg.type())) {
         // Use standard representation
         outVals.add(outArg);
       } else {
@@ -427,11 +427,11 @@ public class WrapUtil {
         if (Types.isFile(outArg) && setOutVarMapping) {
           setFilenameFromFileVal(block, instBuffer, outArg, outVal);
         }
-        instBuffer.add(TurbineOp.storePrim(outArg, outVal.asArg()));
+        instBuffer.add(TurbineOp.storeAny(outArg, outVal.asArg()));
       }
     }
   }
-
+  
   public static void setFilenameFromFileVal(Block block,
       List<Instruction> instBuffer, Var fileFut, Var fileVal) {
     assert(Types.isFile(fileFut));

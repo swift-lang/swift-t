@@ -1218,12 +1218,8 @@ public class ICInstructions {
      * @param newOut
      */
     private void checkSwappedOutput(Var oldOut, Var newOut) {
-      if (Types.isArray(oldOut.type())) {
-        assert(Types.isArray(newOut.type()));
-      } else {
-        assert(Types.derefResultType(oldOut.type()).equals(
-                newOut.type()));
-      }
+      assert(Types.derefResultType(oldOut.type()).equals(
+             newOut.type()));
     }
 
     @Override
