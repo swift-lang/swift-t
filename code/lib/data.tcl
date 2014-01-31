@@ -260,7 +260,7 @@ namespace eval turbine {
               set result [ adlb::retrieve $id ref ]
             }
             if { $cache } {
-              c::cache_store $id integer $result
+              c::cache_store $id ref $result
             }
         }
         debug "retrieve: <$id>=$result"
@@ -304,7 +304,7 @@ namespace eval turbine {
             }
 
             if { $cache } {
-              c::cache_store $id integer $result
+              c::cache_store $id file_ref $result
             }
         }
         debug "retrieve: <$id>=$result"
@@ -350,7 +350,8 @@ namespace eval turbine {
             }
             
             if { $cache } {
-              c::cache_store $id integer $result
+              # TODO: need full struct type
+              #c::cache_store $id struct $result
             }
         }
         debug "retrieve: <$id>=$result"
@@ -401,7 +402,7 @@ namespace eval turbine {
             }
             
             if { $cache } {
-              c::cache_store $id integer $result
+              c::cache_store $id float $result
             }
         }
         debug "retrieve: <$id>=$result"
@@ -438,7 +439,7 @@ namespace eval turbine {
             }
 
             if { $cache } {
-              c::cache_store $id integer $result
+              c::cache_store $id string $result
             }
         }
         debug "retrieve: <$id>=[ log_string $result ]"
