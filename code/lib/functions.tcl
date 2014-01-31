@@ -127,24 +127,13 @@ namespace eval turbine {
     }
 
     proc range_work { result start end step } {
-        if { $start <= $end } {
-            set k 0
-            set write_refcount_decr 0
-            for { set i $start } { $i <= $end } { incr i $step } {
-                allocate td integer
-                store_integer $td $i
-
-                if { [ expr {$i + $step > $end} ] } {
-                  # Drop on last iter
-                  set write_refcount_decr 1
-                }
-                container_insert $result $k $td ref $write_refcount_decr
-                incr k
-            }
-        } else {
-            # no contents, but have to close
-            adlb::write_refcount_decr $result
+        set kv_dict [ dict create ]
+        set k 0
+        for { set v $start } { $v <= $end } { incr v $step } {
+            dict append kv_dict $k $v
+            incr k
         }
+        array_kv_build $result $kv_dict 1 integer integer
     }
 
     # User function
