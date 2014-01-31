@@ -107,5 +107,15 @@ do
   export ${kv}
 done
 
-qsub ${=QUEUE_ARG} ${=QSUB_OPTS} ${TURBINE_OUTPUT}/turbine-aprun.sh
+qsub ${=QUEUE_ARG} ${=QSUB_OPTS} ${TURBINE_OUTPUT}/turbine-aprun.sh | \
+  read JOB_ID
+EXITCODE=${?}
 # Return exit code from qsub
+
+if (( EXITCODE ))
+then
+  print "qsub failed!"
+  exit ${EXITCODE}
+fi
+
+print ${JOB_ID} > ${TURBINE_OUTPUT}/jobid.txt
