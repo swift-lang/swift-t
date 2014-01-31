@@ -83,7 +83,7 @@ type external void;
   [ "turbine::range_work <<res>> <<start>> <<end>> <<step>>" ];
 @pure @implements=size
 <T> (int n) size(T A[]) "turbine" "0.0.5" "container_size"
-  [ "set <<n>> [ turbine::container_size_local <<A>> 1 ]" ];
+  [ "set <<n>> [ dict size <<A>> ]" ];
 @pure
 <K, V> (boolean o) contains(V A[K], K key) "turbine" "0.0.5" "contains"
   [ "set <<o>> [ adlb::exists_sub <<A>> <<key>> 1 ]" ];
