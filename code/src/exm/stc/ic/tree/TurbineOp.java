@@ -1166,7 +1166,7 @@ public class TurbineOp extends Instruction {
       // Input should be unchanged
       Var arr = getInput(0).getVar();
       Var newArr = values.get(0).fetched.getVar();
-      assert(newArr.equals(arr));
+      assert(newArr.equals(arr)) : arr + " " + newArr;
       // Output switched from ref to value
       // TODO: update to reflect that ref is not internal repr
       Var origOut = getOutput(0);
