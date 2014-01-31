@@ -83,7 +83,7 @@
   "turbine" "0.4.0" "string_from_floats";
 
 @pure (string s) string_join(string A[], string separator)
-  "turbine" "0.4.0" "string_join"
+  "turbine" "0.4.0" // "string_join"
   [ "set <<s>> [ turbine::string_join_impl <<A>> <<separator>> ]" ];
 
 #endif
