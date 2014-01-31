@@ -30,7 +30,8 @@
 
 @pure
 (string t[]) split(string s, string delimiter)
-"turbine" "0.0.2" "split";
+"turbine" "0.0.2" "split"
+[ "set <<t>> [ turbine::split_impl <<s>> <<delimiter>> ]" ];
 
 @builtin_op=SPRINTF
 (string o) sprintf(string fmt, int|float|string|boolean... args)

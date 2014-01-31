@@ -80,26 +80,19 @@ namespace eval turbine {
 
     # This accepts an optional delimiter
     # (STC does not yet support optional arguments)
-    proc split { args } {
-        set result [ lindex $args 0 ]
-        set inputs [ lreplace $args 0 0 ]
-
-        # Unpack inputs
-        set inputs [ lindex $inputs 0 ]
-
+    proc split { result inputs } {
         set s [ lindex $inputs 0 ]
         if { [ llength $inputs ] == 2 } {
             set delimiter [ lindex $inputs 1 ]
-            rule [ list $s $delimiter ] \
-                "split_body $result $s $delimiter" \
-                name "split-$result"
         } elseif { [ llength $inputs ] == 1 } {
             # Use default delimiter: " "
             set delimiter 0
-            rule $s "split_body $result $s 0" name "split-$result"
         } else {
             error "split requires 1 or 2 arguments"
         }
+        rule [ list $s $delimiter ] \
+            "split_body $result $s $delimiter" \
+            name "split-$result"
     }
 
     # Split string s with delimiter d into result container r
@@ -112,17 +105,20 @@ namespace eval turbine {
         } else {
             set d_value [ retrieve_decr_string $delimiter ]
         }
-        set r_value [ ::split $s_value $d_value ]
-        set n [ llength $r_value ]
-        log "split: $s_value on: $d_value tokens: $n"
+        #debug "split: $s_value on: $d_value tokens: $n"
 
-        set toks [ list ]
-        for { set i 0 } { $i < $n } { incr i } {
-            set v [ lindex $r_value $i ]
-            lappend toks $v
+        set r_val [ split_impl $s_value $d_value ]
+        array_kv_build $result $r_val 1 integer string
+    }
+
+    proc split_impl { s delimiter } {
+        set result_dict [ list ]
+        set i 0
+        foreach tok [ ::split $s $delimiter ] {
+          dict append result_dict $i $tok
+          incr i
         }
-
-        array_build $result $toks 1 string
+        return $result_dict
     }
 
     proc sprintf { result inputs } {
