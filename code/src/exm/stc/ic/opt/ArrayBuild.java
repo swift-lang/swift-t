@@ -70,6 +70,9 @@ public class ArrayBuild extends FunctionOptimizerPass {
   }
   
   static class BlockVarInfo {
+    /** If var was declared in this block */
+    boolean declaredHere = false;
+
     /** If immediate insert instruction found in this block */
     boolean insertImmHere = false;
     
@@ -130,18 +133,20 @@ public class ArrayBuild extends FunctionOptimizerPass {
     return Types.isArray(var) && var.storage() != Alloc.ALIAS;
   }
 
-  private void addValidCandidates(Collection<Var> candidates,
-                                  Collection<Var> vars) {
+  private void addBlockCandidates(Block block,
+      InfoMap info, Collection<Var> candidates,
+      Collection<Var> vars) {
     for (Var var: vars) {
       if (isValidCandidate(var)){
         candidates.add(var);
+        info.getEntry(block, var).declaredHere = true;
       }
     }
   }
 
   private void buildInfoRec(Logger logger, Function f,
       Block block, InfoMap info, HierarchicalSet<Var> candidates) {
-    addBlockCandidates(f, block, candidates);
+    addBlockCandidates(f, block, info, candidates);
     
     for (Statement stmt: block.getStatements()) {
       switch (stmt.type()) {
@@ -178,11 +183,12 @@ public class ArrayBuild extends FunctionOptimizerPass {
    * @param block
    * @param candidates
    */
-  private void addBlockCandidates(Function f, Block block, Set<Var> candidates) {
+  private void addBlockCandidates(Function f, Block block, InfoMap info,
+                                  Set<Var> candidates) {
     if (block.getType() ==  BlockType.MAIN_BLOCK) {
-      addValidCandidates(candidates, f.getOutputList());
+      addBlockCandidates(block, info, candidates, f.getOutputList());
     }
-    addValidCandidates(candidates, block.getVariables());
+    addBlockCandidates(block, info, candidates, block.getVariables());
   }
 
   private void updateInfo(Block block, InfoMap info, Instruction inst,
@@ -269,7 +275,7 @@ public class ArrayBuild extends FunctionOptimizerPass {
   private void optRecurseOnBlock(Logger logger, Function f, Block block,
       InfoMap info, InitState init, 
       HierarchicalSet<Var> cands, HierarchicalSet<Var> invalid) {
-    addBlockCandidates(f, block, cands);
+    addBlockCandidates(f, block, info, cands);
     
     for (Var cand: cands) {
       if (!invalid.contains(cand)) {
@@ -283,11 +289,17 @@ public class ArrayBuild extends FunctionOptimizerPass {
           logger.trace("Can't optimize due other other inserts!");
           invalid.add(cand);
         } else if ((vi.insertImmOnce && vi.insertImmHere) ||
-                    vi.noInserts()) {
+                    (vi.noInserts() && vi.declaredHere)) {
+          // Criteria 1: declared here && no inserts here or in children
+          // TODO
+          // Criteria 2: declared in ancestor && not modified on any
+          //        non-mutually-exclusive path
+          
           // Optimize here: cases where only inserted in this block,
           // or no inserts at all
           logger.trace("Can optimize!");
           replaceInserts(logger, block, init, cand);
+          invalid.add(cand); // Don't try to opt in descendants
         } else if (vi.insertImmOnce) {
           logger.trace("Try to optimize in descendant block!");
           // Do nothing: handle in child block
