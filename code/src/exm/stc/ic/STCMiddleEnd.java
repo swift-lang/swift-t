@@ -818,7 +818,9 @@ public class STCMiddleEnd {
   public void retrieveRecursive(Var target, Var src) {
     assert(Types.isContainer(src));
     assert(Types.isContainerLocal(target));
-    assert(Types.unpackedContainerType(src).assignableTo(target.type()));
+    Type unpackedSrcType = Types.unpackedContainerType(src);
+    assert(unpackedSrcType.assignableTo(target.type())) :
+            unpackedSrcType + " => " + target;
 
     currBlock().addInstruction(TurbineOp.retrieveRecursive(target, src));
   }

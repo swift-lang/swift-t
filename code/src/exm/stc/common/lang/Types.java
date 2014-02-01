@@ -2099,17 +2099,21 @@ public class Types {
     assert(Types.isContainer(t));
     Type elemType = Types.containerElemType(t);
     Type elemValType;
-    if (Types.isContainer(elemType)) {
+    if (Types.isContainer(elemType)
+              || Types.isContainerLocal(elemType)) {
       elemValType = unpackedContainerType(elemType);
     } else {
+      while (Types.isRef(elemType)) {
+        elemType = Types.derefResultType(elemType);
+      }
       elemValType = Types.derefResultType(elemType);
     }
-    if (Types.isArray(t)) {
+    if (Types.isArray(t) || Types.isArrayLocal(t)) {
       ArrayType at = (ArrayType)t.type().getImplType();
-      return new ArrayType(true, at.keyType(), elemValType);
+      return ArrayType.localArray(at.keyType(), elemValType);
     } else {
-      assert(Types.isBag(t));
-      return new BagType(true, elemValType);
+      assert(Types.isBag(t) || Types.isBagLocal(t));
+      return BagType.localBag(elemValType);
     }
   }
   
