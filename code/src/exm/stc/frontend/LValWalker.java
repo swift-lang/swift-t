@@ -601,10 +601,10 @@ public class LValWalker {
     
     boolean bagRef = Types.isBagRef(bag);
     boolean elemRef = Types.isRefTo(elem, elemType); 
-    boolean openWait = bagRef || elemRef; 
+    boolean openWait1 = bagRef || elemRef; 
     
     // May need to open wait in order to deal with dereference bag or element
-    if (openWait) {
+    if (openWait1) {
       // Wait, then deref if needed
       String waitName = context.getFunctionContext().constructName(
                                                 "bag-deref-append");
@@ -640,10 +640,27 @@ public class LValWalker {
       }
     }
     
-    // Do the actual insert
-    backend.bagInsert(VarRepr.backendVar(bag), VarRepr.backendArg(elem));
+    Var elemVal;
+    // May need to add another wait to retrieve value
+    boolean openWait2 = VarRepr.storeRefInContainer(elem);
+    if (openWait2) {
+      elemVal = elem;
+    } else {
+      String waitName = context.getFunctionContext().constructName(
+                                                "bag-load-append");
+      backend.startWaitStatement(waitName, VarRepr.backendVars(elem),
+              WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
+      elemVal = varCreator.createValueOfVar(context, elem);
+    }
     
-    if (openWait) {
+    // Do the actual insert
+    backend.bagInsert(VarRepr.backendVar(bag), VarRepr.backendArg(elemVal));
+    
+    if (openWait2) {
+      backend.endWaitStatement();
+    }
+
+    if (openWait1) {
       backend.endWaitStatement();
     }
     return stmtResultVar;
