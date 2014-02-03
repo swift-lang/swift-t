@@ -77,10 +77,10 @@ type external void;
 // Container operations
 @pure @implements=range
 (int res[]) range(int start, int end) "turbine" "0.0.2" "range"
-  [ "turbine::range_work <<res>> <<start>> <<end>> 1" ];
+  [ "set <<res>> [ turbine::build_range_dict <<start>> <<end>> 1 ]" ];
 @pure @implements=range_step
 (int res[]) rangestep(int start, int end, int step) "turbine" "0.0.2" "rangestep"
-  [ "turbine::range_work <<res>> <<start>> <<end>> <<step>>" ];
+  [ "set <<res>> [ turbine::build_range_dict <<start>> <<end>> <<step>> ]" ];
 @pure @implements=size
 <T> (int n) size(T A[]) "turbine" "0.0.5" "container_size";
 @pure @implements=contains

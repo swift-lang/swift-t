@@ -127,13 +127,18 @@ namespace eval turbine {
     }
 
     proc range_work { result start end step } {
+        set kv_dict [ build_range_dict $start $end $step ]
+        array_kv_build $result $kv_dict 1 integer integer
+    }
+
+    proc build_range_dict { start end step } {
         set kv_dict [ dict create ]
         set k 0
         for { set v $start } { $v <= $end } { incr v $step } {
             dict append kv_dict $k $v
             incr k
         }
-        array_kv_build $result $kv_dict 1 integer integer
+        return $kv_dict
     }
 
     # User function
