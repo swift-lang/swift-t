@@ -41,9 +41,9 @@ namespace eval turbine {
       array_kv_build $c $kv_dict $write_decr integer {*}$args
     }
 
-    proc swift_array_build { c elems var_type } { 
+    proc swift_array_build { elems var_type } { 
         set n [ llength $elems ]
-        log "swift_array_build: <$c> elems: $n var_type: $var_type"
+        log "swift_array_build: elems: $n var_type: $var_type"
 
         if [ string equal $var_type "file" ] {
             set L [ list ] 
@@ -77,7 +77,7 @@ namespace eval turbine {
                 adlb::store $td $var_type $elem
             }            
         }
-        array_build $c $L 1 $type
+        return $L
     }
 
     # build array by inserting items into a container starting at 0
