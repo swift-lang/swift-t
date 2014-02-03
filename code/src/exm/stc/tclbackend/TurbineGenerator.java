@@ -3048,8 +3048,18 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isArray(inputArray.type()));
     NestedContainerInfo c = new NestedContainerInfo(inputArray.type());
     assert(Types.isArrayLocal(flatLocalArray));
-    Type memberValT = Types.derefResultType(c.baseType);
-    assert(memberValT.assignableTo(Types.containerElemType(flatLocalArray)));
+    Type baseType = c.baseType;
+    
+    // Get type inside reference
+    if (Types.isRef(baseType)) {
+      baseType = Types.derefResultType(baseType);
+    }
+   
+    Type memberValT = Types.derefResultType(baseType);
+
+    assert(memberValT.assignableTo(Types.containerElemType(flatLocalArray)))
+      : memberValT + " " + flatLocalArray;
+    
     
     pointAdd(new SetVariable(prefixVar(flatLocalArray),
                               unpackArrayInternal(inputArray)));
