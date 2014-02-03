@@ -82,11 +82,9 @@ type external void;
 (int res[]) rangestep(int start, int end, int step) "turbine" "0.0.2" "rangestep"
   [ "turbine::range_work <<res>> <<start>> <<end>> <<step>>" ];
 @pure @implements=size
-<T> (int n) size(T A[]) "turbine" "0.0.5" "container_size"
-  [ "set <<n>> [ dict size <<A>> ]" ];
-@pure
-<K, V> (boolean o) contains(V A[K], K key) "turbine" "0.0.5" "contains"
-  [ "set <<o>> [ adlb::exists_sub <<A>> <<key>> 1 ]" ];
+<T> (int n) size(T A[]) "turbine" "0.0.5" "container_size";
+@pure @implements=contains
+<K, V> (boolean o) contains(V A[K], K key) "turbine" "0.0.5" "contains";
 
 @pure @implements=size
 <T> (int n) bag_size(bag<T> B) "turbine" "0.0.5" "container_size"
