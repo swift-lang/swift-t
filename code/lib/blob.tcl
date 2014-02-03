@@ -133,25 +133,30 @@ namespace eval turbine {
 
   # Container must be indexed from 0,N-1
   proc blob_from_floats { result input } {
-    rule $input  "blob_from_floats_body $input $result" \
+    rule $input  "blob_from_floats_body $result $input" \
         name "blob_from_floats-$result"
   }
-  proc blob_from_floats_body { container result } {
 
-      set N  [ adlb::container_size $container ]
-      c::log "blob_from_floats_body start"
-      rule $container \
-          "blob_from_floats_store $result $container $N"
-  }
   # This is called when every entry in container is set
-  proc blob_from_floats_store { result container N } {
+  proc blob_from_floats_body { result container } {
     set kv_dict [ adlb::retrieve_decr $container 1 container ] 
+    adlb::store_blob_floats $result [ sorted_dict_values $kv_dict ]
+  }
+
+  proc sorted_dict_values { kv_dict } {
+    set N [ dict size $kv_dict ]
     set A [ list ]
     for { set i 0 } { $i < $N } { incr i } {
       set v [ dict get $kv_dict $i ]
       lappend A $v
     }
-    adlb::store_blob_floats $result $A
+    return $A
+  }
+
+  proc blob_from_floats_impl { kv_dict } {
+    set L [ sorted_dict_values $kv_dict ]
+    # TODO: convert list to blob
+    return $B
   }
 
   # Container must be indexed from 0,N-1
