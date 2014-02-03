@@ -203,7 +203,7 @@ namespace eval turbine {
       if { $is_file } {
         lappend res [ retrieve_string [ get_file_path $member ] ]
       } else {
-        lappend res [ retrieve $member ]
+        lappend res $member
       }
     }
   }
