@@ -441,8 +441,6 @@ public class ComputedValue<T> {
   }
   
   /* Special subop strings to use with fake opcode */
-  public static final String ARRAY_SIZE_FUTURE = "array_size_future";
-  public static final String ARRAY_SIZE_VAL = "array_size_val";
   public static final String ARRAY_ELEM_COPY = "array_elem_copy";
   
   /**

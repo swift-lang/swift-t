@@ -115,6 +115,7 @@ class Turbine {
   private static final Token CR_F_LOOKUP = turbFn("cr_f_lookup");
   private static final Token ENUMERATE = adlbFn("enumerate");
   private static final Token ENUMERATE_REC = turbFn("enumerate_rec");
+  private static final Token EXISTS_SUB = adlbFn("exists_sub");
   
   // Retrieve functions
   private static final Token RETRIEVE_INTEGER = turbFn("retrieve_integer");
@@ -972,31 +973,36 @@ class Turbine {
     } else {
       return new Command(C_F_LOOKUP, arrayVar, indexVar,refVar, refType);
     }
-   }
+  }
+  
+  public static Expression arrayContains(Value arr,
+                                         Expression key) {
+    return new Square(EXISTS_SUB, arr, key);
+  }
 
-   public static Command dereferenceInteger(Value dstVar, Value refVar) {
+  public static Command dereferenceInteger(Value dstVar, Value refVar) {
      return new Command(DEREFERENCE_INTEGER, dstVar, refVar);
-   }
+  }
    
-   public static Command dereferenceVoid(Value dstVar, Value refVar) {
-     return new Command(DEREFERENCE_VOID, dstVar, refVar);
-   }
+  public static Command dereferenceVoid(Value dstVar, Value refVar) {
+    return new Command(DEREFERENCE_VOID, dstVar, refVar);
+  }
 
-   public static Command dereferenceFloat(Value dstVar, Value refVar) {
-     return new Command(DEREFERENCE_FLOAT, dstVar, refVar);
-   }
+  public static Command dereferenceFloat(Value dstVar, Value refVar) {
+    return new Command(DEREFERENCE_FLOAT, dstVar, refVar);
+  }
 
-   public static Command dereferenceString(Value dstVar, Value refVar) {
-     return new Command(DEREFERENCE_STRING, dstVar, refVar);
-   }
+  public static Command dereferenceString(Value dstVar, Value refVar) {
+    return new Command(DEREFERENCE_STRING, dstVar, refVar);
+  }
    
-   public static Command dereferenceBlob(Value dstVar, Value refVar) {
-     return new Command(DEREFERENCE_BLOB, dstVar, refVar);
-   }
+  public static Command dereferenceBlob(Value dstVar, Value refVar) {
+    return new Command(DEREFERENCE_BLOB, dstVar, refVar);
+  }
    
-   public static Command dereferenceFile(Value dstVar, Value refVar) {
-     return new Command(DEREFERENCE_FILE, dstVar, refVar);
-   }
+  public static Command dereferenceFile(Value dstVar, Value refVar) {
+    return new Command(DEREFERENCE_FILE, dstVar, refVar);
+  }
 
   public static Command arrayStoreImmediate(Expression srcVar, Value arrayVar,
                               Expression arrayIndex, Expression writersDecr,
@@ -1200,10 +1206,13 @@ class Turbine {
     }
   }
 
-
-  public static  Expression dictSize(Value tclDict) {
+  public static Expression dictSize(Value tclDict) {
     Expression containerSize = Square.fnCall("dict",  new Token("size"), tclDict);
     return containerSize;
+  }
+  
+  public static Expression dictExists(Value tclDict, Expression key) {
+    return Square.fnCall("dict", new Token("exists"), tclDict, key);
   }
 
   /**

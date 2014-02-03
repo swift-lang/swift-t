@@ -27,6 +27,8 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import sun.java2d.pipe.SpanClipRenderer;
+
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
@@ -337,6 +339,8 @@ public class ICInstructions {
     /**
      * 
      * @param closedVars variables closed at point of current instruction
+     * @param valueAvail variables where the retrieve resultis available at
+     *                  current point (implies closed too)
      * @param waitForClose if true, allowed to (must don't necessarily
      *        have to) request that unclosed vars be waited for
      * @return null if it cannot be made immediate, if true,
@@ -344,7 +348,7 @@ public class ICInstructions {
      *            and output vars that need to be have value vars created
      */
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-                                           boolean waitForClose) {
+                      Set<Var> valueAvail, boolean waitForClose) {
       // Not implemented
       return null;
     }
@@ -555,7 +559,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars, 
-                                           boolean waitForClose) {
+        Set<Var> valueAvail, boolean waitForClose) {
       return null;
     }
 
@@ -839,7 +843,9 @@ public class ICInstructions {
            isImpl(SpecialFunction.RANGE_STEP))) {
         addRangeCVs(cvs);
       } else if (isImpl(SpecialFunction.SIZE)) {
-          cvs.add(makeContainerSizeCV(IsAssign.NO));
+        cvs.add(makeContainerSizeCV(IsAssign.NO));
+      } else if (isImpl(SpecialFunction.CONTAINS)) {
+        cvs.add(makeArrayContainsCV(IsAssign.NO));
       }
     }
 
@@ -885,7 +891,7 @@ public class ICInstructions {
         // We can work out array contents 
         long arrSize = Math.max(0, (end - start) / step + 1);
         Var arr = getOutput(0);
-        cvs.add(makeContainerSizeCV(arr, Arg.createIntLit(arrSize),
+        cvs.add(ValLoc.makeContainerSizeCV(arr, Arg.createIntLit(arrSize),
                                 false, IsAssign.NO));
         // add array elements up to some limit
         int max_elems = 64;
@@ -903,23 +909,23 @@ public class ICInstructions {
         assert(Types.isIntVal(getOutput(0)));
         isFuture = false;
       }
-      return makeContainerSizeCV(getInput(0).getVar(), getOutput(0).asArg(),
-                             isFuture, isAssign);
+      return ValLoc.makeContainerSizeCV(getInput(0).getVar(),
+                      getOutput(0).asArg(), isFuture, isAssign);
     }
+    
 
-    static ValLoc makeContainerSizeCV(Var arr, Arg size, boolean future,
-                                  IsAssign isAssign) {
-      assert(Types.isContainer(arr) ||
-             Types.isContainerLocal(arr)) : arr;
-      assert((!future && size.isImmediateInt()) ||
-             (future && Types.isInt(size.type())));
-      String subop = future ? ComputedValue.ARRAY_SIZE_FUTURE :
-                              ComputedValue.ARRAY_SIZE_VAL;
-      return ValLoc.buildResult(Opcode.FAKE, subop,
-              arr.asArg(), size, Closed.MAYBE_NOT, isAssign);
+    private ValLoc makeArrayContainsCV(IsAssign isAssign) {
+      boolean isFuture;
+      if (Types.isBool(getOutput(0))) {
+        isFuture = true;
+      } else {
+        assert(Types.isBoolVal(getOutput(0)));
+        isFuture = false;
+      }
+      return ValLoc.makeArrayContainsCV(getInput(0).getVar(), getInput(1),
+                      getOutput(0).asArg(), isFuture, isAssign);
     }
-
-
+    
     /**
      * Check if we should try to constant fold. To enable constant
      * folding for a funciton it needs ot have an entry here and
@@ -1127,34 +1133,28 @@ public class ICInstructions {
  
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-                                           boolean waitForClose) {
-      // See which arguments are closed
-      boolean allClosed = true;
-      if (!waitForClose) {
-        for (int i = 0; i < this.inputs.size(); i++) {
-          Arg in = this.inputs.get(i);
-          if (in.isVar()) {
-            if (closedVars.contains(in.getVar())) {
-              this.closedInputs.set(i, true);
-            } else {
-              allClosed = false;
-            }
-          }
+        Set<Var> valueAvail, boolean waitForClose) {
+      if (isImpl(SpecialFunction.SIZE)) {
+        if (waitForClose || allInputsClosed(closedVars)) {
+          // Input array closed, can lookup right away
+          return new MakeImmRequest(getOutput(0).asList(),
+                                    getInput(0).getVar().asList());
         }
+        return null;
+      } else if (isImpl(SpecialFunction.CONTAINS)) {
+        if (waitForClose || allInputsClosed(closedVars)) {
+          // Need input array to be closed, and need value for index
+          return new MakeImmRequest(getOutput(0).asList(),
+                                    getInput(1).getVar().asList());
+        }
+        return null;
       }
       
-      // Deal with mapped variables, which are effectively side-channels
-      for (int i = 0; i < this.outputs.size(); i++) {
-        Var out = this.outputs.get(i);
-        if (Types.isFile(out)) {
-          // Need to wait for filename, unless unmapped
-          if (!(waitForClose || Semantics.outputMappingAvail(closedVars, out))) {
-            allClosed = false;
-          }
-        }
-      }
+      // By default, need all arguments to be closed
+      boolean allNeededClosed = waitForClose || 
+          (allInputsClosed(closedVars) && allOutputSideChannelsClosed(closedVars));
       
-      if (allClosed && (ForeignFunctions.hasOpEquiv(this.functionName)
+      if (allNeededClosed && (ForeignFunctions.hasOpEquiv(this.functionName)
                 || ForeignFunctions.hasInlineVersion(this.functionName))) {
         TaskMode mode = ForeignFunctions.getTaskMode(this.functionName);
         if (mode == null) {
@@ -1176,11 +1176,64 @@ public class ICInstructions {
       }
       return null;
     }
-    
+
+    private boolean allInputsClosed(Set<Var> closedVars) {
+      for (int i = 0; i < this.inputs.size(); i++) {
+        if (!inputClosed(closedVars, i)) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    private boolean inputClosed(Set<Var> closedVars, int i) {
+      Arg in = this.inputs.get(i);
+      if (!in.isVar()) {
+        return true;
+      }
+      if (closedVars.contains(in.getVar())) {
+        this.closedInputs.set(i, true);
+        return true;
+      } else {
+        return false;
+      }
+    }
+
+    /**
+     * Check if side channels from mapped variables are closed.
+     * @param closedVars
+     * @return
+     */
+    private boolean allOutputSideChannelsClosed(Set<Var> closedVars) {
+      for (Var out: this.outputs) {
+        if (Types.isFile(out)) {
+          // Need to wait for filename, unless unmapped
+          if (!Semantics.outputMappingAvail(closedVars, out)) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
     @Override
     public MakeImmChange makeImmediate(VarCreator creator,
                                        List<Fetched<Var>> outVars, 
                                        List<Fetched<Arg>> values) {
+      if (isImpl(SpecialFunction.SIZE)) {
+        // Don't use fetched array value
+        Var newOut = outVars.get(0).fetched;
+        Var arr = getInput(0).getVar();
+        return new MakeImmChange(TurbineOp.containerSize(newOut, arr));
+      } else if (isImpl(SpecialFunction.CONTAINS)) {
+        // Don't use fetched array value
+        Var newOut = outVars.get(0).fetched;
+        Var arr = getInput(0).getVar();
+        Var keyFuture = getInput(1).getVar();
+        Arg key = Fetched.findFetched(values, keyFuture);
+        return new MakeImmChange(TurbineOp.arrayContains(newOut, arr, key));
+      }
+      
       // Discard non-future inputs.  These are things like priorities or
       // targets which do not need to be retained for the local version
       List<Var> retainedInputs = varInputs(true);
@@ -1323,7 +1376,7 @@ public class ICInstructions {
     
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-                                           boolean waitForClose) {
+        Set<Var> valueAvail, boolean waitForClose) {
       return null; // already immediate
     }
 
@@ -1439,7 +1492,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-                                           boolean waitForClose) {
+        Set<Var> valueAvail, boolean waitForClose) {
       // Don't support reducing this
       return null;
     }
@@ -1626,7 +1679,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-                                           boolean waitForClose) {
+        Set<Var> valueAvail, boolean waitForClose) {
       // Variables we need to wait for to make immediate
       List<Var> waitForInputs = new ArrayList<Var>();
       
@@ -1792,7 +1845,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-                                           boolean waitForClose) {
+        Set<Var> valueAvail, boolean waitForClose) {
       return null;
     }
    
@@ -2010,7 +2063,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-                                           boolean waitForClose) {
+        Set<Var> valueAvail, boolean waitForClose) {
       if (op == Opcode.LOCAL_OP) {
         // already is immediate
         return null; 

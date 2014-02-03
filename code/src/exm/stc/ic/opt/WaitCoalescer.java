@@ -436,7 +436,8 @@ public class WaitCoalescer implements OptimizerPass {
   private static boolean tryExplode(Logger logger, Function fn,
         ExecContext execCx, Block block, ListIterator<Statement> it,
         Instruction inst, HierarchicalSet<Var> waitedFor) {
-    MakeImmRequest req = inst.canMakeImmediate(waitedFor, true);
+    MakeImmRequest req = inst.canMakeImmediate(waitedFor,
+                           Collections.<Var>emptySet(), true);
     if (req != null && req.in.size() > 0) {
       if (logger.isTraceEnabled()) {
         logger.trace("Exploding " + inst + " in function " + fn.getName());

@@ -249,6 +249,14 @@ public interface CompilerBackend {
 
   public void arrayRefCopyOutFuture(Var oVar, Var arrayVar, Var indexVar);
 
+  public void arrayContains(Var out, Var arr, Arg index);
+
+  public void containerSize(Var out, Var cont);
+
+  public void arrayLocalContains(Var out, Var arr, Arg index);
+
+  public void containerLocalSize(Var out, Var cont);
+  
   public void arrayStoreFuture(Var array,
       Var ix, Arg member, Arg writersDecr);
   

@@ -193,8 +193,32 @@ public class ValLoc {
     return ValLoc.build(ComputedValue.structMemberCV(struct, fieldName),
                          elem.asArg(), Closed.MAYBE_NOT, IsAssign.NO);
   }
-  
 
+  public static ValLoc makeContainerSizeCV(Var arr, Arg size, boolean future,
+                                IsAssign isAssign) {
+    assert(Types.isContainer(arr) ||
+           Types.isContainerLocal(arr)) : arr;
+    assert((!future && size.isImmediateInt()) ||
+           (future && Types.isInt(size.type())));
+    Opcode op = Types.isContainer(arr) ? Opcode.CONTAINER_SIZE :
+                                         Opcode.CONTAINER_LOCAL_SIZE;
+    return ValLoc.buildResult(op,
+            arr.asArg().asList(), size, Closed.MAYBE_NOT, isAssign);
+  }
+
+  public static ValLoc makeArrayContainsCV(Var arr, Arg key, Arg out, 
+                        boolean future, IsAssign isAssign) {
+    assert(Types.isArray(arr) ||
+           Types.isArrayLocal(arr)) : arr;
+    assert((!future && Types.isArrayKeyVal(arr, key)) ||
+           (future && Types.isArrayKeyFuture(arr, key)));
+    Opcode op = Types.isArray(arr) ? Opcode.ARR_CONTAINS :
+                               Opcode.ARR_LOCAL_CONTAINS;
+    return ValLoc.buildResult(op,
+          Arrays.asList(arr.asArg(), key),
+          out, Closed.MAYBE_NOT, isAssign);
+  }
+  
   public static ValLoc makeFilename(Arg outFilename, Var inFile) {
     assert(Types.isFile(inFile.type()));
     assert(outFilename.isVar());

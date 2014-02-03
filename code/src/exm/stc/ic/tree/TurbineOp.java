@@ -29,7 +29,6 @@ import exm.stc.ic.opt.valuenumber.ValLoc;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsValCopy;
-import exm.stc.ic.tree.ICInstructions.CommonFunctionCall;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.GenInfo;
@@ -131,6 +130,18 @@ public class TurbineOp extends Instruction {
     case AREF_COPY_OUT_FUTURE:
       gen.arrayRefCopyOutFuture(getOutput(0), getInput(0).getVar(),
                              getInput(1).getVar());
+      break;
+    case ARR_CONTAINS:
+      gen.arrayContains(getOutput(0), getInput(0).getVar(), getInput(1));
+      break;
+    case CONTAINER_SIZE:
+      gen.containerSize(getOutput(0), getInput(0).getVar());
+      break;
+    case ARR_LOCAL_CONTAINS:
+      gen.arrayLocalContains(getOutput(0), getInput(0).getVar(), getInput(1));
+      break;
+    case CONTAINER_LOCAL_SIZE:
+      gen.containerLocalSize(getOutput(0), getInput(0).getVar());
       break;
     case ARR_STORE:
       gen.arrayStore(getOutput(0), getInput(0), getInput(1),
@@ -361,6 +372,32 @@ public class TurbineOp extends Instruction {
       Var indexVar) {
     return new TurbineOp(Opcode.AREF_COPY_OUT_FUTURE, oVar,
                           arrayRefVar.asArg(), indexVar.asArg());
+  }
+  
+  public static Instruction arrayContains(Var out, Var array, Arg ix) {
+    assert(Types.isBoolVal(out));
+    assert(Types.isArray(array));
+    assert(Types.isArrayKeyVal(array, ix));
+    return new TurbineOp(Opcode.ARR_CONTAINS, out, array.asArg(), ix);
+  }
+  
+  public static Instruction containerSize(Var out, Var container) {
+    assert(Types.isIntVal(out));
+    assert(Types.isContainer(container));
+    return new TurbineOp(Opcode.CONTAINER_SIZE, out, container.asArg());
+  }
+  
+  public static Instruction arrayLocalContains(Var out, Var array, Arg ix) {
+    assert(Types.isBoolVal(out));
+    assert(Types.isArrayLocal(array));
+    assert(Types.isArrayKeyVal(array, ix));
+    return new TurbineOp(Opcode.ARR_LOCAL_CONTAINS, out, array.asArg(), ix);
+  }
+  
+  public static Instruction containerLocalSize(Var out, Var container) {
+    assert(Types.isIntVal(out));
+    assert(Types.isContainerLocal(container));
+    return new TurbineOp(Opcode.CONTAINER_LOCAL_SIZE, out, container.asArg());
   }
 
   public static Instruction arrayStore(Var array,
@@ -872,6 +909,10 @@ public class TurbineOp extends Instruction {
     case ARR_COPY_OUT_FUTURE:
     case AREF_COPY_OUT_FUTURE:
     case AREF_COPY_OUT_IMM:
+    case ARR_CONTAINS:
+    case CONTAINER_SIZE:
+    case ARR_LOCAL_CONTAINS:
+    case CONTAINER_LOCAL_SIZE:
       return false;
 
     case GET_FILENAME:
@@ -977,8 +1018,8 @@ public class TurbineOp extends Instruction {
   }
 
   @Override
-  public Instruction.MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-                                         boolean waitForClose) {
+  public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
+      Set<Var> valueAvail, boolean waitForClose) {
     boolean insertRefWaitForClose = waitForClose;
     // Try to take advantage of closed variables 
     switch (op) {
@@ -1020,6 +1061,24 @@ public class TurbineOp extends Instruction {
         return new MakeImmRequest(null, Arrays.asList(arrRef));
       }
       break;
+    }
+    case ARR_CONTAINS: {
+      Var arr = getInput(0).getVar();
+      // check to see if local version of array available
+      // (Already assuming array closed)
+      if (valueAvail.contains(arr)) {
+        return new MakeImmRequest(null, Arrays.asList(arr));
+      }
+      break;  
+    }
+    case CONTAINER_SIZE: {
+      Var cont = getInput(0).getVar();
+      // check to see if local version of container available
+      // (Already assuming array closed)
+      if (valueAvail.contains(cont)) {
+        return new MakeImmRequest(null, Arrays.asList(cont));
+      }
+      break;  
     }
     case STRUCTREF_LOOKUP: {
       Var structRef = getInput(0).getVar();
@@ -1204,6 +1263,16 @@ public class TurbineOp extends Instruction {
       Var newArr = values.get(0).fetched.getVar();
       return new MakeImmChange(
           arrayCopyOutImm(getOutput(0), newArr, getInput(1)));
+    }
+    case ARR_CONTAINS: {
+      Var localArr = values.get(0).fetched.getVar();
+      return new MakeImmChange(
+          arrayLocalContains(getOutput(0), localArr, getInput(1)));
+    }
+    case CONTAINER_SIZE: {
+      Var localCont = values.get(0).fetched.getVar();
+      return new MakeImmChange(
+          containerLocalSize(getOutput(0), localCont));
     }
     case STRUCTREF_LOOKUP: {
       assert(values.size() == 1);
@@ -1602,6 +1671,10 @@ public class TurbineOp extends Instruction {
     case PACK_VALUES:
     case UNPACK_VALUES:
     case UNPACK_ARRAY_TO_FLAT:
+    case ARR_CONTAINS:
+    case CONTAINER_SIZE:
+    case ARR_LOCAL_CONTAINS:
+    case CONTAINER_LOCAL_SIZE:
       return TaskMode.SYNC;
     
     case ARR_COPY_IN_IMM:
@@ -1766,7 +1839,7 @@ public class TurbineOp extends Instruction {
                                          IsAssign.TO_VALUE));
         }
         
-        res.add(CommonFunctionCall.makeContainerSizeCV(arr,
+        res.add(ValLoc.makeContainerSizeCV(arr,
                     Arg.createIntLit(elemCount), false, IsAssign.NO));
         return res;
       }
@@ -1850,6 +1923,11 @@ public class TurbineOp extends Instruction {
       case CHECKPOINT_WRITE_ENABLED:
         return vanillaResult(Closed.YES_NOT_RECURSIVE, IsAssign.NO).asList();
       case UNPACK_ARRAY_TO_FLAT:
+        return vanillaResult(Closed.YES_NOT_RECURSIVE, IsAssign.NO).asList();
+      case ARR_CONTAINS:
+      case CONTAINER_SIZE:
+      case ARR_LOCAL_CONTAINS:
+      case CONTAINER_LOCAL_SIZE:
         return vanillaResult(Closed.YES_NOT_RECURSIVE, IsAssign.NO).asList();
       default:
         return null;
@@ -1946,6 +2024,11 @@ public class TurbineOp extends Instruction {
         return Pair.create(
                   Arrays.asList(getInput(0).getVar()),
                   Var.NONE);
+      }
+      case ARR_CONTAINS:
+      case CONTAINER_SIZE: {
+        // Executes immediately, doesn't need refcount
+        return Pair.create(Var.NONE, Var.NONE);
       }
       case ARR_STORE: {
         Arg mem = getInput(1);

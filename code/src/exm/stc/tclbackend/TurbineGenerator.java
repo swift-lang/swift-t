@@ -1448,7 +1448,6 @@ public class TurbineGenerator implements CompilerBackend {
         varToExpr(arrayVar), varToExpr(indexVar), false);
     pointAdd(getRef);
   }
-  
 
   @Override
   public void arrayRefCopyOutImm(Var oVar, Var arrayVar, Arg arrIx) {
@@ -1476,6 +1475,39 @@ public class TurbineGenerator implements CompilerBackend {
         representationType(oVar.type(), false),
         varToExpr(arrayVar), varToExpr(indexVar), true);
     pointAdd(getRef);
+  }
+
+  @Override
+  public void arrayContains(Var out, Var arr, Arg index) {
+    assert(Types.isBoolVal(out));
+    assert(Types.isArray(arr));
+    assert(Types.isArrayKeyVal(arr, index));
+    pointAdd(new SetVariable(prefixVar(out),
+         Turbine.arrayContains(varToExpr(arr), argToExpr(index))));
+  }
+
+  @Override
+  public void containerSize(Var out, Var cont) {
+    assert(Types.isIntVal(out));
+    assert(Types.isContainer(cont));
+    pointAdd(Turbine.containerSize(prefixVar(out), varToExpr(cont)));
+  }
+
+  @Override
+  public void arrayLocalContains(Var out, Var arr, Arg index) {
+    assert(Types.isBoolVal(out));
+    assert(Types.isArrayLocal(arr));
+    assert(Types.isArrayKeyVal(arr, index));
+    pointAdd(new SetVariable(prefixVar(out), 
+        Turbine.dictExists(varToExpr(arr), argToExpr(index))));
+  }
+
+  @Override
+  public void containerLocalSize(Var out, Var cont) {
+    assert(Types.isIntVal(out));
+    assert(Types.isContainerLocal(cont));
+    pointAdd(new SetVariable(prefixVar(out), 
+             Turbine.dictSize(varToExpr(cont))));
   }
 
   @Override

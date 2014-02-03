@@ -692,6 +692,10 @@ public class Congruences implements AliasFinder {
   public Arg findRetrieveResult(Var v) {
     return byValue.findRetrieveResult(v.asArg());
   }
+  
+  public Set<Var> retrieveResultAvail() {
+    return new RetrieveAvailSet();
+  }
 
   public Arg findValue(Var output) {
     return byValue.findCanonical(output.asArg());
@@ -825,6 +829,28 @@ public class Congruences implements AliasFinder {
     }
   }
 
+  private class RetrieveAvailSet extends AbstractSet<Var> {
+    private RetrieveAvailSet() {
+    }
+  
+    @Override
+    public boolean contains(Object o) {
+      assert(o instanceof Var);
+      Var v = (Var)o;
+      return findRetrieveResult(v) != null;
+    }
+
+    @Override
+    public Iterator<Var> iterator() {
+      throw new STCRuntimeError("iterator() not supported");
+    }
+    
+    @Override
+    public int size() {
+      throw new STCRuntimeError("size() not supported");
+    }
+  }
+
   static class OptUnsafeError extends Exception {
   
     private static final long serialVersionUID = 1L;
@@ -837,4 +863,5 @@ public class Congruences implements AliasFinder {
     }
     
   }
+
 }

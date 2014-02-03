@@ -784,7 +784,8 @@ public class ValueNumber implements OptimizerPass {
     }
     
     // First see if we can replace some futures with values
-    MakeImmRequest req = inst.canMakeImmediate(state.getClosed(stmtIndex), false);
+    MakeImmRequest req = inst.canMakeImmediate(state.getClosed(stmtIndex),
+                               state.retrieveResultAvail(), false);
 
     if (req == null) {
       return false;
