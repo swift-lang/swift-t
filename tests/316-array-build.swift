@@ -6,7 +6,7 @@ import io;
 set f [ swift_filename &<<i>> ]
 exec ./316-array-build.task.sh $f <<n>>
 set L [ glob test-316-*.data ]
-swift_array_build <<o>> $L file
+set <<o>> [ swift_array_build $L file ]
 """
 ];  
 
