@@ -482,7 +482,8 @@ public class STCMiddleEnd {
   public void arrayStoreFuture(Var array, Var ixVar, Arg member) {
     assert(Types.isArray(array.type()));
     assert(Types.isArrayKeyFuture(array, ixVar));
-    assert(Types.isElemType(array, member)) : member + " " + array;
+    assert(Types.isElemValType(array, member)) :
+      member + ":" + member.type() + " " + array;
     currBlock().addInstruction(TurbineOp.arrayStoreFuture(array, ixVar, member));
   }
 
@@ -490,7 +491,7 @@ public class STCMiddleEnd {
                                 Arg ix, Arg member) {
     assert(Types.isArrayRef(array.type()));
     assert(Types.isArrayKeyVal(array, ix));
-    assert(Types.isElemType(array, member)) : member + " " + array;
+    assert(Types.isElemValType(array, member)) : member + " " + array;
     currBlock().addInstruction(TurbineOp.arrayRefStoreImm(outerArray,
                                                  array, ix, member));
   }
@@ -499,7 +500,7 @@ public class STCMiddleEnd {
                                    Var ixVar, Arg member) {
     assert(Types.isArrayRef(array.type()));
     assert(Types.isArrayKeyFuture(array, ixVar));
-    assert(Types.isElemType(array, member)) : member + " " + array;
+    assert(Types.isElemValType(array, member)) : member + " " + array;
     currBlock().addInstruction(
             TurbineOp.arrayRefStoreFuture(outerArray, array, ixVar, member));
   }
