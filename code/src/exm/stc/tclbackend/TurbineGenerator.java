@@ -1998,7 +1998,7 @@ public class TurbineGenerator implements CompilerBackend {
             depths[i] = 0;
             baseType = waitVarType;
           }
-          isFile[i] = Types.isFile(baseType);
+          isFile[i] = Types.isFileRef(baseType);
         }
 
         Sequence rule = Turbine.deepRule(uniqueName, waitFor, depths,
