@@ -32,6 +32,7 @@
  [ "set <<o>> [ adlb::blob_to_string <<b>> ]" ];
 @pure
 (blob o) blob_from_floats(float f[]) "turbine" "0.0.2" "blob_from_floats";
+//  [ "set <<o>> [ blob_from_floats_impl <<f>> ]" ];
 @pure
 (blob o) blob_from_ints(int i[]) "turbine" "0.0.2" "blob_from_ints";
 @pure

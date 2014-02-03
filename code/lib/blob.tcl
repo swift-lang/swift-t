@@ -140,19 +140,18 @@ namespace eval turbine {
 
       set N  [ adlb::container_size $container ]
       c::log "blob_from_floats_body start"
-      complete_container $container \
+      rule $container \
           "blob_from_floats_store $result $container $N"
   }
   # This is called when every entry in container is set
   proc blob_from_floats_store { result container N } {
+    set kv_dict [ adlb::retrieve_decr $container 1 container ] 
     set A [ list ]
     for { set i 0 } { $i < $N } { incr i } {
-      set td [ container_lookup $container $i ]
-      set v  [ retrieve_float $td ]
+      set v [ dict get $kv_dict $i ]
       lappend A $v
     }
     adlb::store_blob_floats $result $A
-    read_refcount_decr $container
   }
 
   # Container must be indexed from 0,N-1
