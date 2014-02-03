@@ -792,6 +792,8 @@ namespace eval turbine {
           if {$is_file} {
             set td [ get_file_status $member ]
           } else {
+            # TODO: need to change to support new container representation
+            # TODO: also new arg to pass in info about whether ref?
             set td $member
           }
           if { [ adlb::exists $td ] } {
