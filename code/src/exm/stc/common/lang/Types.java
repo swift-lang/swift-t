@@ -2089,6 +2089,26 @@ public class Types {
     }
   }
   
+  public static Type refResultType(Typed t) {
+    if (isScalarFuture(t) || isScalarUpdateable(t) ||
+            isFile(t) || isRef(t) || isContainer(t))  {
+      return new RefType(t.type());
+    } else if (isScalarValue(t)) {
+      return new ScalarFutureType(t.type().primType());
+    } else if (isFileVal(t)) {
+      return F_FILE;
+    } else if (isArrayLocal(t)) {
+      ArrayType at = (ArrayType)t.type().getImplType();
+      return ArrayType.sharedArray(at.keyType(), at.memberType());
+    } else if (isBagLocal(t)) {
+      BagType bt = (BagType)t.type().getImplType();
+      return BagType.sharedBag(bt.memberType());
+    } else {
+      throw new STCRuntimeError(t.type() + " can't be dereferenced");
+    }
+  }
+  
+  
   /**
    * Work out type of container variable if we extract all
    * values into local variables

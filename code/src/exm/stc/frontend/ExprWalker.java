@@ -455,7 +455,8 @@ public class ExprWalker {
   public Var assignToVar(Context bodyContext, Arg value)
       throws UserException, UndefinedTypeException {
     assert(value.isConstant() || value.getVar().storage() == Alloc.LOCAL);
-    Var result = varCreator.createTmp(bodyContext, value.futureType());
+    Type resultType = Types.refResultType(value.type());
+    Var result = varCreator.createTmp(bodyContext, resultType);
     assign(result, value);
     return result;
   }

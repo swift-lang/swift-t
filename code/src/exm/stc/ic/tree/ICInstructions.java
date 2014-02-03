@@ -27,8 +27,6 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import sun.java2d.pipe.SpanClipRenderer;
-
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
@@ -1142,6 +1140,13 @@ public class ICInstructions {
         }
         return null;
       } else if (isImpl(SpecialFunction.CONTAINS)) {
+        if (waitForClose || allInputsClosed(closedVars)) {
+          // Need input array to be closed, and need value for index
+          return new MakeImmRequest(getOutput(0).asList(),
+                                    getInput(1).getVar().asList());
+        }
+        return null;
+      } else if (isImpl(SpecialFunction.RANGE, SpecialFunction.RANGE_STEP)) {
         if (waitForClose || allInputsClosed(closedVars)) {
           // Need input array to be closed, and need value for index
           return new MakeImmRequest(getOutput(0).asList(),
