@@ -2018,7 +2018,7 @@ public class TurbineGenerator implements CompilerBackend {
       if (useDeepWait) {
         // Nesting depth of arrays (0 == not array)
         int depths[] = new int[waitVars.size()];
-        boolean isFile[] = new boolean[waitVars.size()];
+        TypeName baseTypes[] = new TypeName[waitVars.size()];
         for (int i = 0; i < waitVars.size(); i++) {
           Type waitVarType = waitVars.get(i).type();
           Type baseType;
@@ -2030,11 +2030,11 @@ public class TurbineGenerator implements CompilerBackend {
             depths[i] = 0;
             baseType = waitVarType;
           }
-          isFile[i] = Types.isFileRef(baseType);
+          baseTypes[i] = representationType(baseType, false);
         }
 
         Sequence rule = Turbine.deepRule(uniqueName, waitFor, depths,
-              isFile, action, mode, execContextStack.peek(), ruleProps);
+              baseTypes, action, mode, execContextStack.peek(), ruleProps);
         point().append(rule);
 
       } else {

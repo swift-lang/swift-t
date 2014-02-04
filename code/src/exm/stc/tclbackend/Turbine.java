@@ -837,21 +837,21 @@ class Turbine {
   }
 
   public static Sequence deepRule(String symbol,
-      List<? extends Expression> inputs, int[] depths, boolean[] isFile,
+      List<? extends Expression> inputs, int[] depths, TypeName[] baseTypes,
       List<Expression> action, TaskMode mode, ExecContext execCx,
       RuleProps props) {
     assert(inputs.size() == depths.length);
-    assert(inputs.size() == isFile.length);
+    assert(inputs.size() == baseTypes.length);
     
     List<Expression> depthExprs = new ArrayList<Expression>(depths.length);
-    List<Expression> isFileExprs = new ArrayList<Expression>(isFile.length);
+    List<Expression> isFileExprs = new ArrayList<Expression>(baseTypes.length);
     
     for (int depth: depths) {
       depthExprs.add(new LiteralInt(depth));
     }
     
-    for (boolean b: isFile) {
-      isFileExprs.add(LiteralInt.boolValue(b));
+    for (TypeName t: baseTypes) {
+      isFileExprs.add(t);
     }
     
     Sequence res = new Sequence();

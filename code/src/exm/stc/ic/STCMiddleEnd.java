@@ -1111,7 +1111,7 @@ public class STCMiddleEnd {
    
     Type memberValT = Types.derefResultType(baseType);
 
-    System.err.println(c.baseType + " => " + memberValT);
+    //System.err.println(c.baseType + " => " + memberValT); 
     
     assert(memberValT.assignableTo(Types.containerElemType(flatLocalArray)))
       : memberValT + " " + flatLocalArray;
