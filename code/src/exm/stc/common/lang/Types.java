@@ -2229,9 +2229,9 @@ public class Types {
      * @param type
      */
     public NestedContainerInfo(Typed type) {
-      assert(isContainer(type));
+      assert(isContainer(type) || isContainerRef(type));
       int depth = 0;
-      while (isContainer(type)) {
+      while (isContainer(type) || isContainerRef(type)) {
         type = containerElemType(type);
         depth++;
       }
