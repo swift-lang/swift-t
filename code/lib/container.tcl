@@ -713,30 +713,36 @@ namespace eval turbine {
     # inputs: list of tds to wait on
     # nest_levels: list corresponding to inputs with nesting level
     #             of containers
-    # is_file: list of booleans: whether file
+    # base_types: type of data in innermost of containers
     # action: command to execute when closed
     # args: additional keyword args (same as rule)
-    proc deeprule { inputs nest_levels is_file action args } {
+    proc deeprule { inputs nest_levels base_types action args } {
       # signals: list of variables that must be closed to signal deep closing
       # allocated_signals: signal variables that were allocated
       set signals [ list ]
       set allocated_signals [ list ]
       check { [ llength $inputs ] == [ llength $nest_levels ] } \
         "deeprule: list lengths do not agree: inputs and nest_levels"
-      check { [ llength $inputs ] == [ llength $is_file ] } \
-        "deeprule: list lengths do not agree: inputs and is_file"
+      check { [ llength $inputs ] == [ llength $base_types ] } \
+        "deeprule: list lengths do not agree: inputs and base_types"
       set i 0
       foreach input $inputs {
-        set isf [ lindex $is_file $i ]
+        set base_type [ lindex $base_types $i ]
         set nest_level [ lindex $nest_levels $i ]
         check { $nest_level >= 0 } \
             "deeprule: negative nest_level: $nest_level"
         if { $nest_level == 0 } {
           # Just need to wait on right thing
-          if { $isf } {
-            lappend signals [ get_file_status $input ]
-          } else {
-            lappend signals $input
+          switch $base_type {
+            case file_ref {
+              lappend signals [ get_file_status $input ]
+            }
+            case ref {
+              lappend signals $input
+            }
+            default {
+              # Assume don't need to wait
+            }
           }
         } else {
           # Wait for deep close of container
@@ -745,7 +751,7 @@ namespace eval turbine {
           lappend signals $signal
           # make sure cleaned up later
           lappend allocated_signals $signal
-          container_deep_wait $input $nest_level $isf $signal
+          container_deep_wait $input $nest_level $base_type $signal
         }
         incr i
       }
@@ -764,21 +770,32 @@ namespace eval turbine {
     # Check for container contents being closed and once true,
     # set signal
     # Called after container itself is closed
-    proc container_deep_wait { container nest_level is_file signal } {
+    proc container_deep_wait { container nest_level base_type signal } {
 
         debug "container_deep_wait: $container $nest_level"
         if { $nest_level == 1 } {
-            # First wait for container to be closed
-            rule $container [ list container_deep_wait_continue $container \
-                                  0 -1 $nest_level $is_file $signal ]
+            switch $base_type {
+              ref -
+              file_ref {
+                # Need to 
+                set action [ list container_deep_wait_continue $container \
+                                      0 -1 $nest_level $base_type $signal ]
+              }
+              default {
+                set action "store_void $signal"
+              }
+            }
+            
         } else {
-            rule $container [ list container_rec_deep_wait $container \
-                                  $nest_level $is_file $signal ]
+            set action [ list container_rec_deep_wait $container \
+                                  $nest_level $base_type $signal ]
         }
+        # Execute action after container is closed
+        rule $container $action
     }
 
     proc container_deep_wait_continue { container progress n
-                                        nest_level is_file signal } {
+                                        nest_level base_type signal } {
       set MAX_CHUNK_SIZE 64
       # TODO: could divide and conquer instead of doing linear search
       if { $n == -1 } {
@@ -789,19 +806,23 @@ namespace eval turbine {
         set members [ adlb::enumerate $container members \
                                       $chunk_size $progress ]
         foreach member $members {
-          if {$is_file} {
-            set td [ get_file_status $member ]
-          } else {
-            # TODO: need to change to support new container representation
-            # TODO: also new arg to pass in info about whether ref?
-            set td $member
+          switch $base_type {
+            file_ref {
+              set td [ get_file_status $member ]
+            }
+            ref {
+              set td $member
+            }
+            default {
+              error "Don't know how to wait on type: $base_type"
+            }
           }
           if { [ adlb::exists $td ] } {
             incr progress
           } else {
             # Suspend execution until next item closed
             rule $td [ list container_deep_wait_continue $container \
-                          $progress $n $nest_level $is_file $signal ]
+                          $progress $n $nest_level $base_type $signal ]
             return
           }
         }
@@ -811,7 +832,7 @@ namespace eval turbine {
       store_void $signal
     }
 
-    proc container_rec_deep_wait { container nest_level is_file signal } {
+    proc container_rec_deep_wait { container nest_level base_type signal } {
       set inner_signals [ list ]
 
       set members [ adlb::enumerate $container members all 0 ]
@@ -822,13 +843,13 @@ namespace eval turbine {
       } elseif { [ llength $members ] == 1 } {
         # skip allocating new signal
         set inner [ lindex $members 0 ]
-        container_deep_wait $inner [ expr {$nest_level - 1} ] $is_file \
+        container_deep_wait $inner [ expr {$nest_level - 1} ] $base_type \
                             $signal
       } else {
         foreach inner $members {
           set inner_signal [ allocate void ]
           lappend inner_signals $inner_signal
-          container_deep_wait $inner [ expr {$nest_level - 1} ] $is_file \
+          container_deep_wait $inner [ expr {$nest_level - 1} ] $base_type \
                             $inner_signal
         }
         rule $inner_signals \
