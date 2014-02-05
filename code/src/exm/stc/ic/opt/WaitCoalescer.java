@@ -388,6 +388,9 @@ public class WaitCoalescer implements OptimizerPass {
       if (!location1.equals(location2)) {
         return false;
       }
+    } else if (location1 != null || location2 != null) {
+      // If only one location present
+      return false;
     }
     
     if (par1 != null || par2 != null) {
