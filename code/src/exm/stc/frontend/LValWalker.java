@@ -648,7 +648,7 @@ public class LValWalker {
                                                 "bag-load-append");
       backend.startWaitStatement(waitName, VarRepr.backendVars(elem),
               WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
-      elemVal = varCreator.createValueOfVar(context, elem);
+      elemVal = exprWalker.retrieveToVar(context, elem);
     } else {
       elemVal = elem;
     }
