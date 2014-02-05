@@ -46,7 +46,7 @@ namespace eval turbine {
         log "swift_array_build: elems: $n var_type: $var_type"
 
         if [ string equal $var_type "file" ] {
-            set L [ list ] 
+            set result [ dict create ] 
             # Mass create filename tds.  Requires 2 initial read refcounts
             if { $n > 0 } {
               set filename_tds [ adlb::multicreate {*}[ lrepeat \
@@ -61,7 +61,7 @@ namespace eval turbine {
                 set filename_td [ lindex $filename_tds $i ]
                 store_string $filename_td $elem
                 turbine::allocate_file2 td $filename_td 1 0
-                lappend L $td
+                dict append result $i $td
             }
         } else { 
             set type "ref"
@@ -71,13 +71,15 @@ namespace eval turbine {
               # Avoid lrepeat not support 0 repeats in tcl < 8.6
               set L [ list ]
             }
+            set result [ dict create ]
             for { set i 0 } { $i < $n } { incr i } { 
                 set elem [ lindex $elems $i ] 
                 set td [ lindex $L $i ]
                 adlb::store $td $var_type $elem
+                dict append result $i $td
             }            
         }
-        return $L
+        return $result
     }
 
     # build array by inserting items into a container starting at 0
