@@ -1146,13 +1146,6 @@ public class ICInstructions {
                                     getInput(1).getVar().asList());
         }
         return null;
-      } else if (isImpl(SpecialFunction.RANGE, SpecialFunction.RANGE_STEP)) {
-        if (waitForClose || allInputsClosed(closedVars)) {
-          // Need input array to be closed, and need value for index
-          return new MakeImmRequest(getOutput(0).asList(),
-                                    getInput(1).getVar().asList());
-        }
-        return null;
       }
       
       // By default, need all arguments to be closed
@@ -1238,6 +1231,7 @@ public class ICInstructions {
         Arg key = Fetched.findFetched(values, keyFuture);
         return new MakeImmChange(TurbineOp.arrayContains(newOut, arr, key));
       }
+    
       
       // Discard non-future inputs.  These are things like priorities or
       // targets which do not need to be retained for the local version
