@@ -292,7 +292,7 @@ public class ForeachLoop {
                               + "loop over " + arrayType.typeName());
       }
       keyType = Types.arrayKeyType(arrayType);
-      Type keyValType = Types.derefResultType(keyType);
+      Type keyValType = Types.retrievedType(keyType);
 
       Var countVar = createCountVar(context);
       loopCountVal = context.createLocalValueVariable(keyValType, countVar);
@@ -313,7 +313,7 @@ public class ForeachLoop {
     if (Types.isRef(memberValRepr)) {
       memberVal = null;
     } else {
-      Type memberValType = Types.derefResultType(memberValRepr);
+      Type memberValType = Types.retrievedType(memberValRepr);
       memberVal = loopBodyContext.createLocalValueVariable(
                                      memberValType, memberVar);
     }

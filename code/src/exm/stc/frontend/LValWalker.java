@@ -352,7 +352,7 @@ public class LValWalker {
     boolean rValDeref = !rValVar.type().assignableTo(elemStorageType);
     if (rValDeref) {
       assert(rValVar.type().assignableTo(
-                             Types.derefResultType(elemStorageType)));
+                             Types.retrievedType(elemStorageType)));
     }
 
     // We know what variable the result will go into now
@@ -412,7 +412,7 @@ public class LValWalker {
 
     Var derefArr; // Plain array (not reference);
     if (Types.isArrayRef(arr)) {
-      derefArr = varCreator.createTmpAlias(context, Types.derefResultType(arr));
+      derefArr = varCreator.createTmpAlias(context, Types.retrievedType(arr));
       exprWalker.retrieveRef(VarRepr.backendVar(derefArr),
                              VarRepr.backendVar(arr));
     } else {
@@ -623,7 +623,7 @@ public class LValWalker {
       if (bagRef) {
         // Dereference and use in place
         Var derefedBag = varCreator.createTmpAlias(context,
-                               Types.derefResultType(bag));
+                               Types.retrievedType(bag));
         exprWalker.retrieveRef(VarRepr.backendVar(derefedBag),
                                VarRepr.backendVar(bag));
         bag = derefedBag;
@@ -642,15 +642,15 @@ public class LValWalker {
     
     Var elemVal;
     // May need to add another wait to retrieve value
-    boolean openWait2 = VarRepr.storeRefInContainer(elem);
+    boolean openWait2 = !VarRepr.storeRefInContainer(elem);
     if (openWait2) {
-      elemVal = elem;
-    } else {
       String waitName = context.getFunctionContext().constructName(
                                                 "bag-load-append");
       backend.startWaitStatement(waitName, VarRepr.backendVars(elem),
               WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
       elemVal = varCreator.createValueOfVar(context, elem);
+    } else {
+      elemVal = elem;
     }
     
     // Do the actual insert

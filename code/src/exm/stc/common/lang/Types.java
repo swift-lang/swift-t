@@ -1822,7 +1822,7 @@ public class Types {
   }
   
   public static Type containerElemValType(Typed t) {
-    return derefResultType(containerElemType(t));
+    return retrievedType(containerElemType(t));
   }
 
   public static boolean isElemType(Typed cont, Typed elem) {
@@ -1870,7 +1870,7 @@ public class Types {
     // Interpret arg type as a value
     Type actual = key.typeInternal(false);
     // Get the value type of the array key
-    Type expected = derefResultType(arrayKeyType(arr));
+    Type expected = retrievedType(arrayKeyType(arr));
     return actual.assignableTo(expected);
   }
   
@@ -2071,7 +2071,27 @@ public class Types {
               future.type().primType() == up.type().primType();
   }
   
-  public static Type derefResultType(Typed t) {
+  /**
+   * Check if we can dereference the type
+   * @param t
+   * @return
+   */
+  public static boolean canRetrieve(Type t) {
+    if (isContainer(t) || isRef(t) || isPrimFuture(t)) {
+      return true;
+    } else if (isPrimValue(t) || isContainerLocal(t)) {
+      return false;
+    } else {
+      throw new STCRuntimeError("Not sure if can deref " + t);
+    }
+  }
+
+  /**
+   * The type that would result from a retrieve operation
+   * @param t
+   * @return
+   */
+  public static Type retrievedType(Typed t) {
     if (isScalarFuture(t) || isScalarUpdateable(t))  {
       return new ScalarValueType(t.type().primType());
     } else if (isFile(t)) {
@@ -2089,7 +2109,12 @@ public class Types {
     }
   }
   
-  public static Type refResultType(Typed t) {
+  /**
+   * Type that would result from storing this type
+   * @param t
+   * @return
+   */
+  public static Type storeResultType(Typed t) {
     if (isScalarFuture(t) || isScalarUpdateable(t) ||
             isFile(t) || isRef(t) || isContainer(t))  {
       return new RefType(t.type());
@@ -2116,17 +2141,25 @@ public class Types {
    * @return
    */
   public static Type unpackedContainerType(Typed t) {
-    assert(Types.isContainer(t));
+    assert(Types.isContainer(t) || Types.isContainerRef(t) ||
+           Types.isContainerLocal(t));
     Type elemType = Types.containerElemType(t);
+    
+    // Strip off references
+    while (Types.isRef(elemType)) {
+      elemType = Types.retrievedType(elemType);
+    }
+    
     Type elemValType;
-    if (Types.isContainer(elemType)
-              || Types.isContainerLocal(elemType)) {
+    if (Types.isContainer(elemType) ||
+        Types.isContainerLocal(elemType)) {
+      // Recursively unpack
       elemValType = unpackedContainerType(elemType);
     } else {
-      while (Types.isRef(elemType)) {
-        elemType = Types.derefResultType(elemType);
+      elemValType = elemType;
+      while (Types.canRetrieve(elemValType)) {
+        elemValType = retrievedType(elemValType );
       }
-      elemValType = Types.derefResultType(elemType);
     }
     if (Types.isArray(t) || Types.isArrayLocal(t)) {
       ArrayType at = (ArrayType)t.type().getImplType();

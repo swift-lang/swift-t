@@ -222,7 +222,7 @@ public class VarCreator {
    */
   public Var createValueOfVar(Context context, Var future,
         boolean initialise) throws UserException {
-    Type valType = Types.derefResultType(future.type());
+    Type valType = Types.retrievedType(future.type());
     assert(valType != null) : future.type() + " could not be derefed";
     Var val = createValueVar(context, valType, future, initialise);
     return val;

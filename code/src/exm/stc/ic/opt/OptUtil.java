@@ -122,7 +122,7 @@ public class OptUtil {
   public static void replaceInstOutput(Block srcBlock,
           Block targetBlock, List<Instruction> instBuffer, Var newOut, Var oldOut) {
     boolean isDerefResult = 
-        Types.derefResultType(oldOut).assignableTo(newOut.type());
+        Types.retrievedType(oldOut).assignableTo(newOut.type());
     if (isDerefResult) {
       Var oldOutReplacement;
       if (oldOut.storage() == Alloc.ALIAS) {
@@ -321,7 +321,7 @@ public class OptUtil {
       storage = Alloc.LOCAL;
     }
     
-    Type resType = Types.derefResultType(toDeref);
+    Type resType = Types.retrievedType(toDeref);
     String name = block.uniqueVarName(
         Var.joinPrefix(Var.VALUEOF_VAR_PREFIX, toDeref.name()));
     Var res = new Var(resType, name,

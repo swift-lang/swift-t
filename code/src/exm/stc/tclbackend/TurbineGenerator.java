@@ -708,7 +708,7 @@ public class TurbineGenerator implements CompilerBackend {
   public void assignScalar(Var dst, Arg src) {
     assert(Types.isScalarFuture(dst));
     assert(Types.isScalarValue(src));
-    assert(src.type().assignableTo(Types.derefResultType(dst)));
+    assert(src.type().assignableTo(Types.retrievedType(dst)));
     
     PrimType primType = src.type().getImplType().primType();
     switch (primType) {
@@ -740,7 +740,7 @@ public class TurbineGenerator implements CompilerBackend {
   public void retrieveScalar(Var dst, Var src, Arg decr) {
     assert(Types.isScalarValue(dst));
     assert(Types.isScalarFuture(src.type()));
-    assert(Types.derefResultType(src).assignableTo(dst.type()));
+    assert(Types.retrievedType(src).assignableTo(dst.type()));
     assert(decr.isImmediateInt());
     
     PrimType primType = dst.type().getImplType().primType();
@@ -3115,10 +3115,10 @@ public class TurbineGenerator implements CompilerBackend {
     
     // Get type inside reference
     if (Types.isRef(baseType)) {
-      baseType = Types.derefResultType(baseType);
+      baseType = Types.retrievedType(baseType);
     }
    
-    Type memberValT = Types.derefResultType(baseType);    
+    Type memberValT = Types.retrievedType(baseType);    
     
     assert(memberValT.assignableTo(Types.containerElemType(flatLocalArray)))
       : memberValT + " " + flatLocalArray;

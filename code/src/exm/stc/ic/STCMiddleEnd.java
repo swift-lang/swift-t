@@ -161,7 +161,7 @@ public class STCMiddleEnd {
 
   public void endFunction() {
     assert(currFunction != null);
-    assert(blockStack.size() == 1);
+    assert(blockStack.size() == 1) : blockStack.size();
 
     currFunction = null;
     blockStack.pop();
@@ -655,14 +655,14 @@ public class STCMiddleEnd {
   public void retrieveScalar(Var dst, Var src) {
     assert(Types.isScalarValue(dst));
     assert(Types.isScalarFuture(src.type()));
-    assert(Types.derefResultType(src).assignableTo(dst.type()));
+    assert(Types.retrievedType(src).assignableTo(dst.type()));
     currBlock().addInstruction(TurbineOp.retrieveScalar(dst, src));
   }
   
   public void assignScalar(Var dst, Arg src) {
     assert(Types.isScalarFuture(dst)) : dst;
     assert(Types.isScalarValue(src));
-    assert(src.type().assignableTo(Types.derefResultType(dst)));
+    assert(src.type().assignableTo(Types.retrievedType(dst)));
     
     currBlock().addInstruction(TurbineOp.assignScalar(dst, src));
   }
@@ -740,7 +740,7 @@ public class STCMiddleEnd {
     Block waitBlock = wait.getBlock();
 
     // Retrieve src file info
-    Var srcVal = waitBlock.declareUnmapped(Types.derefResultType(src),
+    Var srcVal = waitBlock.declareUnmapped(Types.retrievedType(src),
         OptUtil.optVPrefix(waitBlock, src), Alloc.LOCAL,
         DefType.LOCAL_COMPILER, VarProvenance.valueOf(src));
     waitBlock.addInstruction(TurbineOp.retrieveFile(srcVal, src));
@@ -749,7 +749,7 @@ public class STCMiddleEnd {
       Var targetFilenameVal = waitBlock.declareUnmapped(Types.V_STRING,
           OptUtil.optVPrefix(waitBlock, targetFilename), Alloc.LOCAL,
           DefType.LOCAL_COMPILER, VarProvenance.valueOf(targetFilename));
-      Var targetVal = waitBlock.declareUnmapped(Types.derefResultType(target),
+      Var targetVal = waitBlock.declareUnmapped(Types.retrievedType(target),
           OptUtil.optVPrefix(waitBlock, target), Alloc.LOCAL,
           DefType.LOCAL_COMPILER, VarProvenance.valueOf(target));
       
@@ -1106,10 +1106,10 @@ public class STCMiddleEnd {
     
     // Get type inside reference
     if (Types.isRef(baseType)) {
-      baseType = Types.derefResultType(baseType);
+      baseType = Types.retrievedType(baseType);
     }
    
-    Type memberValT = Types.derefResultType(baseType);
+    Type memberValT = Types.retrievedType(baseType);
 
     //System.err.println(c.baseType + " => " + memberValT); 
     

@@ -72,7 +72,7 @@ import exm.stc.ic.STCMiddleEnd;
 /**
  * This module contains logic to walk individual expression in Swift and generate code to evaluate them
  */
-public class ExprWalker {
+public class  ExprWalker {
 
   private final VarCreator varCreator;
   private final WrapperGen wrappers;
@@ -375,7 +375,7 @@ public class ExprWalker {
   }
 
   public void assign(Var dst, Arg src) {
-    assert(src.type().assignableTo(Types.derefResultType(dst.type()))) :
+    assert(src.type().assignableTo(Types.retrievedType(dst.type()))) :
                       dst + " = " + src;
     Var backendDst = VarRepr.backendVar(dst);
     Arg backendSrc = VarRepr.backendArg(src);
@@ -430,12 +430,13 @@ public class ExprWalker {
           throws UserException {
     assert(Types.isContainer(c));
     Type unpackedT = Types.unpackedContainerType(c.type());
+    //System.err.println("UNPACKED " + c.type() + " => " + unpackedT);
     Var val = varCreator.createValueVar(context, unpackedT, c, true);
     backend.retrieveRecursive(VarRepr.backendVar(val), VarRepr.backendVar(c));
     // TODO: recursively free e.g. blobs in list
     return val;
   }
-  
+
   public void retrieveRef(Var dst, Var src) {
     backend.retrieveRef(VarRepr.backendVar(dst), VarRepr.backendVar(src));
   }
@@ -455,7 +456,7 @@ public class ExprWalker {
   public Var assignToVar(Context bodyContext, Arg value)
       throws UserException, UndefinedTypeException {
     assert(value.isConstant() || value.getVar().storage() == Alloc.LOCAL);
-    Type resultType = Types.refResultType(value.type());
+    Type resultType = Types.storeResultType(value.type());
     Var result = varCreator.createTmp(bodyContext, resultType);
     assign(result, value);
     return result;

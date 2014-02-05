@@ -69,7 +69,7 @@ public class WrapUtil {
     if (recursive && Types.isContainer(var)) {
       valueT = Types.unpackedContainerType(var);
     } else {
-      valueT = Types.derefResultType(var);
+      valueT = Types.retrievedType(var);
     }
     
     if (Types.isPrimUpdateable(var)) {
@@ -316,7 +316,7 @@ public class WrapUtil {
    */
   public static Var declareLocalOutputVar(Block block, Var var,
           String valName) {
-    return block.declareUnmapped(Types.derefResultType(var.type()),
+    return block.declareUnmapped(Types.retrievedType(var.type()),
         valName, Alloc.LOCAL, DefType.LOCAL_COMPILER,
         VarProvenance.valueOf(var));
   }

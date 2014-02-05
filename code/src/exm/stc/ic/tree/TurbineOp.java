@@ -582,7 +582,7 @@ public class TurbineOp extends Instruction {
    * @return
    */
   public static Instruction storeAny(Var dst, Arg src) {
-    assert(src.type().assignableTo(Types.derefResultType(dst)));
+    assert(src.type().assignableTo(Types.retrievedType(dst)));
     if (Types.isRef(dst)) {
       assert(src.isVar());
       return storeRef(dst, src.getVar());
@@ -608,7 +608,7 @@ public class TurbineOp extends Instruction {
    */
   public static Instruction storePrim(Var dst, Arg src) {
     assert(Types.isPrimFuture(dst));
-    assert(src.type().assignableTo(Types.derefResultType(dst)));
+    assert(src.type().assignableTo(Types.retrievedType(dst)));
     if (Types.isScalarFuture(dst)) {
       return assignScalar(dst, src);
     } else if (Types.isFile(dst)) {

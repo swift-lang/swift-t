@@ -2034,7 +2034,7 @@ public class ASTWalker {
     } else if (Types.isArray(in.type())) {
       // Unpack to flat representation
       NestedContainerInfo ci = new NestedContainerInfo(in.type());
-      Type memberValType = Types.derefResultType(ci.baseType);
+      Type memberValType = Types.retrievedType(ci.baseType);
       Type localInType =  new ArrayType(true, Types.F_INT, memberValType);
       localInput = varCreator.createValueVar(context, localInType, in, true);
       backend.unpackArrayToFlat(VarRepr.backendVar(localInput),
@@ -2078,7 +2078,7 @@ public class ASTWalker {
             NestedContainerInfo info = new NestedContainerInfo(baseType);
             baseType = info.baseType;
           } else if (Types.isRef(baseType)) {
-            baseType = Types.derefResultType(baseType);
+            baseType = Types.retrievedType(baseType);
           } else {
             break;
           }
@@ -2113,7 +2113,7 @@ public class ASTWalker {
         if (Types.isRef(oldArg)) {
           // Replace old arg with dereferenced version
           Var derefedArg = varCreator.createTmpAlias(context,
-                              Types.derefResultType(oldArg));
+                              Types.retrievedType(oldArg));
           exprWalker.retrieveRef(derefedArg, oldArg);
           args.set(i, derefedArg);
         }

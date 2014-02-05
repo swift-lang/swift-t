@@ -86,7 +86,7 @@ public class FunctionSignature implements OptimizerPass {
     for (WaitVar input: fn.blockingInputs()) {
       // See if we can switch to value version
       if (Types.isPrimFuture(input.var.type())) {
-        Type valueT = Types.derefResultType(input.var.type());
+        Type valueT = Types.retrievedType(input.var.type());
         if (Semantics.canPassToChildTask(valueT)) {
           switchVars.add(input.var);
         }
@@ -183,7 +183,7 @@ public class FunctionSignature implements OptimizerPass {
       // a value var that will have unique name in new context
       String valVarName = OptUtil.optVPrefix(fn.mainBlock(), toSwitch);
       Var valVar = WrapUtil.createValueVar(valVarName,
-          Types.derefResultType(toSwitch.type()), toSwitch);
+          Types.retrievedType(toSwitch.type()), toSwitch);
       
       futValPairs.add(Pair.create(toSwitch, valVar));
     }

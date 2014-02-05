@@ -1271,7 +1271,7 @@ public class ICInstructions {
      * @param newOut
      */
     private void checkSwappedOutput(Var oldOut, Var newOut) {
-      assert(Types.derefResultType(oldOut.type()).equals(
+      assert(Types.retrievedType(oldOut.type()).equals(
              newOut.type()));
     }
 
@@ -2115,7 +2115,7 @@ public class ICInstructions {
         List<Arg> newInArgs = Fetched.getFetched(newIn);
         if (output != null) {
           assert(newOut.size() == 1);
-          assert(Types.derefResultType(output.type()).equals(
+          assert(Types.retrievedType(output.type()).equals(
                  newOut.get(0).fetched.type()));
           return new MakeImmChange(
               Builtin.createLocal(subop, newOut.get(0).fetched, newInArgs));
