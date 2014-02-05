@@ -2114,8 +2114,14 @@ public class TurbineOp extends Instruction {
         return Pair.create(readVars,
                 Arrays.asList(outerArr));
       }
-      case BAG_INSERT:
-        return Pair.create(getInput(0).getVar().asList(), Var.NONE);
+      case BAG_INSERT: {
+        Arg mem = getInput(0);
+        List<Var> readers = Var.NONE;
+        if (mem.isVar() && RefCounting.hasReadRefCount(mem.getVar())) {
+          readers = mem.getVar().asList();
+        }
+        return Pair.create(readers, Var.NONE);
+      }
       case STRUCT_INIT_FIELD:
         // Do nothing: reference count tracker can track variables
         // across struct boundaries

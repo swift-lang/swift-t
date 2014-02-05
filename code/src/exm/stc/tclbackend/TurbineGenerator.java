@@ -952,9 +952,17 @@ public class TurbineGenerator implements CompilerBackend {
       }
       
       curr = Types.containerElemType(curr);
-    } while ((Types.isContainer(curr) || Types.isContainerLocal(curr)) ||
-             (followRefs && Types.isRef(curr)));
+      if (Types.isContainerRef(curr)) {
+        // Strip off reference
+        curr = Types.retrievedType(curr);
+      }
+    } while ((Types.isContainer(curr) ||
+              Types.isContainerLocal(curr)));
     
+    while (followRefs && Types.isRef(curr)) {
+      curr = Types.retrievedType(curr);
+    }
+
     if (includeBaseType) {
       typeList.add(reprTypeHelper(valueType, curr));
     }
