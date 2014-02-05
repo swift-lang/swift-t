@@ -123,7 +123,7 @@ namespace eval turbine {
       if { ! [ file exists $fname ] } {
         error "input_file: file $fname does not exist"
       }
-      return [ create_local_file_ref $fname ]
+      return [ create_local_file_ref $fname 100 ]
     }
 
     proc input_url { out filepath } {
@@ -149,12 +149,6 @@ namespace eval turbine {
     proc input_url_local { url } {
       # Create local file ref with extra refcount so that it is never deleted
       return [ create_local_file_ref $fname 100 ]
-    }
-
-    # fname: filename as tcl string
-    # return: local file handle
-    proc input_url_local { fname } {
-      return [ create_local_file_ref $fname ]
     }
 
     # initialise an unmapped file to a temporary location
@@ -406,21 +400,26 @@ namespace eval turbine {
             [ list file_lines_body $result $src ]
     }
     proc file_lines_body { result input } {
-	set input_name [ retrieve_decr_string [ get_file_path $input ] ]
-        read_refcount_decr [ get_file_status $input ]
+        set input_val [ get_file $input 1 ]
+        set lines_val [ file_lines_impl $input_val ]
+        array_kv_build $result $lines_val 1 integer string
+    }
+
+    # input_file: local file representation
+    proc file_lines_impl { input_file } {
+        set input_name [ local_file_path $input_file ]
         set fp [ ::open $input_name r ]
         set line_number 0
-
+        set lines [ dict create ]
         while { [ gets $fp line ] >= 0 } {
             regsub "#.*" $line "" line
             set line [ string trim $line ]
             if { [ string length $line ] > 0 } {
-                literal td string $line
-                container_insert $result $line_number $td ref 0
+                dict append lines $line_number $line
             }
             incr line_number
         }
         close $fp
-        adlb::write_refcount_decr $result
+        return $lines
     }
 }
