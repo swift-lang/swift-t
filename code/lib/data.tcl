@@ -611,11 +611,14 @@ namespace eval turbine {
                             $read_refcount $write_refcount $permanent]
     }
 
-    # usage: container_insert <id> <subscript> <member> <type> [<drops>]
-    # @param drops = 0 by default
-    proc container_insert { id subscript member type {drops 0} } {
+    # usage: container_insert <id> <subscript> <member> <type>
+    #                           [<read_drops>] [<write_drops>]
+    # @param read_drops = 0 by default
+    # @param write_drops = 0 by default
+    proc container_insert { id subscript member type \
+          {read_drops 0} {write_drops 0} } {
         log "insert: <$id>\[\"$subscript\"\]=<$member>"
-        adlb::insert $id $subscript $member $type $drops
+        adlb::insert $id $subscript $member $type $read_drops $write_drops
     }
 
     # Returns 0 if subscript is not found

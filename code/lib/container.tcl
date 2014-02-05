@@ -495,10 +495,9 @@ namespace eval turbine {
     }
     proc cr_f_insert_body { cr j d t oc } {
         # s: The subscripted container
-        # don't need read reference
-        set c [ acquire_ref $cr 0 1 ]
+        set c [ acquire_ref $cr 1 1 ]
         set s [ retrieve_decr $j ]
-        container_insert $c $s $d $t
+        container_insert $c $s $d $t 0 1
         log "insert: (now) <$c>\[$s\]=<$d>"
         adlb::write_refcount_decr $oc
     }
@@ -520,9 +519,9 @@ namespace eval turbine {
     }
     proc cr_v_insert_body { cr j d t oc } {
         # don't need read reference
-        set c [ acquire_ref $cr 0 1 ]
+        set c [ acquire_ref $cr 1 1 ]
         # insert and drop slot
-        container_insert $c $j $d $t
+        container_insert $c $j $d $t 0 1
         adlb::write_refcount_decr $oc
     }
 
@@ -539,9 +538,9 @@ namespace eval turbine {
             name "CRVIR"
     }
     proc cr_v_insert_r_body { cr j dr t oc } {
-        set c [ acquire_ref $cr 0 1 ]
+        set c [ acquire_ref $cr 1 1 ]
         set d [ adlb::acquire_ref $dr $t 1 1 ]
-        container_insert $c $j $d $t
+        container_insert $c $j $d $t 0 1
         adlb::write_refcount_decr $oc
     }
 
@@ -558,7 +557,8 @@ namespace eval turbine {
         set c [ acquire_ref $cr 1 1 ]
         set d [ adlb::acquire_ref $dr $t 1 1 ]
         set jval [ retrieve_decr $j ]
-        container_insert $c $jval $d $t
+        # Insert and drop read refcount we acquired
+        container_insert $c $jval $d $t 0 1
         adlb::write_refcount_decr $oc
     }
 
