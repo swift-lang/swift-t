@@ -350,6 +350,20 @@ public class ComputedValue<T> {
     return new ArgCV(Opcode.FAKE, newSubop, memRef.inputs);
   }
 
+  public static ArgCV arrayContainsCV(Var arr, Arg key) {
+    assert(Types.isArray(arr) ||
+           Types.isArrayLocal(arr)) : arr;
+    assert(Types.isArrayKeyVal(arr, key) ||
+            Types.isArrayKeyFuture(arr, key));
+    Opcode op = Types.isArray(arr) ? Opcode.ARR_CONTAINS :
+                               Opcode.ARR_LOCAL_CONTAINS;
+    ArgCV cv = new ArgCV(op, Arrays.asList(arr.asArg(), key));
+    return cv;
+  }
+  
+  public boolean isArrayContains() {
+    return op == Opcode.ARR_CONTAINS || op == Opcode.ARR_LOCAL_CONTAINS;
+  }
 
   public List<T> componentOf() {
     if (isArrayMemberValRef() || isArrayMemberRef()) {

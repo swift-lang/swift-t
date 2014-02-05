@@ -247,9 +247,17 @@ public class Congruences implements AliasFinder {
       CongruentSets congruent, int stmtIndex, Arg canonLoc, ArgOrCV canonVal)
       throws OptUnsafeError {
     if (canonVal.isCV()) {
-      for (ArgCV extra: Algebra.tryAlgebra(this, canonVal.cv())) {
+      ArgCV cv = canonVal.cv();
+      for (ArgCV extra: Algebra.tryAlgebra(this, cv)) {
         update(consts, errContext, canonLoc, extra, IsAssign.NO,
                congruent, false, stmtIndex);
+      }
+      if (cv.isArrayMemberVal() || cv.isArrayMemberRef()) {
+        Var arr = cv.getInput(0).getVar();
+        Arg ix = cv.getInput(1);
+        update(consts, errContext, Arg.TRUE,
+                  ComputedValue.arrayContainsCV(arr, ix), IsAssign.NO,
+                  congruent, false, stmtIndex);
       }
     }
   }

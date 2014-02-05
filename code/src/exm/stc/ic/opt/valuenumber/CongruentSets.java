@@ -522,7 +522,7 @@ class CongruentSets {
     // Check that types are compatible in sets being merged
     assert(oldCanon.type().getImplType().equals(
            newCanon.type().getImplType())) : "Types don't match: " +
-           oldCanon + ":" + oldCanon.type() +
+           oldCanon + ":" + oldCanon.type() + " " +
             newCanon + " " + newCanon.type();  
     
     // Handle situation where oldCanonical is part of another ArgOrCV 
