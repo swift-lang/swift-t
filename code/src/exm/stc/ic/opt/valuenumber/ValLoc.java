@@ -159,6 +159,8 @@ public class ValLoc {
    */
   public static ValLoc makeArrayResult(Var arr, Arg ix,
           Arg contents, boolean valResult, IsAssign isAssign) {
+    assert(Types.isArray(arr) || Types.isArrayRef(arr) ||
+           Types.isArrayLocal(arr));
     ArgCV val;
     if (valResult) {
       assert(Types.isElemValType(arr, contents)) :
@@ -174,6 +176,8 @@ public class ValLoc {
   
   public static ValLoc makeCreateNestedResult(Var arr, Arg ix, Var contents,
       boolean nonRefResult) {
+    assert(Types.isArray(arr) || Types.isArrayRef(arr) ||
+        Types.isArrayLocal(arr));
     Arg contentsArg = contents == null ? null : Arg.createVar(contents);
     ArgCV val;
     if (nonRefResult) {

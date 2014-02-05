@@ -351,7 +351,7 @@ public class ComputedValue<T> {
   }
 
   public static ArgCV arrayContainsCV(Var arr, Arg key) {
-    assert(Types.isArray(arr) ||
+    assert(Types.isArray(arr) || Types.isArrayRef(arr) ||
            Types.isArrayLocal(arr)) : arr;
     assert(Types.isArrayKeyVal(arr, key) ||
             Types.isArrayKeyFuture(arr, key));
