@@ -2021,16 +2021,9 @@ public class TurbineGenerator implements CompilerBackend {
         TypeName baseTypes[] = new TypeName[waitVars.size()];
         for (int i = 0; i < waitVars.size(); i++) {
           Type waitVarType = waitVars.get(i).type();
-          Type baseType;
-          if (Types.isContainer(waitVarType)) {
-            NestedContainerInfo ai = new NestedContainerInfo(waitVarType);
-            depths[i] = ai.nesting;
-            baseType = ai.baseType;
-          } else {
-            depths[i] = 0;
-            baseType = waitVarType;
-          }
-          baseTypes[i] = representationType(baseType, false);
+          Pair<Integer, TypeName> data = recursiveContainerType(waitVarType);
+          depths[i] = data.val1;
+          baseTypes[i] = data.val2;
         }
 
         Sequence rule = Turbine.deepRule(uniqueName, waitFor, depths,
@@ -2055,6 +2048,27 @@ public class TurbineGenerator implements CompilerBackend {
         newExecContext = execContextStack.peek();
       }
       execContextStack.push(newExecContext);
+    }
+
+    /**
+     * @param depths
+     * @param i
+     * @param type
+     * @return (nesting depth, base type name)
+     */
+    private Pair<Integer, TypeName> recursiveContainerType(Type type) {
+      Type baseType;
+      int depth;
+      if (Types.isContainer(type)) {
+        NestedContainerInfo ai = new NestedContainerInfo(type);
+        depth = ai.nesting;
+        baseType = ai.baseType;
+      } else {
+        depth = 0;
+        baseType = type;
+      }
+      TypeName baseReprType = representationType(baseType, false);
+      return Pair.create(depth, baseReprType);
     }
 
     private void endAsync() {
@@ -3087,8 +3101,8 @@ public class TurbineGenerator implements CompilerBackend {
       baseType = Types.derefResultType(baseType);
     }
    
-    Type memberValT = Types.derefResultType(baseType);
-
+    Type memberValT = Types.derefResultType(baseType);    
+    
     assert(memberValT.assignableTo(Types.containerElemType(flatLocalArray)))
       : memberValT + " " + flatLocalArray;
     
@@ -3098,10 +3112,9 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   private Expression unpackArrayInternal(Arg arg) {
-    NestedContainerInfo ai = new NestedContainerInfo(arg.type());
+    Pair<Integer, TypeName> rct = recursiveContainerType(arg.type());
     Expression unpackArrayExpr = Turbine.unpackArray(
-                            argToExpr(arg), ai.nesting,
-                            Types.isFile(ai.baseType));
+                            argToExpr(arg), rct.val1, rct.val2);
     return unpackArrayExpr;
   }
   

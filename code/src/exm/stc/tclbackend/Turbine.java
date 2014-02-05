@@ -1397,10 +1397,9 @@ class Turbine {
   }
 
   public static Expression unpackArray(Expression array, int nestLevel,
-                                       boolean isFile) {
+                                       TypeName baseType) {
     assert(nestLevel >= 0);
-    return new Square(UNPACK_ARGS, array,
-          new LiteralInt(nestLevel), LiteralInt.boolValue(isFile));
+    return new Square(UNPACK_ARGS, array, new LiteralInt(nestLevel), baseType);
   }
 
   public static Command fileSet(Value fileFuture, String localFileName) {
