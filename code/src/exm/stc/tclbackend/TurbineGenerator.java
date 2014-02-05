@@ -1510,8 +1510,15 @@ public class TurbineGenerator implements CompilerBackend {
   public void containerLocalSize(Var out, Var cont) {
     assert(Types.isIntVal(out));
     assert(Types.isContainerLocal(cont));
+    Expression sizeExpr;
+    if (Types.isArrayLocal(cont)) {
+      sizeExpr = Turbine.dictSize(varToExpr(cont));
+    } else {
+      assert(Types.isBagLocal(cont));
+      sizeExpr = Turbine.listLength(varToExpr(cont));
+    }
     pointAdd(new SetVariable(prefixVar(out), 
-             Turbine.dictSize(varToExpr(cont))));
+             sizeExpr));
   }
 
   @Override

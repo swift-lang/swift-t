@@ -1211,6 +1211,11 @@ class Turbine {
     return containerSize;
   }
   
+  public static Expression listLength(Value tclList) {
+    Expression containerSize = Square.fnCall("llength", tclList);
+    return containerSize;
+  }
+  
   public static Expression dictExists(Value tclDict, Expression key) {
     return Square.fnCall("dict", new Token("exists"), tclDict, key);
   }
