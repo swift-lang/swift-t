@@ -1253,18 +1253,14 @@ public class TurbineGenerator implements CompilerBackend {
               List<Boolean> blocking, TaskMode mode, TaskProps props)  {
     props.assertInternalTypesValid();
     
-    List<Value> blockOn = new ArrayList<Value>();
-    Set<Var> alreadyBlocking = new HashSet<Var>();
+    List<Var> blockinInputVars = new ArrayList<Var>();
     for (int i = 0; i < inputs.size(); i++) {
-      Arg arg = inputs.get(i);
-      if (arg.isVar()) {
-        Var v = arg.getVar();
-        if (blocking.get(i) && !alreadyBlocking.contains(v)) {
-          blockOn.add(varToExpr(v));
-          alreadyBlocking.add(v);
-        }
+      Arg input = inputs.get(i);
+      if (input.isVar() && blocking.get(i)) {
+        blockinInputVars.add(input.getVar());
       }
     }
+    List<Expression> blockOn = getTurbineWaitIDs(blockinInputVars);
 
     String swiftFuncName = TclNamer.swiftFuncName(function);
     if (mode == TaskMode.CONTROL || mode == TaskMode.LOCAL ||
@@ -1986,32 +1982,13 @@ public class TurbineGenerator implements CompilerBackend {
       Proc proc = new Proc(uniqueName, usedTclFunctionNames, args);
       tree.add(proc);
 
-      boolean useDeepWait = false; // True if we have to use special wait impl. 
+      // True if we have to use special wait impl
+      boolean useDeepWait = recursive &&
+              anySupportRecursiveWait(waitVars);
+      
+      List<Expression> waitFor = getTurbineWaitIDs(waitVars);
       
       // Build up the rule string
-      List<Expression> waitFor = new ArrayList<Expression>();
-      for (Var w: waitVars) {
-        if (recursive) {
-          Type baseType = w.type();
-          if (Types.isArray(w.type()) || Types.isBag(w.type())) {
-            baseType = new NestedContainerInfo(w.type()).baseType;
-            useDeepWait = true;
-          }
-          if (Types.isPrimFuture(baseType)) {
-            // ok
-          } else if (Types.isRef(baseType)) {
-            // TODO: might not be really recursive, but works for now
-          } else {
-            throw new STCRuntimeError("Recursive wait not yet supported"
-                + " for type: " + w.type().typeName());
-          }
-        }
-        
-        Expression waitExpr = getTurbineWaitId(w);
-        waitFor.add(waitExpr);
-      }
-      
-      
       List<Expression> action = buildActionFromVars(uniqueName, passIn);
 
       RuleProps ruleProps = buildRuleProps(props);      
@@ -2048,6 +2025,33 @@ public class TurbineGenerator implements CompilerBackend {
         newExecContext = execContextStack.peek();
       }
       execContextStack.push(newExecContext);
+    }
+
+    private boolean anySupportRecursiveWait(List<Var> waitVars) {
+      for (Var w: waitVars) {
+        if (supportsRecursiveWait(w))
+          return true;
+      }
+      return false;
+    }
+
+    private boolean supportsRecursiveWait(Var var) {
+      boolean supportsRecWait = false;
+      Type baseType = var.type();
+      if (Types.isArray(var.type()) || Types.isBag(var.type())) {
+        baseType = new NestedContainerInfo(var.type()).baseType;
+        supportsRecWait = true;
+      }
+
+      if (Types.isPrimFuture(baseType)) {
+        // ok
+      } else if (Types.isRef(baseType)) {
+        // TODO: might not be really recursive, but works for now
+      } else {
+        throw new STCRuntimeError("Recursive wait not yet supported"
+            + " for type: " + var.type().typeName());
+      }
+      return supportsRecWait;
     }
 
     /**
@@ -2759,6 +2763,19 @@ public class TurbineGenerator implements CompilerBackend {
               + var.toString());
     }
     return waitExpr;
+  }
+  
+  private List<Expression> getTurbineWaitIDs(List<Var> waitVars) {
+    List<Expression> waitFor = new ArrayList<Expression>();
+    Set<Var> alreadyBlocking = new HashSet<Var>();
+    for (Var v: waitVars) {
+      if (!alreadyBlocking.contains(v)) {
+        Expression waitExpr = getTurbineWaitId(v);
+        waitFor.add(waitExpr);
+        alreadyBlocking.add(v);
+      }
+    }
+    return waitFor;
   }
 
   private Expression argToExpr(Arg in) {
