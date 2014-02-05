@@ -952,7 +952,7 @@ public class TurbineGenerator implements CompilerBackend {
       }
       
       curr = Types.containerElemType(curr);
-      if (Types.isContainerRef(curr)) {
+      if (followRefs && Types.isContainerRef(curr)) {
         // Strip off reference
         curr = Types.retrievedType(curr);
       }

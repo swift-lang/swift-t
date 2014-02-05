@@ -1610,7 +1610,7 @@ public class TurbineOp extends Instruction {
         if (Types.isPrimFuture(t) || Types.isRef(t)) {
           blocksOn.add(v);
         } else if (Types.isPrimValue(t) || Types.isStruct(t) ||
-            Types.isArray(t) || Types.isPrimUpdateable(t)) {
+            Types.isContainer(t) || Types.isPrimUpdateable(t)) {
           // No turbine ops block on these types
         } else {
           throw new STCRuntimeError("Don't handle type "
