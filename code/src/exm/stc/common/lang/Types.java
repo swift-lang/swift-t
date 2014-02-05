@@ -1830,7 +1830,6 @@ public class Types {
     return (elem.type().assignableTo(expected));
   }
   
-
   public static boolean isElemValType(Typed cont, Typed elem) {
     Type expected = containerElemValType(cont.type());
     return (elem.type().assignableTo(expected));

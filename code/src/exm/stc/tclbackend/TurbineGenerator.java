@@ -1183,7 +1183,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isBag(bag));
     assert(bag.storage() == Alloc.ALIAS);
     assert(Types.isArrayKeyVal(arr, ix));
-    assert(Types.isElemType(arr, bag));
+    assert(Types.isElemValType(arr, bag)) : arr + " " + bag;
     assert(callerReadRefs.isImmediateInt());
     assert(callerWriteRefs.isImmediateInt());
     
