@@ -148,7 +148,7 @@ namespace eval turbine {
 
     proc input_url_local { url } {
       # Create local file ref with extra refcount so that it is never deleted
-      return [ create_local_file_ref $fname 100 ]
+      return [ create_local_file_ref $url 100 ]
     }
 
     # initialise an unmapped file to a temporary location
