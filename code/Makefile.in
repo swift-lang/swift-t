@@ -94,6 +94,10 @@ CC  = @CC@
 LINKER = @CC@
 
 AR      = @AR@
+# Some autoconf versions do not set AR
+ifeq ($(AR),)
+	AR = ar
+endif
 ARFLAGS = cr
 RANLIB  = @RANLIB@
 
