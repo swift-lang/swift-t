@@ -884,34 +884,42 @@ namespace eval turbine {
     # multiset container int
     #
     # Consumes read refcounts from outer container
+
+
+
     proc enumerate_rec { container types {depth 0} {read_decr 0}} {
       set container_type [ lindex $types $depth ]
       set member_type [ lindex $types [ expr {$depth + 1} ] ]
-      # If there are more than two entries left in the type list
-      # (the leaf type, and another container type), we will
-      # recurse to handle that.
-      set recurse [ expr {$depth < [ llength $types ] - 2} ]
-      set member_ref [ expr $recurse && [ string equal $member_type ref ] ]
-      if { $member_ref } {
-        set member_ref_types [ lrange $types [ expr {$depth + 2} ] \
-                                             [ llength $types ] ]
-      }
 
+      # If there is a ref type, followed by another type, we will
+      # recurse to handle that.
+      set ref_value [ string equal $member_type ref ]
+      if { $ref_value } {
+        set ref_root_type [ lindex $types [ expr {$depth + 1} ] ]
+        if { $ref_root_type == "container" || \
+             $ref_root_type == "multiset" } {
+          set recurse 1
+        } else {
+          set recurse 0
+          set member_ref_type [ lindex $types [ expr {$depth + 2} ] ]
+        }
+      }
+      
       switch $container_type {
         container {
-          if { $recurse } {
+          if { $ref_value } {
             set vals [ adlb::enumerate $container dict all 0 0 ]
             set result_dict [ dict create ]
 
-            if { $member_ref } {
-              # Optimization: do multiget on references
-              set result_dict [ multi_retrieve_kv $vals CACHED 0 \
-                                {*}$member_ref_types ]
-            } else {
+            if { $recurse } {
               dict for { key subcontainer } $vals {
                 dict append result_dict $key [ enumerate_rec $subcontainer \
-                      $types [ expr {$depth + 1} ] 0 ]
+                      $types [ expr {$depth + 2} ] 0 ]
               }
+            } else {
+              # Optimization: do multiget on references
+              set result_dict [ multi_retrieve_kv $vals CACHED 0 \
+                                $member_ref_type ]
             }
             # Decrement here to avoid freeing contents
             adlb::read_refcount_decr $container $read_decr
@@ -921,18 +929,18 @@ namespace eval turbine {
           }
         }
         multiset {
-          if { $recurse } {
+          if { $ref_value } {
             set vals [ adlb::enumerate $container members all 0 0 ]
             set result_list [ list ]
-            if { $member_ref } {
-              # Optimization: do multiget on references
-              set result_dict [ multi_retrieve_kv $vals CACHED 0 \
-                                {*}$member_ref_types ]
-            } else {
+            if { $recurse } {
               foreach subcontainer $vals {
                 lappend result_dict [ enumerate_rec $subcontainer \
-                                      $types [ expr {$depth + 1} ] 0 ]
+                                      $types [ expr {$depth + 2} ] 0 ]
               }
+            } else {
+              # Optimization: do multiget on references
+              set result_dict [ multi_retrieve $vals CACHED 0 \
+                                $member_ref_type ]
             }
             # Decrement here to avoid freeing contents
             adlb::read_refcount_decr $container $read_decr
