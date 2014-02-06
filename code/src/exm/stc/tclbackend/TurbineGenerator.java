@@ -920,7 +920,7 @@ public class TurbineGenerator implements CompilerBackend {
               Types.unpackedContainerType(target)));    
 
     List<TypeName> typeList = recursiveTypeList(target.type(), false, true,
-                                                true, true); 
+                                                true, true, true); 
     pointAdd(Turbine.buildRec(typeList, varToExpr(target), argToExpr(src)));
   }
   
@@ -931,15 +931,26 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.unpackedContainerType(src).assignableTo(target.type()));
 
     List<TypeName> typeList =
-        recursiveTypeList(src.type(), false, false, true, true);
+        recursiveTypeList(src.type(), false, false, true, true, true);
     
     pointAdd(Turbine.enumerateRec(prefixVar(target), typeList,
               varToExpr(src), argToExpr(decr)));
   }
 
+  /**
+   * 
+   * @param type
+   * @param valueType
+   * @param includeKeyTypes
+   * @param includeBaseType
+   * @param followRefs if false, stop at first reference type
+   * @param includeRefs Include ref types followed in output
+   * @return
+   */
   private List<TypeName> recursiveTypeList(Type type,
         boolean valueType, boolean includeKeyTypes,
-        boolean includeBaseType, boolean followRefs) {
+        boolean includeBaseType, boolean followRefs,
+        boolean includeRefs) {
     List<TypeName> typeList = new ArrayList<TypeName>();
     Type curr = type;
     do {
@@ -955,12 +966,18 @@ public class TurbineGenerator implements CompilerBackend {
       if (followRefs && Types.isContainerRef(curr)) {
         // Strip off reference
         curr = Types.retrievedType(curr);
+        if (includeRefs) {
+          typeList.add(Turbine.ADLB_REF_TYPE);  
+        }
       }
     } while ((Types.isContainer(curr) ||
               Types.isContainerLocal(curr)));
     
     while (followRefs && Types.isRef(curr)) {
       curr = Types.retrievedType(curr);
+      if (includeRefs && includeBaseType) {
+        typeList.add(Turbine.ADLB_REF_TYPE);
+      }
     }
 
     if (includeBaseType) {
@@ -1689,7 +1706,7 @@ public class TurbineGenerator implements CompilerBackend {
                                simpleReprType, incrReferand, LiteralInt.ONE));
     
     List<TypeName> fullReprType = recursiveTypeList(dst.type(), false, true,
-                                                    true, false);
+                                                    true, false, false);
     pointAdd(Turbine.adlbStore(varToExpr(dst), tmpVal, fullReprType));
   }
   
@@ -3090,6 +3107,7 @@ public class TurbineGenerator implements CompilerBackend {
   }
   
   /**
+   * Used on local value types
    * Make a list of values, with each value preceded by the ADLB type.
    * For compound ADLB types, we have multiple expressions to describe
    * the "layers" of the type.
@@ -3100,7 +3118,7 @@ public class TurbineGenerator implements CompilerBackend {
     List<Expression> result = new ArrayList<Expression>();
     for (Arg val: vals) {
       if (Types.isContainerLocal(val.type())) {
-        result.addAll(recursiveTypeList(val.type(), true, true, true, true)); 
+        result.addAll(recursiveTypeList(val.type(), true, true, true, true, false)); 
       } else {
         result.add(valRepresentationType(val.type()));
       }
