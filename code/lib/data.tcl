@@ -553,15 +553,18 @@ namespace eval turbine {
       return $result
     }
     
-    proc multi_retrieve_kv { ids {cachemode CACHED} args } {
+    proc multi_retrieve_kv { ids {cachemode CACHED} {read_decr 0} args } {
       set result [ dict create ]
 
       dict for {key id} $ids {
         if { [ string equal $cachemode CACHED ] &&
               [ c::cache_check $id ] } {
           set val [ c::cache_retrieve $id ]
+          if { $read_decr != 0 } {
+            adlb::read_refcount_decr $id $read_decr
+          }
         } else {
-          set val [ adlb::retrieve $id {*}$args ]
+          set val [ adlb::retrieve_decr $id $read_decr {*}$args ]
         }
         dict append result $key $val
       }
