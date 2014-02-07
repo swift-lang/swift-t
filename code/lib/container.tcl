@@ -129,15 +129,16 @@ namespace eval turbine {
       adlb::store $ms multiset {*}$args $elems $write_decr
     }
     
-    proc type_create_slice { outer_type type_list start_pos } {
+    proc type_create_slice { type_list pos } {
+      set outer_type [ lindex $type_list $pos ]
       switch $outer_type {
         container {
           # Include key and value types
-          return [ lrange $type_list $start_pos [ expr {$start_pos + 2} ] ]
+          return [ lrange $type_list $pos [ expr {$pos + 2} ] ]
         }
         multiset {
           # Include value type
-          return [ lrange $type_list $start_pos [ expr {$start_pos + 1} ] ]
+          return [ lrange $type_list $pos [ expr {$pos + 1} ] ]
         }
         default {
           return [ list $outer_type ]
@@ -165,15 +166,14 @@ namespace eval turbine {
           set val_type_pos [ expr {$types_pos + 2} ]
           set val_type [ lindex $types $val_type_pos ]
           # TODO: check if val_type is ref
-          
+         
           switch $val_type {
             ref -
             file_ref {
               # Refs must be handled by creating inner TDs
-              # TODO: slice should look at type after ref instead
-              # appropriate slice of types depending on value type
-              set create_types [ type_create_slice $val_type $types \
-                                                   $val_type_pos ]
+              # appropriate slice of types depending on type
+              set create_types [ type_create_slice $types \
+                                      [ expr {$val_type_pos + 1} ] ]
               # initial refcounts
               lappend create_types 1 1
               if { $n > 0 } {
@@ -190,7 +190,7 @@ namespace eval turbine {
                 set val_id [ lindex $val_ids $i ]
 
                 # build inner data structure
-                build_rec $val_id $val $types $val_type_pos 1
+                build_rec $val_id $val $types [ expr {$val_type_pos + 1 } ] 1
                 
                 dict append val_dict $key $val_id
                 incr i
@@ -212,9 +212,9 @@ namespace eval turbine {
             ref -
             file_ref {
               # Refs must be handled by creating inner TDs
-              # TODO: slice should look at type after ref instead
-              # appropriate slice of types depending on value type
-              set create_types [ type_create_slice $val_type $types $val_type_pos ]
+              # appropriate slice of types depending on type
+              set create_types [ type_create_slice $types \
+                                      [ expr {$val_type_pos + 1} ] ]
               # initial refcounts
               lappend create_types 1 1
               if { $n > 0 } {
@@ -229,7 +229,7 @@ namespace eval turbine {
                 set val_id [ lindex $val_list $i ]
 
                 # build inner data structure
-                build_rec $val_id $val $types $val_type_pos 1
+                build_rec $val_id $val $types [ expr {$val_type_pos + 1 } ] 1
 
                 incr i
               }
