@@ -164,57 +164,82 @@ namespace eval turbine {
           set key_type [ lindex $types $key_type_pos ]
           set val_type_pos [ expr {$types_pos + 2} ]
           set val_type [ lindex $types $val_type_pos ]
-          # appropriate slice of types depending on value type
-          set create_types [ type_create_slice $val_type $types $val_type_pos ]
-          # initial refcounts
-          lappend create_types 1 1
-          if { $n > 0 } {
-            set val_ids [ adlb::multicreate {*}[ lrepeat $n $create_types ] ]
-          } else {
-            # Avoid lrepeat not support 0 repeats in tcl < 8.6
-            set val_ids [ list ]
-          }
-          set val_dict [ dict create ]
+          # TODO: check if val_type is ref
+          
+          switch $val_type {
+            ref -
+            file_ref {
+              # Refs must be handled by creating inner TDs
+              # TODO: slice should look at type after ref instead
+              # appropriate slice of types depending on value type
+              set create_types [ type_create_slice $val_type $types \
+                                                   $val_type_pos ]
+              # initial refcounts
+              lappend create_types 1 1
+              if { $n > 0 } {
+                set val_ids [ adlb::multicreate {*}[ lrepeat $n \
+                                                      $create_types ] ]
+              } else {
+                # Avoid lrepeat not support 0 repeats in tcl < 8.6
+                set val_ids [ list ]
+              }
+              set val_dict [ dict create ]
 
-          set i 0
-          dict for { key val } $cval {
-            set val_id [ lindex $val_ids $i ]
+              set i 0
+              dict for { key val } $cval {
+                set val_id [ lindex $val_ids $i ]
 
-            # build inner data structure
-            build_rec $val_id $val $types $val_type_pos 1
-            
-            dict append val_dict $key $val_id
-            incr i
+                # build inner data structure
+                build_rec $val_id $val $types $val_type_pos 1
+                
+                dict append val_dict $key $val_id
+                incr i
+              }
+            }
+            default {
+              # Not a ref: data stored directly in dict
+              set val_dict $cval
+            }
           }
           # Store values all at once
-          adlb::store $id container $key_type ref $val_dict $write_decr
+          adlb::store $id container $key_type $val_type $val_dict $write_decr
         }
         multiset {
           set n [ llength $cval ]
           set val_type_pos [ expr {$types_pos + 1} ]
           set val_type [ lindex $types $val_type_pos ]
-          # appropriate slice of types depending on value type
-          set create_types [ type_create_slice $val_type $types $val_type_pos ]
-          # initial refcounts
-          lappend create_types 1 1
-          if { $n > 0 } {
-            set val_ids [ adlb::multicreate {*}[ lrepeat $n $create_types ] ]
-          } else {
-            # Avoid lrepeat not support 0 repeats in tcl < 8.6
-            set val_ids [ list ]
-          }
+          switch $val_type {
+            ref -
+            file_ref {
+              # Refs must be handled by creating inner TDs
+              # TODO: slice should look at type after ref instead
+              # appropriate slice of types depending on value type
+              set create_types [ type_create_slice $val_type $types $val_type_pos ]
+              # initial refcounts
+              lappend create_types 1 1
+              if { $n > 0 } {
+                set val_list [ adlb::multicreate {*}[ lrepeat $n $create_types ] ]
+              } else {
+                # Avoid lrepeat not support 0 repeats in tcl < 8.6
+                set val_list [ list ]
+              }
 
-          set i 0
-          foreach val $cval {
-            set val_id [ lindex $val_ids $i ]
+              set i 0
+              foreach val $cval {
+                set val_id [ lindex $val_list $i ]
 
-            # build inner data structure
-            build_rec $val_id $val $types $val_type_pos 1
+                # build inner data structure
+                build_rec $val_id $val $types $val_type_pos 1
 
-            incr i
+                incr i
+              }
+            }
+            default {
+              set val_list $cval
+            }
           }
           # Store values all at once
-          adlb::store $id multiset ref $val_ids $write_decr
+          adlb::store $id multiset $val_type $val_list $write_decr
         }
         default {
           if [ expr {$types_pos + 1 == [ llength $types ]} ] {
