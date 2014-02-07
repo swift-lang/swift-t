@@ -30,8 +30,15 @@ http://lists.mcs.anl.gov/mailman/listinfo/exm-user
 
 == Installation
 
+This section provides generic instructions for installing Swift/T
+on a range of systems.
+The http://www.mcs.anl.gov/exm/local/guides/turbine-sites.html[Turbine Sites Guide]
+is a accompanying resource for configuration settings and preinstalled software
+for specific systems.
+
 Writing and running Swift/Turbine programs requires multiple packages.
 These have been packaged for convenient download and installation.
+
 
 1. Install or locate MPI implementation (MPICH, OpenMPI, etc.)
 +
@@ -1656,11 +1663,6 @@ Configure Turbine with:
                  --with-mpi-lib-name=funny.mpi.a
 ----
 
-==== Known systems
-
-See the
-http://www.mcs.anl.gov/exm/local/guides/turbine-sites.html[Turbine Sites Guide]
-for information about specific systems with Turbine installations.
 
 === Performance enhancements
 
