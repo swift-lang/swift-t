@@ -950,7 +950,7 @@ namespace eval turbine {
             adlb::read_refcount_decr $container $read_decr
             return $result_dict
           } else {
-            return [ adlb::enumerate $container dict all $read_decr 0 ]
+            return [ adlb::enumerate $container dict all 0 $read_decr ]
           }
         }
         multiset {
@@ -971,7 +971,7 @@ namespace eval turbine {
             adlb::read_refcount_decr $container $read_decr
             return $result_dict
           } else {
-            return [ adlb::enumerate $container members all $read_decr 0 ]
+            return [ adlb::enumerate $container members all 0 $read_decr ]
           }
         }
         default {
