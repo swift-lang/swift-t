@@ -558,7 +558,6 @@ namespace eval turbine {
     
     proc multi_retrieve_kv { ids {cachemode CACHED} {read_decr 0} args } {
       set result [ dict create ]
-      puts "ARGS $args"
       dict for {key id} $ids {
         if { [ string equal $cachemode CACHED ] &&
               [ c::cache_check $id ] } {
