@@ -65,6 +65,7 @@ import exm.stc.common.lang.Types.FileKind;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.NestedContainerInfo;
 import exm.stc.common.lang.Types.PrimType;
+import exm.stc.common.lang.Types.RefType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.Typed;
@@ -2099,9 +2100,16 @@ public class TurbineGenerator implements CompilerBackend {
         NestedContainerInfo ai = new NestedContainerInfo(type);
         depth = ai.nesting;
         baseType = ai.baseType;
-      } else {
+      } else if (Types.isFuture((type))) {
+        depth = 0;
+        // Indicate that it's a future not a value
+        baseType = new RefType(type);
+      } else if (Types.isPrimValue(type)) {
         depth = 0;
         baseType = type;
+      } else {
+        throw new STCRuntimeError("Not sure how to deep wait on type "
+                                  + type);
       }
       TypeName baseReprType = representationType(baseType, false);
       return Pair.create(depth, baseReprType);
