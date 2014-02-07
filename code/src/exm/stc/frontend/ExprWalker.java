@@ -957,6 +957,8 @@ public class  ExprWalker {
         waitVars.add(input);
         derefVars.add(derefed);
         realIList.add(derefed);
+        Logging.getSTCLogger().trace("Deref function input " + input +
+                                     " to " + derefed);
       } else if (Types.isUpdateableEquiv(inputType, expType)) {
         realIList.add(snapshotUpdateable(context, input));
       } else {
@@ -982,12 +984,8 @@ public class  ExprWalker {
       for (int i = 0; i < waitVars.size(); i++) {
         Var derefVar = derefVars.get(i);
         varCreator.backendInit(derefVar);
-        if (Types.isContainerRef(waitVars.get(i).type())) {
-          retrieveRef(derefVar, waitVars.get(i));
-        } else {
-          throw new STCRuntimeError("Don't know how to " +
-              "deref non-container function arg " + derefVar);
-        }
+        assert(Types.isRef(waitVars.get(i).type()));
+        retrieveRef(derefVar, waitVars.get(i));
       }
     }
 
