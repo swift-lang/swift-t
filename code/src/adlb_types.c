@@ -535,7 +535,6 @@ ADLB_Unpack_multiset(adlb_multiset_ptr *ms,
   else
   {
     assert(*ms != NULL);
-    assert((*ms)->elem_type == elem_type);
     check_verbose((*ms)->elem_type == elem_type, ADLB_DATA_ERROR_TYPE,
         "Unpacked multiset elem type does not match: expected %s vs. %s",
         ADLB_Data_type_tostring((*ms)->elem_type),
