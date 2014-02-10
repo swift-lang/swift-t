@@ -429,7 +429,7 @@ F2A_MKHDR := scripts/mkstatic/files2arrays_mkhdr.sh
 $(STATIC_PKG_RESOURCE_C): %_tcl.c : %.tcl $(F2A)
 	$(Q) "  FILE2ARRAY $(@)"
 	$(E) $(F2A) -v "turbine_lib_$(shell basename $< | sed 's/[\.-]/_/g')" $< > "$(@).tmp"
-	mv "$(@).tmp" $(@)
+	$(E) mv "$(@).tmp" $(@)
 
 $(STATIC_PKG_RESOURCE_H): $(STATIC_PKG_RESOURCE_C) $(F2A_MKHDR)
 	$(Q) " MKHDR $(@)"
