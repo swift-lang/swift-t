@@ -630,7 +630,7 @@ install.txt: $(ENABLED_PACKAGES) $(BINS) $(EXPORTS) $(SCRIPTS) $(TURBINE_HEADERS
 	$(E) cp $(CP_ARGS) $(TURBINE_HEADERS)    $(INSTALL_INCLUDE)
 	$(E) cp $(CP_ARGS) etc/help.txt          $(INSTALL_ETC)
 	@echo
-	$(Q) "  CREATE 		$(@)"
+	$(Q) "  CREATE  	$(@)"
 	$(E) echo  "PREFIX: $(INSTALL_PREFIX)"   >  $(@)
 	$(E) echo  "SOURCE: $(PWD)"              >> $(@)
 	$(E) date "+DATE:   %m/%d/%Y %I:%M%p"    >> $(@)
