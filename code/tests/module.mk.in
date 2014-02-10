@@ -5,8 +5,9 @@ TEST_SRC_C :=
 TEST_SRC_C += $(DIR)/debug.c
 TEST_SRC_C += $(DIR)/lib-turbine.c
 TEST_SRC_C += $(DIR)/ptasks-1.c
-TEST_SRC_C += $(DIR)/ptasks-bench.c
-TEST_SRC_C += $(DIR)/ptasks-stress.c
+# TEST_SRC_C += $(DIR)/ptasks-bench.c
+# TODO: Add this to exm-issues
+# TEST_SRC_C += $(DIR)/ptasks-stress.c
 TEST_SRC_C += $(DIR)/checkpoint-1.c
 
 ifeq ($(USE_MPE),1)
@@ -70,6 +71,8 @@ ifeq ($(USE_MPE),1)
 	TEST_SRC_TCL += $(DIR)/mpe-3.tcl
 endif
 
-TEST_SRC_MANIFEST += $(DIR)/staticapp-1.manifest
+# Run this only if using static?
+# TODO: Add this to exm-issues
+# TEST_SRC_MANIFEST += $(DIR)/staticapp-1.manifest
 
 TEST_SRC_C += $(patsubst %.manifest, %.c, $(TEST_SRC_MANIFEST))
