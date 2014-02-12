@@ -101,7 +101,7 @@ configuration settings so that all prerequisites can
 be correctly located and configured (see Section
 <<Build_configuration, Build configuration>>).
 +
-A range of other settings are also available here: 
+A range of other settings are also available here:
 enabling/disabling features, debug or optimized builds, etc.
 +
 TIP: Save your +exm-settings.sh+ when you download a new package
