@@ -111,7 +111,7 @@ On more complex, scheduled systems, users do not invoke +mpiexec+
 directly.  Thus, sample scripts are provided below.
 
 [[scheduled_systems]]
-== Scheduled systems
+== Submitting Turbine jobs on scheduled systems
 
 On scheduled systems (PBS, SLURM, Cobalt, etc.), Turbine is launched
 with a customized _run script_ (+turbine-<name>-run+) that launches Turbine
@@ -592,7 +592,7 @@ tar xvzf exm-trunk.tar.gz
 cd exm-trunk
 ----
 
-- exm-settings.zsh needs some customization.  The changed settings were:
+- exm-settings.sh needs some customization.  The changed settings were:
 ----
 EXM_PREFIX=/u/sciteam/tarmstro/soft/exm-trunk-r8770
 
