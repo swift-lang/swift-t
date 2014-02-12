@@ -66,12 +66,12 @@ popd >& /dev/null
 SCRIPT=${SCRIPT_DIR}/${SCRIPT_NAME}
 
 checkvars SCRIPT PPN TURBINE_OUTPUT WALLTIME
-declare   SCRIPT PPN TURBINE_OUTPUT WALLTIME
+declare   SCRIPT PPN TURBINE_OUTPUT WALLTIME QUEUE
 
 # Round NODES up for extra processes
 export NODES=$(( PROCS/PPN ))
 (( PROCS % PPN )) && (( NODES++ )) || true
-declare NODES
+declare PROCS NODES
 
 # Setup custom rank order
 if [ ! -z "${MPICH_CUSTOM_RANK_ORDER}" ]
@@ -118,4 +118,21 @@ then
   exit ${EXITCODE}
 fi
 
+declare JOB_ID
 print ${JOB_ID} > ${TURBINE_OUTPUT}/jobid.txt
+
+LOG_FILE=${TURBINE_OUTPUT}/turbine.log
+{
+  print "JOB:               ${JOB_ID}"
+  print "COMMAND:           ${SCRIPT_NAME} ${ARGS}"
+  print "HOSTNAME:          $( hostname -d )"
+  print "SUBMITTED:         $( date_nice )"
+  print "PROCS:             ${PROCS}"
+  print "PPN:               ${PPN}"
+  print "NODES:             ${NODES}"
+  print "TURBINE_ENGINES:   ${TURBINE_ENGINES}"
+  print "TURBINE_WORKERS:   ${TURBINE_WORKERS}"
+  print "ADLB_SERVERS:      ${ADLB_SERVERS}"
+  print "WALLTIME:          ${WALLTIME}"
+  print "ADLB_EXHAUST_TIME: ${ADLB_EXHAUST_TIME}"
+} >> ${LOG_FILE}
