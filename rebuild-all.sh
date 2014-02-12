@@ -2,7 +2,7 @@
 set -e
 THISDIR=`dirname $0`
 
-BUILDVARS=${THISDIR}/build-vars.sh
+BUILDVARS=${THISDIR}/exm-settings.sh
 if [ ! -f ${BUILDVARS} ] ; then
   echo "Need ${BUILDVARS} to exist"
   exit 1

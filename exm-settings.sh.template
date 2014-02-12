@@ -1,0 +1,112 @@
+# Settings for building Swift/T
+
+#+======================+
+#|| Mandatory settings ||
+#+======================+
+# Please fill in all of these variables
+
+# Install root: change to your install location
+EXM_PREFIX=/tmp/exm-install
+
+#+======================+
+#|| Optional variables ||
+#+======================+
+# These variables can be modified for non-standard configurations
+# or directory layouts
+
+# C compiler and flags
+export CC=mpicc
+# export CFLAGS=
+# export LDFLAGS=
+
+# Set MPI version
+# (version 3 required for parallel tasks but version 2 is also allowed)
+MPI_VERSION=3
+# MPI customization (uncomment to enable)
+# EXM_CUSTOM_MPI=1
+
+# How to call Ant
+ANT=ant
+
+# Ant arguments for STC build
+STC_ANT_ARGS=""
+
+# Code: work out current directory
+SCRIPT_DIR=$(cd $(dirname $0); pwd)
+
+# Root of source directory. Default is current directory.
+# Override with EXM_SRC_ROOT environment variable
+EXM_SRC_ROOT=${EXM_SRC_ROOT:-${SCRIPT_DIR}}
+
+# Source subdirectories. Modify to match your layout if needed
+C_UTILS_SRC=${EXM_SRC_ROOT}/c-utils/
+LB_SRC=${EXM_SRC_ROOT}/lb/
+TURBINE_SRC=${EXM_SRC_ROOT}/turbine/
+STC_SRC=${EXM_SRC_ROOT}/stc/
+
+# Install subdirectories. Modify to match your layout if needed
+LB_INSTALL=${EXM_PREFIX}/lb
+C_UTILS_INSTALL=${EXM_PREFIX}/c-utils
+TURBINE_INSTALL=${EXM_PREFIX}/turbine
+STC_INSTALL=${EXM_PREFIX}/stc
+
+# Locations of software packages to override autodetected locations.
+# PYTHON_INSTALL=/usr/lib
+# TCL_INSTALL=${EXM_PREFIX}/tcl
+# Tcl version: specify in case of multiple competing versions
+# TCL_VERSION=8.6
+# MPI_INSTALL=${EXM_PREFIX}/mpich2
+# MPE_INSTALL=${EXM_PREFIX}/mpe
+
+# Optimized build
+# EXM_OPT_BUILD=1
+
+# Debug build (extra logging)
+# EXM_DEBUG_BUILD=1
+
+# Enable Python integration
+# ENABLE_PYTHON=1
+
+# Enable R integration
+# ENABLE_R=1
+
+# Enable MPE support
+# ENABLE_MPE=1
+
+# Cray systems.  Will perform a dynamic or static build depending on
+# EXM_BUILD_STATIC
+# EXM_CRAY=1
+
+# Disable ADLB checkpoint functionality
+# DISABLE_XPT=1
+
+# Enable developer mode (extra warnings)
+# EXM_DEV=1
+
+# Enable Turbine static linking
+# TURBINE_STATIC=1
+
+# Do full static build (default is dynamic)
+# EXM_STATIC_BUILD=1
+
+#+================================+
+#| Default build behavior         |
+#+================================+
+# These options control the default behavior of each build script, e.g.
+# the extent to which it does a rebuild from scratch. These variables are
+# overridden when you run other scripts like rebuild_all.sh.
+
+# Make build parallelism: increase to speed up builds
+MAKE_PARALLELISM=1
+
+# Run auto-tools before each build
+RUN_AUTOTOOLS=${RUN_AUTOTOOLS:-0}
+
+# Update from SVN in each source directory
+SVN_UPDATE=${SVN_UPDATE:-0}
+
+# Do a "make clean" or "ant clean"
+MAKE_CLEAN=${MAKE_CLEAN:-0}
+
+# Run configure
+CONFIGURE=${CONFIGURE:-1}

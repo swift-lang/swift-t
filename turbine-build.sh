@@ -2,9 +2,9 @@
 set -e
 set -x
 THISDIR=`dirname $0`
-source ${THISDIR}/build-vars.sh
+source ${THISDIR}/exm-settings.sh
 
-rm -rf ${TURBINE_INST}
+rm -rf ${TURBINE_INSTALL}
 if [ -f Makefile ]; then
     # Disabled due to Turbine configure check
     #make clean
@@ -44,8 +44,11 @@ if (( EXM_CRAY )); then
   EXTRA_ARGS+=" --enable-custom-mpi"
 fi
 
-if [ ! -z "$WITH_PYTHON" ]; then
-  EXTRA_ARGS+=" --enable-python --with-python=${WITH_PYTHON}"
+if (( ENABLE_PYTHON )); then
+  EXTRA_ARGS+=" --enable-python"
+  if [ ! -z "$WITH_PYTHON" ]; then
+    EXTRA_ARGS+=" --with-python=${WITH_PYTHON}"
+  fi
 fi
 
 if [ ! -z "$TCL_VERSION" ]; then
@@ -64,13 +67,16 @@ if (( TURBINE_STATIC )); then
   EXTRA_ARGS+=" --enable-static"
 fi
 
+if [ ! -z "$MPI_INSTALL" ]; then
+  EXTRA_ARGS+=" --with-mpi=${MPI_INSTALL}"
+fi
+
 if (( CONFIGURE )); then
-  ./configure --with-adlb=${LB_INST} \
+  ./configure --with-adlb=${LB_INSTALL} \
               ${CRAY_ARGS} \
-              --with-mpi=${MPICH_INST} \
-              --with-tcl=${TCL_INST} \
-              --with-c-utils=${C_UTILS_INST} \
-              --prefix=${TURBINE_INST} \
+              --with-tcl=${TCL_INSTALL} \
+              --with-c-utils=${C_UTILS_INSTALL} \
+              --prefix=${TURBINE_INSTALL} \
               ${EXTRA_ARGS}
 #             --disable-log
 fi

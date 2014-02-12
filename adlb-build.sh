@@ -3,9 +3,8 @@ set -e
 set -x
 
 THISDIR=`dirname $0`
-source ${THISDIR}/build-vars.sh
+source ${THISDIR}/exm-settings.sh
 
-export CC=mpicc
 if (( MAKE_CLEAN )); then
   if [ -f Makefile ]; then
     make clean
@@ -35,7 +34,7 @@ if (( EXM_TRACE_BUILD )); then
 fi
 
 if (( ENABLE_MPE )); then
-    EXTRA_ARGS+="--with-mpe=${MPE_INST} "
+    EXTRA_ARGS+="--with-mpe=${MPE_INSTALL} "
 fi
 
 if (( EXM_STATIC_BUILD )); then
@@ -48,8 +47,8 @@ if (( EXM_CRAY )); then
     export CFLAGS="-g -O2"
   else
     export CC="gcc"
-    export CFLAGS="-g -O2 -I${MPICH_INST}/include"
-    export LDFLAGS="-L${MPICH_INST}/lib -lmpich"
+    export CFLAGS="-g -O2 -I${MPI_INSTALL}/include"
+    export LDFLAGS="-L${MPI_INSTALL}/lib -lmpich"
   fi
   EXTRA_ARGS+=" --enable-mpi-2"
 fi
@@ -62,9 +61,13 @@ if (( EXM_DEV )); then
   EXTRA_ARGS+=" --enable-dev"
 fi
 
+if [[ ${MPI_VERSION} == 2 ]]; then
+  EXTRA_ARGS+=" --enable-mpi-2"
+fi
+
 if (( CONFIGURE )); then
-  ./configure --with-c-utils=${C_UTILS_INST} \
-              --prefix=${LB_INST} ${EXTRA_ARGS}
+  ./configure --with-c-utils=${C_UTILS_INSTALL} \
+              --prefix=${LB_INSTALL} ${EXTRA_ARGS}
 fi
 if (( MAKE_CLEAN )); then
   make clean

@@ -3,7 +3,7 @@ set -e
 
 THISDIR=$( cd $(dirname $0) && pwd )
 
-cd ${C_UTILS}
+pushd ${C_UTILS_SRC}
 echo
 echo "Building c-utils"
 pwd
@@ -12,39 +12,32 @@ ${THISDIR}/cutils-build.sh
 
 if [ ! -z "$ENABLE_MPE" ]; then
   cd ${THISDIR}
-  export DEST=${MPE_INST}
-  export MPICH=${MPICH_INST}
+  export DEST=${MPE_INSTALL}
+  export MPICH=${MPI_INSTALL}
   ${REPO_ROOT}/adlb_patches/make-libmpe.so.zsh
 fi
+popd
 
-cd ${LB}
+pushd ${LB_SRC}
 echo
 echo "Building lb"
 pwd
 echo "================"
 ${THISDIR}/adlb-build.sh
+popd
 
-cd ${TURBINE}
+pushd ${TURBINE_SRC}
 echo
 echo "Building Turbine"
 pwd
 echo "================"
 ${THISDIR}/turbine-build.sh
+popd
 
-cd ${STC}
+pushd ${STC_SRC}
 echo
 echo "Building STC"
 pwd
 echo "================"
-if (( SVN_UPDATE )); then
-  svn update
-fi
-if (( MAKE_CLEAN )); then
-  ant clean
-fi
-ant ${STC_ANT_ARGS}
-
-if [ ! -z "$STC_INST" ]
-then
-  ant -Ddist.dir=$STC_INST -Dturbine.home=${TURBINE_INST} install
-fi
+${THISDIR}/stc-build.sh
+popd

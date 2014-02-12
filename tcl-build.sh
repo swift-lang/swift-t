@@ -7,7 +7,7 @@
 set -e
 set -x
 THISDIR=`dirname $0`
-source ${THISDIR}/build-vars.sh
+source ${THISDIR}/exm-settings.sh
 
 EXTRA_ARGS=""
 
@@ -32,6 +32,6 @@ if [ -f Makefile ]; then
   make distclean
 fi
 
-./configure --prefix=${TCL_INST} ${EXTRA_ARGS}
+./configure --prefix=${TCL_INSTALL} ${EXTRA_ARGS}
 make -j ${MAKE_PARALLELISM}
 make install

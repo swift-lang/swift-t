@@ -3,7 +3,7 @@ set -e
 set -x
 
 THISDIR=`dirname $0`
-source ${THISDIR}/build-vars.sh
+source ${THISDIR}/exm-settings.sh
 
 if (( MAKE_CLEAN )); then
   if [ -f Makefile ]; then
@@ -43,7 +43,7 @@ if (( EXM_CRAY )); then
 fi
 
 if (( CONFIGURE )); then
-  ./configure --enable-shared --prefix=${C_UTILS_INST} ${EXTRA_ARGS}
+  ./configure --enable-shared --prefix=${C_UTILS_INSTALL} ${EXTRA_ARGS}
 fi
 make -j ${MAKE_PARALLELISM}
 make install
