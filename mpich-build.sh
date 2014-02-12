@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run this script from inside extracted mpich2 source distribution
 set -e
-set -x
+
 THISDIR=`dirname $0`
 source ${THISDIR}/exm-settings.sh
 

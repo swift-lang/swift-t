@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 set -e
-set -x
 
 THISDIR=`dirname $0`
 source ${THISDIR}/exm-settings.sh

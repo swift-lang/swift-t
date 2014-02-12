@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -e
-set -x
+
 THISDIR=`dirname $0`
 source ${THISDIR}/exm-settings.sh
 
@@ -46,9 +46,17 @@ fi
 
 if (( ENABLE_PYTHON )); then
   EXTRA_ARGS+=" --enable-python"
-  if [ ! -z "$WITH_PYTHON" ]; then
-    EXTRA_ARGS+=" --with-python=${WITH_PYTHON}"
-  fi
+fi
+
+if [ ! -z "$PYTHON_INSTALL" ]; then
+  EXTRA_ARGS+=" --with-python=${PYTHON_INSTALL}"
+fi
+
+if (( ENABLE_R )); then
+  EXTRA_ARGS+=" --enable-r"
+fi
+if [ ! -z "$R_INSTALL" ]; then
+  EXTRA_ARGS+=" --with-r=${R_INSTALL}"
 fi
 
 if [ ! -z "$TCL_VERSION" ]; then

@@ -5,7 +5,6 @@
 #   cd tcl8.5.12
 #   ~/exm/sfw/dev/tcl_build.sh
 set -e
-set -x
 THISDIR=`dirname $0`
 source ${THISDIR}/exm-settings.sh
 

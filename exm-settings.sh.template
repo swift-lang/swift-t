@@ -51,7 +51,6 @@ TURBINE_INSTALL=${EXM_PREFIX}/turbine
 STC_INSTALL=${EXM_PREFIX}/stc
 
 # Locations of software packages to override autodetected locations.
-# PYTHON_INSTALL=/usr/lib
 # TCL_INSTALL=${EXM_PREFIX}/tcl
 # Tcl version: specify in case of multiple competing versions
 # TCL_VERSION=8.6
@@ -66,9 +65,11 @@ STC_INSTALL=${EXM_PREFIX}/stc
 
 # Enable Python integration
 # ENABLE_PYTHON=1
+# PYTHON_INSTALL=/usr/
 
 # Enable R integration
 # ENABLE_R=1
+# R_INSTALL=/usr/
 
 # Enable MPE support
 # ENABLE_MPE=1
