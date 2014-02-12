@@ -80,7 +80,7 @@ MPI_VERSION=3
 # Enable developer mode (extra warnings)
 # EXM_DEV=1
 
-# Disable build of static librares and executables
+# Disable build of static libraries and executables
 # DISABLE_STATIC=1
 
 # Do full static build (default is dynamic)
