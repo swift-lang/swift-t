@@ -20,6 +20,7 @@ set -e
 
 THIS=$( cd $( dirname $0 ) ; /bin/pwd )
 TURBINE_HOME=$( cd ${THIS}/../../.. ; /bin/pwd )
+source ${TURBINE_HOME}/scripts/helpers.zsh
 
 JOBID=$1
 

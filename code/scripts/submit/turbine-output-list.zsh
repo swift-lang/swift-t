@@ -16,15 +16,49 @@
 # Turbine Output Search
 # COUNT most recent runs
 
-COUNT=$1
+set -e
 
-checkvars COUNT
+THIS=$( cd $( dirname $0 ) ; /bin/pwd )
+TURBINE_HOME=$( cd ${THIS}/../.. ; /bin/pwd )
+source ${TURBINE_HOME}/scripts/helpers.zsh
 
-DIRS=$( lsd_leaf ~/turbine-output | tail -${COUNT} )
+TURBINE_OUTPUT_ROOT=${TURBINE_OUTPUT_ROOT:-${HOME}/turbine-output}
 
-for D in ${DIRS}
+set -u
+
+usage()
+{
+  print "turbine-output-list <COUNT>?"
+  print "shows all or COUNT most recent turbine-output directories"
+}
+
+COUNT="ALL"
+if [[ ${#*} == 1 ]]
+then
+  COUNT=$1
+elif [[ ${#*} > 1 ]]
+then
+  usage
+  exit 1
+fi
+
+# Use ZSH instead of find because of ordering
+# Format YYYY/MM/DD/HH/MM/SS
+if [[ ${COUNT} == "ALL" ]]
+then
+  print -l ${TURBINE_OUTPUT_ROOT}/*/*/*/*/*/*
+else
+  print -l ${TURBINE_OUTPUT_ROOT}/*/*/*/*/*/* | tail -n ${COUNT}
+fi | \
+while read D
 do
-  print $( < ${D}/jobid.txt ) ${D}
+  if [[ -f ${D}/jobid.txt ]]
+  then
+    JOBID=$( < ${D}/jobid.txt )
+  else
+    JOBID="UNKNOWN"
+  fi
+  printf "%7s %s\n" ${JOBID} ${D}
 done
 
-exit 1
+return 0
