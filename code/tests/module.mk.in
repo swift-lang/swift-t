@@ -5,9 +5,11 @@ TEST_SRC_C :=
 TEST_SRC_C += $(DIR)/debug.c
 TEST_SRC_C += $(DIR)/lib-turbine.c
 TEST_SRC_C += $(DIR)/ptasks-1.c
+# This takes too long for ordinary testing:
 # TEST_SRC_C += $(DIR)/ptasks-bench.c
-# TODO: Add this to exm-issues
+# The stress test can fail: (#577)
 # TEST_SRC_C += $(DIR)/ptasks-stress.c
+
 TEST_SRC_C += $(DIR)/checkpoint-1.c
 
 ifeq ($(USE_MPE),1)
