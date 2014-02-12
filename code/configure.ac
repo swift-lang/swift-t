@@ -514,13 +514,13 @@ AC_ARG_ENABLE(shared,
     ])
 AC_SUBST(ENABLE_SHARED)
 
-ENABLE_STATIC=0
+ENABLE_STATIC=1
 AC_ARG_ENABLE(static,
     AS_HELP_STRING([--enable-static],
-                   [Default: disabled]),
+                   [Default: enabled]),
     [
-       if test "$enableval" = yes ; then
-         ENABLE_STATIC=1
+       if test "$enableval" = no ; then
+         ENABLE_STATIC=0
        fi
     ])
 AC_SUBST(ENABLE_STATIC)
