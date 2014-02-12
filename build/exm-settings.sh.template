@@ -80,8 +80,8 @@ MPI_VERSION=3
 # Enable developer mode (extra warnings)
 # EXM_DEV=1
 
-# Enable build of Turbine static library and executables
-TURBINE_STATIC=1
+# Disable build of static librares and executables
+# DISABLE_STATIC=1
 
 # Do full static build (default is dynamic)
 # EXM_STATIC_BUILD=1

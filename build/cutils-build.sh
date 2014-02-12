@@ -32,6 +32,10 @@ if (( EXM_STATIC_BUILD )); then
   EXTRA_ARGS+=" --disable-shared"
 fi
 
+if (( DISABLE_STATIC )); then
+  EXTRA_ARGS+=" --disable-static"
+fi
+
 if (( EXM_CRAY )); then
   if (( EXM_STATIC_BUILD )); then
     export CC=cc

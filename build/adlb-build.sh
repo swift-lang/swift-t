@@ -71,6 +71,10 @@ if [ ! -z "$ZLIB_INSTALL" ]; then
   EXTRA_ARGS+=" --with-zlib=$ZLIB_INSTALL"
 fi
 
+if (( DISABLE_STATIC )); then
+  EXTRA_ARGS+=" --disable-static"
+fi
+
 if (( CONFIGURE )); then
   ./configure --with-c-utils=${C_UTILS_INSTALL} \
               --prefix=${LB_INSTALL} ${EXTRA_ARGS}

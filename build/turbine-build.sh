@@ -32,8 +32,6 @@ fi
 
 if (( EXM_STATIC_BUILD )); then
   EXTRA_ARGS+=" --disable-shared"
-  # Have to enable turbine static consequentially
-  TURBINE_STATIC=1
 fi
 
 if (( EXM_CRAY )); then
@@ -92,8 +90,8 @@ if (( EXM_DEV )); then
   EXTRA_ARGS+=" --enable-dev"
 fi
 
-if (( TURBINE_STATIC )); then
-  EXTRA_ARGS+=" --enable-static"
+if (( DISABLE_STATIC )); then
+  EXTRA_ARGS+=" --disable-static"
 fi
 
 if [ ! -z "$MPI_INSTALL" ]; then
