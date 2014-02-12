@@ -178,7 +178,7 @@ deps.txt: $(DEPS) $(TEST_DEPS)
 lib:
 	$(E) mkdir -pv lib
 
-$(ADLB_A): $(OBJS)
+$(ADLB_A): $(OBJS) lib
 	$(Q) "  AR		$(@)"
 	$(E) $(AR) $(ARFLAGS) $(@) $(OBJS)
 	$(E) $(RANLIB) $(@)
