@@ -34,6 +34,17 @@ public class Annotations {
   public static final String FN_PAR = "par";
   public static final String FN_DEPRECATED = "deprecated";
   public static final String FN_CHECKPOINT = "checkpoint";
+  public static final String FN_SUPPRESS = "suppress";
+  
+  // Options for @suppress
+  public static enum Suppression {
+    UNUSED_OUTPUT,
+    ;
+    static public Suppression fromUserString(String s)
+          throws IllegalArgumentException {
+      return valueOf(s.toUpperCase());
+    }
+  }
 
   public static final String FNCALL_PAR = "par";
   public static final String FNCALL_LOCATION = "location";
