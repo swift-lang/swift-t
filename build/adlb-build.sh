@@ -63,6 +63,14 @@ if [[ ${MPI_VERSION} == 2 ]]; then
   EXTRA_ARGS+=" --enable-mpi-2"
 fi
 
+if (( DISABLE_ZLIB )); then
+  EXTRA_ARGS+=" --disable-zlib"
+fi
+
+if [ ! -z "$ZLIB_INSTALL" ]; then
+  EXTRA_ARGS+=" --with-zlib=$ZLIB_INSTALL"
+fi
+
 if (( CONFIGURE )); then
   ./configure --with-c-utils=${C_UTILS_INSTALL} \
               --prefix=${LB_INSTALL} ${EXTRA_ARGS}

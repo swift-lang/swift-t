@@ -68,6 +68,22 @@ if [ ! -z "$TCL_VERSION" ]; then
   EXTRA_ARGS+=" --with-tcl-version=$TCL_VERSION"
 fi
 
+if [ ! -z "$TCLSH_LOCAL" ]; then
+  EXTRA_ARGS+=" --with-tcl-local=${TCLSH_LOCAL}"
+fi
+
+if [ ! -z "$TCL_LIB_DIR" ]; then
+  EXTRA_ARGS+=" --with-tcl-lib-dir=${TCL_LIB_DIR}"
+fi
+
+if [ ! -z "$TCL_INCLUDE_DIR" ]; then
+  EXTRA_ARGS+=" --with-tcl-include=${TCL_INCLUDE_DIR}"
+fi
+
+if [ ! -z "$TCL_SYSLIB_DIR" ]; then
+  EXTRA_ARGS+=" --with-tcl-syslib-dir=${TCL_SYSLIB_DIR}"
+fi
+
 if (( DISABLE_XPT )); then
     EXTRA_ARGS+=" --enable-checkpoint=no"
 fi
@@ -82,6 +98,22 @@ fi
 
 if [ ! -z "$MPI_INSTALL" ]; then
   EXTRA_ARGS+=" --with-mpi=${MPI_INSTALL}"
+fi
+
+if (( EXM_CUSTOM_MPI )); then
+  EXTRA_ARGS+=" --enable-custom-mpi"
+fi
+
+if [ ! -z "$MPI_INCLUDE" ]; then
+  EXTRA_ARGS+=" --with-mpi-include=${MPI_INCLUDE}"
+fi
+
+if [ ! -z "$MPI_LIB_DIR" ]; then
+  EXTRA_ARGS+=" --with-mpi-lib-dir=${MPI_LIB_DIR}"
+fi
+
+if [ ! -z "$MPI_LIB_NAME" ]; then
+  EXTRA_ARGS+=" --with-mpi-lib-name=${MPI_LIB_NAME}"
 fi
 
 if (( CONFIGURE )); then

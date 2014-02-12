@@ -25,14 +25,29 @@ export CC=mpicc
 # Tcl version: specify in case of multiple competing versions
 # TCL_VERSION=8.6
 
+# Specify details of non-standard Tcl layouts 
+# name of tclsh compatible with build system
+# TCLSH_LOCAL=/usr/bin/tclsh
+# directory containing Tcl library
+# TCL_LIB_DIR=/path/to/tcl/lib
+# directory containing tcl.h
+# TCL_INCLUDE_DIR=/path/to/tcl/include
+# tcl system library directory.  Must contain init.tcl in root or
+# tcl${TCL_VERSION} subdirectory
+# TCL_SYSLIB_DIR=/path/to/tcl/lib
+
 # Location of MPI install to override autodetected location
 # MPI_INSTALL=${EXM_PREFIX}/mpich2
 # MPE_INSTALL=${EXM_PREFIX}/mpe
 # Set MPI version
 # (version 3 required for parallel tasks but version 2 is also allowed)
 MPI_VERSION=3
-# MPI customization (uncomment to enable)
+
+# MPI custom layouts (uncomment below options to enable)
 # EXM_CUSTOM_MPI=1
+# MPI_INCLUDE=/path/to/mpi/include
+# MPI_LIB_DIR=/path/to/mpi/lib
+# MPI_LIB_NAME=funny.mpi.a
 
 # Optimized build
 # EXM_OPT_BUILD=1
@@ -57,6 +72,10 @@ MPI_VERSION=3
 
 # Disable ADLB checkpoint functionality
 # DISABLE_XPT=1
+
+# Manual zlib setup: required for checkpointing
+# DISABLE_ZLIB=1
+# ZLIB_INSTALL=/path/to/zlib
 
 # Enable developer mode (extra warnings)
 # EXM_DEV=1
