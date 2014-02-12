@@ -657,6 +657,8 @@ then
 fi
 
 echo "using Tcl version: ${TCL_VERSION}"
+echo "Tcl shared library: ${USE_LIBTCL_SO}"
+echo "Tcl static library: ${USE_LIBTCL_A}"
 AC_SUBST(TCL_VERSION)
 
 
