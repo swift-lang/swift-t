@@ -19,7 +19,7 @@ Settings:
 ////
 :miscellaneous.newline: \n
 
-== Overview
+== How to use this guide
 
 This manual provides a reference on how to run Swift/T Turbine
 programs on a variety of systems.  It also contains an index of sites
@@ -45,10 +45,19 @@ exm-user@mcs.anl.gov .
 
 === Build procedures
 
-To follow a build procedure, you may start with the +exm+ download
-package.  Simply edit the +exm-setup+ script and modify the
-configuration settings as described here.  Typically, the only
-required changes will be to the +configure+ command lines.
+The build procedure is based on the installation process
+described in the link:./swift.html[Swift/T Guide].  You
+should follow that build procedure, and use this
+guide for information on specific configuration
+settings for your system.
+
+The settings are generally implemented by modifying the
++exm-settings.sh+ configuration script.  In some cases,
+where the setting is not configurable through +exm-settings.sh+,
+it may be necessary to directly modify the +configure+ or +make+
+command lines by following the manual build process, or by modifying
+build scripts under the +build+ subdirectory
+(e.g. +turbine-build.sh+).
 
 === Version numbers
 
@@ -67,7 +76,7 @@ To report a problem, simply email exm-user@mcs.anl.gov .
 
 === For more information
 
-* See the link:./stc.html[Swift/T Guide] for more information about Swift/T.
+* See the link:./swift.html[Swift/T Guide] for more information about Swift/T.
 * Join the ExM (Swift/T project) http://lists.mcs.anl.gov/mailman/listinfo/exm-user[user mailing list].
 
 == Turbine as MPI program
