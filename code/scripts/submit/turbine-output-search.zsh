@@ -14,17 +14,32 @@
 # limitations under the License
 
 # Turbine Output Search
-# COUNT most recent runs
+# for JOBID
 
-COUNT=$1
+set -e
 
-checkvars COUNT
+THIS=$( cd $( dirname $0 ) ; /bin/pwd )
+TURBINE_HOME=$( cd ${THIS}/../../.. ; /bin/pwd )
+source ${TURBINE_HOME}/scripts/helpers.zsh
 
-DIRS=$( lsd_leaf ~/turbine-output | tail -${COUNT} )
+JOBID=$1
 
-for D in ${DIRS}
-do
-  print $( < ${D}/jobid.txt ) ${D}
-done
+checkvar JOBID
 
+TURBINE_OUTPUT_ROOT=${TURBINE_OUTPUT_ROOT:-${HOME}/turbine-output}
+
+set -u
+
+find ${TURBINE_OUTPUT_ROOT} -name jobid.txt | \
+  while read ID_FILE
+  do
+    ID=$( < ${ID_FILE} )
+    if [[ ${ID} = ${JOBID}.* ]]
+    then
+      print TO=$( dirname ${ID_FILE} )
+      exit 0
+    fi
+  done
+
+# We didn't find anything
 exit 1

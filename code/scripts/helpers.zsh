@@ -76,7 +76,16 @@ bail()
 
 crash()
 {
-  CODE=$1
+  local CODE=1
+  while getopts "c" OPTION
+  do
+    case ${OPTION}
+      in
+      (c) CODE=${OPTARG} ;;
+    esac
+  done
+  shift $(( OPTIND-1 ))
+
   shift
   MSG="${*}"
   bail ${CODE} ${MSG}
@@ -89,7 +98,7 @@ checkvar()
 
   if [[ ${(P)VAR} == "" ]]
     then
-    crash 1 "Not set: ${VAR}"
+    crash "Not set: ${VAR}"
   fi
   return 0
 }
@@ -113,7 +122,7 @@ checkint()
   checkvar ${VAR}
   if [[ ${(P)VAR} != <-> ]]
   then
-    crash 1 "Not an integer: ${VAR}"
+    crash "Not an integer: ${VAR}"
   fi
   return 0
 }

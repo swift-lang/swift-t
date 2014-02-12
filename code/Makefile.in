@@ -429,7 +429,7 @@ F2A_MKHDR := scripts/mkstatic/files2arrays_mkhdr.sh
 $(STATIC_PKG_RESOURCE_C): %_tcl.c : %.tcl $(F2A)
 	$(Q) "  FILE2ARRAY $(@)"
 	$(E) $(F2A) -v "turbine_lib_$(shell basename $< | sed 's/[\.-]/_/g')" $< > "$(@).tmp"
-	mv "$(@).tmp" $(@)
+	$(E) mv "$(@).tmp" $(@)
 
 $(STATIC_PKG_RESOURCE_H): $(STATIC_PKG_RESOURCE_C) $(F2A_MKHDR)
 	$(Q) " MKHDR $(@)"
@@ -630,7 +630,7 @@ install.txt: $(ENABLED_PACKAGES) $(BINS) $(EXPORTS) $(SCRIPTS) $(TURBINE_HEADERS
 	$(E) cp $(CP_ARGS) $(TURBINE_HEADERS)    $(INSTALL_INCLUDE)
 	$(E) cp $(CP_ARGS) etc/help.txt          $(INSTALL_ETC)
 	@echo
-	$(Q) "  CREATE 		$(@)"
+	$(Q) "  CREATE  	$(@)"
 	$(E) echo  "PREFIX: $(INSTALL_PREFIX)"   >  $(@)
 	$(E) echo  "SOURCE: $(PWD)"              >> $(@)
 	$(E) date "+DATE:   %m/%d/%Y %I:%M%p"    >> $(@)

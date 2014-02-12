@@ -22,7 +22,7 @@ changecom(`dnl')#!/bin/bash
 # Define a convenience macro
 define(`getenv', `esyscmd(printf -- "$`$1' ")')
 
-COMMAND=getenv(COMMAND)
+COMMAND="getenv(COMMAND)"
 PPN=getenv(PPN)
 PROCS=getenv(PROCS)
 
@@ -38,6 +38,8 @@ fi
 LAUNCHER=getenv(TURBINE_LAUNCHER)
 export TURBINE_LOG=getenv(TURBINE_LOG)
 
+export ADLB_PRINT_TIME=getenv(ADLB_PRINT_TIME)
+
 echo "TURBINE SETTINGS"
 echo "DATE:         $(date)"
 echo "TURBINE_HOME: ${TURBINE_HOME}"
@@ -46,8 +48,9 @@ echo "PROCS:        ${PROCS}"
 echo "PPN:          ${PPN}"
 echo "TCLLIBPATH:   ${TCLLIBPATH}"
 echo "LAUNCHER:     ${LAUNCHER}"
-
 echo
+
+set -x
 
 ${LAUNCHER} -l -n ${PROCS} -ppn ${PPN} ${TCLSH} ${COMMAND}
 # Return exit code from launcher (mpiexec)
