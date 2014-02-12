@@ -8,54 +8,31 @@
 # Install root: change to your install location
 EXM_PREFIX=/tmp/exm-install
 
-#+======================+
-#|| Optional variables ||
-#+======================+
-# These variables can be modified for non-standard configurations
-# or directory layouts
+#+====================================+
+#|| Optional configuration variables ||
+#+====================================+
+# These variables can be modified to enable/disable features or to
+# provide information about your system and required software packages.
+# For many systems the default settings are adequate. 
 
 # C compiler and flags
 export CC=mpicc
 # export CFLAGS=
 # export LDFLAGS=
 
+# Location of Tcl to override autodetected Tcl
+# TCL_INSTALL=${EXM_PREFIX}/tcl
+# Tcl version: specify in case of multiple competing versions
+# TCL_VERSION=8.6
+
+# Location of MPI install to override autodetected location
+# MPI_INSTALL=${EXM_PREFIX}/mpich2
+# MPE_INSTALL=${EXM_PREFIX}/mpe
 # Set MPI version
 # (version 3 required for parallel tasks but version 2 is also allowed)
 MPI_VERSION=3
 # MPI customization (uncomment to enable)
 # EXM_CUSTOM_MPI=1
-
-# How to call Ant
-ANT=ant
-
-# Ant arguments for STC build
-STC_ANT_ARGS=""
-
-# Code: work out current directory
-SCRIPT_DIR=$(cd $(dirname $0); pwd)
-
-# Root of source directory. Default is current directory.
-# Override with EXM_SRC_ROOT environment variable
-EXM_SRC_ROOT=${EXM_SRC_ROOT:-${SCRIPT_DIR}}
-
-# Source subdirectories. Modify to match your layout if needed
-C_UTILS_SRC=${EXM_SRC_ROOT}/c-utils/
-LB_SRC=${EXM_SRC_ROOT}/lb/
-TURBINE_SRC=${EXM_SRC_ROOT}/turbine/
-STC_SRC=${EXM_SRC_ROOT}/stc/
-
-# Install subdirectories. Modify to match your layout if needed
-LB_INSTALL=${EXM_PREFIX}/lb
-C_UTILS_INSTALL=${EXM_PREFIX}/c-utils
-TURBINE_INSTALL=${EXM_PREFIX}/turbine
-STC_INSTALL=${EXM_PREFIX}/stc
-
-# Locations of software packages to override autodetected locations.
-# TCL_INSTALL=${EXM_PREFIX}/tcl
-# Tcl version: specify in case of multiple competing versions
-# TCL_VERSION=8.6
-# MPI_INSTALL=${EXM_PREFIX}/mpich2
-# MPE_INSTALL=${EXM_PREFIX}/mpe
 
 # Optimized build
 # EXM_OPT_BUILD=1
@@ -97,6 +74,12 @@ TURBINE_STATIC=1
 # the extent to which it does a rebuild from scratch. These variables are
 # overridden when you run other scripts like rebuild_all.sh.
 
+# How to call Ant build tool
+ANT=ant
+
+# Ant arguments for STC build
+STC_ANT_ARGS=""
+
 # Make build parallelism: increase to speed up builds
 MAKE_PARALLELISM=1
 
@@ -111,3 +94,28 @@ MAKE_CLEAN=${MAKE_CLEAN:-0}
 
 # Run configure
 CONFIGURE=${CONFIGURE:-1}
+
+#+=====================================+
+#|| Optional directory layout control ||
+#+=====================================+
+# Specify non-standard source/install subdirectory locations
+
+# Code: work out current directory
+SCRIPT_DIR=$(cd $(dirname $0); pwd)
+
+# Root of source directory. Default is current directory.
+# Override with EXM_SRC_ROOT environment variable
+EXM_SRC_ROOT=${EXM_SRC_ROOT:-${SCRIPT_DIR}}
+
+# Source subdirectories. Modify to match your layout if needed
+C_UTILS_SRC=${EXM_SRC_ROOT}/c-utils/
+LB_SRC=${EXM_SRC_ROOT}/lb/
+TURBINE_SRC=${EXM_SRC_ROOT}/turbine/
+STC_SRC=${EXM_SRC_ROOT}/stc/
+
+# Install subdirectories. Modify to match your layout if needed
+LB_INSTALL=${EXM_PREFIX}/lb
+C_UTILS_INSTALL=${EXM_PREFIX}/c-utils
+TURBINE_INSTALL=${EXM_PREFIX}/turbine
+STC_INSTALL=${EXM_PREFIX}/stc
+
