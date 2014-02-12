@@ -1668,9 +1668,20 @@ ant -Ddist.dir=... -Dturbine.home=...
   link:turbine-sites.html[Sites Guide] for further options.
 
 ==== Non-standard MPI locations
+Sometimes simply specifying the MPI directory is not enough to
+configure Swift/T.
 
-Configure Turbine with:
+You can modify these settings in +exm-settings.sh+ to more precisely
+define locations of MPI resources
 
+----
+EXM_CUSTOM_MPI=1
+MPI_INCLUDE=/path/to/mpi.h/include
+MPI_LIB_DIR=/path/to/mpi_lib/lib
+MPI_LIB_NAME=funny.mpi.a
+----
+
+If you are following the manual build process, configure Turbine with:
 ----
  --enable-custom --with-mpi-include=/path/to/mpi.h/include
                  --with-mpi-lib-dir=/path/to/mpi_lib/lib
