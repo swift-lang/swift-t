@@ -47,7 +47,7 @@ export TURBINE_HOME=$( cd $( dirname $0 )/../../.. ; /bin/pwd )
 source ${TURBINE_HOME}/scripts/submit/run-init.zsh
 
 # Log file for turbine-cobalt settings
-LOG_FILE=${TURBINE_OUTPUT}/turbine-cobalt.log
+LOG_FILE=${TURBINE_OUTPUT}/turbine.log
 # All output from job, including error stream
 OUTPUT_FILE=${TURBINE_OUTPUT}/output.txt
 
@@ -114,32 +114,41 @@ NODES=$(( PROCS/PPN ))
 (( PROCS % PPN )) && (( NODES++ )) || true
 declare NODES
 
+if [[ ${CHANGE_DIRECTORY} == "" ]]
+then
+  WORK_DIRECTORY=${TURBINE_OUTPUT}
+else
+  WORK_DIRECTORY=${CHANGE_DIRECTORY}
+fi
+
 # Launch it
 if [[ ${MODE} == "cluster" ]]
 then
-  export COMMAND="${SCRIPT_NAME} ${ARGS}"
+  export COMMAND="${TURBINE_OUTPUT}/${SCRIPT_NAME} ${ARGS}"
   m4 ${TURBINE_HOME}/scripts/submit/cobalt/turbine-cobalt.sh.m4 > \
      ${TURBINE_OUTPUT}/turbine-cobalt.sh
   chmod u+x ${TURBINE_OUTPUT}/turbine-cobalt.sh
   qsub -n ${NODES}             \
        -t ${WALLTIME}          \
        -q ${QUEUE}             \
-       --cwd ${TURBINE_OUTPUT} \
+       --cwd ${WORK_DIRECTORY} \
        --env "${ENV}"          \
        ${=MODE_ARG}            \
        -o ${TURBINE_OUTPUT}/output.txt \
        -e ${TURBINE_OUTPUT}/output.txt \
-       ${TURBINE_OUTPUT}/turbine-cobalt.sh | read JOB_ID
+       ${TURBINE_OUTPUT}/turbine-cobalt.sh | \
+    read JOB_ID
 else
   qsub -n ${NODES}             \
        -t ${WALLTIME}          \
        -q ${QUEUE}             \
-       --cwd ${TURBINE_OUTPUT} \
+       --cwd ${WORK_DIRECTORY} \
        --env "${ENV}"          \
        ${=MODE_ARG}            \
        -o ${TURBINE_OUTPUT}/output.txt \
        -e ${TURBINE_OUTPUT}/output.txt \
-        ${TCLSH} ${SCRIPT_NAME} ${ARGS} | read JOB_ID
+        ${TCLSH} ${TURBINE_OUTPUT}/${SCRIPT_NAME} ${ARGS} | \
+    read JOB_ID
 fi
 
 if [[ ${JOB_ID} == "" ]]
@@ -154,6 +163,7 @@ declare JOB_ID
 {
   print "JOB:               ${JOB_ID}"
   print "COMMAND:           ${SCRIPT_NAME} ${ARGS}"
+  print "WORK_DIRECTORY:    ${WORK_DIRECTORY}"
   print "HOSTNAME:          $( hostname -d )"
   print "SUBMITTED:         $( date_nice )"
   print "PROCS:             ${PROCS}"
@@ -180,13 +190,13 @@ print "TOTAL_TIME:        ${TOTAL_TIME}"  >> ${LOG_FILE}
 # Check for errors in output file
 [[ -f ${OUTPUT_FILE} ]] || abort "no output file!"
 
+# This does not work in MODE=cluster (Tukey)
 # Report non-zero job result codes
-grep "job result code:" ${OUTPUT_FILE} | grep -v "code: 0"
-if [[ $pipestatus[2] != 1 ]]
-then
-  print "JOB CRASHED" | tee -a ${LOG_FILE}
-  grep "job result code:" ${OUTPUT_FILE} >> ${LOG_FILE}
-  exit 1
-fi
+# if ! grep "code: 0" ${OUTPUT_FILE}
+# then
+#   print "JOB CRASHED" | tee -a ${LOG_FILE}
+#   grep "job result code:" ${OUTPUT_FILE} >> ${LOG_FILE}
+#   exit 1
+# fi
 
 exit 0
