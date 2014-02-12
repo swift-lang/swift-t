@@ -41,6 +41,7 @@ import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.exceptions.VariableUsageException;
 import exm.stc.common.lang.Annotations;
+import exm.stc.common.lang.Annotations.Suppression;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.Checkpointing;
@@ -1351,7 +1352,7 @@ public class ASTWalker {
     
     // Read annotations at end of child list
     for (; pos < tree.getChildCount(); pos++) {
-      handleFunctionAnnotation(context, function, fdecl, tree.child(pos),
+      handleBuiltinFunctionAnnotation(context, function, fdecl, tree.child(pos),
                                 inlineTcl != null);
     }
 
@@ -1403,7 +1404,7 @@ public class ASTWalker {
   }
 
 
-  private void handleFunctionAnnotation(Context context, String function,
+  private void handleBuiltinFunctionAnnotation(Context context, String function,
       FunctionDecl fdecl,
       SwiftAST annotTree, boolean hasLocalVersion) throws UserException {
     assert(annotTree.getType() == ExMParser.ANNOTATION);
@@ -1520,7 +1521,9 @@ public class ASTWalker {
                                       + "Swift functions");
     }
     
-    List<String> annotations = extractFunctionAnnotations(context, tree, 5);
+    Set<Suppression> suppressions = new HashSet<Suppression>();
+    List<String> annotations = extractFunctionAnnotations(context, tree, 5,
+                                                          suppressions);
     
     FunctionDecl fdecl = FunctionDecl.fromAST(context, function, inputs,
                           outputs, Collections.<String>emptySet());
@@ -1568,15 +1571,17 @@ public class ASTWalker {
    * @throws InvalidAnnotationException 
    */
   private List<String> extractFunctionAnnotations(Context context,
-      SwiftAST tree, int firstChild) throws InvalidAnnotationException {
+      SwiftAST tree, int firstChild, Set<Suppression> supps)
+              throws InvalidAnnotationException {
     return extractFunctionAnnotations(context, tree, firstChild,
-            false, new Out<AsyncExecutor>());
+            false, new Out<AsyncExecutor>(), supps);
   }
   private List<String> extractAppFunctionAnnotations(Context context,
-      SwiftAST tree, int firstChild,  Out<AsyncExecutor> exec)
+      SwiftAST tree, int firstChild,  Out<AsyncExecutor> exec,
+      Set<Suppression> supps)
           throws InvalidAnnotationException {
     return extractFunctionAnnotations(context, tree, firstChild,
-              true, exec);
+              true, exec, supps);
   }
   
   /**
@@ -1588,8 +1593,8 @@ public class ASTWalker {
    * @throws InvalidAnnotationException
    */
   private List<String> extractFunctionAnnotations(Context context,
-          SwiftAST tree, int firstChild, boolean appFn,
-          Out<AsyncExecutor> exec)
+          SwiftAST tree, int firstChild, boolean appFn,          
+          Out<AsyncExecutor> exec, Set<Suppression> suppressions)
               throws InvalidAnnotationException {
     exec.val = null;
     
@@ -1614,6 +1619,14 @@ public class ASTWalker {
           } catch (IllegalArgumentException e) {
             throw new InvalidAnnotationException(context,
                 "Unknown dispatch option: " + value);
+          }
+        } else if (annotation.equals(Annotations.FN_SUPPRESS)) {
+          try {
+            Suppression supp = Suppression.fromUserString(value);
+            suppressions.add(supp);
+          } catch (IllegalArgumentException e) {
+            throw new InvalidAnnotationException(context,
+                "Unknown suppression: " + value);
           }
         } else {
           throw new InvalidAnnotationException(context, "function definition",
@@ -1716,8 +1729,9 @@ public class ASTWalker {
     
     syncFilePos(context, tree);
     Out<AsyncExecutor> exec = new Out<AsyncExecutor>();
-    List<String> annotations = 
-        extractAppFunctionAnnotations(context, tree, 4, exec);
+    Set<Suppression> suppressions = new HashSet<Suppression>();
+    List<String> annotations = extractAppFunctionAnnotations(context,
+                                        tree, 4, exec, suppressions);
     
     syncFilePos(context, tree);
     boolean hasSideEffects = true, deterministic = false;
@@ -1742,7 +1756,8 @@ public class ASTWalker {
     
     backend.startFunction(function, backendOutArgs, backendInArgs, TaskMode.SYNC);
     genAppFunctionBody(appContext, appBodyT, inArgs, outArgs, 
-                       hasSideEffects, deterministic, exec.val, props);
+                       hasSideEffects, deterministic, exec.val, props,
+                       suppressions);
     backend.endFunction();
   }
 
@@ -1755,13 +1770,14 @@ public class ASTWalker {
    * @param deterministic
    * @param val 
    * @param props 
+   * @param suppressions 
    * @throws UserException
    */
   private void genAppFunctionBody(Context context, SwiftAST appBody,
           List<Var> inArgs, List<Var> outArgs,
           boolean hasSideEffects,
           boolean deterministic, AsyncExecutor asyncExec,
-          TaskProps props) throws UserException {
+          TaskProps props, Set<Suppression> suppressions) throws UserException {
     //TODO: don't yet handle situation where user is naughty and
     //    uses output variable in expression context
     assert(appBody.getType() == ExMParser.APP_BODY);
@@ -1785,7 +1801,8 @@ public class ASTWalker {
     Redirects<Var> redirFutures = processAppRedirects(context,
                                                     appBody.children(1));
     
-    checkAppOutputs(context, appName, outArgs, args, redirFutures);
+    checkAppOutputs(context, appName, outArgs, args, redirFutures,
+                    suppressions);
     
     // Work out what variables must be closed before command line executes
     Pair<Map<String, Var>, List<Var>> wait =
@@ -1945,8 +1962,8 @@ public class ASTWalker {
    * @throws UserException 
    */
   private void checkAppOutputs(Context context, String function,
-      List<Var> outputs, List<Var> args, Redirects<Var> redirFutures)
-                                                      throws UserException {
+      List<Var> outputs, List<Var> args, Redirects<Var> redirFutures,
+      Set<Suppression> suppressions) throws UserException {
     boolean deferredError = false;
     HashMap<String, Var> outMap = new HashMap<String, Var>();
     for (Var output: outputs) {
@@ -1976,9 +1993,13 @@ public class ASTWalker {
     }
     
     for (Var unreferenced: outMap.values()) {
-      if (!Types.isVoid(unreferenced.type())) {
+      if (!Types.isVoid(unreferenced.type()) &&
+          !suppressions.contains(Suppression.UNUSED_OUTPUT)) {
         LogHelper.warn(context, "Output argument " + unreferenced.name() 
-          + " is not referenced in app command line");
+          + " is not referenced in app command line.  This usually " +
+          "indicates an error.  However, if this is intended, for example " +
+          "if the file location is implicit, you can suppress this warning " +
+          "by annotating the function with @suppress=unused_output");
       }
     }
     if (deferredError) {

@@ -29,29 +29,54 @@ The Swift/T user discussion mailing list is found here:
 http://lists.mcs.anl.gov/mailman/listinfo/exm-user
 
 == Installation
-
 Writing and running Swift/Turbine programs requires multiple packages.
-These have been packaged for convenient download and installation.
+This section provides generic instructions for installing Swift/T
+on a range of systems.  We first cover locating and/or installing
+prerequisite software packages, then we cover building Swift/T
+from a source package.
+
+The http://www.mcs.anl.gov/exm/local/guides/turbine-sites.html[Turbine Sites Guide]
+is a accompanying resource for configuration settings and preinstalled software
+for specific systems.
+
+=== Installation of Prerequisites
 
 1. Install or locate MPI implementation (MPICH, OpenMPI, etc.)
 +
-Cf. http://www.mpich.org[MPICH Guides].
-Ensure that MPI is compiled as a shared library
-(for MPICH use +configure --enable-shared+).
-Other MPI implementations are <<Build_settings, supported>> as well.
+** On compute clusters, an MPI will almost certainly be pre-installed
+** Many operating systems provide packages with MPI implementations
+  that are usable, but often outdated.
+  E.g. the +mpich2+ package on Debian/Ubuntu.
+** See http://www.mpich.org[MPICH Guides] for information on installing the
+  latest version of MPICH.
+** Other MPI implementations are <<Build_configuration, supported>> as well.
 +
-Swift/T attempts to use MPI 3.0 functionality by default.
-To disable this, configure ADLB and Turbine with +--enable-mpi-2+.
+Swift/T attempts to use MPI 3.0 functionality by default.  If you
+are using an MPI implementation that does not support the MPI 3.0 standard,
+you must set +MPI_VERSION=2+ (if using the +exm-setup.zsh+ build process),
+or provide the +--enable-mpi-2+ configure option (if using
+the manual build process).
 +
-2. Install Tcl 8.6
+2. Install or locate Tcl 8.6.
 +
-Cf. http://www.tcl.tk[Tcl web site]
+* Tcl is available through the package manager on many systems.
+   You may need to install an additional Tcl development package
+   in addition to the standard tcl package,
+   e.g. +tcl8.6+ plus +tcl8.6-dev+ on Debian/Ubuntu systems.
+* Source distributions are available at the http://www.tcl.tk[Tcl web site]
 +
 3. Install or locate SWIG
 +
-Cf. http://swig.org[SWIG web site]
-+
-4. Obtain the package
+* You can check if SWIG is installed by running +swig -version+
+* SWIG is available through the package manager on many systems.
+* Source distributions are available at
+   the http://swig.org[SWIG web site]
+
+=== Installation of Swift/T from Source
+Once you have found all prerequisites, we can continue with building
+Swift/T from source.
+
+1. Obtain the Swift/T source package
 +
 ----
 wget http://www.mcs.anl.gov/exm/local/downloads/exm-0.5.0.tar.gz
@@ -60,35 +85,46 @@ wget http://www.mcs.anl.gov/exm/local/downloads/exm-0.5.0.tar.gz
 Cf. http://www.mcs.anl.gov/exm/local/downloads/downloads.html[Swift/T Downloads]
 for other packages
 +
-5. Unpack and enter package directory
+2. Unpack and enter package directory
 +
 ----
 tar xfz exm-trunk.tar.gz
 cd exm-trunk
 ----
 +
-6. Edit the settings file: +exm-settings.sh+
+3. Edit the settings file: +exm-settings.sh+
 +
-This allows you to change the installation location, etc.
+At a minimum, you must set the install directory with +EXM_PREFIX+.
+On a standard system, no further configuration may be needed.
+In many cases, however, you will need to modify additional
+configuration settings so that all prerequisites can
+be correctly located and configured (see Section
+<<Build_configuration, Build configuration>>).
++
+A range of other settings are also available here:
+enabling/disabling features, debug or optimized builds, etc.
 +
 TIP: Save your +exm-settings.sh+ when you download a new package
 +
-7. Run the setup script
+4. Run the setup script
 +
 ----
 ./exm-setup.zsh
 ----
-8. Add Turbine and STC to your paths
++
+If +exm-setup.zsh+ does not succeed on your system, see Section
+<<Build_configuration, Build configuration>> below.
++
+TIP: if you want more control than +exm-setup.zsh+ provides, you can
+    build Swift/T with the
+    <<Manual_build_configuration, manual configure/make workflow>>.
++
+5. Add Turbine and STC to your paths
++
 ----
 PATH=${PATH}:/path/to/exm-install/turbine/bin
 PATH=${PATH}:/path/to/exm-install/stc/bin
 ----
-
-Alternatively, each component may be compiled separately.  The
-+exm-setup.zsh+ script is relatively simple to read and modify.
-
-If +exm-setup.zsh+ does not succeed on your system, see Section
-<<Build_settings, Build settings>> below.
 
 == Usage
 
@@ -1602,25 +1638,43 @@ maps hostnames to ranks for use with the location functionality.
 
 +ADLB_DISABLE_HOSTMAP=1+:: Prevent the hostmap from being constructed.
 
-=== Configuration
+[[Build_configuration]]
+=== Build configuration
 
 The following describes how to turn Swift/T programs in Turbine
 on more complex systems.
 
-[[Build_settings]]
-==== Build settings
+==== Build troubleshooting
 
 If +exm-setup.zsh+ does not succeed, you may need to change how it
-tries to configure and compile Swift/T.
+tries to configure and compile Swift/T. 
 
-Swift/T is built with standard Ant (Java) and Autotools/Makefile
-(C,Tcl) techniques.  The primary control is thus the arguments to
-+ant+ or +configure+.
+Troubleshooting a build problem can require a few steps.  The first
+step is to determine why the build failed.  +exm-setup.zsh+ will usually
+report the step at which configuration failed.  For example, if it was unable
+to locate a valid Tcl install, it will report this.  Then  you can try
+these steps to resolve the problem:
 
+1. If your system is covered by the link:turbine-sites.html[Sites Guide],
+   check to see if the problem and solution are described there.
+2. Inspect +exm-settings.sh+ settings related to the reported problem.
+  For example, if locating a Tcl install failed, setting
+  the +TCL_INSTALL+ and +TCL_VERSION+ variables to the correct location
+  and version may help.
+3. If the options in +exm-settings.sh+ do not give sufficient control to
+  fix the problem, you may need to manually configure some components
+  of Swift/T, as described in the next section.
+
+[[Manual_build_configuration]]
 ==== Manual configuration
++exm-setup.zsh+ and +exm-settings.sh+ provide a convenient way to install
+Swift/T. However, this method does not allow full control over
+the configuration.  Swift/T is built with standard Ant (Java) and
+Autotools/Makefile (C,Tcl) techniques.  You can more directly control
+the configuration when building through the arguments to +ant+ or
++configure+.
 
-You do not need to use +exm-setup.zsh+ to install Swift/T.  To perform
-the installation using +configure+/+make+, simply untar the
+To perform the installation using +configure+/+make+, simply untar the
 distribution package and do:
 
 ----
@@ -1642,25 +1696,28 @@ ant -Ddist.dir=... -Dturbine.home=...
 
 * You may use +./configure --help+ and the
   link:turbine-sites.html[Sites Guide] for further options.
-* You can use +exm-setup.zsh+ as a guide to this process, as it is a
-  simple linear shell script that automates the +configure+/+make+
-  process.
 
 ==== Non-standard MPI locations
+Sometimes simply specifying the MPI directory is not enough to
+configure Swift/T.
 
-Configure Turbine with:
+You can modify these settings in +exm-settings.sh+ to more precisely
+define locations of MPI resources
 
+----
+EXM_CUSTOM_MPI=1
+MPI_INCLUDE=/path/to/mpi.h/include
+MPI_LIB_DIR=/path/to/mpi_lib/lib
+MPI_LIB_NAME=funny.mpi.a
+----
+
+If you are following the manual build process, configure Turbine with:
 ----
  --enable-custom --with-mpi-include=/path/to/mpi.h/include
                  --with-mpi-lib-dir=/path/to/mpi_lib/lib
                  --with-mpi-lib-name=funny.mpi.a
 ----
 
-==== Known systems
-
-See the
-http://www.mcs.anl.gov/exm/local/guides/turbine-sites.html[Turbine Sites Guide]
-for information about specific systems with Turbine installations.
 
 === Performance enhancements
 
@@ -1669,8 +1726,8 @@ for information about specific systems with Turbine installations.
 +
 ** Configure c-utils with +--disable-log+
 +
-3. Configure everything with +--enable-fast+. This disables assertions
-   and other checks
+3. Specify EXM_OPT_BUILD=1 in +exm-settings.sh+ or configure everything
+    with +--enable-fast+.  This disables assertions and other checks
 4. When making performance measurements, always subtract 1 second
    (or the value of +ADLB_EXHAUST_TIME+) from the Turbine run time
    due to the ADLB shutdown protocol, which does not start until the
