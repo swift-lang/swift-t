@@ -26,6 +26,7 @@ source ${TURBINE_HOME}/scripts/turbine-config.sh
 source ${TURBINE_HOME}/scripts/helpers.zsh
 
 # Defaults:
+CHANGE_DIRECTORY=""
 USE_TCLSH=1 # Use tclsh to launch script
 export TURBINE_STATIC_EXEC=0 # Use turbine_sh instead of tclsh
 INIT_SCRIPT=0
@@ -47,10 +48,13 @@ typeset -T ENV env
 env=()
 
 # Get options
-while getopts "d:e:i:n:o:s:t:VxX" OPTION
+while getopts "C:d:e:i:n:o:s:t:VxX" OPTION
  do
   case ${OPTION}
    in
+    C)
+      CHANGE_DIRECTORY=${OPTARG}
+      ;;
     d)
       OUTPUT_TOKEN_FILE=${OPTARG}
       ;;
