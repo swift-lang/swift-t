@@ -614,6 +614,18 @@ do
   if [[ ${USE_TCL_LIB_DIR} == 0 ]]
   then
     LIB_DIR_OPTS="${USE_TCL}/lib ${USE_TCL}/lib64"
+
+    # Debian distros may put in architecture-specific subdirectory
+    if which dpkg-architecture > /dev/null
+    then
+      DPKG_ARCH=$(dpkg-architecture -qDEB_HOST_MULTIARCH)
+      LIB_DIR_ARCH_OPTS=""
+      for opt in $LIB_DIR_OPTS
+      do
+        LIB_DIR_ARCH_OPTS+=" $opt/${DPKG_ARCH}"
+      done
+      LIB_DIR_OPTS="$LIB_DIR_OPTS $LIB_DIR_ARCH_OPTS"
+    fi
   else
     LIB_DIR_OPTS="${USE_TCL_LIB_DIR}"
   fi
@@ -634,7 +646,6 @@ do
         # We found the library - work out which variants are present
         MAYBE_LIBTCL_SO="${LIB_DIR}/${LIBTCL_PREFIX}.${SO_SUFFIX}"
         MAYBE_LIBTCL_A="${LIB_DIR}/${LIBTCL_PREFIX}.a"
-        echo $MAYBE_LIBTCL_SO $MAYBE_LIBTCL_A
         if [[ -r "${MAYBE_LIBTCL_SO}" ]]
         then
           USE_LIBTCL_SO="${MAYBE_LIBTCL_SO}"
@@ -643,7 +654,7 @@ do
         then
           USE_LIBTCL_A="${MAYBE_LIBTCL_A}"
         fi
-        break 2
+        break 3
       else
         AC_MSG_RESULT([no])
       fi
@@ -661,33 +672,45 @@ echo "Tcl shared library: ${USE_LIBTCL_SO}"
 echo "Tcl static library: ${USE_LIBTCL_A}"
 AC_SUBST(TCL_VERSION)
 
-
 # Set USE_TCL_CFG_DIR: location of tclConfig.sh
 USE_TCL_CFG_DIR=0
-AC_MSG_CHECKING([for tclConfig.sh ])
+
+# This is a location used e.g. by the APT tcl8.6-dev package.
+# Put first to maximize chance of getting Tcl version correct
+TCL_CFG_DIR_ALTS="${USE_TCL_LIB_DIR}/tcl${TCL_VERSION}"
 # This location is for Tcl installation from source
-if [[ -r ${USE_TCL}/lib/tclConfig.sh ]]
-then
-    USE_TCL_CFG_DIR=${USE_TCL}/lib
-# This is a location used by the APT tcl8.5-dev package (1)
-elif [[ -r ${USE_TCL}/lib64/tclConfig.sh ]]
-then
-    USE_TCL_CFG_DIR=${USE_TCL}/lib64
-# This is a location used by the APT tcl8.5-dev package (2)
-elif [[ -r ${USE_TCL}/lib/tcl${TCL_VERSION}/tclConfig.sh ]]
-then
-    USE_TCL_CFG_DIR=${USE_TCL}/lib/tcl${TCL_VERSION}
-fi
+TCL_CFG_DIR_ALTS+=" ${USE_TCL_LIB_DIR}"
+
+for TCL_CFG_DIR_ALT in $TCL_CFG_DIR_ALTS
+do
+  AC_MSG_CHECKING([for tclConfig.sh at ${TCL_CFG_DIR_ALT}])
+  if [[ -r "$TCL_CFG_DIR_ALT/tclConfig.sh" ]]
+  then
+    USE_TCL_CFG_DIR="${TCL_CFG_DIR_ALT}"
+    AC_MSG_RESULT([found])
+    break
+  else
+    AC_MSG_RESULT([no])
+  fi
+done
+
 if [[ ${USE_TCL_CFG_DIR} == 0 ]]
 then
     AC_MSG_ERROR([Could not find tclConfig.sh!])
 fi
-AC_MSG_RESULT([ok])
 AC_MSG_RESULT([using tclConfig.sh in: ${USE_TCL_CFG_DIR}/])
+
+# Make copy of old version since it can be clobbered by tclConfig.sh
+TCL_OLD_VERSION="$TCL_VERSION"
 source ${USE_TCL_CFG_DIR}/tclConfig.sh
 if [[ ${?} != 0 ]]
 then
     AC_MSG_ERROR([could not source: ${USR_TCL_CFG_DIR}/tclConfig.sh])
+fi
+if [[ "$TCL_VERSION" != "$TCL_OLD_VERSION" ]]
+then
+  AC_MSG_ERROR([${USE_TCL_CFG_DIR}/tclConfig.sh is not for appropriate \
+      Tcl version.  Expected ${TCL_OLD_VERSION} but got ${TCL_VERSION}])
 fi
 
 # TCL_VERSION needed by find-tcl.zsh
