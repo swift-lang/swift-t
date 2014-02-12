@@ -84,8 +84,8 @@ STC_INSTALL=${EXM_PREFIX}/stc
 # Enable developer mode (extra warnings)
 # EXM_DEV=1
 
-# Enable Turbine static linking
-# TURBINE_STATIC=1
+# Enable build of Turbine static library and executables
+TURBINE_STATIC=1
 
 # Do full static build (default is dynamic)
 # EXM_STATIC_BUILD=1
