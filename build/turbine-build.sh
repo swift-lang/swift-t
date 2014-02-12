@@ -60,6 +60,10 @@ if [ ! -z "$R_INSTALL" ]; then
   EXTRA_ARGS+=" --with-r=${R_INSTALL}"
 fi
 
+if [ ! -z "$TCL_INSTALL" ]; then
+  EXTRA_ARGS+=" --with-tcl=${TCL_INSTALL}"
+fi
+
 if [ ! -z "$TCL_VERSION" ]; then
   EXTRA_ARGS+=" --with-tcl-version=$TCL_VERSION"
 fi
@@ -83,7 +87,6 @@ fi
 if (( CONFIGURE )); then
   ./configure --with-adlb=${LB_INSTALL} \
               ${CRAY_ARGS} \
-              --with-tcl=${TCL_INSTALL} \
               --with-c-utils=${C_UTILS_INSTALL} \
               --prefix=${TURBINE_INSTALL} \
               ${EXTRA_ARGS}
