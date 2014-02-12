@@ -4,11 +4,13 @@ set -e
 THISDIR=`dirname $0`
 source ${THISDIR}/exm-settings.sh
 
-rm -rf ${TURBINE_INSTALL}
-if [ -f Makefile ]; then
-    # Disabled due to Turbine configure check
-    #make clean
-    :
+if (( MAKE_CLEAN )); then
+  rm -rf ${TURBINE_INSTALL}
+  if [ -f Makefile ]; then
+      # Disabled due to Turbine configure check
+      #make clean
+      :
+  fi
 fi
 
 if (( SVN_UPDATE )); then
@@ -16,7 +18,6 @@ if (( SVN_UPDATE )); then
 fi
 
 if (( RUN_AUTOTOOLS )); then
-  rm -rf ./config.status ./autom4te.cache
   ./setup.sh
 fi
 
@@ -94,4 +95,3 @@ if (( MAKE_CLEAN )); then
 fi
 make -j ${MAKE_PARALLELISM}
 make install
-#make test_results
