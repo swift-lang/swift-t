@@ -16,20 +16,29 @@
 # Turbine Output Search
 # for JOBID
 
+set -e
+
+THIS=$( cd $( dirname $0 ) ; /bin/pwd )
+TURBINE_HOME=$( cd ${THIS}/../../.. ; /bin/pwd )
+
 JOBID=$1
 
-DIRS=$( lsd_leaf ~/turbine-output )
+checkvar JOBID
 
-for D in ${DIRS}
-do
-  if [[ -f ${D}/jobid.txt ]]
-  then
-    if [[ $( < ${D}/jobid.txt ) == ${JOBID} ]]
+TURBINE_OUTPUT_ROOT=${TURBINE_OUTPUT_ROOT:-${HOME}/turbine-output}
+
+set -u
+
+find ${TURBINE_OUTPUT_ROOT} -name jobid.txt | \
+  while read ID_FILE
+  do
+    ID=$( < ${ID_FILE} )
+    if [[ ${ID} = ${JOBID}.* ]]
     then
-      print ${D}
+      print TO=$( dirname ${ID_FILE} )
       exit 0
     fi
-  fi
-done
+  done
 
+# We didn't find anything
 exit 1
