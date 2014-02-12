@@ -150,7 +150,7 @@ fi
 
 declare JOB_ID
 
-# Fill in log.txt
+# Fill in log
 {
   print "JOB:               ${JOB_ID}"
   print "COMMAND:           ${SCRIPT_NAME} ${ARGS}"
