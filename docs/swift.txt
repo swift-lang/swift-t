@@ -113,9 +113,11 @@ TIP: Save your +exm-settings.sh+ when you download a new package
 ----
 +
 If +exm-setup.zsh+ does not succeed on your system, see Section
-<<Build_configuration, Build configuration>> below.  This section also
-describes how to build Swift/T with the manual +configure+, +make+,
-+make install+ workflow.
+<<Build_configuration, Build configuration>> below.
++
+TIP: if you want more control than +exm-setup.zsh+ provides, you can
+    build Swift/T with the
+    <<Manual_build_configuration, manual configure/make workflow>>.
 +
 5. Add Turbine and STC to your paths
 +
@@ -1663,6 +1665,7 @@ these steps to resolve the problem:
   fix the problem, you may need to manually configure some components
   of Swift/T, as described in the next section.
 
+[[Manual_build_configuration]]
 ==== Manual configuration
 +exm-setup.zsh+ and +exm-settings.sh+ provide a convenient way to install
 Swift/T. However, this method does not allow full control over
