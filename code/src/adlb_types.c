@@ -667,7 +667,8 @@ char *ADLB_Data_repr(const adlb_datum_storage *d, adlb_data_type type)
       assert(rc >= 0);
       return tmp;
     case ADLB_DATA_TYPE_REF:
-      rc = asprintf(&tmp, "<%"PRId64">", d->REF);
+      rc = asprintf(&tmp, "<%"PRId64"> r:%d w:%d", d->REF.id,
+                    d->REF.read_refs, d->REF.write_refs);
       assert(rc >= 0);
       return tmp;
     case ADLB_DATA_TYPE_FLOAT:

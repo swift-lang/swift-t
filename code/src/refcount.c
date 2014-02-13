@@ -96,7 +96,8 @@ xlb_incr_referand(adlb_datum_storage *d, adlb_data_type type,
       break;
     case ADLB_DATA_TYPE_REF:
       // decrement reference
-      dc = xlb_incr_rc_svr(d->REF, change);
+      // TODO: borrow refcount here?
+      dc = xlb_incr_rc_svr(d->REF.id, change);
       DATA_CHECK(dc);
       break;
     case ADLB_DATA_TYPE_FILE_REF:

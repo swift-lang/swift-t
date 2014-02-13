@@ -59,6 +59,13 @@ typedef struct
 } adlb_blob_t;
 
 typedef struct {
+  adlb_datum_id id;
+  // Current count of references held
+  int read_refs;
+  int write_refs;
+} adlb_ref;
+
+typedef struct {
   adlb_datum_id status_id;
   adlb_datum_id filename_id;
   bool mapped;
@@ -90,7 +97,7 @@ typedef union
   adlb_string_t STRING;
   adlb_blob_t BLOB;
   adlb_container CONTAINER;
-  adlb_datum_id REF;
+  adlb_ref REF;
   adlb_file_ref FILE_REF;
 
   // Multiset struct too big for enum, store pointer
@@ -320,14 +327,15 @@ ADLB_Unpack_integer(adlb_int_t *d, const void *data, int length)
 }
 
 static inline adlb_data_code
-ADLB_Pack_ref(const adlb_datum_id *d, adlb_binary_data *result)
+ADLB_Pack_ref(const adlb_ref *d, adlb_binary_data *result)
 {
+  // TODO: only pack ID?
   ADLB_PACK_SCALAR(d, result);
   return ADLB_DATA_SUCCESS;
 }
 
 static inline adlb_data_code
-ADLB_Unpack_ref(adlb_datum_id *d, const void *data, int length)
+ADLB_Unpack_ref(adlb_ref *d, const void *data, int length)
 {
   ADLB_UNPACK_SCALAR(d, data, length);
   return ADLB_DATA_SUCCESS;
