@@ -822,8 +822,13 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
     code = ADLB_Create(ADLB_DATA_ID_NULL, type, type_extra, props, &new_id);
     TCL_CONDITION(code == ADLB_SUCCESS, "Error while creating nested");
 
-    code = ADLB_Store(id, subscript, ADLB_DATA_TYPE_REF, &new_id,
-                    (int)sizeof(new_id), decr);
+    adlb_ref new_ref;
+    new_ref.id = new_id;
+    // Initially have a read and write refcount for inner container
+    // TODO: different counts?
+    new_ref.read_refs = new_ref.write_refs = 1;
+    code = ADLB_Store(id, subscript, ADLB_DATA_TYPE_REF, &new_ref,
+                    (int)sizeof(new_ref), decr);
     TCL_CONDITION(code == ADLB_SUCCESS, "Error while inserting nested");
 
     // Set up rule to close container
@@ -858,11 +863,12 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
     if (!ADLB_RC_IS_NULL(nested_incr))
     {
       // Do any necessary changes to refcounts
-      adlb_datum_id nested_id;
-      adlb_data_code dc = ADLB_Unpack_ref(&nested_id, xfer, value_len);
+      adlb_ref nested_ref;
+      adlb_data_code dc = ADLB_Unpack_ref(&nested_ref, xfer, value_len);
+      // TODO: acquire ref?
       TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
             "unexpected error unpacked reference data");
-      code = ADLB_Refcount_incr(nested_id, nested_incr);
+      code = ADLB_Refcount_incr(nested_ref.id, nested_incr);
       TCL_CONDITION(code == ADLB_SUCCESS,
             "unexpected error incrementing nested reference counts");
     }

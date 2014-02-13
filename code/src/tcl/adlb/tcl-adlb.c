@@ -1295,7 +1295,7 @@ tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
       TCL_CHECK_MSG(rc, "adlb extract int from %s failed!", Tcl_GetString(obj));
       return TCL_OK;
     case ADLB_DATA_TYPE_REF:
-      rc = Tcl_GetADLB_ID(interp, obj, &result->REF);
+      rc = Tcl_GetADLB_ID(interp, obj, &result->REF.id);
       TCL_CHECK_MSG(rc, "adlb extract int from %s failed!",
                       Tcl_GetString(obj));
       return TCL_OK;
@@ -2207,7 +2207,7 @@ adlb_data_to_tcl_obj(Tcl_Interp *interp, Tcl_Obj *const objv[], adlb_datum_id id
       dc = ADLB_Unpack_ref(&tmp.REF, data, length);
       TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
             "Retrieve failed due to error unpacking data %i", dc);
-      *result = Tcl_NewADLB_ID(tmp.REF);
+      *result = Tcl_NewADLB_ID(tmp.REF.id);
       break;
     case ADLB_DATA_TYPE_FLOAT:
       dc = ADLB_Unpack_float(&tmp.FLOAT, data, length);
