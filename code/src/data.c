@@ -708,7 +708,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
     // TODO: add reference work to notifications
     assert(false);
 
-    adlb_refcount decr = { .read_refcount = -1,
+    adlb_refcounts decr = { .read_refcount = -1,
                            .write_refcount = 0 };
     dc = xlb_rc_impl(d, container_id, decr, to_acquire,
                      NULL, NULL, notifications);

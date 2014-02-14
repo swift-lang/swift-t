@@ -8,6 +8,9 @@
 
 #define MAX_NOTIF_PAYLOAD (32+ADLB_DATA_SUBSCRIPT_MAX)
 
+static adlb_code
+xlb_process_local_notif_ranks(adlb_datum_id id, adlb_notif_ranks *ranks);
+
 // Returns size of payload including null terminator
 static int fill_payload(char *payload, adlb_datum_id id, adlb_subscript subscript)
 {
@@ -148,50 +151,60 @@ xlb_close_notify(adlb_datum_id id, const adlb_notif_ranks *ranks)
 adlb_code
 xlb_process_local_notif(adlb_datum_id id, adlb_notif_t *notifs)
 {
+  assert(xlb_am_server);
+
+  assert(false);
   // TODO: process refcount manipulation here
   // TODO: also do pre-increments?
 
-  assert(xlb_am_server);
-  if (ranks->count == 0)
-    return ADLB_SUCCESS;
+  adlb_code ac = xlb_process_local_notif_ranks(id, &notifs->notify);
+  ADLB_CHECK(ac);
+  return ADLB_SUCCESS;
+}
 
-  char payload[MAX_NOTIF_PAYLOAD];
-  int payload_len = 0;
-  adlb_subscript last_subscript = ADLB_NO_SUB;
-
-  int i = 0;
-  while (i < ranks->count)
+static adlb_code
+xlb_process_local_notif_ranks(adlb_datum_id id, adlb_notif_ranks *ranks)
+{
+  if (ranks->count > 0)
   {
-    adlb_notif_rank *notif = &ranks->notifs[i];
-    
-    if (i == 0 || notif->subscript.key != last_subscript.key ||
-                  notif->subscript.length != last_subscript.length)
+    char payload[MAX_NOTIF_PAYLOAD];
+    int payload_len = 0;
+    adlb_subscript last_subscript = ADLB_NO_SUB;
+
+    int i = 0;
+    while (i < ranks->count)
     {
-      // Skip refilling payload if possible 
-      payload_len = fill_payload(payload, id, notif->subscript);
+      adlb_notif_rank *notif = &ranks->notifs[i];
+      
+      if (i == 0 || notif->subscript.key != last_subscript.key ||
+                    notif->subscript.length != last_subscript.length)
+      {
+        // Skip refilling payload if possible 
+        payload_len = fill_payload(payload, id, notif->subscript);
+      }
+
+      int target = notif->rank;
+      int server = xlb_map_to_server(target);
+      if (server == xlb_comm_rank)
+      {
+        // Swap with last and shorten array
+        int rc = notify_local(target, payload, payload_len);
+        ADLB_CHECK(rc);
+        ranks->notifs[i] = ranks->notifs[ranks->count - 1];
+        ranks->count--;
+      }
+      else
+      {
+        i++;
+      }
     }
 
-    int target = notif->rank;
-    int server = xlb_map_to_server(target);
-    if (server == xlb_comm_rank)
+    // Free memory if we managed to remove some
+    if (ranks->count == 0 && ranks->notifs != NULL)
     {
-      // Swap with last and shorten array
-      int rc = notify_local(target, payload, payload_len);
-      ADLB_CHECK(rc);
-      ranks->notifs[i] = ranks->notifs[ranks->count - 1];
-      ranks->count--;
+      free(ranks->notifs);
+      ranks->notifs = NULL;
     }
-    else
-    {
-      i++;
-    }
-  }
-
-  // Free memory if we managed to remove some
-  if (ranks->count == 0 && ranks->notifs != NULL)
-  {
-    free(ranks->notifs);
-    ranks->notifs = NULL;
   }
   return ADLB_SUCCESS;
 }
