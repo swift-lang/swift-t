@@ -990,30 +990,22 @@ xlb_data_close(adlb_datum_id id, adlb_datum *d, adlb_notif_t *notify,
     return ADLB_DATA_ERROR_UNSET;                     \
   }
 
-/**
-   Retrieve works on UNSET data for files and containers:
-                  this is necessary for filenames,
-                  and may be useful for containers.
-   Caller should use result before making further calls into
-   this module, except if type is container, in which case the
-   caller must free result pointer.  This is because the container
-   subscript list must be dynamically created.
-   @param subscript optional subscript.  If provided, looks up container element
-   @param type   Returns type
-   @param result Returns pointer to data.  This data may be internal data in
-                    data module, or may be freshly allocated memory that caller
-                    must free
-   @param malloced_result if data_retrieve allocated memory, this stores a
-                    pointer to the allocated memory.
-   @param length Returns length of string
-   @returns ADLB_DATA_ERROR_NOT_FOUND if id not found
-            ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND if id found, but not subscript
- */
 adlb_data_code
 xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
               adlb_data_type* type,
               const adlb_buffer *caller_buffer,
               adlb_binary_data *result)
+{
+  return xlb_data_retrieve2(id, subscript, ADLB_NO_RC, ADLB_NO_RC,
+                            type, caller_buffer, result, NULL);
+}
+
+// TODO: need to update logic in this function to manipulate refcounts
+adlb_data_code
+xlb_data_retrieve2(adlb_datum_id id, adlb_subscript subscript,
+                 adlb_refcounts decr, adlb_refcounts to_acquire,
+                 adlb_data_type* type, const adlb_buffer *caller_buffer,
+                 adlb_binary_data *result, adlb_notif_t *notifications)
 {
   TRACE("data_retrieve(%"PRId64", %s)", id, subscript);
 
@@ -1030,6 +1022,7 @@ xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
   }
   assert(d != NULL);
 
+  
   if (!adlb_has_sub(subscript))
   {
     *type = d->type;

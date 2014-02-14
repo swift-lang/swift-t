@@ -224,7 +224,10 @@ xlb_notify_all(const adlb_notif_t *notifs, adlb_datum_id id)
   {
     rc = xlb_set_refs(&notifs->references);
     ADLB_CHECK(rc);
-  } 
+  }
+
+  // TODO: need to handle refcount manipulation
+  assert(notifs->rc_changes.count == 0);
   return ADLB_SUCCESS;
 }
 

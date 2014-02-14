@@ -1127,34 +1127,19 @@ handle_retrieve(int caller)
           incr_referand.read_refcount, incr_referand.write_refcount);
       
 
-  adlb_binary_data result;
+  adlb_data_code dc;
   adlb_data_type type;
-  // TODO: need to change retrieve to support acquiring
-  int dc = xlb_data_retrieve(hdr->id, subscript, &type, NULL, &result);
+  adlb_binary_data result;
+  adlb_notif_t notifs = ADLB_NO_NOTIFS;
+  dc = xlb_data_retrieve2(hdr->id, subscript, decr_self, incr_referand,
+                          &type, NULL, &result, &notifs);
   assert(dc != ADLB_DATA_SUCCESS || result.length >= 0);
 
-  if (dc == ADLB_DATA_SUCCESS && !ADLB_RC_IS_NULL(decr_self)) {
-    // Need to copy result if don't own memory
-    dc = ADLB_Own_data(NULL, &result);
-   
-    if (dc == ADLB_DATA_SUCCESS)
-    {
-      adlb_notif_ranks notify = ADLB_NO_NOTIF_RANKS;
-      dc = xlb_incr_rc_scav(hdr->id, subscript,
-                               result.data, result.length,
-                               type, decr_self, incr_referand, &notify);
-      if (dc == ADLB_DATA_SUCCESS)
-      {
-        adlb_code rc = notify_helper(hdr->id, &notify);
-        ADLB_CHECK(rc);
-      }
-    }
-  }
-  else if (dc == ADLB_DATA_SUCCESS && !ADLB_RC_IS_NULL(incr_referand))
-  {
-    assert(ADLB_RC_NONNEGATIVE(incr_referand));
-    dc = xlb_data_referand_refcount(result.data, result.length, type, hdr->id,
-                                incr_referand);
+  
+  // TODO: optionally send notifications back to client
+  if (!xlb_notif_empty(&notifs)) {
+    adlb_code ac = xlb_notify_all(&notifs, hdr->id);
+    ADLB_CHECK(ac);
   }
 
   struct retrieve_response_hdr resp_hdr;
@@ -1165,9 +1150,10 @@ handle_retrieve(int caller)
   if (dc == ADLB_DATA_SUCCESS)
   {
     SEND(result.data, result.length, MPI_BYTE, caller, ADLB_TAG_RESPONSE);
-    ADLB_Free_binary_data(&result);
     DEBUG("Retrieve: <%"PRId64">", hdr->id);
   }
+  
+  ADLB_Free_binary_data(&result);
 
   MPE_LOG(xlb_mpe_svr_retrieve_end);
   return ADLB_SUCCESS;
@@ -1308,6 +1294,7 @@ handle_refcount_incr(int caller)
 static adlb_code
 handle_insert_atomic(int caller)
 {
+  // TODO: support acquiring references
   MPI_Status status;
 
   RECV(xfer, XFER_SIZE, MPI_CHAR, caller, ADLB_TAG_INSERT_ATOMIC);
@@ -1332,6 +1319,7 @@ handle_insert_atomic(int caller)
   adlb_binary_data value;
   if (return_value && resp.dc == ADLB_DATA_SUCCESS && value_present)
   {
+    // TODO: support acquiring references, use xlb_data_retrieve2
     // Retrieve, optionally using xfer for storage
     resp.dc = xlb_data_retrieve(id, subscript, &resp.value_type,
                                 &xfer_buf, &value);

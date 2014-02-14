@@ -68,10 +68,39 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
 adlb_data_code xlb_data_container_size(adlb_datum_id container_id,
                                    int* size);
 
-adlb_data_code xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
-                             adlb_data_type* type,
-                             const adlb_buffer *caller_buffer,
-                             adlb_binary_data *result); 
+/**
+ Retrieve data for id/subscript pair.
+ See xlb_data_retrieve2 for information about arguments
+ */
+adlb_data_code
+xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
+                  adlb_data_type* type, const adlb_buffer *caller_buffer,
+                  adlb_binary_data *result); 
+
+/**
+ Retrieve data for id/subscript pair, plus support acquiring references
+ for caller and decrementing references of datum
+ id: id of top-level datum
+ subscript: subscript to retrieve, ADLB_NO_SUB to retrieve top-level datum
+ decr: decrement references of this id
+ to_acquire: acquire this many references for any data referenced by
+      the retrieved data.
+ type: output arg for type of data retrieved
+ caller_buffer: optional buffer to provide space for result
+ result: output buffer with serialized data, must be freed by
+         caller if contains allocated memory
+ notifications: notifications to process.  Only will be filled if
+        manipulating refcounts through decr or to_acquire.
+        Can be NULL if decr == to_acquire == ADLB_NO_RC.
+        If not NULL, must be initialized by caller.
+ returns ADLB_DATA_ERROR_NOT_FOUND if id not found
+            ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND if id found, but not subscript
+ */
+adlb_data_code
+xlb_data_retrieve2(adlb_datum_id id, adlb_subscript subscript,
+                 adlb_refcounts decr, adlb_refcounts to_acquire,
+                 adlb_data_type* type, const adlb_buffer *caller_buffer,
+                 adlb_binary_data *result, adlb_notif_t *notifications);
 
 adlb_data_code
 xlb_data_enumerate(adlb_datum_id id, int count, int offset,

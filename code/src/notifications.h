@@ -106,7 +106,8 @@ static inline bool xlb_notif_ranks_empty(adlb_notif_ranks *notif)
 
 static inline bool xlb_notif_empty(adlb_notif_t *notif)
 {
-  return notif->notify.count == 0 && notif->references.count != 0;
+  return notif->notify.count == 0 && notif->references.count != 0 &&
+         notif->rc_changes.count == 0;
 }
 
 #define ADLB_NO_NOTIF_RANKS { .count = 0, .notifs = NULL }
