@@ -18,7 +18,7 @@ typedef struct {
   /** If true, we don't have ownership of reference:
       must acquire before doing anything to avoid
       race condition on freeing */
-  bool must_acquire_initial;
+  bool must_preacquire;
 } xlb_rc_change;
 
 /** List of refcount changes */
@@ -62,7 +62,14 @@ xlb_incr_rc_scav(adlb_datum_id id, adlb_subscript subscript,
         const void *ref_data, int ref_data_len, adlb_data_type ref_type,
         adlb_refcounts decr_self, adlb_refcounts incr_referand,
         adlb_notif_ranks *notifications);
-
+/*
+ * Apply refcount changes and remove entries from list
+ * preacquire_only: if true, only acqurie those marked must_preacquire,
+ *                   if false, acquire all
+ * TODO: move to notifications?
+ */
+adlb_data_code xlb_rc_changes_apply(xlb_rc_changes *c,
+                                   bool preacquire_only);
 
 // Inline functions
 static inline adlb_data_code xlb_rc_changes_init(xlb_rc_changes *c)

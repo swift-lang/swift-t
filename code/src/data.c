@@ -471,7 +471,7 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
     // Should not go negative
     check_verbose(d->read_refcount > 0 &&
                    d->read_refcount + read_incr >= 0,
-                ADLB_DATA_ERROR_SLOTS_NEGATIVE,
+                ADLB_DATA_ERROR_REFCOUNT_NEGATIVE,
                 "<%"PRId64"> read_refcount: %i incr: %i",
                 id, d->read_refcount, read_incr);
     d->read_refcount += read_incr;
@@ -482,7 +482,7 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
     // Should not go negative
     check_verbose(d->write_refcount > 0 &&
                    d->write_refcount + write_incr >= 0,
-                ADLB_DATA_ERROR_SLOTS_NEGATIVE,
+                ADLB_DATA_ERROR_REFCOUNT_NEGATIVE,
                 "<%"PRId64"> write_refcount: %i incr: %i",
                 id, d->write_refcount, write_incr);
     d->write_refcount += write_incr;
@@ -933,7 +933,7 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
   if (refcount_decr.write_refcount > 0 || refcount_decr.read_refcount > 0)
   {
     // Avoid accessing freed memory
-    check_verbose(!freed_datum, ADLB_DATA_ERROR_SLOTS_NEGATIVE,
+    check_verbose(!freed_datum, ADLB_DATA_ERROR_REFCOUNT_NEGATIVE,
         "Taking write reference count below zero on datum <%"PRId64">", id);
 
     adlb_refcounts incr = { .read_refcount = xlb_read_refcount_enabled ?

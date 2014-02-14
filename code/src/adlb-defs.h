@@ -238,8 +238,8 @@ typedef enum
   ADLB_DATA_ERROR_NULL,
   /** Attempt to operate on wrong data type */
   ADLB_DATA_ERROR_TYPE,
-  /** Slot count fell below 0 */
-  ADLB_DATA_ERROR_SLOTS_NEGATIVE,
+  /** Refcount fell below 0 */
+  ADLB_DATA_ERROR_REFCOUNT_NEGATIVE,
   /** Exceeded some implementation-defined limit */
   ADLB_DATA_ERROR_LIMIT,
   /** Caller-provided buffer too small */

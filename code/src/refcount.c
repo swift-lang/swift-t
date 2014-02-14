@@ -115,26 +115,98 @@ xlb_incr_referand(adlb_datum_storage *d, adlb_data_type type,
   return ADLB_DATA_SUCCESS;
 }
 
+
+/**
+  Work out refcount change
+  curr_rc: int holding current refcount, will be updated
+  acquire_rc: number to acquire
+  releasing: if we're releasing the local count
+ */
+static adlb_data_code
+apply_rc_update(bool releasing, int *curr_rc, int acquire_rc,
+            int *change)
+{
+  assert(*curr_rc > 0);
+  assert(acquire_rc >= 0);
+
+  if (releasing)
+  {
+    // if releasing refcount, must go to zero
+    *change = acquire_rc - *curr_rc;
+    *curr_rc = 0;
+  }
+  else 
+  {
+    // if not releasing refcount, must end up >= 1
+    int max_acquire = acquire_rc - 1;
+    if (acquire_rc <= max_acquire)
+    {
+      *curr_rc -= acquire_rc;
+      *change = 0;
+    }
+    else
+    {
+      *curr_rc -= max_acquire;
+      *change = acquire_rc - max_acquire;
+    }
+  }
+
+  return ADLB_DATA_SUCCESS;
+}
+
+static adlb_data_code
+xlb_update_rc_id(adlb_datum_id id, int *read_rc, int *write_rc,
+       bool release_read, bool release_write, adlb_refcounts to_acquire,
+       xlb_rc_changes *changes)
+{
+  adlb_data_code dc;
+
+  // Change that needs to be applied
+  int read_change, write_change;
+
+  // Whether we own at least one ref
+  bool own_read_ref, own_write_ref;
+  dc = apply_rc_update(release_read, read_rc,
+                  to_acquire.read_refcount, &read_change);
+  check_verbose(dc == ADLB_DATA_SUCCESS, dc, "Error updating read "
+            "refcount of <%"PRId64"> r=%i acquiring %i release:%i",
+            id, *read_rc, to_acquire.read_refcount, (int)read_change);
+
+  dc = apply_rc_update(release_write, write_rc,
+                  to_acquire.write_refcount, &write_change);
+  check_verbose(dc == ADLB_DATA_SUCCESS, dc, "Error updating write "
+            "refcount of <%"PRId64"> r=%i acquiring %i release:%i",
+            id, *write_rc, to_acquire.write_refcount, (int)write_change);
+
+  if (read_change != 0 || write_change != 0)
+  {
+    dc = xlb_rc_changes_expand(changes, 1);
+    DATA_CHECK(dc);
+
+    xlb_rc_change *change = &changes->arr[changes->count++];
+    change->rc.read_refcount = read_change;
+    change->rc.write_refcount = write_change;
+    // If we don't own a ref, must acquire one before doing anything
+    // that would cause referand to be freed
+    change->must_preacquire = !own_read_ref || !own_write_ref;
+  }
+  return ADLB_DATA_SUCCESS;
+}
+
 // Modify reference count of referands and maybe scavenge
 adlb_data_code
 xlb_update_rc_referand(adlb_datum_storage *d, adlb_data_type type,
-       bool release_read, bool release_write, adlb_refcounts to_acquire)
+       bool release_read, bool release_write, adlb_refcounts to_acquire,
+       xlb_rc_changes *changes)
 {
   assert(to_acquire.read_refcount >= 0);
   assert(to_acquire.write_refcount >= 0);
+  assert(changes != NULL);
 
   // TODO: handle nested structures?
+  // NOTE: should avoid traversing containers if no refs in value
 
-  // TODO: build list of refcounts to acquire
-
-  // TODO: borrow refcounts if possible
-  // - if releasing refcount, must go to zero
-  // - if not releasing refcount, must end up >= 1
-
-  // TODO: if can't borrow all, acquire
-
-  // TODO: if can't give back one refcount, must increment
-  blah
+  // TODO: travers aend use xlb_update_rc_id
   return ADLB_DATA_SUCCESS;
 }
 
@@ -211,13 +283,47 @@ xlb_incr_rc_scav(adlb_datum_id id, adlb_subscript subscript,
   }
 }
 
-void xlb_rc_changes_free(xlb_rc_changes *c)
+adlb_data_code xlb_rc_changes_apply(xlb_rc_changes *c,
+                                   bool preacquire_only)
 {
-  if (c->arr != NULL) {
-    free(c->arr);
-  }
-  c->arr = NULL;
-  c->count = 0;
-  c->size = 0;
-}
+  adlb_data_code dc;
+  for (int i = 0; i < c->count; i++)
+  {
+    xlb_rc_change *change = &c->arr[i];
+    if (!preacquire_only || change->must_preacquire)
+    {
+      // Apply reference count operation
+      if (xlb_am_server)
+      {
+        dc = xlb_incr_rc_svr(change->id, change->rc);
+        DATA_CHECK(dc);
+      }
+      else
+      {
+        adlb_code ac = ADLB_Refcount_incr(change->id, change->rc);
+        check_verbose(ac == ADLB_SUCCESS, ADLB_DATA_ERROR_UNKNOWN,
+                  "could not modify refcount of <%"PRId64">", change->id);
+      }
 
+      if (preacquire_only)
+      {
+        // Remove processed entries selectively
+        c->count--;
+        if (c->count > 0)
+        {
+          // Swap last to here
+          memcpy(&c->arr[i], &c->arr[c->count], sizeof(c->arr[i]));
+          i--; // Process new entry next
+        }
+      }
+    }
+  }
+
+  if (!preacquire_only)
+  {
+    // Remove all from list
+    xlb_rc_changes_free(c);
+  }
+
+  return ADLB_DATA_SUCCESS;
+}
