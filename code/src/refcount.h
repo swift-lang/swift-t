@@ -10,6 +10,26 @@
 #include "data.h"
 #include "data_internal.h"
 
+/** Represent change in refcount that must be applied */
+typedef struct {
+  adlb_datum_id id;
+  adlb_refcounts rc;
+  
+  /** If true, we don't have ownership of reference:
+      must acquire before doing anything to avoid
+      race condition on freeing */
+  bool must_acquire_initial;
+} xlb_rc_change;
+
+/** List of refcount changes */
+typedef struct {
+  xlb_rc_change *arr;
+  int count;
+  int size;
+} xlb_rc_changes;
+
+#define XLB_RC_CHANGES_INIT_SIZE 16
+
 /* Modify reference count of locally stored datum.
    Send any consequent notifications or messages.
    suppress_errors: if true, just log any errors */
@@ -42,5 +62,53 @@ xlb_incr_rc_scav(adlb_datum_id id, adlb_subscript subscript,
         const void *ref_data, int ref_data_len, adlb_data_type ref_type,
         adlb_refcounts decr_self, adlb_refcounts incr_referand,
         adlb_notif_ranks *notifications);
+
+
+// Inline functions
+static inline adlb_data_code xlb_rc_changes_init(xlb_rc_changes *c)
+{
+  c->arr = NULL;
+  c->count = 0;
+  c->size = 0;
+  return ADLB_DATA_SUCCESS;
+}
+
+static inline adlb_data_code xlb_rc_changes_expand(xlb_rc_changes *c,
+                                              int to_add)
+{
+  if (c->arr != NULL &&
+      c->count + to_add <= c->size)
+  {
+    // Big enough
+    return ADLB_DATA_SUCCESS;
+  } else {
+    int new_size;
+    if (c->arr == NULL)
+    {
+      new_size = XLB_RC_CHANGES_INIT_SIZE;
+    }
+    else
+    {
+      new_size = c->size * 2;
+    }
+    void *new_arr = realloc(c->arr, (size_t)new_size * sizeof(c->arr[0]));
+    
+    check_verbose(new_arr != NULL, ADLB_DATA_ERROR_OOM,
+                  "Could not alloc array");
+    c->arr = new_arr;
+    c->size = new_size;
+    return ADLB_DATA_SUCCESS;
+  }
+}
+
+static inline void xlb_rc_changes_free(xlb_rc_changes *c)
+{
+  if (c->arr != NULL) {
+    free(c->arr);
+  }
+  c->arr = NULL;
+  c->count = 0;
+  c->size = 0;
+}
 
 #endif // __XLB_REFCOUNT_H

@@ -118,7 +118,7 @@ xlb_incr_referand(adlb_datum_storage *d, adlb_data_type type,
 // Modify reference count of referands and maybe scavenge
 adlb_data_code
 xlb_update_rc_referand(adlb_datum_storage *d, adlb_data_type type,
-       bool release_read, bool release_write, adlb_refcounts to_acquire);
+       bool release_read, bool release_write, adlb_refcounts to_acquire)
 {
   assert(to_acquire.read_refcount >= 0);
   assert(to_acquire.write_refcount >= 0);
@@ -126,20 +126,6 @@ xlb_update_rc_referand(adlb_datum_storage *d, adlb_data_type type,
   // TODO: handle nested structures?
 
   // TODO: build list of refcounts to acquire
-  typedef struct {
-    adlb_datum_id id;
-    adlb_refcounts rc;
-    
-    /** If true, we don't have ownership of reference:
-        must acquire before doing anything to avoid
-        race condition on freeing */
-    bool must_acquire_initial;
-  } xlb_rc_change;
-  typedef struct {
-    xlb_rc_to_acquire *arr;
-    int count;
-    int size;
-  } xlb_rc_changes;
 
   // TODO: borrow refcounts if possible
   // - if releasing refcount, must go to zero
@@ -223,5 +209,15 @@ xlb_incr_rc_scav(adlb_datum_id id, adlb_subscript subscript,
     return xlb_rc_impl(d, id, adlb_rc_negate(decr_self), NO_SCAVENGE,
                           NULL, NULL, notifications);
   }
+}
+
+void xlb_rc_changes_free(xlb_rc_changes *c)
+{
+  if (c->arr != NULL) {
+    free(c->arr);
+  }
+  c->arr = NULL;
+  c->count = 0;
+  c->size = 0;
 }
 
