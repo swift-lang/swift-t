@@ -36,6 +36,7 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.ForeignFunctions;
+import exm.stc.common.lang.WaitVar;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
@@ -66,7 +67,6 @@ import exm.stc.ic.tree.ICContinuations.AsyncExec;
 import exm.stc.ic.tree.ICContinuations.Loop;
 import exm.stc.ic.tree.ICContinuations.NestedBlock;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
-import exm.stc.ic.tree.ICContinuations.WaitVar;
 import exm.stc.ic.tree.ICInstructions.Builtin;
 import exm.stc.ic.tree.ICInstructions.Comment;
 import exm.stc.ic.tree.ICInstructions.FunctionCall;
@@ -232,11 +232,16 @@ public class STCMiddleEnd {
   public void startWaitStatement(String procName, List<Var> waitVars,
       WaitMode mode, boolean explicit, boolean recursive, TaskMode target,
       TaskProps props) {
+    startWaitStatement(procName, WaitVar.makeList(waitVars, explicit),
+                             mode, recursive, target, props);      
+  }
+  
+  public void startWaitStatement(String procName, List<WaitVar> waitVars,
+        WaitMode mode, boolean recursive, TaskMode target, TaskProps props) {
     assert(currFunction != null);
     props.assertInternalTypesValid();
-    
-    List<WaitVar> waitVars2 = WaitVar.makeList(waitVars, explicit);
-    WaitStatement wait = new WaitStatement(procName, waitVars2,
+
+    WaitStatement wait = new WaitStatement(procName, waitVars,
           PassedVar.NONE, Var.NONE, mode, recursive, target, props);
     currBlock().addContinuation(wait);
     blockStack.push(wait.getBlock());

@@ -47,6 +47,7 @@ import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.Checkpointing;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ForeignFunctions;
+import exm.stc.common.lang.WaitVar;
 import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
 import exm.stc.common.lang.ForeignFunctions.TclOpTemplate;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
@@ -1740,8 +1741,9 @@ public class ASTWalker {
 
   /**
    * @param context local context for app function
-   * @param cmd AST for app function command
-   * @param outArgs output arguments for app
+   * @param appBody AST for app function body
+   * @param inArgs input arguments for app function
+   * @param outArgs output arguments for app function
    * @param hasSideEffects
    * @param deterministic
    * @param val 
@@ -1770,30 +1772,30 @@ public class ASTWalker {
     // Evaluate any argument expressions
     Pair<List<Var>, Boolean> evaledArgs = evalAppCmdArgs(context, cmd);
     
-    List<Var> args = evaledArgs.val1;
+    List<Var> cmdArgs = evaledArgs.val1;
     boolean openedEvalWait = evaledArgs.val2;
     
     // Process any redirections
     Redirects<Var> redirFutures = processAppRedirects(context,
                                                     appBody.children(1));
     
-    checkAppOutputs(context, appName, outArgs, args, redirFutures,
+    checkAppOutputs(context, appName, outArgs, cmdArgs, redirFutures,
                     suppressions);
     
     // Work out what variables must be closed before command line executes
-    Pair<Map<String, Var>, List<Var>> wait =
-            selectAppWaitVars(context, args, outArgs, redirFutures);
+    Pair<Map<String, Var>, List<WaitVar>> wait = selectAppWaitVars(context,
+                                  cmdArgs, inArgs, outArgs, redirFutures);
     Map<String, Var> fileNames = wait.val1; 
-    List<Var> waitVars = wait.val2;
+    List<WaitVar> waitVars = wait.val2;
     
     // use wait to wait for data then dispatch task to worker
     String waitName = context.getFunctionContext().constructName("app-leaf");
     // do deep wait for array args
     backend.startWaitStatement(waitName, waitVars,
-        WaitMode.TASK_DISPATCH, false, true, TaskMode.WORKER, props);
+        WaitMode.TASK_DISPATCH, true, TaskMode.WORKER, props);
     // On worker, just execute the required command directly
     Pair<List<Arg>, Redirects<Arg>> retrieved = retrieveAppArgs(context,
-                                          args, redirFutures, fileNames);
+                                          cmdArgs, redirFutures, fileNames);
     List<Arg> localArgs = retrieved.val1; 
     Redirects<Arg> localRedirects = retrieved.val2;
     
@@ -1925,16 +1927,17 @@ public class ASTWalker {
    * Omit warning
    * @param context
    * @param outputs
-   * @param args
+   * @param outArgs
    * @param redir 
    * @throws UserException 
    */
   private void checkAppOutputs(Context context, String function,
-      List<Var> outputs, List<Var> args, Redirects<Var> redirFutures,
-      Set<Suppression> suppressions) throws UserException {
+      List<Var> outArgs, List<Var> args,
+      Redirects<Var> redirFutures, Set<Suppression> suppressions)
+          throws UserException {
     boolean deferredError = false;
     HashMap<String, Var> outMap = new HashMap<String, Var>();
-    for (Var output: outputs) {
+    for (Var output: outArgs) {
       // Check output types
       if (!Types.isFile(output.type()) && !Types.isVoid(output.type())) {
         LogHelper.error(context, "Output argument " + output.name() + " has "
@@ -2118,34 +2121,47 @@ public class ASTWalker {
    * on filenames/file statuses/etc  
    * @param context
    * @param redirFutures 
-   * @param inputs
-   * @param outputs
+   * @param cmdArgs arguments for command line
+   * @param inArgs input arguments for app function
+   * @param outArgs output arguments for app function
    * @return
    * @throws UserException
    * @throws UndefinedTypeException
    */
-  private Pair<Map<String, Var>, List<Var>> selectAppWaitVars(
-          Context context, List<Var> args, List<Var> outArgs,
-          Redirects<Var> redirFutures)
+  private Pair<Map<String, Var>, List<WaitVar>> selectAppWaitVars(
+          Context context, List<Var> cmdArgs, List<Var> inArgs,
+          List<Var> outArgs, Redirects<Var> redirFutures)
                                                 throws UserException,
           UndefinedTypeException {
-    List<Var> allArgs = new ArrayList<Var>();
-    allArgs.addAll(args);
-    allArgs.addAll(redirFutures.redirections(true, true));
+    // All command arguments including redirects
+    List<Var> allCmdArgs = new ArrayList<Var>();
+    allCmdArgs.addAll(cmdArgs);
+    allCmdArgs.addAll(redirFutures.redirections(true, true));
     
     // map from file var to filename
     Map<String, Var> fileNames = new HashMap<String, Var>(); 
-    List<Var> waitVars = new ArrayList<Var>();
-    for (Var arg: allArgs) {
-      if (Types.isFile(arg.type())) {
+    List<WaitVar> waitVars = new ArrayList<WaitVar>();
+    for (Var arg: allCmdArgs) {
+      if (Types.isFile(arg)) {
         if (fileNames.containsKey(arg.name())) {
           continue;
         }
         loadAppFilename(context, fileNames, waitVars, arg);
       } else {
-        waitVars.add(arg);
+        waitVars.add(new WaitVar(arg, false));
       }
     }
+    
+    for (Var inArg: inArgs) {
+      // Handle input files not referenced in command line
+      if (!allCmdArgs.contains(inArg)) {
+        // File doesn't need to be explicit since input files are
+        // tracked explicitly in middle-end
+        boolean explicit = !Types.isFile(inArg);
+        waitVars.add(new WaitVar(inArg, explicit));
+      }
+    }
+    
     // Fetch missing output arguments that weren't on command line
     for (Var outArg: outArgs) {
       if (Types.isFile(outArg.type()) && !fileNames.containsKey(outArg.name())) {
@@ -2158,7 +2174,7 @@ public class ASTWalker {
 
 
   private void loadAppFilename(Context context, Map<String, Var> fileNames,
-                               List<Var> waitVars, Var fileVar)
+                               List<WaitVar> waitVars, Var fileVar)
       throws UserException, UndefinedTypeException {
     // Need to wait for filename for files
     Var filenameFuture = varCreator.createFilenameAlias(context, fileVar);
@@ -2170,10 +2186,10 @@ public class ASTWalker {
     } else {
       backend.getFileName(filenameFuture, fileVar, false);
     }
-    waitVars.add(filenameFuture);
+    waitVars.add(new WaitVar(filenameFuture, false));
     if (fileVar.defType() != DefType.OUTARG) {
       // Don't wait for file to be closed for output arg
-      waitVars.add(fileVar);
+      waitVars.add(new WaitVar(fileVar, true));
     }
 
     fileNames.put(fileVar.name(), filenameFuture);
