@@ -11,13 +11,12 @@
 #include "multiset.h"
 #include "sync.h"
 
-// TODO: maintain buffer of deferred refcount operations, 
-//       pass up stack to be handled in bulk
+static adlb_data_code
+xlb_update_rc_id(adlb_datum_id id, int *read_rc, int *write_rc,
+       bool release_read, bool release_write, adlb_refcounts to_acquire,
+       xlb_rc_changes *changes);
 
-/* Decrement reference count of given id from the server */
-static adlb_data_code xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change);
-
-static adlb_data_code xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change)
+adlb_data_code xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change)
 {
   assert(xlb_am_server); // Only makes sense to run on server
 
@@ -52,25 +51,28 @@ static adlb_data_code xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change)
 adlb_data_code xlb_incr_rc_local(adlb_datum_id id, adlb_refcounts change,
                                  bool suppress_errors)
 {
-  adlb_notif_ranks notify = ADLB_NO_NOTIF_RANKS;
+  adlb_notif_t notify = ADLB_NO_NOTIFS;
   adlb_data_code dc = xlb_data_reference_count(id, change,
           NO_SCAVENGE, NULL, NULL, &notify);
   ADLB_DATA_CHECK(dc);
-  // handle notifications here if needed for some reason
-  if (!xlb_notif_ranks_empty(&notify))
-  {
-    adlb_code rc = xlb_close_notify(id, &notify);
-    check_verbose(rc == ADLB_SUCCESS, ADLB_DATA_ERROR_UNKNOWN,
-        "Error processing notifications for <%"PRId64">", id);
-  }
+  
+  // handle notifications here if needed
+  adlb_code rc = xlb_notify_all(&notify, id);
+  check_verbose(rc == ADLB_SUCCESS, ADLB_DATA_ERROR_UNKNOWN,
+      "Error processing notifications for <%"PRId64">", id);
+  
   return ADLB_DATA_SUCCESS;
 }
 
 adlb_data_code
 xlb_incr_referand(adlb_datum_storage *d, adlb_data_type type,
-                 adlb_refcounts change)
+                  bool release_read, bool release_write,
+                  adlb_refcounts to_acquire,
+                  xlb_rc_changes *changes)
 {
   assert(d != NULL);
+  refcount_scavenge to_acquire2 = { .subscript = ADLB_NO_SUB,
+                                    .refcounts = to_acquire };
   adlb_data_code dc;
   switch (type)
   {
@@ -81,31 +83,38 @@ xlb_incr_referand(adlb_datum_storage *d, adlb_data_type type,
       // Types that don't hold references
       break;
     case ADLB_DATA_TYPE_CONTAINER:
-      dc = xlb_members_cleanup(&d->CONTAINER, false, change, NO_SCAVENGE);
+      dc = xlb_members_cleanup(&d->CONTAINER, false, release_read,
+                              release_write, to_acquire2, changes);
       DATA_CHECK(dc);
       break;
     case ADLB_DATA_TYPE_MULTISET:
-      dc = xlb_multiset_cleanup(d->MULTISET, false, false, change,
-                                NO_SCAVENGE);
+      dc = xlb_multiset_cleanup(d->MULTISET, false, false, 
+            release_read, release_write, to_acquire2, changes);
       DATA_CHECK(dc);
       break;
     case ADLB_DATA_TYPE_STRUCT:
       // increment referand for all members in struct
-      dc = xlb_struct_incr_referand(d->STRUCT, change);
+      dc = xlb_struct_cleanup(d->STRUCT, false, 
+          release_read, release_write, to_acquire,
+          -1, changes);
       DATA_CHECK(dc);
       break;
     case ADLB_DATA_TYPE_REF:
       // decrement reference
-      // TODO: borrow refcount here?
-      dc = xlb_incr_rc_svr(d->REF.id, change);
+      dc = xlb_update_rc_id(d->REF.id, &d->REF.read_refs,
+         &d->REF.write_refs, release_read, release_write,
+         to_acquire, changes); 
       DATA_CHECK(dc);
       break;
     case ADLB_DATA_TYPE_FILE_REF:
+      // TODO: need to track refcount here
+      assert(false);
+      /*
       // decrement references held
       dc = xlb_incr_rc_svr(d->FILE_REF.status_id, change);
       DATA_CHECK(dc);
       dc = xlb_incr_rc_svr(d->FILE_REF.filename_id, change);
-      DATA_CHECK(dc);
+      DATA_CHECK(dc);*/
       break;
     default:
       check_verbose(false, ADLB_DATA_ERROR_TYPE,
@@ -153,6 +162,7 @@ apply_rc_update(bool releasing, int *curr_rc, int acquire_rc,
   return ADLB_DATA_SUCCESS;
 }
 
+// TODO: need to change this to support multiple IDs
 static adlb_data_code
 xlb_update_rc_id(adlb_datum_id id, int *read_rc, int *write_rc,
        bool release_read, bool release_write, adlb_refcounts to_acquire,
@@ -215,7 +225,7 @@ adlb_data_code
 xlb_incr_rc_scav(adlb_datum_id id, adlb_subscript subscript,
         const void *ref_data, int ref_data_len, adlb_data_type ref_type,
         adlb_refcounts decr_self, adlb_refcounts incr_referand,
-        adlb_notif_ranks *notifications)
+        adlb_notif_t *notifications)
 {
   assert(ADLB_RC_NONNEGATIVE(incr_referand));
   adlb_data_code dc;
@@ -224,9 +234,6 @@ xlb_incr_rc_scav(adlb_datum_id id, adlb_subscript subscript,
   if (!xlb_read_refcount_enabled && decr_self.write_refcount == 0 &&
                                     incr_referand.write_refcount == 0)
   {
-    // Make sure that notifications is initialized since refcount not
-    // called on this branch
-    notifications->count = 0;
     return ADLB_DATA_SUCCESS;
   }
 
@@ -284,47 +291,3 @@ xlb_incr_rc_scav(adlb_datum_id id, adlb_subscript subscript,
   }
 }
 
-adlb_data_code xlb_rc_changes_apply(xlb_rc_changes *c,
-                                   bool preacquire_only)
-{
-  adlb_data_code dc;
-  for (int i = 0; i < c->count; i++)
-  {
-    xlb_rc_change *change = &c->arr[i];
-    if (!preacquire_only || change->must_preacquire)
-    {
-      // Apply reference count operation
-      if (xlb_am_server)
-      {
-        dc = xlb_incr_rc_svr(change->id, change->rc);
-        DATA_CHECK(dc);
-      }
-      else
-      {
-        adlb_code ac = ADLB_Refcount_incr(change->id, change->rc);
-        check_verbose(ac == ADLB_SUCCESS, ADLB_DATA_ERROR_UNKNOWN,
-                  "could not modify refcount of <%"PRId64">", change->id);
-      }
-
-      if (preacquire_only)
-      {
-        // Remove processed entries selectively
-        c->count--;
-        if (c->count > 0)
-        {
-          // Swap last to here
-          memcpy(&c->arr[i], &c->arr[c->count], sizeof(c->arr[i]));
-          i--; // Process new entry next
-        }
-      }
-    }
-  }
-
-  if (!preacquire_only)
-  {
-    // Remove all from list
-    xlb_rc_changes_free(c);
-  }
-
-  return ADLB_DATA_SUCCESS;
-}

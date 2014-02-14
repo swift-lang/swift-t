@@ -7,6 +7,7 @@
 
 #include "adlb-defs.h"
 #include "adlb_types.h"
+#include "notifications.h"
 
 // Free all memory allocated within this module
 adlb_data_code xlb_struct_finalize(void);
@@ -23,11 +24,10 @@ adlb_data_code xlb_struct_get_field(adlb_struct *s, int field_ix,
                         const adlb_datum_storage **val, adlb_data_type *type);
 
 adlb_data_code
-xlb_struct_cleanup(adlb_struct *s, bool free_mem,
-        adlb_refcounts rc_change, adlb_refcounts scav_refcounts, int scav_ix);
-
-adlb_data_code
-xlb_struct_incr_referand(adlb_struct *s, adlb_refcounts rc_change);
+xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
+                   bool release_write, 
+                   adlb_refcounts to_acquire, int acquire_ix,
+                   xlb_rc_changes *rc_changes);
 
 char *xlb_struct_repr(adlb_struct *s);
 

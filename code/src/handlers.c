@@ -1129,6 +1129,7 @@ handle_retrieve(int caller)
 
   adlb_binary_data result;
   adlb_data_type type;
+  // TODO: need to change retrieve to support acquiring
   int dc = xlb_data_retrieve(hdr->id, subscript, &type, NULL, &result);
   assert(dc != ADLB_DATA_SUCCESS || result.length >= 0);
 

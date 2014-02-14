@@ -305,37 +305,27 @@ adlb_data_code xlb_free_struct(adlb_struct *s, bool free_root_ptr)
 }
 
 adlb_data_code
-xlb_struct_incr_referand(adlb_struct *s, adlb_refcounts rc_change)
-{
-  return xlb_struct_cleanup(s, false, rc_change, ADLB_NO_RC, -1);
-}
-
-adlb_data_code
-xlb_struct_cleanup(adlb_struct *s, bool free_mem,
-        adlb_refcounts rc_change, adlb_refcounts scav_refcounts, int scav_ix)
+xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
+                   bool release_write, 
+                   adlb_refcounts to_acquire, int acquire_ix,
+                   xlb_rc_changes *rc_changes)
 {
   assert(s != NULL);
   check_valid_type(s->type);
   adlb_data_code dc;
   struct_type_info *t = &struct_types[s->type];
-  assert(scav_ix < t->field_count);
-  bool do_scavenge = scav_refcounts.read_refcount != 0 ||
-                     scav_refcounts.write_refcount != 0;
+  assert(acquire_ix < t->field_count);
+  bool acquiring = to_acquire.read_refcount != 0 ||
+                     to_acquire.write_refcount != 0;
   
   for (int i = 0; i < t->field_count; i++)
   {
-    if (do_scavenge && (scav_ix < 0 || scav_ix == i))
-    {
-      dc = xlb_incr_scav_referand(&s->data[i], t->field_types[i],
-                                rc_change, scav_refcounts);
-      DATA_CHECK(dc);
-    }
-    else
-    {
-      // Don't scavenge
-      dc = xlb_incr_referand(&s->data[i], t->field_types[i], rc_change);
-      DATA_CHECK(dc);
-    }
+    bool acquire_field = acquiring &&
+                         (acquire_ix < 0 || acquire_ix == i);
+    dc = xlb_incr_referand(&s->data[i], t->field_types[i], release_read,
+            release_write, (acquire_field ? to_acquire : ADLB_NO_RC),
+            rc_changes);
+    DATA_CHECK(dc);
   }
 
   if (free_mem)

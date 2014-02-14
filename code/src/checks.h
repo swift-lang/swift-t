@@ -34,6 +34,8 @@
 #ifndef CHECKS_H
 #define CHECKS_H
 
+#include <stdio.h>
+
 #define ADLB_IS_ERROR(rc) (rc == ADLB_ERROR)
 
 // printf-like macro for printing error info

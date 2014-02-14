@@ -2,6 +2,7 @@
 
 #include "common.h"
 #include "handlers.h"
+#include "refcount.h"
 #include "server.h"
 #include "sync.h"
 
@@ -224,5 +225,50 @@ xlb_notify_all(const adlb_notif_t *notifs, adlb_datum_id id)
     rc = xlb_set_refs(&notifs->references);
     ADLB_CHECK(rc);
   } 
+  return ADLB_SUCCESS;
+}
+
+adlb_code xlb_rc_changes_apply(xlb_rc_changes *c,
+                                   bool preacquire_only)
+{
+  adlb_data_code dc;
+  for (int i = 0; i < c->count; i++)
+  {
+    xlb_rc_change *change = &c->arr[i];
+    if (!preacquire_only || change->must_preacquire)
+    {
+      // Apply reference count operation
+      if (xlb_am_server)
+      {
+        dc = xlb_incr_rc_svr(change->id, change->rc);
+        ADLB_DATA_CHECK(dc);
+      }
+      else
+      {
+        adlb_code ac = ADLB_Refcount_incr(change->id, change->rc);
+        CHECK_MSG(ac == ADLB_SUCCESS,
+            "could not modify refcount of <%"PRId64">", change->id);
+      }
+
+      if (preacquire_only)
+      {
+        // Remove processed entries selectively
+        c->count--;
+        if (c->count > 0)
+        {
+          // Swap last to here
+          memcpy(&c->arr[i], &c->arr[c->count], sizeof(c->arr[i]));
+          i--; // Process new entry next
+        }
+      }
+    }
+  }
+
+  if (!preacquire_only)
+  {
+    // Remove all from list
+    xlb_rc_changes_free(c);
+  }
+
   return ADLB_SUCCESS;
 }

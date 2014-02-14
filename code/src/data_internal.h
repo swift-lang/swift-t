@@ -111,7 +111,7 @@ adlb_data_code
 xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
           adlb_refcounts change, refcount_scavenge scav,
           bool *garbage_collected, adlb_refcounts *refcounts_scavenged,
-          adlb_notif_ranks *notifications);
+          adlb_notif_t *notifications);
 
 /*
   Utility function to resize string buffer using realloc if needed

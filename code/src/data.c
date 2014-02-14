@@ -90,9 +90,10 @@ static adlb_data_code
 datum_init_multiset(adlb_datum *d, adlb_data_type val_type);
 
 static adlb_data_code
-xlb_data_close(adlb_datum_id id, adlb_datum *d, adlb_notif_ranks *notify);
+xlb_data_close(adlb_datum_id id, adlb_datum *d, adlb_notif_t *notify,
+              bool release_write_refs);
 static adlb_data_code datum_gc(adlb_datum_id id, adlb_datum* d,
-           refcount_scavenge scav);
+           refcount_scavenge scav, xlb_rc_changes *rc_changes);
 
 static adlb_data_code
 insert_notifications(adlb_datum *d,
@@ -408,7 +409,7 @@ adlb_data_code
 xlb_data_reference_count(adlb_datum_id id, adlb_refcounts change,
           refcount_scavenge scav, bool *garbage_collected,
           adlb_refcounts *refcounts_scavenged,
-          adlb_notif_ranks *notifications)
+          adlb_notif_t *notifications)
 {
   adlb_datum* d;
   adlb_data_code dc = xlb_datum_lookup(id, &d);
@@ -421,7 +422,7 @@ adlb_data_code
 xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
           adlb_refcounts change, refcount_scavenge scav,
           bool *garbage_collected, adlb_refcounts *refcounts_scavenged,
-          adlb_notif_ranks *notifications)
+          adlb_notif_t *notifications)
 {
   // default: didn't garbage collect
   if (garbage_collected != NULL)
@@ -488,7 +489,10 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
     d->write_refcount += write_incr;
     if (d->write_refcount == 0) {
       adlb_data_code dc;
-      dc = xlb_data_close(id, d, notifications);
+      // If we're keeping around read-only version, release
+      // only write refs here
+      bool release_write_refs = d->read_refcount > 0;
+      dc = xlb_data_close(id, d, notifications, release_write_refs);
       DATA_CHECK(dc);
     }
     DEBUG("write_refcount: <%"PRId64"> => %i", id, d->write_refcount);
@@ -497,7 +501,7 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
   if (d->read_refcount <= 0 && d->write_refcount <= 0) {
     if (garbage_collected != NULL)
       *garbage_collected = true;
-    return datum_gc(id, d, scav);
+    return datum_gc(id, d, scav, &notifications->rc_changes);
   }
 
   return ADLB_DATA_SUCCESS;
@@ -511,7 +515,7 @@ extract_members(adlb_container *c, int count, int offset,
 
 static adlb_data_code
 datum_gc(adlb_datum_id id, adlb_datum* d,
-           refcount_scavenge scav)
+           refcount_scavenge to_acquire, xlb_rc_changes *rc_changes)
 {
   DEBUG("datum_gc: <%"PRId64">", id);
   check_verbose(!d->status.permanent, ADLB_DATA_ERROR_UNKNOWN,
@@ -520,7 +524,8 @@ datum_gc(adlb_datum_id id, adlb_datum* d,
   if (d->status.set)
   {
     // Cleanup the storage if initialized
-    adlb_data_code dc = xlb_datum_cleanup(&d->data, d->type, id, scav);
+    adlb_data_code dc = xlb_datum_cleanup(&d->data, d->type, id, true,
+                                true, true, to_acquire, rc_changes);
     DATA_CHECK(dc);
   }
 
@@ -542,6 +547,8 @@ xlb_data_referand_refcount(const void *data, int length,
         adlb_data_type type, adlb_datum_id id,
         adlb_refcounts change)
 {
+  // TODO: need to rethink this:
+  /// - Are we using this purely to acquire references?
   adlb_data_code dc, rc;
   adlb_datum_storage d;
   dc = ADLB_Unpack(&d, type, data, length);
@@ -940,7 +947,7 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
                                             -refcount_decr.read_refcount : 0,
                             .write_refcount = -refcount_decr.write_refcount };
     dc = xlb_rc_impl(d, id, incr, NO_SCAVENGE,
-                     NULL, NULL, &notifications->notify);
+                     NULL, NULL, notifications);
     DATA_CHECK(dc);
   }
 
@@ -952,18 +959,25 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
 
    Allocates fresh memory in result unless count==0
    Caller must free result
+
+   will_be_gced:
  */
 static adlb_data_code
-xlb_data_close(adlb_datum_id id, adlb_datum *d, adlb_notif_ranks *notify)
+xlb_data_close(adlb_datum_id id, adlb_datum *d, adlb_notif_t *notify,
+              bool release_write_refs)
 {
   assert(d != NULL);
   adlb_subscript no_subscript = ADLB_NO_SUB;
   DEBUG("data_close: <%"PRId64"> listeners: %i", id, d->listeners.size);
-  adlb_data_code dc = append_notifs(&d->listeners, no_subscript, notify);
+  adlb_data_code dc = append_notifs(&d->listeners, no_subscript, &notify->notify);
   DATA_CHECK(dc);
   list_i_clear(&d->listeners);
 
-  TRACE_END;
+
+  if (release_write_refs)
+  {
+    // TODO: need to release write references in here
+  }
   return ADLB_DATA_SUCCESS;
 }
 
@@ -1415,15 +1429,11 @@ insert_notifications2(adlb_datum *d,
       dc = xlb_incr_referand(value, value_type, referand_incr);
       DATA_CHECK(dc);
 
-      // Now that references are incremented on ref variables,
-      // no longer need read reference for waiters on this index
-      adlb_notif_ranks tmp = ADLB_NO_NOTIF_RANKS;
       adlb_refcounts read_decr = { .read_refcount = -1,
                                    .write_refcount = 0 };
       dc = xlb_rc_impl(d, container_id, read_decr, NO_SCAVENGE,
-                         garbage_collected, NULL, &tmp);
+                         garbage_collected, NULL, notify);
       DATA_CHECK(dc);
-      assert(tmp.count == 0);
     }
   }
 

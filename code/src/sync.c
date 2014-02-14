@@ -39,7 +39,7 @@
 static inline adlb_code send_sync(int target, const struct packed_sync *hdr);
 static inline adlb_code msg_from_target(int target,
                                   const struct packed_sync *hdr, bool* done);
-static inline adlb_code msg_from_other_server(int other_server, 
+static adlb_code msg_from_other_server(int other_server, 
                   int target, const struct packed_sync *my_hdr);
 static inline adlb_code msg_shutdown(adlb_sync_mode mode, int sync_target, bool* done);
 
@@ -224,7 +224,7 @@ static inline bool is_simple_sync(adlb_sync_mode mode)
   return mode == ADLB_SYNC_STEAL;
 }
 
-static inline adlb_code msg_from_other_server(int other_server, int target,
+static adlb_code msg_from_other_server(int other_server, int target,
                   const struct packed_sync *my_hdr)
 {
   TRACE_START;

@@ -11,36 +11,27 @@
 #include <string.h>
 
 adlb_data_code
-xlb_datum_cleanup(adlb_datum_storage *d, adlb_data_type type, adlb_datum_id id,
-              refcount_scavenge scav)
+xlb_datum_cleanup(adlb_datum_storage *d,
+     adlb_data_type type, adlb_datum_id id, bool free_mem,
+     bool release_read, bool release_write,
+     refcount_scavenge to_acquire, xlb_rc_changes *rc_changes)
 {
-  // Can't scavenge more than one since we don't hold more than one
-  // refcount per referenced item
-  assert(scav.refcounts.read_refcount == 0 ||
-         scav.refcounts.read_refcount == 1);
-  // TODO: don't currently hold write references internally
-  assert(scav.refcounts.write_refcount == 0);
-  adlb_refcounts rc_change = { .read_refcount = -1, .write_refcount = 0 };
-  return xlb_datum_cleanup2(d, type, id, true, rc_change, scav);
-}
-
-adlb_data_code
-xlb_datum_cleanup2(adlb_datum_storage *d, adlb_data_type type,
-             adlb_datum_id id, bool free_mem,
-             adlb_refcounts rc_change, refcount_scavenge scav)
-{
+  // Sanity-check scavenges
+  assert(to_acquire.refcounts.read_refcount >= 0);
+  assert(to_acquire.refcounts.write_refcount >= 0);
   adlb_data_code dc;
   
   if (type == ADLB_DATA_TYPE_CONTAINER)
   {
     // Optimization: do single pass over container for freeing memory and
     // reference counting
-    return xlb_members_cleanup(&d->CONTAINER, free_mem, rc_change, scav);
+    return xlb_members_cleanup(&d->CONTAINER, free_mem, release_read,
+            release_write, to_acquire, rc_changes);
   }
   else if (type == ADLB_DATA_TYPE_MULTISET)
   {
-    return xlb_multiset_cleanup(d->MULTISET, free_mem, free_mem,
-                                rc_change, scav);
+    return xlb_multiset_cleanup(d->MULTISET, free_mem, free_mem, release_read,
+            release_write, to_acquire, rc_changes);
   }
   else if (type == ADLB_DATA_TYPE_STRUCT)
   {
@@ -50,8 +41,8 @@ xlb_datum_cleanup2(adlb_datum_storage *d, adlb_data_type type,
       dc = xlb_struct_str_to_ix(scav.subscript, &scav_ix);
       DATA_CHECK(dc);
     }
-    return xlb_struct_cleanup(d->STRUCT, free_mem, rc_change,
-                                     scav.refcounts, scav_ix);
+    return xlb_struct_cleanup(d->STRUCT, free_mem, release_read,
+              release_write, scav.refcounts, scav_ix, rc_changes);
   }
   else
   {
@@ -59,7 +50,8 @@ xlb_datum_cleanup2(adlb_datum_storage *d, adlb_data_type type,
     {
       // Decrement any reference counts required
       assert(!adlb_has_sub(scav.subscript));
-      dc = xlb_incr_scav_referand(d, type, rc_change, scav.refcounts);
+      dc = xlb_incr_referand(d, type, release_read, release_write,
+                             scav.refcounts, rc_changes);
       DATA_CHECK(dc);
     }
 
@@ -79,7 +71,8 @@ xlb_datum_cleanup2(adlb_datum_storage *d, adlb_data_type type,
  */
 adlb_data_code
 xlb_members_cleanup(adlb_container *container, bool free_mem,
-                  adlb_refcounts rc_change, refcount_scavenge scav)
+  bool release_read, bool release_write, refcount_scavenge to_acquire,
+  xlb_rc_changes *rc_changes)
 {
   adlb_data_code dc;
   struct table_bp* members = container->members;
@@ -117,7 +110,7 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
           // Note: if we're scavenging entire container, refcounts_scavenged
           // will be overwritten many times, but will have correct result
           dc = xlb_incr_scav_referand(d, container->val_type,
-                                     rc_change, scav.refcounts);
+                                     scav.refcounts);
           DATA_CHECK(dc);
         }
         else

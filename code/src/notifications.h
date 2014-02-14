@@ -28,6 +28,7 @@
 #define ADLB_NOTIFICATIONS_H
 
 #include "adlb-defs.h"
+#include "checks.h"
 
 /** If ADLB_CLIENT_NOTIFIES is true, client is responsible for
     notifying others of closing, otherwise the server does it */
@@ -66,9 +67,30 @@ typedef struct {
   adlb_notif_rank *notifs;
 } adlb_notif_ranks;
 
+/** Represent change in refcount that must be applied */
+typedef struct {
+  adlb_datum_id id;
+  adlb_refcounts rc;
+  
+  /** If true, we don't have ownership of reference:
+      must acquire before doing anything to avoid
+      race condition on freeing */
+  bool must_preacquire;
+} xlb_rc_change;
+
+/** List of refcount changes */
+typedef struct {
+  xlb_rc_change *arr;
+  int count;
+  int size;
+} xlb_rc_changes;
+
+#define XLB_RC_CHANGES_INIT_SIZE 16
+
 typedef struct {
   adlb_notif_ranks notify;
   adlb_ref_data references;
+  xlb_rc_changes rc_changes;
 
   // All data that needs to be freed after notifications, e.g. subscripts
   // (may be NULL)
@@ -89,10 +111,13 @@ static inline bool xlb_notif_empty(adlb_notif_t *notif)
 
 #define ADLB_NO_NOTIF_RANKS { .count = 0, .notifs = NULL }
 #define ADLB_NO_DATUMS { .count = 0, .data = NULL }
+#define ADLB_NO_RC_CHANGES { .size = 0, .count = 0, .arr = NULL }
 #define ADLB_NO_NOTIFS { .notify = ADLB_NO_NOTIF_RANKS,  \
                          .references = ADLB_NO_DATUMS,   \
+                         .rc_changes = ADLB_NO_RC_CHANGES, \
                          .to_free = NULL, .to_free_length = 0, \
                          .to_free_size = 0 }
+
 
 void xlb_free_notif(adlb_notif_t *notifs);
 void xlb_free_ranks(adlb_notif_ranks *ranks);
@@ -116,6 +141,60 @@ xlb_process_local_notif(adlb_datum_id id, adlb_notif_ranks *ranks);
 
 adlb_code
 xlb_notify_all(const adlb_notif_t *notifs, adlb_datum_id id);
+
+/*
+ * Apply refcount changes and remove entries from list
+ * preacquire_only: if true, only acqurie those marked must_preacquire,
+ *                   if false, acquire all
+ */
+adlb_code xlb_rc_changes_apply(xlb_rc_changes *c,
+                                   bool preacquire_only);
+
+// Inline functions
+static inline adlb_code xlb_rc_changes_init(xlb_rc_changes *c)
+{
+  c->arr = NULL;
+  c->count = 0;
+  c->size = 0;
+  return ADLB_SUCCESS;
+}
+
+static inline adlb_code xlb_rc_changes_expand(xlb_rc_changes *c,
+                                              int to_add)
+{
+  if (c->arr != NULL &&
+      c->count + to_add <= c->size)
+  {
+    // Big enough
+    return ADLB_SUCCESS;
+  } else {
+    int new_size;
+    if (c->arr == NULL)
+    {
+      new_size = XLB_RC_CHANGES_INIT_SIZE;
+    }
+    else
+    {
+      new_size = c->size * 2;
+    }
+    void *new_arr = realloc(c->arr, (size_t)new_size * sizeof(c->arr[0]));
+    
+    CHECK_MSG(new_arr != NULL, "Could not alloc array");
+    c->arr = new_arr;
+    c->size = new_size;
+    return ADLB_SUCCESS;
+  }
+}
+
+static inline void xlb_rc_changes_free(xlb_rc_changes *c)
+{
+  if (c->arr != NULL) {
+    free(c->arr);
+  }
+  c->arr = NULL;
+  c->count = 0;
+  c->size = 0;
+}
 
 #endif // ADLB_NOTIFICATIONS_H
 
