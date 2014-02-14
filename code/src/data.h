@@ -57,12 +57,25 @@ adlb_data_code xlb_data_unlock(adlb_datum_id id);
 adlb_data_code xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
                               int rank, int* result);
 
-adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
-                                        adlb_subscript subscript,
-                                        adlb_datum_id reference,
-                                        adlb_data_type ref_type,
-                                        const adlb_buffer *caller_buffer,
-                                        adlb_binary_data *result);
+/**
+ * If data at id[subscript] is already set:
+ *  -> return data in same way as xlb_data_retrieve
+ *  -> fill in notifications with notification work
+ *  -> acquire reference counts for data now
+ * If data is not set:
+ *  -> don't return data
+ *  -> don't fill in notifications
+ *  -> do add entry so that notifications and refcount acquisition
+ *     happens later.
+ * In both cases:
+ *  -> consume single read reference count
+ */
+adlb_data_code
+xlb_data_container_reference(adlb_datum_id id, adlb_subscript subscript,
+         adlb_datum_id reference, adlb_data_type ref_type,
+         adlb_refcounts to_acquire, 
+         const adlb_buffer *caller_buffer, adlb_binary_data *result,
+         adlb_notif_t *notifications);
 
 
 adlb_data_code xlb_data_container_size(adlb_datum_id container_id,
@@ -144,15 +157,6 @@ adlb_data_code xlb_data_reference_count(adlb_datum_id id,
                 refcount_scavenge scav, bool *garbage_collected,
                 adlb_refcounts *refcounts_scavenged,
                 adlb_notif_t *notifications);
-
-/*
-  Change the reference count of all variables referenced by data
-  TODO: promote to adlb.h?
- */
-adlb_data_code
-xlb_data_referand_refcount(const void *data, int length,
-        adlb_data_type type, adlb_datum_id id,
-        adlb_refcounts change);
 
 const char*
 xlb_data_rc_type_tostring(adlb_refcount_type rc_type);

@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <list.h>
 #include <list_i.h>
 #include <list_l.h>
 #include <table.h>
@@ -46,6 +47,10 @@
 */
 static struct table_lp tds;
 
+typedef struct {
+  adlb_datum_id id;
+  adlb_refcounts acquire;
+} container_reference;
 /**
    Map from "container,subscript" specifier to list of listening references.
  */
@@ -110,7 +115,7 @@ insert_notifications_all(adlb_datum *d, adlb_datum_id id,
 
 static adlb_data_code
 check_subscript_notifications(adlb_datum_id container_id,
-    adlb_subscript subscript, struct list_l **ref_list,
+    adlb_subscript subscript, struct list **ref_list,
     struct list_i **subscribed_ranks);
 
 static adlb_data_code
@@ -118,13 +123,14 @@ insert_notifications2(adlb_datum *d,
       adlb_datum_id container_id, adlb_subscript subscript,
       adlb_data_type value_type, adlb_datum_storage *value,
       const void *value_buffer, int value_len,
-      struct list_l *ref_list, struct list_i *sub_list,
+      struct list *ref_list, struct list_i *sub_list,
       adlb_notif_t *notify, bool *garbage_collected);
 
 static 
-adlb_data_code append_refs(const struct list_l *subscribers,
+adlb_data_code process_ref_list(const struct list_l *subscribers,
           adlb_ref_data *references, adlb_data_type type,
-          const void *value, int value_len); 
+          const void *value, int value_len,
+          adlb_refcounts *to_acquire); 
 
 static 
 adlb_data_code append_notifs(const struct list_i *listeners,
@@ -543,25 +549,6 @@ datum_gc(adlb_datum_id id, adlb_datum* d,
 }
 
 adlb_data_code
-xlb_data_referand_refcount(const void *data, int length,
-        adlb_data_type type, adlb_datum_id id,
-        adlb_refcounts change)
-{
-  // TODO: need to rethink this:
-  /// - Are we using this purely to acquire references?
-  adlb_data_code dc, rc;
-  adlb_datum_storage d;
-  dc = ADLB_Unpack(&d, type, data, length);
-  DATA_CHECK(dc);
-
-  rc = xlb_incr_referand(&d, type, change);
-  dc = ADLB_Free_storage(&d, type);
-  DATA_CHECK(dc);
-  return rc;
-}
-
-
-adlb_data_code
 xlb_data_lock(adlb_datum_id id, int rank, bool* result)
 {
   adlb_datum* d;
@@ -687,8 +674,10 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
                                         adlb_subscript subscript,
                                         adlb_datum_id reference,
                                         adlb_data_type ref_type,
+                                        adlb_refcounts to_acquire,
                                         const adlb_buffer *caller_buffer,
-                                        adlb_binary_data *result)
+                                        adlb_binary_data *result,
+                                        adlb_notif_t *notifications)
 {
   // Check that container_id is an initialized container
   adlb_datum* d;
@@ -716,6 +705,15 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
                                       caller_buffer, result);
     DATA_CHECK(dc);
 
+    // TODO: add reference work to notifications
+    assert(false);
+
+    adlb_refcount decr = { .read_refcount = -1,
+                           .write_refcount = 0 };
+    dc = xlb_rc_impl(d, container_id, decr, to_acquire,
+                     NULL, NULL, notifications);
+    DATA_CHECK(dc);
+
     return ADLB_DATA_SUCCESS;
   }
 
@@ -737,7 +735,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
   char key[id_sub_buflen(subscript)];
   size_t key_len = write_id_sub(key, container_id, subscript);
 
-  struct list_l* listeners = NULL;
+  struct list* listeners = NULL;
   found = table_bp_search(&container_references, key, key_len,
                             (void*)&listeners);
   TRACE("search container_ref %"PRId64"[%.*s]: %i", container_id,
@@ -745,7 +743,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
   if (!found)
   {
     // Nobody else has subscribed to this pair yet
-    listeners = list_l_create();
+    listeners = list_create();
     TRACE("add container_ref %"PRId64"[%.*s]", container_id,
           (int)subscript.length, subscript.key);
     table_bp_add(&container_references, key, key_len, listeners);
@@ -773,7 +771,12 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
 
   TRACE("Added %"PRId64" to listeners for %"PRId64"[%s]", reference,
         container_id, subscript);
-  list_l_unique_insert(listeners, reference);
+  container_reference *entry = malloc(sizeof(container_reference));
+  check_verbose(entry != NULL, ADLB_DATA_ERROR_OOM,
+                "Could not allocate memory");
+  entry->id = reference;
+  memcpy(&entry->acquire, &to_acquire, sizeof(entry->acquire));
+  list_add(listeners, entry);
   result->data = NULL;
   return ADLB_DATA_SUCCESS;
 }
@@ -1363,7 +1366,7 @@ insert_notifications(adlb_datum *d,
  */
 static adlb_data_code
 check_subscript_notifications(adlb_datum_id container_id,
-    adlb_subscript subscript, struct list_l **ref_list,
+    adlb_subscript subscript, struct list **ref_list,
     struct list_i **sub_list) {
   char s[id_sub_buflen(subscript)];
   size_t s_len = write_id_sub(s, container_id, subscript);
@@ -1372,7 +1375,7 @@ check_subscript_notifications(adlb_datum_id container_id,
 
   if (result)
   {
-    *ref_list = (struct list_l*) data;
+    *ref_list = (struct list*) data;
   }
   
   result = table_bp_remove(&container_ix_listeners, s, s_len, &data);
@@ -1397,37 +1400,33 @@ insert_notifications2(adlb_datum *d,
       adlb_datum_id container_id, adlb_subscript subscript,
       adlb_data_type value_type, adlb_datum_storage *value,
       const void *value_buffer, int value_len,
-      struct list_l *ref_list, struct list_i *sub_list,
+      struct list *ref_list, struct list_i *sub_list,
       adlb_notif_t *notify, bool *garbage_collected)
 {
   adlb_data_code dc;
   if (ref_list != NULL)
   {
+    refcount_scavenge referand_acquire = NO_SCAVENGE;
     int nreferences = ref_list->size;
-    dc = append_refs(ref_list, &notify->references, value_type,
-                     value_buffer, value_len);
+    dc = process_ref_list(ref_list, &notify->references, value_type,
+                     value_buffer, value_len,
+                     &referand_acquire->refcounts);
     DATA_CHECK(dc);
-    list_l_free(ref_list);
+    list_free(ref_list);
 
-    if (xlb_read_refcount_enabled)
+    // Need to free refcount we were holding for reference notifs
+    adlb_refcounts read_decr = { .read_refcount = -1,
+                                 .write_refcount = 0 };
+    if (!xlb_read_refcount_enabled)
     {
-      // TODO: use scavenging here
-      // TODO: offload this to client?
-      // TODO: does initial call need to tell use whether it was a read or
-      //       write reference?
-      // the referenced variables need refcount incremented, since we're
-      // going to create a new reference to them
-      adlb_refcounts referand_incr = { .read_refcount = nreferences,
-                                       .write_refcount = 0 };
-      dc = xlb_incr_referand(value, value_type, referand_incr);
-      DATA_CHECK(dc);
-
-      adlb_refcounts read_decr = { .read_refcount = -1,
-                                   .write_refcount = 0 };
-      dc = xlb_rc_impl(d, container_id, read_decr, NO_SCAVENGE,
-                         garbage_collected, NULL, notify);
-      DATA_CHECK(dc);
+      read_decr.read_refcount = 0;
+      referand_acquire->refcounts.read_refcount = 0;
     }
+    
+    // Update refcounts if necessary
+    dc = xlb_rc_impl(d, container_id, read_decr, to_acquire,
+                     garbage_collected, NULL, notify);
+    DATA_CHECK(dc);
   }
 
   
@@ -1456,7 +1455,7 @@ insert_notifications_all(adlb_datum *d, adlb_datum_id id,
                            .length = item->key_len };
 
     // Find, remove, and return any listeners/references
-    struct list_l *ref_list = NULL;
+    struct list *ref_list = NULL;
     struct list_i *sub_list = NULL;
     dc = check_subscript_notifications(id, sub, &ref_list, &sub_list);
     DATA_CHECK(dc);
@@ -1501,25 +1500,31 @@ insert_notifications_all(adlb_datum *d, adlb_datum_id id,
 }
 
 static 
-adlb_data_code append_refs(const struct list_l *subscribers,
+adlb_data_code process_ref_list(const struct list *subscribers,
           adlb_ref_data *references, adlb_data_type type,
-          const void *value, int value_len)
+          const void *value, int value_len,
+          adlb_refcounts *to_acquire)
 {
-  int nrefs = subscribers->size;
-  if (nrefs > 0)
+  int nsubs = subscribers->size;
+  if (nsubs > 0)
   {
     // append reference data
     DATA_REALLOC(references->data, (size_t)(nrefs + references->count));
 
-    struct list_l_item *node = subscribers->head;
+    struct list_item *node = subscribers->head;
     for (int i = 0; i < nrefs; i++)
     {
+      container_reference *entry = node->data;
       assert(node != NULL); // Shouldn't fail if size was ok
       adlb_ref_datum *ref = &references->data[i + references->count];
-      ref->id = node->data;
+      ref->id = entry->id;
       ref->type = type;
       ref->value = value;
       ref->value_len = value_len;
+
+      to_acquire->read_refcount += entry->acquire.read_refcount;
+      to_acquire->write_refcount += entry->acquire.write_refcount;
+
       node = node->next;
     }
     references->count += nrefs;
@@ -1783,8 +1788,8 @@ static void free_td_entry(adlb_datum_id id, void *val)
 static void free_cref_entry(const void *key, size_t key_len, void *val)
 {
   assert(key != NULL && val != NULL);
-  struct list_l* listeners = val;
-  struct list_l_item *curr;
+  struct list* listeners = val;
+  struct list_item *curr;
 
   for (curr = listeners->head; curr != NULL; curr = curr->next)
   {
@@ -1794,8 +1799,10 @@ static void free_cref_entry(const void *key, size_t key_len, void *val)
     read_id_sub(key, key_len, &id, &sub);
     printf("UNFILLED CONTAINER REFERENCE <%"PRId64">[%.*s] => <%"PRId64">\n",
             id, (int)sub.length, (const char*)sub.key, curr->data);
+    free(curr->data);
+    curr->data = NULL;
   }
-  list_l_free(listeners);
+  list_free(listeners);
 }
 
 static void free_ix_l_entry(const void *key, size_t key_len, void *val)

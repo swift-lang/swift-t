@@ -146,8 +146,11 @@ xlb_close_notify(adlb_datum_id id, const adlb_notif_ranks *ranks)
 }
 
 adlb_code
-xlb_process_local_notif(adlb_datum_id id, adlb_notif_ranks *ranks)
+xlb_process_local_notif(adlb_datum_id id, adlb_notif_t *notifs)
 {
+  // TODO: process refcount manipulation here
+  // TODO: also do pre-increments?
+
   assert(xlb_am_server);
   if (ranks->count == 0)
     return ADLB_SUCCESS;

@@ -138,7 +138,7 @@ xlb_close_notify(adlb_datum_id id, const adlb_notif_ranks *ranks);
    locally.  Frees memory if all removed.
  */
 adlb_code
-xlb_process_local_notif(adlb_datum_id id, adlb_notif_ranks *ranks);
+xlb_process_local_notif(adlb_datum_id id, adlb_notif_t *notifs);
 
 adlb_code
 xlb_notify_all(const adlb_notif_t *notifs, adlb_datum_id id);

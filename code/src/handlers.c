@@ -134,7 +134,7 @@ static inline adlb_code redirect_work(int type, int putter,
 static inline bool check_workqueue(int caller, int type);
 
 static adlb_code
-notify_helper(adlb_datum_id id, adlb_notif_ranks *notifications);
+notify_helper(adlb_datum_id id, adlb_notif_t *notifications);
 
 static adlb_code
 send_notification_work(int caller, 
@@ -917,7 +917,7 @@ handle_store(int caller)
   else if (ADLB_CLIENT_NOTIFIES)
   {
     // process and remove any local notifications for this server
-    xlb_process_local_notif(hdr.id, &notifs.notify);
+    xlb_process_local_notif(hdr.id, &notifs);
 
     // TODO: process reference setting locally if possible.  This is slightly
     // more complex as we might want to pass the notification work for the
@@ -1248,12 +1248,13 @@ handle_refcount_incr(int caller)
   DEBUG("Refcount_incr: <%"PRId64"> READ %i WRITE %i", msg.id,
         msg.change.read_refcount, msg.change.write_refcount);
   
-  adlb_notif_ranks notify_ranks = ADLB_NO_NOTIF_RANKS;
+  adlb_notif_t notifs = ADLB_NO_NOTIFS;
   adlb_data_code dc = xlb_data_reference_count(msg.id, msg.change, NO_SCAVENGE,
-                                           NULL, NULL, &notify_ranks);
+                                           NULL, NULL, &notifs);
 
   DEBUG("data_reference_count => %i", dc);
 
+  // TODO: send back increment/decrement work too
   struct packed_refcount_resp resp = {
       .success = (dc == ADLB_DATA_SUCCESS),
       .notifs.notify_count = 0,
@@ -1268,26 +1269,24 @@ handle_refcount_incr(int caller)
   else if (ADLB_CLIENT_NOTIFIES)
   {
     // Remove any notifications that can be handled locally
-    xlb_process_local_notif(msg.id, &notify_ranks);
-    resp.notifs.notify_count = notify_ranks.count;
+    xlb_process_local_notif(msg.id, &notifs);
+    resp.notifs.notify_count = notifs.notify.count;
+    // TODO: send back increment/decrement work too
     
     // Send work back to client
-    adlb_notif_t send_notifs = ADLB_NO_NOTIFS;
-    send_notifs.notify.notifs = notify_ranks.notifs;
-    send_notifs.notify.count = notify_ranks.count;
     rc = send_notification_work(caller, &resp, sizeof(resp),
-            &resp.notifs, &send_notifs, true);
+            &resp.notifs, &notifs, true);
     ADLB_CHECK(rc);
   }
   else 
   {
     // Handle on server
     RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
-    rc = xlb_close_notify(msg.id, &notify_ranks);
+    rc = xlb_notify_all(&notifs, msg.id);
     ADLB_CHECK(rc);
   }
   
-  xlb_free_ranks(&notify_ranks);
+  xlb_free_notif(&notifs);
   return ADLB_SUCCESS;
 }
 
@@ -1415,43 +1414,22 @@ handle_container_reference(int caller)
   DEBUG("Container_reference: <%"PRId64">[%.*s] => <%"PRId64"> (%i)",
         container_id, (int)subscript.length, (const char*)subscript.key,
         reference, ref_type);
-  
+ 
+  // TODO: allow caller to specify refcounts
+  // TODO: support custom decrement?
+  adlb_refcounts to_acquire;
+
+  adlb_notif_t notifs = ADLB_NO_NOTIFS;
   adlb_binary_data member;
   adlb_data_code dc = xlb_data_container_reference(container_id,
-                        subscript, reference, ref_type, NULL,
-                        &member);
-  if (dc == ADLB_DATA_SUCCESS)
+                        subscript, reference, ref_type, to_acquire, 
+                        NULL, &member, &notifs);
+  // TODO: offload notifs to client? 
+  if (dc == ADLB_DATA_SUCCESS && !xlb_notif_empty(&notifs))
   {
-    // Data was set if the member is present
-    if (member.data != NULL)
-    {
-      // Make sure we own array member data in case freed
-      dc = ADLB_Own_data(NULL, &member);
-      assert(dc == ADLB_DATA_SUCCESS);
-
-      adlb_notif_ranks notify = ADLB_NO_NOTIF_RANKS;
-      adlb_refcounts self_decr = ADLB_READ_RC;
-      adlb_refcounts referand_incr = ADLB_READ_RC;
-      // container_reference must consume a read reference, and we need
-      // to increment read refcount of referenced variable
-      dc = xlb_incr_rc_scav(container_id, subscript,
-                        member.data, member.length,
-                        ref_type, self_decr, referand_incr, &notify);
-
-      if (dc == ADLB_DATA_SUCCESS)
-      {
-        // TODO: offload to client?
-        adlb_code rc = xlb_set_ref_and_notify(reference, member.data,
-                                      member.length, ref_type);
-        ADLB_CHECK(rc);
-      }
-      if (dc == ADLB_DATA_SUCCESS)
-      {
-        adlb_code rc = notify_helper(container_id, &notify);
-        ADLB_CHECK(rc);
-      }
-      ADLB_Free_binary_data(&member);
-    }
+    
+    adlb_code rc = xlb_notify_all(&notifs, container_id);
+    ADLB_CHECK(rc);
   }
   RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
   return ADLB_SUCCESS;
@@ -1605,14 +1583,14 @@ static adlb_code find_req_bytes(int *bytes, int caller, adlb_tag tag) {
   TODO: option to offload to client
  */
 static adlb_code
-notify_helper(adlb_datum_id id, adlb_notif_ranks *notifications)
+notify_helper(adlb_datum_id id, adlb_notif_t *notifications)
 {
-  if (notifications->count > 0)
+  if (!xlb_notif_empty(notifications))
   {
     adlb_code rc;
-    rc = xlb_close_notify(id, notifications);
+    rc = xlb_notify_all(notifications, id);
     ADLB_CHECK(rc);
-    xlb_free_ranks(notifications);
+    xlb_free_notif(notifications);
   }
   return ADLB_SUCCESS;
 }
@@ -1626,7 +1604,7 @@ refcount_decr_helper(adlb_datum_id id, adlb_refcounts decr)
 {
   if (!ADLB_RC_IS_NULL(decr))
   {
-    adlb_notif_ranks notify = ADLB_NO_NOTIF_RANKS;
+    adlb_notif_t notify = ADLB_NO_NOTIFS;
     adlb_data_code dc;
     dc = xlb_data_reference_count(id, adlb_rc_negate(decr), NO_SCAVENGE,
                               NULL, NULL, &notify);

@@ -217,77 +217,7 @@ xlb_update_rc_referand(adlb_datum_storage *d, adlb_data_type type,
   // TODO: handle nested structures?
   // NOTE: should avoid traversing containers if no refs in value
 
-  // TODO: travers aend use xlb_update_rc_id
+  // TODO: traverse and use xlb_update_rc_id
   return ADLB_DATA_SUCCESS;
-}
-
-adlb_data_code
-xlb_incr_rc_scav(adlb_datum_id id, adlb_subscript subscript,
-        const void *ref_data, int ref_data_len, adlb_data_type ref_type,
-        adlb_refcounts decr_self, adlb_refcounts incr_referand,
-        adlb_notif_t *notifications)
-{
-  assert(ADLB_RC_NONNEGATIVE(incr_referand));
-  adlb_data_code dc;
-
-  // Only do things if read refcounting is enabled
-  if (!xlb_read_refcount_enabled && decr_self.write_refcount == 0 &&
-                                    incr_referand.write_refcount == 0)
-  {
-    return ADLB_DATA_SUCCESS;
-  }
-
-  adlb_datum *d;
-  dc = xlb_datum_lookup(id, &d);
-  DATA_CHECK(dc);
-
-  if (ADLB_RC_IS_NULL(incr_referand))
-  {
-    return xlb_rc_impl(d, id, adlb_rc_negate(decr_self),
-                  NO_SCAVENGE, NULL, NULL, notifications);
-  }
-
-  // Must acquire referand refs here by scavenging from freed structure
-  // or by incrementing
-  adlb_refcounts scavenged;
-  bool garbage_collected = false;
-  refcount_scavenge scav_req = { .subscript = subscript,
-                                 .refcounts = incr_referand };
-  dc = xlb_rc_impl(d, id, adlb_rc_negate(decr_self), scav_req,
-                        &garbage_collected, &scavenged, notifications);
-  DATA_CHECK(dc);
-
-  if (garbage_collected)
-  {
-    // Update based on what we scavenged  
-    incr_referand.read_refcount -= scavenged.read_refcount;
-    incr_referand.write_refcount -= scavenged.write_refcount;
-    assert(ADLB_RC_NONNEGATIVE(incr_referand));
-    if (ADLB_RC_IS_NULL(incr_referand))
-    {
-      DEBUG("Success in refcount switch for <%"PRId64">", id);
-      return ADLB_DATA_SUCCESS;
-    }
-    else
-    {
-      DEBUG("Need to do extra increment of referands <%"PRId64">", id);
-      return xlb_data_referand_refcount(ref_data, ref_data_len, ref_type,
-                                  id, incr_referand);
-    }
-  }
-  else
-  {
-    // First attempt aborted and did nothing, do things one
-    // step at a time
-    DEBUG("Need to manually update refcounts for <%"PRId64">", id);
-    dc = xlb_data_referand_refcount(ref_data, ref_data_len, ref_type,
-                                    id, incr_referand);
-    DATA_CHECK(dc);
-    
-    // Weren't able to acquire any reference counts, so attempted
-    // decrement unsuccessful.  Retry.
-    return xlb_rc_impl(d, id, adlb_rc_negate(decr_self), NO_SCAVENGE,
-                          NULL, NULL, notifications);
-  }
 }
 
