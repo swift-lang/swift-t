@@ -29,4 +29,9 @@ app (file o) touch()
   "touch" o;
 }
 
+app printenv()
+{
+  "printenv";
+}
+
 #endif
