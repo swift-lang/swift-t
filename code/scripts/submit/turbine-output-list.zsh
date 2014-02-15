@@ -28,16 +28,23 @@ set -u
 
 usage()
 {
-  print "turbine-output-list <COUNT>?"
-  print "shows all or COUNT most recent turbine-output directories"
+  print "usage:"
+  print "turbine-output-list [-dj] <COUNT>?"
+  print "shows all or COUNT most recent turbine-output" \
+        "job IDs and directories"
+  print -- "-d: directories only"
+  print -- "-j: jobs only"
 }
+
+zparseopts -D d=DIRS_ONLY j=JOBS_ONLY
 
 COUNT="ALL"
 if [[ ${#*} == 1 ]]
 then
   COUNT=$1
-elif [[ ${#*} > 1 ]]
-then
+else
+  print "${0:t} usage error"
+  print
   usage
   exit 1
 fi
@@ -52,13 +59,27 @@ else
 fi | \
 while read D
 do
-  if [[ -f ${D}/jobid.txt ]]
+  if [[ -z ${DIRS_ONLY} ]]
   then
-    JOBID=$( < ${D}/jobid.txt )
-  else
-    JOBID="UNKNOWN"
+    if [[ -f ${D}/jobid.txt ]]
+    then
+      JOB_ID=$( < ${D}/jobid.txt )
+    else
+      JOB_ID="UNKNOWN"
+    fi
   fi
-  printf "%7s %s\n" ${JOBID} ${D}
+  if [[ -z ${DIRS_ONLY} && -z ${JOBS_ONLY} ]]
+  then
+    printf "%7s %s\n" ${JOB_ID} ${D}
+  elif [[ -n ${DIRS_ONLY} ]]
+  then
+    print ${D}
+  elif [[ -n ${JOBS_ONLY} ]]
+  then
+    print ${JOB_ID}
+  else
+    crash "internal error."
+  fi
 done
 
 return 0
