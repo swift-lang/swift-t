@@ -1249,7 +1249,7 @@ handle_refcount_incr(int caller)
         msg.change.read_refcount, msg.change.write_refcount);
   
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
-  adlb_data_code dc = xlb_data_reference_count(msg.id, msg.change, NO_SCAVENGE,
+  adlb_data_code dc = xlb_data_reference_count(msg.id, msg.change, XLB_NO_ACQUIRE,
                                            NULL, NULL, &notifs);
 
   DEBUG("data_reference_count => %i", dc);
@@ -1606,7 +1606,7 @@ refcount_decr_helper(adlb_datum_id id, adlb_refcounts decr)
   {
     adlb_notif_t notify = ADLB_NO_NOTIFS;
     adlb_data_code dc;
-    dc = xlb_data_reference_count(id, adlb_rc_negate(decr), NO_SCAVENGE,
+    dc = xlb_data_reference_count(id, adlb_rc_negate(decr), XLB_NO_ACQUIRE,
                               NULL, NULL, &notify);
     if (dc == ADLB_DATA_SUCCESS)
     {

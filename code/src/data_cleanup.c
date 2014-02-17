@@ -14,7 +14,7 @@ adlb_data_code
 xlb_datum_cleanup(adlb_datum_storage *d,
      adlb_data_type type, adlb_datum_id id, bool free_mem,
      bool release_read, bool release_write,
-     refcount_scavenge to_acquire, xlb_rc_changes *rc_changes)
+     xlb_acquire_rc to_acquire, xlb_rc_changes *rc_changes)
 {
   // Sanity-check scavenges
   assert(to_acquire.refcounts.read_refcount >= 0);
@@ -70,10 +70,13 @@ xlb_datum_cleanup(adlb_datum_storage *d,
 /*
   Free memory held by container data structure
   Decrement reference counts for other data if required
+  rc_changes: changes resulting from refcount manipulation.
+        Not touched if release_read == released_write == false and
+        to_acquire is (0, 0), so can be NULL in that case
  */
 adlb_data_code
 xlb_members_cleanup(adlb_container *container, bool free_mem,
-  bool release_read, bool release_write, refcount_scavenge to_acquire,
+  bool release_read, bool release_write, xlb_acquire_rc to_acquire,
   xlb_rc_changes *rc_changes)
 {
   adlb_data_code dc;

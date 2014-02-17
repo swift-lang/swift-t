@@ -608,13 +608,14 @@ adlb_data_code ADLB_Free_storage(adlb_datum_storage *d, adlb_data_type type)
       break;
     case ADLB_DATA_TYPE_CONTAINER:
     {
-      dc = xlb_members_cleanup(&d->CONTAINER, true, ADLB_NO_RC, NO_SCAVENGE);
+      dc = xlb_members_cleanup(&d->CONTAINER, true, false, false,
+                               XLB_NO_ACQUIRE, NULL);
       DATA_CHECK(dc);
       break;
     }
     case ADLB_DATA_TYPE_MULTISET:
-      dc = xlb_multiset_cleanup(d->MULTISET, true, true, ADLB_NO_RC,
-                                NO_SCAVENGE);
+      dc = xlb_multiset_cleanup(d->MULTISET, true, true, false, false,
+                                XLB_NO_ACQUIRE, NULL);
       DATA_CHECK(dc);
       break;
     case ADLB_DATA_TYPE_STRUCT:

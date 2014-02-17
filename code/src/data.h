@@ -137,9 +137,9 @@ typedef struct {
   adlb_subscript subscript; 
   // how many refcounts to try to acquire on referands
   adlb_refcounts refcounts;
-} refcount_scavenge;
+} xlb_acquire_rc;
 
-static const refcount_scavenge NO_SCAVENGE = 
+static const xlb_acquire_rc XLB_NO_ACQUIRE = 
       { .subscript.key = NULL, .subscript.length = 0,
         .refcounts.read_refcount = 0, .refcounts.write_refcount = 0 };
 
@@ -154,7 +154,7 @@ static const refcount_scavenge NO_SCAVENGE =
  */
 adlb_data_code xlb_data_reference_count(adlb_datum_id id,
                 adlb_refcounts change,
-                refcount_scavenge scav, bool *garbage_collected,
+                xlb_acquire_rc scav, bool *garbage_collected,
                 adlb_refcounts *refcounts_scavenged,
                 adlb_notif_t *notifications);
 

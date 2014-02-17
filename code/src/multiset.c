@@ -78,7 +78,7 @@ adlb_data_code xlb_multiset_add(xlb_multiset *set, const void *data,
 adlb_data_code
 xlb_multiset_cleanup(xlb_multiset *set, bool free_root, bool free_mem,
              bool release_read, bool release_write,
-             refcount_scavenge to_acquire, xlb_rc_changes *rc_changes)
+             xlb_acquire_rc to_acquire, xlb_rc_changes *rc_changes)
 {
   // Can't support subscripts
   assert(ADLB_RC_IS_NULL(to_acquire.refcounts) ||

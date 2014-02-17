@@ -53,7 +53,7 @@ adlb_data_code xlb_incr_rc_local(adlb_datum_id id, adlb_refcounts change,
 {
   adlb_notif_t notify = ADLB_NO_NOTIFS;
   adlb_data_code dc = xlb_data_reference_count(id, change,
-          NO_SCAVENGE, NULL, NULL, &notify);
+          XLB_NO_ACQUIRE, NULL, NULL, &notify);
   ADLB_DATA_CHECK(dc);
   
   // handle notifications here if needed
@@ -71,7 +71,7 @@ xlb_incr_referand(adlb_datum_storage *d, adlb_data_type type,
                   xlb_rc_changes *changes)
 {
   assert(d != NULL);
-  refcount_scavenge to_acquire2 = { .subscript = ADLB_NO_SUB,
+  xlb_acquire_rc to_acquire2 = { .subscript = ADLB_NO_SUB,
                                     .refcounts = to_acquire };
   adlb_data_code dc;
   switch (type)

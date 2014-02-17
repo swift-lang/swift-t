@@ -98,7 +98,7 @@ static adlb_data_code
 xlb_data_close(adlb_datum_id id, adlb_datum *d, adlb_notif_t *notify,
               bool release_write_refs);
 static adlb_data_code datum_gc(adlb_datum_id id, adlb_datum* d,
-           refcount_scavenge scav, xlb_rc_changes *rc_changes);
+           xlb_acquire_rc scav, xlb_rc_changes *rc_changes);
 
 static adlb_data_code
 insert_notifications(adlb_datum *d,
@@ -413,7 +413,7 @@ xlb_datum_lookup(adlb_datum_id id, adlb_datum **d)
  */
 adlb_data_code
 xlb_data_reference_count(adlb_datum_id id, adlb_refcounts change,
-          refcount_scavenge scav, bool *garbage_collected,
+          xlb_acquire_rc scav, bool *garbage_collected,
           adlb_refcounts *refcounts_scavenged,
           adlb_notif_t *notifications)
 {
@@ -426,7 +426,7 @@ xlb_data_reference_count(adlb_datum_id id, adlb_refcounts change,
 
 adlb_data_code
 xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
-          adlb_refcounts change, refcount_scavenge scav,
+          adlb_refcounts change, xlb_acquire_rc scav,
           bool *garbage_collected, adlb_refcounts *refcounts_scavenged,
           adlb_notif_t *notifications)
 {
@@ -521,7 +521,7 @@ extract_members(adlb_container *c, int count, int offset,
 
 static adlb_data_code
 datum_gc(adlb_datum_id id, adlb_datum* d,
-           refcount_scavenge to_acquire, xlb_rc_changes *rc_changes)
+           xlb_acquire_rc to_acquire, xlb_rc_changes *rc_changes)
 {
   DEBUG("datum_gc: <%"PRId64">", id);
   check_verbose(!d->status.permanent, ADLB_DATA_ERROR_UNKNOWN,
@@ -710,7 +710,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
 
     adlb_refcounts decr = { .read_refcount = -1,
                            .write_refcount = 0 };
-    refcount_scavenge to_acquire2 = { .subscript = subscript,
+    xlb_acquire_rc to_acquire2 = { .subscript = subscript,
                                   .refcounts = to_acquire };
     dc = xlb_rc_impl(d, container_id, decr, to_acquire2,
                      NULL, NULL, notifications);
@@ -951,7 +951,7 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
     adlb_refcounts incr = { .read_refcount = xlb_read_refcount_enabled ?
                                             -refcount_decr.read_refcount : 0,
                             .write_refcount = -refcount_decr.write_refcount };
-    dc = xlb_rc_impl(d, id, incr, NO_SCAVENGE,
+    dc = xlb_rc_impl(d, id, incr, XLB_NO_ACQUIRE,
                      NULL, NULL, notifications);
     DATA_CHECK(dc);
   }
@@ -1408,7 +1408,7 @@ insert_notifications2(adlb_datum *d,
   adlb_data_code dc;
   if (ref_list != NULL)
   {
-    refcount_scavenge referand_acquire = NO_SCAVENGE;
+    xlb_acquire_rc referand_acquire = XLB_NO_ACQUIRE;
     dc = process_ref_list(ref_list, &notify->references, value_type,
                      value_buffer, value_len,
                      &referand_acquire.refcounts);

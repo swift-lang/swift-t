@@ -48,7 +48,7 @@ xlb_multiset_add(xlb_multiset *set, const void *data, int length,
 adlb_data_code
 xlb_multiset_cleanup(xlb_multiset *set, bool free_root, bool free_mem,
              bool release_read, bool release_write,
-             refcount_scavenge to_acquire, xlb_rc_changes *rc_changes);
+             xlb_acquire_rc to_acquire, xlb_rc_changes *rc_changes);
 
 adlb_data_code
 xlb_multiset_slice(xlb_multiset *set, uint start, uint count,

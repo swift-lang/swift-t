@@ -16,11 +16,11 @@
 adlb_data_code xlb_datum_cleanup(adlb_datum_storage *d,
      adlb_data_type type, adlb_datum_id id, bool free_mem,
      bool release_read, bool release_write,
-     refcount_scavenge to_acquire, xlb_rc_changes *rc_changes);
+     xlb_acquire_rc to_acquire, xlb_rc_changes *rc_changes);
 
 // Allow flexible freeing of memory/reference counts
 adlb_data_code xlb_members_cleanup(adlb_container *container, bool free_mem,
-  bool release_read, bool release_write, refcount_scavenge to_acquire,
+  bool release_read, bool release_write, xlb_acquire_rc to_acquire,
   xlb_rc_changes *rc_changes);
 
 #endif // __XLB_DATA_CLEANUP_H
