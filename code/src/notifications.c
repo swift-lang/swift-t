@@ -152,12 +152,15 @@ adlb_code
 xlb_process_local_notif(adlb_datum_id id, adlb_notif_t *notifs)
 {
   assert(xlb_am_server);
+  
+  adlb_code ac;
 
-  assert(false);
-  // TODO: process refcount manipulation here
-  // TODO: also do pre-increments?
+  // Do local refcounts.
+  // Also do pre-increments here, since we can't send them
+  ac = xlb_rc_changes_apply(&notifs->rc_changes, false, true, true);
+  ADLB_CHECK(ac);
 
-  adlb_code ac = xlb_process_local_notif_ranks(id, &notifs->notify);
+  ac = xlb_process_local_notif_ranks(id, &notifs->notify);
   ADLB_CHECK(ac);
   return ADLB_SUCCESS;
 }
@@ -231,6 +234,11 @@ adlb_code
 xlb_notify_all(const adlb_notif_t *notifs, adlb_datum_id id)
 {
   adlb_code rc;
+  // TODO: loop until empty?
+  // TODO: do this first because it may add new notifications?
+  rc = xlb_rc_changes_apply(&notifs->rc_changes, true, true, true);
+  ADLB_CHECK(rc);
+
   if (notifs->notify.count > 0)
   {
     rc = xlb_close_notify(id, &notifs->notify);
@@ -242,19 +250,19 @@ xlb_notify_all(const adlb_notif_t *notifs, adlb_datum_id id)
     ADLB_CHECK(rc);
   }
 
-  // TODO: need to handle refcount manipulation
   assert(notifs->rc_changes.count == 0);
   return ADLB_SUCCESS;
 }
 
-adlb_code xlb_rc_changes_apply(xlb_rc_changes *c,
-                                   bool preacquire_only)
+adlb_code xlb_rc_changes_apply(xlb_rc_changes *c, bool apply_all,
+                               bool apply_local, bool apply_preacquire)
 {
   adlb_data_code dc;
   for (int i = 0; i < c->count; i++)
   {
+    bool applied = false;
     xlb_rc_change *change = &c->arr[i];
-    if (!preacquire_only || change->must_preacquire)
+    if (apply_all || (apply_preacquire && change->must_preacquire))
     {
       // Apply reference count operation
       if (xlb_am_server)
@@ -268,22 +276,33 @@ adlb_code xlb_rc_changes_apply(xlb_rc_changes *c,
         CHECK_MSG(ac == ADLB_SUCCESS,
             "could not modify refcount of <%"PRId64">", change->id);
       }
+      applied = true;
+    }
+    else if (apply_local && ADLB_Locate(change->id) == xlb_comm_rank)
+    {
+      // TODO: need way to accumulate more notifications,
+      //       and process them incrementally
+      // TODO: is it ok if they just get appended at end?
+      dc = xlb_data_reference_count(change->id, change->rc, XLB_NO_ACQUIRE,
+                                    NULL, more_notifications);
+      DATA_CHECK(dc);
+    }
 
-      if (preacquire_only)
+    if (!apply_all && applied)
+    {
+      // Remove processed entries selectively
+      c->count--;
+      if (c->count > 0)
       {
-        // Remove processed entries selectively
-        c->count--;
-        if (c->count > 0)
-        {
-          // Swap last to here
-          memcpy(&c->arr[i], &c->arr[c->count], sizeof(c->arr[i]));
-          i--; // Process new entry next
-        }
+        // Swap last to here
+        memcpy(&c->arr[i], &c->arr[c->count], sizeof(c->arr[i]));
+        i--; // Process new entry next
       }
     }
   }
 
-  if (!preacquire_only)
+  // TODO: just move to incremental updates to support adding more at end?
+  if (apply_all)
   {
     // Remove all from list
     xlb_rc_changes_free(c);

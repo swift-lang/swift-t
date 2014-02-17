@@ -134,8 +134,8 @@ adlb_code
 xlb_close_notify(adlb_datum_id id, const adlb_notif_ranks *ranks);
 
 /*
-   When called from server, remove any notifications that can be handled
-   locally.  Frees memory if all removed.
+   When called from server, remove any notifications that can or must
+   be handled locally.  Frees memory if all removed.
  */
 adlb_code
 xlb_process_local_notif(adlb_datum_id id, adlb_notif_t *notifs);
