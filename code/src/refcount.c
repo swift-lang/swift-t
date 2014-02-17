@@ -142,8 +142,12 @@ static adlb_data_code
 apply_rc_update(bool releasing, int *curr_rc, int acquire_rc,
                 int *acquired, int *remainder)
 {
-  assert(*curr_rc > 0);
+  assert(*curr_rc >= 0);
   assert(acquire_rc >= 0);
+  
+  check_verbose(acquire_rc == 0 || *curr_rc > 0,
+        ADLB_DATA_ERROR_REFCOUNT_NEGATIVE, "Trying to acquire refcount,"
+        " but own no references");
 
   if (releasing)
   {
@@ -153,7 +157,13 @@ apply_rc_update(bool releasing, int *curr_rc, int acquire_rc,
                                 : acquire_rc - *remainder;
     *curr_rc = 0;
   }
-  else 
+  else if (acquire_rc == 0)
+  {
+    // Do nothing
+    *acquired = 0;
+    *remainder = 0;
+  }
+  else
   {
     // if not releasing refcount, must end up >= 1
     int max_acquire = *curr_rc - 1;

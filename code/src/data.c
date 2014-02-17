@@ -483,7 +483,8 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
   {
     if (garbage_collected != NULL)
       *garbage_collected = true;
-    return datum_gc(id, d, acquire, &notifications->rc_changes);
+    dc = datum_gc(id, d, acquire, &notifications->rc_changes);
+    DATA_CHECK(dc);
   }
   else if (!ADLB_RC_IS_NULL(acquire.refcounts))
   {
