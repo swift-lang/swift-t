@@ -98,7 +98,7 @@ xlb_incr_referand(adlb_datum_storage *d, adlb_data_type type,
       break;
     case ADLB_DATA_TYPE_STRUCT:
       // increment referand for all members in struct
-      dc = xlb_struct_cleanup2(d->STRUCT, false, 
+      dc = xlb_struct_cleanup(d->STRUCT, false, 
           release_read, release_write, to_acquire, changes);
       DATA_CHECK(dc);
       break;

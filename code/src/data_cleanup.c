@@ -35,14 +35,8 @@ xlb_datum_cleanup(adlb_datum_storage *d,
   }
   else if (type == ADLB_DATA_TYPE_STRUCT)
   {
-    int acquire_ix = -1; // negative == acquire all subscripts
-    if (adlb_has_sub(to_acquire.subscript)) 
-    {
-      dc = xlb_struct_str_to_ix(to_acquire.subscript, &acquire_ix);
-      DATA_CHECK(dc);
-    }
     return xlb_struct_cleanup(d->STRUCT, free_mem, release_read,
-              release_write, to_acquire.refcounts, acquire_ix,
+              release_write, to_acquire,
               rc_changes);
   }
   else

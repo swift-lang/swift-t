@@ -307,26 +307,32 @@ adlb_data_code xlb_free_struct(adlb_struct *s, bool free_root_ptr)
 adlb_data_code
 xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
                    bool release_write, 
-                   adlb_refcounts to_acquire, int acquire_ix,
-                   xlb_rc_changes *rc_changes)
+                   xlb_acquire_rc to_acquire, xlb_rc_changes *rc_changes)
 {
   assert(s != NULL);
   check_valid_type(s->type);
   adlb_data_code dc;
   struct_type_info *t = &struct_types[s->type];
-  assert(acquire_ix < t->field_count);
-  bool acquiring = to_acquire.read_refcount != 0 ||
-                     to_acquire.write_refcount != 0;
- 
-  xlb_acquire_rc to_acquire2 = { .subscript = ADLB_NO_SUB,
-                                  .refcounts = to_acquire };
+  bool acquiring = to_acquire.refcounts.read_refcount != 0 ||
+                     to_acquire.refcounts.write_refcount != 0;
+
+  
+  int acquire_ix = -1; // negative == acquire all subscripts
+  if (adlb_has_sub(to_acquire.subscript)) 
+  {
+    dc = xlb_struct_str_to_ix(to_acquire.subscript, &acquire_ix);
+    DATA_CHECK(dc);
+    check_verbose(acquire_ix < t->field_count, ADLB_DATA_ERROR_INVALID,
+                "Out of range struct index: %i, type %s field count %i",
+                acquire_ix, t->type_name, t->field_count);
+  }
 
   for (int i = 0; i < t->field_count; i++)
   {
     bool acquire_field = acquiring &&
                          (acquire_ix < 0 || acquire_ix == i);
     dc = xlb_incr_referand(&s->data[i], t->field_types[i], release_read,
-            release_write, (acquire_field ? to_acquire2 : XLB_NO_ACQUIRE),
+            release_write, (acquire_field ? to_acquire : XLB_NO_ACQUIRE),
             rc_changes);
     DATA_CHECK(dc);
   }
