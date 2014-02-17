@@ -16,9 +16,12 @@ xlb_update_rc_id(adlb_datum_id id, int *read_rc, int *write_rc,
        bool release_read, bool release_write, adlb_refcounts to_acquire,
        xlb_rc_changes *changes);
 
-adlb_data_code xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change)
+adlb_data_code xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change,
+                               adlb_notif_t *notifs)
 {
   assert(xlb_am_server); // Only makes sense to run on server
+
+  adlb_data_code dc;
 
   if (!xlb_read_refcount_enabled)
     change.read_refcount = 0;
@@ -32,11 +35,14 @@ adlb_data_code xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change)
   int server = ADLB_Locate(id);
   if (server == xlb_comm_rank)
   {
-    adlb_data_code dc = xlb_incr_rc_local(id, change, false);
+    dc = xlb_data_reference_count(id, change, XLB_NO_ACQUIRE, NULL,
+                                  notifs);
     DATA_CHECK(dc);
   }
   else
   {
+    // TODO: use alternative implementation that can receive
+    //  notifications
     struct packed_sync sync_msg;
     sync_msg.mode = ADLB_SYNC_REFCOUNT;
     sync_msg.incr.id = id;

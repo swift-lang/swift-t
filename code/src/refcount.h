@@ -13,7 +13,8 @@
 
 /* Decrement reference count of given id.  Must be called on a server */
 adlb_data_code
-xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change);
+xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change,
+                adlb_notif_t *notifs);
 
 /* Modify reference count of locally stored datum.
    Send any consequent notifications or messages.

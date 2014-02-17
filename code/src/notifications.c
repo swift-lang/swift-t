@@ -11,6 +11,20 @@
 static adlb_code
 xlb_process_local_notif_ranks(adlb_datum_id id, adlb_notif_ranks *ranks);
 
+static adlb_code
+xlb_close_notify(adlb_datum_id id, const adlb_notif_ranks *ranks);
+
+static adlb_code
+xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
+                               bool apply_local, bool apply_preacquire);
+
+static adlb_code
+xlb_set_refs(const adlb_ref_data *refs);
+
+static adlb_code
+xlb_set_ref_and_notify(adlb_datum_id id, const void *value, int length,
+                         adlb_data_type type);
+
 // Returns size of payload including null terminator
 static int fill_payload(char *payload, adlb_datum_id id, adlb_subscript subscript)
 {
@@ -91,7 +105,6 @@ void xlb_free_datums(adlb_ref_data *datums)
   }
 }
 
-
 /*
    Set references.
    refs: an array of ids, where negative ids indicate that
@@ -99,7 +112,8 @@ void xlb_free_datums(adlb_ref_data *datums)
           positive indicates it should be parsed to integer
    value: string value to set references to.
  */
-adlb_code xlb_set_refs(const adlb_ref_data *refs)
+static adlb_code
+xlb_set_refs(const adlb_ref_data *refs)
 {
   adlb_code rc;
   for (int i = 0; i < refs->count; i++)
@@ -114,7 +128,7 @@ adlb_code xlb_set_refs(const adlb_ref_data *refs)
   return ADLB_SUCCESS;
 }
 
-adlb_code
+static adlb_code
 xlb_close_notify(adlb_datum_id id, const adlb_notif_ranks *ranks)
 {
   adlb_code rc;
@@ -155,9 +169,9 @@ xlb_process_local_notif(adlb_datum_id id, adlb_notif_t *notifs)
   
   adlb_code ac;
 
-  // Do local refcounts.
+  // Do local refcounts first, since they can add additional notifs
   // Also do pre-increments here, since we can't send them
-  ac = xlb_rc_changes_apply(&notifs->rc_changes, false, true, true);
+  ac = xlb_rc_changes_apply(notifs, false, true, true);
   ADLB_CHECK(ac);
 
   ac = xlb_process_local_notif_ranks(id, &notifs->notify);
@@ -212,7 +226,7 @@ xlb_process_local_notif_ranks(adlb_datum_id id, adlb_notif_ranks *ranks)
   return ADLB_SUCCESS;
 }
 
-adlb_code
+static adlb_code
 xlb_set_ref_and_notify(adlb_datum_id id, const void *value, int length,
                          adlb_data_type type)
 {
@@ -224,6 +238,8 @@ xlb_set_ref_and_notify(adlb_datum_id id, const void *value, int length,
     rc = xlb_sync(server);
   ADLB_CHECK(rc);
 
+  // TODO: if processing notifs on client, and not on server here,
+  //      want to get notifs back
   rc = ADLB_Store(id, ADLB_NO_SUB, type, value, length, ADLB_WRITE_RC);
   ADLB_CHECK(rc);
   TRACE("SET_REFERENCE DONE");
@@ -231,12 +247,11 @@ xlb_set_ref_and_notify(adlb_datum_id id, const void *value, int length,
 }
 
 adlb_code
-xlb_notify_all(const adlb_notif_t *notifs, adlb_datum_id id)
+xlb_notify_all(adlb_notif_t *notifs, adlb_datum_id id)
 {
   adlb_code rc;
-  // TODO: loop until empty?
-  // TODO: do this first because it may add new notifications?
-  rc = xlb_rc_changes_apply(&notifs->rc_changes, true, true, true);
+  // apply rc changes first because it may add new notifications
+  rc = xlb_rc_changes_apply(notifs, true, true, true);
   ADLB_CHECK(rc);
 
   if (notifs->notify.count > 0)
@@ -254,10 +269,23 @@ xlb_notify_all(const adlb_notif_t *notifs, adlb_datum_id id)
   return ADLB_SUCCESS;
 }
 
-adlb_code xlb_rc_changes_apply(xlb_rc_changes *c, bool apply_all,
+/*
+ * Apply refcount changes and remove entries from list.
+ * This will add additional notifications to the notifs structure if
+ *  freeing/closing data results in more notifications.
+ * All rc changes in notif matching criteria will be removed, including any
+ * that were added during processing
+ * 
+ * apply_all: if true, apply all changes
+ * apply_local: if true, apply changes to local data
+ * apply_preacquire: if true, apply changes that must be applied early
+ */
+static adlb_code
+xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
                                bool apply_local, bool apply_preacquire)
 {
   adlb_data_code dc;
+  xlb_rc_changes *c = &notifs->rc_changes;
   for (int i = 0; i < c->count; i++)
   {
     bool applied = false;
@@ -267,11 +295,13 @@ adlb_code xlb_rc_changes_apply(xlb_rc_changes *c, bool apply_all,
       // Apply reference count operation
       if (xlb_am_server)
       {
-        dc = xlb_incr_rc_svr(change->id, change->rc);
+        // update reference count (can be local or remote)
+        dc = xlb_incr_rc_svr(change->id, change->rc, notifs);
         ADLB_DATA_CHECK(dc);
       }
       else
       {
+        // TODO: use internal function that appends notifs
         adlb_code ac = ADLB_Refcount_incr(change->id, change->rc);
         CHECK_MSG(ac == ADLB_SUCCESS,
             "could not modify refcount of <%"PRId64">", change->id);
@@ -280,17 +310,16 @@ adlb_code xlb_rc_changes_apply(xlb_rc_changes *c, bool apply_all,
     }
     else if (apply_local && ADLB_Locate(change->id) == xlb_comm_rank)
     {
-      // TODO: need way to accumulate more notifications,
-      //       and process them incrementally
-      // TODO: is it ok if they just get appended at end?
+      // Process locally and added consequential notifications to list
       dc = xlb_data_reference_count(change->id, change->rc, XLB_NO_ACQUIRE,
-                                    NULL, more_notifications);
+                                    NULL, notifs);
       DATA_CHECK(dc);
+      applied = true;
     }
 
-    if (!apply_all && applied)
+    if (applied)
     {
-      // Remove processed entries selectively
+      // Remove processed entries
       c->count--;
       if (c->count > 0)
       {
@@ -301,8 +330,8 @@ adlb_code xlb_rc_changes_apply(xlb_rc_changes *c, bool apply_all,
     }
   }
 
-  // TODO: just move to incremental updates to support adding more at end?
-  if (apply_all)
+  // Free memory if none present
+  if (c->count == 0)
   {
     // Remove all from list
     xlb_rc_changes_free(c);

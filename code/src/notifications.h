@@ -124,15 +124,6 @@ void xlb_free_notif(adlb_notif_t *notifs);
 void xlb_free_ranks(adlb_notif_ranks *ranks);
 void xlb_free_datums(adlb_ref_data *datums);
 
-adlb_code xlb_set_refs(const adlb_ref_data *refs);
-
-adlb_code
-xlb_set_ref_and_notify(adlb_datum_id id, const void *value, int length,
-                         adlb_data_type type);
-
-adlb_code
-xlb_close_notify(adlb_datum_id id, const adlb_notif_ranks *ranks);
-
 /*
    When called from server, remove any notifications that can or must
    be handled locally.  Frees memory if all removed.
@@ -141,15 +132,8 @@ adlb_code
 xlb_process_local_notif(adlb_datum_id id, adlb_notif_t *notifs);
 
 adlb_code
-xlb_notify_all(const adlb_notif_t *notifs, adlb_datum_id id);
+xlb_notify_all(adlb_notif_t *notifs, adlb_datum_id id);
 
-/*
- * Apply refcount changes and remove entries from list
- * preacquire_only: if true, only acqurie those marked must_preacquire,
- *                   if false, acquire all
- */
-adlb_code xlb_rc_changes_apply(xlb_rc_changes *c,
-                                   bool preacquire_only);
 
 // Inline functions
 static inline adlb_code xlb_rc_changes_init(xlb_rc_changes *c)
