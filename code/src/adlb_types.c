@@ -106,8 +106,8 @@ ADLB_Append_buffer(adlb_data_type type, const void *data, int length,
     if (ADLB_pack_pad_size(type) && vint_len < (int)VINT_MAX_BYTES)
     {
       // We expect the size to be padded for these
-      int padding = VINT_MAX_BYTES - vint_len;
-      memset(output->data + *output_pos, 0, padding);
+      int padding = (int)VINT_MAX_BYTES - vint_len;
+      memset(output->data + *output_pos, 0, (size_t)padding);
       *output_pos += padding;
     }
   }
@@ -140,7 +140,7 @@ ADLB_Pack_buffer(const adlb_datum_storage *d, adlb_data_type type,
     if (prefix_len)
     {
       memset(output->data + start_pos, 0, VINT_MAX_BYTES);
-      *output_pos += VINT_MAX_BYTES;
+      *output_pos += (int)VINT_MAX_BYTES;
     }
     if (type == ADLB_DATA_TYPE_CONTAINER)
     {
@@ -159,7 +159,7 @@ ADLB_Pack_buffer(const adlb_datum_storage *d, adlb_data_type type,
     if (prefix_len)
     {
       // Add in actual size to reserved place
-      int serialized_len = *output_pos - start_pos - VINT_MAX_BYTES;
+      int serialized_len = *output_pos - start_pos - (int)VINT_MAX_BYTES;
       vint_encode(serialized_len, output->data + start_pos);
     }
     return ADLB_DATA_SUCCESS;
@@ -196,13 +196,15 @@ ADLB_Pack_container(const adlb_container *container,
 
   TABLE_BP_FOREACH(members, item)
   {
+    assert(item->key_len <= INT_MAX);
+    int key_len = (int)item->key_len;
     // append key; append val
-    int required = *output_pos + (int)VINT_MAX_BYTES + item->key_len;
+    int required = *output_pos + (int)VINT_MAX_BYTES + key_len;
     dc = ADLB_Resize_buf(output, output_caller_buffer, required);
     DATA_CHECK(dc);
 
     dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL,
-          table_bp_get_key(item), item->key_len,
+          table_bp_get_key(item), key_len,
           true, output, output_caller_buffer, output_pos);
     DATA_CHECK(dc);
 
@@ -257,9 +259,10 @@ ADLB_Pack_multiset(const adlb_multiset_ptr ms,
 {
   adlb_data_code dc;
 
-  int size = xlb_multiset_size(ms);
+  uint size = xlb_multiset_size(ms);
+  assert(size <= INT_MAX);
 
-  dc = ADLB_Pack_multiset_hdr(size, ms->elem_type, output,
+  dc = ADLB_Pack_multiset_hdr((int)size, ms->elem_type, output,
                         output_caller_buffer, output_pos);
   DATA_CHECK(dc);
 
@@ -345,7 +348,8 @@ ADLB_Unpack_buffer(adlb_data_type type,
        "Packed buffer encode entry length too long for int: %"PRId64,
        entry_length64);
   
-  int vint_padded_len = ADLB_pack_pad_size(type) ? VINT_MAX_BYTES : vint_len;
+  int vint_padded_len = ADLB_pack_pad_size(type) ?
+                        (int)VINT_MAX_BYTES : vint_len;
   int remaining = length - *pos - vint_padded_len;
   check_verbose(entry_length64 <= remaining,
         ADLB_DATA_ERROR_INVALID, "Decoded entry less than remaining data "
@@ -446,7 +450,7 @@ ADLB_Unpack_container(adlb_container *container,
     DATA_CHECK(dc);
 
     // TODO: handle case where key already exists
-    bool ok = table_bp_add(container->members, key, key_len, d);
+    bool ok = table_bp_add(container->members, key, (size_t)key_len, d);
     check_verbose(ok, ADLB_DATA_ERROR_OOM, "Error adding to container");
   }
 
