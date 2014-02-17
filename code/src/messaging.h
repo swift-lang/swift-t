@@ -247,6 +247,7 @@ struct packed_notif_counts
 {
   int notify_count;
   int reference_count;
+  int rc_change_count;
   int extra_data_count;
   int extra_data_bytes;
 };

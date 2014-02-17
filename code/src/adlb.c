@@ -792,6 +792,17 @@ process_notifications(adlb_datum_id id,
     free(tmp);
   }
 
+  if (counts->rc_change_count > 0)
+  {
+    rc = xlb_rc_changes_expand(&not.rc_changes, counts->rc_change_count);
+    ADLB_CHECK(rc);
+
+    RECV(not.rc_changes.arr, 
+         counts->rc_change_count * (int)sizeof(not.rc_changes.arr[0]),
+         MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE);
+    not.rc_changes.count = counts->rc_change_count;
+  }
+
   xlb_notify_all(&not, id);
   xlb_free_notif(&not);
   if (extra_data != NULL && extra_data != xfer)

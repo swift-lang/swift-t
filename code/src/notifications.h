@@ -161,6 +161,10 @@ static inline adlb_code xlb_rc_changes_expand(xlb_rc_changes *c,
     else
     {
       new_size = c->size * 2;
+      if (new_size < c->count + to_add)
+      {
+        new_size = c->count + to_add;
+      }
     }
     void *new_arr = realloc(c->arr, (size_t)new_size * sizeof(c->arr[0]));
     

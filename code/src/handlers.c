@@ -963,8 +963,10 @@ send_notification_work(int caller,
   // will send remaining to client
   int notify_count = notifs->notify.count;
   int refs_count = notifs->references.count;
+  int rc_count = notifs->rc_changes.count;
   assert(notify_count >= 0);
   assert(refs_count >= 0);
+  assert(rc_count >= 0);
 
   /*
    We need to send subscripts and values back to client, so we pack them
@@ -1070,6 +1072,7 @@ send_notification_work(int caller,
   // Fill in data and send response header
   inner_struct->notify_count = notify_count;
   inner_struct->reference_count = refs_count;
+  inner_struct->rc_change_count = rc_count;
   inner_struct->extra_data_count = extra_data_count;
   inner_struct->extra_data_bytes = extra_pos;
   RSEND(response, (int)response_len, MPI_BYTE, caller, ADLB_TAG_RESPONSE);
@@ -1087,6 +1090,12 @@ send_notification_work(int caller,
   if (refs_count > 0)
   {
     SEND(packed_refs, refs_count * (int)sizeof(packed_refs[0]), MPI_BYTE,
+         caller, ADLB_TAG_RESPONSE);
+  }
+  if (rc_count > 0)
+  {
+    SEND(notifs->rc_changes.arr, 
+         rc_count * (int)sizeof(notifs->rc_changes.arr[0]), MPI_BYTE,
          caller, ADLB_TAG_RESPONSE);
   }
 
@@ -1259,6 +1268,7 @@ handle_refcount_incr(int caller)
       .success = (dc == ADLB_DATA_SUCCESS),
       .notifs.notify_count = 0,
       .notifs.reference_count = 0,
+      .notifs.rc_change_count = 0,
       .notifs.extra_data_count = 0,
       .notifs.extra_data_bytes = 0};
 
@@ -1268,10 +1278,11 @@ handle_refcount_incr(int caller)
   }
   else if (ADLB_CLIENT_NOTIFIES)
   {
+    // Shouldn't set any references based on this
+    assert(notifs.references.count == 0);
+
     // Remove any notifications that can be handled locally
     xlb_process_local_notif(msg.id, &notifs);
-    resp.notifs.notify_count = notifs.notify.count;
-    // TODO: send back increment/decrement work too
     
     // Send work back to client
     rc = send_notification_work(caller, &resp, sizeof(resp),

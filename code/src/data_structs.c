@@ -313,9 +313,7 @@ xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
   check_valid_type(s->type);
   adlb_data_code dc;
   struct_type_info *t = &struct_types[s->type];
-  bool acquiring = to_acquire.refcounts.read_refcount != 0 ||
-                     to_acquire.refcounts.write_refcount != 0;
-
+  bool acquiring = !ADLB_RC_IS_NULL(to_acquire.refcounts);
   
   int acquire_ix = -1; // negative == acquire all subscripts
   if (adlb_has_sub(to_acquire.subscript)) 
