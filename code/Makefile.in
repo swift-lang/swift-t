@@ -101,8 +101,6 @@ endif
 ARFLAGS = cr
 RANLIB  = @RANLIB@
 
-ZLIB = @ZLIB_HOME@
-
 C_UTILS = @USE_C_UTILS@
 
 INCLUDES = -I . -I src -I $(C_UTILS)/include
@@ -117,20 +115,29 @@ LIBS := -L $(C_UTILS)/lib -lexmcutils
 
 RPATH :=
 RPATH += -Wl,-rpath -Wl,$(C_UTILS)/lib
-RPATH += -Wl,-rpath -Wl,$(ZLIB)/lib
 
 ENABLE_MPE = @ADLB_ENABLE_MPE@
 MPE = @USE_MPE@
 MPE_FLAGS  = @MPE_FLAGS@
-ifeq ($(ENABLE_MPE),yes)
+ifeq ($(ENABLE_MPE),1)
 	CFLAGS += -D ENABLE_MPE $(MPE_FLAGS) -I $(MPE)/include
 	LDFLAGS += # -mpilog
 	LIBS += -L $(MPE)/lib -lmpe
         RPATH += -Wl,-rpath -Wl,$(MPE)/lib
 endif
 
+
+ENABLE_ZLIB = @ENABLE_ZLIB@
+ZLIB = @ZLIB_HOME@
+
+ifeq ($(ENABLE_ZLIB),1)
+  CFLAGS += -I$(ZLIB)/include
+  LIBS += -L $(ZLIB)/lib -lz
+  RPATH += -Wl,-rpath -Wl,$(ZLIB)/lib
+endif
+
 ENABLE_XPT = @XLB_ENABLE_XPT@
-ifeq ($(ENABLE_XPT),yes)
+ifeq ($(ENABLE_XPT),1)
 	CFLAGS += -D XLB_ENABLE_XPT
         # Need zlib for checkpoint CRC
         LIBS += -lz
