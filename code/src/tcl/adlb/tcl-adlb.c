@@ -1298,6 +1298,10 @@ tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
       rc = Tcl_GetADLB_ID(interp, obj, &result->REF.id);
       TCL_CHECK_MSG(rc, "adlb extract int from %s failed!",
                       Tcl_GetString(obj));
+      // TODO: non-default refcounts - assuming for now single read refcount
+      result->REF.read_refs = 1;
+      result->REF.write_refs = 0;
+        
       return TCL_OK;
     case ADLB_DATA_TYPE_FLOAT:
       rc = Tcl_GetDoubleFromObj(interp, obj, &result->FLOAT);
