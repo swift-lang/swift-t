@@ -127,7 +127,7 @@ insert_notifications2(adlb_datum *d,
       adlb_notif_t *notify, bool *garbage_collected);
 
 static 
-adlb_data_code process_ref_list(const struct list_l *subscribers,
+adlb_data_code process_ref_list(const struct list *subscribers,
           adlb_ref_data *references, adlb_data_type type,
           const void *value, int value_len,
           adlb_refcounts *to_acquire); 
@@ -710,7 +710,9 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
 
     adlb_refcounts decr = { .read_refcount = -1,
                            .write_refcount = 0 };
-    dc = xlb_rc_impl(d, container_id, decr, to_acquire,
+    refcount_scavenge to_acquire2 = { .subscript = subscript,
+                                  .refcounts = to_acquire };
+    dc = xlb_rc_impl(d, container_id, decr, to_acquire2,
                      NULL, NULL, notifications);
     DATA_CHECK(dc);
 
@@ -1338,7 +1340,7 @@ insert_notifications(adlb_datum *d,
 {
   adlb_data_code dc;
 
-  struct list_l *ref_list = NULL;
+  struct list *ref_list = NULL;
   struct list_i *sub_list = NULL;
 
   // Find, remove, and return any listeners/references
@@ -1407,10 +1409,9 @@ insert_notifications2(adlb_datum *d,
   if (ref_list != NULL)
   {
     refcount_scavenge referand_acquire = NO_SCAVENGE;
-    int nreferences = ref_list->size;
     dc = process_ref_list(ref_list, &notify->references, value_type,
                      value_buffer, value_len,
-                     &referand_acquire->refcounts);
+                     &referand_acquire.refcounts);
     DATA_CHECK(dc);
     list_free(ref_list);
 
@@ -1420,11 +1421,11 @@ insert_notifications2(adlb_datum *d,
     if (!xlb_read_refcount_enabled)
     {
       read_decr.read_refcount = 0;
-      referand_acquire->refcounts.read_refcount = 0;
+      referand_acquire.refcounts.read_refcount = 0;
     }
     
     // Update refcounts if necessary
-    dc = xlb_rc_impl(d, container_id, read_decr, to_acquire,
+    dc = xlb_rc_impl(d, container_id, read_decr, referand_acquire,
                      garbage_collected, NULL, notify);
     DATA_CHECK(dc);
   }
@@ -1436,7 +1437,6 @@ insert_notifications2(adlb_datum *d,
     DATA_CHECK(dc);
     list_i_free(sub_list);
   }
-  return ADLB_DATA_SUCCESS;
   return ADLB_DATA_SUCCESS;
 }
 
@@ -1509,10 +1509,10 @@ adlb_data_code process_ref_list(const struct list *subscribers,
   if (nsubs > 0)
   {
     // append reference data
-    DATA_REALLOC(references->data, (size_t)(nrefs + references->count));
+    DATA_REALLOC(references->data, (size_t)(nsubs + references->count));
 
     struct list_item *node = subscribers->head;
-    for (int i = 0; i < nrefs; i++)
+    for (int i = 0; i < nsubs; i++)
     {
       container_reference *entry = node->data;
       assert(node != NULL); // Shouldn't fail if size was ok
@@ -1527,7 +1527,7 @@ adlb_data_code process_ref_list(const struct list *subscribers,
 
       node = node->next;
     }
-    references->count += nrefs;
+    references->count += nsubs;
   }
 
   return ADLB_DATA_SUCCESS;
@@ -1797,8 +1797,10 @@ static void free_cref_entry(const void *key, size_t key_len, void *val)
     adlb_datum_id id;
     adlb_subscript sub;
     read_id_sub(key, key_len, &id, &sub);
+    
+    container_reference *data = curr->data;
     printf("UNFILLED CONTAINER REFERENCE <%"PRId64">[%.*s] => <%"PRId64">\n",
-            id, (int)sub.length, (const char*)sub.key, curr->data);
+            id, (int)sub.length, (const char*)sub.key, data->id);
     free(curr->data);
     curr->data = NULL;
   }
