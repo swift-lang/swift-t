@@ -35,23 +35,25 @@ xlb_datum_cleanup(adlb_datum_storage *d,
   }
   else if (type == ADLB_DATA_TYPE_STRUCT)
   {
-    int scav_ix = -1; // negative == don't scavenge
-    if (adlb_has_sub(scav.subscript)) 
+    int acquire_ix = -1; // negative == don't scavenge
+    if (adlb_has_sub(to_acquire.subscript)) 
     {
-      dc = xlb_struct_str_to_ix(scav.subscript, &scav_ix);
+      dc = xlb_struct_str_to_ix(to_acquire.subscript, &acquire_ix);
       DATA_CHECK(dc);
     }
     return xlb_struct_cleanup(d->STRUCT, free_mem, release_read,
-              release_write, scav.refcounts, scav_ix, rc_changes);
+              release_write, to_acquire.refcounts, acquire_ix,
+              rc_changes);
   }
   else
   {
-    if (!ADLB_RC_IS_NULL(rc_change))
+    if (release_read || release_write ||
+        !ADLB_RC_IS_NULL(to_acquire.refcounts))
     {
       // Decrement any reference counts required
-      assert(!adlb_has_sub(scav.subscript));
+      assert(!adlb_has_sub(to_acquire.subscript));
       dc = xlb_incr_referand(d, type, release_read, release_write,
-                             scav.refcounts, rc_changes);
+                             to_acquire.refcounts, rc_changes);
       DATA_CHECK(dc);
     }
 
@@ -77,6 +79,10 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
   adlb_data_code dc;
   struct table_bp* members = container->members;
 
+  // Whether we are making any refcount changes
+  bool refcount_change = release_read || release_write ||
+                          !ADLB_RC_IS_NULL(to_acquire.refcounts);
+
   TRACE("Freeing container %p", container);
   for (int i = 0; i < members->capacity; i++)
   {
@@ -98,26 +104,17 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
       
       TRACE("Freeing %p in %p", d, container);
       // Value may be null when insert_atomic occurred, but nothing inserted
-      if (!ADLB_RC_IS_NULL(rc_change) && d != NULL)
+      if (refcount_change && d != NULL)
       {
-        adlb_subscript *sub = &scav.subscript;
-        bool do_scavenge = !ADLB_RC_IS_NULL(scav.refcounts) && 
-           (!adlb_has_sub(*sub) ||
+        adlb_subscript *sub = &to_acquire.subscript;
+        bool acquire_field = (!adlb_has_sub(*sub) ||
              table_bp_key_match(sub->key, sub->length, item));
 
-        if (do_scavenge)
-        {
-          // Note: if we're scavenging entire container, refcounts_scavenged
-          // will be overwritten many times, but will have correct result
-          dc = xlb_incr_scav_referand(d, container->val_type,
-                                     scav.refcounts);
-          DATA_CHECK(dc);
-        }
-        else
-        {
-          dc = xlb_incr_referand(d, container->val_type, rc_change);
-          DATA_CHECK(dc);
-        }
+        dc = xlb_incr_referand(d, container->val_type,
+                release_read, release_write, 
+                (acquire_field ? to_acquire.refcounts : ADLB_NO_RC),
+                rc_changes);
+        DATA_CHECK(dc);
       }
 
       // Free the memory for value and key
