@@ -208,21 +208,3 @@ xlb_update_rc_id(adlb_datum_id id, int *read_rc, int *write_rc,
   }
   return ADLB_DATA_SUCCESS;
 }
-
-// Modify reference count of referands and acquire needed refcounts
-adlb_data_code
-xlb_update_rc_referand(adlb_datum_storage *d, adlb_data_type type,
-       bool release_read, bool release_write, adlb_refcounts to_acquire,
-       xlb_rc_changes *changes)
-{
-  assert(to_acquire.read_refcount >= 0);
-  assert(to_acquire.write_refcount >= 0);
-  assert(changes != NULL);
-
-  // TODO: handle nested structures?
-  // NOTE: should avoid traversing containers if no refs in value
-
-  // TODO: traverse and use xlb_update_rc_id
-  return ADLB_DATA_SUCCESS;
-}
-

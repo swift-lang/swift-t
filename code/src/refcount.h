@@ -29,15 +29,4 @@ xlb_incr_referand(adlb_datum_storage *d, adlb_data_type type,
                   bool release_read, bool release_write,
                   xlb_acquire_rc to_acquire, xlb_rc_changes *changes);
 
-/* Modify refcount of referenced items.  If to_acquire is positive,
-   acquire that number of read references to referands.
-   release_read, release_write: if true, update read/write refcount here
-              to zero, acquiring refcount and/or incrementing/
-              decrementing referand
- */
-adlb_data_code
-xlb_update_rc_referand(adlb_datum_storage *d, adlb_data_type type,
-       bool release_read, bool release_write, adlb_refcounts to_acquire,
-       xlb_rc_changes *changes);
-
 #endif // __XLB_REFCOUNT_H
