@@ -346,6 +346,15 @@ struct packed_bool_resp
   bool result;
 };
 
+/**
+ * Response for container reference
+ */
+struct packed_cont_ref_resp
+{
+  adlb_data_code dc;
+  struct packed_notif_counts notifs;
+};
+
 int
 xlb_pack_id_sub(void *buffer, adlb_datum_id id, adlb_subscript subscript);
 

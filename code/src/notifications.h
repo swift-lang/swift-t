@@ -59,6 +59,7 @@ typedef struct {
  */
 typedef struct {
   int rank;
+  // TODO: need to make id non-implied
   // id is implied
   adlb_subscript subscript; // Optional subscript
 } adlb_notif_rank;
@@ -147,10 +148,10 @@ xlb_notify_all(adlb_notif_t *notifs, adlb_datum_id id);
  * use_xfer: if true, use xfer buffer as scratch space
  */
 adlb_code
-send_notification_work(int caller, 
+send_notification_work(int caller, adlb_datum_id id,
         void *response, size_t response_len,
         struct packed_notif_counts *inner_struct,
-        const adlb_notif_t *notifs, bool use_xfer);
+        adlb_notif_t *notifs, bool use_xfer);
 
 /*
   notify: notify structure initialzied to empty
@@ -159,6 +160,9 @@ adlb_code
 recv_notification_work(adlb_datum_id id,
     const struct packed_notif_counts *counts, int to_server_rank,
     adlb_notif_t *not);
+
+adlb_code
+xlb_to_free_expand(adlb_notif_t *notify, int to_add);
 
 // Inline functions
 static inline adlb_code xlb_rc_changes_init(xlb_rc_changes *c)
@@ -174,11 +178,8 @@ static inline adlb_code xlb_to_free_add(adlb_notif_t *notify, void *data)
   // Mark that caller should free
   if (notify->to_free_length == notify->to_free_size)
   {
-    notify->to_free_size = notify->to_free_size == 0 ? 
-            64 : notify->to_free_size * 2;
-    notify->to_free = realloc(notify->to_free,
-                      sizeof(notify->to_free[0]) * notify->to_free_size);
-    CHECK_MSG(notify->to_free != NULL, "Out of memory");
+    adlb_code ac = xlb_to_free_expand(notify, 1);
+    ADLB_CHECK(ac);
   }
   notify->to_free[notify->to_free_length++] = data;
   return ADLB_SUCCESS;

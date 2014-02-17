@@ -590,6 +590,7 @@ ADLB_Free_binary_data(adlb_binary_data *buffer)
   }
 }
 
+__attribute__((always_inline))
 static inline adlb_data_code
 ADLB_Own_data(const adlb_buffer *caller_buffer, adlb_binary_data *data)
 {

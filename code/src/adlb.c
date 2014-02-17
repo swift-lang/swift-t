@@ -1144,7 +1144,6 @@ ADLBP_Container_reference(adlb_datum_id id, adlb_subscript subscript,
                           adlb_datum_id reference,
                           adlb_data_type ref_type)
 {
-  adlb_data_code dc;
   MPI_Status status;
   MPI_Request request;
 
@@ -1156,7 +1155,9 @@ ADLBP_Container_reference(adlb_datum_id id, adlb_subscript subscript,
 
   int to_server_rank = ADLB_Locate(id);
 
-  IRECV(&dc, 1, MPI_INT, to_server_rank, ADLB_TAG_RESPONSE);
+  struct packed_cont_ref_resp resp;
+
+  IRECV(&resp, sizeof(resp), MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE);
 
   assert(xfer_pos - xfer <= INT_MAX);
   int length = (int)(xfer_pos - xfer);
@@ -1165,13 +1166,17 @@ ADLBP_Container_reference(adlb_datum_id id, adlb_subscript subscript,
        ADLB_TAG_CONTAINER_REFERENCE);
   WAIT(&request, &status);
 
+  // Check for error before processing notification
+  ADLB_DATA_CHECK(resp.dc);
+
+  adlb_code ac = process_notifications(id, &resp.notifs, to_server_rank);
+  ADLB_CHECK(ac);
+
   // TODO: support binary subscript
   DEBUG("ADLB_Container_reference: <%"PRId64">[%.*s] => <%"PRId64"> (%i)",
         id, (int)subscript.length, (const char*)subscript.key, reference,
         ref_type);
 
-  if (dc != ADLB_DATA_SUCCESS)
-    return ADLB_ERROR;
   return ADLB_SUCCESS;
 }
 

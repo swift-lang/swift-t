@@ -26,6 +26,12 @@ static adlb_code
 xlb_set_ref_and_notify(adlb_datum_id id, const void *value, int length,
                          adlb_data_type type);
 
+static adlb_code
+send_client_notification_work(int caller, 
+        void *response, size_t response_len,
+        struct packed_notif_counts *inner_struct,
+        const adlb_notif_t *notifs, bool use_xfer);
+
 // Returns size of payload including null terminator
 static int fill_payload(char *payload, adlb_datum_id id, adlb_subscript subscript)
 {
@@ -347,7 +353,55 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
 }
 
 adlb_code
-send_notification_work(int caller, 
+xlb_to_free_expand(adlb_notif_t *notify, int to_add)
+{
+  assert(to_add >= 0);
+  size_t new_size = notify->to_free_size == 0 ? 
+                    64 : notify->to_free_size * 2;
+  if (new_size < notify->to_free_size + (size_t)to_add)
+    new_size = notify->to_free_size + (size_t)to_add;
+
+  notify->to_free = realloc(notify->to_free,
+                    sizeof(notify->to_free[0]) * new_size);
+  CHECK_MSG(notify->to_free != NULL, "Out of memory");
+  notify->to_free_size = new_size;
+  return ADLB_SUCCESS;
+}
+
+adlb_code
+send_notification_work(int caller, adlb_datum_id id,
+        void *response, size_t response_len,
+        struct packed_notif_counts *inner_struct,
+        adlb_notif_t *notifs, bool use_xfer)
+{
+  adlb_code rc;
+  if (ADLB_CLIENT_NOTIFIES)
+  {
+
+    // Remove any notifications that can be handled locally
+    xlb_process_local_notif(id, notifs);
+    
+    // Send work back to client
+    rc = send_client_notification_work(caller, response, response_len,
+                                       inner_struct, notifs, use_xfer);
+    ADLB_CHECK(rc);
+  }
+  else 
+  {
+    // Handle on server
+    // Initialize counts to all zeroes
+    memset(inner_struct, 0, sizeof(*inner_struct));
+    RSEND(response, (int)response_len, MPI_BYTE, caller,
+          ADLB_TAG_RESPONSE);
+    rc = xlb_notify_all(notifs, id);
+    ADLB_CHECK(rc);
+  }
+
+  return ADLB_SUCCESS;
+}
+
+static adlb_code
+send_client_notification_work(int caller, 
         void *response, size_t response_len,
         struct packed_notif_counts *inner_struct,
         const adlb_notif_t *notifs, bool use_xfer)
@@ -610,11 +664,13 @@ recv_notification_work(adlb_datum_id id,
 
   if (extra_data != NULL && extra_data != xfer)
   {
-    // TODO: add to extra data list
+    rc = xlb_to_free_add(notify, extra_data);
+    ADLB_CHECK(rc)
   }
   if (extra_data_ptrs != NULL)
   {
-    // TODO: add to extra data list
+    rc = xlb_to_free_add(notify, extra_data_ptrs);
+    ADLB_CHECK(rc)
   }
   return ADLB_SUCCESS;
 }

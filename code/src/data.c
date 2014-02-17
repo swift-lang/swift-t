@@ -688,14 +688,34 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
     adlb_data_code dc = ADLB_Pack(t, d->data.CONTAINER.val_type,
                                       caller_buffer, result);
     DATA_CHECK(dc);
+    
+    // Get ownership in case internal pointer freed later
+    dc = ADLB_Own_data(caller_buffer, result);
+    DATA_CHECK(dc);
 
-    // TODO: add reference work to notifications
-    assert(false);
+    if (caller_buffer == NULL ||
+        result->caller_data != caller_buffer->data)
+    {
+      // Allocated memory, must free
+      adlb_code ac = xlb_to_free_add(notifications, result->caller_data);
+      DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
+    }
 
+    // add reference setting work to notifications
+    adlb_ref_data *refs = &notifications->references;
+    DATA_REALLOC(refs->data, (size_t)(refs->count + 1));
+
+    adlb_ref_datum *ref = &refs->data[refs->count++];
+    ref->id = reference;
+    ref->type = ref_type;
+    ref->value = result->data;
+    ref->value_len = result->length;
+
+    // Need to acquire references 
     adlb_refcounts decr = { .read_refcount = -1,
-                           .write_refcount = 0 };
+                            .write_refcount = 0 };
     xlb_acquire_rc to_acquire2 = { .subscript = subscript,
-                                  .refcounts = to_acquire };
+                                   .refcounts = to_acquire };
     dc = xlb_rc_impl(d, container_id, decr, to_acquire2,
                      NULL, notifications);
     DATA_CHECK(dc);
