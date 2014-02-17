@@ -1459,10 +1459,7 @@ insert_notifications_all(adlb_datum *d, adlb_datum_id id,
         DATA_CHECK(dc);
 
         adlb_code ac = xlb_to_free_add(notify, val_data.caller_data);
-        if (ac != ADLB_SUCCESS)
-        {
-          return ADLB_DATA_ERROR_OOM;
-        }
+        DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
       }
       dc = insert_notifications2(d, id, sub, c->val_type, item->data,
                     val_data.data, val_data.length, ref_list, sub_list,

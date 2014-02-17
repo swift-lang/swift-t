@@ -74,12 +74,27 @@ typedef struct
          __FUNCTION__, __FILE__, __LINE__);                 \
       return _rc;                                           \
   }}
+
+// Check adlb_code, translate to dc
+#define DATA_CHECK_ADLB(ac, dc) \
+  { adlb_code _ac = (ac);                              \
+    if (_ac != ADLB_SUCCESS) {                         \
+      printf("ADLB DATA CHECK FAILED: %s:%s:%i\n",     \
+         __FUNCTION__, __FILE__, __LINE__);            \
+      return dc;                                       \
+  }}
 #else
 // Just return
 #define DATA_CHECK(rc) \
   { adlb_data_code _rc = (rc);                              \
     if (_rc != ADLB_DATA_SUCCESS) {                         \
       return _rc;                                           \
+  }}
+
+#define DATA_CHECK_ADLB(ac, dc) \
+  { adlb_code _ac = (ac);                              \
+    if (_ac != ADLB_SUCCESS) {                         \
+      return dc;                                       \
   }}
 
 #endif

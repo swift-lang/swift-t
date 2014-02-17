@@ -5,7 +5,7 @@
 # make V=1 turns on verbose output
 
 ifeq (@ENABLE_DEV@,1)
-	WARN_EXTRA = -Wconversion -Wshadow \
+	WARN_EXTRA = -Wconversion -Wshadow -Wenum-compare \
                           -Winline -Wunreachable-code
 endif
 

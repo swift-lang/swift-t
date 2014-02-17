@@ -184,6 +184,7 @@ xlb_update_rc_id(adlb_datum_id id, int *read_rc, int *write_rc,
        xlb_rc_changes *changes)
 {
   adlb_data_code dc;
+  adlb_code ac;
 
   // Number we acquired 
   int read_acquired, write_acquired;
@@ -205,8 +206,8 @@ xlb_update_rc_id(adlb_datum_id id, int *read_rc, int *write_rc,
   if (read_remainder != 0 || write_remainder != 0)
   {
     // Need to apply further changes
-    dc = xlb_rc_changes_expand(changes, 1);
-    DATA_CHECK(dc);
+    ac = xlb_rc_changes_expand(changes, 1);
+    DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
 
     xlb_rc_change *change = &changes->arr[changes->count++];
     change->rc.read_refcount = read_remainder;
