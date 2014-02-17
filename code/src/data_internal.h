@@ -65,7 +65,7 @@ typedef struct
     }                                                         \
   }
 
-#if ENABLE_LOG_TRACE
+#if ENABLE_LOG_DEBUG
 // Include traceback
 #define DATA_CHECK(rc) \
   { adlb_data_code _rc = (rc);                              \
