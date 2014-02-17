@@ -210,6 +210,7 @@ xlb_update_rc_id(adlb_datum_id id, int *read_rc, int *write_rc,
     DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
 
     xlb_rc_change *change = &changes->arr[changes->count++];
+    change->id = id;
     change->rc.read_refcount = read_remainder;
     change->rc.write_refcount = write_remainder;
     // If we don't own a ref, must acquire one before doing anything
