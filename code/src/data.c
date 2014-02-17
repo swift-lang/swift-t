@@ -1457,14 +1457,11 @@ insert_notifications_all(adlb_datum *d, adlb_datum_id id,
         dc = ADLB_Own_data(NULL, &val_data);
         DATA_CHECK(dc);
 
-        // Mark that caller should free
-        if (notify->to_free_length == notify->to_free_size)
+        adlb_code ac = xlb_to_free_add(notify, val_data.caller_data);
+        if (ac != ADLB_SUCCESS)
         {
-          notify->to_free_size = notify->to_free_size == 0 ? 
-                  64 : notify->to_free_size * 2;
-          DATA_REALLOC(notify->to_free, notify->to_free_size);
+          return ADLB_DATA_ERROR_OOM;
         }
-        notify->to_free[notify->to_free_length++] = val_data.caller_data;
       }
       dc = insert_notifications2(d, id, sub, c->val_type, item->data,
                     val_data.data, val_data.length, ref_list, sub_list,

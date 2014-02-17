@@ -704,115 +704,18 @@ process_notifications(adlb_datum_id id,
     const struct packed_notif_counts *counts, int to_server_rank)
 {
   adlb_code rc;
-  MPI_Status status;
+
   // Take care of any notifications that the client must do
   adlb_notif_t not = ADLB_NO_NOTIFS;
 
-  void *extra_data = NULL;
-  adlb_binary_data *extra_data_ptrs = NULL; // Pointers into buffer
-  int extra_data_count = 0;
-  if (counts->extra_data_bytes > 0)
-  {
-    int bytes = counts->extra_data_bytes;
-    assert(bytes >= 0);
-    if (bytes <= XFER_SIZE)
-    {
-      extra_data = xfer;
-    }
-    else
-    {
-      extra_data = malloc((size_t)bytes);
-      CHECK_MSG(extra_data != NULL, "out of memory");
-    }
+  rc = recv_notification_work(id, counts, to_server_rank, &not);
+  ADLB_CHECK(rc);
 
-    RECV(extra_data, bytes, MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE);
+  rc = xlb_notify_all(&not, id);
+  ADLB_CHECK(rc);
 
-    // Locate the separate data entries in the buffer
-    extra_data_count = counts->extra_data_count;
-    assert(extra_data_count >= 0);
-    extra_data_ptrs = malloc(sizeof(extra_data_ptrs[0]) * (size_t)extra_data_count);
-    CHECK_MSG(extra_data_ptrs != NULL, "out of memory");
-    int pos = 0;
-    for (int i = 0; i < extra_data_count; i++)
-    {
-      rc = ADLB_Unpack_buffer(ADLB_DATA_TYPE_NULL, extra_data, bytes, &pos,
-              &extra_data_ptrs[i].data, &extra_data_ptrs[i].length);
-      ADLB_CHECK(rc);
-    }
-    assert(pos == bytes); // Should consume all of buffer
-  }
-
-  if (counts->notify_count > 0)
-  {
-    int count = not.notify.count = counts->notify_count;
-    not.notify.notifs = malloc(sizeof(not.notify.notifs[0]) * (size_t)count);
-    struct packed_notif *tmp = malloc(sizeof(struct packed_notif) *
-                                             (size_t)count);
-    valgrind_assert(not.notify.notifs);
-    RECV(not.notify.notifs, (int)sizeof(tmp[0]) * count,
-        MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE);
-
-    for (int i = 0; i < count; i++)
-    {
-      // Copy data from tmp and fill in values
-      not.notify.notifs[i].rank = tmp[i].rank;
-      assert(tmp[i].subscript_data >= 0 &&
-             tmp[i].subscript_data < extra_data_count);
-      adlb_binary_data *data = &extra_data_ptrs[tmp[i].subscript_data];
-      assert(data->data != NULL);
-      assert(data->length >= 0);
-      not.notify.notifs[i].subscript.key = data->data;
-      not.notify.notifs[i].subscript.length = (size_t)data->length;
-    }
-    free(tmp);
-  }
-
-  if (counts->reference_count > 0)
-  {
-    int count = not.references.count = counts->reference_count;
-    not.references.data = malloc(sizeof(not.references.data[0]) *
-                                 (size_t)count);
-    valgrind_assert(not.references.data);
-    
-    struct packed_reference *tmp =
-        malloc(sizeof(struct packed_reference) * (size_t)count);
-    RECV(tmp, count * (int)sizeof(tmp[0]), MPI_BYTE,
-         to_server_rank, ADLB_TAG_RESPONSE);
-
-    for (int i = 0; i < count; i++)
-    {
-      // Copy data from tmp and fill in values
-      not.references.data[i].id = tmp[i].id;
-      not.references.data[i].type = tmp[i].type;
-      assert(tmp[i].val_data >= 0 && tmp[i].val_data < extra_data_count);
-      adlb_binary_data *data = &extra_data_ptrs[tmp[i].val_data];
-      not.references.data[i].value = data->data;
-      not.references.data[i].value_len = data->length;
-    }
-    free(tmp);
-  }
-
-  if (counts->rc_change_count > 0)
-  {
-    rc = xlb_rc_changes_expand(&not.rc_changes, counts->rc_change_count);
-    ADLB_CHECK(rc);
-
-    RECV(not.rc_changes.arr, 
-         counts->rc_change_count * (int)sizeof(not.rc_changes.arr[0]),
-         MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE);
-    not.rc_changes.count = counts->rc_change_count;
-  }
-
-  xlb_notify_all(&not, id);
   xlb_free_notif(&not);
-  if (extra_data != NULL && extra_data != xfer)
-  {
-    free(extra_data);
-  }
-  if (extra_data_ptrs != NULL)
-  {
-    free(extra_data_ptrs);
-  }
+
   return ADLB_SUCCESS;
 }
 

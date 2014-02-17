@@ -29,6 +29,7 @@
 
 #include "adlb-defs.h"
 #include "checks.h"
+#include "messaging.h"
 
 /** If ADLB_CLIENT_NOTIFIES is true, client is responsible for
     notifying others of closing, otherwise the server does it */
@@ -134,6 +135,30 @@ xlb_process_local_notif(adlb_datum_id id, adlb_notif_t *notifs);
 adlb_code
 xlb_notify_all(adlb_notif_t *notifs, adlb_datum_id id);
 
+/**
+ * Transfer notification work back to caller rank.
+ * Caller should receive with recv_notification_work.
+ * Finish filling in provided response header with info about
+ * notifications, then send to caller including additional
+ * notification work.
+ * 
+ * response/response_len: pointer to response struct to be sent
+ * inner_struct: struct inside outer struct to be updated before sending
+ * use_xfer: if true, use xfer buffer as scratch space
+ */
+adlb_code
+send_notification_work(int caller, 
+        void *response, size_t response_len,
+        struct packed_notif_counts *inner_struct,
+        const adlb_notif_t *notifs, bool use_xfer);
+
+/*
+  notify: notify structure initialzied to empty
+ */
+adlb_code
+recv_notification_work(adlb_datum_id id,
+    const struct packed_notif_counts *counts, int to_server_rank,
+    adlb_notif_t *not);
 
 // Inline functions
 static inline adlb_code xlb_rc_changes_init(xlb_rc_changes *c)
@@ -141,6 +166,21 @@ static inline adlb_code xlb_rc_changes_init(xlb_rc_changes *c)
   c->arr = NULL;
   c->count = 0;
   c->size = 0;
+  return ADLB_SUCCESS;
+}
+
+static inline adlb_code xlb_to_free_add(adlb_notif_t *notify, void *data)
+{
+  // Mark that caller should free
+  if (notify->to_free_length == notify->to_free_size)
+  {
+    notify->to_free_size = notify->to_free_size == 0 ? 
+            64 : notify->to_free_size * 2;
+    notify->to_free = realloc(notify->to_free,
+                      sizeof(notify->to_free[0]) * notify->to_free_size);
+    CHECK_MSG(notify->to_free != NULL, "Out of memory");
+  }
+  notify->to_free[notify->to_free_length++] = data;
   return ADLB_SUCCESS;
 }
 
