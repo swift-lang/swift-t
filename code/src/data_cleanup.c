@@ -53,7 +53,7 @@ xlb_datum_cleanup(adlb_datum_storage *d,
       // Decrement any reference counts required
       assert(!adlb_has_sub(to_acquire.subscript));
       dc = xlb_incr_referand(d, type, release_read, release_write,
-                             to_acquire.refcounts, rc_changes);
+                             to_acquire, rc_changes);
       DATA_CHECK(dc);
     }
 
@@ -115,7 +115,7 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
 
         dc = xlb_incr_referand(d, container->val_type,
                 release_read, release_write, 
-                (acquire_field ? to_acquire.refcounts : ADLB_NO_RC),
+                (acquire_field ? to_acquire : XLB_NO_ACQUIRE),
                 rc_changes);
         DATA_CHECK(dc);
       }

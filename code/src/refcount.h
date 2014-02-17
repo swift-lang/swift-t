@@ -26,7 +26,7 @@ xlb_incr_rc_local(adlb_datum_id id, adlb_refcounts change,
 adlb_data_code
 xlb_incr_referand(adlb_datum_storage *d, adlb_data_type type,
                   bool release_read, bool release_write,
-                  adlb_refcounts to_acquire, xlb_rc_changes *changes);
+                  xlb_acquire_rc to_acquire, xlb_rc_changes *changes);
 
 /* Modify refcount of referenced items.  If to_acquire is positive,
    acquire that number of read references to referands.

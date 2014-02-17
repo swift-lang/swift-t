@@ -428,6 +428,8 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
           adlb_refcounts change, xlb_acquire_rc acquire,
           bool *garbage_collected, adlb_notif_t *notifications)
 {
+  adlb_data_code dc;
+
   // default: didn't garbage collect
   if (garbage_collected != NULL)
     *garbage_collected = false;
@@ -467,7 +469,6 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
                 id, d->write_refcount, write_incr);
     d->write_refcount += write_incr;
     if (d->write_refcount == 0) {
-      adlb_data_code dc;
       // If we're keeping around read-only version, release
       // only write refs here
       bool release_write_refs = d->read_refcount > 0;
@@ -478,13 +479,19 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
     DEBUG("write_refcount: <%"PRId64"> => %i", id, d->write_refcount);
   }
 
-  // TODO: if we didn't gc, acquire refs?
-
-  if (d->read_refcount <= 0 && d->write_refcount <= 0) {
+  if (d->read_refcount <= 0 && d->write_refcount <= 0)
+  {
     if (garbage_collected != NULL)
       *garbage_collected = true;
     return datum_gc(id, d, acquire, &notifications->rc_changes);
   }
+  else if (!ADLB_RC_IS_NULL(acquire.refcounts))
+  {
+    // Have to acquire references
+    dc = xlb_incr_referand(&d->data, d->type, true, true,
+                 acquire, &notifications->rc_changes); 
+    DATA_CHECK(dc);
+}
 
   return ADLB_DATA_SUCCESS;
 }

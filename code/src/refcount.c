@@ -53,7 +53,7 @@ adlb_data_code xlb_incr_rc_local(adlb_datum_id id, adlb_refcounts change,
 {
   adlb_notif_t notify = ADLB_NO_NOTIFS;
   adlb_data_code dc = xlb_data_reference_count(id, change,
-          XLB_NO_ACQUIRE, NULL, &notify);
+                           XLB_NO_ACQUIRE, NULL, &notify);
   ADLB_DATA_CHECK(dc);
   
   // handle notifications here if needed
@@ -67,12 +67,10 @@ adlb_data_code xlb_incr_rc_local(adlb_datum_id id, adlb_refcounts change,
 adlb_data_code
 xlb_incr_referand(adlb_datum_storage *d, adlb_data_type type,
                   bool release_read, bool release_write,
-                  adlb_refcounts to_acquire,
+                  xlb_acquire_rc to_acquire,
                   xlb_rc_changes *changes)
 {
   assert(d != NULL);
-  xlb_acquire_rc to_acquire2 = { .subscript = ADLB_NO_SUB,
-                                    .refcounts = to_acquire };
   adlb_data_code dc;
   switch (type)
   {
@@ -84,29 +82,30 @@ xlb_incr_referand(adlb_datum_storage *d, adlb_data_type type,
       break;
     case ADLB_DATA_TYPE_CONTAINER:
       dc = xlb_members_cleanup(&d->CONTAINER, false, release_read,
-                              release_write, to_acquire2, changes);
+                              release_write, to_acquire, changes);
       DATA_CHECK(dc);
       break;
     case ADLB_DATA_TYPE_MULTISET:
       dc = xlb_multiset_cleanup(d->MULTISET, false, false, 
-            release_read, release_write, to_acquire2, changes);
+            release_read, release_write, to_acquire, changes);
       DATA_CHECK(dc);
       break;
     case ADLB_DATA_TYPE_STRUCT:
       // increment referand for all members in struct
-      dc = xlb_struct_cleanup(d->STRUCT, false, 
-          release_read, release_write, to_acquire,
-          -1, changes);
+      dc = xlb_struct_cleanup2(d->STRUCT, false, 
+          release_read, release_write, to_acquire, changes);
       DATA_CHECK(dc);
       break;
     case ADLB_DATA_TYPE_REF:
+      assert(!adlb_has_sub(to_acquire.subscript));
       // decrement reference
       dc = xlb_update_rc_id(d->REF.id, &d->REF.read_refs,
          &d->REF.write_refs, release_read, release_write,
-         to_acquire, changes); 
+         to_acquire.refcounts, changes); 
       DATA_CHECK(dc);
       break;
     case ADLB_DATA_TYPE_FILE_REF:
+      assert(!adlb_has_sub(to_acquire.subscript));
       // TODO: need to track refcount here
       assert(false);
       /*

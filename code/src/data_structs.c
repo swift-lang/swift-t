@@ -317,13 +317,16 @@ xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
   assert(acquire_ix < t->field_count);
   bool acquiring = to_acquire.read_refcount != 0 ||
                      to_acquire.write_refcount != 0;
-  
+ 
+  xlb_acquire_rc to_acquire2 = { .subscript = ADLB_NO_SUB,
+                                  .refcounts = to_acquire };
+
   for (int i = 0; i < t->field_count; i++)
   {
     bool acquire_field = acquiring &&
                          (acquire_ix < 0 || acquire_ix == i);
     dc = xlb_incr_referand(&s->data[i], t->field_types[i], release_read,
-            release_write, (acquire_field ? to_acquire : ADLB_NO_RC),
+            release_write, (acquire_field ? to_acquire2 : XLB_NO_ACQUIRE),
             rc_changes);
     DATA_CHECK(dc);
   }
