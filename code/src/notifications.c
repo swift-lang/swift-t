@@ -486,6 +486,8 @@ send_notification_work(int caller,
   }
   if (rc_count > 0)
   {
+    DEBUG("Sending %i rc changes", rc_count);
+    
     SEND(notifs->rc_changes.arr, 
          rc_count * (int)sizeof(notifs->rc_changes.arr[0]), MPI_BYTE,
          caller, ADLB_TAG_RESPONSE);
@@ -596,6 +598,7 @@ recv_notification_work(adlb_datum_id id,
 
   if (counts->rc_change_count > 0)
   {
+    DEBUG("Receiving %i rc changes", counts->rc_change_count);
     rc = xlb_rc_changes_expand(&notify->rc_changes, counts->rc_change_count);
     ADLB_CHECK(rc);
 
