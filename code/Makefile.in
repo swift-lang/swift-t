@@ -137,7 +137,7 @@ ifeq ($(ENABLE_ZLIB),1)
 endif
 
 ENABLE_XPT = @XLB_ENABLE_XPT@
-ifeq ($(ENABLE_XPT),1)
+ifeq ($(ENABLE_XPT),yes)
 	CFLAGS += -D XLB_ENABLE_XPT
         # Need zlib for checkpoint CRC
         LIBS += -lz
