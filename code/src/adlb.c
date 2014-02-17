@@ -516,7 +516,7 @@ ADLB_Locate(adlb_datum_id id)
    @param filename Only used for file-type data
    @param subscript_type Only used for container-type data
  */
-static inline adlb_code
+static adlb_code
 ADLBP_Create_impl(adlb_datum_id id, adlb_data_type type,
                   adlb_type_extra type_extra,
                   adlb_create_props props,
