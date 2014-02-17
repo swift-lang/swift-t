@@ -98,7 +98,7 @@ static adlb_data_code
 xlb_data_close(adlb_datum_id id, adlb_datum *d, adlb_notif_t *notify,
               bool release_write_refs);
 static adlb_data_code datum_gc(adlb_datum_id id, adlb_datum* d,
-           xlb_acquire_rc scav, xlb_rc_changes *rc_changes);
+           xlb_acquire_rc acquire, xlb_rc_changes *rc_changes);
 
 static adlb_data_code
 insert_notifications(adlb_datum *d,
@@ -413,57 +413,30 @@ xlb_datum_lookup(adlb_datum_id id, adlb_datum **d)
  */
 adlb_data_code
 xlb_data_reference_count(adlb_datum_id id, adlb_refcounts change,
-          xlb_acquire_rc scav, bool *garbage_collected,
-          adlb_refcounts *refcounts_scavenged,
+          xlb_acquire_rc acquire, bool *garbage_collected,
           adlb_notif_t *notifications)
 {
   adlb_datum* d;
   adlb_data_code dc = xlb_datum_lookup(id, &d);
   DATA_CHECK(dc);
-  return xlb_rc_impl(d, id, change, scav, garbage_collected,
-                       refcounts_scavenged, notifications);
+  return xlb_rc_impl(d, id, change, acquire, garbage_collected,
+                     notifications);
 }
 
 adlb_data_code
 xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
-          adlb_refcounts change, xlb_acquire_rc scav,
-          bool *garbage_collected, adlb_refcounts *refcounts_scavenged,
-          adlb_notif_t *notifications)
+          adlb_refcounts change, xlb_acquire_rc acquire,
+          bool *garbage_collected, adlb_notif_t *notifications)
 {
   // default: didn't garbage collect
   if (garbage_collected != NULL)
     *garbage_collected = false;
-  if (refcounts_scavenged != NULL)
-    *refcounts_scavenged = ADLB_NO_RC;
 
-  assert(scav.refcounts.read_refcount >= 0);
-  assert(scav.refcounts.write_refcount >= 0);
+  assert(acquire.refcounts.read_refcount >= 0);
+  assert(acquire.refcounts.write_refcount >= 0);
 
   int read_incr = change.read_refcount;
   int write_incr = change.write_refcount;
-
-  bool do_gc = d->read_refcount + read_incr <= 0 &&
-               d->write_refcount + write_incr <= 0;
-  
-  if (!ADLB_RC_IS_NULL(scav.refcounts))
-  {
-    // Don't go through with decrement if caller wants to scavenge refcounts
-    // and we can't get at least one.
-    // This is because, otherwise, there is a race condition where this
-    // item may be garbage-collected before the referands have their
-    // counts incremented.
-    if (!do_gc)
-      return ADLB_DATA_SUCCESS;
-
-    // Will only hold one refcount on referand per reference in datum
-    if (refcounts_scavenged != NULL)
-    {
-      if (scav.refcounts.read_refcount > 0)
-        refcounts_scavenged->read_refcount = 1;
-      if (scav.refcounts.write_refcount > 0)
-        refcounts_scavenged->write_refcount = 1;
-    }
-  }
 
   if (read_incr != 0) {
     // Shouldn't get here if disabled
@@ -498,16 +471,19 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
       // If we're keeping around read-only version, release
       // only write refs here
       bool release_write_refs = d->read_refcount > 0;
+      // TODO: acquire refs here?
       dc = xlb_data_close(id, d, notifications, release_write_refs);
       DATA_CHECK(dc);
     }
     DEBUG("write_refcount: <%"PRId64"> => %i", id, d->write_refcount);
   }
 
+  // TODO: if we didn't gc, acquire refs?
+
   if (d->read_refcount <= 0 && d->write_refcount <= 0) {
     if (garbage_collected != NULL)
       *garbage_collected = true;
-    return datum_gc(id, d, scav, &notifications->rc_changes);
+    return datum_gc(id, d, acquire, &notifications->rc_changes);
   }
 
   return ADLB_DATA_SUCCESS;
@@ -713,7 +689,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
     xlb_acquire_rc to_acquire2 = { .subscript = subscript,
                                   .refcounts = to_acquire };
     dc = xlb_rc_impl(d, container_id, decr, to_acquire2,
-                     NULL, NULL, notifications);
+                     NULL, notifications);
     DATA_CHECK(dc);
 
     return ADLB_DATA_SUCCESS;
@@ -952,7 +928,7 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
                                             -refcount_decr.read_refcount : 0,
                             .write_refcount = -refcount_decr.write_refcount };
     dc = xlb_rc_impl(d, id, incr, XLB_NO_ACQUIRE,
-                     NULL, NULL, notifications);
+                     NULL, notifications);
     DATA_CHECK(dc);
   }
 
@@ -1426,7 +1402,7 @@ insert_notifications2(adlb_datum *d,
     
     // Update refcounts if necessary
     dc = xlb_rc_impl(d, container_id, read_decr, referand_acquire,
-                     garbage_collected, NULL, notify);
+                     garbage_collected, notify);
     DATA_CHECK(dc);
   }
 

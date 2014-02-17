@@ -53,7 +53,7 @@ adlb_data_code xlb_incr_rc_local(adlb_datum_id id, adlb_refcounts change,
 {
   adlb_notif_t notify = ADLB_NO_NOTIFS;
   adlb_data_code dc = xlb_data_reference_count(id, change,
-          XLB_NO_ACQUIRE, NULL, NULL, &notify);
+          XLB_NO_ACQUIRE, NULL, &notify);
   ADLB_DATA_CHECK(dc);
   
   // handle notifications here if needed
@@ -204,7 +204,7 @@ xlb_update_rc_id(adlb_datum_id id, int *read_rc, int *write_rc,
   return ADLB_DATA_SUCCESS;
 }
 
-// Modify reference count of referands and maybe scavenge
+// Modify reference count of referands and acquire needed refcounts
 adlb_data_code
 xlb_update_rc_referand(adlb_datum_storage *d, adlb_data_type type,
        bool release_read, bool release_write, adlb_refcounts to_acquire,

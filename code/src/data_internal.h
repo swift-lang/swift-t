@@ -109,9 +109,8 @@ xlb_datum_lookup(adlb_datum_id id, adlb_datum **d);
  */
 adlb_data_code
 xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
-          adlb_refcounts change, xlb_acquire_rc scav,
-          bool *garbage_collected, adlb_refcounts *refcounts_scavenged,
-          adlb_notif_t *notifications);
+          adlb_refcounts change, xlb_acquire_rc acquire,
+          bool *garbage_collected, adlb_notif_t *notifications);
 
 /*
   Utility function to resize string buffer using realloc if needed

@@ -16,7 +16,7 @@ xlb_datum_cleanup(adlb_datum_storage *d,
      bool release_read, bool release_write,
      xlb_acquire_rc to_acquire, xlb_rc_changes *rc_changes)
 {
-  // Sanity-check scavenges
+  // Sanity-check acquire amounts
   assert(to_acquire.refcounts.read_refcount >= 0);
   assert(to_acquire.refcounts.write_refcount >= 0);
   adlb_data_code dc;
@@ -35,7 +35,7 @@ xlb_datum_cleanup(adlb_datum_storage *d,
   }
   else if (type == ADLB_DATA_TYPE_STRUCT)
   {
-    int acquire_ix = -1; // negative == don't scavenge
+    int acquire_ix = -1; // negative == acquire all subscripts
     if (adlb_has_sub(to_acquire.subscript)) 
     {
       dc = xlb_struct_str_to_ix(to_acquire.subscript, &acquire_ix);

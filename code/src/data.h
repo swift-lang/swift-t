@@ -133,7 +133,7 @@ adlb_data_code xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
    when a structure is freed
  */
 typedef struct {
-  // Optional: if non-null, only scavenge refcount for this subscript
+  // Optional: if non-null, only acquire refcount for this subscript
   adlb_subscript subscript; 
   // how many refcounts to try to acquire on referands
   adlb_refcounts refcounts;
@@ -146,16 +146,13 @@ static const xlb_acquire_rc XLB_NO_ACQUIRE =
 /*
   Modify data reference count
 
-  scav/refcounts_scavenged: try to scavenge reference counts to referenced
-                            items.  If *refcounts_scavenged is filled
-                            with 0, this means we weren't successful and
-                            didn't modify any reference counts
-  garbage_collected/refcounts_scavenged: can be NULL
+  acquire: acquire this number of references to all ids referenced
+           by datum
+  garbage_collected: can be NULL if you don't need info
  */
 adlb_data_code xlb_data_reference_count(adlb_datum_id id,
                 adlb_refcounts change,
-                xlb_acquire_rc scav, bool *garbage_collected,
-                adlb_refcounts *refcounts_scavenged,
+                xlb_acquire_rc acquire, bool *garbage_collected,
                 adlb_notif_t *notifications);
 
 const char*
