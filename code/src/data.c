@@ -678,14 +678,16 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
   }
 
   // Is the subscript already pointing to a data identifier?
-  adlb_container_val t;
+  adlb_container_val val_data;
 
-  bool data_found = container_lookup(&d->data.CONTAINER, subscript, &t);
+  bool data_found = container_lookup(&d->data.CONTAINER, subscript,
+                                     &val_data);
   TRACE("lookup container for ref: %"PRId64"[%.*s]: %i", container_id,
           (int)subscript.length, subscript.key, (int)data_found);
-  if (data_found && t != NULL)
+  if (data_found && val_data != NULL)
   {
-    adlb_data_code dc = ADLB_Pack(t, d->data.CONTAINER.val_type,
+    adlb_data_code dc;
+    dc = ADLB_Pack(val_data, d->data.CONTAINER.val_type,
                                       caller_buffer, result);
     DATA_CHECK(dc);
     

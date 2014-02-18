@@ -1232,9 +1232,11 @@ handle_container_reference(int caller)
         container_id, (int)subscript.length, (const char*)subscript.key,
         reference, ref_type);
  
-  // TODO: allow caller to specify refcounts
   // TODO: support custom decrement
-  adlb_refcounts to_acquire;
+  // TODO: allow caller to specify refcounts
+
+  // TODO: for now, assume 1 read reference given to caller
+  adlb_refcounts to_acquire = { .read_refcount = 1, .write_refcount = 0};
 
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
   adlb_binary_data member;

@@ -107,10 +107,20 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
         bool acquire_field = (!adlb_has_sub(*sub) ||
              table_bp_key_match(sub->key, sub->length, item));
 
+        // create new acquire to remove subscript
+        xlb_acquire_rc field_acquire;
+        field_acquire.subscript = ADLB_NO_SUB;
+        if (acquire_field)
+        {
+          field_acquire.refcounts = to_acquire.refcounts;
+        }
+        else
+        {
+          field_acquire.refcounts = ADLB_NO_RC;
+        }
+
         dc = xlb_incr_referand(d, container->val_type,
-                release_read, release_write, 
-                (acquire_field ? to_acquire : XLB_NO_ACQUIRE),
-                rc_changes);
+                release_read, release_write, field_acquire, rc_changes);
         DATA_CHECK(dc);
       }
 
