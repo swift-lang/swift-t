@@ -123,7 +123,6 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
                 release_read, release_write, field_acquire, rc_changes);
         DATA_CHECK(dc);
       }
-
       // Free the memory for value and key
       if (free_mem)
       {
@@ -145,8 +144,10 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
         free(item);
     }
 
+
     // Mark bucket empty
-    table_bp_clear_entry(head);
+    if (free_mem)
+      table_bp_clear_entry(head);
   }
   if (free_mem)
     table_bp_free(members);
