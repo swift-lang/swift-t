@@ -58,10 +58,9 @@ typedef struct {
   <id>[subscript] was set
  */
 typedef struct {
-  int rank;
-  // TODO: need to make id non-implied
-  // id is implied
+  adlb_datum_id id;
   adlb_subscript subscript; // Optional subscript
+  int rank;
 } adlb_notif_rank;
 
 typedef struct {
@@ -131,14 +130,14 @@ void xlb_free_datums(adlb_ref_data *datums);
    be handled locally.  Frees memory if all removed.
  */
 adlb_code
-xlb_process_local_notif(adlb_datum_id id, adlb_notif_t *notifs);
+xlb_process_local_notif(adlb_notif_t *notifs);
 
 adlb_code
-xlb_notify_all(adlb_notif_t *notifs, adlb_datum_id id);
+xlb_notify_all(adlb_notif_t *notifs);
 
 /**
  * Transfer notification work back to caller rank.
- * Caller should receive with recv_notification_work.
+ * Caller should receive with xlb_handle_client_notif_work
  * Finish filling in provided response header with info about
  * notifications, then send to caller including additional
  * notification work.
@@ -148,18 +147,18 @@ xlb_notify_all(adlb_notif_t *notifs, adlb_datum_id id);
  * use_xfer: if true, use xfer buffer as scratch space
  */
 adlb_code
-send_notification_work(int caller, adlb_datum_id id,
+xlb_send_notif_work(int caller,
         void *response, size_t response_len,
         struct packed_notif_counts *inner_struct,
         adlb_notif_t *notifs, bool use_xfer);
 
 /*
-  notify: notify structure initialzied to empty
+ Receive notifications send by server, then
+ process them locally
  */
 adlb_code
-recv_notification_work(adlb_datum_id id,
-    const struct packed_notif_counts *counts, int to_server_rank,
-    adlb_notif_t *not);
+xlb_handle_client_notif_work(const struct packed_notif_counts *counts, 
+                        int to_server_rank);
 
 adlb_code
 xlb_to_free_expand(adlb_notif_t *notify, int to_add);

@@ -181,6 +181,19 @@ struct packed_put
 #define PACKED_PUT_MAX (PACKED_PUT_SIZE(PUT_INLINE_DATA_MAX))
 
 /**
+  Struct with notification counts for embedding in other structure
+ */
+struct packed_notif_counts
+{
+  int notify_count;
+  int reference_count;
+  int rc_change_count;
+  int extra_data_count;
+  int extra_data_bytes;
+};
+
+
+/**
    Simple struct for message packing
  */
 struct packed_get_response
@@ -216,6 +229,7 @@ struct packed_code_id
  */
 struct retrieve_response_hdr
 {
+  struct packed_notif_counts notifs;
   adlb_data_code code;
   adlb_data_type type;
   int length;
@@ -243,19 +257,11 @@ struct packed_enumerate_result
   adlb_data_type val_type;
 };
 
-struct packed_notif_counts
-{
-  int notify_count;
-  int reference_count;
-  int rc_change_count;
-  int extra_data_count;
-  int extra_data_bytes;
-};
-
 struct packed_notif
 {
-  int rank; // Rank to notify
+  adlb_datum_id id;
   int subscript_data; // index of extra data item, -1 for no subscript
+  int rank; // Rank to notify
 };
 
 struct packed_reference

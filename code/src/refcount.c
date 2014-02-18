@@ -63,7 +63,7 @@ adlb_data_code xlb_incr_rc_local(adlb_datum_id id, adlb_refcounts change,
   ADLB_DATA_CHECK(dc);
   
   // handle notifications here if needed
-  adlb_code rc = xlb_notify_all(&notify, id);
+  adlb_code rc = xlb_notify_all(&notify);
   check_verbose(rc == ADLB_SUCCESS, ADLB_DATA_ERROR_UNKNOWN,
       "Error processing notifications for <%"PRId64">", id);
   

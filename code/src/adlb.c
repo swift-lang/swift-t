@@ -696,29 +696,6 @@ ADLBP_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
   return ADLB_SUCCESS;
 }
 
-/*
-  Receive notification messages from server and process them
- */
-static adlb_code
-process_notifications(adlb_datum_id id,
-    const struct packed_notif_counts *counts, int to_server_rank)
-{
-  adlb_code rc;
-
-  // Take care of any notifications that the client must do
-  adlb_notif_t not = ADLB_NO_NOTIFS;
-
-  rc = recv_notification_work(id, counts, to_server_rank, &not);
-  ADLB_CHECK(rc);
-
-  rc = xlb_notify_all(&not, id);
-  ADLB_CHECK(rc);
-
-  xlb_free_notif(&not);
-
-  return ADLB_SUCCESS;
-}
-
 adlb_code
 ADLBP_Store(adlb_datum_id id, adlb_subscript subscript, adlb_data_type type,
             const void *data, int length, adlb_refcounts refcount_decr)
@@ -756,7 +733,7 @@ ADLBP_Store(adlb_datum_id id, adlb_subscript subscript, adlb_data_type type,
       return ADLB_REJECTED;
     ADLB_DATA_CHECK(dc);
 
-    code = xlb_notify_all(&notifs, id);
+    code = xlb_notify_all(&notifs);
     xlb_free_notif(&notifs);
     ADLB_CHECK(code);
     return ADLB_SUCCESS;
@@ -784,7 +761,7 @@ ADLBP_Store(adlb_datum_id id, adlb_subscript subscript, adlb_data_type type,
     return ADLB_REJECTED;
   ADLB_DATA_CHECK(resp.dc);
 
-  code = process_notifications(id, &resp.notifs, to_server_rank);
+  code = xlb_handle_client_notif_work(&resp.notifs, to_server_rank);
   ADLB_CHECK(code);
 
   return ADLB_SUCCESS;
@@ -854,7 +831,7 @@ ADLBP_Refcount_incr(adlb_datum_id id, adlb_refcounts change)
   if (!resp.success)
     return ADLB_ERROR;
 
-  rc = process_notifications(id, &resp.notifs, to_server_rank);
+  rc = xlb_handle_client_notif_work(&resp.notifs, to_server_rank);
   ADLB_CHECK(rc);
 
   return ADLB_SUCCESS;
@@ -941,28 +918,31 @@ ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
   SEND(hdr, hdr_len, MPI_BYTE, to_server_rank, ADLB_TAG_RETRIEVE);
   WAIT(&request,&status);
 
-  if (resp_hdr.code == ADLB_DATA_SUCCESS)
-  {
-    assert(resp_hdr.length <= ADLB_PAYLOAD_MAX);
-    RECV(data, resp_hdr.length, MPI_BYTE, to_server_rank,
-         ADLB_TAG_RESPONSE);
 
-    // Set length and type output parameters
-    *length = resp_hdr.length;
-    *type = resp_hdr.type;
-    DEBUG("RETRIEVE: <%"PRId64"> (%i bytes)\n", id, *length);
-    return ADLB_SUCCESS;
-  }
-  else if (resp_hdr.code == ADLB_DATA_ERROR_NOT_FOUND ||
+  if (resp_hdr.code == ADLB_DATA_ERROR_NOT_FOUND ||
            resp_hdr.code == ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND)
   {
     *length = -1;
     return ADLB_SUCCESS;
   }
-  else
+  else if (!resp_hdr.code == ADLB_DATA_SUCCESS)
   {
     return ADLB_ERROR;
   }
+  
+  adlb_code ac = xlb_handle_client_notif_work(&resp_hdr.notifs,
+                                              to_server_rank);
+  ADLB_CHECK(ac);
+
+  assert(resp_hdr.length <= ADLB_PAYLOAD_MAX);
+  RECV(data, resp_hdr.length, MPI_BYTE, to_server_rank,
+       ADLB_TAG_RESPONSE);
+
+  // Set length and type output parameters
+  *length = resp_hdr.length;
+  *type = resp_hdr.type;
+  DEBUG("RETRIEVE: <%"PRId64"> (%i bytes)\n", id, *length);
+  return ADLB_SUCCESS;
 }
 
 /**
@@ -1169,7 +1149,7 @@ ADLBP_Container_reference(adlb_datum_id id, adlb_subscript subscript,
   // Check for error before processing notification
   ADLB_DATA_CHECK(resp.dc);
 
-  adlb_code ac = process_notifications(id, &resp.notifs, to_server_rank);
+  adlb_code ac = xlb_handle_client_notif_work(&resp.notifs, to_server_rank);
   ADLB_CHECK(ac);
 
   // TODO: support binary subscript

@@ -134,7 +134,7 @@ static inline adlb_code redirect_work(int type, int putter,
 static inline bool check_workqueue(int caller, int type);
 
 static adlb_code
-notify_helper(adlb_datum_id id, adlb_notif_t *notifications);
+notify_helper(adlb_notif_t *notifications);
 
 static adlb_code
 refcount_decr_helper(adlb_datum_id id, adlb_refcounts decr);
@@ -911,7 +911,7 @@ handle_store(int caller)
   else
   {
     // Send notifications
-    adlb_code rc = send_notification_work(caller, hdr.id,
+    adlb_code rc = xlb_send_notif_work(caller,
             &resp, sizeof(resp), &resp.notifs, &notifs, false);
     ADLB_CHECK(rc);
   }
@@ -959,22 +959,24 @@ handle_retrieve(int caller)
                           &type, NULL, &result, &notifs);
   assert(dc != ADLB_DATA_SUCCESS || result.length >= 0);
 
-  
-  // TODO: optionally send notifications back to client
-  if (!xlb_notif_empty(&notifs)) {
-    adlb_code ac = xlb_notify_all(&notifs, hdr->id);
-    ADLB_CHECK(ac);
-  }
-
   struct retrieve_response_hdr resp_hdr;
   resp_hdr.code = dc;
   resp_hdr.type = type;
   resp_hdr.length = result.length;
-  RSEND(&resp_hdr, sizeof(resp_hdr), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
   if (dc == ADLB_DATA_SUCCESS)
   {
+    // Send notifications then data
+    adlb_code ac = xlb_send_notif_work(caller, &resp_hdr,
+              sizeof(resp_hdr), &resp_hdr.notifs, &notifs, true);
+    ADLB_CHECK(ac);
+
     SEND(result.data, result.length, MPI_BYTE, caller, ADLB_TAG_RESPONSE);
     DEBUG("Retrieve: <%"PRId64">", hdr->id);
+  }
+  else
+  {
+    // Send header only
+    RSEND(&resp_hdr, sizeof(resp_hdr), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
   }
   
   ADLB_Free_binary_data(&result);
@@ -1096,7 +1098,7 @@ handle_refcount_incr(int caller)
   }
   else
   {
-    rc = send_notification_work(caller, msg.id,
+    rc = xlb_send_notif_work(caller,
             &resp, sizeof(resp), &resp.notifs, &notifs, true);
     ADLB_CHECK(rc);
   }
@@ -1248,7 +1250,7 @@ handle_container_reference(int caller)
   else
   {
     // Send notifications
-    adlb_code rc = send_notification_work(caller, container_id,
+    adlb_code rc = xlb_send_notif_work(caller,
             &resp, sizeof(resp), &resp.notifs, &notifs, false);
     ADLB_CHECK(rc);
   }
@@ -1405,12 +1407,12 @@ static adlb_code find_req_bytes(int *bytes, int caller, adlb_tag tag) {
   TODO: option to offload to client
  */
 static adlb_code
-notify_helper(adlb_datum_id id, adlb_notif_t *notifications)
+notify_helper(adlb_notif_t *notifications)
 {
   if (!xlb_notif_empty(notifications))
   {
     adlb_code rc;
-    rc = xlb_notify_all(notifications, id);
+    rc = xlb_notify_all(notifications);
     ADLB_CHECK(rc);
     xlb_free_notif(notifications);
   }
@@ -1432,7 +1434,7 @@ refcount_decr_helper(adlb_datum_id id, adlb_refcounts decr)
                               NULL, &notify);
     if (dc == ADLB_DATA_SUCCESS)
     {
-      adlb_code rc = notify_helper(id, &notify);
+      adlb_code rc = notify_helper(&notify);
       ADLB_CHECK(rc);
     }
   }

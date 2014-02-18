@@ -10,10 +10,10 @@
 #define MAX_NOTIF_PAYLOAD (32+ADLB_DATA_SUBSCRIPT_MAX)
 
 static adlb_code
-xlb_process_local_notif_ranks(adlb_datum_id id, adlb_notif_ranks *ranks);
+xlb_process_local_notif_ranks(adlb_notif_ranks *ranks);
 
 static adlb_code
-xlb_close_notify(adlb_datum_id id, const adlb_notif_ranks *ranks);
+xlb_close_notify(const adlb_notif_ranks *ranks);
 
 static adlb_code
 xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
@@ -27,10 +27,17 @@ xlb_set_ref_and_notify(adlb_datum_id id, const void *value, int length,
                          adlb_data_type type);
 
 static adlb_code
-send_client_notification_work(int caller, 
+send_client_notif_work(int caller, 
         void *response, size_t response_len,
         struct packed_notif_counts *inner_struct,
         const adlb_notif_t *notifs, bool use_xfer);
+
+/*
+  notify: notify structure initialzied to empty
+ */
+static adlb_code
+xlb_recv_notif_work(const struct packed_notif_counts *counts,
+    int to_server_rank, adlb_notif_t *not);
 
 // Returns size of payload including null terminator
 static int fill_payload(char *payload, adlb_datum_id id, adlb_subscript subscript)
@@ -136,7 +143,7 @@ xlb_set_refs(const adlb_ref_data *refs)
 }
 
 static adlb_code
-xlb_close_notify(adlb_datum_id id, const adlb_notif_ranks *ranks)
+xlb_close_notify(const adlb_notif_ranks *ranks)
 {
   adlb_code rc;
   char payload[MAX_NOTIF_PAYLOAD];
@@ -151,7 +158,7 @@ xlb_close_notify(adlb_datum_id id, const adlb_notif_ranks *ranks)
                   notif->subscript.length != last_subscript.length)
     {
       // Skip refilling payload if possible 
-      payload_len = fill_payload(payload, id, notif->subscript);
+      payload_len = fill_payload(payload, notif->id, notif->subscript);
     }
     int target = notif->rank;
     int server = xlb_map_to_server(target);
@@ -170,7 +177,7 @@ xlb_close_notify(adlb_datum_id id, const adlb_notif_ranks *ranks)
 }
 
 adlb_code
-xlb_process_local_notif(adlb_datum_id id, adlb_notif_t *notifs)
+xlb_process_local_notif(adlb_notif_t *notifs)
 {
   assert(xlb_am_server);
   
@@ -185,14 +192,14 @@ xlb_process_local_notif(adlb_datum_id id, adlb_notif_t *notifs)
   // more complex as we might want to pass the notification work for the
   // set references back to the client
 
-  ac = xlb_process_local_notif_ranks(id, &notifs->notify);
+  ac = xlb_process_local_notif_ranks(&notifs->notify);
   ADLB_CHECK(ac);
 
   return ADLB_SUCCESS;
 }
 
 static adlb_code
-xlb_process_local_notif_ranks(adlb_datum_id id, adlb_notif_ranks *ranks)
+xlb_process_local_notif_ranks(adlb_notif_ranks *ranks)
 {
   if (ranks->count > 0)
   {
@@ -209,7 +216,7 @@ xlb_process_local_notif_ranks(adlb_datum_id id, adlb_notif_ranks *ranks)
                     notif->subscript.length != last_subscript.length)
       {
         // Skip refilling payload if possible 
-        payload_len = fill_payload(payload, id, notif->subscript);
+        payload_len = fill_payload(payload, notif->id, notif->subscript);
       }
 
       int target = notif->rank;
@@ -259,7 +266,7 @@ xlb_set_ref_and_notify(adlb_datum_id id, const void *value, int length,
 }
 
 adlb_code
-xlb_notify_all(adlb_notif_t *notifs, adlb_datum_id id)
+xlb_notify_all(adlb_notif_t *notifs)
 {
   adlb_code rc;
   // apply rc changes first because it may add new notifications
@@ -268,7 +275,7 @@ xlb_notify_all(adlb_notif_t *notifs, adlb_datum_id id)
 
   if (notifs->notify.count > 0)
   {
-    rc = xlb_close_notify(id, &notifs->notify);
+    rc = xlb_close_notify(&notifs->notify);
     ADLB_CHECK(rc);
   }
   if (notifs->references.count > 0)
@@ -369,7 +376,7 @@ xlb_to_free_expand(adlb_notif_t *notify, int to_add)
 }
 
 adlb_code
-send_notification_work(int caller, adlb_datum_id id,
+xlb_send_notif_work(int caller,
         void *response, size_t response_len,
         struct packed_notif_counts *inner_struct,
         adlb_notif_t *notifs, bool use_xfer)
@@ -379,10 +386,10 @@ send_notification_work(int caller, adlb_datum_id id,
   {
 
     // Remove any notifications that can be handled locally
-    xlb_process_local_notif(id, notifs);
+    xlb_process_local_notif(notifs);
     
     // Send work back to client
-    rc = send_client_notification_work(caller, response, response_len,
+    rc = send_client_notif_work(caller, response, response_len,
                                        inner_struct, notifs, use_xfer);
     ADLB_CHECK(rc);
   }
@@ -393,7 +400,7 @@ send_notification_work(int caller, adlb_datum_id id,
     memset(inner_struct, 0, sizeof(*inner_struct));
     RSEND(response, (int)response_len, MPI_BYTE, caller,
           ADLB_TAG_RESPONSE);
-    rc = xlb_notify_all(notifs, id);
+    rc = xlb_notify_all(notifs);
     ADLB_CHECK(rc);
   }
 
@@ -401,7 +408,7 @@ send_notification_work(int caller, adlb_datum_id id,
 }
 
 static adlb_code
-send_client_notification_work(int caller, 
+send_client_notif_work(int caller, 
         void *response, size_t response_len,
         struct packed_notif_counts *inner_struct,
         const adlb_notif_t *notifs, bool use_xfer)
@@ -457,6 +464,7 @@ send_client_notification_work(int caller,
   {
     adlb_notif_rank *rank = &notifs->notify.notifs[i];
     packed_notifs[i].rank = rank->rank;
+    packed_notifs[i].id = rank->id;
     if (adlb_has_sub(rank->subscript))
     {
       if (last_subscript != NULL &&
@@ -557,10 +565,32 @@ send_client_notification_work(int caller,
   return ADLB_DATA_SUCCESS;
 }
 
+/*
+  Receive notification messages from server and process them
+ */
 adlb_code
-recv_notification_work(adlb_datum_id id,
-    const struct packed_notif_counts *counts, int to_server_rank,
-    adlb_notif_t *notify)
+xlb_handle_client_notif_work(const struct packed_notif_counts *counts, 
+                        int to_server_rank)
+{
+  adlb_code rc;
+
+  // Take care of any notifications that the client must do
+  adlb_notif_t not = ADLB_NO_NOTIFS;
+
+  rc = xlb_recv_notif_work(counts, to_server_rank, &not);
+  ADLB_CHECK(rc);
+
+  rc = xlb_notify_all(&not);
+  ADLB_CHECK(rc);
+
+  xlb_free_notif(&not);
+
+  return ADLB_SUCCESS;
+}
+
+static adlb_code
+xlb_recv_notif_work(const struct packed_notif_counts *counts,
+    int to_server_rank, adlb_notif_t *notify)
 {
   adlb_code rc;
   MPI_Status status;
@@ -614,6 +644,7 @@ recv_notification_work(adlb_datum_id id,
     {
       // Copy data from tmp and fill in values
       notify->notify.notifs[i].rank = tmp[i].rank;
+      notify->notify.notifs[i].id = tmp[i].id;
       assert(tmp[i].subscript_data >= 0 &&
              tmp[i].subscript_data < extra_data_count);
       adlb_binary_data *data = &extra_data_ptrs[tmp[i].subscript_data];
