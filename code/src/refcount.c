@@ -105,6 +105,7 @@ xlb_incr_referand(adlb_datum_storage *d, adlb_data_type type,
     case ADLB_DATA_TYPE_REF:
       assert(!adlb_has_sub(to_acquire.subscript));
       // decrement reference
+      TRACE("xlb_incr_referand: <%"PRId64">", d->REF.id);
       dc = xlb_update_rc_id(d->REF.id, &d->REF.read_refs,
          &d->REF.write_refs, release_read, release_write,
          to_acquire.refcounts, changes); 
@@ -144,7 +145,9 @@ apply_rc_update(bool releasing, int *curr_rc, int acquire_rc,
 {
   assert(*curr_rc >= 0);
   assert(acquire_rc >= 0);
-  
+
+  TRACE("RC UP curr: %i", *curr_rc);
+
   check_verbose(acquire_rc == 0 || *curr_rc > 0,
         ADLB_DATA_ERROR_REFCOUNT_NEGATIVE, "Trying to acquire refcount,"
         " but own no references");
@@ -156,12 +159,16 @@ apply_rc_update(bool releasing, int *curr_rc, int acquire_rc,
     *acquired = *remainder <= 0 ? acquire_rc
                                 : acquire_rc - *remainder;
     *curr_rc = 0;
+    TRACE("RC UP releasing: curr: %i acq: %i rem: %i", *curr_rc, *acquired,
+                                                 *remainder);
   }
   else if (acquire_rc == 0)
   {
     // Do nothing
     *acquired = 0;
     *remainder = 0;
+    TRACE("RC UP do nothing: curr: %i acq: %i rem: %i",
+           *curr_rc, *acquired, *remainder);
   }
   else
   {
@@ -172,6 +179,8 @@ apply_rc_update(bool releasing, int *curr_rc, int acquire_rc,
                 acquire_rc : max_acquire;
     *curr_rc -= *acquired;
     *remainder = acquire_rc - *acquired;
+    TRACE("RC acquire: curr: %i acq: %i rem: %i",
+           *curr_rc, *acquired, *remainder);
   }
 
   return ADLB_DATA_SUCCESS;
@@ -217,6 +226,9 @@ xlb_update_rc_id(adlb_datum_id id, int *read_rc, int *write_rc,
     // that would cause referand to be freed
     change->must_preacquire = (read_remainder > 0 && read_acquired == 0) ||
                               (write_remainder > 0 && write_acquired == 0);
+    DEBUG("Add change: <%"PRId64"> r: %i w: %i pa: %i", change->id,
+            change->rc.read_refcount, change->rc.write_refcount, 
+            (int)change->must_preacquire);
   }
   return ADLB_DATA_SUCCESS;
 }

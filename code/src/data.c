@@ -490,7 +490,7 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
     dc = datum_gc(id, d, acquire, &notifications->rc_changes);
     DATA_CHECK(dc);
   }
-  else if (closed || !ADLB_RC_IS_NULL(acquire.refcounts))
+  else if (closed || ADLB_RC_NOT_NULL(acquire.refcounts))
   {
     // Have to release or acquire references
     dc = xlb_incr_referand(&d->data, d->type, false, closed,
