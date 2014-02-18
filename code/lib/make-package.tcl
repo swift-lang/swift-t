@@ -52,7 +52,7 @@ set items [ eval list -load $libtclturbine \
                 -source blob.tcl       \
                 -source location.tcl   \
                 -source checkpoint.tcl \
-                -source gemtc.tcl \
+                -source gemtc_worker.tcl \
                 -source helpers.tcl ]
 
 puts [ eval ::pkg::create $metadata $items ]
