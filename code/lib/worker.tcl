@@ -21,6 +21,15 @@ namespace eval turbine {
 
     # Main worker loop
     proc worker { } {
+        
+        # Alternative GEMTC worker is enabled by environment variable
+        # TURBINE_GEMTC_WORKER=1, or another non-zero value
+        global env
+        if { [ info exists env(TURBINE_GEMTC_WORKER) ] &&
+             $env(TURBINE_GEMTC_WORKER) } {
+             gemtc_worker
+             return
+        }
 
         global WORK_TYPE
 
