@@ -66,6 +66,12 @@ int64_t handler_counters[XLB_MAX_HANDLERS];
 /** Copy of this processes' MPI rank */
 static int mpi_rank;
 
+/** Additional scratch space */
+#define XLB_SCRATCH_SIZE (1024 * 64)
+char xlb_scratch[XLB_SCRATCH_SIZE];
+static const adlb_buffer xlb_scratch_buf =
+          { .data = xlb_scratch, .length = XLB_SCRATCH_SIZE };
+
 static void register_handler(adlb_tag tag, xlb_handler h);
 
 static adlb_code handle_sync(int caller);
@@ -955,9 +961,8 @@ handle_retrieve(int caller)
   adlb_data_type type;
   adlb_binary_data result;
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
-  // TODO: small buffer
   dc = xlb_data_retrieve2(hdr->id, subscript, decr_self, incr_referand,
-                          &type, NULL, &result, &notifs);
+                          &type, &xlb_scratch_buf, &result, &notifs);
   assert(dc != ADLB_DATA_SUCCESS || result.length >= 0);
 
   struct retrieve_response_hdr resp_hdr;
@@ -1077,14 +1082,13 @@ handle_refcount_incr(int caller)
   
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
   adlb_data_code dc = xlb_data_reference_count(msg.id, msg.change, XLB_NO_ACQUIRE,
-                                           NULL, &notifs);
+                                               NULL, &notifs);
   
   // Shouldn't set any references based on this
   assert(notifs.references.count == 0);
 
   DEBUG("data_reference_count => %i", dc);
 
-  // TODO: send back increment/decrement work too
   struct packed_refcount_resp resp = {
       .success = (dc == ADLB_DATA_SUCCESS),
       .notifs.notify_count = 0,
@@ -1138,9 +1142,8 @@ handle_insert_atomic(int caller)
   {
     // TODO: support acquiring references, use xlb_data_retrieve2
     // Retrieve, optionally using xfer for storage
-    // TODO: small buffer
     resp.dc = xlb_data_retrieve(id, subscript, &resp.value_type,
-                                &xfer_buf, &value);
+                                &xlb_scratch_buf, &value);
     resp.value_len = value.length;
   }
   
@@ -1244,7 +1247,7 @@ handle_container_reference(int caller)
   adlb_binary_data member;
   adlb_data_code dc = xlb_data_container_reference(container_id,
                         subscript, reference, ref_type, to_acquire, 
-                        NULL, &member, &notifs);
+                        &xlb_scratch_buf, &member, &notifs);
 
   struct packed_cont_ref_resp resp = { .dc = dc };
   if (dc != ADLB_DATA_SUCCESS)
@@ -1435,7 +1438,7 @@ refcount_decr_helper(adlb_datum_id id, adlb_refcounts decr)
     adlb_notif_t notify = ADLB_NO_NOTIFS;
     adlb_data_code dc;
     dc = xlb_data_reference_count(id, adlb_rc_negate(decr), XLB_NO_ACQUIRE,
-                              NULL, &notify);
+                                  NULL, &notify);
     if (dc == ADLB_DATA_SUCCESS)
     {
       adlb_code rc = notify_helper(&notify);
