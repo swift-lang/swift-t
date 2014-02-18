@@ -590,6 +590,20 @@ ADLB_Free_binary_data(adlb_binary_data *buffer)
   }
 }
 
+// Free only if pointer owned, and doesn't match
+// provided pointer
+static inline void
+ADLB_Free_binary_data2(adlb_binary_data *buffer,
+                       const void *owned)
+{
+  // Must free any memory allocated
+  if (buffer->caller_data != NULL &&
+      buffer->caller_data != owned)
+  {
+    free(buffer->caller_data);
+  }
+}
+
 __attribute__((always_inline))
 static inline adlb_data_code
 ADLB_Own_data(const adlb_buffer *caller_buffer, adlb_binary_data *data)

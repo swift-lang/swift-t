@@ -985,7 +985,7 @@ handle_retrieve(int caller)
     RSEND(&resp_hdr, sizeof(resp_hdr), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
   }
   
-  ADLB_Free_binary_data(&result);
+  ADLB_Free_binary_data2(&result, xlb_scratch);
 
   MPE_LOG(xlb_mpe_svr_retrieve_end);
   return ADLB_SUCCESS;
@@ -1158,7 +1158,7 @@ handle_insert_atomic(int caller)
   {
     // Send response value
     SEND(value.data, value.length, MPI_BYTE, caller, ADLB_TAG_RESPONSE);
-    ADLB_Free_binary_data(&value);
+    ADLB_Free_binary_data2(&value, xlb_scratch);
   }
   return ADLB_SUCCESS;
 }
