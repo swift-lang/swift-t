@@ -1031,12 +1031,15 @@ xlb_data_retrieve2(adlb_datum_id id, adlb_subscript subscript,
   }
   assert(d != NULL);
 
-  
+  // Result code for retrieve
+  adlb_data_code result_code = ADLB_DATA_SUCCESS;
+
   if (!adlb_has_sub(subscript))
   {
     *type = d->type;
     CHECK_SET(id, d);
-    return ADLB_Pack(&d->data, d->type, caller_buffer, result);
+    dc = ADLB_Pack(&d->data, d->type, caller_buffer, result);
+    DATA_CHECK(dc);
   }
   else
   {
@@ -1050,15 +1053,19 @@ xlb_data_retrieve2(adlb_datum_id id, adlb_subscript subscript,
         if (!found)
         {
           DEBUG("SUBSCRIPT NOT FOUND");
-          return ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND;
+          result_code = ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND;
         }
         else if (t == NULL)
         {
           DEBUG("SUBSCRIPT CREATED BUT NOT LINKED");
-          return ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND;
+          result_code = ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND;
         }
-
-        return ADLB_Pack(t, d->data.CONTAINER.val_type, caller_buffer, result);
+        else
+        {
+          dc = ADLB_Pack(t, d->data.CONTAINER.val_type, caller_buffer,
+                         result);
+          DATA_CHECK(dc);
+        }
       }
       case ADLB_DATA_TYPE_STRUCT:
       {
@@ -1069,16 +1076,32 @@ xlb_data_retrieve2(adlb_datum_id id, adlb_subscript subscript,
         const adlb_datum_storage *v;
         dc = xlb_struct_get_field(d->data.STRUCT, field_ix, &v, type);
         DATA_CHECK(dc);
-        return ADLB_Pack(v, *type, caller_buffer, result);
+        
+        dc = ADLB_Pack(v, *type, caller_buffer, result);
+        DATA_CHECK(dc);
       }
       default:
         verbose_error(ADLB_DATA_ERROR_INVALID, "Cannot lookup subscript "
                         "on type: %s", ADLB_Data_type_tostring(d->type));
     }
   }
-  // Unreachable
-  assert(false);
-  return ADLB_DATA_ERROR_UNKNOWN;
+  
+  if (ADLB_RC_NOT_NULL(decr) || ADLB_RC_NOT_NULL(to_acquire)) {
+    // own data in case we free it
+    if (ADLB_RC_NOT_NULL(decr))
+    {
+      dc = ADLB_Own_data(caller_buffer, result);
+      DATA_CHECK(dc);
+    }
+
+    xlb_acquire_rc to_acquire2 = { .refcounts = to_acquire,
+                                   .subscript = subscript };
+    dc = xlb_data_reference_count(id, adlb_rc_negate(decr),
+                to_acquire2, NULL, notifications);
+    DATA_CHECK(dc);
+  }
+
+  return result_code;
 }
 
 /**

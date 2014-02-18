@@ -955,6 +955,7 @@ handle_retrieve(int caller)
   adlb_data_type type;
   adlb_binary_data result;
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
+  // TODO: small buffer
   dc = xlb_data_retrieve2(hdr->id, subscript, decr_self, incr_referand,
                           &type, NULL, &result, &notifs);
   assert(dc != ADLB_DATA_SUCCESS || result.length >= 0);
@@ -1137,6 +1138,7 @@ handle_insert_atomic(int caller)
   {
     // TODO: support acquiring references, use xlb_data_retrieve2
     // Retrieve, optionally using xfer for storage
+    // TODO: small buffer
     resp.dc = xlb_data_retrieve(id, subscript, &resp.value_type,
                                 &xfer_buf, &value);
     resp.value_len = value.length;

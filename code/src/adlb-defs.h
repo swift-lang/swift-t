@@ -138,6 +138,9 @@ static const adlb_refcounts ADLB_READWRITE_RC =
 #define ADLB_RC_IS_NULL(rc) \
     ((rc).read_refcount == 0 && (rc).write_refcount == 0)
 
+#define ADLB_RC_NOT_NULL(rc) \
+    ((rc).read_refcount != 0 || (rc).write_refcount != 0)
+
 #define ADLB_RC_POSITIVE(rc) \
     ((rc).read_refcount > 0 && (rc).write_refcount > 0)
 
