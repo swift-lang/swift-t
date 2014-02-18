@@ -95,8 +95,9 @@ static adlb_data_code
 datum_init_multiset(adlb_datum *d, adlb_data_type val_type);
 
 static adlb_data_code
-xlb_data_close(adlb_datum_id id, adlb_datum *d, adlb_notif_t *notify,
-              bool release_write_refs);
+add_close_notifs(adlb_datum_id id, adlb_datum *d,
+                    adlb_notif_t *notify);
+
 static adlb_data_code datum_gc(adlb_datum_id id, adlb_datum* d,
            xlb_acquire_rc acquire, xlb_rc_changes *rc_changes);
 
@@ -134,7 +135,7 @@ adlb_data_code process_ref_list(const struct list *subscribers,
 
 static 
 adlb_data_code append_notifs(const struct list_i *listeners,
-                   adlb_subscript sub, adlb_notif_ranks *notify);
+  adlb_datum_id id, adlb_subscript sub, adlb_notif_ranks *notify);
 
 
 static bool container_contains(adlb_container *c, adlb_subscript sub);
@@ -460,6 +461,9 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
     DEBUG("read_refcount: <%"PRId64"> => %i", id, d->read_refcount);
   }
 
+  // True if we just closed the ID here
+  bool closed = false;
+
   if (write_incr != 0) {
     // Should not go negative
     check_verbose(d->write_refcount > 0 &&
@@ -471,25 +475,25 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
     if (d->write_refcount == 0) {
       // If we're keeping around read-only version, release
       // only write refs here
-      bool release_write_refs = d->read_refcount > 0;
-      // TODO: acquire refs here?
-      dc = xlb_data_close(id, d, notifications, release_write_refs);
+      dc = add_close_notifs(id, d, notifications);
       DATA_CHECK(dc);
+
+      closed = true;
     }
     DEBUG("write_refcount: <%"PRId64"> => %i", id, d->write_refcount);
   }
 
-  if (d->read_refcount <= 0 && d->write_refcount <= 0)
+  if (d->read_refcount == 0 && d->write_refcount == 0)
   {
     if (garbage_collected != NULL)
       *garbage_collected = true;
     dc = datum_gc(id, d, acquire, &notifications->rc_changes);
     DATA_CHECK(dc);
   }
-  else if (!ADLB_RC_IS_NULL(acquire.refcounts))
+  else if (closed || !ADLB_RC_IS_NULL(acquire.refcounts))
   {
-    // Have to acquire references
-    dc = xlb_incr_referand(&d->data, d->type, true, true,
+    // Have to release or acquire references
+    dc = xlb_incr_referand(&d->data, d->type, false, closed,
                  acquire, &notifications->rc_changes); 
     DATA_CHECK(dc);
 }
@@ -974,21 +978,15 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
    will_be_gced:
  */
 static adlb_data_code
-xlb_data_close(adlb_datum_id id, adlb_datum *d, adlb_notif_t *notify,
-              bool release_write_refs)
+add_close_notifs(adlb_datum_id id, adlb_datum *d, adlb_notif_t *notify)
 {
   assert(d != NULL);
-  adlb_subscript no_subscript = ADLB_NO_SUB;
   DEBUG("data_close: <%"PRId64"> listeners: %i", id, d->listeners.size);
-  adlb_data_code dc = append_notifs(&d->listeners, no_subscript, &notify->notify);
+  adlb_data_code dc = append_notifs(&d->listeners, id, ADLB_NO_SUB,
+                                    &notify->notify);
   DATA_CHECK(dc);
   list_i_clear(&d->listeners);
 
-
-  if (release_write_refs)
-  {
-    // TODO: need to release write references in here
-  }
   return ADLB_DATA_SUCCESS;
 }
 
@@ -1439,7 +1437,7 @@ insert_notifications2(adlb_datum *d,
   
   if (sub_list != NULL && sub_list->size > 0)
   {
-    dc = append_notifs(sub_list, subscript, &notify->notify);
+    dc = append_notifs(sub_list, container_id, subscript, &notify->notify);
     DATA_CHECK(dc);
     list_i_free(sub_list);
   }
@@ -1535,7 +1533,7 @@ adlb_data_code process_ref_list(const struct list *subscribers,
 
 static 
 adlb_data_code append_notifs(const struct list_i *listeners,
-                   adlb_subscript sub, adlb_notif_ranks *notify)
+  adlb_datum_id id, adlb_subscript sub, adlb_notif_ranks *notify)
 {
   assert(notify->count >= 0);
   int nlisteners = listeners->size;
@@ -1551,6 +1549,7 @@ adlb_data_code append_notifs(const struct list_i *listeners,
     assert(node != NULL); // If null, list size was wrong
     adlb_notif_rank *nrank = &notify->notifs[i + notify->count];
     nrank->rank = node->data;
+    nrank->id = id;
     nrank->subscript = sub;
     node = node->next;
   }
