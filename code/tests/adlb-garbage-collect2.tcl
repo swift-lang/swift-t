@@ -36,7 +36,6 @@ proc test_insert_then_decr_ref {} {
   # Insert and close
   adlb::insert $C 1 $i2 integer 1
 
-  puts "RETRIEVE $C"
   set res [ adlb::lookup $C 0 ]
   if { $res != $i1 } {
     puts "res: $res != $i1"
