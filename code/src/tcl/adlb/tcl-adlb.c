@@ -3036,26 +3036,61 @@ ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 /**
    usage: adlb::insert_atomic <id> <subscript>
+              [<caller read refs>] [<caller write refs>]
+              [<outer write decrements>] [<outer read decrements>]
    returns: 0 if the id[subscript] already existed, else 1
 */
 static int
 ADLB_Insert_Atomic_Cmd(ClientData cdata, Tcl_Interp *interp,
                        int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(3);
+  TCL_CONDITION(objc >= 3, "Requires at least 3 args");
   int rc;
+  int argpos = 1;
 
   bool b;
   adlb_datum_id id;
-  Tcl_GetADLB_ID(interp, objv[1], &id);
+  Tcl_GetADLB_ID(interp, objv[argpos++], &id);
   adlb_subscript subscript;
-  rc = Tcl_GetADLB_Subscript(objv[2], &subscript);
+  rc = Tcl_GetADLB_Subscript(objv[argpos++], &subscript);
   TCL_CHECK_MSG(rc, "Invalid subscript argument");
+
+  // Increments/decrements for outer and inner containers
+  // (default no extras)
+  adlb_retrieve_rc refcounts = ADLB_RETRIEVE_NO_RC;
+
+  if (argpos < objc)
+  {
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++],
+                    &refcounts.incr_referand.read_refcount);
+    TCL_CHECK(rc);
+  }
+  if (argpos < objc)
+  {
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++],
+                    &refcounts.incr_referand.write_refcount);
+    TCL_CHECK(rc);
+  }
+
+  if (argpos < objc)
+  {
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++],
+                           &refcounts.decr_self.write_refcount);
+    TCL_CHECK(rc);
+  }
+  if (argpos < objc)
+  {
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++],
+                           &refcounts.decr_self.read_refcount);
+    TCL_CHECK(rc);
+  }
+  TCL_CONDITION(argpos == objc, "Trailing args starting at %i", argpos);
+  
 
   // TODO: support binary subscript
   DEBUG_ADLB("adlb::insert_atomic: <%"PRId64">[\"%.*s\"]",
              id, (int)subscript.length, (const char*)subscript.key);
-  rc = ADLB_Insert_atomic(id, subscript, &b, NULL, NULL, NULL);
+  rc = ADLB_Insert_atomic(id, subscript, refcounts, &b, NULL, NULL, NULL);
 
   TCL_CONDITION(rc == ADLB_SUCCESS,
                 "adlb::insert_atomic: failed: <%"PRId64">[%.*s]",

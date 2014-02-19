@@ -712,10 +712,6 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp* interp,
 }
 
 static int
-create_autoclose_rule(Tcl_Interp *interp, Tcl_Obj *const objv[],
-                      adlb_datum_id wait_on, adlb_datum_id to_close);
-
-static int
 Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[], adlb_data_type type)
 {
@@ -760,31 +756,34 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
     type_extra.MULTISET.val_type = tmp;
   }
 
-  // Increments for inner container (default no extras)
-  adlb_refcounts nested_incr = ADLB_NO_RC;
+
+  // Increments/decrements for outer and inner containers
+  // (default no extras)
+  adlb_retrieve_rc refcounts = ADLB_RETRIEVE_NO_RC;
+
   if (argpos < objc)
   {
     rc = Tcl_GetIntFromObj(interp, objv[argpos++],
-                                   &nested_incr.read_refcount);
+                    &refcounts.incr_referand.read_refcount);
     TCL_CHECK(rc);
   }
   if (argpos < objc)
   {
     rc = Tcl_GetIntFromObj(interp, objv[argpos++],
-                                   &nested_incr.write_refcount);
+                    &refcounts.incr_referand.write_refcount);
     TCL_CHECK(rc);
   }
 
-  // Decrements for outer container
-  adlb_refcounts decr = ADLB_NO_RC;
   if (argpos < objc)
   {
-    rc = Tcl_GetIntFromObj(interp, objv[argpos++], &decr.write_refcount);
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++],
+                           &refcounts.decr_self.write_refcount);
     TCL_CHECK(rc);
   }
   if (argpos < objc)
   {
-    rc = Tcl_GetIntFromObj(interp, objv[argpos++], &decr.read_refcount);
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++],
+                           &refcounts.decr_self.read_refcount);
     TCL_CHECK(rc);
   }
   TCL_CONDITION(argpos == objc, "Trailing args starting at %i", argpos);
@@ -806,34 +805,37 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
   bool created;
   int value_len;
   adlb_data_type outer_value_type;
-  adlb_code code = ADLB_Insert_atomic(id, subscript, &created,
-                              xfer, &value_len, &outer_value_type);
+
+  // Initial trial at inserting.
+  // Refcounts are only applied here if we got back the data
+  adlb_code code = ADLB_Insert_atomic(id, subscript, refcounts,
+                        &created, xfer, &value_len, &outer_value_type);
   TCL_CONDITION(code == ADLB_SUCCESS, "error in Insert_atomic!");
 
   if (created)
   {
+    adlb_ref new_ref;
+    // Initial refcount for container: 1 r/w
+    // TODO: different counts?
+    new_ref.read_refs = new_ref.write_refs = 1;
+
     // Need to create container and insert
     adlb_datum_id new_id;
     adlb_create_props props = DEFAULT_CREATE_PROPS;
-    // Initial read refcount - 1 for container, plus more
-    // Initial write refcount - 1 for container, plus more
-    props.read_refcount = 1 + nested_incr.read_refcount;
-    props.write_refcount = 1 + nested_incr.write_refcount;
+
+    props.read_refcount = new_ref.read_refs +
+                          refcounts.incr_referand.read_refcount;
+    props.write_refcount = new_ref.write_refs +
+                           refcounts.incr_referand.write_refcount;
     code = ADLB_Create(ADLB_DATA_ID_NULL, type, type_extra, props, &new_id);
     TCL_CONDITION(code == ADLB_SUCCESS, "Error while creating nested");
-
-    adlb_ref new_ref;
+    
     new_ref.id = new_id;
-    // Initially have a read and write refcount for inner container
-    // TODO: different counts?
-    new_ref.read_refs = new_ref.write_refs = 1;
-    code = ADLB_Store(id, subscript, ADLB_DATA_TYPE_REF, &new_ref,
-                    (int)sizeof(new_ref), decr);
-    TCL_CONDITION(code == ADLB_SUCCESS, "Error while inserting nested");
 
-    // Set up rule to close container
-    rc = create_autoclose_rule(interp, objv, id, new_id);
-    TCL_CHECK(rc);
+    // Store and apply remaining refcounts
+    code = ADLB_Store(id, subscript, ADLB_DATA_TYPE_REF, &new_ref,
+                    (int)sizeof(new_ref), refcounts.decr_self);
+    TCL_CONDITION(code == ADLB_SUCCESS, "Error while inserting nested");
 
     // Return the ID of the new container
     Tcl_SetObjResult(interp, Tcl_NewADLB_ID(new_id));
@@ -842,44 +844,18 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
   else
   {
     // Wasn't able to create.  Entry may or may not already have value.
-    bool must_do_rc = !ADLB_RC_IS_NULL(decr);
     while (value_len < 0)
     {
       // Need to poll until value exists
-      // Try to decrement reference counts with this operation
-      adlb_retrieve_rc ret_decr = ADLB_RETRIEVE_NO_RC;
-      if (must_do_rc)
-        ret_decr.decr_self = decr;
-      code = ADLB_Retrieve(id, subscript, ret_decr, &outer_value_type,
+      // This will decrement reference counts if it succeeds
+      code = ADLB_Retrieve(id, subscript, refcounts, &outer_value_type,
                          xfer, &value_len);
       TCL_CONDITION(code == ADLB_SUCCESS,
           "unexpected error while polling for container value");
 
-      must_do_rc = false;
     }
     TCL_CONDITION(outer_value_type == ADLB_DATA_TYPE_REF,
             "only works on containers with values of type ref");
-
-    if (!ADLB_RC_IS_NULL(nested_incr))
-    {
-      // Do any necessary changes to refcounts
-      adlb_ref nested_ref;
-      adlb_data_code dc = ADLB_Unpack_ref(&nested_ref, xfer, value_len);
-      // TODO: acquire ref?
-      TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
-            "unexpected error unpacked reference data");
-      code = ADLB_Refcount_incr(nested_ref.id, nested_incr);
-      TCL_CONDITION(code == ADLB_SUCCESS,
-            "unexpected error incrementing nested reference counts");
-    }
-
-    if (must_do_rc)
-    {
-      // do decrement as separate operation
-      code = ADLB_Refcount_incr(id, adlb_rc_negate(decr));
-      TCL_CONDITION(code == ADLB_SUCCESS,
-          "unexpected error when update reference count");
-    }
 
     Tcl_Obj* result = NULL;
     adlb_data_to_tcl_obj(interp, objv, id, ADLB_DATA_TYPE_REF, NULL,
@@ -915,47 +891,6 @@ Turbine_Create_Nested_Bag_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   return Turbine_Create_Nested_Impl(cdata, interp, objc, objv,
                                   ADLB_DATA_TYPE_MULTISET);
-}
-
-static int
-create_autoclose_rule(Tcl_Interp *interp, Tcl_Obj *const objv[],
-                      adlb_datum_id wait_on, adlb_datum_id to_close)
-{
-  const int i64_len = 21; // Upper bound on int64_t string length
-
-  int tmp_len;
-  const int name_len = 10 + i64_len; // enough for text+id
-  char name[name_len];
-  tmp_len = sprintf(name, "autoclose-%"PRId64"", to_close);
-  assert(tmp_len > 0 && tmp_len < name_len);
-
-  const int action_len = 30 + i64_len; // enough for function name+id
-  char action[action_len];
-  tmp_len = sprintf(action, "adlb::write_refcount_decr %"PRId64"", to_close);
-  assert(tmp_len > 0 && tmp_len < action_len);
-
-  if (turbine_is_engine())
-  {
-    turbine_transform_id transform_id;
-    turbine_code tc = turbine_rule(name, 1, &wait_on, 0, NULL,
-                  TURBINE_ACTION_LOCAL, action, ADLB_curr_priority,
-                  TURBINE_RANK_ANY, 1, &transform_id);
-    TCL_CONDITION(tc == TURBINE_SUCCESS, "Failed creating autoclose rule");
-  }
-  else
-  {
-    // We're not on an engine, need to send this to an engine to process
-    const int rule_cmd_len = name_len + action_len + 20 + i64_len;
-    char rule_cmd[rule_cmd_len];
-    tmp_len = sprintf(rule_cmd, "rule %"PRId64" \"%s\" name \"%s\"",
-                      wait_on, action, name);
-    assert(tmp_len > 0 && tmp_len < rule_cmd_len);
-
-    adlb_code code = ADLB_Put(rule_cmd, tmp_len + 1, ADLB_RANK_ANY, adlb_comm_rank,
-                        TURBINE_ADLB_WORK_TYPE_CONTROL, ADLB_curr_priority, 1);
-    TCL_CONDITION(code == ADLB_SUCCESS, "Error in ADLB put");
-  }
-  return TCL_OK;
 }
 
 static int
