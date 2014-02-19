@@ -202,11 +202,18 @@ xlb_update_rc_id(adlb_datum_id id, int *read_rc, int *write_rc,
   // Remainder change that needs to be applied
   int read_remainder, write_remainder;
 
-  dc = apply_rc_update(release_read, read_rc,
-          to_acquire.read_refcount, &read_acquired, &read_remainder);
-  check_verbose(dc == ADLB_DATA_SUCCESS, dc, "Error updating read "
+  if (xlb_read_refcount_enabled)
+  {
+    dc = apply_rc_update(release_read, read_rc,
+            to_acquire.read_refcount, &read_acquired, &read_remainder);
+    check_verbose(dc == ADLB_DATA_SUCCESS, dc, "Error updating read "
             "refcount of <%"PRId64"> r=%i acquiring %i release:%i",
             id, *read_rc, to_acquire.read_refcount, (int)read_remainder);
+  }
+  else
+  {
+    read_acquired = read_remainder = 0;
+  }
 
   dc = apply_rc_update(release_write, write_rc,
           to_acquire.write_refcount, &write_acquired, &write_remainder);

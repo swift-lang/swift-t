@@ -441,16 +441,13 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
   int read_incr = change.read_refcount;
   int write_incr = change.write_refcount;
 
-  if (read_incr != 0) {
+  if (xlb_read_refcount_enabled && read_incr != 0 &&
+                                   !d->status.permanent) {
     // Shouldn't get here if disabled
     check_verbose(xlb_read_refcount_enabled, ADLB_DATA_ERROR_INVALID,
                   "Internal error: should not get here with read reference "
                   "counting disabled");
 
-    if (d->status.permanent) {
-        // Ignore read reference count operations for permanent variables
-        return ADLB_DATA_SUCCESS;
-      }
     // Should not go negative
     check_verbose(d->read_refcount > 0 &&
                    d->read_refcount + read_incr >= 0,
@@ -496,7 +493,7 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
     dc = xlb_incr_referand(&d->data, d->type, false, closed,
                  acquire, &notifications->rc_changes); 
     DATA_CHECK(dc);
-}
+  }
 
   return ADLB_DATA_SUCCESS;
 }
@@ -1083,7 +1080,7 @@ xlb_data_retrieve2(adlb_datum_id id, adlb_subscript subscript,
 
     xlb_acquire_rc to_acquire2 = { .refcounts = to_acquire,
                                    .subscript = subscript };
-    dc = xlb_data_reference_count(id, adlb_rc_negate(decr),
+    dc = xlb_rc_impl(d, id, adlb_rc_negate(decr),
                 to_acquire2, NULL, notifications);
     DATA_CHECK(dc);
   }
