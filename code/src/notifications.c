@@ -354,7 +354,6 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
   xlb_rc_changes *c = &notifs->rc_changes;
   for (int i = 0; i < c->count; i++)
   {
-    DEBUG("COUNT BEFORE: %i", c->count);
     bool applied = false;
     xlb_rc_change *change = &c->arr[i];
     if (apply_all || (apply_preacquire && change->must_preacquire))
@@ -382,7 +381,6 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
       ADLB_DATA_CHECK(dc);
       applied = true;
     }
-    DEBUG("COUNT AFTER: %i", c->count);
 
     if (applied)
     {

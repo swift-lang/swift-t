@@ -702,18 +702,18 @@ ADLBP_Store(adlb_datum_id id, adlb_subscript subscript, adlb_data_type type,
             const void *data, int length, adlb_refcounts refcount_decr)
 {
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
-  adlb_code rc;
+  adlb_code rc, final_rc;
   
-  rc = xlb_store(id, subscript, type, data, length, refcount_decr,
+  final_rc = xlb_store(id, subscript, type, data, length, refcount_decr,
                  &notifs);
-  ADLB_CHECK(rc);
+  ADLB_CHECK(final_rc); // Check for ADLB_ERROR, not other codes
   
   rc = xlb_notify_all(&notifs);
   ADLB_CHECK(rc);
 
   xlb_free_notif(&notifs);
 
-  return ADLB_SUCCESS;
+  return final_rc;
 }
 
 
