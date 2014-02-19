@@ -41,8 +41,11 @@ adlb_data_code xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change,
   }
   else
   {
-    // TODO: use alternative implementation that can receive
-    //  notifications
+    /*
+     * If sending server->server, just send sync and don't wait for
+     * response or notification to come back - might as well have the
+     * other server do the work as this one
+     */
     struct packed_sync sync_msg;
     sync_msg.mode = ADLB_SYNC_REFCOUNT;
     sync_msg.incr.id = id;
