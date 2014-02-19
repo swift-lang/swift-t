@@ -2089,7 +2089,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
   // Free if needed
   if (data.data != xfer_buf.data)
     ADLB_Free_binary_data(&data);
-  
+ 
   CHECK_ADLB_STORE(rc, id);
 
   return TCL_OK;
