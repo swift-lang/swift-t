@@ -708,14 +708,8 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
     }
 
     // add reference setting work to notifications
-    adlb_ref_data *refs = &notifications->references;
-    DATA_REALLOC(refs->data, (size_t)(refs->count + 1));
-
-    adlb_ref_datum *ref = &refs->data[refs->count++];
-    ref->id = reference;
-    ref->type = ref_type;
-    ref->value = result->data;
-    ref->value_len = result->length;
+    xlb_refs_add(&notifications->references, reference,
+                 ref_type, result->data, result->length);
 
     // Need to acquire references 
     adlb_refcounts decr = { .read_refcount = -1,
@@ -797,6 +791,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
    Can allocate fresh memory in notifications
    Caller must free result
    type: type of data to be assigned
+   notifications: list of notifications, must be initialized
  */
 adlb_data_code
 xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
@@ -806,12 +801,6 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
           adlb_notif_t *notifications)
 {
   assert(length >= 0);
-  
-  // Initialize notifications to empty to be sure
-  notifications->notify.count = 0;
-  notifications->references.count = 0;
-  notifications->to_free = NULL;
-  notifications->to_free_length = 0;
 
   adlb_datum* d;
   bool found = table_lp_search(&tds, id, (void**)&d);
@@ -1530,7 +1519,8 @@ adlb_data_code process_ref_list(const struct list *subscribers,
   if (nsubs > 0)
   {
     // append reference data
-    DATA_REALLOC(references->data, (size_t)(nsubs + references->count));
+    adlb_code ac = xlb_refs_expand(references, nsubs);
+    DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
 
     struct list_item *node = subscribers->head;
     for (int i = 0; i < nsubs; i++)
@@ -1564,7 +1554,8 @@ adlb_data_code append_notifs(const struct list_i *listeners,
   if (nlisteners == 0)
     return ADLB_DATA_SUCCESS;
 
-  DATA_REALLOC(notify->notifs, (size_t)(notify->count + nlisteners));
+  adlb_code ac = xlb_notifs_expand(notify, nlisteners);
+  DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
 
   struct list_i_item *node = listeners->head;
   for (int i = 0; i < nlisteners; i++)

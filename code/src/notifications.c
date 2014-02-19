@@ -20,11 +20,11 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
                                bool apply_local, bool apply_preacquire);
 
 static adlb_code
-xlb_set_refs(const adlb_ref_data *refs);
+xlb_set_refs(adlb_notif_t *notifs, bool local_only);
 
 static adlb_code
-xlb_set_ref_and_notify(adlb_datum_id id, const void *value, int length,
-                         adlb_data_type type);
+xlb_set_ref(adlb_datum_id id, const void *value, int length,
+            adlb_data_type type, adlb_notif_t *notifs);
 
 static adlb_code
 send_client_notif_work(int caller, 
@@ -91,6 +91,7 @@ void xlb_free_notif(adlb_notif_t *notifs)
 {
   xlb_free_ranks(&notifs->notify);
   xlb_free_datums(&notifs->references);
+  xlb_rc_changes_free(&notifs->rc_changes);
   for (int i = 0; i < notifs->to_free_length; i++)
   {
     free(notifs->to_free[i]);
@@ -107,6 +108,7 @@ void xlb_free_ranks(adlb_notif_ranks *ranks)
   {
     free(ranks->notifs);
     ranks->notifs = NULL;
+    ranks->count = ranks->size = 0;
   }
 }
 
@@ -116,30 +118,88 @@ void xlb_free_datums(adlb_ref_data *datums)
   {
     free(datums->data);
     datums->data = NULL;
+    datums->count = datums->size = 0;
   }
 }
 
 /*
    Set references.
-   refs: an array of ids, where negative ids indicate that
-          the value should be treated as a string, and
-          positive indicates it should be parsed to integer
-   value: string value to set references to.
+
+   After returning, all matching references should be cleared
+   from notifications.  Additional notifications and refcount
+   operations may be added to notifications strcuture
+
+   local_only: only set references local to server
  */
 static adlb_code
-xlb_set_refs(const adlb_ref_data *refs)
+xlb_set_refs(adlb_notif_t *notifs, bool local_only)
 {
   adlb_code rc;
+  adlb_ref_data *refs = &notifs->references;
   for (int i = 0; i < refs->count; i++)
   {
     const adlb_ref_datum *ref = &refs->data[i];
-    TRACE("Notifying reference %"PRId64" (%s)\n", ref->id,
-          ADLB_Data_type_tostring(ref->type));
-    rc = xlb_set_ref_and_notify(ref->id, ref->value, ref->value_len,
-                                ref->type);
-    ADLB_CHECK(rc);
+
+    if (!local_only || ADLB_Locate(ref->id) == xlb_comm_rank)
+    {
+      TRACE("Notifying reference %"PRId64" (%s)\n", ref->id,
+            ADLB_Data_type_tostring(ref->type));
+      rc = xlb_set_ref(ref->id, ref->value, ref->value_len,
+                       ref->type, notifs);
+      ADLB_CHECK(rc);
+    }
+
+    if (local_only)
+    {
+      // swap with last
+      refs->count--;
+      if (refs->count > 0)
+      {
+        // Swap last to here
+        memcpy(&refs->data[i], &refs[refs->count],
+               sizeof(refs->data[i]));
+        i--; // Process new entry next
+      }
+    }
+  }
+  
+  if (!local_only)
+  {
+    // We processed all, can clear
+    xlb_free_datums(&notifs->references);
   }
   return ADLB_SUCCESS;
+}
+
+static adlb_code
+xlb_set_ref(adlb_datum_id id, const void *value, int length,
+            adlb_data_type type, adlb_notif_t *notifs)
+{
+  DEBUG("xlb_set_ref: <%"PRId64">=%p[%i]", id, value, length);
+
+  int rc = ADLB_SUCCESS;
+  int server = ADLB_Locate(id);
+
+  if (server == xlb_comm_rank)
+  {
+    adlb_data_code dc = xlb_data_store(id, ADLB_NO_SUB, value, length,
+                                       type, ADLB_WRITE_RC, notifs);
+    ADLB_DATA_CHECK(dc);
+
+    return ADLB_SUCCESS;
+  }
+
+  if (xlb_am_server)
+    rc = xlb_sync(server);
+  ADLB_CHECK(rc);
+
+  // TODO: if processing notifs on client, and not on server here,
+  //      want to get notifs back
+  rc = ADLB_Store(id, ADLB_NO_SUB, type, value, length, ADLB_WRITE_RC);
+  ADLB_CHECK(rc);
+  TRACE("SET_REFERENCE DONE");
+  return ADLB_SUCCESS;
+
 }
 
 static adlb_code
@@ -182,16 +242,19 @@ xlb_process_local_notif(adlb_notif_t *notifs)
   assert(xlb_am_server);
   
   adlb_code ac;
+  
+  // First set references where necessary
+  // This may result in adding some refcount changes
+  ac = xlb_set_refs(notifs, true);
+  ADLB_CHECK(ac);
 
-  // Do local refcounts first, since they can add additional notifs
+  // Do local refcounts second, since they can add additional notifs
   // Also do pre-increments here, since we can't send them
   ac = xlb_rc_changes_apply(notifs, false, true, true);
   ADLB_CHECK(ac);
 
-  // TODO: process reference setting locally if possible.  This is slightly
-  // more complex as we might want to pass the notification work for the
-  // set references back to the client
-
+  // Finally send notification messages, which will not add any
+  // additional work
   ac = xlb_process_local_notif_ranks(&notifs->notify);
   ADLB_CHECK(ac);
 
@@ -245,26 +308,6 @@ xlb_process_local_notif_ranks(adlb_notif_ranks *ranks)
   return ADLB_SUCCESS;
 }
 
-static adlb_code
-xlb_set_ref_and_notify(adlb_datum_id id, const void *value, int length,
-                         adlb_data_type type)
-{
-  DEBUG("xlb_set_ref: <%"PRId64">=%p[%i]", id, value, length);
-
-  int rc = ADLB_SUCCESS;
-  int server = ADLB_Locate(id);
-  if (xlb_am_server && server != xlb_comm_rank)
-    rc = xlb_sync(server);
-  ADLB_CHECK(rc);
-
-  // TODO: if processing notifs on client, and not on server here,
-  //      want to get notifs back
-  rc = ADLB_Store(id, ADLB_NO_SUB, type, value, length, ADLB_WRITE_RC);
-  ADLB_CHECK(rc);
-  TRACE("SET_REFERENCE DONE");
-  return ADLB_SUCCESS;
-}
-
 adlb_code
 xlb_notify_all(adlb_notif_t *notifs)
 {
@@ -280,7 +323,7 @@ xlb_notify_all(adlb_notif_t *notifs)
   }
   if (notifs->references.count > 0)
   {
-    rc = xlb_set_refs(&notifs->references);
+    rc = xlb_set_refs(notifs, false);
     ADLB_CHECK(rc);
   }
 
@@ -356,6 +399,22 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
     xlb_rc_changes_free(c);
   }
 
+  return ADLB_SUCCESS;
+}
+
+adlb_code
+xlb_refs_expand(adlb_ref_data *refs, int to_add)
+{
+  assert(to_add >= 0);
+  int new_size = refs->size == 0 ? 
+                    64 : refs->size * 2;
+  if (new_size < refs->size + to_add)
+    new_size = refs->size + to_add;
+
+  refs->data = realloc(refs->data, sizeof(refs->data[0]) *
+                       (size_t)new_size);
+  CHECK_MSG(refs->data != NULL, "Out of memory");
+  refs->size = new_size;
   return ADLB_SUCCESS;
 }
 
