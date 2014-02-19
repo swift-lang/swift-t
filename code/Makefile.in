@@ -5,6 +5,8 @@ ENABLE_SHARED = @ENABLE_SHARED@
 ENABLE_STATIC = @ENABLE_STATIC@
 
 PACKAGE = lib/pkgIndex.tcl
+
+# Enabled packages tracks which ultimate build target files are enabled
 ENABLED_PACKAGES :=
 
 BUILD_ALL_TARGETS = libs executables
@@ -13,13 +15,12 @@ BUILD_ALL_TARGETS = libs executables
 ifeq ($(ENABLE_SHARED),1)
 # Shared libraries are required for tcl package
   BUILD_ALL_TARGETS += package
-  ENABLED_PACKAGES += package
+  ENABLED_PACKAGES += $(PACKAGE)
 endif
 
 ifeq ($(ENABLE_STATIC),1)
 # Shared libraries are required for tcl package
   BUILD_ALL_TARGETS += package_static
-  ENABLED_PACKAGES += package_static
 endif
 
 all: $(BUILD_ALL_TARGETS)
@@ -110,6 +111,16 @@ endif
 libs: $(TCL_TURBINE_LIBS)
 
 libs_static: $(TCL_TURBINE_STATIC_LIBS)
+
+ifeq ($(ENABLE_SHARED),1)
+  # Shared libraries are one of the file build targets
+  ENABLED_PACKAGES += $(TCL_TURBINE_LIBS)
+endif
+
+ifeq ($(ENABLE_STATIC),1)
+  # Shared libraries are one of the file build targets
+  ENABLED_PACKAGES += $(TCL_TURBINE_STATIC_LIBS)
+endif
 
 srcdir = @srcdir@
 
