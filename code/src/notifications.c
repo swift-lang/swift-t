@@ -1,5 +1,6 @@
 #include "notifications.h"
 
+#include "client_internal.h"
 #include "common.h"
 #include "handlers.h"
 #include "messaging.h"
@@ -31,13 +32,6 @@ send_client_notif_work(int caller,
         void *response, size_t response_len,
         struct packed_notif_counts *inner_struct,
         const adlb_notif_t *notifs, bool use_xfer);
-
-/*
-  notify: notify structure initialzied to empty
- */
-static adlb_code
-xlb_recv_notif_work(const struct packed_notif_counts *counts,
-    int to_server_rank, adlb_notif_t *not);
 
 // Returns size of payload including null terminator
 static int fill_payload(char *payload, adlb_datum_id id, adlb_subscript subscript)
@@ -193,9 +187,9 @@ xlb_set_ref(adlb_datum_id id, const void *value, int length,
     rc = xlb_sync(server);
   ADLB_CHECK(rc);
 
-  // TODO: if processing notifs on client, and not on server here,
-  //      want to get notifs back
-  rc = ADLB_Store(id, ADLB_NO_SUB, type, value, length, ADLB_WRITE_RC);
+  // Store value, maybe accumulating more notification/ref setting work
+  rc = xlb_store(id, ADLB_NO_SUB, type, value, length, ADLB_WRITE_RC,
+                 notifs);
   ADLB_CHECK(rc);
   TRACE("SET_REFERENCE DONE");
   return ADLB_SUCCESS;
@@ -363,10 +357,9 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
       }
       else
       {
-        // TODO: use internal function that appends notifs
-        adlb_code ac = ADLB_Refcount_incr(change->id, change->rc);
-        CHECK_MSG(ac == ADLB_SUCCESS,
-            "could not modify refcount of <%"PRId64">", change->id);
+        // Increment refcount, maybe accumulating more notifications
+        adlb_code ac = xlb_refcount_incr(change->id, change->rc, notifs);
+        ADLB_CHECK(ac);
       }
       applied = true;
     }
@@ -375,7 +368,7 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
       // Process locally and added consequential notifications to list
       dc = xlb_data_reference_count(change->id, change->rc, XLB_NO_ACQUIRE,
                                     NULL, notifs);
-      DATA_CHECK(dc);
+      ADLB_DATA_CHECK(dc);
       applied = true;
     }
 
@@ -647,7 +640,7 @@ xlb_handle_client_notif_work(const struct packed_notif_counts *counts,
   return ADLB_SUCCESS;
 }
 
-static adlb_code
+adlb_code
 xlb_recv_notif_work(const struct packed_notif_counts *counts,
     int to_server_rank, adlb_notif_t *notify)
 {

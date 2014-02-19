@@ -36,6 +36,7 @@
 #include "adlb-version.h"
 #include "adlb-xpt.h"
 #include "checks.h"
+#include "client_internal.h"
 #include "common.h"
 #include "data.h"
 #include "debug.h"
@@ -700,6 +701,27 @@ adlb_code
 ADLBP_Store(adlb_datum_id id, adlb_subscript subscript, adlb_data_type type,
             const void *data, int length, adlb_refcounts refcount_decr)
 {
+  adlb_notif_t notifs = ADLB_NO_NOTIFS;
+  adlb_code rc;
+  
+  rc = xlb_store(id, subscript, type, data, length, refcount_decr,
+                 &notifs);
+  ADLB_CHECK(rc);
+  
+  rc = xlb_notify_all(&notifs);
+  ADLB_CHECK(rc);
+
+  xlb_free_notif(&notifs);
+
+  return ADLB_SUCCESS;
+}
+
+
+adlb_code
+xlb_store(adlb_datum_id id, adlb_subscript subscript, adlb_data_type type,
+            const void *data, int length, adlb_refcounts refcount_decr,
+            adlb_notif_t *notifs)
+{
   adlb_code code;
   adlb_data_code dc;
   MPI_Status status;
@@ -726,16 +748,12 @@ ADLBP_Store(adlb_datum_id id, adlb_subscript subscript, adlb_data_type type,
   {
     // This is a server-to-server operation on myself
     TRACE("Store SELF");
-    adlb_notif_t notifs = ADLB_NO_NOTIFS;
     dc = xlb_data_store(id, subscript, data, length,
-                    type, refcount_decr, &notifs);
+                    type, refcount_decr, notifs);
     if (dc == ADLB_DATA_ERROR_DOUBLE_WRITE)
       return ADLB_REJECTED;
     ADLB_DATA_CHECK(dc);
 
-    code = xlb_notify_all(&notifs);
-    xlb_free_notif(&notifs);
-    ADLB_CHECK(code);
     return ADLB_SUCCESS;
   }
 
@@ -761,7 +779,7 @@ ADLBP_Store(adlb_datum_id id, adlb_subscript subscript, adlb_data_type type,
     return ADLB_REJECTED;
   ADLB_DATA_CHECK(resp.dc);
 
-  code = xlb_handle_client_notif_work(&resp.notifs, to_server_rank);
+  code = xlb_recv_notif_work(&resp.notifs, to_server_rank, notifs);
   ADLB_CHECK(code);
 
   return ADLB_SUCCESS;
@@ -802,10 +820,28 @@ ADLBP_Read_refcount_enable(void)
 adlb_code
 ADLBP_Refcount_incr(adlb_datum_id id, adlb_refcounts change)
 {
+  adlb_code rc;
+  
+  adlb_notif_t notifs = ADLB_NO_NOTIFS;
+  rc = xlb_refcount_incr(id, change, &notifs);
+  ADLB_CHECK(rc);
+
+  rc = xlb_notify_all(&notifs);
+  ADLB_CHECK(rc);
+
+  xlb_free_notif(&notifs);
+
+  return ADLB_SUCCESS;
+}
+
+adlb_code
+xlb_refcount_incr(adlb_datum_id id, adlb_refcounts change,
+                    adlb_notif_t *notifs)
+{
   int rc;
   MPI_Status status;
   MPI_Request request;
-
+  
   DEBUG("ADLB_Refcount_incr: <%"PRId64"> READ %i WRITE %i", id,
             change.read_refcount, change.write_refcount);
 
@@ -831,7 +867,7 @@ ADLBP_Refcount_incr(adlb_datum_id id, adlb_refcounts change)
   if (!resp.success)
     return ADLB_ERROR;
 
-  rc = xlb_handle_client_notif_work(&resp.notifs, to_server_rank);
+  rc = xlb_recv_notif_work(&resp.notifs, to_server_rank, notifs);
   ADLB_CHECK(rc);
 
   return ADLB_SUCCESS;

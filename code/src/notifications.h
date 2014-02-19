@@ -143,7 +143,7 @@ xlb_notify_all(adlb_notif_t *notifs);
 
 /**
  * Transfer notification work back to caller rank.
- * Caller should receive with xlb_handle_client_notif_work
+ * Caller receives w/ xlb_handle_client_notif_work or xlb_recv_notif_work
  * Finish filling in provided response header with info about
  * notifications, then send to caller including additional
  * notification work.
@@ -159,12 +159,19 @@ xlb_send_notif_work(int caller,
         adlb_notif_t *notifs, bool use_xfer);
 
 /*
- Receive notifications send by server, then
- process them locally
+  Receive notifications send by server, then
+  process them locally
  */
 adlb_code
 xlb_handle_client_notif_work(const struct packed_notif_counts *counts, 
                         int to_server_rank);
+
+/*
+  notify: notify structure initialzied to empty
+ */
+adlb_code
+xlb_recv_notif_work(const struct packed_notif_counts *counts,
+    int to_server_rank, adlb_notif_t *not);
 
 static inline adlb_code xlb_to_free_add(adlb_notif_t *notify, void *data)
 {
