@@ -147,11 +147,10 @@ xlb_set_refs(adlb_notif_t *notifs, bool local_only)
     {
       // swap with last
       refs->count--;
-      if (refs->count > 0)
+      if (i != refs->count)
       {
         // Swap last to here
-        memcpy(&refs->data[i], &refs[refs->count],
-               sizeof(refs->data[i]));
+        refs->data[i] = refs->data[refs->count];
         i--; // Process new entry next
       }
     }
@@ -389,7 +388,7 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
       if (c->count > 0)
       {
         // Swap last to here
-        memcpy(&c->arr[i], &c->arr[c->count], sizeof(c->arr[i]));
+        c->arr[i] = c->arr[c->count];
         i--; // Process new entry next
       }
     }
