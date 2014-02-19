@@ -306,22 +306,32 @@ adlb_code
 xlb_notify_all(adlb_notif_t *notifs)
 {
   adlb_code rc;
-  // apply rc changes first because it may add new notifications
-  rc = xlb_rc_changes_apply(notifs, true, true, true);
-  ADLB_CHECK(rc);
+  if (notifs->rc_changes.count > 0)
+  {
+    // apply rc changes first because it may add new notifications
+    rc = xlb_rc_changes_apply(notifs, true, true, true);
+    ADLB_CHECK(rc);
+  }
+
+  assert(notifs->rc_changes.count == 0);
 
   if (notifs->notify.count > 0)
   {
     rc = xlb_close_notify(&notifs->notify);
     ADLB_CHECK(rc);
   }
-  if (notifs->references.count > 0)
+
+  assert(notifs->notify.count == 0);
+  assert(notifs->rc_changes.count == 0);
+
+  if (!notifs->references.count > 0)
   {
     rc = xlb_set_refs(notifs, false);
     ADLB_CHECK(rc);
   }
 
-  assert(notifs->rc_changes.count == 0);
+  // Check all were cleared
+  assert(xlb_notif_empty(notifs)); 
   return ADLB_SUCCESS;
 }
 
