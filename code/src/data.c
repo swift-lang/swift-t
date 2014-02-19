@@ -1051,6 +1051,7 @@ xlb_data_retrieve2(adlb_datum_id id, adlb_subscript subscript,
                          result);
           DATA_CHECK(dc);
         }
+        break;
       }
       case ADLB_DATA_TYPE_STRUCT:
       {
@@ -1064,6 +1065,7 @@ xlb_data_retrieve2(adlb_datum_id id, adlb_subscript subscript,
         
         dc = ADLB_Pack(v, *type, caller_buffer, result);
         DATA_CHECK(dc);
+        break;
       }
       default:
         verbose_error(ADLB_DATA_ERROR_INVALID, "Cannot lookup subscript "
