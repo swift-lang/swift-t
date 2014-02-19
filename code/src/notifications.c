@@ -396,6 +396,22 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
 }
 
 adlb_code
+xlb_notifs_expand(adlb_notif_ranks *notifs, int to_add)
+{
+  assert(to_add >= 0);
+  int new_size = notifs->size == 0 ? 
+                    64 : notifs->size * 2;
+  if (new_size < notifs->size + to_add)
+    new_size = notifs->size + to_add;
+
+  notifs->notifs = realloc(notifs->notifs, sizeof(notifs->notifs[0]) *
+                       (size_t)new_size);
+  CHECK_MSG(notifs->notifs != NULL, "Out of memory");
+  notifs->size = new_size;
+  return ADLB_SUCCESS;
+}
+
+adlb_code
 xlb_refs_expand(adlb_ref_data *refs, int to_add)
 {
   assert(to_add >= 0);

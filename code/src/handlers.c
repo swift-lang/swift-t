@@ -1115,7 +1115,6 @@ handle_refcount_incr(int caller)
 static adlb_code
 handle_insert_atomic(int caller)
 {
-  // TODO: support acquiring references
   MPI_Status status;
 
   RECV(xfer, XFER_SIZE, MPI_CHAR, caller, ADLB_TAG_INSERT_ATOMIC);
@@ -1127,34 +1126,66 @@ handle_insert_atomic(int caller)
   bool return_value;
   MSG_UNPACK_BIN(xfer_pos, &return_value);
 
+  adlb_retrieve_rc refcounts;
+  MSG_UNPACK_BIN(xfer_pos, &refcounts);
+
   struct packed_insert_atomic_resp resp;
   resp.value_len = -1; // Default: no data returned
 
   bool value_present;
   resp.dc = xlb_data_insert_atomic(id, subscript, &resp.created,
                                    &value_present);
-
-  // Only return value if it was already present
-  return_value = return_value && !resp.created;
-
-  adlb_binary_data value;
-  if (return_value && resp.dc == ADLB_DATA_SUCCESS && value_present)
-  {
-    // TODO: support acquiring references, use xlb_data_retrieve2
-    // Retrieve, optionally using xfer for storage
-    resp.dc = xlb_data_retrieve(id, subscript, &resp.value_type,
-                                &xlb_scratch_buf, &value);
-    resp.value_len = value.length;
-  }
-  
+ 
   // TODO: support binary subscript
   DEBUG("Insert_atomic: <%"PRId64">[%.*s] => %i", id, (int)subscript.length,
         (const char*)subscript.key, resp.created);
 
-  // Send response header
-  RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+  if (resp.dc != ADLB_DATA_SUCCESS)
+  {
+    // Failed: send response header
+    RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+    return ADLB_SUCCESS;
+  }
   
-  if (return_value && value_present && resp.dc == ADLB_DATA_SUCCESS)
+  adlb_notif_t notifs = ADLB_NO_NOTIFS;
+  adlb_binary_data value;
+  bool send_data = return_value && value_present;
+  if (value_present)
+  {
+    // In these cases, need to apply refcount operation
+    if (return_value)
+    {
+      // Retrieve and update references
+      // Optionally use xlb_scratch_buf for storage
+      resp.dc = xlb_data_retrieve2(id, subscript,
+            refcounts.decr_self, refcounts.incr_referand,
+            &resp.value_type, &xlb_scratch_buf, &value, &notifs);
+      resp.value_len = value.length;
+    }
+    else
+    {
+      xlb_acquire_rc acq = { .refcounts = refcounts.incr_referand,
+                          .subscript = subscript };
+      // Just update reference counts
+      resp.dc = xlb_data_reference_count(id,
+              adlb_rc_negate(refcounts.decr_self), acq , NULL, &notifs);
+    }
+  }
+    
+  if (resp.dc != ADLB_DATA_SUCCESS)
+  {
+    // Failed: send response header
+    RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+    return ADLB_SUCCESS;
+  }
+
+  adlb_code rc = xlb_send_notif_work(caller,
+          &resp, sizeof(resp), &resp.notifs, &notifs, false);
+  ADLB_CHECK(rc);
+  
+  xlb_free_notif(&notifs);
+  
+  if (send_data)
   {
     // Send response value
     SEND(value.data, value.length, MPI_BYTE, caller, ADLB_TAG_RESPONSE);
@@ -1411,7 +1442,6 @@ static adlb_code find_req_bytes(int *bytes, int caller, adlb_tag tag) {
 
 /*
   Handle notifications server-side and free memory
-  TODO: option to offload to client
  */
 static adlb_code
 notify_helper(adlb_notif_t *notifications)
@@ -1428,7 +1458,8 @@ notify_helper(adlb_notif_t *notifications)
 
 /*
   Simple helper function to modify reference counts
-  TODO: option to offload to client
+  TODO: eliminate this, have option of sending all refcounts
+  back to client.
  */
 static adlb_code
 refcount_decr_helper(adlb_datum_id id, adlb_refcounts decr)

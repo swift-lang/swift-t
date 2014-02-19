@@ -1038,12 +1038,12 @@ xlb_data_retrieve2(adlb_datum_id id, adlb_subscript subscript,
         if (!found)
         {
           DEBUG("SUBSCRIPT NOT FOUND");
-          result_code = ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND;
+          return ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND;
         }
         else if (t == NULL)
         {
           DEBUG("SUBSCRIPT CREATED BUT NOT LINKED");
-          result_code = ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND;
+          return ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND;
         }
         else
         {
@@ -1593,6 +1593,7 @@ xlb_data_insert_atomic(adlb_datum_id container_id, adlb_subscript subscript,
   // Use NULL pointer value to represent unlinked
   container_add(&d->data.CONTAINER, subscript, NULL);
   *created = true;
+  *value_present = false;
   return ADLB_DATA_SUCCESS;
 }
 

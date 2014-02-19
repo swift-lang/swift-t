@@ -325,6 +325,7 @@ struct packed_retrieve_hdr
           sizeof(adlb_datum_id) + sizeof(int))
 struct packed_insert_atomic_resp
 {
+  struct packed_notif_counts notifs;
   adlb_data_code dc;
   bool created;
   int value_len; // Value length, negative if not present

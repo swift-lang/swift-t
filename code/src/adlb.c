@@ -875,6 +875,7 @@ xlb_refcount_incr(adlb_datum_id id, adlb_refcounts change,
 
 adlb_code
 ADLBP_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
+                        adlb_retrieve_rc refcounts,
                         bool* result, void *data, int *length,
                         adlb_data_type *type)
 {
@@ -892,6 +893,8 @@ ADLBP_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
   bool return_value = data != NULL;
   MSG_PACK_BIN(xfer_pos, return_value);
 
+  MSG_PACK_BIN(xfer_pos, refcounts);
+
   int to_server_rank = ADLB_Locate(id);
 
   rc = MPI_Irecv(&resp, sizeof(resp), MPI_BYTE, to_server_rank,
@@ -905,6 +908,10 @@ ADLBP_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
 
   if (resp.dc != ADLB_DATA_SUCCESS)
     return ADLB_ERROR;
+
+  adlb_code ac = xlb_handle_client_notif_work(&resp.notifs,
+                                              to_server_rank);
+  ADLB_CHECK(ac);
 
   *result = resp.created;
 

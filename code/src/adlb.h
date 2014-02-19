@@ -212,11 +212,17 @@ adlb_code ADLB_Refcount_incr(adlb_datum_id id, adlb_refcounts change);
         this buffer of at least size ADLB_DATA_MAX
   length: length of existing value, -1 if value not yet present
   type: type of existing value
+  refcounts: refcounts to apply.
+        if data exists, apply all refcounts
+        if placeholder exists, don't apply
+        if nothing exists, don't apply
  */
 adlb_code ADLBP_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
+                        adlb_retrieve_rc refcounts,
                         bool* result, void *data, int *length,
                         adlb_data_type *type);
 adlb_code ADLB_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
+                        adlb_retrieve_rc refcounts,
                        bool* result, void *data, int *length,
                        adlb_data_type *type);
 
