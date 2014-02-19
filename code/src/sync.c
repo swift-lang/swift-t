@@ -114,8 +114,6 @@ xlb_sync(int target)
       request in xlb_pending_syncs to process later, or rejects it
    3) The master server tells this process to shut down
    These numbers correspond to the variables in the function
-
-   TODO: update perf counters based on requests here
  */
 adlb_code
 xlb_sync2(int target, const struct packed_sync *hdr)

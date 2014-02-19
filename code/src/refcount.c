@@ -116,7 +116,7 @@ xlb_incr_referand(adlb_datum_storage *d, adlb_data_type type,
       break;
     case ADLB_DATA_TYPE_FILE_REF:
       assert(!adlb_has_sub(to_acquire.subscript));
-      // TODO: need to track refcount here
+      // TODO: need to update file_ref -> maybe just use struct
       assert(false);
       /*
       // decrement references held
@@ -189,7 +189,6 @@ apply_rc_update(bool releasing, int *curr_rc, int acquire_rc,
   return ADLB_DATA_SUCCESS;
 }
 
-// TODO: need to change this to support multiple IDs
 static adlb_data_code
 xlb_update_rc_id(adlb_datum_id id, int *read_rc, int *write_rc,
        bool release_read, bool release_write, adlb_refcounts to_acquire,

@@ -839,11 +839,8 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
     }
     
     // If this was a container, need to handle reference notifications
-    // TODO: need to pass back subscripts and data for references
     if (type == ADLB_DATA_TYPE_CONTAINER)
     {
-      // TODO: deserialize container value
-      // TODO; append to to_free list
       dc = insert_notifications_all(d, id, &d->data.CONTAINER, 
                 notifications, &freed_datum);
       DATA_CHECK(dc);
@@ -998,7 +995,6 @@ xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
                             type, caller_buffer, result, NULL);
 }
 
-// TODO: need to update logic in this function to manipulate refcounts
 adlb_data_code
 xlb_data_retrieve2(adlb_datum_id id, adlb_subscript subscript,
                  adlb_refcounts decr, adlb_refcounts to_acquire,
