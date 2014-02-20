@@ -182,15 +182,18 @@ deps.txt: $(DEPS) $(TEST_DEPS)
 
 ### LINK
 
+# Rule to make lib directory.  It should be used as an order-only target
+# after a |, because added anything to the directory will modify the
+# directory's timestamp
 lib:
 	$(E) mkdir -pv lib
 
-$(ADLB_A): $(OBJS) lib
+$(ADLB_A): $(OBJS) | lib
 	$(Q) "  AR		$(@)"
 	$(E) $(AR) $(ARFLAGS) $(@) $(OBJS)
 	$(E) $(RANLIB) $(@)
 
-$(ADLB_SO): $(OBJS) $(NLOBJS) lib
+$(ADLB_SO): $(OBJS) $(NLOBJS) | lib
 	$(Q) "  LINK		$(@)"
 	$(E) $(LINKER) $(SHARED) -g -o $(@) \
                 $(LDFLAGS)                      \
