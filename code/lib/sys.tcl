@@ -351,6 +351,7 @@ namespace eval turbine {
         } else {
             set result_value ""
         }
+        return $result_value
     }
 
     # Sleep for given time in seconds.  Return void

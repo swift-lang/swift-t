@@ -180,7 +180,7 @@ This is the simplest method to run Turbine.
 
 ==== Build procedure
 
-The +exm-setup.zsh+ script should just work.
+The +exm-setup.zsh+ script should work without any special configuration.
 
 To run, simply build a MPI hosts file and pass that to Turbine, which
 will pass it to +mpiexec+.
@@ -266,12 +266,20 @@ srun ~wozniak/Public/turbine-0.1.1/scripts/submit/slurm/turbine-slurm.sh -n 3 ~/
 
 * Midway uses OpenMPI.  We have tested with +/software/openmpi-1.6-el6-x86_64+
 * Put +mpicc+ in your +PATH+
-* Configure ADLB with:
+* Use these settings in +exm-settings.sh+:
 +
 ----
-CC=mpicc LDFLAGS="-Wl,-rpath -Wl,/software/openmpi-1.6-el6-x86_64/lib" --enable-mpi-2
+export LDFLAGS="-Wl,-rpath -Wl,/software/openmpi-1.6-el6-x86_64/lib"
+MPI_VERSION=2
+MPI_LIB_NAME=mpi
 ----
-* Configure Turbine with:
+* Or if doing a manual build with +configure+ and make:
+** Configure ADLB with:
++
+----
+LDFLAGS="-Wl,-rpath -Wl,/software/openmpi-1.6-el6-x86_64/lib" --enable-mpi-2
+----
+** Configure Turbine with:
 +
 ----
  --with-mpi-lib-name=mpi
@@ -504,6 +512,21 @@ Urbana-Champaign.
 Cray systems do not use +mpicc+.  We set +CC=gcc+ and use compiler
 flags to configure the MPI library.
 
+* Use the following settings in +exm-settings.sh+ (TODO: check these and
+  confirm that cc works)
+----
+export CC=cc
+
+MPI_VERSION=2
+EXM_CUSTOM_MPI=1
+
+EXM_CRAY=1
+
+# Optionally, if you want to exclusively build static executables
+EXM_BUILD_STATIC=1
+----
+
+Or if doing a manual build with +configure+ and make:
 * Configure ADLB with:
 +
 ----
@@ -611,13 +634,6 @@ export LDFLAGS="-L/opt/cray/mpt/default/gni/mpich2-gnu/48/lib/ -lmpich"
 # Currently MPI 3 not supported
 MPI_VERSION=2
 ----
-- I also needed to make a change to the configure script (as of Aug 29 2013)
-  so that it found the tcl shared library in /usr/lib64 instead of /usr/lib
-- After that the +exm-setup.zsh+ script should take care of installation
-----
-./exm-setup.zsh
-----
-
 
 === Beagle
 

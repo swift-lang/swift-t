@@ -48,9 +48,22 @@ echo "PROCS:        ${PROCS}"
 echo "PPN:          ${PPN}"
 echo "TCLLIBPATH:   ${TCLLIBPATH}"
 echo "LAUNCHER:     ${LAUNCHER}"
+[[ -n ${VALGRIND} ]] && \
+echo "VALGRIND:     ${VALGRIND}"
 echo
 
-set -x
+export TZ=getenv(TZ)
 
-${LAUNCHER} -l -n ${PROCS} -ppn ${PPN} ${TCLSH} ${COMMAND}
+# Unpack and export all user environment variables
+export getenv(ENV_LIST)
+
+${LAUNCHER} -l -n ${PROCS} -ppn ${PPN} ${VALGRIND} ${TCLSH} ${COMMAND}
+CODE=${?}
+
+echo
+echo "Turbine launcher done."
+echo "CODE: ${CODE}"
+echo "COMPLETE: $(date)"
+
 # Return exit code from launcher (mpiexec)
+exit ${CODE}

@@ -67,7 +67,7 @@ export N=${N:-0}
 # Evaluate any user turbine-pbs-run -e K=V settings here:
 for kv in ${env}
 do
-  eval ${kv}
+  eval export ${kv}
 done
 
 declare SCRIPT_NAME

@@ -44,7 +44,6 @@ export PPN=${PPN:-1}
 OUTPUT_TOKEN_FILE=turbine-directory.txt
 
 # Job environment
-typeset -T ENV env
 env=()
 
 # Get options
@@ -143,3 +142,4 @@ then
   fi
   print "done: ${INIT_SCRIPT}"
 fi
+

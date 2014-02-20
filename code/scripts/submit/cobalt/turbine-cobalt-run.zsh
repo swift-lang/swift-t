@@ -121,6 +121,10 @@ else
   WORK_DIRECTORY=${CHANGE_DIRECTORY}
 fi
 
+# Create the environment list in a format Cobalt can support
+ENV_LIST=${env}
+export ENV_LIST
+
 # Launch it
 if [[ ${MODE} == "cluster" ]]
 then
@@ -132,7 +136,6 @@ then
        -t ${WALLTIME}          \
        -q ${QUEUE}             \
        --cwd ${WORK_DIRECTORY} \
-       --env "${ENV}"          \
        ${=MODE_ARG}            \
        -o ${TURBINE_OUTPUT}/output.txt \
        -e ${TURBINE_OUTPUT}/output.txt \
