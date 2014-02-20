@@ -1413,8 +1413,10 @@ code is passed to Python for evaluation.  The output is:
                 [ 0.,  0.,  2.]])
 ----
 
-NOTE: To use this, Turbine must be configured with +--enable-python+
- before compiling.  This feature is implemented by linking to Python
+NOTE: To use this, Turbine must be configured with Python enabled
+ before compiling, by setting +ENABLE_PYTHON=1+
+ in +exm-settings.sh+, or by providing the +--enable-python+ argument
+ to +configure+.  This feature is implemented by linking to Python
  as a shared library, enabling better performance than calling the
  +python+ program (which may be done by using a normal Swift
  <<app_functions,app function>>).  Error messages for minor coding
@@ -1459,8 +1461,10 @@ the answer was: 104
 
 As coded here, both R and Swift report the value of +a+.
 
-NOTE: To use this, Turbine must be configured with +--enable-r+ before
- compiling.  This feature is implemented by linking to R as a shared
+NOTE: To use this, Turbine must be configured with R enabled
+ before compiling, by setting +ENABLE_R=1+
+ in +exm-settings.sh+, or by providing the +--enable-r+ argument
+ to +configure+.  This feature is implemented by linking to R as a shared
  library, enabling better performance than calling the +R+ program
  (which may be done by using a normal Swift <<app_functions,app
  function>>).  When installing R, be sure to include the +devel+
@@ -1473,8 +1477,9 @@ NOTE: To use this, Turbine must be configured with +--enable-r+ before
 == Optimizations
 STC performs a range of compiler optimizations that can significantly
 speed up most Swift programs.  The optimization level can be controlled
-by the +-O+ command line option.  Almost always the default optimization
-level +-O2+ is your best choice.
+by the +-O+ command line option.  The default optimization
+level +-O2+, or the increased optimization level +-O3+ are usually
+the best choices.
 
 ----
 # No optimizations at all (not recommended)
@@ -1726,7 +1731,7 @@ If you are following the manual build process, configure Turbine with:
 +
 ** Configure c-utils with +--disable-log+
 +
-3. Specify EXM_OPT_BUILD=1 in +exm-settings.sh+ or configure everything
+3. Specify +EXM_OPT_BUILD=1+ in +exm-settings.sh+ or configure everything
     with +--enable-fast+.  This disables assertions and other checks
 4. When making performance measurements, always subtract 1 second
    (or the value of +ADLB_EXHAUST_TIME+) from the Turbine run time
@@ -1750,8 +1755,10 @@ static linking.  If not, it is also possible to build an executable with
 a subset of Tcl scripts and code linked in, providing some performance
 benefits.
 
-1. Configure c-utils, lb, and turbine with the +--enable-static+ option,
-   then build to obtain static libraries.  To build a fully standalone
+1. Ensure that static versions of the c-utils, lb, and turbine libraries
+   were built, typically with a +.a+ suffix, e.g. libadlb.a.  These
+   are created by default, unless you specified +DISABLE_STATIC=0+ or
+   +--disable-static+.  To build a fully standalone
    executable, you will also need to build a static version of Tcl
    (with the +--disable-shared+ configure option), and static versions
    of any other libraries your own code needs to link with, such
