@@ -862,6 +862,7 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
                 notifications, &freed_datum);
       DATA_CHECK(dc);
     }
+    // TODO: struct reference notifications
   }
   else if (d->type == ADLB_DATA_TYPE_MULTISET)
   {
@@ -885,12 +886,9 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
       free(val_s);
     }
   }
-  else
+  else if (d->type == ADLB_DATA_TYPE_CONTAINER)
   {
     // Handle insert
-    check_verbose(d->type == ADLB_DATA_TYPE_CONTAINER, ADLB_DATA_ERROR_TYPE,
-                  "insert to type %s not supported: <%"PRId64">",
-                  ADLB_Data_type_tostring(d->type), id);
 
     adlb_container *c = &d->data.CONTAINER;
 
@@ -947,6 +945,31 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
       char *val_s = ADLB_Data_repr(entry, c->val_type);
       // TODO: support binary keys
       DEBUG("data_store <%"PRId64">[%.*s]=%s\n", id, (int)subscript.length,
+            (const char*)subscript.key, val_s);
+      free(val_s);
+    }
+  }
+  else
+  {
+    // Handle assigning struct field
+    check_verbose(d->type == ADLB_DATA_TYPE_STRUCT, ADLB_DATA_ERROR_TYPE,
+                  "insert to type %s not supported: <%"PRId64">",
+                  ADLB_Data_type_tostring(d->type), id);
+    dc = xlb_struct_set_subscript(d->data.STRUCT, subscript,
+                        buffer, length, type);
+    DATA_CHECK(dc);
+    // TODO: struct notifications
+    if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
+    {
+      const adlb_datum_storage *entry;
+      adlb_data_type tmp_type;
+      dc = xlb_struct_get_subscript(d->data.STRUCT, subscript, &entry,
+                                    &tmp_type);
+      DATA_CHECK(dc);
+
+      char *val_s = ADLB_Data_repr(entry, type);
+      // TODO: support binary keys
+      DEBUG("data_store <%"PRId64">.%.*s=%s\n", id, (int)subscript.length,
             (const char*)subscript.key, val_s);
       free(val_s);
     }
@@ -1072,12 +1095,8 @@ xlb_data_retrieve2(adlb_datum_id id, adlb_subscript subscript,
       }
       case ADLB_DATA_TYPE_STRUCT:
       {
-        int field_ix;
-        dc = xlb_struct_str_to_ix(subscript, &field_ix);
-        DATA_CHECK(dc);
-
         const adlb_datum_storage *v;
-        dc = xlb_struct_get_field(d->data.STRUCT, field_ix, &v, type);
+        dc = xlb_struct_get_subscript(d->data.STRUCT, subscript, &v, type);
         DATA_CHECK(dc);
         
         dc = ADLB_Pack(v, *type, caller_buffer, result);

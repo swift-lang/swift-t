@@ -328,6 +328,18 @@ adlb_data_code xlb_struct_get_field(adlb_struct *s, int field_ix,
   return ADLB_DATA_SUCCESS;
 }
 
+adlb_data_code xlb_struct_get_subscript(adlb_struct *s, adlb_subscript subscript,
+                        const adlb_datum_storage **val, adlb_data_type *type)
+{
+  adlb_data_code dc;
+
+  int ix;
+  dc = xlb_struct_str_to_ix(subscript, &ix);
+  DATA_CHECK(dc);
+
+  return xlb_struct_get_field(s, ix, val, type);
+}
+
 adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,
                         const void *data, int length, adlb_data_type type)
 {
@@ -349,6 +361,18 @@ adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,
   dc = ADLB_Unpack(&f->data, type, data, length); 
   DATA_CHECK(dc);
   return ADLB_DATA_SUCCESS;
+}
+
+adlb_data_code xlb_struct_set_subscript(adlb_struct *s, adlb_subscript subscript,
+                        const void *data, int length, adlb_data_type type)
+{
+  adlb_data_code dc;
+
+  int ix;
+  dc = xlb_struct_str_to_ix(subscript, &ix);
+  DATA_CHECK(dc);
+
+  return xlb_struct_set_field(s, ix, data, length, type);
 }
 
 adlb_data_code xlb_free_struct(adlb_struct *s, bool free_root_ptr)
