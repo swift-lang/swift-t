@@ -24,6 +24,11 @@ adlb_data_code xlb_free_struct(adlb_struct *s, bool free_root_ptr);
 adlb_data_code xlb_struct_get_field(adlb_struct *s, int field_ix,
                         const adlb_datum_storage **val, adlb_data_type *type);
 
+
+// Get data for struct field
+adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,
+                        const void *data, int length, adlb_data_type type);
+
 adlb_data_code
 xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
                    bool release_write, 

@@ -297,22 +297,57 @@ adlb_data_code ADLB_Pack_struct(const adlb_struct *s,
   return ADLB_DATA_SUCCESS;
 }
 
+static adlb_data_code get_field(adlb_struct *s, int field_ix,
+            struct_type_info **st, adlb_struct_field **f)
+{
+  check_valid_type(s->type);
+  *st = &struct_types[s->type];
+  check_verbose(field_ix >= 0 && field_ix < (*st)->field_count,
+                 ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND,
+                 "Looking up field #%i in struct type %s with %i fields",
+                 field_ix, (*st)->type_name, (*st)->field_count);
+  *f = &s->fields[field_ix];
+  return ADLB_DATA_SUCCESS;
+}
+
 // Get data for struct field
 adlb_data_code xlb_struct_get_field(adlb_struct *s, int field_ix,
                         const adlb_datum_storage **val, adlb_data_type *type)
 {
-  check_valid_type(s->type);
-  struct_type_info *st = &struct_types[s->type];
-  check_verbose(field_ix >= 0 && field_ix < st->field_count,
-                 ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND,
-                 "Looking up field #%i in struct type %s with %i fields",
-                 field_ix, st->type_name, st->field_count);
-  check_verbose(s->fields[field_ix].initialized, ADLB_DATA_ERROR_UNSET,
-        "Field %s of struct type %s unset",
-        st->field_names[field_ix], st->type_name);
-  *val = &s->fields[field_ix].data;
+  adlb_struct_field *f;
+  struct_type_info *st;
+  adlb_data_code dc = get_field(s, field_ix, &st, &f);
+  DATA_CHECK(dc);
+
+  check_verbose(f->initialized, ADLB_DATA_ERROR_UNSET,
+                "Field %s of struct type %s unset",
+                st->field_names[field_ix], st->type_name);
+  *val = &f->data;
   *type = st->field_types[field_ix];
 
+  return ADLB_DATA_SUCCESS;
+}
+
+adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,
+                        const void *data, int length, adlb_data_type type)
+{
+  adlb_struct_field *f;
+  struct_type_info *st;
+  adlb_data_code dc = get_field(s, field_ix, &st, &f);
+  DATA_CHECK(dc);
+
+  check_verbose(f->initialized, ADLB_DATA_ERROR_DOUBLE_WRITE,
+        "Field %s of struct type %s already set",
+        st->field_names[field_ix], st->type_name);
+  check_verbose(st->field_types[field_ix] == type, ADLB_DATA_ERROR_TYPE,
+        "Invalid type %s when assigning to field %s: expected %s",
+        ADLB_Data_type_tostring(type), st->field_names[field_ix],
+        ADLB_Data_type_tostring(st->field_types[field_ix]));
+
+  // TODO: recursively traverse nested structs to do assign?
+
+  dc = ADLB_Unpack(&f->data, type, data, length); 
+  DATA_CHECK(dc);
   return ADLB_DATA_SUCCESS;
 }
 
