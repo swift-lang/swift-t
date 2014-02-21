@@ -27,6 +27,9 @@ adlb_data_code xlb_struct_get_field(adlb_struct *s, int field_ix,
 adlb_data_code xlb_struct_get_subscript(adlb_struct *s, adlb_subscript subscript,
                         const adlb_datum_storage **val, adlb_data_type *type);
 
+adlb_data_code xlb_struct_subscript_init(adlb_struct *s, adlb_subscript subscript,
+                                        bool *b);
+
 // Get data for struct field
 adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,
                         const void *data, int length, adlb_data_type type);

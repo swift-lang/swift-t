@@ -599,6 +599,8 @@ adlb_data_code
 xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
               int rank, int* result)
 {
+  adlb_data_code dc;
+
   if (!adlb_has_sub(subscript))
   {
     DEBUG("data_subscribe(): <%"PRId64">", id);
@@ -621,16 +623,28 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
   if (adlb_has_sub(subscript))
   {
     // TODO: support binary keys
-    check_verbose(d->type == ADLB_DATA_TYPE_CONTAINER,
+    bool is_container = d->type == ADLB_DATA_TYPE_CONTAINER;
+    bool is_struct = d->type == ADLB_DATA_TYPE_STRUCT; 
+    check_verbose(is_container || is_struct,
             ADLB_DATA_ERROR_INVALID, "subscribing to subscript %.*s on "
-            "non-container: <%"PRId64">", (int)subscript.length,
-            (const char*)subscript.key, id);
-    
-    if (container_contains(&d->data.CONTAINER, subscript))
+            "invalid type: %s for <%"PRId64">", (int)subscript.length,
+            (const char*)subscript.key, ADLB_Data_type_tostring(d->type),
+            id);
+    bool sub_found = false; 
+    if ((is_container && container_contains(&d->data.CONTAINER, subscript)))
     {
-      subscribed = false;
+      sub_found = true;
     }
-    else
+    else if (is_struct)
+    {
+      dc = xlb_struct_subscript_init(&d->data.STRUCT, subscript,
+                                    &sub_found);
+      DATA_CHECK(dc);
+    }
+    
+    subscribed = !found; 
+    
+    if (!found)
     {
       // encode container, index and ref type into string
       char key[id_sub_buflen(subscript)];

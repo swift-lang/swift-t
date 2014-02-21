@@ -208,28 +208,35 @@ ADLB_Unpack_struct(adlb_struct **s, const void *data, int length,
   // Go through and assign all of the datums from the data in the buffer
   for (int i = 0; i < t->field_count; i++)
   {
-    int offset = hdr->field_offsets[i];
-    const void *field_start = data + offset;
-    int field_len;
-    if (i == t->field_count - 1)
-    {
-      // Remainder of buffer
-      field_len = length - offset;
-    }
-    else
-    {
-      field_len = hdr->field_offsets[i + 1] - offset;
-    }
-    if (!init_struct && (*s)->fields[i].initialized)
-    {
-      // Free any existing data
-      dc = ADLB_Free_storage(&(*s)->fields[i].data, t->field_types[i]);
-      DATA_CHECK(dc);
-    }
+    int init_offset = hdr->field_offsets[i];
+    int data_offset = init_offset + 1;
+    
+    bool field_init = (((char*)data)[init_offset] != 0);
 
-    ADLB_Unpack(&(*s)->fields[i].data, t->field_types[i],
-                field_start, field_len);
-    (*s)->fields[i].initialized = true;
+    if (field_init)
+    {
+      const void *field_start = data + data_offset;
+      int field_len;
+      if (i == t->field_count - 1)
+      {
+        // Remainder of buffer
+        field_len = length - data_offset;
+      }
+      else
+      {
+        field_len = hdr->field_offsets[i + 1] - data_offset;
+      }
+      if (!init_struct && (*s)->fields[i].initialized)
+      {
+        // Free any existing data
+        dc = ADLB_Free_storage(&(*s)->fields[i].data, t->field_types[i]);
+        DATA_CHECK(dc);
+      }
+
+      ADLB_Unpack(&(*s)->fields[i].data, t->field_types[i],
+                  field_start, field_len);
+    }
+    (*s)->fields[i].initialized = field_init;
   }
   return ADLB_DATA_SUCCESS;
 }
@@ -267,27 +274,39 @@ adlb_data_code ADLB_Pack_struct(const adlb_struct *s,
   {
     adlb_data_type field_t = t->field_types[i];
     adlb_binary_data field_data;
-
-    check_verbose(s->fields[i].initialized, ADLB_DATA_ERROR_UNSET,
-          "Field %s of struct type %s unset during packing",
-          t->field_names[i], t->type_name);
-    dc = ADLB_Pack(&s->fields[i].data, field_t, NULL, &field_data);
-    DATA_CHECK(dc);
-    assert(field_data.data != NULL);
-    assert(field_data.length >= 0);
+      
+    bool init = s->fields[i].initialized;
+    if (init)
+    {
+      dc = ADLB_Pack(&s->fields[i].data, field_t, NULL, &field_data);
+      DATA_CHECK(dc);
+      assert(field_data.data != NULL);
+      assert(field_data.length >= 0);
+    }
+    else
+    {
+      field_data.length = 0;
+    }
 
     dc = ADLB_Resize_buf(&result_buf, &using_caller_buf,
-                         buf_pos + field_data.length);
+                         buf_pos + field_data.length + 1);
     DATA_CHECK(dc);
-
-    // Copy serialized data into buffer
-    memcpy((result_buf.data) + buf_pos, field_data.data,
-           (size_t)field_data.length);
+    
     // Mark start of data
     (*hdr)->field_offsets[i] = buf_pos;
-    buf_pos += field_data.length;
 
-    ADLB_Free_binary_data(&field_data);
+    // Mark whether present or not
+    result_buf.data[buf_pos++] = init;
+
+    if (init)
+    {
+      // Copy serialized data into buffer
+      memcpy((result_buf.data) + buf_pos, field_data.data,
+             (size_t)field_data.length);
+      buf_pos += field_data.length;
+    
+      ADLB_Free_binary_data(&field_data);
+    }
   }
 
   // Fill in result
@@ -338,6 +357,25 @@ adlb_data_code xlb_struct_get_subscript(adlb_struct *s, adlb_subscript subscript
   DATA_CHECK(dc);
 
   return xlb_struct_get_field(s, ix, val, type);
+}
+
+adlb_data_code xlb_struct_subscript_init(adlb_struct *s, adlb_subscript subscript,
+                                        bool *b)
+{
+  adlb_data_code dc;
+
+  int ix;
+  dc = xlb_struct_str_to_ix(subscript, &ix);
+  DATA_CHECK(dc);
+
+
+  adlb_struct_field *f;
+  struct_type_info *st;
+  dc = get_field(s, ix, &st, &f);
+  DATA_CHECK(dc);
+
+  *b = f->initialized;
+  return ADLB_DATA_SUCCESS;
 }
 
 adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,
