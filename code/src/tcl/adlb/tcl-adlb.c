@@ -31,7 +31,6 @@
 // calls to the ADLB C layer
 
 #include "config.h"
-
 #include <assert.h>
 
 // strnlen() is a GNU extension: Need _GNU_SOURCE
@@ -166,7 +165,7 @@ static int extract_tcl_blob(Tcl_Interp *interp, Tcl_Obj *const objv[],
 static int blob_cache_finalize(void);
 
 // Functions for managing struct formats
-static void struct_format_init(void);
+static int struct_format_init(Tcl_Interp *interp, Tcl_Obj *const objv[]);
 static int struct_format_finalize(void);
 static int add_struct_format(Tcl_Interp *interp, Tcl_Obj *const objv[],
             adlb_struct_type type_id, const char *type_name,
@@ -300,7 +299,8 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   for (int i = 0; i < ntypes; i++)
     type_vect[i] = i;
 
-  table_lp_init(&blob_cache, 16);
+  bool ok = table_lp_init(&blob_cache, 16);
+  TCL_CONDITION(ok, "Could not initialize blob cache");
 
   if (objc == 3)
   {
@@ -351,22 +351,26 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   set_namespace_constants(interp);
 
-  struct_format_init();
+  rc = struct_format_init(interp, objv);
+  TCL_CHECK(rc);
 
   Tcl_SetObjResult(interp, Tcl_NewIntObj(ADLB_SUCCESS));
   return TCL_OK;
 }
 
-static void struct_format_init(void)
+static int struct_format_init(Tcl_Interp *interp, Tcl_Obj *const objv[])
 {
   int init_size = 16;
   adlb_struct_formats.types_len = init_size;
   adlb_struct_formats.types = malloc(sizeof(adlb_struct_formats.types[0]) *
                                     (size_t)init_size);
+  TCL_MALLOC_CHECK(adlb_struct_formats.types);
   for (int i = 0; i < init_size; i++)
   {
     adlb_struct_formats.types[i].initialized = false;
   }
+  
+  return TCL_OK;
 }
 
 static int struct_format_finalize(void)
