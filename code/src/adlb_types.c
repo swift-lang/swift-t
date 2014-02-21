@@ -386,7 +386,8 @@ adlb_data_code ADLB_Unpack2(adlb_datum_storage *d, adlb_data_type type,
     case ADLB_DATA_TYPE_FILE_REF:
       return ADLB_Unpack_file_ref(&d->FILE_REF, buffer, length);
     case ADLB_DATA_TYPE_STRUCT:
-      return ADLB_Unpack_struct(&d->STRUCT, buffer, length);
+      return ADLB_Unpack_struct(&d->STRUCT, buffer, length,
+                                init_compound);
     case ADLB_DATA_TYPE_CONTAINER:
       return ADLB_Unpack_container(&d->CONTAINER, buffer, length,
                                    init_compound);

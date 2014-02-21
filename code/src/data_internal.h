@@ -51,12 +51,12 @@ static inline void xlb_data_init_status(adlb_data_status *s)
 
 typedef struct
 {
-  adlb_data_type type;
-  adlb_data_status status;
-  int read_refcount; // Number of open read refs
-  int write_refcount; // Number of open write refs
   adlb_datum_storage data;
   struct list_i listeners;
+  int read_refcount; // Number of open read refs
+  int write_refcount; // Number of open write refs
+  adlb_data_type type;
+  adlb_data_status status;
 } adlb_datum;
 
 #define verbose_error(code, format, args...)                \

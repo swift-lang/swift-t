@@ -104,6 +104,9 @@ static adlb_data_code
 datum_init_multiset(adlb_datum *d, adlb_data_type val_type);
 
 static adlb_data_code
+datum_init_struct(adlb_datum *d, adlb_struct_type struct_type);
+
+static adlb_data_code
 add_close_notifs(adlb_datum_id id, adlb_datum *d,
                     adlb_notif_t *notify);
 
@@ -315,6 +318,15 @@ datum_init_multiset(adlb_datum *d, adlb_data_type val_type)
                 "Could not allocate multiset: out of memory");
 
   // Multiset structure is filled in, so mark as set
+  d->status.set = true;
+  return ADLB_DATA_SUCCESS;
+}
+
+static adlb_data_code
+datum_init_struct(adlb_datum *d, adlb_struct_type struct_type)
+{
+  // TODO: initialize empty struct of given type.
+  // Struct structure is filled in, so mark as set
   d->status.set = true;
   return ADLB_DATA_SUCCESS;
 }
@@ -1713,7 +1725,7 @@ xlb_data_types_init(void)
             type_entries[i].code, false, ADLB_TYPE_EXTRA_NULL);
     DATA_CHECK(dc);
   }
-  return ADLB_SUCCESS;
+  return ADLB_DATA_SUCCESS;
 }
 
 static adlb_data_code

@@ -122,9 +122,14 @@ typedef struct {
   slice_chunk_t chunks[];
 } adlb_slice_t;
 
+typedef struct {
+  adlb_datum_storage data;
+  bool initialized : 1;
+} adlb_struct_field;
+
 typedef struct adlb_struct_s {
   adlb_struct_type type;
-  adlb_datum_storage data[];
+  adlb_struct_field fields[];
 } adlb_struct;
 
 /*
@@ -507,7 +512,8 @@ ADLB_Pack_struct(const adlb_struct *s, const adlb_buffer *caller_buffer,
                  adlb_binary_data *result);
 
 adlb_data_code
-ADLB_Unpack_struct(adlb_struct **s, const void *data, int length);
+ADLB_Unpack_struct(adlb_struct **s, const void *data, int length,
+                   bool init_struct);
 
 // Free any memory used
 adlb_data_code
