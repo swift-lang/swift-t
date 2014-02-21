@@ -181,6 +181,12 @@ adlb_data_code xlb_data_type_add(const char *name,
             adlb_data_type code, bool has_extra, adlb_type_extra extra);
 
 /**
+  Lookup a data type.  If not found, set type to ADLB_DATA_TYPE_NULL.
+ */
+adlb_data_code xlb_data_type_lookup(const char* name,
+        adlb_data_type* type, bool *has_extra, adlb_type_extra *extra);
+
+/**
   Finalize data types module and clean up memory.
  */
 void xlb_data_types_finalize(void);

@@ -264,6 +264,10 @@ adlb_code ADLB_Lock(adlb_datum_id id, bool* result);
 adlb_code ADLBP_Unlock(adlb_datum_id id);
 adlb_code ADLB_Unlock(adlb_datum_id id);
 
+/**
+  Get information about a type based on name.
+  Returns error if not found
+ */
 adlb_code ADLB_Data_string_totype(const char* type_string,
                                   adlb_data_type* type, bool *has_extra,
                                   adlb_type_extra *extra);

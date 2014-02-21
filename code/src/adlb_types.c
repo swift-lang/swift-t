@@ -110,6 +110,30 @@ xlb_data_type_add(const char *name, adlb_data_type code, bool has_extra,
   return ADLB_DATA_SUCCESS;
 }
 
+adlb_data_code
+xlb_data_type_lookup(const char* name,
+                        adlb_data_type* type, bool *has_extra,
+                        adlb_type_extra *extra)
+{
+  xlb_data_type_info *entry;
+  bool found = table_search(&xlb_data_types, name, (void**)&entry);
+  if (!found)
+  {
+    *type = ADLB_DATA_TYPE_NULL;
+    return ADLB_DATA_SUCCESS;
+  }
+
+  assert(entry != NULL);
+  *type = entry->code;
+  *has_extra = entry->has_extra;
+  if (*has_extra)
+  {
+    *extra = entry->extra;
+  }
+
+  return ADLB_DATA_SUCCESS;
+}
+
 static void xlb_data_types_free_cb(const char *key, void *val)
 {
   free(val);
@@ -130,16 +154,12 @@ ADLB_Data_string_totype(const char* type_string,
                         adlb_data_type* type, bool *has_extra,
                         adlb_type_extra *extra)
 {
-  xlb_data_type_info *entry;
-  bool found = table_search(&xlb_data_types, type_string, (void**)&entry);
-  check_verbose(found, ADLB_ERROR, "Type %s not found", type_string);
-  *type = entry->code;
-  *has_extra = entry->has_extra;
-  if (*has_extra)
-  {
-    *extra = entry->extra;
-  }
+  adlb_data_code dc;
 
+  dc = xlb_data_type_lookup(type_string, type, has_extra, extra);
+  ADLB_DATA_CHECK(dc);
+  CHECK_MSG(*type != ADLB_DATA_TYPE_NULL, "Type %s not found", type_string);
+  
   return ADLB_SUCCESS;
 }
 

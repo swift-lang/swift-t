@@ -90,6 +90,15 @@ adlb_data_code ADLB_Declare_struct_type(adlb_struct_type type,
   assert(field_types != NULL);
   assert(field_names != NULL);
 
+  adlb_data_type tmp_type;
+  bool tmp_bool;
+  adlb_type_extra tmp_extra;
+  dc = xlb_data_type_lookup(type_name, &tmp_type, &tmp_bool, &tmp_extra);
+  DATA_CHECK(dc);
+
+  check_verbose(tmp_type == ADLB_DATA_TYPE_NULL, ADLB_DATA_ERROR_TYPE,
+            "Type called %s already exists", type_name);
+
   // Check array big enough
   dc = resize_struct_types(type);
   DATA_CHECK(dc);
@@ -109,6 +118,17 @@ adlb_data_code ADLB_Declare_struct_type(adlb_struct_type type,
     t->field_names[i] = strdup(field_names[i]);
     t->field_types[i] = field_types[i];
   }
+
+  // Add struct type name to index
+  adlb_type_extra extra = { .STRUCT.struct_type=type };
+  dc = xlb_data_type_add(type_name, ADLB_DATA_TYPE_STRUCT, true, extra);
+  DATA_CHECK(dc);
+
+  // Also add alias name, e.g. struct1, for backward compatibility
+  char *tmp_type_name;
+  int n = asprintf(&tmp_type_name, "struct%i", type);
+  check_verbose(n != -1, ADLB_DATA_ERROR_OOM, "Error printing string");
+  free(tmp_type_name);
 
   DEBUG("Declared struct type %s with id %i and %i fields",
         type_name, type, field_count);
