@@ -38,7 +38,6 @@ static struct_type_info *struct_types = NULL;
 static adlb_data_code struct_type_free(struct_type_info *t);
 static adlb_struct *alloc_struct(struct_type_info *t);
 
-
 const char *xlb_struct_type_name(adlb_struct_type type)
 {
   if (type >= 0 && type < struct_types_size)
@@ -162,6 +161,25 @@ ADLB_Lookup_struct_type(adlb_struct_type type,
   *field_count = t->field_count;
   *field_types = t->field_types;
   *field_names = t->field_names;
+  return ADLB_DATA_SUCCESS;
+}
+
+adlb_data_code xlb_new_struct(adlb_struct_type type, adlb_struct **s)
+{
+  check_valid_type(type);
+
+  struct_type_info *t = &struct_types[type];
+
+  adlb_struct *tmp = alloc_struct(t);
+  check_verbose(tmp != NULL, ADLB_DATA_ERROR_OOM, "Out of memory");
+
+  tmp->type = type;
+  for (int i = 0; i < t->field_count; i++)
+  {
+    tmp->fields[i].initialized = false;
+  }
+  *s = tmp;
+
   return ADLB_DATA_SUCCESS;
 }
 

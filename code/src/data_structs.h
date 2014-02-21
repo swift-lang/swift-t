@@ -10,6 +10,8 @@
 #include "data.h"
 #include "notifications.h"
 
+adlb_data_code xlb_new_struct(adlb_struct_type type, adlb_struct **s);
+
 // Free all memory allocated within this module
 adlb_data_code xlb_struct_finalize(void);
 
