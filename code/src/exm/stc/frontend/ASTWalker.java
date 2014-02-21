@@ -1815,7 +1815,7 @@ public class ASTWalker {
     // use wait to wait for data then dispatch task to worker
     String waitName = context.getFunctionContext().constructName("app-leaf");
     // do deep wait for array args
-    backend.startWaitStatement(waitName, VarRepr.backendVars(waitVars),
+    backend.startWaitStatement(waitName, VarRepr.backendWaitVars(waitVars),
         WaitMode.TASK_DISPATCH, true, TaskMode.WORKER, props);
     // On worker, just execute the required command directly
     Pair<List<Arg>, Redirects<Arg>> retrieved = retrieveAppArgs(context,

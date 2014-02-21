@@ -15,6 +15,7 @@ import exm.stc.common.lang.Types.RefType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.Typed;
 import exm.stc.common.lang.Var;
+import exm.stc.common.lang.WaitVar;
 
 /**
  * This class contains logic for translating frontend variables to
@@ -41,9 +42,22 @@ public class VarRepr {
     }
     return result;
   }
+  
+  public static List<WaitVar> backendWaitVars(List<WaitVar> frontendVars) {
+    ArrayList<WaitVar> result = new ArrayList<WaitVar>(frontendVars.size());
+    for (WaitVar v: frontendVars) {
+      result.add(backendWaitVar(v));
+    }
+    return result;
+  }
 
   public static Arg backendArg(Var frontendVar) {
     return backendVar(frontendVar).asArg();
+  }
+
+  public static WaitVar backendWaitVar(WaitVar frontendVar) {
+    return new WaitVar(backendVar(frontendVar.var),
+                        frontendVar.explicit);
   }
   
   public static Arg backendArg(Arg frontendArg) {
