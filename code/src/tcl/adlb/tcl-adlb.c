@@ -1855,13 +1855,14 @@ tcl_dict_to_adlb_struct(Tcl_Interp *interp, Tcl_Obj *const objv[],
       curr = val;
     }
     // TODO: Don't support nested elements with extra type info
-    adlb_datum_storage *field = &(*result)->data[i];
+    adlb_datum_storage *field = &(*result)->fields[i].data;
     adlb_type_extra type_extra = ADLB_TYPE_EXTRA_NULL;
     bool alloced;
     // Need to own memory in allocated object so we can free correctly
     rc = tcl_obj_to_adlb_data(interp, objv, f->field_types[i],
                       &type_extra, curr, true, field, &alloced);
     TCL_CHECK(rc);
+    (*result)->fields[i].initialized = true;
   }
 
   return TCL_OK;
