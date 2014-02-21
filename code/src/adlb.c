@@ -33,6 +33,7 @@
 #include <tools.h>
 
 #include "adlb.h"
+#include "adlb_types.h"
 #include "adlb-version.h"
 #include "adlb-xpt.h"
 #include "checks.h"
@@ -161,6 +162,9 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
 
   xlb_read_refcount_enabled = false;
 
+  adlb_data_code dc = xlb_data_types_init();
+  ADLB_DATA_CHECK(dc);
+  
   TRACE_END;
   return ADLB_SUCCESS;
 }
@@ -1395,6 +1399,9 @@ ADLBP_Finalize()
 
   free(xlb_types);
   xlb_types = NULL;
+  
+  xlb_data_types_finalize();
+
   return ADLB_SUCCESS;
 }
 

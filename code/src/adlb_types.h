@@ -169,6 +169,22 @@ typedef struct {
   int length;
 } adlb_buffer;
 
+/**
+  Initialize data types module.  Required to look up types by name.
+ */
+adlb_data_code xlb_data_types_init(void);
+
+/**
+  Add a new data type.
+ */
+adlb_data_code xlb_data_type_add(const char *name,
+            adlb_data_type code, bool has_extra, adlb_type_extra extra);
+
+/**
+  Finalize data types module and clean up memory.
+ */
+void xlb_data_types_finalize(void);
+
 /*
    Get a packed representation, i.e. one in which the data is in
    contiguous memory.

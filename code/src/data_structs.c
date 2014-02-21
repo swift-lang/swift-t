@@ -418,7 +418,7 @@ xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
 adlb_data_code
 xlb_struct_str_to_ix(adlb_subscript subscript, int *field_ix)
 {
-  // TODO: use binary repr for subscript?
+  // TODO: use binary repr for subscript? vint?
   char *end;
   // TODO: unsafe, assuming null terminated
   long field_ixl = strtol(subscript.key, &end, 10);

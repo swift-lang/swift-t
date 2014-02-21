@@ -26,7 +26,6 @@
 #include <list.h>
 #include <list_i.h>
 #include <list_l.h>
-#include <table.h>
 #include <table_bp.h>
 #include <table_lp.h>
 #include <vint.h>
@@ -82,15 +81,6 @@ static adlb_datum_id unique = -1;
    longs. Defined in data_init()
  */
 static adlb_datum_id last_id;
-
-typedef struct {
-  adlb_data_type code;
-  bool has_extra;
-  adlb_type_extra extra;
-} xlb_data_type_info;
-
-/** Map from type name to xlb_data_type_info */
-struct table xlb_data_types;
 
 static adlb_data_code
 datum_init_props(adlb_datum_id id, adlb_datum *d,
@@ -161,11 +151,6 @@ static void container_add(adlb_container *c, adlb_subscript sub,
 
 static void report_leaks(void);
 
-static adlb_data_code xlb_data_types_init(void);
-static adlb_data_code xlb_data_type_add(const char *name,
-            adlb_data_type code, bool has_extra, adlb_type_extra extra);
-static void xlb_data_types_finalize(void);
-
 // Maximum length of id/subscript string
 #define ID_SUB_PAIR_MAX \
   (sizeof(adlb_datum_id) + ADLB_DATA_SUBSCRIPT_MAX + 1)
@@ -225,9 +210,6 @@ xlb_data_init(int s, int server_num)
     return ADLB_DATA_ERROR_OOM;
 
   last_id = LONG_MAX - servers - 1;
-
-  adlb_data_code dc = xlb_data_types_init();
-  DATA_CHECK(dc);
 
   return ADLB_DATA_SUCCESS;
 }
@@ -1668,151 +1650,6 @@ xlb_data_unique(adlb_datum_id* result)
   *result = unique;
   unique += servers;
   return ADLB_DATA_SUCCESS;
-}
-
-#define TYPE_NAME_INTEGER "integer"
-#define TYPE_NAME_FLOAT "float"
-#define TYPE_NAME_STRING "string"
-#define TYPE_NAME_BLOB "blob"
-#define TYPE_NAME_CONTAINER "container"
-#define TYPE_NAME_MULTISET "multiset"
-#define TYPE_NAME_REF "ref"
-#define TYPE_NAME_FILE_REF "file_ref"
-#define TYPE_NAME_STRUCT "struct"
-#define TYPE_NAME_NULL "ADLB_DATA_TYPE_NULL"
-
-struct type_entry
-{
-  adlb_data_type code;
-  const char *name;
-  size_t name_len;
-};
-
-static struct type_entry type_entries[] = {
-  { ADLB_DATA_TYPE_INTEGER, TYPE_NAME_INTEGER,
-    sizeof(TYPE_NAME_INTEGER) - 1 },
-  { ADLB_DATA_TYPE_FLOAT, TYPE_NAME_FLOAT,
-    sizeof(TYPE_NAME_FLOAT) - 1 },
-  { ADLB_DATA_TYPE_STRING, TYPE_NAME_STRING,
-    sizeof(TYPE_NAME_STRING) - 1 },
-  { ADLB_DATA_TYPE_BLOB, TYPE_NAME_BLOB,
-    sizeof(TYPE_NAME_BLOB) - 1 },
-  { ADLB_DATA_TYPE_CONTAINER, TYPE_NAME_CONTAINER,
-    sizeof(TYPE_NAME_CONTAINER) - 1 },
-  { ADLB_DATA_TYPE_MULTISET, TYPE_NAME_MULTISET,
-    sizeof(TYPE_NAME_MULTISET) - 1 },
-  { ADLB_DATA_TYPE_REF, TYPE_NAME_REF,
-    sizeof(TYPE_NAME_REF) - 1 },
-  { ADLB_DATA_TYPE_FILE_REF, TYPE_NAME_FILE_REF,
-    sizeof(TYPE_NAME_FILE_REF) - 1 },
-  { ADLB_DATA_TYPE_STRUCT, TYPE_NAME_STRUCT,
-    sizeof(TYPE_NAME_STRUCT) - 1 },
-  { ADLB_DATA_TYPE_NULL, TYPE_NAME_NULL,
-    sizeof(TYPE_NAME_NULL) - 1 },
-};
-static int type_entries_size = sizeof(type_entries) / sizeof(*type_entries);
-
-static adlb_data_code
-xlb_data_types_init(void)
-{
-  bool ok = table_init(&xlb_data_types, 64);
-  check_verbose(ok, ADLB_DATA_ERROR_OOM, "Out of memory");
-  
-  // Add builtin types
-  for (int i = 0; i < type_entries_size; i++)
-  {
-    adlb_data_code dc = xlb_data_type_add(type_entries[i].name,
-            type_entries[i].code, false, ADLB_TYPE_EXTRA_NULL);
-    DATA_CHECK(dc);
-  }
-  return ADLB_DATA_SUCCESS;
-}
-
-static adlb_data_code
-xlb_data_type_add(const char *name, adlb_data_type code, bool has_extra,
-             adlb_type_extra extra)
-{
-  check_verbose(!table_contains(&xlb_data_types, name),
-                ADLB_DATA_ERROR_INVALID,
-                "Struct type name %s already in use", name);
-
-  xlb_data_type_info *entry = malloc(sizeof(xlb_data_type_info)); 
-  check_verbose(entry != NULL, ADLB_DATA_ERROR_OOM, "Out of memory");
-  entry->code = code;
-  entry->has_extra = has_extra;
-  entry->extra = extra;
-
-  bool ok = table_add(&xlb_data_types, name, entry);
-  check_verbose(ok, ADLB_DATA_ERROR_INVALID, 
-                "Failed adding new type %s to index", name);
-
-  return ADLB_DATA_SUCCESS;
-}
-
-static void xlb_data_types_free_cb(const char *key, void *val)
-{
-  free(val);
-}
-
-static void
-xlb_data_types_finalize(void)
-{
-  table_free_callback(&xlb_data_types, false, xlb_data_types_free_cb);
-}
-
-/**
-   Convert string representation of data type to data type number
-   plus additional info
- */
-adlb_code
-ADLB_Data_string_totype(const char* type_string,
-                        adlb_data_type* type, bool *has_extra,
-                        adlb_type_extra *extra)
-{
-  xlb_data_type_info *entry;
-  bool found = table_search(&xlb_data_types, type_string, (void**)&entry);
-  check_verbose(found, ADLB_ERROR, "Type %s not found", type_string);
-  *type = entry->code;
-  *has_extra = entry->has_extra;
-  if (*has_extra)
-  {
-    *extra = entry->extra;
-  }
-
-  return ADLB_SUCCESS;
-}
-
-/**
-   Convert given data type number to output string representation
- */
-const char
-*ADLB_Data_type_tostring(adlb_data_type type)
-{
-  switch(type)
-  {
-    case ADLB_DATA_TYPE_INTEGER:
-      return TYPE_NAME_INTEGER;
-    case ADLB_DATA_TYPE_FLOAT:
-      return TYPE_NAME_FLOAT;
-    case ADLB_DATA_TYPE_STRING:
-      return TYPE_NAME_STRING;
-    case ADLB_DATA_TYPE_BLOB:
-      return TYPE_NAME_BLOB;
-    case ADLB_DATA_TYPE_CONTAINER:
-      return TYPE_NAME_CONTAINER;
-    case ADLB_DATA_TYPE_MULTISET:
-      return TYPE_NAME_MULTISET;
-    case ADLB_DATA_TYPE_REF:
-      return TYPE_NAME_REF;
-    case ADLB_DATA_TYPE_FILE_REF:
-      return TYPE_NAME_FILE_REF;
-    case ADLB_DATA_TYPE_STRUCT:
-      return TYPE_NAME_STRUCT;
-    case ADLB_DATA_TYPE_NULL:
-      return TYPE_NAME_NULL;
-    default:
-      return "<invalid type>";
-  }
 }
 
 const char*
