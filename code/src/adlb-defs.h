@@ -86,7 +86,6 @@ typedef union {
     adlb_data_type_short val_type;
   } MULTISET;
   struct {
-    // Note: struct type isn't specified at creation
     adlb_struct_type struct_type; 
   } STRUCT;
   void *NONE;

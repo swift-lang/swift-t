@@ -83,6 +83,15 @@ static adlb_datum_id unique = -1;
  */
 static adlb_datum_id last_id;
 
+typedef struct {
+  adlb_data_type code;
+  bool has_extra;
+  adlb_type_extra extra;
+} xlb_data_type_info;
+
+/** Map from type name to xlb_data_type_info */
+struct table xlb_data_types;
+
 static adlb_data_code
 datum_init_props(adlb_datum_id id, adlb_datum *d,
                  const adlb_create_props *props);
@@ -149,6 +158,10 @@ static void container_add(adlb_container *c, adlb_subscript sub,
 
 static void report_leaks(void);
 
+static adlb_data_code xlb_data_types_init(void);
+static adlb_data_code xlb_data_type_add(const char *name,
+            adlb_data_type code, bool has_extra, adlb_type_extra extra);
+static void xlb_data_types_finalize(void);
 
 // Maximum length of id/subscript string
 #define ID_SUB_PAIR_MAX \
@@ -198,6 +211,8 @@ xlb_data_init(int s, int server_num)
   if (!result)
     return ADLB_DATA_ERROR_OOM;
   result = table_bp_init(&container_references, 1024*1024);
+  if (!result)
+    return ADLB_DATA_ERROR_OOM;
   result = table_bp_init(&container_ix_listeners, 1024*1024);
   if (!result)
     return ADLB_DATA_ERROR_OOM;
@@ -207,6 +222,9 @@ xlb_data_init(int s, int server_num)
     return ADLB_DATA_ERROR_OOM;
 
   last_id = LONG_MAX - servers - 1;
+
+  adlb_data_code dc = xlb_data_types_init();
+  DATA_CHECK(dc);
 
   return ADLB_DATA_SUCCESS;
 }
@@ -249,17 +267,25 @@ xlb_data_create(adlb_datum_id id, adlb_data_type type,
   adlb_data_code dc = datum_init_props(id, d, props);
   DATA_CHECK(dc);
 
-  // Containers need additional information
-  if (type == ADLB_DATA_TYPE_CONTAINER)
+  // Some compound types need additional information
+  switch (type)
   {
-    dc = datum_init_container(d, type_extra->CONTAINER.key_type,
+    case ADLB_DATA_TYPE_CONTAINER:
+      dc = datum_init_container(d, type_extra->CONTAINER.key_type,
                                 type_extra->CONTAINER.val_type);
-    DATA_CHECK(dc);
-  }
-  else if (type == ADLB_DATA_TYPE_MULTISET)
-  {
-    datum_init_multiset(d, type_extra->MULTISET.val_type);
-    DATA_CHECK(dc);
+      DATA_CHECK(dc);
+      break;
+    case ADLB_DATA_TYPE_MULTISET:
+      dc = datum_init_multiset(d, type_extra->MULTISET.val_type);
+      DATA_CHECK(dc);
+      break;
+    case ADLB_DATA_TYPE_STRUCT:
+      dc = datum_init_struct(d, type_extra->STRUCT.struct_type);
+      DATA_CHECK(dc);
+      break;
+    default:
+      // Do nothing
+      break;
   }
   return ADLB_DATA_SUCCESS;
 }
@@ -1674,6 +1700,54 @@ static struct type_entry type_entries[] = {
 };
 static int type_entries_size = sizeof(type_entries) / sizeof(*type_entries);
 
+static adlb_data_code
+xlb_data_types_init(void)
+{
+  bool ok = table_init(&xlb_data_types, 64);
+  check_verbose(ok, ADLB_DATA_ERROR_OOM, "Out of memory");
+  
+  // Add builtin types
+  for (int i = 0; i < type_entries_size; i++)
+  {
+    adlb_data_code dc = xlb_data_type_add(type_entries[i].name,
+            type_entries[i].code, false, ADLB_TYPE_EXTRA_NULL);
+    DATA_CHECK(dc);
+  }
+  return ADLB_SUCCESS;
+}
+
+static adlb_data_code
+xlb_data_type_add(const char *name, adlb_data_type code, bool has_extra,
+             adlb_type_extra extra)
+{
+  check_verbose(!table_contains(&xlb_data_types, name),
+                ADLB_DATA_ERROR_INVALID,
+                "Struct type name %s already in use", name);
+
+  xlb_data_type_info *entry = malloc(sizeof(xlb_data_type_info)); 
+  check_verbose(entry != NULL, ADLB_DATA_ERROR_OOM, "Out of memory");
+  entry->code = code;
+  entry->has_extra = has_extra;
+  entry->extra = extra;
+
+  bool ok = table_add(&xlb_data_types, name, entry);
+  check_verbose(ok, ADLB_DATA_ERROR_INVALID, 
+                "Failed adding new type %s to index", name);
+
+  return ADLB_DATA_SUCCESS;
+}
+
+static void xlb_data_types_free_cb(const char *key, void *val)
+{
+  free(val);
+}
+
+static void
+xlb_data_types_finalize(void)
+{
+  table_free_callback(&xlb_data_types, false, xlb_data_types_free_cb);
+}
+
 /**
    Convert string representation of data type to data type number
    plus additional info
@@ -1683,47 +1757,17 @@ ADLB_Data_string_totype(const char* type_string,
                         adlb_data_type* type, bool *has_extra,
                         adlb_type_extra *extra)
 {
-  for (int i = 0; i < type_entries_size; i++)
+  xlb_data_type_info *entry;
+  bool found = table_search(&xlb_data_types, type_string, (void**)&entry);
+  check_verbose(found, ADLB_ERROR, "Type %s not found", type_string);
+  *type = entry->code;
+  *has_extra = entry->has_extra;
+  if (*has_extra)
   {
-    size_t name_len = type_entries[i].name_len;
-    // Check that type names starts with prefix
-    if (strncmp(type_string, type_entries[i].name, name_len) == 0)
-    {
-      if (type_string[name_len] == '\0')
-      {
-        // Exact match
-        *type = type_entries[i].code;
-        *has_extra = false;
-        return ADLB_SUCCESS;
-      }
-      else
-      {
-        if (type_entries[i].code == ADLB_DATA_TYPE_STRUCT)
-        {
-          // See if of form "struct1234"
-          const char *suffix = &type_string[name_len];
-          char *endptr;
-          long val = strtol(suffix, &endptr, 10);
-          if (endptr != NULL && endptr[0] == '\0' &&
-              val >= 0 && val <= INT_MAX)
-          {
-            // successful parse
-            *type = ADLB_DATA_TYPE_STRUCT;
-            *has_extra = true;
-            extra->STRUCT.struct_type = (int)val;
-            return ADLB_SUCCESS;
-          }
-          else
-          {
-            DEBUG("Bad struct suffix: %s", suffix);
-          }
-        }
-        return ADLB_ERROR;
-      }
-    }
+    *extra = entry->extra;
   }
 
-  return ADLB_ERROR;
+  return ADLB_SUCCESS;
 }
 
 /**
@@ -1845,6 +1889,8 @@ xlb_data_finalize()
 
   adlb_data_code dc = xlb_struct_finalize();
   DATA_CHECK(dc);
+
+  xlb_data_types_finalize();
   return ADLB_DATA_SUCCESS;
 }
 
