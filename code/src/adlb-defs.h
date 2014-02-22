@@ -77,21 +77,25 @@ typedef short adlb_data_type_short;
 typedef int adlb_struct_type;
 
 // Additional type info for particular types
-typedef union {
-  struct {
-    adlb_data_type_short key_type;
-    adlb_data_type_short val_type;
-  } CONTAINER;
-  struct {
-    adlb_data_type_short val_type;
-  } MULTISET;
-  struct {
-    adlb_struct_type struct_type; 
-  } STRUCT;
-  void *NONE;
+typedef struct {
+  union {
+    struct {
+      adlb_data_type_short key_type;
+      adlb_data_type_short val_type;
+    } CONTAINER;
+    struct {
+      adlb_data_type_short val_type;
+    } MULTISET;
+    struct {
+      adlb_struct_type struct_type; 
+    } STRUCT;
+  };
+  bool valid; // If true, data is actually valid
 } adlb_type_extra;
 
-#define ADLB_TYPE_EXTRA_NULL ((adlb_type_extra) NULL)
+static const adlb_type_extra ADLB_TYPE_EXTRA_NULL = {
+  .valid = false
+};
 
 // Struct to specify a subscript into e.g. an ADLB data container
 typedef struct {

@@ -94,7 +94,8 @@ static adlb_data_code
 datum_init_multiset(adlb_datum *d, adlb_data_type val_type);
 
 static adlb_data_code
-datum_init_struct(adlb_datum *d, adlb_struct_type struct_type);
+datum_init_struct(adlb_datum *d, bool struct_type_provided,
+                  adlb_struct_type struct_type);
 
 static adlb_data_code
 add_close_notifs(adlb_datum_id id, adlb_datum *d,
@@ -264,16 +265,19 @@ xlb_data_create(adlb_datum_id id, adlb_data_type type,
   switch (type)
   {
     case ADLB_DATA_TYPE_CONTAINER:
+      assert(type_extra->valid);
       dc = datum_init_container(d, type_extra->CONTAINER.key_type,
                                 type_extra->CONTAINER.val_type);
       DATA_CHECK(dc);
       break;
     case ADLB_DATA_TYPE_MULTISET:
+      assert(type_extra->valid);
       dc = datum_init_multiset(d, type_extra->MULTISET.val_type);
       DATA_CHECK(dc);
       break;
     case ADLB_DATA_TYPE_STRUCT:
-      dc = datum_init_struct(d, type_extra->STRUCT.struct_type);
+      dc = datum_init_struct(d, type_extra->valid, type_extra->valid ? 
+                              type_extra->STRUCT.struct_type : 0);
       DATA_CHECK(dc);
       break;
     default:
@@ -313,14 +317,24 @@ datum_init_multiset(adlb_datum *d, adlb_data_type val_type)
 }
 
 static adlb_data_code
-datum_init_struct(adlb_datum *d, adlb_struct_type struct_type)
+datum_init_struct(adlb_datum *d, bool struct_type_provided,
+                  adlb_struct_type struct_type)
 {
   adlb_data_code dc;
-  // Struct structure is filled in, so mark as set
-  dc = xlb_new_struct(struct_type, &d->data.STRUCT);
-  DATA_CHECK(dc);
 
-  d->status.set = true;
+  if (struct_type_provided)
+  {
+    // Struct structure is filled in, so mark as set
+    dc = xlb_new_struct(struct_type, &d->data.STRUCT);
+    DATA_CHECK(dc);
+    d->status.set = true;
+  }
+  else
+  {
+    d->data.STRUCT = NULL;
+    d->status.set = false;
+  }
+
   return ADLB_DATA_SUCCESS;
 }
 
@@ -650,6 +664,8 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
     }
     else if (is_struct)
     {
+      check_verbose(d->status.set, ADLB_DATA_ERROR_INVALID, "Can't set "
+          "subscript of struct initialized without type <%"PRId64">", id);
       // This will check validity of subscript as side-effect
       dc = xlb_struct_subscript_init(d->data.STRUCT, subscript,
                                     &sub_found);
@@ -871,7 +887,8 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
             ADLB_Data_type_tostring(type), ADLB_Data_type_tostring(d->type));
 
     // Handle store to top-level datum
-    dc = ADLB_Unpack2(&d->data, d->type, buffer, length, false);
+    bool initialize = !d->status.set;
+    dc = ADLB_Unpack2(&d->data, d->type, buffer, length, initialize);
     DATA_CHECK(dc);
     d->status.set = true;
 
@@ -982,6 +999,8 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
   }
   else if (d->type == ADLB_DATA_TYPE_STRUCT)
   {
+    check_verbose(d->status.set, ADLB_DATA_ERROR_INVALID, "Can't set "
+        "subscript of struct initialized without type <%"PRId64">", id);
     // Handle assigning struct field
     dc = xlb_struct_set_subscript(d->data.STRUCT, subscript,
                         buffer, length, type);
@@ -1169,6 +1188,8 @@ lookup_subscript(adlb_datum_id id, const adlb_datum_storage *d,
       break;
     case ADLB_DATA_TYPE_STRUCT:
     {
+      check_verbose(d->STRUCT != NULL, ADLB_DATA_ERROR_INVALID, "Can't set "
+          "subscript of struct initialized without type <%"PRId64">", id);
       dc = xlb_struct_get_subscript(d->STRUCT, subscript, result,
                                     result_type);
       DATA_CHECK(dc);

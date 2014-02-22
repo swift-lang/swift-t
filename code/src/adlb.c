@@ -519,7 +519,7 @@ ADLB_Locate(adlb_datum_id id)
    Reusable internal data creation function
    Applications should use the ADLB_Create_type functions in adlb.h
    @param filename Only used for file-type data
-   @param subscript_type Only used for container-type data
+   @param type_extra Additional type info
  */
 static adlb_code
 ADLBP_Create_impl(adlb_datum_id id, adlb_data_type type,
@@ -655,6 +655,7 @@ ADLB_Create_container(adlb_datum_id id, adlb_data_type key_type,
                       adlb_create_props props, adlb_datum_id *new_id)
 {
   adlb_type_extra extra_type;
+  extra_type.valid = true;
   extra_type.CONTAINER.key_type = key_type;
   extra_type.CONTAINER.val_type = val_type;
   return ADLBP_Create_impl(id, ADLB_DATA_TYPE_CONTAINER, extra_type,
@@ -667,6 +668,7 @@ adlb_code ADLB_Create_multiset(adlb_datum_id id,
                                 adlb_datum_id *new_id)
 {
   adlb_type_extra extra_type;
+  extra_type.valid = true;
   extra_type.MULTISET.val_type = val_type;
   return ADLBP_Create_impl(id, ADLB_DATA_TYPE_MULTISET, extra_type,
                            props, new_id);
@@ -1034,6 +1036,7 @@ ADLBP_Enumerate(adlb_datum_id container_id,
       *data = malloc((size_t)res.length);
       RECV(*data, res.length, MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE);
     }
+    kv_type->valid = true;
     kv_type->CONTAINER.key_type = res.key_type;
     kv_type->CONTAINER.val_type = res.val_type;
     return ADLB_SUCCESS;

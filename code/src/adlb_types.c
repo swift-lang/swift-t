@@ -66,7 +66,6 @@ static int type_entries_size = sizeof(type_entries) / sizeof(*type_entries);
 
 typedef struct {
   adlb_data_type code;
-  bool has_extra;
   adlb_type_extra extra;
 } xlb_data_type_info;
 
@@ -83,14 +82,14 @@ xlb_data_types_init(void)
   for (int i = 0; i < type_entries_size; i++)
   {
     adlb_data_code dc = xlb_data_type_add(type_entries[i].name,
-            type_entries[i].code, false, ADLB_TYPE_EXTRA_NULL);
+            type_entries[i].code, ADLB_TYPE_EXTRA_NULL);
     DATA_CHECK(dc);
   }
   return ADLB_DATA_SUCCESS;
 }
 
 adlb_data_code
-xlb_data_type_add(const char *name, adlb_data_type code, bool has_extra,
+xlb_data_type_add(const char *name, adlb_data_type code,
              adlb_type_extra extra)
 {
   check_verbose(!table_contains(&xlb_data_types, name),
@@ -100,7 +99,6 @@ xlb_data_type_add(const char *name, adlb_data_type code, bool has_extra,
   xlb_data_type_info *entry = malloc(sizeof(xlb_data_type_info)); 
   check_verbose(entry != NULL, ADLB_DATA_ERROR_OOM, "Out of memory");
   entry->code = code;
-  entry->has_extra = has_extra;
   entry->extra = extra;
 
   bool ok = table_add(&xlb_data_types, name, entry);
@@ -111,8 +109,7 @@ xlb_data_type_add(const char *name, adlb_data_type code, bool has_extra,
 }
 
 adlb_data_code
-xlb_data_type_lookup(const char* name,
-                        adlb_data_type* type, bool *has_extra,
+xlb_data_type_lookup(const char* name, adlb_data_type* type,
                         adlb_type_extra *extra)
 {
   xlb_data_type_info *entry;
@@ -125,11 +122,7 @@ xlb_data_type_lookup(const char* name,
 
   assert(entry != NULL);
   *type = entry->code;
-  *has_extra = entry->has_extra;
-  if (*has_extra)
-  {
-    *extra = entry->extra;
-  }
+  *extra = entry->extra;
 
   return ADLB_DATA_SUCCESS;
 }
@@ -150,13 +143,12 @@ xlb_data_types_finalize(void)
    plus additional info
  */
 adlb_code
-ADLB_Data_string_totype(const char* type_string,
-                        adlb_data_type* type, bool *has_extra,
+ADLB_Data_string_totype(const char* type_string, adlb_data_type* type,
                         adlb_type_extra *extra)
 {
   adlb_data_code dc;
 
-  dc = xlb_data_type_lookup(type_string, type, has_extra, extra);
+  dc = xlb_data_type_lookup(type_string, type, extra);
   ADLB_DATA_CHECK(dc);
   CHECK_MSG(*type != ADLB_DATA_TYPE_NULL, "Type %s not found", type_string);
   

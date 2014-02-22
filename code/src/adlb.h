@@ -269,8 +269,7 @@ adlb_code ADLB_Unlock(adlb_datum_id id);
   Returns error if not found
  */
 adlb_code ADLB_Data_string_totype(const char* type_string,
-                                  adlb_data_type* type, bool *has_extra,
-                                  adlb_type_extra *extra);
+              adlb_data_type* type, adlb_type_extra *extra);
 
 const char *ADLB_Data_type_tostring(adlb_data_type type);
 

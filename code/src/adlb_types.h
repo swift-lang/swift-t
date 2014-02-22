@@ -178,13 +178,13 @@ adlb_data_code xlb_data_types_init(void);
   Add a new data type.
  */
 adlb_data_code xlb_data_type_add(const char *name,
-            adlb_data_type code, bool has_extra, adlb_type_extra extra);
+            adlb_data_type code, adlb_type_extra extra);
 
 /**
   Lookup a data type.  If not found, set type to ADLB_DATA_TYPE_NULL.
  */
 adlb_data_code xlb_data_type_lookup(const char* name,
-        adlb_data_type* type, bool *has_extra, adlb_type_extra *extra);
+        adlb_data_type* type, adlb_type_extra *extra);
 
 /**
   Finalize data types module and clean up memory.

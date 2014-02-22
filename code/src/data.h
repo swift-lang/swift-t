@@ -43,6 +43,10 @@ adlb_data_code xlb_data_container_typeof(adlb_datum_id id,
                                      adlb_data_type* key_type,
                                      adlb_data_type* val_type);
 
+/**
+  Create a new datum
+  type_extra: extra type info, or null if not provided
+ */
 adlb_data_code xlb_data_create(adlb_datum_id id, adlb_data_type type,
                            const adlb_type_extra *type_extra,
                            const adlb_create_props *props);
