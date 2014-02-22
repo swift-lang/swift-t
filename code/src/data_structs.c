@@ -500,7 +500,7 @@ xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
 
   for (int i = 0; i < t->field_count; i++)
   {
-    if (s->fields[i].initialized)
+    if (!s->fields[i].initialized)
       // Skip acquiring/freeing uninitialized fields
       continue;
 
