@@ -429,7 +429,7 @@ adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,
   adlb_data_code dc = get_field(s, field_ix, &st, &f);
   DATA_CHECK(dc);
 
-  check_verbose(f->initialized, ADLB_DATA_ERROR_DOUBLE_WRITE,
+  check_verbose(!f->initialized, ADLB_DATA_ERROR_DOUBLE_WRITE,
         "Field %s of struct type %s already set",
         st->field_names[field_ix], st->type_name);
   check_verbose(st->field_types[field_ix] == type, ADLB_DATA_ERROR_TYPE,
