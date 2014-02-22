@@ -754,6 +754,7 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
     TCL_CHECK(rc);
     type_extra.MULTISET.val_type = tmp;
   }
+  type_extra.valid = true;
 
 
   // Increments/decrements for outer and inner containers
