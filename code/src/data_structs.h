@@ -10,6 +10,14 @@
 #include "data.h"
 #include "notifications.h"
 
+typedef struct {
+  bool initialized;
+  char *type_name;
+  int field_count;
+  char **field_names;
+  adlb_data_type *field_types;
+} xlb_struct_type_info;
+
 adlb_data_code xlb_new_struct(adlb_struct_type type, adlb_struct **s);
 
 // Free all memory allocated within this module
@@ -17,6 +25,12 @@ adlb_data_code xlb_struct_finalize(void);
 
 // Return the name of a declared struct type
 const char *xlb_struct_type_name(adlb_struct_type type);
+
+// Return info about the struct type
+// return: pointer to struct type info, valid until finalize called.
+//         NULL if invalid type
+const xlb_struct_type_info *
+xlb_get_struct_type_info(adlb_struct_type type);
 
 // Free memory associated with struct, including the
 // provided pointer if specified

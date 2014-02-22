@@ -15,17 +15,9 @@
 #include "data_internal.h"
 #include "refcount.h"
 
-typedef struct {
-  bool initialized;
-  char *type_name;
-  int field_count;
-  char **field_names;
-  adlb_data_type *field_types;
-} struct_type_info;
-
 // Dynamically allocated array of struct type entries
 static int struct_types_size = 0;
-static struct_type_info *struct_types = NULL;
+static xlb_struct_type_info *struct_types = NULL;
 
 #define is_valid_type(type) (type >= 0 && type < struct_types_size && \
                              struct_types[type].initialized)
@@ -35,14 +27,14 @@ static struct_type_info *struct_types = NULL;
             "Invalid type id %i", type); \
   }
 
-static adlb_data_code struct_type_free(struct_type_info *t);
-static adlb_struct *alloc_struct(struct_type_info *t);
+static adlb_data_code struct_type_free(xlb_struct_type_info *t);
+static adlb_struct *alloc_struct(xlb_struct_type_info *t);
 
 const char *xlb_struct_type_name(adlb_struct_type type)
 {
   if (type >= 0 && type < struct_types_size)
   {
-    struct_type_info *info = &struct_types[type];
+    xlb_struct_type_info *info = &struct_types[type];
     if (info->initialized)
     {
       return info->type_name;
@@ -50,6 +42,15 @@ const char *xlb_struct_type_name(adlb_struct_type type)
   };
 
   return NULL;
+}
+
+const xlb_struct_type_info *
+xlb_get_struct_type_info(adlb_struct_type type)
+{
+  if (is_valid_type(type))
+    return &struct_types[type];
+  else
+    return NULL;
 }
 
 
@@ -103,7 +104,7 @@ adlb_data_code ADLB_Declare_struct_type(adlb_struct_type type,
   dc = resize_struct_types(type);
   DATA_CHECK(dc);
 
-  struct_type_info *t = &struct_types[type];
+  xlb_struct_type_info *t = &struct_types[type];
   check_verbose(!t->initialized, ADLB_DATA_ERROR_INVALID,
                 "struct type %i already initialized", type);
 
@@ -154,7 +155,7 @@ adlb_data_code xlb_struct_finalize(void)
 }
 
 static
-adlb_data_code struct_type_free(struct_type_info *t)
+adlb_data_code struct_type_free(xlb_struct_type_info *t)
 {
   if (t->initialized)
   {
@@ -176,7 +177,7 @@ ADLB_Lookup_struct_type(adlb_struct_type type,
 {
   check_valid_type(type);
 
-  struct_type_info *t = &struct_types[type];
+  xlb_struct_type_info *t = &struct_types[type];
   *type_name = t->type_name;
   *field_count = t->field_count;
   *field_types = t->field_types;
@@ -188,7 +189,7 @@ adlb_data_code xlb_new_struct(adlb_struct_type type, adlb_struct **s)
 {
   check_valid_type(type);
 
-  struct_type_info *t = &struct_types[type];
+  xlb_struct_type_info *t = &struct_types[type];
 
   adlb_struct *tmp = alloc_struct(t);
   check_verbose(tmp != NULL, ADLB_DATA_ERROR_OOM, "Out of memory");
@@ -203,7 +204,7 @@ adlb_data_code xlb_new_struct(adlb_struct_type type, adlb_struct **s)
   return ADLB_DATA_SUCCESS;
 }
 
-static adlb_struct *alloc_struct(struct_type_info *t)
+static adlb_struct *alloc_struct(xlb_struct_type_info *t)
 {
   adlb_struct *res;
   res = malloc(sizeof(adlb_struct) +
@@ -223,7 +224,7 @@ ADLB_Unpack_struct(adlb_struct **s, const void *data, int length,
                 "buffer too small for serialized struct");
   const adlb_packed_struct_hdr *hdr = data;
   check_valid_type(hdr->type);
-  struct_type_info *t = &struct_types[hdr->type];
+  xlb_struct_type_info *t = &struct_types[hdr->type];
   check_verbose((size_t)length >= sizeof(*s) +
                 sizeof(*(hdr->field_offsets)) * (size_t)t->field_count,
                 ADLB_DATA_ERROR_INVALID,
@@ -290,7 +291,7 @@ adlb_data_code ADLB_Pack_struct(const adlb_struct *s,
   adlb_data_code dc;
 
   check_valid_type(s->type);
-  struct_type_info *t = &struct_types[s->type];
+  xlb_struct_type_info *t = &struct_types[s->type];
 
   adlb_buffer result_buf;
   // Use double pointer so that *hdr always points to result_buf->data
@@ -355,7 +356,7 @@ adlb_data_code ADLB_Pack_struct(const adlb_struct *s,
 }
 
 static adlb_data_code get_field(adlb_struct *s, int field_ix,
-            struct_type_info **st, adlb_struct_field **f)
+            xlb_struct_type_info **st, adlb_struct_field **f)
 {
   check_valid_type(s->type);
   *st = &struct_types[s->type];
@@ -372,7 +373,7 @@ adlb_data_code xlb_struct_get_field(adlb_struct *s, int field_ix,
                         const adlb_datum_storage **val, adlb_data_type *type)
 {
   adlb_struct_field *f;
-  struct_type_info *st;
+  xlb_struct_type_info *st;
   adlb_data_code dc = get_field(s, field_ix, &st, &f);
   DATA_CHECK(dc);
 
@@ -411,7 +412,7 @@ adlb_data_code xlb_struct_subscript_init(adlb_struct *s, adlb_subscript subscrip
 
 
   adlb_struct_field *f;
-  struct_type_info *st;
+  xlb_struct_type_info *st;
   dc = get_field(s, ix, &st, &f);
   DATA_CHECK(dc);
 
@@ -423,7 +424,7 @@ adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,
                         const void *data, int length, adlb_data_type type)
 {
   adlb_struct_field *f;
-  struct_type_info *st;
+  xlb_struct_type_info *st;
   adlb_data_code dc = get_field(s, field_ix, &st, &f);
   DATA_CHECK(dc);
 
@@ -461,7 +462,7 @@ adlb_data_code xlb_free_struct(adlb_struct *s, bool free_root_ptr)
   assert(s != NULL);
   check_valid_type(s->type);
 
-  struct_type_info *t = &struct_types[s->type];
+  xlb_struct_type_info *t = &struct_types[s->type];
   for (int i = 0; i < t->field_count; i++)
   {
     if (s->fields[i].initialized)
@@ -483,7 +484,7 @@ xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
   assert(s != NULL);
   check_valid_type(s->type);
   adlb_data_code dc;
-  struct_type_info *t = &struct_types[s->type];
+  xlb_struct_type_info *t = &struct_types[s->type];
   bool acquiring = !ADLB_RC_IS_NULL(to_acquire.refcounts);
   
   int acquire_ix = -1; // negative == acquire all subscripts
@@ -540,7 +541,7 @@ char *xlb_struct_repr(adlb_struct *s)
 {
   if (is_valid_type(s->type))
   {
-    struct_type_info *t = &struct_types[s->type];
+    xlb_struct_type_info *t = &struct_types[s->type];
     int total_len = 0;
     char *field_reprs[t->field_count];
     total_len += (int)strlen(t->type_name) + 5;

@@ -117,8 +117,12 @@ insert_notifications(adlb_datum *d,
             bool *garbage_collected);
 
 static adlb_data_code
-insert_notifications_all(adlb_datum *d, adlb_datum_id id,
+container_all_notifs(adlb_datum *d, adlb_datum_id id,
           adlb_container *c, adlb_notif_t *notify, bool *garbage_collected);
+
+static adlb_data_code
+struct_all_notifs(adlb_datum *d, adlb_datum_id id,
+          adlb_struct *s, adlb_notif_t *notify, bool *garbage_collected);
 
 static adlb_data_code
 check_subscript_notifications(adlb_datum_id container_id,
@@ -879,10 +883,15 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
     }
     
     // If this was a container, need to handle reference notifications
-    // TODO: struct reference notifications
     if (type == ADLB_DATA_TYPE_CONTAINER)
     {
-      dc = insert_notifications_all(d, id, &d->data.CONTAINER, 
+      dc = container_all_notifs(d, id, &d->data.CONTAINER, 
+                notifications, &freed_datum);
+      DATA_CHECK(dc);
+    }
+    else if (type == ADLB_DATA_TYPE_STRUCT)
+    {
+      dc = struct_all_notifs(d, id, d->data.STRUCT, 
                 notifications, &freed_datum);
       DATA_CHECK(dc);
     }
@@ -1536,52 +1545,107 @@ insert_notifications2(adlb_datum *d,
   return ADLB_DATA_SUCCESS;
 }
 
+
+/**
+  Handle processing for a single subscript when processing
+  entire container
+ */
+static adlb_data_code
+all_notifs_step(adlb_datum *d, adlb_datum_id id, adlb_subscript sub,
+                const adlb_datum_storage *val,
+                adlb_data_type val_type, adlb_notif_t *notify,
+                bool *garbage_collected)
+{
+  adlb_data_code dc;
+  // Find, remove, and return any listeners/references
+  struct list *ref_list = NULL;
+  struct list_i *sub_list = NULL;
+  dc = check_subscript_notifications(id, sub, &ref_list, &sub_list);
+  DATA_CHECK(dc);
+
+  if (ref_list != NULL || sub_list != NULL)
+  {
+    adlb_binary_data val_data;
+    if (ref_list != NULL)
+    {
+      // Pack container value to binary value if needed
+      dc = ADLB_Pack(val, val_type, NULL, &val_data);
+      DATA_CHECK(dc);
+
+      // Take ownership of data in case it is freed
+      dc = ADLB_Own_data(NULL, &val_data);
+      DATA_CHECK(dc);
+
+      adlb_code ac = xlb_to_free_add(notify, val_data.caller_data);
+      DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
+    }
+    dc = insert_notifications2(d, id, sub, val_type,
+                  val_data.data, val_data.length, ref_list, sub_list,
+                  notify, garbage_collected);
+    DATA_CHECK(dc);
+  }
+  return ADLB_DATA_SUCCESS;
+}
+
 /*
   Check for references to all members.
  */
 static adlb_data_code
-insert_notifications_all(adlb_datum *d, adlb_datum_id id,
+container_all_notifs(adlb_datum *d, adlb_datum_id id,
           adlb_container *c, adlb_notif_t *notify, bool *garbage_collected)
 {
   adlb_data_code dc;
   struct table_bp* members = c->members;
+  
+  *garbage_collected = false;
+
   TABLE_BP_FOREACH(members, item)
   {
     adlb_subscript sub = { .key = table_bp_get_key(item),
                            .length = item->key_len };
-
-    // Find, remove, and return any listeners/references
-    struct list *ref_list = NULL;
-    struct list_i *sub_list = NULL;
-    dc = check_subscript_notifications(id, sub, &ref_list, &sub_list);
+    dc = all_notifs_step(d, id, sub, item->data, c->val_type, notify,
+                         garbage_collected);
     DATA_CHECK(dc);
 
-    if (ref_list != NULL || sub_list != NULL)
+    if (*garbage_collected)
     {
-      adlb_container_val val = item->data;
-      adlb_binary_data val_data;
-      if (ref_list != NULL)
-      {
-        // Pack container value to binary value if needed
-        dc = ADLB_Pack(val, c->val_type, NULL, &val_data);
-        DATA_CHECK(dc);
+      // We just processed the last pending notification for the
+      // container: we're done!
+      return ADLB_DATA_SUCCESS;
+    }
+  }
+  return ADLB_DATA_SUCCESS;
+}
 
-        // Take ownership of data in case it is freed
-        dc = ADLB_Own_data(NULL, &val_data);
-        DATA_CHECK(dc);
 
-        adlb_code ac = xlb_to_free_add(notify, val_data.caller_data);
-        DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
-      }
-      dc = insert_notifications2(d, id, sub, c->val_type,
-                    val_data.data, val_data.length, ref_list, sub_list,
-                    notify, garbage_collected);
+static adlb_data_code
+struct_all_notifs(adlb_datum *d, adlb_datum_id id,
+          adlb_struct *s, adlb_notif_t *notify, bool *garbage_collected)
+{
+  adlb_data_code dc;
+  
+  *garbage_collected = false;
+
+  const xlb_struct_type_info *st = xlb_get_struct_type_info(s->type);
+  assert(st != NULL);
+
+  for (int i = 0; i < st->field_count; i++)
+  {
+    adlb_struct_field *field = &s->fields[i];
+    if (field->initialized)
+    {
+      // key from field index
+      char key[20];
+      int key_len = sprintf(key, "%i", i);
+      adlb_subscript sub = { .key = key,
+                             .length = (size_t)key_len };
+      dc = all_notifs_step(d, id, sub, &field->data, st->field_types[i],
+                           notify, garbage_collected);
       DATA_CHECK(dc);
 
       if (*garbage_collected)
       {
-        // We just processed the last pending notification for the
-        // container: we're done!
+        // We just processed the last pending notification: we're done!
         return ADLB_DATA_SUCCESS;
       }
     }
