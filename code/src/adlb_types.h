@@ -124,7 +124,7 @@ typedef struct {
 
 typedef struct {
   adlb_datum_storage data;
-  bool initialized : 1;
+  bool initialized;
 } adlb_struct_field;
 
 typedef struct adlb_struct_s {

@@ -378,6 +378,7 @@ adlb_data_code xlb_struct_get_field(adlb_struct *s, int field_ix,
   DATA_CHECK(dc);
 
   *type = st->field_types[field_ix];
+  DEBUG("Field type: %s", ADLB_Data_type_tostring(*type));
   if (f->initialized)
   {
     *val = &f->data;

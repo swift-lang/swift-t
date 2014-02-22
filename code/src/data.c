@@ -1132,6 +1132,8 @@ xlb_data_retrieve2(adlb_datum_id id, adlb_subscript subscript,
                           &sub_data, &sub_type);
     DATA_CHECK(dc);
 
+    *type = sub_type;
+
     if (sub_data == NULL)
     {
       return ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND;
