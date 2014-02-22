@@ -316,11 +316,6 @@ class Turbine {
                        Arrays.asList(typeId, typeName, fieldList));
   }
   
-  public static TypeName structTypeName(int structType) {
-    // Form full type name by concatenation
-    return new TypeName(STRUCT_REF_TYPENAME + structType);
-  }
-  
   public static Command addConstantArg(Expression argName, Expression argVal) {
     return new Command(ARGV_ADD_CONSTANT, argName, argVal);
   }

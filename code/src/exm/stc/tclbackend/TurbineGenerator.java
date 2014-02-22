@@ -393,23 +393,16 @@ public class TurbineGenerator implements CompilerBackend {
       }
       
       Command decl = Turbine.declareStructType(new LiteralInt(typeId),
-                                      new TclString(st.getTypeName()),
-                                      new TclList(fieldInfo));
+                          structTypeName(st), new TclList(fieldInfo));
       result.add(decl);
     }
     return result;
   }
   
-  private TypeName structTypeName(Type type, boolean includeSubtype) {
+  private TypeName structTypeName(Type type) {
     assert(Types.isStruct(type));
-    if (includeSubtype) {
-      int structTypeId = structTypes.getIDForType((StructType)type);
-      // Form type name through concatenation
-      return Turbine.structTypeName(structTypeId);
-    } else {
-      // Don't include subtype
-      return Turbine.ADLB_STRUCT_REF_TYPE;
-    }
+    // Prefix Swift name with prefix to indicate struct type
+    return new TypeName("s:" + type.typeName());
   }
 
   @Override
@@ -560,7 +553,7 @@ public class TurbineGenerator implements CompilerBackend {
 
   private TypeName refRepresentationType(Type memberType, boolean creation) {
       if (Types.isStruct(memberType)) {
-        return structTypeName(memberType, !creation);
+        return structTypeName(memberType);
       } else if (Types.isFile(memberType)) {
     	return Turbine.ADLB_FILE_REF_TYPE;
       } else {
@@ -588,7 +581,7 @@ public class TurbineGenerator implements CompilerBackend {
       // Local handle to remote data
       return Turbine.ADLB_REF_TYPE; 
     } else if (Types.isStruct(t)) {
-      return structTypeName(t, true);
+      return structTypeName(t);
     } else {
       throw new STCRuntimeError("Unknown ADLB representation type for " + t);
     }
@@ -655,7 +648,7 @@ public class TurbineGenerator implements CompilerBackend {
     if (Types.isStructRef((target.type()))) {
       pointAdd(Turbine.structRefSet(
           varToExpr(target), varToExpr(src),
-          structTypeName(target.type(), false)));
+          structTypeName(target.type())));
     } else if (Types.isFileRef(target.type())) {
     	pointAdd(Turbine.fileRefSet(
     	          varToExpr(target), varToExpr(src)));
