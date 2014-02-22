@@ -1029,38 +1029,44 @@ extract_create_props(Tcl_Interp *interp, bool accept_id, int argstart,
   }
 
   adlb_data_type tmp_type;
-  rc = type_from_obj(interp, objv, objv[argpos++], &tmp_type);
+  rc = type_from_obj_extra(interp, objv, objv[argpos++], &tmp_type,
+                           type_extra);
   TCL_CHECK(rc);
   *type = tmp_type;
 
-  // Process type-specific params
-  switch (*type)
+  // Process type-specific params if not already in type extra
+  if (!type_extra->valid)
   {
-    case ADLB_DATA_TYPE_CONTAINER: {
-      TCL_CONDITION(objc > argpos + 1,
-                    "adlb::create type=container requires "
-                    "key and value types!");
-      adlb_data_type key_type, val_type;
-      rc = type_from_obj(interp, objv, objv[argpos++], &key_type);
-      TCL_CHECK(rc);
-      rc = type_from_obj(interp, objv, objv[argpos++], &val_type);
-      TCL_CHECK(rc);
-      type_extra->CONTAINER.key_type = key_type;
-      type_extra->CONTAINER.val_type = val_type;
-      break;
+    switch (*type)
+    {
+      case ADLB_DATA_TYPE_CONTAINER: {
+        TCL_CONDITION(objc > argpos + 1,
+                      "adlb::create type=container requires "
+                      "key and value types!");
+        adlb_data_type key_type, val_type;
+        rc = type_from_obj(interp, objv, objv[argpos++], &key_type);
+        TCL_CHECK(rc);
+        rc = type_from_obj(interp, objv, objv[argpos++], &val_type);
+        TCL_CHECK(rc);
+        type_extra->CONTAINER.key_type = key_type;
+        type_extra->CONTAINER.val_type = val_type;
+        type_extra->valid = true;
+        break;
+      }
+      case ADLB_DATA_TYPE_MULTISET: {
+        TCL_CONDITION(objc > argpos,
+                      "adlb::create type=multiset requires "
+                      "member type!");
+        adlb_data_type val_type;
+        rc = type_from_obj(interp, objv, objv[argpos++], &val_type);
+        TCL_CHECK(rc);
+        type_extra->MULTISET.val_type = val_type;
+        type_extra->valid = true;
+        break;
+      }
+      default:
+        break;
     }
-    case ADLB_DATA_TYPE_MULTISET: {
-      TCL_CONDITION(objc > argpos,
-                    "adlb::create type=multiset requires "
-                    "member type!");
-      adlb_data_type val_type;
-      rc = type_from_obj(interp, objv, objv[argpos++], &val_type);
-      TCL_CHECK(rc);
-      type_extra->MULTISET.val_type = val_type;
-      break;
-    }
-    default:
-      break;
   }
 
   // Process create props if present
@@ -1788,33 +1794,39 @@ packed_struct_to_tcl_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
     const char *name = f->field_names[i];
     // Find slice of buffer for the field
     int offset = hdr->field_offsets[i];
-    const void *field_data = data + offset;
-    int field_data_length;
-    if (i == f->field_count - 1)
-      field_data_length = (int)(length - offset);
-    else
-      field_data_length = hdr->field_offsets[i + 1] - offset;
-
     TCL_CONDITION(offset >= 0,
         "invalid struct buffer: negative offset %i for field %s", offset, name);
-    TCL_CONDITION(field_data_length >= 0,
-        "invalid struct buffer: negative length %i for field %s",
-                                                      field_data_length, name);
-    TCL_CONDITION(offset + field_data_length <= length,
-        "invalid struct buffer: field %s past buffer end: %d+%d vs %d", name,
-        offset, field_data_length, length);
+    // Check if 
+    bool valid = (((char*)data)[offset]) != 0;
+    if (valid)
+    {
+      int data_offset = offset + 1;
+      const void *field_data = data + data_offset;
+      int field_data_length;
+      if (i == f->field_count - 1)
+        field_data_length = (int)(length - data_offset);
+      else
+        field_data_length = hdr->field_offsets[i + 1] - data_offset;
 
-    // Create a TCL object for the field data
-    Tcl_Obj *field_tcl_obj;
-    rc = adlb_data_to_tcl_obj(interp, objv, ADLB_DATA_ID_NULL,
-                  f->field_types[i], ADLB_TYPE_EXTRA_NULL, field_data,
-                  field_data_length, &field_tcl_obj);
-    TCL_CHECK_MSG(rc, "Error building tcl object for field %s", name);
+      TCL_CONDITION(field_data_length >= 0,
+          "invalid struct buffer: negative length %i for field %s",
+                                                        field_data_length, name);
+      TCL_CONDITION(data_offset + field_data_length <= length,
+          "invalid struct buffer: field %s past buffer end: %d+%d vs %d", name,
+          data_offset, field_data_length, length);
 
-    // Add it to nested dicts
-    rc = Tcl_DictObjPutKeyList(interp, result_dict,
-          f->field_nest_level[i] + 1, f->field_parts[i], field_tcl_obj);
-    TCL_CHECK_MSG(rc, "Error inserting tcl object for field %s", name);
+      // Create a TCL object for the field data
+      Tcl_Obj *field_tcl_obj;
+      rc = adlb_data_to_tcl_obj(interp, objv, ADLB_DATA_ID_NULL,
+                    f->field_types[i], ADLB_TYPE_EXTRA_NULL, field_data,
+                    field_data_length, &field_tcl_obj);
+      TCL_CHECK_MSG(rc, "Error building tcl object for field %s", name);
+
+      // Add it to nested dicts
+      rc = Tcl_DictObjPutKeyList(interp, result_dict,
+            f->field_nest_level[i] + 1, f->field_parts[i], field_tcl_obj);
+      TCL_CHECK_MSG(rc, "Error inserting tcl object for field %s", name);
+    }
   }
 
   *result = result_dict;
@@ -1835,32 +1847,37 @@ tcl_dict_to_adlb_struct(Tcl_Interp *interp, Tcl_Obj *const objv[],
   adlb_struct_format *f = &adlb_struct_formats.types[struct_type];
 
   *result = malloc(sizeof(adlb_struct) +
-                   sizeof(adlb_datum_storage) * f->field_count);
+                   sizeof((*result)->fields[0]) * f->field_count);
   (*result)->type = struct_type;
 
   for (int i = 0; i < f->field_count; i++)
   {
     Tcl_Obj *curr = dict;
+    bool present = true;
     for (int j = 0; j <= f->field_nest_level[i]; j++)
     {
       Tcl_Obj *val;
       rc = Tcl_DictObjGet(interp, curr, f->field_parts[i][j], &val);
       TCL_CHECK(rc);
-      TCL_CONDITION(val != NULL,
-            "Could not find field \"%s\". Lookup \"%s\" in {%s}",
-            f->field_names[i], Tcl_GetString(f->field_parts[i][j]),
-            Tcl_GetString(curr));
+      if (val == NULL)
+      {
+        present = false;
+        break;
+      }
       curr = val;
     }
-    // TODO: Don't support nested elements with extra type info
-    adlb_datum_storage *field = &(*result)->fields[i].data;
-    adlb_type_extra type_extra = ADLB_TYPE_EXTRA_NULL;
-    bool alloced;
-    // Need to own memory in allocated object so we can free correctly
-    rc = tcl_obj_to_adlb_data(interp, objv, f->field_types[i],
-                      type_extra, curr, true, field, &alloced);
-    TCL_CHECK(rc);
-    (*result)->fields[i].initialized = true;
+    if (present)
+    {
+      // TODO: Don't support nested elements with extra type info
+      adlb_datum_storage *field = &(*result)->fields[i].data;
+      adlb_type_extra type_extra = ADLB_TYPE_EXTRA_NULL;
+      bool alloced;
+      // Need to own memory in allocated object so we can free correctly
+      rc = tcl_obj_to_adlb_data(interp, objv, f->field_types[i],
+                        type_extra, curr, true, field, &alloced);
+      TCL_CHECK(rc);
+    }
+    (*result)->fields[i].initialized = present;
   }
 
   return TCL_OK;
@@ -2163,6 +2180,7 @@ ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
   adlb_retrieve_rc refcounts = ADLB_RETRIEVE_NO_RC;
   refcounts.decr_self.read_refcount = decr_amount;
   rc = ADLB_Retrieve(id, ADLB_NO_SUB, refcounts, &type, xfer, &length);
+  assert(type != ADLB_DATA_TYPE_NULL);
   TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", id);
   TCL_CONDITION(length >= 0, "adlb::retrieve <%"PRId64"> not found!",
                             id);
@@ -3167,10 +3185,13 @@ ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
   // TODO: support binary subscript
   TCL_CONDITION(len >= 0, "adlb::lookup <%"PRId64">[\"%.*s\"] not found",
                 id, (int)subscript.length, (const char*)subscript.key);
+  assert(type != ADLB_DATA_TYPE_NULL);
 
   Tcl_Obj* result = NULL;
-  adlb_data_to_tcl_obj(interp, objv, id, type, ADLB_TYPE_EXTRA_NULL,
-                       xfer, len, &result);
+  rc = adlb_data_to_tcl_obj(interp, objv, id, type,
+                    ADLB_TYPE_EXTRA_NULL, xfer, len, &result);
+  TCL_CHECK(rc);
+
   DEBUG_ADLB("adlb::lookup <%"PRId64">[\"%.*s\"]=<%s>",
              id, (int)subscript.length, (const char*)subscript.key,
              Tcl_GetStringFromObj(result, NULL));

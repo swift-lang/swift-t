@@ -28,7 +28,7 @@ turbine::defaults
 turbine::init $engines $servers
 turbine::enable_read_refcount
 
-global TYPE_A TYPE_B
+global TYPE_A TYPE_B TYPENAME_A TYPENAME_B
 set TYPE_A 1
 set TYPENAME_A struct:A
 set TYPE_B 2
@@ -66,7 +66,7 @@ proc check_b { act exp int_val str_val float_val ref } {
 }
 
 proc do_test { i } {
-    global TYPE_A TYPE_B
+    global TYPE_A TYPE_B TYPENAME_A TYPENAME_B
     # Testing first type
     set id [ adlb::create $::adlb::NULL_ID struct ]
     puts "Created <$id>"
