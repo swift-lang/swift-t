@@ -376,12 +376,15 @@ adlb_data_code xlb_struct_get_field(adlb_struct *s, int field_ix,
   adlb_data_code dc = get_field(s, field_ix, &st, &f);
   DATA_CHECK(dc);
 
-  check_verbose(f->initialized, ADLB_DATA_ERROR_UNSET,
-                "Field %s of struct type %s unset",
-                st->field_names[field_ix], st->type_name);
-  *val = &f->data;
   *type = st->field_types[field_ix];
-
+  if (f->initialized)
+  {
+    *val = &f->data;
+  }
+  else
+  {
+    *val = NULL;
+  }
   return ADLB_DATA_SUCCESS;
 }
 

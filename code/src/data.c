@@ -100,6 +100,11 @@ static adlb_data_code
 add_close_notifs(adlb_datum_id id, adlb_datum *d,
                     adlb_notif_t *notify);
 
+static adlb_data_code
+lookup_subscript(adlb_datum_id id, const adlb_datum_storage *d,
+    adlb_subscript subscript, adlb_data_type type,
+    const adlb_datum_storage **result, adlb_data_type *result_type);
+
 static adlb_data_code datum_gc(adlb_datum_id id, adlb_datum* d,
            xlb_acquire_rc acquire, xlb_rc_changes *rc_changes);
 
@@ -139,8 +144,8 @@ adlb_data_code append_notifs(const struct list_i *listeners,
   adlb_datum_id id, adlb_subscript sub, adlb_notif_ranks *notify);
 
 
-static bool container_contains(adlb_container *c, adlb_subscript sub);
-static bool container_lookup(adlb_container *c, adlb_subscript sub,
+static bool container_contains(const adlb_container *c, adlb_subscript sub);
+static bool container_lookup(const adlb_container *c, adlb_subscript sub,
                              adlb_container_val *val);
 static bool container_set(adlb_container *c, adlb_subscript sub,
                               adlb_container_val val,
@@ -307,7 +312,6 @@ static adlb_data_code
 datum_init_struct(adlb_datum *d, adlb_struct_type struct_type)
 {
   adlb_data_code dc;
-  // TODO: initialize empty struct of given type.
   // Struct structure is filled in, so mark as set
   dc = xlb_new_struct(struct_type, &d->data.STRUCT);
   DATA_CHECK(dc);
@@ -339,6 +343,7 @@ datum_init_props(adlb_datum_id id, adlb_datum *d,
 adlb_data_code
 xlb_data_exists(adlb_datum_id id, adlb_subscript subscript, bool* result)
 {
+  adlb_data_code dc;
   adlb_datum* d;
   table_lp_search(&tds, id, (void**)&d);
 
@@ -356,12 +361,13 @@ xlb_data_exists(adlb_datum_id id, adlb_subscript subscript, bool* result)
     check_verbose(d != NULL, ADLB_DATA_ERROR_INVALID,
         "<%"PRId64"> does not exist, can't check existence of subscript",
         id);
-    check_verbose(d->type == ADLB_DATA_TYPE_CONTAINER, ADLB_DATA_ERROR_TYPE,
-                "Expected <%"PRId64"> to be container, but had type %i",
-                id, d->type);
-    adlb_container_val t;
-    bool data_found = container_lookup(&d->data.CONTAINER, subscript, &t);
-    *result = data_found;
+    const adlb_datum_storage *lookup_result;
+    adlb_data_type result_type;
+    dc = lookup_subscript(id, &d->data, subscript, d->type,
+                          &lookup_result, &result_type);
+    DATA_CHECK(dc);
+                          
+    *result = (lookup_result != NULL);
     // TODO: support binary keys
     DEBUG("Exists: <%"PRId64">[%.*s] => %s", id, (int)subscript.length,
             (const char*)subscript.key, bool2string(*result));
@@ -693,7 +699,7 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
     the caller is responsible for setting references and then
     decrementing the read reference count of the container.
  */
-adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
+adlb_data_code xlb_data_container_reference(adlb_datum_id id,
                                         adlb_subscript subscript,
                                         adlb_datum_id reference,
                                         adlb_data_type ref_type,
@@ -703,31 +709,30 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
                                         adlb_notif_t *notifications)
 {
   // Check that container_id is an initialized container
+  adlb_data_code dc;
   adlb_datum* d;
-  bool found = table_lp_search(&tds, container_id, (void**)&d);
+  bool found = table_lp_search(&tds, id, (void**)&d);
   check_verbose(found, ADLB_DATA_ERROR_NOT_FOUND,
-                "not found: <%"PRId64">", container_id);
+                "not found: <%"PRId64">", id);
   assert(d != NULL);
 
-  // TODO: support structs
-
-  if (ref_type != d->data.CONTAINER.val_type)
-  {
-    printf("Type mismatch when setting up reference expected %i actual %i\n",
-            ref_type, d->data.CONTAINER.val_type);
-    return ADLB_DATA_ERROR_TYPE;
-  }
-
   // Is the subscript already pointing to a data identifier?
-  adlb_container_val val_data;
+  const adlb_datum_storage *val_data;
+  adlb_data_type val_type;
 
-  bool data_found = container_lookup(&d->data.CONTAINER, subscript,
-                                     &val_data);
-  TRACE("lookup container for ref: %"PRId64"[%.*s]: %i", container_id,
-          (int)subscript.length, subscript.key, (int)data_found);
-  if (data_found && val_data != NULL)
+  dc = lookup_subscript(id, &d->data, subscript, d->type,
+                        &val_data, &val_type);
+  DATA_CHECK(dc);
+
+  TRACE("lookup datum for ref: %"PRId64"[%.*s]: %p", id,
+          (int)subscript.length, subscript.key, val_data );
+
+  check_verbose(ref_type == val_type, ADLB_DATA_ERROR_TYPE,
+    "Type mismatch when setting up reference expected %i actual %i\n",
+    ref_type, val_type);
+
+  if (val_data != NULL)
   {
-    adlb_data_code dc;
     dc = ADLB_Pack(val_data, d->data.CONTAINER.val_type,
                                       caller_buffer, result);
     DATA_CHECK(dc);
@@ -753,8 +758,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
                             .write_refcount = 0 };
     xlb_acquire_rc to_acquire2 = { .subscript = subscript,
                                    .refcounts = to_acquire };
-    dc = xlb_rc_impl(d, container_id, decr, to_acquire2,
-                     NULL, notifications);
+    dc = xlb_rc_impl(d, id, decr, to_acquire2, NULL, notifications);
     DATA_CHECK(dc);
 
     return ADLB_DATA_SUCCESS;
@@ -767,27 +771,26 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
   check_verbose(d->write_refcount > 0, ADLB_DATA_ERROR_INVALID,
         "Attempting to subscribe to non-existent subscript\n"
         "on a closed container:  <%"PRId64">[%.*s]\n",
-        container_id, (int)subscript.length, (const char*)subscript.key);
+        id, (int)subscript.length, (const char*)subscript.key);
   check_verbose(d->read_refcount > 0, ADLB_DATA_ERROR_INVALID,
         "Container_reference consumes a read reference count, but "
-        "reference count was %d for <%"PRId64">", d->read_refcount,
-        container_id);
+        "reference count was %d for <%"PRId64">", d->read_refcount, id);
 
 
   // encode container, index and ref type into string
   char key[id_sub_buflen(subscript)];
-  size_t key_len = write_id_sub(key, container_id, subscript);
+  size_t key_len = write_id_sub(key, id, subscript);
 
   struct list* listeners = NULL;
   found = table_bp_search(&container_references, key, key_len,
                             (void*)&listeners);
-  TRACE("search container_ref %"PRId64"[%.*s]: %i", container_id,
+  TRACE("search container_ref %"PRId64"[%.*s]: %i", id,
           (int)subscript.length, subscript.key, (int)found);
   if (!found)
   {
     // Nobody else has subscribed to this pair yet
     listeners = list_create();
-    TRACE("add container_ref %"PRId64"[%.*s]", container_id,
+    TRACE("add container_ref %"PRId64"[%.*s]", id,
           (int)subscript.length, subscript.key);
     table_bp_add(&container_references, key, key_len, listeners);
   }
@@ -802,18 +805,18 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id container_id,
       d->read_refcount--;
       
       DEBUG("read_refcount in container_reference: <%"PRId64"> => %i",
-          container_id, d->read_refcount);
+            id, d->read_refcount);
     }
   }
 
   // TODO: support binary keys
   check_verbose(listeners != NULL, ADLB_DATA_ERROR_NULL,
                 "Found null value in listeners table\n"
-                "for:  %"PRId64"[%.*s]\n", container_id,
+                "for:  %"PRId64"[%.*s]\n", id,
                 (int)subscript.length, (const char*)subscript.key);
 
   TRACE("Added %"PRId64" to listeners for %"PRId64"[%s]", reference,
-        container_id, subscript);
+        id, subscript);
   container_reference *entry = malloc(sizeof(container_reference));
   check_verbose(entry != NULL, ADLB_DATA_ERROR_OOM,
                 "Could not allocate memory");
@@ -876,13 +879,13 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
     }
     
     // If this was a container, need to handle reference notifications
+    // TODO: struct reference notifications
     if (type == ADLB_DATA_TYPE_CONTAINER)
     {
       dc = insert_notifications_all(d, id, &d->data.CONTAINER, 
                 notifications, &freed_datum);
       DATA_CHECK(dc);
     }
-    // TODO: struct reference notifications
   }
   else if (d->type == ADLB_DATA_TYPE_MULTISET)
   {
@@ -968,12 +971,9 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
       free(val_s);
     }
   }
-  else
+  else if (d->type == ADLB_DATA_TYPE_STRUCT)
   {
     // Handle assigning struct field
-    check_verbose(d->type == ADLB_DATA_TYPE_STRUCT, ADLB_DATA_ERROR_TYPE,
-                  "insert to type %s not supported: <%"PRId64">",
-                  ADLB_Data_type_tostring(d->type), id);
     dc = xlb_struct_set_subscript(d->data.STRUCT, subscript,
                         buffer, length, type);
     DATA_CHECK(dc);
@@ -989,7 +989,7 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
       adlb_data_type tmp_type;
       dc = xlb_struct_get_subscript(d->data.STRUCT, subscript, &entry,
                                     &tmp_type);
-      DATA_CHECK(dc);
+      assert(dc == ADLB_DATA_SUCCESS && entry != NULL);
 
       char *val_s = ADLB_Data_repr(entry, type);
       // TODO: support binary keys
@@ -997,6 +997,12 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
             (const char*)subscript.key, val_s);
       free(val_s);
     }
+  }
+  else
+  {
+    verbose_error(ADLB_DATA_ERROR_TYPE,
+                  "insert to type %s not supported: <%"PRId64">",
+                  ADLB_Data_type_tostring(d->type), id);
   }
 
   // Handle reference count decrease
@@ -1092,45 +1098,19 @@ xlb_data_retrieve2(adlb_datum_id id, adlb_subscript subscript,
   }
   else
   {
-    switch (d->type) {
-      case ADLB_DATA_TYPE_CONTAINER:
-      {
-        *type = d->data.CONTAINER.val_type;
+    const adlb_datum_storage *sub_data;
+    adlb_data_type sub_type;
+    dc = lookup_subscript(id, &d->data, subscript, d->type,
+                          &sub_data, &sub_type);
+    DATA_CHECK(dc);
 
-        adlb_container_val t;
-        found = container_lookup(&d->data.CONTAINER, subscript, &t);
-        if (!found)
-        {
-          DEBUG("SUBSCRIPT NOT FOUND");
-          return ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND;
-        }
-        else if (t == NULL)
-        {
-          DEBUG("SUBSCRIPT CREATED BUT NOT LINKED");
-          return ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND;
-        }
-        else
-        {
-          dc = ADLB_Pack(t, d->data.CONTAINER.val_type, caller_buffer,
-                         result);
-          DATA_CHECK(dc);
-        }
-        break;
-      }
-      case ADLB_DATA_TYPE_STRUCT:
-      {
-        const adlb_datum_storage *v;
-        dc = xlb_struct_get_subscript(d->data.STRUCT, subscript, &v, type);
-        DATA_CHECK(dc);
-        
-        dc = ADLB_Pack(v, *type, caller_buffer, result);
-        DATA_CHECK(dc);
-        break;
-      }
-      default:
-        verbose_error(ADLB_DATA_ERROR_INVALID, "Cannot lookup subscript "
-                        "on type: %s", ADLB_Data_type_tostring(d->type));
+    if (sub_data == NULL)
+    {
+      return ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND;
     }
+    
+    dc = ADLB_Pack(sub_data, sub_type, caller_buffer, result);
+    DATA_CHECK(dc);
   }
   
   if (ADLB_RC_NOT_NULL(decr) || ADLB_RC_NOT_NULL(to_acquire)) {
@@ -1149,6 +1129,49 @@ xlb_data_retrieve2(adlb_datum_id id, adlb_subscript subscript,
   }
 
   return result_code;
+}
+
+/**
+  Lookup subscript in any datum that supports it.
+  result is NULL if not present.
+  result_type is always set
+ */
+static adlb_data_code
+lookup_subscript(adlb_datum_id id, const adlb_datum_storage *d,
+    adlb_subscript subscript, adlb_data_type type,
+    const adlb_datum_storage **result, adlb_data_type *result_type)
+{
+  adlb_data_code dc;
+
+  switch(type)
+  {
+    case ADLB_DATA_TYPE_CONTAINER:
+      // We don't distinguish unlinked and non-existent subscript here
+      *result_type = d->CONTAINER.val_type;
+      adlb_container_val tmp_val;
+      if (container_lookup(&d->CONTAINER, subscript, &tmp_val))
+      {
+        *result = tmp_val;
+      }
+      else
+      {
+        *result = NULL;
+      }
+      break;
+    case ADLB_DATA_TYPE_STRUCT:
+    {
+      dc = xlb_struct_get_subscript(d->STRUCT, subscript, result,
+                                    result_type);
+      DATA_CHECK(dc);
+      break;
+    }
+    default:
+      verbose_error(ADLB_DATA_ERROR_TYPE, "Expected <%"PRId64"> to "
+            "support subscripting, but type %s doesn't", id,
+            ADLB_Data_type_tostring(type));
+  }
+
+  return ADLB_DATA_SUCCESS;
 }
 
 /**
@@ -1171,7 +1194,7 @@ static bool container_set(adlb_container *c, adlb_subscript sub,
   return table_bp_set(c->members, sub.key, sub.length, val, (void**)prev);
 }
 
-static bool container_contains(adlb_container *c, adlb_subscript sub)
+static bool container_contains(const adlb_container *c, adlb_subscript sub)
 {
   adlb_container_val tmp;
   return container_lookup(c, sub, &tmp);
@@ -1180,7 +1203,7 @@ static bool container_contains(adlb_container *c, adlb_subscript sub)
 /**
    Helper function for looking up container
   */
-static bool container_lookup(adlb_container *c, adlb_subscript sub,
+static bool container_lookup(const adlb_container *c, adlb_subscript sub,
                              adlb_container_val *val)
 {
   return table_bp_search(c->members, sub.key, sub.length, (void**)val);

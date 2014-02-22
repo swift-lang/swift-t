@@ -22,7 +22,12 @@ const char *xlb_struct_type_name(adlb_struct_type type);
 // provided pointer if specified
 adlb_data_code xlb_free_struct(adlb_struct *s, bool free_root_ptr);
 
-// Get data for struct field
+/*
+ * Get data for struct field.
+ * Returns error if field invalid.
+ * val: result if field is set, NULL if not yet set
+ * type: type of field (always set)
+ */
 adlb_data_code xlb_struct_get_field(adlb_struct *s, int field_ix,
                         const adlb_datum_storage **val, adlb_data_type *type);
 
