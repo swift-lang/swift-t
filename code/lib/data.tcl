@@ -329,6 +329,7 @@ namespace eval turbine {
 
     # store_struct <id> <value> <typename>
     # typename is a struct typename including struct subtype, e.g. "struct1"
+    # or "name_of_struct_type"
     proc store_struct { id value typename } {
         log "store: <$id>=$value"
         adlb::store $id $typename $value
