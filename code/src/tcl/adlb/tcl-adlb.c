@@ -149,7 +149,7 @@ static struct {
 typedef struct {
   int len;
   adlb_data_type *types; /* E.g. container and nested types */
-  adlb_type_extra **extras; /* E.g. for struct subtype */
+  adlb_type_extra *extras; /* E.g. for struct subtype */
 } compound_type;
 
 static void set_namespace_constants(Tcl_Interp* interp);
@@ -174,7 +174,7 @@ static int add_struct_format(Tcl_Interp *interp, Tcl_Obj *const objv[],
 static int
 packed_struct_to_tcl_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
                          const void *data, int length,
-                         const adlb_type_extra *extra, Tcl_Obj **result);
+                         adlb_type_extra extra, Tcl_Obj **result);
 static int
 tcl_dict_to_adlb_struct(Tcl_Interp *interp, Tcl_Obj *const objv[],
                          Tcl_Obj *dict, adlb_struct_type struct_type,
@@ -183,7 +183,7 @@ tcl_dict_to_adlb_struct(Tcl_Interp *interp, Tcl_Obj *const objv[],
 static int
 packed_multiset_to_list(Tcl_Interp *interp, Tcl_Obj *const objv[],
                          const void *data, int length,
-                         const adlb_type_extra *extra, Tcl_Obj **result);
+                         adlb_type_extra extra, Tcl_Obj **result);
 
 static int
 tcl_list_to_packed_multiset(Tcl_Interp *interp, Tcl_Obj *const objv[],
@@ -193,7 +193,7 @@ tcl_list_to_packed_multiset(Tcl_Interp *interp, Tcl_Obj *const objv[],
 static int
 packed_container_to_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
        const void *data, int length,
-       const adlb_type_extra *extra, Tcl_Obj **result);
+       adlb_type_extra extra, Tcl_Obj **result);
 
 static int
 tcl_dict_to_packed_container(Tcl_Interp *interp, Tcl_Obj *const objv[],
@@ -210,7 +210,7 @@ free_compound_type(compound_type *types);
 static inline int
 compound_type_next(Tcl_Interp *interp, Tcl_Obj *const objv[],
       const compound_type types, int *ctype_pos,
-      adlb_data_type *type, const adlb_type_extra **extra);
+      adlb_data_type *type, adlb_type_extra *extra);
 
 static int
 tcl_obj_to_bin_compound(Tcl_Interp *interp, Tcl_Obj *const objv[],
@@ -227,7 +227,7 @@ tcl_obj_bin_append(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
 static int
 tcl_obj_bin_append2(Tcl_Interp *interp, Tcl_Obj *const objv[],
-        adlb_data_type type, const adlb_type_extra *extra,
+        adlb_data_type type, adlb_type_extra extra,
         Tcl_Obj *obj, bool prefix_len,
         adlb_buffer *output, bool *output_caller_buf,
         int *output_pos);
@@ -962,14 +962,14 @@ ADLB_Iget_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   Convert type string to adlb_data_type
+   Convert type string to adlb_data_type.
+   If extra type info is provided, extra->valid is set to true
  */
 static int type_from_string(Tcl_Interp *interp, const char* type_string,
-                            adlb_data_type *type, bool *has_extra,
-                            adlb_type_extra *extra)
+                            adlb_data_type *type, adlb_type_extra *extra)
 {
 
-  adlb_code rc = ADLB_Data_string_totype(type_string, type, has_extra, extra);
+  adlb_code rc = ADLB_Data_string_totype(type_string, type, extra);
   if (rc != ADLB_SUCCESS)
   {
     *type = ADLB_DATA_TYPE_NULL;
@@ -984,22 +984,20 @@ static int type_from_string(Tcl_Interp *interp, const char* type_string,
 int type_from_obj(Tcl_Interp *interp, Tcl_Obj *const objv[],
                          Tcl_Obj* obj, adlb_data_type *type)
 {
-  bool has_extra;
   adlb_type_extra extra;
-  int rc = type_from_obj_extra(interp, objv, obj, type, &has_extra, &extra);
+  int rc = type_from_obj_extra(interp, objv, obj, type, &extra);
   TCL_CHECK(rc);
-  TCL_CONDITION(!has_extra, "didn't expect extra type info in %s",
+  TCL_CONDITION(!extra.valid, "didn't expect extra type info in %s",
                              Tcl_GetString(obj));
   return TCL_OK;
 }
 
 int type_from_obj_extra(Tcl_Interp *interp, Tcl_Obj *const objv[],
-                         Tcl_Obj* obj, adlb_data_type *type,
-                         bool *has_extra, adlb_type_extra *extra)
+         Tcl_Obj* obj, adlb_data_type *type, adlb_type_extra *extra)
 {
   const char *type_name = Tcl_GetString(obj);
   TCL_CONDITION(type_name != NULL, "type argument not found!");
-  int rc = type_from_string(interp, type_name, type, has_extra, extra);
+  int rc = type_from_string(interp, type_name, type, extra);
   TCL_CHECK(rc);
   return TCL_OK;
 }
@@ -1286,7 +1284,7 @@ ADLB_Exists_Sub_Cmd(ClientData cdata, Tcl_Interp *interp,
  */
 int
 tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
-  adlb_data_type type, const adlb_type_extra *extra,
+  adlb_data_type type, adlb_type_extra extra,
   Tcl_Obj *obj, bool own_pointers,
   adlb_datum_storage *result, bool *alloced)
 {
@@ -1344,10 +1342,10 @@ tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
     }
     case ADLB_DATA_TYPE_STRUCT:
     {
-      TCL_CONDITION(extra != NULL, "Must specify struct type to convert "
+      TCL_CONDITION(extra.valid, "Must specify struct type to convert "
                                     "dict to struct");
       int rc = tcl_dict_to_adlb_struct(interp, objv, obj,
-             extra->STRUCT.struct_type, &result->STRUCT);
+             extra.STRUCT.struct_type, &result->STRUCT);
       *alloced = true;
       TCL_CHECK(rc);
       return TCL_OK;
@@ -1401,13 +1399,6 @@ free_compound_type(compound_type *types)
   }
   if (types->extras != NULL)
   {
-    for (int i = 0; i < types->len; i++)
-    {
-      if (types->extras[i] != NULL)
-      {
-        free(types->extras[i]);
-      }
-    }
     free(types->extras);
   }
 }
@@ -1416,14 +1407,21 @@ free_compound_type(compound_type *types)
 static inline int
 compound_type_next(Tcl_Interp *interp, Tcl_Obj *const objv[],
       const compound_type types, int *ctype_pos,
-      adlb_data_type *type, const adlb_type_extra **extra)
+      adlb_data_type *type, adlb_type_extra *extra)
 {
   TCL_CONDITION(*ctype_pos < types.len,
           "Consumed past end of compound type info (%i/%i)",
           *ctype_pos, types.len);
 
   *type = types.types[*ctype_pos];
-  *extra = types.extras == NULL ?  NULL : types.extras[*ctype_pos];
+  if (types.extras == NULL)
+  {
+    extra->valid = false;
+  }
+  else
+  {
+    *extra =  types.extras[*ctype_pos];
+  }
   (*ctype_pos)++;
   return TCL_OK;
 }
@@ -1470,7 +1468,7 @@ tcl_obj_bin_append(Tcl_Interp *interp, Tcl_Obj *const objv[],
 {
   int rc;
   adlb_data_type type;
-  const adlb_type_extra *extra;
+  adlb_type_extra extra;
 
   rc = compound_type_next(interp, objv, types, &ctype_pos, &type, &extra);
   TCL_CHECK(rc);
@@ -1553,7 +1551,7 @@ tcl_obj_bin_append(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
 static int
 tcl_obj_bin_append2(Tcl_Interp *interp, Tcl_Obj *const objv[],
-        adlb_data_type type, const adlb_type_extra *extra,
+        adlb_data_type type, adlb_type_extra extra,
         Tcl_Obj *obj, bool prefix_len,
         adlb_buffer *output, bool *output_caller_buf,
         int *output_pos)
@@ -1561,7 +1559,7 @@ tcl_obj_bin_append2(Tcl_Interp *interp, Tcl_Obj *const objv[],
   // NOTE: it's ok to remove const qualifier since it isn't
   //       modified by called function.
   compound_type ct = { .len = 1, .types = &type,
-        .extras = (extra == NULL) ? NULL : (adlb_type_extra**)&extra };
+        .extras = (adlb_type_extra*)&extra };
   return tcl_obj_bin_append(interp, objv, ct, 0, obj,
              false, output, output_caller_buf, output_pos);
 }
@@ -1575,7 +1573,7 @@ tcl_obj_bin_append2(Tcl_Interp *interp, Tcl_Obj *const objv[],
  */
 int
 tcl_obj_to_bin(Tcl_Interp *interp, Tcl_Obj *const objv[],
-                adlb_data_type type, const adlb_type_extra *extra,
+                adlb_data_type type, adlb_type_extra extra,
                 Tcl_Obj *obj, const adlb_buffer *caller_buffer,
                 adlb_binary_data* result)
 {
@@ -1642,7 +1640,7 @@ tcl_dict_to_packed_container(Tcl_Interp *interp, Tcl_Obj *const objv[],
   TCL_CHECK(rc);
 
   adlb_data_type key_type, val_type;
-  const adlb_type_extra *key_extra, *val_extra;
+  adlb_type_extra key_extra, val_extra;
 
   // Note: assuming key isn't a compound type, because we don't
   //       consume additional type info for key
@@ -1717,7 +1715,7 @@ tcl_list_to_packed_multiset(Tcl_Interp *interp, Tcl_Obj *const objv[],
   
   
   adlb_data_type elem_type;
-  const adlb_type_extra *elem_extra;
+  adlb_type_extra elem_extra;
 
   // Elem might be a compound type: we consume that info later
   rc = compound_type_next(interp, objv, types, &ctype_pos,
@@ -1759,7 +1757,7 @@ exit_err:
 static int
 packed_struct_to_tcl_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
                          const void *data, int length,
-                         const adlb_type_extra *extra, Tcl_Obj **result)
+                         adlb_type_extra extra, Tcl_Obj **result)
 {
   assert(data != NULL);
   assert(length >= 0);
@@ -1775,9 +1773,9 @@ packed_struct_to_tcl_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
   st = hdr->type;
   ADLB_STRUCT_TYPE_CHECK(st);
 
-  TCL_CONDITION(extra == NULL || st == extra->STRUCT.struct_type,
+  TCL_CONDITION(!extra.valid || st == extra.STRUCT.struct_type,
                 "Expected struct type %i but got %i",
-                extra->STRUCT.struct_type, st);
+                extra.STRUCT.struct_type, st);
 
   adlb_struct_format *f = &adlb_struct_formats.types[st];
   TCL_CONDITION(length >= sizeof(*hdr) + sizeof(hdr->field_offsets[0]) *
@@ -1809,8 +1807,8 @@ packed_struct_to_tcl_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
     // Create a TCL object for the field data
     Tcl_Obj *field_tcl_obj;
     rc = adlb_data_to_tcl_obj(interp, objv, ADLB_DATA_ID_NULL,
-                  f->field_types[i], NULL, field_data, field_data_length,
-                  &field_tcl_obj);
+                  f->field_types[i], ADLB_TYPE_EXTRA_NULL, field_data,
+                  field_data_length, &field_tcl_obj);
     TCL_CHECK_MSG(rc, "Error building tcl object for field %s", name);
 
     // Add it to nested dicts
@@ -1860,7 +1858,7 @@ tcl_dict_to_adlb_struct(Tcl_Interp *interp, Tcl_Obj *const objv[],
     bool alloced;
     // Need to own memory in allocated object so we can free correctly
     rc = tcl_obj_to_adlb_data(interp, objv, f->field_types[i],
-                      &type_extra, curr, true, field, &alloced);
+                      type_extra, curr, true, field, &alloced);
     TCL_CHECK(rc);
     (*result)->fields[i].initialized = true;
   }
@@ -1871,7 +1869,7 @@ tcl_dict_to_adlb_struct(Tcl_Interp *interp, Tcl_Obj *const objv[],
 static int
 packed_container_to_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
                          const void *data, int length,
-                         const adlb_type_extra *extra, Tcl_Obj **result)
+                         adlb_type_extra extra, Tcl_Obj **result)
 {
   int pos = 0;
   adlb_data_type key_type, val_type;
@@ -1884,16 +1882,16 @@ packed_container_to_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
                                  &key_type, &val_type);
   TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error parsing packed data header");
 
-  if (extra != NULL)
+  if (extra.valid)
   {
-    TCL_CONDITION(val_type == extra->CONTAINER.val_type, "Packed value "
+    TCL_CONDITION(val_type == extra.CONTAINER.val_type, "Packed value "
           "type doesn't match expected: %s vs. %s",
           ADLB_Data_type_tostring(val_type),
-          ADLB_Data_type_tostring(extra->CONTAINER.val_type));
-    TCL_CONDITION(key_type == extra->CONTAINER.key_type, "Packed key "
+          ADLB_Data_type_tostring(extra.CONTAINER.val_type));
+    TCL_CONDITION(key_type == extra.CONTAINER.key_type, "Packed key "
           "type doesn't match expected: %s vs. %s",
           ADLB_Data_type_tostring(key_type),
-          ADLB_Data_type_tostring(extra->CONTAINER.key_type));
+          ADLB_Data_type_tostring(extra.CONTAINER.key_type));
   }
 
   Tcl_Obj *dict = Tcl_NewDictObj();
@@ -1910,7 +1908,7 @@ packed_container_to_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
     // TODO: interpreting key as string; support binary keys
     
     rc = adlb_data_to_tcl_obj(interp, objv, ADLB_DATA_ID_NULL, val_type,
-            NULL, val, val_len, &val_obj);
+            ADLB_TYPE_EXTRA_NULL, val, val_len, &val_obj);
     TCL_CHECK_MSG_GOTO(rc, exit_err,
             "Error constructing Tcl object for packed container val");
     
@@ -1947,7 +1945,7 @@ exit_err:
 static int
 packed_multiset_to_list(Tcl_Interp *interp, Tcl_Obj *const objv[],
                          const void *data, int length,
-                         const adlb_type_extra *extra, Tcl_Obj **result)
+                         adlb_type_extra extra, Tcl_Obj **result)
 {
   Tcl_Obj **arr = NULL;
   int pos = 0;
@@ -1961,12 +1959,12 @@ packed_multiset_to_list(Tcl_Interp *interp, Tcl_Obj *const objv[],
   dc = ADLB_Unpack_multiset_hdr(data, length, &pos, &entries, &elem_type);
   TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error parsing packed data header");
 
-  if (extra != NULL)
+  if (extra.valid)
   {
-    TCL_CONDITION(elem_type == extra->MULTISET.val_type, "Packed element "
+    TCL_CONDITION(elem_type == extra.MULTISET.val_type, "Packed element "
           "type doesn't match expected: %s vs. %s",
           ADLB_Data_type_tostring(elem_type),
-          ADLB_Data_type_tostring(extra->MULTISET.val_type));
+          ADLB_Data_type_tostring(extra.MULTISET.val_type));
   }
 
 
@@ -1986,7 +1984,7 @@ packed_multiset_to_list(Tcl_Interp *interp, Tcl_Obj *const objv[],
     }
 
     rc = adlb_data_to_tcl_obj(interp, objv, ADLB_DATA_ID_NULL, elem_type,
-            NULL, elem, elem_len, &arr[entry]);
+            ADLB_TYPE_EXTRA_NULL, elem, elem_len, &arr[entry]);
     if (rc != TCL_OK)
     {
       tcl_condition_failed(interp, objv[0], 
@@ -2039,10 +2037,9 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_GetADLB_ID(interp, objv[argpos++], &id);
 
   adlb_data_type type;
-  bool has_extra;
   adlb_type_extra extra;
   int rc = type_from_obj_extra(interp, objv, objv[argpos++], &type,
-                         &has_extra, &extra);
+                         &extra);
   TCL_CHECK(rc);
 
   adlb_binary_data data; // The data to send
@@ -2067,7 +2064,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
   {
     Tcl_Obj *obj = objv[argpos++];
     // Straightforward case with no nested type info
-    rc = tcl_obj_to_bin(interp, objv, type, has_extra ? &extra : NULL,
+    rc = tcl_obj_to_bin(interp, objv, type, extra,
                         obj, &xfer_buf, &data);
     TCL_CHECK_MSG(rc, "<%"PRId64"> failed, could not extract data from %s!",
                   id, Tcl_GetString(obj));
@@ -2152,12 +2149,11 @@ ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
   }
 
   adlb_data_type given_type = ADLB_DATA_TYPE_NULL;
-  bool has_extra = false;
-  adlb_type_extra extra;
+  adlb_type_extra extra = { .valid = false };
   if (argpos < objc)
   {
     rc = type_from_obj_extra(interp, objv, objv[argpos++], &given_type,
-                            &has_extra, &extra);
+                             &extra);
     TCL_CHECK_MSG(rc, "arg %i must be valid type!", argpos);
   }
 
@@ -2181,7 +2177,7 @@ ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
 
   // Unpack from xfer to Tcl object
   Tcl_Obj* result = NULL;
-  rc = adlb_data_to_tcl_obj(interp, objv, id, type, has_extra ? &extra : NULL,
+  rc = adlb_data_to_tcl_obj(interp, objv, id, type, extra,
                             xfer, length, &result);
   TCL_CHECK(rc);
 
@@ -2196,7 +2192,7 @@ ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
  */
 int
 adlb_data_to_tcl_obj(Tcl_Interp *interp, Tcl_Obj *const objv[], adlb_datum_id id,
-                adlb_data_type type, const adlb_type_extra *extra,
+                adlb_data_type type, adlb_type_extra extra,
                 const void *data, int length, Tcl_Obj** result)
 {
   adlb_datum_storage tmp;
@@ -2327,10 +2323,9 @@ ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
   }
 
   adlb_data_type expected_type;
-  bool has_extra;
   adlb_type_extra extra;
   rc = type_from_obj_extra(interp, objv, objv[argpos++], &expected_type,
-                          &has_extra, &extra);
+                          &extra);
   TCL_CHECK(rc);
 
   adlb_retrieve_rc refcounts = ADLB_RETRIEVE_NO_RC;
@@ -2359,7 +2354,7 @@ ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
 
   // Unpack from xfer to Tcl object
   Tcl_Obj* result;
-  rc = adlb_data_to_tcl_obj(interp, objv, id, type, has_extra ? &extra : NULL,
+  rc = adlb_data_to_tcl_obj(interp, objv, id, type, extra,
                             xfer, length, &result);
   TCL_CHECK(rc);
 
@@ -2575,7 +2570,7 @@ enumerate_object(Tcl_Interp *interp, Tcl_Obj *const objv[],
             "message received, key for record %i/%i extends beyond end "
             "of data", i + 1, records);
       rc = adlb_data_to_tcl_obj(interp, objv, id, kv_type.CONTAINER.val_type,
-                NULL, data + pos, (int)val_len, &val);
+                ADLB_TYPE_EXTRA_NULL, data + pos, (int)val_len, &val);
 
       pos += (int)val_len;
     }
@@ -2992,15 +2987,14 @@ ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_Obj *member_obj = objv[argpos++];
 
   adlb_data_type type;
-  bool has_extra;
   adlb_type_extra extra;
   rc = type_from_obj_extra(interp, objv, objv[argpos++], &type,
-                           &has_extra, &extra);
+                           &extra);
   TCL_CHECK(rc);
 
   adlb_binary_data member;
-  rc = tcl_obj_to_bin(interp, objv, type, has_extra ? &extra : NULL,
-                            member_obj, &xfer_buf, &member);
+  rc = tcl_obj_to_bin(interp, objv, type, extra,
+                      member_obj, &xfer_buf, &member);
 
   // TODO: support binary subscript
   TCL_CHECK_MSG(rc, "adlb::insert <%"PRId64">[%.*s] failed, could not "
@@ -3175,7 +3169,8 @@ ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
                 id, (int)subscript.length, (const char*)subscript.key);
 
   Tcl_Obj* result = NULL;
-  adlb_data_to_tcl_obj(interp, objv, id, type, NULL, xfer, len, &result);
+  adlb_data_to_tcl_obj(interp, objv, id, type, ADLB_TYPE_EXTRA_NULL,
+                       xfer, len, &result);
   DEBUG_ADLB("adlb::lookup <%"PRId64">[\"%.*s\"]=<%s>",
              id, (int)subscript.length, (const char*)subscript.key,
              Tcl_GetStringFromObj(result, NULL));
@@ -3363,11 +3358,10 @@ ADLB_Container_Reference_Cmd(ClientData cdata, Tcl_Interp *interp,
                 "argument 3 is not a 64-bit integer!");
 
   adlb_data_type ref_type;
-  bool has_extra;
   adlb_type_extra extra;
   // ignores extra type info
   rc = type_from_obj_extra(interp, objv, objv[4], &ref_type,
-                           &has_extra, &extra);
+                           &extra);
   TCL_CHECK(rc);
 
   // DEBUG_ADLB("adlb::container_reference: <%"PRId64">[%s] => <%"PRId64">\n",
@@ -3813,7 +3807,7 @@ get_compound_type(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
   adlb_data_type *type_arr = malloc(sizeof(adlb_data_type) * types_size);
   TCL_CONDITION(type_arr != NULL, "Error allocating memory");
 
-  adlb_type_extra **extras = malloc(sizeof(adlb_type_extra*) * types_size);
+  adlb_type_extra *extras = malloc(sizeof(adlb_type_extra) * types_size);
   TCL_CONDITION_GOTO(extras != NULL, exit_err, "Error allocating memory");
   int to_consume = 1; // Min additional number that must be consumed
 
@@ -3829,28 +3823,26 @@ get_compound_type(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
       TCL_CONDITION_GOTO(type_arr != NULL, exit_err,
                         "Error allocating memory");
       
-      extras = realloc(extras, sizeof(adlb_type_extra*) * types_size);
+      extras = realloc(extras, sizeof(adlb_type_extra) * types_size);
       TCL_CONDITION_GOTO(extras != NULL, exit_err,
                         "Error allocating memory");
     }
 
     adlb_data_type curr;
-    bool has_extra;
     adlb_type_extra extra;
     rc = type_from_obj_extra(interp, objv, objv[*argpos], &curr,
-                             &has_extra, &extra);
+                             &extra);
     TCL_CHECK_GOTO(rc, exit_err);
     
     type_arr[len] = curr;
    
-    if (has_extra)
+    if (extra.valid)
     {
-      extras[len] = malloc(sizeof(adlb_type_extra));
-      *(extras[len]) = extra;
+      extras[len] = extra;
     }
     else
     {
-      extras[len] = NULL;
+      extras[len] = ADLB_TYPE_EXTRA_NULL;
     }
 
     // Make sure we consume more types
@@ -3884,10 +3876,6 @@ exit_err:
   }
   if (extras != NULL)
   {
-    for (int i = 0; i < len; i++)
-    {
-      free(extras[i]);
-    }
     free(extras);
   }
   return TCL_ERROR;
@@ -3972,10 +3960,8 @@ ADLB_Xpt_Unpack_Cmd(ClientData cdata, Tcl_Interp *interp,
 
     // Get type of object
     adlb_data_type type;
-    bool has_extra;
     adlb_type_extra extra;
-    rc = type_from_obj_extra(interp, objv, typeO, &type,
-                         &has_extra, &extra);
+    rc = type_from_obj_extra(interp, objv, typeO, &type, &extra);
     TCL_CHECK(rc);
 
     // Unpack next entry from buffer
@@ -3995,7 +3981,7 @@ ADLB_Xpt_Unpack_Cmd(ClientData cdata, Tcl_Interp *interp,
 
     Tcl_Obj *obj;
     rc = adlb_data_to_tcl_obj(interp, objv, ADLB_DATA_ID_NULL,
-          type, has_extra ? &extra : NULL, entry, entry_length, &obj);
+          type, extra, entry, entry_length, &obj);
     TCL_CHECK(rc);
     
     // Store result into location caller requested

@@ -602,8 +602,8 @@ Turbine_Cache_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
   TURBINE_CHECK(rc, "cache retrieve failed: %"PRId64"", td);
 
   Tcl_Obj* result = NULL;
-  int tcl_code = adlb_data_to_tcl_obj(interp, objv, td, type, NULL,
-                                      data, length, &result);
+  int tcl_code = adlb_data_to_tcl_obj(interp, objv, td, type,
+                      ADLB_TYPE_EXTRA_NULL, data, length, &result);
   TCL_CHECK(tcl_code);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
@@ -612,7 +612,7 @@ Turbine_Cache_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
 static int
 tcl_obj_to_binary(Tcl_Interp* interp, Tcl_Obj *const objv[],
                turbine_datum_id td, turbine_type type,
-               const adlb_type_extra *extra,
+               adlb_type_extra extra,
                Tcl_Obj* obj, void** result, int* length);
 
 /**
@@ -635,14 +635,13 @@ Turbine_Cache_Store_Cmd(ClientData cdata, Tcl_Interp* interp,
   TCL_CHECK(error);
 
   adlb_data_type type;
-  bool has_extra;
   adlb_type_extra extra;
   error = type_from_obj_extra(interp, objv, objv[argpos++], &type,
-                              &has_extra, &extra);
+                              &extra);
   TCL_CHECK(error);
 
   TCL_CONDITION(argpos < objc, "not enough arguments");
-  error = tcl_obj_to_binary(interp, objv, td, type, has_extra ? &extra : NULL,
+  error = tcl_obj_to_binary(interp, objv, td, type, extra,
                          objv[argpos++], &data, &length);
   TCL_CHECK_MSG(error, "object extraction failed: <%"PRId64">", td);
 
@@ -659,7 +658,7 @@ Turbine_Cache_Store_Cmd(ClientData cdata, Tcl_Interp* interp,
 static int
 tcl_obj_to_binary(Tcl_Interp* interp, Tcl_Obj *const objv[],
                turbine_datum_id td, turbine_type type,
-               const adlb_type_extra *extra,
+               adlb_type_extra extra,
                Tcl_Obj* obj, void** result, int* length)
 {
   adlb_binary_data data;
@@ -858,8 +857,8 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
             "only works on containers with values of type ref");
 
     Tcl_Obj* result = NULL;
-    adlb_data_to_tcl_obj(interp, objv, id, ADLB_DATA_TYPE_REF, NULL,
-                         xfer, value_len, &result);
+    adlb_data_to_tcl_obj(interp, objv, id, ADLB_DATA_TYPE_REF,
+            ADLB_TYPE_EXTRA_NULL, xfer, value_len, &result);
     Tcl_SetObjResult(interp, result);
     return TCL_OK;
   }
