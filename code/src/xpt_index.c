@@ -42,7 +42,8 @@ adlb_code xlb_xpt_index_init(void)
     adlb_datum_id container_id = id_for_rank(xlb_comm_rank);
 
     adlb_type_extra extra = { .CONTAINER.key_type = ADLB_DATA_TYPE_BLOB,
-                              .CONTAINER.val_type = ADLB_DATA_TYPE_BLOB };
+                              .CONTAINER.val_type = ADLB_DATA_TYPE_BLOB,
+                              .valid = true };
     adlb_create_props props = { .read_refcount = 1, .write_refcount = 1,
                                 .permanent = true };
     dc = xlb_data_create(container_id, ADLB_DATA_TYPE_CONTAINER, &extra,
