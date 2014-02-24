@@ -16,15 +16,12 @@
 package exm.stc.frontend;
 
 import java.util.List;
-import java.util.Stack;
 
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.StructType;
-import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
@@ -78,13 +75,7 @@ public class VarCreator {
 
   public void initialiseVariable(Context context, Var v)
       throws UndefinedTypeException, DoubleDefineException {
-    if (!Types.isStruct(v.type())) {
-      backendInit(v);
-    } else {
-      // Need to handle structs specially because they have lots of nested
-      // variables created at declaration time
-      initialiseStruct(context, v, v, new Stack<String>());
-    }
+    backendInit(v);
   }
 
   /**
@@ -95,39 +86,6 @@ public class VarCreator {
    */
   public void backendInit(Var var) throws UndefinedTypeException {
     backend.declare(VarRepr.backendVar(var));
-  }
-
-  private void initialiseStruct(Context context, Var rootStruct,
-              Var structToInit, Stack<String> path)
-      throws UndefinedTypeException, DoubleDefineException {
-    assert(Types.isStruct(structToInit.type()));
-    
-    backendInit(structToInit);
-    
-    if (structToInit.storage() == Alloc.ALIAS) {
-      // Skip recursive initialisation if its just an alias
-      return;
-    } else {
-      StructType type = (StructType)structToInit.type();
-  
-      for (StructField f: type.getFields()) {
-        path.push(f.getName());
-  
-        Var tmp = context.createStructFieldTmp(
-            rootStruct, f.getType(), path, Alloc.TEMP);
-  
-        if (Types.isStruct(f.getType())) {
-          // Continue recursive structure initialisation,
-          // while keeping track of the full path
-          initialiseStruct(context, rootStruct, tmp, path);
-        } else {
-          initialiseVariable(context, tmp);
-        }
-        backend.structInitField(VarRepr.backendVar(structToInit), f.getName(),
-                                VarRepr.backendVar(tmp));
-        path.pop();
-      }
-    }
   }
 
   /**

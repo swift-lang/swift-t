@@ -312,7 +312,8 @@ public class LValWalker {
         + lval.getType(context).toString() + "> to " + newTarget.toString()
         + "<" + newTarget.getType(context).toString() + "> by looking up "
         + structPathLen + " fields");
-    return newTarget;
+    //return newTarget;
+    throw new STCRuntimeError("Need to revisit struct lval handling");
   }
 
   /**
