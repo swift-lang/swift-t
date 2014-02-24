@@ -83,11 +83,7 @@ public class AliasTracker {
   }
 
   public List<Alias> getInstructionAliases(Instruction inst) {
-    if (inst.op == Opcode.STRUCT_INIT_FIELD) {
-      return Collections.singletonList(new Alias(inst.getOutput(0), 
-                            inst.getInput(0).getStringLit(),
-                            inst.getInput(1).getVar()));
-    } else if (inst.op == Opcode.STRUCT_LOOKUP) {
+    if (inst.op == Opcode.STRUCT_LOOKUP) {
       return Collections.singletonList(new Alias(inst.getInput(0).getVar(),
                             inst.getInput(1).getStringLit(),
                             inst.getOutput(0)));

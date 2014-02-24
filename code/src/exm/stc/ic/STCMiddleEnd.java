@@ -902,12 +902,51 @@ public class STCMiddleEnd {
         TurbineOp.structRefLookup(result, structVar, structField));
   }
 
-  public void structInitField(Var structVar, String fieldName,
-      Var fieldContents) {
-    currBlock().addInstruction(
-        TurbineOp.structInitField(structVar, fieldName, fieldContents));
+  public void structStore(Var struct, String fieldName,
+                          Arg fieldVal) {
+    assert(Types.isStruct(struct));
+    StructType st = (StructType)struct.type().getImplType();
+    Type fieldType = st.getFieldTypeByName(fieldName);
+    assert(fieldType != null);
+    assert(fieldVal.type().assignableTo(
+                  Types.retrievedType(fieldType)));
+    currBlock().addInstruction(TurbineOp.structStore(struct,
+                                fieldName, fieldVal));
+  }
+  
+  public void structRefStore(Var struct, String fieldName,
+                             Arg fieldVal) {
+    assert(Types.isStruct(struct));
+    StructType st = (StructType)struct.type().getImplType().memberType();
+    Type fieldType = st.getFieldTypeByName(fieldName);
+    assert(fieldType != null);
+    assert(fieldVal.type().assignableTo(fieldType));
+    currBlock().addInstruction(TurbineOp.structRefStore(struct,
+            fieldName, fieldVal));
   }
 
+  public void structCopyIn(Var struct, String fieldName,
+                            Var fieldVar) {
+    assert(Types.isStruct(struct));
+    StructType st = (StructType)struct.type().getImplType();
+    Type fieldType = st.getFieldTypeByName(fieldName);
+    assert(fieldType != null);
+    assert(fieldVar.type().assignableTo(fieldType));
+    currBlock().addInstruction(TurbineOp.structCopyIn(struct,
+                                fieldName, fieldVar));
+  }
+  
+  public void structRefCopyIn(Var struct, String fieldName,
+                              Var fieldVar) {
+    assert(Types.isStructRef(struct));
+    StructType st = (StructType)struct.type().getImplType().memberType();
+    Type fieldType = st.getFieldTypeByName(fieldName);
+    assert(fieldType != null);
+    assert(fieldVar.type().assignableTo(fieldType));
+    currBlock().addInstruction(TurbineOp.structRefCopyIn(struct,
+                                          fieldName, fieldVar));
+  }
+  
   public void addGlobal(Var var, Arg val) {
     assert(val.isConstant());
     program.constants().add(var, val);

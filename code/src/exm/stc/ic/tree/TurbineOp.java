@@ -208,9 +208,21 @@ public class TurbineOp extends Instruction {
       gen.structRefLookup(getOutput(0), getInput(0).getVar(),
                            getInput(1).getStringLit());
       break;
-    case STRUCT_INIT_FIELD:
-      gen.structInitField(getOutput(0), getInput(0).getStringLit(),
+    case STRUCT_STORE:
+      gen.structStore(getOutput(0), getInput(0).getStringLit(),
+                       getInput(1));
+      break;
+    case STRUCT_COPY_IN:
+      gen.structCopyIn(getOutput(0), getInput(0).getStringLit(),
                        getInput(1).getVar());
+      break;
+    case STRUCTREF_STORE:
+      gen.structRefStore(getOutput(0), getInput(0).getStringLit(),
+                         getInput(1));
+      break;
+    case STRUCTREF_COPY_IN:
+      gen.structRefCopyIn(getOutput(0), getInput(0).getStringLit(),
+          getInput(1).getVar());
       break;
     case DEREF_SCALAR:
       gen.dereferenceScalar(getOutput(0), getInput(0).getVar());
@@ -493,13 +505,34 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.BAG_INSERT, bag, elem, writersDecr);
   }
   
-  public static Instruction structInitField(Var structVar,
-      String fieldName, Var fieldContents) {
-    return new TurbineOp(Opcode.STRUCT_INIT_FIELD,
-                    structVar,
-                    Arg.createStringLit(fieldName),
-                    fieldContents.asArg());
+  public static Instruction structStore(Var structVar,
+      String fieldName, Arg fieldVal) {
+    return new TurbineOp(Opcode.STRUCT_STORE,
+                    structVar, Arg.createStringLit(fieldName),
+                    fieldVal);
   }
+  
+  public static Instruction structCopyIn(Var structVar,
+      String fieldName, Var fieldVar) {
+    return new TurbineOp(Opcode.STRUCT_COPY_IN,
+                    structVar, Arg.createStringLit(fieldName),
+                    fieldVar.asArg());
+  }
+  
+  public static Instruction structRefStore(Var structVar,
+      String fieldName, Arg fieldVal) {
+    return new TurbineOp(Opcode.STRUCTREF_STORE,
+                    structVar, Arg.createStringLit(fieldName),
+                    fieldVal);
+  }
+  
+  public static Instruction structRefCopyIn(Var structVar,
+      String fieldName, Var fieldVar) {
+    return new TurbineOp(Opcode.STRUCTREF_COPY_IN,
+                    structVar, Arg.createStringLit(fieldName),
+                    fieldVar.asArg());
+  }
+
 
   public static Instruction structLookup(Var oVar, Var structVar,
                                                         String fieldName) {
@@ -862,7 +895,10 @@ public class TurbineOp extends Instruction {
     switch (op) {
     /* The direct container write functions only mutate their output 
      * argument */
-    case STRUCT_INIT_FIELD:
+    case STRUCT_STORE:
+    case STRUCT_COPY_IN:
+    case STRUCTREF_STORE:
+    case STRUCTREF_COPY_IN:
       return false;
       
     case ARRAY_BUILD:
@@ -1508,9 +1544,6 @@ public class TurbineOp extends Instruction {
       case LOAD_FILE:
         // Initializes output file value
         return Arrays.asList(Pair.create(getOutput(0), InitType.FULL));
-      case STRUCT_INIT_FIELD:
-        // Fills in part of struct
-        return Arrays.asList(Pair.create(getOutput(0), InitType.PARTIAL));
       default:
         return Collections.emptyList();
     }
@@ -1585,7 +1618,10 @@ public class TurbineOp extends Instruction {
         List<Var> outputs = getOutputs();
         return outputs.subList(1, outputs.size());
       }
-      case STRUCT_INIT_FIELD:
+      case STRUCT_STORE:
+      case STRUCT_COPY_IN:
+      case STRUCTREF_STORE:
+      case STRUCTREF_COPY_IN:
         return getOutputs();
       case SET_FILENAME_VAL:
         // File's filename might be modified
@@ -1644,7 +1680,7 @@ public class TurbineOp extends Instruction {
     case INIT_UPDATEABLE_FLOAT:
     case LATEST_VALUE:
     case ARR_STORE:
-    case STRUCT_INIT_FIELD:
+    case STRUCT_STORE:
     case STRUCT_LOOKUP:
     case ARR_CREATE_NESTED_IMM:
     case ARRAY_CREATE_BAG:
@@ -1695,6 +1731,9 @@ public class TurbineOp extends Instruction {
     case ARR_CREATE_NESTED_FUTURE:
     case AREF_CREATE_NESTED_IMM:
     case ASYNC_COPY_CONTAINER:
+    case STRUCT_COPY_IN:
+    case STRUCTREF_STORE:
+    case STRUCTREF_COPY_IN:
       return TaskMode.LOCAL;
     default:
       throw new STCRuntimeError("Need to add opcode " + op.toString()
@@ -1788,10 +1827,15 @@ public class TurbineOp extends Instruction {
         return ValLoc.derefCompVal(getOutput(0), getInput(0).getVar(),
                                    IsValCopy.YES, IsAssign.NO).asList();
       }
-      case STRUCT_INIT_FIELD: {
-        ValLoc lookup = ValLoc.makeStructLookupResult(
+
+      case STRUCT_STORE:
+      case STRUCT_COPY_IN:
+      case STRUCTREF_STORE:
+      case STRUCTREF_COPY_IN:{
+        throw new STCRuntimeError("TODO");
+        /*ValLoc lookup = ValLoc.makeStructLookupResult(
             getInput(1).getVar(), getOutput(0), getInput(0).getStringLit());
-        return lookup.asList(); 
+        return lookup.asList();*/ 
       }
       case STRUCT_LOOKUP: {
         ValLoc lookup = ValLoc.makeStructLookupResult(
@@ -2122,7 +2166,10 @@ public class TurbineOp extends Instruction {
         }
         return Pair.create(readers, Var.NONE);
       }
-      case STRUCT_INIT_FIELD:
+      case STRUCT_STORE:
+      case STRUCT_COPY_IN:
+      case STRUCTREF_STORE:
+      case STRUCTREF_COPY_IN:
         // Do nothing: reference count tracker can track variables
         // across struct boundaries
         return super.getIncrVars();

@@ -78,12 +78,12 @@ public enum Opcode {
   // Create new bag inside array
   ARRAY_CREATE_BAG,
   
-  // Init field in struct
-  STRUCT_INIT_FIELD,
   // Lookup in local struct
   STRUCT_LOOKUP,
   // Lookup in reference to struct
   STRUCTREF_LOOKUP,
+  // Assign or copy to struct
+  STRUCT_STORE, STRUCTREF_STORE, STRUCT_COPY_IN, STRUCTREF_COPY_IN,
   
   // Manipulate filenames
   GET_FILENAME, SET_FILENAME_VAL, CHOOSE_TMP_FILENAME, IS_MAPPED,

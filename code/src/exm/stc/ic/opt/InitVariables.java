@@ -6,14 +6,11 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.StructType;
-import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.common.util.HierarchicalSet;
@@ -199,6 +196,9 @@ public class InitVariables {
     }
 
     private void updatePartialInitStruct(Instruction inst, Var initVar) {
+      throw new STCRuntimeError("TODO");
+      // TODO: how will this apply to new struct instructions?
+      /*
       assert(inst.op == Opcode.STRUCT_INIT_FIELD) : "Expected STRUCT_INIT_FIELD";
       String field = inst.getInput(0).getStringLit();
 
@@ -245,6 +245,7 @@ public class InitVariables {
         // All initialized: struct is fully initialized
         initVars.add(initVar);
       }
+      */
     }
 
     /**

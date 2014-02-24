@@ -1402,13 +1402,53 @@ public class TurbineGenerator implements CompilerBackend {
       pointAdd(Turbine.setPriority(argToExpr(priority)));
     }
   }
-
+  
   @Override
-  public void structInitField(Var structVar, String fieldName,
-      Var fieldContents) {
-    throw new STCRuntimeError("Don't need to init struct fields now");
+  public void structStore(Var struct, String fieldName,
+      Arg fieldContents) {
+    assert(Types.isStruct(struct));
+    StructType st = (StructType)struct.type().getImplType();
+    Type fieldType = st.getFieldTypeByName(fieldName);
+    assert(fieldType != null);
+    assert(fieldContents.type().assignableTo(
+                  Types.retrievedType(fieldType)));
+    throw new STCRuntimeError("Not yet implemented");
+  }
+  
+  @Override
+  public void structCopyIn(Var struct, String fieldName,
+                           Var fieldContents) {
+    assert(Types.isStruct(struct));
+    StructType st = (StructType)struct.type().getImplType();
+    Type fieldType = st.getFieldTypeByName(fieldName);
+    assert(fieldType != null);
+    assert(fieldContents.type().assignableTo(fieldType));
+    throw new STCRuntimeError("Not yet implemented");
+  }
+  
+  @Override
+  public void structRefCopyIn(Var structRef, String fieldName,
+                           Var fieldContents) {
+    assert(Types.isStructRef(structRef));
+    StructType st = (StructType)structRef.type().getImplType().memberType();
+    Type fieldType = st.getFieldTypeByName(fieldName); 
+    assert(fieldType != null);
+    assert(fieldContents.type().assignableTo(fieldType));
+    throw new STCRuntimeError("Not yet implemented");
   }
 
+  @Override
+  public void structRefStore(Var structRef, String fieldName,
+      Arg fieldContents) {
+    assert(Types.isStructRef(structRef));
+    StructType st = (StructType)structRef.type().getImplType().memberType();
+    Type fieldType = st.getFieldTypeByName(fieldName); 
+    assert(fieldType != null);
+    assert(fieldContents.type().assignableTo(
+        Types.retrievedType(fieldType)));
+    throw new STCRuntimeError("Not yet implemented");
+  }
+  
   /**
    * load the turbine id of the field into alias
    * @param structVar

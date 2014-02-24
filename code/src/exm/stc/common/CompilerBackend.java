@@ -227,9 +227,21 @@ public interface CompilerBackend {
   public void structRefLookup(Var result, Var structVar,
       String fieldName);
 
-  public void structInitField(Var structVar, String fieldName,
-                                          Var fieldContents);
+  /**
+   * Copy in value of variable to struct field 
+   * @param struct
+   * @param fieldName
+   * @param fieldContents
+   */
 
+  public void structStore(Var struct, String fieldName,
+                           Arg fieldContents);
+  public void structCopyIn(Var struct, String fieldName,
+      Var fieldContents);
+  public void structRefStore(Var structRef, String fieldName,
+                           Arg fieldContents);
+  public void structRefCopyIn(Var structRef, String fieldName,
+                           Var fieldContents );
   /**
    * Direct lookup of array without any blocking at all.  This is only
    * safe to use if we know the array is closed, or if we know that the
