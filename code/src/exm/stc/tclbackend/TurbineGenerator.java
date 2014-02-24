@@ -67,6 +67,7 @@ import exm.stc.common.lang.Types.NestedContainerInfo;
 import exm.stc.common.lang.Types.PrimType;
 import exm.stc.common.lang.Types.RefType;
 import exm.stc.common.lang.Types.StructType;
+import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.Typed;
 import exm.stc.common.lang.Var;
@@ -379,22 +380,32 @@ public class TurbineGenerator implements CompilerBackend {
   private Sequence structTypeDeclarations() {
     Sequence result = new Sequence();
     
+    // TODO: sort struct types in order in case one type appears
+    // inside another. I think for now the frontend will guarantee
+    // this order, so we'll just check that it's true.
+    // Note that we can't have recursive struct types.
+    Set<StructType> declared = new HashSet<StructType>();
+    
     for (Pair<Integer, StructType> type: structTypes.getTypeList()) {
       int typeId = type.val1;
       StructType st = type.val2;
-      List<Pair<String, Type>> fields = structTypes.getFields(st);
      
       // Tcl expression list describing fields;
       List<Expression> fieldInfo = new ArrayList<Expression>();
-      for (Pair<String, Type> field: fields) {
-        // Field name, then reference type
-        fieldInfo.add(new TclString(field.val1, true));
-        fieldInfo.add(refRepresentationType(field.val2, true));
+      for (StructField field: st.getFields()) {
+        // Field name and type
+        fieldInfo.add(new TclString(field.getName(), true));
+        fieldInfo.add(representationType(field.getType(), true));
+        if (Types.isStruct(field.getType())) {
+          assert(declared.contains(field.getType())) :
+            field.getType() + " struct type was not initialized";
+        }
       }
       
       Command decl = Turbine.declareStructType(new LiteralInt(typeId),
                           structTypeName(st), new TclList(fieldInfo));
       result.add(decl);
+      declared.add(st);
     }
     return result;
   }
@@ -450,7 +461,8 @@ public class TurbineGenerator implements CompilerBackend {
       if (Types.isFile(t)) {
         batchedFiles.add(decl);
       } else if (Types.isPrimFuture(t) || Types.isPrimUpdateable(t) ||
-          Types.isArray(t) || Types.isRef(t) || Types.isBag(t)) {
+          Types.isArray(t) || Types.isRef(t) || Types.isBag(t) ||
+          Types.isStruct(t)) {
         List<Expression> createArgs = new ArrayList<Expression>();
         // Data type
         createArgs.add(representationType(t, true));
@@ -467,9 +479,6 @@ public class TurbineGenerator implements CompilerBackend {
           createArgs.add(argToExpr(initWriters));
         batched.add(new TclList(createArgs));
         batchedVarNames.add(tclVarName);
-      } else if (Types.isStruct(t)) {
-        // don't allocate in data store
-        pointAdd(Turbine.allocateStruct(prefixVar(var)));
       } else if (Types.isPrimValue(t) || Types.isContainerLocal(t)) {
         assert(var.storage() == Alloc.LOCAL);
         // don't need to do anything
@@ -546,6 +555,8 @@ public class TurbineGenerator implements CompilerBackend {
       return Turbine.ADLB_CONTAINER_TYPE;
     } else if (Types.isBag(t)) {
       return Turbine.ADLB_MULTISET_TYPE;
+    } else if (Types.isStruct(t)) {
+      return structTypeName(t);
     } else {
       throw new STCRuntimeError("Unknown ADLB representation type for " + t);
     }
@@ -580,8 +591,8 @@ public class TurbineGenerator implements CompilerBackend {
                Types.isRef(t)) {
       // Local handle to remote data
       return Turbine.ADLB_REF_TYPE; 
-    } else if (Types.isStruct(t)) {
-      return structTypeName(t);
+    /*} else if (Types.isStructLocal(t)) {
+      return structTypeName(t);*/
     } else {
       throw new STCRuntimeError("Unknown ADLB representation type for " + t);
     }
@@ -1395,9 +1406,7 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void structInitField(Var structVar, String fieldName,
       Var fieldContents) {
-    pointAdd(
-        Turbine.structInsert(prefixVar(structVar),
-            fieldName, varToExpr(fieldContents)));
+    throw new STCRuntimeError("Don't need to init struct fields now");
   }
 
   /**

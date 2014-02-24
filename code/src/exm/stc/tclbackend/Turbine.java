@@ -881,29 +881,6 @@ class Turbine {
                       execCx, RuleProps.DEFAULT);
   }
 
-  public static TclTree allocateStruct(String tclName) {
-    Square createExpr = new Square(new Token("dict"), new Token("create"));
-    return new SetVariable(tclName, createExpr);
-  }
-  
-  /**
-   * Insert src into struct at container.field
-   * @param container
-   * @param field
-   * @param src
-   */
-  public static Sequence structInsert(String container, String field,
-                    Value src) {
-    Sequence result = new Sequence();
-    Command storeCmd = new Command(
-        new Token("dict"), new Token("set"), 
-        new Token(container), new TclString(field, true), src);
-  
-    result.add(storeCmd);
-    return result;
-  
-  }
-
   public static Sequence structLookupFieldID(Value struct, String structField,
       String resultVar) {
     Sequence result = new Sequence();
