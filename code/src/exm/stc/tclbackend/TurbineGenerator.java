@@ -2394,7 +2394,7 @@ public class TurbineGenerator implements CompilerBackend {
           } else {
             throw new STCRuntimeError("Don't know how to pass var " + v);
           } 
-        } else if (Types.isContainerLocal(t)) {
+        } else if (Types.isContainerLocal(t) || Types.isStructLocal(t)) {
           exprs.add(varToExpr(v));
         } else {
           throw new STCRuntimeError("Don't know how to pass var with type "

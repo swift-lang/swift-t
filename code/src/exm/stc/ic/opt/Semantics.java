@@ -3,6 +3,9 @@ package exm.stc.ic.opt;
 import java.util.Set;
 
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.StructType;
+import exm.stc.common.lang.Types.StructType.StructField;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.Typed;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.TernaryLogic.Ternary;
@@ -24,6 +27,16 @@ public class Semantics {
     } else if (Types.isContainerLocal(t)) {
       // Depends on contents
       return canPassToChildTask(Types.containerElemType(t));
+    } else if (Types.isStructLocal(t)) {
+      // Check if can pass all fields
+      StructType st = (StructType)t.type().getImplType();
+      for (StructField field: st.getFields()) {
+        Type fieldType = field.getType();
+        if (!canPassToChildTask(fieldType)) {
+          return false;
+        }
+      }
+      return true;
     } else {
       return true;
     }        

@@ -110,6 +110,7 @@ public class TclUtil {
   }
 
   public static boolean representationIsTclList(Type type) {
+    // TODO: treat handles as lists?
     if (Types.isFile(type) || Types.isStructLocal(type) ||
         Types.isFileVal(type) || Types.isContainerLocal(type)) {
       return true;
