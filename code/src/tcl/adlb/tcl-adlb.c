@@ -404,6 +404,12 @@ static int field_name_objs_init(Tcl_Interp *interp, Tcl_Obj *const objv[])
                             sizeof(field_name_objs.objs[0]));
   TCL_CONDITION(field_name_objs.objs != NULL,
                 "error allocating field names");
+
+  // Init. entries
+  for (int i = 0; i < field_name_objs.size; i++)
+  {
+    field_name_objs.objs[i] = NULL;
+  }
   return TCL_OK;
 }
 
