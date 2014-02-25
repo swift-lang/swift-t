@@ -174,15 +174,27 @@ adlb_data_code
 ADLB_Lookup_struct_type(adlb_struct_type type,
                   const char **type_name, int *field_count,
                   const adlb_struct_field_type **field_types,
-                  char ***field_names)
+                  char const* const** field_names)
 {
   check_valid_type(type);
 
   xlb_struct_type_info *t = &struct_types[type];
-  *type_name = t->type_name;
-  *field_count = t->field_count;
-  *field_types = t->field_types;
-  *field_names = t->field_names;
+  if (type_name != NULL)
+    *type_name = t->type_name;
+
+  if (field_count != NULL)
+    *field_count = t->field_count;
+
+  if (field_types != NULL)
+    *field_types = t->field_types;
+
+  if (field_names != NULL)
+  {
+    // Convert to non-modifiable pointer
+    char const* const* tmp_field_names = 
+                    (char const* const*)field_names;
+    *field_names = tmp_field_names;
+  }
   return ADLB_DATA_SUCCESS;
 }
 

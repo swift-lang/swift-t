@@ -157,12 +157,13 @@ ADLB_Declare_struct_type(adlb_struct_type type,
 
 /*
    Retrieve info about struct type. Returns type error if not found.
+   Any pointer arguments can be left NULL if info not needed.
  */
 adlb_data_code
 ADLB_Lookup_struct_type(adlb_struct_type type,
                   const char **type_name, int *field_count,
                   const adlb_struct_field_type **field_types,
-                  char ***field_names);
+                  char const* const** field_names);
 
 // adlb_binary_data: struct to represent
 typedef struct {
