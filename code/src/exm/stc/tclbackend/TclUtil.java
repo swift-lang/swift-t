@@ -110,7 +110,7 @@ public class TclUtil {
   }
 
   public static boolean representationIsTclList(Type type) {
-    if (Types.isFile(type) || Types.isStruct(type) ||
+    if (Types.isFile(type) || Types.isStructLocal(type) ||
         Types.isFileVal(type) || Types.isContainerLocal(type)) {
       return true;
     }

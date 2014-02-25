@@ -431,21 +431,42 @@ public class Types {
       }
     }
 
-    public StructType(String typeName, List<StructField> fields) {
+    public StructType(boolean local, String typeName,
+                       List<StructField> fields) {
+      this.local = local;
       this.typeName = typeName;
       this.fields = new ArrayList<StructField>(fields);
     }
 
+    private final boolean local;
     private final List<StructField> fields;
     private final String typeName;
-
+    
+    public static StructType localStruct(StructType structType) {
+      return new StructType(true, structType.typeName, structType.fields);
+    }
+    
+    public static StructType sharedStruct(StructType structType) {
+      return new StructType(false, structType.typeName, structType.fields);
+    }
+    
+    public static StructType localStruct(String typeName,
+                                   List<StructField> fields) {
+      return new StructType(true, typeName, fields);
+    }
+    
+    public static StructType sharedStruct(String typeName,
+                                  List<StructField> fields) {
+      return new StructType(false, typeName, fields);
+    }
+    
     public String getTypeName() {
       return typeName;
     }
 
     @Override
     public StructureType structureType() {
-      return StructureType.STRUCT;
+      return local ? StructureType.STRUCT_LOCAL : StructureType.STRUCT;
     }
 
     public List<StructField> getFields() {
@@ -509,12 +530,13 @@ public class Types {
               "non-type object");
       }
       Type otherT = (Type) other;
-      if (!otherT.structureType().equals(StructureType.STRUCT)) {
+      if (!isStruct(otherT) || isStructLocal(otherT)) {
         return false;
       } else {
         // Type names should match, along with fields
         StructType otherST = (StructType)otherT;
-        if (!otherST.getTypeName().equals(typeName)) {
+        if (otherST.local != this.local ||
+                !otherST.getTypeName().equals(typeName)) {
           return false;
         } else {
           // assume that if the names match, the types match, because the
@@ -526,7 +548,11 @@ public class Types {
 
     @Override
     public String toString() {
-      StringBuilder s = new StringBuilder("struct " + this.typeName + " {");
+      StringBuilder s = new StringBuilder();
+      if (local) {
+        s.append(VALUE_SIGIL);
+      }
+      s.append("struct " + this.typeName + " {");
       boolean first = true;
       for (StructField f: fields) {
         if (first) {
@@ -544,12 +570,17 @@ public class Types {
 
     @Override
     public String typeName() {
-      return this.typeName;
+      if (local) {
+        return VALUE_SIGIL + this.typeName;
+      } else {
+        return this.typeName;
+      }
     }
 
     @Override
     public int hashCode() {
-      return StructType.class.hashCode() ^ typeName.hashCode();
+      return ((StructType.class.hashCode() * 13) +
+               typeName.hashCode()) * 2 + (local ? 0 : 1);
     }
 
     @Override
@@ -1273,7 +1304,7 @@ public class Types {
     BAG, BAG_LOCAL,
     /** Reference is only used internally in compiler */
     REFERENCE,
-    STRUCT,
+    STRUCT, STRUCT_LOCAL,
     TYPE_VARIABLE,
     WILDCARD,
     TYPE_UNION,
@@ -1924,9 +1955,10 @@ public class Types {
 
   public static boolean isStructField(Typed struct,
             List<String> fieldPath, Typed field) {
-    assert(Types.isStruct(struct) || Types.isStructRef(struct));
+    assert(Types.isStruct(struct) || Types.isStructRef(struct) ||
+            isStructLocal(struct));
     StructType structType;
-    if (Types.isStruct(struct)) {
+    if (isStruct(struct) || isStructLocal(struct)) {
       structType = (StructType)struct.type().getImplType();
     } else {
       structType = (StructType)struct.type().getImplType().memberType();
@@ -2002,6 +2034,10 @@ public class Types {
 
   public static boolean isStruct(Typed t) {
     return t.type().structureType() == StructureType.STRUCT;
+  }
+  
+  public static boolean isStructLocal(Typed t) {
+    return t.type().structureType() == StructureType.STRUCT_LOCAL;
   }
   
   public static boolean isStructRef(Typed t) {
@@ -2153,6 +2189,9 @@ public class Types {
     } else if (isBag(t)) {
       BagType bt = (BagType)t.type().getImplType();
       return BagType.localBag(bt.memberType());
+    } else if (isStruct(t)) {
+      StructType st = (StructType)t.type().getImplType();
+      return st.localStruct(st);
     } else {
       throw new STCRuntimeError(t.type() + " can't be dereferenced");
     }
@@ -2177,8 +2216,11 @@ public class Types {
     } else if (isBagLocal(t)) {
       BagType bt = (BagType)t.type().getImplType();
       return BagType.sharedBag(bt.memberType());
+    } else if (isStructLocal(t)) {
+      StructType st = (StructType)t.type().getImplType();
+      return st.sharedStruct(st);
     } else {
-      throw new STCRuntimeError(t.type() + " can't be dereferenced");
+      throw new STCRuntimeError(t.type() + " can't be stored");
     }
   }
   

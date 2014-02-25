@@ -76,9 +76,9 @@ class Turbine {
   public static final String FILE_REF_TYPENAME = "file_ref";
   public static final TypeName ADLB_FILE_REF_TYPE = 
                                           new TypeName(FILE_REF_TYPENAME);
-  public static final String STRUCT_REF_TYPENAME = "struct";
-  public static final TypeName ADLB_STRUCT_REF_TYPE = 
-                                          new TypeName(STRUCT_REF_TYPENAME);
+  public static final String STRUCT_TYPENAME = "struct";
+  public static final TypeName ADLB_STRUCT_TYPE = 
+                                          new TypeName(STRUCT_TYPENAME);
 
 
   private static final Token ALLOCATE_CONTAINER_CUSTOM =

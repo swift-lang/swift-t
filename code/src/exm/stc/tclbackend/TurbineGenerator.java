@@ -606,8 +606,8 @@ public class TurbineGenerator implements CompilerBackend {
                Types.isRef(t)) {
       // Local handle to remote data
       return Turbine.ADLB_REF_TYPE; 
-    /*} else if (Types.isStructLocal(t)) {
-      return structTypeName(t);*/
+    } else if (Types.isStructLocal(t)) {
+      return structTypeName(t);
     } else {
       throw new STCRuntimeError("Unknown ADLB representation type for " + t);
     }

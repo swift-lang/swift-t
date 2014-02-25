@@ -279,7 +279,6 @@ public class TypeChecker {
     List<Op> matched = new ArrayList<Op>();
     
     for (Op candidate: Operators.getOps(opTok)) {
-      // TODO: check input types
       OpType opType = candidate.type;
       
       if (opOutputMatches(outType, opType) &&

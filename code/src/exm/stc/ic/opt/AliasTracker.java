@@ -253,7 +253,7 @@ public class AliasTracker {
       Type t = var.type();
       if (structPath != null) {
         for (String field: structPath) {
-          assert(Types.isStruct(t)) : t;
+          assert(Types.isStruct(t) || Types.isStructLocal(t)) : t;
           t = ((StructType)t).getFieldTypeByName(field);
         }
       }
