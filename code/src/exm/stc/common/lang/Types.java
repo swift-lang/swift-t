@@ -530,7 +530,7 @@ public class Types {
               "non-type object");
       }
       Type otherT = (Type) other;
-      if (!isStruct(otherT) || isStructLocal(otherT)) {
+      if (!isStruct(otherT) && !isStructLocal(otherT)) {
         return false;
       } else {
         // Type names should match, along with fields

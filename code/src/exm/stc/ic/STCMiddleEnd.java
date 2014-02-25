@@ -929,7 +929,7 @@ public class STCMiddleEnd {
     assert(Types.isStruct(struct));
     assert(Types.isStructFieldVal(struct, fieldPath, target));
     currBlock().addInstruction(
-        TurbineOp.structRetrieve(target, struct, fieldPath));
+        TurbineOp.structRetrieveSub(target, struct, fieldPath));
   }
   
   public void structCopyOut(Var target, Var struct,
@@ -956,7 +956,7 @@ public class STCMiddleEnd {
                           Arg fieldVal) {
     assert(Types.isStruct(struct));
     assert(Types.isStructFieldVal(struct, fieldPath, fieldVal));
-    currBlock().addInstruction(TurbineOp.structStore(struct,
+    currBlock().addInstruction(TurbineOp.structStoreSub(struct,
                                 fieldPath, fieldVal));
   }
 

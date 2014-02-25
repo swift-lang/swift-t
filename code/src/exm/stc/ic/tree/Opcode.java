@@ -13,8 +13,8 @@ public enum Opcode {
   LOAD_SCALAR, LOAD_FILE, LOAD_REF,
   
   // Load and store container contents (TODO: recursively?)
-  STORE_ARRAY, STORE_BAG,
-  LOAD_ARRAY, LOAD_BAG, 
+  STORE_ARRAY, STORE_BAG, STORE_STRUCT,
+  LOAD_ARRAY, LOAD_BAG, LOAD_STRUCT,
   STORE_RECURSIVE, LOAD_RECURSIVE,
   
   // Dereference *prim to prim
@@ -85,13 +85,13 @@ public enum Opcode {
   // Create alias of struct field
   STRUCT_CREATE_ALIAS,
   // Retrieve field from struct
-  STRUCT_RETRIEVE,
+  STRUCT_RETRIEVE_SUB,
   // Copy out field from struct
   STRUCT_COPY_OUT,
   // Copy out element of struct reference
   STRUCTREF_COPY_OUT,
   // Assign or copy to struct
-  STRUCT_STORE, STRUCTREF_STORE, STRUCT_COPY_IN, STRUCTREF_COPY_IN,
+  STRUCT_STORE_SUB, STRUCTREF_STORE_SUB, STRUCT_COPY_IN, STRUCTREF_COPY_IN,
   
   // Manipulate filenames
   GET_FILENAME, SET_FILENAME_VAL, CHOOSE_TMP_FILENAME, IS_MAPPED,
@@ -119,6 +119,7 @@ public enum Opcode {
       case STORE_FILE:
       case STORE_ARRAY:
       case STORE_BAG:
+      case STORE_STRUCT:
       case STORE_RECURSIVE:
         return true;
       default:
@@ -150,6 +151,12 @@ public enum Opcode {
       } else {
         op = Opcode.STORE_BAG;
       }
+    } else if (Types.isStruct(dstType)) {
+      if (recursive) {
+        // TODO: makes sense?
+      } else {
+        op = Opcode.STORE_STRUCT;
+      }
     }
     return op;
   }
@@ -161,6 +168,7 @@ public enum Opcode {
     case LOAD_REF:
     case LOAD_ARRAY:
     case LOAD_BAG:
+    case LOAD_STRUCT:
     case LOAD_RECURSIVE:
       return true;
     default:
@@ -192,6 +200,13 @@ public enum Opcode {
         op = Opcode.LOAD_RECURSIVE;
       } else {
         op = Opcode.LOAD_BAG;
+      }
+    } else if (Types.isStruct(srcType)) {
+      if (recursive) {
+        // TODO: support?
+        op = null;
+      } else {
+        op = Opcode.LOAD_STRUCT;
       }
     } else {
       op = null;

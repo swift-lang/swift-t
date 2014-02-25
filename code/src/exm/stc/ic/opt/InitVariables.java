@@ -179,65 +179,8 @@ public class InitVariables {
      * @param initVar
      */
     private void updatePartialInit(Instruction inst, Var initVar) {
-      if (Types.isStruct(initVar)) {
-        updatePartialInitStruct(inst, initVar);
-      } else {
-        throw new STCRuntimeError("Can't handle partial init for type " +
+      throw new STCRuntimeError("Can't handle partial init for type " +
                                    initVar.type());
-      }
-    }
-
-    private void updatePartialInitStruct(Instruction inst, Var initVar) {
-      throw new STCRuntimeError("TODO");
-      // TODO: how will this apply to new struct instructions?
-      /*
-      assert(inst.op == Opcode.STRUCT_INIT_FIELD) : "Expected STRUCT_INIT_FIELD";
-      String field = inst.getInput(0).getStringLit();
-
-      List<String> prevUninitFields = uninitStructFields.get(initVar);
-      List<String> newUninitFields; 
-      StructType st = (StructType)(initVar.type().getImplType());
-      if (prevUninitFields == null) {
-        // Initialize with fields
-        newUninitFields = new ArrayList<String>(st.getFieldCount() - 1);
-        for (StructField f: st.getFields()) {
-          // Add all except initialized
-          if (!f.getName().equals(field)) {
-            newUninitFields.add(f.getName());
-          }
-        }
-      } else {
-        // Create a new array to avoid modifying something higher up in 
-        // hierarchical map
-        newUninitFields = new ArrayList<String>(
-              Math.max(0, prevUninitFields.size() - 1));
-        // Add back all uninitialized fields except the new one
-        boolean wasUninit = false;
-        for (String prevUninit: prevUninitFields) {
-          if (prevUninit.equals(field)) {
-            wasUninit = true;
-          } else {
-            newUninitFields.add(prevUninit);
-          }
-        }
-        if (!wasUninit) {
-          throw new STCRuntimeError(initVar.name() + "." + field +
-                                    " was doubly initialized");
-        }
-      }
-
-      if (Logging.getSTCLogger().isTraceEnabled()) {
-        Logging.getSTCLogger().debug("At " + inst + ": uninit for " +
-                               initVar.name() + " " + newUninitFields);
-      }
-
-      uninitStructFields.put(initVar, newUninitFields);
-
-      if (newUninitFields.isEmpty()) {
-        // All initialized: struct is fully initialized
-        initVars.add(initVar);
-      }
-      */
     }
 
     /**

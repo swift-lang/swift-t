@@ -392,7 +392,7 @@ public class ComputedValue<T> {
    */
   public static ArgCV structFieldValCV(Var struct, List<Arg> fieldNames) {
     List<Arg> inputs = structFieldInputs(struct, fieldNames);
-    return new ArgCV(Opcode.STRUCT_RETRIEVE, inputs);
+    return new ArgCV(Opcode.STRUCT_RETRIEVE_SUB, inputs);
   }
 
   /**

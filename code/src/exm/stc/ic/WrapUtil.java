@@ -106,7 +106,8 @@ public class WrapUtil {
       block.addVariable(deref);
       instBuffer.add(TurbineOp.retrieveRecursive(deref, var));
       return deref;
-    } else if (Types.isContainer(var) && !recursive) { 
+    } else if ((Types.isContainer(var) || Types.isStruct(var))
+                && !recursive) { 
       Var deref = new Var(valueT, valName,
           Alloc.LOCAL, DefType.LOCAL_COMPILER,
           VarProvenance.valueOf(var));
@@ -114,9 +115,11 @@ public class WrapUtil {
       // TODO: recursively fetch members?
       if (Types.isArray(var)) {
         instBuffer.add(TurbineOp.retrieveArray(deref, var)); 
-      } else {
-        assert(Types.isBag(var));
+      } else if (Types.isBag(var)) {
         instBuffer.add(TurbineOp.retrieveBag(deref, var));
+      } else {
+        assert(Types.isStruct(var));
+        instBuffer.add(TurbineOp.retrieveStruct(deref, var));
       }
       return deref;
     } else {

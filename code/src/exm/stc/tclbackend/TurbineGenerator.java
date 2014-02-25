@@ -472,7 +472,8 @@ public class TurbineGenerator implements CompilerBackend {
           createArgs.add(argToExpr(initWriters));
         batched.add(new TclList(createArgs));
         batchedVarNames.add(tclVarName);
-      } else if (Types.isPrimValue(t) || Types.isContainerLocal(t)) {
+      } else if (Types.isPrimValue(t) || Types.isContainerLocal(t) ||
+                  Types.isStructLocal(t)) {
         assert(var.storage() == Alloc.LOCAL);
         // don't need to do anything
       } else {
@@ -529,7 +530,7 @@ public class TurbineGenerator implements CompilerBackend {
   private List<Expression> dataDeclarationFullType(Type type) {
     List<Expression> typeExprList = new ArrayList<Expression>();
     // Basic data type
-    typeExprList.add(representationType(type, true));
+    typeExprList.add(representationType(type));
     // Subscript and value type for containers only
     if (Types.isArray(type)) {
       typeExprList.add(arrayKeyType(type, true)); // key
@@ -561,11 +562,11 @@ public class TurbineGenerator implements CompilerBackend {
    * @param t
    * @return ADLB representation type
    */
-  private TypeName representationType(Type t, boolean creation) {
+  private TypeName representationType(Type t) {
     if (Types.isScalarFuture(t) || Types.isScalarUpdateable(t)) {
       return adlbPrimType(t.primType());
     } else if (Types.isRef(t)) {
-      return refRepresentationType(t.memberType(), creation);
+      return refRepresentationType(t.memberType());
     } else if (Types.isArray(t)) {
       return Turbine.ADLB_CONTAINER_TYPE;
     } else if (Types.isBag(t)) {
@@ -577,11 +578,9 @@ public class TurbineGenerator implements CompilerBackend {
     }
   }
 
-  private TypeName refRepresentationType(Type memberType, boolean creation) {
-      if (Types.isStruct(memberType)) {
-        return structTypeName(memberType);
-      } else if (Types.isFile(memberType)) {
-    	return Turbine.ADLB_FILE_REF_TYPE;
+  private TypeName refRepresentationType(Type memberType) {
+      if (Types.isFile(memberType)) {
+        return Turbine.ADLB_FILE_REF_TYPE;
       } else {
         return Turbine.ADLB_REF_TYPE;
       }
@@ -614,15 +613,15 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   private TypeName arrayKeyType(Typed arr, boolean creation) {
-    return representationType(Types.arrayKeyType(arr), creation);
+    return representationType(Types.arrayKeyType(arr));
   }
   
   private TypeName arrayValueType(Typed arrType, boolean creation) {
-    return representationType(Types.containerElemType(arrType), creation);
+    return representationType(Types.containerElemType(arrType));
   }
   
   private TypeName bagValueType(Typed bagType, boolean creation) {
-    return representationType(Types.containerElemType(bagType), creation);
+    return representationType(Types.containerElemType(bagType));
   }
   
   private void allocateFile(Var var, Arg initReaders) {
@@ -667,11 +666,7 @@ public class TurbineGenerator implements CompilerBackend {
   public void assignReference(Var target, Var src) {
     assert(Types.isRef(target.type()));
     assert(target.type().memberType().equals(src.type()));
-    if (Types.isStructRef((target.type()))) {
-      pointAdd(Turbine.structRefSet(
-          varToExpr(target), varToExpr(src),
-          structTypeName(target.type())));
-    } else if (Types.isFileRef(target.type())) {
+    if (Types.isFileRef(target.type())) {
     	pointAdd(Turbine.fileRefSet(
     	          varToExpr(target), varToExpr(src)));
     } else {
@@ -687,14 +682,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isAssignableRefTo(src.type(), target.type()));
     assert(decr.isImmediateInt());
     TclTree deref;
-    if (Types.isStructRef(src.type())) {
-      if (decr.equals(Arg.ZERO)) {
-        deref = Turbine.structRefGet(prefixVar(target), varToExpr(src));
-      } else {
-        deref = Turbine.structRefDecrGet(prefixVar(target), varToExpr(src),
-                                      argToExpr(decr));
-      }
-    } else if (Types.isFileRef(src.type())) {
+    if (Types.isFileRef(src.type())) {
       if (decr.equals(Arg.ZERO)) {
         deref = Turbine.fileRefGet(prefixVar(target), varToExpr(src));
       } else {
@@ -911,8 +899,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.containerElemType(src.type()).assignableTo(
               Types.containerElemType(target)));    
 
-    TypeName elemType = representationType(Types.containerElemType(target),
-                                          false);
+    TypeName elemType = representationType(Types.containerElemType(target));
     pointAdd(Turbine.multisetBuild(varToExpr(target), argToExpr(src), LiteralInt.ONE,
                                    Collections.singletonList(elemType)));
   }
@@ -924,6 +911,34 @@ public class TurbineGenerator implements CompilerBackend {
     assert(decr.isImmediateInt());
     assert(Types.containerElemType(src).assignableTo(
                     Types.containerElemType(target)));
+
+    pointAdd(Turbine.structDecrGet(prefixVar(target), varToExpr(src),
+                                   argToExpr(decr)));
+  }
+  
+  @Override
+  public void assignStruct(Var target, Arg src) {
+    assert(Types.isStruct(target));
+    assert(Types.isStructLocal(src.type()));
+    assert(StructType.sharedStruct((StructType)src.type().getImplType())
+            .assignableTo(target.type()));
+    
+    TypeName structType = representationType(target.type());
+    pointAdd(Turbine.structSet(varToExpr(target), argToExpr(src),
+                                structType));
+  }
+
+  @Override
+  public void retrieveStruct(Var target, Var src, Arg decr) {
+    assert(Types.isStruct(src));
+    assert(Types.isStructLocal(target));
+    assert(decr.isImmediateInt());
+
+    assert(StructType.sharedStruct((StructType)target.type().getImplType())
+            .assignableTo(src.type()));
+    
+    TypeName structType = representationType(src.type());
+    
     pointAdd(Turbine.enumerateAll(prefixVar(target), varToExpr(src),
                                        false, argToExpr(decr)));
   }
@@ -975,7 +990,7 @@ public class TurbineGenerator implements CompilerBackend {
           (Types.isArray(curr) || Types.isArrayLocal(curr))) {
         // Include key type if requested
         typeList.add(representationType(Types.arrayKeyType(
-                curr), false));
+        curr)));
       }
       
       curr = Types.containerElemType(curr);
@@ -1008,7 +1023,7 @@ public class TurbineGenerator implements CompilerBackend {
     if (valueType) {
       reprType = valRepresentationType(type);
     } else {
-      reprType = representationType(type, false);
+      reprType = representationType(type);
     }
     return reprType;
   }
@@ -1468,7 +1483,7 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void structRefStore(Var structRef, List<String> fields,
+  public void structRefStoreSub(Var structRef, List<String> fields,
       Arg fieldContents) {
     assert(Types.isStructRef(structRef));
     assert(Types.isStructField(structRef, fields, fieldContents));
@@ -1495,7 +1510,7 @@ public class TurbineGenerator implements CompilerBackend {
 
 
   @Override
-  public void structRetrieve(Var output, Var struct,
+  public void structRetrieveSub(Var output, Var struct,
       List<String> fields) {
     assert(Types.isStruct(struct));
     assert(Types.isStructFieldVal(struct, fields, output));
@@ -1526,7 +1541,7 @@ public class TurbineGenerator implements CompilerBackend {
     pointAdd(
         Turbine.derefSubscriptCopy(varToExpr(structRef),
             subscript, varToExpr(alias),
-            refRepresentationType(alias.type().memberType(), false)));
+            refRepresentationType(alias.type().memberType())));
   }
 
   @Override
@@ -1559,7 +1574,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isElemType(arrayVar, oVar));
     // Nested arrays - oVar should be a reference type
     Command getRef = Turbine.arrayLookupComputed(varToExpr(oVar), 
-        representationType(oVar.type(), false),
+        representationType(oVar.type()),
         varToExpr(arrayVar), varToExpr(indexVar), false);
     pointAdd(getRef);
   }
@@ -1587,7 +1602,7 @@ public class TurbineGenerator implements CompilerBackend {
     
     // Nested arrays - oVar should be a reference type
     Command getRef = Turbine.arrayLookupComputed(varToExpr(oVar), 
-        representationType(oVar.type(), false),
+        representationType(oVar.type()),
         varToExpr(arrayVar), varToExpr(indexVar), true);
     pointAdd(getRef);
   }
@@ -1828,12 +1843,20 @@ public class TurbineGenerator implements CompilerBackend {
   private void syncCopyCompound(Var dst, Var src, Expression incrReferand) {
     // Implement as load followed by store
     Value tmpVal = new Value(TCLTMP_RETRIEVED);
-    TypeName simpleReprType = representationType(src.type(), false);
+    TypeName simpleReprType = representationType(src.type());
     pointAdd(Turbine.retrieveAcquire(tmpVal.variable(), varToExpr(src),
                                simpleReprType, incrReferand, LiteralInt.ONE));
     
-    List<TypeName> fullReprType = recursiveTypeList(dst.type(), false, true,
-                                                    true, false, false);
+    List<TypeName> fullReprType;
+    
+    if (Types.isContainer(src)) {
+      fullReprType = recursiveTypeList(dst.type(), false, true,
+                                          true, false, false);
+    } else {
+      assert(Types.isStruct(src));
+      fullReprType = Collections.singletonList(
+                                  representationType(src.type()));
+    }
     pointAdd(Turbine.adlbStore(varToExpr(dst), tmpVal, fullReprType));
   }
 
@@ -1844,9 +1867,9 @@ public class TurbineGenerator implements CompilerBackend {
    * @param dict
    */
   private Command arrayBuild(Var array, Expression dict) {
-    TypeName keyType = representationType(Types.arrayKeyType(array), false);
+    TypeName keyType = representationType(Types.arrayKeyType(array));
     Type valType2 = Types.containerElemType(array);
-    TypeName valType = representationType(valType2, false);
+    TypeName valType = representationType(valType2);
 
     return Turbine.arrayBuild(varToExpr(array), dict, LiteralInt.ONE,
                 keyType, Collections.singletonList(valType));
@@ -2237,7 +2260,7 @@ public class TurbineGenerator implements CompilerBackend {
         throw new STCRuntimeError("Not sure how to deep wait on type "
                                   + type);
       }
-      TypeName baseReprType = representationType(baseType, false);
+      TypeName baseReprType = representationType(baseType);
       return Pair.create(depth, baseReprType);
     }
 
@@ -2922,7 +2945,7 @@ public class TurbineGenerator implements CompilerBackend {
       waitExpr = Turbine.getFileStatus(wv);
     } else if (Types.isScalarFuture(var) || Types.isRef(var) ||
             Types.isArray(var) || Types.isScalarUpdateable(var)||
-            Types.isBag(var)) {
+            Types.isBag(var) || Types.isStruct(var)) {
       waitExpr = wv;
     } else {
       throw new STCRuntimeError("Don't know how to wait on var: "

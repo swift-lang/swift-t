@@ -125,6 +125,10 @@ public interface CompilerBackend {
 
   public void retrieveBag(Var target, Var src, Arg decr);
   
+  public void assignStruct(Var target, Arg src);
+
+  public void retrieveStruct(Var target, Var src, Arg decr);
+  
   public void assignRecursive(Var target, Arg src);
   
   public void retrieveRecursive(Var target, Var src, Arg decr);
@@ -217,7 +221,7 @@ public interface CompilerBackend {
   
   public void structCreateAlias(Var output, Var struct,
                                 List<String> fields);
-  public void structRetrieve(Var output, Var struct,
+  public void structRetrieveSub(Var output, Var struct,
       List<String> fields);
   public void structCopyOut(Var output, Var struct,
       List<String> fields);
@@ -236,7 +240,7 @@ public interface CompilerBackend {
                            Arg fieldContents);
   public void structCopyIn(Var struct, List<String> fields,
       Var fieldContents);
-  public void structRefStore(Var structRef, List<String> fields,
+  public void structRefStoreSub(Var structRef, List<String> fields,
                            Arg fieldContents);
   public void structRefCopyIn(Var structRef, List<String> fields,
                            Var fieldContents);

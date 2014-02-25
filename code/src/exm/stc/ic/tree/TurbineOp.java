@@ -110,6 +110,9 @@ public class TurbineOp extends Instruction {
     case STORE_BAG:
       gen.assignBag(getOutput(0), getInput(0));
       break;
+    case STORE_STRUCT:
+      gen.assignStruct(getOutput(0), getInput(0));
+      break;
     case STORE_RECURSIVE:
       gen.assignRecursive(getOutput(0), getInput(0));
       break;
@@ -212,8 +215,8 @@ public class TurbineOp extends Instruction {
       gen.structCreateAlias(getOutput(0), getInput(0).getVar(),
                             Arg.extractStrings(getInputsTail(1)));
       break;
-    case STRUCT_RETRIEVE:
-      gen.structRetrieve(getOutput(0), getInput(0).getVar(),
+    case STRUCT_RETRIEVE_SUB:
+      gen.structRetrieveSub(getOutput(0), getInput(0).getVar(),
                          Arg.extractStrings(getInputsTail(1)));
       break;
     case STRUCT_COPY_OUT:
@@ -224,7 +227,7 @@ public class TurbineOp extends Instruction {
       gen.structRefLookup(getOutput(0), getInput(0).getVar(),
                           Arg.extractStrings(getInputsTail(1)));
       break;
-    case STRUCT_STORE:
+    case STRUCT_STORE_SUB:
       gen.structStore(getOutput(0), Arg.extractStrings(getInputsTail(1)),
                                     getInput(0));
       break;
@@ -232,8 +235,8 @@ public class TurbineOp extends Instruction {
       gen.structCopyIn(getOutput(0), Arg.extractStrings(getInputsTail(1)),
                        getInput(0).getVar());
       break;
-    case STRUCTREF_STORE:
-      gen.structRefStore(getOutput(0), Arg.extractStrings(getInputsTail(1)),
+    case STRUCTREF_STORE_SUB:
+      gen.structRefStoreSub(getOutput(0), Arg.extractStrings(getInputsTail(1)),
                          getInput(0));
       break;
     case STRUCTREF_COPY_IN:
@@ -283,6 +286,10 @@ public class TurbineOp extends Instruction {
       break;
     case LOAD_ARRAY:
       gen.retrieveArray(getOutput(0), getInput(0).getVar(),
+              getInputs().size() == 2 ? getInput(1) : Arg.ZERO);
+      break;
+    case LOAD_STRUCT:
+      gen.retrieveStruct(getOutput(0), getInput(0).getVar(),
               getInputs().size() == 2 ? getInput(1) : Arg.ZERO);
       break;
     case LOAD_BAG:
@@ -534,7 +541,7 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.BAG_INSERT, bag, elem, writersDecr);
   }
 
-  public static Instruction structRetrieve(Var oVar, Var structVar,
+  public static Instruction structRetrieveSub(Var oVar, Var structVar,
                                            List<String> fields) {
     List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
     
@@ -542,7 +549,7 @@ public class TurbineOp extends Instruction {
     for (String field: fields) {
       in.add(Arg.createStringLit(field));
     }
-    return new TurbineOp(Opcode.STRUCT_RETRIEVE, oVar.asList(), in);
+    return new TurbineOp(Opcode.STRUCT_RETRIEVE_SUB, oVar.asList(), in);
   }
 
   public static Instruction structCreateAlias(Var oVar, Var structVar,
@@ -579,7 +586,7 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.STRUCTREF_COPY_OUT, oVar.asList(), in);
   }
 
-  public static Instruction structStore(Var structVar,
+  public static Instruction structStoreSub(Var structVar,
         List<String> fields, Arg fieldVal) {
     List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
 
@@ -587,7 +594,7 @@ public class TurbineOp extends Instruction {
       in.add(Arg.createStringLit(field));
     }
     in.add(fieldVal);
-    return new TurbineOp(Opcode.STRUCT_STORE, structVar.asList(), in);
+    return new TurbineOp(Opcode.STRUCT_STORE_SUB, structVar.asList(), in);
   }
   
   public static Instruction structCopyIn(Var structVar,
@@ -601,7 +608,7 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.STRUCT_COPY_IN, structVar.asList(), in);
   }
   
-  public static Instruction structRefStore(Var structVar,
+  public static Instruction structRefStoreSub(Var structVar,
       List<String> fields, Arg fieldVal) {
     List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
 
@@ -609,7 +616,7 @@ public class TurbineOp extends Instruction {
       in.add(Arg.createStringLit(field));
     }
     in.add(fieldVal);
-    return new TurbineOp(Opcode.STRUCTREF_STORE, structVar.asList(), in);
+    return new TurbineOp(Opcode.STRUCTREF_STORE_SUB, structVar.asList(), in);
   }
   
   public static Instruction structRefCopyIn(Var structVar,
@@ -638,6 +645,10 @@ public class TurbineOp extends Instruction {
   public static Instruction assignBag(Var target, Arg src) {
     return new TurbineOp(Opcode.STORE_BAG, target, src);
   }
+  
+  public static Instruction assignStruct(Var target, Arg src) {
+    return new TurbineOp(Opcode.STORE_STRUCT, target, src);
+  }
 
   public static Instruction retrieveScalar(Var target, Var source) {
     return new TurbineOp(Opcode.LOAD_SCALAR, target, source.asArg());
@@ -653,6 +664,10 @@ public class TurbineOp extends Instruction {
   
   public static Instruction retrieveBag(Var target, Var source) {
     return new TurbineOp(Opcode.LOAD_BAG, target, source.asArg());
+  }
+  
+  public static Instruction retrieveStruct(Var target, Var source) {
+    return new TurbineOp(Opcode.LOAD_STRUCT, target, source.asArg());
   }
   
   public static Instruction storeRecursive(Var target, Arg src) {
@@ -702,6 +717,9 @@ public class TurbineOp extends Instruction {
     } else if (Types.isBag(dst)) {
       assert(src.isVar());
       return assignBag(dst, src);
+    } else if (Types.isStruct(dst)) {
+      assert(src.isVar());
+      return assignStruct(dst, src);
     } else {
       throw new STCRuntimeError("Don't know how to store to " + dst);
     }
@@ -969,9 +987,9 @@ public class TurbineOp extends Instruction {
     switch (op) {
     // The direct container write functions only mutate their output argument
     // so effect can be tracked back to output var
-    case STRUCT_STORE:
+    case STRUCT_STORE_SUB:
     case STRUCT_COPY_IN:
-    case STRUCTREF_STORE:
+    case STRUCTREF_STORE_SUB:
     case STRUCTREF_COPY_IN:
     case ARRAY_BUILD:
     case ARR_STORE_FUTURE:
@@ -1004,6 +1022,7 @@ public class TurbineOp extends Instruction {
     case STORE_FILE:
     case STORE_ARRAY:
     case STORE_BAG:
+    case STORE_STRUCT:
     case STORE_RECURSIVE:
     case DEREF_SCALAR:
     case DEREF_FILE:
@@ -1011,6 +1030,7 @@ public class TurbineOp extends Instruction {
     case LOAD_FILE:
     case LOAD_ARRAY:
     case LOAD_BAG:
+    case LOAD_STRUCT:
     case LOAD_RECURSIVE:
       return false;
       
@@ -1057,7 +1077,7 @@ public class TurbineOp extends Instruction {
     case STORE_REF:
     case COPY_REF:
     case STRUCT_CREATE_ALIAS:
-    case STRUCT_RETRIEVE:
+    case STRUCT_RETRIEVE_SUB:
     case STRUCT_COPY_OUT:
     case STRUCTREF_COPY_OUT:
     case ARR_RETRIEVE:
@@ -1619,7 +1639,7 @@ public class TurbineOp extends Instruction {
         return Arrays.asList(Pair.create(getOutput(0), InitType.FULL));
 
       case ARR_RETRIEVE:
-      case STRUCT_RETRIEVE:
+      case STRUCT_RETRIEVE_SUB:
       case STRUCT_CREATE_ALIAS: {
         // May initialise alias if we're looking up a reference
         Var output = getOutput(0);
@@ -1712,9 +1732,9 @@ public class TurbineOp extends Instruction {
         List<Var> outputs = getOutputs();
         return outputs.subList(1, outputs.size());
       }
-      case STRUCT_STORE:
+      case STRUCT_STORE_SUB:
       case STRUCT_COPY_IN:
-      case STRUCTREF_STORE:
+      case STRUCTREF_STORE_SUB:
       case STRUCTREF_COPY_IN:
         return getOutputs();
       case SET_FILENAME_VAL:
@@ -1759,11 +1779,13 @@ public class TurbineOp extends Instruction {
     case STORE_FILE:
     case STORE_ARRAY:
     case STORE_BAG:
+    case STORE_STRUCT:
     case STORE_RECURSIVE:
     case LOAD_SCALAR:
     case LOAD_FILE:
     case LOAD_ARRAY:
     case LOAD_BAG:
+    case LOAD_STRUCT:
     case LOAD_RECURSIVE:
     case UPDATE_INCR:
     case UPDATE_MIN:
@@ -1774,8 +1796,8 @@ public class TurbineOp extends Instruction {
     case INIT_UPDATEABLE_FLOAT:
     case LATEST_VALUE:
     case ARR_STORE:
-    case STRUCT_STORE:
-    case STRUCT_RETRIEVE:
+    case STRUCT_STORE_SUB:
+    case STRUCT_RETRIEVE_SUB:
     case STRUCT_CREATE_ALIAS:
     case ARR_CREATE_NESTED_IMM:
     case ARRAY_CREATE_BAG:
@@ -1828,7 +1850,7 @@ public class TurbineOp extends Instruction {
     case ASYNC_COPY_CONTAINER:
     case ASYNC_COPY_STRUCT:
     case STRUCT_COPY_IN:
-    case STRUCTREF_STORE:
+    case STRUCTREF_STORE_SUB:
     case STRUCTREF_COPY_IN:
     case STRUCT_COPY_OUT:
     case STRUCTREF_COPY_OUT:
@@ -1846,7 +1868,8 @@ public class TurbineOp extends Instruction {
       case LOAD_REF: 
       case LOAD_FILE:
       case LOAD_ARRAY:
-      case LOAD_BAG: 
+      case LOAD_BAG:
+      case LOAD_STRUCT:
       case LOAD_RECURSIVE: {
         Arg src = getInput(0);
         Var dst = getOutput(0);
@@ -1871,6 +1894,7 @@ public class TurbineOp extends Instruction {
       case STORE_FILE:
       case STORE_ARRAY:
       case STORE_BAG:
+      case STORE_STRUCT:
       case STORE_RECURSIVE: {
 
         // add assign so we can avoid recreating future 
@@ -1944,14 +1968,14 @@ public class TurbineOp extends Instruction {
           return copyV.asList();
         }
       }
-      case STRUCT_RETRIEVE: {
+      case STRUCT_RETRIEVE_SUB: {
         Var struct = getInput(0).getVar();
         List<Arg> fields = getInputsTail(1);
         return ValLoc.makeStructFieldValResult(getOutput(0).asArg(),
                                                 struct, fields).asList();
       }
-      case STRUCT_STORE: 
-      case STRUCTREF_STORE: {
+      case STRUCT_STORE_SUB: 
+      case STRUCTREF_STORE_SUB: {
         Var struct = getOutput(0);
         Arg val = getInput(0);
         List<Arg> fields = getInputsTail(1);
@@ -2170,6 +2194,7 @@ public class TurbineOp extends Instruction {
                            getOutput(0).asList());
       case STORE_BAG:
       case STORE_ARRAY: 
+      case STORE_STRUCT:
       case STORE_RECURSIVE: { 
         // Inputs stored into array need to have refcount incremented
         // This finalizes array so will consume refcount
@@ -2293,9 +2318,9 @@ public class TurbineOp extends Instruction {
         }
         return Pair.create(readers, Var.NONE);
       }
-      case STRUCT_STORE:
+      case STRUCT_STORE_SUB:
       case STRUCT_COPY_IN:
-      case STRUCTREF_STORE:
+      case STRUCTREF_STORE_SUB:
       case STRUCTREF_COPY_IN:
         // Do nothing: reference count tracker can track variables
         // across struct boundaries
@@ -2324,7 +2349,8 @@ public class TurbineOp extends Instruction {
       case LOAD_FILE:
       case LOAD_REF: 
       case LOAD_ARRAY:
-      case LOAD_BAG: 
+      case LOAD_BAG:
+      case LOAD_STRUCT:
       case LOAD_RECURSIVE: {
         Var inVar = getInput(0).getVar();
         if (type == RefCountType.READERS) {
