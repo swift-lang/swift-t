@@ -60,6 +60,9 @@ public enum Opcode {
   // Copy containers
   ASYNC_COPY_CONTAINER, SYNC_COPY_CONTAINER,
   
+  // Copy structs
+  ASYNC_COPY_STRUCT, SYNC_COPY_STRUCT,
+  
   // Create full array in one shot
   ARRAY_BUILD,
   

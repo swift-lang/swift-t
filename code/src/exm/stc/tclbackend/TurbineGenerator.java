@@ -120,6 +120,7 @@ public class TurbineGenerator implements CompilerBackend {
   private static final String TCLTMP_SPLITEND = "tcltmp:splitend";
   private static final String TCLTMP_CONTAINER_SIZE = "tcltmp:container_sz";
   private static final String TCLTMP_ARRAY_CONTENTS = "tcltmp:contents";
+  private static final String TCLTMP_RETRIEVED = "tcltmp:retrieved";
   private static final String TCLTMP_RANGE_LO = "tcltmp:lo";
   private static final Value TCLTMP_RANGE_LO_V = new Value(TCLTMP_RANGE_LO);
   private static final String TCLTMP_RANGE_HI = "tcltmp:hi";
@@ -1723,6 +1724,7 @@ public class TurbineGenerator implements CompilerBackend {
     pointAdd(arrayBuild(array, dict));
   }
   
+  @Override
   public void asyncCopyContainer(Var dst, Var src) {
     assert(Types.isContainer(dst));
     assert(src.type().assignableTo(dst.type()));
@@ -1734,16 +1736,48 @@ public class TurbineGenerator implements CompilerBackend {
     endAsync();
   }
   
+  @Override
   public void syncCopyContainer(Var dst, Var src) {
     assert(Types.isContainer(dst));
     assert(src.type().assignableTo(dst.type()));
-    // Implement as load followed by store
-    Value tmpVal = new Value(TCLTMP_ARRAY_CONTENTS);
-    
+
     Type elemType = Types.containerElemType(dst);
     boolean refElems = Types.isRef(elemType);
     Expression incrReferand = refElems ? LiteralInt.ONE : LiteralInt.ZERO;
 
+    syncCopyCompound(dst, src, incrReferand);
+  }
+
+  @Override
+  public void asyncCopyStruct(Var dst, Var src) {
+    assert(Types.isStruct(dst));
+    assert(src.type().assignableTo(dst.type()));
+    
+    startAsync("copy-" + src.name() + "_" + dst.name(),
+               src.asList(), Arrays.asList(src, dst), false,
+               TaskMode.LOCAL, new TaskProps());
+    syncCopyStruct(dst, src);
+    endAsync();
+  }
+  
+  @Override
+  public void syncCopyStruct(Var dst, Var src) {
+    assert(Types.isStruct(dst));
+    assert(src.type().assignableTo(dst.type()));
+    // Need to increment referands, if any
+    Expression incrReferand = LiteralInt.ONE;
+    syncCopyCompound(dst, src, incrReferand);
+  }
+  
+  /**
+   * Helper to synchronously copy a compound type
+   * @param dst
+   * @param src
+   * @param incrReferand
+   */
+  private void syncCopyCompound(Var dst, Var src, Expression incrReferand) {
+    // Implement as load followed by store
+    Value tmpVal = new Value(TCLTMP_RETRIEVED);
     TypeName simpleReprType = representationType(src.type(), false);
     pointAdd(Turbine.retrieveAcquire(tmpVal.variable(), varToExpr(src),
                                simpleReprType, incrReferand, LiteralInt.ONE));
@@ -1752,7 +1786,7 @@ public class TurbineGenerator implements CompilerBackend {
                                                     true, false, false);
     pointAdd(Turbine.adlbStore(varToExpr(dst), tmpVal, fullReprType));
   }
-  
+
   /**
    * Helper function to generate arrayBuild call given a Tcl expression
    * that is a dict

@@ -197,6 +197,14 @@ public class TurbineOp extends Instruction {
       gen.syncCopyContainer(getOutput(0), getInput(0).getVar());
       break;
     }
+    case ASYNC_COPY_STRUCT: {
+      gen.asyncCopyStruct(getOutput(0), getInput(0).getVar());
+      break;
+    }
+    case SYNC_COPY_STRUCT: {
+      gen.syncCopyStruct(getOutput(0), getInput(0).getVar());
+      break;
+    }
     case BAG_INSERT:
       gen.bagInsert(getOutput(0), getInput(0), getInput(1));
       break;
@@ -951,14 +959,12 @@ public class TurbineOp extends Instruction {
   @Override
   public boolean hasSideEffects() {
     switch (op) {
-    /* The direct container write functions only mutate their output 
-     * argument */
+    // The direct container write functions only mutate their output argument
+    // so effect can be tracked back to output var
     case STRUCT_STORE:
     case STRUCT_COPY_IN:
     case STRUCTREF_STORE:
     case STRUCTREF_COPY_IN:
-      return false;
-      
     case ARRAY_BUILD:
     case ARR_STORE_FUTURE:
     case ARR_COPY_IN_FUTURE:
@@ -970,7 +976,8 @@ public class TurbineOp extends Instruction {
     case AREF_COPY_IN_IMM:
     case SYNC_COPY_CONTAINER:
     case ASYNC_COPY_CONTAINER:
-      // Effect can be tracked back to original array
+    case SYNC_COPY_STRUCT:
+    case ASYNC_COPY_STRUCT:
       return false;
 
     case BAG_INSERT:
@@ -1268,8 +1275,9 @@ public class TurbineOp extends Instruction {
       }
       break;
     }
-    case ASYNC_COPY_CONTAINER: {
-      // See if we can get closed container
+    case ASYNC_COPY_CONTAINER: 
+    case ASYNC_COPY_STRUCT: {
+      // See if we can get closed container/struct
       List<Var> req = mkImmVarList(waitForClose, closedVars,
                                    getInput(0).getVar());
       if (req.size() > 0) {
@@ -1277,7 +1285,8 @@ public class TurbineOp extends Instruction {
       }
       break;
     }
-    case SYNC_COPY_CONTAINER: {
+    case SYNC_COPY_CONTAINER: 
+    case SYNC_COPY_STRUCT: {
       // TODO: would be nice to switch to array_store if we already have
       //       loaded array value
       break;
@@ -1540,6 +1549,16 @@ public class TurbineOp extends Instruction {
       //       loaded array value
       break;
     }
+    case ASYNC_COPY_STRUCT: {
+      // Array is closed: replace with sync version
+      return new MakeImmChange(
+          syncCopyStruct(getOutput(0), getInput(0).getVar()));
+    }
+    case SYNC_COPY_STRUCT: {
+      // TODO: would be nice to switch to directly store if we already
+      // have value
+      break;
+    }
     case UPDATE_INCR:
     case UPDATE_MIN:
     case UPDATE_SCALE: {
@@ -1757,6 +1776,7 @@ public class TurbineOp extends Instruction {
     case INIT_LOCAL_OUTPUT_FILE:
     case ARRAY_BUILD:
     case SYNC_COPY_CONTAINER:
+    case SYNC_COPY_STRUCT:
     case BAG_INSERT:
     case CHECKPOINT_WRITE_ENABLED:
     case CHECKPOINT_LOOKUP_ENABLED:
@@ -1789,6 +1809,7 @@ public class TurbineOp extends Instruction {
     case ARR_CREATE_NESTED_FUTURE:
     case AREF_CREATE_NESTED_IMM:
     case ASYNC_COPY_CONTAINER:
+    case ASYNC_COPY_STRUCT:
     case STRUCT_COPY_IN:
     case STRUCTREF_STORE:
     case STRUCTREF_COPY_IN:
@@ -1999,7 +2020,9 @@ public class TurbineOp extends Instruction {
         return res;
       }
       case SYNC_COPY_CONTAINER: 
-      case ASYNC_COPY_CONTAINER: {
+      case ASYNC_COPY_CONTAINER: 
+      case SYNC_COPY_STRUCT:
+      case ASYNC_COPY_STRUCT: {
         return ValLoc.makeCopy(getOutput(0), getInput(0),
                                IsAssign.TO_LOCATION).asList();
       }
@@ -2060,7 +2083,8 @@ public class TurbineOp extends Instruction {
 
   @Override
   public List<Var> getClosedOutputs() {
-    if (op == Opcode.ARRAY_BUILD || op == Opcode.SYNC_COPY_CONTAINER) {
+    if (op == Opcode.ARRAY_BUILD || op == Opcode.SYNC_COPY_CONTAINER ||
+        op == Opcode.SYNC_COPY_STRUCT) {
       // Output array should be closed
       return Collections.singletonList(getOutput(0));
     } else if (op == Opcode.STORE_REF) {
@@ -2095,8 +2119,10 @@ public class TurbineOp extends Instruction {
       }
       case ASYNC_COPY_CONTAINER:
       case SYNC_COPY_CONTAINER:
-        // Need to pass in refcount for array to be copied, and write
-        // refcount for assigned array
+      case ASYNC_COPY_STRUCT:
+      case SYNC_COPY_STRUCT:
+        // Need to pass in refcount for var to be copied, and write
+        // refcount for assigned var
         return Pair.create(getInput(0).getVar().asList(),
                            getOutput(0).asList());
       case STORE_BAG:

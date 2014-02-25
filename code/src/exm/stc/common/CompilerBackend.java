@@ -318,6 +318,22 @@ public interface CompilerBackend {
    */
   public void syncCopyContainer(Var dst, Var src);
   
+
+  /**
+   * Copy non-closed struct asynchronously
+   * @param dst
+   * @param src
+   */
+  public void asyncCopyStruct(Var dst, Var src);
+
+  /**
+   * Copy closed struct synchronously
+   * @param dst
+   * @param src
+   */
+  public void syncCopyStruct(Var dst, Var src);
+  
+  
   public void arrayCreateNestedFuture(Var arrayResult,
       Var array, Var ix);
 
