@@ -30,6 +30,9 @@ import exm.stc.common.lang.Types.PrimType;
 import exm.stc.common.util.MultiMap;
 import exm.stc.frontend.Context;
 
+/**
+ * This class serves to define details of builtin operators in Swift
+ */
 public class Operators {
 
   /**
@@ -72,70 +75,73 @@ public class Operators {
    * case of multiple possible matches
    */
   private static void fillArithOps() {
-    // DOC: Why is this called numType? 
-    for (PrimType numType : Arrays.asList(PrimType.INT, PrimType.FLOAT,
-        PrimType.STRING, PrimType.BOOL)) {
-      String opTypeName = getOpTypeName(numType);
+    // Fill by each primitive type
+    List<PrimType> primTypes = Arrays.asList(PrimType.INT, PrimType.FLOAT,
+                                             PrimType.STRING, PrimType.BOOL);
+    for (PrimType primT: primTypes) {
+      String opTypeName = getOpTypeName(primT);
       
-      // DOC: Why is this called REL OpType?  logicalOpType? 
-      OpType relOpType = new OpType(PrimType.BOOL, numType, numType);
-      OpType closedOpType = new OpType(numType, numType, numType);
+      // Type for relational operations, e.g. a < b
+      OpType relOp = new OpType(PrimType.BOOL, primT, primT);
+
+      // Types for closed operations - output type is input type
+      OpType closedUnaryOp = new OpType(primT, primT);
+      OpType closedOp = new OpType(primT, primT, primT);
       
       // Want equality tests for all primitives
       BuiltinOpcode eq = BuiltinOpcode.valueOf("EQ_" + opTypeName);
-      registerOperator(ExMParser.EQUALS, eq, relOpType);
+      registerOperator(ExMParser.EQUALS, eq, relOp);
       BuiltinOpcode neq = BuiltinOpcode.valueOf("NEQ_" + opTypeName);
-      registerOperator(ExMParser.NEQUALS, neq, relOpType);
+      registerOperator(ExMParser.NEQUALS, neq, relOp);
 
-      if (numType == PrimType.STRING) {
-        registerOperator(ExMParser.PLUS, BuiltinOpcode.STRCAT, closedOpType);
-        registerOperator(ExMParser.DIV, BuiltinOpcode.DIRCAT, closedOpType);
+      if (primT == PrimType.STRING) {
+        registerOperator(ExMParser.PLUS, BuiltinOpcode.STRCAT, closedOp);
+        registerOperator(ExMParser.DIV, BuiltinOpcode.DIRCAT, closedOp);
       }
 
-      if (numType == PrimType.INT) {
-        registerOperator(ExMParser.INTDIV, BuiltinOpcode.DIV_INT, closedOpType);
-        registerOperator(ExMParser.MOD, BuiltinOpcode.MOD_INT, closedOpType);
-      } else if (numType == PrimType.FLOAT) {
-        registerOperator(ExMParser.DIV, BuiltinOpcode.DIV_FLOAT, closedOpType);
+      if (primT == PrimType.INT) {
+        registerOperator(ExMParser.INTDIV, BuiltinOpcode.DIV_INT, closedOp);
+        registerOperator(ExMParser.MOD, BuiltinOpcode.MOD_INT, closedOp);
+      } else if (primT == PrimType.FLOAT) {
+        registerOperator(ExMParser.DIV, BuiltinOpcode.DIV_FLOAT, closedOp);
       }
 
-      OpType closeUnaryOpType = new OpType(numType, numType);
-      if (numType == PrimType.INT || numType == PrimType.FLOAT) {
+      if (primT == PrimType.INT || primT == PrimType.FLOAT) {
         BuiltinOpcode plus = BuiltinOpcode.valueOf("PLUS_" + opTypeName);
-        registerOperator(ExMParser.PLUS, plus, closedOpType);
+        registerOperator(ExMParser.PLUS, plus, closedOp);
         
         BuiltinOpcode minus = BuiltinOpcode.valueOf("MINUS_" + opTypeName);
-        registerOperator(ExMParser.MINUS, minus, closedOpType);
+        registerOperator(ExMParser.MINUS, minus, closedOp);
         
         BuiltinOpcode mult = BuiltinOpcode.valueOf("MULT_" + opTypeName);
-        registerOperator(ExMParser.MULT, mult, closedOpType);
+        registerOperator(ExMParser.MULT, mult, closedOp);
         
         BuiltinOpcode negate = BuiltinOpcode.valueOf("NEGATE_" + opTypeName);
-        registerOperator(ExMParser.NEGATE, negate, closeUnaryOpType);
+        registerOperator(ExMParser.NEGATE, negate, closedUnaryOp);
         
         BuiltinOpcode gt = BuiltinOpcode.valueOf("GT_" + opTypeName);
-        registerOperator(ExMParser.GT, gt, relOpType);
+        registerOperator(ExMParser.GT, gt, relOp);
         
         BuiltinOpcode gte = BuiltinOpcode.valueOf("GTE_" + opTypeName);
-        registerOperator(ExMParser.GTE, gte, relOpType);
+        registerOperator(ExMParser.GTE, gte, relOp);
         
         BuiltinOpcode lt = BuiltinOpcode.valueOf("LT_" + opTypeName);
-        registerOperator(ExMParser.LT, lt, relOpType);
+        registerOperator(ExMParser.LT, lt, relOp);
 
         BuiltinOpcode lte = BuiltinOpcode.valueOf("LTE_" + opTypeName);
-        registerOperator(ExMParser.LTE, lte, relOpType);
+        registerOperator(ExMParser.LTE, lte, relOp);
 
         BuiltinOpcode pow = BuiltinOpcode.valueOf("POW_" + opTypeName);
         registerOperator(ExMParser.POW, pow,
-                          new OpType(PrimType.FLOAT, numType, numType));
+                          new OpType(PrimType.FLOAT, primT, primT));
       }
 
-      if (numType == PrimType.BOOL) {
-        registerOperator(ExMParser.NOT, BuiltinOpcode.NOT, closeUnaryOpType);
+      if (primT == PrimType.BOOL) {
+        registerOperator(ExMParser.NOT, BuiltinOpcode.NOT, closedUnaryOp);
         
-        registerOperator(ExMParser.AND, BuiltinOpcode.AND, closedOpType);
+        registerOperator(ExMParser.AND, BuiltinOpcode.AND, closedOp);
         
-        registerOperator(ExMParser.OR, BuiltinOpcode.OR, closedOpType);
+        registerOperator(ExMParser.OR, BuiltinOpcode.OR, closedOp);
       }
     }
   }
@@ -162,8 +168,7 @@ public class Operators {
   }
 
   /**
-   * @param tokenType
-   * @param argTypes
+   * @param tokenType frontend token type
    * @return list of possible operators, empty list if not 
    */
   public static List<Op> getOps(int tokenType) {
@@ -257,6 +262,9 @@ public class Operators {
     flippedOps.put(BuiltinOpcode.GTE_INT, BuiltinOpcode.LTE_INT);
   }
   
+  /**
+   * Class to represent info about a builtin operator
+   */
   public static class Op {
     public Op(BuiltinOpcode code, OpType type) {
       this.code = code;
@@ -271,7 +279,9 @@ public class Operators {
     }
   }
 
-  /** represent type of builtin operators */
+  /** 
+   * Represent type of builtin operators
+   */
   public static class OpType {
     public final PrimType out;
     public final List<PrimType> in;
@@ -291,6 +301,9 @@ public class Operators {
     }
   }
 
+  /**
+   * Different ways to update an updateable variable
+   */
   public static enum UpdateMode {
     MIN, SCALE, INCR;
   
@@ -313,6 +326,11 @@ public class Operators {
     }
   }
 
+  /**
+   * Whether the op can be short-circuit evaluated in some cases
+   * @param op
+   * @return
+   */
   public static boolean isShortCircuitable(BuiltinOpcode op) {
     return op == BuiltinOpcode.AND || op == BuiltinOpcode.OR;
   }
