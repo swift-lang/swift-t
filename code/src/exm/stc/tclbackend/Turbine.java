@@ -934,11 +934,13 @@ class Turbine {
    * @param fields
    * @return
    */
-  public static Expression structAlias(Value var, List<String> fields) {
-    List<Expression> args = new ArrayList<Expression>(fields.size() + 1);
+  public static Expression structAlias(Value var, int fieldIndices[]) {
+    // TODO: way to encode fact that indices are struct
+    List<Expression> args = new ArrayList<Expression>(
+                                      fieldIndices.length + 1);
     args.add(var);
-    for (String field : fields) {
-      args.add(new TclString(field, true));
+    for (int field : fieldIndices) {
+      args.add(new LiteralInt(field));
     }
     return Square.fnCall(BUILD_SUBSCRIPT, args);
   }
@@ -950,7 +952,9 @@ class Turbine {
    * @param subscript
    * @return
    */
-  public static Expression lookupSubscript(Value var, Expression subscript) {
+  public static Expression lookupSubscript(Value var,
+            Expression subscript) {
+    // TODO: call adlb::lookup_struct
     throw new STCRuntimeError("TODO: Not implemented");
   }
 
@@ -963,6 +967,7 @@ class Turbine {
    */
   public static Expression copySubscript(Value out, Value var,
           Expression subscript) {
+    // TODO: call adlb::struct_reference
     throw new STCRuntimeError("TODO: Not implemented");
   }
 

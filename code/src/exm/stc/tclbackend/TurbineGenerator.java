@@ -1444,15 +1444,20 @@ public class TurbineGenerator implements CompilerBackend {
       curr = curr.memberType();
     }
     
+    int[] indices = structFieldIndices(curr, fields);
+    return Turbine.structSubscript(indices);
+  }
+
+  private static int[] structFieldIndices(Type type, List<String> fields) {
     // use struct type info to construct index list
     int indices[] = new int[fields.size()];
     for (int i = 0; i < fields.size(); i++) {
-      assert(curr instanceof StructType);
+      assert(type instanceof StructType);
       String field = fields.get(i);
-      int fieldIx = ((StructType)curr).getFieldIndexByName(field);
+      int fieldIx = ((StructType)type).getFieldIndexByName(field);
       indices[i] = fieldIx;
     }
-    return Turbine.structSubscript(indices);
+    return indices;
   }
 
   @Override
@@ -1504,7 +1509,8 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isStruct(struct));
     assert(Types.isStructField(struct, fields, alias));
     // Simple create alias as handle
-    Expression aliasExpr = Turbine.structAlias(varToExpr(struct), fields);
+    Expression aliasExpr = Turbine.structAlias(varToExpr(struct), 
+                       structFieldIndices(struct.type(), fields));
     pointAdd(new SetVariable(prefixVar(alias), aliasExpr));
   }
 
