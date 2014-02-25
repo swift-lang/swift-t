@@ -498,57 +498,115 @@ public class TurbineOp extends Instruction {
 
     return new TurbineOp(Opcode.SYNC_COPY_CONTAINER, dst, src.asArg());
   }
+  
+  public static Instruction asyncCopyStruct(Var dst, Var src) {
+    assert(Types.isStruct(dst));
+    assert(src.type().assignableTo(dst.type()));
+    return new TurbineOp(Opcode.ASYNC_COPY_STRUCT, dst, src.asArg());
+  }
+  
+  public static Instruction syncCopyStruct(Var dst, Var src) {
+    assert(Types.isStruct(dst));
+    assert(src.type().assignableTo(dst.type()));
+
+    return new TurbineOp(Opcode.SYNC_COPY_STRUCT, dst, src.asArg());
+  }
 
   public static Instruction bagInsert(Var bag, Arg elem, Arg writersDecr) {
     assert(Types.isElemValType(bag, elem));
     assert(writersDecr.isImmediateInt());
     return new TurbineOp(Opcode.BAG_INSERT, bag, elem, writersDecr);
   }
+
+  public static Instruction structRetrieve(Var oVar, Var structVar,
+                                           List<String> fields) {
+    List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
+    
+    in.add(structVar.asArg());
+    for (String field: fields) {
+      in.add(Arg.createStringLit(field));
+    }
+    return new TurbineOp(Opcode.STRUCT_RETRIEVE, oVar.asList(), in);
+  }
+
+  public static Instruction structCreateAlias(Var oVar, Var structVar,
+                                              List<String> fields) {
+    assert(oVar.storage() == Alloc.ALIAS) : oVar;
+    List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
+    
+    in.add(structVar.asArg());
+    for (String field: fields) {
+      in.add(Arg.createStringLit(field));
+    }
+    return new TurbineOp(Opcode.STRUCT_CREATE_ALIAS, oVar.asList(), in);
+  }
   
+  public static Instruction structCopyOut(Var oVar, Var structVar,
+                                          List<String> fields) {
+    List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
+    
+    in.add(structVar.asArg());
+    for (String field: fields) {
+      in.add(Arg.createStringLit(field));
+    }
+    return new TurbineOp(Opcode.STRUCT_COPY_OUT, oVar.asList(), in);
+  }
+
+  public static Instruction structRefCopyOut(Var oVar, Var structVar,
+                                          List<String> fields) {
+    List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
+
+    in.add(structVar.asArg());
+    for (String field: fields) {
+      in.add(Arg.createStringLit(field));
+    }
+    return new TurbineOp(Opcode.STRUCTREF_COPY_OUT, oVar.asList(), in);
+  }
+
   public static Instruction structStore(Var structVar,
-      String fieldName, Arg fieldVal) {
-    return new TurbineOp(Opcode.STRUCT_STORE,
-                    structVar, Arg.createStringLit(fieldName),
-                    fieldVal);
+        List<String> fields, Arg fieldVal) {
+    List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
+
+    for (String field: fields) {
+      in.add(Arg.createStringLit(field));
+    }
+    in.add(fieldVal);
+    return new TurbineOp(Opcode.STRUCT_STORE, structVar.asList(), in);
   }
   
   public static Instruction structCopyIn(Var structVar,
-      String fieldName, Var fieldVar) {
-    return new TurbineOp(Opcode.STRUCT_COPY_IN,
-                    structVar, Arg.createStringLit(fieldName),
-                    fieldVar.asArg());
+      List<String> fields, Var fieldVar) {
+    List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
+
+    for (String field: fields) {
+      in.add(Arg.createStringLit(field));
+    }
+    in.add(fieldVar.asArg());
+    return new TurbineOp(Opcode.STRUCT_COPY_IN, structVar.asList(), in);
   }
   
   public static Instruction structRefStore(Var structVar,
-      String fieldName, Arg fieldVal) {
-    return new TurbineOp(Opcode.STRUCTREF_STORE,
-                    structVar, Arg.createStringLit(fieldName),
-                    fieldVal);
+      List<String> fields, Arg fieldVal) {
+    List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
+
+    for (String field: fields) {
+      in.add(Arg.createStringLit(field));
+    }
+    in.add(fieldVal);
+    return new TurbineOp(Opcode.STRUCTREF_STORE, structVar.asList(), in);
   }
   
   public static Instruction structRefCopyIn(Var structVar,
-      String fieldName, Var fieldVar) {
-    return new TurbineOp(Opcode.STRUCTREF_COPY_IN,
-                    structVar, Arg.createStringLit(fieldName),
-                    fieldVar.asArg());
-  }
+                        List<String> fields, Var fieldVar) {
+    List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
 
-
-  public static Instruction structLookup(Var oVar, Var structVar,
-                                                        String fieldName) {
-    assert(oVar.storage() == Alloc.ALIAS) : oVar;
-    return new TurbineOp(Opcode.STRUCT_LOOKUP,
-        oVar, structVar.asArg(),
-            Arg.createStringLit(fieldName));
+    for (String field: fields) {
+      in.add(Arg.createStringLit(field));
+    }
+    in.add(fieldVar.asArg());
+    return new TurbineOp(Opcode.STRUCTREF_COPY_IN, structVar.asList(), in);
   }
   
-  public static Instruction structRefLookup(Var oVar, Var structVar,
-      String fieldName) {
-    return new TurbineOp(Opcode.STRUCTREF_COPY_OUT,
-            oVar, structVar.asArg(),
-            Arg.createStringLit(fieldName));
-  }
-
   public static Instruction assignScalar(Var target, Arg src) {
     return new TurbineOp(Opcode.STORE_SCALAR, target, src);
   }

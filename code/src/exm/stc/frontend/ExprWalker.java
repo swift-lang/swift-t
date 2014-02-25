@@ -272,8 +272,7 @@ public class  ExprWalker {
             "type " + dst.type().typeName());       
       }
     } else if (Types.isStruct(type)) {
-      copyStructByValue(context, src, dst, new Stack<String>(),
-                        new Stack<String>(), src, dst, type);
+      copyStructByValue(context, src, dst);
     } else if (Types.isArray(type)) {
       copyContainerByValue(context, dst, src);
     } else if (Types.isBag(type)) {
@@ -291,51 +290,47 @@ public class  ExprWalker {
    * 
    * @param context
    * @param structVar Variable of type struct or struct ref
-   * @param fieldName
+   * @param fieldName Path from struct to lookup
    * @param storeInStack
-   * @param rootStruct top level variable for structure
-   * @param fieldPath path from top level
    * @return the contents of the struct field if structVar is a non-ref, 
    *        a reference to the contents of the struct field if structVar is 
    *        a ref
    * @throws UserException
    * @throws UndefinedTypeException
    */
-  public Var structLookup(Context context, Var structVar,
-      String fieldName, boolean storeInStack, Var rootStruct,
-      List<String> fieldPath, Var outVar) throws UserException,
+  public Var structLookup(Context context, Var struct,
+      List<String> fieldPath, boolean storeInStack, Var outVar)
+          throws UserException,
       UndefinedTypeException {
-    assert(rootStruct != null);
+    assert(struct != null);
     assert(fieldPath != null);
     assert(fieldPath.size() > 0);
-    Type memType = TypeChecker.findStructFieldType(context, fieldName,
-                                                    structVar.type());
+    Type memType = TypeChecker.findStructFieldType(context, fieldPath,
+                                                   struct.type());
     Var result;
-    if (Types.isStructRef(structVar.type())) {
+    if (Types.isStructRef(struct)) {
       RefType resultType = new RefType(memType);
       if (outVar == null || !resultType.assignableTo(outVar.type())) {
         result = varCreator.createStructFieldTmp(context, 
-            rootStruct, resultType,
-            fieldPath, Alloc.TEMP); 
+            struct, resultType, fieldPath, Alloc.TEMP); 
       } else {
         result = outVar;
       }
-      backend.structRefLookup(VarRepr.backendVar(result),
-                              VarRepr.backendVar(structVar), fieldName);
+      backend.structRefCopyOut(VarRepr.backendVar(result),
+                               VarRepr.backendVar(struct),
+                               fieldPath);
     } else {
-      assert(Types.isStruct(structVar.type()));
+      assert(Types.isStruct(struct));
       if (outVar == null) {
         // Just create alias for later use
         result = varCreator.createStructFieldAlias(context, 
-                            rootStruct, memType, fieldPath);
+                            struct, memType, fieldPath);
         backend.structCreateAlias(VarRepr.backendVar(result), 
-                                  VarRepr.backendVar(structVar),
-                                  Collections.singletonList(fieldName));
+                      VarRepr.backendVar(struct), fieldPath);
       } else{
         // Copy to existing output variable
         backend.structCopyOut(VarRepr.backendVar(outVar), 
-                              VarRepr.backendVar(structVar),
-                              Collections.singletonList(fieldName));
+                              VarRepr.backendVar(struct), fieldPath);
         result = outVar;
       }
     }
@@ -348,11 +343,10 @@ public class  ExprWalker {
     }
   }
 
-  public Var structLookup(Context context, Var structVar,
-      String fieldName, boolean storeInStack, Var rootStruct,
-      List<String> fieldPath) throws UserException, UndefinedTypeException {
-    return structLookup(context, structVar, fieldName, storeInStack,
-                        rootStruct, fieldPath, null);
+  public Var structLookup(Context context, Var struct,
+      List<String> fieldPath, boolean storeInStack)
+          throws UserException, UndefinedTypeException {
+    return structLookup(context, struct, fieldPath, storeInStack, null);
   }
   
   /**
@@ -757,49 +751,32 @@ public class  ExprWalker {
     assert (tree.getType() == ExMParser.STRUCT_LOAD);
     assert (tree.getChildCount() == 2);
     
-    LinkedList<String> path = new LinkedList<String>();
-    path.add(tree.child(1).getText());
     SwiftAST structTree = tree.child(0);
-
-    
-    Var parent;
-    SwiftAST parentTree = tree.child(0);
-    String fieldName = tree.child(1).getText();
-
-    if (parentTree.getType() == ExMParser.VARIABLE) {
-      parent = context.lookupVarUser(parentTree.child(0).getText());
-    } else {
-      Type parentType = TypeChecker.findSingleExprType(context, parentTree);
-      // Type error should have been caught earlier
-      assert(Types.isStruct(parentType) || Types.isStructRef(parentType));
-      parent = eval(context, parentTree, parentType, false, renames);
-    }
-    
-
+    LinkedList<String> pathFromRoot = new LinkedList<String>();
     /* 
      * Walk the tree to find out the full path if we are accessing a nested 
      * struct.  rootStruct should be the name of the outermost nested struct 
      */
     while (structTree.getType() == ExMParser.STRUCT_LOAD) {
       assert (structTree.getChildCount() == 2);
-      path.addFirst(structTree.child(1).getText());
+      pathFromRoot.addFirst(structTree.child(1).getText());
       structTree = structTree.child(0);
     }
-    Var rootStruct = null;
-    List<String> pathFromRoot = null;
+    
+    Var rootStruct;
     if (structTree.getType() == ExMParser.VARIABLE) {
       // The root is a local variable
       assert (structTree.getChildCount() == 1);
       String structVarName = structTree.child(0).getText();
-      rootStruct = context.lookupVarUnsafe(structVarName);
-      pathFromRoot = path;
+      rootStruct = context.lookupVarUser(structVarName);
     } else {
-      rootStruct = parent;
-      pathFromRoot = Arrays.asList(fieldName);
+      Type parentType = TypeChecker.findSingleExprType(context, structTree);
+      // Type error should have been caught earlier
+      assert(Types.isStruct(parentType) || Types.isStructRef(parentType));
+      rootStruct = eval(context, structTree, parentType, false, renames);
     }
-
-    return structLookup(context, parent, fieldName,
-        storeInStack, rootStruct, pathFromRoot, outVar);
+    
+    return structLookup(context, rootStruct, pathFromRoot, storeInStack, outVar);
   }
 
   
@@ -1422,47 +1399,14 @@ public class  ExprWalker {
   }
 
   private void copyStructByValue(Context context,
-      Var srcRoot, Var dstRoot,
-      Stack<String> srcPath, Stack<String> dstPath,
-      Var src, Var dst, Type type)
+                                 Var src, Var dst)
           throws UserException, UndefinedTypeException {
-    assert(src.type().equals(dst.type()));
-    assert(Types.isStruct(src.type()));
-
-    // recursively copy struct members
-    StructType st = (StructType) type;
-    for (StructField f : st.getFields()) {
-      // get handles to both src and dst field
-      Type fieldType = f.getType();
-      srcPath.push(f.getName());
-      dstPath.push(f.getName());
-      Var fieldSrc = structLookup(context, src, f.getName(),
-          false, srcRoot, srcPath);
-
-      Var fieldDst = structLookup(context, dst, f.getName(),
-          false, dstRoot, dstPath);
-
-      if (Types.isStruct(fieldType)) {
-        copyStructByValue(context, srcRoot, dstRoot,
-          srcPath, dstPath, fieldSrc, fieldDst, fieldType);
-      } else {
-        copyByValue(context, fieldSrc, fieldDst, fieldType);
-      }
-      srcPath.pop(); dstPath.pop();
-    }
+    assert(src.type().assignableTo(dst.type()));
+    assert(Types.isStruct(src));
+    backend.asyncCopyStruct(VarRepr.backendVar(dst),
+                            VarRepr.backendVar(src));
   }
   
-
-  private void copyRefByValue(Context context, Var src, Var dst, Type type)
-      throws UserException, UndefinedTypeException {
-    backend.startWaitStatement(context.constructName("copy-ref-wait"),
-        VarRepr.backendVar(src).asList(), WaitMode.WAIT_ONLY,
-        false, false, TaskMode.LOCAL);
-    Var srcVal = varCreator.createTmpAlias(context, type.memberType());
-    retrieveRef(srcVal, src);
-    assignRef(dst, srcVal);
-    backend.endWaitStatement();
-  }
 
   /**
    * Copy a struct reference to a struct.  We need to do this in the
@@ -1485,17 +1429,28 @@ public class  ExprWalker {
     retrieveRef(rValDerefed, src);
     copyByValue(context, rValDerefed, dst, dst.type());
     backend.endWaitStatement();
-  } 
-  
+  }
+
+  private void copyRefByValue(Context context, Var src, Var dst, Type type)
+      throws UserException, UndefinedTypeException {
+    backend.startWaitStatement(context.constructName("copy-ref-wait"),
+        VarRepr.backendVar(src).asList(), WaitMode.WAIT_ONLY,
+        false, false, TaskMode.LOCAL);
+    Var srcVal = varCreator.createTmpAlias(context, type.memberType());
+    retrieveRef(srcVal, src);
+    assignRef(dst, srcVal);
+    backend.endWaitStatement();
+  }
+
   void findArraysInStruct(Context context,
       Var root, VInfo structVInfo, List<Pair<Var, VInfo>> arrays)
           throws UndefinedTypeException, UserException {
-    findArraysInStructToClose(context, root, root, structVInfo,
-        new Stack<String>(), arrays);
+    findArraysInStructToClose(context, root, structVInfo,
+                              new Stack<String>(), arrays);
   }
 
   private void findArraysInStructToClose(Context context,
-      Var root, Var struct, VInfo structVInfo,
+      Var struct, VInfo structVInfo,
       Stack<String> fieldPath, List<Pair<Var, VInfo>> arrays) throws UndefinedTypeException,
                                                                       UserException {
     assert(structVInfo != null);
@@ -1503,18 +1458,14 @@ public class  ExprWalker {
     for (StructField f: vtype.getFields()) {
       fieldPath.push(f.getName());
       if (Types.isArray(f.getType())) {
-        Var fieldVar = structLookup(context, struct, 
-            f.getName(), false, root, fieldPath);
+        Var fieldVar = structLookup(context, struct, fieldPath, false);
         VInfo fieldInfo = structVInfo != null ?
             structVInfo.getFieldVInfo(f.getName()) : null;
         arrays.add(Pair.create(fieldVar, fieldInfo));
       } else if (Types.isStruct(f.getType())) {
         VInfo nestedVInfo = structVInfo.getFieldVInfo(f.getName());
-        Var field = structLookup(context, struct, f.getName(),
-                                  false, root, fieldPath);
-
-        findArraysInStructToClose(context, root, field, nestedVInfo, fieldPath,
-            arrays);
+        findArraysInStructToClose(context, struct, nestedVInfo, fieldPath,
+                                  arrays);
       }
       fieldPath.pop();
     }

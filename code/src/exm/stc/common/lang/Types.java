@@ -1922,6 +1922,29 @@ public class Types {
     return key.type().assignableTo(arrayKeyType(arr));
   }
 
+  public static boolean isStructField(Typed struct,
+            List<String> fieldPath, Typed field) {
+    assert(Types.isStruct(struct) || Types.isStructRef(struct));
+    StructType structType;
+    if (Types.isStruct(struct)) {
+      structType = (StructType)struct.type().getImplType();
+    } else {
+      structType = (StructType)struct.type().getImplType().memberType();
+    }
+    Type fieldType;
+    try {
+      fieldType = structType.getFieldTypeByPath(fieldPath);
+    } catch (TypeMismatchException e) {
+      return false;
+    }
+    return field.type().assignableTo(fieldType);
+  }
+  
+  public static boolean isStructFieldVal(Typed struct,
+      List<String> fieldPath, Typed field) {
+    return isStructField(struct, fieldPath, storeResultType(field));
+  }
+  
   /**
    * Return true if the type is one that we can subscribe to
    * the final value of 

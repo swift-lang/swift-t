@@ -31,13 +31,11 @@ import exm.stc.common.CompilerBackend.RefCount;
 import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.ForeignFunctions;
-import exm.stc.common.lang.WaitVar;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
@@ -55,6 +53,7 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
+import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
@@ -611,6 +610,12 @@ public class STCMiddleEnd {
     assert(src.type().assignableTo(dst.type()));
     currBlock().addInstruction(TurbineOp.asyncCopyContainer(dst, src));
   }
+  
+  public void asyncCopyStruct(Var dst, Var src) {
+    assert(Types.isStruct(src));
+    assert(src.type().assignableTo(dst.type()));
+    currBlock().addInstruction(TurbineOp.asyncCopyStruct(dst, src));
+  }
 
   public void bagInsert(Var bag, Arg elem) {
     assert(Types.isBag(bag));
@@ -912,86 +917,62 @@ public class STCMiddleEnd {
   public void structCreateAlias(Var fieldAlias, Var struct,
                                 List<String> fieldPath) {
     assert(Types.isStruct(struct));
-    StructType structType = (StructType)struct.type().getImplType();
-    Type fieldType;
-    try {
-      fieldType = structType.getFieldTypeByPath(fieldPath);
-    } catch (TypeMismatchException e) {
-      throw new STCRuntimeError(e.getMessage());
-    }
-    assert(fieldType.assignableTo(fieldAlias.type()));
+    assert(Types.isStructField(struct, fieldPath, fieldAlias));
     assert(fieldAlias.storage() == Alloc.ALIAS);
     
-    throw new STCRuntimeError("TODO: not implemented");
+    currBlock().addInstruction(
+        TurbineOp.structCreateAlias(fieldAlias, struct, fieldPath));
+  }
+  public void structRetrieve(Var target, Var struct,
+      List<String> fieldPath) {
+    assert(Types.isStruct(struct));
+    assert(Types.isStructFieldVal(struct, fieldPath, target));
+    currBlock().addInstruction(
+        TurbineOp.structRetrieve(target, struct, fieldPath));
   }
   
   public void structCopyOut(Var target, Var struct,
                             List<String> fieldPath) {
     assert(Types.isStruct(struct));
-    StructType structType = (StructType)struct.type().getImplType();
-    Type fieldType;
-    try {
-      fieldType = structType.getFieldTypeByPath(fieldPath);
-    } catch (TypeMismatchException e) {
-      throw new STCRuntimeError(e.getMessage());
-    }
-    assert(fieldType.assignableTo(target.type()));
+    assert(Types.isStructField(struct, fieldPath, target));
     
-    throw new STCRuntimeError("TODO: not implemented");
+    currBlock().addInstruction(
+        TurbineOp.structCopyOut(target, struct, fieldPath));
   }
   
-  public void structRefLookup(Var result, Var structVar,
-      String structField) {
-    assert(Types.isStructRef(structVar.type()));
-    assert(Types.isRef(result.type()));
-    assert(result.storage() != Alloc.ALIAS);
+  public void structRefCopyOut(Var target, Var struct,
+                                List<String> fieldPath) {
+    assert(Types.isStructRef(struct));
+    assert(Types.isRef(target.type()));
+    assert(Types.isStructField(struct, fieldPath,
+                   Types.retrievedType(target)));
+    
     currBlock().addInstruction(
-        TurbineOp.structRefLookup(result, structVar, structField));
+        TurbineOp.structCopyOut(target, struct, fieldPath));
   }
 
-  public void structStore(Var struct, String fieldName,
+  public void structStore(Var struct, List<String> fieldPath,
                           Arg fieldVal) {
     assert(Types.isStruct(struct));
-    StructType st = (StructType)struct.type().getImplType();
-    Type fieldType = st.getFieldTypeByName(fieldName);
-    assert(fieldType != null);
-    assert(fieldVal.type().assignableTo(
-                  Types.retrievedType(fieldType)));
+    assert(Types.isStructFieldVal(struct, fieldPath, fieldVal));
     currBlock().addInstruction(TurbineOp.structStore(struct,
-                                fieldName, fieldVal));
-  }
-  
-  public void structRefStore(Var struct, String fieldName,
-                             Arg fieldVal) {
-    assert(Types.isStruct(struct));
-    StructType st = (StructType)struct.type().getImplType().memberType();
-    Type fieldType = st.getFieldTypeByName(fieldName);
-    assert(fieldType != null);
-    assert(fieldVal.type().assignableTo(fieldType));
-    currBlock().addInstruction(TurbineOp.structRefStore(struct,
-            fieldName, fieldVal));
+                                fieldPath, fieldVal));
   }
 
-  public void structCopyIn(Var struct, String fieldName,
+  public void structCopyIn(Var struct, List<String> fieldPath,
                             Var fieldVar) {
     assert(Types.isStruct(struct));
-    StructType st = (StructType)struct.type().getImplType();
-    Type fieldType = st.getFieldTypeByName(fieldName);
-    assert(fieldType != null);
-    assert(fieldVar.type().assignableTo(fieldType));
+    assert(Types.isStructField(struct, fieldPath, fieldVar));
     currBlock().addInstruction(TurbineOp.structCopyIn(struct,
-                                fieldName, fieldVar));
+                                fieldPath, fieldVar));
   }
   
-  public void structRefCopyIn(Var struct, String fieldName,
+  public void structRefCopyIn(Var struct, List<String> fieldPath,
                               Var fieldVar) {
     assert(Types.isStructRef(struct));
-    StructType st = (StructType)struct.type().getImplType().memberType();
-    Type fieldType = st.getFieldTypeByName(fieldName);
-    assert(fieldType != null);
-    assert(fieldVar.type().assignableTo(fieldType));
+    assert(Types.isStructField(struct, fieldPath, fieldVar));
     currBlock().addInstruction(TurbineOp.structRefCopyIn(struct,
-                                          fieldName, fieldVar));
+                                          fieldPath, fieldVar));
   }
   
   public void addGlobal(Var var, Arg val) {

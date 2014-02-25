@@ -136,7 +136,14 @@ public class TypeChecker {
           + LogHelper.tokName(token));
     }
   }
-
+  
+  public static Type findStructFieldType(Context context,
+      List<String> fields, Type type) throws TypeMismatchException {
+    for (String f: fields) {
+      type = findStructFieldType(context, f, type);
+    }
+    return type;
+  }
 
   /**
    * Find the type of a particular field
