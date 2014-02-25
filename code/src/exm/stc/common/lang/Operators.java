@@ -72,10 +72,12 @@ public class Operators {
    * case of multiple possible matches
    */
   private static void fillArithOps() {
+    // DOC: Why is this called numType? 
     for (PrimType numType : Arrays.asList(PrimType.INT, PrimType.FLOAT,
         PrimType.STRING, PrimType.BOOL)) {
       String opTypeName = getOpTypeName(numType);
       
+      // DOC: Why is this called REL OpType?  logicalOpType? 
       OpType relOpType = new OpType(PrimType.BOOL, numType, numType);
       OpType closedOpType = new OpType(numType, numType, numType);
       
