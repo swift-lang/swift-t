@@ -41,6 +41,10 @@ bool string_copy(char* dest, int d_space, const char* src);
 
 char* string_dup_word(char* src);
 
+/**
+   Remove the newline from the end of string s.
+   Like Perl's chomp.
+ */
 void chomp(char* s);
 
 #if ! SUBST_HAVE_STRNLEN
