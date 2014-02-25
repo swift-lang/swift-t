@@ -119,30 +119,6 @@ char *tcl_adlb_xfer_buffer(uint64_t *buf_size) {
  */
 static struct table_lp blob_cache;
 
-typedef struct {
-  bool initialized;
-  char *name;
-  unsigned int field_count;
-  adlb_data_type *field_types;
-  char **field_names;
-  // Each field has an array of field names representing nesting
-  int *field_nest_level;
-  Tcl_Obj ***field_parts;
-} adlb_struct_format;
-
-/**
-   Information about struct formats to enable parsing/constructing TCL dicts
-   based on structs.
- */
-static struct {
-  adlb_struct_format *types;
-  int types_len;
-} adlb_struct_formats;
-#define ADLB_STRUCT_TYPE_CHECK(st) \
-    TCL_CONDITION(st < adlb_struct_formats.types_len &&     \
-                adlb_struct_formats.types[st].initialized,  \
-                "Struct type %i not registered with Tcl ADLB module", st);
-
 /*
   Represent full type of a data structure
  */
@@ -407,98 +383,6 @@ static int struct_format_finalize(void)
   return TCL_OK;
 };
 
-static int add_struct_format(Tcl_Interp *interp, Tcl_Obj *const objv[],
-            adlb_struct_type type_id, const char *type_name,
-            unsigned int field_count,
-            const adlb_struct_field_type *field_types,
-            const char **field_names)
-{
-  assert(adlb_struct_formats.types != NULL); // Check init
-  TCL_CONDITION(type_id >= 0, "Struct type id must be non-negative");
-
-  if (adlb_struct_formats.types_len <= type_id)
-  {
-    int old_len = adlb_struct_formats.types_len;
-    int new_len = old_len * 2;
-    if (new_len <= type_id)
-      new_len = type_id + 1;
-
-    adlb_struct_formats.types = realloc(adlb_struct_formats.types,
-                                      (size_t)new_len *
-                                      sizeof(adlb_struct_formats.types[0]));
-    TCL_MALLOC_CHECK(adlb_struct_formats.types);
-    for (int i = old_len; i < new_len; i++)
-    {
-      adlb_struct_formats.types[i].initialized = false;
-    }
-  }
-
-  adlb_struct_format *t = &adlb_struct_formats.types[type_id];
-  t->initialized = true;
-  t->name = strdup(type_name);
-  TCL_MALLOC_CHECK(t->name);
-  t->field_count = field_count;
-  t->field_types = malloc(sizeof(t->field_types[0]) * field_count);
-  TCL_MALLOC_CHECK(t->field_types);
-  t->field_nest_level = malloc(sizeof(t->field_nest_level[0]) *
-                               field_count);
-  TCL_MALLOC_CHECK(t->field_nest_level);
-  t->field_names = malloc(sizeof(t->field_names[0]) * field_count);
-  TCL_MALLOC_CHECK(t->field_names);
-  t->field_parts = malloc(sizeof(t->field_parts[0]) * field_count);
-  TCL_MALLOC_CHECK(t->field_parts);
-
-  for (int i = 0; i < field_count; i++)
-  {
-    t->field_types[i] = field_types[i];
-    t->field_names[i] = strdup(field_names[i]);
-    TCL_MALLOC_CHECK(t->field_names[i]);
-
-    const char *fname_pos;
-
-    // Discover number of nested structs
-    int nest_level = 0;
-    fname_pos = field_names[i];
-    while ((fname_pos = strchr(fname_pos, '.')) != NULL)
-    {
-      fname_pos++; // Move past '.'
-      nest_level++;
-    }
-
-    t->field_nest_level[i] = nest_level;
-    t->field_parts[i] = malloc(sizeof(t->field_parts[i][0]) *
-                               (size_t)(nest_level + 1));
-    TCL_MALLOC_CHECK(t->field_parts[i]);
-
-    // Extract field names, e.g. "field1.b.c"
-    fname_pos = field_names[i];
-    for (int j = 0; j <= nest_level; j++)
-    {
-      assert(fname_pos != NULL);
-      // Find next separator and copy field name
-      char *sep_pos = strchr(fname_pos, '.');
-      int fname_len;
-      if (sep_pos == NULL)
-      {
-        assert(j == nest_level);
-        fname_len = (int)strlen(fname_pos);
-      }
-      else
-      {
-        assert(j < nest_level);
-        fname_len = (int)(sep_pos - fname_pos);
-      }
-      t->field_parts[i][j] = Tcl_NewStringObj(fname_pos, fname_len);
-      Tcl_IncrRefCount(t->field_parts[i][j]); // Hold on to reference
-      TCL_MALLOC_CHECK(t->field_parts[i][j]);
-
-      fname_pos = sep_pos + 1;
-    }
-
-  }
-  return TCL_OK;
-}
-
 /**
    usage: adlb::declare_struct_type <type id> <type name> <field list>
       where field list is a list of (<field name> <field type>)*
@@ -542,10 +426,6 @@ ADLB_Declare_Struct_Type_Cmd(ClientData cdata, Tcl_Interp *interp,
     TCL_CHECK(rc);
     field_count++;
   }
-
-  rc = add_struct_format(interp, objv, type_id, type_name,
-                (unsigned int)field_count, field_types, field_names);
-  TCL_CHECK(rc);
 
   adlb_data_code dc = ADLB_Declare_struct_type(type_id, type_name, field_count,
                       field_types, field_names);
