@@ -169,7 +169,8 @@ static int struct_format_init(Tcl_Interp *interp, Tcl_Obj *const objv[]);
 static int struct_format_finalize(void);
 static int add_struct_format(Tcl_Interp *interp, Tcl_Obj *const objv[],
             adlb_struct_type type_id, const char *type_name,
-            unsigned int field_count, const adlb_data_type *field_types,
+            unsigned int field_count,
+            const adlb_struct_field_type *field_types,
             const char **field_names);
 static int
 packed_struct_to_tcl_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
@@ -408,7 +409,8 @@ static int struct_format_finalize(void)
 
 static int add_struct_format(Tcl_Interp *interp, Tcl_Obj *const objv[],
             adlb_struct_type type_id, const char *type_name,
-            unsigned int field_count, const adlb_data_type *field_types,
+            unsigned int field_count,
+            const adlb_struct_field_type *field_types,
             const char **field_names)
 {
   assert(adlb_struct_formats.types != NULL); // Check init
@@ -500,6 +502,8 @@ static int add_struct_format(Tcl_Interp *interp, Tcl_Obj *const objv[],
 /**
    usage: adlb::declare_struct_type <type id> <type name> <field list>
       where field list is a list of (<field name> <field type>)*
+      field type should be the full type of the field, i.e. what you
+      would pass to adlb::create.
  */
 static int
 ADLB_Declare_Struct_Type_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -510,7 +514,8 @@ ADLB_Declare_Struct_Type_Cmd(ClientData cdata, Tcl_Interp *interp,
   adlb_struct_type type_id;
   const char *type_name;
 
-  rc = Tcl_GetIntFromObj(interp, objv[1], &type_id);
+  int tmp_type_id;
+  rc = Tcl_GetIntFromObj(interp, objv[1], &tmp_type_id);
   TCL_CHECK(rc);
 
   type_name = Tcl_GetString(objv[2]);
@@ -519,18 +524,23 @@ ADLB_Declare_Struct_Type_Cmd(ClientData cdata, Tcl_Interp *interp,
   int field_list_len;
   rc = Tcl_ListObjGetElements(interp, objv[3], &field_list_len, &field_list);
   TCL_CHECK(rc);
-  TCL_CONDITION(field_list_len % 2 == 0,
-                "adlb::declare_struct_type field list must have even length");
+  int max_field_count = field_list_len / 2;
+  adlb_struct_field_type field_types[max_field_count];
+  const char *field_names[max_field_count];
 
-  int field_count = field_list_len / 2;
-  adlb_data_type field_types[field_count];
-  const char *field_names[field_count];
-
-  for (int i = 0; i < field_count; i++)
+  int field_count = 0;
+  int field_list_ix = 0;
+  while (field_list_ix < field_list_len)
   {
-    field_names[i] = Tcl_GetString(field_list[2 * i]);
-    rc = type_from_obj(interp, objv, field_list[2 * i + 1], &field_types[i]);
+    field_names[field_count] = Tcl_GetString(field_list[field_list_ix++]);
+  
+    TCL_CONDITION(field_list_ix < field_list_len, "missing type for "
+                  "field named %s", field_names[field_count]);
+    rc = type_from_array(interp, objv, field_list, field_list_len,
+                         &field_list_ix, &field_types[field_count].type,
+                         &field_types[field_count].extra);
     TCL_CHECK(rc);
+    field_count++;
   }
 
   rc = add_struct_format(interp, objv, type_id, type_name,
@@ -1002,6 +1012,61 @@ int type_from_obj_extra(Tcl_Interp *interp, Tcl_Obj *const objv[],
   return TCL_OK;
 }
 
+/**
+  Extra type info from argument list, advancing index.
+  First consume type name as first arg, then if there is additional info
+  needed, e.g. container key/value types, consume that info
+ */
+int type_from_array(Tcl_Interp *interp, Tcl_Obj *const objv[],
+        Tcl_Obj *const array[], int len, int *ix,
+        adlb_data_type *type, adlb_type_extra *extra)
+{
+  int rc;
+  // Avoid passing out any uninitialized bytes
+  memset(extra, 0, sizeof(*extra));
+
+  adlb_data_type tmp_type;
+  rc = type_from_obj_extra(interp, objv, array[(*ix)++], &tmp_type,
+                           extra);
+  TCL_CHECK(rc);
+  *type = tmp_type;
+
+  // Process type-specific params if not already in type extra
+  if (!extra->valid)
+  {
+    switch (*type)
+    {
+      case ADLB_DATA_TYPE_CONTAINER: {
+        TCL_CONDITION(len > *ix + 1,
+                      "adlb::create type=container requires "
+                      "key and value types!");
+        adlb_data_type key_type, val_type;
+        rc = type_from_obj(interp, objv, array[(*ix)++], &key_type);
+        TCL_CHECK(rc);
+        rc = type_from_obj(interp, objv, array[(*ix)++], &val_type);
+        TCL_CHECK(rc);
+        extra->CONTAINER.key_type = key_type;
+        extra->CONTAINER.val_type = val_type;
+        extra->valid = true;
+        break;
+      }
+      case ADLB_DATA_TYPE_MULTISET: {
+        TCL_CONDITION(len > *ix, "adlb::create type=multiset requires "
+                      "member type!");
+        adlb_data_type val_type;
+        rc = type_from_obj(interp, objv, array[(*ix)++], &val_type);
+        TCL_CHECK(rc);
+        extra->MULTISET.val_type = val_type;
+        extra->valid = true;
+        break;
+      }
+      default:
+        break;
+    }
+  }
+  return TCL_OK;
+}
+
 /*
   Extract variable create properties
   accept_id: if true, accept id as first element
@@ -1016,9 +1081,8 @@ extract_create_props(Tcl_Interp *interp, bool accept_id, int argstart,
   int argpos = argstart;
   
   // Avoid passing out any uninitialized bytes
-  memset(type_extra, 0, sizeof(*type_extra));
   memset(props, 0, sizeof(*props));
-
+  
   if (accept_id) {
     TCL_CONDITION(objc - argstart >= 2, "adlb::create requires >= 2 args!");
     rc = Tcl_GetADLB_ID(interp, objv[argpos++], id);
@@ -1028,46 +1092,9 @@ extract_create_props(Tcl_Interp *interp, bool accept_id, int argstart,
     *id = ADLB_DATA_ID_NULL;
   }
 
-  adlb_data_type tmp_type;
-  rc = type_from_obj_extra(interp, objv, objv[argpos++], &tmp_type,
-                           type_extra);
+  // Consume type info from arg list
+  rc = type_from_array(interp, objv, objv, objc, &argpos, type, type_extra);
   TCL_CHECK(rc);
-  *type = tmp_type;
-
-  // Process type-specific params if not already in type extra
-  if (!type_extra->valid)
-  {
-    switch (*type)
-    {
-      case ADLB_DATA_TYPE_CONTAINER: {
-        TCL_CONDITION(objc > argpos + 1,
-                      "adlb::create type=container requires "
-                      "key and value types!");
-        adlb_data_type key_type, val_type;
-        rc = type_from_obj(interp, objv, objv[argpos++], &key_type);
-        TCL_CHECK(rc);
-        rc = type_from_obj(interp, objv, objv[argpos++], &val_type);
-        TCL_CHECK(rc);
-        type_extra->CONTAINER.key_type = key_type;
-        type_extra->CONTAINER.val_type = val_type;
-        type_extra->valid = true;
-        break;
-      }
-      case ADLB_DATA_TYPE_MULTISET: {
-        TCL_CONDITION(objc > argpos,
-                      "adlb::create type=multiset requires "
-                      "member type!");
-        adlb_data_type val_type;
-        rc = type_from_obj(interp, objv, objv[argpos++], &val_type);
-        TCL_CHECK(rc);
-        type_extra->MULTISET.val_type = val_type;
-        type_extra->valid = true;
-        break;
-      }
-      default:
-        break;
-    }
-  }
 
   // Process create props if present
   adlb_create_props defaults = DEFAULT_CREATE_PROPS;

@@ -35,6 +35,9 @@ int type_from_obj_extra(Tcl_Interp *interp, Tcl_Obj *const objv[],
                          Tcl_Obj* obj, adlb_data_type *type,
                          adlb_type_extra *extra);
 
+int type_from_array(Tcl_Interp *interp, Tcl_Obj *const objv[],
+        Tcl_Obj *const array[], int len, int *ix,
+        adlb_data_type *type, adlb_type_extra *extra);
 
 int
 tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
