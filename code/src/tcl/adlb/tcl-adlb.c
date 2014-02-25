@@ -2026,14 +2026,16 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
                int objc, Tcl_Obj *const objv[])
 {
   TCL_CONDITION(objc >= 4, "requires at least 4 args!");
+  int rc;
   int argpos = 1;
 
   adlb_datum_id id;
-  Tcl_GetADLB_ID(interp, objv[argpos++], &id);
+  rc = Tcl_GetADLB_ID(interp, objv[argpos++], &id);
+  TCL_CHECK(rc);
 
   adlb_data_type type;
   adlb_type_extra extra;
-  int rc = type_from_obj_extra(interp, objv, objv[argpos++], &type,
+  rc = type_from_obj_extra(interp, objv, objv[argpos++], &type,
                          &extra);
   TCL_CHECK(rc);
 
@@ -3045,7 +3047,9 @@ ADLB_Insert_Atomic_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   bool b;
   adlb_datum_id id;
-  Tcl_GetADLB_ID(interp, objv[argpos++], &id);
+  rc = Tcl_GetADLB_ID(interp, objv[argpos++], &id);
+  TCL_CHECK(rc);
+
   adlb_subscript subscript;
   rc = Tcl_GetADLB_Subscript(objv[argpos++], &subscript);
   TCL_CHECK_MSG(rc, "Invalid subscript argument");
@@ -3277,12 +3281,13 @@ ADLB_Typeof_Cmd(ClientData cdata, Tcl_Interp *interp,
 		int objc, Tcl_Obj *const objv[])
 {
   TCL_ARGS(2);
-
+  int rc;
   adlb_datum_id id;
-  Tcl_GetADLB_ID(interp, objv[1], &id);
+  rc = Tcl_GetADLB_ID(interp, objv[1], &id);
+  TCL_CHECK(rc);
 
   adlb_data_type type;
-  int rc = ADLB_Typeof(id, &type);
+  rc = ADLB_Typeof(id, &type);
   TCL_CONDITION(rc == ADLB_SUCCESS,
                 "adlb::container_typeof <%"PRId64"> failed!", id);
 
@@ -3309,10 +3314,13 @@ ADLB_Container_Typeof_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_ARGS(2);
 
   adlb_datum_id id;
-  Tcl_GetADLB_ID(interp, objv[1], &id);
+  int rc;
+
+  rc = Tcl_GetADLB_ID(interp, objv[1], &id);
+  TCL_CHECK(rc);
 
   adlb_data_type key_type, val_type;
-  int rc = ADLB_Container_typeof(id, &key_type, &val_type);
+  rc = ADLB_Container_typeof(id, &key_type, &val_type);
   TCL_CONDITION(rc == ADLB_SUCCESS,
                 "adlb::container_typeof <%"PRId64"> failed!", id);
 
@@ -3425,7 +3433,8 @@ ADLB_Write_Refcount_Incr_Cmd(ClientData cdata, Tcl_Interp *interp,
                 "requires 1 or 2 args!");
   int rc;
   adlb_datum_id container_id;
-  Tcl_GetADLB_ID(interp, objv[1], &container_id);
+  rc = Tcl_GetADLB_ID(interp, objv[1], &container_id);
+  TCL_CHECK(rc);
 
   adlb_refcounts incr = ADLB_WRITE_RC;
   if (objc == 3)
