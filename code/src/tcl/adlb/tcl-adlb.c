@@ -420,10 +420,7 @@ static int field_name_objs_add(Tcl_Interp *interp, Tcl_Obj *const objv[],
     }
     Tcl_Obj ***tmp = realloc(field_name_objs.objs, (size_t)new_size *
                                     sizeof(field_name_objs.objs[0]));
-    if (tmp == NULL)
-    {
-      return false;
-    }
+    TCL_MALLOC_CHECK(tmp);
     // Initialize to NULL
     for (int i = field_name_objs.size; i < new_size; i++)
     {
@@ -435,21 +432,20 @@ static int field_name_objs_add(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
   field_name_objs.objs[type] = malloc(
         sizeof(field_name_objs.objs[0][0]) * (size_t)field_count);
-  if (field_name_objs.objs[type] == NULL)
-  {
-    return false;
-  }
+  TCL_MALLOC_CHECK(field_name_objs.objs[type]);
+  
   for (int i = 0; i < field_count; i++)
   {
     field_name_objs.objs[type][i] = Tcl_NewStringObj(field_names[i], -1);
-    if (field_name_objs.objs[type][i] == NULL)
-    {
-      return false;
-    }
+    TCL_MALLOC_CHECK(field_name_objs.objs[type][i]);
   }
-  return true;
+  return TCL_OK;
 }
 
+/**
+ * Free memory used to keep field object names around.
+ * Must be called before ADLB_Finalize
+ */
 static int field_name_objs_finalize(Tcl_Interp *interp,
                                      Tcl_Obj *const objv[])
 {
@@ -457,14 +453,14 @@ static int field_name_objs_finalize(Tcl_Interp *interp,
   {
     for (int i = 0; i < field_name_objs.size; i++)
     {
-      int field_count;
-      adlb_data_code dc = ADLB_Lookup_struct_type(i, NULL,
-                                &field_count, NULL, NULL);
-      TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
-                    "Error looking up struct type %i", i);
       Tcl_Obj **name_arr = field_name_objs.objs[i];
       if (name_arr != NULL)
       {
+        int field_count;
+        adlb_data_code dc = ADLB_Lookup_struct_type(i, NULL,
+                                  &field_count, NULL, NULL);
+        TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
+                      "Error looking up struct type %i", i);
         for (int j = 0; j < field_count; j++)
         {
           Tcl_DecrRefCount(name_arr[j]);
@@ -4108,7 +4104,13 @@ static int
 ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
-  int rc = ADLB_Finalize();
+  int rc;
+
+  // Finalize field objs before ADLB struct type stuff cleared up
+  rc = field_name_objs_finalize(interp, objv);
+  TCL_CHECK(rc);
+
+  rc = ADLB_Finalize();
   if (rc != ADLB_SUCCESS)
     printf("WARNING: ADLB_Finalize() failed!\n");
   TCL_ARGS(2);
@@ -4123,9 +4125,6 @@ ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
   turbine_debug_finalize();
 
   rc = blob_cache_finalize();
-  TCL_CHECK(rc);
-  
-  rc = field_name_objs_finalize(interp, objv);
   TCL_CHECK(rc);
 
   return TCL_OK;
