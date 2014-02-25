@@ -2,31 +2,22 @@ package exm.stc.ic.refcount;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import org.apache.log4j.Logger;
 
 import exm.stc.common.Logging;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
-import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.StructType;
-import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.Alloc;
-import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.opt.AliasTracker;
 import exm.stc.ic.opt.AliasTracker.Alias;
 import exm.stc.ic.opt.AliasTracker.AliasKey;
-import exm.stc.ic.opt.OptUtil;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.TurbineOp.RefCountOp.RCDir;
@@ -58,11 +49,6 @@ public class RCTracker {
   
   private final AliasTracker aliases;
   
-  /**
-   * List of variables that we've created to store struct elements
-   */
-  private Set<Var> createdTemporaries = new HashSet<Var>();  
-  
   public RCTracker() {
     this(null);
   }
@@ -82,11 +68,7 @@ public class RCTracker {
   public AliasTracker getAliases() {
     return aliases;
   }
-
-  public Set<Var> getCreatedTemporaries() {
-    return createdTemporaries;
-  }
-
+  
   public void updateForInstruction(Instruction inst) {
     for (Alias alias: aliases.getInstructionAliases(inst)) {
       addStructElem(alias.parent, alias.field, alias.child);
@@ -213,51 +195,10 @@ public class RCTracker {
 
   public Var getRefCountVar(Block block, AliasKey key,
                             boolean createIfNotPresent) {
-    // See if we have a variable already for that path
-    Var result = aliases.findVar(key);
-    
-    if (result != null) {
-      return result;
-    } else if (createIfNotPresent) {
-      assert(block != null);
-      return createStructFieldTmp(block, key);
-    } else {
-      return null;
-    }
+    // increment var, or struct root
+    return key.var;
   }
 
-
-  /**
-   * If we don't have a variable corresponding to struct path, 
-   * then create a temporary variable that will be added later to IR
-   * @param block
-   * @param key
-   * @return
-   */
-  private Var createStructFieldTmp(Block block, AliasKey key) {
-    Var curr = key.var;
-    for (int i = 0; i < key.structPath.length; i++) {
-      assert(Types.isStruct(curr.type()));
-      String fieldName = key.structPath[i];
-      Var child = aliases.findVar(curr, fieldName);
-      if (child == null) {
-        // Doesn't exist
-        StructType parentType = (StructType)curr.type();
-        Type elemType = parentType.getFieldTypeByName(fieldName);
-        String varName = OptUtil.optVPrefix(block, 
-            Var.STRUCT_FIELD_VAR_PREFIX + curr.name() + "_" + fieldName); 
-        child = new Var(elemType, varName, Alloc.ALIAS, DefType.LOCAL_COMPILER,
-                        VarProvenance.structField(curr, fieldName));
-        createdTemporaries.add(child);
-        
-        // Must add to block to avoid duplicates later
-        block.addVariable(child);
-        addStructElem(curr, fieldName, child);
-      }
-      curr = child;
-    }
-    return curr;
-  }
 
   public void reset(RefCountType rcType, Var v, RCDir dir) {
     getCounters(rcType, dir).reset(getCountKey(v));
@@ -353,9 +294,7 @@ public class RCTracker {
   }
 
   void incr(Var var, RefCountType rcType, long amount) {
-    if (Types.isStruct(var.type())) {
-      incrStructMembers(var, rcType, amount);
-    } else if (RefCounting.hasRefCount(var, rcType)) {
+    if (RefCounting.hasRefCount(var, rcType)) {
       AliasKey key = getCountKey(var);
       incrDirect(key, rcType, amount);
     }
@@ -385,37 +324,12 @@ public class RCTracker {
    */
   public void incrKey(AliasKey key, RefCountType rcType, long amount,
                       Type varType) {
-    if (Types.isStruct(varType)) {
-      incrStructMembersRec(key, (StructType)varType, rcType, amount);
-    } else {
-      // Check to see if var/type may be able to carry refcount
-      Var var = getRefCountVar(null, key, false);
-      if ((var != null && RefCounting.hasRefCount(var, rcType)) ||
-          (var == null &&
-           RefCounting.mayHaveRefcount(varType, rcType))) {
-        incrDirect(key, rcType, amount);
-      }
-    }
-  }
-
-  private void incrStructMembers(Var var, RefCountType rcType, long amount) {
-    StructType t = (StructType)var.type();
-    incrStructMembersRec(getCountKey(var), t, rcType, amount);
-  }
-  
-  /**
-   * recursively walk struct type and increment fields
-   * @param result
-   * @param key
-   * @param type
-   * @param amount
-   */
-  private void incrStructMembersRec(AliasKey key, StructType type,
-      RefCountType rcType, long amount) {
-    for (StructField f: type.getFields()) {
-      AliasKey newKey = key.makeChild(f.getName());
-      Type fieldType = f.getType();
-      incrKey(newKey, rcType, amount, fieldType);
+    // Check to see if var/type may be able to carry refcount
+    Var var = getRefCountVar(null, key, false);
+    if ((var != null && RefCounting.hasRefCount(var, rcType)) ||
+        (var == null &&
+         RefCounting.mayHaveRefcount(varType, rcType))) {
+      incrDirect(key, rcType, amount);
     }
   }
 

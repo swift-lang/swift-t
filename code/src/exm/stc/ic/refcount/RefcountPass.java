@@ -1,9 +1,7 @@
 package exm.stc.ic.refcount;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Deque;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -22,12 +20,8 @@ import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.StructType;
-import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
-import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.opt.AliasTracker.AliasKey;
@@ -48,7 +42,6 @@ import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.Statement;
 import exm.stc.ic.tree.ICTree.StatementType;
 import exm.stc.ic.tree.Opcode;
-import exm.stc.ic.tree.TurbineOp;
 import exm.stc.ic.tree.TurbineOp.RefCountOp;
 import exm.stc.ic.tree.TurbineOp.RefCountOp.RCDir;
 
@@ -92,9 +85,8 @@ public class RefcountPass implements OptimizerPass {
 
     for (Function f: program.getFunctions()) {
       logger.trace("Entering function " + f.getName());
-      lookupStructArgMembers(logger, f);
       recurseOnBlock(logger, f, f.mainBlock(), new RCTracker(),
-          new TopDownInfo());
+                     new TopDownInfo());
     }
 
     this.functionMap = null;
@@ -141,12 +133,7 @@ public class RefcountPass implements OptimizerPass {
       TopDownInfo info) {
     
     for (Block block: cont.getBlocks()) {
-
-      // Workaround for e.g. foreach loops: lookup all struct members 
-      lookupAllStructMembers(block, cont.constructDefinedVars());
-      
       // Build separate copy for each block
-
       TopDownInfo contInfo = info.makeChild(cont);
 
       RCTracker increments = new RCTracker(contInfo.aliases);
@@ -193,7 +180,6 @@ public class RefcountPass implements OptimizerPass {
           parentInfo.initAliasVars);
     }
 
-    addTemporaryStructFields(block, increments, parentInfo);
   }
   
 
@@ -372,7 +358,7 @@ public class RefcountPass implements OptimizerPass {
       // Alias variables aren't allocated here. Struct variables have
       // members separately allocated, so don't want to double-decrement
       // struct members.
-      if (var.storage() != Alloc.ALIAS && !Types.isStruct(var)) {
+      if (var.storage() != Alloc.ALIAS) {
         increments.readDecr(var);
         increments.writeDecr(var);
       }
@@ -498,75 +484,6 @@ public class RefcountPass implements OptimizerPass {
       for (RefCount rc: foreach.getStartIncrements()) {
         increments.incr(rc.var, rc.type, 1);
         foreach.addConstantStartIncrement(rc.var, rc.type, Arg.createIntLit(-1));
-      }
-    }
-  }
-
-  /**
-   * Create temporary variables to hold struct aliases
-   * 
-   * @param increments
-   * @param parentAssignedAliasVars
-   */
-  private void addTemporaryStructFields(Block block, RCTracker increments,
-                                        TopDownInfo parentInfo) {
-    // Vars that were created out of order
-    Set<Var> alreadyCreated = new HashSet<Var>();
-    for (Var toCreate: increments.getCreatedTemporaries()) {
-      if (alreadyCreated.contains(toCreate))
-        continue;
-
-      // Keep track of insert position for instruction
-      ListIterator<Statement> insertPos = block.statementIterator();
-
-      AliasKey pathToCreate = increments.getAliases().getCanonical(toCreate);
-
-      Deque<Pair<String, Var>> stack = new ArrayDeque<Pair<String,Var>>();
-      int pos; // Track which the closest existing parent is
-      Var curr = toCreate;
-      for (pos = pathToCreate.pathLength() - 1; pos >= 0; pos--) {
-        stack.push(Pair.create(pathToCreate.structPath[pos], curr));
-        
-        AliasKey parentKey = pathToCreate.prefix(pos);
-        curr = increments.getAliases().findVar(parentKey);
-        assert(curr != null); // Should have been created previously
-        if (alreadyCreated.contains(curr) ||
-            !increments.getCreatedTemporaries().contains(curr)) {
-          // Should already be loaded, don't need to go further
-          break;
-        }
-      }
-      assert(pos >= 0); // At least the root should exist      
-      
-      // Track assigned alias vars in this block so we know where we can
-      // insert lookup instructions
-      TopDownInfo aliasInfo = parentInfo.makeChild();
-      Var parentStruct = curr;
-      // Do lookups in dependency order
-      while (!stack.isEmpty()) {
-        Pair<String, Var> toLookup = stack.pop();
-        String field = toLookup.val1;
-        Var child = toLookup.val2;
-        
-        // If curr is alias, may not be able to read yet:
-        // must scan down block for location where insert can occur
-        if (curr.storage() == Alloc.ALIAS) {
-          while (!aliasInfo.initAliasVars.contains(parentStruct)) {
-            assert (insertPos.hasNext()) : "Malformed IR, var not init: " +
-                    parentStruct;
-            Statement stmt = insertPos.next();
-            if (stmt.type() == StatementType.INSTRUCTION) {
-              aliasInfo.updateForInstruction(stmt.instruction());
-            }
-          }
-        }
-        Instruction newInst =
-              TurbineOp.structLookup(child, parentStruct, field);
-        insertPos.add(newInst);
-        aliasInfo.updateForInstruction(newInst);
-
-        alreadyCreated.add(child);
-        parentStruct = child;
       }
     }
   }
@@ -917,61 +834,6 @@ public class RefcountPass implements OptimizerPass {
       }
     }
     return null;
-  }
-
-  /**
-   * Workaround for Issue #438: just lookup all struct members at top
-   * so that at least the fields are in scope.
-   * @param logger
-   * @param f
-   */
-  @SuppressWarnings("unchecked")
-  private void lookupStructArgMembers(Logger logger, Function f) {
-    Block block = f.mainBlock();
-    ListIterator<Statement> insertPos = block.statementIterator();
-    for (List<Var> args: Arrays.asList(f.getInputList(), f.getOutputList())) {
-      lookupAllStructMembers(block, insertPos, args);
-    }
-  }
-
-  private void lookupAllStructMembers(Block block, List<Var> args) {
-    // Start inserting lookups at top
-    lookupAllStructMembers(block, block.statementIterator(), args);
-  }
-  
-  private void lookupAllStructMembers(Block block,
-      ListIterator<Statement> insertPos, List<Var> args) {
-    for (Var arg: args) {
-      if (Types.isStruct(arg)) {
-        lookupAllStructMembers(block, insertPos, arg);
-      }
-    }
-  }
-
-  private void lookupAllStructMembers(Block block,
-          ListIterator<Statement> insertPos, Var arg) {
-    assert(Types.isStruct(arg));
-    StructType st = (StructType)arg.type().getImplType();
-    for (StructField field: st.getFields()) {
-      // Fetch field
-      String fieldVarName = block.uniqueVarName(
-                              Var.structFieldName(arg, field.getName()));
-      Var fieldVar = block.declareUnmapped(field.getType(), fieldVarName,
-               Alloc.ALIAS, DefType.LOCAL_COMPILER,
-               VarProvenance.structField(arg, field.getName()));
-      Instruction inst = TurbineOp.structLookup(fieldVar, arg, field.getName());
-      if (logger.isTraceEnabled()) {
-        logger.trace("Added struct loop for arg " + arg + "." + field.getName()
-                     + ": " + inst); 
-      }
-      insertPos.add(inst);
-      inst.setParent(block);
-      
-      // Recurse on all fields
-      if (Types.isStruct(field.getType())) {
-        lookupAllStructMembers(block, insertPos, fieldVar);
-      }
-    }
   }
 
   /**
