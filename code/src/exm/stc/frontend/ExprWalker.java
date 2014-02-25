@@ -17,6 +17,7 @@ package exm.stc.frontend;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -323,10 +324,20 @@ public class  ExprWalker {
                               VarRepr.backendVar(structVar), fieldName);
     } else {
       assert(Types.isStruct(structVar.type()));
-      result = varCreator.createStructFieldTmp(context, 
-          rootStruct, memType, fieldPath, Alloc.ALIAS);
-      backend.structLookup(VarRepr.backendVar(result), 
-                           VarRepr.backendVar(structVar), fieldName);
+      if (outVar == null) {
+        // Just create alias for later use
+        result = varCreator.createStructFieldAlias(context, 
+                            rootStruct, memType, fieldPath);
+        backend.structCreateAlias(VarRepr.backendVar(result), 
+                                  VarRepr.backendVar(structVar),
+                                  Collections.singletonList(fieldName));
+      } else{
+        // Copy to existing output variable
+        backend.structCopyOut(VarRepr.backendVar(outVar), 
+                              VarRepr.backendVar(structVar),
+                              Collections.singletonList(fieldName));
+        result = outVar;
+      }
     }
 
     // If necessary, copy result to outVar

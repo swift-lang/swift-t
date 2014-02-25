@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Set;
 
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.lang.Var.Alloc;
 
 /**
@@ -463,6 +464,32 @@ public class Types {
         }
       }
       return null;
+    }
+    
+    /**
+     * Follow field path through one or more levels of structs to
+     * find type
+     * @param fields
+     * @return
+     * @throw {@link TypeMismatchException} if path invalid
+     */
+    public Type getFieldTypeByPath(List<String> fields) 
+        throws TypeMismatchException {
+      Type curr = this;
+      for (String field: fields) {
+        curr = curr.getImplType();
+        if (!(curr instanceof StructType)) {
+          throw new TypeMismatchException("Can't lookup field " + field +
+                                          " in non-struct type: " + curr);
+        }
+        Type fieldType = ((StructType)curr).getFieldTypeByName(field);
+        if (fieldType == null) {
+          throw new TypeMismatchException("Field " + field + " does not "
+                                      + " exist in struct type " + curr);
+        }
+        curr = fieldType;
+      }
+      return curr;
     }
 
     public int getFieldIndexByName(String name) {

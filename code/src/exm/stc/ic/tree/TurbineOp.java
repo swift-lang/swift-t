@@ -204,7 +204,7 @@ public class TurbineOp extends Instruction {
       gen.structLookup(getOutput(0), getInput(0).getVar(),
                        getInput(1).getStringLit());
       break;
-    case STRUCTREF_LOOKUP:
+    case STRUCTREF_COPY_OUT:
       gen.structRefLookup(getOutput(0), getInput(0).getVar(),
                            getInput(1).getStringLit());
       break;
@@ -544,7 +544,7 @@ public class TurbineOp extends Instruction {
   
   public static Instruction structRefLookup(Var oVar, Var structVar,
       String fieldName) {
-    return new TurbineOp(Opcode.STRUCTREF_LOOKUP,
+    return new TurbineOp(Opcode.STRUCTREF_COPY_OUT,
             oVar, structVar.asArg(),
             Arg.createStringLit(fieldName));
   }
@@ -984,7 +984,7 @@ public class TurbineOp extends Instruction {
     case LOAD_REF:
     case STORE_REF:
     case COPY_REF:
-    case STRUCTREF_LOOKUP:
+    case STRUCTREF_COPY_OUT:
     case ARR_RETRIEVE:
     case LATEST_VALUE:
         // Always has alias as output because the instructions initialises
@@ -1116,7 +1116,7 @@ public class TurbineOp extends Instruction {
       }
       break;  
     }
-    case STRUCTREF_LOOKUP: {
+    case STRUCTREF_COPY_OUT: {
       Var structRef = getInput(0).getVar();
       if (waitForClose || closedVars.contains(structRef)) {
         return new MakeImmRequest(null, structRef.asList());
@@ -1310,7 +1310,7 @@ public class TurbineOp extends Instruction {
       return new MakeImmChange(
           containerLocalSize(getOutput(0), localCont));
     }
-    case STRUCTREF_LOOKUP: {
+    case STRUCTREF_COPY_OUT: {
       assert(values.size() == 1);
       // OUtput switched from ref to value
       Var newStruct = values.get(0).fetched.getVar();
@@ -1725,7 +1725,7 @@ public class TurbineOp extends Instruction {
     case ARR_COPY_OUT_IMM:
     case DEREF_SCALAR:
     case DEREF_FILE:
-    case STRUCTREF_LOOKUP:
+    case STRUCTREF_COPY_OUT:
     case ARR_COPY_OUT_FUTURE:
     case AREF_CREATE_NESTED_FUTURE:
     case ARR_CREATE_NESTED_FUTURE:
@@ -2137,7 +2137,7 @@ public class TurbineOp extends Instruction {
         Var ix = getInput(0).getVar();
         return Pair.create(ix.asList(), srcArray.asList());
       }
-      case STRUCTREF_LOOKUP: {
+      case STRUCTREF_COPY_OUT: {
         return Pair.create(Arrays.asList(getInput(0).getVar()),
                            Var.NONE);
       }
@@ -2310,7 +2310,7 @@ public class TurbineOp extends Instruction {
         // Sometimes a reference is filled in
         return Pair.create(getOutput(0), getInput(0).getVar());
       case STRUCT_LOOKUP:
-      case STRUCTREF_LOOKUP:
+      case STRUCTREF_COPY_OUT:
         // Output is alias for part of struct
         return Pair.create(getOutput(0), getInput(0).getVar());
       default:

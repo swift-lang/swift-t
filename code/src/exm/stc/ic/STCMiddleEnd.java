@@ -31,6 +31,7 @@ import exm.stc.common.CompilerBackend.RefCount;
 import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
@@ -885,12 +886,58 @@ public class STCMiddleEnd {
     currBlock().addInstruction(Builtin.createAsync(op, out, in, props));
   }
 
-  public void structLookup(Var result, Var structVar, String structField) {
-    assert(Types.isStruct(structVar.type()));
-    assert(result.storage() == Alloc.ALIAS);
+  public void unpackArrayToFlat(Var flatLocalArray, Arg inputArray) {
+    // TODO: other container types?
+    assert(Types.isArray(inputArray.type()));
+    NestedContainerInfo c = new NestedContainerInfo(inputArray.type());
+    assert(Types.isArrayLocal(flatLocalArray));
+    Type baseType = c.baseType;
+    
+    // Get type inside reference
+    if (Types.isRef(baseType)) {
+      baseType = Types.retrievedType(baseType);
+    }
+  
+    Type memberValT = Types.retrievedType(baseType);
+  
+    //System.err.println(c.baseType + " => " + memberValT); 
+    
+    assert(memberValT.assignableTo(Types.containerElemType(flatLocalArray)))
+      : memberValT + " " + flatLocalArray;
+    
     currBlock().addInstruction(
-        TurbineOp.structLookup(result, structVar, structField));
+        TurbineOp.unpackArrayToFlat(flatLocalArray, inputArray));
+  }
 
+  public void structCreateAlias(Var fieldAlias, Var struct,
+                                List<String> fieldPath) {
+    assert(Types.isStruct(struct));
+    StructType structType = (StructType)struct.type().getImplType();
+    Type fieldType;
+    try {
+      fieldType = structType.getFieldTypeByPath(fieldPath);
+    } catch (TypeMismatchException e) {
+      throw new STCRuntimeError(e.getMessage());
+    }
+    assert(fieldType.assignableTo(fieldAlias.type()));
+    assert(fieldAlias.storage() == Alloc.ALIAS);
+    
+    throw new STCRuntimeError("TODO: not implemented");
+  }
+  
+  public void structCopyOut(Var target, Var struct,
+                            List<String> fieldPath) {
+    assert(Types.isStruct(struct));
+    StructType structType = (StructType)struct.type().getImplType();
+    Type fieldType;
+    try {
+      fieldType = structType.getFieldTypeByPath(fieldPath);
+    } catch (TypeMismatchException e) {
+      throw new STCRuntimeError(e.getMessage());
+    }
+    assert(fieldType.assignableTo(target.type()));
+    
+    throw new STCRuntimeError("TODO: not implemented");
   }
   
   public void structRefLookup(Var result, Var structVar,
@@ -1139,28 +1186,5 @@ public class STCMiddleEnd {
     assert(Types.isBlobVal(packedValues));
     currBlock().addInstruction(
         TurbineOp.unpackValues(values, packedValues.asArg()));
-  }
-
-  public void unpackArrayToFlat(Var flatLocalArray, Arg inputArray) {
-    // TODO: other container types?
-    assert(Types.isArray(inputArray.type()));
-    NestedContainerInfo c = new NestedContainerInfo(inputArray.type());
-    assert(Types.isArrayLocal(flatLocalArray));
-    Type baseType = c.baseType;
-    
-    // Get type inside reference
-    if (Types.isRef(baseType)) {
-      baseType = Types.retrievedType(baseType);
-    }
-   
-    Type memberValT = Types.retrievedType(baseType);
-
-    //System.err.println(c.baseType + " => " + memberValT); 
-    
-    assert(memberValT.assignableTo(Types.containerElemType(flatLocalArray)))
-      : memberValT + " " + flatLocalArray;
-    
-    currBlock().addInstruction(
-        TurbineOp.unpackArrayToFlat(flatLocalArray, inputArray));
   }
 }

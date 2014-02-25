@@ -20,7 +20,6 @@ import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Types.RefType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.Alloc;
 import exm.stc.frontend.tree.Assignment;
 import exm.stc.frontend.tree.Assignment.AssignOp;
 import exm.stc.frontend.tree.LValue;
@@ -295,25 +294,20 @@ public class LValWalker {
     }
     final int structPathLen = structPathIndex;
 
-    Var curr = rootVar;
-    for (int i = 0; i < structPathLen; i++) {
-      List<String> currPath = fieldPath.subList(0, i + 1);
-      Var next = varCreator.createStructFieldTmp(context, rootVar,
-          lval.getType(context, i + 1), currPath, Alloc.ALIAS);
-
-      backend.structLookup(VarRepr.backendVar(next), VarRepr.backendVar(curr),
-                           fieldPath.get(i));
-      LogHelper.trace(context, "Lookup " + curr + "." + fieldPath.get(i));
-      curr = next;
-    }
-    LValue newTarget = new LValue(lval, lval.tree, curr, lval.indices.subList(
-        structPathLen, lval.indices.size()));
+    Var fieldAlias = varCreator.createStructFieldAlias(context, rootVar,
+              lval.getType(context, structPathLen - 1), fieldPath);
+    backend.structCreateAlias(VarRepr.backendVar(fieldAlias),
+                      VarRepr.backendVar(rootVar), fieldPath);
+    
+    List<SwiftAST> indicesLeft =
+          lval.indices.subList(structPathLen, lval.indices.size());
+      LValue newTarget = new LValue(lval, lval.tree, fieldAlias, indicesLeft);
+      
     LogHelper.trace(context, "Transform target " + lval.toString() + "<"
         + lval.getType(context).toString() + "> to " + newTarget.toString()
         + "<" + newTarget.getType(context).toString() + "> by looking up "
         + structPathLen + " fields");
-    //return newTarget;
-    throw new STCRuntimeError("Need to revisit struct lval handling");
+    return newTarget;
   }
 
   /**

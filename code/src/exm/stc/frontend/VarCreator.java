@@ -155,6 +155,14 @@ public class VarCreator {
     return val;
   }
   
+  
+  public Var createStructFieldAlias(Context context, Var rootStruct, 
+      Type memType, List<String> fieldPath)
+          throws UndefinedTypeException {
+    return createStructFieldTmp(context, rootStruct, memType, fieldPath,
+            Alloc.ALIAS);
+  }
+  
   public Var createStructFieldTmp(Context context, Var rootStruct, 
                   Type memType, List<String> fieldPath,
                   Alloc storage) throws UndefinedTypeException {

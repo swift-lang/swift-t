@@ -78,10 +78,15 @@ public enum Opcode {
   // Create new bag inside array
   ARRAY_CREATE_BAG,
   
-  // Lookup in local struct
-  STRUCT_LOOKUP,
-  // Lookup in reference to struct
-  STRUCTREF_LOOKUP,
+
+  // Create alias of struct field
+  STRUCT_CREATE_ALIAS,
+  // Retrieve field from struct
+  STRUCT_RETRIEVE,
+  // Copy out field from struct
+  STRUCT_COPY_OUT,
+  // Copy out element of struct reference
+  STRUCTREF_COPY_OUT,
   // Assign or copy to struct
   STRUCT_STORE, STRUCTREF_STORE, STRUCT_COPY_IN, STRUCTREF_COPY_IN,
   
