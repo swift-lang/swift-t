@@ -1662,7 +1662,8 @@ struct_all_notifs(adlb_datum *d, adlb_datum_id id,
       int key_len = sprintf(key, "%i", i);
       adlb_subscript sub = { .key = key,
                              .length = (size_t)key_len };
-      dc = all_notifs_step(d, id, sub, &field->data, st->field_types[i],
+      dc = all_notifs_step(d, id, sub, &field->data,
+                           st->field_types[i].type,
                            notify, garbage_collected);
       DATA_CHECK(dc);
 

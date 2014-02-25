@@ -80,7 +80,7 @@ static inline adlb_data_code resize_struct_types(adlb_struct_type new_type)
 adlb_data_code ADLB_Declare_struct_type(adlb_struct_type type,
                     const char *type_name,
                     int field_count,
-                    const adlb_data_type *field_types,
+                    const adlb_struct_field_type *field_types,
                     const char **field_names)
 {
   adlb_data_code dc;
@@ -173,7 +173,8 @@ adlb_data_code struct_type_free(xlb_struct_type_info *t)
 adlb_data_code
 ADLB_Lookup_struct_type(adlb_struct_type type,
                   const char **type_name, int *field_count,
-                  const adlb_data_type **field_types, char ***field_names)
+                  const adlb_struct_field_type **field_types,
+                  char ***field_names)
 {
   check_valid_type(type);
 
@@ -268,11 +269,12 @@ ADLB_Unpack_struct(adlb_struct **s, const void *data, int length,
       if (!init_struct && (*s)->fields[i].initialized)
       {
         // Free any existing data
-        dc = ADLB_Free_storage(&(*s)->fields[i].data, t->field_types[i]);
+        dc = ADLB_Free_storage(&(*s)->fields[i].data,
+                               t->field_types[i].type);
         DATA_CHECK(dc);
       }
 
-      ADLB_Unpack(&(*s)->fields[i].data, t->field_types[i],
+      ADLB_Unpack(&(*s)->fields[i].data, t->field_types[i].type,
                   field_start, field_len);
     }
     (*s)->fields[i].initialized = field_init;
@@ -311,7 +313,7 @@ adlb_data_code ADLB_Pack_struct(const adlb_struct *s,
 
   for (int i = 0; i < t->field_count; i++)
   {
-    adlb_data_type field_t = t->field_types[i];
+    adlb_data_type field_t = t->field_types[i].type;
     adlb_binary_data field_data;
       
     bool init = s->fields[i].initialized;
@@ -377,7 +379,7 @@ adlb_data_code xlb_struct_get_field(adlb_struct *s, int field_ix,
   adlb_data_code dc = get_field(s, field_ix, &st, &f);
   DATA_CHECK(dc);
 
-  *type = st->field_types[field_ix];
+  *type = st->field_types[field_ix].type;
   DEBUG("Field type: %s", ADLB_Data_type_tostring(*type));
   if (f->initialized)
   {
@@ -432,10 +434,10 @@ adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,
   check_verbose(!f->initialized, ADLB_DATA_ERROR_DOUBLE_WRITE,
         "Field %s of struct type %s already set",
         st->field_names[field_ix], st->type_name);
-  check_verbose(st->field_types[field_ix] == type, ADLB_DATA_ERROR_TYPE,
+  check_verbose(st->field_types[field_ix].type == type, ADLB_DATA_ERROR_TYPE,
         "Invalid type %s when assigning to field %s: expected %s",
         ADLB_Data_type_tostring(type), st->field_names[field_ix],
-        ADLB_Data_type_tostring(st->field_types[field_ix]));
+        ADLB_Data_type_tostring(st->field_types[field_ix].type));
 
   // TODO: recursively traverse nested structs to do assign?
 
@@ -468,7 +470,7 @@ adlb_data_code xlb_free_struct(adlb_struct *s, bool free_root_ptr)
   {
     if (s->fields[i].initialized)
     {
-      dc = ADLB_Free_storage(&s->fields[i].data, t->field_types[i]);
+      dc = ADLB_Free_storage(&s->fields[i].data, t->field_types[i].type);
       DATA_CHECK(dc);
     }
   }
@@ -506,7 +508,7 @@ xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
 
     bool acquire_field = acquiring &&
                          (acquire_ix < 0 || acquire_ix == i);
-    dc = xlb_incr_referand(&s->fields[i].data, t->field_types[i],
+    dc = xlb_incr_referand(&s->fields[i].data, t->field_types[i].type,
             release_read, release_write,
             (acquire_field ? to_acquire : XLB_NO_ACQUIRE), rc_changes);
     DATA_CHECK(dc);
@@ -550,7 +552,8 @@ char *xlb_struct_repr(adlb_struct *s)
     {
       if (s->fields[i].initialized)
       {
-        field_reprs[i] = ADLB_Data_repr(&s->fields[i].data, t->field_types[i]);
+        field_reprs[i] = ADLB_Data_repr(&s->fields[i].data,
+                                        t->field_types[i].type);
         total_len += (int)strlen(field_reprs[i]);
       }
       else

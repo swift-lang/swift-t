@@ -10,12 +10,21 @@
 #include "data.h"
 #include "notifications.h"
 
+/*
+  Type of a struct field.
+  Need extra type info because we might need to initialize the data
+  item, e.g. if a subscript of a field is assigned.  If extra type
+  info is required to initialize the type, and it is not provided,
+  any operation that requires initializing the field will fail.
+  Currently the extra type info is only used to initialize fields:
+  it is not used to type-check assignments to fields.
+ */
 typedef struct {
   bool initialized;
   char *type_name;
   int field_count;
   char **field_names;
-  adlb_data_type *field_types;
+  adlb_struct_field_type *field_types;
 } xlb_struct_type_info;
 
 adlb_data_code xlb_new_struct(adlb_struct_type type, adlb_struct **s);

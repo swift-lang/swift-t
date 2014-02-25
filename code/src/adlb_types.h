@@ -132,10 +132,18 @@ typedef struct adlb_struct_s {
   adlb_struct_field fields[];
 } adlb_struct;
 
+typedef struct {
+  adlb_data_type type;
+  adlb_type_extra extra;
+} adlb_struct_field_type;
+
 /*
    Declare a struct type.  This function must be called on all
    processes separately.
    type: the index of the struct type
+   type_name: name of the type, which must not conflict with an
+         existing adlb type (e.g. int), or an already-declared struct
+         type.  This can be later used to create structs of that type.
    field_count: number of fields
    field_types: types of fields
    field_names: names of fields
@@ -144,7 +152,7 @@ adlb_data_code
 ADLB_Declare_struct_type(adlb_struct_type type,
                     const char *type_name,
                     int field_count,
-                    const adlb_data_type *field_types,
+                    const adlb_struct_field_type *field_types,
                     const char **field_names);
 
 /*
@@ -153,7 +161,8 @@ ADLB_Declare_struct_type(adlb_struct_type type,
 adlb_data_code
 ADLB_Lookup_struct_type(adlb_struct_type type,
                   const char **type_name, int *field_count,
-                  const adlb_data_type **field_types, char ***field_names);
+                  const adlb_struct_field_type **field_types,
+                  char ***field_names);
 
 // adlb_binary_data: struct to represent
 typedef struct {

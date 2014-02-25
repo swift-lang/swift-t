@@ -74,7 +74,7 @@ typedef enum
 typedef short adlb_data_type_short;
 
 // Identifier for sub-types of ADLB struct
-typedef int adlb_struct_type;
+typedef int16_t adlb_struct_type;
 
 // Additional type info for particular types
 typedef struct {
