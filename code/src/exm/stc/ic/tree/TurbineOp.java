@@ -1056,6 +1056,7 @@ public class TurbineOp extends Instruction {
     case LOAD_REF:
     case STORE_REF:
     case COPY_REF:
+    case STRUCT_CREATE_ALIAS:
     case STRUCT_RETRIEVE:
     case STRUCT_COPY_OUT:
     case STRUCTREF_COPY_OUT:
