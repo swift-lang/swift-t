@@ -2270,8 +2270,7 @@ public class Types {
    */
   public static boolean inputRequiresInitialization(Var input) {
     return input.storage() == Alloc.ALIAS 
-        || isPrimUpdateable(input)
-        || isStruct(input); // Need to load all struct members
+        || isPrimUpdateable(input);
   }
   
   /**

@@ -739,6 +739,7 @@ public class  ExprWalker {
     
     SwiftAST structTree = tree.child(0);
     LinkedList<String> pathFromRoot = new LinkedList<String>();
+    pathFromRoot.addFirst(tree.child(1).getText());
     /* 
      * Walk the tree to find out the full path if we are accessing a nested 
      * struct.  rootStruct should be the name of the outermost nested struct 

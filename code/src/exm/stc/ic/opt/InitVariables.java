@@ -12,7 +12,6 @@ import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
-import exm.stc.common.util.HierarchicalMap;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
@@ -34,26 +33,19 @@ public class InitVariables {
   public static class InitState {
     public final HierarchicalSet<Var> initVars;
     public final HierarchicalSet<Var> assignedVals;
-    /** Track which struct fields remain to be initialized
-     *  (if there is no entry, none are) */
-    public final HierarchicalMap<Var, List<String>> uninitStructFields;
     
     private InitState(HierarchicalSet<Var> initVars,
-        HierarchicalSet<Var> assignedVals,
-        HierarchicalMap<Var, List<String>> uninitStructFields) {
+        HierarchicalSet<Var> assignedVals) {
       this.initVars = initVars;
       this.assignedVals = assignedVals;
-      this.uninitStructFields = uninitStructFields;
     }
     
     private InitState() {
-      this(new HierarchicalSet<Var>(), new HierarchicalSet<Var>(),
-           new HierarchicalMap<Var, List<String>>());
+      this(new HierarchicalSet<Var>(), new HierarchicalSet<Var>());
     }
     
     private InitState makeChild() {
-      return new InitState(initVars.makeChild(), assignedVals.makeChild(),
-                           uninitStructFields.makeChildMap());
+      return new InitState(initVars.makeChild(), assignedVals.makeChild());
     }
 
     /**
