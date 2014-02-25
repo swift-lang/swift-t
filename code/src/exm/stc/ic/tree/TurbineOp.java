@@ -1052,11 +1052,12 @@ public class TurbineOp extends Instruction {
         // Maybe mapped
         return true;
       }
-      
-    case STRUCT_LOOKUP:
+
     case LOAD_REF:
     case STORE_REF:
     case COPY_REF:
+    case STRUCT_RETRIEVE:
+    case STRUCT_COPY_OUT:
     case STRUCTREF_COPY_OUT:
     case ARR_RETRIEVE:
     case LATEST_VALUE:
@@ -1390,7 +1391,9 @@ public class TurbineOp extends Instruction {
           containerLocalSize(getOutput(0), localCont));
     }
     case STRUCTREF_COPY_OUT: {
-      assert(values.size() == 1);
+      assert(values.size() == 1); 
+      throw new STCRuntimeError("TODO: not implemented");
+      /*
       // OUtput switched from ref to value
       Var newStruct = values.get(0).fetched.getVar();
       assert(Types.isRefTo(getInput(0).getVar(), newStruct));
@@ -1398,7 +1401,7 @@ public class TurbineOp extends Instruction {
       Var valOut = creator.createDerefTmp(refOut);
       String field = getInput(1).getStringLit();
       Instruction newI = structLookup(valOut, newStruct, field);
-      return new MakeImmChange(valOut, refOut, newI);
+      return new MakeImmChange(valOut, refOut, newI);*/
     }
     case ARR_COPY_IN_IMM: {
       assert(values.size() == 1);
@@ -1615,7 +1618,8 @@ public class TurbineOp extends Instruction {
         return Arrays.asList(Pair.create(getOutput(0), InitType.FULL));
 
       case ARR_RETRIEVE:
-      case STRUCT_LOOKUP: {
+      case STRUCT_RETRIEVE:
+      case STRUCT_CREATE_ALIAS: {
         // May initialise alias if we're looking up a reference
         Var output = getOutput(0);
         if (output.storage() == Alloc.ALIAS) {
@@ -1770,7 +1774,7 @@ public class TurbineOp extends Instruction {
     case LATEST_VALUE:
     case ARR_STORE:
     case STRUCT_STORE:
-    case STRUCT_LOOKUP:
+    case STRUCT_RETRIEVE:
     case ARR_CREATE_NESTED_IMM:
     case ARRAY_CREATE_BAG:
     case STORE_REF:
@@ -1815,7 +1819,6 @@ public class TurbineOp extends Instruction {
     case ARR_COPY_OUT_IMM:
     case DEREF_SCALAR:
     case DEREF_FILE:
-    case STRUCTREF_COPY_OUT:
     case ARR_COPY_OUT_FUTURE:
     case AREF_CREATE_NESTED_FUTURE:
     case ARR_CREATE_NESTED_FUTURE:
@@ -1825,6 +1828,8 @@ public class TurbineOp extends Instruction {
     case STRUCT_COPY_IN:
     case STRUCTREF_STORE:
     case STRUCTREF_COPY_IN:
+    case STRUCT_COPY_OUT:
+    case STRUCTREF_COPY_OUT:
       return TaskMode.LOCAL;
     default:
       throw new STCRuntimeError("Need to add opcode " + op.toString()
@@ -2429,8 +2434,7 @@ public class TurbineOp extends Instruction {
       case STORE_REF:
         // Sometimes a reference is filled in
         return Pair.create(getOutput(0), getInput(0).getVar());
-      case STRUCT_LOOKUP:
-      case STRUCTREF_COPY_OUT:
+      case STRUCT_CREATE_ALIAS:
         // Output is alias for part of struct
         return Pair.create(getOutput(0), getInput(0).getVar());
       default:
