@@ -1776,6 +1776,7 @@ public class TurbineOp extends Instruction {
     case ARR_STORE:
     case STRUCT_STORE:
     case STRUCT_RETRIEVE:
+    case STRUCT_CREATE_ALIAS:
     case ARR_CREATE_NESTED_IMM:
     case ARRAY_CREATE_BAG:
     case STORE_REF:
