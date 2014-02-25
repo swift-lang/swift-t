@@ -921,14 +921,17 @@ static int type_from_string(Tcl_Interp *interp, const char* type_string,
   return TCL_OK;
 }
 
+/**
+  Extract type info from object.
+
+  Does not return any extra type info, if present
+ */
 int type_from_obj(Tcl_Interp *interp, Tcl_Obj *const objv[],
-                         Tcl_Obj* obj, adlb_data_type *type)
+                   Tcl_Obj* obj, adlb_data_type *type)
 {
   adlb_type_extra extra;
   int rc = type_from_obj_extra(interp, objv, obj, type, &extra);
   TCL_CHECK(rc);
-  TCL_CONDITION(!extra.valid, "didn't expect extra type info in %s",
-                             Tcl_GetString(obj));
   return TCL_OK;
 }
 
