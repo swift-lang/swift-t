@@ -1034,8 +1034,7 @@ public class ASTWalker {
     for (LoopVar lv: forLoop.getLoopVars()) {
       if (lv.declaredOutsideLoop) {
         exprWalker.copyByValue(loopFinalizeContext, 
-            lv.var, parentLoopVarAliases.get(lv.var.name()), 
-            lv.var.type());
+            lv.var, parentLoopVarAliases.get(lv.var.name()));
       }
     }
     
