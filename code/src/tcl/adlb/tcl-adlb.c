@@ -4074,6 +4074,82 @@ ADLB_Dict_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
+ * Handle input of forms:
+ * - 124 (plain ID)
+ * - 1234 "a" "353" (id + two subscripts in list)
+ * - etc
+ */
+static int
+Extract_ADLB_Handle(Tcl_Interp *interp, Tcl_Obj *const objv[],
+        Tcl_Obj *obj, adlb_datum_id *id, Tcl_Obj ***subscript_list,
+        int *subscript_list_len)
+{
+  int rc;
+  rc = Tcl_GetADLB_ID(interp, obj, id);
+  if (rc == TCL_OK)
+  {
+    *subscript_list_len = 0;
+    return TCL_OK;
+  }
+  
+  rc = Tcl_ListObjGetElements(interp, obj, subscript_list_len, subscript_list);
+  TCL_CHECK_MSG(rc, "Not a valid ADLB datum handle: %s",
+                    Tcl_GetString(obj));
+  
+  TCL_CONDITION(*subscript_list_len >= 1,
+        "Not a valid ADLB datum handle - empty");
+
+  rc = Tcl_GetADLB_ID(interp, (*subscript_list)[0], id);
+  TCL_CHECK_MSG(rc, "Not a valid ADLB datum handle, "
+              "first elem must be ID: %s", Tcl_GetString(obj));
+
+  // Return trailing elems
+  (*subscript_list_len)--;
+  (*subscript_list)++;
+  
+  return TCL_OK;
+}
+
+/**
+  Build a handle for an id + subscript.
+  adlb::subscript <handle> [<subscript>]*
+  handle: either an id, or a handle built by this function
+ */
+static int
+ADLB_Subscript_Cmd(ClientData cdata, Tcl_Interp *interp,
+               int objc, Tcl_Obj *const objv[])
+{
+  int rc;
+  adlb_datum_id id;
+  Tcl_Obj **subscript_list;
+  int subscript_list_len;
+
+  // Try to extract as in
+  rc = Extract_ADLB_Handle(interp, objv, objv[1], &id, &subscript_list,
+                           &subscript_list_len);
+  TCL_CHECK(rc);
+
+
+  int new_len = 1 + subscript_list_len + objc - 2;
+  Tcl_Obj* items[new_len];
+  int next_item = 0;
+
+  items[next_item++] = Tcl_NewADLB_ID(id);
+  for (int i = 2; i < objc; i++)
+  {
+    items[next_item++] = objv[i];
+  }
+  for (int i = 0; i < subscript_list_len; i++)
+  {
+    items[next_item++] = subscript_list[i];
+  }
+
+  Tcl_Obj* result = Tcl_NewListObj(new_len, items);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
+/**
    usage: adlb::fail
  */
 static int
@@ -4232,6 +4308,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("xpt_unpack", ADLB_Xpt_Unpack_Cmd);
   COMMAND("xpt_reload", ADLB_Xpt_Reload_Cmd);
   COMMAND("dict_create", ADLB_Dict_Create_Cmd);
+  COMMAND("subscript", ADLB_Subscript_Cmd);
   COMMAND("fail",      ADLB_Fail_Cmd);
   COMMAND("abort",     ADLB_Abort_Cmd);
   COMMAND("finalize",  ADLB_Finalize_Cmd);
