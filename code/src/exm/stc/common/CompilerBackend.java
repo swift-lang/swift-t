@@ -215,17 +215,15 @@ public interface CompilerBackend {
            Redirects<Arg> redirects,
            boolean hasSideEffects, boolean deterministic);
   
-  /**
-   * lookup structVarName.structField and copy to oVarName
-   * @param result
-   * @param structVar
-   * @param structField
-   */
-  public void structLookup(Var result, Var structVar,
-      String structField);
+  public void structCreateAlias(Var output, Var struct,
+                                List<String> fields);
+  public void structRetrieve(Var output, Var struct,
+      List<String> fields);
+  public void structCopyOut(Var output, Var struct,
+      List<String> fields);
   
   public void structRefLookup(Var result, Var structVar,
-      String fieldName);
+                              List<String> fields);
 
   /**
    * Copy in value of variable to struct field 
@@ -234,14 +232,14 @@ public interface CompilerBackend {
    * @param fieldContents
    */
 
-  public void structStore(Var struct, String fieldName,
+  public void structStore(Var struct, List<String> fields,
                            Arg fieldContents);
-  public void structCopyIn(Var struct, String fieldName,
+  public void structCopyIn(Var struct, List<String> fields,
       Var fieldContents);
-  public void structRefStore(Var structRef, String fieldName,
+  public void structRefStore(Var structRef, List<String> fields,
                            Arg fieldContents);
-  public void structRefCopyIn(Var structRef, String fieldName,
-                           Var fieldContents );
+  public void structRefCopyIn(Var structRef, List<String> fields,
+                           Var fieldContents);
   /**
    * Direct lookup of array without any blocking at all.  This is only
    * safe to use if we know the array is closed, or if we know that the

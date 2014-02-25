@@ -1404,78 +1404,118 @@ public class TurbineGenerator implements CompilerBackend {
     }
   }
   
+  /**
+   * Construct subscript expression for struct
+   * @param struct
+   * @param fields
+   * @return
+   */
+  public static Expression structSubscript(Var struct,
+                                           List<String> fields) {
+    assert(Types.isStruct(struct) || Types.isStructRef(struct));
+
+    Type curr = struct.type().getImplType();
+    if (Types.isStructRef(curr)) {
+      curr = curr.memberType();
+    }
+    
+    // use struct type info to construct index list
+    int indices[] = new int[fields.size()];
+    for (int i = 0; i < fields.size(); i++) {
+      assert(curr instanceof StructType);
+      String field = fields.get(i);
+      int fieldIx = ((StructType)curr).getFieldIndexByName(field);
+      indices[i] = fieldIx;
+    }
+    return Turbine.structSubscript(indices);
+  }
+
   @Override
-  public void structStore(Var struct, String fieldName,
+  public void structStore(Var struct, List<String> fields,
       Arg fieldContents) {
     assert(Types.isStruct(struct));
-    StructType st = (StructType)struct.type().getImplType();
-    Type fieldType = st.getFieldTypeByName(fieldName);
-    assert(fieldType != null);
-    assert(fieldContents.type().assignableTo(
-                  Types.retrievedType(fieldType)));
-    throw new STCRuntimeError("Not yet implemented");
+    assert(Types.isStructFieldVal(struct, fields, fieldContents));
+    Expression subscript = structSubscript(struct, fields);
+    throw new STCRuntimeError("TODO: Not yet implemented");
   }
   
   @Override
-  public void structCopyIn(Var struct, String fieldName,
+  public void structCopyIn(Var struct, List<String> fields,
                            Var fieldContents) {
     assert(Types.isStruct(struct));
-    StructType st = (StructType)struct.type().getImplType();
-    Type fieldType = st.getFieldTypeByName(fieldName);
-    assert(fieldType != null);
-    assert(fieldContents.type().assignableTo(fieldType));
-    throw new STCRuntimeError("Not yet implemented");
+    assert(Types.isStructField(struct, fields, fieldContents));
+    Expression subscript = structSubscript(struct, fields);
+    throw new STCRuntimeError("TODO: Not yet implemented");
   }
   
   @Override
-  public void structRefCopyIn(Var structRef, String fieldName,
+  public void structRefCopyIn(Var structRef, List<String> fields,
                            Var fieldContents) {
     assert(Types.isStructRef(structRef));
-    StructType st = (StructType)structRef.type().getImplType().memberType();
-    Type fieldType = st.getFieldTypeByName(fieldName); 
-    assert(fieldType != null);
-    assert(fieldContents.type().assignableTo(fieldType));
+    assert(Types.isStructField(structRef, fields, fieldContents));
+    Expression subscript = structSubscript(structRef, fields);
     throw new STCRuntimeError("Not yet implemented");
   }
 
   @Override
-  public void structRefStore(Var structRef, String fieldName,
+  public void structRefStore(Var structRef, List<String> fields,
       Arg fieldContents) {
     assert(Types.isStructRef(structRef));
-    StructType st = (StructType)structRef.type().getImplType().memberType();
-    Type fieldType = st.getFieldTypeByName(fieldName); 
-    assert(fieldType != null);
-    assert(fieldContents.type().assignableTo(
-        Types.retrievedType(fieldType)));
+    assert(Types.isStructField(structRef, fields, fieldContents));
+    Expression subscript = structSubscript(structRef, fields);
     throw new STCRuntimeError("Not yet implemented");
   }
   
   /**
-   * load the turbine id of the field into alias
+   * Create alias for a struct field
    * @param structVar
    * @param structField
    * @param alias
    */
   @Override
-  public void structLookup(Var alias, Var structVar,
-        String structField) {
-    pointAdd(
-        Turbine.structLookupFieldID(varToExpr(structVar),
-            structField, prefixVar(alias)));
+  public void structCreateAlias(Var alias, Var struct,
+                           List<String> fields) {
+    assert(alias.storage() == Alloc.ALIAS);
+    assert(Types.isStruct(struct));
+    assert(Types.isStructField(struct, fields, alias));
+    // Simple create alias as handle
+    Expression aliasExpr = Turbine.structAlias(varToExpr(struct), fields);
+    pointAdd(new SetVariable(prefixVar(alias), aliasExpr));
+  }
+
+
+  @Override
+  public void structRetrieve(Var output, Var struct,
+      List<String> fields) {
+    assert(Types.isStruct(struct));
+    assert(Types.isStructFieldVal(struct, fields, output));
+
+    Expression subscript = structSubscript(struct, fields);
+    Expression expr = Turbine.lookupSubscript(varToExpr(struct), subscript);
+    pointAdd(new SetVariable(prefixVar(output), expr));
   }
 
   @Override
-  public void structRefLookup(Var alias, Var structVar,
-        String structField) {
+  public void structCopyOut(Var output, Var struct,
+      List<String> fields) {
+    assert(Types.isStruct(struct));
+    assert(Types.isStructField(struct, fields, output));
+    Expression subscript = structSubscript(struct, fields);
+    pointAdd(Turbine.copySubscript(varToExpr(output),
+                                   varToExpr(struct), subscript));
+  }
+  
+  @Override
+  public void structRefLookup(Var alias, Var structRef,
+                              List<String> fields) {
     assert(Types.isRef(alias.type()));
-    assert(Types.isStructRef(structVar));
+    assert(Types.isStructRef(structRef));
     
-    StructType structType = (StructType)structVar.type().memberType();
-    int fieldID = structTypes.getFieldID(structType, structField);
+    Expression subscript = structSubscript(structRef, fields);
     
     pointAdd(
-        Turbine.structRefLookupFieldID(varToExpr(structVar),
-            fieldID, varToExpr(alias),
+        Turbine.derefSubscriptCopy(varToExpr(structRef),
+            subscript, varToExpr(alias),
             refRepresentationType(alias.type().memberType(), false)));
   }
 

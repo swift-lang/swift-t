@@ -881,26 +881,6 @@ class Turbine {
                       execCx, RuleProps.DEFAULT);
   }
 
-  public static Sequence structLookupFieldID(Value struct, String structField,
-      String resultVar) {
-    Sequence result = new Sequence();
-
-    Square containerGet = new Square(new Token("dict"), new Token("get"),
-        struct, new TclString(structField, true));
-
-    SetVariable loadCmd = new SetVariable(resultVar, containerGet);
-    result.add(loadCmd);
-    return result;
-  }
-
-
-  public static Command structRefLookupFieldID(Value struct, int structFieldIx,
-      Value resultVar, TypeName refType) { 
-    return new Command(turbFn("struct_ref_lookup"),
-            struct, new LiteralInt(structFieldIx), resultVar, refType);
-  }
-
-
   /**
    * Put reference to arrayVar[arrayIndex] into refVar once it is ready
    * @param refVar
@@ -926,6 +906,56 @@ class Turbine {
       Expression arrayIndex) {
     return new SetVariable(dst,
         new Square(C_LOOKUP_CHECKED, arrayVar, arrayIndex));
+  }
+  
+  /**
+   * Convert list of field indices into internal subscript
+   * representation
+   * @param fieldIndices
+   * @return
+   */
+  public static Expression structSubscript(int fieldIndices[]) {
+    throw new STCRuntimeError("TODO: Not implemented"); 
+  }
+  
+  /**
+   * Construct a new handle to a subscript of the struct
+   * @param var may be a plain ID, or a pre-existing alias
+   * @param fields
+   * @return
+   */
+  public static Expression structAlias(Value var, List<String> fields) {
+    throw new STCRuntimeError("TODO: Not implemented");
+  }
+  
+  /**
+   * Lookup subscript in a variable
+   * @param var
+   * @param subscript
+   * @return
+   */
+  public static Expression lookupSubscript(Value var,
+                                           Expression subscript) {
+    throw new STCRuntimeError("TODO: Not implemented");
+  }
+  
+  /**
+   * Copy subscript of a variable to another variable
+   * @param arrayVar
+   * @param arrayIndex
+   * @return
+   */
+  public static Expression copySubscript(Value out, Value var,
+                                           Expression subscript) {
+    throw new STCRuntimeError("TODO: Not implemented");
+  }
+
+  public static Command derefSubscriptCopy(Value struct,
+      Expression subscript, Value resultVar, TypeName refType) {
+    
+    /*return new Command(turbFn("struct_ref_lookup"),
+            struct, new LiteralInt(structFieldIx), resultVar, refType);*/
+    throw new STCRuntimeError("TODO: need to edit struct_ref_lookup");
   }
 
   /**

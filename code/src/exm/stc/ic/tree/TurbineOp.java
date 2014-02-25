@@ -208,29 +208,37 @@ public class TurbineOp extends Instruction {
     case BAG_INSERT:
       gen.bagInsert(getOutput(0), getInput(0), getInput(1));
       break;
-    case STRUCT_LOOKUP:
-      gen.structLookup(getOutput(0), getInput(0).getVar(),
-                       getInput(1).getStringLit());
+    case STRUCT_CREATE_ALIAS:
+      gen.structCreateAlias(getOutput(0), getInput(0).getVar(),
+                            Arg.extractStrings(getInputsTail(1)));
+      break;
+    case STRUCT_RETRIEVE:
+      gen.structRetrieve(getOutput(0), getInput(0).getVar(),
+                         Arg.extractStrings(getInputsTail(1)));
+      break;
+    case STRUCT_COPY_OUT:
+      gen.structCopyOut(getOutput(0), getInput(0).getVar(),
+                         Arg.extractStrings(getInputsTail(1)));
       break;
     case STRUCTREF_COPY_OUT:
       gen.structRefLookup(getOutput(0), getInput(0).getVar(),
-                           getInput(1).getStringLit());
+                          Arg.extractStrings(getInputsTail(1)));
       break;
     case STRUCT_STORE:
-      gen.structStore(getOutput(0), getInput(0).getStringLit(),
-                       getInput(1));
+      gen.structStore(getOutput(0), Arg.extractStrings(getInputsTail(1)),
+                                    getInput(0));
       break;
     case STRUCT_COPY_IN:
-      gen.structCopyIn(getOutput(0), getInput(0).getStringLit(),
-                       getInput(1).getVar());
+      gen.structCopyIn(getOutput(0), Arg.extractStrings(getInputsTail(1)),
+                       getInput(0).getVar());
       break;
     case STRUCTREF_STORE:
-      gen.structRefStore(getOutput(0), getInput(0).getStringLit(),
-                         getInput(1));
+      gen.structRefStore(getOutput(0), Arg.extractStrings(getInputsTail(1)),
+                         getInput(0));
       break;
     case STRUCTREF_COPY_IN:
-      gen.structRefCopyIn(getOutput(0), getInput(0).getStringLit(),
-          getInput(1).getVar());
+      gen.structRefCopyIn(getOutput(0), Arg.extractStrings(getInputsTail(1)),
+                          getInput(0).getVar());
       break;
     case DEREF_SCALAR:
       gen.dereferenceScalar(getOutput(0), getInput(0).getVar());
@@ -1112,6 +1120,10 @@ public class TurbineOp extends Instruction {
   @Override
   public List<Arg> getInputs() {
     return Collections.unmodifiableList(inputs);
+  }
+  
+  public List<Arg> getInputsTail(int start) {
+    return Collections.unmodifiableList(inputs.subList(start, inputs.size()));
   }
 
   public void setInput(int i, Arg arg) {

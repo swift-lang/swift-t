@@ -391,4 +391,18 @@ public class Arg implements Comparable<Arg>, Typed {
   public List<Arg> asList() {
     return Collections.singletonList(this);
   }
+
+  /**
+   * Extract string literals from list, assuming all members
+   * are string literals
+   * @param l a list of string args
+   * @return
+   */
+  public static List<String> extractStrings(List<Arg> l) {
+    ArrayList<String> result = new ArrayList<String>(l.size());
+    for (Arg a: l) {
+      result.add(a.getStringLit());
+    }
+    return result;
+  }
 }
