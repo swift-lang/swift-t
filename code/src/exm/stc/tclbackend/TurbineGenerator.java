@@ -396,7 +396,7 @@ public class TurbineGenerator implements CompilerBackend {
       for (StructField field: st.getFields()) {
         // Field name and type
         fieldInfo.add(new TclString(field.getName(), true));
-        fieldInfo.add(representationType(field.getType(), true));
+        fieldInfo.addAll(dataDeclarationFullType(field.getType()));
         if (Types.isStruct(field.getType())) {
           assert(declared.contains(field.getType())) :
             field.getType() + " struct type was not initialized";
@@ -465,15 +465,7 @@ public class TurbineGenerator implements CompilerBackend {
           Types.isArray(t) || Types.isRef(t) || Types.isBag(t) ||
           Types.isStruct(t)) {
         List<Expression> createArgs = new ArrayList<Expression>();
-        // Data type
-        createArgs.add(representationType(t, true));
-        // Subscript and value type for containers only
-        if (Types.isArray(t)) {
-          createArgs.add(arrayKeyType(t, true)); // key
-          createArgs.add(arrayValueType(t, true)); // value
-        } else if (Types.isBag(t)) {
-          createArgs.add(bagValueType(t, true));
-        }
+        createArgs.addAll(dataDeclarationFullType(t));
         if (initReaders != null)
           createArgs.add(argToExpr(initReaders));
         if (initWriters != null)
@@ -524,6 +516,28 @@ public class TurbineGenerator implements CompilerBackend {
         pointAdd(s);
       }
     }
+  }
+
+  /**
+   * Return the full type required to create data by ADLB.
+   * In case of simple data, just the name - e.g. "int", or "mystruct"
+   * For containers, may need to have key/value/etc as separate arguments
+   * @param type
+   * @param createArgs
+   * @return
+   */
+  private List<Expression> dataDeclarationFullType(Type type) {
+    List<Expression> typeExprList = new ArrayList<Expression>();
+    // Basic data type
+    typeExprList.add(representationType(type, true));
+    // Subscript and value type for containers only
+    if (Types.isArray(type)) {
+      typeExprList.add(arrayKeyType(type, true)); // key
+      typeExprList.add(arrayValueType(type, true)); // value
+    } else if (Types.isBag(type)) {
+      typeExprList.add(bagValueType(type, true));
+    }
+    return typeExprList;
   }
 
   private TypeName adlbPrimType(PrimType pt) {
