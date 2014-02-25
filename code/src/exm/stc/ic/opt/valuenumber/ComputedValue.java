@@ -15,6 +15,7 @@
  */
 package exm.stc.ic.opt.valuenumber;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -291,11 +292,6 @@ public class ComputedValue<T> {
         Arrays.asList(arr.asArg(), ix));
   }
   
-  public static ArgCV structMemberCV(Var struct, String fieldName) {
-    return new ArgCV(Opcode.STRUCT_LOOKUP, 
-            Arrays.asList(struct.asArg(), Arg.createStringLit(fieldName)));
-  }
-  
   public boolean isCopy() {
     return this.op == Opcode.FAKE && this.subop.equals(COPY_OF);
   }
@@ -364,22 +360,63 @@ public class ComputedValue<T> {
   public boolean isArrayContains() {
     return op == Opcode.ARR_CONTAINS || op == Opcode.ARR_LOCAL_CONTAINS;
   }
-
-  public List<T> componentOf() {
-    if (isArrayMemberValRef() || isArrayMemberRef()) {
-      return Collections.singletonList(inputs.get(0));
-    } else if (isCopy() || isAlias()) {
-      return Collections.singletonList(inputs.get(0));
-    } else if (isDerefCompVal()) {
-      return Collections.singletonList(inputs.get(0));
-    } else if (isStructMember()) {
-      return Collections.singletonList(inputs.get(0));
-    }
-    return Collections.emptyList();
+  
+  /**
+   * Computed Value for alias of struct
+   * @param struct
+   * @param fieldName
+   * @return
+   */
+  public static ArgCV structFieldAliasCV(Var struct, List<Arg> fieldNames) {
+    List<Arg> inputs = structFieldInputs(struct, fieldNames);
+    return new ArgCV(Opcode.STRUCT_CREATE_ALIAS, inputs);
   }
   
-  public boolean isStructMember() {
-    return op == Opcode.STRUCT_LOOKUP;
+  
+  /**
+   * Computed Value for something with same value as field of struct
+   * @param struct
+   * @param fieldName
+   * @return
+   */
+  public static ArgCV structFieldCopyCV(Var struct, List<Arg> fieldNames) {
+    List<Arg> inputs = structFieldInputs(struct, fieldNames);
+    return new ArgCV(Opcode.STRUCT_COPY_OUT, inputs);
+  }
+  
+  /**
+   * Computed Value for value of field of struct
+   * @param struct
+   * @param fieldName
+   * @return
+   */
+  public static ArgCV structFieldValCV(Var struct, List<Arg> fieldNames) {
+    List<Arg> inputs = structFieldInputs(struct, fieldNames);
+    return new ArgCV(Opcode.STRUCT_RETRIEVE, inputs);
+  }
+
+  /**
+   * Helper to convert struct fields to input list
+   * @param struct
+   * @param fieldNames
+   * @return
+   */
+  private static List<Arg> structFieldInputs(Var struct, List<Arg> fieldNames) {
+    List<Arg> inputs = new ArrayList<Arg>(fieldNames.size() + 1);
+    inputs.add(struct.asArg());
+    for (Arg fieldName: fieldNames) {
+      assert(fieldName.isStringVal());
+      inputs.add(fieldName);
+    }
+    return inputs;
+  }
+
+  public boolean isStructFieldAlias() {
+    return op == Opcode.STRUCT_CREATE_ALIAS;
+  }
+  
+  public boolean isStructFieldCopy() {
+    return op == Opcode.STRUCT_CREATE_ALIAS;
   }
   
   public boolean canSubstituteInputs(CongruenceType congType) {
@@ -447,7 +484,7 @@ public class ComputedValue<T> {
       return CongruenceType.ALIAS;
     } else if (isArrayMemberValRef()) {
       return CongruenceType.ALIAS;
-    } else if (isStructMember()) { 
+    } else if (isStructFieldAlias()) { 
       return CongruenceType.ALIAS;
     }
     // Assume value equivalence unless otherwise known

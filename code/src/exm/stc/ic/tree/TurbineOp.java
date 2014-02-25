@@ -1919,19 +1919,43 @@ public class TurbineOp extends Instruction {
                                    IsValCopy.YES, IsAssign.NO).asList();
       }
 
-      case STRUCT_STORE:
-      case STRUCT_COPY_IN:
-      case STRUCTREF_STORE:
-      case STRUCTREF_COPY_IN:{
-        throw new STCRuntimeError("TODO");
-        /*ValLoc lookup = ValLoc.makeStructLookupResult(
-            getInput(1).getVar(), getOutput(0), getInput(0).getStringLit());
-        return lookup.asList();*/ 
+      case STRUCT_CREATE_ALIAS: 
+      case STRUCT_COPY_OUT:
+      case STRUCTREF_COPY_OUT: {
+        // Ops that lookup field in struct somehow
+        Var struct = getInput(0).getVar();
+        List<Arg> fields = getInputsTail(1);
+        ValLoc copyV = ValLoc.makeStructFieldCopyResult(getOutput(0),
+                                                        struct, fields);
+        if (op == Opcode.STRUCT_CREATE_ALIAS) {
+          // Create values to repr both alias and value
+          ValLoc aliasV = ValLoc.makeStructFieldAliasResult(getOutput(0),
+                                struct, fields);
+          return Arrays.asList(aliasV, copyV);
+        } else {
+          // Not an alias - copy val only
+          return copyV.asList();
+        }
       }
-      case STRUCT_LOOKUP: {
-        ValLoc lookup = ValLoc.makeStructLookupResult(
-            getOutput(0), getInput(0).getVar(), getInput(1).getStringLit());
-        return lookup.asList(); 
+      case STRUCT_RETRIEVE: {
+        Var struct = getInput(0).getVar();
+        List<Arg> fields = getInputsTail(1);
+        return ValLoc.makeStructFieldValResult(getOutput(0).asArg(),
+                                                struct, fields).asList();
+      }
+      case STRUCT_STORE: 
+      case STRUCTREF_STORE: {
+        Var struct = getOutput(0);
+        Arg val = getInput(0);
+        List<Arg> fields = getInputsTail(1);
+        return ValLoc.makeStructFieldValResult(val, struct, fields).asList();
+      }
+      case STRUCT_COPY_IN:
+      case STRUCTREF_COPY_IN: {
+        Var struct = getOutput(0);
+        Var val = getInput(0).getVar();
+        List<Arg> fields = getInputsTail(1);
+        return ValLoc.makeStructFieldCopyResult(val, struct, fields).asList();
       }
       case ARR_STORE:
       case ARR_STORE_FUTURE:

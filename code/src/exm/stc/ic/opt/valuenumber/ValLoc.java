@@ -192,12 +192,24 @@ public class ValLoc {
     return ValLoc.build(val, contentsArg, Closed.MAYBE_NOT, IsAssign.NO);
   }
   
-  public static ValLoc makeStructLookupResult(Var elem, Var struct,
-                                                 String fieldName) {
-    return ValLoc.build(ComputedValue.structMemberCV(struct, fieldName),
+  public static ValLoc makeStructFieldAliasResult(Var elem, Var struct,
+                                                List<Arg> fields) {
+    return ValLoc.build(ComputedValue.structFieldAliasCV(struct, fields),
                          elem.asArg(), Closed.MAYBE_NOT, IsAssign.NO);
   }
+  
+  public static ValLoc makeStructFieldCopyResult(Var elem, Var struct,
+                                                   List<Arg> fields) {
+      return ValLoc.build(ComputedValue.structFieldCopyCV(struct, fields),
+                      elem.asArg(), Closed.MAYBE_NOT, IsAssign.NO);
+  }
 
+  public static ValLoc makeStructFieldValResult(Arg val, Var struct,
+          List<Arg> fields) {
+    return ValLoc.build(ComputedValue.structFieldValCV(struct, fields),
+                          val, Closed.MAYBE_NOT, IsAssign.NO);
+  }
+  
   public static ValLoc makeContainerSizeCV(Var arr, Arg size, boolean future,
                                 IsAssign isAssign) {
     assert(Types.isContainer(arr) ||
