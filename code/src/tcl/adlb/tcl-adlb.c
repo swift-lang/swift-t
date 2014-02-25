@@ -119,6 +119,14 @@ char *tcl_adlb_xfer_buffer(uint64_t *buf_size) {
  */
 static struct table_lp blob_cache;
 
+/**
+ * Cache Tcl_Objs for struct field names
+ */
+static struct {
+  Tcl_Obj ***objs;
+  int size;
+} field_name_objs;
+
 /*
   Represent full type of a data structure
  */
@@ -140,14 +148,6 @@ static int extract_tcl_blob(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
 static int blob_cache_finalize(void);
 
-// Functions for managing struct formats
-static int struct_format_init(Tcl_Interp *interp, Tcl_Obj *const objv[]);
-static int struct_format_finalize(void);
-static int add_struct_format(Tcl_Interp *interp, Tcl_Obj *const objv[],
-            adlb_struct_type type_id, const char *type_name,
-            unsigned int field_count,
-            const adlb_struct_field_type *field_types,
-            const char **field_names);
 static int
 packed_struct_to_tcl_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
                          const void *data, int length,
@@ -208,6 +208,14 @@ tcl_obj_bin_append2(Tcl_Interp *interp, Tcl_Obj *const objv[],
         Tcl_Obj *obj, bool prefix_len,
         adlb_buffer *output, bool *output_caller_buf,
         int *output_pos);
+
+
+static int field_name_objs_init(Tcl_Interp *interp, Tcl_Obj *const objv[]);
+static int field_name_objs_add(Tcl_Interp *interp, Tcl_Obj *const objv[],
+      adlb_struct_type type, int field_count,
+      const char *const* field_names);
+static int field_name_objs_finalize(Tcl_Interp *interp,
+                                    Tcl_Obj *const objv[]);
 
 #define DEFAULT_PRIORITY 0
 
@@ -279,6 +287,9 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   bool ok = table_lp_init(&blob_cache, 16);
   TCL_CONDITION(ok, "Could not initialize blob cache");
 
+  rc = field_name_objs_init(interp, objv);
+  TCL_CHECK(rc);
+
   if (objc == 3)
   {
     // Start with MPI_Init() and MPI_COMM_WORLD
@@ -328,60 +339,9 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   set_namespace_constants(interp);
 
-  rc = struct_format_init(interp, objv);
-  TCL_CHECK(rc);
-
   Tcl_SetObjResult(interp, Tcl_NewIntObj(ADLB_SUCCESS));
   return TCL_OK;
 }
-
-static int struct_format_init(Tcl_Interp *interp, Tcl_Obj *const objv[])
-{
-  int init_size = 16;
-  adlb_struct_formats.types_len = init_size;
-  adlb_struct_formats.types = malloc(sizeof(adlb_struct_formats.types[0]) *
-                                    (size_t)init_size);
-  TCL_MALLOC_CHECK(adlb_struct_formats.types);
-  for (int i = 0; i < init_size; i++)
-  {
-    adlb_struct_formats.types[i].initialized = false;
-  }
-  
-  return TCL_OK;
-}
-
-static int struct_format_finalize(void)
-{
-  for (int i = 0; i < adlb_struct_formats.types_len; i++)
-  {
-    adlb_struct_format *f = &adlb_struct_formats.types[i];
-    if (f->initialized)
-    {
-      free(f->name);
-      free(f->field_types);
-      for (unsigned int j = 0; j < f->field_count; j++)
-      {
-        for (int k = 0; k <= f->field_nest_level[j]; k++)
-        {
-          // free tcl object
-          Tcl_DecrRefCount(f->field_parts[j][k]);
-        }
-        free(f->field_parts[j]);
-        free(f->field_names[j]);
-      }
-      free(f->field_nest_level);
-      free(f->field_names);
-      free(f->field_parts);
-    }
-  }
-
-  if (adlb_struct_formats.types != NULL)
-    free(adlb_struct_formats.types);
-
-  adlb_struct_formats.types = NULL;
-  adlb_struct_formats.types_len = 0;
-  return TCL_OK;
-};
 
 /**
    usage: adlb::declare_struct_type <type id> <type name> <field list>
@@ -398,8 +358,7 @@ ADLB_Declare_Struct_Type_Cmd(ClientData cdata, Tcl_Interp *interp,
   adlb_struct_type type_id;
   const char *type_name;
 
-  int tmp_type_id;
-  rc = Tcl_GetIntFromObj(interp, objv[1], &tmp_type_id);
+  rc = Tcl_GetIntFromObj(interp, objv[1], &type_id);
   TCL_CHECK(rc);
 
   type_name = Tcl_GetString(objv[2]);
@@ -429,7 +388,96 @@ ADLB_Declare_Struct_Type_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   adlb_data_code dc = ADLB_Declare_struct_type(type_id, type_name, field_count,
                       field_types, field_names);
-  return (dc == ADLB_DATA_SUCCESS) ? TCL_OK : TCL_ERROR;
+  TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Declaring ADLB struct type failed");
+
+
+  rc = field_name_objs_add(interp, objv, type_id, field_count,
+                           field_names);
+  TCL_CHECK(rc);
+  return TCL_OK;
+}
+
+static int field_name_objs_init(Tcl_Interp *interp, Tcl_Obj *const objv[])
+{
+  field_name_objs.size = 64;
+  field_name_objs.objs = malloc((size_t)field_name_objs.size *
+                            sizeof(field_name_objs.objs[0]));
+  TCL_CONDITION(field_name_objs.objs != NULL,
+                "error allocating field names");
+  return TCL_OK;
+}
+
+static int field_name_objs_add(Tcl_Interp *interp, Tcl_Obj *const objv[],
+    adlb_struct_type type, int field_count,
+    const char *const* field_names)
+{
+  if (field_name_objs.size <= type)
+  {
+    int new_size = field_name_objs.size * 2;
+    if (new_size <= type)
+    {
+      new_size = type;
+    }
+    Tcl_Obj ***tmp = realloc(field_name_objs.objs, (size_t)new_size *
+                                    sizeof(field_name_objs.objs[0]));
+    if (tmp == NULL)
+    {
+      return false;
+    }
+    // Initialize to NULL
+    for (int i = field_name_objs.size; i < new_size; i++)
+    {
+      tmp[i] = NULL;
+    }
+    field_name_objs.objs = tmp;
+    field_name_objs.size = new_size;
+  }
+
+  field_name_objs.objs[type] = malloc(
+        sizeof(field_name_objs.objs[0][0]) * (size_t)field_count);
+  if (field_name_objs.objs[type] == NULL)
+  {
+    return false;
+  }
+  for (int i = 0; i < field_count; i++)
+  {
+    field_name_objs.objs[type][i] = Tcl_NewStringObj(field_names[i], -1);
+    if (field_name_objs.objs[type][i] == NULL)
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
+static int field_name_objs_finalize(Tcl_Interp *interp,
+                                     Tcl_Obj *const objv[])
+{
+  if (field_name_objs.objs != NULL)
+  {
+    for (int i = 0; i < field_name_objs.size; i++)
+    {
+      int field_count;
+      adlb_data_code dc = ADLB_Lookup_struct_type(i, NULL,
+                                &field_count, NULL, NULL);
+      TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
+                    "Error looking up struct type %i", i);
+      Tcl_Obj **name_arr = field_name_objs.objs[i];
+      if (name_arr != NULL)
+      {
+        for (int j = 0; j < field_count; j++)
+        {
+          Tcl_DecrRefCount(name_arr[j]);
+        }
+        free(name_arr);
+      }
+    }
+
+    free(field_name_objs.objs);
+  }
+  field_name_objs.objs = NULL;
+  field_name_objs.size = 0;
+  return TCL_OK;
 }
 
 static void
@@ -1658,10 +1706,11 @@ exit_err:
 }
 
 /*
-   Build a representation of an ADLB struct using Tcl dicts. E.g.
+   Build a representation of an ADLB struct using Tcl dicts, handling
+   nested structs. E.g.
 
    ADLB struct:
-     [ "a.foo" = 1, "a.bar" = "hello", "b" = 3.14 ]
+     [ a: { foo: 1, bar: "hello" }, b: 3.14 ]
    Tcl Dict:
      { a: { foo: 1, bar: "hello" }, b: 3.14 }
 
@@ -1684,21 +1733,31 @@ packed_struct_to_tcl_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
   TCL_CONDITION(length >= sizeof(*hdr), "Not enough data for header");
 
   st = hdr->type;
-  ADLB_STRUCT_TYPE_CHECK(st);
-
   TCL_CONDITION(!extra.valid || st == extra.STRUCT.struct_type,
                 "Expected struct type %i but got %i",
                 extra.STRUCT.struct_type, st);
 
-  adlb_struct_format *f = &adlb_struct_formats.types[st];
+  const char *st_name;
+  int field_count;
+  const adlb_struct_field_type *field_types;
+  char const* const* field_names;
+  adlb_data_code dc = ADLB_Lookup_struct_type(st,
+                  &st_name, &field_count, &field_types, &field_names);
+  TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
+                "Error looking up struct type %i", st);
+
   TCL_CONDITION(length >= sizeof(*hdr) + sizeof(hdr->field_offsets[0]) *
-                (size_t)f->field_count, "Not enough data for header");
+                (size_t)field_count, "Not enough data for header");
+
+  assert(st < field_name_objs.size);
+  Tcl_Obj **field_names2 = field_name_objs.objs[st];
+  assert(field_names2 != NULL);
 
   Tcl_Obj *result_dict = Tcl_NewDictObj();
 
-  for (int i = 0; i < f->field_count; i++)
+  for (int i = 0; i < field_count; i++)
   {
-    const char *name = f->field_names[i];
+    const char *name = field_names[i];
     // Find slice of buffer for the field
     int offset = hdr->field_offsets[i];
     TCL_CONDITION(offset >= 0,
@@ -1710,28 +1769,28 @@ packed_struct_to_tcl_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
       int data_offset = offset + 1;
       const void *field_data = data + data_offset;
       int field_data_length;
-      if (i == f->field_count - 1)
+      if (i == field_count - 1)
         field_data_length = (int)(length - data_offset);
       else
         field_data_length = hdr->field_offsets[i + 1] - data_offset;
 
       TCL_CONDITION(field_data_length >= 0,
           "invalid struct buffer: negative length %i for field %s",
-                                                        field_data_length, name);
+                                          field_data_length, name);
       TCL_CONDITION(data_offset + field_data_length <= length,
-          "invalid struct buffer: field %s past buffer end: %d+%d vs %d", name,
-          data_offset, field_data_length, length);
+          "invalid struct buffer: field %s past buffer end: %d+%d vs %d",
+          name, data_offset, field_data_length, length);
 
       // Create a TCL object for the field data
       Tcl_Obj *field_tcl_obj;
       rc = adlb_data_to_tcl_obj(interp, objv, ADLB_DATA_ID_NULL,
-                    f->field_types[i], ADLB_TYPE_EXTRA_NULL, field_data,
-                    field_data_length, &field_tcl_obj);
+                    field_types[i].type, field_types[i].extra,
+                    field_data, field_data_length, &field_tcl_obj);
       TCL_CHECK_MSG(rc, "Error building tcl object for field %s", name);
 
       // Add it to nested dicts
-      rc = Tcl_DictObjPutKeyList(interp, result_dict,
-            f->field_nest_level[i] + 1, f->field_parts[i], field_tcl_obj);
+      rc = Tcl_DictObjPut(interp, result_dict,
+                        field_names2[i], field_tcl_obj);
       TCL_CHECK_MSG(rc, "Error inserting tcl object for field %s", name);
     }
   }
@@ -1750,41 +1809,48 @@ tcl_dict_to_adlb_struct(Tcl_Interp *interp, Tcl_Obj *const objv[],
 {
   int rc;
 
-  ADLB_STRUCT_TYPE_CHECK(struct_type);
-  adlb_struct_format *f = &adlb_struct_formats.types[struct_type];
+  const char *st_name;
+  int field_count;
+  const adlb_struct_field_type *field_types;
+  char const* const* field_names;
+  adlb_data_code dc = ADLB_Lookup_struct_type(struct_type,
+                  &st_name, &field_count, &field_types, &field_names);
+  TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
+                "Error looking up struct type %i", struct_type);
 
   *result = malloc(sizeof(adlb_struct) +
-                   sizeof((*result)->fields[0]) * f->field_count);
+                   sizeof((*result)->fields[0]) * (size_t)field_count);
+  TCL_MALLOC_CHECK(*result);
   (*result)->type = struct_type;
 
-  for (int i = 0; i < f->field_count; i++)
+  // Get field name objects
+  assert(struct_type < field_name_objs.size);
+  Tcl_Obj **field_names2 = field_name_objs.objs[struct_type];
+  assert(field_names2 != NULL);
+
+
+  for (int i = 0; i < field_count; i++)
   {
-    Tcl_Obj *curr = dict;
-    bool present = true;
-    for (int j = 0; j <= f->field_nest_level[i]; j++)
+    Tcl_Obj *val;
+
+    rc = Tcl_DictObjGet(interp, dict, field_names2[i], &val);
+    TCL_CHECK(rc);
+    
+    if (val != NULL)
     {
-      Tcl_Obj *val;
-      rc = Tcl_DictObjGet(interp, curr, f->field_parts[i][j], &val);
-      TCL_CHECK(rc);
-      if (val == NULL)
-      {
-        present = false;
-        break;
-      }
-      curr = val;
-    }
-    if (present)
-    {
-      // TODO: Don't support nested elements with extra type info
       adlb_datum_storage *field = &(*result)->fields[i].data;
-      adlb_type_extra type_extra = ADLB_TYPE_EXTRA_NULL;
       bool alloced;
       // Need to own memory in allocated object so we can free correctly
-      rc = tcl_obj_to_adlb_data(interp, objv, f->field_types[i],
-                        type_extra, curr, true, field, &alloced);
+      rc = tcl_obj_to_adlb_data(interp, objv, field_types[i].type,
+                        field_types[i].extra, val, true, field, &alloced);
       TCL_CHECK(rc);
+      (*result)->fields[i].initialized = true;
     }
-    (*result)->fields[i].initialized = present;
+    else
+    {
+      // Data not present
+      (*result)->fields[i].initialized = false;
+    }
   }
 
   return TCL_OK;
@@ -4056,10 +4122,10 @@ ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
     MPI_Finalize();
   turbine_debug_finalize();
 
-  rc = struct_format_finalize();
-  TCL_CHECK(rc);
-
   rc = blob_cache_finalize();
+  TCL_CHECK(rc);
+  
+  rc = field_name_objs_finalize(interp, objv);
   TCL_CHECK(rc);
 
   return TCL_OK;
