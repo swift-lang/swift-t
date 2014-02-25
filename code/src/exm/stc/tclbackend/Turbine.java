@@ -246,6 +246,9 @@ class Turbine {
   public static Token XPT_PACK = adlbFn("xpt_pack");
   public static Token XPT_UNPACK = adlbFn("xpt_unpack");
   
+  // Subscript/handle manipulation
+  public static Token BUILD_SUBSCRIPT = adlbFn("subscript");
+  
   // Checkpointing options
   public static enum XptFlushPolicy {
     NO_FLUSH,
@@ -915,7 +918,13 @@ class Turbine {
    * @return
    */
   public static Expression structSubscript(int fieldIndices[]) {
-    throw new STCRuntimeError("TODO: Not implemented"); 
+    if (fieldIndices.length != 1) {
+      throw new STCRuntimeError("TODO: Not implemented for sizes " +
+                               "other than 1"); 
+    }
+    int fieldIndex = fieldIndices[0];
+    
+    return new LiteralInt(fieldIndex);
   }
   
   /**
@@ -925,7 +934,12 @@ class Turbine {
    * @return
    */
   public static Expression structAlias(Value var, List<String> fields) {
-    throw new STCRuntimeError("TODO: Not implemented");
+    List<Expression> args = new ArrayList<Expression>(fields.size() + 1);
+    args.add(var);
+    for (String field: fields) {
+      args.add(new TclString(field, true));
+    }
+    return Square.fnCall(BUILD_SUBSCRIPT, args);
   }
   
   /**
