@@ -636,7 +636,6 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void decrWriters(Var var, Arg amount) {
     assert(RefCounting.hasWriteRefCount(var));
-    assert(!Types.isStruct(var.type()));
     // Close array by removing the slot we created at startup
     decrementWriters(Arrays.asList(var), argToExpr(amount));
   }
@@ -644,7 +643,6 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void decrRef(Var var, Arg amount) {
     assert(RefCounting.hasReadRefCount(var));
-    assert(!Types.isStruct(var.type()));
     decrementReaders(Arrays.asList(var), argToExpr(amount));
   }
   
@@ -652,7 +650,6 @@ public class TurbineGenerator implements CompilerBackend {
   public void incrRef(Var var, Arg amount) {
     assert(RefCounting.hasReadRefCount(var));
     assert(amount.isImmediateInt());
-    assert(!Types.isStruct(var.type()));
     incrementReaders(Arrays.asList(var), argToExpr(amount));
   }
   
@@ -660,7 +657,6 @@ public class TurbineGenerator implements CompilerBackend {
   public void incrWriters(Var var, Arg amount) {
     assert(RefCounting.hasWriteRefCount(var));
     assert(amount.isImmediateInt());
-    assert(!Types.isStruct(var.type()));
     incrementWriters(Arrays.asList(var), argToExpr(amount));
   }
   
