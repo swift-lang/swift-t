@@ -295,7 +295,7 @@ public class LValWalker {
     final int structPathLen = structPathIndex;
 
     Var fieldAlias = varCreator.createStructFieldAlias(context, rootVar,
-              lval.getType(context, structPathLen - 1), fieldPath);
+              lval.getType(context, structPathLen), fieldPath);
     backend.structCreateAlias(VarRepr.backendVar(fieldAlias),
                       VarRepr.backendVar(rootVar), fieldPath);
     

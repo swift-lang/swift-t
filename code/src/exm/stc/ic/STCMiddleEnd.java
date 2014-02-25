@@ -917,7 +917,8 @@ public class STCMiddleEnd {
   public void structCreateAlias(Var fieldAlias, Var struct,
                                 List<String> fieldPath) {
     assert(Types.isStruct(struct));
-    assert(Types.isStructField(struct, fieldPath, fieldAlias));
+    assert(Types.isStructField(struct, fieldPath, fieldAlias)):
+              struct + " " + fieldPath + " " + fieldAlias;
     assert(fieldAlias.storage() == Alloc.ALIAS);
     
     currBlock().addInstruction(
