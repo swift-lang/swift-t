@@ -16,7 +16,13 @@ import exm.stc.common.util.Pair;
  */
 public class TurbineStructs {
 
-  private int nextStructType = 0;
+  /**
+   * Struct types after system reserved.
+   * TODO: better system to get this from Turbine
+   */
+  private static final int MIN_USER_STRUCT_TYPE = 16;
+  
+  private int nextStructType = MIN_USER_STRUCT_TYPE;
   private List<Pair<Integer, StructType>> structTypes =
                       new ArrayList<Pair<Integer, StructType>>();
   private Map<StructType, Integer> structTypeIds =

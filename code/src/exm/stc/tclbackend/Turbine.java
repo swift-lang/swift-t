@@ -390,6 +390,8 @@ class Turbine {
 
   public static TclTree allocateFile(Value mapVar, String tclName,
           Expression initReaders) {
+    // TODO: modify handling of mapped vars in middle-end: should just
+    //      be assigned mapping after initialization
     if (mapVar != null) {
       return new Command(ALLOCATE_FILE, new Token(tclName), mapVar, initReaders);
     } else {
