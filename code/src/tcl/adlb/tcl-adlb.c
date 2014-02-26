@@ -1082,15 +1082,20 @@ ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
     case ADLB_DATA_TYPE_REF:
       rc = ADLB_Create_ref(id, props, &new_id);
       break;
-    case ADLB_DATA_TYPE_STRUCT:
-      rc = ADLB_Create_struct(id, props, &new_id);
+    case ADLB_DATA_TYPE_STRUCT: {
+      adlb_struct_type struct_t = type_extra.valid ?
+              type_extra.STRUCT.struct_type : ADLB_STRUCT_TYPE_NULL;
+      rc = ADLB_Create_struct(id, props, struct_t, &new_id);
       break;
+    }
     case ADLB_DATA_TYPE_CONTAINER: {
+      assert(type_extra.valid);
       rc = ADLB_Create_container(id, type_extra.CONTAINER.key_type,
                     type_extra.CONTAINER.val_type, props, &new_id);
       break;
     }
     case ADLB_DATA_TYPE_MULTISET: {
+      assert(type_extra.valid);
       rc = ADLB_Create_multiset(id, type_extra.MULTISET.val_type,
                                 props, &new_id);
       break;

@@ -49,6 +49,12 @@ namespace eval turbine {
         set v $u
         return $u
     }
+    
+    proc create_file { id {read_refcount 1} {write_refcount 1} \
+                             {permanent 0} } {
+        return [ adlb::create $id file $read_refcount \
+                              $write_refcount $permanent ]
+    }
 
     # Handles files that are input to a builtin function
     # Increments reference count to avoid file deletion
@@ -341,8 +347,8 @@ namespace eval turbine {
 
     # set the filename to a string
     proc set_filename_val { file_handle filename } {
-      # TODO: store directly
-      store_string [ get_file_path $file_handle ] $filename
+      # TODO: different struct store function?
+      adlb::insert [ get_file_td $file_handle ] 0 $filename string
     }
 
     proc close_file { handle } {
