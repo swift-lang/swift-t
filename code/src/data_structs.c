@@ -455,6 +455,7 @@ adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,
 
   dc = ADLB_Unpack(&f->data, type, data, length); 
   DATA_CHECK(dc);
+  f->initialized = true;
   return ADLB_DATA_SUCCESS;
 }
 

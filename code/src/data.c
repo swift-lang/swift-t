@@ -983,11 +983,6 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
       container_add(c, subscript, entry);
     }
 
-    dc = insert_notifications(d, id, subscript,
-              buffer, length, c->val_type,
-              notifications, &freed_datum);
-    DATA_CHECK(dc);
-
     if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
     {
       char *val_s = ADLB_Data_repr(entry, c->val_type);
@@ -996,6 +991,11 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
             (const char*)subscript.key, val_s);
       free(val_s);
     }
+
+    dc = insert_notifications(d, id, subscript,
+              buffer, length, c->val_type,
+              notifications, &freed_datum);
+    DATA_CHECK(dc);
   }
   else if (d->type == ADLB_DATA_TYPE_STRUCT)
   {
@@ -1006,18 +1006,14 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
                         buffer, length, type);
     DATA_CHECK(dc);
 
-    dc = insert_notifications(d, id, subscript,
-              buffer, length, type,
-              notifications, NULL);
-    DATA_CHECK(dc);
-
     if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
     {
       const adlb_datum_storage *entry;
       adlb_data_type tmp_type;
       dc = xlb_struct_get_subscript(d->data.STRUCT, subscript, &entry,
                                     &tmp_type);
-      assert(dc == ADLB_DATA_SUCCESS && entry != NULL);
+      assert(dc == ADLB_DATA_SUCCESS);
+      assert(entry != NULL);
 
       char *val_s = ADLB_Data_repr(entry, type);
       // TODO: support binary keys
@@ -1025,6 +1021,11 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
             (const char*)subscript.key, val_s);
       free(val_s);
     }
+
+    dc = insert_notifications(d, id, subscript,
+              buffer, length, type,
+              notifications, &freed_datum);
+    DATA_CHECK(dc);
   }
   else
   {
