@@ -434,8 +434,10 @@ static int field_name_objs_add(Tcl_Interp *interp, Tcl_Obj *const objv[],
   
   for (int i = 0; i < field_count; i++)
   {
-    field_name_objs.objs[type][i] = Tcl_NewStringObj(field_names[i], -1);
-    TCL_MALLOC_CHECK(field_name_objs.objs[type][i]);
+    Tcl_Obj *name_obj = Tcl_NewStringObj(field_names[i], -1);
+    TCL_MALLOC_CHECK(name_obj);
+    field_name_objs.objs[type][i] = name_obj;
+    Tcl_IncrRefCount(name_obj);
   }
   return TCL_OK;
 }
@@ -1761,6 +1763,8 @@ packed_struct_to_tcl_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
       TCL_CHECK_MSG(rc, "Error building tcl object for field %s", name);
 
       // Add it to nested dicts
+      assert(field_names2[i] != NULL);
+      assert(field_tcl_obj != NULL);
       rc = Tcl_DictObjPut(interp, result_dict,
                         field_names2[i], field_tcl_obj);
       TCL_CHECK_MSG(rc, "Error inserting tcl object for field %s", name);
