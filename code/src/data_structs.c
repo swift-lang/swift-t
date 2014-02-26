@@ -118,7 +118,7 @@ adlb_data_code ADLB_Declare_struct_type(adlb_struct_type type,
     t->field_names[i] = strdup(field_names[i]);
     t->field_types[i] = field_types[i];
   }
-
+  
   // Add struct type name to index
   adlb_type_extra extra = { .valid = true, .STRUCT.struct_type=type };
   dc = xlb_data_type_add(type_name, ADLB_DATA_TYPE_STRUCT, extra);
@@ -192,7 +192,7 @@ ADLB_Lookup_struct_type(adlb_struct_type type,
   {
     // Convert to non-modifiable pointer
     char const* const* tmp_field_names = 
-                    (char const* const*)field_names;
+                    (char const* const*)t->field_names;
     *field_names = tmp_field_names;
   }
   return ADLB_DATA_SUCCESS;
