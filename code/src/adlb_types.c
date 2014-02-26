@@ -26,7 +26,6 @@
 #define TYPE_NAME_CONTAINER "container"
 #define TYPE_NAME_MULTISET "multiset"
 #define TYPE_NAME_REF "ref"
-#define TYPE_NAME_FILE_REF "file_ref"
 #define TYPE_NAME_STRUCT "struct"
 #define TYPE_NAME_NULL "ADLB_DATA_TYPE_NULL"
 
@@ -54,8 +53,6 @@ static struct type_entry type_entries[] = {
     sizeof(TYPE_NAME_MULTISET) - 1 },
   { ADLB_DATA_TYPE_REF, TYPE_NAME_REF,
     sizeof(TYPE_NAME_REF) - 1 },
-  { ADLB_DATA_TYPE_FILE_REF, TYPE_NAME_FILE_REF,
-    sizeof(TYPE_NAME_FILE_REF) - 1 },
   { ADLB_DATA_TYPE_STRUCT, TYPE_NAME_STRUCT,
     sizeof(TYPE_NAME_STRUCT) - 1 },
   { ADLB_DATA_TYPE_NULL, TYPE_NAME_NULL,
@@ -177,8 +174,6 @@ const char
       return TYPE_NAME_MULTISET;
     case ADLB_DATA_TYPE_REF:
       return TYPE_NAME_REF;
-    case ADLB_DATA_TYPE_FILE_REF:
-      return TYPE_NAME_FILE_REF;
     case ADLB_DATA_TYPE_STRUCT:
       return TYPE_NAME_STRUCT;
     case ADLB_DATA_TYPE_NULL:
@@ -215,8 +210,6 @@ ADLB_Pack(const adlb_datum_storage *d, adlb_data_type type,
       return ADLB_Pack_string(&d->STRING, result);
     case ADLB_DATA_TYPE_BLOB:
       return ADLB_Pack_blob(&d->BLOB, result);
-    case ADLB_DATA_TYPE_FILE_REF:
-      return ADLB_Pack_file_ref(&d->FILE_REF, result);
     case ADLB_DATA_TYPE_STRUCT:
       return ADLB_Pack_struct(d->STRUCT, caller_buffer, result);
     case ADLB_DATA_TYPE_CONTAINER:
@@ -552,8 +545,6 @@ adlb_data_code ADLB_Unpack2(adlb_datum_storage *d, adlb_data_type type,
     case ADLB_DATA_TYPE_BLOB:
       // Ok to cast from const buffer since we force it to copy
       return ADLB_Unpack_blob(&d->BLOB, (void *)buffer, length, true);
-    case ADLB_DATA_TYPE_FILE_REF:
-      return ADLB_Unpack_file_ref(&d->FILE_REF, buffer, length);
     case ADLB_DATA_TYPE_STRUCT:
       return ADLB_Unpack_struct(&d->STRUCT, buffer, length,
                                 init_compound);
@@ -799,7 +790,6 @@ adlb_data_code ADLB_Free_storage(adlb_datum_storage *d, adlb_data_type type)
     case ADLB_DATA_TYPE_INTEGER:
     case ADLB_DATA_TYPE_FLOAT:
     case ADLB_DATA_TYPE_REF:
-    case ADLB_DATA_TYPE_FILE_REF:
       break;
     default:
       check_verbose(false, ADLB_DATA_ERROR_TYPE,
@@ -853,12 +843,6 @@ char *ADLB_Data_repr(const adlb_datum_storage *d, adlb_data_type type)
       break;
     case ADLB_DATA_TYPE_BLOB:
       rc = asprintf(&tmp, "blob (%d bytes)", d->BLOB.length);
-      assert(rc >= 0);
-      return tmp;
-    case ADLB_DATA_TYPE_FILE_REF:
-      rc = asprintf(&tmp, "status:<%"PRId64"> filename:<%"PRId64"> mapped:%i",
-                    d->FILE_REF.status_id, d->FILE_REF.filename_id,
-                    d->FILE_REF.mapped);
       assert(rc >= 0);
       return tmp;
     case ADLB_DATA_TYPE_CONTAINER:

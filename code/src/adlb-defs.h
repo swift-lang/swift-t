@@ -67,7 +67,6 @@ typedef enum
   ADLB_DATA_TYPE_MULTISET,
   ADLB_DATA_TYPE_STRUCT,
   ADLB_DATA_TYPE_REF,
-  ADLB_DATA_TYPE_FILE_REF,
 } adlb_data_type;
 
 // More compact representation for data type

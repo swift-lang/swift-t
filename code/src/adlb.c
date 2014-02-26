@@ -635,13 +635,6 @@ adlb_code ADLB_Create_ref(adlb_datum_id id, adlb_create_props props,
                    props, new_id);
 }
 
-adlb_code ADLB_Create_file_ref(adlb_datum_id id, adlb_create_props props,
-                              adlb_datum_id *new_id)
-{
-  return ADLBP_Create_impl(id, ADLB_DATA_TYPE_FILE_REF, ADLB_TYPE_EXTRA_NULL,
-                   props, new_id);
-}
-
 adlb_code ADLB_Create_struct(adlb_datum_id id, adlb_create_props props,
                               adlb_datum_id *new_id)
 {

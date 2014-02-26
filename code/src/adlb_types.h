@@ -66,12 +66,6 @@ typedef struct {
 } adlb_ref;
 
 typedef struct {
-  adlb_datum_id status_id;
-  adlb_datum_id filename_id;
-  bool mapped;
-} adlb_file_ref;
-
-typedef struct {
   // type of container keys
   adlb_data_type_short key_type;
   // type of container values
@@ -98,7 +92,6 @@ typedef union
   adlb_blob_t BLOB;
   adlb_container CONTAINER;
   adlb_ref REF;
-  adlb_file_ref FILE_REF;
 
   // Multiset struct too big for enum, store pointer
   adlb_multiset_ptr MULTISET;
@@ -373,20 +366,6 @@ ADLB_Pack_ref(const adlb_ref *d, adlb_binary_data *result)
 
 static inline adlb_data_code
 ADLB_Unpack_ref(adlb_ref *d, const void *data, int length)
-{
-  ADLB_UNPACK_SCALAR(d, data, length);
-  return ADLB_DATA_SUCCESS;
-}
-
-static inline adlb_data_code
-ADLB_Pack_file_ref(const adlb_file_ref *d, adlb_binary_data *result)
-{
-  ADLB_PACK_SCALAR(d, result);
-  return ADLB_DATA_SUCCESS;
-}
-
-static inline adlb_data_code
-ADLB_Unpack_file_ref(adlb_file_ref *d, const void *data, int length)
 {
   ADLB_UNPACK_SCALAR(d, data, length);
   return ADLB_DATA_SUCCESS;

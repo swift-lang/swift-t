@@ -114,17 +114,6 @@ xlb_incr_referand(adlb_datum_storage *d, adlb_data_type type,
          to_acquire.refcounts, changes); 
       DATA_CHECK(dc);
       break;
-    case ADLB_DATA_TYPE_FILE_REF:
-      assert(!adlb_has_sub(to_acquire.subscript));
-      // TODO: need to update file_ref -> maybe just use struct
-      assert(false);
-      /*
-      // decrement references held
-      dc = xlb_incr_rc_svr(d->FILE_REF.status_id, change);
-      DATA_CHECK(dc);
-      dc = xlb_incr_rc_svr(d->FILE_REF.filename_id, change);
-      DATA_CHECK(dc);*/
-      break;
     default:
       check_verbose(false, ADLB_DATA_ERROR_TYPE,
                     "datum_gc(): unknown type %u>", type);
