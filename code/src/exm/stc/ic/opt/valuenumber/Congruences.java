@@ -441,6 +441,21 @@ public class Congruences implements AliasFinder {
     		    " canonical member in ALIAS congruence relationship";
     return canonical.getVar();
   }
+  
+  /**
+   * 
+   * @param vall
+   * @return Canonical alias, or null
+   */
+  private Var getCanonicalAlias(ArgCV val) {
+    Arg canonical = byAlias.findCanonicalInternal(val);
+    if (canonical == null) {
+      return null;
+    }
+    assert(canonical.isVar()) : "Should only have a variable as" +
+            " canonical member in ALIAS congruence relationship";
+    return canonical.getVar();
+  }
 
   /**
    * 
@@ -565,12 +580,20 @@ public class Congruences implements AliasFinder {
     return isClosed(varArg, stmtIndex, false);
   }
   
+  public boolean isClosed(ArgCV val, int stmtIndex) {
+    return isClosed(val, stmtIndex, false);
+  }
+  
   public boolean isRecClosed(Var var, int stmtIndex) {
     return isRecClosed(var.asArg(), stmtIndex);
   }
 
   public boolean isRecClosed(Arg varArg, int stmtIndex) {
     return isClosed(varArg, stmtIndex, true);
+  }
+  
+  public boolean isRecClosed(ArgCV val, int stmtIndex) {
+    return isClosed(val, stmtIndex, true);
   }
 
   /**
@@ -607,6 +630,17 @@ public class Congruences implements AliasFinder {
     return false;
   }
 
+
+  private boolean isClosed(ArgCV val, int stmtIndex, boolean recursive) {
+    // See if we can resolve alias to variable
+    Var canon = getCanonicalAlias(val);
+    if (canon == null) {
+      // No info - assume not closed
+      return false;
+    }
+    return isClosed(canon.asArg(), stmtIndex, recursive);
+  }
+  
   /**
    * Whether we should track closed status for this var
    * @param var
@@ -624,6 +658,15 @@ public class Congruences implements AliasFinder {
   public Set<Var> getRecursivelyClosed(int stmtIndex) {
     return new ClosedSet(stmtIndex, true);
   }
+  
+  public Set<ArgCV> getClosedLocs(int stmtIndex) {
+    return new ClosedCVSet(stmtIndex, false);
+  }
+
+  public Set<ArgCV> getRecursivelyLocs(int stmtIndex) {
+    return new ClosedCVSet(stmtIndex, true);
+  }
+  
   
   /**
    * Return set of vars that were closed in this scope but
@@ -828,6 +871,40 @@ public class Congruences implements AliasFinder {
 
     @Override
     public Iterator<Var> iterator() {
+      throw new STCRuntimeError("iterator() not supported");
+    }
+    
+    @Override
+    public int size() {
+      throw new STCRuntimeError("size() not supported");
+    }
+  }
+  
+  /**
+   * Implement set interface for checking if abstract location is closed
+   */
+  private class ClosedCVSet extends AbstractSet<ArgCV> {
+    ClosedCVSet(int stmtIndex, boolean recursive) {
+      this.stmtIndex = stmtIndex;
+      this.recursive = recursive;
+    }
+
+    private final int stmtIndex;
+    private final boolean recursive;
+  
+    @Override
+    public boolean contains(Object o) {
+      assert(o instanceof ArgCV);
+      ArgCV v = (ArgCV)o;
+      if (recursive) {
+        return isRecClosed(v, stmtIndex);
+      } else {
+        return isClosed(v, stmtIndex);
+      }
+    }
+
+    @Override
+    public Iterator<ArgCV> iterator() {
       throw new STCRuntimeError("iterator() not supported");
     }
     

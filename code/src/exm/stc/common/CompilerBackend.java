@@ -148,7 +148,12 @@ public interface CompilerBackend {
   /**
    * Extract handle to filename future out of file variable
    */
-  public void getFileName(Var filename, Var file);
+  public void getFileNameAlias(Var filename, Var file);
+  
+  /**
+   * Copy filename from future to file
+   */
+  public void copyInFilename(Var file, Var filename);
   
   /**
    * Extract handle to filename future out of localfile variable

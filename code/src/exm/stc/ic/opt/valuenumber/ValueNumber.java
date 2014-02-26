@@ -778,6 +778,7 @@ public class ValueNumber implements OptimizerPass {
     
     // First see if we can replace some futures with values
     MakeImmRequest req = inst.canMakeImmediate(state.getClosed(stmtIndex),
+                               state.getClosedLocs(stmtIndex),
                                state.retrieveResultAvail(), false);
 
     if (req == null) {
@@ -913,7 +914,7 @@ public class ValueNumber implements OptimizerPass {
               OptUtil.optFilenamePrefix(insertContext, output),
               Alloc.ALIAS, DefType.LOCAL_COMPILER,
               VarProvenance.filenameOf(output));
-          insertPoint.add(TurbineOp.getFileName(filenameAlias, output));
+          insertPoint.add(TurbineOp.getFileNameAlias(filenameAlias, output));
           insertPoint.add(TurbineOp.retrieveScalar(filenameVal, filenameAlias));
         }
         filenameVals.put(output, filenameVal);

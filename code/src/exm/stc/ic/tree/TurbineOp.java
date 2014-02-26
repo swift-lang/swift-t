@@ -25,6 +25,7 @@ import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
+import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ValLoc;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
@@ -330,8 +331,11 @@ public class TurbineOp extends Instruction {
     case UPDATE_SCALE_IMM:
       gen.updateImm(getOutput(0), UpdateMode.SCALE, getInput(0));
       break;
-    case GET_FILENAME:
-      gen.getFileName(getOutput(0), getInput(0).getVar());
+    case GET_FILENAME_ALIAS:
+      gen.getFileNameAlias(getOutput(0), getInput(0).getVar());
+      break;
+    case COPY_IN_FILENAME:
+      gen.copyInFilename(getOutput(0), getInput(0).getVar());
       break;
     case GET_LOCAL_FILENAME:
       gen.getLocalFileName(getOutput(0), getInput(0).getVar());
@@ -868,8 +872,12 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(op, updateable, val);
   }
   
-  public static Instruction getFileName(Var filename, Var file) {
-    return new TurbineOp(Opcode.GET_FILENAME, filename, file.asArg());
+  public static Instruction getFileNameAlias(Var filename, Var file) {
+    return new TurbineOp(Opcode.GET_FILENAME_ALIAS, filename, file.asArg());
+  }
+  
+  public static Instruction copyInFilename(Var file, Var filename) {
+    return new TurbineOp(Opcode.COPY_IN_FILENAME, file, filename.asArg());
   }
   
   public static Instruction getLocalFileName(Var filename, Var file) {
@@ -1044,7 +1052,7 @@ public class TurbineOp extends Instruction {
     case CONTAINER_LOCAL_SIZE:
       return false;
 
-    case GET_FILENAME:
+    case GET_FILENAME_ALIAS:
       // Only effect is setting alias var
       return false;
     case GET_LOCAL_FILENAME:
@@ -1154,7 +1162,7 @@ public class TurbineOp extends Instruction {
 
   @Override
   public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-      Set<Var> valueAvail, boolean waitForClose) {
+      Set<ArgCV> closedLocations, Set<Var> valueAvail, boolean waitForClose) {
     boolean insertRefWaitForClose = waitForClose;
     // Try to take advantage of closed variables 
     switch (op) {
@@ -1325,11 +1333,12 @@ public class TurbineOp extends Instruction {
       //       loaded array value
       break;
     }
+    case COPY_IN_FILENAME:
+      return new MakeImmRequest(null, getInput(0).getVar().asList());
     case UPDATE_INCR:
     case UPDATE_MIN:
     case UPDATE_SCALE:
-      return new MakeImmRequest(null, Arrays.asList(
-                getInput(0).getVar()));
+      return new MakeImmRequest(null, getInput(0).getVar().asList());
     default:
       // fall through
     }
@@ -1580,7 +1589,8 @@ public class TurbineOp extends Instruction {
       return new MakeImmChange(
           syncCopyContainer(getOutput(0), getInput(0).getVar()));
     }
-    case SYNC_COPY_CONTAINER: {
+    case SYNC_COPY_CONTAINER: 
+    case SYNC_COPY_STRUCT: {
       // TODO: would be nice to switch to array_store if we already have
       //       loaded array value
       break;
@@ -1590,10 +1600,9 @@ public class TurbineOp extends Instruction {
       return new MakeImmChange(
           syncCopyStruct(getOutput(0), getInput(0).getVar()));
     }
-    case SYNC_COPY_STRUCT: {
-      // TODO: would be nice to switch to directly store if we already
-      // have value
-      break;
+    case COPY_IN_FILENAME: {
+      return new MakeImmChange(
+          setFilenameVal(getOutput(0), values.get(0).fetched));
     }
     case UPDATE_INCR:
     case UPDATE_MIN:
@@ -1634,7 +1643,7 @@ public class TurbineOp extends Instruction {
       case COPY_REF:
       case ARR_CREATE_NESTED_IMM:
       case ARRAY_CREATE_BAG:
-      case GET_FILENAME:
+      case GET_FILENAME_ALIAS:
         // Initialises alias
         return Arrays.asList(Pair.create(getOutput(0), InitType.FULL));
 
@@ -1805,7 +1814,7 @@ public class TurbineOp extends Instruction {
     case LOAD_REF:
     case FREE_BLOB:
     case DECR_LOCAL_FILE_REF:
-    case GET_FILENAME:
+    case GET_FILENAME_ALIAS:
     case GET_LOCAL_FILENAME:
     case IS_MAPPED:
     case COPY_FILE_CONTENTS:
@@ -1854,6 +1863,7 @@ public class TurbineOp extends Instruction {
     case STRUCTREF_COPY_IN:
     case STRUCT_COPY_OUT:
     case STRUCTREF_COPY_OUT:
+    case COPY_IN_FILENAME:
       return TaskMode.LOCAL;
     default:
       throw new STCRuntimeError("Need to add opcode " + op.toString()
@@ -1930,9 +1940,14 @@ public class TurbineOp extends Instruction {
                 ValLoc.makeCopy(getOutput(0), result, IsAssign.NO));
         }
       }
-      case GET_FILENAME: {
+      case GET_FILENAME_ALIAS: {
         Arg filename = getOutput(0).asArg();
         Var file = getInput(0).getVar();
+        return ValLoc.makeFilename(filename, file).asList();
+      }
+      case COPY_IN_FILENAME: {
+        Arg filename = getInput(0);
+        Var file = getOutput(0);
         return ValLoc.makeFilename(filename, file).asList();
       }
       case GET_LOCAL_FILENAME: {
@@ -2328,6 +2343,11 @@ public class TurbineOp extends Instruction {
       case COPY_REF: {
         return Pair.create(getInput(0).getVar().asList(),
                            getInput(0).getVar().asList());
+      }
+      case COPY_IN_FILENAME: {
+        // Read for input filename
+        return Pair.create(getInput(0).getVar().asList(),
+                           Var.NONE);
       }
       case UPDATE_INCR:
       case UPDATE_MIN:

@@ -192,7 +192,7 @@ public class WrapUtil {
     assert(Types.isString(filename.type()));
     assert(filename.storage() == Alloc.ALIAS);
     assert(Types.isFile(file.type()));
-    Instruction getFileName = TurbineOp.getFileName(filename, file);
+    Instruction getFileName = TurbineOp.getFileNameAlias(filename, file);
     
     if (file.isMapped() == Ternary.TRUE ||
         !file.type().fileKind().supportsTmpImmediate()) {

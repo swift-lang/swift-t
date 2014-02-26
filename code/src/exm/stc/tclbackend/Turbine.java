@@ -81,7 +81,7 @@ class Turbine {
 
   private static final Token ALLOCATE_CONTAINER_CUSTOM =
           turbFn("allocate_container_custom");
-  private static final Token ALLOCATE_FILE = turbFn("allocate_file2");
+  private static final Token ALLOCATE_FILE = turbFn("allocate_file");
   private static final Token ALLOCATE_CUSTOM = turbFn("allocate_custom");
   private static final Token MULTICREATE = adlbFn("multicreate");
 
@@ -220,6 +220,7 @@ class Turbine {
   private static final Token GET_FILE = turbFn("get_file");
   private static final Token SET_FILE = turbFn("set_file");
   private static final Token GET_FILE_PATH = turbFn("get_file_path");
+  private static final Token COPY_IN_FILENAME = turbFn("copy_in_filename");
   private static final Token IS_MAPPED = turbFn("is_file_mapped");
   private static final Token GET_FILE_STATUS = turbFn("get_file_status");
   private static final Token LOCAL_FILE_PATH = turbFn("local_file_path");
@@ -388,16 +389,10 @@ class Turbine {
             valType, initReaders, initWriters);
   }
 
-  public static TclTree allocateFile(Value mapVar, String tclName,
+  public static TclTree allocateFile(Expression isMapped, String tclName,
           Expression initReaders) {
-    // TODO: modify handling of mapped vars in middle-end: should just
-    //      be assigned mapping after initialization
-    if (mapVar != null) {
-      return new Command(ALLOCATE_FILE, new Token(tclName), mapVar, initReaders);
-    } else {
-      return new Command(ALLOCATE_FILE, new Token(tclName), TclString.EMPTY,
-              initReaders);
-    }
+    return new Command(ALLOCATE_FILE, new Token(tclName), isMapped,
+                       initReaders);
   }
 
   public static SetVariable stackLookup(String stackName, String tclVarName,
@@ -1410,6 +1405,10 @@ class Turbine {
     return new Square(GET_FILE_PATH, fileVar);
   }
 
+  public static Command copyInFilename(Value file, Value filename) {
+    return new Command(COPY_IN_FILENAME, file, filename);
+  }
+
   public static SetVariable isMapped(String isMappedVar, Value fileVar) {
     return new SetVariable(isMappedVar, new Square(IS_MAPPED, fileVar));
   }
@@ -1636,4 +1635,5 @@ class Turbine {
     return new SetVariable(existsVarName, xptLookupExpr(resultVarName,
             packedKey));
   }
+  
 }

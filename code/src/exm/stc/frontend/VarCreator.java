@@ -73,8 +73,15 @@ public class VarCreator {
     Var v = createVariable(context,
         new Var(type, name, storage, defType, prov, mapping != null));
     
-    backend.copyMapping(VarRepr.backendVar(v),
-                        VarRepr.backendVar(mapping));
+    if (mapping != null) {
+      if (Types.isFile(v)) {
+        backend.copyInFilename(VarRepr.backendVar(v),
+                          VarRepr.backendVar(mapping));
+      } else {
+        throw new STCRuntimeError("Mapping type " + v.type() +
+                                  " not implemented");
+      }
+    }
     
     return v;
   }

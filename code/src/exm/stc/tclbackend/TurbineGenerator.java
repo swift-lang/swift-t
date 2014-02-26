@@ -625,11 +625,8 @@ public class TurbineGenerator implements CompilerBackend {
   }
   
   private void allocateFile(Var var, Arg initReaders) {
-    // TODO: don't need mapping
-    Value mapExpr = (!var.mappedDecl()) ? 
-                    null : varToExpr(var.mapping());
-    pointAdd(
-        Turbine.allocateFile(mapExpr, prefixVar(var),
+    Expression mappedExpr = LiteralInt.boolValue(var.mappedDecl());
+    pointAdd(Turbine.allocateFile(mappedExpr, prefixVar(var),
                              argToExpr(initReaders)));
   }
 
@@ -1035,7 +1032,7 @@ public class TurbineGenerator implements CompilerBackend {
   }
   
   @Override
-  public void getFileName(Var filename, Var file) {
+  public void getFileNameAlias(Var filename, Var file) {
     assert(Types.isString(filename.type()));
     assert(filename.storage() == Alloc.ALIAS);
     assert(Types.isFile(file.type()));
@@ -1043,6 +1040,15 @@ public class TurbineGenerator implements CompilerBackend {
     SetVariable cmd = new SetVariable(prefixVar(filename),
                           Turbine.getFileName(varToExpr(file)));
     pointAdd(cmd);
+  }
+  
+  /**
+   * Copy filename from future to file
+   */
+  public void copyInFilename(Var file, Var filename) {
+    assert(Types.isString(filename));
+    assert(Types.isFile(file));
+    pointAdd(Turbine.copyInFilename(varToExpr(file), varToExpr(filename)));
   }
   
   @Override

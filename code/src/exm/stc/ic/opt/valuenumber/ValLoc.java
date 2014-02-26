@@ -237,7 +237,7 @@ public class ValLoc {
     assert(Types.isFile(inFile.type()));
     assert(outFilename.isVar());
     assert(Types.isString(outFilename.getVar().type()));
-    return build(ComputedValue.filenameCV(inFile),
+    return build(ComputedValue.filenameAliasCV(inFile),
                       outFilename, Closed.MAYBE_NOT, IsAssign.NO);
   }
   

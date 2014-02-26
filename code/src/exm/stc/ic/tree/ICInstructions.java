@@ -50,6 +50,7 @@ import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.Semantics;
 import exm.stc.ic.opt.valuenumber.ComputedValue;
 import exm.stc.ic.opt.valuenumber.ValLoc;
+import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
 import exm.stc.ic.tree.Conditionals.Conditional;
@@ -327,6 +328,8 @@ public class ICInstructions {
     /**
      * 
      * @param closedVars variables closed at point of current instruction
+     * @param closedLocations abstract locations closed at point of current
+     *          instruction
      * @param valueAvail variables where the retrieve resultis available at
      *                  current point (implies closed too)
      * @param waitForClose if true, allowed to (must don't necessarily
@@ -336,7 +339,8 @@ public class ICInstructions {
      *            and output vars that need to be have value vars created
      */
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-                      Set<Var> valueAvail, boolean waitForClose) {
+                      Set<ArgCV> closedLocations, Set<Var> valueAvail,
+                      boolean waitForClose) {
       // Not implemented
       return null;
     }
@@ -547,7 +551,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars, 
-        Set<Var> valueAvail, boolean waitForClose) {
+        Set<ArgCV> closedLocations, Set<Var> valueAvail, boolean waitForClose) {
       return null;
     }
 
@@ -1121,7 +1125,7 @@ public class ICInstructions {
  
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-        Set<Var> valueAvail, boolean waitForClose) {
+        Set<ArgCV> closedLocations, Set<Var> valueAvail, boolean waitForClose) {
       if (isImpl(SpecialFunction.SIZE)) {
         if (waitForClose || allInputsClosed(closedVars)) {
           // Input array closed, can lookup right away
@@ -1140,7 +1144,8 @@ public class ICInstructions {
       
       // By default, need all arguments to be closed
       boolean allNeededClosed = waitForClose || 
-          (allInputsClosed(closedVars) && allOutputSideChannelsClosed(closedVars));
+          (allInputsClosed(closedVars) &&
+              allOutputSideChannelsClosed(closedVars, closedLocations));
       
       if (allNeededClosed && (ForeignFunctions.hasOpEquiv(this.functionName)
                 || ForeignFunctions.hasInlineVersion(this.functionName))) {
@@ -1192,11 +1197,13 @@ public class ICInstructions {
      * @param closedVars
      * @return
      */
-    private boolean allOutputSideChannelsClosed(Set<Var> closedVars) {
+    private boolean allOutputSideChannelsClosed(Set<Var> closedVars,
+        Set<ArgCV> closedLocations) {
       for (Var out: this.outputs) {
         if (Types.isFile(out)) {
           // Need to wait for filename, unless unmapped
-          if (!Semantics.outputMappingAvail(closedVars, out)) {
+          if (!Semantics.outputMappingAvail(closedVars, closedLocations,
+                                            out)) {
             return false;
           }
         }
@@ -1365,7 +1372,7 @@ public class ICInstructions {
     
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-        Set<Var> valueAvail, boolean waitForClose) {
+        Set<ArgCV> closedLocations, Set<Var> valueAvail, boolean waitForClose) {
       return null; // already immediate
     }
 
@@ -1481,7 +1488,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-        Set<Var> valueAvail, boolean waitForClose) {
+        Set<ArgCV> closedLocations, Set<Var> valueAvail, boolean waitForClose) {
       // Don't support reducing this
       return null;
     }
@@ -1668,7 +1675,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-        Set<Var> valueAvail, boolean waitForClose) {
+        Set<ArgCV> closedLocations, Set<Var> valueAvail, boolean waitForClose) {
       // Variables we need to wait for to make immediate
       List<Var> waitForInputs = new ArrayList<Var>();
       
@@ -1834,7 +1841,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-        Set<Var> valueAvail, boolean waitForClose) {
+        Set<ArgCV> closedLocations, Set<Var> valueAvail, boolean waitForClose) {
       return null;
     }
    
@@ -2052,7 +2059,8 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-        Set<Var> valueAvail, boolean waitForClose) {
+        Set<ArgCV> closedLocations, Set<Var> valueAvail,
+        boolean waitForClose) {
       if (op == Opcode.LOCAL_OP) {
         // already is immediate
         return null; 
@@ -2080,7 +2088,8 @@ public class ICInstructions {
         if (Types.isFile(output) && !mapOutputVars) {
           // Need to wait for filename, unless unmapped
           if (!(waitForClose ||
-                Semantics.outputMappingAvail(closedVars, output))) {
+                Semantics.outputMappingAvail(closedVars, closedLocations,
+                                             output))) {
             return null;
           }
         }

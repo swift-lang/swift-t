@@ -36,12 +36,12 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.TaskMode;
-import exm.stc.common.lang.WaitVar;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.MultiMap.LinkedListFactory;
@@ -53,6 +53,7 @@ import exm.stc.ic.WrapUtil;
 import exm.stc.ic.opt.OptUtil.InstOrCont;
 import exm.stc.ic.opt.OptUtil.OptVarCreator;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
+import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -440,7 +441,8 @@ public class WaitCoalescer implements OptimizerPass {
         ExecContext execCx, Block block, ListIterator<Statement> it,
         Instruction inst, HierarchicalSet<Var> waitedFor) {
     MakeImmRequest req = inst.canMakeImmediate(waitedFor,
-                           Collections.<Var>emptySet(), true);
+             Collections.<ArgCV>emptySet(), Collections.<Var>emptySet(),
+             true);
     if (req != null && req.in.size() > 0) {
       if (logger.isTraceEnabled()) {
         logger.trace("Exploding " + inst + " in function " + fn.getName());

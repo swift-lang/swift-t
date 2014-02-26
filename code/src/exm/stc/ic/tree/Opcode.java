@@ -94,9 +94,11 @@ public enum Opcode {
   STRUCT_STORE_SUB, STRUCTREF_STORE_SUB, STRUCT_COPY_IN, STRUCTREF_COPY_IN,
   
   // Manipulate filenames
-  GET_FILENAME, SET_FILENAME_VAL, CHOOSE_TMP_FILENAME, IS_MAPPED,
-  // Dummy opcode to indicate value of file
-  GET_FILENAME_VAL,
+  GET_FILENAME_ALIAS, // Create String alias to filename
+  SET_FILENAME_VAL, // Immediately set filename
+  GET_FILENAME_VAL, // Dummy opcode to indicate filename value
+  COPY_IN_FILENAME, // Copy in mapping to mappable var
+  CHOOSE_TMP_FILENAME, IS_MAPPED,
   // Manage local files
   INIT_LOCAL_OUTPUT_FILE, GET_LOCAL_FILENAME,
   // Physical copy of file

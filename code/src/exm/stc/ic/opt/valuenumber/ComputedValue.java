@@ -420,7 +420,7 @@ public class ComputedValue<T> {
   }
   
   public boolean canSubstituteInputs(CongruenceType congType) {
-    if (op == Opcode.GET_FILENAME || op == Opcode.GET_FILENAME_VAL) {
+    if (op == Opcode.GET_FILENAME_ALIAS || op == Opcode.GET_FILENAME_VAL) {
       if (congType == CongruenceType.VALUE) {
         // Even if two file variables are congruent by value, they may
         // have different filename
@@ -437,9 +437,9 @@ public class ComputedValue<T> {
    * @param file
    * @return
    */
-  public static ArgCV filenameCV(Var file) {
+  public static ArgCV filenameAliasCV(Var file) {
     assert(Types.isFile(file));
-    return new ArgCV(Opcode.GET_FILENAME, file.asArg().asList());
+    return new ArgCV(Opcode.GET_FILENAME_ALIAS, file.asArg().asList());
   }
   
   /**
@@ -462,8 +462,8 @@ public class ComputedValue<T> {
     return new ArgCV(Opcode.GET_LOCAL_FILENAME, file.asArg().asList());
   }
   
-  public boolean isFilenameCV() {
-    return op == Opcode.GET_FILENAME;
+  public boolean isFilenameAliasCV() {
+    return op == Opcode.GET_FILENAME_ALIAS;
   }
   
   public boolean isFilenameValCV() {
@@ -480,7 +480,7 @@ public class ComputedValue<T> {
    */
   public CongruenceType congType() {
     if (isAlias() || op == Opcode.LOAD_REF ||
-        op == Opcode.GET_FILENAME) {
+        op == Opcode.GET_FILENAME_ALIAS) {
       return CongruenceType.ALIAS;
     } else if (isArrayMemberValRef()) {
       return CongruenceType.ALIAS;

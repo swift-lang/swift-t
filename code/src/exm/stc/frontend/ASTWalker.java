@@ -2215,10 +2215,10 @@ public class ASTWalker {
     if (fileVar.defType() == DefType.OUTARG &&
         fileVar.type().fileKind().supportsTmpImmediate()) {
       // If output may be unmapped, need to assign file name
-      backend.getFileName(VarRepr.backendVar(filenameFuture),
+      backend.getFileNameAlias(VarRepr.backendVar(filenameFuture),
                           VarRepr.backendVar(fileVar), true);
     } else {
-      backend.getFileName(VarRepr.backendVar(filenameFuture),
+      backend.getFileNameAlias(VarRepr.backendVar(filenameFuture),
                           VarRepr.backendVar(fileVar), false);
     }
     waitVars.add(new WaitVar(filenameFuture, false));

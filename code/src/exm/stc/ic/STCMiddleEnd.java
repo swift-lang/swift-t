@@ -732,7 +732,7 @@ public class STCMiddleEnd {
           OptUtil.optFilenamePrefix(block, target),
           Alloc.ALIAS, DefType.LOCAL_COMPILER, VarProvenance.filenameOf(target));
       
-      block.addInstruction(TurbineOp.getFileName(targetFilename, target));
+      block.addInstruction(TurbineOp.getFileNameAlias(targetFilename, target));
       
       waitVars = Arrays.asList(new WaitVar(src, false),
                        new WaitVar(targetFilename, false));
@@ -876,7 +876,7 @@ public class STCMiddleEnd {
         Var filenameAlias = block.declareUnmapped(Types.F_STRING,
             filenameAliasN, Alloc.ALIAS, DefType.LOCAL_COMPILER,
             VarProvenance.filenameOf(file));
-        block.addInstruction(TurbineOp.getFileName(filenameAlias, file));
+        block.addInstruction(TurbineOp.getFileNameAlias(filenameAlias, file));
         block.addInstruction(Builtin.createAsync(BuiltinOpcode.COPY_STRING,
                                   filename, filenameAlias.asArg().asList()));
         break;
@@ -1042,7 +1042,7 @@ public class STCMiddleEnd {
           TurbineOp.updateImm(updateable, updateMode, val));
   }
 
-  public void getFileName(Var filename, Var file,
+  public void getFileNameAlias(Var filename, Var file,
                           boolean initUnmapped) {
     assert(Types.isString(filename.type()));
     assert(filename.storage() == Alloc.ALIAS);
@@ -1052,7 +1052,7 @@ public class STCMiddleEnd {
               currBlock().statementEndIterator(), filename, file);
     } else {
       // Don't allow initialization of filename
-      currBlock().addInstruction(TurbineOp.getFileName(filename, file));
+      currBlock().addInstruction(TurbineOp.getFileNameAlias(filename, file));
     }
   }
   
@@ -1061,6 +1061,13 @@ public class STCMiddleEnd {
     assert(filenameVal.isImmediateString());
     currBlock().addInstruction(
             TurbineOp.setFilenameVal(file, filenameVal));
+  }
+
+  public void copyInFilename(Var var, Var mapping) {
+    assert(Types.isFile(var));
+    assert(Types.isString(mapping));
+    currBlock().addInstruction(
+            TurbineOp.copyInFilename(var, mapping));
   }
 
   public void generateWrappedBuiltin(String wrapperName,
@@ -1187,9 +1194,4 @@ public class STCMiddleEnd {
         TurbineOp.unpackValues(values, packedValues.asArg()));
   }
 
-  public void copyMapping(Var var, Var mapping) {
-    assert(Types.isMappable(var));
-    // TODO Auto-generated method stub
-    throw new STCRuntimeError("TODO: not implemented");
-  }
 }
