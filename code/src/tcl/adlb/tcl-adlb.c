@@ -136,6 +136,24 @@ typedef struct {
   adlb_type_extra *extras; /* E.g. for struct subtype */
 } compound_type;
 
+
+static int
+Extract_ADLB_Handle(Tcl_Interp *interp, Tcl_Obj *const objv[],
+        Tcl_Obj *obj, adlb_datum_id *id, Tcl_Obj ***subscript_list,
+        int *subscript_list_len);
+
+// Extract only ID from handle, ignore rest
+static inline int
+Extract_ADLB_Handle_ID(Tcl_Interp *interp, Tcl_Obj *const objv[],
+        Tcl_Obj *obj, adlb_datum_id *id);
+
+// Helper macros to pass interp, objv
+#define EXTRACT_HANDLE(obj, id, list, len) \
+        Extract_ADLB_Handle(interp, objv, obj, id, list, len)
+
+#define EXTRACT_HANDLE_ID(obj, id) \
+    Extract_ADLB_Handle_ID(interp, objv, obj, id)
+
 static void set_namespace_constants(Tcl_Interp* interp);
 
 static int refcount_mode(Tcl_Interp *interp, Tcl_Obj *const objv[],
@@ -3388,7 +3406,7 @@ ADLB_Write_Refcount_Incr_Cmd(ClientData cdata, Tcl_Interp *interp,
                 "requires 1 or 2 args!");
   int rc;
   adlb_datum_id container_id;
-  rc = Tcl_GetADLB_ID(interp, objv[1], &container_id);
+  rc = EXTRACT_HANDLE_ID(objv[1], &container_id);
   TCL_CHECK(rc);
 
   adlb_refcounts incr = ADLB_WRITE_RC;
@@ -3451,7 +3469,7 @@ ADLB_Refcount_Incr_Impl(ClientData cdata, Tcl_Interp *interp,
   int rc;
 
   adlb_datum_id id;
-  rc = Tcl_GetADLB_ID(interp, var, &id);
+  rc = EXTRACT_HANDLE_ID(var, &id);
   TCL_CHECK(rc);
 
   int change = 1; // Default
@@ -4081,6 +4099,16 @@ Extract_ADLB_Handle(Tcl_Interp *interp, Tcl_Obj *const objv[],
   (*subscript_list)++;
   
   return TCL_OK;
+}
+
+static inline int
+Extract_ADLB_Handle_ID(Tcl_Interp *interp, Tcl_Obj *const objv[],
+        Tcl_Obj *obj, adlb_datum_id *id)
+{
+  Tcl_Obj **subscript_list;
+  int subscript_list_len;
+  return Extract_ADLB_Handle(interp, objv, obj, id, &subscript_list,
+                             &subscript_list_len);
 }
 
 /**
