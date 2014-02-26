@@ -18,14 +18,16 @@
 # TODO: Need some Turbine tests for this
 
 namespace eval turbine {
-    namespace export get_file_status get_file_path is_file_mapped \
-                     filename2 copy_file close_file file_read file_write \
-                     swift_filename \
-        create_file     store_file            \
-        create_file_ref     store_file_ref            \
-        retrieve_file_ref retrieve_decr_file_ref acquire_file_ref \
+    namespace export get_file_status get_file_path is_file_mapped       \
+        filename2 copy_file close_file file_read file_write             \
+        swift_filename                                                  \
+        create_file store_file                                          \
+        create_file_ref store_file_ref                                  \
+        retrieve_file_ref retrieve_decr_file_ref acquire_file_ref       \
+        retrieve_file retrieve_decr_file store_file
 
-    # Initialize file struct types, should be called when initializing Turbine
+    # Initialize file struct types, should be called when initializing
+    # Turbine
     proc init_file_types { } {
       # Setup file and file_ref struct types
       # File is represented by path.  Status of td reflects whether file
@@ -87,7 +89,6 @@ namespace eval turbine {
       return [ dict get $file_handle is_mapped ]
     }
 
-
     proc store_file { file_handle value } {
         set id [ get_file_td $file_handle ]
         log "store: <$id>=$value"
@@ -115,7 +116,11 @@ namespace eval turbine {
             }
         }
         debug "retrieve: <$id>=$result"
-        return [ create_local_file_ref [ dict get path $result ] 2 ]
+        return [ create_local_file_ref [ dict get $result path ] 2 ]
+    }
+
+    proc retrieve_decr_file { file_handle {cachemode CACHED} } {
+      return [ retrieve_file $file_handle $cachemode 1 ]
     }
     
     proc create_file_ref { id {read_refcount 1} {write_refcount 1} \
@@ -293,48 +298,54 @@ namespace eval turbine {
     proc copy_file { outputs inputs } {
       set dst [ lindex $outputs 0 ]
       set src [ lindex $inputs 0 ]
+      log "copy_file $src => $dst"
       #  puts "dst: $dst"
       set mapped [ is_file_mapped $dst ]
+      set src_td [ get_file_td $src ]
       if { $mapped } {
         # is mapped, so need to make sure that file is at mapped path
         set dstpath [ get_file_path $dst ]
-        set srcpath [ get_file_path $src ]
-        set srcstatus [ get_file_status $src ]
-        rule "$dstpath $srcpath $srcstatus" \
-            [ list copy_file_body $dst $src ] \
-            name "copy_file-$dst-$src" type $::turbine::WORK
+        rule [ list $dstpath $src_td ] \
+            "copy_file_body {$dst} {$src}" \
+            name "copy_file-{$dst}-{$src}" type $::turbine::WORK
       } else {
         # not mapped.  As shortcut, just make them both point to the
         # same file and update status once src file is closed
-        
-        set src_td [ get_file_td $src ]
         rule $src_td [ list copy_file_td_body $dst $src ]
       }
     }
 
     proc copy_file_td_body { dst src } {
-      set tmp [ retrieve_file $src CACHED 1 ]
+      set tmp [ retrieve_decr_file $src ]
       store_file $dst $tmp
     }
 
     proc copy_file_body { dst src } {
-      # TODO: got upto here updating file types
-      set dstpath [ get_file_path $dst ]
-      set dstpath_val [ retrieve_string $dstpath ]
-      set srcpath [ get_file_path $src ]
-      set srcpath_val [ retrieve_string $srcpath ]
+      set dstpath_val [ get_filename_val $dst ]
+      set src_val [ retrieve_decr_file $src ]
+      set srcpath_val [ local_file_path $src_val ]
+      log "physical file copy \"$srcpath_val\" => \"$dstpath_val\""
       # do the copy: srcpath to dstpath
       # TODO: is this the best way to do this?
       file copy -force $srcpath_val $dstpath_val
       # signal that output is now available
-      store_void [ get_file_status $dst ]
-      file_read_refcount_decr $src
+      close_file $dst
     }
 
     proc copy_local_file_contents { dst src } {
       set dstpath [ local_file_path $dst ]
       set srcpath [ local_file_path $src ]
       file copy -force $srcpath $dstpath
+    }
+    
+    proc dereference_file { v r } {
+        rule $r "dereference_file_body {$v} $r" \
+            name "dereference_file"
+    }
+    proc dereference_file_body { v r } {
+        # Get the TD from the reference
+        set handle [ acquire_file_ref $r 1 1 ]
+        copy_file [ list $v ] [ list $handle ]
     }
 
     # return the filename of a unique temporary file
@@ -349,6 +360,11 @@ namespace eval turbine {
     proc set_filename_val { file_handle filename } {
       # TODO: different struct store function?
       adlb::insert [ get_file_td $file_handle ] 0 $filename string
+    }
+
+    proc get_filename_val { file_handle } {
+      # TODO: different struct retrieve function?
+      return [ adlb::lookup [ get_file_td $file_handle ] 0 ]
     }
 
     proc close_file { handle } {
@@ -436,8 +452,8 @@ namespace eval turbine {
     }
 
     proc file_read_body { result src } {
-	set val [ retrieve_file $src CACHED 1 ]
-	set s [ dict get path $val ]
+	set val [ retrieve_decr_file $src ]
+	set s [ dict get $val path ]
         set fp [ ::open $s r ]
 	set file_data [ read $fp ]
         close $fp
@@ -487,8 +503,8 @@ namespace eval turbine {
             [ list blob_read_body $result $src ]
     }
     proc blob_read_body { result input } {
-	set val [ retrieve_file $src CACHED 1 ]
-	set input_name [ dict get path $val ]
+	set val [ retrieve_decr_file $src ]
+	set input_name [ dict get $val path ]
 
         set blob [ new_turbine_blob ]
         log "blob_read: $input_name"

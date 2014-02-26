@@ -448,16 +448,6 @@ namespace eval turbine {
         copy_blob [ list $v ] [ list $id ]
     }
 
-    proc dereference_file { v r } {
-        rule $r "dereference_file_body {$v} $r" \
-            name "dereference_file"
-    }
-    proc dereference_file_body { v r } {
-        # Get the TD from the reference
-        set handle [ acquire_file_ref $r 1 1 ]
-        copy_file [ list $v ] [ list $handle ]
-    }
-
     # CRVL
     # When reference cr is closed, store d = (*cr)[i]
     # Blocks on cr
