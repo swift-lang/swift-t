@@ -110,12 +110,26 @@ public class TclUtil {
   }
 
   public static boolean representationIsTclList(Type type) {
-    // TODO: treat handles as lists?
-    if (Types.isFile(type) || Types.isStructLocal(type) ||
+    if (Types.isFileRef(type) || Types.isStructLocal(type) ||
         Types.isFileVal(type) || Types.isContainerLocal(type)) {
+      return true;
+    } else if (isHandle(type))     {
+      // treat handles as lists, since they might be a list of id + subscript
+      // TODO: more selective treatment?
       return true;
     }
     return false;
+  }
+
+  /**
+   * If it's a handle to shared data
+   * @param type
+   * @return
+   */
+  private static boolean isHandle(Type type) {
+    return Types.isPrimFuture(type) || Types.isStruct(type) ||
+               Types.isContainer(type) || Types.isPrimUpdateable(type) ||
+               Types.isRef(type);
   }
 
   public static List<Expression> varsToExpr(List<Var> inputs) {
