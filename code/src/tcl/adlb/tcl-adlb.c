@@ -222,16 +222,8 @@ static int field_name_objs_finalize(Tcl_Interp *interp,
 /* current priority for rule */
 int ADLB_curr_priority = DEFAULT_PRIORITY;
 
-
-/* Layout of file list used as Tcl representation */
-#define FILE_REF_ELEMS 3
-#define FILE_REF_STATUS 0
-#define FILE_REF_FILENAME 1
-#define FILE_REF_MAPPED 2
-
 /** We only free this if we are the outermost MPI communicator */
 static bool must_comm_free = false;
-
 
 #define CHECK_ADLB_STORE(rc, id) {                                      \
   TCL_CONDITION(rc != ADLB_REJECTED,                                    \
@@ -1090,9 +1082,6 @@ ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
     case ADLB_DATA_TYPE_REF:
       rc = ADLB_Create_ref(id, props, &new_id);
       break;
-    case ADLB_DATA_TYPE_FILE_REF:
-      rc = ADLB_Create_file_ref(id, props, &new_id);
-      break;
     case ADLB_DATA_TYPE_STRUCT:
       rc = ADLB_Create_struct(id, props, &new_id);
       break;
@@ -1314,32 +1303,6 @@ tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
              extra.STRUCT.struct_type, &result->STRUCT);
       *alloced = true;
       TCL_CHECK(rc);
-      return TCL_OK;
-    }
-    case ADLB_DATA_TYPE_FILE_REF:
-    {
-      // Extract from Tcl list and pack into struct
-      Tcl_Obj **fr_elems;
-      int fr_count;
-      rc = Tcl_ListObjGetElements(interp, obj, &fr_count, &fr_elems);
-      TCL_CONDITION(rc == TCL_OK, "Failed interpreting object as list: %s",
-                Tcl_GetString(obj));
-      TCL_CONDITION(fr_count == FILE_REF_ELEMS, "Expected 3-element list as ADLB file "
-                     "representation, but instead got %d-element list: %s",
-                     fr_count, Tcl_GetString(obj));
-      rc = Tcl_GetADLB_ID(interp, fr_elems[FILE_REF_STATUS],
-                          &result->FILE_REF.status_id);
-      TCL_CHECK_MSG(rc, "adlb extract ID from %s failed!",
-                      Tcl_GetString(fr_elems[FILE_REF_STATUS]));
-      rc = Tcl_GetADLB_ID(interp, fr_elems[FILE_REF_FILENAME],
-                          &result->FILE_REF.filename_id);
-      TCL_CHECK_MSG(rc, "adlb extract ID from %s failed!",
-                      Tcl_GetString(fr_elems[FILE_REF_FILENAME]));
-      int tmp_mapped;
-      rc = Tcl_GetIntFromObj(interp, fr_elems[FILE_REF_MAPPED], &tmp_mapped);
-      TCL_CHECK_MSG(rc, "adlb extract bool from %s failed!",
-                      Tcl_GetString(fr_elems[FILE_REF_MAPPED]));
-      result->FILE_REF.mapped = tmp_mapped != 0;
       return TCL_OK;
     }
     case ADLB_DATA_TYPE_CONTAINER:
@@ -2237,22 +2200,6 @@ adlb_data_to_tcl_obj(Tcl_Interp *interp, Tcl_Obj *const objv[], adlb_datum_id id
       *result = build_tcl_blob(tmp.BLOB.value, tmp.BLOB.length,
                                ADLB_DATA_ID_NULL);
       break;
-    case ADLB_DATA_TYPE_FILE_REF:
-    {
-      dc = ADLB_Unpack_file_ref(&tmp.FILE_REF, data, length);
-      TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
-            "Retrieve failed due to error unpacking data %i", dc);
-
-      // Pack into Tcl list representation
-      Tcl_Obj *file_ref_elems[FILE_REF_ELEMS];
-      file_ref_elems[FILE_REF_STATUS] = Tcl_NewADLB_ID(tmp.FILE_REF.status_id);
-      file_ref_elems[FILE_REF_FILENAME] =
-                                      Tcl_NewADLB_ID(tmp.FILE_REF.filename_id);
-      file_ref_elems[FILE_REF_MAPPED] =
-                                    Tcl_NewIntObj(tmp.FILE_REF.mapped ? 1 : 0);
-      *result = Tcl_NewListObj(FILE_REF_ELEMS, file_ref_elems);
-      break;
-    }
     case ADLB_DATA_TYPE_STRUCT:
       return packed_struct_to_tcl_dict(interp, objv, data, length,
                                        extra, result);

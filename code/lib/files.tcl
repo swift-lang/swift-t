@@ -20,7 +20,32 @@
 namespace eval turbine {
     namespace export get_file_status get_file_path is_file_mapped \
                      filename2 copy_file close_file file_read file_write \
-                     swift_filename
+                     swift_filename \
+        create_file     store_file            \
+        create_file_ref     store_file_ref            \
+        retrieve_file_ref retrieve_decr_file_ref acquire_file_ref \
+
+    # Initialize struct types, should be called when initializing Turbine
+    proc init_struct_types { } {
+      # Setup file and file_ref struct types
+      adlb::declare_struct_type 0 file [ list "status" integer "path" string ]
+      adlb::declare_struct_type 1 file_ref [ list "file" file "is_mapped" integer ]
+    }
+    
+    # usage: <name> <is_mapped> [<create props>]
+    # is_mapped: if true, file mapping will be set;
+    #            if false, temporary file can be generated
+    proc allocate_file { name is_mapped {read_refcount 1} {write_refcount 1} args } {
+        # use void to signal file availability
+        set file_td [ allocate_custom "$name" file \
+                              $read_refcount $write_refcount {*}${args} ]
+
+        # Format matches file_ref struct type
+        set u [ dict create file $file_td is_mapped $is_mapped ]
+        upvar 1 $name v
+        set v $u
+        return $u
+    }
 
     # Handles files that are input to a builtin function
     # Increments reference count to avoid file deletion
@@ -31,27 +56,107 @@ namespace eval turbine {
         set result [ lindex $file_handle 0 ]
         return $result
     }
+    
+    proc get_file_td { file_handle } {
+      return [ dict get $file_handle file ]
+    }
 
-    # Extract file status future from handle
+    # Extract file status handle from file handle
     proc get_file_status { file_handle } {
-      return [ lindex $file_handle 0 ]
+      # Create handle for subscript of struct variable
+      return [ adlb::subscript [ get_file_td $file_handle ] 0 ]
     }
 
     # Extract filename future from handle
     proc get_file_path { file_handle } {
-      return [ lindex $file_handle 1 ]
+      # Create handle for subscript of struct variable
+      return [ adlb::subscript [ get_file_td $file_handle ] 1 ]
     }
 
     # return tcl bool value
     proc is_file_mapped { file_handle } {
-      return [ lindex $file_handle 2 ]
+      return [ dict get $file_handle is_mapped ]
     }
 
+
+    proc store_file { file_handle value } {
+        set id [ get_file_td $file_handle ]
+        log "store: <$id>=$value"
+        adlb::store $id file $value
+        c::cache_store $id file $value
+    }
+
+    proc retrieve_file { file_handle {cachemode CACHED} {decrref 0} } {
+        set id [ get_file_td $file_handle ]
+        set cache [ string equal $cachemode CACHED ]
+        if { $cache && [ c::cache_check $id ] } {
+            set result [ c::cache_retrieve $id ]
+            if { $decrref } {
+              read_file_refcount_decr $id
+            }
+        } else {
+            if { $decrref } {
+              set result [ adlb::retrieve_decr $id $decrref file ]
+            } else {
+              set result [ adlb::retrieve $id file ]
+            }
+
+            if { $cache } {
+              c::cache_store $id file $result
+            }
+        }
+        debug "retrieve: <$id>=$result"
+        return $result
+    }
+    
+    proc create_file_ref { id {read_refcount 1} {write_refcount 1} \
+                             {permanent 0} } {
+        return [ adlb::create $id file_ref $read_refcount \
+                              $write_refcount $permanent ]
+    }
+
+    proc store_file_ref { id value } {
+        log "store: <$id>=$value"
+        adlb::store $id file_ref $value
+        c::cache_store $id file_ref $value
+    }
+
+    proc retrieve_file_ref { id {cachemode CACHED} {decrref 0} } {
+        set cache [ string equal $cachemode CACHED ]
+        if { $cache && [ c::cache_check $id ] } {
+            set result [ c::cache_retrieve $id ]
+            if { $decrref } {
+              read_file_refcount_decr $id
+            }
+        } else {
+            if { $decrref } {
+              set result [ adlb::retrieve_decr $id $decrref file_ref ]
+            } else {
+              set result [ adlb::retrieve $id file_ref ]
+            }
+
+            if { $cache } {
+              c::cache_store $id file_ref $result
+            }
+        }
+        debug "retrieve: <$id>=$result"
+        return $result
+    }
+
+    proc retrieve_decr_file_ref { id {cachemode CACHED} } {
+      return [ retrieve_file_ref $id $cachemode 1 ]
+    }
+
+    proc acquire_file_ref { id {incrref 1} {decrref 0} } {
+        set result [ adlb::acquire_ref $id file_ref $incrref $decrref ]
+        debug "acquire_file_ref: <$id>=$result"
+        return $result
+    }
+    
     # get the filename from the file handle
     proc filename2 { out in } {
       set file_handle [ lindex $in 0 ]
       copy_string $out [ get_file_path $file_handle ]
-      read_refcount_decr [ get_file_status $file_handle ]
     }
 
     # get the filename if mapped, assign if unmapped
@@ -113,6 +218,7 @@ namespace eval turbine {
       if { ! [ file exists $filepath_val ] } {
         error "input_file: file '$filepath_val' does not exist"
       }
+      s
       store_string [ get_file_path $outfile ] $filepath_val
       store_void [ get_file_status $outfile ]
     }
@@ -142,8 +248,7 @@ namespace eval turbine {
     }
 
     proc input_url_impl { outfile filepath_val } {
-      store_string [ get_file_path $outfile ] $filepath_val
-      store_void [ get_file_status $outfile ]
+      store_file $outfile [ dict create status 12345 path $filepath_val ]
     }
 
     proc input_url_local { url } {
@@ -184,12 +289,19 @@ namespace eval turbine {
       } else {
         # not mapped.  As shortcut, just make them both point to the
         # same file and update status once src file is closed
-        copy_void [ get_file_status $dst ] [ get_file_status $src ]
-        copy_string [ get_file_path $dst ] [ get_file_path $src ]
+        
+        set src_td [ get_file_td $src ]
+        rule $src_td [ list copy_file_td_body $dst $src ]
       }
     }
 
+    proc copy_file_td_body { dst src } {
+      set tmp [ retrieve_file $src CACHED 1 ]
+      store_file $dst $tmp
+    }
+
     proc copy_file_body { dst src } {
+      # TODO: got upto here updating file types
       set dstpath [ get_file_path $dst ]
       set dstpath_val [ retrieve_string $dstpath ]
       set srcpath [ get_file_path $src ]

@@ -105,6 +105,8 @@ namespace eval turbine {
 
         turbine::init_rng
 
+        turbine::init_struct_types
+
         adlb::barrier
         c::normalize
 
