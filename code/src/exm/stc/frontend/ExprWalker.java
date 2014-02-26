@@ -385,6 +385,8 @@ public class  ExprWalker {
       backend.assignArray(backendDst, backendSrc);
     } else if (Types.isBag(dst)) {
       backend.assignBag(backendDst, backendSrc);
+    } else if (Types.isStruct(dst)) {
+      backend.assignStruct(backendDst, backendSrc);
     } else {
       throw new STCRuntimeError("Can't assign: " + dst);
     }
@@ -403,6 +405,9 @@ public class  ExprWalker {
     } else if (Types.isBag(src)) {
       // TODO: recursively?
       backend.retrieveBag(backendDst, backendSrc);
+    } else if (Types.isStruct(src)) {
+      // TODO: recursively?
+      backend.retrieveStruct(backendDst, backendSrc);
     } else {
       throw new STCRuntimeError("Don't know how to fetch " + src);
     }

@@ -819,6 +819,24 @@ public class STCMiddleEnd {
     currBlock().addInstruction(TurbineOp.retrieveBag(target, src));
   }
   
+  public void assignStruct(Var target, Arg src) {
+    assert(Types.isStruct(target)) : target;
+    assert(Types.isStructLocal(src)) : src.type();
+    assert(StructType.sharedStruct((StructType)src.type().getImplType())
+                                            .assignableTo(target.type()));
+    
+    currBlock().addInstruction(TurbineOp.assignStruct(target, src));
+  }
+  
+  public void retrieveStruct(Var target, Var src) {
+    assert(Types.isStruct(src.type()));
+    assert(Types.isStructLocal(target));
+    assert(StructType.localStruct((StructType)src.type().getImplType())
+                                            .assignableTo(target.type()));
+    
+    currBlock().addInstruction(TurbineOp.retrieveStruct(target, src));
+  }
+  
   public void storeRecursive(Var target, Arg src) {
     assert(Types.isContainer(target));
     assert(Types.isContainerLocal(src.type()));
