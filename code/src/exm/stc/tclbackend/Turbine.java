@@ -217,8 +217,8 @@ class Turbine {
   private static final Token FREE_LOCAL_BLOB = turbFn("free_local_blob");
 
   // Files
-  private static final Token GET_FILE = turbFn("get_file");
-  private static final Token SET_FILE = turbFn("set_file");
+  private static final Token RETRIEVE_FILE = turbFn("retrieve_file");
+  private static final Token STORE_FILE = turbFn("store_file");
   private static final Token GET_FILE_PATH = turbFn("get_file_path");
   private static final Token COPY_IN_FILENAME = turbFn("copy_in_filename");
   private static final Token IS_MAPPED = turbFn("is_file_mapped");
@@ -581,7 +581,7 @@ class Turbine {
 
   public static SetVariable fileDecrGet(String target, Value src,
           Expression decr) {
-    return new SetVariable(target, new Square(GET_FILE, src, decr));
+    return new SetVariable(target, new Square(RETRIEVE_FILE, src, CACHED, decr));
   }
 
   /**
@@ -1432,11 +1432,11 @@ class Turbine {
   }
 
   public static Command fileSet(Value fileFuture, String localFileName) {
-    return new Command(SET_FILE, fileFuture, new Token(localFileName));
+    return new Command(STORE_FILE, fileFuture, new Token(localFileName));
   }
 
   public static TclTree fileGet(String prefixVar, Value varToExpr) {
-    return new SetVariable(prefixVar, new Square(GET_FILE, varToExpr));
+    return new SetVariable(prefixVar, new Square(RETRIEVE_FILE, varToExpr));
   }
 
   public static Command decrLocalFileRef(String localFileName) {
