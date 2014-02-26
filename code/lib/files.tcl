@@ -32,7 +32,7 @@ namespace eval turbine {
       # data available
       adlb::declare_struct_type 0 file [ list path string ]
       adlb::declare_struct_type 1 file_ref \
-                [ list file file is_mapped integer ]
+                [ list file ref is_mapped integer ]
     }
     
     # usage: <name> <is_mapped> [<create props>]

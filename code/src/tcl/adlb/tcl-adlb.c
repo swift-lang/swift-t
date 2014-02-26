@@ -1513,7 +1513,6 @@ tcl_obj_to_bin(Tcl_Interp *interp, Tcl_Obj *const objv[],
 {
   int rc;
   adlb_data_code dc;
-
   if (type == ADLB_DATA_TYPE_CONTAINER ||
       type == ADLB_DATA_TYPE_MULTISET)
   {
@@ -1781,7 +1780,7 @@ tcl_dict_to_adlb_struct(Tcl_Interp *interp, Tcl_Obj *const objv[],
                          adlb_struct **result)
 {
   int rc;
-
+  
   const char *st_name;
   int field_count;
   const adlb_struct_field_type *field_types;
