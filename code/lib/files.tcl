@@ -88,12 +88,27 @@ namespace eval turbine {
     proc is_file_mapped { file_handle } {
       return [ dict get $file_handle is_mapped ]
     }
+  
+    proc store_file_from_local { file_handle local_f_varname } {
+       upvar 1 $local_f_varname local_f
+       # Increment refcount so not cleaned up locally
+       lset local_f 1 [ expr {[ lindex $local_f 1 ] + 1} ]
+       store_void [ get_file_status $f ]
+    }
 
-    proc store_file { file_handle value } {
-        set id [ get_file_td $file_handle ]
-        log "store: <$id>=$value"
-        adlb::store $id file $value
-        c::cache_store $id file $value
+    # store file and update local file var refcounts
+    # second argument must be var name so we can manipulate refcounts
+    proc store_file { file_handle local_f_varname } {
+      upvar 1 $local_f_varname local_f
+      # Increment refcount so not cleaned up locally
+      lset local_f 1 [ expr {[ lindex $local_f 1 ] + 1} ]
+
+      set value [ dict create path [ local_file_path $local_f ] ]
+        
+      set id [ get_file_td $file_handle ]
+      log "store: <$id>=$value"
+      adlb::store $id file $value
+      c::cache_store $id file $value
     }
 
     proc retrieve_file { file_handle {cachemode CACHED} {decrref 0} } {
