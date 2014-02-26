@@ -5,7 +5,6 @@ THISDIR=`dirname $0`
 source ${THISDIR}/exm-settings.sh
 
 if (( MAKE_CLEAN )); then
-  rm -rf ${TURBINE_INSTALL}
   if [ -f Makefile ]; then
       # Disabled due to Turbine configure check
       #make clean

@@ -6,7 +6,9 @@ source ${THISDIR}/exm-settings.sh
 
 if (( MAKE_CLEAN )); then
   if [ -f Makefile ]; then
-    make clean
+    # Disabled due to Turbine configure check
+    #make clean
+    :
   fi
 fi
 
