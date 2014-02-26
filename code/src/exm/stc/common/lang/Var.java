@@ -240,7 +240,27 @@ public class Var implements Comparable<Var>, Typed {
     // Can't be sure
     return Ternary.MAYBE;
   }
-
+  
+  /**
+   * Determine if the variable may be an alias at runtime
+   * @return
+   */
+  public Ternary isRuntimeAlias() {
+    if (storage == Alloc.ALIAS) {
+      return Ternary.TRUE;
+    } else if (storage == Alloc.GLOBAL_CONST ||
+               storage == Alloc.LOCAL)
+    {
+      return Ternary.FALSE;
+    } else if (storage != Alloc.ALIAS &&
+        (defType == DefType.LOCAL_USER ||
+         defType == DefType.LOCAL_COMPILER)) {
+      // Was declared in this scope, can be sure wasn't alias
+      return Ternary.FALSE;
+    }
+    // Otherwise not sure
+    return Ternary.MAYBE;
+  }
 
 
   public static String names(List<Var> list)
