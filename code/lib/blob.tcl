@@ -72,7 +72,7 @@ namespace eval turbine {
           literal t float $d
           container_immediate_insert $result $i $t ref
       }
-      adlb::refcount_incr $result w -1
+      refcount_incr $result w -1
       adlb::blob_free $input
       log "floats_from_blob_body: done"
   }
@@ -121,11 +121,11 @@ namespace eval turbine {
       }
       # Close rows
       for { set i 0 } { $i < $m_value } { incr i } {
-          adlb::refcount_incr $c($i) w -1
+          refcount_incr $c($i) w -1
       }
 
       # Close result
-      adlb::refcount_incr $result w -1
+      refcount_incr $result w -1
       # Release cached blob
       adlb::blob_free $b
       log "matrix_from_blob_fortran_body: done"

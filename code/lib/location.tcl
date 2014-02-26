@@ -97,6 +97,6 @@ namespace eval turbine {
           container_insert $results $i $t ref
       }
       # close container
-      adlb::write_refcount_decr $results
+      write_refcount_decr $results
   }
 }

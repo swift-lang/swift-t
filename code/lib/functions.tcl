@@ -172,7 +172,7 @@ namespace eval turbine {
                 $prio 1
         }
         # close container
-        adlb::write_refcount_decr $result
+        write_refcount_decr $result
     }
 
     # User function
@@ -214,7 +214,7 @@ namespace eval turbine {
             container_insert $result $i $s ref
             incr i
         }
-        adlb::write_refcount_decr $result
+        write_refcount_decr $result
     }
 
     # User function

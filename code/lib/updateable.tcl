@@ -40,7 +40,7 @@ namespace eval turbine {
   proc update_min_body { x val } {
     set val2 [ retrieve_decr_float $val ]
     update_min_impl $x $val2
-    adlb::write_refcount_decr $x
+    write_refcount_decr $x
   }
 
   proc update_min_impl { x val } {
@@ -60,7 +60,7 @@ namespace eval turbine {
   proc update_incr_body { x val } {
     set val2 [ retrieve_decr_float $val ]
     update_incr_impl $x $val2
-    adlb::write_refcount_decr $x
+    write_refcount_decr $x
   }
 
   proc update_incr_impl { x val } {
@@ -77,7 +77,7 @@ namespace eval turbine {
   proc update_scale_body { x val } {
     set val2 [ retrieve_decr_float $val ]
     update_scale_impl $x $val2
-    adlb::write_refcount_decr $x
+    write_refcount_decr $x
   }
 
   proc update_scale_impl { x val } {

@@ -383,7 +383,7 @@ namespace eval turbine {
             incr i
         }
         # close container
-        adlb::write_refcount_decr $result
+        write_refcount_decr $result
     }
 
     # Create a reference to track local file

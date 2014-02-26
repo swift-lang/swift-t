@@ -302,7 +302,7 @@ namespace eval turbine {
         nonempty c i t d
 
         if { $write_refcount_incr } {
-            adlb::write_refcount_incr $c
+            write_refcount_incr $c
         }
 
         rule $i [ list turbine::c_f_insert_body $c $i $d $t $write_refcount_decrs ] \
@@ -321,7 +321,7 @@ namespace eval turbine {
         nonempty c i r t
 
         if { $write_refcount_incr } {
-            adlb::write_refcount_incr $c
+            write_refcount_incr $c
         }
 
         rule "$i $r" \
@@ -344,7 +344,7 @@ namespace eval turbine {
         nonempty c i r t
 
         if { $write_refcount_incr } {
-            adlb::write_refcount_incr $c
+            write_refcount_incr $c
         }
 
         rule $r "c_v_insert_r_body $c $i $r $t $write_refcount_decrs" \
@@ -363,7 +363,7 @@ namespace eval turbine {
     # d: the data
     # outputs: ignored.
     proc container_immediate_insert { c i d t {drops 0} } {
-        # adlb::write_refcount_incr $c
+        # write_refcount_incr $c
         container_insert $c $i $d $t $drops
     }
 
@@ -512,7 +512,7 @@ namespace eval turbine {
         log "insert (future): <*$cr>\[<$j>\]=<$d>"
 
         if { $write_refcount_incr } {
-            adlb::write_refcount_incr $oc
+            write_refcount_incr $oc
         }
 
         rule "$cr $j" "cr_f_insert_body $cr $j $d $t $oc" \
@@ -524,7 +524,7 @@ namespace eval turbine {
         set s [ retrieve_decr $j ]
         container_insert $c $s $d $t 0 1
         log "insert: (now) <$c>\[$s\]=<$d>"
-        adlb::write_refcount_decr $oc
+        write_refcount_decr $oc
     }
 
     # CRVI
@@ -536,7 +536,7 @@ namespace eval turbine {
     # outputs: ignored
     proc cr_v_insert { cr j d t oc {write_refcount_incr 1} } {
         if { $write_refcount_incr } {
-            adlb::write_refcount_incr $oc
+            write_refcount_incr $oc
         }
 
         rule "$cr" "cr_v_insert_body $cr $j $d $t $oc" \
@@ -547,7 +547,7 @@ namespace eval turbine {
         set c [ acquire_ref $cr 1 1 ]
         # insert and drop slot
         container_insert $c $j $d $t 0 1
-        adlb::write_refcount_decr $oc
+        write_refcount_decr $oc
     }
 
     # CRVIR
@@ -555,7 +555,7 @@ namespace eval turbine {
     # oc: direct handle to outer container
     proc cr_v_insert_r { cr j dr t oc {write_refcount_incr 1}} {
         if { $write_refcount_incr } {
-            adlb::write_refcount_incr $oc
+            write_refcount_incr $oc
         }
 
         rule [ list $cr $dr ] \
@@ -566,12 +566,12 @@ namespace eval turbine {
         set c [ acquire_ref $cr 1 1 ]
         set d [ adlb::acquire_ref $dr $t 1 1 ]
         container_insert $c $j $d $t 0 1
-        adlb::write_refcount_decr $oc
+        write_refcount_decr $oc
     }
 
     proc cr_f_insert_r { cr j dr t oc {write_refcount_incr 1}} {
         if { $write_refcount_incr } {
-            adlb::write_refcount_incr $oc
+            write_refcount_incr $oc
         }
 
         rule [ list $cr $j $dr ] \
@@ -584,7 +584,7 @@ namespace eval turbine {
         set jval [ retrieve_decr $j ]
         # Insert and drop read refcount we acquired
         container_insert $c $jval $d $t 0 1
-        adlb::write_refcount_decr $oc
+        write_refcount_decr $oc
     }
 
     # CVC
@@ -636,7 +636,7 @@ namespace eval turbine {
     proc cr_v_create { r cr i key_type val_type oa {write_refcount_incr 1}} {
         if { $write_refcount_incr } {
             # create slot on outer array
-            adlb::write_refcount_incr $oa
+            write_refcount_incr $oa
         }
 
         rule "$cr" \
@@ -650,7 +650,7 @@ namespace eval turbine {
         set res [ create_nested $c $i $key_type $val_type 1 0 0 1 ]
         # Pass read refcount into ref
         store_ref $r $res
-        adlb::write_refcount_decr $oa
+        write_refcount_decr $oa
     }
 
     # Create container at c[i]
@@ -660,7 +660,7 @@ namespace eval turbine {
     proc cr_f_create { r cr i key_type val_type oa {write_refcount_incr 1}} {
         if { $write_refcount_incr } {
             # create slot on outer array
-            adlb::write_refcount_incr $oa
+            write_refcount_incr $oa
         }
 
         rule "$cr $i" "cr_f_create_body $r $cr $i $key_type $val_type $oa" \
@@ -673,7 +673,7 @@ namespace eval turbine {
         # Acquire 1 read refcount for container
         set res [ create_nested $c $s $key_type $val_type 1 0 0 1 ]
         store_ref $r $res
-        adlb::write_refcount_decr $oa
+        write_refcount_decr $oa
     }
 
     # When container is closed, concatenate its keys in result
@@ -947,7 +947,7 @@ namespace eval turbine {
                                 $member_ref_type ]
             }
             # Decrement here to avoid freeing contents
-            adlb::read_refcount_decr $container $read_decr
+            read_refcount_decr $container $read_decr
             return $result_dict
           } else {
             return [ adlb::enumerate $container dict all 0 $read_decr ]
@@ -968,7 +968,7 @@ namespace eval turbine {
                                 $member_ref_type ]
             }
             # Decrement here to avoid freeing contents
-            adlb::read_refcount_decr $container $read_decr
+            read_refcount_decr $container $read_decr
             return $result_dict
           } else {
             return [ adlb::enumerate $container members all 0 $read_decr ]

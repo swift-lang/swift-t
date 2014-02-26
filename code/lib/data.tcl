@@ -16,7 +16,9 @@
 
 namespace eval turbine {
 
+    namespace import ::adlb::refcount_incr
     namespace import ::adlb::read_refcount_*
+    namespace import ::adlb::write_refcount_*
     namespace export                                  \
         allocate retrieve                             \
         create_string  store_string                   \
@@ -37,6 +39,7 @@ namespace eval turbine {
         container_lookup container_list               \
         container_insert notify_waiter                \
         read_refcount_incr read_refcount_decr         \
+        write_refcount_incr write_refcount_decr       \
         allocate_file2 filename
 
 
@@ -460,7 +463,7 @@ namespace eval turbine {
               [ c::cache_check $id ] } {
           set val [ c::cache_retrieve $id ]
           if { $read_decr != 0 } {
-            adlb::read_refcount_decr $id $read_decr
+            read_refcount_decr $id $read_decr
           }
         } else {
           set val [ adlb::retrieve_decr $id $read_decr {*}$args ]
@@ -478,7 +481,7 @@ namespace eval turbine {
               [ c::cache_check $id ] } {
           set val [ c::cache_retrieve $id ]
           if { $read_decr != 0 } {
-            adlb::read_refcount_decr $id $read_decr
+            read_refcount_decr $id $read_decr
           }
         } else {
           set val [ adlb::retrieve_decr $id $read_decr {*}$args ]
