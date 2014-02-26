@@ -1790,7 +1790,6 @@ tcl_dict_to_adlb_struct(Tcl_Interp *interp, Tcl_Obj *const objv[],
                   &st_name, &field_count, &field_types, &field_names);
   TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
                 "Error looking up struct type %i", struct_type);
-
   *result = malloc(sizeof(adlb_struct) +
                    sizeof((*result)->fields[0]) * (size_t)field_count);
   TCL_MALLOC_CHECK(*result);
@@ -1807,7 +1806,8 @@ tcl_dict_to_adlb_struct(Tcl_Interp *interp, Tcl_Obj *const objv[],
     Tcl_Obj *val;
 
     rc = Tcl_DictObjGet(interp, dict, field_names2[i], &val);
-    TCL_CHECK(rc);
+    TCL_CHECK_MSG(rc, "Could not find val for %s (or %s) in %s",
+          field_names[i], Tcl_GetString(field_names2[i]), Tcl_GetString(dict));
     
     if (val != NULL)
     {
