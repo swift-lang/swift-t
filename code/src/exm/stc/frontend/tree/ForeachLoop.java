@@ -306,7 +306,7 @@ public class ForeachLoop {
     // MemberVar is the logical future type for user code
     memberVar = loopBodyContext.declareVariable(findElemType(arrayType),
         getMemberVarName(), Alloc.TEMP, DefType.LOCAL_USER,
-        VarProvenance.userVar(context.getSourceLoc()), null);
+        VarProvenance.userVar(context.getSourceLoc()), false);
 
     // This is the value type that we'll use internally too
     Type memberValRepr = VarRepr.fieldRepr(memberVar.type());

@@ -427,9 +427,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
     }
     @Override
     protected void visitDeclaration(Var declared) {
-      if (declared.mapping() != null) {
-        info.inputVars.add(declared.mapping());
-      }
+      
     }
     @Override
     protected void visit(Instruction inst) {

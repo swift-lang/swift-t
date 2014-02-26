@@ -374,8 +374,7 @@ public class STCMiddleEnd {
   }
   
   public void declare(Var var) throws UndefinedTypeException {
-    assert(var.mapping() == null || Types.isMappable(var));
-    assert(var.mapping() == null || Types.isString(var.mapping()));
+    assert(!var.mappedDecl()|| Types.isMappable(var));
     currBlock().addVariable(var);
   }
 
@@ -1186,5 +1185,11 @@ public class STCMiddleEnd {
     assert(Types.isBlobVal(packedValues));
     currBlock().addInstruction(
         TurbineOp.unpackValues(values, packedValues.asArg()));
+  }
+
+  public void copyMapping(Var var, Var mapping) {
+    assert(Types.isMappable(var));
+    // TODO Auto-generated method stub
+    throw new STCRuntimeError("TODO: not implemented");
   }
 }

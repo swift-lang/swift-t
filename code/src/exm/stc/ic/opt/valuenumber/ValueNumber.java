@@ -378,13 +378,6 @@ public class ValueNumber implements OptimizerPass {
       ExecContext execCx, Congruences state, Map<Block, Congruences> result)
           throws OptUnsafeError {
     result.put(block, state);
-    for (Var v : block.getVariables()) {
-      if (v.mapping() != null && Types.isFile(v.type())) {
-        // Track the mapping
-        ValLoc filenameVal = ValLoc.makeFilename(v.mapping().asArg(), v);
-        state.update(program.constants(), f.getName(), filenameVal, 0);
-      }
-    }
     
     ListIterator<Statement> stmts = block.statementIterator();
     while (stmts.hasNext()) {
@@ -916,9 +909,6 @@ public class ValueNumber implements OptimizerPass {
         } else {
           // Load existing mapping
           // Should only get here if value of mapped var is available.
-          assert(output.mapping() != null);
-          assert(state.isClosed(output.mapping(), oldStmtIndex))
-               : output.mapping() + " not closed @ " + oldStmtIndex;
           Var filenameAlias = insertContext.declareUnmapped(Types.F_STRING,
               OptUtil.optFilenamePrefix(insertContext, output),
               Alloc.ALIAS, DefType.LOCAL_COMPILER,

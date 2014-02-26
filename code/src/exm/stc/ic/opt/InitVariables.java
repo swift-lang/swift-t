@@ -336,20 +336,6 @@ public class InitVariables {
 
   private static void recurseOnBlock(Logger logger,
       Block block, InitState state, boolean validate) {
-    if (validate) {
-      for (Var v: block.getVariables()) {
-        if (v.mapping() != null) {
-          if (varMustBeInitialized(v.mapping(), false)) {
-            assert (state.initVars.contains(v.mapping())):
-              v + " mapped to uninitialized var " + v.mapping();
-          }
-          if (assignBeforeRead(v.mapping())) {
-            assert(state.assignedVals.contains(v.mapping())) :
-              v + " mapped to unassigned var " + v.mapping();
-          }
-        }
-      }
-    }
     
     for (Statement stmt: block.getStatements()) {
       updateInitVars(logger, stmt, state, validate);

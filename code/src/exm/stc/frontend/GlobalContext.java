@@ -77,7 +77,7 @@ public class GlobalContext extends Context {
       throws UserException {
     checkNotDefined(name);
     declareVariable(type, name, Alloc.GLOBAL_CONST, DefType.GLOBAL_CONST,
-                    VarProvenance.userVar(getSourceLoc()), null);
+                    VarProvenance.userVar(getSourceLoc()), false);
   }
   
   @Override
@@ -118,13 +118,13 @@ public class GlobalContext extends Context {
    */
   @Override
   public Var declareVariable(Type type, String name, Alloc scope,
-          DefType defType, VarProvenance provenance, Var mapping)
+          DefType defType, VarProvenance provenance, boolean mapped)
                            throws DoubleDefineException {
     // Sanity checks for global scope
     assert(defType == DefType.GLOBAL_CONST);
     assert(scope == Alloc.GLOBAL_CONST);
     return super.declareVariable(type, name, scope, defType, provenance,
-                                 mapping);
+                                 mapped);
   }
 
   @Override

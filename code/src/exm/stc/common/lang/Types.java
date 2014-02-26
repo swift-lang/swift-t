@@ -2191,7 +2191,7 @@ public class Types {
       return BagType.localBag(bt.memberType());
     } else if (isStruct(t)) {
       StructType st = (StructType)t.type().getImplType();
-      return st.localStruct(st);
+      return StructType.localStruct(st);
     } else {
       throw new STCRuntimeError(t.type() + " can't be dereferenced");
     }
@@ -2218,7 +2218,7 @@ public class Types {
       return BagType.sharedBag(bt.memberType());
     } else if (isStructLocal(t)) {
       StructType st = (StructType)t.type().getImplType();
-      return st.sharedStruct(st);
+      return StructType.sharedStruct(st);
     } else {
       throw new STCRuntimeError(t.type() + " can't be stored");
     }

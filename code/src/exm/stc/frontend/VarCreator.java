@@ -52,9 +52,9 @@ public class VarCreator {
    */
   public Var createVariable(Context context, Var var) throws UserException {
 
-    if (var.mapping() != null && (!Types.isMappable(var))) {
+    if (var.mappedDecl() && (!Types.isMappable(var))) {
       throw new UserException(context, "Variable " + var.name() + " of type "
-          + var.type().toString() + " cannot be mapped to " + var.mapping());
+          + var.type().toString() + " cannot be mapped to");
     }
 
     try {
@@ -66,11 +66,24 @@ public class VarCreator {
     return var;
   }
   
-  public Var createVariable(Context context, Type type, String name,
+  
+  public Var createMappedVariable(Context context, Type type, String name,
       Alloc storage, DefType defType, VarProvenance prov, Var mapping)
                                                 throws UserException {
+    Var v = createVariable(context,
+        new Var(type, name, storage, defType, prov, mapping != null));
+    
+    backend.copyMapping(VarRepr.backendVar(v),
+                        VarRepr.backendVar(mapping));
+    
+    return v;
+  }
+  
+  public Var createVariable(Context context, Type type, String name,
+      Alloc storage, DefType defType, VarProvenance prov, boolean mapped)
+                                                throws UserException {
     return createVariable(context,
-        new Var(type, name, storage, defType, prov, mapping));
+        new Var(type, name, storage, defType, prov, mapped));
   }
 
   public void initialiseVariable(Context context, Var v)

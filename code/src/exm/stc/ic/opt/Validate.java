@@ -128,10 +128,6 @@ public class Validate implements OptimizerPass {
       Function fn, Block block, Map<String, Var> declared) {
     for (Var v: block.getVariables()) {
       checkVarUnique(logger, fn, declared, v);
-      if (v.mapping() != null) {
-        // Check that it refers to previously declared var
-        assert(declared.containsKey(v.mapping().name()));
-      }
     }
  
     checkVarReferences(logger, fn, block, declared);
@@ -161,9 +157,6 @@ public class Validate implements OptimizerPass {
     for (Var v: block.getVariables()) {
       if (v.storage() == Alloc.GLOBAL_CONST) {
         checkVarReference(f, declared, v, v);
-      }
-      if (v.mapping() != null) {
-        checkVarReference(f, declared, v.mapping(), v);
       }
     }
     for (Statement stmt: block.getStatements()) {
@@ -223,7 +216,7 @@ public class Validate implements OptimizerPass {
               declaredVar + " " + referencedVar + " | " +
               declaredVar.storage() + " " + referencedVar.storage() + " | " +
               declaredVar.defType() + " " + referencedVar.defType() + " | " +
-              declaredVar.mapping() + " " + referencedVar.mapping();
+              declaredVar.mappedDecl() + " " + referencedVar.mappedDecl();
     checkUsed(f, referencedVar);
   }
 

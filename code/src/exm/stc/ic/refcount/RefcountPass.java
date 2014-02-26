@@ -163,13 +163,6 @@ public class RefcountPass implements OptimizerPass {
   private void processBlock(Logger logger, Function fn, Block block,
       RCTracker increments, TopDownInfo parentInfo) {
     // First collect up all required reference counting ops in block
-    for (Var v: block.getVariables()) {
-      if (v.mapping() != null) {
-        // Add two since Turbine libraries want two references
-        increments.readIncr(v.mapping(), 2);
-      }
-    }
-
     countBlockIncrements(block, increments);
 
     countBlockDecrements(fn, block, increments);

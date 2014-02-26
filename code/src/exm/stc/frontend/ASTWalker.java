@@ -803,7 +803,7 @@ public class ASTWalker {
       Var loopCountVar = varCreator.createVariable(bodyContext,
           Types.F_INT, loop.getCountVarName(), Alloc.STACK,
           DefType.LOCAL_USER, VarProvenance.userVar(context.getSourceLoc()),
-          null);
+          false);
       exprWalker.assign(loopCountVar, counterVal.asArg());
     }
     block(bodyContext, loop.getBody());
@@ -948,7 +948,7 @@ public class ASTWalker {
                   Var.OUTER_VAR_PREFIX + lv.var.name(),
                   Alloc.ALIAS, DefType.LOCAL_COMPILER,
                   VarProvenance.userVar(context.getSourceLoc()),
-                  lv.var.mapping());
+                  lv.var.mappedDecl());
         // Copy turbine ID
         backend.makeAlias(VarRepr.backendVar(parentAlias),
                           VarRepr.backendVar(lv.var));
@@ -975,7 +975,7 @@ public class ASTWalker {
     Var condArg = 
         loopIterContext.declareVariable(condType, Var.LOOP_COND_PREFIX + 
             loopNum, Alloc.TEMP, DefType.INARG,
-            VarProvenance.exprTmp(context.getSourceLoc()), null);
+            VarProvenance.exprTmp(context.getSourceLoc()), false);
 
 
 
@@ -1061,7 +1061,7 @@ public class ASTWalker {
     // Start the loop construct with some initial values
     Var condArg = iterContext.declareVariable(Types.F_BOOL,
             Var.LOOP_COND_PREFIX + loopNum, Alloc.TEMP, DefType.INARG, 
-            VarProvenance.exprTmp(context.getSourceLoc()), null);
+            VarProvenance.exprTmp(context.getSourceLoc()), false);
     
     List<Boolean> blockingVars = Arrays.asList(true, false);
     backend.startLoop(loopName, 
@@ -1217,7 +1217,7 @@ public class ASTWalker {
       }
     }
 
-    Var var = varCreator.createVariable(context, definedType, 
+    Var var = varCreator.createMappedVariable(context, definedType, 
         vDesc.getName(), Alloc.STACK, DefType.LOCAL_USER, 
         VarProvenance.userVar(context.getSourceLoc()), mappedVar);
     return var;
@@ -2315,7 +2315,7 @@ public class ASTWalker {
     }
     Var v = context.declareVariable(vDesc.getType(), vDesc.getName(),
                    Alloc.GLOBAL_CONST, DefType.GLOBAL_CONST,
-                   VarProvenance.userVar(context.getSourceLoc()), null);
+                   VarProvenance.userVar(context.getSourceLoc()), false);
     
     
     SwiftAST val = vd.getVarExpr(0);

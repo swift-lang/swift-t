@@ -44,7 +44,10 @@ public class Var implements Comparable<Var>, Typed {
   private final Alloc storage;
   private final DefType defType;
   private final VarProvenance provenance;
-  private final Var mapping;
+  /**
+   * True if the variable was mapped at definition time
+   */
+  private final boolean mappedDecl;
   private final int hashCode; // Cache hashcode
 
   public static final String TMP_VAR_PREFIX = "__t:";
@@ -116,18 +119,17 @@ public class Var implements Comparable<Var>, Typed {
   public Var(Type type, String name, Alloc storage, DefType defType,
              VarProvenance provenance)
   {
-    this(type, name, storage, defType, provenance, null);
+    this(type, name, storage, defType, provenance, false);
   }
   
   public Var(Type type, String name, Alloc storage, DefType defType,
-             VarProvenance provenance, Var mapping) {
+             VarProvenance provenance, boolean mappedDecl) {
     assert(provenance != null);
     this.type = type;
     this.name = name;
     this.storage = storage;
     this.defType = defType;
-    assert(mapping == null || Types.isString(mapping.type()));
-    this.mapping = mapping;
+    this.mappedDecl = mappedDecl;
     this.hashCode = calcHashCode();
     this.provenance = provenance;
   }
@@ -142,17 +144,13 @@ public class Var implements Comparable<Var>, Typed {
       return this;
     } else {
       return new Var(newType, name, storage, defType, 
-                     provenance, mapping);
+                     provenance, mappedDecl);
     }
-  }
-  
-  public Var replaceMapping(Var newMapping) {
-    return new Var(type, name, storage, defType, provenance, newMapping);
   }
 
   public Var makeRenamed(String newName) {
     return new Var(type(), newName, storage(), defType(),
-                    VarProvenance.renamed(this), mapping());
+                    VarProvenance.renamed(this), mappedDecl);
   }
 
   @Override
@@ -192,7 +190,7 @@ public class Var implements Comparable<Var>, Typed {
   public boolean identical(Var o) {
     return name.equals(o.name) &&
            type.equals(o.type) &&
-           (mapping == o.mapping || mapping.identical(o.mapping)) &&
+           mappedDecl == o.mappedDecl &&
            storage == o.storage &&
            defType == o.defType;
   }
@@ -214,22 +212,22 @@ public class Var implements Comparable<Var>, Typed {
     return defType;
   }
 
-  public Var mapping() {
-    return mapping;
-  }
-  
   public VarProvenance provenance() {
     return provenance;
   }
+  
+  public boolean mappedDecl() {
+    return mappedDecl;
+  }
 
   /**
-   * Determine if variable is mapped.  This is not trivial, as
+   * Determine if variable is mappedDecl.  This is not trivial, as
    * we sometimes don't have visibility of whether a variable is
-   * mapped or not if, e.g., it is passed in as a function argument.
+   * mappedDecl or not if, e.g., it is passed in as a function argument.
    * @return
    */
   public Ternary isMapped() {
-    if (mapping != null) {
+    if (mappedDecl) {
       return Ternary.TRUE;
     } else if (!Types.isMappable(this)) {
       return Ternary.FALSE;

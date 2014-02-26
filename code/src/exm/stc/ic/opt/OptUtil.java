@@ -131,7 +131,7 @@ public class OptUtil {
         
         oldOutReplacement = new Var(oldOut.type(),
             oldOut.name(), Alloc.TEMP,
-            oldOut.defType(), oldOut.provenance(), oldOut.mapping());
+            oldOut.defType(), oldOut.provenance(), oldOut.mappedDecl());
         
         // Replace variable in block and in buffered instructions
         replaceVarDeclaration(srcBlock, oldOut, oldOutReplacement);

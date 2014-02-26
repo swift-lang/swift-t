@@ -341,11 +341,6 @@ public class FixupVariables implements OptimizerPass {
    */
   private static void findBlockNeeded(Block block, Result result,
                     AliasTracker aliases, List<Pair<Var, Var>> createdAliases) {
-    for (Var v: block.getVariables()) {
-      if (v.mapping() != null) {
-        result.addRead(v.mapping());
-      }
-    }
     
     for (Statement stmt: block.getStatements()) {
       switch (stmt.type()) {

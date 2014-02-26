@@ -331,10 +331,6 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
       if (v.storage() != Alloc.GLOBAL_CONST) {
         removeCandidates.add(v);
       }
-      if (v.mapping() != null) {
-        // Need mapping if v is retained
-        dependencyGraph.put(v, v.mapping());
-      }
     }
   }
 

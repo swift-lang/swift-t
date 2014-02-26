@@ -428,7 +428,7 @@ public class TurbineGenerator implements CompilerBackend {
       Arg initReaders = decl.initReaders;
       Arg initWriters = decl.initWriters;
       Type t = var.type();
-      assert(var.mapping() == null || Types.isMappable(t));
+      assert(!var.mappedDecl() || Types.isMappable(t));
       if (var.storage() == Alloc.ALIAS) {
         assert(initReaders == null && initWriters == null);
         continue;
@@ -625,7 +625,8 @@ public class TurbineGenerator implements CompilerBackend {
   }
   
   private void allocateFile(Var var, Arg initReaders) {
-    Value mapExpr = (var.mapping() == null) ? 
+    // TODO: don't need mapping
+    Value mapExpr = (!var.mappedDecl()) ? 
                     null : varToExpr(var.mapping());
     pointAdd(
         Turbine.allocateFile(mapExpr, prefixVar(var),
@@ -939,8 +940,7 @@ public class TurbineGenerator implements CompilerBackend {
     
     TypeName structType = representationType(src.type());
     
-    pointAdd(Turbine.enumerateAll(prefixVar(target), varToExpr(src),
-                                       false, argToExpr(decr)));
+    throw new STCRuntimeError("TODO: not implemented");
   }
   
   @Override

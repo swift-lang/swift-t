@@ -160,16 +160,6 @@ public class ICInstructions {
       return false;
     }
     
-    public boolean writesMappedVar() {
-      // Writes to alias variables can have non-local effects
-      for (Var out: this.getOutputs()) {
-        if (out.mapping() != null) {
-          return true;
-        }
-      }
-      return false;
-    }
-    
     public static class MakeImmRequest {
       public final List<Var> out;
       public final List<Var> in;

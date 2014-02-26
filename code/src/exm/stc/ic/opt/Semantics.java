@@ -55,6 +55,7 @@ public class Semantics {
     // Two cases where we can get mapping right away:
     // - if it's definitely unmapped
     // - if the mapping has been assigned
+    // TODO: How to get mapping?
     return out.isMapped() == Ternary.FALSE ||
             (out.mapping() != null && closedVars.contains(out.mapping()));
   }
