@@ -75,6 +75,8 @@ typedef short adlb_data_type_short;
 // Identifier for sub-types of ADLB struct
 typedef int adlb_struct_type;
 
+#define ADLB_STRUCT_TYPE_NULL (-1)
+
 // Additional type info for particular types
 typedef struct {
   union {

@@ -118,9 +118,12 @@ adlb_code ADLB_Create_blob(adlb_datum_id id, adlb_create_props props,
 
 adlb_code ADLB_Create_ref(adlb_datum_id id, adlb_create_props props,
                               adlb_datum_id *new_id);
-
+/**
+ * Struct type: specify struct type, or leave as ADLB_STRUCT_TYPE_NULL to
+ *              resolve upon assigning typed struct value
+ */
 adlb_code ADLB_Create_struct(adlb_datum_id id, adlb_create_props props,
-                              adlb_datum_id *new_id);
+                             adlb_struct_type struct_type, adlb_datum_id *new_id);
 
 adlb_code ADLB_Create_container(adlb_datum_id id,
                                 adlb_data_type key_type, 

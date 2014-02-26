@@ -636,10 +636,13 @@ adlb_code ADLB_Create_ref(adlb_datum_id id, adlb_create_props props,
 }
 
 adlb_code ADLB_Create_struct(adlb_datum_id id, adlb_create_props props,
-                              adlb_datum_id *new_id)
+                             adlb_struct_type struct_type, adlb_datum_id *new_id)
 {
-  return ADLBP_Create_impl(id, ADLB_DATA_TYPE_STRUCT, ADLB_TYPE_EXTRA_NULL,
-                   props, new_id);
+  adlb_type_extra extra;
+  extra.STRUCT.struct_type = struct_type;
+  extra.valid = (struct_type != ADLB_STRUCT_TYPE_NULL);
+  return ADLBP_Create_impl(id, ADLB_DATA_TYPE_STRUCT, extra, props,
+                           new_id);
 }
 
 adlb_code
