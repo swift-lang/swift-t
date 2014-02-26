@@ -25,11 +25,14 @@ namespace eval turbine {
         create_file_ref     store_file_ref            \
         retrieve_file_ref retrieve_decr_file_ref acquire_file_ref \
 
-    # Initialize struct types, should be called when initializing Turbine
-    proc init_struct_types { } {
+    # Initialize file struct types, should be called when initializing Turbine
+    proc init_file_types { } {
       # Setup file and file_ref struct types
-      adlb::declare_struct_type 0 file [ list "status" integer "path" string ]
-      adlb::declare_struct_type 1 file_ref [ list "file" file "is_mapped" integer ]
+      # File is represented by path.  Status of td reflects whether file
+      # data available
+      adlb::declare_struct_type 0 file [ list path string ]
+      adlb::declare_struct_type 1 file_ref \
+                [ list file file is_mapped integer ]
     }
     
     # usage: <name> <is_mapped> [<create props>]
@@ -64,13 +67,13 @@ namespace eval turbine {
     # Extract file status handle from file handle
     proc get_file_status { file_handle } {
       # Create handle for subscript of struct variable
-      return [ adlb::subscript [ get_file_td $file_handle ] 0 ]
+      return [ get_file_td $file_handle ]
     }
 
     # Extract filename future from handle
     proc get_file_path { file_handle } {
-      # Create handle for subscript of struct variable
-      return [ adlb::subscript [ get_file_td $file_handle ] 1 ]
+      # Create handle for subscript of struct variable (first elem)
+      return [ adlb::subscript [ get_file_td $file_handle ] 0 ]
     }
 
     # return tcl bool value
@@ -106,7 +109,7 @@ namespace eval turbine {
             }
         }
         debug "retrieve: <$id>=$result"
-        return $result
+        return [ create_local_file_ref [ dict get path $result ] 2 ]
     }
     
     proc create_file_ref { id {read_refcount 1} {write_refcount 1} \
@@ -159,6 +162,16 @@ namespace eval turbine {
       copy_string $out [ get_file_path $file_handle ]
     }
 
+    # Copy in filename from future
+    proc copy_in_filename { file filename } {
+      rule $filename "copy_in_filename_body {$file} $filename"
+    }
+
+    proc copy_in_filename_body { file filename } {
+      set filename_val [ retrieve_decr_string $filename ]
+      set_filename_val $file $filename_val
+    }
+
     # get the filename if mapped, assign if unmapped
     proc get_output_file_path { file_handle } {
       if { ! [ is_file_mapped $file_handle ] } {
@@ -191,10 +204,8 @@ namespace eval turbine {
         }
 
         foreach infile $infiles {
-            # Wait for both path and status
-            set inpath [ get_file_path $infile ]
-            set instatus [ get_file_status $infile ]
-            lappend waitfor $inpath $instatus
+            # Wait for file to be closed, not just path
+            lappend waitfor [ get_file_td $infile ]
         }
         rule $waitfor $cmd  name $msg target $target
     }
@@ -248,7 +259,7 @@ namespace eval turbine {
     }
 
     proc input_url_impl { outfile filepath_val } {
-      store_file $outfile [ dict create status 12345 path $filepath_val ]
+      store_file $outfile [ dict create path $filepath_val ]
     }
 
     proc input_url_local { url } {
@@ -330,18 +341,16 @@ namespace eval turbine {
 
     # set the filename to a string
     proc set_filename_val { file_handle filename } {
+      # TODO: store directly
       store_string [ get_file_path $file_handle ] $filename
     }
 
     proc close_file { handle } {
-      store_void [ get_file_status $handle ]
+      write_refcount_decr [ get_file_td $handle ]
     }
 
     proc file_read_refcount_incr { handle { amount 1 } } {
-      set status [ get_file_status $handle ]
-      set path [ get_file_path $handle ]
-      read_refcount_incr $status $amount
-      read_refcount_incr $path $amount
+      read_refcount_incr [ get_file_td $handle ] $amount
     }
 
     proc file_read_refcount_decr { handle { amount 1 } } {
@@ -381,23 +390,12 @@ namespace eval turbine {
         return [ lindex $local_file 0 ]
     }
 
-    # f: Turbine file handle
-    # returns: local file ref
-    proc get_file { f {decrref 0}} {
-        set fname [ retrieve_string [ get_file_path $f ] CACHED $decrref ]
-        if { $decrref > 0 } {
-          set status [ get_file_status $f ]
-          read_refcount_decr $status $decrref
-        }
-        # two references: global file future, local one
-        return [ create_local_file_ref $fname 2 ]
-    }
-
     proc set_file { f local_f_varname } {
        upvar 1 $local_f_varname local_f
        # Increment refcount so not cleaned up locally
        lset local_f 1 [ expr {[ lindex $local_f 1 ] + 1} ]
-       store_void [ get_file_status $f ]
+       # Decrement write refcount to close file
+       close_file $f
     }
 
     proc incr_local_file_refcount { varname levels } {
@@ -432,8 +430,8 @@ namespace eval turbine {
     }
 
     proc file_read_body { result src } {
-	set s [retrieve_decr_string [ get_file_path $src ] ]
-        read_refcount_decr [ get_file_status $src ]
+	set val [ retrieve_file $src CACHED 1 ]
+	set s [ dict get path $val ]
         set fp [ ::open $s r ]
 	set file_data [ read $fp ]
         close $fp
@@ -456,12 +454,13 @@ namespace eval turbine {
 
     proc file_write_body { dst str } {
         set str_val [ retrieve_decr_string $str ]
+        # TODO: retrieve filename directly
 	set dstpath [ get_file_path $dst ]
 	set d [ retrieve_string $dstpath ]
 	set fp [ ::open $d w+ ]
         puts -nonewline $fp $str_val
 	close $fp
-	store_void [ get_file_status $dst ]
+	close_file $dst
     }
 
     # local_file: local file object
@@ -482,8 +481,9 @@ namespace eval turbine {
             [ list blob_read_body $result $src ]
     }
     proc blob_read_body { result input } {
-	set input_name [ retrieve_decr_string [ get_file_path $input ] ]
-        read_refcount_decr [ get_file_status $input ]
+	set val [ retrieve_file $src CACHED 1 ]
+	set input_name [ dict get path $val ]
+
         set blob [ new_turbine_blob ]
         log "blob_read: $input_name"
         blobutils_read $input_name $blob
