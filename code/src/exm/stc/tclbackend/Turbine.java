@@ -918,13 +918,18 @@ class Turbine {
    * @return
    */
   public static Expression structSubscript(int fieldIndices[]) {
-    if (fieldIndices.length != 1) {
-      throw new STCRuntimeError("TODO: Not implemented for sizes "
-              + "other than 1");
-    }
-    int fieldIndex = fieldIndices[0];
+    assert(fieldIndices.length >= 1);
+    if (fieldIndices.length == 1) {
+      int fieldIndex = fieldIndices[0];
 
-    return new LiteralInt(fieldIndex);
+      return new LiteralInt(fieldIndex);  
+    } else {
+      List<LiteralInt> exprs = new ArrayList<LiteralInt>();
+      for (int ix: fieldIndices) {
+        exprs.add(new LiteralInt(ix));
+      }
+      return new TclList(exprs);
+    }
   }
 
   /**
@@ -977,6 +982,7 @@ class Turbine {
      * return new Command(turbFn("struct_ref_lookup"), struct, new
      * LiteralInt(structFieldIx), resultVar, refType);
      */
+    // TODO
     throw new STCRuntimeError("TODO: need to edit struct_ref_lookup");
   }
 
