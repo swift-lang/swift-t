@@ -213,13 +213,17 @@ static int refcount_mode(Tcl_Interp *interp, Tcl_Obj *const objv[],
                           Tcl_Obj* obj, adlb_refcount_type *mode);
 
 static int blob_cache_key(Tcl_Interp *interp, Tcl_Obj *const objv[],
-                          adlb_datum_id id, adlb_subscript sub,
+                          adlb_datum_id *id, adlb_subscript *sub,
                           void **key, size_t *key_len, bool *alloced);
 
 static Tcl_Obj *build_tcl_blob(void *data, int length, Tcl_Obj *handle);
 
 static int extract_tcl_blob(Tcl_Interp *interp, Tcl_Obj *const objv[],
                    Tcl_Obj *obj, adlb_blob_t *blob, Tcl_Obj **handle);
+
+static int cache_blob(Tcl_Interp *interp, int objc,
+    Tcl_Obj *const objv[], adlb_datum_id id, adlb_subscript sub,
+    void *blob);
 
 static int uncache_blob(Tcl_Interp *interp, int objc,
     Tcl_Obj *const objv[], adlb_datum_id id, adlb_subscript sub,
@@ -2682,26 +2686,31 @@ ADLB_Retrieve_Blob_Decr_Cmd(ClientData cdata, Tcl_Interp *interp,
   return ADLB_Retrieve_Blob_Impl(cdata, interp, objc, objv, true);
 }
 
+/**
+ * Construct cache key
+ * Key may point to id or sub
+ */
 static int blob_cache_key(Tcl_Interp *interp, Tcl_Obj *const objv[],
-                          adlb_datum_id id, adlb_subscript sub,
+                          adlb_datum_id *id, adlb_subscript *sub,
                           void **key, size_t *key_len, bool *alloced)
 {
-  if (adlb_has_sub(sub))
+  if (adlb_has_sub(*sub))
   {
-    *key_len = sizeof(id) + sub.length;
+    *key_len = sizeof(*id) + sub->length;
     *key = malloc(*key_len);
     TCL_MALLOC_CHECK(*key);
     *alloced = true;
 
-    memcpy(*key, &id, sizeof(id));
-    memcpy(*key + sizeof(id), sub.key, sub.length);
+    memcpy(*key, id, sizeof(*id));
+    memcpy(*key + sizeof(*id), sub->key, sub->length);
   }
   else
   {
-    *key = &id;
-    *key_len = sizeof(id);
+    *key = id;
+    *key_len = sizeof(*id);
     *alloced = false;
   }
+  
   return TCL_OK;
 }
 
@@ -2752,22 +2761,9 @@ ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
   // Copy the blob data
   memcpy(blob, xfer, (size_t)length);
 
-  // Build key for the cache
-  void *cache_key;
-  size_t cache_key_len;
-  bool free_cache_key;
-  rc = blob_cache_key(interp, objv, handle.id, handle.subscript,
-                      &cache_key, &cache_key_len, &free_cache_key);
+  DEBUG_ADLB("ADD TO CACHE: {%s}\n", Tcl_GetString(handle_obj));
+  rc = cache_blob(interp, objc, objv, handle.id, handle.subscript, blob);
   TCL_CHECK(rc);
-
-  // Link the blob into the cache
-  bool b = table_bp_add(&blob_cache, cache_key, cache_key_len, blob);
-  if (free_cache_key)
-  {
-    free(cache_key); 
-  }
-  TCL_CONDITION(b, "Error adding to blob cache");
-
 
   // printf("retrieved blob: [ %p %i ]\n", blob, length);
   
@@ -2837,6 +2833,35 @@ static int extract_tcl_blob(Tcl_Interp *interp, Tcl_Obj *const objv[],
   return TCL_OK;
 }
 
+/**
+ * Add blob to cache
+ * blob: pointer to blob, to take ownership of
+ */
+static int cache_blob(Tcl_Interp *interp, int objc,
+    Tcl_Obj *const objv[], adlb_datum_id id, adlb_subscript sub,
+    void *blob)
+{
+  int rc;
+
+  // Build key for the cache
+  void *cache_key;
+  size_t cache_key_len;
+  bool free_cache_key;
+  rc = blob_cache_key(interp, objv, id, sub, &cache_key,
+                      &cache_key_len, &free_cache_key);
+  TCL_CHECK(rc);
+
+  // Link the blob into the cache
+  bool b = table_bp_add(&blob_cache, cache_key, cache_key_len, blob);
+  if (free_cache_key)
+  {
+    free(cache_key); 
+  }
+  TCL_CONDITION(b, "Error adding to blob cache");
+
+  return TCL_OK;
+}
+
 static int uncache_blob(Tcl_Interp *interp, int objc,
     Tcl_Obj *const objv[], adlb_datum_id id, adlb_subscript sub,
     bool *found_in_cache) {
@@ -2848,7 +2873,7 @@ static int uncache_blob(Tcl_Interp *interp, int objc,
               &cache_key, &cache_key_len, &free_cache_key);
   TCL_CHECK(rc);
   void* blob;
-  
+ 
   *found_in_cache = table_bp_remove(&blob_cache, cache_key,
                                     cache_key_len, &blob);
   if (*found_in_cache)
@@ -2880,6 +2905,7 @@ ADLB_Blob_Free_Cmd(ClientData cdata, Tcl_Interp *interp,
                 Tcl_GetString(objv[1]));
 
   bool found;
+  DEBUG_ADLB("LOOKUP IN CACHE: {%s}\n", Tcl_GetString(objv[1]));
   rc = uncache_blob(interp, objc, objv, handle.id,
                     handle.subscript, &found);
   TCL_CHECK(rc);
