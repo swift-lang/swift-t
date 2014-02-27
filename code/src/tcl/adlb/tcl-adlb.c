@@ -74,6 +74,14 @@
 #define USE_ADLB
 #endif
 
+/**
+  Different ways of interpreting subscripts
+ */
+typedef enum {
+  ADLB_SUB_CONTAINER, // Tcl string representation
+  ADLB_SUB_STRUCT,    // Integer index, encoded as space-separated list
+} adlb_subscript_kind;
+
 /** The communicator to use in our ADLB instance */
 MPI_Comm adlb_comm;
 
@@ -148,6 +156,11 @@ typedef struct {
   adlb_subscript subscript;
   adlb_buffer subscript_buf;
 } tcl_adlb_handle;
+
+typedef struct {
+  adlb_subscript subscript;
+  adlb_buffer subscript_buf;
+} tcl_adlb_sub_parse;
 
 /**
  * Function to parse ADLB handle
@@ -267,13 +280,25 @@ tcl_obj_bin_append2(Tcl_Interp *interp, Tcl_Obj *const objv[],
         adlb_buffer *output, bool *output_caller_buf,
         int *output_pos);
 
+static int
+ADLB_Parse_Subscript(Tcl_Interp *interp, Tcl_Obj *const objv[],
+  Tcl_Obj *obj, adlb_subscript_kind sub_kind, tcl_adlb_sub_parse *parse);
+
+static int
+ADLB_Parse_Subscript_Cleanup(Tcl_Interp *interp, Tcl_Obj *const objv[],
+                             tcl_adlb_sub_parse *parse);
+
+#define ADLB_PARSE_SUB(obj, sub_kind, parse) \
+    ADLB_Parse_Subscript(interp, objv, obj, sub_kind, parse)
+#define ADLB_PARSE_SUB_CLEANUP(parse) \
+    ADLB_Parse_Subscript_Cleanup(interp, objv, parse)
+
 static int ADLB_Sub_List_Parse(Tcl_Interp *interp, Tcl_Obj *const objv[],
   Tcl_Obj *const subscript_list[], int subscript_list_len,
   adlb_buffer *buf, adlb_subscript *sub);
 
 #define SUB_LIST_PARSE(list, len, buf, sub) \
     ADLB_Sub_List_Parse(interp, objv, list, len, buf, sub)
-
 
 static int field_name_objs_init(Tcl_Interp *interp, Tcl_Obj *const objv[]);
 static int field_name_objs_add(Tcl_Interp *interp, Tcl_Obj *const objv[],
@@ -3366,33 +3391,63 @@ ADLB_Container_Typeof_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+static int
+ADLB_Reference_Impl(ClientData cdata, Tcl_Interp *interp,
+                             int objc, Tcl_Obj *const objv[],
+                             adlb_subscript_kind sub_kind);
+
 /**
    usage: adlb::container_reference
       <container_id> <subscript> <reference> <reference_type>
 
-      reference_type is type used internally to represent
-      the reference e.g. integer for plain turbine IDs, or
-      string if represented as a more complex datatype
+      reference_type is type of container field
+      e.g. ref for plain turbine IDs
 */
 static int
 ADLB_Container_Reference_Cmd(ClientData cdata, Tcl_Interp *interp,
                              int objc, Tcl_Obj *const objv[])
 {
+  return ADLB_Reference_Impl(cdata, interp, objc, objv,
+                             ADLB_SUB_CONTAINER);
+}
+
+/**
+   usage: adlb::struct_reference
+      <struct_id> <subscript> <reference> <reference_type>
+      subscript is a list of indices into struct
+      reference_type is type of container field
+      e.g. ref for plain turbine IDs
+*/
+static int
+ADLB_Struct_Reference_Cmd(ClientData cdata, Tcl_Interp *interp,
+                             int objc, Tcl_Obj *const objv[])
+{
+  return ADLB_Reference_Impl(cdata, interp, objc, objv,
+                             ADLB_SUB_STRUCT);
+}
+
+// container_reference, supporting different subscript formats
+static int
+ADLB_Reference_Impl(ClientData cdata, Tcl_Interp *interp,
+                             int objc, Tcl_Obj *const objv[],
+                             adlb_subscript_kind sub_kind)
+{
   TCL_ARGS(5);
 
-  adlb_datum_id container_id;
+  adlb_datum_id id;
   int rc;
-  rc = Tcl_GetADLB_ID(interp, objv[1], &container_id);
-  TCL_CHECK_MSG(rc, "adlb::container_reference: "
-                "argument 1 is not a 64-bit integer!");
-  adlb_subscript subscript;
-  rc = Tcl_GetADLB_Subscript(objv[2], &subscript);
+  rc = Tcl_GetADLB_ID(interp, objv[1], &id);
+  TCL_CHECK_MSG(rc, "argument 1 is not a 64-bit integer!");
+
+  tcl_adlb_sub_parse parse;
+  rc = ADLB_PARSE_SUB(objv[2], sub_kind, &parse);
   TCL_CHECK_MSG(rc, "Invalid subscript argument");
+  // Check for no subscript
+  TCL_CONDITION(parse.subscript.length > 0, "Invalid subscript argument");
 
   adlb_datum_id reference;
   rc = Tcl_GetADLB_ID(interp, objv[3], &reference);
-  TCL_CHECK_MSG(rc, "adlb::container_reference: "
-                "argument 3 is not a 64-bit integer!");
+  TCL_CHECK_MSG(rc, "argument 3 is not a 64-bit integer!");
 
   adlb_data_type ref_type;
   adlb_type_extra extra;
@@ -3402,12 +3457,10 @@ ADLB_Container_Reference_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CHECK(rc);
 
   // DEBUG_ADLB("adlb::container_reference: <%"PRId64">[%s] => <%"PRId64">\n",
-  //            container_id, subscript, reference);
-  rc = ADLB_Container_reference(container_id, subscript, reference,
-                                ref_type);
-  TCL_CONDITION(rc == ADLB_SUCCESS,
-                "adlb::container_reference: <%"PRId64"> failed!",
-                container_id);
+  //            id, subscript, reference);
+  rc = ADLB_Container_reference(id, parse.subscript, reference, ref_type);
+  ADLB_PARSE_SUB_CLEANUP(&parse);
+  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", id);
   return TCL_OK;
 }
 
@@ -4168,6 +4221,55 @@ ADLB_Extract_Handle_ID(Tcl_Interp *interp, Tcl_Obj *const objv[],
                              &subscript_list_len);
 }
 
+
+static int
+ADLB_Parse_Subscript(Tcl_Interp *interp, Tcl_Obj *const objv[],
+  Tcl_Obj *obj, adlb_subscript_kind sub_kind, tcl_adlb_sub_parse *parse)
+{
+  int rc;
+  if (sub_kind == ADLB_SUB_CONTAINER)
+  {
+    rc = Tcl_GetADLB_Subscript(obj, &parse->subscript);
+    TCL_CHECK(rc);
+    parse->subscript_buf.data = NULL;
+    parse->subscript_buf.length = 0;
+  }
+  else
+  {
+    assert(sub_kind == ADLB_SUB_STRUCT);
+    Tcl_Obj **subscript_list;
+    int subscript_list_len;
+    rc = Tcl_ListObjGetElements(interp, obj, &subscript_list_len,
+                                &subscript_list);
+    TCL_CHECK_MSG(rc, "Expected struct subscript to be valid list: %s",
+                  Tcl_GetString(obj));
+    if (subscript_list_len == 0)
+    {
+      parse->subscript = ADLB_NO_SUB;
+      // Ensure buffer initialized
+      parse->subscript_buf.data = NULL;
+      parse->subscript_buf.length = 0;
+    }
+    else
+    {
+      parse->subscript_buf = tcl_adlb_scratch_buf;
+
+      rc = SUB_LIST_PARSE(subscript_list, subscript_list_len,
+                          &parse->subscript_buf, &parse->subscript);
+      TCL_CHECK(rc);
+    }
+  }
+  return TCL_OK;
+}
+
+static int
+ADLB_Parse_Subscript_Cleanup(Tcl_Interp *interp, Tcl_Obj *const objv[],
+                             tcl_adlb_sub_parse *parse)
+{
+  // If we're using tcl_adlb_scratch, free it
+  free_non_scratch(parse->subscript_buf);
+  return TCL_OK;
+}
 /**
  * Parse a Tcl list into a binary ADLB subscript
  * sub: 
@@ -4460,6 +4562,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("container_typeof",    ADLB_Container_Typeof_Cmd);
   COMMAND("container_reference", ADLB_Container_Reference_Cmd);
   COMMAND("container_size",      ADLB_Container_Size_Cmd);
+  COMMAND("struct_reference", ADLB_Struct_Reference_Cmd);
   COMMAND("xpt_init", ADLB_Xpt_Init_Cmd);
   COMMAND("xpt_finalize", ADLB_Xpt_Finalize_Cmd);
   COMMAND("xpt_write", ADLB_Xpt_Write_Cmd);
