@@ -849,7 +849,7 @@ public class  ExprWalker {
     }
     
     Var backendOVar = VarRepr.backendVar(oVar);
-    boolean elemIsRef = VarRepr.storeRefInContainer(Types.containerElemType(oVar));
+    boolean elemIsRef = VarRepr.storeRefInContainerStruct(Types.containerElemType(oVar));
     /* We can only use arrayBuild operation if we have the keys and values in
      * the appropriate format for the internal container representation.
      * If user specified keys, they will be futures so we can't use them here.

@@ -1527,7 +1527,8 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isStructFieldVal(struct, fields, output));
 
     Expression subscript = structSubscript(struct, fields);
-    Expression expr = Turbine.lookupSubscript(varToExpr(struct), subscript);
+    Expression expr = Turbine.lookupStruct(varToExpr(struct),
+                                subscript, LiteralInt.ZERO);
     pointAdd(new SetVariable(prefixVar(output), expr));
   }
 

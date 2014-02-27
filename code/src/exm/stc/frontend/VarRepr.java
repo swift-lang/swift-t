@@ -2,19 +2,24 @@ package exm.stc.frontend;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.RefType;
+import exm.stc.common.lang.Types.StructType;
+import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.Typed;
 import exm.stc.common.lang.Var;
+import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.WaitVar;
 
 /**
@@ -25,10 +30,16 @@ import exm.stc.common.lang.WaitVar;
  * of representing the same logical variable in different ways.
  */
 public class VarRepr {
+  
+  /**
+   * Cache results of conversions, to avoid recomputing.
+   */
+  private static HashMap<Type, Type> conversionCache 
+                          = new HashMap<Type, Type>();
 
   public static Var backendVar(Var frontendVar) {
     assert(frontendVar != null);
-    return frontendVar.substituteType(backendType(frontendVar.type()));
+    return frontendVar.substituteType(backendType(frontendVar.type(), true));
   }
   
   public static List<Var> backendVars(Var ...frontendVars) {
@@ -105,59 +116,132 @@ public class VarRepr {
    * Convert a frontend logical type used for typechecking and user-facing
    * messages to a backend type used for implementation 
    * @param type
+   * @param checkInstantiate if true, expect to be able to instantiate type
    * @return
    */
-  public static Type backendType(Type type) {
-    assert(type.isConcrete()) : type;
-    
+  public static Type backendType(Type type, boolean checkInstantiate) {
     // Remove any subtype info, etc
-    return backendTypeInternal(type.getImplType());
+    return backendTypeInternal(type.getImplType(), checkInstantiate);
   }
 
   /**
    * Internal backend type
    * @param type a type that has had implType applied already
+   * @param checkInstantiate if true, expect to be able to instantiate type
    * @return
    */
-  private static Type backendTypeInternal(Type type) {
-    // TODO: also need to search recursively through structs, etc
+  private static Type backendTypeInternal(Type type,
+                            boolean checkInstantiate) {
+    Type originalType = type;
+    
+    Type lookup = conversionCache.get(type); 
+    if (lookup != null) {
+      return lookup;
+    }
+    
     if (Types.isContainer(type) || Types.isContainerRef(type)) {
       Type frontendElemType = Types.containerElemType(type);
-      Type backendElemType = backendTypeInternal(frontendElemType);
-      if (storeRefInContainer(backendElemType)) {
+      Type backendElemType = backendTypeInternal(frontendElemType,
+                                                 checkInstantiate);
+      if (storeRefInContainerStruct(backendElemType)) {
         type = Types.substituteElemType(type, new RefType(backendElemType));
       }
     } else if (Types.isRef(type)) {
       Type frontendDerefT = type.memberType();
-      Type backendDerefT = backendType(frontendDerefT);
+      Type backendDerefT = backendTypeInternal(frontendDerefT,
+                                               checkInstantiate);
       if (!frontendDerefT.equals(backendDerefT)) {
-        return new RefType(backendDerefT);
+        type = new RefType(backendDerefT);
       }
+    } else if (Types.isStruct(type)) {
+      type = backendStructType((StructType)type, checkInstantiate);
     }
+    
+    assert(!checkInstantiate || type.isConcrete()) :
+            "Cannot instantiate type " + type;
+    
+    conversionCache.put(originalType, type);
     return type;
   }
   
-  
+  /**
+   * Convert struct type.
+   * Retain name, but convert types of fields
+   * @param frontend
+   * @return
+   */
+  private static Type backendStructType(StructType frontend,
+                                boolean checkInstantiate) {
+    List<StructField> backendFields = new ArrayList<StructField>();
+    
+    for (StructField frontendF: frontend.getFields()) {
+      Type fieldT = backendTypeInternal(frontendF.getType(), checkInstantiate);
+      if (storeRefInContainerStruct(fieldT)) {
+        // Need to store as ref to separate data
+        fieldT = new RefType(fieldT);
+      }
+      backendFields.add(new StructField(fieldT, frontendF.getName()));
+    }
+    
+    return new StructType(frontend.isLocal(), frontend.typeName(),
+                            backendFields);
+  }
+
   /**
    * Whether to store a container value as a reference to data elsewhere
    * @param type
    * @return
    */
-  public static boolean storeRefInContainer(Typed type) {
-    if (Types.isContainer(type) || Types.isBlob(type)) {
-      // Typically large types are stored separately
+  public static boolean storeRefInContainerStruct(Typed type) {
+    if (isBig(type)) {
+      // Want to be able to distribute data
       return true;
-    } else if (Types.isFile(type)) {
-      // File is actually reference to two things
+    } else if (RefCounting.trackWriteRefCount(type.type(), DefType.LOCAL_USER)) {
+      // Need to track write refcount separately to manage closing,
+      // so must store as ref to separate datum
+      return true;
+    } else if (Types.isFile(type) || Types.isStruct(type)) {
+      // TODO: would make sense, but don't have capacity to modify
+      // individual fields currently 
       return true;
     } else {
       return false;
     }
   }
 
+  /**
+   * Data that is likely to be big
+   * @param type
+   */
+  private static boolean isBig(Typed type) {
+    return Types.isBlob(type) || Types.isContainer(type);
+  }
+
   public static FunctionType backendFnType(FunctionType frontendType) {
-    // TODO: translate input and output arg types
-    return frontendType;
+
+    Type lookup = conversionCache.get(frontendType); 
+    if (lookup != null) {
+      return (FunctionType)lookup;
+    }
+    
+    // translate input and output arg types
+    List<Type> backendInputs = new ArrayList<Type>();
+    List<Type> backendOutputs = new ArrayList<Type>();
+    
+    for (Type in: frontendType.getInputs()) {
+      backendInputs.add(backendType(in, false));
+    }
+    
+    for (Type out: frontendType.getOutputs()) {
+      backendOutputs.add(backendType(out, false));
+    }
+    
+    FunctionType result = new FunctionType(backendInputs, backendOutputs, 
+               frontendType.hasVarargs(), frontendType.getTypeVars());
+    
+    conversionCache.put(frontendType, result);
+
+    return result;
   }
   
 
@@ -170,7 +254,7 @@ public class VarRepr {
    * @return
    */
   public static Type fieldRepr(Type memberType) {
-    if (storeRefInContainer(memberType)) {
+    if (storeRefInContainerStruct(memberType)) {
       return new RefType(memberType);
     } else {
       return memberType;

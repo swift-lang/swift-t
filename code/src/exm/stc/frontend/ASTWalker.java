@@ -2293,7 +2293,7 @@ public class ASTWalker {
 
     StructType newType = StructType.sharedStruct(typeName, fields);
     context.defineType(typeName, newType);
-    backend.defineStructType((StructType)VarRepr.backendType(newType));
+    backend.defineStructType((StructType)VarRepr.backendType(newType, false));
     LogHelper.debug(context, "Defined new type called " + typeName + ": "
         + newType.toString());
   }

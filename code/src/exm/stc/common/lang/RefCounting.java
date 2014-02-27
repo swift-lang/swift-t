@@ -78,7 +78,7 @@ public class RefCounting {
     return trackReadRefCount(v.type(), v.defType());
   }
   
-  private static boolean trackReadRefCount(Type type, DefType defType) {
+  public static boolean trackReadRefCount(Type type, DefType defType) {
     if (!mayHaveReadRefcount(type)) {
       return false;
     } else if (defType == DefType.GLOBAL_CONST) {
@@ -96,7 +96,7 @@ public class RefCounting {
     return trackWriteRefCount(v.type(), v.defType());
   }
   
-  private static boolean trackWriteRefCount(Type type, DefType defType) {
+  public static boolean trackWriteRefCount(Type type, DefType defType) {
     if (!mayHaveWriteRefcount(type)) {
       return false;
     } else if (defType == DefType.GLOBAL_CONST) {
@@ -114,7 +114,7 @@ public class RefCounting {
     return trackRefCount(var.type(), var.defType(), rcType);
   }
   
-  private static boolean trackRefCount(Type type, DefType defType,
+  public static boolean trackRefCount(Type type, DefType defType,
                                       RefCountType rcType) {
     if (rcType == RefCountType.READERS) {
       return trackReadRefCount(type, defType);

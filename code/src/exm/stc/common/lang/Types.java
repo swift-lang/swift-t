@@ -182,14 +182,18 @@ public class Types {
     public Type getImplType() {
       Type implKey = keyType.getImplType();
       Type implMember = memberType.getImplType();
-      if (implMember == memberType && implKey == keyType)
+      if (implMember == memberType && implKey == keyType) {
         return this;
-      else if (implMember == null || implKey == null)
-        return null;
-      else
+      } else {
         return new ArrayType(local, implKey, implMember);
+      }
     }
-
+    
+    @Override
+    public boolean isConcrete() {
+      return keyType.isConcrete() && memberType.isConcrete();
+    }
+    
     public Type substituteElemType(Type newElem) {
       return new ArrayType(local, keyType, newElem);
     }
@@ -322,6 +326,11 @@ public class Types {
       else
         return new BagType(local, implElem);
     }
+    
+    @Override
+    public boolean isConcrete() {
+      return elemType.isConcrete();
+    }
 
     public Type substituteElemType(Type newElem) {
       return new BagType(local, newElem);
@@ -411,6 +420,11 @@ public class Types {
       else
         return new RefType(implMember);
     }
+    
+    @Override
+    public boolean isConcrete() {
+      return referencedType.isConcrete();
+    }
   }
 
   public static class StructType extends Type {
@@ -464,6 +478,10 @@ public class Types {
       return typeName;
     }
 
+    public boolean isLocal() {
+      return local;
+    }
+    
     @Override
     public StructureType structureType() {
       return local ? StructureType.STRUCT_LOCAL : StructureType.STRUCT;
@@ -620,6 +638,17 @@ public class Types {
     public Type getImplType() {
       return this;
     }
+    
+    @Override
+    public boolean isConcrete() {
+      // Concrete if all fields are concrete (they probably should be..)
+      for (StructField f: fields) {
+        if (!f.getType().isConcrete()) {
+          return false;
+        }
+      }
+      return true;
+    }
   }
 
   
@@ -667,7 +696,12 @@ public class Types {
       // This is a primitive type: implements itself
       return this;
     }
-
+    
+    @Override
+    public boolean isConcrete() {
+      return true;
+    }
+    
     @Override
     public Type bindTypeVars(Map<String, Type> vals) {
       // No type vars in primitive
@@ -1114,7 +1148,16 @@ public class Types {
     
     @Override
     public Type getImplType() {
-      return null;
+      ArrayList<Type> implAlts = new ArrayList<Type>();
+      for (Type t: alts) {
+        implAlts.add(t.getImplType());
+      }
+      return new UnionType(implAlts);
+    }
+    
+    @Override
+    public boolean isConcrete() {
+      return false;
     }
   }
   
@@ -1225,7 +1268,12 @@ public class Types {
     
     @Override
     public Type getImplType() {
-      return null;
+      return this;
+    }
+    
+    @Override
+    public boolean isConcrete() {
+      return false;
     }
   }
   
@@ -1288,9 +1336,13 @@ public class Types {
     
     @Override
     public Type getImplType() {
-      return null;
+      return this;
     }
     
+    @Override
+    public boolean isConcrete() {
+      return false;
+    }
   }
   
   private enum StructureType
@@ -1402,11 +1454,10 @@ public class Types {
 
     /**
      * @return the base type which is used to implement this type.
-     *        This will find the implementation type of any paremeter types.
-     *          Null if not concrete type
+     *        This will find the implementation type of any parameter types.
+     *        If not a concrete type, e.g. type var, return original type
      */
     public abstract Type getImplType();
-    
     
     /**
      * Get the base type of this type.  This doesn't do anything
@@ -1420,9 +1471,7 @@ public class Types {
     /**
      * @return true if the type is something we can actually instantiate
      */
-    public boolean isConcrete() {
-      return getImplType() != null;
-    }
+    public abstract boolean isConcrete();
 
     /**
      * Convert to a concrete type that is assignable to the argument.
@@ -1621,20 +1670,20 @@ public class Types {
       List<Type> ins = new ArrayList<Type>(inputs.size());
       List<Type> outs = new ArrayList<Type>(outputs.size());
       for (Type in: inputs) {
-        Type implType = in.getImplType();
-        if (implType == null)
-          return null;
-        ins.add(implType);
+        ins.add(in.getImplType());
       }
       
       for (Type out: outputs) {
-        Type implType = out.getImplType();
-        if (implType == null)
-          return null;
-        outs.add(implType);
+        outs.add(out.getImplType());
       }
       
       return new FunctionType(ins, outs, varargs);
+    }
+    
+    @Override
+    public boolean isConcrete() {
+      // Should be able to instantiate function in principle
+      return true;
     }
   }
 
@@ -1773,6 +1822,11 @@ public class Types {
     public Type getImplType() {
       // This has same implementation as base type
       return baseType.getImplType();
+    }
+    
+    @Override
+    public boolean isConcrete() {
+      return baseType.isConcrete();
     }
     
     public Type baseType() {
