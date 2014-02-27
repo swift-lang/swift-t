@@ -910,8 +910,8 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.containerElemType(src).assignableTo(
                     Types.containerElemType(target)));
 
-    pointAdd(Turbine.structDecrGet(prefixVar(target), varToExpr(src),
-                                   argToExpr(decr)));
+    pointAdd(Turbine.enumerateAll(prefixVar(target), varToExpr(src), true,
+            argToExpr(decr)));
   }
   
   @Override
@@ -935,9 +935,8 @@ public class TurbineGenerator implements CompilerBackend {
     assert(StructType.sharedStruct((StructType)target.type().getImplType())
             .assignableTo(src.type()));
     
-    TypeName structType = representationType(src.type());
-    
-    throw new STCRuntimeError("TODO: not implemented");
+    pointAdd(Turbine.structDecrGet(prefixVar(target), varToExpr(src),
+                                   argToExpr(decr)));
   }
   
   @Override

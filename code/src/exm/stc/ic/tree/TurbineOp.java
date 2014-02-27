@@ -1223,6 +1223,40 @@ public class TurbineOp extends Instruction {
       }
       break;  
     }
+    case STRUCT_COPY_IN: {
+      Var val = getInput(0).getVar();
+      if (waitForClose || closedVars.contains(val)) {
+        return new MakeImmRequest(null, val.asList());
+      }
+      break;
+    }
+    case STRUCTREF_COPY_IN: {
+      Var structRef = getOutput(0);
+      Var val = getInput(0).getVar();
+      List<Var> vs = mkImmVarList(waitForClose, closedVars,
+                                  Arrays.asList(structRef, val));
+      if (vs.size() > 0) {
+        return new MakeImmRequest(null, vs);
+      }
+      break;
+    }
+    case STRUCTREF_STORE_SUB: {
+      Var structRef = getOutput(0);
+      if (waitForClose || closedVars.contains(structRef)) {
+        return new MakeImmRequest(null, structRef.asList());
+      }
+      break;
+    }
+    case STRUCT_COPY_OUT: {
+      // If struct is closed or this field already set, don't needto block
+      Var struct = getInput(0).getVar();
+      if (closedVars.contains(struct)) {
+        // Don't request to wait for close - whole struct doesn't need to be
+        // closed
+        return new MakeImmRequest(null, Collections.<Var>emptyList());
+      }
+      break;
+    }
     case STRUCTREF_COPY_OUT: {
       Var structRef = getInput(0).getVar();
       if (waitForClose || closedVars.contains(structRef)) {
@@ -1371,7 +1405,6 @@ public class TurbineOp extends Instruction {
       // Input should be unchanged
       Var arr = getInput(0).getVar();
       // Output switched from ref to value
-      // TODO: update to reflect that ref is not internal repr
       Var origOut = getOutput(0);
       Var valOut = creator.createDerefTmp(origOut);
       Instruction newI = arrayRetrieve(valOut, arr, getInput(1));
@@ -1420,18 +1453,59 @@ public class TurbineOp extends Instruction {
       return new MakeImmChange(
           containerLocalSize(getOutput(0), localCont));
     }
+    case STRUCT_COPY_IN: {
+      assert(values.size() == 1);
+      Arg derefMember = values.get(0).fetched;
+      List<String> fields = Arg.extractStrings(getInputsTail(1));
+      return new MakeImmChange(
+          structStoreSub(getOutput(0), fields, derefMember));
+    }
+    case STRUCTREF_STORE_SUB: {
+      assert(values.size() == 1);
+      Var structRef = getOutput(0);
+      Var newStruct = Fetched.findFetchedVar(values, structRef);
+      List<String> fields = Arg.extractStrings(getInputsTail(1));
+      return new MakeImmChange(
+          structStoreSub(newStruct, fields, getInput(0)));
+    } 
+    case STRUCTREF_COPY_IN: {
+      Var structRef = getOutput(0);
+      Var val = getInput(0).getVar();
+      Var newStruct = Fetched.findFetchedVar(values, structRef);
+      Arg newVal = Fetched.findFetched(values, val);
+
+      List<String> fields = Arg.extractStrings(getInputsTail(1));
+      
+      Instruction newI;
+      if (newStruct != null && newVal != null) {
+        newI = structStoreSub(newStruct, fields, newVal);
+      } else if (newStruct != null && newVal == null) {
+        newI = structCopyIn(newStruct, fields, val);
+      } else {
+        assert(newStruct == null && newVal != null);
+        newI = structRefStoreSub(structRef, fields, newVal);
+      }
+      
+      return new MakeImmChange(newI);
+    }
+    case STRUCT_COPY_OUT: {
+      assert(values.size() == 0);
+      // Input should be unchanged
+      Var arr = getInput(0).getVar();
+      // Output switched from ref to value
+      Var origOut = getOutput(0);
+      List<String> fields = Arg.extractStrings(getInputsTail(1));
+      Var valOut = creator.createDerefTmp(origOut);
+      Instruction newI = structRetrieveSub(valOut, arr, fields);
+      return new MakeImmChange(valOut, origOut, newI);
+    }
     case STRUCTREF_COPY_OUT: {
-      assert(values.size() == 1); 
-      throw new STCRuntimeError("TODO: not implemented");
-      /*
-      // OUtput switched from ref to value
-      Var newStruct = values.get(0).fetched.getVar();
-      assert(Types.isRefTo(getInput(0).getVar(), newStruct));
-      Var refOut = getOutput(0);
-      Var valOut = creator.createDerefTmp(refOut);
-      String field = getInput(1).getStringLit();
-      Instruction newI = structLookup(valOut, newStruct, field);
-      return new MakeImmChange(valOut, refOut, newI);*/
+      assert(values.size() == 1);
+      Var structRef = getInput(0).getVar();
+      Var newStruct = Fetched.findFetchedVar(values, structRef);
+      List<String> fields = Arg.extractStrings(getInputsTail(1));
+      return new MakeImmChange(
+          structCopyOut(getOutput(0), newStruct, fields));
     }
     case ARR_COPY_IN_IMM: {
       assert(values.size() == 1);
