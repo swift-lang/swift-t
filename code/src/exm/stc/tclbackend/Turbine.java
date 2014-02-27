@@ -149,6 +149,9 @@ class Turbine {
   private static final Token STORE_FILE_REF = turbFn("store_file_ref");
   private static final Token STORE_STRUCT = turbFn("store_struct");
   private static final Token INIT_UPD_FLOAT = turbFn("init_updateable_float");
+  
+  // Struct functions
+  private static final Token STRUCT_REFERENCE = adlbFn("struct_reference");
 
   // Rule functions
   private static final Token SPAWN_RULE = turbFn("spawn_rule");
@@ -962,11 +965,9 @@ class Turbine {
    * @param arrayIndex
    * @return
    */
-  public static Expression copySubscript(Value out, Value var,
-          Expression subscript) {
-    // TODO: call adlb::struct_reference, which will handle subscript
-    //      conversion for struct
-    throw new STCRuntimeError("TODO: Not implemented");
+  public static Command copySubscript(Value out, Value var,
+          Expression subscript, TypeName fieldType) {
+    return new Command(STRUCT_REFERENCE, var, subscript, out, fieldType);
   }
 
   public static Command derefSubscriptCopy(Value struct, Expression subscript,
