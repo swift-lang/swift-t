@@ -3283,7 +3283,7 @@ ADLB_Insert_Atomic_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 static int
 ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
-                 bool spin)
+                 adlb_subscript_kind sub_kind, bool spin)
 {
   TCL_CONDITION(objc >= 3, "adlb::lookup at least 2 arguments!");
 
@@ -3292,10 +3292,15 @@ ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
   int rc;
   rc = Tcl_GetADLB_ID(interp, objv[argpos++], &id);
   TCL_CHECK_MSG(rc, "adlb::lookup could not parse given id!");
+
+  // TODO: support ADLB handle as well as ID, then append with
+  //       subscript arg
   
-  adlb_subscript subscript;
-  rc = Tcl_GetADLB_Subscript(objv[argpos++], &subscript);
+  tcl_adlb_sub_parse parse;
+  rc = ADLB_PARSE_SUB(objv[argpos++], sub_kind, &parse);
   TCL_CHECK_MSG(rc, "Invalid subscript argument");
+  // Check for no subscript
+  TCL_CONDITION(parse.subscript.length > 0, "Invalid subscript argument");
  
   // TODO: support binary subscript
   DEBUG_ADLB("adlb::lookup <%"PRId64">[\"%.*s\"]",
@@ -3339,14 +3344,22 @@ ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
 
   do {
     // TODO: support binary subscript
-    rc = ADLB_Retrieve(id, subscript, refcounts, &type, xfer, &len);
-    TCL_CONDITION(rc == ADLB_SUCCESS, "lookup failed for: <%"PRId64">[%.*s]",
-                  id, (int)subscript.length, (const char*)subscript.key);
-  } while (spin && len < 0);
+    rc = ADLB_Retrieve(id, parse.subscript, refcounts, &type,
+                      xfer, &len);
+    if (rc != ADLB_SUCCESS) // Check outside loop
+      break;
+  } while (spin && rc == ADLB_SUCCESS && len < 0);
+  
+  ADLB_PARSE_SUB_CLEANUP(&parse);
+  
+  TCL_CONDITION(rc == ADLB_SUCCESS, "lookup failed for: <%"PRId64">[%.*s]",
+                  id, (int)parse.subscript.length,
+                  (const char*)parse.subscript.key);
 
   // TODO: support binary subscript
   TCL_CONDITION(len >= 0, "adlb::lookup <%"PRId64">[\"%.*s\"] not found",
-                id, (int)subscript.length, (const char*)subscript.key);
+                id, (int)parse.subscript.length,
+                (const char*)parse.subscript.key);
   assert(type != ADLB_DATA_TYPE_NULL);
 
   Tcl_Obj* result = NULL;
@@ -3354,15 +3367,18 @@ ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
                     ADLB_TYPE_EXTRA_NULL, xfer, len, &result);
   TCL_CHECK(rc);
 
-  DEBUG_ADLB("adlb::lookup <%"PRId64">[\"%.*s\"]=<%s>",
-             id, (int)subscript.length, (const char*)subscript.key,
-             Tcl_GetStringFromObj(result, NULL));
+  DEBUG_ADLB("adlb::lookup <%"PRId64">[\"%.*s\"]=<%s>", id,
+        (int)parse.subscript.length, (const char*)parse.subscript.key,
+         Tcl_GetStringFromObj(result, NULL));
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
 
 /**
-   usage: adlb::lookup <id> <subscript> [<decr readers>] [<decr writers>]
+   Lookup something in an ADLB container
+
+   usage: adlb::lookup <id> <subscript>
+        [<decr readers>] [<decr writers>]
         [<incr readers referand>] [<incr writers referand>]
    decr (readers|writers): decrement reference counts.  Default is zero.
    incr (readers|writers) referand: increment reference counts of referand
@@ -3372,7 +3388,24 @@ static int
 ADLB_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
 {
-    return ADLB_Lookup_Impl(interp, objc, objv, false);
+    return ADLB_Lookup_Impl(interp, objc, objv, ADLB_SUB_CONTAINER, false);
+}
+
+/**
+  Lookup something in an ADLB struct
+   usage: adlb::lookup_struct <id> <subscript>
+        [<decr readers>] [<decr writers>]
+        [<incr readers referand>] [<incr writers referand>]
+   subscript: integer, or list of integers for struct indices
+   decr (readers|writers): decrement reference counts.  Default is zero.
+   incr (readers|writers) referand: increment reference counts of referand
+   returns the member
+*/
+static int
+ADLB_Lookup_Struct_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+    return ADLB_Lookup_Impl(interp, objc, objv, ADLB_SUB_STRUCT, false);
 }
 
 /**
@@ -3386,7 +3419,7 @@ static int
 ADLB_Lookup_Spin_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
 {
-    return ADLB_Lookup_Impl(interp, objc, objv, true);
+    return ADLB_Lookup_Impl(interp, objc, objv, ADLB_SUB_CONTAINER, true);
 }
 
 /**
@@ -4676,6 +4709,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("insert",    ADLB_Insert_Cmd);
   COMMAND("insert_atomic", ADLB_Insert_Atomic_Cmd);
   COMMAND("lookup",    ADLB_Lookup_Cmd);
+  COMMAND("lookup_struct",    ADLB_Lookup_Struct_Cmd);
   COMMAND("lookup_spin", ADLB_Lookup_Spin_Cmd);
   COMMAND("lock",      ADLB_Lock_Cmd);
   COMMAND("unlock",    ADLB_Unlock_Cmd);
