@@ -576,10 +576,22 @@ Turbine_Cache_Check_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(2);
   turbine_datum_id td;
-  int error = Tcl_GetADLB_ID(interp, objv[1], &td);
+  Tcl_Obj **subscripts;
+  int subscripts_len;
+  int error = ADLB_EXTRACT_HANDLE(objv[1], &td, &subscripts,
+                                  &subscripts_len);
   TCL_CHECK(error);
 
-  bool found = turbine_cache_check(td);
+  bool found;
+  if (subscripts_len == 0)
+  {
+    found = turbine_cache_check(td);
+  }
+  else
+  {
+    // TODO: handle caching subscripts - currently just ignore
+    found = false;
+  }
 
   Tcl_Obj* result = Tcl_NewBooleanObj(found);
   Tcl_SetObjResult(interp, result);
@@ -592,8 +604,14 @@ Turbine_Cache_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(2);
   turbine_datum_id td;
-  int error = Tcl_GetADLB_ID(interp, objv[1], &td);
+  Tcl_Obj **subscripts;
+  int subscripts_len;
+  int error = ADLB_EXTRACT_HANDLE(objv[1], &td, &subscripts,
+                                  &subscripts_len);
   TCL_CHECK(error);
+
+  // TODO: handle caching subscripts
+  TCL_CONDITION(subscripts_len == 0, "Don't handle caching subscripts");
 
   turbine_type type;
   void* data;
@@ -629,9 +647,12 @@ Turbine_Cache_Store_Cmd(ClientData cdata, Tcl_Interp* interp,
   int length = 0;
 
   int argpos = 1;
-
   int error;
-  error = Tcl_GetADLB_ID(interp, objv[argpos++], &td);
+
+  Tcl_Obj **subscripts;
+  int subscripts_len;
+  error = ADLB_EXTRACT_HANDLE(objv[argpos++], &td, &subscripts,
+                                  &subscripts_len);
   TCL_CHECK(error);
 
   adlb_data_type type;
@@ -646,6 +667,12 @@ Turbine_Cache_Store_Cmd(ClientData cdata, Tcl_Interp* interp,
   TCL_CHECK_MSG(error, "object extraction failed: <%"PRId64">", td);
 
   TCL_CONDITION(argpos == objc, "extra trailing arguments from %i", argpos);
+
+  if (subscripts_len != 0)
+  {
+    // TODO: handle caching subscripts
+    return TCL_OK;
+  }
 
   turbine_code rc = turbine_cache_store(td, type, data, length);
   TURBINE_CHECK(rc, "cache store failed: %"PRId64"", td);
