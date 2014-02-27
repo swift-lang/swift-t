@@ -39,8 +39,7 @@ namespace eval turbine {
         container_lookup container_list               \
         container_insert notify_waiter                \
         read_refcount_incr read_refcount_decr         \
-        write_refcount_incr write_refcount_decr       \
-        allocate_file2 filename
+        write_refcount_incr write_refcount_decr
 
 
     # Shorten strings in the log if the user requested that

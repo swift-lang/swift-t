@@ -19,6 +19,7 @@
 
 namespace eval turbine {
     namespace export get_file_status get_file_path is_file_mapped       \
+        allocate_file                                                   \
         filename2 copy_file close_file file_read file_write             \
         swift_filename                                                  \
         create_file store_file                                          \
@@ -52,6 +53,10 @@ namespace eval turbine {
         return $u
     }
     
+    proc file_handle_from_td { td is_mapped } {
+      return [ dict create file $td is_mapped $is_mapped ]
+    }
+
     proc create_file { id {read_refcount 1} {write_refcount 1} \
                              {permanent 0} } {
         return [ adlb::create $id file $read_refcount \
@@ -255,9 +260,8 @@ namespace eval turbine {
       if { ! [ file exists $filepath_val ] } {
         error "input_file: file '$filepath_val' does not exist"
       }
-      s
-      store_string [ get_file_path $outfile ] $filepath_val
-      store_void [ get_file_status $outfile ]
+      # Set filename and close
+      set_filename_val $outfile $filepath_val 1
     }
 
     # fname: filename as tcl string
@@ -372,9 +376,9 @@ namespace eval turbine {
     }
 
     # set the filename to a string
-    proc set_filename_val { file_handle filename } {
+    proc set_filename_val { file_handle filename {write_decr 0}} {
       # TODO: different struct store function?
-      adlb::insert [ get_file_td $file_handle ] 0 $filename string
+      adlb::insert [ get_file_td $file_handle ] 0 $filename string $write_decr
     }
 
     proc get_filename_val { file_handle } {
@@ -405,11 +409,12 @@ namespace eval turbine {
 
         set i 0
         foreach v $r_value {
-            # allocate filename with read refcount 2
-            allocate_custom split_token string 2
-            store_string $split_token $v
-            # Allocate file with given filename that is already closed
-            set f [ allocate_file2 "<$result>\[$i\]" $split_token 1 0 ]
+            # Allocate file with given filename
+            # TODO: this binds lots of variable names in this scope
+            #       - sorta bad
+            set f [ allocate_file "<$result>\[$i\]" ]
+            # Set filename and close file in one operation
+            set_filename_val $f $split_token 1
             container_insert $result $i $f file_ref
             incr i
         }

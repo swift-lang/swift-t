@@ -49,19 +49,20 @@ namespace eval turbine {
             set result [ dict create ] 
             # Mass create filename tds.  Requires 2 initial read refcounts
             if { $n > 0 } {
-              set filename_tds [ adlb::multicreate {*}[ lrepeat \
-                                      $n [ list string 2 ] ] ]
+              set file_tds [ adlb::multicreate {*}[ lrepeat \
+                                      $n [ list file 1 ] ] ]
             } else {
               # Avoid lrepeat not support 0 repeats in tcl < 8.6
-              set filename_tds [ list ]
+              set file_tds [ list ]
             }
             set type "file_ref"
             for { set i 0 } { $i < $n } { incr i } { 
                 set elem [ lindex $elems $i ] 
-                set filename_td [ lindex $filename_tds $i ]
-                store_string $filename_td $elem
-                turbine::allocate_file2 td $filename_td 1 0
-                dict append result $i $td
+                set file_td [ lindex $file_tds $i ]
+                set file_handle [ file_handle_from_td $file_td 1 ]
+                # Set filename and close file in one operation
+                set_filename_val $file_handle $elem 1
+                dict append result $i $file_handle
             }
         } else { 
             set type "ref"
