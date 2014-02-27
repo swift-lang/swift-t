@@ -11,7 +11,6 @@ type person {
   wrapping.  All should behave identically
  */
 
-// SKIP-THIS-TEST
 // Waiting on ability to pass structs to inline tcl code
 (string o) fmt_person_wrapped(person p) "funcs_165" "0.5" [
   "set <<o>> [ funcs_165::fmt_person <<p>> ]"

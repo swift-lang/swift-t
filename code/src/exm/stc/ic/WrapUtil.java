@@ -112,7 +112,6 @@ public class WrapUtil {
           Alloc.LOCAL, DefType.LOCAL_COMPILER,
           VarProvenance.valueOf(var));
       block.addVariable(deref);
-      // TODO: recursively fetch members?
       if (Types.isArray(var)) {
         instBuffer.add(TurbineOp.retrieveArray(deref, var)); 
       } else if (Types.isBag(var)) {

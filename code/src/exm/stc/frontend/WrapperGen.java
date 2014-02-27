@@ -104,8 +104,9 @@ public class WrapperGen {
           // OK
         } else if (Types.isPrimUpdateable(alt)) {
           // OK
-        } else if (Types.isContainer(alt)) {
-          // OK
+        } else if (Types.isContainer(alt) || Types.isStruct(alt)) {
+          // OK: can store
+          // TODO: check for recursive?
         } else if (!concreteType && 
                 (Types.isWildcard(alt) || Types.isTypeVar(alt))) {
           // Defer checking until type parameters filled in
@@ -122,8 +123,9 @@ public class WrapperGen {
       assert(!concreteType || alts.size() == 1) :
           "polymorphic type but concrete expected " + out;
       for (Type alt: alts) {
-        if (Types.isContainer(alt)) {
-          // OK: will pass in standard repr
+        if (Types.isContainer(alt) || Types.isStruct(alt)) {
+          // OK: can store
+          // TODO: check for recursive?
         } else if (Types.isPrimUpdateable(alt)) {
           // OK: will pass in standard repr
         } else if (Types.isPrimFuture(alt)) {
