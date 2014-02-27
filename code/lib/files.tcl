@@ -381,9 +381,9 @@ namespace eval turbine {
       adlb::insert [ get_file_td $file_handle ] 0 $filename string $write_decr
     }
 
-    proc get_filename_val { file_handle } {
+    proc get_filename_val { file_handle {read_decr 0} } {
       # TODO: different struct retrieve function?
-      return [ adlb::lookup [ get_file_td $file_handle ] 0 ]
+      return [ adlb::lookup [ get_file_td $file_handle ] 0 $read_decr ]
     }
 
     proc close_file { handle } {
@@ -472,8 +472,7 @@ namespace eval turbine {
     }
 
     proc file_read_body { result src } {
-	set val [ retrieve_decr_file $src ]
-	set s [ dict get $val path ]
+	set s [ get_filename_val $src 1 ]
         set fp [ ::open $s r ]
 	set file_data [ read $fp ]
         close $fp
@@ -496,9 +495,7 @@ namespace eval turbine {
 
     proc file_write_body { dst str } {
         set str_val [ retrieve_decr_string $str ]
-        # TODO: retrieve filename directly
-	set dstpath [ get_file_path $dst ]
-	set d [ retrieve_string $dstpath ]
+	set d [ get_filename_val $dst ]
 	set fp [ ::open $d w+ ]
         puts -nonewline $fp $str_val
 	close $fp
