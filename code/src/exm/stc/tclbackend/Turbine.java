@@ -964,7 +964,8 @@ class Turbine {
    */
   public static Expression copySubscript(Value out, Value var,
           Expression subscript) {
-    // TODO: call adlb::struct_reference
+    // TODO: call adlb::struct_reference, which will handle subscript
+    //      conversion for struct
     throw new STCRuntimeError("TODO: Not implemented");
   }
 
