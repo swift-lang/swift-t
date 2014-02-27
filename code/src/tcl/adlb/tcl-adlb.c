@@ -2847,7 +2847,7 @@ static int cache_blob(Tcl_Interp *interp, int objc,
   void *cache_key;
   size_t cache_key_len;
   bool free_cache_key;
-  rc = blob_cache_key(interp, objv, id, sub, &cache_key,
+  rc = blob_cache_key(interp, objv, &id, &sub, &cache_key,
                       &cache_key_len, &free_cache_key);
   TCL_CHECK(rc);
 
@@ -2869,7 +2869,7 @@ static int uncache_blob(Tcl_Interp *interp, int objc,
   void *cache_key;
   size_t cache_key_len;
   bool free_cache_key;
-  int rc = blob_cache_key(interp, objv, id, sub,
+  int rc = blob_cache_key(interp, objv, &id, &sub,
               &cache_key, &cache_key_len, &free_cache_key);
   TCL_CHECK(rc);
   void* blob;
