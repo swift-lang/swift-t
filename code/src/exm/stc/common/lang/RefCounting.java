@@ -176,9 +176,6 @@ public class RefCounting {
    */
   private static long baseRefCount(Type type, DefType defType,
                RefCountType rcType, boolean trackedCountOnly) {
-    assert(!Types.isPrimValue(type) && !Types.isContainerLocal(type) &&
-           !Types.isStructLocal(type)) :
-           "Invalid type for refcount: " + type.type();
     if (Types.isStruct(type)) {
       // Sum of field refcounts
       StructType structT = (StructType)type.type().getImplType();
@@ -187,7 +184,11 @@ public class RefCounting {
         count += baseRefCount(field.getType(), defType, rcType,
                               trackedCountOnly);
       }
-      return count;
+      return count; 
+    } else if (Types.isPrimValue(type) || Types.isContainerLocal(type) ||
+               Types.isStructLocal(type)) {
+      // No refcount
+      return 0;
     } else {
       // Data store variables generally have one refcount to start with
       // In some cases (e.g. decrement-on-assign), it's not tracked 
