@@ -503,7 +503,7 @@ public class FixupVariables implements OptimizerPass {
             + " should have been " + "visible but wasn't in "
             + function.getName());
       }
-      if (RefCounting.hasWriteRefCount(v)) {
+      if (RefCounting.trackWriteRefCount(v)) {
         keepOpen.add(v);
       }
     }

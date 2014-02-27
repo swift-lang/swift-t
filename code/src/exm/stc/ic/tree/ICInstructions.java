@@ -978,7 +978,7 @@ public class ICInstructions {
           for (Arg inArg: inputs) {
             if (inArg.isVar()) {
               Var inVar = inArg.getVar();
-              if (RefCounting.hasReadRefCount(inVar)) {
+              if (RefCounting.trackReadRefCount(inVar)) {
                 readIncr.add(inVar);
               }
               if (Types.isScalarUpdateable(inVar) &&
@@ -989,7 +989,7 @@ public class ICInstructions {
           }
           for (int i = 0; i < outputs.size(); i++) {
             Var outVar = outputs.get(i);
-            if (RefCounting.hasWriteRefCount(outVar)) {
+            if (RefCounting.trackWriteRefCount(outVar)) {
               writeIncr.add(outVar);
             }
             boolean readRC = false;
@@ -999,11 +999,11 @@ public class ICInstructions {
               boolean writeOnly = f.isOutputWriteOnly(i);
               
               // keep read references to output vars
-              if (!writeOnly && RefCounting.hasReadRefCount(outVar)) {
+              if (!writeOnly && RefCounting.trackReadRefCount(outVar)) {
                 readRC = true;
               }
             }
-            if (readRC && RefCounting.hasReadRefCount(outVar)) {
+            if (readRC && RefCounting.trackReadRefCount(outVar)) {
               readIncr.add(outVar);
             }
           }
@@ -2220,7 +2220,7 @@ public class ICInstructions {
       if (op == Opcode.ASYNC_OP) {
         List<Var> res = new ArrayList<Var>(inputs.size());
         for (Arg in: inputs) {
-          if (RefCounting.hasReadRefCount(in.getVar())) {
+          if (RefCounting.trackReadRefCount(in.getVar())) {
             res.add(in.getVar());
           }
         }

@@ -408,15 +408,20 @@ public class RCPlacer {
         AliasKey key = tracker.getCountKey(blockVar);
         long incr = tracker.getCount(rcType, key, RCDir.DECR);
         assert(incr <= 0);
-        // -1 may correspond to the case when the value of the var is
+
+        long baseRC = RefCounting.baseRefCount(blockVar, rcType, true);
+        // -baseCount may correspond to the case when the value of the var is
         // thrown away, or where the var is never written. The exception is
         // if an instruction reads/writes the var without modifying the
         // refcount,
         // in which case we can't move the decrement to the front of the block
         // Shouldn't be less than this when var is declared in this
         // block.
-        assert (incr >= -1) : blockVar + " " + incr;
-        if (incr == -1) {
+        // TODO: this is a little conservative in case of structs, where
+        //       any writes to other fields will prevent refcount of unused
+        //       field being decremented
+        assert (incr >= -baseRC) : blockVar + " " + incr + " < base " + baseRC;
+        if (incr < 0) {
           immDecrCandidates.add(key);
         }
       }
@@ -433,8 +438,9 @@ public class RCPlacer {
     for (AliasKey key: immDecrCandidates) {
       Var immDecrVar = tracker.getRefCountVar(block, key, true);
       assert(immDecrVar.storage() != Alloc.ALIAS) : immDecrVar;
-      block.setInitRefcount(immDecrVar, rcType, 0);
-      tracker.cancel(immDecrVar, rcType, 1);
+      long incr = tracker.getCount(rcType, key, RCDir.DECR);
+      block.modifyInitRefcount(immDecrVar, rcType, incr);
+      tracker.cancel(immDecrVar, rcType, -incr);
     }
   }
 
@@ -734,7 +740,7 @@ public class RCPlacer {
   private void addDecrement(Block block, Counters<Var> increments,
       RefCountType type, Var var, long count) {
     if (count < 0) {
-      assert (RefCounting.hasRefCount(var, type));
+      assert (RefCounting.trackRefCount(var, type));
       Arg amount = Arg.createIntLit(count * -1);
 
       block.addCleanup(var, RefCountOp.decrRef(type, var, amount));
@@ -905,8 +911,8 @@ public class RCPlacer {
         long incr = increments.getCount(rcType, blockVar, RCDir.INCR);
         assert(incr >= 0);
         if (incr > 0) {
-          assert(RefCounting.hasRefCount(blockVar, rcType)) : blockVar;
-          block.setInitRefcount(blockVar, rcType, incr + 1);
+          assert(RefCounting.trackRefCount(blockVar, rcType)) : blockVar;
+          block.modifyInitRefcount(blockVar, rcType, incr);
           increments.cancel(blockVar, rcType, -incr);
         }
       }

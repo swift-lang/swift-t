@@ -92,7 +92,7 @@ public class RCTracker {
     // that, e.g. if the variable is a constant, that it no longer has
     // a refcount.
     for (RefCountType rcType: RefcountPass.RC_TYPES) {
-      if (!RefCounting.hasRefCount(child, rcType)) {
+      if (!RefCounting.trackRefCount(child, rcType)) {
         reset(rcType, child);
       }
     }
@@ -294,7 +294,7 @@ public class RCTracker {
   }
 
   void incr(Var var, RefCountType rcType, long amount) {
-    if (RefCounting.hasRefCount(var, rcType)) {
+    if (RefCounting.trackRefCount(var, rcType)) {
       AliasKey key = getCountKey(var);
       incrDirect(key, rcType, amount);
     }
@@ -326,7 +326,7 @@ public class RCTracker {
                       Type varType) {
     // Check to see if var/type may be able to carry refcount
     Var var = getRefCountVar(null, key, false);
-    if ((var != null && RefCounting.hasRefCount(var, rcType)) ||
+    if ((var != null && RefCounting.trackRefCount(var, rcType)) ||
         (var == null &&
          RefCounting.mayHaveRefcount(varType, rcType))) {
       incrDirect(key, rcType, amount);

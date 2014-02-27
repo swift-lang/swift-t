@@ -18,6 +18,8 @@ package exm.stc.common.lang;
 import java.util.ArrayList;
 import java.util.List;
 
+import exm.stc.common.lang.Types.StructType;
+import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.Typed;
 import exm.stc.common.lang.Var.DefType;
@@ -69,37 +71,56 @@ public class RefCounting {
 
   /**
    * @param v
-   * @return true if var has read refcount to be managed
+   * @return true if var has read refcount to be tracked/managed by
+   *              STC-emitted code
    */
-  public static boolean hasReadRefCount(Var v) {
-    if (!mayHaveReadRefcount(v.type())) {
+  public static boolean trackReadRefCount(Var v) {
+    return trackReadRefCount(v.type(), v.defType());
+  }
+  
+  private static boolean trackReadRefCount(Type type, DefType defType) {
+    if (!mayHaveReadRefcount(type)) {
       return false;
-    } else if (v.defType() == DefType.GLOBAL_CONST) {
+    } else if (defType == DefType.GLOBAL_CONST) {
       return false;
     }
     return true;
   }
   
   /**
-   * Return true if writer count is tracked for type
    * @param v
-   * @return
+   * @return true if var has write refcount to be tracked/managed by
+   *              STC-emitted code
    */
-  public static boolean hasWriteRefCount(Var v) {
-    if (!mayHaveWriteRefcount(v.type())) {
+  public static boolean trackWriteRefCount(Var v) {
+    return trackWriteRefCount(v.type(), v.defType());
+  }
+  
+  private static boolean trackWriteRefCount(Type type, DefType defType) {
+    if (!mayHaveWriteRefcount(type)) {
       return false;
-    } else if (v.defType() == DefType.GLOBAL_CONST) {
+    } else if (defType == DefType.GLOBAL_CONST) {
       return false;
     }
     return true;
   }
   
-  public static boolean hasRefCount(Var var, RefCountType type) {
-    if (type == RefCountType.READERS) {
-      return hasReadRefCount(var);
+  /**
+   * @param v
+   * @return true if var has refcount to be tracked/managed by
+   *              STC-emitted code
+   */
+  public static boolean trackRefCount(Var var, RefCountType rcType) {
+    return trackRefCount(var.type(), var.defType(), rcType);
+  }
+  
+  private static boolean trackRefCount(Type type, DefType defType,
+                                      RefCountType rcType) {
+    if (rcType == RefCountType.READERS) {
+      return trackReadRefCount(type, defType);
     } else {
-      assert(type == RefCountType.WRITERS);
-      return hasWriteRefCount(var);
+      assert(rcType == RefCountType.WRITERS);
+      return trackWriteRefCount(type, defType);
     }
   }
 
@@ -108,11 +129,11 @@ public class RefCounting {
    * @param vars
    * @return
    */
-  public static List<Var> filterWriteRefcount(List<Var> vars) {
+  public static List<Var> filterTrackedWriteRefcount(List<Var> vars) {
     assert(vars != null);
     List<Var> res = new ArrayList<Var>();
     for (Var var: vars) {
-      if (hasWriteRefCount(var)) {
+      if (trackWriteRefCount(var)) {
         res.add(var);
       }
     }
@@ -139,4 +160,58 @@ public class RefCounting {
     return true;
   }
 
+  public static long baseRefCount(Var v, RefCountType rcType,
+                                  boolean trackedCountOnly) {
+    return baseRefCount(v.type(), v.defType(), rcType, trackedCountOnly);
+  }
+  
+  /**
+   * Return base reference count for type, i.e. what it's initialized to
+   * by default 
+   * @param rcType 
+   * @param blockVar
+   * @param trackedCountOnly return only refcounts tracked by STC
+   *                (not auto-decremented on assign)
+   * @return
+   */
+  private static long baseRefCount(Type type, DefType defType,
+               RefCountType rcType, boolean trackedCountOnly) {
+    assert(!Types.isPrimValue(type) && !Types.isContainerLocal(type) &&
+           !Types.isStructLocal(type)) :
+           "Invalid type for refcount: " + type.type();
+    if (Types.isStruct(type)) {
+      // Sum of field refcounts
+      StructType structT = (StructType)type.type().getImplType();
+      long count = 0;
+      for (StructField field: structT.getFields()) {
+        count += baseRefCount(field.getType(), defType, rcType,
+                              trackedCountOnly);
+      }
+      return count;
+    } else {
+      // Data store variables generally have one refcount to start with
+      // In some cases (e.g. decrement-on-assign), it's not tracked 
+      if (trackedCountOnly) {
+        if (trackRefCount(type, defType, rcType)) {
+          return 1;
+        } else {
+          return 0;
+        }
+      }
+      else
+      {
+        return 1;
+      }
+    }
+  }
+  
+  public static long baseReadRefCount(Var var, boolean trackedCountOnly) {
+    return baseRefCount(var.type(), var.defType(), RefCountType.READERS,
+                        trackedCountOnly);
+  }
+  
+  public static long baseWriteRefCount(Var var, boolean trackedCountOnly) {
+    return baseRefCount(var.type(), var.defType(), RefCountType.WRITERS,
+                        trackedCountOnly);
+  }
 }

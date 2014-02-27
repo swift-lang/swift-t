@@ -1054,17 +1054,25 @@ public class ICTree {
         // Initialize refcounts to default value if not
         //  explicitly overridden and check for bad refcounts
         if (v.storage() != Alloc.ALIAS && 
-            RefCounting.hasReadRefCount(v)) {
+            RefCounting.trackReadRefCount(v)) {
           if (initReaders == null)
-            initReaders = Arg.ONE;
+          {
+            long baseReaders = RefCounting.baseReadRefCount(v, false);
+            initReaders = Arg.createIntLit(baseReaders);
+          }
         } else {
+          // Check we don't have refcount for non-refcountable var
           assert(initReaders == null) : v + " " +   initReaders;
         }
         if (v.storage() != Alloc.ALIAS && 
-            RefCounting.hasWriteRefCount(v)) {
+            RefCounting.trackWriteRefCount(v)) {
           if (initWriters == null)
-            initWriters = Arg.ONE;
+          {
+            long baseWriters = RefCounting.baseWriteRefCount(v, false);
+            initWriters = Arg.createIntLit(baseWriters);
+          }
         } else {
+          // Check we don't have refcount for non-refcountable var
           assert(initWriters == null);
         }
         declarations.add(new VarDecl(v, initReaders, initWriters));
@@ -1666,6 +1674,19 @@ public class ICTree {
       }
       return count;
     }
+    
+    /**
+     * Set the initial refcount to the base refcount, plus amount provided.
+     * Should be called at most once per var
+     * @param blockVar
+     * @param refcountType
+     * @param incr
+     */
+    public void modifyInitRefcount(Var blockVar, RefCountType rcType,
+                                   long incr) {
+      long baseRC = RefCounting.baseRefCount(blockVar, rcType, false);
+      setInitRefcount(blockVar, rcType, baseRC + incr);
+    }
 
     /**
      * Set the initial reference count of a variable to something
@@ -1673,14 +1694,14 @@ public class ICTree {
      * @param refcountType
      * @param val
      */
-    public void setInitRefcount(Var blockVar, RefCountType refcountType,
+    public void setInitRefcount(Var blockVar, RefCountType rcType,
                                    long val) {
       assert(val >= 0);
       HashMap<Var, Arg> refcountMap;
-      if (refcountType == RefCountType.READERS) {
+      if (rcType == RefCountType.READERS) {
         refcountMap = this.initReadRefcounts;
       } else {
-        assert(refcountType == RefCountType.WRITERS);
+        assert(rcType == RefCountType.WRITERS);
         refcountMap = this.initWriteRefcounts;
       }
       assert(!refcountMap.containsKey(blockVar)) :

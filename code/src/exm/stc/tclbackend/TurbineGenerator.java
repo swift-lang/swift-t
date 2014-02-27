@@ -438,8 +438,8 @@ public class TurbineGenerator implements CompilerBackend {
                 prefixVar(var.name()) + " " + var.provenance().logFormat()));
      
       // Check that init refcounts are valid
-      assert(RefCounting.hasReadRefCount(var) ^ initReaders == null);
-      assert(RefCounting.hasWriteRefCount(var) ^ initWriters == null);
+      assert(RefCounting.trackReadRefCount(var) ^ initReaders == null);
+      assert(RefCounting.trackWriteRefCount(var) ^ initWriters == null);
   
       if (var.storage() == Alloc.GLOBAL_CONST) {
         // If global, it should already be in TCL global scope, just need to
@@ -632,27 +632,27 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void decrWriters(Var var, Arg amount) {
-    assert(RefCounting.hasWriteRefCount(var));
+    assert(RefCounting.trackWriteRefCount(var));
     // Close array by removing the slot we created at startup
     decrementWriters(Arrays.asList(var), argToExpr(amount));
   }
   
   @Override
   public void decrRef(Var var, Arg amount) {
-    assert(RefCounting.hasReadRefCount(var));
+    assert(RefCounting.trackReadRefCount(var));
     decrementReaders(Arrays.asList(var), argToExpr(amount));
   }
   
   @Override
   public void incrRef(Var var, Arg amount) {
-    assert(RefCounting.hasReadRefCount(var));
+    assert(RefCounting.trackReadRefCount(var));
     assert(amount.isImmediateInt());
     incrementReaders(Arrays.asList(var), argToExpr(amount));
   }
   
   @Override
   public void incrWriters(Var var, Arg amount) {
-    assert(RefCounting.hasWriteRefCount(var));
+    assert(RefCounting.trackWriteRefCount(var));
     assert(amount.isImmediateInt());
     incrementWriters(Arrays.asList(var), argToExpr(amount));
   }
@@ -2303,7 +2303,7 @@ public class TurbineGenerator implements CompilerBackend {
       Sequence seq = new Sequence();
       for (VarCount vc: Var.countVars(vars)) {
         Var var = vc.var;
-        if (!RefCounting.hasReadRefCount(var)) {
+        if (!RefCounting.trackReadRefCount(var)) {
           continue;
         }
         Expression amount;
@@ -2338,7 +2338,7 @@ public class TurbineGenerator implements CompilerBackend {
           Expression incr) {
       Sequence seq = new Sequence();
       for (VarCount vc: Var.countVars(keepOpenVars)) {
-        if (!RefCounting.hasWriteRefCount(vc.var)) {
+        if (!RefCounting.trackWriteRefCount(vc.var)) {
           continue;
         }
         
@@ -2358,7 +2358,7 @@ public class TurbineGenerator implements CompilerBackend {
                                              Expression decr) {
       Sequence seq = new Sequence();
       for (VarCount vc: Var.countVars(vars)) {
-        if (!RefCounting.hasWriteRefCount(vc.var)) {
+        if (!RefCounting.trackWriteRefCount(vc.var)) {
           continue;
         }
         if (decr == null) {

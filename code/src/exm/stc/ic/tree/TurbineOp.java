@@ -2266,7 +2266,7 @@ public class TurbineOp extends Instruction {
           // Skip keys and only get values
           Arg elem = getInput(i * 2 + 1);
           // Container gets reference to member
-          if (elem.isVar() && RefCounting.hasReadRefCount(elem.getVar())) {
+          if (elem.isVar() && RefCounting.trackReadRefCount(elem.getVar())) {
             readIncr.add(elem.getVar());
           }
         }
@@ -2319,7 +2319,7 @@ public class TurbineOp extends Instruction {
         Arg mem = getInput(1);
         // Increment reference to memberif needed
         List<Var> readIncr;
-        if (mem.isVar() && RefCounting.hasReadRefCount(mem.getVar())) {
+        if (mem.isVar() && RefCounting.trackReadRefCount(mem.getVar())) {
           readIncr = mem.getVar().asList(); 
         } else {
           readIncr = Var.NONE;
@@ -2341,7 +2341,7 @@ public class TurbineOp extends Instruction {
         Arg mem = getInput(1);
 
         List<Var> readIncr;
-        if (mem.isVar() && RefCounting.hasReadRefCount(mem.getVar())) {
+        if (mem.isVar() && RefCounting.trackReadRefCount(mem.getVar())) {
           readIncr = Arrays.asList(arr, mem.getVar());
         } else {
           readIncr = arr.asList();
@@ -2358,7 +2358,7 @@ public class TurbineOp extends Instruction {
         Var arrayRef = getOutput(1);
         List<Var> readers = new ArrayList<Var>(3);
         readers.add(arrayRef);
-        if (mem.isVar() && RefCounting.hasReadRefCount(mem.getVar())) {
+        if (mem.isVar() && RefCounting.trackReadRefCount(mem.getVar())) {
           readers.add(mem.getVar());
         }
 
@@ -2402,7 +2402,7 @@ public class TurbineOp extends Instruction {
       case BAG_INSERT: {
         Arg mem = getInput(0);
         List<Var> readers = Var.NONE;
-        if (mem.isVar() && RefCounting.hasReadRefCount(mem.getVar())) {
+        if (mem.isVar() && RefCounting.trackReadRefCount(mem.getVar())) {
           readers = mem.getVar().asList();
         }
         return Pair.create(readers, Var.NONE);

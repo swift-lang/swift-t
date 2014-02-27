@@ -191,12 +191,12 @@ public class RefcountPass implements OptimizerPass {
       // If we're spawning off, increment once per iteration so that
       // each parallel task has a refcount to work with
       for (PassedVar v: loop.getAllPassedVars()) {
-        if (!v.writeOnly && RefCounting.hasReadRefCount(v.var)) {
+        if (!v.writeOnly && RefCounting.trackReadRefCount(v.var)) {
           readIncrs.increment(v.var);
         }
       }
       for (Var v: loop.getKeepOpenVars()) {
-        if (RefCounting.hasWriteRefCount(v)) {
+        if (RefCounting.trackWriteRefCount(v)) {
           writeIncrs.increment(v);
         }
       }
@@ -352,8 +352,9 @@ public class RefcountPass implements OptimizerPass {
       // members separately allocated, so don't want to double-decrement
       // struct members.
       if (var.storage() != Alloc.ALIAS) {
-        increments.readDecr(var);
-        increments.writeDecr(var);
+        // Work out base refcounts that we'll have to start with for var
+        increments.readDecr(var, RefCounting.baseReadRefCount(var, true));
+        increments.writeDecr(var, RefCounting.baseWriteRefCount(var, true));
       }
     }
 
@@ -416,7 +417,7 @@ public class RefcountPass implements OptimizerPass {
       // Special case: decrement all variables passed into loop from outside
       LoopBreak loopBreak = (LoopBreak) inst;
       for (Var ko: loopBreak.getKeepOpenVars()) {
-        assert (RefCounting.hasWriteRefCount(ko));
+        assert (RefCounting.trackWriteRefCount(ko));
         increments.writeDecr(ko);
       }
       for (PassedVar pass: loopBreak.getLoopUsedVars()) {
@@ -442,20 +443,20 @@ public class RefcountPass implements OptimizerPass {
       Set<Var> alreadyAdded = new HashSet<Var>();
       
       for (Var keepOpen: cont.getKeepOpenVars()) {
-        assert (RefCounting.hasWriteRefCount(keepOpen));
+        assert (RefCounting.trackWriteRefCount(keepOpen));
         alreadyAdded.add(keepOpen);
         increments.writeIncr(keepOpen, incr);
       }
 
       for (PassedVar passedIn: cont.getAllPassedVars()) {
         logger.trace(cont.getType() + ": passedIn: " + passedIn.var.name());
-        if (!passedIn.writeOnly && RefCounting.hasReadRefCount(passedIn.var)) {
+        if (!passedIn.writeOnly && RefCounting.trackReadRefCount(passedIn.var)) {
           increments.readIncr(passedIn.var, incr);
           alreadyAdded.add(passedIn.var);
         }
       }
       for (BlockingVar blockingVar: cont.blockingVars(false)) {
-        if (RefCounting.hasReadRefCount(blockingVar.var) &&
+        if (RefCounting.trackReadRefCount(blockingVar.var) &&
              !alreadyAdded.contains(blockingVar.var)) {
           increments.readIncr(blockingVar.var, incr);
         }
@@ -782,7 +783,7 @@ public class RefcountPass implements OptimizerPass {
     }
 
     for (PassedVar passedIn: cont.getAllPassedVars()) {
-      if (!passedIn.writeOnly && RefCounting.hasReadRefCount(passedIn.var)) {
+      if (!passedIn.writeOnly && RefCounting.trackReadRefCount(passedIn.var)) {
         increments.readDecr(passedIn.var, amount);
         alreadyAdded.add(passedIn.var);
       }
@@ -790,7 +791,7 @@ public class RefcountPass implements OptimizerPass {
 
     // Hold read reference for wait var if not already present
     for (BlockingVar blockingVar: cont.blockingVars(false)) {
-      if (RefCounting.hasReadRefCount(blockingVar.var) &&
+      if (RefCounting.trackReadRefCount(blockingVar.var) &&
           !alreadyAdded.contains(blockingVar.var)) {
         increments.readDecr(blockingVar.var, amount);
       }
