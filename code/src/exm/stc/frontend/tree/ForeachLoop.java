@@ -309,7 +309,7 @@ public class ForeachLoop {
         VarProvenance.userVar(context.getSourceLoc()), false);
 
     // This is the value type that we'll use internally too
-    Type memberValRepr = VarRepr.fieldRepr(memberVar.type());
+    Type memberValRepr = VarRepr.containerElemRepr(memberVar.type());
     if (Types.isRef(memberValRepr)) {
       memberVal = null;
     } else {

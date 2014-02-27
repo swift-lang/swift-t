@@ -117,10 +117,11 @@ public class VarCreator {
     StructType structType = (StructType)struct.type().getImplType();
     for (StructField field: structType.getFields()) {
       Type fieldT = field.getType();
-      if (VarRepr.storeRefContainer(fieldT)) {
+      if (VarRepr.storeRefInStruct(fieldT)) {
         // TODO: initialize data being referenced and put into struct
         throw new STCRuntimeError("Need to implement initialisation" +
-                                   " for struct type " + struct.type());
+           " for struct type " + struct.type() + " because of field " +
+           field.getName() + " " + field.getType());
       }
     }
   }

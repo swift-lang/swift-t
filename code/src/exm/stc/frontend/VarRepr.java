@@ -143,7 +143,7 @@ public class VarRepr {
       Type frontendElemType = Types.containerElemType(type);
       Type backendElemType = backendTypeInternal(frontendElemType,
                                                  checkInstantiate);
-      if (storeRefContainer(backendElemType)) {
+      if (storeRefInContainer(backendElemType)) {
         type = Types.substituteElemType(type, new RefType(backendElemType));
       }
     } else if (Types.isRef(type)) {
@@ -176,7 +176,7 @@ public class VarRepr {
     
     for (StructField frontendF: frontend.getFields()) {
       Type fieldT = backendTypeInternal(frontendF.getType(), checkInstantiate);
-      if (storeRefContainer(fieldT)) {
+      if (storeRefInStruct(fieldT)) {
         // Need to store as ref to separate data
         fieldT = new RefType(fieldT);
       }
@@ -192,17 +192,37 @@ public class VarRepr {
    * @param type
    * @return
    */
-  public static boolean storeRefContainer(Typed type) {
-    if (isBig(type)) {
+  public static boolean storeRefInContainer(Typed type) {
+    return storeRefInCompound(type, CompoundType.CONTAINER);
+  }
+  
+  public static boolean storeRefInStruct(Typed type) {
+    return storeRefInCompound(type, CompoundType.STRUCT);
+  }
+  
+  private static enum CompoundType {
+    STRUCT,
+    CONTAINER,
+  }
+  
+  private static boolean storeRefInCompound(Typed type,
+                                 CompoundType compound) {
+    if (Types.isFile(type) || Types.isStruct(type)) {
+      if (compound == CompoundType.CONTAINER) {
+        // TODO: would make sense to store directly, but don't have capacity to
+        // init/modify individual fields currently in container
+        return true;
+      } else {
+        assert(compound == CompoundType.STRUCT);
+        // Store structs, etc directly in struct
+        return false;
+      }
+    } else if (isBig(type)) {
       // Want to be able to distribute data
       return true;
     } else if (RefCounting.trackWriteRefCount(type.type(), DefType.LOCAL_USER)) {
       // Need to track write refcount separately to manage closing,
       // so must store as ref to separate datum
-      return true;
-    } else if (Types.isFile(type) || Types.isStruct(type)) {
-      // TODO: would make sense, but don't have capacity to modify
-      // individual fields currently 
       return true;
     } else {
       return false;
@@ -253,8 +273,8 @@ public class VarRepr {
    *          the type of array members for the array being dereferenced
    * @return
    */
-  public static Type fieldRepr(Type memberType) {
-    if (storeRefContainer(memberType)) {
+  public static Type containerElemRepr(Type memberType) {
+    if (storeRefInContainer(memberType)) {
       return new RefType(memberType);
     } else {
       return memberType;

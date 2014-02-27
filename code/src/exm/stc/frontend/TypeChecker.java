@@ -784,7 +784,7 @@ public class TypeChecker {
   
         // Depending on the member type of the array, the result type might be
         // the actual member type, or a reference to the member type
-        Type resultAlt = VarRepr.fieldRepr(memberType);
+        Type resultAlt = VarRepr.containerElemRepr(memberType);
         resultAlts.add(resultAlt);
       } else {
         throw new TypeMismatchException(context,
@@ -818,7 +818,7 @@ public class TypeChecker {
       return new ExprType(fieldType);
     } else { assert(Types.isStructRef(structType));
       // Will get copy
-      return new ExprType(VarRepr.fieldRepr(fieldType));
+      return new ExprType(VarRepr.containerElemRepr(fieldType));
     }
   }
   

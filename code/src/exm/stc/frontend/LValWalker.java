@@ -343,7 +343,7 @@ public class LValWalker {
     // E.g. if we store ints inline in container, storage type is int,
     //      and we can store directly if we have a $int, or copy if we have
     //      an int rval
-    Type elemStorageType = VarRepr.fieldRepr(Types.containerElemType(arr));
+    Type elemStorageType = VarRepr.containerElemRepr(Types.containerElemType(arr));
     boolean rValDeref = !rValVar.type().assignableTo(elemStorageType);
     if (rValDeref) {
       assert(rValVar.type().assignableTo(
@@ -637,7 +637,7 @@ public class LValWalker {
     
     Var elemVal;
     // May need to add another wait to retrieve value
-    boolean openWait2 = !VarRepr.storeRefContainer(elem);
+    boolean openWait2 = !VarRepr.storeRefInContainer(elem);
     if (openWait2) {
       String waitName = context.getFunctionContext().constructName(
                                                 "bag-load-append");

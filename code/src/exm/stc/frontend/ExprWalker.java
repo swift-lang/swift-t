@@ -300,7 +300,7 @@ public class  ExprWalker {
     assert(fieldPath.size() > 0);
     Type memType = TypeChecker.findStructFieldType(context, fieldPath,
                                                    struct.type());
-    boolean storedAsRef = VarRepr.storeRefContainer(memType);
+    boolean storedAsRef = VarRepr.storeRefInStruct(memType);
     Var result;
     if (Types.isStructRef(struct)) {
       RefType resultType = new RefType(memType);
@@ -708,7 +708,7 @@ public class  ExprWalker {
   private Type chooseArrayTypeForLookup(Var oVar, Type arrExprType) {
     for (Type altType: UnionType.getAlternatives(arrExprType)) {
       assert(Types.isArray(altType) || Types.isArrayRef(altType));
-      Type lookupRes = VarRepr.fieldRepr(
+      Type lookupRes = VarRepr.containerElemRepr(
                                 Types.containerElemType(altType));
       if (lookupRes.equals(oVar.type())) {
         return altType;
@@ -856,7 +856,7 @@ public class  ExprWalker {
     }
     
     Var backendOVar = VarRepr.backendVar(oVar);
-    boolean elemIsRef = VarRepr.storeRefContainer(Types.containerElemType(oVar));
+    boolean elemIsRef = VarRepr.storeRefInContainer(Types.containerElemType(oVar));
     /* We can only use arrayBuild operation if we have the keys and values in
      * the appropriate format for the internal container representation.
      * If user specified keys, they will be futures so we can't use them here.
