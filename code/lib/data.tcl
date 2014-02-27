@@ -412,7 +412,7 @@ namespace eval turbine {
       } else {
         set result [ adlb::retrieve_blob $id ]
       }
-      log [ format "retrieve_blob: <%d>=\[%x %d\]" $id \
+      log [ format "retrieve_blob: <%s>=\[%x %d\]" $id \
                     [ lindex $result 0 ] [ lindex $result 1 ] ]
       return $result
     }
@@ -429,7 +429,7 @@ namespace eval turbine {
     # Free local blob
     proc free_local_blob { blob } {
       if { [ llength $blob ] == 3 } {
-        debug [ format "free_local_blob: \[%x %d %d\]" \
+        debug [ format "free_local_blob: \[%x %d %s\]" \
                     [ lindex $blob 0 ] [ lindex $blob 1 ] \
                     [ lindex $blob 2 ] ]
       } else {

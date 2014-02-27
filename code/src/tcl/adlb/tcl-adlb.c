@@ -58,7 +58,7 @@
 #include <log.h>
 
 #include <memory.h>
-#include <table_lp.h>
+#include <table_bp.h>
 #include <tools.h>
 #include <vint.h>
 
@@ -184,11 +184,11 @@ ADLB_Parse_Handle_Cleanup(Tcl_Interp *interp, Tcl_Obj *const objv[],
     ADLB_Parse_Handle_Cleanup(interp, objv, parse)
 
 /**
-   Map from TD to local blob pointers.
+   Map from binary packed [TD,subscript] to local blob pointers.
    This is not an LRU cache: the user must use blob_free to
    free memory
  */
-static struct table_lp blob_cache;
+static table_bp blob_cache;
 
 /**
  * Cache Tcl_Objs for struct field names
@@ -212,10 +212,18 @@ static void set_namespace_constants(Tcl_Interp* interp);
 static int refcount_mode(Tcl_Interp *interp, Tcl_Obj *const objv[],
                           Tcl_Obj* obj, adlb_refcount_type *mode);
 
-static Tcl_Obj *build_tcl_blob(void *data, int length, adlb_datum_id id);
+static int blob_cache_key(Tcl_Interp *interp, Tcl_Obj *const objv[],
+                          adlb_datum_id id, adlb_subscript sub,
+                          void **key, size_t *key_len, bool *alloced);
+
+static Tcl_Obj *build_tcl_blob(void *data, int length, Tcl_Obj *handle);
 
 static int extract_tcl_blob(Tcl_Interp *interp, Tcl_Obj *const objv[],
-                         Tcl_Obj *obj, adlb_blob_t *blob, adlb_datum_id *id);
+                   Tcl_Obj *obj, adlb_blob_t *blob, Tcl_Obj **handle);
+
+static int uncache_blob(Tcl_Interp *interp, int objc,
+    Tcl_Obj *const objv[], adlb_datum_id id, adlb_subscript sub,
+    bool *found_in_cache);
 
 static int blob_cache_finalize(void);
 
@@ -366,7 +374,7 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   for (int i = 0; i < ntypes; i++)
     type_vect[i] = i;
 
-  bool ok = table_lp_init(&blob_cache, 16);
+  bool ok = table_bp_init(&blob_cache, 16);
   TCL_CONDITION(ok, "Could not initialize blob cache");
 
   rc = field_name_objs_init(interp, objv);
@@ -1378,9 +1386,8 @@ tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
       return TCL_OK;
     case ADLB_DATA_TYPE_BLOB:
     {
-      adlb_datum_id tmp_id;
       // Take list-based blob representation
-      int rc = extract_tcl_blob(interp, objv, obj, &result->BLOB, &tmp_id);
+      int rc = extract_tcl_blob(interp, objv, obj, &result->BLOB, NULL);
       TCL_CHECK(rc);
       if (own_pointers)
       {
@@ -2305,8 +2312,7 @@ adlb_data_to_tcl_obj(Tcl_Interp *interp, Tcl_Obj *const objv[], adlb_datum_id id
       TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
             "Retrieve failed due to error unpacking data %i", dc);
       // Don't provide id to avoid blob caching
-      *result = build_tcl_blob(tmp.BLOB.value, tmp.BLOB.length,
-                               ADLB_DATA_ID_NULL);
+      *result = build_tcl_blob(tmp.BLOB.value, tmp.BLOB.length, NULL);
       break;
     case ADLB_DATA_TYPE_STRUCT:
       return packed_struct_to_tcl_dict(interp, objv, data, length,
@@ -2676,6 +2682,29 @@ ADLB_Retrieve_Blob_Decr_Cmd(ClientData cdata, Tcl_Interp *interp,
   return ADLB_Retrieve_Blob_Impl(cdata, interp, objc, objv, true);
 }
 
+static int blob_cache_key(Tcl_Interp *interp, Tcl_Obj *const objv[],
+                          adlb_datum_id id, adlb_subscript sub,
+                          void **key, size_t *key_len, bool *alloced)
+{
+  if (adlb_has_sub(sub))
+  {
+    *key_len = sizeof(id) + sub.length;
+    *key = malloc(*key_len);
+    TCL_MALLOC_CHECK(*key);
+    *alloced = true;
+
+    memcpy(*key, &id, sizeof(id));
+    memcpy(*key + sizeof(id), sub.key, sub.length);
+  }
+  else
+  {
+    *key = &id;
+    *key_len = sizeof(id);
+    *alloced = false;
+  }
+  return TCL_OK;
+}
+
 static inline int
 ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
                         int objc, Tcl_Obj *const objv[], bool decr)
@@ -2687,9 +2716,11 @@ ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
   }
 
   int rc;
-  adlb_datum_id id;
-  rc = Tcl_GetADLB_ID(interp, objv[1], &id);
-  TCL_CHECK_MSG(rc, "requires id!");
+  tcl_adlb_handle handle;
+  Tcl_Obj *handle_obj = objv[1];
+  rc = ADLB_PARSE_HANDLE(handle_obj, &handle);
+  TCL_CHECK_MSG(rc, "Invalid handle %s",
+                Tcl_GetString(objv[1]));
 
   adlb_retrieve_rc refcounts = ADLB_RETRIEVE_NO_RC;
   /* Only decrement if refcounting enabled */
@@ -2702,39 +2733,62 @@ ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
   // Retrieve the blob data
   adlb_data_type type;
   int length;
-  rc = ADLB_Retrieve(id, ADLB_NO_SUB, refcounts, &type, xfer, &length);
-  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", id);
+  int ret_rc = ADLB_Retrieve(handle.id, handle.subscript, refcounts,
+                             &type, xfer, &length);
+
+  rc = ADLB_PARSE_HANDLE_CLEANUP(&handle);
+  TCL_CHECK(rc);
+
+  TCL_CONDITION(ret_rc == ADLB_SUCCESS, "<%"PRId64"> failed!",
+                handle.id);
   TCL_CONDITION(type == ADLB_DATA_TYPE_BLOB,
                 "type mismatch: expected: %i actual: %i",
                 ADLB_DATA_TYPE_BLOB, type);
 
   // Allocate the local blob
   void* blob = malloc((size_t)length);
-  assert(blob);
+  TCL_CONDITION(blob != NULL, "Error allocating blob: %i bytes", length);
 
   // Copy the blob data
   memcpy(blob, xfer, (size_t)length);
 
+  // Build key for the cache
+  void *cache_key;
+  size_t cache_key_len;
+  bool free_cache_key;
+  rc = blob_cache_key(interp, objv, handle.id, handle.subscript,
+                      &cache_key, &cache_key_len, &free_cache_key);
+  TCL_CHECK(rc);
+
   // Link the blob into the cache
-  bool b = table_lp_add(&blob_cache, id, blob);
-  ASSERT(b);
+  bool b = table_bp_add(&blob_cache, cache_key, cache_key_len, blob);
+  if (free_cache_key)
+  {
+    free(cache_key); 
+  }
+  TCL_CONDITION(b, "Error adding to blob cache");
+
 
   // printf("retrieved blob: [ %p %i ]\n", blob, length);
-
-  Tcl_SetObjResult(interp, build_tcl_blob(blob, length, id));
+  
+  // build blob with original handle - ID or ID/sub
+  Tcl_SetObjResult(interp, build_tcl_blob(blob, length, handle_obj));
   return TCL_OK;
 }
 
-static Tcl_Obj *build_tcl_blob(void *data, int length, adlb_datum_id id)
+static Tcl_Obj *build_tcl_blob(void *data, int length, Tcl_Obj *handle)
 {
   // Pack and return the blob pointer, length, turbine ID as Tcl list
-  int blob_elems = (id == ADLB_DATA_ID_NULL) ? 2 : 3;
+  int blob_elems = (handle == NULL) ? 2 : 3;
 
   Tcl_Obj* list[blob_elems];
   list[0] = Tcl_NewPtr(data);
   list[1] = Tcl_NewIntObj(length);
-  if (id != ADLB_DATA_ID_NULL)
-    list[2] = Tcl_NewADLB_ID(id);
+  if (handle != NULL)
+  {
+    Tcl_IncrRefCount(handle);
+    list[2] = handle;
+  }
   return Tcl_NewListObj(blob_elems, list);
 }
 
@@ -2742,13 +2796,13 @@ static Tcl_Obj *build_tcl_blob(void *data, int length, adlb_datum_id id)
   Construct a Tcl blob object, which has two representations:
    This handles two cases:
     -> A three element list representing a blob retrieved from the
-       data store, in which case we fill in id
+       data store, in which case we fill in handle, if not NULL
     -> A two element list representing a locally allocated blob,
-        in which case we set id = ADLB_DATA_ID_NULL
+        in which case we set handle == NULL
  */
 
 static int extract_tcl_blob(Tcl_Interp *interp, Tcl_Obj *const objv[],
-                         Tcl_Obj *obj, adlb_blob_t *blob, adlb_datum_id *id)
+                     Tcl_Obj *obj, adlb_blob_t *blob, Tcl_Obj **handle)
 {
   int rc;
   Tcl_Obj **elems;
@@ -2768,24 +2822,43 @@ static int extract_tcl_blob(Tcl_Interp *interp, Tcl_Obj *const objv[],
                 Tcl_GetString(elems[1]));
   if (elem_count == 2)
   {
-    *id = ADLB_DATA_ID_NULL;
+    if (handle != NULL)
+    {
+      *handle = NULL;
+    }
   }
   else
   {
-    rc = Tcl_GetADLB_ID(interp, elems[2], id);
-    TCL_CHECK_MSG(rc, "Error extracting ID from %s", Tcl_GetString(elems[2]));
+    if (handle != NULL)
+    {
+      *handle = elems[2];
+    }
   }
   return TCL_OK;
 }
 
-static int uncache_blob(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
-                        adlb_datum_id id, bool *found_in_cache) {
+static int uncache_blob(Tcl_Interp *interp, int objc,
+    Tcl_Obj *const objv[], adlb_datum_id id, adlb_subscript sub,
+    bool *found_in_cache) {
+  // Build key for the cache
+  void *cache_key;
+  size_t cache_key_len;
+  bool free_cache_key;
+  int rc = blob_cache_key(interp, objv, id, sub,
+              &cache_key, &cache_key_len, &free_cache_key);
+  TCL_CHECK(rc);
   void* blob;
   
-  *found_in_cache = table_lp_remove(&blob_cache, id, &blob);
+  *found_in_cache = table_bp_remove(&blob_cache, cache_key,
+                                    cache_key_len, &blob);
   if (*found_in_cache)
   {
     free(blob);
+  }
+
+  if (free_cache_key)
+  {
+    free(cache_key);
   }
   return TCL_OK;
 }
@@ -2801,14 +2874,29 @@ ADLB_Blob_Free_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_ARGS(2);
 
   int rc;
-  adlb_datum_id id;
-  rc = Tcl_GetADLB_ID(interp, objv[1], &id);
-  TCL_CHECK_MSG(rc, "requires id!");
+  tcl_adlb_handle handle;
+  rc = ADLB_PARSE_HANDLE(objv[1], &handle);
+  TCL_CHECK_MSG(rc, "Invalid handle %s",
+                Tcl_GetString(objv[1]));
 
   bool found;
-  rc = uncache_blob(interp, objc, objv, id, &found);
+  rc = uncache_blob(interp, objc, objv, handle.id,
+                    handle.subscript, &found);
   TCL_CHECK(rc);
-  TCL_CONDITION(found, "blob not cached: <%"PRId64">", id);
+  
+  rc = ADLB_PARSE_HANDLE_CLEANUP(&handle);
+  TCL_CHECK(rc);
+
+  if (adlb_has_sub(handle.subscript))
+  {
+    TCL_CONDITION(found, "blob not cached: <%"PRId64">[%.*s]",
+        handle.id, (int)handle.subscript.length,
+        (const char*)handle.subscript.key);
+  }
+  else
+  {
+    TCL_CONDITION(found, "blob not cached: <%"PRId64">", handle.id);
+  }
   return TCL_OK;
 }
 
@@ -2828,26 +2916,34 @@ ADLB_Local_Blob_Free_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   int rc;
   adlb_blob_t blob;
-  adlb_datum_id id;
-
-  rc = extract_tcl_blob(interp, objv, objv[1], &blob, &id);
+  
+  Tcl_Obj *handle_obj;
+  rc = extract_tcl_blob(interp, objv, objv[1], &blob, &handle_obj);
   TCL_CHECK(rc);
 
-  if (id == ADLB_DATA_ID_NULL)
+  if (handle_obj == NULL)
   {
     if (blob.value != NULL)
       free(blob.value);
     return TCL_OK;
   } else {
     //printf("uncache_blob: %s", Tcl_GetString(objv[1]));
+    tcl_adlb_handle handle;
+    rc = ADLB_PARSE_HANDLE(handle_obj, &handle);
+    TCL_CHECK_MSG(rc, "Invalid handle %s",
+                  Tcl_GetString(objv[1]));
+    
     bool cached;
-    rc = uncache_blob(interp, objc, objv, id, &cached);
+    rc = uncache_blob(interp, objc, objv, handle.id, 
+                      handle.subscript, &cached);
     TCL_CHECK(rc);
 
-    if (!cached)
+    if (!cached && blob.value != NULL)
       // Wasn't managed by cache
       free(blob.value);
 
+    rc = ADLB_PARSE_HANDLE_CLEANUP(&handle);
+    TCL_CHECK(rc);
     return TCL_OK;
   }
 }
@@ -3007,8 +3103,7 @@ ADLB_Blob_To_String_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(2);
   adlb_blob_t blob;
-  adlb_datum_id tmp_id;
-  int rc = extract_tcl_blob(interp, objv, objv[1], &blob, &tmp_id);
+  int rc = extract_tcl_blob(interp, objv, objv[1], &blob, NULL);
   TCL_CHECK(rc);
 
   TCL_CONDITION(((char*)blob.value)[blob.length-1] == '\0', "adlb::blob_to_string "
@@ -3779,12 +3874,11 @@ ADLB_Xpt_Write_Cmd(ClientData cdata, Tcl_Interp *interp,
   int rc;
   adlb_code ac;
 
-  adlb_datum_id tmp;
   adlb_blob_t key_blob, val_blob;
-  rc = extract_tcl_blob(interp, objv, objv[1], &key_blob, &tmp);
+  rc = extract_tcl_blob(interp, objv, objv[1], &key_blob, NULL);
   TCL_CHECK(rc);
   
-  rc = extract_tcl_blob(interp, objv, objv[2], &val_blob, &tmp);
+  rc = extract_tcl_blob(interp, objv, objv[2], &val_blob, NULL);
   TCL_CHECK(rc);
 
   adlb_xpt_persist persist_mode;
@@ -3837,9 +3931,8 @@ ADLB_Xpt_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
   int rc;
   adlb_code ac;
 
-  adlb_datum_id tmp;
   adlb_blob_t key;
-  rc = extract_tcl_blob(interp, objv, objv[1], &key, &tmp);
+  rc = extract_tcl_blob(interp, objv, objv[1], &key, NULL);
   TCL_CHECK(rc);
  
   adlb_binary_data val;
@@ -3855,7 +3948,7 @@ ADLB_Xpt_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
     // put into Tcl blob and put in variable caller requested
     ADLB_Own_data(NULL, &val); // Make sure we own memory
     Tcl_Obj *tclVal = build_tcl_blob(val.caller_data, val.length,
-                                     ADLB_DATA_ID_NULL);
+                                     NULL);
     TCL_CONDITION(tclVal != NULL, "Error building blob");
     tclVal = Tcl_ObjSetVar2(interp, objv[2], NULL,
                            tclVal, EMPTY_FLAG);
@@ -4016,8 +4109,7 @@ ADLB_Xpt_Pack_Cmd(ClientData cdata, Tcl_Interp *interp,
     field++;
   }
 
-  Tcl_Obj *packedBlob = build_tcl_blob(packed.data, pos,
-                                       ADLB_DATA_ID_NULL);
+  Tcl_Obj *packedBlob = build_tcl_blob(packed.data, pos, NULL);
   Tcl_SetObjResult(interp, packedBlob);
   return TCL_OK;
 }
@@ -4038,8 +4130,7 @@ ADLB_Xpt_Unpack_Cmd(ClientData cdata, Tcl_Interp *interp,
   int fieldCount = (objc - 2) / 2;
   
   adlb_blob_t packed;
-  adlb_datum_id tmpid;
-  rc = extract_tcl_blob(interp, objv, objv[fieldCount + 1], &packed, &tmpid);
+  rc = extract_tcl_blob(interp, objv, objv[fieldCount + 1], &packed, NULL);
   TCL_CHECK(rc);
 
   int packed_pos = 0;
@@ -4468,7 +4559,8 @@ ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
-static void blob_free_callback(int64_t key, void *blob)
+static void blob_free_callback(const void *key, size_t key_len,
+                               void *blob)
 {
   free(blob);
 }
@@ -4476,7 +4568,7 @@ static void blob_free_callback(int64_t key, void *blob)
 static int blob_cache_finalize(void)
 {
   // Free table structure and any contained blobs
-  table_lp_free_callback(&blob_cache, false, blob_free_callback);
+  table_bp_free_callback(&blob_cache, false, blob_free_callback);
   return TCL_OK;
 }
 
