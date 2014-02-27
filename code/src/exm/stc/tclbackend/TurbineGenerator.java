@@ -2954,7 +2954,7 @@ public class TurbineGenerator implements CompilerBackend {
     Expression waitExpr;
     if (Types.isFile(var)) {
       // Block on file status
-      waitExpr = Turbine.getFileStatus(wv);
+      waitExpr = Turbine.getFileID(wv);
     } else if (Types.isScalarFuture(var) || Types.isRef(var) ||
             Types.isArray(var) || Types.isScalarUpdateable(var)||
             Types.isBag(var) || Types.isStruct(var)) {

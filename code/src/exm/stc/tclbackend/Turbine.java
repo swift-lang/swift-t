@@ -222,7 +222,7 @@ class Turbine {
   private static final Token GET_FILE_PATH = turbFn("get_file_path");
   private static final Token COPY_IN_FILENAME = turbFn("copy_in_filename");
   private static final Token IS_MAPPED = turbFn("is_file_mapped");
-  private static final Token GET_FILE_STATUS = turbFn("get_file_status");
+  private static final Token GET_FILE_ID = turbFn("get_file_td");
   private static final Token LOCAL_FILE_PATH = turbFn("local_file_path");
   private static final Token CREATE_LOCAL_FILE_REF =
           turbFn("create_local_file_ref");
@@ -1386,13 +1386,13 @@ class Turbine {
   }
 
   /**
-   * Expression that extracts the void status variable for a file variable
+   * Expression that extracts the ID to wait on for a file variable
    * 
    * @param fileVar
    * @return
    */
-  public static Expression getFileStatus(Value fileVar) {
-    return new Square(GET_FILE_STATUS, fileVar);
+  public static Expression getFileID(Value fileVar) {
+    return new Square(GET_FILE_ID, fileVar);
   }
 
   /**
