@@ -941,7 +941,7 @@ public class STCMiddleEnd {
     currBlock().addInstruction(
         TurbineOp.structCreateAlias(fieldAlias, struct, fieldPath));
   }
-  public void structRetrieve(Var target, Var struct,
+  public void structRetrieveSub(Var target, Var struct,
       List<String> fieldPath) {
     assert(Types.isStruct(struct));
     assert(Types.isStructFieldVal(struct, fieldPath, target));
@@ -969,7 +969,7 @@ public class STCMiddleEnd {
         TurbineOp.structCopyOut(target, struct, fieldPath));
   }
 
-  public void structStore(Var struct, List<String> fieldPath,
+  public void structStoreSub(Var struct, List<String> fieldPath,
                           Arg fieldVal) {
     assert(Types.isStruct(struct));
     assert(Types.isStructFieldVal(struct, fieldPath, fieldVal));

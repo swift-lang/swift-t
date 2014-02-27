@@ -637,7 +637,7 @@ public class LValWalker {
     
     Var elemVal;
     // May need to add another wait to retrieve value
-    boolean openWait2 = !VarRepr.storeRefInContainerStruct(elem);
+    boolean openWait2 = !VarRepr.storeRefContainer(elem);
     if (openWait2) {
       String waitName = context.getFunctionContext().constructName(
                                                 "bag-load-append");

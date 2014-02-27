@@ -143,7 +143,7 @@ public class VarRepr {
       Type frontendElemType = Types.containerElemType(type);
       Type backendElemType = backendTypeInternal(frontendElemType,
                                                  checkInstantiate);
-      if (storeRefInContainerStruct(backendElemType)) {
+      if (storeRefContainer(backendElemType)) {
         type = Types.substituteElemType(type, new RefType(backendElemType));
       }
     } else if (Types.isRef(type)) {
@@ -176,7 +176,7 @@ public class VarRepr {
     
     for (StructField frontendF: frontend.getFields()) {
       Type fieldT = backendTypeInternal(frontendF.getType(), checkInstantiate);
-      if (storeRefInContainerStruct(fieldT)) {
+      if (storeRefContainer(fieldT)) {
         // Need to store as ref to separate data
         fieldT = new RefType(fieldT);
       }
@@ -192,7 +192,7 @@ public class VarRepr {
    * @param type
    * @return
    */
-  public static boolean storeRefInContainerStruct(Typed type) {
+  public static boolean storeRefContainer(Typed type) {
     if (isBig(type)) {
       // Want to be able to distribute data
       return true;
@@ -254,7 +254,7 @@ public class VarRepr {
    * @return
    */
   public static Type fieldRepr(Type memberType) {
-    if (storeRefInContainerStruct(memberType)) {
+    if (storeRefContainer(memberType)) {
       return new RefType(memberType);
     } else {
       return memberType;

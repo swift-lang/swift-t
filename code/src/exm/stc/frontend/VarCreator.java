@@ -22,6 +22,8 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.StructType;
+import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
@@ -96,6 +98,9 @@ public class VarCreator {
   public void initialiseVariable(Context context, Var v)
       throws UndefinedTypeException, DoubleDefineException {
     backendInit(v);
+    if (Types.isStruct(v)) {
+      initialiseStruct(v);
+    }
   }
 
   /**
@@ -106,6 +111,18 @@ public class VarCreator {
    */
   public void backendInit(Var var) throws UndefinedTypeException {
     backend.declare(VarRepr.backendVar(var));
+  }
+
+  private void initialiseStruct(Var struct) {
+    StructType structType = (StructType)struct.type().getImplType();
+    for (StructField field: structType.getFields()) {
+      Type fieldT = field.getType();
+      if (VarRepr.storeRefContainer(fieldT)) {
+        // TODO: initialize data being referenced and put into struct
+        throw new STCRuntimeError("Need to implement initialisation" +
+                                   " for struct type " + struct.type());
+      }
+    }
   }
 
   /**

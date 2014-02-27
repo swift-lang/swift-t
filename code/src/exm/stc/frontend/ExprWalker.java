@@ -300,6 +300,7 @@ public class  ExprWalker {
     assert(fieldPath.size() > 0);
     Type memType = TypeChecker.findStructFieldType(context, fieldPath,
                                                    struct.type());
+    boolean storedAsRef = VarRepr.storeRefContainer(memType);
     Var result;
     if (Types.isStructRef(struct)) {
       RefType resultType = new RefType(memType);
@@ -314,14 +315,20 @@ public class  ExprWalker {
                                fieldPath);
     } else {
       assert(Types.isStruct(struct));
-      if (outVar == null) {
-        // Just create alias for later use
+      if (storedAsRef)  {
+        // Lookup ref data into tmp alias
+        result = varCreator.createTmpAlias(context, memType);
+        backend.structRetrieveSub(VarRepr.backendVar(result), 
+                             VarRepr.backendVar(struct), fieldPath);
+      } else if (!storedAsRef && outVar == null) {
+        // Just create alias to data in struct for later use
         result = varCreator.createStructFieldAlias(context, 
                             struct, memType, fieldPath);
         backend.structCreateAlias(VarRepr.backendVar(result), 
                       VarRepr.backendVar(struct), fieldPath);
-      } else{
-        // Copy to existing output variable
+      } else {
+        assert(!storedAsRef && outVar != null);
+        // Copy data in struct to existing output variable
         backend.structCopyOut(VarRepr.backendVar(outVar), 
                               VarRepr.backendVar(struct), fieldPath);
         result = outVar;
@@ -849,7 +856,7 @@ public class  ExprWalker {
     }
     
     Var backendOVar = VarRepr.backendVar(oVar);
-    boolean elemIsRef = VarRepr.storeRefInContainerStruct(Types.containerElemType(oVar));
+    boolean elemIsRef = VarRepr.storeRefContainer(Types.containerElemType(oVar));
     /* We can only use arrayBuild operation if we have the keys and values in
      * the appropriate format for the internal container representation.
      * If user specified keys, they will be futures so we can't use them here.
