@@ -1985,7 +1985,7 @@ public class Types {
    */
   public static boolean canWaitForFinalize(Typed type) {
     return isFuture(type) || isPrimUpdateable(type) ||
-            isContainer(type);
+            isContainer(type) || isStruct(type);
   }
   
   /**
