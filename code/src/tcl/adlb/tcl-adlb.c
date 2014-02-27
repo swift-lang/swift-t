@@ -3154,6 +3154,10 @@ ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
   int argpos = 1;
   rc = Tcl_GetADLB_ID(interp, objv[argpos++], &id);
   TCL_CHECK(rc);
+
+  // TODO: need to get handle, then append subscript to handle
+  //       e.g. array inside struct
+
   adlb_subscript subscript;
   rc = Tcl_GetADLB_Subscript(objv[argpos++], &subscript);
   TCL_CHECK_MSG(rc, "Invalid subscript argument");
