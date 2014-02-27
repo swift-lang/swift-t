@@ -152,6 +152,7 @@ class Turbine {
   
   // Struct functions
   private static final Token STRUCT_REFERENCE = adlbFn("struct_reference");
+  private static final Token STRUCT_LOOKUP = adlbFn("struct_lookup");
 
   // Rule functions
   private static final Token SPAWN_RULE = turbFn("spawn_rule");
@@ -952,10 +953,9 @@ class Turbine {
    * @param subscript
    * @return
    */
-  public static Expression lookupSubscript(Value var,
-            Expression subscript) {
-    // TODO: call adlb::lookup_struct
-    throw new STCRuntimeError("TODO: Not implemented");
+  public static Expression lookupStruct(Value var,
+            Expression subscript, Expression decrRead) {
+    return Square.fnCall(STRUCT_LOOKUP, var, subscript, decrRead);
   }
 
   /**
