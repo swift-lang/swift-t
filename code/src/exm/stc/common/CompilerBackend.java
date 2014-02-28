@@ -112,8 +112,9 @@ public interface CompilerBackend {
    * Set file object.  Increment local file ref count
    * @param target
    * @param src dummy local variable
+   * @param setFilename if true, set filename
    */
-  public void assignFile(Var target, Arg src);
+  public void assignFile(Var target, Arg src, boolean setFilename);
 
   public void retrieveFile(Var target, Var src, Arg decr);
   

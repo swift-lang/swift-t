@@ -389,14 +389,15 @@ public class  ExprWalker {
     Arg backendSrc = VarRepr.backendArg(src);
     if (Types.isScalarFuture(dst)) {
       backend.assignScalar(backendDst, backendSrc);
-    } else if (Types.isFile(dst)) {
-      backend.assignFile(backendDst, backendSrc);
     } else if (Types.isArray(dst)) {
       backend.assignArray(backendDst, backendSrc);
     } else if (Types.isBag(dst)) {
       backend.assignBag(backendDst, backendSrc);
     } else if (Types.isStruct(dst)) {
       backend.assignStruct(backendDst, backendSrc);
+    } else if (Types.isFile(dst)) {
+      // 
+      backend.assignFile(backendDst, backendSrc, true);
     } else {
       throw new STCRuntimeError("Can't assign: " + dst);
     }

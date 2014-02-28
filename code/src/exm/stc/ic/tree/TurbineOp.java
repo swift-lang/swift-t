@@ -18,6 +18,7 @@ import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
@@ -100,7 +101,7 @@ public class TurbineOp extends Instruction {
       gen.assignScalar(getOutput(0), getInput(0));
       break;
     case STORE_FILE:
-      gen.assignFile(getOutput(0), getInput(0));
+      gen.assignFile(getOutput(0), getInput(0), getInput(1).getBoolLit());
       break;
     case STORE_REF:
       gen.assignReference(getOutput(0), getInput(0).getVar());
@@ -634,51 +635,184 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.STRUCTREF_COPY_IN, structVar.asList(), in);
   }
   
-  public static Instruction assignScalar(Var target, Arg src) {
-    return new TurbineOp(Opcode.STORE_SCALAR, target, src);
+  /**
+   * Assign any scalar data type
+   * @param dst shared scalar
+   * @param src local scalar value
+   * @return
+   */
+  public static Instruction assignScalar(Var dst, Arg src) {
+    assert(Types.isScalarFuture(dst)) : dst;
+    assert(Types.isScalarValue(src));
+    assert(src.type().assignableTo(Types.retrievedType(dst)));
+    
+    return new TurbineOp(Opcode.STORE_SCALAR, dst, src);
   }
 
-  public static Instruction assignFile(Var target, Arg src) {
-    return new TurbineOp(Opcode.STORE_FILE, target, src);
+  /**
+   * Assign a file future from a file value
+   * @param dst
+   * @param src
+   * @param setName if true, set filename, if false assume already
+   *                 has filename, just close the file
+   * @return
+   */
+  public static Instruction assignFile(Var dst, Arg src, boolean setName) {
+    assert(Types.isFile(dst.type()));
+    assert(src.isVar());
+    assert(Types.isFileVal(src.getVar()));
+    return new TurbineOp(Opcode.STORE_FILE, dst, src,
+                          Arg.createBoolLit(setName));
   }
   
-  public static Instruction assignArray(Var target, Arg src) {
-    return new TurbineOp(Opcode.STORE_ARRAY, target, src);
+  /**
+   * Store array directly from local array representation to shared.
+   * Does not follow refs, e.g. if it is an array of refs, dst must
+   * be a local array of refs
+   * @param dst
+   * @param src
+   * @return
+   */
+  public static Instruction assignArray(Var dst, Arg src) {
+    assert(Types.isArray(dst.type())) : dst;
+    assert(Types.isArrayLocal(src.type())) : src + " " + src.type();
+    assert(Types.arrayKeyType(src).assignableTo(Types.arrayKeyType(dst)));
+    assert(Types.containerElemType(src.type()).assignableTo(
+              Types.containerElemType(dst)));
+    return new TurbineOp(Opcode.STORE_ARRAY, dst, src);
   }
   
-  public static Instruction assignBag(Var target, Arg src) {
-    return new TurbineOp(Opcode.STORE_BAG, target, src);
+  /**
+   * Store bag directly from local bag representation to shared.
+   * Does not follow refs, e.g. if it is a bag of refs, dst must
+   * be a local bag of refs
+   * @param dst
+   * @param src
+   * @return
+   */
+  public static Instruction assignBag(Var dst, Arg src) {
+    assert(Types.isBag(dst)) : dst;
+    assert(Types.isBagLocal(src.type())) : src.type();
+    assert(Types.containerElemType(src.type()).assignableTo(
+              Types.containerElemType(dst)));
+    return new TurbineOp(Opcode.STORE_BAG, dst, src);
   }
   
-  public static Instruction assignStruct(Var target, Arg src) {
-    return new TurbineOp(Opcode.STORE_STRUCT, target, src);
+  /**
+   * Store struct directly from local struct representation to shared.
+   * Does not follow refs.
+   * @param dst
+   * @param src
+   * @return
+   */
+  public static Instruction assignStruct(Var dst, Arg src) {
+    assert(Types.isStruct(dst)) : dst;
+    assert(Types.isStructLocal(src)) : src.type();
+    assert(StructType.sharedStruct((StructType)src.type().getImplType())
+                                            .assignableTo(dst.type()));
+    
+    return new TurbineOp(Opcode.STORE_STRUCT, dst, src);
   }
 
-  public static Instruction retrieveScalar(Var target, Var source) {
-    return new TurbineOp(Opcode.LOAD_SCALAR, target, source.asArg());
+  /**
+   * Retrieve any scalar type to local value
+   * @param dst
+   * @param src closed scalar value
+   * @return
+   */
+  public static Instruction retrieveScalar(Var dst, Var src) {
+    assert(Types.isScalarValue(dst));
+    assert(Types.isScalarFuture(src.type()));
+    assert(Types.retrievedType(src).assignableTo(dst.type()));
+    return new TurbineOp(Opcode.LOAD_SCALAR, dst, src.asArg());
   }
   
-  public static Instruction retrieveFile(Var target, Var source) {
-    return new TurbineOp(Opcode.LOAD_FILE, target, source.asArg());
+  /**
+   * Retrieve a file value from a file future
+   * @param target
+   * @param src
+   * @return
+   */
+  public static Instruction retrieveFile(Var target, Var src) {
+    assert(Types.isFile(src.type()));
+    assert(Types.isFileVal(target));
+    return new TurbineOp(Opcode.LOAD_FILE, target, src.asArg());
   }
   
-  public static Instruction retrieveArray(Var target, Var source) {
-    return new TurbineOp(Opcode.LOAD_ARRAY, target, source.asArg());
+  /**
+   * Retrieve an array directly to a local array, without following
+   * any references
+   * @param dst
+   * @param src non-recursively closed array
+   * @return
+   */
+  public static Instruction retrieveArray(Var dst, Var src) {
+    assert(Types.isArray(src.type()));
+    assert(Types.isArrayLocal(dst));
+    assert(Types.containerElemType(src.type()).assignableTo(
+              Types.containerElemType(dst)));
+    return new TurbineOp(Opcode.LOAD_ARRAY, dst, src.asArg());
   }
   
-  public static Instruction retrieveBag(Var target, Var source) {
-    return new TurbineOp(Opcode.LOAD_BAG, target, source.asArg());
+  /**
+   * Retrieve a bag directly to a local bag, without following
+   * any references
+   * @param dst
+   * @param src non-recursively closed bag
+   * @return
+   */
+  public static Instruction retrieveBag(Var target, Var src) {
+    assert(Types.isBag(src.type()));
+    assert(Types.isBagLocal(target));
+    assert(Types.containerElemType(src.type()).assignableTo(
+              Types.containerElemType(target)));
+    return new TurbineOp(Opcode.LOAD_BAG, target, src.asArg());
   }
   
-  public static Instruction retrieveStruct(Var target, Var source) {
-    return new TurbineOp(Opcode.LOAD_STRUCT, target, source.asArg());
+  /**
+   * Retrieve a struct directly to a local struct, without following
+   * any references
+   * @param dst
+   * @param src non-recursively closed struct
+   * @return
+   */
+  public static Instruction retrieveStruct(Var dst, Var src) {
+    assert(Types.isStruct(src.type()));
+    assert(Types.isStructLocal(dst));
+    assert(StructType.localStruct((StructType)src.type().getImplType())
+                                            .assignableTo(dst.type()));
+    return new TurbineOp(Opcode.LOAD_STRUCT, dst, src.asArg());
   }
   
+  /**
+   * Store a completely unpacked array/bag/etc to the standard shared
+   * representation
+   * @param target
+   * @param src
+   * @return
+   */
   public static Instruction storeRecursive(Var target, Arg src) {
+    assert(Types.isContainer(target));
+    assert(Types.isContainerLocal(src.type()));
+    assert(src.type().assignableTo(
+            Types.unpackedContainerType(target)));
     return new TurbineOp(Opcode.STORE_RECURSIVE, target, src);
   }
   
+  /**
+   * Retrieve an array/bag/etc, following all references to included.
+   * src must be recursively closed
+   * @param target
+   * @param src
+   * @return
+   */
   public static Instruction retrieveRecursive(Var target, Var src) {
+    assert(Types.isContainer(src));
+    assert(Types.isContainerLocal(target));
+    Type unpackedSrcType = Types.unpackedContainerType(src);
+    assert(unpackedSrcType.assignableTo(target.type())) :
+            unpackedSrcType + " => " + target;
+
     return new TurbineOp(Opcode.LOAD_RECURSIVE, target, src.asArg());
   }
   
@@ -696,8 +830,17 @@ public class TurbineOp extends Instruction {
                                                      fileVal.asArg());
   }
 
-  public static Instruction storeRef(Var target, Var src) {
-    return new TurbineOp(Opcode.STORE_REF, target, src.asArg());
+  /**
+   * Store a reference
+   * @param dst reference to store to
+   * @param src some datastore object
+   * @return
+   */
+  public static Instruction storeRef(Var dst, Var src) {
+    assert(Types.isRef(dst));
+    assert(src.type().assignableTo(Types.retrievedType(dst)));
+    
+    return new TurbineOp(Opcode.STORE_REF, dst, src.asArg());
   }
 
   /**
@@ -741,7 +884,8 @@ public class TurbineOp extends Instruction {
     if (Types.isScalarFuture(dst)) {
       return assignScalar(dst, src);
     } else if (Types.isFile(dst)) {
-      return assignFile(dst, src);
+      // TODO: is this right to always close?
+      return assignFile(dst, src, true);
     } else {
       throw new STCRuntimeError("method to set " +
           dst.type().typeName() + " is not known yet");
@@ -756,8 +900,17 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.DEREF_FILE, target, src.asArg());
   }
   
-  public static Instruction retrieveRef(Var target, Var src) {
-    return new TurbineOp(Opcode.LOAD_REF, target, src.asArg());
+  /**
+   * Retrieve a reference to a local handle 
+   * @param dst alias variable to hold handle to referenced data
+   * @param src Closed reference
+   * @return
+   */
+  public static Instruction retrieveRef(Var dst, Var src) {
+    assert(Types.isRef(src.type()));
+    assert(Types.isAssignableRefTo(src.type(), dst.type()));
+    assert(dst.storage() == Alloc.ALIAS);
+    return new TurbineOp(Opcode.LOAD_REF, dst, src.asArg());
   }
   
   public static Instruction copyRef(Var dst, Var src) {

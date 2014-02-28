@@ -650,8 +650,6 @@ public class STCMiddleEnd {
   }
   
   public void retrieveRef(Var target, Var src) {
-    assert(Types.isRef(src.type()));
-    assert(Types.isAssignableRefTo(src.type(), target.type()));
     currBlock().addInstruction(TurbineOp.retrieveRef(target, src));
   }
   
@@ -663,17 +661,10 @@ public class STCMiddleEnd {
   }
 
   public void retrieveScalar(Var dst, Var src) {
-    assert(Types.isScalarValue(dst));
-    assert(Types.isScalarFuture(src.type()));
-    assert(Types.retrievedType(src).assignableTo(dst.type()));
     currBlock().addInstruction(TurbineOp.retrieveScalar(dst, src));
   }
   
   public void assignScalar(Var dst, Arg src) {
-    assert(Types.isScalarFuture(dst)) : dst;
-    assert(Types.isScalarValue(src));
-    assert(src.type().assignableTo(Types.retrievedType(dst)));
-    
     currBlock().addInstruction(TurbineOp.assignScalar(dst, src));
   }
     
@@ -682,16 +673,11 @@ public class STCMiddleEnd {
     currBlock().addCleanup(blobVal, TurbineOp.freeBlob(blobVal));
   }
 
-  public void assignFile(Var target, Arg src) {
-    assert(Types.isFile(target.type()));
-    assert(src.isVar());
-    assert(Types.isFileVal(src.getVar()));
-    currBlock().addInstruction(TurbineOp.assignFile(target, src));
+  public void assignFile(Var target, Arg src, boolean setName) {
+    currBlock().addInstruction(TurbineOp.assignFile(target, src, setName));
   }
 
   public void retrieveFile(Var target, Var src) {
-    assert(Types.isFile(src.type()));
-    assert(Types.isFileVal(target));
     currBlock().addInstruction(TurbineOp.retrieveFile(target, src));
   }
   
@@ -771,86 +757,46 @@ public class STCMiddleEnd {
       
       // Actually do the copy of file contents
       waitBlock.addInstruction(TurbineOp.copyFileContents(targetVal, srcVal));
-      waitBlock.addInstruction(TurbineOp.assignFile(target, targetVal.asArg()));
-    } else {
-      Var srcFilenameVal = waitBlock.declareUnmapped(Types.V_STRING,
-          OptUtil.optFilenamePrefix(waitBlock, srcVal), Alloc.LOCAL,
-          DefType.LOCAL_COMPILER, VarProvenance.filenameOf(srcVal));
-      // Set filename of target to name of source
-      waitBlock.addInstruction(TurbineOp.getLocalFileName(srcFilenameVal, srcVal));
-      waitBlock.addInstruction(TurbineOp.setFilenameVal(target,
-                                                        srcFilenameVal.asArg()));
       
-      // Mark target as closed
-      waitBlock.addInstruction(TurbineOp.assignFile(target, srcVal.asArg()));
+      // Set target.  Since mapped, will not set target filename
+      waitBlock.addInstruction(
+              TurbineOp.assignFile(target, targetVal.asArg(), false));
+    } else {
+      // Set target.  Since unmapped, will set target filename
+      waitBlock.addInstruction(
+              TurbineOp.assignFile(target, srcVal.asArg(), true));
     }
   }
   
   public void assignArray(Var target, Arg src) {
-    assert(Types.isArray(target.type())) : target;
-    assert(Types.isArrayLocal(src.type())) : src + " " + src.type();
-    assert(Types.containerElemType(src.type()).assignableTo(
-              Types.containerElemType(target)));
     currBlock().addInstruction(TurbineOp.assignArray(target, src));
   }
 
   public void retrieveArray(Var target, Var src) {
-    assert(Types.isArray(src.type()));
-    assert(Types.isArrayLocal(target));
-    assert(Types.containerElemType(src.type()).assignableTo(
-              Types.containerElemType(target)));
     currBlock().addInstruction(TurbineOp.retrieveArray(target, src));
   }
   
   public void assignBag(Var target, Arg src) {
-    assert(Types.isBag(target)) : target;
-    assert(Types.isBagLocal(src.type())) : src.type();
-    assert(Types.containerElemType(src.type()).assignableTo(
-              Types.containerElemType(target)));
     currBlock().addInstruction(TurbineOp.assignBag(target, src));
   }
   
   public void retrieveBag(Var target, Var src) {
-    assert(Types.isBag(src.type()));
-    assert(Types.isBagLocal(target));
-    assert(Types.containerElemType(src.type()).assignableTo(
-              Types.containerElemType(target)));
     currBlock().addInstruction(TurbineOp.retrieveBag(target, src));
   }
   
   public void assignStruct(Var target, Arg src) {
-    assert(Types.isStruct(target)) : target;
-    assert(Types.isStructLocal(src)) : src.type();
-    assert(StructType.sharedStruct((StructType)src.type().getImplType())
-                                            .assignableTo(target.type()));
-    
     currBlock().addInstruction(TurbineOp.assignStruct(target, src));
   }
   
   public void retrieveStruct(Var target, Var src) {
-    assert(Types.isStruct(src.type()));
-    assert(Types.isStructLocal(target));
-    assert(StructType.localStruct((StructType)src.type().getImplType())
-                                            .assignableTo(target.type()));
-    
     currBlock().addInstruction(TurbineOp.retrieveStruct(target, src));
   }
   
   public void storeRecursive(Var target, Arg src) {
-    assert(Types.isContainer(target));
-    assert(Types.isContainerLocal(src.type()));
-    assert(src.type().assignableTo(
-            Types.unpackedContainerType(target)));
     currBlock().addInstruction(TurbineOp.storeRecursive(target, src));
   }
   
   public void retrieveRecursive(Var target, Var src) {
-    assert(Types.isContainer(src));
-    assert(Types.isContainerLocal(target));
-    Type unpackedSrcType = Types.unpackedContainerType(src);
-    assert(unpackedSrcType.assignableTo(target.type())) :
-            unpackedSrcType + " => " + target;
-
     currBlock().addInstruction(TurbineOp.retrieveRecursive(target, src));
   }
 
