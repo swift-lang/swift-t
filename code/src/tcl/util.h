@@ -230,7 +230,10 @@ static inline Tcl_Obj *Tcl_NewPtr(void *ptr)
   return Tcl_NewLongObj((long)ptr);
 }
 
-
+/**
+ * Attempt to extract int of appropriate width for ADLB
+ * interp: if non-NULL, leave error message here
+ */
 static inline int Tcl_GetADLBInt(Tcl_Interp *interp, Tcl_Obj *objPtr,
                                  adlb_int_t *intPtr)
 {
@@ -239,6 +242,10 @@ static inline int Tcl_GetADLBInt(Tcl_Interp *interp, Tcl_Obj *objPtr,
   return Tcl_GetWideIntFromObj(interp, objPtr, (Tcl_WideInt*)intPtr);
 }
 
+/**
+ * Attempt to extract ADLB data ID
+ * interp: if non-NULL, leave error message here
+ */
 static inline int Tcl_GetADLB_ID(Tcl_Interp *interp, Tcl_Obj *objPtr,
                                  adlb_datum_id *intPtr)
 {
@@ -247,6 +254,10 @@ static inline int Tcl_GetADLB_ID(Tcl_Interp *interp, Tcl_Obj *objPtr,
   return Tcl_GetWideIntFromObj(interp, objPtr, (Tcl_WideInt*)intPtr);
 }
 
+/**
+ * Attempt to extract pointer stored in Tcl obj
+ * interp: if non-NULL, leave error message here
+ */
 static inline int Tcl_GetPtr(Tcl_Interp *interp, Tcl_Obj *objPtr,
                                  void **ptr)
 {

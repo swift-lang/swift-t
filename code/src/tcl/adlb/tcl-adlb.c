@@ -4340,13 +4340,14 @@ ADLB_Extract_Handle(Tcl_Interp *interp, Tcl_Obj *const objv[],
         int *subscript_list_len)
 {
   int rc;
-  rc = Tcl_GetADLB_ID(interp, obj, id);
+  // Leave interp NULL so we don't get error message there
+  rc = Tcl_GetADLB_ID(NULL, obj, id);
   if (rc == TCL_OK)
   {
     *subscript_list_len = 0;
     return TCL_OK;
   }
-  
+
   rc = Tcl_ListObjGetElements(interp, obj, subscript_list_len, subscript_list);
   TCL_CHECK_MSG(rc, "Not a valid ADLB datum handle: %s",
                     Tcl_GetString(obj));
