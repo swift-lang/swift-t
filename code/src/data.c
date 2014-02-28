@@ -657,10 +657,11 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
             "invalid type: %s for <%"PRId64">", (int)subscript.length,
             (const char*)subscript.key, ADLB_Data_type_tostring(d->type),
             id);
-    bool sub_found = false; 
+    
+    found = false; 
     if ((is_container && container_contains(&d->data.CONTAINER, subscript)))
     {
-      sub_found = true;
+      found = true;
     }
     else if (is_struct)
     {
@@ -668,8 +669,9 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
           "subscript of struct initialized without type <%"PRId64">", id);
       // This will check validity of subscript as side-effect
       dc = xlb_struct_subscript_init(d->data.STRUCT, subscript,
-                                    &sub_found);
+                                    &found);
       DATA_CHECK(dc);
+      DEBUG("Struct subscript initialized: %i", (int)found);
     }
     
     subscribed = !found; 
