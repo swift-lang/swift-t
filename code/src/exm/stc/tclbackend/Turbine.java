@@ -1439,8 +1439,10 @@ class Turbine {
     return new Square(UNPACK_ARGS, array, new LiteralInt(nestLevel), baseType);
   }
 
-  public static Command fileSet(Value fileFuture, String localFileName) {
-    return new Command(STORE_FILE, fileFuture, new Token(localFileName));
+  public static Command fileSet(Value fileFuture, String localFile,
+                                  boolean setFilename) {
+    return new Command(STORE_FILE, fileFuture, new Token(localFile),
+                        LiteralInt.boolValue(setFilename));
   }
 
   public static TclTree fileGet(String prefixVar, Value varToExpr) {

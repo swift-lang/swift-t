@@ -274,8 +274,7 @@ public class Congruences implements AliasFinder {
   private void addInferredFilename(String errContext,
           CongruentSets congruent, Arg canonLoc, ArgCV cv, int stmtIndex)
                   throws OptUnsafeError {
-    // TODO: also check for set filename => load_file in case added later
-    
+    // TODO: something with filename aliases?
     if (cv.op() == Opcode.STORE_FILE) {
       addInferredStoreFile(errContext, congruent, canonLoc, cv, stmtIndex);
     } else if (cv.op() == Opcode.LOAD_FILE) {

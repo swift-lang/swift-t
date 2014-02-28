@@ -465,6 +465,7 @@ class CongruentSets {
     
     // Also add any equivalent values
     for (ArgCV equiv: lookupEquivalences(val)) {
+      // Note: should avoid infinite recursion because of newEntry check above
       addSetEntry(new ArgOrCV(equiv), canonicalVal);
     }
 

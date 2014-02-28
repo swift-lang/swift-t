@@ -853,7 +853,7 @@ public class TurbineGenerator implements CompilerBackend {
     }
     
     pointAdd(Turbine.fileSet(varToExpr(target),
-                            prefixVar(src.getVar())));
+             prefixVar(src.getVar()), setFilename));
   }
 
   @Override
