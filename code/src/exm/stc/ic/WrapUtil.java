@@ -139,13 +139,13 @@ public class WrapUtil {
    * @param instInsertIt position to insert instructions
    * @param inArgs
    * @param outArgs
-   * @param mapOutFiles 
+   * @param initOutputMapping 
    * @return (a list of variables to wait for,
    *          the mapping from file output vars to filenames)
    */
   public static Pair<List<WaitVar>, Map<Var, Var>> buildWaitVars(
       Block block, ListIterator<Statement> instInsertIt,
-      List<Var> inArgs, List<Var> outArgs, boolean mapOutFiles) {
+      List<Var> inArgs, List<Var> outArgs, boolean initOutputMapping) {
     if (inArgs == null) {
       // Gracefully handle null as empty list
       inArgs = Var.NONE;
@@ -164,7 +164,7 @@ public class WrapUtil {
     }
     
     for (Var out: outArgs) {
-      if (Types.isFile(out) && mapOutFiles) {
+      if (Types.isFile(out) && initOutputMapping) {
         // Must wait on filename of output var
         String name = block.uniqueVarName(Var.WRAP_FILENAME_PREFIX +
                                           out.name());
@@ -246,6 +246,8 @@ public class WrapUtil {
         "Can't create temporary file for type " + file.type();
     // Select temporary file name
     insertPos.add(TurbineOp.chooseTmpFilename(filenameVal));
+
+    // TODO: would be ideal to be able to just keep local
     // Set the filename on the file var
     insertPos.add(TurbineOp.setFilenameVal(file, filenameVal.asArg()));
   }
@@ -259,21 +261,16 @@ public class WrapUtil {
    * @return
    */
   public static List<Arg> fetchLocalOpInputs(Block block, List<Var> inputs,
-      List<Instruction> instBuffer, boolean uniquifyNames) {
+      List<Statement> instBuffer, boolean uniquifyNames) {
     if (inputs == null) {
       // Gracefully handle null as empty list
       inputs = Var.NONE;
     }
     List<Arg> inVals = new ArrayList<Arg>(inputs.size());
     for (Var inArg: inputs) {
-  /*    if (Types.isContainer(inArg.type())) {
-        // Pass arrays in original representation
-        inVals.add(inArg.asArg());
-      } else {*/
-        String name = valName(block, inArg, uniquifyNames);
-        inVals.add(WrapUtil.fetchValueOf(block, instBuffer,
-            inArg, name).asArg());
-      /*}*/
+      String name = valName(block, inArg, uniquifyNames);
+      inVals.add(WrapUtil.fetchValueOf(block, instBuffer,
+          inArg, name).asArg());
     }
     return inVals;
   }
@@ -286,12 +283,13 @@ public class WrapUtil {
    * @param instBuffer
    * @param uniquifyNames if it isn't safe to use default name prefix,
    *      e.g. if we're in the middle of optimizations
-   * @param mapOutFiles 
+   * @param initOutputMapping 
    * @return
    */
   public static List<Var> createLocalOpOutputs(Block block,
       List<Var> outputFutures, Map<Var, Var> filenameVars,
-      List<Instruction> instBuffer, boolean uniquifyNames, boolean mapOutFiles) {
+      List<Statement> instBuffer, boolean uniquifyNames,
+      boolean initOutputMapping) {
     if (outputFutures == null) {
       // Gracefully handle null as empty list
       outputFutures = Var.NONE;
@@ -303,7 +301,7 @@ public class WrapUtil {
         outVals.add(outArg);
       } else {
         outVals.add(WrapUtil.createLocalOutputVar(outArg, filenameVars,
-                         block, instBuffer, uniquifyNames, mapOutFiles));
+                   block, instBuffer, uniquifyNames, initOutputMapping));
       }
     }
     return outVals;
@@ -334,17 +332,17 @@ public class WrapUtil {
    * @param instBuffer buffer for initialization actions
    * @param uniquifyName if it isn't safe to use default name prefix,
    *      e.g. if we're in the middle of optimizations
-   * @param mapOutFile whether to initialize mappings for output files 
+   * @param initOutputMapping whether to initialize mappings for output files 
    * @return
    */
   public static Var createLocalOutputVar(Var outFut,
       Map<Var, Var> filenameVars,
-      Block block, List<Instruction> instBuffer, boolean uniquifyName,
-      boolean mapOutFile) {
+      Block block, List<Statement> instBuffer, boolean uniquifyName,
+      boolean initOutputMapping) {
     String outValName = valName(block, outFut, uniquifyName);
     Var outVal = WrapUtil.declareLocalOutputVar(block, outFut, outValName);
     WrapUtil.initLocalOutputVar(block, filenameVars, instBuffer,
-                                outFut, outVal, mapOutFile);
+                                outFut, outVal, initOutputMapping);
     WrapUtil.cleanupLocalOutputVar(block, outFut, outVal);
     return outVal;
   }
@@ -369,8 +367,8 @@ public class WrapUtil {
    * @param mapOutFile 
    */
   private static void initLocalOutputVar(Block block, Map<Var, Var> filenameVars,
-      List<Instruction> instBuffer, Var outFut, Var outVal, boolean mapOutFile) {
-    if (Types.isFile(outFut) && mapOutFile) {
+      List<Statement> instBuffer, Var outFut, Var outVal, boolean initOutputMapping) {
+    if (Types.isFile(outFut) && initOutputMapping) {
       // Initialize filename in local variable
       Var outFilename = filenameVars.get(outFut);
       assert(outFilename != null) : "Expected filename in map for " + outFut;
@@ -414,7 +412,7 @@ public class WrapUtil {
    */
   public static void setLocalOpOutputs(Block block,
       List<Var> outFuts, List<Var> outVals,
-      List<Instruction> instBuffer, boolean setOutVarMapping) {
+      List<Statement> instBuffer, boolean storeOutputMapping) {
     if (outFuts == null) {
       assert(outVals == null || outVals.isEmpty());
       return;
@@ -426,22 +424,14 @@ public class WrapUtil {
       if (outArg.equals(outVal)) {
         // Do nothing: the variable wasn't substituted
       } else {
-        if (Types.isFile(outArg) && setOutVarMapping) {
-          setFilenameFromFileVal(block, instBuffer, outArg, outVal);
+        if (Types.isFile(outArg)) {
+          // Assign without assigning mapping
+          TurbineOp.assignFile(outArg, outVal.asArg(), storeOutputMapping);
+        } else {
+          Instruction storeInst = TurbineOp.storeAny(outArg, outVal.asArg());
+          instBuffer.add(storeInst);
         }
-        instBuffer.add(TurbineOp.storeAny(outArg, outVal.asArg()));
       }
     }
-  }
-  
-  public static void setFilenameFromFileVal(Block block,
-      List<Instruction> instBuffer, Var fileFut, Var fileVal) {
-    assert(Types.isFile(fileFut));
-    assert(Types.isFileVal(fileVal));
-    String filenameVName = OptUtil.optFilenamePrefix(block, fileFut);  
-    Var filenameV = block.declareUnmapped(Types.V_STRING, filenameVName,
-          Alloc.LOCAL, DefType.LOCAL_COMPILER, VarProvenance.filenameOf(fileVal));
-    instBuffer.add(TurbineOp.getLocalFileName(filenameV, fileVal));
-    instBuffer.add(TurbineOp.setFilenameVal(fileFut, filenameV.asArg()));
   }
 }

@@ -451,8 +451,12 @@ public class WaitCoalescer implements OptimizerPass {
       // Remove old instruction now that we're certain to replace it
       it.remove();
       
+      // We have to initialize mapping if instruction doesn't do it
+      boolean mustInitOutputMapping = !req.initsOutputMapping;
+      
       Pair<List<WaitVar>, Map<Var, Var>> r;
-      r = WrapUtil.buildWaitVars(block, it, req.in, req.out, req.mapOutVars);
+      r = WrapUtil.buildWaitVars(block, it, req.in, req.out,
+                                 mustInitOutputMapping);
       
       List<WaitVar> waitVars = r.val1;
       Map<Var, Var> filenameMap = r.val2;
@@ -484,7 +488,7 @@ public class WaitCoalescer implements OptimizerPass {
       }
       
       // Instructions to add inside wait
-      List<Instruction> instBuffer = new ArrayList<Instruction>();
+      List<Statement> instBuffer = new ArrayList<Statement>();
       
       // Fetch the inputs
       List<Arg> inVals = WrapUtil.fetchLocalOpInputs(wait.getBlock(), req.in,
@@ -493,17 +497,18 @@ public class WaitCoalescer implements OptimizerPass {
       // Create local instruction, copy out outputs
       List<Var> localOutputs = WrapUtil.createLocalOpOutputs(
                               wait.getBlock(), req.out, filenameMap,
-                              instBuffer, true, req.mapOutVars); 
-      
+                              instBuffer, true, mustInitOutputMapping); 
+
+      boolean storeOutputMapping = req.initsOutputMapping;
       MakeImmChange change = inst.makeImmediate(
                                   new OptVarCreator(wait.getBlock()),
                                   Fetched.makeList(req.out, localOutputs),
                                   Fetched.makeList(req.in, inVals));
       OptUtil.fixupImmChange(block, wait.getBlock(), inst, change, instBuffer,
-                                 localOutputs, req.out, req.mapOutVars);
+                                 localOutputs, req.out, storeOutputMapping);
       
       // Remove old instruction, add new one inside wait block
-      wait.getBlock().addInstructions(instBuffer);
+      wait.getBlock().addStatements(instBuffer);
       return true;
     }
     return false;

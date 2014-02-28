@@ -70,7 +70,6 @@ import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICInstructions.Builtin;
 import exm.stc.ic.tree.ICInstructions.Comment;
 import exm.stc.ic.tree.ICInstructions.FunctionCall;
-import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.LocalFunctionCall;
 import exm.stc.ic.tree.ICInstructions.LoopBreak;
 import exm.stc.ic.tree.ICInstructions.LoopContinue;
@@ -80,6 +79,7 @@ import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.BuiltinFunction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
+import exm.stc.ic.tree.ICTree.Statement;
 import exm.stc.ic.tree.TurbineOp;
 
 /**
@@ -1090,7 +1090,7 @@ public class STCMiddleEnd {
     Block waitBlock = wait.getBlock();
     
     // List of instructions to go inside wait
-    List<Instruction> instBuffer = new ArrayList<Instruction>();
+    List<Statement> instBuffer = new ArrayList<Statement>();
     List<Arg> inVals = WrapUtil.fetchLocalOpInputs(waitBlock, userInArgs,
                                                   instBuffer, false);
     
@@ -1101,7 +1101,7 @@ public class STCMiddleEnd {
     WrapUtil.setLocalOpOutputs(waitBlock, outArgs, outVals, instBuffer,
                                !mapOutFiles);
     
-    waitBlock.addInstructions(instBuffer);
+    waitBlock.addStatements(instBuffer);
   }
 
   public void checkpointWriteEnabled(Var v) {

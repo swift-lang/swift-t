@@ -809,25 +809,32 @@ public class ValueNumber implements OptimizerPass {
     }
 
     // Now load the values
-    List<Instruction> alt = new ArrayList<Instruction>();
+    List<Statement> alt = new ArrayList<Statement>();
     List<Fetched<Arg>> inVals = fetchInputsForSwitch(state, req,
                                     insertContext, noWaitRequired, alt);
     if (logger.isTraceEnabled()) {
       logger.trace("Fetched " + inVals + " for " + inst
                  + " req.in: " + req.in);
     }
-    
+
+    // If instruction doesn't initialize mapping, we have to
+    boolean mustInitOutputMapping = !req.initsOutputMapping;
     // Need filenames for output file values
     Map<Var, Var> filenameVals = loadOutputFileNames(state, stmtIndex,
-                      req.out, insertContext, insertPoint, req.mapOutVars);
+                req.out, insertContext, insertPoint, mustInitOutputMapping);
+    
     
     List<Var> outFetched = OptUtil.createLocalOpOutputVars(insertContext,
-                      insertPoint, req.out, filenameVals, req.mapOutVars);
+                insertPoint, req.out, filenameVals, mustInitOutputMapping);
+    
+    // If instruction initialized mapping, need to store
+    boolean storeOutputMapping = req.initsOutputMapping;
+    
     MakeImmChange change;
     change = inst.makeImmediate(new OptVarCreator(block),
           Fetched.makeList(req.out, outFetched), inVals);
     OptUtil.fixupImmChange(block, insertContext, inst, change, alt,
-                           outFetched, req.out, req.mapOutVars);
+                           outFetched, req.out, storeOutputMapping);
 
     if (logger.isTraceEnabled()) {
       logger.trace("Replacing instruction <" + inst + "> with sequence "
@@ -835,8 +842,8 @@ public class ValueNumber implements OptimizerPass {
     }
 
     // Add new instructions at insert point
-    for (Instruction newInst : alt) {
-      insertPoint.add(newInst);
+    for (Statement newStmt : alt) {
+      insertPoint.add(newStmt);
     }
 
     // Rewind argument iterator to instruction before replaced one
@@ -849,7 +856,7 @@ public class ValueNumber implements OptimizerPass {
   private static List<Fetched<Arg>> fetchInputsForSwitch(
       Congruences state,
       MakeImmRequest req, Block insertContext, boolean noWaitRequired,
-      List<Instruction> alt) {
+      List<Statement> alt) {
     List<Fetched<Arg>> inVals = new ArrayList<Fetched<Arg>>(req.in.size());
 
     // same var might appear multiple times
@@ -891,13 +898,13 @@ public class ValueNumber implements OptimizerPass {
   private static Map<Var, Var> loadOutputFileNames(Congruences state,
       int oldStmtIndex, List<Var> outputs,
       Block insertContext, ListIterator<Statement> insertPoint,
-      boolean mapOutVars) {
+      boolean initOutputMapping) {
     if (outputs == null)
       outputs = Collections.emptyList();
     
     Map<Var, Var> filenameVals = new HashMap<Var, Var>();
     for (Var output: outputs) {
-      if (Types.isFile(output) && mapOutVars) {
+      if (Types.isFile(output) && initOutputMapping) {
         Var filenameVal = insertContext.declareUnmapped(Types.V_STRING,
             OptUtil.optFilenamePrefix(insertContext, output),
             Alloc.LOCAL, DefType.LOCAL_COMPILER,
@@ -910,12 +917,7 @@ public class ValueNumber implements OptimizerPass {
         } else {
           // Load existing mapping
           // Should only get here if value of mapped var is available.
-          Var filenameAlias = insertContext.declareUnmapped(Types.F_STRING,
-              OptUtil.optFilenamePrefix(insertContext, output),
-              Alloc.ALIAS, DefType.LOCAL_COMPILER,
-              VarProvenance.filenameOf(output));
-          insertPoint.add(TurbineOp.getFileNameAlias(filenameAlias, output));
-          insertPoint.add(TurbineOp.retrieveScalar(filenameVal, filenameAlias));
+          insertPoint.add(TurbineOp.getFilenameVal(filenameVal, output));
         }
         filenameVals.put(output, filenameVal);
       }

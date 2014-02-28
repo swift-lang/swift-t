@@ -344,6 +344,9 @@ public class TurbineOp extends Instruction {
     case IS_MAPPED:
       gen.isMapped(getOutput(0), getInput(0).getVar());
       break;
+    case GET_FILENAME_VAL:
+      gen.getFilenameVal(getOutput(0), getInput(0).getVar());
+      break;
     case SET_FILENAME_VAL:
       gen.setFilenameVal(getOutput(0), getInput(0));
       break;
@@ -661,20 +664,8 @@ public class TurbineOp extends Instruction {
     assert(Types.isFile(dst.type()));
     assert(src.isVar());
     assert(Types.isFileVal(src.getVar()));
-    // Sanity check setFilename
-    switch (dst.isMapped()) {
-      case TRUE:
-        // Filename already set
-        assert(!setFilename);
-        break;
-      case FALSE:
-        // Filename must be set
-        assert(setFilename);
-        break;
-      case MAYBE:
-        // could be either
-        break;
-    }
+    // Sanity check that we're not setting mapped file
+    assert(!setFilename || dst.isMapped() != Ternary.TRUE);
     return new TurbineOp(Opcode.STORE_FILE, dst, src,
                           Arg.createBoolLit(setFilename));
   }
@@ -1053,6 +1044,12 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.GET_LOCAL_FILENAME, filename, file.asArg());
   }
 
+  public static Instruction getFilenameVal(Var filenameVal, Var file) {
+    assert(Types.isStringVal(filenameVal));
+    assert(Types.isFile(file));
+    return new TurbineOp(Opcode.GET_FILENAME_VAL, filenameVal, file.asArg());
+  }
+
   public static Instruction setFilenameVal(Var file, Arg filenameVal) {
     return new TurbineOp(Opcode.SET_FILENAME_VAL, file, filenameVal);
   }
@@ -1223,6 +1220,8 @@ public class TurbineOp extends Instruction {
       // Only effect is setting alias var
       return false;
     case GET_LOCAL_FILENAME:
+      return false;
+    case GET_FILENAME_VAL:
       return false;
     case IS_MAPPED:
       // will always returns same result for same var
@@ -2063,6 +2062,7 @@ public class TurbineOp extends Instruction {
     case ARR_RETRIEVE:
     case COPY_REF:
     case CHOOSE_TMP_FILENAME:
+    case GET_FILENAME_VAL:
     case SET_FILENAME_VAL:
     case INIT_LOCAL_OUTPUT_FILE:
     case ARRAY_BUILD:
@@ -2208,6 +2208,11 @@ public class TurbineOp extends Instruction {
         Var file = getOutput(0);
         Arg val = getInput(0);
         return ValLoc.makeFilenameVal(file, val, IsAssign.TO_VALUE).asList();
+      }
+      case GET_FILENAME_VAL: {
+        Var file = getInput(0).getVar();
+        Var val = getOutput(0);
+        return ValLoc.makeFilenameVal(file, val.asArg(), IsAssign.NO).asList();
       }
       case DEREF_SCALAR: 
       case DEREF_FILE: {

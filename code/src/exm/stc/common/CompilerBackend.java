@@ -184,6 +184,12 @@ public interface CompilerBackend {
    */
   public void initLocalOutputFile(Var localFile, Arg filenameVal,
                                   Arg isMapped);
+  /**
+   * Get filename of file future to a local string value
+   * @param file file future
+   * @param filenameVal a local string value
+   */
+  public void getFilenameVal(Var filenameVal, Var file);
   
   /**
    * Set filename of file future to a local string value

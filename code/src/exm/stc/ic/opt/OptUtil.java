@@ -95,19 +95,6 @@ public class OptUtil {
     return vals;
   }
 
-  /**
-   * Do the manipulation necessary to allow an old instruction
-   * output variable to be replaced with a new one. Assume that
-   * newOut is a value type of oldOut
-   * @param targetBlock 
-   * @param instBuffer append any fixup instructions here
-   * @param newOut
-   * @param oldOut
-   */
-  public static void replaceInstructionOutputVar(Block block,
-          Block targetBlock, List<Instruction> instBuffer, Var newOut, Var oldOut) {
-            replaceInstOutput(block, targetBlock, instBuffer, newOut, oldOut);
-          }
 
   /**
    * Do the manipulation necessary to allow an old instruction
@@ -118,9 +105,11 @@ public class OptUtil {
    * @param instBuffer append any fixup instructions here
    * @param newOut
    * @param oldOut
+   * @param storeOutputMapping if true, assign mapping
    */
   public static void replaceInstOutput(Block srcBlock,
-          Block targetBlock, List<Instruction> instBuffer, Var newOut, Var oldOut) {
+          Block targetBlock, List<Statement> instBuffer, Var newOut, Var oldOut,
+          boolean storeOutputMapping) {
     boolean isDerefResult = 
         Types.retrievedType(oldOut).assignableTo(newOut.type());
     if (isDerefResult) {
@@ -138,14 +127,19 @@ public class OptUtil {
         
         Map<Var, Arg> renames = Collections.singletonMap(
                                 oldOut, Arg.createVar(oldOutReplacement));
-        for (Instruction inst: instBuffer) {
+        for (Statement inst: instBuffer) {
           inst.renameVars(renames, RenameMode.REPLACE_VAR);
         }
       } else {
         oldOutReplacement = oldOut;
       }
 
-      instBuffer.add(TurbineOp.storeAny(oldOutReplacement, newOut.asArg()));
+      if (Types.isFile(oldOutReplacement)) {
+        instBuffer.add(TurbineOp.assignFile(oldOutReplacement, newOut.asArg(),
+                                            storeOutputMapping));
+      } else {
+        instBuffer.add(TurbineOp.storeAny(oldOutReplacement, newOut.asArg()));
+      }
     } else {
       throw new STCRuntimeError("Tried to replace instruction"
           + " output var " + oldOut + " with " + newOut + ": this doesn't make sense"
@@ -188,13 +182,13 @@ public class OptUtil {
       return Collections.emptyList();
     }
     
-    List<Instruction> instBuffer = new ArrayList<Instruction>();
+    List<Statement> instBuffer = new ArrayList<Statement>();
     
     List<Var> outValVars = WrapUtil.createLocalOpOutputs(block, outputFutures,
                                outputFilenames, instBuffer, true, mapOutVars);
     
-    for (Instruction inst: instBuffer) {
-      insertPos.add(inst);
+    for (Statement stmt: instBuffer) {
+      insertPos.add(stmt);
     }
 
     return outValVars;
@@ -203,9 +197,9 @@ public class OptUtil {
   public static void fixupImmChange(Block srcBlock,
           Block targetBlock, Instruction oldInst,
           MakeImmChange change,
-          List<Instruction> instBuffer, 
+          List<Statement> instBuffer, 
           List<Var> newOutVars, List<Var> oldOutVars,
-          boolean mapOutputFiles) {
+          boolean storeOutputMapping) {
     instBuffer.addAll(Arrays.asList(change.newInsts));
 
     Logger logger = Logging.getSTCLogger();
@@ -220,13 +214,13 @@ public class OptUtil {
       Var oldOut = change.oldOut;
       
       replaceInstOutput(srcBlock, targetBlock, instBuffer,
-                                  newOut, oldOut);
+                                  newOut, oldOut, storeOutputMapping);
     }
 
     // Now copy back values into future
     if (change.storeOutputVals) {
       WrapUtil.setLocalOpOutputs(targetBlock, oldOutVars, newOutVars,
-                                 instBuffer, !mapOutputFiles);
+                                 instBuffer, storeOutputMapping);
     }
   }
   
@@ -290,8 +284,8 @@ public class OptUtil {
     }
   }
 
-  public static Var fetchForLocalOp(Block block, List<Instruction> instBuffer,
-      Var var) {
+  public static Var fetchForLocalOp(Block block,
+          List<? super Instruction> instBuffer, Var var) {
     return WrapUtil.fetchValueOf(block, instBuffer, var,
                              OptUtil.optVPrefix(block, var));
   }

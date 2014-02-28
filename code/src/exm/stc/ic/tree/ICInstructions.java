@@ -168,8 +168,11 @@ public class ICInstructions {
       public final TaskMode mode;
       /** If inputs should be recursively closed */
       public final boolean recursiveClose;
-      /** If outputs should have mapping initialized */
-      public final boolean mapOutVars;
+      /** 
+       * If instruction initialize output mappings itself
+       * default: false
+       */
+      public final boolean initsOutputMapping;
       
       public MakeImmRequest(List<Var> out, List<Var> in) {
         this(out, in, TaskMode.LOCAL);
@@ -180,15 +183,15 @@ public class ICInstructions {
       }
       public MakeImmRequest(List<Var> out, List<Var> in, TaskMode mode,
                             boolean recursiveClose) {
-        this(out, in, mode, recursiveClose, true);
+        this(out, in, mode, recursiveClose, false);
       } 
       public MakeImmRequest(List<Var> out, List<Var> in, TaskMode mode,
-          boolean recursiveClose, boolean mapOutVars) {
+          boolean recursiveClose, boolean initsOutputMapping) {
         this.out = out;
         this.in = in;
         this.mode = mode;
         this.recursiveClose = recursiveClose;
-        this.mapOutVars = mapOutVars;
+        this.initsOutputMapping = initsOutputMapping;
       }
     }
     
@@ -1155,16 +1158,16 @@ public class ICInstructions {
         }
         
         // True unless the function alters mapping itself
-        boolean mapOutVars = true;
+        boolean initsOutputMapping = false;
         if (isImpl(SpecialFunction.INITS_OUTPUT_MAPPING)) {
-          mapOutVars = false;
+          initsOutputMapping = true;
         }
         
         // All args are closed!
         return new MakeImmRequest(
             Collections.unmodifiableList(this.outputs),
             Collections.unmodifiableList(this.varInputs(true)),
-            mode, false, mapOutVars);
+            mode, false, initsOutputMapping);
 
       }
       return null;
@@ -1706,7 +1709,7 @@ public class ICInstructions {
       } else {
         return new MakeImmRequest(
             Var.NONE, waitForInputs,
-            TaskMode.LOCAL, false, false);
+            TaskMode.LOCAL, false);
       }
     }
     
@@ -2071,7 +2074,7 @@ public class ICInstructions {
         }
         
         // COPY_FILE wants to initialize its own output file
-        boolean mapOutputVars = true;
+        boolean initsOutputMapping = false;
         
         // See which arguments are closed
         if (!waitForClose) {
@@ -2085,7 +2088,7 @@ public class ICInstructions {
           }
         }
         
-        if (Types.isFile(output) && !mapOutputVars) {
+        if (Types.isFile(output) && !initsOutputMapping) {
           // Need to wait for filename, unless unmapped
           if (!(waitForClose ||
                 Semantics.outputMappingAvail(closedVars, closedLocations,
@@ -2099,7 +2102,7 @@ public class ICInstructions {
             (this.output == null) ? 
                   null : Collections.singletonList(this.output),
             ICUtil.extractVars(this.inputs),
-            TaskMode.LOCAL, false, mapOutputVars);
+            TaskMode.LOCAL, false, initsOutputMapping);
       }
     }
 

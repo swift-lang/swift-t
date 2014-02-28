@@ -233,6 +233,7 @@ class Turbine {
   private static final Token DECR_LOCAL_FILE_REFCOUNT =
           turbFn("decr_local_file_refcount");
   private static final Token MKTEMP = turbFn("mktemp");
+  private static final Token GET_FILENAME_VAL = turbFn("get_filename_val");
   private static final Token SET_FILENAME_VAL = turbFn("set_filename_val");
 
   // External apps
@@ -1461,6 +1462,10 @@ class Turbine {
 
   public static SetVariable mkTemp(String varName) {
     return new SetVariable(varName, new Square(MKTEMP));
+  }
+  
+  public static Expression getFilenameVal(Value fileFuture) {
+    return Square.fnCall(GET_FILENAME_VAL, fileFuture);
   }
 
   public static Command

@@ -96,7 +96,7 @@ public enum Opcode {
   // Manipulate filenames
   GET_FILENAME_ALIAS, // Create String alias to filename
   SET_FILENAME_VAL, // Immediately set filename
-  GET_FILENAME_VAL, // Dummy opcode to indicate filename value
+  GET_FILENAME_VAL, // Immediately retrieve filename value
   COPY_IN_FILENAME, // Copy in mapping to mappable var
   CHOOSE_TMP_FILENAME, IS_MAPPED,
   // Manage local files

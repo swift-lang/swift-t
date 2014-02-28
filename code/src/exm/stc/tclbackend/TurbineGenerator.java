@@ -75,6 +75,7 @@ import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.VarCount;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.tclbackend.Turbine.CacheMode;
 import exm.stc.tclbackend.Turbine.RuleProps;
 import exm.stc.tclbackend.Turbine.StackFrameType;
@@ -834,26 +835,14 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void assignFile(Var target, Arg src, boolean setFilename) {
-    assert(Types.isFile(target.type()));
+  public void assignFile(Var dst, Arg src, boolean setFilename) {
+    assert(Types.isFile(dst.type()));
     assert(Types.isFileVal(src.type()));
-    // Sanity check setFilename
-    switch (target.isMapped()) {
-      case TRUE:
-        // Filename already set
-        assert(!setFilename);
-        break;
-      case FALSE:
-        // Filename must be set
-        assert(setFilename);
-        break;
-      case MAYBE:
-        // could be either
-        break;
-    }
+    // Sanity check that we're not setting mapped file
+    assert(!setFilename || dst.isMapped() != Ternary.TRUE);
     
-    pointAdd(Turbine.fileSet(varToExpr(target),
-             prefixVar(src.getVar()), setFilename));
+    pointAdd(Turbine.fileSet(varToExpr(dst),
+              prefixVar(src.getVar()), setFilename));
   }
 
   @Override
@@ -1079,6 +1068,14 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isBoolVal(isMapped));
     pointAdd(Turbine.isMapped(prefixVar(isMapped),
                                            varToExpr(file)));
+  }
+
+  @Override
+  public void getFilenameVal(Var filenameVal, Var file) {
+    assert(Types.isFile(file.type()));
+    assert(Types.isStringVal(filenameVal));
+    pointAdd(new SetVariable(prefixVar(filenameVal),
+            Turbine.getFilenameVal(varToExpr(file))));
   }
   
   @Override

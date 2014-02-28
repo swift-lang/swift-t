@@ -466,6 +466,10 @@ class CongruentSets {
     // Also add any equivalent values
     for (ArgCV equiv: lookupEquivalences(val)) {
       // Note: should avoid infinite recursion because of newEntry check above
+      if (logger.isTraceEnabled()) {
+        logger.trace("Add set entry from equiv: "
+                     + equiv + " in " + canonicalVal);
+      }
       addSetEntry(new ArgOrCV(equiv), canonicalVal);
     }
 
@@ -1027,8 +1031,9 @@ class CongruentSets {
     List<ArgCV> res = new ArrayList<ArgCV>();
     while (curr != null) {
       res.addAll(curr.equivalences.get(val));
+      curr = curr.parent;
     }
-    return null;
+    return res;
   }
 
   /**

@@ -279,7 +279,19 @@ public class Congruences implements AliasFinder {
       addInferredStoreFile(errContext, congruent, canonLoc, cv, stmtIndex);
     } else if (cv.op() == Opcode.LOAD_FILE) {
       addInferredLoadFile(errContext, congruent, canonLoc, cv, stmtIndex);
+    } else if (cv.isFilenameAliasCV()) {
+      addInferredFilenameAlias(errContext, congruent, canonLoc, cv, stmtIndex);
     }
+  }
+
+  private void addInferredFilenameAlias(String errContext,
+          CongruentSets congruent, Arg canonLoc, ArgCV cv, int stmtIndex) 
+                  throws OptUnsafeError {
+    Var file = cv.getInput(0).getVar();
+    // Retrieving alias == filename
+    equateValues(errContext, congruent, stmtIndex,
+            ComputedValue.filenameValCV(file),
+            ComputedValue.retrieveCompVal(canonLoc.getVar()));
   }
 
   private void addInferredLoadFile(String errContext, CongruentSets congruent,
