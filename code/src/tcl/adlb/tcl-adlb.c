@@ -2243,7 +2243,6 @@ ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
   rc = ADLB_PARSE_HANDLE_CLEANUP(&handle);
   TCL_CHECK(rc);
 
-  assert(type != ADLB_DATA_TYPE_NULL);
   TCL_CONDITION(ret_rc == ADLB_SUCCESS, "<%"PRId64"> failed!", handle.id);
   TCL_CONDITION(length >= 0, "adlb::retrieve <%"PRId64"> not found!",
                             handle.id);
