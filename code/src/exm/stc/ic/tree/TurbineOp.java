@@ -1064,6 +1064,7 @@ public class TurbineOp extends Instruction {
       // Non-deterministic
       return true;
     case SET_FILENAME_VAL:
+    case COPY_IN_FILENAME:
       // Only effect is in file output var
       return false;
     case COPY_FILE_CONTENTS:
