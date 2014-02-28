@@ -314,7 +314,7 @@ namespace eval turbine {
               <$file_handle>"
       }
       set filename [ mktemp ]
-      store_string [ get_file_path $file_handle ] $filename
+      set_filename_val $file_handle $filename
       return $filename
     }
 
