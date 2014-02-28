@@ -350,7 +350,6 @@ namespace eval turbine {
             }
         } else {
             if { $decrref } {
-              puts [ list adlb::retrieve_decr $id $decrref string ]
               set result [ adlb::retrieve_decr $id $decrref string ]
             } else {
               set result [ adlb::retrieve $id string ]
