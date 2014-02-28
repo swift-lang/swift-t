@@ -1257,7 +1257,7 @@ public class  ExprWalker {
     if (context.hasFunctionProp(function, FnProp.WRAPPED_BUILTIN)) {
       // Wrapper may need to be generated
       wrapperFnName = wrappers.generateWrapper(context, function,
-                                  VarRepr.backendFnType(concrete));
+                                               concrete);
     } else {
       assert(context.hasFunctionProp(function, FnProp.APP));
       // Wrapper has same name for apps
