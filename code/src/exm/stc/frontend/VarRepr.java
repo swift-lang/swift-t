@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
 
+import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.RefCounting;
@@ -39,7 +40,8 @@ public class VarRepr {
 
   public static Var backendVar(Var frontendVar) {
     assert(frontendVar != null);
-    return frontendVar.substituteType(backendType(frontendVar.type(), true));
+    Type backendT = backendType(frontendVar.type(), true);
+    return frontendVar.substituteType(backendT);
   }
   
   public static List<Var> backendVars(Var ...frontendVars) {
@@ -160,6 +162,8 @@ public class VarRepr {
     assert(!checkInstantiate || type.isConcrete()) :
             "Cannot instantiate type " + type;
     
+    Logging.getSTCLogger().trace("Type conversion frontend => backend: " +
+                                    originalType + " to backend " + type);
     conversionCache.put(originalType, type);
     return type;
   }
@@ -217,8 +221,8 @@ public class VarRepr {
         // Store structs, etc directly in struct
         return false;
       }
-    } else if (isBig(type)) {
-      // Want to be able to distribute data
+    } else if (compound == CompoundType.CONTAINER && isBig(type)) {
+      // Want to be able to distribute data if many copies stored
       return true;
     } else if (RefCounting.trackWriteRefCount(type.type(), DefType.LOCAL_USER)) {
       // Need to track write refcount separately to manage closing,

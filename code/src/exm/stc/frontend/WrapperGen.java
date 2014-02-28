@@ -223,7 +223,6 @@ public class WrapperGen {
     for (int i = 0; i < nOut; i++) {
       Var out = outVars.get(i);
       Type concreteT = concrete.getOutputs().get(i);
-      System.err.println("OUT " + out + " " + concreteT);
       concreteOut.add(out.substituteType(concreteT));
       updateTypeInfo(typeVarBindings, unionBindings, out.type(), concreteT);
     }

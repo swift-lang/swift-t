@@ -944,7 +944,9 @@ public class STCMiddleEnd {
   public void structRetrieveSub(Var target, Var struct,
       List<String> fieldPath) {
     assert(Types.isStruct(struct));
-    assert(Types.isStructFieldVal(struct, fieldPath, target));
+    assert(Types.isStructFieldVal(struct, fieldPath, target)) :
+          "(" + struct.name()  + ":" + struct.type()  + ")." + fieldPath
+          + " => " + target;
     currBlock().addInstruction(
         TurbineOp.structRetrieveSub(target, struct, fieldPath));
   }

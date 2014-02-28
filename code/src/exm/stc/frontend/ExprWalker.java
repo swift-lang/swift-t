@@ -301,7 +301,9 @@ public class  ExprWalker {
     Type memType = TypeChecker.findStructFieldType(context, fieldPath,
                                                    struct.type());
     boolean storedAsRef = VarRepr.storeRefInStruct(memType);
+    
     Var result;
+    Var backendStruct = VarRepr.backendVar(struct);
     if (Types.isStructRef(struct)) {
       RefType resultType = new RefType(memType);
       if (outVar == null || !resultType.assignableTo(outVar.type())) {
@@ -311,26 +313,27 @@ public class  ExprWalker {
         result = outVar;
       }
       backend.structRefCopyOut(VarRepr.backendVar(result),
-                               VarRepr.backendVar(struct),
-                               fieldPath);
+                               backendStruct, fieldPath);
     } else {
       assert(Types.isStruct(struct));
       if (storedAsRef)  {
         // Lookup ref data into tmp alias
         result = varCreator.createTmpAlias(context, memType);
+        System.err.println("Struct " + struct.type());
+        System.err.println("Backend Struct " + backendStruct.type());
         backend.structRetrieveSub(VarRepr.backendVar(result), 
-                             VarRepr.backendVar(struct), fieldPath);
+                                  backendStruct, fieldPath);
       } else if (!storedAsRef && outVar == null) {
         // Just create alias to data in struct for later use
         result = varCreator.createStructFieldAlias(context, 
                             struct, memType, fieldPath);
         backend.structCreateAlias(VarRepr.backendVar(result), 
-                      VarRepr.backendVar(struct), fieldPath);
+                                  backendStruct, fieldPath);
       } else {
         assert(!storedAsRef && outVar != null);
         // Copy data in struct to existing output variable
         backend.structCopyOut(VarRepr.backendVar(outVar), 
-                              VarRepr.backendVar(struct), fieldPath);
+                              backendStruct, fieldPath);
         result = outVar;
       }
     }

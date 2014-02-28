@@ -450,11 +450,14 @@ public class Types {
       this.local = local;
       this.typeName = typeName;
       this.fields = new ArrayList<StructField>(fields);
+      this.hashCode = calcHashCode();
     }
 
     private final boolean local;
     private final List<StructField> fields;
     private final String typeName;
+    
+    private final int hashCode;
     
     public static StructType localStruct(StructType structType) {
       return new StructType(true, structType.typeName, structType.fields);
@@ -557,8 +560,16 @@ public class Types {
                 !otherST.getTypeName().equals(typeName)) {
           return false;
         } else {
-          // assume that if the names match, the types match, because the
-          // language doesn't permit the same type name to be used twice
+          // Names match, now check that fields match.
+          if (otherST.fields.size() != fields.size()) {
+            return false;
+          }
+          for (int i = 0; i < fields.size(); i++) {
+            StructField f1 = fields.get(i), f2 = otherST.fields.get(i);
+            if (!f1.name.equals(f2.name) || !f1.type.equals(f2.type)) {
+              return false;
+            }
+          }
           return true;
         }
       }
@@ -597,8 +608,20 @@ public class Types {
 
     @Override
     public int hashCode() {
-      return ((StructType.class.hashCode() * 13) +
+      // Use cached hashcode
+      return hashCode;
+    }
+    
+    private int calcHashCode() {
+      int code = ((StructType.class.hashCode() * 13) +
                typeName.hashCode()) * 2 + (local ? 0 : 1);
+      
+     for (StructField field: fields) {
+       code *= 13;
+       code += (field.name.hashCode() * 7) + field.type.hashCode();
+     }
+      
+      return code;
     }
 
     @Override
