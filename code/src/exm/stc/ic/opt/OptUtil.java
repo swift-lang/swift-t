@@ -134,12 +134,14 @@ public class OptUtil {
         oldOutReplacement = oldOut;
       }
 
+      Instruction storeInst;
       if (Types.isFile(oldOutReplacement)) {
-        instBuffer.add(TurbineOp.assignFile(oldOutReplacement, newOut.asArg(),
-                                            storeOutputMapping));
+        storeInst = TurbineOp.assignFile(oldOutReplacement, newOut.asArg(),
+                                            storeOutputMapping);
       } else {
-        instBuffer.add(TurbineOp.storeAny(oldOutReplacement, newOut.asArg()));
+        storeInst = TurbineOp.storeAny(oldOutReplacement, newOut.asArg());
       }
+      instBuffer.add(storeInst);
     } else {
       throw new STCRuntimeError("Tried to replace instruction"
           + " output var " + oldOut + " with " + newOut + ": this doesn't make sense"
@@ -212,11 +214,11 @@ public class OptUtil {
       // Output variable of instruction changed, need to fix up
       Var newOut = change.newOut;
       Var oldOut = change.oldOut;
-      
+       
       replaceInstOutput(srcBlock, targetBlock, instBuffer,
                                   newOut, oldOut, storeOutputMapping);
     }
-
+    
     // Now copy back values into future
     if (change.storeOutputVals) {
       WrapUtil.setLocalOpOutputs(targetBlock, oldOutVars, newOutVars,

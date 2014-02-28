@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 
+import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
@@ -421,16 +422,18 @@ public class WrapUtil {
     for (int i = 0; i < outVals.size(); i++) {
       Var outArg = outFuts.get(i);
       Var outVal = outVals.get(i);
+
       if (outArg.equals(outVal)) {
         // Do nothing: the variable wasn't substituted
       } else {
+        Instruction store; 
         if (Types.isFile(outArg)) {
           // Assign without assigning mapping
-          TurbineOp.assignFile(outArg, outVal.asArg(), storeOutputMapping);
+          store = TurbineOp.assignFile(outArg, outVal.asArg(), storeOutputMapping);
         } else {
-          Instruction storeInst = TurbineOp.storeAny(outArg, outVal.asArg());
-          instBuffer.add(storeInst);
+          store = TurbineOp.storeAny(outArg, outVal.asArg());
         }
+        instBuffer.add(store);
       }
     }
   }
