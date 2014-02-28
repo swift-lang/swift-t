@@ -122,7 +122,7 @@ namespace eval turbine {
         if { $cache && [ c::cache_check $id ] } {
             set result [ c::cache_retrieve $id ]
             if { $decrref } {
-              read_file_refcount_decr $id
+              read_refcount_decr $id
             }
         } else {
             if { $decrref } {
@@ -160,7 +160,7 @@ namespace eval turbine {
         if { $cache && [ c::cache_check $id ] } {
             set result [ c::cache_retrieve $id ]
             if { $decrref } {
-              read_file_refcount_decr $id
+              read_refcount_decr $id
             }
         } else {
             if { $decrref } {
@@ -289,7 +289,8 @@ namespace eval turbine {
     }
 
     proc input_url_impl { outfile filepath_val } {
-      store_file $outfile [ dict create path $filepath_val ]
+      # Set filename and close
+      set_filename_val $outfile $filepath_val 1
     }
 
     proc input_url_local { url } {
