@@ -834,9 +834,24 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void assignFile(Var target, Arg src) {
+  public void assignFile(Var target, Arg src, boolean setFilename) {
     assert(Types.isFile(target.type()));
     assert(Types.isFileVal(src.type()));
+    // Sanity check setFilename
+    switch (target.isMapped()) {
+      case TRUE:
+        // Filename already set
+        assert(!setFilename);
+        break;
+      case FALSE:
+        // Filename must be set
+        assert(setFilename);
+        break;
+      case MAYBE:
+        // could be either
+        break;
+    }
+    
     pointAdd(Turbine.fileSet(varToExpr(target),
                             prefixVar(src.getVar())));
   }

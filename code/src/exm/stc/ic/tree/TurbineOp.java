@@ -653,16 +653,30 @@ public class TurbineOp extends Instruction {
    * Assign a file future from a file value
    * @param dst
    * @param src
-   * @param setName if true, set filename, if false assume already
+   * @param setFilename if true, set filename, if false assume already
    *                 has filename, just close the file
    * @return
    */
-  public static Instruction assignFile(Var dst, Arg src, boolean setName) {
+  public static Instruction assignFile(Var dst, Arg src, boolean setFilename) {
     assert(Types.isFile(dst.type()));
     assert(src.isVar());
     assert(Types.isFileVal(src.getVar()));
+    // Sanity check setFilename
+    switch (dst.isMapped()) {
+      case TRUE:
+        // Filename already set
+        assert(!setFilename);
+        break;
+      case FALSE:
+        // Filename must be set
+        assert(setFilename);
+        break;
+      case MAYBE:
+        // could be either
+        break;
+    }
     return new TurbineOp(Opcode.STORE_FILE, dst, src,
-                          Arg.createBoolLit(setName));
+                          Arg.createBoolLit(setFilename));
   }
   
   /**
@@ -2149,6 +2163,14 @@ public class TurbineOp extends Instruction {
           ValLoc retrieve = ValLoc.derefCompVal(src.getVar(), dst.getVar(),
                                    IsValCopy.NO, IsAssign.NO);
           return Arrays.asList(retrieve, assign);
+        } else if (op == Opcode.STORE_FILE) {
+          boolean setFilename = getInput(1).getBoolLit();
+          if (setFilename) {
+            // TODO: transfer filename from value
+            return assign.asList();
+          } else {
+            return assign.asList();
+          }
         } else {
           return assign.asList();
         }

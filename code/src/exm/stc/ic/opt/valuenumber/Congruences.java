@@ -259,6 +259,87 @@ public class Congruences implements AliasFinder {
                   ComputedValue.arrayContainsCV(arr, ix), IsAssign.NO,
                   congruent, false, stmtIndex);
       }
+      addInferredFilename(errContext, congruent, canonLoc, cv, stmtIndex);
+    }
+  }
+
+  /**
+   * Attempt to infer filenames when stores/retrieves occur
+   * @param errContext
+   * @param congruent
+   * @param canonLoc
+   * @param cv
+   * @throws OptUnsafeError 
+   */
+  private void addInferredFilename(String errContext,
+          CongruentSets congruent, Arg canonLoc, ArgCV cv, int stmtIndex)
+                  throws OptUnsafeError {
+    // TODO: also check for set filename => load_file in case added later
+    
+    if (cv.op() == Opcode.STORE_FILE) {
+      addInferredStoreFile(errContext, congruent, canonLoc, cv, stmtIndex);
+    } else if (cv.op() == Opcode.LOAD_FILE) {
+      addInferredLoadFile(errContext, congruent, canonLoc, cv, stmtIndex);
+    }
+  }
+
+  private void addInferredLoadFile(String errContext, CongruentSets congruent,
+          Arg canonLoc, ArgCV cv, int stmtIndex) throws OptUnsafeError {
+    Var file = cv.getInput(0).getVar();
+    equateValues(errContext, congruent, stmtIndex,
+            ComputedValue.filenameValCV(file),
+            ComputedValue.localFilenameCV(canonLoc.getVar()));
+  }
+
+  private void addInferredStoreFile(String errContext, CongruentSets congruent,
+          Arg canonLoc, ArgCV cv, int stmtIndex) throws OptUnsafeError {
+    Var localFile = cv.getInput(0).getVar();
+    boolean setFilename = cv.getInput(1).getBoolLit();
+    if (setFilename) {
+      // Only if the filename was set by store
+      ArgCV srcFilename = ComputedValue.localFilenameCV(localFile);
+      ArgCV dstFilename = ComputedValue.filenameValCV(canonLoc.getVar());
+      equateValues(errContext, congruent, stmtIndex,
+                          srcFilename, dstFilename);
+    }
+  }
+
+  /**
+   * Make two abstract locations equivalent.
+   * 
+   * @param errContext
+   * @param congruent
+   * @param stmtIndex
+   * @param val1
+   * @param val2
+   * @throws OptUnsafeError
+   */
+  private void equateValues(String errContext,
+          CongruentSets congruent, int stmtIndex,
+          ArgCV val1, ArgCV val2) throws OptUnsafeError {
+    /*
+     * Three cases:
+     * 1. Both already present
+     *    => merge canonical(val1) and canonical(val2)
+     * 2. One present (assume WLOG val1)
+     *    => add val2 to canonical(val1)
+     * 3. Neither present yet
+     *    => Save equivalence
+     *    => Later, WLOG, assume val1 added to canon(val1)
+     *       Then add val2 to canonical(val1)
+     */
+    Arg canon1 = congruent.findCanonical(consts, val1);
+    Arg canon2 = congruent.findCanonical(consts, val2);
+    if (canon1 != null && canon2 != null) {
+      mergeSets(errContext, "Equating " + val1 + " == " + val2, consts,
+                congruent, canon1, canon2, IsAssign.NO, stmtIndex);
+    } else if (canon1 == null && canon2 != null) {
+      congruent.addToSet(consts, new ArgOrCV(val1), canon2);
+    } else if (canon1 != null && canon2 == null) {
+      congruent.addToSet(consts, new ArgOrCV(val2), canon1);
+    } else {
+      assert(canon1 == null && canon2 == null);
+      congruent.addEquivalence(consts, val1, val2);
     }
   }
 
@@ -272,13 +353,13 @@ public class Congruences implements AliasFinder {
   /**
    * Merge two congruence sets that are newly connected via value
    * @param errContext
-   * @param resVal
+   * @param mergeCause object where toString() gets explanation of merge cause
    * @param congruent
    * @param newLoc representative of set with location just maybeAssigned
    * @param oldLoc representative of existing set
    * @throws OptUnsafeError 
    */
-  private void mergeSets(String errContext, ArgOrCV value,
+  private void mergeSets(String errContext, Object mergeCause,
       GlobalConstants consts, CongruentSets congruent,
       Arg oldLoc, Arg newLoc, IsAssign newIsAssign, int stmtIndex) throws OptUnsafeError {
     if (newLoc.equals(oldLoc)) {
@@ -287,7 +368,7 @@ public class Congruences implements AliasFinder {
     }
     
     checkNoContradiction(errContext, congruent.congType,
-                         value, newLoc, oldLoc);
+                          mergeCause, newLoc, oldLoc);
     
     // Must merge.  Select which is the preferred value
     // (for replacement purposes, etc.)
@@ -324,13 +405,13 @@ public class Congruences implements AliasFinder {
    * Check if vals contradict each other.
    * @param errContext
    * @param congType
-   * @param value
+   * @param mergeCause
    * @param val1
    * @param val2
    * @throw {@link OptUnsafeError} if problem found
    */
   private void checkNoContradiction(String errContext,
-    CongruenceType congType, ArgOrCV value, Arg val1, Arg val2) 
+    CongruenceType congType, Object mergeCause, Arg val1, Arg val2) 
     throws OptUnsafeError {
     boolean contradiction = false;
     if (congType == CongruenceType.VALUE) {
@@ -349,7 +430,7 @@ public class Congruences implements AliasFinder {
     if (contradiction) {
       Logging.uniqueWarn("Invalid code detected during optimization. "
           + "Conflicting values congruence type " + congType + " "
-          + value + ": " + val1 +
+          + mergeCause + ": " + val1 +
           " != " + val2 + " in " + errContext + ".\n"
           + "This may have been caused by a double-write to a variable. "
           + "Please look at any previous warnings emitted by compiler. "

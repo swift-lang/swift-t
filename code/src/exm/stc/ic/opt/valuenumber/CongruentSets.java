@@ -65,6 +65,11 @@ class CongruentSets {
   private final MultiMap<Arg, ArgOrCV> canonicalInv;
   
   /**
+   * Record congruence between values without canonical location
+   */
+  private final MultiMap<ArgCV, ArgCV> equivalences;
+  
+  /**
    * Track sets that were merged into this one.  Allows
    * finding an alternate value if current is out of scope.
    */
@@ -108,6 +113,7 @@ class CongruentSets {
     this.parent = parent;
     this.canonical = new HashMap<ArgOrCV, Arg>();
     this.canonicalInv = new MultiMap<Arg, ArgOrCV>();
+    this.equivalences = new MultiMap<ArgCV, ArgCV>();
     this.mergedInto = new MultiMap<Arg, Arg>();
     this.componentIndex = new HashMap<Arg, Set<ArgCV>>();
     this.varsFromParent = varsFromParent;
@@ -456,6 +462,12 @@ class CongruentSets {
     if (val.isCV()) {
       checkForRecanonicalization(canonicalVal, val.cv());
     }
+    
+    // Also add any equivalent values
+    for (ArgCV equiv: lookupEquivalences(val)) {
+      addSetEntry(new ArgOrCV(equiv), canonicalVal);
+    }
+
   }
 
   /**
@@ -616,6 +628,7 @@ class CongruentSets {
           if (canonical != null) {
             addUpdatedCV(oldComponent, newComponent, newOuterCV2, canonical);
           }
+          updateEquivCanonicalization(outerCV, newOuterCV2);
         }
       }
       curr = curr.parent;
@@ -957,6 +970,64 @@ class CongruentSets {
       }
     }
     return allMerged;
+  }
+
+  /**
+   * Add equivalence for the case where we don't have a location
+   * for either.  Should only be called if findCanonical() was null
+   * for both values
+   * @param val1
+   * @param val2
+   */
+  public void addEquivalence(GlobalConstants consts, ArgCV val1, ArgCV val2) {
+    ArgOrCV canon1 = canonicalizeInternal(consts, val1);
+    ArgOrCV canon2 = canonicalizeInternal(consts, val2);
+    // Shouldn't have canonical arg value if calling this function
+    assert(canon1.isCV());
+    assert(canon2.isCV());
+  
+    addEquivalenceEntry(canon1.cv(), canon2.cv());
+    // TODO: when new CV added to canonical, check equivalence map
+  }
+
+  /**
+   * Update equivalences when recanonicalization occurs
+   * @param oldCV
+   * @param newCV
+   */
+  private void updateEquivCanonicalization(ArgCV oldCV, ArgOrCV newCV) {
+    if (newCV.isCV()) {
+      for (ArgCV equiv: lookupEquivalences(oldCV)) {
+        addEquivalenceEntry(equiv, newCV.cv());
+      }
+    }
+  }
+  
+  private void addEquivalenceEntry(ArgCV val1, ArgCV val2) {
+    // add to equivalence map in both directions
+    equivalences.put(val1, val2);
+    equivalences.put(val2, val1);
+  }
+
+  private List<ArgCV> lookupEquivalences(ArgOrCV val) {
+    if (val.isCV()) {
+      return lookupEquivalences(val.cv());
+    } else {
+      return Collections.emptyList();
+    }
+  }
+  /**
+   * Lookup equivalent value here and in parents
+   * @param val
+   * @return
+   */
+  private List<ArgCV> lookupEquivalences(ArgCV val) {
+    CongruentSets curr = this;
+    List<ArgCV> res = new ArrayList<ArgCV>();
+    while (curr != null) {
+      res.addAll(curr.equivalences.get(val));
+    }
+    return null;
   }
 
   /**
