@@ -103,17 +103,22 @@ namespace eval turbine {
 
     # store file and update local file var refcounts
     # second argument must be var name so we can manipulate refcounts
-    proc store_file { file_handle local_f_varname } {
+    proc store_file { file_handle local_f_varname {set_filename 1} } {
       upvar 1 $local_f_varname local_f
       # Increment refcount so not cleaned up locally
       lset local_f 1 [ expr {[ lindex $local_f 1 ] + 1} ]
 
       set value [ dict create path [ local_file_path $local_f ] ]
-        
-      set id [ get_file_td $file_handle ]
-      log "store: <$id>=$value"
-      adlb::store $id file $value
-      c::cache_store $id file $value
+      
+      if { $set_filename } {
+        set id [ get_file_td $file_handle ]
+        log "store: <$id>=$value"
+        adlb::store $id file $value
+        c::cache_store $id file $value
+      } else {
+        # Close without modifying filename
+        close_file $file_handle
+      }
     }
 
     proc retrieve_file { file_handle {cachemode CACHED} {decrref 0} } {

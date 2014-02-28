@@ -250,6 +250,7 @@ namespace eval turbine {
     proc store_struct { id value typename } {
         log "store: <$id>=$value"
         adlb::store $id $typename $value
+        # TODO: only store if have all fields present?
         c::cache_store $id $typename $value
     }
 
