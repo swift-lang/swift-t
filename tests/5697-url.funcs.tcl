@@ -16,12 +16,11 @@ namespace eval funcs_5697 {
 
   proc copy_url5_body { outurl inurl  } {
     puts [ list Entering copy_url5_body $outurl $inurl ]
-    read_refcount_decr [ get_file_status $inurl ]
     set outpath [ retrieve_string [ get_file_path $outurl ] ]
     set inpath [ retrieve_decr_string [ get_file_path $inurl ] ]
 
     copy_url5_impl $inpath $outpath
-    store_void [ get_file_status $outurl ]
+    turbine::close_file $outurl
   }
 
   proc copy_url5_impl { inpath outpath } {
