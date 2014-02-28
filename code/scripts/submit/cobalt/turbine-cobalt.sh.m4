@@ -41,6 +41,7 @@ export TURBINE_LOG=getenv(TURBINE_LOG)
 export ADLB_PRINT_TIME=getenv(ADLB_PRINT_TIME)
 
 echo "TURBINE SETTINGS"
+echo "JOB_ID:       ${COBALT_JOBID}"
 echo "DATE:         $(date)"
 echo "TURBINE_HOME: ${TURBINE_HOME}"
 echo "COMMAND:      ${COMMAND}"
