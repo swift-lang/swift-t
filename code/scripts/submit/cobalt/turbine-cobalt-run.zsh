@@ -139,6 +139,7 @@ then
        ${=MODE_ARG}            \
        -o ${TURBINE_OUTPUT}/output.txt \
        -e ${TURBINE_OUTPUT}/output.txt \
+       --jobname "Swift" \
        ${TURBINE_OUTPUT}/turbine-cobalt.sh | \
     read JOB_ID
 else
