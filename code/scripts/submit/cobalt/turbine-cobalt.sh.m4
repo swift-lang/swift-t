@@ -60,7 +60,7 @@ echo "PPN:          ${PPN}"
 echo "TCLLIBPATH:   ${TCLLIBPATH}"
 echo "LAUNCHER:     ${LAUNCHER}"
 [[ -n ${VALGRIND} ]] && \
-echo "VALGRIND:     ${VAqLGRIND}"
+echo "VALGRIND:     ${VALGRIND}"
 echo
 
 # Unpack and export all user environment variables
