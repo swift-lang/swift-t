@@ -22,6 +22,9 @@ changecom(`dnl')#!/bin/bash
 # Define a convenience macro
 define(`getenv', `esyscmd(printf -- "$`$1' ")')
 
+# Get the time zone: for time stamps on log messages
+export TZ=getenv(TZ)
+
 COMMAND="getenv(COMMAND)"
 PPN=getenv(PPN)
 PROCS=getenv(PROCS)
@@ -35,10 +38,17 @@ then
   exit 1
 fi
 
-LAUNCHER=getenv(TURBINE_LAUNCHER)
-export TURBINE_LOG=getenv(TURBINE_LOG)
+MODE=getenv(MODE)
+LAUNCHER="getenv(TURBINE_LAUNCHER)"
+VALGRIND="getenv(VALGRIND)"
 
+export TURBINE_LOG=getenv(TURBINE_LOG)
 export ADLB_PRINT_TIME=getenv(ADLB_PRINT_TIME)
+
+if [[ ${MODE} == "cluster" ]]
+then
+      NODE_ARG="-f ${COBALT_NODEFILE}"
+fi
 
 echo "TURBINE SETTINGS"
 echo "JOB_ID:       ${COBALT_JOBID}"
@@ -50,15 +60,15 @@ echo "PPN:          ${PPN}"
 echo "TCLLIBPATH:   ${TCLLIBPATH}"
 echo "LAUNCHER:     ${LAUNCHER}"
 [[ -n ${VALGRIND} ]] && \
-echo "VALGRIND:     ${VALGRIND}"
+echo "VALGRIND:     ${VAqLGRIND}"
 echo
-
-export TZ=getenv(TZ)
 
 # Unpack and export all user environment variables
 export getenv(ENV_LIST)
 
-${LAUNCHER} -l -n ${PROCS} -ppn ${PPN} ${VALGRIND} ${TCLSH} ${COMMAND}
+# Run Turbine:
+${LAUNCHER} -l ${NODE_ARG} -n ${PROCS} -ppn ${PPN} \
+            ${VALGRIND} ${TCLSH} ${COMMAND}
 CODE=${?}
 
 echo
