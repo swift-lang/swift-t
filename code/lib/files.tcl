@@ -20,6 +20,7 @@
 namespace eval turbine {
     namespace export get_file_status get_file_path is_file_mapped       \
         allocate_file                                                   \
+        set_filename_val get_filename_val                               \
         filename2 copy_file close_file file_read file_write             \
         swift_filename                                                  \
         create_file store_file                                          \
