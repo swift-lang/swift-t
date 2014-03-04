@@ -84,13 +84,15 @@ namespace eval turbine {
         set s [ lindex $inputs 0 ]
         if { [ llength $inputs ] == 2 } {
             set delimiter [ lindex $inputs 1 ]
+            set inputs [ list $delimiter $s ]
         } elseif { [ llength $inputs ] == 1 } {
             # Use default delimiter: " "
             set delimiter 0
+            set inputs $s
         } else {
             error "split requires 1 or 2 arguments"
         }
-        rule [ list $s $delimiter ] \
+        rule $inputs \
             "split_body $result $s $delimiter" \
             name "split-$result"
     }
