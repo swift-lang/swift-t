@@ -52,6 +52,7 @@ wait $pid
 RC=${?}
 [[ ${RC} == 0 ]] || exit 1
 
-grep -q "LEAK" ${OUTPUT} && exit 1
+# Filter out Valgrind leak messages, include only ADLB
+grep -v "LEAK SUMMARY" ${OUTPUT} | grep -q "LEAK DETECTED" && exit 1
 
 exit 0
