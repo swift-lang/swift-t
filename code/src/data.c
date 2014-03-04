@@ -1199,13 +1199,19 @@ lookup_subscript(adlb_datum_id id, const adlb_datum_storage *d,
         check_verbose(d->STRUCT != NULL, ADLB_DATA_ERROR_INVALID, "Can't set "
             "subscript of struct initialized without type <%"PRId64">", id);
 
-        // Struct subscripts are of form <integer>(.<integer>)*
+        // Struct subscripts are of form <integer>(.<integer>)*'\0'?
+
         // Locate next '.', if any
         void *sep = memchr(subscript.key, '.', subscript.length);
         size_t component_len;
         if (sep == NULL)
         {
           component_len = subscript.length;
+          // May or may not be null-terminated
+          if (((const char*)subscript.key)[component_len - 1] == '\0')
+          {
+            component_len--;
+          }
         }
         else
         {
@@ -1214,7 +1220,10 @@ lookup_subscript(adlb_datum_id id, const adlb_datum_storage *d,
         
         int64_t struct_ix64;
         dc = ADLB_Int64_parse(subscript.key, component_len, &struct_ix64);
-        DATA_CHECK(dc);
+        check_verbose(dc == ADLB_DATA_SUCCESS, ADLB_DATA_ERROR_INVALID,
+              "Invalid subscript component: \"%.*s\" len %i",
+              (int)component_len, (const char*)subscript.key,
+              (int)component_len);
         check_verbose(struct_ix64 >= 0 && struct_ix64 <= INT_MAX,
             ADLB_DATA_ERROR_INVALID, "Struct index out of range: %"PRId64,
             struct_ix64);
