@@ -262,7 +262,7 @@ class Turbine {
   public static Token XPT_UNPACK = adlbFn("xpt_unpack");
 
   // Subscript/handle manipulation
-  public static Token BUILD_SUBSCRIPT = adlbFn("subscript");
+  public static Token MAKE_STRUCT_SUBSCRIPT = adlbFn("subscript_struct");
 
   // Checkpointing options
   public static enum XptFlushPolicy {
@@ -949,7 +949,7 @@ class Turbine {
     for (int field : fieldIndices) {
       args.add(new LiteralInt(field));
     }
-    return Square.fnCall(BUILD_SUBSCRIPT, args);
+    return Square.fnCall(MAKE_STRUCT_SUBSCRIPT, args);
   }
 
   /**
