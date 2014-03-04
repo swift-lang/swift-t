@@ -1080,7 +1080,6 @@ turbine_extract_ids(Tcl_Interp* interp, Tcl_Obj *const objv[],
     if (handle.subscript.key == NULL)
     {
       ids[(*id_count)++] = handle.id;
-      fprintf(stderr, "ID: %"PRId64"\n", handle.id);
     }
     else
     {
