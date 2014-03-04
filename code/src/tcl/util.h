@@ -285,4 +285,126 @@ static inline int Tcl_GetADLB_Subscript(Tcl_Obj *objPtr, adlb_subscript *sub)
   return TCL_OK;
 }
 
+
+/**
+ * Parse 64-bit integer. Return TCL_OK if entire string is
+ * valid integer.
+ * If not successful return TCL_ERROR and do not print anything
+ * or modify error state upon faiulre.
+ */
+static inline int adlb_int64_parse(
+      const char *str, size_t length, int64_t *result)
+{
+  if (length == 0)
+  {
+    return TCL_ERROR;
+  }
+
+  int64_t val = 0;
+  int i = 0;
+  bool negative = false;
+  if (str[i] == '-') {
+    negative = true;
+    i++;
+    if (length == 1)
+    {
+      return TCL_ERROR;
+    }
+  }
+
+  int64_t limit = negative ? INT64_MIN : INT64_MAX;
+  // Limit that we can multiply by 10 without overflow
+  int64_t pre_limit = limit / 10; 
+
+  for (; i < length; i++)
+  {
+    char c = str[i];
+    int64_t digit = c - '0';
+    if (digit < 0 || digit > 9)
+    {
+      return TCL_ERROR;
+    }
+
+    if (negative)
+    {
+      if (val < pre_limit)
+      {
+        return TCL_ERROR;
+      }
+      val = 10 * val;
+      
+      if (val - limit < digit)
+      {
+        return TCL_ERROR;
+      }
+      val -= digit;
+    }
+    else
+    {
+      if (val > pre_limit)
+      {
+        return TCL_ERROR;
+      }
+      val = 10 * val;
+      if (limit - val < digit)
+      {
+        return TCL_ERROR;
+      }
+      val += digit;
+    }
+  }
+
+  *result = val;
+
+  return TCL_OK;
+}
+
+/**
+ * Parse the subscript part of an ADLB handle, ie. suffixed to an ID.
+ * Handle subscripts of forms:
+ * - "" => no subscript
+ * - ".123.424.53" (struct indices - each introduced by .)
+ * - "[5]test " - arbitrary subscript prefixed by length
+ *                (to allow for future support for multiple subscripts
+ *                 with binary data)
+ */
+static inline int adlb_subscript_convert(
+      Tcl_Interp *interp, Tcl_Obj *const objv[],
+      const char *str, size_t length, adlb_subscript *sub, bool *alloced)
+{
+  if (length == 0)
+  {
+    *sub = ADLB_NO_SUB;
+    *alloced = false;
+  }
+  else if (str[0] == '.')
+  {
+    // Include everything after '.'
+    sub->key = &str[1];
+    sub->length = length; // include null terminator, exclude .
+    *alloced = false;
+  }
+  else if (str[0] == '[')
+  {
+    char *endstr;
+    long sublen = strtol(&str[1], &endstr, 10);
+    TCL_CONDITION(endstr[0] == ']' && sublen >= 0,
+        "Invalid prefixed length in subscript %.*s", (int)length, str);
+    const char *sub_start = &endstr[1];
+    sub->key = sub_start;
+    // TODO: don't handle multiple subscripts yet
+    long exp_sublen = (long)length - (sub_start - str);
+    TCL_CONDITION(sublen == exp_sublen,
+      "Invalid subscript length: expected to be rest of string (%li), "
+      "but was %li", exp_sublen, sublen);
+    sub->length = (size_t)sublen;
+    *alloced = false;
+  }
+  else
+  {
+    TCL_RETURN_ERROR("Invalid subscript: %.*s", (int)length, str);
+  }
+  return TCL_OK;
+}
+
 #endif

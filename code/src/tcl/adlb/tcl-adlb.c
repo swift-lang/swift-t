@@ -4331,7 +4331,7 @@ ADLB_Dict_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
  * Handle input of forms:
  * - 124 (plain ID)
  * - 1234.123.424.53 (id + struct indices - space separated)
- * - 1234 "SDFS" (id + arbitrary string index)
+ * - 1234."SDFS" (id + arbitrary string index)
  * TODO: implement this)
  */
 int
@@ -4354,6 +4354,8 @@ ADLB_Extract_Handle(Tcl_Interp *interp, Tcl_Obj *const objv[],
   TCL_CHECK_MSG(rc, "Not a valid ADLB datum handle: %s",
                     Tcl_GetString(obj));
   
+  // TODO: find first '.', parse ID from before that
+
   TCL_CONDITION(*subscript_list_len >= 1,
         "Not a valid ADLB datum handle - empty");
 
@@ -4532,9 +4534,13 @@ ADLB_Parse_Handle_Cleanup(Tcl_Interp *interp, Tcl_Obj *const objv[],
 }
 
 /**
-  Build a handle for an id + subscript.
+  Build a handle for an id + subscript into a struct.
+
+  This does not yet handle creating subscripts for arrays.
+
   adlb::subscript <handle> [<subscript>]*
   handle: either an id, or a handle built by this function
+  subscript: a valid subscript into a struct
  */
 static int
 ADLB_Subscript_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -4543,33 +4549,46 @@ ADLB_Subscript_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(objc >= 2, "Must have at least one argument");
 
   int rc;
-  adlb_datum_id id;
-  Tcl_Obj **subscript_list;
-  int subscript_list_len;
+  int old_handle_len;
+  char *old_handle = Tcl_GetStringFromObj(objv[1], &old_handle_len);
+  assert(old_handle != NULL);
 
-  // Try to extract existing subscript or ID
-  rc = ADLB_EXTRACT_HANDLE(objv[1], &id, &subscript_list,
-                           &subscript_list_len);
-  TCL_CHECK(rc);
-
-
-  // TODO: string-based handles, e.g
-  //        1.2.3
-  int new_len = 1 + subscript_list_len + objc - 2;
-  Tcl_Obj* items[new_len];
-  int next_item = 0;
-
-  items[next_item++] = Tcl_NewADLB_ID(id);
+  int new_handle_len = old_handle_len;
   for (int i = 2; i < objc; i++)
   {
-    items[next_item++] = objv[i];
+    int sub_len;
+    char *sub = Tcl_GetStringFromObj(objv[i], &sub_len);
+    assert(sub != NULL);
+    new_handle_len += sub_len + 1;  // subscript plus "." separator
   }
-  for (int i = 0; i < subscript_list_len; i++)
-  {
-    items[next_item++] = subscript_list[i];
-  }
+  
+  Tcl_Obj *result = Tcl_NewObj();
+  TCL_MALLOC_CHECK(result);
 
-  Tcl_Obj* result = Tcl_NewListObj(new_len, items);
+  rc = Tcl_AttemptSetObjLength(result, new_handle_len);
+  // TCL_AttemptSetObjLength doesn't use standard Tcl return codes
+  TCL_CONDITION(rc == 1, "Error setting object length");
+
+  // Copy in subscripts to object
+  char *result_ptr = result->bytes;
+  assert(result_ptr != NULL);
+  memcpy(result_ptr, old_handle, (size_t)old_handle_len);
+  result_ptr += old_handle_len;
+
+  for (int i = 2; i < objc; i++)
+  {
+    int sub_len;
+    char *sub = Tcl_GetStringFromObj(objv[i], &sub_len);
+    assert(sub != NULL);
+
+    // subscript plus "." separator
+    *result_ptr = '.';
+    result_ptr++;
+
+    memcpy(result_ptr, sub, (size_t)sub_len);
+    result_ptr += sub_len;
+  }
+  
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
