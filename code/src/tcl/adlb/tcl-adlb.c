@@ -4330,8 +4330,9 @@ ADLB_Dict_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
 /**
  * Handle input of forms:
  * - 124 (plain ID)
- * - 1234 "a" "353" (id + two subscripts in list)
- * - etc
+ * - 1234.123.424.53 (id + struct indices - space separated)
+ * - 1234 "SDFS" (id + arbitrary string index)
+ * TODO: implement this)
  */
 int
 ADLB_Extract_Handle(Tcl_Interp *interp, Tcl_Obj *const objv[],
@@ -4347,6 +4348,8 @@ ADLB_Extract_Handle(Tcl_Interp *interp, Tcl_Obj *const objv[],
     return TCL_OK;
   }
 
+  // TODO: string-based handles, e.g
+  //        1.2.3
   rc = Tcl_ListObjGetElements(interp, obj, subscript_list_len, subscript_list);
   TCL_CHECK_MSG(rc, "Not a valid ADLB datum handle: %s",
                     Tcl_GetString(obj));
@@ -4390,6 +4393,8 @@ ADLB_Parse_Subscript(Tcl_Interp *interp, Tcl_Obj *const objv[],
   }
   else
   {
+  // TODO: string-based handles, e.g
+  //        1.2.3
     assert(sub_kind == ADLB_SUB_STRUCT);
     Tcl_Obj **subscript_list;
     int subscript_list_len;
@@ -4535,17 +4540,21 @@ static int
 ADLB_Subscript_Cmd(ClientData cdata, Tcl_Interp *interp,
                int objc, Tcl_Obj *const objv[])
 {
+  TCL_CONDITION(objc >= 2, "Must have at least one argument");
+
   int rc;
   adlb_datum_id id;
   Tcl_Obj **subscript_list;
   int subscript_list_len;
 
-  // Try to extract as in
+  // Try to extract existing subscript or ID
   rc = ADLB_EXTRACT_HANDLE(objv[1], &id, &subscript_list,
                            &subscript_list_len);
   TCL_CHECK(rc);
 
 
+  // TODO: string-based handles, e.g
+  //        1.2.3
   int new_len = 1 + subscript_list_len + objc - 2;
   Tcl_Obj* items[new_len];
   int next_item = 0;

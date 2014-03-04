@@ -313,7 +313,6 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp* interp,
   }
 
   // Get the input list - done last so we can report name on error
-  // TODO: also support id/subscript pairs
   rc = turbine_extract_ids(interp, objv, objv[1], TCL_TURBINE_MAX_INPUTS,
               input_list, &inputs, input_pair_list, &input_pairs);
   TCL_CHECK_MSG(rc, "could not parse inputs list as ids or id/subscript "
@@ -1083,6 +1082,7 @@ turbine_extract_ids(Tcl_Interp* interp, Tcl_Obj *const objv[],
     }
     else
     {
+      // TODO: use Handle extraction functions from ADLB module
       // Try to interpret as id/sub pair
       Tcl_Obj** id_pair_list;
       int id_pair_llen;
