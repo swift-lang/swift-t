@@ -55,6 +55,20 @@ adlb_data_to_tcl_obj(Tcl_Interp *interp, Tcl_Obj *const objv[], adlb_datum_id id
                 adlb_data_type type, adlb_type_extra extra,
                 const void *data, int length, Tcl_Obj** result);
 
+/**
+ * Data structures for parsing handles
+ */
+typedef struct {
+  adlb_datum_id id;
+  adlb_subscript subscript;
+  adlb_buffer subscript_buf;
+} tcl_adlb_handle;
+
+typedef struct {
+  adlb_subscript subscript;
+  adlb_buffer subscript_buf;
+} tcl_adlb_sub_parse;
+
 int
 ADLB_Extract_Handle(Tcl_Interp *interp, Tcl_Obj *const objv[],
         Tcl_Obj *obj, adlb_datum_id *id, const char **subscript,
@@ -71,6 +85,28 @@ ADLB_Extract_Handle_ID(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
 #define ADLB_EXTRACT_HANDLE_ID(obj, id) \
     ADLB_Extract_Handle_ID(interp, objv, obj, id)
+
+/**
+ * Function to parse ADLB handle
+ * If use_scratch is true, uses tcl_adlb_scratch buffer until cleanup
+ * called.
+ */
+int
+ADLB_Parse_Handle(Tcl_Interp *interp, Tcl_Obj *const objv[],
+        Tcl_Obj *obj, tcl_adlb_handle *parse, bool use_scratch);
+
+/**
+ * Release resources allocated
+ */
+int
+ADLB_Parse_Handle_Cleanup(Tcl_Interp *interp, Tcl_Obj *const objv[],
+                          tcl_adlb_handle *parse);
+
+#define ADLB_PARSE_HANDLE(obj, parse, use_scratch) \
+    ADLB_Parse_Handle(interp, objv, obj, parse, use_scratch)
+
+#define ADLB_PARSE_HANDLE_CLEANUP(parse) \
+    ADLB_Parse_Handle_Cleanup(interp, objv, parse)
 
 
 #endif

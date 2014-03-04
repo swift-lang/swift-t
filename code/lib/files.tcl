@@ -86,7 +86,7 @@ namespace eval turbine {
     # Extract filename future from handle
     proc get_file_path { file_handle } {
       # Create handle for subscript of struct variable (first elem)
-      return [ adlb::subscript [ get_file_td $file_handle ] 0 ]
+      return [ adlb::subscript_struct [ get_file_td $file_handle ] 0 ]
     }
 
     # return tcl bool value

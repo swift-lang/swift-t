@@ -149,41 +149,6 @@ char *tcl_adlb_xfer_buffer(uint64_t *buf_size) {
 }
 
 /**
- * Data structures for parsing handles
- */
-typedef struct {
-  adlb_datum_id id;
-  adlb_subscript subscript;
-  adlb_buffer subscript_buf;
-} tcl_adlb_handle;
-
-typedef struct {
-  adlb_subscript subscript;
-  adlb_buffer subscript_buf;
-} tcl_adlb_sub_parse;
-
-/**
- * Function to parse ADLB handle
- * Uses tcl_adlb_scratch buffer until cleanup called.
- */
-static int
-ADLB_Parse_Handle(Tcl_Interp *interp, Tcl_Obj *const objv[],
-        Tcl_Obj *obj, tcl_adlb_handle *parse);
-
-/**
- * Release resources allocated
- */
-static int
-ADLB_Parse_Handle_Cleanup(Tcl_Interp *interp, Tcl_Obj *const objv[],
-                          tcl_adlb_handle *parse);
-
-#define ADLB_PARSE_HANDLE(obj, parse) \
-    ADLB_Parse_Handle(interp, objv, obj, parse)
-
-#define ADLB_PARSE_HANDLE_CLEANUP(parse) \
-    ADLB_Parse_Handle_Cleanup(interp, objv, parse)
-
-/**
    Map from binary packed [TD,subscript] to local blob pointers.
    This is not an LRU cache: the user must use blob_free to
    free memory
@@ -305,12 +270,13 @@ ADLB_Parse_Subscript_Cleanup(Tcl_Interp *interp, Tcl_Obj *const objv[],
 #define ADLB_PARSE_SUB_CLEANUP(parse) \
     ADLB_Parse_Subscript_Cleanup(interp, objv, parse)
 
-static int ADLB_Subscript_Parse(Tcl_Interp *interp, Tcl_Obj *const objv[],
-  const char *str, int length, adlb_subscript_kind sub_kind,
-  adlb_buffer *buf, adlb_subscript *sub)
+static int ADLB_Parse_Struct_Subscript(Tcl_Interp *interp,
+  Tcl_Obj *const objv[],
+  const char *str, int length,
+  adlb_buffer *buf, adlb_subscript *sub);
 
-#define SUBSCRIPT_PARSE(str, len, buf, sub) \
-    ADLB_Subscript_Parse(interp, objv, str, len, buf, sub)
+#define PARSE_STRUCT_SUB(str, len, buf, sub) \
+    ADLB_Parse_Struct_Subscript(interp, objv, str, len, buf, sub)
 
 static int field_name_objs_init(Tcl_Interp *interp, Tcl_Obj *const objv[]);
 static int field_name_objs_add(Tcl_Interp *interp, Tcl_Obj *const objv[],
@@ -2102,7 +2068,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
   int argpos = 1;
 
   tcl_adlb_handle handle;
-  rc = ADLB_PARSE_HANDLE(objv[argpos++], &handle);
+  rc = ADLB_PARSE_HANDLE(objv[argpos++], &handle, true);
   TCL_CHECK_MSG(rc, "Invalid handle %s",
                 Tcl_GetString(objv[argpos-1]));
 
@@ -2213,7 +2179,7 @@ ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
   int argpos = 1;
 
   tcl_adlb_handle handle;
-  rc = ADLB_PARSE_HANDLE(objv[argpos++], &handle);
+  rc = ADLB_PARSE_HANDLE(objv[argpos++], &handle, true);
   TCL_CHECK_MSG(rc, "Invalid handle %s",
                 Tcl_GetString(objv[argpos-1]));
 
@@ -2726,7 +2692,7 @@ ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
   int rc;
   tcl_adlb_handle handle;
   Tcl_Obj *handle_obj = objv[1];
-  rc = ADLB_PARSE_HANDLE(handle_obj, &handle);
+  rc = ADLB_PARSE_HANDLE(handle_obj, &handle, true);
   TCL_CHECK_MSG(rc, "Invalid handle %s",
                 Tcl_GetString(objv[1]));
 
@@ -2899,7 +2865,7 @@ ADLB_Blob_Free_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   int rc;
   tcl_adlb_handle handle;
-  rc = ADLB_PARSE_HANDLE(objv[1], &handle);
+  rc = ADLB_PARSE_HANDLE(objv[1], &handle, true);
   TCL_CHECK_MSG(rc, "Invalid handle %s",
                 Tcl_GetString(objv[1]));
 
@@ -2954,7 +2920,7 @@ ADLB_Local_Blob_Free_Cmd(ClientData cdata, Tcl_Interp *interp,
   } else {
     //printf("uncache_blob: %s", Tcl_GetString(objv[1]));
     tcl_adlb_handle handle;
-    rc = ADLB_PARSE_HANDLE(handle_obj, &handle);
+    rc = ADLB_PARSE_HANDLE(handle_obj, &handle, true);
     TCL_CHECK_MSG(rc, "Invalid handle %s",
                   Tcl_GetString(objv[1]));
     
@@ -4355,13 +4321,13 @@ ADLB_Extract_Handle(Tcl_Interp *interp, Tcl_Obj *const objv[],
   TCL_CONDITION(str_handle != NULL, "Error getting string handle");
 
   // Separate ID from remainder of subscript
-  void *sep = memchr(str_handle, '.', (size_t)str_handle_len);
+  const char *sep = memchr(str_handle, '.', (size_t)str_handle_len);
   TCL_CONDITION(sep != NULL, "Invalid ADLB handle %s", str_handle);
 
   int prefix_len = (int)(sep - str_handle);
 
   adlb_data_code dc;
-  dc = ADLB_Int64_parse(str_handle, prefix_len, id);
+  dc = ADLB_Int64_parse(str_handle, (size_t)prefix_len, id);
   TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Expected first element "
         "in handle to be valid ADLB ID: %s", str_handle);
 
@@ -4377,10 +4343,10 @@ int
 ADLB_Extract_Handle_ID(Tcl_Interp *interp, Tcl_Obj *const objv[],
         Tcl_Obj *obj, adlb_datum_id *id)
 {
-  Tcl_Obj **subscript_list;
-  int subscript_list_len;
-  return ADLB_Extract_Handle(interp, objv, obj, id, &subscript_list,
-                             &subscript_list_len);
+  const char *subscript;
+  int subscript_len;
+  return ADLB_Extract_Handle(interp, objv, obj, id, &subscript,
+                             &subscript_len);
 }
 
 
@@ -4398,16 +4364,12 @@ ADLB_Parse_Subscript(Tcl_Interp *interp, Tcl_Obj *const objv[],
   }
   else
   {
-  // TODO: string-based handles, e.g
-  //        1.2.3
     assert(sub_kind == ADLB_SUB_STRUCT);
-    Tcl_Obj **subscript_list;
-    int subscript_list_len;
-    rc = Tcl_ListObjGetElements(interp, obj, &subscript_list_len,
-                                &subscript_list);
-    TCL_CHECK_MSG(rc, "Expected struct subscript to be valid list: %s",
-                  Tcl_GetString(obj));
-    if (subscript_list_len == 0)
+    int subscript_len;
+    char *subscript = Tcl_GetStringFromObj(obj, &subscript_len);
+    TCL_CONDITION(subscript != NULL, "Could not extract string for "
+                  "subscript");
+    if (subscript_len == 0)
     {
       parse->subscript = ADLB_NO_SUB;
       // Ensure buffer initialized
@@ -4418,7 +4380,7 @@ ADLB_Parse_Subscript(Tcl_Interp *interp, Tcl_Obj *const objv[],
     {
       parse->subscript_buf = tcl_adlb_scratch_buf;
 
-      rc = SUBSCRIPT_PARSE(subscript_list, subscript_list_len,
+      rc = PARSE_STRUCT_SUB(subscript, subscript_len,
                           &parse->subscript_buf, &parse->subscript);
       TCL_CHECK(rc);
     }
@@ -4434,6 +4396,7 @@ ADLB_Parse_Subscript_Cleanup(Tcl_Interp *interp, Tcl_Obj *const objv[],
   free_non_scratch(parse->subscript_buf);
   return TCL_OK;
 }
+
 /**
  * Parse a Tcl ADLB subscript into a binary ADLB subscript
  * str: string containing Tcl subscript
@@ -4445,20 +4408,15 @@ ADLB_Parse_Subscript_Cleanup(Tcl_Interp *interp, Tcl_Obj *const objv[],
  *      indicates size of buffer given by caller.
  *      Upon return, pointer will be updated if memory allocated in here.
  */
-static int ADLB_Subscript_Parse(Tcl_Interp *interp, Tcl_Obj *const objv[],
-  const char *str, int length, adlb_subscript_kind sub_kind,
-  adlb_buffer *buf, adlb_subscript *sub)
+static int ADLB_Parse_Struct_Subscript(Tcl_Interp *interp,
+  Tcl_Obj *const objv[],
+  const char *str, int length, adlb_buffer *buf, adlb_subscript *sub)
 {
   assert(length >= 0);
-  // TODO: support non-struct subscripts 
-  TCL_CONDITION(sub_kind == ADLB_SUB_STRUCT,
-        "Don't yet support non-struct subscripts");
 
-  int rc;
   adlb_data_code dc;
 
   bool using_caller_buf = buf->length > 0;
-  size_t sub_len = 0;
   /*
    * Let's assume struct subscript, which is a '.'-separated list of
    * integer indices, for now, since this is main use case.
@@ -4479,9 +4437,9 @@ static int ADLB_Subscript_Parse(Tcl_Interp *interp, Tcl_Obj *const objv[],
   return TCL_OK;
 }
 
-static int
+int
 ADLB_Parse_Handle(Tcl_Interp *interp, Tcl_Obj *const objv[],
-        Tcl_Obj *obj, tcl_adlb_handle *parse)
+        Tcl_Obj *obj, tcl_adlb_handle *parse, bool use_scratch)
 {
   int rc;
   const char *subscript;
@@ -4498,9 +4456,17 @@ ADLB_Parse_Handle(Tcl_Interp *interp, Tcl_Obj *const objv[],
   }
   else
   {
-    parse->subscript_buf = tcl_adlb_scratch_buf;
+    if (use_scratch)
+    {
+      parse->subscript_buf = tcl_adlb_scratch_buf;
+    }
+    else
+    {
+      parse->subscript_buf.data = NULL;
+      parse->subscript_buf.length = 0;
+    }
 
-    rc = SUBSCRIPT_PARSE(subscript, subscript_len,
+    rc = PARSE_STRUCT_SUB(subscript, subscript_len,
                         &parse->subscript_buf, &parse->subscript);
     TCL_CHECK(rc);
   }
@@ -4508,7 +4474,7 @@ ADLB_Parse_Handle(Tcl_Interp *interp, Tcl_Obj *const objv[],
   return TCL_OK;
 }
 
-static int
+int
 ADLB_Parse_Handle_Cleanup(Tcl_Interp *interp, Tcl_Obj *const objv[],
                           tcl_adlb_handle *parse)
 {
@@ -4755,6 +4721,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("xpt_reload", ADLB_Xpt_Reload_Cmd);
   COMMAND("dict_create", ADLB_Dict_Create_Cmd);
   COMMAND("subscript_struct", ADLB_Subscript_Struct_Cmd);
+  COMMAND("subscript_container", ADLB_Subscript_Container_Cmd);
   COMMAND("fail",      ADLB_Fail_Cmd);
   COMMAND("abort",     ADLB_Abort_Cmd);
   COMMAND("finalize",  ADLB_Finalize_Cmd);

@@ -575,14 +575,14 @@ Turbine_Cache_Check_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(2);
   turbine_datum_id td;
-  Tcl_Obj **subscripts;
-  int subscripts_len;
-  int error = ADLB_EXTRACT_HANDLE(objv[1], &td, &subscripts,
-                                  &subscripts_len);
+  const char *subscript;
+  int subscript_len;
+  int error = ADLB_EXTRACT_HANDLE(objv[1], &td, &subscript,
+                                  &subscript_len);
   TCL_CHECK(error);
 
   bool found;
-  if (subscripts_len == 0)
+  if (subscript_len == 0)
   {
     found = turbine_cache_check(td);
   }
@@ -603,14 +603,14 @@ Turbine_Cache_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(2);
   turbine_datum_id td;
-  Tcl_Obj **subscripts;
-  int subscripts_len;
-  int error = ADLB_EXTRACT_HANDLE(objv[1], &td, &subscripts,
-                                  &subscripts_len);
+  const char *subscript;
+  int subscript_len;
+  int error = ADLB_EXTRACT_HANDLE(objv[1], &td, &subscript,
+                                  &subscript_len);
   TCL_CHECK(error);
 
   // TODO: handle caching subscripts
-  TCL_CONDITION(subscripts_len == 0, "Don't handle caching subscripts");
+  TCL_CONDITION(subscript_len == 0, "Don't handle caching subscripts");
 
   turbine_type type;
   void* data;
@@ -648,11 +648,17 @@ Turbine_Cache_Store_Cmd(ClientData cdata, Tcl_Interp* interp,
   int argpos = 1;
   int error;
 
-  Tcl_Obj **subscripts;
-  int subscripts_len;
-  error = ADLB_EXTRACT_HANDLE(objv[argpos++], &td, &subscripts,
-                                  &subscripts_len);
+  const char *subscript;
+  int subscript_len;
+  error = ADLB_EXTRACT_HANDLE(objv[argpos++], &td, &subscript,
+                                  &subscript_len);
   TCL_CHECK(error);
+
+  if (subscript_len != 0)
+  {
+    // TODO: handle caching subscripts
+    return TCL_OK;
+  }
 
   adlb_data_type type;
   adlb_type_extra extra;
@@ -666,12 +672,6 @@ Turbine_Cache_Store_Cmd(ClientData cdata, Tcl_Interp* interp,
   TCL_CHECK_MSG(error, "object extraction failed: <%"PRId64">", td);
 
   TCL_CONDITION(argpos == objc, "extra trailing arguments from %i", argpos);
-
-  if (subscripts_len != 0)
-  {
-    // TODO: handle caching subscripts
-    return TCL_OK;
-  }
 
   turbine_code rc = turbine_cache_store(td, type, data, length);
   TURBINE_CHECK(rc, "cache store failed: %"PRId64"", td);
@@ -1069,42 +1069,38 @@ turbine_extract_ids(Tcl_Interp* interp, Tcl_Obj *const objv[],
   assert(code == TCL_OK);
   TCL_CONDITION(n < max, "Rule IDs exceed supported max: %i > %i",
                 n, max);
-  assert(sizeof(Tcl_WideInt) == sizeof(turbine_datum_id));
   for (int i = 0; i < n; i++)
   {
     Tcl_Obj *obj = entry[i];
-    // First try to interpret as ID
-    code = Tcl_GetWideIntFromObj(interp, obj,
-                                (Tcl_WideInt*)&ids[*id_count]);
-    if (code == TCL_OK)
+
+    // Parse, allocating memory for subscripts
+    tcl_adlb_handle handle;
+    code = ADLB_PARSE_HANDLE(obj, &handle, false);
+    TCL_CHECK_MSG(code, "Error parsing handle %s", Tcl_GetString(obj));
+    if (handle.subscript.key == NULL)
     {
-      (*id_count)++;
+      ids[(*id_count)++] = handle.id;
     }
     else
     {
-      // TODO: use Handle extraction functions from ADLB module
-      // Try to interpret as id/sub pair
-      Tcl_Obj** id_pair_list;
-      int id_pair_llen;
-      code = Tcl_ListObjGetElements(interp, obj, &id_pair_llen, &id_pair_list);
-      TCL_CONDITION(code == TCL_OK && id_pair_llen == 2, "Could not "
-              "interpret %s as id or id/subscript pair", Tcl_GetString(obj));
-      turbine_datum_id id;
-      char *subscript;
-      int subscript_strlen;
-      code = Tcl_GetWideIntFromObj(interp, id_pair_list[0],
-                                  (Tcl_WideInt*)&id);
-      TCL_CONDITION(code == TCL_OK, "Could not interpret %s as "
-            "id/subscript pair", Tcl_GetString(obj));
-      subscript = Tcl_GetStringFromObj(id_pair_list[1], &subscript_strlen);
-      size_t subscript_len = (size_t)subscript_strlen + 1;
       td_sub_pair *pair = &id_subs[(*id_sub_count)++];
-      pair->td = id;
-      pair->subscript.key = malloc(subscript_len);
-      TCL_CONDITION(pair->subscript.key != NULL,
-                    "Could not allocate memory");
-      memcpy(pair->subscript.key, subscript, subscript_len);
-      pair->subscript.length = subscript_len;
+
+      pair->td = handle.id;
+      pair->subscript.length = handle.subscript.length;
+
+      // check if key memory was allocated and owned by us
+      if (handle.subscript_buf.data == handle.subscript.key)
+      {
+        pair->subscript.key = handle.subscript_buf.data;
+      }
+      else
+      {
+        // Don't own data, alloc and copy
+        char *tmp_key = malloc(handle.subscript.length);
+        TCL_MALLOC_CHECK(tmp_key);
+        memcpy(tmp_key, handle.subscript.key, handle.subscript.length);
+        pair->subscript.key = tmp_key;
+      }
     }
   }
   return TURBINE_SUCCESS;
