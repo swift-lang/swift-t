@@ -499,6 +499,9 @@ transform_free(transform* T)
 static inline turbine_code
 subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
 {
+  turbine_condition(id != ADLB_DATA_ID_NULL, TURBINE_ERROR_INVALID,
+                    "Null ID provided to rule");
+
   // if subscript provided, use key
   size_t id_sub_keylen = id_sub_key_buflen(subscript.key, subscript.length);
   char id_sub_key[id_sub_keylen];
