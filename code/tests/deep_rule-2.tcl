@@ -21,11 +21,11 @@ proc main {  } {
     turbine::store_string ${t:3} "brown"
     turbine::array_build ${u:args} [ list ${t:2} ${t:3} ${t:4} ] 1 ref
 
-    turbine::allocate_file2 t:6 "" 1
-    turbine::allocate_file2 t:8 "" 1
-    turbine::allocate_file2 t:10 "" 1
-    turbine::allocate_file2 t:12 "" 1
-    turbine::allocate_file2 t:14 "" 1
+    turbine::allocate_file t:6 0 1
+    turbine::allocate_file t:8 0 1
+    turbine::allocate_file t:10 0 1
+    turbine::allocate_file t:12 0 1
+    turbine::allocate_file t:14 0 1
     turbine::store_string ${t:7} "jumped"
     turbine::store_string ${t:11} "the"
     turbine::store_string ${t:13} "lazy"
@@ -57,8 +57,8 @@ proc main {  } {
 proc echo { u:arg u:args echo_cmd u:done u:args2 } {
     set v:echo_cmd [ turbine::retrieve_string ${echo_cmd} CACHED 1 ]
     set v:arg [ turbine::retrieve_string ${u:arg} CACHED 1 ]
-    set tcltmp:unpacked2 [ turbine::unpack_args ${u:args} 1 0 ]
-    set tcltmp:unpacked3 [ turbine::unpack_args ${u:args2} 1 1 ]
+    set tcltmp:unpacked2 [ turbine::unpack_args ${u:args} 1 ref ]
+    set tcltmp:unpacked3 [ turbine::unpack_args ${u:args2} 1 file_ref ]
     turbine::c::log [ list exec: /usr/bin/env ${v:echo_cmd} ${v:arg} {*}${tcltmp:unpacked2} {*}${tcltmp:unpacked3} [ dict create ] ]
     turbine::exec_external "/usr/bin/env" [ dict create ] ${v:echo_cmd} ${v:arg} {*}${tcltmp:unpacked2} {*}${tcltmp:unpacked3}
     turbine::store_void ${u:done}
