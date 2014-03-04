@@ -78,6 +78,11 @@ namespace eval sudoku {
 
         set n [ llength $boardl ]
         puts stderr "${n} new boards at [ clock clicks -milliseconds ]"
+        if { $n == 0 } {
+            set tds [ list ]
+        } else {
+            set tds [ adlb::multicreate {*}[ lrepeat $n [ list s:boardinfo 1 ] ] ]
+        }
         set output [ dict create ]
 
         for { set i 0 } { $i < $n } { incr i } {
@@ -90,7 +95,11 @@ namespace eval sudoku {
             # TODO: free blob?
 
             set struct [ dict create "board" $board_blob "filledSquares" $filled ]
-            dict append output $i $struct
+            set struct_td [ lindex $tds $i ]
+
+            store_struct $struct_td $struct s:boardinfo
+
+            dict append output $i $struct_td
         }
 
         turbine::log "sudoku_step_body done => $output"
