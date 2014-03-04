@@ -1175,38 +1175,76 @@ lookup_subscript(adlb_datum_id id, const adlb_datum_storage *d,
     const adlb_datum_storage **result, adlb_data_type *result_type)
 {
   adlb_data_code dc;
-  // TODO: switch to loop to process components of subscript
-  switch(type)
+  while (true)
   {
-    case ADLB_DATA_TYPE_CONTAINER:
-      // We don't distinguish unlinked and non-existent subscript here
-      *result_type = d->CONTAINER.val_type;
-      adlb_container_val tmp_val;
-      if (container_lookup(&d->CONTAINER, subscript, &tmp_val))
-      {
-        *result = tmp_val;
-      }
-      else
-      {
-        *result = NULL;
-      }
-      break;
-    case ADLB_DATA_TYPE_STRUCT:
+    switch(type)
     {
-      check_verbose(d->STRUCT != NULL, ADLB_DATA_ERROR_INVALID, "Can't set "
-          "subscript of struct initialized without type <%"PRId64">", id);
-      dc = xlb_struct_get_subscript(d->STRUCT, subscript, result,
-                                    result_type);
-      DATA_CHECK(dc);
-      break;
-    }
-    default:
-      verbose_error(ADLB_DATA_ERROR_TYPE, "Expected <%"PRId64"> to "
-            "support subscripting, but type %s doesn't", id,
-            ADLB_Data_type_tostring(type));
-  }
+      case ADLB_DATA_TYPE_CONTAINER:
+        // Assume remainder of subscript is container key
+        *result_type = d->CONTAINER.val_type;
+        adlb_container_val tmp_val;
+        
+        // We don't distinguish unlinked and non-existent subscript here
+        if (container_lookup(&d->CONTAINER, subscript, &tmp_val))
+        {
+          *result = tmp_val;
+        }
+        else
+        {
+          *result = NULL;
+        }
+        return ADLB_DATA_SUCCESS;
+      case ADLB_DATA_TYPE_STRUCT:
+      {
+        check_verbose(d->STRUCT != NULL, ADLB_DATA_ERROR_INVALID, "Can't set "
+            "subscript of struct initialized without type <%"PRId64">", id);
 
-  return ADLB_DATA_SUCCESS;
+        // Struct subscripts are of form <integer>(.<integer>)*
+        // Locate next '.', if any
+        void *sep = memchr(subscript.key, '.', subscript.length);
+        size_t component_len;
+        if (sep == NULL)
+        {
+          component_len = subscript.length;
+        }
+        else
+        {
+          component_len = (size_t)(sep - subscript.key);
+        }
+        
+        int64_t struct_ix64;
+        dc = ADLB_Int64_parse(subscript.key, component_len, &struct_ix64);
+        DATA_CHECK(dc);
+        check_verbose(struct_ix64 >= 0 && struct_ix64 <= INT_MAX,
+            ADLB_DATA_ERROR_INVALID, "Struct index out of range: %"PRId64,
+            struct_ix64);
+
+
+        dc = xlb_struct_get_field(d->STRUCT, (int)struct_ix64, &d,
+                                      &type);
+        DATA_CHECK(dc);
+
+        if (sep == NULL)
+        {
+          *result_type = type;
+          *result = d;
+          return ADLB_DATA_SUCCESS;
+        }
+        else
+        {
+          // Another iteration
+          subscript.key += component_len;
+          subscript.length -= component_len;
+        }
+        break;
+      }
+      default:
+        verbose_error(ADLB_DATA_ERROR_TYPE, "Expected <%"PRId64"> to "
+              "support subscripting, but type %s doesn't", id,
+              ADLB_Data_type_tostring(type));
+        return ADLB_DATA_ERROR_UNKNOWN;
+    }
+  }
 }
 
 /**
