@@ -1175,7 +1175,7 @@ lookup_subscript(adlb_datum_id id, const adlb_datum_storage *d,
     const adlb_datum_storage **result, adlb_data_type *result_type)
 {
   adlb_data_code dc;
-
+  // TODO: switch to loop to process components of subscript
   switch(type)
   {
     case ADLB_DATA_TYPE_CONTAINER:

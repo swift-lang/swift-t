@@ -918,3 +918,76 @@ xlb_resize_str(char **str, size_t *curr_size, int pos, size_t needed)
   }
   return ADLB_DATA_SUCCESS;
 }
+
+/**
+ * Parse 64-bit integer. Return ADLB_SUCCESS if entire string is
+ * valid integer that fits in 64-bit signed representation
+ * If not successful return ADLB_DATA_ERROR_NUMBER_FORMAT and do not
+ * print anything.
+ */
+adlb_data_code
+ADLB_Int64_parse(const char *str, size_t length, int64_t *result)
+{
+  if (length == 0)
+  {
+    return ADLB_DATA_ERROR_INVALID;
+  }
+
+  int64_t val = 0;
+  int i = 0;
+  bool negative = false;
+  if (str[i] == '-') {
+    negative = true;
+    i++;
+    if (length == 1)
+    {
+      return ADLB_DATA_ERROR_INVALID;
+    }
+  }
+
+  int64_t limit = negative ? INT64_MIN : INT64_MAX;
+  // Limit that we can multiply by 10 without overflow
+  int64_t pre_limit = limit / 10; 
+
+  for (; i < length; i++)
+  {
+    char c = str[i];
+    int64_t digit = c - '0';
+    if (digit < 0 || digit > 9)
+    {
+      return ADLB_DATA_ERROR_INVALID;
+    }
+
+    if (negative)
+    {
+      if (val < pre_limit)
+      {
+        return ADLB_DATA_ERROR_INVALID;
+      }
+      val = 10 * val;
+      
+      if (val - limit < digit)
+      {
+        return ADLB_DATA_ERROR_INVALID;
+      }
+      val -= digit;
+    }
+    else
+    {
+      if (val > pre_limit)
+      {
+        return ADLB_DATA_ERROR_INVALID;
+      }
+      val = 10 * val;
+      if (limit - val < digit)
+      {
+        return ADLB_DATA_ERROR_INVALID;
+      }
+      val += digit;
+    }
+  }
+
+  *result = val;
+
+  return ADLB_DATA_SUCCESS;
+}

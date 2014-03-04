@@ -529,6 +529,13 @@ ADLB_Unpack_struct(adlb_struct **s, const void *data, int length,
 // Free any memory used
 adlb_data_code
 ADLB_Free_storage(adlb_datum_storage *d, adlb_data_type type);
+
+/**
+ * Parse 64-bit integer from fixed-length string
+ */
+adlb_data_code
+ADLB_Int64_parse(const char *str, size_t length, int64_t *result);
+
 /*
    Create string with human-readable representation of datum.
    Caller must free string.
