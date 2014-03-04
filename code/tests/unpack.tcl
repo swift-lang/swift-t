@@ -104,10 +104,14 @@ proc test_1D_file_ref { } {
   store_string $name2 "name2.txt"
   store_string $name3 "name3.swift"
 
-  allocate_file2 x1 $name1
-  allocate_file2 x2 $name2
-  allocate_file2 x3 $name1
-  allocate_file2 x4 $name3
+  allocate_file x1 1
+  set_filename_val $x1 [ retrieve $name1 ]
+  allocate_file x2 1
+  set_filename_val $x2 [ retrieve $name2 ]
+  allocate_file x3 1
+  set_filename_val $x3 [ retrieve $name1 ]
+  allocate_file x4 1
+  set_filename_val $x4 [ retrieve $name3 ]
 
   container_insert $C 1 $x1 file_ref
   container_insert $C 4 $x2 file_ref
