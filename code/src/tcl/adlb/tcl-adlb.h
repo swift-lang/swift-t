@@ -57,8 +57,8 @@ adlb_data_to_tcl_obj(Tcl_Interp *interp, Tcl_Obj *const objv[], adlb_datum_id id
 
 int
 ADLB_Extract_Handle(Tcl_Interp *interp, Tcl_Obj *const objv[],
-        Tcl_Obj *obj, adlb_datum_id *id, Tcl_Obj ***subscript_list,
-        int *subscript_list_len);
+        Tcl_Obj *obj, adlb_datum_id *id, const char **subscript,
+        int *subscript_len);
 
 // Extract only ID from handle, ignore rest
 int
@@ -66,8 +66,8 @@ ADLB_Extract_Handle_ID(Tcl_Interp *interp, Tcl_Obj *const objv[],
         Tcl_Obj *obj, adlb_datum_id *id);
 
 // Helper macros to pass interp, objv
-#define ADLB_EXTRACT_HANDLE(obj, id, list, len) \
-        ADLB_Extract_Handle(interp, objv, obj, id, list, len)
+#define ADLB_EXTRACT_HANDLE(obj, id, sub, len) \
+        ADLB_Extract_Handle(interp, objv, obj, id, sub, len)
 
 #define ADLB_EXTRACT_HANDLE_ID(obj, id) \
     ADLB_Extract_Handle_ID(interp, objv, obj, id)
