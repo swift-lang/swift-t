@@ -244,12 +244,13 @@ namespace eval turbine {
                               $write_refcount $permanent ]
     }
 
-    # store_struct <id> <value> <typename>
+    # store_struct <id> <value> <typename> <write decr>?
     # typename is a struct typename including struct subtype, e.g. "struct1"
     # or "name_of_struct_type"
-    proc store_struct { id value typename } {
+    # write decr is the number of write refcounts to remove: default 1
+    proc store_struct { id value typename {write_decr 1}} {
         log "store: <$id>=$value"
-        adlb::store $id $typename $value
+        adlb::store $id $typename $value $write_decr
         # TODO: only store if have all fields present?
         c::cache_store $id $typename $value
     }
