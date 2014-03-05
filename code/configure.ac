@@ -836,7 +836,6 @@ AC_ARG_ENABLE(fast,
     DISABLE_LOG=1
     CFLAGS="${CFLAGS} -O3 -DNDEBUG")
 AC_SUBST(ENABLE_FAST)
-AC_SUBST(CFLAGS)
 
 USE_XLC=0
 AC_ARG_ENABLE(xlc,
@@ -865,6 +864,9 @@ AC_ARG_ENABLE(dev,
                     Default: disabled]),
     ENABLE_DEV=1)
 AC_SUBST(ENABLE_DEV)
+
+AC_SUBST(CFLAGS)
+AC_SUBST(LDFLAGS)
 
 # We take system libraries out of arguments to the linker (#546)
 ldconfig -v 2>/dev/null | grep -vP '\t' | cut -d : -f 1 > system-libs.txt

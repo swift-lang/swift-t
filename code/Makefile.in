@@ -131,6 +131,7 @@ endif
 
 CC = @CC@
 CFLAGS := @CFLAGS@
+LDFLAGS := @LDFLAGS@
 
 # Set includes
 CFLAGS += -I . -I src/turbine -I src/tcl/turbine -I src/tcl/static-pkg/
