@@ -500,7 +500,7 @@ LD_EXEC_SYMBOL_EXPORT = -Wl,--export-dynamic
 #   Static libs must be compiled with -fPIC or -fPIE
 $(TURBINE_EXECUTABLES): %: %.o ${STATIC_LIBS} ${STATIC_PKG_RESOURCE_H} $(TCL_API_SYMBOLS_LD)
 	$(Q) "  LINK		$(@)"
-	$(E) $(CC) $(<) $(LDFLAGS) $(LD_EXEC_SYMBOL_EXPORT) \
+	$(E) $(CC) $(LDFLAGS) $(LD_EXEC_SYMBOL_EXPORT) $(<) \
 	$(shell $(MKSTATIC_RUN) "$(@).manifest" --ignore-no-manifest --link-objs) \
 	$(STATIC_LIBS) \
 	$(shell $(MKSTATIC_RUN) "$(@).manifest" --ignore-no-manifest --link-flags) \
