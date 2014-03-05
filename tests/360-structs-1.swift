@@ -11,6 +11,7 @@ type tweedledum {
 }
 
 main {
+    // UNSET-VARIABLE-EXPECTED
     // Check they can be declared/allocated
     tweedledee x;
     tweedledee y;

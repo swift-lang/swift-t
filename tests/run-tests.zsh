@@ -242,9 +242,25 @@ run_test()
       print "Transforms were left in the rule engine!"
       return 1
     fi
+    
+    set LEAK_FOUND=0
 
     # Check for leaks
     if grep -F -q "LEAK DETECTED:" ${TURBINE_OUTPUT}
+    then
+      LEAK_FOUND=1
+    fi
+
+    if grep -F -q "UNSET VARIABLE DETECTED:" ${TURBINE_OUTPUT}
+    then
+      # Some tests may expect unset variables
+      if ! grep -F -q "UNSET-VARIABLE-EXPECTED" ${SWIFT_FILE}
+      then
+        LEAK_FOUND=1
+      fi
+    fi
+
+    if  (( LEAK_FOUND ))
     then
       LEAK_TEST_COUNT=$((LEAK_TEST_COUNT + 1))
       if (( LEAK_CHECK ))
