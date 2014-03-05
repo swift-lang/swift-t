@@ -925,9 +925,14 @@ public class TurbineGenerator implements CompilerBackend {
     assert(StructType.sharedStruct((StructType)src.type().getImplType())
             .assignableTo(target.type()));
     
+    // Must decrement any refcounts not explicitly tracked since
+    // we're assigning the struct in whole
+    long writeDecr = RefCounting.baseWriteRefCount(target, false)
+                     - RefCounting.baseWriteRefCount(target, true);
+    
     TypeName structType = representationType(target.type());
     pointAdd(Turbine.structSet(varToExpr(target), argToExpr(src),
-                                structType));
+                          structType, new LiteralInt(writeDecr)));
   }
 
   @Override

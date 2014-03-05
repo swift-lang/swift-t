@@ -440,8 +440,8 @@ class Turbine {
   }
 
   public static Command structSet(Value dst, Expression src,
-                                    TypeName structType) {
-    return new Command(STORE_STRUCT, dst, src, structType);
+                  TypeName structType, Expression writeDecr) {
+    return new Command(STORE_STRUCT, dst, src, structType, writeDecr);
   }
 
   public static TclTree voidSet(Value voidVar) {
