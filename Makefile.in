@@ -102,6 +102,7 @@ dirname = $(patsubst %/,%,$(dir $(1)))
 
 CC = @CC@
 CFLAGS := @CFLAGS@
+LDFLAGS := @LDFLAGS@
 CFLAGS += -I $(srcdir) -I $(srcdir)/src -std=gnu99 -Wall
 CFLAGS += -Wconversion
 ifeq ($(ENABLE_SHARED),1)
