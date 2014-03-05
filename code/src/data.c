@@ -1957,7 +1957,8 @@ report_leaks()
     adlb_datum *d = item->data;
     if (d == NULL || !d->status.permanent)
     {
-      if (d->status.set)
+      // Distinguish between leaked data, and unassigned data
+      if (d->write_refcount == 0)
       {
         DEBUG("LEAK: %"PRId64"", item->key);
         if (report_leaks_setting)
