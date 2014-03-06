@@ -3,6 +3,7 @@
 
 (int output) func_a(int a, int b)
 {
+  // UNSET-VARIABLE-EXPECTED
   int i;
   output = 0;
 }
