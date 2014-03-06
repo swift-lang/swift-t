@@ -319,8 +319,6 @@ public class  ExprWalker {
       if (storedAsRef)  {
         // Lookup ref data into tmp alias
         result = varCreator.createTmpAlias(context, memType);
-        System.err.println("Struct " + struct.type());
-        System.err.println("Backend Struct " + backendStruct.type());
         backend.structRetrieveSub(VarRepr.backendVar(result), 
                                   backendStruct, fieldPath);
       } else if (!storedAsRef && outVar == null) {
@@ -444,7 +442,6 @@ public class  ExprWalker {
           throws UserException {
     assert(Types.isContainer(c));
     Type unpackedT = Types.unpackedContainerType(c.type());
-    //System.err.println("UNPACKED " + c.type() + " => " + unpackedT);
     Var val = varCreator.createValueVar(context, unpackedT, c, true);
     backend.retrieveRecursive(VarRepr.backendVar(val), VarRepr.backendVar(c));
     // TODO: recursively free e.g. blobs in list
