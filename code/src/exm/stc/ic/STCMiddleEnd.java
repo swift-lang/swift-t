@@ -758,6 +758,14 @@ public class STCMiddleEnd {
         DefType.LOCAL_COMPILER, VarProvenance.valueOf(src));
     waitBlock.addInstruction(TurbineOp.retrieveFile(srcVal, src));
     
+    // Assign filename if unmapped
+    Var assignFilename = waitBlock.declareUnmapped(Types.V_BOOL,
+            waitBlock.uniqueVarName(Var.OPT_VAR_PREFIX + "assignfile"),
+            Alloc.LOCAL, DefType.LOCAL_COMPILER,
+            VarProvenance.unknown());
+    waitBlock.addInstruction(Builtin.createLocal(BuiltinOpcode.NOT,
+                                    assignFilename, targetMapped));
+    
     if (compileForTargetMapped) {
       Var targetFilenameVal = waitBlock.declareUnmapped(Types.V_STRING,
           OptUtil.optVPrefix(waitBlock, targetFilename), Alloc.LOCAL,
@@ -777,13 +785,13 @@ public class STCMiddleEnd {
       
       // Set target.  Since mapped, will not set target filename
       // Provide targetMapped arg to avoid confusing optimiser
-      waitBlock.addInstruction(
-              TurbineOp.assignFile(target, targetVal.asArg(), targetMapped));
+      waitBlock.addInstruction(TurbineOp.assignFile(
+              target, targetVal.asArg(), assignFilename.asArg()));
     } else {
       // Set target.  Since unmapped, will set target filename
       // Provide targetMapped arg to avoid confusing optimiser
-      waitBlock.addInstruction(
-              TurbineOp.assignFile(target, srcVal.asArg(), targetMapped));
+      waitBlock.addInstruction(TurbineOp.assignFile(
+              target, srcVal.asArg(), assignFilename.asArg()));
     }
   }
   
