@@ -419,9 +419,9 @@ namespace eval turbine {
             # Allocate file with given filename
             # TODO: this binds lots of variable names in this scope
             #       - sorta bad
-            set f [ allocate_file "<$result>\[$i\]" ]
+            set f [ allocate_file "<$result>\[$i\]" 1 ]
             # Set filename and close file in one operation
-            set_filename_val $f $split_token 1
+            set_filename_val $f $v 1
             container_insert $result $i $f file_ref
             incr i
         }
