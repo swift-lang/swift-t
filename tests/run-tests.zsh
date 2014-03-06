@@ -431,7 +431,7 @@ do
 
   if [[ ${PATTERN} != "" ]]
   then
-    if [[ ! ${SWIFT_FILE} =~ ${PATTERN} ]]
+    if [[ ! ${TEST_NAME} =~ ${PATTERN} ]]
       then
       continue
     fi
