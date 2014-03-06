@@ -759,8 +759,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
 
   if (val_data != NULL)
   {
-    dc = ADLB_Pack(val_data, d->data.CONTAINER.val_type,
-                                      caller_buffer, result);
+    dc = ADLB_Pack(val_data, val_type, caller_buffer, result);
     DATA_CHECK(dc);
     
     // Get ownership in case internal pointer freed later
