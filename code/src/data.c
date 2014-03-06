@@ -536,6 +536,10 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
   }
   else if (closed || ADLB_RC_NOT_NULL(acquire.refcounts))
   {
+    DEBUG("Updating referand refcounts. Closed: %i, "
+          "Acquire sub: [%.*s] r: %i w: %i ", (int)closed,
+          (int)acquire.subscript.length, (const char*)acquire.subscript.key, 
+          acquire.refcounts.read_refcount, acquire.refcounts.write_refcount);
     // Have to release or acquire references
     dc = xlb_incr_referand(&d->data, d->type, false, closed,
                  acquire, &notifications->rc_changes); 
@@ -1586,7 +1590,10 @@ insert_notifications2(adlb_datum *d,
   adlb_data_code dc;
   if (ref_list != NULL)
   {
+    DEBUG("Setting references for subscript assign");
     xlb_acquire_rc referand_acquire = XLB_NO_ACQUIRE;
+    referand_acquire.subscript = subscript;
+
     dc = process_ref_list(ref_list, &notify->references, value_type,
                      value_buffer, value_len,
                      &referand_acquire.refcounts);
