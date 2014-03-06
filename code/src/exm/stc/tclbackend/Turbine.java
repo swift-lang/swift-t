@@ -28,6 +28,7 @@ import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.Location;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.StringUtil;
 import exm.stc.tclbackend.tree.Command;
 import exm.stc.tclbackend.tree.Dict;
 import exm.stc.tclbackend.tree.Expression;
@@ -925,11 +926,9 @@ class Turbine {
 
       return new LiteralInt(fieldIndex);  
     } else {
-      List<LiteralInt> exprs = new ArrayList<LiteralInt>();
-      for (int ix: fieldIndices) {
-        exprs.add(new LiteralInt(ix));
-      }
-      return new TclList(exprs);
+      // String separated by "."s
+      String subscript = StringUtil.concat('.', Arrays.asList(fieldIndices));
+      return new TclString(subscript, true);
     }
   }
 
