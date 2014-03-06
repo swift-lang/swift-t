@@ -711,19 +711,16 @@ namespace eval turbine {
         store_integer $result [ adlb::exists_sub $c $i_val 1 ]
     }
 
-    # If a reference to a struct is represented as a Turbine string
-    # future containing a serialized TCL dict, then lookup a
-    # struct member
-    proc struct_ref_lookup { structr field_id result type } {
+    # Dereference a struct reference, then copy out a struct member
+    proc structref_reference { structr subscript result type } {
         rule  "$structr" \
-            "struct_ref_lookup_body $structr $field_id $result $type" \
-            name "struct_ref_lookup-$structr-$field_id"
+            "structref_reference_body $structr $subscript $result $type" \
+            name "structref_reference-$structr-$subscript"
     }
 
-    proc struct_ref_lookup_body { structr field_id result type } {
-        set result_val [ acquire_subscript $structr $field_id $type 1 1 ]
-        debug "<${result}> <= ${result_val}"
-        adlb::store $result $type $result_val
+    proc structref_reference_body { structr subscript result type } {
+        set struct [ acquire_ref $structr 1 1 ]
+        adlb::struct_reference $struct $subscript $result $type
     }
 
     # Wait, recursively for container contents
