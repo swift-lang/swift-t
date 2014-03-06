@@ -4,6 +4,12 @@
 
 # See About.txt for notes
 
+# Test error codes
+TEST_OK=0
+TEST_TRUE_FAIL=1 # Failure in actual test
+TEST_SETUP_FAIL=2 # Failure pre-test
+TEST_LEAK_FAIL=3 # Failure due to memory leak
+
 # Defaults
 EXIT_ON_FAIL=1
 MAX_TESTS=-1 # by default, unlimited
@@ -172,8 +178,9 @@ compile_test()
   popd
 }
 
-run_test()
 # Run test under Turbine/MPI
+# Return approriate error code on failure
+run_test()
 { 
   # Run program, check and setup scripts with test directory as
   # working directory
@@ -207,15 +214,20 @@ run_test()
     if [ -f ${STC_TESTS_DIR}/${SETUP_SCRIPT} ]
     then
       print "sourcing:  $( basename ${SETUP_SCRIPT} )"
-      source ./${SETUP_SCRIPT} >& ${SETUP_OUTPUT} || return 2
+      if ! source ./${SETUP_SCRIPT} >& ${SETUP_OUTPUT}
+      then 
+        return $TEST_SETUP_FAIL
+      fi
     fi
+    
     print "running:   $( basename ${TCL_FILE} )"
+
     ${RUN_TEST} ${TCL_FILE} ${TURBINE_OUTPUT} ${ARGS} 
     CODE=${?}
-    if (( CODE != 0 )) 
+    if (( CODE != TEST_OK )) 
     then
       (( REPORT_ERRORS )) && cat ${TURBINE_OUTPUT}
-      return 1
+      return $TEST_TRUE_FAIL
     fi
 
     if [ ! -z "${TURBINE_XPT_FILE}" ]
@@ -223,27 +235,35 @@ run_test()
       print "rerunning with checkpoint: ${TURBINE_XPT_FILE}"
       export TURBINE_XPT_RELOAD="${TURBINE_XPT_FILE}"
       unset TURBINE_XPT_FILE
-      ${RUN_TEST} ${TCL_FILE} ${TURBINE_XPT_RELOAD_OUTPUT} ${ARGS} || return 1
+      ${RUN_TEST} ${TCL_FILE} ${TURBINE_XPT_RELOAD_OUTPUT} ${ARGS}
+      CODE=${?}
+      if (( CODE != TEST_OK ))
+      then
+        return $TEST_TRUE_FAIL
+      fi
+
       # Test reload from checkpoint file
     fi
   )
   EXIT_CODE=${?}
   popd
 
-  if [ $EXIT_CODE = 2 ]
+  if [ $EXIT_CODE = $TEST_SETUP_FAIL ]
   then
     echo "Setup script failed"
-    return 1
+    return $EXIT_CODE
   fi
 
   if grep -F -q "THIS-TEST-SHOULD-NOT-RUN" ${SWIFT_FILE}
   then
-    if [ $EXIT_CODE = 0 ]
+    # This test was intended to fail at run time
+    if (( EXIT_CODE == TEST_OK ))
     then
       echo "Should have failed at runtime, but succeeded"
+      EXIT_CODE=$TEST_TRUE_FAIL
+    else
+      EXIT_CODE=$TEST_OK
     fi
-    # This test was intended to fail at run time
-    EXIT_CODE=$(( ! EXIT_CODE ))
   else
     # Check for unexecuted transforms
     grep -F -q "WAITING TRANSFORMS" ${TURBINE_OUTPUT}
@@ -252,7 +272,7 @@ run_test()
     if (( WAITING_TRANSFORMS ))
       then
       print "Transforms were left in the rule engine!"
-      return 1
+      return $TEST_TRUE_FAIL
     fi
     
     set LEAK_FOUND=0
@@ -274,22 +294,25 @@ run_test()
 
     if  (( LEAK_FOUND ))
     then
-      LEAK_TEST_COUNT=$((LEAK_TEST_COUNT + 1))
       if (( LEAK_CHECK ))
         then
         print "Memory leak!"
-        return 1
+        return $TEST_LEAK_FAIL
       fi
     fi
   fi
-  (( EXIT_CODE )) && return ${EXIT_CODE}
+
+  if (( EXIT_CODE != TEST_OK ))
+  then
+    return ${EXIT_CODE}
+  fi
 
   # Check the test output with the test-specific check script
   if [ -x ${STC_TESTS_DIR}/${CHECK_SCRIPT} ]
   then
     print "executing: $( basename ${CHECK_SCRIPT} )"
     pushd $STC_TESTS_DIR
-    ./${CHECK_SCRIPT} >& ${CHECK_OUTPUT} || return 1
+    ./${CHECK_SCRIPT} >& ${CHECK_OUTPUT} || return $TEST_TRUE_FAIL
     popd
   fi
 
@@ -308,10 +331,10 @@ run_test()
       fi
     done <  ${EXP_OUTPUT}
     if [ $LINE_MISSING = true ]; then
-      return 1
+      return $TEST_TRUE_FAIL
     fi
   fi
-  return 0
+  return $TEST_OK
 }
 
 report_result()
@@ -320,17 +343,26 @@ report_result()
   local OPT_LEVEL=$2
   local EXIT_CODE=$3
 
-  if (( EXIT_CODE == 0 ))
+  if [ ${#STC_OPT_LEVELS} -eq 1 ]
+  then
+    local TEST_DESC=${TEST_PATH}
+  else
+    local TEST_DESC="${TEST_PATH}@O${OPT_LEVEL}"
+  fi
+
+  if (( EXIT_CODE == TEST_OK ))
   then
     printf "PASSED\n\n"
   else
     printf "FAILED\n\n"
-    if [ ${#STC_OPT_LEVELS} -eq 1 ]
+    FAILED_TESTS+=${TEST_DESC}
+    if (( EXIT_CODE == TEST_LEAK_FAIL ))
     then
-      FAILED_TESTS+=${TEST_PATH}
+      LEAKY_TESTS+=${TEST_DESC}
     else
-      FAILED_TESTS+="${TEST_PATH}@O${OPT_LEVEL}"
+      HARD_FAILED_TESTS+=${TEST_DESC}
     fi
+
     if (( EXIT_ON_FAIL ))
       then
       print "EXIT CODE: ${EXIT_CODE}"
@@ -351,25 +383,19 @@ report_stats_and_exit()
   fi
 
   print "tests run: ${TESTS_RUN}"
-  if [ "${FAILED_TESTS}" != "" ]; then
-      print "failed tests: ${#FAILED_TESTS} (${FAILED_TESTS})"
-  fi
-
-  if [ ${LEAK_TEST_COUNT} != 0 ]; then
-      print "leaky tests: ${LEAK_TEST_COUNT}"
-  fi
-  
-  if [ "${DISABLED_TESTS}" != "" ]; then
-      print "disabled tests: ${#DISABLED_TESTS} (${DISABLED_TESTS})"
-  fi
+  print "failed tests: ${#FAILED_TESTS} (${FAILED_TESTS})"
+  print "hard failed tests: ${#HARD_FAILED_TESTS} (${HARD_FAILED_TESTS})"
+  print "leaky tests: ${#LEAKY_TESTS} (${LEAKY_TESTS})"
+  print "disabled tests: ${#DISABLED_TESTS} (${DISABLED_TESTS})"
   exit ${EXIT_CODE}
 }
 
 TESTS_RUN=0
 SWIFT_FILES=( ${STC_TESTS_DIR}/*.swift )
 SWIFT_FILE_TOTAL=${#SWIFT_FILES}
-FAILED_TESTS=()
-LEAK_TEST_COUNT=0
+FAILED_TESTS=() # Failed for any reason
+HARD_FAILED_TESTS=() # Failed for non-leak reason
+LEAKY_TESTS=() # Failed due to leak
 DISABLED_TESTS=()
 
 # Setup signal handler for early termination
@@ -461,10 +487,10 @@ do
     then
       if (( COMPILE_ONLY ))
       then
-          EXIT_CODE=0
+          EXIT_CODE=$TEST_OK
       elif grep -F -q "COMPILE-ONLY-TEST" ${SWIFT_FILE}
       then
-          EXIT_CODE=0
+          EXIT_CODE=$TEST_OK
       else
           run_test
           EXIT_CODE=${?}
@@ -477,7 +503,7 @@ do
       then
           :
       else
-          EXIT_CODE=1
+          EXIT_CODE=$TEST_TRUE_FAIL
           printf "No warning in stc output\n"
       fi
     fi
