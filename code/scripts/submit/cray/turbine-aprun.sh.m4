@@ -50,7 +50,13 @@ ifelse(getenv(BLUE_WATERS_FEATURE), `',
 
 VERBOSE=getenv(VERBOSE)
 (( VERBOSE )) && set -x
+
+# Set variables required for turbine-config.sh
 export TURBINE_HOME=getenv(TURBINE_HOME)
+TURBINE_STATIC_EXEC=getenv(TURBINE_STATIC_EXEC)
+TCLSH=getenv(TCLSH)
+
+# Setup configuration for turbine
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 
 SCRIPT=getenv(SCRIPT)
@@ -58,7 +64,6 @@ ARGS="getenv(ARGS)"
 NODES=getenv(NODES)
 WALLTIME=getenv(WALLTIME)
 TURBINE_OUTPUT=getenv(TURBINE_OUTPUT)
-TCLSH=getenv(TCLSH)
 
 export TURBINE_USER_LIB=getenv(TURBINE_USER_LIB)
 export TURBINE_LOG=getenv(TURBINE_LOG)

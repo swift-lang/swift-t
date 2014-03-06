@@ -142,6 +142,7 @@ endif
 
 CC = @CC@
 CFLAGS := @CFLAGS@
+LDFLAGS := @LDFLAGS@
 
 # Set includes
 CFLAGS += -I . -I src/turbine -I src/tcl/turbine -I src/tcl/static-pkg/
@@ -510,7 +511,7 @@ LD_EXEC_SYMBOL_EXPORT = -Wl,--export-dynamic
 #   Static libs must be compiled with -fPIC or -fPIE
 $(TURBINE_EXECUTABLES): %: %.o ${STATIC_LIBS} ${STATIC_PKG_RESOURCE_H} $(TCL_API_SYMBOLS_LD)
 	$(Q) "  LINK		$(@)"
-	$(E) $(CC) $(<) $(LDFLAGS) $(LD_EXEC_SYMBOL_EXPORT) \
+	$(E) $(CC) $(LDFLAGS) $(LD_EXEC_SYMBOL_EXPORT) $(<) \
 	$(shell $(MKSTATIC_RUN) "$(@).manifest" --ignore-no-manifest --link-objs) \
 	$(STATIC_LIBS) \
 	$(shell $(MKSTATIC_RUN) "$(@).manifest" --ignore-no-manifest --link-flags) \
@@ -651,9 +652,16 @@ install.txt: $(ENABLED_PACKAGES) $(BINS) $(EXPORTS) $(SCRIPTS) $(TURBINE_HEADERS
 
 ### Autoconf sanity:
 
+configure: setup.sh
+	@echo
+	@echo "Configuration is not up to date (setup.sh)!"
+	@echo "Run ./setup.sh and ./configure again."
+	@echo
+	@exit 1
+
 Makefile: configure.ac
 	@echo
-	@echo "Configuration is not up to date!"
+	@echo "Configuration is not up to date (Makefile)!"
 	@echo "Run ./setup.sh and ./configure again."
 	@echo
 	@exit 1
