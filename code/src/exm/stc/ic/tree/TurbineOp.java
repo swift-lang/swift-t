@@ -1987,9 +1987,20 @@ public class TurbineOp extends Instruction {
       case STRUCTREF_STORE_SUB:
       case STRUCTREF_COPY_IN:
         return getOutputs();
+      case COPY_IN_FILENAME:
       case SET_FILENAME_VAL:
         // File's filename might be modified
-        return Collections.singletonList(getOutput(0));
+        return getOutput(0).asList();
+      case STORE_FILE: {
+        boolean setFilename = getInput(1).getBoolLit();
+        if (setFilename) {
+          // Assign whole file
+          return Var.NONE;
+        } else {
+          // Assigned filename separately
+          return getOutput(0).asList();
+        }
+      }
       default:
         return Var.NONE;
     }
