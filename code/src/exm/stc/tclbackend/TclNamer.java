@@ -18,6 +18,7 @@ package exm.stc.tclbackend;
 import java.util.ArrayList;
 import java.util.List;
 
+import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Var;
 
 public class TclNamer {
@@ -43,9 +44,23 @@ public class TclNamer {
   public static final String TCL_TMP_LOOP_COND = "t:loopcond";
   public static final String TCL_NEXTITER_PREFIX = "nextiter:";
   
+  /**
+   * Replace internal names of variables with readable ones that
+   * are also valid in Tcl 
+   * @param varname
+   * @return
+   */
   public static String prefixVar(String varname) {
-    // Replace the internal names of temporary variables with
-    // shorter ones for generated tcl code
+    String prefixed = prefixVarInternal(varname);
+    // Check that variable name is valid
+    if (prefixed.indexOf("::") >= 0) {
+      throw new STCRuntimeError("Bad Tcl variable name, " +
+                      "contains '::': '" + prefixed + "'");
+    }
+    return prefixed;
+  }
+
+  private static String prefixVarInternal(String varname) {
     if (varname.startsWith(Var.TMP_VAR_PREFIX)) {
       return TCL_TMP_VAR_PREFIX + varname.substring(
               Var.TMP_VAR_PREFIX.length());

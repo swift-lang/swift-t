@@ -449,10 +449,10 @@ public class WrapUtil {
     if (storeOutputMapping) {
       // Store filename conditional on it not being mapped already
       Var isMapped = block.declareUnmapped(Types.V_BOOL,
-          block.uniqueVarName(Var.OPT_VAR_PREFIX),
+          block.uniqueVarName(Var.OPT_VAR_PREFIX + "ismapped"),
           Alloc.LOCAL, DefType.LOCAL_COMPILER, VarProvenance.unknown());
       Var storeFilenameV = block.declareUnmapped(Types.V_BOOL,
-          block.uniqueVarName(Var.OPT_VAR_PREFIX),
+          block.uniqueVarName(Var.OPT_VAR_PREFIX + "store"),
           Alloc.LOCAL, DefType.LOCAL_COMPILER, VarProvenance.unknown());
 
       instBuffer.add(TurbineOp.isMapped(isMapped, file));
