@@ -12,6 +12,8 @@ SKIP_COUNT=0
 
 COMPILE_ONLY=0
 RUN_DISABLED=0
+# If 1, show error outputs
+REPORT_ERRORS=0
 VERBOSE=0
 STC_OPT_LEVELS=() #-O levels to test for STC
 DEFAULT_STC_OPT_LEVEL=2
@@ -24,7 +26,7 @@ if [ -z ${ADLB_EXHAUST_TIME} ]; then
     export ADLB_EXHAUST_TIME=1
 fi
 
-while getopts "cCDk:n:p:VO:t:T:alo:" OPTION
+while getopts "cCDek:n:p:VO:t:T:alo:" OPTION
 do
   case ${OPTION}
     in
@@ -40,6 +42,10 @@ do
       #Run disabled tests
       RUN_DISABLED=1
       ;;
+    e) 
+      # Show error outputs
+      REPORT_ERRORS=1
+      ;; 
     k)
       # skip some tests
       SKIP_COUNT=${OPTARG}
@@ -204,7 +210,13 @@ run_test()
       source ./${SETUP_SCRIPT} >& ${SETUP_OUTPUT} || return 2
     fi
     print "running:   $( basename ${TCL_FILE} )"
-    ${RUN_TEST} ${TCL_FILE} ${TURBINE_OUTPUT} ${ARGS} || return 1
+    ${RUN_TEST} ${TCL_FILE} ${TURBINE_OUTPUT} ${ARGS} 
+    CODE=${?}
+    if (( CODE != 0 )) 
+    then
+      (( REPORT_ERRORS )) && cat ${TURBINE_OUTPUT}
+      return 1
+    fi
 
     if [ ! -z "${TURBINE_XPT_FILE}" ]
     then
