@@ -285,6 +285,8 @@ AC_ARG_ENABLE(dev,
     ENABLE_DEV=1)
 AC_SUBST(ENABLE_DEV)
 
+AC_SUBST(CFLAGS)
+AC_SUBST(LDFLAGS)
 
 AC_CONFIG_FILES(Makefile
                 src/module.mk
