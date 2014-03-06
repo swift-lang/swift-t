@@ -275,7 +275,7 @@ run_test()
       return $TEST_TRUE_FAIL
     fi
     
-    set LEAK_FOUND=0
+    LEAK_FOUND=0
 
     # Check for leaks
     if grep -F -q "LEAK DETECTED:" ${TURBINE_OUTPUT}
