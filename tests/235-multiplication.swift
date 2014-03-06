@@ -9,7 +9,6 @@ import assert;
 {
   int t;
   int n;
-  int m;
   n = 1;
   t = s + i;
   if (j)

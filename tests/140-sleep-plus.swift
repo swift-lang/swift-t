@@ -7,6 +7,7 @@
 (int o, int u) sub_b(int a, int b, int c, int d)
 {
   int k;
+  // UNSET-VARIABLE-EXPECTED
   int m;
   k = 2;
   (o) = a + b;
