@@ -153,6 +153,8 @@ class Turbine {
   
   // Struct functions
   private static final Token STRUCT_REFERENCE = adlbFn("struct_reference");
+  private static final Token STRUCTREF_REFERENCE = 
+                                                turbFn("structref_reference");
   private static final Token STRUCT_LOOKUP = adlbFn("struct_lookup");
 
   // Rule functions
@@ -970,20 +972,15 @@ class Turbine {
    * @param arrayIndex
    * @return
    */
-  public static Command copySubscript(Value out, Value var,
+  public static Command copyStructSubscript(Value out, Value var,
           Expression subscript, TypeName fieldType) {
     return new Command(STRUCT_REFERENCE, var, subscript, out, fieldType);
   }
 
-  public static Command derefSubscriptCopy(Value struct, Expression subscript,
-          Value resultVar, TypeName refType) {
+  public static Command copyStructRefSubscript(Value out, Value var,
+          Expression subscript, TypeName fieldType) {
 
-    /*
-     * return new Command(turbFn("struct_ref_lookup"), struct, new
-     * LiteralInt(structFieldIx), resultVar, refType);
-     */
-    // TODO
-    throw new STCRuntimeError("TODO: need to edit struct_ref_lookup");
+    return new Command(STRUCTREF_REFERENCE, var, subscript, out, fieldType);
   }
 
   /**

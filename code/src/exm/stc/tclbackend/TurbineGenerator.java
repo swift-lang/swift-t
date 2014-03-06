@@ -1559,7 +1559,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isStruct(struct)) : struct;
     assert(Types.isStructField(struct, fields, output));
     Expression subscript = structSubscript(struct, fields);
-    pointAdd(Turbine.copySubscript(varToExpr(output), varToExpr(struct),
+    pointAdd(Turbine.copyStructSubscript(varToExpr(output), varToExpr(struct),
               subscript, representationType(output.type())));
   }
   
@@ -1573,9 +1573,8 @@ public class TurbineGenerator implements CompilerBackend {
     
     Expression subscript = structSubscript(structRef, fields);
     
-    pointAdd(Turbine.derefSubscriptCopy(varToExpr(structRef),
-            subscript, varToExpr(output),
-            refRepresentationType(Types.retrievedType(output))));
+    pointAdd(Turbine.copyStructRefSubscript(varToExpr(output),
+        varToExpr(structRef), subscript, representationType(output.type())));
   }
 
   @Override
