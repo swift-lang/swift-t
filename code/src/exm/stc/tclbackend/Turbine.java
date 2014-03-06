@@ -1441,9 +1441,9 @@ class Turbine {
   }
 
   public static Command fileSet(Value fileFuture, String localFile,
-                                  boolean setFilename) {
+                                  Expression setFilename) {
     return new Command(STORE_FILE, fileFuture, new Token(localFile),
-                        LiteralInt.boolValue(setFilename));
+                        setFilename);
   }
 
   public static TclTree fileGet(String prefixVar, Value varToExpr) {

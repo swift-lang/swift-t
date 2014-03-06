@@ -101,7 +101,7 @@ public class TurbineOp extends Instruction {
       gen.assignScalar(getOutput(0), getInput(0));
       break;
     case STORE_FILE:
-      gen.assignFile(getOutput(0), getInput(0), getInput(1).getBoolLit());
+      gen.assignFile(getOutput(0), getInput(0), getInput(1));
       break;
     case STORE_REF:
       gen.assignReference(getOutput(0), getInput(0).getVar());
@@ -654,20 +654,27 @@ public class TurbineOp extends Instruction {
 
   /**
    * Assign a file future from a file value
+   * 
+   * NOTE: the setFilename parameter is not strictly necessary: at runtime
+   *       we could set the filename conditionally on the file not being
+   *       mapped.  However, making it explicit simplifies correct optimisation 
    * @param dst
    * @param src
    * @param setFilename if true, set filename, if false assume already
-   *                 has filename, just close the file
+   *                 has filename, just close the file.
    * @return
    */
-  public static Instruction assignFile(Var dst, Arg src, boolean setFilename) {
+  public static Instruction assignFile(Var dst, Arg src, Arg setFilename) {
     assert(Types.isFile(dst.type()));
     assert(src.isVar());
     assert(Types.isFileVal(src.getVar()));
-    // Sanity check that we're not setting mapped file
-    assert(!setFilename || dst.isMapped() != Ternary.TRUE);
+    assert(setFilename.isImmediateBool());
+    if (setFilename.isBoolVal() && setFilename.getBoolLit()) {
+      // Sanity check that we're not setting mapped file
+      assert(dst.isMapped() != Ternary.TRUE);
+    }
     return new TurbineOp(Opcode.STORE_FILE, dst, src,
-                          Arg.createBoolLit(setFilename));
+                          setFilename);
   }
   
   /**
@@ -890,7 +897,7 @@ public class TurbineOp extends Instruction {
       return assignScalar(dst, src);
     } else if (Types.isFile(dst)) {
       // TODO: is this right to always close?
-      return assignFile(dst, src, true);
+      return assignFile(dst, src, Arg.TRUE);
     } else {
       throw new STCRuntimeError("method to set " +
           dst.type().typeName() + " is not known yet");
@@ -1050,7 +1057,17 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.GET_FILENAME_VAL, filenameVal, file.asArg());
   }
 
+  /**
+   * Set the filename of a file
+   * TODO: take additional disable variable that avoids setting if not
+   * mapped, to aid optimiser
+   * @param file
+   * @param filenameVal
+   * @return
+   */
   public static Instruction setFilenameVal(Var file, Arg filenameVal) {
+    assert(Types.isFile(file.type()));
+    assert(filenameVal.isImmediateString());
     return new TurbineOp(Opcode.SET_FILENAME_VAL, file, filenameVal);
   }
 
@@ -1058,10 +1075,16 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.COPY_FILE_CONTENTS, target, src.asArg());
   }
   
-  public static Instruction isMapped(Var isMapped, Var filename) {
+  /**
+   * Check if file is mapped
+   * @param isMapped
+   * @param file
+   * @return
+   */
+  public static Instruction isMapped(Var isMapped, Var file) {
     assert(Types.isBoolVal(isMapped));
-    assert(Types.isFile(filename));
-    return new TurbineOp(Opcode.IS_MAPPED, isMapped, filename.asArg());
+    assert(Types.isFile(file));
+    return new TurbineOp(Opcode.IS_MAPPED, isMapped, file.asArg());
   }
 
   public static Instruction chooseTmpFilename(Var filenameVal) {
@@ -1992,8 +2015,8 @@ public class TurbineOp extends Instruction {
         // File's filename might be modified
         return getOutput(0).asList();
       case STORE_FILE: {
-        boolean setFilename = getInput(1).getBoolLit();
-        if (setFilename) {
+        Arg setFilename = getInput(1);
+        if (setFilename.isBoolVal() && setFilename.getBoolLit()) {
           // Assign whole file
           return Var.NONE;
         } else {
@@ -2174,14 +2197,6 @@ public class TurbineOp extends Instruction {
           ValLoc retrieve = ValLoc.derefCompVal(src.getVar(), dst.getVar(),
                                    IsValCopy.NO, IsAssign.NO);
           return Arrays.asList(retrieve, assign);
-        } else if (op == Opcode.STORE_FILE) {
-          boolean setFilename = getInput(1).getBoolLit();
-          if (setFilename) {
-            // TODO: transfer filename from value
-            return assign.asList();
-          } else {
-            return assign.asList();
-          }
         } else {
           return assign.asList();
         }

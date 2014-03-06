@@ -305,9 +305,9 @@ public class Congruences implements AliasFinder {
   private void addInferredStoreFile(String errContext, CongruentSets congruent,
           Arg canonLoc, ArgCV cv, int stmtIndex) throws OptUnsafeError {
     Var localFile = cv.getInput(0).getVar();
-    boolean setFilename = cv.getInput(1).getBoolLit();
-    if (setFilename) {
-      // Only if the filename was set by store
+    Arg setFilename = cv.getInput(1);
+    if (setFilename.isBoolVal() && setFilename.getBoolLit()) {
+      // Only if the filename was definitely set by store
       ArgCV srcFilename = ComputedValue.localFilenameCV(localFile);
       ArgCV dstFilename = ComputedValue.filenameValCV(canonLoc.getVar());
       equateValues(errContext, congruent, stmtIndex,

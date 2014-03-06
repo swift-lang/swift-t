@@ -394,11 +394,18 @@ public class  ExprWalker {
     } else if (Types.isStruct(dst)) {
       backend.assignStruct(backendDst, backendSrc);
     } else if (Types.isFile(dst)) {
-      // 
-      backend.assignFile(backendDst, backendSrc, true);
+      // TODO: is it right to always assign filename here?
+      assignFile(dst, src, Arg.TRUE);
     } else {
       throw new STCRuntimeError("Can't assign: " + dst);
     }
+  }
+
+  public void assignFile(Var dst, Arg src, Arg setFilename) {
+    Var backendDst = VarRepr.backendVar(dst);
+    Arg backendSrc = VarRepr.backendArg(src);
+    Arg backendSetFileName = VarRepr.backendArg(setFilename);
+    backend.assignFile(backendDst, backendSrc, backendSetFileName);
   }
   
   public void retrieve(Var dst, Var src) {
@@ -481,6 +488,10 @@ public class  ExprWalker {
    */
   public void asyncOp(BuiltinOpcode op, Var out, List<Arg> inputs) {
     backend.asyncOp(op, VarRepr.backendVar(out), VarRepr.backendArgs(inputs));
+  }
+  
+  public void localOp(BuiltinOpcode op, Var out, List<Arg> inputs) {
+    backend.localOp(op, VarRepr.backendVar(out), VarRepr.backendArgs(inputs));
   }
 
   private void callOperator(Context context, SwiftAST tree, 

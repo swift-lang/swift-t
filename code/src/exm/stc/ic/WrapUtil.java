@@ -21,21 +21,22 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 
-import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.WaitVar;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
+import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.opt.OptUtil;
 import exm.stc.ic.tree.Conditionals.IfStatement;
 import exm.stc.ic.tree.ICInstructions;
+import exm.stc.ic.tree.ICInstructions.Builtin;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Statement;
@@ -426,15 +427,44 @@ public class WrapUtil {
       if (outArg.equals(outVal)) {
         // Do nothing: the variable wasn't substituted
       } else {
-        Instruction store; 
-        if (Types.isFile(outArg)) {
-          // Assign without assigning mapping
-          store = TurbineOp.assignFile(outArg, outVal.asArg(), storeOutputMapping);
-        } else {
-          store = TurbineOp.storeAny(outArg, outVal.asArg());
-        }
-        instBuffer.add(store);
+        assignOutput(block, instBuffer, storeOutputMapping, outArg, outVal);
       }
     }
+  }
+  
+  public static void assignOutput(Block block, List<Statement> instBuffer,
+      boolean storeOutputMapping, Var outArg, Var outVal) {
+    if (Types.isFile(outArg)) {
+      assignOutputFile(block, instBuffer, storeOutputMapping, outArg, outVal);
+    } else {
+      instBuffer.add(TurbineOp.storeAny(outArg, outVal.asArg()));
+    }
+  }
+  
+  public static Instruction assignOutputFile(Block block,
+      List<Statement> instBuffer, boolean storeOutputMapping,
+      Var file, Var fileVal) {
+    Instruction store;
+    // Can't be sure if output file is already mapped
+    Arg storeFilename;
+    if (storeOutputMapping) {
+      // Store filename conditional on it not being mapped already
+      Var isMapped = block.declareUnmapped(Types.V_BOOL,
+          block.uniqueVarName(Var.OPT_VAR_PREFIX),
+          Alloc.LOCAL, DefType.LOCAL_COMPILER, VarProvenance.unknown());
+      Var storeFilenameV = block.declareUnmapped(Types.V_BOOL,
+          block.uniqueVarName(Var.OPT_VAR_PREFIX),
+          Alloc.LOCAL, DefType.LOCAL_COMPILER, VarProvenance.unknown());
+
+      instBuffer.add(TurbineOp.isMapped(isMapped, file));
+      instBuffer.add(Builtin.createLocal(BuiltinOpcode.NOT,
+          storeFilenameV, isMapped.asArg()));
+      storeFilename = storeFilenameV.asArg();
+    } else {
+      // Definitely don't store
+      storeFilename = Arg.FALSE;
+    }
+    store = TurbineOp.assignFile(file, fileVal.asArg(), storeFilename);
+    return store;
   }
 }

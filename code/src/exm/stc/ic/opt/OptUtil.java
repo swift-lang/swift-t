@@ -43,7 +43,6 @@ import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.RenameMode;
 import exm.stc.ic.tree.ICTree.Statement;
-import exm.stc.ic.tree.TurbineOp;
 
 public class OptUtil {
 
@@ -134,14 +133,8 @@ public class OptUtil {
         oldOutReplacement = oldOut;
       }
 
-      Instruction storeInst;
-      if (Types.isFile(oldOutReplacement)) {
-        storeInst = TurbineOp.assignFile(oldOutReplacement, newOut.asArg(),
-                                            storeOutputMapping);
-      } else {
-        storeInst = TurbineOp.storeAny(oldOutReplacement, newOut.asArg());
-      }
-      instBuffer.add(storeInst);
+      WrapUtil.assignOutput(targetBlock, instBuffer,
+                storeOutputMapping, oldOutReplacement, newOut);
     } else {
       throw new STCRuntimeError("Tried to replace instruction"
           + " output var " + oldOut + " with " + newOut + ": this doesn't make sense"

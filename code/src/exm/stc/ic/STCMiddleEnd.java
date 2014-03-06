@@ -672,8 +672,12 @@ public class STCMiddleEnd {
     assert(Types.isBlobVal(blobVal));
     currBlock().addCleanup(blobVal, TurbineOp.freeBlob(blobVal));
   }
-
-  public void assignFile(Var target, Arg src, boolean setName) {
+  
+  public void isMapped(Var dst, Var file) {
+    currBlock().addInstruction(TurbineOp.isMapped(dst, file));
+  }
+  
+  public void assignFile(Var target, Arg src, Arg setName) {
     currBlock().addInstruction(TurbineOp.assignFile(target, src, setName));
   }
 
@@ -684,13 +688,14 @@ public class STCMiddleEnd {
   public void copyFile(Var target, Var src) {
     assert(Types.isFile(src));
     assert(Types.isFile(target));
-    // Generate different code depending on whether target is mapped
+    // Generate different code depending on whether target is mapped,
+    // and depending on whether it is known at compile-time or not
     Ternary targetMapped = target.isMapped();
     Block block = currBlock();
     if (targetMapped == Ternary.TRUE) {
-      copyFile(block, target, src, true);
+      copyFile(block, target, src, true, Arg.TRUE);
     } else if (targetMapped == Ternary.FALSE) {
-      copyFile(block, target, src, false);
+      copyFile(block, target, src, false, Arg.FALSE);
     } else {
       assert(targetMapped == Ternary.MAYBE);
       Var targetMappedV = block.declareUnmapped(Types.V_BOOL,
@@ -699,20 +704,32 @@ public class STCMiddleEnd {
       block.addInstruction(TurbineOp.isMapped(targetMappedV, target));
       IfStatement ifMapped = new IfStatement(targetMappedV.asArg());
       block.addStatement(ifMapped);
-      copyFile(ifMapped.thenBlock(), target, src, true);
-      copyFile(ifMapped.elseBlock(), target, src, false);
+      copyFile(ifMapped.thenBlock(), target, src, true, targetMappedV.asArg());
+      copyFile(ifMapped.elseBlock(), target, src, false, targetMappedV.asArg());
     }
   }
 
-  private void copyFile(Block block, Var target, Var src, boolean targetMapped) {
+  /**
+   * Generate code to copy a file
+   * @param block
+   * @param target
+   * @param src
+   * @param compileForTargetMapped whether to compile code for the target
+   *          being mapped or not 
+   * @param targetMapped runtime value of mapping
+   */
+  private void copyFile(Block block, Var target, Var src,
+        boolean compileForTargetMapped, Arg targetMapped) {
     assert(Types.isFile(target));
     assert(Types.isFile(src));
     assert(src.type().assignableTo(target.type()));
-    assert(!targetMapped || target.type().fileKind().supportsPhysicalCopy());
+    assert(!compileForTargetMapped ||
+        target.type().fileKind().supportsPhysicalCopy());
+    assert(Types.isBoolVal(targetMapped));
     
     Var targetFilename = null;
     List<WaitVar> waitVars;
-    if (targetMapped) {
+    if (compileForTargetMapped) {
       // Wait for target filename and src file
       targetFilename = block.declareUnmapped(Types.F_STRING,
           OptUtil.optFilenamePrefix(block, target),
@@ -741,7 +758,7 @@ public class STCMiddleEnd {
         DefType.LOCAL_COMPILER, VarProvenance.valueOf(src));
     waitBlock.addInstruction(TurbineOp.retrieveFile(srcVal, src));
     
-    if (targetMapped) {
+    if (compileForTargetMapped) {
       Var targetFilenameVal = waitBlock.declareUnmapped(Types.V_STRING,
           OptUtil.optVPrefix(waitBlock, targetFilename), Alloc.LOCAL,
           DefType.LOCAL_COMPILER, VarProvenance.valueOf(targetFilename));
@@ -759,12 +776,14 @@ public class STCMiddleEnd {
       waitBlock.addInstruction(TurbineOp.copyFileContents(targetVal, srcVal));
       
       // Set target.  Since mapped, will not set target filename
+      // Provide targetMapped arg to avoid confusing optimiser
       waitBlock.addInstruction(
-              TurbineOp.assignFile(target, targetVal.asArg(), false));
+              TurbineOp.assignFile(target, targetVal.asArg(), targetMapped));
     } else {
       // Set target.  Since unmapped, will set target filename
+      // Provide targetMapped arg to avoid confusing optimiser
       waitBlock.addInstruction(
-              TurbineOp.assignFile(target, srcVal.asArg(), true));
+              TurbineOp.assignFile(target, srcVal.asArg(), targetMapped));
     }
   }
   
@@ -831,6 +850,16 @@ public class STCMiddleEnd {
         throw new STCRuntimeError("Intrinsic " + intF +
                                   " unknown to middle end");
     }
+  }
+
+  /**
+   * All default task properties
+   * @param op
+   * @param out
+   * @param in
+   */
+  public void localOp(BuiltinOpcode op, Var out, List<Arg> in) {
+    currBlock().addInstruction(Builtin.createLocal(op, out, in));
   }
 
   /**
@@ -1005,8 +1034,6 @@ public class STCMiddleEnd {
   }
   
   public void setFilenameVal(Var file, Arg filenameVal) {
-    assert(Types.isFile(file.type()));
-    assert(filenameVal.isImmediateString());
     currBlock().addInstruction(
             TurbineOp.setFilenameVal(file, filenameVal));
   }

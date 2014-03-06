@@ -1874,7 +1874,14 @@ public class ASTWalker {
       Var output = outArgs.get(i);
       Var localOutput = localOutputs.get(i);
       if (Types.isFile(output.type())) {
-        exprWalker.assign(output, Arg.createVar(localOutput));
+        Var outIsMapped = varCreator.createTmpLocalVal(context, Types.V_BOOL);
+        Var setOutFilename = varCreator.createTmpLocalVal(context, Types.V_BOOL);
+        backend.isMapped(VarRepr.backendVar(outIsMapped),
+                         VarRepr.backendVar(output));
+        exprWalker.localOp(BuiltinOpcode.NOT, setOutFilename,
+                           outIsMapped.asArg().asList());
+        exprWalker.assignFile(output, Arg.createVar(localOutput),
+                              setOutFilename.asArg());
         if (output.isMapped() != Ternary.TRUE &&
             output.type().fileKind().supportsTmpImmediate()) {
           // Cleanup temporary local file if needed

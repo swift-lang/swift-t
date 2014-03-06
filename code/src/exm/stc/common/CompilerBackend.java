@@ -114,7 +114,7 @@ public interface CompilerBackend {
    * @param src dummy local variable
    * @param setFilename if true, set filename
    */
-  public void assignFile(Var target, Arg src, boolean setFilename);
+  public void assignFile(Var target, Arg src, Arg setFilename);
 
   public void retrieveFile(Var target, Var src, Arg decr);
   
