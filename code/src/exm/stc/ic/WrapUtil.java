@@ -441,10 +441,9 @@ public class WrapUtil {
     }
   }
   
-  public static Instruction assignOutputFile(Block block,
+  public static void assignOutputFile(Block block,
       List<Statement> instBuffer, boolean storeOutputMapping,
       Var file, Var fileVal) {
-    Instruction store;
     // Can't be sure if output file is already mapped
     Arg storeFilename;
     if (storeOutputMapping) {
@@ -464,7 +463,6 @@ public class WrapUtil {
       // Definitely don't store
       storeFilename = Arg.FALSE;
     }
-    store = TurbineOp.assignFile(file, fileVal.asArg(), storeFilename);
-    return store;
+    instBuffer.add(TurbineOp.assignFile(file, fileVal.asArg(), storeFilename));
   }
 }
