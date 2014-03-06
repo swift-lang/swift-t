@@ -226,7 +226,7 @@ public class TurbineOp extends Instruction {
                          Arg.extractStrings(getInputsTail(1)));
       break;
     case STRUCTREF_COPY_OUT:
-      gen.structRefLookup(getOutput(0), getInput(0).getVar(),
+      gen.structRefCopyOut(getOutput(0), getInput(0).getVar(),
                           Arg.extractStrings(getInputsTail(1)));
       break;
     case STRUCT_STORE_SUB:
@@ -572,26 +572,46 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.STRUCT_CREATE_ALIAS, oVar.asList(), in);
   }
   
-  public static Instruction structCopyOut(Var oVar, Var structVar,
+  /**
+   * Copy out value of field from a struct to a destination variable
+   * @param dst
+   * @param struct
+   * @param fields
+   * @return
+   */
+  public static Instruction structCopyOut(Var dst, Var struct,
                                           List<String> fields) {
+    assert(Types.isStruct(struct));
+    assert(Types.isStructField(struct, fields, dst));
+    
     List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
     
-    in.add(structVar.asArg());
+    in.add(struct.asArg());
     for (String field: fields) {
       in.add(Arg.createStringLit(field));
     }
-    return new TurbineOp(Opcode.STRUCT_COPY_OUT, oVar.asList(), in);
+    return new TurbineOp(Opcode.STRUCT_COPY_OUT, dst.asList(), in);
   }
 
-  public static Instruction structRefCopyOut(Var oVar, Var structVar,
+  /**
+   * Copy out value of field from a struct to a destination variable
+   * @param dst
+   * @param struct
+   * @param fields
+   * @return
+   */
+  public static Instruction structRefCopyOut(Var dst, Var struct,
                                           List<String> fields) {
+    assert(Types.isStructRef(struct));
+    assert(Types.isStructField(struct, fields, dst));
+    
     List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
 
-    in.add(structVar.asArg());
+    in.add(struct.asArg());
     for (String field: fields) {
       in.add(Arg.createStringLit(field));
     }
-    return new TurbineOp(Opcode.STRUCTREF_COPY_OUT, oVar.asList(), in);
+    return new TurbineOp(Opcode.STRUCTREF_COPY_OUT, dst.asList(), in);
   }
 
   public static Instruction structStoreSub(Var structVar,

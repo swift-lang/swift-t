@@ -238,7 +238,7 @@ public interface CompilerBackend {
   public void structCopyOut(Var output, Var struct,
       List<String> fields);
   
-  public void structRefLookup(Var result, Var structVar,
+  public void structRefCopyOut(Var result, Var structVar,
                               List<String> fields);
 
   /**

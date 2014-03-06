@@ -1556,7 +1556,7 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void structCopyOut(Var output, Var struct,
       List<String> fields) {
-    assert(Types.isStruct(struct));
+    assert(Types.isStruct(struct)) : struct;
     assert(Types.isStructField(struct, fields, output));
     Expression subscript = structSubscript(struct, fields);
     pointAdd(Turbine.copySubscript(varToExpr(output), varToExpr(struct),
@@ -1564,17 +1564,18 @@ public class TurbineGenerator implements CompilerBackend {
   }
   
   @Override
-  public void structRefLookup(Var alias, Var structRef,
+  public void structRefCopyOut(Var output, Var structRef,
                               List<String> fields) {
-    assert(Types.isRef(alias.type()));
-    assert(Types.isStructRef(structRef));
+    assert(Types.isStructRef(structRef)) : structRef;
+    assert(Types.isStructField(structRef, fields, output)) :
+      structRef.name() + ":" + structRef.type() + " " 
+      + fields + " " + output;
     
     Expression subscript = structSubscript(structRef, fields);
     
-    pointAdd(
-        Turbine.derefSubscriptCopy(varToExpr(structRef),
-            subscript, varToExpr(alias),
-            refRepresentationType(alias.type().memberType())));
+    pointAdd(Turbine.derefSubscriptCopy(varToExpr(structRef),
+            subscript, varToExpr(output),
+            refRepresentationType(Types.retrievedType(output))));
   }
 
   @Override

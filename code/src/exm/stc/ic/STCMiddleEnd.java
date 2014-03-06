@@ -928,22 +928,14 @@ public class STCMiddleEnd {
   
   public void structCopyOut(Var target, Var struct,
                             List<String> fieldPath) {
-    assert(Types.isStruct(struct));
-    assert(Types.isStructField(struct, fieldPath, target));
-    
     currBlock().addInstruction(
         TurbineOp.structCopyOut(target, struct, fieldPath));
   }
   
   public void structRefCopyOut(Var target, Var struct,
                                 List<String> fieldPath) {
-    assert(Types.isStructRef(struct));
-    assert(Types.isRef(target.type()));
-    assert(Types.isStructField(struct, fieldPath,
-                   Types.retrievedType(target)));
-    
     currBlock().addInstruction(
-        TurbineOp.structCopyOut(target, struct, fieldPath));
+        TurbineOp.structRefCopyOut(target, struct, fieldPath));
   }
 
   public void structStoreSub(Var struct, List<String> fieldPath,

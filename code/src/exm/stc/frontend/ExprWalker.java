@@ -305,7 +305,7 @@ public class  ExprWalker {
     Var result;
     Var backendStruct = VarRepr.backendVar(struct);
     if (Types.isStructRef(struct)) {
-      RefType resultType = new RefType(memType);
+      Type resultType = memType;
       if (outVar == null || !resultType.assignableTo(outVar.type())) {
         result = varCreator.createStructFieldTmp(context, 
             struct, resultType, fieldPath, Alloc.TEMP); 
