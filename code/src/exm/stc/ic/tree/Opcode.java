@@ -82,6 +82,8 @@ public enum Opcode {
   ARRAY_CREATE_BAG,
   
 
+  // Initialize struct fields
+  INIT_STRUCT_FIELDS,
   // Create alias of struct field
   STRUCT_CREATE_ALIAS,
   // Retrieve field from struct

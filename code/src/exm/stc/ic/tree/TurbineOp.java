@@ -23,6 +23,7 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.Counters;
+import exm.stc.common.util.Out;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
@@ -228,6 +229,15 @@ public class TurbineOp extends Instruction {
     case STRUCTREF_COPY_OUT:
       gen.structRefCopyOut(getOutput(0), getInput(0).getVar(),
                           Arg.extractStrings(getInputsTail(1)));
+      break;
+    case INIT_STRUCT_FIELDS: {
+      // Need to unpack variables from flat input list
+      Out<List<List<String>>> fieldPaths = new Out<List<List<String>>>();
+      Out<List<Arg>> fieldVals = new Out<List<Arg>>();
+      Arg readDecr = unpackInitStructArgs(fieldPaths, fieldVals);
+      
+      gen.initStructFields(getOutput(0), fieldPaths.val, fieldVals.val, readDecr);
+    }
       break;
     case STRUCT_STORE_SUB:
       gen.structStore(getOutput(0), Arg.extractStrings(getInputsTail(1)),
@@ -730,6 +740,66 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.STORE_BAG, dst, src);
   }
   
+  
+  /**
+   * Initialize all struct fields that need initialization,
+   * e.g. references to other data.
+   * Should be called only once on each struct that needs
+   * initialization. 
+   * @param struct
+   * @param fields
+   * @param readDecr
+   */
+  public static TurbineOp initStructFields(Var struct,
+      List<List<String>> fieldPaths, List<Arg> fieldVals, Arg readDecr) {
+    assert(Types.isStruct(struct));
+    assert(fieldPaths.size() == fieldVals.size());
+    assert(readDecr.isImmediateInt());
+    
+    List<Arg> inputs = new ArrayList<Arg>();
+    for (int i = 0; i < inputs.size(); i++) {
+      List<String> fieldPath = fieldPaths.get(i);
+      Arg fieldVal = fieldVals.get(i);
+      assert(Types.isStructFieldVal(struct, fieldPath, fieldVal));
+      // encode lists with length prefixed
+      inputs.add(Arg.createIntLit(fieldPath.size()));
+      for (String field: fieldPath) {
+        inputs.add(Arg.createStringLit(field));
+      }
+      inputs.add(fieldVal);
+    }
+    inputs.add(readDecr);
+    
+    return new TurbineOp(Opcode.INIT_STRUCT_FIELDS, struct.asList(), inputs);
+  }
+  
+  private Arg unpackInitStructArgs(Out<List<List<String>>> fieldPaths,
+                                   Out<List<Arg>> fieldVals) {
+    fieldPaths.val = new ArrayList<List<String>>();
+    fieldVals.val = new ArrayList<Arg>();
+    int pos = 0;
+    while (pos < inputs.size() - 1) {
+      long pathLength = inputs.get(pos).getIntLit();
+      assert(pathLength > 0 && pathLength <= Integer.MAX_VALUE);
+      pos++;
+      
+      List<String> fieldPath = new ArrayList<String>((int)pathLength);
+      for (int i = 0; i < pathLength; i++) {
+        fieldPath.add(inputs.get(pos).getStringLit());
+        pos++;
+      }
+      
+      Arg fieldVal = inputs.get(pos); 
+      pos++;
+      
+      fieldPaths.val.add(fieldPath);
+      fieldVals.val.add(fieldVal);
+    }
+    
+    Arg readDecr = getInput(pos);
+    return readDecr;
+  }
+
   /**
    * Store struct directly from local struct representation to shared.
    * Does not follow refs.
