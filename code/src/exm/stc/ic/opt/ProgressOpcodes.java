@@ -190,7 +190,7 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.STRUCT_RETRIEVE_SUB);
     opcodes.add(Opcode.STRUCT_CREATE_ALIAS);
     opcodes.add(Opcode.LOOP_BREAK);
-    opcodes.add(Opcode.INIT_STRUCT_FIELDS);
+    opcodes.add(Opcode.STRUCT_INIT_FIELDS);
     return opcodes;
   }
   
@@ -241,7 +241,7 @@ public class ProgressOpcodes {
     opcodes.add(Opcode.AREF_COPY_IN_IMM);
     opcodes.add(Opcode.AREF_STORE_FUTURE);
     opcodes.add(Opcode.AREF_COPY_IN_FUTURE);
-    opcodes.add(Opcode.INIT_STRUCT_FIELDS);
+    opcodes.add(Opcode.STRUCT_INIT_FIELDS);
     opcodes.add(Opcode.STRUCT_STORE_SUB);
     opcodes.add(Opcode.STRUCT_COPY_IN);
     opcodes.add(Opcode.STRUCTREF_STORE_SUB);

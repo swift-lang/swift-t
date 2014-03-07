@@ -230,13 +230,13 @@ public class TurbineOp extends Instruction {
       gen.structRefCopyOut(getOutput(0), getInput(0).getVar(),
                           Arg.extractStrings(getInputsTail(1)));
       break;
-    case INIT_STRUCT_FIELDS: {
+    case STRUCT_INIT_FIELDS: {
       // Need to unpack variables from flat input list
       Out<List<List<String>>> fieldPaths = new Out<List<List<String>>>();
       Out<List<Arg>> fieldVals = new Out<List<Arg>>();
-      Arg readDecr = unpackInitStructArgs(fieldPaths, fieldVals);
+      Arg readDecr = unpackStructInitArgs(fieldPaths, null, fieldVals);
       
-      gen.initStructFields(getOutput(0), fieldPaths.val, fieldVals.val, readDecr);
+      gen.structInitFields(getOutput(0), fieldPaths.val, fieldVals.val, readDecr);
     }
       break;
     case STRUCT_STORE_SUB:
@@ -750,7 +750,7 @@ public class TurbineOp extends Instruction {
    * @param fields
    * @param readDecr
    */
-  public static TurbineOp initStructFields(Var struct,
+  public static TurbineOp structInitFields(Var struct,
       List<List<String>> fieldPaths, List<Arg> fieldVals, Arg readDecr) {
     assert(Types.isStruct(struct));
     assert(fieldPaths.size() == fieldVals.size());
@@ -770,30 +770,69 @@ public class TurbineOp extends Instruction {
     }
     inputs.add(readDecr);
     
-    return new TurbineOp(Opcode.INIT_STRUCT_FIELDS, struct.asList(), inputs);
+    return new TurbineOp(Opcode.STRUCT_INIT_FIELDS, struct.asList(), inputs);
   }
   
-  private Arg unpackInitStructArgs(Out<List<List<String>>> fieldPaths,
+  /**
+   * 
+   * @param fieldPaths if null, not filled
+   * @param fieldPathsArgs if null, not filled
+   * @param fieldVals if null, not filled
+   * @return readDecr
+   */
+  private Arg unpackStructInitArgs(Out<List<List<String>>> fieldPaths,
+                                   Out<List<List<Arg>>> fieldPathsArgs,
                                    Out<List<Arg>> fieldVals) {
-    fieldPaths.val = new ArrayList<List<String>>();
-    fieldVals.val = new ArrayList<Arg>();
+    if (fieldPaths != null) {
+      fieldPaths.val = new ArrayList<List<String>>();
+    }
+    
+    if (fieldPathsArgs != null) {
+      fieldPathsArgs.val = new ArrayList<List<Arg>>();
+    }
+    
+    if (fieldVals != null) {
+      fieldVals.val = new ArrayList<Arg>();
+    }
+    
     int pos = 0;
     while (pos < inputs.size() - 1) {
       long pathLength = inputs.get(pos).getIntLit();
       assert(pathLength > 0 && pathLength <= Integer.MAX_VALUE);
       pos++;
       
-      List<String> fieldPath = new ArrayList<String>((int)pathLength);
+      List<String> fieldPath = (fieldPaths == null) ? null:
+                            new ArrayList<String>((int)pathLength);
+      
+      List<Arg> fieldPathArgs = (fieldPathsArgs == null) ? null:
+                            new ArrayList<Arg>((int)pathLength);
+
+      
       for (int i = 0; i < pathLength; i++) {
-        fieldPath.add(inputs.get(pos).getStringLit());
+        if (fieldPath != null) {
+          fieldPath.add(inputs.get(pos).getStringLit());
+        }
+        
+        if (fieldPathArgs != null) {
+          fieldPathArgs.add(inputs.get(pos));
+        }
         pos++;
       }
       
       Arg fieldVal = inputs.get(pos); 
       pos++;
       
-      fieldPaths.val.add(fieldPath);
-      fieldVals.val.add(fieldVal);
+      if (fieldPaths != null) {
+        fieldPaths.val.add(fieldPath);
+      }
+      
+      if (fieldPaths != null) {
+        fieldPathsArgs.val.add(fieldPathArgs);
+      }
+      
+      if (fieldVals != null) {
+        fieldVals.val.add(fieldVal);
+      }
     }
     
     Arg readDecr = getInput(pos);
@@ -1272,6 +1311,7 @@ public class TurbineOp extends Instruction {
     switch (op) {
     // The direct container write functions only mutate their output argument
     // so effect can be tracked back to output var
+    case STRUCT_INIT_FIELDS:
     case STRUCT_STORE_SUB:
     case STRUCT_COPY_IN:
     case STRUCTREF_STORE_SUB:
@@ -2013,6 +2053,12 @@ public class TurbineOp extends Instruction {
         }
       }
 
+      case STRUCT_INIT_FIELDS: {
+        // Initializes struct fields that we assume are present
+        Var struct = getOutput(0);
+        return Arrays.asList(Pair.create(struct, InitType.FULL));
+      }
+      
       case INIT_UPDATEABLE_FLOAT:
         // Initializes updateable
         return Arrays.asList(Pair.create(getOutput(0), InitType.FULL));
@@ -2170,6 +2216,7 @@ public class TurbineOp extends Instruction {
     case INIT_UPDATEABLE_FLOAT:
     case LATEST_VALUE:
     case ARR_STORE:
+    case STRUCT_INIT_FIELDS:
     case STRUCT_STORE_SUB:
     case STRUCT_RETRIEVE_SUB:
     case STRUCT_CREATE_ALIAS:
@@ -2359,6 +2406,22 @@ public class TurbineOp extends Instruction {
         List<Arg> fields = getInputsTail(1);
         return ValLoc.makeStructFieldValResult(getOutput(0).asArg(),
                                                 struct, fields).asList();
+      }
+      case STRUCT_INIT_FIELDS: {
+        List<ValLoc> results = new ArrayList<ValLoc>();
+        Out<List<List<Arg>>> fieldPaths = new Out<List<List<Arg>>>();
+        Out<List<Arg>> fieldVals = new Out<List<Arg>>();
+        unpackStructInitArgs(null, fieldPaths, fieldVals);
+
+        Var struct = getOutput(0);
+        
+        assert(fieldPaths.val.size() == fieldVals.val.size());
+        for (int i = 0; i < fieldPaths.val.size(); i++) {
+          ValLoc.makeStructFieldValResult(fieldVals.val.get(i), struct,
+                                          fieldPaths.val.get(i)).asList();
+        }
+        
+        return results;
       }
       case STRUCT_STORE_SUB: 
       case STRUCTREF_STORE_SUB: {
@@ -2703,6 +2766,27 @@ public class TurbineOp extends Instruction {
           readers = mem.getVar().asList();
         }
         return Pair.create(readers, Var.NONE);
+      }
+      case STRUCT_INIT_FIELDS: {
+        Out<List<Arg>> fieldVals = new Out<List<Arg>>();
+        unpackStructInitArgs(null, null, fieldVals);
+        
+        List<Var> readIncr = new ArrayList<Var>();
+        List<Var> writeIncr = new ArrayList<Var>();
+        for (Arg fieldVal: fieldVals.val) {
+          if (fieldVal.isVar()) {
+            // Need to acquire refcount to pass to struct
+            Var fieldVar = fieldVal.getVar();
+            if (RefCounting.trackReadRefCount(fieldVar)) {
+              readIncr.add(fieldVar);
+            }
+            if (RefCounting.trackWriteRefCount(fieldVar)) {
+              writeIncr.add(fieldVar);
+            }
+          }
+        }
+        
+        return Pair.create(readIncr, writeIncr);
       }
       case STRUCT_STORE_SUB:
       case STRUCT_COPY_IN:

@@ -64,7 +64,8 @@ public class RefCounting {
   }
 
   public static boolean mayHaveWriteRefcount(Type type) {
-    // Struct members may have write refcount 
+    // Struct members may have write refcount
+    // TODO: struct of e.g. all integers shouldn't have write refcount tracked
     return Types.isArray(type) || Types.isPrimUpdateable(type) ||
            Types.isStruct(type) || Types.isBag(type);
   }

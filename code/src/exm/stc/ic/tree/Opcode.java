@@ -83,7 +83,7 @@ public enum Opcode {
   
 
   // Initialize struct fields
-  INIT_STRUCT_FIELDS,
+  STRUCT_INIT_FIELDS,
   // Create alias of struct field
   STRUCT_CREATE_ALIAS,
   // Retrieve field from struct

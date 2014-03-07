@@ -923,6 +923,18 @@ public class TurbineGenerator implements CompilerBackend {
   }
   
   @Override
+  public void structInitFields(Var struct, List<List<String>> fieldPaths,
+      List<Arg> fieldVals, Arg readDecr) {
+    /*
+     * TODO:
+     * Implement by storing a local struct with missing fields.
+     * ADLB/Turbine semantics allow us to do this: only the required
+     * fields will be overwritten.
+     */
+    throw new STCRuntimeError("TODO");
+  }
+  
+  @Override
   public void assignStruct(Var target, Arg src) {
     assert(Types.isStruct(target));
     assert(Types.isStructLocal(src.type()));

@@ -811,11 +811,10 @@ public class STCMiddleEnd {
     currBlock().addInstruction(TurbineOp.retrieveBag(target, src));
   }
   
-  public void initStructFields(Var struct, List<List<String>> fieldNames,
-        List<Arg> fieldVals, Arg readDecr)
-  {
+  public void structInitFields(Var struct, List<List<String>> fieldNames,
+        List<Arg> fieldVals, Arg readDecr) {
     currBlock().addInstruction(
-        TurbineOp.initStructFields(struct, fieldNames, fieldVals, readDecr));
+        TurbineOp.structInitFields(struct, fieldNames, fieldVals, readDecr));
   }
   
   public void assignStruct(Var target, Arg src) {
