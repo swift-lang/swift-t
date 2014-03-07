@@ -923,6 +923,11 @@ class Turbine {
    */
   public static Expression structSubscript(int fieldIndices[]) {
     assert(fieldIndices.length >= 1);
+    for (int i = 0; i < fieldIndices.length; i++)
+    {
+      assert(fieldIndices[i] > 0) : fieldIndices;
+    }
+    
     if (fieldIndices.length == 1) {
       int fieldIndex = fieldIndices[0];
 
@@ -943,11 +948,11 @@ class Turbine {
    * @return
    */
   public static Expression structAlias(Value var, int fieldIndices[]) {
-    // TODO: way to encode fact that indices are struct
     List<Expression> args = new ArrayList<Expression>(
                                       fieldIndices.length + 1);
     args.add(var);
     for (int field : fieldIndices) {
+      assert(field >= 0) : var + " " + Arrays.asList(fieldIndices);
       args.add(new LiteralInt(field));
     }
     return Square.fnCall(MAKE_STRUCT_SUBSCRIPT, args);

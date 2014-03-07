@@ -1514,7 +1514,10 @@ public class TurbineGenerator implements CompilerBackend {
       assert(type instanceof StructType);
       String field = fields.get(i);
       int fieldIx = ((StructType)type).getFieldIndexByName(field);
+      assert(fieldIx >= 0) : field + " " + type;
       indices[i] = fieldIx;
+      // Get inner type
+      type = ((StructType)type).getFields().get(fieldIx).getType();
     }
     return indices;
   }
