@@ -31,6 +31,8 @@
 #include "checks.h"
 #include "messaging.h"
 
+#include <table_lp.h>
+
 /** If ADLB_CLIENT_NOTIFIES is true, client is responsible for
     notifying others of closing, otherwise the server does it */
 #ifndef ADLB_CLIENT_NOTIFIES
@@ -83,7 +85,8 @@ typedef struct {
 
 /** List of refcount changes */
 typedef struct {
-  // TODO: use table_lp to index changes to allow merging
+  // Index changes by ID to allow merging
+  table_lp index;
   xlb_rc_change *arr;
   int count;
   int size;
@@ -256,18 +259,73 @@ static inline adlb_code xlb_rc_changes_expand(xlb_rc_changes *c,
       }
     }
     void *new_arr = realloc(c->arr, (size_t)new_size * sizeof(c->arr[0]));
-    
     CHECK_MSG(new_arr != NULL, "Could not alloc array");
+
+    // Init index, use 1.0 load factor so realloced at same pace as array
+    if (!table_lp_init_custom(&c->index, new_size, 1.0))
+    {
+      ERR_PRINTF("Could not alloc table");
+      free(new_arr);
+      return ADLB_ERROR;
+    }
+
     c->arr = new_arr;
     c->size = new_size;
     return ADLB_SUCCESS;
   }
 }
 
+static inline adlb_code xlb_rc_changes_add(xlb_rc_changes *c,
+    adlb_datum_id id, int read_change, int write_change,
+    bool must_preacquire)
+{
+  xlb_rc_change *change;
+  adlb_code ac;
+
+  // Ensure index initialized
+  if (c->count > 0 &&
+      table_lp_search(&c->index, id, (void**)&change))
+  {
+    assert(change->id == id);
+    change->rc.read_refcount += read_change;
+    change->rc.write_refcount += write_change;
+    // Check to see if we still need to preacquire
+    change->must_preacquire =
+      (change->must_preacquire || must_preacquire) &&
+      (change->rc.read_refcount > 0 || change->rc.write_refcount > 0);
+    // NOTE, this might bring both refcounts to zero.  We handle this
+    // later, when processing local refcounts
+  }
+  else
+  {
+    // New ID, add to array
+    ac = xlb_rc_changes_expand(c, 1);
+    ADLB_CHECK(ac);
+
+    change = &c->arr[c->count++];
+    change->id = id;
+    change->rc.read_refcount = read_change;
+    change->rc.write_refcount = write_change;
+    // If we don't own a ref, must acquire one before doing anything
+    // that would cause referand to be freed
+    change->must_preacquire = must_preacquire;
+
+    bool added = table_lp_add(&c->index, id, change);
+    CHECK_MSG(added, "Could not add to refcount index table");
+
+    DEBUG("Add change: <%"PRId64"> r: %i w: %i pa: %i", change->id,
+            change->rc.read_refcount, change->rc.write_refcount, 
+            (int)change->must_preacquire);
+  }
+
+  return ADLB_SUCCESS;
+}
+
 static inline void xlb_rc_changes_free(xlb_rc_changes *c)
 {
   if (c->arr != NULL) {
     free(c->arr);
+    table_lp_free_callback(&c->index, false, NULL);
   }
   c->arr = NULL;
   c->count = 0;

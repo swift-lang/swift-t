@@ -355,7 +355,12 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
   {
     bool applied = false;
     xlb_rc_change *change = &c->arr[i];
-    if (apply_all || (apply_preacquire && change->must_preacquire))
+    if (ADLB_RC_IS_NULL(change->rc))
+    {
+      // Don't need to apply null refcounts
+      applied = true;
+    }
+    else if (apply_all || (apply_preacquire && change->must_preacquire))
     {
       // Apply reference count operation
       if (xlb_am_server)
@@ -729,13 +734,21 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
       r = &notify->notify.notifs[notify->notify.count + i];
       r->rank = tmp[i].rank;
       r->id = tmp[i].id;
-      assert(tmp[i].subscript_data >= 0 &&
-             tmp[i].subscript_data < extra_data_count);
-      adlb_binary_data *data = &extra_data_ptrs[tmp[i].subscript_data];
-      assert(data->data != NULL);
-      assert(data->length >= 0);
-      r->subscript.key = data->data;
-      r->subscript.length = (size_t)data->length;
+      if (tmp[i].subscript_data == -1)
+      {
+        // No subscript
+        r->subscript = ADLB_NO_SUB;
+      }
+      else
+      {
+        assert(tmp[i].subscript_data >= 0 &&
+               tmp[i].subscript_data < extra_data_count);
+        adlb_binary_data *data = &extra_data_ptrs[tmp[i].subscript_data];
+        assert(data->data != NULL);
+        assert(data->length >= 0);
+        r->subscript.key = data->data;
+        r->subscript.length = (size_t)data->length;
+    }
     }
     notify->notify.count += added_count;
     free(tmp);
@@ -780,6 +793,8 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
          counts->rc_change_count * (int)sizeof(notify->rc_changes.arr[0]),
          MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE);
     notify->rc_changes.count += counts->rc_change_count;
+
+    // TODO: rebuild index
   }
 
   if (extra_data != NULL && extra_data != xfer)

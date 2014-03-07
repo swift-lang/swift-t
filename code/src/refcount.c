@@ -213,20 +213,11 @@ xlb_update_rc_id(adlb_datum_id id, int *read_rc, int *write_rc,
   if (read_remainder != 0 || write_remainder != 0)
   {
     // Need to apply further changes
-    ac = xlb_rc_changes_expand(changes, 1);
-    DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
-
-    xlb_rc_change *change = &changes->arr[changes->count++];
-    change->id = id;
-    change->rc.read_refcount = read_remainder;
-    change->rc.write_refcount = write_remainder;
-    // If we don't own a ref, must acquire one before doing anything
-    // that would cause referand to be freed
-    change->must_preacquire = (read_remainder > 0 && read_acquired == 0) ||
+    bool must_preacquire = (read_remainder > 0 && read_acquired == 0) ||
                               (write_remainder > 0 && write_acquired == 0);
-    DEBUG("Add change: <%"PRId64"> r: %i w: %i pa: %i", change->id,
-            change->rc.read_refcount, change->rc.write_refcount, 
-            (int)change->must_preacquire);
+    ac = xlb_rc_changes_add(changes, id, read_remainder, write_remainder,
+                            must_preacquire);
+    DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
   }
   return ADLB_DATA_SUCCESS;
 }
