@@ -15,12 +15,16 @@
  */
 package exm.stc.frontend;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
@@ -99,7 +103,7 @@ public class VarCreator {
       throws UndefinedTypeException, DoubleDefineException {
     backendInit(v);
     if (Types.isStruct(v)) {
-      initialiseStruct(v);
+      initialiseStruct(context, v);
     }
   }
 
@@ -113,17 +117,60 @@ public class VarCreator {
     backend.declare(VarRepr.backendVar(var));
   }
 
-  private void initialiseStruct(Var struct) {
+  private void initialiseStruct(Context context, Var struct)
+      throws UndefinedTypeException, DoubleDefineException {
     StructType structType = (StructType)struct.type().getImplType();
+    
+    List<List<String>> fieldPaths = new ArrayList<List<String>>();
+    List<Arg> fieldVals = new ArrayList<Arg>();
+
+    Deque<String> currFieldPath = new ArrayDeque<String>();
+    int initFieldCount = initialiseStructRec(context, struct, currFieldPath,
+        structType, fieldPaths, fieldVals);
+    backend.structInitFields(struct, fieldPaths, fieldVals,
+                              Arg.createIntLit(initFieldCount));
+  }
+
+  /**
+   * 
+   * @param rootStruct
+   * @param currFieldPath path from root to here
+   * @param structType type of current path
+   * @param fieldPaths Field paths - added to
+   * @param fieldVals Field values - added to
+   * @return number of fields initialised
+   * @throws DoubleDefineException 
+   * @throws UndefinedTypeException 
+   */
+  private int initialiseStructRec(Context context,
+      Var rootStruct, Deque<String> currFieldPath, StructType structType,
+      List<List<String>> fieldPaths, List<Arg> fieldVals)
+          throws UndefinedTypeException, DoubleDefineException {
+    int initFieldCount = 0;
+    
     for (StructField field: structType.getFields()) {
+      currFieldPath.push(field.getName());
+      
       Type fieldT = field.getType();
       if (VarRepr.storeRefInStruct(fieldT)) {
-        // TODO: initialize data being referenced and put into struct
-        throw new STCRuntimeError("Need to implement initialisation" +
-           " for struct type " + struct.type() + " because of field " +
-           field.getName() + " " + field.getType());
+        ArrayList<String> fieldPath = new ArrayList<String>(currFieldPath);
+        // initialize data being referenced and put into struct
+        Var fieldVar = createStructFieldTmp(context, rootStruct, fieldT,
+                                              fieldPath, Alloc.TEMP);
+        
+        fieldPaths.add(fieldPath);
+        fieldVals.add(VarRepr.backendVar(fieldVar).asArg());
+        
+        initFieldCount++;
+      } else if (Types.isStruct(fieldT)) {
+        initFieldCount += initialiseStructRec(context, rootStruct,
+            currFieldPath, (StructType)fieldT.getImplType(),
+            fieldPaths, fieldVals);
       }
+      
+      currFieldPath.pop();
     }
+    return initFieldCount;
   }
 
   /**
@@ -196,17 +243,17 @@ public class VarCreator {
   
   public Var createStructFieldAlias(Context context, Var rootStruct, 
       Type memType, List<String> fieldPath)
-          throws UndefinedTypeException {
+          throws UndefinedTypeException, DoubleDefineException {
     return createStructFieldTmp(context, rootStruct, memType, fieldPath,
             Alloc.ALIAS);
   }
   
   public Var createStructFieldTmp(Context context, Var rootStruct, 
                   Type memType, List<String> fieldPath,
-                  Alloc storage) throws UndefinedTypeException {
+                  Alloc storage) throws UndefinedTypeException, DoubleDefineException {
     Var tmp = context.createStructFieldTmp(rootStruct, memType,
           fieldPath, storage);
-    backendInit(tmp);
+    initialiseVariable(context, tmp);
     return tmp;
   }
 

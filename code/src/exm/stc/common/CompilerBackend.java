@@ -127,7 +127,7 @@ public interface CompilerBackend {
   public void retrieveBag(Var target, Var src, Arg decr);
   
   public void structInitFields(Var struct, List<List<String>> fieldPaths,
-                               List<Arg> fieldVals, Arg readDecr);
+                               List<Arg> fieldVals, Arg writeDecr);
   
   public void assignStruct(Var target, Arg src);
 

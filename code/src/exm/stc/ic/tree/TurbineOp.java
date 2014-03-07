@@ -234,9 +234,9 @@ public class TurbineOp extends Instruction {
       // Need to unpack variables from flat input list
       Out<List<List<String>>> fieldPaths = new Out<List<List<String>>>();
       Out<List<Arg>> fieldVals = new Out<List<Arg>>();
-      Arg readDecr = unpackStructInitArgs(fieldPaths, null, fieldVals);
+      Arg writeDecr = unpackStructInitArgs(fieldPaths, null, fieldVals);
       
-      gen.structInitFields(getOutput(0), fieldPaths.val, fieldVals.val, readDecr);
+      gen.structInitFields(getOutput(0), fieldPaths.val, fieldVals.val, writeDecr);
     }
       break;
     case STRUCT_STORE_SUB:
@@ -748,13 +748,13 @@ public class TurbineOp extends Instruction {
    * initialization. 
    * @param struct
    * @param fields
-   * @param readDecr
+   * @param writeDecr
    */
   public static TurbineOp structInitFields(Var struct,
-      List<List<String>> fieldPaths, List<Arg> fieldVals, Arg readDecr) {
+      List<List<String>> fieldPaths, List<Arg> fieldVals, Arg writeDecr) {
     assert(Types.isStruct(struct));
     assert(fieldPaths.size() == fieldVals.size());
-    assert(readDecr.isImmediateInt());
+    assert(writeDecr.isImmediateInt());
     
     List<Arg> inputs = new ArrayList<Arg>();
     for (int i = 0; i < inputs.size(); i++) {
@@ -768,7 +768,7 @@ public class TurbineOp extends Instruction {
       }
       inputs.add(fieldVal);
     }
-    inputs.add(readDecr);
+    inputs.add(writeDecr);
     
     return new TurbineOp(Opcode.STRUCT_INIT_FIELDS, struct.asList(), inputs);
   }
@@ -778,7 +778,7 @@ public class TurbineOp extends Instruction {
    * @param fieldPaths if null, not filled
    * @param fieldPathsArgs if null, not filled
    * @param fieldVals if null, not filled
-   * @return readDecr
+   * @return writeDecr
    */
   private Arg unpackStructInitArgs(Out<List<List<String>>> fieldPaths,
                                    Out<List<List<Arg>>> fieldPathsArgs,
@@ -835,8 +835,8 @@ public class TurbineOp extends Instruction {
       }
     }
     
-    Arg readDecr = getInput(pos);
-    return readDecr;
+    Arg writeDecr = getInput(pos);
+    return writeDecr;
   }
 
   /**

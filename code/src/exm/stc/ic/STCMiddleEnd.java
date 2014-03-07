@@ -812,9 +812,9 @@ public class STCMiddleEnd {
   }
   
   public void structInitFields(Var struct, List<List<String>> fieldNames,
-        List<Arg> fieldVals, Arg readDecr) {
+        List<Arg> fieldVals, Arg writeDecr) {
     currBlock().addInstruction(
-        TurbineOp.structInitFields(struct, fieldNames, fieldVals, readDecr));
+        TurbineOp.structInitFields(struct, fieldNames, fieldVals, writeDecr));
   }
   
   public void assignStruct(Var target, Arg src) {

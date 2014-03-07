@@ -924,7 +924,7 @@ public class TurbineGenerator implements CompilerBackend {
   
   @Override
   public void structInitFields(Var struct, List<List<String>> fieldPaths,
-      List<Arg> fieldVals, Arg readDecr) {
+      List<Arg> fieldVals, Arg writeDecr) {
     /*
      * TODO:
      * Implement by storing a local struct with missing fields.
