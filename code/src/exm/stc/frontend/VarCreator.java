@@ -128,8 +128,8 @@ public class VarCreator {
     int initFieldCount = initialiseStructRec(context, struct, currFieldPath,
         structType, fieldPaths, fieldVals);
     if (initFieldCount > 0) {
-      backend.structInitFields(struct, fieldPaths, fieldVals,
-                              Arg.createIntLit(initFieldCount));
+      backend.structInitFields(VarRepr.backendVar(struct), fieldPaths,
+          VarRepr.backendArgs(fieldVals), Arg.createIntLit(initFieldCount));
     }
   }
 

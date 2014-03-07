@@ -761,7 +761,8 @@ public class TurbineOp extends Instruction {
       List<String> fieldPath = fieldPaths.get(i);
       Arg fieldVal = fieldVals.get(i);
       assert(Types.isStructFieldVal(struct, fieldPath, fieldVal))
-            : struct + " " + fieldPath + " " + fieldVal.getVar();
+            : struct + " " + fieldPath + " " + fieldVal.getVar() + "\n"
+              + struct.type();
       // encode lists with length prefixed
       inputs.add(Arg.createIntLit(fieldPath.size()));
       for (String field: fieldPath) {
@@ -827,7 +828,7 @@ public class TurbineOp extends Instruction {
         fieldPaths.val.add(fieldPath);
       }
       
-      if (fieldPaths != null) {
+      if (fieldPathsArgs != null) {
         fieldPathsArgs.val.add(fieldPathArgs);
       }
       

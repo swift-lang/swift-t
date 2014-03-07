@@ -155,7 +155,7 @@ class Turbine {
   private static final Token STRUCT_REFERENCE = adlbFn("struct_reference");
   private static final Token STRUCTREF_REFERENCE = 
                                                 turbFn("structref_reference");
-  private static final Token STRUCT_LOOKUP = adlbFn("struct_lookup");
+  private static final Token LOOKUP_STRUCT = adlbFn("lookup_struct");
 
   // Rule functions
   private static final Token SPAWN_RULE = turbFn("spawn_rule");
@@ -962,7 +962,7 @@ class Turbine {
    */
   public static Expression lookupStruct(Value var,
             Expression subscript, Expression decrRead) {
-    return Square.fnCall(STRUCT_LOOKUP, var, subscript, decrRead);
+    return Square.fnCall(LOOKUP_STRUCT, var, subscript, decrRead);
   }
 
   /**
