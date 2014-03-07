@@ -294,14 +294,26 @@ public class LValWalker {
     }
     final int structPathLen = structPathIndex;
 
-    Var fieldAlias = varCreator.createStructFieldAlias(context, rootVar,
-              lval.getType(context, structPathLen), fieldPath);
-    backend.structCreateAlias(VarRepr.backendVar(fieldAlias),
-                      VarRepr.backendVar(rootVar), fieldPath);
+
+    Type fieldType = lval.getType(context, structPathLen);
+
+    Var field = varCreator.createStructFieldAlias(context, rootVar,
+                                          fieldType, fieldPath);
+
+    if (VarRepr.storeRefInStruct(fieldType)) {
+      // Lookup ref stored in struct
+      backend.structRetrieveSub(VarRepr.backendVar(field),
+                  VarRepr.backendVar(rootVar), fieldPath);
+    } else {
+      // Create an alias to data stored in struct
+      backend.structCreateAlias(VarRepr.backendVar(field),
+                  VarRepr.backendVar(rootVar), fieldPath);
+
+    }
     
     List<SwiftAST> indicesLeft =
           lval.indices.subList(structPathLen, lval.indices.size());
-      LValue newTarget = new LValue(lval, lval.tree, fieldAlias, indicesLeft);
+      LValue newTarget = new LValue(lval, lval.tree, field, indicesLeft);
       
     LogHelper.trace(context, "Transform target " + lval.toString() + "<"
         + lval.getType(context).toString() + "> to " + newTarget.toString()

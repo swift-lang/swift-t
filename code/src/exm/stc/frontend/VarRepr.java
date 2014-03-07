@@ -269,6 +269,14 @@ public class VarRepr {
   }
   
 
+  public static Type elemRepr(Type memberType, CompoundType c) {
+    if (storeRefInCompound(memberType, c)) {
+      return new RefType(memberType);
+    } else {
+      return memberType;
+    }
+  }
+  
   /**
    * The type of internal storage used for a Swift type when stored in a
    * container.
@@ -278,10 +286,17 @@ public class VarRepr {
    * @return
    */
   public static Type containerElemRepr(Type memberType) {
-    if (storeRefInContainer(memberType)) {
-      return new RefType(memberType);
-    } else {
-      return memberType;
-    }
+    return elemRepr(memberType, CompoundType.CONTAINER);
+  }
+  
+  /**
+   * The type of internal storage used for a Swift type when stored in a
+   * struct.
+   *
+   * @param memberType the type of struct member
+   * @return
+   */
+  public static Type structElemRepr(Type memberType) {
+    return elemRepr(memberType, CompoundType.STRUCT);
   }
 }
