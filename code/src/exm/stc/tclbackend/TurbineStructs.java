@@ -5,11 +5,16 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
+import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
+import exm.stc.tclbackend.tree.Dict;
+import exm.stc.tclbackend.tree.Expression;
 
 /**
  * Module to track different struct types we're using in generated code
@@ -59,4 +64,50 @@ public class TurbineStructs {
     throw new STCRuntimeError("Field not found in type: " + structField +
                               " " + structType); 
   }
+  
+  /**
+   * Convert a flat representation of nested dict into the appropriate
+   * Tcl dictionary expression
+   * @param fields
+   * @return
+   */
+  public static Dict buildNestedDict(List<Pair<List<String>, Arg>> fields) {
+    // Map of prefix => (rest of path, val)
+    MultiMap<String, Pair<List<String>, Arg>> grouped =
+            new MultiMap<String, Pair<List<String>,Arg>>();
+    
+    // Group together common prefixes (i.e. structs inside structs)
+    for (Pair<List<String>, Arg> field: fields) {
+      List<String> fieldPath = field.val1;
+      assert(fieldPath.size() > 0);
+      Arg fieldVal = field.val2;
+      
+      List<String> pathTail = fieldPath.subList(1, fieldPath.size());
+      grouped.put(fieldPath.get(0), Pair.create(pathTail, fieldVal));
+    }
+    
+    List<Pair<String, Expression>> dictPairs =
+            new ArrayList<Pair<String, Expression>>();
+    
+    for (Entry<String, List<Pair<List<String>, Arg>>> e: grouped.entrySet()) {
+      String field = e.getKey();
+      Expression fieldExpr;
+      
+      List<Pair<List<String>, Arg>> vals = e.getValue();
+      if (vals.size() == 1 && vals.get(0).val1.isEmpty()) {
+        // This is a single field value
+        Arg fieldVal = vals.get(0).val2;
+        fieldExpr = TclUtil.argToExpr(fieldVal);
+      } else {
+        // Build sub-dictionary
+        fieldExpr = buildNestedDict(vals);
+      }
+
+      dictPairs.add(Pair.create(field, fieldExpr));
+    }
+    
+    // Don't bother checking for dupes, we have eliminated them already
+    return Dict.dictCreateSE(false, dictPairs);
+  }
+
 }

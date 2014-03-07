@@ -926,12 +926,34 @@ public class TurbineGenerator implements CompilerBackend {
   public void structInitFields(Var struct, List<List<String>> fieldPaths,
       List<Arg> fieldVals, Arg writeDecr) {
     /*
-     * TODO:
      * Implement by storing a local struct with missing fields.
      * ADLB/Turbine semantics allow us to do this: only the required
      * fields will be overwritten.
      */
-    throw new STCRuntimeError("TODO");
+    // TODO: assertions
+    assert(Types.isStruct(struct));
+    assert(fieldPaths.size() == fieldVals.size());
+    assert(writeDecr.isImmediateInt());
+    
+
+    // Restructure into pairs
+    List<Pair<List<String>, Arg>> fields =
+              new ArrayList<Pair<List<String>,Arg>>(fieldPaths.size());
+    for (int i = 0; i < fieldPaths.size(); i++) {
+      List<String> fieldPath = fieldPaths.get(i);
+      Arg fieldVal = fieldVals.get(i);
+      assert(Types.isStructFieldVal(struct, fieldPath, fieldVal));
+      fields.add(Pair.create(fieldPath, fieldVal));
+    }
+    
+    // Build dict containing only fields to initialise
+    Dict dict = TurbineStructs.buildNestedDict(fields);
+    
+    List<TypeName> structTypeName = Collections.singletonList(
+            representationType(struct.type()));
+    Turbine.adlbStore(varToExpr(struct),
+            dict, structTypeName, argToExpr(writeDecr), null);
+   
   }
   
   @Override

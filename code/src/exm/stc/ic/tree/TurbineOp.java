@@ -757,10 +757,11 @@ public class TurbineOp extends Instruction {
     assert(writeDecr.isImmediateInt());
     
     List<Arg> inputs = new ArrayList<Arg>();
-    for (int i = 0; i < inputs.size(); i++) {
+    for (int i = 0; i < fieldPaths.size(); i++) {
       List<String> fieldPath = fieldPaths.get(i);
       Arg fieldVal = fieldVals.get(i);
-      assert(Types.isStructFieldVal(struct, fieldPath, fieldVal));
+      assert(Types.isStructFieldVal(struct, fieldPath, fieldVal))
+            : struct + " " + fieldPath + " " + fieldVal.getVar();
       // encode lists with length prefixed
       inputs.add(Arg.createIntLit(fieldPath.size()));
       for (String field: fieldPath) {
