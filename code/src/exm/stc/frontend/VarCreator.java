@@ -127,8 +127,10 @@ public class VarCreator {
     Deque<String> currFieldPath = new ArrayDeque<String>();
     int initFieldCount = initialiseStructRec(context, struct, currFieldPath,
         structType, fieldPaths, fieldVals);
-    backend.structInitFields(struct, fieldPaths, fieldVals,
+    if (initFieldCount > 0) {
+      backend.structInitFields(struct, fieldPaths, fieldVals,
                               Arg.createIntLit(initFieldCount));
+    }
   }
 
   /**
