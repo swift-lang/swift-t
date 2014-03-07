@@ -83,6 +83,7 @@ typedef struct {
 
 /** List of refcount changes */
 typedef struct {
+  // TODO: use table_lp to index changes to allow merging
   xlb_rc_change *arr;
   int count;
   int size;
