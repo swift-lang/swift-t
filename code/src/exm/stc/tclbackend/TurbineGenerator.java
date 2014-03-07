@@ -951,9 +951,8 @@ public class TurbineGenerator implements CompilerBackend {
     
     List<TypeName> structTypeName = Collections.singletonList(
             representationType(struct.type()));
-    Turbine.adlbStore(varToExpr(struct),
-            dict, structTypeName, argToExpr(writeDecr), null);
-   
+    pointAdd(Turbine.adlbStore(varToExpr(struct),
+            dict, structTypeName, argToExpr(writeDecr), null));
   }
   
   @Override
