@@ -74,14 +74,6 @@
 #define USE_ADLB
 #endif
 
-/**
-  Different ways of interpreting subscripts
- */
-typedef enum {
-  ADLB_SUB_CONTAINER, // Tcl string representation
-  ADLB_SUB_STRUCT,    // Integer index, encoded as space-separated list
-} adlb_subscript_kind;
-
 /** The communicator to use in our ADLB instance */
 MPI_Comm adlb_comm;
 
@@ -257,26 +249,19 @@ tcl_obj_bin_append2(Tcl_Interp *interp, Tcl_Obj *const objv[],
         adlb_buffer *output, bool *output_caller_buf,
         int *output_pos);
 
-static int
-ADLB_Parse_Subscript(Tcl_Interp *interp, Tcl_Obj *const objv[],
-  Tcl_Obj *obj, adlb_subscript_kind sub_kind, tcl_adlb_sub_parse *parse);
-
-static int
-ADLB_Parse_Subscript_Cleanup(Tcl_Interp *interp, Tcl_Obj *const objv[],
-                             tcl_adlb_sub_parse *parse);
-
-#define ADLB_PARSE_SUB(obj, sub_kind, parse) \
-    ADLB_Parse_Subscript(interp, objv, obj, sub_kind, parse)
-#define ADLB_PARSE_SUB_CLEANUP(parse) \
-    ADLB_Parse_Subscript_Cleanup(interp, objv, parse)
-
 static int ADLB_Parse_Struct_Subscript(Tcl_Interp *interp,
   Tcl_Obj *const objv[],
   const char *str, int length,
-  adlb_buffer *buf, adlb_subscript *sub);
+  adlb_buffer *buf, adlb_subscript *sub,
+  bool *using_caller_buf, bool append);
 
-#define PARSE_STRUCT_SUB(str, len, buf, sub) \
-    ADLB_Parse_Struct_Subscript(interp, objv, str, len, buf, sub)
+#define PARSE_STRUCT_SUB(str, len, buf, sub, using_caller_buf, append) \
+    ADLB_Parse_Struct_Subscript(interp, objv, str, len, buf, sub, \
+                                using_caller_buf, append)
+
+static int append_subscript(Tcl_Interp *interp,
+      Tcl_Obj *const objv[], adlb_subscript *sub, adlb_subscript to_append,
+      adlb_buffer *buf);
 
 static int field_name_objs_init(Tcl_Interp *interp, Tcl_Obj *const objv[]);
 static int field_name_objs_add(Tcl_Interp *interp, Tcl_Obj *const objv[],
@@ -312,7 +297,7 @@ ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
 
 static int
 ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
-                  int objc, Tcl_Obj *const objv[], bool has_subscript);
+          int objc, Tcl_Obj *const objv[], adlb_subscript_kind sub_kind);
 /**
    usage: adlb::init <servers> <types> [<comm>]?
    Simplified use of ADLB_Init type_vect: just give adlb_init
@@ -1231,24 +1216,25 @@ ADLB_Multicreate_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 static int
 ADLB_Exists_Impl(ClientData cdata, Tcl_Interp *interp,
-                int objc, Tcl_Obj *const objv[], bool has_subscript)
+                int objc, Tcl_Obj *const objv[],
+                adlb_subscript_kind sub_kind)
 {
-  int min_args = has_subscript ? 3 : 2;
+  int min_args = sub_kind == ADLB_SUB_NONE ? 2 : 3;
   TCL_CONDITION(objc >= min_args,
                 "requires at least %i arguments", min_args);
-  int argpos = 1;
-
-  adlb_datum_id id;
-  bool b;
   int rc;
-  rc = Tcl_GetADLB_ID(interp, objv[argpos++], &id);
-  TCL_CHECK_MSG(rc, "requires a data ID");
 
-  adlb_subscript subscript = ADLB_NO_SUB;
-  if (has_subscript)
+  tcl_adlb_handle handle;
+  rc = ADLB_PARSE_HANDLE(objv[1], &handle, true);
+  TCL_CHECK_MSG(rc, "Invalid handle %s", Tcl_GetString(objv[1]));
+
+  int argpos = 2;
+  if (sub_kind != ADLB_SUB_NONE)
   {
-    rc = Tcl_GetADLB_Subscript(objv[argpos++], &subscript);
-    TCL_CHECK_MSG(rc, "Invalid subscript argument");
+    rc = ADLB_PARSE_SUB(objv[2], sub_kind, &handle.sub, true, true);
+    TCL_CHECK_MSG(rc, "Invalid subscript argument %s",
+                      Tcl_GetString(objv[2]));
+    argpos = 3;
   }
 
   adlb_refcounts decr = ADLB_NO_RC;
@@ -1269,16 +1255,20 @@ ADLB_Exists_Impl(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(argpos == objc,
                 "unexpected trailing args at %ith arg", argpos);
 
-  rc = ADLB_Exists(id, subscript, &b, decr);
-  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", id);
+  bool b;
+  rc = ADLB_Exists(handle.id, handle.sub.val, &b, decr);
+  
+  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", handle.id);
 
-  if (has_subscript)
+  if (sub_kind != ADLB_SUB_NONE)
     // TODO: support binary subscript
     DEBUG_ADLB("adlb::exists <%"PRId64">[%.*s] => %s", id,
                 (int)subscript.length, (const char*)subscript.key,
                 bool2string(b));
   else
     DEBUG_ADLB("adlb::exists <%"PRId64"> => %s", id, bool2string(b));
+
+  ADLB_PARSE_HANDLE_CLEANUP(&handle);
 
   Tcl_Obj* result = Tcl_NewBooleanObj(b);
   Tcl_SetObjResult(interp, result);
@@ -1292,7 +1282,7 @@ static int
 ADLB_Exists_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
 {
-  return ADLB_Exists_Impl(cdata, interp, objc, objv, false);
+  return ADLB_Exists_Impl(cdata, interp, objc, objv, ADLB_SUB_NONE);
 }
 
 /**
@@ -1302,7 +1292,7 @@ static int
 ADLB_Exists_Sub_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
 {
-  return ADLB_Exists_Impl(cdata, interp, objc, objv, true);
+  return ADLB_Exists_Impl(cdata, interp, objc, objv, ADLB_SUB_CONTAINER);
 }
 
 /*
@@ -2122,7 +2112,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
           "extra trailing arguments starting at argument %i", argpos);
 
   // DEBUG_ADLB("adlb::store: <%"PRId64">=%s", id, data);
-  int store_rc = ADLB_Store(handle.id, handle.subscript, type,
+  int store_rc = ADLB_Store(handle.id, handle.sub.val, type,
                   data.data, data.length, decr);
   
   // Free if needed
@@ -2203,7 +2193,7 @@ ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
   int length;
   adlb_retrieve_rc refcounts = ADLB_RETRIEVE_NO_RC;
   refcounts.decr_self.read_refcount = decr_amount;
-  int ret_rc = ADLB_Retrieve(handle.id, handle.subscript, refcounts,
+  int ret_rc = ADLB_Retrieve(handle.id, handle.sub.val, refcounts,
                      &type, xfer, &length);
 
   rc = ADLB_PARSE_HANDLE_CLEANUP(&handle);
@@ -2316,7 +2306,7 @@ static int
 ADLB_Acquire_Ref_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
-  return ADLB_Acquire_Ref_Impl(cdata, interp, objc, objv, false);
+  return ADLB_Acquire_Ref_Impl(cdata, interp, objc, objv, ADLB_SUB_NONE);
 }
 
 /**
@@ -2329,25 +2319,28 @@ static int
 ADLB_Acquire_Sub_Ref_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
-  return ADLB_Acquire_Ref_Impl(cdata, interp, objc, objv, true);
+  return ADLB_Acquire_Ref_Impl(cdata, interp, objc, objv, ADLB_SUB_CONTAINER);
 }
 
 static int
 ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
-                  int objc, Tcl_Obj *const objv[], bool has_subscript)
+          int objc, Tcl_Obj *const objv[], adlb_subscript_kind sub_kind)
 {
-  TCL_ARGS(has_subscript ? 6 : 5);
-  int argpos = 1;
+  TCL_ARGS(sub_kind == ADLB_SUB_NONE ? 5 : 6);
   int rc;
-  adlb_datum_id id;
-  rc = Tcl_GetADLB_ID(interp, objv[argpos++], &id);
-  TCL_CHECK_MSG(rc, "requires id!");
+  
+  tcl_adlb_handle handle;
+  rc = ADLB_PARSE_HANDLE(objv[1], &handle, true);
+  TCL_CHECK_MSG(rc, "Invalid handle %s", Tcl_GetString(objv[1]));
+  
+  int argpos = 2;
 
-  adlb_subscript subscript = ADLB_NO_SUB;
-  if (has_subscript)
+  if (sub_kind != ADLB_SUB_NONE)
   {
-    rc = Tcl_GetADLB_Subscript(objv[argpos++], &subscript);
-    TCL_CHECK_MSG(rc, "Invalid subscript argument");
+    rc = ADLB_PARSE_SUB(objv[2], sub_kind, &handle.sub, true, true);
+    TCL_CHECK_MSG(rc, "Invalid subscript argument %s",
+                      Tcl_GetString(objv[2]));
+    argpos = 3;
   }
 
   adlb_data_type expected_type;
@@ -2369,9 +2362,11 @@ ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
   // Retrieve the data, actual type, and length from server
   adlb_data_type type;
   int length;
-  rc = ADLB_Retrieve(id, subscript, refcounts, &type, xfer, &length);
-  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", id);
-  TCL_CONDITION(length >= 0, "<%"PRId64"> not found!", id);
+  rc = ADLB_Retrieve(handle.id, handle.sub.val, refcounts, &type, xfer, &length);
+  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", handle.id);
+  TCL_CONDITION(length >= 0, "<%"PRId64"> not found!", handle.id);
+
+  ADLB_PARSE_HANDLE_CLEANUP(&handle);
 
   // Type check
   if (expected_type != type)
@@ -2382,7 +2377,7 @@ ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
 
   // Unpack from xfer to Tcl object
   Tcl_Obj* result;
-  rc = adlb_data_to_tcl_obj(interp, objv, id, type, extra,
+  rc = adlb_data_to_tcl_obj(interp, objv, handle.id, type, extra,
                             xfer, length, &result);
   TCL_CHECK(rc);
 
@@ -2707,7 +2702,7 @@ ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
   // Retrieve the blob data
   adlb_data_type type;
   int length;
-  int ret_rc = ADLB_Retrieve(handle.id, handle.subscript, refcounts,
+  int ret_rc = ADLB_Retrieve(handle.id, handle.sub.val, refcounts,
                              &type, xfer, &length);
 
   rc = ADLB_PARSE_HANDLE_CLEANUP(&handle);
@@ -2727,7 +2722,7 @@ ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
   memcpy(blob, xfer, (size_t)length);
 
   DEBUG_ADLB("ADD TO CACHE: {%s}\n", Tcl_GetString(handle_obj));
-  rc = cache_blob(interp, objc, objv, handle.id, handle.subscript, blob);
+  rc = cache_blob(interp, objc, objv, handle.id, handle.sub.val, blob);
   TCL_CHECK(rc);
 
   // printf("retrieved blob: [ %p %i ]\n", blob, length);
@@ -2872,17 +2867,17 @@ ADLB_Blob_Free_Cmd(ClientData cdata, Tcl_Interp *interp,
   bool found;
   DEBUG_ADLB("LOOKUP IN CACHE: {%s}\n", Tcl_GetString(objv[1]));
   rc = uncache_blob(interp, objc, objv, handle.id,
-                    handle.subscript, &found);
+                    handle.sub.val, &found);
   TCL_CHECK(rc);
   
   rc = ADLB_PARSE_HANDLE_CLEANUP(&handle);
   TCL_CHECK(rc);
 
-  if (adlb_has_sub(handle.subscript))
+  if (adlb_has_sub(handle.sub.val))
   {
     TCL_CONDITION(found, "blob not cached: <%"PRId64">[%.*s]",
-        handle.id, (int)handle.subscript.length,
-        (const char*)handle.subscript.key);
+        handle.id, (int)handle.sub.val.length,
+        (const char*)handle.sub.val.key);
   }
   else
   {
@@ -2926,7 +2921,7 @@ ADLB_Local_Blob_Free_Cmd(ClientData cdata, Tcl_Interp *interp,
     
     bool cached;
     rc = uncache_blob(interp, objc, objv, handle.id, 
-                      handle.subscript, &cached);
+                      handle.sub.val, &cached);
     TCL_CHECK(rc);
 
     if (!cached && blob.value != NULL)
@@ -3103,30 +3098,27 @@ ADLB_Blob_To_String_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
-/**
-   usage: adlb::insert <id> <subscript> <member> <type> [<extra for type>]
-                       [<write refcount decr>] [<read refcount decr>]
-*/
+
 static int
-ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
-                int objc, Tcl_Obj *const objv[])
+ADLB_Insert_Impl(ClientData cdata, Tcl_Interp *interp,
+      int objc, Tcl_Obj *const objv[], adlb_subscript_kind sub_kind)
 {
   TCL_CONDITION((objc >= 4),
                 "requires at least 4 args!");
-
   int rc;
-  adlb_datum_id id;
-  int argpos = 1;
-  rc = Tcl_GetADLB_ID(interp, objv[argpos++], &id);
-  TCL_CHECK(rc);
 
-  // TODO: need to get handle, then append subscript to handle
-  //       e.g. array inside struct
+  tcl_adlb_handle handle;
+  rc = ADLB_PARSE_HANDLE(objv[1], &handle, true);
+  TCL_CHECK_MSG(rc, "Invalid handle %s", Tcl_GetString(objv[1]));
 
-  adlb_subscript subscript;
-  rc = Tcl_GetADLB_Subscript(objv[argpos++], &subscript);
-  TCL_CHECK_MSG(rc, "Invalid subscript argument");
+  rc = ADLB_PARSE_SUB(objv[2], sub_kind, &handle.sub, true, true);
+  TCL_CHECK_MSG(rc, "Invalid subscript argument %s",
+                    Tcl_GetString(objv[2]));
 
+  // Check for no subscript
+  TCL_CONDITION(adlb_has_sub(handle.sub.val), "No subscript");
+
+  int argpos = 3;
   Tcl_Obj *member_obj = objv[argpos++];
 
   adlb_data_type type;
@@ -3141,12 +3133,12 @@ ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   // TODO: support binary subscript
   TCL_CHECK_MSG(rc, "adlb::insert <%"PRId64">[%.*s] failed, could not "
-        "extract data!", id, (int)subscript.length,
-        (const char*)subscript.key);
+        "extract data!", handle.id, (int)handle.sub.val.length,
+        (const char*)handle.sub.val.key);
 
   // TODO: support binary subscript
   DEBUG_ADLB("adlb::insert <%"PRId64">[\"%.*s\"]=<%s>",
-               id, (int)subscript.length, (const char*)subscript.key,
+               handle.id, (int)handle.sub.val.length, (const char*)handle.sub.val.key,
                Tcl_GetStringFromObj(member_obj, NULL));
 
   adlb_refcounts decr = ADLB_NO_RC;
@@ -3165,15 +3157,39 @@ ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(argpos == objc, "trailing arguments after %i not consumed",
                                 argpos);
 
-  rc = ADLB_Store(id, subscript, type, member.data, member.length, decr);
+  rc = ADLB_Store(handle.id, handle.sub.val, type, member.data, member.length, decr);
 
   // Free if needed
   if (member.data != xfer_buf.data)
     ADLB_Free_binary_data(&member);
+  
+  ADLB_PARSE_HANDLE_CLEANUP(&handle);
 
   // TODO: support binary subscript
-  CHECK_ADLB_STORE_SUB(rc, id, subscript);
+  CHECK_ADLB_STORE_SUB(rc, handle.id, handle.sub.val);
   return TCL_OK;
+}
+
+/**
+   usage: adlb::insert <id> <subscript> <member> <type> [<extra for type>]
+                       [<write refcount decr>] [<read refcount decr>]
+*/
+static int
+ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  return ADLB_Insert_Impl(cdata, interp, objc, objv, ADLB_SUB_CONTAINER);
+}
+
+/**
+   usage: adlb::insert_struct <id> <subscript> <member> <type> [<extra for type>]
+                       [<write refcount decr>] [<read refcount decr>]
+*/
+static int
+ADLB_Insert_Struct_Cmd(ClientData cdata, Tcl_Interp *interp,
+                       int objc, Tcl_Obj *const objv[])
+{
+  return ADLB_Insert_Impl(cdata, interp, objc, objv, ADLB_SUB_STRUCT);
 }
 
 /**
@@ -3188,16 +3204,17 @@ ADLB_Insert_Atomic_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_CONDITION(objc >= 3, "Requires at least 3 args");
   int rc;
-  int argpos = 1;
-
   bool b;
-  adlb_datum_id id;
-  rc = Tcl_GetADLB_ID(interp, objv[argpos++], &id);
-  TCL_CHECK(rc);
 
-  adlb_subscript subscript;
-  rc = Tcl_GetADLB_Subscript(objv[argpos++], &subscript);
-  TCL_CHECK_MSG(rc, "Invalid subscript argument");
+  tcl_adlb_handle handle;
+  rc = ADLB_PARSE_HANDLE(objv[1], &handle, true);
+  TCL_CHECK_MSG(rc, "Invalid handle %s", Tcl_GetString(objv[1]));
+
+  rc = ADLB_PARSE_SUB(objv[2], ADLB_SUB_CONTAINER, &handle.sub, true, true);
+  TCL_CHECK_MSG(rc, "Invalid subscript argument %s",
+                    Tcl_GetString(objv[2]));
+  
+  int argpos = 3;
 
   // Increments/decrements for outer and inner containers
   // (default no extras)
@@ -3233,12 +3250,16 @@ ADLB_Insert_Atomic_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   // TODO: support binary subscript
   DEBUG_ADLB("adlb::insert_atomic: <%"PRId64">[\"%.*s\"]",
-             id, (int)subscript.length, (const char*)subscript.key);
-  rc = ADLB_Insert_atomic(id, subscript, refcounts, &b, NULL, NULL, NULL);
+             handle.id, (int)handle.sub.val.length,
+             (const char*)handle.sub.val.key);
+  rc = ADLB_Insert_atomic(handle.id, handle.sub.val, refcounts, &b,
+                          NULL, NULL, NULL);
+  
+  ADLB_PARSE_HANDLE_CLEANUP(&handle);
 
   TCL_CONDITION(rc == ADLB_SUCCESS,
-                "adlb::insert_atomic: failed: <%"PRId64">[%.*s]",
-                id, (int)subscript.length, (const char*)subscript.key);
+        "adlb::insert_atomic: failed: <%"PRId64">[%.*s]", handle.id,
+        (int)handle.sub.val.length, (const char*)handle.sub.val.key);
 
   Tcl_Obj* result = Tcl_NewBooleanObj(b);
   Tcl_SetObjResult(interp, result);
@@ -3252,25 +3273,23 @@ ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
 {
   TCL_CONDITION(objc >= 3, "adlb::lookup at least 2 arguments!");
 
-  adlb_datum_id id;
-  int argpos = 1;
   int rc;
-  rc = Tcl_GetADLB_ID(interp, objv[argpos++], &id);
-  TCL_CHECK_MSG(rc, "adlb::lookup could not parse given id!");
-
-  // TODO: support ADLB handle as well as ID, then append with
-  //       subscript arg
   
-  tcl_adlb_sub_parse parse;
-  rc = ADLB_PARSE_SUB(objv[argpos++], sub_kind, &parse);
-  TCL_CHECK_MSG(rc, "Invalid subscript argument");
+  tcl_adlb_handle handle;
+  rc = ADLB_PARSE_HANDLE(objv[1], &handle, true);
+  TCL_CHECK_MSG(rc, "Invalid handle %s", Tcl_GetString(objv[1]));
+
+  rc = ADLB_PARSE_SUB(objv[2], sub_kind, &handle.sub, true, true);
+  TCL_CHECK_MSG(rc, "Invalid subscript argument %s",
+                    Tcl_GetString(objv[2]));
   // Check for no subscript
-  TCL_CONDITION(parse.subscript.length > 0, "Invalid subscript argument");
+  TCL_CONDITION(adlb_has_sub(handle.sub.val), "No subscript");
  
   // TODO: support binary subscript
   DEBUG_ADLB("adlb::lookup <%"PRId64">[\"%.*s\"]",
-               id, (int)subscript.length, (const char*)subscript.key);
+               id, (int)handle.sub.val.length, (const char*)handle.sub.val.key);
 
+  int argpos = 3;
   adlb_data_type type;
   int len;
 
@@ -3309,32 +3328,33 @@ ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
 
   do {
     // TODO: support binary subscript
-    rc = ADLB_Retrieve(id, parse.subscript, refcounts, &type,
+    rc = ADLB_Retrieve(handle.id, handle.sub.val, refcounts, &type,
                       xfer, &len);
     if (rc != ADLB_SUCCESS) // Check outside loop
       break;
   } while (spin && rc == ADLB_SUCCESS && len < 0);
   
-  ADLB_PARSE_SUB_CLEANUP(&parse);
+  ADLB_PARSE_HANDLE_CLEANUP(&handle);
   
   TCL_CONDITION(rc == ADLB_SUCCESS, "lookup failed for: <%"PRId64">[%.*s]",
-                  id, (int)parse.subscript.length,
-                  (const char*)parse.subscript.key);
+                  handle.id, (int)handle.sub.val.length,
+                  (const char*)handle.sub.val.key);
 
   // TODO: support binary subscript
   TCL_CONDITION(len >= 0, "adlb::lookup <%"PRId64">[\"%.*s\"] not found",
-                id, (int)parse.subscript.length,
-                (const char*)parse.subscript.key);
+                handle.id, (int)handle.sub.val.length,
+                (const char*)handle.sub.val.key);
   assert(type != ADLB_DATA_TYPE_NULL);
 
   Tcl_Obj* result = NULL;
-  rc = adlb_data_to_tcl_obj(interp, objv, id, type,
+  rc = adlb_data_to_tcl_obj(interp, objv, handle.id, type,
                     ADLB_TYPE_EXTRA_NULL, xfer, len, &result);
   TCL_CHECK(rc);
 
-  DEBUG_ADLB("adlb::lookup <%"PRId64">[\"%.*s\"]=<%s>", id,
-        (int)parse.subscript.length, (const char*)parse.subscript.key,
-         Tcl_GetStringFromObj(result, NULL));
+  DEBUG_ADLB("adlb::lookup <%"PRId64">[\"%.*s\"]=<%s>", handle.id,
+        (int)handle.sub.subscript.length,
+        (const char*)handle.sub.subscript.key,
+        Tcl_GetStringFromObj(result, NULL));
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
@@ -3557,16 +3577,15 @@ ADLB_Reference_Impl(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(5);
 
-  adlb_datum_id id;
   int rc;
-  rc = Tcl_GetADLB_ID(interp, objv[1], &id);
-  TCL_CHECK_MSG(rc, "argument 1 is not a 64-bit integer!");
+  tcl_adlb_handle handle;
+  rc = ADLB_PARSE_HANDLE(objv[1], &handle, true);
+  TCL_CHECK_MSG(rc, "Invalid handle %s", Tcl_GetString(objv[1]));
 
-  tcl_adlb_sub_parse parse;
-  rc = ADLB_PARSE_SUB(objv[2], sub_kind, &parse);
-  TCL_CHECK_MSG(rc, "Invalid subscript argument");
+  rc = ADLB_PARSE_SUB(objv[2], sub_kind, &handle.sub, true, true);
+  TCL_CHECK_MSG(rc, "Invalid subscript %s", Tcl_GetString(objv[2]));
   // Check for no subscript
-  TCL_CONDITION(parse.subscript.length > 0, "Invalid subscript argument");
+  TCL_CONDITION(adlb_has_sub(handle.sub.val), "Invalid subscript argument");
 
   adlb_datum_id reference;
   rc = Tcl_GetADLB_ID(interp, objv[3], &reference);
@@ -3581,9 +3600,11 @@ ADLB_Reference_Impl(ClientData cdata, Tcl_Interp *interp,
 
   // DEBUG_ADLB("adlb::container_reference: <%"PRId64">[%s] => <%"PRId64">\n",
   //            id, subscript, reference);
-  rc = ADLB_Container_reference(id, parse.subscript, reference, ref_type);
-  ADLB_PARSE_SUB_CLEANUP(&parse);
-  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", id);
+  rc = ADLB_Container_reference(handle.id, handle.sub.val, reference, ref_type);
+  
+  ADLB_PARSE_HANDLE_CLEANUP(&handle);
+
+  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", handle.id);
   return TCL_OK;
 }
 
@@ -4299,7 +4320,6 @@ ADLB_Dict_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
  * - 1234.123.424.53 (id + struct indices - . separated)
  *    => id=1234 subscript="123.424.53" (not counting null terminator)
  * TODO: support array subscripts
- * TODO: implement this)
  */
 int
 ADLB_Extract_Handle(Tcl_Interp *interp, Tcl_Obj *const objv[],
@@ -4350,17 +4370,31 @@ ADLB_Extract_Handle_ID(Tcl_Interp *interp, Tcl_Obj *const objv[],
 }
 
 
-static int
+int
 ADLB_Parse_Subscript(Tcl_Interp *interp, Tcl_Obj *const objv[],
-  Tcl_Obj *obj, adlb_subscript_kind sub_kind, tcl_adlb_sub_parse *parse)
+  Tcl_Obj *obj, adlb_subscript_kind sub_kind, tcl_adlb_sub_parse *parse,
+  bool append, bool use_scratch)
 {
   int rc;
   if (sub_kind == ADLB_SUB_CONTAINER)
   {
-    rc = Tcl_GetADLB_Subscript(obj, &parse->subscript);
-    TCL_CHECK(rc);
-    parse->subscript_buf.data = NULL;
-    parse->subscript_buf.length = 0;
+    if (!append || parse->val.length == 0)
+    {
+      rc = Tcl_GetADLB_Subscript(obj, &parse->val);
+      TCL_CHECK(rc);
+      parse->buf.data = NULL;
+      parse->buf.length = 0;
+    }
+    else
+    {
+      adlb_subscript tmp_sub;
+      rc = Tcl_GetADLB_Subscript(obj, &tmp_sub);
+      TCL_CHECK(rc);
+
+      rc = append_subscript(interp, objv, &parse->val, tmp_sub,
+                            &parse->buf);
+      TCL_CHECK(rc);
+    }
   }
   else
   {
@@ -4371,29 +4405,79 @@ ADLB_Parse_Subscript(Tcl_Interp *interp, Tcl_Obj *const objv[],
                   "subscript");
     if (subscript_len == 0)
     {
-      parse->subscript = ADLB_NO_SUB;
-      // Ensure buffer initialized
-      parse->subscript_buf.data = NULL;
-      parse->subscript_buf.length = 0;
+      if (!append)
+      {
+        parse->val = ADLB_NO_SUB;
+        // Ensure buffer initialized
+        parse->buf.data = NULL;
+        parse->buf.length = 0;
+      }
     }
     else
     {
-      parse->subscript_buf = tcl_adlb_scratch_buf;
+      if (!append)
+      {
+        // Initialize buffer
+        if (use_scratch)
+        {
+          parse->buf = tcl_adlb_scratch_buf;
+        }
+        else
+        {
+          parse->buf.data = NULL;
+          parse->buf.length = 0;
+        }
+      }
+
+      bool using_scratch = (parse->buf.data == tcl_adlb_scratch);
 
       rc = PARSE_STRUCT_SUB(subscript, subscript_len,
-                          &parse->subscript_buf, &parse->subscript);
+                          &parse->buf, &parse->val, &using_scratch, append);
       TCL_CHECK(rc);
     }
   }
   return TCL_OK;
 }
 
-static int
+int
 ADLB_Parse_Subscript_Cleanup(Tcl_Interp *interp, Tcl_Obj *const objv[],
                              tcl_adlb_sub_parse *parse)
 {
   // If we're using tcl_adlb_scratch, free it
-  free_non_scratch(parse->subscript_buf);
+  free_non_scratch(parse->buf);
+  return TCL_OK;
+}
+
+
+/**
+ * Append a subscript to an existing one
+ * Assume that buf is either malloced buffer, or the
+ * scratch buffer
+ */
+static int append_subscript(Tcl_Interp *interp,
+      Tcl_Obj *const objv[], adlb_subscript *sub, adlb_subscript to_append,
+      adlb_buffer *buf)
+{
+  bool using_scratch = (buf->data == tcl_adlb_scratch);
+
+  // resize buffer to fit new and old subscript
+  adlb_data_code dc = ADLB_Resize_buf(buf, &using_scratch,
+                          (int)(sub->length + to_append.length));
+  TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error resizing");
+
+  if (buf->data != sub->key)
+  {
+    // if not in buffer, copy old subscript to buffer
+    memcpy(buf->data, sub->key, sub->length);
+  }
+  // overwrite null terminator with '.'
+  buf->data[sub->length - 1] = '.';
+
+  // append the new subscript
+  memcpy(&buf->data[sub->length], to_append.key, to_append.length);
+
+  sub->key = buf->data;
+  sub->length += to_append.length;
   return TCL_OK;
 }
 
@@ -4407,16 +4491,18 @@ ADLB_Parse_Subscript_Cleanup(Tcl_Interp *interp, Tcl_Obj *const objv[],
  *      optionally with storage that can be used. Initial size
  *      indicates size of buffer given by caller.
  *      Upon return, pointer will be updated if memory allocated in here.
+ * using_caller_buf: if true, storage is owned by caller and shouldn't be
+ *                   freed
+ * append: if true, append to existing subscript
  */
 static int ADLB_Parse_Struct_Subscript(Tcl_Interp *interp,
   Tcl_Obj *const objv[],
-  const char *str, int length, adlb_buffer *buf, adlb_subscript *sub)
+  const char *str, int length, adlb_buffer *buf, adlb_subscript *sub,
+  bool *using_caller_buf, bool append)
 {
   assert(length >= 0);
 
   adlb_data_code dc;
-
-  bool using_caller_buf = buf->length > 0;
   /*
    * Let's assume struct subscript, which is a '.'-separated list of
    * integer indices, for now, since this is main use case.
@@ -4425,14 +4511,37 @@ static int ADLB_Parse_Struct_Subscript(Tcl_Interp *interp,
    * representation, just copy it over and ensure it's null terminated.
    * We'll leave validation for the ADLB server
    */
-  dc = ADLB_Resize_buf(buf, &using_caller_buf, length + 1);
-  TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error expanding buf");
 
-  memcpy(buf->data, str, (size_t)length);
-  buf->data[length] = '\0';
+  if (append)
+  {
+    dc = ADLB_Resize_buf(buf, using_caller_buf,
+              (int)sub->length + length + 1);
+    TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error expanding buf");
+   
+    if (buf->data != sub->key)
+    {
+      memcpy(buf->data, sub->key, sub->length);
+    }
 
-  sub->length = (size_t)length + 1; // Length includes terminator;
-  sub->key = buf->data;
+    buf->data[sub->length-1] = '.'; // Replace null terminator
+
+    memcpy(&buf->data[sub->length], str, (size_t)length);
+    buf->data[length] = '\0';
+
+    sub->length += (size_t)length + 1; // Length includes terminator;
+    sub->key = buf->data;
+  }
+  else
+  {
+    dc = ADLB_Resize_buf(buf, using_caller_buf, length + 1);
+    TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error expanding buf");
+
+    memcpy(buf->data, str, (size_t)length);
+    buf->data[length] = '\0';
+
+    sub->length = (size_t)length + 1; // Length includes terminator;
+    sub->key = buf->data;
+  }
 
   return TCL_OK;
 }
@@ -4449,25 +4558,27 @@ ADLB_Parse_Handle(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
   if (subscript == NULL)
   {
-    parse->subscript = ADLB_NO_SUB;
+    parse->sub.val = ADLB_NO_SUB;
     // Ensure buffer initialized
-    parse->subscript_buf.data = NULL;
-    parse->subscript_buf.length = 0;
+    parse->sub.buf.data = NULL;
+    parse->sub.buf.length = 0;
   }
   else
   {
     if (use_scratch)
     {
-      parse->subscript_buf = tcl_adlb_scratch_buf;
+      parse->sub.buf = tcl_adlb_scratch_buf;
     }
     else
     {
-      parse->subscript_buf.data = NULL;
-      parse->subscript_buf.length = 0;
+      parse->sub.buf.data = NULL;
+      parse->sub.buf.length = 0;
     }
 
+    bool using_scratch = use_scratch;
     rc = PARSE_STRUCT_SUB(subscript, subscript_len,
-                        &parse->subscript_buf, &parse->subscript);
+                        &parse->sub.buf, &parse->sub.val,
+                        &using_scratch, false);
     TCL_CHECK(rc);
   }
 
@@ -4479,7 +4590,7 @@ ADLB_Parse_Handle_Cleanup(Tcl_Interp *interp, Tcl_Obj *const objv[],
                           tcl_adlb_handle *parse)
 {
   // If we're using tcl_adlb_scratch, free it
-  free_non_scratch(parse->subscript_buf);
+  free_non_scratch(parse->sub.buf);
   return TCL_OK;
 }
 
@@ -4700,6 +4811,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("write_refcount_incr", ADLB_Write_Refcount_Incr_Cmd);
   COMMAND("write_refcount_decr", ADLB_Write_Refcount_Decr_Cmd);
   COMMAND("insert",    ADLB_Insert_Cmd);
+  COMMAND("insert",    ADLB_Insert_Struct_Cmd);
   COMMAND("insert_atomic", ADLB_Insert_Atomic_Cmd);
   COMMAND("lookup",    ADLB_Lookup_Cmd);
   COMMAND("lookup_struct",    ADLB_Lookup_Struct_Cmd);

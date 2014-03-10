@@ -1077,7 +1077,7 @@ turbine_extract_ids(Tcl_Interp* interp, Tcl_Obj *const objv[],
     tcl_adlb_handle handle;
     code = ADLB_PARSE_HANDLE(obj, &handle, false);
     TCL_CHECK_MSG(code, "Error parsing handle %s", Tcl_GetString(obj));
-    if (handle.subscript.key == NULL)
+    if (handle.sub.val.key == NULL)
     {
       ids[(*id_count)++] = handle.id;
     }
@@ -1086,19 +1086,19 @@ turbine_extract_ids(Tcl_Interp* interp, Tcl_Obj *const objv[],
       td_sub_pair *pair = &id_subs[(*id_sub_count)++];
 
       pair->td = handle.id;
-      pair->subscript.length = handle.subscript.length;
+      pair->subscript.length = handle.sub.val.length;
 
       // check if key memory was allocated and owned by us
-      if (handle.subscript_buf.data == handle.subscript.key)
+      if (handle.sub.buf.data == handle.sub.val.key)
       {
-        pair->subscript.key = handle.subscript_buf.data;
+        pair->subscript.key = handle.sub.buf.data;
       }
       else
       {
         // Don't own data, alloc and copy
-        char *tmp_key = malloc(handle.subscript.length);
+        char *tmp_key = malloc(handle.sub.val.length);
         TCL_MALLOC_CHECK(tmp_key);
-        memcpy(tmp_key, handle.subscript.key, handle.subscript.length);
+        memcpy(tmp_key, handle.sub.val.key, handle.sub.val.length);
         pair->subscript.key = tmp_key;
       }
     }

@@ -56,18 +56,27 @@ adlb_data_to_tcl_obj(Tcl_Interp *interp, Tcl_Obj *const objv[], adlb_datum_id id
                 const void *data, int length, Tcl_Obj** result);
 
 /**
+  Different ways of interpreting subscripts
+ */
+typedef enum {
+  ADLB_SUB_NONE,
+  ADLB_SUB_CONTAINER, // Tcl string representation
+  ADLB_SUB_STRUCT,    // Integer index, encoded as space-separated list
+} adlb_subscript_kind;
+
+/**
  * Data structures for parsing handles
  */
-typedef struct {
-  adlb_datum_id id;
-  adlb_subscript subscript;
-  adlb_buffer subscript_buf;
-} tcl_adlb_handle;
 
 typedef struct {
-  adlb_subscript subscript;
-  adlb_buffer subscript_buf;
+  adlb_subscript val;
+  adlb_buffer buf; // Buffer used for storing subscript, if any
 } tcl_adlb_sub_parse;
+
+typedef struct {
+  adlb_datum_id id;
+  tcl_adlb_sub_parse sub;
+} tcl_adlb_handle;
 
 int
 ADLB_Extract_Handle(Tcl_Interp *interp, Tcl_Obj *const objv[],
@@ -88,8 +97,7 @@ ADLB_Extract_Handle_ID(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
 /**
  * Function to parse ADLB handle
- * If use_scratch is true, uses tcl_adlb_scratch buffer until cleanup
- * called.
+ * use_scratch: if true, uses tcl_adlb_scratch buffer until cleanup
  */
 int
 ADLB_Parse_Handle(Tcl_Interp *interp, Tcl_Obj *const objv[],
@@ -102,11 +110,31 @@ int
 ADLB_Parse_Handle_Cleanup(Tcl_Interp *interp, Tcl_Obj *const objv[],
                           tcl_adlb_handle *parse);
 
+/**
+ * Function to parse ADLB subscript.,
+ * append: if append is true, append to existing subscript in parse
+ *         including a separator.  Currently assumes that
+ *         subscript was initialized by ADLB_Parse_handle for memory
+ *         management purposes
+ * use_scratch: if true, uses tcl_adlb_scratch buffer until cleanup
+ */
+int
+ADLB_Parse_Subscript(Tcl_Interp *interp, Tcl_Obj *const objv[],
+  Tcl_Obj *obj, adlb_subscript_kind sub_kind, tcl_adlb_sub_parse *parse,
+  bool append, bool use_scratch);
+
+// Convenience macros to avoid passing interp, etc. explicitly
 #define ADLB_PARSE_HANDLE(obj, parse, use_scratch) \
     ADLB_Parse_Handle(interp, objv, obj, parse, use_scratch)
 
 #define ADLB_PARSE_HANDLE_CLEANUP(parse) \
     ADLB_Parse_Handle_Cleanup(interp, objv, parse)
 
+#define ADLB_PARSE_SUB(obj, sub_kind, parse, append, use_scratch) \
+    ADLB_Parse_Subscript(interp, objv, obj, sub_kind, parse, \
+                         append, use_scratch)
+
+#define ADLB_PARSE_SUB_CLEANUP(parse) \
+    ADLB_Parse_Subscript_Cleanup(interp, objv, parse)
 
 #endif
