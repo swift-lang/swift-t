@@ -208,8 +208,8 @@ static inline adlb_code xlb_notifs_add(adlb_notif_ranks *notifs,
 }
 
 static inline adlb_code xlb_refs_add(adlb_ref_data *refs,
-        adlb_datum_id id, adlb_data_type type, const void *value,
-        int value_len)
+        adlb_datum_id id, adlb_subscript sub, adlb_data_type type,
+        const void *value, int value_len)
 {
   // Mark that caller should free
   if (refs->count == refs->size)
@@ -220,6 +220,8 @@ static inline adlb_code xlb_refs_add(adlb_ref_data *refs,
 
   adlb_ref_datum *d = &refs->data[refs->count++];
   d->id = id;
+  // TODO: handle subscript
+  assert(!adlb_has_sub(sub));
   d->type = type;
   d->value = value;
   d->value_len = value_len;

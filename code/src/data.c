@@ -49,6 +49,8 @@ static struct table_lp tds;
 typedef struct {
   adlb_datum_id id;
   adlb_refcounts acquire;
+  size_t subscript_len;
+  char subscript_data[];
 } container_reference;
 
 /**
@@ -109,6 +111,9 @@ lookup_subscript(adlb_datum_id id, const adlb_datum_storage *d,
 
 static adlb_data_code datum_gc(adlb_datum_id id, adlb_datum* d,
            xlb_acquire_rc acquire, xlb_rc_changes *rc_changes);
+
+static container_reference *
+alloc_container_reference(size_t subscript_len);
 
 static adlb_data_code
 insert_notifications(adlb_datum *d,
@@ -728,7 +733,8 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
  */
 adlb_data_code xlb_data_container_reference(adlb_datum_id id,
                                         adlb_subscript subscript,
-                                        adlb_datum_id reference,
+                                        adlb_datum_id ref_id,
+                                        adlb_subscript ref_sub,
                                         adlb_data_type ref_type,
                                         adlb_refcounts to_acquire,
                                         const adlb_buffer *caller_buffer,
@@ -776,7 +782,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
     }
 
     // add reference setting work to notifications
-    xlb_refs_add(&notifications->references, reference,
+    xlb_refs_add(&notifications->references, ref_id, ref_sub,
                  ref_type, result->data, result->length);
 
     // Need to acquire references 
@@ -843,15 +849,23 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
 
   TRACE("Added %"PRId64" to listeners for %"PRId64"[%s]", reference,
         id, subscript);
-  container_reference *entry = malloc(sizeof(container_reference));
+  container_reference *entry = alloc_container_reference(ref_sub.length);
   check_verbose(entry != NULL, ADLB_DATA_ERROR_OOM,
                 "Could not allocate memory");
-  entry->id = reference;
+  entry->id = ref_id;
   entry->acquire = to_acquire;
+  entry->subscript_len = ref_sub.length;
+  memcpy(entry->subscript_data, ref_sub.key, ref_sub.length);
 
   list_add(listeners, entry);
   result->data = NULL;
   return ADLB_DATA_SUCCESS;
+}
+
+static container_reference *
+alloc_container_reference(size_t subscript_len)
+{
+  return malloc(sizeof(container_references) + subscript_len);
 }
 
 /**
@@ -1762,6 +1776,10 @@ adlb_data_code process_ref_list(const struct list *subscribers,
       to_acquire->read_refcount += entry->acquire.read_refcount;
       to_acquire->write_refcount += entry->acquire.write_refcount;
 
+      // TODO: handle subscript
+      check_verbose(entry->subscript_len == 0, ADLB_DATA_ERROR_INVALID,
+                   "TODO: implement subscript handling");
+
       node = node->next;
     }
     references->count += nsubs;
@@ -1912,8 +1930,10 @@ static void free_cref_entry(const void *key, size_t key_len, void *val)
     read_id_sub(key, key_len, &id, &sub);
     
     container_reference *data = curr->data;
-    printf("UNFILLED CONTAINER REFERENCE <%"PRId64">[%.*s] => <%"PRId64">\n",
-            id, (int)sub.length, (const char*)sub.key, data->id);
+    printf("UNFILLED CONTAINER REFERENCE <%"PRId64">[%.*s] => "
+           "<%"PRId64">[%.*s]\n", id, (int)sub.length,
+           (const char*)sub.key, data->id, (int)data->subscript_len,
+           (const char*)data->subscript_data);
     free(curr->data);
     curr->data = NULL;
   }
