@@ -236,10 +236,10 @@ adlb_code ADLB_Subscribe(adlb_datum_id id, adlb_subscript subscript,
                           int* subscribed);
 
 adlb_code ADLBP_Container_reference(adlb_datum_id id, adlb_subscript subscript,
-                              adlb_datum_id reference,
+                              adlb_datum_id ref_id, adlb_subscript ref_subscript,
                               adlb_data_type ref_type);
 adlb_code ADLB_Container_reference(adlb_datum_id id, adlb_subscript subscript,
-                             adlb_datum_id reference,
+                              adlb_datum_id ref_id, adlb_subscript ref_subscript,
                               adlb_data_type ref_type);
 
 adlb_code ADLBP_Unique(adlb_datum_id *result);

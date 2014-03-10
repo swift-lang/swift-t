@@ -1167,7 +1167,7 @@ ADLBP_Subscribe(adlb_datum_id id, adlb_subscript subscript,
  */
 adlb_code
 ADLBP_Container_reference(adlb_datum_id id, adlb_subscript subscript,
-                          adlb_datum_id reference,
+                          adlb_datum_id ref_id, adlb_subscript ref_subscript,
                           adlb_data_type ref_type)
 {
   MPI_Status status;
@@ -1176,8 +1176,8 @@ ADLBP_Container_reference(adlb_datum_id id, adlb_subscript subscript,
   char *xfer_pos = xfer;
 
   MSG_PACK_BIN(xfer_pos, ref_type);
-  MSG_PACK_BIN(xfer_pos, reference);
   xfer_pos += xlb_pack_id_sub(xfer_pos, id, subscript);
+  xfer_pos += xlb_pack_id_sub(xfer_pos, ref_id, ref_subscript);
 
   int to_server_rank = ADLB_Locate(id);
 
@@ -1199,9 +1199,10 @@ ADLBP_Container_reference(adlb_datum_id id, adlb_subscript subscript,
   ADLB_CHECK(ac);
 
   // TODO: support binary subscript
-  DEBUG("ADLB_Container_reference: <%"PRId64">[%.*s] => <%"PRId64"> (%i)",
-        id, (int)subscript.length, (const char*)subscript.key, reference,
-        ref_type);
+  DEBUG("ADLB_Container_reference: <%"PRId64">[%.*s] => "
+        "<%"PRId64">[%.*s] (%i)",
+        id, (int)subscript.length, (const char*)subscript.key, ref_id,
+        (int)ref_subscript.length, (const char*)ref_subscript.key, ref_type);
 
   return ADLB_SUCCESS;
 }
