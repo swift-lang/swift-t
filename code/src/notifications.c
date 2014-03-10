@@ -133,7 +133,8 @@ xlb_set_refs(adlb_notif_t *notifs, bool local_only)
   for (int i = 0; i < refs->count; i++)
   {
     const adlb_ref_datum *ref = &refs->data[i];
-
+    
+    bool set = false;
     if (!local_only || ADLB_Locate(ref->id) == xlb_comm_rank)
     {
       TRACE("Notifying reference %"PRId64" (%s)\n", ref->id,
@@ -141,9 +142,10 @@ xlb_set_refs(adlb_notif_t *notifs, bool local_only)
       rc = xlb_set_ref(ref->id, ref->value, ref->value_len,
                        ref->type, notifs);
       ADLB_CHECK(rc);
+      set = true;
     }
 
-    if (local_only)
+    if (local_only && set)
     {
       // swap with last
       refs->count--;
