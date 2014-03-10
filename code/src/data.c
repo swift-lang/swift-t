@@ -50,6 +50,7 @@ typedef struct {
   adlb_datum_id id;
   adlb_refcounts acquire;
 } container_reference;
+
 /**
    Map from "container,subscript" specifier to list of listening references.
  */
@@ -846,7 +847,8 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
   check_verbose(entry != NULL, ADLB_DATA_ERROR_OOM,
                 "Could not allocate memory");
   entry->id = reference;
-  memcpy(&entry->acquire, &to_acquire, sizeof(entry->acquire));
+  entry->acquire = to_acquire;
+
   list_add(listeners, entry);
   result->data = NULL;
   return ADLB_DATA_SUCCESS;
