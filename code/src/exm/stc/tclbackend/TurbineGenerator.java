@@ -1527,8 +1527,15 @@ public class TurbineGenerator implements CompilerBackend {
       Arg fieldContents) {
     assert(Types.isStruct(struct));
     assert(Types.isStructFieldVal(struct, fields, fieldContents));
-    Expression subscript = structSubscript(struct, fields);
-    throw new STCRuntimeError("TODO: Not yet implemented");
+    
+    int[] indices = structFieldIndices(struct.type(), fields);
+    
+    int writeDecr = 1; // TODO: work out write refcounts for field
+    
+    pointAdd(Turbine.insertStruct(varToExpr(struct),
+        Turbine.structSubscript(indices), argToExpr(fieldContents),
+        Collections.singletonList(representationType(fieldContents.type())),
+        new LiteralInt(writeDecr)));
   }
   
   @Override

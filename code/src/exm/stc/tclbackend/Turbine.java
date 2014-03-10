@@ -156,6 +156,7 @@ class Turbine {
   private static final Token STRUCTREF_REFERENCE = 
                                                 turbFn("structref_reference");
   private static final Token LOOKUP_STRUCT = adlbFn("lookup_struct");
+  private static final Token INSERT_STRUCT = adlbFn("insert_struct");
 
   // Rule functions
   private static final Token SPAWN_RULE = turbFn("spawn_rule");
@@ -970,6 +971,18 @@ class Turbine {
     return Square.fnCall(LOOKUP_STRUCT, var, subscript, decrRead);
   }
 
+  public static Command insertStruct(Value struct,
+      Expression subscript, Expression member, List<TypeName> type,
+      Expression decrWrite) {
+    List<Expression> args = new ArrayList<Expression>();
+    args.add(struct);
+    args.add(subscript);
+    args.add(member);
+    args.addAll(type);
+    args.add(decrWrite);
+    return new Command(INSERT_STRUCT, args);
+  }
+  
   /**
    * Copy subscript of a variable to another variable
    * 
