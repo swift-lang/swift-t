@@ -925,7 +925,7 @@ class Turbine {
     assert(fieldIndices.length >= 1);
     for (int i = 0; i < fieldIndices.length; i++)
     {
-      assert(fieldIndices[i] > 0) : fieldIndices;
+      assert(fieldIndices[i] >= 0) : Arrays.toString(fieldIndices);
     }
     
     if (fieldIndices.length == 1) {
