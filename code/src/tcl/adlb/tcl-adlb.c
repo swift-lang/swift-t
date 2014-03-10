@@ -3587,9 +3587,12 @@ ADLB_Reference_Impl(ClientData cdata, Tcl_Interp *interp,
   // Check for no subscript
   TCL_CONDITION(adlb_has_sub(handle.sub.val), "Invalid subscript argument");
 
-  adlb_datum_id reference;
-  rc = Tcl_GetADLB_ID(interp, objv[3], &reference);
-  TCL_CHECK_MSG(rc, "argument 3 is not a 64-bit integer!");
+  tcl_adlb_handle ref_handle;
+  rc = ADLB_PARSE_HANDLE(objv[3], &ref_handle, false);
+  TCL_CHECK_MSG(rc, "Invalid handle %s", Tcl_GetString(objv[3]));
+  // TODO: support subscript?
+  TCL_CONDITION(!adlb_has_sub(ref_handle.sub.val),
+               "Reference target does not support subscript");
 
   adlb_data_type ref_type;
   adlb_type_extra extra;
@@ -3600,9 +3603,11 @@ ADLB_Reference_Impl(ClientData cdata, Tcl_Interp *interp,
 
   // DEBUG_ADLB("adlb::container_reference: <%"PRId64">[%s] => <%"PRId64">\n",
   //            id, subscript, reference);
-  rc = ADLB_Container_reference(handle.id, handle.sub.val, reference, ref_type);
+  rc = ADLB_Container_reference(handle.id, handle.sub.val,
+                                ref_handle.id, ref_type);
   
   ADLB_PARSE_HANDLE_CLEANUP(&handle);
+  ADLB_PARSE_HANDLE_CLEANUP(&ref_handle);
 
   TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", handle.id);
   return TCL_OK;
@@ -4465,13 +4470,16 @@ static int append_subscript(Tcl_Interp *interp,
                           (int)(sub->length + to_append.length));
   TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error resizing");
 
-  if (buf->data != sub->key)
+  if (sub->length > 0)
   {
-    // if not in buffer, copy old subscript to buffer
-    memcpy(buf->data, sub->key, sub->length);
+    if (buf->data != sub->key)
+    {
+      // if not in buffer, copy old subscript to buffer
+      memcpy(buf->data, sub->key, sub->length);
+    }
+    // overwrite null terminator with '.'
+    buf->data[sub->length - 1] = '.';
   }
-  // overwrite null terminator with '.'
-  buf->data[sub->length - 1] = '.';
 
   // append the new subscript
   memcpy(&buf->data[sub->length], to_append.key, to_append.length);
@@ -4512,7 +4520,7 @@ static int ADLB_Parse_Struct_Subscript(Tcl_Interp *interp,
    * We'll leave validation for the ADLB server
    */
 
-  if (append)
+  if (append && sub->length > 0)
   {
     dc = ADLB_Resize_buf(buf, using_caller_buf,
               (int)sub->length + length + 1);
