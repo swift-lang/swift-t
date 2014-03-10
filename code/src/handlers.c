@@ -1276,7 +1276,8 @@ handle_container_reference(int caller)
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
   adlb_binary_data member;
   adlb_data_code dc = xlb_data_container_reference(id,
-                        subscript, ref_id, ref_subscript, ref_type, to_acquire, 
+                        subscript, ref_id, ref_subscript, false,
+                        ref_type, to_acquire, 
                         &xlb_scratch_buf, &member, &notifs);
 
   struct packed_cont_ref_resp resp = { .dc = dc };

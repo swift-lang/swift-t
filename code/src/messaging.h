@@ -267,6 +267,7 @@ struct packed_notif
 struct packed_reference
 {
   adlb_datum_id id; // ID to set
+  int subscript_data; // index of extra data subscript
   adlb_data_type type;
   int val_data; // index of extra data item
 };

@@ -73,10 +73,15 @@ adlb_data_code xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
  *     happens later.
  * In both cases:
  *  -> consume single read reference count
+ *
+ * 
+ * copy_subscript: if false, it's ok to use ref_sub subscript data in notifications
+ *                 if true, make a copy if ref_sub is used in notifications
  */
 adlb_data_code
 xlb_data_container_reference(adlb_datum_id id, adlb_subscript subscript,
          adlb_datum_id ref_id, adlb_subscript ref_sub,
+         bool copy_subscript,
          adlb_data_type ref_type, adlb_refcounts to_acquire, 
          const adlb_buffer *caller_buffer, adlb_binary_data *result,
          adlb_notif_t *notifications);

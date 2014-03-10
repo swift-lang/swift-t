@@ -145,8 +145,8 @@ insert_notifications2(adlb_datum *d,
       adlb_notif_t *notify, bool *garbage_collected);
 
 static 
-adlb_data_code process_ref_list(const struct list *subscribers,
-          adlb_ref_data *references, adlb_data_type type,
+adlb_data_code process_ref_list(struct list *subscribers,
+          adlb_notif_t *notifs, adlb_data_type type,
           const void *value, int value_len,
           adlb_refcounts *to_acquire); 
 
@@ -735,6 +735,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
                                         adlb_subscript subscript,
                                         adlb_datum_id ref_id,
                                         adlb_subscript ref_sub,
+                                        bool copy_subscript,
                                         adlb_data_type ref_type,
                                         adlb_refcounts to_acquire,
                                         const adlb_buffer *caller_buffer,
@@ -742,6 +743,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
                                         adlb_notif_t *notifications)
 {
   // Check that container_id is an initialized container
+  adlb_code ac;
   adlb_data_code dc;
   adlb_datum* d;
   bool found = table_lp_search(&tds, id, (void**)&d);
@@ -777,7 +779,20 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
         result->caller_data != caller_buffer->data)
     {
       // Allocated memory, must free
-      adlb_code ac = xlb_to_free_add(notifications, result->caller_data);
+      ac = xlb_to_free_add(notifications, result->caller_data);
+      DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
+    }
+    
+    if (adlb_has_sub(ref_sub) && copy_subscript)
+    {
+      // Need to make a copy of the subscript data
+      void *sub_storage = malloc(ref_sub.length);
+      DATA_CHECK_MALLOC(sub_storage);
+
+      memcpy(sub_storage, ref_sub.key, ref_sub.length);
+      ref_sub.key = sub_storage;
+
+      ac = xlb_to_free_add(notifications, sub_storage);
       DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
     }
 
@@ -1609,11 +1624,10 @@ insert_notifications2(adlb_datum *d,
     xlb_acquire_rc referand_acquire = XLB_NO_ACQUIRE;
     referand_acquire.subscript = subscript;
 
-    dc = process_ref_list(ref_list, &notify->references, value_type,
+    dc = process_ref_list(ref_list, notify, value_type,
                      value_buffer, value_len,
                      &referand_acquire.refcounts);
     DATA_CHECK(dc);
-    list_free(ref_list);
 
     // Need to free refcount we were holding for reference notifs
     adlb_refcounts read_decr = { .read_refcount = -1,
@@ -1749,12 +1763,19 @@ struct_all_notifs(adlb_datum *d, adlb_datum_id id,
   return ADLB_DATA_SUCCESS;
 }
 
+
+/**
+ * Process reference list:
+ * subscribers: list memory is freed
+ */
 static 
-adlb_data_code process_ref_list(const struct list *subscribers,
-          adlb_ref_data *references, adlb_data_type type,
+adlb_data_code process_ref_list(struct list *subscribers,
+          adlb_notif_t *notifs, adlb_data_type type,
           const void *value, int value_len,
           adlb_refcounts *to_acquire)
 {
+  adlb_ref_data *references = &notifs->references;
+
   int nsubs = subscribers->size;
   if (nsubs > 0)
   {
@@ -1776,13 +1797,23 @@ adlb_data_code process_ref_list(const struct list *subscribers,
       to_acquire->read_refcount += entry->acquire.read_refcount;
       to_acquire->write_refcount += entry->acquire.write_refcount;
 
-      // TODO: handle subscript
-      check_verbose(entry->subscript_len == 0, ADLB_DATA_ERROR_INVALID,
-                   "TODO: implement subscript handling");
+      ref->subscript.key = entry->subscript_data;
+      ref->subscript.length = entry->subscript_len;
 
-      node = node->next;
+      // Retain memory entry with subscript
+      ac = xlb_to_free_add(notifs, entry);
+      DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
+
+      struct list_item *next = node->next;
+      free(node);
+      node = next;
     }
+
     references->count += nsubs;
+    
+    // Clear list
+    subscribers->head = subscribers->tail = NULL;
+    subscribers->size = 0;
   }
 
   return ADLB_DATA_SUCCESS;

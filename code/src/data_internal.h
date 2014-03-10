@@ -123,12 +123,15 @@ typedef struct
 #define DATA_CHECK(rc) ((void) (condition));
 #endif
 
+#define DATA_CHECK_MALLOC(ptr) { \
+  check_verbose((ptr) != NULL, ADLB_DATA_ERROR_OOM, "out of memory");  \
+}
 
 // Helper macro to create/resize an array.  Given NULL, realloc() allocates
 // the initial array.  On error, return ADLB_DATA_ERROR_OOM
 #define DATA_REALLOC(array, new_count) {                               \
   array = realloc((array), sizeof((array)[0]) * (new_count));          \
-  check_verbose(array != NULL, ADLB_DATA_ERROR_OOM, "out of memory");  \
+  DATA_CHECK_MALLOC(array);                                            \
 }
 
 adlb_data_code

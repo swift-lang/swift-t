@@ -24,7 +24,8 @@ static adlb_code
 xlb_set_refs(adlb_notif_t *notifs, bool local_only);
 
 static adlb_code
-xlb_set_ref(adlb_datum_id id, const void *value, int length,
+xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
+            const void *value, int length,
             adlb_data_type type, adlb_notif_t *notifs);
 
 static adlb_code
@@ -139,8 +140,8 @@ xlb_set_refs(adlb_notif_t *notifs, bool local_only)
     {
       TRACE("Notifying reference %"PRId64" (%s)\n", ref->id,
             ADLB_Data_type_tostring(ref->type));
-      rc = xlb_set_ref(ref->id, ref->value, ref->value_len,
-                       ref->type, notifs);
+      rc = xlb_set_ref(ref->id, ref->subscript, ref->value,
+                       ref->value_len, ref->type, notifs);
       ADLB_CHECK(rc);
       set = true;
     }
@@ -167,7 +168,8 @@ xlb_set_refs(adlb_notif_t *notifs, bool local_only)
 }
 
 static adlb_code
-xlb_set_ref(adlb_datum_id id, const void *value, int length,
+xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
+            const void *value, int length,
             adlb_data_type type, adlb_notif_t *notifs)
 {
   DEBUG("xlb_set_ref: <%"PRId64">=%p[%i]", id, value, length);
@@ -177,7 +179,7 @@ xlb_set_ref(adlb_datum_id id, const void *value, int length,
 
   if (server == xlb_comm_rank)
   {
-    adlb_data_code dc = xlb_data_store(id, ADLB_NO_SUB, value, length,
+    adlb_data_code dc = xlb_data_store(id, subscript, value, length,
                                        type, ADLB_WRITE_RC, notifs);
     ADLB_DATA_CHECK(dc);
 
@@ -390,6 +392,8 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
 
     if (applied)
     {
+      // TODO: will need to update or invalidate index
+
       // Remove processed entries
       c->count--;
       if (c->count > 0)
@@ -589,6 +593,20 @@ send_client_notif_work(int caller,
     adlb_ref_datum *ref = &notifs->references.data[i];
     packed_refs[i].id = ref->id;
     packed_refs[i].type = ref->type;
+
+    if (adlb_has_sub(ref->subscript))
+    {
+      packed_refs[i].subscript_data = extra_data_count++;
+      dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL, ref->subscript.key,
+          (int)ref->subscript.length, true, &extra_data, &using_static_buf,
+          &extra_pos);
+      ADLB_DATA_CHECK(dc);
+    }
+    else
+    {
+      packed_refs[i].subscript_data = -1;
+    }
+
     if (last_value != NULL &&
         last_value == ref->value &&
         last_value_len == ref->value_len)
@@ -776,6 +794,19 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
       d = &notify->references.data[notify->references.count + i];
       d->id = tmp[i].id;
       d->type = tmp[i].type;
+      int sub_data_ix = tmp[i].subscript_data;
+      if (sub_data_ix >= 0)
+      {
+        assert(sub_data_ix >= 0 && sub_data_ix < extra_data_count);
+        adlb_binary_data *sub_data = &extra_data_ptrs[sub_data_ix];
+        d->subscript.key = sub_data->data;
+        d->subscript.length = (size_t)sub_data->length;
+      }
+      else
+      {
+        d->subscript = ADLB_NO_SUB;
+      }
+
       assert(tmp[i].val_data >= 0 && tmp[i].val_data < extra_data_count);
       adlb_binary_data *data = &extra_data_ptrs[tmp[i].val_data];
       d->value = data->data;
@@ -797,6 +828,8 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
     notify->rc_changes.count += counts->rc_change_count;
 
     // TODO: rebuild index
+    //  - Merge new data into existing ones
+    //  - Index remaining new data
   }
 
   if (extra_data != NULL && extra_data != xfer)
