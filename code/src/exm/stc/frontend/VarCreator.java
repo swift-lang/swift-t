@@ -20,6 +20,9 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
+import exm.stc.common.Logging;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
@@ -43,10 +46,12 @@ import exm.stc.ic.STCMiddleEnd;
  *
  */
 public class VarCreator {
-  private STCMiddleEnd backend;
+  private final STCMiddleEnd backend;
+  private final Logger logger;
 
   public VarCreator(STCMiddleEnd backend) {
     super();
+    this.logger = Logging.getSTCLogger();
     this.backend = backend;
   }
 
@@ -128,6 +133,9 @@ public class VarCreator {
     int initFieldCount = initialiseStructRec(context, struct, currFieldPath,
         structType, fieldPaths, fieldVals);
     if (initFieldCount > 0) {
+      logger.trace("Init struct: " + struct.name() +
+               " type: " + struct.type() + "\n" +
+               "Paths: " + fieldPaths + "\n" + "Vals: " + fieldVals);
       backend.structInitFields(VarRepr.backendVar(struct), fieldPaths,
           VarRepr.backendArgs(fieldVals), Arg.createIntLit(initFieldCount));
     }
@@ -151,7 +159,7 @@ public class VarCreator {
     int initFieldCount = 0;
     
     for (StructField field: structType.getFields()) {
-      currFieldPath.push(field.getName());
+      currFieldPath.addLast(field.getName());
       
       Type fieldT = field.getType();
       if (VarRepr.storeRefInStruct(fieldT)) {
@@ -170,7 +178,7 @@ public class VarCreator {
             fieldPaths, fieldVals);
       }
       
-      currFieldPath.pop();
+      currFieldPath.removeLast();
     }
     return initFieldCount;
   }
