@@ -3590,9 +3590,6 @@ ADLB_Reference_Impl(ClientData cdata, Tcl_Interp *interp,
   tcl_adlb_handle ref_handle;
   rc = ADLB_PARSE_HANDLE(objv[3], &ref_handle, false);
   TCL_CHECK_MSG(rc, "Invalid handle %s", Tcl_GetString(objv[3]));
-  // TODO: support subscript?
-  TCL_CONDITION(!adlb_has_sub(ref_handle.sub.val),
-               "Reference target does not support subscript");
 
   adlb_data_type ref_type;
   adlb_type_extra extra;
@@ -3604,7 +3601,7 @@ ADLB_Reference_Impl(ClientData cdata, Tcl_Interp *interp,
   // DEBUG_ADLB("adlb::container_reference: <%"PRId64">[%s] => <%"PRId64">\n",
   //            id, subscript, reference);
   rc = ADLB_Container_reference(handle.id, handle.sub.val,
-                                ref_handle.id, ref_type);
+              ref_handle.id, ref_handle.sub.val, ref_type);
   
   ADLB_PARSE_HANDLE_CLEANUP(&handle);
   ADLB_PARSE_HANDLE_CLEANUP(&ref_handle);
