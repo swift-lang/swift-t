@@ -1011,133 +1011,165 @@ data_store_root(adlb_datum_id id, adlb_datum *d,
 static adlb_data_code
 data_store_subscript(adlb_datum_id id, adlb_datum *d,
     adlb_subscript subscript,
-    const void* buffer, int length, adlb_data_type type,
+    const void* value, int length, adlb_data_type value_type,
     adlb_notif_t *notifications, bool *freed_datum)
 {
   adlb_data_code dc;
 
-  if (d->type == ADLB_DATA_TYPE_MULTISET)
-  {
-    // Any subscript appends to multiset
-    assert(adlb_has_sub(subscript));
-    check_verbose(adlb_has_sub(subscript), ADLB_DATA_ERROR_TYPE,
-                  "Cannot provide subscript when appending to multiset");
-    adlb_data_type elem_type = d->data.MULTISET->elem_type;
-    check_verbose(type == elem_type, ADLB_DATA_ERROR_TYPE,
-            "Type mismatch for multiset val: expected %s actual %s\n",
-            ADLB_Data_type_tostring(elem_type), ADLB_Data_type_tostring(type));
-    // Handle addition to multiset
-    const adlb_datum_storage *elem;
-    dc = xlb_multiset_add(d->data.MULTISET, buffer, length, &elem);
-    DATA_CHECK(dc);
+  adlb_datum_storage *data = &d->data;
+  adlb_data_type data_type = d->type;
 
-    if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
+  check_verbose(d->status.set, ADLB_DATA_ERROR_INVALID, "Can't set "
+      "subscript of datum initialized without type <%"PRId64">", id);
+
+  // Loop to go through multiple components of subscript
+  while (true)
+  {
+    if (data_type == ADLB_DATA_TYPE_MULTISET)
     {
-      char *val_s = ADLB_Data_repr(elem, elem_type);
-      DEBUG("data_store <%"PRId64">+=%s\n", id, val_s);
-      free(val_s);
+      // Any subscript appends to multiset
+      assert(adlb_has_sub(subscript));
+      adlb_data_type elem_type = data->MULTISET->elem_type;
+      check_verbose(value_type == elem_type, ADLB_DATA_ERROR_TYPE,
+              "Type mismatch for multiset val: expected %s actual %s\n",
+              ADLB_Data_type_tostring(elem_type), ADLB_Data_type_tostring(value_type));
+      // Handle addition to multiset
+      const adlb_datum_storage *elem;
+      dc = xlb_multiset_add(data->MULTISET, value, length, &elem);
+      DATA_CHECK(dc);
+
+      if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
+      {
+        char *val_s = ADLB_Data_repr(elem, elem_type);
+        DEBUG("data_store <%"PRId64">+=%s\n", id, val_s);
+        free(val_s);
+      }
+      return ADLB_DATA_SUCCESS;
     }
-  }
-  else if (d->type == ADLB_DATA_TYPE_CONTAINER)
-  {
-    // Handle insert
-
-    adlb_container *c = &d->data.CONTAINER;
-
-    check_verbose(type == c->val_type, ADLB_DATA_ERROR_TYPE,
-                  "Type mismatch for container value: "
-                  "given: %s required: %s\n",
-                  ADLB_Data_type_tostring(type),
-                  ADLB_Data_type_tostring(c->val_type));
-
-    // Does the link already exist?
-    adlb_container_val t = NULL;
-    bool found = container_lookup(c, subscript, &t);
-
-    if (found && t != NULL)
+    else if (data_type == ADLB_DATA_TYPE_CONTAINER)
     {
-      // If present, must be an UNLINKED entry:
-      // TODO: support binary keys
-      // Don't print error by default: caller may want to handle
-      DEBUG("already exists: <%"PRId64">[%.*s]", id, (int)subscript.length,
-            (const char*)subscript.key);
-      return ADLB_DATA_ERROR_DOUBLE_WRITE;
-   } 
+      // Handle insert
 
-    
-    // Now we are guaranteed to succeed
-    adlb_datum_storage *entry = malloc(sizeof(adlb_datum_storage));
-    dc = ADLB_Unpack(entry, c->val_type, buffer, length);
-    DATA_CHECK(dc);
+      adlb_container *c = &data->CONTAINER;
 
-    if (found)
+      check_verbose(value_type == c->val_type, ADLB_DATA_ERROR_TYPE,
+                    "Type mismatch for container value: "
+                    "given: %s required: %s\n",
+                    ADLB_Data_type_tostring(value_type),
+                    ADLB_Data_type_tostring(c->val_type));
+
+      // Does the link already exist?
+      adlb_container_val t = NULL;
+      bool found = container_lookup(c, subscript, &t);
+
+      if (found && t != NULL)
+      {
+        // If present, must be an UNLINKED entry:
+        // TODO: support binary keys
+        // Don't print error by default: caller may want to handle
+        DEBUG("already exists: <%"PRId64">[%.*s]", id, (int)subscript.length,
+              (const char*)subscript.key);
+        return ADLB_DATA_ERROR_DOUBLE_WRITE;
+     } 
+
+      
+      // Now we are guaranteed to succeed
+      adlb_datum_storage *entry = malloc(sizeof(adlb_datum_storage));
+      dc = ADLB_Unpack(entry, c->val_type, value, length);
+      DATA_CHECK(dc);
+
+      if (found)
+      {
+        DEBUG("Assigning unlinked precreated entry");
+        // Ok- somebody did an Insert_atomic
+        adlb_container_val v;
+        // Reset entry
+        bool b = container_set(c, subscript, entry, &v);
+        ASSERT(b);
+        ASSERT(v == NULL); // Should have been NULL for unlinked
+      }
+      else
+      {
+        DEBUG("Creating new container entry");
+        container_add(c, subscript, entry);
+      }
+
+      if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
+      {
+        char *val_s = ADLB_Data_repr(entry, value_type);
+        // TODO: support binary keys
+        DEBUG("data_store <%"PRId64">[%.*s]=%s\n", id, (int)subscript.length,
+              (const char*)subscript.key, val_s);
+        free(val_s);
+      }
+
+      dc = insert_notifications(d, id, subscript,
+                value, length, value_type,
+                notifications, freed_datum);
+      DATA_CHECK(dc);
+      return ADLB_DATA_SUCCESS;
+    }
+    else if (data_type == ADLB_DATA_TYPE_STRUCT)
     {
-      DEBUG("Assigning unlinked precreated entry");
-      // Ok- somebody did an Insert_atomic
-      adlb_container_val v;
-      // Reset entry
-      bool b = container_set(c, subscript, entry, &v);
-      ASSERT(b);
-      ASSERT(v == NULL); // Should have been NULL for unlinked
+      // Handle assigning struct field
+      adlb_struct_field *field;
+      adlb_struct_field_type field_type;
+      size_t sub_pos;
+      dc = xlb_struct_lookup(data->STRUCT, subscript, &field, &field_type,
+                            &sub_pos);
+      DATA_CHECK(dc);
+      
+      assert(sub_pos <= subscript.length);
+
+      if (sub_pos == subscript.length) {
+        // Located field to assign
+        check_verbose(!field->initialized,
+          ADLB_DATA_ERROR_DOUBLE_WRITE,
+          "Subscript already assigned: [%.*s] under <%"PRId64">",
+          (int)subscript.length, (const char*)subscript.key, id);
+
+        dc = xlb_struct_assign_field(field, field_type, value, length,
+                                     value_type);
+        DATA_CHECK(dc);
+
+        if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
+        {
+          char *val_s = ADLB_Data_repr(&field->data, value_type);
+          // TODO: support binary keys
+          DEBUG("data_store <%"PRId64">.%.*s=%s\n", id, (int)subscript.length,
+                (const char*)subscript.key, val_s);
+          free(val_s);
+        }
+
+        dc = insert_notifications(d, id, subscript,
+                  value, length, value_type,
+                  notifications, freed_datum);
+        DATA_CHECK(dc);
+
+        return ADLB_DATA_SUCCESS;
+      }
+      else
+      {
+        // Some of subscript left, must continue
+        check_verbose(field->initialized,
+          ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND,
+          "Uninitialized subscript: [%.*s] under <%"PRId64">",
+          (int)subscript.length, (const char*)subscript.key, id);
+        // Some of subscript left:
+        // update data, subscript, etc. for next iteration
+        data = &field->data;
+        data_type = field_type.type;
+        subscript.key += sub_pos;
+        subscript.length -= sub_pos;
+      }
     }
     else
     {
-      DEBUG("Creating new container entry");
-      container_add(c, subscript, entry);
+      verbose_error(ADLB_DATA_ERROR_TYPE,
+                    "type %s not subscriptable: <%"PRId64">",
+                    ADLB_Data_type_tostring(data_type), id);
     }
-
-    if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
-    {
-      char *val_s = ADLB_Data_repr(entry, c->val_type);
-      // TODO: support binary keys
-      DEBUG("data_store <%"PRId64">[%.*s]=%s\n", id, (int)subscript.length,
-            (const char*)subscript.key, val_s);
-      free(val_s);
-    }
-
-    dc = insert_notifications(d, id, subscript,
-              buffer, length, c->val_type,
-              notifications, freed_datum);
-    DATA_CHECK(dc);
   }
-  else if (d->type == ADLB_DATA_TYPE_STRUCT)
-  {
-    check_verbose(d->status.set, ADLB_DATA_ERROR_INVALID, "Can't set "
-        "subscript of struct initialized without type <%"PRId64">", id);
-    // Handle assigning struct field
-    // TODO: lookup field, put in loop
-    dc = xlb_struct_set_subscript(d->data.STRUCT, subscript,
-                        buffer, length, type);
-    DATA_CHECK(dc);
-
-    if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
-    {
-      const adlb_datum_storage *entry;
-      adlb_data_type tmp_type;
-      dc = xlb_struct_get_subscript(d->data.STRUCT, subscript, &entry,
-                                    &tmp_type);
-      assert(dc == ADLB_DATA_SUCCESS);
-      assert(entry != NULL);
-
-      char *val_s = ADLB_Data_repr(entry, type);
-      // TODO: support binary keys
-      DEBUG("data_store <%"PRId64">.%.*s=%s\n", id, (int)subscript.length,
-            (const char*)subscript.key, val_s);
-      free(val_s);
-    }
-
-    dc = insert_notifications(d, id, subscript,
-              buffer, length, type,
-              notifications, freed_datum);
-    DATA_CHECK(dc);
-  }
-  else
-  {
-    verbose_error(ADLB_DATA_ERROR_TYPE,
-                  "type %s not subscriptable: <%"PRId64">",
-                  ADLB_Data_type_tostring(d->type), id);
-  }
-
 
   return ADLB_DATA_SUCCESS;
 }
@@ -1295,14 +1327,16 @@ lookup_subscript(adlb_datum_id id, const adlb_datum_storage *d,
         
         assert(sub_pos <= subscript.length);
 
-        check_verbose(field->initialized,
-          ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND,
-          "Uninitialized subscript: [%.*s] under <%"PRId64">",
-          (int)subscript.length, (const char*)subscript.key, id);
-        if (sub_pos == subscript.length)
+        if (!field->initialized)
         {
+          *result = NULL;
           *result_type = field_type.type;
+          return ADLB_DATA_SUCCESS;
+        }
+        else if (sub_pos == subscript.length)
+        {
           *result = &field->data;
+          *result_type = field_type.type;
           return ADLB_DATA_SUCCESS;
         }
         else

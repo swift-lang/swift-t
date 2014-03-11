@@ -49,6 +49,9 @@ adlb_data_code xlb_free_struct(adlb_struct *s, bool free_root_ptr);
  * Search for subscript in struct, consuming as much of subscript as
  * we can by traversing nested structs.
  *
+ * In the case that we encounter an uninitialized inner struct, we
+ * return that field
+ *
  * field: field of struct located
  * type: type info for field returned
  * sub_pos: index of start of remainder of subscript
@@ -72,6 +75,10 @@ adlb_data_code xlb_struct_get_subscript(adlb_struct *s, adlb_subscript subscript
 
 adlb_data_code xlb_struct_subscript_init(adlb_struct *s, adlb_subscript subscript,
                                         bool *b);
+
+adlb_data_code xlb_struct_assign_field(adlb_struct_field *field,
+        adlb_struct_field_type field_type, const void *data, int length,
+        adlb_data_type data_type);
 
 // Get data for struct field
 adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,

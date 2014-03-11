@@ -396,6 +396,8 @@ adlb_data_code xlb_struct_lookup(adlb_struct *s, adlb_subscript sub,
 
   while (true)
   {
+    assert(sub.length > pos);
+
     // Struct subscripts are of form <integer>(.<integer>)*'\0'?
 
     // Locate next '.', if any
@@ -438,11 +440,12 @@ adlb_data_code xlb_struct_lookup(adlb_struct *s, adlb_subscript sub,
       *field = curr_field;
       *type = *field_type;
       *sub_pos = sub.length;
-      return ADLB_SUCCESS;
+      return ADLB_DATA_SUCCESS;
     }
-    else if (field_type->type == ADLB_DATA_TYPE_STRUCT)
+    else if (field_type->type == ADLB_DATA_TYPE_STRUCT &&
+             curr_field->initialized)
     {
-      // Another iteration
+      // Another iteration if it's a valid struct
       sub_ptr += component_len + 1;
       pos += component_len + 1;
       s = curr_field->data.STRUCT;
@@ -450,14 +453,10 @@ adlb_data_code xlb_struct_lookup(adlb_struct *s, adlb_subscript sub,
     else
     {
       // Not a struct: return
-      check_verbose(curr_field->initialized,
-            ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND, "Uninitialized struct "
-            "field at subscript [%.*s], could not complete lookup",
-             (int)pos, (const char*)sub.key);
       *field = curr_field;
       *type = *field_type;
       *sub_pos = pos + component_len + 1; // Component plus separator
-      return ADLB_SUCCESS;
+      return ADLB_DATA_SUCCESS;
     }
   }
 }
@@ -530,7 +529,7 @@ adlb_data_code xlb_struct_subscript_init(adlb_struct *s, adlb_subscript subscrip
   return ADLB_DATA_SUCCESS;
 }
 
-static adlb_data_code set_field(adlb_struct_field *field,
+adlb_data_code xlb_struct_assign_field(adlb_struct_field *field,
         adlb_struct_field_type field_type, const void *data, int length,
         adlb_data_type data_type)
 {
@@ -557,7 +556,8 @@ adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,
   adlb_data_code dc = get_field(s, field_ix, &st, &f);
   DATA_CHECK(dc);
 
-  return set_field(f, st->field_types[field_ix], data, length, type);
+  return xlb_struct_assign_field(f, st->field_types[field_ix],
+                                 data, length, type);
 }
 
 adlb_data_code xlb_struct_set_subscript(adlb_struct *s, adlb_subscript subscript,
@@ -581,7 +581,7 @@ adlb_data_code xlb_struct_set_subscript(adlb_struct *s, adlb_subscript subscript
         "Subscript [%.*s] not initialized", (int)subscript.length,
         (const char*)subscript.key);
 
-  return set_field(field, field_type, data, length, type);
+  return xlb_struct_assign_field(field, field_type, data, length, type);
 }
 
 adlb_data_code xlb_free_struct(adlb_struct *s, bool free_root_ptr)
