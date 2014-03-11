@@ -382,7 +382,7 @@ static adlb_data_code get_field(adlb_struct *s, int field_ix,
   return ADLB_DATA_SUCCESS;
 }
 
-adlb_data_code xlb_struct_lookup(adlb_struct *s, adlb_subscript sub,
+adlb_data_code xlb_struct_lookup(adlb_struct *s, adlb_subscript sub, bool init_nested,
                     adlb_struct_field **field, adlb_struct_field_type *type,
                     size_t *sub_pos)
 {
@@ -443,8 +443,14 @@ adlb_data_code xlb_struct_lookup(adlb_struct *s, adlb_subscript sub,
       return ADLB_DATA_SUCCESS;
     }
     else if (field_type->type == ADLB_DATA_TYPE_STRUCT &&
-             curr_field->initialized)
+             (curr_field->initialized || init_nested))
     {
+      if (!curr_field->initialized)
+      {
+        dc = xlb_new_struct(field_type->extra.STRUCT.struct_type,
+                            &curr_field->data.STRUCT);
+        DATA_CHECK(dc);
+      }
       // Another iteration if it's a valid struct
       sub_ptr += component_len + 1;
       pos += component_len + 1;
@@ -491,7 +497,7 @@ adlb_data_code xlb_struct_get_subscript(adlb_struct *s, adlb_subscript subscript
   adlb_struct_field *field;
   adlb_struct_field_type field_type;
   size_t sub_pos;
-  dc = xlb_struct_lookup(s, subscript, &field, &field_type, &sub_pos);
+  dc = xlb_struct_lookup(s, subscript, false, &field, &field_type, &sub_pos);
   DATA_CHECK(dc);
 
   check_verbose(sub_pos == subscript.length,
@@ -561,14 +567,14 @@ adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,
 }
 
 adlb_data_code xlb_struct_set_subscript(adlb_struct *s, adlb_subscript subscript,
-                        const void *data, int length, adlb_data_type type)
+             bool init_nested, const void *data, int length, adlb_data_type type)
 {
   adlb_data_code dc;
 
   adlb_struct_field *field;
   adlb_struct_field_type field_type;
   size_t sub_pos;
-  dc = xlb_struct_lookup(s, subscript, &field, &field_type, &sub_pos);
+  dc = xlb_struct_lookup(s, subscript, init_nested, &field, &field_type, &sub_pos);
   DATA_CHECK(dc);
 
   check_verbose(sub_pos == subscript.length,

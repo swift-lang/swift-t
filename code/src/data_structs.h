@@ -52,12 +52,14 @@ adlb_data_code xlb_free_struct(adlb_struct *s, bool free_root_ptr);
  * In the case that we encounter an uninitialized inner struct, we
  * return that field
  *
+ * init_nested: if true, initialize inner structs on path
  * field: field of struct located
  * type: type info for field returned
  * sub_pos: index of start of remainder of subscript
  * return: ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND if could not be found
  */
 adlb_data_code xlb_struct_lookup(adlb_struct *s, adlb_subscript sub,
+                    bool init_nested,
                     adlb_struct_field **field, adlb_struct_field_type *type,
                     size_t *sub_pos);
 
@@ -80,12 +82,15 @@ adlb_data_code xlb_struct_assign_field(adlb_struct_field *field,
         adlb_struct_field_type field_type, const void *data, int length,
         adlb_data_type data_type);
 
-// Get data for struct field
 adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,
                         const void *data, int length, adlb_data_type type);
 
+/**
+ * Set struct field at subscript
+ * init_nested: if true, initialize inner structs on path
+ */
 adlb_data_code xlb_struct_set_subscript(adlb_struct *s, adlb_subscript subscript,
-                        const void *data, int length, adlb_data_type type);
+            bool init_nested, const void *data, int length, adlb_data_type type);
 
 adlb_data_code
 xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,

@@ -1115,8 +1115,8 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
       adlb_struct_field *field;
       adlb_struct_field_type field_type;
       size_t sub_pos;
-      dc = xlb_struct_lookup(data->STRUCT, subscript, &field, &field_type,
-                            &sub_pos);
+      dc = xlb_struct_lookup(data->STRUCT, subscript, true, &field,
+                             &field_type, &sub_pos);
       DATA_CHECK(dc);
       
       assert(sub_pos <= subscript.length);
@@ -1153,8 +1153,9 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
         // Some of subscript left, must continue
         check_verbose(field->initialized,
           ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND,
-          "Uninitialized subscript: [%.*s] under <%"PRId64">",
-          (int)subscript.length, (const char*)subscript.key, id);
+          "Uninitialized subscript: [%.*s] under <%"PRId64">. "
+          "Remaining bytes %zu", (int)subscript.length,\
+          (const char*)subscript.key, id, subscript.length - sub_pos);
         // Some of subscript left:
         // update data, subscript, etc. for next iteration
         data = &field->data;
@@ -1321,8 +1322,8 @@ lookup_subscript(adlb_datum_id id, const adlb_datum_storage *d,
         adlb_struct_field *field;
         adlb_struct_field_type field_type;
         size_t sub_pos;
-        dc = xlb_struct_lookup(d->STRUCT, subscript, &field, &field_type,
-                              &sub_pos);
+        dc = xlb_struct_lookup(d->STRUCT, subscript, false, &field,
+                               &field_type, &sub_pos);
         DATA_CHECK(dc);
         
         assert(sub_pos <= subscript.length);
