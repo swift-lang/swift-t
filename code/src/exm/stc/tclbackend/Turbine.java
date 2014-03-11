@@ -935,7 +935,11 @@ class Turbine {
       return new LiteralInt(fieldIndex);  
     } else {
       // String separated by "."s
-      String subscript = StringUtil.concat('.', Arrays.asList(fieldIndices));
+      List<Integer> indexList = new ArrayList<Integer>(fieldIndices.length);
+      for (int index: fieldIndices) {
+        indexList.add(index);
+      }
+      String subscript = StringUtil.concat('.', indexList);
       return new TclString(subscript, true);
     }
   }
