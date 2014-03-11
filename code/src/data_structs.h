@@ -45,6 +45,19 @@ xlb_get_struct_type_info(adlb_struct_type type);
 // provided pointer if specified
 adlb_data_code xlb_free_struct(adlb_struct *s, bool free_root_ptr);
 
+/**
+ * Search for subscript in struct, consuming as much of subscript as
+ * we can by traversing nested structs.
+ *
+ * field: field of struct located
+ * type: type info for field returned
+ * sub_pos: index of start of remainder of subscript
+ * return: ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND if could not be found
+ */
+adlb_data_code xlb_struct_lookup(adlb_struct *s, adlb_subscript sub,
+                    adlb_struct_field **field, adlb_struct_field_type *type,
+                    size_t *sub_pos);
+
 /*
  * Get data for struct field.
  * Returns error if field invalid.
