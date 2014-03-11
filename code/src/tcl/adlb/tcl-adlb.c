@@ -2119,10 +2119,10 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
   if (data.data != xfer_buf.data)
     ADLB_Free_binary_data(&data);
   
+  CHECK_ADLB_STORE(store_rc, handle.id);
+  
   rc = ADLB_PARSE_HANDLE_CLEANUP(&handle);
   TCL_CHECK(rc);
- 
-  CHECK_ADLB_STORE(store_rc, handle.id);
 
   return TCL_OK;
 }
@@ -2196,12 +2196,12 @@ ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
   int ret_rc = ADLB_Retrieve(handle.id, handle.sub.val, refcounts,
                      &type, xfer, &length);
 
-  rc = ADLB_PARSE_HANDLE_CLEANUP(&handle);
-  TCL_CHECK(rc);
-
   TCL_CONDITION(ret_rc == ADLB_SUCCESS, "<%"PRId64"> failed!", handle.id);
   TCL_CONDITION(length >= 0, "adlb::retrieve <%"PRId64"> not found!",
                             handle.id);
+  
+  rc = ADLB_PARSE_HANDLE_CLEANUP(&handle);
+  TCL_CHECK(rc);
 
   // Type check
   if ((given_type != ADLB_DATA_TYPE_NULL &&
@@ -2705,9 +2705,6 @@ ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
   int ret_rc = ADLB_Retrieve(handle.id, handle.sub.val, refcounts,
                              &type, xfer, &length);
 
-  rc = ADLB_PARSE_HANDLE_CLEANUP(&handle);
-  TCL_CHECK(rc);
-
   TCL_CONDITION(ret_rc == ADLB_SUCCESS, "<%"PRId64"> failed!",
                 handle.id);
   TCL_CONDITION(type == ADLB_DATA_TYPE_BLOB,
@@ -2726,6 +2723,8 @@ ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
   TCL_CHECK(rc);
 
   // printf("retrieved blob: [ %p %i ]\n", blob, length);
+  rc = ADLB_PARSE_HANDLE_CLEANUP(&handle);
+  TCL_CHECK(rc);
   
   // build blob with original handle - ID or ID/sub
   Tcl_SetObjResult(interp, build_tcl_blob(blob, length, handle_obj));
@@ -2870,9 +2869,6 @@ ADLB_Blob_Free_Cmd(ClientData cdata, Tcl_Interp *interp,
                     handle.sub.val, &found);
   TCL_CHECK(rc);
   
-  rc = ADLB_PARSE_HANDLE_CLEANUP(&handle);
-  TCL_CHECK(rc);
-
   if (adlb_has_sub(handle.sub.val))
   {
     TCL_CONDITION(found, "blob not cached: <%"PRId64">[%.*s]",
@@ -2883,6 +2879,10 @@ ADLB_Blob_Free_Cmd(ClientData cdata, Tcl_Interp *interp,
   {
     TCL_CONDITION(found, "blob not cached: <%"PRId64">", handle.id);
   }
+
+  rc = ADLB_PARSE_HANDLE_CLEANUP(&handle);
+  TCL_CHECK(rc);
+
   return TCL_OK;
 }
 
@@ -3159,14 +3159,14 @@ ADLB_Insert_Impl(ClientData cdata, Tcl_Interp *interp,
 
   rc = ADLB_Store(handle.id, handle.sub.val, type, member.data, member.length, decr);
 
+  // TODO: support binary subscript
+  CHECK_ADLB_STORE_SUB(rc, handle.id, handle.sub.val);
+
   // Free if needed
   if (member.data != xfer_buf.data)
     ADLB_Free_binary_data(&member);
   
   ADLB_PARSE_HANDLE_CLEANUP(&handle);
-
-  // TODO: support binary subscript
-  CHECK_ADLB_STORE_SUB(rc, handle.id, handle.sub.val);
   return TCL_OK;
 }
 
@@ -3255,11 +3255,11 @@ ADLB_Insert_Atomic_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = ADLB_Insert_atomic(handle.id, handle.sub.val, refcounts, &b,
                           NULL, NULL, NULL);
   
-  ADLB_PARSE_HANDLE_CLEANUP(&handle);
-
   TCL_CONDITION(rc == ADLB_SUCCESS,
         "adlb::insert_atomic: failed: <%"PRId64">[%.*s]", handle.id,
         (int)handle.sub.val.length, (const char*)handle.sub.val.key);
+  
+  ADLB_PARSE_HANDLE_CLEANUP(&handle);
 
   Tcl_Obj* result = Tcl_NewBooleanObj(b);
   Tcl_SetObjResult(interp, result);
@@ -3334,8 +3334,6 @@ ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
       break;
   } while (spin && rc == ADLB_SUCCESS && len < 0);
   
-  ADLB_PARSE_HANDLE_CLEANUP(&handle);
-  
   TCL_CONDITION(rc == ADLB_SUCCESS, "lookup failed for: <%"PRId64">[%.*s]",
                   handle.id, (int)handle.sub.val.length,
                   (const char*)handle.sub.val.key);
@@ -3355,6 +3353,9 @@ ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
         (int)handle.sub.subscript.length,
         (const char*)handle.sub.subscript.key,
         Tcl_GetStringFromObj(result, NULL));
+  
+  ADLB_PARSE_HANDLE_CLEANUP(&handle);
+  
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
 }
