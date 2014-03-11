@@ -1259,13 +1259,18 @@ handle_container_reference(int caller)
   void *xfer_read = xfer;
   MSG_UNPACK_BIN(xfer_read, &ref_type);
 
-  xlb_unpack_id_sub(xfer_read, &id, &subscript);
-  xlb_unpack_id_sub(xfer_read, &ref_id, &ref_subscript);
+  xfer_read += xlb_unpack_id_sub(xfer_read, &id, &subscript);
+  xfer_read += xlb_unpack_id_sub(xfer_read, &ref_id, &ref_subscript);
+
+  printf("ref_id %"PRId64"\n", ref_id);
+  printf("ref_sub len %zu\n", ref_subscript.length);
+  printf("ref_sub [%.*s]\n", (int)ref_subscript.length, (char*)ref_subscript.key);
 
   // TODO: support binary subscript
   DEBUG("Container_reference: <%"PRId64">[%.*s] => <%"PRId64">[%.*s] (%i)",
         id, (int)subscript.length, (const char*)subscript.key,
-        ref_id, (int)ref_subscript.length, (const char*)ref_subscript.key, ref_type);
+        ref_id, (int)ref_subscript.length, (const char*)ref_subscript.key,
+        ref_type);
  
   // TODO: support custom decrement
   // TODO: allow caller to specify refcounts

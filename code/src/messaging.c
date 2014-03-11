@@ -206,6 +206,7 @@ xlb_unpack_id_sub(const void *buffer, adlb_datum_id *id,
   else
   {
     subscript->key = NULL;
+    subscript->length = 0;
   }
   long length = (pos - buffer);
   assert(length <= INT_MAX);
