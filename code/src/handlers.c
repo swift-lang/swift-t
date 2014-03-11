@@ -1262,10 +1262,6 @@ handle_container_reference(int caller)
   xfer_read += xlb_unpack_id_sub(xfer_read, &id, &subscript);
   xfer_read += xlb_unpack_id_sub(xfer_read, &ref_id, &ref_subscript);
 
-  printf("ref_id %"PRId64"\n", ref_id);
-  printf("ref_sub len %zu\n", ref_subscript.length);
-  printf("ref_sub [%.*s]\n", (int)ref_subscript.length, (char*)ref_subscript.key);
-
   // TODO: support binary subscript
   DEBUG("Container_reference: <%"PRId64">[%.*s] => <%"PRId64">[%.*s] (%i)",
         id, (int)subscript.length, (const char*)subscript.key,

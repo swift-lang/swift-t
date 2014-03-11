@@ -1066,7 +1066,7 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
   else
   {
     verbose_error(ADLB_DATA_ERROR_TYPE,
-                  "insert to type %s not supported: <%"PRId64">",
+                  "type %s not subscriptable: <%"PRId64">",
                   ADLB_Data_type_tostring(d->type), id);
   }
 
@@ -1620,7 +1620,7 @@ insert_notifications2(adlb_datum *d,
   adlb_data_code dc;
   if (ref_list != NULL)
   {
-    DEBUG("Setting references for subscript assign");
+    DEBUG("Processing references for subscript assign");
     xlb_acquire_rc referand_acquire = XLB_NO_ACQUIRE;
     referand_acquire.subscript = subscript;
 
@@ -1797,8 +1797,9 @@ adlb_data_code process_ref_list(struct list *subscribers,
       to_acquire->read_refcount += entry->acquire.read_refcount;
       to_acquire->write_refcount += entry->acquire.write_refcount;
 
-      ref->subscript.key = entry->subscript_data;
       ref->subscript.length = entry->subscript_len;
+      ref->subscript.key = entry->subscript_len == 0 ?
+                           NULL : entry->subscript_data;
 
       // Retain memory entry with subscript
       ac = xlb_to_free_add(notifs, entry);
