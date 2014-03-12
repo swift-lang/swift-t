@@ -1045,6 +1045,31 @@ public class ICTree {
 
       logger.trace("Generate code for block of type " + this.type.toString());
       // Pass variable declarations as batch
+      generateBlockVariables(logger, gen);
+      
+      for (Statement stmt: statements) {
+        stmt.generate(logger, gen, info);
+      }
+
+      // Can put conditional statements at end of block, making sure
+      // Ones which are marked as runLast occur after those not
+      for (boolean runLast: new boolean[] {false, true}) {
+        for (Continuation c: continuations) {
+          if (c.runLast() == runLast) {
+            logger.trace("generating code for continuation");
+            c.generate(logger, gen, info);
+          }
+        }
+      }
+
+      for (CleanupAction cleanup: cleanupActions) {
+        cleanup.action().generate(logger, gen, info);
+      }
+      logger.trace("Done with code for block of type " + this.type.toString());
+
+    }
+
+    private void generateBlockVariables(Logger logger, CompilerBackend gen) {
       List<VarDecl> declarations = new ArrayList<VarDecl>(variables.size());
       for (Var v: variables) {
         logger.trace("generating variable decl for " + v.toString());
@@ -1078,27 +1103,6 @@ public class ICTree {
         declarations.add(new VarDecl(v, initReaders, initWriters));
       }
       gen.declare(declarations);
-      
-      for (Statement stmt: statements) {
-        stmt.generate(logger, gen, info);
-      }
-
-      // Can put conditional statements at end of block, making sure
-      // Ones which are marked as runLast occur after those not
-      for (boolean runLast: new boolean[] {false, true}) {
-        for (Continuation c: continuations) {
-          if (c.runLast() == runLast) {
-            logger.trace("generating code for continuation");
-            c.generate(logger, gen, info);
-          }
-        }
-      }
-
-      for (CleanupAction cleanup: cleanupActions) {
-        cleanup.action().generate(logger, gen, info);
-      }
-      logger.trace("Done with code for block of type " + this.type.toString());
-
     }
 
     public void prettyPrint(StringBuilder sb, String indent) {

@@ -137,7 +137,7 @@ public class AliasTracker {
         // need to track if ref is alias to struct field
         Var ref = inst.getOutput(0);
         AliasKey key = getCanonical(ref);
-        if (key.structPath.length > 0) {
+        if (key.pathLength() > 0) {
           assert(Types.isStruct(key.var));
           Var val = inst.getInput(0).getVar();
           return buildStructAliases(key.var, Arrays.asList(key.structPath),
@@ -149,7 +149,7 @@ public class AliasTracker {
         // need to track if ref is alias to struct field
         Var ref = inst.getInput(0).getVar();
         AliasKey key = getCanonical(ref);
-        if (key.structPath.length > 0) {
+        if (key.pathLength() > 0) {
           Var val = inst.getOutput(0);
           assert(Types.isStruct(key.var));
           return buildStructAliases(key.var, Arrays.asList(key.structPath),
@@ -166,13 +166,13 @@ public class AliasTracker {
         List<Alias> aliases = new ArrayList<Alias>();
         
         // Copy across alias info from one ref to another
-        if (key1.structPath.length > 0) {
+        if (key1.pathLength() > 0) {
           assert(Types.isStruct(key1.var));
           aliases.addAll(
               buildStructAliases(key1.var, Arrays.asList(key1.structPath),
                                  ref2, false));
         }
-        if (key2.structPath.length > 0) {
+        if (key2.pathLength() > 0) {
           assert(Types.isStruct(key2.var));
           aliases.addAll(
               buildStructAliases(key2.var, Arrays.asList(key2.structPath),
@@ -249,6 +249,9 @@ public class AliasTracker {
     AliasKey parentPath = getCanonical(parent);
     assert(parentPath != null);
     AliasKey childPath = parentPath.makeChild(fieldPath, derefed);
+    
+    assert(child.type().assignableTo(childPath.type())) 
+            : child.type() + " vs " + childPath.type();
     
     addVarPath(child, childPath, null);
   }
