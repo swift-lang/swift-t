@@ -1076,30 +1076,47 @@ public class ICTree {
         Arg initReaders = initReadRefcounts.get(v);
         Arg initWriters = initWriteRefcounts.get(v);
         
+        if (initReaders == null) {
+          logger.trace("Init readers: " + v.name() + " null");
+        } else {
+          logger.trace("Init readers: " + v.name() + " " + initReaders);
+        }
+        
+        if (initWriters == null) {
+          logger.trace("Init writers: " + v.name() + " null");
+        } else {
+          logger.trace("Init writers: " + v.name() + " " + initWriters);
+        }
+        
         // Initialize refcounts to default value if not
         //  explicitly overridden and check for bad refcounts
-        if (v.storage() != Alloc.ALIAS && 
-            RefCounting.trackReadRefCount(v)) {
-          if (initReaders == null)
-          {
+        if (v.storage() == Alloc.ALIAS || 
+            !RefCounting.trackReadRefCount(v)) {
+          // Check we don't have refcount for untracked var
+          assert(initReaders == null) : v + " " +   initReaders;
+        }
+
+        if (v.storage() == Alloc.ALIAS || 
+            !RefCounting.trackWriteRefCount(v)) {
+          // Check we don't have refcount for untracked var
+          assert(initWriters == null);
+        }
+        
+        if (v.storage() != Alloc.ALIAS) {
+          // If not an alias, need to select refcount
+          if (initReaders == null) {
+            // Init to default refcount
             long baseReaders = RefCounting.baseReadRefCount(v, false);
             initReaders = Arg.createIntLit(baseReaders);
           }
-        } else {
-          // Check we don't have refcount for non-refcountable var
-          assert(initReaders == null) : v + " " +   initReaders;
-        }
-        if (v.storage() != Alloc.ALIAS && 
-            RefCounting.trackWriteRefCount(v)) {
-          if (initWriters == null)
-          {
+
+          if (initWriters == null) {
+            // Init to default refcount
             long baseWriters = RefCounting.baseWriteRefCount(v, false);
             initWriters = Arg.createIntLit(baseWriters);
           }
-        } else {
-          // Check we don't have refcount for non-refcountable var
-          assert(initWriters == null);
         }
+        
         declarations.add(new VarDecl(v, initReaders, initWriters));
       }
       gen.declare(declarations);

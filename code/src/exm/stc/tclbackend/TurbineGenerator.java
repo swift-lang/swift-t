@@ -437,10 +437,6 @@ public class TurbineGenerator implements CompilerBackend {
       // For now, just add provenance info as a comment
       pointAdd(new Comment("Var: " + t.typeName() + " " +
                 prefixVar(var.name()) + " " + var.provenance().logFormat()));
-     
-      // Check that init refcounts are valid
-      assert(RefCounting.trackReadRefCount(var) ^ initReaders == null);
-      assert(RefCounting.trackWriteRefCount(var) ^ initWriters == null);
   
       if (var.storage() == Alloc.GLOBAL_CONST) {
         // If global, it should already be in TCL global scope, just need to
@@ -448,7 +444,6 @@ public class TurbineGenerator implements CompilerBackend {
         pointAdd(Turbine.makeTCLGlobal(prefixVar(var)));
         continue;
       }
-      
   
       try {
         if (!Settings.getBoolean(Settings.ENABLE_REFCOUNTING)) {
