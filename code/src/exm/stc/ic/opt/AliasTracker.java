@@ -35,7 +35,8 @@ import exm.stc.ic.tree.TurbineOp;
 public class AliasTracker {
   
   /**
-   * String to add to path to indicate that it's a dereferenced value 
+   * String to add to path to indicate that it's a dereferenced value.
+   * Note: we assume that this isn't a valid struct field name
    */
   public static final String DEREF_MARKER = "*";
   
@@ -132,20 +133,58 @@ public class AliasTracker {
         return buildStructAliases2(inst.getOutput(0),
             ((TurbineOp)inst).getInputsTail(1),
             inst.getInput(0).getVar(), false);
-      case STORE_REF:
-        // TODO: if ref is alias to struct field
-        throw new STCRuntimeError("Not implemented");
-      case LOAD_REF:
-        // TODO: if ref is alias to struct field
-        throw new STCRuntimeError("Not implemented");
-      case COPY_REF:
-        // TODO: if ref is alias to struct field
-        throw new STCRuntimeError("Not implemented");
+      case STORE_REF: {
+        // need to track if ref is alias to struct field
+        Var ref = inst.getOutput(0);
+        AliasKey key = getCanonical(ref);
+        if (key.structPath.length > 0) {
+          assert(Types.isStruct(key.var));
+          Var val = inst.getInput(0).getVar();
+          return buildStructAliases(key.var, Arrays.asList(key.structPath),
+                                    val, true);
+        }
+        break;
+      }
+      case LOAD_REF: {
+        // need to track if ref is alias to struct field
+        Var ref = inst.getInput(0).getVar();
+        AliasKey key = getCanonical(ref);
+        if (key.structPath.length > 0) {
+          Var val = inst.getOutput(0);
+          assert(Types.isStruct(key.var));
+          return buildStructAliases(key.var, Arrays.asList(key.structPath),
+                                    val, true);
+        }
+        break;
+      }
+      case COPY_REF: {
+        // need to track if ref is alias to struct field
+        Var ref1 = inst.getOutput(0);
+        Var ref2 = inst.getInput(0).getVar();
+        AliasKey key1 = getCanonical(ref1);
+        AliasKey key2 = getCanonical(ref2);
+        List<Alias> aliases = new ArrayList<Alias>();
+        
+        // Copy across alias info from one ref to another
+        if (key1.structPath.length > 0) {
+          assert(Types.isStruct(key1.var));
+          aliases.addAll(
+              buildStructAliases(key1.var, Arrays.asList(key1.structPath),
+                                 ref2, false));
+        }
+        if (key2.structPath.length > 0) {
+          assert(Types.isStruct(key2.var));
+          aliases.addAll(
+              buildStructAliases(key2.var, Arrays.asList(key2.structPath),
+                                 ref1, false));
+        }
+        return aliases;
+      }
       default:
         // Opcode not relevant
         break;
     }
-    return Collections.emptyList();
+    return Alias.NONE;
   }
 
   private List<Alias> buildStructAliases2(Var struct, List<Arg> fieldPath,
@@ -372,8 +411,12 @@ public class AliasTracker {
       Type t = var.type();
       if (structPath != null) {
         for (String field: structPath) {
-          assert(Types.isStruct(t) || Types.isStructLocal(t)) : t;
-          t = ((StructType)t).getFieldTypeByName(field);
+          if (field.equals(DEREF_MARKER)) {
+            t = Types.retrievedType(t);
+          } else {
+            assert(Types.isStruct(t) || Types.isStructLocal(t)) : t;
+            t = ((StructType)t).getFieldTypeByName(field);
+          }
         }
       }
       return t;
