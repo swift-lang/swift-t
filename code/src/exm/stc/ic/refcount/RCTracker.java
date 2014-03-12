@@ -70,30 +70,25 @@ public class RCTracker {
   }
   
   public void updateForInstruction(Instruction inst) {
-    for (Alias alias: aliases.getInstructionAliases(inst)) {
-      addStructElem(alias.parent, alias.field, alias.child);
+    for (Alias alias: aliases.update(inst)) {
+      updateForAlias(alias);
     }
   }
 
   /**
-   * Record that parent.field == child
+   * Perform any updates required for alias info
    * 
    * @param parent
    * @param field
    * @param child
    */
-  private void addStructElem(Var parent, String field, Var child) {
-    assert(child != null);
-    assert(parent != null);
-
-    aliases.addStructElem(parent, field, child);
-    
+  private void updateForAlias(Alias alias) {
     // This may bind a struct path to a concrete variable, which may mean
     // that, e.g. if the variable is a constant, that it no longer has
     // a refcount.
     for (RefCountType rcType: RefcountPass.RC_TYPES) {
-      if (!RefCounting.trackRefCount(child, rcType)) {
-        reset(rcType, child);
+      if (!RefCounting.trackRefCount(alias.child, rcType)) {
+        reset(rcType, alias.child);
       }
     }
   }
