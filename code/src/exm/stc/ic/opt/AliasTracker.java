@@ -353,7 +353,7 @@ public class AliasTracker {
   /**
    * Something for which refcount is tracked in this module
    */
-  public static class AliasKey {
+  public static class AliasKey implements Typed {
     public final Var var;
     public final String structPath[]; // Can be null for no path
     

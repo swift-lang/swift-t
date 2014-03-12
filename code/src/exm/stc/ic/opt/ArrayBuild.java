@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -19,6 +20,7 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.Pair;
+import exm.stc.ic.opt.AliasTracker.AliasKey;
 import exm.stc.ic.opt.InitVariables.InitState;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -49,23 +51,52 @@ public class ArrayBuild extends FunctionOptimizerPass {
 
   @Override
   public void optimize(Logger logger, Function f) throws UserException {
-    InfoMap info = buildInfo(logger, f);
+    ArrayInfo info = buildInfo(logger, f);
     optimize(logger, f, info);
   }
 
-  private static class InfoMap extends HashMap<Pair<Var, Block>, BlockVarInfo> {
+  private static class ArrayInfo {
+    
+    private final Map<Block, AliasTracker> aliasMap 
+                      = new HashMap<Block, AliasTracker>();
 
-    /** Prevent warnings by providing version */
-    private static final long serialVersionUID = 1L;
-
+    private final Map<Pair<AliasKey, Block>, BlockVarInfo> varMap
+                      = new HashMap<Pair<AliasKey, Block>, BlockVarInfo>();
+    
+    /**
+     * Mark correspondence between block and aliases
+     * @param block
+     * @param aliases
+     */
+    void addAliasTracker(Block block, AliasTracker aliases) {
+      aliasMap.put(block, aliases);
+    }
+    
     BlockVarInfo getEntry(Block block, Var arr) {
-      Pair<Var, Block> key = Pair.create(arr, block);
-      BlockVarInfo entry = this.get(key);
+      AliasTracker aliases = aliasMap.get(block);
+      assert(aliases != null) : "Alias map must be init";
+      return getEntry(block, aliases.getCanonical(arr));
+    }
+    
+    BlockVarInfo getEntry(Block block, AliasKey arr) {
+      Pair<AliasKey, Block> key = Pair.create(arr, block);
+      BlockVarInfo entry = varMap.get(key);
       if (entry == null) {
         entry = new BlockVarInfo();
-        this.put(key, entry);
+        varMap.put(key, entry);
       }
       return entry;
+    }
+
+    /**
+     * Get aliases for block, raises error if not present
+     * @param block
+     * @return
+     */
+    public AliasTracker getAliases(Block block) {
+      AliasTracker aliases = aliasMap.get(block);
+      assert(aliases != null) : "Alias map must be init";
+      return aliases;
     }
   }
   
@@ -120,24 +151,32 @@ public class ArrayBuild extends FunctionOptimizerPass {
    * @param f
    * @return
    */
-  private InfoMap buildInfo(Logger logger, Function f) {
+  private ArrayInfo buildInfo(Logger logger, Function f) {
     // Set to track candidates in scope 
     HierarchicalSet<Var> candidates = new HierarchicalSet<Var>();
-    InfoMap info = new InfoMap();
-    buildInfoRec(logger, f, f.mainBlock(), info, candidates);
+    ArrayInfo info = new ArrayInfo();
+    AliasTracker aliases = new AliasTracker();
+    buildInfoRec(logger, f, f.mainBlock(), info, aliases,
+                 candidates);
     return info;
   }
 
 
   private boolean isValidCandidate(Var var) {
+    /*
+     * Only attempt to optimise non-alias arrays. Optimising
+     * some alias arrays, e.g. nested ones, would require further
+     * analysis since there is not a single canonical non-alias
+     * variable for the nested array.
+     */
     return Types.isArray(var) && var.storage() != Alloc.ALIAS;
   }
 
   private void addBlockCandidates(Block block,
-      InfoMap info, Collection<Var> candidates,
+      ArrayInfo info, Collection<Var> candidates,
       Collection<Var> vars) {
     for (Var var: vars) {
-      if (isValidCandidate(var)){
+      if (isValidCandidate(var)) {
         candidates.add(var);
         info.getEntry(block, var).declaredHere = true;
       }
@@ -145,13 +184,16 @@ public class ArrayBuild extends FunctionOptimizerPass {
   }
 
   private void buildInfoRec(Logger logger, Function f,
-      Block block, InfoMap info, HierarchicalSet<Var> candidates) {
+      Block block, ArrayInfo info, AliasTracker aliases,
+      HierarchicalSet<Var> candidates) {
+    info.addAliasTracker(block, aliases);
+    
     addBlockCandidates(f, block, info, candidates);
     
     for (Statement stmt: block.getStatements()) {
       switch (stmt.type()) {
         case INSTRUCTION:
-          updateInfo(block, info, stmt.instruction(), candidates);
+          updateInfo(block, info, aliases, stmt.instruction(), candidates);
           break;
         default:
           // Do nothing: handle conditionals below
@@ -161,7 +203,8 @@ public class ArrayBuild extends FunctionOptimizerPass {
     
     for (Continuation c: block.allComplexStatements()) {
       for (Block inner: c.getBlocks()) {
-        buildInfoRec(logger, f, inner, info, candidates.makeChild());
+        buildInfoRec(logger, f, inner, info, aliases.makeChild(),
+                     candidates.makeChild());
       }
     }
     
@@ -183,7 +226,7 @@ public class ArrayBuild extends FunctionOptimizerPass {
    * @param block
    * @param candidates
    */
-  private void addBlockCandidates(Function f, Block block, InfoMap info,
+  private void addBlockCandidates(Function f, Block block, ArrayInfo info,
                                   Set<Var> candidates) {
     if (block.getType() ==  BlockType.MAIN_BLOCK) {
       addBlockCandidates(block, info, candidates, f.getOutputList());
@@ -191,8 +234,12 @@ public class ArrayBuild extends FunctionOptimizerPass {
     addBlockCandidates(block, info, candidates, block.getVariables());
   }
 
-  private void updateInfo(Block block, InfoMap info, Instruction inst,
-                          Set<Var> candidates) {
+  private void updateInfo(Block block, ArrayInfo info, AliasTracker aliases,
+                Instruction inst, Set<Var> candidates) {
+    
+    // Update aliases
+    aliases.update(inst);
+    
     if (inst.op == Opcode.ARR_STORE) {
       Var arr = inst.getOutput(0);
       if (candidates.contains(arr)) {
@@ -219,7 +266,7 @@ public class ArrayBuild extends FunctionOptimizerPass {
    * @param candidates update info for these vars
    */
   private void updateInfoBottomUp(Logger logger, Block block,
-          InfoMap info, Set<Var> candidates) {
+          ArrayInfo info, Set<Var> candidates) {
     for (Var candidate: candidates) {
       BlockVarInfo ci = info.getEntry(block, candidate);
       ci.insertImmRec = ci.insertImmHere;
@@ -265,7 +312,7 @@ public class ArrayBuild extends FunctionOptimizerPass {
     }
   }
 
-  private void optimize(Logger logger, Function f, InfoMap info) {
+  private void optimize(Logger logger, Function f, ArrayInfo info) {
     InitState init = InitState.enterFunction(f);
     
     optRecurseOnBlock(logger, f, f.mainBlock(), info, init,
@@ -273,12 +320,15 @@ public class ArrayBuild extends FunctionOptimizerPass {
   }
 
   private void optRecurseOnBlock(Logger logger, Function f, Block block,
-      InfoMap info, InitState init, 
+      ArrayInfo info, InitState init, 
       HierarchicalSet<Var> cands, HierarchicalSet<Var> invalid) {
     addBlockCandidates(f, block, info, cands);
     
     for (Var cand: cands) {
       if (!invalid.contains(cand)) {
+        AliasTracker blockAliases = info.getAliases(block);
+        AliasKey candKey = blockAliases.getCanonical(cand);
+        
         BlockVarInfo vi = info.getEntry(block, cand);
         if (logger.isTraceEnabled()) {
           logger.trace("Candidate: " + cand + " in block " +
@@ -298,7 +348,7 @@ public class ArrayBuild extends FunctionOptimizerPass {
           // Optimize here: cases where only inserted in this block,
           // or no inserts at all
           logger.trace("Can optimize!");
-          replaceInserts(logger, block, init, cand);
+          replaceInserts(logger, block, blockAliases, init, cand, candKey);
           invalid.add(cand); // Don't try to opt in descendants
         } else if (vi.insertImmOnce) {
           logger.trace("Try to optimize in descendant block!");
@@ -331,7 +381,7 @@ public class ArrayBuild extends FunctionOptimizerPass {
   }
 
   private void optRecurseOnCont(Logger logger, Function f,
-      Continuation cont, InfoMap info, InitState init,
+      Continuation cont, ArrayInfo info, InitState init,
       HierarchicalSet<Var> cands, HierarchicalSet<Var> invalid) {
     InitState contInit = init.enterContinuation(cont);
     
@@ -351,21 +401,23 @@ public class ArrayBuild extends FunctionOptimizerPass {
   /**
    * Replace arrayInsertImm instructions with an arrayBuild
    * @param block
-   * @param arr
+   * @param candKey
    * @param init initialized state from outside.  Not modified
    */
   private void replaceInserts(Logger logger, Block block,
-                              InitState init, Var arr) {
+          AliasTracker blockAliases, InitState init,
+          Var cand, AliasKey candKey) {
     
     // First remove the old instructions and gather keys and vals
-    Pair<List<Arg>, List<Arg>> keyVals = removeOldInserts(block, arr);
+    Pair<List<Arg>, List<Arg>> keyVals = 
+            removeOldInserts(block, blockAliases, candKey);
     List<Arg> keys = keyVals.val1;
     List<Arg> vals = keyVals.val2;
     
     ListIterator<Statement> insertPos;
-    insertPos = findArrayBuildPos(logger, block, init, arr, keys, vals);
+    insertPos = findArrayBuildPos(logger, block, init, cand, keys, vals);
     
-    insertPos.add(TurbineOp.arrayBuild(arr, keys, vals));
+    insertPos.add(TurbineOp.arrayBuild(cand, keys, vals));
   }
 
   /**
@@ -447,7 +499,8 @@ public class ArrayBuild extends FunctionOptimizerPass {
     return insertPos;
   }
 
-  private Pair<List<Arg>, List<Arg>> removeOldInserts(Block block, Var arr) {
+  private Pair<List<Arg>, List<Arg>> removeOldInserts(Block block,
+                  AliasTracker blockAliases, AliasKey candKey) {
     List<Arg> keys = new ArrayList<Arg>();
     List<Arg> vals = new ArrayList<Arg>();
     ListIterator<Statement> it = block.statementIterator();
@@ -456,12 +509,14 @@ public class ArrayBuild extends FunctionOptimizerPass {
       if (stmt.type() == StatementType.INSTRUCTION) {
         Instruction inst = stmt.instruction();
         if (inst.op == Opcode.ARR_STORE) {
-          if (inst.getOutput(0).equals(arr)) {
+          Var arrVar = inst.getOutput(0);
+          AliasKey arrKey = blockAliases.getCanonical(arrVar);
+          if (arrKey.equals(candKey)) {
             it.remove();
             Arg key = inst.getInput(0);
             Arg val = inst.getInput(1);
-            assert(Types.isArrayKeyVal(arr, key));
-            assert(Types.isElemValType(arr, val));
+            assert(Types.isArrayKeyVal(candKey, key));
+            assert(Types.isElemValType(candKey, val));
             keys.add(key);
             vals.add(val);
           }
