@@ -27,6 +27,7 @@ import exm.stc.ic.opt.InitVariables.InitState;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.Instruction.InitType;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.Function;
@@ -241,7 +242,7 @@ public class ArrayBuild extends FunctionOptimizerPass {
     for (Statement stmt: block.getStatements()) {
       switch (stmt.type()) {
         case INSTRUCTION:
-          updateInfo(block, info, stmt.instruction(), candidates);
+          updateInfo(logger, block, info, stmt.instruction(), candidates);
           break;
         default:
           // Do nothing: handle conditionals below
@@ -292,14 +293,30 @@ public class ArrayBuild extends FunctionOptimizerPass {
       }
     } else {
       for (Var out: inst.getOutputs()) {
-        if (isValidCandidate(out, false)) {
+        if (isValidCandidate(out, false) &&
+             !initsAlias(inst, out)) {
           // Can't optimize variables that are modified by other instructions
+          // It's ok if the instruction initialises aliases
           BlockVarInfo entry = info.getEntry(block, out);
           entry.otherModHere = true;
-          logger.trac
+          if (logger.isTraceEnabled()) {
+            logger.trace("Modified " + out + " due to " + inst);
+          }
         }
       }
     }
+  }
+
+  private boolean initsAlias(Instruction inst, Var out) {
+    if (out.storage() == Alloc.ALIAS) {
+      for (Pair<Var, InitType> e: inst.getInitialized()) {
+        if (out.equals(e.val1) && e.val2 == InitType.FULL) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
   }
 
 
