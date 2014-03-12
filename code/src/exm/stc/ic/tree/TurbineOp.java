@@ -782,9 +782,10 @@ public class TurbineOp extends Instruction {
    * @param fieldVals if null, not filled
    * @return writeDecr
    */
-  private Arg unpackStructInitArgs(Out<List<List<String>>> fieldPaths,
+  public Arg unpackStructInitArgs(Out<List<List<String>>> fieldPaths,
                                    Out<List<List<Arg>>> fieldPathsArgs,
                                    Out<List<Arg>> fieldVals) {
+    assert(op == Opcode.STRUCT_INIT_FIELDS) : op;
     if (fieldPaths != null) {
       fieldPaths.val = new ArrayList<List<String>>();
     }

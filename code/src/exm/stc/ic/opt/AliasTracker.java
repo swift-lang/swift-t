@@ -1,5 +1,6 @@
 package exm.stc.ic.opt;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -8,6 +9,8 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.exceptions.TypeMismatchException;
+import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.Type;
@@ -16,8 +19,10 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.common.util.MultiMap;
+import exm.stc.common.util.Out;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.TurbineOp;
 
 /**
  * Track which variables alias what.  AliasKey is a canonical key that
@@ -33,12 +38,6 @@ public class AliasTracker {
    * String to add to path to indicate that it's a dereferenced value 
    */
   public static final String DEREF_MARKER = "*";
-  
-  /**
-   * String to add to path to indicate that it's a regular value 
-   */
-  public static final String NON_DEREF_MARKER = "@";
-  
   
   private final Logger logger = Logging.getSTCLogger();
   
@@ -97,21 +96,42 @@ public class AliasTracker {
   private List<Alias> getInstructionAliases(Instruction inst) {
     switch (inst.op) {
       case STRUCT_CREATE_ALIAS:
-        return buildStructAliases(inst.getInput(0).getVar(),
-                              inst.getInput(1).getStringLit(),
-                              inst.getOutput(0), false);
-      case STRUCT_INIT_FIELDS:
-        throw new STCRuntimeError("Not implemented");
+        return buildStructAliases2(inst.getInput(0).getVar(),
+                     ((TurbineOp)inst).getInputsTail(1),
+                     inst.getOutput(0), false);
+      case STRUCT_INIT_FIELDS: {
+        Out<List<List<String>>> fieldPaths = new Out<List<List<String>>>();
+        Out<List<Arg>> fieldVals = new Out<List<Arg>>();
+        List<Alias> aliases = new ArrayList<Alias>();
+        ((TurbineOp)inst).unpackStructInitArgs(fieldPaths, null, fieldVals);
+        assert(fieldPaths.val.size() == fieldVals.val.size());
+        
+        for (int i = 0; i < fieldPaths.val.size(); i++) {
+          List<String> fieldPath = fieldPaths.val.get(i);
+          Arg fieldVal = fieldVals.val.get(i);
+          if (fieldVal.isVar()) {
+            aliases.addAll(buildStructAliases(inst.getOutput(0),
+                                       fieldPath, fieldVal.getVar(), true));
+          }
+        }
+        return aliases;
+      }
       case STRUCT_RETRIEVE_SUB:
-        throw new STCRuntimeError("Not implemented");
+        return buildStructAliases2(inst.getInput(0).getVar(),
+                     ((TurbineOp)inst).getInputsTail(1),
+                     inst.getOutput(0), true);
       case STRUCT_STORE_SUB:
-        throw new STCRuntimeError("Not implemented");
-      case STRUCT_COPY_IN:
-        // TODO: if field is ref, update
-        throw new STCRuntimeError("Not implemented");
+        return buildStructAliases2(inst.getOutput(0),
+                     ((TurbineOp)inst).getInputsTail(1),
+                     inst.getInput(0).getVar(), true);
       case STRUCT_COPY_OUT:
-        // TODO: if field is ref, update
-        throw new STCRuntimeError("Not implemented");
+        return buildStructAliases2(inst.getInput(0).getVar(),
+            ((TurbineOp)inst).getInputsTail(1),
+            inst.getOutput(0), false);
+      case STRUCT_COPY_IN:
+        return buildStructAliases2(inst.getOutput(0),
+            ((TurbineOp)inst).getInputsTail(1),
+            inst.getInput(0).getVar(), false);
       case STORE_REF:
         // TODO: if ref is alias to struct field
         throw new STCRuntimeError("Not implemented");
@@ -128,21 +148,27 @@ public class AliasTracker {
     return Collections.emptyList();
   }
 
+  private List<Alias> buildStructAliases2(Var struct, List<Arg> fieldPath,
+                                          Var val, boolean derefed) {
+    return buildStructAliases(struct, Arg.extractStrings(fieldPath),
+                              val, derefed);
+  }
+
   /**
    * Helper to build appropriate alias for struct
    * @param struct
-   * @param field
+   * @param fieldPath
    * @param val
    * @param derefed if val is dereferenced type for struct field
    * @return
    */
-  private List<Alias> buildStructAliases(Var struct, String field, Var val,
-          boolean derefed) {
+  private List<Alias> buildStructAliases(Var struct, List<String> fieldPath,
+                                         Var val, boolean derefed) {
     if (derefed) {
       // Value of field - only relevant if field is a reference
-      if (fieldIsRef(struct, field)) {
+      if (fieldIsRef(struct, fieldPath)) {
         // val is the value of the reference
-        return new Alias(struct, field, true, val).asList();
+        return new Alias(struct, fieldPath, true, val).asList();
       } else {
         // Value of field - not an alias
         return Alias.NONE;
@@ -150,34 +176,40 @@ public class AliasTracker {
       
     } else {
       // Straightforward alias of field
-      return new Alias(struct, field, false, val).asList();
+      return new Alias(struct, fieldPath, false, val).asList();
     }
   }
 
   /**
    * Return true if field of struct is a reference
    * @param struct
-   * @param field
+   * @param fieldPath
    * @return
    */
-  private boolean fieldIsRef(Typed struct, String field) {
+  private boolean fieldIsRef(Typed struct, List<String> fieldPath) {
     StructType type = (StructType)struct.type().getImplType();
-    Type fieldType = type.getFieldTypeByName(field);
+    Type fieldType;
+    try {
+      fieldType = type.getFieldTypeByPath(fieldPath);
+    } catch (TypeMismatchException e) {
+      // Should only happen if we allowed bad IR to get generated
+      throw new STCRuntimeError(e.getMessage());
+    }
     assert(fieldType != null);
     return Types.isRef(fieldType);
   }
 
   public void addAlias(Alias alias) {
-    addStructElem(alias.parent, alias.field, alias.derefed, alias.child);
+    addStructElem(alias.parent, alias.fieldPath, alias.derefed, alias.child);
   }
 
-  public void addStructElem(Var parent, String field, boolean derefed,
+  public void addStructElem(Var parent, List<String> fieldPath, boolean derefed,
                             Var child) {
     
     // find canonical paths for parent and child
     AliasKey parentPath = getCanonical(parent);
     assert(parentPath != null);
-    AliasKey childPath = parentPath.makeChild(field, derefed);
+    AliasKey childPath = parentPath.makeChild(fieldPath, derefed);
     
     addVarPath(child, childPath, null);
   }
@@ -306,19 +338,26 @@ public class AliasTracker {
       this.structPath = structPath;
     }
     
-    public AliasKey makeChild(String field, boolean derefed) {
-      String newPath[] = new String[pathLength() + 1];
+    public AliasKey makeChild(List<String> fieldPath,
+                              boolean derefed) {
+      int newPathLength = pathLength() + fieldPath.size();
+      if (derefed) {
+        newPathLength++; // For deref marker
+      }
+      
+      String newPath[] = new String[newPathLength];
       for (int i = 0; i < pathLength(); i++) {
         newPath[i] = structPath[i];
       }
-      String newElemName;
-      if (derefed) {
-        newElemName = DEREF_MARKER + field;
-      } else {
-        newElemName = NON_DEREF_MARKER + field;
+      
+      for (int i = 0; i < fieldPath.size(); i++) {
+        newPath[pathLength() + i] = fieldPath.get(i);
       }
       
-      newPath[pathLength()] = newElemName;
+      if (derefed) {
+        newPath[newPathLength - 1] = DEREF_MARKER;
+      }
+      
       return new AliasKey(var, newPath);
     }
     
@@ -415,15 +454,16 @@ public class AliasTracker {
     public static final List<Alias> NONE = Collections.emptyList();
     
     public final Var parent;
-    public final String field;
+    public final List<String> fieldPath;
     public final boolean derefed;
     public final Var child;
     
 
-    public Alias(Var parent, String field, boolean derefed, Var child) {
+    public Alias(Var parent, List<String> fieldPath,
+                  boolean derefed, Var child) {
       super();
       this.parent = parent;
-      this.field = field;
+      this.fieldPath = fieldPath;
       this.derefed = derefed;
       this.child = child;
     }
