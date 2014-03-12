@@ -196,7 +196,7 @@ public class RCTracker {
    */
   public Var getRefCountVar(Block block, AliasKey key) {
     // If inside struct, check to see if there is a reference
-    for (int i = key.pathLength() - 1; i >= 0; i++) {
+    for (int i = key.pathLength() - 1; i >= 0; i--) {
       if (key.structPath[i].equals(AliasTracker.DEREF_MARKER)) {
         // Refcount var key includes prefix including deref marker:
         // I.e. it should be the ID of the datum being refcounting
