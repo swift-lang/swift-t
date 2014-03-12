@@ -845,6 +845,9 @@ The following binary arithmetic operators on numbers are defined:
 
 +xor()+ is a builtin function.
 
+Swift boolean operators are not short-circuited (to allow maximal
+concurrency).  For conditional execution, use an +if+ statement.
+
 The following unary operators are defined:
 
 +-+ (negate), +!+ (boolean not)
