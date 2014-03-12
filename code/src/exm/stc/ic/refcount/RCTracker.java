@@ -125,7 +125,7 @@ public class RCTracker {
           // Canonicalize key by finding var, and then finding first path
           // that a var is a part of
           AliasKey currKey = e.getKey();
-          Var v = getRefCountVar(null, currKey, false);
+          Var v = getRefCountVar(null, currKey);
           if (v != null) {
             AliasKey canonKey = getCountKey(v);
             if (!canonKey.equals(currKey)) {
@@ -171,7 +171,7 @@ public class RCTracker {
                                         RCDir dir) {
     Counters<Var> result = new Counters<Var>();
     for (Entry<AliasKey, Long> e: rcIter(rcType, dir)) {
-      result.add(getRefCountVar(block, e.getKey(), true), e.getValue());
+      result.add(getRefCountVar(block, e.getKey()), e.getValue());
     }
     return result;
   }
@@ -188,9 +188,31 @@ public class RCTracker {
     return getCounters(rcType, dir).entries();
   }
 
-  public Var getRefCountVar(Block block, AliasKey key,
-                            boolean createIfNotPresent) {
-    // increment var, or struct root
+  /**
+   * Get the variable that we need to increment/decrement refcount of
+   * @param block
+   * @param key
+   * @return
+   */
+  public Var getRefCountVar(Block block, AliasKey key) {
+    // If inside struct, check to see if there is a reference
+    for (int i = key.pathLength() - 1; i >= 0; i++) {
+      if (key.structPath[i].equals(AliasTracker.DEREF_MARKER)) {
+        // Refcount var key includes prefix including deref marker:
+        // I.e. it should be the ID of the datum being refcounting
+        String pathPrefix[] = new String[i + 1];
+        for (int j = 0; j <= i; j++) {
+          pathPrefix[j] = key.structPath[j];
+        }
+        AliasKey prefixKey = new AliasKey(key.var, pathPrefix);
+        Var refcountVar = aliases.findVar(prefixKey);
+        assert(refcountVar != null) : "Expected var for alias key " + key +
+                                       " to exist";
+        return refcountVar;
+      }
+    }
+    
+    // If no references, struct root
     return key.var;
   }
 
@@ -320,7 +342,7 @@ public class RCTracker {
   public void incrKey(AliasKey key, RefCountType rcType, long amount,
                       Type varType) {
     // Check to see if var/type may be able to carry refcount
-    Var var = getRefCountVar(null, key, false);
+    Var var = getRefCountVar(null, key);
     if ((var != null && RefCounting.trackRefCount(var, rcType)) ||
         (var == null &&
          RefCounting.mayHaveRefcount(varType, rcType))) {

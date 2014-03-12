@@ -128,7 +128,7 @@ public class RCPlacer {
     for (RefCountType rcType: RefcountPass.RC_TYPES) {
       for (Entry<AliasKey, Long> e: increments.rcIter(rcType, RCDir.DECR)) {
         assert (e.getValue() <= 0);
-        Var var = increments.getRefCountVar(block, e.getKey(), true);
+        Var var = increments.getRefCountVar(block, e.getKey());
         Arg amount = Arg.createIntLit(e.getValue() * -1);
         block.addCleanup(var, RefCountOp.decrRef(rcType, var, amount));
       }
@@ -150,7 +150,7 @@ public class RCPlacer {
       ListIterator<Statement> stmtIt, RCTracker increments) {
     for (RefCountType rcType: RefcountPass.RC_TYPES) {
       for (Entry<AliasKey, Long> e: increments.rcIter(rcType, RCDir.INCR)) {
-        Var var = increments.getRefCountVar(block, e.getKey(), true);
+        Var var = increments.getRefCountVar(block, e.getKey());
         assert(var != null);
         Long incr = e.getValue();
         assert(incr >= 0);
@@ -417,10 +417,8 @@ public class RCPlacer {
         // in which case we can't move the decrement to the front of the block
         // Shouldn't be less than this when var is declared in this
         // block.
-        // TODO: this is a little conservative in case of structs, where
-        //       any writes to other fields will prevent refcount of unused
-        //       field being decremented
-        assert (incr >= -baseRC) : blockVar + " " + incr + " < base " + baseRC;
+        assert (incr >= -baseRC) : blockVar + " " + rcType + ": " +
+                                    incr + " < base " + baseRC;
         if (incr < 0) {
           immDecrCandidates.add(key);
         }
@@ -436,7 +434,7 @@ public class RCPlacer {
     immDecrCandidates.removeAll(useFinder.getUsedKeys());
    
     for (AliasKey key: immDecrCandidates) {
-      Var immDecrVar = tracker.getRefCountVar(block, key, true);
+      Var immDecrVar = tracker.getRefCountVar(block, key);
       assert(immDecrVar.storage() != Alloc.ALIAS) : immDecrVar;
       long incr = tracker.getCount(rcType, key, RCDir.DECR);
       block.modifyInitRefcount(immDecrVar, rcType, incr);
@@ -707,7 +705,7 @@ public class RCPlacer {
     AbstractForeachLoop loop = (AbstractForeachLoop) parent;
     Counters<Var> changes = new Counters<Var>();
     for (Entry<AliasKey, Long> e : increments.rcIter(type, RCDir.DECR)) {
-      Var var = increments.getRefCountVar(block, e.getKey(), true);
+      Var var = increments.getRefCountVar(block, e.getKey());
       long count = e.getValue();
       assert(count <= 0);
       if (count < 0 && RCUtil.definedOutsideCont(loop, block, var)) {
@@ -728,7 +726,7 @@ public class RCPlacer {
       RefCountType rcType) {
     Counters<Var> changes = new Counters<Var>();
     for (Entry<AliasKey, Long> e : increments.rcIter(rcType, RCDir.DECR)) {
-      Var var = increments.getRefCountVar(block, e.getKey(), true);
+      Var var = increments.getRefCountVar(block, e.getKey());
       long count = e.getValue();
       assert(count <= 0);
       addDecrement(block, changes, rcType, var, count);
@@ -802,7 +800,7 @@ public class RCPlacer {
         increments.rcIter(rcType, RCDir.INCR).iterator();
     while (it.hasNext()) {
       Entry<AliasKey, Long> e = it.next();
-      Var var = increments.getRefCountVar(block, e.getKey(), true);
+      Var var = increments.getRefCountVar(block, e.getKey());
       long count = e.getValue();
       if (var.storage() != Alloc.ALIAS
           || parentAssignedAliasVars.contains(var)) {
