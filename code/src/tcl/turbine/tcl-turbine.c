@@ -812,6 +812,7 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
                            &refcounts.decr_self.read_refcount);
     TCL_CHECK(rc);
   }
+
   TCL_CONDITION(argpos == objc, "Trailing args starting at %i", argpos);
 
   if (type == ADLB_DATA_TYPE_CONTAINER) {
@@ -841,9 +842,14 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
   if (created)
   {
     adlb_ref new_ref;
-    // Initial refcount for container: 1 r/w
-    // TODO: different counts?
-    new_ref.read_refs = new_ref.write_refs = 1;
+    /*
+     * Initial refcounts for container passed to caller
+     * We set to a fairly high number since this lets us give refcounts
+     * from outer container to callers without also touching inner
+     * datum.  Remainder will be freed all at once when outer container
+     * is closed/garbage collected.
+     */
+    new_ref.read_refs = new_ref.write_refs = (2 << 24);
 
     // Need to create container and insert
     adlb_datum_id new_id;
