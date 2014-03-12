@@ -12,7 +12,9 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.Logging;
 import exm.stc.common.Settings;
+import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
@@ -85,6 +87,7 @@ public class ArrayBuild extends FunctionOptimizerPass {
         entry = new BlockVarInfo();
         varMap.put(key, entry);
       }
+      
       return entry;
     }
 
@@ -131,10 +134,11 @@ public class ArrayBuild extends FunctionOptimizerPass {
     
     @Override
     public String toString() {
-      return "insertImmHere: " + insertImmHere + " " +
-             "otherModHere: " + otherModHere + " " +
-             "insertImmRec: " + insertImmRec + " " +
-             "otherModRec: " + otherModRec + " " +
+      return "declaredHere: " + declaredHere + ", " +
+              "insertImmHere: " + insertImmHere + ", " +
+             "otherModHere: " + otherModHere + ", " +
+             "insertImmRec: " + insertImmRec + ", " +
+             "otherModRec: " + otherModRec + ", " +
              "insertImmOnce: " + insertImmOnce;
     }
 
@@ -155,45 +159,89 @@ public class ArrayBuild extends FunctionOptimizerPass {
     // Set to track candidates in scope 
     HierarchicalSet<Var> candidates = new HierarchicalSet<Var>();
     ArrayInfo info = new ArrayInfo();
-    AliasTracker aliases = new AliasTracker();
-    buildInfoRec(logger, f, f.mainBlock(), info, aliases,
-                 candidates);
+    
+    // First build up complete alias info for each block, to avoid
+    // complications with alias info being incrementally refined
+    buildAliasInfoRec(logger, f, f.mainBlock(), info, new AliasTracker());
+    
+    buildInfoRec(logger, f, f.mainBlock(), info, candidates);
     return info;
   }
 
 
-  private boolean isValidCandidate(Var var) {
+  /**
+   * Build up alias info for all blocks and subblocks, adding them
+   * to info
+   * @param logger
+   * @param f
+   * @param block
+   * @param info
+   * @param aliases
+   */
+  private void buildAliasInfoRec(Logger logger, Function f, Block block,
+          ArrayInfo info, AliasTracker aliases) {
+    info.addAliasTracker(block, aliases);
+    
+    for (Statement stmt: block.getStatements()) {
+      switch(stmt.type()) {
+        case INSTRUCTION:
+          aliases.update(stmt.instruction());
+          break;
+        case CONDITIONAL:
+          for (Block child: stmt.conditional().getBlocks()) {
+            buildAliasInfoRec(logger, f, child, info, aliases.makeChild());
+          }
+          break;
+        default:
+          throw new STCRuntimeError("Unexpected " + stmt.type());
+      }
+    }
+    
+    for (Continuation c: block.getContinuations()) {
+      for (Block child: c.getBlocks()) {
+        buildAliasInfoRec(logger, f, child, info, aliases.makeChild());
+      }
+    }
+  }
+
+  /**
+   * Check if this is a valid candidate for optimisation
+   * @param var
+   * @param canonicalOnly if true, return false if not canonical
+   * @return
+   */
+  private boolean isValidCandidate(Var var, boolean canonicalOnly) {
     /*
      * Only attempt to optimise non-alias arrays. Optimising
      * some alias arrays, e.g. nested ones, would require further
      * analysis since there is not a single canonical non-alias
      * variable for the nested array.
      */
-    return Types.isArray(var) && var.storage() != Alloc.ALIAS;
+    return Types.isArray(var) && 
+            !(canonicalOnly && var.storage() == Alloc.ALIAS);
   }
 
   private void addBlockCandidates(Block block,
       ArrayInfo info, Collection<Var> candidates,
       Collection<Var> vars) {
     for (Var var: vars) {
-      if (isValidCandidate(var)) {
+      if (isValidCandidate(var, true)) {
         candidates.add(var);
         info.getEntry(block, var).declaredHere = true;
+        Logging.getSTCLogger().trace(var + " declared here! " +
+                                System.identityHashCode(block));
       }
     }
   }
 
   private void buildInfoRec(Logger logger, Function f,
-      Block block, ArrayInfo info, AliasTracker aliases,
-      HierarchicalSet<Var> candidates) {
-    info.addAliasTracker(block, aliases);
-    
+      Block block, ArrayInfo info, HierarchicalSet<Var> candidates) {
     addBlockCandidates(f, block, info, candidates);
     
     for (Statement stmt: block.getStatements()) {
       switch (stmt.type()) {
         case INSTRUCTION:
-          updateInfo(block, info, aliases, stmt.instruction(), candidates);
+          updateInfo(block, info, stmt.instruction(), candidates);
           break;
         default:
           // Do nothing: handle conditionals below
@@ -203,8 +251,7 @@ public class ArrayBuild extends FunctionOptimizerPass {
     
     for (Continuation c: block.allComplexStatements()) {
       for (Block inner: c.getBlocks()) {
-        buildInfoRec(logger, f, inner, info, aliases.makeChild(),
-                     candidates.makeChild());
+        buildInfoRec(logger, f, inner, info, candidates.makeChild());
       }
     }
     
@@ -234,11 +281,8 @@ public class ArrayBuild extends FunctionOptimizerPass {
     addBlockCandidates(block, info, candidates, block.getVariables());
   }
 
-  private void updateInfo(Block block, ArrayInfo info, AliasTracker aliases,
+  private void updateInfo(Logger logger, Block block, ArrayInfo info,
                 Instruction inst, Set<Var> candidates) {
-    
-    // Update aliases
-    aliases.update(inst);
     
     if (inst.op == Opcode.ARR_STORE) {
       Var arr = inst.getOutput(0);
@@ -248,10 +292,11 @@ public class ArrayBuild extends FunctionOptimizerPass {
       }
     } else {
       for (Var out: inst.getOutputs()) {
-        if (isValidCandidate(out) && candidates.contains(out)) {
+        if (isValidCandidate(out, false)) {
           // Can't optimize variables that are modified by other instructions
           BlockVarInfo entry = info.getEntry(block, out);
           entry.otherModHere = true;
+          logger.trac
         }
       }
     }
@@ -336,7 +381,7 @@ public class ArrayBuild extends FunctionOptimizerPass {
           logger.trace(vi);
         }
         if (vi.otherModRec) {
-          logger.trace("Can't optimize due other other inserts!");
+          logger.trace("Can't optimize due to other inserts!");
           invalid.add(cand);
         } else if ((vi.insertImmOnce && vi.insertImmHere) ||
                     (vi.noInserts() && vi.declaredHere)) {
