@@ -2,7 +2,7 @@
 
 # usage: run-test <OPTIONS> <PROGRAM> <OUTPUT>
 # turbine must be in your PATH or in TURBINE
-#         or installed in TURBINE_HOME
+#         or installed in TURBINE_HOME or TURBINE_INSTALL
 # Set VALGRIND=/path/to/valgrind to run valgrind (Turbine feature)
 
 # Defaults:
@@ -53,6 +53,17 @@ then
   if [[ ! -x ${TURBINE} ]]
   then
     print "Bad TURBINE_HOME!"
+    print "Not executable: ${TURBINE}"
+    exit 1
+  fi
+fi
+
+if [[ ${TURBINE_INSTALL} != "" ]]
+then
+  TURBINE=${TURBINE_INSTALL}/bin/turbine
+  if [[ ! -x ${TURBINE} ]]
+  then
+    print "Bad TURBINE_INSTALL!"
     print "Not executable: ${TURBINE}"
     exit 1
   fi
