@@ -185,7 +185,7 @@ public class RefCounting {
    */
   private static long baseRefCount(Type type, DefType defType,
                RefCountType rcType, boolean trackedCountOnly) {
-    if (Types.isStruct(type)) {
+    if (Types.isStruct(type) && rcType == RefCountType.WRITERS) {
       // Sum of field refcounts
       StructType structT = (StructType)type.type().getImplType();
       long count = 0;
