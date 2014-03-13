@@ -2741,10 +2741,6 @@ public class TurbineOp extends Instruction {
         Var ix = getInput(0).getVar();
         return Pair.create(ix.asList(), srcArray.asList());
       }
-      case STRUCTREF_COPY_OUT: {
-        return Pair.create(Arrays.asList(getInput(0).getVar()),
-                           Var.NONE);
-      }
       case AREF_CREATE_NESTED_IMM:
       case AREF_CREATE_NESTED_FUTURE: {
         Var outerArr = getOutput(1);
@@ -2790,6 +2786,13 @@ public class TurbineOp extends Instruction {
         }
         
         return Pair.create(readIncr, writeIncr);
+      }
+      case STRUCTREF_COPY_OUT:
+      case STRUCT_COPY_OUT: {
+        // Array only
+        return Pair.create(
+                  Arrays.asList(getInput(0).getVar()),
+                  Var.NONE);
       }
       case STRUCT_STORE_SUB:
       case STRUCT_COPY_IN:
