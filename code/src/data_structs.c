@@ -450,6 +450,7 @@ adlb_data_code xlb_struct_lookup(adlb_struct *s, adlb_subscript sub, bool init_n
         dc = xlb_new_struct(field_type->extra.STRUCT.struct_type,
                             &curr_field->data.STRUCT);
         DATA_CHECK(dc);
+        curr_field->initialized = true;
       }
       // Another iteration if it's a valid struct
       sub_ptr += component_len + 1;
@@ -517,21 +518,40 @@ adlb_data_code xlb_struct_get_subscript(adlb_struct *s, adlb_subscript subscript
 }
 
 adlb_data_code xlb_struct_subscript_init(adlb_struct *s, adlb_subscript subscript,
-                                        bool *b)
+                  bool validate_path, bool *b)
 {
   adlb_data_code dc;
 
-  int ix;
-  dc = xlb_struct_str_to_ix(subscript, &ix);
+  adlb_struct_field *field;
+  adlb_struct_field_type field_type;
+  size_t sub_pos;
+
+  // Initialize subscripts as a way to validate path
+  bool init_nested = validate_path;
+  dc = xlb_struct_lookup(s, subscript, init_nested, &field, &field_type, &sub_pos);
   DATA_CHECK(dc);
 
+  if (sub_pos == subscript.length)
+  {
+    // Entire subscript was consumed
+    *b = field->initialized;
+  }
+  else
+  {
+    if (validate_path)
+    {
+      verbose_error(ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND,
+          "Subscript invalid: [%.*s] (tail of [%.*s])",
+          (int)(subscript.length - sub_pos),
+          &((const char *)subscript.key)[sub_pos],
+          (int)subscript.length, (const char*)subscript.key);
+    }
+    else
+    {
+      *b = false;
+    }
+  }
 
-  adlb_struct_field *f;
-  xlb_struct_type_info *st;
-  dc = get_field(s, ix, &st, &f);
-  DATA_CHECK(dc);
-
-  *b = f->initialized;
   return ADLB_DATA_SUCCESS;
 }
 
@@ -654,6 +674,9 @@ xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
   return ADLB_DATA_SUCCESS;
 }
 
+/*
+ * TODO: deprecate this function
+ */
 adlb_data_code
 xlb_struct_str_to_ix(adlb_subscript subscript, int *field_ix)
 {

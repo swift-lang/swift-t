@@ -690,7 +690,7 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
           "subscript of struct initialized without type <%"PRId64">", id);
       // This will check validity of subscript as side-effect
       dc = xlb_struct_subscript_init(d->data.STRUCT, subscript,
-                                    &found);
+                                    true, &found);
       DATA_CHECK(dc);
       DEBUG("Struct subscript initialized: %i", (int)found);
     }

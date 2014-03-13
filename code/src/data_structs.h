@@ -75,8 +75,14 @@ adlb_data_code xlb_struct_get_field(adlb_struct *s, int field_ix,
 adlb_data_code xlb_struct_get_subscript(adlb_struct *s, adlb_subscript subscript,
                         const adlb_datum_storage **val, adlb_data_type *type);
 
+/*
+ * Check if a subscript of a struct is initialized.
+ * validate_path: if false, an invalid path may result in an error
+ *    return code, or simply say that the subscript is not init
+ *    if true, an invalid path always causes an error
+ */
 adlb_data_code xlb_struct_subscript_init(adlb_struct *s, adlb_subscript subscript,
-                                        bool *b);
+                                        bool validate_path, bool *b);
 
 adlb_data_code xlb_struct_assign_field(adlb_struct_field *field,
         adlb_struct_field_type field_type, const void *data, int length,
