@@ -5,13 +5,19 @@ set -e
 THISDIR=`dirname $0`
 source ${THISDIR}/exm-settings.sh
 
+
+# If CC set to mpicc, don't use it
+if [ ! -z "$CC" -a "$(basename $CC)" = mpicc ]; then
+  unset CC
+fi
+
 CONF_FLAGS=
 
 if (( MPICH2_SOCK )); then
   CONF_FLAGS+=" --with-device=ch3:sock"
 fi
 
-if (( ENABLE_FORTRAN )) then
+if (( ENABLE_FORTRAN )); then
   CONF_FLAGS+=" --disable-f77 --disable-fc"
 fi
 
