@@ -656,13 +656,21 @@ xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
   for (int i = 0; i < t->field_count; i++)
   {
     if (!s->fields[i].initialized)
+    {
+      check_verbose(i != acquire_ix, ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND,
+          "Could not acquire subscript [%.*s]",
+          (int)to_acquire.subscript.length,
+          (const char*)to_acquire.subscript.key);
       // Skip acquiring/freeing uninitialized fields
       continue;
+    }
+
+    adlb_data_type field_type = t->field_types[i].type;
 
     // TODO: need to recurse here on nested structs/containers
     bool acquire_field = acquiring &&
                          (acquire_ix < 0 || acquire_ix == i);
-    dc = xlb_incr_referand(&s->fields[i].data, t->field_types[i].type,
+    dc = xlb_incr_referand(&s->fields[i].data, field_type,
             release_read, release_write,
             (acquire_field ? to_acquire : XLB_NO_ACQUIRE), rc_changes);
     DATA_CHECK(dc);
