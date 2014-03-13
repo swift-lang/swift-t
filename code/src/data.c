@@ -164,7 +164,7 @@ check_subscript_notifications(adlb_datum_id container_id,
 static adlb_data_code
 insert_notifications2(adlb_datum *d,
       adlb_datum_id id, adlb_subscript subscript,
-      adlb_data_type value_type,
+      bool copy_sub, adlb_data_type value_type,
       const void *value_buffer, int value_len,
       struct list *ref_list, struct list_i *sub_list,
       adlb_notif_t *notify, bool *garbage_collected);
@@ -716,6 +716,10 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
       // encode container, index and ref type into string
       char key[id_sub_buflen(subscript)];
       size_t key_len = write_id_sub(key, id, subscript);
+      
+      DEBUG("Subscribe to <%"PRId64">[%.*s] len %i", id,
+        (int)subscript.length, (const char*)subscript.key,
+        (int)subscript.length);
 
       struct list_i* listeners = NULL;
       found = table_bp_search(&container_ix_listeners, key, key_len,
@@ -1617,6 +1621,10 @@ xlb_data_container_size(adlb_datum_id container_id, int* size)
 /**
  * Add notifications resulting from assignment to subscript.
  *
+ * subscript: we assume that a point to the subscript can be added to
+ *          notifications, i.e. that lifetime of subscript is longer than
+ *          notifications structure
+ * 
  * TODO: we don't handle subscription to nodes that are neither the root
  * nor the leaf here.  In principle a subtree could be fully assigned
  * before the full datum is assigned, but we don't detect that.
@@ -1640,7 +1648,7 @@ insert_notifications(adlb_datum *d,
                                      &sub_list);
   DATA_CHECK(dc);
   
-  dc = insert_notifications2(d, id, subscript,
+  dc = insert_notifications2(d, id, subscript, false,
       value_type, value_buffer, value_len,
       ref_list, sub_list, notify, garbage_collected);
   DATA_CHECK(dc);
@@ -1688,11 +1696,13 @@ check_subscript_notifications(adlb_datum_id id,
         This memory should have a lifetime matching that of the
         whole notification data structure (i.e. we don't make a
         copy of it and store a pointer in there)
+  copy_sub: if true, subscript data has shorter lifetime than
+            notifications, so much copy data to add to notifs
  */
 static adlb_data_code
 insert_notifications2(adlb_datum *d,
       adlb_datum_id id, adlb_subscript subscript,
-      adlb_data_type value_type,
+      bool copy_sub, adlb_data_type value_type,
       const void *value_buffer, int value_len,
       struct list *ref_list, struct list_i *sub_list,
       adlb_notif_t *notify, bool *garbage_collected)
@@ -1727,6 +1737,17 @@ insert_notifications2(adlb_datum *d,
   
   if (sub_list != NULL && sub_list->size > 0)
   {
+    if (copy_sub && adlb_has_sub(subscript))
+    {
+      void *subscript_ptr = malloc(subscript.length);
+      DATA_CHECK_MALLOC(subscript_ptr);
+
+      memcpy(subscript_ptr, subscript.key, subscript.length);
+      subscript.key = subscript_ptr;
+
+      dc = xlb_to_free_add(notify, subscript_ptr);
+      DATA_CHECK_ADLB(dc, ADLB_DATA_ERROR_OOM);
+    }
     dc = append_notifs(sub_list, id, subscript, &notify->notify);
     DATA_CHECK(dc);
     list_i_free(sub_list);
@@ -1737,24 +1758,28 @@ insert_notifications2(adlb_datum *d,
 
 /**
   Handle processing for a single subscript when processing
-  entire container
+  entire container.
+  copy_sub: if true, must copy sub if we want to add to notifications
  */
 static adlb_data_code
 all_notifs_step(adlb_datum *d, adlb_datum_id id, adlb_subscript sub,
-                const adlb_datum_storage *val,
+                bool copy_sub, const adlb_datum_storage *val,
                 adlb_data_type val_type, adlb_notif_t *notify,
                 bool *garbage_collected)
 {
   adlb_data_code dc;
-
-  DEBUG("Checking notifications for <%"PRId64">[%.*s]", id,
-        (int)sub.length, (const char*)sub.key);
 
   // Find, remove, and return any listeners/references
   struct list *ref_list = NULL;
   struct list_i *sub_list = NULL;
   dc = check_subscript_notifications(id, sub, &ref_list, &sub_list);
   DATA_CHECK(dc);
+
+  DEBUG("Notifications for <%"PRId64">[%.*s] len %i refs %i "
+        "subscribers %i", id, (int)sub.length,
+        (const char*)sub.key, (int)sub.length, 
+        ref_list != NULL ? ref_list->size : 0,
+        sub_list != NULL ? sub_list->size : 0);
 
   if (ref_list != NULL || sub_list != NULL)
   {
@@ -1772,7 +1797,7 @@ all_notifs_step(adlb_datum *d, adlb_datum_id id, adlb_subscript sub,
       adlb_code ac = xlb_to_free_add(notify, val_data.caller_data);
       DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
     }
-    dc = insert_notifications2(d, id, sub, val_type,
+    dc = insert_notifications2(d, id, sub, copy_sub, val_type,
                   val_data.data, val_data.length, ref_list, sub_list,
                   notify, garbage_collected);
     DATA_CHECK(dc);
@@ -1787,6 +1812,7 @@ static inline adlb_data_code
 add_subscript_notifs(adlb_datum *d, adlb_datum_id id,
                      adlb_notif_t *notify, bool *garbage_collected)
 {
+  adlb_data_code dc;
   *garbage_collected = false;
 
   if (d->type == ADLB_DATA_TYPE_CONTAINER ||
@@ -1797,9 +1823,12 @@ add_subscript_notifs(adlb_datum *d, adlb_datum_id id,
                                .length = XLB_STACK_BUFFER_LEN };
     bool sub_caller_buf = true; // Don't free buffer
 
-    return subscript_notifs_rec(d, id, &d->data, d->type,
+    dc = subscript_notifs_rec(d, id, &d->data, d->type,
           &sub_buffer, &sub_caller_buf, ADLB_NO_SUB, notify,
           garbage_collected);
+    DATA_CHECK(dc);
+
+    ADLB_Free_buf(&sub_buffer, sub_caller_buf);
   }
   return ADLB_DATA_SUCCESS;
 }
@@ -1901,8 +1930,8 @@ container_notifs_rec(adlb_datum *d, adlb_datum_id id,
     DATA_CHECK(dc);
 
     // Check for subscriptions on this subscript
-    dc = all_notifs_step(d, id, child_sub, item->data, c->val_type,
-                         notify, garbage_collected);
+    dc = all_notifs_step(d, id, child_sub, true, item->data,
+                         c->val_type, notify, garbage_collected);
     DATA_CHECK(dc);
 
     if (*garbage_collected)
@@ -1985,8 +2014,10 @@ struct_notifs_rec(adlb_datum *d, adlb_datum_id id,
       
       adlb_data_type field_type = st->field_types[i].type;
       // Check for subscriptions on this subscript
-      dc = all_notifs_step(d, id, child_sub, &field->data,
+      dc = all_notifs_step(d, id, child_sub, true, &field->data,
               field_type, notify, garbage_collected);
+      DATA_CHECK(dc);
+
       if (*garbage_collected)
       {
         // We just processed the last pending notification: we're done!

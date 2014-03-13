@@ -321,6 +321,9 @@ static inline adlb_data_code
 ADLB_Resize_buf(adlb_buffer *buf, bool *using_caller_buf, int min_length);
 
 static inline void
+ADLB_Free_buf(adlb_buffer *buf, bool using_caller_buf);
+
+static inline void
 ADLB_Free_binary_data(adlb_binary_data *buffer);
 
 // Helper macro for packing and unpacking data types with no additional memory
@@ -602,6 +605,18 @@ ADLB_Resize_buf(adlb_buffer *buf, bool *using_caller_buf, int min_length)
   }
   return ADLB_DATA_SUCCESS;
 }
+
+static inline void
+ADLB_Free_buf(adlb_buffer *buf, bool using_caller_buf)
+{
+  if (!using_caller_buf && buf->data != NULL)
+  {
+    free(buf->data);
+    buf->data = NULL;
+    buf->length = 0;
+  }
+}
+
 
 
 static inline void
