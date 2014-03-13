@@ -4817,7 +4817,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("write_refcount_incr", ADLB_Write_Refcount_Incr_Cmd);
   COMMAND("write_refcount_decr", ADLB_Write_Refcount_Decr_Cmd);
   COMMAND("insert",    ADLB_Insert_Cmd);
-  COMMAND("insert",    ADLB_Insert_Struct_Cmd);
+  COMMAND("insert_struct",    ADLB_Insert_Struct_Cmd);
   COMMAND("insert_atomic", ADLB_Insert_Atomic_Cmd);
   COMMAND("lookup",    ADLB_Lookup_Cmd);
   COMMAND("lookup_struct",    ADLB_Lookup_Struct_Cmd);
