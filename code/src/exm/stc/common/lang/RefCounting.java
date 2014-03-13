@@ -224,4 +224,9 @@ public class RefCounting {
     return baseRefCount(var.type(), var.defType(), RefCountType.WRITERS,
                         trackedCountOnly);
   }
+
+  public static long baseUntrackedWriteRefcount(Var var) {
+    return baseWriteRefCount(var, false)
+            - baseWriteRefCount(var, true);
+  }
 }

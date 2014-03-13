@@ -959,8 +959,7 @@ public class TurbineGenerator implements CompilerBackend {
     
     // Must decrement any refcounts not explicitly tracked since
     // we're assigning the struct in whole
-    long writeDecr = RefCounting.baseWriteRefCount(target, false)
-                     - RefCounting.baseWriteRefCount(target, true);
+    long writeDecr = RefCounting.baseUntrackedWriteRefcount(target);
     
     TypeName structType = representationType(target.type());
     pointAdd(Turbine.structSet(varToExpr(target), argToExpr(src),
@@ -1525,7 +1524,8 @@ public class TurbineGenerator implements CompilerBackend {
     
     int[] indices = structFieldIndices(struct.type(), fields);
     
-    int writeDecr = 1; // TODO: work out write refcounts for field
+    // TODO: work out write refcounts for field if struct
+    int writeDecr = 1;
     
     pointAdd(Turbine.insertStruct(varToExpr(struct),
         Turbine.structSubscript(indices), argToExpr(fieldContents),
@@ -1918,6 +1918,11 @@ public class TurbineGenerator implements CompilerBackend {
     pointAdd(Turbine.retrieveAcquire(tmpVal.variable(), varToExpr(src),
                                simpleReprType, incrReferand, LiteralInt.ONE));
     
+
+    // Must decrement any refcounts not explicitly tracked since
+    // we're assigning the struct in whole
+    long writeDecr = RefCounting.baseUntrackedWriteRefcount(dst);
+    
     List<TypeName> fullReprType;
     
     if (Types.isContainer(src)) {
@@ -1928,7 +1933,8 @@ public class TurbineGenerator implements CompilerBackend {
       fullReprType = Collections.singletonList(
                                   representationType(src.type()));
     }
-    pointAdd(Turbine.adlbStore(varToExpr(dst), tmpVal, fullReprType));
+    pointAdd(Turbine.adlbStore(varToExpr(dst), tmpVal, fullReprType,
+                              new LiteralInt(writeDecr), null));
   }
 
   /**
