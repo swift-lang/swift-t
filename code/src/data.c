@@ -134,13 +134,27 @@ insert_notifications(adlb_datum *d,
             adlb_notif_t *notify,
             bool *garbage_collected);
 
-static adlb_data_code
-container_all_notifs(adlb_datum *d, adlb_datum_id id,
-          adlb_container *c, adlb_notif_t *notify, bool *garbage_collected);
+static inline adlb_data_code
+add_subscript_notifs(adlb_datum *d, adlb_datum_id id,
+                     adlb_notif_t *notify, bool *garbage_collected);
+static inline adlb_data_code
+subscript_notifs_rec(adlb_datum *d, adlb_datum_id id,
+          adlb_datum_storage *data, adlb_data_type type,
+          adlb_buffer *sub_buf, bool *sub_caller_buf,
+          adlb_subscript subscript, adlb_notif_t *notify,
+          bool *garbage_collected);
 
 static adlb_data_code
-struct_all_notifs(adlb_datum *d, adlb_datum_id id,
-          adlb_struct *s, adlb_notif_t *notify, bool *garbage_collected);
+container_notifs_rec(adlb_datum *d, adlb_datum_id id,
+          adlb_container *s, adlb_buffer *sub_buf, bool *sub_caller_buf,
+          adlb_subscript subscript, adlb_notif_t *notify,
+          bool *garbage_collected);
+
+static adlb_data_code
+struct_notifs_rec(adlb_datum *d, adlb_datum_id id,
+          adlb_struct *c, adlb_buffer *sub_buf, bool *sub_caller_buf,
+          adlb_subscript subscript, adlb_notif_t *notify,
+          bool *garbage_collected);
 
 static adlb_data_code
 check_subscript_notifications(adlb_datum_id container_id,
@@ -989,19 +1003,9 @@ data_store_root(adlb_datum_id id, adlb_datum *d,
     free(val_s);
   }
   
-  // If this was a container, need to handle reference notifications
-  if (type == ADLB_DATA_TYPE_CONTAINER)
-  {
-    dc = container_all_notifs(d, id, &d->data.CONTAINER, 
-              notifications, freed_datum);
-    DATA_CHECK(dc);
-  }
-  else if (type == ADLB_DATA_TYPE_STRUCT)
-  {
-    dc = struct_all_notifs(d, id, d->data.STRUCT, 
-              notifications, freed_datum);
-    DATA_CHECK(dc);
-  }
+  // Need to handle subscript notifications
+  dc = add_subscript_notifs(d, id, notifications, freed_datum);
+  DATA_CHECK(dc);
   return ADLB_DATA_SUCCESS;
 }
 
@@ -1421,8 +1425,8 @@ extract_members(adlb_container *cont, int count, int offset,
 
   // Allocate some temporary storage on stack
   adlb_buffer tmp_buf;
-  tmp_buf.length = 4096;
-  char tmp_storage[4096];
+  tmp_buf.length = XLB_STACK_BUFFER_LEN;
+  char tmp_storage[XLB_STACK_BUFFER_LEN];
   tmp_buf.data = tmp_storage;
 
   int output_pos = 0; // Amount of output used
@@ -1610,6 +1614,13 @@ xlb_data_container_size(adlb_datum_id container_id, int* size)
   }
 }
 
+/**
+ * Add notifications resulting from assignment to subscript.
+ *
+ * TODO: we don't handle subscription to nodes that are neither the root
+ * nor the leaf here.  In principle a subtree could be fully assigned
+ * before the full datum is assigned, but we don't detect that.
+ */
 static adlb_data_code
 insert_notifications(adlb_datum *d,
             adlb_datum_id id,
@@ -1735,6 +1746,10 @@ all_notifs_step(adlb_datum *d, adlb_datum_id id, adlb_subscript sub,
                 bool *garbage_collected)
 {
   adlb_data_code dc;
+
+  DEBUG("Checking notifications for <%"PRId64">[%.*s]", id,
+        (int)sub.length, (const char*)sub.key);
+
   // Find, remove, and return any listeners/references
   struct list *ref_list = NULL;
   struct list_i *sub_list = NULL;
@@ -1765,24 +1780,129 @@ all_notifs_step(adlb_datum *d, adlb_datum_id id, adlb_subscript sub,
   return ADLB_DATA_SUCCESS;
 }
 
+/**
+ * Check for references or subscript to all members.
+ */
+static inline adlb_data_code
+add_subscript_notifs(adlb_datum *d, adlb_datum_id id,
+                     adlb_notif_t *notify, bool *garbage_collected)
+{
+  *garbage_collected = false;
+
+  if (d->type == ADLB_DATA_TYPE_CONTAINER ||
+      d->type == ADLB_DATA_TYPE_STRUCT)
+  {
+    char sub_storage[XLB_STACK_BUFFER_LEN];
+    adlb_buffer sub_buffer = { .data = sub_storage,
+                               .length = XLB_STACK_BUFFER_LEN };
+    bool sub_caller_buf = true; // Don't free buffer
+
+    return subscript_notifs_rec(d, id, &d->data, d->type,
+          &sub_buffer, &sub_caller_buf, ADLB_NO_SUB, notify,
+          garbage_collected);
+  }
+  return ADLB_DATA_SUCCESS;
+}
+
+static inline adlb_data_code
+subscript_notifs_rec(adlb_datum *d, adlb_datum_id id,
+          adlb_datum_storage *data, adlb_data_type type,
+          adlb_buffer *sub_buf, bool *sub_caller_buf,
+          adlb_subscript subscript, adlb_notif_t *notify,
+          bool *garbage_collected)
+{
+  switch (type)
+  {
+    case ADLB_DATA_TYPE_CONTAINER:
+      return container_notifs_rec(d, id, &data->CONTAINER,
+          sub_buf, sub_caller_buf, subscript, notify,
+          garbage_collected);
+    case ADLB_DATA_TYPE_STRUCT:
+      return struct_notifs_rec(d, id, data->STRUCT,
+          sub_buf, sub_caller_buf, subscript, notify,
+          garbage_collected);
+    default:
+      return ADLB_DATA_SUCCESS;
+  }
+}
+
+/**
+ * Concatenate two subscripts, optionally using buffer
+ * sub1: base, can be empty
+ * sub2: appended to end, cannot be empty
+ * sub_buf: buffer.  sub1 may use buffer
+ */
+static adlb_data_code
+concat_subscripts(adlb_subscript sub1, adlb_subscript sub2,
+                  adlb_subscript *result, adlb_buffer *sub_buf,
+                  bool *sub_caller_buf)
+{
+  adlb_data_code dc;
+
+  if (!adlb_has_sub(sub1))
+  {
+    *result = sub2;
+  }
+  else
+  {
+    // Combine subscripts
+    result->length = sub1.length + sub2.length;
+    dc = ADLB_Resize_buf(sub_buf, sub_caller_buf, (int)result->length);
+    DATA_CHECK(dc);
+
+    if (sub1.key != sub_buf->data)
+    {
+      memcpy(sub_buf->data, sub1.key, sub1.length);
+    }
+    sub_buf->data[sub1.length - 1] = '.';
+    memcpy(&sub_buf->data[sub1.length], sub2.key, sub2.length);
+    result->key = sub_buf->data;
+  }
+  return ADLB_DATA_SUCCESS;
+}
+
 /*
   Check for references to all members.
  */
 static adlb_data_code
-container_all_notifs(adlb_datum *d, adlb_datum_id id,
-          adlb_container *c, adlb_notif_t *notify, bool *garbage_collected)
+container_notifs_rec(adlb_datum *d, adlb_datum_id id,
+          adlb_container *c, adlb_buffer *sub_buf, bool *sub_caller_buf,
+          adlb_subscript subscript, adlb_notif_t *notify,
+          bool *garbage_collected)
 {
   adlb_data_code dc;
-  struct table_bp* members = c->members;
-  
-  *garbage_collected = false;
 
-  TABLE_BP_FOREACH(members, item)
+  /*
+   * It's possible that sub_buf is reallocated, in which case
+   * we need to keep the subscript pointer pointed to it
+   */
+  bool subscript_uses_buf = (subscript.key == sub_buf->data);
+
+  TABLE_BP_FOREACH(c->members, item)
   {
-    adlb_subscript sub = { .key = table_bp_get_key(item),
-                           .length = item->key_len };
-    dc = all_notifs_step(d, id, sub, item->data, c->val_type, notify,
-                         garbage_collected);
+    adlb_subscript component = { .key = table_bp_get_key(item),
+                                 .length = item->key_len };
+         
+    // Ensure subscript valid in event of reallocation
+    if (subscript_uses_buf)
+    {
+      subscript.key = sub_buf->data;
+      assert(subscript.length <= sub_buf->length);
+    }
+
+    /*
+     * Note: concatenating subscripts like this will modify the data
+     * pointed to by subscript.  But redoing the concatenation will
+     * still be valid.
+     */
+    adlb_subscript child_sub;
+    dc = concat_subscripts(subscript, component, &child_sub,
+                           sub_buf, sub_caller_buf);
+    DATA_CHECK(dc);
+
+    // Check for subscriptions on this subscript
+    dc = all_notifs_step(d, id, child_sub, item->data, c->val_type,
+                         notify, garbage_collected);
     DATA_CHECK(dc);
 
     if (*garbage_collected)
@@ -1791,21 +1911,37 @@ container_all_notifs(adlb_datum *d, adlb_datum_id id,
       // container: we're done!
       return ADLB_DATA_SUCCESS;
     }
+
+    dc = subscript_notifs_rec(d, id, item->data, c->val_type,
+        sub_buf, sub_caller_buf, child_sub, notify,
+        garbage_collected);
+    DATA_CHECK(dc);
+
+    if (*garbage_collected)
+    {
+      return ADLB_DATA_SUCCESS;
+    }
   }
   return ADLB_DATA_SUCCESS;
 }
 
 
 static adlb_data_code
-struct_all_notifs(adlb_datum *d, adlb_datum_id id,
-          adlb_struct *s, adlb_notif_t *notify, bool *garbage_collected)
+struct_notifs_rec(adlb_datum *d, adlb_datum_id id,
+          adlb_struct *s, adlb_buffer *sub_buf, bool *sub_caller_buf,
+          adlb_subscript subscript, adlb_notif_t *notify,
+          bool *garbage_collected)
 {
   adlb_data_code dc;
   
-  *garbage_collected = false;
-
   const xlb_struct_type_info *st = xlb_get_struct_type_info(s->type);
   assert(st != NULL);
+
+  /*
+   * It's possible that sub_buf is reallocated, in which case
+   * we need to keep the subscript pointer pointed to it
+   */
+  bool subscript_uses_buf = (subscript.key == sub_buf->data);
 
   for (int i = 0; i < st->field_count; i++)
   {
@@ -1813,18 +1949,57 @@ struct_all_notifs(adlb_datum *d, adlb_datum_id id,
     if (field->initialized)
     {
       // key from field index
-      char key[20];
-      int key_len = sprintf(key, "%i", i);
-      adlb_subscript sub = { .key = key,
-                             .length = (size_t)key_len };
-      dc = all_notifs_step(d, id, sub, &field->data,
-                           st->field_types[i].type,
-                           notify, garbage_collected);
+      size_t max_key_len = 21;
+      char key[max_key_len];
+      adlb_subscript child_sub; 
+     
+      if (adlb_has_sub(subscript))
+      {
+        // Append child subscript to buffer
+        dc = ADLB_Resize_buf(sub_buf, sub_caller_buf,
+                             (int)(subscript.length + max_key_len));
+        DATA_CHECK(dc);
+
+        if (subscript_uses_buf)
+        {
+          // Ensure subscript valid in event of reallocation
+          subscript.key = sub_buf->data;
+          assert(subscript.length <= sub_buf->length);
+        }
+        else
+        {
+          memcpy(sub_buf->data, subscript.key, subscript.length);
+        }
+
+        child_sub.key = sub_buf->data;
+        char *buf_ptr = &((char*)sub_buf->data)[subscript.length - 1];
+        // Separator and null terminator cancel out for length
+        child_sub.length = (size_t)sprintf(buf_ptr, ".%i", i) +
+                           subscript.length;
+      }
+      else
+      {
+        child_sub.key = key;
+        child_sub.length = 1 + (size_t)sprintf(key, "%i", i);
+      }
+      
+      adlb_data_type field_type = st->field_types[i].type;
+      // Check for subscriptions on this subscript
+      dc = all_notifs_step(d, id, child_sub, &field->data,
+              field_type, notify, garbage_collected);
+      if (*garbage_collected)
+      {
+        // We just processed the last pending notification: we're done!
+        return ADLB_DATA_SUCCESS;
+      }
+    
+      dc = subscript_notifs_rec(d, id, &field->data, field_type,
+                     sub_buf, sub_caller_buf, child_sub, notify,
+                     garbage_collected);
       DATA_CHECK(dc);
 
       if (*garbage_collected)
       {
-        // We just processed the last pending notification: we're done!
         return ADLB_DATA_SUCCESS;
       }
     }

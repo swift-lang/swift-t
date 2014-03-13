@@ -32,6 +32,12 @@
 #define CONTAINER_INIT_CAPACITY 32
 
 /**
+ * Size for temporary stack buffers.  Assume no recursive calls.
+ * Should be small enough to avoid stack overflows
+ */
+#define XLB_STACK_BUFFER_LEN 4096
+
+/**
    Status vector for Turbine variables
  */
 typedef struct {
