@@ -645,6 +645,7 @@ xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
   int acquire_ix = -1; // negative == acquire all subscripts
   if (adlb_has_sub(to_acquire.subscript)) 
   {
+    // TODO: separate initial component from rest
     dc = xlb_struct_str_to_ix(to_acquire.subscript, &acquire_ix);
     DATA_CHECK(dc);
     check_verbose(acquire_ix < t->field_count, ADLB_DATA_ERROR_INVALID,
@@ -658,6 +659,7 @@ xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
       // Skip acquiring/freeing uninitialized fields
       continue;
 
+    // TODO: need to recurse here on nested structs/containers
     bool acquire_field = acquiring &&
                          (acquire_ix < 0 || acquire_ix == i);
     dc = xlb_incr_referand(&s->fields[i].data, t->field_types[i].type,
