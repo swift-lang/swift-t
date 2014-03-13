@@ -583,7 +583,7 @@ datum_gc(adlb_datum_id id, adlb_datum* d,
   if (d->status.set)
   {
     // Cleanup the storage if initialized
-    adlb_data_code dc = xlb_datum_cleanup(&d->data, d->type, id, true,
+    adlb_data_code dc = xlb_datum_cleanup(&d->data, d->type, true,
                                 true, true, to_acquire, rc_changes);
     DATA_CHECK(dc);
   }

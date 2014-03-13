@@ -42,8 +42,10 @@ const xlb_struct_type_info *
 xlb_get_struct_type_info(adlb_struct_type type);
 
 // Free memory associated with struct, including the
-// provided pointer if specified
-adlb_data_code xlb_free_struct(adlb_struct *s, bool free_root_ptr);
+// provided pointer if specified.  If recurse specified, free
+// struct fields too
+adlb_data_code xlb_free_struct(adlb_struct *s, bool free_root_ptr,
+                               bool recurse);
 
 /**
  * Search for subscript in struct, consuming as much of subscript as
@@ -105,8 +107,5 @@ xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
                    xlb_rc_changes *rc_changes);
 
 char *xlb_struct_repr(adlb_struct *s);
-
-// Convert subscript to struct field ID
-adlb_data_code xlb_struct_str_to_ix(adlb_subscript subscript, int *field_ix);
 
 #endif // __XLB_DATA_STRUCTS_H

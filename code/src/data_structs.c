@@ -30,6 +30,10 @@ static xlb_struct_type_info *struct_types = NULL;
 static adlb_data_code struct_type_free(xlb_struct_type_info *t);
 static adlb_struct *alloc_struct(xlb_struct_type_info *t);
 
+static adlb_data_code
+struct_subscript_pop(adlb_subscript *sub, int *field_ix,
+                     size_t *consumed);
+
 const char *xlb_struct_type_name(adlb_struct_type type)
 {
   if (type >= 0 && type < struct_types_size)
@@ -167,6 +171,59 @@ adlb_data_code struct_type_free(xlb_struct_type_info *t)
     free(t->field_types);
     free(t->field_names);
   }
+  return ADLB_DATA_SUCCESS;
+}
+
+/**
+ * Extract first component of struct subscript, and
+ * update subscript to refer to remainder, or ADLB_NO_SUB if finished.
+ * consumed: number of bytes of subscript consumed
+ */
+static adlb_data_code
+struct_subscript_pop(adlb_subscript *sub, int *field_ix,
+                     size_t *consumed)
+{
+  adlb_data_code dc;
+  // Struct subscripts are of form <integer>(.<integer>)*'\0'?
+
+  const char *sub_str = sub->key;
+  // Locate next '.', if any
+  void *sep = memchr(sub_str, '.', sub->length);
+  size_t component_len;
+  if (sep == NULL)
+  {
+    component_len = sub->length;
+    // May or may not be null-terminated
+    if (sub_str[component_len - 1] == '\0')
+    {
+      component_len--;
+    }
+    
+    *consumed = sub->length;
+
+    // Finished with subscript
+    *sub = ADLB_NO_SUB;
+  }
+  else
+  {
+    component_len = (size_t)((char*)sep - sub_str);
+    sub->key = ((const char*)sep) + 1;
+    *consumed = component_len + 1; // Including separator
+    assert(*consumed <= sub->length);
+    sub->length = sub->length - *consumed;
+  }
+  
+  int64_t field_ix64;
+  dc = ADLB_Int64_parse(sub_str, component_len, &field_ix64);
+  check_verbose(dc == ADLB_DATA_SUCCESS, ADLB_DATA_ERROR_INVALID,
+        "Invalid subscript component: \"%.*s\" len %zu",
+        (int)component_len, sub_str, component_len);
+
+  check_verbose(field_ix64 >= 0 && field_ix64 <= INT_MAX,
+      ADLB_DATA_ERROR_INVALID, "Struct index out of range: %"PRId64,
+      field_ix64);
+
+  *field_ix = (int)field_ix64;
   return ADLB_DATA_SUCCESS;
 }
 
@@ -390,56 +447,31 @@ adlb_data_code xlb_struct_lookup(adlb_struct *s, adlb_subscript sub, bool init_n
   assert(sub.length > 0);
 
   adlb_data_code dc;
-
-  const char *sub_ptr = sub.key;
-  size_t pos = 0;
+  size_t pos = 0; // position relative to start
 
   while (true)
   {
-    assert(sub.length > pos);
+    assert(sub.length > 0);
+    int field_ix;
+    size_t consumed;
 
-    // Struct subscripts are of form <integer>(.<integer>)*'\0'?
+    dc = struct_subscript_pop(&sub, &field_ix, &consumed);
+    DATA_CHECK(dc);
 
-    // Locate next '.', if any
-    size_t remaining = sub.length - pos;
-    void *sep = memchr(sub_ptr, '.', remaining);
-    size_t component_len;
-    if (sep == NULL)
-    {
-      component_len = remaining;
-      // May or may not be null-terminated
-      if (sub_ptr[component_len - 1] == '\0')
-      {
-        component_len--;
-      }
-    }
-    else
-    {
-      component_len = (size_t)((char*)sep - sub_ptr);
-    }
-    
-    int64_t field_ix64;
-    dc = ADLB_Int64_parse(sub_ptr, component_len, &field_ix64);
-    check_verbose(dc == ADLB_DATA_SUCCESS, ADLB_DATA_ERROR_INVALID,
-          "Invalid subscript component: \"%.*s\" len %zu",
-          (int)component_len, sub_ptr, component_len);
-
-    check_verbose(field_ix64 >= 0 && field_ix64 <= INT_MAX,
-        ADLB_DATA_ERROR_INVALID, "Struct index out of range: %"PRId64,
-        field_ix64);
+    pos += consumed;
 
     adlb_struct_field *curr_field;
     xlb_struct_type_info *st;
-    dc = get_field(s, (int)field_ix64, &st, &curr_field);
+    dc = get_field(s, field_ix, &st, &curr_field);
     DATA_CHECK(dc);
 
-    adlb_struct_field_type *field_type = &st->field_types[field_ix64];
+    adlb_struct_field_type *field_type = &st->field_types[field_ix];
 
-    if (sep == NULL)
+    if (!adlb_has_sub(sub))
     {
       *field = curr_field;
       *type = *field_type;
-      *sub_pos = sub.length;
+      *sub_pos = pos;
       return ADLB_DATA_SUCCESS;
     }
     else if (field_type->type == ADLB_DATA_TYPE_STRUCT &&
@@ -453,8 +485,6 @@ adlb_data_code xlb_struct_lookup(adlb_struct *s, adlb_subscript sub, bool init_n
         curr_field->initialized = true;
       }
       // Another iteration if it's a valid struct
-      sub_ptr += component_len + 1;
-      pos += component_len + 1;
       s = curr_field->data.STRUCT;
     }
     else
@@ -462,7 +492,7 @@ adlb_data_code xlb_struct_lookup(adlb_struct *s, adlb_subscript sub, bool init_n
       // Not a struct: return
       *field = curr_field;
       *type = *field_type;
-      *sub_pos = pos + component_len + 1; // Component plus separator
+      *sub_pos = pos;
       return ADLB_DATA_SUCCESS;
     }
   }
@@ -538,6 +568,7 @@ adlb_data_code xlb_struct_subscript_init(adlb_struct *s, adlb_subscript subscrip
   }
   else
   {
+    DEBUG("%zu vs %zu", sub_pos, subscript.length);
     if (validate_path)
     {
       verbose_error(ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND,
@@ -610,24 +641,31 @@ adlb_data_code xlb_struct_set_subscript(adlb_struct *s, adlb_subscript subscript
   return xlb_struct_assign_field(field, field_type, data, length, type);
 }
 
-adlb_data_code xlb_free_struct(adlb_struct *s, bool free_root_ptr)
+adlb_data_code xlb_free_struct(adlb_struct *s, bool free_root_ptr,
+                               bool recurse)
 {
   adlb_data_code dc;
 
   assert(s != NULL);
   check_valid_type(s->type);
 
-  xlb_struct_type_info *t = &struct_types[s->type];
-  for (int i = 0; i < t->field_count; i++)
+  if (recurse)
   {
-    if (s->fields[i].initialized)
+    xlb_struct_type_info *t = &struct_types[s->type];
+    for (int i = 0; i < t->field_count; i++)
     {
-      dc = ADLB_Free_storage(&s->fields[i].data, t->field_types[i].type);
-      DATA_CHECK(dc);
+      if (s->fields[i].initialized)
+      {
+        dc = ADLB_Free_storage(&s->fields[i].data, t->field_types[i].type);
+        DATA_CHECK(dc);
+      }
     }
   }
+
   if (free_root_ptr)
+  {
     free(s);
+  }
   return ADLB_DATA_SUCCESS;
 }
 
@@ -642,12 +680,23 @@ xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
   xlb_struct_type_info *t = &struct_types[s->type];
   bool acquiring = !ADLB_RC_IS_NULL(to_acquire.refcounts);
   
-  int acquire_ix = -1; // negative == acquire all subscripts
+  int acquire_ix = -1; // negative means acquire all subscripts
   if (adlb_has_sub(to_acquire.subscript)) 
   {
-    // TODO: separate initial component from rest
-    dc = xlb_struct_str_to_ix(to_acquire.subscript, &acquire_ix);
+    // separate initial component from rest
+    // this leaves trailing subscript in to_acquire, allowing us
+    // to pass it directly to recursive calls
+    DEBUG("xlb_struct_cleanup sub before: [%.*s]",
+          (int)to_acquire.subscript.length,
+          (const char*)to_acquire.subscript.key);
+    size_t consumed;
+    dc = struct_subscript_pop(&to_acquire.subscript, &acquire_ix,
+                              &consumed);
     DATA_CHECK(dc);
+    DEBUG("xlb_struct_cleanup sub after: [%.*s]",
+          (int)to_acquire.subscript.length,
+          (const char*)to_acquire.subscript.key);
+
     check_verbose(acquire_ix < t->field_count, ADLB_DATA_ERROR_INVALID,
                 "Out of range struct index: %i, type %s field count %i",
                 acquire_ix, t->type_name, t->field_count);
@@ -666,42 +715,37 @@ xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
     }
 
     adlb_data_type field_type = t->field_types[i].type;
+    adlb_datum_storage *field_data = &s->fields[i].data;
 
     // TODO: need to recurse here on nested structs/containers
-    bool acquire_field = acquiring &&
+    bool acquiring_field = acquiring &&
                          (acquire_ix < 0 || acquire_ix == i);
-    dc = xlb_incr_referand(&s->fields[i].data, field_type,
-            release_read, release_write,
-            (acquire_field ? to_acquire : XLB_NO_ACQUIRE), rc_changes);
-    DATA_CHECK(dc);
+    xlb_acquire_rc acquire_field = acquiring_field ? to_acquire
+                                                   : XLB_NO_ACQUIRE;
+
+    TRACE("Field %i of %s: acquiring %i", i, t->type_name,
+                                      (int)acquire_field);
+    switch (field_type)
+    {
+      case ADLB_DATA_TYPE_STRUCT:
+        // Call directly so fewer recursive calls for nested structs
+        dc = xlb_struct_cleanup(field_data->STRUCT, free_mem,
+              release_read, release_write, acquire_field, rc_changes);
+        DATA_CHECK(dc);
+        break;
+      default:
+        dc = xlb_datum_cleanup(field_data, field_type, free_mem,
+                release_read, release_write, acquire_field, rc_changes);
+        DATA_CHECK(dc);
+        break;
+    }
   }
 
   if (free_mem)
   {
-    dc = xlb_free_struct(s, true);
+    dc = xlb_free_struct(s, true, false);
     DATA_CHECK(dc);
   }
-  return ADLB_DATA_SUCCESS;
-}
-
-/*
- * TODO: deprecate this function
- */
-adlb_data_code
-xlb_struct_str_to_ix(adlb_subscript subscript, int *field_ix)
-{
-  // TODO: use binary repr for subscript? vint?
-  char *end;
-  // TODO: unsafe, assuming null terminated
-  long field_ixl = strtol(subscript.key, &end, 10);
-  // TODO: support binary subscript
-  check_verbose(end != subscript.key && *end == '\0', ADLB_DATA_ERROR_INVALID,
-                "Expected integer subscript for struct: [%.*s]",
-                (int)subscript.length, (const char*)subscript.key);
-  check_verbose(field_ixl >= 0 && field_ixl < INT_MAX,
-                ADLB_DATA_ERROR_INVALID, "Integer subscript for struct"
-                " out of range: [%li]", field_ixl);
-  *field_ix = (int)field_ixl;
   return ADLB_DATA_SUCCESS;
 }
 

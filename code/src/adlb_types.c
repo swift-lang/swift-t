@@ -784,7 +784,7 @@ adlb_data_code ADLB_Free_storage(adlb_datum_storage *d, adlb_data_type type)
       DATA_CHECK(dc);
       break;
     case ADLB_DATA_TYPE_STRUCT:
-      xlb_free_struct(d->STRUCT, true);
+      xlb_free_struct(d->STRUCT, true, true);
       break;
     // Types with no malloced storage:
     case ADLB_DATA_TYPE_INTEGER:

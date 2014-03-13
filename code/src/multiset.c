@@ -89,8 +89,7 @@ xlb_multiset_cleanup(xlb_multiset *set, bool free_root, bool free_mem,
     for (int j = 0; j < clen; j++) {
       adlb_datum_storage *d = &chunk->arr[j];
       adlb_data_code dc = xlb_datum_cleanup(d, set->elem_type,
-                    ADLB_DATA_ID_NULL, free_mem,
-                    release_read, release_write,
+                    free_mem, release_read, release_write,
                     to_acquire, rc_changes);
       DATA_CHECK(dc);
     }
