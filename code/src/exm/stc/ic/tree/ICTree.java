@@ -1106,13 +1106,13 @@ public class ICTree {
           // If not an alias, need to select refcount
           if (initReaders == null) {
             // Init to default refcount
-            long baseReaders = RefCounting.baseReadRefCount(v, false);
+            long baseReaders = RefCounting.baseReadRefCount(v, true, true);
             initReaders = Arg.createIntLit(baseReaders);
           }
 
           if (initWriters == null) {
             // Init to default refcount
-            long baseWriters = RefCounting.baseWriteRefCount(v, false);
+            long baseWriters = RefCounting.baseWriteRefCount(v, true, true);
             initWriters = Arg.createIntLit(baseWriters);
           }
         }
@@ -1705,7 +1705,7 @@ public class ICTree {
      */
     public void modifyInitRefcount(Var blockVar, RefCountType rcType,
                                    long incr) {
-      long baseRC = RefCounting.baseRefCount(blockVar, rcType, false);
+      long baseRC = RefCounting.baseRefCount(blockVar, rcType, true, true);
       setInitRefcount(blockVar, rcType, baseRC + incr);
     }
 

@@ -959,7 +959,7 @@ public class TurbineGenerator implements CompilerBackend {
     
     // Must decrement any refcounts not explicitly tracked since
     // we're assigning the struct in whole
-    long writeDecr = RefCounting.baseUntrackedWriteRefcount(target);
+    long writeDecr = RefCounting.baseWriteRefCount(target, true, true);
     
     TypeName structType = representationType(target.type());
     pointAdd(Turbine.structSet(varToExpr(target), argToExpr(src),
@@ -1921,7 +1921,7 @@ public class TurbineGenerator implements CompilerBackend {
 
     // Must decrement any refcounts not explicitly tracked since
     // we're assigning the struct in whole
-    long writeDecr = RefCounting.baseUntrackedWriteRefcount(dst);
+    long writeDecr = RefCounting.baseWriteRefCount(dst, true, true);
     
     List<TypeName> fullReprType;
     

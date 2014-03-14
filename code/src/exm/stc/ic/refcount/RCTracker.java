@@ -345,7 +345,7 @@ public class RCTracker {
     Var var = getRefCountVar(null, key);
     if ((var != null && RefCounting.trackRefCount(var, rcType)) ||
         (var == null &&
-         RefCounting.mayHaveRefcount(varType, rcType))) {
+         RefCounting.mayHaveTrackedRefcount(varType, rcType))) {
       incrDirect(key, rcType, amount);
     }
   }

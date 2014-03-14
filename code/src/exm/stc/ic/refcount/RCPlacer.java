@@ -409,7 +409,7 @@ public class RCPlacer {
         long incr = tracker.getCount(rcType, key, RCDir.DECR);
         assert(incr <= 0);
 
-        long baseRC = RefCounting.baseRefCount(blockVar, rcType, true);
+        long baseRC = RefCounting.baseRefCount(blockVar, rcType, true, false);
         // -baseCount may correspond to the case when the value of the var is
         // thrown away, or where the var is never written. The exception is
         // if an instruction reads/writes the var without modifying the
