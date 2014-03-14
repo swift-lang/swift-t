@@ -183,6 +183,47 @@ const char
   }
 }
 
+adlb_data_code
+ADLB_Init_compound(adlb_datum_storage *d, adlb_data_type type,
+          adlb_type_extra type_extra, bool must_init)
+{
+  adlb_data_code dc;
+  switch (type)
+  {
+    case ADLB_DATA_TYPE_CONTAINER:
+      assert(type_extra.valid);
+      d->CONTAINER.members = table_bp_create(CONTAINER_INIT_CAPACITY);
+      DATA_CHECK_MALLOC(d->CONTAINER.members);
+      d->CONTAINER.key_type = type_extra.CONTAINER.key_type;
+      d->CONTAINER.val_type = type_extra.CONTAINER.val_type;
+      break;
+    case ADLB_DATA_TYPE_MULTISET:
+      assert(type_extra.valid);
+      d->MULTISET = xlb_multiset_alloc(type_extra.MULTISET.val_type);
+      DATA_CHECK_MALLOC(d->MULTISET);
+      break;
+    case ADLB_DATA_TYPE_STRUCT:
+      if (type_extra.valid)
+      {
+        dc = xlb_new_struct(type_extra.STRUCT.struct_type, &d->STRUCT);
+        DATA_CHECK(dc);
+      }
+      else
+      {
+        check_verbose(!must_init, ADLB_DATA_ERROR_INVALID,
+          "Could not initialize struct, missing struct type info");
+        d->STRUCT = NULL;
+      }
+      break;
+    default:
+      // Do nothing
+      verbose_error(ADLB_DATA_ERROR_TYPE, "Do not support init "
+                    "non-compound type %i", type);
+                
+  }
+  return ADLB_DATA_SUCCESS;
+}
+
 /*
   Whether we pad the vint size to VINT_MAX_BYTES
  */

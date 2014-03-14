@@ -90,17 +90,6 @@ datum_init_props(adlb_datum_id id, adlb_datum *d,
                  const adlb_create_props *props);
 
 static adlb_data_code
-datum_init_container(adlb_datum *d, adlb_data_type key_type,
-                 adlb_data_type val_type);
-
-static adlb_data_code
-datum_init_multiset(adlb_datum *d, adlb_data_type val_type);
-
-static adlb_data_code
-datum_init_struct(adlb_datum *d, bool struct_type_provided,
-                  adlb_struct_type struct_type);
-
-static adlb_data_code
 add_close_notifs(adlb_datum_id id, adlb_datum *d,
                     adlb_notif_t *notify);
 
@@ -292,82 +281,15 @@ xlb_data_create(adlb_datum_id id, adlb_data_type type,
   adlb_data_code dc = datum_init_props(id, d, props);
   DATA_CHECK(dc);
 
-  // Some compound types need additional information
-  switch (type)
+  if (ADLB_Data_is_compound(type))
   {
-    case ADLB_DATA_TYPE_CONTAINER:
-      assert(type_extra->valid);
-      dc = datum_init_container(d, type_extra->CONTAINER.key_type,
-                                type_extra->CONTAINER.val_type);
-      DATA_CHECK(dc);
-      break;
-    case ADLB_DATA_TYPE_MULTISET:
-      assert(type_extra->valid);
-      dc = datum_init_multiset(d, type_extra->MULTISET.val_type);
-      DATA_CHECK(dc);
-      break;
-    case ADLB_DATA_TYPE_STRUCT:
-      dc = datum_init_struct(d, type_extra->valid, type_extra->valid ? 
-                              type_extra->STRUCT.struct_type : 0);
-      DATA_CHECK(dc);
-      break;
-    default:
-      // Do nothing
-      break;
-  }
-  return ADLB_DATA_SUCCESS;
-}
-
-/**
-   container-type data should have the subscript type set at creation
-   time
- */
-static adlb_data_code
-datum_init_container(adlb_datum *d, adlb_data_type key_type,
-                      adlb_data_type val_type)
-{
-  d->data.CONTAINER.members = table_bp_create(CONTAINER_INIT_CAPACITY);
-  d->data.CONTAINER.key_type = key_type;
-  d->data.CONTAINER.val_type = val_type;
-
-  // Container structure is filled in, so set
-  d->status.set = true;
-  return ADLB_DATA_SUCCESS;
-}
-
-static adlb_data_code
-datum_init_multiset(adlb_datum *d, adlb_data_type val_type)
-{
-  d->data.MULTISET = xlb_multiset_alloc(val_type);
-  check_verbose(d->data.MULTISET != NULL, ADLB_DATA_ERROR_OOM,
-                "Could not allocate multiset: out of memory");
-
-  // Multiset structure is filled in, so mark as set
-  d->status.set = true;
-  return ADLB_DATA_SUCCESS;
-}
-
-static adlb_data_code
-datum_init_struct(adlb_datum *d, bool struct_type_provided,
-                  adlb_struct_type struct_type)
-{
-  adlb_data_code dc;
-
-  if (struct_type_provided)
-  {
-    // Struct structure is filled in, so mark as set
-    dc = xlb_new_struct(struct_type, &d->data.STRUCT);
+    dc = ADLB_Init_compound(&d->data, type, *type_extra, false);
     DATA_CHECK(dc);
     d->status.set = true;
   }
-  else
-  {
-    d->data.STRUCT = NULL;
-    d->status.set = false;
-  }
-
   return ADLB_DATA_SUCCESS;
 }
+
 
 /*
   Initialize datum with props.  This will garbage collect datum
@@ -1158,11 +1080,19 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
       else
       {
         // Some of subscript left, must continue
-        check_verbose(field->initialized,
-          ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND,
-          "Uninitialized subscript:  <%"PRId64">[%.*s] "
-          "Remaining bytes %zu", id, (int)subscript.length,\
-          (const char*)subscript.key, curr_sub.length - curr_sub_pos);
+        if (!field->initialized)
+        {
+          // Can't initialize non-compound fields like this
+          check_verbose(ADLB_Data_is_compound(field_type.type),
+            ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND,
+            "Uninitialized subscript:  <%"PRId64">[%.*s] "
+            "Remaining bytes %zu", id, (int)subscript.length,\
+            (const char*)subscript.key, curr_sub.length - curr_sub_pos);
+          
+          dc = ADLB_Init_compound(&d->data, field_type.type,
+                                  field_type.extra, true);
+          DATA_CHECK(dc);
+        }
         // Some of subscript left:
         // update data, subscript, etc. for next iteration
         data = &field->data;

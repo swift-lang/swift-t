@@ -362,6 +362,15 @@ ADLB_Free_binary_data(adlb_binary_data *buffer);
   memcpy(d, data, sizeof(*d));                \
 }
 
+/**
+  Initialize a compound data type
+  must_init: if true, fail if cannot be initialized, e.g. if we don't
+             have full type info.
+ */
+adlb_data_code
+ADLB_Init_compound(adlb_datum_storage *d, adlb_data_type type,
+          adlb_type_extra type_extra, bool must_init);
+
 static inline adlb_data_code
 ADLB_Pack_integer(const adlb_int_t *d, adlb_binary_data *result)
 {
@@ -684,4 +693,5 @@ ADLB_Own_data(const adlb_buffer *caller_buffer, adlb_binary_data *data)
   }
   return ADLB_DATA_SUCCESS;
 }
+
 #endif // __ADLB_TYPES_H
