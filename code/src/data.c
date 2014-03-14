@@ -1131,6 +1131,9 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
 
       if (sub_pos == subscript.length) {
         // Located field to assign
+        // TODO: need to relax this check since initialized flag might
+        // mean that it's an empty struct/container
+        // Test 367 fails because of this.
         check_verbose(!field->initialized,
           ADLB_DATA_ERROR_DOUBLE_WRITE,
           "Subscript already assigned: [%.*s] under <%"PRId64">",
