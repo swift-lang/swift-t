@@ -1133,15 +1133,8 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
       assert(curr_sub_pos <= curr_sub.length);
 
       if (curr_sub_pos == curr_sub.length) {
-        // Located field to assign
-        // TODO: need to relax this check since initialized flag might
-        // mean that it's an empty struct/container
-        // Test 367 fails because of this.
-        check_verbose(!field->initialized,
-          ADLB_DATA_ERROR_DOUBLE_WRITE,
-          "Subscript already assigned: [%.*s] under <%"PRId64">",
-          (int)subscript.length, (const char*)subscript.key, id);
-
+        // Located field to assign.  This function will check
+        // that it hasn't already been assigned
         dc = xlb_struct_assign_field(field, field_type, value, length,
                                      value_type);
         DATA_CHECK(dc);

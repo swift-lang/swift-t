@@ -194,6 +194,23 @@ adlb_data_code xlb_data_type_lookup(const char* name,
  */
 void xlb_data_types_finalize(void);
 
+/**
+ * Return true if the data type is a compound type that has multiple
+ * assignable subscripts
+ */
+static inline bool ADLB_Data_is_compound(adlb_data_type type)
+{
+  switch (type)
+  {
+    case ADLB_DATA_TYPE_CONTAINER:
+    case ADLB_DATA_TYPE_MULTISET:
+    case ADLB_DATA_TYPE_STRUCT:
+      return true;
+    default:
+      return false;
+  }
+}
+
 /*
    Get a packed representation, i.e. one in which the data is in
    contiguous memory.

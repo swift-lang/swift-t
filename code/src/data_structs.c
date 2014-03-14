@@ -591,14 +591,20 @@ adlb_data_code xlb_struct_assign_field(adlb_struct_field *field,
         adlb_data_type data_type)
 {
   adlb_data_code dc;
-  check_verbose(!field->initialized, ADLB_DATA_ERROR_DOUBLE_WRITE,
+
+  // Non-compound fields can only be initialized/assigned once
+  check_verbose(ADLB_Data_is_compound(field_type.type) ||
+        !field->initialized, ADLB_DATA_ERROR_DOUBLE_WRITE,
         "Field already set");
+
   check_verbose(field_type.type == data_type, ADLB_DATA_ERROR_TYPE,
         "Invalid type %s when assigning to struct field: expected %s",
         ADLB_Data_type_tostring(field_type.type),
         ADLB_Data_type_tostring(data_type));
 
-  dc = ADLB_Unpack(&field->data, data_type, data, length); 
+  // Assign, initializing compound type if needed
+  dc = ADLB_Unpack2(&field->data, data_type, data, length,
+                    !field->initialized); 
   DATA_CHECK(dc);
   field->initialized = true;
 
