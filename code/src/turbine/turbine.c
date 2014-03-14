@@ -808,7 +808,8 @@ turbine_close(turbine_datum_id id)
   DEBUG_TURBINE("turbine_close(<%"PRId64">)", id);
   // Record no longer subscribed
   void *tmp;
-  table_lp_remove(&td_subscribed, id, &tmp);
+  bool was_subscribed = table_lp_remove(&td_subscribed, id, &tmp);
+  assert(was_subscribed);
 
   // Remove from table transforms that this td was blocking
   // Will need to free list later
@@ -831,6 +832,12 @@ turbine_code turbine_sub_close(turbine_datum_id id, const void *subscript,
   char key[key_len];
   write_id_sub_key(key, id, subscript, subscript_len);
   
+  // Record no longer subscribed
+  void *tmp;
+  bool was_subscribed = table_bp_remove(&td_sub_subscribed, key,
+                                        key_len, &tmp);
+  assert(was_subscribed);
+
   struct list_l* L;
   
   bool found = table_bp_remove(&td_sub_blockers, key, key_len, (void**)&L);
