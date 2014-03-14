@@ -203,12 +203,12 @@ public class RefCounting {
       // Sum of field refcounts
       StructType structT = (StructType)type.type().getImplType();
       long trackedSum = 0;
-      long fieldSum = 0;
+      long untrackedSum = 0;
       for (StructField field: structT.getFields()) {
-        fieldSum += baseRefCount(field.getType(), defType, rcType,
-                                 includeTracked, includeUntracked);
+        untrackedSum += baseRefCount(field.getType(), defType, rcType,
+                                 false, true);
         trackedSum += baseRefCount(field.getType(), defType, rcType,
-                                 includeTracked, includeUntracked);
+                                 true, false);
       }
       
       long structCount = 0;
@@ -222,7 +222,6 @@ public class RefCounting {
       if (includeUntracked) {
         // Each field is managed seperately in this case, since
         // each assign will decrement the count
-        long untrackedSum = fieldSum - trackedSum;
         structCount += untrackedSum;
       }
       
