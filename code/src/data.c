@@ -1654,6 +1654,12 @@ insert_notifications(adlb_datum *d,
                                      &sub_list);
   DATA_CHECK(dc);
   
+  DEBUG("Notifications for <%"PRId64">[%.*s] len %i refs %i "
+        "subscribers %i", id, (int)subscript.length,
+        (const char*)subscript.key, (int)subscript.length, 
+        ref_list != NULL ? ref_list->size : 0,
+        sub_list != NULL ? sub_list->size : 0);
+  
   dc = insert_notifications2(d, id, subscript, false,
       value_type, value_buffer, value_len,
       ref_list, sub_list, notify, garbage_collected);
