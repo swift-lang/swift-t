@@ -1262,11 +1262,11 @@ ADLB_Exists_Impl(ClientData cdata, Tcl_Interp *interp,
 
   if (sub_kind != ADLB_SUB_NONE)
     // TODO: support binary subscript
-    DEBUG_ADLB("adlb::exists <%"PRId64">[%.*s] => %s", id,
-                (int)subscript.length, (const char*)subscript.key,
-                bool2string(b));
+    DEBUG_ADLB("adlb::exists <%"PRId64">[%.*s] => %s", handle.id,
+                (int)handle.sub.val.length,
+                (const char*)handle.sub.val.key, bool2string(b));
   else
-    DEBUG_ADLB("adlb::exists <%"PRId64"> => %s", id, bool2string(b));
+    DEBUG_ADLB("adlb::exists <%"PRId64"> => %s", handle.id, bool2string(b));
 
   ADLB_PARSE_HANDLE_CLEANUP(&handle);
 
@@ -3286,8 +3286,8 @@ ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
   TCL_CONDITION(adlb_has_sub(handle.sub.val), "No subscript");
  
   // TODO: support binary subscript
-  DEBUG_ADLB("adlb::lookup <%"PRId64">[\"%.*s\"]",
-               id, (int)handle.sub.val.length, (const char*)handle.sub.val.key);
+  DEBUG_ADLB("adlb::lookup <%"PRId64">[\"%.*s\"]", handle.id,
+      (int)handle.sub.val.length, (const char*)handle.sub.val.key);
 
   int argpos = 3;
   adlb_data_type type;
@@ -3350,8 +3350,7 @@ ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
   TCL_CHECK(rc);
 
   DEBUG_ADLB("adlb::lookup <%"PRId64">[\"%.*s\"]=<%s>", handle.id,
-        (int)handle.sub.subscript.length,
-        (const char*)handle.sub.subscript.key,
+        (int)handle.sub.val.length, (const char*)handle.sub.val.key,
         Tcl_GetStringFromObj(result, NULL));
   
   ADLB_PARSE_HANDLE_CLEANUP(&handle);
