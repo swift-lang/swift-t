@@ -1030,13 +1030,16 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
   check_verbose(d->status.set, ADLB_DATA_ERROR_INVALID, "Can't set "
       "subscript of datum initialized without type <%"PRId64">", id);
 
+  // Modify subscript as we progress
+  adlb_subscript curr_sub = subscript;
+
   // Loop to go through multiple components of subscript
   while (true)
   {
     if (data_type == ADLB_DATA_TYPE_MULTISET)
     {
       // Any subscript appends to multiset
-      assert(adlb_has_sub(subscript));
+      assert(adlb_has_sub(curr_sub));
       adlb_data_type elem_type = data->MULTISET->elem_type;
       check_verbose(value_type == elem_type, ADLB_DATA_ERROR_TYPE,
               "Type mismatch for multiset val: expected %s actual %s\n",
@@ -1068,7 +1071,7 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
 
       // Does the link already exist?
       adlb_container_val t = NULL;
-      bool found = container_lookup(c, subscript, &t);
+      bool found = container_lookup(c, curr_sub, &t);
 
       if (found && t != NULL)
       {
@@ -1092,14 +1095,14 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
         // Ok- somebody did an Insert_atomic
         adlb_container_val v;
         // Reset entry
-        bool b = container_set(c, subscript, entry, &v);
+        bool b = container_set(c, curr_sub, entry, &v);
         ASSERT(b);
         ASSERT(v == NULL); // Should have been NULL for unlinked
       }
       else
       {
         DEBUG("Creating new container entry");
-        container_add(c, subscript, entry);
+        container_add(c, curr_sub, entry);
       }
 
       if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
@@ -1122,14 +1125,14 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
       // Handle assigning struct field
       adlb_struct_field *field;
       adlb_struct_field_type field_type;
-      size_t sub_pos;
-      dc = xlb_struct_lookup(data->STRUCT, subscript, true, &field,
-                             &field_type, &sub_pos);
+      size_t curr_sub_pos;
+      dc = xlb_struct_lookup(data->STRUCT, curr_sub, true, &field,
+                             &field_type, &curr_sub_pos);
       DATA_CHECK(dc);
       
-      assert(sub_pos <= subscript.length);
+      assert(curr_sub_pos <= curr_sub.length);
 
-      if (sub_pos == subscript.length) {
+      if (curr_sub_pos == curr_sub.length) {
         // Located field to assign
         // TODO: need to relax this check since initialized flag might
         // mean that it's an empty struct/container
@@ -1164,15 +1167,15 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
         // Some of subscript left, must continue
         check_verbose(field->initialized,
           ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND,
-          "Uninitialized subscript: [%.*s] under <%"PRId64">. "
-          "Remaining bytes %zu", (int)subscript.length,\
-          (const char*)subscript.key, id, subscript.length - sub_pos);
+          "Uninitialized subscript:  <%"PRId64">[%.*s] "
+          "Remaining bytes %zu", id, (int)subscript.length,\
+          (const char*)subscript.key, curr_sub.length - curr_sub_pos);
         // Some of subscript left:
         // update data, subscript, etc. for next iteration
         data = &field->data;
         data_type = field_type.type;
-        subscript.key += sub_pos;
-        subscript.length -= sub_pos;
+        curr_sub.key += curr_sub_pos;
+        curr_sub.length -= curr_sub_pos;
       }
     }
     else
