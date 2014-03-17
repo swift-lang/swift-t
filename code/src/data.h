@@ -84,7 +84,7 @@ xlb_data_container_reference(adlb_datum_id id, adlb_subscript subscript,
          bool copy_subscript,
          adlb_data_type ref_type, adlb_refcounts to_acquire, 
          const adlb_buffer *caller_buffer, adlb_binary_data *result,
-         adlb_notif_t *notifications);
+         adlb_notif_t *notifs);
 
 
 adlb_data_code xlb_data_container_size(adlb_datum_id container_id,
@@ -122,7 +122,7 @@ adlb_data_code
 xlb_data_retrieve2(adlb_datum_id id, adlb_subscript subscript,
                  adlb_refcounts decr, adlb_refcounts to_acquire,
                  adlb_data_type* type, const adlb_buffer *caller_buffer,
-                 adlb_binary_data *result, adlb_notif_t *notifications);
+                 adlb_binary_data *result, adlb_notif_t *notifs);
 
 adlb_data_code
 xlb_data_enumerate(adlb_datum_id id, int count, int offset,
@@ -134,7 +134,7 @@ xlb_data_enumerate(adlb_datum_id id, int count, int offset,
 adlb_data_code xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
           const void* buffer, int length, adlb_data_type type,
           adlb_refcounts refcount_decr,
-          adlb_notif_t *notifications);
+          adlb_notif_t *notifs);
 
 
 /*
@@ -162,7 +162,7 @@ static const xlb_acquire_rc XLB_NO_ACQUIRE =
 adlb_data_code xlb_data_reference_count(adlb_datum_id id,
                 adlb_refcounts change,
                 xlb_acquire_rc acquire, bool *garbage_collected,
-                adlb_notif_t *notifications);
+                adlb_notif_t *notifs);
 
 const char*
 xlb_data_rc_type_tostring(adlb_refcount_type rc_type);

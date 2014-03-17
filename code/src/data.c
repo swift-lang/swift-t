@@ -91,7 +91,7 @@ datum_init_props(adlb_datum_id id, adlb_datum *d,
 
 static adlb_data_code
 add_close_notifs(adlb_datum_id id, adlb_datum *d,
-                    adlb_notif_t *notify);
+                    adlb_notif_t *notifs);
 
 static adlb_data_code
 lookup_subscript(adlb_datum_id id, const adlb_datum_storage *d,
@@ -107,44 +107,44 @@ alloc_container_reference(size_t subscript_len);
 static adlb_data_code
 data_store_root(adlb_datum_id id, adlb_datum *d,
     const void* buffer, int length, adlb_data_type type,
-    adlb_notif_t *notifications, bool *freed_datum);
+    adlb_notif_t *notifs, bool *freed_datum);
 
 static adlb_data_code
 data_store_subscript(adlb_datum_id id, adlb_datum *d,
     adlb_subscript subscript,
     const void* buffer, int length, adlb_data_type type,
-    adlb_notif_t *notifications, bool *freed_datum);
+    adlb_notif_t *notifs, bool *freed_datum);
 
 static adlb_data_code
 insert_notifications(adlb_datum *d,
             adlb_datum_id id, adlb_subscript subscript,
             const void *value_buffer, int value_len,
             adlb_data_type value_type,
-            adlb_notif_t *notify,
+            adlb_notif_t *notifs,
             bool *garbage_collected);
 
 static inline adlb_data_code
 add_recursive_notifs(adlb_datum *d, adlb_datum_id id,
       adlb_subscript assigned_sub, adlb_data_type type,
-      adlb_notif_t *notify, bool *garbage_collected);
+      adlb_notif_t *notifs, bool *garbage_collected);
 
 static inline adlb_data_code
 subscript_notifs_rec(adlb_datum *d, adlb_datum_id id,
           adlb_datum_storage *data, adlb_data_type type,
           adlb_buffer *sub_buf, bool *sub_caller_buf,
-          adlb_subscript subscript, adlb_notif_t *notify,
+          adlb_subscript subscript, adlb_notif_t *notifs,
           bool *garbage_collected);
 
 static adlb_data_code
 container_notifs_rec(adlb_datum *d, adlb_datum_id id,
           adlb_container *s, adlb_buffer *sub_buf, bool *sub_caller_buf,
-          adlb_subscript subscript, adlb_notif_t *notify,
+          adlb_subscript subscript, adlb_notif_t *notifs,
           bool *garbage_collected);
 
 static adlb_data_code
 struct_notifs_rec(adlb_datum *d, adlb_datum_id id,
           adlb_struct *c, adlb_buffer *sub_buf, bool *sub_caller_buf,
-          adlb_subscript subscript, adlb_notif_t *notify,
+          adlb_subscript subscript, adlb_notif_t *notifs,
           bool *garbage_collected);
 
 static adlb_data_code
@@ -158,7 +158,7 @@ insert_notifications2(adlb_datum *d,
       bool copy_sub, adlb_data_type value_type,
       const void *value_buffer, int value_len,
       struct list *ref_list, struct list_i *sub_list,
-      adlb_notif_t *notify, bool *garbage_collected);
+      adlb_notif_t *notifs, bool *garbage_collected);
 
 static 
 adlb_data_code process_ref_list(struct list *subscribers,
@@ -417,19 +417,18 @@ xlb_datum_lookup(adlb_datum_id id, adlb_datum **d)
 adlb_data_code
 xlb_data_reference_count(adlb_datum_id id, adlb_refcounts change,
           xlb_acquire_rc acquire, bool *garbage_collected,
-          adlb_notif_t *notifications)
+          adlb_notif_t *notifs)
 {
   adlb_datum* d;
   adlb_data_code dc = xlb_datum_lookup(id, &d);
   DATA_CHECK(dc);
-  return xlb_rc_impl(d, id, change, acquire, garbage_collected,
-                     notifications);
+  return xlb_rc_impl(d, id, change, acquire, garbage_collected, notifs);
 }
 
 adlb_data_code
 xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
           adlb_refcounts change, xlb_acquire_rc acquire,
-          bool *garbage_collected, adlb_notif_t *notifications)
+          bool *garbage_collected, adlb_notif_t *notifs)
 {
   adlb_data_code dc;
 
@@ -474,7 +473,7 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
     if (d->write_refcount == 0) {
       // If we're keeping around read-only version, release
       // only write refs here
-      dc = add_close_notifs(id, d, notifications);
+      dc = add_close_notifs(id, d, notifs);
       DATA_CHECK(dc);
 
       closed = true;
@@ -486,7 +485,7 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
   {
     if (garbage_collected != NULL)
       *garbage_collected = true;
-    dc = datum_gc(id, d, acquire, &notifications->rc_changes);
+    dc = datum_gc(id, d, acquire, &notifs->rc_changes);
     DATA_CHECK(dc);
   }
   else if (closed || ADLB_RC_NOT_NULL(acquire.refcounts))
@@ -497,7 +496,7 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
           acquire.refcounts.read_refcount, acquire.refcounts.write_refcount);
     // Have to release or acquire references
     dc = xlb_incr_referand(&d->data, d->type, false, closed,
-                 acquire, &notifications->rc_changes); 
+                 acquire, &notifs->rc_changes); 
     DATA_CHECK(dc);
   }
 
@@ -693,7 +692,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
                                         adlb_refcounts to_acquire,
                                         const adlb_buffer *caller_buffer,
                                         adlb_binary_data *result,
-                                        adlb_notif_t *notifications)
+                                        adlb_notif_t *notifs)
 {
   // Check that container_id is an initialized container
   adlb_code ac;
@@ -732,7 +731,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
         result->caller_data != caller_buffer->data)
     {
       // Allocated memory, must free
-      ac = xlb_to_free_add(notifications, result->caller_data);
+      ac = xlb_to_free_add(notifs, result->caller_data);
       DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
     }
     
@@ -745,12 +744,12 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
       memcpy(sub_storage, ref_sub.key, ref_sub.length);
       ref_sub.key = sub_storage;
 
-      ac = xlb_to_free_add(notifications, sub_storage);
+      ac = xlb_to_free_add(notifs, sub_storage);
       DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
     }
 
     // add reference setting work to notifications
-    xlb_refs_add(&notifications->references, ref_id, ref_sub,
+    xlb_refs_add(&notifs->references, ref_id, ref_sub,
                  ref_type, result->data, result->length);
 
     // Need to acquire references 
@@ -758,7 +757,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
                             .write_refcount = 0 };
     xlb_acquire_rc to_acquire2 = { .subscript = subscript,
                                    .refcounts = to_acquire };
-    dc = xlb_rc_impl(d, id, decr, to_acquire2, NULL, notifications);
+    dc = xlb_rc_impl(d, id, decr, to_acquire2, NULL, notifs);
     DATA_CHECK(dc);
 
     return ADLB_DATA_SUCCESS;
@@ -841,14 +840,14 @@ alloc_container_reference(size_t subscript_len)
    Can allocate fresh memory in notifications
    Caller must free result
    type: type of data to be assigned
-   notifications: list of notifications, must be initialized
+   notifs: list of notifications, must be initialized
  */
 adlb_data_code
 xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
           const void* buffer, int length,
           adlb_data_type type,
           adlb_refcounts refcount_decr,
-          adlb_notif_t *notifications)
+          adlb_notif_t *notifs)
 {
   assert(length >= 0);
 
@@ -873,12 +872,12 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
   if (adlb_has_sub(subscript))
   {
     dc = data_store_subscript(id, d, subscript, buffer, length, type,
-                              notifications, &freed_datum);
+                              notifs, &freed_datum);
     DATA_CHECK(dc);
   }
   else
   {
-    dc = data_store_root(id, d, buffer, length, type, notifications,
+    dc = data_store_root(id, d, buffer, length, type, notifs,
                          &freed_datum);
     DATA_CHECK(dc);
   }
@@ -896,7 +895,7 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
                                             -refcount_decr.read_refcount : 0,
                             .write_refcount = -refcount_decr.write_refcount };
     dc = xlb_rc_impl(d, id, incr, XLB_NO_ACQUIRE,
-                     NULL, notifications);
+                     NULL, notifs);
     DATA_CHECK(dc);
   }
 
@@ -910,7 +909,7 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
 static adlb_data_code
 data_store_root(adlb_datum_id id, adlb_datum *d,
     const void* buffer, int length, adlb_data_type type,
-    adlb_notif_t *notifications, bool *freed_datum)
+    adlb_notif_t *notifs, bool *freed_datum)
 {
   adlb_data_code dc;
 
@@ -933,7 +932,7 @@ data_store_root(adlb_datum_id id, adlb_datum *d,
   
   // Need to handle subscript notifications
   dc = add_recursive_notifs(d, id, ADLB_NO_SUB, d->type,
-                            notifications, freed_datum);
+                            notifs, freed_datum);
   DATA_CHECK(dc);
   return ADLB_DATA_SUCCESS;
 }
@@ -945,7 +944,7 @@ static adlb_data_code
 data_store_subscript(adlb_datum_id id, adlb_datum *d,
     adlb_subscript subscript,
     const void* value, int length, adlb_data_type value_type,
-    adlb_notif_t *notifications, bool *freed_datum)
+    adlb_notif_t *notifs, bool *freed_datum)
 {
   adlb_data_code dc;
 
@@ -1041,7 +1040,7 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
 
       dc = insert_notifications(d, id, subscript,
                 value, length, value_type,
-                notifications, freed_datum);
+                notifs, freed_datum);
       DATA_CHECK(dc);
       return ADLB_DATA_SUCCESS;
     }
@@ -1075,7 +1074,7 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
 
         dc = insert_notifications(d, id, subscript,
                   value, length, value_type,
-                  notifications, freed_datum);
+                  notifs, freed_datum);
         DATA_CHECK(dc);
 
         return ADLB_DATA_SUCCESS;
@@ -1125,12 +1124,12 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
    will_be_gced:
  */
 static adlb_data_code
-add_close_notifs(adlb_datum_id id, adlb_datum *d, adlb_notif_t *notify)
+add_close_notifs(adlb_datum_id id, adlb_datum *d, adlb_notif_t *notifs)
 {
   assert(d != NULL);
   DEBUG("data_close: <%"PRId64"> listeners: %i", id, d->listeners.size);
   adlb_data_code dc = append_notifs(&d->listeners, id, ADLB_NO_SUB,
-                                    &notify->notify);
+                                    &notifs->notify);
   DATA_CHECK(dc);
   list_i_clear(&d->listeners);
 
@@ -1160,7 +1159,7 @@ adlb_data_code
 xlb_data_retrieve2(adlb_datum_id id, adlb_subscript subscript,
                  adlb_refcounts decr, adlb_refcounts to_acquire,
                  adlb_data_type* type, const adlb_buffer *caller_buffer,
-                 adlb_binary_data *result, adlb_notif_t *notifications)
+                 adlb_binary_data *result, adlb_notif_t *notifs)
 {
   TRACE("data_retrieve(%"PRId64", %s)", id, subscript);
 
@@ -1217,7 +1216,7 @@ xlb_data_retrieve2(adlb_datum_id id, adlb_subscript subscript,
     xlb_acquire_rc to_acquire2 = { .refcounts = to_acquire,
                                    .subscript = subscript };
     dc = xlb_rc_impl(d, id, adlb_rc_negate(decr),
-                to_acquire2, NULL, notifications);
+                to_acquire2, NULL, notifs);
     DATA_CHECK(dc);
   }
 
@@ -1567,7 +1566,7 @@ insert_notifications(adlb_datum *d,
             adlb_subscript subscript,
             const void *value_buffer, int value_len,
             adlb_data_type value_type,
-            adlb_notif_t *notify,
+            adlb_notif_t *notifs,
             bool *garbage_collected)
 {
   adlb_data_code dc;
@@ -1592,14 +1591,14 @@ insert_notifications(adlb_datum *d,
   
   dc = insert_notifications2(d, id, subscript, false,
       value_type, value_buffer, value_len,
-      ref_list, sub_list, notify, garbage_collected);
+      ref_list, sub_list, notifs, garbage_collected);
   DATA_CHECK(dc);
 
   TRACE("remove container_ref %"PRId64"[%.*s]: %i\n", id,
         (int)subscript.length, subscript.key, (int)result);
   
   dc = add_recursive_notifs(d, id, subscript, value_type,
-                            notify, garbage_collected);
+                            notifs, garbage_collected);
   DATA_CHECK(dc);
 
   return ADLB_DATA_SUCCESS;
@@ -1648,7 +1647,7 @@ insert_notifications2(adlb_datum *d,
       bool copy_sub, adlb_data_type value_type,
       const void *value_buffer, int value_len,
       struct list *ref_list, struct list_i *sub_list,
-      adlb_notif_t *notify, bool *garbage_collected)
+      adlb_notif_t *notifs, bool *garbage_collected)
 {
   adlb_data_code dc;
   if (ref_list != NULL)
@@ -1657,7 +1656,7 @@ insert_notifications2(adlb_datum *d,
     xlb_acquire_rc referand_acquire = XLB_NO_ACQUIRE;
     referand_acquire.subscript = subscript;
 
-    dc = process_ref_list(ref_list, notify, value_type,
+    dc = process_ref_list(ref_list, notifs, value_type,
                      value_buffer, value_len,
                      &referand_acquire.refcounts);
     DATA_CHECK(dc);
@@ -1673,7 +1672,7 @@ insert_notifications2(adlb_datum *d,
     
     // Update refcounts if necessary
     dc = xlb_rc_impl(d, id, read_decr, referand_acquire,
-                     garbage_collected, notify);
+                     garbage_collected, notifs);
     DATA_CHECK(dc);
   }
 
@@ -1688,10 +1687,10 @@ insert_notifications2(adlb_datum *d,
       memcpy(subscript_ptr, subscript.key, subscript.length);
       subscript.key = subscript_ptr;
 
-      dc = xlb_to_free_add(notify, subscript_ptr);
+      dc = xlb_to_free_add(notifs, subscript_ptr);
       DATA_CHECK_ADLB(dc, ADLB_DATA_ERROR_OOM);
     }
-    dc = append_notifs(sub_list, id, subscript, &notify->notify);
+    dc = append_notifs(sub_list, id, subscript, &notifs->notify);
     DATA_CHECK(dc);
     list_i_free(sub_list);
   }
@@ -1707,7 +1706,7 @@ insert_notifications2(adlb_datum *d,
 static adlb_data_code
 all_notifs_step(adlb_datum *d, adlb_datum_id id, adlb_subscript sub,
                 bool copy_sub, const adlb_datum_storage *val,
-                adlb_data_type val_type, adlb_notif_t *notify,
+                adlb_data_type val_type, adlb_notif_t *notifs,
                 bool *garbage_collected)
 {
   adlb_data_code dc;
@@ -1737,12 +1736,12 @@ all_notifs_step(adlb_datum *d, adlb_datum_id id, adlb_subscript sub,
       dc = ADLB_Own_data(NULL, &val_data);
       DATA_CHECK(dc);
 
-      adlb_code ac = xlb_to_free_add(notify, val_data.caller_data);
+      adlb_code ac = xlb_to_free_add(notifs, val_data.caller_data);
       DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
     }
     dc = insert_notifications2(d, id, sub, copy_sub, val_type,
                   val_data.data, val_data.length, ref_list, sub_list,
-                  notify, garbage_collected);
+                  notifs, garbage_collected);
     DATA_CHECK(dc);
   }
   return ADLB_DATA_SUCCESS;
@@ -1754,7 +1753,7 @@ all_notifs_step(adlb_datum *d, adlb_datum_id id, adlb_subscript sub,
 static inline adlb_data_code
 add_recursive_notifs(adlb_datum *d, adlb_datum_id id,
       adlb_subscript assigned_sub, adlb_data_type type,
-      adlb_notif_t *notify, bool *garbage_collected)
+      adlb_notif_t *notifs, bool *garbage_collected)
 {
   adlb_data_code dc;
   *garbage_collected = false;
@@ -1768,7 +1767,7 @@ add_recursive_notifs(adlb_datum *d, adlb_datum_id id,
     bool sub_caller_buf = true; // Don't free buffer
 
     dc = subscript_notifs_rec(d, id, &d->data, type,
-          &sub_buffer, &sub_caller_buf, assigned_sub, notify,
+          &sub_buffer, &sub_caller_buf, assigned_sub, notifs,
           garbage_collected);
     DATA_CHECK(dc);
 
@@ -1781,18 +1780,18 @@ static inline adlb_data_code
 subscript_notifs_rec(adlb_datum *d, adlb_datum_id id,
           adlb_datum_storage *data, adlb_data_type type,
           adlb_buffer *sub_buf, bool *sub_caller_buf,
-          adlb_subscript subscript, adlb_notif_t *notify,
+          adlb_subscript subscript, adlb_notif_t *notifs,
           bool *garbage_collected)
 {
   switch (type)
   {
     case ADLB_DATA_TYPE_CONTAINER:
       return container_notifs_rec(d, id, &data->CONTAINER,
-          sub_buf, sub_caller_buf, subscript, notify,
+          sub_buf, sub_caller_buf, subscript, notifs,
           garbage_collected);
     case ADLB_DATA_TYPE_STRUCT:
       return struct_notifs_rec(d, id, data->STRUCT,
-          sub_buf, sub_caller_buf, subscript, notify,
+          sub_buf, sub_caller_buf, subscript, notifs,
           garbage_collected);
     default:
       return ADLB_DATA_SUCCESS;
@@ -1840,7 +1839,7 @@ concat_subscripts(adlb_subscript sub1, adlb_subscript sub2,
 static adlb_data_code
 container_notifs_rec(adlb_datum *d, adlb_datum_id id,
           adlb_container *c, adlb_buffer *sub_buf, bool *sub_caller_buf,
-          adlb_subscript subscript, adlb_notif_t *notify,
+          adlb_subscript subscript, adlb_notif_t *notifs,
           bool *garbage_collected)
 {
   adlb_data_code dc;
@@ -1875,7 +1874,7 @@ container_notifs_rec(adlb_datum *d, adlb_datum_id id,
 
     // Check for subscriptions on this subscript
     dc = all_notifs_step(d, id, child_sub, true, item->data,
-                         c->val_type, notify, garbage_collected);
+                         c->val_type, notifs, garbage_collected);
     DATA_CHECK(dc);
 
     if (*garbage_collected)
@@ -1886,7 +1885,7 @@ container_notifs_rec(adlb_datum *d, adlb_datum_id id,
     }
 
     dc = subscript_notifs_rec(d, id, item->data, c->val_type,
-        sub_buf, sub_caller_buf, child_sub, notify,
+        sub_buf, sub_caller_buf, child_sub, notifs,
         garbage_collected);
     DATA_CHECK(dc);
 
@@ -1902,7 +1901,7 @@ container_notifs_rec(adlb_datum *d, adlb_datum_id id,
 static adlb_data_code
 struct_notifs_rec(adlb_datum *d, adlb_datum_id id,
           adlb_struct *s, adlb_buffer *sub_buf, bool *sub_caller_buf,
-          adlb_subscript subscript, adlb_notif_t *notify,
+          adlb_subscript subscript, adlb_notif_t *notifs,
           bool *garbage_collected)
 {
   adlb_data_code dc;
@@ -1959,7 +1958,7 @@ struct_notifs_rec(adlb_datum *d, adlb_datum_id id,
       adlb_data_type field_type = st->field_types[i].type;
       // Check for subscriptions on this subscript
       dc = all_notifs_step(d, id, child_sub, true, &field->data,
-              field_type, notify, garbage_collected);
+              field_type, notifs, garbage_collected);
       DATA_CHECK(dc);
 
       if (*garbage_collected)
@@ -1969,7 +1968,7 @@ struct_notifs_rec(adlb_datum *d, adlb_datum_id id,
       }
     
       dc = subscript_notifs_rec(d, id, &field->data, field_type,
-                     sub_buf, sub_caller_buf, child_sub, notify,
+                     sub_buf, sub_caller_buf, child_sub, notifs,
                      garbage_collected);
       DATA_CHECK(dc);
 

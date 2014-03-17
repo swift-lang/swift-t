@@ -140,7 +140,7 @@ static inline adlb_code redirect_work(int type, int putter,
 static inline bool check_workqueue(int caller, int type);
 
 static adlb_code
-notify_helper(adlb_notif_t *notifications);
+notify_helper(adlb_notif_t *notifs);
 
 static adlb_code
 refcount_decr_helper(adlb_datum_id id, adlb_refcounts decr);
@@ -1445,14 +1445,14 @@ static adlb_code find_req_bytes(int *bytes, int caller, adlb_tag tag) {
   Handle notifications server-side and free memory
  */
 static adlb_code
-notify_helper(adlb_notif_t *notifications)
+notify_helper(adlb_notif_t *notifs)
 {
-  if (!xlb_notif_empty(notifications))
+  if (!xlb_notif_empty(notifs))
   {
     adlb_code rc;
-    rc = xlb_notify_all(notifications);
+    rc = xlb_notify_all(notifs);
     ADLB_CHECK(rc);
-    xlb_free_notif(notifications);
+    xlb_free_notif(notifs);
   }
   return ADLB_SUCCESS;
 }
@@ -1467,13 +1467,13 @@ refcount_decr_helper(adlb_datum_id id, adlb_refcounts decr)
 {
   if (!ADLB_RC_IS_NULL(decr))
   {
-    adlb_notif_t notify = ADLB_NO_NOTIFS;
+    adlb_notif_t notifs = ADLB_NO_NOTIFS;
     adlb_data_code dc;
     dc = xlb_data_reference_count(id, adlb_rc_negate(decr), XLB_NO_ACQUIRE,
-                                  NULL, &notify);
+                                  NULL, &notifs);
     if (dc == ADLB_DATA_SUCCESS)
     {
-      adlb_code rc = notify_helper(&notify);
+      adlb_code rc = notify_helper(&notifs);
       ADLB_CHECK(rc);
     }
   }

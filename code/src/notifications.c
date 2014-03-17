@@ -449,18 +449,18 @@ xlb_refs_expand(adlb_ref_data *refs, int to_add)
 }
 
 adlb_code
-xlb_to_free_expand(adlb_notif_t *notify, int to_add)
+xlb_to_free_expand(adlb_notif_t *notifs, int to_add)
 {
   assert(to_add >= 0);
-  size_t new_size = notify->to_free_size == 0 ? 
-                    64 : notify->to_free_size * 2;
-  if (new_size < notify->to_free_size + (size_t)to_add)
-    new_size = notify->to_free_size + (size_t)to_add;
+  size_t new_size = notifs->to_free_size == 0 ? 
+                    64 : notifs->to_free_size * 2;
+  if (new_size < notifs->to_free_size + (size_t)to_add)
+    new_size = notifs->to_free_size + (size_t)to_add;
 
-  notify->to_free = realloc(notify->to_free,
-                    sizeof(notify->to_free[0]) * new_size);
-  ADLB_MALLOC_CHECK(notify->to_free);
-  notify->to_free_size = new_size;
+  notifs->to_free = realloc(notifs->to_free,
+                    sizeof(notifs->to_free[0]) * new_size);
+  ADLB_MALLOC_CHECK(notifs->to_free);
+  notifs->to_free_size = new_size;
   return ADLB_SUCCESS;
 }
 
@@ -681,22 +681,22 @@ xlb_handle_client_notif_work(const struct packed_notif_counts *counts,
   adlb_code rc;
 
   // Take care of any notifications that the client must do
-  adlb_notif_t not = ADLB_NO_NOTIFS;
+  adlb_notif_t notifs = ADLB_NO_NOTIFS;
 
-  rc = xlb_recv_notif_work(counts, to_server_rank, &not);
+  rc = xlb_recv_notif_work(counts, to_server_rank, &notifs);
   ADLB_CHECK(rc);
 
-  rc = xlb_notify_all(&not);
+  rc = xlb_notify_all(&notifs);
   ADLB_CHECK(rc);
 
-  xlb_free_notif(&not);
+  xlb_free_notif(&notifs);
 
   return ADLB_SUCCESS;
 }
 
 adlb_code
 xlb_recv_notif_work(const struct packed_notif_counts *counts,
-    int to_server_rank, adlb_notif_t *notify)
+    int to_server_rank, adlb_notif_t *notifs)
 {
   adlb_code ac;
   MPI_Status status;
@@ -738,7 +738,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
   if (counts->notify_count > 0)
   {
     int added_count = counts->notify_count;
-    ac = xlb_notifs_expand(&notify->notify, added_count);
+    ac = xlb_notifs_expand(&notifs->notify, added_count);
     ADLB_CHECK(ac);
 
     struct packed_notif *tmp = malloc(sizeof(struct packed_notif) *
@@ -752,7 +752,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
     {
       // Copy data from tmp and fill in values
       adlb_notif_rank *r;
-      r = &notify->notify.notifs[notify->notify.count + i];
+      r = &notifs->notify.notifs[notifs->notify.count + i];
       r->rank = tmp[i].rank;
       r->id = tmp[i].id;
       if (tmp[i].subscript_data == -1)
@@ -769,16 +769,16 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
         assert(data->length >= 0);
         r->subscript.key = data->data;
         r->subscript.length = (size_t)data->length;
+      }
     }
-    }
-    notify->notify.count += added_count;
+    notifs->notify.count += added_count;
     free(tmp);
   }
 
   if (counts->reference_count > 0)
   {
     int added_count = counts->reference_count;
-    ac = xlb_refs_expand(&notify->references, added_count);
+    ac = xlb_refs_expand(&notifs->references, added_count);
     ADLB_CHECK(ac);
 
     struct packed_reference *tmp =
@@ -792,7 +792,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
     {
       // Copy data from tmp and fill in values
       adlb_ref_datum *d;
-      d = &notify->references.data[notify->references.count + i];
+      d = &notifs->references.data[notifs->references.count + i];
       d->id = tmp[i].id;
       d->type = tmp[i].type;
       int sub_data_ix = tmp[i].subscript_data;
@@ -813,20 +813,20 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
       d->value = data->data;
       d->value_len = data->length;
     }
-    notify->references.count += added_count;
+    notifs->references.count += added_count;
     free(tmp);
   }
 
   if (counts->rc_change_count > 0)
   {
     DEBUG("Receiving %i rc changes", counts->rc_change_count);
-    ac = xlb_rc_changes_expand(&notify->rc_changes, counts->rc_change_count);
+    ac = xlb_rc_changes_expand(&notifs->rc_changes, counts->rc_change_count);
     ADLB_CHECK(ac);
 
-    RECV(&notify->rc_changes.arr[notify->rc_changes.count], 
-         counts->rc_change_count * (int)sizeof(notify->rc_changes.arr[0]),
+    RECV(&notifs->rc_changes.arr[notifs->rc_changes.count], 
+         counts->rc_change_count * (int)sizeof(notifs->rc_changes.arr[0]),
          MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE);
-    notify->rc_changes.count += counts->rc_change_count;
+    notifs->rc_changes.count += counts->rc_change_count;
 
     // TODO: rebuild index
     //  - Merge new data into existing ones
@@ -835,12 +835,12 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
 
   if (extra_data != NULL && extra_data != xfer)
   {
-    ac = xlb_to_free_add(notify, extra_data);
+    ac = xlb_to_free_add(notifs, extra_data);
     ADLB_CHECK(ac)
   }
   if (extra_data_ptrs != NULL)
   {
-    ac = xlb_to_free_add(notify, extra_data_ptrs);
+    ac = xlb_to_free_add(notifs, extra_data_ptrs);
     ADLB_CHECK(ac)
   }
   return ADLB_SUCCESS;

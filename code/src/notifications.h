@@ -133,7 +133,7 @@ void xlb_free_ranks(adlb_notif_ranks *ranks);
 void xlb_free_datums(adlb_ref_data *datums);
 
 adlb_code xlb_notifs_expand(adlb_notif_ranks *notifs, int to_add);
-adlb_code xlb_to_free_expand(adlb_notif_t *notify, int to_add);
+adlb_code xlb_to_free_expand(adlb_notif_t *notifs, int to_add);
 adlb_code xlb_refs_expand(adlb_ref_data *refs, int to_add);
 
 /*
@@ -176,17 +176,17 @@ xlb_handle_client_notif_work(const struct packed_notif_counts *counts,
  */
 adlb_code
 xlb_recv_notif_work(const struct packed_notif_counts *counts,
-    int to_server_rank, adlb_notif_t *not);
+    int to_server_rank, adlb_notif_t *notifs);
 
-static inline adlb_code xlb_to_free_add(adlb_notif_t *notify, void *data)
+static inline adlb_code xlb_to_free_add(adlb_notif_t *notifs, void *data)
 {
   // Mark that caller should free
-  if (notify->to_free_length == notify->to_free_size)
+  if (notifs->to_free_length == notifs->to_free_size)
   {
-    adlb_code ac = xlb_to_free_expand(notify, 1);
+    adlb_code ac = xlb_to_free_expand(notifs, 1);
     ADLB_CHECK(ac);
   }
-  notify->to_free[notify->to_free_length++] = data;
+  notifs->to_free[notifs->to_free_length++] = data;
   return ADLB_SUCCESS;
 }
 
