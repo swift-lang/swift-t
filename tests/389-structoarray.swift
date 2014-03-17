@@ -9,7 +9,7 @@ type arrays {
 main {
   arrays x;
 
-  # Check storing array at struct subscript
+  // Check storing array at struct subscript
   x.X = [1,2,3];
   
   f(x);
