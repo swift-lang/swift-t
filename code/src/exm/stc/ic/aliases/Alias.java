@@ -36,6 +36,12 @@ public class Alias {
     return Collections.singletonList(this);
   }
 
+  public static enum AliasTransform {
+    IDENTITY, // Just a plain alias
+    RETRIEVE, // Retrieved value of field
+    COPY, // Copied field
+  }
+  
   /**
    * Helper to build appropriate alias for struct
    * 
@@ -47,8 +53,8 @@ public class Alias {
    * @return
    */
   public static List<Alias> makeStructAliases(Var struct, List<String> fieldPath,
-      Var val, boolean derefed) {
-    if (derefed) {
+      Var val, AliasTransform transform) {
+    if (transform == AliasTransform.RETRIEVE) {
       // Value of field - only relevant if field is a reference
       if (fieldIsRef(struct, fieldPath)) {
         // val is the value of the reference
@@ -57,7 +63,14 @@ public class Alias {
         // Value of field - not an alias
         return Alias.NONE;
       }
-  
+    } else if (transform == AliasTransform.COPY) {
+      if (fieldIsRef(struct, fieldPath)) {
+        // Only relevant if it's a reference to something
+        throw new STCRuntimeError("To implement");
+      } else {
+        // Copy is irrelevant
+        return Alias.NONE;
+      }
     } else {
       // Straightforward alias of field
       return new Alias(struct, fieldPath, false, val).asList();
@@ -65,9 +78,9 @@ public class Alias {
   }
 
   public static List<Alias> makeStructAliases2(Var struct, List<Arg> fieldPath,
-      Var val, boolean derefed) {
+      Var val, AliasTransform transform) {
     return makeStructAliases(struct, Arg.extractStrings(fieldPath), val,
-                             derefed);
+                             transform);
   }
 
   /**

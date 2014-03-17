@@ -29,6 +29,7 @@ import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.aliases.Alias;
 import exm.stc.ic.aliases.AliasKey;
+import exm.stc.ic.aliases.Alias.AliasTransform;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ValLoc;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
@@ -2930,7 +2931,7 @@ public class TurbineOp extends Instruction {
     switch (this.op) {
       case STRUCT_CREATE_ALIAS:
         return Alias.makeStructAliases2(getInput(0).getVar(), getInputsTail(1),
-            getOutput(0), false);
+            getOutput(0), AliasTransform.IDENTITY);
       case STRUCT_INIT_FIELDS: {
         Out<List<List<String>>> fieldPaths = new Out<List<List<String>>>();
         Out<List<Arg>> fieldVals = new Out<List<Arg>>();
@@ -2943,23 +2944,23 @@ public class TurbineOp extends Instruction {
           Arg fieldVal = fieldVals.val.get(i);
           if (fieldVal.isVar()) {
             aliases.addAll(Alias.makeStructAliases(getOutput(0), fieldPath,
-                fieldVal.getVar(), true));
+                fieldVal.getVar(), AliasTransform.RETRIEVE));
           }
         }
         return aliases;
       }
       case STRUCT_RETRIEVE_SUB:
         return Alias.makeStructAliases2(getInput(0).getVar(), getInputsTail(1),
-            getOutput(0), true);
+            getOutput(0), AliasTransform.RETRIEVE);
       case STRUCT_STORE_SUB:
         return Alias.makeStructAliases2(getOutput(0), getInputsTail(1),
-            getInput(0).getVar(), true);
+            getInput(0).getVar(), AliasTransform.RETRIEVE);
       case STRUCT_COPY_OUT:
         return Alias.makeStructAliases2(getInput(0).getVar(), getInputsTail(1),
-            getOutput(0), false);
+            getOutput(0), AliasTransform.COPY);
       case STRUCT_COPY_IN:
         return Alias.makeStructAliases2(getOutput(0), getInputsTail(1),
-            getInput(0).getVar(), false);
+            getInput(0).getVar(), AliasTransform.COPY);
       case STORE_REF: {
         // need to track if ref is alias to struct field
         Var ref = getOutput(0);
@@ -2968,7 +2969,7 @@ public class TurbineOp extends Instruction {
           assert (Types.isStruct(key.var));
           Var val = getInput(0).getVar();
           return Alias.makeStructAliases(key.var,
-              Arrays.asList(key.structPath), val, true);
+              Arrays.asList(key.structPath), val, AliasTransform.RETRIEVE);
         }
         break;
       }
@@ -2980,7 +2981,7 @@ public class TurbineOp extends Instruction {
           Var val = getOutput(0);
           assert (Types.isStruct(key.var));
           return Alias.makeStructAliases(key.var,
-              Arrays.asList(key.structPath), val, true);
+              Arrays.asList(key.structPath), val, AliasTransform.RETRIEVE);
         }
         break;
       }
@@ -2996,12 +2997,12 @@ public class TurbineOp extends Instruction {
         if (key1.pathLength() > 0) {
           assert (Types.isStruct(key1.var));
           aliases.addAll(Alias.makeStructAliases(key1.var,
-              Arrays.asList(key1.structPath), ref2, false));
+              Arrays.asList(key1.structPath), ref2, AliasTransform.COPY));
         }
         if (key2.pathLength() > 0) {
           assert (Types.isStruct(key2.var));
           aliases.addAll(Alias.makeStructAliases(key2.var,
-              Arrays.asList(key2.structPath), ref1, false));
+              Arrays.asList(key2.structPath), ref1, AliasTransform.COPY));
         }
         return aliases;
       }
