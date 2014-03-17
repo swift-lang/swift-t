@@ -24,7 +24,7 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
-import exm.stc.ic.opt.AliasTracker.AliasKey;
+import exm.stc.ic.aliases.AliasKey;
 import exm.stc.ic.opt.OptimizerPass;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ForeachLoops.AbstractForeachLoop;

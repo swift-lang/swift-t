@@ -47,10 +47,12 @@ import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
+import exm.stc.ic.aliases.Alias;
+import exm.stc.ic.aliases.AliasKey;
 import exm.stc.ic.opt.Semantics;
 import exm.stc.ic.opt.valuenumber.ComputedValue;
-import exm.stc.ic.opt.valuenumber.ValLoc;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
+import exm.stc.ic.opt.valuenumber.ValLoc;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
 import exm.stc.ic.tree.Conditionals.Conditional;
@@ -495,6 +497,20 @@ public class ICInstructions {
     public List<Var> tryPiggyback(Counters<Var> increments, RefCountType type) {
       return Var.NONE;
     }
+
+    public interface AliasCanonicalizer {
+      public AliasKey getCanonical(Var var);
+    }
+    
+    /**
+     * Return list of all aliases created by function
+     * @return
+     */
+    public List<Alias> getAliases(AliasCanonicalizer ac) {
+      // Default implementation: no aliases
+      return Alias.NONE;
+    }
+
 
     /**
      * If this instruction makes an output a part of another
