@@ -32,7 +32,7 @@ MACHINE_FILE=0
 REPORT_VERSION=0
 VERBOSE=0
 TURBINE_STATIC_EXEC=0
-EXECUTABLE_PROGRAM=0
+EXEC_SCRIPT=0
 
 while getopts "f:hln:vVxX" OPTION
 do
@@ -59,7 +59,7 @@ do
       TURBINE_STATIC_EXEC=1
       ;;
     x)
-      EXECUTABLE_PROGRAM=1
+      EXEC_SCRIPT=1
       ;;
     \?)
       # Bash already reported an error
@@ -78,8 +78,6 @@ if [[ -z ${TURBINE_HOME} ]]
 then
   TURBINE_HOME=$( cd ${TURBINE_BIN}/.. ; /bin/pwd )
 fi
-
-export TURBINE_STATIC_EXEC
 
 # Load Turbine configuration settings
 source ${TURBINE_HOME}/scripts/turbine-config.sh

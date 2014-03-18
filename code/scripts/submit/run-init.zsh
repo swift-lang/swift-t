@@ -27,7 +27,7 @@ source ${TURBINE_HOME}/scripts/helpers.zsh
 
 # Defaults:
 CHANGE_DIRECTORY=""
-USE_TCLSH=1 # Use tclsh to launch script
+export EXEC_SCRIPT=0 # 1 means execute script directly, e.g. if binary
 export TURBINE_STATIC_EXEC=0 # Use turbine_sh instead of tclsh
 INIT_SCRIPT=0
 export PROCS=0
@@ -75,7 +75,7 @@ while getopts "C:d:e:i:n:o:s:t:VxX" OPTION
       VERBOSE=1
       ;;
     x)
-      USE_TCLSH=0
+      export EXEC_SCRIPT=1
       ;;
     X)
       export TURBINE_STATIC_EXEC=1
@@ -105,11 +105,6 @@ then
 fi
 
 [[ -f ${SCRIPT} ]] || abort "Could not find script: ${SCRIPT}"
-
-if (( ! USE_TCLSH ))
-then
-  export TCLSH=""
-fi
 
 START=$( date +%s )
 

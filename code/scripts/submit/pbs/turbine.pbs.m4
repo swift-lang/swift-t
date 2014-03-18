@@ -41,6 +41,8 @@ echo
 cd ${PBS_O_WORKDIR}
 
 TURBINE_HOME=getenv(TURBINE_HOME)
+TURBINE_STATIC_EXEC=getenv(TURBINE_STATIC_EXEC)
+EXEC_SCRIPT=getenv(EXEC_SCRIPT)
 PROGRAM=getenv(PROGRAM)
 
 source ${TURBINE_HOME}/scripts/turbine-config.sh

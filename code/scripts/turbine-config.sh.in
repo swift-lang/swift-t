@@ -24,7 +24,11 @@ if [[ -n ${TURBINE_USER_LIB:-} ]] ; then
   TCLLIBPATH="${TURBINE_USER_LIB} "
 fi
 
-if (( TURBINE_STATIC_EXEC ))
+if (( EXEC_SCRIPT ))
+then
+  # Run script directly
+  export TCLSH=""
+elif (( TURBINE_STATIC_EXEC ))
 then
   # Use statically linked executable with builtin Turbine package
   export TCLSH=${TURBINE_SH}
