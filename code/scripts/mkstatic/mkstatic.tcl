@@ -323,6 +323,10 @@ proc locate_all_lib_src { tcl_version sys_lib_dirs other_lib_dirs } {
   foreach lib_dir [ concat $sys_lib_dirs $other_lib_dirs ] {
     set lib_src [ locate_lib_src $tcl_version $lib_dir ]
     lappend all_lib_src {*}$lib_src
+
+    if { [ llength $lib_src ] == 0 } {
+      warn_msg "No Tcl library source located in $lib_dir"
+    }
   }
   verbose_msg "Will include following lib source files: $all_lib_src"
   return $all_lib_src
@@ -1003,6 +1007,10 @@ proc verbose_msg { msg } {
   if { $verbose_setting } {
     puts $msg
   }
+}
+
+proc warn_msg { msg } {
+  puts stderr "WARN: $msg"
 }
 
 # Open script output file and register in case of error
