@@ -176,6 +176,7 @@ proc main { } {
     write_link_deps_file $manifest_dict $link_deps_output_file $link_deps_target
   }
 
+  set sys_lib_dir ""
   if { $skip_tcl_init } {
     if { [ llength $sys_lib_dirs ] == 0 } {
       error "Internal error: zero-length sys_lib_dirs"
