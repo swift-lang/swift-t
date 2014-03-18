@@ -66,7 +66,8 @@ public class Alias {
     } else if (transform == AliasTransform.COPY) {
       if (fieldIsRef(struct, fieldPath)) {
         // Only relevant if it's a reference to something
-        throw new STCRuntimeError("To implement");
+        // TODO: need to implement this
+        throw new STCRuntimeError("TODO To implement");
       } else {
         // Copy is irrelevant
         return Alias.NONE;
