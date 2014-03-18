@@ -90,7 +90,7 @@ public class Alias {
    * @param fieldPath
    * @return
    */
-  private static boolean fieldIsRef(Typed struct, List<String> fieldPath) {
+  public static boolean fieldIsRef(Typed struct, List<String> fieldPath) {
     StructType type = (StructType) struct.type().getImplType();
     Type fieldType;
     try {

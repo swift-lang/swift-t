@@ -516,11 +516,11 @@ public class ICInstructions {
      * If this instruction makes an output a part of another
      * variable such that modifying the output modifies something
      * else
-     * @return null if nothing
+     * @return empty list if nothing
      */
-    public Pair<Var, Var> getComponentAlias() {
+    public List<Pair<Var, Var>> getComponentAliases() {
       // Default is nothing, few instructions do this
-      return null;
+      return Collections.emptyList();
     }
 
     /**

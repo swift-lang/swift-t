@@ -300,8 +300,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
       }
       
       // Update structural information
-      Pair<Var, Var> componentAlias = inst.getComponentAlias();
-      if (componentAlias != null) {
+      for (Pair<Var, Var> componentAlias: inst.getComponentAliases()) {
         Var component = componentAlias.val1;
         assert(component.storage() == Alloc.ALIAS ||
             Types.isRef(component.type())) : component + " " + inst;
