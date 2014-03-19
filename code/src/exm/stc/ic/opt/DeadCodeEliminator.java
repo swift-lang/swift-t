@@ -34,12 +34,12 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.MultiMap;
-import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.Instruction.ComponentAlias;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Statement;
@@ -102,28 +102,29 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
     /* Set of vars that are definitely required */
     HashSet<Var> needed = new HashSet<Var>();
 
-    /* List of vars that were written that might have resulted in
-     *  modification of part of larger array or structure */
-    List<Var> modifiedComponents = new ArrayList<Var>(); 
+    /* List of vars that were written.  Need to ensure that all variables
+     * that are keys in writeEffect are tracked. */
+    List<Var> modifiedVars = new ArrayList<Var>(); 
     /*
      * Graph of dependencies from vars to other vars. If edge exists v1 -> v2
      * this means that if v1 is required, then v2 is required
      */
     MultiMap<Var, Var> dependencyGraph = new MultiMap<Var, Var>();
     
-    /* a -> b means that a is part of b */
-    Map <Var, Var> componentOf = new HashMap<Var, Var>();
+    /* a -> b means that modifications to a affect b too 
+     * (e.g. if a is part of b) */
+    Map <Var, Var> writeEffect = new HashMap<Var, Var>();
 
     walkFunction(logger, f, removeCandidates, needed, dependencyGraph,
-                            modifiedComponents, componentOf);
+                            modifiedVars, writeEffect);
     
     if (logger.isTraceEnabled()) {
       logger.trace("Dead code elimination in function " + f.getName() + "\n" +
                    "removal candidates: " + removeCandidates + "\n" +
                    "definitely needed: "+ needed + "\n" +
                    "dependencies: \n" + printDepGraph(dependencyGraph, 4) +
-                   "modified: " + modifiedComponents + "\n" +
-                   "componentOf: \n" + ICUtil.prettyPrintMap(componentOf, 4));
+                   "modifiedVars: " + modifiedVars + "\n" +
+                   "writeEffect: \n" + ICUtil.prettyPrintMap(writeEffect, 4));
     }
     
     /*
@@ -131,8 +132,8 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
      * Take into account that we might modify value of containing
      * structure, e.g. array
      */
-    for (Var written: modifiedComponents) {
-      Var whole = componentOf.get(written);
+    for (Var written: modifiedVars) {
+      Var whole = writeEffect.get(written);
       if (logger.isTraceEnabled())
         logger.trace("Modified var " + written);
       while (whole != null) {
@@ -140,7 +141,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
         if (logger.isTraceEnabled())
           logger.trace("Add transitive dep " + whole + " => " + written);
         dependencyGraph.put(whole, written);
-        whole = componentOf.get(whole);
+        whole = writeEffect.get(whole);
       }
     }
     
@@ -185,13 +186,13 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
    *                           could be removed
    * @param needed
    * @param dependencyGraph
-   * @param modifiedComponents 
-   * @param componentOf
+   * @param modifiedVars 
+   * @param writeEffects
    */
   private static void walkFunction(Logger logger, Function f,
       HashSet<Var> removeCandidates, HashSet<Var> needed,
-      MultiMap<Var, Var> dependencyGraph, List<Var> modifiedComponents,
-      Map <Var, Var> componentOf) {
+      MultiMap<Var, Var> dependencyGraph, List<Var> modifiedVars,
+      Map <Var, Var> writeEffects) {
     ArrayDeque<Block> workStack = new ArrayDeque<Block>();
     workStack.push(f.mainBlock());
     
@@ -202,8 +203,8 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
 
       walkBlockVars(block, removeCandidates, dependencyGraph);
       
-      walkInstructions(logger, block, needed, dependencyGraph, modifiedComponents,
-                       componentOf);
+      walkInstructions(logger, block, needed, dependencyGraph, modifiedVars,
+                       writeEffects);
       
       Iterator<Continuation> it = block.allComplexStatements().iterator();
       while (it.hasNext()) {
@@ -224,13 +225,13 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
 
   private static void walkInstructions(Logger logger,
       Block block, HashSet<Var> needed, MultiMap<Var, Var> dependencyGraph,
-      List<Var> modifiedComponents, Map<Var, Var> componentOf) {
+      List<Var> modifiedVars, Map<Var, Var> writeEffects) {
     ListIterator<Statement> it = block.statementIterator();
     while (it.hasNext()) {
       Statement stmt = it.next();
       if (stmt.type() == StatementType.INSTRUCTION) {
         walkInstruction(logger, stmt.instruction(), needed, dependencyGraph,
-                        modifiedComponents, componentOf);
+                        modifiedVars, writeEffects);
       } else if (stmt.type() == StatementType.CONDITIONAL) {
         if (stmt.conditional().isNoop()) {
           it.remove();
@@ -241,7 +242,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
 
   private static void walkInstruction(Logger logger, Instruction inst,
       HashSet<Var> needed, MultiMap<Var, Var> dependencyGraph,
-      List<Var> modifiedComponents, Map<Var, Var> componentOf) {
+      List<Var> modifiedVars, Map<Var, Var> writeEffects) {
     // If it has side-effects, need all inputs and outputs
     if (inst.hasSideEffects()) {
       needed.addAll(inst.getOutputs());
@@ -272,13 +273,13 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
         Var out = modOutputs.get(0);
         for (Arg in: inputs) {
           if (in.isVar()) {
-            addOutputDep(logger, inst, dependencyGraph, componentOf, out,
+            addOutputDep(logger, inst, dependencyGraph, writeEffects, out,
                          in.getVar());
           }
         }
         
         for (Var readOut: readOutputs) {
-          addOutputDep(logger, inst, dependencyGraph, componentOf, out,
+          addOutputDep(logger, inst, dependencyGraph, writeEffects, out,
                        readOut);
         }
       }
@@ -295,22 +296,22 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
       for (Var mod: modOutputs) {
         boolean modInit = inst.isInitialized(mod);
         if (!modInit && inst.op != Opcode.STORE_REF) {
-          modifiedComponents.add(mod);
+          modifiedVars.add(mod);
         }
       }
       
       // Update structural information
-      for (Pair<Var, Var> componentAlias: inst.getComponentAliases()) {
-        Var component = componentAlias.val1;
-        assert(component.storage() == Alloc.ALIAS ||
-            Types.isRef(component.type())) : component + " " + inst;
-        Var whole = componentAlias.val2;
-        Var prev = componentOf.put(component, whole);
+      for (ComponentAlias componentAlias: inst.getComponentAliases()) {
+        Var part = componentAlias.part;
+        assert(part.storage() == Alloc.ALIAS ||
+            Types.isRef(part.type())) : part + " " + inst;
+        Var whole = componentAlias.whole;
+        Var prev = writeEffects.put(part, whole);
         if (logger.isTraceEnabled()) {
-          logger.trace(component + " part of whole " + whole);
+          logger.trace(part + " part of whole " + whole);
         }
         if (prev != null && logger.isTraceEnabled()) {
-          logger.trace(component + " part of " + prev + " and " + whole);
+          logger.trace(part + " part of " + prev + " and " + whole);
         }
       }
     }
@@ -318,7 +319,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
   
   private static void addOutputDep(Logger logger,
       Instruction inst, MultiMap<Var, Var> dependencyGraph,
-      Map<Var, Var> componentOf, Var out, Var in) {
+      Map<Var, Var> writeEffects, Var out, Var in) {
     if (logger.isTraceEnabled())
       logger.trace("Add dep " + out + " => " + in + " for inst " + inst);
     dependencyGraph.put(out, in);

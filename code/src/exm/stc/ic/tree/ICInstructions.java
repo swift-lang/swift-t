@@ -508,12 +508,39 @@ public class ICInstructions {
 
 
     /**
+     * Represent a relationship where a write to part will (or may) affect
+     * the value of the whole.
+     */
+    public static class ComponentAlias {
+      public static final List<ComponentAlias> NONE = Collections.emptyList();
+      
+      /**
+       * Enclosing object
+       */
+      public final Var whole;
+      
+      /**
+       * Part which, if written, 
+       */
+      public final Var part;
+
+      public ComponentAlias(Var part, Var whole) {
+        this.whole = whole;
+        this.part = part;
+      }
+      
+      public List<ComponentAlias> asList() {
+        return Collections.singletonList(this);
+      }
+    }
+    
+    /**
      * If this instruction makes an output a part of another
      * variable such that modifying the output modifies something
      * else
      * @return empty list if nothing
      */
-    public List<Pair<Var, Var>> getComponentAliases() {
+    public List<ComponentAlias> getComponentAliases() {
       // Default is nothing, few instructions do this
       return Collections.emptyList();
     }

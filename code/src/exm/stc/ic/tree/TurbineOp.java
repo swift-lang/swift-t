@@ -29,7 +29,6 @@ import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.aliases.Alias;
 import exm.stc.ic.aliases.Alias.AliasTransform;
-import exm.stc.ic.aliases.AliasKey;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ValLoc;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
@@ -2995,35 +2994,30 @@ public class TurbineOp extends Instruction {
   }
 
   @Override
-  public List<Pair<Var, Var>> getComponentAliases() {
+  public List<ComponentAlias> getComponentAliases() {
     switch (op) {
       case ARR_CREATE_NESTED_IMM:
       case ARR_CREATE_NESTED_FUTURE:
       case ARRAY_CREATE_BAG:
         // From inner object to immediately enclosing
-        return Collections.singletonList(
-            Pair.create(getOutput(0), getOutput(1)));
+        return new ComponentAlias(getOutput(0), getOutput(1)).asList();
       case AREF_CREATE_NESTED_IMM:
       case AREF_CREATE_NESTED_FUTURE:
         // From inner array to immediately enclosing
-        return Collections.singletonList(
-            Pair.create(getOutput(0), getOutput(2)));
+        return new ComponentAlias(getOutput(0), getOutput(2)).asList();
       case LOAD_REF:
         // If reference was a part of something, modifying the
         // dereferenced object will modify the whole
-        return Collections.singletonList(
-            Pair.create(getOutput(0), getInput(0).getVar()));
+        return new ComponentAlias(getOutput(0), getInput(0).getVar()).asList();
       case COPY_REF:
-        return Collections.singletonList(
-            Pair.create(getOutput(0), getInput(0).getVar()));
+        return new ComponentAlias(getOutput(0), getInput(0).getVar()).asList();
       case STORE_REF:
         // Sometimes a reference is filled in
-        return Collections.singletonList(
-            Pair.create(getOutput(0), getInput(0).getVar()));
+        return new ComponentAlias(getOutput(0), getInput(0).getVar()).asList();
       case STRUCT_INIT_FIELDS: {
         Out<List<List<String>>> fieldPaths = new Out<List<List<String>>>();
         Out<List<Arg>> fieldVals = new Out<List<Arg>>();
-        List<Pair<Var, Var>> aliases = new ArrayList<Pair<Var, Var>>();
+        List<ComponentAlias> aliases = new ArrayList<ComponentAlias>();
         unpackStructInitArgs(fieldPaths, null, fieldVals);
         assert (fieldPaths.val.size() == fieldVals.val.size());
 
@@ -3034,7 +3028,7 @@ public class TurbineOp extends Instruction {
           Arg fieldVal = fieldVals.val.get(i);
           if (fieldVal.isVar()) {
             if (Alias.fieldIsRef(struct, fieldPath)) {
-              aliases.add(Pair.create(struct, fieldVal.getVar()));
+              aliases.add(new ComponentAlias(fieldVal.getVar(), struct));
             }
           }
         }
@@ -3042,37 +3036,36 @@ public class TurbineOp extends Instruction {
       }
       case STRUCT_CREATE_ALIAS:
         // Output is alias for part of struct
-        return Collections.singletonList(
-            Pair.create(getOutput(0), getInput(0).getVar()));
+        return new ComponentAlias(getOutput(0), getInput(0).getVar()).asList();
       case STRUCTREF_STORE_SUB:
       case STRUCT_STORE_SUB:
         if (Alias.fieldIsRef(getOutput(0),
                              Arg.extractStrings(getInputsTail(1)))) {
-          return Collections.singletonList(
-              Pair.create(getOutput(0), getInput(0).getVar()));
+          return new ComponentAlias(getInput(0).getVar(),
+                                    getOutput(0)).asList();
         }
         break;
       case STRUCT_RETRIEVE_SUB:
         if (Alias.fieldIsRef(getInput(0).getVar(),
                              Arg.extractStrings(getInputsTail(1)))) {
-          return Collections.singletonList(
-              Pair.create(getOutput(0), getInput(0).getVar()));
+          return new ComponentAlias(getOutput(0),
+                  getInput(0).getVar()).asList();
         }
         break;
       case STRUCTREF_COPY_IN:
       case STRUCT_COPY_IN:
         if (Alias.fieldIsRef(getOutput(0),
                              Arg.extractStrings(getInputsTail(1)))) {
-          return Collections.singletonList(
-              Pair.create(getOutput(0), getInput(0).getVar()));
+          return new ComponentAlias(getInput(0).getVar(),
+                                    getOutput(0)).asList();
         }
         break;
       case STRUCTREF_COPY_OUT:
       case STRUCT_COPY_OUT:
         if (Alias.fieldIsRef(getInput(0).getVar(),
                              Arg.extractStrings(getInputsTail(1)))) {
-          return Collections.singletonList(
-              Pair.create(getOutput(0), getInput(0).getVar()));
+          return new ComponentAlias(getOutput(0),
+                  getInput(0).getVar()).asList();
         }
         break;
       default:
