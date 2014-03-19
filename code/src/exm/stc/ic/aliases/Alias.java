@@ -84,6 +84,10 @@ public class Alias {
    * @return
    */
   public static boolean fieldIsRef(Typed struct, List<String> fieldPath) {
+    assert(Types.isStruct(struct) || Types.isStructRef(struct));
+    if (Types.isStructRef(struct)) {
+      struct = Types.retrievedType(struct);
+    }
     StructType type = (StructType) struct.type().getImplType();
     Type fieldType;
     try {
