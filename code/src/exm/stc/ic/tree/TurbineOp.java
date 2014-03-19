@@ -2927,7 +2927,7 @@ public class TurbineOp extends Instruction {
   }
 
   @Override
-  public List<Alias> getAliases(AliasCanonicalizer ac) {
+  public List<Alias> getAliases() {
     switch (this.op) {
       case STRUCT_CREATE_ALIAS:
         return Alias.makeStructAliases2(getInput(0).getVar(), getInputsTail(1),
@@ -2964,47 +2964,28 @@ public class TurbineOp extends Instruction {
       case STORE_REF: {
         // need to track if ref is alias to struct field
         Var ref = getOutput(0);
-        AliasKey key = ac.getCanonical(ref);
-        if (key.pathLength() > 0) {
-          assert (Types.isStruct(key.var));
-          Var val = getInput(0).getVar();
-          return Alias.makeStructAliases(key.var,
-              Arrays.asList(key.structPath), val, AliasTransform.RETRIEVE);
-        }
-        break;
+        Var val = getInput(0).getVar();
+        
+        return new Alias(ref, Collections.<String>emptyList(),
+                         AliasTransform.RETRIEVE, val).asList();
       }
       case LOAD_REF: {
         // need to track if ref is alias to struct field
+        Var val = getOutput(0);
         Var ref = getInput(0).getVar();
-        AliasKey key = ac.getCanonical(ref);
-        if (key.pathLength() > 0) {
-          Var val = getOutput(0);
-          assert (Types.isStruct(key.var));
-          return Alias.makeStructAliases(key.var,
-              Arrays.asList(key.structPath), val, AliasTransform.RETRIEVE);
-        }
-        break;
+        
+        return new Alias(ref, Collections.<String>emptyList(),
+                         AliasTransform.RETRIEVE, val).asList();
       }
       case COPY_REF: {
         // need to track if ref is alias to struct field
         Var ref1 = getOutput(0);
         Var ref2 = getInput(0).getVar();
-        AliasKey key1 = ac.getCanonical(ref1);
-        AliasKey key2 = ac.getCanonical(ref2);
-        List<Alias> aliases = new ArrayList<Alias>();
-
-        // Copy across alias info from one ref to another
-        if (key1.pathLength() > 0) {
-          assert (Types.isStruct(key1.var));
-          aliases.addAll(Alias.makeStructAliases(key1.var,
-              Arrays.asList(key1.structPath), ref2, AliasTransform.COPY));
-        }
-        if (key2.pathLength() > 0) {
-          assert (Types.isStruct(key2.var));
-          aliases.addAll(Alias.makeStructAliases(key2.var,
-              Arrays.asList(key2.structPath), ref1, AliasTransform.COPY));
-        }
-        return aliases;
+        return Arrays.asList(
+            new Alias(ref1, Collections.<String>emptyList(),
+                      AliasTransform.COPY, ref2),
+            new Alias(ref2, Collections.<String>emptyList(),
+                      AliasTransform.COPY, ref1));
       }
       default:
         // Opcode not relevant

@@ -10,8 +10,8 @@ import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.HierarchicalMap;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
+import exm.stc.ic.aliases.Alias.AliasTransform;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.Instruction.AliasCanonicalizer;
 
 /**
  * Track which variables alias what.  AliasKey is a canonical key that
@@ -21,7 +21,7 @@ import exm.stc.ic.tree.ICInstructions.Instruction.AliasCanonicalizer;
  * - Does a variable exist in scope that corresponds to x.field1.field2?
  * - Is variable x a component of any struct?  
  */
-public class AliasTracker implements AliasCanonicalizer {
+public class AliasTracker {
   
   /**
    * String to add to path to indicate that it's a dereferenced value.
@@ -42,6 +42,13 @@ public class AliasTracker implements AliasCanonicalizer {
    */
   private final HierarchicalMap<Var, AliasKey> varToPath;
   
+
+  /**
+   * Map from variable to alias key that is copy of alias key, but could
+   * be dereferenced to yield valid alias.  I.e. var should be a ref variable.
+   */
+  private final HierarchicalMap<Var, AliasKey> refCopyVarToPath;
+  
   /**
    * Map from alias key to element vars.  We only track the first variable
    * encountered for each alias.
@@ -56,22 +63,25 @@ public class AliasTracker implements AliasCanonicalizer {
 
   public AliasTracker() {
     this(null, new HierarchicalMap<Var, AliasKey>(),
+        new HierarchicalMap<Var, AliasKey>(),
         new HierarchicalMap<AliasKey, Var>());
   }
   
   private AliasTracker(AliasTracker parent,
                        HierarchicalMap<Var, AliasKey> varToPath,
+                       HierarchicalMap<Var, AliasKey> refCopyVarToPath,
                        HierarchicalMap<AliasKey, Var> pathToVar) {
     this.parent = parent;
     this.varToPath = varToPath;
     this.pathToVar = pathToVar;
+    this.refCopyVarToPath = refCopyVarToPath;
     // We need to look at parent to find additional roots
     this.roots = new MultiMap<Var, Pair<Var, AliasKey>>();
   }
   
   public AliasTracker makeChild() {
-    return new AliasTracker(this, varToPath.makeChildMap(), 
-                            pathToVar.makeChildMap());
+    return new AliasTracker(this, varToPath.makeChildMap(),
+        refCopyVarToPath.makeChildMap(), pathToVar.makeChildMap());
   }
 
 
@@ -81,7 +91,7 @@ public class AliasTracker implements AliasCanonicalizer {
    * @return aliases from instruction for caller to use, if needed
    */
   public List<Alias> update(Instruction inst) {
-    List<Alias> aliases = inst.getAliases(this);
+    List<Alias> aliases = inst.getAliases();
     for (Alias alias: aliases) {
       addAlias(alias);
     }
@@ -89,21 +99,28 @@ public class AliasTracker implements AliasCanonicalizer {
   }
 
   public void addAlias(Alias alias) {
-    addStructElem(alias.parent, alias.fieldPath, alias.derefed, alias.child);
+    addStructElem(alias.parent, alias.fieldPath, alias.transform, alias.child);
   }
 
-  public void addStructElem(Var parent, List<String> fieldPath, boolean derefed,
-                            Var child) {
+  public void addStructElem(Var parent, List<String> fieldPath,
+      AliasTransform transform, Var child) {
+    boolean derefed = (transform == AliasTransform.RETRIEVE);
     
     // find canonical paths for parent and child
-    AliasKey parentPath = getCanonical(parent);
+    // If we're going to deref, doesn't matter if it's a copy
+    AliasKey parentPath = getCanonical(parent, derefed);
     assert(parentPath != null);
+   
     AliasKey childPath = parentPath.makeChild(fieldPath, derefed);
-    
     assert(child.type().assignableTo(childPath.type())) 
             : child.type() + " vs " + childPath.type();
     
-    addVarPath(child, childPath, null);
+    if (transform == AliasTransform.IDENTITY ||
+        transform == AliasTransform.RETRIEVE) {
+      addVarPath(child, childPath, null);
+    } else {
+      addRefCopyVarPath(child, childPath);
+    }
   }
 
   /**
@@ -113,7 +130,7 @@ public class AliasTracker implements AliasCanonicalizer {
    * @param replacePath if a root was updated, and we should override the
    *              previous entry in varToPath in event of a conflict
    */
-  public void addVarPath(Var var, AliasKey path, AliasKey replacePath) {
+  private void addVarPath(Var var, AliasKey path, AliasKey replacePath) {
     assert(!path.var.equals(var));
     assert(path.pathLength() >= 1);
     
@@ -163,6 +180,10 @@ public class AliasTracker implements AliasCanonicalizer {
     }
   }
 
+  private void addRefCopyVarPath(Var var, AliasKey path) {
+    refCopyVarToPath.put(var, path);
+  }
+
   /**
    * See if a variable exists corresponding to key
    * @param key
@@ -185,13 +206,29 @@ public class AliasTracker implements AliasCanonicalizer {
    *        Should not be null
    */
   public AliasKey getCanonical(Var var) {
+    return getCanonical(var, false);
+  }
+
+  /**
+   * Find the canonical root and path corresponding to the variable
+   * @param var
+   * @param includeCopies if we can't find a true alias, is a copy ok?
+   * @return the key containing root variable, and path from root.
+   *        Should not be null
+   */
+  private AliasKey getCanonical(Var var, boolean includeCopies) {
     AliasKey key = varToPath.get(var);
     if (key != null) {
       return key;
-    } else {
-      // Not a part of any structure
-      return new AliasKey(var);
+    } else if (includeCopies) {
+      key = refCopyVarToPath.get(var);
+      if (key != null) {
+        return key;
+      }
     }
+    
+    // Not a part of any structure
+    return new AliasKey(var);
   }
   
   @Override

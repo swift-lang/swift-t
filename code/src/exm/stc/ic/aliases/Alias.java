@@ -21,14 +21,15 @@ public class Alias {
 
   public final Var parent;
   public final List<String> fieldPath;
-  public final boolean derefed;
+  public final AliasTransform transform;
   public final Var child;
 
-  public Alias(Var parent, List<String> fieldPath, boolean derefed, Var child) {
+  public Alias(Var parent, List<String> fieldPath,
+               AliasTransform transform, Var child) {
     super();
     this.parent = parent;
     this.fieldPath = fieldPath;
-    this.derefed = derefed;
+    this.transform = transform;
     this.child = child;
   }
 
@@ -54,27 +55,18 @@ public class Alias {
    */
   public static List<Alias> makeStructAliases(Var struct, List<String> fieldPath,
       Var val, AliasTransform transform) {
-    if (transform == AliasTransform.RETRIEVE) {
-      // Value of field - only relevant if field is a reference
+    if (transform == AliasTransform.RETRIEVE ||
+        transform == AliasTransform.COPY) {
+      // Value or copy of field - only relevant if field is a reference
       if (fieldIsRef(struct, fieldPath)) {
-        // val is the value of the reference
-        return new Alias(struct, fieldPath, true, val).asList();
+        return new Alias(struct, fieldPath, transform, val).asList();
       } else {
         // Value of field - not an alias
         return Alias.NONE;
       }
-    } else if (transform == AliasTransform.COPY) {
-      if (fieldIsRef(struct, fieldPath)) {
-        // Only relevant if it's a reference to something
-        // TODO: need to implement this
-        throw new STCRuntimeError("TODO To implement");
-      } else {
-        // Copy is irrelevant
-        return Alias.NONE;
-      }
     } else {
       // Straightforward alias of field
-      return new Alias(struct, fieldPath, false, val).asList();
+      return new Alias(struct, fieldPath, transform, val).asList();
     }
   }
 
