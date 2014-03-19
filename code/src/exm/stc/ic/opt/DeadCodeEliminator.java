@@ -303,8 +303,6 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
       // Update structural information
       for (ComponentAlias componentAlias: inst.getComponentAliases()) {
         Var part = componentAlias.part;
-        assert(part.storage() == Alloc.ALIAS ||
-            Types.isRef(part.type())) : part + " " + inst;
         Var whole = componentAlias.whole;
         Var prev = writeEffects.put(part, whole);
         if (logger.isTraceEnabled()) {
