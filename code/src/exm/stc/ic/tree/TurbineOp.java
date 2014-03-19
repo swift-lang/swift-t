@@ -593,6 +593,7 @@ public class TurbineOp extends Instruction {
    */
   public static Instruction structCopyOut(Var dst, Var struct,
                                           List<String> fields) {
+    // TODO: support piggybacked refcount ops for this and other struct operations
     assert(Types.isStruct(struct));
     assert(Types.isStructField(struct, fields, dst));
     
