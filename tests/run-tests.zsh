@@ -202,12 +202,14 @@ run_test()
   CHECK_OUTPUT=${TCL_FILE%.tcl}.check.out
   EXP_OUTPUT=${TEST_PATH}.exp
   TURBINE_OUTPUT=${TCL_FILE%.tcl}.out
-  export TURBINE_OUTPUT
   TURBINE_XPT_RELOAD_OUTPUT=${TCL_FILE%.tcl}.reload.out
   export TURBINE_XPT_RELOAD_OUTPUT
 
   ARGS=""
   ARGS_FILE=${TEST_PATH}.args
+  
+  # Export output filenames for check script
+  export TURBINE_OUTPUT STC_OUT_FILE STC_ERR_FILE STC_LOG_FILE
 
 
   # Get test command-line arguments

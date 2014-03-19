@@ -3,5 +3,6 @@
 
 main {
   // UNSET-VARIABLE-EXPECTED
+  // This should only cause a single unused variable warning
   int i;
 }

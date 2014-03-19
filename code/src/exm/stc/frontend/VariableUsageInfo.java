@@ -214,7 +214,7 @@ public class VariableUsageInfo {
         // v might be read
         if (Types.isArray(v.type)) {
           // ok to refer to entire array if not written
-          // Could do more sophisticated analysis of indices, but best toavoid
+          // Could do more sophisticated analysis of indices, but best toa void
           // emitting too much warning spam
         } else if (Types.isBag(v.type)) {
           // ok not to add anything
@@ -226,8 +226,7 @@ public class VariableUsageInfo {
             violations.add(new Violation(ViolationType.ERROR,
                 "Variable " + v.getName() + " never written and is read " +
                 "on some code paths", context));
-          }
-          else if (v.isAssigned() == Ternary.MAYBE) {
+          } else if (v.isAssigned() == Ternary.MAYBE) {
             violations.add(new Violation(ViolationType.WARNING,
                 "Variable " + v.getName() + " might be read and not written, "
               + "possibly leading to deadlock", context));
@@ -236,15 +235,17 @@ public class VariableUsageInfo {
       } else {
         // v isn't read, but still should issue warnings
         if (!v.hasMapping()) {
+          // If no mapping, variable just is useful 
           violations.add(new Violation(ViolationType.WARNING,
               "Variable " + v.getName() + " is not used", context));
-        }
-        if (v.isAssigned() == Ternary.FALSE) {
+        } else if (v.isAssigned() == Ternary.FALSE) {
           violations.add(new Violation(ViolationType.WARNING,
-              "Variable " + v.getName() + " is not written", context));
+              "Mapped variable " + v.getName() + " is not written",
+              context));
         } else if (v.isAssigned() == Ternary.MAYBE) {
           violations.add(new Violation(ViolationType.WARNING,
-              "Variable " + v.getName() + " might not be written", context));
+              "Mapped variable " + v.getName() + " might not be written",
+              context));
         }
       }
       List<Violation> more = v.isIncompletelyDefinedStruct(context);
