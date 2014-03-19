@@ -19,6 +19,10 @@ changecom(`dnl')#!/bin/bash
 
 # Created: esyscmd(`date')
 
+# Define a convenience macro
+# This simply does environment variable substition when m4 runs
+define(`getenv', `esyscmd(printf -- "$`$1'")')
+
 PROGRAM=$1
 
 #SBATCH --time=esyscmd(`printf $WALLTIME')
@@ -33,6 +37,9 @@ then
 fi
 
 export TURBINE_HOME=$( cd $(dirname ${TURBINE})/.. ; /bin/pwd )
+
+TURBINE_STATIC_EXEC=getenv(TURBINE_STATIC_EXEC)
+EXEC_SCRIPT=getenv(EXEC_SCRIPT)
 
 echo "TURBINE_HOME: ${TURBINE_HOME}"
 echo "PROGRAM:      ${PROGRAM}"

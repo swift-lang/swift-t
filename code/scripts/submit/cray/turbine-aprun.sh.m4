@@ -54,7 +54,7 @@ VERBOSE=getenv(VERBOSE)
 # Set variables required for turbine-config.sh
 export TURBINE_HOME=getenv(TURBINE_HOME)
 TURBINE_STATIC_EXEC=getenv(TURBINE_STATIC_EXEC)
-TCLSH=getenv(TCLSH)
+EXEC_SCRIPT=getenv(EXEC_SCRIPT)
 
 # Setup configuration for turbine
 source ${TURBINE_HOME}/scripts/turbine-config.sh
@@ -77,6 +77,7 @@ export ADLB_SERVERS=getenv(ADLB_SERVERS)
 # Default to 1
 TURBINE_ENGINES=${TURBINE_ENGINES:-1}
 ADLB_SERVERS=${ADLB_SERVERS:-1}
+export TURBINE_GEMTC_WORKER=getenv(TURBINE_GEMTC_WORKER)
 
 export ADLB_DEBUG_RANKS=getenv(ADLB_DEBUG_RANKS)
 export ADLB_PRINT_TIME=getenv(ADLB_PRINT_TIME)
