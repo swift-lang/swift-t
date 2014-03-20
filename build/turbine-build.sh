@@ -113,6 +113,14 @@ if [ ! -z "$MPI_LIB_NAME" ]; then
   EXTRA_ARGS+=" --with-mpi-lib-name=${MPI_LIB_NAME}"
 fi
 
+if (( DISABLE_ZLIB )); then
+  EXTRA_ARGS+=" --disable-zlib"
+fi
+
+if [ ! -z "$ZLIB_INSTALL" ]; then
+  EXTRA_ARGS+=" --with-zlib=$ZLIB_INSTALL"
+fi
+
 if (( CONFIGURE )); then
   ./configure --with-adlb=${LB_INSTALL} \
               ${CRAY_ARGS} \
