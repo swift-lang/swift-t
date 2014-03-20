@@ -297,7 +297,8 @@ ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
 
 static int
 ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
-          int objc, Tcl_Obj *const objv[], adlb_subscript_kind sub_kind);
+          int objc, Tcl_Obj *const objv[], bool write_ref,
+          adlb_subscript_kind sub_kind);
 /**
    usage: adlb::init <servers> <types> [<comm>]?
    Simplified use of ADLB_Init type_vect: just give adlb_init
@@ -2306,7 +2307,22 @@ static int
 ADLB_Acquire_Ref_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
-  return ADLB_Acquire_Ref_Impl(cdata, interp, objc, objv, ADLB_SUB_NONE);
+  return ADLB_Acquire_Ref_Impl(cdata, interp, objc, objv,
+                               false, ADLB_SUB_NONE);
+}
+
+/**
+   usage: adlb::acquire_write_ref <id> <type>
+          <read increment> <write increment> <read decrement>
+   Retrieve and increment read & write refcount of referenced ids by increment.
+   Decrement refcount of this id by decrement
+*/
+static int
+ADLB_Acquire_Write_Ref_Cmd(ClientData cdata, Tcl_Interp *interp,
+                  int objc, Tcl_Obj *const objv[])
+{
+  return ADLB_Acquire_Ref_Impl(cdata, interp, objc, objv,
+                               true, ADLB_SUB_NONE);
 }
 
 /**
@@ -2319,12 +2335,29 @@ static int
 ADLB_Acquire_Sub_Ref_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
-  return ADLB_Acquire_Ref_Impl(cdata, interp, objc, objv, ADLB_SUB_CONTAINER);
+  return ADLB_Acquire_Ref_Impl(cdata, interp, objc, objv,
+                               false, ADLB_SUB_CONTAINER);
+}
+
+/**
+   usage: adlb::acquire_sub_write_ref <id> <subscript> <type>
+          <read increment> <write increment> <read decrement>
+   Retrieve value at subscript and increment read & write refcounts
+   of referenced ids by increment.
+   Decrement refcount of this id by decrement
+*/
+static int
+ADLB_Acquire_Sub_Write_Ref_Cmd(ClientData cdata, Tcl_Interp *interp,
+                  int objc, Tcl_Obj *const objv[])
+{
+  return ADLB_Acquire_Ref_Impl(cdata, interp, objc, objv,
+                               true, ADLB_SUB_CONTAINER);
 }
 
 static int
 ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
-          int objc, Tcl_Obj *const objv[], adlb_subscript_kind sub_kind)
+          int objc, Tcl_Obj *const objv[],
+          bool write_ref, adlb_subscript_kind sub_kind)
 {
   TCL_ARGS(sub_kind == ADLB_SUB_NONE ? 5 : 6);
   int rc;
@@ -2352,12 +2385,17 @@ ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
   adlb_retrieve_rc refcounts = ADLB_RETRIEVE_NO_RC;
   rc = Tcl_GetIntFromObj(interp, objv[argpos++],
             &refcounts.incr_referand.read_refcount);
-  TCL_CHECK_MSG(rc, "requires incr referand amount!");
+  TCL_CHECK_MSG(rc, "requires incr referand read amount!");
+
+  if (write_ref) {
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++],
+              &refcounts.incr_referand.write_refcount);
+    TCL_CHECK_MSG(rc, "requires incr referand write amount!");
+  }
 
   rc = Tcl_GetIntFromObj(interp, objv[argpos++],
             &refcounts.decr_self.read_refcount);
   TCL_CHECK_MSG(rc, "requires decr amount!");
-  // TODO: support acquiring write reference
 
   // Retrieve the data, actual type, and length from server
   adlb_data_type type;
@@ -4800,7 +4838,9 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("retrieve",  ADLB_Retrieve_Cmd);
   COMMAND("retrieve_decr",  ADLB_Retrieve_Decr_Cmd);
   COMMAND("acquire_ref",  ADLB_Acquire_Ref_Cmd);
+  COMMAND("acquire_write_ref",  ADLB_Acquire_Write_Ref_Cmd);
   COMMAND("acquire_sub_ref",  ADLB_Acquire_Sub_Ref_Cmd);
+  COMMAND("acquire_sub_write_ref",  ADLB_Acquire_Sub_Write_Ref_Cmd);
   COMMAND("enumerate", ADLB_Enumerate_Cmd);
   COMMAND("retrieve_blob", ADLB_Retrieve_Blob_Cmd);
   COMMAND("retrieve_decr_blob", ADLB_Retrieve_Blob_Decr_Cmd);
