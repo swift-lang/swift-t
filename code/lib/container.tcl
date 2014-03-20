@@ -496,86 +496,62 @@ namespace eval turbine {
     # CRFI
     # When reference r on c[i] is closed, store c[i][j] = d
     # Blocks on r and j
-    # oc is outer container
-    # inputs: r j d oc
+    # inputs: r j d
     # outputs: ignored
-    proc cr_f_insert {cr j d t oc {write_refcount_incr 1}} {
+    proc cr_f_insert {cr j d t} {
         log "insert (future): <*$cr>\[<$j>\]=<$d>"
 
-        if { $write_refcount_incr } {
-            write_refcount_incr $oc
-        }
-
-        rule "$cr $j" "cr_f_insert_body $cr $j $d $t $oc" \
+        rule "$cr $j" "cr_f_insert_body $cr $j $d $t" \
             name "CRFI-$cr"
     }
     proc cr_f_insert_body { cr j d t oc } {
         # s: The subscripted container
-        set c [ acquire_ref $cr 1 1 ]
+        set c [ acquire_write_ref $cr 1 1 1 ]
         set s [ retrieve_decr $j ]
-        container_insert $c $s $d $t 0 1
+        container_insert $c $s $d $t 1 1
         log "insert: (now) <$c>\[$s\]=<$d>"
-        write_refcount_decr $oc
     }
 
     # CRVI
     # When reference cr on c[i] is closed, store c[i][j] = d
     # Blocks on cr, j must be a tcl integer
-    # oc is a direct handle to the top-level container
-    #       which cr will be inside
-    # inputs: r j d oc
+    # inputs: r j d
     # outputs: ignored
-    proc cr_v_insert { cr j d t oc {write_refcount_incr 1} } {
-        if { $write_refcount_incr } {
-            write_refcount_incr $oc
-        }
-
-        rule "$cr" "cr_v_insert_body $cr $j $d $t $oc" \
-            name "CRVI-$cr-$j-$d-$oc"
+    proc cr_v_insert { cr j d t } {
+        rule "$cr" "cr_v_insert_body $cr $j $d $t" \
+            name "CRVI-$cr-$j-$d"
     }
-    proc cr_v_insert_body { cr j d t oc } {
-        # don't need read reference
-        set c [ acquire_ref $cr 1 1 ]
+    proc cr_v_insert_body { cr j d t } {
+        set c [ acquire_write_ref $cr 1 1 1 ]
         # insert and drop slot
-        container_insert $c $j $d $t 0 1
-        write_refcount_decr $oc
+        container_insert $c $j $d $t 1 1
     }
 
     # CRVIR
     # j: tcl integer index
     # oc: direct handle to outer container
-    proc cr_v_insert_r { cr j dr t oc {write_refcount_incr 1}} {
-        if { $write_refcount_incr } {
-            write_refcount_incr $oc
-        }
-
+    proc cr_v_insert_r { cr j dr t } {
         rule [ list $cr $dr ] \
-            "cr_v_insert_r_body $cr $j $dr $t $oc" \
+            "cr_v_insert_r_body $cr $j $dr $t" \
             name "CRVIR"
     }
-    proc cr_v_insert_r_body { cr j dr t oc } {
-        set c [ acquire_ref $cr 1 1 ]
+    proc cr_v_insert_r_body { cr j dr t } {
+        set c [ acquire_write_ref $cr 1 1 1 ]
         set d [ adlb::acquire_ref $dr $t 1 1 ]
-        container_insert $c $j $d $t 0 1
-        write_refcount_decr $oc
+        container_insert $c $j $d $t 1 1
     }
 
-    proc cr_f_insert_r { cr j dr t oc {write_refcount_incr 1}} {
-        if { $write_refcount_incr } {
-            write_refcount_incr $oc
-        }
-
+    proc cr_f_insert_r { cr j dr t } {
         rule [ list $cr $j $dr ] \
-            "cr_f_insert_r_body $cr $j $dr $t $oc" \
+            "cr_f_insert_r_body $cr $j $dr $t" \
             name "CRFIR"
     }
-    proc cr_f_insert_r_body { cr j dr t oc } {
-        set c [ acquire_ref $cr 1 1 ]
+    proc cr_f_insert_r_body { cr j dr t } {
+        set c [ acquire_write_ref $cr 1 1 1 ]
         set d [ adlb::acquire_ref $dr $t 1 1 ]
         set jval [ retrieve_decr $j ]
-        # Insert and drop read refcount we acquired
-        container_insert $c $jval $d $t 0 1
-        write_refcount_decr $oc
+        # Insert and drop refcounts we acquired
+        container_insert $c $jval $d $t 1 1
     }
 
     # CVC
@@ -622,49 +598,32 @@ namespace eval turbine {
 
     # Create container at c[i]
     # Set r, a reference TD on (cr*)[i]
-    # oa: outer array
-    # write_refcount_incr: if false, caller has created slot on oa
-    proc cr_v_create { r cr i key_type val_type oa {write_refcount_incr 1}} {
-        if { $write_refcount_incr } {
-            # create slot on outer array
-            write_refcount_incr $oa
-        }
-
+    proc cr_v_create { r cr i key_type val_type } {
         rule "$cr" \
-          "cr_v_create_body $r $cr $i $key_type $val_type $oa" \
+          "cr_v_create_body $r $cr $i $key_type $val_type" \
            name crvc
     }
 
-    proc cr_v_create_body { r cr i key_type val_type oa } {
-        set c [ acquire_ref $cr 1 1 ]
-        # Acquire 1 read refcount for container
-        set res [ create_nested $c $i $key_type $val_type 1 0 0 1 ]
-        # Pass read refcount into ref
+    proc cr_v_create_body { r cr i key_type val_type } {
+        set c [ acquire_write_ref $cr 1 1 1 ]
+        # Transfer 1 read & write refcount to ref
+        set res [ create_nested $c $i $key_type $val_type 1 1 1 1 ]
         store_ref $r $res
-        write_refcount_decr $oa
     }
 
     # Create container at c[i]
     # Set r, a reference TD on (cr*)[i]
-    # oa: outer array of nested
-    # write_refcount_incr: if false, caller has created slot on oa
-    proc cr_f_create { r cr i key_type val_type oa {write_refcount_incr 1}} {
-        if { $write_refcount_incr } {
-            # create slot on outer array
-            write_refcount_incr $oa
-        }
-
-        rule "$cr $i" "cr_f_create_body $r $cr $i $key_type $val_type $oa" \
+    proc cr_f_create { r cr i key_type val_type} {
+        rule "$cr $i" "cr_f_create_body $r $cr $i $key_type $val_type" \
            name crfc
     }
 
-    proc cr_f_create_body { r cr i key_type val_type oa } {
-        set c [ acquire_ref $cr 1 1 ]
+    proc cr_f_create_body { r cr i key_type val_type } {
+        set c [ acquire_write_ref $cr 1 1 1 ]
         set s [ retrieve_decr $i ]
-        # Acquire 1 read refcount for container
-        set res [ create_nested $c $s $key_type $val_type 1 0 0 1 ]
+        # Transfer 1 read & write refcount to ref
+        set res [ create_nested $c $s $key_type $val_type 1 1 1 1 ]
         store_ref $r $res
-        write_refcount_decr $oa
     }
 
     # When container is closed, concatenate its keys in result
