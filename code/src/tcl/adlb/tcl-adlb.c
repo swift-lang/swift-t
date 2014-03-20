@@ -3598,6 +3598,8 @@ ADLB_Reference_Impl(ClientData cdata, Tcl_Interp *interp,
                            &extra);
   TCL_CHECK(rc);
 
+  // TODO: optionally take num of read/write references to acquire
+
   // DEBUG_ADLB("adlb::container_reference: <%"PRId64">[%s] => <%"PRId64">\n",
   //            id, subscript, reference);
   rc = ADLB_Container_reference(handle.id, handle.sub.val,
