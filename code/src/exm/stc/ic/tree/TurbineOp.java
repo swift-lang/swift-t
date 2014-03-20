@@ -1164,7 +1164,8 @@ public class TurbineOp extends Instruction {
       assert(Types.isAssignableRefTo(src.type(), dst.type()));
     }
     assert(dst.storage() == Alloc.ALIAS);
-    return new TurbineOp(Opcode.LOAD_REF, dst, src.asArg());
+    return new TurbineOp(Opcode.LOAD_REF, dst, src.asArg(),
+          Arg.createIntLit(acquireRead), Arg.createIntLit(acquireWrite));
   }
   
   public static Instruction copyRef(Var dst, Var src) {
@@ -2249,13 +2250,6 @@ public class TurbineOp extends Instruction {
       // In create_nested instructions only the 
       // first output (the created array) is needed
       return Collections.singletonList(getOutput(0));
-
-    case AREF_STORE_FUTURE:
-    case AREF_STORE_IMM:
-      // In the arrayref_insert instructions, the first output
-      // is a reference to an outer array that is kept open but not
-      // modified
-      return Collections.singletonList(getOutput(1));
     default:
         return this.getOutputs();
     }
