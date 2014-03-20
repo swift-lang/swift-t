@@ -85,7 +85,8 @@ public interface CompilerBackend {
   
   public void dereferenceFile(Var dst, Var src);
 
-  public void retrieveRef(Var target, Var src, Arg decr);
+  public void retrieveRef(Var target, Var src, Arg acquireRead,
+                          Arg acquireWrite, Arg decr);
   
   /**
    * Copy the handle to a future, creating an alias
@@ -293,11 +294,9 @@ public interface CompilerBackend {
   public void arrayCopyInFuture(Var array,
       Var ix, Var member, Arg writersDecr);
   
-  public void arrayRefStoreFuture(Var outerArray,
-      Var array, Var ix, Arg member);
+  public void arrayRefStoreFuture(Var array, Var ix, Arg member);
   
-  public void arrayRefCopyInFuture(Var outerArray,
-      Var array, Var ix, Var member);
+  public void arrayRefCopyInFuture(Var array, Var ix, Var member);
 
   public void arrayStore(Var array, Arg ix, Arg member,
       Arg writersDecr);
@@ -305,11 +304,9 @@ public interface CompilerBackend {
   public void arrayCopyInImm(Var array, Arg ix, Var member,
       Arg writersDecr);
   
-  public void arrayRefStoreImm(Var outerArray, 
-      Var array, Arg ix, Arg member);
+  public void arrayRefStoreImm(Var array, Arg ix, Arg member);
   
-  public void arrayRefCopyInImm(Var outerArray, 
-      Var array, Arg ix, Var member);
+  public void arrayRefCopyInImm(Var array, Arg ix, Var member);
 
 
   /**
@@ -365,11 +362,9 @@ public interface CompilerBackend {
   public void arrayCreateNestedImm(Var arrayResult,
       Var array, Arg ix, Arg callerReadRefs, Arg callerWriteRefs);
 
-  public void arrayRefCreateNestedFuture(Var arrayResult,
-      Var outerArray, Var array, Var ix);
+  public void arrayRefCreateNestedFuture(Var arrayResult, Var array, Var ix);
 
-  public void arrayRefCreateNestedImm(Var arrayResult,
-      Var outerArray, Var array, Arg ix);
+  public void arrayRefCreateNestedImm(Var arrayResult, Var array, Arg ix);
 
   public void bagInsert(Var bag, Arg elem, Arg writersDecr);
 

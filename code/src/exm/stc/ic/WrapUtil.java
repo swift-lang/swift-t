@@ -52,9 +52,10 @@ public class WrapUtil {
   /**
    * TODO: should more fetch recursively?
    */
-  public static Var fetchValueOf(Block block, List<? super Instruction> instBuffer,
-          Var var, String valName) {
-    return fetchValueOf(block, instBuffer, var, valName, false);
+  public static Var fetchValueOf(Block block,
+          List<? super Instruction> instBuffer,
+          Var var, String valName, boolean acquireWrite) {
+    return fetchValueOf(block, instBuffer, var, valName, false, acquireWrite);
   }
   /**
 
@@ -62,10 +63,13 @@ public class WrapUtil {
    * @param block
    * @param instBuffer append fetch instruction to this list
    * @param var the variable to fetch the value of
+   * @param acquireWrite if the var is a reference, do we acquire 
+   *                      write refcounts?
    * @return variable holding value
    */
-  public static Var fetchValueOf(Block block, List<? super Instruction> instBuffer,
-          Var var, String valName, boolean recursive) {
+  public static Var fetchValueOf(Block block,
+          List<? super Instruction> instBuffer,
+          Var var, String valName, boolean recursive, boolean acquireWrite) {
     
     Type valueT;
     if (recursive && Types.isContainer(var)) {
@@ -99,7 +103,11 @@ public class WrapUtil {
           Alloc.ALIAS, DefType.LOCAL_COMPILER,
           VarProvenance.valueOf(var));
       block.addVariable(deref);
-      instBuffer.add(TurbineOp.retrieveRef(deref, var));
+      
+      long acquireReadRC = 1;
+      long acquireWriteRC = acquireWrite ? 1 : 0;
+      instBuffer.add(TurbineOp.retrieveRef(deref, var,
+                      acquireReadRC, acquireWriteRC));
       return deref;
     } else if (Types.isContainer(var) && recursive) {
       Var deref = new Var(valueT, valName,
@@ -272,7 +280,7 @@ public class WrapUtil {
     for (Var inArg: inputs) {
       String name = valName(block, inArg, uniquifyNames);
       inVals.add(WrapUtil.fetchValueOf(block, instBuffer,
-          inArg, name).asArg());
+                                       inArg, name, false).asArg());
     }
     return inVals;
   }
@@ -379,7 +387,7 @@ public class WrapUtil {
         String valName = block.uniqueVarName(Var.VALUEOF_VAR_PREFIX +
                                            outFilename.name());
         outFilenameVal = WrapUtil.fetchValueOf(block, instBuffer,
-                                                 outFilename, valName);
+                                     outFilename, valName, false);
       } else {
         // Already a value
         assert(Types.isStringVal(outFilename));

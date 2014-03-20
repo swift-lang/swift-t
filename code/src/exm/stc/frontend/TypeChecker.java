@@ -401,7 +401,7 @@ public class TypeChecker {
   }
 
   /**
-   * Check if an expression type can be used for function argument
+   * Check if an expression type can be used for function input argument
    * @param argType non-polymorphic function argument type
    * @param exprType type of argument expression
    * @return concretized argType if compatible, null if incompatible
@@ -413,7 +413,7 @@ public class TypeChecker {
       return exprType.concretize(argType);
     } else if (Types.isAssignableRefTo(exprType, argType)) {
       // We can block on reference, so we can transform type here
-      return exprType.concretize(new RefType(argType));
+      return exprType.concretize(new RefType(argType, false));
     } else {
       return null;
     }
@@ -597,7 +597,7 @@ public class TypeChecker {
   }
 
   /**
-   * Check function argument type
+   * Check function input argument type
    * Returns a tuple indicating which formal argument type is selected and
    * what type the input argument expression should be interpreted as having.
    * Does not handle type variables

@@ -886,7 +886,7 @@ public class ValueNumber implements OptimizerPass {
         alreadyFetched.put(toFetch, maybeVal);
       } else {
         // Generate instruction to fetch val, append to alt
-        Var fetchedV = OptUtil.fetchForLocalOp(insertContext, alt, toFetch);
+        Var fetchedV = OptUtil.fetchForLocalOp(insertContext, alt, toFetch, false);
         Arg fetched = Arg.createVar(fetchedV);
         inVals.add(new Fetched<Arg>(toFetch, fetched));
         alreadyFetched.put(toFetch, fetched);

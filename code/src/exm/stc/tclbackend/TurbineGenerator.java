@@ -671,23 +671,30 @@ public class TurbineGenerator implements CompilerBackend {
 
 
   @Override
-  public void retrieveRef(Var target, Var src, Arg decr) {
+  public void retrieveRef(Var dst, Var src, Arg acquireRead,
+                          Arg acquireWrite, Arg decr) {
     assert(Types.isRef(src.type()));
-    assert(Types.isAssignableRefTo(src.type(), target.type()));
+    assert(acquireRead.isIntVal());
+    assert(acquireWrite.isIntVal());
+    if (acquireWrite.isVar() || acquireWrite.getIntLit() > 0) {
+      assert(Types.isAssignableRefTo(src.type(), dst.type(), true));
+    } else {
+      assert(Types.isAssignableRefTo(src.type(), dst.type()));
+    }
     assert(decr.isImmediateInt());
     TclTree deref;
     if (Types.isFileRef(src.type())) {
       if (decr.equals(Arg.ZERO)) {
-        deref = Turbine.fileRefGet(prefixVar(target), varToExpr(src));
+        deref = Turbine.fileRefGet(prefixVar(dst), varToExpr(src));
       } else {
-        deref = Turbine.fileRefDecrGet(prefixVar(target), varToExpr(src),
+        deref = Turbine.fileRefDecrGet(prefixVar(dst), varToExpr(src),
             argToExpr(decr));
       }
     } else {
       if (decr.equals(Arg.ZERO)) {
-        deref = Turbine.refGet(prefixVar(target), varToExpr(src));
+        deref = Turbine.refGet(prefixVar(dst), varToExpr(src));
       } else {
-        deref = Turbine.refDecrGet(prefixVar(target), varToExpr(src),
+        deref = Turbine.refDecrGet(prefixVar(dst), varToExpr(src),
                                     argToExpr(decr));
       }
     }
@@ -1231,16 +1238,15 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void arrayRefCreateNestedFuture(Var arrayResult,
-      Var outerArray, Var arrayRefVar, Var ix) {
+  public void arrayRefCreateNestedFuture(Var arrayResult, Var arrayRefVar,
+                                         Var ix) {
     assert(Types.isArrayRef(arrayRefVar.type()));
     assert(Types.isArrayRef(arrayResult.type()));
     assert(arrayResult.storage() != Alloc.ALIAS);
     assert(Types.isArrayKeyFuture(arrayRefVar, ix));
 
     TclTree t = Turbine.containerRefCreateNested(
-        varToExpr(arrayResult), varToExpr(arrayRefVar),
-        varToExpr(ix), varToExpr(outerArray),
+        varToExpr(arrayResult), varToExpr(arrayRefVar), varToExpr(ix),
         arrayKeyType(arrayResult, true), arrayValueType(arrayResult, true));
     pointAdd(t);
   }
@@ -1264,16 +1270,14 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void arrayRefCreateNestedImm(Var arrayResult,
-      Var outerArray, Var array, Arg ix) {
+  public void arrayRefCreateNestedImm(Var arrayResult, Var array, Arg ix) {
     assert(Types.isArrayRef(array.type()));
     assert(Types.isArrayRef(arrayResult.type()));
     assert(arrayResult.storage() != Alloc.ALIAS);
     assert(Types.isArrayKeyVal(array, ix));
 
     TclTree t = Turbine.containerRefCreateNestedImmIx(
-        varToExpr(arrayResult), varToExpr(array),
-        argToExpr(ix), varToExpr(outerArray),
+        varToExpr(arrayResult), varToExpr(array), argToExpr(ix),
         arrayKeyType(arrayResult, true), arrayValueType(arrayResult, true));
     pointAdd(t);
   }
@@ -1749,30 +1753,25 @@ public class TurbineGenerator implements CompilerBackend {
   }
   
   @Override
-  public void arrayRefStoreImm(Var outerArray, Var array, Arg arrIx,
-                               Arg member) {
+  public void arrayRefStoreImm(Var array, Arg arrIx, Arg member) {
     assert(Types.isArrayRef(array.type()));
-    assert(Types.isArray(outerArray.type()));
     assert(Types.isArrayKeyVal(array, arrIx));
     assert(Types.isElemValType(array, member));
     
     Command r = Turbine.arrayRefStoreImmediate(
-        argToExpr(member), varToExpr(array),
-        argToExpr(arrIx), varToExpr(outerArray),
+        argToExpr(member), varToExpr(array), argToExpr(arrIx),
         arrayValueType(array, false));
     pointAdd(r);
   }
 
   @Override
-  public void arrayRefStoreFuture(Var outerArray, Var array, Var ix, Arg member) {
+  public void arrayRefStoreFuture(Var array, Var ix, Arg member) {
     assert(Types.isArrayRef(array.type()));
-    assert(Types.isArray(outerArray.type()));
     assert(Types.isArrayKeyFuture(array, ix));
     assert(Types.isElemValType(array, member));
     Command r = Turbine.arrayRefStoreComputed(
         argToExpr(member), varToExpr(array),
-        varToExpr(ix), varToExpr(outerArray),
-        arrayValueType(array, false));
+        varToExpr(ix), arrayValueType(array, false));
   
     pointAdd(r);
   }
@@ -1807,32 +1806,26 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void arrayRefCopyInImm(Var outerArray, Var array, Arg arrIx,
-                                     Var member) {
+  public void arrayRefCopyInImm(Var array, Arg arrIx, Var member) {
     assert(Types.isArrayRef(array.type()));
-    assert(Types.isArray(outerArray.type()));
     assert(Types.isArrayKeyVal(array, arrIx));
     assert(Types.isElemType(array, member));
     
     Command r = Turbine.arrayRefDerefStore(
         varToExpr(member), varToExpr(array),
-        argToExpr(arrIx), varToExpr(outerArray),
-        arrayValueType(array, false));
+        argToExpr(arrIx), arrayValueType(array, false));
     pointAdd(r);
   }
 
   @Override
-  public void arrayRefCopyInFuture(Var outerArray, Var array, Var ix,
-                                        Var member) {
+  public void arrayRefCopyInFuture(Var array, Var ix, Var member) {
     assert(Types.isArrayRef(array.type()));
-    assert(Types.isArray(outerArray.type()));
     assert(Types.isArrayKeyFuture(array, ix));
     assert(Types.isElemType(array, member));
 
     Command r = Turbine.arrayRefDerefStoreComputed(
         varToExpr(member), varToExpr(array),
-        varToExpr(ix), varToExpr(outerArray),
-        arrayValueType(array, false));
+        varToExpr(ix), arrayValueType(array, false));
 
     pointAdd(r);
   }
@@ -2329,7 +2322,8 @@ public class TurbineGenerator implements CompilerBackend {
       } else if (Types.isFuture((type))) {
         depth = 0;
         // Indicate that it's a future not a value
-        baseType = new RefType(type);
+        // TODO: does mutability matter?
+        baseType = new RefType(type, false);
       } else if (Types.isPrimValue(type)) {
         depth = 0;
         baseType = type;

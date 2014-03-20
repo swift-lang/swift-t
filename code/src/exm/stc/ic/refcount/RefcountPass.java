@@ -410,7 +410,10 @@ public class RefcountPass implements OptimizerPass {
       // Hack to handle fact that the load_ref will increment
       // reference count of referand
       Var v = inst.getOutput(0);
-      increments.readDecr(v);
+      long readRefs = inst.getInput(1).getIntLit();
+      long writeRefs = inst.getInput(2).getIntLit();
+      increments.readDecr(v, readRefs);
+      increments.writeDecr(v, writeRefs);
     }
 
     if (inst.op == Opcode.LOOP_BREAK) {

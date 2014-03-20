@@ -455,8 +455,11 @@ public class  ExprWalker {
     return val;
   }
 
-  public void retrieveRef(Var dst, Var src) {
-    backend.retrieveRef(VarRepr.backendVar(dst), VarRepr.backendVar(src));
+  public void retrieveRef(Var dst, Var src, boolean mutable) {
+    long acquireRead = 1;
+    long acquireWrite = mutable ? 1 : 0;
+    backend.retrieveRef(VarRepr.backendVar(dst), VarRepr.backendVar(src),
+                        acquireRead, acquireWrite);
   }
   
   public void assignRef(Var dst, Var src) {
@@ -467,14 +470,15 @@ public class  ExprWalker {
    * Create a future of the appropriate type for the argument 
    * @param bodyContext
    * @param value
+   * @param mutableRef if storing to a ref, does it need to be mutable
    * @return
    * @throws UserException
    * @throws UndefinedTypeException
    */
-  public Var assignToVar(Context bodyContext, Arg value)
+  public Var assignToVar(Context bodyContext, Arg value, boolean mutableRef)
       throws UserException, UndefinedTypeException {
     assert(value.isConstant() || value.getVar().storage() == Alloc.LOCAL);
-    Type resultType = Types.storeResultType(value.type());
+    Type resultType = Types.storeResultType(value.type(), mutableRef);
     Var result = varCreator.createTmp(bodyContext, resultType);
     assign(result, value);
     return result;
@@ -682,7 +686,7 @@ public class  ExprWalker {
             backendElemType + " => " + backendOVar;
       // Need to dereference into temporary var
       copyDst = varCreator.createTmp(context,
-              new RefType(Types.containerElemType(arrayVar)));
+              new RefType(Types.containerElemType(arrayVar), false));
       mustDereference = true;
     }
     
@@ -984,7 +988,7 @@ public class  ExprWalker {
         Var derefVar = derefVars.get(i);
         varCreator.backendInit(derefVar);
         assert(Types.isRef(waitVars.get(i).type()));
-        retrieveRef(derefVar, waitVars.get(i));
+        retrieveRef(derefVar, waitVars.get(i), false);
       }
     }
 
@@ -1418,7 +1422,7 @@ public class  ExprWalker {
      * By making the retrieve and store explicit the optimizer should be
      * able to optimize out the future in many cases
      */
-    Var snapshot = assignToVar(context, val.asArg());
+    Var snapshot = assignToVar(context, val.asArg(), false);
     return snapshot;
   }
 
@@ -1446,7 +1450,7 @@ public class  ExprWalker {
     backend.startWaitStatement(wName, VarRepr.backendVars(waitVars),
             WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
     Var derefed = varCreator.createTmpAlias(context, dst.type());
-    retrieveRef(derefed, src);
+    retrieveRef(derefed, src, false);
     copyContainerByValue(context, dst, derefed);
     backend.endWaitStatement();
   }
@@ -1461,9 +1465,7 @@ public class  ExprWalker {
   }
 
   /**
-   * Copy a struct reference to a struct.  We need to do this in the
-   * compiler front-end because we want to generate specialized code
-   * to walk the structure and copy all struct members
+   * Copy a struct reference to a struct.
    * @param context
    * @param dst
    * @param src
@@ -1478,7 +1480,7 @@ public class  ExprWalker {
                     false, false, TaskMode.LOCAL);
     Var rValDerefed = varCreator.createTmp(context, 
             src.type().memberType(), false, true);
-    retrieveRef(rValDerefed, src);
+    retrieveRef(rValDerefed, src, false);
     copyStructByValue(context, rValDerefed, dst);
     backend.endWaitStatement();
   }
@@ -1490,7 +1492,7 @@ public class  ExprWalker {
         VarRepr.backendVar(src).asList(), WaitMode.WAIT_ONLY,
         false, false, TaskMode.LOCAL);
     Var srcVal = varCreator.createTmpAlias(context, src.type().memberType());
-    retrieveRef(srcVal, src);
+    retrieveRef(srcVal, src, false);
     assignRef(dst, srcVal);
     backend.endWaitStatement();
   }

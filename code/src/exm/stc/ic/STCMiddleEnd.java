@@ -491,117 +491,62 @@ public class STCMiddleEnd {
     currBlock().addInstruction(TurbineOp.arrayStoreFuture(array, ixVar, member));
   }
 
-  public void arrayRefStoreImm(Var outerArray, Var array,
-                                Arg ix, Arg member) {
-    assert(Types.isArrayRef(array.type()));
-    assert(Types.isArrayKeyVal(array, ix));
-    assert(Types.isElemValType(array, member)) : member + " " + array;
-    currBlock().addInstruction(TurbineOp.arrayRefStoreImm(outerArray,
-                                                 array, ix, member));
+  public void arrayRefStoreImm(Var array, Arg ix, Arg member) {
+    currBlock().addInstruction(TurbineOp.arrayRefStoreImm(array, ix, member));
   }
 
-  public void arrayRefStoreFuture(Var outerArray, Var array,
-                                   Var ixVar, Arg member) {
-    assert(Types.isArrayRef(array.type()));
-    assert(Types.isArrayKeyFuture(array, ixVar));
-    assert(Types.isElemValType(array, member)) : member + " " + array;
+  public void arrayRefStoreFuture(Var array, Var ixVar, Arg member) {
     currBlock().addInstruction(
-            TurbineOp.arrayRefStoreFuture(outerArray, array, ixVar, member));
+            TurbineOp.arrayRefStoreFuture(array, ixVar, member));
   }
 
   public void arrayCopyInImm(Var array, Arg ix, Var member) {
-    assert(Types.isArray(array.type()));
-    assert(Types.isArrayKeyVal(array, ix));
-    assert(Types.isElemType(array, member));
     currBlock().addInstruction(
         TurbineOp.arrayCopyInImm(array, ix, member));
   }
   
   public void arrayCopyInFuture(Var array, Var ix, Var member) {
-    assert(Types.isArray(array.type()));
-    assert(Types.isArrayKeyFuture(array, ix));
-    assert(Types.isElemType(array, member));
     currBlock().addInstruction(
         TurbineOp.arrayCopyInFuture(array, ix, member));
   }
 
-  public void arrayRefCopyInImm(Var outerArray, Var array,
-          Arg ix, Var member) {
-    assert(Types.isArrayKeyVal(array, ix));
-    assert(Types.isArrayRef(array.type()));
-    assert(Types.isElemType(array, member));
+  public void arrayRefCopyInImm(Var array, Arg ix, Var member) {
     currBlock().addInstruction(
-        TurbineOp.arrayRefCopyInImm(outerArray, array, ix, member));
+        TurbineOp.arrayRefCopyInImm(array, ix, member));
   }
 
-  public void arrayRefCopyInFuture(Var outerArray,
-      Var array, Var ix, Var member) {
-    assert(Types.isArrayKeyFuture(array, ix));
-    assert(Types.isArrayRef(array.type()));
-    assert(Types.isElemType(array, member));
+  public void arrayRefCopyInFuture(Var array, Var ix, Var member) {
     currBlock().addInstruction(
-        TurbineOp.arrayRefCopyInFuture(outerArray, array, ix, member));
+        TurbineOp.arrayRefCopyInFuture(array, ix, member));
   }
   
-  /**
-   * Build an array in one hit.
-   * @param array
-   * @param keys key values for array (NOT futures)
-   * @param vals
-   */
   public void arrayBuild(Var array, List<Arg> keys, List<Var> vals) {
-    assert(Types.isArray(array.type()));
-    for (Arg key: keys) {
-      assert(Types.isArrayKeyVal(array, key));
-    }
-    for (Var val: vals) {
-      assert(Types.isElemValType(array, val));
-    }
     currBlock().addInstruction(
         TurbineOp.arrayBuild(array, keys, Arg.fromVarList(vals)));
   }
   
   public void arrayCreateNestedFuture(Var arrayResult,
       Var array, Var ix) {
-    assert(Types.isArrayRef(arrayResult.type()));
-    assert(Types.isArray(array.type()));
-    assert(Types.isArrayKeyFuture(array, ix));
-
     currBlock().addInstruction(
       TurbineOp.arrayCreateNestedFuture(arrayResult, array, ix));
   }
 
   public void arrayCreateNestedImm(Var arrayResult,
       Var arrayVar, Arg arrIx) {
-    assert(Types.isArray(arrayResult.type()));
-    assert(Types.isArray(arrayVar.type()));
-    assert(arrayResult.storage() == Alloc.ALIAS);
-    assert(Types.isArrayKeyVal(arrayVar, arrIx));
-
     currBlock().addInstruction(
       TurbineOp.arrayCreateNestedImm(arrayResult,
           arrayVar, arrIx));
   }
 
   public void arrayRefCreateNestedImm(Var arrayResult,
-      Var outerArray, Var array, Arg ix) {
-    assert(Types.isArrayRef(arrayResult.type()));
-    assert(Types.isArrayRef(array.type()));
-    assert(Types.isArray(outerArray.type()));
-    assert(Types.isArrayKeyVal(array, ix));
-
+                                      Var array, Arg ix) {
     currBlock().addInstruction(
-      TurbineOp.arrayRefCreateNestedImmIx(arrayResult, outerArray, array, ix));
+      TurbineOp.arrayRefCreateNestedImmIx(arrayResult, array, ix));
   }
 
-  public void arrayRefCreateNestedFuture(Var arrayResult,
-      Var outerArr, Var array, Var ix) {
-    assert(Types.isArrayRef(arrayResult.type()));
-    assert(Types.isArrayRef(array.type()));
-    assert(Types.isArrayKeyFuture(array, ix));
-    assert(Types.isArray(outerArr.type()));
-    currBlock().addInstruction(TurbineOp.arrayRefCreateNestedComputed(
-                                      arrayResult, outerArr, array, ix));
+  public void arrayRefCreateNestedFuture(Var arrayResult, Var array, Var ix) {
+    currBlock().addInstruction(
+        TurbineOp.arrayRefCreateNestedComputed(arrayResult, array, ix));
   }
   
   public void asyncCopyContainer(Var dst, Var src) {
@@ -617,15 +562,10 @@ public class STCMiddleEnd {
   }
 
   public void bagInsert(Var bag, Arg elem) {
-    assert(Types.isBag(bag));
-    assert(Types.isElemValType(bag, elem)) : bag + " " + elem + ":" + elem.type();
     currBlock().addInstruction(TurbineOp.bagInsert(bag, elem, Arg.ZERO));
   }
 
   public void arrayCreateBag(Var bag, Var arr, Arg key) {
-    assert(Types.isBag(bag));
-    assert(Types.isArray(arr));
-    assert(Types.isArrayKeyVal(arr, key));
     currBlock().addInstruction(TurbineOp.arrayCreateBag(bag, arr, key));
   }
 
@@ -649,8 +589,10 @@ public class STCMiddleEnd {
         TurbineOp.derefFile(target, src));
   }
   
-  public void retrieveRef(Var target, Var src) {
-    currBlock().addInstruction(TurbineOp.retrieveRef(target, src));
+  public void retrieveRef(Var target, Var src, long acquireRead,
+                          long acquireWrite) {
+    currBlock().addInstruction(
+        TurbineOp.retrieveRef(target, src, acquireRead, acquireWrite));
   }
   
   public void makeAlias(Var dst, Var src) {
@@ -922,20 +864,12 @@ public class STCMiddleEnd {
 
   public void structCreateAlias(Var fieldAlias, Var struct,
                                 List<String> fieldPath) {
-    assert(Types.isStruct(struct));
-    assert(Types.isStructField(struct, fieldPath, fieldAlias)):
-              struct + " " + fieldPath + " " + fieldAlias;
-    assert(fieldAlias.storage() == Alloc.ALIAS);
-    
     currBlock().addInstruction(
         TurbineOp.structCreateAlias(fieldAlias, struct, fieldPath));
   }
+  
   public void structRetrieveSub(Var target, Var struct,
       List<String> fieldPath) {
-    assert(Types.isStruct(struct));
-    assert(Types.isStructFieldVal(struct, fieldPath, target)) :
-          "(" + struct.name()  + ":" + struct.type()  + ")." + fieldPath
-          + " => " + target;
     currBlock().addInstruction(
         TurbineOp.structRetrieveSub(target, struct, fieldPath));
   }
@@ -954,24 +888,18 @@ public class STCMiddleEnd {
 
   public void structStoreSub(Var struct, List<String> fieldPath,
                           Arg fieldVal) {
-    assert(Types.isStruct(struct));
-    assert(Types.isStructFieldVal(struct, fieldPath, fieldVal));
     currBlock().addInstruction(TurbineOp.structStoreSub(struct,
                                 fieldPath, fieldVal));
   }
 
   public void structCopyIn(Var struct, List<String> fieldPath,
                             Var fieldVar) {
-    assert(Types.isStruct(struct));
-    assert(Types.isStructField(struct, fieldPath, fieldVar));
     currBlock().addInstruction(TurbineOp.structCopyIn(struct,
                                 fieldPath, fieldVar));
   }
   
   public void structRefCopyIn(Var struct, List<String> fieldPath,
                               Var fieldVar) {
-    assert(Types.isStructRef(struct));
-    assert(Types.isStructField(struct, fieldPath, fieldVar));
     currBlock().addInstruction(TurbineOp.structRefCopyIn(struct,
                                           fieldPath, fieldVar));
   }

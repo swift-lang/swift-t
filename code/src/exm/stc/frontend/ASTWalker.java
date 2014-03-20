@@ -760,7 +760,7 @@ public class ASTWalker {
       step = exprWalker.eval(context, range.getStep(), Types.F_INT, false, null);
     } else {
       // Inefficient but constant folding will clean up
-      step = exprWalker.assignToVar(context, Arg.ONE);
+      step = exprWalker.assignToVar(context, Arg.ONE, false);
     }
     FunctionContext fc = context.getFunctionContext();
     int loopNum = fc.getCounterVal("foreach-range");
@@ -855,7 +855,7 @@ public class ASTWalker {
       outsideLoopContext = new LocalContext(context);
       realArray = varCreator.createTmp(outsideLoopContext,
                               arrayVar.type().memberType(), false, true);
-      exprWalker.retrieveRef(realArray, arrayVar);
+      exprWalker.retrieveRef(realArray, arrayVar, false);
     } else {
       assert(Types.isContainer(arrayVar));
       realArray = arrayVar;
@@ -1049,8 +1049,8 @@ public class ASTWalker {
     IterateDescriptor loop = IterateDescriptor.fromAST(context, tree);
     
     // Initial iteration should succeed
-    Var falseV = exprWalker.assignToVar(context, Arg.FALSE);
-    Var zero = exprWalker.assignToVar(context, Arg.ZERO);
+    Var falseV = exprWalker.assignToVar(context, Arg.FALSE, false);
+    Var zero = exprWalker.assignToVar(context, Arg.ZERO, false);
     
     FunctionContext fc = context.getFunctionContext();
     int loopNum = fc.getCounterVal("iterate");
@@ -1092,7 +1092,7 @@ public class ASTWalker {
     Var nextCounter = varCreator.createTmp(bodyContext,
                                       Types.F_INT);
 
-    Var one = exprWalker.assignToVar(bodyContext, Arg.ONE);
+    Var one = exprWalker.assignToVar(bodyContext, Arg.ONE, false);
     exprWalker.asyncOp(BuiltinOpcode.PLUS_INT, nextCounter, Arrays.asList(
                       loop.getLoopVar().asArg(), one.asArg()));
     
@@ -2144,7 +2144,7 @@ public class ASTWalker {
           // Replace old arg with dereferenced version
           Var derefedArg = varCreator.createTmpAlias(context,
                               Types.retrievedType(oldArg));
-          exprWalker.retrieveRef(derefedArg, oldArg);
+          exprWalker.retrieveRef(derefedArg, oldArg, false);
           args.set(i, derefedArg);
         }
       }

@@ -340,27 +340,42 @@ public class Types {
   
   public static class RefType extends Type {
     private final Type referencedType;
-    public RefType(Type referencedType) {
+    private final boolean mutable;
+    
+    public RefType(Type referencedType, boolean mutable) {
       this.referencedType = referencedType;
+      this.mutable = mutable;
     }
 
     @Override
     public StructureType structureType() {
-      return StructureType.REFERENCE;
+      if (mutable) {
+        return StructureType.MUTABLE_REFERENCE;
+      } else {
+        return StructureType.CONST_REFERENCE;
+      }
     }
     @Override
     public Type memberType() {
       return referencedType;
     }
 
+    private String refSigil() {
+      if (mutable) {
+        return "*rw";
+      } else {
+        return "*r";
+      }
+    }
+    
     @Override
     public String toString() {
-      return "*(" + referencedType.toString() + ")";
+      return refSigil() + "(" + referencedType.toString() + ")";
     }
 
     @Override
     public String typeName() {
-      return "*(" + referencedType.typeName() + ")";
+      return refSigil() + "(" + referencedType.typeName() + ")";
     }
 
     @Override
@@ -378,13 +393,29 @@ public class Types {
     }
 
     @Override
+    public boolean assignableTo(Type otherT) {
+      if (!(otherT instanceof RefType)) {
+        return false;
+      }
+      
+      RefType otherRef = (RefType)otherT;
+      /* TODO: currently treat mutable and non-mutable as separate types
+      if (otherRef.mutable && !this.mutable) {
+        return false;
+      }*/
+      return referencedType.assignableTo(otherRef.referencedType);
+    }
+
+    
+    @Override
     public int hashCode() {
-      return referencedType.hashCode() ^ RefType.class.hashCode();
+      return (referencedType.hashCode() * 13 + RefType.class.hashCode()) +
+              (mutable ? 1 : 0);
     }
 
     @Override
     public Type bindTypeVars(Map<String, Type> vals) {
-      return new RefType(referencedType.bindTypeVars(vals));
+      return new RefType(referencedType.bindTypeVars(vals), mutable);
     }
 
     @Override
@@ -403,7 +434,7 @@ public class Types {
       Type cMember = referencedType.concretize(concrete.memberType());
       if (cMember == this.referencedType)
         return this;
-      return new RefType(cMember);
+      return new RefType(cMember, mutable);
     }
 
     @Override
@@ -419,7 +450,7 @@ public class Types {
       else if (implMember == null)
         return null;
       else
-        return new RefType(implMember);
+        return new RefType(implMember, mutable);
     }
     
     @Override
@@ -1378,8 +1409,8 @@ public class Types {
     FILE_VALUE,
     ARRAY, ARRAY_LOCAL,
     BAG, BAG_LOCAL,
-    /** Reference is only used internally in compiler */
-    REFERENCE,
+    /** Reference types are only used internally in compiler */
+    MUTABLE_REFERENCE, CONST_REFERENCE,
     STRUCT, STRUCT_LOCAL,
     TYPE_VARIABLE,
     WILDCARD,
@@ -1898,6 +1929,10 @@ public class Types {
   public static boolean isArrayRef(Typed t) {
     return isRef(t) && isArray(t.type().memberType());
   }
+  
+  public static boolean isArrayRef(Typed t, boolean mutable) {
+    return isRef(t, mutable) && isArray(t.type().memberType());
+  }
 
   public static boolean isArrayLocalRef(Typed t) {
     return isRef(t) && isArrayLocal(t.type().memberType());
@@ -1913,6 +1948,10 @@ public class Types {
   
   public static boolean isBagRef(Typed t) {
     return isRef(t) && isBag(t.type().memberType());
+  }
+  
+  public static boolean isBagRef(Typed t, boolean mutable) {
+    return isRef(t, mutable) && isBag(t.type().memberType());
   }
   
   public static boolean isBagLocalRef(Typed t) {
@@ -1973,6 +2012,7 @@ public class Types {
   
   public static Type substituteElemType(Typed cont, Type newElem) {
     boolean isRef = isRef(cont);
+    boolean isMutableRef = isMutableRef(cont);
     if (isRef) {
       cont = cont.type().memberType();
     }
@@ -1986,7 +2026,7 @@ public class Types {
     }
     
     if (isRef) {
-      return new RefType(newCont);
+      return new RefType(newCont, isMutableRef);
     } else {
       return newCont;
     }
@@ -2033,6 +2073,24 @@ public class Types {
 
   public static boolean isStructField(Typed struct,
             List<String> fieldPath, Typed field) {
+    Type fieldType;
+    try {
+      fieldType = structFieldType(struct, fieldPath);
+    } catch (TypeMismatchException e) {
+      return false;
+    }
+    return field.type().assignableTo(fieldType);
+  }
+
+  /**
+   * 
+   * @param struct
+   * @param fieldPath
+   * @throw TypeMismatchException if not a field
+   * @return
+   * @throws TypeMismatchException 
+   */
+  public static Type structFieldType(Typed struct, List<String> fieldPath) throws TypeMismatchException {
     assert(Types.isStruct(struct) || Types.isStructRef(struct) ||
             isStructLocal(struct));
     StructType structType;
@@ -2041,18 +2099,18 @@ public class Types {
     } else {
       structType = (StructType)struct.type().getImplType().memberType();
     }
-    Type fieldType;
-    try {
-      fieldType = structType.getFieldTypeByPath(fieldPath);
-    } catch (TypeMismatchException e) {
-      return false;
-    }
-    return field.type().assignableTo(fieldType);
+    return structType.getFieldTypeByPath(fieldPath);
   }
   
   public static boolean isStructFieldVal(Typed struct,
       List<String> fieldPath, Typed field) {
-    return isStructField(struct, fieldPath, storeResultType(field));
+    Type fieldType;
+    try {
+      fieldType = structFieldType(struct, fieldPath);
+    } catch (TypeMismatchException e) {
+      return false;
+    }
+    return field.type().assignableTo(retrievedType(fieldType));
   }
   
   /**
@@ -2107,7 +2165,19 @@ public class Types {
   }
 
   public static boolean isRef(Typed t) {
-    return t.type().structureType() == StructureType.REFERENCE;
+    return isConstRef(t) || isMutableRef(t);
+  }
+  
+  public static boolean isRef(Typed t, boolean mutable) {
+    return mutable ? isMutableRef(t): isConstRef(t);
+  }
+  
+  public static boolean isConstRef(Typed t) {
+    return t.type().structureType() == StructureType.CONST_REFERENCE;
+  }
+  
+  public static boolean isMutableRef(Typed t) {
+    return t.type().structureType() == StructureType.MUTABLE_REFERENCE;
   }
 
   public static boolean isStruct(Typed t) {
@@ -2121,6 +2191,11 @@ public class Types {
   public static boolean isStructRef(Typed t) {
     return isRef(t) && isStruct(t.type().memberType());
   }
+  
+  public static boolean isStructRef(Typed t, boolean mutable) {
+    return isRef(t, mutable) && isStruct(t.type().memberType());
+  }
+  
   
   public static boolean isFuture(PrimType primType, Typed t) {
     return isPrimFuture(t) && t.type().primType() == primType;
@@ -2223,8 +2298,19 @@ public class Types {
            refType.type().memberType().equals(valType.type());
   }
   
+  public static boolean isRefTo(Typed refType, Typed valType, boolean mutable) {
+    return isRef(refType, mutable) && 
+           refType.type().memberType().equals(valType.type());
+  }
+  
   public static boolean isAssignableRefTo(Typed refType, Typed valType) {
     return isRef(refType) && 
+        refType.type().memberType().assignableTo(valType.type());
+  }
+  
+  public static boolean isAssignableRefTo(Typed refType, Typed valType,
+                                          boolean mutable) {
+    return isRef(refType, mutable) && 
         refType.type().memberType().assignableTo(valType.type());
   }
   
@@ -2278,12 +2364,13 @@ public class Types {
   /**
    * Type that would result from storing this type
    * @param t
+   * @param mutable if should be mutable
    * @return
    */
-  public static Type storeResultType(Typed t) {
+  public static Type storeResultType(Typed t, boolean mutable) {
     if (isScalarFuture(t) || isScalarUpdateable(t) ||
             isFile(t) || isRef(t) || isContainer(t))  {
-      return new RefType(t.type());
+      return new RefType(t.type(), mutable);
     } else if (isScalarValue(t)) {
       return new ScalarFutureType(t.type().primType());
     } else if (isFileVal(t)) {
@@ -2555,36 +2642,28 @@ public class Types {
 
   public static final Type F_INT = new ScalarFutureType(PrimType.INT);
   public static final Type V_INT = new ScalarValueType(PrimType.INT);
-  public static final Type R_INT = new RefType(F_INT);
 
   public static final Type F_STRING = new ScalarFutureType(PrimType.STRING);
   public static final Type V_STRING = new ScalarValueType(PrimType.STRING);
-  public static final Type R_STRING = new RefType(F_STRING);
 
   public static final Type F_FLOAT = new ScalarFutureType(PrimType.FLOAT);
   public static final Type V_FLOAT = new ScalarValueType(PrimType.FLOAT);
-  public static final Type R_FLOAT = new RefType(F_FLOAT);
   public static final Type UP_FLOAT = new ScalarUpdateableType(PrimType.FLOAT);
 
   public static final Type F_BOOL = new ScalarFutureType(PrimType.BOOL);
   public static final Type V_BOOL = new ScalarValueType(PrimType.BOOL);
-  public static final Type R_BOOL = new RefType(F_BOOL);
   
   public static final Type F_BLOB = new ScalarFutureType(PrimType.BLOB);
-  public static final Type R_BLOB = new RefType(F_BLOB);
   public static final Type V_BLOB = new ScalarValueType(PrimType.BLOB);
   
   public static final Type F_FILE = new FileFutureType(FileKind.LOCAL_FS);
   public static final Type V_FILE = new FileValueType(FileKind.LOCAL_FS);
-  public static final Type REF_FILE = new RefType(F_FILE);
   
   public static final Type F_URL = new FileFutureType(FileKind.URL);
   public static final Type V_URL = new FileValueType(FileKind.URL);
-  public static final Type REF_URL = new RefType(F_URL);
   
   public static final Type V_VOID = new ScalarValueType(PrimType.VOID);
   public static final Type F_VOID = new ScalarFutureType(PrimType.VOID);
-  public static final Type REF_VOID = new RefType(F_VOID);
   
   /**
    * Represents location of execution 

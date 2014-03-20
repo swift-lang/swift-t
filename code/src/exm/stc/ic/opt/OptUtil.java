@@ -75,21 +75,23 @@ public class OptUtil {
    * @return
    */
   public static List<Arg> fetchValuesOf(Block block, List<Instruction> instBuffer,
-          List<Var> vars) {
+          List<Var> vars, boolean acquireWrite) {
     List<Arg> inVals = new ArrayList<Arg>(vars.size());
 
     for (Var v: vars) {
       String name = optVPrefix(block, v);
-      Var valueV = WrapUtil.fetchValueOf(block, instBuffer, v, name);
+      Var valueV = WrapUtil.fetchValueOf(block, instBuffer, v, name,
+                                         acquireWrite);
       Arg value = Arg.createVar(valueV);
       inVals.add(value);
     }
     return inVals;
   }
 
-  public static List<Arg> fetchValuesOf(Block block, List<Var> vars) {
+  public static List<Arg> fetchValuesOf(Block block, List<Var> vars,
+                                        boolean acquireWrite) {
     List<Instruction> instBuffer = new ArrayList<Instruction>();
-    List<Arg> vals = fetchValuesOf(block, instBuffer, vars);
+    List<Arg> vals = fetchValuesOf(block, instBuffer, vars, acquireWrite);
     block.addInstructions(instBuffer);
     return vals;
   }
@@ -280,9 +282,11 @@ public class OptUtil {
   }
 
   public static Var fetchForLocalOp(Block block,
-          List<? super Instruction> instBuffer, Var var) {
+          List<? super Instruction> instBuffer, Var var,
+          boolean acquireWrite) {
     return WrapUtil.fetchValueOf(block, instBuffer, var,
-                             OptUtil.optVPrefix(block, var));
+                             OptUtil.optVPrefix(block, var),
+                             acquireWrite);
   }
 
   public static class OptVarCreator implements VarCreator {

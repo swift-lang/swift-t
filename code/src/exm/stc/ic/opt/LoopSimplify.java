@@ -246,7 +246,7 @@ public class LoopSimplify extends FunctionOptimizerPass {
     assert(replaceLoopVarWithVal(var));
     String valName = OptUtil.optVPrefix(targetBlock, var);
     return WrapUtil.fetchValueOf(targetBlock, fetches, var,
-                                 valName, recursive);
+                                 valName, recursive, false);
   }
 
   /**
