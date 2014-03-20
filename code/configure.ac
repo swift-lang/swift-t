@@ -142,6 +142,12 @@ AC_ARG_WITH(c-utils,
 )
 AC_SUBST(USE_C_UTILS)
 
+USE_LIBCUTILS_A=""
+if [[ -f "${USE_C_UTILS}/libexmcutils.${AR_SUFFIX}" ]]; then
+  USE_LIBCUTILS_A="${USE_C_UTILS}/libexmcutils.${AR_SUFFIX}"
+fi
+AC_SUBST(USE_LIBCUTILS_A)
+
 # MPI defaults (may be overridden on special systems)
 USE_MACHINE=normal
 # The "launcher" is used by job submission systems to launch jobs
@@ -160,6 +166,7 @@ if [[ $(uname) = "Darwin" ]]
 then
    SO_SUFFIX=dylib
 fi
+AR_SUFFIX=a
 
 # Set MPI_DIR directly
 AC_ARG_WITH(mpi,
@@ -273,13 +280,29 @@ AC_CHECK_FILE(${USE_MPI_INCLUDE}/mpi.h,
               [],
               [AC_MSG_ERROR([Could not find mpi.h in ${USE_MPI_INCLUDE}])])
 
-MPI_LIB=${USE_MPI_LIB_DIR}/lib${USE_MPI_LIB_NAME}.${SO_SUFFIX}
-AC_CHECK_FILE(${MPI_LIB},
-              [], AC_MSG_ERROR([Could not find MPI shared library:
-                               ${MPI_LIB}.
-                               MPI may not be installed at this
-                               location or shared library may not
-                               have been built.]))
+MPI_LIB_SO=${USE_MPI_LIB_DIR}/lib${USE_MPI_LIB_NAME}.${SO_SUFFIX}
+MPI_LIB_A=${USE_MPI_LIB_DIR}/lib${USE_MPI_LIB_NAME}.${AR_SUFFIX}
+MPI_LIB_FOUND=0
+if [[ -f ${MPI_LIB_SO} ]]
+then
+  MPI_LIB_FOUND=1
+fi
+
+USE_MPI_LIB_A=
+if [[ -f ${MPI_LIB_A} ]]
+then
+  MPI_LIB_FOUND=1
+  USE_MPI_LIB_A=${MPI_LIB_A}
+fi
+
+if (( ! MPI_LIB_FOUND ))
+then
+  AC_MSG_ERROR([Could not find MPI library:
+                   ${MPI_LIB_SO} or ${MPI_LIB_A}.
+                   MPI may not be installed at this
+                   location or library may not
+                   have been built.])
+fi
 
 AC_MSG_RESULT([Using MPI launcher: ${USE_LAUNCHER}])
 
@@ -289,6 +312,7 @@ AC_SUBST(USE_LAUNCHER)
 AC_SUBST(USE_MPI_INCLUDE)
 AC_SUBST(USE_MPI_LIB_DIR)
 AC_SUBST(USE_MPI_LIB_NAME)
+AC_SUBST(USE_MPI_LIB_A)
 
 # Discover MPI implementation:
 # MPI_IMPL will be unknown, OpenMPI, or MPICH
@@ -316,7 +340,9 @@ AC_SUBST(MPI_IMPL)
 # See Turbine - Build for explanation
 ENABLE_MPE=0
 USE_MPE=0
-LIBMPE=libmpe.${SO_SUFFIX}
+USE_MPE_LIB_A=
+LIBMPE_SO=${USE_MPE}/lib/libmpe.${SO_SUFFIX}
+LIBMPE_A=${USE_MPE}/lib/libmpe.${AR_SUFFIX}
 AC_ARG_WITH(mpe,
      AS_HELP_STRING(
                     [--with-mpe],
@@ -325,12 +351,32 @@ AC_ARG_WITH(mpe,
 if [[ ${USE_MPE} != 0 ]]
 then
     AC_MSG_RESULT([Enabling MPE]);
-    AC_CHECK_FILE(${USE_MPE}/lib/${LIBMPE},,
-                  AC_MSG_ERROR([Could not find MPE!]))
+
+    LIBMPE_FOUND=0
+    if [[ -f ${LIBMPE_SO} ]]
+    then
+      LIBMPE_FOUND=1
+    fi
+
+    if [[ -f ${LIBMPE_A} ]]
+    then
+      LIBMPE_FOUND=1
+      USE_MPI_LIB_A=${LIBMPE_A}
+    fi
+
+    if (( ! LIBMPE_FOUND ))
+    then
+      AC_MSG_ERROR([Could not find MPE library:
+                       ${LIBMPE_SO} or ${LIBMPE_A}.
+                       MPE may not be installed at this
+                       location or library may not
+                       have been built.])
+    fi
     AC_DEFINE_UNQUOTED(ENABLE_MPE,ENABLE_MPE,[Enables MPE])
 fi
 AC_SUBST(USE_MPE)
 AC_SUBST(ENABLE_MPE)
+AC_SUBST(USE_MPE_LIB_A)
 
 ENABLE_XPT=yes
 AC_ARG_ENABLE(checkpoint,
@@ -386,6 +432,12 @@ AC_ARG_WITH(adlb,
     ]
 )
 AC_SUBST(USE_ADLB)
+
+USE_LIBADLB_A=""
+if [[ -f "${USE_ADLB}/libadlb.${AR_SUFFIX}" ]]; then
+  USE_LIBADLB_A="${USE_ADLB}/libadlb.${AR_SUFFIX}"
+fi
+AC_SUBST(USE_LIBADLB_A)
 
 # Python is optional
 HAVE_PYTHON=0
@@ -645,7 +697,7 @@ do
 
         # We found the library - work out which variants are present
         MAYBE_LIBTCL_SO="${LIB_DIR}/${LIBTCL_PREFIX}.${SO_SUFFIX}"
-        MAYBE_LIBTCL_A="${LIB_DIR}/${LIBTCL_PREFIX}.a"
+        MAYBE_LIBTCL_A="${LIB_DIR}/${LIBTCL_PREFIX}.${AR_SUFFIX}"
         if [[ -r "${MAYBE_LIBTCL_SO}" ]]
         then
           USE_LIBTCL_SO="${MAYBE_LIBTCL_SO}"
