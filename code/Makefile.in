@@ -157,6 +157,8 @@ TCL_LIB_SO := @USE_LIBTCL_SO@
 TCL_LIB_A := @USE_LIBTCL_A@
 TCLSH_LOCAL := @USE_TCLSH_LOCAL@
 
+TCL_LIB_DEPS := @TCL_LIB_SPEC_EXTRA@
+
 MKSTATIC := scripts/mkstatic/mkstatic.tcl
 MKSTATIC_TEMPLATE := scripts/mkstatic/mkstatic.c.template
 # Bundle Tcl system libraries using mkstatic
@@ -251,17 +253,15 @@ ifeq ($(HAVE_R),1)
 endif
 
 # Transitive shared library dependencies, e.g. if we link against libtcl*.a
-# TODO: more elegant solution
-TRANSITIVE_LIB_DEPS_SHARED := -lpthread -ldl -lm
-# Static dependencies are those where we generally can use the static
-# library version even when dynamically linking a binary
-TRANSITIVE_LIB_DEPS_STATIC := -lz
-TRANSITIVE_LIB_DEPS := $(TRANSITIVE_LIB_DEPS_SHARED) \
-		       $(TRANSITIVE_LIB_DEPS_STATIC)
+TRANSITIVE_LIB_DEPS := $(TCL_LIB_DEPS) -lz
+
+ifeq ($(ENABLE_ZLIB),1)
+  TRANSITIVE_LIB_DEPS += -lz -L$(ZLIB)/lib
+endif
 
 # If we are using libtcl*.a, need to always include these libraries
 ifeq ($(strip $(TCL_LIB_SO)),)
-	LIBS += $(TRANSITIVE_LIB_DEPS)
+	LIBS += $(TCL_LIB_DEPS)
 endif
 
 dirname = $(patsubst %/,%,$(dir $(1)))
@@ -474,15 +474,10 @@ ifneq ($(strip $(MPE_LIB_A)),)
   STATIC_LIBS += $(MPE_LIB_A)
 endif
 
-DYNAMIC_LIBS :=
+NONSTATIC_TURBINE_LIBS :=
 ifeq ($(ENABLE_STATIC),0)
-  DYNAMIC_LIBS += -L$(INSTALL_LIB) -ltclturbine
+  NONSTATIC_TURBINE_LIBS += -L$(INSTALL_LIB) -ltclturbine
 endif
-
-# Transitive shared library dependencies
-# TODO: more elegant solution
-TRANSITIVE_LIB_DEPS_SHARED = -lpthread -ldl -lm
-TRANSITIVE_LIB_DEPS_STATIC = -lz
 
 # Export Tcl API symbols to link with dynamically loaded modules.
 # Needed to support dynamically loading Tcl modules from our binary
@@ -521,10 +516,9 @@ $(TURBINE_EXECUTABLES): %: %.o ${STATIC_LIBS} ${STATIC_PKG_RESOURCE_H} $(TCL_API
 	$(shell $(MKSTATIC_RUN) "$(@).manifest" --ignore-no-manifest --link-objs) \
 	$(STATIC_LIBS) \
 	$(shell $(MKSTATIC_RUN) "$(@).manifest" --ignore-no-manifest --link-flags) \
-	-Wl,-Bstatic $(TRANSITIVE_LIB_DEPS_STATIC) -Wl,-Bdynamic \
-	$(TRANSITIVE_LIB_DEPS_SHARED) \
+	$(TRANSITIVE_LIB_DEPS) \
         $(MAC_FLAT) \
-	$(DYNAMIC_LIBS) $(LIBS) \
+	$(NONSTATIC_TURBINE_LIBS) $(LIBS) \
 	$(RPATHS) \
 	-o $(@)
 
@@ -554,11 +548,11 @@ $(TEST_BINS): %.x: %.o install.txt $(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(<) \
 	$(shell $(MKSTATIC_RUN) "$(@).manifest" --ignore-no-manifest --link-objs) \
-	$(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A) \
+	$(STATIC_LIBS) \
         $(MAC_FLAT) \
 	$(shell $(MKSTATIC_RUN) "$(@).manifest" --ignore-no-manifest --link-flags) \
-	$(DYNAMIC_LIBS) \
-	$(LIBS) -L $(TCL_LIB_DIR) -l$(TCL_LIB_NAME) \
+	$(TRANSITIVE_LIB_DEPS) \
+	$(NONSTATIC_TURBINE_LIBS) $(LIBS) \
 	$(RPATHS) \
 	-o $(@)
 

@@ -53,11 +53,27 @@ then
 fi
 AC_SUBST(USE_MAC)
 
+# Set shared object suffix (.so on Linux, .dylib on Mac)
+SO_SUFFIX=so
+if [[ $(uname) = "Darwin" ]]
+then
+   SO_SUFFIX=dylib
+fi
+AR_SUFFIX=a
+
 # Checks for programs
 AC_PROG_CC
 AC_PATH_PROG([SWIG],[swig],[0])
 [[ ${SWIG} == 0 ]] && AC_MSG_ERROR([Could not find SWIG!])
 # We trust the user's install and omit AC_PROG_INSTALL
+
+ENABLE_ZLIB=0
+m4_include([m4/ax_check_zlib.m4])
+AX_CHECK_ZLIB([ENABLE_ZLIB=1],
+              AC_MSG_ERROR([Could not find zlib!]))
+CFLAGS="${CFLAGS} -I${ZLIB_HOME}/include"
+AC_SUBST(ZLIB_HOME)
+AC_SUBST(ENABLE_ZLIB)
 
 # We prefer to use cp -u for installation
 AC_CACHE_CHECK([for cp that supports -u], [ac_cv_path_cp_u],
@@ -143,8 +159,9 @@ AC_ARG_WITH(c-utils,
 AC_SUBST(USE_C_UTILS)
 
 USE_LIBCUTILS_A=""
-if [[ -f "${USE_C_UTILS}/libexmcutils.${AR_SUFFIX}" ]]; then
-  USE_LIBCUTILS_A="${USE_C_UTILS}/libexmcutils.${AR_SUFFIX}"
+echo "CHECK ${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}" 
+if [[ -f "${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}" ]]; then
+  USE_LIBCUTILS_A="${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}"
 fi
 AC_SUBST(USE_LIBCUTILS_A)
 
@@ -159,14 +176,6 @@ USE_MPI_INCLUDE=0
 USE_MPI_LIB_DIR=0
 USE_MPI_LIB_NAME=mpich
 ENABLE_CUSTOM_MPI=0
-
-# Set shared object suffix (.so on Linux, .dylib on Mac)
-SO_SUFFIX=so
-if [[ $(uname) = "Darwin" ]]
-then
-   SO_SUFFIX=dylib
-fi
-AR_SUFFIX=a
 
 # Set MPI_DIR directly
 AC_ARG_WITH(mpi,
@@ -434,8 +443,8 @@ AC_ARG_WITH(adlb,
 AC_SUBST(USE_ADLB)
 
 USE_LIBADLB_A=""
-if [[ -f "${USE_ADLB}/libadlb.${AR_SUFFIX}" ]]; then
-  USE_LIBADLB_A="${USE_ADLB}/libadlb.${AR_SUFFIX}"
+if [[ -f "${USE_ADLB}/lib/libadlb.${AR_SUFFIX}" ]]; then
+  USE_LIBADLB_A="${USE_ADLB}/lib/libadlb.${AR_SUFFIX}"
 fi
 AC_SUBST(USE_LIBADLB_A)
 
