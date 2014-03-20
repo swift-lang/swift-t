@@ -1078,29 +1078,24 @@ class Turbine {
   }
 
   public static Command arrayRefStoreImmediate(Expression srcVar,
-          Value arrayVar, Expression arrayIndex, Value outerArray,
-          TypeName valType) {
-    return new Command(CR_V_INSERT, arrayVar, arrayIndex, srcVar, valType,
-            outerArray, LiteralInt.FALSE);
+          Value arrayVar, Expression arrayIndex, TypeName valType) {
+    return new Command(CR_V_INSERT, arrayVar, arrayIndex, srcVar, valType);
   }
 
   public static Command arrayRefStoreComputed(Expression srcVar,
-          Value arrayVar, Value indexVar, Value outerArray, TypeName valType) {
-    return new Command(CR_F_INSERT, arrayVar, indexVar, srcVar, valType,
-            outerArray, LiteralInt.FALSE);
+          Value arrayVar, Value indexVar, TypeName valType) {
+    return new Command(CR_F_INSERT, arrayVar, indexVar, srcVar, valType);
   }
 
   public static Command arrayRefDerefStore(Value srcRefVar, Value arrayVar,
-          Expression arrayIndex, Value outerArrayVar, TypeName valType) {
-    return new Command(CR_V_DEREF_INSERT, arrayVar, arrayIndex, srcRefVar,
-            valType, outerArrayVar, LiteralInt.FALSE);
+          Expression arrayIndex, TypeName valType) {
+    return new Command(CR_V_DEREF_INSERT, arrayVar, arrayIndex, srcRefVar, valType);
   }
 
   public static Command
           arrayRefDerefStoreComputed(Value srcRefVar, Value arrayVar,
-                  Value indexVar, Value outerArrayVar, TypeName valType) {
-    return new Command(CR_F_DEREF_INSERT, arrayVar, indexVar, srcRefVar,
-            valType, outerArrayVar, LiteralInt.FALSE);
+                  Value indexVar, TypeName valType) {
+    return new Command(CR_F_DEREF_INSERT, arrayVar, indexVar, srcRefVar, valType);
   }
 
   public static TclTree
@@ -1111,17 +1106,17 @@ class Turbine {
   }
 
   public static TclTree containerRefCreateNested(Value resultVar,
-          Value containerVar, Value indexVar, Value outerArr, TypeName keyType,
+          Value containerVar, Value indexVar, TypeName keyType,
           TypeName valType) {
     return new Command(CR_F_CREATE_NESTED, resultVar, containerVar, indexVar,
-            keyType, valType, outerArr, LiteralInt.FALSE);
+                       keyType, valType);
   }
 
   public static TclTree containerRefCreateNestedImmIx(Value resultVar,
-          Value containerVar, Expression arrIx, Value outerArr,
+          Value containerVar, Expression arrIx,
           TypeName keyType, TypeName valType) {
     return new Command(CR_V_CREATE_NESTED, resultVar, containerVar, arrIx,
-            keyType, valType, outerArr, LiteralInt.FALSE);
+            keyType, valType);
   }
 
   public static TclTree containerCreateNestedImmIx(String resultVar,

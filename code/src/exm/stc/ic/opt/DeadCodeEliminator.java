@@ -30,7 +30,6 @@ import org.apache.log4j.Logger;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.MultiMap;
