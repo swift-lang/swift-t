@@ -353,8 +353,13 @@ public class RefcountPass implements OptimizerPass {
       // struct members.
       if (var.storage() != Alloc.ALIAS) {
         // Work out base refcounts that we'll have to start with for var
-        increments.readDecr(var, RefCounting.baseReadRefCount(var, true, false));
-        increments.writeDecr(var, RefCounting.baseWriteRefCount(var, true, false));
+        long baseReadRC = RefCounting.baseReadRefCount(var, true, false);
+        long baseWriteRC = RefCounting.baseWriteRefCount(var, true, false);
+        increments.readDecr(var, baseReadRC);
+        increments.writeDecr(var, baseWriteRC);
+        if (logger.isTraceEnabled()) {
+          logger.trace(var + " base r: " + baseReadRC + " w: " + baseWriteRC);
+        }
       }
     }
 
