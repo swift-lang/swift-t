@@ -921,8 +921,11 @@ public class ICInstructions {
                                 false, IsAssign.NO));
         // add array elements up to some limit
         int max_elems = 64;
-        for (int i = 0; i <= (end - start) && i < max_elems; i++) {
-          // TODO: can't represent value_of(A[i]) 
+        for (long val = start, key = 0;
+                  val <= end && key < max_elems;
+                  val += step, key++) { 
+          cvs.add(ValLoc.makeArrayResult(arr, Arg.createIntLit(key),
+                      Arg.createIntLit(val), true, IsAssign.TO_VALUE));
         }
       }
     }
