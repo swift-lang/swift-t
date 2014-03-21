@@ -395,33 +395,89 @@ public class TurbineOp extends Instruction {
 
   }
 
-  public static Instruction arrayRetrieve(Var oVar, Var arrayVar,
-                                            Arg arrayIndex) {
+  /**
+   * Look up value of array index immediately
+   * @param dst
+   * @param arrayVar
+   * @param arrIx
+   * @return
+   */
+  public static Instruction arrayRetrieve(Var dst, Var arrayVar,
+                                            Arg arrIx) {
+    assert(dst.storage() == Alloc.LOCAL || dst.storage() == Alloc.ALIAS);
+    assert(Types.isArray(arrayVar));
+    assert(Types.isArrayKeyVal(arrayVar, arrIx));
+    assert(Types.isElemValType(arrayVar, dst));
+    
     return new TurbineOp(Opcode.ARR_RETRIEVE,
-        oVar, arrayVar.asArg(), arrayIndex);
+        dst, arrayVar.asArg(), arrIx);
   }
 
-  public static Instruction arrayRefCopyOutImm(Var oVar,
-      Var arrayVar, Arg arrayIndex) {
+  /**
+   * Copy out value of array once set
+   * @param dst
+   * @param arrayRefVar
+   * @param arrIx
+   * @return
+   */
+  public static Instruction arrayRefCopyOutImm(Var dst,
+      Var arrayRefVar, Arg arrIx) {
+    assert(Types.isArrayRef(arrayRefVar));
+    assert(Types.isArrayKeyVal(arrayRefVar, arrIx));
+    assert(Types.isElemType(arrayRefVar, dst));
+    assert(!Types.isMutableRef(dst)); // Doesn't acquire write ref
     return new TurbineOp(Opcode.AREF_COPY_OUT_IMM,
-        oVar, arrayVar.asArg(), arrayIndex);
+        dst, arrayRefVar.asArg(), arrIx);
   }
 
-  public static Instruction arrayCopyOutImm(Var oVar, Var arrayVar,
-      Arg arrayIndex) {
+  /**
+   * Copy out value of field from array once set
+   * @param dst
+   * @param arrayVar
+   * @param arrIx
+   * @return
+   */
+  public static Instruction arrayCopyOutImm(Var dst, Var arrayVar,
+      Arg arrIx) {
+    assert(Types.isArray(arrayVar));
+    assert(Types.isArrayKeyVal(arrayVar, arrIx));
+    assert(Types.isElemType(arrayVar, dst)) : arrayVar + " " + dst;
+    assert(!Types.isMutableRef(dst)); // Doesn't acquire write ref
     return new TurbineOp(Opcode.ARR_COPY_OUT_IMM,
-        oVar, arrayVar.asArg(), arrayIndex);
+        dst, arrayVar.asArg(), arrIx);
   }
 
-  public static TurbineOp arrayCopyOutFuture(Var oVar, Var arrayVar,
+  /**
+   * Copy out value of field from array once set
+   * @param dst
+   * @param arrayVar
+   * @param indexVar
+   * @return
+   */
+  public static TurbineOp arrayCopyOutFuture(Var dst, Var arrayVar,
       Var indexVar) {
+    assert(Types.isArray(arrayVar));
+    assert(Types.isArrayKeyFuture(arrayVar, indexVar));
+    assert(Types.isElemType(arrayVar, dst));
+    assert(!Types.isMutableRef(dst)); // Doesn't acquire write ref
     return new TurbineOp(Opcode.ARR_COPY_OUT_FUTURE,
-        oVar, arrayVar.asArg(), indexVar.asArg());
+        dst, arrayVar.asArg(), indexVar.asArg());
   }
 
-  public static TurbineOp arrayRefCopyOutFuture(Var oVar, Var arrayRefVar,
+  /**
+   * Copy out value of field from array once set
+   * @param dst
+   * @param arrayRefVar
+   * @param indexVar
+   * @return
+   */
+  public static TurbineOp arrayRefCopyOutFuture(Var dst, Var arrayRefVar,
       Var indexVar) {
-    return new TurbineOp(Opcode.AREF_COPY_OUT_FUTURE, oVar,
+    assert(Types.isArrayRef(arrayRefVar));
+    assert(Types.isArrayKeyFuture(arrayRefVar, indexVar));
+    assert(Types.isElemType(arrayRefVar, dst));
+    assert(!Types.isMutableRef(dst)); // Doesn't acquire write ref
+    return new TurbineOp(Opcode.AREF_COPY_OUT_FUTURE, dst,
                           arrayRefVar.asArg(), indexVar.asArg());
   }
   
@@ -453,10 +509,10 @@ public class TurbineOp extends Instruction {
 
   public static Instruction arrayStore(Var array,
       Arg ix, Arg member) {
-    assert(Types.isArray(array));
+    assert(Types.isArray(array.type()));
     assert(Types.isArrayKeyVal(array, ix));
     assert(Types.isElemValType(array, member)) :
-      array + " " + member + " " + member.type();
+            member.toStringTyped() + " " + array;
     return new TurbineOp(Opcode.ARR_STORE, array, ix, member);
   }
 
@@ -1187,6 +1243,7 @@ public class TurbineOp extends Instruction {
     assert(arrayResult.storage() != Alloc.ALIAS);
     assert(Types.isArray(array.type()));
     assert(Types.isArrayKeyFuture(array, ix));
+    assert(!Types.isConstRef(arrayResult)); // Should be mutable if ref
     // Both arrays are modified, so outputs
     return new TurbineOp(Opcode.ARR_CREATE_NESTED_FUTURE,
         Arrays.asList(arrayResult, array), ix.asArg());
@@ -1219,6 +1276,7 @@ public class TurbineOp extends Instruction {
     assert(arrayResult.storage() != Alloc.ALIAS);
     assert(Types.isArrayRef(array.type(), true)): array;
     assert(Types.isArrayKeyFuture(array, ix));
+    assert(!Types.isConstRef(arrayResult)); // Should be mutable if ref
     // Returns nested array, modifies outer array and
     // reference counts outmost array
     return new TurbineOp(Opcode.AREF_CREATE_NESTED_FUTURE,
@@ -1240,6 +1298,7 @@ public class TurbineOp extends Instruction {
     assert(arrayResult.storage() != Alloc.ALIAS);
     assert(Types.isArrayRef(array.type(), true)): array;
     assert(Types.isArrayKeyVal(array, ix));
+    assert(!Types.isConstRef(arrayResult)); // Should be mutable if ref
     return new TurbineOp(Opcode.AREF_CREATE_NESTED_IMM,
         // Returns nested array, modifies outer array and
         // reference counts outmost array

@@ -436,59 +436,40 @@ public class STCMiddleEnd {
                             localOutFile, fileName, isMapped.asArg()));
   }
   
-  public void arrayRetrieve(Var oVar, Var arrayVar, Arg arrIx) {
-    assert(oVar.storage() == Alloc.ALIAS);
-    assert(Types.isArray(arrayVar.type())); // Can't be reference to array
-    assert(Types.isArrayKeyVal(arrayVar, arrIx));
-    assert(Types.isElemValType(arrayVar, oVar));
+  public void arrayRetrieve(Var dst, Var arrayVar, Arg arrIx) {
     currBlock().addInstruction(
-        TurbineOp.arrayRetrieve(oVar, arrayVar, arrIx));
+        TurbineOp.arrayRetrieve(dst, arrayVar, arrIx));
   }
 
-  public void arrayCopyOutImm(Var oVar, Var arrayVar, Arg arrIx) {
-    assert(Types.isArrayKeyVal(arrayVar, arrIx));
-    assert(Types.isElemType(arrayVar, oVar)) : arrayVar + " " + oVar;
+  public void arrayCopyOutImm(Var dst, Var arrayVar, Arg arrIx) {
     currBlock().addInstruction(
-          TurbineOp.arrayCopyOutImm(oVar, arrayVar, arrIx));
+          TurbineOp.arrayCopyOutImm(dst, arrayVar, arrIx));
   }
   
   
-  public void arrayCopyOutFuture(Var oVar, Var arrayVar, Var indexVar) {
-    assert(Types.isArrayKeyFuture(arrayVar, indexVar));
-    assert(Types.isElemType(arrayVar, oVar));
+  public void arrayCopyOutFuture(Var dst, Var arrayVar, Var indexVar) {
     currBlock().addInstruction(
-          TurbineOp.arrayCopyOutFuture(oVar, arrayVar, indexVar));
+          TurbineOp.arrayCopyOutFuture(dst, arrayVar, indexVar));
   }
   
-  public void arrayRefCopyOutImm(Var oVar, Var arrayVar, Arg arrIx) {
-    assert(Types.isArrayKeyVal(arrayVar, arrIx));
-    assert(Types.isElemType(arrayVar, oVar));
+  public void arrayRefCopyOutImm(Var dst, Var arrayVar, Arg arrIx) {
     currBlock().addInstruction(
-        TurbineOp.arrayRefCopyOutImm(oVar, arrayVar, arrIx));
+        TurbineOp.arrayRefCopyOutImm(dst, arrayVar, arrIx));
   }
   
-  public void arrayRefCopyOutFuture(Var oVar, Var arrayVar,
+  public void arrayRefCopyOutFuture(Var dst, Var arrayVar,
                                      Var indexVar) {
-    assert(Types.isArrayKeyFuture(arrayVar, indexVar));
-    assert(Types.isElemType(arrayVar, oVar));
     currBlock().addInstruction(
-          TurbineOp.arrayRefCopyOutFuture(oVar, arrayVar, indexVar));
+          TurbineOp.arrayRefCopyOutFuture(dst, arrayVar, indexVar));
   }
 
   public void arrayStore(Var array, Arg ix, Arg member) {
-    assert(Types.isArray(array.type()));
-    assert(Types.isArrayKeyVal(array, ix));
-    assert(Types.isElemValType(array, member)) :
-            member.toStringTyped() + " " + array;
     currBlock().addInstruction(TurbineOp.arrayStore(array, ix, member));
   }
 
   public void arrayStoreFuture(Var array, Var ixVar, Arg member) {
-    assert(Types.isArray(array.type()));
-    assert(Types.isArrayKeyFuture(array, ixVar));
-    assert(Types.isElemValType(array, member)) :
-      member + ":" + member.type() + " " + array;
-    currBlock().addInstruction(TurbineOp.arrayStoreFuture(array, ixVar, member));
+    currBlock().addInstruction(
+        TurbineOp.arrayStoreFuture(array, ixVar, member));
   }
 
   public void arrayRefStoreImm(Var array, Arg ix, Arg member) {
