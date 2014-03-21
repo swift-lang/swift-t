@@ -3088,9 +3088,6 @@ public class TurbineOp extends Instruction {
       case ARR_CREATE_NESTED_IMM:
       case ARRAY_CREATE_BAG: {
         // Instruction can give additional refcounts back
-        // TODO: don't allow piggybacking r/w refcounts yet since that might
-        // lead to premature closing of outer array -> premature closing of inner
-        // array
         Var nested = getOutput(0);
         assert(getInputs().size() == 3);
         return tryPiggyBackHelper(increments, type, nested, 1, 2);
