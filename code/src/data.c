@@ -1147,16 +1147,6 @@ add_close_notifs(adlb_datum_id id, adlb_datum *d, adlb_notif_t *notifs)
 
 adlb_data_code
 xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
-              adlb_data_type* type,
-              const adlb_buffer *caller_buffer,
-              adlb_binary_data *result)
-{
-  return xlb_data_retrieve2(id, subscript, ADLB_NO_RC, ADLB_NO_RC,
-                            type, caller_buffer, result, NULL);
-}
-
-adlb_data_code
-xlb_data_retrieve2(adlb_datum_id id, adlb_subscript subscript,
                  adlb_refcounts decr, adlb_refcounts to_acquire,
                  adlb_data_type* type, const adlb_buffer *caller_buffer,
                  adlb_binary_data *result, adlb_notif_t *notifs)

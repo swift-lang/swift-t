@@ -89,16 +89,6 @@ xlb_data_container_reference(adlb_datum_id id, adlb_subscript subscript,
 
 adlb_data_code xlb_data_container_size(adlb_datum_id container_id,
                                    int* size);
-
-/**
- Retrieve data for id/subscript pair.
- See xlb_data_retrieve2 for information about arguments
- */
-adlb_data_code
-xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
-                  adlb_data_type* type, const adlb_buffer *caller_buffer,
-                  adlb_binary_data *result); 
-
 /**
  Retrieve data for id/subscript pair, plus support acquiring references
  for caller and decrementing references of datum
@@ -119,7 +109,7 @@ xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
             ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND if id found, but not subscript
  */
 adlb_data_code
-xlb_data_retrieve2(adlb_datum_id id, adlb_subscript subscript,
+xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
                  adlb_refcounts decr, adlb_refcounts to_acquire,
                  adlb_data_type* type, const adlb_buffer *caller_buffer,
                  adlb_binary_data *result, adlb_notif_t *notifs);

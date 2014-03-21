@@ -961,7 +961,7 @@ handle_retrieve(int caller)
   adlb_data_type type;
   adlb_binary_data result;
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
-  dc = xlb_data_retrieve2(hdr->id, subscript, decr_self, incr_referand,
+  dc = xlb_data_retrieve(hdr->id, subscript, decr_self, incr_referand,
                           &type, &xlb_scratch_buf, &result, &notifs);
   assert(dc != ADLB_DATA_SUCCESS || result.length >= 0);
 
@@ -1157,7 +1157,7 @@ handle_insert_atomic(int caller)
     {
       // Retrieve and update references
       // Optionally use xlb_scratch_buf for storage
-      resp.dc = xlb_data_retrieve2(id, subscript,
+      resp.dc = xlb_data_retrieve(id, subscript,
             refcounts.decr_self, refcounts.incr_referand,
             &resp.value_type, &xlb_scratch_buf, &value, &notifs);
       resp.value_len = value.length;
