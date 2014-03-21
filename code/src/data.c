@@ -1169,31 +1169,34 @@ xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
   // Result code for retrieve
   adlb_data_code result_code = ADLB_DATA_SUCCESS;
 
+  const adlb_datum_storage *val_data;
+  adlb_data_type val_type;
+
   if (!adlb_has_sub(subscript))
   {
-    *type = d->type;
     CHECK_SET(id, d);
-    dc = ADLB_Pack(&d->data, d->type, caller_buffer, result);
-    DATA_CHECK(dc);
+
+    val_type = d->type;
+    val_data = &d->data;
   }
   else
   {
-    const adlb_datum_storage *sub_data;
-    adlb_data_type sub_type;
     dc = lookup_subscript(id, &d->data, subscript, d->type,
-                          &sub_data, &sub_type);
+                          &val_data, &val_type);
     DATA_CHECK(dc);
 
-    *type = sub_type;
-
-    if (sub_data == NULL)
+    if (val_data == NULL)
     {
       return ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND;
     }
     
-    dc = ADLB_Pack(sub_data, sub_type, caller_buffer, result);
-    DATA_CHECK(dc);
   }
+
+  // TODO: when serializing, update refcounts to match to_acquire 
+  dc = ADLB_Pack(val_data, val_type, caller_buffer, result);
+  DATA_CHECK(dc);
+
+  *type = val_type;
   
   if (ADLB_RC_NOT_NULL(decr) || ADLB_RC_NOT_NULL(to_acquire)) {
     // own data in case we free it
