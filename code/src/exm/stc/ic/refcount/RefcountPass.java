@@ -401,6 +401,9 @@ public class RefcountPass implements OptimizerPass {
       logger.trace("At " + inst + " readIncr: " + readIncrVars +
           " writeIncr: " + writeIncrVars);
     }
+    
+    // TODO: refactor into getRefDecrs() in instruction
+    // TODO: will need to add structRetrieveSub if reference
 
     if (inst.op == Opcode.COPY_REF) {
       // Hack to handle COPY_REF
