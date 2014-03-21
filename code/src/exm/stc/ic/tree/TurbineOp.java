@@ -1153,7 +1153,8 @@ public class TurbineOp extends Instruction {
    * @param acquireWrite num of write refcounts to acquire
    * @return
    */
-  public static Instruction retrieveRef(Var dst, Var src, long acquireRead, long acquireWrite) {
+  public static Instruction retrieveRef(Var dst, Var src,
+                     long acquireRead, long acquireWrite) {
     assert(Types.isRef(src.type()));
     assert(acquireRead >= 0);
     assert(acquireWrite >= 0);
@@ -2943,7 +2944,6 @@ public class TurbineOp extends Instruction {
     switch (op) {
       case LOAD_SCALAR:
       case LOAD_FILE:
-      case LOAD_REF: 
       case LOAD_ARRAY:
       case LOAD_BAG:
       case LOAD_STRUCT:
@@ -2961,6 +2961,19 @@ public class TurbineOp extends Instruction {
         }
         break;
       }
+      case LOAD_REF:
+        Var inVar = getInput(0).getVar();
+        if (type == RefCountType.READERS) {
+          long amt = increments.getCount(inVar);
+          if (amt < 0) {
+            assert(getInputs().size() == 3);
+            // Add extra arg
+            this.inputs = Arrays.asList(getInput(0), getInput(1), getInput(2),
+                                      Arg.createIntLit(amt * -1));
+            return inVar.asList();
+          }
+        }
+        break;
       case ARR_STORE:
       case ARR_COPY_IN_IMM: 
       case ARR_STORE_FUTURE: 
