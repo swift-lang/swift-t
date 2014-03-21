@@ -2616,8 +2616,8 @@ public class TurbineOp extends Instruction {
         
         assert(fieldPaths.val.size() == fieldVals.val.size());
         for (int i = 0; i < fieldPaths.val.size(); i++) {
-          ValLoc.makeStructFieldValResult(fieldVals.val.get(i), struct,
-                                          fieldPaths.val.get(i)).asList();
+          results.add(ValLoc.makeStructFieldValResult(fieldVals.val.get(i),
+                                  struct, fieldPaths.val.get(i)));
         }
         
         return results;
