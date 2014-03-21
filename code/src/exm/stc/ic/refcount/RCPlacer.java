@@ -268,10 +268,10 @@ public class RCPlacer {
       Set<AliasKey> cancelCandidates, Set<AliasKey> consumedAfter) {
     List<Var> consumedVars;
     if (rcType == RefCountType.READERS) {
-      consumedVars = inst.getIncrVars(functionMap).val1;
+      consumedVars = inst.inRefCounts(functionMap).val1;
     } else {
       assert (rcType == RefCountType.WRITERS);
-      consumedVars = inst.getIncrVars(functionMap).val2;
+      consumedVars = inst.inRefCounts(functionMap).val2;
     }
     List<AliasKey> consumed = new ArrayList<AliasKey>(consumedVars.size());
     for (Var v: consumedVars) {

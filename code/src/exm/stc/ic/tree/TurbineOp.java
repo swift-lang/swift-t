@@ -2798,7 +2798,8 @@ public class TurbineOp extends Instruction {
   }
 
   @Override
-  public Pair<List<Var>, List<Var>> getIncrVars() {
+  public Pair<List<Var>, List<Var>> inRefCounts(
+                Map<String, Function> functions) {
     switch (op) {
       case STORE_REF:
         return Pair.create(getInput(0).getVar().asList(), Var.NONE);
@@ -2975,7 +2976,7 @@ public class TurbineOp extends Instruction {
       case STRUCTREF_COPY_IN:
         // Do nothing: reference count tracker can track variables
         // across struct boundaries
-        return super.getIncrVars();
+        return Pair.create(Var.NONE, Var.NONE);
       case COPY_REF: {
         return Pair.create(getInput(0).getVar().asList(),
                            getInput(0).getVar().asList());
@@ -2993,8 +2994,20 @@ public class TurbineOp extends Instruction {
         return Pair.create(getInput(0).getVar().asList(),
                            getOutput(0).asList());
       default:
-        // Return default
-        return super.getIncrVars();
+        // Default is nothing
+        return Pair.create(Var.NONE, Var.NONE);
+    }
+  }
+  
+  @Override
+  public Pair<List<Var>, List<Var>> outRefCounts(
+                 Map<String, Function> functions) {
+    switch (this.op) {
+      case STRUCT_RETRIEVE_SUB:
+        // TODO: other array/struct retrieval funcs
+        return Pair.create(Var.NONE, Var.NONE);
+      default:
+        return Pair.create(Var.NONE, Var.NONE);
     }
   }
   

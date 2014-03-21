@@ -386,7 +386,7 @@ public class RefcountPass implements OptimizerPass {
   }
 
   private void updateCountsInstruction(Instruction inst, RCTracker increments) {
-    Pair<List<Var>, List<Var>> refIncrs = inst.getIncrVars(functionMap);
+    Pair<List<Var>, List<Var>> refIncrs = inst.inRefCounts(functionMap);
     List<Var> readIncrVars = refIncrs.val1;
     List<Var> writeIncrVars = refIncrs.val2;
 
@@ -402,9 +402,7 @@ public class RefcountPass implements OptimizerPass {
           " writeIncr: " + writeIncrVars);
     }
     
-    // TODO: refactor into getRefDecrs() in instruction
-    // TODO: will need to add structRetrieveSub if reference
-
+    // TODO: move these to getRefDecrs() in instruction
     if (inst.op == Opcode.COPY_REF) {
       // Hack to handle COPY_REF
       // We incremented refcounts for orig. var, now need to decrement
@@ -412,9 +410,7 @@ public class RefcountPass implements OptimizerPass {
       Var newAlias = inst.getOutput(0);
       increments.readDecr(newAlias);
       increments.writeDecr(newAlias);
-    }
-
-    if (inst.op == Opcode.LOAD_REF) {
+    } else if (inst.op == Opcode.LOAD_REF) {
       // Hack to handle fact that the load_ref will increment
       // reference count of referand
       Var v = inst.getOutput(0);
@@ -422,9 +418,7 @@ public class RefcountPass implements OptimizerPass {
       long writeRefs = inst.getInput(2).getIntLit();
       increments.readDecr(v, readRefs);
       increments.writeDecr(v, writeRefs);
-    }
-
-    if (inst.op == Opcode.LOOP_BREAK) {
+    } else if (inst.op == Opcode.LOOP_BREAK) {
       // Special case: decrement all variables passed into loop from outside
       LoopBreak loopBreak = (LoopBreak) inst;
       for (Var ko: loopBreak.getKeepOpenVars()) {
@@ -435,6 +429,15 @@ public class RefcountPass implements OptimizerPass {
         if (!pass.writeOnly) {
           increments.readDecr(pass.var);
         }
+      }
+    } else {
+      Pair<List<Var>, List<Var>> outRefs = inst.outRefCounts(functionMap);
+      for (Var outReadRef: outRefs.val1) {
+        increments.readDecr(outReadRef);
+      }
+      
+      for (Var outWriteRef: outRefs.val2) {
+        increments.writeDecr(outWriteRef);
       }
     }
   }

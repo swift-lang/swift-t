@@ -459,32 +459,22 @@ public class ICInstructions {
     
     public abstract Instruction clone();
 
+    /**
+     * @return vars with refcounts to be incremented: (read, write)
+     */
+    public Pair<List<Var>, List<Var>> inRefCounts(
+        Map<String, Function> functions) {
+      return Pair.create(Var.NONE, Var.NONE);
+    }
+
+    /**
+     * @return vars with refcounts to be incremented: (read, write)
+     */
+    public Pair<List<Var>, List<Var>> outRefCounts(
+                        Map<String, Function> functions) {
+      return Pair.create(Var.NONE, Var.NONE);
+    }
     
-    public Pair<List<Var>, List<Var>> getIncrVars(Map<String, Function> functions) {
-      return getIncrVars();
-    }
-
-    /**
-     * @return (read vars to be incremented, write vars to be incremented)
-     */
-    protected Pair<List<Var>, List<Var>> getIncrVars() {
-      return Pair.create(getReadIncrVars(), getWriteIncrVars());
-    }
-
-    /**
-     * @return list of vars that need read refcount increment
-     */
-    public List<Var> getReadIncrVars() {
-      return Var.NONE;
-    }
-
-    /**
-     * @return list of vars that need write refcount increment
-     */
-    public List<Var> getWriteIncrVars() {
-      return Var.NONE;
-    }
-
     /**
      * Try to piggyback increments or decrements to instruction
      * @param increments count of increment or decrement operations per var
@@ -1007,7 +997,7 @@ public class ICInstructions {
     }
 
     @Override
-    public Pair<List<Var>, List<Var>> getIncrVars(Map<String, Function> functions) {
+    public Pair<List<Var>, List<Var>> inRefCounts(Map<String, Function> functions) {
       switch (op) { 
         case CALL_FOREIGN:
         case CALL_FOREIGN_LOCAL:
@@ -1052,7 +1042,7 @@ public class ICInstructions {
         }
         case CALL_SYNC:
           // Sync calls must acquire their own references
-          return super.getIncrVars();
+          return Pair.create(Var.NONE, Var.NONE);
         default:
           throw new STCRuntimeError("Unexpected function type: " + op);
       }
@@ -1760,9 +1750,12 @@ public class ICInstructions {
     }
 
     @Override
-    public List<Var> getReadIncrVars() {
+    public Pair<List<Var>, List<Var>> inRefCounts(
+        Map<String, Function> functions) {
       // Increment variables passed to next iter
-      return Collections.unmodifiableList(ICUtil.extractVars(newLoopVars));
+      return Pair.create(
+          Collections.unmodifiableList(ICUtil.extractVars(newLoopVars)),
+          Var.NONE);
     }
 
     @Override
@@ -2257,17 +2250,18 @@ public class ICInstructions {
 
 
     @Override
-    public List<Var> getReadIncrVars() {
+    public Pair<List<Var>, List<Var>> inRefCounts(
+                   Map<String, Function> functions) {
       if (op == Opcode.ASYNC_OP) {
-        List<Var> res = new ArrayList<Var>(inputs.size());
+        List<Var> readRCs = new ArrayList<Var>(inputs.size());
         for (Arg in: inputs) {
           if (RefCounting.trackReadRefCount(in.getVar())) {
-            res.add(in.getVar());
+            readRCs.add(in.getVar());
           }
         }
-        return res;
+        return Pair.create(readRCs, Var.NONE);
       }
-      return Var.NONE;
+      return Pair.create(Var.NONE, Var.NONE);
     }
 
 
