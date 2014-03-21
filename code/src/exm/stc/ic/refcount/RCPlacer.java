@@ -22,6 +22,7 @@ import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.VarCount;
 import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
@@ -263,19 +264,29 @@ public class RCPlacer {
   }
 
 
+  /**
+   * Maintain list of cancel candidates based on what instruction does
+   * @param tracker
+   * @param inst
+   * @param rcType
+   * @param cancelCandidates
+   * @param consumedAfter
+   */
   private void updateCancel(RCTracker tracker, Instruction inst,
       RefCountType rcType,
       Set<AliasKey> cancelCandidates, Set<AliasKey> consumedAfter) {
-    List<Var> consumedVars;
+    List<VarCount> consumedVars;
     if (rcType == RefCountType.READERS) {
       consumedVars = inst.inRefCounts(functionMap).val1;
     } else {
       assert (rcType == RefCountType.WRITERS);
       consumedVars = inst.inRefCounts(functionMap).val2;
     }
-    List<AliasKey> consumed = new ArrayList<AliasKey>(consumedVars.size());
-    for (Var v: consumedVars) {
-      consumed.add(tracker.getCountKey(v));
+    Set<AliasKey> consumed = new HashSet<AliasKey>();
+    for (VarCount v: consumedVars) {
+      if (v.count != 0) {
+        consumed.add(tracker.getCountKey(v.var));
+      }
     }
     
     if (logger.isTraceEnabled()) {

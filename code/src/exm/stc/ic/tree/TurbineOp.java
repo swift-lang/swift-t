@@ -22,6 +22,7 @@ import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.VarCount;
 import exm.stc.common.util.Counters;
 import exm.stc.common.util.Out;
 import exm.stc.common.util.Pair;
@@ -2798,23 +2799,24 @@ public class TurbineOp extends Instruction {
   }
 
   @Override
-  public Pair<List<Var>, List<Var>> inRefCounts(
+  public Pair<List<VarCount>, List<VarCount>> inRefCounts(
                 Map<String, Function> functions) {
     switch (op) {
       case STORE_REF:
-        return Pair.create(getInput(0).getVar().asList(), Var.NONE);
+        return Pair.create(VarCount.one(getInput(0).getVar()).asList(),
+                           VarCount.NONE);
       case ARRAY_BUILD: {
-        List<Var> readIncr = new ArrayList<Var>(getInputs().size() / 2);
+        List<VarCount> readIncr = new ArrayList<VarCount>();
         for (int i = 0; i < getInputs().size() / 2; i++) {
           // Skip keys and only get values
           Arg elem = getInput(i * 2 + 1);
           // Container gets reference to member
           if (elem.isVar() && RefCounting.trackReadRefCount(elem.getVar())) {
-            readIncr.add(elem.getVar());
+            readIncr.add(VarCount.one(elem.getVar()));
           }
         }
         Var arr = getOutput(0);
-        return Pair.create(readIncr, Arrays.asList(arr));
+        return Pair.create(readIncr, VarCount.one(arr).asList());
       }
       case ASYNC_COPY_CONTAINER:
       case SYNC_COPY_CONTAINER:
@@ -2822,59 +2824,59 @@ public class TurbineOp extends Instruction {
       case SYNC_COPY_STRUCT:
         // Need to pass in refcount for var to be copied, and write
         // refcount for assigned var
-        return Pair.create(getInput(0).getVar().asList(),
-                           getOutput(0).asList());
+        return Pair.create(VarCount.one(getInput(0).getVar()).asList(),
+                           VarCount.one(getOutput(0)).asList());
       case STORE_BAG:
       case STORE_ARRAY: 
       case STORE_STRUCT:
       case STORE_RECURSIVE: { 
         // Inputs stored into array need to have refcount incremented
         // This finalizes array so will consume refcount
-        return Pair.create(getInput(0).getVar().asList(),
-                            getOutput(0).asList());
+        return Pair.create(VarCount.one(getInput(0).getVar()).asList(),
+                           VarCount.one(getOutput(0)).asList());
       }
       case DEREF_SCALAR:
       case DEREF_FILE: {
         // Increment refcount of ref var
-        return Pair.create(Arrays.asList(getInput(0).getVar()),
-                           Var.NONE);
+        return Pair.create(VarCount.one(getInput(0).getVar()).asList(),
+                           VarCount.NONE);
       }
       case AREF_COPY_OUT_FUTURE:
       case ARR_COPY_OUT_FUTURE: {
         // Array and index
-        return Pair.create(
-                Arrays.asList(getInput(0).getVar(), getInput(1).getVar()),
-                Var.NONE);
+        return Pair.create(Arrays.asList(
+            VarCount.one(getInput(0).getVar()), VarCount.one(getInput(1).getVar())),
+                VarCount.NONE);
       }
       case AREF_COPY_OUT_IMM:
       case ARR_COPY_OUT_IMM: {
         // Array only
         return Pair.create(
-                  Arrays.asList(getInput(0).getVar()),
-                  Var.NONE);
+                  VarCount.one(getInput(0).getVar()).asList(),
+                  VarCount.NONE);
       }
       case ARR_CONTAINS:
       case CONTAINER_SIZE: {
         // Executes immediately, doesn't need refcount
-        return Pair.create(Var.NONE, Var.NONE);
+        return Pair.create(VarCount.NONE, VarCount.NONE);
       }
       case ARR_STORE: {
         Arg mem = getInput(1);
         // Increment reference to memberif needed
-        List<Var> readIncr;
+        List<VarCount> readIncr;
         if (mem.isVar() && RefCounting.trackReadRefCount(mem.getVar())) {
-          readIncr = mem.getVar().asList(); 
+          readIncr = VarCount.one(mem.getVar()).asList(); 
         } else {
-          readIncr = Var.NONE;
+          readIncr = VarCount.NONE;
         }
-        return Pair.create(readIncr, Var.NONE);
+        return Pair.create(readIncr, VarCount.NONE);
       }
       case ARR_COPY_IN_IMM: {
         // Increment reference to member ref
         // Increment writers count on array
         Var mem = getInput(1).getVar();
-        return Pair.create(Arrays.asList(mem),
-                           Arrays.asList(getOutput(0)));
+        return Pair.create(VarCount.one(mem).asList(),
+                           VarCount.one(getOutput(0)).asList());
       }
       case ARR_STORE_FUTURE: 
       case ARR_COPY_IN_FUTURE: {
@@ -2883,13 +2885,14 @@ public class TurbineOp extends Instruction {
         Var arr = getInput(0).getVar();
         Arg mem = getInput(1);
 
-        List<Var> readIncr;
+        List<VarCount> readIncr;
         if (mem.isVar() && RefCounting.trackReadRefCount(mem.getVar())) {
-          readIncr = Arrays.asList(arr, mem.getVar());
+          readIncr = Arrays.asList(VarCount.one(arr),
+                                   VarCount.one(mem.getVar()));
         } else {
-          readIncr = arr.asList();
+          readIncr = VarCount.one(arr).asList();
         }
-        return Pair.create(readIncr, Arrays.asList(getOutput(0)));
+        return Pair.create(readIncr, VarCount.one((getOutput(0))).asList());
       }
       case AREF_STORE_IMM:
       case AREF_COPY_IN_IMM:
@@ -2898,65 +2901,67 @@ public class TurbineOp extends Instruction {
         Arg ix = getInput(0);
         Arg mem = getInput(1);
         Var arrayRef = getOutput(0);
-        List<Var> readers = new ArrayList<Var>(3);
-        readers.add(arrayRef);
+        List<VarCount> readers = new ArrayList<VarCount>(3);
+        readers.add(VarCount.one(arrayRef));
         if (mem.isVar() && RefCounting.trackReadRefCount(mem.getVar())) {
-          readers.add(mem.getVar());
+          readers.add(VarCount.one(mem.getVar()));
         }
 
         if (op == Opcode.AREF_STORE_FUTURE ||
             op == Opcode.AREF_COPY_IN_FUTURE) {
-          readers.add(ix.getVar());
+          readers.add(VarCount.one(ix.getVar()));
         } else {
           assert(op == Opcode.AREF_STORE_IMM ||
                  op == Opcode.AREF_COPY_IN_IMM);
         }
         // Management of reference counts from array ref is handled by runtime
-        return Pair.create(readers, Var.NONE);
+        return Pair.create(readers, VarCount.NONE);
       }
       case ARR_CREATE_NESTED_FUTURE: {
         Var srcArray = getOutput(1);
         Var ix = getInput(0).getVar();
-        return Pair.create(ix.asList(), srcArray.asList());
+        return Pair.create(VarCount.one(ix).asList(),
+                           VarCount.one(srcArray).asList());
       }
       case AREF_CREATE_NESTED_IMM:
       case AREF_CREATE_NESTED_FUTURE: {
         Var arr = getOutput(1);
         Arg ixArg = getInput(0);
-        List<Var> readVars;
+        List<VarCount> readVars;
         if (op == Opcode.AREF_CREATE_NESTED_IMM) {
-          readVars = Arrays.asList(arr);
+          readVars = VarCount.one(arr).asList();
         } else {
           assert(op == Opcode.AREF_CREATE_NESTED_FUTURE);
-          readVars = Arrays.asList(arr, ixArg.getVar());
+          readVars = Arrays.asList(VarCount.one(arr),
+                                   VarCount.one(ixArg.getVar()));
         }
 
         // Management of reference counts from array ref is handled by runtime
-        return Pair.create(readVars, Var.NONE);
+        return Pair.create(readVars, VarCount.NONE);
       }
       case BAG_INSERT: {
         Arg mem = getInput(0);
-        List<Var> readers = Var.NONE;
+        List<VarCount> readers = VarCount.NONE;
         if (mem.isVar() && RefCounting.trackReadRefCount(mem.getVar())) {
-          readers = mem.getVar().asList();
+          readers = VarCount.one(mem.getVar()).asList();
         }
-        return Pair.create(readers, Var.NONE);
+        return Pair.create(readers, VarCount.NONE);
       }
       case STRUCT_INIT_FIELDS: {
         Out<List<Arg>> fieldVals = new Out<List<Arg>>();
         unpackStructInitArgs(null, null, fieldVals);
         
-        List<Var> readIncr = new ArrayList<Var>();
-        List<Var> writeIncr = new ArrayList<Var>();
+        List<VarCount> readIncr = new ArrayList<VarCount>();
+        List<VarCount> writeIncr = new ArrayList<VarCount>();
         for (Arg fieldVal: fieldVals.val) {
           if (fieldVal.isVar()) {
             // Need to acquire refcount to pass to struct
             Var fieldVar = fieldVal.getVar();
             if (RefCounting.trackReadRefCount(fieldVar)) {
-              readIncr.add(fieldVar);
+              readIncr.add(VarCount.one(fieldVar));
             }
             if (RefCounting.trackWriteRefCount(fieldVar)) {
-              writeIncr.add(fieldVar);
+              writeIncr.add(VarCount.one(fieldVar));
             }
           }
         }
@@ -2966,9 +2971,8 @@ public class TurbineOp extends Instruction {
       case STRUCTREF_COPY_OUT:
       case STRUCT_COPY_OUT: {
         // Array only
-        return Pair.create(
-                  Arrays.asList(getInput(0).getVar()),
-                  Var.NONE);
+        return Pair.create(VarCount.one(getInput(0).getVar()).asList(),
+                           VarCount.NONE);
       }
       case STRUCT_STORE_SUB:
       case STRUCT_COPY_IN:
@@ -2976,38 +2980,55 @@ public class TurbineOp extends Instruction {
       case STRUCTREF_COPY_IN:
         // Do nothing: reference count tracker can track variables
         // across struct boundaries
-        return Pair.create(Var.NONE, Var.NONE);
+        // TODO: still right?
+        return Pair.create(VarCount.NONE, VarCount.NONE);
       case COPY_REF: {
-        return Pair.create(getInput(0).getVar().asList(),
-                           getInput(0).getVar().asList());
+        return Pair.create(VarCount.one(getInput(0).getVar()).asList(),
+                           VarCount.one(getInput(0).getVar()).asList());
       }
       case COPY_IN_FILENAME: {
         // Read for input filename
-        return Pair.create(getInput(0).getVar().asList(),
-                           Var.NONE);
+        return Pair.create(VarCount.one(getInput(0).getVar()).asList(),
+                           VarCount.NONE);
       }
       case UPDATE_INCR:
       case UPDATE_MIN:
       case UPDATE_SCALE:
         // Consumes a read refcount for the input argument and
         // write refcount for updated variable
-        return Pair.create(getInput(0).getVar().asList(),
-                           getOutput(0).asList());
+        return Pair.create(VarCount.one(getInput(0).getVar()).asList(),
+                           VarCount.one(getOutput(0)).asList());
       default:
         // Default is nothing
-        return Pair.create(Var.NONE, Var.NONE);
+        return Pair.create(VarCount.NONE, VarCount.NONE);
     }
   }
   
   @Override
-  public Pair<List<Var>, List<Var>> outRefCounts(
+  public Pair<List<VarCount>, List<VarCount>> outRefCounts(
                  Map<String, Function> functions) {
     switch (this.op) {
+      case COPY_REF: {
+        // We incremented refcounts for orig. var, now need to decrement
+        // refcount on alias vars
+        Var newAlias = getOutput(0);
+        return Pair.create(VarCount.one(newAlias).asList(),
+                           VarCount.one(newAlias).asList());
+      }
+      case LOAD_REF: {
+        // Load_ref will increment reference count of referand
+        Var v = getOutput(0);
+        long readRefs = getInput(1).getIntLit();
+        long writeRefs = getInput(2).getIntLit();
+        // TODO: return actual # of refs
+        return Pair.create(new VarCount(v, readRefs).asList(), 
+                           new VarCount(v, writeRefs).asList());
+      }
       case STRUCT_RETRIEVE_SUB:
         // TODO: other array/struct retrieval funcs
-        return Pair.create(Var.NONE, Var.NONE);
+        return Pair.create(VarCount.NONE, VarCount.NONE);
       default:
-        return Pair.create(Var.NONE, Var.NONE);
+        return Pair.create(VarCount.NONE, VarCount.NONE);
     }
   }
   

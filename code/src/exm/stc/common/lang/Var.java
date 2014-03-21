@@ -325,15 +325,30 @@ public class Var implements Comparable<Var>, Typed {
     return diff;
   }
   
+
+  /**
+   * Represent variable plus a count
+   */
   public static class VarCount {
-    public Var var;
-    public int count;
-    public VarCount(Var var, int count) {
-      super();
+    public final Var var;
+    public final long count;
+    
+    public VarCount(Var var, long count) {
       this.var = var;
       this.count = count;
     }
+    
+    public static VarCount one(Var var) {
+      return new VarCount(var, 1);
+    }
+    
+    public List<VarCount> asList() {
+      return Collections.singletonList(this);
+    }
+    
+    public static final List<VarCount> NONE = Collections.emptyList();
   }
+  
   public static List<VarCount> countVars(List<Var> list) {
     ArrayList<Var> sorted = new ArrayList<Var>(list);
     Collections.sort(sorted, new Comparator<Var>() {
@@ -343,15 +358,24 @@ public class Var implements Comparable<Var>, Typed {
       }
     });
     ArrayList<VarCount> res = new ArrayList<VarCount>();
-    VarCount curr = null;
+    Var curr = null;
+    long currCount = 0; 
     for (Var v: sorted) {
-      if (curr == null || !v.name().equals(curr.var.name())) {
-        curr = new VarCount(v, 1);
-        res.add(curr);
+      if (curr == null) {
+        curr = v;
+        currCount = 1;
+      } else if (!v.equals(curr)) {
+        res.add(new VarCount(curr, currCount));
+        curr = v;
+        currCount = 1;
       } else {
-        curr.count++;
+        currCount++;
       }
     }
+    if (curr != null && currCount != 0) {
+      res.add(new VarCount(curr, currCount));
+    }
+      
     return res;
   }
 

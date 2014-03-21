@@ -22,6 +22,7 @@ import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.VarCount;
 import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.aliases.AliasKey;
@@ -33,7 +34,6 @@ import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICContinuations.Loop;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.LoopBreak;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.CleanupAction;
@@ -41,7 +41,6 @@ import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.Statement;
 import exm.stc.ic.tree.ICTree.StatementType;
-import exm.stc.ic.tree.Opcode;
 import exm.stc.ic.tree.TurbineOp.RefCountOp;
 import exm.stc.ic.tree.TurbineOp.RefCountOp.RCDir;
 
@@ -288,7 +287,7 @@ public class RefcountPass implements OptimizerPass {
       switch (stmt.type()) {
         case INSTRUCTION:
           Instruction inst = stmt.instruction();
-          updateCountsInstruction(inst, increments);
+          updateCountsInst(inst, increments);
           increments.updateForInstruction(inst);
           break;
         case CONDITIONAL:
@@ -385,60 +384,45 @@ public class RefcountPass implements OptimizerPass {
     }
   }
 
-  private void updateCountsInstruction(Instruction inst, RCTracker increments) {
-    Pair<List<Var>, List<Var>> refIncrs = inst.inRefCounts(functionMap);
-    List<Var> readIncrVars = refIncrs.val1;
-    List<Var> writeIncrVars = refIncrs.val2;
+  /**
+   * Update reference count counters based on refcounts consumed and
+   * returned by instructions
+   * @param inst
+   * @param increments
+   */
+  private void updateCountsInst(Instruction inst, RCTracker increments) {
+    Pair<List<VarCount>, List<VarCount>> inRefs;
+    inRefs = inst.inRefCounts(functionMap);
+    
+    List<VarCount> inReadRefs = inRefs.val1;
+    List<VarCount> inWriteRefs = inRefs.val2;
 
-    for (Var v: readIncrVars) {
-      increments.readIncr(v);
+    for (VarCount vc: inReadRefs) {
+      increments.readIncr(vc.var, vc.count);
     }
-    for (Var v: writeIncrVars) {
-      increments.writeIncr(v);
+    for (VarCount vc: inWriteRefs) {
+      increments.writeIncr(vc.var, vc.count);
+    }
+
+    
+    Pair<List<VarCount>, List<VarCount>> outRefs;
+    outRefs = inst.outRefCounts(functionMap);
+    
+    List<VarCount> outReadRefs = outRefs.val1;
+    List<VarCount> outWriteRefs = outRefs.val2;
+    
+    for (VarCount vc: outReadRefs) {
+      increments.readDecr(vc.var, vc.count);
+    }
+    
+    for (VarCount vc: outWriteRefs) {
+      increments.writeDecr(vc.var, vc.count);
     }
 
     if (logger.isTraceEnabled()) {
-      logger.trace("At " + inst + " readIncr: " + readIncrVars +
-          " writeIncr: " + writeIncrVars);
-    }
-    
-    // TODO: move these to getRefDecrs() in instruction
-    if (inst.op == Opcode.COPY_REF) {
-      // Hack to handle COPY_REF
-      // We incremented refcounts for orig. var, now need to decrement
-      // refcount on alias vars
-      Var newAlias = inst.getOutput(0);
-      increments.readDecr(newAlias);
-      increments.writeDecr(newAlias);
-    } else if (inst.op == Opcode.LOAD_REF) {
-      // Hack to handle fact that the load_ref will increment
-      // reference count of referand
-      Var v = inst.getOutput(0);
-      long readRefs = inst.getInput(1).getIntLit();
-      long writeRefs = inst.getInput(2).getIntLit();
-      increments.readDecr(v, readRefs);
-      increments.writeDecr(v, writeRefs);
-    } else if (inst.op == Opcode.LOOP_BREAK) {
-      // Special case: decrement all variables passed into loop from outside
-      LoopBreak loopBreak = (LoopBreak) inst;
-      for (Var ko: loopBreak.getKeepOpenVars()) {
-        assert (RefCounting.trackWriteRefCount(ko));
-        increments.writeDecr(ko);
-      }
-      for (PassedVar pass: loopBreak.getLoopUsedVars()) {
-        if (!pass.writeOnly) {
-          increments.readDecr(pass.var);
-        }
-      }
-    } else {
-      Pair<List<Var>, List<Var>> outRefs = inst.outRefCounts(functionMap);
-      for (Var outReadRef: outRefs.val1) {
-        increments.readDecr(outReadRef);
-      }
-      
-      for (Var outWriteRef: outRefs.val2) {
-        increments.writeDecr(outWriteRef);
-      }
+      logger.trace("At " + inst + 
+          " inReadRefs: " + inReadRefs + " inWriteRefs: " + inWriteRefs + 
+          " outReadRefs: " + outReadRefs + " outWriteRefs: " + outWriteRefs);
     }
   }
 

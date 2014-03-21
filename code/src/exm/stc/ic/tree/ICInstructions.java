@@ -44,6 +44,7 @@ import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.VarCount;
 import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
@@ -458,21 +459,23 @@ public class ICInstructions {
     }
     
     public abstract Instruction clone();
-
+    
     /**
      * @return vars with refcounts to be incremented: (read, write)
+     *         NOTE: can include repeats
      */
-    public Pair<List<Var>, List<Var>> inRefCounts(
+    public Pair<List<VarCount>, List<VarCount>> inRefCounts(
         Map<String, Function> functions) {
-      return Pair.create(Var.NONE, Var.NONE);
+      return Pair.create(VarCount.NONE, VarCount.NONE);
     }
 
     /**
      * @return vars with refcounts to be incremented: (read, write)
+     *         NOTE: can include repeats
      */
-    public Pair<List<Var>, List<Var>> outRefCounts(
+    public Pair<List<VarCount>, List<VarCount>> outRefCounts(
                         Map<String, Function> functions) {
-      return Pair.create(Var.NONE, Var.NONE);
+      return Pair.create(VarCount.NONE, VarCount.NONE);
     }
     
     /**
@@ -997,31 +1000,32 @@ public class ICInstructions {
     }
 
     @Override
-    public Pair<List<Var>, List<Var>> inRefCounts(Map<String, Function> functions) {
+    public Pair<List<VarCount>, List<VarCount>> inRefCounts(
+                            Map<String, Function> functions) {
       switch (op) { 
         case CALL_FOREIGN:
         case CALL_FOREIGN_LOCAL:
         case CALL_CONTROL:
         case CALL_LOCAL:
         case CALL_LOCAL_CONTROL: {
-          List<Var> readIncr = new ArrayList<Var>();
-          List<Var> writeIncr = new ArrayList<Var>();
+          List<VarCount> readIncr = new ArrayList<VarCount>();
+          List<VarCount> writeIncr = new ArrayList<VarCount>();
           for (Arg inArg: inputs) {
             if (inArg.isVar()) {
               Var inVar = inArg.getVar();
               if (RefCounting.trackReadRefCount(inVar)) {
-                readIncr.add(inVar);
+                readIncr.add(VarCount.one(inVar));
               }
               if (Types.isScalarUpdateable(inVar) &&
                   treatUpdInputsAsOutputs()) {
-                writeIncr.add(inVar);
+                writeIncr.add(VarCount.one(inVar));
               }
             }
           }
           for (int i = 0; i < outputs.size(); i++) {
             Var outVar = outputs.get(i);
             if (RefCounting.trackWriteRefCount(outVar)) {
-              writeIncr.add(outVar);
+              writeIncr.add(VarCount.one(outVar));
             }
             boolean readRC = false;
             if (op != Opcode.CALL_FOREIGN &&
@@ -1035,14 +1039,14 @@ public class ICInstructions {
               }
             }
             if (readRC && RefCounting.trackReadRefCount(outVar)) {
-              readIncr.add(outVar);
+              readIncr.add(VarCount.one(outVar));
             }
           }
           return Pair.create(readIncr, writeIncr);
         }
         case CALL_SYNC:
           // Sync calls must acquire their own references
-          return Pair.create(Var.NONE, Var.NONE);
+          return Pair.create(VarCount.NONE, VarCount.NONE);
         default:
           throw new STCRuntimeError("Unexpected function type: " + op);
       }
@@ -1750,12 +1754,16 @@ public class ICInstructions {
     }
 
     @Override
-    public Pair<List<Var>, List<Var>> inRefCounts(
+    public Pair<List<VarCount>, List<VarCount>> inRefCounts(
         Map<String, Function> functions) {
+      List<VarCount> writeRefs = new ArrayList<VarCount>();
+      for (Arg loopVar: newLoopVars) {
+        if (loopVar.isVar()) {
+          writeRefs.add(VarCount.one(loopVar.getVar()));
+        }
+      }
       // Increment variables passed to next iter
-      return Pair.create(
-          Collections.unmodifiableList(ICUtil.extractVars(newLoopVars)),
-          Var.NONE);
+      return Pair.create(writeRefs, VarCount.NONE);
     }
 
     @Override
@@ -1893,6 +1901,26 @@ public class ICInstructions {
     public List<ValLoc> getResults() {
       // nothing
       return null;
+    }
+    
+
+    @Override
+    public Pair<List<VarCount>, List<VarCount>> outRefCounts(
+                   Map<String, Function> functions) {
+      // Decrement all variables passed into loop from outside
+      // NOTE: include multiple copies of vars
+      List<VarCount> readOut = new ArrayList<VarCount>();
+      List<VarCount> writeOut = new ArrayList<VarCount>();
+      for (Var ko: this.getKeepOpenVars()) {
+        assert (RefCounting.trackWriteRefCount(ko));
+        writeOut.add(VarCount.one(ko));
+      }
+      for (PassedVar pass: this.getLoopUsedVars()) {
+        if (!pass.writeOnly) {
+          readOut.add(VarCount.one(pass.var));
+        }
+      }
+      return Pair.create(readOut, writeOut);
     }
 
     @Override
@@ -2250,18 +2278,18 @@ public class ICInstructions {
 
 
     @Override
-    public Pair<List<Var>, List<Var>> inRefCounts(
+    public Pair<List<VarCount>, List<VarCount>> inRefCounts(
                    Map<String, Function> functions) {
       if (op == Opcode.ASYNC_OP) {
-        List<Var> readRCs = new ArrayList<Var>(inputs.size());
+        List<VarCount> readRCs = new ArrayList<VarCount>(inputs.size());
         for (Arg in: inputs) {
           if (RefCounting.trackReadRefCount(in.getVar())) {
-            readRCs.add(in.getVar());
+            readRCs.add(VarCount.one(in.getVar()));
           }
         }
-        return Pair.create(readRCs, Var.NONE);
+        return Pair.create(readRCs, VarCount.NONE);
       }
-      return Pair.create(Var.NONE, Var.NONE);
+      return Pair.create(VarCount.NONE, VarCount.NONE);
     }
 
 
