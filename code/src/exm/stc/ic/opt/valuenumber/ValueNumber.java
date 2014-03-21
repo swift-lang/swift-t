@@ -126,7 +126,7 @@ public class ValueNumber implements OptimizerPass {
 
   @Override
   public String getPassName() {
-    return "Forward dataflow";
+    return "Value numbering";
   }
 
   @Override
