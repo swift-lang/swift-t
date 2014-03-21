@@ -43,6 +43,7 @@ import exm.stc.common.lang.Types.ScalarFutureType;
 import exm.stc.common.lang.Types.ScalarUpdateableType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Types.Typed;
 import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.MultiMap;
@@ -780,11 +781,11 @@ public class TypeChecker {
     List<Type> resultAlts = new ArrayList<Type>();
     for (Type arrAlt: UnionType.getAlternatives(arrType)) {
       if (Types.isArray(arrAlt) || Types.isArrayRef(arrAlt)) {
-        Type memberType = Types.containerElemType(arrAlt);
+        Type memberType = containerElemType(arrAlt, false);
   
         // Depending on the member type of the array, the result type might be
         // the actual member type, or a reference to the member type
-        Type resultAlt = VarRepr.containerElemRepr(memberType);
+        Type resultAlt = VarRepr.containerElemRepr(memberType, false);
         resultAlts.add(resultAlt);
       } else {
         throw new TypeMismatchException(context,
@@ -818,7 +819,7 @@ public class TypeChecker {
       return new ExprType(fieldType);
     } else { assert(Types.isStructRef(structType));
       // Will get copy
-      return new ExprType(VarRepr.containerElemRepr(fieldType));
+      return new ExprType(VarRepr.containerElemRepr(fieldType, false));
     }
   }
   
@@ -913,5 +914,25 @@ public class TypeChecker {
       }
     }
     return possible;
+  }
+  
+
+  /**
+   * Get container elem type, modifying const/mutable status as
+   * appropriate
+   * @param typed
+   * @param mutable
+   * @return
+   */
+  public static Type containerElemType(Typed typed, boolean mutable) {
+    Type result = Types.containerElemType(typed);
+    if (!mutable && Types.isMutableRef(result)) {
+      // Should be read-only ref
+      result = new RefType(result.memberType(), false);
+    } else if (mutable && Types.isConstRef(result)) {
+      throw new STCRuntimeError("Wanted mutable field, got " + result);
+    }
+    
+    return result;
   }
 }

@@ -353,7 +353,8 @@ public class LValWalker {
     // E.g. if we store ints inline in container, storage type is int,
     //      and we can store directly if we have a $int, or copy if we have
     //      an int rval
-    Type elemStorageType = VarRepr.containerElemRepr(Types.containerElemType(arr));
+    Type elemStorageType = VarRepr.containerElemRepr(
+                    Types.containerElemType(arr), true);
     boolean rValDeref = !rValVar.type().assignableTo(elemStorageType);
     if (rValDeref) {
       assert(rValVar.type().assignableTo(

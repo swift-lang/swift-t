@@ -671,7 +671,9 @@ public class  ExprWalker {
     }
 
     Var backendArray = VarRepr.backendVar(arrayVar);
-    Type backendElemType = Types.containerElemType(backendArray);
+    Type backendElemType =
+        TypeChecker.containerElemType(backendArray, false);
+    
     Var backendOVar = VarRepr.backendVar(oVar);
     
     // The direct output of the array op
@@ -685,8 +687,9 @@ public class  ExprWalker {
       assert(Types.isRefTo(backendElemType, backendOVar)) :
             backendElemType + " => " + backendOVar;
       // Need to dereference into temporary var
+      Type readOnlyElemType = TypeChecker.containerElemType(arrayVar, false);
       copyDst = varCreator.createTmp(context,
-              new RefType(Types.containerElemType(arrayVar), false));
+              new RefType(readOnlyElemType, false));
       mustDereference = true;
     }
     
@@ -725,7 +728,7 @@ public class  ExprWalker {
     for (Type altType: UnionType.getAlternatives(arrExprType)) {
       assert(Types.isArray(altType) || Types.isArrayRef(altType));
       Type lookupRes = VarRepr.containerElemRepr(
-                                Types.containerElemType(altType));
+                                Types.containerElemType(altType), false);
       if (lookupRes.equals(oVar.type())) {
         return altType;
       }

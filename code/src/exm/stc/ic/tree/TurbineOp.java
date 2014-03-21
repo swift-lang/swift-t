@@ -442,7 +442,7 @@ public class TurbineOp extends Instruction {
     assert(Types.isArray(arrayVar));
     assert(Types.isArrayKeyVal(arrayVar, arrIx));
     assert(Types.isElemType(arrayVar, dst)) : arrayVar + " " + dst;
-    assert(!Types.isMutableRef(dst)); // Doesn't acquire write ref
+    assert(!Types.isMutableRef(dst)) : dst; // Doesn't acquire write ref
     return new TurbineOp(Opcode.ARR_COPY_OUT_IMM,
         dst, arrayVar.asArg(), arrIx);
   }

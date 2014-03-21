@@ -269,9 +269,10 @@ public class VarRepr {
   }
   
 
-  public static Type elemRepr(Type memberType, CompoundType c) {
+  public static Type elemRepr(Type memberType, CompoundType c,
+                              boolean mutable) {
     if (storeRefInCompound(memberType, c)) {
-      return new RefType(memberType, true);
+      return new RefType(memberType, mutable);
     } else {
       return memberType;
     }
@@ -285,8 +286,8 @@ public class VarRepr {
    *          the type of array members for the array being dereferenced
    * @return
    */
-  public static Type containerElemRepr(Type memberType) {
-    return elemRepr(memberType, CompoundType.CONTAINER);
+  public static Type containerElemRepr(Type memberType, boolean mutable) {
+    return elemRepr(memberType, CompoundType.CONTAINER, mutable);
   }
   
   /**
@@ -296,7 +297,8 @@ public class VarRepr {
    * @param memberType the type of struct member
    * @return
    */
-  public static Type structElemRepr(Type memberType) {
-    return elemRepr(memberType, CompoundType.STRUCT);
+  public static Type structElemRepr(Type memberType, boolean mutable) {
+    return elemRepr(memberType, CompoundType.STRUCT, mutable);
   }
+
 }
