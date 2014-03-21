@@ -121,6 +121,10 @@ if [ ! -z "$ZLIB_INSTALL" ]; then
   EXTRA_ARGS+=" --with-zlib=$ZLIB_INSTALL"
 fi
 
+if (( ENABLE_MKSTATIC_CRC )); then
+  EXTRA_ARGS+=" --enable-mkstatic-crc-check"
+fi
+
 if (( CONFIGURE )); then
   ./configure --with-adlb=${LB_INSTALL} \
               ${CRAY_ARGS} \

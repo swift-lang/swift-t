@@ -138,3 +138,8 @@ C_UTILS_INSTALL=${EXM_PREFIX}/c-utils
 TURBINE_INSTALL=${EXM_PREFIX}/turbine
 STC_INSTALL=${EXM_PREFIX}/stc
 
+#+======================================+
+#|| Developer options (debugging, etc) ||
+#+======================================+
+# Verify integrity of bundled data
+# ENABLE_MKSTATIC_CRC=1
