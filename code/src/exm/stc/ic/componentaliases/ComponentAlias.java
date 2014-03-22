@@ -64,8 +64,7 @@ public class ComponentAlias {
    * @return
    */
   public static ComponentAlias ref(Var var, Var ref) {
-    // Only one field so can use wildcard
-    return new ComponentAlias(ref, Collections.<Arg>singletonList(null), var);
+    return new ComponentAlias(ref, Collections.<Arg>singletonList(DEREF), var);
   }
 
   public static List<Arg> deref(List<Arg> key) {
