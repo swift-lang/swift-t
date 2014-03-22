@@ -108,6 +108,21 @@ public class ComponentGraph {
     return node;
   }
 
+  /**
+   * Add edge, avoiding duplicates
+   * @param parents2
+   * @param child
+   * @param edge
+   */
+  private void addEdge(MultiMap<Node, Edge> edgeLists, Node src, Edge edge) {
+    // NOTE: this potentially requires linear search, but in practice lists should
+    // generally be quite short
+    List<Edge> edges = edgeLists.get(src);
+    if (!edges.contains(edge)) {
+      edgeLists.put(src, edge);
+    }
+  }
+
   public void addPotentialComponent(ComponentAlias componentAlias) {
     if (componentAlias.key.isEmpty()) {
       addPotentialDirectAlias(componentAlias.part, componentAlias.whole);
@@ -150,9 +165,8 @@ public class ComponentGraph {
         child = getAnonNode(curr, keyElem);
       }
       
-      children.put(curr, new Edge(child, keyElem));
-      parents.put(child, new Edge(curr, keyElem));
-      logger.trace(child + "[" + keyToString(keyElem) + "]" + curr);
+      addEdge(children, curr, new Edge(child, keyElem));
+      addEdge(parents, child, new Edge(curr, keyElem));
       curr = child;
     }
   }
