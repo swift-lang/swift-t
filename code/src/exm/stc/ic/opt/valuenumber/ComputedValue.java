@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.List;
 
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Types;
@@ -392,7 +393,19 @@ public class ComputedValue<T> {
    */
   public static ArgCV structFieldValCV(Var struct, List<Arg> fieldNames) {
     List<Arg> inputs = structFieldInputs(struct, fieldNames);
-    return new ArgCV(Opcode.STRUCT_RETRIEVE_SUB, inputs);
+    
+    Typed fieldType;
+    try {
+      fieldType = Types.structFieldType(struct,
+                      Arg.extractStrings(fieldNames));
+    } catch (TypeMismatchException e) {
+      throw new STCRuntimeError(e.getMessage());
+    }
+    if (Types.isRef(fieldType)) {
+      return new ArgCV(Opcode.FAKE, STRUCT_FIELD_VALUE_REF,  inputs);
+    } else {
+      return new ArgCV(Opcode.STRUCT_RETRIEVE_SUB, inputs);
+    }
   }
 
   /**
@@ -417,6 +430,15 @@ public class ComputedValue<T> {
   
   public boolean isStructFieldCopy() {
     return op == Opcode.STRUCT_CREATE_ALIAS;
+  }
+  
+  /**
+   * If it represents an array member that is a reference to something
+   * @return
+   */
+  public boolean isStructFieldValRef() {
+    return (op == Opcode.FAKE &&
+                         subop.equals(ComputedValue.STRUCT_FIELD_VALUE_REF));
   }
   
   public boolean canSubstituteInputs(CongruenceType congType) {
@@ -486,6 +508,8 @@ public class ComputedValue<T> {
       return CongruenceType.ALIAS;
     } else if (isStructFieldAlias()) { 
       return CongruenceType.ALIAS;
+    } else if (isStructFieldValRef()) {
+      return CongruenceType.ALIAS;
     }
     // Assume value equivalence unless otherwise known
     return CongruenceType.VALUE;
@@ -502,6 +526,8 @@ public class ComputedValue<T> {
    * Value of array element when reference to something else
    */
   public static final String ARRAY_ELEM_VALUE_REF = "array_elem_value_ref";
+  
+  public static final String STRUCT_FIELD_VALUE_REF = "struct_field_value_ref";
   
   public static final String ARRAY_NESTED = "autocreated_nested";
   public static final String ARRAY_NESTED_REF = "autocreated_nested_ref";
