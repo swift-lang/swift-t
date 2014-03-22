@@ -20,7 +20,6 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Stack;
 
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
@@ -60,6 +59,7 @@ import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.StackLite;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.frontend.Context.FnProp;
 import exm.stc.frontend.VariableUsageInfo.VInfo;
@@ -1504,12 +1504,12 @@ public class  ExprWalker {
       Var root, VInfo structVInfo, List<Pair<Var, VInfo>> arrays)
           throws UndefinedTypeException, UserException {
     findArraysInStructToClose(context, root, structVInfo,
-                              new Stack<String>(), arrays);
+                              new StackLite<String>(), arrays);
   }
 
   private void findArraysInStructToClose(Context context,
       Var struct, VInfo structVInfo,
-      Stack<String> fieldPath, List<Pair<Var, VInfo>> arrays) throws UndefinedTypeException,
+      StackLite<String> fieldPath, List<Pair<Var, VInfo>> arrays) throws UndefinedTypeException,
                                                                       UserException {
     assert(structVInfo != null);
     StructType vtype = (StructType)struct.type();

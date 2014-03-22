@@ -15,7 +15,7 @@ public class StackLite<T> extends ArrayList<T> {
   }
   
   public T pop() {
-    this.remove(this.size() - 1)
+    return this.remove(this.size() - 1);
   }
 
   public T peek() {
