@@ -16,17 +16,12 @@ public class ComponentAlias {
   /**
    * Mark "value of reference"
    */
-  public static final Arg DEREF = null;
+  public static final Arg DEREF = Arg.createStringLit("*");
   
   /**
    * Enclosing object
    */
   public final Var whole;
-  
-  /**
-   * Component
-   */
-  public final Var part;
   
   /**
    * Relationship from whole to part, e.g. struct field name, or array key.
@@ -37,14 +32,19 @@ public class ComponentAlias {
    */
   public final List<Arg> key;
   
-  public ComponentAlias(Var part, Var whole, List<Arg> key) {
+  /**
+   * Component
+   */
+  public final Var part;
+  
+  public ComponentAlias(Var whole, List<Arg> key, Var part) {
     this.whole = whole;
     this.part = part;
     this.key = key;
   }
   
-  public ComponentAlias(Var part, Var whole, Arg key) {
-    this(part, whole, key.asList());
+  public ComponentAlias(Var whole, Arg key, Var part) {
+    this(whole, key.asList(), part);
   }
   
   /**
@@ -54,7 +54,7 @@ public class ComponentAlias {
    * @return
    */
   public static ComponentAlias directAlias(Var var1, Var var2) {
-    return new ComponentAlias(var1, var2, Arg.NONE);
+    return new ComponentAlias(var2, Arg.NONE, var1);
   }
 
   /**
@@ -65,7 +65,7 @@ public class ComponentAlias {
    */
   public static ComponentAlias ref(Var var, Var ref) {
     // Only one field so can use wildcard
-    return new ComponentAlias(var, ref, Collections.<Arg>singletonList(null));
+    return new ComponentAlias(ref, Collections.<Arg>singletonList(null), var);
   }
 
   public static List<Arg> deref(List<Arg> key) {

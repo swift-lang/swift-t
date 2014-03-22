@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -15,6 +16,7 @@ import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.StackLite;
+import exm.stc.ic.ICUtil;
 
 /**
  * Graph that can track component relationships between different variables 
@@ -30,6 +32,7 @@ import exm.stc.common.util.StackLite;
  *   
  * Model:
  * - We represent relationship as DAG with all potential edges.
+ * - Nodes may correspond to a var, or be an anonymous location
  * - Multiple edges with different labels  are possible between two nodes
  * - Roots of DAG are variable that is not part of anything
  *      A ----
@@ -46,13 +49,29 @@ import exm.stc.common.util.StackLite;
 public class ComponentGraph {
   Logger logger = Logging.getSTCLogger();
   
+  /**
+   * Allocate node IDs in sequential order
+   */
+  private int nextNodeID;
+  
+  /**
+   * Track existing nodes
+   */
   private final Map<Var, Node> varNodes;
+  
+  /**
+   * Track existing anonymous nodes, identified by (parent, field)
+   */
+  private final Map<Pair<Node, Arg>, Node> anonNodes;
+  
   private final MultiMap<Node, Edge> parents;
   private final MultiMap<Node, Edge> children;
   private final MultiMap<Node, Node> aliases;
   
   public ComponentGraph() {
+    this.nextNodeID = 0;
     this.varNodes = new HashMap<Var, Node>();
+    this.anonNodes = new HashMap<Pair<Node, Arg>, Node>();
     this.parents = new MultiMap<Node, Edge>();
     this.children = new MultiMap<Node, Edge>();
     this.aliases = new MultiMap<Node, Node>();
@@ -66,36 +85,56 @@ public class ComponentGraph {
   private Node getVarNode(Var var) {
     Node node = varNodes.get(var);
     if (node == null) {
-      node = new Node(var);
+      node = new Node(var, nextNodeID++);
       varNodes.put(var, node);
     }
     return node;
   }
   
+  /**
+   * Get anonymous node for field of variable
+   * @param parent
+   * @param key
+   * @return
+   */
+  private Node getAnonNode(Node parent, Arg key) {
+    // Try to avoid creating duplicates
+    Pair<Node, Arg> anonKey = Pair.create(parent, key);
+    Node node = anonNodes.get(anonKey);
+    if (node == null) {
+      node = Node.anonymous(nextNodeID++);
+      anonNodes.put(anonKey, node);
+    }
+    return node;
+  }
+
   public void addPotentialComponent(ComponentAlias componentAlias) {
     if (componentAlias.key.isEmpty()) {
       addPotentialDirectAlias(componentAlias.part, componentAlias.whole);
     } else {
-      addPotentialComponent(componentAlias.part, componentAlias.whole,
-                            componentAlias.key);
+      addPotentialComponent(componentAlias.whole, componentAlias.key,
+                            componentAlias.part);
     }
   }
 
   /**
    * Add a (potential) component relationship
-   * @param part
    * @param whole enclosing structure
    * @param key relation from whole to part
+   * @param part
    */
-  public void addPotentialComponent(Var part, Var whole, List<Arg> key) {
+  public void addPotentialComponent(Var whole, List<Arg> key, Var part) {
     assert(!key.isEmpty());
     
     Node wholeNode = getVarNode(whole);
     Node partNode = getVarNode(part);
     
-    
-    // Add chain of keys with any needed intermediate nodes
-    Node curr = partNode;
+    if (logger.isTraceEnabled()) {
+      logger.trace("Component: " + whole + "[" + keyToString(key) + "] = "
+                 + part);
+    }
+    // Add chain of keys from whole to part with any needed intermediate nodes
+    Node curr = wholeNode;
     for (int i = 0; i < key.size(); i++) {
       Arg keyElem = key.get(i);
       if (keyElem != null && !keyElem.isConstant()) {
@@ -104,15 +143,17 @@ public class ComponentGraph {
       }
       assert(keyElem == null || keyElem.isConstant());
       
-      Node parent;
+      Node child;
       if (i == key.size() - 1) {
-        parent = wholeNode;
+        child = partNode;
       } else {
-        parent = Node.anonymous();
+        child = getAnonNode(curr, keyElem);
       }
       
-      parents.put(curr, new Edge(parent, keyElem));
-      children.put(parent, new Edge(curr, keyElem));
+      children.put(curr, new Edge(child, keyElem));
+      parents.put(child, new Edge(curr, keyElem));
+      logger.trace(child + "[" + keyToString(keyElem) + "]" + curr);
+      curr = child;
     }
   }
   
@@ -230,24 +271,86 @@ public class ComponentGraph {
     }
   }
   
+  private static String keyToString(List<Arg> key) {
+    boolean first = true;
+    StringBuilder sb = new StringBuilder();
+    for (Arg k: key) {
+      if (first) {
+        first = false;
+      } else {
+        sb.append(".");
+      }
+      sb.append(keyToString(k));
+    }
+    return sb.toString();
+  }
+
+  private static String keyToString(Arg k) {
+    if (k == null) {
+      return "?"; // Wildcard
+    } else {
+      return k.toString();
+    }
+  }
+
   @Override
   public String toString() {
-    return "<parents: " + parents + " children: " + children +
+    return "<parents:\n" + edgeListsToString(parents, "  ") + "\n" + 
+            "children:\n" + edgeListsToString(children, "  ") + "\n" +
            " aliases: " + aliases + ">";
   }
   
+  private String edgeListsToString(MultiMap<Node, Edge> graph,
+                                   String indent) {
+    StringBuilder sb = new StringBuilder();
+    for (Entry<Node, List<Edge>> node: graph.entrySet()) {
+      sb.append(indent);
+      sb.append(node.getKey());
+      sb.append(" => ");
+      sb.append("[");
+      ICUtil.prettyPrintList(sb, node.getValue());
+      sb.append("]");
+      sb.append("\n");
+    }
+    
+    return sb.toString();
+  }
+
   /**
-   * Graph node.  Compared by object identity
+   * Graph node.  Compared by id number identity
    */
   private static class Node {
     final Var var; // Variable, if variable associated with node
+    public int id; // Unique ID for node, used for equality
 
-    public Node(Var var) {
+    private Node(Var var, int id) {
       this.var = var;
+      this.id = id;
     }
-
-    public static Node anonymous() {
-      return new Node(null);
+    
+    public static Node anonymous(int id) {
+      return new Node(null, id);
+    }
+    
+    @Override
+    public int hashCode() {
+      return id;
+    }
+    
+    @Override
+    public boolean equals(Object other) {
+      assert(other instanceof Node);
+      // Compare only on id;
+      return this.id == ((Node)other).id; 
+    }
+    
+    @Override
+    public String toString() {
+      if (var == null) {
+        return Integer.toString(id);
+      } else {
+        return var.name();
+      }
     }
   }
     
@@ -289,6 +392,10 @@ public class ComponentGraph {
         return false;
       return true;
     }
+    
+    @Override
+    public String toString() {
+      return "(" + keyToString(label) + ", " + dst + ")"; 
+    }
   }
-  
 }

@@ -3216,18 +3216,18 @@ public class TurbineOp extends Instruction {
       case ARR_CREATE_NESTED_IMM:
       case ARRAY_CREATE_BAG:
         // From inner object to immediately enclosing
-        return new ComponentAlias(getOutput(0), getOutput(1), 
-                   ComponentAlias.deref(getInput(0).asList())).asList();
+        return new ComponentAlias(getOutput(1), ComponentAlias.deref(getInput(0).asList()), 
+                   getOutput(0)).asList();
       case ARR_CREATE_NESTED_FUTURE: {
         // From inner array to immediately enclosing
-        return new ComponentAlias(getOutput(0), getOutput(1),
-                                  getInput(0).asList()).asList();
+        return new ComponentAlias(getOutput(1), getInput(0).asList(),
+                                  getOutput(0)).asList();
       }
       case AREF_CREATE_NESTED_IMM:
       case AREF_CREATE_NESTED_FUTURE: {
         List<Arg> key = Arrays.asList(ComponentAlias.DEREF, getInput(0));
         // From inner array to immediately enclosing
-        return new ComponentAlias(getOutput(0), getOutput(1), key).asList();
+        return new ComponentAlias(getOutput(1), key, getOutput(0)).asList();
       }
       case AREF_STORE_FUTURE:
       case AREF_STORE_IMM:
@@ -3245,7 +3245,7 @@ public class TurbineOp extends Instruction {
             key = Arrays.asList(ix, ComponentAlias.DEREF);
           }
           
-          return new ComponentAlias(getInput(1).getVar(), arr, key).asList();
+          return new ComponentAlias(arr, key, getInput(1).getVar()).asList();
         }
         break;
       }
@@ -3265,7 +3265,7 @@ public class TurbineOp extends Instruction {
             key = ix.asList();
           }
           
-          return new ComponentAlias(getInput(1).getVar(), arr, key).asList();
+          return new ComponentAlias(arr, key, getInput(1).getVar()).asList();
         }
         break;
       }
@@ -3284,7 +3284,7 @@ public class TurbineOp extends Instruction {
           } else {
             key = ix.asList();
           }
-          return new ComponentAlias(getOutput(0), arr, key).asList();
+          return new ComponentAlias(arr, key, getOutput(0)).asList();
         }
         break;
       }
@@ -3311,8 +3311,8 @@ public class TurbineOp extends Instruction {
           Arg fieldVal = fieldVals.val.get(i);
           if (fieldVal.isVar()) {
             if (Alias.fieldIsRef(struct, Arg.extractStrings(fieldPath))) {
-              aliases.add(new ComponentAlias(fieldVal.getVar(), struct,
-                                    ComponentAlias.deref(fieldPath)));
+              aliases.add(new ComponentAlias(struct, ComponentAlias.deref(fieldPath),
+                                    fieldVal.getVar()));
             }
           }
         }
@@ -3321,8 +3321,8 @@ public class TurbineOp extends Instruction {
       case STRUCT_CREATE_ALIAS: {
         // Output is alias for part of struct
         List<Arg> fields = getInputsTail(1);
-        return new ComponentAlias(getOutput(0), getInput(0).getVar(),
-                                  fields).asList();
+        return new ComponentAlias(getInput(0).getVar(), fields,
+                                  getOutput(0)).asList();
       }
       case STRUCTREF_STORE_SUB:
       case STRUCT_STORE_SUB:
@@ -3334,16 +3334,16 @@ public class TurbineOp extends Instruction {
             fields = new ArrayList<Arg>(fields);
             fields.add(0, ComponentAlias.DEREF);
           }
-          return new ComponentAlias(getInput(0).getVar(), getOutput(0),
-                                ComponentAlias.deref(fields)).asList();
+          return new ComponentAlias(getOutput(0), ComponentAlias.deref(fields),
+                                getInput(0).getVar()).asList();
         }
         break;
       case STRUCT_RETRIEVE_SUB:
         if (Alias.fieldIsRef(getInput(0).getVar(),
                              Arg.extractStrings(getInputsTail(1)))) {
           List<Arg> fields = getInputsTail(1);
-          return new ComponentAlias(getOutput(0), getInput(0).getVar(),
-                                ComponentAlias.deref(fields)).asList();
+          return new ComponentAlias(getInput(0).getVar(), ComponentAlias.deref(fields),
+                                getOutput(0)).asList();
         }
         break;
       case STRUCTREF_COPY_IN:
@@ -3356,8 +3356,8 @@ public class TurbineOp extends Instruction {
             fields = new ArrayList<Arg>(fields);
             fields.add(0, ComponentAlias.DEREF);
           }
-          return new ComponentAlias(getInput(0).getVar(),
-                                    getOutput(0), fields).asList();
+          return new ComponentAlias(getOutput(0),
+                                    fields, getInput(0).getVar()).asList();
         }
         break;
       case STRUCTREF_COPY_OUT:
@@ -3365,8 +3365,8 @@ public class TurbineOp extends Instruction {
         if (Alias.fieldIsRef(getInput(0).getVar(),
                              Arg.extractStrings(getInputsTail(1)))) {
           List<Arg> fields = getInputsTail(1);
-          return new ComponentAlias(getOutput(0),
-                  getInput(0).getVar(), fields).asList();
+          return new ComponentAlias(getInput(0).getVar(),
+                  fields, getOutput(0)).asList();
         }
         break;
       default:
