@@ -1,5 +1,6 @@
 package exm.stc.ic.componentaliases;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -25,14 +26,19 @@ public class ComponentAlias {
   
   /**
    * Relationship from whole to part, e.g. struct field name, or array key.
-   * Null if 
+   * List element should be null or variable to represent wildcard.
+   * In order from outer to inner
    */
-  public final Arg key;
-
-  public ComponentAlias(Var part, Var whole, Arg key) {
+  public final List<Arg> key;
+  
+  public ComponentAlias(Var part, Var whole, List<Arg> key) {
     this.whole = whole;
     this.part = part;
     this.key = key;
+  }
+  
+  public ComponentAlias(Var part, Var whole, Arg key) {
+    this(part, whole, key.asList());
   }
   
   /**
@@ -54,7 +60,14 @@ public class ComponentAlias {
    */
   public static ComponentAlias ref(Var var, Var ref) {
     // Only one field so can use wildcard
-    return new ComponentAlias(var, ref, null);
+    return new ComponentAlias(var, ref, Collections.<Arg>singletonList(null));
+  }
+
+  public static List<Arg> deref(List<Arg> key) {
+    List<Arg> result = new ArrayList<Arg>(key.size() + 1);
+    result.addAll(key);
+    result.add(null); // Represent extra dereference
+    return result;
   }
 
   public List<ComponentAlias> asList() {

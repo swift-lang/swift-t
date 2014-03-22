@@ -3212,6 +3212,9 @@ public class TurbineOp extends Instruction {
 
   @Override
   public List<ComponentAlias> getComponentAliases() {
+    // TODO: more accurate handling of array or struct refs?
+    //       we really need to reflect the different between array refs and arrays, etc
+    //       Can we just prefix with an extra wildcard?
     switch (op) {
       case ARR_CREATE_NESTED_IMM:
       case ARR_CREATE_NESTED_FUTURE:
@@ -3225,7 +3228,7 @@ public class TurbineOp extends Instruction {
       case LOAD_REF:
         // If reference was a part of something, modifying the
         // dereferenced object will modify the whole
-        return ComponentAlias.ref((getOutput(0), getInput(0).getVar()).asList();
+        return ComponentAlias.ref(getOutput(0), getInput(0).getVar()).asList();
       case COPY_REF:
         // TODO: way to mark alias
         return ComponentAlias.directAlias(getOutput(0), getInput(0).getVar()).asList();
@@ -3233,22 +3236,22 @@ public class TurbineOp extends Instruction {
         // Sometimes a reference is filled in
         return ComponentAlias.ref(getInput(0).getVar(), getOutput(0)).asList();
       case STRUCT_INIT_FIELDS: {
-        Out<List<List<String>>> fieldPaths = new Out<List<List<String>>>();
+        Out<List<List<Arg>>> fieldPaths = new Out<List<List<Arg>>>();
         Out<List<Arg>> fieldVals = new Out<List<Arg>>();
         List<ComponentAlias> aliases = new ArrayList<ComponentAlias>();
-        unpackStructInitArgs(fieldPaths, null, fieldVals);
+        unpackStructInitArgs(null, fieldPaths, fieldVals);
         assert (fieldPaths.val.size() == fieldVals.val.size());
 
         Var struct = getOutput(0);
         
         for (int i = 0; i < fieldPaths.val.size(); i++) {
-          List<String> fieldPath = fieldPaths.val.get(i);
+          List<Arg> fieldPath = fieldPaths.val.get(i);
           Arg fieldVal = fieldVals.val.get(i);
           if (fieldVal.isVar()) {
-            if (Alias.fieldIsRef(struct, fieldPath)) {
+            if (Alias.fieldIsRef(struct, Arg.extractStrings(fieldPath))) {
               // TODO: translate to multiple nodes
               aliases.add(new ComponentAlias(fieldVal.getVar(), struct,
-                                             Arg.createStringLit(v)));
+                                    ComponentAlias.deref(fieldPath)));
             }
           }
         }
@@ -3258,23 +3261,24 @@ public class TurbineOp extends Instruction {
         // Output is alias for part of struct
         // TODO: multiple fields
         List<Arg> fields = getInputsTail(1);
-        return new ComponentAlias(getOutput(0), getInput(0).getVar()).asList();
+        return new ComponentAlias(getOutput(0), getInput(0).getVar(),
+                                  fields).asList();
       }
       case STRUCTREF_STORE_SUB:
       case STRUCT_STORE_SUB:
         if (Alias.fieldIsRef(getOutput(0),
                              Arg.extractStrings(getInputsTail(1)))) {
           List<Arg> fields = getInputsTail(1);
-          return new ComponentAlias(getInput(0).getVar(),
-                                    getOutput(0)).asList();
+          return new ComponentAlias(getInput(0).getVar(), getOutput(0),
+                                ComponentAlias.deref(fields)).asList();
         }
         break;
       case STRUCT_RETRIEVE_SUB:
         if (Alias.fieldIsRef(getInput(0).getVar(),
                              Arg.extractStrings(getInputsTail(1)))) {
           List<Arg> fields = getInputsTail(1);
-          return new ComponentAlias(getOutput(0),
-                  getInput(0).getVar()).asList();
+          return new ComponentAlias(getOutput(0), getInput(0).getVar(),
+                                ComponentAlias.deref(fields)).asList();
         }
         break;
       case STRUCTREF_COPY_IN:
@@ -3283,7 +3287,7 @@ public class TurbineOp extends Instruction {
                              Arg.extractStrings(getInputsTail(1)))) {
           List<Arg> fields = getInputsTail(1);
           return new ComponentAlias(getInput(0).getVar(),
-                                    getOutput(0)).asList();
+                                    getOutput(0), fields).asList();
         }
         break;
       case STRUCTREF_COPY_OUT:
@@ -3292,7 +3296,7 @@ public class TurbineOp extends Instruction {
                              Arg.extractStrings(getInputsTail(1)))) {
           List<Arg> fields = getInputsTail(1);
           return new ComponentAlias(getOutput(0),
-                  getInput(0).getVar()).asList();
+                  getInput(0).getVar(), fields).asList();
         }
         break;
       default:

@@ -1,10 +1,11 @@
 package exm.stc.ic.componentaliases;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
-import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.HierarchicalSet;
@@ -41,14 +42,30 @@ import exm.stc.common.util.StackLite;
  */
 public class ComponentGraph {
   
-  private final MultiMap<Var, ComponentEdge> parents;
-  private final MultiMap<Var, ComponentEdge> children;
-  private final MultiMap<Var, Var> aliases;
+  private final Map<Var, Node> varNodes;
+  private final MultiMap<Node, Edge> parents;
+  private final MultiMap<Node, Edge> children;
+  private final MultiMap<Node, Node> aliases;
   
   public ComponentGraph() {
-    this.parents = new MultiMap<Var, ComponentEdge>();
-    this.children = new MultiMap<Var, ComponentEdge>();
-    this.aliases = new MultiMap<Var, Var>();
+    this.varNodes = new HashMap<Var, Node>();
+    this.parents = new MultiMap<Node, Edge>();
+    this.children = new MultiMap<Node, Edge>();
+    this.aliases = new MultiMap<Node, Node>();
+  }
+  
+  /**
+   * Get node corresponding to variable
+   * @param var
+   * @return
+   */
+  private Node getVarNode(Var var) {
+    Node node = varNodes.get(var);
+    if (node == null) {
+      node = new Node(var);
+      varNodes.put(var, node);
+    }
+    return node;
   }
   
   public void addPotentialComponent(ComponentAlias componentAlias) {
@@ -62,14 +79,31 @@ public class ComponentGraph {
    * @param whole enclosing structure
    * @param key relation from whole to part
    */
-  public void addPotentialComponent(Var part, Var whole, Arg key) {
-    if (!key.isConstant()) {
-      // Treat all non-constant keys as wildcard
-      key = null;
+  public void addPotentialComponent(Var part, Var whole, List<Arg> key) {
+    Node wholeNode = getVarNode(whole);
+    Node partNode = getVarNode(part);
+    
+    
+    // Add chain of keys with any needed intermediate nodes
+    Node curr = partNode;
+    for (int i = 0; i < key.size(); i++) {
+      Arg keyElem = key.get(i);
+      if (keyElem != null && !keyElem.isConstant()) {
+        // Treat all non-constant keys as wildcard
+        keyElem = null;
+      }
+      assert(keyElem == null || keyElem.isConstant());
+      
+      Node parent;
+      if (i == key.size() - 1) {
+        parent = wholeNode;
+      } else {
+        parent = Node.anonymous();
+      }
+      
+      parents.put(curr, new Edge(parent, keyElem));
+      parents.put(parent, new Edge(curr, keyElem));
     }
-    assert(key == null || key.isConstant());
-    parents.put(part, new ComponentEdge(whole, key));
-    parents.put(whole, new ComponentEdge(part, key));
   }
   
   /**
@@ -79,8 +113,10 @@ public class ComponentGraph {
    */
   public void addPotentialDirectAlias(Var var1, Var var2) {
     assert(!var1.equals(var2));
-    aliases.put(var1, var2);
-    aliases.put(var2, var1);
+    Node node1 = getVarNode(var1);
+    Node node2 = getVarNode(var2);
+    aliases.put(node1, node2);
+    aliases.put(node2, node1);
   }
   
   /**
@@ -95,8 +131,11 @@ public class ComponentGraph {
   }
   
   public void findPotentialAliases(Var var, Set<Var> results) {
-    walkUpRec(var, results, new StackLite<Pair<Var, Arg>>(),
-            new HierarchicalSet<Pair<Var, Integer>>());
+    Node node = varNodes.get(var);
+    if (node != null) { 
+      walkUpRec(node, results, new StackLite<Pair<Node, Arg>>(),
+              new HierarchicalSet<Pair<Node, Integer>>());
+    }
   }
   
   /**
@@ -107,20 +146,19 @@ public class ComponentGraph {
    * @param visited a set of (var, height) tuples we already visited on this
    *                 upward trip
    */
-  private void walkUpRec(Var node, Set<Var> results, StackLite<Pair<Var, Arg>> pathUp,
-      HierarchicalSet<Pair<Var, Integer>> visited) {
+  private void walkUpRec(Node node, Set<Var> results, StackLite<Pair<Node, Arg>> pathUp,
+      HierarchicalSet<Pair<Node, Integer>> visited) {
     if (!pathUp.isEmpty()) {
       // Note: add all visited nodes from this root down
       walkDownRec(node, pathUp, results, visited);
     }
     
-    
     // Explore all possible routes to roots
-    List<ComponentEdge> parentEdges = parents.get(node);
-    for (ComponentEdge parent: parentEdges) {
+    List<Edge> parentEdges = parents.get(node);
+    for (Edge parent: parentEdges) {
       pathUp.push(Pair.create(node, parent.label));
       
-      HierarchicalSet<Pair<Var, Integer>> visitedParent;
+      HierarchicalSet<Pair<Node, Integer>> visitedParent;
       if (parentEdges.size() > 1) {
         // Use map scoping to automatically invalidate alternate paths
         visitedParent = visited.makeChild();
@@ -134,19 +172,22 @@ public class ComponentGraph {
 
   }
 
-  private void walkDownRec(Var node, StackLite<Pair<Var, Arg>> pathUp,
-      Set<Var> results, HierarchicalSet<Pair<Var, Integer>> visited) {
-    Pair<Var, Integer> visitedKey = Pair.create(node, pathUp.size());
+  private void walkDownRec(Node node, StackLite<Pair<Node, Arg>> pathUp,
+      Set<Var> results, HierarchicalSet<Pair<Node, Integer>> visited) {
+    Pair<Node, Integer> visitedKey = Pair.create(node, pathUp.size());
     if (visited.contains(visitedKey)) {
       // Already visited with this pathUp: will not get new results
       return;
     }
 
-    results.add(node);
+    if (node.var != null) {
+      results.add(node.var);
+    }
+    
     visited.add(visitedKey);
 
     // Check aliases of this.  Mark visited first to avoid cycle
-    for (Var alias: aliases.get(node)) {
+    for (Node alias: aliases.get(node)) {
       walkDownRec(alias, pathUp, results, visited);
     }
 
@@ -154,11 +195,11 @@ public class ComponentGraph {
       return;
     }
 
-    Pair<Var, Arg> prev = pathUp.pop();
+    Pair<Node, Arg> prev = pathUp.pop();
     Arg childLabel = prev.val2;
-    Var srcChild = prev.val1;
+    Node srcChild = prev.val1;
     
-    for (ComponentEdge child: children.get(node)) {
+    for (Edge child: children.get(node)) {
       if (!child.dst.equals(srcChild) &&
           labelsMatch(childLabel, child.label)) {
         // Recurse if it may match and is not original path
@@ -184,12 +225,27 @@ public class ComponentGraph {
     return "<parents: " + parents + " children: " + children +
            " aliases: " + aliases + ">";
   }
+  
+  /**
+   * Graph node.  Compared by object identity
+   */
+  private static class Node {
+    final Var var; // Variable, if variable associated with node
+
+    public Node(Var var) {
+      this.var = var;
+    }
+
+    public static Node anonymous() {
+      return new Node(null);
+    }
+  }
     
-  private static class ComponentEdge {
-    final Var dst;
+  private static class Edge {
+    final Node dst;
     final Arg label;
     
-    public ComponentEdge(Var dst, Arg label) {
+    public Edge(Node dst, Arg label) {
       assert(dst != null);
       assert(label == null || label.isConstant());
       this.dst = dst;
@@ -213,7 +269,7 @@ public class ComponentGraph {
         return false;
       if (getClass() != obj.getClass())
         return false;
-      ComponentEdge other = (ComponentEdge) obj;
+      Edge other = (Edge) obj;
       if (!dst.equals(other.dst))
         return false;
       if (label == null) {
