@@ -3212,25 +3212,87 @@ public class TurbineOp extends Instruction {
 
   @Override
   public List<ComponentAlias> getComponentAliases() {
-    // TODO: more accurate handling of array or struct refs?
-    //       we really need to reflect the different between array refs and arrays, etc
-    //       Can we just prefix with an extra wildcard?
     switch (op) {
       case ARR_CREATE_NESTED_IMM:
-      case ARR_CREATE_NESTED_FUTURE:
       case ARRAY_CREATE_BAG:
         // From inner object to immediately enclosing
-        return new ComponentAlias(getOutput(0), getOutput(1), getInput(0)).asList();
-      case AREF_CREATE_NESTED_IMM:
-      case AREF_CREATE_NESTED_FUTURE:
+        return new ComponentAlias(getOutput(0), getOutput(1), 
+                   ComponentAlias.deref(getInput(0).asList())).asList();
+      case ARR_CREATE_NESTED_FUTURE: {
         // From inner array to immediately enclosing
-        return new ComponentAlias(getOutput(0), getOutput(1), getInput(0)).asList();
+        return new ComponentAlias(getOutput(0), getOutput(1),
+                                  getInput(0).asList()).asList();
+      }
+      case AREF_CREATE_NESTED_IMM:
+      case AREF_CREATE_NESTED_FUTURE: {
+        List<Arg> key = Arrays.asList(ComponentAlias.DEREF, getInput(0));
+        // From inner array to immediately enclosing
+        return new ComponentAlias(getOutput(0), getOutput(1), key).asList();
+      }
+      case AREF_STORE_FUTURE:
+      case AREF_STORE_IMM:
+      case ARR_STORE:
+      case ARR_STORE_FUTURE: {
+        Var arr = getOutput(0);
+
+        if (Types.isRef(Types.arrayKeyType(arr))) {
+          Arg ix = getInput(0);
+          List<Arg> key;
+          if (Types.isArrayRef(arr)) {
+            // Mark extra dereference
+            key = Arrays.asList(ComponentAlias.DEREF, ix, ComponentAlias.DEREF);
+          } else {
+            key = Arrays.asList(ix, ComponentAlias.DEREF);
+          }
+          
+          return new ComponentAlias(getInput(1).getVar(), arr, key).asList();
+        }
+        break;
+      }
+      case ARR_COPY_IN_FUTURE:
+      case ARR_COPY_IN_IMM:
+      case AREF_COPY_IN_FUTURE:
+      case AREF_COPY_IN_IMM: {
+        Var arr = getOutput(0);
+
+        if (Types.isRef(Types.arrayKeyType(arr))) {
+          Arg ix = getInput(0);
+          List<Arg> key;
+          if (Types.isArrayRef(arr)) {
+            // Mark extra dereference
+            key = Arrays.asList(ComponentAlias.DEREF, ix);
+          } else {
+            key = ix.asList();
+          }
+          
+          return new ComponentAlias(getInput(1).getVar(), arr, key).asList();
+        }
+        break;
+      }
+      case ARR_COPY_OUT_FUTURE:
+      case ARR_COPY_OUT_IMM:
+      case AREF_COPY_OUT_FUTURE:
+      case AREF_COPY_OUT_IMM: {
+        Var arr = getInput(0).getVar();
+        
+        if (Types.isRef(Types.arrayKeyType(arr))) {
+          Arg ix = getInput(1);
+          List<Arg> key;
+          if (Types.isArrayRef(arr)) {
+            // Mark extra dereference
+            key = Arrays.asList(ComponentAlias.DEREF, ix);
+          } else {
+            key = ix.asList();
+          }
+          return new ComponentAlias(getOutput(0), arr, key).asList();
+        }
+        break;
+      }
       case LOAD_REF:
         // If reference was a part of something, modifying the
         // dereferenced object will modify the whole
         return ComponentAlias.ref(getOutput(0), getInput(0).getVar()).asList();
       case COPY_REF:
-        // TODO: way to mark alias
         return ComponentAlias.directAlias(getOutput(0), getInput(0).getVar()).asList();
       case STORE_REF:
         // Sometimes a reference is filled in
@@ -3249,7 +3311,6 @@ public class TurbineOp extends Instruction {
           Arg fieldVal = fieldVals.val.get(i);
           if (fieldVal.isVar()) {
             if (Alias.fieldIsRef(struct, Arg.extractStrings(fieldPath))) {
-              // TODO: translate to multiple nodes
               aliases.add(new ComponentAlias(fieldVal.getVar(), struct,
                                     ComponentAlias.deref(fieldPath)));
             }
@@ -3259,7 +3320,6 @@ public class TurbineOp extends Instruction {
       }
       case STRUCT_CREATE_ALIAS: {
         // Output is alias for part of struct
-        // TODO: multiple fields
         List<Arg> fields = getInputsTail(1);
         return new ComponentAlias(getOutput(0), getInput(0).getVar(),
                                   fields).asList();
@@ -3269,6 +3329,11 @@ public class TurbineOp extends Instruction {
         if (Alias.fieldIsRef(getOutput(0),
                              Arg.extractStrings(getInputsTail(1)))) {
           List<Arg> fields = getInputsTail(1);
+          if (op == Opcode.STRUCTREF_STORE_SUB) {
+            // Mark extra dereference
+            fields = new ArrayList<Arg>(fields);
+            fields.add(0, ComponentAlias.DEREF);
+          }
           return new ComponentAlias(getInput(0).getVar(), getOutput(0),
                                 ComponentAlias.deref(fields)).asList();
         }
@@ -3286,6 +3351,11 @@ public class TurbineOp extends Instruction {
         if (Alias.fieldIsRef(getOutput(0),
                              Arg.extractStrings(getInputsTail(1)))) {
           List<Arg> fields = getInputsTail(1);
+          if (op == Opcode.STRUCTREF_COPY_IN) {
+            // Mark extra dereference
+            fields = new ArrayList<Arg>(fields);
+            fields.add(0, ComponentAlias.DEREF);
+          }
           return new ComponentAlias(getInput(0).getVar(),
                                     getOutput(0), fields).asList();
         }

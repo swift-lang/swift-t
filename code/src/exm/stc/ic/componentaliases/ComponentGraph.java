@@ -6,6 +6,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
+
+import exm.stc.common.Logging;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.HierarchicalSet;
@@ -41,6 +44,7 @@ import exm.stc.common.util.StackLite;
  * - We also track potential direct aliases
  */
 public class ComponentGraph {
+  Logger logger = Logging.getSTCLogger();
   
   private final Map<Var, Node> varNodes;
   private final MultiMap<Node, Edge> parents;
@@ -69,8 +73,12 @@ public class ComponentGraph {
   }
   
   public void addPotentialComponent(ComponentAlias componentAlias) {
-    addPotentialComponent(componentAlias.part, componentAlias.whole,
-                          componentAlias.key);
+    if (componentAlias.key.isEmpty()) {
+      addPotentialDirectAlias(componentAlias.part, componentAlias.whole);
+    } else {
+      addPotentialComponent(componentAlias.part, componentAlias.whole,
+                            componentAlias.key);
+    }
   }
 
   /**
@@ -80,6 +88,8 @@ public class ComponentGraph {
    * @param key relation from whole to part
    */
   public void addPotentialComponent(Var part, Var whole, List<Arg> key) {
+    assert(!key.isEmpty());
+    
     Node wholeNode = getVarNode(whole);
     Node partNode = getVarNode(part);
     
@@ -102,7 +112,7 @@ public class ComponentGraph {
       }
       
       parents.put(curr, new Edge(parent, keyElem));
-      parents.put(parent, new Edge(curr, keyElem));
+      children.put(parent, new Edge(curr, keyElem));
     }
   }
   

@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
 
@@ -13,6 +12,11 @@ import exm.stc.common.lang.Var;
  */
 public class ComponentAlias {
   public static final List<ComponentAlias> NONE = Collections.emptyList();
+
+  /**
+   * Mark "value of reference"
+   */
+  public static final Arg DEREF = null;
   
   /**
    * Enclosing object
@@ -27,7 +31,9 @@ public class ComponentAlias {
   /**
    * Relationship from whole to part, e.g. struct field name, or array key.
    * List element should be null or variable to represent wildcard.
-   * In order from outer to inner
+   * In order from outer to inner.
+   * 
+   * If zero-length list, signifies that it's an alias
    */
   public final List<Arg> key;
   
@@ -48,8 +54,7 @@ public class ComponentAlias {
    * @return
    */
   public static ComponentAlias directAlias(Var var1, Var var2) {
-    // TODO
-    throw new STCRuntimeError("not implemented");
+    return new ComponentAlias(var1, var2, Arg.NONE);
   }
 
   /**
@@ -66,7 +71,7 @@ public class ComponentAlias {
   public static List<Arg> deref(List<Arg> key) {
     List<Arg> result = new ArrayList<Arg>(key.size() + 1);
     result.addAll(key);
-    result.add(null); // Represent extra dereference
+    result.add(DEREF); // Represent extra dereference
     return result;
   }
 
