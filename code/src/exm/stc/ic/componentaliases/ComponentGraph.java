@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.HierarchicalSet;
@@ -50,16 +51,25 @@ public class ComponentGraph {
     this.aliases = new MultiMap<Var, Var>();
   }
   
+  public void addPotentialComponent(ComponentAlias componentAlias) {
+    addPotentialComponent(componentAlias.part, componentAlias.whole,
+                          componentAlias.key);
+  }
+
   /**
    * Add a (potential) component relationship
-   * @param child
-   * @param parent enclosing structure
-   * @param label a constant, or null if undetermined
+   * @param part
+   * @param whole enclosing structure
+   * @param key relation from whole to part
    */
-  public void addPotentialComponent(Var child, Var parent, Arg label) {
-    assert(label == null || label.isConstant());
-    parents.put(child, new ComponentEdge(parent, label));
-    parents.put(parent, new ComponentEdge(child, label));
+  public void addPotentialComponent(Var part, Var whole, Arg key) {
+    if (!key.isConstant()) {
+      // Treat all non-constant keys as wildcard
+      key = null;
+    }
+    assert(key == null || key.isConstant());
+    parents.put(part, new ComponentEdge(whole, key));
+    parents.put(whole, new ComponentEdge(part, key));
   }
   
   /**
@@ -73,6 +83,11 @@ public class ComponentGraph {
     aliases.put(var2, var1);
   }
   
+  /**
+   * Find variables that this variable may potential alias a part of
+   * @param var
+   * @return
+   */
   public Set<Var> findPotentialAliases(Var var) {
     HashSet<Var> result = new HashSet<Var>();
     findPotentialAliases(var, result);
@@ -94,7 +109,6 @@ public class ComponentGraph {
    */
   private void walkUpRec(Var node, Set<Var> results, StackLite<Pair<Var, Arg>> pathUp,
       HierarchicalSet<Pair<Var, Integer>> visited) {
-    // TODO Auto-generated method stub
     if (!pathUp.isEmpty()) {
       // Note: add all visited nodes from this root down
       walkDownRec(node, pathUp, results, visited);
@@ -163,6 +177,12 @@ public class ComponentGraph {
     } else {
       return label1.equals(label2);
     }
+  }
+  
+  @Override
+  public String toString() {
+    return "<parents: " + parents + " children: " + children +
+           " aliases: " + aliases + ">";
   }
     
   private static class ComponentEdge {

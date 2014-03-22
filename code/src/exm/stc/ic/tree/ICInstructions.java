@@ -49,6 +49,7 @@ import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.aliases.Alias;
+import exm.stc.ic.componentaliases.ComponentAlias;
 import exm.stc.ic.opt.Semantics;
 import exm.stc.ic.opt.valuenumber.ComputedValue;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
@@ -500,33 +501,6 @@ public class ICInstructions {
     }
 
 
-    /**
-     * Represent a relationship where a write to part will (or may) affect
-     * the value of the whole.
-     */
-    public static class ComponentAlias {
-      public static final List<ComponentAlias> NONE = Collections.emptyList();
-      
-      /**
-       * Enclosing object
-       */
-      public final Var whole;
-      
-      /**
-       * Part which, if written, 
-       */
-      public final Var part;
-
-      public ComponentAlias(Var part, Var whole) {
-        this.whole = whole;
-        this.part = part;
-      }
-      
-      public List<ComponentAlias> asList() {
-        return Collections.singletonList(this);
-      }
-    }
-    
     /**
      * If this instruction makes an output a part of another
      * variable such that modifying the output modifies something

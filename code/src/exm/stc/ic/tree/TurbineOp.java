@@ -30,6 +30,7 @@ import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.aliases.Alias;
 import exm.stc.ic.aliases.Alias.AliasTransform;
+import exm.stc.ic.componentaliases.ComponentAlias;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ValLoc;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
@@ -3216,20 +3217,21 @@ public class TurbineOp extends Instruction {
       case ARR_CREATE_NESTED_FUTURE:
       case ARRAY_CREATE_BAG:
         // From inner object to immediately enclosing
-        return new ComponentAlias(getOutput(0), getOutput(1)).asList();
+        return new ComponentAlias(getOutput(0), getOutput(1), getInput(0)).asList();
       case AREF_CREATE_NESTED_IMM:
       case AREF_CREATE_NESTED_FUTURE:
         // From inner array to immediately enclosing
-        return new ComponentAlias(getOutput(0), getOutput(1)).asList();
+        return new ComponentAlias(getOutput(0), getOutput(1), getInput(0)).asList();
       case LOAD_REF:
         // If reference was a part of something, modifying the
         // dereferenced object will modify the whole
-        return new ComponentAlias(getOutput(0), getInput(0).getVar()).asList();
+        return ComponentAlias.ref((getOutput(0), getInput(0).getVar()).asList();
       case COPY_REF:
-        return new ComponentAlias(getOutput(0), getInput(0).getVar()).asList();
+        // TODO: way to mark alias
+        return ComponentAlias.directAlias(getOutput(0), getInput(0).getVar()).asList();
       case STORE_REF:
         // Sometimes a reference is filled in
-        return new ComponentAlias(getOutput(0), getInput(0).getVar()).asList();
+        return ComponentAlias.ref(getInput(0).getVar(), getOutput(0)).asList();
       case STRUCT_INIT_FIELDS: {
         Out<List<List<String>>> fieldPaths = new Out<List<List<String>>>();
         Out<List<Arg>> fieldVals = new Out<List<Arg>>();
@@ -3244,19 +3246,25 @@ public class TurbineOp extends Instruction {
           Arg fieldVal = fieldVals.val.get(i);
           if (fieldVal.isVar()) {
             if (Alias.fieldIsRef(struct, fieldPath)) {
-              aliases.add(new ComponentAlias(fieldVal.getVar(), struct));
+              // TODO: translate to multiple nodes
+              aliases.add(new ComponentAlias(fieldVal.getVar(), struct,
+                                             Arg.createStringLit(v)));
             }
           }
         }
         return aliases;
       }
-      case STRUCT_CREATE_ALIAS:
+      case STRUCT_CREATE_ALIAS: {
         // Output is alias for part of struct
+        // TODO: multiple fields
+        List<Arg> fields = getInputsTail(1);
         return new ComponentAlias(getOutput(0), getInput(0).getVar()).asList();
+      }
       case STRUCTREF_STORE_SUB:
       case STRUCT_STORE_SUB:
         if (Alias.fieldIsRef(getOutput(0),
                              Arg.extractStrings(getInputsTail(1)))) {
+          List<Arg> fields = getInputsTail(1);
           return new ComponentAlias(getInput(0).getVar(),
                                     getOutput(0)).asList();
         }
@@ -3264,6 +3272,7 @@ public class TurbineOp extends Instruction {
       case STRUCT_RETRIEVE_SUB:
         if (Alias.fieldIsRef(getInput(0).getVar(),
                              Arg.extractStrings(getInputsTail(1)))) {
+          List<Arg> fields = getInputsTail(1);
           return new ComponentAlias(getOutput(0),
                   getInput(0).getVar()).asList();
         }
@@ -3272,6 +3281,7 @@ public class TurbineOp extends Instruction {
       case STRUCT_COPY_IN:
         if (Alias.fieldIsRef(getOutput(0),
                              Arg.extractStrings(getInputsTail(1)))) {
+          List<Arg> fields = getInputsTail(1);
           return new ComponentAlias(getInput(0).getVar(),
                                     getOutput(0)).asList();
         }
@@ -3280,6 +3290,7 @@ public class TurbineOp extends Instruction {
       case STRUCT_COPY_OUT:
         if (Alias.fieldIsRef(getInput(0).getVar(),
                              Arg.extractStrings(getInputsTail(1)))) {
+          List<Arg> fields = getInputsTail(1);
           return new ComponentAlias(getOutput(0),
                   getInput(0).getVar()).asList();
         }
