@@ -1,10 +1,8 @@
 package exm.stc.ic.opt.valuenumber;
 
 import java.util.AbstractMap;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -23,6 +21,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.StackLite;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.opt.InitVariables.InitState;
 import exm.stc.ic.opt.Semantics;
@@ -956,8 +955,8 @@ class CongruentSets {
                 boolean followAncestors) {
     List<Arg> allMerged = new ArrayList<Arg>();
     
-    Deque<Pair<CongruentSets, Arg>> work =
-          new ArrayDeque<Pair<CongruentSets, Arg>>();
+    StackLite<Pair<CongruentSets, Arg>> work =
+          new StackLite<Pair<CongruentSets, Arg>>();
     work.push(Pair.create(this, canonical));
     
     while (!work.isEmpty()) {
@@ -1103,7 +1102,7 @@ class CongruentSets {
      */
     private Arg findAltReplacement(Var orig, Arg replace) {
       // Check alternative canonical vals using DFS
-      Deque<Arg> replacementStack = new ArrayDeque<Arg>();
+      StackLite<Arg> replacementStack = new StackLite<Arg>();
       do {
         logger.trace(orig + " => " + replace + "(" + congType + ")" +
                          ": NOT INITIALIZED");

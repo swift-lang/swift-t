@@ -1,6 +1,5 @@
 package exm.stc.ic.opt;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -19,6 +18,7 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.StackLite;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
 import exm.stc.ic.tree.Conditionals.Conditional;
@@ -141,7 +141,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
       MultiMap<Statement, Statement> after) {
     // Put all instructions back.  We do a topological sort to
     // make sure they end up in correct order
-    ArrayDeque<Statement> stack = new ArrayDeque<Statement>();
+    StackLite<Statement> stack = new StackLite<Statement>();
     HashSet<Statement> visited = new HashSet<Statement>();
     visited.addAll(newStatements);
     while (!after.isEmpty()) {
@@ -219,7 +219,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
 
   private boolean pathExists(MultiMap<Statement, Statement> after,
       Statement from, Statement to) {
-    ArrayDeque<Statement> stack = new ArrayDeque<Statement>();
+    StackLite<Statement> stack = new StackLite<Statement>();
     stack.push(from);
     while (!stack.isEmpty()) {
       Statement curr = stack.pop();

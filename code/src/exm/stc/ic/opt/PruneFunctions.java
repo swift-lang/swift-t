@@ -1,7 +1,5 @@
 package exm.stc.ic.opt;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -13,6 +11,7 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.util.MultiMap;
+import exm.stc.common.util.StackLite;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
 import exm.stc.ic.tree.ICInstructions.Builtin;
 import exm.stc.ic.tree.ICInstructions.CommonFunctionCall;
@@ -80,7 +79,7 @@ public class PruneFunctions implements OptimizerPass {
    */
   private Set<String> findNeeded(DepFinder deps) {
     Set<String> needed = new HashSet<String>();
-    Deque<String> workQueue = new ArrayDeque<String>();
+    StackLite<String> workQueue = new StackLite<String>();
     
     // Main is always needed
     addFunction(needed, workQueue, Constants.MAIN_FUNCTION);
@@ -93,7 +92,7 @@ public class PruneFunctions implements OptimizerPass {
     return needed;
   }
 
-  private void addFunction(Set<String> needed, Deque<String> workQueue,
+  private void addFunction(Set<String> needed, StackLite<String> workQueue,
                            String fnName) {
     boolean added = needed.add(fnName);
     if (added) {
@@ -102,7 +101,7 @@ public class PruneFunctions implements OptimizerPass {
     }
   }
 
-  private void addFunctions(Set<String> needed, Deque<String> workQueue,
+  private void addFunctions(Set<String> needed, StackLite<String> workQueue,
       List<String> fnNames) {
     for (String fnName: fnNames) {
       addFunction(needed, workQueue, fnName);

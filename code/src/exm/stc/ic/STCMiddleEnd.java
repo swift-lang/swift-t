@@ -16,11 +16,9 @@
 package exm.stc.ic;
 
 import java.io.PrintStream;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 
@@ -56,6 +54,7 @@ import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.StackLite;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.opt.ICOptimizer;
 import exm.stc.ic.opt.OptUtil;
@@ -96,9 +95,9 @@ public class STCMiddleEnd {
 
   // Keep track of current place in program
   private Function currFunction = null;
-  private final Deque<Block> blockStack = new ArrayDeque<Block>();
+  private final StackLite<Block> blockStack = new StackLite<Block>();
   
-  private final Deque<Loop> loopStack = new ArrayDeque<Loop>();
+  private final StackLite<Loop> loopStack = new StackLite<Loop>();
   
 //Place to log IC to (can be null for no output)
   private PrintStream icOutput;

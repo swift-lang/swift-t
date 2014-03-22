@@ -15,12 +15,10 @@
  */
 package exm.stc.ic.tree;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
@@ -42,12 +40,13 @@ import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.TaskMode;
-import exm.stc.common.lang.WaitVar;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
+import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.StackLite;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.LoopBreak;
@@ -672,7 +671,7 @@ public class ICContinuations {
       Block breakInstBlock = null, continueInstBlock = null;
       LoopBreak breakInst = null;
       LoopContinue continueInst = null;
-      Deque<Block> blocks = new ArrayDeque<Block>();
+      StackLite<Block> blocks = new StackLite<Block>();
       blocks.add(loopBody);
       while (!blocks.isEmpty()) {
         // Find instructions

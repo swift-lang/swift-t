@@ -15,9 +15,7 @@
  */
 package exm.stc.frontend;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -36,6 +34,7 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
+import exm.stc.common.util.StackLite;
 import exm.stc.ic.STCMiddleEnd;
 
 /**
@@ -129,7 +128,7 @@ public class VarCreator {
     List<List<String>> fieldPaths = new ArrayList<List<String>>();
     List<Arg> fieldVals = new ArrayList<Arg>();
 
-    Deque<String> currFieldPath = new ArrayDeque<String>();
+    StackLite<String> currFieldPath = new StackLite<String>();
     int initFieldCount = initialiseStructRec(context, struct, currFieldPath,
         structType, fieldPaths, fieldVals);
     if (initFieldCount > 0) {
@@ -153,13 +152,13 @@ public class VarCreator {
    * @throws UndefinedTypeException 
    */
   private int initialiseStructRec(Context context,
-      Var rootStruct, Deque<String> currFieldPath, StructType structType,
+      Var rootStruct, StackLite<String> currFieldPath, StructType structType,
       List<List<String>> fieldPaths, List<Arg> fieldVals)
           throws UndefinedTypeException, DoubleDefineException {
     int initFieldCount = 0;
     
     for (StructField field: structType.getFields()) {
-      currFieldPath.addLast(field.getName());
+      currFieldPath.push(field.getName());
       
       Type fieldT = field.getType();
       if (VarRepr.storeRefInStruct(fieldT)) {
@@ -178,7 +177,7 @@ public class VarCreator {
             fieldPaths, fieldVals);
       }
       
-      currFieldPath.removeLast();
+      currFieldPath.pop();
     }
     return initFieldCount;
   }

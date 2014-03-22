@@ -15,10 +15,8 @@
  */
 package exm.stc.ic.opt;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
@@ -48,6 +46,7 @@ import exm.stc.common.util.MultiMap.LinkedListFactory;
 import exm.stc.common.util.MultiMap.ListFactory;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
+import exm.stc.common.util.StackLite;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.WrapUtil;
 import exm.stc.ic.opt.OptUtil.InstOrCont;
@@ -799,8 +798,8 @@ public class WaitCoalescer implements OptimizerPass {
       ExecContext newContext = canPushDownInto(c, currContext); 
       if (newContext != null) {
         for (Block innerBlock: c.getBlocks()) {
-          ArrayDeque<Continuation> ancestors =
-                                        new ArrayDeque<Continuation>();
+          StackLite<Continuation> ancestors =
+                                        new StackLite<Continuation>();
           ancestors.push(c);
           PushDownResult pdRes = 
                pushDownWaitsRec(logger, fn, block, currContext, ancestors,
@@ -818,7 +817,7 @@ public class WaitCoalescer implements OptimizerPass {
   private PushDownResult pushDownWaitsRec(
                 Logger logger,  Function fn,
                 Block top, ExecContext topContext,
-                Deque<Continuation> ancestors, Block curr,
+                StackLite<Continuation> ancestors, Block curr,
                 ExecContext currContext,
                 MultiMap<Var, InstOrCont> waitMap) {
     boolean changed = false;
@@ -939,7 +938,7 @@ public class WaitCoalescer implements OptimizerPass {
   }
 
   public boolean tryPushdownClosedVar(Logger logger, Block top,
-      ExecContext topContext, Deque<Continuation> ancestors, Block curr,
+      ExecContext topContext, StackLite<Continuation> ancestors, Block curr,
       ExecContext currContext, MultiMap<Var, InstOrCont> waitMap,
       ArrayList<Continuation> pushedDown, ListIterator<Statement> it,
       Var v) {
@@ -1010,7 +1009,7 @@ public class WaitCoalescer implements OptimizerPass {
   private Pair<Boolean, Set<Continuation>> relocateDependentInstructions(
       Logger logger,
       Block ancestorBlock, ExecContext ancestorContext,
-      Deque<Continuation> ancestors,
+      StackLite<Continuation> ancestors,
       Block currBlock, ExecContext currContext, ListIterator<Statement> currBlockIt,
       MultiMap<Var, InstOrCont> waitMap, Var writtenV) {
     boolean changed = false;
@@ -1064,7 +1063,7 @@ public class WaitCoalescer implements OptimizerPass {
   }
 
   private boolean relocateContinuation(
-      Deque<Continuation> ancestors, Block currBlock,
+      StackLite<Continuation> ancestors, Block currBlock,
       ExecContext currContext, Set<Continuation> movedC, Continuation cont) {
     boolean canRelocate = true;
     // Check we're not relocating continuation into itself
@@ -1108,7 +1107,7 @@ public class WaitCoalescer implements OptimizerPass {
   }
 
   private static boolean relocateInstruction(
-      Deque<Continuation> ancestors, ExecContext currContext,
+      StackLite<Continuation> ancestors, ExecContext currContext,
       Block currBlock,
       ListIterator<Statement> currBlockIt,
       Set<Instruction> movedI, Instruction inst) {

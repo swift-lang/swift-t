@@ -21,12 +21,10 @@
 package exm.stc.tclbackend;
 
 import java.io.File;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -75,6 +73,7 @@ import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.VarCount;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.StackLite;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.tclbackend.Turbine.CacheMode;
 import exm.stc.tclbackend.Turbine.RuleProps;
@@ -158,7 +157,8 @@ public class TurbineGenerator implements CompilerBackend {
      First entry is the sequence
      Second entry is a list of things to add at end of sequence
    */
-  Deque<Pair<Sequence, Sequence>> pointStack = new ArrayDeque<Pair<Sequence, Sequence>>();
+  StackLite<Pair<Sequence, Sequence>> pointStack = 
+      new StackLite<Pair<Sequence, Sequence>>();
 
   /**
    * Shortcut for current sequence in pointStack
@@ -202,12 +202,12 @@ public class TurbineGenerator implements CompilerBackend {
   /**
    * Stack for (name, execImmediate) of loop functions
    */
-  Deque<EnclosingLoop> loopStack = new ArrayDeque<EnclosingLoop>();
+  StackLite<EnclosingLoop> loopStack = new StackLite<EnclosingLoop>();
 
   /**
    * Stack for what context we're in. 
    */
-  Deque<ExecContext> execContextStack = new ArrayDeque<ExecContext>();
+  StackLite<ExecContext> execContextStack = new StackLite<ExecContext>();
 
   String turbineVersion = Settings.get(Settings.TURBINE_VERSION);
 

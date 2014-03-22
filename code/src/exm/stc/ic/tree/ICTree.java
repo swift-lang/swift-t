@@ -16,11 +16,9 @@
 package exm.stc.ic.tree;
 
 import java.io.PrintStream;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -56,6 +54,7 @@ import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.StackLite;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -702,7 +701,7 @@ public class ICTree {
 
 
     private void addUsedVarsRec(Block rootBlock) {
-      Deque<Block> work = new ArrayDeque<Block>();
+      StackLite<Block> work = new StackLite<Block>();
       work.push(rootBlock);
     
       while (!work.isEmpty()) {
@@ -901,7 +900,7 @@ public class ICTree {
      * @param parentFunction
      */
     void fixParentLinksRec(Function parentFunction) {
-      Deque<Block> work = new ArrayDeque<Block>();
+      StackLite<Block> work = new StackLite<Block>();
       work.push(this);
       while (!work.isEmpty()) {
         Block curr = work.pop();
@@ -1680,7 +1679,7 @@ public class ICTree {
      * @return
      */
     public int getInstructionCount() {
-      Deque<Block> blocks = new ArrayDeque<Block>();
+      StackLite<Block> blocks = new StackLite<Block>();
       blocks.push(this);
       int count = 0;
       while (!blocks.isEmpty()) {

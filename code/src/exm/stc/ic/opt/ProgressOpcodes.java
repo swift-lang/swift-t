@@ -15,8 +15,6 @@
  */
 package exm.stc.ic.opt;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.HashSet;
 
 import org.apache.log4j.Logger;
@@ -25,6 +23,7 @@ import exm.stc.common.Logging;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.TaskMode;
+import exm.stc.common.util.StackLite;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.LocalFunctionCall;
@@ -110,8 +109,8 @@ public class ProgressOpcodes {
    */
   public static boolean blockProgress(Block rootBlock, Category type) {
     Logger logger = Logging.getSTCLogger();
-    Deque<Block> stack = new ArrayDeque<Block>();
-    stack.add(rootBlock);
+    StackLite<Block> stack = new StackLite<Block>();
+    stack.push(rootBlock);
     while (!stack.isEmpty()) {
       Block block = stack.pop();
       

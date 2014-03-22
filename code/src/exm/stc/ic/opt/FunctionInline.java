@@ -15,10 +15,8 @@
  */
 package exm.stc.ic.opt;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -41,10 +39,11 @@ import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.WaitVar;
 import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.StackLite;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -209,12 +208,12 @@ public class FunctionInline implements OptimizerPass {
     // to break in circular loop
     for (String toInline: alwaysInline) {
       findCycleFreeRec(inlineCandidates, visited, toRemove,
-              inlineCandidates2, new ArrayDeque<String>(), toInline);
+              inlineCandidates2, new StackLite<String>(), toInline);
     }
     // Now process remaining functions
     for (String toInline: inlineCandidates.keySet()) {
       findCycleFreeRec(inlineCandidates, visited, toRemove,
-                      inlineCandidates2, new ArrayDeque<String>(), toInline);
+                      inlineCandidates2, new StackLite<String>(), toInline);
     }
     return inlineCandidates2;
   }
@@ -223,7 +222,7 @@ public class FunctionInline implements OptimizerPass {
    */
   private void findCycleFreeRec(MultiMap<String, String> candidates,
       Set<String> visited, Set<String> toRemove,
-      MultiMap<String, String> newCandidates, Deque<String> callStack,
+      MultiMap<String, String> newCandidates, StackLite<String> callStack,
       String curr) {
     List<String> callers = candidates.get(curr);
     if (callers == null || callers.size() == 0) {
@@ -514,7 +513,7 @@ public class FunctionInline implements OptimizerPass {
     for (Var globalConst: constants.vars()) {
       excludedNames.add(globalConst.name());
     }
-    Deque<Block> blocks = new ArrayDeque<Block>();
+    StackLite<Block> blocks = new StackLite<Block>();
     blocks.add(inlineBlock);
     // Walk block to find local vars
     while(!blocks.isEmpty()) {

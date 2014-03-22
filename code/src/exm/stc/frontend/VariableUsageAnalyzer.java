@@ -15,10 +15,8 @@
  */
 package exm.stc.frontend;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -35,10 +33,11 @@ import exm.stc.common.exceptions.VariableUsageException;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.StackLite;
 import exm.stc.frontend.VariableUsageInfo.Violation;
 import exm.stc.frontend.VariableUsageInfo.ViolationType;
 import exm.stc.frontend.tree.ArrayElems;
@@ -46,6 +45,7 @@ import exm.stc.frontend.tree.ArrayRange;
 import exm.stc.frontend.tree.Assignment;
 import exm.stc.frontend.tree.Assignment.AssignOp;
 import exm.stc.frontend.tree.ForLoopDescriptor;
+import exm.stc.frontend.tree.ForLoopDescriptor.LoopVar;
 import exm.stc.frontend.tree.ForeachLoop;
 import exm.stc.frontend.tree.If;
 import exm.stc.frontend.tree.IterateDescriptor;
@@ -53,9 +53,8 @@ import exm.stc.frontend.tree.LValue;
 import exm.stc.frontend.tree.Switch;
 import exm.stc.frontend.tree.Update;
 import exm.stc.frontend.tree.VariableDeclaration;
-import exm.stc.frontend.tree.Wait;
-import exm.stc.frontend.tree.ForLoopDescriptor.LoopVar;
 import exm.stc.frontend.tree.VariableDeclaration.VariableDescriptor;
+import exm.stc.frontend.tree.Wait;
 /**
  * This module collects information about variable dataflow in the program, e.g.
  * if a variable is read or not, whether it is assigned twice, etc.
@@ -550,7 +549,7 @@ class VariableUsageAnalyzer {
 
     // Do a depth-first search of the expression tree to discover all
     // references to variables
-    Deque<SwiftAST> exprNodes = new ArrayDeque<SwiftAST>();
+    StackLite<SwiftAST> exprNodes = new StackLite<SwiftAST>();
     exprNodes.push(exprRoot);
     while (!exprNodes.isEmpty()) {
       SwiftAST node = exprNodes.pop();

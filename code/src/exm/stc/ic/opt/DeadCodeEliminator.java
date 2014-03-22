@@ -15,7 +15,6 @@
  */
 package exm.stc.ic.opt;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -33,6 +32,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.MultiMap;
+import exm.stc.common.util.StackLite;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
@@ -150,7 +150,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
     /*
      * Expand set of needed based on dependency graph 
      */
-    ArrayDeque<Var> workStack = new ArrayDeque<Var>();
+    StackLite<Var> workStack = new StackLite<Var>();
     workStack.addAll(needed);
     
     while (!workStack.isEmpty()) {
@@ -192,7 +192,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
       HashSet<Var> removeCandidates, HashSet<Var> needed,
       MultiMap<Var, Var> dependencyGraph, List<Var> modifiedVars,
       Map <Var, Var> writeEffects) {
-    ArrayDeque<Block> workStack = new ArrayDeque<Block>();
+    StackLite<Block> workStack = new StackLite<Block>();
     workStack.push(f.mainBlock());
     
     needed.addAll(f.getOutputList());
