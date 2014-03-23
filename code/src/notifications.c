@@ -25,8 +25,8 @@ xlb_set_refs(adlb_notif_t *notifs, bool local_only);
 
 static adlb_code
 xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
-            const void *value, int length,
-            adlb_data_type type, adlb_notif_t *notifs);
+          const void *value, int length, adlb_data_type type,
+          adlb_refcounts transferred_refs, adlb_notif_t *notifs);
 
 static adlb_code
 send_client_notif_work(int caller, 
@@ -141,7 +141,7 @@ xlb_set_refs(adlb_notif_t *notifs, bool local_only)
       TRACE("Notifying reference %"PRId64" (%s)\n", ref->id,
             ADLB_Data_type_tostring(ref->type));
       rc = xlb_set_ref(ref->id, ref->subscript, ref->value,
-                       ref->value_len, ref->type, notifs);
+                ref->value_len, ref->type, ref->refcounts, notifs);
       ADLB_CHECK(rc);
       set = true;
     }
@@ -169,8 +169,8 @@ xlb_set_refs(adlb_notif_t *notifs, bool local_only)
 
 static adlb_code
 xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
-            const void *value, int length,
-            adlb_data_type type, adlb_notif_t *notifs)
+            const void *value, int length, adlb_data_type type,
+            adlb_refcounts transferred_refs, adlb_notif_t *notifs)
 {
   DEBUG("xlb_set_ref: <%"PRId64">[%.*s]=%p[%i]", id,
       (int)subscript.length, (const char*)subscript.key, value, length);
@@ -178,6 +178,7 @@ xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
   int rc = ADLB_SUCCESS;
   int server = ADLB_Locate(id);
 
+  // TODO: need way to pass refcounts in when storing
   if (server == xlb_comm_rank)
   {
     adlb_data_code dc = xlb_data_store(id, subscript, value, length,

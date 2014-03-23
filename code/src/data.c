@@ -1192,7 +1192,6 @@ xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
     
   }
 
-  // TODO: when serializing, update refcounts to match to_acquire 
   dc = ADLB_Pack(val_data, val_type, caller_buffer, result);
   DATA_CHECK(dc);
 
