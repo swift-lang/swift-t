@@ -866,12 +866,19 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
 
     // ID is only relevant data, so init refcounts to any value
     adlb_ref new_ref = { .id = new_id, .read_refs = 0, .write_refs = 0 };
+   
+    // Pack using standard api.  Checks should be mostly optimized out
+    adlb_binary_data packed;
+    adlb_data_code dc = ADLB_Pack_ref(&new_ref, &packed);
+    TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error packing ref");
 
 
     // Store and apply remaining refcounts
-    code = ADLB_Store(id, subscript, ADLB_DATA_TYPE_REF, &new_ref,
-                    (int)sizeof(new_ref), refcounts.decr_self, init_refs );
+    code = ADLB_Store(id, subscript, ADLB_DATA_TYPE_REF, packed.data,
+                      packed.length, refcounts.decr_self, init_refs);
     TCL_CONDITION(code == ADLB_SUCCESS, "Error while inserting nested");
+
+    ADLB_Free_binary_data(&packed);
 
     // Return the ID of the new container
     Tcl_SetObjResult(interp, Tcl_NewADLB_ID(new_id));
