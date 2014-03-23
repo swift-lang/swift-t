@@ -2000,6 +2000,7 @@ adlb_data_code process_ref_list(struct list *subscribers,
       adlb_ref_datum *ref = &references->data[i + references->count];
       ref->id = entry->id;
       ref->type = type;
+      ref->refcounts = entry->acquire;
       ref->value = value;
       ref->value_len = value_len;
 

@@ -396,6 +396,7 @@ ADLB_Pack_ref(const adlb_ref *d, adlb_binary_data *result)
 static inline adlb_data_code
 ADLB_Unpack_ref(adlb_ref *d, const void *data, int length)
 {
+  // TODO: only unpack scalar, take refcounts as arg
   ADLB_UNPACK_SCALAR(d, data, length);
   return ADLB_DATA_SUCCESS;
 }

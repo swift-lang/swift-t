@@ -594,6 +594,7 @@ send_client_notif_work(int caller,
     adlb_ref_datum *ref = &notifs->references.data[i];
     packed_refs[i].id = ref->id;
     packed_refs[i].type = ref->type;
+    packed_refs[i].refcounts = ref->refcounts;
 
     if (adlb_has_sub(ref->subscript))
     {
@@ -795,6 +796,8 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
       d = &notifs->references.data[notifs->references.count + i];
       d->id = tmp[i].id;
       d->type = tmp[i].type;
+      d->refcounts = tmp[i].refcounts;
+
       int sub_data_ix = tmp[i].subscript_data;
       if (sub_data_ix >= 0)
       {

@@ -45,6 +45,7 @@
 typedef struct {
   adlb_datum_id id; // ID to set
   adlb_subscript subscript; // Subscript of ID to set
+  adlb_refcounts refcounts; // Refcounts to transfer
   adlb_data_type type;
   // Data to set it to:
   const void *value;
