@@ -107,12 +107,13 @@ alloc_container_reference(size_t subscript_len);
 static adlb_data_code
 data_store_root(adlb_datum_id id, adlb_datum *d,
     const void* buffer, int length, adlb_data_type type,
+    adlb_refcounts store_refcounts,
     adlb_notif_t *notifs, bool *freed_datum);
 
 static adlb_data_code
 data_store_subscript(adlb_datum_id id, adlb_datum *d,
-    adlb_subscript subscript,
-    const void* buffer, int length, adlb_data_type type,
+    adlb_subscript subscript, const void* buffer, int length,
+    adlb_data_type type, adlb_refcounts store_refcounts,
     adlb_notif_t *notifs, bool *freed_datum);
 
 static adlb_data_code
@@ -843,9 +844,8 @@ alloc_container_reference(size_t subscript_len)
  */
 adlb_data_code
 xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
-          const void* buffer, int length,
-          adlb_data_type type,
-          adlb_refcounts refcount_decr,
+          const void* buffer, int length, adlb_data_type type,
+          adlb_refcounts store_refcounts, adlb_refcounts refcount_decr,
           adlb_notif_t *notifs)
 {
   assert(length >= 0);
@@ -871,13 +871,13 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
   if (adlb_has_sub(subscript))
   {
     dc = data_store_subscript(id, d, subscript, buffer, length, type,
-                              notifs, &freed_datum);
+                             store_refcounts, notifs, &freed_datum);
     DATA_CHECK(dc);
   }
   else
   {
-    dc = data_store_root(id, d, buffer, length, type, notifs,
-                         &freed_datum);
+    dc = data_store_root(id, d, buffer, length, type, store_refcounts,
+                         notifs, &freed_datum);
     DATA_CHECK(dc);
   }
 
@@ -908,6 +908,7 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
 static adlb_data_code
 data_store_root(adlb_datum_id id, adlb_datum *d,
     const void* buffer, int length, adlb_data_type type,
+    adlb_refcounts store_refcounts,
     adlb_notif_t *notifs, bool *freed_datum)
 {
   adlb_data_code dc;
@@ -918,7 +919,8 @@ data_store_root(adlb_datum_id id, adlb_datum *d,
 
   // Handle store to top-level datum
   bool initialize = !d->status.set;
-  dc = ADLB_Unpack2(&d->data, d->type, buffer, length, initialize);
+  dc = ADLB_Unpack2(&d->data, d->type, buffer, length, store_refcounts,
+                    initialize);
   DATA_CHECK(dc);
   d->status.set = true;
 
@@ -942,8 +944,8 @@ data_store_root(adlb_datum_id id, adlb_datum *d,
  */
 static adlb_data_code
 data_store_subscript(adlb_datum_id id, adlb_datum *d,
-    adlb_subscript subscript,
-    const void* value, int length, adlb_data_type value_type,
+    adlb_subscript subscript, const void* value, int length,
+    adlb_data_type value_type, adlb_refcounts store_refcounts,
     adlb_notif_t *notifs, bool *freed_datum)
 {
   adlb_data_code dc;
@@ -970,7 +972,8 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
               ADLB_Data_type_tostring(elem_type), ADLB_Data_type_tostring(value_type));
       // Handle addition to multiset
       const adlb_datum_storage *elem;
-      dc = xlb_multiset_add(data->MULTISET, value, length, &elem);
+      dc = xlb_multiset_add(data->MULTISET, value, length,
+                            store_refcounts, &elem);
       DATA_CHECK(dc);
 
       if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
@@ -1010,7 +1013,8 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
       
       // Now we are guaranteed to succeed
       adlb_datum_storage *entry = malloc(sizeof(adlb_datum_storage));
-      dc = ADLB_Unpack(entry, c->val_type, value, length);
+      dc = ADLB_Unpack(entry, c->val_type, value, length,
+                      store_refcounts);
       DATA_CHECK(dc);
 
       if (found)
@@ -1060,7 +1064,7 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
         // Located field to assign.  This function will check
         // that it hasn't already been assigned
         dc = xlb_struct_assign_field(field, field_type, value, length,
-                                     value_type);
+                                     value_type, store_refcounts);
         DATA_CHECK(dc);
 
         if (ENABLE_LOG_DEBUG && xlb_debug_enabled)

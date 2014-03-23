@@ -41,7 +41,7 @@ uint xlb_multiset_size(const xlb_multiset *set);
  */
 adlb_data_code
 xlb_multiset_add(xlb_multiset *set, const void *data, int length,
-                 const adlb_datum_storage **stored);
+                 adlb_refcounts refcounts, const adlb_datum_storage **stored);
 /*
   Free memory and clear references from multiset
  */

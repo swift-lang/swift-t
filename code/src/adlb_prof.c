@@ -216,11 +216,12 @@ ADLB_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
 
 adlb_code
 ADLB_Store(adlb_datum_id id, adlb_subscript subscript,
-                      adlb_data_type type, const void *data, int length,
-                      adlb_refcounts refcount_decr)
+          adlb_data_type type, const void *data, int length,
+          adlb_refcounts refcount_decr, adlb_refcounts store_refcounts)
 {
   MPE_LOG(xlb_mpe_wkr_store_start);
-  int rc = ADLBP_Store(id, subscript, type, data, length, refcount_decr);
+  int rc = ADLBP_Store(id, subscript, type, data, length, refcount_decr,
+                       store_refcounts);
   MPE_LOG(xlb_mpe_wkr_store_end);
   return rc;
 }

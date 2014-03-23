@@ -145,17 +145,19 @@ adlb_code ADLB_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
   Store value into datum
   data: binary representation
   length: length of binary representation
+  refcount_decr: refcounts to to decrement on this id
+  store_refcounts: refcounts to include for any refs in this data
   returns: ADLB_SUCCESS if store succeeded
            ADLB_REJECTED if id/subscript already assigned and cannot be
                          overwritten
            ADLB_ERROR for other errors
  */
 adlb_code ADLBP_Store(adlb_datum_id id, adlb_subscript subscript,
-                      adlb_data_type type, const void *data, int length,
-                      adlb_refcounts refcount_decr);
+          adlb_data_type type, const void *data, int length,
+          adlb_refcounts refcount_decr, adlb_refcounts store_refcounts);
 adlb_code ADLB_Store(adlb_datum_id id, adlb_subscript subscript,
-                      adlb_data_type type, const void *data, int length,
-                      adlb_refcounts refcount_decr);
+          adlb_data_type type, const void *data, int length,
+          adlb_refcounts refcount_decr, adlb_refcounts store_refcounts);
 
 /*
    Retrieve contents of datum.

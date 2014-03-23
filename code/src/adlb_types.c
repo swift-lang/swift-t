@@ -564,20 +564,21 @@ ADLB_Unpack_buffer(adlb_data_type type,
 }
 
 adlb_data_code ADLB_Unpack(adlb_datum_storage *d, adlb_data_type type,
-                          const void *buffer, int length)
+            const void *buffer, int length, adlb_refcounts refcounts)
 {
-  return ADLB_Unpack2(d, type, buffer, length, true);
+  return ADLB_Unpack2(d, type, buffer, length, refcounts, true);
 }
 
 adlb_data_code ADLB_Unpack2(adlb_datum_storage *d, adlb_data_type type,
-        const void *buffer, int length, bool init_compound)
+        const void *buffer, int length, adlb_refcounts refcounts,
+        bool init_compound)
 {
   switch (type)
   {
     case ADLB_DATA_TYPE_INTEGER:
       return ADLB_Unpack_integer(&d->INTEGER, buffer, length);
     case ADLB_DATA_TYPE_REF:
-      return ADLB_Unpack_ref(&d->REF, buffer, length);
+      return ADLB_Unpack_ref(&d->REF, buffer, length, refcounts);
     case ADLB_DATA_TYPE_FLOAT:
       return ADLB_Unpack_float(&d->FLOAT, buffer, length);
     case ADLB_DATA_TYPE_STRING:
@@ -587,14 +588,14 @@ adlb_data_code ADLB_Unpack2(adlb_datum_storage *d, adlb_data_type type,
       // Ok to cast from const buffer since we force it to copy
       return ADLB_Unpack_blob(&d->BLOB, (void *)buffer, length, true);
     case ADLB_DATA_TYPE_STRUCT:
-      return ADLB_Unpack_struct(&d->STRUCT, buffer, length,
+      return ADLB_Unpack_struct(&d->STRUCT, buffer, length, refcounts,
                                 init_compound);
     case ADLB_DATA_TYPE_CONTAINER:
       return ADLB_Unpack_container(&d->CONTAINER, buffer, length,
-                                   init_compound);
+                                   refcounts, init_compound);
     case ADLB_DATA_TYPE_MULTISET:
       return ADLB_Unpack_multiset(&d->MULTISET, buffer, length,
-                                  init_compound);
+                                  refcounts, init_compound);
     default:
       printf("data_store(): unknown type: %i\n", type);
       return ADLB_DATA_ERROR_INVALID;
@@ -605,7 +606,8 @@ adlb_data_code ADLB_Unpack2(adlb_datum_storage *d, adlb_data_type type,
 
 adlb_data_code
 ADLB_Unpack_container(adlb_container *container,
-      const void *data, int length, bool init_cont)
+    const void *data, int length, adlb_refcounts refcounts,
+    bool init_cont)
 {
   assert(container != NULL);
   assert(data != NULL);
@@ -641,14 +643,14 @@ ADLB_Unpack_container(adlb_container *container,
     // unpack key/value pair and add to container
     const void *key, *val;
     int key_len, val_len;
-    dc = ADLB_Unpack_container_entry(key_type, val_type,
-          data, length, &pos, &key, &key_len, &val, &val_len);
+    dc = ADLB_Unpack_container_entry(key_type, val_type, data, length,
+                                &pos, &key, &key_len, &val, &val_len);
     DATA_CHECK(dc);
 
     adlb_datum_storage *d = malloc(sizeof(adlb_datum_storage));
     check_verbose(d != NULL, ADLB_DATA_ERROR_OOM,
                   "error allocating memory");
-    dc = ADLB_Unpack(d, val_type, val, val_len);
+    dc = ADLB_Unpack(d, val_type, val, val_len, refcounts);
     DATA_CHECK(dc);
 
     // TODO: handle case where key already exists
@@ -719,8 +721,8 @@ ADLB_Unpack_container_entry(adlb_data_type key_type,
 }
 
 adlb_data_code
-ADLB_Unpack_multiset(adlb_multiset_ptr *ms,
-                const void *data, int length, bool init_ms)
+ADLB_Unpack_multiset(adlb_multiset_ptr *ms, const void *data,
+        int length, adlb_refcounts refcounts, bool init_ms)
 {
   assert(ms != NULL);
   assert(data != NULL);
@@ -756,7 +758,7 @@ ADLB_Unpack_multiset(adlb_multiset_ptr *ms,
                                     &pos, &elem, &elem_len);
     DATA_CHECK(dc);
     
-    dc = xlb_multiset_add(*ms, elem, elem_len, NULL);
+    dc = xlb_multiset_add(*ms, elem, elem_len, refcounts, NULL);
     DATA_CHECK(dc);
   }
 

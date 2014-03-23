@@ -178,11 +178,10 @@ xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
   int rc = ADLB_SUCCESS;
   int server = ADLB_Locate(id);
 
-  // TODO: need way to pass refcounts in when storing
   if (server == xlb_comm_rank)
   {
     adlb_data_code dc = xlb_data_store(id, subscript, value, length,
-                                       type, ADLB_WRITE_RC, notifs);
+                     type, ADLB_WRITE_RC, transferred_refs, notifs);
     ADLB_DATA_CHECK(dc);
 
     return ADLB_SUCCESS;
@@ -194,7 +193,7 @@ xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
 
   // Store value, maybe accumulating more notification/ref setting work
   rc = xlb_store(id, ADLB_NO_SUB, type, value, length, ADLB_WRITE_RC,
-                 notifs);
+                 transferred_refs, notifs);
   ADLB_CHECK(rc);
   TRACE("SET_REFERENCE DONE");
   return ADLB_SUCCESS;

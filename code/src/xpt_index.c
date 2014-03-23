@@ -180,7 +180,7 @@ adlb_code xlb_xpt_index_add(const void *key, int key_len,
   adlb_subscript subscript = { .key = key, .length = (size_t)key_len };
   assert(data_len <= INT_MAX);
   adlb_code rc = ADLB_Store(id, subscript, ADLB_DATA_TYPE_BLOB,
-                            data, (int)data_len, refcounts);
+                    data, (int)data_len, refcounts, ADLB_NO_RC);
   
   // Handle duplicate key gracefully: it is possible for the same
   //       function to be recomputed, and we need to handle it!

@@ -42,7 +42,8 @@ uint xlb_multiset_size(const xlb_multiset *set) {
 }
 
 adlb_data_code xlb_multiset_add(xlb_multiset *set, const void *data,
-              int length, const adlb_datum_storage **stored) {
+                               int length, adlb_refcounts refcounts,
+                                  const adlb_datum_storage **stored) {
   xlb_multiset_chunk *chunk = NULL;
   if (set->last_chunk_elems >= XLB_MULTISET_CHUNK_SIZE)
   {
@@ -72,7 +73,7 @@ adlb_data_code xlb_multiset_add(xlb_multiset *set, const void *data,
   if (stored != NULL) {
     *stored = elem;
   }
-  return ADLB_Unpack(elem, set->elem_type, data, length);
+  return ADLB_Unpack(elem, set->elem_type, data, length, refcounts);
 }
 
 adlb_data_code

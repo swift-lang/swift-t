@@ -88,17 +88,20 @@ adlb_data_code xlb_struct_subscript_init(adlb_struct *s, adlb_subscript subscrip
 
 adlb_data_code xlb_struct_assign_field(adlb_struct_field *field,
         adlb_struct_field_type field_type, const void *data, int length,
-        adlb_data_type data_type);
+        adlb_data_type data_type, adlb_refcounts refcounts);
 
 adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,
-                        const void *data, int length, adlb_data_type type);
+                const void *data, int length, adlb_data_type type,
+                adlb_refcounts refcounts);
 
 /**
  * Set struct field at subscript
  * init_nested: if true, initialize inner structs on path
  */
-adlb_data_code xlb_struct_set_subscript(adlb_struct *s, adlb_subscript subscript,
-            bool init_nested, const void *data, int length, adlb_data_type type);
+adlb_data_code xlb_struct_set_subscript(adlb_struct *s,
+      adlb_subscript subscript, bool init_nested,
+      const void *data, int length, adlb_data_type type,
+      adlb_refcounts refcounts);
 
 adlb_data_code
 xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,

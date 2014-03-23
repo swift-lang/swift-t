@@ -700,14 +700,15 @@ ADLBP_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
 }
 
 adlb_code
-ADLBP_Store(adlb_datum_id id, adlb_subscript subscript, adlb_data_type type,
-            const void *data, int length, adlb_refcounts refcount_decr)
+ADLBP_Store(adlb_datum_id id, adlb_subscript subscript,
+          adlb_data_type type, const void *data, int length,
+          adlb_refcounts refcount_decr, adlb_refcounts store_refcounts)
 {
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
   adlb_code rc, final_rc;
   
   final_rc = xlb_store(id, subscript, type, data, length, refcount_decr,
-                 &notifs);
+                 store_refcounts, &notifs);
   ADLB_CHECK(final_rc); // Check for ADLB_ERROR, not other codes
   
   rc = xlb_notify_all(&notifs);
@@ -722,7 +723,7 @@ ADLBP_Store(adlb_datum_id id, adlb_subscript subscript, adlb_data_type type,
 adlb_code
 xlb_store(adlb_datum_id id, adlb_subscript subscript, adlb_data_type type,
             const void *data, int length, adlb_refcounts refcount_decr,
-            adlb_notif_t *notifs)
+            adlb_refcounts store_refcounts, adlb_notif_t *notifs)
 {
   adlb_code code;
   adlb_data_code dc;
@@ -751,7 +752,7 @@ xlb_store(adlb_datum_id id, adlb_subscript subscript, adlb_data_type type,
     // This is a server-to-server operation on myself
     TRACE("Store SELF");
     dc = xlb_data_store(id, subscript, data, length,
-                    type, refcount_decr, notifs);
+                    type, refcount_decr, store_refcounts, notifs);
     if (dc == ADLB_DATA_ERROR_DOUBLE_WRITE)
       return ADLB_REJECTED;
     ADLB_DATA_CHECK(dc);
@@ -762,7 +763,7 @@ xlb_store(adlb_datum_id id, adlb_subscript subscript, adlb_data_type type,
   struct packed_store_hdr hdr = { .id = id,
       .type = type,
       .subscript_len = adlb_has_sub(subscript) ? (int)subscript.length : 0,
-      .refcount_decr = refcount_decr };
+      .refcount_decr = refcount_decr, .store_refcounts = store_refcounts};
   struct packed_store_resp resp;
 
   IRECV(&resp, sizeof(resp), MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE);

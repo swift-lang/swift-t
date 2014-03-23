@@ -299,6 +299,7 @@ struct packed_store_hdr
   adlb_datum_id id;
   adlb_data_type type; // Type of data
   adlb_refcounts refcount_decr;
+  adlb_refcounts store_refcounts; // Refcounts to store
   int subscript_len; // including null byte, 0 if no subscript
 };
 

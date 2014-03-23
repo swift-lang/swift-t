@@ -284,7 +284,7 @@ static adlb_struct *alloc_struct(xlb_struct_type_info *t)
 
 adlb_data_code
 ADLB_Unpack_struct(adlb_struct **s, const void *data, int length,
-                   bool init_struct)
+                   adlb_refcounts refcounts, bool init_struct)
 {
   adlb_data_code dc;
 
@@ -344,7 +344,7 @@ ADLB_Unpack_struct(adlb_struct **s, const void *data, int length,
       }
 
       ADLB_Unpack(&(*s)->fields[i].data, t->field_types[i].type,
-                  field_start, field_len);
+                  field_start, field_len, refcounts);
     }
     (*s)->fields[i].initialized = field_init;
   }
@@ -588,7 +588,7 @@ adlb_data_code xlb_struct_subscript_init(adlb_struct *s, adlb_subscript subscrip
 
 adlb_data_code xlb_struct_assign_field(adlb_struct_field *field,
         adlb_struct_field_type field_type, const void *data, int length,
-        adlb_data_type data_type)
+        adlb_data_type data_type, adlb_refcounts refcounts)
 {
   adlb_data_code dc;
 
@@ -603,7 +603,7 @@ adlb_data_code xlb_struct_assign_field(adlb_struct_field *field,
         ADLB_Data_type_tostring(data_type));
 
   // Assign, initializing compound type if needed
-  dc = ADLB_Unpack2(&field->data, data_type, data, length,
+  dc = ADLB_Unpack2(&field->data, data_type, data, length, refcounts,
                     !field->initialized); 
   DATA_CHECK(dc);
   field->initialized = true;
@@ -612,7 +612,8 @@ adlb_data_code xlb_struct_assign_field(adlb_struct_field *field,
 }
 
 adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,
-                        const void *data, int length, adlb_data_type type)
+                const void *data, int length, adlb_data_type type,
+                adlb_refcounts refcounts)
 {
   adlb_struct_field *f;
   xlb_struct_type_info *st;
@@ -620,18 +621,21 @@ adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,
   DATA_CHECK(dc);
 
   return xlb_struct_assign_field(f, st->field_types[field_ix],
-                                 data, length, type);
+                                 data, length, type, refcounts);
 }
 
-adlb_data_code xlb_struct_set_subscript(adlb_struct *s, adlb_subscript subscript,
-             bool init_nested, const void *data, int length, adlb_data_type type)
+adlb_data_code xlb_struct_set_subscript(adlb_struct *s,
+      adlb_subscript subscript, bool init_nested,
+      const void *data, int length, adlb_data_type type,
+      adlb_refcounts refcounts)
 {
   adlb_data_code dc;
 
   adlb_struct_field *field;
   adlb_struct_field_type field_type;
   size_t sub_pos;
-  dc = xlb_struct_lookup(s, subscript, init_nested, &field, &field_type, &sub_pos);
+  dc = xlb_struct_lookup(s, subscript, init_nested, &field,
+                         &field_type, &sub_pos);
   DATA_CHECK(dc);
 
   check_verbose(sub_pos == subscript.length,
@@ -644,7 +648,8 @@ adlb_data_code xlb_struct_set_subscript(adlb_struct *s, adlb_subscript subscript
         "Subscript [%.*s] not initialized", (int)subscript.length,
         (const char*)subscript.key);
 
-  return xlb_struct_assign_field(field, field_type, data, length, type);
+  return xlb_struct_assign_field(field, field_type, data, length, type,
+                                 refcounts);
 }
 
 adlb_data_code xlb_free_struct(adlb_struct *s, bool free_root_ptr,
