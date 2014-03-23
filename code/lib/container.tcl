@@ -399,7 +399,7 @@ namespace eval turbine {
     }
     proc dereference_integer_body { v r } {
         # Get the TD from the reference
-        set id [ acquire_ref $r 1 1 ]
+        set id [ adlb::acquire_ref $r ref 1 1 ]
         copy_integer $v $id
     }
 
@@ -410,7 +410,7 @@ namespace eval turbine {
             name "DRV-$v-$r"
     }
     proc dereference_void_body { v r } {
-        set id [ acquire_ref $r 1 1 ]
+        set id [ adlb::acquire_ref $r ref 1 1 ]
         copy_void $v $id
     }
 
@@ -423,7 +423,7 @@ namespace eval turbine {
 
     proc dereference_float_body { v r } {
         # Get the TD from the reference
-        set id [ acquire_ref $r 1 1 ]
+        set id [ adlb::acquire_ref $r ref 1 1 ]
         copy_float $v $id
     }
 
@@ -434,7 +434,7 @@ namespace eval turbine {
             name "DRS-$v-$r"
     }
     proc dereference_string_body { v r } {
-        set id [ acquire_ref $r 1 1 ]
+        set id [ adlb::acquire_ref $r ref 1 1 ]
         copy_string $v $id
     }
 
@@ -445,7 +445,7 @@ namespace eval turbine {
             name "DRB-$v-$r"
     }
     proc dereference_blob_body { v r } {
-        set id [ acquire_ref $r 1 1 ]
+        set id [ adlb::acquire_ref $r ref 1 1 ]
         copy_blob [ list $v ] [ list $id ]
     }
 
@@ -468,7 +468,7 @@ namespace eval turbine {
     proc cr_v_lookup_body { cr i d d_type } {
         # When this procedure is run, cr should be set and
         # i should be the literal index
-        set c [ acquire_ref $cr 1 1 ]
+        set c [ adlb::acquire_ref $cr ref 1 1 ]
         container_reference $c $i $d $d_type
     }
 
@@ -488,7 +488,7 @@ namespace eval turbine {
 
     proc cr_f_lookup_body { cr i d d_type } {
         # When this procedure is run, cr and i should be set
-        set c [ acquire_ref $cr 1 1 ]
+        set c [ adlb::acquire_ref $cr ref 1 1 ]
         set t1 [ retrieve_decr $i ]
         container_reference $c $t1 $d $d_type
     }
@@ -506,7 +506,7 @@ namespace eval turbine {
     }
     proc cr_f_insert_body { cr j d t oc } {
         # s: The subscripted container
-        set c [ acquire_write_ref $cr 1 1 1 ]
+        set c [ adlb::acquire_write_ref $cr ref 1 1 1 ]
         set s [ retrieve_decr $j ]
         container_insert $c $s $d $t 1 1
         log "insert: (now) <$c>\[$s\]=<$d>"
@@ -522,7 +522,7 @@ namespace eval turbine {
             name "CRVI-$cr-$j-$d"
     }
     proc cr_v_insert_body { cr j d t } {
-        set c [ acquire_write_ref $cr 1 1 1 ]
+        set c [ adlb::acquire_write_ref $cr ref 1 1 1 ]
         # insert and drop slot
         container_insert $c $j $d $t 1 1
     }
@@ -536,7 +536,7 @@ namespace eval turbine {
             name "CRVIR"
     }
     proc cr_v_insert_r_body { cr j dr t } {
-        set c [ acquire_write_ref $cr 1 1 1 ]
+        set c [ adlb::acquire_write_ref $cr ref 1 1 1 ]
         set d [ adlb::acquire_ref $dr $t 1 1 ]
         container_insert $c $j $d $t 1 1
     }
@@ -547,7 +547,7 @@ namespace eval turbine {
             name "CRFIR"
     }
     proc cr_f_insert_r_body { cr j dr t } {
-        set c [ acquire_write_ref $cr 1 1 1 ]
+        set c [ adlb::acquire_write_ref $cr ref 1 1 1 ]
         set d [ adlb::acquire_ref $dr $t 1 1 ]
         set jval [ retrieve_decr $j ]
         # Insert and drop refcounts we acquired
@@ -605,7 +605,7 @@ namespace eval turbine {
     }
 
     proc cr_v_create_body { r cr i key_type val_type } {
-        set c [ acquire_write_ref $cr 1 1 1 ]
+        set c [ adlb::acquire_write_ref $cr ref 1 1 1 ]
         # Transfer 1 read & write refcount to ref
         set res [ create_nested $c $i $key_type $val_type 1 1 1 1 ]
         store_ref $r $res
@@ -619,7 +619,7 @@ namespace eval turbine {
     }
 
     proc cr_f_create_body { r cr i key_type val_type } {
-        set c [ acquire_write_ref $cr 1 1 1 ]
+        set c [ adlb::acquire_write_ref $cr ref 1 1 1 ]
         set s [ retrieve_decr $i ]
         # Transfer 1 read & write refcount to ref
         set res [ create_nested $c $s $key_type $val_type 1 1 1 1 ]
@@ -678,7 +678,7 @@ namespace eval turbine {
     }
 
     proc structref_reference_body { structr subscript result type } {
-        set struct [ acquire_ref $structr 1 1 ]
+        set struct [ adlb::acquire_ref $structr ref 1 1 ]
         adlb::struct_reference $struct $subscript $result $type
     }
 
