@@ -81,7 +81,7 @@ table_lp* table_lp_create_custom(int capacity, float load_factor);
 
 bool table_lp_add(table_lp* table, int64_t key, void* data);
 
-bool table_lp_set(table_lp* target, int64_t key,
+bool table_lp_set(table_lp* table, int64_t key,
                void* value, void** old_value);
 
 bool table_lp_search(table_lp* table, int64_t key, void **value);

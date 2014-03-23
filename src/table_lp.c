@@ -353,6 +353,25 @@ table_lp_add(table_lp *target, int64_t key, void* data)
   }
 }
 
+bool table_lp_set(table_lp* table, int64_t key,
+               void* value, void** old_value)
+{
+  table_lp_bucket *b = find_bucket(table, key);
+  table_lp_entry *e = bucket_locate_entry(b, key, NULL);
+  if (e != NULL)
+  {
+    *old_value = e->data;
+    e->data = value;
+    return true;
+  }
+  else
+  {
+    *old_value = NULL;
+    return false;
+  }
+}
+
+
 /*
   Find entry in table matching key
   prev: if provided, filled with previous entry
