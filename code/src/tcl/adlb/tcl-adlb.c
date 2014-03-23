@@ -2364,7 +2364,16 @@ ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
           int objc, Tcl_Obj *const objv[],
           bool write_ref, adlb_subscript_kind sub_kind)
 {
-  TCL_ARGS(sub_kind == ADLB_SUB_NONE ? 5 : 6);
+  int expected_args = 5;
+  if (sub_kind != ADLB_SUB_NONE) {
+    expected_args++;
+  }
+  if (write_ref)
+  {
+    expected_args++;
+  }
+
+  TCL_ARGS(expected_args);
   int rc;
   
   tcl_adlb_handle handle;
