@@ -592,7 +592,9 @@ namespace eval turbine {
 
         set s [ retrieve_decr $i ]
         # Acquire 1 read refcount for container
+        # TODO: get correct number of refcounts (here and in similar situations)
         set res [ create_nested $c $s $key_type $val_type 1 0 $decr_write $decr_read ]
+        # TODO: store correct number of refcounts (here and in similar situations)
         store_ref $r $res
     }
 
