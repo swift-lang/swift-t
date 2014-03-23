@@ -1254,6 +1254,7 @@ handle_container_reference(int caller)
   adlb_datum_id id, ref_id;
   adlb_subscript subscript, ref_subscript;
   adlb_data_type ref_type;
+  adlb_refcounts transfer_refs; // Refcounts to transfer to dest
 
   // Unpack data from buffer
   void *xfer_read = xfer;
@@ -1261,6 +1262,8 @@ handle_container_reference(int caller)
 
   xfer_read += xlb_unpack_id_sub(xfer_read, &id, &subscript);
   xfer_read += xlb_unpack_id_sub(xfer_read, &ref_id, &ref_subscript);
+  
+  MSG_UNPACK_BIN(xfer_read, &transfer_refs);
 
   // TODO: support binary subscript
   DEBUG("Container_reference: <%"PRId64">[%.*s] => <%"PRId64">[%.*s] (%i)",
@@ -1269,16 +1272,12 @@ handle_container_reference(int caller)
         ref_type);
  
   // TODO: support custom decrement
-  // TODO: allow caller to specify refcounts
-
-  // TODO: for now, assume 1 read reference given to caller
-  adlb_refcounts to_acquire = { .read_refcount = 1, .write_refcount = 0};
 
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
   adlb_binary_data member;
   adlb_data_code dc = xlb_data_container_reference(id,
                         subscript, ref_id, ref_subscript, false,
-                        ref_type, to_acquire, 
+                        ref_type, transfer_refs, 
                         &xlb_scratch_buf, &member, &notifs);
 
   struct packed_cont_ref_resp resp = { .dc = dc };

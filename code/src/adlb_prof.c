@@ -297,10 +297,11 @@ ADLB_Subscribe(adlb_datum_id id, adlb_subscript subscript,
 }
 
 adlb_code ADLB_Container_reference(adlb_datum_id id, adlb_subscript subscript,
-                             adlb_datum_id ref_id, adlb_subscript ref_subscript,
-                             adlb_data_type ref_type)
+               adlb_datum_id ref_id, adlb_subscript ref_subscript,
+               adlb_data_type ref_type, adlb_refcounts transfer_refs)
 {
-  return ADLBP_Container_reference(id, subscript, ref_id, ref_subscript, ref_type);
+  return ADLBP_Container_reference(id, subscript, ref_id,
+                  ref_subscript, ref_type, transfer_refs);
 }
 
 adlb_code ADLB_Container_size(adlb_datum_id id, int* size,
