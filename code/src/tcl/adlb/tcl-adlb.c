@@ -74,6 +74,9 @@
 #define USE_ADLB
 #endif
 
+// TODO: remove this once better implementation for ref storing added
+#define TMP_STORE_REFCOUNTS ADLB_NO_RC
+
 /** The communicator to use in our ADLB instance */
 MPI_Comm adlb_comm;
 
@@ -2114,7 +2117,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   // DEBUG_ADLB("adlb::store: <%"PRId64">=%s", id, data);
   int store_rc = ADLB_Store(handle.id, handle.sub.val, type,
-                  data.data, data.length, decr);
+                  data.data, data.length, decr, TMP_STORE_REFCOUNTS);
   
   // Free if needed
   if (data.data != xfer_buf.data)
@@ -2245,7 +2248,7 @@ adlb_data_to_tcl_obj(Tcl_Interp *interp, Tcl_Obj *const objv[], adlb_datum_id id
       *result = Tcl_NewADLBInt(tmp.INTEGER);
       break;
     case ADLB_DATA_TYPE_REF:
-      dc = ADLB_Unpack_ref(&tmp.REF, data, length);
+      dc = ADLB_Unpack_ref(&tmp.REF, data, length, ADLB_NO_RC);
       TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
             "Retrieve failed due to error unpacking data %i", dc);
       *result = Tcl_NewADLB_ID(tmp.REF.id);
@@ -2999,7 +3002,8 @@ ADLB_Store_Blob_Cmd(ClientData cdata, Tcl_Interp *interp,
     TCL_CHECK_MSG(rc, "decr must be int!");
   }
 
-  rc = ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_BLOB, pointer, length, decr);
+  rc = ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_BLOB, pointer, length,
+                  decr, TMP_STORE_REFCOUNTS);
   CHECK_ADLB_STORE(rc, id);
 
   return TCL_OK;
@@ -3041,7 +3045,7 @@ ADLB_Blob_store_floats_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   }
   rc = ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_BLOB,
-                  xfer, length*(int)sizeof(double), decr);
+        xfer, length*(int)sizeof(double), decr, TMP_STORE_REFCOUNTS);
   CHECK_ADLB_STORE(rc, id);
 
   return TCL_OK;
@@ -3082,7 +3086,7 @@ ADLB_Blob_store_ints_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   }
   rc = ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_BLOB,
-                  xfer, length*(int)sizeof(int), decr);
+        xfer, length*(int)sizeof(int), decr, TMP_STORE_REFCOUNTS);
   CHECK_ADLB_STORE(rc, id);
 
   return TCL_OK;
@@ -3195,7 +3199,8 @@ ADLB_Insert_Impl(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(argpos == objc, "trailing arguments after %i not consumed",
                                 argpos);
 
-  rc = ADLB_Store(handle.id, handle.sub.val, type, member.data, member.length, decr);
+  rc = ADLB_Store(handle.id, handle.sub.val, type,
+                  member.data, member.length, decr, TMP_STORE_REFCOUNTS);
 
   // TODO: support binary subscript
   CHECK_ADLB_STORE_SUB(rc, handle.id, handle.sub.val);

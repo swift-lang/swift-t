@@ -841,7 +841,8 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
 
   if (created)
   {
-    adlb_ref new_ref;
+    // Need to create container and insert
+
     /*
      * Initial refcounts for container passed to caller
      * We set to a fairly high number since this lets us give refcounts
@@ -849,24 +850,27 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
      * datum.  Remainder will be freed all at once when outer container
      * is closed/garbage collected.
      */
-    new_ref.read_refs = new_ref.write_refs = (2 << 24);
-
-    // Need to create container and insert
-    adlb_datum_id new_id;
+    int init_count = (2 << 24);
+    adlb_refcounts init_refs = { .read_refcount = init_count,
+                                 .write_refcount = init_count };
     adlb_create_props props = DEFAULT_CREATE_PROPS;
 
-    props.read_refcount = new_ref.read_refs +
+    props.read_refcount = init_refs.read_refcount +
                           refcounts.incr_referand.read_refcount;
-    props.write_refcount = new_ref.write_refs +
+    props.write_refcount = init_refs.write_refcount +
                            refcounts.incr_referand.write_refcount;
+    
+    adlb_datum_id new_id;
     code = ADLB_Create(ADLB_DATA_ID_NULL, type, type_extra, props, &new_id);
     TCL_CONDITION(code == ADLB_SUCCESS, "Error while creating nested");
-    
-    new_ref.id = new_id;
+
+    // ID is only relevant data, so init refcounts to any value
+    adlb_ref new_ref = { .id = new_id, .read_refs = 0, .write_refs = 0 };
+
 
     // Store and apply remaining refcounts
     code = ADLB_Store(id, subscript, ADLB_DATA_TYPE_REF, &new_ref,
-                    (int)sizeof(new_ref), refcounts.decr_self);
+                    (int)sizeof(new_ref), refcounts.decr_self, init_refs );
     TCL_CONDITION(code == ADLB_SUCCESS, "Error while inserting nested");
 
     // Return the ID of the new container
