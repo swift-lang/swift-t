@@ -845,7 +845,7 @@ alloc_container_reference(size_t subscript_len)
 adlb_data_code
 xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
           const void* buffer, int length, adlb_data_type type,
-          adlb_refcounts store_refcounts, adlb_refcounts refcount_decr,
+          adlb_refcounts refcount_decr, adlb_refcounts store_refcounts, 
           adlb_notif_t *notifs)
 {
   assert(length >= 0);
