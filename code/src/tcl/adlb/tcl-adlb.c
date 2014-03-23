@@ -75,7 +75,7 @@
 #endif
 
 // TODO: remove this once better implementation for ref storing added
-#define TMP_STORE_REFCOUNTS ADLB_NO_RC
+#define TMP_STORE_REFCOUNTS ADLB_READ_RC
 
 /** The communicator to use in our ADLB instance */
 MPI_Comm adlb_comm;
@@ -1302,6 +1302,8 @@ ADLB_Exists_Sub_Cmd(ClientData cdata, Tcl_Interp *interp,
 /*
   Convert a tcl object to the ADLB representation.
   own_pointers: whether we want to own any memory allocated
+
+  Note: initialises refcounts to 0
   result: the result
   alloced: whether memory was allocated that must be freed with
            ADLB_Free_storage
@@ -1324,8 +1326,8 @@ tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
       rc = Tcl_GetADLB_ID(interp, obj, &result->REF.id);
       TCL_CHECK_MSG(rc, "adlb extract int from %s failed!",
                       Tcl_GetString(obj));
-      // TODO: non-default refcounts - assuming for now single read refcount
-      result->REF.read_refs = 1;
+      // init refcounts to zero
+      result->REF.read_refs = 0;
       result->REF.write_refs = 0;
         
       return TCL_OK;
