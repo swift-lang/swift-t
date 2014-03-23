@@ -186,6 +186,11 @@ xlb_update_rc_id(adlb_datum_id id, int *read_rc, int *write_rc,
   adlb_data_code dc;
   adlb_code ac;
 
+  DEBUG("xlb_update_rc_id r: %i w:%i release_r: %i release_w: %i\
+         acquire_r: %i acquire_w: %i", *read_rc, *write_rc,
+          (int)release_read, (int)release_write,
+          to_acquire.read_refcount, to_acquire.write_refcount);
+
   // Number we acquired 
   int read_acquired, write_acquired;
   // Remainder change that needs to be applied
@@ -207,7 +212,7 @@ xlb_update_rc_id(adlb_datum_id id, int *read_rc, int *write_rc,
   dc = apply_rc_update(release_write, write_rc,
           to_acquire.write_refcount, &write_acquired, &write_remainder);
   check_verbose(dc == ADLB_DATA_SUCCESS, dc, "Error updating write "
-            "refcount of <%"PRId64"> r=%i acquiring %i release:%i",
+            "refcount of <%"PRId64"> w=%i acquiring %i release:%i",
             id, *write_rc, to_acquire.write_refcount, (int)write_remainder);
 
   if (read_remainder != 0 || write_remainder != 0)
