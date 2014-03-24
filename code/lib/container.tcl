@@ -504,7 +504,7 @@ namespace eval turbine {
         rule "$cr $j" "cr_f_insert_body $cr $j $d $t" \
             name "CRFI-$cr"
     }
-    proc cr_f_insert_body { cr j d t oc } {
+    proc cr_f_insert_body { cr j d t } {
         # s: The subscripted container
         set c [ adlb::acquire_write_ref $cr ref 1 1 1 ]
         set s [ retrieve_decr $j ]
@@ -529,7 +529,6 @@ namespace eval turbine {
 
     # CRVIR
     # j: tcl integer index
-    # oc: direct handle to outer container
     proc cr_v_insert_r { cr j dr t } {
         rule [ list $cr $dr ] \
             "cr_v_insert_r_body $cr $j $dr $t" \
