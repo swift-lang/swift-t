@@ -74,9 +74,6 @@
 #define USE_ADLB
 #endif
 
-// TODO: remove this once better implementation for ref storing added
-#define TMP_STORE_REFCOUNTS ADLB_READ_RC
-
 /** The communicator to use in our ADLB instance */
 MPI_Comm adlb_comm;
 
@@ -2048,12 +2045,13 @@ exit_err:
 /**
    usage: adlb::store <id> <type> [ <extra> ] <value>
                       [ <decrement writers> ] [ <decrement readers> ]
-   @param extra any extra info for type, e.g. struct type when storing struct
-   @param value value to be stored
-   @param decrement writers Optional  Decrement the writers reference
-                count by this amount.  Default if not provided is 1
-   @param decrement readers Optional  Decrement the readers reference
-                count by this amount.  Default if not provided is 0
+                      [ <store readers> ] [ <store writers> ]
+   extra: any extra info for type, e.g. struct type when storing struct
+   value: value to be stored
+   decrement readers/writers: Optional  Decrement the readers/writers
+          reference count by this amount.  Defaults are 0 read, 1 write
+   decrement readers/writers: Optional  Add this many references to any
+          stored reference variables.   Defaults are 0 read, 0 write
 */
 static int
 ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -2114,12 +2112,27 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
     TCL_CHECK_MSG(rc, "decrement arg must be int!");
   }
 
+  // Handle optional number of refcounts to store
+  adlb_refcounts store_refcounts = ADLB_NO_RC;
+  if (argpos < objc) {
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++],
+                 &store_refcounts.read_refcount);
+    TCL_CHECK_MSG(rc, "store refcount arg must be int!");
+  }
+
+  if (argpos < objc) {
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++],
+                 &store_refcounts.write_refcount);
+    TCL_CHECK_MSG(rc, "store refcount arg must be int!");
+  }
+
+
   TCL_CONDITION(argpos == objc,
           "extra trailing arguments starting at argument %i", argpos);
 
   // DEBUG_ADLB("adlb::store: <%"PRId64">=%s", id, data);
   int store_rc = ADLB_Store(handle.id, handle.sub.val, type,
-                  data.data, data.length, decr, TMP_STORE_REFCOUNTS);
+                  data.data, data.length, decr, store_refcounts);
   
   // Free if needed
   if (data.data != xfer_buf.data)
@@ -3014,7 +3027,7 @@ ADLB_Store_Blob_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
 
   rc = ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_BLOB, pointer, length,
-                  decr, TMP_STORE_REFCOUNTS);
+                  decr, ADLB_NO_RC);
   CHECK_ADLB_STORE(rc, id);
 
   return TCL_OK;
@@ -3056,7 +3069,7 @@ ADLB_Blob_store_floats_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   }
   rc = ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_BLOB,
-        xfer, length*(int)sizeof(double), decr, TMP_STORE_REFCOUNTS);
+        xfer, length*(int)sizeof(double), decr, ADLB_NO_RC);
   CHECK_ADLB_STORE(rc, id);
 
   return TCL_OK;
@@ -3097,7 +3110,7 @@ ADLB_Blob_store_ints_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   }
   rc = ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_BLOB,
-        xfer, length*(int)sizeof(int), decr, TMP_STORE_REFCOUNTS);
+        xfer, length*(int)sizeof(int), decr, ADLB_NO_RC);
   CHECK_ADLB_STORE(rc, id);
 
   return TCL_OK;
@@ -3210,8 +3223,11 @@ ADLB_Insert_Impl(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(argpos == objc, "trailing arguments after %i not consumed",
                                 argpos);
 
+
+  // TODO: support accepting this as arg
+  adlb_refcounts store_rc = ADLB_READ_RC;
   rc = ADLB_Store(handle.id, handle.sub.val, type,
-                  member.data, member.length, decr, TMP_STORE_REFCOUNTS);
+                  member.data, member.length, decr, store_rc);
 
   // TODO: support binary subscript
   CHECK_ADLB_STORE_SUB(rc, handle.id, handle.sub.val);

@@ -591,11 +591,9 @@ namespace eval turbine {
         debug "c_f_create: $r $c\[$i\] $key_type $val_type"
 
         set s [ retrieve_decr $i ]
-        # Acquire 1 read refcount for container
-        # TODO: get correct number of refcounts (here and in similar situations)
-        set res [ create_nested $c $s $key_type $val_type 1 0 $decr_write $decr_read ]
-        # TODO: store correct number of refcounts (here and in similar situations)
-        store_ref $r $res
+        # Acquire 1 read & 1 write refcount for container
+        set res [ create_nested $c $s $key_type $val_type 1 1 $decr_write $decr_read ]
+        store_rw_ref $r $res
     }
 
     # Create container at c[i]
@@ -610,7 +608,7 @@ namespace eval turbine {
         set c [ adlb::acquire_write_ref $cr ref 1 1 1 ]
         # Transfer 1 read & write refcount to ref
         set res [ create_nested $c $i $key_type $val_type 1 1 1 1 ]
-        store_ref $r $res
+        store_rw_ref $r $res
     }
 
     # Create container at c[i]
@@ -625,7 +623,7 @@ namespace eval turbine {
         set s [ retrieve_decr $i ]
         # Transfer 1 read & write refcount to ref
         set res [ create_nested $c $s $key_type $val_type 1 1 1 1 ]
-        store_ref $r $res
+        store_rw_ref $r $res
     }
 
     # When container is closed, concatenate its keys in result
