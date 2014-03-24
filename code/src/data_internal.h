@@ -45,6 +45,9 @@ typedef struct {
   bool set : 1;
   /** PERMANENT: Whether garbage collection is disabled for data item */
   bool permanent : 1;
+  /** RELEASE_WRITE_REFS: If true, release write refcount for any
+      references in this datum when its write refcount goes to zero */
+  bool release_write_refs : 1;
 } adlb_data_status;
 
 
@@ -53,7 +56,7 @@ static inline void xlb_data_init_status(adlb_data_status *s)
   memset(s, 0, sizeof(*s));
 }
 #define ADLB_DATA_INIT_STATUS \
-  { .set = 0, .permanent = 0 }
+  { .set = 0, .permanent = 0, .release_write_refs = 0}
 
 typedef struct
 {

@@ -170,7 +170,8 @@ typedef struct
 {
   int read_refcount;
   int write_refcount;
-  bool permanent;
+  bool permanent : 1;
+  bool release_write_refs : 1;
 } adlb_create_props;
 
 // Default settings for new variables
@@ -178,6 +179,7 @@ static const adlb_create_props DEFAULT_CREATE_PROPS = {
   1, /* read_refcount */
   1, /* write_refcount */
   false, /* permanent */
+  false, /* release_write_refs */
 };
 
 // Information for new variable creation

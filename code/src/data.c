@@ -309,6 +309,7 @@ datum_init_props(adlb_datum_id id, adlb_datum *d,
   d->write_refcount = props->write_refcount;
   xlb_data_init_status(&d->status); // default status
   d->status.permanent = props->permanent;
+  d->status.release_write_refs = props->release_write_refs;
 
   return ADLB_DATA_SUCCESS;
 }
@@ -488,18 +489,21 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
     dc = datum_gc(id, d, acquire, &notifs->rc_changes);
     DATA_CHECK(dc);
   }
-  else if (closed || ADLB_RC_NOT_NULL(acquire.refcounts))
+  else
   {
-    DEBUG("Updating referand refcounts. Closed: %i, "
-          "Acquire sub: [%.*s] r: %i w: %i ", (int)closed,
-          (int)acquire.subscript.length, (const char*)acquire.subscript.key, 
-          acquire.refcounts.read_refcount, acquire.refcounts.write_refcount);
-    // Have to release or acquire references
-    dc = xlb_incr_referand(&d->data, d->type, false, closed,
-                 acquire, &notifs->rc_changes); 
-    DATA_CHECK(dc);
+    bool release_write_refs = closed && d->status.release_write_refs;
+    if (release_write_refs || ADLB_RC_NOT_NULL(acquire.refcounts))
+    {
+      DEBUG("Updating referand refcounts. release write refs: %i, "
+            "Acquire sub: [%.*s] r: %i w: %i ", (int)release_write_refs,
+            (int)acquire.subscript.length, (const char*)acquire.subscript.key, 
+            acquire.refcounts.read_refcount, acquire.refcounts.write_refcount);
+      // Have to release or acquire references
+      dc = xlb_incr_referand(&d->data, d->type, false, release_write_refs,
+                   acquire, &notifs->rc_changes); 
+      DATA_CHECK(dc);
+    }
   }
-
   return ADLB_DATA_SUCCESS;
 }
 
