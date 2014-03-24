@@ -215,8 +215,8 @@ static inline adlb_code xlb_notifs_add(adlb_notif_ranks *notifs,
  *      structure, but is not freed unless it is in the to_free list.
  */
 static inline adlb_code xlb_refs_add(adlb_ref_data *refs,
-        adlb_datum_id id, adlb_subscript sub, adlb_data_type type,
-        const void *value, int value_len)
+      adlb_datum_id id, adlb_subscript sub, adlb_data_type type,
+      const void *value, int value_len, adlb_refcounts refcounts)
 {
   // Mark that caller should free
   if (refs->count == refs->size)
@@ -231,6 +231,7 @@ static inline adlb_code xlb_refs_add(adlb_ref_data *refs,
   d->type = type;
   d->value = value;
   d->value_len = value_len;
+  d->refcounts = refcounts;
 
   return ADLB_SUCCESS;
 }

@@ -750,7 +750,8 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
 
     // add reference setting work to notifications
     xlb_refs_add(&notifs->references, ref_id, ref_sub,
-                 ref_type, result->data, result->length);
+                 ref_type, result->data, result->length,
+                 to_acquire);
 
     // Need to acquire references 
     adlb_refcounts decr = { .read_refcount = -1,

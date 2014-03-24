@@ -172,8 +172,9 @@ xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
             const void *value, int length, adlb_data_type type,
             adlb_refcounts transferred_refs, adlb_notif_t *notifs)
 {
-  DEBUG("xlb_set_ref: <%"PRId64">[%.*s]=%p[%i]", id,
-      (int)subscript.length, (const char*)subscript.key, value, length);
+  DEBUG("xlb_set_ref: <%"PRId64">[%.*s]=%p[%i] r: %i w: %i", id,
+      (int)subscript.length, (const char*)subscript.key, value, length,
+      transferred_refs.read_refcount, transferred_refs.write_refcount);
 
   int rc = ADLB_SUCCESS;
   int server = ADLB_Locate(id);
