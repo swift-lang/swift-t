@@ -1078,8 +1078,8 @@ extract_create_props(Tcl_Interp *interp, bool accept_id, int argstart,
   TCL_CHECK(rc);
 
   // Process create props if present
-  adlb_create_props defaults = DEFAULT_CREATE_PROPS;
-  *props = defaults;
+  *props = DEFAULT_CREATE_PROPS;
+  props->release_write_refs = turbine_release_write_rc_policy(*type);
 
   if (argpos < objc) {
     rc = Tcl_GetIntFromObj(interp, objv[argpos++], &(props->read_refcount));

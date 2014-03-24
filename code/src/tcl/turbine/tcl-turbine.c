@@ -855,6 +855,8 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
                                  .write_refcount = init_count };
     adlb_create_props props = DEFAULT_CREATE_PROPS;
 
+    props.release_write_refs = turbine_release_write_rc_policy(type);
+
     props.read_refcount = init_refs.read_refcount +
                           refcounts.incr_referand.read_refcount;
     props.write_refcount = init_refs.write_refcount +

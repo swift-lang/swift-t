@@ -137,4 +137,15 @@ ADLB_Parse_Subscript(Tcl_Interp *interp, Tcl_Obj *const objv[],
 #define ADLB_PARSE_SUB_CLEANUP(parse) \
     ADLB_Parse_Subscript_Cleanup(interp, objv, parse)
 
+/**
+ * Define policy for which types should automatically release write
+ * refcounts on close. This is generally compound types that allow
+ * mutation of inner referenced data through the outer one
+ */
+static inline bool
+turbine_release_write_rc_policy(adlb_data_type type)
+{
+  return ADLB_Data_is_compound(type);
+}
+
 #endif
