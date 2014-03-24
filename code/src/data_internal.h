@@ -129,7 +129,7 @@ typedef struct
 #define check_verbose(condition, code, format, args...) \
     ((void) (condition));
 
-#define DATA_CHECK(rc) ((void) (condition));
+#define DATA_CHECK(rc) ((void) (rc));
 #endif
 
 #define DATA_CHECK_MALLOC(ptr) { \
