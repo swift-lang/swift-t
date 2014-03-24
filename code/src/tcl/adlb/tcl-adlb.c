@@ -2050,8 +2050,8 @@ exit_err:
    value: value to be stored
    decrement readers/writers: Optional  Decrement the readers/writers
           reference count by this amount.  Defaults are 0 read, 1 write
-   decrement readers/writers: Optional  Add this many references to any
-          stored reference variables.   Defaults are 0 read, 0 write
+   store readers/writers: Optional  Add this many references to any
+          stored reference variables.   Defaults are 2 read, 0 write
 */
 static int
 ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -2113,7 +2113,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
 
   // Handle optional number of refcounts to store
-  adlb_refcounts store_refcounts = ADLB_NO_RC;
+  adlb_refcounts store_refcounts = ADLB_READ_RC;
   if (argpos < objc) {
     rc = Tcl_GetIntFromObj(interp, objv[argpos++],
                  &store_refcounts.read_refcount);
