@@ -1,6 +1,4 @@
 
 DIR := src/tcl/static-pkg
 
-ifeq ($(ENABLE_STATIC),1)
-  STATIC_PKG_SRC += $(DIR)/static-pkg.c
-endif
+STATIC_PKG_SRC += $(DIR)/static-pkg.c

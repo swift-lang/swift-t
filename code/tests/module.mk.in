@@ -74,7 +74,6 @@ ifeq ($(USE_MPE),1)
 endif
 
 # Run this only if using static?
-# TODO: Add this to exm-issues
-# TEST_SRC_MANIFEST += $(DIR)/staticapp-1.manifest
+TEST_SRC_MANIFEST += $(DIR)/staticapp-1.manifest
 
 TEST_SRC_C += $(patsubst %.manifest, %.c, $(TEST_SRC_MANIFEST))
