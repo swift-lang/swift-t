@@ -8,18 +8,10 @@ TCL_VERSION = 8.6
 
 CFLAGS = -I $(TCL)/include -fPIC -g -std=gnu99
 
-# ### SWIG
-
-# swift-main_wrap.c: swift-main.i
-# 	swig -includeall swift-main.i
-# 	sed -i s/F_Init/Func_Init/ swift-main_wrap.c
-
-### Programs:
-
 LIBS = -L $(TCL)/lib -l tcl$(TCL_VERSION) \
 		-Wl,-rpath -Wl,$(TCL)/lib
 
-prog-cc: prog-c.o swift-main.o
+prog-c: prog-c.o swift-main.o
 	$(CC) -o $(@) $(^) \
 		$(LIBS)
 
