@@ -19,7 +19,7 @@ CFLAGS = -I $(TCL)/include -fPIC -g -std=gnu99
 LIBS = -L $(TCL)/lib -l tcl$(TCL_VERSION) \
 		-Wl,-rpath -Wl,$(TCL)/lib
 
-prog-swift-main: prog-swift-main.o swift-main.o
+prog-cc: prog-c.o swift-main.o
 	$(CC) -o $(@) $(^) \
 		$(LIBS)
 
@@ -45,7 +45,7 @@ run: all pkgIndex.tcl
 	./prog-swift-main arg1 arg2 output.data
 	@echo
 	@echo Running Tcl:
-	TCLLIBPATH=$(PWD) tclsh prog.tcl
+	TCLLIBPATH=$(PWD) tclsh prog-tcl.tcl
 	@echo
 	@echo Running Swift:
 	TURBINE_USER_LIB=$(PWD) turbine -l prog-swift.tcl
