@@ -1266,10 +1266,12 @@ handle_container_reference(int caller)
   MSG_UNPACK_BIN(xfer_read, &transfer_refs);
 
   // TODO: support binary subscript
-  DEBUG("Container_reference: <%"PRId64">[%.*s] => <%"PRId64">[%.*s] (%i)",
+  DEBUG("Container_reference: <%"PRId64">[%.*s] => <%"PRId64">[%.*s] "
+        "(%s) r: %i w: %i",
         id, (int)subscript.length, (const char*)subscript.key,
         ref_id, (int)ref_subscript.length, (const char*)ref_subscript.key,
-        ref_type);
+        ADLB_Data_type_tostring(ref_type), transfer_refs.read_refcount,
+        transfer_refs.write_refcount);
  
   // TODO: support custom decrement
 

@@ -927,7 +927,8 @@ data_store_root(adlb_datum_id id, adlb_datum *d,
   if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
   {
     char *val_s = ADLB_Data_repr(&d->data, d->type);
-    DEBUG("data_store <%"PRId64">=%s\n", id, val_s);
+    DEBUG("data_store <%"PRId64">=%s | refs: r: %i w: %i\n", id, val_s,
+          store_refcounts.read_refcount, store_refcounts.write_refcount);
     free(val_s);
   }
   
@@ -979,7 +980,9 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
       if (ENABLE_LOG_DEBUG && xlb_debug_enabled)
       {
         char *val_s = ADLB_Data_repr(elem, elem_type);
-        DEBUG("data_store <%"PRId64">+=%s\n", id, val_s);
+        DEBUG("data_store <%"PRId64">+=%s | refs: r: %i w: %i\n", id,
+              val_s, store_refcounts.read_refcount,
+              store_refcounts.write_refcount);
         free(val_s);
       }
       return ADLB_DATA_SUCCESS;
@@ -1037,8 +1040,9 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
       {
         char *val_s = ADLB_Data_repr(entry, value_type);
         // TODO: support binary keys
-        DEBUG("data_store <%"PRId64">[%.*s]=%s\n", id, (int)subscript.length,
-              (const char*)subscript.key, val_s);
+        DEBUG("data_store <%"PRId64">[%.*s]=%s | refs: r: %i w: %i\n",
+           id, (int)subscript.length, (const char*)subscript.key, val_s,
+           store_refcounts.read_refcount, store_refcounts.write_refcount);
         free(val_s);
       }
 
@@ -1071,8 +1075,9 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
         {
           char *val_s = ADLB_Data_repr(&field->data, value_type);
           // TODO: support binary keys
-          DEBUG("data_store <%"PRId64">.%.*s=%s\n", id, (int)subscript.length,
-                (const char*)subscript.key, val_s);
+          DEBUG("data_store <%"PRId64">.%.*s=%s | refs: r: %i w: %i\n",
+            id, (int)subscript.length, (const char*)subscript.key, val_s,
+            store_refcounts.read_refcount, store_refcounts.write_refcount);
           free(val_s);
         }
 
