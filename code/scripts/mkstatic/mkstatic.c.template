@@ -83,7 +83,7 @@ int
 main(int argc, char **argv)
 {
   Tcl_Interp *interp = Tcl_CreateInterp();
- 
+
   if (MkStatic_Tcl_Init(interp) != TCL_OK)
   {
     exit(1);
@@ -98,6 +98,12 @@ main(int argc, char **argv)
   }
   else
   {
+    if (argc < 2)
+    {
+      printf("turbine_sh: no script file!\n");
+      exit(EXIT_FAILURE);
+    }
+
     // Get script from first argument
     script_file = argv[1];
 
