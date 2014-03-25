@@ -251,6 +251,15 @@ verbose()
   fi
 }
 
+lookup_java()
+{
+  if [[ ${JVM} == "unset" ]]
+  then
+    # Set Java from PATH
+    JVM=$( which java || true )
+  fi
+}
+
 report_version()
 {
   print "STC: Swift-Turbine Compiler"
@@ -258,6 +267,8 @@ report_version()
   cat ${STC_HOME}/turbine-version.txt
   print "TURBINE_INSTALL=${TURBINE_INSTALL}"
   print "TURBINE_HOME=${TURBINE_HOME}"
+  lookup_java
+  print "Using Java: ${JVM}"
   exit 0
 }
 
@@ -349,16 +360,12 @@ then
   export DEBUG=-agentlib:jdwp=transport=dt_socket,server=y,address=${DEBUG_PORT}
 fi
 
-if [[ ${JVM} == "unset" ]]
+lookup_java
+if [[ ${JVM} == *"not found" ]]
 then
-  # Set Java from PATH
-  JVM=$( which java || true )
-  if [[ ${JVM} == *"not found" ]]
-  then
-    print "Could not find java!"
-    print "Put java in your PATH or use stc -j /path/to/java"
-    exit 1
-  fi
+  print "Could not find java!"
+  print "Put java in your PATH or use stc -j /path/to/java"
+  exit 1
 fi
 
 STC=${STC_HOME}/lib/stc.jar
