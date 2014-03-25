@@ -5,7 +5,7 @@ all: prog-c pkgIndex.tcl prog-swift.tcl
 
 #TCL = $(HOME)/sfw/tcl-8.6.0
 #TCL_VERSION = 8.6
-
+JAVA = $(HOME)/jdk1.7.0_07/bin/java
 TCL = $(HOME)/tcl-install
 TCL_VERSION = 8.5
 
@@ -31,7 +31,7 @@ libswift_main.so: extension.o swift-main.o
 ### Swift:
 
 prog-swift.tcl: prog-swift.swift
-	stc -r $(PWD) $(<)
+	stc -j $(JAVA) -r $(PWD) $(<)
 
 ### Tests:
 
