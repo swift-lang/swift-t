@@ -25,6 +25,6 @@ main {
     mystruct tmp2;
     tmp2.a = 1;
     // forgot to assign b - should cause warning but not error
+    // UNSET-VARIABLE-EXPECTED
     bigarray[f(2) + 1] = tmp2;
-
 }
