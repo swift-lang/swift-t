@@ -1898,12 +1898,20 @@ public class TurbineOp extends Instruction {
       //       loaded array value
       break;
     }
-    case COPY_IN_FILENAME:
-      return new MakeImmRequest(null, getInput(0).getVar().asList());
+    case COPY_IN_FILENAME: {
+      Var filenameIn = getInput(0).getVar();
+      if (waitForClose || closedVars.contains(filenameIn)) {
+        return new MakeImmRequest(null, filenameIn.asList());
+      }
+    }
     case UPDATE_INCR:
     case UPDATE_MIN:
-    case UPDATE_SCALE:
-      return new MakeImmRequest(null, getInput(0).getVar().asList());
+    case UPDATE_SCALE: {
+      Var newVal = getInput(0).getVar();
+      if (waitForClose || closedVars.contains(newVal)) {
+        return new MakeImmRequest(null, newVal.asList());
+      }
+    }
     default:
       // fall through
     }
