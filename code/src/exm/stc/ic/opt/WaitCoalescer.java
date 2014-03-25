@@ -1085,12 +1085,8 @@ public class WaitCoalescer implements OptimizerPass {
             w.getTarget() == TaskMode.LOCAL) {
           canRelocate = true;
         } else if (w.getTarget() == TaskMode.LOCAL_CONTROL) {
-          if (w.hasExplicit() && retainExplicit) {
-            canRelocate = false;
-          } else {
-            w.setMode(WaitMode.TASK_DISPATCH);
-            w.setTarget(TaskMode.CONTROL);
-          }
+          w.setMode(WaitMode.TASK_DISPATCH);
+          w.setTarget(TaskMode.CONTROL);
         } else {
           canRelocate = false;
         }
