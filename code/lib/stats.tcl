@@ -239,7 +239,8 @@ namespace eval turbine {
       set n_out [ lindex $outputs 0 ]
       set mean_out [ lindex $outputs 1 ]
       set std_out [ lindex $outputs 2 ]
-      rule $container \
+      # TODO: revert to non-deep rule once we change back container repr
+      deeprule $container [ list 1 ] [ list ref ] \
           "stat_combine_body $container $n_out $mean_out $std_out" \
           name "stats-combine-$container" 
     }
