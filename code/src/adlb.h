@@ -141,6 +141,20 @@ adlb_code ADLBP_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
 adlb_code ADLB_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
                        adlb_refcounts decr);
 
+/**
+ * Find out the current reference counts for a datum.
+ *
+ * E.g. if you want to find out that the datum is closed with refcount 0
+ * This will succeed with zero refcounts if datum isn't found.
+ *
+ * result: refcounts of id after decr applied
+ * decr: amount to decrement refcounts
+ */
+adlb_code ADLBP_Get_refcounts(adlb_datum_id id, adlb_refcounts *result,
+                              adlb_refcounts decr);
+adlb_code ADLB_Get_refcounts(adlb_datum_id id, adlb_refcounts *result,
+                              adlb_refcounts decr);
+
 /*
   Store value into datum
   data: binary representation

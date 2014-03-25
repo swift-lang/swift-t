@@ -698,6 +698,31 @@ ADLBP_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
   *result = resp.result;
   return ADLB_SUCCESS;
 }
+adlb_code
+ADLBP_Get_refcounts(adlb_datum_id id, adlb_refcounts *result,
+                              adlb_refcounts decr)
+{
+  int to_server_rank = ADLB_Locate(id);
+
+  MPI_Status status;
+  MPI_Request request;
+
+  TRACE("ADLB_Get_refcounts: <%"PRId64">\n", id);
+
+  struct packed_refcounts_req req = { .id = id, .decr = decr };
+
+  struct packed_refcounts_resp resp;
+  IRECV(&resp, sizeof(resp), MPI_BYTE, to_server_rank,
+        ADLB_TAG_RESPONSE);
+  SEND(&req, sizeof(req), MPI_BYTE, to_server_rank,
+       ADLB_TAG_GET_REFCOUNTS);
+  WAIT(&request, &status);
+
+  ADLB_DATA_CHECK(resp.dc);
+  *result = resp.refcounts;
+  return ADLB_SUCCESS;
+
+}
 
 adlb_code
 ADLBP_Store(adlb_datum_id id, adlb_subscript subscript,
@@ -856,7 +881,7 @@ xlb_refcount_incr(adlb_datum_id id, adlb_refcounts change,
 
   int to_server_rank = ADLB_Locate(id);
 
-  struct packed_refcount_resp resp;
+  struct packed_incr_resp resp;
   rc = MPI_Irecv(&resp, sizeof(resp), MPI_BYTE, to_server_rank,
                  ADLB_TAG_RESPONSE, adlb_comm, &request);
   MPI_CHECK(rc);

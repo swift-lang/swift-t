@@ -409,6 +409,18 @@ xlb_datum_lookup(adlb_datum_id id, adlb_datum **d)
   return ADLB_DATA_SUCCESS;
 }
 
+adlb_data_code xlb_data_get_reference_count(adlb_datum_id id,
+          adlb_refcounts *result)
+{
+  adlb_datum *d;
+  adlb_data_code dc = xlb_datum_lookup(id, &d);
+  DATA_CHECK(dc);
+  
+  result->read_refcount = d->read_refcount;
+  result->write_refcount = d->write_refcount;
+  return ADLB_DATA_SUCCESS;
+}
+
 /**
    @param garbaged_collected: whether the data was freed
                               (if null, not modified);

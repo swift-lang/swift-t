@@ -210,8 +210,18 @@ adlb_code
 ADLB_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
             adlb_refcounts decr)
 {
+  MPE_LOG(xlb_mpe_wkr_exists_start);
   int rc = ADLBP_Exists(id, subscript, result, decr);
   return rc;
+  MPE_LOG(xlb_mpe_wkr_exists_end);
+}
+
+adlb_code ADLB_Get_refcounts(adlb_datum_id id, adlb_refcounts *result,
+                              adlb_refcounts decr)
+{
+  MPE_LOG(xlb_mpe_wkr_get_refcounts_start);
+  return ADLBP_Get_refcounts(id, result, decr);
+  MPE_LOG(xlb_mpe_wkr_get_refcounts_end);
 }
 
 adlb_code

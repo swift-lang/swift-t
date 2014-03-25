@@ -87,6 +87,7 @@ static adlb_code handle_store(int caller);
 static adlb_code handle_retrieve(int caller);
 static adlb_code handle_enumerate(int caller);
 static adlb_code handle_subscribe(int caller);
+static adlb_code handle_get_refcounts(int caller);
 static adlb_code handle_refcount_incr(int caller);
 static adlb_code handle_insert_atomic(int caller);
 static adlb_code handle_unique(int caller);
@@ -168,6 +169,7 @@ xlb_handlers_init(void)
   register_handler(ADLB_TAG_RETRIEVE, handle_retrieve);
   register_handler(ADLB_TAG_ENUMERATE, handle_enumerate);
   register_handler(ADLB_TAG_SUBSCRIBE, handle_subscribe);
+  register_handler(ADLB_TAG_GET_REFCOUNTS, handle_get_refcounts);
   register_handler(ADLB_TAG_REFCOUNT_INCR, handle_refcount_incr);
   register_handler(ADLB_TAG_INSERT_ATOMIC, handle_insert_atomic);
   register_handler(ADLB_TAG_UNIQUE, handle_unique);
@@ -1070,6 +1072,33 @@ handle_subscribe(int caller)
 }
 
 static adlb_code
+handle_get_refcounts(int caller)
+{
+  adlb_code rc;
+  MPI_Status status;
+  struct packed_refcounts_req req;
+  RECV(&req, sizeof(req), MPI_BYTE, caller, ADLB_TAG_GET_REFCOUNTS);
+
+  DEBUG("Get_refcounts: <%"PRId64"> decr r: %i w: %i", req.id,
+        req.decr.read_refcount, req.decr.write_refcount);
+ 
+  struct packed_refcounts_resp resp;
+  resp.dc = xlb_data_get_reference_count(req.id, &resp.refcounts);
+
+  if (resp.dc == ADLB_DATA_SUCCESS)
+  {
+    rc = refcount_decr_helper(req.id, req.decr);
+    ADLB_CHECK(rc);
+  }
+  
+  // Compensate for decr
+  resp.refcounts.read_refcount -= req.decr.read_refcount;
+  resp.refcounts.write_refcount -= req.decr.write_refcount;
+  RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+  return ADLB_SUCCESS;
+}
+
+static adlb_code
 handle_refcount_incr(int caller)
 {
   adlb_code rc;
@@ -1089,7 +1118,7 @@ handle_refcount_incr(int caller)
 
   DEBUG("data_reference_count => %i", dc);
 
-  struct packed_refcount_resp resp = {
+  struct packed_incr_resp resp = {
       .success = (dc == ADLB_DATA_SUCCESS),
       .notifs.notify_count = 0,
       .notifs.reference_count = 0,

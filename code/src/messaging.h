@@ -274,6 +274,19 @@ struct packed_reference
 };
 
 /**
+ * Request refcount info
+ */
+struct packed_refcounts_req {
+  adlb_datum_id id;
+  adlb_refcounts decr;
+};
+
+struct packed_refcounts_resp {
+  adlb_data_code dc;
+  adlb_refcounts refcounts;
+};
+
+/**
    Count increment or decrement
  */
 struct packed_incr
@@ -285,7 +298,7 @@ struct packed_incr
 /**
    Response to reference count operation
  */
-struct packed_refcount_resp
+struct packed_incr_resp
 {
   bool success;
   struct packed_notif_counts notifs;
@@ -457,6 +470,7 @@ typedef enum
   ADLB_TAG_ENUMERATE,
   ADLB_TAG_SUBSCRIBE,
   ADLB_TAG_PERMANENT,
+  ADLB_TAG_GET_REFCOUNTS,
   ADLB_TAG_REFCOUNT_INCR,
   ADLB_TAG_INSERT_ATOMIC,
   ADLB_TAG_UNIQUE,

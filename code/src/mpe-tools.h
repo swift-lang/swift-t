@@ -85,6 +85,8 @@ extern_declare_pair(wkr, subscribe);
 extern_declare_pair(wkr, close);
 extern_declare_pair(wkr, insert);
 extern_declare_pair(wkr, lookup);
+extern_declare_pair(wkr, exists);
+extern_declare_pair(wkr, get_refcounts);
 
 // Info event:
 extern int xlb_mpe_svr_info;

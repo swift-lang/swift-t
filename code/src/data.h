@@ -126,6 +126,8 @@ adlb_data_code xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
           adlb_refcounts refcount_decr, adlb_refcounts store_refcounts,
           adlb_notif_t *notifs);
 
+adlb_data_code xlb_data_get_reference_count(adlb_datum_id id,
+          adlb_refcounts *result);
 
 /*
    Struct used to specify if refcounts of referands should be reused
