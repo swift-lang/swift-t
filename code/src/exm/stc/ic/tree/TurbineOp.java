@@ -3138,7 +3138,7 @@ public class TurbineOp extends Instruction {
   private List<Var> tryPiggyBackHelper(Counters<Var> increments,
       RefCountType type, Var var, int readDecrInput, int writeDecrInput) {
     long amt = increments.getCount(var);
-    if (amt > 0) {
+    if (amt < 0) {
       // Which argument is increment
       int inputPos;
       if (type == RefCountType.READERS) {
