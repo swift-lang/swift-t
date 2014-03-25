@@ -259,7 +259,8 @@ namespace eval turbine {
 
         if { $last_chunk } {
           set this_chunk_size [ expr {$count - $i} ]
-          set read_decr 1
+          # TODO: change back for inline structs in array
+          set read_decr 0
         } else {
           set this_chunk_size $CHUNK_SIZE
           set read_decr 0
@@ -299,13 +300,16 @@ namespace eval turbine {
         }
         incr i [ llength $members ]
       }
+
+      # TODO: change back for inline structs in array
+      read_refcount_decr $container
       if { $n == 0 } {
-        read_refcount_decr $container
+        # TODO: change back for inline structs in array
+        # read_refcount_decr $container
         error "mean and standard deviation not defined for sample size 0"
       }
       store_integer $n_out $n_accum
       store_float $mean_out $mean_accum
       store_float $std_out [ expr {sqrt($M2_accum / (double($n_accum)))} ]
-      read_refcount_decr $container
     }
 }
