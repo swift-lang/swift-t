@@ -3114,6 +3114,9 @@ public class TurbineOp extends Instruction {
         Var bag = getOutput(0);
         return tryPiggyBackHelper(increments, type, bag, -1, 1);
       }
+      case STRUCT_INIT_FIELDS:
+        return tryPiggyBackHelper(increments, type, getOutput(0), -1,
+                                  inputs.size() - 1);
       default:
         // Do nothing
     }
@@ -3152,7 +3155,7 @@ public class TurbineOp extends Instruction {
 
       Arg oldAmt = getInput(inputPos);
       if (oldAmt.isIntVal()) {
-        setInput(inputPos, Arg.createIntLit(oldAmt.getIntLit() + amt));
+        setInput(inputPos, Arg.createIntLit(oldAmt.getIntLit() - amt));
         return var.asList();
       }
     }
