@@ -558,7 +558,7 @@ namespace eval turbine {
             [ list file_lines_body $result $src ]
     }
     proc file_lines_body { result input } {
-        set input_val [ get_file $input 1 ]
+        set input_val [ retrieve_decr_file $input ]
         set lines_val [ file_lines_impl $input_val ]
         array_kv_build $result $lines_val 1 integer string
     }
