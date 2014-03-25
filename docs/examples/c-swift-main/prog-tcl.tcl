@@ -1,4 +1,4 @@
 
 package require swift_main
 
-swift_main x y z
+swift_main_extension x y z

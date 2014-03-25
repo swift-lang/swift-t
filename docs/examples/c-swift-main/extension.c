@@ -8,8 +8,8 @@
 #include "swift-main.h"
 
 static int
-swift_main_tcl(ClientData cdata, Tcl_Interp *interp,
-                int objc, Tcl_Obj*const objv[])
+swift_main_extension(ClientData cdata, Tcl_Interp *interp,
+                     int objc, Tcl_Obj*const objv[])
 {
   // Create argc/argv from Tcl objects:
   int argc = objc;
@@ -35,7 +35,8 @@ Swift_main_Init(Tcl_Interp* interp)
 
   Tcl_PkgProvide(interp, "swift_main", "0.0");
 
-  Tcl_CreateObjCommand(interp, "swift_main", swift_main_tcl,    \
+  Tcl_CreateObjCommand(interp,
+                       "swift_main_extension", swift_main_extension,
                        NULL, NULL);
   return TCL_OK;
 }

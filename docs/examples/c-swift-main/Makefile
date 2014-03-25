@@ -1,5 +1,5 @@
 
-all: prog-swift-main pkgIndex.tcl prog-swift.tcl
+all: prog-c pkgIndex.tcl prog-swift.tcl
 
 ### Settings:
 
@@ -20,7 +20,7 @@ prog-c: prog-c.o swift-main.o
 pkgIndex.tcl: make-package.tcl libswift_main.so
 	tclsh make-package.tcl > $(@)
 
-libswift_main.so: swift-main.o helpers.o
+libswift_main.so: extension.o swift-main.o
 	$(CC) -shared -o $(@) \
 		$(^) \
 		$(LIBS)
@@ -34,7 +34,7 @@ prog-swift.tcl: prog-swift.swift
 
 run: all pkgIndex.tcl
 	@echo Running Pure C:
-	./prog-swift-main arg1 arg2 output.data
+	./prog-c arg1 arg2 output.data
 	@echo
 	@echo Running Tcl:
 	TCLLIBPATH=$(PWD) tclsh prog-tcl.tcl
