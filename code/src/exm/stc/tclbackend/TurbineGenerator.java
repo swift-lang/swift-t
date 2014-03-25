@@ -953,8 +953,14 @@ public class TurbineGenerator implements CompilerBackend {
     
     List<TypeName> structTypeName = Collections.singletonList(
             representationType(struct.type()));
+    
+    // Struct should own both refcount types
+    Expression storeReadRC = LiteralInt.ONE;
+    Expression storeWriteRC = LiteralInt.ONE;
+    
     pointAdd(Turbine.adlbStore(varToExpr(struct),
-            dict, structTypeName, argToExpr(writeDecr), null));
+            dict, structTypeName, argToExpr(writeDecr),
+            LiteralInt.ZERO, storeReadRC, storeWriteRC));
   }
   
   @Override

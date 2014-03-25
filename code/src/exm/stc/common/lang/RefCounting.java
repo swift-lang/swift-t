@@ -207,8 +207,15 @@ public class RefCounting {
       for (StructField field: structT.getFields()) {
         untrackedSum += baseRefCount(field.getType(), defType, rcType,
                                  false, true);
-        trackedSum += baseRefCount(field.getType(), defType, rcType,
-                                 true, false);
+        if (Types.isMutableRef(field.getType())) {
+          // Need to have tracked refcount as proxy
+          Type referencedType = field.getType().getImplType().memberType();
+          trackedSum += baseRefCount(referencedType, defType, rcType,
+                                      true, false);
+        } else {
+          trackedSum += baseRefCount(field.getType(), defType, rcType,
+                                     true, false);
+        }
       }
       
       long structCount = 0;

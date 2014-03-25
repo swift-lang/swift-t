@@ -549,8 +549,16 @@ class Turbine {
   }
 
   public static Command adlbStore(Value dst, Expression src,
+      List<TypeName> dstTypeInfo, Expression decrWriters,
+      Expression decrReaders) {
+    return adlbStore(dst, src, dstTypeInfo, decrWriters, decrReaders,
+                     null, null);
+  }
+  
+  public static Command adlbStore(Value dst, Expression src,
           List<TypeName> dstTypeInfo, Expression decrWriters,
-          Expression decrReaders) {
+          Expression decrReaders, Expression storeReaders,
+          Expression storeWriters) {
     List<Expression> args = new ArrayList<Expression>();
     args.add(dst);
     args.addAll(dstTypeInfo);
@@ -561,6 +569,14 @@ class Turbine {
     if (decrReaders != null) {
       assert (decrWriters != null);
       args.add(decrReaders);
+    }
+    if (storeReaders != null) {
+      assert (decrReaders != null);
+      args.add(storeReaders);
+    }
+    if (storeWriters != null) {
+      assert (storeReaders != null);
+      args.add(storeWriters);
     }
     return new Command(ADLB_STORE, args);
   }
