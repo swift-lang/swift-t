@@ -77,7 +77,7 @@ public class Pair<T1, T2> {
 
   @Override
   public String toString() {
-    return "(" + val1.toString() + ", " + val2.toString() + ")";
+    return "(" + val1 + ", " + val2 + ")";
   }
   
   public static <T, S> List<T> extract1(List<Pair<T, S>> list) {

@@ -170,6 +170,8 @@ public class ReorderInstructions extends FunctionOptimizerPass {
       startNodes.add(i);
     }
     
+    //Collections.reverse(startNodes);
+    
     // Do a topological sort with depth first search
     for (int dfsStart: startNodes) {
       if (visited.contains(dfsStart)) {

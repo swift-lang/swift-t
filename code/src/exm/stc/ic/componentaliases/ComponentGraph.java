@@ -221,7 +221,8 @@ public class ComponentGraph {
   public void findPotentialAliases(Var var, List<Arg> componentPath,
                                     Set<Var> results) {
     Node node = varNodes.get(var);
-    if (node != null) { 
+    
+    if (node != null) {
       // Setup stack with current path
       StackLite<Pair<Node, Arg>> stack = new StackLite<Pair<Node, Arg>>();
       for (Arg component: componentPath) {
@@ -230,6 +231,29 @@ public class ComponentGraph {
       
       walkUpRec(node, results, stack,
                 new HierarchicalSet<Pair<Node, Integer>>());
+    }
+    
+    // Iteratively check all results for more aliases so we don't miss any
+    // TODO: not so elegant, can result in multiple visits to nodes
+    Set<Var> toProcess = new HashSet<Var>();
+    toProcess.addAll(results);
+    
+    while (!toProcess.isEmpty()) {
+      Set<Var> newResults = new HashSet<Var>();
+      
+      for (Var processAlias: toProcess) {
+        // Locate any additional aliases of newly added var
+        walkUpRec(varNodes.get(processAlias), newResults,
+                  new StackLite<Pair<Node, Arg>>(),
+                  new HierarchicalSet<Pair<Node, Integer>>());
+      }
+      
+      toProcess.clear();
+      for (Var newResult: newResults) {
+        if (results.add(newResult)) {
+          toProcess.add(newResult);
+        }
+      }
     }
   }
 
@@ -243,6 +267,10 @@ public class ComponentGraph {
    */
   private void walkUpRec(Node node, Set<Var> results, StackLite<Pair<Node, Arg>> pathUp,
       HierarchicalSet<Pair<Node, Integer>> visited) {
+    if (logger.isTraceEnabled()) {
+      logger.trace("walkUpRec: visit " + node + " pathUp: " + pathUp);
+    }
+    
     if (!pathUp.isEmpty()) {
       // Note: add all visited nodes from this root down
       walkDownRec(node, pathUp, results, visited);
@@ -251,6 +279,9 @@ public class ComponentGraph {
     // Explore all possible routes to roots
     List<Edge> parentEdges = parents.get(node);
     for (Edge parent: parentEdges) {
+      if (logger.isTraceEnabled()) {
+        logger.trace("walkUpRec: visit " + parent + " from " + node);
+      }
       pathUp.push(Pair.create(node, parent.label));
       
       HierarchicalSet<Pair<Node, Integer>> visitedParent;
@@ -269,9 +300,14 @@ public class ComponentGraph {
 
   private void walkDownRec(Node node, StackLite<Pair<Node, Arg>> pathUp,
       Set<Var> results, HierarchicalSet<Pair<Node, Integer>> visited) {
+    if (logger.isTraceEnabled()) {
+      logger.trace("walkDownRec: visit " + node + " pathUp " + pathUp);
+    }
+    
     Pair<Node, Integer> visitedKey = Pair.create(node, pathUp.size());
     if (visited.contains(visitedKey)) {
       // Already visited with this pathUp: will not get new results
+      logger.trace("Already visited");
       return;
     }
 
@@ -283,6 +319,9 @@ public class ComponentGraph {
 
     // Check aliases of this.  Mark visited first to avoid cycle
     for (Node alias: aliases.get(node)) {
+      if (logger.isTraceEnabled()) {
+        logger.trace("walkDownRec: visit " + alias + " alias of " + node);
+      }
       walkDownRec(alias, pathUp, results, visited);
     }
 
@@ -295,6 +334,9 @@ public class ComponentGraph {
     Node srcChild = prev.val1;
     
     for (Edge child: children.get(node)) {
+      if (logger.isTraceEnabled()) {
+        logger.trace("Check child " + child + " down from " + node);
+      }
       if ((srcChild == null || !child.dst.equals(srcChild)) &&
           labelsMatch(childLabel, child.label)) {
         // Recurse if it may match and is not original path
