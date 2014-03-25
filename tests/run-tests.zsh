@@ -180,8 +180,16 @@ compile_test()
     ARGS=$(cat ${STC_ARGS})
   fi
 
+  STC_LOG_FLAG=-l
+  if (( VERBOSE ))
+  then
+    # Enable trace-level logging
+    STC_LOG_FLAG=-L
+  fi
+
   pushd $STC_TESTS_DIR
-  ${STC} -l ${STC_LOG_FILE} -O ${STC_OPT_LEVEL} -C ${STC_IC_FILE} \
+  ${STC} ${STC_LOG_FLAG} ${STC_LOG_FILE} \
+      -O ${STC_OPT_LEVEL} -C ${STC_IC_FILE} \
             ${ADDTL_STC_ARGS} ${ARGS} \
             ${SWIFT_FILE} ${TCL_FILE} \
             > ${STC_OUT_FILE} 2> ${STC_ERR_FILE}
