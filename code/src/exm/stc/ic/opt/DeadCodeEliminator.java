@@ -103,7 +103,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
 
     /* List of vars that were written.  Need to ensure that all variables
      * that are keys in writeEffect are tracked. */
-    List<Var> modifiedVars = new ArrayList<Var>(); 
+    List<Pair<Var, List<Arg>>> modifiedVars = new ArrayList<Pair<Var, List<Arg>>(); 
     /*
      * Graph of dependencies from vars to other vars. If edge exists v1 -> v2
      * this means that if v1 is required, then v2 is required

@@ -189,18 +189,27 @@ public class ComponentGraph {
    * @param var
    * @return
    */
-  public Set<Var> findPotentialAliases(Var var) {
+  public Set<Var> findPotentialAliases(Var var, List<Arg> componentPath) {
     HashSet<Var> result = new HashSet<Var>();
-    findPotentialAliases(var, result);
+    findPotentialAliases(var, componentPath, result);
     return result;
   }
   
-  public void findPotentialAliases(Var var, Set<Var> results) {
-    Node node = varNodes.get(var);
+  public void findPotentialAliases(Var var, List<Arg> componentPath,
+                                    Set<Var> results) {
+    Node node = locateNode(var, componentPath);
     if (node != null) { 
       walkUpRec(node, results, new StackLite<Pair<Node, Arg>>(),
               new HierarchicalSet<Pair<Node, Integer>>());
     }
+  }
+
+  private Node locateNode(Var var, List<Arg> componentPath) {
+    Node curr = varNodes.get(var);
+    for (Arg component: componentPath) {
+      curr = getAnonNode(curr, component);
+    }
+    return curr;
   }
   
   /**
