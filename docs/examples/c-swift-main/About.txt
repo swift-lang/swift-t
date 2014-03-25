@@ -11,14 +11,14 @@ The package contains the following files:
 
 About.txt:
 extension.c:
-helpers.h: Header file to declare functions defined in application
+helpers.h: ?
 Makefile: Make file to generate shared library from source code
 make-package.tcl
 prog-c.c : main program a la application code
 prog-swift.swift
 prog-tcl.tcl
-run.sh: run script
+run.sh: run script.
 swift-main.c
-swift-main.h
+swift-main.h: Header file to declare functions defined in Swift main.
 swift-main.i
 swift-main.tcl
