@@ -920,7 +920,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.containerElemType(src).assignableTo(
                     Types.containerElemType(target)));
 
-    pointAdd(Turbine.enumerateAll(prefixVar(target), varToExpr(src), true,
+    pointAdd(Turbine.enumerateAll(prefixVar(target), varToExpr(src), false,
             argToExpr(decr)));
   }
   
