@@ -265,7 +265,8 @@ namespace eval turbine {
         }
 
         set members [ adlb::enumerate $container members $this_chunk_size $i $read_decr ]
-        foreach struct $members {
+        foreach struct_td $members {
+          set struct [ retrieve_struct $struct_td ]
           set n [ dict get $struct "n" ]
           set mean [ dict get $struct "mean" ]
           set M2 [ dict get $struct "M2" ]
