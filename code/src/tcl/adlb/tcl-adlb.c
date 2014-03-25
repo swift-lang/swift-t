@@ -1296,6 +1296,56 @@ ADLB_Exists_Sub_Cmd(ClientData cdata, Tcl_Interp *interp,
   return ADLB_Exists_Impl(cdata, interp, objc, objv, ADLB_SUB_CONTAINER);
 }
 
+
+/**
+  Check if a datum is closed.
+  If not found, counted as closed
+  NOTE: decrements are applied before checking for close
+   usage: adlb::closed <id> [ <read decr> ] [ <write decr> ]
+ */
+static int
+ADLB_Closed_Cmd(ClientData cdata, Tcl_Interp *interp,
+                int objc, Tcl_Obj *const objv[])
+{
+  TCL_CONDITION(objc >= 2, "requires at least 1 argument");
+  int rc;
+
+  tcl_adlb_handle handle;
+  rc = ADLB_PARSE_HANDLE(objv[1], &handle, true);
+  TCL_CHECK_MSG(rc, "Invalid handle %s", Tcl_GetString(objv[1]));
+
+  int argpos = 2;
+  adlb_refcounts decr = ADLB_NO_RC;
+  if (argpos < objc)
+  {
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++],
+                           &decr.read_refcount);
+    TCL_CHECK_MSG(rc, "Expected integer argument");
+  }
+
+  if (argpos < objc)
+  {
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++],
+                           &decr.write_refcount);
+    TCL_CHECK_MSG(rc, "Expected integer argument");
+  }
+
+  TCL_CONDITION(argpos == objc,
+                "unexpected trailing args at %ith arg", argpos);
+
+  adlb_refcounts curr_refcounts;
+  rc = ADLB_Get_refcounts(handle.id, &curr_refcounts, decr);
+  
+  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", handle.id);
+
+  ADLB_PARSE_HANDLE_CLEANUP(&handle);
+
+  bool closed = curr_refcounts.write_refcount == 0;
+  Tcl_Obj* result = Tcl_NewBooleanObj(closed);
+  Tcl_SetObjResult(interp, result);
+  return TCL_OK;
+}
+
 /*
   Convert a tcl object to the ADLB representation.
   own_pointers: whether we want to own any memory allocated
@@ -4867,6 +4917,7 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("multicreate",ADLB_Multicreate_Cmd);
   COMMAND("exists",    ADLB_Exists_Cmd);
   COMMAND("exists_sub", ADLB_Exists_Sub_Cmd);
+  COMMAND("closed", ADLB_Closed_Cmd);
   COMMAND("store",     ADLB_Store_Cmd);
   COMMAND("retrieve",  ADLB_Retrieve_Cmd);
   COMMAND("retrieve_decr",  ADLB_Retrieve_Decr_Cmd);

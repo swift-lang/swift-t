@@ -790,7 +790,7 @@ namespace eval turbine {
               error "Don't know how to wait on type: $base_type"
             }
           }
-          if { [ adlb::exists $td ] } {
+          if { [ adlb::closed $td ] } {
             incr progress
           } else {
             # Suspend execution until next item closed
