@@ -3,8 +3,11 @@ all: prog-c pkgIndex.tcl prog-swift.tcl
 
 ### Settings:
 
-TCL = $(HOME)/sfw/tcl-8.6.0
-TCL_VERSION = 8.6
+#TCL = $(HOME)/sfw/tcl-8.6.0
+#TCL_VERSION = 8.6
+
+TCL = $(HOME)/tcl-install
+TCL_VERSION = 8.5
 
 CFLAGS = -I $(TCL)/include -fPIC -g -std=gnu99
 

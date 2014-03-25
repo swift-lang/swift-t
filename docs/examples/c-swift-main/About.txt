@@ -1,0 +1,24 @@
+Enabling running ordinary C code as Swift/T application on IBM BG-style supercomputers
+=======================================================================================
+
+Motivation:
+
+Since the target computing environment does not allow fork/exec on compute nodes, an alternative approach is to tightly couple existing codes into the Swift/T framework and run it as a single piece of code.
+
+The benefit to users is ease of application composability while still being able to have high performance from execution.
+
+The package contains the following files:
+
+About.txt:
+extension.c:
+helpers.h: Header file to declare functions defined in application
+Makefile: Make file to generate shared library from source code
+make-package.tcl
+prog-c.c : main program a la application code
+prog-swift.swift
+prog-tcl.tcl
+run.sh: run script
+swift-main.c
+swift-main.h
+swift-main.i
+swift-main.tcl
