@@ -49,6 +49,7 @@ import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.aliases.Alias;
+import exm.stc.ic.componentaliases.Component;
 import exm.stc.ic.componentaliases.ComponentAlias;
 import exm.stc.ic.opt.Semantics;
 import exm.stc.ic.opt.valuenumber.ComputedValue;
@@ -425,6 +426,17 @@ public class ICInstructions {
      */
     public List<Var> getModifiedOutputs() {
       return this.getOutputs();
+    }
+    
+    /**
+     * Specify more granular information about effect of instruction on
+     * output variable.  If this returns non-null, it overrides info in
+     * getModifiedOutputs().  Note that getModifiedOutputs() must be
+     * specified for op regardless
+     * @return list of components modified.
+     */
+    public List<Component> getModifiedComponents() {
+      return null;
     }
     
     /**

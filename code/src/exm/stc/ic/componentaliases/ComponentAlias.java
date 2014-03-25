@@ -12,35 +12,20 @@ import exm.stc.common.lang.Var;
  */
 public class ComponentAlias {
   public static final List<ComponentAlias> NONE = Collections.emptyList();
-
-  /**
-   * Mark "value of reference"
-   */
-  public static final Arg DEREF = Arg.createStringLit("*");
   
   /**
-   * Enclosing object
+   * Enclosing object and path to component
    */
-  public final Var whole;
-  
-  /**
-   * Relationship from whole to part, e.g. struct field name, or array key.
-   * List element should be null or variable to represent wildcard.
-   * In order from outer to inner.
-   * 
-   * If zero-length list, signifies that it's an alias
-   */
-  public final List<Arg> key;
+  public final Component component;
   
   /**
    * Component
    */
-  public final Var part;
+  public final Var alias;
   
   public ComponentAlias(Var whole, List<Arg> key, Var part) {
-    this.whole = whole;
-    this.part = part;
-    this.key = key;
+    this.component = new Component(whole, key);
+    this.alias = part;
   }
   
   public ComponentAlias(Var whole, Arg key, Var part) {
@@ -64,14 +49,7 @@ public class ComponentAlias {
    * @return
    */
   public static ComponentAlias ref(Var var, Var ref) {
-    return new ComponentAlias(ref, Collections.<Arg>singletonList(DEREF), var);
-  }
-
-  public static List<Arg> deref(List<Arg> key) {
-    List<Arg> result = new ArrayList<Arg>(key.size() + 1);
-    result.addAll(key);
-    result.add(DEREF); // Represent extra dereference
-    return result;
+    return new ComponentAlias(ref, Component.DEREF.asList(), var);
   }
 
   public List<ComponentAlias> asList() {
@@ -80,6 +58,6 @@ public class ComponentAlias {
   
   @Override
   public String toString() {
-    return "<" + whole + "[" + key + "] = " + part + ">"; 
+    return "<" + component + " = " + alias + ">"; 
   }
 }

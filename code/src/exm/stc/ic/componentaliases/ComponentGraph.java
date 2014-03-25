@@ -50,6 +50,11 @@ public class ComponentGraph {
   Logger logger = Logging.getSTCLogger();
   
   /**
+   * Represent wildcard component as null
+   */
+  private static final Arg WILDCARD = null;
+  
+  /**
    * Allocate node IDs in sequential order
    */
   private int nextNodeID;
@@ -77,6 +82,25 @@ public class ComponentGraph {
     this.aliases = new MultiMap<Node, Node>();
   }
   
+  private static Arg normaliseComponentKey(Arg key) {
+    if (key != null && !key.isConstant()) {
+      // Treat all non-constant keys as wildcard
+      return WILDCARD;
+    } else {
+      return key;
+    }
+  }
+  
+  /**
+   * Check that this is a valid component key that can be used in this
+   * graph
+   * @param key
+   * @return
+   */
+  private static boolean isValidComponentKey(Arg key) {
+    return key == WILDCARD || key.isConstant();
+  }
+
   /**
    * Get node corresponding to variable
    * @param var
@@ -98,6 +122,8 @@ public class ComponentGraph {
    * @return
    */
   private Node getAnonNode(Node parent, Arg key) {
+    assert(isValidComponentKey(key));
+    
     // Try to avoid creating duplicates
     Pair<Node, Arg> anonKey = Pair.create(parent, key);
     Node node = anonNodes.get(anonKey);
@@ -124,11 +150,13 @@ public class ComponentGraph {
   }
 
   public void addPotentialComponent(ComponentAlias componentAlias) {
-    if (componentAlias.key.isEmpty()) {
-      addPotentialDirectAlias(componentAlias.part, componentAlias.whole);
+    Var var = componentAlias.component.var;
+    List<Arg> key = componentAlias.component.key;
+    
+    if (key.isEmpty()) {
+      addPotentialDirectAlias(componentAlias.alias, var);
     } else {
-      addPotentialComponent(componentAlias.whole, componentAlias.key,
-                            componentAlias.part);
+      addPotentialComponent(var, key, componentAlias.alias);
     }
   }
 
@@ -145,18 +173,13 @@ public class ComponentGraph {
     Node partNode = getVarNode(part);
     
     if (logger.isTraceEnabled()) {
-      logger.trace("Component: " + whole + "[" + keyToString(key) + "] = "
+      logger.trace("Component: " + whole.name() + "[" + keyToString(key) + "] = "
                  + part);
     }
     // Add chain of keys from whole to part with any needed intermediate nodes
     Node curr = wholeNode;
     for (int i = 0; i < key.size(); i++) {
-      Arg keyElem = key.get(i);
-      if (keyElem != null && !keyElem.isConstant()) {
-        // Treat all non-constant keys as wildcard
-        keyElem = null;
-      }
-      assert(keyElem == null || keyElem.isConstant());
+      Arg keyElem = normaliseComponentKey(key.get(i));
       
       Node child;
       if (i == key.size() - 1) {
@@ -189,29 +212,27 @@ public class ComponentGraph {
    * @param var
    * @return
    */
-  public Set<Var> findPotentialAliases(Var var, List<Arg> componentPath) {
+  public Set<Var> findPotentialAliases(Component component) {
     HashSet<Var> result = new HashSet<Var>();
-    findPotentialAliases(var, componentPath, result);
+    findPotentialAliases(component.var, component.key, result);
     return result;
   }
   
   public void findPotentialAliases(Var var, List<Arg> componentPath,
                                     Set<Var> results) {
-    Node node = locateNode(var, componentPath);
+    Node node = varNodes.get(var);
     if (node != null) { 
-      walkUpRec(node, results, new StackLite<Pair<Node, Arg>>(),
-              new HierarchicalSet<Pair<Node, Integer>>());
+      // Setup stack with current path
+      StackLite<Pair<Node, Arg>> stack = new StackLite<Pair<Node, Arg>>();
+      for (Arg component: componentPath) {
+        stack.push(Pair.create((Node)null, component));
+      }
+      
+      walkUpRec(node, results, stack,
+                new HierarchicalSet<Pair<Node, Integer>>());
     }
   }
 
-  private Node locateNode(Var var, List<Arg> componentPath) {
-    Node curr = varNodes.get(var);
-    for (Arg component: componentPath) {
-      curr = getAnonNode(curr, component);
-    }
-    return curr;
-  }
-  
   /**
    * 
    * @param var
@@ -274,7 +295,7 @@ public class ComponentGraph {
     Node srcChild = prev.val1;
     
     for (Edge child: children.get(node)) {
-      if (!child.dst.equals(srcChild) &&
+      if ((srcChild == null || !child.dst.equals(srcChild)) &&
           labelsMatch(childLabel, child.label)) {
         // Recurse if it may match and is not original path
         walkDownRec(child.dst, pathUp, results, visited);
@@ -286,8 +307,7 @@ public class ComponentGraph {
   }
   
   private static boolean labelsMatch(Arg label1, Arg label2) {
-    if (label1 == null || label2 == null) {
-      // Treat null as wildcard
+    if (label1 == WILDCARD || label2 == WILDCARD) {
       return true;
     } else {
       return label1.equals(label2);
@@ -309,7 +329,7 @@ public class ComponentGraph {
   }
 
   private static String keyToString(Arg k) {
-    if (k == null) {
+    if (k == WILDCARD) {
       return "?"; // Wildcard
     } else {
       return k.toString();
@@ -383,7 +403,7 @@ public class ComponentGraph {
     
     public Edge(Node dst, Arg label) {
       assert(dst != null);
-      assert(label == null || label.isConstant());
+      assert isValidComponentKey(label);
       this.dst = dst;
       this.label = label;
     }

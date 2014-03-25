@@ -22,6 +22,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
@@ -34,6 +35,7 @@ import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.StackLite;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
+import exm.stc.ic.componentaliases.Component;
 import exm.stc.ic.componentaliases.ComponentAlias;
 import exm.stc.ic.componentaliases.ComponentGraph;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
@@ -103,7 +105,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
 
     /* List of vars that were written.  Need to ensure that all variables
      * that are keys in writeEffect are tracked. */
-    List<Pair<Var, List<Arg>>> modifiedVars = new ArrayList<Pair<Var, List<Arg>>(); 
+    List<Component> modifiedComponents = new ArrayList<Component>(); 
     /*
      * Graph of dependencies from vars to other vars. If edge exists v1 -> v2
      * this means that if v1 is required, then v2 is required
@@ -114,14 +116,14 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
     ComponentGraph components = new ComponentGraph();
 
     walkFunction(logger, f, removeCandidates, needed, dependencyGraph,
-                            modifiedVars, components);
+                 modifiedComponents, components);
     
     if (logger.isTraceEnabled()) {
       logger.trace("Dead code elimination in function " + f.getName() + "\n" +
                    "removal candidates: " + removeCandidates + "\n" +
                    "definitely needed: "+ needed + "\n" +
                    "dependencies: \n" + printDepGraph(dependencyGraph, 4) +
-                   "modifiedVars: " + modifiedVars + "\n" +
+                   "modifiedComponents: " + modifiedComponents + "\n" +
                    "components: \n" + components);
     }
     
@@ -130,17 +132,20 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
      * Take into account that we might modify value of containing
      * structure, e.g. array
      */
-    for (Var written: modifiedVars) {
+    for (Component written: modifiedComponents) {
+      Set<Var> potentialAliases = components.findPotentialAliases(written);
+      
       if (logger.isTraceEnabled()) {
-        logger.trace("Modified var " + written);
+        logger.trace("Modified var " + written + " potential aliases: " +
+                      potentialAliases);
       }
-      for (Var maybeAffected: components.findPotentialAliases(written)) {
-        // Need to keep written var if we keep whole
+      for (Var maybeAffected: potentialAliases) {
         if (logger.isTraceEnabled()) {
           logger.trace("Add transitive dep " + maybeAffected +
                         " => " + written);
         }
-        dependencyGraph.put(maybeAffected, written);
+        // Need to keep var that we wrote the affected var through
+        dependencyGraph.put(maybeAffected, written.var);
       }
     }
     
@@ -190,7 +195,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
    */
   private static void walkFunction(Logger logger, Function f,
       HashSet<Var> removeCandidates, HashSet<Var> needed,
-      MultiMap<Var, Var> dependencyGraph, List<Var> modifiedVars,
+      MultiMap<Var, Var> dependencyGraph, List<Component> modifiedComponents,
       ComponentGraph components) {
     StackLite<Block> workStack = new StackLite<Block>();
     workStack.push(f.mainBlock());
@@ -202,8 +207,8 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
 
       walkBlockVars(block, removeCandidates, dependencyGraph);
       
-      walkInstructions(logger, block, needed, dependencyGraph, modifiedVars,
-                       components);
+      walkInstructions(logger, block, needed, dependencyGraph,
+                       modifiedComponents, components);
       
       Iterator<Continuation> it = block.allComplexStatements().iterator();
       while (it.hasNext()) {
@@ -224,13 +229,13 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
 
   private static void walkInstructions(Logger logger,
       Block block, HashSet<Var> needed, MultiMap<Var, Var> dependencyGraph,
-      List<Var> modifiedVars, ComponentGraph components) {
+      List<Component> modifiedComponents, ComponentGraph components) {
     ListIterator<Statement> it = block.statementIterator();
     while (it.hasNext()) {
       Statement stmt = it.next();
       if (stmt.type() == StatementType.INSTRUCTION) {
         walkInstruction(logger, stmt.instruction(), needed, dependencyGraph,
-                        modifiedVars, components);
+                        modifiedComponents, components);
       } else if (stmt.type() == StatementType.CONDITIONAL) {
         if (stmt.conditional().isNoop()) {
           it.remove();
@@ -241,7 +246,7 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
 
   private static void walkInstruction(Logger logger, Instruction inst,
       HashSet<Var> needed, MultiMap<Var, Var> dependencyGraph,
-      List<Var> modifiedVars, ComponentGraph components) {
+      List<Component> modifiedComponents, ComponentGraph components) {
     // If it has side-effects, need all inputs and outputs
     if (inst.hasSideEffects()) {
       needed.addAll(inst.getOutputs());
@@ -292,22 +297,39 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
       }
       
       // Update any components that were modified
-      for (Var mod: modOutputs) {
-        boolean modInit = inst.isInitialized(mod);
-        if (!modInit && inst.op != Opcode.STORE_REF) {
-          modifiedVars.add(mod);
+      List<Component> modComponents = inst.getModifiedComponents();
+      if (modComponents != null)
+      {
+        for (Component mod: modComponents) {
+          addModComponent(inst, modifiedComponents, mod);
+        }
+      }
+      else
+      {
+        for (Var mod: modOutputs) {
+          addModComponent(inst, modifiedComponents,
+                        new Component(mod, Arg.NONE));
         }
       }
       
       // Update structural information
       for (ComponentAlias componentAlias: inst.getComponentAliases()) {
-        // TODO: add aliases for instruction
         components.addPotentialComponent(componentAlias);
-
-        if (logger.isTraceEnabled()) {
-          logger.trace("Component: " + componentAlias);
-        }
       }
+    }
+  }
+
+  private static void addModComponent(Instruction inst,
+      List<Component> modifiedComponents, Component component) {
+    if (component.key.isEmpty()) {
+      boolean modInit = inst.isInitialized(component.var);
+      if (!modInit) {
+        modifiedComponents.add(component);
+      }
+    }
+    else
+    {
+      modifiedComponents.add(component);
     }
   }
   

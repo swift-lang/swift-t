@@ -30,6 +30,7 @@ import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.aliases.Alias;
 import exm.stc.ic.aliases.Alias.AliasTransform;
+import exm.stc.ic.componentaliases.Component;
 import exm.stc.ic.componentaliases.ComponentAlias;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ValLoc;
@@ -2316,6 +2317,22 @@ public class TurbineOp extends Instruction {
         return this.getOutputs();
     }
   }
+  
+  @Override
+  public List<Component> getModifiedComponents() {
+    switch (op) {
+      case AREF_COPY_IN_FUTURE:
+      case AREF_COPY_IN_IMM:
+      case AREF_STORE_FUTURE:
+      case AREF_STORE_IMM:
+      case STRUCTREF_COPY_IN:
+      case STRUCTREF_STORE_SUB:
+        // This functions modify the datum referred to by the output reference
+        return new Component(getOutput(0), Component.DEREF).asList();
+      default:
+         return null;
+    }
+  }
 
   /**
    * @return List of outputs that are piecewise assigned
@@ -3216,7 +3233,7 @@ public class TurbineOp extends Instruction {
       case ARR_CREATE_NESTED_IMM:
       case ARRAY_CREATE_BAG:
         // From inner object to immediately enclosing
-        return new ComponentAlias(getOutput(1), ComponentAlias.deref(getInput(0).asList()), 
+        return new ComponentAlias(getOutput(1), Component.deref(getInput(0).asList()), 
                    getOutput(0)).asList();
       case ARR_CREATE_NESTED_FUTURE: {
         // From inner array to immediately enclosing
@@ -3225,7 +3242,7 @@ public class TurbineOp extends Instruction {
       }
       case AREF_CREATE_NESTED_IMM:
       case AREF_CREATE_NESTED_FUTURE: {
-        List<Arg> key = Arrays.asList(ComponentAlias.DEREF, getInput(0));
+        List<Arg> key = Arrays.asList(Component.DEREF, getInput(0));
         // From inner array to immediately enclosing
         return new ComponentAlias(getOutput(1), key, getOutput(0)).asList();
       }
@@ -3240,9 +3257,9 @@ public class TurbineOp extends Instruction {
           List<Arg> key;
           if (Types.isArrayRef(arr)) {
             // Mark extra dereference
-            key = Arrays.asList(ComponentAlias.DEREF, ix, ComponentAlias.DEREF);
+            key = Arrays.asList(Component.DEREF, ix, Component.DEREF);
           } else {
-            key = Arrays.asList(ix, ComponentAlias.DEREF);
+            key = Arrays.asList(ix, Component.DEREF);
           }
           
           return new ComponentAlias(arr, key, getInput(1).getVar()).asList();
@@ -3260,7 +3277,7 @@ public class TurbineOp extends Instruction {
           List<Arg> key;
           if (Types.isArrayRef(arr)) {
             // Mark extra dereference
-            key = Arrays.asList(ComponentAlias.DEREF, ix);
+            key = Arrays.asList(Component.DEREF, ix);
           } else {
             key = ix.asList();
           }
@@ -3280,7 +3297,7 @@ public class TurbineOp extends Instruction {
           List<Arg> key;
           if (Types.isArrayRef(arr)) {
             // Mark extra dereference
-            key = Arrays.asList(ComponentAlias.DEREF, ix);
+            key = Arrays.asList(Component.DEREF, ix);
           } else {
             key = ix.asList();
           }
@@ -3311,7 +3328,7 @@ public class TurbineOp extends Instruction {
           Arg fieldVal = fieldVals.val.get(i);
           if (fieldVal.isVar()) {
             if (Alias.fieldIsRef(struct, Arg.extractStrings(fieldPath))) {
-              aliases.add(new ComponentAlias(struct, ComponentAlias.deref(fieldPath),
+              aliases.add(new ComponentAlias(struct, Component.deref(fieldPath),
                                     fieldVal.getVar()));
             }
           }
@@ -3332,9 +3349,9 @@ public class TurbineOp extends Instruction {
           if (op == Opcode.STRUCTREF_STORE_SUB) {
             // Mark extra dereference
             fields = new ArrayList<Arg>(fields);
-            fields.add(0, ComponentAlias.DEREF);
+            fields.add(0, Component.DEREF);
           }
-          return new ComponentAlias(getOutput(0), ComponentAlias.deref(fields),
+          return new ComponentAlias(getOutput(0), Component.deref(fields),
                                 getInput(0).getVar()).asList();
         }
         break;
@@ -3342,7 +3359,7 @@ public class TurbineOp extends Instruction {
         if (Alias.fieldIsRef(getInput(0).getVar(),
                              Arg.extractStrings(getInputsTail(1)))) {
           List<Arg> fields = getInputsTail(1);
-          return new ComponentAlias(getInput(0).getVar(), ComponentAlias.deref(fields),
+          return new ComponentAlias(getInput(0).getVar(), Component.deref(fields),
                                 getOutput(0)).asList();
         }
         break;
@@ -3354,7 +3371,7 @@ public class TurbineOp extends Instruction {
           if (op == Opcode.STRUCTREF_COPY_IN) {
             // Mark extra dereference
             fields = new ArrayList<Arg>(fields);
-            fields.add(0, ComponentAlias.DEREF);
+            fields.add(0, Component.DEREF);
           }
           return new ComponentAlias(getOutput(0),
                                     fields, getInput(0).getVar()).asList();
