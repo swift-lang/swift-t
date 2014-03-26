@@ -1,12 +1,12 @@
 /*
 Powerseries of the form sum=Tn + Tn-1 + Tn-2 + ..., where Tk=Tk-1*(x/n) for a fixed large n and user supplied x.
 */
-
 #include <stdio.h>
 #include <stdlib.h>
+#include "power.h"
 #define ACCURACY 0.0001
 
-int main(int argc, char** argv){
+int power_main(int argc, char** argv){
     int n, count;
     float x, term, sum;
 
