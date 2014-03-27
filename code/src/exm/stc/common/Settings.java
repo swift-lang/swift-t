@@ -53,7 +53,7 @@ public class Settings
   public static final String OPT_VALUE_NUMBER = "stc.opt.value-number";
   public static final String OPT_FINALIZED_VAR = "stc.opt.finalized-var";
   public static final String OPT_ALGEBRA = "stc.opt.algebra";
-  public static final String OPT_EXPAND_DATAFLOW_OPS = "stc.opt.expand-dataflow-ops";
+  public static final String OPT_DATAFLOW_OP_INLINE = "stc.opt.dataflow-op-inline";
   public static final String OPT_WAIT_COALESCE = "stc.opt.wait-coalesce";
   public static final String OPT_PIPELINE = "stc.opt.pipeline";
   public static final String OPT_CONTROLFLOW_FUSION =
@@ -166,7 +166,7 @@ public class Settings
     defaults.setProperty(OPT_VALUE_NUMBER, "true");
     defaults.setProperty(OPT_FINALIZED_VAR, "true");
     defaults.setProperty(OPT_ALGEBRA, "false");
-    defaults.setProperty(OPT_EXPAND_DATAFLOW_OPS, "true");
+    defaults.setProperty(OPT_DATAFLOW_OP_INLINE, "true");
     defaults.setProperty(OPT_WAIT_COALESCE, "true");
     defaults.setProperty(OPT_PIPELINE, "false");
     defaults.setProperty(OPT_CONTROLFLOW_FUSION, "true");
@@ -305,7 +305,7 @@ public class Settings
     getBoolean(OPT_VALUE_NUMBER);
     getBoolean(OPT_FINALIZED_VAR);
     getBoolean(OPT_ALGEBRA);
-    getBoolean(OPT_EXPAND_DATAFLOW_OPS);
+    getBoolean(OPT_DATAFLOW_OP_INLINE);
     getBoolean(OPT_WAIT_COALESCE);
     getBoolean(OPT_PIPELINE);
     getBoolean(OPT_CONTROLFLOW_FUSION);

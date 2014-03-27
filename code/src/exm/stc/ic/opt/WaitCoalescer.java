@@ -20,7 +20,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -28,19 +27,16 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Settings;
-import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.TaskMode;
-import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.WaitVar;
-import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.MultiMap.LinkedListFactory;
 import exm.stc.common.util.MultiMap.ListFactory;
@@ -48,20 +44,14 @@ import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
 import exm.stc.common.util.StackLite;
 import exm.stc.ic.ICUtil;
-import exm.stc.ic.WrapUtil;
 import exm.stc.ic.opt.OptUtil.InstOrCont;
-import exm.stc.ic.opt.OptUtil.OptVarCreator;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
-import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.Instruction.Fetched;
-import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
-import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmRequest;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
@@ -177,16 +167,12 @@ import exm.stc.ic.tree.ICTree.StatementType;
  *
  */
 public class WaitCoalescer implements OptimizerPass {
-  // If true, explode dataflow ops
-  private final boolean doExplode;
   // If true, merge continuations
   private final boolean doMerges;
   // If true, retain explicit waits even if removing them is valid
   private final boolean retainExplicit;
   
-  public WaitCoalescer(boolean doExplode, boolean doMerges,
-                       boolean retainExplicit) {
-    this.doExplode = doExplode;
+  public WaitCoalescer(boolean doMerges, boolean retainExplicit) {
     this.doMerges = doMerges;
     this.retainExplicit = retainExplicit;
   }
@@ -204,56 +190,29 @@ public class WaitCoalescer implements OptimizerPass {
   @Override
   public void optimize(Logger logger, Program prog) {
     for (Function f: prog.getFunctions()) {
-      HierarchicalSet<Var> waitedFor = new HierarchicalSet<Var>();
-      waitedFor.addAll(WaitVar.asVarList(f.blockingInputs()));
-      rearrangeWaits(logger, prog, f, f.mainBlock(), ExecContext.CONTROL,
-                     waitedFor);
+      rearrangeWaits(logger, prog, f, f.mainBlock(), ExecContext.CONTROL);
     }
   }
 
   public boolean rearrangeWaits(Logger logger, Program prog, Function fn,
-      Block block, ExecContext currContext, HierarchicalSet<Var> waitedFor) {
-    boolean exploded = false;
-    logger.trace("Entering function " + fn.getName());
-    try {
-      if (doExplode && Settings.getBoolean(Settings.OPT_EXPAND_DATAFLOW_OPS)) {
-        logger.trace("Exploding Function Calls...");
-        exploded = explodeFuncCalls(logger, fn, currContext, block, waitedFor);
-      }
-    } catch (InvalidOptionException e) {
-      throw new STCRuntimeError(e.getMessage());
-    }
+                                  Block block, ExecContext currContext) {
 
-    if (logger.isTraceEnabled()) {
-      //StringBuilder sb = new StringBuilder();
-      //fn.prettyPrint(sb);
-      //logger.trace("After exploding " + fn.getName() +":\n" + sb.toString());
-    }
-    
     boolean merged = false;
     if (doMerges) {
       logger.trace("Merging Waits...");
       merged = mergeWaits(logger, fn, block, currContext);
     }
     
-    if (logger.isTraceEnabled()) {
-      //sb = new StringBuilder();
-      //fn.prettyPrint(sb);
-      //logger.trace("After merging " + fn.getName() +":\n" + sb.toString());
-    }
-    
     logger.trace("Pushing down waits...");
     boolean pushedDown = pushDownWaits(logger, prog, fn, block, currContext);
     
     // Recurse on child blocks
-    boolean recChanged = rearrangeWaitsRec(logger, prog, fn, block,
-                                           currContext, waitedFor);
-    return exploded || merged || pushedDown || recChanged;
+    boolean recChanged = rearrangeWaitsRec(logger, prog, fn, block, currContext);
+    return merged || pushedDown || recChanged;
   }
 
   private boolean rearrangeWaitsRec(Logger logger, Program prog,
-                  Function fn, Block block, ExecContext currContext,
-                  HierarchicalSet<Var> waitedFor) {
+                  Function fn, Block block, ExecContext currContext) {
     // List of waits to inline (to avoid modifying continuations while
     //          iterating over them)
     List<WaitStatement> toInline = new ArrayList<WaitStatement>();
@@ -262,15 +221,11 @@ public class WaitCoalescer implements OptimizerPass {
     
     for (Continuation c: block.allComplexStatements()) {
       ExecContext newContext = c.childContext(currContext);
-      HierarchicalSet<Var> newWaitedFor = waitedFor.makeChild();
-      for (BlockingVar v: c.blockingVars(true)) {
-        newWaitedFor.add(v.var);
-      }
       
       for (Block childB: c.getBlocks()) {
         if (rearrangeWaits(logger, prog, fn, childB,
-                           newContext, newWaitedFor)) {
-          changed = true;
+                           newContext)) {
+          changed = true; 
         }
       }
       
@@ -401,118 +356,7 @@ public class WaitCoalescer implements OptimizerPass {
     return true;
   }
   
-  /**
-   * Convert dataflow f() to local f_l() with wait around it
-   * @param logger
-   * @param block
-   * @return
-   */
-  private static boolean explodeFuncCalls(Logger logger, Function fn,
-        ExecContext execCx, Block block, HierarchicalSet<Var> waitedFor) {
-    boolean changed = false;
-    ListIterator<Statement> it = block.statementIterator();
-    while (it.hasNext()) {
-      Statement stmt = it.next();
-      // Only handle instructions: don't recurse here
-      if (stmt.type() == StatementType.INSTRUCTION) {
-        if (tryExplode(logger, fn, execCx, block, it, stmt.instruction(),
-                       waitedFor)) {
-          changed = true;
-        } 
-      }
-    }
-    return changed;
-  }
   
-  /**
-   * Attempt to explode individual instruction
-   * @param logger
-   * @param fn
-   * @param execCx
-   * @param block
-   * @param it
-   * @param inst
-   * @param waitedFor any vars waited for, e.g. in outer exploded.  This prevents
-   *      infinite cycles of exploding if we didn't change instruction
-   * @return true if exploded
-   */
-  private static boolean tryExplode(Logger logger, Function fn,
-        ExecContext execCx, Block block, ListIterator<Statement> it,
-        Instruction inst, HierarchicalSet<Var> waitedFor) {
-    MakeImmRequest req = inst.canMakeImmediate(waitedFor,
-             Collections.<ArgCV>emptySet(), Collections.<Var>emptySet(),
-             true);
-    if (req != null && req.in.size() > 0) {
-      if (logger.isTraceEnabled()) {
-        logger.trace("Exploding " + inst + " in function " + fn.getName());
-      }
-      
-      // Remove old instruction now that we're certain to replace it
-      it.remove();
-      
-      // We have to initialize mapping if instruction doesn't do it
-      boolean mustInitOutputMapping = !req.initsOutputMapping;
-      
-      Pair<List<WaitVar>, Map<Var, Var>> r;
-      r = WrapUtil.buildWaitVars(block, it, req.in, req.out,
-                                 mustInitOutputMapping);
-      
-      List<WaitVar> waitVars = r.val1;
-      Map<Var, Var> filenameMap = r.val2;
-      
-      WaitMode waitMode;
-      if (req.mode == TaskMode.SYNC || req.mode == TaskMode.LOCAL ||
-            (req.mode == TaskMode.LOCAL_CONTROL &&
-              execCx == ExecContext.CONTROL)) {
-        waitMode = WaitMode.WAIT_ONLY;
-      } else {
-        waitMode = WaitMode.TASK_DISPATCH;
-      }
-      
-      TaskProps props = inst.getTaskProps();
-      if (props == null) {
-        props = new TaskProps();
-      }
-      
-      WaitStatement wait = new WaitStatement(
-              fn.getName() + "-" + inst.shortOpName(),
-              waitVars, PassedVar.NONE, Var.NONE,
-              waitMode, req.recursiveClose, req.mode, props);
-      block.addContinuation(wait);
-      
-      if (props.containsKey(TaskPropKey.PARALLELISM)) {
-        //TODO: different output var conventions
-        throw new STCRuntimeError("Don't know how to explode parallel " +
-            "instruction yet: " + inst);
-      }
-      
-      // Instructions to add inside wait
-      List<Statement> instBuffer = new ArrayList<Statement>();
-      
-      // Fetch the inputs
-      List<Arg> inVals = WrapUtil.fetchLocalOpInputs(wait.getBlock(), req.in,
-                                                     instBuffer, true);
-            
-      // Create local instruction, copy out outputs
-      List<Var> localOutputs = WrapUtil.createLocalOpOutputs(
-                              wait.getBlock(), req.out, filenameMap,
-                              instBuffer, true, mustInitOutputMapping); 
-
-      boolean storeOutputMapping = req.initsOutputMapping;
-      MakeImmChange change = inst.makeImmediate(
-                                  new OptVarCreator(wait.getBlock()),
-                                  Fetched.makeList(req.out, localOutputs),
-                                  Fetched.makeList(req.in, inVals));
-      OptUtil.fixupImmChange(block, wait.getBlock(), inst, change, instBuffer,
-                                 localOutputs, req.out, storeOutputMapping);
-      
-      // Remove old instruction, add new one inside wait block
-      wait.getBlock().addStatements(instBuffer);
-      return true;
-    }
-    return false;
-  }
-
   /**
    * Try to squash together waits, e.g.
    * wait (x) {

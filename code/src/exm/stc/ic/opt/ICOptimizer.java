@@ -184,10 +184,15 @@ public class ICOptimizer {
           pipe.addPass(Validate.standardValidator());
       }
       
+      // Expand ops about halfway through
+      boolean doInlineOps = iteration == nIterations / 2;
+      if (doInlineOps) {
+        pipe.addPass(new DataflowOpInline());
+      }
+      
       // Do merges near end since it can be detrimental to other optimizations
       boolean doWaitMerges = iteration == nIterations - (nIterations / 4) - 2;
-      boolean doExplode = iteration == nIterations / 2;
-      pipe.addPass(new WaitCoalescer(doExplode, doWaitMerges, canReorder));
+      pipe.addPass(new WaitCoalescer(doWaitMerges, canReorder));
       
       if (debug)
         pipe.addPass(Validate.standardValidator());

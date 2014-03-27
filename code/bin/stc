@@ -29,7 +29,7 @@ O1_OPTS=("constant-fold" "dead-code-elim" "value-number" "finalized-var"
          "controlflow-fusion"
          "merge-refcounts" "cancel-refcounts" "piggyback-refcounts"
          "batch-refcounts" "hoist-refcounts")
-O2_OPTS=("expand-dataflow-ops" "wait-coalesce" "hoisting" "expand-loops"
+O2_OPTS=("dataflow-op-inline" "wait-coalesce" "hoisting" "expand-loops"
          "function-signature" "array-build" "loop-simplify")
 O3_OPTS=("pipeline" "function-inline" "reorder-insts" "algebra" "full-unroll")
 EXPERIMENTAL_OPTS=()
@@ -70,7 +70,7 @@ function get_compiler_opt_name() {
         algebra) echo "stc.opt.algebra"
                     return 0
                     ;;
-        expand-dataflow-ops) echo "stc.opt.expand-dataflow-ops"
+        dataflow-op-inline) echo "stc.opt.dataflow-op-inline"
                     return 0
                     ;;
         wait-coalesce) echo "stc.opt.wait-coalesce"
