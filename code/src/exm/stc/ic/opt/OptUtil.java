@@ -121,12 +121,6 @@ public class OptUtil {
           initialisesOutput) {
         // Will need to initialise variable in this scope as before we
         // were relying on instruction to initialise it
-        System.err.println("REPLACE " + oldOut);
-        new Exception().printStackTrace();
-        oldOutReplacement = new Var(oldOut.type(),
-            oldOut.name(), Alloc.TEMP,
-            oldOut.defType(), oldOut.provenance(), oldOut.mappedDecl());
-        
         // Replace variable in block and in buffered instructions
         replaceVarDeclaration(srcBlock, oldOut, oldOutReplacement);
         
