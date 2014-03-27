@@ -87,8 +87,7 @@ public class HoistLoops implements OptimizerPass {
       
       // Set up map for top block of function
       HoistTracking mainBlockState =
-          global.makeChild(f.mainBlock(), ExecContext.CONTROL,
-                           0, 0);
+          global.makeChild(f.mainBlock(), true, ExecContext.CONTROL, 0, 0);
       
       // Inputs are written elsewhere
       for (Var in: f.getInputList()) {
@@ -177,7 +176,7 @@ public class HoistLoops implements OptimizerPass {
      * Create root for whole program
      */
     public HoistTracking() {
-      this(null, null, ExecContext.CONTROL, 0, 0,
+      this(null, null, false, ExecContext.CONTROL, 0, 0,
            new HierarchicalMap<Var, Block>(),
            new HierarchicalMap<Var, Block>(),
            new HierarchicalMap<Var, Block>(),
@@ -195,7 +194,7 @@ public class HoistLoops implements OptimizerPass {
 
       Logging.getSTCLogger().trace("Child of " + c.getType() + " " + " childHoist: " + childHoist);
       int childLoopHoist = c.isLoop() ? 0 : maxLoopHoist + 1;
-      HoistTracking childState = makeChild(childBlock,
+      HoistTracking childState = makeChild(childBlock, c.isAsync(),
           c.childContext(execCx), childHoist, childLoopHoist);
       // make sure loop iteration variables, etc are tracked
       for (Var v: c.constructDefinedVars()) {
@@ -213,7 +212,7 @@ public class HoistLoops implements OptimizerPass {
     }
 
     private HoistTracking(HoistTracking parent,
-        Block block, ExecContext execCx, 
+        Block block, boolean async, ExecContext execCx, 
         int maxHoist, int maxLoopHoist,
         HierarchicalMap<Var, Block> writeMap,
         HierarchicalMap<Var, Block> piecewiseWriteMap,
@@ -222,6 +221,7 @@ public class HoistLoops implements OptimizerPass {
       super();
       this.parent = parent;
       this.block = block;
+      this.async = async;
       this.execCx = execCx;
       this.maxHoist = maxHoist;
       this.maxLoopHoist = maxLoopHoist;
@@ -236,6 +236,9 @@ public class HoistLoops implements OptimizerPass {
     
     /** Current block */
     public final Block block;
+    
+    /** Whether it executes asynchronously from parent */
+    public final boolean async;
     
     /** Execution context */
     public final ExecContext execCx;
@@ -285,10 +288,10 @@ public class HoistLoops implements OptimizerPass {
       return curr;
     }
     
-    public HoistTracking makeChild(Block childBlock,
+    public HoistTracking makeChild(Block childBlock, boolean async,
                        ExecContext newExecCx,
                        int maxHoist, int maxLoopHoist) {
-      return new HoistTracking(this, childBlock, execCx,
+      return new HoistTracking(this, childBlock, async, execCx,
                               maxHoist, maxLoopHoist,
                               writeMap.makeChildMap(),
                               piecewiseWriteMap.makeChildMap(),
@@ -314,10 +317,19 @@ public class HoistLoops implements OptimizerPass {
     }
     
     public void write(Var v, boolean piecewise) {
+      // Mark as written in parent continuation if synchronous - 
+      //  e.g. branches of if
+      
+      // TODO: more efficient to just not create child map?
+      HoistTracking taskRoot = this;
+      while (!taskRoot.async && taskRoot.parent != null) {
+        taskRoot = taskRoot.parent;
+      }
+      
       if (piecewise) {
-        piecewiseWriteMap.put(v, this.block);
+        taskRoot.piecewiseWriteMap.put(v, this.block);
       } else {
-        writeMap.put(v, this.block);
+        taskRoot.writeMap.put(v, this.block);
       }
     }
 
