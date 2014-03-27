@@ -863,7 +863,7 @@ public class STCMiddleEnd {
   public void structRetrieveSub(Var target, Var struct,
       List<String> fieldPath) {
     currBlock().addInstruction(
-        TurbineOp.structRetrieveSub(target, struct, fieldPath));
+        TurbineOp.structRetrieveSub(target, struct, fieldPath, Arg.ZERO));
   }
   
   public void structCopyOut(Var target, Var struct,

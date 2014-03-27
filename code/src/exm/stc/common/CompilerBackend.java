@@ -238,7 +238,7 @@ public interface CompilerBackend {
   public void structCreateAlias(Var output, Var struct,
                                 List<String> fields);
   public void structRetrieveSub(Var output, Var struct,
-      List<String> fields);
+      List<String> fields, Arg readDecr);
   public void structCopyOut(Var output, Var struct,
       List<String> fields);
   

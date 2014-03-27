@@ -155,6 +155,10 @@ public class ICOptimizer {
         pipe.addPass(new ReorderInstructions(lastHalf));
       }
       
+      if (iteration % 3 == 0) {
+        pipe.addPass(new PropagateAliases());
+      }
+      
       if (iteration == nIterations - 2) {
         // Towards end, inline explicit waits and disallow reordering
         canReorder = false;

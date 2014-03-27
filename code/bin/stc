@@ -26,7 +26,7 @@ COMPILER_OPTS=()
 O0_OPTS=()
 O1_OPTS=("constant-fold" "dead-code-elim" "value-number" "finalized-var"
          "flatten-nested" "shared-constants" "unroll-loops"
-         "controlflow-fusion"
+         "controlflow-fusion" "propagate-aliases"
          "merge-refcounts" "cancel-refcounts" "piggyback-refcounts"
          "batch-refcounts" "hoist-refcounts")
 O2_OPTS=("dataflow-op-inline" "wait-coalesce" "hoisting" "expand-loops"
@@ -110,6 +110,9 @@ function get_compiler_opt_name() {
                     return 0
                     ;;
         loop-simplify) echo "stc.opt.loop-simplify"
+                    return 0
+                    ;;
+        propagate-aliases) echo "stc.opt.propagate-aliases"
                     return 0
                     ;;
         merge-refcounts) echo "stc.opt.merge-refcounts"

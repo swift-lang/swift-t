@@ -222,8 +222,8 @@ public class TurbineOp extends Instruction {
                             Arg.extractStrings(getInputsTail(1)));
       break;
     case STRUCT_RETRIEVE_SUB:
-      gen.structRetrieveSub(getOutput(0), getInput(0).getVar(),
-                         Arg.extractStrings(getInputsTail(1)));
+      gen.structRetrieveSub(getOutput(0), getInput(0).getVar(), Arg.extractStrings(getInputsTail(2)),
+                         getInput(1));
       break;
     case STRUCT_COPY_OUT:
       gen.structCopyOut(getOutput(0), getInput(0).getVar(),
@@ -681,15 +681,17 @@ public class TurbineOp extends Instruction {
   }
 
   public static Instruction structRetrieveSub(Var dst, Var structVar,
-                                           List<String> fields) {
+                                           List<String> fields, Arg readDecr) {
     assert(Types.isStruct(structVar));
     assert(Types.isStructFieldVal(structVar, fields, dst)) :
           "(" + structVar.name()  + ":" + structVar.type()  + ")." + fields
           + " => " + dst;
+    assert (readDecr.isImmediateInt());
     
     List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
     
     in.add(structVar.asArg());
+    in.add(readDecr);
     for (String field: fields) {
       in.add(Arg.createStringLit(field));
     }
@@ -2039,7 +2041,7 @@ public class TurbineOp extends Instruction {
       Var origOut = getOutput(0);
       List<String> fields = Arg.extractStrings(getInputsTail(1));
       Var valOut = creator.createDerefTmp(origOut);
-      Instruction newI = structRetrieveSub(valOut, arr, fields);
+      Instruction newI = structRetrieveSub(valOut, arr, fields, Arg.ZERO);
       return new MakeImmChange(valOut, origOut, newI);
     }
     case STRUCTREF_COPY_OUT: {
@@ -3050,7 +3052,7 @@ public class TurbineOp extends Instruction {
       }
       case STRUCT_RETRIEVE_SUB: {
         Var struct = getInput(0).getVar();
-        List<Arg> fields = getInputsTail(1);
+        List<Arg> fields = getInputsTail(2);
         return ValLoc.makeStructFieldValResult(getOutput(0).asArg(),
                                                 struct, fields).asList();
       }
@@ -3472,9 +3474,12 @@ public class TurbineOp extends Instruction {
         return Pair.create(new VarCount(v, readRefs).asList(), 
                            new VarCount(v, writeRefs).asList());
       }
-      case STRUCT_RETRIEVE_SUB:
+      case STRUCT_RETRIEVE_SUB: 
+      case ARR_RETRIEVE: {
+        // Gives back a refcount to the result if relevant
+        return Pair.create(VarCount.one(getOutput(0)).asList(), VarCount.NONE);
+      }
         // TODO: other array/struct retrieval funcs
-        return Pair.create(VarCount.NONE, VarCount.NONE);
       default:
         return Pair.create(VarCount.NONE, VarCount.NONE);
     }
@@ -3547,6 +3552,9 @@ public class TurbineOp extends Instruction {
       case STRUCT_INIT_FIELDS:
         return tryPiggyBackHelper(increments, type, getOutput(0), -1,
                                   inputs.size() - 1);
+      case STRUCT_RETRIEVE_SUB:
+        return tryPiggyBackHelper(increments, type, getInput(0).getVar(),
+                                  1, -1);
       default:
         // Do nothing
     }
@@ -3616,7 +3624,7 @@ public class TurbineOp extends Instruction {
         return aliases;
       }
       case STRUCT_RETRIEVE_SUB:
-        return Alias.makeStructAliases2(getInput(0).getVar(), getInputsTail(1),
+        return Alias.makeStructAliases2(getInput(0).getVar(), getInputsTail(2),
             getOutput(0), AliasTransform.RETRIEVE);
       case STRUCT_STORE_SUB:
         return Alias.makeStructAliases2(getOutput(0), getInputsTail(1),
@@ -3790,7 +3798,7 @@ public class TurbineOp extends Instruction {
         break;
       case STRUCT_RETRIEVE_SUB:
         if (Alias.fieldIsRef(getInput(0).getVar(),
-                             Arg.extractStrings(getInputsTail(1)))) {
+                             Arg.extractStrings(getInputsTail(2)))) {
           List<Arg> fields = getInputsTail(1);
           return new ComponentAlias(getInput(0).getVar(), Component.deref(fields),
                                 getOutput(0)).asList();

@@ -1590,14 +1590,14 @@ public class TurbineGenerator implements CompilerBackend {
 
 
   @Override
-  public void structRetrieveSub(Var output, Var struct,
-      List<String> fields) {
+  public void structRetrieveSub(Var output, Var struct, List<String> fields,
+      Arg readDecr) {
     assert(Types.isStruct(struct));
     assert(Types.isStructFieldVal(struct, fields, output));
 
     Expression subscript = structSubscript(struct, fields);
     Expression expr = Turbine.lookupStruct(varToExpr(struct),
-                                subscript, LiteralInt.ZERO);
+                                subscript, argToExpr(readDecr));
     pointAdd(new SetVariable(prefixVar(output), expr));
   }
 
