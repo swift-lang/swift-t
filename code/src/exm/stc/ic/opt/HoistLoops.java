@@ -272,9 +272,15 @@ public class HoistLoops implements OptimizerPass {
     public final HierarchicalMap<Var, Block> initializedMap;
 
     public HoistTracking getAncestor(int links) {
+      Logger logger = Logging.getSTCLogger();
+      
       HoistTracking curr = this;
       for (int i = 0; i < links; i++) {
-        curr = this.parent;
+        if (logger.isTraceEnabled()) {
+          logger.trace("Ancestor of " + this.block.getType() +
+                           ": " + this.parent.block.getType());
+        }
+        curr = curr.parent;
       }
       return curr;
     }
@@ -541,39 +547,46 @@ public class HoistLoops implements OptimizerPass {
           int hoistDepth, HoistTracking state) {
     assert(hoistDepth > 0);
     
-    
     logger.trace("Hoisting instruction up " + hoistDepth + " blocks: "
                  + inst.toString());
+    HoistTracking ancestor = state.getAncestor(hoistDepth);
+    logger.trace("Ancestor block " + ancestor.block.getType());
     
-    state.getAncestor(hoistDepth).addInstruction(inst);
+    ancestor.addInstruction(inst);
     
     // Move variable declaration if needed to outer block.
-    relocateVarDefs(state, inst, hoistDepth);
+    relocateVarDefs(state, inst, ancestor);
     
     // need to update write map to reflect moved instruction
-    state.getAncestor(hoistDepth).updateState(inst);
+    ancestor.updateState(inst);
   }
 
+  /**
+   * Relocate var defs from this block and any in-between ancestors
+   * to target block
+   * @param state
+   * @param inst
+   * @param targetAncestor
+   */
   private static void relocateVarDefs(HoistTracking state,
-      Instruction inst, int hoistDepth) {
+      Instruction inst, HoistTracking targetAncestor) {
     HoistTracking ancestor = state;
-    HoistTracking target = state.getAncestor(hoistDepth);
-    assert(target != null && state != target);
-    while (ancestor != target) {
+    assert(targetAncestor != null && state != targetAncestor);
+    while (ancestor != targetAncestor) {
       assert(ancestor != null);
       // Relocate all output variable definitions to target block 
-      relocateVarDefs(ancestor, target, inst);
-      ancestor = state.parent;
+      relocateVarDefsFromBlock(ancestor, targetAncestor, inst);
+      ancestor = ancestor.parent;
     }
   }
 
   /**
-   * Relocate output variables to target block
+   * Relocate output variables from one block to target block
    * @param source
    * @param target
    * @param inst
    */
-  private static void relocateVarDefs(HoistTracking source, 
+  private static void relocateVarDefsFromBlock(HoistTracking source, 
       HoistTracking target, Instruction inst) {
     assert(source != target);
     ListIterator<Var> varIt = source.block.variableIterator();
