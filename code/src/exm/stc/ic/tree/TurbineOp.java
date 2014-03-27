@@ -2639,8 +2639,8 @@ public class TurbineOp extends Instruction {
         return ExecContext.ALL;
         
       case WRITE_CHECKPOINT:
-        // May require I/O
-        return ExecContext.WORKER_LIST;
+        // Should checkpoint data where it is created
+        return ExecContext.ALL;
         
       default:
         throw new STCRuntimeError("Missing: " + op);
