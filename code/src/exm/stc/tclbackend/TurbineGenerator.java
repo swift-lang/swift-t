@@ -1539,7 +1539,7 @@ public class TurbineGenerator implements CompilerBackend {
     
     pointAdd(Turbine.insertStruct(varToExpr(struct),
         Turbine.structSubscript(indices), argToExpr(fieldContents),
-        Collections.singletonList(representationType(fieldContents.type())),
+        Collections.singletonList(valRepresentationType(fieldContents.type())),
         new LiteralInt(writeDecr)));
   }
   
