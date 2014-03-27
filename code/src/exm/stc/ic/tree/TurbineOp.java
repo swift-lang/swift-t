@@ -13,6 +13,7 @@ import exm.stc.common.CompilerBackend;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgKind;
+import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.Operators.UpdateMode;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
@@ -285,7 +286,7 @@ public class TurbineOp extends Instruction {
       gen.arrayCreateNestedImm(getOutput(0), getOutput(1), getInput(0),
                                getInput(1), getInput(2));
       break;
-    case ARRAY_CREATE_BAG:
+    case ARR_CREATE_BAG:
       gen.arrayCreateBag(getOutput(0), getOutput(1), getInput(0),
                          getInput(1), getInput(2));
       break;
@@ -1324,7 +1325,7 @@ public class TurbineOp extends Instruction {
     assert(Types.isArrayKeyVal(arr, key));
     assert(bag.storage() == Alloc.ALIAS);
     // Both arrays are modified, so outputs
-    return new TurbineOp(Opcode.ARRAY_CREATE_BAG,
+    return new TurbineOp(Opcode.ARR_CREATE_BAG,
         Arrays.asList(bag, arr),
         key, Arg.ZERO, Arg.ZERO);
   }
@@ -1629,7 +1630,7 @@ public class TurbineOp extends Instruction {
     case AREF_CREATE_NESTED_FUTURE:
     case ARR_CREATE_NESTED_IMM:
     case AREF_CREATE_NESTED_IMM:
-    case ARRAY_CREATE_BAG:
+    case ARR_CREATE_BAG:
         /* It might seem like these nested creation primitives have a 
          * side-effect, but for optimisation purposes they can be treated as 
          * side-effect free, as the side-effect is only relevant if the array 
@@ -1903,6 +1904,7 @@ public class TurbineOp extends Instruction {
       if (waitForClose || closedVars.contains(filenameIn)) {
         return new MakeImmRequest(null, filenameIn.asList());
       }
+      break;
     }
     case UPDATE_INCR:
     case UPDATE_MIN:
@@ -1911,9 +1913,11 @@ public class TurbineOp extends Instruction {
       if (waitForClose || closedVars.contains(newVal)) {
         return new MakeImmRequest(null, newVal.asList());
       }
+      break;
     }
     default:
       // fall through
+      break;
     }
     return null;
   }
@@ -2252,7 +2256,7 @@ public class TurbineOp extends Instruction {
       case LOAD_REF:
       case COPY_REF:
       case ARR_CREATE_NESTED_IMM:
-      case ARRAY_CREATE_BAG:
+      case ARR_CREATE_BAG:
       case GET_FILENAME_ALIAS:
         // Initialises alias
         return Arrays.asList(Pair.create(getOutput(0), InitType.FULL));
@@ -2298,7 +2302,7 @@ public class TurbineOp extends Instruction {
       // In create_nested instructions the 
       // second array being inserted into is needed
       return Arrays.asList(getOutput(1));
-    case ARRAY_CREATE_BAG:
+    case ARR_CREATE_BAG:
       // the array being inserted into
       return getOutput(1).asList();
     case AREF_CREATE_NESTED_IMM:
@@ -2317,7 +2321,7 @@ public class TurbineOp extends Instruction {
     case ARR_CREATE_NESTED_FUTURE:
     case AREF_CREATE_NESTED_IMM:
     case AREF_CREATE_NESTED_FUTURE:
-    case ARRAY_CREATE_BAG:
+    case ARR_CREATE_BAG:
       // In create_nested instructions only the 
       // first output (the created array) is needed
       return Collections.singletonList(getOutput(0));
@@ -2359,7 +2363,7 @@ public class TurbineOp extends Instruction {
         return getOutputs();
       case ARR_CREATE_NESTED_FUTURE:
       case ARR_CREATE_NESTED_IMM:
-      case ARRAY_CREATE_BAG:
+      case ARR_CREATE_BAG:
       case AREF_CREATE_NESTED_FUTURE:
       case AREF_CREATE_NESTED_IMM: {
         // All arrays except the newly created array; 
@@ -2446,7 +2450,7 @@ public class TurbineOp extends Instruction {
     case STRUCT_RETRIEVE_SUB:
     case STRUCT_CREATE_ALIAS:
     case ARR_CREATE_NESTED_IMM:
-    case ARRAY_CREATE_BAG:
+    case ARR_CREATE_BAG:
     case STORE_REF:
     case LOAD_REF:
     case FREE_BLOB:
@@ -2506,6 +2510,424 @@ public class TurbineOp extends Instruction {
     default:
       throw new STCRuntimeError("Need to add opcode " + op.toString()
           + " to getMode");
+    }
+  }
+  
+  @Override
+  public List<ExecContext> supportedContexts() {
+    switch (op) {
+      case LOAD_ARRAY:
+      case LOAD_BAG:
+      case LOAD_FILE:
+      case LOAD_RECURSIVE:
+      case LOAD_REF:
+      case LOAD_SCALAR:
+      case LOAD_STRUCT:
+      case LATEST_VALUE:
+      case STORE_ARRAY:
+      case STORE_BAG:
+      case STORE_FILE:
+      case STORE_RECURSIVE:
+      case STORE_REF:
+      case STORE_SCALAR:
+      case STORE_STRUCT:
+      case ARRAY_BUILD:
+        // Loads and stores can run anywhere
+        return ExecContext.ALL;
+
+      case SET_FILENAME_VAL:
+      case GET_FILENAME_VAL:
+      case COPY_IN_FILENAME:
+        // Filename loads and stores can run anywhere
+        return ExecContext.ALL;
+        
+      case INIT_LOCAL_OUTPUT_FILE:
+      case INIT_UPDATEABLE_FLOAT:
+        // Init operations can run anywhere
+        return ExecContext.ALL;
+
+      case UPDATE_INCR:
+      case UPDATE_INCR_IMM:
+      case UPDATE_MIN:
+      case UPDATE_MIN_IMM:
+      case UPDATE_SCALE:
+      case UPDATE_SCALE_IMM:
+        // Update operations can run anywhere
+        return ExecContext.ALL;
+        
+      case COPY_REF:
+      case STRUCT_CREATE_ALIAS:
+      case GET_FILENAME_ALIAS:
+        // Alias can be created anywhere
+        return ExecContext.ALL;
+        
+      case DEREF_FILE:
+      case DEREF_SCALAR:
+        // Deref can be done anywhere
+        return ExecContext.ALL;
+        
+      case ARR_CONTAINS:
+      case ARR_COPY_IN_FUTURE:
+      case ARR_COPY_IN_IMM:
+      case ARR_COPY_OUT_FUTURE:
+      case ARR_COPY_OUT_IMM:
+      case ARR_CREATE_NESTED_FUTURE:
+      case ARR_CREATE_NESTED_IMM:
+      case ARR_LOCAL_CONTAINS:
+      case ARR_RETRIEVE:
+      case ARR_STORE:
+      case ARR_STORE_FUTURE:
+      case ARR_CREATE_BAG:
+      case AREF_COPY_IN_FUTURE:
+      case AREF_COPY_IN_IMM:
+      case AREF_COPY_OUT_FUTURE:
+      case AREF_COPY_OUT_IMM:
+      case AREF_CREATE_NESTED_FUTURE:
+      case AREF_CREATE_NESTED_IMM:
+      case AREF_STORE_FUTURE:
+      case AREF_STORE_IMM:
+      case BAG_INSERT:
+      case CONTAINER_SIZE:
+      case CONTAINER_LOCAL_SIZE:
+        // Array ops can be done anywhere
+        return ExecContext.ALL;
+        
+      case STRUCT_COPY_IN:
+      case STRUCT_COPY_OUT:
+      case STRUCT_INIT_FIELDS:
+      case STRUCT_RETRIEVE_SUB:
+      case STRUCT_STORE_SUB:
+      case STRUCTREF_COPY_IN:
+      case STRUCTREF_COPY_OUT:
+      case STRUCTREF_STORE_SUB:
+        // Struct ops can be done anywhere
+        return ExecContext.ALL;
+      
+      case ASYNC_COPY_CONTAINER:
+      case ASYNC_COPY_STRUCT:
+        // Copy ops can be done anywhere
+        return ExecContext.ALL;
+        
+      case SYNC_COPY_CONTAINER:
+      case SYNC_COPY_STRUCT:
+        // Copy ops can be done anywhere
+        return ExecContext.ALL;
+        
+      case CHECKPOINT_LOOKUP_ENABLED:
+      case CHECKPOINT_WRITE_ENABLED:
+      case CHOOSE_TMP_FILENAME:
+      case IS_MAPPED:
+      case GET_LOCAL_FILENAME:
+        // Utility operations can be done anywhere
+        return ExecContext.ALL;
+        
+      case COPY_FILE_CONTENTS:
+        // Copying a file can take some time - only do on worker
+        return ExecContext.WORKER_LIST;
+        
+      case DECR_LOCAL_FILE_REF:
+      case FREE_BLOB:
+        // Local refcount manipulations
+        return ExecContext.ALL;
+        
+      case LOOKUP_CHECKPOINT:
+        return ExecContext.ALL;
+        
+      case PACK_VALUES:
+      case UNPACK_ARRAY_TO_FLAT:
+      case UNPACK_VALUES:
+        return ExecContext.ALL;
+        
+      case WRITE_CHECKPOINT:
+        // May require I/O
+        return ExecContext.WORKER_LIST;
+        
+      default:
+        throw new STCRuntimeError("Missing: " + op);
+    }
+  }
+
+  @Override
+  public boolean isCheap() {
+    switch (op) {
+      case LOAD_ARRAY:
+      case LOAD_BAG:
+      case LOAD_FILE:
+      case LOAD_RECURSIVE:
+      case LOAD_REF:
+      case LOAD_SCALAR:
+      case LOAD_STRUCT:
+      case LATEST_VALUE:
+      case STORE_ARRAY:
+      case STORE_BAG:
+      case STORE_FILE:
+      case STORE_RECURSIVE:
+      case STORE_REF:
+      case STORE_SCALAR:
+      case STORE_STRUCT:
+      case ARRAY_BUILD:
+        // Loads and stores aren't too expensive
+        return true;
+
+      case SET_FILENAME_VAL:
+      case GET_FILENAME_VAL:
+      case COPY_IN_FILENAME:
+        // Filename loads and stores aren't expensive
+        return true;
+        
+      case INIT_LOCAL_OUTPUT_FILE:
+      case INIT_UPDATEABLE_FLOAT:
+        // Init operations
+        return true;
+
+      case UPDATE_INCR:
+      case UPDATE_INCR_IMM:
+      case UPDATE_MIN:
+      case UPDATE_MIN_IMM:
+      case UPDATE_SCALE:
+      case UPDATE_SCALE_IMM:
+        // Update operations
+        return true;
+        
+      case COPY_REF:
+      case STRUCT_CREATE_ALIAS:
+      case GET_FILENAME_ALIAS:
+        // Creating alias is cheap
+        return true;
+        
+      case DEREF_FILE:
+      case DEREF_SCALAR:
+        // Spawning deref is cheap
+        return true;
+        
+      case ARR_CONTAINS:
+      case ARR_COPY_IN_FUTURE:
+      case ARR_COPY_IN_IMM:
+      case ARR_COPY_OUT_FUTURE:
+      case ARR_COPY_OUT_IMM:
+      case ARR_CREATE_NESTED_FUTURE:
+      case ARR_CREATE_NESTED_IMM:
+      case ARR_LOCAL_CONTAINS:
+      case ARR_RETRIEVE:
+      case ARR_STORE:
+      case ARR_STORE_FUTURE:
+      case ARR_CREATE_BAG:
+      case AREF_COPY_IN_FUTURE:
+      case AREF_COPY_IN_IMM:
+      case AREF_COPY_OUT_FUTURE:
+      case AREF_COPY_OUT_IMM:
+      case AREF_CREATE_NESTED_FUTURE:
+      case AREF_CREATE_NESTED_IMM:
+      case AREF_STORE_FUTURE:
+      case AREF_STORE_IMM:
+      case BAG_INSERT:
+      case CONTAINER_SIZE:
+      case CONTAINER_LOCAL_SIZE:
+        // Container operations aren't too expensive
+        return true;
+        
+      case STRUCT_COPY_IN:
+      case STRUCT_COPY_OUT:
+      case STRUCT_INIT_FIELDS:
+      case STRUCT_RETRIEVE_SUB:
+      case STRUCT_STORE_SUB:
+      case STRUCTREF_COPY_IN:
+      case STRUCTREF_COPY_OUT:
+      case STRUCTREF_STORE_SUB:
+        // Struct operations aren't too expensive
+        return true;
+      
+      case ASYNC_COPY_CONTAINER:
+      case ASYNC_COPY_STRUCT:
+        // Spawning the task isn't expensive
+        return true;
+        
+      case SYNC_COPY_CONTAINER:
+      case SYNC_COPY_STRUCT:
+        // Copying a large container may be expensive
+        return false;
+        
+      case CHECKPOINT_LOOKUP_ENABLED:
+      case CHECKPOINT_WRITE_ENABLED:
+      case CHOOSE_TMP_FILENAME:
+      case IS_MAPPED:
+      case GET_LOCAL_FILENAME:
+        // Utility operations are cheap
+        return true;
+        
+      case COPY_FILE_CONTENTS:
+        // Copying a file can take some time
+        return false;
+        
+      case DECR_LOCAL_FILE_REF:
+      case FREE_BLOB:
+        // Local refcount manipulations
+        return true;
+        
+      case LOOKUP_CHECKPOINT:
+        return true;
+        
+      case PACK_VALUES:
+      case UNPACK_ARRAY_TO_FLAT:
+      case UNPACK_VALUES:
+        return true;
+        
+      case WRITE_CHECKPOINT:
+        // May require I/O
+        return false;
+        
+      default:
+        throw new STCRuntimeError("Missing: " + op);
+    }
+  }
+  
+  @Override
+  public boolean isProgressEnabling() {
+    switch (op) {
+      case LOAD_ARRAY:
+      case LOAD_BAG:
+      case LOAD_FILE:
+      case LOAD_RECURSIVE:
+      case LOAD_REF:
+      case LOAD_SCALAR:
+      case LOAD_STRUCT:
+      case LATEST_VALUE:
+      case GET_FILENAME_VAL:
+        // Loads don't do anything
+        return false;
+        
+      case STORE_ARRAY:
+      case STORE_BAG:
+      case STORE_FILE:
+      case STORE_RECURSIVE:
+      case STORE_REF:
+      case STORE_SCALAR:
+      case STORE_STRUCT:
+      case ARRAY_BUILD:
+      case SET_FILENAME_VAL:
+      case COPY_IN_FILENAME:
+        // Stores can enable progress
+        return true;
+        
+      case INIT_LOCAL_OUTPUT_FILE:
+      case INIT_UPDATEABLE_FLOAT:
+      case STRUCT_INIT_FIELDS:
+        // Init operations don't enable progress
+        return false;
+
+      case UPDATE_INCR:
+      case UPDATE_INCR_IMM:
+      case UPDATE_MIN:
+      case UPDATE_MIN_IMM:
+      case UPDATE_SCALE:
+      case UPDATE_SCALE_IMM:
+        // Don't want to defer updates
+        return true;
+        
+      case COPY_REF:
+      case STRUCT_CREATE_ALIAS:
+      case GET_FILENAME_ALIAS:
+        // Creating alias doesn't make progress
+        return false;
+        
+      case DEREF_FILE:
+      case DEREF_SCALAR:
+        // Deref assigns future
+        return true;
+        
+
+      case ARR_COPY_IN_FUTURE:
+      case ARR_COPY_IN_IMM:
+      case ARR_STORE:
+      case ARR_STORE_FUTURE:
+      case AREF_COPY_IN_FUTURE:
+      case AREF_COPY_IN_IMM:
+      case AREF_STORE_FUTURE:
+      case AREF_STORE_IMM:
+      case BAG_INSERT:
+        // Adding to container can enable progress
+        return true;
+        
+      case ARR_CREATE_NESTED_FUTURE:
+      case ARR_CREATE_NESTED_IMM:
+      case AREF_CREATE_NESTED_FUTURE:
+      case AREF_CREATE_NESTED_IMM:
+      case ARR_CREATE_BAG:
+        // Creating nested containers can release write refcount on outer
+        return true;
+        
+      case ARR_CONTAINS:
+      case ARR_LOCAL_CONTAINS:
+      case ARR_RETRIEVE:
+      case CONTAINER_SIZE:
+      case CONTAINER_LOCAL_SIZE:
+        // Retrieving from array won't enable progress
+        return false;
+
+      case ARR_COPY_OUT_FUTURE:
+      case ARR_COPY_OUT_IMM:
+      case AREF_COPY_OUT_FUTURE:
+      case AREF_COPY_OUT_IMM:
+        // Copying to future can enable progress
+        return true;
+        
+      case STRUCT_COPY_IN:
+      case STRUCT_STORE_SUB:
+      case STRUCTREF_COPY_IN:
+      case STRUCTREF_STORE_SUB:
+        // Adding to struct can enable progress
+        return true;
+ 
+      case STRUCT_RETRIEVE_SUB:
+        // Retrieving from struct won't enable progress
+        return false;
+
+      case STRUCT_COPY_OUT:
+      case STRUCTREF_COPY_OUT:
+        // Copying to future can enable progress
+        return true;
+      
+      case ASYNC_COPY_CONTAINER:
+      case ASYNC_COPY_STRUCT:
+        // Copying can enable progress
+        return true;
+        
+      case SYNC_COPY_CONTAINER:
+      case SYNC_COPY_STRUCT:
+        // Copying can enable progress
+        return false;
+        
+      case CHECKPOINT_LOOKUP_ENABLED:
+      case CHECKPOINT_WRITE_ENABLED:
+      case CHOOSE_TMP_FILENAME:
+      case IS_MAPPED:
+      case GET_LOCAL_FILENAME:
+        // Utility operations don't enable progress
+        return true;
+        
+      case COPY_FILE_CONTENTS:
+        // Copying a file doesn't assign future
+        return false;
+        
+      case DECR_LOCAL_FILE_REF:
+      case FREE_BLOB:
+        // Local refcount manipulations
+        return false;
+        
+      case LOOKUP_CHECKPOINT:
+        return false;
+        
+      case PACK_VALUES:
+      case UNPACK_ARRAY_TO_FLAT:
+      case UNPACK_VALUES:
+        return false;
+        
+      case WRITE_CHECKPOINT:
+        // Don't defer writing checkpoint
+        return true;
+        
+      default:
+        throw new STCRuntimeError("Missing: " + op);
     }
   }
 
@@ -2725,7 +3147,7 @@ public class TurbineOp extends Instruction {
       case ARR_CREATE_NESTED_IMM:
       case AREF_CREATE_NESTED_FUTURE:
       case AREF_CREATE_NESTED_IMM: 
-      case ARRAY_CREATE_BAG: {
+      case ARR_CREATE_BAG: {
         // CREATE_NESTED <out inner array> <in array> <in index>
         // OR
         // CREATE_BAG <out inner bag> <in array> <in index> 
@@ -2735,7 +3157,7 @@ public class TurbineOp extends Instruction {
         List<ValLoc> res = new ArrayList<ValLoc>();
         
         boolean returnsNonRef = op == Opcode.ARR_CREATE_NESTED_IMM ||
-                                op == Opcode.ARRAY_CREATE_BAG;
+                                op == Opcode.ARR_CREATE_BAG;
         // Mark as not substitutable since this op may have
         // side-effect of creating array
         res.add(ValLoc.makeArrayResult(arr, ix, nestedArr.asArg(),
@@ -3112,7 +3534,7 @@ public class TurbineOp extends Instruction {
         break;
       }
       case ARR_CREATE_NESTED_IMM:
-      case ARRAY_CREATE_BAG: {
+      case ARR_CREATE_BAG: {
         // Instruction can give additional refcounts back
         Var nested = getOutput(0);
         assert(getInputs().size() == 3);
@@ -3242,7 +3664,7 @@ public class TurbineOp extends Instruction {
   public List<ComponentAlias> getComponentAliases() {
     switch (op) {
       case ARR_CREATE_NESTED_IMM:
-      case ARRAY_CREATE_BAG:
+      case ARR_CREATE_BAG:
         // From inner object to immediately enclosing
         return new ComponentAlias(getOutput(1), Component.deref(getInput(0).asList()), 
                    getOutput(0)).asList();
@@ -3410,7 +3832,7 @@ public class TurbineOp extends Instruction {
       case ARR_CREATE_NESTED_IMM:
       case AREF_CREATE_NESTED_FUTURE:
       case AREF_CREATE_NESTED_IMM:
-      case ARRAY_CREATE_BAG:
+      case ARR_CREATE_BAG:
         return true;
       default:
         return false;
@@ -3555,6 +3977,22 @@ public class TurbineOp extends Instruction {
     public TaskMode getMode() {
       // Executes right away
       return TaskMode.SYNC;
+    }
+
+    @Override
+    public List<ExecContext> supportedContexts() {
+      return ExecContext.ALL;
+    }
+
+    @Override
+    public boolean isCheap() {
+      return true;
+    }
+    
+    @Override
+    public boolean isProgressEnabling() {
+      // Decrementing write refcount can close
+      return getRCType(op) == RefCountType.WRITERS;
     }
     
     @Override

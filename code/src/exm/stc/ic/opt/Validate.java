@@ -26,6 +26,7 @@ import org.apache.log4j.Logger;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
@@ -52,18 +53,22 @@ public class Validate implements OptimizerPass {
   private final boolean checkVarPassing;
   private final boolean checkCleanups;
   private final boolean noNestedBlocks;
+  private final boolean checkExecContext;
+  
   
   private Validate(boolean checkVarPassing,
                    boolean checkCleanups,
-                   boolean noNestedBlocks) {
+                   boolean noNestedBlocks,
+                   boolean checkExecContext) {
     super();
     this.checkVarPassing = checkVarPassing;
     this.checkCleanups = checkCleanups;
     this.noNestedBlocks = noNestedBlocks;
+    this.checkExecContext = checkExecContext;
   }
 
   public static Validate standardValidator() {
-    return new Validate(true, true, false);
+    return new Validate(true, true, false, true);
   }
   
   /**
@@ -72,7 +77,7 @@ public class Validate implements OptimizerPass {
    *                    variable passing check
    */
   public static Validate finalValidator() {
-    return new Validate(false, false, false);
+    return new Validate(false, false, false, true);
   }
   
   @Override
@@ -96,9 +101,11 @@ public class Validate implements OptimizerPass {
       checkParentLinks(logger, program, fn);
       checkUniqueVarNames(logger, program.constants(), fn);
       InitVariables.checkVarInit(logger, fn);
+      if (checkExecContext) {
+        checkExecCx(logger, program, fn);
+      }
     }
   }
-
   /**
    * Check that var names are unique within each function, and
    * that all references to variable have same attributes
@@ -312,4 +319,38 @@ public class Validate implements OptimizerPass {
       }
     }
   }
+  
+
+
+  private void checkExecCx(Logger logger, Program program, Function fn) {
+    checkExecCx(logger, program, fn.mainBlock(), ExecContext.CONTROL);
+  }
+
+  private void checkExecCx(Logger logger, Program program,
+      Block block, ExecContext execCx) {
+    
+    for (Statement stmt: block.getStatements()) {
+      switch (stmt.type()) {
+        case INSTRUCTION:
+          List<ExecContext> valid = stmt.instruction().supportedContexts();
+          assert(valid.contains(execCx)) : stmt + " expects to execute in " +
+                "one of these contexts: " + valid + " but is in " + execCx; 
+          break;
+        case CONDITIONAL:
+          checkExecCxRecurse(logger, program, execCx, stmt.conditional());
+          break;
+        default:
+          throw new STCRuntimeError("Unexpected: " + stmt.type());
+      }
+    }
+    
+  }
+
+  private void checkExecCxRecurse(Logger logger, Program program,
+      ExecContext execCx, Continuation cont) {
+    for (Block branch: cont.getBlocks()) {
+      checkExecCx(logger, program, branch, cont.childContext(execCx));
+    }
+  }
+
 }

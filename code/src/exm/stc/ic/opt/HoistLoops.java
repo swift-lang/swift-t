@@ -475,7 +475,7 @@ public class HoistLoops implements OptimizerPass {
    * @param maxHoist
    * @return
    */
-  public int maxHoistContext(Logger logger, HoistTracking state, int maxHoist) {
+  private int maxHoistContext(Logger logger, HoistTracking state, int maxHoist) {
     int maxCorrectContext = 0;
     HoistTracking curr = state;
     for (int hoist = 1; hoist <= maxHoist; hoist++) {

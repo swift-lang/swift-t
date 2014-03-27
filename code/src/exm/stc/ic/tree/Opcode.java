@@ -79,7 +79,7 @@ public enum Opcode {
   // Insert into bag
   BAG_INSERT, 
   // Create new bag inside array
-  ARRAY_CREATE_BAG,
+  ARR_CREATE_BAG,
   
 
   // Initialize struct fields

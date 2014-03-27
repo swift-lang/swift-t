@@ -31,6 +31,7 @@ import exm.stc.common.CompilerBackend;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.CompileTimeArgs;
+import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
 import exm.stc.common.lang.Operators;
@@ -379,6 +380,24 @@ public class ICInstructions {
     public abstract TaskMode getMode();
     
     /**
+     * @return which execution contexts are supported
+     */
+    public abstract List<ExecContext> supportedContexts();
+    
+    /**
+     * @return true if instruction is cheap: i.e. doesn't consume much CPU or IO
+     *        time so doesn't need to be run in parallel 
+     */
+    public abstract boolean isCheap();
+    
+    /**
+     * @return true if instruction doesn't spawn or enable further work
+     *           (e.g. by assigning future), so can be put off without problem
+     */
+    public abstract boolean isProgressEnabling();
+
+   
+    /**
      * @return List of outputs closed immediately after instruction returns
      */
     public List<Var> getClosedOutputs() {
@@ -594,6 +613,22 @@ public class ICInstructions {
     public TaskMode getMode() {
       return TaskMode.SYNC;
     }
+    
+    @Override
+    public List<ExecContext> supportedContexts() {
+      return ExecContext.ALL;
+    }
+
+    @Override
+    public boolean isCheap() {
+      return true;
+    }
+    
+    @Override
+    public boolean isProgressEnabling() {
+      return false;
+    }
+    
   }
 
   // Maximum number of array element CVs to insert
@@ -1349,7 +1384,42 @@ public class ICInstructions {
           throw new STCRuntimeError("Unexpected function call opcode: " + op);
       }
     }
+    
+    @Override
+    public List<ExecContext> supportedContexts() {
+      switch (op) {
+        case CALL_SYNC:
+        case CALL_LOCAL_CONTROL:
+          return ExecContext.CONTROL_LIST;
+        case CALL_LOCAL:
+          // Can run anywhere
+          return ExecContext.ALL;
+        case CALL_FOREIGN:
+        case CALL_CONTROL:
+          // Task is spawned: doesn't matter
+          return ExecContext.ALL;
+        default:
+          throw new STCRuntimeError("Unexpected function call opcode: " + op);
+      }
+    }
 
+    @Override
+    public boolean isCheap() {
+      if (op == Opcode.CALL_SYNC) {
+        // Not sure how much work it will involve without looking at
+        // function def
+        return false;
+      } else {
+        // Just spawns the task here
+        return true;
+      }
+    }
+    
+    @Override
+    public boolean isProgressEnabling() {
+      return true; // Function may have side-effects, etc
+    }
+    
     @Override
     public Instruction clone() {
       // Variables are immutable so just need to clone lists
@@ -1409,6 +1479,45 @@ public class ICInstructions {
     @Override
     public TaskMode getMode() {
       return TaskMode.SYNC;
+    }
+    
+    @Override
+    public List<ExecContext> supportedContexts() {
+      TaskMode fnMode = ForeignFunctions.getTaskMode(functionName);
+      switch (fnMode) {
+        case CONTROL:
+        case LOCAL_CONTROL:
+          return ExecContext.CONTROL_LIST;
+        case WORKER:
+          return ExecContext.WORKER_LIST;
+        case LOCAL:
+        case SYNC:
+          return ExecContext.ALL;
+        default:
+          throw new STCRuntimeError("Unexpected: " + fnMode);
+      }
+    }
+
+    @Override
+    public boolean isCheap() {
+      TaskMode fnMode = ForeignFunctions.getTaskMode(functionName);
+      switch (fnMode) {
+        case LOCAL_CONTROL:
+        case LOCAL:
+        case SYNC:
+          return true;
+        case CONTROL:
+        case WORKER:
+          return false;
+        default:
+          throw new STCRuntimeError("Unexpected: " + fnMode);
+      }
+    }
+    
+    @Override
+    public boolean isProgressEnabling() {
+      // Only assigns value
+      return false;
     }
     
     @Override
@@ -1536,6 +1645,22 @@ public class ICInstructions {
     @Override
     public TaskMode getMode() {
       return TaskMode.SYNC;
+    }
+    
+    @Override
+    public List<ExecContext> supportedContexts() {
+      // Only run external commands on workers
+      return ExecContext.WORKER_LIST;
+    }
+
+    @Override
+    public boolean isCheap() {
+      return false;
+    }
+    
+    @Override
+    public boolean isProgressEnabling() {
+      return false;
     }
     
     @Override
@@ -1776,6 +1901,21 @@ public class ICInstructions {
       return TaskMode.CONTROL;
     }
     
+    @Override
+    public List<ExecContext> supportedContexts() {
+      return ExecContext.ALL;
+    }
+
+    @Override
+    public boolean isCheap() {
+      return true;
+    }
+    
+    @Override
+    public boolean isProgressEnabling() {
+      return true;
+    }
+    
     public void setLoopUsedVars(Collection<Var> variables) {
       loopUsedVars.clear();
       loopUsedVars.addAll(variables);
@@ -1884,6 +2024,22 @@ public class ICInstructions {
     @Override
     public TaskMode getMode() {
       return TaskMode.SYNC;
+    }
+    
+    @Override
+    public List<ExecContext> supportedContexts() {
+      return ExecContext.ALL;
+    }
+
+    @Override
+    public boolean isCheap() {
+      return true;
+    }
+    
+    @Override
+    public boolean isProgressEnabling() {
+      // ending loop might allow vars to be closed
+      return !keepOpenVars.isEmpty();
     }
    
     @Override
@@ -2202,7 +2358,29 @@ public class ICInstructions {
       if (op == Opcode.ASYNC_OP) {
         return TaskMode.CONTROL;
       } else {
+        assert(op == Opcode.LOCAL_OP);
         return TaskMode.SYNC;
+      }
+    }
+    
+    @Override
+    public List<ExecContext> supportedContexts() {
+      return ExecContext.ALL;
+    }
+
+    @Override
+    public boolean isCheap() {
+      // Ops are generally cheap
+      return true;
+    }
+    
+    @Override
+    public boolean isProgressEnabling() {
+      if (op == Opcode.ASYNC_OP) {
+        return true; // Assigns future
+      } else {
+        assert(op == Opcode.LOCAL_OP);
+        return false;
       }
     }
     
