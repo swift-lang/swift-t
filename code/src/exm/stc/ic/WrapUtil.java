@@ -168,7 +168,8 @@ public class WrapUtil {
     List<WaitVar> waitVars = new ArrayList<WaitVar>(inArgs.size());
     Map<Var, Var> filenameVars = new HashMap<Var, Var>();
     for (Var in: inArgs) {
-      if (!Types.isPrimUpdateable(in.type())) {
+      if (!Types.isPrimUpdateable(in.type()) &&
+          in.storage() != Alloc.GLOBAL_CONST) {
         waitVars.add(new WaitVar(in, false));
       }
     }
