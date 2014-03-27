@@ -34,9 +34,11 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
+import exm.stc.common.util.Pair;
 import exm.stc.ic.WrapUtil;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.Instruction.InitType;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
 import exm.stc.ic.tree.ICInstructions.Instruction.VarCreator;
 import exm.stc.ic.tree.ICTree.Block;
@@ -110,15 +112,17 @@ public class OptUtil {
    */
   public static void replaceInstOutput(Block srcBlock,
           Block targetBlock, List<Statement> instBuffer, Var newOut, Var oldOut,
-          boolean storeOutputMapping) {
+          boolean initialisesOutput, boolean storeOutputMapping) {
     boolean isDerefResult = 
         Types.retrievedType(oldOut).assignableTo(newOut.type());
     if (isDerefResult) {
       Var oldOutReplacement;
-      if (oldOut.storage() == Alloc.ALIAS) {
+      if (oldOut.storage() == Alloc.ALIAS  &&
+          initialisesOutput) {
         // Will need to initialise variable in this scope as before we
         // were relying on instruction to initialise it
-        
+        System.err.println("REPLACE " + oldOut);
+        new Exception().printStackTrace();
         oldOutReplacement = new Var(oldOut.type(),
             oldOut.name(), Alloc.TEMP,
             oldOut.defType(), oldOut.provenance(), oldOut.mappedDecl());
@@ -209,9 +213,17 @@ public class OptUtil {
       // Output variable of instruction changed, need to fix up
       Var newOut = change.newOut;
       Var oldOut = change.oldOut;
-       
+      boolean initOutput = false;
+      for (Pair<Var, InitType> init: oldInst.getInitialized()) {
+        if (init.val2 == InitType.FULL &&
+            init.val1.equals(oldOut)) {
+          initOutput = true;
+          break;
+        }
+      }
+      
       replaceInstOutput(srcBlock, targetBlock, instBuffer,
-                                  newOut, oldOut, storeOutputMapping);
+                                  newOut, oldOut, storeOutputMapping, initOutput);
     }
     
     // Now copy back values into future

@@ -1594,7 +1594,7 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void structCreateAlias(Var alias, Var struct,
                            List<String> fields) {
-    assert(alias.storage() == Alloc.ALIAS);
+    assert(alias.storage() == Alloc.ALIAS) : alias;
     assert(Types.isStruct(struct));
     assert(Types.isStructField(struct, fields, alias));
     // Simple create alias as handle
