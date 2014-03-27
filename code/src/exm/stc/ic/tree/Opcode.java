@@ -118,14 +118,19 @@ public enum Opcode {
   ;
   
   public boolean isAssign() {
+    return isAssign(true);
+  }
+  
+  public boolean isAssign(boolean includeRecursive) {
     switch (this) {
       case STORE_SCALAR:
       case STORE_FILE:
       case STORE_ARRAY:
       case STORE_BAG:
       case STORE_STRUCT:
-      case STORE_RECURSIVE:
         return true;
+      case STORE_RECURSIVE:
+        return includeRecursive;
       default:
         return false;
     }
@@ -166,18 +171,23 @@ public enum Opcode {
   }
   
   public boolean isRetrieve() {
-    switch (this) {
-    case LOAD_SCALAR:
-    case LOAD_FILE:
-    case LOAD_REF:
-    case LOAD_ARRAY:
-    case LOAD_BAG:
-    case LOAD_STRUCT:
-    case LOAD_RECURSIVE:
-      return true;
-    default:
-      return false;
+    return isRetrieve(true);
   }
+  
+  public boolean isRetrieve(boolean includeRecursive) {
+    switch (this) {
+      case LOAD_SCALAR:
+      case LOAD_FILE:
+      case LOAD_REF:
+      case LOAD_ARRAY:
+      case LOAD_BAG:
+      case LOAD_STRUCT:
+        return true;
+      case LOAD_RECURSIVE:
+        return includeRecursive;
+      default:
+        return false;
+    }
   }
 
   public static Opcode retrieveOpcode(Typed srcType) {

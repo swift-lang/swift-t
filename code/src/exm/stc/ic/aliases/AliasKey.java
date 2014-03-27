@@ -71,6 +71,28 @@ public class AliasKey implements Typed {
     return structPath.length;
   }
 
+  /**
+   * @return true if it's a simple alias of a struct field
+   */
+  public boolean isPlainStructAlias() {
+    if (structPath == null || structPath.length == 0) {
+      return false;
+    }
+
+    Type t = var.type();
+    if (structPath != null) {
+      for (String field: structPath) {
+        if (field.equals(AliasTracker.DEREF_MARKER)) {
+          return false;
+        } else {
+          assert(Types.isStruct(t) || Types.isStructLocal(t)) : t;
+          t = ((StructType)t).getFieldTypeByName(field);
+        }
+      }
+    }
+    return true;
+  }
+
   public Type type() {
     Type t = var.type();
     if (structPath != null) {

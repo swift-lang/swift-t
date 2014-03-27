@@ -9,7 +9,6 @@ import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.ic.aliases.AliasKey;
 import exm.stc.ic.aliases.AliasTracker;
@@ -88,10 +87,10 @@ public class PropagateAliases extends FunctionOptimizerPass {
    * @return
    */
   private static Instruction tryPropagateAliases(Instruction inst, AliasTracker aliases) {
-    if (inst.op.isRetrieve()) {
+    if (inst.op.isRetrieve(false)) {
       Var src = inst.getInput(0).getVar();
       AliasKey srcKey = aliases.getCanonical(src);
-      if (srcKey.pathLength() > 0 && Types.isStruct(srcKey.var)) {
+      if (srcKey.isPlainStructAlias()) {
         Arg decr = Arg.ZERO;
         if (inst.getInputs().size() > 1) {
           decr = inst.getInput(1);
@@ -100,7 +99,7 @@ public class PropagateAliases extends FunctionOptimizerPass {
         return TurbineOp.structRetrieveSub(inst.getOutput(0), srcKey.var,
                                 Arrays.asList(srcKey.structPath), decr);
       }
-    } else if (inst.op.isAssign()) {
+    } else if (inst.op.isAssign(false)) {
       Var out ;
     }
     return null;
