@@ -18,6 +18,7 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.StackLite;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
+import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
@@ -77,6 +78,12 @@ public class StructBuild extends FunctionOptimizerPass {
       }
       if (expectedPaths.isEmpty()) {
         doStructBuildTransform(logger, block, candidate, assigned.size());
+      }
+    }
+    
+    for (Continuation cont: block.allComplexStatements()) {
+      for (Block cb: cont.getBlocks()) {
+        structBuildRec(logger, cb);
       }
     }
   }
