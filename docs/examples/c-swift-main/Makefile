@@ -48,7 +48,7 @@ run: all pkgIndex.tcl
 ### Clean:
 
 clean:
-	@rm -fv prog-swift-main *.o
+	@rm -fv prog-c prog-swift-main *.o *.so
 	@rm -fv swift-main_wrap.c
 	@rm -fv pkgIndex.tcl
 	@rm -fv prog-swift.tcl
