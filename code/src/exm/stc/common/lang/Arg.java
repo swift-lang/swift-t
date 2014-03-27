@@ -109,7 +109,8 @@ public class Arg implements Comparable<Arg>, Typed {
     if (kind == ArgKind.STRINGVAL) {
       return stringlit;
     } else {
-      throw new STCRuntimeError("getStringVal for non-string type " + kind);
+      throw new STCRuntimeError("getStringVal for non-string type " + kind
+                                 + " " + this);
     }
   }
 
@@ -117,7 +118,8 @@ public class Arg implements Comparable<Arg>, Typed {
     if (kind == ArgKind.INTVAL) {
       return intlit;
     } else {
-      throw new STCRuntimeError("getIntVal for non-int type " + kind);
+      throw new STCRuntimeError("getIntVal for non-int type " + kind
+                                 + " " + this);
     }
   }
 
@@ -125,7 +127,8 @@ public class Arg implements Comparable<Arg>, Typed {
     if (kind == ArgKind.FLOATVAL) {
       return floatlit;
     } else {
-      throw new STCRuntimeError("getFloatVal for non-float type " + kind);
+      throw new STCRuntimeError("getFloatVal for non-float type " + kind
+                                 + " " + this);
     }
   }
 
@@ -133,7 +136,8 @@ public class Arg implements Comparable<Arg>, Typed {
     if (kind == ArgKind.BOOLVAL) {
       return boollit;
     } else {
-      throw new STCRuntimeError("getBoolLit for non-bool type " + kind);
+      throw new STCRuntimeError("getBoolLit for non-bool type " + kind
+                                 + " " + this);  
     }
   }
 
@@ -141,7 +145,8 @@ public class Arg implements Comparable<Arg>, Typed {
     if (kind == ArgKind.VAR) {
       return var;
     } else {
-      throw new STCRuntimeError("getVariable for non-variable type " + kind);
+      throw new STCRuntimeError("getVariable for non-variable type " + kind
+                                + " " + this);
     }
   }
 

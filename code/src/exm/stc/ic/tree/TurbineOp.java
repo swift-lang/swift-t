@@ -771,10 +771,10 @@ public class TurbineOp extends Instruction {
     
     List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
 
+    in.add(fieldVal);
     for (String field: fields) {
       in.add(Arg.createStringLit(field));
     }
-    in.add(fieldVal);
     return new TurbineOp(Opcode.STRUCT_STORE_SUB, structVar.asList(), in);
   }
   
@@ -3076,7 +3076,13 @@ public class TurbineOp extends Instruction {
       case STRUCTREF_STORE_SUB: {
         Var struct = getOutput(0);
         Arg val = getInput(0);
-        List<Arg> fields = getInputsTail(1);
+        List<Arg> fields;
+        if (op == Opcode.STRUCT_STORE_SUB) {
+          fields = getInputsTail(1);
+        } else {
+          assert(op == Opcode.STRUCTREF_STORE_SUB);
+          fields = getInputsTail(1);
+        }
         return ValLoc.makeStructFieldValResult(val, struct, fields).asList();
       }
       case STRUCT_COPY_IN:
@@ -3627,8 +3633,11 @@ public class TurbineOp extends Instruction {
         return Alias.makeStructAliases2(getInput(0).getVar(), getInputsTail(2),
             getOutput(0), AliasTransform.RETRIEVE);
       case STRUCT_STORE_SUB:
-        return Alias.makeStructAliases2(getOutput(0), getInputsTail(1),
-            getInput(0).getVar(), AliasTransform.RETRIEVE);
+        if (getInput(0).isVar()) {
+          return Alias.makeStructAliases2(getOutput(0), getInputsTail(1),
+                                  getInput(0).getVar(), AliasTransform.RETRIEVE);
+        }
+        break;
       case STRUCT_COPY_OUT:
         return Alias.makeStructAliases2(getInput(0).getVar(), getInputsTail(1),
             getOutput(0), AliasTransform.COPY);

@@ -418,7 +418,7 @@ public class ComputedValue<T> {
     List<Arg> inputs = new ArrayList<Arg>(fieldNames.size() + 1);
     inputs.add(struct.asArg());
     for (Arg fieldName: fieldNames) {
-      assert(fieldName.isStringVal());
+      assert(fieldName.isStringVal()) : fieldName;
       inputs.add(fieldName);
     }
     return inputs;
