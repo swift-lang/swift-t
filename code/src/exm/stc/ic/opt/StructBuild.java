@@ -44,6 +44,7 @@ public class StructBuild extends FunctionOptimizerPass {
 
   @Override
   public void optimize(Logger logger, Function f) throws UserException {
+    logger.trace("Struct build in " + f.getName());
     structBuildRec(logger, f.mainBlock());
   }
 
@@ -69,6 +70,8 @@ public class StructBuild extends FunctionOptimizerPass {
       Set<List<String>> expectedPaths = allAssignablePaths(candidate);
       List<List<String>> assigned = assignedPaths.get(candidate);
       
+      logger.trace("Check candidate " + candidate.name());
+      
       for (List<String> path: assigned) {
         boolean found = expectedPaths.remove(path);
         if (!found) {
@@ -78,6 +81,8 @@ public class StructBuild extends FunctionOptimizerPass {
       }
       if (expectedPaths.isEmpty()) {
         doStructBuildTransform(logger, block, candidate, assigned.size());
+      } else if (logger.isTraceEnabled()) {
+        logger.trace("Fields not assigned: " + expectedPaths);
       }
     }
     
@@ -127,6 +132,7 @@ public class StructBuild extends FunctionOptimizerPass {
   private void
       doStructBuildTransform(Logger logger, Block block, Var candidate,
                              int fieldsToAssign) {
+    logger.trace("Transforming " + candidate.name());
     int fieldsAssigned = 0;
     List<List<String>> fieldPaths = new ArrayList<List<String>>();
     List<Arg> fieldVals = new ArrayList<Arg>();
