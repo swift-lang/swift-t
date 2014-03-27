@@ -107,6 +107,8 @@ public class AliasKey implements Typed {
       for (String field: structPath) {
         if (field.equals(AliasTracker.DEREF_MARKER)) {
           t = Types.retrievedType(t);
+        } else if (Types.isFile(t) && field.equals(Alias.FILENAME)) {
+          t = Types.F_STRING;
         } else {
           assert(Types.isStruct(t) || Types.isStructLocal(t)) : t;
           t = ((StructType)t).getFieldTypeByName(field);
