@@ -130,6 +130,9 @@ public interface CompilerBackend {
   public void structInitFields(Var struct, List<List<String>> fieldPaths,
                                List<Arg> fieldVals, Arg writeDecr);
   
+  public void buildStructLocal(Var struct, List<List<String>> fieldPaths,
+                                List<Arg> fieldVals); 
+  
   public void assignStruct(Var target, Arg src);
 
   public void retrieveStruct(Var target, Var src, Arg decr);

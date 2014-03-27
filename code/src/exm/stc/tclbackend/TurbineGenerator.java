@@ -938,6 +938,22 @@ public class TurbineGenerator implements CompilerBackend {
     assert(writeDecr.isImmediateInt());
     
 
+    Dict dict = localStructDict(struct, fieldPaths, fieldVals);
+    
+    List<TypeName> structTypeName = Collections.singletonList(
+            representationType(struct.type()));
+    
+    // Struct should own both refcount types
+    Expression storeReadRC = LiteralInt.ONE;
+    Expression storeWriteRC = LiteralInt.ONE;
+    
+    pointAdd(Turbine.adlbStore(varToExpr(struct),
+            dict, structTypeName, argToExpr(writeDecr),
+            LiteralInt.ZERO, storeReadRC, storeWriteRC));
+  }
+
+  private Dict localStructDict(Var struct, List<List<String>> fieldPaths,
+      List<Arg> fieldVals) {
     // Restructure into pairs
     List<Pair<List<String>, Arg>> fields =
               new ArrayList<Pair<List<String>,Arg>>(fieldPaths.size());
@@ -950,17 +966,16 @@ public class TurbineGenerator implements CompilerBackend {
     
     // Build dict containing only fields to initialise
     Dict dict = TurbineStructs.buildNestedDict(fields);
+    return dict;
+  }
+  
+  @Override
+  public void buildStructLocal(Var struct, List<List<String>> fieldPaths,
+                                List<Arg> fieldVals) {
+    assert(Types.isStructLocal(struct));
+    Dict dictExpr = localStructDict(struct, fieldPaths, fieldVals);
     
-    List<TypeName> structTypeName = Collections.singletonList(
-            representationType(struct.type()));
-    
-    // Struct should own both refcount types
-    Expression storeReadRC = LiteralInt.ONE;
-    Expression storeWriteRC = LiteralInt.ONE;
-    
-    pointAdd(Turbine.adlbStore(varToExpr(struct),
-            dict, structTypeName, argToExpr(writeDecr),
-            LiteralInt.ZERO, storeReadRC, storeWriteRC));
+    pointAdd(new SetVariable(prefixVar(struct), dictExpr));
   }
   
   @Override

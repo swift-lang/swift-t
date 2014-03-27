@@ -21,6 +21,7 @@ import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Types.Typed;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.VarCount;
@@ -43,6 +44,7 @@ import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.GenInfo;
 import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.RenameMode;
+import exm.stc.ic.tree.ICTree.Statement;
 
 /**
  * Class to represent builtin Turbine operations with fixed number
@@ -240,8 +242,16 @@ public class TurbineOp extends Instruction {
       Arg writeDecr = unpackStructInitArgs(fieldPaths, null, fieldVals);
       
       gen.structInitFields(getOutput(0), fieldPaths.val, fieldVals.val, writeDecr);
-    }
       break;
+    }
+    case STRUCT_LOCAL_BUILD: {
+      Out<List<List<String>>> fieldPaths = new Out<List<List<String>>>();
+      Out<List<Arg>> fieldVals = new Out<List<Arg>>();
+      unpackStructBuildArgs(fieldPaths, null, fieldVals);
+      
+      gen.buildStructLocal(getOutput(0), fieldPaths.val, fieldVals.val);
+      break;
+    }
     case STRUCT_STORE_SUB:
       gen.structStore(getOutput(0), Arg.extractStrings(getInputsTail(1)),
                                     getInput(0));
@@ -902,6 +912,16 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.STORE_BAG, dst, src);
   }
   
+  public static Statement structLocalBuild(Var struct,
+      List<List<String>> fieldPaths, List<Arg> fieldVals) {
+    assert(Types.isStructLocal(struct));
+    
+    List<Arg> inputs = new ArrayList<Arg>();
+
+    packFieldData(struct, fieldPaths, fieldVals, inputs);
+    
+    return new TurbineOp(Opcode.STRUCT_LOCAL_BUILD, struct.asList(), inputs);
+  }
   
   /**
    * Initialize all struct fields that need initialization,
@@ -915,28 +935,16 @@ public class TurbineOp extends Instruction {
   public static TurbineOp structInitFields(Var struct,
       List<List<String>> fieldPaths, List<Arg> fieldVals, Arg writeDecr) {
     assert(Types.isStruct(struct));
-    assert(fieldPaths.size() == fieldVals.size());
     assert(writeDecr.isImmediateInt());
     
     List<Arg> inputs = new ArrayList<Arg>();
-    for (int i = 0; i < fieldPaths.size(); i++) {
-      List<String> fieldPath = fieldPaths.get(i);
-      Arg fieldVal = fieldVals.get(i);
-      assert(Types.isStructFieldVal(struct, fieldPath, fieldVal))
-            : struct + " " + fieldPath + " " + fieldVal.getVar() + "\n"
-              + struct.type();
-      // encode lists with length prefixed
-      inputs.add(Arg.createIntLit(fieldPath.size()));
-      for (String field: fieldPath) {
-        inputs.add(Arg.createStringLit(field));
-      }
-      inputs.add(fieldVal);
-    }
+
+    packFieldData(struct, fieldPaths, fieldVals, inputs);
     inputs.add(writeDecr);
     
     return new TurbineOp(Opcode.STRUCT_INIT_FIELDS, struct.asList(), inputs);
   }
-  
+
   /**
    * 
    * @param fieldPaths if null, not filled
@@ -948,6 +956,52 @@ public class TurbineOp extends Instruction {
                                    Out<List<List<Arg>>> fieldPathsArgs,
                                    Out<List<Arg>> fieldVals) {
     assert(op == Opcode.STRUCT_INIT_FIELDS) : op;
+
+    List<Arg> packedFieldData = inputs.subList(0, inputs.size() - 1);
+    
+    unpackFieldData(packedFieldData, fieldPaths, fieldPathsArgs, fieldVals);
+    
+    Arg writeDecr = getInput(inputs.size() - 1);
+    return writeDecr;
+  }
+  
+  public void unpackStructBuildArgs(Out<List<List<String>>> fieldPaths,
+      Out<List<List<Arg>>> fieldPathsArgs,
+      Out<List<Arg>> fieldVals) {
+    assert(op == Opcode.STRUCT_LOCAL_BUILD) : op;
+
+    List<Arg> packedFieldData = inputs;
+    unpackFieldData(packedFieldData, fieldPaths, fieldPathsArgs, fieldVals);
+  }
+
+  /**
+   * Pack info about struct fields into arg list
+   * @param struct
+   * @param fieldPaths
+   * @param fieldVals
+   * @param result
+   */
+  private static void packFieldData(Typed structType,
+      List<List<String>> fieldPaths, List<Arg> fieldVals, List<Arg> result) {
+    assert(fieldPaths.size() == fieldVals.size());
+    for (int i = 0; i < fieldPaths.size(); i++) {
+      List<String> fieldPath = fieldPaths.get(i);
+      Arg fieldVal = fieldVals.get(i);
+      assert(Types.isStructFieldVal(structType, fieldPath, fieldVal))
+            : structType + " " + fieldPath + " " + fieldVal.getVar() + "\n"
+              + structType.type();
+      // encode lists with length prefixed
+      result.add(Arg.createIntLit(fieldPath.size()));
+      for (String field: fieldPath) {
+        result.add(Arg.createStringLit(field));
+      }
+      result.add(fieldVal);
+    }
+  }
+
+  private static void unpackFieldData(List<Arg> packedFieldData,
+      Out<List<List<String>>> fieldPaths, Out<List<List<Arg>>> fieldPathsArgs,
+      Out<List<Arg>> fieldVals) {
     if (fieldPaths != null) {
       fieldPaths.val = new ArrayList<List<String>>();
     }
@@ -961,8 +1015,8 @@ public class TurbineOp extends Instruction {
     }
     
     int pos = 0;
-    while (pos < inputs.size() - 1) {
-      long pathLength = inputs.get(pos).getIntLit();
+    while (pos < packedFieldData.size()) {
+      long pathLength = packedFieldData.get(pos).getIntLit();
       assert(pathLength > 0 && pathLength <= Integer.MAX_VALUE);
       pos++;
       
@@ -975,16 +1029,16 @@ public class TurbineOp extends Instruction {
       
       for (int i = 0; i < pathLength; i++) {
         if (fieldPath != null) {
-          fieldPath.add(inputs.get(pos).getStringLit());
+          fieldPath.add(packedFieldData.get(pos).getStringLit());
         }
         
         if (fieldPathArgs != null) {
-          fieldPathArgs.add(inputs.get(pos));
+          fieldPathArgs.add(packedFieldData.get(pos));
         }
         pos++;
       }
       
-      Arg fieldVal = inputs.get(pos); 
+      Arg fieldVal = packedFieldData.get(pos); 
       pos++;
       
       if (fieldPaths != null) {
@@ -999,9 +1053,6 @@ public class TurbineOp extends Instruction {
         fieldVals.val.add(fieldVal);
       }
     }
-    
-    Arg writeDecr = getInput(pos);
-    return writeDecr;
   }
 
   /**
@@ -1571,6 +1622,7 @@ public class TurbineOp extends Instruction {
     case LOAD_BAG:
     case LOAD_STRUCT:
     case LOAD_RECURSIVE:
+    case STRUCT_LOCAL_BUILD:
       return false;
       
     case ARR_COPY_OUT_IMM:
@@ -2482,6 +2534,7 @@ public class TurbineOp extends Instruction {
     case CONTAINER_SIZE:
     case ARR_LOCAL_CONTAINS:
     case CONTAINER_LOCAL_SIZE:
+    case STRUCT_LOCAL_BUILD:
       return TaskMode.SYNC;
     
     case ARR_COPY_IN_IMM:
@@ -2638,6 +2691,7 @@ public class TurbineOp extends Instruction {
       case PACK_VALUES:
       case UNPACK_ARRAY_TO_FLAT:
       case UNPACK_VALUES:
+      case STRUCT_LOCAL_BUILD:
         return ExecContext.ALL;
         
       case WRITE_CHECKPOINT:
@@ -2772,6 +2826,7 @@ public class TurbineOp extends Instruction {
       case PACK_VALUES:
       case UNPACK_ARRAY_TO_FLAT:
       case UNPACK_VALUES:
+      case STRUCT_LOCAL_BUILD:
         return true;
         
       case WRITE_CHECKPOINT:
@@ -2922,6 +2977,7 @@ public class TurbineOp extends Instruction {
       case PACK_VALUES:
       case UNPACK_ARRAY_TO_FLAT:
       case UNPACK_VALUES:
+      case STRUCT_LOCAL_BUILD:
         return false;
         
       case WRITE_CHECKPOINT:
@@ -3209,6 +3265,9 @@ public class TurbineOp extends Instruction {
       case ARR_LOCAL_CONTAINS:
       case CONTAINER_LOCAL_SIZE:
         return vanillaResult(Closed.YES_NOT_RECURSIVE, IsAssign.NO).asList();
+      case STRUCT_LOCAL_BUILD:
+        // Worth optimising?
+        return null;
       default:
         return null;
     }

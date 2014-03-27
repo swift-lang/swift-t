@@ -131,6 +131,7 @@ public class ICOptimizer {
       if ((iteration % 3) == 2) {
         // Try to merge instructions into array build
         pipe.addPass(new ArrayBuild());
+        pipe.addPass(new StructBuild());
         
         // Try occasionally to unroll loops.  Don't do it on first iteration
         // so the code can be shrunk a little first

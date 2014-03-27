@@ -81,7 +81,8 @@ public enum Opcode {
   // Create new bag inside array
   ARR_CREATE_BAG,
   
-
+  // Create local struct
+  STRUCT_LOCAL_BUILD,
   // Initialize struct fields
   STRUCT_INIT_FIELDS,
   // Create alias of struct field
