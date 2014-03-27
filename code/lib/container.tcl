@@ -261,12 +261,9 @@ namespace eval turbine {
     }
 
     # Same as container_lookup, but fail if item does not exist
+    # deprecated: container_lookup now checks
     proc container_lookup_checked { c i } {
-        set res [ container_lookup $c $i ]
-        if { $res == 0 } {
-            error "lookup failed: container_lookup <$c>\[$i\]"
-        }
-        return $res
+        return [ container_lookup $c $i ]
     }
 
     # CFRI
