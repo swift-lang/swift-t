@@ -190,6 +190,7 @@ public class WaitCoalescer implements OptimizerPass {
   @Override
   public void optimize(Logger logger, Program prog) {
     for (Function f: prog.getFunctions()) {
+      logger.trace("Wait coalescer entering function " + f.getName());
       rearrangeWaits(logger, prog, f, f.mainBlock(), ExecContext.CONTROL);
     }
   }
@@ -402,11 +403,19 @@ public class WaitCoalescer implements OptimizerPass {
 
   private boolean trySquash(Logger logger, WaitStatement wait,
           ExecContext waitContext, Block waitBlock, WaitStatement innerWait) {
+    
+    if (logger.isTraceEnabled()) {
+      logger.trace("Attempting squash of  wait(" + wait.getWaitVars() + ") " +
+                   wait.getTarget() + " " + wait.getMode() +
+                    " with wait(" + innerWait.getWaitVars() + ") " +
+                   innerWait.getTarget() + " " + innerWait.getMode());
+    }
     ExecContext innerContext = innerWait.childContext(waitContext);
     
     // Check that locations are compatible
     if (!compatibleLocPar(wait.targetLocation(), innerWait.targetLocation(),
                              wait.parallelism(), innerWait.parallelism())) {
+      logger.trace("Locations incompatible");
       return false;
     }
     
@@ -463,6 +472,20 @@ public class WaitCoalescer implements OptimizerPass {
         assert(possibleMergedContext == ExecContext.WORKER);
         wait.setTarget(TaskMode.WORKER);
       }
+    }
+    
+    // Fixup any LOCAL_CONTROL waits in block
+    if (possibleMergedContext == ExecContext.WORKER) {
+      if (innerContext == ExecContext.CONTROL) {
+        replaceLocalControl(innerWait.getBlock());
+      } else if (waitContext == ExecContext.CONTROL) {
+        replaceLocalControl(wait.getBlock());
+      }
+    }
+    
+    if (logger.isTraceEnabled()) {
+      logger.trace("Squash succeeded: wait(" + wait.getWaitVars() + ") "
+                  + wait.getTarget() + " " + wait.getMode());
     }
     innerWait.inlineInto(waitBlock);
     return true;
