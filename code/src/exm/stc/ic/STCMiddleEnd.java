@@ -665,11 +665,23 @@ public class STCMiddleEnd {
       // Don't need target filename, just wait for src file
       waitVars = Arrays.asList(new WaitVar(src, false));
     }
-                               
+    
+    WaitMode waitMode;
+    TaskMode taskMode;
+    if (compileForTargetMapped) {
+      // Do physical copy on worker
+      waitMode = WaitMode.TASK_DISPATCH;
+      taskMode = TaskMode.WORKER;
+      System.err.println("HERE");
+    } else {
+      waitMode = WaitMode.WAIT_ONLY;
+      taskMode = TaskMode.LOCAL;
+    }
+                           
     WaitStatement wait = new WaitStatement(
         currFunction.getName() + ":wait:" + src.name(), waitVars,
         PassedVar.NONE, Var.NONE,
-        WaitMode.WAIT_ONLY, false, TaskMode.LOCAL, new TaskProps());
+        waitMode, false, taskMode, new TaskProps());
     block.addContinuation(wait);
 
     Block waitBlock = wait.getBlock();
