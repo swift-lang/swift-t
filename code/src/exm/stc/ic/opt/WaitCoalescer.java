@@ -250,17 +250,25 @@ public class WaitCoalescer implements OptimizerPass {
    * try to reduce to a simpler form of wait
    * @param currContext
    * @param toInline
-   * @param newContext
+   * @param innerContext
    * @param wait
+   * @return true if it should be inlined
    */
   private boolean tryReduce(Logger logger,
       Function fn, ExecContext currContext,
-      ExecContext newContext, WaitStatement wait) {
-    if ((currContext == newContext &&
+      ExecContext innerContext, WaitStatement wait) {
+    if ((currContext == innerContext &&
         ProgressOpcodes.isCheap(wait.getBlock())) ||
         (currContext == ExecContext.WORKER && 
-         newContext == ExecContext.CONTROL &&
+         innerContext == ExecContext.CONTROL &&
          canSwitchControlToWorker(logger, fn, wait))) {
+      
+      // Fix any waits inside that expect to be execute in CONTROL context
+      if (currContext == ExecContext.WORKER &&
+          innerContext == ExecContext.CONTROL) {
+        replaceLocalControl(wait.getBlock());
+      }
+      
       if (wait.getWaitVars().isEmpty()) {
         return true;
       } else {
