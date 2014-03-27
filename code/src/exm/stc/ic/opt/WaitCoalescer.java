@@ -1082,11 +1082,13 @@ public class WaitCoalescer implements OptimizerPass {
         // Make sure gets dispatched to right place
         if (w.getTarget() == TaskMode.CONTROL ||
             w.getTarget() == TaskMode.WORKER ||
-            w.getTarget() == TaskMode.LOCAL) {
+            w.getTarget() == TaskMode.LOCAL || 
+            w.getTarget() == TaskMode.LOCAL_CONTROL) {
           canRelocate = true;
-        } else if (w.getTarget() == TaskMode.LOCAL_CONTROL) {
-          w.setMode(WaitMode.TASK_DISPATCH);
-          w.setTarget(TaskMode.CONTROL);
+          
+          if (w.getTarget().isLocal()) {
+            replaceLocalControl(w);
+          }
         } else {
           canRelocate = false;
         }
@@ -1100,6 +1102,36 @@ public class WaitCoalescer implements OptimizerPass {
       assert(cont.isAsync());
     }
     return canRelocate;
+  }
+
+  /**
+   * Replace local control waits recursively
+   * @param w
+   */
+  private void replaceLocalControl(WaitStatement w) {
+    if (w.getTarget() == TaskMode.LOCAL_CONTROL) {
+      w.setMode(WaitMode.TASK_DISPATCH);
+      w.setTarget(TaskMode.CONTROL);
+    }
+    
+    if (w.getTarget().isLocal()) {
+      replaceLocalControl(w.getBlock());
+    }
+  }
+
+  private void replaceLocalControl(Block block) {
+    for (Continuation c: block.allComplexStatements()) {
+      if (!c.isAsync()) {
+        // Locate any inner waits that are sync
+        for (Block inner: c.getBlocks()) {
+          replaceLocalControl(inner);
+        }
+      }
+      if (c.getType() == ContinuationType.WAIT_STATEMENT) {
+        WaitStatement w = (WaitStatement) c;
+        replaceLocalControl(w);
+      }
+    }
   }
 
   private static boolean relocateInstruction(
