@@ -108,8 +108,7 @@ class Turbine {
           turbFn("create_nested_bag");
 
   // Container lookup
-  private static final Token C_LOOKUP_CHECKED =
-          turbFn("container_lookup_checked");
+  private static final Token C_LOOKUP = turbFn("container_lookup");
   private static final Token C_REFERENCE = turbFn("container_reference");
   private static final Token C_F_LOOKUP = turbFn("c_f_lookup");
   private static final TclTree CR_V_LOOKUP = turbFn("cr_v_lookup");
@@ -928,8 +927,7 @@ class Turbine {
    */
   public static SetVariable arrayLookupImm(String dst, Value arrayVar,
           Expression arrayIndex) {
-    return new SetVariable(dst, new Square(C_LOOKUP_CHECKED, arrayVar,
-            arrayIndex));
+    return new SetVariable(dst, new Square(C_LOOKUP, arrayVar, arrayIndex));
   }
 
   /**
