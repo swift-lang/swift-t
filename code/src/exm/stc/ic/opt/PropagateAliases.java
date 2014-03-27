@@ -100,7 +100,12 @@ public class PropagateAliases extends FunctionOptimizerPass {
                                 Arrays.asList(srcKey.structPath), decr);
       }
     } else if (inst.op.isAssign(false)) {
-      Var out ;
+      Var dst = inst.getOutput(0);
+      AliasKey dstKey = aliases.getCanonical(dst);
+      if (dstKey.isPlainStructAlias()) {
+        return TurbineOp.structStoreSub(dstKey.var, Arrays.asList(dstKey.structPath),
+                                        inst.getInput(0)); 
+      }
     }
     return null;
   }

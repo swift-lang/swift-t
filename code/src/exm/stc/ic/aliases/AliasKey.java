@@ -80,6 +80,9 @@ public class AliasKey implements Typed {
     }
 
     Type t = var.type();
+    if (!Types.isStruct(t)) {
+      return false;
+    }
     if (structPath != null) {
       for (String field: structPath) {
         if (field.equals(AliasTracker.DEREF_MARKER)) {

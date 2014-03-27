@@ -766,7 +766,7 @@ public class TurbineOp extends Instruction {
    */
   public static Instruction structStoreSub(Var structVar,
         List<String> fields, Arg fieldVal) {
-    assert(Types.isStruct(structVar));
+    assert(Types.isStruct(structVar)) : structVar;
     assert(Types.isStructFieldVal(structVar, fields, fieldVal));
     
     List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
