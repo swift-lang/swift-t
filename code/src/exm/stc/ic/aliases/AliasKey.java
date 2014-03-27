@@ -75,7 +75,7 @@ public class AliasKey implements Typed {
    * @return true if it's a simple alias of a struct field
    */
   public boolean isPlainStructAlias() {
-    if (structPath == null || structPath.length == 0) {
+    if (pathLength() == 0) {
       return false;
     }
 
@@ -94,6 +94,11 @@ public class AliasKey implements Typed {
       }
     }
     return true;
+  }
+
+  public boolean isFilenameAlias() {
+    return Types.isFile(var) && pathLength() == 1 &&
+        structPath[0] == Alias.FILENAME;
   }
 
   public Type type() {

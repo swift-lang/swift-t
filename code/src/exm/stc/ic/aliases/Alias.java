@@ -19,6 +19,10 @@ public class Alias {
 
   public static final List<Alias> NONE = Collections.emptyList();
 
+  public static final String FILENAME = "filename";
+  public static final List<String> FILENAME_PATH = 
+                          Collections.singletonList(FILENAME);
+
   public final Var parent;
   public final List<String> fieldPath;
   public final AliasTransform transform;

@@ -3661,6 +3661,10 @@ public class TurbineOp extends Instruction {
             new Alias(ref2, Collections.<String>emptyList(),
                       AliasTransform.COPY, ref1));
       }
+      case GET_FILENAME_ALIAS: {
+        return new Alias(getInput(0).getVar(), Alias.FILENAME_PATH,
+                         AliasTransform.IDENTITY, getOutput(0)).asList();
+      }
       default:
         // Opcode not relevant
         break;
