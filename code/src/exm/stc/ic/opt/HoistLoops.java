@@ -192,6 +192,8 @@ public class HoistLoops implements OptimizerPass {
      */
     public HoistTracking makeChild(Continuation c, Block childBlock) {
       int childHoist = canHoistThrough(c) ? maxHoist + 1 : 0;
+
+      Logging.getSTCLogger().trace("Child of " + c.getType() + " " + " childHoist: " + childHoist);
       int childLoopHoist = c.isLoop() ? 0 : maxLoopHoist + 1;
       HoistTracking childState = makeChild(childBlock,
           c.childContext(execCx), childHoist, childLoopHoist);
@@ -344,7 +346,7 @@ public class HoistLoops implements OptimizerPass {
       return true;
     } else if (c.getType() == ContinuationType.WAIT_STATEMENT &&
             !((WaitStatement)c).hasExplicit() &&
-            ((WaitStatement)c).targetLocation() != null) {
+            ((WaitStatement)c).targetLocation() == null) {
       // Don't hoist through wait statements that have explicit
       // ordering constraints or locations.
       // TODO: Could relax this assumption for target locations for basic operations
@@ -395,7 +397,10 @@ public class HoistLoops implements OptimizerPass {
       }
     }
     for (Var readOutput: inst.getReadOutputs()) {
-      maxHoist = Math.min(maxHoist, maxInputHoist(logger, state, readOutput));
+      int inputHoist = maxInputHoist(logger, state, readOutput);
+      maxHoist = Math.min(maxHoist, inputHoist);
+      logger.trace("Hoist limited to " + inputHoist + " by read output: "
+                    + readOutput.name()); 
     }
     
     for (Var out: inst.getOutputs()) {
@@ -454,7 +459,8 @@ public class HoistLoops implements OptimizerPass {
       return false;
     }
     
-    int maxCorrectContext = maxHoistContext(logger, state, maxHoist);
+    int maxCorrectContext = maxHoistContext(logger, state,
+                      inst.supportedContexts(), maxHoist);
     
     maxHoist = Math.max(maxHoist, maxCorrectContext);
     
@@ -467,27 +473,26 @@ public class HoistLoops implements OptimizerPass {
   }
 
   /**
-   * Find maximum hoist with same execution context as state
-   * TODO: could be less conservative if we know which instructions can
-   * run in which context
+   * Find maximum hoist with compatible execution context
    * @param logger
    * @param state
    * @param maxHoist
    * @return
    */
-  private int maxHoistContext(Logger logger, HoistTracking state, int maxHoist) {
+  private int maxHoistContext(Logger logger, HoistTracking state, 
+                        List<ExecContext> supportedContexts, int maxHoist) {
     int maxCorrectContext = 0;
     HoistTracking curr = state;
     for (int hoist = 1; hoist <= maxHoist; hoist++) {
       curr = state.parent;
-      if (curr.execCx == state.execCx) {
+      if (supportedContexts.contains(curr.execCx)) {
         maxCorrectContext = hoist;
       }
     }
     
     if (logger.isTraceEnabled()) {
-      logger.trace("Hoist limited to " + maxCorrectContext + " by exec context "
-          + state.execCx);
+      logger.trace("Hoist limited to " + maxCorrectContext + " by supported " +
+                   "exec contexts " + supportedContexts);
     }
     return maxCorrectContext;
   }
