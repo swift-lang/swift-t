@@ -70,7 +70,8 @@ public class StructBuild extends FunctionOptimizerPass {
       Set<List<String>> expectedPaths = allAssignablePaths(candidate);
       List<List<String>> assigned = assignedPaths.get(candidate);
       
-      logger.trace("Check candidate " + candidate.name());
+      logger.trace("Check candidate " + candidate.name() + "\n" +
+                   "expected: " + expectedPaths);
       
       for (List<String> path: assigned) {
         boolean found = expectedPaths.remove(path);
