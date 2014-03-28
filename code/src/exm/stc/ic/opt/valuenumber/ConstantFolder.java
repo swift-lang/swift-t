@@ -149,7 +149,7 @@ public class ConstantFolder {
         // For some calling conventions, constants are used
         inputs.add(arg);
       } else {
-        Arg storedConst = sets.findRetrieveResult(arg);
+        Arg storedConst = sets.findRetrieveResult(arg, false);
         if (storedConst != null && storedConst.isConstant()) {
           inputs.add(storedConst);
         } else {

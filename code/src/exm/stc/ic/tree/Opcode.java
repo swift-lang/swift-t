@@ -136,6 +136,15 @@ public enum Opcode {
         return false;
     }
   }
+  
+  public boolean isRecursiveAssign() {
+    switch (this) {
+      case STORE_RECURSIVE:
+        return true;
+      default: 
+        return false;
+    }
+  }
 
   public static Opcode assignOpcode(Typed dstType) {
     return assignOpcode(dstType, false);
@@ -186,6 +195,15 @@ public enum Opcode {
         return true;
       case LOAD_RECURSIVE:
         return includeRecursive;
+      default:
+        return false;
+    }
+  }
+  
+  public boolean isRecursiveRetrieve() {
+    switch (this) {
+      case LOAD_RECURSIVE:
+        return true;
       default:
         return false;
     }

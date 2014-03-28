@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import exm.stc.ast.antlr.ExMParser.new_type_definition_return;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.lang.Arg;
@@ -183,17 +184,16 @@ public class ComputedValue<T> {
    * @param src
    * @return null if cannot be fetched
    */
-  public static ArgCV retrieveCompVal(Var src) {
+  public static ArgCV retrieveCompVal(Var src, boolean recursive) {
     Type srcType = src.type();
-    Opcode op = Opcode.retrieveOpcode(srcType);
+    Opcode op = Opcode.retrieveOpcode(srcType, recursive);
     if (op == null) {
       return null;
     }
     return new ArgCV(op, Arrays.asList(src.asArg()));
   }
 
-  public static ValLoc assignComputedVal(Var dst, Arg val,
-                                         IsAssign isAssign) {
+  public static ArgCV assignCompVal(Var dst, boolean recursive) {
     Type dstType = dst.type();
     if (Types.isPrimValue(dstType)) {
         BuiltinOpcode op;
@@ -219,17 +219,25 @@ public class ComputedValue<T> {
         default:
           throw new STCRuntimeError("Unhandled type: " + dstType);
         }
-        return ValLoc.buildResult(Opcode.LOCAL_OP, 
-            op.toString(), Arrays.asList(val), dst.asArg(), Closed.MAYBE_NOT,
-            isAssign);
+        return new ArgCV(Opcode.LOCAL_OP,  op, dst.asArg().asList());
     } else {
-      Opcode op = Opcode.assignOpcode(dstType);
+      Opcode op = Opcode.assignOpcode(dstType, recursive);
       if (op != null) {
-        return ValLoc.buildResult(op, Arrays.asList(val), dst.asArg(),
-                                  Closed.YES_NOT_RECURSIVE, isAssign);
+        return new ArgCV(op, dst.asArg().asList());
       }
     }
-    throw new STCRuntimeError("DOn't know how to assign to " + dst);
+    
+    throw new STCRuntimeError("Don't know how to assign to " + dst);
+  }
+  
+  public static ValLoc assignValLoc(Var dst, Arg val,
+                           IsAssign isAssign, boolean recursive) {
+    ArgCV cv = assignCompVal(dst, recursive);
+    if (cv == null)
+      return null;
+
+    Closed closed = recursive ? Closed.YES_RECURSIVE: Closed.YES_NOT_RECURSIVE;
+    return ValLoc.build(cv, dst.asArg(), closed, isAssign);
   }
   
   /**

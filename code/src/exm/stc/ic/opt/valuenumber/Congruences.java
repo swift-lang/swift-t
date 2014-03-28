@@ -264,11 +264,17 @@ public class Congruences implements AliasFinder {
       // Only add value congruences to be safe.
       // It might be possible to handle ALIAS congruences, e.g. for
       // STORE_REF/LOAD_REF pair here later on (TODO)
-      if (cv.op().isAssign()) {
-        ArgCV invVal = ComputedValue.retrieveCompVal(canonLoc.getVar());
+      if (cv.op().isAssign(false)) {
+        ArgCV invVal = ComputedValue.assignCompVal(invOutput.getVar(), true);
         updateInv(consts, errContext, invOutput, invVal, stmtIndex);
-      } else if (cv.op().isRetrieve()) {
-        Opcode invOp = Opcode.assignOpcode(invOutput.getVar());
+      } else if (cv.op().isRecursiveAssign()) {
+          ArgCV invVal = ComputedValue.retrieveCompVal(canonLoc.getVar(), true);
+          updateInv(consts, errContext, invOutput, invVal, stmtIndex);
+      } else if (cv.op().isRetrieve(false)) {
+        ArgCV invVal = ComputedValue.assignCompVal(invOutput.getVar(), false);    
+        updateInv(consts, errContext, invOutput, invVal, stmtIndex);
+      } else if (cv.op().isRecursiveRetrieve()) {
+        Opcode invOp = Opcode.assignOpcode(invOutput.getVar(), true);
         assert(invOp != null);
         ArgCV invVal = new ArgCV(invOp, canonLoc.asList());
         updateInv(consts, errContext, invOutput, invVal, stmtIndex);
@@ -279,7 +285,7 @@ public class Congruences implements AliasFinder {
       Var globalConst = canonVal.arg().getVar();
       Arg constVal = consts.lookupByVar(globalConst);
       assert(constVal != null);
-      ArgCV invVal = ComputedValue.retrieveCompVal(globalConst);
+      ArgCV invVal = ComputedValue.retrieveCompVal(globalConst, false);
       updateInv(consts, errContext, constVal, invVal, stmtIndex);
     }
   }
@@ -332,7 +338,7 @@ public class Congruences implements AliasFinder {
     // Retrieving alias == filename
     equateValues(errContext, congruent, stmtIndex,
             ComputedValue.filenameValCV(file),
-            ComputedValue.retrieveCompVal(canonLoc.getVar()));
+            ComputedValue.retrieveCompVal(canonLoc.getVar(), false));
   }
 
   private void addInferredLoadFile(String errContext, CongruentSets congruent,
@@ -934,8 +940,8 @@ public class Congruences implements AliasFinder {
    * @param v
    * @return
    */
-  public Arg findRetrieveResult(Var v) {
-    return byValue.findRetrieveResult(v.asArg());
+  public Arg findRetrieveResult(Var v, boolean recursive) {
+    return byValue.findRetrieveResult(v.asArg(), recursive);
   }
   
   public Set<Var> retrieveResultAvail() {
@@ -1115,7 +1121,7 @@ public class Congruences implements AliasFinder {
     public boolean contains(Object o) {
       assert(o instanceof Var);
       Var v = (Var)o;
-      return findRetrieveResult(v) != null;
+      return findRetrieveResult(v, false) != null;
     }
 
     @Override

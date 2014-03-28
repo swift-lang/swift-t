@@ -394,11 +394,11 @@ class CongruentSets {
    * @param var
    * @return
    */
-  public Arg findRetrieveResult(Arg var) {
+  public Arg findRetrieveResult(Arg var, boolean recursive) {
     assert(var.isVar());
     Arg canonVar = findCanonical(var);
     assert(canonVar.isVar());
-    ArgCV cv = ComputedValue.retrieveCompVal(canonVar.getVar());
+    ArgCV cv = ComputedValue.retrieveCompVal(canonVar.getVar(), recursive);
     return findCanonicalInternal(cv);
   }
 

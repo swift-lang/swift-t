@@ -172,8 +172,8 @@ public class ValueNumber implements OptimizerPass {
         Arg val = constants.lookupByVar(v);
         assert (val != null) : v.name();
         
-        ValLoc assign = ComputedValue.assignComputedVal(v, val,
-                                                IsAssign.TO_LOCATION);
+        ValLoc assign = ComputedValue.assignValLoc(v, val,
+                                        IsAssign.TO_LOCATION, false);
         int stmtIndex = -1;
         congruent.update(constants, f.getName(), assign, stmtIndex);
       }
@@ -520,7 +520,7 @@ public class ValueNumber implements OptimizerPass {
               init.isInitialized(output, true)) {
             if (Types.isScalarFuture(output)) {
               // Replace a computation with future output with a store
-              Arg val = state.findRetrieveResult(output);
+              Arg val = state.findRetrieveResult(output, false);
               if (val != null && init.isInitialized(val, false)) {
                 Instruction futureSet = TurbineOp.storePrim(output, val);
                 stmtIt.set(futureSet);
@@ -865,7 +865,7 @@ public class ValueNumber implements OptimizerPass {
         maybeVal = alreadyFetched.get(toFetch);
         fetchedHere = true;
       } else {
-        maybeVal = state.findRetrieveResult(toFetch);
+        maybeVal = state.findRetrieveResult(toFetch, false);
         fetchedHere = false;
       }
       // Can only retrieve value of future or reference
