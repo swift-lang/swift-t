@@ -3676,8 +3676,8 @@ public class TurbineOp extends Instruction {
   public List<Alias> getAliases() {
     switch (this.op) {
       case ARR_CREATE_ALIAS:
-        // Don't do this alias analysis for arrays
-        break;
+        return Alias.makeArrayAlias(getInput(0).getVar(), getInput(1),
+            getOutput(0), AliasTransform.IDENTITY);
       case STRUCT_CREATE_ALIAS:
         return Alias.makeStructAliases2(getInput(0).getVar(), getInputsTail(1),
             getOutput(0), AliasTransform.IDENTITY);

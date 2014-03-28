@@ -100,12 +100,21 @@ public class AliasKey implements Typed {
     return Types.isFile(var) && pathLength() == 1 &&
         structPath[0] == Alias.FILENAME;
   }
+  
+
+  public boolean isArrayMemberAlias() {
+    return Types.isArray(var) && pathLength() == 1 &&
+        structPath[0] == Alias.ARRAY_SUBSCRIPT;
+  }
 
   public Type type() {
     Type t = var.type();
     if (structPath != null) {
       for (String field: structPath) {
-        if (field.equals(AliasTracker.DEREF_MARKER)) {
+        if (field == Alias.UNKNOWN) {
+          assert(Types.isContainer(t));
+          t = Types.containerElemType(t);
+        } else if (field.equals(AliasTracker.DEREF_MARKER)) {
           t = Types.retrievedType(t);
         } else if (Types.isFile(t) && field.equals(Alias.FILENAME)) {
           t = Types.F_STRING;
@@ -118,6 +127,11 @@ public class AliasKey implements Typed {
     return t;
   }
 
+  /**
+   * Any alias key with UNKNOWN is non equal to anything else
+   * @param o
+   * @return
+   */
   @Override
   public boolean equals(Object o) {
     if (!(o instanceof AliasKey)) {
@@ -139,6 +153,10 @@ public class AliasKey implements Typed {
     String op[] = other.structPath;
     assert (p.length == op.length);
     for (int i = 0; i < p.length; i++) {
+      if (p[i] == Alias.UNKNOWN || op[i] == Alias.UNKNOWN) {
+        // Don't treat unknowns as equal
+        return false;
+      }
       if (!p[i].equals(op[i])) {
         return false;
       }
@@ -153,7 +171,13 @@ public class AliasKey implements Typed {
     result = prime * result + var.hashCode();
     if (structPath != null) {
       for (int i = 0; i < structPath.length; i++) {
-        result = prime * result + structPath [i].hashCode();
+        int fieldHashCode;
+        if (structPath[i] == null) {
+          fieldHashCode = 0;
+        } else {
+          fieldHashCode = structPath[i].hashCode();
+        }
+        result = prime * result + fieldHashCode;
       }
     }
     return result;

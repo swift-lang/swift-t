@@ -99,10 +99,10 @@ public class AliasTracker {
   }
 
   public void addAlias(Alias alias) {
-    addStructElem(alias.parent, alias.fieldPath, alias.transform, alias.child);
+    addAlias(alias.parent, alias.fieldPath, alias.transform, alias.child);
   }
 
-  public void addStructElem(Var parent, List<String> fieldPath,
+  public void addAlias(Var parent, List<String> fieldPath,
       AliasTransform transform, Var child) {
     boolean derefed = (transform == AliasTransform.RETRIEVE);
     

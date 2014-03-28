@@ -23,7 +23,15 @@ public class Alias {
   public static final List<String> FILENAME_PATH = 
                           Collections.singletonList(FILENAME);
 
+  public static final String UNKNOWN = null;
+  public static final String ARRAY_SUBSCRIPT = UNKNOWN;
+  
   public final Var parent;
+  
+  /**
+   * Path of fields
+   * null == UNKNOWN
+   */
   public final List<String> fieldPath;
   public final AliasTransform transform;
   public final Var child;
@@ -45,6 +53,20 @@ public class Alias {
     IDENTITY, // Just a plain alias
     RETRIEVE, // Retrieved value of field
     COPY, // Copied field
+  }
+
+  public static List<Alias> makeArrayAlias(Var arr, Arg ix, Var alias,
+      AliasTransform transform) {
+    if (transform == AliasTransform.RETRIEVE ||
+        transform == AliasTransform.COPY) {
+      // Don't handle
+      return NONE;
+    } else {
+      // Straightforward alias of field, not sensitive to actual subscript
+      // TODO: could factor in constant subscripts
+      return new Alias(arr, Collections.singletonList(ARRAY_SUBSCRIPT),
+                       transform, alias).asList();
+    }
   }
 
   /**
