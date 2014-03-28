@@ -198,7 +198,7 @@ public class PropagateAliases extends FunctionOptimizerPass {
       if (srcKey != null && srcKey.isPlainStructAlias()) {
         
         return TurbineOp.structRetrieveSub(inst.getOutput(0), srcKey.var,
-                                Arrays.asList(srcKey.structPath), decr);
+                                Arrays.asList(srcKey.path), decr);
       } else if (srcKey != null && srcKey.isFilenameAlias() && 
                  decr.isIntVal() && decr.getIntLit() == 0) {
         return TurbineOp.getFilenameVal(inst.getOutput(0), srcKey.var);
@@ -208,7 +208,7 @@ public class PropagateAliases extends FunctionOptimizerPass {
 
       AliasKey dstKey = checkedGetCanonical(aliases, waitedForAliases, dst);
       if (dstKey != null && dstKey.isPlainStructAlias()) {
-        return TurbineOp.structStoreSub(dstKey.var, Arrays.asList(dstKey.structPath),
+        return TurbineOp.structStoreSub(dstKey.var, Arrays.asList(dstKey.path),
                                         inst.getInput(0)); 
       } else if (dstKey != null && dstKey.isFilenameAlias()) {
         return TurbineOp.setFilenameVal(dstKey.var, inst.getInput(0));

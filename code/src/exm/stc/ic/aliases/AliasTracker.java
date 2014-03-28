@@ -1,5 +1,6 @@
 package exm.stc.ic.aliases;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -22,12 +23,6 @@ import exm.stc.ic.tree.ICInstructions.Instruction;
  * - Is variable x a component of any struct?  
  */
 public class AliasTracker {
-  
-  /**
-   * String to add to path to indicate that it's a dereferenced value.
-   * Note: we assume that this isn't a valid struct field name
-   */
-  public static final String DEREF_MARKER = "*";
   
   private final Logger logger = Logging.getSTCLogger();
   
@@ -92,10 +87,14 @@ public class AliasTracker {
    */
   public List<Alias> update(Instruction inst) {
     List<Alias> aliases = inst.getAliases();
+    update(aliases);
+    return aliases;
+  }
+
+  public void update(List<Alias> aliases) {
     for (Alias alias: aliases) {
       addAlias(alias);
     }
-    return aliases;
   }
 
   public void addAlias(Alias alias) {
@@ -231,6 +230,98 @@ public class AliasTracker {
     return new AliasKey(var);
   }
   
+  /**
+   * Get the root of the datum represented by the key.
+   * Often this is just the root of the key, but if there is a reference
+   * involved, this gets the last referand, rather than referee
+   * @param key
+   * @return
+   */
+  public Var getDatumRoot(AliasKey key) {
+    // If inside struct, check to see if there is a reference
+    for (int i = key.pathLength() - 1; i >= 0; i--) {
+      if (key.path[i] != Alias.UNKNOWN &&
+          key.path[i].equals(Alias.DEREF_MARKER)) {
+        // Refcount var key includes prefix including deref marker:
+        // I.e. it should be the ID of the datum being refcounting
+        String pathPrefix[] = new String[i + 1];
+        for (int j = 0; j <= i; j++) {
+          pathPrefix[j] = key.path[j];
+        }
+        AliasKey prefixKey = new AliasKey(key.var, pathPrefix);
+        Var refcountVar = findVar(prefixKey);
+        assert(refcountVar != null) : "Expected var for alias key " + key +
+                                       " to exist";
+        return refcountVar;
+      }
+    }
+    
+    // If no references, struct root
+    return key.var;
+  }
+  
+  public List<Var> getDatumComponents(Var var, boolean followRefs) {
+    List<Var> results = new ArrayList<Var>();
+    // Find root of this var to narrow down search
+    AliasKey canon = getCanonical(var);
+    for (Pair<Var, AliasKey> component: roots.get(canon.var)) {
+      Var componentVar = component.val1;
+      AliasKey componentKey = component.val2;
+      if (componentVar.equals(var)) {
+        continue;
+      }
+      if (!prefixMatch(canon, componentKey)) {
+        continue;
+      }
+      
+      
+      if (followRefs) {
+        // Skip checking references
+        results.add(componentVar);
+      } else {
+        // Need to make sure it is part of same datum, i.e. doesn't
+        // follow a ref
+        boolean followsRef = false;
+        for (int i = canon.pathLength(); i < componentKey.pathLength(); i++) {
+          if (componentKey.path[i].equals(Alias.DEREF_MARKER)) {
+            followsRef = true;
+            break;
+          }
+        }
+        if (!followsRef) {
+          results.add(componentVar);
+        }
+      }
+    }
+    return results;
+  }
+
+  /**
+   * Check if key1's path is a prefix of key2's path
+   * @param key1
+   * @param key2
+   * @param prefixLne
+   * @return
+   */
+  private boolean prefixMatch(AliasKey key1, AliasKey key2) {
+    // Check that prefixes match
+
+    if (key2.pathLength() < key1.pathLength()) {
+      // Cannot be a component
+      return false;
+    }
+    for (int i = 0; i < key1.pathLength(); i++) {
+      String elem1 = key1.path[i];
+      String elem2 = key2.path[i];
+      if (elem1 != elem2 &&
+          (elem1 == null || elem2 == null || !elem1.equals(elem2))) {
+            // prefix doesn't match
+        return false;
+      }
+    }
+    return true;
+  }
+
   @Override
   public String toString() {
     return "varToPath: " + varToPath +

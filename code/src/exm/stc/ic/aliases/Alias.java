@@ -19,6 +19,15 @@ public class Alias {
 
   public static final List<Alias> NONE = Collections.emptyList();
 
+  /**
+   * String to add to path to indicate that it's a dereferenced value.
+   * Note: we assume that this isn't a valid struct field name
+   */
+  public static final String DEREF_MARKER = "*";
+
+  /**
+   * Filename of a file
+   */
   public static final String FILENAME = "filename";
   public static final List<String> FILENAME_PATH = 
                           Collections.singletonList(FILENAME);

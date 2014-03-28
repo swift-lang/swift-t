@@ -16,21 +16,21 @@ import exm.stc.common.lang.Types.Typed;
  */
 public class AliasKey implements Typed {
   public final Var var;
-  public final String structPath[]; // Can be null for no path
+  public final String path[]; // Can be null for no path
   
   public AliasKey(Var var) {
     this(var, null);
   }
   
   public AliasKey splice(AliasKey subKey) {
-    int splicedLen = structPath.length + subKey.structPath.length;
+    int splicedLen = path.length + subKey.path.length;
     String spliced[] = new String[splicedLen];
     
-    for (int i = 0; i < structPath.length; i++) {
-      spliced[i] = this.structPath[i];
+    for (int i = 0; i < path.length; i++) {
+      spliced[i] = this.path[i];
     }
-    for (int i = 0; i < subKey.structPath.length; i++) {
-      spliced[i + structPath.length] = subKey.structPath[i];
+    for (int i = 0; i < subKey.path.length; i++) {
+      spliced[i + path.length] = subKey.path[i];
     }
     return new AliasKey(this.var, spliced);
   }
@@ -38,7 +38,7 @@ public class AliasKey implements Typed {
   public AliasKey(Var var, String structPath[]) {
     assert(var != null);
     this.var = var;
-    this.structPath = structPath;
+    this.path = structPath;
   }
   
   public AliasKey makeChild(List<String> fieldPath,
@@ -50,7 +50,7 @@ public class AliasKey implements Typed {
     
     String newPath[] = new String[newPathLength];
     for (int i = 0; i < pathLength(); i++) {
-      newPath[i] = structPath[i];
+      newPath[i] = path[i];
     }
     
     for (int i = 0; i < fieldPath.size(); i++) {
@@ -58,17 +58,17 @@ public class AliasKey implements Typed {
     }
     
     if (derefed) {
-      newPath[newPathLength - 1] = AliasTracker.DEREF_MARKER;
+      newPath[newPathLength - 1] = Alias.DEREF_MARKER;
     }
     
     return new AliasKey(var, newPath);
   }
   
   public int pathLength() {
-    if (structPath == null) {
+    if (path == null) {
       return 0;
     }
-    return structPath.length;
+    return path.length;
   }
 
   /**
@@ -83,9 +83,9 @@ public class AliasKey implements Typed {
     if (!Types.isStruct(t)) {
       return false;
     }
-    if (structPath != null) {
-      for (String field: structPath) {
-        if (field.equals(AliasTracker.DEREF_MARKER)) {
+    if (path != null) {
+      for (String field: path) {
+        if (field.equals(Alias.DEREF_MARKER)) {
           return false;
         } else {
           assert(Types.isStruct(t) || Types.isStructLocal(t)) : t;
@@ -98,23 +98,23 @@ public class AliasKey implements Typed {
 
   public boolean isFilenameAlias() {
     return Types.isFile(var) && pathLength() == 1 &&
-        structPath[0] == Alias.FILENAME;
+        path[0] == Alias.FILENAME;
   }
   
 
   public boolean isArrayMemberAlias() {
     return Types.isArray(var) && pathLength() == 1 &&
-        structPath[0] == Alias.ARRAY_SUBSCRIPT;
+        path[0] == Alias.ARRAY_SUBSCRIPT;
   }
 
   public Type type() {
     Type t = var.type();
-    if (structPath != null) {
-      for (String field: structPath) {
+    if (path != null) {
+      for (String field: path) {
         if (field == Alias.UNKNOWN) {
           assert(Types.isContainer(t));
           t = Types.containerElemType(t);
-        } else if (field.equals(AliasTracker.DEREF_MARKER)) {
+        } else if (field.equals(Alias.DEREF_MARKER)) {
           t = Types.retrievedType(t);
         } else if (Types.isFile(t) && field.equals(Alias.FILENAME)) {
           t = Types.F_STRING;
@@ -149,8 +149,8 @@ public class AliasKey implements Typed {
       // Both have zero-length paths
       return true;
     }
-    String p[] = this.structPath;
-    String op[] = other.structPath;
+    String p[] = this.path;
+    String op[] = other.path;
     assert (p.length == op.length);
     for (int i = 0; i < p.length; i++) {
       if (p[i] == Alias.UNKNOWN || op[i] == Alias.UNKNOWN) {
@@ -169,13 +169,13 @@ public class AliasKey implements Typed {
     final int prime = 31;
     int result = 1;
     result = prime * result + var.hashCode();
-    if (structPath != null) {
-      for (int i = 0; i < structPath.length; i++) {
+    if (path != null) {
+      for (int i = 0; i < path.length; i++) {
         int fieldHashCode;
-        if (structPath[i] == null) {
+        if (path[i] == null) {
           fieldHashCode = 0;
         } else {
-          fieldHashCode = structPath[i].hashCode();
+          fieldHashCode = path[i].hashCode();
         }
         result = prime * result + fieldHashCode;
       }
@@ -189,7 +189,7 @@ public class AliasKey implements Typed {
     sb.append(var.name());
     for (int i = 0; i < pathLength(); i++) {
       sb.append(".");
-      sb.append(structPath[i]);
+      sb.append(path[i]);
     }
     return sb.toString();
   }
@@ -205,6 +205,6 @@ public class AliasKey implements Typed {
       throw new IllegalArgumentException("Too many elems: " + elems +
                                          " vs " + pathLength()); 
     }
-    return new AliasKey(var, Arrays.copyOfRange(structPath, 0, elems));
+    return new AliasKey(var, Arrays.copyOfRange(path, 0, elems));
   }
 }

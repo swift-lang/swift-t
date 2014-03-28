@@ -38,13 +38,14 @@ import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.WaitVar;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
+import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.WrapUtil;
+import exm.stc.ic.aliases.Alias;
 import exm.stc.ic.opt.ICOptimizer;
 import exm.stc.ic.opt.InitVariables;
 import exm.stc.ic.opt.InitVariables.InitState;
@@ -743,18 +744,14 @@ public class ValueNumber implements OptimizerPass {
   private static void updateCongruent(Logger logger, GlobalConstants consts,
             Function function, Instruction inst, int stmtIndex,
             Congruences state) throws OptUnsafeError {
-    List<ValLoc> irs = inst.getResults();
+    List<ValLoc> resVals = inst.getResults();
+    List<Alias> aliases = inst.getAliases();
     
-    if (irs != null) {
-      if (logger.isTraceEnabled()) {
-        logger.trace("irs: " + irs.toString());
-      }
-      for (ValLoc resVal : irs) {
-        state.update(consts, function.getName(), resVal, stmtIndex);
-      }
-    } else {
-      logger.trace("no icvs");
+    if (logger.isTraceEnabled()) {
+      logger.trace("resVals: " + resVals);
+      logger.trace("aliases: " + aliases);
     }
+    state.update(consts, function.getName(), resVals, aliases, stmtIndex);
   }
 
   /**

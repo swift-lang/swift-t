@@ -129,7 +129,7 @@ public class RCPlacer {
     for (RefCountType rcType: RefcountPass.RC_TYPES) {
       for (Entry<AliasKey, Long> e: increments.rcIter(rcType, RCDir.DECR)) {
         assert (e.getValue() <= 0);
-        Var var = increments.getRefCountVar(block, e.getKey());
+        Var var = increments.getRefCountVar(e.getKey());
         Arg amount = Arg.createIntLit(e.getValue() * -1);
         block.addCleanup(var, RefCountOp.decrRef(rcType, var, amount));
       }
@@ -151,7 +151,7 @@ public class RCPlacer {
       ListIterator<Statement> stmtIt, RCTracker increments) {
     for (RefCountType rcType: RefcountPass.RC_TYPES) {
       for (Entry<AliasKey, Long> e: increments.rcIter(rcType, RCDir.INCR)) {
-        Var var = increments.getRefCountVar(block, e.getKey());
+        Var var = increments.getRefCountVar(e.getKey());
         assert(var != null);
         Long incr = e.getValue();
         assert(incr >= 0);
@@ -445,7 +445,7 @@ public class RCPlacer {
     immDecrCandidates.removeAll(useFinder.getUsedKeys());
    
     for (AliasKey key: immDecrCandidates) {
-      Var immDecrVar = tracker.getRefCountVar(block, key);
+      Var immDecrVar = tracker.getRefCountVar(key);
       assert(immDecrVar.storage() != Alloc.ALIAS) : immDecrVar;
       long incr = tracker.getCount(rcType, key, RCDir.DECR);
       block.modifyInitRefcount(immDecrVar, rcType, incr);
@@ -716,7 +716,7 @@ public class RCPlacer {
     AbstractForeachLoop loop = (AbstractForeachLoop) parent;
     Counters<Var> changes = new Counters<Var>();
     for (Entry<AliasKey, Long> e : increments.rcIter(type, RCDir.DECR)) {
-      Var var = increments.getRefCountVar(block, e.getKey());
+      Var var = increments.getRefCountVar(e.getKey());
       long count = e.getValue();
       assert(count <= 0);
       if (count < 0 && RCUtil.definedOutsideCont(loop, block, var)) {
@@ -737,7 +737,7 @@ public class RCPlacer {
       RefCountType rcType) {
     Counters<Var> changes = new Counters<Var>();
     for (Entry<AliasKey, Long> e : increments.rcIter(rcType, RCDir.DECR)) {
-      Var var = increments.getRefCountVar(block, e.getKey());
+      Var var = increments.getRefCountVar(e.getKey());
       long count = e.getValue();
       assert(count <= 0);
       addDecrement(block, changes, rcType, var, count);
@@ -811,7 +811,7 @@ public class RCPlacer {
         increments.rcIter(rcType, RCDir.INCR).iterator();
     while (it.hasNext()) {
       Entry<AliasKey, Long> e = it.next();
-      Var var = increments.getRefCountVar(block, e.getKey());
+      Var var = increments.getRefCountVar(e.getKey());
       long count = e.getValue();
       if (var.storage() != Alloc.ALIAS
           || parentAssignedAliasVars.contains(var)) {

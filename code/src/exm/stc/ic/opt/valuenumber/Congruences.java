@@ -19,6 +19,8 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.TernaryLogic.Ternary;
+import exm.stc.ic.aliases.Alias;
+import exm.stc.ic.aliases.AliasTracker;
 import exm.stc.ic.opt.InitVariables.InitState;
 import exm.stc.ic.opt.valuenumber.ClosedVarTracker.AliasFinder;
 import exm.stc.ic.opt.valuenumber.ClosedVarTracker.ClosedEntry;
@@ -73,6 +75,7 @@ public class Congruences implements AliasFinder {
   private final ClosedVarTracker track;
   private final CongruentSets byValue;
   private final CongruentSets byAlias;
+  private final AliasTracker aliasTracker;
   private final HierarchicalSet<List<Arg>> maybeAssigned;
   private final boolean reorderingAllowed;
   
@@ -82,6 +85,7 @@ public class Congruences implements AliasFinder {
                         ClosedVarTracker track,
                         CongruentSets byValue,
                         CongruentSets byAlias,
+                        AliasTracker aliasTracker,
                         HierarchicalSet<List<Arg>> maybeAssigned,
                         boolean reorderingAllowed) {
     this.logger = logger;
@@ -90,6 +94,7 @@ public class Congruences implements AliasFinder {
     this.track = track;
     this.byValue = byValue;
     this.byAlias = byAlias;
+    this.aliasTracker = aliasTracker;
     this.maybeAssigned = maybeAssigned;
     this.reorderingAllowed = reorderingAllowed;
   }
@@ -100,6 +105,7 @@ public class Congruences implements AliasFinder {
         ClosedVarTracker.makeRoot(logger, reorderingAllowed),
         CongruentSets.makeRoot(CongruenceType.VALUE),
          CongruentSets.makeRoot(CongruenceType.ALIAS),
+         new AliasTracker(),
          new HierarchicalSet<List<Arg>>(),
          reorderingAllowed);
   }
@@ -110,6 +116,7 @@ public class Congruences implements AliasFinder {
              track.enterContinuation(parentStmtIndex),
              byValue.makeChild(varsFromParent),
              byAlias.makeChild(varsFromParent),
+             aliasTracker.makeChild(),
              maybeAssigned.makeChild(), reorderingAllowed);
     
     /*
@@ -124,13 +131,45 @@ public class Congruences implements AliasFinder {
      */
     return child;
   }
-
+  
+  /**
+   * Update state with values and alias info
+   * @param consts
+   * @param errContext
+   * @param resVals values for program point, may be null
+   * @param aliases aliases for program point, may be null
+   * @param stmtIndex
+   * @throws OptUnsafeError
+   */
+  public void update(GlobalConstants consts, String errContext,
+      List<ValLoc> resVals, List<Alias> aliases, int stmtIndex) 
+          throws OptUnsafeError {
+    if (aliases != null) {
+      // Get aliases up to date first since they don't depend on others here
+      aliasTracker.update(aliases);
+    }
+    
+    if (resVals != null) {
+      for (ValLoc resVal: resVals) {
+        update(consts, errContext, resVal, stmtIndex);
+      }
+    }
+  }
+  
+  /**
+   * Update the state with a ValLoc for a given program point
+   * @param consts
+   * @param errContext
+   * @param resVal
+   * @param stmtIndex
+   * @throws OptUnsafeError
+   */
   public void update(GlobalConstants consts, String errContext,
            ValLoc resVal, int stmtIndex) throws OptUnsafeError {
     if (logger.isTraceEnabled()) {
       logger.trace("update: " + resVal + " " + resVal.congType());
     }
-
+    
     if (resVal.congType() == CongruenceType.ALIAS) {
       // Update aliases only if congType matches
       update(consts, errContext, resVal.location(), resVal.value(),
@@ -639,6 +678,17 @@ public class Congruences implements AliasFinder {
     }
 
     Var canonical = getCanonicalAlias(var.asArg());
+    markClosedInTracker(blockStart, stmtIndex, recursive, canonical);
+    
+    // use alias tracker to mark elems of alias closed
+    for (Var component: aliasTracker.getDatumComponents(canonical, recursive)) {
+      markClosedInTracker(blockStart, stmtIndex, recursive,
+                          getCanonicalAlias(component.asArg()));
+    }
+  }
+
+  private void markClosedInTracker(boolean blockStart, int stmtIndex,
+      boolean recursive, Var canonical) {
     if (blockStart) {
       track.closeBlockStart(canonical, recursive);
     } else {
@@ -655,12 +705,15 @@ public class Congruences implements AliasFinder {
   private void markClosed(Arg location, int stmtIndex, Closed closed) {
     if (closed != Closed.MAYBE_NOT && location.isVar()) {
       // Mark the canonical version of the variable closed
+      boolean recursive;
       if (closed == Closed.YES_NOT_RECURSIVE) {
-        markClosed(location.getVar(), stmtIndex, false);
+        recursive = false;
       } else {
         assert(closed == Closed.YES_RECURSIVE);
-        markClosed(location.getVar(), stmtIndex, true);
+        recursive = true;
       }
+      Var closedVar = location.getVar();
+      markClosed(closedVar, stmtIndex, recursive);
     }
   }
 
@@ -885,9 +938,8 @@ public class Congruences implements AliasFinder {
     for (Var closed: unified.recursivelyClosed) {
       markClosed(closed, stmtIndex, true);
     }
-    for (ValLoc loc: unified.availableVals) {
-      update(consts, errContext, loc, stmtIndex);
-    }
+    
+    update(consts, errContext, unified.availableVals, null, stmtIndex);
   }
 
   /**
