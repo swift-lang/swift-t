@@ -230,12 +230,12 @@ public class  ExprWalker {
    * Do a by-value copy from src to dst
    *
    * @param context
-   * @param src
    * @param dst
+   * @param src
    * @param type
    * @throws UserException
    */
-  public void copyByValue(Context context, Var src, Var dst)
+  public void copyByValue(Context context, Var dst, Var src)
                            throws UserException {
     assert(src.type().assignableTo(dst.type()));
     
@@ -244,7 +244,7 @@ public class  ExprWalker {
     if (Types.isScalarFuture(src) ||
         Types.isStruct(src) || Types.isContainer(src) ||
         Types.isRef(src)) {
-       backendAsyncCopy(context, src, dst);
+       backendAsyncCopy(context, dst, src);
     } else if (Types.isFile(src)) {
       if (dst.isMapped() == Ternary.FALSE || 
           dst.type().fileKind().supportsPhysicalCopy()) {
@@ -789,7 +789,7 @@ public class  ExprWalker {
         dereference(context, outVar, lookupResult);
         return outVar;
       } else {
-        copyByValue(context, lookupResult, outVar);
+        copyByValue(context, outVar, lookupResult);
         return outVar;
       }
     } catch (RuntimeException e) {
@@ -1377,7 +1377,7 @@ public class  ExprWalker {
     Type dstType = dst.type();
     TypeChecker.checkCopy(context, srcType, dstType);
 
-    copyByValue(context, src, dst);
+    copyByValue(context, dst, src);
   }
   
   /**
@@ -1456,7 +1456,7 @@ public class  ExprWalker {
     Var rValDerefed = varCreator.createTmp(context, 
             src.type().memberType(), false, true);
     retrieveRef(rValDerefed, src, false);
-    backendAsyncCopy(context, rValDerefed, dst);
+    backendAsyncCopy(context, dst, rValDerefed);
     backend.endWaitStatement();
   }
 
