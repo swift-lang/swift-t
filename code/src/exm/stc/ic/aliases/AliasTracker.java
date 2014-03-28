@@ -325,7 +325,8 @@ public class AliasTracker {
         // follow a ref
         boolean followsRef = false;
         for (int i = canon.pathLength(); i < componentKey.pathLength(); i++) {
-          if (componentKey.path[i].equals(Alias.DEREF_MARKER)) {
+          if (componentKey.path[i] != Alias.UNKNOWN &&
+              componentKey.path[i].equals(Alias.DEREF_MARKER)) {
             followsRef = true;
             break;
           }
