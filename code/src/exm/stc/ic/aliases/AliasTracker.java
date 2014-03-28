@@ -164,6 +164,8 @@ public class AliasTracker {
   private void updateRoot(Var var, AliasKey newPath) {
     assert(newPath.pathLength() >= 1);
     
+    // TODO: don't update if there's an unknown in newPath 
+    
     // Traverse parents
     AliasTracker curr = this;
     while (curr != null) {
@@ -264,7 +266,18 @@ public class AliasTracker {
     List<Var> results = new ArrayList<Var>();
     // Find root of this var to narrow down search
     AliasKey canon = getCanonical(var);
-    for (Pair<Var, AliasKey> component: roots.get(canon.var)) {
+    
+    AliasTracker curr = this;
+    while (curr != null) {
+      getDatumComponents(curr, var, followRefs, results, canon); 
+      curr = curr.parent;
+    }
+    return results;
+  }
+
+  private static void getDatumComponents(AliasTracker tracker, Var var,
+      boolean followRefs, List<Var> results, AliasKey canon) {
+    for (Pair<Var, AliasKey> component: tracker.roots.get(canon.var)) {
       Var componentVar = component.val1;
       AliasKey componentKey = component.val2;
       if (componentVar.equals(var)) {
@@ -273,7 +286,6 @@ public class AliasTracker {
       if (!prefixMatch(canon, componentKey)) {
         continue;
       }
-      
       
       if (followRefs) {
         // Skip checking references
@@ -293,7 +305,6 @@ public class AliasTracker {
         }
       }
     }
-    return results;
   }
 
   /**
@@ -303,7 +314,7 @@ public class AliasTracker {
    * @param prefixLne
    * @return
    */
-  private boolean prefixMatch(AliasKey key1, AliasKey key2) {
+  private static boolean prefixMatch(AliasKey key1, AliasKey key2) {
     // Check that prefixes match
 
     if (key2.pathLength() < key1.pathLength()) {
