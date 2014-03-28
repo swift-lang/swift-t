@@ -293,7 +293,7 @@ public class Congruences implements AliasFinder {
         update(consts, errContext, canonLoc, extra, IsAssign.NO,
                congruent, false, stmtIndex);
       }
-      if (cv.isArrayMemberVal() || cv.isArrayMemberRef()) {
+      if (cv.isArrayMemberVal() || cv.isArrayMember()) {
         Var arr = cv.getInput(0).getVar();
         Arg ix = cv.getInput(1);
         update(consts, errContext, Arg.TRUE,
@@ -652,7 +652,7 @@ public class Congruences implements AliasFinder {
     //  (e.g. root var by alias and subscripts by value)
     // TODO: will need to recanonicalize?
     
-    if (val.isArrayMemberVal() || val.isArrayMemberRef()) {
+    if (val.isArrayMemberVal() || val.isArrayMember()) {
       Arg arr = byAlias.findCanonical(val.getInput(0));
       Arg ix = byValue.findCanonical(val.getInput(1));
       return Arrays.asList(arr, ix);

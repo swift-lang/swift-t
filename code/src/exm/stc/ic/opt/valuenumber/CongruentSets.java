@@ -793,10 +793,10 @@ class CongruentSets {
     }
     
     // Try to resolve dereferenced references
-    if (val.isDerefCompVal()) {
-      ArgCV resolvedRef = tryResolveRef(val);
-      if (resolvedRef != null) {
-        val = resolvedRef;
+    if (val.isRetrieve(false)) {
+      ArgCV resolved = tryResolve(val);
+      if (resolved != null) {
+        val = resolved;
       }
     } 
     
@@ -887,19 +887,19 @@ class CongruentSets {
   }
   
   /**
-   * Try to resolve a reference lookup to the original thing
+   * Try to resolve a lookup to the original thing
    * dereferenced
    * @param val
    * @return
    */
-  private ArgCV tryResolveRef(ComputedValue<Arg> val) {
-    assert(val.isDerefCompVal());
-    Arg ref = val.getInput(0);
-    for (ArgOrCV v: findCongruentValues(ref)) {
+  private ArgCV tryResolve(ComputedValue<Arg> val) {
+    assert(val.isRetrieve(false));
+    Arg src = val.getInput(0);
+    for (ArgOrCV v: findCongruentValues(src)) {
       if (v.isCV()) {
         ArgCV v2 = v.cv();
-        if (v2.isArrayMemberRef()) {
-          return ComputedValue.derefArrayMemberRef(v2);
+        if (v2.isArrayMember()) {
+          return ComputedValue.derefArrayMember(v2);
         }
       }
     }
@@ -923,7 +923,7 @@ class CongruentSets {
         logger.trace("Enqueue future with val " + future);
       }
       recanonicalizeQueue.add(future);
-    } else if (val.isArrayMemberRef()) {
+    } else if (val.isArrayMember()) {
       // Might be able to dereference
       Arg arrayMemberRef = val.getInput(0);
       if (logger.isTraceEnabled()) {

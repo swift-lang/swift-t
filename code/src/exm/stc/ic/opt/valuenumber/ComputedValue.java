@@ -245,10 +245,12 @@ public class ComputedValue<T> {
     return this.op == Opcode.LOAD_REF;
   }
   
+  public boolean isRetrieve(boolean includeRecursive) {
+    return this.op.isRetrieve(includeRecursive);
+  }
 
   /**
-   * Computed value to indicate that something is a direct handle
-   * to array contents
+   * Computed value to indicate that something is a copy
    * @param arr
    * @param ix
    * @return
@@ -341,27 +343,29 @@ public class ComputedValue<T> {
             subop.equals(ComputedValue.ARRAY_ELEM_VALUE_SCALAR));
   }
   
-  public boolean isArrayMemberRef() {
+  public boolean isArrayMember() {
     return (op == Opcode.FAKE && 
           subop.equals(ComputedValue.ARRAY_NESTED_REF)) ||
         (op == Opcode.FAKE &&
-          subop.equals(ComputedValue.ARRAY_ELEM_COPY));
+          subop.equals(ComputedValue.ARRAY_ELEM_COPY)) ||
+          isArrayMemberAlias();
   }
   
   /**
-   * Convert a Array Member Ref to an Array Member value.
+   * Convert a Array Member to an Array Member value.
    * @return
    */
-  public static ArgCV derefArrayMemberRef(ArgCV memRef) {
-    assert(memRef.isArrayMemberRef());
+  public static ArgCV derefArrayMember(ArgCV mem) {
+    assert(mem.isArrayMember());
     Object newSubop;
-    if (memRef.subop.equals(ARRAY_NESTED_REF)) {
+    if (mem.subop.equals(ARRAY_NESTED_REF)) {
       newSubop = ARRAY_NESTED;
     } else {
-      assert(memRef.subop.equals(ARRAY_ELEM_COPY));
-      newSubop = arrayValSubop(memRef.getInput(0));
+      assert(mem.subop.equals(ARRAY_ELEM_COPY) ||
+             mem.subop.equals(ARRAY_ELEM_ALIAS));
+      newSubop = arrayValSubop(mem.getInput(0));
     }
-    return new ArgCV(Opcode.FAKE, newSubop, memRef.inputs);
+    return new ArgCV(Opcode.FAKE, newSubop, mem.inputs);
   }
 
   public static ArgCV arrayContainsCV(Var arr, Arg key) {
