@@ -29,9 +29,9 @@ O1_OPTS=("constant-fold" "dead-code-elim" "value-number" "finalized-var"
          "controlflow-fusion" "propagate-aliases"
          "merge-refcounts" "cancel-refcounts" "piggyback-refcounts"
          "batch-refcounts" "hoist-refcounts")
-O2_OPTS=("dataflow-op-inline" "wait-coalesce" "hoisting" "expand-loops"
+O2_OPTS=("dataflow-op-inline" "wait-coalesce" "hoisting"
          "function-signature" "array-build" "loop-simplify")
-O3_OPTS=("pipeline" "function-inline" "reorder-insts" "algebra" "full-unroll")
+O3_OPTS=("pipeline" "function-inline" "reorder-insts" "algebra" "expand-loops" "full-unroll")
 EXPERIMENTAL_OPTS=()
 
 # OUTPUT_MODE= turbine or cpp
