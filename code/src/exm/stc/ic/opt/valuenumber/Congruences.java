@@ -261,21 +261,21 @@ public class Congruences implements AliasFinder {
       ComputedValue<Arg> cv = canonVal.cv();
       Arg invOutput = cv.getInput(0);
 
-      // Only add value congruences to be safe.
+      // Only add value congruences to be safe
       // It might be possible to handle ALIAS congruences, e.g. for
       // STORE_REF/LOAD_REF pair here later on (TODO)
       if (cv.op().isAssign(false)) {
         ArgCV invVal = ComputedValue.retrieveCompVal(canonLoc.getVar(), false);
+        assert(invVal != null): canonLoc.getVar();
         updateInv(consts, errContext, invOutput, invVal, stmtIndex);
       } else if (cv.op().isRecursiveAssign()) {
-          ArgCV invVal = ComputedValue.retrieveCompVal(canonLoc.getVar(), true);
-          updateInv(consts, errContext, invOutput, invVal, stmtIndex);
+        ArgCV invVal = ComputedValue.retrieveCompVal(canonLoc.getVar(), true);
+        updateInv(consts, errContext, invOutput, invVal, stmtIndex);
       } else if (cv.op().isRetrieve(false)) {
-        ArgCV invVal = ComputedValue.assignCompVal(invOutput.getVar(), false);    
+        ArgCV invVal = ComputedValue.assignCompVal(invOutput, false);    
         updateInv(consts, errContext, invOutput, invVal, stmtIndex);
       } else if (cv.op().isRecursiveRetrieve()) {
-        ArgCV invVal = ComputedValue.assignCompVal(invOutput.getVar(), true);    
-        updateInv(consts, errContext, invOutput, invVal, stmtIndex);
+        ArgCV invVal = ComputedValue.assignCompVal(invOutput, true);    
         updateInv(consts, errContext, invOutput, invVal, stmtIndex);
       }
     } else if (canonVal.isArg() && canonVal.arg().isVar() &&

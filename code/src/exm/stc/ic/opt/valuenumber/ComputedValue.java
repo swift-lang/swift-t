@@ -192,7 +192,7 @@ public class ComputedValue<T> {
     return new ArgCV(op, Arrays.asList(src.asArg()));
   }
 
-  public static ArgCV assignCompVal(Var dst, boolean recursive) {
+  public static ArgCV assignCompVal(Arg dst, boolean recursive) {
     Type dstType = dst.type();
     if (Types.isPrimValue(dstType)) {
         BuiltinOpcode op;
@@ -218,11 +218,11 @@ public class ComputedValue<T> {
         default:
           throw new STCRuntimeError("Unhandled type: " + dstType);
         }
-        return new ArgCV(Opcode.LOCAL_OP,  op, dst.asArg().asList());
+        return new ArgCV(Opcode.LOCAL_OP,  op, dst.asList());
     } else {
       Opcode op = Opcode.assignOpcode(dstType, recursive);
       if (op != null) {
-        return new ArgCV(op, dst.asArg().asList());
+        return new ArgCV(op, dst.asList());
       }
     }
     
@@ -232,7 +232,7 @@ public class ComputedValue<T> {
   
   public static ValLoc assignValLoc(Var dst, Arg val,
                            IsAssign isAssign, boolean recursive) {
-    ArgCV cv = assignCompVal(dst, recursive);
+    ArgCV cv = assignCompVal(val, recursive);
     if (cv == null)
       return null;
 
