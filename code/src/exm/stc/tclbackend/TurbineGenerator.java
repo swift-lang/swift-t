@@ -1889,7 +1889,6 @@ public class TurbineGenerator implements CompilerBackend {
   
   @Override
   public void asyncCopy(Var dst, Var src) {
-    assert(Types.isStruct(dst));
     assert(src.type().assignableTo(dst.type()));
     
     startAsync("copy-" + src.name() + "_" + dst.name(),
