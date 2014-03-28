@@ -60,11 +60,8 @@ public enum Opcode {
   ARR_CONTAINS, CONTAINER_SIZE,
   ARR_LOCAL_CONTAINS, CONTAINER_LOCAL_SIZE,
   
-  // Copy containers
-  ASYNC_COPY_CONTAINER, SYNC_COPY_CONTAINER,
-  
-  // Copy structs
-  ASYNC_COPY_STRUCT, SYNC_COPY_STRUCT,
+  // Copy non-local data
+  SYNC_COPY, ASYNC_COPY,
   
   // Create full array in one shot
   ARRAY_BUILD,

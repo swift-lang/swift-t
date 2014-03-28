@@ -324,34 +324,18 @@ public interface CompilerBackend {
 
 
   /**
-   * Copy non-closed container asynchronously
+   * Copy non-closed non-local data
    * @param dst
    * @param src
    */
-  public void asyncCopyContainer(Var dst, Var src);
+  public void asyncCopy(Var dst, Var src);
 
   /**
-   * Copy closed container synchronously
+   * Copy closed non-local data synchronously
    * @param dst
    * @param src
    */
-  public void syncCopyContainer(Var dst, Var src);
-  
-
-  /**
-   * Copy non-closed struct asynchronously
-   * @param dst
-   * @param src
-   */
-  public void asyncCopyStruct(Var dst, Var src);
-
-  /**
-   * Copy closed struct synchronously
-   * @param dst
-   * @param src
-   */
-  public void syncCopyStruct(Var dst, Var src);
-  
+  public void syncCopy(Var dst, Var src);
   
   public void arrayCreateNestedFuture(Var arrayResult,
       Var array, Var ix);

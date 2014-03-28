@@ -1888,48 +1888,48 @@ public class TurbineGenerator implements CompilerBackend {
   }
   
   @Override
-  public void asyncCopyContainer(Var dst, Var src) {
-    assert(Types.isContainer(dst));
-    assert(src.type().assignableTo(dst.type()));
-    
-    startAsync("copy-" + src.name() + "_" + dst.name(),
-               src.asList(), Arrays.asList(src, dst), false,
-               TaskMode.LOCAL, new TaskProps());
-    syncCopyContainer(dst, src);
-    endAsync();
-  }
-  
-  @Override
-  public void syncCopyContainer(Var dst, Var src) {
-    assert(Types.isContainer(dst));
-    assert(src.type().assignableTo(dst.type()));
-
-    Type elemType = Types.containerElemType(dst);
-    boolean refElems = Types.isRef(elemType);
-    Expression incrReferand = refElems ? LiteralInt.ONE : LiteralInt.ZERO;
-
-    syncCopyCompound(dst, src, incrReferand);
-  }
-
-  @Override
-  public void asyncCopyStruct(Var dst, Var src) {
+  public void asyncCopy(Var dst, Var src) {
     assert(Types.isStruct(dst));
     assert(src.type().assignableTo(dst.type()));
     
     startAsync("copy-" + src.name() + "_" + dst.name(),
                src.asList(), Arrays.asList(src, dst), false,
                TaskMode.LOCAL, new TaskProps());
-    syncCopyStruct(dst, src);
+    syncCopy(dst, src);
     endAsync();
   }
   
   @Override
-  public void syncCopyStruct(Var dst, Var src) {
-    assert(Types.isStruct(dst));
+  public void syncCopy(Var dst, Var src) {
+    assert(dst.storage() != Alloc.LOCAL);
     assert(src.type().assignableTo(dst.type()));
-    // Need to increment referands, if any
-    Expression incrReferand = LiteralInt.ONE;
-    syncCopyCompound(dst, src, incrReferand);
+    
+    syncCopy(dst, src, copyIncrReferand(dst));
+  }
+
+  /**
+   * Compute number we need to increment referand
+   * @param dst
+   * @return
+   */
+  private static Expression copyIncrReferand(Var dst) {
+    // Depending on type, see if there are any refcounts
+    // that need to be incremented
+    if (Types.isContainer(dst)) {
+      Type elemType = Types.containerElemType(dst);
+      boolean refElems = Types.isRef(elemType);
+      return refElems ? LiteralInt.ONE : LiteralInt.ZERO;
+    } else if (Types.isStruct(dst)) {
+      // Could check to see if any ref elems
+      return LiteralInt.ONE;
+    } else if (Types.isPrimFuture(dst)) {
+      return LiteralInt.ZERO;
+    } else if (Types.isRef(dst)) {
+      return LiteralInt.ONE;
+    }
+    // Default to one: safe since ignored if not needed
+    return LiteralInt.ONE;
+
   }
   
   /**
@@ -1938,7 +1938,7 @@ public class TurbineGenerator implements CompilerBackend {
    * @param src
    * @param incrReferand
    */
-  private void syncCopyCompound(Var dst, Var src, Expression incrReferand) {
+  private void syncCopy(Var dst, Var src, Expression incrReferand) {
     // Implement as load followed by store
     Value tmpVal = new Value(TCLTMP_RETRIEVED);
     TypeName simpleReprType = representationType(src.type());
@@ -1956,7 +1956,6 @@ public class TurbineGenerator implements CompilerBackend {
       fullReprType = recursiveTypeList(dst.type(), false, true,
                                           true, false, false);
     } else {
-      assert(Types.isStruct(src));
       fullReprType = Collections.singletonList(
                                   representationType(src.type()));
     }

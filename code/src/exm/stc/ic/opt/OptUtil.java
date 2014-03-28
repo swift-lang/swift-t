@@ -334,4 +334,15 @@ public class OptUtil {
     block.addVariable(res);
     return res;
   }
+  
+  public static Var createTmpAlias(Block block, Var orig) {
+    String name = block.uniqueVarName(
+        Var.joinPrefix(Var.ALIAS_VAR_PREFIX, orig.name()));
+    Var res = new Var(orig.type(), name,
+        Alloc.ALIAS, DefType.LOCAL_COMPILER, 
+        VarProvenance.renamed(orig));
+
+    block.addVariable(res);
+    return res;
+  }
 }

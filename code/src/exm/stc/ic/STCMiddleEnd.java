@@ -540,16 +540,12 @@ public class STCMiddleEnd {
         TurbineOp.arrayRefCreateNestedComputed(arrayResult, array, ix));
   }
   
-  public void asyncCopyContainer(Var dst, Var src) {
-    assert(Types.isContainer(src));
-    assert(src.type().assignableTo(dst.type()));
-    currBlock().addInstruction(TurbineOp.asyncCopyContainer(dst, src));
+  public void asyncCopy(Var dst, Var src) {
+    currBlock().addInstruction(TurbineOp.asyncCopy(dst, src));
   }
   
-  public void asyncCopyStruct(Var dst, Var src) {
-    assert(Types.isStruct(src));
-    assert(src.type().assignableTo(dst.type()));
-    currBlock().addInstruction(TurbineOp.asyncCopyStruct(dst, src));
+  public void syncCopy(Var dst, Var src) {
+    currBlock().addInstruction(TurbineOp.syncCopy(dst, src));
   }
 
   public void bagInsert(Var bag, Arg elem) {

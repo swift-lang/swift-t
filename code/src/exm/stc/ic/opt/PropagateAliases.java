@@ -23,6 +23,7 @@ import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Statement;
+import exm.stc.ic.tree.Opcode;
 import exm.stc.ic.tree.TurbineOp;
 
 /**
@@ -64,12 +65,15 @@ public class PropagateAliases extends FunctionOptimizerPass {
       Statement stmt = stmtIt.next();
       
       switch (stmt.type()) {
-        case INSTRUCTION:
-          propAliasesInst(logger, stmtIt, stmt.instruction(), aliases,
-                          waitedForAliases);
+        case INSTRUCTION: {
+          Instruction inst = stmt.instruction();
+          inst = preprocessInst(logger, b, stmtIt, inst);
+          
+          propAliasesInst(logger, stmtIt, inst, aliases, waitedForAliases);
           
           aliases.update(stmt.instruction());
           break;
+        }
         case CONDITIONAL:
           propAliasRecOnCont(logger, aliases, waitedForAliases, stmt.conditional());
           break;
@@ -81,6 +85,49 @@ public class PropagateAliases extends FunctionOptimizerPass {
     for (Continuation c: b.getContinuations()) {
       propAliasRecOnCont(logger, aliases, waitedForAliases, c);
     }
+  }
+
+  /**
+   * Any modifications to instruction
+   * @param logger
+   * @param b
+   * @param stmtIt
+   * @param instruction
+   * @return
+   */
+  private static Instruction preprocessInst(Logger logger, Block b,
+      ListIterator<Statement> stmtIt, Instruction inst) {
+    if (inst.op == Opcode.ARR_COPY_OUT_IMM) {
+      return swapArrayAlias(logger, b, stmtIt, inst);
+    }
+    return inst; // Return unmodified by default
+  }
+
+  /**
+   * Change array copy out to create array alias then copy,
+   * to allow further optimization
+   * @param logger
+   * @param b
+   * @param stmtIt
+   * @param inst
+   */
+  private static Instruction swapArrayAlias(Logger logger, Block b,
+      ListIterator<Statement> stmtIt, Instruction inst) {
+    assert(inst.op == Opcode.ARR_COPY_OUT_IMM);
+    Var dst = inst.getOutput(0);
+    Var arr = inst.getInput(0).getVar();
+    Arg ix = inst.getInput(1);
+    
+    Var alias = OptUtil.createTmpAlias(b, dst);
+    
+    Instruction aliasInst = TurbineOp.arrayCreateAlias(alias, arr, ix);
+    Instruction copyInst = TurbineOp.asyncCopy(dst, alias); 
+    
+    stmtIt.remove();
+    stmtIt.add(aliasInst);
+    stmtIt.add(copyInst);
+    
+    return aliasInst; // Return first instruction
   }
 
   private static void propAliasRecOnCont(Logger logger, AliasTracker aliases,

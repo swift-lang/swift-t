@@ -204,20 +204,12 @@ public class TurbineOp extends Instruction {
       gen.arrayBuild(getOutput(0), keys, vals);
       break;
     }
-    case ASYNC_COPY_CONTAINER: {
-      gen.asyncCopyContainer(getOutput(0), getInput(0).getVar());
+    case ASYNC_COPY: {
+      gen.asyncCopy(getOutput(0), getInput(0).getVar());
       break;
     }
-    case SYNC_COPY_CONTAINER: {
-      gen.syncCopyContainer(getOutput(0), getInput(0).getVar());
-      break;
-    }
-    case ASYNC_COPY_STRUCT: {
-      gen.asyncCopyStruct(getOutput(0), getInput(0).getVar());
-      break;
-    }
-    case SYNC_COPY_STRUCT: {
-      gen.syncCopyStruct(getOutput(0), getInput(0).getVar());
+    case SYNC_COPY: {
+      gen.syncCopy(getOutput(0), getInput(0).getVar());
       break;
     }
     case BAG_INSERT:
@@ -410,7 +402,6 @@ public class TurbineOp extends Instruction {
       throw new STCRuntimeError("didn't expect to see op " +
                 op.toString() + " here");
     }
-
   }
 
   /**
@@ -665,30 +656,23 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.ARRAY_BUILD, array.asList(), inputs);
   }
   
-  public static Instruction asyncCopyContainer(Var dst, Var src) {
-    assert(Types.isContainer(dst));
+  /**
+   * Generic async copy instruction for non-local data
+   */
+  public static Instruction asyncCopy(Var dst, Var src) {
     assert(src.type().assignableTo(dst.type()));
-    return new TurbineOp(Opcode.ASYNC_COPY_CONTAINER, dst, src.asArg());
+    assert(dst.storage() != Alloc.LOCAL);
+    return new TurbineOp(Opcode.ASYNC_COPY, dst, src.asArg());
   }
   
-  public static Instruction syncCopyContainer(Var dst, Var src) {
-    assert(Types.isContainer(dst));
+  /**
+   * Generic sync copy instruction for non-local data.
+   * Assumes input data closed
+   */
+  public static Instruction syncCopy(Var dst, Var src) {
     assert(src.type().assignableTo(dst.type()));
-
-    return new TurbineOp(Opcode.SYNC_COPY_CONTAINER, dst, src.asArg());
-  }
-  
-  public static Instruction asyncCopyStruct(Var dst, Var src) {
-    assert(Types.isStruct(dst));
-    assert(src.type().assignableTo(dst.type()));
-    return new TurbineOp(Opcode.ASYNC_COPY_STRUCT, dst, src.asArg());
-  }
-  
-  public static Instruction syncCopyStruct(Var dst, Var src) {
-    assert(Types.isStruct(dst));
-    assert(src.type().assignableTo(dst.type()));
-
-    return new TurbineOp(Opcode.SYNC_COPY_STRUCT, dst, src.asArg());
+    assert(dst.storage() != Alloc.LOCAL);
+    return new TurbineOp(Opcode.SYNC_COPY, dst, src.asArg());
   }
 
   /**
@@ -1605,10 +1589,8 @@ public class TurbineOp extends Instruction {
     case AREF_COPY_IN_FUTURE:
     case AREF_STORE_IMM:
     case AREF_COPY_IN_IMM:
-    case SYNC_COPY_CONTAINER:
-    case ASYNC_COPY_CONTAINER:
-    case SYNC_COPY_STRUCT:
-    case ASYNC_COPY_STRUCT:
+    case SYNC_COPY:
+    case ASYNC_COPY:
       return false;
 
     case BAG_INSERT:
@@ -1953,8 +1935,7 @@ public class TurbineOp extends Instruction {
       }
       break;
     }
-    case ASYNC_COPY_CONTAINER: 
-    case ASYNC_COPY_STRUCT: {
+    case ASYNC_COPY: {
       // See if we can get closed container/struct
       List<Var> req = mkImmVarList(waitForClose, closedVars,
                                    getInput(0).getVar());
@@ -1963,10 +1944,18 @@ public class TurbineOp extends Instruction {
       }
       break;
     }
-    case SYNC_COPY_CONTAINER: 
-    case SYNC_COPY_STRUCT: {
-      // TODO: would be nice to switch to array_store if we already have
-      //       loaded array value
+    case SYNC_COPY: {
+      // TODO: would be nice to switch to  explicit load/store if container
+      //       datum is small enough
+      Var dst = getOutput(0);
+      Var src = getInput(0).getVar();
+      if (Types.isPrimFuture(dst) || Types.isStruct(dst) ||
+          Types.isRef(dst)) {
+        // Small data
+        if (waitForClose || closedVars.contains(src)) {
+          return new MakeImmRequest(null, src.asList());
+        }
+      }
       break;
     }
     case COPY_IN_FILENAME: {
@@ -2268,21 +2257,16 @@ public class TurbineOp extends Instruction {
       return new MakeImmChange(newOut3, arrResult,
           arrayCreateNestedImm(newOut3, newArr, getInput(0)));
     }
-    case ASYNC_COPY_CONTAINER: {
-      // Array is closed: replace with sync version
+    case ASYNC_COPY: {
+      // data is closed: replace with sync version
       return new MakeImmChange(
-          syncCopyContainer(getOutput(0), getInput(0).getVar()));
+          syncCopy(getOutput(0), getInput(0).getVar()));
     }
-    case SYNC_COPY_CONTAINER: 
-    case SYNC_COPY_STRUCT: {
-      // TODO: would be nice to switch to array_store if we already have
-      //       loaded array value
-      break;
-    }
-    case ASYNC_COPY_STRUCT: {
-      // Array is closed: replace with sync version
+    case SYNC_COPY: {
+      assert(values.get(0).original.equals(getInput(0).getVar()));
+      Arg val = values.get(0).fetched;
       return new MakeImmChange(
-          syncCopyStruct(getOutput(0), getInput(0).getVar()));
+          TurbineOp.storeAny(getOutput(0), val));
     }
     case COPY_IN_FILENAME: {
       return new MakeImmChange(
@@ -2538,8 +2522,7 @@ public class TurbineOp extends Instruction {
     case SET_FILENAME_VAL:
     case INIT_LOCAL_OUTPUT_FILE:
     case ARRAY_BUILD:
-    case SYNC_COPY_CONTAINER:
-    case SYNC_COPY_STRUCT:
+    case SYNC_COPY:
     case BAG_INSERT:
     case CHECKPOINT_WRITE_ENABLED:
     case CHECKPOINT_LOOKUP_ENABLED:
@@ -2571,8 +2554,7 @@ public class TurbineOp extends Instruction {
     case AREF_CREATE_NESTED_FUTURE:
     case ARR_CREATE_NESTED_FUTURE:
     case AREF_CREATE_NESTED_IMM:
-    case ASYNC_COPY_CONTAINER:
-    case ASYNC_COPY_STRUCT:
+    case ASYNC_COPY:
     case STRUCT_COPY_IN:
     case STRUCTREF_STORE_SUB:
     case STRUCTREF_COPY_IN:
@@ -2677,13 +2659,11 @@ public class TurbineOp extends Instruction {
         // Struct ops can be done anywhere
         return ExecContext.ALL;
       
-      case ASYNC_COPY_CONTAINER:
-      case ASYNC_COPY_STRUCT:
+      case ASYNC_COPY:
         // Copy ops can be done anywhere
         return ExecContext.ALL;
         
-      case SYNC_COPY_CONTAINER:
-      case SYNC_COPY_STRUCT:
+      case SYNC_COPY:
         // Copy ops can be done anywhere
         return ExecContext.ALL;
         
@@ -2813,13 +2793,11 @@ public class TurbineOp extends Instruction {
         // Struct operations aren't too expensive
         return true;
       
-      case ASYNC_COPY_CONTAINER:
-      case ASYNC_COPY_STRUCT:
+      case ASYNC_COPY:
         // Spawning the task isn't expensive
         return true;
-        
-      case SYNC_COPY_CONTAINER:
-      case SYNC_COPY_STRUCT:
+
+      case SYNC_COPY:
         // Copying a large container may be expensive
         return false;
         
@@ -2965,15 +2943,13 @@ public class TurbineOp extends Instruction {
         // Copying to future can enable progress
         return true;
       
-      case ASYNC_COPY_CONTAINER:
-      case ASYNC_COPY_STRUCT:
+      case ASYNC_COPY:
         // Copying can enable progress
         return true;
         
-      case SYNC_COPY_CONTAINER:
-      case SYNC_COPY_STRUCT:
+      case SYNC_COPY:
         // Copying can enable progress
-        return false;
+        return true;
         
       case CHECKPOINT_LOOKUP_ENABLED:
       case CHECKPOINT_WRITE_ENABLED:
@@ -3258,10 +3234,8 @@ public class TurbineOp extends Instruction {
                                               returnsNonRef));
         return res;
       }
-      case SYNC_COPY_CONTAINER: 
-      case ASYNC_COPY_CONTAINER: 
-      case SYNC_COPY_STRUCT:
-      case ASYNC_COPY_STRUCT: {
+      case SYNC_COPY: 
+      case ASYNC_COPY: {
         return ValLoc.makeCopy(getOutput(0), getInput(0),
                                IsAssign.TO_LOCATION).asList();
       }
@@ -3325,8 +3299,8 @@ public class TurbineOp extends Instruction {
 
   @Override
   public List<Var> getClosedOutputs() {
-    if (op == Opcode.ARRAY_BUILD || op == Opcode.SYNC_COPY_CONTAINER ||
-        op == Opcode.SYNC_COPY_STRUCT) {
+    if (op == Opcode.ARRAY_BUILD || op == Opcode.SYNC_COPY ||
+        op == Opcode.SYNC_COPY) {
       // Output array should be closed
       return Collections.singletonList(getOutput(0));
     } else if (op == Opcode.STORE_REF) {
@@ -3361,14 +3335,19 @@ public class TurbineOp extends Instruction {
         Var arr = getOutput(0);
         return Pair.create(readIncr, VarCount.one(arr).asList());
       }
-      case ASYNC_COPY_CONTAINER:
-      case SYNC_COPY_CONTAINER:
-      case ASYNC_COPY_STRUCT:
-      case SYNC_COPY_STRUCT:
+      case ASYNC_COPY:
+      case SYNC_COPY: {
         // Need to pass in refcount for var to be copied, and write
-        // refcount for assigned var
+        // refcount for assigned var if write refcounti tracked
+        List<VarCount> writeRefs;
+        if (RefCounting.trackWriteRefCount(getOutput(0))) {
+          writeRefs = VarCount.one(getOutput(0)).asList();
+        } else {
+          writeRefs = VarCount.NONE;
+        }
         return Pair.create(VarCount.one(getInput(0).getVar()).asList(),
-                           VarCount.one(getOutput(0)).asList());
+                           writeRefs);
+      }
       case STORE_BAG:
       case STORE_ARRAY: 
       case STORE_STRUCT:

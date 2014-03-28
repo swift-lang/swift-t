@@ -1440,7 +1440,7 @@ public class  ExprWalker {
                                                 throws UserException {
     assert(src.type().assignableTo(dst.type()));
     assert(Types.isArray(src) || Types.isBag(src));
-    backend.asyncCopyContainer(VarRepr.backendVar(dst),
+    backend.asyncCopy(VarRepr.backendVar(dst),
                                VarRepr.backendVar(src));
   }
 
@@ -1463,8 +1463,8 @@ public class  ExprWalker {
           throws UserException, UndefinedTypeException {
     assert(src.type().assignableTo(dst.type()));
     assert(Types.isStruct(src));
-    backend.asyncCopyStruct(VarRepr.backendVar(dst),
-                            VarRepr.backendVar(src));
+    backend.asyncCopy(VarRepr.backendVar(dst),
+                      VarRepr.backendVar(src));
   }
 
   /**
