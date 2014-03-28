@@ -265,7 +265,7 @@ public class Congruences implements AliasFinder {
       // It might be possible to handle ALIAS congruences, e.g. for
       // STORE_REF/LOAD_REF pair here later on (TODO)
       if (cv.op().isAssign(false)) {
-        ArgCV invVal = ComputedValue.assignCompVal(invOutput.getVar(), true);
+        ArgCV invVal = ComputedValue.assignCompVal(invOutput.getVar(), false);
         updateInv(consts, errContext, invOutput, invVal, stmtIndex);
       } else if (cv.op().isRecursiveAssign()) {
           ArgCV invVal = ComputedValue.retrieveCompVal(canonLoc.getVar(), true);

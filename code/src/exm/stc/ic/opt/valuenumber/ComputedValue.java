@@ -20,7 +20,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import exm.stc.ast.antlr.ExMParser.new_type_definition_return;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.lang.Arg;
@@ -227,7 +226,8 @@ public class ComputedValue<T> {
       }
     }
     
-    throw new STCRuntimeError("Don't know how to assign to " + dst);
+    throw new STCRuntimeError("Don't know how to assign to " + dst
+                              + (recursive ? " recursively" : ""));
   }
   
   public static ValLoc assignValLoc(Var dst, Arg val,
