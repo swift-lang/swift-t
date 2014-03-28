@@ -1,6 +1,7 @@
 package exm.stc.ic.opt;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
@@ -9,11 +10,14 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.Settings;
+import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.StackLite;
@@ -67,17 +71,36 @@ public class StructBuild extends FunctionOptimizerPass {
     
     // Check if all fields were assigned
     for (Var candidate: assignedPaths.keySet()) {
-      Set<List<String>> expectedPaths = allAssignablePaths(candidate);
+      StructType candidateType = (StructType)candidate.type().getImplType();
+      Set<List<String>> expectedPaths = allAssignablePaths(candidateType);
       List<List<String>> assigned = assignedPaths.get(candidate);
       
       logger.trace("Check candidate " + candidate.name() + "\n" +
                    "expected: " + expectedPaths);
       
       for (List<String> path: assigned) {
-        boolean found = expectedPaths.remove(path);
-        if (!found) {
-          logger.warn("Invalid or double-assigned struct field: " +
-                       candidate.name() + "." + path);
+        Type fieldType;
+        try {
+          fieldType = candidateType.getFieldTypeByPath(path);
+        } catch (TypeMismatchException e) {
+          throw new STCRuntimeError(e.getMessage());
+        }
+        
+        Set<List<String>> assignedSubPaths;
+        if (Types.isStruct(fieldType)) {
+          // Handle case where we assign a substruct
+          StructType structFieldType = (StructType)fieldType.getImplType();
+          assignedSubPaths = allAssignablePaths(structFieldType, path);
+        } else {
+          assignedSubPaths = Collections.singleton(path);
+        }
+        
+        for (List<String> assignedPath: assignedSubPaths) {
+          boolean found = expectedPaths.remove(assignedPath);
+          if (!found) {
+            logger.warn("Invalid or double-assigned struct field: " +
+                         candidate.name() + "." + assignedPath);
+          }
         }
       }
       if (expectedPaths.isEmpty()) {
@@ -99,10 +122,16 @@ public class StructBuild extends FunctionOptimizerPass {
    * @param candidate
    * @return
    */
-  private Set<List<String>> allAssignablePaths(Var candidate) {
+  private Set<List<String>> allAssignablePaths(StructType type) {
+    return allAssignablePaths(type, Collections.<String>emptyList());
+  }
+  
+  private Set<List<String>> allAssignablePaths(StructType type,
+                                               List<String> prefix) {
     Set<List<String>> paths = new HashSet<List<String>>();
-    StructType type = (StructType)candidate.type().getImplType();
-    addAssignablePaths(type, new StackLite<String>(), paths);
+    StackLite<String> prefixStack = new StackLite<String>();
+    prefixStack.pushAll(prefix);
+    addAssignablePaths(type, prefixStack, paths);
     return paths;
   }
 

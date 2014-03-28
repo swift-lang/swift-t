@@ -1,6 +1,7 @@
 package exm.stc.common.util;
 
 import java.util.ArrayList;
+import java.util.Collection;
 
 /**
  * Lightweight wrapper around ArrayList
@@ -12,6 +13,11 @@ public class StackLite<T> extends ArrayList<T> {
 
   public void push(T o) {
     this.add(o);
+  }
+  
+
+  public void pushAll(Collection<? extends T> l) {
+    this.addAll(l);
   }
   
   public T pop() {
