@@ -4444,7 +4444,6 @@ ADLB_Dict_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
  * - 124 (plain ID) => 124 & no subscript
  * - 1234.123.424.53 (id + struct indices - . separated)
  *    => id=1234 subscript="123.424.53" (not counting null terminator)
- * TODO: support array subscripts
  */
 int
 ADLB_Extract_Handle(Tcl_Interp *interp, Tcl_Obj *const objv[],
@@ -4619,6 +4618,8 @@ static int append_subscript(Tcl_Interp *interp,
  *      optionally with storage that can be used. Initial size
  *      indicates size of buffer given by caller.
  *      Upon return, pointer will be updated if memory allocated in here.
+ * TODO: this currently works for array subscripts too.. maybe this is ideal
+ * to leave as-is 
  * using_caller_buf: if true, storage is owned by caller and shouldn't be
  *                   freed
  * append: if true, append to existing subscript
@@ -4703,6 +4704,8 @@ ADLB_Parse_Handle(Tcl_Interp *interp, Tcl_Obj *const objv[],
       parse->sub.buf.length = 0;
     }
 
+    // TODO: container subscripts?
+
     bool using_scratch = use_scratch;
     rc = PARSE_STRUCT_SUB(subscript, subscript_len,
                         &parse->sub.buf, &parse->sub.val,
@@ -4728,19 +4731,29 @@ ADLB_Subscript_Impl(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_CONDITION(objc >= 2, "Must have at least one argument");
 
-  // TODO: support container subscripts
-  TCL_CONDITION(sub_kind == ADLB_SUB_STRUCT,
-        "Don't yet support non-struct subscripts");
   int rc;
   int old_handle_len;
   char *old_handle = Tcl_GetStringFromObj(objv[1], &old_handle_len);
   assert(old_handle != NULL);
 
+  int subscripts = objc - 2;
+
+  if (sub_kind == ADLB_SUB_CONTAINER)
+  {
+    TCL_CONDITION(subscripts <= 1, "Only support one level of"
+                                   "subscripting for container");
+  }
+  else
+  {
+    // Only support two kinds
+    assert(sub_kind == ADLB_SUB_STRUCT);
+  }
+
   int new_handle_len = old_handle_len;
-  for (int i = 2; i < objc; i++)
+  for (int i = 0; i < subscripts; i++)
   {
     int sub_len;
-    char *sub = Tcl_GetStringFromObj(objv[i], &sub_len);
+    char *sub = Tcl_GetStringFromObj(objv[i + 2], &sub_len);
     assert(sub != NULL);
     new_handle_len += sub_len + 1;  // subscript plus "." separator
   }
@@ -4758,10 +4771,10 @@ ADLB_Subscript_Impl(ClientData cdata, Tcl_Interp *interp,
   memcpy(result_ptr, old_handle, (size_t)old_handle_len);
   result_ptr += old_handle_len;
 
-  for (int i = 2; i < objc; i++)
+  for (int i = 0; i < subscripts; i++)
   {
     int sub_len;
-    char *sub = Tcl_GetStringFromObj(objv[i], &sub_len);
+    char *sub = Tcl_GetStringFromObj(objv[i + 2], &sub_len);
     assert(sub != NULL);
 
     // subscript plus "." separator
