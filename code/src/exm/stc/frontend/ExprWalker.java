@@ -241,20 +241,10 @@ public class  ExprWalker {
     
     Var backendSrc = VarRepr.backendVar(src);
     Var backendDst = VarRepr.backendVar(dst);
-    List<Arg> backendSrcList = backendSrc.asArg().asList();
-    if (Types.isInt(src)) {
-      backend.asyncOp(BuiltinOpcode.COPY_INT, backendDst, backendSrcList);
-    } else if (Types.isString(src)) {
-      backend.asyncOp(BuiltinOpcode.COPY_STRING, backendDst, backendSrcList);
-    } else if (Types.isFloat(src)) {
-      backend.asyncOp(BuiltinOpcode.COPY_FLOAT, backendDst, backendSrcList);
-    } else if (Types.isBool(src)) {
-      backend.asyncOp(BuiltinOpcode.COPY_BOOL, backendDst, backendSrcList);
-    } else if (Types.isBlob(src)) {
-      backend.asyncOp(BuiltinOpcode.COPY_BLOB, backendDst, backendSrcList);
-    } else if (Types.isVoid(src)) {
-      // Sort of silly, but might be needed
-      backend.asyncOp(BuiltinOpcode.COPY_VOID, backendDst, backendSrcList);
+    if (Types.isScalarFuture(src) ||
+        Types.isStruct(src) || Types.isContainer(src) ||
+        Types.isRef(src)) {
+       backendAsyncCopy(context, src, dst);
     } else if (Types.isFile(src)) {
       if (dst.isMapped() == Ternary.FALSE || 
           dst.type().fileKind().supportsPhysicalCopy()) {
@@ -264,14 +254,6 @@ public class  ExprWalker {
             "to (possibly) mapped variable " + dst.name() + " with " +
             "type " + dst.type().typeName());       
       }
-    } else if (Types.isStruct(src)) {
-      copyStructByValue(context, src, dst);
-    } else if (Types.isArray(src)) {
-      copyContainerByValue(context, dst, src);
-    } else if (Types.isBag(src)) {
-      copyContainerByValue(context, dst, src);
-    } else if (Types.isRef(src)) {
-      copyRefByValue(context, src, dst);
     } else {
       throw new STCRuntimeError(context.getFileLine() +
           " copying type " + src + " by value not yet "
@@ -1430,18 +1412,17 @@ public class  ExprWalker {
   }
 
   /**
-   * Copy container by value
+   * Copy non-local data by value
    * @param context
    * @param dst
    * @param src
    * @throws UserException
    */
-  private void copyContainerByValue(Context context, Var dst, Var src) 
+  private void backendAsyncCopy(Context context, Var dst, Var src) 
                                                 throws UserException {
     assert(src.type().assignableTo(dst.type()));
-    assert(Types.isArray(src) || Types.isBag(src));
-    backend.asyncCopy(VarRepr.backendVar(dst),
-                               VarRepr.backendVar(src));
+    assert(src.storage() != Alloc.LOCAL);
+    backend.asyncCopy(VarRepr.backendVar(dst), VarRepr.backendVar(src));
   }
 
   private void derefThenCopyContainer(Context context, Var dst, Var src)
@@ -1454,19 +1435,10 @@ public class  ExprWalker {
             WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
     Var derefed = varCreator.createTmpAlias(context, dst.type());
     retrieveRef(derefed, src, false);
-    copyContainerByValue(context, dst, derefed);
+    backendAsyncCopy(context, dst, derefed);
     backend.endWaitStatement();
   }
-
-  private void copyStructByValue(Context context,
-                                 Var src, Var dst)
-          throws UserException, UndefinedTypeException {
-    assert(src.type().assignableTo(dst.type()));
-    assert(Types.isStruct(src));
-    backend.asyncCopy(VarRepr.backendVar(dst),
-                      VarRepr.backendVar(src));
-  }
-
+  
   /**
    * Copy a struct reference to a struct.
    * @param context
@@ -1484,19 +1456,7 @@ public class  ExprWalker {
     Var rValDerefed = varCreator.createTmp(context, 
             src.type().memberType(), false, true);
     retrieveRef(rValDerefed, src, false);
-    copyStructByValue(context, rValDerefed, dst);
-    backend.endWaitStatement();
-  }
-
-  private void copyRefByValue(Context context, Var src, Var dst)
-      throws UserException, UndefinedTypeException {
-    assert(src.type().assignableTo(dst.type()));
-    backend.startWaitStatement(context.constructName("copy-ref-wait"),
-        VarRepr.backendVar(src).asList(), WaitMode.WAIT_ONLY,
-        false, false, TaskMode.LOCAL);
-    Var srcVal = varCreator.createTmpAlias(context, src.type().memberType());
-    retrieveRef(srcVal, src, false);
-    assignRef(dst, srcVal);
+    backendAsyncCopy(context, rValDerefed, dst);
     backend.endWaitStatement();
   }
 
