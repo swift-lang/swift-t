@@ -147,14 +147,29 @@ public class ValLoc {
     return build(ComputedValue.makeAlias(src.asArg()), dst.asArg(),
                  Closed.MAYBE_NOT, IsAssign.NO);
   }
-  
+
+  /**
+   * Make a standard computed value for direct alias of array member
+   * @param arr
+   * @param ix
+   * @param contents
+   * @return
+   */
+  public static ValLoc makeArrayAlias(Var arr, Arg ix,
+          Arg contents, IsAssign isAssign) {
+
+  assert(Types.isElemType(arr, contents)) :
+          "not member: " + contents.toStringTyped() + " " + arr;
+  ArgCV val = ComputedValue.arrayValAliasCV(arr, ix);
+  return new ValLoc(val, contents, Closed.MAYBE_NOT, IsValCopy.NO, isAssign);
+  }
 
   /**
    * Make a standard computed value for array contents
    * @param arr
    * @param ix
    * @param contents
-   * @param refResult if contents is of value type of elem
+   * @param valResult if contents is of value type of elem
    * @return
    */
   public static ValLoc makeArrayResult(Var arr, Arg ix,

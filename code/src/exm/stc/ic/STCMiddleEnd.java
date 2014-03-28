@@ -440,6 +440,17 @@ public class STCMiddleEnd {
         TurbineOp.arrayRetrieve(dst, arrayVar, arrIx));
   }
 
+  /**
+   * Create alias to array member
+   * @param dst
+   * @param arrayVar
+   * @param arrIx
+   */
+  public void arrayCreateAlias(Var dst, Var arrayVar, Arg arrIx) {
+    currBlock().addInstruction(
+        TurbineOp.arrayCreateAlias(dst, arrayVar, arrIx));
+  }
+
   public void arrayCopyOutImm(Var dst, Var arrayVar, Arg arrIx) {
     currBlock().addInstruction(
           TurbineOp.arrayCopyOutImm(dst, arrayVar, arrIx));

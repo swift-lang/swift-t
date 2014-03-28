@@ -274,6 +274,8 @@ public interface CompilerBackend {
   public void arrayRetrieve(Var oVar, Var arrayVar,
       Arg arrayIndex);
 
+  public void arrayCreateAlias(Var oVar, Var arrayVar, Arg arrayIndex);
+  
   public void arrayCopyOutImm(Var oVar, Var arrayVar, Arg arrayIndex);
 
   public void arrayCopyOutFuture(Var oVar, Var arrayVar, Var indexVar);

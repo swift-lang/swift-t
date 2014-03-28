@@ -6,7 +6,6 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import exm.stc.ast.antlr.ExMParser.new_type_definition_return;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;

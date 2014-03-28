@@ -131,6 +131,10 @@ public class TurbineOp extends Instruction {
       gen.arrayRetrieve(getOutput(0), getInput(0).getVar(),
                          getInput(1));
       break;
+    case ARR_CREATE_ALIAS:
+      gen.arrayCreateAlias(getOutput(0), getInput(0).getVar(),
+                         getInput(1));
+      break;
     case ARR_COPY_OUT_IMM:
       gen.arrayCopyOutImm(getOutput(0), getInput(0).getVar(), getInput(1));
       break;
@@ -444,6 +448,17 @@ public class TurbineOp extends Instruction {
         dst, arrayRefVar.asArg(), arrIx);
   }
 
+  public static Instruction arrayCreateAlias(Var dst, Var arrayVar,
+      Arg arrIx) {
+    assert(Types.isArray(arrayVar));
+    assert(Types.isArrayKeyVal(arrayVar, arrIx));
+    assert(Types.isElemType(arrayVar, dst)) : arrayVar + " " + dst;
+    assert(dst.storage() == Alloc.ALIAS);
+
+    return new TurbineOp(Opcode.ARR_CREATE_ALIAS,
+                         dst, arrayVar.asArg(), arrIx);
+  }
+  
   /**
    * Copy out value of field from array once set
    * @param dst
@@ -1676,6 +1691,7 @@ public class TurbineOp extends Instruction {
     case STRUCTREF_COPY_OUT:
     case ARR_RETRIEVE:
     case LATEST_VALUE:
+    case ARR_CREATE_ALIAS:
         // Always has alias as output because the instructions initialises
         // the aliases
         return false;
@@ -2316,8 +2332,9 @@ public class TurbineOp extends Instruction {
         return Arrays.asList(Pair.create(getOutput(0), InitType.FULL));
 
       case ARR_RETRIEVE:
+      case ARR_CREATE_ALIAS: 
       case STRUCT_RETRIEVE_SUB:
-      case STRUCT_CREATE_ALIAS: {
+      case STRUCT_CREATE_ALIAS:{
         // May initialise alias if we're looking up a reference
         Var output = getOutput(0);
         if (output.storage() == Alloc.ALIAS) {
@@ -2503,6 +2520,7 @@ public class TurbineOp extends Instruction {
     case STRUCT_STORE_SUB:
     case STRUCT_RETRIEVE_SUB:
     case STRUCT_CREATE_ALIAS:
+    case ARR_CREATE_ALIAS:
     case ARR_CREATE_NESTED_IMM:
     case ARR_CREATE_BAG:
     case STORE_REF:
@@ -2613,6 +2631,7 @@ public class TurbineOp extends Instruction {
       case COPY_REF:
       case STRUCT_CREATE_ALIAS:
       case GET_FILENAME_ALIAS:
+      case ARR_CREATE_ALIAS:
         // Alias can be created anywhere
         return ExecContext.ALL;
         
@@ -2748,6 +2767,7 @@ public class TurbineOp extends Instruction {
       case COPY_REF:
       case STRUCT_CREATE_ALIAS:
       case GET_FILENAME_ALIAS:
+      case ARR_CREATE_ALIAS:
         // Creating alias is cheap
         return true;
         
@@ -2884,6 +2904,7 @@ public class TurbineOp extends Instruction {
       case COPY_REF:
       case STRUCT_CREATE_ALIAS:
       case GET_FILENAME_ALIAS:
+      case ARR_CREATE_ALIAS:
         // Creating alias doesn't make progress
         return false;
         
@@ -3185,6 +3206,7 @@ public class TurbineOp extends Instruction {
                     Arg.createIntLit(elemCount), false, IsAssign.NO));
         return res;
       }
+      case ARR_CREATE_ALIAS:
       case ARR_RETRIEVE:
       case ARR_COPY_OUT_IMM:
       case ARR_COPY_OUT_FUTURE:
@@ -3200,6 +3222,12 @@ public class TurbineOp extends Instruction {
           // This just retrieves the item immediately
           return ValLoc.makeArrayResult(arr, ix, contents.asArg(),
                                          true, IsAssign.NO).asList();
+        } else if (op == Opcode.ARR_CREATE_ALIAS) {
+          ValLoc memVal = ValLoc.makeArrayResult(arr, ix, contents.asArg(),
+                                                false, IsAssign.NO);
+          ValLoc memAlias = ValLoc.makeArrayAlias(arr, ix, contents.asArg(),
+                                                IsAssign.NO);
+          return Arrays.asList(memVal, memAlias);
         } else {
           assert (Types.isElemType(arr, contents));
           // Will assign the reference
@@ -3668,6 +3696,9 @@ public class TurbineOp extends Instruction {
   @Override
   public List<Alias> getAliases() {
     switch (this.op) {
+      case ARR_CREATE_ALIAS:
+        // Don't do this alias analysis for arrays
+        break;
       case STRUCT_CREATE_ALIAS:
         return Alias.makeStructAliases2(getInput(0).getVar(), getInputsTail(1),
             getOutput(0), AliasTransform.IDENTITY);
@@ -3798,6 +3829,10 @@ public class TurbineOp extends Instruction {
           return new ComponentAlias(arr, key, getInput(1).getVar()).asList();
         }
         break;
+      }
+      case ARR_CREATE_ALIAS: {
+        return new ComponentAlias(getInput(0).getVar(), getInput(1),
+                                  getOutput(0)).asList();
       }
       case ARR_COPY_OUT_FUTURE:
       case ARR_COPY_OUT_IMM:

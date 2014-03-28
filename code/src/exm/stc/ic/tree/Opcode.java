@@ -48,6 +48,9 @@ public enum Opcode {
   // Loop control flow
   LOOP_BREAK, LOOP_CONTINUE,
   
+  // Create alias of array index
+  ARR_CREATE_ALIAS,
+  
   // Lookup things in arrays
   ARR_RETRIEVE,
   ARR_COPY_OUT_IMM, ARR_COPY_OUT_FUTURE,

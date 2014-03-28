@@ -265,6 +265,7 @@ class Turbine {
   public static Token XPT_UNPACK = adlbFn("xpt_unpack");
 
   // Subscript/handle manipulation
+  public static Token MAKE_CONTAINER_SUBSCRIPT = adlbFn("subscript_container");
   public static Token MAKE_STRUCT_SUBSCRIPT = adlbFn("subscript_struct");
 
   // Checkpointing options
@@ -958,6 +959,18 @@ class Turbine {
     }
   }
 
+  /**
+   * Construct a new handle to a subscript of the array
+   * 
+   * @param var
+   *          may be a plain ID, or a pre-existing alias
+   * @param sub array subscript (only one supported for onw)
+   * @return
+   */
+  public static Expression arrayAlias(Value var, Expression sub) {
+    return Square.fnCall(MAKE_CONTAINER_SUBSCRIPT, var, sub);
+  }
+  
   /**
    * Construct a new handle to a subscript of the struct
    * 

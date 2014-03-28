@@ -1649,6 +1649,19 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
+  public void arrayCreateAlias(Var alias, Var arrayVar, Arg arrIx) {
+    assert(alias.storage() == Alloc.ALIAS) : alias;
+    assert(Types.isArrayKeyVal(arrayVar, arrIx));
+    assert(Types.isArray(arrayVar)) : arrayVar;
+    assert(Types.isElemType(arrayVar, alias));
+    // Simple create alias as handle
+    Expression aliasExpr = Turbine.arrayAlias(varToExpr(arrayVar), 
+                                              argToExpr(arrIx));
+    pointAdd(new SetVariable(prefixVar(alias), aliasExpr));
+  }
+  
+  
+  @Override
   public void arrayCopyOutImm(Var oVar, Var arrayVar, Arg arrIx) {
     assert(Types.isArrayKeyVal(arrayVar, arrIx));
     assert(Types.isArray(arrayVar)) : arrayVar;

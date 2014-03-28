@@ -46,7 +46,7 @@ public class Alias {
     RETRIEVE, // Retrieved value of field
     COPY, // Copied field
   }
-  
+
   /**
    * Helper to build appropriate alias for struct
    * 

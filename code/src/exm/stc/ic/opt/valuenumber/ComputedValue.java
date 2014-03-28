@@ -245,6 +245,7 @@ public class ComputedValue<T> {
     return this.op == Opcode.LOAD_REF;
   }
   
+
   /**
    * Computed value to indicate that something is a direct handle
    * to array contents
@@ -254,6 +255,17 @@ public class ComputedValue<T> {
    */
   public static ArgCV arrayValCopyCV(Var arr, Arg ix) {
     return new ArgCV(Opcode.FAKE, ComputedValue.ARRAY_ELEM_COPY,
+                              Arrays.asList(arr.asArg(), ix));
+  }
+  
+  /**
+   * Computed value to indicate that something is a direct alias
+   * @param arr
+   * @param ix
+   * @return
+   */
+  public static ArgCV arrayValAliasCV(Var arr, Arg ix) {
+    return new ArgCV(Opcode.FAKE, ComputedValue.ARRAY_ELEM_ALIAS,
                               Arrays.asList(arr.asArg(), ix));
   }
 
@@ -299,6 +311,11 @@ public class ComputedValue<T> {
   
   public boolean isAlias() {
     return this.op == Opcode.FAKE && this.subop.equals(ALIAS_OF); 
+  }
+  
+
+  public boolean isArrayMemberAlias() {
+    return (op == Opcode.FAKE && subop.equals(ARRAY_ELEM_ALIAS));
   }
   
   public boolean isArrayMemberVal() {
@@ -504,6 +521,8 @@ public class ComputedValue<T> {
     if (isAlias() || op == Opcode.LOAD_REF ||
         op == Opcode.GET_FILENAME_ALIAS) {
       return CongruenceType.ALIAS;
+    } else if (isArrayMemberAlias()) {
+      return CongruenceType.ALIAS;
     } else if (isArrayMemberValRef()) {
       return CongruenceType.ALIAS;
     } else if (isStructFieldAlias()) { 
@@ -516,6 +535,15 @@ public class ComputedValue<T> {
   }
   
   /* Special subop strings to use with fake opcode */
+  
+  /**
+   * Direct alias of array member
+   */
+  public static final String ARRAY_ELEM_ALIAS = "array_elem_alias";
+  
+  /**
+   * Copy of array member
+   */
   public static final String ARRAY_ELEM_COPY = "array_elem_copy";
   
   /**
