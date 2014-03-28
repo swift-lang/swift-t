@@ -413,7 +413,7 @@ public class TurbineGenerator implements CompilerBackend {
   }
   
   private TypeName structTypeName(Type type) {
-    assert(Types.isStruct(type));
+    assert(Types.isStruct(type) || Types.isStructLocal(type));
     // Prefix Swift name with prefix to indicate struct type
     return new TypeName("s:" + type.typeName());
   }
