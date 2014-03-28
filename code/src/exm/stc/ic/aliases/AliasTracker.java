@@ -20,7 +20,13 @@ import exm.stc.ic.tree.ICInstructions.Instruction;
  * 
  * This data structure lets us answer some basic questions:
  * - Does a variable exist in scope that corresponds to x.field1.field2?
- * - Is variable x a component of any struct?  
+ * - Is variable x a component of any struct?
+ * - Is variable x a component of any other structure
+ * 
+ * We use a definition of canonical path, where there are multiple possible
+ * paths to a variable.  A path is canonical if the root of the path is not
+ * a child of any other variable with a known path.  This favours precise
+ * paths, which are more useful.
  */
 public class AliasTracker {
   
@@ -32,7 +38,7 @@ public class AliasTracker {
    * Map from variable to alias key.
    * 
    * Note that it is possible that a variable can be a part of more than
-   * one struct.  In this case we use the first definition encountered in
+   * one thing.  In this case we use the first definition encountered in
    * code and don't track subsequent ones.
    */
   private final HierarchicalMap<Var, AliasKey> varToPath;
@@ -109,6 +115,12 @@ public class AliasTracker {
     // If we're going to deref, doesn't matter if it's a copy
     AliasKey parentPath = getCanonical(parent, derefed);
     assert(parentPath != null);
+    
+
+    // Need to check if it's a precise path: don't want to reduce precision
+    if (parentPath.hasUnknown()) {
+      parentPath = new AliasKey(parent);
+    }
    
     AliasKey childPath = parentPath.makeChild(fieldPath, derefed);
     assert(child.type().assignableTo(childPath.type())) 
@@ -143,8 +155,11 @@ public class AliasTracker {
     }
     
     AliasKey prevPath = varToPath.get(var);
-    // First entry takes priority, unless we're explicitly replacing an old path
-    if (prevPath == null || (replacePath != null && prevPath.equals(replacePath))) {
+    // First entry without unknowns takes priority, unless we're explicitly 
+    // replacing an old path
+    if (prevPath == null || 
+        (replacePath != null && prevPath.equals(replacePath)) ||
+        (prevPath.hasUnknown() && !path.hasUnknown())) {
       varToPath.put(var, path);
     } else {
       // It is ok if a var is a part of multiple structs
@@ -164,7 +179,10 @@ public class AliasTracker {
   private void updateRoot(Var var, AliasKey newPath) {
     assert(newPath.pathLength() >= 1);
     
-    // TODO: don't update if there's an unknown in newPath 
+    // Don't update unless precise
+    if (newPath.hasUnknown()) {
+      return;
+    }
     
     // Traverse parents
     AliasTracker curr = this;
@@ -265,12 +283,24 @@ public class AliasTracker {
   public List<Var> getDatumComponents(Var var, boolean followRefs) {
     List<Var> results = new ArrayList<Var>();
     // Find root of this var to narrow down search
-    AliasKey canon = getCanonical(var);
+    AliasKey currKey = getCanonical(var);
     
-    AliasTracker curr = this;
-    while (curr != null) {
-      getDatumComponents(curr, var, followRefs, results, canon); 
-      curr = curr.parent;
+    while (currKey != null) {
+      AliasTracker curr = this;
+      while (curr != null) {
+        getDatumComponents(curr, var, followRefs, results, currKey); 
+        curr = curr.parent;
+      }
+    
+      // there might be an ancestor key of canon if there was an unknown in
+      // the path somewhere
+      AliasKey next = getCanonical(currKey.var);
+      if (next.pathLength() > 0) {
+        currKey = next.splice(currKey);
+      } else {
+        // Done
+        currKey = null;
+      }
     }
     return results;
   }

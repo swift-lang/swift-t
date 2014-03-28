@@ -23,6 +23,10 @@ public class AliasKey implements Typed {
   }
   
   public AliasKey splice(AliasKey subKey) {
+    if (subKey.pathLength() == 0) {
+      return this;
+    }
+    
     int splicedLen = path.length + subKey.path.length;
     String spliced[] = new String[splicedLen];
     
@@ -206,5 +210,18 @@ public class AliasKey implements Typed {
                                          " vs " + pathLength()); 
     }
     return new AliasKey(var, Arrays.copyOfRange(path, 0, elems));
+  }
+
+  /**
+   * Return true if there's an unknown in the path
+   * @return
+   */
+  public boolean hasUnknown() {
+    for (int i = 0; i < pathLength(); i++) {
+      if (path[i] == Alias.UNKNOWN) {
+        return true;
+      }
+    }
+    return false;
   }
 }
