@@ -30,7 +30,7 @@ import exm.stc.ic.tree.TurbineOp;
  * Try to propagate any aliases created to instructions where they're used,
  * so that lookup/store can be performed directly instead of to opaque alias.
  * 
- * TODO: remove blacklist approach and wait directly on aliases
+ * TODO: remove waitedForAliases approach and wait directly on aliases
  */
 public class PropagateAliases extends FunctionOptimizerPass {
 
@@ -55,10 +55,10 @@ public class PropagateAliases extends FunctionOptimizerPass {
    * @param logger
    * @param b
    * @param aliases
-   * @param blackList alias variables that should not be substituted
+   * @param waitedForAliases alias variables that have been waited for
    */
   public static void propAliasesRec(Logger logger, Block b, AliasTracker aliases,
-                   HierarchicalSet<Var> blackList) {
+                   HierarchicalSet<Var> waitedForAliases) {
     
     ListIterator<Statement> stmtIt = b.statementIterator();
     while (stmtIt.hasNext()) {
@@ -67,12 +67,12 @@ public class PropagateAliases extends FunctionOptimizerPass {
       switch (stmt.type()) {
         case INSTRUCTION:
           propAliasesInst(logger, stmtIt, stmt.instruction(), aliases,
-                          blackList);
+                          waitedForAliases);
           
           aliases.update(stmt.instruction());
           break;
         case CONDITIONAL:
-          propAliasRecOnCont(logger, aliases, blackList, stmt.conditional());
+          propAliasRecOnCont(logger, aliases, waitedForAliases, stmt.conditional());
           break;
         default:
           throw new STCRuntimeError("Unexpected " + stmt.type());
@@ -80,18 +80,18 @@ public class PropagateAliases extends FunctionOptimizerPass {
     }
     
     for (Continuation c: b.getContinuations()) {
-      propAliasRecOnCont(logger, aliases, blackList, c);
+      propAliasRecOnCont(logger, aliases, waitedForAliases, c);
     }
   }
 
   private static void propAliasRecOnCont(Logger logger, AliasTracker aliases,
-      HierarchicalSet<Var> blackList, Continuation cont) {
-    HierarchicalSet<Var> contBlackList;
+      HierarchicalSet<Var> waitedForAliases, Continuation cont) {
+    HierarchicalSet<Var> contwaitedForAliases;
     if (cont.getType() == ContinuationType.WAIT_STATEMENT) {
       WaitStatement w = (WaitStatement)cont;
       
       /*
-       * This blacklist is a workaround for the fact that other optimization
+       * This waitedForAliases is a workaround for the fact that other optimization
        * passes aren't aware that waiting on an aliases will wait for an
        * array/struct/whatever member and will optimize out the wait
        * incorrectly even though the member is accessed within the wait.
@@ -100,23 +100,30 @@ public class PropagateAliases extends FunctionOptimizerPass {
        * waited on
        * 
        * TODO: remove once better solution possible
+       * 
+       * TODO: we have enough info to merge waits on structs, e.g.
+       *      if we wait on x.A and x.B, and those are only two fields
+       *      in struct
        */
 
-      contBlackList = blackList.makeChild();
+      contwaitedForAliases = waitedForAliases.makeChild();
       for (WaitVar wv: w.getWaitVars()) {
-        contBlackList.add(wv.var);
+        AliasKey wvAlias = aliases.getCanonical(wv.var);
+        if (wvAlias.pathLength() > 0) {
+          contwaitedForAliases.add(wv.var);
+        }
       }
     } else {
-      contBlackList = blackList;
+      contwaitedForAliases = waitedForAliases;
     }
     for (Block cb: cont.getBlocks()) {
-      propAliasesRec(logger, cb, aliases.makeChild(), contBlackList);
+      propAliasesRec(logger, cb, aliases.makeChild(), contwaitedForAliases);
     }
   }
 
   private static void propAliasesInst(Logger logger, ListIterator<Statement> stmtIt,
-                    Instruction inst, AliasTracker aliases, Set<Var> blackList) {
-    Instruction newInst = tryPropagateAliases(inst, aliases, blackList);
+                    Instruction inst, AliasTracker aliases, Set<Var> waitedForAliases) {
+    Instruction newInst = tryPropagateAliases(inst, aliases, waitedForAliases);
     if (newInst != null) {
       stmtIt.set(newInst);
     }  
@@ -131,11 +138,11 @@ public class PropagateAliases extends FunctionOptimizerPass {
    * @return
    */
   private static Instruction tryPropagateAliases(Instruction inst,
-        AliasTracker aliases, Set<Var> blackList) {
+        AliasTracker aliases, Set<Var> waitedForAliases) {
     if (inst.op.isRetrieve(false)) {
       Var src = inst.getInput(0).getVar();
       
-      AliasKey srcKey = checkedGetCanonical(aliases, blackList, src);
+      AliasKey srcKey = checkedGetCanonical(aliases, waitedForAliases, src);
 
       Arg decr = Arg.ZERO;
       if (inst.getInputs().size() > 1) {
@@ -153,7 +160,7 @@ public class PropagateAliases extends FunctionOptimizerPass {
     } else if (inst.op.isAssign(false)) {
       Var dst = inst.getOutput(0);
 
-      AliasKey dstKey = checkedGetCanonical(aliases, blackList, dst);
+      AliasKey dstKey = checkedGetCanonical(aliases, waitedForAliases, dst);
       if (dstKey != null && dstKey.isPlainStructAlias()) {
         return TurbineOp.structStoreSub(dstKey.var, Arrays.asList(dstKey.structPath),
                                         inst.getInput(0)); 
@@ -165,16 +172,16 @@ public class PropagateAliases extends FunctionOptimizerPass {
   }
 
   /**
-   * Get alias, checking against blackList.  If var is in blackList,
+   * Get alias, checking against waitedForAliases.  If var is in waitedForAliases,
    * return null
    * @param aliases
-   * @param blackList
+   * @param waitedForAliases
    * @param var
    * @return
    */
   private static AliasKey checkedGetCanonical(AliasTracker aliases,
-      Set<Var> blackList, Var var) {
-    if (blackList.contains(var)) {
+      Set<Var> waitedForAliases, Var var) {
+    if (waitedForAliases.contains(var)) {
       return null;
     } else {
       return aliases.getCanonical(var);
