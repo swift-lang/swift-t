@@ -18,8 +18,10 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.HierarchicalSet;
+import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.aliases.Alias;
+import exm.stc.ic.aliases.AliasKey;
 import exm.stc.ic.aliases.AliasTracker;
 import exm.stc.ic.opt.InitVariables.InitState;
 import exm.stc.ic.opt.valuenumber.ClosedVarTracker.AliasFinder;
@@ -749,6 +751,11 @@ public class Congruences implements AliasFinder {
    * @return
    */
   private boolean isClosed(Arg varArg, int stmtIndex, boolean recursive) {
+    if (logger.isTraceEnabled()) {
+      logger.trace("Checking closed: " + varArg + "@" + stmtIndex + " rec: "
+                  + recursive);  
+    }
+    
     // Find canonical var for alias, and check if that is closed.
     if (varArg.isConstant() || !trackClosed(varArg.getVar())) {
       // No write refcount - always closed
@@ -756,23 +763,65 @@ public class Congruences implements AliasFinder {
       return true;
     }
 
+
     Var canonicalAlias = getCanonicalAlias(varArg);
+    ClosedEntry ce = getClosedEntry(canonicalAlias, stmtIndex, recursive);
+    if (ce != null && ce.matches(recursive, stmtIndex)) {
+      logger.trace(varArg + "/" + canonicalAlias + " closed @ "
+                 + ce.stmtIndex);
+      return true;
+    }
+    
+
+    for (Pair<AliasKey, Boolean> ancestor: 
+              aliasTracker.getAncestors(canonicalAlias)) {
+      AliasKey ancestorKey = ancestor.val1;
+      boolean traversedRef = ancestor.val2;
+      Var ancestorVar = aliasTracker.findVar(ancestorKey);
+      
+      if (logger.isTraceEnabled()) {
+        logger.trace("Checking ancestor close: " + ancestorVar +
+                     " ancestor of " + canonicalAlias); 
+      }
+      
+      if (ancestorVar != null) {
+        boolean ancestorRecursive = recursive || traversedRef;
+        Var ancestorCanonical = getCanonicalAlias(ancestorVar.asArg());
+        ce = getClosedEntry(ancestorCanonical, stmtIndex, ancestorRecursive);
+        if (ce != null) {
+          // Mark whether this is closed
+          markClosed(canonicalAlias, ce.stmtIndex, recursive);
+          if (ce.matches(ancestorRecursive, stmtIndex)) {
+            logger.trace(varArg + "/" + canonicalAlias + " closed @ "
+                         + stmtIndex);
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Lookup closed entry, updating info for subsequent lookups 
+   * @param canonicalAlias
+   * @param stmtIndex
+   * @param recursive
+   * @return
+   */
+  private ClosedEntry getClosedEntry(Var canonicalAlias, int stmtIndex,
+                                      boolean recursive) {
     
     ClosedEntry ce;
     ce = track.getClosedEntry(canonicalAlias, recursive, stmtIndex, this);
     if (logger.isTraceEnabled()) {
-      logger.trace("Closed " + varArg + "(" + canonicalAlias + "): " + ce);
+      logger.trace("Closed " + canonicalAlias +": " + ce);
     }
     if (ce != null) {
       // Mark as closed to avoid having to trace back again like this.
       track.close(canonicalAlias, ce);
-      if (ce.matches(recursive, stmtIndex)) {
-        logger.trace(varArg + "/" + canonicalAlias + " closed @ "
-                   + ce.stmtIndex);
-        return true;
-      }
     }
-    return false;
+    return ce;
   }
 
 

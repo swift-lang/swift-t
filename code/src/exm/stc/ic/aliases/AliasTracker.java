@@ -322,6 +322,40 @@ public class AliasTracker {
     return true;
   }
 
+  /**
+   * Return list of ancestor datums
+   * @param var
+   * @return list of (ancestorKey, if part of separate structure) 
+   */
+  public List<Pair<AliasKey, Boolean>> getAncestors(Var var) {
+    if (logger.isTraceEnabled()) {
+      logger.trace("getAncestors(" + var + ")");
+    }
+    
+    List<Pair<AliasKey, Boolean>> results = 
+        new ArrayList<Pair<AliasKey, Boolean>>();
+    // Try tracing back through parents
+    AliasKey canonKey = getCanonical(var);
+    
+    logger.trace("CanonKey: " + canonKey);
+    
+    boolean traversedDeref = false;
+    for (int i = canonKey.pathLength() - 1; i >= 0; i--) {
+      AliasKey prefix = canonKey.prefix(i);
+      if (logger.isTraceEnabled()) {
+        logger.trace("ancestor: (" + prefix + ", " + traversedDeref + ")");
+      }      
+      results.add(Pair.create(prefix, traversedDeref));
+      if (canonKey.path[i] != null &&
+          canonKey.path[i].equals(Alias.DEREF_MARKER)) {
+        // Traversed ref
+        traversedDeref = true;
+      }
+    }
+    
+    return results;
+  }
+
   @Override
   public String toString() {
     return "varToPath: " + varToPath +
