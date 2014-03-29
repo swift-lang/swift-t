@@ -197,7 +197,7 @@ public class RefCounting {
    * @param includeUntracked
    * @return
    */
-  private static long baseRefCount(Type type, DefType defType,
+  public static long baseRefCount(Type type, DefType defType,
        RefCountType rcType, boolean includeTracked, boolean includeUntracked) {
     if (Types.isStruct(type) && rcType == RefCountType.WRITERS) {
       // Sum of field refcounts

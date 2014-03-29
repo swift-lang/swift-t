@@ -41,6 +41,7 @@ import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCFatal;
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.AsyncExecutor;
@@ -70,6 +71,7 @@ import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.Typed;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarCount;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
@@ -1551,8 +1553,15 @@ public class TurbineGenerator implements CompilerBackend {
     
     int[] indices = structFieldIndices(struct.type(), fields);
     
-    // TODO: work out write refcounts for field if struct
-    int writeDecr = 1;
+    // Work out write refcounts for field (might be > 1 if struct)
+    Type fieldType;
+    try {
+      fieldType = Types.structFieldType(struct, fields);
+    } catch (TypeMismatchException e) {
+      throw new STCRuntimeError(e.getMessage());
+    }
+    long writeDecr = RefCounting.baseRefCount(fieldType, DefType.LOCAL_COMPILER,
+                                          RefCountType.WRITERS, false, true);
     
     pointAdd(Turbine.insertStruct(varToExpr(struct),
         Turbine.structSubscript(indices), argToExpr(fieldContents),
