@@ -3619,6 +3619,7 @@ public class TurbineOp extends Instruction {
         assert(getInputs().size() == 3);
         
         // TODO: piggyback decrements here
+        // TODO: only works if we default to giving back refcounts
         return tryPiggyBackHelper(increments, type, nested, 1, 2);
       }
       case BAG_INSERT: {
