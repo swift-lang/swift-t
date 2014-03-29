@@ -3617,6 +3617,8 @@ public class TurbineOp extends Instruction {
         // Instruction can give additional refcounts back
         Var nested = getOutput(0);
         assert(getInputs().size() == 3);
+        
+        // TODO: piggyback decrements here
         return tryPiggyBackHelper(increments, type, nested, 1, 2);
       }
       case BAG_INSERT: {
