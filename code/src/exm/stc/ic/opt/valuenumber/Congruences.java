@@ -786,7 +786,8 @@ public class Congruences implements AliasFinder {
       
       if (logger.isTraceEnabled()) {
         logger.trace("Checking ancestor close: " + ancestorVar +
-                     " ancestor of " + canonicalAlias); 
+                     " ancestor of " + canonicalAlias + 
+                     " traversed ref: " + traversedRef); 
       }
       
       if (ancestorVar != null) {

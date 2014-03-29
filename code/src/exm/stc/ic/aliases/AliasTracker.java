@@ -280,45 +280,25 @@ public class AliasTracker {
     return key.var;
   }
   
+  /**
+   * Find variables that are a part of this var
+   * @param var
+   * @param followRefs
+   * @return
+   */
   public List<Var> getDatumComponents(Var var, boolean followRefs) {
     List<Var> results = new ArrayList<Var>();
     // Find root of this var to narrow down search
-    AliasKey currKey = getCanonical(var);
+    AliasKey canonKey = getCanonical(var);
     
-    while (currKey != null) {
-      AliasTracker curr = this;
-      while (curr != null) {
-        getDatumComponents(curr, var, followRefs, results, currKey); 
-        curr = curr.parent;
-      }
-    
-      /*
-       * It is possible that there are further ancestors beyond the root of the
-       * canonical, e.g. if there was an array lookup that wasn't resolved
-       * to a precise index.  We should check to see if the root of the current
-       * canonical is part of some larger structure.
-       * 
-       * We should ensure we're not traversing refs in doing this unless we intend
-       * to do so
-       */
-      currKey = traverseParent(currKey, followRefs);
-    }
-    return results;
-  }
 
-  private AliasKey traverseParent(AliasKey key, boolean followRefs) {
-    if (followRefs || !key.hasDeref()) {
-      AliasKey next = getCanonical(key.var);
-      if (next.pathLength() > 0) {
-        return next.splice(key);
-      } else {
-        // No ancestors
-        return null;
-      }
-    } else {
-      // Don't follow refs
-      return null;
+    AliasTracker curr = this;
+    while (curr != null) {
+      getDatumComponents(curr, var, followRefs, results, canonKey); 
+      curr = curr.parent;
     }
+    
+    return results;
   }
 
   private static void getDatumComponents(AliasTracker tracker, Var var,
@@ -366,7 +346,7 @@ public class AliasTracker {
     }
     return true;
   }
-
+  
   /**
    * Return list of ancestor datums
    * @param var
@@ -380,25 +360,51 @@ public class AliasTracker {
     List<Pair<AliasKey, Boolean>> results = 
         new ArrayList<Pair<AliasKey, Boolean>>();
     // Try tracing back through parents
-    AliasKey canonKey = getCanonical(var);
+    AliasKey currKey = getCanonical(var);
     
-    logger.trace("CanonKey: " + canonKey);
-    
+
     boolean traversedDeref = false;
+    while (currKey != null) {
+      logger.trace("getAncestors() currKey=" + currKey);
+      
+      traversedDeref = addAncestors(results, currKey, traversedDeref);
+
+      /*
+       * It is possible that there are further ancestors beyond the root of the
+       * canonical, e.g. if there was an array lookup that wasn't resolved
+       * to a precise index.  We should check to see if the root of the current
+       * canonical is part of some larger structure.
+       * 
+       * We should ensure we're not traversing refs in doing this unless we intend
+       * to do so
+       */
+      AliasKey next = getCanonical(currKey.var);
+      if (next.pathLength() > 0) {
+        currKey = next;
+      } else {
+        // No ancestors
+        currKey = null;
+      }
+    }
+    
+    return results;
+  }
+
+  private boolean addAncestors(List<Pair<AliasKey, Boolean>> results,
+      AliasKey canonKey, boolean traversedDeref) {
     for (int i = canonKey.pathLength() - 1; i >= 0; i--) {
-      AliasKey prefix = canonKey.prefix(i);
-      if (logger.isTraceEnabled()) {
-        logger.trace("ancestor: (" + prefix + ", " + traversedDeref + ")");
-      }      
-      results.add(Pair.create(prefix, traversedDeref));
       if (canonKey.path[i] != null &&
           canonKey.path[i].equals(Alias.DEREF_MARKER)) {
         // Traversed ref
         traversedDeref = true;
       }
+      AliasKey prefix = canonKey.prefix(i);
+      if (logger.isTraceEnabled()) {
+        logger.trace("ancestor: (" + prefix + ", " + traversedDeref + ")");
+      }      
+      results.add(Pair.create(prefix, traversedDeref));
     }
-    
-    return results;
+    return traversedDeref;
   }
 
   @Override
