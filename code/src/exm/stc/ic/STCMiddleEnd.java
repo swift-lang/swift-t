@@ -437,7 +437,7 @@ public class STCMiddleEnd {
   
   public void arrayRetrieve(Var dst, Var arrayVar, Arg arrIx) {
     currBlock().addInstruction(
-        TurbineOp.arrayRetrieve(dst, arrayVar, arrIx));
+        TurbineOp.arrayRetrieve(dst, arrayVar, arrIx, Arg.ZERO));
   }
 
   /**

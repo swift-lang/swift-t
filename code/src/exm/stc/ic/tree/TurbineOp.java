@@ -129,7 +129,7 @@ public class TurbineOp extends Instruction {
       break;
     case ARR_RETRIEVE:
       gen.arrayRetrieve(getOutput(0), getInput(0).getVar(),
-                         getInput(1));
+                         getInput(1), getInput(2));
       break;
     case ARR_CREATE_ALIAS:
       gen.arrayCreateAlias(getOutput(0), getInput(0).getVar(),
@@ -409,17 +409,19 @@ public class TurbineOp extends Instruction {
    * @param dst
    * @param arrayVar
    * @param arrIx
+   * @param decrRead
    * @return
    */
   public static Instruction arrayRetrieve(Var dst, Var arrayVar,
-                                            Arg arrIx) {
+                                          Arg arrIx, Arg decrRead) {
     assert(dst.storage() == Alloc.LOCAL || dst.storage() == Alloc.ALIAS);
     assert(Types.isArray(arrayVar));
     assert(Types.isArrayKeyVal(arrayVar, arrIx));
     assert(Types.isElemValType(arrayVar, dst));
+    assert(decrRead.isImmediateInt());
     
     return new TurbineOp(Opcode.ARR_RETRIEVE,
-        dst, arrayVar.asArg(), arrIx);
+        dst, arrayVar.asArg(), arrIx, decrRead);
   }
 
   /**
@@ -690,6 +692,16 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.BAG_INSERT, bag, elem, writersDecr);
   }
 
+  /**
+   * Retrieve value of a struct entry
+   * 
+   * TODO: for case of ref entries, separate op to get writable reference?
+   * @param dst
+   * @param structVar
+   * @param fields
+   * @param readDecr
+   * @return
+   */
   public static Instruction structRetrieveSub(Var dst, Var structVar,
                                            List<String> fields, Arg readDecr) {
     assert(Types.isStruct(structVar));
@@ -2011,7 +2023,7 @@ public class TurbineOp extends Instruction {
       // Output switched from ref to value
       Var origOut = getOutput(0);
       Var valOut = creator.createDerefTmp(origOut);
-      Instruction newI = arrayRetrieve(valOut, arr, getInput(1));
+      Instruction newI = arrayRetrieve(valOut, arr, getInput(1), Arg.ZERO);
       return new MakeImmChange(valOut, origOut, newI);
     }
     case ARR_COPY_OUT_FUTURE: {
@@ -3384,6 +3396,11 @@ public class TurbineOp extends Instruction {
         // Executes immediately, doesn't need refcount
         return Pair.create(VarCount.NONE, VarCount.NONE);
       }
+      case ARR_RETRIEVE: {
+        VarCount readDecr = new VarCount(getInput(0).getVar(),
+                                         getInput(2).getIntLit());
+        return Pair.create(readDecr.asList(), VarCount.NONE);
+      }
       case ARR_STORE: {
         Arg mem = getInput(1);
         // Increment reference to memberif needed
@@ -3548,7 +3565,12 @@ public class TurbineOp extends Instruction {
         return Pair.create(new VarCount(v, readRefs).asList(), 
                            new VarCount(v, writeRefs).asList());
       }
-      case STRUCT_RETRIEVE_SUB: 
+      case STRUCT_RETRIEVE_SUB: {
+        // Gives back a read refcount to the result if relevant
+        // TODO: change to optionally get back write increment?
+        return Pair.create(VarCount.one(getOutput(0)).asList(),
+                           VarCount.NONE);
+      }
       case ARR_RETRIEVE: {
         // Gives back a refcount to the result if relevant
         return Pair.create(VarCount.one(getOutput(0)).asList(), VarCount.NONE);
@@ -3611,6 +3633,11 @@ public class TurbineOp extends Instruction {
           }
         }
         break;
+      }
+      case ARR_RETRIEVE: {
+        Var arr = getInput(0).getVar();
+        assert(getInputs().size() == 3);
+        return tryPiggyBackHelper(increments, type, arr, 2, -1);
       }
       case ARR_CREATE_NESTED_IMM:
       case ARR_CREATE_BAG: {

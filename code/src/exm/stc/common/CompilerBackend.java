@@ -270,9 +270,10 @@ public interface CompilerBackend {
    * @param oVar
    * @param arrayVar
    * @param arrayIndex
+   * @param readDecr
    */
   public void arrayRetrieve(Var oVar, Var arrayVar,
-      Arg arrayIndex);
+                            Arg arrayIndex, Arg readDecr);
 
   public void arrayCreateAlias(Var oVar, Var arrayVar, Arg arrayIndex);
   

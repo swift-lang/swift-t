@@ -927,8 +927,9 @@ class Turbine {
    * Lookup arrayVar[arrayIndex] right away, regardless of whether it is closed
    */
   public static SetVariable arrayLookupImm(String dst, Value arrayVar,
-          Expression arrayIndex) {
-    return new SetVariable(dst, new Square(C_LOOKUP, arrayVar, arrayIndex));
+          Expression arrayIndex, Expression readDecr) {
+    return new SetVariable(dst,
+          new Square(C_LOOKUP, arrayVar, arrayIndex, readDecr));
   }
 
   /**
@@ -998,8 +999,27 @@ class Turbine {
    * @return
    */
   public static Expression lookupStruct(Value var,
-            Expression subscript, Expression decrRead) {
-    return Square.fnCall(LOOKUP_STRUCT, var, subscript, decrRead);
+            Expression subscript, Expression decrRead, Expression incrRead,
+            Expression decrWrite, Expression incrWrite) {
+    List<Expression> inputs = new ArrayList<Expression>();
+    inputs.add(var);
+    inputs.add(subscript);
+    if (decrRead != null) {
+      inputs.add(decrRead);
+    }
+    if (incrRead != null) {
+      assert(decrRead != null);
+      inputs.add(incrRead);
+    }
+    if (decrWrite != null) {
+      assert(incrRead != null);
+      inputs.add(decrWrite);
+    }
+    if (incrWrite != null) {
+      assert(decrWrite != null);
+      inputs.add(incrWrite);
+    }
+    return Square.fnCall(LOOKUP_STRUCT, inputs);
   }
 
   public static Command insertStruct(Value struct,
