@@ -2372,7 +2372,7 @@ public class Types {
    */
   public static Type storeResultType(Typed t, boolean mutable) {
     if (isScalarFuture(t) || isScalarUpdateable(t) ||
-            isFile(t) || isRef(t) || isContainer(t))  {
+            isFile(t) || isRef(t) || isContainer(t) || isStruct(t))  {
       return new RefType(t.type(), mutable);
     } else if (isScalarValue(t)) {
       return new ScalarFutureType(t.type().primType());
