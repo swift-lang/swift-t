@@ -317,19 +317,25 @@ public class HoistLoops implements OptimizerPass {
     }
     
     public void write(Var v, boolean piecewise) {
-      // Mark as written in parent continuation if synchronous - 
-      //  e.g. branches of if
+      if (piecewise) {
+        this.piecewiseWriteMap.put(v, this.block);
+      } else {
+        this.writeMap.put(v, this.block);
+      }
       
-      // TODO: more efficient to just not create child map?
+      /*
+       * Also mark as written in parent continuation if synchronous -
+       * e.g. branches of if.
+       * This is because code in the parent continuation can reasonably
+       * assume that this var was written, so hoisting it out would
+       * be unreasonable. 
+       */
       HoistTracking taskRoot = this;
       while (!taskRoot.async && taskRoot.parent != null) {
         taskRoot = taskRoot.parent;
       }
-      
-      if (piecewise) {
-        taskRoot.piecewiseWriteMap.put(v, this.block);
-      } else {
-        taskRoot.writeMap.put(v, this.block);
+      if (taskRoot != this) {
+        taskRoot.write(v, piecewise);
       }
     }
 
@@ -518,6 +524,10 @@ public class HoistLoops implements OptimizerPass {
   private int maxInputHoist(Logger logger, HoistTracking state,
                                    Var inVar) {
     int depth = state.writeMap.getDepth(inVar);
+    if (logger.isTraceEnabled()) {
+      logger.trace("Write depth of " + inVar.name() + ": " + depth);
+    }
+    
     if (Types.isPiecewiseAssigned(inVar.type()) && !aggressive) {
       // We might want to avoid moving before a piecewise write since it could
       // hurt future optimization opportunities
