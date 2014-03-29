@@ -192,7 +192,14 @@ public class ComputedValue<T> {
   }
 
   public static ArgCV assignCompVal(Typed dst, Arg src, boolean recursive) {
-    assert(Types.storeResultType(src, false).assignableTo(dst.type()));
+    if (recursive) {
+      assert(src.type().assignableTo(
+             Types.unpackedContainerType(dst)));
+
+    } else {
+      assert(Types.storeResultType(src, false)
+                              .assignableTo(dst.type()));
+    }
     Opcode op = Opcode.assignOpcode(dst, recursive);
     if (op != null) {
       return new ArgCV(op, src.asList());
