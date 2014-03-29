@@ -198,7 +198,8 @@ public class ComputedValue<T> {
 
     } else {
       assert(Types.storeResultType(src, false)
-                              .assignableTo(dst.type()));
+          .assignableTo(dst.type())) :
+            dst.type() + " <= " + src.type();
     }
     Opcode op = Opcode.assignOpcode(dst, recursive);
     if (op != null) {

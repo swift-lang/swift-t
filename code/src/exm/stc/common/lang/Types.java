@@ -2377,7 +2377,8 @@ public class Types {
     } else if (isScalarValue(t)) {
       return new ScalarFutureType(t.type().primType());
     } else if (isFileVal(t)) {
-      return F_FILE;
+      FileValueType fv = (FileValueType)t.type().getImplType();
+      return new FileFutureType(fv.fileKind());
     } else if (isArrayLocal(t)) {
       ArrayType at = (ArrayType)t.type().getImplType();
       return ArrayType.sharedArray(at.keyType(), at.memberType());
