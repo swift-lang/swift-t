@@ -509,7 +509,10 @@ public class Types {
       return new StructType(false, typeName, fields);
     }
     
-    public String getTypeName() {
+    /**
+     * @return struct type name without any sigils
+     */
+    public String getStructTypeName() {
       return typeName;
     }
 
@@ -589,7 +592,7 @@ public class Types {
         // Type names should match, along with fields
         StructType otherST = (StructType)otherT;
         if (otherST.local != this.local ||
-                !otherST.getTypeName().equals(typeName)) {
+                !otherST.getStructTypeName().equals(typeName)) {
           return false;
         } else {
           // Names match, now check that fields match.

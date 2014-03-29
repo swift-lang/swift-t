@@ -812,7 +812,7 @@ public class TypeChecker {
 
     if (fieldType == null) {
       throw new TypeMismatchException(context, "No field called " + fieldName
-          + " in structure type " + ((StructType) structType).getTypeName());
+          + " in structure type " + ((StructType) structType).getStructTypeName());
     }
     if (Types.isStruct(structType)) {
       // Look up immediately

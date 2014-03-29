@@ -575,7 +575,7 @@ public class VariableUsageInfo {
           return Arrays.asList(new Violation(ViolationType.ERROR,
             "Tried to assign to field " + field + " of variable " +
                 this.name + " but field doesn't exist in struct type "
-                + ((StructType)type).getTypeName(), context));
+                + ((StructType)type).getStructTypeName(), context));
         }
       } else {
         return Arrays.asList(new Violation(ViolationType.ERROR,
