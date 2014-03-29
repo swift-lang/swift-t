@@ -3483,8 +3483,8 @@ ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
    Lookup something in an ADLB container
 
    usage: adlb::lookup <id> <subscript>
-        [<decr readers>] [<decr writers>]
-        [<incr readers referand>] [<incr writers referand>]
+        [<decr readers>] [<incr readers referand>]
+        [<decr writers>] [<incr writers referand>]
    decr (readers|writers): decrement reference counts.  Default is zero.
    incr (readers|writers) referand: increment reference counts of referand
    returns the member
@@ -3499,8 +3499,8 @@ ADLB_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
 /**
   Lookup something in an ADLB struct
    usage: adlb::lookup_struct <id> <subscript>
-        [<decr readers>] [<decr writers>]
-        [<incr readers referand>] [<incr writers referand>]
+        [<decr readers>] [<incr readers referand>]
+        [<decr writers>] [<incr writers referand>]
    subscript: integer, or list of integers for struct indices
    decr (readers|writers): decrement reference counts.  Default is zero.
    incr (readers|writers) referand: increment reference counts of referand
