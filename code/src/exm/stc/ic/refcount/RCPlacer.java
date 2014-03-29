@@ -453,6 +453,19 @@ public class RCPlacer {
     }
   }
 
+  /**
+   * Try to piggyback decrement operations on instructions
+   * in block
+   * 
+   * TODO: this doesn't factor in alias info: if we're storing to
+   * an alias (e.g. struct field), we could piggyback a decrement
+   * for the root of he struct E.g. see test 367
+   * @param logger
+   * @param fn
+   * @param block
+   * @param tracker
+   * @param rcType
+   */
   private void piggybackDecrementsOnInstructions(Logger logger, Function fn,
       Block block, final RCTracker tracker, final RefCountType rcType) {
     if (!RCUtil.piggybackEnabled()) {
