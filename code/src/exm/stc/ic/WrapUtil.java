@@ -16,6 +16,7 @@
 package exm.stc.ic;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
@@ -155,22 +156,18 @@ public class WrapUtil {
    */
   public static Pair<List<WaitVar>, Map<Var, Var>> buildWaitVars(
       Block block, ListIterator<Statement> instInsertIt,
-      List<Var> inArgs, List<Var> outArgs, boolean initOutputMapping) {
-    if (inArgs == null) {
-      // Gracefully handle null as empty list
-      inArgs = Var.NONE;
-    }
-    if (outArgs == null) {
-      // Gracefully handle null as empty list
-      outArgs = Var.NONE;
-    }
+      List<Var> inArgs, List<Var> otherWaitArgs, List<Var> outArgs,
+      boolean initOutputMapping) {
     
     List<WaitVar> waitVars = new ArrayList<WaitVar>(inArgs.size());
     Map<Var, Var> filenameVars = new HashMap<Var, Var>();
-    for (Var in: inArgs) {
-      if (!Types.isPrimUpdateable(in.type()) &&
-          in.storage() != Alloc.GLOBAL_CONST) {
-        waitVars.add(new WaitVar(in, false));
+
+    for (List<Var> waitArgList: Arrays.asList(inArgs, otherWaitArgs)) {
+      for (Var in: waitArgList) {
+        if (!Types.isPrimUpdateable(in.type()) &&
+            in.storage() != Alloc.GLOBAL_CONST) {
+          waitVars.add(new WaitVar(in, false));
+        }
       }
     }
     

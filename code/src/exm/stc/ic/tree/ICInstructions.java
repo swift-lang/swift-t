@@ -167,8 +167,15 @@ public class ICInstructions {
     }
     
     public static class MakeImmRequest {
+      /** Output variables to replace and store after changing instruction */
       public final List<Var> out;
+      
+      /** Input variables to fetch before changing instruction */
       public final List<Var> in;
+      
+      /** Input variables to wait for but not fetch */
+      public final List<Var> wait;
+      
       /** Where immediate code should run.  Default is local: in the current context */
       public final TaskMode mode;
       /** If inputs should be recursively closed */
@@ -183,20 +190,47 @@ public class ICInstructions {
         this(out, in, TaskMode.LOCAL);
       }
       
+      public MakeImmRequest(List<Var> out, List<Var> in, List<Var> wait) {
+        this(out, in, wait, TaskMode.LOCAL);
+      }
+      
       public MakeImmRequest(List<Var> out, List<Var> in, TaskMode mode) {
         this(out, in, mode, false);
       }
+      
+      public MakeImmRequest(List<Var> out, List<Var> in, List<Var> wait, 
+                            TaskMode mode) {
+        this(out, in, wait, mode, false);
+      }
+      
+      public MakeImmRequest(List<Var> out, List<Var> in, List<Var> wait, 
+          TaskMode mode, boolean recursiveClose) {
+        this(out, in, wait, mode, recursiveClose, false);
+      }
+      
       public MakeImmRequest(List<Var> out, List<Var> in, TaskMode mode,
                             boolean recursiveClose) {
         this(out, in, mode, recursiveClose, false);
       } 
       public MakeImmRequest(List<Var> out, List<Var> in, TaskMode mode,
           boolean recursiveClose, boolean initsOutputMapping) {
-        this.out = out;
-        this.in = in;
+        this(out, in, null, mode, recursiveClose, initsOutputMapping);
+      }
+      
+      public MakeImmRequest(List<Var> out, List<Var> in, List<Var> wait,
+            TaskMode mode, boolean recursiveClose,
+            boolean initsOutputMapping) {
+        // Gracefully handle null as empty list
+        this.out = (out == null) ? Var.NONE : out;
+        this.in = (in == null) ? Var.NONE : in;
+        this.wait = (wait == null) ? Var.NONE: wait;
         this.mode = mode;
         this.recursiveClose = recursiveClose;
         this.initsOutputMapping = initsOutputMapping;
+      }
+
+      public static MakeImmRequest waitOnly(List<Var> wait) {
+        return new MakeImmRequest(null, null, wait);
       }
     }
     

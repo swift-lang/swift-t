@@ -811,7 +811,7 @@ public class ValueNumber implements OptimizerPass {
                                     insertContext, noWaitRequired, alt);
     if (logger.isTraceEnabled()) {
       logger.trace("Fetched " + inVals + " for " + inst
-                 + " req.in: " + req.in);
+                 + " req.in: " + req.in + " req.wait: " + req.wait);
     }
 
     // If instruction doesn't initialize mapping, we have to
@@ -896,9 +896,6 @@ public class ValueNumber implements OptimizerPass {
       int oldStmtIndex, List<Var> outputs,
       Block insertContext, ListIterator<Statement> insertPoint,
       boolean initOutputMapping) {
-    if (outputs == null)
-      outputs = Collections.emptyList();
-    
     Map<Var, Var> filenameVals = new HashMap<Var, Var>();
     for (Var output: outputs) {
       if (Types.isFile(output) && initOutputMapping) {

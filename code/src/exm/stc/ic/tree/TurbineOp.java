@@ -1940,7 +1940,8 @@ public class TurbineOp extends Instruction {
       List<Var> req = mkImmVarList(waitForClose, closedVars,
                                    getInput(0).getVar());
       if (req.size() > 0) {
-        return new MakeImmRequest(null, req);
+        // Wait for vars only
+        return MakeImmRequest.waitOnly(req);
       }
       break;
     }

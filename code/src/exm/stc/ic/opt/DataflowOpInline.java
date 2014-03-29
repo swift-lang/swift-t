@@ -125,7 +125,8 @@ public class DataflowOpInline extends FunctionOptimizerPass {
     MakeImmRequest req = inst.canMakeImmediate(waitedFor,
              Collections.<ArgCV>emptySet(), Collections.<Var>emptySet(),
              true);
-    if (req != null && req.in.size() > 0) {
+    if (req != null && 
+        (req.in.size() > 0 || req.wait.size() > 0)) {
       if (logger.isTraceEnabled()) {
         logger.trace("Exploding " + inst + " in function " + fn.getName());
       }
@@ -137,7 +138,7 @@ public class DataflowOpInline extends FunctionOptimizerPass {
       boolean mustInitOutputMapping = !req.initsOutputMapping;
       
       Pair<List<WaitVar>, Map<Var, Var>> r;
-      r = WrapUtil.buildWaitVars(block, it, req.in, req.out,
+      r = WrapUtil.buildWaitVars(block, it, req.in, req.wait, req.out,
                                  mustInitOutputMapping);
       
       List<WaitVar> waitVars = r.val1;

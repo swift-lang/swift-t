@@ -1032,7 +1032,7 @@ public class STCMiddleEnd {
     
     Pair<List<WaitVar>, Map<Var, Var>> p;
     p = WrapUtil.buildWaitVars(mainBlock, mainBlock.statementIterator(),
-                               userInArgs, outArgs, mapOutFiles);
+                               userInArgs, Var.NONE, outArgs, mapOutFiles);
     
     // Variables we must wait for
     List<WaitVar> waitVars = p.val1;
