@@ -25,7 +25,6 @@ import exm.stc.common.lang.Types.Typed;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.VarCount;
-import exm.stc.common.util.Counters;
 import exm.stc.common.util.Out;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
@@ -39,6 +38,7 @@ import exm.stc.ic.opt.valuenumber.ValLoc;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsValCopy;
+import exm.stc.ic.refcount.RefCountsToPlace;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.GenInfo;
@@ -3560,7 +3560,7 @@ public class TurbineOp extends Instruction {
   }
   
   @Override
-  public List<Var> tryPiggyback(Counters<Var> increments, RefCountType type) {
+  public Var tryPiggyback(RefCountsToPlace increments, RefCountType type) {
     switch (op) {
       case LOAD_SCALAR:
       case LOAD_FILE:
@@ -3576,7 +3576,7 @@ public class TurbineOp extends Instruction {
             // Add extra arg
             this.inputs = Arrays.asList(getInput(0),
                                       Arg.createIntLit(amt * -1));
-            return inVar.asList();
+            return inVar;
           }
         }
         break;
@@ -3590,7 +3590,7 @@ public class TurbineOp extends Instruction {
             // Add extra arg
             this.inputs = Arrays.asList(getInput(0), getInput(1), getInput(2),
                                       Arg.createIntLit(amt * -1));
-            return inVar.asList();
+            return inVar;
           }
         }
         break;
@@ -3607,7 +3607,7 @@ public class TurbineOp extends Instruction {
             int defaultDecr = op == Opcode.ARR_STORE ? 0 : 1;
             Arg decrArg = Arg.createIntLit(amt * -1 + defaultDecr);
             this.inputs = Arrays.asList(getInput(0), getInput(1), decrArg);
-            return arr.asList();
+            return arr;
           }
         }
         break;
@@ -3637,7 +3637,7 @@ public class TurbineOp extends Instruction {
     }
 
     // Fall through to here if can do nothing
-    return Var.NONE;
+    return null;
   }
 
   
@@ -3650,7 +3650,7 @@ public class TurbineOp extends Instruction {
    * @param writeDecrInput input index of write refcount arg, negative if none
    * @return
    */
-  private List<Var> tryPiggyBackHelper(Counters<Var> increments,
+  private Var tryPiggyBackHelper(RefCountsToPlace increments,
       RefCountType type, Var var, int readDecrInput, int writeDecrInput) {
     long amt = increments.getCount(var);
     if (amt < 0) {
@@ -3664,17 +3664,17 @@ public class TurbineOp extends Instruction {
       }
       if (inputPos < 0) {
         // No input
-        return Var.NONE;
+        return null;
       }
       assert(inputPos < inputs.size());
 
       Arg oldAmt = getInput(inputPos);
       if (oldAmt.isIntVal()) {
         setInput(inputPos, Arg.createIntLit(oldAmt.getIntLit() - amt));
-        return var.asList();
+        return var;
       }
     }
-    return Var.NONE;
+    return null;
   }
 
   @Override

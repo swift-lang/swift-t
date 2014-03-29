@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
@@ -162,18 +163,52 @@ public class RCTracker {
   }
   
   /**
+   * Track refcounts requiring placement for a block
+   */
+  public class RefCountCandidates implements RefCountsToPlace {
+    private final Counters<Var> counts;
+
+    public RefCountCandidates(Counters<AliasKey> initCounts) {
+      this.counts = new Counters<Var>();
+      for (Entry<AliasKey, Long> e: initCounts.entries()) {
+        this.counts.add(getRefCountVar(e.getKey()), e.getValue());
+      }
+    }
+
+    /**
+     * Get count for structure variable is associated with
+     */
+    @Override
+    public long getCount(Var var) {
+      return counts.getCount(getRefCountVar(var));
+    }
+
+    public void reset(AliasKey removed) {
+      counts.reset(getRefCountVar(removed));
+    }
+
+    public void reset(Var removed) {
+      counts.reset(getRefCountVar(removed));
+    }
+
+    /**
+     * @return set of alias keys that exist in counts
+     */
+    public Set<Var> varKeySet() {
+      return this.counts.keySet();
+    }
+    
+  }
+  
+  /**
    * Return list of variables that need to be incremented/decremented.
    * Modifying this doesn't affect underlying map
    * @param rcType
    * @return
    */
-  public Counters<Var> getVarCandidates(Block block, RefCountType rcType,
-                                        RCDir dir) {
-    Counters<Var> result = new Counters<Var>();
-    for (Entry<AliasKey, Long> e: rcIter(rcType, dir)) {
-      result.add(getRefCountVar(e.getKey()), e.getValue());
-    }
-    return result;
+  public RefCountCandidates getVarCandidates(Block block, RefCountType rcType,
+                                             RCDir dir) {
+    return new RefCountCandidates(getCounters(rcType, dir));
   }
 
   /**
@@ -197,7 +232,10 @@ public class RCTracker {
   public Var getRefCountVar(AliasKey key) {
     return aliases.getDatumRoot(key);
   }
-
+  
+  public Var getRefCountVar(Var var) {
+    return aliases.getDatumRoot(var);
+  }
 
   public void reset(RefCountType rcType, Var v, RCDir dir) {
     getCounters(rcType, dir).reset(getCountKey(v));

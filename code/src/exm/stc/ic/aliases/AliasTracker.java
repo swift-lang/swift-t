@@ -250,6 +250,10 @@ public class AliasTracker {
     return new AliasKey(var);
   }
   
+  public Var getDatumRoot(Var var) {
+    return getDatumRoot(getCanonical(var));
+  }
+  
   /**
    * Get the root of the datum represented by the key.
    * Often this is just the root of the key, but if there is a reference

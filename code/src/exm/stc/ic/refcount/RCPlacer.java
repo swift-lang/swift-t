@@ -29,6 +29,7 @@ import exm.stc.common.util.Sets;
 import exm.stc.ic.aliases.AliasKey;
 import exm.stc.ic.opt.TreeWalk;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
+import exm.stc.ic.refcount.RCTracker.RefCountCandidates;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ForeachLoops.AbstractForeachLoop;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -467,17 +468,17 @@ public class RCPlacer {
    * @param rcType
    */
   private void piggybackDecrementsOnInstructions(Logger logger, Function fn,
-      Block block, final RCTracker tracker, final RefCountType rcType) {
+      Block block, RCTracker tracker, RefCountType rcType) {
     if (!RCUtil.piggybackEnabled()) {
       return;
     }
     
     // Initially all decrements are candidates for piggybacking
-    final Counters<Var> candidates =
+    RefCountCandidates candidates =
         tracker.getVarCandidates(block, rcType, RCDir.DECR);
 
     UseFinder subblockWalker = new UseFinder(tracker, rcType,  
-                                             candidates.keySet(), null);
+                                candidates.varKeySet(), null);
     
     // Try to piggyback on continuations, starting at bottom up
     ListIterator<Continuation> cit = block.continuationEndIterator();
@@ -486,21 +487,28 @@ public class RCPlacer {
 
       if (RCUtil.isAsyncForeachLoop(cont)) {
         AbstractForeachLoop loop = (AbstractForeachLoop) cont;
-        List<Var> piggybacked = loop.tryPiggyBack(candidates, rcType, RCDir.DECR);
         
-        for (Var pv: piggybacked) {
-          logger.trace("Piggybacked on foreach: " + pv + " " + rcType + " " +
-                       candidates.getCount(pv));
-        }
-        candidates.resetAll(piggybacked);
-        tracker.resetAll(rcType, piggybacked, RCDir.DECR);
+        Var piggybacked;
+        do {
+          /* Process one at a time so that candidates is correctly updated
+           * for each call based on previous changes */
+          piggybacked = loop.tryPiggyBack(candidates, rcType, RCDir.DECR);
+
+          if (piggybacked != null) {
+            if (logger.isTraceEnabled()) {
+              logger.trace("Piggybacked on foreach: " + piggybacked + " " +
+                     rcType + " " + candidates.getCount(piggybacked));
+            }
+            candidates.reset(piggybacked);
+            tracker.reset(rcType, piggybacked, RCDir.DECR);
+          }
+        } while (piggybacked != null);
       }
 
       // Walk continuation to find usages
       subblockWalker.reset();
       TreeWalk.walkSyncChildren(logger, fn, cont, subblockWalker);
-      removeCandidates(subblockWalker.getUsedVars(), tracker,
-                       candidates.keySet());
+      removeCandidates(subblockWalker.getUsedVars(), tracker, candidates);
     }
 
     // Vars where we were successful
@@ -513,27 +521,38 @@ public class RCPlacer {
       switch (stmt.type()) {
         case INSTRUCTION: {
           Instruction inst = stmt.instruction();
-          List<Var> piggybacked = inst.tryPiggyback(candidates, rcType);
-          
-          if (piggybacked.size() > 0 && logger.isTraceEnabled()) {
-            logger.trace("Piggybacked " + piggybacked + " decr on " + inst);
+
+          if (logger.isTraceEnabled()) {
+            logger.trace("Try piggyback on " + inst);
           }
-          candidates.resetAll(piggybacked);
-          successful.addAll(piggybacked);
           
+          Var piggybacked;
+          do {
+            /* Process one at a time so that candidates is correctly updated
+             * for each call based on previous changes */
+            piggybacked = inst.tryPiggyback(candidates, rcType);
+          
+            if (piggybacked != null) {
+              if (logger.isTraceEnabled()) {
+                logger.trace("Piggybacked " + piggybacked + " decr on " + inst);
+              }
+              candidates.reset(piggybacked);
+              successful.add(piggybacked);
+            }
+          } while (piggybacked != null);
+            
           // Make sure we don't decrement before a use of the var by removing
           // from candidate set
-          List<Var> used = findUses(inst, rcType, candidates.keySet());
-          removeCandidates(used, tracker, candidates.keySet());
+          List<Var> used = findUses(inst, tracker, rcType,
+                                    candidates.varKeySet());
+          removeCandidates(used, tracker, candidates);
           break;
         }
         case CONDITIONAL:
           // Walk continuation to find usages
           subblockWalker.reset();
-          TreeWalk.walkSyncChildren(logger, fn, stmt.conditional(),
-                                     subblockWalker);
-          removeCandidates(subblockWalker.getUsedVars(), tracker,
-                           candidates.keySet());
+          TreeWalk.walkSyncChildren(logger, fn, stmt.conditional(), subblockWalker);
+          removeCandidates(subblockWalker.getUsedVars(), tracker, candidates);
           break;
         default:
           throw new STCRuntimeError("Unknown statement type " + stmt.type());
@@ -543,7 +562,7 @@ public class RCPlacer {
     // Update main increments map
     for (Var v : successful) {
       assert(v != null);
-      tracker.reset(rcType, v, RCDir.DECR);
+      tracker.reset(rcType, tracker.getRefCountVar(v), RCDir.DECR);
     }
   }
 
@@ -599,10 +618,10 @@ public class RCPlacer {
   }
 
 
-  private List<Var> findUses(Instruction inst,
-      RefCountType rcType, Set<Var> candidates) {
+  private List<Var> findUses(Instruction inst, RCTracker tracker,
+              RefCountType rcType, Set<Var> candidates) {
     ArrayList<Var> res = new ArrayList<Var>();
-    findUses(inst, null, rcType, candidates, null, res, null);
+    findUses(inst, tracker, rcType, candidates, null, res, null);
     return res;
   }
   
@@ -689,24 +708,14 @@ public class RCPlacer {
       }
     }
   }
-
-  private void removeCandidates(Collection<Var> vars, RCTracker tracker,
-                                Set<Var> varSet) {
-    for (Var var: vars) {
-      removeCandidate(var, tracker, null, varSet);
-    }
-  }
   
-  private void removeCandidate(Var var, RCTracker tracker,
-      Set<AliasKey> keySet, Set<Var> varSet) {
-    if (logger.isTraceEnabled()) {
-      logger.trace("Remove candidate " + var.name());
-    }
-    if (keySet != null) {
-      keySet.remove(tracker.getCountKey(var));
-    }
-    if (varSet != null) {
-      varSet.remove(var);
+  private void removeCandidates(Collection<Var> vars, RCTracker tracker,
+                                RefCountCandidates candidates) {
+    for (Var key: vars) {
+      if (logger.isTraceEnabled()) {
+        logger.trace("Remove candidate " + key);
+      }
+      candidates.reset(key);
     }
   }
     

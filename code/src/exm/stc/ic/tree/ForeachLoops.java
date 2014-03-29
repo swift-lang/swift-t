@@ -28,10 +28,10 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
-import exm.stc.common.util.Counters;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
+import exm.stc.ic.refcount.RefCountsToPlace;
 import exm.stc.ic.tree.ICContinuations.AbstractLoop;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.ContVarDefType;
@@ -151,14 +151,16 @@ public class ForeachLoops {
     /**
      * Try to piggyback constant incrs/decrs from outside continuation.
      * 
+     * Called repeatedly until it returns null.
+     * 
      * @param increments
      * @param type
      * @param dir whether to piggyback decrements or increments
-     * @return list of vars for which increments were piggybacked
+     * @return if piggybacked, the var for which increments were piggybacked
+     *          otherwise null
      */
-    public List<Var> tryPiggyBack(Counters<Var> increments, RefCountType type,
+    public Var tryPiggyBack(RefCountsToPlace increments, RefCountType type,
                                   RCDir dir) {
-      List<Var> result = new ArrayList<Var>();
       for (RefCount startIncr: startIncrements) {
         // Only consider piggybacking where we already are modifying
         // that particular count
@@ -168,11 +170,11 @@ public class ForeachLoops {
           if ((dir == RCDir.DECR && incr < 0) ||
               (dir == RCDir.INCR && incr > 0)) {
             addConstantStartIncrement(startIncr.var, type, Arg.createIntLit(incr));
-            result.add(startIncr.var);
+            return startIncr.var;
           }
         }
       }
-      return result;
+      return null;
     }
   }
 

@@ -46,7 +46,6 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.VarCount;
-import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.aliases.Alias;
@@ -58,6 +57,7 @@ import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ValLoc;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
+import exm.stc.ic.refcount.RefCountsToPlace;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
@@ -545,15 +545,15 @@ public class ICInstructions {
     }
     
     /**
-     * Try to piggyback increments or decrements to instruction
+     * Try to piggyback increments or decrements to instruction.
+     * Repeatedly called until it returns null;
      * @param increments count of increment or decrement operations per var
      * @param type
-     * @return empty list if not successful, otherwise list of vars for which
-     *      piggyback occurred
+     * @return null if not successful, var for which piggyback occurred
      *          
      */
-    public List<Var> tryPiggyback(Counters<Var> increments, RefCountType type) {
-      return Var.NONE;
+    public Var tryPiggyback(RefCountsToPlace increments, RefCountType type) {
+      return null;
     }
     
     /**
