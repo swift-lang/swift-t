@@ -292,17 +292,33 @@ public class AliasTracker {
         curr = curr.parent;
       }
     
-      // there might be an ancestor key of canon if there was an unknown in
-      // the path somewhere
-      AliasKey next = getCanonical(currKey.var);
-      if (next.pathLength() > 0) {
-        currKey = next.splice(currKey);
-      } else {
-        // Done
-        currKey = null;
-      }
+      /*
+       * It is possible that there are further ancestors beyond the root of the
+       * canonical, e.g. if there was an array lookup that wasn't resolved
+       * to a precise index.  We should check to see if the root of the current
+       * canonical is part of some larger structure.
+       * 
+       * We should ensure we're not traversing refs in doing this unless we intend
+       * to do so
+       */
+      currKey = traverseParent(currKey, followRefs);
     }
     return results;
+  }
+
+  private AliasKey traverseParent(AliasKey key, boolean followRefs) {
+    if (followRefs || !key.hasDeref()) {
+      AliasKey next = getCanonical(key.var);
+      if (next.pathLength() > 0) {
+        return next.splice(key);
+      } else {
+        // No ancestors
+        return null;
+      }
+    } else {
+      // Don't follow refs
+      return null;
+    }
   }
 
   private static void getDatumComponents(AliasTracker tracker, Var var,
@@ -317,23 +333,10 @@ public class AliasTracker {
         continue;
       }
       
-      if (followRefs) {
+      if (followRefs ||
+          !componentKey.hasDeref(canon.pathLength())) {
         // Skip checking references
         results.add(componentVar);
-      } else {
-        // Need to make sure it is part of same datum, i.e. doesn't
-        // follow a ref
-        boolean followsRef = false;
-        for (int i = canon.pathLength(); i < componentKey.pathLength(); i++) {
-          if (componentKey.path[i] != Alias.UNKNOWN &&
-              componentKey.path[i].equals(Alias.DEREF_MARKER)) {
-            followsRef = true;
-            break;
-          }
-        }
-        if (!followsRef) {
-          results.add(componentVar);
-        }
       }
     }
   }

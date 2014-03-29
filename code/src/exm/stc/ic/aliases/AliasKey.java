@@ -213,12 +213,31 @@ public class AliasKey implements Typed {
   }
 
   /**
-   * Return true if there's an unknown in the path
-   * @return
+   * @return true if there's an unknown in the path
    */
   public boolean hasUnknown() {
     for (int i = 0; i < pathLength(); i++) {
       if (path[i] == Alias.UNKNOWN) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * @return true if theres a deref in the path;
+   */
+  public boolean hasDeref() {
+    return hasDeref(0);
+  }
+  
+  /**
+   * @return true if there's a deref in the path from startIX onwards
+   */
+  public boolean hasDeref(int startIx) {
+    for (int i = 0; i < pathLength(); i++) {
+      if (path[i] != Alias.UNKNOWN &&
+          path[i].equals(Alias.DEREF_MARKER)) {
         return true;
       }
     }
