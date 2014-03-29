@@ -23,7 +23,6 @@ import java.util.List;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.Typed;
@@ -192,38 +191,11 @@ public class ComputedValue<T> {
     return new ArgCV(op, Arrays.asList(src.asArg()));
   }
 
-  public static ArgCV assignCompVal(Arg dst, boolean recursive) {
-    Type dstType = dst.type();
-    if (Types.isPrimValue(dstType)) {
-        BuiltinOpcode op;
-        switch(dstType.primType()) {
-        case BOOL:
-          op = BuiltinOpcode.COPY_BOOL;
-          break;
-        case INT:
-          op = BuiltinOpcode.COPY_INT;
-          break;
-        case FLOAT:
-          op = BuiltinOpcode.COPY_FLOAT;
-          break;
-        case STRING:
-          op = BuiltinOpcode.COPY_STRING;
-          break;
-        case BLOB:
-          op = BuiltinOpcode.COPY_BLOB;
-          break;
-        case VOID:
-          op = BuiltinOpcode.COPY_VOID;
-          break;
-        default:
-          throw new STCRuntimeError("Unhandled type: " + dstType);
-        }
-        return new ArgCV(Opcode.LOCAL_OP,  op, dst.asList());
-    } else {
-      Opcode op = Opcode.assignOpcode(dstType, recursive);
-      if (op != null) {
-        return new ArgCV(op, dst.asList());
-      }
+  public static ArgCV assignCompVal(Typed dst, Arg src, boolean recursive) {
+    assert(Types.storeResultType(src, false).assignableTo(dst.type()));
+    Opcode op = Opcode.assignOpcode(dst, recursive);
+    if (op != null) {
+      return new ArgCV(op, src.asList());
     }
     
     throw new STCRuntimeError("Don't know how to assign to " + dst
@@ -232,12 +204,12 @@ public class ComputedValue<T> {
   
   public static ValLoc assignValLoc(Var dst, Arg val,
                            IsAssign isAssign, boolean recursive) {
-    ArgCV cv = assignCompVal(val, recursive);
-    if (cv == null)
-      return null;
-
+    Arg dstArg = dst.asArg();
+    ArgCV cv = assignCompVal(dst, val, recursive);
+    assert(cv != null) : val;
+    
     Closed closed = recursive ? Closed.YES_RECURSIVE: Closed.YES_NOT_RECURSIVE;
-    return ValLoc.build(cv, dst.asArg(), closed, isAssign);
+    return ValLoc.build(cv, dstArg, closed, isAssign);
   }
   
   /**

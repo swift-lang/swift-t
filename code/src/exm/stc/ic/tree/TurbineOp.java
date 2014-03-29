@@ -460,7 +460,8 @@ public class TurbineOp extends Instruction {
   public static Instruction arrayCopyOutImm(Var dst, Var arrayVar,
       Arg arrIx) {
     assert(Types.isArray(arrayVar));
-    assert(Types.isArrayKeyVal(arrayVar, arrIx));
+    assert(Types.isArrayKeyVal(arrayVar, arrIx)) : 
+                arrayVar.type() + " " + arrIx.type();
     assert(Types.isElemType(arrayVar, dst)) : arrayVar + " " + dst;
     assert(!Types.isMutableRef(dst)) : dst; // Doesn't acquire write ref
     return new TurbineOp(Opcode.ARR_COPY_OUT_IMM,
@@ -2004,7 +2005,7 @@ public class TurbineOp extends Instruction {
                                      List<Fetched<Arg>> values) {
     switch (op) {
     case ARR_COPY_OUT_IMM: {
-      assert(values.size() == 0);
+      assert(values.size() == 0) : values;
       // Input should be unchanged
       Var arr = getInput(0).getVar();
       // Output switched from ref to value

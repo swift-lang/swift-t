@@ -272,10 +272,10 @@ public class Congruences implements AliasFinder {
         ArgCV invVal = ComputedValue.retrieveCompVal(canonLoc.getVar(), true);
         updateInv(consts, errContext, invOutput, invVal, stmtIndex);
       } else if (cv.op().isRetrieve(false)) {
-        ArgCV invVal = ComputedValue.assignCompVal(invOutput, false);    
+        ArgCV invVal = ComputedValue.assignCompVal(invOutput, canonLoc, false);    
         updateInv(consts, errContext, invOutput, invVal, stmtIndex);
       } else if (cv.op().isRecursiveRetrieve()) {
-        ArgCV invVal = ComputedValue.assignCompVal(invOutput, true);    
+        ArgCV invVal = ComputedValue.assignCompVal(invOutput, canonLoc, true);    
         updateInv(consts, errContext, invOutput, invVal, stmtIndex);
       }
     } else if (canonVal.isArg() && canonVal.arg().isVar() &&
