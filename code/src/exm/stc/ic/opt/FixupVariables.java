@@ -437,8 +437,8 @@ public class FixupVariables implements OptimizerPass {
         result.add(inner);
       } else if (updateLists) {
         // Update the passed in vars
-        rebuildContinuationPassedVars(function, continuation, visible,
-              outerBlockVars, outerAliases, result, inner);
+        rebuildContinuationPassedVars(function, continuation, innerCx,
+            visible, outerBlockVars, outerAliases, result, inner);
         rebuildContinuationKeepOpenVars(function, continuation,
                   visible, outerBlockVars, outerAliases, result, inner);
       }
@@ -446,7 +446,8 @@ public class FixupVariables implements OptimizerPass {
   }
 
   private static void rebuildContinuationPassedVars(Function function,
-          Continuation continuation, HierarchicalSet<Var> visibleVars,
+          Continuation continuation, ExecContext contCx,
+          HierarchicalSet<Var> visibleVars,
           Set<Var> outerBlockVars, AliasTracker outerAliases,
           Result outer, Result inner) {
     // Rebuild passed in vars
@@ -482,7 +483,22 @@ public class FixupVariables implements OptimizerPass {
         }
       }
       if (mustAdd) {
-        passedIn.add(addtl);
+
+        if (addtl.var.storage() == Alloc.GLOBAL_CONST) {
+          // Only pass global const if needed
+          if (contCx == ExecContext.WORKER) {
+            passedIn.add(addtl);
+          } else {
+            assert(contCx == ExecContext.CONTROL);
+            for (Block b: continuation.getBlocks()) {
+              if (!b.getVariables().contains(addtl.var)) {
+                b.addVariable(addtl.var);
+              }
+            }
+          }
+        } else {
+          passedIn.add(addtl);
+        }
       }
     }
     
