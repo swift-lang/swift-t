@@ -579,7 +579,8 @@ public class STCMiddleEnd {
   public void retrieveRef(Var target, Var src, long acquireRead,
                           long acquireWrite) {
     currBlock().addInstruction(
-        TurbineOp.retrieveRef(target, src, acquireRead, acquireWrite));
+        TurbineOp.retrieveRef(target, src, acquireRead, acquireWrite,
+                              Arg.ZERO));
   }
   
   public void makeAlias(Var dst, Var src) {

@@ -549,10 +549,11 @@ public class ICInstructions {
      * Repeatedly called until it returns null;
      * @param increments count of increment or decrement operations per var
      * @param type
-     * @return null if not successful, var for which piggyback occurred
+     * @return null if not successful, var for which piggyback occurred and change 
+     *        (-ive if decrement)
      *          
      */
-    public Var tryPiggyback(RefCountsToPlace increments, RefCountType type) {
+    public VarCount tryPiggyback(RefCountsToPlace increments, RefCountType type) {
       return null;
     }
     

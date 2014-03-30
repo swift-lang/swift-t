@@ -512,7 +512,7 @@ public class RCPlacer {
     }
 
     // Vars where we were successful
-    List<Var> successful = new ArrayList<Var>();
+    List<VarCount> successful = new ArrayList<VarCount>();
 
     // scan up from bottom of block instructions to see if we can piggyback
     ListIterator<Statement> it = block.statementEndIterator();
@@ -526,20 +526,21 @@ public class RCPlacer {
             logger.trace("Try piggyback on " + inst);
           }
           
-          Var piggybacked;
+          VarCount piggybacked;
           do {
             /* Process one at a time so that candidates is correctly updated
              * for each call based on previous changes */
             piggybacked = inst.tryPiggyback(candidates, rcType);
           
-            if (piggybacked != null) {
+            if (piggybacked != null && piggybacked.count != 0) {
               if (logger.isTraceEnabled()) {
-                logger.trace("Piggybacked " + piggybacked + " decr on " + inst);
+                logger.trace("Piggybacked decr " + piggybacked + " on " + inst);
               }
-              candidates.reset(piggybacked);
+
+              candidates.add(piggybacked.var, -piggybacked.count);
               successful.add(piggybacked);
             }
-          } while (piggybacked != null);
+          } while (piggybacked != null && piggybacked.count != 0);
             
           // Make sure we don't decrement before a use of the var by removing
           // from candidate set
@@ -559,10 +560,13 @@ public class RCPlacer {
       }
     }
 
+    if (logger.isTraceEnabled()) {
+      logger.trace(successful);
+    }
     // Update main increments map
-    for (Var v : successful) {
-      assert(v != null);
-      tracker.reset(rcType, tracker.getRefCountVar(v), RCDir.DECR);
+    for (VarCount vc: successful) {
+      assert(vc != null);
+      tracker.cancel(tracker.getRefCountVar(vc.var), rcType, -vc.count);
     }
   }
 

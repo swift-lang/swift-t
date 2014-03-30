@@ -108,7 +108,7 @@ public class WrapUtil {
       long acquireReadRC = 1;
       long acquireWriteRC = acquireWrite ? 1 : 0;
       instBuffer.add(TurbineOp.retrieveRef(deref, var,
-                      acquireReadRC, acquireWriteRC));
+                      acquireReadRC, acquireWriteRC, Arg.ZERO));
       return deref;
     } else if (Types.isContainer(var) && recursive) {
       Var deref = new Var(valueT, valName,

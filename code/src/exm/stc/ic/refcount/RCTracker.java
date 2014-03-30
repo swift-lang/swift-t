@@ -192,6 +192,15 @@ public class RCTracker {
     }
 
     /**
+     * Cancel out refcount
+     * @param var
+     * @param count
+     */
+    public long add(Var var, long count) {
+      return counts.add(getRefCountVar(var), count);
+    }
+
+    /**
      * @return set of alias keys that exist in counts
      */
     public Set<Var> varKeySet() {
@@ -324,9 +333,9 @@ public class RCTracker {
     }
     // Check we don't overshoot
     if (oldCount < 0) {
-      assert(newCount <= 0) : oldCount + " + " + amount;
+      assert(newCount <= 0) : key + " " + oldCount + " + " + amount;
     } else {
-      assert(newCount >= 0) : oldCount + " + " + amount;
+      assert(newCount >= 0) : key + " " + oldCount + " + " + amount;
     }
   }
 

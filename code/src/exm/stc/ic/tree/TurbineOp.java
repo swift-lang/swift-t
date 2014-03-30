@@ -1276,13 +1276,16 @@ public class TurbineOp extends Instruction {
    * @param src Closed reference
    * @param acquireRead num of read refcounts to acquire
    * @param acquireWrite num of write refcounts to acquire
+   * @param decrRead num of read refcounts to decr on input
    * @return
    */
   public static Instruction retrieveRef(Var dst, Var src,
-                     long acquireRead, long acquireWrite) {
+                     long acquireRead, long acquireWrite,
+                     Arg decrRead) {
     assert(Types.isRef(src.type()));
     assert(acquireRead >= 0);
     assert(acquireWrite >= 0);
+    assert(decrRead.isImmediateInt());
     
     if (acquireWrite > 0) {
       assert(Types.isAssignableRefTo(src.type(), dst.type(), true));
@@ -1291,7 +1294,8 @@ public class TurbineOp extends Instruction {
     }
     assert(dst.storage() == Alloc.ALIAS);
     return new TurbineOp(Opcode.LOAD_REF, dst, src.asArg(),
-          Arg.createIntLit(acquireRead), Arg.createIntLit(acquireWrite));
+          Arg.createIntLit(acquireRead), Arg.createIntLit(acquireWrite),
+          decrRead);
   }
   
   public static Instruction copyRef(Var dst, Var src) {
@@ -3610,7 +3614,7 @@ public class TurbineOp extends Instruction {
   }
   
   @Override
-  public Var tryPiggyback(RefCountsToPlace increments, RefCountType type) {
+  public VarCount tryPiggyback(RefCountsToPlace increments, RefCountType type) {
     switch (op) {
       case LOAD_SCALAR:
       case LOAD_FILE:
@@ -3626,24 +3630,15 @@ public class TurbineOp extends Instruction {
             // Add extra arg
             this.inputs = Arrays.asList(getInput(0),
                                       Arg.createIntLit(amt * -1));
-            return inVar;
+            return new VarCount(inVar, amt);
           }
         }
         break;
       }
       case LOAD_REF:
-        Var inVar = getInput(0).getVar();
-        if (type == RefCountType.READERS) {
-          long amt = increments.getCount(inVar);
-          if (amt < 0) {
-            assert(getInputs().size() == 3);
-            // Add extra arg
-            this.inputs = Arrays.asList(getInput(0), getInput(1), getInput(2),
-                                      Arg.createIntLit(amt * -1));
-            return inVar;
-          }
-        }
-        break;
+        assert(inputs.size() == 4);
+        return piggyBackDecrHelper(increments, type, getInput(0).getVar(),
+                                    3, -1);
       case ARR_STORE:
       case ARR_COPY_IN_IMM: 
       case ARR_STORE_FUTURE: 
@@ -3657,7 +3652,7 @@ public class TurbineOp extends Instruction {
             int defaultDecr = op == Opcode.ARR_STORE ? 0 : 1;
             Arg decrArg = Arg.createIntLit(amt * -1 + defaultDecr);
             this.inputs = Arrays.asList(getInput(0), getInput(1), decrArg);
-            return arr;
+            return new VarCount(arr, amt);
           }
         }
         break;
@@ -3665,27 +3660,57 @@ public class TurbineOp extends Instruction {
       case ARR_RETRIEVE: {
         Var arr = getInput(0).getVar();
         assert(getInputs().size() == 3);
-        return tryPiggyBackHelper(increments, type, arr, 2, -1);
+        return piggyBackDecrHelper(increments, type, arr, 2, -1);
       }
       case ARR_CREATE_NESTED_IMM:
       case ARR_CREATE_BAG: {
         // Piggyback decrements on outer array
-        // TODO: Instruction can give additional refcounts back
+        Var resArr = getOutput(0);
         Var outerArr = getOutput(1);
         assert(getInputs().size() == 5);
         
         // piggyback decrements here
-        return tryPiggyBackHelper(increments, type, outerArr, 3, 4);
+        VarCount success = piggyBackDecrHelper(increments, type, outerArr,
+                                               3, 4);
+        if (success != null) {
+          return success;
+        }
+
+        long decrAmt = increments.getCount(resArr);
+        if (decrAmt < 0) {
+          int pos = (type == RefCountType.READERS) ? 1 : 2;
+          long currVal = getInput(pos).getIntLit();
+          assert(currVal >= 0);
+          long updatedVal;
+          long piggybackedAmt;
+          if (currVal + decrAmt >= 0) {
+            updatedVal = currVal + decrAmt;
+            piggybackedAmt = decrAmt;
+          } else {
+            // Can't piggyback all
+            updatedVal = 0;
+            piggybackedAmt = -currVal;
+          }
+          
+          inputs.set(pos, Arg.createIntLit(updatedVal));
+          if (piggybackedAmt != 0) {
+            assert(piggybackedAmt < 0);
+            return new VarCount(resArr, piggybackedAmt);
+          }
+        }
+        
+        // TODO: Instruction can give additional refcounts back
+        return null;
       }
       case BAG_INSERT: {
         Var bag = getOutput(0);
-        return tryPiggyBackHelper(increments, type, bag, -1, 1);
+        return piggyBackDecrHelper(increments, type, bag, -1, 1);
       }
       case STRUCT_INIT_FIELDS:
-        return tryPiggyBackHelper(increments, type, getOutput(0), -1,
+        return piggyBackDecrHelper(increments, type, getOutput(0), -1,
                                   inputs.size() - 1);
       case STRUCT_RETRIEVE_SUB:
-        return tryPiggyBackHelper(increments, type, getInput(0).getVar(),
+        return piggyBackDecrHelper(increments, type, getInput(0).getVar(),
                                   1, -1);
       default:
         // Do nothing
@@ -3694,7 +3719,6 @@ public class TurbineOp extends Instruction {
     // Fall through to here if can do nothing
     return null;
   }
-
   
   /**
    * Try to piggyback by applying refcount to an argument
@@ -3705,7 +3729,7 @@ public class TurbineOp extends Instruction {
    * @param writeDecrInput input index of write refcount arg, negative if none
    * @return
    */
-  private Var tryPiggyBackHelper(RefCountsToPlace increments,
+  private VarCount piggyBackDecrHelper(RefCountsToPlace increments,
       RefCountType type, Var var, int readDecrInput, int writeDecrInput) {
     long amt = increments.getCount(var);
     if (amt < 0) {
@@ -3726,7 +3750,7 @@ public class TurbineOp extends Instruction {
       Arg oldAmt = getInput(inputPos);
       if (oldAmt.isIntVal()) {
         setInput(inputPos, Arg.createIntLit(oldAmt.getIntLit() - amt));
-        return var;
+        return new VarCount(var, amt);
       }
     }
     return null;
