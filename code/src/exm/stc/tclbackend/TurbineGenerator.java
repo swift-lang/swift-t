@@ -685,22 +685,20 @@ public class TurbineGenerator implements CompilerBackend {
     } else {
       assert(Types.isAssignableRefTo(src.type(), dst.type()));
     }
+
     assert(decr.isImmediateInt());
+    
+    Expression acquireReadExpr = argToExpr(acquireRead);
+    Expression acquireWriteExpr = argToExpr(acquireWrite);
+    
+    TypeName refType = refRepresentationType(dst.type());
     TclTree deref;
-    if (Types.isFileRef(src.type())) {
-      if (decr.equals(Arg.ZERO)) {
-        deref = Turbine.fileRefGet(prefixVar(dst), varToExpr(src));
-      } else {
-        deref = Turbine.fileRefDecrGet(prefixVar(dst), varToExpr(src),
-            argToExpr(decr));
-      }
+    if (acquireWriteExpr.equals(Arg.ZERO)) {
+      deref = Turbine.readRefGet(prefixVar(dst), varToExpr(src),
+            refType, acquireReadExpr, argToExpr(decr));
     } else {
-      if (decr.equals(Arg.ZERO)) {
-        deref = Turbine.refGet(prefixVar(dst), varToExpr(src));
-      } else {
-        deref = Turbine.refDecrGet(prefixVar(dst), varToExpr(src),
-                                    argToExpr(decr));
-      }
+      deref = Turbine.readWriteRefGet(prefixVar(dst), varToExpr(src),
+            refType, acquireReadExpr, acquireWriteExpr, argToExpr(decr));
     }
     pointAdd(deref);
   }

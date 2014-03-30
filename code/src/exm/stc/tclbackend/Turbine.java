@@ -122,8 +122,8 @@ class Turbine {
   private static final Token RETRIEVE_FLOAT = turbFn("retrieve_float");
   private static final Token RETRIEVE_STRING = turbFn("retrieve_string");
   private static final Token RETRIEVE_BLOB = turbFn("retrieve_blob");
-  private static final Token ACQUIRE_REF = turbFn("acquire_ref");
-  private static final Token ACQUIRE_FILE_REF = turbFn("acquire_file_ref");
+  private static final Token ACQUIRE_REF = adlbFn("acquire_ref");
+  private static final Token ACQUIRE_WRITE_REF = adlbFn("acquire_write_ref");
   private static final Token ACQUIRE_STRUCT_REF = turbFn("acquire_struct");
   private static final Token ADLB_ACQUIRE_REF = adlbFn("acquire_ref");
   private static final Token ADLB_STORE = adlbFn("store");
@@ -495,25 +495,19 @@ class Turbine {
     // Calling convention requires separate pointer and length args
     return new Command(STORE_BLOB, target, src);
   }
-
-  public static SetVariable refGet(String target, Value variable) {
-    return refDecrGet(target, variable, LiteralInt.ZERO);
-  }
-
-  public static SetVariable refDecrGet(String target, Value variable,
-          Expression decr) {
+  
+  public static SetVariable readRefGet(String target, Value variable,
+      TypeName refType, Expression acquireReadExpr, Expression decrRead) {
     return new SetVariable(target, new Square(ACQUIRE_REF, variable,
-            LiteralInt.ONE, decr));
+                           refType, acquireReadExpr, decrRead));
   }
-
-  public static SetVariable fileRefGet(String target, Value variable) {
-    return fileRefDecrGet(target, variable, LiteralInt.ZERO);
-  }
-
-  public static SetVariable fileRefDecrGet(String target, Value variable,
-          Expression decr) {
-    return new SetVariable(target, new Square(ACQUIRE_FILE_REF, variable,
-            LiteralInt.ONE, decr));
+  
+  public static SetVariable readWriteRefGet(String target, Value variable,
+      TypeName refType,
+          Expression acquireReadExpr, Expression acquireWriteExpr,
+          Expression decrRead) {
+    return new SetVariable(target, new Square(ACQUIRE_WRITE_REF, variable,
+            refType, acquireReadExpr, acquireWriteExpr, decrRead));
   }
 
   public static SetVariable structRefGet(String target, Value variable) {

@@ -272,7 +272,7 @@ public class TurbineOp extends Instruction {
       break;
     case LOAD_REF:
       gen.retrieveRef(getOutput(0), getInput(0).getVar(), getInput(1),
-            getInput(2), getInputs().size() == 4 ? getInput(3) : Arg.ZERO);
+            getInput(2), getInput(3));
       break;
     case COPY_REF:
       gen.makeAlias(getOutput(0), getInput(0).getVar());
