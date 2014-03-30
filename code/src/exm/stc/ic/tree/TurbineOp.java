@@ -3474,11 +3474,11 @@ public class TurbineOp extends Instruction {
         return Pair.create(readers, VarCount.NONE);
       }
       case ARR_CREATE_NESTED_IMM: {
-        long readDecr = getInput(2).getIntLit();
+        long readDecr = getInput(3).getIntLit();
         long writeDecr = getInput(4).getIntLit();
-        Var resultArr = getOutput(0);
-        return Pair.create(new VarCount(resultArr, readDecr).asList(),
-                           new VarCount(resultArr, writeDecr).asList());
+        Var arr = getOutput(1);
+        return Pair.create(new VarCount(arr, readDecr).asList(),
+                           new VarCount(arr, writeDecr).asList());
       }
       case ARR_CREATE_NESTED_FUTURE: {
         Var srcArray = getOutput(1);

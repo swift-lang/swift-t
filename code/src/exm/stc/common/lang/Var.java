@@ -346,6 +346,11 @@ public class Var implements Comparable<Var>, Typed {
       return Collections.singletonList(this);
     }
     
+    @Override
+    public String toString() {
+      return var.name() + "=" + count;
+    }
+    
     public static final List<VarCount> NONE = Collections.emptyList();
   }
   
