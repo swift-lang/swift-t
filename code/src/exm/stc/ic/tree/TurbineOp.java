@@ -3669,12 +3669,13 @@ public class TurbineOp extends Instruction {
       }
       case ARR_CREATE_NESTED_IMM:
       case ARR_CREATE_BAG: {
-        // Instruction can give additional refcounts back
-        Var nested = getOutput(0);
+        // Piggyback decrements on outer array
+        // TODO: Instruction can give additional refcounts back
+        Var outerArr = getOutput(1);
         assert(getInputs().size() == 5);
         
         // piggyback decrements here
-        return tryPiggyBackHelper(increments, type, nested, 3, 4);
+        return tryPiggyBackHelper(increments, type, outerArr, 3, 4);
       }
       case BAG_INSERT: {
         Var bag = getOutput(0);
