@@ -3657,7 +3657,8 @@ public class TurbineOp extends Instruction {
         
         // TODO: piggyback decrements here
         // TODO: only works if we default to giving back refcounts
-        return tryPiggyBackHelper(increments, type, nested, 1, 2);
+        //return tryPiggyBackHelper(increments, type, nested, 1, 2);
+        return null;
       }
       case BAG_INSERT: {
         Var bag = getOutput(0);
