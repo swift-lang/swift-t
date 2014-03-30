@@ -209,6 +209,9 @@ public class RCPlacer {
       }
     }
     
+    // TODO: account for refcount vars  - maybe just list set of Vars 
+    // instead of AliasKey
+    
     /*
      * Scan backwards up block to find out if we need to hold onto refcount
      * past point where it is consumed.
