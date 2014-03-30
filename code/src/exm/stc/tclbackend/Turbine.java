@@ -1169,10 +1169,11 @@ class Turbine {
   public static TclTree containerCreateNestedImmIx(String resultVar,
           Value containerVar, Expression arrIx, TypeName keyType,
           TypeName valType, Expression callerReadRefs,
-          Expression callerWriteRefs) {
+          Expression callerWriteRefs,
+          Expression decrRead, Expression decrWrite) {
     return new SetVariable(resultVar, new Square(C_V_CREATE_NESTED,
             containerVar, arrIx, keyType, valType, callerReadRefs,
-            callerWriteRefs));
+            callerWriteRefs, decrWrite, decrRead));
   }
 
   public static TclTree containerCreateNestedBag(String resultVar,

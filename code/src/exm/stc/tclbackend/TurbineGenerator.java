@@ -1279,18 +1279,22 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void arrayCreateNestedImm(Var arrayResult, Var array, Arg ix,
-        Arg callerReadRefs, Arg callerWriteRefs) {
+        Arg callerReadRefs, Arg callerWriteRefs,
+        Arg readDecr, Arg writeDecr) {
     assert(Types.isArray(array.type()));
     assert(Types.isArray(arrayResult.type()));
     assert(arrayResult.storage() == Alloc.ALIAS);
     assert(Types.isArrayKeyVal(array, ix));
     assert(callerReadRefs.isImmediateInt());
     assert(callerWriteRefs.isImmediateInt());
+    assert(readDecr.isImmediateInt());
+    assert(writeDecr.isImmediateInt());
     
     TclTree t = Turbine.containerCreateNestedImmIx(
         prefixVar(arrayResult), varToExpr(array), argToExpr(ix),
         arrayKeyType(arrayResult, true), arrayValueType(arrayResult, true),
-        argToExpr(callerReadRefs), argToExpr(callerWriteRefs));
+        argToExpr(callerReadRefs), argToExpr(callerWriteRefs),
+        argToExpr(readDecr), argToExpr(writeDecr));
     pointAdd(t);
   }
 

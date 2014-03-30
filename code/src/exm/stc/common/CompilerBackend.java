@@ -348,9 +348,12 @@ public interface CompilerBackend {
    * @param ix
    * @param callerReadRefs number of refcounts to give back to caller
    * @param callerWriteRefs number of refcounts to give back to caller
+   * @param readDecr decrement array
+   * @param writeDecr decrement array
    */
   public void arrayCreateNestedImm(Var arrayResult,
-      Var array, Arg ix, Arg callerReadRefs, Arg callerWriteRefs);
+      Var array, Arg ix, Arg callerReadRefs, Arg callerWriteRefs,
+      Arg readDecr, Arg writeDecr);
 
   public void arrayRefCreateNestedFuture(Var arrayResult, Var array, Var ix);
 

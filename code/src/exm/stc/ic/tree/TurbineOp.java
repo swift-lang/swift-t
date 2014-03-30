@@ -290,7 +290,7 @@ public class TurbineOp extends Instruction {
       break;
     case ARR_CREATE_NESTED_IMM:
       gen.arrayCreateNestedImm(getOutput(0), getOutput(1), getInput(0),
-                               getInput(1), getInput(2));
+                    getInput(1), getInput(2), getInput(3), getInput(4));
       break;
     case ARR_CREATE_BAG:
       gen.arrayCreateBag(getOutput(0), getOutput(1), getInput(0),
@@ -1319,6 +1319,15 @@ public class TurbineOp extends Instruction {
   }
 
   /**
+   * arrayCreateNestedImm with default refcount settings
+   */
+  public static Instruction arrayCreateNestedImm(Var arrayResult,
+      Var arrayVar, Arg arrIx) {
+    return arrayCreateNestedImm(arrayResult, arrayVar, arrIx,
+                        Arg.ONE, Arg.ONE, Arg.ZERO, Arg.ZERO);
+  }
+  
+  /**
    * Create a nested array inside the current one, or return current
    * nested array if not present.  Acquire read + write reference
    * to nested array.
@@ -1328,18 +1337,21 @@ public class TurbineOp extends Instruction {
    * @return
    */
   public static Instruction arrayCreateNestedImm(Var arrayResult,
-      Var arrayVar, Arg arrIx) {
+      Var arrayVar, Arg arrIx, Arg readAcquire, Arg writeAcquire,
+      Arg readDecr, Arg writeDecr) {
     assert(Types.isArray(arrayResult.type()));
     assert(Types.isArray(arrayVar.type()));
     assert(arrayResult.storage() == Alloc.ALIAS);
     assert(Types.isArrayKeyVal(arrayVar, arrIx));
-    Arg readAcquire = Arg.ONE;
-    Arg writeAcquire = Arg.ONE;
+    assert(readAcquire.isImmediateInt());
+    assert(writeAcquire.isImmediateInt());
+    assert(readDecr.isImmediateInt());
+    assert(writeDecr.isImmediateInt());
     
     // Both arrays are modified, so outputs
     return new TurbineOp(Opcode.ARR_CREATE_NESTED_IMM,
         Arrays.asList(arrayResult, arrayVar),
-        arrIx, readAcquire, writeAcquire);
+        arrIx, readAcquire, writeAcquire, readDecr, writeDecr);
   }
 
   public static Instruction arrayRefCreateNestedComputed(Var arrayResult,
@@ -3461,6 +3473,13 @@ public class TurbineOp extends Instruction {
         // Management of reference counts from array ref is handled by runtime
         return Pair.create(readers, VarCount.NONE);
       }
+      case ARR_CREATE_NESTED_IMM: {
+        long readDecr = getInput(2).getIntLit();
+        long writeDecr = getInput(4).getIntLit();
+        Var resultArr = getOutput(0);
+        return Pair.create(new VarCount(resultArr, readDecr).asList(),
+                           new VarCount(resultArr, writeDecr).asList());
+      }
       case ARR_CREATE_NESTED_FUTURE: {
         Var srcArray = getOutput(1);
         Var ix = getInput(0).getVar();
@@ -3564,7 +3583,6 @@ public class TurbineOp extends Instruction {
         Var v = getOutput(0);
         long readRefs = getInput(1).getIntLit();
         long writeRefs = getInput(2).getIntLit();
-        // TODO: return actual # of refs
         return Pair.create(new VarCount(v, readRefs).asList(), 
                            new VarCount(v, writeRefs).asList());
       }
@@ -3653,12 +3671,10 @@ public class TurbineOp extends Instruction {
       case ARR_CREATE_BAG: {
         // Instruction can give additional refcounts back
         Var nested = getOutput(0);
-        assert(getInputs().size() == 3);
+        assert(getInputs().size() == 5);
         
-        // TODO: piggyback decrements here
-        // TODO: only works if we default to giving back refcounts
-        //return tryPiggyBackHelper(increments, type, nested, 1, 2);
-        return null;
+        // piggyback decrements here
+        return tryPiggyBackHelper(increments, type, nested, 3, 4);
       }
       case BAG_INSERT: {
         Var bag = getOutput(0);
