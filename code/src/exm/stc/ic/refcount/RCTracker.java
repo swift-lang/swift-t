@@ -230,7 +230,7 @@ public class RCTracker {
    * @return
    */
   public Var getRefCountVar(AliasKey key) {
-    return aliases.getDatumRoot(key);
+    return aliases.findVar(AliasTracker.getDatumRootKey(key));
   }
   
   public Var getRefCountVar(Var var) {

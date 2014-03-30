@@ -39,10 +39,23 @@ public class AliasKey implements Typed {
     return new AliasKey(this.var, spliced);
   }
 
-  public AliasKey(Var var, String structPath[]) {
+  public AliasKey(Var var, String path[]) {
     assert(var != null);
     this.var = var;
-    this.path = structPath;
+    this.path = path;
+  }
+  
+  public static AliasKey create(Var var, List<String> pathList) {
+    return new AliasKey(var, pathListToArray(pathList));
+  }
+
+  private static String[] pathListToArray(List<String> pathList) {
+    String path[] = new String[pathList.size()];
+    int i = 0;
+    for (String s: pathList) {
+      path[i++] = s;
+    }
+    return path;
   }
   
   public AliasKey makeChild(List<String> fieldPath,
@@ -116,7 +129,7 @@ public class AliasKey implements Typed {
     if (path != null) {
       for (String field: path) {
         if (field == Alias.UNKNOWN) {
-          assert(Types.isContainer(t));
+          assert(Types.isContainer(t)) : t;
           t = Types.containerElemType(t);
         } else if (field.equals(Alias.DEREF_MARKER)) {
           t = Types.retrievedType(t);

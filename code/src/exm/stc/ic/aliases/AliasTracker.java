@@ -1,14 +1,15 @@
 package exm.stc.ic.aliases;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
 import exm.stc.common.Logging;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
-import exm.stc.common.util.HierarchicalMap;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.aliases.Alias.AliasTransform;
@@ -35,26 +36,27 @@ public class AliasTracker {
   private final AliasTracker parent;
   
   /**
-   * Map from variable to alias key.
+   * Map from variable to all alias keys added in this scope.
    * 
    * Note that it is possible that a variable can be a part of more than
-   * one thing.  In this case we use the first definition encountered in
-   * code and don't track subsequent ones.
+   * one thing.
+   * 
+   * The first element of the list (if present) will be the canonical one.
+   * Aliases may also exist in ancestor scopes. 
    */
-  private final HierarchicalMap<Var, AliasKey> varToPath;
+  private final MultiMap<Var, AliasKey> varToPath;
   
 
   /**
    * Map from variable to alias key that is copy of alias key, but could
    * be dereferenced to yield valid alias.  I.e. var should be a ref variable.
    */
-  private final HierarchicalMap<Var, AliasKey> refCopyVarToPath;
+  private final MultiMap<Var, AliasKey> refCopyVarToPath;
   
   /**
-   * Map from alias key to element vars.  We only track the first variable
-   * encountered for each alias.
+   * Map from alias key to element vars
    */
-  private final HierarchicalMap<AliasKey, Var> pathToVar;
+  private final MultiMap<AliasKey, Var> pathToVar;
   
   
   /**
@@ -63,26 +65,20 @@ public class AliasTracker {
   private final MultiMap<Var, Pair<Var, AliasKey>> roots;
 
   public AliasTracker() {
-    this(null, new HierarchicalMap<Var, AliasKey>(),
-        new HierarchicalMap<Var, AliasKey>(),
-        new HierarchicalMap<AliasKey, Var>());
+    this(null);
   }
   
-  private AliasTracker(AliasTracker parent,
-                       HierarchicalMap<Var, AliasKey> varToPath,
-                       HierarchicalMap<Var, AliasKey> refCopyVarToPath,
-                       HierarchicalMap<AliasKey, Var> pathToVar) {
+  private AliasTracker(AliasTracker parent) {
     this.parent = parent;
-    this.varToPath = varToPath;
-    this.pathToVar = pathToVar;
-    this.refCopyVarToPath = refCopyVarToPath;
+    this.varToPath = new MultiMap<Var, AliasKey>();
+    this.pathToVar = new MultiMap<AliasKey, Var>();
+    this.refCopyVarToPath = new MultiMap<Var, AliasKey>();
     // We need to look at parent to find additional roots
     this.roots = new MultiMap<Var, Pair<Var, AliasKey>>();
   }
   
   public AliasTracker makeChild() {
-    return new AliasTracker(this, varToPath.makeChildMap(),
-        refCopyVarToPath.makeChildMap(), pathToVar.makeChildMap());
+    return new AliasTracker(this);
   }
 
 
@@ -109,28 +105,49 @@ public class AliasTracker {
 
   public void addAlias(Var parent, List<String> fieldPath,
       AliasTransform transform, Var child) {
+    if (logger.isTraceEnabled()) {
+      logger.trace("addAlias: " + parent + "." + fieldPath
+                + " == " + child + " (" + transform + ")");
+    }
+    
     boolean derefed = (transform == AliasTransform.RETRIEVE);
     
-    // find canonical paths for parent and child
+    // find paths for parent and child
     // If we're going to deref, doesn't matter if it's a copy
-    AliasKey parentPath = getCanonical(parent, derefed);
-    assert(parentPath != null);
+    Set<AliasKey> parentPaths = getAllKeys(parent, true, derefed);
     
+    // If we didn't have a precise path, want to add one
+    boolean foundPrecisePath = false;
+    for (AliasKey parentPath: parentPaths) {
+      AliasKey childPath = parentPath.makeChild(fieldPath, derefed);
 
-    // Need to check if it's a precise path: don't want to reduce precision
-    if (parentPath.hasUnknown()) {
-      parentPath = new AliasKey(parent);
+      if (logger.isTraceEnabled()) {
+        logger.trace("Found parentPath: " + parentPath + " for " + parent 
+                      + " => " + childPath);
+      }
+      assert(child.type().assignableTo(childPath.type())) 
+              : child.type() + " vs " + childPath.type();
+      
+      if (parentPath.pathLength() > 0 || !parentPath.var.equals(child)) {
+        addNewVarPath(child, childPath, transform);
+        foundPrecisePath = foundPrecisePath || !parentPath.hasUnknown();
+      }
     }
-   
-    AliasKey childPath = parentPath.makeChild(fieldPath, derefed);
-    assert(child.type().assignableTo(childPath.type())) 
-            : child.type() + " vs " + childPath.type();
     
+    if (!foundPrecisePath) {
+      // Ensure at least one precise path added
+      addNewVarPath(child, new AliasKey(parent).makeChild(fieldPath, derefed),
+                    transform);
+    }
+  }
+
+  private void addNewVarPath(Var var, AliasKey path,
+      AliasTransform transform) {
     if (transform == AliasTransform.IDENTITY ||
         transform == AliasTransform.RETRIEVE) {
-      addVarPath(child, childPath, null);
+      addVarPath(var, path, null);
     } else {
-      addRefCopyVarPath(child, childPath);
+      addRefCopyVarPath(var, path);
     }
   }
 
@@ -143,31 +160,125 @@ public class AliasTracker {
    */
   private void addVarPath(Var var, AliasKey path, AliasKey replacePath) {
     assert(!path.var.equals(var));
-    assert(path.pathLength() >= 1);
-    
     roots.put(path.var, Pair.create(var, path));
-    
-    Var prevChild = pathToVar.get(path); 
-    if (prevChild == null || (prevChild.storage() == Alloc.ALIAS &&
-                                 var.storage() != Alloc.ALIAS)) {
-      // Prefer non-alias vars
-      pathToVar.put(path, var);
-    }
-    
-    AliasKey prevPath = varToPath.get(var);
-    // First entry without unknowns takes priority, unless we're explicitly 
-    // replacing an old path
-    if (prevPath == null || 
-        (replacePath != null && prevPath.equals(replacePath)) ||
-        (prevPath.hasUnknown() && !path.hasUnknown())) {
-      varToPath.put(var, path);
-    } else {
-      // It is ok if a var is a part of multiple structs
-      logger.trace(prevPath + " and " + path + 
-                   " both lead to " + var);
+
+    AliasKey canonPath = updateVarToPath(var, path, replacePath);
+    updatePathToVar(var, path);
+    if (path != canonPath) {
+      updatePathToVar(var, canonPath);
     }
     
     updateRoot(var, path);
+  }
+
+  /**
+   * Update varToPath map
+   * @param var
+   * @param path
+   * @param replacePath
+   * @return canonical path
+   */
+  private AliasKey
+      updateVarToPath(Var var, AliasKey path, AliasKey replacePath) {
+    /*
+     * Ensure new ones added, and ensure that canonicals are first in list
+     */
+    AliasKey canonPath = path;
+    AliasTracker curr = this;
+    boolean foundPrevPath = false;
+    while (curr != null && !foundPrevPath) {
+      for (AliasKey prevPath: varToPath.get(var)) {
+        // Can assume that first thing we encounter is previous canonical
+        // First entry without unknowns takes priority
+        if (!prevPath.hasUnknown() || path.hasUnknown() &&
+            (!canonPath.equals(replacePath))) {
+          canonPath = prevPath;
+        } else {
+          // It is ok if a var is a part of multiple structs
+          logger.trace(prevPath + " and " + path + 
+                       " both lead to " + var);
+        }
+        foundPrevPath = true;
+        break;
+      }
+      curr = curr.parent;
+    }
+    
+    // Apply the changes to var => path mapping to the current scope
+    if (path == canonPath) {
+      setAsCanonicalPath(var, path);
+    } else {
+      // Add new one first
+      varToPath.put(var, path);
+      // Ensure canonical is still canonical
+      setAsCanonicalPath(var, canonPath);
+    }
+    return canonPath;
+  }
+
+  /**
+   * Update pathToVar map
+   * @param var 
+   * @param path
+   * @return canonical var
+   */
+  private Var updatePathToVar(Var var, AliasKey path) {
+    AliasTracker curr = this;
+    // Search for other vars associated with path
+    boolean foundPrevVar = false;
+    Var canonVar = var;
+    while (curr != null && !foundPrevVar) {
+      for (Var prevVar: pathToVar.get(path)) {
+        // Prefer non-alias, or first encountered
+        if (var.storage() == Alloc.ALIAS || prevVar.storage() != Alloc.ALIAS) {
+          canonVar = prevVar;
+        }
+        
+        if (logger.isTraceEnabled()) {
+          logger.trace("Found prev var for path " + path + " " +
+                       prevVar + " vs " + var); 
+        }
+        foundPrevVar = true;
+        break;
+      }
+      curr = curr.parent;
+    }
+    
+    
+    if (var == canonVar) {
+      setAsCanonicalVar(var, path);
+    } else {
+      pathToVar.put(path, var);
+      setAsCanonicalVar(canonVar, path);
+    }
+    
+    return canonVar;
+  }
+
+  private void setAsCanonicalVar(Var var, AliasKey path) {
+    List<Var> currList = pathToVar.get(path);
+    if (currList.isEmpty()) {
+      // Just add
+      pathToVar.put(path, var);
+    } else {
+      // Ensure new canonical is first in list
+      if (!currList.get(0).equals(var)) {
+        currList.add(0, var);
+      }
+    }
+  }
+
+  private void setAsCanonicalPath(Var var, AliasKey path) {
+    List<AliasKey> currList = varToPath.get(var);
+    if (currList.isEmpty()) {
+      // Just add
+      varToPath.put(var, path);
+    } else {
+      // Ensure new canonical is first in list
+      if (!currList.get(0).equals(path)) {
+        currList.add(0, path);
+      }
+    }
   }
 
   /**
@@ -177,7 +288,9 @@ public class AliasTracker {
    * @param child
    */
   private void updateRoot(Var var, AliasKey newPath) {
-    assert(newPath.pathLength() >= 1);
+    if (newPath.pathLength() == 0) {
+      return;
+    }
     
     // Don't update unless precise
     if (newPath.hasUnknown()) {
@@ -213,16 +326,46 @@ public class AliasTracker {
     if (key.pathLength() == 0) {
       return key.var;
     } else {
-      return pathToVar.get(key);
+      // Find the one in the innermost scope
+      AliasTracker curr = this;
+      while (curr != null) {
+        List<Var> vars = curr.pathToVar.get(key);
+        if (vars.size() > 0) {
+          // Return first one
+          return vars.get(0);
+        }
+        curr = curr.parent;
+      }
+      return null;
     }
   }
 
+
+  private Set<AliasKey> getAllKeys(Var var, boolean includeUnknown,
+                                  boolean includeCopies) {
+    Set<AliasKey> result = new HashSet<AliasKey>();
+    
+    AliasTracker curr = this;
+    while (curr != null) {
+      for (AliasKey key: varToPath.get(var)) {
+        if (includeUnknown || !key.hasUnknown()) {
+          result.add(key);
+        }
+      }
+      if (includeCopies) {
+        result.addAll(refCopyVarToPath.get(var));
+      }
+      curr = curr.parent;
+    }
+    
+    return result;
+  }
 
   /**
    * Find the canonical root and path corresponding to the variable
    * @param var
    * @return the key containing root variable, and path from root.
-   *        Should not be null
+   *        Should not be null and should not contain unknown
    */
   public AliasKey getCanonical(Var var) {
     return getCanonical(var, false);
@@ -236,13 +379,22 @@ public class AliasTracker {
    *        Should not be null
    */
   private AliasKey getCanonical(Var var, boolean includeCopies) {
-    AliasKey key = varToPath.get(var);
-    if (key != null) {
-      return key;
-    } else if (includeCopies) {
-      key = refCopyVarToPath.get(var);
-      if (key != null) {
-        return key;
+    AliasTracker curr = this;
+    while (curr != null) {
+      List<AliasKey> keys = curr.varToPath.get(var);
+      if (keys.size() > 0) {
+        return keys.get(0);
+      } 
+      curr = curr.parent;
+    }
+    
+    if (includeCopies) {
+      while (curr != null) {
+        List<AliasKey> keys = curr.refCopyVarToPath.get(var);
+        if (keys.size() > 0) {
+          return keys.get(0);
+        } 
+        curr = curr.parent;
       }
     }
     
@@ -250,8 +402,34 @@ public class AliasTracker {
     return new AliasKey(var);
   }
   
+
+  /**
+   * Get the root of the datum containing the variable
+   * @param var
+   * @return
+   */
   public Var getDatumRoot(Var var) {
-    return getDatumRoot(getCanonical(var));
+    Var best = var;
+    int bestSteps = 0; // Number of steps up from var
+    
+    // We're looking for the longest key without a deref
+    AliasTracker curr = this;
+    while (curr != null) {
+      for (AliasKey key: curr.varToPath.get(var)) {
+        AliasKey rootKey = getDatumRootKey(key);
+        int steps = key.pathLength() - rootKey.pathLength();
+        assert(steps >= 0);
+        if (steps > bestSteps) {
+          Var rootVar = findVar(rootKey);
+          if (rootVar != null) {
+            bestSteps = steps;
+            best = rootVar;
+          }
+        }
+      }
+      curr = curr.parent;
+    }
+    return best;
   }
   
   /**
@@ -261,7 +439,7 @@ public class AliasTracker {
    * @param key
    * @return
    */
-  public Var getDatumRoot(AliasKey key) {
+  public static AliasKey getDatumRootKey(AliasKey key) {
     // If inside struct, check to see if there is a reference
     for (int i = key.pathLength() - 1; i >= 0; i--) {
       if (key.path[i] != Alias.UNKNOWN &&
@@ -273,15 +451,12 @@ public class AliasTracker {
           pathPrefix[j] = key.path[j];
         }
         AliasKey prefixKey = new AliasKey(key.var, pathPrefix);
-        Var refcountVar = findVar(prefixKey);
-        assert(refcountVar != null) : "Expected var for alias key " + key +
-                                       " to exist";
-        return refcountVar;
+        return prefixKey;
       }
     }
     
     // If no references, struct root
-    return key.var;
+    return new AliasKey(key.var);
   }
   
   /**
@@ -293,12 +468,12 @@ public class AliasTracker {
   public List<Var> getDatumComponents(Var var, boolean followRefs) {
     List<Var> results = new ArrayList<Var>();
     // Find root of this var to narrow down search
-    AliasKey canonKey = getCanonical(var);
-    
-
+    Set<AliasKey> keys = getAllKeys(var, false, false);
     AliasTracker curr = this;
     while (curr != null) {
-      getDatumComponents(curr, var, followRefs, results, canonKey); 
+      for (AliasKey key: keys) {
+        getDatumComponents(curr, var, followRefs, results, key);
+      }
       curr = curr.parent;
     }
     
@@ -364,51 +539,28 @@ public class AliasTracker {
     List<Pair<AliasKey, Boolean>> results = 
         new ArrayList<Pair<AliasKey, Boolean>>();
     // Try tracing back through parents
-    AliasKey currKey = getCanonical(var);
-    
-
-    boolean traversedDeref = false;
-    while (currKey != null) {
-      logger.trace("getAncestors() currKey=" + currKey);
-      
-      traversedDeref = addAncestors(results, currKey, traversedDeref);
-
-      /*
-       * It is possible that there are further ancestors beyond the root of the
-       * canonical, e.g. if there was an array lookup that wasn't resolved
-       * to a precise index.  We should check to see if the root of the current
-       * canonical is part of some larger structure.
-       * 
-       * We should ensure we're not traversing refs in doing this unless we intend
-       * to do so
-       */
-      AliasKey next = getCanonical(currKey.var);
-      if (next.pathLength() > 0) {
-        currKey = next;
-      } else {
-        // No ancestors
-        currKey = null;
-      }
-    }
-    
+    for (AliasKey key: getAllKeys(var, true, false)) {
+      logger.trace("getAncestors() key=" + key);
+      addAncestors(results, key);
+    }      
     return results;
   }
 
-  private boolean addAncestors(List<Pair<AliasKey, Boolean>> results,
-      AliasKey canonKey, boolean traversedDeref) {
-    for (int i = canonKey.pathLength() - 1; i >= 0; i--) {
-      if (canonKey.path[i] != null &&
-          canonKey.path[i].equals(Alias.DEREF_MARKER)) {
+  private void addAncestors(List<Pair<AliasKey, Boolean>> results,
+                            AliasKey key) {
+    boolean traversedDeref = false;
+    for (int i = key.pathLength() - 1; i >= 0; i--) {
+      if (key.path[i] != null &&
+          key.path[i].equals(Alias.DEREF_MARKER)) {
         // Traversed ref
         traversedDeref = true;
       }
-      AliasKey prefix = canonKey.prefix(i);
+      AliasKey prefix = key.prefix(i);
       if (logger.isTraceEnabled()) {
         logger.trace("ancestor: (" + prefix + ", " + traversedDeref + ")");
       }      
       results.add(Pair.create(prefix, traversedDeref));
     }
-    return traversedDeref;
   }
 
   @Override
