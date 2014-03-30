@@ -2478,8 +2478,18 @@ ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
   adlb_data_type type;
   int length;
   rc = ADLB_Retrieve(handle.id, handle.sub.val, refcounts, &type, xfer, &length);
-  TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", handle.id);
-  TCL_CONDITION(length >= 0, "<%"PRId64"> not found!", handle.id);
+  if (adlb_has_sub(handle.sub.val))
+  {
+    TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64">[%.*s] failed!", handle.id,
+            (int)handle.sub.val.length, (const char*)handle.sub.val.key);
+    TCL_CONDITION(length >= 0, "<%"PRId64">[%.*s] not found!", handle.id,
+            (int)handle.sub.val.length, (const char*)handle.sub.val.key);
+  }
+  else
+  {
+    TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", handle.id);
+    TCL_CONDITION(length >= 0, "<%"PRId64"> not found!", handle.id);
+  }
 
   ADLB_PARSE_HANDLE_CLEANUP(&handle);
 
