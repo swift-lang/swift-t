@@ -1321,7 +1321,7 @@ public class TurbineOp extends Instruction {
   /**
    * Create a nested array inside the current one, or return current
    * nested array if not present.  Acquire read + write reference
-   * to nested array. (TODO)
+   * to nested array.
    * @param arrayResult
    * @param arrayVar
    * @param arrIx
@@ -1333,10 +1333,13 @@ public class TurbineOp extends Instruction {
     assert(Types.isArray(arrayVar.type()));
     assert(arrayResult.storage() == Alloc.ALIAS);
     assert(Types.isArrayKeyVal(arrayVar, arrIx));
+    Arg readAcquire = Arg.ONE;
+    Arg writeAcquire = Arg.ONE;
+    
     // Both arrays are modified, so outputs
     return new TurbineOp(Opcode.ARR_CREATE_NESTED_IMM,
         Arrays.asList(arrayResult, arrayVar),
-        arrIx, Arg.ZERO, Arg.ZERO);
+        arrIx, readAcquire, writeAcquire);
   }
 
   public static Instruction arrayRefCreateNestedComputed(Var arrayResult,
@@ -3575,7 +3578,13 @@ public class TurbineOp extends Instruction {
         // Gives back a refcount to the result if relevant
         return Pair.create(VarCount.one(getOutput(0)).asList(), VarCount.NONE);
       }
-      // TODO: create_nested_imm
+      case ARR_CREATE_NESTED_IMM: {
+        long readIncr = getInput(1).getIntLit();
+        long writeIncr = getInput(2).getIntLit();
+        Var resultArr = getOutput(0);
+        return Pair.create(new VarCount(resultArr, readIncr).asList(),
+                           new VarCount(resultArr, writeIncr).asList());
+      }
         // TODO: other array/struct retrieval funcs
       default:
         return Pair.create(VarCount.NONE, VarCount.NONE);
