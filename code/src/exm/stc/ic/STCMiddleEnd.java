@@ -576,11 +576,9 @@ public class STCMiddleEnd {
         TurbineOp.derefFile(target, src));
   }
   
-  public void retrieveRef(Var target, Var src, long acquireRead,
-                          long acquireWrite) {
+  public void retrieveRef(Var target, Var src, boolean mutable) {
     currBlock().addInstruction(
-        TurbineOp.retrieveRef(target, src, acquireRead, acquireWrite,
-                              Arg.ZERO));
+        TurbineOp.retrieveRef(target, src, mutable));
   }
   
   public void makeAlias(Var dst, Var src) {

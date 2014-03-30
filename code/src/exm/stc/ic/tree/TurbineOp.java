@@ -1270,6 +1270,13 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.DEREF_FILE, target, src.asArg());
   }
   
+
+  public static Instruction retrieveRef(Var dst, Var src, boolean mutable) {
+    long defaultAcquire = 1;
+    return retrieveRef(dst, src, defaultAcquire, mutable ? defaultAcquire : 0,
+                       Arg.ZERO);
+  }
+  
   /**
    * Retrieve a reference to a local handle 
    * @param dst alias variable to hold handle to referenced data
@@ -3635,10 +3642,21 @@ public class TurbineOp extends Instruction {
         }
         break;
       }
-      case LOAD_REF:
+      case LOAD_REF: {
         assert(inputs.size() == 4);
-        return piggyBackDecrHelper(increments, type, getInput(0).getVar(),
-                                    3, -1);
+        VarCount success = piggyBackDecrHelper(increments, type,
+                  getInput(0).getVar(), 3, -1);
+        if (success != null) {
+          return success;
+        }
+        
+        success = piggybackCancelIncr(increments, getOutput(0), type,
+                                      1, 2);
+        if (success != null) {
+          return success;
+        }
+        return null;
+      }
       case ARR_STORE:
       case ARR_COPY_IN_IMM: 
       case ARR_STORE_FUTURE: 
@@ -3676,27 +3694,9 @@ public class TurbineOp extends Instruction {
           return success;
         }
 
-        long decrAmt = increments.getCount(resArr);
-        if (decrAmt < 0) {
-          int pos = (type == RefCountType.READERS) ? 1 : 2;
-          long currVal = getInput(pos).getIntLit();
-          assert(currVal >= 0);
-          long updatedVal;
-          long piggybackedAmt;
-          if (currVal + decrAmt >= 0) {
-            updatedVal = currVal + decrAmt;
-            piggybackedAmt = decrAmt;
-          } else {
-            // Can't piggyback all
-            updatedVal = 0;
-            piggybackedAmt = -currVal;
-          }
-          
-          inputs.set(pos, Arg.createIntLit(updatedVal));
-          if (piggybackedAmt != 0) {
-            assert(piggybackedAmt < 0);
-            return new VarCount(resArr, piggybackedAmt);
-          }
+        success = piggybackCancelIncr(increments, resArr, type, 1, 2);
+        if (success != null) {
+          return success;
         }
         
         // TODO: Instruction can give additional refcounts back
@@ -3719,7 +3719,7 @@ public class TurbineOp extends Instruction {
     // Fall through to here if can do nothing
     return null;
   }
-  
+
   /**
    * Try to piggyback by applying refcount to an argument
    * @param increments
@@ -3751,6 +3751,37 @@ public class TurbineOp extends Instruction {
       if (oldAmt.isIntVal()) {
         setInput(inputPos, Arg.createIntLit(oldAmt.getIntLit() - amt));
         return new VarCount(var, amt);
+      }
+    }
+    return null;
+  }
+
+  private VarCount piggybackCancelIncr(RefCountsToPlace increments, Var var,
+      RefCountType type, int readIncrInput, int writeIncrInput) {
+    long decrAmt = increments.getCount(var);
+    if (decrAmt < 0) {
+      int pos = (type == RefCountType.READERS) ? 
+                readIncrInput : writeIncrInput;
+      if (pos < 0) {
+        return null;
+      }
+      long currVal = getInput(pos).getIntLit();
+      assert(currVal >= 0);
+      long updatedVal;
+      long piggybackedAmt;
+      if (currVal + decrAmt >= 0) {
+        updatedVal = currVal + decrAmt;
+        piggybackedAmt = decrAmt;
+      } else {
+        // Can't piggyback all
+        updatedVal = 0;
+        piggybackedAmt = -currVal;
+      }
+      
+      inputs.set(pos, Arg.createIntLit(updatedVal));
+      if (piggybackedAmt != 0) {
+        assert(piggybackedAmt < 0);
+        return new VarCount(var, piggybackedAmt);
       }
     }
     return null;

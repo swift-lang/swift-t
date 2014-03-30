@@ -104,11 +104,7 @@ public class WrapUtil {
           Alloc.ALIAS, DefType.LOCAL_COMPILER,
           VarProvenance.valueOf(var));
       block.addVariable(deref);
-      
-      long acquireReadRC = 1;
-      long acquireWriteRC = acquireWrite ? 1 : 0;
-      instBuffer.add(TurbineOp.retrieveRef(deref, var,
-                      acquireReadRC, acquireWriteRC, Arg.ZERO));
+      instBuffer.add(TurbineOp.retrieveRef(deref, var, acquireWrite));
       return deref;
     } else if (Types.isContainer(var) && recursive) {
       Var deref = new Var(valueT, valName,

@@ -438,10 +438,8 @@ public class  ExprWalker {
   }
 
   public void retrieveRef(Var dst, Var src, boolean mutable) {
-    long acquireRead = 1;
-    long acquireWrite = mutable ? 1 : 0;
     backend.retrieveRef(VarRepr.backendVar(dst), VarRepr.backendVar(src),
-                        acquireRead, acquireWrite);
+                        mutable);
   }
   
   public void assignRef(Var dst, Var src) {
