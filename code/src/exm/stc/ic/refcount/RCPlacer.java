@@ -75,7 +75,7 @@ public class RCPlacer {
       placeDecrements(logger, fn, block, increments, rcType);
 
       // Add any remaining increments
-      placeIncrements(block, increments, rcType, parentAssignedAliasVars);
+      placeIncrements(fn, block, increments, rcType, parentAssignedAliasVars);
 
       // Verify we didn't miss any
       RCUtil.checkRCZero(block, increments, rcType, true, true);
@@ -98,7 +98,7 @@ public class RCPlacer {
     piggybackDecrementsOnDeclarations(logger, fn, block, increments, type);
 
     // Then see if we can do the decrement on top of another operation
-    piggybackDecrementsOnInstructions(logger, fn, block, increments, type);
+    piggybackOnStatements(logger, fn, block, increments, RCDir.DECR, type);
   
     if (block.getType() != BlockType.MAIN_BLOCK
         && RCUtil.isForeachLoop(block.getParentCont())) {
@@ -113,6 +113,7 @@ public class RCPlacer {
   /**
    * Add reference increments at head of block
    * 
+   * @param fn
    * @param block
    * @param increments
    * @param rcType
@@ -120,10 +121,13 @@ public class RCPlacer {
    *          assign alias vars from parent blocks that we can immediately
    *          manipulate refcount of
    */
-  private void placeIncrements(Block block, RCTracker increments,
+  private void placeIncrements(Function fn, Block block, RCTracker increments,
       RefCountType rcType, Set<Var> parentAssignedAliasVars) {
     // First try to piggy-back onto var declarations
     piggybackIncrementsOnDeclarations(block, increments, rcType);
+    
+    // Then see if we can do the increment on top of another operation
+    piggybackOnStatements(logger, fn, block, increments, RCDir.INCR, rcType);
 
     // If we can't piggyback, put them at top of block before any tasks are
     // spawned
@@ -463,7 +467,7 @@ public class RCPlacer {
   }
 
   /**
-   * Try to piggyback decrement operations on instructions
+   * Try to piggyback decrement operations on instructions or continuations
    * in block
    * 
    * @param logger
@@ -472,64 +476,62 @@ public class RCPlacer {
    * @param tracker
    * @param rcType
    */
-  private void piggybackDecrementsOnInstructions(Logger logger, Function fn,
-      Block block, RCTracker tracker, RefCountType rcType) {
+  private void piggybackOnStatements(Logger logger, Function fn,
+      Block block, RCTracker tracker, RCDir dir, RefCountType rcType) {
     if (!RCUtil.piggybackEnabled()) {
       return;
     }
     
     // Initially all decrements are candidates for piggybacking
     RefCountCandidates candidates =
-        tracker.getVarCandidates(block, rcType, RCDir.DECR);
+        tracker.getVarCandidates(block, rcType, dir);
 
     UseFinder subblockWalker = new UseFinder(tracker, rcType,
                                              candidates.varKeySet());
     
-    // Try to piggyback on continuations, starting at bottom up
-    ListIterator<Continuation> cit = block.continuationEndIterator();
-    while (cit.hasPrevious()) {
-      Continuation cont = cit.previous();
+    // Depending on whether it's a decrement or an increment, we need
+    // to traverse statements in a different direciton so that refcounts
+    // can be disqualified in the right order
+    boolean reverse = (dir == RCDir.DECR);
 
-      if (RCUtil.isAsyncForeachLoop(cont)) {
-        AbstractForeachLoop loop = (AbstractForeachLoop) cont;
-        
-        VarCount piggybacked;
-        do {
-          /* Process one at a time so that candidates is correctly updated
-           * for each call based on previous changes */
-          piggybacked = loop.tryPiggyBack(candidates, rcType, RCDir.DECR);
-
-          if (piggybacked != null) {
-            if (logger.isTraceEnabled()) {
-              logger.trace("Piggybacked on foreach: " + piggybacked + " " +
-                     rcType + " " + piggybacked.count);
-            }
-            candidates.add(piggybacked.var, -piggybacked.count);
-            tracker.cancel(tracker.getRefCountVar(piggybacked.var), rcType,
-                           -piggybacked.count);
-          }
-        } while (piggybacked != null);
-      }
-
-      // Walk continuation to find usages
-      subblockWalker.reset();
-      TreeWalk.walkSyncChildren(logger, fn, cont, subblockWalker);
-      removeCandidates(subblockWalker.getUsedVars(), tracker, candidates);
+    if (reverse) {
+      piggybackOnContinuations(logger, fn, block, tracker, dir, rcType,
+                               candidates, subblockWalker, reverse);
     }
 
+    piggybackOnStatements(logger, fn, block, tracker, dir, rcType, candidates,
+                          subblockWalker, reverse);
+    
+    if (!reverse) {
+      piggybackOnContinuations(logger, fn, block, tracker, dir, rcType,
+                               candidates, subblockWalker, reverse);
+    }
+  }
+
+
+  private void piggybackOnStatements(Logger logger, Function fn, Block block,
+      RCTracker tracker, RCDir dir, RefCountType rcType,
+      RefCountCandidates candidates, UseFinder subblockWalker, boolean reverse) {
     // Vars where we were successful
     List<VarCount> successful = new ArrayList<VarCount>();
 
     // scan up from bottom of block instructions to see if we can piggyback
-    ListIterator<Statement> it = block.statementEndIterator();
-    while (it.hasPrevious()) {
-      Statement stmt = it.previous();
+    ListIterator<Statement> it = reverse ? block.statementEndIterator()
+                                          : block.statementIterator();
+    while ((reverse && it.hasPrevious()) || (!reverse && it.hasNext())) {
+      Statement stmt;
+      if (reverse) {
+        stmt = it.previous();
+      } else {
+        stmt = it.next();
+      }
+      
       switch (stmt.type()) {
         case INSTRUCTION: {
           Instruction inst = stmt.instruction();
 
           if (logger.isTraceEnabled()) {
-            logger.trace("Try piggyback on " + inst);
+            logger.trace("Try piggyback " + dir + " on " + inst);
           }
           
           VarCount piggybacked;
@@ -548,7 +550,7 @@ public class RCPlacer {
             }
           } while (piggybacked != null && piggybacked.count != 0);
             
-          // Make sure we don't decrement before a use of the var by removing
+          // Make sure we don't modify before a use of the var by removing
           // from candidate set
           List<Var> used = findUses(inst, tracker, rcType,
                                     candidates.varKeySet());
@@ -573,6 +575,49 @@ public class RCPlacer {
     for (VarCount vc: successful) {
       assert(vc != null);
       tracker.cancel(tracker.getRefCountVar(vc.var), rcType, -vc.count);
+    }
+  }
+
+
+  private void piggybackOnContinuations(Logger logger, Function fn,
+      Block block, RCTracker tracker, RCDir dir, RefCountType rcType,
+      RefCountCandidates candidates, UseFinder subblockWalker, boolean reverse) {
+    // Try to piggyback on continuations, starting at bottom up
+    ListIterator<Continuation> cit = reverse ? block.continuationEndIterator() 
+                                              : block.continuationIterator();
+    while ((reverse && cit.hasPrevious()) || (!reverse && cit.hasNext())) {
+      Continuation cont;
+      if (reverse) {
+        cont = cit.previous();
+      } else {
+        cont = cit.next();
+      }
+
+      if (RCUtil.isAsyncForeachLoop(cont)) {
+        AbstractForeachLoop loop = (AbstractForeachLoop) cont;
+        
+        VarCount piggybacked;
+        do {
+          /* Process one at a time so that candidates is correctly updated
+           * for each call based on previous changes */
+          piggybacked = loop.tryPiggyBack(candidates, rcType, dir);
+
+          if (piggybacked != null) {
+            if (logger.isTraceEnabled()) {
+              logger.trace("Piggybacked on foreach: " + piggybacked + " " +
+                     rcType + " " + piggybacked.count);
+            }
+            candidates.add(piggybacked.var, -piggybacked.count);
+            tracker.cancel(tracker.getRefCountVar(piggybacked.var), rcType,
+                           -piggybacked.count);
+          }
+        } while (piggybacked != null);
+      }
+
+      // Walk continuation to find usages
+      subblockWalker.reset();
+      TreeWalk.walkSyncChildren(logger, fn, cont, subblockWalker);
+      removeCandidates(subblockWalker.getUsedVars(), tracker, candidates);
     }
   }
 

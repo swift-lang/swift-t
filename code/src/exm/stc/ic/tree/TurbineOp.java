@@ -3700,6 +3700,15 @@ public class TurbineOp extends Instruction {
         }
         
         // TODO: Instruction can give additional refcounts back
+        long resIncr = increments.getCount(resArr);
+        if (resIncr > 0) {
+          int pos = (type == RefCountType.READERS) ? 1 : 2;
+          Arg currIncr = getInput(pos);
+          if (currIncr.isIntVal()) {
+            inputs.set(pos, Arg.createIntLit(currIncr.getIntLit() + resIncr));
+            return new VarCount(resArr, resIncr);
+          }
+        }
         return null;
       }
       case BAG_INSERT: {
