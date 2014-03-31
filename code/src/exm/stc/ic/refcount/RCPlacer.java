@@ -69,6 +69,11 @@ public class RCPlacer {
   public void placeAll(Logger logger, Function fn, Block block,
              RCTracker increments, Set<Var> parentAssignedAliasVars) {
     for (RefCountType rcType: RefcountPass.RC_TYPES) {
+      preprocessIncrements(increments, rcType);
+      if (logger.isTraceEnabled()) {
+        logger.trace("After preprocessing: \n" + increments);
+      }
+      
       // Cancel out increments and decrements
       cancelIncrements(logger, fn, block, increments, rcType);
       
@@ -83,7 +88,37 @@ public class RCPlacer {
     }
   }
 
-  
+  /**
+   * Do preprocessing of increments to get ready for placement.
+   * This entails taking all increments/decrements for keys that aren't
+   * the datum roots and moving the refcount to the datum root var key.
+   * This simplifies the remainder of the pass.
+   * @param increments
+   * @param rcType
+   */
+  private void preprocessIncrements(RCTracker increments, RefCountType rcType) {
+    for (RCDir dir: RCDir.values()) {
+      Iterator<Entry<AliasKey, Long>> it = 
+                          increments.rcIter(rcType, dir).iterator();
+      List<Pair<Var, Long>> newRCs = new ArrayList<Pair<Var, Long>>();
+      // Remove all refcounts
+      while (it.hasNext()) {
+        Entry<AliasKey, Long> e = it.next();  
+        Var rcVar = increments.getRefCountVar(e.getKey());
+        if (logger.isTraceEnabled()) {
+          logger.trace(rcVar + " is refcount var for key " + e.getKey());
+        }
+        newRCs.add(Pair.create(rcVar, e.getValue()));
+        it.remove();
+      }
+      // Add them back in with updated key
+      for (Pair<Var, Long> newRC: newRCs) {
+        increments.incr(newRC.val1, rcType, newRC.val2);
+      }
+    }
+  }
+
+
   /**
    * Add decrement operations to block, performing optimized placement
    * where possible

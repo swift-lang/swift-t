@@ -243,7 +243,8 @@ public class RCTracker {
    * @return
    */
   public Var getRefCountVar(AliasKey key) {
-    return aliases.findVar(AliasTracker.getDatumRootKey(key));
+    // Use getRefCountVar to find all keys for this
+    return getRefCountVar(aliases.findVar(key));
   }
   
   public Var getRefCountVar(Var var) {
@@ -391,7 +392,6 @@ public class RCTracker {
   public AliasKey getCountKey(Var var) {
     // See if this is within an enclosing struct, and if so find
     // topmost struct
-
     return aliases.getCanonical(var);
   }
   
