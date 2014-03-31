@@ -191,7 +191,7 @@ public class AliasTracker {
         // Can assume that first thing we encounter is previous canonical
         // First entry without unknowns takes priority
         if (!prevPath.hasUnknown() || path.hasUnknown() &&
-            (!canonPath.equals(replacePath))) {
+            !(replacePath != null && canonPath.equals(replacePath))) {
           canonPath = prevPath;
         } else {
           // It is ok if a var is a part of multiple structs
@@ -223,6 +223,11 @@ public class AliasTracker {
    * @return canonical var
    */
   private Var updatePathToVar(Var var, AliasKey path) {
+    if (path.hasUnknown()) {
+      // Don't compare paths with unknown components
+      return var;
+    }
+    
     AliasTracker curr = this;
     // Search for other vars associated with path
     boolean foundPrevVar = false;

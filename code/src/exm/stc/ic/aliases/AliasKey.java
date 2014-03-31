@@ -168,10 +168,13 @@ public class AliasKey implements Typed {
     }
     String p[] = this.path;
     String op[] = other.path;
+    System.err.println("Compare " + this + " v " + other);
     assert (p.length == op.length);
     for (int i = 0; i < p.length; i++) {
+      System.err.println("Compare [" + i + "] " + p[i] + " " + op[i]);
       if (p[i] == Alias.UNKNOWN || op[i] == Alias.UNKNOWN) {
         // Don't treat unknowns as equal
+        System.err.println("UNKNOWN");
         return false;
       }
       if (!p[i].equals(op[i])) {
