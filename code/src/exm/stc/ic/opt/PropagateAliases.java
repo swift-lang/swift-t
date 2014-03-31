@@ -168,8 +168,9 @@ public class PropagateAliases extends FunctionOptimizerPass {
   }
 
   private static void propAliasesInst(Logger logger, ListIterator<Statement> stmtIt,
-                    Instruction inst, AliasTracker aliases, Set<Var> waitedForAliases) {
-    Instruction newInst = tryPropagateAliases(inst, aliases, waitedForAliases);
+                Instruction inst, AliasTracker aliases, Set<Var> waitedForAliases) {
+    Instruction newInst = tryPropagateAliases(logger, inst, aliases,
+                                              waitedForAliases);
     if (newInst != null) {
       stmtIt.set(newInst);
     }  
@@ -183,12 +184,15 @@ public class PropagateAliases extends FunctionOptimizerPass {
    * @param aliases
    * @return
    */
-  private static Instruction tryPropagateAliases(Instruction inst,
-        AliasTracker aliases, Set<Var> waitedForAliases) {
+  private static Instruction tryPropagateAliases(Logger logger,
+      Instruction inst, AliasTracker aliases, Set<Var> waitedForAliases) {
+    if (logger.isTraceEnabled()) {
+      logger.trace("Try propagate aliases for " + inst);
+    }
     if (inst.op.isRetrieve(false)) {
       Var src = inst.getInput(0).getVar();
       
-      AliasKey srcKey = checkedGetCanonical(aliases, waitedForAliases, src);
+      AliasKey srcKey = checkedGetCanonical(logger, aliases, waitedForAliases, src);
 
       Arg decr = Arg.ZERO;
       if (inst.getInputs().size() > 1) {
@@ -206,7 +210,8 @@ public class PropagateAliases extends FunctionOptimizerPass {
     } else if (inst.op.isAssign(false)) {
       Var dst = inst.getOutput(0);
 
-      AliasKey dstKey = checkedGetCanonical(aliases, waitedForAliases, dst);
+      AliasKey dstKey = checkedGetCanonical(logger, aliases, waitedForAliases, dst);
+      logger.trace("ALIAS FOR " + dst + ": " + dstKey);
       if (dstKey != null && dstKey.isPlainStructAlias()) {
         return TurbineOp.structStoreSub(dstKey.var, Arrays.asList(dstKey.path),
                                         inst.getInput(0)); 
@@ -225,12 +230,15 @@ public class PropagateAliases extends FunctionOptimizerPass {
    * @param var
    * @return
    */
-  private static AliasKey checkedGetCanonical(AliasTracker aliases,
-      Set<Var> waitedForAliases, Var var) {
+  private static AliasKey checkedGetCanonical(Logger logger,
+      AliasTracker aliases, Set<Var> waitedForAliases, Var var) {
     if (waitedForAliases.contains(var)) {
+      logger.trace("Can't replace alias " + var + ": waited for");
       return null;
     } else {
-      return aliases.getCanonical(var);
+      AliasKey canon = aliases.getCanonical(var);
+      assert(canon != null);
+      return canon;
     }
   }
 

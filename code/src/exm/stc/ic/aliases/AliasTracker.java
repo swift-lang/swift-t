@@ -163,6 +163,10 @@ public class AliasTracker {
     roots.put(path.var, Pair.create(var, path));
 
     AliasKey canonPath = updateVarToPath(var, path, replacePath);
+    if (logger.isTraceEnabled()) {
+      logger.trace("Add varToPath: " + var + " => " + path + " canon "
+                  + canonPath);
+    }
     updatePathToVar(var, path);
     if (path != canonPath) {
       updatePathToVar(var, canonPath);
@@ -392,6 +396,8 @@ public class AliasTracker {
         if (best.hasUnknown()) {
           // There will be no keys here with unknown components
           break;
+        } else {
+          return best;
         }
       } 
       curr = curr.parent;
@@ -405,6 +411,8 @@ public class AliasTracker {
           if (best.hasUnknown()) {
             // There will be no keys with unknown components
             break;
+          } else {
+            return best;
           }
         } 
         curr = curr.parent;
