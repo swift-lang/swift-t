@@ -26,6 +26,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend.WaitMode;
+import exm.stc.common.Logging;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
@@ -504,10 +505,20 @@ public class WaitCoalescer implements OptimizerPass {
     boolean changed = false;
     boolean fin;
     do {
+      if (logger.isTraceEnabled()) {
+        logger.trace("Attempting to merge waits");
+      }
       fin = true;
       MultiMap<Var, WaitStatement> waitMap = buildWaitMap(block);
       // Greedy approach: find most shared variable and
       //    merge wait based on that
+      if (logger.isTraceEnabled()) {
+        logger.trace("Wait keys: " + waitMap.keySet());
+        for (Entry<Var, List<WaitStatement>> e: waitMap.entrySet()) {
+          logger.trace("Waiting on : " + e.getKey() + ": " 
+                       + e.getValue().size());
+        }
+      }
       Var winner = mostSharedVar(waitMap);
       if (winner != null) {
         // There is some shared variable between waits

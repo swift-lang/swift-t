@@ -196,7 +196,8 @@ public class ICOptimizer {
       }
       
       // Do merges near end since it can be detrimental to other optimizations
-      boolean doWaitMerges = iteration == nIterations - (nIterations / 4) - 2;
+      boolean doWaitMerges = (iteration >= nIterations - (nIterations / 4) - 2)
+                              && iteration % 2 == 0;
       pipe.addPass(new WaitCoalescer(doWaitMerges, canReorder));
       
       if (debug)
