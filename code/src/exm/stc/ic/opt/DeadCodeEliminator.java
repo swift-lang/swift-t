@@ -82,11 +82,18 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
    */
   public static void eliminate(Logger logger, Function f) {
     boolean converged = false;
+    boolean changed = false;
     while (!converged) {
       // Dead variable elimination can allow dead code blocks to be removed,
       // which can allow more variables to be removed.  So we should just
       // iterate until no more changes were made
-      converged = !eliminateIter(logger, f);
+      boolean changeThisIter = eliminateIter(logger, f);
+      converged = !changeThisIter;
+      changed = changed || changeThisIter;
+    }
+    
+    if (changed) {
+      inlineContinuations(logger, f.mainBlock());
     }
   }
 
@@ -383,6 +390,41 @@ public class DeadCodeEliminator extends FunctionOptimizerPass {
     }
     
     return sb.toString();
+  }
+
+  /**
+   * Inline continuations, e.g. waits with no arguments to cleanup
+   * for any removed variables
+   * @param logger
+   * @param block
+   */
+  private static void inlineContinuations(Logger logger, Block block) {
+    Set<Var> noClosedVars = Collections.emptySet();
+    
+    for (Statement stmt: block.getStatements()) {
+      if (stmt.type() == StatementType.CONDITIONAL) {
+        for (Block cb: stmt.conditional().getBlocks()) {
+          inlineContinuations(logger, cb);
+        }
+      }
+    }
+    
+    ListIterator<Continuation> contIt = block.continuationIterator();
+    while (contIt.hasNext()) {
+      Continuation c = contIt.next();
+      Block toInline = null;
+      toInline = c.tryInline(noClosedVars, noClosedVars, true);
+      if (toInline != null) {
+        // Remove old and then add new
+        contIt.remove();
+        block.insertInline(toInline, contIt, block.statementEndIterator());
+        logger.trace("Inlined continuation " + c.getType());
+      } else {
+        for (Block cb: c.getBlocks()) {
+          inlineContinuations(logger, cb);
+        }
+      }
+    }
   }
 
 }
