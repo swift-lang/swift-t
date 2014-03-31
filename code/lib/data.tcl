@@ -174,7 +174,7 @@ namespace eval turbine {
         if { $cache && [ c::cache_check $id ] } {
             set result [ c::cache_retrieve $id ]
             if { $decrref } {
-              read_refcount_decr $id
+              read_refcount_decr $id $decrref
             }
         } else {
             if { $decrref } {
@@ -217,7 +217,7 @@ namespace eval turbine {
         if { $cache && [ c::cache_check $id ] } {
             set result [ c::cache_retrieve $id ]
             if { $decrref } {
-              read_refcount_decr $id
+              read_refcount_decr $id $decrref
             }
         } else {
             if { $decrref } {
@@ -316,7 +316,7 @@ namespace eval turbine {
         if { $cache && [ c::cache_check $id ] } {
             set result [ c::cache_retrieve $id ]
             if { $decrref } {
-              read_refcount_decr $id
+              read_refcount_decr $id $decrref
             }
         } else {
             if { $decrref } {
@@ -353,7 +353,7 @@ namespace eval turbine {
         if { $cache && [ c::cache_check $id ] } {
             set result [ c::cache_retrieve $id ]
             if { $decrref } {
-              read_refcount_decr $id
+              read_refcount_decr $id $decrref
             }
         } else {
             if { $decrref } {
