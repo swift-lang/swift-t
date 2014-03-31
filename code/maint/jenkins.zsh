@@ -1,11 +1,18 @@
 #!/bin/zsh
 
 ./setup.sh
+
+
 # Check your mpicc location first!
-TURBINE_INSTALL=/tmp/exm-install/turbine/bin;
-STC_INSTALL=/tmp/exm-install/stc/bin;
+TURBINE_INSTALL=/tmp/exm-install/turbine/bin
+STC_INSTALL=/tmp/exm-install/stc/bin
 MPICH=/tmp/mpich-install/bin
-export PATH=$MPICH:$TURBINE_INSTALL:$STC_INSTALL:$PATH;
+export PATH=$MPICH:$TURBINE_INSTALL:$STC_INSTALL:$PATH
+
+set -x
+
+ls /tmp/mpich-install/lib
+
 ./configure --prefix=/tmp/exm-install/turbine --with-tcl=/usr --with-mpi=/tmp/mpich-install --with-c-utils=/tmp/exm-install/c-utils --with-adlb=/tmp/exm-install/lb --enable-shared
 make clean
 
