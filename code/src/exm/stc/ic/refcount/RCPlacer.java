@@ -49,6 +49,10 @@ import exm.stc.ic.tree.TurbineOp.RefCountOp.RCDir;
  * are all implemented in this module.  For example, we can insert explicit
  * reference count instructions, or we can do tricky things like piggybacking
  * them on other operations, or canceling them out.
+ * 
+ * 
+ * TODO: Merge together refcounts to place - e.g. read/write same var,
+ *       or two vars if they happen to alias same refcounted var
  */
 public class RCPlacer {
 
@@ -127,6 +131,8 @@ public class RCPlacer {
   }
 
   public void dumpDecrements(Block block, RCTracker increments) {
+    // TODO: can we guarantee that the refcount var is available in the
+    //       current scope?
     for (RefCountType rcType: RefcountPass.RC_TYPES) {
       for (Entry<AliasKey, Long> e: increments.rcIter(rcType, RCDir.DECR)) {
         assert (e.getValue() <= 0);
@@ -152,6 +158,8 @@ public class RCPlacer {
       ListIterator<Statement> stmtIt, RCTracker increments) {
     for (RefCountType rcType: RefcountPass.RC_TYPES) {
       for (Entry<AliasKey, Long> e: increments.rcIter(rcType, RCDir.INCR)) {
+        // TODO: can we guarantee that the refcount var is available in the
+        //       current scope?
         Var var = increments.getRefCountVar(e.getKey());
         assert(var != null);
         Long incr = e.getValue();
@@ -160,8 +168,7 @@ public class RCPlacer {
           boolean varInit = stmt != null &&
                    stmt.type() == StatementType.INSTRUCTION && 
                    stmt.instruction().isInitialized(var);
-          // TODO: what if not initialized in a conditional? Should insert
-          //        before
+          // TODO: what if not initialized in a conditional? Should insert before
           if (stmt != null &&
                   (stmt.type() == StatementType.INSTRUCTION &&
                   !(var.storage() == Alloc.ALIAS && varInit))) {
