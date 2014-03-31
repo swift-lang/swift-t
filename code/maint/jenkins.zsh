@@ -15,7 +15,7 @@ printenv
 
 ls /tmp/mpich-install/lib
 
-./configure --prefix=/tmp/exm-install/turbine --with-tcl=/usr --with-mpi=/tmp/mpich-install --with-c-utils=/tmp/exm-install/c-utils --with-adlb=/tmp/exm-install/lb --enable-shared
+./configure --prefix=/tmp/exm-install/turbine --with-tcl=/usr --with-mpi=/tmp/mpich-install --with-c-utils=/tmp/exm-install/c-utils --with-adlb=/tmp/exm-install/lb --enable-shared LDFLAGS=-lmpl
 make clean
 
 # echo "Setting exit values to 0 instead of 1"
@@ -25,7 +25,7 @@ make clean
 # grep "exit 1" *.sh
 # cd ..;
 
-make V=1
+make LDFLAGS=-lmpl V=1
 
 ## Results aggregator script ##
 make test_results || :
