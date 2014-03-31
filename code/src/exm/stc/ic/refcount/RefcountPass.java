@@ -467,12 +467,25 @@ public class RefcountPass implements OptimizerPass {
 
   private void updateIncrementsPassIntoForeach(RCTracker increments,
       AbstractForeachLoop foreach) {
-    /*
-     * Hold a refcount until we get to this loop: do a switcheroo where 
-     * we pull an increment into the outer block, and balance by adding
-     * a decrement to loop.
-     */
+    long iterCount = foreach.constIterCount();
+    if (iterCount >= 0) {
+      // Constant iteration count: can hoist out increment
+      ListIterator<RefCount> it = foreach.startIncrementIterator();
+      while (it.hasNext()) {
+        RefCount rc = it.next();
+        if (rc.amount.isIntVal()) {
+          increments.incr(rc.var, rc.type, iterCount * rc.amount.getIntLit());
+          it.remove();
+        }
+      }
+    }
+    
     if (foreach.isAsync()) {
+      /*
+       * Hold a refcount until we get to this loop: do a switcheroo where 
+       * we pull an increment into the outer block, and balance by adding
+       * a decrement to loop.
+       */
       for (RefCount rc: foreach.getStartIncrements()) {
         increments.incr(rc.var, rc.type, 1);
         foreach.addConstantStartIncrement(rc.var, rc.type, Arg.createIntLit(-1));

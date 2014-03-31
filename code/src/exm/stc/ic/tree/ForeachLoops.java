@@ -100,6 +100,10 @@ public class ForeachLoops {
       return Collections.unmodifiableList(startIncrements);
     }
     
+    public ListIterator<RefCount> startIncrementIterator() {
+      return startIncrements.listIterator();
+    }
+    
     public void addStartIncrement(RefCount incr) {
       startIncrements.add(incr);
     }
@@ -177,6 +181,14 @@ public class ForeachLoops {
         }
       }
       return null;
+    }
+
+    /**
+     * Constant iteration count 
+     * @return -1 if iter count not known, otherwise iteration count
+     */
+    public long constIterCount() {
+      return -1;
     }
   }
 
@@ -683,14 +695,13 @@ public class ForeachLoops {
         return Pair.create(true, doUnroll(logger, outerBlock, desiredUnroll));
       } else if (expandLoops || fullUnroll) {
         long instCount = loopBody.getInstructionCount();
-        if (expandLoops && start.isIntVal() && end.isIntVal() && increment.isIntVal()) {
-          // See if the loop has a small number of iterations, could just expand
-          long iters = calcIterations(start.getIntLit(), end.getIntLit(),
-                                      increment.getIntLit());
-          if (iters <= getUnrollMaxIters(true)) {
-            long extraInstructions = instCount * (iters - 1);
+        long iterCount = constIterCount();
+        if (expandLoops && iterCount >= 0) {
+          // See if the loop has a small number of iterations, could just expand;
+          if (iterCount <= getUnrollMaxIters(true)) {
+            long extraInstructions = instCount * (iterCount - 1);
             if (extraInstructions <= getUnrollMaxExtraInsts(true)) {
-              return Pair.create(true, doUnroll(logger, outerBlock, (int)iters));
+              return Pair.create(true, doUnroll(logger, outerBlock, (int)iterCount));
             }
           }
         } 
@@ -864,6 +875,16 @@ public class ForeachLoops {
       return Collections.<Continuation>singletonList(unrolled);
     }
 
+    @Override
+    public long constIterCount() {
+      if ( start.isIntVal() && end.isIntVal() && increment.isIntVal()) {
+        return calcIterations(start.getIntLit(), end.getIntLit(),
+                              increment.getIntLit());
+      } else {
+        return -1;
+      }
+    }
+    
     private long calcIterations(long startV, long endV, long incV) {
       long diff = (endV - startV + 1);
       // Number of loop iterations
