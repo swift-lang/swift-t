@@ -58,8 +58,8 @@ public class ComputedValue<T> {
     // Matching ComputedValues indicates that locations are aliases for
     // each other.  E.g. writing to either location gives same result.
     ALIAS,
-  };
-  
+  }
+
   final Opcode op;
 
   /**
@@ -505,6 +505,22 @@ public class ComputedValue<T> {
     return op == Opcode.GET_LOCAL_FILENAME;
   }
   
+  public static ArgCV containerSizeCV(Var arr, boolean async) {
+    boolean isLocal = Types.isContainerLocal(arr);
+    assert(Types.isContainer(arr) ||
+           isLocal) : arr;
+    
+    if (async) {
+      assert(!isLocal);
+      return new ArgCV(Opcode.FAKE, CONTAINER_SIZE_FUTURE,
+                       arr.asArg().asList());
+    } else {
+      Opcode op = isLocal ? Opcode.CONTAINER_LOCAL_SIZE :
+                            Opcode.CONTAINER_SIZE;
+      return new ArgCV(op, arr.asArg());
+    }
+  }
+
   /**
    * @return the equivalence type of this computed value,
    *         assuming it wasn't copied
@@ -554,6 +570,8 @@ public class ComputedValue<T> {
   public static final String COPY_OF = "copy_of";
   public static final String ALIAS_OF = "alias_of";
 
+  private static final String CONTAINER_SIZE_FUTURE = "container_size_future";
+  
   /**
    * Shorter class name for ComputedValue parameterized with Args
    */

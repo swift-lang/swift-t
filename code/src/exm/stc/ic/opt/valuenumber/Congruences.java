@@ -320,13 +320,18 @@ public class Congruences implements AliasFinder {
   private void addInferredFilename(String errContext,
           CongruentSets congruent, Arg canonLoc, ArgCV cv, int stmtIndex)
                   throws OptUnsafeError {
-    // TODO: something with filename aliases?
     if (cv.op() == Opcode.STORE_FILE) {
       addInferredStoreFile(errContext, congruent, canonLoc, cv, stmtIndex);
     } else if (cv.op() == Opcode.LOAD_FILE) {
       addInferredLoadFile(errContext, congruent, canonLoc, cv, stmtIndex);
     } else if (cv.isFilenameAliasCV()) {
       addInferredFilenameAlias(errContext, congruent, canonLoc, cv, stmtIndex);
+    } else if (cv.op().isRetrieveContainer(true)) {
+      addInferredRetrieveContainer(errContext, congruent, canonLoc, cv,
+                                   stmtIndex);
+    } else if (cv.op().isStoreContainer(true)) {
+      addInferredStoreContainer(errContext, congruent, canonLoc, cv,
+          stmtIndex);
     }
   }
 
@@ -359,6 +364,26 @@ public class Congruences implements AliasFinder {
       equateValues(errContext, congruent, stmtIndex,
                           srcFilename, dstFilename);
     }
+  }
+
+  private void addInferredRetrieveContainer(String errContext,
+      CongruentSets congruent, Arg canonLoc, ArgCV cv, int stmtIndex) 
+          throws OptUnsafeError {
+    // TODO: also transfer across element info, etc
+    Var src = cv.getInput(0).getVar();
+    equateValues(errContext, congruent, stmtIndex,
+            ComputedValue.containerSizeCV(src, false),
+            ComputedValue.containerSizeCV(canonLoc.getVar(), false));
+  }
+
+  private void addInferredStoreContainer(String errContext,
+      CongruentSets congruent, Arg canonLoc, ArgCV cv, int stmtIndex) 
+          throws OptUnsafeError {
+    // TODO: also transfer across element info, etc
+    Var src = cv.getInput(0).getVar();
+    equateValues(errContext, congruent, stmtIndex,
+            ComputedValue.containerSizeCV(src, false),
+            ComputedValue.containerSizeCV(canonLoc.getVar(), false));
   }
 
   /**

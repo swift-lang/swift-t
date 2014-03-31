@@ -225,16 +225,14 @@ public class ValLoc {
                           val, Closed.MAYBE_NOT, IsAssign.NO);
   }
   
-  public static ValLoc makeContainerSizeCV(Var arr, Arg size, boolean future,
+  public static ValLoc makeContainerSizeCV(Var arr, Arg size, boolean async,
                                 IsAssign isAssign) {
-    assert(Types.isContainer(arr) ||
-           Types.isContainerLocal(arr)) : arr;
-    assert((!future && size.isImmediateInt()) ||
-           (future && Types.isInt(size.type())));
-    Opcode op = Types.isContainer(arr) ? Opcode.CONTAINER_SIZE :
-                                         Opcode.CONTAINER_LOCAL_SIZE;
-    return ValLoc.buildResult(op,
-            arr.asArg().asList(), size, Closed.MAYBE_NOT, isAssign);
+    ArgCV cv = ComputedValue.containerSizeCV(arr, async);
+    
+    assert((!async && size.isImmediateInt()) ||
+           (async && Types.isInt(size.type())));
+
+    return ValLoc.build(cv, size, Closed.MAYBE_NOT, isAssign);
   }
 
   public static ValLoc makeArrayContainsCV(Var arr, Arg key, Arg out, 

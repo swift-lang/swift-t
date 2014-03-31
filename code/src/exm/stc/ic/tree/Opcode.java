@@ -209,6 +209,30 @@ public enum Opcode {
     }
   }
 
+  public boolean isRetrieveContainer(boolean includeRecursive) {
+    switch (this) {
+      case LOAD_ARRAY:
+      case LOAD_BAG:
+        return true;
+      case LOAD_RECURSIVE:
+        return includeRecursive;
+      default:
+        return false;
+    }
+  }
+  
+  public boolean isStoreContainer(boolean includeRecursive) {
+    switch (this) {
+      case STORE_ARRAY:
+      case STORE_BAG:
+        return true;
+      case STORE_RECURSIVE:
+        return includeRecursive;
+      default:
+        return false;
+    }
+  }
+
   public static Opcode retrieveOpcode(Typed srcType) {
     return retrieveOpcode(srcType, false);
   }
