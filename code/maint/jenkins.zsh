@@ -11,20 +11,24 @@ export PATH=$MPICH:$TURBINE_INSTALL:$STC_INSTALL:$PATH
 
 set -x
 
+printenv
+
 ls /tmp/mpich-install/lib
 
 ./configure --prefix=/tmp/exm-install/turbine --with-tcl=/usr --with-mpi=/tmp/mpich-install --with-c-utils=/tmp/exm-install/c-utils --with-adlb=/tmp/exm-install/lb --enable-shared
 make clean
 
-echo "Setting exit values to 0 instead of 1"
-cd tests;
-grep "exit 1" *.sh
-sed -i 's/exit 1/echo "SOMETHING_BAD";exit 0/g' *.sh
-grep "exit 1" *.sh
-cd ..;
+# echo "Setting exit values to 0 instead of 1"
+# cd tests;
+# grep "exit 1" *.sh
+# sed -i 's/exit 1/echo "SOMETHING_BAD";exit 0/g' *.sh
+# grep "exit 1" *.sh
+# cd ..;
+
+make V=1
 
 ## Results aggregator script ##
-make test_results ||:
+make test_results || :
 cd tests;
 
 SUITE_RESULT="result_aggregate.xml";
