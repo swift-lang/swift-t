@@ -207,6 +207,10 @@ public class RCTracker {
       return this.counts.keySet();
     }
     
+    @Override
+    public String toString() {
+      return counts.toString();
+    }
   }
   
   /**

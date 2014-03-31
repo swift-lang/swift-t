@@ -24,6 +24,7 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.VarCount;
 import exm.stc.common.util.Counters;
+import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
 import exm.stc.ic.aliases.AliasKey;
@@ -211,14 +212,25 @@ public class RCPlacer {
     // Use var instead of key since we can now deal with concrete vars
     Set<Var> cancelCandidates = new HashSet<Var>();
     
+    // TODO: inelegant
+    // Need to track which vars are associated with each refcount var
+    MultiMap<Var, AliasKey> rcVarToKey = new MultiMap<Var, AliasKey>();
+    
     for (Entry<AliasKey, Long> e: tracker.rcIter(rcType, RCDir.DECR)) {
       long decr = e.getValue();
-      long incr = tracker.getCount(rcType, e.getKey(), RCDir.INCR);
+      AliasKey key = e.getKey();
+      long incr = tracker.getCount(rcType, key, RCDir.INCR);
       assert(decr <= 0);
       assert(incr >= 0);
       if (incr != 0 && decr != 0) {
-        cancelCandidates.add(tracker.getRefCountVar(e.getKey()));
+        Var rcVar = tracker.getRefCountVar(key);
+        cancelCandidates.add(rcVar);
+        rcVarToKey.put(rcVar, key);
       }
+    }
+    
+    if (logger.isTraceEnabled()) {
+      logger.trace("Cancel candidates " + rcType + ": " + cancelCandidates);
     }
     
     /*
@@ -262,8 +274,16 @@ public class RCPlacer {
     for (Var toCancel: cancelCandidates) {
       // Simple approach to cancelling: if we are totally free to
       // cancel, cancel as much as possible
-      long incr = tracker.getCount(rcType, toCancel, RCDir.INCR);
-      long decr = tracker.getCount(rcType, toCancel, RCDir.DECR);
+      long incr = 0;
+      long decr = 0;
+      
+      // Account for fact we may have multiple vars for key
+      List<AliasKey> matchingKeys = rcVarToKey.get(toCancel);
+      assert(!matchingKeys.isEmpty());
+      for (AliasKey key: matchingKeys) {
+        incr += tracker.getCount(rcType, key, RCDir.INCR);
+        decr += tracker.getCount(rcType, key, RCDir.DECR);
+      }
       long cancelAmount = Math.min(incr, Math.abs(decr));
       if (logger.isTraceEnabled()) {
         logger.trace("Cancel " + toCancel.toString() + " " + cancelAmount);
@@ -330,9 +350,11 @@ public class RCPlacer {
     // Update with any remaining consumptions.  Note that it doesn't
     // matter if we update consumption after use, but the other way
     // doesn't work
-    for (Var con: consumed) {
-      if (cancelCandidates.contains(con)) {
-        updateCancel(con, cancelCandidates, consumedAfter, false, true);
+    for (Var consumedVar: consumed) {
+      if (cancelCandidates.contains(consumedVar)) {
+        Var consumedRCVar = tracker.getRefCountVar(consumedVar);
+        updateCancel(consumedRCVar, cancelCandidates, consumedAfter,
+                      false, true);
       }
     }
   }
@@ -485,6 +507,9 @@ public class RCPlacer {
     // Initially all decrements are candidates for piggybacking
     RefCountCandidates candidates =
         tracker.getVarCandidates(block, rcType, dir);
+    if (logger.isTraceEnabled()) {
+      logger.trace("Piggyback candidates: " + candidates);
+    }
 
     UseFinder subblockWalker = new UseFinder(tracker, rcType,
                                              candidates.varKeySet());
