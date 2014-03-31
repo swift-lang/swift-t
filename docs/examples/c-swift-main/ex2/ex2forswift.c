@@ -3,7 +3,7 @@ Powerseries of the form sum=Tn + Tn-1 + Tn-2 + ..., where Tk=Tk-1*(x/n) for a fi
 */
 #include <stdio.h>
 #include <stdlib.h>
-#include "power.h"
+#include "ex2.h"
 #define ACCURACY 0.0001
 
 int power_main(int argc, char** argv){
