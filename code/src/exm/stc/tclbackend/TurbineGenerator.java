@@ -49,6 +49,7 @@ import exm.stc.common.lang.CompileTimeArgs;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ForeignFunctions;
+import exm.stc.common.lang.Unimplemented;
 import exm.stc.common.lang.ForeignFunctions.TclOpTemplate;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
@@ -1674,6 +1675,10 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isArrayKeyVal(arrayVar, arrIx));
     assert(Types.isArray(arrayVar)) : arrayVar;
     assert(Types.isElemType(arrayVar, alias));
+    
+    // Check that we can generate valid code for it
+    assert(Unimplemented.subscriptAliasSupported(arrayVar));
+    
     // Simple create alias as handle
     Expression aliasExpr = Turbine.arrayAlias(varToExpr(arrayVar), 
                                               argToExpr(arrIx));

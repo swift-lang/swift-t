@@ -10,6 +10,7 @@ import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.Unimplemented;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.HierarchicalSet;
@@ -116,6 +117,12 @@ public class PropagateAliases extends FunctionOptimizerPass {
     assert(inst.op == Opcode.ARR_COPY_OUT_IMM);
     Var dst = inst.getOutput(0);
     Var arr = inst.getInput(0).getVar();
+    
+    if (!Unimplemented.subscriptAliasSupported(arr)) {
+      // Don't change if not supported
+      return inst;
+    }
+    
     Arg ix = inst.getInput(1);
     
     Var alias = OptUtil.createTmpAlias(b, dst);
