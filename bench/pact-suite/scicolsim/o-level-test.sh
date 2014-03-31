@@ -27,11 +27,11 @@ for i in `seq $n`; do
   #            --minrange=58 --maxrange=58 \
   #            --n_epochs=1 --n_steps=1'
 
-  ARGS='--graph_file=movie_graph.txt \
+  ARGS="--graph_file=${SCS}/data/movie_graph.txt \
               --annealingcycles=25 \
               --evoreruns=100 --reruns_per_task=1 \
               --minrange=58 --maxrange=108 --rangeinc=50 \
-              --n_epochs=1 --n_steps=1'
+              --n_epochs=1 --n_steps=1"
 
   export TURBINE_USER_LIB=$SCS 
   export TURBINE_DEBUG=0
