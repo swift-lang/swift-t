@@ -758,9 +758,9 @@ public class Congruences implements AliasFinder {
   private boolean isClosed(Arg varArg, int stmtIndex, boolean recursive) {
     if (logger.isTraceEnabled()) {
       logger.trace("Checking closed: " + varArg + "@" + stmtIndex + " rec: "
-                  + recursive);  
+                  + recursive);
     }
-    
+        
     // Find canonical var for alias, and check if that is closed.
     if (varArg.isConstant() || !trackClosed(varArg.getVar())) {
       // No write refcount - always closed

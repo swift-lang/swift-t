@@ -218,6 +218,7 @@ public class FixupVariables implements OptimizerPass {
     Var canonicalWriteVar(Var var, AliasTracker aliases) {
       AliasKey key = aliases.getCanonical(var);
       assert(key != null) : var;
+      assert(!key.hasUnknown()) : key + " " + var;
       Var canonical = aliases.findVar(key);
       assert(canonical != null) : var + " " + key;
       return canonical;

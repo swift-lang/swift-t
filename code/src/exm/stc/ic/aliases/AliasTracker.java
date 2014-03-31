@@ -388,7 +388,11 @@ public class AliasTracker {
     while (curr != null) {
       List<AliasKey> keys = curr.varToPath.get(var);
       if (keys.size() > 0) {
-        return keys.get(0);
+        AliasKey best = keys.get(0);
+        if (best.hasUnknown()) {
+          // There will be no keys here with unknown components
+          break;
+        }
       } 
       curr = curr.parent;
     }
@@ -397,7 +401,11 @@ public class AliasTracker {
       while (curr != null) {
         List<AliasKey> keys = curr.refCopyVarToPath.get(var);
         if (keys.size() > 0) {
-          return keys.get(0);
+          AliasKey best = keys.get(0);
+          if (best.hasUnknown()) {
+            // There will be no keys with unknown components
+            break;
+          }
         } 
         curr = curr.parent;
       }

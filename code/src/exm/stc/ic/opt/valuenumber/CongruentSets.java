@@ -146,7 +146,8 @@ class CongruentSets {
         assert(e.getValue().size() > 0);
         if (e.getValue().size() == 1) {
           // Should be self-reference, don't print
-          assert(e.getValue().get(0).arg().equals(e.getKey()));
+          assert(e.getValue().get(0).arg().equals(e.getKey())) 
+                : e.getKey() + " " + e.getValue();
         } else {
           logger.trace(congType + " cong. class " + e.getKey() + 
                        " => " + e.getValue());

@@ -17,11 +17,20 @@ import exm.stc.common.lang.Types.Typed;
 public class AliasKey implements Typed {
   public final Var var;
   public final String path[]; // Can be null for no path
+  public final boolean hasUnknown;
+  
   
   public AliasKey(Var var) {
     this(var, null);
   }
   
+  public AliasKey(Var var, String path[]) {
+    assert(var != null);
+    this.var = var;
+    this.path = path;
+    this.hasUnknown = calcHasUnknown(path);
+  }
+
   public AliasKey splice(AliasKey subKey) {
     if (subKey.pathLength() == 0) {
       return this;
@@ -39,12 +48,6 @@ public class AliasKey implements Typed {
     return new AliasKey(this.var, spliced);
   }
 
-  public AliasKey(Var var, String path[]) {
-    assert(var != null);
-    this.var = var;
-    this.path = path;
-  }
-  
   public static AliasKey create(Var var, List<String> pathList) {
     return new AliasKey(var, pathListToArray(pathList));
   }
@@ -168,13 +171,10 @@ public class AliasKey implements Typed {
     }
     String p[] = this.path;
     String op[] = other.path;
-    System.err.println("Compare " + this + " v " + other);
     assert (p.length == op.length);
     for (int i = 0; i < p.length; i++) {
-      System.err.println("Compare [" + i + "] " + p[i] + " " + op[i]);
       if (p[i] == Alias.UNKNOWN || op[i] == Alias.UNKNOWN) {
         // Don't treat unknowns as equal
-        System.err.println("UNKNOWN");
         return false;
       }
       if (!p[i].equals(op[i])) {
@@ -232,7 +232,14 @@ public class AliasKey implements Typed {
    * @return true if there's an unknown in the path
    */
   public boolean hasUnknown() {
-    for (int i = 0; i < pathLength(); i++) {
+    return hasUnknown;
+  }
+  
+  private static boolean calcHasUnknown(String path[]) {
+    if (path == null) {
+      return false;
+    }
+    for (int i = 0; i < path.length; i++) {
       if (path[i] == Alias.UNKNOWN) {
         return true;
       }
