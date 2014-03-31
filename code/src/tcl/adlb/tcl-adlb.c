@@ -4628,8 +4628,8 @@ static int append_subscript(Tcl_Interp *interp,
  *      optionally with storage that can be used. Initial size
  *      indicates size of buffer given by caller.
  *      Upon return, pointer will be updated if memory allocated in here.
- * TODO: this currently works for array subscripts too.. maybe this is ideal
- * to leave as-is 
+ * TODO: this currently works for some array subscripts too.. 
+ * TODO: but it breaks for e.g. general string subscripts
  * using_caller_buf: if true, storage is owned by caller and shouldn't be
  *                   freed
  * append: if true, append to existing subscript
