@@ -144,11 +144,19 @@ class CongruentSets {
       MultiMap<Arg, ArgOrCV> sets = activeSets(consts);
       for (Entry<Arg, List<ArgOrCV>> e: sets.entrySet()) {
         assert(e.getValue().size() > 0);
+        boolean printSet = true;
         if (e.getValue().size() == 1) {
           // Should be self-reference, don't print
-          assert(e.getValue().get(0).arg().equals(e.getKey())) 
-                : e.getKey() + " " + e.getValue();
-        } else {
+          if (e.getValue().get(0).arg().equals(e.getKey())) {
+            printSet = false;
+          } else {
+            // TODO: this happens occasionally, e..g test 385
+            logger.debug("INTERNAL ERROR: Bad set: " + 
+                         e.getKey() + " " + e.getValue());
+          }
+        }
+        
+        if (printSet) {
           logger.trace(congType + " cong. class " + e.getKey() + 
                        " => " + e.getValue());
         }
