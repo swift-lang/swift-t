@@ -2,12 +2,11 @@
 
 ./setup.sh
 
-
-# Check your mpicc location first!
-TURBINE_INSTALL=/tmp/exm-install/turbine/bin
-STC_INSTALL=/tmp/exm-install/stc/bin
-MPICH=/tmp/mpich-install/bin
-export PATH=$MPICH:$TURBINE_INSTALL:$STC_INSTALL:$PATH
+C_UTILS=/tmp/exm-install/c-utils
+TURBINE=/tmp/exm-install/turbine
+STC=/tmp/exm-install/stc
+MPICH=/tmp/mpich-install
+path+=( $MPICH/bin $TURBINE/bin $STC/bin )
 
 set -x
 
@@ -15,7 +14,13 @@ printenv
 
 ls /tmp/mpich-install/lib
 
-./configure --prefix=/tmp/exm-install/turbine --with-tcl=/usr --with-mpi=/tmp/mpich-install --with-c-utils=/tmp/exm-install/c-utils --with-adlb=/tmp/exm-install/lb --enable-shared LDFLAGS=-lmpl
+LDFLAGS="-L$MPICH/lib -lmpl"                \
+./configure --prefix=$TURBINE               \
+            --with-tcl=/usr                 \
+            --with-mpi=$MPICH               \
+            --with-c-utils=$C_UTILS         \
+            --with-adlb=/tmp/exm-install/lb \
+            --enable-shared
 make clean
 
 # echo "Setting exit values to 0 instead of 1"
@@ -25,11 +30,11 @@ make clean
 # grep "exit 1" *.sh
 # cd ..;
 
-make LDFLAGS=-lmpl V=1
+make V=1
 
-## Results aggregator script ##
-make test_results || :
-cd tests;
+## Results aggregation
+make test_results || true
+cd tests
 
 SUITE_RESULT="result_aggregate.xml";
 rm $SUITE_RESULT > /dev/null 2>&1 ;
