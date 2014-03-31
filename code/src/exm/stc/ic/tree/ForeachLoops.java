@@ -27,6 +27,7 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarCount;
 import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
@@ -157,10 +158,11 @@ public class ForeachLoops {
      * @param type
      * @param dir whether to piggyback decrements or increments
      * @return if piggybacked, the var for which increments were piggybacked
+     *          and amount (e.g. -2 if 2 decrements were piggybacked),
      *          otherwise null
      */
-    public Var tryPiggyBack(RefCountsToPlace increments, RefCountType type,
-                                  RCDir dir) {
+    public VarCount tryPiggyBack(RefCountsToPlace increments,
+            RefCountType type, RCDir dir) {
       for (RefCount startIncr: startIncrements) {
         // Only consider piggybacking where we already are modifying
         // that particular count
@@ -170,7 +172,7 @@ public class ForeachLoops {
           if ((dir == RCDir.DECR && incr < 0) ||
               (dir == RCDir.INCR && incr > 0)) {
             addConstantStartIncrement(startIncr.var, type, Arg.createIntLit(incr));
-            return startIncr.var;
+            return new VarCount(startIncr.var, incr);
           }
         }
       }

@@ -461,9 +461,6 @@ public class RCPlacer {
    * Try to piggyback decrement operations on instructions
    * in block
    * 
-   * TODO: this doesn't factor in alias info: if we're storing to
-   * an alias (e.g. struct field), we could piggyback a decrement
-   * for the root of he struct E.g. see test 367
    * @param logger
    * @param fn
    * @param block
@@ -491,7 +488,7 @@ public class RCPlacer {
       if (RCUtil.isAsyncForeachLoop(cont)) {
         AbstractForeachLoop loop = (AbstractForeachLoop) cont;
         
-        Var piggybacked;
+        VarCount piggybacked;
         do {
           /* Process one at a time so that candidates is correctly updated
            * for each call based on previous changes */
@@ -500,10 +497,11 @@ public class RCPlacer {
           if (piggybacked != null) {
             if (logger.isTraceEnabled()) {
               logger.trace("Piggybacked on foreach: " + piggybacked + " " +
-                     rcType + " " + candidates.getCount(piggybacked));
+                     rcType + " " + piggybacked.count);
             }
-            candidates.reset(piggybacked);
-            tracker.reset(rcType, piggybacked, RCDir.DECR);
+            candidates.add(piggybacked.var, -piggybacked.count);
+            tracker.cancel(tracker.getRefCountVar(piggybacked.var), rcType,
+                           -piggybacked.count);
           }
         } while (piggybacked != null);
       }
