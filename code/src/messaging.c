@@ -85,6 +85,7 @@ add_tags()
   add_tag(ADLB_TAG_ENUMERATE);
   add_tag(ADLB_TAG_SUBSCRIBE);
   add_tag(ADLB_TAG_PERMANENT);
+  add_tag(ADLB_TAG_GET_REFCOUNTS);
   add_tag(ADLB_TAG_REFCOUNT_INCR);
   add_tag(ADLB_TAG_INSERT_ATOMIC);
   add_tag(ADLB_TAG_UNIQUE);
