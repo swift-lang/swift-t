@@ -1311,18 +1311,21 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void arrayCreateBag(Var bag, Var arr, Arg ix, Arg callerReadRefs,
-      Arg callerWriteRefs) {
+      Arg callerWriteRefs, Arg readDecr, Arg writeDecr) {
     assert(Types.isBag(bag));
     assert(bag.storage() == Alloc.ALIAS);
     assert(Types.isArrayKeyVal(arr, ix));
     assert(Types.isElemValType(arr, bag)) : arr + " " + bag;
     assert(callerReadRefs.isImmediateInt());
     assert(callerWriteRefs.isImmediateInt());
+    assert(readDecr.isImmediateInt());
+    assert(writeDecr.isImmediateInt());
     
     TclTree t = Turbine.containerCreateNestedBag(
             prefixVar(bag), varToExpr(arr), argToExpr(ix),
             bagValueType(bag, true),
-            argToExpr(callerReadRefs), argToExpr(callerWriteRefs));
+            argToExpr(callerReadRefs), argToExpr(callerWriteRefs),
+            argToExpr(readDecr), argToExpr(writeDecr));
     pointAdd(t);
   }
 

@@ -294,7 +294,7 @@ public class TurbineOp extends Instruction {
       break;
     case ARR_CREATE_BAG:
       gen.arrayCreateBag(getOutput(0), getOutput(1), getInput(0),
-                         getInput(1), getInput(2));
+                         getInput(1), getInput(2), getInput(3), getInput(4));
       break;
     case LOAD_SCALAR:
       gen.retrieveScalar(getOutput(0), getInput(0).getVar(),
@@ -1402,23 +1402,36 @@ public class TurbineOp extends Instruction {
   }
   
 
+  public static Instruction arrayCreateBag(Var bag,
+      Var arr, Arg key) {
+    return arrayCreateBag(bag, arr, key, Arg.ONE, Arg.ONE,
+                          Arg.ZERO, Arg.ZERO);
+  }
+  
   /**
-   * Create a nested bag inside an array
+   * Create a nested bag inside an array.
+   * Similar to arrayCreateNestedImm
    * @param bag
    * @param arr
    * @param key
    * @return
    */
   public static Instruction arrayCreateBag(Var bag,
-      Var arr, Arg key) {
+      Var arr, Arg key, Arg readAcquire, Arg writeAcquire,
+      Arg readDecr, Arg writeDecr) {
     assert(Types.isBag(bag));
     assert(Types.isArray(arr));
     assert(Types.isArrayKeyVal(arr, key));
     assert(bag.storage() == Alloc.ALIAS);
+    assert(readAcquire.isImmediateInt());
+    assert(writeAcquire.isImmediateInt());
+    assert(readDecr.isImmediateInt());
+    assert(writeDecr.isImmediateInt());
+    
     // Both arrays are modified, so outputs
     return new TurbineOp(Opcode.ARR_CREATE_BAG,
         Arrays.asList(bag, arr),
-        key, Arg.ZERO, Arg.ZERO);
+        key, readAcquire, writeAcquire, readDecr, writeDecr);
   }
 
   public static Instruction initUpdateableFloat(Var updateable, Arg val) {
@@ -3484,7 +3497,8 @@ public class TurbineOp extends Instruction {
         // Management of reference counts from array ref is handled by runtime
         return Pair.create(readers, VarCount.NONE);
       }
-      case ARR_CREATE_NESTED_IMM: {
+      case ARR_CREATE_NESTED_IMM: 
+      case ARR_CREATE_BAG: {
         long readDecr = getInput(3).getIntLit();
         long writeDecr = getInput(4).getIntLit();
         Var arr = getOutput(1);
@@ -3607,7 +3621,8 @@ public class TurbineOp extends Instruction {
         // Gives back a refcount to the result if relevant
         return Pair.create(VarCount.one(getOutput(0)).asList(), VarCount.NONE);
       }
-      case ARR_CREATE_NESTED_IMM: {
+      case ARR_CREATE_NESTED_IMM: 
+      case ARR_CREATE_BAG: {
         long readIncr = getInput(1).getIntLit();
         long writeIncr = getInput(2).getIntLit();
         Var resultArr = getOutput(0);
@@ -3683,7 +3698,7 @@ public class TurbineOp extends Instruction {
       case ARR_CREATE_NESTED_IMM:
       case ARR_CREATE_BAG: {
         // Piggyback decrements on outer array
-        Var resArr = getOutput(0);
+        Var res = getOutput(0);
         Var outerArr = getOutput(1);
         assert(getInputs().size() == 5);
         
@@ -3694,19 +3709,19 @@ public class TurbineOp extends Instruction {
           return success;
         }
 
-        success = piggybackCancelIncr(increments, resArr, type, 1, 2);
+        success = piggybackCancelIncr(increments, res, type, 1, 2);
         if (success != null) {
           return success;
         }
         
-        // TODO: Instruction can give additional refcounts back
-        long resIncr = increments.getCount(resArr);
+        // Instruction can give additional refcounts back
+        long resIncr = increments.getCount(res);
         if (resIncr > 0) {
           int pos = (type == RefCountType.READERS) ? 1 : 2;
           Arg currIncr = getInput(pos);
           if (currIncr.isIntVal()) {
             inputs.set(pos, Arg.createIntLit(currIncr.getIntLit() + resIncr));
-            return new VarCount(resArr, resIncr);
+            return new VarCount(res, resIncr);
           }
         }
         return null;

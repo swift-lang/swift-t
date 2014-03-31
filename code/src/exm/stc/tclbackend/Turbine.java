@@ -105,7 +105,7 @@ class Turbine {
   private static final Token CR_V_CREATE_NESTED = turbFn("cr_v_create");
   private static final Token CR_F_CREATE_NESTED = turbFn("cr_f_create");
   private static final Token C_V_CREATE_NESTED_BAG =
-          turbFn("create_nested_bag");
+                                            turbFn("create_nested_bag");
 
   // Container lookup
   private static final Token C_LOOKUP = turbFn("container_lookup");
@@ -1172,9 +1172,11 @@ class Turbine {
 
   public static TclTree containerCreateNestedBag(String resultVar,
           Value containerVar, Expression arrIx, TypeName valType,
-          Expression callerReadRefs, Expression callerWriteRefs) {
+          Expression callerReadRefs, Expression callerWriteRefs,
+          Expression decrRead, Expression decrWrite) {
     return new SetVariable(resultVar, new Square(C_V_CREATE_NESTED_BAG,
-            containerVar, arrIx, valType, callerReadRefs, callerWriteRefs));
+            containerVar, arrIx, valType, callerReadRefs, callerWriteRefs,
+            decrWrite, decrRead));
   }
 
   public static TclTree bagAppend(Value bag, TypeName elemType,

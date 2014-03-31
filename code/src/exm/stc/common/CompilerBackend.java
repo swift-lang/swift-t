@@ -362,7 +362,7 @@ public interface CompilerBackend {
   public void bagInsert(Var bag, Arg elem, Arg writersDecr);
 
   public void arrayCreateBag(Var bag, Var arr, Arg ix, Arg callerReadRefs,
-                              Arg callerWriteRefs);
+                        Arg callerWriteRefs, Arg readDecr, Arg writeDecr);
 
   public void initUpdateable(Var updateable, Arg val);
   public void latestValue(Var result, Var updateable);
