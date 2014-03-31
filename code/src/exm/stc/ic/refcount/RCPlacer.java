@@ -197,7 +197,8 @@ public class RCPlacer {
     }
 
     // Set of keys that we might be able to cancel
-    Set<AliasKey> cancelCandidates = new HashSet<AliasKey>();
+    // Use var instead of key since we can now deal with concrete vars
+    Set<Var> cancelCandidates = new HashSet<Var>();
     
     for (Entry<AliasKey, Long> e: tracker.rcIter(rcType, RCDir.DECR)) {
       long decr = e.getValue();
@@ -205,12 +206,9 @@ public class RCPlacer {
       assert(decr <= 0);
       assert(incr >= 0);
       if (incr != 0 && decr != 0) {
-        cancelCandidates.add(e.getKey());
+        cancelCandidates.add(tracker.getRefCountVar(e.getKey()));
       }
     }
-    
-    // TODO: account for refcount vars  - maybe just list set of Vars 
-    // instead of AliasKey
     
     /*
      * Scan backwards up block to find out if we need to hold onto refcount
@@ -219,11 +217,10 @@ public class RCPlacer {
     
     // Set of variables where refcount was consumed by statement/continuation
     // after current position
-    Set<AliasKey> consumedAfter = new HashSet<AliasKey>();
+    Set<Var> consumedAfter = new HashSet<Var>();
     
     // Check that the data isn't actually used in block or sync continuations
-    UseFinder useFinder = new UseFinder(tracker, rcType,
-                                             null, cancelCandidates);
+    UseFinder useFinder = new UseFinder(tracker, rcType, cancelCandidates);
     
     ListIterator<Continuation> cit = block.continuationEndIterator();
     while (cit.hasPrevious()) {
@@ -231,8 +228,8 @@ public class RCPlacer {
   
       useFinder.reset();
       TreeWalk.walkSyncChildren(logger, fn, cont, useFinder);
-      updateCancelCont(tracker, cont, useFinder.getUsedKeys(), rcType,
-                   cancelCandidates, consumedAfter);
+      updateCancelCont(tracker, cont, useFinder.getUsedVars(), rcType,
+                       cancelCandidates, consumedAfter);
     }
     
     ListIterator<Statement> it = block.statementEndIterator();
@@ -246,12 +243,12 @@ public class RCPlacer {
         Conditional cond = stmt.conditional();
         useFinder.reset();
         TreeWalk.walkSyncChildren(logger, fn, cond, useFinder);
-        updateCancelCont(tracker, cond, useFinder.getUsedKeys(), rcType,
+        updateCancelCont(tracker, cond, useFinder.getUsedVars(), rcType,
                      cancelCandidates, consumedAfter);
       }
     }
     
-    for (AliasKey toCancel: cancelCandidates) {
+    for (Var toCancel: cancelCandidates) {
       // Simple approach to cancelling: if we are totally free to
       // cancel, cancel as much as possible
       long incr = tracker.getCount(rcType, toCancel, RCDir.INCR);
@@ -278,7 +275,7 @@ public class RCPlacer {
    */
   private void updateCancel(RCTracker tracker, Instruction inst,
       RefCountType rcType,
-      Set<AliasKey> cancelCandidates, Set<AliasKey> consumedAfter) {
+      Set<Var> cancelCandidates, Set<Var> consumedAfter) {
     List<VarCount> consumedVars;
     if (rcType == RefCountType.READERS) {
       consumedVars = inst.inRefCounts(functionMap).val1;
@@ -286,10 +283,10 @@ public class RCPlacer {
       assert (rcType == RefCountType.WRITERS);
       consumedVars = inst.inRefCounts(functionMap).val2;
     }
-    Set<AliasKey> consumed = new HashSet<AliasKey>();
+    Set<Var> consumed = new HashSet<Var>();
     for (VarCount v: consumedVars) {
       if (v.count != 0) {
-        consumed.add(tracker.getCountKey(v.var));
+        consumed.add(tracker.getRefCountVar(v.var));
       }
     }
     
@@ -300,102 +297,102 @@ public class RCPlacer {
     if (rcType == RefCountType.READERS) {
       for (Arg in: inst.getInputs()) {
         if (in.isVar()) {
-          AliasKey key = tracker.getCountKey(in.getVar());
-          updateCancel(key, cancelCandidates, consumedAfter,
-                       true, consumed.contains(key));
+          Var inRCVar = tracker.getRefCountVar(in.getVar());
+          updateCancel(inRCVar, cancelCandidates, consumedAfter,
+                       true, consumed.contains(inRCVar));
         }
       }
       for (Var read: inst.getReadOutputs(functionMap)) {
-        AliasKey key = tracker.getCountKey(read);
-        updateCancel(key, cancelCandidates, consumedAfter,
-            true, consumed.contains(key));
+        Var readRCVar = tracker.getRefCountVar(read);
+        updateCancel(readRCVar, cancelCandidates, consumedAfter,
+                     true, consumed.contains(readRCVar));
       }
     } else {
       assert (rcType == RefCountType.WRITERS);
       for (Var modified: inst.getOutputs()) {
-        AliasKey key = tracker.getCountKey(modified);
-        updateCancel(key, cancelCandidates, consumedAfter,
-            true, consumed.contains(key));
+        Var modifiedRCVar = tracker.getRefCountVar(modified);
+        updateCancel(modifiedRCVar, cancelCandidates, consumedAfter,
+                     true, consumed.contains(modifiedRCVar));
       }
     }
     
     // Update with any remaining consumptions.  Note that it doesn't
     // matter if we update consumption after use, but the other way
     // doesn't work
-    for (AliasKey con: consumed) {
+    for (Var con: consumed) {
       if (cancelCandidates.contains(con)) {
-        updateCancel(con, cancelCandidates, consumedAfter, false,
-                     true);
+        updateCancel(con, cancelCandidates, consumedAfter, false, true);
       }
     }
   }
 
 
   private void updateCancelCont(RCTracker tracker, Continuation cont,
-      List<AliasKey> usedKeys, RefCountType rcType,
-      Set<AliasKey> cancelCandidates, Set<AliasKey> consumedAfter) {
-    List<AliasKey> consumed;
+      List<Var> usedRCVars, RefCountType rcType,
+      Set<Var> cancelCandidates, Set<Var> consumedAfter) {
+    List<Var> consumedRCVars;
     if (!cont.isAsync()) {
-      consumed = Collections.emptyList();
+      consumedRCVars = Collections.emptyList();
     } else {
       if (rcType == RefCountType.READERS) {
         Collection<PassedVar> passed = cont.getPassedVars();
         if (passed.isEmpty()) {
-          consumed = Collections.emptyList();
+          consumedRCVars = Collections.emptyList();
         } else {
-          consumed = new ArrayList<AliasKey>(passed.size());
+          consumedRCVars = new ArrayList<Var>(passed.size());
           for (PassedVar pv: passed) {
-            consumed.add(tracker.getCountKey(pv.var));
+            consumedRCVars.add(tracker.getRefCountVar(pv.var));
           }
         }
       } else {
         assert(rcType == RefCountType.WRITERS);
         Collection<Var> keepOpen = cont.getKeepOpenVars();
         if (keepOpen.isEmpty()) {
-          consumed = Collections.emptyList();
+          consumedRCVars = Collections.emptyList();
         } else {
-          consumed = new ArrayList<AliasKey>(keepOpen.size());
+          consumedRCVars = new ArrayList<Var>(keepOpen.size());
           for (Var v: keepOpen) {
-            consumed.add(tracker.getCountKey(v));
+            consumedRCVars.add(tracker.getRefCountVar(v));
           }
         }
       }
     }
     
-    for (AliasKey usedKey: usedKeys) {
-      updateCancel(usedKey, cancelCandidates, consumedAfter, true,
-                   consumed.contains(usedKey));
+    for (Var usedRCVar: usedRCVars) {
+      updateCancel(usedRCVar, cancelCandidates, consumedAfter, true,
+                   consumedRCVars.contains(usedRCVar));
     }
     
-    for (AliasKey ck: consumed) {
-      updateCancel(ck, cancelCandidates, consumedAfter, false, true);
+    for (Var consumedRCVar: consumedRCVars) {
+      updateCancel(consumedRCVar, cancelCandidates, consumedAfter,
+                   false, true);
     }
     
   }
 
 
-  private void updateCancel(AliasKey key,
-      Set<AliasKey> cancelCandidates, Set<AliasKey> consumedAfter,
+  private void updateCancel(Var var,
+      Set<Var> cancelCandidates, Set<Var> consumedAfter,
       boolean usedHere, boolean consumedHere) {
     if (logger.isTraceEnabled()) {
-      logger.trace("updateCancel " + key + " usedHere: " + usedHere 
+      logger.trace("updateCancel " + var + " usedHere: " + usedHere 
           + " consumedHere: " + consumedHere);
     }
     
     if (consumedHere) {
       // For instructions that just consume a refcount, don't need to do
       // anything, just mark that it was consumed
-      consumedAfter.add(key);
+      consumedAfter.add(var);
       return;
     }
     if (usedHere) {
-      if (consumedAfter.contains(key)) {
+      if (consumedAfter.contains(var)) {
         // We hold onto a refcount until later in block - ok
         return;
       } else {
         // The refcount is consumed by a prior instruction: can't safely
         // cancel
-        cancelCandidates.remove(key);
+        cancelCandidates.remove(var);
       }
     }
   }
@@ -416,12 +413,14 @@ public class RCPlacer {
       return;
     }
     
-    final Set<AliasKey> immDecrCandidates = Sets.createSet(
+    final Set<Var> immDecrCandidates = Sets.createSet(
                         block.getVariables().size());
     for (Var blockVar : block.getVariables()) {
       if (blockVar.storage() != Alloc.ALIAS) {
-        AliasKey key = tracker.getCountKey(blockVar);
-        long incr = tracker.getCount(rcType, key, RCDir.DECR);
+        // NOTE: this block var will be it's own root since
+        // it's allocated here
+        assert(tracker.getRefCountVar(blockVar).equals(blockVar)) : blockVar;
+        long incr = tracker.getCount(rcType, blockVar, RCDir.DECR);
         assert(incr <= 0);
 
         long baseRC = RefCounting.baseRefCount(blockVar, rcType, true, false);
@@ -435,7 +434,7 @@ public class RCPlacer {
         assert (incr >= -baseRC) : blockVar + " " + rcType + ": " +
                                     incr + " < base " + baseRC;
         if (incr < 0) {
-          immDecrCandidates.add(key);
+          immDecrCandidates.add(blockVar);
         }
       }
     }
@@ -443,15 +442,14 @@ public class RCPlacer {
     // Check that the data isn't actually used in block or sync continuations
     // In the case of async continuations, there should be an increment to
     // pass the var
-    UseFinder useFinder = new UseFinder(tracker, rcType, null, immDecrCandidates);
+    UseFinder useFinder = new UseFinder(tracker, rcType, immDecrCandidates);
     useFinder.reset();
     TreeWalk.walkSyncChildren(logger, fn, block, true, useFinder);
-    immDecrCandidates.removeAll(useFinder.getUsedKeys());
+    immDecrCandidates.removeAll(useFinder.getUsedVars());
    
-    for (AliasKey key: immDecrCandidates) {
-      Var immDecrVar = tracker.getRefCountVar(key);
+    for (Var immDecrVar: immDecrCandidates) {
       assert(immDecrVar.storage() != Alloc.ALIAS) : immDecrVar;
-      long incr = tracker.getCount(rcType, key, RCDir.DECR);
+      long incr = tracker.getCount(rcType, immDecrVar, RCDir.DECR);
       block.modifyInitRefcount(immDecrVar, rcType, incr);
       tracker.cancel(immDecrVar, rcType, -incr);
     }
@@ -477,8 +475,8 @@ public class RCPlacer {
     RefCountCandidates candidates =
         tracker.getVarCandidates(block, rcType, RCDir.DECR);
 
-    UseFinder subblockWalker = new UseFinder(tracker, rcType,  
-                                candidates.varKeySet(), null);
+    UseFinder subblockWalker = new UseFinder(tracker, rcType,
+                                             candidates.varKeySet());
     
     // Try to piggyback on continuations, starting at bottom up
     ListIterator<Continuation> cit = block.continuationEndIterator();
@@ -572,53 +570,43 @@ public class RCPlacer {
   }
 
   /**
-   * Find uses of variables in continuations
-   *
+   * Find uses of refcounted variables in continuations.
+   * Note that we only count root variables i.e. returned by getRefcountVar()
+   * in RCTracker
    */
   private final class UseFinder extends TreeWalker {
     private final RCTracker tracker;
     private final RefCountType rcType;
-    private final Set<Var> varCandidates;
-    private final Set<AliasKey> keyCandidates;
+    private final Set<Var> varCandidates; 
     
     /**
      * List into which usages are accumulated.  Must
      * be reset by caller
      */
     private final ArrayList<Var> varAccum;
-    private final ArrayList<AliasKey> keyAccum;
-  
+    
     private UseFinder(RCTracker tracker, RefCountType rcType,
-            Set<Var> varCandidates, Set<AliasKey> keyCandidates) {
+            Set<Var> varCandidates) {
       this.tracker = tracker;
       this.rcType = rcType;
       this.varCandidates = varCandidates;
-      this.keyCandidates = keyCandidates;
       this.varAccum = new ArrayList<Var>();
-      this.keyAccum = new ArrayList<AliasKey>();
     }
   
     public void reset() {
       this.varAccum.clear();
-      this.keyAccum.clear();
     }
     
     public void visit(Continuation cont) {
-      findUsesNonRec(cont, tracker, rcType, varCandidates, keyCandidates,
-                     varAccum, keyAccum);
+      findUsesNonRec(cont, tracker, rcType, varCandidates, varAccum);
     }
   
     public void visit(Instruction inst) {
-      findUses(inst, tracker, rcType, varCandidates, keyCandidates,
-                             varAccum, keyAccum);
+      findUses(inst, tracker, rcType, varCandidates, varAccum);
     }
     
     public List<Var> getUsedVars() {
       return varAccum;
-    }
-    
-    public List<AliasKey> getUsedKeys() {
-      return keyAccum;
     }
   }
 
@@ -626,7 +614,7 @@ public class RCPlacer {
   private List<Var> findUses(Instruction inst, RCTracker tracker,
               RefCountType rcType, Set<Var> candidates) {
     ArrayList<Var> res = new ArrayList<Var>();
-    findUses(inst, tracker, rcType, candidates, null, res, null);
+    findUses(inst, tracker, rcType, candidates, res);
     return res;
   }
   
@@ -641,48 +629,39 @@ public class RCPlacer {
    * @param keyAccum required if keyCandidates != null
    */
   private void findUses(Instruction inst, RCTracker tracker,
-      RefCountType rcType, Set<Var> varCandidates, Set<AliasKey> keyCandidates,
-      List<Var> varAccum, List<AliasKey> keyAccum) {
+      RefCountType rcType, Set<Var> varCandidates,  List<Var> varAccum) {
     if (rcType == RefCountType.READERS) {
       for (Arg in : inst.getInputs()) {
         if (in.isVar()) {
-          updateUses(in.getVar(), tracker, varCandidates, keyCandidates,
-                     varAccum, keyAccum);
+          updateUses(in.getVar(), tracker, varCandidates, varAccum);
         }
       }
       for (Var read : inst.getReadOutputs(functionMap)) {
-        updateUses(read, tracker, varCandidates, keyCandidates,
-            varAccum, keyAccum);
+        updateUses(read, tracker, varCandidates, varAccum);
       }
     } else {
       assert (rcType == RefCountType.WRITERS);
       for (Var modified : inst.getOutputs()) {
-        updateUses(modified, tracker, varCandidates, keyCandidates,
-            varAccum, keyAccum);
+        updateUses(modified, tracker, varCandidates, varAccum);
       }
     }    
   }
   
   private void findUsesNonRec(Continuation cont, RCTracker tracker,
-      RefCountType rcType,
-      Set<Var> varCandidates, Set<AliasKey> keyCandidates,
-      ArrayList<Var> varAccum, ArrayList<AliasKey> keyAccum) {
+      RefCountType rcType, Set<Var> varCandidates, ArrayList<Var> varAccum) {
     if (rcType == RefCountType.READERS) {
       for (Var v: cont.requiredVars(false)) {
-        updateUses(v, tracker, varCandidates, keyCandidates,
-                   varAccum, keyAccum);
+        updateUses(v, tracker, varCandidates, varAccum);
       }
       if (cont.isAsync() && rcType == RefCountType.READERS) {
         for (PassedVar pv: cont.getPassedVars()) {
           if (!pv.writeOnly) {
-            updateUses(pv.var, tracker, varCandidates, keyCandidates,
-                       varAccum, keyAccum);
+            updateUses(pv.var, tracker, varCandidates, varAccum);
           }
         }
       } else if (cont.isAsync() && rcType == RefCountType.WRITERS) {
         for (Var v: cont.getKeepOpenVars()) {
-          updateUses(v, tracker, varCandidates, keyCandidates,
-              varAccum, keyAccum);
+          updateUses(v, tracker, varCandidates, varAccum);
         }
       }
     }
@@ -692,8 +671,7 @@ public class RCPlacer {
       AbstractForeachLoop loop = (AbstractForeachLoop) cont;
       for (RefCount rc: loop.getStartIncrements()) {
         if (rc.type == rcType) {
-          updateUses(rc.var, tracker, varCandidates, keyCandidates,
-              varAccum, keyAccum);
+          updateUses(rc.var, tracker, varCandidates, varAccum);
         }
       }
     }
@@ -701,16 +679,9 @@ public class RCPlacer {
 
 
   private void updateUses(Var v, RCTracker tracker, Set<Var> varCandidates,
-      Set<AliasKey> keyCandidates, List<Var> varAccum,
-      List<AliasKey> keyAccum) {
+                          List<Var> varAccum) {
     if (varCandidates != null && varCandidates.contains(v)) {
-      varAccum.add(v);
-    }
-    if (keyCandidates != null) {
-      AliasKey key = tracker.getCountKey(v);
-      if (keyCandidates.contains(key)) {
-        keyAccum.add(key);
-      }
+      varAccum.add(tracker.getRefCountVar(v));
     }
   }
   
