@@ -19,6 +19,7 @@ import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Unimplemented;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.Typed;
@@ -447,6 +448,9 @@ public class TurbineOp extends Instruction {
     assert(Types.isArrayKeyVal(arrayVar, arrIx));
     assert(Types.isElemType(arrayVar, dst)) : arrayVar + " " + dst;
     assert(dst.storage() == Alloc.ALIAS);
+    
+    // Check that we can generate valid code for it
+    assert(Unimplemented.subscriptAliasSupported(arrayVar));
 
     return new TurbineOp(Opcode.ARR_CREATE_ALIAS,
                          dst, arrayVar.asArg(), arrIx);
