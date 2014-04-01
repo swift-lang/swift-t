@@ -62,6 +62,8 @@ static inline bool turbine_is_engine(void) {
 /**
    work: ownership of this task is passed into the engine module
             until released
+   ready: if true, rule is ready to run, and ownership stays with
+          caller
    returns TURBINE_SUCCESS/TURBINE_ERROR_*
  */
 turbine_code turbine_rule(const char* name,
@@ -69,28 +71,24 @@ turbine_code turbine_rule(const char* name,
                           const turbine_datum_id* input_td_list,
                           int input_td_subs,
                           const td_sub_pair* input_td_sub_list,
-                          xlb_work_unit *work);
-
-turbine_code turbine_rules_push(void);
+                          xlb_work_unit *work, bool *ready);
 
 /*
   Should be called when turbine engine is notified that an id is closed
-  TODO: argument indicating whether we should call pop?
+  ready/ready_count: array with pointers to any newly ready tasks,
+          ownership is passed to caller
  */
-turbine_code turbine_close(turbine_datum_id id);
+turbine_code turbine_close(turbine_datum_id id,
+         xlb_work_unit ***ready, int *ready_count);
 
 /*
   Should be called when turbine engine is notified that an id/subscript
   is closed
-  TODO: argument indicating whether we should call pop?
+  ready/ready_count: array with pointers to any newly ready tasks,
+          ownership is passed to caller
  */
-turbine_code turbine_sub_close(turbine_datum_id id, const void *subscript,
-                               size_t subscript_len);
-
-/*
-  work: a ready task, NULL if none ready.  Ownership is passed to caller
- */
-turbine_code turbine_pop(xlb_work_unit** work);
+turbine_code turbine_sub_close(turbine_datum_id id, adlb_subscript sub, 
+                               xlb_work_unit ***ready, int *ready_count);
 
 #define TURBINE_CODE_STRING_MAX 64
 

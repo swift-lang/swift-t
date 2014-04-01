@@ -36,7 +36,6 @@
 #include <adlb.h>
 
 #include <c-utils.h>
-#include <list.h>
 #include <log.h>
 #include <table.h>
 #include <table_bp.h>
@@ -97,7 +96,7 @@ static inline void mark_input_td_sub_closed(transform *T, int i);
 // Update transforms after close
 static turbine_code
 turbine_close_update(struct list_l *blocked, turbine_datum_id id,
-                     const void *subscript, size_t subscript_len);
+     adlb_subscript sub, xlb_work_unit ***ready, int *ready_count);
 
 // Finalize engine
 static void turbine_engine_finalize(void);
@@ -115,11 +114,6 @@ bool turbine_engine_initialized = false;
    Map from transform id to transform
  */
 struct table_lp transforms_waiting;
-
-/**
-   Ready transforms
- */
-struct list transforms_ready;
 
 /**
    TD inputs blocking their transforms
@@ -150,6 +144,7 @@ struct table_bp td_sub_subscribed;
 
 // Return size of buffer to use for id/subscript pair.
 // Zero-length buffer if no subscript
+// TODO: use other adlb code for this
 static inline size_t
 id_sub_key_buflen(const void *subscript, size_t length)
 {
@@ -191,15 +186,6 @@ static inline adlb_subscript sub_convert(turbine_subscript sub)
       return code;                                      \
     }                                                   \
   }
-
-/**
-   Globally unique transform ID for new rules
-   Starts at mpi_rank, incremented by mpi_size, thus unique
- */
-static long transform_unique_id = -1;
-
-static int mpi_size = -1;
-static int mpi_rank = -1;
 
 #define turbine_condition(condition, code, format, args...) \
   { if (! (condition))                                      \
@@ -255,9 +241,6 @@ turbine_init(int amserver, int rank, int size)
   if (!amserver)
     return TURBINE_SUCCESS;
 
-  mpi_size = size;
-  mpi_rank = rank;
-  transform_unique_id = rank+mpi_size;
   initialized = true;
 
   return TURBINE_SUCCESS;
@@ -296,14 +279,6 @@ turbine_engine_init()
 
   turbine_engine_initialized = true;
   return TURBINE_SUCCESS;
-}
-
-static inline long
-make_unique_id()
-{
-  long result = transform_unique_id;
-  transform_unique_id += mpi_size;
-  return result;
 }
 
 static inline turbine_code
@@ -496,7 +471,7 @@ turbine_rule(const char* name,
               const turbine_datum_id* input_td_list,
               int input_td_subs,
               const td_sub_pair* input_td_sub_list,
-              xlb_work_unit *work)
+              xlb_work_unit *work, bool *ready)
 {
   turbine_code tc;
   xlb_work_unit_id id = work->id;
@@ -528,11 +503,12 @@ turbine_rule(const char* name,
     DEBUG_TURBINE("waiting: {%"PRId64"}", id);
     assert(T != NULL);
     table_lp_add(&transforms_waiting, id, T);
+    *ready = false;
   }
   else
   {
     DEBUG_TURBINE("ready: {%"PRId64"}", id);
-    list_add(&transforms_ready, T);
+    *ready = true;
   }
 
   return TURBINE_SUCCESS;
@@ -577,59 +553,6 @@ rule_inputs(transform* T)
   return TURBINE_SUCCESS;
 }
 
-/**
-   Remove the transforms from waiting and add to ready list
-   Empties given list along the way
- */
-static void
-add_to_ready(struct list* tmp)
-{
-  transform* T;
-  while ((T = list_poll(tmp)))
-  {
-    void* c;
-    table_lp_remove(&transforms_waiting, T->work->id, &c);
-    if (c != NULL)
-    {
-      // TODO: c can be null if there were two entries in the blockers
-      //      list for that transform.  Handle here for now
-      list_add(&transforms_ready, T);
-    }
-  }
-}
-
-/**
-   Push transforms that are ready into trs_ready
-   @return
-*/
-turbine_code
-turbine_rules_push()
-{
-  // Temporary holding list for transforms moving into ready list
-  struct list tmp;
-  list_init(&tmp);
-
-  TABLE_LP_FOREACH(&transforms_waiting, item)
-  {
-    transform* T = item->data;
-    assert(T);
-    bool subscribed;
-    turbine_code tc = progress(T, &subscribed);
-    if (tc != TURBINE_SUCCESS) {
-      return tc;
-    }
-
-    if (!subscribed)
-    {
-      DEBUG_TURBINE("not subscribed on: %"PRId64"\n", T->work->id);
-      list_add(&tmp, T);
-    }
-  }
-
-  add_to_ready(&tmp);
-
-  return TURBINE_SUCCESS;
-}
 
 /**
    Declare a new data id
@@ -672,38 +595,8 @@ static inline turbine_code add_rule_blocker_sub(void *id_sub_key,
   return TURBINE_SUCCESS;
 }
 
-turbine_code turbine_pop(xlb_work_unit** work)
-{
-  transform *T = (transform*) list_poll(&transforms_ready);
-
-  if (T == NULL)
-  {
-    // Signal none ready
-    DEBUG_TURBINE("pop: no transforms ready");
-    *work = NULL;
-    return TURBINE_SUCCESS;
-  }
-
-  // Debugging
-  DEBUG_TURBINE("pop: transform:   {%"PRId64"}", T->work->id);
-  DEBUG_TURBINE("     action:      {%"PRId64"} %s: %.*s", T->work->id, T->name,
-                                      T->work->length, (const char*)T->work->payload);
-  DEBUG_TURBINE("     priority:    {%"PRId64"} => %i",  T->work->id, T->work->priority);
-  DEBUG_TURBINE("     target:      {%"PRId64"} => %i",  T->work->id, T->work->target);
-  DEBUG_TURBINE("     parallelism: {%"PRId64"} => %i",  T->work->id, T->work->parallelism);
-
-  // Copy outputs
-  *work = T->work;
-  T->work = NULL; // Avoid freeing action that we're going to return
-  
-  // Clean up
-  transform_free(T);
-
-  return TURBINE_SUCCESS;
-}
-
 turbine_code
-turbine_close(turbine_datum_id id)
+turbine_close(turbine_datum_id id, xlb_work_unit ***ready, int *ready_count)
 {
   DEBUG_TURBINE("turbine_close(<%"PRId64">)", id);
   // Record no longer subscribed
@@ -720,17 +613,17 @@ turbine_close(turbine_datum_id id)
     return TURBINE_SUCCESS;
 
   DEBUG_TURBINE("%i blocked", L->size);
-  return turbine_close_update(L, id, NULL, 0);
+  return turbine_close_update(L, id, ADLB_NO_SUB, ready, ready_count);
 }
 
-turbine_code turbine_sub_close(turbine_datum_id id, const void *subscript,
-                               size_t subscript_len)
+turbine_code turbine_sub_close(turbine_datum_id id, adlb_subscript sub,
+                            xlb_work_unit ***ready, int *ready_count)
 {
   DEBUG_TURBINE("turbine_sub_close(<%"PRId64">[\"%.*s\"])", id,
-                (int)subscript_len, (const char*)subscript);
-  size_t key_len = id_sub_key_buflen(subscript, subscript_len);
+                (int)sub.length, (const char*)sub.key);
+  size_t key_len = id_sub_key_buflen(sub.key, sub.length);
   char key[key_len];
-  write_id_sub_key(key, id, subscript, subscript_len);
+  write_id_sub_key(key, id, sub.key, sub.length);
   
   // Record no longer subscribed
   void *tmp;
@@ -745,23 +638,24 @@ turbine_code turbine_sub_close(turbine_datum_id id, const void *subscript,
     // We don't have any rules that block on this td
     return TURBINE_SUCCESS;
 
-  // TODO: support binary subscript
-  return turbine_close_update(L, id, subscript, subscript_len);
+  return turbine_close_update(L, id, sub, ready, ready_count);
 }
 
 /*
   Update transforms after having one of blockers removed.
   blocked: list of transforms with blocker remoed
   id: id of data
-  subscript: optional subscript
+  sub: optional subscript
+  ready/ready_count: list of any work units made ready by this change,
+      with ownership passed to caller
  */
 static turbine_code
 turbine_close_update(struct list_l *blocked, turbine_datum_id id,
-                     const void *subscript, size_t subscript_len)
+         adlb_subscript sub, xlb_work_unit ***ready, int *ready_count)
 {
-  // Temporary holding spot for transforms moving into ready list
-  struct list tmp;
-  list_init(&tmp);
+  int ready_size = 0; // malloced size
+  int ready_count_tmp = 0;
+  xlb_work_unit **ready_tmp = NULL;
 
   // Try to make progress on those transforms
   for (struct list_l_item* item = blocked->head; item; item = item->next)
@@ -775,7 +669,7 @@ turbine_close_update(struct list_l *blocked, turbine_datum_id id,
       continue;
  
     // update closed vector
-    if (subscript == NULL)
+    if (!adlb_has_sub(sub))
     {
       DEBUG_TURBINE("Update {%"PRId64"} for close: <%"PRId64">", T->work->id, id);
       for (int i = T->blocker; i < T->input_tds; i++) {
@@ -797,10 +691,10 @@ turbine_close_update(struct list_l *blocked, turbine_datum_id id,
 
       for (int i = first_td_sub; i < T->input_td_subs; i++)
       {
-        td_sub_pair *tdsub = &T->input_td_sub_list[i];
-        turbine_subscript *sub = &tdsub->subscript;
-        if (tdsub->td == id && sub->length == subscript_len
-            && memcmp(sub->key, subscript, subscript_len) == 0)
+        td_sub_pair *input_tdsub = &T->input_td_sub_list[i];
+        turbine_subscript *input_sub = &input_tdsub->subscript;
+        if (input_tdsub->td == id && input_sub->length == sub.length 
+            && memcmp(input_sub->key, sub.key, sub.length) == 0)
         {
           mark_input_td_sub_closed(T, i);
         }
@@ -815,15 +709,29 @@ turbine_close_update(struct list_l *blocked, turbine_datum_id id,
     if (!subscribed)
     {
       DEBUG_TURBINE("ready: {%"PRId64"}", transform_id);
-      list_add(&tmp, T);
+      if (ready_size <= ready_count_tmp)
+      {
+        if (ready_size == 0)
+        {
+          ready_size = 16;
+        } else {
+          ready_size *= 2;
+        }
+        ready_tmp = realloc(ready_tmp, sizeof(ready_tmp[0]) *
+                                     (size_t) ready_size);
+        if (!ready_tmp)
+          return TURBINE_ERROR_OOM;
+      }
+      ready_tmp[ready_count_tmp++] = T->work;
+      T->work = NULL; // Don't free work
     }
   }
 
 
   list_l_free(blocked); // No longer need list
 
-  add_to_ready(&tmp);
-
+  *ready = ready_tmp;
+  *ready_count = ready_count_tmp;
   return TURBINE_SUCCESS;
 }
 
@@ -1046,7 +954,6 @@ info_waiting()
 static void tbl_free_transform_cb(xlb_work_unit_id key, void *T);
 static void tbl_free_blockers_cb(turbine_datum_id key, void *L);
 static void tbl_free_sub_blockers_cb(const void *key, size_t key_len, void *L);
-static void list_free_transform_cb(void *T);
 
 void
 turbine_finalize(void)
@@ -1066,7 +973,6 @@ static void turbine_engine_finalize(void)
 
   // Now we're done reporting, free everything
   table_lp_free_callback(&transforms_waiting, false, tbl_free_transform_cb);
-  list_clear_callback(&transforms_ready, list_free_transform_cb);
   table_lp_free_callback(&td_blockers, false, tbl_free_blockers_cb);
   table_bp_free_callback(&td_sub_blockers, false, tbl_free_sub_blockers_cb);
 
@@ -1078,11 +984,6 @@ static void turbine_engine_finalize(void)
 }
 
 static void tbl_free_transform_cb(xlb_work_unit_id key, void *T)
-{
-  transform_free((transform*)T);
-}
-
-static void list_free_transform_cb(void *T)
 {
   transform_free((transform*)T);
 }
