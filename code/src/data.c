@@ -182,36 +182,6 @@ static void container_add(adlb_container *c, adlb_subscript sub,
 
 static void report_leaks(void);
 
-// Maximum length of id/subscript string
-#define ID_SUB_PAIR_MAX \
-  (sizeof(adlb_datum_id) + ADLB_DATA_SUBSCRIPT_MAX + 1)
-
-// Length of buffer for id+subscript.  Will be at most 8 bytes
-// more than ADLB_SUBSCRIPT_MAX
-static size_t id_sub_buflen(adlb_subscript sub)
-{
-  size_t size = (sizeof(adlb_datum_id) + sub.length);
-  assert(size <= ID_SUB_PAIR_MAX);
-  return size;
-}
-
-static size_t write_id_sub(char *buf, adlb_datum_id id,
-                                  adlb_subscript sub)
-{
-  memcpy(buf, &id, sizeof(adlb_datum_id));
-  memcpy(buf + sizeof(adlb_datum_id), sub.key, sub.length);
-  return id_sub_buflen(sub);
-}
-
-// Extract id and sub from buffer.  Return internal pointer into buffer
-static void read_id_sub(const char *buf, size_t buflen,
-        adlb_datum_id *id, adlb_subscript *sub)
-{
-  assert(buflen >= sizeof(*id));
-  memcpy(id, buf, sizeof(*id));
-  sub->length = buflen - sizeof(*id);
-  sub->key = &buf[sizeof(*id)];
-}
 
 /**
    @param s Number of servers
@@ -653,8 +623,8 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
     if (!found)
     {
       // encode container, index and ref type into string
-      char key[id_sub_buflen(subscript)];
-      size_t key_len = write_id_sub(key, id, subscript);
+      char key[xlb_id_sub_buflen(subscript)];
+      size_t key_len = xlb_write_id_sub(key, id, subscript);
       
       DEBUG("Subscribe to <%"PRId64">[%.*s] len %i", id,
         (int)subscript.length, (const char*)subscript.key,
@@ -794,8 +764,8 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
 
 
   // encode container, index and ref type into string
-  char key[id_sub_buflen(subscript)];
-  size_t key_len = write_id_sub(key, id, subscript);
+  char key[xlb_id_sub_buflen(subscript)];
+  size_t key_len = xlb_write_id_sub(key, id, subscript);
 
   struct list* listeners = NULL;
   found = table_bp_search(&container_references, key, key_len,
@@ -1627,8 +1597,8 @@ static adlb_data_code
 check_subscript_notifications(adlb_datum_id id,
     adlb_subscript subscript, struct list **ref_list,
     struct list_i **sub_list) {
-  char s[id_sub_buflen(subscript)];
-  size_t s_len = write_id_sub(s, id, subscript);
+  char s[xlb_id_sub_buflen(subscript)];
+  size_t s_len = xlb_write_id_sub(s, id, subscript);
   void *data;
   bool result = table_bp_remove(&container_references, s, s_len, &data);
 
@@ -2194,7 +2164,7 @@ static void free_cref_entry(const void *key, size_t key_len, void *val)
     // TODO: support binary key
     adlb_datum_id id;
     adlb_subscript sub;
-    read_id_sub(key, key_len, &id, &sub);
+    xlb_read_id_sub(key, key_len, &id, &sub);
     
     container_reference *data = curr->data;
     printf("UNFILLED CONTAINER REFERENCE <%"PRId64">[%.*s] => "

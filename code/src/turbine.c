@@ -135,35 +135,12 @@ struct table_lp td_subscribed;
 
 /**
   TD/subscript pairs to which engine is subscribed.  Key is created using
-   write_id_sub_key function
+   xlb_write_id_sub function
  */
 struct table_bp td_sub_subscribed;
 
 // Maximum length of buffer required for key
 #define ID_SUB_KEY_MAX (ADLB_DATA_SUBSCRIPT_MAX + 30)
-
-// Return size of buffer to use for id/subscript pair.
-// Zero-length buffer if no subscript
-// TODO: use other adlb code for this
-static inline size_t
-id_sub_key_buflen(const void *subscript, size_t length)
-{
-  if (subscript == NULL)
-    return 0;
-  size_t res = (sizeof(turbine_datum_id) + length);
-  assert(res <= ID_SUB_KEY_MAX);
-  return res;
-}
-
-static inline size_t
-write_id_sub_key(char *buf, turbine_datum_id id,
-                 const void *subscript, size_t length)
-{
-  assert(subscript != NULL);
-  memcpy(buf, &id, sizeof(id));
-  memcpy(&buf[sizeof(id)], subscript, length);
-  return id_sub_key_buflen(subscript, length);
-}
 
 static inline adlb_subscript sub_convert(turbine_subscript sub)
 {
@@ -388,11 +365,11 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
                     "Null ID provided to rule");
 
   // if subscript provided, use key
-  size_t id_sub_keylen = id_sub_key_buflen(subscript.key, subscript.length);
+  size_t id_sub_keylen = xlb_id_sub_buflen(sub_convert(subscript));
   char id_sub_key[id_sub_keylen];
   if (subscript.key != NULL)
   {
-    write_id_sub_key(id_sub_key, id, subscript.key, subscript.length);
+    xlb_write_id_sub(id_sub_key, id, sub_convert(subscript));
     void *tmp;
     if (table_bp_search(&td_sub_subscribed, id_sub_key, id_sub_keylen,
                         &tmp))
@@ -538,12 +515,10 @@ rule_inputs(transform* T)
   for (int i = 0; i < T->input_td_subs; i++)
   {
     td_sub_pair *td_sub = &T->input_td_sub_list[i];
-    size_t id_sub_keylen = id_sub_key_buflen(td_sub->subscript.key,
-                                             td_sub->subscript.length);
+    size_t id_sub_keylen = xlb_id_sub_buflen(sub_convert(td_sub->subscript));
     char id_sub_key[id_sub_keylen];
     assert(td_sub->subscript.key != NULL);
-    write_id_sub_key(id_sub_key, td_sub->td, td_sub->subscript.key,
-                     td_sub->subscript.length);
+    xlb_write_id_sub(id_sub_key, td_sub->td, sub_convert(td_sub->subscript));
     // TODO: we might add duplicate list entries if id appears multiple
     //      times. This is currently handled upon removal from list
     turbine_code code = add_rule_blocker_sub(id_sub_key, id_sub_keylen,

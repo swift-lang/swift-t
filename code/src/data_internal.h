@@ -169,4 +169,34 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
 adlb_data_code
 xlb_resize_str(char **str, size_t *curr_size, int pos, size_t needed);
 
+// Maximum length of id/subscript string
+#define ID_SUB_PAIR_MAX \
+  (sizeof(adlb_datum_id) + ADLB_DATA_SUBSCRIPT_MAX + 1)
+
+// Length of buffer for id+subscript.  Will be at most 8 bytes
+// more than ADLB_SUBSCRIPT_MAX
+static inline size_t xlb_id_sub_buflen(adlb_subscript sub)
+{
+  size_t size = (sizeof(adlb_datum_id) + sub.length);
+  assert(size <= ID_SUB_PAIR_MAX);
+  return size;
+}
+
+static inline size_t xlb_write_id_sub(char *buf, adlb_datum_id id,
+                                  adlb_subscript sub)
+{
+  memcpy(buf, &id, sizeof(adlb_datum_id));
+  memcpy(buf + sizeof(adlb_datum_id), sub.key, sub.length);
+  return xlb_id_sub_buflen(sub);
+}
+
+// Extract id and sub from buffer.  Return internal pointer into buffer
+static inline void xlb_read_id_sub(const char *buf, size_t buflen,
+        adlb_datum_id *id, adlb_subscript *sub)
+{
+  assert(buflen >= sizeof(*id));
+  memcpy(id, buf, sizeof(*id));
+  sub->length = buflen - sizeof(*id);
+  sub->key = &buf[sizeof(*id)];
+}
 #endif // __XLB_DATA_INTERNAL_H
