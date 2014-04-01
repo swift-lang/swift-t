@@ -45,6 +45,7 @@
 #include "server.h"
 #include "steal.h"
 #include "sync.h"
+#include "turbine.h"
 #include "workqueue.h"
 
 // Check for sync requests this often so that can be handled in preference
@@ -170,6 +171,9 @@ xlb_server_init()
   
   code = xlb_sync_init();
   ADLB_CHECK(code);
+
+  turbine_code tc = turbine_engine_init(xlb_comm_rank);
+  CHECK_MSG(tc == TURBINE_SUCCESS, "Error initializing engine");
 
   TRACE_END
   return ADLB_SUCCESS;
@@ -716,6 +720,8 @@ server_shutdown()
   xlb_requestqueue_shutdown();
   xlb_workq_finalize();
   xlb_sync_finalize();
+
+  turbine_engine_finalize();
   return ADLB_SUCCESS;
 }
 

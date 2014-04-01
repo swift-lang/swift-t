@@ -50,14 +50,7 @@ typedef struct {
 */
 extern MPI_Comm turbine_task_comm;
 
-turbine_code turbine_init(int amserver, int rank, int size);
-
-turbine_code turbine_engine_init(void);
-
-extern bool turbine_engine_initialized;
-static inline bool turbine_is_engine(void) {
-  return turbine_engine_initialized;
-}
+turbine_code turbine_engine_init(int rank);
 
 /**
    work: ownership of this task is passed into the engine module
@@ -98,7 +91,7 @@ turbine_code turbine_sub_close(turbine_datum_id id, adlb_subscript sub,
  */
 int turbine_code_tostring(char* output, turbine_code code);
 
-void turbine_finalize(void);
+void turbine_engine_finalize(void);
 
 // Temporary hack to get working ok
 // TODO: move elsewhere

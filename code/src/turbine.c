@@ -101,14 +101,6 @@ static turbine_code
 turbine_close_update(struct list_l *blocked, turbine_datum_id id,
      adlb_subscript sub, xlb_work_unit ***ready, int *ready_count);
 
-// Finalize engine
-static void turbine_engine_finalize(void);
-
-/**
-   Has turbine_init() been called successfully?
-*/
-static bool initialized = false;
-
 /** Has turbine_engine_init() been called? */
 bool turbine_engine_initialized = false;
 
@@ -214,23 +206,9 @@ gdb_check(int rank)
 }
 
 turbine_code
-turbine_init(int amserver, int rank, int size)
+turbine_engine_init(int rank)
 {
   gdb_check(rank);
-
-  if (!amserver)
-    return TURBINE_SUCCESS;
-
-  initialized = true;
-
-  return TURBINE_SUCCESS;
-}
-
-turbine_code
-turbine_engine_init()
-{
-  if (!initialized)
-    return TURBINE_ERROR_UNINITIALIZED;
 
   // Initialize tables to size that will probably not need to be
   // expanded, but is not excessively large
@@ -367,6 +345,9 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
   turbine_condition(id != ADLB_DATA_ID_NULL, TURBINE_ERROR_INVALID,
                     "Null ID provided to rule");
   bool subscribed;
+  
+  int XLB_NOTIFY_LOCAL_ENGINE = -1; // TODO: fix
+  bool datum_is_local = true; // TODO: fix
 
   // if subscript provided, use key
   size_t id_sub_keylen = xlb_id_sub_buflen(sub_convert(subscript));
@@ -557,7 +538,7 @@ rule_inputs(transform* T)
 static inline turbine_code
 add_rule_blocker(turbine_datum_id id, xlb_work_unit_id transform)
 {
-  assert(initialized);
+  assert(turbine_engine_initialized);
   DEBUG_TURBINE("add_rule_blocker for {%"PRId64"}: <%"PRId64">",
                 transform, id);
   struct list_l* blocked;
@@ -577,7 +558,7 @@ add_rule_blocker(turbine_datum_id id, xlb_work_unit_id transform)
 static inline turbine_code add_rule_blocker_sub(void *id_sub_key,
         size_t id_sub_keylen, xlb_work_unit_id transform)
 {
-  assert(initialized);
+  assert(turbine_engine_initialized);
   DEBUG_TURBINE("add_rule_blocker_sub for {%"PRId64"}", transform);
   struct list_l* blocked;
   bool found = table_bp_search(&td_sub_blockers, id_sub_key,
@@ -617,9 +598,9 @@ turbine_code turbine_sub_close(turbine_datum_id id, adlb_subscript sub,
 {
   DEBUG_TURBINE("turbine_sub_close(<%"PRId64">[\"%.*s\"])", id,
                 (int)sub.length, (const char*)sub.key);
-  size_t key_len = id_sub_key_buflen(sub.key, sub.length);
+  size_t key_len = xlb_id_sub_buflen(sub);
   char key[key_len];
-  write_id_sub_key(key, id, sub.key, sub.length);
+  xlb_write_id_sub(key, id, sub);
   
   // Record no longer subscribed
   void *tmp;
@@ -951,14 +932,7 @@ static void tbl_free_transform_cb(xlb_work_unit_id key, void *T);
 static void tbl_free_blockers_cb(turbine_datum_id key, void *L);
 static void tbl_free_sub_blockers_cb(const void *key, size_t key_len, void *L);
 
-void
-turbine_finalize(void)
-{
-  turbine_engine_finalize();
-}
-
-
-static void turbine_engine_finalize(void)
+void turbine_engine_finalize(void)
 {
   if (!turbine_engine_initialized)
     return;
