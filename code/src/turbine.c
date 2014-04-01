@@ -24,6 +24,10 @@
  * TR means TRansform, the in-memory record from a rule
  * */
 
+/*
+  TODO: convert to using ADLB conventions for return codes, etc
+ */
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,6 +47,7 @@
 #include <tools.h>
 
 #include "turbine.h"
+#include "data_internal.h"
 
 typedef enum
 {
@@ -50,8 +55,6 @@ typedef enum
   TRANSFORM_WAITING,
   /** Inputs ready */
   TRANSFORM_READY,
-  /** Application level has received this TR as ready */
-  TRANSFORM_RETURNED
 } transform_status;
 
 /**
@@ -363,6 +366,7 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
 {
   turbine_condition(id != ADLB_DATA_ID_NULL, TURBINE_ERROR_INVALID,
                     "Null ID provided to rule");
+  bool subscribed;
 
   // if subscript provided, use key
   size_t id_sub_keylen = xlb_id_sub_buflen(sub_convert(subscript));
@@ -380,6 +384,28 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
       *result = true;
       return TURBINE_SUCCESS;
     }
+
+    if (datum_is_local)
+    {
+      adlb_data_code dc = xlb_subscribe_sub(id_sub_key, id_sub_keylen,
+                                  XLB_NOTIFY_LOCAL_ENGINE, &subscribed);
+      if (dc == ADLB_DATA_ERROR_NOT_FOUND)
+      {
+        // Handle case where read_refcount == 0 and write_refcount == 0
+        //      => datum was freed and we're good to go
+        subscribed = false;
+      }
+      else
+      {
+        DATA_CHECK(dc);
+      }
+    }
+    else
+    {
+      adlb_code ac = xlb_sync_subscribe_sub(id_sub_key, id_sub_keylen);
+      DATA_CHECK_ADLB(ac,  TURBINE_ERROR_UNKNOWN);
+      subscribed = true; // Always subscribes
+    }
   }
   else
   {
@@ -388,41 +414,36 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
       *result = true;
       return TURBINE_SUCCESS;
     }
-  }
-
-  // TODO:
-  // If datum is local, subscribe directly
-  // Otherwise send subscribe sync message
-  int subscribed;
-  adlb_code rc = ADLB_Subscribe(id, sub_convert(subscript), &subscribed);
-  
-  if (rc == (int)ADLB_DATA_ERROR_NOT_FOUND) {
-    // Handle case where read_refcount == 0 and write_refcount == 0
-    //      => datum was freed and we're good to go
-    subscribed = 0;
-  } else if (rc != ADLB_SUCCESS) {
-    if (subscript.key != NULL)
+    if (datum_is_local)
     {
-      log_printf("ADLB_Subscribe on <%ld>[\"%s\"] failed with code: %d\n",
-                 id, subscript, rc);
+      adlb_data_code dc = xlb_subscribe_id(id, XLB_NOTIFY_LOCAL_ENGINE,
+                                           &subscribed);
+      if (dc == ADLB_DATA_ERROR_NOT_FOUND)
+      {
+        // Handle case where read_refcount == 0 and write_refcount == 0
+        //      => datum was freed and we're good to go
+        subscribed = false;
+      }
+      DATA_CHECK(dc);
     }
     else
     {
-      log_printf("ADLB_Subscribe on <%ld> failed with code: %d\n", id, rc);
+      adlb_code ac = xlb_sync_subscribe_id(id);
+      DATA_CHECK_ADLB(ac,  TURBINE_ERROR_UNKNOWN);
+      subscribed = true; // Always subscribes
     }
-    return rc; // Turbine codes are same as ADLB data codes
   }
 
-  DEBUG_TURBINE("ADLB_Subscribe: %i", subscribed);
+  DEBUG_TURBINE("ADLB_Subscribe: %i", (int)subscribed);
 
-  if (subscribed != 0) {
+  if (subscribed) {
     // Record it was subscribed
     if (subscript.key != NULL)
       table_bp_add(&td_sub_subscribed, id_sub_key, id_sub_keylen, (void*)1);
     else
       table_lp_add(&td_subscribed, id, (void*)1);
   }
-  *result = subscribed != 0;
+  *result = subscribed;
   return TURBINE_SUCCESS;
 }
 
