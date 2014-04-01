@@ -1,8 +1,12 @@
 
 /*
-   Related to RDCEP work
+   Simplified version of test 984 that replicates same bug
 */
 
+// Skip tests - see issue 628
+// SKIP-O0-TEST
+// SKIP-O1-TEST
+`
 import io;
 import string;
 import stats;
