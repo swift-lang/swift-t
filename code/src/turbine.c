@@ -60,12 +60,11 @@ typedef enum
  */
 typedef struct
 {
-  turbine_transform_id id;
   /** Name for human debugging */
   char* name;
+
   /** Task to release when inputs are ready */
-  void* action;
-  size_t action_len;
+  xlb_work_unit *work;
 
   /** Number of input tds */
   int input_tds;
@@ -77,13 +76,6 @@ typedef struct
   /** Array of input TD/subscript pairs */
   td_sub_pair* input_td_sub_list;
 
-  turbine_action_type action_type;
-  /** ADLB priority for this action */
-  int priority;
-  /** ADLB target rank for this action */
-  int target;
-  /** ADLB task parallelism */
-  int parallelism;
   /** Closed inputs - bit vector for both tds and td/sub pairs */
   unsigned char *closed_inputs;
   /** Index of next subscribed input (starts at 0 in input_td list,
@@ -318,43 +310,19 @@ static inline turbine_code
 transform_create(const char* name,
              int input_tds, const turbine_datum_id* input_td_list,
              int input_td_subs, const td_sub_pair* input_td_sub_list,
-             turbine_action_type action_type,
-             const void* action, size_t action_len,
-             int priority, int target, int parallelism,
-             transform** result)
+             xlb_work_unit *work, transform** result)
 {
   assert(name);
-  assert(action);
+  assert(work);
   assert(input_tds >= 0);
   assert(input_tds == 0 || input_td_list != NULL);
   assert(input_td_subs >= 0);
   assert(input_td_subs == 0 || input_td_sub_list != NULL);
 
-  if (strlen(action) > TURBINE_ACTION_MAX)
-  {
-    printf("error: turbine rule action string storage exceeds %i\n",
-           TURBINE_ACTION_MAX);
-    *result = NULL;
-    return TURBINE_ERROR_INVALID;
-  }
-  if (parallelism <= 0)
-  {
-    printf("error: turbine rule parallelism must be >0 \n");
-    *result = NULL;
-    return TURBINE_ERROR_INVALID;
-  }
-
   transform* T = malloc(sizeof(transform));
 
-  T->id = make_unique_id();
   T->name = strdup(name);
-  T->action_type = action_type;
-  T->action = malloc(action_len);
-  memcpy(T->action, action, action_len);
-  T->action_len = action_len;
-  T->priority = priority;
-  T->target = target;
-  T->parallelism = parallelism;
+  T->work = work;
   T->blocker = 0;
   T->input_tds = input_tds;
   T->input_td_subs = input_td_subs;
@@ -416,8 +384,8 @@ static inline void
 transform_free(transform* T)
 {
   free(T->name);
-  if (T->action)
-    free(T->action);
+  if (T->work)
+    work_unit_free(T->work);
   if (T->input_td_list)
     free(T->input_td_list);
   if (T->input_td_sub_list)
@@ -469,6 +437,10 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
       return TURBINE_SUCCESS;
     }
   }
+
+  // TODO:
+  // If datum is local, subscribe directly
+  // Otherwise send subscribe sync message
   int subscribed;
   adlb_code rc = ADLB_Subscribe(id, sub_convert(subscript), &subscribed);
   
@@ -520,29 +492,22 @@ static inline turbine_code rule_inputs(transform* T);
 
 turbine_code
 turbine_rule(const char* name,
-             int input_tds, const turbine_datum_id* input_td_list,
-             int input_td_subs, const td_sub_pair* input_td_sub_list,
-             turbine_action_type action_type,
-             const void* action,
-             size_t action_len,
-             int priority,
-             int target,
-             int parallelism,
-             turbine_transform_id* id)
+              int input_tds,
+              const turbine_datum_id* input_td_list,
+              int input_td_subs,
+              const td_sub_pair* input_td_sub_list,
+              xlb_work_unit *work)
 {
   turbine_code tc;
+  xlb_work_unit_id id = work->id;
 
   if (!turbine_engine_initialized)
     return TURBINE_ERROR_UNINITIALIZED;
   transform* T = NULL;
   tc = transform_create(name, input_tds, input_td_list,
-                                       input_td_subs, input_td_sub_list,
-                                       action_type, action, action_len,
-                                       priority, target, parallelism,
-                                       &T);
+                       input_td_subs, input_td_sub_list, work, &T);
 
   turbine_check(tc);
-  *id = T->id;
 
   tc = rule_inputs(T);
   turbine_check(tc);
@@ -552,21 +517,21 @@ turbine_rule(const char* name,
   if (tc != TURBINE_SUCCESS)
   {
     DEBUG_TURBINE("turbine_rule failed:\n");
-    DEBUG_TURBINE_RULE(T, *id);
+    DEBUG_TURBINE_RULE(T, id);
     return tc;
   }
 
-  DEBUG_TURBINE_RULE(T, *id);
+  DEBUG_TURBINE_RULE(T, id);
 
   if (subscribed)
   {
-    DEBUG_TURBINE("waiting: {%"PRId64"}", *id);
+    DEBUG_TURBINE("waiting: {%"PRId64"}", id);
     assert(T != NULL);
-    table_lp_add(&transforms_waiting, *id, T);
+    table_lp_add(&transforms_waiting, id, T);
   }
   else
   {
-    DEBUG_TURBINE("ready: {%"PRId64"}", *id);
+    DEBUG_TURBINE("ready: {%"PRId64"}", id);
     list_add(&transforms_ready, T);
   }
 
@@ -574,10 +539,10 @@ turbine_rule(const char* name,
 }
 
 static inline turbine_code add_rule_blocker(turbine_datum_id id,
-                                         turbine_transform_id transform);
+                                            xlb_work_unit_id transform);
 
 static inline turbine_code add_rule_blocker_sub(void *id_sub_key,
-        size_t id_sub_keylen, turbine_transform_id transform);
+        size_t id_sub_keylen, xlb_work_unit_id transform);
 /**
    Record that this transform is blocked by its inputs.  Do not yet
    subscribe to any inputs
@@ -590,7 +555,7 @@ rule_inputs(transform* T)
     turbine_datum_id id = T->input_td_list[i];
     // TODO: we might add duplicate list entries if id appears multiple
     //       times. This is currently handled upon removal from list
-    turbine_code code = add_rule_blocker(id, T->id);
+    turbine_code code = add_rule_blocker(id, T->work->id);
     turbine_check_verbose(code);
   }
 
@@ -606,7 +571,7 @@ rule_inputs(transform* T)
     // TODO: we might add duplicate list entries if id appears multiple
     //      times. This is currently handled upon removal from list
     turbine_code code = add_rule_blocker_sub(id_sub_key, id_sub_keylen,
-                                             T->id);
+                                             T->work->id);
     turbine_check_verbose(code);
   }
   return TURBINE_SUCCESS;
@@ -623,7 +588,7 @@ add_to_ready(struct list* tmp)
   while ((T = list_poll(tmp)))
   {
     void* c;
-    table_lp_remove(&transforms_waiting, T->id, &c);
+    table_lp_remove(&transforms_waiting, T->work->id, &c);
     if (c != NULL)
     {
       // TODO: c can be null if there were two entries in the blockers
@@ -656,7 +621,7 @@ turbine_rules_push()
 
     if (!subscribed)
     {
-      DEBUG_TURBINE("not subscribed on: %"PRId64"\n", T->id);
+      DEBUG_TURBINE("not subscribed on: %"PRId64"\n", T->work->id);
       list_add(&tmp, T);
     }
   }
@@ -671,7 +636,7 @@ turbine_rules_push()
    @param result return the new blocked list here
  */
 static inline turbine_code
-add_rule_blocker(turbine_datum_id id, turbine_transform_id transform)
+add_rule_blocker(turbine_datum_id id, xlb_work_unit_id transform)
 {
   assert(initialized);
   DEBUG_TURBINE("add_rule_blocker for {%"PRId64"}: <%"PRId64">",
@@ -691,7 +656,7 @@ add_rule_blocker(turbine_datum_id id, turbine_transform_id transform)
   Same as add_rule_blocker, but with subscript.
  */
 static inline turbine_code add_rule_blocker_sub(void *id_sub_key,
-        size_t id_sub_keylen, turbine_transform_id transform)
+        size_t id_sub_keylen, xlb_work_unit_id transform)
 {
   assert(initialized);
   DEBUG_TURBINE("add_rule_blocker_sub for {%"PRId64"}", transform);
@@ -707,11 +672,7 @@ static inline turbine_code add_rule_blocker_sub(void *id_sub_key,
   return TURBINE_SUCCESS;
 }
 
-turbine_code turbine_pop(turbine_action_type* action_type,
-                         turbine_transform_id *id,
-                         void** action, size_t *action_len,
-                         int* priority, int* target,
-                         int* parallelism)
+turbine_code turbine_pop(xlb_work_unit** work)
 {
   transform *T = (transform*) list_poll(&transforms_ready);
 
@@ -719,28 +680,22 @@ turbine_code turbine_pop(turbine_action_type* action_type,
   {
     // Signal none ready
     DEBUG_TURBINE("pop: no transforms ready");
-    *action_type = TURBINE_ACTION_NULL;
+    *work = NULL;
     return TURBINE_SUCCESS;
   }
 
   // Debugging
-  DEBUG_TURBINE("pop: transform:   {%"PRId64"}", T->id);
-  DEBUG_TURBINE("     action:      {%"PRId64"} %s: %.*s", T->id, T->name,
-                                      (int)T->action_len, (const char*)T->action);
-  DEBUG_TURBINE("     priority:    {%"PRId64"} => %i",  T->id, T->priority);
-  DEBUG_TURBINE("     target:      {%"PRId64"} => %i",  T->id, T->target);
-  DEBUG_TURBINE("     parallelism: {%"PRId64"} => %i",  T->id, T->parallelism);
+  DEBUG_TURBINE("pop: transform:   {%"PRId64"}", T->work->id);
+  DEBUG_TURBINE("     action:      {%"PRId64"} %s: %.*s", T->work->id, T->name,
+                                      T->work->length, (const char*)T->work->payload);
+  DEBUG_TURBINE("     priority:    {%"PRId64"} => %i",  T->work->id, T->work->priority);
+  DEBUG_TURBINE("     target:      {%"PRId64"} => %i",  T->work->id, T->work->target);
+  DEBUG_TURBINE("     parallelism: {%"PRId64"} => %i",  T->work->id, T->work->parallelism);
 
   // Copy outputs
-  *action_type = T->action_type;
-  *id = T->id;
-  *action = T->action;
-  T->action = NULL; // Avoid freeing action that we're going to return
-  *action_len = T->action_len;
-  *priority = T->priority;
-  *target = T->target;
-  *parallelism = T->parallelism;
-
+  *work = T->work;
+  T->work = NULL; // Avoid freeing action that we're going to return
+  
   // Clean up
   transform_free(T);
 
@@ -811,7 +766,7 @@ turbine_close_update(struct list_l *blocked, turbine_datum_id id,
   // Try to make progress on those transforms
   for (struct list_l_item* item = blocked->head; item; item = item->next)
   {
-    turbine_transform_id transform_id = item->data;
+    xlb_work_unit_id transform_id = item->data;
     transform* T;
     
     bool found = table_lp_search(&transforms_waiting, transform_id,
@@ -822,7 +777,7 @@ turbine_close_update(struct list_l *blocked, turbine_datum_id id,
     // update closed vector
     if (subscript == NULL)
     {
-      DEBUG_TURBINE("Update {%"PRId64"} for close: <%"PRId64">", T->id, id);
+      DEBUG_TURBINE("Update {%"PRId64"} for close: <%"PRId64">", T->work->id, id);
       for (int i = T->blocker; i < T->input_tds; i++) {
         if (T->input_td_list[i] == id) {
           mark_input_td_closed(T, i);
@@ -832,7 +787,7 @@ turbine_close_update(struct list_l *blocked, turbine_datum_id id,
     else
     {
       DEBUG_TURBINE("Update {%"PRId64"} for subscript close: <%"PRId64">",
-                    T->id, id);
+                    T->work->id, id);
       // Check to see which ones remain to be checked
       int first_td_sub;
       if (T->blocker >= T->input_tds)
@@ -982,18 +937,13 @@ turbine_code_tostring(char* output, turbine_code code)
   return result;
 }
 
-static const char *action_type_tostring(turbine_action_type action_type);
-
 static int
 transform_tostring(char* output, transform* t)
 {
   int result = 0;
   char* p = output;
 
-  const char *action_type_string = action_type_tostring(t->action_type);
-
   append(p, "%s ", t->name);
-  append(p, "%s ", action_type_string);
   append(p, "(");
   bool first = true;
   for (int i = 0; i < t->input_tds; i++)
@@ -1076,34 +1026,6 @@ bitfield_size(int inputs) {
   return (size_t)(inputs - 1) / 8 + 1;
 }
 
-/**
-   Convert given action_type to string representation
-*/
-static const char*
-action_type_tostring(turbine_action_type action_type)
-{
-  const char* s = NULL;
-  switch (action_type)
-  {
-    case TURBINE_ACTION_NULL:
-      s = "NULL";
-      break;
-    case TURBINE_ACTION_LOCAL:
-      s = "LOCAL";
-      break;
-    case TURBINE_ACTION_CONTROL:
-      s = "CONTROL";
-      break;
-    case TURBINE_ACTION_WORK:
-      s = "WORK";
-      break;
-    default:
-      printf("action_type_tostring(): unknown: %i\n", action_type);
-      exit(1);
-  }
-  return s;
-}
-
 static void
 info_waiting()
 {
@@ -1113,7 +1035,7 @@ info_waiting()
   {
     transform* t = item->data;
     char id_string[24];
-    sprintf(id_string, "{%"PRId64"}", t->id);
+    sprintf(id_string, "{%"PRId64"}", t->work->id);
     int c = sprintf(buffer, "%10s ", id_string);
     transform_tostring(buffer+c, t);
     printf("TRANSFORM: %s\n", buffer);
@@ -1121,7 +1043,7 @@ info_waiting()
 }
 
 // Callbacks to free data
-static void tbl_free_transform_cb(turbine_transform_id key, void *T);
+static void tbl_free_transform_cb(xlb_work_unit_id key, void *T);
 static void tbl_free_blockers_cb(turbine_datum_id key, void *L);
 static void tbl_free_sub_blockers_cb(const void *key, size_t key_len, void *L);
 static void list_free_transform_cb(void *T);
@@ -1155,7 +1077,7 @@ static void turbine_engine_finalize(void)
 
 }
 
-static void tbl_free_transform_cb(turbine_transform_id key, void *T)
+static void tbl_free_transform_cb(xlb_work_unit_id key, void *T)
 {
   transform_free((transform*)T);
 }

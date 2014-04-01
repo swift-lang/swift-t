@@ -61,5 +61,5 @@ src/turbine.d src/turbine.o: src/turbine.c /usr/include/stdc-predef.h \
  /home/tim/ExM/inst/c-utils/include/jenkins-hash.h \
  /home/tim/ExM/inst/c-utils/include/table_lp.h \
  /home/tim/ExM/inst/c-utils/include/tools.h src/turbine.h \
- src/turbine-defs.h src/adlb-defs.h src/adlb_types.h src/debug.h config.h \
- src/common.h src/adlb_types.h
+ src/turbine-defs.h src/adlb-defs.h src/adlb_types.h src/workqueue.h \
+ src/debug.h config.h src/common.h src/adlb_types.h

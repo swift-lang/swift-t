@@ -28,19 +28,7 @@
 
 #include <turbine-defs.h>
 
-typedef enum
-{
-  /** No action */
-  TURBINE_ACTION_NULL = 0,
-  /** Act locally */
-  TURBINE_ACTION_LOCAL = 1,
-  /** Act on a remote engine */
-  TURBINE_ACTION_CONTROL = 2,
-  /** Act on a worker */
-  TURBINE_ACTION_WORK = 3
-} turbine_action_type;
-
-typedef int64_t turbine_transform_id;
+#include "workqueue.h"
 
 typedef struct {
   char *key;
@@ -72,48 +60,37 @@ static inline bool turbine_is_engine(void) {
 }
 
 /**
-   @param id Output: the ID of the new rule
-   @return TURBINE_SUCCESS/TURBINE_ERROR_*
-           On error, id is undefined
+   work: ownership of this task is passed into the engine module
+            until released
+   returns TURBINE_SUCCESS/TURBINE_ERROR_*
  */
 turbine_code turbine_rule(const char* name,
-                          int inpbt_tds,
+                          int input_tds,
                           const turbine_datum_id* input_td_list,
                           int input_td_subs,
                           const td_sub_pair* input_td_sub_list,
-                          turbine_action_type action_type,
-                          const void* action,
-                          size_t action_len,
-                          int priority,
-                          int target,
-                          int parallelism,
-                          turbine_transform_id* id);
+                          xlb_work_unit *work);
 
 turbine_code turbine_rules_push(void);
 
 /*
   Should be called when turbine engine is notified that an id is closed
+  TODO: argument indicating whether we should call pop?
  */
 turbine_code turbine_close(turbine_datum_id id);
 
 /*
   Should be called when turbine engine is notified that an id/subscript
   is closed
+  TODO: argument indicating whether we should call pop?
  */
 turbine_code turbine_sub_close(turbine_datum_id id, const void *subscript,
                                size_t subscript_len);
 
 /*
-  action_type: this is TURBINE_ACTION_NULL if no ready actions.
-               otherwise it will have the type of action and
-               the output arguments will be filled in
-  action: the string action.  Caller is responsible for freeing
+  work: a ready task, NULL if none ready.  Ownership is passed to caller
  */
-turbine_code turbine_pop(turbine_action_type* action_type,
-                         turbine_transform_id *id,
-                         void** action, size_t *action_len,
-                         int* priority, int* target,
-                         int* parallelism);
+turbine_code turbine_pop(xlb_work_unit** work);
 
 #define TURBINE_CODE_STRING_MAX 64
 
