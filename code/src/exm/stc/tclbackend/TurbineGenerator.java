@@ -2338,29 +2338,48 @@ public class TurbineGenerator implements CompilerBackend {
 
     private boolean anySupportRecursiveWait(List<Var> waitVars) {
       for (Var w: waitVars) {
-        if (supportsRecursiveWait(w))
+        if (checkRecursiveWait(w))
           return true;
       }
       return false;
     }
 
-    private boolean supportsRecursiveWait(Var var) {
-      boolean supportsRecWait = false;
-      Type baseType = var.type();
-      if (Types.isArray(var.type()) || Types.isBag(var.type())) {
-        baseType = new NestedContainerInfo(var.type()).baseType;
-        supportsRecWait = true;
+    /**
+     * Return true if recursive and non-recursive wait are different for variable.
+     * Throw exception if not supported yet
+     * @param var
+     * @return
+     */
+    private boolean checkRecursiveWait(Typed typed) {
+      boolean requiresRecursion = false;
+      Type baseType = typed.type();
+      if (Types.isContainer(typed)) {
+        baseType = new NestedContainerInfo(typed.type()).baseType;
+        requiresRecursion = true;
       }
 
       if (Types.isPrimFuture(baseType)) {
         // ok
       } else if (Types.isRef(baseType)) {
-        // TODO: might not be really recursive, but works for now
+        // Can follow refs
+        
+        // Check valid
+        checkRecursiveWait(Types.retrievedType(baseType));
+        requiresRecursion = true;
+      } else if (Types.isStruct(baseType)) {
+        // Can't follow struct field refs yet
+        for (StructField f: ((StructType)baseType.getImplType()).getFields()) {
+          if (checkRecursiveWait(f.getType())) {
+            requiresRecursion = true;
+            throw new STCRuntimeError("Recursively waiting on structs with " +
+                         " references to other datums is not yet implemented");
+          }
+        }
       } else {
         throw new STCRuntimeError("Recursive wait not yet supported"
-            + " for type: " + var.type().typeName());
+            + " for type: " + typed.type().typeName());
       }
-      return supportsRecWait;
+      return requiresRecursion;
     }
 
     /**
