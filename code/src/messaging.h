@@ -395,12 +395,20 @@ struct packed_steal
   int work_type_counts[]; // Sender's count of each work type
 };
 
-#define WORK_TYPES_SIZE (sizeof(int) * (size_t)xlb_types_size) 
+#define WORK_TYPES_SIZE (sizeof(int) * (size_t)xlb_types_size)
 
 struct packed_steal_resp
 {
   int count; // number of work units
   bool last; // whether last set of stolen work
+};
+
+#define PACKED_SUBSCRIBE_INLINE_BYTES 32
+struct packed_subscribe_sync
+{
+  adlb_datum_id id;
+  int subscript_len;
+  char inline_subscript[]; // Small subscripts inline
 };
 
 /**
@@ -411,6 +419,7 @@ typedef enum
   ADLB_SYNC_REQUEST, // Sync for a regular request
   ADLB_SYNC_STEAL, // Trying to steal work
   ADLB_SYNC_REFCOUNT, // Modify reference count
+  ADLB_SYNC_SUBSCRIBE, // Subscribe to a datum
 } adlb_sync_mode;
 
 struct packed_sync
@@ -420,10 +429,15 @@ struct packed_sync
   {
     struct packed_incr incr;   // if refcount increment
     struct packed_steal steal; // if steal
+    struct packed_subscribe_sync subscribe; // if subscribe
   };
 };
 
-#define PACKED_SYNC_SIZE (sizeof(struct packed_sync) + WORK_TYPES_SIZE)
+#define PACKED_SYNC_EXTRA \
+  (WORK_TYPES_SIZE > PACKED_SUBSCRIBE_INLINE_BYTES ? \
+   WORK_TYPES_SIZE : PACKED_SUBSCRIBE_INLINE_BYTES)
+
+#define PACKED_SYNC_SIZE (sizeof(struct packed_sync) + PACKED_SYNC_EXTRA)
 
 /**
    Simple data type transfer
@@ -493,6 +507,7 @@ typedef enum
   ADLB_TAG_RESPONSE_STEAL_COUNT,
   ADLB_TAG_RESPONSE_STEAL,
   ADLB_TAG_SYNC_RESPONSE,
+  ADLB_TAG_SYNC_SUB,
   ADLB_TAG_WORKUNIT,
   ADLB_TAG_FAIL,
 

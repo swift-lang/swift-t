@@ -43,6 +43,9 @@ static adlb_code msg_from_other_server(int other_server,
                   int target, const struct packed_sync *my_hdr);
 static inline adlb_code msg_shutdown(adlb_sync_mode mode, int sync_target, bool* done);
 
+static adlb_code xlb_handle_subscribe_sync(int rank,
+            const struct packed_subscribe_sync *hdr);
+
 static adlb_code enqueue_pending(xlb_pending_kind kind, int rank,
                              const struct packed_sync *hdr);
 
@@ -195,6 +198,40 @@ send_sync(int target, const struct packed_sync *hdr)
   return ADLB_SUCCESS;
 }
 
+adlb_code
+xlb_sync_subscribe(int target, adlb_datum_id id, adlb_subscript sub)
+{
+  char req_storage[PACKED_SYNC_SIZE]; // Temporary stack storage for struct
+  struct packed_sync *req = (struct packed_sync *)req_storage;
+  req->subscribe.id = id;
+  req->subscribe.subscript_len = (int)sub.length;
+
+  bool inlined_subscript; 
+  if (sub.length <= PACKED_SYNC_EXTRA)
+  {
+    if (sub.length > 0)
+    {
+      memcpy(req->subscribe.inline_subscript, sub.key, sub.length);
+    }
+    inlined_subscript = true;
+  }
+  else
+  {
+    inlined_subscript = false;
+  }
+
+  int rc = xlb_sync2(target, req);
+  ADLB_CHECK(rc);
+
+  if (!inlined_subscript)
+  {
+    // send subscript separately with special tag
+    SEND(sub.key, (int)sub.length, MPI_BYTE, target, ADLB_TAG_SYNC_SUB);
+  }
+
+  return ADLB_SUCCESS;
+}
+
 /**
    @return adlb_code
  */
@@ -320,12 +357,56 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
     // Then we're done - already sent sync response to caller
     return ADLB_SUCCESS;
   }
+  else if (mode == ADLB_SYNC_SUBSCRIBE)
+  {
+    code = xlb_handle_subscribe_sync(rank, &hdr->subscribe);
+  }
   else
   {
     printf("Invalid sync mode: %d\n", mode);
     return ADLB_ERROR;
   }
   return code;
+}
+
+static adlb_code xlb_handle_subscribe_sync(int rank,
+            const struct packed_subscribe_sync *hdr)
+{
+  MPI_Status status;
+
+  void *malloced_subscript = NULL;
+  adlb_subscript sub;
+  sub.length = (size_t)hdr->subscript_len;
+
+  if (hdr->subscript_len == 0)
+  {
+    sub.key = NULL; 
+  }
+  else if (hdr->subscript_len <= PACKED_SYNC_EXTRA)
+  {
+    // subscript small enough to store inline
+    sub.key = hdr->inline_subscript;
+  }
+  else
+  {
+    assert(hdr->subscript_len <= ADLB_DATA_SUBSCRIPT_MAX);
+    malloced_subscript = malloc((size_t)hdr->subscript_len);
+    ADLB_MALLOC_CHECK(malloced_subscript);
+    
+    // receive subscript as separate message with special tag
+    RECV(malloced_subscript, hdr->subscript_len, MPI_BYTE,
+         rank, ADLB_TAG_SYNC_SUB);
+    sub.key = malloced_subscript;
+  }
+
+  // call data module to subscribe
+  xlb_subscribe(hdr->id, sub, rank);
+
+  if (malloced_subscript != NULL)
+  {
+    free(malloced_subscript);
+  }
+  return ADLB_SUCCESS;
 }
 
 /*

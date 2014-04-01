@@ -344,17 +344,19 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
 {
   turbine_condition(id != ADLB_DATA_ID_NULL, TURBINE_ERROR_INVALID,
                     "Null ID provided to rule");
-  bool subscribed;
   
   int XLB_NOTIFY_LOCAL_ENGINE = -1; // TODO: fix
-  bool datum_is_local = true; // TODO: fix
 
-  // if subscript provided, use key
-  size_t id_sub_keylen = xlb_id_sub_buflen(sub_convert(subscript));
-  char id_sub_key[id_sub_keylen];
+  int server = ADLB_Locate(id);
+
   if (subscript.key != NULL)
   {
+    // Create key from id and subscript
+    size_t id_sub_keylen = xlb_id_sub_buflen(sub_convert(subscript));
+    char id_sub_key[id_sub_keylen];
     xlb_write_id_sub(id_sub_key, id, sub_convert(subscript));
+
+    // Avoid multiple subscriptions for same data
     void *tmp;
     if (table_bp_search(&td_sub_subscribed, id_sub_key, id_sub_keylen,
                         &tmp))
@@ -366,26 +368,28 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
       return TURBINE_SUCCESS;
     }
 
-    if (datum_is_local)
+    if (server == xlb_comm_rank)
     {
       adlb_data_code dc = xlb_subscribe_sub(id_sub_key, id_sub_keylen,
-                                  XLB_NOTIFY_LOCAL_ENGINE, &subscribed);
+                                  XLB_NOTIFY_LOCAL_ENGINE, result);
       if (dc == ADLB_DATA_ERROR_NOT_FOUND)
       {
         // Handle case where read_refcount == 0 and write_refcount == 0
         //      => datum was freed and we're good to go
-        subscribed = false;
+        *result = false;
+        return TURBINE_SUCCESS;
       }
-      else
-      {
-        DATA_CHECK(dc);
-      }
+      DATA_CHECK(dc);
     }
     else
     {
-      adlb_code ac = xlb_sync_subscribe_sub(id_sub_key, id_sub_keylen);
+      adlb_code ac = xlb_sync_subscribe(server, id,
+                          sub_convert(subscript));
       DATA_CHECK_ADLB(ac,  TURBINE_ERROR_UNKNOWN);
-      subscribed = true; // Always subscribes
+      *result = true; // Always subscribes
+      // Record it was subscribed
+      table_bp_add(&td_sub_subscribed, id_sub_key, id_sub_keylen, (void*)1);
+      return TURBINE_SUCCESS;
     }
   }
   else
@@ -395,36 +399,29 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
       *result = true;
       return TURBINE_SUCCESS;
     }
-    if (datum_is_local)
+    if (server == xlb_comm_rank)
     {
       adlb_data_code dc = xlb_subscribe_id(id, XLB_NOTIFY_LOCAL_ENGINE,
-                                           &subscribed);
+                                           result);
       if (dc == ADLB_DATA_ERROR_NOT_FOUND)
       {
         // Handle case where read_refcount == 0 and write_refcount == 0
         //      => datum was freed and we're good to go
-        subscribed = false;
+        *result = false;
+        return TURBINE_SUCCESS;
       }
       DATA_CHECK(dc);
     }
     else
     {
-      adlb_code ac = xlb_sync_subscribe_id(id);
+      adlb_code ac = xlb_sync_subscribe(server, id, ADLB_NO_SUB);
       DATA_CHECK_ADLB(ac,  TURBINE_ERROR_UNKNOWN);
-      subscribed = true; // Always subscribes
+      *result = true; // Always subscribes
+      table_lp_add(&td_subscribed, id, (void*)1);
+      return TURBINE_SUCCESS;
     }
   }
 
-  DEBUG_TURBINE("ADLB_Subscribe: %i", (int)subscribed);
-
-  if (subscribed) {
-    // Record it was subscribed
-    if (subscript.key != NULL)
-      table_bp_add(&td_sub_subscribed, id_sub_key, id_sub_keylen, (void*)1);
-    else
-      table_lp_add(&td_subscribed, id, (void*)1);
-  }
-  *result = subscribed;
   return TURBINE_SUCCESS;
 }
 
