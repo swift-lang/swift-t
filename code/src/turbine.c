@@ -96,7 +96,7 @@ static inline void mark_input_td_sub_closed(transform *T, int i);
 
 // Update transforms after close
 static turbine_engine_code
-turbine_close_update(struct list_l *blocked, adlb_datum_id id,
+turbine_close_update(struct list *blocked, adlb_datum_id id,
      adlb_subscript sub, turbine_work_array *ready);
 
 /** Has turbine_engine_init() been called? */
@@ -105,18 +105,19 @@ bool turbine_engine_initialized = false;
 /**
    Waiting transforms
    Map from transform id to transform
+   TODO: don't really need hash table for this - linked list?
  */
 struct table_lp transforms_waiting;
 
 /**
    TD inputs blocking their transforms
-   Map from TD ID to list of transforms
+   Map from TD ID to list of pointers to transforms
  */
 struct table_lp td_blockers;
 
 /**
    ID/subscript pairs blocking transforms
-   Map from ID/subscript pair to list of transforms
+   Map from ID/subscript pair to list of pointers to transforms
  */
 struct table_bp td_sub_blockers;
 
@@ -491,10 +492,10 @@ turbine_rule(const char* name,
 }
 
 static inline turbine_engine_code add_rule_blocker(adlb_datum_id id,
-                                            xlb_work_unit_id transform);
+                                      transform *T);
 
 static inline turbine_engine_code add_rule_blocker_sub(void *id_sub_key,
-        size_t id_sub_keylen, xlb_work_unit_id transform);
+        size_t id_sub_keylen, transform *T);
 /**
    Record that this transform is blocked by its inputs.  Do not yet
    subscribe to any inputs
@@ -507,10 +508,11 @@ rule_inputs(transform* T)
     adlb_datum_id id = T->input_td_list[i];
     // TODO: we might add duplicate list entries if id appears multiple
     //       times. This is currently handled upon removal from list
-    turbine_engine_code code = add_rule_blocker(id, T->work->id);
+    turbine_engine_code code = add_rule_blocker(id, T);
     turbine_check_verbose(code);
   }
 
+  turbine_engine_code code;
   for (int i = 0; i < T->input_td_subs; i++)
   {
     td_sub_pair *td_sub = &T->input_td_sub_list[i];
@@ -520,8 +522,7 @@ rule_inputs(transform* T)
     xlb_write_id_sub(id_sub_key, td_sub->td, sub_convert(td_sub->subscript));
     // TODO: we might add duplicate list entries if id appears multiple
     //      times. This is currently handled upon removal from list
-    turbine_engine_code code = add_rule_blocker_sub(id_sub_key, id_sub_keylen,
-                                             T->work->id);
+    code = add_rule_blocker_sub(id_sub_key, id_sub_keylen, T);
     turbine_check_verbose(code);
   }
   return TURBINE_SUCCESS;
@@ -533,19 +534,19 @@ rule_inputs(transform* T)
    @param result return the new blocked list here
  */
 static inline turbine_engine_code
-add_rule_blocker(adlb_datum_id id, xlb_work_unit_id transform)
+add_rule_blocker(adlb_datum_id id, transform *T)
 {
   assert(turbine_engine_initialized);
   DEBUG_TURBINE("add_rule_blocker for {%"PRId64"}: <%"PRId64">",
-                transform, id);
-  struct list_l* blocked;
+                T->work->id, id);
+  struct list* blocked;
   table_lp_search(&td_blockers, id, (void**)&blocked);
   if (blocked == NULL)
   {
-    blocked = list_l_create();
+    blocked = list_create();
     table_lp_add(&td_blockers, id, blocked);
   }
-  list_l_add(blocked, transform);
+  list_add(blocked, T);
   return TURBINE_SUCCESS;
 }
 
@@ -553,19 +554,19 @@ add_rule_blocker(adlb_datum_id id, xlb_work_unit_id transform)
   Same as add_rule_blocker, but with subscript.
  */
 static inline turbine_engine_code add_rule_blocker_sub(void *id_sub_key,
-        size_t id_sub_keylen, xlb_work_unit_id transform)
+        size_t id_sub_keylen, transform *T)
 {
   assert(turbine_engine_initialized);
-  DEBUG_TURBINE("add_rule_blocker_sub for {%"PRId64"}", transform);
-  struct list_l* blocked;
+  DEBUG_TURBINE("add_rule_blocker_sub for {%"PRId64"}", T->work->id);
+  struct list* blocked;
   bool found = table_bp_search(&td_sub_blockers, id_sub_key,
                          id_sub_keylen, (void**)&blocked);
   if (!found)
   {
-    blocked = list_l_create();
+    blocked = list_create();
     table_bp_add(&td_sub_blockers, id_sub_key, id_sub_keylen, blocked);
   }
-  list_l_add(blocked, transform);
+  list_add(blocked, T);
   return TURBINE_SUCCESS;
 }
 
@@ -580,7 +581,7 @@ turbine_close(adlb_datum_id id, turbine_work_array *ready)
 
   // Remove from table transforms that this td was blocking
   // Will need to free list later
-  struct list_l* L;
+  struct list* L;
   bool found = table_lp_remove(&td_blockers, id, (void**)&L);
   if (!found)
     // We don't have any rules that block on this td
@@ -605,7 +606,7 @@ turbine_engine_code turbine_sub_close(adlb_datum_id id, adlb_subscript sub,
                                         key_len, &tmp);
   assert(was_subscribed);
 
-  struct list_l* L;
+  struct list* L;
   
   bool found = table_bp_remove(&td_sub_blockers, key, key_len, (void**)&L);
   if (!found)
@@ -624,19 +625,13 @@ turbine_engine_code turbine_sub_close(adlb_datum_id id, adlb_subscript sub,
       with ownership passed to caller
  */
 static turbine_engine_code
-turbine_close_update(struct list_l *blocked, adlb_datum_id id,
+turbine_close_update(struct list *blocked, adlb_datum_id id,
          adlb_subscript sub, turbine_work_array *ready)
 {
   // Try to make progress on those transforms
-  for (struct list_l_item* item = blocked->head; item; item = item->next)
+  for (struct list_item* item = blocked->head; item; item = item->next)
   {
-    xlb_work_unit_id transform_id = item->data;
-    transform* T;
-    
-    bool found = table_lp_search(&transforms_waiting, transform_id,
-                                 (void**)&T);
-    if (!found)
-      continue;
+    transform* T = item->data;
  
     // update closed vector
     if (!adlb_has_sub(sub))
@@ -678,7 +673,7 @@ turbine_close_update(struct list_l *blocked, adlb_datum_id id,
 
     if (!subscribed)
     {
-      DEBUG_TURBINE("ready: {%"PRId64"}", transform_id);
+      DEBUG_TURBINE("ready: {%"PRId64"}", T->work->id);
       if (ready->size <= ready->count)
       {
         if (ready->size == 0)
@@ -698,7 +693,7 @@ turbine_close_update(struct list_l *blocked, adlb_datum_id id,
   }
 
 
-  list_l_free(blocked); // No longer need list
+  list_free(blocked); // No longer need list
 
   return TURBINE_SUCCESS;
 }
@@ -951,10 +946,10 @@ static void tbl_free_transform_cb(xlb_work_unit_id key, void *T)
 
 static void tbl_free_blockers_cb(adlb_datum_id key, void *L)
 {
-  list_l_free((struct list_l*)L);
+  list_free((struct list*)L);
 }
 
 static void tbl_free_sub_blockers_cb(const void *key, size_t key_len, void *L)
 {
-  list_l_free((struct list_l*)L);
+  list_free((struct list*)L);
 }
