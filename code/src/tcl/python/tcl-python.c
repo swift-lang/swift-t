@@ -45,6 +45,7 @@
 static int
 handle_python_exception()
 {
+  printf("\n");
   printf("PYTHON EXCEPTION:\n");
   PyErr_Print();
   return TCL_ERROR;

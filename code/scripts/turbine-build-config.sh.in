@@ -21,6 +21,7 @@ MPI_INCLUDE='@USE_MPI_INCLUDE@'
 # Only one of the following is used
 MPI_LIB_DIR='@USE_MPI_LIB_DIR@'
 MPI_LIB_NAME='@USE_MPI_LIB_NAME@'
+MPI_LIB_SPEC='@USE_MPI_LIB_SPEC@'
 
 ENABLE_MPE='@ENABLE_MPE@'
 MPE='@USE_MPE@'
@@ -44,7 +45,7 @@ TURBINE_LIBS="-L${TURBINE_HOME}/lib \
 if [ ! -z "$MPI_LIB_DIR" -a "$MPI_LIB_DIR" != 0 ]; then
   TURBINE_LIBS+=" -L$MPI_LIB_DIR"
 fi
-TURBINE_LIBS+=" -l${MPI_LIB_NAME}"
+TURBINE_LIBS+=" ${MPI_LIB_SPEC}"
 
 if [ "$ENABLE_MPE" = 1 ]; then
   TURBINE_LIBS+=" -L${MPE}/lib -lmpe"
