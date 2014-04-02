@@ -42,8 +42,9 @@ public class Settings
 {
   
   // Whether we're using no engine
-  // TODO: remove or make configurable
+  // TODO: remove eventually
   public static boolean NO_TURBINE_ENGINE = false;
+  public static final String NO_TURBINE_ENGINE_KEY = "stc.turbine.no-engine";
   
   public static final String TURBINE_VERSION = "stc.turbine.version";
   public static final String DEBUG_LEVEL = "stc.debugging";
@@ -145,6 +146,7 @@ public class Settings
     defaults.setProperty(TURBINE_VERSION, "0.0.5");
     defaults.setProperty(DEBUG_LEVEL, "COMMENTS");
     defaults.setProperty(IC_OUTPUT_FILE, "");
+    defaults.setProperty(NO_TURBINE_ENGINE_KEY, "false");
     defaults.setProperty(RPATH, "");
     defaults.setProperty(INPUT_FILENAME, "");
     defaults.setProperty(OUTPUT_FILENAME, "");
@@ -305,6 +307,7 @@ public class Settings
    */
   private static void validateProperties() throws InvalidOptionException {
     // Check that boolean values are correct
+    NO_TURBINE_ENGINE = getBoolean(NO_TURBINE_ENGINE_KEY);
     getBoolean(OPT_FLATTEN_NESTED);
     getBoolean(OPT_CONSTANT_FOLD);
     getBoolean(OPT_DEAD_CODE_ELIM);
