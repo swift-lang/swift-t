@@ -55,6 +55,12 @@ adlb_code xlb_sync(int target);
  */
 adlb_code xlb_sync2(int target, const struct packed_sync *hdr);
 
+/*
+  Subscribe to a datum on another server
+ */
+adlb_code
+xlb_sync_subscribe(int target, adlb_datum_id id, adlb_subscript sub);
+
 typedef enum {
   DEFERRED_SYNC, // Have not yet accepted
   ACCEPTED_RC,   // Have accepted but need to do refcount

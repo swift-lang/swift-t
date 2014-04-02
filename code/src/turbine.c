@@ -48,6 +48,7 @@
 
 #include "turbine.h"
 #include "data_internal.h"
+#include "sync.h"
 
 typedef enum
 {

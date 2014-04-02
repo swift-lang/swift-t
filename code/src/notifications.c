@@ -220,8 +220,8 @@ xlb_close_notify(const adlb_notif_ranks *ranks)
     if (server == target)
     {
       // Server subscribed by sync
-      // TODO
       rc = xlb_notify_server(server, notif->id, notif->subscript);
+      ADLB_CHECK(rc);
     }
     else
     {
@@ -244,6 +244,15 @@ xlb_close_notify(const adlb_notif_ranks *ranks)
     }
   }
   return ADLB_SUCCESS;
+}
+
+adlb_code
+xlb_notify_server(int server, adlb_datum_id id, adlb_sub subscript)
+{
+  // TODO: pack id/subscript
+  // TODO: send to server
+  // TODO: wait for response
+
 }
 
 adlb_code
