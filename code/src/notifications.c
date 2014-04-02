@@ -482,16 +482,17 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
       bool maintain_index = !apply_all;
       if (maintain_index)
       {
-        void *ptr;
-        bool removed = table_lp_remove(&c->index, change->id, &ptr);
-        DEBUG("Remove change for id <%"PRId64">: %p", change->id, ptr);
+        void *tmp;
+        bool removed = table_lp_remove(&c->index, change->id, &tmp);
+        DEBUG("Remove change for id <%"PRId64">: %lu", change->id,
+              (unsigned long)tmp);
         assert(removed);
-        assert(ptr == change);
+        assert(((unsigned long)tmp) == i);
       }
 
       // Remove processed entries
       c->count--;
-      if (i != c->count)
+      if (i != c->count - 1)
       {
         // Swap last to here
         *change = c->arr[c->count];
@@ -500,7 +501,7 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
         {
           void *ptr;
           bool found = table_lp_set(&c->index, change->id,
-                      (void*)(unsigned long)i, &ptr);
+                      (void*)(unsigned long)(i + 1), &ptr);
           assert(found);
           assert(((unsigned long)ptr) == c->count);
           TRACE("Reindex change for id <%"PRId64">: %lu => %d",
