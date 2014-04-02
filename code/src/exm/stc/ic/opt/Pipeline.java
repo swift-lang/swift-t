@@ -85,7 +85,9 @@ public class Pipeline extends FunctionOptimizerPass {
         boolean compatible = true;
         if (!w.getWaitVars().isEmpty()) {
           compatible = false;
-        } else if (w.childContext(cx) != cx) {
+        } else if (!Settings.NO_TURBINE_ENGINE 
+                    && w.childContext(cx) != cx) {
+          // We can't merge if WORKER and CONTROL contexts are different
           compatible = false;
         } else if (w.isParallel()) {
           compatible = false;
