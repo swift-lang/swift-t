@@ -213,24 +213,34 @@ xlb_close_notify(const adlb_notif_ranks *ranks)
   for (int i = 0; i < ranks->count; i++)
   {
     adlb_notif_rank *notif = &ranks->notifs[i];
-    
-    if (i == 0 || notif->subscript.key != last_subscript.key ||
-                  notif->subscript.length != last_subscript.length)
-    {
-      // Skip refilling payload if possible 
-      payload_len = fill_payload(payload, notif->id, notif->subscript);
-    }
+   
     int target = notif->rank;
     int server = xlb_map_to_server(target);
-    if (xlb_am_server && server == xlb_comm_rank)
+
+    if (server == target)
     {
-      rc = notify_local(target, payload, payload_len);
-      ADLB_CHECK(rc);
+      // Server subscribed by sync
+      // TODO
+      rc = xlb_notify_server(server, notif->id, notif->subscript);
     }
     else
     {
-      rc = notify_nonlocal(target, server, payload, payload_len);
-      ADLB_CHECK(rc);
+      if (i == 0 || notif->subscript.key != last_subscript.key ||
+                    notif->subscript.length != last_subscript.length)
+      {
+        // Skip refilling payload if possible 
+        payload_len = fill_payload(payload, notif->id, notif->subscript);
+      }
+      if (xlb_am_server && server == xlb_comm_rank)
+      {
+        rc = notify_local(target, payload, payload_len);
+        ADLB_CHECK(rc);
+      }
+      else
+      {
+        rc = notify_nonlocal(target, server, payload, payload_len);
+        ADLB_CHECK(rc);
+      }
     }
   }
   return ADLB_SUCCESS;
