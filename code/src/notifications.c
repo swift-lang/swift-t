@@ -484,7 +484,8 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
       {
         void *ptr;
         bool removed = table_lp_remove(&c->index, change->id, &ptr);
-        assert(removed && ptr == change);
+        assert(removed);
+        assert(ptr == change);
       }
 
       // Remove processed entries
