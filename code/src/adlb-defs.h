@@ -116,7 +116,7 @@ static inline bool adlb_has_sub(adlb_subscript sub)
 
 typedef struct {
   adlb_datum_id id;
-  adlb_subscript sub;
+  adlb_subscript subscript;
 } adlb_datum_id_sub;
 
 typedef enum
