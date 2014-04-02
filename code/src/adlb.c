@@ -465,14 +465,6 @@ adlb_code ADLBP_Put_rule(const void* payload, int length, int target,
   // pack in all needed data at end
   void *p_data = p->inline_data;
 
-  #ifndef NDEBUG
-  // Don't pack name if NDEBUG on
-  p->name_strlen = (int)strlen(name);
-  memcpy(p_data, name, (size_t)p->name_strlen);
-  p_data += p->name_strlen;
-  p_len += p->name_strlen;
-  #endif
-
   size_t wait_id_len = sizeof(wait_ids[0]) * (size_t)wait_id_count;
   memcpy(p_data, wait_ids, wait_id_len);
   p_data += wait_id_len;
@@ -485,6 +477,14 @@ adlb_code ADLBP_Put_rule(const void* payload, int length, int target,
     p_data += packed_len;
     p_len += packed_len;
   }
+
+  #ifndef NDEBUG
+  // Don't pack name if NDEBUG on
+  p->name_strlen = (int)strlen(name);
+  memcpy(p_data, name, (size_t)p->name_strlen);
+  p_data += p->name_strlen;
+  p_len += p->name_strlen;
+  #endif
   
   if (p->has_inline_data)
   {

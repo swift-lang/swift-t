@@ -306,7 +306,8 @@ handle_put_rule(int caller)
   const adlb_datum_id *wait_ids = p->inline_data;
  
   // Remainder of data is packed into array in binary form
-  const void *p_pos = p->inline_data + sizeof(wait_ids[0]) * p->id_count;
+  const void *p_pos = p->inline_data;
+  p_pos += sizeof(wait_ids[0]) * p->id_count;
 
   adlb_datum_id_sub wait_id_subs[p->id_sub_count];
   for (int i = 0; i < p->id_sub_count; i++)
@@ -336,7 +337,7 @@ handle_put_rule(int caller)
   int mc = MPI_Get_count(&status, MPI_BYTE, &msg_size);
   assert(mc == MPI_SUCCESS);
   // Make sure we don't get garbage data
-  assert(((const char*)p_pos) - ((const char*) p) < msg_size);
+  assert(((const char*)p_pos) - ((const char*) p) <= msg_size);
   #endif
 
   MPI_Request request;
