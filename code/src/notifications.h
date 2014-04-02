@@ -284,17 +284,17 @@ static inline adlb_code xlb_rc_changes_expand(xlb_rc_changes *c,
   }
 }
 
-static inline adlb_code xlb_rc_changes_add(xlb_rc_changes *c,
+static inline bool
+xlb_rc_change_merge_existing(xlb_rc_changes *c,
     adlb_datum_id id, int read_change, int write_change,
     bool must_preacquire)
 {
-  xlb_rc_change *change;
-  adlb_code ac;
-
-  // Ensure index initialized
-  if (c->count > 0 &&
-      table_lp_search(&c->index, id, (void**)&change))
+  void *tmp;
+  if (table_lp_search(&c->index, id, &tmp))
   {
+    unsigned long change_ix = (unsigned long)tmp;
+    assert(change_ix < c->count);
+    xlb_rc_change *change = &c->arr[change_ix];
     assert(change->id == id);
     change->rc.read_refcount += read_change;
     change->rc.write_refcount += write_change;
@@ -304,14 +304,29 @@ static inline adlb_code xlb_rc_changes_add(xlb_rc_changes *c,
       (change->rc.read_refcount > 0 || change->rc.write_refcount > 0);
     // NOTE, this might bring both refcounts to zero.  We handle this
     // later, when processing local refcounts
+    return true;
   }
-  else
+  return false;
+}
+
+static inline adlb_code xlb_rc_changes_add(xlb_rc_changes *c,
+    adlb_datum_id id, int read_change, int write_change,
+    bool must_preacquire)
+{
+  xlb_rc_change *change;
+  adlb_code ac;
+
+  // Ensure index initialized
+  if (c->count == 0 ||
+      !xlb_rc_change_merge_existing(c, id, read_change, write_change,
+                                    must_preacquire))
   {
     // New ID, add to array
     ac = xlb_rc_changes_expand(c, 1);
     ADLB_CHECK(ac);
 
-    change = &c->arr[c->count++];
+    unsigned long change_ix = c->count++;
+    change = &c->arr[change_ix];
     change->id = id;
     change->rc.read_refcount = read_change;
     change->rc.write_refcount = write_change;
@@ -319,7 +334,7 @@ static inline adlb_code xlb_rc_changes_add(xlb_rc_changes *c,
     // that would cause referand to be freed
     change->must_preacquire = must_preacquire;
 
-    bool added = table_lp_add(&c->index, id, change);
+    bool added = table_lp_add(&c->index, id, (void*)change_ix);
     CHECK_MSG(added, "Could not add to refcount index table");
 
     DEBUG("Add change: <%"PRId64"> r: %i w: %i pa: %i", change->id,

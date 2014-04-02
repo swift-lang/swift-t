@@ -484,9 +484,7 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
       {
         void *ptr;
         bool removed = table_lp_remove(&c->index, change->id, &ptr);
-        assert(removed);
-        assert(ptr == change);
-        TRACE("Remove change for id <%"PRId64">: %p", change->id, ptr);
+        DEBUG("Remove change for id <%"PRId64">: %p", change->id, ptr);
         assert(removed);
         assert(ptr == change);
       }
@@ -501,11 +499,12 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
         if (maintain_index)
         {
           void *ptr;
-          bool found = table_lp_set(&c->index, change->id, change, &ptr);
+          bool found = table_lp_set(&c->index, change->id,
+                      (void*)(unsigned long)i, &ptr);
           assert(found);
-          assert(ptr == &c->arr[c->count]);
-          TRACE("Reindex change for id <%"PRId64">: %p => %p",
-                change->id, ptr, change);
+          assert(((unsigned long)ptr) == c->count);
+          TRACE("Reindex change for id <%"PRId64">: %lu => %d",
+                change->id, (unsigned long)ptr, i);
         }
       }
     }
@@ -927,18 +926,47 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
 
   if (counts->rc_change_count > 0)
   {
-    DEBUG("Receiving %i rc changes", counts->rc_change_count);
-    ac = xlb_rc_changes_expand(&notifs->rc_changes, counts->rc_change_count);
+    int rc_change_count = counts->rc_change_count;
+
+    xlb_rc_changes *c = &notifs->rc_changes; 
+    DEBUG("Receiving %i rc changes", rc_change_count);
+    ac = xlb_rc_changes_expand(c, rc_change_count);
     ADLB_CHECK(ac);
 
-    RECV(&notifs->rc_changes.arr[notifs->rc_changes.count], 
-         counts->rc_change_count * (int)sizeof(notifs->rc_changes.arr[0]),
+    RECV(&c->arr[c->count], 
+         rc_change_count * (int)sizeof(c->arr[0]),
          MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE);
-    notifs->rc_changes.count += counts->rc_change_count;
 
-    // TODO: rebuild index
+    // Rebuild index
     //  - Merge new data into existing ones
     //  - Index remaining new data
+    bool has_existing_counts = c->count > 0;
+    for (int i = 0; i < rc_change_count; i++)
+    {
+      int change_ix = c->count + i;
+      adlb_datum_id change_id = c->arr[change_ix].id;
+      if (has_existing_counts &&
+          xlb_rc_change_merge_existing(c, change_id, 
+            c->arr[change_ix].rc.read_refcount,
+            c->arr[change_ix].rc.write_refcount,
+            false)) {
+        // Merged - move last one here
+        c->arr[change_ix] =
+          c->arr[c->count + rc_change_count - 1];
+        i--;
+        rc_change_count--;
+      }
+      else
+      {
+        bool added = table_lp_add(&c->index, change_id,
+                                 (void*)(unsigned long)change_ix);
+        CHECK_MSG(added, "Could not add to refcount index table");
+      }
+    }
+   
+    // Only extend to cover new ones now that we've finished
+    // manipulating index
+    notifs->rc_changes.count += rc_change_count;
   }
 
   if (extra_data != NULL && extra_data != xfer)
