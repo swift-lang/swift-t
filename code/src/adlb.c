@@ -507,7 +507,6 @@ adlb_code ADLBP_Put_rule(const void* payload, int length, int target,
 //      next_server = master_server_rank;
     return response;
   }
-  ADLB_CHECK(response);
 
   // Check response before sending any payload data
   ADLB_CHECK(response);

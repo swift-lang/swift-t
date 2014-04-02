@@ -202,6 +202,7 @@ adlb_code
 xlb_sync_subscribe(int target, adlb_datum_id id, adlb_subscript sub,
                    bool *subscribed)
 {
+  // TODO: perf counter?
   char req_storage[PACKED_SYNC_SIZE]; // Temporary stack storage for struct
   struct packed_sync *req = (struct packed_sync *)req_storage;
   req->subscribe.id = id;
@@ -249,6 +250,7 @@ xlb_sync_subscribe(int target, adlb_datum_id id, adlb_subscript sub,
 static inline adlb_code
 msg_from_target(int target, const struct packed_sync *hdr, bool* done)
 {
+  // TODO: perf counters?
   MPI_Status status;
   TRACE_START;
   int response;
@@ -276,6 +278,7 @@ static adlb_code msg_from_other_server(int other_server, int target,
   TRACE_START;
   MPI_Status status;
   adlb_code code;
+  // TODO: perf counters?
 
   // Store on stack - skip malloc
   char hdr_storage[PACKED_SYNC_SIZE];

@@ -467,37 +467,59 @@ xlb_put_work_unit(xlb_work_unit *work)
   adlb_code code;
   assert(work->length >= 0);
 
+  int target = work->target;
+  int type = work->type;
   if (work->parallelism <= 1)
   {
-    // Try to match to a worker immediately for single-worker task
-    adlb_code matched = attempt_match_work(work->type, work->putter,
-        work->priority, work->answer, work->target, work->length,
-        work->parallelism, work->payload);
-    if (matched == ADLB_SUCCESS)
+    // Try to match to a worker
+    bool targeted = (target >= 0);
+    int worker;
+    // Attempt to redirect work unit to another worker
+    if (targeted)
     {
+      CHECK_MSG(target < xlb_comm_size, "Invalid target: %i", target);
+      worker = xlb_requestqueue_matches_target(target, type);
+    }
+    else
+    {
+      worker = xlb_requestqueue_matches_type(type);
+    }
+
+    if (worker != ADLB_RANK_NULL)
+    {
+      code = send_work(worker, work->id, type, work->answer,
+                       work->payload, work->length, 1);                                  
+      ADLB_CHECK(code);
       work_unit_free(work);
-      // Redirected ok
+      
+      if (xlb_perf_counters_enabled)
+      {
+        xlb_task_bypass_count(type, targeted, false);
+      }
       return ADLB_SUCCESS;
     }
-    ADLB_CHECK(matched);
   }
- 
-  // Store this work unit on this server
-  DEBUG("server storing work...");
-  DEBUG("work unit: x%i %s ", work->parallelism, work->payload);
-
-  if (work->parallelism > 1)
+  else
   {
-    code = attempt_match_par_work(work->type, work->answer,
+    code = attempt_match_par_work(type, work->answer,
             work->payload, work->length, work->parallelism);
     if (code == ADLB_SUCCESS)
     {
       // Successfully sent out task
       work_unit_free(work);
+      
+      if (xlb_perf_counters_enabled)
+      {
+        xlb_task_bypass_count(type, false, true);
+      }
       return ADLB_SUCCESS;
     }
     ADLB_CHECK(code);
   }
+
+  // Store this work unit on this server
+  DEBUG("server storing work...");
+  DEBUG("work unit: x%i %s ", work->parallelism, work->payload);
 
   code = xlb_workq_add(work);
   ADLB_CHECK(code);
