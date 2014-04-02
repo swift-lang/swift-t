@@ -616,17 +616,29 @@ class Turbine {
     return new SetVariable(target, fnCall);
   }
 
-  private static Value tclRuleType(TaskMode t) {
-    switch (t) {
-    case LOCAL:
-    case LOCAL_CONTROL:
-      return turbConst("LOCAL");
-    case CONTROL:
-      return turbConst("CONTROL");
-    case WORKER:
-      return turbConst("WORK");
-    default:
-      throw new STCRuntimeError("Unexpected rule type: " + t);
+  private static Expression tclRuleType(TaskMode t) {
+    if (Settings.NO_TURBINE_ENGINE) {
+      switch (t) {
+        case LOCAL:
+        case LOCAL_CONTROL:
+          // Just implement as work
+          return adlbWorkTypeVal(TaskMode.WORKER);
+        default:
+          // Same as ADLB work types
+          return adlbWorkTypeVal(t);
+      }
+    } else {
+      switch (t) {
+      case LOCAL:
+      case LOCAL_CONTROL:
+        return turbConst("LOCAL");
+      case CONTROL:
+        return turbConst("CONTROL");
+      case WORKER:
+        return turbConst("WORK");
+      default:
+        throw new STCRuntimeError("Unexpected rule type: " + t);
+      }
     }
   }
 
@@ -694,9 +706,12 @@ class Turbine {
       args.add(target.toTcl());
     }
 
-    if (type != null && type != TaskMode.LOCAL && type != TaskMode.CONTROL) {
-      args.add(RULE_KEYWORD_TYPE);
-      args.add(tclRuleType(type));
+    // Only a single rule type with no turbine engines
+    if (!Settings.NO_TURBINE_ENGINE) {
+      if (type != null && type != TaskMode.LOCAL && type != TaskMode.CONTROL) {
+        args.add(RULE_KEYWORD_TYPE);
+        args.add(tclRuleType(type));
+      }
     }
 
     if (parallelism != null && !LiteralInt.ONE.equals(parallelism)) {
@@ -723,11 +738,17 @@ class Turbine {
     List<Expression> taskTokens = new ArrayList<Expression>();
     // Different task formats for work types
     if (type == TaskMode.WORKER) {
+      // TODO: handle priorities?
       taskTokens.add(TURBINE_NULL_RULE);
       taskTokens.addAll(action);
     } else {
       assert (type == TaskMode.CONTROL);
-      if (props.priority == null) {
+      if (Settings.NO_TURBINE_ENGINE) {
+        // For now, treat as work task
+        // TODO: handle priorities?
+        taskTokens.add(TURBINE_NULL_RULE);
+        taskTokens.addAll(action);
+      } else if (props.priority == null) {
         taskTokens.add(RULE_COMMAND);
       } else {
         assert (priorityVar != null);
@@ -768,13 +789,23 @@ class Turbine {
   }
 
   public static Expression adlbWorkType(TaskMode type) {
-    switch (type) {
-    case CONTROL:
-      return new Value("turbine::CONTROL_TASK");
-    case WORKER:
-      return new Value("turbine::WORK_TASK");
-    default:
-      throw new STCRuntimeError("Can't create task of type " + type);
+    if (Settings.NO_TURBINE_ENGINE) {
+      switch (type) {
+      case CONTROL:
+      case WORKER:
+        return new Value("turbine::WORK_TASK");
+      default:
+        throw new STCRuntimeError("Can't create task of type " + type);
+      }
+    } else {
+      switch (type) {
+        case CONTROL:
+          return new Value("turbine::CONTROL_TASK");
+        case WORKER:
+          return new Value("turbine::WORK_TASK");
+        default:
+          throw new STCRuntimeError("Can't create task of type " + type);
+        }
     }
   }
 
@@ -783,13 +814,23 @@ class Turbine {
    * work ids
    */
   public static Expression adlbWorkTypeVal(TaskMode type) {
-    switch (type) {
-    case CONTROL:
-      return TURBINE_CONTROL_WORK_ID;
-    case WORKER:
-      return TURBINE_WORKER_WORK_ID;
-    default:
-      throw new STCRuntimeError("Can't create task of type " + type);
+    if (Settings.NO_TURBINE_ENGINE) {
+      switch (type) {
+        case CONTROL:
+        case WORKER:
+          return TURBINE_WORKER_WORK_ID;
+        default:
+          throw new STCRuntimeError("Can't create task of type " + type);
+      }
+    } else {
+      switch (type) {
+      case CONTROL:
+        return TURBINE_CONTROL_WORK_ID;
+      case WORKER:
+        return TURBINE_WORKER_WORK_ID;
+      default:
+        throw new STCRuntimeError("Can't create task of type " + type);
+      }
     }
   }
 

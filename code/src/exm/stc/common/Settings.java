@@ -40,6 +40,11 @@ import exm.stc.common.util.Pair;
  * */
 public class Settings
 {
+  
+  // Whether we're using no engine
+  // TODO: remove or make configurable
+  public static boolean NO_TURBINE_ENGINE = false;
+  
   public static final String TURBINE_VERSION = "stc.turbine.version";
   public static final String DEBUG_LEVEL = "stc.debugging";
 
