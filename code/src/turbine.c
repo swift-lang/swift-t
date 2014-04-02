@@ -100,6 +100,9 @@ static turbine_engine_code
 turbine_close_update(struct list *blocked, adlb_datum_id id,
      adlb_subscript sub, turbine_work_array *ready);
 
+static inline turbine_engine_code
+move_to_ready(turbine_work_array *ready, transform *T);
+
 /** Has turbine_engine_init() been called? */
 bool turbine_engine_initialized = false;
 
@@ -698,27 +701,45 @@ turbine_close_update(struct list *blocked, adlb_datum_id id,
 
     if (!subscribed)
     {
-      DEBUG_TURBINE("ready: {%"PRId64"}", T->work->id);
-      if (ready->size <= ready->count)
-      {
-        if (ready->size == 0)
-        {
-          ready->size = 16;
-        } else {
-          ready->size *= 2;
-        }
-        ready->work = realloc(ready->work, sizeof(ready->work[0]) *
-                              (size_t) ready->size);
-        if (!ready->work)
-          return TURBINE_ERROR_OOM;
-      }
-      ready->work[ready->count++] = T->work;
-      T->work = NULL; // Don't free work
+      tc = move_to_ready(ready, T);
+      turbine_check(tc);
     }
   }
 
 
   list_free(blocked); // No longer need list
+
+  return TURBINE_SUCCESS;
+}
+
+/*
+ * Add transform to ready array and remove from waiting table
+ */
+static inline turbine_engine_code
+move_to_ready(turbine_work_array *ready, transform *T)
+{
+  DEBUG_TURBINE("ready: {%"PRId64"}", T->work->id);
+  if (ready->size <= ready->count)
+  {
+    if (ready->size == 0)
+    {
+      ready->size = 16;
+    } else {
+      ready->size *= 2;
+    }
+    ready->work = realloc(ready->work, sizeof(ready->work[0]) *
+                          (size_t) ready->size);
+    if (!ready->work)
+      return TURBINE_ERROR_OOM;
+  }
+  ready->work[ready->count++] = T->work;
+
+  void *tmp;
+  table_lp_remove(&transforms_waiting, T->work->id, &tmp);
+  assert(tmp == T);
+  
+  T->work = NULL; // Don't free work
+  transform_free(T);
 
   return TURBINE_SUCCESS;
 }
@@ -933,7 +954,9 @@ info_waiting()
   TABLE_LP_FOREACH(&transforms_waiting, item)
   {
     transform* t = item->data;
+    assert(t != NULL);
     char id_string[24];
+    assert(t->work != NULL);
     sprintf(id_string, "{%"PRId64"}", t->work->id);
     int c = sprintf(buffer, "%10s ", id_string);
     transform_tostring(buffer+c, t);
