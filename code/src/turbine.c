@@ -514,6 +514,10 @@ turbine_rule(const char* name, int name_strlen,
   {
     DEBUG_TURBINE("ready: {%"PRId64"}", id);
     *ready = true;
+
+    // Free transform except for work unit
+    T->work = NULL;
+    transform_free(T);
   }
 
   return TURBINE_SUCCESS;
@@ -705,7 +709,6 @@ turbine_close_update(struct list *blocked, adlb_datum_id id,
       turbine_check(tc);
     }
   }
-
 
   list_free(blocked); // No longer need list
 
