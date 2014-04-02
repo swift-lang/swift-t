@@ -39,8 +39,9 @@ typedef struct
 {
   /** Unique ID wrt this server */
   xlb_work_unit_id id;
-  /** Time at which this was enqueued */
-  double timestamp;
+  /** Time at which this was enqueued 
+      NOTE: unused */
+  // double timestamp;
   /** Work type */
   int type;
   /** Rank that put this work unit */
@@ -72,12 +73,25 @@ static inline xlb_work_unit *work_unit_alloc(size_t payload_length)
   return malloc(sizeof(xlb_work_unit) + payload_length);
 }
 
+/** Initialize work unit fields, aside from payload */
+static inline void xlb_work_unit_init(xlb_work_unit *wu, int type,
+      int putter, int priority, int answer, int target_rank, int length,
+      int parallelism)
+{
+  wu->id = xlb_workq_unique();
+  wu->type = type;
+  wu->putter = putter;
+  wu->priority = priority;
+  wu->answer = answer;
+  wu->target = target_rank;
+  wu->length = length;
+  wu->parallelism = parallelism;
+}
+
 /*
- * Initialize work unit fields and add to queue
+ * Add work unit to queue.  All fields of work unit must be init.
  */
-adlb_code xlb_workq_add(int type, int putter, int priority, int answer,
-                   int target, int length, int parallelism,
-                   xlb_work_unit *wu);
+adlb_code xlb_workq_add(xlb_work_unit *wu);
 
 /**
    Return work unit for rank target and given type.

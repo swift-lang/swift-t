@@ -170,9 +170,10 @@ steal_payloads(int target, int count,
     xlb_work_unit *work = work_unit_alloc((size_t)wus[i].length);
     RECV(work->payload, wus[i].length, MPI_BYTE, target,
          ADLB_TAG_RESPONSE_STEAL);
-    xlb_workq_add(wus[i].type, wus[i].putter, wus[i].priority,
+    xlb_work_unit_init(work, wus[i].type, wus[i].putter, wus[i].priority,
                   wus[i].answer, wus[i].target, wus[i].length,
-                  wus[i].parallelism, work);
+                  wus[i].parallelism);
+    xlb_workq_add(work);
     if (wus[i].parallelism > 1)
     {
       par++;

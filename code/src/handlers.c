@@ -344,6 +344,9 @@ handle_put_rule(int caller)
   xlb_work_unit *work = work_unit_alloc((size_t)p->length);
   ADLB_MALLOC_CHECK(work);
 
+  xlb_work_unit_init(work, p->type, caller, p->priority, p->answer,
+                     p->target, p->length, p->parallelism);
+
   if (inline_data == NULL) 
   {
     // Set up receive for payload into work unit
@@ -446,8 +449,9 @@ put(int type, int putter, int priority, int answer, int target,
     ADLB_CHECK(code);
   }
 
-  code = xlb_workq_add(type, putter, priority, answer, target,
-                length, parallelism, work);
+  xlb_work_unit_init(work, type, putter, priority, answer, target,
+                length, parallelism);
+  code = xlb_workq_add(work);
   ADLB_CHECK(code);
 
   return ADLB_SUCCESS;
@@ -495,9 +499,7 @@ xlb_put_work_unit(xlb_work_unit *work)
     ADLB_CHECK(code);
   }
 
-  code = xlb_workq_add(work->type, work->putter, work->priority,
-          work->answer, work->target, work->length, work->parallelism,
-          work);
+  code = xlb_workq_add(work);
   ADLB_CHECK(code);
 
   return ADLB_SUCCESS;
@@ -527,9 +529,11 @@ adlb_code xlb_put_targeted_local(int type, int putter, int priority,
   {
     xlb_work_unit *work = work_unit_alloc((size_t)length);
     memcpy(work->payload, payload, (size_t)length);
+    
+    xlb_work_unit_init(work, type, putter, priority, answer, target,
+                       length, 1);
     DEBUG("xlb_put_targeted_local(): server storing work...");
-    xlb_workq_add(type, putter, priority, answer, target,
-                  length, 1, work);
+    xlb_workq_add(work);
   }
 
   return ADLB_SUCCESS;
