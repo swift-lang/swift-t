@@ -464,7 +464,7 @@ adlb_data_code xlb_struct_lookup(adlb_struct *s, adlb_subscript sub, bool init_n
     xlb_struct_type_info *st;
     dc = get_field(s, field_ix, &st, &curr_field);
     DATA_CHECK(dc);
-
+    TRACE("Pop sub %i", field_ix);
     adlb_struct_field_type *field_type = &st->field_types[field_ix];
 
     if (!adlb_has_sub(sub))

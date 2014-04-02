@@ -1248,7 +1248,7 @@ lookup_subscript(adlb_datum_id id, const adlb_datum_storage *d,
         adlb_struct_field *field;
         adlb_struct_field_type field_type;
         size_t sub_pos;
-        dc = xlb_struct_lookup(d->STRUCT, subscript, false, &field,
+        dc = xlb_struct_lookup(d->STRUCT, subscript, true, &field,
                                &field_type, &sub_pos);
         DATA_CHECK(dc);
         
