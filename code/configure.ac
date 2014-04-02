@@ -282,6 +282,20 @@ AC_ARG_WITH(mpi-lib-name,
     ],
     [])
 
+MPI_EXTRA_LIBS=
+AC_ARG_WITH(mpi-lib-extra,
+    AS_HELP_STRING([--with-mpi-lib-extra],
+                   [comma-separated list of names of any additional MPI
+                    libraries in MPI lib directory that must be linked
+                    against.  Mainly useful for static linking against
+                    uncommon MPI implementations or when not using
+                    mpicc.]),
+    [
+      # Switch to space separated
+      MPI_EXTRA_LIBS=$(echo "${withval}" | tr "," " ")
+    ],
+    [])
+
 # Now check MPI settings
 
 AC_CHECK_FILE(${USE_MPI_LIB_DIR},
@@ -299,12 +313,41 @@ then
   MPI_LIB_FOUND=1
 fi
 
+USE_MPI_LIB_SPEC="-l${USE_MPI_LIB_NAME}"
+for extra_lib in ${MPI_EXTRA_LIBS}
+do
+  USE_MPI_LIB_SPEC+=" -l${extra_lib}"
+done
+
 USE_MPI_LIB_A=
+USE_MPI_LIB_EXTRA_A=
 if [[ -f ${MPI_LIB_A} ]]
 then
   MPI_LIB_FOUND=1
   USE_MPI_LIB_A=${MPI_LIB_A}
+
+  for extra_lib in ${MPI_EXTRA_LIBS}
+  do
+    extra_lib_a=${USE_MPI_LIB_DIR}/lib${extra_lib}.${AR_SUFFIX}
+    if [[ ! -f "${extra_lib_a}" ]]
+    then
+      AC_MSG_ERROR([Expected library ${extra_lib_a} to exist])
+    fi
+    USE_MPI_LIB_EXTRA_A+=" ${extra_lib_a}"
+  done
+
+  # Locate common extra dependencies
+  for extra_lib in opa mpl open-rte open-pal
+  do
+    extra_lib_a=${USE_MPI_LIB_DIR}/lib${extra_lib}.${AR_SUFFIX}
+    if [[ -f "${extra_lib_a}" ]]
+    then
+      USE_MPI_LIB_EXTRA_A+=" ${extra_lib_a}"
+      USE_MPI_LIB_SPEC+=" -l${extra_lib}"
+    fi
+  done
 fi
+
 
 if (( ! MPI_LIB_FOUND ))
 then
@@ -323,7 +366,9 @@ AC_SUBST(USE_LAUNCHER)
 AC_SUBST(USE_MPI_INCLUDE)
 AC_SUBST(USE_MPI_LIB_DIR)
 AC_SUBST(USE_MPI_LIB_NAME)
+AC_SUBST(USE_MPI_LIB_SPEC)
 AC_SUBST(USE_MPI_LIB_A)
+AC_SUBST(USE_MPI_LIB_EXTRA_A)
 
 # Discover MPI implementation:
 # MPI_IMPL will be unknown, OpenMPI, or MPICH
