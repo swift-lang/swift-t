@@ -739,15 +739,15 @@ class Turbine {
     // Different task formats for work types
     if (type == TaskMode.WORKER) {
       // TODO: handle priorities?
-      taskTokens.add(TURBINE_NULL_RULE);
+      if (!Settings.NO_TURBINE_ENGINE) {
+        taskTokens.add(TURBINE_NULL_RULE);
+      }
       taskTokens.addAll(action);
     } else {
       assert (type == TaskMode.CONTROL);
       if (Settings.NO_TURBINE_ENGINE) {
-        // For now, treat as work task
+        // Treat as work task - no prefix
         // TODO: handle priorities?
-        taskTokens.add(TURBINE_NULL_RULE);
-        taskTokens.addAll(action);
       } else if (props.priority == null) {
         taskTokens.add(RULE_COMMAND);
       } else {
