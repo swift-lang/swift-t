@@ -672,7 +672,13 @@ class Turbine {
     if (props.priority != null)
       res.add(setPriority(props.priority));
     // Use different command on worker
-    Token ruleCmd = execCx == ExecContext.CONTROL ? RULE : SPAWN_RULE;
+    Token ruleCmd;
+    if (Settings.NO_TURBINE_ENGINE) {
+      // No worker/control distinction
+      ruleCmd = RULE;
+    } else {
+      ruleCmd = (execCx == ExecContext.CONTROL) ? RULE : SPAWN_RULE;
+    }
 
     List<Expression> args = new ArrayList<Expression>();
 
