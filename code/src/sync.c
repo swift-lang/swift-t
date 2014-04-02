@@ -401,7 +401,7 @@ static adlb_code xlb_handle_subscribe_sync(int rank,
 
   // call data module to subscribe
   // TODO: how to handle if already closed?
-  xlb_data_subscribe(hdr->id, sub, rank);
+  xlb_data_subscribe2(hdr->id, sub, rank);
 
   if (malloced_subscript != NULL)
   {

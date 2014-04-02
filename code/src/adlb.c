@@ -400,6 +400,15 @@ ADLBP_Put(const void* payload, int length, int target, int answer,
   return ADLB_SUCCESS;
 }
 
+adlb_code ADLBP_Put_rule(const void* payload, int length, int target,
+        int answer, int type, int priority, int parallelism,
+        const char *name,
+        const adlb_datum_id *wait_ids, int wait_id_count, 
+        const adlb_datum_id_sub *wait_id_subs, int wait_id_sub_count)
+{
+
+}
+
 adlb_code
 ADLBP_Get(int type_requested, void* payload, int* length,
           int* answer, int* type_recvd, MPI_Comm* comm)
