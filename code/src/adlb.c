@@ -46,6 +46,7 @@
 #include "mpi-tools.h"
 #include "notifications.h"
 #include "server.h"
+#include "turbine-defs.h"
 
 static adlb_code next_server;
 
@@ -312,17 +313,23 @@ ADLB_Hostmap_list(char* output, uint max, uint offset, int* actual)
   return ADLB_SUCCESS;
 }
 
-adlb_code
-ADLBP_Put(const void* payload, int length, int target, int answer,
-          int type, int priority, int parallelism)
+// Server to target with work
+static inline adlb_code
+adlb_put_target_server(int target, int *to_server)
 {
-  MPI_Status status;
-  MPI_Request request;
-  int response;
+  if (target == ADLB_RANK_ANY)
+    *to_server = xlb_my_server;
+  else if (target < xlb_comm_size)
+    *to_server = xlb_map_to_server(target);
+  else
+    CHECK_MSG(target >= 0 && target < xlb_comm_size,
+        "ADLB_Put(): invalid target rank: %i", target);
+  return ADLB_SUCCESS;;
+}
 
-  DEBUG("ADLB_Put: target=%i x%i %s",
-        target, parallelism, (char*) payload);
-
+static inline adlb_code
+adlb_put_check_params(int type, int parallelism)
+{
   CHECK_MSG(type >= 0 && xlb_type_index(type) >= 0,
             "ADLB_Put(): invalid work type: %d\n", type);
 
@@ -330,17 +337,27 @@ ADLBP_Put(const void* payload, int length, int target, int answer,
             "ADLB_Put(): "
             "parallel tasks not supported for MPI version %i",
             mpi_version);
+  return ADLB_SUCCESS;
+}
+
+adlb_code
+ADLBP_Put(const void* payload, int length, int target, int answer,
+          int type, int priority, int parallelism)
+{
+  MPI_Status status;
+  MPI_Request request;
+  int rc, response;
+
+  DEBUG("ADLB_Put: target=%i x%i %.*s",
+        target, parallelism, length, (char*) payload);
+
+  rc = adlb_put_check_params(type, parallelism);
+  ADLB_CHECK(rc);
 
   /** Server to contact */
-  int to_server = -1;
-  if (target == ADLB_RANK_ANY)
-    to_server = xlb_my_server;
-  else if (target < xlb_comm_size)
-    to_server = xlb_map_to_server(target);
-  else
-    CHECK_MSG(target >= 0 && target < xlb_comm_size,
-        "ADLB_Put(): invalid target rank: %i", target);
-
+  int to_server;
+  rc = adlb_put_target_server(target, &to_server);
+  ADLB_CHECK(rc);
 
   int inline_data_len;
   if (length <= PUT_INLINE_DATA_MAX)
@@ -352,9 +369,9 @@ ADLBP_Put(const void* payload, int length, int target, int answer,
     inline_data_len = 0;
   }
 
-  char p_storage[PACKED_PUT_MAX];
   size_t p_size = PACKED_PUT_SIZE((size_t)inline_data_len);
-  struct packed_put *p = (struct packed_put*)p_storage;
+  assert(p_size <= XFER_SIZE);
+  struct packed_put *p = (struct packed_put*)xfer;
   p->type = type;
   p->priority = priority;
   p->putter = xlb_comm_rank;
@@ -406,7 +423,108 @@ adlb_code ADLBP_Put_rule(const void* payload, int length, int target,
         const adlb_datum_id *wait_ids, int wait_id_count, 
         const adlb_datum_id_sub *wait_id_subs, int wait_id_sub_count)
 {
+  MPI_Status status;
+  MPI_Request request;
+  int response, rc;
 
+  DEBUG("ADLB_Put_rule: target=%i x%i %.*s",
+        target, parallelism, length, (char*) payload);
+  
+  rc = adlb_put_check_params(type, parallelism);
+  ADLB_CHECK(rc);
+
+  /** Server to contact */
+  int to_server;
+  rc = adlb_put_target_server(target, &to_server);
+  ADLB_CHECK(rc);
+
+  int inline_data_len;
+  if (length <= PUT_INLINE_DATA_MAX)
+  {
+    inline_data_len = length;
+  }
+  else
+  {
+    inline_data_len = 0;
+  }
+
+  struct packed_put_rule *p = (struct packed_put_rule*)xfer;
+  p->type = type;
+  p->priority = priority;
+  p->putter = xlb_comm_rank;
+  p->answer = answer;
+  p->target = target;
+  p->length = length;
+  p->parallelism = parallelism;
+  p->has_inline_data = inline_data_len > 0;
+  p->id_count = wait_id_count;
+  p->id_sub_count = wait_id_sub_count;
+  
+  int p_len = (int)sizeof(struct packed_put_rule);
+
+  // pack in all needed data at end
+  void *p_data = p->inline_data;
+
+  #ifndef NDEBUG
+  // Don't pack name if NDEBUG on
+  p->name_strlen = (int)strlen(name);
+  memcpy(p_data, name, (size_t)p->name_strlen);
+  p_data += p->name_strlen;
+  p_len += p->name_strlen;
+  #endif
+
+  size_t wait_id_len = sizeof(wait_ids[0]) * (size_t)wait_id_count;
+  memcpy(p_data, wait_ids, wait_id_len);
+  p_data += wait_id_len;
+  p_len += wait_id_len;
+
+  for (int i = 0; i < wait_id_sub_count; i++)
+  {
+    int packed_len = xlb_pack_id_sub(p_data, wait_id_subs[i].id,
+                                      wait_id_subs[i].subscript);
+    p_data += packed_len;
+    p_len += packed_len;
+  }
+  
+  if (p->has_inline_data)
+  {
+    memcpy(p_data, payload, (size_t)inline_data_len);
+    p_data += inline_data_len;
+    p_len += inline_data_len;
+  }
+
+  // xfer is much larger than we need for ids/subs plus inline data
+  assert(p_len < XFER_SIZE); 
+
+  IRECV(&response, 1, MPI_INT, to_server, ADLB_TAG_RESPONSE_PUT);
+  SEND(p, (int)p_len, MPI_BYTE, to_server, ADLB_TAG_PUT_RULE);
+
+  WAIT(&request, &status);
+  if (response == ADLB_REJECTED)
+  {
+ //    to_server_rank = next_server++;
+//    if (next_server >= (master_server_rank+num_servers))
+//      next_server = master_server_rank;
+    return response;
+  }
+  ADLB_CHECK(response);
+
+  // Check response before sending any payload data
+  ADLB_CHECK(response);
+  if (!p->has_inline_data)
+  {
+    // Second response to confirm entered ok
+    IRECV(&response, 1, MPI_INT, to_server, ADLB_TAG_RESPONSE_PUT);
+    // Still need to send payload
+    // Note: don't try to redirect work for rule
+    // Use RSEND so that server can pre-allocate a buffer
+    RSEND(payload, length, MPI_BYTE, to_server, ADLB_TAG_WORK);
+    WAIT(&request, &status);
+    ADLB_CHECK(response);
+  }
+  TRACE("ADLB_Put_rule: DONE");
+
+  return ADLB_SUCCESS;
 }
 
 adlb_code

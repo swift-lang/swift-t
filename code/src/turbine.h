@@ -54,17 +54,19 @@ typedef struct {
 turbine_engine_code turbine_engine_init(int rank);
 
 /**
+   input_td_list, input_td_sub_list:
+        ownership of arrays and array contents is retained by caller
    work: ownership of this task is passed into the engine module
             until released
    ready: if true, rule is ready to run, and ownership stays with
           caller
    returns TURBINE_SUCCESS/TURBINE_ERROR_*
  */
-turbine_engine_code turbine_rule(const char* name,
+turbine_engine_code turbine_rule(const char* name, int name_strlen,
                           int input_tds,
                           const adlb_datum_id* input_td_list,
                           int input_td_subs,
-                          const td_sub_pair* input_td_sub_list,
+                          const adlb_datum_id_sub* input_td_sub_list,
                           xlb_work_unit *work, bool *ready);
 
 /*

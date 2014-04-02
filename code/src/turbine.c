@@ -240,21 +240,33 @@ turbine_engine_init(int rank)
 }
 
 static inline turbine_engine_code
-transform_create(const char* name,
-             int input_tds, const adlb_datum_id* input_td_list,
-             int input_td_subs, const td_sub_pair* input_td_sub_list,
-             xlb_work_unit *work, transform** result)
+transform_create(const char* name, int name_strlen,
+           int input_tds, const adlb_datum_id* input_td_list,
+           int input_td_subs, const adlb_datum_id_sub* input_td_sub_list,
+           xlb_work_unit *work, transform** result)
 {
-  assert(name);
   assert(work);
   assert(input_tds >= 0);
   assert(input_tds == 0 || input_td_list != NULL);
   assert(input_td_subs >= 0);
   assert(input_td_subs == 0 || input_td_sub_list != NULL);
 
+  // TODO: could malloc single chunk for all arrays?
   transform* T = malloc(sizeof(transform));
+  if (! T)
+    return TURBINE_ERROR_OOM;
 
-  T->name = strdup(name);
+  if (name != NULL)
+  {
+    T->name = malloc((size_t) name_strlen + 1);
+    memcpy(T->name, name, (size_t)name_strlen);
+    T->name[name_strlen] = '\0';
+  }
+  else
+  {
+    T->name = NULL;
+  }
+
   T->work = work;
   T->blocker = 0;
   T->input_tds = input_tds;
@@ -282,8 +294,21 @@ transform_create(const char* name,
 
     if (! T->input_td_sub_list)
       return TURBINE_ERROR_OOM;
-
-    memcpy(T->input_td_sub_list, input_td_sub_list, sz);
+    // Copy across all subscripts
+    for (int i = 0; i < input_td_subs; i++)
+    {
+      const adlb_datum_id_sub *src;
+      td_sub_pair *dst;
+      src = &input_td_sub_list[i];
+      dst = &T->input_td_sub_list[i];
+      dst->td = src->id;
+      dst->subscript.length = src->subscript.length;
+      dst->subscript.key = malloc(src->subscript.length);
+      if (!dst->subscript.key)
+        return TURBINE_ERROR_OOM;
+      memcpy(dst->subscript.key, src->subscript.key,
+             src->subscript.length);
+    }
   }
   else
   {
@@ -316,7 +341,8 @@ transform_create(const char* name,
 static inline void
 transform_free(transform* T)
 {
-  free(T->name);
+  if (T->name != NULL)
+    free(T->name);
   if (T->work)
     work_unit_free(T->work);
   if (T->input_td_list)
@@ -447,11 +473,11 @@ static inline turbine_engine_code progress(transform* T, bool* subscribed);
 static inline turbine_engine_code rule_inputs(transform* T);
 
 turbine_engine_code
-turbine_rule(const char* name,
+turbine_rule(const char* name, int name_strlen,
               int input_tds,
               const adlb_datum_id* input_td_list,
               int input_td_subs,
-              const td_sub_pair* input_td_sub_list,
+              const adlb_datum_id_sub* input_td_sub_list,
               xlb_work_unit *work, bool *ready)
 {
   turbine_engine_code tc;
@@ -460,7 +486,7 @@ turbine_rule(const char* name,
   if (!turbine_engine_initialized)
     return TURBINE_ERROR_UNINITIALIZED;
   transform* T = NULL;
-  tc = transform_create(name, input_tds, input_td_list,
+  tc = transform_create(name, name_strlen, input_tds, input_td_list,
                        input_td_subs, input_td_sub_list, work, &T);
 
   turbine_check(tc);
@@ -817,8 +843,11 @@ transform_tostring(char* output, transform* t)
 {
   int result = 0;
   char* p = output;
-
-  append(p, "%s ", t->name);
+ 
+  if (t->name != NULL)
+  {
+    append(p, "%s ", t->name);
+  }
   append(p, "(");
   bool first = true;
   for (int i = 0; i < t->input_tds; i++)

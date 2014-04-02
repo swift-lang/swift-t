@@ -110,6 +110,7 @@ xlb_mpe_setup()
 
   make_pair(svr, busy);
   make_pair(svr, put);
+  make_pair(svr, put_rule);
   make_pair(svr, get);
 
   make_pair(svr, create);

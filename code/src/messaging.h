@@ -181,6 +181,35 @@ struct packed_put
 #define PACKED_PUT_MAX (PACKED_PUT_SIZE(PUT_INLINE_DATA_MAX))
 
 /**
+   Put request with data dependencies
+ */
+struct packed_put_rule
+{
+  int type;
+  int priority;
+  int putter;
+  int answer;
+  int target;
+  int length;
+  int parallelism;
+  int id_count;
+  int id_sub_count;
+#ifndef NDEBUG
+  int name_strlen;
+#endif
+  bool has_inline_data;
+  /* Pack ids/subscripts and small tasks here.
+     Format is:
+     1. Array of ids with length id_count
+        Use type adlb_datum_id to get correct alignment for first array
+     2. id_sub_count packed ids/subscripts 
+     3. Name, unless NDEBUG enabled, packed w/o null terminator
+     4. Inline task, if has_inline_data is true
+   */
+  adlb_datum_id inline_data[]; 
+};
+
+/**
   Struct with notification counts for embedding in other structure
  */
 struct packed_notif_counts
@@ -484,6 +513,7 @@ typedef enum
 
   // task operations
   ADLB_TAG_PUT = 1,
+  ADLB_TAG_PUT_RULE,
   ADLB_TAG_GET,
   ADLB_TAG_IGET,
 

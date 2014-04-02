@@ -78,6 +78,7 @@ static adlb_code handle_sync(int caller);
 static adlb_code handle_sync_response(int caller);
 static adlb_code handle_do_nothing(int caller);
 static adlb_code handle_put(int caller);
+static adlb_code handle_put_rule(int caller);
 static adlb_code handle_get(int caller);
 static adlb_code handle_iget(int caller);
 static adlb_code handle_create(int caller);
@@ -161,6 +162,7 @@ xlb_handlers_init(void)
   register_handler(ADLB_TAG_SYNC_RESPONSE, handle_sync_response);
   register_handler(ADLB_TAG_DO_NOTHING, handle_do_nothing);
   register_handler(ADLB_TAG_PUT, handle_put);
+  register_handler(ADLB_TAG_PUT_RULE, handle_put_rule);
   register_handler(ADLB_TAG_GET, handle_get);
   register_handler(ADLB_TAG_IGET, handle_iget);
   register_handler(ADLB_TAG_CREATE_HEADER, handle_create);
@@ -290,6 +292,96 @@ handle_put(int caller)
   return ADLB_SUCCESS;
 }
 
+static adlb_code
+handle_put_rule(int caller)
+{
+  MPI_Status status;
+
+  MPE_LOG(xlb_mpe_svr_put_start);
+
+  RECV(xfer, XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_PUT_RULE);
+  const struct packed_put_rule *p = (struct packed_put_rule*)xfer;
+
+  // Put arrays first to avoid alignment issues  
+  const adlb_datum_id *wait_ids = p->inline_data;
+ 
+  // Remainder of data is packed into array in binary form
+  const void *p_pos = p->inline_data + sizeof(wait_ids[0]) * p->id_count;
+
+  adlb_datum_id_sub wait_id_subs[p->id_sub_count];
+  for (int i = 0; i < p->id_sub_count; i++)
+  {
+    p_pos += xlb_unpack_id_sub(p_pos, &wait_id_subs[i].id,
+                               &wait_id_subs[i].subscript);
+  }
+
+  const char *name = NULL;
+  int name_strlen = 0;
+  #ifndef NDEBUG
+  // Don't pack name for optimized build
+  name_strlen = p->name_strlen;
+  name = p_pos;
+  p_pos += name_strlen;
+  #endif
+
+  const void *inline_data = NULL;
+  if (p->has_inline_data)
+  {
+    inline_data = p_pos;
+    p_pos += p->length;
+  }
+  #ifndef NDEBUG
+  // Sanity check size
+  int msg_size;
+  int mc = MPI_Get_count(&status, MPI_BYTE, &msg_size);
+  assert(mc == MPI_SUCCESS);
+  // Make sure we don't get garbage data
+  assert(((const char*)p_pos) - ((const char*) p) < msg_size);
+  #endif
+
+  MPI_Request request;
+  xlb_work_unit *work = work_unit_alloc((size_t)p->length);
+  ADLB_MALLOC_CHECK(work);
+
+  if (inline_data == NULL) 
+  {
+    // Set up receive for payload into work unit
+    IRECV(work->payload, p->length, MPI_BYTE, caller, ADLB_TAG_WORK);
+  
+    // send initial response to prompt send
+    int send_work_response = ADLB_SUCCESS;
+    SEND(&send_work_response, 1, MPI_INT, caller, ADLB_TAG_RESPONSE_PUT);
+  }
+  else
+  {
+    memcpy(work->payload, inline_data, (size_t)p->length);
+  }
+  
+  if (inline_data == NULL)
+  {
+    // Wait to receive data
+    WAIT(&request, &status);
+  }
+
+  bool ready;
+  turbine_engine_code tc = turbine_rule(name, p->name_strlen,
+        p->id_count, wait_ids, p->id_sub_count, wait_id_subs,
+        work, &ready);
+
+  int response = (tc == TURBINE_SUCCESS) ? ADLB_SUCCESS : ADLB_ERROR;
+  SEND(&response, 1, MPI_INT, caller, ADLB_TAG_RESPONSE_PUT);
+
+  if (ready)
+  {
+    // Didn't put into engine, need to move to work queue
+    adlb_code ac = xlb_put_work_unit(work);
+    ADLB_CHECK(ac);
+  }
+
+  MPE_LOG(xlb_mpe_svr_put_rule_end);
+  return ADLB_SUCCESS;
+}
+
 /*
   Handle a put 
   inline_data: if task data already available here, otherwise NULL
@@ -363,7 +455,6 @@ put(int type, int putter, int priority, int answer, int target,
 /*
   Put already-allocated work unit.
   This takes ownership of entire work unit.
-  TODO: move this and other put functions into separate module?
   */
 adlb_code
 xlb_put_work_unit(xlb_work_unit *work)
