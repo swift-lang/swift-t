@@ -389,10 +389,8 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *subscribed)
       DEBUG_TURBINE("Already subscribed: <%"PRId64">[\"%.*s\"]",
                       id, (int)subscript.length, subscript.key);
       *subscribed = true;
-      return TURBINE_SUCCESS;
     }
-
-    if (server == xlb_comm_rank)
+    else if (server == xlb_comm_rank)
     {
       adlb_data_code dc = xlb_data_subscribe(id, sub_convert(subscript),
                                             xlb_comm_rank, subscribed);
@@ -401,7 +399,6 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *subscribed)
         // Handle case where read_refcount == 0 and write_refcount == 0
         //      => datum was freed and we're good to go
         *subscribed = false;
-        return TURBINE_SUCCESS;
       }
       DATA_CHECK(dc);
     }
@@ -411,13 +408,13 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *subscribed)
                           sub_convert(subscript), subscribed);
       DATA_CHECK_ADLB(ac,  TURBINE_ERROR_UNKNOWN);
 
-      if (*subscribed)
-      {
-        // Record it was subscribed
-        table_bp_add(&td_sub_subscribed, id_sub_key, id_sub_keylen,
-                     (void*)1);
-      }
-      return TURBINE_SUCCESS;
+    }
+
+    if (*subscribed)
+    {
+      // Record it was subscribed
+      table_bp_add(&td_sub_subscribed, id_sub_key, id_sub_keylen,
+                   (void*)1);
     }
   }
   else
@@ -425,9 +422,8 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *subscribed)
     if (table_lp_contains(&td_subscribed, id)) {
       // Already subscribed
       *subscribed = true;
-      return TURBINE_SUCCESS;
     }
-    if (server == xlb_comm_rank)
+    else if (server == xlb_comm_rank)
     {
       adlb_data_code dc = xlb_data_subscribe(id, ADLB_NO_SUB,
                                             xlb_comm_rank, subscribed);
@@ -436,7 +432,6 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *subscribed)
         // Handle case where read_refcount == 0 and write_refcount == 0
         //      => datum was freed and we're good to go
         *subscribed = false;
-        return TURBINE_SUCCESS;
       }
       DATA_CHECK(dc);
     }
@@ -445,11 +440,11 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *subscribed)
       adlb_code ac = xlb_sync_subscribe(server, id, ADLB_NO_SUB,
                                         subscribed);
       DATA_CHECK_ADLB(ac,  TURBINE_ERROR_UNKNOWN);
-      if (*subscribed)
-      {
-        table_lp_add(&td_subscribed, id, (void*)1);
-      }
-      return TURBINE_SUCCESS;
+    }
+    
+    if (*subscribed)
+    {
+      table_lp_add(&td_subscribed, id, (void*)1);
     }
   }
 
