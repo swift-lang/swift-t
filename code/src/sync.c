@@ -199,7 +199,8 @@ send_sync(int target, const struct packed_sync *hdr)
 }
 
 adlb_code
-xlb_sync_subscribe(int target, adlb_datum_id id, adlb_subscript sub)
+xlb_sync_subscribe(int target, adlb_datum_id id, adlb_subscript sub,
+                   bool *subscribed)
 {
   char req_storage[PACKED_SYNC_SIZE]; // Temporary stack storage for struct
   struct packed_sync *req = (struct packed_sync *)req_storage;
@@ -220,6 +221,12 @@ xlb_sync_subscribe(int target, adlb_datum_id id, adlb_subscript sub)
     inlined_subscript = false;
   }
 
+  MPI_Status status;
+  MPI_Request request;
+  int subscribed_resp;
+  IRECV(&subscribed_resp, 1, MPI_INT, target, ADLB_TAG_RESPONSE);
+
+
   int rc = xlb_sync2(target, req);
   ADLB_CHECK(rc);
 
@@ -228,6 +235,10 @@ xlb_sync_subscribe(int target, adlb_datum_id id, adlb_subscript sub)
     // send subscript separately with special tag
     SEND(sub.key, (int)sub.length, MPI_BYTE, target, ADLB_TAG_SYNC_SUB);
   }
+
+  // Wait for response to find out if subscribed
+  WAIT(&request, &status);
+  *subscribed = subscribed_resp != 0;
 
   return ADLB_SUCCESS;
 }
@@ -400,8 +411,11 @@ static adlb_code xlb_handle_subscribe_sync(int rank,
   }
 
   // call data module to subscribe
-  // TODO: how to handle if already closed?
-  xlb_data_subscribe2(hdr->id, sub, rank);
+  bool subscribed;
+  xlb_data_subscribe(hdr->id, sub, rank, &subscribed);
+
+  int subscribed_resp = subscribed;
+  RSEND(&subscribed_resp, 1, MPI_INT, rank, ADLB_TAG_RESPONSE);
 
   if (malloced_subscript != NULL)
   {

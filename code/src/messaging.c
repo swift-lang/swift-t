@@ -108,6 +108,7 @@ add_tags()
   add_tag(ADLB_TAG_RESPONSE_STEAL_COUNT);
   add_tag(ADLB_TAG_RESPONSE_STEAL);
   add_tag(ADLB_TAG_SYNC_RESPONSE);
+  add_tag(ADLB_TAG_SYNC_SUB);
   add_tag(ADLB_TAG_WORKUNIT);
   add_tag(ADLB_TAG_FAIL);
   

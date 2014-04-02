@@ -563,12 +563,12 @@ xlb_data_unlock(adlb_datum_id id)
 /**
    @param if not null and data type is container, subscribe
           to this subscript
-   @param result set to 1 iff subscribed, else 0 (td closed)
+   @param result set to true iff subscribed, else false (td closed)
    @return ADLB_SUCCESS or ADLB_ERROR
  */
 adlb_data_code
 xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
-              int rank, int* result)
+              int rank, bool* subscribed)
 {
   adlb_data_code dc;
 
@@ -588,8 +588,6 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
   check_verbose(found, ADLB_DATA_ERROR_NOT_FOUND,
                 "not found: <%"PRId64">", id);
   assert(d != NULL);
-
-  bool subscribed;
 
   if (adlb_has_sub(subscript))
   {
@@ -618,8 +616,6 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
       DEBUG("Struct subscript initialized: %i", (int)found);
     }
     
-    subscribed = !found; 
-    
     if (!found)
     {
       // encode container, index and ref type into string
@@ -642,7 +638,11 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
       TRACE("Added %i to listeners for %"PRId64"[%.*s]\n", rank,
           id, (int)subscript.length, (const char*)subscript.key);
       list_i_unique_insert(listeners, rank);
-      subscribed = true;
+      *subscribed = true;
+    }
+    else
+    {
+      *subscribed = false;
     }
   }
   else
@@ -650,16 +650,15 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
     // No subscript, so subscribing to top-level datum
     if (d->write_refcount == 0)
     {
-      subscribed = false;
+      *subscribed = false;
     }
     else
     {
       list_i_unique_insert(&d->listeners, rank);
-      subscribed = true;
+      *subscribed = true;
     }
   }
 
-  *result = subscribed ? 1 : 0;
   return ADLB_DATA_SUCCESS;
 }
 

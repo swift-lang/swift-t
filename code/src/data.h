@@ -59,7 +59,7 @@ adlb_data_code xlb_data_lock(adlb_datum_id id, int rank, bool* result);
 adlb_data_code xlb_data_unlock(adlb_datum_id id);
 
 adlb_data_code xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
-                              int rank, int* result);
+                              int rank, bool* subscribed);
 
 /**
  * If data at id[subscript] is already set:

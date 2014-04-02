@@ -340,7 +340,7 @@ transform_free(transform* T)
  * Return true if subscribed, false if data already set
  */
 static inline turbine_engine_code
-subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
+subscribe(adlb_datum_id id, turbine_subscript subscript, bool *subscribed)
 {
   turbine_condition(id != ADLB_DATA_ID_NULL, TURBINE_ERROR_INVALID,
                     "Null ID provided to rule");
@@ -362,33 +362,35 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
       // TODO: support binary subscript
       DEBUG_TURBINE("Already subscribed: <%"PRId64">[\"%.*s\"]",
                       id, (int)subscript.length, subscript.key);
-      *result = true;
+      *subscribed = true;
       return TURBINE_SUCCESS;
     }
 
     if (server == xlb_comm_rank)
     {
-      int tmp_result;
       adlb_data_code dc = xlb_data_subscribe(id, sub_convert(subscript),
-                                            xlb_comm_rank, &tmp_result);
+                                            xlb_comm_rank, subscribed);
       if (dc == ADLB_DATA_ERROR_NOT_FOUND)
       {
         // Handle case where read_refcount == 0 and write_refcount == 0
         //      => datum was freed and we're good to go
-        *result = false;
+        *subscribed = false;
         return TURBINE_SUCCESS;
       }
       DATA_CHECK(dc);
-      *result = tmp_result != 0;
     }
     else
     {
       adlb_code ac = xlb_sync_subscribe(server, id,
-                          sub_convert(subscript));
+                          sub_convert(subscript), subscribed);
       DATA_CHECK_ADLB(ac,  TURBINE_ERROR_UNKNOWN);
-      *result = true; // Always subscribes
-      // Record it was subscribed
-      table_bp_add(&td_sub_subscribed, id_sub_key, id_sub_keylen, (void*)1);
+
+      if (*subscribed)
+      {
+        // Record it was subscribed
+        table_bp_add(&td_sub_subscribed, id_sub_key, id_sub_keylen,
+                     (void*)1);
+      }
       return TURBINE_SUCCESS;
     }
   }
@@ -396,30 +398,31 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
   {
     if (table_lp_contains(&td_subscribed, id)) {
       // Already subscribed
-      *result = true;
+      *subscribed = true;
       return TURBINE_SUCCESS;
     }
     if (server == xlb_comm_rank)
     {
-      int tmp_result;
       adlb_data_code dc = xlb_data_subscribe(id, ADLB_NO_SUB,
-                                            xlb_comm_rank, &tmp_result);
+                                            xlb_comm_rank, subscribed);
       if (dc == ADLB_DATA_ERROR_NOT_FOUND)
       {
         // Handle case where read_refcount == 0 and write_refcount == 0
         //      => datum was freed and we're good to go
-        *result = false;
+        *subscribed = false;
         return TURBINE_SUCCESS;
       }
-      *result = tmp_result != 0;
       DATA_CHECK(dc);
     }
     else
     {
-      adlb_code ac = xlb_sync_subscribe(server, id, ADLB_NO_SUB);
+      adlb_code ac = xlb_sync_subscribe(server, id, ADLB_NO_SUB,
+                                        subscribed);
       DATA_CHECK_ADLB(ac,  TURBINE_ERROR_UNKNOWN);
-      *result = true; // Always subscribes
-      table_lp_add(&td_subscribed, id, (void*)1);
+      if (*subscribed)
+      {
+        table_lp_add(&td_subscribed, id, (void*)1);
+      }
       return TURBINE_SUCCESS;
     }
   }

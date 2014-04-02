@@ -1111,11 +1111,8 @@ handle_subscribe(int caller)
     DEBUG("subscribe: <%"PRId64">", id);
   }
   struct pack_sub_resp resp;
-  int result;
-  resp.dc = xlb_data_subscribe(id, subscript, caller, &result);
-  if (resp.dc == ADLB_DATA_SUCCESS)
-    resp.subscribed = result != 0;
-  else
+  resp.dc = xlb_data_subscribe(id, subscript, caller, &resp.subscribed);
+  if (resp.dc != ADLB_DATA_SUCCESS)
     resp.subscribed = false;
   RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
 
@@ -1150,9 +1147,8 @@ handle_notify(int caller)
     tc = turbine_close(hdr->id, &xlb_server_ready_work);
   }
 
-
-  // TODO: translate codes
-  int resp = ADLB_SUCCESS;
+  // TODO: report error?
+  int resp = (tc == TURBINE_SUCCESS) ? ADLB_SUCCESS : ADLB_ERROR;
   RSEND(&resp, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
   return ADLB_SUCCESS;
 }
