@@ -87,6 +87,7 @@ static adlb_code handle_store(int caller);
 static adlb_code handle_retrieve(int caller);
 static adlb_code handle_enumerate(int caller);
 static adlb_code handle_subscribe(int caller);
+static adlb_code handle_notify(int caller);
 static adlb_code handle_get_refcounts(int caller);
 static adlb_code handle_refcount_incr(int caller);
 static adlb_code handle_insert_atomic(int caller);
@@ -169,6 +170,7 @@ xlb_handlers_init(void)
   register_handler(ADLB_TAG_RETRIEVE, handle_retrieve);
   register_handler(ADLB_TAG_ENUMERATE, handle_enumerate);
   register_handler(ADLB_TAG_SUBSCRIBE, handle_subscribe);
+  register_handler(ADLB_TAG_NOTIFY, handle_notify);
   register_handler(ADLB_TAG_GET_REFCOUNTS, handle_get_refcounts);
   register_handler(ADLB_TAG_REFCOUNT_INCR, handle_refcount_incr);
   register_handler(ADLB_TAG_INSERT_ATOMIC, handle_insert_atomic);
@@ -1119,6 +1121,39 @@ handle_subscribe(int caller)
 
   TRACE("ADLB_TAG_SUBSCRIBE done\n");
   MPE_LOG(xlb_mpe_svr_subscribe_end);
+  return ADLB_SUCCESS;
+}
+
+static adlb_code
+handle_notify(int caller)
+{
+  TRACE("ADLB_TAG_NOTIFY\n");
+
+  MPI_Status status;
+  RECV(xfer, XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_SUBSCRIBE);
+  struct packed_notify_hdr *hdr = (struct packed_notify_hdr *)xfer;
+
+  turbine_engine_code tc;
+  
+  // TODO: support binary keys
+  if (hdr->subscript_len > 0)
+  {
+    DEBUG("notification received: <%"PRId64">[%.*s]", hdr->id,
+          hdr->subscript_len, hdr->subscript);
+    adlb_subscript sub = { .key = hdr->subscript,
+                           .length = (size_t)hdr->subscript_len };
+    tc = turbine_sub_close(hdr->id, sub, &xlb_server_ready_work);
+  }
+  else
+  {
+    DEBUG("notification received: <%"PRId64">", hdr->id);
+    tc = turbine_close(hdr->id, &xlb_server_ready_work);
+  }
+
+
+  // TODO: translate codes
+  int resp = ADLB_SUCCESS;
+  RSEND(&resp, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
   return ADLB_SUCCESS;
 }
 

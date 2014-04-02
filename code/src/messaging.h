@@ -403,7 +403,22 @@ struct packed_steal_resp
   bool last; // whether last set of stolen work
 };
 
+/*
+  Notify server for closed data
+ */
+struct packed_notify_hdr
+{
+  adlb_datum_id id;
+  int subscript_len;
+  char subscript[]; // Small subscripts inline
+};
+
+
 #define PACKED_SUBSCRIBE_INLINE_BYTES 32
+/**
+ Subscribe header for sync message.
+ Include small subscripts inline
+ */
 struct packed_subscribe_sync
 {
   adlb_datum_id id;
@@ -483,6 +498,7 @@ typedef enum
   ADLB_TAG_RETRIEVE,
   ADLB_TAG_ENUMERATE,
   ADLB_TAG_SUBSCRIBE,
+  ADLB_TAG_NOTIFY,
   ADLB_TAG_PERMANENT,
   ADLB_TAG_GET_REFCOUNTS,
   ADLB_TAG_REFCOUNT_INCR,

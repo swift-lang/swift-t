@@ -30,6 +30,9 @@ xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
           adlb_refcounts transferred_refs, adlb_notif_t *notifs);
 
 static adlb_code
+xlb_notify_server(int server, adlb_datum_id id, adlb_subscript subscript);
+
+static adlb_code
 send_client_notif_work(int caller, 
         void *response, size_t response_len,
         struct packed_notif_counts *inner_struct,
@@ -246,13 +249,37 @@ xlb_close_notify(const adlb_notif_ranks *ranks)
   return ADLB_SUCCESS;
 }
 
-adlb_code
-xlb_notify_server(int server, adlb_datum_id id, adlb_sub subscript)
+static adlb_code
+xlb_notify_server(int server, adlb_datum_id id, adlb_subscript subscript)
 {
+  MPI_Status status;
+  MPI_Request request;
   // TODO: pack id/subscript
   // TODO: send to server
   // TODO: wait for response
 
+  int subscript_len = adlb_has_sub(subscript) ? (int)subscript.length : 0;
+  assert(subscript_len <= ADLB_DATA_SUBSCRIPT_MAX);
+
+  // Stack allocate small buffer
+  int hdr_len = (int)sizeof(struct packed_notify_hdr) + subscript_len;
+  char hdr_buffer[hdr_len];
+  struct packed_notify_hdr *hdr = (struct packed_notify_hdr*)hdr_buffer;
+
+  // Fill in header
+  hdr->id = id;
+  hdr->subscript_len = subscript_len;
+  if (subscript_len > 0)
+  {
+    memcpy(hdr->subscript, subscript.key, (size_t)subscript_len);
+  }
+
+  int response; 
+  IRECV(&response, 1, MPI_INT, server, ADLB_TAG_RESPONSE);
+  SEND(hdr, hdr_len, MPI_BYTE, server, ADLB_TAG_NOTIFY);
+  WAIT(&request,&status);
+
+  return (adlb_code)response;
 }
 
 adlb_code
