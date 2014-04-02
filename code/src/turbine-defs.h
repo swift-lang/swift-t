@@ -29,26 +29,12 @@
 #ifndef TURBINE_DEFS_H
 #define TURBINE_DEFS_H
 
-typedef adlb_datum_id turbine_datum_id;
-
-typedef enum
-{
-  TURBINE_TYPE_NULL = 0,
-  TURBINE_TYPE_INTEGER   = ADLB_DATA_TYPE_INTEGER,
-  TURBINE_TYPE_FLOAT     = ADLB_DATA_TYPE_FLOAT,
-  TURBINE_TYPE_STRING    = ADLB_DATA_TYPE_STRING,
-  TURBINE_TYPE_BLOB      = ADLB_DATA_TYPE_BLOB,
-  TURBINE_TYPE_REF       = ADLB_DATA_TYPE_REF,
-  TURBINE_TYPE_CONTAINER = ADLB_DATA_TYPE_CONTAINER,
-  TURBINE_TYPE_MULTISET  = ADLB_DATA_TYPE_MULTISET,
-  TURBINE_TYPE_STRUCT    = ADLB_DATA_TYPE_STRUCT,
-} turbine_type;
-
 typedef struct
 {
   char* name;
 } turbine_entry;
 
+// TODO: remove unneeded codes
 typedef enum
 {
   TURBINE_SUCCESS = ADLB_DATA_SUCCESS,
@@ -80,34 +66,11 @@ typedef enum
   TURBINE_ERROR_EXTERNAL,
   /** Unknown error */
   TURBINE_ERROR_UNKNOWN = ADLB_DATA_ERROR_UNKNOWN,
-} turbine_code;
-
-/** The NULL TD */
-#define TURBINE_ID_NULL        ADLB_DATA_ID_NULL
-
-/** Indicates any MPI rank */
-#define TURBINE_RANK_ANY ADLB_RANK_ANY
-
-/**
-   The maximal string length of a container subscript
- */
-#define TURBINE_SUBSCRIPT_MAX  ADLB_DATA_SUBSCRIPT_MAX
+} turbine_engine_code;
 
 /**
    The maximal length of a Turbine rule name string
  */
 #define TURBINE_NAME_MAX 128
-
-/**
-   The maximal length of a datum (string, blob, etc.)
- */
-#define TURBINE_DATA_MAX       ADLB_DATA_MAX
-
-/**
-   Maximal storage of a Turbine action string
- */
-#define TURBINE_ACTION_MAX ADLB_PAYLOAD_MAX
-
-#define turbine_string_totype adlb_data_string_totype
 
 #endif

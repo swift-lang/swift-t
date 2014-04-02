@@ -38,7 +38,7 @@ typedef struct {
 static const turbine_subscript TURBINE_NO_SUB = { .key = NULL, .length = 0 };
 
 typedef struct {
-  turbine_datum_id td;
+  adlb_datum_id td;
   turbine_subscript subscript;
 } td_sub_pair;
 
@@ -51,15 +51,7 @@ typedef struct {
   int count; // entry count
 } turbine_work_array;
 
-/**
-   If the user parallel task is being released, this
-   
-   if (rc will be set to the communicator to use.
-   If task is not parallel, this is MPI_COMM_SELF
-*/
-extern MPI_Comm turbine_task_comm;
-
-turbine_code turbine_engine_init(int rank);
+turbine_engine_code turbine_engine_init(int rank);
 
 /**
    work: ownership of this task is passed into the engine module
@@ -68,9 +60,9 @@ turbine_code turbine_engine_init(int rank);
           caller
    returns TURBINE_SUCCESS/TURBINE_ERROR_*
  */
-turbine_code turbine_rule(const char* name,
+turbine_engine_code turbine_rule(const char* name,
                           int input_tds,
-                          const turbine_datum_id* input_td_list,
+                          const adlb_datum_id* input_td_list,
                           int input_td_subs,
                           const td_sub_pair* input_td_sub_list,
                           xlb_work_unit *work, bool *ready);
@@ -80,7 +72,7 @@ turbine_code turbine_rule(const char* name,
   ready: array to append with pointers to any newly ready tasks,
           ownership of pointers add is passed to caller
  */
-turbine_code turbine_close(turbine_datum_id id,
+turbine_engine_code turbine_close(adlb_datum_id id,
                            turbine_work_array *ready);
 
 /*
@@ -89,7 +81,7 @@ turbine_code turbine_close(turbine_datum_id id,
   ready: array to append with pointers to any newly ready tasks,
           ownership of pointers add is passed to caller
  */
-turbine_code turbine_sub_close(turbine_datum_id id, adlb_subscript sub, 
+turbine_engine_code turbine_sub_close(adlb_datum_id id, adlb_subscript sub, 
                                turbine_work_array *ready);
 
 #define TURBINE_CODE_STRING_MAX 64
@@ -98,7 +90,7 @@ turbine_code turbine_sub_close(turbine_datum_id id, adlb_subscript sub,
   Convert code to string.
   output: buffer of at least TURBINE_CODE_STRING_MAX bytes
  */
-int turbine_code_tostring(char* output, turbine_code code);
+int turbine_engine_code_tostring(char* output, turbine_engine_code code);
 
 void turbine_engine_finalize(void);
 
