@@ -40,6 +40,12 @@ static inline bool xlb_handler_valid(adlb_tag tag);
 
 static inline adlb_code xlb_handle(adlb_tag tag, int from_rank);
 
+/**
+  Put for already-allocated work unit
+ */
+adlb_code
+xlb_put_work_unit(xlb_work_unit *work);
+
 /** 
    Targeted put for local target
 */

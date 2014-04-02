@@ -112,6 +112,9 @@ static bool failed = false;
 /** If we failed, this contains the positive exit code */
 static bool fail_code = -1;
 
+/** Ready task queue for server */
+turbine_work_array xlb_server_ready_work;
+
 static adlb_code setup_idle_time(void);
 
 static inline int xlb_server_number(int rank);
@@ -128,6 +131,9 @@ xlb_handle_pending(MPI_Status *status);
 __attribute__((always_inline))
 static inline adlb_code
 xlb_handle_pending_syncs(void);
+
+static inline adlb_code
+xlb_handle_ready_work(void);
 
 /**
    Serve a single request then return
@@ -174,6 +180,10 @@ xlb_server_init()
 
   turbine_code tc = turbine_engine_init(xlb_comm_rank);
   CHECK_MSG(tc == TURBINE_SUCCESS, "Error initializing engine");
+
+  xlb_server_ready_work.work = NULL;
+  xlb_server_ready_work.size = 0;
+  xlb_server_ready_work.count = 0;
 
   TRACE_END
   return ADLB_SUCCESS;
@@ -266,6 +276,10 @@ serve_several()
 
       // Previous request may have resulted in pending sync requests
       code = xlb_handle_pending_syncs();
+      ADLB_CHECK(code);
+
+      // Previous request may have resulted in pending work
+      code = xlb_handle_ready_work();
       ADLB_CHECK(code);
 
       // Back off less on each successful request
@@ -370,6 +384,35 @@ xlb_handle_pending_syncs(void)
   }
   ADLB_CHECK(rc); // Check that not error instead of ADLB_NOTHING
   
+  return ADLB_SUCCESS;
+}
+
+/*
+ * Handle all ready work
+ */
+static inline adlb_code
+xlb_handle_ready_work(void)
+{
+  adlb_code rc;
+  if (xlb_server_ready_work.count == 0)
+  {
+    return ADLB_SUCCESS;
+  }
+
+  for (int i = 0; i < xlb_server_ready_work.count; i++)
+  {
+    rc = xlb_put_work_unit(xlb_server_ready_work.work[i]);
+    ADLB_CHECK(rc);
+  }
+
+  if (xlb_server_ready_work.size > 1024)
+  {
+    // Prevent from growing too large
+    free(xlb_server_ready_work.work);
+    xlb_server_ready_work.work = NULL;
+    xlb_server_ready_work.size = 0;
+  }
+  xlb_server_ready_work.count = 0;
   return ADLB_SUCCESS;
 }
 

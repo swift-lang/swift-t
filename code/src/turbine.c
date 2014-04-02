@@ -99,7 +99,7 @@ static inline void mark_input_td_sub_closed(transform *T, int i);
 // Update transforms after close
 static turbine_code
 turbine_close_update(struct list_l *blocked, turbine_datum_id id,
-     adlb_subscript sub, xlb_work_unit ***ready, int *ready_count);
+     adlb_subscript sub, turbine_work_array *ready);
 
 /** Has turbine_engine_init() been called? */
 bool turbine_engine_initialized = false;
@@ -345,8 +345,6 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
   turbine_condition(id != ADLB_DATA_ID_NULL, TURBINE_ERROR_INVALID,
                     "Null ID provided to rule");
   
-  int XLB_NOTIFY_LOCAL_ENGINE = -1; // TODO: fix
-
   int server = ADLB_Locate(id);
 
   if (subscript.key != NULL)
@@ -370,8 +368,9 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
 
     if (server == xlb_comm_rank)
     {
-      adlb_data_code dc = xlb_subscribe_sub(id_sub_key, id_sub_keylen,
-                                  XLB_NOTIFY_LOCAL_ENGINE, result);
+      int tmp_result;
+      adlb_data_code dc = xlb_data_subscribe(id, sub_convert(subscript),
+                                            xlb_comm_rank, &tmp_result);
       if (dc == ADLB_DATA_ERROR_NOT_FOUND)
       {
         // Handle case where read_refcount == 0 and write_refcount == 0
@@ -380,6 +379,7 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
         return TURBINE_SUCCESS;
       }
       DATA_CHECK(dc);
+      *result = tmp_result != 0;
     }
     else
     {
@@ -401,8 +401,9 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
     }
     if (server == xlb_comm_rank)
     {
-      adlb_data_code dc = xlb_subscribe_id(id, XLB_NOTIFY_LOCAL_ENGINE,
-                                           result);
+      int tmp_result;
+      adlb_data_code dc = xlb_data_subscribe(id, ADLB_NO_SUB,
+                                            xlb_comm_rank, &tmp_result);
       if (dc == ADLB_DATA_ERROR_NOT_FOUND)
       {
         // Handle case where read_refcount == 0 and write_refcount == 0
@@ -410,6 +411,7 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *result)
         *result = false;
         return TURBINE_SUCCESS;
       }
+      *result = tmp_result != 0;
       DATA_CHECK(dc);
     }
     else
@@ -570,7 +572,7 @@ static inline turbine_code add_rule_blocker_sub(void *id_sub_key,
 }
 
 turbine_code
-turbine_close(turbine_datum_id id, xlb_work_unit ***ready, int *ready_count)
+turbine_close(turbine_datum_id id, turbine_work_array *ready)
 {
   DEBUG_TURBINE("turbine_close(<%"PRId64">)", id);
   // Record no longer subscribed
@@ -587,11 +589,11 @@ turbine_close(turbine_datum_id id, xlb_work_unit ***ready, int *ready_count)
     return TURBINE_SUCCESS;
 
   DEBUG_TURBINE("%i blocked", L->size);
-  return turbine_close_update(L, id, ADLB_NO_SUB, ready, ready_count);
+  return turbine_close_update(L, id, ADLB_NO_SUB, ready);
 }
 
 turbine_code turbine_sub_close(turbine_datum_id id, adlb_subscript sub,
-                            xlb_work_unit ***ready, int *ready_count)
+                               turbine_work_array *ready)
 {
   DEBUG_TURBINE("turbine_sub_close(<%"PRId64">[\"%.*s\"])", id,
                 (int)sub.length, (const char*)sub.key);
@@ -612,7 +614,7 @@ turbine_code turbine_sub_close(turbine_datum_id id, adlb_subscript sub,
     // We don't have any rules that block on this td
     return TURBINE_SUCCESS;
 
-  return turbine_close_update(L, id, sub, ready, ready_count);
+  return turbine_close_update(L, id, sub, ready);
 }
 
 /*
@@ -625,12 +627,8 @@ turbine_code turbine_sub_close(turbine_datum_id id, adlb_subscript sub,
  */
 static turbine_code
 turbine_close_update(struct list_l *blocked, turbine_datum_id id,
-         adlb_subscript sub, xlb_work_unit ***ready, int *ready_count)
+         adlb_subscript sub, turbine_work_array *ready)
 {
-  int ready_size = 0; // malloced size
-  int ready_count_tmp = 0;
-  xlb_work_unit **ready_tmp = NULL;
-
   // Try to make progress on those transforms
   for (struct list_l_item* item = blocked->head; item; item = item->next)
   {
@@ -683,20 +681,20 @@ turbine_close_update(struct list_l *blocked, turbine_datum_id id,
     if (!subscribed)
     {
       DEBUG_TURBINE("ready: {%"PRId64"}", transform_id);
-      if (ready_size <= ready_count_tmp)
+      if (ready->size <= ready->count)
       {
-        if (ready_size == 0)
+        if (ready->size == 0)
         {
-          ready_size = 16;
+          ready->size = 16;
         } else {
-          ready_size *= 2;
+          ready->size *= 2;
         }
-        ready_tmp = realloc(ready_tmp, sizeof(ready_tmp[0]) *
-                                     (size_t) ready_size);
-        if (!ready_tmp)
+        ready->work = realloc(ready->work, sizeof(ready->work[0]) *
+                              (size_t) ready->size);
+        if (!ready->work)
           return TURBINE_ERROR_OOM;
       }
-      ready_tmp[ready_count_tmp++] = T->work;
+      ready->work[ready->count++] = T->work;
       T->work = NULL; // Don't free work
     }
   }
@@ -704,8 +702,6 @@ turbine_close_update(struct list_l *blocked, turbine_datum_id id,
 
   list_l_free(blocked); // No longer need list
 
-  *ready = ready_tmp;
-  *ready_count = ready_count_tmp;
   return TURBINE_SUCCESS;
 }
 

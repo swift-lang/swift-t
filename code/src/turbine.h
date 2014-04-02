@@ -42,6 +42,15 @@ typedef struct {
   turbine_subscript subscript;
 } td_sub_pair;
 
+/*
+ * Array of ready work
+ */
+typedef struct {
+  xlb_work_unit **work;
+  int size; // allocated size
+  int count; // entry count
+} turbine_work_array;
+
 /**
    If the user parallel task is being released, this
    
@@ -68,20 +77,20 @@ turbine_code turbine_rule(const char* name,
 
 /*
   Should be called when turbine engine is notified that an id is closed
-  ready/ready_count: array with pointers to any newly ready tasks,
-          ownership is passed to caller
+  ready: array to append with pointers to any newly ready tasks,
+          ownership of pointers add is passed to caller
  */
 turbine_code turbine_close(turbine_datum_id id,
-         xlb_work_unit ***ready, int *ready_count);
+                           turbine_work_array *ready);
 
 /*
   Should be called when turbine engine is notified that an id/subscript
   is closed
-  ready/ready_count: array with pointers to any newly ready tasks,
-          ownership is passed to caller
+  ready: array to append with pointers to any newly ready tasks,
+          ownership of pointers add is passed to caller
  */
 turbine_code turbine_sub_close(turbine_datum_id id, adlb_subscript sub, 
-                               xlb_work_unit ***ready, int *ready_count);
+                               turbine_work_array *ready);
 
 #define TURBINE_CODE_STRING_MAX 64
 

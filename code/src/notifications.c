@@ -7,6 +7,7 @@
 #include "refcount.h"
 #include "server.h"
 #include "sync.h"
+#include "turbine.h"
 
 #define MAX_NOTIF_PAYLOAD (32+ADLB_DATA_SUBSCRIPT_MAX)
 
@@ -260,9 +261,13 @@ xlb_process_local_notif(adlb_notif_t *notifs)
   return ADLB_SUCCESS;
 }
 
+/*
+  Process local notifications on this server
+ */
 static adlb_code
 xlb_process_local_notif_ranks(adlb_notif_ranks *ranks)
 {
+  assert(xlb_am_server);
   if (ranks->count > 0)
   {
     char payload[MAX_NOTIF_PAYLOAD];
@@ -273,21 +278,54 @@ xlb_process_local_notif_ranks(adlb_notif_ranks *ranks)
     while (i < ranks->count)
     {
       adlb_notif_rank *notif = &ranks->notifs[i];
-      
-      if (i == 0 || notif->subscript.key != last_subscript.key ||
-                    notif->subscript.length != last_subscript.length)
+      int target = notif->rank;
+      bool processed_locally = false;
+
+      if (target == xlb_comm_rank)
       {
-        // Skip refilling payload if possible 
-        payload_len = fill_payload(payload, notif->id, notif->subscript);
+        /*
+          Handle notification for self, which must have been initiated
+          by a Turbine engine subscribe.  This may result in work being
+          released.  This will be stored in xlb_server_ready_work to be
+          later processed by the server loop
+         */
+        adlb_data_code dc;
+        if (adlb_has_sub(notif->subscript))
+        {
+          dc = turbine_sub_close(notif->id, notif->subscript,
+                                &xlb_server_ready_work);
+          ADLB_DATA_CHECK(dc);
+        }
+        else
+        {
+          dc = turbine_close(notif->id, &xlb_server_ready_work);
+
+          ADLB_DATA_CHECK(dc);
+        }
+        processed_locally = true;
+      }
+      else
+      {
+        // Check to see if target is worker belonging to server
+        if (i == 0 || notif->subscript.key != last_subscript.key ||
+                      notif->subscript.length != last_subscript.length)
+        {
+          // Skip refilling payload if possible 
+          payload_len = fill_payload(payload, notif->id, notif->subscript);
+        }
+
+        int server = xlb_map_to_server(target);
+        if (server == xlb_comm_rank)
+        {
+          // Swap with last and shorten array
+          int rc = notify_local(target, payload, payload_len);
+          ADLB_CHECK(rc);
+          processed_locally = true;
+        }
       }
 
-      int target = notif->rank;
-      int server = xlb_map_to_server(target);
-      if (server == xlb_comm_rank)
+      if (processed_locally)
       {
-        // Swap with last and shorten array
-        int rc = notify_local(target, payload, payload_len);
-        ADLB_CHECK(rc);
         ranks->notifs[i] = ranks->notifs[ranks->count - 1];
         ranks->count--;
       }
