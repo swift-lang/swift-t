@@ -119,6 +119,22 @@ ADLB_Put(const void *work_buf, int work_len, int reserve_rank,
   return rc;
 }
 
+adlb_code ADLB_Put_rule(const void* payload, int length, int target, int answer,
+                   int type, int priority, int parallelism, const char *name,
+                    const adlb_datum_id *wait_ids, int wait_id_count, 
+                    const adlb_datum_id_sub *wait_id_subs, int wait_id_sub_count)
+{
+  MPE_LOG(xlb_mpe_wkr_put_rule_start);
+
+  int rc = ADLBP_Put_rule(payload, length, target, answer,
+                     type, priority, parallelism, name,
+                     wait_ids, wait_id_count, wait_id_subs, wait_id_sub_count);
+
+  MPE_LOG(xlb_mpe_wkr_put_rule_end);
+
+  return rc;
+}
+
 #ifdef ENABLE_MPE
 
 /**

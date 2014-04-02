@@ -58,6 +58,7 @@ declare_pair(dmn, sync);
 declare_pair(dmn, shutdown);
 
 declare_pair(wkr, put);
+declare_pair(wkr, put_rule);
 declare_pair(wkr, get);
 declare_pair(wkr, unique);
 declare_pair(wkr, create);

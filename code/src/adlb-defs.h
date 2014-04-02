@@ -114,6 +114,11 @@ static inline bool adlb_has_sub(adlb_subscript sub)
   return sub.key != NULL;
 }
 
+typedef struct {
+  adlb_datum_id id;
+  adlb_subscript sub;
+} adlb_datum_id_sub;
+
 typedef enum
 {
   ADLB_READ_REFCOUNT,
