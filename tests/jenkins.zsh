@@ -27,8 +27,6 @@ check_error()
   return 0
 }
 
-set -x
-
 pwd
 TESTS_SKIP=0
 TESTS_TOTAL=10 # May set to -1 to run all

@@ -29,20 +29,21 @@ message()
 
 print "<testsuites>"
 
+set -x
 while read line
 do
     if [[ $line == test:* ]]
     then
-	a=( $line );
-	T_count=${a[1]};
+	a=( $line )
+	T_count=${a[2]}
     elif [[ $line == compiling:* ]]
     then
-	a=( $line );
-	T_swift=${a[1]};
+	a=( $line )
+	T_swift=${a[2]}
     elif [[ $line == running:* ]]
     then
-	a=( $line );
-	T_turbine=${a[1]};
+	a=( $line )
+	T_turbine=${a[2]}
     elif [[ $line == PASSED ]]
     then
         message "Test count : $T_count"
