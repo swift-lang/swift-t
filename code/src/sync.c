@@ -253,6 +253,7 @@ xlb_sync_subscribe(int target, adlb_datum_id id, adlb_subscript sub,
   // TODO: perf counter?
   char req_storage[PACKED_SYNC_SIZE]; // Temporary stack storage for struct
   struct packed_sync *req = (struct packed_sync *)req_storage;
+  req->mode = ADLB_SYNC_SUBSCRIBE;
   req->subscribe.id = id;
   req->subscribe.subscript_len = (int)sub.length;
 
