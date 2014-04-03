@@ -32,44 +32,44 @@ print "<testsuites>"
 set -x
 while read line
 do
-    message "line: $line"
-    if [[ $line == test:* ]]
-    then
-	a=( ${=line} )
-	T_count=${a[2]}
-    elif [[ $line == compiling:* ]]
-    then
-	a=( ${=line} )
-	T_swift=${a[2]}
-    elif [[ $line == running:* ]]
-    then
-	a=( ${=line} )
-	T_turbine=${a[2]}
-    elif [[ ${line} == "PASSED" ]]
-    then
-        message "Test count : $T_count"
-	message "Test swift : $T_swift"
-	message "Test turbine : $T_turbine"
-	message "Status: $line"
-        print "  <testcase name=\"${T_swift}\" />"
-    elif [[ $line == "FAILED" ]]
-    then
-	message "Test count : $T_count";
-	message "Test swift : $T_swift";
-	message "Test turbine : $T_turbine";
-	message "Status: $line"
-        print "  <testcase name=\"${T_swift}\" >"
-        print "     <failure type=\"generic\">"
-	print "     ${T_swift}   ${T_tcl}"
-	print "OUTPUT from ${T_swift%.swift}.out"
-	print "<![CDATA["
-	cat  ${T_swift%.swift}.out
-        print "]]>"
-	print "OUTPUT from ${T_swift%.swift}.stc.out"
-	cat  ${T_swift%.swift}.stc.out
-        print "     </failure> "
-        print "  </testcase>"
-    fi;
+  message "line: $line"
+  if [[ $line == test:* ]]
+  then
+    a=( ${=line} )
+    T_count=${a[2]}
+  elif [[ $line == compiling:* ]]
+  then
+    a=( ${=line} )
+    T_swift=${a[2]}
+  elif [[ $line == running:* ]]
+  then
+    a=( ${=line} )
+    T_turbine=${a[2]}
+  elif [[ ${line} == "PASSED" ]]
+  then
+    message "Test count : $T_count"
+    message "Test swift : $T_swift"
+    message "Test turbine : $T_turbine"
+    message "Status: $line"
+    print "  <testcase name=\"${T_swift}\" />"
+  elif [[ $line == "FAILED" ]]
+  then
+    message "Test count : $T_count";
+    message "Test swift : $T_swift";
+    message "Test turbine : $T_turbine";
+    message "Status: $line"
+    print "  <testcase name=\"${T_swift}\" >"
+    print "     <failure type=\"generic\">"
+    print "     ${T_swift}   ${T_tcl}"
+    print "OUTPUT from ${T_swift%.swift}.out"
+    print "<![CDATA["
+    cat  ${T_swift%.swift}.out
+    print "]]>"
+    print "OUTPUT from ${T_swift%.swift}.stc.out"
+    cat  ${T_swift%.swift}.stc.out
+    print "     </failure> "
+    print "  </testcase>"
+  fi
 done < results.out
 
 print "</testsuites>"

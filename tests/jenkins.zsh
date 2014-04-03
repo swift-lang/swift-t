@@ -41,6 +41,7 @@ turbine -v
 
 cd tests
 
+export TURBINE_HOME=${TURBINE}
 source ./run-tests.zsh -c -k ${TESTS_SKIP} -n ${TESTS_TOTAL} |& \
       tee results.out
 check_error ${pipestatus[1]} "run-tests.zsh"
