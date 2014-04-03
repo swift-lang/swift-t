@@ -86,6 +86,10 @@ PROCS=$(( ENGINES + SERVERS + WORKERS ))
 export ADLB_PERF_COUNTERS=true
 export ADLB_PRINT_TIME=true
 
+# Setup environment vars for Turbine size
+export TURBINE_ENGINES=${ENGINES}
+export ADLB_SERVERS=${SERVERS}
+
 # Run Turbine:
 TURBINE_ARGS="-l ${TURBINE_VERBOSE} -n ${PROCS}"
 ${TURBINE} ${=TURBINE_ARGS} ${PROGRAM} ${ARGS} >& ${OUTPUT}
