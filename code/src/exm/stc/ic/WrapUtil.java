@@ -108,7 +108,7 @@ public class WrapUtil {
       return deref;
     } else if (Types.isContainer(var) && recursive) {
       Var deref = new Var(valueT, valName,
-              Alloc.ALIAS, DefType.LOCAL_COMPILER,
+              Alloc.LOCAL, DefType.LOCAL_COMPILER,
               VarProvenance.valueOf(var));
       block.addVariable(deref);
       instBuffer.add(TurbineOp.retrieveRecursive(deref, var));
@@ -274,7 +274,7 @@ public class WrapUtil {
     for (Var inArg: inputs) {
       String name = valName(block, inArg, uniquifyNames);
       inVals.add(WrapUtil.fetchValueOf(block, instBuffer,
-                                       inArg, name, false).asArg());
+                                       inArg, name, true, false).asArg());
     }
     return inVals;
   }
