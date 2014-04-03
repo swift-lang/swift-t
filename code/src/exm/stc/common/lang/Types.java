@@ -2365,11 +2365,13 @@ public class Types {
     } else if (isArray(t)) {
       assert(!recursive);
       ArrayType at = (ArrayType)t.type().getImplType();
-      return ArrayType.localArray(at.keyType(), at.memberType());
+      Type retrievedMemberType = retrievedType(at.memberType(), false);
+      return ArrayType.localArray(at.keyType(), retrievedMemberType);
     } else if (isBag(t)) {
       assert(!recursive);
       BagType bt = (BagType)t.type().getImplType();
-      return BagType.localBag(bt.memberType());
+      Type retrievedMemberType = retrievedType(bt.memberType(), false);
+      return BagType.localBag(retrievedMemberType);
     } else if (isStruct(t)) {
       StructType st = (StructType)t.type().getImplType();
       if (recursive) {
@@ -2403,10 +2405,12 @@ public class Types {
       return new FileFutureType(fv.fileKind());
     } else if (isArrayLocal(t)) {
       ArrayType at = (ArrayType)t.type().getImplType();
-      return ArrayType.sharedArray(at.keyType(), at.memberType());
+      Type storedMemberType = storeResultType(at.memberType(), mutable);
+      return ArrayType.sharedArray(at.keyType(), storedMemberType);
     } else if (isBagLocal(t)) {
       BagType bt = (BagType)t.type().getImplType();
-      return BagType.sharedBag(bt.memberType());
+      Type storedMemberType = storeResultType(bt.memberType(), mutable);
+      return BagType.sharedBag(storedMemberType);
     } else if (isStructLocal(t)) {
       StructType st = (StructType)t.type().getImplType();
       return StructType.sharedStruct(st);

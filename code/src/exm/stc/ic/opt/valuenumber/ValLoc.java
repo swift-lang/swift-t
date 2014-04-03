@@ -177,7 +177,9 @@ public class ValLoc {
     assert(Types.isArray(arr) || Types.isArrayRef(arr) ||
            Types.isArrayLocal(arr));
     ArgCV val;
-    if (valResult) {
+    // Local arrays already use derefed type internally
+    boolean derefMemberType = valResult && !Types.isArrayLocal(arr);
+    if (derefMemberType) {
       assert(Types.isElemValType(arr, contents)) :
             "not member val: " + contents.toStringTyped() + " " + arr;
       val = ComputedValue.arrayValCV(arr, ix);
