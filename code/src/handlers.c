@@ -1252,7 +1252,7 @@ handle_notify(int caller)
   TRACE("ADLB_TAG_NOTIFY\n");
 
   MPI_Status status;
-  RECV(xfer, XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_SUBSCRIBE);
+  RECV(xfer, XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_NOTIFY);
   struct packed_notify_hdr *hdr = (struct packed_notify_hdr *)xfer;
 
   turbine_engine_code tc;
