@@ -1,5 +1,19 @@
 #!/bin/zsh
 
+# Copyright 2013 University of Chicago and Argonne National Laboratory
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License
+
 set -ux
 
 pwd
@@ -12,15 +26,12 @@ print -l ${path}
 which stc
 which turbine
 turbine -v
-wget -O STC_results_aggregator.sh  http://dl.dropbox.com/u/1739272/STC_results_aggregator.sh
-chmod a+x *sh
 
-###############################This runs the tests###############################
-./run-tests.zsh -c -k $TESTS_SKIP -S $PATH 2>&1 | tee RESULTS_FILE
-#./run-tests.zsh -c -k $TESTS_SKIP 2>&1 | tee RESULTS_FILE
-ls -thor
-#######Script to create the xml output###########################################
-./STC_results_aggregator.sh
-#perl -CSDA -pe'
-#   s/[^\x9\xA\xD\x20-\x{D7FF}\x{E000}-\x{FFFD}\x{10000}-\x{10FFFF}]+//g;
-#' result_aggregate.xml > result_aggregate.xml
+./run-tests.zsh -c -k $TESTS_SKIP |& tee results.out
+if (( ${?} != 0 ))
+then
+  print "run-tests.zsh failed!"
+  return 1
+fi
+
+./jenkins-results.zsh

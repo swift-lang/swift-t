@@ -1,14 +1,29 @@
-#!/bin/bash                                                                      
+#!/bin/zsh
+
+# Copyright 2013 University of Chicago and Argonne National Laboratory
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License
+
 
 SUITE_RESULT="result_aggregate.xml";
 rm $SUITE_RESULT > /dev/null 2>&1 ;
 
 
-ls "RESULTS_FILE" > /dev/null;
-if [[ ${?} == 1 ]]
+if [[ ! -f  results.out ]]
 then
-    echo "Could not find RESULTS_FILE";
-fi; 
+  print "Could not find results.out!"
+  return 1
+fi
 
 echo "<testsuites>" >> $SUITE_RESULT
 
@@ -21,11 +36,11 @@ LINE_NUMBER=0;
 echo ${#LINES[@]};
 
 while read line
-do 
+do
     if [[ $line == test:* ]]
     then
 	a=( $line );
-	T_count=${a[1]};       
+	T_count=${a[1]};
     elif [[ $line == compiling:* ]]
     then
 	a=( $line );
@@ -40,7 +55,7 @@ do
 	echo "Test swift : $T_swift";
 	echo "Test turbine : $T_turbine";
 	echo "Status: $line"
-        echo "  <testcase name=\"${T_swift}\" />"    >> $SUITE_RESULT	
+        echo "  <testcase name=\"${T_swift}\" />"    >> $SUITE_RESULT
     elif [[ $line == FAILED ]]
     then
 	echo "Test count : $T_count";
