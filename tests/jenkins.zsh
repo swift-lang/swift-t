@@ -47,8 +47,8 @@ source ./run-tests.zsh -c -k ${TESTS_SKIP} -n ${TESTS_TOTAL} |& \
 check_error ${pipestatus[1]} "run-tests.zsh"
 
 SUITE_RESULT="result_aggregate.xml";
-./jenkins-results.zsh | tee ${SUITE_RESULT}
-check_error ${pipestatus[1]} "jenkins-results.zsh"
+./jenkins-results.zsh > ${SUITE_RESULT}
+check_error ${?} "jenkins-results.zsh"
 
-print "SUITE RESULT:"
+print "SUITE RESULT XML:"
 cat ${SUITE_RESULT}
