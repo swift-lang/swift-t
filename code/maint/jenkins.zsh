@@ -27,7 +27,7 @@ check_error()
   fi
 }
 
-LDFLAGS="-L$MPICH/lib -lmpl"                \
+# LDFLAGS="-L$MPICH/lib -lmpl"
 ./configure --prefix=$TURBINE               \
             --with-tcl=/usr                 \
             --with-mpi=$MPICH               \
