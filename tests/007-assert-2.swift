@@ -1,5 +1,5 @@
 
-// THIS- TEST-SHOULD-NOT-RUN // Flex Jenkins error handling
+// THIS-TEST-SHOULD-NOT-RUN
 // check that asserts fail as expected
 
 import assert;
