@@ -9,12 +9,13 @@ while read olevel; do
 done < o-levels.txt
 
 
+STC_FLAGS="-T no-engine"
 #set -x
 for i in `seq $n`; do
   olevel=${olevels[$i]}
   echo $i: ${olevel}
   TCL=annealing-exm.olevel$i.tcl
-  stc $olevel -C annealing-exm.olevel$i.ic -I $SCS/src $SCS/src/annealing-exm.swift $TCL 
+  stc ${STC_FLAGS} $olevel -C annealing-exm.olevel$i.ic -I $SCS/src $SCS/src/annealing-exm.swift $TCL 
 
   if [[ $? -ne 0 ]]; then
     echo "FAILED COMPILE $i"
