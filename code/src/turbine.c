@@ -448,7 +448,7 @@ transform_free(transform* T)
 /**
  * Return true if subscribed, false if data already set
  */
-static inline turbine_engine_code
+static turbine_engine_code
 subscribe(adlb_datum_id id, turbine_subscript subscript, bool *subscribed)
 {
   turbine_condition(id != ADLB_DATA_ID_NULL, TURBINE_ERROR_INVALID,
@@ -580,8 +580,8 @@ static int transform_tostring(char* output,
 #define DEBUG_TURBINE_RULE(transform, id)
 #endif
 
-static inline turbine_engine_code progress(transform* T, bool* subscribed);
-static inline turbine_engine_code rule_inputs(transform* T);
+static turbine_engine_code progress(transform* T, bool* subscribed);
+static turbine_engine_code rule_inputs(transform* T);
 
 turbine_engine_code
 turbine_rule(const char* name, int name_strlen,
@@ -647,7 +647,7 @@ static inline turbine_engine_code add_rule_blocker_sub(void *id_sub_key,
    Record that this transform is blocked by its inputs.  Do not yet
    subscribe to any inputs
 */
-static inline turbine_engine_code
+static turbine_engine_code
 rule_inputs(transform* T)
 {
   /*
@@ -887,7 +887,7 @@ move_to_ready(turbine_work_array *ready, transform *T)
  * ids that are closed.  We contact server to check
  * status of any IDs not in list.
  */
-static inline turbine_engine_code
+static turbine_engine_code
 progress(transform* T, bool* subscribed)
 {
   *subscribed = false;
