@@ -3,7 +3,9 @@ package exm.stc.common.lang;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.ListIterator;
 
 /**
  * Represents a variable passed between tasks
@@ -49,6 +51,56 @@ public class PassedVar {
     return false;
   }
   
+  // Merge two lists of passed variables
+  public static List<PassedVar> mergeLists(List<PassedVar> l1,
+      Collection<PassedVar> l2) {
+    
+    List<PassedVar> newList = new ArrayList<PassedVar>(l1.size() + l2.size());
+    newList.addAll(l1);
+    newList.addAll(l2);
+    
+    // Sort by variable name, putting writeOnly after readWrite
+    Comparator<PassedVar> cmp = new Comparator<PassedVar>() {
+
+      @Override
+      public int compare(PassedVar o1, PassedVar o2) {
+        int varCmp = o1.var.compareTo(o2.var);
+        if (varCmp != 0) {
+          return varCmp;
+        }
+        
+        if (o2.writeOnly) {
+          // writeOnly goes second
+          return -1;
+        } else if (o1.writeOnly) {
+          // writeOnly goes second
+          return 1;
+        } else {
+          return 0;
+        }
+      }
+      
+    };
+    
+    Collections.sort(newList, cmp);
+   
+    PassedVar prev = null;
+    ListIterator<PassedVar> it = newList.listIterator();
+    while (it.hasNext()) {
+      PassedVar curr = it.next();
+      if (prev != null && curr.var.equals(prev.var)) {
+        // Retain readWrite if conflict
+        
+        // Should be true from sort order:
+        assert(curr.writeOnly || !prev.writeOnly);
+        it.remove();
+      }
+      prev = curr;
+    }
+    
+    return newList;
+  }
+
   @Override
   public String toString() {
     String res = var.name() + "<";

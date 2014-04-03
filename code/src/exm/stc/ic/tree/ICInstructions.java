@@ -1854,7 +1854,7 @@ public class ICInstructions {
     @Override
     public List<Arg> getInputs() {
       // need to make sure that these variables are avail in scope
-      ArrayList<Arg> res = new ArrayList<Arg>(newLoopVars.size());
+      ArrayList<Arg> res = new ArrayList<Arg>();
       for (Arg v: newLoopVars) {
         res.add(v);
       }
@@ -1865,6 +1865,7 @@ public class ICInstructions {
           res.add(uva);
         }
       }
+      
       return res;
     }
   
@@ -1974,6 +1975,9 @@ public class ICInstructions {
     }
     
     public void setLoopUsedVars(Collection<Var> variables) {
+      //System.err.println(this + " USED VARS CHANGE: " + loopUsedVars + " => " + variables);
+      //new Exception().printStackTrace();
+      
       loopUsedVars.clear();
       loopUsedVars.addAll(variables);
     }
