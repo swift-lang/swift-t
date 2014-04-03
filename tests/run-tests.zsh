@@ -1,5 +1,7 @@
 #!/bin/zsh -f
 
+print run-tests PATH: $PATH
+
 # STC RUN-TESTS
 
 # See About.txt for notes
@@ -42,10 +44,10 @@ do
       #Run disabled tests
       RUN_DISABLED=1
       ;;
-    e) 
+    e)
       # Show error outputs
       REPORT_ERRORS=1
-      ;; 
+      ;;
     k)
       # skip some tests
       SKIP_COUNT=${OPTARG}
@@ -174,7 +176,7 @@ compile_test()
 
 run_test()
 # Run test under Turbine/MPI
-{ 
+{
   # Run program, check and setup scripts with test directory as
   # working directory
   SETUP_SCRIPT=${TEST_NAME}.setup.sh
@@ -189,7 +191,7 @@ run_test()
 
   ARGS=""
   ARGS_FILE=${TEST_PATH}.args
-  
+
   # Export output filenames for check script
   export TURBINE_OUTPUT STC_OUT_FILE STC_ERR_FILE STC_LOG_FILE
 
@@ -202,7 +204,7 @@ run_test()
 
   # Run the test from within the test directory
   pushd $STC_TESTS_DIR
-  
+
   # Run in subshell to allow setting environment variables without
   # affecting other tests.  Return values 0=OK, 1=TEST FAILED, 2=SETUP FAILED
   (
@@ -212,9 +214,9 @@ run_test()
       source ./${SETUP_SCRIPT} >& ${SETUP_OUTPUT} || return 2
     fi
     print "running:   $( basename ${TCL_FILE} )"
-    ${RUN_TEST} ${TCL_FILE} ${TURBINE_OUTPUT} ${ARGS} 
+    ${RUN_TEST} ${TCL_FILE} ${TURBINE_OUTPUT} ${ARGS}
     CODE=${?}
-    if (( CODE != 0 )) 
+    if (( CODE != 0 ))
     then
       (( REPORT_ERRORS )) && cat ${TURBINE_OUTPUT}
       return 1
@@ -344,7 +346,7 @@ report_stats_and_exit()
   if [ ${LEAK_TEST_COUNT} != 0 ]; then
       print "leaky tests: ${LEAK_TEST_COUNT}"
   fi
-  
+
   if [ "${DISABLED_TESTS}" != "" ]; then
       print "disabled tests: ${#DISABLED_TESTS} (${DISABLED_TESTS})"
   fi
