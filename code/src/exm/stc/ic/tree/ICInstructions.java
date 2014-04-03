@@ -43,6 +43,7 @@ import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.VarCount;
@@ -1363,8 +1364,8 @@ public class ICInstructions {
      * @param newOut
      */
     private void checkSwappedOutput(Var oldOut, Var newOut) {
-      assert(Types.retrievedType(oldOut.type()).equals(
-             newOut.type()));
+      Type exp = Types.retrievedType(oldOut.type(), recursiveInOut(op));
+      assert(exp.equals(newOut.type()));
     }
 
     @Override
