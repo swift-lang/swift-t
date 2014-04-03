@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 INST=$HOME/ExM/inst
 LB=$INST/lb
 CUTILS=$INST/c-utils

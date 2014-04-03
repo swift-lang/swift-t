@@ -9,11 +9,10 @@
 
 #define _Bool bool
 
-#undef __cplusplus
-extern "C" { 
+extern "C" {
 #include <adlb.h>
 }
-#define __cplusplus
+
 #include <unistd.h>
 
 #include <map>
@@ -37,7 +36,7 @@ void mystore(adlb_datum_id id, long val) {
     int count;
     //printf("<%ld> = %ld\n", id, val);
     ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_INTEGER,
-               &val, sizeof(long), ADLB_WRITE_RC);
+               &val, sizeof(long), ADLB_WRITE_RC, ADLB_NO_RC);
     if (count > 0) {
       char buf[128];
       int len = sprintf(buf, "close %ld", id);
