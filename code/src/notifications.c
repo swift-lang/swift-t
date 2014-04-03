@@ -246,6 +246,9 @@ xlb_close_notify(const adlb_notif_ranks *ranks)
       }
     }
   }
+
+  // Should be all processed now
+  xlb_free_ranks(ranks);
   return ADLB_SUCCESS;
 }
 
