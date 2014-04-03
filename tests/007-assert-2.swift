@@ -5,5 +5,6 @@
 import assert;
 
 main {
+  x // Flex Jenkins error handling
     assert(false, "false"); // should fail
 }
