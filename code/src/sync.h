@@ -31,6 +31,8 @@
 adlb_code xlb_sync_init(void);
 void xlb_sync_finalize(void);
 
+void xlb_print_sync_counters(void);
+
 /**
    Avoids server-to-server deadlocks by synchronizing with target
    server rank.  An MPI deadlock may be caused by two processes

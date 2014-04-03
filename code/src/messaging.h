@@ -456,7 +456,8 @@ struct packed_subscribe_sync
 };
 
 /**
- Sync can contain various types of control messages
+ Sync can contain various types of control messages.
+ These should be registered in sync.c for human-readable perf counters
  */
 typedef enum
 {
@@ -464,6 +465,8 @@ typedef enum
   ADLB_SYNC_STEAL, // Trying to steal work
   ADLB_SYNC_REFCOUNT, // Modify reference count
   ADLB_SYNC_SUBSCRIBE, // Subscribe to a datum
+
+  ADLB_SYNC_ENUM_COUNT, // Dummy value: count of enum types
 } adlb_sync_mode;
 
 struct packed_sync

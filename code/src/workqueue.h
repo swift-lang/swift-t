@@ -147,6 +147,7 @@ void xlb_workq_finalize(void);
 
 
 typedef struct {
+
   /** Number of targeted tasks added to work queue */
   int64_t targeted_enqueued;
 
@@ -170,6 +171,28 @@ typedef struct {
 
   /** Parallel tasks stolen */
   int64_t parallel_stolen;
+
+  /*
+   * Data-dependent task counters:
+   */ 
+
+  /** Number of targeted tasks that must wait for input */
+  int64_t targeted_data_wait;
+
+  /** Number of targeted tasks that were ready immediately */
+  int64_t targeted_data_no_wait;
+  
+  /** Number of single tasks that must wait for input */
+  int64_t single_data_wait;
+
+  /** Number of single tasks that were ready immediately */
+  int64_t single_data_no_wait;
+  
+  /** Number of parallel tasks that must wait for input */
+  int64_t parallel_data_wait;
+
+  /** Number of parallel tasks that were ready immediately */
+  int64_t parallel_data_no_wait;
 } work_type_counters;
 
 extern work_type_counters *xlb_task_counters;
@@ -195,6 +218,40 @@ static inline void xlb_task_bypass_count(int type, bool targeted,
     else
     {
       tc->single_bypass++;
+    }
+  }
+}
+
+/*
+ * Mark that a rule task was created
+ * wait: if it has to wait for data
+ */
+static inline void xlb_task_data_count(int type, bool targeted,
+                                      bool parallel, bool wait)
+{
+  if (xlb_perf_counters_enabled)
+  {
+    work_type_counters *tc = &xlb_task_counters[type];
+    if (targeted)
+    {
+      if (wait)
+        tc->targeted_data_wait++;
+      else
+        tc->targeted_data_no_wait++;
+    }
+    else if (parallel)
+    {
+      if (wait)
+        tc->parallel_data_wait++;
+      else
+        tc->parallel_data_no_wait++;
+    }
+    else
+    {
+      if (wait)
+        tc->single_data_wait++;
+      else
+        tc->single_data_no_wait++;
     }
   }
 }

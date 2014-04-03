@@ -783,4 +783,5 @@ static inline void print_final_stats()
   // Print other performance counters
   xlb_print_handler_counters();
   xlb_print_workq_perf_counters();
+  xlb_print_sync_counters();
 }

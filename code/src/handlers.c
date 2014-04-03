@@ -385,6 +385,10 @@ handle_put_rule(int caller)
     ADLB_CHECK(ac);
   }
 
+  // Update performance counters
+  xlb_task_data_count(p->type, p->target >= 0, p->parallelism > 1,
+                      !ready);
+
   MPE_LOG(xlb_mpe_svr_put_rule_end);
   return ADLB_SUCCESS;
 }

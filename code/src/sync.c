@@ -51,6 +51,17 @@ static adlb_code enqueue_pending(xlb_pending_kind kind, int rank,
 
 static inline bool is_simple_sync(adlb_sync_mode mode);
 
+typedef struct {
+  int64_t sent;     /** Sent to other servers */
+  int64_t accepted; /** Accepted from other servers */
+} xlb_sync_type_counter;
+
+static xlb_sync_type_counter xlb_sync_perf_counters[ADLB_SYNC_ENUM_COUNT];
+static const char *xlb_sync_type_name[ADLB_SYNC_ENUM_COUNT];
+
+#define xlb_add_sync_type_name(name) \
+            xlb_sync_type_name[name] = #name;
+
 /*
   Pending sync requests that we deferred
   Implemented with FIFO ring buffer since we need FIFO in case refcount
@@ -84,6 +95,21 @@ xlb_sync_init(void)
   xlb_pending_syncs = malloc(sizeof(xlb_pending_syncs[0]) *
                                 (size_t)xlb_pending_sync_size);
   CHECK_MSG(xlb_pending_syncs != NULL, "could not allocate memory");
+
+  if (xlb_perf_counters_enabled)
+  {
+    for (int i = 0; i < ADLB_SYNC_ENUM_COUNT; i++)
+    {
+      xlb_sync_perf_counters[i].sent = 0;
+      xlb_sync_perf_counters[i].accepted = 0;
+    }
+    
+    // Register human-readable names
+    xlb_add_sync_type_name(ADLB_SYNC_REQUEST);
+    xlb_add_sync_type_name(ADLB_SYNC_STEAL);
+    xlb_add_sync_type_name(ADLB_SYNC_REFCOUNT);
+    xlb_add_sync_type_name(ADLB_SYNC_SUBSCRIBE);
+  }
   return ADLB_SUCCESS;
 }
 
@@ -92,6 +118,22 @@ void xlb_sync_finalize(void)
   free(xlb_pending_syncs);
   xlb_pending_sync_count = 0;
   xlb_pending_sync_size = 0;
+}
+
+void xlb_print_sync_counters(void)
+{
+  if (!xlb_perf_counters_enabled)
+  {
+    return;
+  }
+
+  for (int i = 0; i < ADLB_SYNC_ENUM_COUNT; i++)
+  {
+    PRINT_COUNTER("SYNC_SENT_%s=%"PRId64"\n", xlb_sync_type_name[i],
+                  xlb_sync_perf_counters[i].sent);
+    PRINT_COUNTER("SYNC_ACCEPTED_%s=%"PRId64"\n", xlb_sync_type_name[i],
+                  xlb_sync_perf_counters[i].accepted);
+  }
 }
 
 
@@ -133,6 +175,12 @@ xlb_sync2(int target, const struct packed_sync *hdr)
 
   assert(!xlb_server_sync_in_progress);
   xlb_server_sync_in_progress = true;
+
+  if (xlb_perf_counters_enabled)
+  {
+    assert(hdr->mode >= 0 && hdr->mode < ADLB_SYNC_ENUM_COUNT);
+    xlb_sync_perf_counters[hdr->mode].sent++;
+  }
 
   // When true, break the loop
   bool done = false;
@@ -321,6 +369,12 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
 {
   adlb_sync_mode mode = hdr->mode;
   adlb_code code = ADLB_ERROR;
+  
+  if (xlb_perf_counters_enabled)
+  {
+    assert(mode >= 0 && mode < ADLB_SYNC_ENUM_COUNT);
+    xlb_sync_perf_counters[mode].accepted++;
+  }
 
   // Notify the caller
   const int accepted_response = 1;

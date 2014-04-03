@@ -138,6 +138,13 @@ xlb_workq_init(int work_types, int my_workers)
       xlb_task_counters[i].parallel_enqueued = 0;
       xlb_task_counters[i].parallel_bypass = 0;
       xlb_task_counters[i].parallel_stolen = 0;
+
+      xlb_task_counters[i].targeted_data_wait = 0;
+      xlb_task_counters[i].targeted_data_no_wait = 0;
+      xlb_task_counters[i].single_data_wait = 0;
+      xlb_task_counters[i].single_data_no_wait = 0;
+      xlb_task_counters[i].parallel_data_wait = 0;
+      xlb_task_counters[i].parallel_data_no_wait = 0;
     }
   }
   else
@@ -467,6 +474,10 @@ void xlb_print_workq_perf_counters(void)
             t, c->targeted_enqueued);
     PRINT_COUNTER("worktype_%i_targeted_bypass=%"PRId64"\n",
             t, c->targeted_bypass);
+    PRINT_COUNTER("worktype_%i_targeted_data_wait=%"PRId64"\n",
+            t, c->targeted_data_wait);
+    PRINT_COUNTER("worktype_%i_targeted_data_no_wait=%"PRId64"\n",
+            t, c->targeted_data_no_wait);
     PRINT_COUNTER("worktype_%i_single_total=%"PRId64"\n",
             t, c->single_enqueued + c->single_bypass);
     PRINT_COUNTER("worktype_%i_single_net=%"PRId64"\n",
@@ -477,6 +488,10 @@ void xlb_print_workq_perf_counters(void)
             t, c->single_bypass);
     PRINT_COUNTER("worktype_%i_single_stolen=%"PRId64"\n",
             t, c->single_stolen);
+    PRINT_COUNTER("worktype_%i_single_data_wait=%"PRId64"\n",
+            t, c->single_data_wait);
+    PRINT_COUNTER("worktype_%i_single_data_no_wait=%"PRId64"\n",
+            t, c->single_data_no_wait);
     PRINT_COUNTER("worktype_%i_parallel_total=%"PRId64"\n",
             t, c->parallel_enqueued + c->parallel_bypass);
     PRINT_COUNTER("worktype_%i_parallel_net=%"PRId64"\n",
@@ -487,6 +502,10 @@ void xlb_print_workq_perf_counters(void)
             t, c->parallel_bypass);
     PRINT_COUNTER("worktype_%i_parallel_stolen=%"PRId64"\n",
             t, c->parallel_stolen);
+    PRINT_COUNTER("worktype_%i_parallel_data_wait=%"PRId64"\n",
+            t, c->parallel_data_wait);
+    PRINT_COUNTER("worktype_%i_parallel_data_no_wait=%"PRId64"\n",
+            t, c->parallel_data_no_wait);
   }
 }
 
