@@ -79,7 +79,7 @@ do
     if [[ -f ${TURBINE_OUTPUT} ]]
     then
       print "Turbine output from ${T_swift}:"
-      cat ${OUTPUT}
+      cat ${TURBINE_OUTPUT}
     fi
     print "     </failure> "
     print "  </testcase>"
