@@ -115,13 +115,21 @@ struct table_lp transforms_waiting;
 
 /**
    TD inputs blocking their transforms
-   Map from TD ID to list of pointers to transforms
+   Map from TD ID to list of pointers to transforms.
+
+   There may be duplicate entries of the same transform for an ID
+   in td_blockers: this must be handled when the notification is
+   received.
  */
 struct table_lp td_blockers;
 
 /**
    ID/subscript pairs blocking transforms
    Map from ID/subscript pair to list of pointers to transforms
+   
+   There may be duplicate entries of the same transform for an ID
+   in td_sub_blockers: this must be handled when the notification is
+   received.
  */
 struct table_bp td_sub_blockers;
 
@@ -554,11 +562,13 @@ static inline turbine_engine_code add_rule_blocker_sub(void *id_sub_key,
 static inline turbine_engine_code
 rule_inputs(transform* T)
 {
+  /*
+    We might add duplicate list entries if input appears multiple
+    times. This is currently handled upon removal from list.
+   */
   for (int i = 0; i < T->input_tds; i++)
   {
     adlb_datum_id id = T->input_td_list[i];
-    // TODO: we might add duplicate list entries if id appears multiple
-    //       times. This is currently handled upon removal from list
     turbine_engine_code code = add_rule_blocker(id, T);
     turbine_check_verbose(code);
   }
@@ -684,11 +694,22 @@ static turbine_engine_code
 turbine_close_update(struct list *blocked, adlb_datum_id id,
          adlb_subscript sub, turbine_work_array *ready)
 {
+  transform* T_prev = NULL;
+  
   // Try to make progress on those transforms
   for (struct list_item* item = blocked->head; item; item = item->next)
   {
     transform* T = item->data;
- 
+
+    /*
+     * Avoid processing transform multiple times if the input appeared
+     * multiple times in the transform inputs.  We can assume that the
+     * duplicates of a transform will appear consecutively in the list
+     * because they would have been added at the same time.
+     */
+    if (T == T_prev)
+      continue;
+
     // update closed vector
     if (!adlb_has_sub(sub))
     {
@@ -727,6 +748,7 @@ turbine_close_update(struct list *blocked, adlb_datum_id id,
     if (tc != TURBINE_SUCCESS)
       return tc;
 
+    T_prev = T;
     if (!subscribed)
     {
       DEBUG_TURBINE("Ready {%"PRId64"}", T->work->id);
