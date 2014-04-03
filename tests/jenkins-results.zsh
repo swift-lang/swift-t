@@ -14,12 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-
-if [[ ! -f results.out ]]
-then
-  print "Could not find results.out!"
-  return 1
-fi
+# Note: All stdout from this script goes into the Jenkins XML
 
 # Print a message on stderr to avoid putting it in the Jenkins XML
 message()
@@ -27,12 +22,17 @@ message()
   print -u 2 ${*}
 }
 
+if [[ ! -f results.out ]]
+then
+  print "Could not find results.out!"
+  return 1
+fi
+
 print "<testsuites>"
 
-set -x
 while read line
 do
-  message "line: $line"
+  # message "line: $line"
   if [[ $line == test:* ]]
   then
     a=( ${=line} )
