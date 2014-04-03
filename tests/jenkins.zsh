@@ -24,12 +24,14 @@ check_error()
     print "Exit code: ${CODE}"
     exit 1
   fi
+  return 0
 }
 
 set -x
 
 pwd
 TESTS_SKIP=0
+TESTS_TOTAL=10 # May set to -1 to run all
 TURBINE=/tmp/exm-install/turbine
 STC=/tmp/exm-install/stc
 MPICH=/tmp/mpich-install
@@ -41,8 +43,10 @@ turbine -v
 
 cd tests
 
-source ./run-tests.zsh -V -c -k ${TESTS_SKIP} |& tee results.out
+source ./run-tests.zsh -V -c -k ${TESTS_SKIP} -n ${TESTS_TOTAL} |& \
+      tee results.out
 check_error ${pipestatus[1]} "run-tests.zsh"
 
-./jenkins-results.zsh
-check_error ${?} "jenkins-results.zsh"
+SUITE_RESULT="result_aggregate.xml";
+./jenkins-results.zsh |& tee ${SUITE_RESULT}
+check_error ${pipestatus[1]} "jenkins-results.zsh"

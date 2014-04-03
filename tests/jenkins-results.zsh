@@ -15,25 +15,13 @@
 # limitations under the License
 
 
-SUITE_RESULT="result_aggregate.xml";
-rm $SUITE_RESULT > /dev/null 2>&1 ;
-
-
-if [[ ! -f  results.out ]]
+if [[ ! -f results.out ]]
 then
   print "Could not find results.out!"
   return 1
 fi
 
-echo "<testsuites>" >> $SUITE_RESULT
-
-STC_OUT=`ls *stc.out`;
-OUT=`ls *[^stc].out`;
-COUNT_STC=0;
-
-LINES=($(cat RESULTS_FILE));
-LINE_NUMBER=0;
-echo ${#LINES[@]};
+print "<testsuites>"
 
 while read line
 do
@@ -51,31 +39,30 @@ do
 	T_turbine=${a[1]};
     elif [[ $line == PASSED ]]
     then
-	echo "Test count : $T_count";
-	echo "Test swift : $T_swift";
-	echo "Test turbine : $T_turbine";
-	echo "Status: $line"
-        echo "  <testcase name=\"${T_swift}\" />"    >> $SUITE_RESULT
+	print "Test count : $T_count";
+	print "Test swift : $T_swift";
+	print "Test turbine : $T_turbine";
+	print "Status: $line"
+        print "  <testcase name=\"${T_swift}\" />"
     elif [[ $line == FAILED ]]
     then
-	echo "Test count : $T_count";
-	echo "Test swift : $T_swift";
-	echo "Test turbine : $T_turbine";
-	echo "Status: $line"
-        echo "  <testcase name=\"${T_swift}\" >"     >> $SUITE_RESULT
-        echo "     <failure type=\"generic\">"       >> $SUITE_RESULT
-	echo "     ${T_swift}   ${T_tcl}"            >> $SUITE_RESULT
-	echo "OUTPUT from ${T_swift%.swift}.out"     >> $SUITE_RESULT
-	echo "<![CDATA["                             >> $SUITE_RESULT
-	cat  ${T_swift%.swift}.out                   >> $SUITE_RESULT
-        echo "]]>"                                   >> $SUITE_RESULT
-	echo "OUTPUT from ${T_swift%.swift}.stc.out" >> $SUITE_RESULT
-	cat  ${T_swift%.swift}.stc.out               >> $SUITE_RESULT
-        echo "     </failure> "                      >> $SUITE_RESULT
-        echo "  </testcase>" >> $SUITE_RESULT
+	print "Test count : $T_count";
+	print "Test swift : $T_swift";
+	print "Test turbine : $T_turbine";
+	print "Status: $line"
+        print "  <testcase name=\"${T_swift}\" >"
+        print "     <failure type=\"generic\">"
+	print "     ${T_swift}   ${T_tcl}"
+	print "OUTPUT from ${T_swift%.swift}.out"
+	print "<![CDATA["
+	cat  ${T_swift%.swift}.out
+        print "]]>"
+	print "OUTPUT from ${T_swift%.swift}.stc.out"
+	cat  ${T_swift%.swift}.stc.out
+        print "     </failure> "
+        print "  </testcase>"
     fi;
-done < RESULTS_FILE ;
+done < results.out
 
-
-echo "</testsuites>" >> $SUITE_RESULT;
-exit 0;
+print "</testsuites>"
+exit 0
