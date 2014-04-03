@@ -41,7 +41,7 @@ turbine -v
 
 cd tests
 
-./run-tests.zsh -V -c -k $TESTS_SKIP |& tee results.out
+source ./run-tests.zsh -V -c -k ${TESTS_SKIP} |& tee results.out
 check_error ${pipestatus[1]} "run-tests.zsh"
 
 ./jenkins-results.zsh
