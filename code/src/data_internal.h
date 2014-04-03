@@ -77,7 +77,6 @@ typedef struct
     return code;                                            \
   }
 
-#ifndef NDEBUG
 /**
     Allows user to check an exceptional condition,
     print an error message, and return an error code in one swoop.
@@ -122,14 +121,6 @@ typedef struct
       return dc;                                       \
   }}
 
-#endif
-
-#else
-// Make this a noop if NDEBUG is set (for performance)
-#define check_verbose(condition, code, format, args...) \
-    ((void) (condition));
-
-#define DATA_CHECK(rc) ((void) (rc));
 #endif
 
 #define DATA_CHECK_MALLOC(ptr) { \
