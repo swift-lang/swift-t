@@ -378,6 +378,8 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *subscribed)
 
   if (subscript.key != NULL)
   {
+    DEBUG_TURBINE("Engine subscribe to <%"PRId64">[%.*s]", id,
+                 (int)subscript.length, (const char*)subscript.key);
     // Create key from id and subscript
     size_t id_sub_keylen = xlb_id_sub_buflen(sub_convert(subscript));
     char id_sub_key[id_sub_keylen];
@@ -393,61 +395,71 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *subscribed)
                       id, (int)subscript.length, subscript.key);
       *subscribed = true;
     }
-    else if (server == xlb_comm_rank)
-    {
-      adlb_data_code dc = xlb_data_subscribe(id, sub_convert(subscript),
-                                            xlb_comm_rank, subscribed);
-      if (dc == ADLB_DATA_ERROR_NOT_FOUND)
-      {
-        // Handle case where read_refcount == 0 and write_refcount == 0
-        //      => datum was freed and we're good to go
-        *subscribed = false;
-      }
-      DATA_CHECK(dc);
-    }
     else
     {
-      adlb_code ac = xlb_sync_subscribe(server, id,
-                          sub_convert(subscript), subscribed);
-      DATA_CHECK_ADLB(ac,  TURBINE_ERROR_UNKNOWN);
+      if (server == xlb_comm_rank)
+      {
+        adlb_data_code dc = xlb_data_subscribe(id, sub_convert(subscript),
+                                              xlb_comm_rank, subscribed);
+        TRACE("xlb_data_subscribe => %i %i", (int)dc, (int)*subscribed);
+        if (dc == ADLB_DATA_ERROR_NOT_FOUND)
+        {
+          // Handle case where read_refcount == 0 and write_refcount == 0
+          //      => datum was freed and we're good to go
+          *subscribed = false;
+        }
+        DATA_CHECK(dc);
+      }
+      else
+      {
+        adlb_code ac = xlb_sync_subscribe(server, id,
+                            sub_convert(subscript), subscribed);
+        DATA_CHECK_ADLB(ac,  TURBINE_ERROR_UNKNOWN);
 
-    }
+      }
 
-    if (*subscribed)
-    {
-      // Record it was subscribed
-      table_bp_add(&td_sub_subscribed, id_sub_key, id_sub_keylen,
-                   (void*)1);
+      if (*subscribed)
+      {
+        // Record it was subscribed
+        table_bp_add(&td_sub_subscribed, id_sub_key, id_sub_keylen,
+                     (void*)1);
+      }
     }
   }
   else
   {
+    DEBUG_TURBINE("Engine subscribe to <%"PRId64">", id);
     if (table_lp_contains(&td_subscribed, id)) {
+      TRACE("already subscribed: <%"PRId64">", id);
       // Already subscribed
       *subscribed = true;
     }
-    else if (server == xlb_comm_rank)
-    {
-      adlb_data_code dc = xlb_data_subscribe(id, ADLB_NO_SUB,
-                                            xlb_comm_rank, subscribed);
-      if (dc == ADLB_DATA_ERROR_NOT_FOUND)
-      {
-        // Handle case where read_refcount == 0 and write_refcount == 0
-        //      => datum was freed and we're good to go
-        *subscribed = false;
-      }
-      DATA_CHECK(dc);
-    }
     else
     {
-      adlb_code ac = xlb_sync_subscribe(server, id, ADLB_NO_SUB,
-                                        subscribed);
-      DATA_CHECK_ADLB(ac,  TURBINE_ERROR_UNKNOWN);
-    }
+      if (server == xlb_comm_rank)
+      {
+        adlb_data_code dc = xlb_data_subscribe(id, ADLB_NO_SUB,
+                                              xlb_comm_rank, subscribed);
+        TRACE("xlb_data_subscribe => %i %i", (int)dc, (int)*subscribed);
+        if (dc == ADLB_DATA_ERROR_NOT_FOUND)
+        {
+          // Handle case where read_refcount == 0 and write_refcount == 0
+          //      => datum was freed and we're good to go
+          *subscribed = false;
+        }
+        DATA_CHECK(dc);
+      }
+      else
+      {
+        adlb_code ac = xlb_sync_subscribe(server, id, ADLB_NO_SUB,
+                                          subscribed);
+        DATA_CHECK_ADLB(ac,  TURBINE_ERROR_UNKNOWN);
+      }
     
-    if (*subscribed)
-    {
-      table_lp_add(&td_subscribed, id, (void*)1);
+      if (*subscribed)
+      {
+        table_lp_add(&td_subscribed, id, (void*)1);
+      }
     }
   }
 
@@ -705,6 +717,7 @@ turbine_close_update(struct list *blocked, adlb_datum_id id,
 
     if (!subscribed)
     {
+      DEBUG_TURBINE("Ready {%"PRId64"}", T->work->id);
       tc = move_to_ready(ready, T);
       turbine_check(tc);
     }
@@ -769,6 +782,7 @@ progress(transform* T, bool* subscribed)
         return tc;
       }
       if (*subscribed) {
+        TRACE("{%"PRId64"} blocked on <%"PRId64">", T->work->id, td);
         // Need to block on this id
         return TURBINE_SUCCESS;
       }
@@ -796,6 +810,7 @@ progress(transform* T, bool* subscribed)
   }
 
   // Ready to run
+  TRACE("{%"PRId64"} ready to run", T->work->id);
   *subscribed = false;
   return TURBINE_SUCCESS;
 }
