@@ -367,13 +367,16 @@ handle_put_rule(int caller)
     WAIT(&request, &status);
   }
 
+  // We have rule now - caller can proceed.
+  // Any errors in rule will occur in server now.
+  int response = ADLB_SUCCESS;
+  SEND(&response, 1, MPI_INT, caller, ADLB_TAG_RESPONSE_PUT);
+
   bool ready;
   turbine_engine_code tc = turbine_rule(name, p->name_strlen,
         p->id_count, wait_ids, p->id_sub_count, wait_id_subs,
         work, &ready);
-
-  int response = (tc == TURBINE_SUCCESS) ? ADLB_SUCCESS : ADLB_ERROR;
-  SEND(&response, 1, MPI_INT, caller, ADLB_TAG_RESPONSE_PUT);
+  CHECK_MSG(tc == TURBINE_SUCCESS, "Error adding rule");
 
   if (ready)
   {
