@@ -25,6 +25,7 @@ import org.apache.log4j.Logger;
 import exm.stc.common.Settings;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.Location;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
@@ -90,6 +91,9 @@ public class Pipeline extends FunctionOptimizerPass {
           // We can't merge if WORKER and CONTROL contexts are different
           compatible = false;
         } else if (w.isParallel()) {
+          compatible = false;
+        } else if (w.targetLocation() != null &&
+                  !w.targetLocation().equals(Location.ANY_LOCATION)) {
           compatible = false;
         }
         
