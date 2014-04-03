@@ -14,6 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+check_error()
+{
+  CODE=$1
+  MSG=$2
+  if (( CODE != 0 ))
+  then
+    print "Operation failed: ${MSG}"
+    print "Exit code: ${CODE}"
+    exit 1
+  fi
+}
+
 set -ux
 
 pwd
@@ -22,16 +34,18 @@ TURBINE=/tmp/exm-install/turbine
 STC=/tmp/exm-install/stc
 MPICH=/tmp/mpich-install
 export PATH=${MPICH}/bin:${TURBINE}/bin:${STC}/bin:${PATH}
-print -l ${path}
+# print -l ${path}
 which stc
 which turbine
 turbine -v
 
+ant -Ddist.dir=${STC} -Dturbine.home=${TURBINE} install
+check_error ${?} "ant"
+
+cd tests
+
 ./run-tests.zsh -c -k $TESTS_SKIP |& tee results.out
-if (( ${?} != 0 ))
-then
-  print "run-tests.zsh failed!"
-  return 1
-fi
+check_error ${pipestatus[1]} "run-tests.zsh"
 
 ./jenkins-results.zsh
+check_error ${?} "jenkins-results.zsh"
