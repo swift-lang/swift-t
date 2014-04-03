@@ -26,8 +26,5 @@ if [ adlb::amserver ] {
     adlb::server
 } else {}
 
-# Inject simulated error to test Jenkins
-exit 1
-
 adlb::finalize 1
 puts OK

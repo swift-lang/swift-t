@@ -1,7 +1,5 @@
 #!/bin/zsh
 
-./setup.sh
-
 C_UTILS=/tmp/exm-install/c-utils
 TURBINE=/tmp/exm-install/turbine
 STC=/tmp/exm-install/stc
@@ -10,10 +8,6 @@ path+=( $MPICH/bin $TURBINE/bin $STC/bin )
 
 set -u
 set -x
-
-# printenv
-
-ls /tmp/mpich-install/lib
 
 check_error()
 {
@@ -27,7 +21,9 @@ check_error()
   fi
 }
 
-# LDFLAGS="-L$MPICH/lib -lmpl"
+./setup.sh
+check_error ${?} "setup.sh"
+
 ./configure --prefix=$TURBINE               \
             --with-tcl=/usr                 \
             --with-mpi=$MPICH               \
@@ -64,7 +60,7 @@ inspect_results()
       print "    <testcase name=\"${result}\" >"
       print "        <failure type=\"generic\">"
       print "Result file contents:"
-      cat $result
+      cat ${result}
       print ""
       print ""
       print "Out file contents:"
