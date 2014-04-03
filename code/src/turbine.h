@@ -55,6 +55,8 @@ typedef struct {
 
 turbine_engine_code turbine_engine_init(int rank);
 
+void turbine_engine_print_counters(void);
+
 /**
    input_td_list, input_td_sub_list:
         ownership of arrays and array contents is retained by caller

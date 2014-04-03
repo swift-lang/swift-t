@@ -784,4 +784,5 @@ static inline void print_final_stats()
   xlb_print_handler_counters();
   xlb_print_workq_perf_counters();
   xlb_print_sync_counters();
+  turbine_engine_print_counters();
 }

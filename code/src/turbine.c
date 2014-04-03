@@ -50,6 +50,29 @@
 #include "data_internal.h"
 #include "sync.h"
 
+/*
+  Track different subscribe methods used
+ */
+static struct {
+  // Counters for IDs only
+  int64_t id_subscribed; /* Combine with existing subscribe */
+  int64_t id_subscribe_local; /* Subscribe to local data */
+  int64_t id_subscribe_remote; /* Subscribe to remote data */
+  int64_t id_ready; /* Already closed upon subscribe */
+  
+  // Counters for ID/subscript combo
+  int64_t id_sub_subscribed; /* Combine with existing subscribe */
+  int64_t id_sub_subscribe_local; /* Subscribe to local data */
+  int64_t id_sub_subscribe_remote; /* Subscribe to remote data */
+  int64_t id_sub_ready; /* Already closed upon subscribe */
+} xlb_engine_counters;
+
+#define INCR_COUNTER(name) \
+  if (xlb_perf_counters_enabled) { \
+    xlb_engine_counters.name++;    \
+  }
+
+
 typedef enum
 {
   /** Waiting for inputs */
@@ -246,8 +269,57 @@ turbine_engine_init(int rank)
   if (!result)
     return TURBINE_ERROR_OOM;
 
+  if (xlb_perf_counters_enabled)
+  {
+    xlb_engine_counters.id_subscribed = 0;
+    xlb_engine_counters.id_subscribe_local = 0;
+    xlb_engine_counters.id_subscribe_remote = 0;
+    xlb_engine_counters.id_ready = 0;
+    
+    xlb_engine_counters.id_sub_subscribed = 0;
+    xlb_engine_counters.id_sub_subscribe_local = 0;
+    xlb_engine_counters.id_sub_subscribe_remote = 0;
+    xlb_engine_counters.id_sub_ready = 0;
+  }
+  
   turbine_engine_initialized = true;
   return TURBINE_SUCCESS;
+}
+
+void
+turbine_engine_print_counters(void)
+{
+  if (!xlb_perf_counters_enabled)
+    return;
+  PRINT_COUNTER("engine_subscribed=%"PRId64,
+        xlb_engine_counters.id_subscribed +
+        xlb_engine_counters.id_sub_subscribed);
+  PRINT_COUNTER("engine_subscribe_local=%"PRId64,
+        xlb_engine_counters.id_subscribe_local + 
+        xlb_engine_counters.id_sub_subscribe_local);
+  PRINT_COUNTER("engine_subscribe_remote=%"PRId64, 
+        xlb_engine_counters.id_subscribe_remote +
+        xlb_engine_counters.id_sub_subscribe_remote);
+  PRINT_COUNTER("engine_ready=%"PRId64, xlb_engine_counters.id_ready +
+                                xlb_engine_counters.id_sub_ready);
+
+  PRINT_COUNTER("engine_id_subscribed=%"PRId64,
+        xlb_engine_counters.id_subscribed);
+  PRINT_COUNTER("engine_id_subscribe_local=%"PRId64,
+        xlb_engine_counters.id_subscribe_local);
+  PRINT_COUNTER("engine_id_subscribe_remote=%"PRId64,
+        xlb_engine_counters.id_subscribe_remote);
+  PRINT_COUNTER("engine_id_ready=%"PRId64,
+        xlb_engine_counters.id_ready);
+  
+  PRINT_COUNTER("engine_id_sub_subscribed=%"PRId64,
+        xlb_engine_counters.id_sub_subscribed);
+  PRINT_COUNTER("engine_id_sub_subscribe_local=%"PRId64,
+        xlb_engine_counters.id_sub_subscribe_local);
+  PRINT_COUNTER("engine_id_sub_subscribe_remote=%"PRId64,
+        xlb_engine_counters.id_sub_subscribe_remote);
+  PRINT_COUNTER("engine_id_sub_ready=%"PRId64,
+        xlb_engine_counters.id_sub_ready);
 }
 
 static inline turbine_engine_code
@@ -402,6 +474,8 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *subscribed)
       DEBUG_TURBINE("Already subscribed: <%"PRId64">[\"%.*s\"]",
                       id, (int)subscript.length, subscript.key);
       *subscribed = true;
+
+      INCR_COUNTER(id_sub_subscribed);
     }
     else
     {
@@ -417,13 +491,16 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *subscribed)
           *subscribed = false;
         }
         DATA_CHECK(dc);
+      
+        INCR_COUNTER(id_sub_subscribe_local);
       }
       else
       {
         adlb_code ac = xlb_sync_subscribe(server, id,
                             sub_convert(subscript), subscribed);
         DATA_CHECK_ADLB(ac,  TURBINE_ERROR_UNKNOWN);
-
+        
+        INCR_COUNTER(id_sub_subscribe_remote);
       }
 
       if (*subscribed)
@@ -435,6 +512,10 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *subscribed)
         if (!ok)
           return TURBINE_ERROR_OOM;
       }
+      else
+      {
+        INCR_COUNTER(id_sub_ready);
+      }
     }
   }
   else
@@ -444,6 +525,7 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *subscribed)
       TRACE("already subscribed: <%"PRId64">", id);
       // Already subscribed
       *subscribed = true;
+      INCR_COUNTER(id_subscribed);
     }
     else
     {
@@ -459,12 +541,14 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *subscribed)
           *subscribed = false;
         }
         DATA_CHECK(dc);
+        INCR_COUNTER(id_subscribe_local);
       }
       else
       {
         adlb_code ac = xlb_sync_subscribe(server, id, ADLB_NO_SUB,
                                           subscribed);
         DATA_CHECK_ADLB(ac,  TURBINE_ERROR_UNKNOWN);
+        INCR_COUNTER(id_subscribe_remote);
       }
     
       if (*subscribed)
@@ -472,6 +556,10 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *subscribed)
         bool ok = table_lp_add(&td_subscribed, id, (void*)1);
         if (!ok)
           return TURBINE_ERROR_OOM;
+      }
+      else
+      {
+        INCR_COUNTER(id_ready);
       }
     }
   }
