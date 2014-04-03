@@ -10,7 +10,7 @@ path+=( $MPICH/bin $TURBINE/bin $STC/bin )
 
 set -x
 
-printenv
+# printenv
 
 ls /tmp/mpich-install/lib
 
@@ -23,13 +23,6 @@ LDFLAGS="-L$MPICH/lib -lmpl"                \
             --enable-shared
 make clean
 
-# echo "Setting exit values to 0 instead of 1"
-# cd tests;
-# grep "exit 1" *.sh
-# sed -i 's/exit 1/echo "SOMETHING_BAD";exit 0/g' *.sh
-# grep "exit 1" *.sh
-# cd ..;
-
 make V=1
 
 make test_results
@@ -40,34 +33,35 @@ cd tests
 SUITE_RESULT="result_aggregate.xml";
 rm -fv $SUITE_RESULT
 
-echo "<testsuites>" >> $SUITE_RESULT
-for result in *.result
-do
-    cat $result | grep "SOMETHING_BAD" > /dev/null
-    #if [[ $? == 0 ]]
-    #then
-    #    echo "$result : result is BAD "
-    #else
-    #    echo "$result : result is GOOD "
-    #fi
-    cat $result | grep "SOMETHING_BAD" >/dev/null
-    CODE=${?};
+inspect_results()
+{
+  print "<testsuites>"
+  for result in *.result
+  do
+    grep "ERROR" ${result} > /dev/null
+    CODE=${?}
+
     if [[ ${CODE} == 0 ]]
     then
-        echo "    <testcase name=\"${result}\" >"     >> $SUITE_RESULT
-        echo "        <failure type=\"generic\">"     >> $SUITE_RESULT
-        echo "Result file contents:"                  >> $SUITE_RESULT
-        cat $result                                   >> $SUITE_RESULT
-        echo ""                                       >> $SUITE_RESULT
-        echo ""                                       >> $SUITE_RESULT
-        echo "Out file contents:"                     >> $SUITE_RESULT
-        echo "<![CDATA["                              >> $SUITE_RESULT
-        cat ${result%.result}.out                     >> $SUITE_RESULT
-        echo "]]>"                                    >> $SUITE_RESULT
-        echo "        </failure> "                    >> $SUITE_RESULT
-        echo "    </testcase>" >> $SUITE_RESULT
+      # We found ERROR
+      print "    <testcase name=\"${result}\" >"
+      print "        <failure type=\"generic\">"
+      print "Result file contents:"
+      cat $result
+      print ""
+      print ""
+      print "Out file contents:"
+      print "<![CDATA["
+      cat ${result%.result}.out
+      print "]]>"
+      print "        </failure> "
+      print "    </testcase>"
     else
-        echo "    <testcase name=\"${result}\" />"    >> $SUITE_RESULT
+      # Success:
+      print "    <testcase name=\"${result}\" />"
     fi
-done
-echo "</testsuites>" >> $SUITE_RESULT
+  done
+  print "</testsuites>"
+}
+
+inspect_results > ${SUITE_RESULT}
