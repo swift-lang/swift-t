@@ -8,18 +8,18 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
-import exm.stc.common.Settings;
 import exm.stc.common.CompilerBackend.WaitMode;
+import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.TaskMode;
-import exm.stc.common.lang.Var;
-import exm.stc.common.lang.WaitVar;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
+import exm.stc.common.lang.Var;
+import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.WrapUtil;
@@ -161,7 +161,7 @@ public class DataflowOpInline extends FunctionOptimizerPass {
       WaitStatement wait = new WaitStatement(
               fn.getName() + "-" + inst.shortOpName(),
               waitVars, PassedVar.NONE, Var.NONE,
-              waitMode, req.recursiveClose, req.mode, props);
+              waitMode, req.recursive, req.mode, props);
       block.addContinuation(wait);
       
       if (props.containsKey(TaskPropKey.PARALLELISM)) {
@@ -180,7 +180,8 @@ public class DataflowOpInline extends FunctionOptimizerPass {
       // Create local instruction, copy out outputs
       List<Var> localOutputs = WrapUtil.createLocalOpOutputs(
                               wait.getBlock(), req.out, filenameMap,
-                              instBuffer, true, mustInitOutputMapping); 
+                              instBuffer, true, mustInitOutputMapping,
+                              req.recursive); 
 
       boolean storeOutputMapping = req.initsOutputMapping;
       MakeImmChange change = inst.makeImmediate(
@@ -188,7 +189,8 @@ public class DataflowOpInline extends FunctionOptimizerPass {
                                   Fetched.makeList(req.out, localOutputs),
                                   Fetched.makeList(req.in, inVals));
       OptUtil.fixupImmChange(block, wait.getBlock(), inst, change, instBuffer,
-                                 localOutputs, req.out, storeOutputMapping);
+                                 localOutputs, req.out, storeOutputMapping,
+                                 req.recursive);
       
       // Remove old instruction, add new one inside wait block
       wait.getBlock().addStatements(instBuffer);

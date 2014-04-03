@@ -23,6 +23,7 @@ import exm.stc.common.lang.Unimplemented;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.Typed;
+import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.VarCount;
@@ -1168,7 +1169,8 @@ public class TurbineOp extends Instruction {
     assert(Types.isContainer(target));
     assert(Types.isContainerLocal(src.type()));
     assert(src.type().assignableTo(
-            Types.unpackedContainerType(target)));
+            Types.unpackedContainerType(target))) : src + ":" + src.type()
+                                                          + " " + target;
     return new TurbineOp(Opcode.STORE_RECURSIVE, target, src);
   }
   
@@ -1224,8 +1226,9 @@ public class TurbineOp extends Instruction {
    * @param src
    * @return
    */
-  public static Instruction storeAny(Var dst, Arg src) {
-    assert(src.type().assignableTo(Types.retrievedType(dst)));
+  public static Instruction storeAny(Var dst, Arg src,
+                                     boolean recursive) {
+    assert(src.type().assignableTo(Types.retrievedType(dst, recursive)));
     if (Types.isRef(dst)) {
       assert(src.isVar());
       return storeRef(dst, src.getVar());
@@ -1233,13 +1236,28 @@ public class TurbineOp extends Instruction {
       // Regular store?
       return storePrim(dst, src);
     } else if (Types.isArray(dst)) {
-      assert(src.isVar());
-      return assignArray(dst, src);
+      assert(src.isVar()) : src;
+      if (recursive) {
+        return storeRecursive(dst, src);
+      } else {
+        return assignArray(dst, src);
+      }
     } else if (Types.isBag(dst)) {
       assert(src.isVar());
-      return assignBag(dst, src);
+      if (recursive) {
+        return storeRecursive(dst, src);
+      } else {
+        return assignBag(dst, src);
+      }
     } else if (Types.isStruct(dst)) {
       assert(src.isVar());
+      // TODO: recursive
+      for (StructField f: ((StructType)dst.type().getImplType()).getFields()) {
+        if (Types.isRef(f.getType())) {
+          throw new STCRuntimeError("Recursive fetch of struct with ref field "
+                                   + "not supported yet " + dst.type());
+        }
+      }
       return assignStruct(dst, src);
     } else {
       throw new STCRuntimeError("Don't know how to store to " + dst);
@@ -2323,7 +2341,7 @@ public class TurbineOp extends Instruction {
       assert(values.get(0).original.equals(getInput(0).getVar()));
       Arg val = values.get(0).fetched;
       return new MakeImmChange(
-          TurbineOp.storeAny(getOutput(0), val));
+          TurbineOp.storeAny(getOutput(0), val, false));
     }
     case COPY_IN_FILENAME: {
       return new MakeImmChange(

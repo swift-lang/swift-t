@@ -109,6 +109,7 @@ public class OptUtil {
    * @param newOut
    * @param oldOut
    * @param storeOutputMapping if true, assign mapping
+   * @param recursive if it's to be fetched recursively
    */
   public static void replaceInstOutput(Block srcBlock,
           Block targetBlock, List<Statement> instBuffer, Var newOut, Var oldOut,
@@ -138,7 +139,8 @@ public class OptUtil {
       }
 
       WrapUtil.assignOutput(targetBlock, instBuffer,
-                storeOutputMapping, oldOutReplacement, newOut);
+                storeOutputMapping, oldOutReplacement, newOut,
+                false);
     } else {
       throw new STCRuntimeError("Tried to replace instruction"
           + " output var " + oldOut + " with " + newOut + ": this doesn't make sense"
@@ -176,7 +178,7 @@ public class OptUtil {
   public static List<Var> createLocalOpOutputVars(Block block,
           ListIterator<Statement> insertPos,
           List<Var> outputFutures, Map<Var, Var> outputFilenames,
-          boolean mapOutVars) {
+          boolean mapOutVars, boolean recursive) {
     if (outputFutures == null) {
       return Collections.emptyList();
     }
@@ -184,7 +186,8 @@ public class OptUtil {
     List<Statement> instBuffer = new ArrayList<Statement>();
     
     List<Var> outValVars = WrapUtil.createLocalOpOutputs(block, outputFutures,
-                               outputFilenames, instBuffer, true, mapOutVars);
+                               outputFilenames, instBuffer, true, mapOutVars,
+                               recursive);
     
     for (Statement stmt: instBuffer) {
       insertPos.add(stmt);
@@ -198,7 +201,7 @@ public class OptUtil {
           MakeImmChange change,
           List<Statement> instBuffer, 
           List<Var> newOutVars, List<Var> oldOutVars,
-          boolean storeOutputMapping) {
+          boolean storeOutputMapping, boolean recursiveStore) {
     instBuffer.addAll(Arrays.asList(change.newInsts));
 
     Logger logger = Logging.getSTCLogger();
@@ -221,13 +224,13 @@ public class OptUtil {
       }
       
       replaceInstOutput(srcBlock, targetBlock, instBuffer,
-                                  newOut, oldOut, storeOutputMapping, initOutput);
+              newOut, oldOut, storeOutputMapping, initOutput);
     }
     
     // Now copy back values into future
     if (change.storeOutputVals) {
       WrapUtil.setLocalOpOutputs(targetBlock, oldOutVars, newOutVars,
-                                 instBuffer, storeOutputMapping);
+                     instBuffer, storeOutputMapping, recursiveStore);
     }
   }
   

@@ -26,6 +26,8 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.StructType;
+import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
@@ -112,6 +114,19 @@ public class WrapUtil {
               VarProvenance.valueOf(var));
       block.addVariable(deref);
       instBuffer.add(TurbineOp.retrieveRecursive(deref, var));
+      return deref;
+    } else if (Types.isStruct(var) && recursive) {
+      for (StructField f: ((StructType)var.type().getImplType()).getFields()) {
+        if (Types.isRef(f.getType())) {
+          throw new STCRuntimeError("Recursive fetch of struct with ref field "
+                                   + "not supported yet " + var.type());
+        }
+      }
+
+      Var deref = new Var(valueT, valName,
+          Alloc.LOCAL, DefType.LOCAL_COMPILER,
+          VarProvenance.valueOf(var));
+      instBuffer.add(TurbineOp.retrieveStruct(deref, var));
       return deref;
     } else if ((Types.isContainer(var) || Types.isStruct(var))
                 && !recursive) { 
@@ -288,12 +303,13 @@ public class WrapUtil {
    * @param uniquifyNames if it isn't safe to use default name prefix,
    *      e.g. if we're in the middle of optimizations
    * @param initOutputMapping 
+   * @param store recursively
    * @return
    */
   public static List<Var> createLocalOpOutputs(Block block,
       List<Var> outputFutures, Map<Var, Var> filenameVars,
       List<Statement> instBuffer, boolean uniquifyNames,
-      boolean initOutputMapping) {
+      boolean initOutputMapping, boolean recursive) {
     if (outputFutures == null) {
       // Gracefully handle null as empty list
       outputFutures = Var.NONE;
@@ -305,7 +321,8 @@ public class WrapUtil {
         outVals.add(outArg);
       } else {
         outVals.add(WrapUtil.createLocalOutputVar(outArg, filenameVars,
-                   block, instBuffer, uniquifyNames, initOutputMapping));
+                   block, instBuffer, uniquifyNames, initOutputMapping,
+                   recursive));
       }
     }
     return outVals;
@@ -319,8 +336,8 @@ public class WrapUtil {
    * @return
    */
   public static Var declareLocalOutputVar(Block block, Var var,
-          String valName) {
-    return block.declareUnmapped(Types.retrievedType(var.type()),
+          String valName, boolean recursive) {
+    return block.declareUnmapped(Types.retrievedType(var.type(), recursive),
         valName, Alloc.LOCAL, DefType.LOCAL_COMPILER,
         VarProvenance.valueOf(var));
   }
@@ -336,15 +353,17 @@ public class WrapUtil {
    * @param instBuffer buffer for initialization actions
    * @param uniquifyName if it isn't safe to use default name prefix,
    *      e.g. if we're in the middle of optimizations
-   * @param initOutputMapping whether to initialize mappings for output files 
+   * @param initOutputMapping whether to initialize mappings for output files
+   * @param recursive if the fetch will be recursive 
    * @return
    */
   public static Var createLocalOutputVar(Var outFut,
       Map<Var, Var> filenameVars,
       Block block, List<Statement> instBuffer, boolean uniquifyName,
-      boolean initOutputMapping) {
+      boolean initOutputMapping, boolean recursive) {
     String outValName = valName(block, outFut, uniquifyName);
-    Var outVal = WrapUtil.declareLocalOutputVar(block, outFut, outValName);
+    Var outVal = WrapUtil.declareLocalOutputVar(block, outFut, outValName,
+                recursive);
     WrapUtil.initLocalOutputVar(block, filenameVars, instBuffer,
                                 outFut, outVal, initOutputMapping);
     WrapUtil.cleanupLocalOutputVar(block, outFut, outVal);
@@ -416,7 +435,8 @@ public class WrapUtil {
    */
   public static void setLocalOpOutputs(Block block,
       List<Var> outFuts, List<Var> outVals,
-      List<Statement> instBuffer, boolean storeOutputMapping) {
+      List<Statement> instBuffer, boolean storeOutputMapping,
+      boolean recursive) {
     if (outFuts == null) {
       assert(outVals == null || outVals.isEmpty());
       return;
@@ -429,17 +449,18 @@ public class WrapUtil {
       if (outArg.equals(outVal)) {
         // Do nothing: the variable wasn't substituted
       } else {
-        assignOutput(block, instBuffer, storeOutputMapping, outArg, outVal);
+        assignOutput(block, instBuffer, storeOutputMapping, outArg, outVal,
+                     recursive);
       }
     }
   }
   
   public static void assignOutput(Block block, List<Statement> instBuffer,
-      boolean storeOutputMapping, Var outArg, Var outVal) {
+      boolean storeOutputMapping, Var outArg, Var outVal, boolean recursive) {
     if (Types.isFile(outArg)) {
       assignOutputFile(block, instBuffer, storeOutputMapping, outArg, outVal);
     } else {
-      instBuffer.add(TurbineOp.storeAny(outArg, outVal.asArg()));
+      instBuffer.add(TurbineOp.storeAny(outArg, outVal.asArg(), recursive));
     }
   }
   

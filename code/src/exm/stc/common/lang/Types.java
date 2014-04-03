@@ -2339,25 +2339,47 @@ public class Types {
   }
 
   /**
-   * The type that would result from a retrieve operation
+   * The type that would result from a non-recursive retrieve operation
    * @param t
    * @return
    */
   public static Type retrievedType(Typed t) {
+    return retrievedType(t, false);
+  }
+  
+  /**
+   * The type that would result from a retrieve operation
+   * @param t
+   * @return
+   */
+  public static Type retrievedType(Typed t, boolean recursive) {
     if (isScalarFuture(t) || isScalarUpdateable(t))  {
       return new ScalarValueType(t.type().primType());
     } else if (isFile(t)) {
       return new FileValueType(t.type().fileKind());
     } else if (isRef(t)) {
       return t.type().baseType().memberType();
+    } else if (recursive && 
+        (isContainer(t) || isContainerLocal(t))) {
+      return unpackedContainerType(t);
     } else if (isArray(t)) {
+      assert(!recursive);
       ArrayType at = (ArrayType)t.type().getImplType();
       return ArrayType.localArray(at.keyType(), at.memberType());
     } else if (isBag(t)) {
+      assert(!recursive);
       BagType bt = (BagType)t.type().getImplType();
       return BagType.localBag(bt.memberType());
     } else if (isStruct(t)) {
       StructType st = (StructType)t.type().getImplType();
+      if (recursive) {
+        for (StructField f: st.getFields()) {
+          if (Types.isRef(f.getType())) {
+            throw new STCRuntimeError("Recursive fetch of struct with ref field "
+                                     + "not supported yet " + st);
+          }
+        }
+      }
       return StructType.localStruct(st);
     } else {
       throw new STCRuntimeError(t.type() + " can't be dereferenced");

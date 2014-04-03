@@ -1054,11 +1054,12 @@ public class STCMiddleEnd {
                                                   instBuffer, false);
     
     List<Var> outVals = WrapUtil.createLocalOpOutputs(waitBlock, outArgs,
-                            filenameVars, instBuffer, false, mapOutFiles);
+                            filenameVars, instBuffer, false, mapOutFiles,
+                            true);
     instBuffer.add(new LocalFunctionCall(builtinName, inVals, outVals));
     
     WrapUtil.setLocalOpOutputs(waitBlock, outArgs, outVals, instBuffer,
-                               !mapOutFiles);
+                               !mapOutFiles, true);
     
     waitBlock.addStatements(instBuffer);
   }

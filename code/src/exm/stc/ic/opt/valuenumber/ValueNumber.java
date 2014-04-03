@@ -822,7 +822,8 @@ public class ValueNumber implements OptimizerPass {
     
     
     List<Var> outFetched = OptUtil.createLocalOpOutputVars(insertContext,
-                insertPoint, req.out, filenameVals, mustInitOutputMapping);
+                insertPoint, req.out, filenameVals, mustInitOutputMapping,
+                req.recursive);
     
     // If instruction initialized mapping, need to store
     boolean storeOutputMapping = req.initsOutputMapping;
@@ -831,7 +832,7 @@ public class ValueNumber implements OptimizerPass {
     change = inst.makeImmediate(new OptVarCreator(block),
           Fetched.makeList(req.out, outFetched), inVals);
     OptUtil.fixupImmChange(block, insertContext, inst, change, alt,
-                           outFetched, req.out, storeOutputMapping);
+           outFetched, req.out, storeOutputMapping, req.recursive);
 
     if (logger.isTraceEnabled()) {
       logger.trace("Replacing instruction <" + inst + "> with sequence "

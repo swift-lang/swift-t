@@ -178,8 +178,9 @@ public class ICInstructions {
       
       /** Where immediate code should run.  Default is local: in the current context */
       public final TaskMode mode;
-      /** If inputs should be recursively closed */
-      public final boolean recursiveClose;
+      
+      /** If inputs should be recursively fetched and outputs recursively stored*/
+      public final boolean recursive;
       /** 
        * If instruction initialize output mappings itself
        * default: false
@@ -204,28 +205,28 @@ public class ICInstructions {
       }
       
       public MakeImmRequest(List<Var> out, List<Var> in, List<Var> wait, 
-          TaskMode mode, boolean recursiveClose) {
-        this(out, in, wait, mode, recursiveClose, false);
+          TaskMode mode, boolean recursive) {
+        this(out, in, wait, mode, recursive, false);
       }
       
       public MakeImmRequest(List<Var> out, List<Var> in, TaskMode mode,
-                            boolean recursiveClose) {
-        this(out, in, mode, recursiveClose, false);
+                            boolean recursive) {
+        this(out, in, mode, recursive, false);
       } 
       public MakeImmRequest(List<Var> out, List<Var> in, TaskMode mode,
-          boolean recursiveClose, boolean initsOutputMapping) {
-        this(out, in, null, mode, recursiveClose, initsOutputMapping);
+          boolean recursive, boolean initsOutputMapping) {
+        this(out, in, null, mode, recursive, initsOutputMapping);
       }
       
       public MakeImmRequest(List<Var> out, List<Var> in, List<Var> wait,
-            TaskMode mode, boolean recursiveClose,
+            TaskMode mode, boolean recursive,
             boolean initsOutputMapping) {
         // Gracefully handle null as empty list
         this.out = (out == null) ? Var.NONE : out;
         this.in = (in == null) ? Var.NONE : in;
         this.wait = (wait == null) ? Var.NONE: wait;
         this.mode = mode;
-        this.recursiveClose = recursiveClose;
+        this.recursive = recursive;
         this.initsOutputMapping = initsOutputMapping;
       }
 
@@ -1253,17 +1254,17 @@ public class ICInstructions {
         if (isImpl(SpecialFunction.INITS_OUTPUT_MAPPING)) {
           initsOutputMapping = true;
         }
-        
+
         // All args are closed!
         return new MakeImmRequest(
             Collections.unmodifiableList(this.outputs),
             Collections.unmodifiableList(this.varInputs(true)),
-            mode, false, initsOutputMapping);
+            mode, recursiveInOut(this.op), initsOutputMapping);
 
       }
       return null;
     }
-
+    
     private boolean allInputsClosed(Set<Var> closedVars) {
       for (int i = 0; i < this.inputs.size(); i++) {
         if (!inputClosed(closedVars, i)) {
@@ -1402,6 +1403,27 @@ public class ICInstructions {
     }
     
       
+    /**
+     * Returns true if we recursively pack and unpack inputs and outputs for
+     * this type of function call if converting to local version
+     * @param op
+     */
+    private static boolean recursiveInOut(Opcode op) {
+      switch (op) {
+        case CALL_SYNC:
+        case CALL_LOCAL:
+        case CALL_LOCAL_CONTROL:
+        case CALL_CONTROL:
+          // With Swift functions, we wouldn't want to do this
+          return false;
+        case CALL_FOREIGN:
+          // Foreign functions get unpack representations
+          return true;
+        default:
+          throw new STCRuntimeError("Unexpected function call opcode: " + op);
+      }
+    }
+
     @Override
     public TaskMode getMode() {
       switch (op) {

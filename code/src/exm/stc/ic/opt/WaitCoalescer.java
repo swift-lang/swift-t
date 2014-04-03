@@ -26,7 +26,6 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend.WaitMode;
-import exm.stc.common.Logging;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
