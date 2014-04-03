@@ -21,6 +21,12 @@ then
   return 1
 fi
 
+# Print a message on stderr to avoid putting it in the Jenkins XML
+message()
+{
+  print -u 2 ${*}
+}
+
 print "<testsuites>"
 
 while read line
@@ -39,17 +45,17 @@ do
 	T_turbine=${a[1]};
     elif [[ $line == PASSED ]]
     then
-	print "Test count : $T_count";
-	print "Test swift : $T_swift";
-	print "Test turbine : $T_turbine";
-	print "Status: $line"
+        message "Test count : $T_count"
+	message "Test swift : $T_swift"
+	message "Test turbine : $T_turbine"
+	message "Status: $line"
         print "  <testcase name=\"${T_swift}\" />"
     elif [[ $line == FAILED ]]
     then
-	print "Test count : $T_count";
-	print "Test swift : $T_swift";
-	print "Test turbine : $T_turbine";
-	print "Status: $line"
+	message "Test count : $T_count";
+	message "Test swift : $T_swift";
+	message "Test turbine : $T_turbine";
+	message "Status: $line"
         print "  <testcase name=\"${T_swift}\" >"
         print "     <failure type=\"generic\">"
 	print "     ${T_swift}   ${T_tcl}"
