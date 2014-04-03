@@ -33,7 +33,7 @@ namespace eval turbine {
 
     proc assert_impl { cond msg } {
         if { $cond == 0 } {
-            error "Assertion failed!: $msg"
+            turbine_error "Assertion failed!: $msg"
         } else {
             log "assert passed: ($msg)"
         }
