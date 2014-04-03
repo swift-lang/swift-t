@@ -23,6 +23,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
@@ -323,7 +324,10 @@ public class Validate implements OptimizerPass {
 
 
   private void checkExecCx(Logger logger, Program program, Function fn) {
-    checkExecCx(logger, program, fn.mainBlock(), ExecContext.CONTROL);
+    // Don't need to check context if no distinct contexts
+    if (!Settings.NO_TURBINE_ENGINE) {
+      checkExecCx(logger, program, fn.mainBlock(), ExecContext.CONTROL);
+    }
   }
 
   private void checkExecCx(Logger logger, Program program,
