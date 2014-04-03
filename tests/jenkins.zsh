@@ -41,6 +41,7 @@ turbine -v
 
 cd tests
 
+export STC=${STC}/bin/stc
 ./run-tests.zsh -V -c -k $TESTS_SKIP |& tee results.out
 check_error ${pipestatus[1]} "run-tests.zsh"
 
