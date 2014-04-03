@@ -39,9 +39,6 @@ which stc
 which turbine
 turbine -v
 
-ant -Ddist.dir=${STC} -Dturbine.home=${TURBINE} install
-check_error ${?} "ant"
-
 cd tests
 
 ./run-tests.zsh -c -k $TESTS_SKIP |& tee results.out
