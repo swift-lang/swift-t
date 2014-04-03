@@ -79,9 +79,7 @@ do
     if [[ -f ${TURBINE_OUTPUT} ]]
     then
       print "Turbine output from ${T_swift}:"
-      print "<![CDATA["
       cat ${OUTPUT}
-      print "]]>"
     fi
     print "     </failure> "
     print "  </testcase>"
