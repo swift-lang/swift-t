@@ -26,7 +26,7 @@ check_error()
   fi
 }
 
-set -ux
+set -x
 
 pwd
 TESTS_SKIP=0
