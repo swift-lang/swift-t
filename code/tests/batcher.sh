@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+source tests/test-helpers.sh
+
 set -x
 
 THIS=$0
@@ -23,11 +25,11 @@ mkdir tests/data
 
 bin/turbine -l -n 4 ${SCRIPT} \
                     tests/batcher.txt >& ${OUTPUT}
-[[ ${?} == 0 ]] || exit 1
+[[ ${?} == 0 ]] || test_result 1
 
 LINES=$( ls tests/data/{1..4}.txt | wc -l )
-(( ${LINES} == 4 )) || exit 1
+(( ${LINES} == 4 )) || test_result 1
 
-rm tests/data/{1..4}.txt || exit 1
+rm tests/data/{1..4}.txt || test_result 1
 
-exit 0
+test_result 0

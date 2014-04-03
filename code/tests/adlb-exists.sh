@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+source tests/test-helpers.sh
+
 set -x
 
 THIS=$0
@@ -20,12 +22,12 @@ SCRIPT=${THIS%.sh}.tcl
 OUTPUT=${THIS%.sh}.out
 
 bin/turbine -l -n 2 ${SCRIPT} >& ${OUTPUT}
-[[ ${?} == 0 ]] || exit 1
+[[ ${?} == 0 ]] || test_result 1
 
-grep "nope: 0"   ${OUTPUT} || exit 1
-grep "nope: 1"   ${OUTPUT} || exit 1
-grep "nope: 2"   ${OUTPUT} || exit 1
-grep "exists: 3" ${OUTPUT} || exit 1
-grep "exists: 4" ${OUTPUT} || exit 1
+grep "nope: 0"   ${OUTPUT} || test_result 1
+grep "nope: 1"   ${OUTPUT} || test_result 1
+grep "nope: 2"   ${OUTPUT} || test_result 1
+grep "exists: 3" ${OUTPUT} || test_result 1
+grep "exists: 4" ${OUTPUT} || test_result 1
 
-exit 0
+test_result 0

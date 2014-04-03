@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+source tests/test-helpers.sh
+
 # Test CONTAINER-ENUMERATE.TCL
 # WARNING: This test requires GNU sed
 
@@ -27,10 +29,10 @@ set -x
 if ! sed --version | grep GNU > /dev/null
 then
   echo "need GNU sed: skipping this test..."
-  exit 0
+  test_result 0
 fi
 
 bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
-[[ ${?} == 0 ]] || exit 1
+[[ ${?} == 0 ]] || test_result 1
 
-exit 0
+test_result 0

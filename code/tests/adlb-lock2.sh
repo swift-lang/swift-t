@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+source tests/test-helpers.sh
+
 set -x
 
 THIS=$0
@@ -21,9 +23,9 @@ OUTPUT=${THIS%.sh}.out
 
 export TURBINE_TEST_PARAM_1=4
 bin/turbine -l -n 4 ${SCRIPT} >& ${OUTPUT}
-[[ ${?} == 0 ]] || exit 1
+[[ ${?} == 0 ]] || test_result 1
 
 OKS=$( grep -c ' OK$' ${OUTPUT} )
-(( OKS == 4 )) || exit 1
+(( OKS == 4 )) || test_result 1
 
-exit 0
+test_result 0

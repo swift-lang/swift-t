@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+source tests/test-helpers.sh
+
 set -x
 
 THIS=$0
@@ -24,15 +26,15 @@ export ADLB_REPORT_LEAKS=true
 PROCS=4
 
 bin/turbine -l -n $PROCS ${SCRIPT} >& ${OUTPUT}
-[[ ${?} == 0 ]] || exit 1
+[[ ${?} == 0 ]] || test_result 1
 
 OKS=$( grep -c ' OK$' ${OUTPUT} )
-(( OKS == $PROCS )) || exit 1
+(( OKS == $PROCS )) || test_result 1
 
 if grep "LEAK DETECTED" ${OUTPUT}
 then
   echo "LEAKS FOUND"
-  exit 1
+  test_result 1
 fi
 
-exit 0
+test_result 0

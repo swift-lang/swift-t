@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+source tests/test-helpers.sh
+
 THIS=$0
 SCRIPT=${THIS%.sh}.tcl
 OUTPUT=${THIS%.sh}.out
@@ -22,10 +24,10 @@ source $( dirname $0 )/setup.sh > ${OUTPUT} 2>&1
 set -x
 
 bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
-[[ ${?} == 0 ]] || exit 1
+[[ ${?} == 0 ]] || test_result 1
 
-grep -q "enumeration: 0 1"    ${OUTPUT} || exit 1
-grep -q "string:.*string2" ${OUTPUT} || exit 1
-grep -q "string:.*string3" ${OUTPUT} || exit 1
+grep -q "enumeration: 0 1"    ${OUTPUT} || test_result 1
+grep -q "string:.*string2" ${OUTPUT} || test_result 1
+grep -q "string:.*string3" ${OUTPUT} || test_result 1
 
-exit 0
+test_result 0

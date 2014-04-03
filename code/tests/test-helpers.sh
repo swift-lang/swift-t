@@ -13,17 +13,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-source tests/test-helpers.sh
 
-set -x
+# Handle test results for two modes:
+# 1) Normal user-based shell/make operation
+# 2) Runs under Jenkins
+# usage: test_result <CODE>
+#                    CODE==0 is success; else is failure
+test_result()
+{
+  RESULT=$1
+  if (( ${RESULT} == 0 ))
+  then
+    echo "TEST RESULT: OK"
+    exit 0
+  fi
 
-THIS=$0
-SCRIPT=${THIS%.sh}.tcl
-OUTPUT=${THIS%.sh}.out
+  # Error condition:
+  if [[ -n ${JENKINS_HOME} ]]
+  then
+    # We are running under Jenkins- we cannot test_result non-zero
+    echo "ERROR"
+    exit 0
+  fi
 
-bin/turbine -l -n 3 ${SCRIPT} >& ${OUTPUT}
-[[ ${?} == 0 ]] || test_result 1
-
-grep -q "container size: 5"  ${OUTPUT} || test_result 1
-
-test_result 0
+  # Normal run from user - test failed - stop
+  echo "ERROR"
+  exit 1
+}

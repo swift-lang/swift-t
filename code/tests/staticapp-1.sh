@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+source tests/test-helpers.sh
+
 THIS=$0
 BIN=${THIS%.sh}.x
 OUTPUT=${THIS%.sh}.out
@@ -23,10 +25,10 @@ set -x
 export TURBINE_USER_LIB=${THIS%.sh}/
 
 ${TESTS}/run-mpi.zsh ${BIN} >& ${OUTPUT}
-[[ ${?} == 0 ]] || exit 1
+[[ ${?} == 0 ]] || test_result 1
 
 for i in `seq 0 19`; do
-  grep -q "Hello world: $i" ${OUTPUT} || exit 1
+  grep -q "Hello world: $i" ${OUTPUT} || test_result 1
 done
 
-exit 0
+test_result 0

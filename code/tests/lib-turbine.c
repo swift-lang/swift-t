@@ -27,6 +27,8 @@ main()
   int mpi_argc = 0;
   char** mpi_argv = NULL;
 
+  printf("HI\n");
+
   MPI_Init(&mpi_argc, &mpi_argv);
 
   // Create communicator for ADLB

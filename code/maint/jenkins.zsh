@@ -32,26 +32,27 @@ make clean
 
 make V=1
 
-## Results aggregation
-make test_results || true
-cd tests
+make test_results
+# Make should always return 0 under Jenkins even if a test failed
+# We inpect test results below
 
+cd tests
 SUITE_RESULT="result_aggregate.xml";
-rm $SUITE_RESULT > /dev/null 2>&1 ;
+rm -fv $SUITE_RESULT
 
 echo "<testsuites>" >> $SUITE_RESULT
-for result in `ls *.result`
+for result in *.result
 do
-    cat $result | grep "SOMETHING_BAD" > /dev/null ;
+    cat $result | grep "SOMETHING_BAD" > /dev/null
     #if [[ $? == 0 ]]
     #then
     #    echo "$result : result is BAD "
     #else
     #    echo "$result : result is GOOD "
     #fi
-    cat $result | grep "SOMETHING_BAD" >/dev/null ;
-    status=${?};
-    if [[ $status == 0 ]]
+    cat $result | grep "SOMETHING_BAD" >/dev/null
+    CODE=${?};
+    if [[ ${CODE} == 0 ]]
     then
         echo "    <testcase name=\"${result}\" >"     >> $SUITE_RESULT
         echo "        <failure type=\"generic\">"     >> $SUITE_RESULT
@@ -68,5 +69,5 @@ do
     else
         echo "    <testcase name=\"${result}\" />"    >> $SUITE_RESULT
     fi
-done;
-echo "</testsuites>" >> $SUITE_RESULT;
+done
+echo "</testsuites>" >> $SUITE_RESULT

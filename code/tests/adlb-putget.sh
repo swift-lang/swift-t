@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+source tests/test-helpers.sh
+
 set -x
 
 THIS=$0
@@ -22,11 +24,11 @@ OUTPUT=${THIS%.sh}.out
 export ADLB_EXHAUST_TIME=1
 
 bin/turbine -l -n 4 ${SCRIPT} >& ${OUTPUT}
-[[ ${?} == 0 ]] || exit 1
+[[ ${?} == 0 ]] || test_result 1
 
-grep -q "msg: 'hello.'"     ${OUTPUT} || exit 1
+grep -q "msg: 'hello.'"     ${OUTPUT} || test_result 1
 
 LINES=$( grep -c ' OK$' ${OUTPUT} )
-[[ ${LINES} == 4 ]] || exit 1
+[[ ${LINES} == 4 ]] || test_result 1
 
-exit 0
+test_result 0
