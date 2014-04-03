@@ -85,10 +85,16 @@ typedef struct {
   bool must_preacquire;
 } xlb_rc_change;
 
+#ifndef XLB_INDEX_RC_CHANGES
+#define XLB_INDEX_RC_CHANGES 0
+#endif
+
 /** List of refcount changes */
 typedef struct {
+#if XLB_INDEX_RC_CHANGES
   // Index changes by ID to allow merging
   table_lp index;
+#endif
   xlb_rc_change *arr;
   int count;
   int size;
@@ -270,6 +276,7 @@ static inline adlb_code xlb_rc_changes_expand(xlb_rc_changes *c,
     void *new_arr = realloc(c->arr, (size_t)new_size * sizeof(c->arr[0]));
     CHECK_MSG(new_arr != NULL, "Could not alloc array");
 
+#if XLB_INDEX_RC_CHANGES
     // Init index, use 1.0 load factor so realloced at same pace as array
     if (!table_lp_init_custom(&c->index, new_size, 1.0))
     {
@@ -277,6 +284,7 @@ static inline adlb_code xlb_rc_changes_expand(xlb_rc_changes *c,
       free(new_arr);
       return ADLB_ERROR;
     }
+#endif
 
     c->arr = new_arr;
     c->size = new_size;
@@ -289,6 +297,7 @@ xlb_rc_change_merge_existing(xlb_rc_changes *c,
     adlb_datum_id id, int read_change, int write_change,
     bool must_preacquire)
 {
+#if XLB_INDEX_RC_CHANGES
   void *tmp;
   if (table_lp_search(&c->index, id, &tmp))
   {
@@ -306,6 +315,7 @@ xlb_rc_change_merge_existing(xlb_rc_changes *c,
     // later, when processing local refcounts
     return true;
   }
+#endif
   return false;
 }
 
@@ -334,8 +344,10 @@ static inline adlb_code xlb_rc_changes_add(xlb_rc_changes *c,
     // that would cause referand to be freed
     change->must_preacquire = must_preacquire;
 
+#if XLB_INDEX_RC_CHANGES
     bool added = table_lp_add(&c->index, id, (void*)change_ix);
     CHECK_MSG(added, "Could not add to refcount index table");
+#endif
 
     DEBUG("Add change: <%"PRId64"> r: %i w: %i pa: %i", change->id,
             change->rc.read_refcount, change->rc.write_refcount, 
@@ -349,7 +361,9 @@ static inline void xlb_rc_changes_free(xlb_rc_changes *c)
 {
   if (c->arr != NULL) {
     free(c->arr);
+#if XLB_INDEX_RC_CHANGES
     table_lp_free_callback(&c->index, false, NULL);
+#endif
   }
   c->arr = NULL;
   c->count = 0;

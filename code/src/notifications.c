@@ -478,6 +478,7 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
 
     if (applied)
     {
+#if XLB_INDEX_RC_CHANGES
       // Will need to update or invalidate index if not processing all
       bool maintain_index = !apply_all;
       if (maintain_index)
@@ -489,6 +490,7 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
         assert(removed);
         assert(((unsigned long)tmp) == i);
       }
+#endif
 
       // Remove processed entries
       c->count--;
@@ -497,6 +499,7 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
         // Swap last to here
         *change = c->arr[c->count];
         i--; // Process new entry next
+#if XLB_INDEX_RC_CHANGES
         if (maintain_index)
         {
           void *ptr;
@@ -507,6 +510,7 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
           TRACE("Reindex change for id <%"PRId64">: %lu => %d",
                 change->id, (unsigned long)ptr, i);
         }
+#endif
       }
     }
   }
@@ -938,6 +942,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
          rc_change_count * (int)sizeof(c->arr[0]),
          MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE);
 
+#if XLB_INDEX_RC_CHANGES
     // Rebuild index
     //  - Merge new data into existing ones
     //  - Index remaining new data
@@ -964,7 +969,8 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
         CHECK_MSG(added, "Could not add to refcount index table");
       }
     }
-   
+#endif
+
     // Only extend to cover new ones now that we've finished
     // manipulating index
     notifs->rc_changes.count += rc_change_count;
