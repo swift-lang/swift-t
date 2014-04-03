@@ -1,10 +1,9 @@
 
-// THIS-TEST-SHOULD-NOT-RUN
+// THIS- TEST-SHOULD-NOT-RUN // Flex Jenkins error handling
 // check that asserts fail as expected
 
 import assert;
 
 main {
-  x // Flex Jenkins error handling
     assert(false, "false"); // should fail
 }

@@ -60,18 +60,17 @@ do
     message "Status: $line"
     print "  <testcase name=\"${T_swift}\" >"
     print "     <failure type=\"generic\">"
-    # print "Error case: ${T_swift}"
 
     STC_OUTPUT=${T_swift%.swift}.stc.out
     STC_ERROR=${T_swift%.swift}.stc.err
 
     # STC stdout from failed case
-    print "STC output from ${T_swift}:"
+    print "STC outputs from ${T_swift}:"
     cat ${STC_OUTPUT}
     print
 
     # STC stderr from failed case
-    print "STC error from ${T_swift}:"
+    print "STC errors from ${T_swift}:"
     cat ${STC_ERROR}
     print
 
@@ -83,8 +82,6 @@ do
       print "<![CDATA["
       cat ${OUTPUT}
       print "]]>"
-    else
-      print NOT HERE
     fi
     print "     </failure> "
     print "  </testcase>"

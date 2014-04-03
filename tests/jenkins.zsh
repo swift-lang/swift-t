@@ -50,5 +50,6 @@ SUITE_RESULT="result_aggregate.xml";
 ./jenkins-results.zsh > ${SUITE_RESULT}
 check_error ${?} "jenkins-results.zsh"
 
+print
 print "SUITE RESULT XML:"
 cat ${SUITE_RESULT}
