@@ -114,21 +114,21 @@ typedef struct {
   size_t to_free_size; // Allocated length
 } adlb_notif_t;
 
-static inline bool xlb_notif_ranks_empty(adlb_notif_ranks *notif)
+static inline bool xlb_notif_ranks_empty(const adlb_notif_ranks *notif)
 {
   return notif->count == 0;
 }
 
-static inline bool xlb_rc_changes_empty(xlb_rc_changes *changes)
+static inline bool xlb_rc_changes_empty(const xlb_rc_changes *changes)
 {
   return changes->count == 0;
 }
 
-static inline bool xlb_refs_empty(adlb_ref_data *refs)
+static inline bool xlb_refs_empty(const adlb_ref_data *refs)
 {
   return refs->count == 0;
 }
-static inline bool xlb_notif_empty(adlb_notif_t *notif)
+static inline bool xlb_notif_empty(const adlb_notif_t *notif)
 {
   return notif->notify.count == 0 && notif->references.count == 0 &&
          notif->rc_changes.count == 0;
@@ -344,7 +344,7 @@ static inline adlb_code xlb_rc_changes_add(xlb_rc_changes *c,
     ac = xlb_rc_changes_expand(c, 1);
     ADLB_CHECK(ac);
 
-    unsigned long change_ix = c->count++;
+    unsigned long change_ix = (unsigned long)c->count++;
     change = &c->arr[change_ix];
     change->id = id;
     change->rc.read_refcount = read_change;

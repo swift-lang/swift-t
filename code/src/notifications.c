@@ -15,7 +15,7 @@ static adlb_code
 xlb_process_local_notif_ranks(adlb_notif_ranks *ranks);
 
 static adlb_code
-xlb_close_notify(const adlb_notif_ranks *ranks);
+xlb_close_notify(adlb_notif_ranks *ranks);
 
 static adlb_code
 xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
@@ -206,7 +206,7 @@ xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
 }
 
 static adlb_code
-xlb_close_notify(const adlb_notif_ranks *ranks)
+xlb_close_notify(adlb_notif_ranks *ranks)
 {
   adlb_code rc;
   char payload[MAX_NOTIF_PAYLOAD];
@@ -257,10 +257,7 @@ xlb_notify_server(int server, adlb_datum_id id, adlb_subscript subscript)
 {
   MPI_Status status;
   MPI_Request request;
-  // TODO: pack id/subscript
-  // TODO: send to server
-  // TODO: wait for response
-
+  
   int subscript_len = adlb_has_sub(subscript) ? (int)subscript.length : 0;
   assert(subscript_len <= ADLB_DATA_SUBSCRIPT_MAX);
 
@@ -398,34 +395,32 @@ adlb_code
 xlb_notify_all(adlb_notif_t *notifs)
 {
   adlb_code rc;
-  if (notifs->rc_changes.count > 0)
+  if (!xlb_rc_changes_empty(&notifs->rc_changes))
   {
     // apply rc changes first because it may add new notifications
     rc = xlb_rc_changes_apply(notifs, true, true, true);
     ADLB_CHECK(rc);
   }
 
-  assert(notifs->rc_changes.count == 0);
+  assert(xlb_rc_changes_empty(&notifs->rc_changes));
 
-  if (notifs->notify.count > 0)
+  if (!xlb_notif_ranks_empty(&notifs->notify))
   {
     rc = xlb_close_notify(&notifs->notify);
     ADLB_CHECK(rc);
   }
 
-  assert(notifs->notify.count == 0);
-  assert(notifs->rc_changes.count == 0);
+  assert(xlb_notif_ranks_empty(&notifs->notify));
+  assert(xlb_rc_changes_empty(&notifs->rc_changes));
 
-  if (!notifs->references.count > 0)
+  if (!xlb_refs_empty(&notifs->references))
   {
     rc = xlb_set_refs(notifs, false);
     ADLB_CHECK(rc);
   }
+  assert(xlb_refs_empty(&notifs->references));
 
   // Check all were cleared
-  assert(xlb_notif_ranks_empty(&notifs->notify));
-  assert(xlb_rc_changes_empty(&notifs->rc_changes));
-  assert(xlb_refs_empty(&notifs->references));
   assert(xlb_notif_empty(notifs)); 
   return ADLB_SUCCESS;
 }
