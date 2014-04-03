@@ -373,7 +373,7 @@ handle_put_rule(int caller)
   SEND(&response, 1, MPI_INT, caller, ADLB_TAG_RESPONSE_PUT);
 
   bool ready;
-  turbine_engine_code tc = turbine_rule(name, p->name_strlen,
+  turbine_engine_code tc = turbine_rule(name, name_strlen,
         p->id_count, wait_ids, p->id_sub_count, wait_id_subs,
         work, &ready);
   CHECK_MSG(tc == TURBINE_SUCCESS, "Error adding rule");
