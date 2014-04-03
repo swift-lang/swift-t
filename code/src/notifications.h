@@ -119,6 +119,15 @@ static inline bool xlb_notif_ranks_empty(adlb_notif_ranks *notif)
   return notif->count == 0;
 }
 
+static inline bool xlb_rc_changes_empty(xlb_rc_changes *changes)
+{
+  return changes->count == 0;
+}
+
+static inline bool xlb_refs_empty(adlb_ref_data *refs)
+{
+  return refs->count == 0;
+}
 static inline bool xlb_notif_empty(adlb_notif_t *notif)
 {
   return notif->notify.count == 0 && notif->references.count == 0 &&

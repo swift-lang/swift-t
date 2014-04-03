@@ -423,6 +423,9 @@ xlb_notify_all(adlb_notif_t *notifs)
   }
 
   // Check all were cleared
+  assert(xlb_notif_ranks_empty(&notifs->notify));
+  assert(xlb_rc_changes_empty(&notifs->rc_changes));
+  assert(xlb_refs_empty(&notifs->references));
   assert(xlb_notif_empty(notifs)); 
   return ADLB_SUCCESS;
 }
