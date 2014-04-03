@@ -429,6 +429,7 @@ public class WaitCoalescer implements OptimizerPass {
     
     // Check that recursiveness matches
     if (wait.isRecursive() != innerWait.isRecursive()) {
+      logger.trace("Recursiveness incompatible");
       return false;
     }
     
@@ -440,12 +441,14 @@ public class WaitCoalescer implements OptimizerPass {
       if (waitContext == ExecContext.WORKER) {
         assert(innerContext == ExecContext.CONTROL);
         // Don't try to move work from worker to control
+        logger.trace("Contexts incompatible (outer is worker)");
         return false;
       } else {
         assert(waitContext == ExecContext.CONTROL);
         assert(innerContext == ExecContext.WORKER);
         // Inner wait is on worker, try to see if we can
         // move context of outer wait to worker
+        logger.trace("Outer is control: maybe change to worker");
         possibleMergedContext = innerContext;
       }
     }
@@ -453,12 +456,14 @@ public class WaitCoalescer implements OptimizerPass {
     // Check that wait variables not defined in this block
     for (WaitVar waitVar: innerWait.getWaitVars()) {
       if (waitBlock.getVariables().contains(waitVar.var)) {
+        logger.trace("Squash failed: wait var declared inside");
         return false;
       }
     }
     
     if (!ProgressOpcodes.isNonProgress(waitBlock, possibleMergedContext)) {
       // Progress might be deferred by squashing
+      logger.trace("Squash failed: progress would be deferred");
       return false;
     }
     
