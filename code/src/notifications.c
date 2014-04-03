@@ -494,7 +494,7 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
 
       // Remove processed entries
       c->count--;
-      if (i != c->count - 1)
+      if (i != c->count)
       {
         // Swap last to here
         *change = c->arr[c->count];
