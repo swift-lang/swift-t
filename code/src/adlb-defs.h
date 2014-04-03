@@ -94,9 +94,14 @@ typedef struct {
   bool valid; // If true, data is actually valid
 } adlb_type_extra;
 
+
+/* C++ doesn't support named initializers, no nice way to
+ * initialize the above struct in C++ */
+#ifndef __cplusplus
 static const adlb_type_extra ADLB_TYPE_EXTRA_NULL = {
   .valid = false
 };
+#endif
 
 // Struct to specify a subscript into e.g. an ADLB data container
 typedef struct {

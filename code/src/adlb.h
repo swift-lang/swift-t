@@ -28,7 +28,16 @@
 #include <stdbool.h>
 #include <limits.h>
 
+// Include mpi header can cause confusion for C++, since it will
+// try to link against C++ version of functions
+#ifdef __cplusplus
+#define __adlb_old_cplusplus __cplusplus
+#undef __cplusplus
+#endif
 #include <mpi.h>
+#ifdef __adlb_old_cplusplus
+#define __cplusplus __adlb_old_cplusplus
+#endif
 
 #include "adlb-defs.h"
 
