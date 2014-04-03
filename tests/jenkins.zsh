@@ -43,10 +43,10 @@ turbine -v
 
 cd tests
 
-source ./run-tests.zsh -V -c -k ${TESTS_SKIP} -n ${TESTS_TOTAL} |& \
+source ./run-tests.zsh -c -k ${TESTS_SKIP} -n ${TESTS_TOTAL} |& \
       tee results.out
 check_error ${pipestatus[1]} "run-tests.zsh"
 
 SUITE_RESULT="result_aggregate.xml";
-./jenkins-results.zsh |& tee ${SUITE_RESULT}
+./jenkins-results.zsh | tee ${SUITE_RESULT}
 check_error ${pipestatus[1]} "jenkins-results.zsh"
