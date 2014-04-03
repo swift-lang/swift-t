@@ -421,8 +421,11 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *subscribed)
       if (*subscribed)
       {
         // Record it was subscribed
-        table_bp_add(&td_sub_subscribed, id_sub_key, id_sub_keylen,
-                     (void*)1);
+        bool ok = table_bp_add(&td_sub_subscribed, id_sub_key,
+                              id_sub_keylen, (void*)1);
+
+        if (!ok)
+          return TURBINE_ERROR_OOM;
       }
     }
   }
@@ -458,7 +461,9 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *subscribed)
     
       if (*subscribed)
       {
-        table_lp_add(&td_subscribed, id, (void*)1);
+        bool ok = table_lp_add(&td_subscribed, id, (void*)1);
+        if (!ok)
+          return TURBINE_ERROR_OOM;
       }
     }
   }
@@ -519,7 +524,9 @@ turbine_rule(const char* name, int name_strlen,
   {
     DEBUG_TURBINE("waiting: {%"PRId64"}", id);
     assert(T != NULL);
-    table_lp_add(&transforms_waiting, id, T);
+    bool ok = table_lp_add(&transforms_waiting, id, T);
+    if (!ok)
+      return TURBINE_ERROR_OOM;
     *ready = false;
   }
   else
@@ -588,7 +595,9 @@ add_rule_blocker(adlb_datum_id id, transform *T)
   if (blocked == NULL)
   {
     blocked = list_create();
-    table_lp_add(&td_blockers, id, blocked);
+    bool ok = table_lp_add(&td_blockers, id, blocked);
+    if (!ok)
+      return TURBINE_ERROR_OOM;
   }
   list_add(blocked, T);
   return TURBINE_SUCCESS;
@@ -608,7 +617,10 @@ static inline turbine_engine_code add_rule_blocker_sub(void *id_sub_key,
   if (!found)
   {
     blocked = list_create();
-    table_bp_add(&td_sub_blockers, id_sub_key, id_sub_keylen, blocked);
+    bool ok = table_bp_add(&td_sub_blockers, id_sub_key, id_sub_keylen,
+                           blocked);
+    if (!ok)
+      return TURBINE_ERROR_OOM;
   }
   list_add(blocked, T);
   return TURBINE_SUCCESS;
