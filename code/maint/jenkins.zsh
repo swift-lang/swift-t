@@ -8,11 +8,24 @@ STC=/tmp/exm-install/stc
 MPICH=/tmp/mpich-install
 path+=( $MPICH/bin $TURBINE/bin $STC/bin )
 
+set -u
 set -x
 
 # printenv
 
 ls /tmp/mpich-install/lib
+
+check_error()
+{
+  CODE=$1
+  MSG=$2
+  if (( CODE != 0 ))
+  then
+    print "Operation failed: ${MSG}"
+    print "Exit code: ${CODE}"
+    exit 1
+  fi
+}
 
 LDFLAGS="-L$MPICH/lib -lmpl"                \
 ./configure --prefix=$TURBINE               \
@@ -22,15 +35,19 @@ LDFLAGS="-L$MPICH/lib -lmpl"                \
             --with-adlb=/tmp/exm-install/lb \
             --enable-shared
 make clean
+check_error ${?} "make clean"
 
 make V=1
+check_error ${?} "make"
+
+make V=1 install
+check_error ${?} "make install"
 
 make test_results
-# Make should always return 0 under Jenkins even if a test failed
-# We inpect test results below
+check_error ${?} "make test_results"
 
 cd tests
-SUITE_RESULT="result_aggregate.xml";
+SUITE_RESULT="result_aggregate.xml"
 rm -fv $SUITE_RESULT
 
 inspect_results()
@@ -41,7 +58,7 @@ inspect_results()
     grep "ERROR" ${result} > /dev/null
     CODE=${?}
 
-    if [[ ${CODE} == 0 ]]
+    if (( CODE == 0 ))
     then
       # We found ERROR
       print "    <testcase name=\"${result}\" >"
