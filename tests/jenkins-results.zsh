@@ -32,26 +32,27 @@ print "<testsuites>"
 set -x
 while read line
 do
+    message "line: $line"
     if [[ $line == test:* ]]
     then
-	a=( $line )
+	a=( ${=line} )
 	T_count=${a[2]}
     elif [[ $line == compiling:* ]]
     then
-	a=( $line )
+	a=( ${=line} )
 	T_swift=${a[2]}
     elif [[ $line == running:* ]]
     then
-	a=( $line )
+	a=( ${=line} )
 	T_turbine=${a[2]}
-    elif [[ $line == PASSED ]]
+    elif [[ ${line} == "PASSED" ]]
     then
         message "Test count : $T_count"
 	message "Test swift : $T_swift"
 	message "Test turbine : $T_turbine"
 	message "Status: $line"
         print "  <testcase name=\"${T_swift}\" />"
-    elif [[ $line == FAILED ]]
+    elif [[ $line == "FAILED" ]]
     then
 	message "Test count : $T_count";
 	message "Test swift : $T_swift";

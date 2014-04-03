@@ -48,3 +48,6 @@ check_error ${pipestatus[1]} "run-tests.zsh"
 SUITE_RESULT="result_aggregate.xml";
 ./jenkins-results.zsh | tee ${SUITE_RESULT}
 check_error ${pipestatus[1]} "jenkins-results.zsh"
+
+print "SUITE RESULT:"
+cat ${SUITE_RESULT}
