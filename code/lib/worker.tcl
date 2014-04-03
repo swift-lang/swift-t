@@ -21,7 +21,7 @@ namespace eval turbine {
 
     # Main worker loop
     proc worker { } {
-        
+
         # Alternative GEMTC worker is enabled by environment variable
         # TURBINE_GEMTC_WORKER=1, or another non-zero value
         # An empty string is treated as false, other values are invalid
@@ -33,7 +33,7 @@ namespace eval turbine {
               error "Invalid TURBINE_GEMTC_WORKER setting, must be int:\
                      ${gemtc_setting}"
             }
-            
+
             if { $gemtc_setting } {
              gemtc_worker
              return
@@ -42,9 +42,6 @@ namespace eval turbine {
 
         global WORK_TYPE
 
-        if { [ catch { c::worker_loop $WORK_TYPE(WORK) } e ] } {
-            global errorInfo
-            error "worker error: \n$errorInfo"
-        }
+        c::worker_loop $WORK_TYPE(WORK)
     }
 }
