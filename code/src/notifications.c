@@ -605,6 +605,8 @@ xlb_prepare_notif_work(adlb_notif_t *notifs,
 
     if (xlb_notif_empty(notifs))
     {
+      // Initialize counts to all zeroes
+      memset(client_counts, 0, sizeof(*client_counts));
       *must_send = false;
       return ADLB_SUCCESS;
     }

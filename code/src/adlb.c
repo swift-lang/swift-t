@@ -1127,14 +1127,13 @@ ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
     *length = -1;
     return ADLB_SUCCESS;
   }
-  else if (!resp_hdr.code == ADLB_DATA_SUCCESS)
+  else if (resp_hdr.code != ADLB_DATA_SUCCESS)
   {
     return ADLB_ERROR;
   }
   
   assert(resp_hdr.length <= ADLB_PAYLOAD_MAX);
-  RECV(data, resp_hdr.length, MPI_BYTE, to_server_rank,
-       ADLB_TAG_RESPONSE);
+  RECV(data, resp_hdr.length, MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE);
   // Set length and type output parameters
   *length = resp_hdr.length;
   *type = resp_hdr.type;
