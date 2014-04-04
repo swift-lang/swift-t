@@ -159,8 +159,8 @@ steal_payloads(int target, int count,
 {
   assert(count > 0);
   MPI_Status status;
-  int length = count * (int)sizeof(struct packed_put);
-  struct packed_put* wus = malloc((size_t)length);
+  int length = count * (int)sizeof(struct packed_steal_work);
+  struct packed_steal_work* wus = malloc((size_t)length);
   valgrind_assert(wus);
   RECV(wus, length, MPI_BYTE, target, ADLB_TAG_RESPONSE_STEAL);
   int single = 0, par = 0;
@@ -215,10 +215,10 @@ send_steal_batch(steal_cb_state *batch, bool finish)
   if (count == 0)
     return ADLB_SUCCESS;
 
-  struct packed_put packed[count];
+  struct packed_steal_work packed[count];
   for (int i = 0; i < count; i++)
   {
-    xlb_pack_work_unit(&(packed[i]), batch->work_units[i]);
+    xlb_pack_steal_work(&(packed[i]), batch->work_units[i]);
   }
  
   // Store requests for wait

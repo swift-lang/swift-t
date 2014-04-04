@@ -371,6 +371,20 @@ struct packed_steal_resp
 };
 
 /**
+   Header for stolen task
+ */
+struct packed_steal_work
+{
+  int type;
+  int priority;
+  int putter;
+  int answer;
+  int target;
+  int length;
+  int parallelism;
+};
+
+/**
  Sync can contain various types of control messages
  */
 typedef enum
@@ -396,7 +410,7 @@ struct packed_sync
    Simple data type transfer
  */
 static inline void
-xlb_pack_work_unit(struct packed_put* p, xlb_work_unit* wu)
+xlb_pack_steal_work(struct packed_steal_work* p, xlb_work_unit* wu)
 {
   p->answer = wu->answer;
   p->length = wu->length;
