@@ -667,13 +667,21 @@ send_client_notif_work(int caller,
   ADLB_DATA_CHECK(dc);
 
   int extra_data_count = 0;
-  struct packed_notif *packed_notifs =
-            malloc(sizeof(struct packed_notif) * (size_t)notify_count);
-  ADLB_MALLOC_CHECK(packed_notifs);
+  struct packed_notif *packed_notifs = NULL;
+  if (notify_count > 0)
+  {
+    packed_notifs = malloc(sizeof(struct packed_notif) *
+                           (size_t)notify_count);
+    ADLB_MALLOC_CHECK(packed_notifs);
+  }
 
-  struct packed_reference *packed_refs =
-            malloc(sizeof(struct packed_reference) * (size_t)refs_count);
-  ADLB_MALLOC_CHECK(packed_refs);
+  struct packed_reference *packed_refs = NULL;
+  if (refs_count > 0)
+  {
+    packed_refs = malloc(sizeof(struct packed_reference) *
+                        (size_t)refs_count);
+    ADLB_MALLOC_CHECK(packed_refs);
+  }
 
   // Track last subscript so we don't send redundant subscripts
   const adlb_subscript *last_subscript = NULL;
@@ -715,6 +723,7 @@ send_client_notif_work(int caller,
   // Track last value so we don't send redundant values
   const void *last_value = NULL;
   int last_value_len;
+  int last_value_ix;
   for (int i = 0; i < refs_count; i++)
   {
     adlb_ref_datum *ref = &notifs->references.data[i];
@@ -740,7 +749,7 @@ send_client_notif_work(int caller,
         last_value_len == ref->value_len)
     {
       // Same as last
-      packed_refs[i].val_data = extra_data_count - 1;
+      packed_refs[i].val_data = last_value_ix;
     }
     else
     {
@@ -752,6 +761,7 @@ send_client_notif_work(int caller,
       
       last_value = ref->value;
       last_value_len = ref->value_len;
+      last_value_ix = extra_data_count;
       extra_data_count++;
     }
   }
@@ -766,18 +776,29 @@ send_client_notif_work(int caller,
 
   if (extra_pos > 0)
   {
+    DEBUG("Sending %i extra data count %i bytes", extra_data_count,
+                                                    extra_pos);
     assert(extra_data_count > 0);
     SEND(extra_data.data, extra_pos, MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+
+    if (!using_static_buf)
+    {
+      free(extra_data.data);
+    }
   }
   if (notify_count > 0)
   {
+    DEBUG("Sending %i notifs", notify_count);
     SEND(packed_notifs, notify_count * (int)sizeof(packed_notifs[0]),
          MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+    free(packed_notifs);
   }
   if (refs_count > 0)
   {
+    DEBUG("Sending %i refs", refs_count);
     SEND(packed_refs, refs_count * (int)sizeof(packed_refs[0]), MPI_BYTE,
          caller, ADLB_TAG_RESPONSE);
+    free(packed_refs);
   }
   if (rc_count > 0)
   {
@@ -788,13 +809,8 @@ send_client_notif_work(int caller,
          caller, ADLB_TAG_RESPONSE);
   }
 
-  if (!using_static_buf)
-  {
-    free(extra_data.data);
-  }
+  DEBUG("Done sending notifs");
   
-  free(packed_notifs);
-  free(packed_refs);
   return ADLB_DATA_SUCCESS;
 }
 
@@ -834,24 +850,28 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
   if (counts->extra_data_bytes > 0)
   {
     int bytes = counts->extra_data_bytes;
-    assert(bytes >= 0);
-    if (bytes <= XFER_SIZE)
-    {
-      extra_data = xfer;
-    }
-    else
-    {
-      extra_data = malloc((size_t)bytes);
-      ADLB_MALLOC_CHECK(extra_data);
-    }
+    extra_data_count = counts->extra_data_count;
+    assert(extra_data_count >= 0);
+
+    DEBUG("Receiving %i extra data count %i bytes", extra_data_count,
+                                                    bytes);
+    
+    extra_data = malloc((size_t)bytes);
+    ADLB_MALLOC_CHECK(extra_data);
+    
+    ac = xlb_to_free_add(notifs, extra_data);
+    ADLB_CHECK(ac)
 
     RECV(extra_data, bytes, MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE);
 
     // Locate the separate data entries in the buffer
-    extra_data_count = counts->extra_data_count;
-    assert(extra_data_count >= 0);
-    extra_data_ptrs = malloc(sizeof(extra_data_ptrs[0]) * (size_t)extra_data_count);
+    extra_data_ptrs = malloc(sizeof(extra_data_ptrs[0]) *
+                             (size_t)extra_data_count);
     ADLB_MALLOC_CHECK(extra_data_ptrs);
+    
+    ac = xlb_to_free_add(notifs, extra_data_ptrs);
+    ADLB_CHECK(ac)
+
     int pos = 0;
     for (int i = 0; i < extra_data_count; i++)
     {
@@ -864,6 +884,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
 
   if (counts->notify_count > 0)
   {
+    DEBUG("Receiving %i notifs", counts->notify_count);
     int added_count = counts->notify_count;
     ac = xlb_notifs_expand(&notifs->notify, added_count);
     ADLB_CHECK(ac);
@@ -904,6 +925,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
 
   if (counts->reference_count > 0)
   {
+    DEBUG("Receiving %i refs", counts->reference_count);
     int added_count = counts->reference_count;
     ac = xlb_refs_expand(&notifs->references, added_count);
     ADLB_CHECK(ac);
@@ -992,16 +1014,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
     // manipulating index
     notifs->rc_changes.count += rc_change_count;
   }
-
-  if (extra_data != NULL && extra_data != xfer)
-  {
-    ac = xlb_to_free_add(notifs, extra_data);
-    ADLB_CHECK(ac)
-  }
-  if (extra_data_ptrs != NULL)
-  {
-    ac = xlb_to_free_add(notifs, extra_data_ptrs);
-    ADLB_CHECK(ac)
-  }
+  
+  DEBUG("Done receiving notifs");
   return ADLB_SUCCESS;
 }

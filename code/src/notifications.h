@@ -188,7 +188,8 @@ xlb_handle_client_notif_work(const struct packed_notif_counts *counts,
                         int to_server_rank);
 
 /*
-  notify: notify structure initialzied to empty
+  notify: notify structure in valid state (init to empty, or with
+          valid data)
  */
 adlb_code
 xlb_recv_notif_work(const struct packed_notif_counts *counts,
