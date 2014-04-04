@@ -578,6 +578,8 @@ public class TurbineGenerator implements CompilerBackend {
       return Turbine.ADLB_MULTISET_TYPE;
     } else if (Types.isStruct(t)) {
       return structTypeName(t);
+    } else if (Types.isFile(t)) {
+      return Turbine.ADLB_FILE_TYPE;
     } else {
       throw new STCRuntimeError("Unknown ADLB representation type for " + t);
     }

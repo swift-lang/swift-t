@@ -74,6 +74,9 @@ class Turbine {
           MULTISET_TYPENAME);
   public static final String REF_TYPENAME = "ref";
   public static final TypeName ADLB_REF_TYPE = new TypeName(REF_TYPENAME);
+  public static final String FILE_TYPENAME = "file";
+  public static final TypeName ADLB_FILE_TYPE = new TypeName(
+          FILE_TYPENAME);
   public static final String FILE_REF_TYPENAME = "file_ref";
   public static final TypeName ADLB_FILE_REF_TYPE = new TypeName(
           FILE_REF_TYPENAME);
