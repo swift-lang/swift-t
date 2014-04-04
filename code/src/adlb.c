@@ -1066,13 +1066,8 @@ ADLBP_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
 
   if (resp.dc != ADLB_DATA_SUCCESS)
     return ADLB_ERROR;
-
-  adlb_code ac = xlb_handle_client_notif_work(&resp.notifs,
-                                              to_server_rank);
-  ADLB_CHECK(ac);
-
-  *result = resp.created;
-
+  
+  // Receive data before handling notifications
   if (return_value)
   {
     *length = resp.value_len;
@@ -1082,6 +1077,12 @@ ADLBP_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
       *type = resp.value_type;
     }
   }
+
+  adlb_code ac = xlb_handle_client_notif_work(&resp.notifs,
+                                              to_server_rank);
+  ADLB_CHECK(ac);
+
+  *result = resp.created;
   return ADLB_SUCCESS;
 }
 
@@ -1131,18 +1132,18 @@ ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
     return ADLB_ERROR;
   }
   
-  adlb_code ac = xlb_handle_client_notif_work(&resp_hdr.notifs,
-                                              to_server_rank);
-  ADLB_CHECK(ac);
-
   assert(resp_hdr.length <= ADLB_PAYLOAD_MAX);
   RECV(data, resp_hdr.length, MPI_BYTE, to_server_rank,
        ADLB_TAG_RESPONSE);
-
   // Set length and type output parameters
   *length = resp_hdr.length;
   *type = resp_hdr.type;
   DEBUG("RETRIEVE: <%"PRId64"> (%i bytes)\n", id, *length);
+  
+  adlb_code ac = xlb_handle_client_notif_work(&resp_hdr.notifs,
+                                              to_server_rank);
+  ADLB_CHECK(ac);
+
   return ADLB_SUCCESS;
 }
 

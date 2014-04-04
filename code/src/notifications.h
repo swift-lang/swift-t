@@ -177,21 +177,21 @@ typedef struct {
 } xlb_prepared_notifs;
 
 /**
- * Processes any local notifications
+ * Processes any local notifications.
  *
  * caller_buffer: optional buffer to use instead of malloc
  * client_counts: struct to fill in with counts to send to
-              client and pass to xlb_send_notif_work
+ *             client and pass to xlb_send_notif_work
  * prepared: internal state struct that should be passed to
  *           xlb_send_notif_work
- * finished: set to true if all were processed and caller needs
- *           to take no further action
+ * must_send: set to true if caller must send the notifications with
+ *            xlb_send_notif_work
  */
 adlb_code
 xlb_prepare_notif_work(adlb_notif_t *notifs,
         const adlb_buffer *caller_buffer,
         struct packed_notif_counts *client_counts,
-        xlb_prepared_notifs *prepared, bool *finished);
+        xlb_prepared_notifs *prepared, bool *must_send);
 
 /**
  * Transfer notification work back to caller rank.
@@ -200,9 +200,9 @@ xlb_prepare_notif_work(adlb_notif_t *notifs,
  * Caller receives w/ xlb_handle_client_notif_work or xlb_recv_notif_work
  */
 adlb_code
-xlb_send_notif_work(int caller, const struct packed_notif_counts *counts,
-       const xlb_prepared_notifs *prepared,
-       adlb_notif_t *notifs);
+xlb_send_notif_work(int caller, adlb_notif_t *notifs,
+    const struct packed_notif_counts *counts,
+    const xlb_prepared_notifs *prepared);
 
 /*
   Receive notifications send by server, then

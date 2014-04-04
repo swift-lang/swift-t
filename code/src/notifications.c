@@ -594,7 +594,7 @@ adlb_code
 xlb_prepare_notif_work(adlb_notif_t *notifs,
         const adlb_buffer *caller_buffer,
         struct packed_notif_counts *client_counts,
-        xlb_prepared_notifs *prepared, bool *finished)
+        xlb_prepared_notifs *prepared, bool *must_send)
 {
   adlb_code rc;
   if (ADLB_CLIENT_NOTIFIES)
@@ -605,11 +605,11 @@ xlb_prepare_notif_work(adlb_notif_t *notifs,
 
     if (xlb_notif_empty(notifs))
     {
-      *finished = true;
+      *must_send = false;
       return ADLB_SUCCESS;
     }
 
-    *finished = false;
+    *must_send = true;
     rc = xlb_prepare_for_send(notifs, caller_buffer, client_counts,
                               prepared);
     ADLB_CHECK(rc);
@@ -623,7 +623,7 @@ xlb_prepare_notif_work(adlb_notif_t *notifs,
     // Initialize counts to all zeroes
     memset(client_counts, 0, sizeof(*client_counts));
 
-    *finished = true;
+    *must_send = false;
   }
 
   return ADLB_SUCCESS;
@@ -815,14 +815,10 @@ xlb_prepare_for_send(adlb_notif_t *notifs,
   return ADLB_SUCCESS;
 }
 
-
-
-
 adlb_code
-send_notif_work(int caller, 
+xlb_send_notif_work(int caller, adlb_notif_t *notifs,
        const struct packed_notif_counts *counts,
-       const xlb_prepared_notifs *prepared,
-       adlb_notif_t *notifs)
+       const xlb_prepared_notifs *prepared)
 {
   int extra_data_bytes = counts->extra_data_bytes;
   int notify_count = counts->notify_count;

@@ -1083,12 +1083,7 @@ handle_store(int caller)
   adlb_data_code dc = xlb_data_store(hdr.id, subscript, xfer, length,
           hdr.type, hdr.refcount_decr, hdr.store_refcounts, &notifs);
 
-  struct packed_store_resp resp = {
-    .dc = dc,
-    .notifs.notify_count = 0,
-    .notifs.reference_count = 0,
-    .notifs.extra_data_count = 0,
-    .notifs.extra_data_bytes = 0};
+  struct packed_store_resp resp = { .dc = dc };
   // Can handle notifications on client or on server
   if (dc != ADLB_DATA_SUCCESS)
   {
@@ -1097,10 +1092,24 @@ handle_store(int caller)
   }
   else
   {
-    // Send notifications
-    adlb_code rc = xlb_send_notif_work(caller, &resp, sizeof(resp),
-            ((char*)&resp.notifs) - (char*)&resp, &notifs, false);
+    adlb_code rc;
+    int tmp_len = 8192;
+    char tmp[tmp_len];
+    adlb_buffer tmp_buf = { .data = tmp, .length= tmp_len };
+    xlb_prepared_notifs prep;
+    bool send_notifs;
+
+    rc = xlb_prepare_notif_work(&notifs, &tmp_buf, &resp.notifs,
+                                &prep, &send_notifs);
     ADLB_CHECK(rc);
+
+    RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+
+    if (send_notifs)
+    {
+      rc = xlb_send_notif_work(caller, &notifs, &resp.notifs, &prep);
+      ADLB_CHECK(rc)
+    }
   }
 
   xlb_free_notif(&notifs);
@@ -1152,20 +1161,36 @@ handle_retrieve(int caller)
   resp_hdr.length = result.length;
   if (dc == ADLB_DATA_SUCCESS)
   {
-    // Send notifications then data
-    adlb_code ac = xlb_send_notif_work(caller, &resp_hdr,
-          sizeof(resp_hdr), ((char*)&resp_hdr.notifs)- (char*)&resp_hdr,
-          &notifs, true);
-    ADLB_CHECK(ac);
+    adlb_code rc;
+    int tmp_len = 8192;
+    char tmp[tmp_len];
+    adlb_buffer tmp_buf = { .data = tmp, .length= tmp_len };
+    xlb_prepared_notifs prep;
+    bool send_notifs;
 
+    rc = xlb_prepare_notif_work(&notifs, &tmp_buf, &resp_hdr.notifs,
+                                &prep, &send_notifs);
+    ADLB_CHECK(rc);
+
+    RSEND(&resp_hdr, sizeof(resp_hdr), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+
+    // Send data then notifs
     SEND(result.data, result.length, MPI_BYTE, caller, ADLB_TAG_RESPONSE);
     DEBUG("Retrieve: <%"PRId64">", hdr->id);
+
+    if (send_notifs)
+    {
+      rc = xlb_send_notif_work(caller, &notifs, &resp_hdr.notifs, &prep);
+      ADLB_CHECK(rc)
+    }
   }
   else
   {
     // Send header only
     RSEND(&resp_hdr, sizeof(resp_hdr), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
   }
+
+  xlb_free_notif(&notifs);
   
   ADLB_Free_binary_data2(&result, xlb_scratch);
 
@@ -1328,12 +1353,7 @@ handle_refcount_incr(int caller)
   DEBUG("data_reference_count => %i", dc);
 
   struct packed_incr_resp resp = {
-      .success = (dc == ADLB_DATA_SUCCESS),
-      .notifs.notify_count = 0,
-      .notifs.reference_count = 0,
-      .notifs.rc_change_count = 0,
-      .notifs.extra_data_count = 0,
-      .notifs.extra_data_bytes = 0};
+      .success = (dc == ADLB_DATA_SUCCESS)};
 
   if (dc != ADLB_DATA_SUCCESS)
   {
@@ -1341,12 +1361,24 @@ handle_refcount_incr(int caller)
   }
   else
   {
-    rc = xlb_send_notif_work(caller, &resp, sizeof(resp),
-            ((char*)&resp.notifs) - (char*)&resp, &notifs, true);
+    xlb_prepared_notifs prep;
+    bool send_notifs;
+
+    rc = xlb_prepare_notif_work(&notifs, &xfer_buf, &resp.notifs,
+                                &prep, &send_notifs);
     ADLB_CHECK(rc);
+
+    RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+
+    if (send_notifs)
+    {
+      rc = xlb_send_notif_work(caller, &notifs, &resp.notifs, &prep);
+      ADLB_CHECK(rc)
+    }
   }
   
   xlb_free_notif(&notifs);
+
   return ADLB_SUCCESS;
 }
 
@@ -1417,18 +1449,35 @@ handle_insert_atomic(int caller)
     return ADLB_SUCCESS;
   }
 
-  adlb_code rc = xlb_send_notif_work(caller, &resp, sizeof(resp),
-            ((char*)&resp.notifs) - (char*)&resp, &notifs, false);
+  adlb_code rc;
+  int tmp_len = 8192;
+  char tmp[tmp_len];
+  adlb_buffer tmp_buf = { .data = tmp, .length= tmp_len };
+  xlb_prepared_notifs prep;
+  bool send_notifs;
+
+  rc = xlb_prepare_notif_work(&notifs, &tmp_buf, &resp.notifs,
+                              &prep, &send_notifs);
   ADLB_CHECK(rc);
+
+  RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
   
-  xlb_free_notif(&notifs);
-  
+  // Send data before notifs
   if (send_data)
   {
     // Send response value
     SEND(value.data, value.length, MPI_BYTE, caller, ADLB_TAG_RESPONSE);
     ADLB_Free_binary_data2(&value, xlb_scratch);
   }
+
+  if (send_notifs)
+  {
+    rc = xlb_send_notif_work(caller, &notifs, &resp.notifs, &prep);
+    ADLB_CHECK(rc)
+  }
+  
+  xlb_free_notif(&notifs);
+  
   return ADLB_SUCCESS;
 }
 
@@ -1527,13 +1576,28 @@ handle_container_reference(int caller)
   }
   else
   {
-    // Send notifications
-    adlb_code rc = xlb_send_notif_work(caller, &resp, sizeof(resp),
-              ((char*)&resp.notifs) - (char*)&resp, &notifs, false);
+    adlb_code rc;
+    int tmp_len = 8192;
+    char tmp[tmp_len];
+    adlb_buffer tmp_buf = { .data = tmp, .length= tmp_len };
+    xlb_prepared_notifs prep;
+    bool send_notifs;
+
+    rc = xlb_prepare_notif_work(&notifs, &tmp_buf, &resp.notifs,
+                                &prep, &send_notifs);
     ADLB_CHECK(rc);
+
+    RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+
+    if (send_notifs)
+    {
+      rc = xlb_send_notif_work(caller, &notifs, &resp.notifs, &prep);
+      ADLB_CHECK(rc)
+    }
   }
   
   xlb_free_notif(&notifs);
+
   return ADLB_SUCCESS;
 }
 
