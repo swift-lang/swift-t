@@ -831,7 +831,7 @@ xlb_send_notif_work(int caller, adlb_notif_t *notifs,
            counts->extra_data_count, extra_data_bytes);
     assert(counts->extra_data_count > 0);
     SEND(prepared->extra_data, extra_data_bytes, MPI_BYTE,
-         caller, ADLB_TAG_RESPONSE);
+         caller, ADLB_TAG_RESPONSE_NOTIF);
 
     if (prepared->free_extra_data)
     {
@@ -843,7 +843,7 @@ xlb_send_notif_work(int caller, adlb_notif_t *notifs,
     struct packed_notif *packed_notifs = prepared->packed_notifs;
     DEBUG("Sending %i notifs", notify_count);
     SEND(packed_notifs, notify_count * (int)sizeof(packed_notifs[0]),
-         MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+         MPI_BYTE, caller, ADLB_TAG_RESPONSE_NOTIF);
     if (prepared->free_packed_notifs)
     {
       free(packed_notifs);
@@ -854,7 +854,7 @@ xlb_send_notif_work(int caller, adlb_notif_t *notifs,
     DEBUG("Sending %i refs", refs_count);
     struct packed_reference *packed_refs = prepared->packed_refs;
     SEND(packed_refs, refs_count * (int)sizeof(packed_refs[0]), MPI_BYTE,
-         caller, ADLB_TAG_RESPONSE);
+         caller, ADLB_TAG_RESPONSE_NOTIF);
     if (prepared->free_packed_refs)
     {
       free(packed_refs);
@@ -866,7 +866,7 @@ xlb_send_notif_work(int caller, adlb_notif_t *notifs,
     
     SEND(notifs->rc_changes.arr, 
          rc_count * (int)sizeof(notifs->rc_changes.arr[0]), MPI_BYTE,
-         caller, ADLB_TAG_RESPONSE);
+         caller, ADLB_TAG_RESPONSE_NOTIF);
   }
 
   DEBUG("Done sending notifs");
@@ -922,7 +922,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
     ac = xlb_to_free_add(notifs, extra_data);
     ADLB_CHECK(ac)
 
-    RECV(extra_data, bytes, MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE);
+    RECV(extra_data, bytes, MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE_NOTIF);
 
     // Locate the separate data entries in the buffer
     extra_data_ptrs = malloc(sizeof(extra_data_ptrs[0]) *
@@ -954,7 +954,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
     ADLB_MALLOC_CHECK(tmp);
 
     RECV(tmp, (int)sizeof(tmp[0]) * added_count,
-        MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE);
+        MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE_NOTIF);
 
     for (int i = 0; i < added_count; i++)
     {
@@ -995,7 +995,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
     ADLB_MALLOC_CHECK(tmp);
 
     RECV(tmp, added_count * (int)sizeof(tmp[0]), MPI_BYTE,
-         to_server_rank, ADLB_TAG_RESPONSE);
+         to_server_rank, ADLB_TAG_RESPONSE_NOTIF);
 
     for (int i = 0; i < added_count; i++)
     {
@@ -1039,7 +1039,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
 
     RECV(&c->arr[c->count], 
          rc_change_count * (int)sizeof(c->arr[0]),
-         MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE);
+         MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE_NOTIF);
 
 #if XLB_INDEX_RC_CHANGES
     // Rebuild index
