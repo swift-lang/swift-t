@@ -328,8 +328,12 @@ adlb_put_target_server(int target, int *to_server)
 }
 
 static inline adlb_code
-adlb_put_check_params(int type, int parallelism)
+adlb_put_check_params(int target, int type, int parallelism)
 {
+  CHECK_MSG(target == ADLB_RANK_ANY ||
+            (target >= 0 && target < xlb_workers),
+            "ADLB_Put(): invalid target: %i", target);
+
   CHECK_MSG(type >= 0 && xlb_type_index(type) >= 0,
             "ADLB_Put(): invalid work type: %d\n", type);
 
@@ -351,7 +355,7 @@ ADLBP_Put(const void* payload, int length, int target, int answer,
   DEBUG("ADLB_Put: target=%i x%i %.*s",
         target, parallelism, length, (char*) payload);
 
-  rc = adlb_put_check_params(type, parallelism);
+  rc = adlb_put_check_params(target, type, parallelism);
   ADLB_CHECK(rc);
 
   /** Server to contact */
@@ -430,7 +434,7 @@ adlb_code ADLBP_Put_rule(const void* payload, int length, int target,
   DEBUG("ADLB_Put_rule: target=%i x%i %.*s",
         target, parallelism, length, (char*) payload);
   
-  rc = adlb_put_check_params(type, parallelism);
+  rc = adlb_put_check_params(target, type, parallelism);
   ADLB_CHECK(rc);
 
   /** Server to contact */
@@ -468,7 +472,7 @@ adlb_code ADLBP_Put_rule(const void* payload, int length, int target,
   size_t wait_id_len = sizeof(wait_ids[0]) * (size_t)wait_id_count;
   memcpy(p_data, wait_ids, wait_id_len);
   p_data += wait_id_len;
-  p_len += wait_id_len;
+  p_len += (int)wait_id_len;
 
   for (int i = 0; i < wait_id_sub_count; i++)
   {

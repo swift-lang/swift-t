@@ -122,13 +122,13 @@ insert_notifications(adlb_datum *d, adlb_datum_id id,
     const void *value_buffer, int value_len, adlb_data_type value_type,
     adlb_notif_t *notifs, bool *garbage_collected);
 
-static inline adlb_data_code
+static adlb_data_code
 add_recursive_notifs(adlb_datum *d, adlb_datum_id id,
       adlb_subscript assigned_sub,
       const adlb_datum_storage *value, adlb_data_type value_type,
       adlb_notif_t *notifs, bool *garbage_collected);
 
-static inline adlb_data_code
+static adlb_data_code
 subscript_notifs_rec(adlb_datum *d, adlb_datum_id id,
           const adlb_datum_storage *data, adlb_data_type type,
           adlb_buffer *sub_buf, bool *sub_caller_buf,
@@ -1734,7 +1734,7 @@ all_notifs_step(adlb_datum *d, adlb_datum_id id, adlb_subscript sub,
 /**
  * Check for references or subscript to all members.
  */
-static inline adlb_data_code
+static adlb_data_code
 add_recursive_notifs(adlb_datum *d, adlb_datum_id id,
       adlb_subscript assigned_sub,
       const adlb_datum_storage *value, adlb_data_type value_type,
@@ -1761,7 +1761,7 @@ add_recursive_notifs(adlb_datum *d, adlb_datum_id id,
   return ADLB_DATA_SUCCESS;
 }
 
-static inline adlb_data_code
+static adlb_data_code
 subscript_notifs_rec(adlb_datum *d, adlb_datum_id id,
           const adlb_datum_storage *data, adlb_data_type type,
           adlb_buffer *sub_buf, bool *sub_caller_buf,

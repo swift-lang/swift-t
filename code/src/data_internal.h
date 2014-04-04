@@ -166,6 +166,7 @@ xlb_resize_str(char **str, size_t *curr_size, int pos, size_t needed);
 
 // Length of buffer for id+subscript.  Will be at most 8 bytes
 // more than ADLB_SUBSCRIPT_MAX
+__attribute__((always_inline))
 static inline size_t xlb_id_sub_buflen(adlb_subscript sub)
 {
   size_t size = (sizeof(adlb_datum_id) + sub.length);
@@ -173,6 +174,7 @@ static inline size_t xlb_id_sub_buflen(adlb_subscript sub)
   return size;
 }
 
+__attribute__((always_inline))
 static inline size_t xlb_write_id_sub(char *buf, adlb_datum_id id,
                                   adlb_subscript sub)
 {
@@ -182,6 +184,7 @@ static inline size_t xlb_write_id_sub(char *buf, adlb_datum_id id,
 }
 
 // Extract id and sub from buffer.  Return internal pointer into buffer
+__attribute__((always_inline))
 static inline void xlb_read_id_sub(const char *buf, size_t buflen,
         adlb_datum_id *id, adlb_subscript *sub)
 {

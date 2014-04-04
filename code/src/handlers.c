@@ -307,7 +307,7 @@ handle_put_rule(int caller)
  
   // Remainder of data is packed into array in binary form
   const void *p_pos = p->inline_data;
-  p_pos += sizeof(wait_ids[0]) * p->id_count;
+  p_pos += (int)sizeof(wait_ids[0]) * p->id_count;
 
   adlb_datum_id_sub wait_id_subs[p->id_sub_count];
   for (int i = 0; i < p->id_sub_count; i++)

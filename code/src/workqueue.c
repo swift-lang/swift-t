@@ -60,15 +60,20 @@ static xlb_work_unit_id unique = 1;
    Only contains targeted work
 */
 static heap_t *targeted_work;
+static int targeted_work_size;
 
-static inline int targeted_work_entries(int work_types, int my_workers)
+static int targeted_work_entries(int work_types, int my_workers)
 {
+  TRACE("work_types: %i my_workers: %i", work_types, my_workers);
   return work_types * my_workers;
 }
 
-static inline int targeted_work_ix(int rank, adlb_data_type type)
+__attribute__((always_inline))
+static inline int targeted_work_ix(int rank, int type)
 {
-  return xlb_my_worker_ix(rank) * xlb_types_size + (int)type;
+  int ix = xlb_my_worker_ix(rank) * xlb_types_size + (int)type;
+  assert(ix >= 0 && ix < targeted_work_size);
+  return ix;
 }
 
 // Calculate index for one of my workers
@@ -104,6 +109,7 @@ xlb_workq_init(int work_types, int my_workers)
 
   int targeted_entries = targeted_work_entries(work_types, my_workers);
   targeted_work = malloc(sizeof(heap_t) * (size_t)targeted_entries);
+  targeted_work_size = targeted_entries;
   valgrind_assert(targeted_work != NULL);
   for (int i = 0; i < targeted_entries; i++)
   {

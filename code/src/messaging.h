@@ -407,9 +407,11 @@ struct packed_cont_ref_resp
   struct packed_notif_counts notifs;
 };
 
+__attribute__((always_inline))
 static inline int
 xlb_pack_id_sub(void *buffer, adlb_datum_id id, adlb_subscript subscript);
 
+__attribute__((always_inline))
 static inline int
 xlb_unpack_id_sub(const void *buffer, adlb_datum_id *id,
                   adlb_subscript *subscript);
