@@ -94,6 +94,7 @@ xlb_my_worker_ix(int rank)
   return rank / xlb_servers;
 }
 
+__attribute__((always_inline))
 static inline bool
 xlb_is_server(int rank)
 {
@@ -104,6 +105,7 @@ xlb_is_server(int rank)
    @param rank of worker
    @return rank of server for this worker rank
  */
+__attribute__((always_inline))
 static inline int
 xlb_map_to_server(int rank)
 {

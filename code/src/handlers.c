@@ -538,7 +538,8 @@ adlb_code xlb_put_targeted_local(int type, int putter, int priority,
       int answer, int target, const void* payload, int length)
 {
   assert(xlb_map_to_server(target) == xlb_comm_rank);
-  assert(target >= 0);
+  valgrind_assert(target >= 0 && target < xlb_workers);
+  assert(target >= 0 && target < xlb_workers);
   int worker;
   int rc;
 

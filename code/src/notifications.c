@@ -18,6 +18,9 @@ static adlb_code
 xlb_close_notify(adlb_notif_ranks *ranks);
 
 static adlb_code
+xlb_notify_server_self(adlb_notif_rank *notif);
+
+static adlb_code
 xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
                                bool apply_local, bool apply_preacquire);
 
@@ -219,8 +222,12 @@ xlb_close_notify(adlb_notif_ranks *ranks)
    
     int target = notif->rank;
     int server = xlb_map_to_server(target);
-
-    if (server == target)
+    if (xlb_am_server && target == xlb_comm_rank)
+    {
+      rc = xlb_notify_server_self(notif);
+      ADLB_CHECK(rc);
+    }
+    else if (server == target)
     {
       // Server subscribed by sync
       rc = xlb_notify_server(server, notif->id, notif->subscript);
@@ -234,7 +241,7 @@ xlb_close_notify(adlb_notif_ranks *ranks)
         // Skip refilling payload if possible 
         payload_len = fill_payload(payload, notif->id, notif->subscript);
       }
-      if (xlb_am_server && server == xlb_comm_rank)
+      if (server == xlb_comm_rank)
       {
         rc = notify_local(target, payload, payload_len);
         ADLB_CHECK(rc);
@@ -282,6 +289,35 @@ xlb_notify_server(int server, adlb_datum_id id, adlb_subscript subscript)
   return (adlb_code)response;
 }
 
+/*
+  Handle notification destined for this server
+ */
+static adlb_code
+xlb_notify_server_self(adlb_notif_rank *notif)
+{
+  assert(xlb_am_server && notif->rank == xlb_comm_rank);
+  /*
+    Handle notification for self, which must have been initiated
+    by a Turbine engine subscribe.  This may result in work being
+    released.  This will be stored in xlb_server_ready_work to be
+    later processed by the server loop
+   */
+  adlb_data_code dc;
+  if (adlb_has_sub(notif->subscript))
+  {
+    dc = turbine_sub_close(notif->id, notif->subscript,
+                          &xlb_server_ready_work);
+    ADLB_DATA_CHECK(dc);
+  }
+  else
+  {
+    dc = turbine_close(notif->id, &xlb_server_ready_work);
+
+    ADLB_DATA_CHECK(dc);
+  }
+  return ADLB_SUCCESS;
+}
+
 adlb_code
 xlb_process_local_notif(adlb_notif_t *notifs)
 {
@@ -327,44 +363,25 @@ xlb_process_local_notif_ranks(adlb_notif_ranks *ranks)
       int target = notif->rank;
       bool processed_locally = false;
 
-      if (target == xlb_comm_rank)
+      if (xlb_am_server && target == xlb_comm_rank)
       {
-        /*
-          Handle notification for self, which must have been initiated
-          by a Turbine engine subscribe.  This may result in work being
-          released.  This will be stored in xlb_server_ready_work to be
-          later processed by the server loop
-         */
-        adlb_data_code dc;
-        if (adlb_has_sub(notif->subscript))
-        {
-          dc = turbine_sub_close(notif->id, notif->subscript,
-                                &xlb_server_ready_work);
-          ADLB_DATA_CHECK(dc);
-        }
-        else
-        {
-          dc = turbine_close(notif->id, &xlb_server_ready_work);
-
-          ADLB_DATA_CHECK(dc);
-        }
+        adlb_code rc = xlb_notify_server_self(notif);
+        ADLB_CHECK(rc);
         processed_locally = true;
-      }
-      else
-      {
-        // Check to see if target is worker belonging to server
-        if (i == 0 || notif->subscript.key != last_subscript.key ||
-                      notif->subscript.length != last_subscript.length)
-        {
-          // Skip refilling payload if possible 
-          payload_len = fill_payload(payload, notif->id, notif->subscript);
-        }
-
+      } else {
         int server = xlb_map_to_server(target);
         if (server == xlb_comm_rank)
         {
+          // Check to see if target is worker belonging to server
+          if (i == 0 || notif->subscript.key != last_subscript.key ||
+                        notif->subscript.length != last_subscript.length)
+          {
+            // Skip refilling payload if possible 
+            payload_len = fill_payload(payload, notif->id, notif->subscript);
+          }
+
           // Swap with last and shorten array
-          int rc = notify_local(target, payload, payload_len);
+          adlb_code rc = notify_local(target, payload, payload_len);
           ADLB_CHECK(rc);
           processed_locally = true;
         }
@@ -384,8 +401,7 @@ xlb_process_local_notif_ranks(adlb_notif_ranks *ranks)
     // Free memory if we managed to remove some
     if (ranks->count == 0 && ranks->notifs != NULL)
     {
-      free(ranks->notifs);
-      ranks->notifs = NULL;
+      xlb_free_ranks(ranks);
     }
   }
   return ADLB_SUCCESS;
