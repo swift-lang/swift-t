@@ -2331,7 +2331,10 @@ public class Types {
   public static boolean canRetrieve(Type t) {
     if (isContainer(t) || isRef(t) || isPrimFuture(t)) {
       return true;
-    } else if (isPrimValue(t) || isContainerLocal(t)) {
+    } else if (isStruct(t)) {
+      return true;
+    } else if (isPrimValue(t) || isContainerLocal(t) ||
+               isStructLocal(t)) {
       return false;
     } else {
       throw new STCRuntimeError("Not sure if can deref " + t);
