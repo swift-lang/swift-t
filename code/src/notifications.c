@@ -38,7 +38,7 @@ xlb_notify_server(int server, adlb_datum_id id, adlb_subscript subscript);
 static adlb_code
 send_client_notif_work(int caller, 
         void *response, size_t response_len,
-        struct packed_notif_counts *inner_struct,
+        int inner_struct_offset,
         const adlb_notif_t *notifs, bool use_xfer);
 
 // Returns size of payload including null terminator
@@ -593,7 +593,7 @@ xlb_to_free_expand(adlb_notif_t *notifs, int to_add)
 adlb_code
 xlb_send_notif_work(int caller,
         void *response, size_t response_len,
-        struct packed_notif_counts *inner_struct,
+        int inner_struct_offset,
         adlb_notif_t *notifs, bool use_xfer)
 {
   adlb_code rc;
@@ -605,14 +605,15 @@ xlb_send_notif_work(int caller,
     
     // Send work back to client
     rc = send_client_notif_work(caller, response, response_len,
-                                       inner_struct, notifs, use_xfer);
+                                inner_struct_offset, notifs, use_xfer);
     ADLB_CHECK(rc);
   }
   else 
   {
     // Handle on server
     // Initialize counts to all zeroes
-    memset(inner_struct, 0, sizeof(*inner_struct));
+    memset(((char*)response) + inner_struct_offset, 0,
+          sizeof(struct packed_notif_counts));
     RSEND(response, (int)response_len, MPI_BYTE, caller,
           ADLB_TAG_RESPONSE);
     rc = xlb_notify_all(notifs);
@@ -625,7 +626,7 @@ xlb_send_notif_work(int caller,
 static adlb_code
 send_client_notif_work(int caller, 
         void *response, size_t response_len,
-        struct packed_notif_counts *inner_struct,
+        int inner_struct_offset,
         const adlb_notif_t *notifs, bool use_xfer)
 {
   // will send remaining to client
@@ -767,6 +768,8 @@ send_client_notif_work(int caller,
   }
 
   // Fill in data and send response header
+  struct packed_notif_counts *inner_struct = 
+            ((void*)response) + inner_struct_offset;
   inner_struct->notify_count = notify_count;
   inner_struct->reference_count = refs_count;
   inner_struct->rc_change_count = rc_count;

@@ -170,13 +170,16 @@ xlb_notify_all(adlb_notif_t *notifs);
  * notification work.
  * 
  * response/response_len: pointer to response struct to be sent
- * inner_struct: struct inside outer struct to be updated before sending
+ * inner_struct_offset: offset in bytes of struct packed_notif_counts
+        struct inside outer struct to be updated before sending.
+ *      This scheme is used to avoid aliasing optimisation issues
+ *      associated with using pointers of different types
  * use_xfer: if true, use xfer buffer as scratch space
  */
 adlb_code
 xlb_send_notif_work(int caller,
         void *response, size_t response_len,
-        struct packed_notif_counts *inner_struct,
+        int inner_struct_offset,
         adlb_notif_t *notifs, bool use_xfer);
 
 /*
