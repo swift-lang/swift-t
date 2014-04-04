@@ -13,7 +13,8 @@ TEST_LEAK_FAIL=3 # Failure due to memory leak
 # Defaults
 EXIT_ON_FAIL=1
 MAX_TESTS=-1 # by default, unlimited
-PATTERN=""
+PATTERNS=()
+SKIP_PATTERNS=()
 SKIP_COUNT=0
 
 COMPILE_ONLY=0
@@ -32,7 +33,7 @@ if [ -z ${ADLB_EXHAUST_TIME} ]; then
     export ADLB_EXHAUST_TIME=1
 fi
 
-while getopts "cCDek:n:p:VO:t:T:alo:" OPTION
+while getopts "cCDek:n:p:P:VO:t:T:alo:" OPTION
 do
   case ${OPTION}
     in
@@ -61,8 +62,12 @@ do
       MAX_TESTS=${OPTARG}
       ;;
     p)
-      # run only tests that match the pattern
-      PATTERN=${OPTARG}
+      # run only tests that match one of the patterns
+      PATTERNS+=${OPTARG}
+      ;;
+    P)
+      # don't run tests that match one of the patterns
+      SKIP_PATTERNS+=${OPTARG}
       ;;
     t)
       ADDTL_STC_ARGS+="-t${OPTARG}"
@@ -450,10 +455,38 @@ do
     continue
   fi
 
-  if [[ ${PATTERN} != "" ]]
+  if [[ ${#PATTERNS} > 0 ]]
   then
-    if [[ ! ${TEST_NAME} =~ ${PATTERN} ]]
+    PATTERN_MATCH=0
+    for PATTERN in ${PATTERNS}
+    do
+      if [[ ${TEST_NAME} =~ ${PATTERN} ]]
       then
+        PATTERN_MATCH=1
+        break
+      fi
+    done
+
+    if (( ! PATTERN_MATCH ))
+    then
+      continue
+    fi
+  fi
+  
+  if [[ ${#SKIP_PATTERNS} > 0 ]]
+  then
+    PATTERN_MATCH=0
+    for PATTERN in ${SKIP_PATTERNS}
+    do
+      if [[ ${TEST_NAME} =~ ${PATTERN} ]]
+      then
+        PATTERN_MATCH=1
+        break
+      fi
+    done
+
+    if (( PATTERN_MATCH ))
+    then
       continue
     fi
   fi
