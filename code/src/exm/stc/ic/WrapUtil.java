@@ -126,6 +126,7 @@ public class WrapUtil {
       Var deref = new Var(valueT, valName,
           Alloc.LOCAL, DefType.LOCAL_COMPILER,
           VarProvenance.valueOf(var));
+      block.addVariable(deref);
       instBuffer.add(TurbineOp.retrieveStruct(deref, var));
       return deref;
     } else if ((Types.isContainer(var) || Types.isStruct(var))
