@@ -829,7 +829,7 @@ xlb_send_notif_work(int caller, adlb_notif_t *notifs,
 
   if (extra_data_bytes > 0)
   {
-    DEBUG("Sending %i extra data count %i bytes",
+    TRACE("Sending %i extra data count %i bytes",
            counts->extra_data_count, extra_data_bytes);
     assert(counts->extra_data_count > 0);
     SEND(prepared->extra_data, extra_data_bytes, MPI_BYTE,
@@ -843,7 +843,7 @@ xlb_send_notif_work(int caller, adlb_notif_t *notifs,
   if (notify_count > 0)
   {
     struct packed_notif *packed_notifs = prepared->packed_notifs;
-    DEBUG("Sending %i notifs", notify_count);
+    TRACE("Sending %i notifs", notify_count);
     SEND(packed_notifs, notify_count * (int)sizeof(packed_notifs[0]),
          MPI_BYTE, caller, ADLB_TAG_RESPONSE_NOTIF);
     if (prepared->free_packed_notifs)
@@ -853,7 +853,7 @@ xlb_send_notif_work(int caller, adlb_notif_t *notifs,
   }
   if (refs_count > 0)
   {
-    DEBUG("Sending %i refs", refs_count);
+    TRACE("Sending %i refs", refs_count);
     struct packed_reference *packed_refs = prepared->packed_refs;
     SEND(packed_refs, refs_count * (int)sizeof(packed_refs[0]), MPI_BYTE,
          caller, ADLB_TAG_RESPONSE_NOTIF);
@@ -864,14 +864,14 @@ xlb_send_notif_work(int caller, adlb_notif_t *notifs,
   }
   if (rc_count > 0)
   {
-    DEBUG("Sending %i rc changes", rc_count);
+    TRACE("Sending %i rc changes", rc_count);
     
     SEND(notifs->rc_changes.arr, 
          rc_count * (int)sizeof(notifs->rc_changes.arr[0]), MPI_BYTE,
          caller, ADLB_TAG_RESPONSE_NOTIF);
   }
 
-  DEBUG("Done sending notifs");
+  TRACE("Done sending notifs");
   
   return ADLB_DATA_SUCCESS;
 }
@@ -915,9 +915,6 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
     extra_data_count = counts->extra_data_count;
     assert(extra_data_count >= 0);
 
-    DEBUG("Receiving %i extra data count %i bytes", extra_data_count,
-                                                    bytes);
-    
     extra_data = malloc((size_t)bytes);
     ADLB_MALLOC_CHECK(extra_data);
     
@@ -946,7 +943,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
 
   if (counts->notify_count > 0)
   {
-    DEBUG("Receiving %i notifs", counts->notify_count);
+    TRACE("Receiving %i notifs", counts->notify_count);
     int added_count = counts->notify_count;
     ac = xlb_notifs_expand(&notifs->notify, added_count);
     ADLB_CHECK(ac);
@@ -987,7 +984,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
 
   if (counts->reference_count > 0)
   {
-    DEBUG("Receiving %i refs", counts->reference_count);
+    TRACE("Receiving %i refs", counts->reference_count);
     int added_count = counts->reference_count;
     ac = xlb_refs_expand(&notifs->references, added_count);
     ADLB_CHECK(ac);
@@ -1035,7 +1032,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
     int rc_change_count = counts->rc_change_count;
 
     xlb_rc_changes *c = &notifs->rc_changes; 
-    DEBUG("Receiving %i rc changes", rc_change_count);
+    TRACE("Receiving %i rc changes", rc_change_count);
     ac = xlb_rc_changes_expand(c, rc_change_count);
     ADLB_CHECK(ac);
 
@@ -1077,6 +1074,6 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
     notifs->rc_changes.count += rc_change_count;
   }
   
-  DEBUG("Done receiving notifs");
+  TRACE("Done receiving notifs");
   return ADLB_SUCCESS;
 }
