@@ -162,29 +162,53 @@ xlb_process_local_notif(adlb_notif_t *notifs);
 adlb_code
 xlb_notify_all(adlb_notif_t *notifs);
 
+/*
+ * Track state of prepared notifs.
+ */
+typedef struct {
+  void *extra_data;
+  struct packed_notif *packed_notifs;
+  struct packed_reference *packed_refs;
+
+  // Should we free pointers
+  bool free_packed_notifs : 1;
+  bool free_packed_refs : 1;
+  bool free_extra_data;
+} xlb_prepared_notifs;
+
 /**
- * Transfer notification work back to caller rank.
- * Caller receives w/ xlb_handle_client_notif_work or xlb_recv_notif_work
- * Finish filling in provided response header with info about
- * notifications, then send to caller including additional
- * notification work.
- * 
- * response/response_len: pointer to response struct to be sent
- * inner_struct_offset: offset in bytes of struct packed_notif_counts
-        struct inside outer struct to be updated before sending.
- *      This scheme is used to avoid aliasing optimisation issues
- *      associated with using pointers of different types
- * use_xfer: if true, use xfer buffer as scratch space
+ * Processes any local notifications
+ *
+ * caller_buffer: optional buffer to use instead of malloc
+ * client_counts: struct to fill in with counts to send to
+              client and pass to xlb_send_notif_work
+ * prepared: internal state struct that should be passed to
+ *           xlb_send_notif_work
+ * finished: set to true if all were processed and caller needs
+ *           to take no further action
  */
 adlb_code
-xlb_send_notif_work(int caller,
-        void *response, size_t response_len,
-        int inner_struct_offset,
-        adlb_notif_t *notifs, bool use_xfer);
+xlb_prepare_notif_work(adlb_notif_t *notifs,
+        const adlb_buffer *caller_buffer,
+        struct packed_notif_counts *client_counts,
+        xlb_prepared_notifs *prepared, bool *finished);
+
+/**
+ * Transfer notification work back to caller rank.
+ * counts and prepared structs must be prepared with
+ * xlb_prepare_notif_work
+ * Caller receives w/ xlb_handle_client_notif_work or xlb_recv_notif_work
+ */
+adlb_code
+xlb_send_notif_work(int caller, const struct packed_notif_counts *counts,
+       const xlb_prepared_notifs *prepared,
+       adlb_notif_t *notifs);
 
 /*
   Receive notifications send by server, then
-  process them locally
+  process them locally.  Note that this may involve communicating
+  with server, so should not be called if there are, for example,
+  unmatched messages you expect to receive from somewhere
  */
 adlb_code
 xlb_handle_client_notif_work(const struct packed_notif_counts *counts, 

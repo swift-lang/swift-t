@@ -36,10 +36,10 @@ static adlb_code
 xlb_notify_server(int server, adlb_datum_id id, adlb_subscript subscript);
 
 static adlb_code
-send_client_notif_work(int caller, 
-        void *response, size_t response_len,
-        int inner_struct_offset,
-        const adlb_notif_t *notifs, bool use_xfer);
+xlb_prepare_for_send(adlb_notif_t *notifs,
+    const adlb_buffer *caller_buf,
+    struct packed_notif_counts *client_counts,
+    xlb_prepared_notifs *prepared);
 
 // Returns size of payload including null terminator
 static int fill_payload(char *payload, adlb_datum_id id, adlb_subscript subscript)
@@ -591,45 +591,54 @@ xlb_to_free_expand(adlb_notif_t *notifs, int to_add)
 }
 
 adlb_code
-xlb_send_notif_work(int caller,
-        void *response, size_t response_len,
-        int inner_struct_offset,
-        adlb_notif_t *notifs, bool use_xfer)
+xlb_prepare_notif_work(adlb_notif_t *notifs,
+        const adlb_buffer *caller_buffer,
+        struct packed_notif_counts *client_counts,
+        xlb_prepared_notifs *prepared, bool *finished)
 {
   adlb_code rc;
   if (ADLB_CLIENT_NOTIFIES)
   {
-
     // Remove any notifications that can be handled locally
-    xlb_process_local_notif(notifs);
-    
-    // Send work back to client
-    rc = send_client_notif_work(caller, response, response_len,
-                                inner_struct_offset, notifs, use_xfer);
+    rc = xlb_process_local_notif(notifs);
+    ADLB_CHECK(rc);
+
+    if (xlb_notif_empty(notifs))
+    {
+      *finished = true;
+      return ADLB_SUCCESS;
+    }
+
+    *finished = false;
+    rc = xlb_prepare_for_send(notifs, caller_buffer, client_counts,
+                              prepared);
     ADLB_CHECK(rc);
   }
   else 
   {
     // Handle on server
-    // Initialize counts to all zeroes
-    memset(((char*)response) + inner_struct_offset, 0,
-          sizeof(struct packed_notif_counts));
-    RSEND(response, (int)response_len, MPI_BYTE, caller,
-          ADLB_TAG_RESPONSE);
     rc = xlb_notify_all(notifs);
     ADLB_CHECK(rc);
+    
+    // Initialize counts to all zeroes
+    memset(client_counts, 0, sizeof(*client_counts));
+
+    *finished = true;
   }
 
   return ADLB_SUCCESS;
 }
 
+/**
+ * Assemble data into buffers in preparation for sending to
+ * another rank
+ */
 static adlb_code
-send_client_notif_work(int caller, 
-        void *response, size_t response_len,
-        int inner_struct_offset,
-        const adlb_notif_t *notifs, bool use_xfer)
+xlb_prepare_for_send(adlb_notif_t *notifs,
+    const adlb_buffer *caller_buf,
+    struct packed_notif_counts *client_counts,
+    xlb_prepared_notifs *prepared)
 {
-  // will send remaining to client
   int notify_count = notifs->notify.count;
   int refs_count = notifs->references.count;
   int rc_count = notifs->rc_changes.count;
@@ -637,55 +646,81 @@ send_client_notif_work(int caller,
   assert(refs_count >= 0);
   assert(rc_count >= 0);
 
+  adlb_data_code dc;
+
+  /*
+    First allocate buffers for packed notifications and references:
+    we know the side we need in advance
+   */
+
+  int caller_buf_size = (caller_buf == NULL) ?  0 : caller_buf->length;
+  int caller_buf_used = 0;
+
+  struct packed_notif *packed_notifs = NULL;
+  struct packed_reference *packed_refs = NULL;
+  prepared->free_packed_notifs = false;
+  prepared->free_packed_refs = false;
+
+  if (notify_count > 0)
+  {
+    // Grab enough space for packed notifs in buffer or by mallocing
+    int notif_bytes = (int)sizeof(struct packed_notif) * notify_count;
+    if (caller_buf_used + notif_bytes <= caller_buf_size)
+    {
+      packed_notifs = (struct packed_notif *)
+                    &caller_buf->data[caller_buf_used];
+      caller_buf_used += notif_bytes;
+    }
+    else
+    {
+      packed_notifs = malloc((size_t)notif_bytes);
+      ADLB_MALLOC_CHECK(packed_notifs);
+      prepared->free_packed_notifs = true;
+    }
+    prepared->packed_notifs = packed_notifs;
+  }
+
+  if (refs_count > 0)
+  {
+    // Grab enough space for packed refs in buffer or by mallocing
+    int refs_bytes = (int)sizeof(struct packed_reference) * refs_count;
+    if (caller_buf_used + refs_bytes <= caller_buf_size)
+    {
+      packed_refs = (struct packed_reference*)
+                  &caller_buf->data[caller_buf_used];
+      caller_buf_used += refs_bytes;
+    }
+    else
+    {
+      packed_refs = malloc((size_t)refs_bytes);
+      ADLB_MALLOC_CHECK(packed_refs);
+      prepared->free_packed_refs = true;
+    }
+    prepared->packed_refs = packed_refs;
+  }
+  
+  // Remainder of bufer
+  bool using_caller_buf2 = true;
+  adlb_buffer caller_buf2;
+  caller_buf2.data = caller_buf == NULL ? 
+             NULL : caller_buf->data + caller_buf_used;
+  caller_buf2.length = caller_buf_size - caller_buf_used;
+
   /*
    We need to send subscripts and values back to client, so we pack them
    all into a buffer, and send them back.  We can then reference them by
    their index in the buffer.
    */
-  adlb_data_code dc;
-
-  /*
-   * Allocate some scratch space on stack.
-   */
-  int tmp_buf_size = 1024;
-  char tmp_buf_data[tmp_buf_size];
-  adlb_buffer static_buf;
-  if (use_xfer)
-  {
-    static_buf = xfer_buf;
-  }
-  else
-  {
-    static_buf.data = tmp_buf_data;
-    static_buf.length = tmp_buf_size;
-  }
-  bool using_static_buf = true;
-  
   adlb_buffer extra_data;
-  int extra_pos = 0;
-
-  dc = ADLB_Init_buf(&static_buf, &extra_data, &using_static_buf, 0);
+  dc = ADLB_Init_buf(&caller_buf2, &extra_data, &using_caller_buf2, 0);
   ADLB_DATA_CHECK(dc);
 
+  int extra_pos = 0;
   int extra_data_count = 0;
-  struct packed_notif *packed_notifs = NULL;
-  if (notify_count > 0)
-  {
-    packed_notifs = malloc(sizeof(struct packed_notif) *
-                           (size_t)notify_count);
-    ADLB_MALLOC_CHECK(packed_notifs);
-  }
-
-  struct packed_reference *packed_refs = NULL;
-  if (refs_count > 0)
-  {
-    packed_refs = malloc(sizeof(struct packed_reference) *
-                        (size_t)refs_count);
-    ADLB_MALLOC_CHECK(packed_refs);
-  }
 
   // Track last subscript so we don't send redundant subscripts
   const adlb_subscript *last_subscript = NULL;
+  int last_subscript_ix = -1;
 
   for (int i = 0; i < notify_count; i++)
   {
@@ -699,7 +734,7 @@ send_client_notif_work(int caller,
           last_subscript->length == rank->subscript.length)
       {
         // Same as last
-        packed_notifs[i].subscript_data = extra_data_count - 1;
+        packed_notifs[i].subscript_data = last_subscript_ix;
       }
       else
       {
@@ -708,7 +743,7 @@ send_client_notif_work(int caller,
         // pack into extra data
         dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL,rank->subscript.key,
             (int)rank->subscript.length, true, &extra_data,
-            &using_static_buf, &extra_pos);
+            &using_caller_buf2, &extra_pos);
         ADLB_DATA_CHECK(dc);
        
         last_subscript = &rank->subscript;
@@ -736,8 +771,8 @@ send_client_notif_work(int caller,
     {
       packed_refs[i].subscript_data = extra_data_count++;
       dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL, ref->subscript.key,
-          (int)ref->subscript.length, true, &extra_data, &using_static_buf,
-          &extra_pos);
+          (int)ref->subscript.length, true, &extra_data,
+          &using_caller_buf2, &extra_pos);
       ADLB_DATA_CHECK(dc);
     }
     else
@@ -756,7 +791,7 @@ send_client_notif_work(int caller,
     {
       packed_refs[i].val_data = extra_data_count;
       dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL, ref->value,
-          ref->value_len, true, &extra_data, &using_static_buf,
+          ref->value_len, true, &extra_data, &using_caller_buf2,
           &extra_pos);
       ADLB_DATA_CHECK(dc);
       
@@ -767,41 +802,67 @@ send_client_notif_work(int caller,
     }
   }
 
-  // Fill in data and send response header
-  struct packed_notif_counts *inner_struct = 
-            ((void*)response) + inner_struct_offset;
-  inner_struct->notify_count = notify_count;
-  inner_struct->reference_count = refs_count;
-  inner_struct->rc_change_count = rc_count;
-  inner_struct->extra_data_count = extra_data_count;
-  inner_struct->extra_data_bytes = extra_pos;
-  RSEND(response, (int)response_len, MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+  // Store remaining things to output structs
+  prepared->extra_data = extra_data.data;
+  prepared->free_extra_data = !using_caller_buf2;
 
-  if (extra_pos > 0)
+  client_counts->notify_count = notify_count;
+  client_counts->reference_count = refs_count;
+  client_counts->rc_change_count = rc_count;
+  client_counts->extra_data_count = extra_data_count;
+  client_counts->extra_data_bytes = extra_pos;
+
+  return ADLB_SUCCESS;
+}
+
+
+
+
+adlb_code
+send_notif_work(int caller, 
+       const struct packed_notif_counts *counts,
+       const xlb_prepared_notifs *prepared,
+       adlb_notif_t *notifs)
+{
+  int extra_data_bytes = counts->extra_data_bytes;
+  int notify_count = counts->notify_count;
+  int refs_count = counts->reference_count;
+  int rc_count = counts->rc_change_count;
+
+  if (extra_data_bytes > 0)
   {
-    DEBUG("Sending %i extra data count %i bytes", extra_data_count,
-                                                    extra_pos);
-    assert(extra_data_count > 0);
-    SEND(extra_data.data, extra_pos, MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+    DEBUG("Sending %i extra data count %i bytes",
+           counts->extra_data_count, extra_data_bytes);
+    assert(counts->extra_data_count > 0);
+    SEND(prepared->extra_data, extra_data_bytes, MPI_BYTE,
+         caller, ADLB_TAG_RESPONSE);
 
-    if (!using_static_buf)
+    if (prepared->free_extra_data)
     {
-      free(extra_data.data);
+      free(prepared->extra_data);
     }
   }
   if (notify_count > 0)
   {
+    struct packed_notif *packed_notifs = prepared->packed_notifs;
     DEBUG("Sending %i notifs", notify_count);
     SEND(packed_notifs, notify_count * (int)sizeof(packed_notifs[0]),
          MPI_BYTE, caller, ADLB_TAG_RESPONSE);
-    free(packed_notifs);
+    if (prepared->free_packed_notifs)
+    {
+      free(packed_notifs);
+    }
   }
   if (refs_count > 0)
   {
     DEBUG("Sending %i refs", refs_count);
+    struct packed_reference *packed_refs = prepared->packed_refs;
     SEND(packed_refs, refs_count * (int)sizeof(packed_refs[0]), MPI_BYTE,
          caller, ADLB_TAG_RESPONSE);
-    free(packed_refs);
+    if (prepared->free_packed_refs)
+    {
+      free(packed_refs);
+    }
   }
   if (rc_count > 0)
   {
