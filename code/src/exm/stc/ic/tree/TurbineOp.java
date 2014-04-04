@@ -909,7 +909,7 @@ public class TurbineOp extends Instruction {
     assert(Types.isArrayLocal(src.type())) : src + " " + src.type();
     assert(Types.arrayKeyType(src).assignableTo(Types.arrayKeyType(dst)));
     assert(Types.containerElemType(src.type()).assignableTo(
-              Types.containerElemType(dst)));
+              Types.containerElemValType(dst)));
     return new TurbineOp(Opcode.STORE_ARRAY, dst, src);
   }
   
@@ -925,7 +925,7 @@ public class TurbineOp extends Instruction {
     assert(Types.isBag(dst)) : dst;
     assert(Types.isBagLocal(src.type())) : src.type();
     assert(Types.containerElemType(src.type()).assignableTo(
-              Types.containerElemType(dst)));
+              Types.containerElemValType(dst)));
     return new TurbineOp(Opcode.STORE_BAG, dst, src);
   }
   
@@ -1123,7 +1123,7 @@ public class TurbineOp extends Instruction {
   public static Instruction retrieveArray(Var dst, Var src) {
     assert(Types.isArray(src.type()));
     assert(Types.isArrayLocal(dst));
-    assert(Types.containerElemType(src.type()).assignableTo(
+    assert(Types.containerElemValType(src.type()).assignableTo(
               Types.containerElemType(dst)));
     return new TurbineOp(Opcode.LOAD_ARRAY, dst, src.asArg());
   }
@@ -1138,7 +1138,7 @@ public class TurbineOp extends Instruction {
   public static Instruction retrieveBag(Var target, Var src) {
     assert(Types.isBag(src.type()));
     assert(Types.isBagLocal(target));
-    assert(Types.containerElemType(src.type()).assignableTo(
+    assert(Types.containerElemValType(src.type()).assignableTo(
               Types.containerElemType(target)));
     return new TurbineOp(Opcode.LOAD_BAG, target, src.asArg());
   }

@@ -885,7 +885,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isArray(target));
     assert(Types.isArrayLocal(src.type()));
     assert(Types.containerElemType(src.type()).assignableTo(
-              Types.containerElemType(target)));
+              Types.containerElemValType(target)));
     assert(Types.arrayKeyType(src.type()).assignableTo(
             Types.arrayKeyType(target.type())));
     
@@ -896,7 +896,7 @@ public class TurbineGenerator implements CompilerBackend {
   public void retrieveArray(Var target, Var src, Arg decr) {
     assert(Types.isArray(src));
     assert(Types.isArrayLocal(target));
-    assert(Types.containerElemType(src).assignableTo(
+    assert(Types.containerElemValType(src).assignableTo(
                     Types.containerElemType(target)));
 
     assert(Types.arrayKeyType(src.type()).assignableTo(
@@ -912,7 +912,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isBag(target));
     assert(Types.isBagLocal(src.type()));
     assert(Types.containerElemType(src.type()).assignableTo(
-              Types.containerElemType(target)));    
+              Types.containerElemValType(target)));    
 
     TypeName elemType = representationType(Types.containerElemType(target));
     pointAdd(Turbine.multisetBuild(varToExpr(target), argToExpr(src), LiteralInt.ONE,
@@ -924,7 +924,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isBag(src));
     assert(Types.isBagLocal(target));
     assert(decr.isImmediateInt());
-    assert(Types.containerElemType(src).assignableTo(
+    assert(Types.containerElemValType(src).assignableTo(
                     Types.containerElemType(target)));
 
     pointAdd(Turbine.enumerateAll(prefixVar(target), varToExpr(src), false,
