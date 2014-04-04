@@ -81,7 +81,7 @@ double xlb_approx_time(void);
 /**
   Try to steal and handle any necessary matching.
  */
-adlb_code xlb_steal_match();
+adlb_code xlb_steal_match(void);
 
 /**
    @param rank rank of worker belonging to this server
@@ -97,9 +97,7 @@ xlb_my_worker_ix(int rank)
 static inline bool
 xlb_is_server(int rank)
 {
-  if (rank > xlb_comm_size - xlb_servers)
-    return true;
-  return false;
+  return (rank >= xlb_workers);
 }
 
 /**
@@ -111,8 +109,7 @@ xlb_map_to_server(int rank)
 {
   if (xlb_is_server(rank))
     return rank;
-  valgrind_assert(rank >= 0);
-  valgrind_assert(rank < xlb_comm_size);
+  assert(rank >= 0 && rank < xlb_workers);
   int w = rank % xlb_servers;
   return w + xlb_workers;
 }
