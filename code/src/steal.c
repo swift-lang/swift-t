@@ -146,7 +146,9 @@ steal_sync(int target, int max_memory)
   req->mode = ADLB_SYNC_STEAL;
   req->steal.max_memory = max_memory;
   req->steal.idle_check_attempt = xlb_idle_check_attempt;
-  xlb_workq_type_counts(req->steal.work_type_counts, xlb_types_size);
+
+  // Include work types in sync data field
+  xlb_workq_type_counts((int*)req->sync_data, xlb_types_size);
 
   adlb_code code = xlb_sync2(target, req);
   DEBUG("[%i] synced with %i, receiving steal response", xlb_comm_rank, target);
@@ -269,7 +271,8 @@ handle_steal_callback(void *cb_data, xlb_work_unit *work)
 }
 
 adlb_code
-xlb_handle_steal(int caller, const struct packed_steal *req)
+xlb_handle_steal(int caller, const struct packed_steal *req,
+                 const int *work_type_counts)
 {
   TRACE_START;
   MPE_LOG(xlb_mpe_svr_steal_start);
@@ -290,7 +293,7 @@ xlb_handle_steal(int caller, const struct packed_steal *req)
 
   // Maximum amount of memory to return- currently unused
   // Call steal.  This function will call back to send messages
-  code = xlb_workq_steal(req->max_memory, req->work_type_counts, cb);
+  code = xlb_workq_steal(req->max_memory, work_type_counts, cb);
   ADLB_CHECK(code);
  
   // send any remaining.  If nothing left (or nothing was stolen)

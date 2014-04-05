@@ -88,7 +88,9 @@ adlb_code xlb_steal(bool* stole_single, bool *stole_par);
 
 /**
    Handle an accepted steal request
+   work_type_counts: array of size WORK_TYPES_SIZE
   */
-adlb_code xlb_handle_steal(int caller, const struct packed_steal *req);
+adlb_code xlb_handle_steal(int caller, const struct packed_steal *req,
+                           const int *work_type_counts);
 
 #endif

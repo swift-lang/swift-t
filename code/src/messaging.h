@@ -359,7 +359,7 @@ struct packed_steal
 {
   int max_memory;
   int64_t idle_check_attempt; // Sender's last idle check number
-  int work_type_counts[]; // Sender's count of each work type
+  // Sender's work type counts packed into sync_data field as int[]
 };
 
 #define WORK_TYPES_SIZE (sizeof(int) * (size_t)xlb_types_size) 
@@ -402,9 +402,11 @@ struct packed_sync
     struct packed_incr incr;   // if refcount increment
     struct packed_steal steal; // if steal
   };
+  char sync_data[]; // Extra data depending on sync type
 };
 
-#define PACKED_SYNC_SIZE (sizeof(struct packed_sync) + WORK_TYPES_SIZE)
+#define SYNC_DATA_SIZE WORK_TYPES_SIZE
+#define PACKED_SYNC_SIZE (sizeof(struct packed_sync) + SYNC_DATA_SIZE)
 
 /**
    Simple data type transfer
