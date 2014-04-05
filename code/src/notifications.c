@@ -208,6 +208,9 @@ xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
 
 }
 
+/*
+ * Send all notifications.
+ */
 static adlb_code
 xlb_close_notify(adlb_notif_ranks *ranks)
 {
@@ -324,16 +327,30 @@ xlb_process_local_notif(adlb_notif_t *notifs)
   assert(xlb_am_server);
   
   adlb_code ac;
-  
-  // First set references where necessary
-  // This may result in adding some refcount changes
-  ac = xlb_set_refs(notifs, true);
-  ADLB_CHECK(ac);
 
-  // Do local refcounts second, since they can add additional notifs
-  // Also do pre-increments here, since we can't send them
-  ac = xlb_rc_changes_apply(notifs, false, true, true);
-  ADLB_CHECK(ac);
+  // Whether there may be refs or rc_changes left to process locally
+  bool maybe_local_remaining = true;
+  do
+  {
+    // First set references where necessary
+    // This may result in adding some refcount changes
+    ac = xlb_set_refs(notifs, true);
+    ADLB_CHECK(ac);
+
+    int refs_count = notifs->references.count;
+
+    // Do local refcounts second, since they can add additional notifs
+    // Also do pre-increments here, since we can't send them
+    ac = xlb_rc_changes_apply(notifs, false, true, true);
+    ADLB_CHECK(ac);
+    
+    // Check if any new refs appeared, they may be local
+    if (notifs->references.count == refs_count)
+    {
+      // Didn't add any new refs
+      maybe_local_remaining = false;
+    }
+  } while (maybe_local_remaining);
 
   // Finally send notification messages, which will not add any
   // additional work
@@ -411,29 +428,39 @@ adlb_code
 xlb_notify_all(adlb_notif_t *notifs)
 {
   adlb_code rc;
-  if (!xlb_rc_changes_empty(&notifs->rc_changes))
+  /*
+   * Apply rc changes and refs before notifs because they may add new
+   * notifications.  It is possible for refs to cause adding rc changes
+   * and vice-versa, so need to loop
+   */
+  do
   {
-    // apply rc changes first because it may add new notifications
-    rc = xlb_rc_changes_apply(notifs, true, true, true);
-    ADLB_CHECK(rc);
-  }
+    if (!xlb_rc_changes_empty(&notifs->rc_changes))
+    {
+      rc = xlb_rc_changes_apply(notifs, true, true, true);
+      ADLB_CHECK(rc);
+    }
+    assert(xlb_rc_changes_empty(&notifs->rc_changes));
 
+    if (!xlb_refs_empty(&notifs->references))
+    {
+      rc = xlb_set_refs(notifs, false);
+      ADLB_CHECK(rc);
+    }
+    assert(xlb_refs_empty(&notifs->references));
+  } while (!xlb_rc_changes_empty(&notifs->rc_changes));
+  
+  assert(xlb_refs_empty(&notifs->references));
   assert(xlb_rc_changes_empty(&notifs->rc_changes));
 
+  // Sending notifications doesn't result in additional work
   if (!xlb_notif_ranks_empty(&notifs->notify))
   {
     rc = xlb_close_notify(&notifs->notify);
     ADLB_CHECK(rc);
   }
-
   assert(xlb_notif_ranks_empty(&notifs->notify));
   assert(xlb_rc_changes_empty(&notifs->rc_changes));
-
-  if (!xlb_refs_empty(&notifs->references))
-  {
-    rc = xlb_set_refs(notifs, false);
-    ADLB_CHECK(rc);
-  }
   assert(xlb_refs_empty(&notifs->references));
 
   // Check all were cleared
@@ -445,6 +472,7 @@ xlb_notify_all(adlb_notif_t *notifs)
  * Apply refcount changes and remove entries from list.
  * This will add additional notifications to the notifs structure if
  *  freeing/closing data results in more notifications.
+ * It may also result in more refs being added to structure
  * All rc changes in notif matching criteria will be removed, including any
  * that were added during processing
  * 
