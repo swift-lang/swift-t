@@ -100,8 +100,6 @@ typedef struct {
   int size;
 } xlb_rc_changes;
 
-#define XLB_RC_CHANGES_INIT_SIZE 16
-
 typedef struct {
   adlb_notif_ranks notify;
   adlb_ref_data references;
@@ -113,6 +111,15 @@ typedef struct {
   int to_free_length;
   size_t to_free_size; // Allocated length
 } adlb_notif_t;
+
+/*
+ * Initial sizes for dynamically expanded arrays
+ */
+#define XLB_NOTIFS_INIT_SIZE 16
+#define XLB_REFS_INIT_SIZE 16
+#define XLB_RC_CHANGES_INIT_SIZE 16
+#define XLB_TO_FREE_INIT_SIZE 16
+
 
 static inline bool xlb_notif_ranks_empty(const adlb_notif_ranks *notif)
 {
@@ -148,9 +155,14 @@ void xlb_free_notif(adlb_notif_t *notifs);
 void xlb_free_ranks(adlb_notif_ranks *ranks);
 void xlb_free_datums(adlb_ref_data *datums);
 
+/*
+ * expand functions:
+ *  Called to enlarge array by at least to_add items
+ */
 adlb_code xlb_notifs_expand(adlb_notif_ranks *notifs, int to_add);
-adlb_code xlb_to_free_expand(adlb_notif_t *notifs, int to_add);
 adlb_code xlb_refs_expand(adlb_ref_data *refs, int to_add);
+adlb_code xlb_rc_changes_expand(xlb_rc_changes *c, int to_add);
+adlb_code xlb_to_free_expand(adlb_notif_t *notifs, int to_add);
 
 /*
    When called from server, remove any notifications that can or must
@@ -288,46 +300,6 @@ static inline adlb_code xlb_rc_changes_init(xlb_rc_changes *c)
   return ADLB_SUCCESS;
 }
 
-static inline adlb_code xlb_rc_changes_expand(xlb_rc_changes *c,
-                                              int to_add)
-{
-  if (c->arr != NULL &&
-      c->count + to_add <= c->size)
-  {
-    // Big enough
-    return ADLB_SUCCESS;
-  } else {
-    int new_size;
-    if (c->arr == NULL)
-    {
-      new_size = XLB_RC_CHANGES_INIT_SIZE;
-    }
-    else
-    {
-      new_size = c->size * 2;
-      if (new_size < c->count + to_add)
-      {
-        new_size = c->count + to_add;
-      }
-    }
-    void *new_arr = realloc(c->arr, (size_t)new_size * sizeof(c->arr[0]));
-    CHECK_MSG(new_arr != NULL, "Could not alloc array");
-
-#if XLB_INDEX_RC_CHANGES
-    // Init index, use 1.0 load factor so realloced at same pace as array
-    if (!table_lp_init_custom(&c->index, new_size, 1.0))
-    {
-      ERR_PRINTF("Could not alloc table");
-      free(new_arr);
-      return ADLB_ERROR;
-    }
-#endif
-
-    c->arr = new_arr;
-    c->size = new_size;
-    return ADLB_SUCCESS;
-  }
-}
 
 static inline bool
 xlb_rc_change_merge_existing(xlb_rc_changes *c,
@@ -369,8 +341,11 @@ static inline adlb_code xlb_rc_changes_add(xlb_rc_changes *c,
                                     must_preacquire))
   {
     // New ID, add to array
-    ac = xlb_rc_changes_expand(c, 1);
-    ADLB_CHECK(ac);
+    if (c->count == c->size)
+    {
+      ac = xlb_rc_changes_expand(c, 1);
+      ADLB_CHECK(ac);
+    }
 
     unsigned long change_ix = (unsigned long)c->count++;
     change = &c->arr[change_ix];

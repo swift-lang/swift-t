@@ -547,13 +547,16 @@ xlb_notifs_expand(adlb_notif_ranks *notifs, int to_add)
 {
   assert(to_add >= 0);
   int new_size = notifs->size == 0 ? 
-                    64 : notifs->size * 2;
-  if (new_size < notifs->size + to_add)
-    new_size = notifs->size + to_add;
+                    XLB_NOTIFS_INIT_SIZE : notifs->size * 2;
+  int needed = notifs->size + to_add;
+  if (new_size < needed)
+    new_size = needed;
 
-  notifs->notifs = realloc(notifs->notifs, sizeof(notifs->notifs[0]) *
-                       (size_t)new_size);
-  ADLB_MALLOC_CHECK(notifs->notifs);
+  void *ptr = realloc(notifs->notifs, sizeof(notifs->notifs[0]) *
+                                      (size_t)new_size);
+  ADLB_MALLOC_CHECK(ptr);
+
+  notifs->notifs = ptr;
   notifs->size = new_size;
   return ADLB_SUCCESS;
 }
@@ -563,14 +566,43 @@ xlb_refs_expand(adlb_ref_data *refs, int to_add)
 {
   assert(to_add >= 0);
   int new_size = refs->size == 0 ? 
-                    64 : refs->size * 2;
+                    XLB_REFS_INIT_SIZE : refs->size * 2;
   if (new_size < refs->size + to_add)
     new_size = refs->size + to_add;
 
-  refs->data = realloc(refs->data, sizeof(refs->data[0]) *
+  void *ptr = realloc(refs->data, sizeof(refs->data[0]) *
                        (size_t)new_size);
-  ADLB_MALLOC_CHECK(refs->data);
+  ADLB_MALLOC_CHECK(ptr);
+
+  refs->data = ptr;
   refs->size = new_size;
+  return ADLB_SUCCESS;
+}
+
+adlb_code
+xlb_rc_changes_expand(xlb_rc_changes *c, int to_add)
+{
+  assert(to_add >= 0);
+  int new_size = (c->size == 0) ? XLB_RC_CHANGES_INIT_SIZE : c->size * 2;
+  int needed = c->size + to_add;
+  if (new_size < needed)
+    new_size = needed;
+
+  void *ptr = realloc(c->arr, (size_t)new_size * sizeof(c->arr[0]));
+  ADLB_MALLOC_CHECK(ptr);
+
+#if XLB_INDEX_RC_CHANGES
+  // Init index, use 1.0 load factor so realloced at same pace as array
+  if (!table_lp_init_custom(&c->index, new_size, 1.0))
+  {
+    ERR_PRINTF("Could not alloc table");
+    free(ptr);
+    return ADLB_ERROR;
+  }
+#endif
+
+  c->arr = ptr;
+  c->size = new_size;
   return ADLB_SUCCESS;
 }
 
@@ -579,13 +611,16 @@ xlb_to_free_expand(adlb_notif_t *notifs, int to_add)
 {
   assert(to_add >= 0);
   size_t new_size = notifs->to_free_size == 0 ? 
-                    64 : notifs->to_free_size * 2;
-  if (new_size < notifs->to_free_size + (size_t)to_add)
-    new_size = notifs->to_free_size + (size_t)to_add;
+            XLB_TO_FREE_INIT_SIZE : notifs->to_free_size * 2;
+  size_t needed = notifs->to_free_size + (size_t)to_add;
+  if (new_size < needed)
+    new_size = needed;
 
-  notifs->to_free = realloc(notifs->to_free,
+  void *ptr = realloc(notifs->to_free,
                     sizeof(notifs->to_free[0]) * new_size);
-  ADLB_MALLOC_CHECK(notifs->to_free);
+  ADLB_MALLOC_CHECK(ptr);
+
+  notifs->to_free = ptr;
   notifs->to_free_size = new_size;
   return ADLB_SUCCESS;
 }
