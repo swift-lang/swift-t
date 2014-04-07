@@ -72,7 +72,7 @@ WORKERS=${TEST_ADLB_WORKERS:-1}
 PROCS=$(( ENGINES + SERVERS + WORKERS ))
 
 # Setup environment variables to get info out of ADLB
-export ADLB_PERF_COUNTERS=true
+export ADLB_PERF_COUNTERS=${ADLB_PERF_COUNTERS:-true}
 export ADLB_PRINT_TIME=true
 
 # Run Turbine:
