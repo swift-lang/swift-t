@@ -3,7 +3,6 @@ import assert;
 // will need to support whole-array copying
 
 // SKIP-O0-TEST  Issue #644
-}
 
 (int r) id (int x) {
     r = x;
