@@ -28,7 +28,7 @@ check_error()
 }
 
 pwd
-TESTS_SKIP=0
+TESTS_SKIP=300
 TESTS_TOTAL=-1 # May set to -1 to run all
 TURBINE=/tmp/exm-install/turbine
 STC=/tmp/exm-install/stc
