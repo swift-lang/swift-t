@@ -150,6 +150,8 @@ xlb_set_refs(adlb_notif_t *notifs, bool local_only)
       rc = xlb_set_ref(ref->id, ref->subscript, ref->value,
                 ref->value_len, ref->type, ref->refcounts, notifs);
       ADLB_CHECK(rc);
+      
+      ref = NULL; // Pointer may be invalid due to realloc
       set = true;
     }
 
@@ -523,6 +525,8 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
 
     if (applied)
     {
+      // Array may have been realloced, old pointer maybe invalid
+      change = &c->arr[i];
 #if XLB_INDEX_RC_CHANGES
       // Will need to update or invalidate index if not processing all
       bool maintain_index = !apply_all;
