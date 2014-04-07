@@ -20,18 +20,19 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.VarCount;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.aliases.AliasKey;
 import exm.stc.ic.aliases.AliasTracker;
 import exm.stc.ic.opt.InitVariables.InitState;
-import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Instruction.InitType;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.Function;
+import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.Statement;
 import exm.stc.ic.tree.ICTree.StatementType;
 import exm.stc.ic.tree.Opcode;
@@ -41,7 +42,7 @@ import exm.stc.ic.tree.TurbineOp;
  * Try to merge multiple array inserts into a single build instruction.
  * TODO: optimise multisets
  */
-public class ArrayBuild extends FunctionOptimizerPass {
+public class ArrayBuild implements OptimizerPass {
 
   @Override
   public String getPassName() {
@@ -54,9 +55,12 @@ public class ArrayBuild extends FunctionOptimizerPass {
   }
 
   @Override
-  public void optimize(Logger logger, Function f) throws UserException {
-    ArrayInfo info = buildInfo(logger, f);
-    optimize(logger, f, info);
+  public void optimize(Logger logger, Program prog) throws UserException {
+    Map<String, Function> funcMap = prog.getFunctionMap();
+    for (Function f: prog.getFunctions()) {
+      ArrayInfo info = buildInfo(logger, funcMap, f);
+      optimize(logger, f, info);
+    }
   }
 
   private static class ArrayInfo {
@@ -155,9 +159,11 @@ public class ArrayBuild extends FunctionOptimizerPass {
    * blocks of function
    * @param logger
    * @param f
+   * @param funcMap 
    * @return
    */
-  private ArrayInfo buildInfo(Logger logger, Function f) {
+  private ArrayInfo buildInfo(Logger logger, Map<String, Function> funcMap,
+                              Function f) {
     // Set to track candidates in scope 
     HierarchicalSet<Var> candidates = new HierarchicalSet<Var>();
     ArrayInfo info = new ArrayInfo();
@@ -166,7 +172,7 @@ public class ArrayBuild extends FunctionOptimizerPass {
     // complications with alias info being incrementally refined
     buildAliasInfoRec(logger, f, f.mainBlock(), info, new AliasTracker());
     
-    buildInfoRec(logger, f, f.mainBlock(), info, candidates);
+    buildInfoRec(logger, funcMap,f, f.mainBlock(), info, candidates);
     return info;
   }
 
@@ -236,14 +242,16 @@ public class ArrayBuild extends FunctionOptimizerPass {
     }
   }
 
-  private void buildInfoRec(Logger logger, Function f,
-      Block block, ArrayInfo info, HierarchicalSet<Var> candidates) {
+  private void buildInfoRec(Logger logger, Map<String, Function> funcMap, 
+      Function f, Block block, ArrayInfo info,
+      HierarchicalSet<Var> candidates) {
     addBlockCandidates(f, block, info, candidates);
     
     for (Statement stmt: block.getStatements()) {
       switch (stmt.type()) {
         case INSTRUCTION:
-          updateInfo(logger, block, info, stmt.instruction(), candidates);
+          updateInfo(logger, funcMap, block, info, stmt.instruction(), 
+                      candidates);
           break;
         default:
           // Do nothing: handle conditionals below
@@ -253,7 +261,7 @@ public class ArrayBuild extends FunctionOptimizerPass {
     
     for (Continuation c: block.allComplexStatements()) {
       for (Block inner: c.getBlocks()) {
-        buildInfoRec(logger, f, inner, info, candidates.makeChild());
+        buildInfoRec(logger, funcMap, f, inner, info, candidates.makeChild());
       }
     }
     
@@ -283,8 +291,8 @@ public class ArrayBuild extends FunctionOptimizerPass {
     addBlockCandidates(block, info, candidates, block.getVariables());
   }
 
-  private void updateInfo(Logger logger, Block block, ArrayInfo info,
-                Instruction inst, Set<Var> candidates) {
+  private void updateInfo(Logger logger, Map<String, Function> funcMap, 
+      Block block, ArrayInfo info, Instruction inst, Set<Var> candidates) {
     
     if (inst.op == Opcode.ARR_STORE) {
       Var arr = inst.getOutput(0);
@@ -302,6 +310,18 @@ public class ArrayBuild extends FunctionOptimizerPass {
           entry.otherModHere = true;
           if (logger.isTraceEnabled()) {
             logger.trace("Modified " + out + " due to " + inst);
+          }
+        }
+      }
+      Pair<List<VarCount>, List<VarCount>> inRC = inst.inRefCounts(funcMap);
+      List<VarCount> inWriteRC = inRC.val2;
+      for (VarCount written: inWriteRC) {
+        if (written.count != 0 && isValidCandidate(written.var, false)) {
+          // Write reference count transferred somewhere
+          BlockVarInfo entry = info.getEntry(block, written.var);
+          entry.otherModHere = true;
+          if (logger.isTraceEnabled()) {
+            logger.trace("Write RC " + written + " taken by " + inst);
           }
         }
       }
