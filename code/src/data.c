@@ -2046,6 +2046,8 @@ adlb_data_code append_notifs(const struct list_i *listeners,
     nrank->id = id;
     nrank->subscript = sub;
     node = node->next;
+    TRACE("Add notif <%"PRId64">[%.*s] to rank %i", id, (int)sub.length,
+          (const char*)sub.key, nrank->rank);
   }
   notify->count += nlisteners;
   return ADLB_DATA_SUCCESS;

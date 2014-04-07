@@ -273,6 +273,9 @@ xlb_notify_server(int server, adlb_datum_id id, adlb_subscript subscript)
   int subscript_len = adlb_has_sub(subscript) ? (int)subscript.length : 0;
   assert(subscript_len <= ADLB_DATA_SUBSCRIPT_MAX);
 
+  TRACE("notify_server(<%"PRId64">[%.*s]) => server %i",
+         id, subscript_len, (char*)subscript.key, server);
+
   // Stack allocate small buffer
   int hdr_len = (int)sizeof(struct packed_notify_hdr) + subscript_len;
   char hdr_buffer[hdr_len];
@@ -816,6 +819,7 @@ xlb_prepare_for_send(adlb_notif_t *notifs,
         ADLB_DATA_CHECK(dc);
        
         last_subscript = &rank->subscript;
+        last_subscript_ix = extra_data_count;
         extra_data_count++;
       }
     }
