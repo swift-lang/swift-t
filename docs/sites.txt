@@ -137,7 +137,7 @@ Each script accepts input via environment variables and command-line options.
 For scheduled systems, Turbine accepts a common set of environment
 variables.
 
-+NODES+:: Number of nodes to use
++PROCS+:: Number of processes to use
 +PPN+:: Number of processes per node
 +PROJECT+:: The project name to use with the system scheduler
 +TURBINE_OUTPUT+:: Directory in which to place Turbine output
@@ -154,7 +154,7 @@ default is provided based on the date).
 +-e <key>=<value>+:: Set an environment variable in the job
 environment.  This may be used multiple times
 
-+-n <procs>+:: Number of processes.
++-n <procs>+:: Number of processes.  (Overrides +PROCS+.)
 
 +-o <directory>+:: Set the Turbine output directory root, in which
 default Turbine output directories are automatically created based on
