@@ -34,3 +34,7 @@ main {
     assertEqual(b.A[2], 3, "b.A[2]");
 }
 
+type soa {
+    int A[];
+    int B[];
+}
