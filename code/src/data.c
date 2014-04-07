@@ -167,7 +167,7 @@ adlb_data_code process_ref_list(struct list *subscribers,
           adlb_refcounts *to_acquire); 
 
 static 
-adlb_data_code append_notifs(const struct list_i *listeners,
+adlb_data_code append_notifs(struct list_i *listeners, bool free_list_root,
   adlb_datum_id id, adlb_subscript sub, adlb_notif_ranks *notify);
 
 
@@ -1123,10 +1123,9 @@ add_close_notifs(adlb_datum_id id, adlb_datum *d, adlb_notif_t *notifs)
 {
   assert(d != NULL);
   DEBUG("data_close: <%"PRId64"> listeners: %i", id, d->listeners.size);
-  adlb_data_code dc = append_notifs(&d->listeners, id, ADLB_NO_SUB,
+  adlb_data_code dc = append_notifs(&d->listeners, false, id, ADLB_NO_SUB,
                                     &notifs->notify);
   DATA_CHECK(dc);
-  list_i_clear(&d->listeners);
 
   return ADLB_DATA_SUCCESS;
 }
@@ -1674,9 +1673,8 @@ insert_notifications2(adlb_datum *d,
       dc = xlb_to_free_add(notifs, subscript_ptr);
       DATA_CHECK_ADLB(dc, ADLB_DATA_ERROR_OOM);
     }
-    dc = append_notifs(sub_list, id, subscript, &notifs->notify);
+    dc = append_notifs(sub_list, true, id, subscript, &notifs->notify);
     DATA_CHECK(dc);
-    list_i_free(sub_list);
   }
   return ADLB_DATA_SUCCESS;
 }
@@ -1977,57 +1975,61 @@ adlb_data_code process_ref_list(struct list *subscribers,
           const void *value, int value_len,
           adlb_refcounts *to_acquire)
 {
+  assert(subscribers != NULL);
   adlb_ref_data *references = &notifs->references;
 
   int nsubs = subscribers->size;
-  if (nsubs > 0)
+  assert(nsubs >= 0);
+
+  // append reference data
+  adlb_code ac = xlb_refs_expand(references, nsubs);
+  DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
+
+  struct list_item *node = subscribers->head;
+  for (int i = 0; i < nsubs; i++)
   {
-    // append reference data
-    adlb_code ac = xlb_refs_expand(references, nsubs);
+    assert(node != NULL); // Shouldn't fail if size was ok
+    container_reference *entry = node->data;
+    adlb_ref_datum *ref = &references->data[i + references->count];
+    ref->id = entry->id;
+    ref->type = type;
+    ref->refcounts = entry->acquire;
+    ref->value = value;
+    ref->value_len = value_len;
+
+    to_acquire->read_refcount += entry->acquire.read_refcount;
+    to_acquire->write_refcount += entry->acquire.write_refcount;
+
+    ref->subscript.length = entry->subscript_len;
+    ref->subscript.key = entry->subscript_len == 0 ?
+                         NULL : entry->subscript_data;
+
+    // Retain memory entry with subscript
+    ac = xlb_to_free_add(notifs, entry);
     DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
 
-    struct list_item *node = subscribers->head;
-    for (int i = 0; i < nsubs; i++)
-    {
-      container_reference *entry = node->data;
-      assert(node != NULL); // Shouldn't fail if size was ok
-      adlb_ref_datum *ref = &references->data[i + references->count];
-      ref->id = entry->id;
-      ref->type = type;
-      ref->refcounts = entry->acquire;
-      ref->value = value;
-      ref->value_len = value_len;
-
-      to_acquire->read_refcount += entry->acquire.read_refcount;
-      to_acquire->write_refcount += entry->acquire.write_refcount;
-
-      ref->subscript.length = entry->subscript_len;
-      ref->subscript.key = entry->subscript_len == 0 ?
-                           NULL : entry->subscript_data;
-
-      // Retain memory entry with subscript
-      ac = xlb_to_free_add(notifs, entry);
-      DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
-
-      struct list_item *next = node->next;
-      free(node);
-      node = next;
-    }
-
-    references->count += nsubs;
-    
-    // Clear list
-    subscribers->head = subscribers->tail = NULL;
-    subscribers->size = 0;
+    struct list_item *next = node->next;
+    free(node);
+    node = next;
   }
+  references->count += nsubs;
+  
+  // We freed list nodes, now free head
+  free(subscribers);
 
   return ADLB_DATA_SUCCESS;
 }
 
+/*
+ * listeners: list items are freed, list root is freed
+              if free_list_root is true
+ */
 static 
-adlb_data_code append_notifs(const struct list_i *listeners,
+adlb_data_code append_notifs(struct list_i *listeners,
+  bool free_list_root,
   adlb_datum_id id, adlb_subscript sub, adlb_notif_ranks *notify)
 {
+  assert(listeners != NULL);
   assert(notify->count >= 0);
   int nlisteners = listeners->size;
   assert(nlisteners >= 0);
@@ -2045,11 +2047,27 @@ adlb_data_code append_notifs(const struct list_i *listeners,
     nrank->rank = node->data;
     nrank->id = id;
     nrank->subscript = sub;
-    node = node->next;
+
     TRACE("Add notif <%"PRId64">[%.*s] to rank %i", id, (int)sub.length,
           (const char*)sub.key, nrank->rank);
+
+    struct list_i_item *next = node->next;
+    free(node);
+    node = next;
   }
   notify->count += nlisteners;
+
+  // We freed list items, now free or clear root
+  if (free_list_root)
+  {
+    free(listeners);
+  }
+  else
+  {
+    listeners->head = listeners->tail = NULL;
+    listeners->size = 0;
+  }
+
   return ADLB_DATA_SUCCESS;
 }
 
