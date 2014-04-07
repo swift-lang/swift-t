@@ -20,7 +20,7 @@
 # Used to process command line arguments, initialize basic settings
 # before launching qsub
 
-set -eu
+set -e
 
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 source ${TURBINE_HOME}/scripts/helpers.zsh
