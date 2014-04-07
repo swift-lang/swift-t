@@ -438,12 +438,16 @@ class Turbine {
     return new Command(STORE_INTEGER, turbineDstVar, src);
   }
 
-  public static Command refSet(Value turbineDstVar, Expression src) {
-    return new Command(STORE_REF, turbineDstVar, src);
+  public static Command refSet(Value turbineDstVar, Expression src,
+          Expression storeReaders, Expression storeWriters) {
+    return new Command(STORE_REF, turbineDstVar, src, 
+                       storeReaders, storeWriters);
   }
 
-  public static Command fileRefSet(Value turbineDstVar, Expression src) {
-    return new Command(STORE_FILE_REF, turbineDstVar, src);
+  public static Command fileRefSet(Value turbineDstVar, Expression src,
+          Expression storeReaders, Expression storeWriters) {
+    return new Command(STORE_FILE_REF, turbineDstVar, src, 
+                        storeReaders, storeWriters);
   }
 
   public static Command structSet(Value dst, Expression src,

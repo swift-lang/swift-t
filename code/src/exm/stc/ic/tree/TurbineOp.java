@@ -115,7 +115,8 @@ public class TurbineOp extends Instruction {
       gen.assignFile(getOutput(0), getInput(0), getInput(1));
       break;
     case STORE_REF:
-      gen.assignReference(getOutput(0), getInput(0).getVar());
+      gen.assignReference(getOutput(0), getInput(0).getVar(),
+            getInput(1).getIntLit(), getInput(2).getIntLit());
       break;
     case STORE_ARRAY:
       gen.assignArray(getOutput(0), getInput(0));
@@ -1204,19 +1205,33 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.DECR_LOCAL_FILE_REF, Collections.<Var>emptyList(),
                                                      fileVal.asArg());
   }
+  
+  public static Instruction storeRef(Var dst, Var src, boolean mutable) {
+    return storeRef(dst, src, 1, mutable ? 1 : 0);
+  }
 
   /**
    * Store a reference
    * @param dst reference to store to
    * @param src some datastore object
+   * @param readRefs read reference counts to transfer
+   * @param writeRefs write reference counts to transfer
    * @return
    */
-  public static Instruction storeRef(Var dst, Var src) {
-    // TODO: refcounts to transfer.  Implied by output type?
+  public static Instruction storeRef(Var dst, Var src,
+                          long readRefs, long writeRefs) {
     assert(Types.isRef(dst));
+    assert(readRefs >= 0);
+    assert(writeRefs >= 0);
+    if (writeRefs == 0) {
+      assert(Types.isRef(dst, false));
+    } else {
+      assert(Types.isMutableRef(dst)) : dst;
+    }
     assert(src.type().assignableTo(Types.retrievedType(dst)));
     
-    return new TurbineOp(Opcode.STORE_REF, dst, src.asArg());
+    return new TurbineOp(Opcode.STORE_REF, dst, src.asArg(),
+           Arg.createIntLit(readRefs), Arg.createIntLit(writeRefs));
   }
 
   /**
@@ -1231,7 +1246,8 @@ public class TurbineOp extends Instruction {
     assert(src.type().assignableTo(Types.retrievedType(dst, recursive)));
     if (Types.isRef(dst)) {
       assert(src.isVar());
-      return storeRef(dst, src.getVar());
+      boolean mutable = Types.isMutableRef(dst);
+      return storeRef(dst, src.getVar(), mutable);
     } else if (Types.isPrimFuture(dst)) {
       // Regular store?
       return storePrim(dst, src);
@@ -3107,6 +3123,7 @@ public class TurbineOp extends Instruction {
 
 
         if (op == Opcode.STORE_REF) {
+          // TODO: incorporate mutability here?
           // Use standard dereference computed value
           ValLoc retrieve = ValLoc.derefCompVal(src.getVar(), dst.getVar(),
                                    IsValCopy.NO, IsAssign.NO);
@@ -3395,8 +3412,11 @@ public class TurbineOp extends Instruction {
                 Map<String, Function> functions) {
     switch (op) {
       case STORE_REF:
-        return Pair.create(VarCount.one(getInput(0).getVar()).asList(),
-                           VarCount.NONE);
+        long readRefsIn = getInput(1).getIntLit();
+        long writeRefsIn = getInput(2).getIntLit();
+        Var src = getInput(0).getVar();
+        return Pair.create(new VarCount(src, readRefsIn).asList(),
+                           new VarCount(src, writeRefsIn).asList());
       case ARRAY_BUILD: {
         List<VarCount> readIncr = new ArrayList<VarCount>();
         for (int i = 0; i < getInputs().size() / 2; i++) {
@@ -3593,6 +3613,7 @@ public class TurbineOp extends Instruction {
         // TODO: still right?
         return Pair.create(VarCount.NONE, VarCount.NONE);
       case COPY_REF: {
+        // TODO: right?
         return Pair.create(VarCount.one(getInput(0).getVar()).asList(),
                            VarCount.one(getInput(0).getVar()).asList());
       }

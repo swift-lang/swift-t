@@ -442,8 +442,12 @@ public class  ExprWalker {
                         mutable);
   }
   
-  public void assignRef(Var dst, Var src) {
-    backend.assignRef(VarRepr.backendVar(dst), VarRepr.backendVar(src));
+  public void assignRef(Var dst, Var src, boolean mutable) {
+    // Only assign single refcounts 
+    long readRefs = 1;
+    long writeRefs = mutable ? 1 : 0;
+    backend.assignRef(VarRepr.backendVar(dst), VarRepr.backendVar(src),
+                      readRefs, writeRefs);
   }
 
   /**

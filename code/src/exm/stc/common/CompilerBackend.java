@@ -78,8 +78,11 @@ public interface CompilerBackend {
   
   /**
    * Set target=addressof(src)
+   * @param readRefs Number of read refs to transfer to reference var 
+   * @param writeRefs Number of write refs to transfer to reference var
    */
-  public void assignReference(Var target, Var src);
+  public void assignReference(Var target, Var src,
+                  long readRefs, long writeRefs);
 
   public void dereferenceScalar(Var target, Var src);
   

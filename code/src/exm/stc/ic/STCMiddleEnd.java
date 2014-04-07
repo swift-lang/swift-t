@@ -556,9 +556,9 @@ public class STCMiddleEnd {
     currBlock().addInstruction(TurbineOp.arrayCreateBag(bag, arr, key));
   }
 
-  public void assignRef(Var target, Var src) {
+  public void assignRef(Var target, Var src, long readRefs, long writeRefs) {
     currBlock().addInstruction(
-        TurbineOp.storeRef(target, src));
+        TurbineOp.storeRef(target, src, readRefs, writeRefs));
   }
 
   public void derefScalar(Var dst, Var src) {

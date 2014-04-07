@@ -668,15 +668,18 @@ public class TurbineGenerator implements CompilerBackend {
    * Set target=addressof(src)
    */
   @Override
-  public void assignReference(Var target, Var src) {
+  public void assignReference(Var target, Var src,
+                     long readRefs, long writeRefs) {
     assert(Types.isRef(target.type()));
     assert(target.type().memberType().equals(src.type()));
     if (Types.isFileRef(target.type())) {
     	pointAdd(Turbine.fileRefSet(
-    	          varToExpr(target), varToExpr(src)));
+    	          varToExpr(target), varToExpr(src),
+    	          new LiteralInt(readRefs), new LiteralInt(writeRefs)));
     } else {
       pointAdd(Turbine.refSet(
-          varToExpr(target), varToExpr(src)));
+          varToExpr(target), varToExpr(src),
+          new LiteralInt(readRefs), new LiteralInt(writeRefs)));
     }
   }
 
