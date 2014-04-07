@@ -1350,6 +1350,9 @@ public class ASTWalker {
       pos++;
     }
     
+    // Register as foreign function
+    ForeignFunctions.addForeignFunction(function);
+    
     // Read annotations at end of child list
     for (; pos < tree.getChildCount(); pos++) {
       handleBuiltinFunctionAnnotation(context, function, fdecl, tree.child(pos),

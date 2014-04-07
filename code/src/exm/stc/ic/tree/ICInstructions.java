@@ -1260,7 +1260,7 @@ public class ICInstructions {
         return new MakeImmRequest(
             Collections.unmodifiableList(this.outputs),
             Collections.unmodifiableList(this.varInputs(true)),
-            mode, recursiveInOut(this.op), initsOutputMapping);
+            mode, recursiveInOut(this.op, this.functionName), initsOutputMapping);
 
       }
       return null;
@@ -1364,7 +1364,8 @@ public class ICInstructions {
      * @param newOut
      */
     private void checkSwappedOutput(Var oldOut, Var newOut) {
-      Type exp = Types.retrievedType(oldOut.type(), recursiveInOut(op));
+      Type exp = Types.retrievedType(oldOut.type(),
+                  recursiveInOut(op, functionName));
       assert(exp.equals(newOut.type()));
     }
 
@@ -1409,17 +1410,21 @@ public class ICInstructions {
      * this type of function call if converting to local version
      * @param op
      */
-    private static boolean recursiveInOut(Opcode op) {
+    private static boolean recursiveInOut(Opcode op, String functionName) {
       switch (op) {
         case CALL_SYNC:
         case CALL_LOCAL:
         case CALL_LOCAL_CONTROL:
         case CALL_CONTROL:
-          // With Swift functions, we wouldn't want to do this
-          return false;
         case CALL_FOREIGN:
           // Foreign functions get unpack representations
-          return true;
+          // Note: we may be calling wrapper of foreign funciton -
+          // can't assume that it is not foreign based on opcode
+          if (ForeignFunctions.isForeignFunction(functionName)) {
+            return ForeignFunctions.recursivelyUnpackedInOut(functionName);
+          } else {
+            return false;
+          }
         default:
           throw new STCRuntimeError("Unexpected function call opcode: " + op);
       }
