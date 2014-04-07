@@ -36,7 +36,7 @@ namespace eval turbine {
       exec_coaster $cmd $stdin_src $stdout_dst $stderr_dst {*}$args
     } else {
       set start [ clock milliseconds ]
-      if { [ catch "exec $cmd {*}$args $stdin_src $stdout_dst $stderr_dst" ] } {
+      if { [ catch "exec $cmd $args $stdin_src $stdout_dst $stderr_dst" ] } {
         turbine_error "external command failed: $cmd $args"
       }
       set stop [ clock milliseconds ]
