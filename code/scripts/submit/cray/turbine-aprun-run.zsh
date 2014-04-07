@@ -74,12 +74,12 @@ export NODES=$(( PROCS/PPN ))
 declare PROCS NODES
 
 # Setup custom rank order
-if [ ! -z "${MPICH_CUSTOM_RANK_ORDER}" ]
+if (( ${+MPICH_CUSTOM_RANK_ORDER} ))
 then
-  if [ ! -x "${MPICH_CUSTOM_RANK_ORDER}" ]
+  if [[ ! -x "${MPICH_CUSTOM_RANK_ORDER}" ]]
   then
-    echo "Expected MPICH_CUSTOM_RANK_ORDER=${MPICH_CUSTOM_RANK_ORDER} to \
-          be an executable file.  Aborting."
+    print "Expected MPICH_CUSTOM_RANK_ORDER=${MPICH_CUSTOM_RANK_ORDER} to \
+           be an executable file.  Aborting."
     exit 1
   fi
 
@@ -106,6 +106,8 @@ do
   print "user environment variable: ${kv}"
   export ${kv}
 done
+
+(( ! ${+QSUB_OPTS} )) && QSUB_OPTS=""
 
 qsub ${=QUEUE_ARG} ${=QSUB_OPTS} ${TURBINE_OUTPUT}/turbine-aprun.sh | \
   read JOB_ID
