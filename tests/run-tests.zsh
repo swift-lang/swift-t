@@ -214,8 +214,8 @@ run_test()
   SETUP_OUTPUT=${TCL_FILE%.tcl}.setup.out
   CHECK_OUTPUT=${TCL_FILE%.tcl}.check.out
   EXP_OUTPUT=${TEST_PATH}.exp
-  TURBINE_OUTPUT=${TCL_FILE%.tcl}.out
-  TURBINE_XPT_RELOAD_OUTPUT=${TCL_FILE%.tcl}.reload.out
+  TURBINE_OUTPUT=${TEST_OUT_PATH}.out
+  TURBINE_XPT_RELOAD_OUTPUT=${TEST_OUT_PATH}.reload.out
   export TURBINE_XPT_RELOAD_OUTPUT
 
   ARGS=""
@@ -433,7 +433,6 @@ do
   TEST_PATH=${SWIFT_FILE%.swift}
   STC_ARGS="${TEST_PATH}.stcargs"
   TEST_NAME=$( basename ${TEST_PATH} )
-  TEST_OUT_PATH="${STC_TESTS_OUT_DIR}/${TEST_NAME}"
 
   if (( SKIP_COUNT ))
   then
@@ -491,12 +490,6 @@ do
     fi
   fi
 
-  TCL_FILE=${TEST_OUT_PATH}.tcl
-  STC_OUT_FILE=${TEST_OUT_PATH}.stc.out
-  STC_ERR_FILE=${TEST_OUT_PATH}.stc.err
-  STC_LOG_FILE=${TEST_OUT_PATH}.stc.log
-  STC_IC_FILE=${TEST_OUT_PATH}.ic
-
   print "test: ${TESTS_RUN} (${i}/${SWIFT_FILE_TOTAL})"
   for OPT_LEVEL in $STC_OPT_LEVELS
   do
@@ -510,6 +503,20 @@ do
       DISABLED_TESTS+="${TEST_NAME}@O${OPT_LEVEL}"
       continue
     fi
+
+
+    TEST_OUT_PATH="${STC_TESTS_OUT_DIR}/${TEST_NAME}"
+    if [ ${#STC_OPT_LEVELS} -gt 1 ]
+    then
+      # Disambiguate test output if running multiple opt levels at same 
+      # time so it's not overwritten
+      TEST_OUT_PATH+=".O${OPT_LEVEL}"
+    fi
+    TCL_FILE=${TEST_OUT_PATH}.tcl
+    STC_OUT_FILE=${TEST_OUT_PATH}.stc.out
+    STC_ERR_FILE=${TEST_OUT_PATH}.stc.err
+    STC_LOG_FILE=${TEST_OUT_PATH}.stc.log
+    STC_IC_FILE=${TEST_OUT_PATH}.ic
 
     compile_test ${OPT_LEVEL}
 
