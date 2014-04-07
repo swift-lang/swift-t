@@ -2,9 +2,7 @@
 import assert;
 // will need to support whole-array copying
 
-type soa {
-    int A[];
-    int B[];
+// SKIP-O0-TEST  Issue #644
 }
 
 (int r) id (int x) {
