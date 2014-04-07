@@ -581,9 +581,13 @@ adlb_code
 xlb_notifs_expand(adlb_notif_ranks *notifs, int to_add)
 {
   assert(to_add >= 0);
+  int needed = notifs->count + to_add;
+  if (notifs->size >= needed) {
+    return ADLB_SUCCESS;
+  }
+
   int new_size = notifs->size == 0 ? 
                     XLB_NOTIFS_INIT_SIZE : notifs->size * 2;
-  int needed = notifs->size + to_add;
   if (new_size < needed)
     new_size = needed;
 
@@ -600,10 +604,16 @@ adlb_code
 xlb_refs_expand(adlb_ref_data *refs, int to_add)
 {
   assert(to_add >= 0);
+
+  int needed = refs->count + to_add;
+  if (refs->size >= needed) {
+    return ADLB_SUCCESS;
+  }
+
   int new_size = refs->size == 0 ? 
                     XLB_REFS_INIT_SIZE : refs->size * 2;
-  if (new_size < refs->size + to_add)
-    new_size = refs->size + to_add;
+  if (new_size < needed)
+    new_size = needed;
 
   void *ptr = realloc(refs->data, sizeof(refs->data[0]) *
                        (size_t)new_size);
@@ -618,8 +628,13 @@ adlb_code
 xlb_rc_changes_expand(xlb_rc_changes *c, int to_add)
 {
   assert(to_add >= 0);
+  int needed = c->count + to_add;
+  if (c->size >= needed)
+  { 
+    return ADLB_SUCCESS;
+  }
+
   int new_size = (c->size == 0) ? XLB_RC_CHANGES_INIT_SIZE : c->size * 2;
-  int needed = c->size + to_add;
   if (new_size < needed)
     new_size = needed;
 
@@ -645,14 +660,19 @@ adlb_code
 xlb_to_free_expand(adlb_notif_t *notifs, int to_add)
 {
   assert(to_add >= 0);
-  size_t new_size = notifs->to_free_size == 0 ? 
+  int needed = notifs->to_free_length + to_add;
+  if (notifs->to_free_size >= needed)
+  {
+    return ADLB_SUCCESS;
+  }
+
+  int new_size = notifs->to_free_size == 0 ? 
             XLB_TO_FREE_INIT_SIZE : notifs->to_free_size * 2;
-  size_t needed = notifs->to_free_size + (size_t)to_add;
   if (new_size < needed)
     new_size = needed;
 
   void *ptr = realloc(notifs->to_free,
-                    sizeof(notifs->to_free[0]) * new_size);
+                    sizeof(notifs->to_free[0]) * (size_t)new_size);
   ADLB_MALLOC_CHECK(ptr);
 
   notifs->to_free = ptr;
