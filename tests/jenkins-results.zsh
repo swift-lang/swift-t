@@ -22,6 +22,13 @@ message()
   print -u 2 ${*}
 }
 
+# Escape XML entities
+xml_escape()
+{
+  FILE=$1
+  sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' ${FILE}
+}
+
 if [[ ! -f results.out ]]
 then
   print "Could not find results.out!"
@@ -66,12 +73,12 @@ do
 
     # STC stdout from failed case
     print "STC outputs from ${T_swift}:"
-    cat ${STC_OUTPUT}
+    xml_escape ${STC_OUTPUT}
     print
 
     # STC stderr from failed case
     print "STC errors from ${T_swift}:"
-    cat ${STC_ERROR}
+    xml_escape ${STC_ERROR}
     print
 
     # stdout from failed run
@@ -79,7 +86,7 @@ do
     if [[ -f ${TURBINE_OUTPUT} ]]
     then
       print "Turbine output from ${T_swift}:"
-      cat ${TURBINE_OUTPUT}
+      xml_escape ${TURBINE_OUTPUT}
     fi
     print "     </failure> "
     print "  </testcase>"
