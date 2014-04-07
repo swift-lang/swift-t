@@ -1,7 +1,5 @@
 #!/bin/zsh -f
 
-print run-tests PATH: $PATH
-
 # STC RUN-TESTS
 
 # See About.txt for notes
