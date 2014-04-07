@@ -4,7 +4,7 @@
 Turbine Sites Guide
 ===================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
-v0.4.0, August 2013
+v0.5.0, April 2014
 
 ////
 
