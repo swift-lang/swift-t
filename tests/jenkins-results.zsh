@@ -88,6 +88,15 @@ do
       print "Turbine output from ${T_swift}:"
       xml_escape ${TURBINE_OUTPUT}
     fi
+
+    # All output from failed run check
+    TURBINE_CHECK=${T_swift%.swift}.check.out
+    if [[ -f ${TURBINE_CHECK} ]]
+    then
+      print "Turbine check output from ${T_swift}:"
+      xml_escape ${TURBINE_CHECK}
+    fi
+
     print "     </failure> "
     print "  </testcase>"
   fi
