@@ -42,6 +42,7 @@ import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsValCopy;
 import exm.stc.ic.refcount.RefCountsToPlace;
 import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmRequest;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.GenInfo;
 import exm.stc.ic.tree.ICTree.Program;
@@ -1837,7 +1838,6 @@ public class TurbineOp extends Instruction {
   @Override
   public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
       Set<ArgCV> closedLocations, Set<Var> valueAvail, boolean waitForClose) {
-    boolean insertRefWaitForClose = waitForClose;
     // Try to take advantage of closed variables 
     switch (op) {
     case ARR_COPY_OUT_IMM: {
@@ -1850,14 +1850,14 @@ public class TurbineOp extends Instruction {
       if (closedVars.contains(arr)) {
         // Don't request to wait for close - whole array doesn't need to be
         // closed
-        return new MakeImmRequest(null, Collections.<Var>emptyList());
+        return MakeImmRequest.fromVars(Var.NONE, Var.NONE);
       }
       break;
     }
     case ARR_COPY_OUT_FUTURE: {
       Var index = getInput(1).getVar();
       if (waitForClose || closedVars.contains(index)) {
-        return new MakeImmRequest(null, Arrays.asList(index));
+        return MakeImmRequest.fromVars(Var.NONE, index);
       }
       break;
     }
@@ -1865,7 +1865,8 @@ public class TurbineOp extends Instruction {
       Var arr = getInput(0).getVar();
       Var ix = getInput(1).getVar();
       // We will take either the index or the dereferenced array
-      List<Var> req = mkImmVarList(waitForClose, closedVars, arr, ix);
+      List<MakeImmVar> req = mkImmVarList(waitForClose, closedVars,
+                                    true, false, false, arr, ix);
       if (req.size() > 0) {
         return new MakeImmRequest(null, req);
       }
@@ -1875,7 +1876,7 @@ public class TurbineOp extends Instruction {
       // Could skip using reference
       Var arrRef = getInput(0).getVar();
       if (waitForClose || closedVars.contains(arrRef)) {
-        return new MakeImmRequest(null, Arrays.asList(arrRef));
+        return MakeImmRequest.fromVars(Var.NONE, arrRef);
       }
       break;
     }
@@ -1884,7 +1885,7 @@ public class TurbineOp extends Instruction {
       // check to see if local version of array available
       // (Already assuming array closed)
       if (valueAvail.contains(arr)) {
-        return new MakeImmRequest(null, Arrays.asList(arr));
+        return MakeImmRequest.fromVars(Var.NONE, arr);
       }
       break;  
     }
@@ -1893,31 +1894,37 @@ public class TurbineOp extends Instruction {
       // check to see if local version of container available
       // (Already assuming array closed)
       if (valueAvail.contains(cont)) {
-        return new MakeImmRequest(null, Arrays.asList(cont));
+        return MakeImmRequest.fromVars(Var.NONE, cont);
       }
       break;  
     }
     case STRUCT_COPY_IN: {
       Var val = getInput(0).getVar();
       if (waitForClose || closedVars.contains(val)) {
-        return new MakeImmRequest(null, val.asList());
+        return MakeImmRequest.fromVars(Var.NONE, val);
       }
       break;
     }
     case STRUCTREF_COPY_IN: {
       Var structRef = getOutput(0);
       Var val = getInput(0).getVar();
-      List<Var> vs = mkImmVarList(waitForClose, closedVars,
-                                  Arrays.asList(structRef, val));
+      
+      List<Var> inputs = Arrays.asList(structRef, val);
+      List<Boolean> acquireWrite = Arrays.asList(true, false);
+      List<MakeImmVar> vs = mkImmVarListAcquire(waitForClose,
+          closedVars, true, false, inputs, acquireWrite);
+      
       if (vs.size() > 0) {
-        return new MakeImmRequest(null, vs);
+        return new MakeImmRequest(MakeImmVar.NONE, vs);
       }
       break;
     }
     case STRUCTREF_STORE_SUB: {
       Var structRef = getOutput(0);
+      List<MakeImmVar> vs = mkImmVarList(waitForClose, closedVars, true,
+                  false, true, structRef.asList());
       if (waitForClose || closedVars.contains(structRef)) {
-        return new MakeImmRequest(null, structRef.asList());
+        return new MakeImmRequest(MakeImmVar.NONE, vs);
       }
       break;
     }
@@ -1927,21 +1934,22 @@ public class TurbineOp extends Instruction {
       if (closedVars.contains(struct)) {
         // Don't request to wait for close - whole struct doesn't need to be
         // closed
-        return new MakeImmRequest(null, Collections.<Var>emptyList());
+        return MakeImmRequest.fromVars(Var.NONE, Var.NONE);
       }
       break;
     }
     case STRUCTREF_COPY_OUT: {
       Var structRef = getInput(0).getVar();
       if (waitForClose || closedVars.contains(structRef)) {
-        return new MakeImmRequest(null, structRef.asList());
+        return MakeImmRequest.fromVars(Var.NONE, structRef);
       }
       break;  
     }
     case ARR_COPY_IN_IMM: {
       // See if we can get deref arg
       Var mem = getInput(1).getVar();
-      List<Var> vs = mkImmVarList(waitForClose, closedVars, mem.asList());
+      List<MakeImmVar> vs = mkImmVarList(waitForClose, closedVars, 
+          true, false, false, mem);
       if (vs.size() > 0) {
         return new MakeImmRequest(null, vs);
       }
@@ -1951,14 +1959,15 @@ public class TurbineOp extends Instruction {
     case ARR_COPY_IN_FUTURE: {
       Var ix = getInput(0).getVar();
       Arg val = getInput(1);
-      List<Var> vs;
+      List<Var> candVs;
       if (op == Opcode.ARR_STORE_FUTURE) {
-        vs = ix.asList();
+        candVs = ix.asList();
       } else { 
         assert(op == Opcode.ARR_COPY_IN_FUTURE);
-        vs = Arrays.asList(ix, val.getVar());
+        candVs = Arrays.asList(ix, val.getVar());
       }
-      vs = mkImmVarList(waitForClose, closedVars, vs);
+      List<MakeImmVar> vs = mkImmVarList(waitForClose, closedVars,
+                                        true, false, false, candVs);
       if (vs.size() > 0) {
         return new MakeImmRequest(null, vs);
       }
@@ -1966,16 +1975,20 @@ public class TurbineOp extends Instruction {
     }
     case AREF_STORE_IMM: 
     case AREF_COPY_IN_IMM: {
-      List<Var> vs;
+      List<Var> candVs;
+      List<Boolean> candAcquireWrite;
       Var arrRef = getOutput(0);
       Arg mem = getInput(1);
       if (op == Opcode.AREF_STORE_IMM) {
-        vs = arrRef.asList();
+        candVs = arrRef.asList();
+        candAcquireWrite = Collections.singletonList(true);
       } else {
         assert(op == Opcode.AREF_COPY_IN_IMM);
-        vs = Arrays.asList(arrRef, mem.getVar());
+        candVs = Arrays.asList(arrRef, mem.getVar());
+        candAcquireWrite = Arrays.asList(true, false);
       }
-      vs = mkImmVarList(insertRefWaitForClose, closedVars, vs);
+      List<MakeImmVar> vs = mkImmVarListAcquire(waitForClose, closedVars,
+                                 true, false, candVs, candAcquireWrite);
       
       if (vs.size() > 0) {
         return new MakeImmRequest(null, vs);
@@ -1987,17 +2000,22 @@ public class TurbineOp extends Instruction {
       Var arrRef = getOutput(0);
       Var ix = getInput(0).getVar();
       Arg mem = getInput(1);
-      List<Var> req;
+      List<Var> candVs;
+      List<Boolean> candAcquireWrite;
       if (op == Opcode.AREF_STORE_FUTURE) {
-        req = Arrays.asList(arrRef, ix);
+        candVs = Arrays.asList(arrRef, ix);
+        candAcquireWrite = Arrays.asList(true, false);
       } else {
         assert(op == Opcode.AREF_COPY_IN_FUTURE);
-        req = Arrays.asList(arrRef, ix, mem.getVar());
+        candVs = Arrays.asList(arrRef, ix, mem.getVar());
+        candAcquireWrite = Arrays.asList(true, false, false);
       }
       // We will take either the index or the dereferenced array
-      req = mkImmVarList(insertRefWaitForClose, closedVars, req);
-      if (req.size() > 0) {
-        return new MakeImmRequest(null, req);
+
+      List<MakeImmVar> vs = mkImmVarListAcquire(waitForClose, closedVars,
+                                 true, false, candVs, candAcquireWrite);
+      if (vs.size() > 0) {
+        return new MakeImmRequest(null, vs);
       }
       break;
     }
@@ -2005,33 +2023,42 @@ public class TurbineOp extends Instruction {
       // Try to get immediate index
       Var ix = getInput(0).getVar();
       if (waitForClose || closedVars.contains(ix)) {
-        return new MakeImmRequest(null, Arrays.asList(ix));
+        return MakeImmRequest.fromVars(Var.NONE, Arrays.asList(ix));
       }
       break;
     }
     case AREF_CREATE_NESTED_IMM: {
       Var arrRef = getOutput(1);
-      if (waitForClose || closedVars.contains(arrRef)) {
-        return new MakeImmRequest(null, Arrays.asList(arrRef));
+      List<MakeImmVar> vs = mkImmVarList(waitForClose, closedVars, 
+                  true, false, true, arrRef.asList());
+      if (vs.size() > 0) {
+        return new MakeImmRequest(null, vs);
       }
       break;
     }
     case AREF_CREATE_NESTED_FUTURE: {
       Var arrRef = getOutput(1);
       Var ix = getInput(0).getVar();
-      List<Var> req5 = mkImmVarList(waitForClose, closedVars, arrRef, ix);
-      if (req5.size() > 0) {
-        return new MakeImmRequest(null, req5);
+      
+      List<Var> candVs;
+      List<Boolean> candAcquireWrite;
+      candVs = Arrays.asList(arrRef, ix);
+      candAcquireWrite = Arrays.asList(true, false);
+      
+      List<MakeImmVar> vs = mkImmVarListAcquire(waitForClose, closedVars,
+                                 true, false, candVs, candAcquireWrite);
+      if (vs.size() > 0) {
+        return new MakeImmRequest(null, vs);
       }
       break;
     }
     case ASYNC_COPY: {
       // See if we can get closed container/struct
-      List<Var> req = mkImmVarList(waitForClose, closedVars,
-                                   getInput(0).getVar());
+      List<MakeImmVar> req = mkImmVarList(waitForClose, closedVars,
+                                   false, false, false, getInput(0).getVar());
       if (req.size() > 0) {
         // Wait for vars only
-        return MakeImmRequest.waitOnly(req);
+        return new MakeImmRequest(null, req);
       }
       break;
     }
@@ -2044,7 +2071,7 @@ public class TurbineOp extends Instruction {
           Types.isRef(dst)) {
         // Small data
         if (waitForClose || closedVars.contains(src)) {
-          return new MakeImmRequest(null, src.asList());
+          return MakeImmRequest.fromVars(Var.NONE, src);
         }
       }
       break;
@@ -2052,7 +2079,7 @@ public class TurbineOp extends Instruction {
     case COPY_IN_FILENAME: {
       Var filenameIn = getInput(0).getVar();
       if (waitForClose || closedVars.contains(filenameIn)) {
-        return new MakeImmRequest(null, filenameIn.asList());
+        return MakeImmRequest.fromVars(Var.NONE, filenameIn);
       }
       break;
     }
@@ -2061,7 +2088,7 @@ public class TurbineOp extends Instruction {
     case UPDATE_SCALE: {
       Var newVal = getInput(0).getVar();
       if (waitForClose || closedVars.contains(newVal)) {
-        return new MakeImmRequest(null, newVal.asList());
+        return MakeImmRequest.fromVars(Var.NONE, newVal);
       }
       break;
     }
@@ -2071,21 +2098,55 @@ public class TurbineOp extends Instruction {
     }
     return null;
   }
-  
-  private List<Var> mkImmVarList(boolean waitForClose,
-                                 Set<Var> closedVars, Var... args) {
-    return mkImmVarList(waitForClose, closedVars, Arrays.asList(args));
+
+  private List<MakeImmVar> mkImmVarListAcquire(boolean waitForClose,
+      Set<Var> closedVars, boolean fetch,
+      boolean recursive, List<Var> inputs, List<Boolean> acquireWrite) {
+    List<MakeImmVar> vs = new ArrayList<MakeImmVar>();
+    
+    assert(inputs.size() == acquireWrite.size());
+    for (int i = 0; i < inputs.size(); i++) {
+      MakeImmVar check = checkMkImmInput(waitForClose, closedVars, 
+                      fetch, recursive, acquireWrite.get(i), inputs.get(i));
+      if (check != null) {
+        vs.add(check);
+      }
+    }
+    return vs;
   }
   
-  private List<Var> mkImmVarList(boolean waitForClose,
-        Set<Var> closedVars, List<Var> args) {
-    ArrayList<Var> req = new ArrayList<Var>(args.size());
+  private List<MakeImmVar> mkImmVarList(boolean waitForClose,
+      Set<Var> closedVars, boolean fetch,
+      boolean recursive, boolean acquireWriteRefs,
+      Var... args) {
+    return mkImmVarList(waitForClose, closedVars,
+        fetch, recursive, acquireWriteRefs, Arrays.asList(args));
+    
+  }
+  private List<MakeImmVar> mkImmVarList(boolean waitForClose,
+      Set<Var> closedVars, boolean fetch, boolean recursive,
+      boolean acquireWriteRefs, List<Var> args) {
+    ArrayList<MakeImmVar> req = new ArrayList<MakeImmVar>(args.size());
     for (Var v: args) {
-      if (waitForClose || closedVars.contains(v)) {
-        req.add(v);
+      MakeImmVar in;
+      in = checkMkImmInput(waitForClose, closedVars, fetch, recursive,
+          acquireWriteRefs, v);
+      if (in != null) {
+        req.add(in);
       }
     }
     return req;
+  }
+
+  private MakeImmVar checkMkImmInput(boolean waitForClose, Set<Var> closedVars,
+      boolean fetch, boolean recursive, boolean acquireWriteRefs, Var v) {
+    MakeImmVar in;
+    if (waitForClose || closedVars.contains(v)) {
+      in = MakeImmVar.in(v, fetch, recursive, acquireWriteRefs);
+    } else {
+      in = null;
+    }
+    return in;
   }
 
   @Override

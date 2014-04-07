@@ -70,6 +70,7 @@ import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Instruction.Fetched;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmRequest;
+import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmVar;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.GlobalConstants;
@@ -811,28 +812,22 @@ public class ValueNumber implements OptimizerPass {
                                     insertContext, noWaitRequired, alt);
     if (logger.isTraceEnabled()) {
       logger.trace("Fetched " + inVals + " for " + inst
-                 + " req.in: " + req.in + " req.wait: " + req.wait);
+                 + " req.in: " + req.in);
     }
 
-    // If instruction doesn't initialize mapping, we have to
-    boolean mustInitOutputMapping = !req.initsOutputMapping;
     // Need filenames for output file values
     Map<Var, Var> filenameVals = loadOutputFileNames(state, stmtIndex,
-                req.out, insertContext, insertPoint, mustInitOutputMapping);
+                req.out, insertContext, insertPoint);
     
     
     List<Var> outFetched = OptUtil.createLocalOpOutputVars(insertContext,
-                insertPoint, req.out, filenameVals, mustInitOutputMapping,
-                req.recursive);
-    
-    // If instruction initialized mapping, need to store
-    boolean storeOutputMapping = req.initsOutputMapping;
-    
+                insertPoint, req.out, filenameVals);
+
     MakeImmChange change;
     change = inst.makeImmediate(new OptVarCreator(block),
           Fetched.makeList(req.out, outFetched), inVals);
     OptUtil.fixupImmChange(block, insertContext, inst, change, alt,
-           outFetched, req.out, storeOutputMapping, req.recursive);
+                           outFetched, req.out);
 
     if (logger.isTraceEnabled()) {
       logger.trace("Replacing instruction <" + inst + "> with sequence "
@@ -859,7 +854,12 @@ public class ValueNumber implements OptimizerPass {
 
     // same var might appear multiple times
     HashMap<Var, Arg> alreadyFetched = new HashMap<Var, Arg>();
-    for (Var toFetch: req.in) {
+    for (MakeImmVar input: req.in) {
+      if (!input.fetch) {
+        continue;
+      }
+      Var toFetch = input.var;
+      
       Arg maybeVal;
       boolean fetchedHere;
       if (alreadyFetched.containsKey(toFetch)) {
@@ -884,7 +884,8 @@ public class ValueNumber implements OptimizerPass {
         alreadyFetched.put(toFetch, maybeVal);
       } else {
         // Generate instruction to fetch val, append to alt
-        Var fetchedV = OptUtil.fetchForLocalOp(insertContext, alt, toFetch, false);
+        Var fetchedV = OptUtil.fetchForLocalOp(insertContext, alt, toFetch,
+                                  input.recursive, input.acquireWriteRefs);
         Arg fetched = Arg.createVar(fetchedV);
         inVals.add(new Fetched<Arg>(toFetch, fetched));
         alreadyFetched.put(toFetch, fetched);
@@ -894,27 +895,27 @@ public class ValueNumber implements OptimizerPass {
   }
 
   private static Map<Var, Var> loadOutputFileNames(Congruences state,
-      int oldStmtIndex, List<Var> outputs,
-      Block insertContext, ListIterator<Statement> insertPoint,
-      boolean initOutputMapping) {
+      int oldStmtIndex, List<MakeImmVar> outputs,
+      Block insertContext, ListIterator<Statement> insertPoint) {
     Map<Var, Var> filenameVals = new HashMap<Var, Var>();
-    for (Var output: outputs) {
-      if (Types.isFile(output) && initOutputMapping) {
+    for (MakeImmVar output: outputs) {
+      Var outVar = output.var;
+      if (Types.isFile(outVar) && output.preinitOutputMapping) {
         Var filenameVal = insertContext.declareUnmapped(Types.V_STRING,
-            OptUtil.optFilenamePrefix(insertContext, output),
+            OptUtil.optFilenamePrefix(insertContext, outVar),
             Alloc.LOCAL, DefType.LOCAL_COMPILER,
-            VarProvenance.filenameOf(output));
+            VarProvenance.filenameOf(outVar));
 
-        if (output.isMapped() == Ternary.FALSE) {
+        if (outVar.isMapped() == Ternary.FALSE) {
           // Initialize unmapped var
-          assert (output.type().fileKind().supportsTmpImmediate());
-          WrapUtil.initTemporaryFileName(insertPoint, output, filenameVal);
+          assert (outVar.type().fileKind().supportsTmpImmediate());
+          WrapUtil.initTemporaryFileName(insertPoint, outVar, filenameVal);
         } else {
           // Load existing mapping
           // Should only get here if value of mapped var is available.
-          insertPoint.add(TurbineOp.getFilenameVal(filenameVal, output));
+          insertPoint.add(TurbineOp.getFilenameVal(filenameVal, outVar));
         }
-        filenameVals.put(output, filenameVal);
+        filenameVals.put(outVar, filenameVal);
       }
     }
     return filenameVals;

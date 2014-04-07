@@ -145,7 +145,7 @@ public class FunctionSignature implements OptimizerPass {
     // these vars should already be closed.
     // load values and call new function
     
-    List<Arg> fetched = OptUtil.fetchValuesOf(main, switched, false);
+    List<Arg> fetched = OptUtil.fetchValuesOf(main, switched, false, false);
     
     List<Arg> callInputs = new ArrayList<Arg>(fn.getInputList().size());
     for (Var inArg: fn.getInputList()) {

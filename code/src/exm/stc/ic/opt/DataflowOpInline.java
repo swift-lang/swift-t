@@ -2,6 +2,7 @@ package exm.stc.ic.opt;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -22,7 +23,7 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.Pair;
-import exm.stc.ic.WrapUtil;
+import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.opt.OptUtil.OptVarCreator;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
@@ -125,8 +126,7 @@ public class DataflowOpInline extends FunctionOptimizerPass {
     MakeImmRequest req = inst.canMakeImmediate(waitedFor,
              Collections.<ArgCV>emptySet(), Collections.<Var>emptySet(),
              true);
-    if (req != null && 
-        (req.in.size() > 0 || req.wait.size() > 0)) {
+    if (req != null && req.in.size() > 0) {
       if (logger.isTraceEnabled()) {
         logger.trace("Exploding " + inst + " in function " + fn.getName());
       }
@@ -134,69 +134,127 @@ public class DataflowOpInline extends FunctionOptimizerPass {
       // Remove old instruction now that we're certain to replace it
       it.remove();
       
-      // We have to initialize mapping if instruction doesn't do it
-      boolean mustInitOutputMapping = !req.initsOutputMapping;
+      List<Pair<Var, Ternary>> waitVars = new ArrayList<Pair<Var, Ternary>>();
+      Map<Var, Var> filenameMap = new HashMap<Var, Var>();
+      OptUtil.buildWaitVars(block, it, req.in, req.out, filenameMap, waitVars);
       
-      Pair<List<WaitVar>, Map<Var, Var>> r;
-      r = WrapUtil.buildWaitVars(block, it, req.in, req.wait, req.out,
-                                 mustInitOutputMapping);
-      
-      List<WaitVar> waitVars = r.val1;
-      Map<Var, Var> filenameMap = r.val2;
-      
-      WaitMode waitMode;
-      if (req.mode == TaskMode.SYNC || req.mode == TaskMode.LOCAL ||
-            (req.mode == TaskMode.LOCAL_CONTROL &&
-              execCx == ExecContext.CONTROL)) {
-        waitMode = WaitMode.WAIT_ONLY;
-      } else {
-        waitMode = WaitMode.TASK_DISPATCH;
-      }
-      
-      TaskProps props = inst.getTaskProps();
-      if (props == null) {
-        props = new TaskProps();
-      }
-      
-      WaitStatement wait = new WaitStatement(
-              fn.getName() + "-" + inst.shortOpName(),
-              waitVars, PassedVar.NONE, Var.NONE,
-              waitMode, req.recursive, req.mode, props);
-      block.addContinuation(wait);
-      
-      if (props.containsKey(TaskPropKey.PARALLELISM)) {
-        //TODO: different output var conventions
-        throw new STCRuntimeError("Don't know how to explode parallel " +
-            "instruction yet: " + inst);
-      }
+      Block insideWaitBlock = enterWaits(fn, execCx, block, inst, req, waitVars);
       
       // Instructions to add inside wait
       List<Statement> instBuffer = new ArrayList<Statement>();
       
       // Fetch the inputs
-      List<Arg> inVals = WrapUtil.fetchLocalOpInputs(wait.getBlock(), req.in,
-                                                     instBuffer, true);
+      List<Arg> inVals = OptUtil.fetchMakeImmInputs(insideWaitBlock, req.in,
+                                                    instBuffer);
             
       // Create local instruction, copy out outputs
-      List<Var> localOutputs = WrapUtil.createLocalOpOutputs(
-                              wait.getBlock(), req.out, filenameMap,
-                              instBuffer, true, mustInitOutputMapping,
-                              req.recursive); 
+      List<Var> localOutputs = OptUtil.createMakeImmOutputs(insideWaitBlock,
+                                          req.out, filenameMap, instBuffer); 
 
-      boolean storeOutputMapping = req.initsOutputMapping;
       MakeImmChange change = inst.makeImmediate(
-                                  new OptVarCreator(wait.getBlock()),
+                                  new OptVarCreator(insideWaitBlock),
                                   Fetched.makeList(req.out, localOutputs),
                                   Fetched.makeList(req.in, inVals));
-      OptUtil.fixupImmChange(block, wait.getBlock(), inst, change, instBuffer,
-                                 localOutputs, req.out, storeOutputMapping,
-                                 req.recursive);
+      OptUtil.fixupImmChange(block, insideWaitBlock, inst, change, instBuffer,
+                                 localOutputs, req.out);
       
       // Remove old instruction, add new one inside wait block
-      wait.getBlock().addStatements(instBuffer);
+      insideWaitBlock.addStatements(instBuffer);
       return true;
     }
     return false;
+  }
+
+  /**
+   * @param fn
+   * @param execCx
+   * @param block
+   * @param inst
+   * @param req
+   * @param waitVars
+   * @return innermost wait block
+   */
+  private static Block enterWaits(Function fn, ExecContext execCx, Block block,
+      Instruction inst, MakeImmRequest req, List<Pair<Var, Ternary>> waitVars) {
+
+    List<WaitVar> nonRecWaitVars = new ArrayList<WaitVar>();
+    List<WaitVar> recWaitVars = new ArrayList<WaitVar>();
+    List<WaitVar> eitherWaitVars = new ArrayList<WaitVar>();
+    
+    /*
+     * Need to ensure we correctly non-rec or rec wait if it's important
+     */
+    for (Pair<Var, Ternary> wv: waitVars) {
+      if (wv.val2 == Ternary.FALSE) {
+        nonRecWaitVars.add(new WaitVar(wv.val1, false));
+      } else if (wv.val2 == Ternary.TRUE) {
+        recWaitVars.add(new WaitVar(wv.val1, false));
+      } else {
+        eitherWaitVars.add(new WaitVar(wv.val1, false));
+      }
+    }
+    
+    boolean needRec = recWaitVars.size() > 0;
+    boolean needNonRec = nonRecWaitVars.size() > 0;
+    
+    if (needRec && needNonRec) {
+      nonRecWaitVars.addAll(eitherWaitVars);
+      
+      // First get rec
+      block = enterWait(fn, block, inst, true, WaitMode.WAIT_ONLY,
+                        TaskMode.LOCAL, recWaitVars);
+      // then non-rec
+      return enterWait(fn, block, inst, false, 
+          selectWaitMode(execCx, req.mode), req.mode, nonRecWaitVars);
+    } else if (needRec && !needNonRec) {
+      recWaitVars.addAll(eitherWaitVars);
+      return enterWait(fn, block, inst, true, selectWaitMode(execCx, req.mode),
+                       req.mode, recWaitVars);
+    } else {
+      // Treat all as non-recursive
+      nonRecWaitVars.addAll(eitherWaitVars);
+      
+      // Must createwait even with no vars to ensure wait mode respected
+      // NOTE: also avoids problem with caller being confused by
+      //    commodification issues with stmt list in outer block
+      return enterWait(fn, block, inst, false, selectWaitMode(execCx, req.mode),
+                       req.mode, nonRecWaitVars);
+    }
+  }
+
+  private static Block enterWait(Function fn, Block block,
+      Instruction inst, boolean recursive, WaitMode waitMode, TaskMode taskMode, 
+      List<WaitVar> waitVars) {
+    TaskProps props = inst.getTaskProps();
+    if (props == null) {
+      props = new TaskProps();
+    }
+    
+    WaitStatement wait = new WaitStatement(
+            fn.getName() + "-" + inst.shortOpName(),
+            waitVars, PassedVar.NONE, Var.NONE,
+            waitMode, recursive, taskMode, props);
+    block.addContinuation(wait);
+    
+    if (props.containsKey(TaskPropKey.PARALLELISM)) {
+      //TODO: different output var conventions
+      throw new STCRuntimeError("Don't know how to explode parallel " +
+          "instruction yet: " + inst);
+    }
+    return wait.getBlock();
+  }
+
+  private static WaitMode selectWaitMode(ExecContext execCx, TaskMode taskMode) {
+    // TODO: this is a little restrictive
+    WaitMode waitMode;
+    if (taskMode == TaskMode.SYNC || taskMode == TaskMode.LOCAL ||
+          (taskMode == TaskMode.LOCAL_CONTROL &&
+            execCx == ExecContext.CONTROL)) {
+      waitMode = WaitMode.WAIT_ONLY;
+    } else {
+      waitMode = WaitMode.TASK_DISPATCH;
+    }
+    return waitMode;
   }
 
 }

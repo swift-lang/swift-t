@@ -167,73 +167,144 @@ public class ICInstructions {
       return false;
     }
     
+    /**
+     * Class helping to specify how a variable should be handled when
+     * making immediate
+     */
+    public static class MakeImmVar {
+      public MakeImmVar(Var var, boolean fetch, boolean recursive,
+          boolean initOutputMapping, boolean acquireWriteRefs) {
+        super();
+        this.var = var;
+        this.fetch = fetch;
+        this.recursive = recursive;
+        this.preinitOutputMapping = initOutputMapping;
+        this.acquireWriteRefs = acquireWriteRefs;
+      }
+      
+      public static MakeImmVar in(Var var, boolean fetch, boolean recursive,
+                                   boolean acquireWriteRefs) {
+        return new MakeImmVar(var, fetch, recursive, false, acquireWriteRefs);
+      }
+      
+      public static MakeImmVar out(Var var, boolean recursive, boolean initOutputMapping) {
+        return new MakeImmVar(var, false, recursive, initOutputMapping, false);
+      }
+
+      public static final List<MakeImmVar> NONE = Collections.emptyList();;
+
+      public final Var var;
+      
+      /** For inputs, if we should fetch (otherwise just wait) */
+      public final boolean fetch;
+      
+      /** For inputs and outputs, if we should fetch recursively */
+      public final boolean recursive;
+      
+      /** For outputs, whether output mapping should initialized 
+       * before calling this instruction */
+      public final boolean preinitOutputMapping;
+      
+      /**
+       * For inputs that are refs, if write refcounts should be acquired 
+       */
+      public final boolean acquireWriteRefs;
+      
+      @Override
+      public String toString() {
+        return var.name() + " fetch: " + fetch + " recursive: " + recursive +
+              " preinitOutputMapping: " + preinitOutputMapping + 
+              " acquireWriteRefs: " + acquireWriteRefs;
+      }
+    }
+    
     public static class MakeImmRequest {
       /** Output variables to replace and store after changing instruction */
-      public final List<Var> out;
+      public final List<MakeImmVar> out;
       
       /** Input variables to fetch before changing instruction */
-      public final List<Var> in;
-      
-      /** Input variables to wait for but not fetch */
-      public final List<Var> wait;
+      public final List<MakeImmVar> in;
       
       /** Where immediate code should run.  Default is local: in the current context */
       public final TaskMode mode;
       
-      /** If inputs should be recursively fetched and outputs recursively stored*/
-      public final boolean recursive;
-      /** 
-       * If instruction initialize output mappings itself
-       * default: false
-       */
-      public final boolean initsOutputMapping;
+      private static final TaskMode DEFAULT_MODE = TaskMode.LOCAL;
+      private static final boolean DEFAULT_RECURSIVE = false;
+      private static final boolean DEFAULT_PREINIT_OUTPUT_MAPPING = false;
+      private static final boolean DEFAULT_ACQUIRE_WRITE_REFS = false;
       
-      public MakeImmRequest(List<Var> out, List<Var> in) {
-        this(out, in, TaskMode.LOCAL);
+      public static MakeImmRequest fromVars(Var out, Var in) {
+        return fromVars(out.asList(), in.asList());
       }
       
-      public MakeImmRequest(List<Var> out, List<Var> in, List<Var> wait) {
-        this(out, in, wait, TaskMode.LOCAL);
+      public static MakeImmRequest fromVars(Var out, List<Var> in) {
+        return fromVars(out.asList(), in);
       }
       
-      public MakeImmRequest(List<Var> out, List<Var> in, TaskMode mode) {
-        this(out, in, mode, false);
+
+      public static MakeImmRequest fromVars(List<Var> out, Var in) {
+        return fromVars(out, in.asList());
       }
       
-      public MakeImmRequest(List<Var> out, List<Var> in, List<Var> wait, 
-                            TaskMode mode) {
-        this(out, in, wait, mode, false);
+      public static MakeImmRequest fromVars(List<Var> out, List<Var> in) {
+        return MakeImmRequest.fromVars(out, in, null, DEFAULT_MODE,
+            DEFAULT_RECURSIVE, DEFAULT_PREINIT_OUTPUT_MAPPING,
+            DEFAULT_ACQUIRE_WRITE_REFS);
       }
       
-      public MakeImmRequest(List<Var> out, List<Var> in, List<Var> wait, 
-          TaskMode mode, boolean recursive) {
-        this(out, in, wait, mode, recursive, false);
-      }
-      
-      public MakeImmRequest(List<Var> out, List<Var> in, TaskMode mode,
-                            boolean recursive) {
-        this(out, in, mode, recursive, false);
-      } 
-      public MakeImmRequest(List<Var> out, List<Var> in, TaskMode mode,
-          boolean recursive, boolean initsOutputMapping) {
-        this(out, in, null, mode, recursive, initsOutputMapping);
-      }
-      
-      public MakeImmRequest(List<Var> out, List<Var> in, List<Var> wait,
-            TaskMode mode, boolean recursive,
-            boolean initsOutputMapping) {
-        // Gracefully handle null as empty list
-        this.out = (out == null) ? Var.NONE : out;
-        this.in = (in == null) ? Var.NONE : in;
-        this.wait = (wait == null) ? Var.NONE: wait;
-        this.mode = mode;
-        this.recursive = recursive;
-        this.initsOutputMapping = initsOutputMapping;
+      public static MakeImmRequest fromVars(List<Var> out,
+          List<Var> in, TaskMode mode) {
+        return fromVars(out, in, null, mode,
+            DEFAULT_RECURSIVE, DEFAULT_PREINIT_OUTPUT_MAPPING,
+            DEFAULT_ACQUIRE_WRITE_REFS);
       }
 
-      public static MakeImmRequest waitOnly(List<Var> wait) {
-        return new MakeImmRequest(null, null, wait);
+      public static MakeImmRequest fromVars(List<Var> out, List<Var> in,
+            List<Var> wait, TaskMode mode, boolean recursive,
+            boolean preinitOutputMapping, boolean acquireWriteRefs) {
+        return new MakeImmRequest(buildOutList(out, recursive, preinitOutputMapping),
+             buildInList(in, wait, recursive, acquireWriteRefs),
+             mode);
       }
+      
+      public MakeImmRequest(List<MakeImmVar> out, List<MakeImmVar> in) {
+        this(out, in, DEFAULT_MODE);
+      }
+
+      public MakeImmRequest(List<MakeImmVar> out, List<MakeImmVar> in,
+          TaskMode mode) {
+        this.out = (out == null) ? MakeImmVar.NONE : out;
+        this.in = (in == null) ? MakeImmVar.NONE : in ;
+        this.mode = mode;
+      }
+
+      private static List<MakeImmVar> buildOutList(List<Var> out, boolean recursive,
+          boolean initsOutputMapping) {
+        List<MakeImmVar> l = new ArrayList<MakeImmVar>(out.size());
+        if (out != null) {
+          for (Var v: out) {
+            l.add(MakeImmVar.out(v, recursive, initsOutputMapping));
+          }
+        }
+        return l;
+      }
+
+      private static List<MakeImmVar> buildInList(List<Var> in, List<Var> wait,
+          boolean recursive, boolean acquireWriteRefs) {
+        List<MakeImmVar> l = new ArrayList<MakeImmVar>();
+        if (in != null) {
+          for (Var v: in) {
+            l.add(MakeImmVar.in(v, true, recursive, acquireWriteRefs));
+          }
+        }
+        if (wait != null) {
+          for (Var v: wait) {
+            l.add(MakeImmVar.in(v, false, recursive, acquireWriteRefs));
+          }
+        }
+        return l;
+      }
+
     }
     
     /**
@@ -320,7 +391,7 @@ public class ICInstructions {
       public final V fetched;
       
       public static <T> List<Fetched<T>> makeList(
-          List<Var> original, List<T> fetched) {
+          List<MakeImmVar> original, List<T> fetched) {
         // Handle nulls gracefully
         if (original == null) {
           original = Collections.emptyList();
@@ -331,7 +402,7 @@ public class ICInstructions {
         assert(original.size() == fetched.size());
         List<Fetched<T>> result = new ArrayList<Fetched<T>>(fetched.size());
         for (int i = 0; i < fetched.size(); i++) {
-          result.add(new Fetched<T>(original.get(i), fetched.get(i)));
+          result.add(new Fetched<T>(original.get(i).var, fetched.get(i)));
         }
         return result;
       }
@@ -1225,15 +1296,13 @@ public class ICInstructions {
       if (isImpl(SpecialFunction.SIZE)) {
         if (waitForClose || allInputsClosed(closedVars)) {
           // Input array closed, can lookup right away
-          return new MakeImmRequest(getOutput(0).asList(),
-                                    getInput(0).getVar().asList());
+          return MakeImmRequest.fromVars(getOutput(0), getInput(0).getVar());
         }
         return null;
       } else if (isImpl(SpecialFunction.CONTAINS)) {
         if (waitForClose || allInputsClosed(closedVars)) {
           // Need input array to be closed, and need value for index
-          return new MakeImmRequest(getOutput(0).asList(),
-                                    getInput(1).getVar().asList());
+          return MakeImmRequest.fromVars(getOutput(0), getInput(1).getVar());
         }
         return null;
       }
@@ -1251,16 +1320,18 @@ public class ICInstructions {
         }
         
         // True unless the function alters mapping itself
-        boolean initsOutputMapping = false;
+        boolean preinitOutputMapping = true;
         if (isImpl(SpecialFunction.INITS_OUTPUT_MAPPING)) {
-          initsOutputMapping = true;
+          preinitOutputMapping = false;
         }
 
         // All args are closed!
-        return new MakeImmRequest(
+        return MakeImmRequest.fromVars(
             Collections.unmodifiableList(this.outputs),
             Collections.unmodifiableList(this.varInputs(true)),
-            mode, recursiveInOut(this.op, this.functionName), initsOutputMapping);
+            Var.NONE,
+            mode, recursiveInOut(this.op, this.functionName),
+            preinitOutputMapping, false);
 
       }
       return null;
@@ -1917,9 +1988,9 @@ public class ICInstructions {
       if (waitForInputs.isEmpty()) {
         return null;
       } else {
-        return new MakeImmRequest(
-            Var.NONE, waitForInputs,
-            TaskMode.LOCAL, false);
+        return MakeImmRequest.fromVars(
+                Var.NONE, waitForInputs,
+                TaskMode.LOCAL);
       }
     }
     
@@ -2344,9 +2415,6 @@ public class ICInstructions {
           return null;
         }
         
-        // COPY_FILE wants to initialize its own output file
-        boolean initsOutputMapping = false;
-        
         // See which arguments are closed
         if (!waitForClose) {
           for (Arg inarg: this.inputs) {
@@ -2358,8 +2426,9 @@ public class ICInstructions {
             }
           }
         }
-        
-        if (Types.isFile(output) && !initsOutputMapping) {
+
+        boolean preinitOutputMapping = true;
+        if (Types.isFile(output) && preinitOutputMapping) {
           // Need to wait for filename, unless unmapped
           if (!(waitForClose ||
                 Semantics.outputMappingAvail(closedVars, closedLocations,
@@ -2369,11 +2438,11 @@ public class ICInstructions {
         }
       
           // All args are closed!
-        return new MakeImmRequest(
+        return MakeImmRequest.fromVars(
             (this.output == null) ? 
                   null : Collections.singletonList(this.output),
             ICUtil.extractVars(this.inputs),
-            TaskMode.LOCAL, false, initsOutputMapping);
+            Var.NONE, TaskMode.LOCAL, false, preinitOutputMapping, false);
       }
     }
 
