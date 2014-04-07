@@ -667,7 +667,7 @@ variables>>.
 2. Run submit script (in +turbine/scripts/submit/cray+):
 +
 ----
-turbine-aprun-run.zsh script.tcl --arg1=value1 ...
+turbine-aprun-run.zsh -n <numprocs> script.tcl --arg1=value1 ...
 ----
 
 ==== Build procedure
