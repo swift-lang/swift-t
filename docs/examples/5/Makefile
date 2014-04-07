@@ -3,7 +3,7 @@ all: prog-f90 prog-cxx pkgIndex.tcl prog-swift.tcl
 
 ### Settings:
 
-TCL = $(HOME)/sfw/tcl-8.6.1
+TCL = $(HOME)/tcl-install
 
 FFLAGS = -ffree-form -std=f2003 -cpp -I . -fPIC -fmax-errors=3 -g
 
@@ -47,7 +47,7 @@ prog-f90.o: prog-f90.f90 func.o
 
 ### Programs:
 
-LIBS = 	-L $(TCL)/lib -l tcl8.6 -lgfortran \
+LIBS = 	-L $(TCL)/lib -l tcl8.5 -lgfortran \
 		-Wl,-rpath -Wl,$(TCL)/lib
 
 prog-f90: $(OBJS) prog-f90.o func.o

@@ -30,7 +30,7 @@ Links:
 Two methods are available for connecting a leaf function: simple mode
 and advanced mode.  Both call to Tcl.  It is easy to call from Tcl to
 native code, as presented in this guide.  We tap into
-http://www.swig.or[SWIG] which allows us to use a standard
+http://www.swig.org[SWIG] which allows us to use a standard
 language-language tool to help automate this process.  (SWIG
 is a nice skill to have in general, so the techniques here are usable
 outside Swift as well!)
@@ -44,7 +44,7 @@ The modes have separate syntax:
 ----
 
 Thus, in the simple mode the user specifies the exact Tcl line to
-execute.  Data dependencies are handled by Swift.  Thus, that
+execute. Data dependencies are handled by Swift. Thus, that
 Tcl line runs _after_ +i+ has a value and +o+ is a writable variable.
 
 More complex Tcl programming can be done on that line.  However,
