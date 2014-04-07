@@ -153,8 +153,8 @@ public class DataflowOpInline extends FunctionOptimizerPass {
 
       MakeImmChange change = inst.makeImmediate(
                                   new OptVarCreator(insideWaitBlock),
-                                  Fetched.makeList(req.out, localOutputs),
-                                  Fetched.makeList(req.in, inVals));
+                                  Fetched.makeList(req.out, localOutputs, true),
+                                  Fetched.makeList(req.in, inVals, false));
       OptUtil.fixupImmChange(block, insideWaitBlock, inst, change, instBuffer,
                                  localOutputs, req.out);
       

@@ -390,8 +390,17 @@ public class ICInstructions {
       public final Var original;
       public final V fetched;
       
+      /**
+       * 
+       * @param original
+       * @param fetched
+       * @param includeAll if true, all were fetched.  If false, check 
+       *        fetched field of original
+       * @return
+       */
       public static <T> List<Fetched<T>> makeList(
-          List<MakeImmVar> original, List<T> fetched) {
+          List<MakeImmVar> original, List<T> fetched,
+          boolean includeAll) {
         // Handle nulls gracefully
         if (original == null) {
           original = Collections.emptyList();
@@ -399,11 +408,21 @@ public class ICInstructions {
         if (fetched == null) {
           fetched = Collections.emptyList();
         }
-        assert(original.size() == fetched.size());
+        assert(original.size() >= fetched.size());
+        
+        int j = 0; // fetched index 
         List<Fetched<T>> result = new ArrayList<Fetched<T>>(fetched.size());
-        for (int i = 0; i < fetched.size(); i++) {
-          result.add(new Fetched<T>(original.get(i).var, fetched.get(i)));
+        for (int i = 0; i < original.size(); i++) {
+          MakeImmVar orig = original.get(i);
+          if (includeAll || orig.fetch) {
+            assert(j < fetched.size());
+            result.add(new Fetched<T>(orig.var, fetched.get(j)));
+            j++;
+          }
         }
+        
+        // Check all were included
+        assert(j == fetched.size()) : original + " " + fetched;
         return result;
       }
 

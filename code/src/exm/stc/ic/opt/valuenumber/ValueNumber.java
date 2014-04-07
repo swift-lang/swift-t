@@ -825,7 +825,7 @@ public class ValueNumber implements OptimizerPass {
 
     MakeImmChange change;
     change = inst.makeImmediate(new OptVarCreator(block),
-          Fetched.makeList(req.out, outFetched), inVals);
+          Fetched.makeList(req.out, outFetched, true), inVals);
     OptUtil.fixupImmChange(block, insertContext, inst, change, alt,
                            outFetched, req.out);
 
