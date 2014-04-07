@@ -116,9 +116,14 @@ directly.  Thus, sample scripts are provided below.
 On scheduled systems (PBS, SLURM, Cobalt, etc.), Turbine is launched
 with a customized _run script_ (+turbine-<name>-run+) that launches Turbine
 on that system.  This produces a batch script if necessary and submits
-it with the job submission program (e.g., +qsub+).  The working
-directory (+PWD+) for the job is called +TURBINE_OUTPUT+; the user may
-select this or Turbine will pick one based on the date and report it.
+it with the job submission program (e.g., +qsub+).
+
+=== Turbine output directory
+
+The working directory (+PWD+) for the job is called +TURBINE_OUTPUT+;
+the user may select this or Turbine will pick one based on the date
+and report it.  This directory will be placed under
++TURBINE_OUTPUT_ROOT+, which defaults to +${HOME}/turbine-output$.
 The user program will be copied to +TURBINE_OUTPUT+ before submission.
 Standard output and error goes to +TURBINE_OUTPUT/output.txt+.
 
@@ -144,21 +149,25 @@ variables.
 +QUEUE+:: Name of queue in which to run (may leave unset)
 
 [[options]]
-=== Turbine run script options
+=== Turbine scheduler script options
 
 For scheduled systems, Turbine accepts a common set of command line options.
 
-+-d <directory>+:: Set the Turbine output directory (optional, a
-default is provided based on the date).
++-d <directory>+:: Set the Turbine output directory.  (Overrides
++TURBINE_OUTPUT+).
 
 +-e <key>=<value>+:: Set an environment variable in the job
 environment.  This may be used multiple times
+
++-i <script>+:: Set a script to run before launching Turbine.  This
+script will have +TURBINE_OUTPUT+ in the environment, so you may
+perform additional configuration just before job launch.
 
 +-n <procs>+:: Number of processes.  (Overrides +PROCS+.)
 
 +-o <directory>+:: Set the Turbine output directory root, in which
 default Turbine output directories are automatically created based on
-the date.
+the date.  (Overrides +TURBINE_OUTPUT_ROOT+.)
 
 +-s <file>+:: Source this file for environment variables.  These
 variables override any other <<variables,Turbine scheduler
@@ -663,7 +672,8 @@ To run:
 
 1. Set environment variables.  The normal Turbine environment
 variables are honored, plus the <<variables,Turbine scheduler
-variables>>.
+variables>> and <<options,Turbine scheduler
+options>>..
 2. Run submit script (in +turbine/scripts/submit/cray+):
 +
 ----
