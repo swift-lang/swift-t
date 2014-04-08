@@ -1797,12 +1797,20 @@ mkstatic.tcl my.manifest -c my_main.c
 +
 You will likely wish to include Tcl system libraries with
 +--include-sys-lib /home/example/tcl-install/lib --tcl-version 8.6+.
-The Tcl system library directory is the one that contains
-+init.tcl+
+The Tcl system library directory can be identified by the fact that
+it contains the file +init.tcl+.  This directory must be specified
+with a special flag so that +mkstatic.tcl+ can correctly replace
+the regular Tcl initialization process.
 +
-Use +mkstatic.tcl -h+ for a list of options.
-// TODO: Need some note about init.tcl - is this always necessary? (#650)
-
+You can include additional libraries and packages with
++--include-lib /home/example/tcl-lib/+.  Any +.tcl+ or +.tm+ source files
+in the directory will be included.  Source-only packages can
+generally be completely linked into the executable, but if a package
+loads shared libraries, only the +pkgIndex.tcl+ file will be linked 
+into the executable.  A package with compiled code can be converted to
+support static linking by specifying a package init function, plus
+static library or object files in the manifest file.
++
 4. Link together the compiled C main program with user libraries and
   Swift/T libraries to produce a final executable.
   The details vary depending on the compiler:
@@ -1839,7 +1847,8 @@ gcc -static script_main.c file1.o file2.o -L/path/to/lib/dir -lsomething ...
   you wish to statically link, then +-Wl,-Bdynamic+ to reset to
   dynamic linking for any libraries after those.
 
-//  TODO: note, need additional flags from mkstatic (#650)
+We have described the most commonly-used options.  Additional options
+and descriptions can be obtained by invoking +mkstatic.tcl -h+.
 
 ////
 Local Variables:
