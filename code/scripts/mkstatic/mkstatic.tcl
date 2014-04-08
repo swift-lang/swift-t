@@ -55,7 +55,7 @@ proc main { } {
           - --include-sys-lib causes the regular Tcl_Init initialization to be\
             skipped, allowing Tcl builtin libraries to be compiled into the\
             result binary \n\
-        -> multiple -l flags can be provided to include multiple directories\n\
+        -> multiple ---include-lib flags can be provided to include multiple directories\n\
         -> --link-objs are printed before --link-flags if both provided"
 
   set non_flag_args [ list ]
