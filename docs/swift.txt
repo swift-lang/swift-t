@@ -1741,7 +1741,7 @@ If you are following the manual build process, configure Turbine with:
 +
 3. Specify +EXM_OPT_BUILD=1+ in +exm-settings.sh+ or configure everything
     with +--enable-fast+.  This disables assertions and other checks
-4. When making performance measurements, always subtract 1 second
+4. When making performance measurements, always subtract 0.1 seconds
    (or the value of +ADLB_EXHAUST_TIME+) from the Turbine run time
    due to the ADLB shutdown protocol, which does not start until the
    system is idle for that amount of time.
