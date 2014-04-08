@@ -18,5 +18,8 @@ To just build the examples tarball, run
 
 ./make-examples-tgz.zsh
 
+You can clean up the asciidoc-generated HTML and images with ./clean-html.sh
+
 The examples directories contain clean.sh scripts for cleanup.  These
 may be used before TGZ generation or SVN operations.
+
