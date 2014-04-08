@@ -84,6 +84,7 @@ for NAME in ${DOCS}
 do
   if ! uptodate ${NAME}.html ${NAME}.txt
   then
-    asciidoc --attribute stylesheet=${PWD}/swift.css ${NAME}.txt
+    print "asciidoc ${NAME}.txt"
+    asciidoc --attribute stylesheet=${PWD}/swift.css -a max-width=750px -a textwidth=80 ${NAME}.txt
   fi
 done
