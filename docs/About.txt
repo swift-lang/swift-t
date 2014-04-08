@@ -1,4 +1,22 @@
 
-To generate HTML, simply run:
+ABOUT.TXT: STC docs
 
-asciidoc stc.txt
+To build and install everything, run:
+
+./install-stc-docs.zsh
+
+You may need to modify this file to include your user name.
+Currently, only Wozniak has permissions on this MCS directory.
+
+To just generate HTML, simply run:
+
+./make-stc-docs.zsh
+
+You can preview the HTML locally in your browser before committing.
+
+To just build the examples tarball, run
+
+./make-examples-tgz.zsh
+
+The examples directories contain clean.sh scripts for cleanup.  These
+may be used before TGZ generation or SVN operations.
