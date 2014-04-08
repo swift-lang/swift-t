@@ -1486,7 +1486,8 @@ STC performs a range of compiler optimizations that can significantly
 speed up most Swift programs.  The optimization level can be controlled
 by the +-O+ command line option.  The default optimization
 level +-O2+, or the increased optimization level +-O3+ are usually
-the best choices.
+the best choices.  Some applications benefit markedly from +-O3+,
+while others do not, and compile times can increase slightly.
 
 ----
 # No optimizations at all (not recommended)
@@ -1500,7 +1501,7 @@ stc example.swift example.tcl
 # OR
 stc -O2 example.swift example.tcl
 
-# All optimizations (including ones that sometimes hurt performance)
+# All optimizations (also recommended)
 stc -O3 example.swift example.tcl
 ----
 
