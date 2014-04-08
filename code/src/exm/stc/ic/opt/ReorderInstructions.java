@@ -106,7 +106,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
     
     for (int i = 0; i < stmtInfos.size(); i++) {
       StatementInfo info1 = stmtInfos.get(i);
-      boolean move = searchForInputWriter(logger, fn, stmtInfos, i, info1,
+      boolean move = addDependencies(logger, fn, stmtInfos, i, info1,
                                           before, mustMove);
 
       if (logger.isTraceEnabled())
@@ -228,7 +228,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
     return rebuilt;
   }
 
-  private boolean searchForInputWriter(Logger logger,
+  private boolean addDependencies(Logger logger,
           Function fn,
           ArrayList<StatementInfo> stmtInfos, int i,
           StatementInfo info1, MultiMap<Integer, Integer> before,
@@ -242,6 +242,8 @@ public class ReorderInstructions extends FunctionOptimizerPass {
     boolean canMoveFurther = true;
     for (int j = i + 1; j < stmtInfos.size(); j++) {
       StatementInfo info2 = stmtInfos.get(j);
+      // TODO: should check for "expensive" statements to avoid 
+      // deferring execution by putting instruction after it
       if (writesInputs(logger, info2, info1, false)) {
         // These edges wont create cycle - backward edge
         before.put(j, i);
