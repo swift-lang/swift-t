@@ -149,5 +149,5 @@ xlb_get_tag_name(int tag)
       return name;
     }
   }
-  return "<UNKNOWN TAG NAME>";
+  return "<UNKNOWN_TAG_NAME>";
 }

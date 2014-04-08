@@ -2149,7 +2149,7 @@ xlb_data_rc_type_tostring(adlb_refcount_type rc_type)
     case ADLB_READWRITE_REFCOUNT:
       return "rw";
     default:
-      return "<UNKNOWN RC TYPE>";
+      return "<UNKNOWN_RC_TYPE>";
   }
 }
 
