@@ -218,7 +218,8 @@ starting with # are supported:
 == Modules
 
 Swift has a module system that allows you to import function and variable
-definitions into your source file.
+definitions into your source file.  Importing a module will import all
+function and variable definitions from that module into your program.
 ----
 import io;
 import mypackage.mymodule;
@@ -236,8 +237,6 @@ The mechanisms for locating source files is as follows:
 * In the case of a multi-part import name, E.g. +import mypackage.mymodule+,
   then, it looks for +mymodule.swift+ in subdirectory +mypackage+.
 
-Importing a module will import all function and variable definitions
-from that module into your program.
 
 The alternative +#include+ statement textually includes an entire
 file using the C preprocessor at the point of the statement.
