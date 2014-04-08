@@ -16,10 +16,14 @@ print
 
 TGZ=examples.tar.gz
 
-find examples -name "*.sh"     -o \
+find examples/[1-9] -maxdepth 1   \
+              -name "*.sh"     -o \
+              -name "*.f90"    -o \
               -name "*.[chfi]" -o \
               -name "*.tcl"    -o \
-              -name "*.swift" | \
-     xargs tar cfz ${TGZ}
+              -name "*.swift"  -o \
+              -name "Makefile"    \
+      | \
+      xargs tar cfzv ${TGZ}
 
 du -h ${TGZ}
