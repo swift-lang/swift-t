@@ -387,7 +387,7 @@ of strings instead of using Fortran builtins
 
 Consider the Fortran function +func()+ (+func.f90+):
 ----
-include::examples/5/func-snip-1.f90[]
+include::examples/6/func-snip-1.f90[]
 ----
 
 The +argc/argv+ is stored in a +string_array+, defined in the top of
@@ -397,7 +397,7 @@ This data structure is constructed and filled by the program
 +prog-f90.f90+ as follows:
 
 ----
-include::examples/5/prog-f90-snip-1.f90[]
+include::examples/6/prog-f90-snip-1.f90[]
 ----
 
 To call this function from Swift, follow the +Makefile+.  (You may
@@ -418,13 +418,13 @@ from Swift and create an output buffer for the output double.
 5. We call the function from Swift using the simple syntax:
 +
 ----
-include::examples/5/prog-swift-snip-1.swift[]
+include::examples/6/prog-swift-snip-1.swift[]
 ----
 
 6. We run with:
 +
 ----
-include::examples/5/run.sh[]
+include::examples/6/run.sh[]
 ----
 
 == Advanced mode
@@ -445,7 +445,7 @@ Turbine +rule+ statement to schedule real leaf work when +i+ is set.
 
 Consider the following Tcl code (+f.tcl+):
 ----
-include::examples/6/f.tcl[]
+include::examples/7/f.tcl[]
 ----
 In this case, Tcl function +f_impl+ is the _implementation_: the
 actual code the user desires to call.  This may be an existing Tcl
@@ -469,7 +469,7 @@ executed, and so on.
 This Tcl code is called by the following simple Swift/T test
 (+test-f.swift+):
 ----
-include::examples/6/test-f.swift[]
+include::examples/7/test-f.swift[]
 ----
 
 For more information about the APIs used to store/retrieve Swift/T
@@ -493,7 +493,7 @@ Swift/T on an MPI-3 implementation such as MPICH 3.0.
 
 Consider the  following MPI library function (+f.c+):
 ----
-include::examples/7/f-snip-1.c[]
+include::examples/8/f-snip-1.c[]
 ----
 
 This function accepts an MPI communicator +comm+ freshly created for
@@ -508,7 +508,7 @@ communication.  Point-to-point messaging and collectives (such as
 
 We desire to call this from Swift as (+test-f.swift+):
 ----
-include::examples/7/test-f.swift[]
+include::examples/8/test-f.swift[]
 ----
 
 In the declaration, +@par+ allows us to call the function as a
@@ -516,7 +516,7 @@ parallel function.  At call time, we use +@par=2+.
 
 We wrap this function with SWIG and a Swift/T interface/body:
 ----
-include::examples/7/f.tcl[]
+include::examples/8/f.tcl[]
 ----
 
 This differs from the single-process task (example 5) in that it
@@ -530,7 +530,7 @@ result.
 
 At run time, ensure Turbine has enough workers to run the user task:
 ----
-include::examples/7/run-f.sh[]
+include::examples/8/run-f.sh[]
 ----
 
 == Calling Swift/T from native code
@@ -565,19 +565,19 @@ The Swift script is a normal Swift script except for the call to
 (+test-f.swift+):
 
 ----
-include::examples/8/test-f.swift[]
+include::examples/9/test-f.swift[]
 ----
 
 The controller MPI program is run as: (+run.sh+):
 
 ----
-include::examples/8/run.sh[]
+include::examples/9/run.sh[]
 ----
 
 producing:
 
 ----
-include::examples/8/output.txt[]
+include::examples/9/output.txt[]
 ----
 
 Note that only rank 0 in the Swift/T communicator has access to the

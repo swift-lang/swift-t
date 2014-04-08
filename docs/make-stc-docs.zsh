@@ -73,13 +73,17 @@ uptodate()
   return ${CODE}
 }
 
-snip 1 examples/5/func.f90
-snip 1 examples/5/prog-f90.f90
-snip 1 examples/5/prog-swift.swift
-snip 1 examples/7/f.c
+snip 1 examples/6/func.f90
+snip 1 examples/6/prog-f90.f90
+snip 1 examples/6/prog-swift.swift
+snip 1 examples/8/f.c
 
-uptodate swift.html swift.txt || \
-asciidoc --attribute stylesheet=${PWD}/swift.css swift.txt
+DOCS=( swift leaf internals )
 
-uptodate leaf.html leaf.txt || \
-asciidoc --attribute stylesheet=${PWD}/swift.css leaf.txt
+for NAME in ${DOCS}
+do
+  if ! uptodate ${NAME}.html ${NAME}.txt
+  then
+    asciidoc --attribute stylesheet=${PWD}/swift.css ${NAME}.txt
+  fi
+done
