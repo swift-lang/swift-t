@@ -92,9 +92,10 @@ include::examples/1/f.tcl[]
 
 This simply defines a function +f+ that adds two numbers together.
 Tcl command +puts+ prints the result (as +puts()+ in C).  Thus,
-writing a Tcl function for Swift involves 1) creating a namespace
-(which will be used to group functions into a package) and 2) defining
-Tcl functions to call.
+writing a Tcl function for Swift involves:
+
+. creating a namespace (which will be used to group functions into a package) and
+. defining Tcl functions to call.
 
 It may be tested with this test (+test-f-1.tcl+):
 ----
