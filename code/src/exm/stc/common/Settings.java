@@ -173,7 +173,7 @@ public class Settings
     defaults.setProperty(OPT_DISABLE_ASSERTS, "false");
     defaults.setProperty(OPT_VALUE_NUMBER, "true");
     defaults.setProperty(OPT_FINALIZED_VAR, "true");
-    defaults.setProperty(OPT_ALGEBRA, "false");
+    defaults.setProperty(OPT_ALGEBRA, "true");
     defaults.setProperty(OPT_DATAFLOW_OP_INLINE, "true");
     defaults.setProperty(OPT_WAIT_COALESCE, "true");
     defaults.setProperty(OPT_PIPELINE, "false");
