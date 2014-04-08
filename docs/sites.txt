@@ -118,23 +118,30 @@ with a customized _run script_ (+turbine-<name>-run+) that launches Turbine
 on that system.  This produces a batch script if necessary and submits
 it with the job submission program (e.g., +qsub+).
 
-=== Turbine output directory
-
-The working directory (+PWD+) for the job is called +TURBINE_OUTPUT+;
-the user may select this or Turbine will pick one based on the date
-and report it.  This directory will be placed under
-+TURBINE_OUTPUT_ROOT+, which defaults to +${HOME}/turbine-output$.
-The user program will be copied to +TURBINE_OUTPUT+ before submission.
-Standard output and error goes to +TURBINE_OUTPUT/output.txt+.
-
 === Turbine run scripts
 
+PBS:: +turbine-pbs-run.zsh+
 Cobalt:: +turbine-cobalt-run.zsh+
-Cray/APRUN:: +turbine-aprun.zsh+ (PBS with Cray's +aprun+)
-PBS:: +setup-turbine-pbs.zsh+
+Cray/APRUN:: +turbine-aprun-run.zsh+ (PBS with Cray's +aprun+)
 SLURM:: +turbine-slurm-run.zsh+
 
 Each script accepts input via environment variables and command-line options.
+
+A typical invocation is:
+
+----
+stc program.swift
+turbine-pbs-run.zsh -n 96 -s settings.sh program.tcl
+----
+
+where +program.tcl+ is the output of STC and +settings.sh+ contains:
+----
+export QUEUE=bigqueue
+export PPN=8
+----
+
+which would run +program.tcl+ in 96 MPI processes on 12 nodes (8
+processes per node), submitted by PBS to queue +bigqueue+.
 
 [[variables]]
 === Turbine scheduler variables
@@ -145,8 +152,11 @@ variables.
 +PROCS+:: Number of processes to use
 +PPN+:: Number of processes per node
 +PROJECT+:: The project name to use with the system scheduler
-+TURBINE_OUTPUT+:: Directory in which to place Turbine output
-+QUEUE+:: Name of queue in which to run (may leave unset)
++QUEUE+:: Name of queue in which to run
++TURBINE_OUTPUT+:: Directory in which to place Turbine output (if
+unset, a default value is automatically created)
++TURBINE_OUTPUT_ROOT+:: Directory under which Turbine will
+automatically create +TURBINE_OUTPUT+ if necessary
 
 [[options]]
 === Turbine scheduler script options
@@ -169,7 +179,7 @@ perform additional configuration just before job launch.
 default Turbine output directories are automatically created based on
 the date.  (Overrides +TURBINE_OUTPUT_ROOT+.)
 
-+-s <file>+:: Source this file for environment variables.  These
++-s <script>+:: Source this file for environment variables.  These
 variables override any other <<variables,Turbine scheduler
 variables>>.  You may place arbitrary shell code in this script.
 
@@ -179,6 +189,23 @@ through to the scheduler
 +-V+:: Make script verbose.  This typically just applies +set -x+,
 allowing you to inspect variables and arguments as passed to the
 system scheduler.
+
++-x+:: Use +turbine_sh+ launcher with compiled-in libraries instead of +tclsh+
+       (reduces number of files that must be read from file system).
+
++-X+:: Run standalone Turbine executable
+        (created by link:swift.html#mkstatic[mkstatic.tcl]) instead of
+        +program.tcl+.
+
+=== Turbine output directory
+
+The working directory (+PWD+) for the job is called +TURBINE_OUTPUT+.
+
+If the user does not set this variable, Turbine will select one based on the date
+and report it.  The automatically selected directory will be placed
+under +TURBINE_OUTPUT_ROOT+, which defaults to +$HOME/turbine-output+.
+The user program will be copied to +TURBINE_OUTPUT+ before submission.
+Standard output and error goes to +TURBINE_OUTPUT/output.txt+.
 
 == x86 clusters
 
