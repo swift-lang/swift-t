@@ -375,7 +375,7 @@ This produces:
 include::examples/4/test-mvm-swift.out[]
 ----
 
-=== Complete example 5: Calling Fortran with +argc/argv+
+=== Complete example 6: Calling Fortran with +argc/argv+
 
 It may be desirable to call an existing Fortran _program_ from Swift
 with as little modification as possible.  This example considers the
@@ -432,7 +432,7 @@ include::examples/5/run.sh[]
 In this mode, the user provides the Swift/T runtime with dataflow
 information so that more complex operations may be performed.
 
-=== Complete example 6: Leaf task with dataflow
+=== Complete example 7: Leaf task with dataflow
 
 When using the advanced syntax, the final argument is the name of a
 Tcl function:
@@ -482,7 +482,7 @@ installation directory.  The Swift headers are in +turbine/export+ and
 their Tcl implementations are in +turbine/lib+.  This is a good way to
 find out what else may be done.
 
-=== Complete example 7: Calling an MPI library
+=== Complete example 8: Calling an MPI library
 
 Calling an existing MPI library is similar to calling any other C
 code.  In this example, we will show how to obtain the new
@@ -535,7 +535,7 @@ include::examples/7/run-f.sh[]
 
 == Calling Swift/T from native code
 
-=== Complete example 8: Calling Swift/T from C
+=== Complete example 9: Calling Swift/T from C
 
 Swift/T itself may be called from native code as a library.
 
