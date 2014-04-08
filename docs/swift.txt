@@ -268,10 +268,14 @@ is dependent only on a literal.  When +y+ is set, +f()+ runs, setting
 +x+.  Then, two invocations of +h()+ execute.  Finally, +z1+ and +z2+
 are set, allowing +r()+ to run.
 
-Variables may be assigned only once.  Multiple assignment is typically
-detected at compile time, although in some cases it will result in a
-run time error.  Unassigned variables that are inputs to functions
-will lead to a stall in progress.
+Variables may be assigned only once.  Multiple assignment is often
+detected at compile time, and will always be detected at run time,
+resulting in a run time error.  If variable is not assigned,
+expressions that depend on the variable cannot execute.  If the variable
+is never assigned during the course of program execution, these
+expressions will never execute.  Upon program completion, Swift/T will
+report the error and print debug information about any unexecuted
+expressions and identifiers of corresponding unassigned variables.
 
 == Composite functions
 
@@ -429,7 +433,7 @@ _greater-than-or-equal-to_.
 
 === Blobs
 
-Blobs represent native byte data.  They are primarily used to pass
+Blobs represent raw byte data.  They are primarily used to pass
 data to and from native code libraries callable from Swift.  They are
 like Swift strings but may contain arbitrary data.
 
@@ -638,6 +642,10 @@ main () {
   trace(hello, pi_approx, ONE);
 }
 ----
+
+*Note:* global constants provide no performance benefit compared with
+variables initialized to constant values at optimization levels +O1+
+or greater.
 
 *Note:* better support is planned in future for more flexible support for
 global variables and code.
