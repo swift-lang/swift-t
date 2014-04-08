@@ -90,6 +90,13 @@ public class Pipeline extends FunctionOptimizerPass {
                     && w.childContext(cx) != cx) {
           // We can't merge if WORKER and CONTROL contexts are different
           compatible = false;
+        } else if (Settings.NO_TURBINE_ENGINE &&
+              cx == ExecContext.CONTROL) {
+          /* 
+           * Don't merge work into control, since we might defer important
+           * control work, e.g. work task inside foreach loop
+           */
+          compatible = false;
         } else if (w.isParallel()) {
           compatible = false;
         } else if (w.targetLocation() != null &&
@@ -173,7 +180,8 @@ public class Pipeline extends FunctionOptimizerPass {
    * Heuristic score
    * 
    * TODO: this is simplistic, since this doesn't incorporate whether the
-   * variable is written in the child, or if 
+   * variable is produced or consumed by the child or the exact mechanism
+   * of data transfer
    * @param logger
    * @param t
    * @return
