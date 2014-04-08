@@ -2,7 +2,7 @@
 -O0 -T value-number -T propagate-aliases -T dead-code-elim
 -O0 -T value-number -T propagate-aliases -T dead-code-elim -T shared-constants -T constant-fold
 -O0 -T value-number -T propagate-aliases -T dead-code-elim -T shared-constants -T constant-fold -T finalized-var
--O0 -T value-number -T dead-code-elim -T shared-constants -T constant-fold -T finalized-var -T controlflow-fusion
+-O0 -T value-number -T propagate-aliases -T dead-code-elim -T shared-constants -T constant-fold -T finalized-var -T controlflow-fusion
 -O1
 -O1 -T dataflow-op-inline
 -O1 -T dataflow-op-inline -T hoisting
