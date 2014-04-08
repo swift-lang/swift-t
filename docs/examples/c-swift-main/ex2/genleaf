@@ -1,0 +1,55 @@
+#!/bin/bash
+
+# Generate leaf function, given a C/C++ source
+# user-code.c --> user-leaf.tcl
+
+USER_SOURCE=$1
+USER_HEADER=$2
+#step 1. Replace the main function in the source code with an ordinary function
+
+sed 's/main(.*)/leaf_main(int argc, char** argv)/' $USER_SOURCE > user-leaf.c || echo "something went wrong"
+
+#step 2. Generate extension.c
+cat << EOF > extension.c
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <tcl.h>
+
+#include "\"$USER_HEADER\""
+
+static int power_main_extension(ClientData cdata, Tcl_Interp *interp,
+                     int objc, Tcl_Obj*const objv[]) {
+  // Create argc/argv from Tcl objects:
+  int argc = objc;
+  char** argv = (char**) malloc(argc * sizeof(argv));
+  for (int i = 0; i < argc; i++)
+    argv[i] = Tcl_GetString(objv[i]);
+
+  // Call the user function:
+  int rc = leaf_main(argc, argv);
+
+  // Return the exit code as the Tcl return code:
+  Tcl_Obj* result = Tcl_NewIntObj(rc);
+  Tcl_SetObjResult(interp, result);
+
+  // Clean up:
+  free(argv);
+}
+
+int Leaf_main_Init(Tcl_Interp* interp) {
+  int rc;
+
+  Tcl_PkgProvide(interp, "leaf_main", "0.0");
+
+  Tcl_CreateObjCommand(interp,
+                       "leaf_main_extension", leaf_main_extension,
+                       NULL, NULL);
+  return TCL_OK;
+}
+EOF
+
+#step 3. Generate user-leaf.tcl
+
+#step 4. Generate user-code.swift
+
