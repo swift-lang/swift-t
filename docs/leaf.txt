@@ -106,12 +106,17 @@ Calling this from the shell looks like this:
 ----
 include::examples/1/test-f-1.sh[]
 ----
-(On your system, the Tcl shell +tclsh+ may be called +tclsh8.5+)
 
-Thus, to load this into Swift, we need to be able to 1) load +f.tcl+
-and 2) invoke it.  To make it easy to load +f.tcl+, we create a Tcl
-package for it.  This is done with a simple Tcl line that groups
-together a package name.  Conventionally this is put in
+NOTE: On your system, the Tcl shell +tclsh+ may be called +tclsh8.5+
+
+Thus, to load this into Swift, we need to be able to:
+
+. load +f.tcl+ and
+. invoke it.
+
+To make it easy to load +f.tcl+, we create a Tcl
+package for it. This is done with a simple Tcl line that groups
+together a package name. Conventionally this is put in
 +make-package.tcl+:
 ----
 include::examples/1/make-package.tcl[]
@@ -123,9 +128,9 @@ the package.  Multiple +-source+ arguments may be used.
 The Tcl package is represented in a file that must be called
 +pkgIndex.tcl+.  This directory containing this file is found by Tcl
 via the +TCLLIBPATH+ variable.  (This is similar to +LD_LIBRARY_PATH+,
-Java's +CLASSPATH+, Python's +PYTHONPATH+, etc.)  Note that
-+TCLLIBPATH+ is space-separated (which makes for easier Tcl
-processing).
+Java's +CLASSPATH+, Python's +PYTHONPATH+, etc.).
+
+NOTE: +TCLLIBPATH+ is space-separated (which makes for easier Tcl processing).
 
 We create +pkgIndex.tcl+ from the shell:
 ----
@@ -244,7 +249,7 @@ the 6 loop iterations, one Turbine engine, and one ADLB server.
 In this case, we pass binary data in a byte array between Swift and C.
 
 The application in this case consumes a binary file containing
-double precision integers.  It manipulates the data in Swift and passes
+double precision floats.  It manipulates the data in Swift and passes
 it to a C library.  The C library returns the sum of the numbers
 as an array of double precision numbers of length 1.
 
