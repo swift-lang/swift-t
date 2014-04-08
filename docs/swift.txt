@@ -674,8 +674,8 @@ else
 }
 ----
 
-As required by dataflow processing, progress blocks on the availability
-of the condition value.
+As required by dataflow processing, neither branch of the conditional can
+execute until the value of the condition expression is available.
 
 ==== Switch statement
 
@@ -696,6 +696,8 @@ switch (a)
 }
 printf("b: %i\n", b);
 ----
+
+*Note:* there is no fall-through between cases in switch statements.
 
 === Iteration
 
@@ -795,7 +797,7 @@ wait(x, y) {
 
 The chaining operator chains statements together so that a
 statement only executes after the previous statement's output
-value is closed.  This is meant to be
+value is closed.  This is
 a more concise way to express dependencies than the +wait+ statement.
 ----
 sleep(1) =>
@@ -804,7 +806,7 @@ sleep(1) =>
   trace("DONE!");
 ----
 
-In order for this to work we define a notion of the *output values*
+Chaining is based on the *output values*
 of a statement.  In the simple case of a function call +f() \=> ...+,
 the output values are the output values of the function.  In the
 case of and assignment +x = f() \=> ...+ or a declaration,
@@ -1040,8 +1042,8 @@ Given 0, returns the program name,
 
 +argv_accept(string...)+::
 
-If program is given command line arguments not contained in given list,
-abort.
+If program is given flagged command line arguments not contained in given
+list, abort.
 E.g., +argv_accept("x")+ would cause program failure at run time
 
 +argv_contains(string) -> boolean+::
