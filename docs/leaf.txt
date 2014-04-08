@@ -422,6 +422,13 @@ then calls it with the given array of strings.  The "exit code"
 This example may be compiled and run (from C, Tcl, and Swift) by using
 the provided Makefile.
 
+The above process is semi-automated by the +genleaf+ script. The script takes a C program and a header file as input and produces the required Tcl-C extension and Tcl leaf function. It also produces a simple source Swift and stc-compiled Tcl code ready to be run via +turbine+. Invoke +genleaf+ as follows:
+
+----
+./genleaf ex2.c ex2.h
+turbine user-code.tcl
+----
+
 === Complete example 6: Calling Fortran with +argc/argv+
 
 It may be desirable to call an existing Fortran _program_ from Swift
