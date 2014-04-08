@@ -1228,6 +1228,9 @@ stc -r <package directory> ...
 ----
 or set +TURBINE_USER_LIB+ at run time.
 
+* *Tip:* advanced users can also create <<mkstatic,standalone executables>>
+     with compiled code and Tcl code for the extension directly linked in.
+
 ==== Swift/Tcl data type mapping
 
 If you are defining Tcl functions in the way above with inline
@@ -1302,7 +1305,8 @@ App arguments can be:
 
 Standard input, output and error can be redirected to files.
 
-Join files together:
+Here is an example of an app function that joins multiple files
+with the +cat+ utility:
 ----
 import files;
 
@@ -1315,7 +1319,8 @@ main {
 }
 ----
 
-Sleep an arbitrary amount of time:
+Here is an example of an app function that sleeps for an arbitrary
+amount of time:
 ----
 
 app (void signal) sleep (int secs) {
