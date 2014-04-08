@@ -207,6 +207,13 @@ under +TURBINE_OUTPUT_ROOT+, which defaults to +$HOME/turbine-output+.
 The user program will be copied to +TURBINE_OUTPUT+ before submission.
 Standard output and error goes to +TURBINE_OUTPUT/output.txt+.
 
+TIP: When running on a big HPC machine, it may be difficult to get STC
+(a Java-based program) running.  STC output (+program.tcl+) is
+platform-independent.  You may run STC to develop and debug your
+script on your local workstation, then simply copy +program.tcl+ to
+the big machine for execution.  Just make sure that the STC and
+Turbine versions are compatible (the same release number).
+
 == x86 clusters
 
 [[generic_clusters]]
