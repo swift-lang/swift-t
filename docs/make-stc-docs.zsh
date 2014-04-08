@@ -1,7 +1,6 @@
 #!/bin/zsh -e
 
 # MAKE-STC-DOCS
-
 # 1) Extracts snippets for code samples
 # 2) Runs asciidoc
 
@@ -12,6 +11,66 @@ snip()
   # Insert -snip-NUMBER into file name
   OUTPUT=${FILE/\./-snip-${N}.}
   examples/snippet.pl -n=${N} ${FILE} > ${OUTPUT}
+}
+
+# Check if file $1 is uptodate wrt $2
+# $1 is uptodate if it exists and is newer than $2
+# If $2 does not exist, crash
+uptodate()
+{
+  if [[ ${#} < 2 ]]
+  then
+    print "uptodate: Need at least 2 args!"
+    return 1
+  fi
+
+  local OPTION
+  local VERBOSE=0
+  while getopts "v" OPTION
+  do
+    case ${OPTION}
+      in
+      v)
+        VERBOSE=1 ;;
+    esac
+  done
+  shift $(( OPTIND-1 ))
+
+  local TARGET=$1
+  shift
+  local PREREQS
+  PREREQS=( ${*} )
+
+  local f
+  for f in ${PREREQS}
+  do
+    if [[ ! -f ${f} ]]
+    then
+      ((VERBOSE)) && print "not found: ${f}"
+      return 1
+    fi
+  done
+
+  if [[ ! -f ${TARGET} ]]
+  then
+    ((VERBOSE)) && print "does not exist: ${TARGET}"
+    return 1
+  fi
+
+  local CODE
+  for f in ${PREREQS}
+  do
+    [[ ${TARGET} -nt ${f} ]]
+    CODE=${?}
+    if (( ${CODE} == 0 ))
+    then
+      ((VERBOSE)) && print "${TARGET} : ${f} is uptodate"
+    else
+      ((VERBOSE)) && print "${TARGET} : ${f} is not uptodate"
+      return ${CODE}
+    fi
+  done
+  return ${CODE}
 }
 
 snip 1 examples/5/func.f90
