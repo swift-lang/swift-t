@@ -8,10 +8,14 @@ fileVals = []
 for file in files:
   vals = {}
   fileVals.append(vals)
-  for line in open(file).readlines():
-    k, v = line.split()
-    vals[k] = v
-    keys.add(k)
+  try:
+    for line in open(file).readlines():
+      k, v = line.split()
+      vals[k] = v
+      keys.add(k)
+  except Exception, e:
+    print "Error in line \"%s\" of file %s" % (line, file)
+    raise e
 
 
 for key in sorted(keys):
