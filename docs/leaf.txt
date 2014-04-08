@@ -25,6 +25,9 @@ Links:
 * http://www.tcl.tk[Tcl documentation]
 * http://www.swig.or[SWIG]
 
+To report problems with these examples, post to
+http://lists.mcs.anl.gov/mailman/listinfo/exm-user[the ExM user list].
+
 == Overview
 
 Two methods are available for connecting a leaf function: simple mode
@@ -68,7 +71,10 @@ Complete code samples for each example are found in this tar file:
 
 * link:examples.tar.gz[] (12 KB)
 
-Note: In many scripts, we use shell options +set -ex+.
+NOTE: In many scripts, we use shell options +set -ex+.
+
+NOTE: You may need to modify some scripts to set the location of Tcl
+or other system tools.
 
 == Simple mode
 
@@ -374,6 +380,41 @@ This produces:
 ----
 include::examples/4/test-mvm-swift.out[]
 ----
+
+=== Complete example 5: Calling C with +argc/argv+
+
+It may be desirable to call an existing C _program_ from Swift
+with as little modification as possible.  This example considers the
+case that the Swift program will construct an array of strings to pass
+to the C code.  The C program is minimally modified by
+renaming its +main()+ function and calling that from Swift/T.
+
+Consider the user code (+swift-main.c+):
+----
+include::examples/5/swift-main.c[]
+----
+This is essentially a simple C program except that its +main()+ function
+has been renamed to +swift_main()+.  Also, the header +swift-main.h+
+has been created to allow the Swift/T framework to call this code.
+The function essentially acts like +/bin/echo+, reporting its
+arguments.
+
+An example C wrapper to call this function is as follows (+prog-c.c+):
+----
+include::examples/5/prog-c.c[]
+----
+
+The equivalent Swift code is as follows (+prog-swift.swift+):
+----
+include::examples/5/prog-swift.swift[]
+----
+
+The Swift version defines the extension function symbol +swift_main+,
+then calls it with the given array of strings.  The "exit code"
+(actually just a return value) is available to Swift.
+
+This example may be compiled and run (from C, Tcl, and Swift) by using
+the provided Makefile.
 
 === Complete example 6: Calling Fortran with +argc/argv+
 
