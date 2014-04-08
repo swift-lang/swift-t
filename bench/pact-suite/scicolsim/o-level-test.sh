@@ -50,7 +50,14 @@ for i in `seq $n`; do
   PF=annealing-exm.olevel$i
   OUT=$PF.out
   COUNTS=$PF.counts
-  turbine -n6 $TCL $ARGS 2>&1 | tee $OUT
+
+  # CCGrid '13 draft
+  #export ADLB_SERVERS=1
+  #PROCS=6
+  export ADLB_SERVERS=2
+  PROCS=8
+
+  turbine -n${PROCS} $TCL $ARGS 2>&1 | tee $OUT
   if [[ $? -eq 0 ]]; then
     echo "SUCCESS"
     ../scripts/opcounts.py  < $OUT > $COUNTS
