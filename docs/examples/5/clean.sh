@@ -1,4 +1,4 @@
-#!/bin/sh -ex
+#!/bin/sh -e
 
 rm -fv CppWrappers.f90  \
        FortFuncs.cpp    \
