@@ -1801,7 +1801,7 @@ The Tcl system library directory is the one that contains
 +init.tcl+
 +
 Use +mkstatic.tcl -h+ for a list of options.
-// TODO: Need some note about init.tcl - is this always necessary?
+// TODO: Need some note about init.tcl - is this always necessary? (#650)
 
 4. Link together the compiled C main program with user libraries and
   Swift/T libraries to produce a final executable.
@@ -1839,7 +1839,7 @@ gcc -static script_main.c file1.o file2.o -L/path/to/lib/dir -lsomething ...
   you wish to statically link, then +-Wl,-Bdynamic+ to reset to
   dynamic linking for any libraries after those.
 
-//  TODO: note, need additional flags from mkstatic
+//  TODO: note, need additional flags from mkstatic (#650)
 
 ////
 Local Variables:
