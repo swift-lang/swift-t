@@ -1,13 +1,18 @@
 #!/bin/bash
 
+set -x
+
 # Generate leaf function, given a C/C++ source
 # user-code.c --> user-leaf.tcl
 
 USER_SOURCE=$1
 USER_HEADER=$2
-#step 1. Replace the main function in the source code with an ordinary function
 
+TCL=/homes/ketan/tcl-install
+
+#step 1. Replace the main function in the source code with an ordinary function and push it into header
 sed 's/main(.*)/leaf_main(int argc, char** argv)/' $USER_SOURCE > user-leaf.c || echo "something went wrong"
+grep -Fxq 'int leaf_main(int argc, char** argv);' $USER_HEADER || echo 'int leaf_main(int argc, char** argv);' >> $USER_HEADER
 
 #step 2. Generate extension.c
 cat << EOF > extension.c
@@ -16,9 +21,9 @@ cat << EOF > extension.c
 #include <stdlib.h>
 #include <tcl.h>
 
-#include "\"$USER_HEADER\""
+#include "$USER_HEADER"
 
-static int power_main_extension(ClientData cdata, Tcl_Interp *interp,
+static int leaf_main_extension(ClientData cdata, Tcl_Interp *interp,
                      int objc, Tcl_Obj*const objv[]) {
   // Create argc/argv from Tcl objects:
   int argc = objc;
@@ -37,7 +42,7 @@ static int power_main_extension(ClientData cdata, Tcl_Interp *interp,
   free(argv);
 }
 
-int Leaf_main_Init(Tcl_Interp* interp) {
+int Userlib_Init(Tcl_Interp* interp) {
   int rc;
 
   Tcl_PkgProvide(interp, "leaf_main", "0.0");
@@ -47,9 +52,79 @@ int Leaf_main_Init(Tcl_Interp* interp) {
                        NULL, NULL);
   return TCL_OK;
 }
+
 EOF
 
-#step 3. Generate user-leaf.tcl
+#step 3 Generate make-package.tcl
+cat << EOF > make-package.tcl
+set name     leaf_main
+set version  0.0
+set leaf_so  userlib.so
+set leaf_tcl user-leaf.tcl
 
-#step 4. Generate user-code.swift
+puts [ ::pkg::create -name \$name -version \$version \
+           -load \$leaf_so -source \$leaf_tcl ]
 
+EOF
+
+#step 4. Generate user-leaf.tcl
+cat << EOF > user-leaf.tcl
+namespace eval leaf_main {
+
+    proc leaf_main_wrap { rc A } {
+        deeprule \$A 1 0 "leaf_main::leaf_main_wrap_impl \$rc \$A"
+    }
+
+    proc leaf_main_wrap_impl { rc A } {
+
+        set length [ adlb::container_size \$A ]
+        set tds [ adlb::enumerate \$A dict all 0 ]
+        set argv [ list ]
+        # Fill argv with blanks
+        dict for { i td } \$tds {
+            lappend argv 0
+        }
+        # Set values at ordered list positions
+        dict for { i td } \$tds {
+            set s [ adlb::retrieve \$td ]
+            lset argv \$i \$s
+        }
+        set rc_value [ leaf_main_extension {*}\$argv ]
+        turbine::store_integer \$rc \$rc_value
+    }
+}
+
+EOF
+
+#step 5. Generate user-code.swift
+cat << EOF > user-code.swift
+import io;
+/*
+ret_type swift_app_func() pkg_name version tcl_func
+*/
+(int v) leaf_main(string A[]) "leaf_main" "0.0" "leaf_main_wrap";
+
+main
+{
+  string A[] = [ "2" ];
+  rc = leaf_main(A); // rc gets its type implicitly
+  printf("exit code: %i", rc);
+}
+
+EOF
+
+#step 6. Build userlib.so
+#compile user-leaf.c
+cc -I ${TCL}/include -fPIC -g -std=gnu99 -c -o user-leaf.o user-leaf.c
+
+#compile extension.c
+cc -I ${TCL}/include -fPIC -g -std=gnu99 -c -o extension.o extension.c
+
+#build userlib.so
+cc -shared -o userlib.so extension.o user-leaf.o -L ${TCL}/lib -l tcl8.5 -Wl,-rpath -Wl,${TCL}/lib
+
+#step 7. Call make-package
+tclsh make-package.tcl > pkgIndex.tcl
+
+#step 8. call stc
+stc -j /homes/ketan/jdk1.7.0_07/bin/java -r ${PWD} user-code.swift
