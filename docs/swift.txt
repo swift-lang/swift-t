@@ -234,27 +234,17 @@ The mechanisms for locating source files is as follows:
 * Swift source files must have a +.swift+ suffix.  E.g. +import io;+
   looks for a file called +io.swift+.
 * In the case of a multi-part import name, E.g. +import mypackage.mymodule+,
-  then, we look for +mymodule.swift+ in subdirectory +mypackage+.
+  then, it looks for +mymodule.swift+ in subdirectory +mypackage+.
 
-Currently Swift has no notion of namespaces or selective import, so
-including a module will import all function and variable definitions
-into your current file.
+Importing a module will import all function and variable definitions
+from that module into your program.
 
-There are two additional ways to include files.
-
-This syntax is completely equivalent, but is also supported for
-compatibility:
-----
-import mypackage.mymodule;
-----
-
-The +#include+ syntax uses a different mechanism to import the file: it
-uses the C preprocessor to textually include an entire file into the
-current one.  Note that +#include+ will only work if the preprocessor
-is enabled on the current file.
-In contrast to +import+, +#include+ will run the C preprocessor on
-any included modules.  +import+ is recommended over +#include+ unless
-the imported module requires preprocessing.
+The alternative +#include+ statement textually includes an entire
+file using the C preprocessor at the point of the statement.
+Note that +#include+ will only work if the preprocessor is enabled
+on the current file.  In contrast to +import+, +#include+ will run the
+C preprocessor on any included modules.  +import+ is recommended over
++#include+ unless the imported module requires preprocessing.
 ----
 #include <mypackage/mymodule.swift>
 ----
