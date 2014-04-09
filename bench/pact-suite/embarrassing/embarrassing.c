@@ -23,6 +23,7 @@ int main(int argc, char *argv[])
   int num_servers, use_debug_server, aprintf_flag;
   MPI_Comm app_comm;
   int my_world_rank, my_app_rank;
+  int app_comm_size;
 
   int num_types = 1;
   int type_vect[2] = {WORKT};
@@ -47,11 +48,14 @@ int main(int argc, char *argv[])
 
   use_debug_server = 0;		/* default: no debug server */
   rc = ADLB_Init(num_servers, 1, type_vect, &am_server, MPI_COMM_WORLD, &app_comm);
+
   if ( !am_server ) /* application process */
   {
     printf("[%i] I AM NOT SERVER!\n", my_world_rank);
-    MPI_Comm_rank( app_comm, &my_app_rank );
   }
+  
+  MPI_Comm_rank( app_comm, &my_app_rank );
+  MPI_Comm_size( app_comm, &app_comm_size );
 
   //rc = MPI_Barrier( MPI_COMM_WORLD );
   start_time = MPI_Wtime();
@@ -80,7 +84,7 @@ int main(int argc, char *argv[])
     if ( (my_app_rank % control_ratio) == 0 ) {
       // Get a subset of procs to put in work
 
-      int control_task_count;// TODO: calc by dividing, round up
+      int control_task_count = (;// TODO: calc by dividing, round up
       int my_control_rank = my_app_rank / control_ratio;
       // partition loop between ranks
       for (int i = my_control_rank; i < N; i+=control_task_count) {
