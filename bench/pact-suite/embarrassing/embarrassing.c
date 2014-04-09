@@ -73,8 +73,17 @@ int main(int argc, char *argv[])
     int M = atoi(argv[2]);
     double F = atof(argv[3]);
 
-    if ( my_app_rank == 0 ) {  /* if master app, read and put cmds */
-      for (int i = 0; i < N; i++) {
+    int control_ratio = 24; // 1/24 put tasks
+    if (getenv("CONTROL_RATIO") != NULL) {
+      control_ratio = atoi(getenv("CONTROL_RATIO"));
+    }
+    if ( (my_app_rank % control_ratio) == 0 ) {
+      // Get a subset of procs to put in work
+
+      int control_task_count;// TODO: calc by dividing, round up
+      int my_control_rank = my_app_rank / control_ratio;
+      // partition loop between ranks
+      for (int i = my_control_rank; i < N; i+=control_task_count) {
         for (int j = 0; j < M; j++) {
           char buf[1024];
           int len = sprintf(buf, "%i %i\n", i, j);
@@ -83,6 +92,7 @@ int main(int argc, char *argv[])
       }
     }
   
+    // Now all processes should try to complete tasks
     done = 0;
     int ndone = 0;
     while (!done)
