@@ -128,9 +128,9 @@ EXM_SRC_ROOT=${EXM_SRC_ROOT:-${SCRIPT_DIR}}
 
 # Source subdirectories. Modify to match your layout if needed
 C_UTILS_SRC=${EXM_SRC_ROOT}/c-utils/
-LB_SRC=${EXM_SRC_ROOT}/lb/
-TURBINE_SRC=${EXM_SRC_ROOT}/turbine/
-STC_SRC=${EXM_SRC_ROOT}/stc/
+LB_SRC=${EXM_SRC_ROOT}/lb/code
+TURBINE_SRC=${EXM_SRC_ROOT}/turbine/code
+STC_SRC=${EXM_SRC_ROOT}/stc/code
 
 # Install subdirectories. Modify to match your layout if needed
 LB_INSTALL=${EXM_PREFIX}/lb
