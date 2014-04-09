@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <tcl.h>
 
 #include "uts.h"
 #include "uts_inline.h"
@@ -14,6 +15,28 @@
 #define NODE_ARRAY_SIZE (MAX_NODE_RETURN_THRESHOLD + MAXNUMCHILDREN)
 
 #define COMPUTE_GRANULARITY 1
+
+// Side of node struct representation in bytes
+int uts_node_strlen(void)
+{
+  // Encode each byte as two non-zero string bytes
+  return (int)sizeof(struct node_t) * 2;
+}
+
+// Convert to string
+// String must be at least uts_node_strlen long
+void uts_node_tostr(char *out, const struct node_t *node)
+{
+  const char *data = (const char*)node;
+  int pos = 0;
+  for (int i = 0; i < sizeof(*node); i++)
+  {
+    out[pos++] = ((data[i] & 0xf0) >> 4) + '0';
+    out[pos++] = (data[i] & 0x0f)  + '0';
+  }
+  out[pos++] = '\0';
+}
+
 
 static struct node_t nodes[NODE_ARRAY_SIZE];
 
