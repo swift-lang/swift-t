@@ -73,6 +73,7 @@ the manual build process).
    the http://swig.org[SWIG web site]
 
 === Installation of Swift/T from Source
+
 Once you have found all prerequisites, we can continue with building
 Swift/T from source.
 
@@ -135,7 +136,8 @@ code is stored in Tcl files +*.tcl+.  After writing the Swift program
 stc program.swift
 ----
 
-This will compile the program to +program.tcl+
+This will compile the program to +program.tcl+.  A second, optional
+argument may be given as an alternate output file name.
 
 Then, to run the program, use Turbine:
 
@@ -146,17 +148,31 @@ turbine -n 4 program.tcl
 See the <<Turbine,Turbine section>> for more information about
 running the program.
 
+[[stc_arguments]]
 STC accepts the following arguments:
 
-+-A+:: Set a command-line argument at compile-time
-+-D+:: Define C preprocessor macro
-+-E+:: Just run the C preprocessor: do not compile the program
-+-I+:: Add a directory to the import search path
-+-O+:: Set optimization level: 0, 1, 2, or 3.  See <<Optimizations>>
-+-p+:: Disable C preprocessor
-+-u+:: Only compile if output file is not up-to-date
-+-v+:: Output version number and exit
-+-V+:: Verbose output
++-A _name_=_value_+:: Set a command-line argument at
+compile-time. This may be found at runtime using the Swift
+<<argv,argument processing>> library. This option enables these
+arguments to be treated as compile-time constants for optimization.
++-D _macro_=_value_+:: Define a C preprocessor macro.
++-E+:: Just run the C preprocessor: do not compile the program.  The
+output goes into the STC output file (the second file name argument).
++-I+:: Add a directory to the import and include search path.
++-O+:: Set optimization level: 0, 1, 2, or 3.  See <<Optimizations>>.
++-j+:: Set the location of the +java+ executable.
++-p+:: Disable the C preprocessor.
++-u+:: Only compile if output file is not up-to-date.
++-v+:: Output version number and exit.
++-V+:: Verbose output.
+
+STC runs as a Java program.  You may use +-j+ to set the Java VM
+executable.  This Java VM must be compatible with the +javac+ used to
+compile STC.
+
+By default, STC runs the user script through the C preprocessor
+(+cpp+), enabling arbitrary macro processing, etc.  The +-D+, +-E+,
++-I+, and +-p+ options are relevant to this feature.
 
 Additional arguments for advanced users/developers:
 
@@ -1013,14 +1029,6 @@ has _flagged_ arguments +v+, +a=file.txt+, +exec="prog thing1
 thing2"+, and +help+. The command has _unflagged_ arguments
 +file2.txt+ and +file4.txt+
 
-In addition to regular run-time arguments, a special feature called
-*compile-time arguments* allows keyword arguments to be provided at
-compile time.  This allows a specialized, optimized version of code to be
-compiled for a particular set of arguments.  Keyword arguments, accessible
-through the +argv+ function, can be specified at compile time with the
-+-A name=val+ argument to STC. Note that if the argument is re-specified
-at run-time, an error will occur.
-
 +argc()+::
 Get count of unflagged arguments
 
@@ -1029,6 +1037,13 @@ _(argument-value)_
 Given a string, returns the flagged argument with that key:
 +
 +argv("a") -> file1.txt+
++
+In addition to regular run-time arguments, the STC _compile-time
+arguments_ feature allows +argv()+ arguments to be provided at compile
+time.  This allows a specialized, optimized version of code to be
+compiled for a particular set of arguments.  See the +-A
+_name_=_value_+ <<stc_arguments,argument>> to +stc+.  Note that if the
+argument is re-specified at run-time, an error will occur.
 
 +argp(int)+::
 _(argument-positional)_
@@ -1811,7 +1826,7 @@ You can include additional libraries and packages with
 +--include-lib /home/example/tcl-lib/+.  Any +.tcl+ or +.tm+ source files
 in the directory will be included.  Source-only packages can
 generally be completely linked into the executable, but if a package
-loads shared libraries, only the +pkgIndex.tcl+ file will be linked 
+loads shared libraries, only the +pkgIndex.tcl+ file will be linked
 into the executable.  A package with compiled code can be converted to
 support static linking by specifying a package init function, plus
 static library or object files in the manifest file.
