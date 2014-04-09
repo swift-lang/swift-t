@@ -1,9 +1,31 @@
 #!/bin/bash
 
-INST=$HOME/soft/exm-dev
+set -e
+
+INST=$HOME/soft/exm-sc14/v1/
+TURBINE=$INST/turbine
 LB=$INST/lb
 CUTILS=$INST/c-utils
+STC_INST=$INST/stc
 
-MPICH_INST=/opt/cray/mpt/default/gni/mpich2-gnu/48/
+source $TURBINE/scripts/turbine-build-config.sh
 
-gcc -std=c99 -O2 -L $LB/lib -L $CUTILS/lib -L $MPICH_INST/lib -I $LB/include -I $CUTILS/include -I $MPICH_INST/include -o embarrassing embarrassing.c -lmpich -ladlb -lexmcutils -Wl,-rpath,$LB/lib,-rpath,$CUTILS/lib,-rpath,$MPICH_INST/lib
+CC=cc
+CFLAGS="-std=c99 -O2 ${TURBINE_INCLUDES}"
+LDFLAGS="${TURBINE_LIBS} ${TURBINE_RPATH}"
+
+MKSTATIC=$TURBINE/scripts/mkstatic/mkstatic.tcl
+
+${CC} ${CFLAGS} embarrassing.c  ${LDFLAGS} -o embarrassing 
+
+STC=$STC_INST/bin/stc
+STC_OPTLEVEL=${STC_OPTLEVEL:--O2}
+STC_FLAGS="$STC_OPTLEVEL"
+
+${STC} ${STC_FLAGS} -C embarrassing_lognorm.ic embarrassing_lognorm.swift
+${MKSTATIC} embarrassing_lognorm.manifest -c embarrassing_lognorm_tcl.c
+
+# Statically link
+${CC} ${CFLAGS} embarrassing_lognorm_tcl.c  ${LDFLAGS} -o embarrassing_lognorm_tcl
+
+echo "OK."
