@@ -242,6 +242,11 @@ public class WrapperGen {
     // Save for later use
     GeneratedWrapper genWrapper = new GeneratedWrapper(chosenName, concrete);
     generated.put(wrapper.function, genWrapper);
+    
+
+    // Copy over template
+    ForeignFunctions.addInlineTemplate(chosenName, 
+                    ForeignFunctions.getInlineTemplate(wrapper.function));
     return chosenName;
   }
 
