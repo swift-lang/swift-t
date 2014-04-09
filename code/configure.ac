@@ -299,7 +299,7 @@ AC_ARG_WITH(mpi-lib-extra,
 # Now check MPI settings
 
 AC_CHECK_FILE(${USE_MPI_LIB_DIR},
-              [], [AC_MSG_ERROR(Could not find directory ${USE_MPI_LIB_DIR})])
+              [], [AC_MSG_ERROR(Could not find MPI library directory ${USE_MPI_LIB_DIR})])
 
 AC_CHECK_FILE(${USE_MPI_INCLUDE}/mpi.h,
               [],
