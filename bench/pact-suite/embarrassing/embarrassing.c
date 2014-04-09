@@ -52,10 +52,10 @@ int main(int argc, char *argv[])
   if ( !am_server ) /* application process */
   {
     printf("[%i] I AM NOT SERVER!\n", my_world_rank);
+    
+    MPI_Comm_rank( app_comm, &my_app_rank );
+    MPI_Comm_size( app_comm, &app_comm_size );
   }
-  
-  MPI_Comm_rank( app_comm, &my_app_rank );
-  MPI_Comm_size( app_comm, &app_comm_size );
 
   //rc = MPI_Barrier( MPI_COMM_WORLD );
   start_time = MPI_Wtime();
@@ -77,15 +77,16 @@ int main(int argc, char *argv[])
     int M = atoi(argv[2]);
     double F = atof(argv[3]);
 
-    int control_ratio = 24; // 1/24 put tasks
+    int control_ratio = 8; // E.g. 1/8 workers start putting tasks
     if (getenv("CONTROL_RATIO") != NULL) {
       control_ratio = atoi(getenv("CONTROL_RATIO"));
     }
     if ( (my_app_rank % control_ratio) == 0 ) {
       // Get a subset of procs to put in work
-
-      int control_task_count = (;// TODO: calc by dividing, round up
+      // divide, rounding up to get control task count
+      int control_task_count = ((app_comm_size - 1) / control_ratio) + 1;
       int my_control_rank = my_app_rank / control_ratio;
+      int tasks_put = 0;
       // partition loop between ranks
       for (int i = my_control_rank; i < N; i+=control_task_count) {
         for (int j = 0; j < M; j++) {
@@ -93,7 +94,10 @@ int main(int argc, char *argv[])
           int len = sprintf(buf, "%i %i\n", i, j);
           ADLB_Put(buf, len+1, ADLB_RANK_ANY, -1, WORKT, 1, 1);
         }
+        tasks_put += M;
       }
+      printf("[%i] put all tasks (%i)\n", my_app_rank,
+              tasks_put);
     }
   
     // Now all processes should try to complete tasks
@@ -115,7 +119,10 @@ int main(int argc, char *argv[])
       }
       int i, j;
       sscanf(cmdbuffer, "%i %i", &i, &j);
-      usleep((int) F * 1000000);
+      float spin_start = MPI_Wtime();
+
+      // Spin!
+      while (MPI_Wtime() - spin_start < F);
       //printf("%i %i\n", i, j);
       ndone++;
       if (ndone % 50000 == 0) {
