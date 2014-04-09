@@ -353,18 +353,20 @@ https://www.alcf.anl.gov/user-guides/tukey[Tukey] is a 96-node x86
 cluster at the Argonne Leadership Computing Facility (ALCF).  It uses
 the Cobalt scheduler.
 
-*As of:* Trunk, 7/30/2013
+*As of:* Trunk, 4/9/2014
 
 ==== Public installation
 
-* STC: +~wozniak/Public/stc-tukey/bin/stc+
+Add to +PATH+:
+* STC: +~wozniak/Public/sfw/x86/stc/bin+
+* Turbine submit script: +~wozniak/Public/sfw/x86/turbine/scripts/submit/cobalt+
 
 To run:
 ----
 export MODE=cluster
 export QUEUE=pubnet
 export PROJECT=...
-~wozniak/Public/turbine-tukey/scripts/submit/cobalt/turbine-cobalt-run.zsh -n 3 program.tcl
+turbine-cobalt-run.zsh -n 3 program.tcl
 ----
 
 ==== Build procedure
