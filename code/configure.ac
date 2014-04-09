@@ -240,7 +240,7 @@ then
        USE_MPI_INCLUDE=${USE_MPI_DIR}/include
        USE_MPI_LIB_DIR=${USE_MPI_DIR}/lib
        AC_MSG_RESULT([Trying MPI directory: ${USE_MPI_DIR}])
-   elif (( ! ${ENABLE_CUSTOM} ))
+   elif (( ! ENABLE_CUSTOM_MPI ))
    then
        AC_MSG_ERROR([Turbine requires --with-mpi or
                                   --enable-custom-mpi or
