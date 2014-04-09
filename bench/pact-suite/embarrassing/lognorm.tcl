@@ -4,6 +4,20 @@ package provide lognorm 0.0
 namespace eval lognorm {
   namespace export sample samples norm_samples
 
+  proc mean { mu sigma } {
+    return [ expr {exp($mu + ($sigma**2)/2)} ]
+  }
+
+  proc stdev { mu sigma } {
+    return [ expr {sqrt([ variance $mu $sigma ])} ]
+  }
+
+  proc variance { mu sigma } {
+    set a [ expr {exp($sigma**2) - 1}]
+    set b [ expr {exp(2*$mu + $sigma**2)} ]
+    return [ expr {$a * $b} ]
+  }
+  
   proc sample { mu sigma } {
     samples $mu $sigma result tmp
     return $result
