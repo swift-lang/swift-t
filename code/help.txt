@@ -49,6 +49,11 @@ OPTIONS
 COMPILER OPTION NAMES
 ----------------------------------------
 
+Features:
+--------
+checkpointing: enable checkpointing support (on by default)
+refcounting: enable garbage collection by refcounting (on by default)
+
 Optimization passes:
 -------------------
 dead-code-elim: eliminate unused variables, instructions and branches
