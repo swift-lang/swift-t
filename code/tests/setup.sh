@@ -12,6 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License
+
+source tests/test-helpers.sh
 # Re-usable test setup lines
 # Helps automate selection of process mode (engine, server, worker)
 # Prints the "SETUP:" header in the *.out file

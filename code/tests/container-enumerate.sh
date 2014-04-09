@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+source tests/test-helpers.sh
+
 # Test CONTAINER-ENUMERATE.TCL
 # WARNING: This test requires GNU sed
 
@@ -27,19 +29,19 @@ set -x
 if ! sed --version | grep GNU > /dev/null
 then
   echo "need GNU sed: skipping this test..."
-  exit 0
+  test_result 0
 fi
 
 bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
-[[ ${?} == 0 ]] || exit 1
+[[ ${?} == 0 ]] || test_result 1
 
 # Read member TDs to search for them later
 M1=$( sed -n '/.*member1:.*/{s/.*member1: \(.*\)/\1/;p}' ${OUTPUT} )
 M2=$( sed -n '/.*member2:.*/{s/.*member2: \(.*\)/\1/;p}' ${OUTPUT} )
 
-grep -q "subscripts: 0 1"       ${OUTPUT} || exit 1
-grep -q "members: ${M1} ${M2}"  ${OUTPUT} || exit 1
-grep -q "dict: 0 ${M1} 1 ${M2}" ${OUTPUT} || exit 1
-grep -q "count: 2"              ${OUTPUT} || exit 1
+grep -q "subscripts: 0 1"       ${OUTPUT} || test_result 1
+grep -q "members: ${M1} ${M2}"  ${OUTPUT} || test_result 1
+grep -q "dict: 0 ${M1} 1 ${M2}" ${OUTPUT} || test_result 1
+grep -q "count: 2"              ${OUTPUT} || test_result 1
 
-exit 0
+test_result 0

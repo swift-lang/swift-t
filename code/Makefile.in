@@ -197,6 +197,7 @@ ifeq ($(filter $(MPI_LIB_DIR),$(SYSTEM_LIBS)),)
   MPI_LIB += -L$(MPI_LIB_DIR)
 endif
 MPI_LIB_FLAGS = @USE_MPI_LIB_SPEC@
+MPI_LIB += $(MPI_LIB_FLAGS)
 MPI_LIB_A := @USE_MPI_LIB_A@
 MPI_LIB_EXTRA_A := @USE_MPI_LIB_EXTRA_A@ # extra deps, e.g. mpl
 MPE_LIB_A := @USE_MPE_LIB_A@
@@ -268,13 +269,6 @@ endif
 ifeq ($(HAVE_R),1)
 	R_LIB = $(USE_R)/lib
 	LIBS += -L$(R_LIB) -lR
-endif
-
-# Transitive shared library dependencies, e.g. if we link against libtcl*.a
-TRANSITIVE_LIB_DEPS := $(TCL_LIB_DEPS) -lz
-
-ifeq ($(ENABLE_ZLIB),1)
-  TRANSITIVE_LIB_DEPS += -lz -L$(ZLIB)/lib
 endif
 
 # If we are using libtcl*.a, need to always include these libraries
@@ -510,7 +504,6 @@ $(TURBINE_EXECUTABLES): %: %.o ${STATIC_LIBS} ${STATIC_PKG_RESOURCE_H}
         $(MAC_FLAT) \
         $(TCL_TURBINE_LIB_FLAGS) \
         $(LIBS) \
-	$(TRANSITIVE_LIB_DEPS) \
 	$(RPATHS) \
 	-o $(@)
 
@@ -544,7 +537,6 @@ $(TEST_BINS): %.x: %.o install.txt $(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A)
 	$(shell $(MKSTATIC_RUN) "$(@).manifest" --ignore-no-manifest --link-flags) \
         $(TCL_TURBINE_LIB_FLAGS) \
         $(LIBS) \
-	$(TRANSITIVE_LIB_DEPS) \
 	$(RPATHS) \
 	-o $(@)
 

@@ -4,7 +4,7 @@
 Turbine Sites Guide
 ===================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
-v0.4.0, August 2013
+v0.5.0, April 2014
 
 ////
 
@@ -116,20 +116,32 @@ directly.  Thus, sample scripts are provided below.
 On scheduled systems (PBS, SLURM, Cobalt, etc.), Turbine is launched
 with a customized _run script_ (+turbine-<name>-run+) that launches Turbine
 on that system.  This produces a batch script if necessary and submits
-it with the job submission program (e.g., +qsub+).  The working
-directory (+PWD+) for the job is called +TURBINE_OUTPUT+; the user may
-select this or Turbine will pick one based on the date and report it.
-The user program will be copied to +TURBINE_OUTPUT+ before submission.
-Standard output and error goes to +TURBINE_OUTPUT/output.txt+.
+it with the job submission program (e.g., +qsub+).
 
 === Turbine run scripts
 
+PBS:: +turbine-pbs-run.zsh+
 Cobalt:: +turbine-cobalt-run.zsh+
-Cray/APRUN:: +turbine-aprun.zsh+ (PBS with Cray's +aprun+)
-PBS:: +setup-turbine-pbs.zsh+
+Cray/APRUN:: +turbine-aprun-run.zsh+ (PBS with Cray's +aprun+)
 SLURM:: +turbine-slurm-run.zsh+
 
 Each script accepts input via environment variables and command-line options.
+
+A typical invocation is:
+
+----
+stc program.swift
+turbine-pbs-run.zsh -n 96 -s settings.sh program.tcl
+----
+
+where +program.tcl+ is the output of STC and +settings.sh+ contains:
+----
+export QUEUE=bigqueue
+export PPN=8
+----
+
+which would run +program.tcl+ in 96 MPI processes on 12 nodes (8
+processes per node), submitted by PBS to queue +bigqueue+.
 
 [[variables]]
 === Turbine scheduler variables
@@ -137,30 +149,37 @@ Each script accepts input via environment variables and command-line options.
 For scheduled systems, Turbine accepts a common set of environment
 variables.
 
-+NODES+:: Number of nodes to use
++PROCS+:: Number of processes to use
 +PPN+:: Number of processes per node
 +PROJECT+:: The project name to use with the system scheduler
-+TURBINE_OUTPUT+:: Directory in which to place Turbine output
-+QUEUE+:: Name of queue in which to run (may leave unset)
++QUEUE+:: Name of queue in which to run
++TURBINE_OUTPUT+:: Directory in which to place Turbine output (if
+unset, a default value is automatically created)
++TURBINE_OUTPUT_ROOT+:: Directory under which Turbine will
+automatically create +TURBINE_OUTPUT+ if necessary
 
 [[options]]
-=== Turbine run script options
+=== Turbine scheduler script options
 
 For scheduled systems, Turbine accepts a common set of command line options.
 
-+-d <directory>+:: Set the Turbine output directory (optional, a
-default is provided based on the date).
++-d <directory>+:: Set the Turbine output directory.  (Overrides
++TURBINE_OUTPUT+).
 
 +-e <key>=<value>+:: Set an environment variable in the job
 environment.  This may be used multiple times
 
-+-n <procs>+:: Number of processes.
++-i <script>+:: Set a script to run before launching Turbine.  This
+script will have +TURBINE_OUTPUT+ in the environment, so you may
+perform additional configuration just before job launch.
+
++-n <procs>+:: Number of processes.  (Overrides +PROCS+.)
 
 +-o <directory>+:: Set the Turbine output directory root, in which
 default Turbine output directories are automatically created based on
-the date.
+the date.  (Overrides +TURBINE_OUTPUT_ROOT+.)
 
-+-s <file>+:: Source this file for environment variables.  These
++-s <script>+:: Source this file for environment variables.  These
 variables override any other <<variables,Turbine scheduler
 variables>>.  You may place arbitrary shell code in this script.
 
@@ -170,6 +189,30 @@ through to the scheduler
 +-V+:: Make script verbose.  This typically just applies +set -x+,
 allowing you to inspect variables and arguments as passed to the
 system scheduler.
+
++-x+:: Use +turbine_sh+ launcher with compiled-in libraries instead of +tclsh+
+       (reduces number of files that must be read from file system).
+
++-X+:: Run standalone Turbine executable
+        (created by link:swift.html#mkstatic[mkstatic.tcl]) instead of
+        +program.tcl+.
+
+=== Turbine output directory
+
+The working directory (+PWD+) for the job is called +TURBINE_OUTPUT+.
+
+If the user does not set this variable, Turbine will select one based on the date
+and report it.  The automatically selected directory will be placed
+under +TURBINE_OUTPUT_ROOT+, which defaults to +$HOME/turbine-output+.
+The user program will be copied to +TURBINE_OUTPUT+ before submission.
+Standard output and error goes to +TURBINE_OUTPUT/output.txt+.
+
+TIP: When running on a big HPC machine, it may be difficult to get STC
+(a Java-based program) running.  STC output (+program.tcl+) is
+platform-independent.  You may run STC to develop and debug your
+script on your local workstation, then simply copy +program.tcl+ to
+the big machine for execution.  Just make sure that the STC and
+Turbine versions are compatible (the same release number).
 
 == x86 clusters
 
@@ -310,18 +353,20 @@ https://www.alcf.anl.gov/user-guides/tukey[Tukey] is a 96-node x86
 cluster at the Argonne Leadership Computing Facility (ALCF).  It uses
 the Cobalt scheduler.
 
-*As of:* Trunk, 7/30/2013
+*As of:* Trunk, 4/9/2014
 
 ==== Public installation
 
-* STC: +~wozniak/Public/stc-tukey/bin/stc+
+Add to +PATH+:
+* STC: +~wozniak/Public/sfw/x86/stc/bin+
+* Turbine submit script: +~wozniak/Public/sfw/x86/turbine/scripts/submit/cobalt+
 
 To run:
 ----
 export MODE=cluster
 export QUEUE=pubnet
 export PROJECT=...
-~wozniak/Public/turbine-tukey/scripts/submit/cobalt/turbine-cobalt-run.zsh -n 3 program.tcl
+turbine-cobalt-run.zsh -n 3 program.tcl
 ----
 
 ==== Build procedure
@@ -371,7 +416,9 @@ systems>> that use Cobalt.
 
 ==== Surveyor/Intrepid/Challenger
 
-These machines are at the Argonne Leadership Computing Facility (ALCF).
+These machines were at the Argonne Leadership Computing Facility
+(ALCF).  Other existing Blue Gene/P systems may be configured in a
+similar way.
 
 ===== Public installation
 
@@ -448,11 +495,11 @@ See the script header for usage.
 
 === Blue Gene/Q
 
-*As of:* 0.4.0 - 07/29/2013
-
 ==== Vesta
 
 ===== Public installation
+
+*As of:* 0.4.0 - 07/29/2013
 
 * STC: +~wozniak/Public/stc-bgq/bin/stc+
 * Turbine: +~wozniak/Public/turbine-bgq/scrips/submit/cobalt/turbine-cobalt-run.zsh+
@@ -467,7 +514,27 @@ turbine-cobalt-run.zsh -n 3 program.tcl
 The normal Turbine environment variables are honored, plus the
 <<variables,Turbine scheduler variables>>.
 
+==== Cetus
+
+*As of:* 0.5.0 - 4/4/2014
+
+Add to +PATH+:
+* STC: +~wozniak/Public/ppc64/stc/bin+
+* Turbine:
++~wozniak/Public/ppc64/turbine/scripts/submit/cobalt+
+
+* Run as:
++
+----
+export MODE=BGQ
+export QUEUE=...
+export PROJECT=...
+turbine-cobalt-run.zsh -n 3 program.tcl
+----
+
 ===== Build procedure
+
+*As of:* 0.5.0 - 4/4/2014
 
 *Tcl:*
 
@@ -482,9 +549,9 @@ the problem.
 
 Put +/bgsys/drivers/ppcfloor/comm/gcc/bin+ in your +PATH+.
 
-* Compile c-utils with gcc
-* Configure ADLB with +mpicc+ and +--enable-mpi-2+
-* Configure Turbine
+* Compile c-utils with +/usr/bin/gcc+
+* Configure ADLB with +mpixlc --enable-mpi-2 --enable-xlc+
+* Configure Turbine with +/usr/bin/gcc --disable-static --with-tcl=/home/wozniak/Public/sfw/ppc64/tcl-8.5.12+
 
 *External scripting:*
 
@@ -663,11 +730,12 @@ To run:
 
 1. Set environment variables.  The normal Turbine environment
 variables are honored, plus the <<variables,Turbine scheduler
-variables>>.
+variables>> and <<options,Turbine scheduler
+options>>..
 2. Run submit script (in +turbine/scripts/submit/cray+):
 +
 ----
-turbine-aprun-run.zsh script.tcl --arg1=value1 ...
+turbine-aprun-run.zsh -n <numprocs> script.tcl --arg1=value1 ...
 ----
 
 ==== Build procedure

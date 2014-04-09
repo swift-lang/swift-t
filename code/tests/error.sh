@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+source tests/test-helpers.sh
+
 set -x
 
 THIS=$0
@@ -21,6 +23,6 @@ OUTPUT=${THIS%.sh}.out
 
 bin/turbine -l -n 1 ${SCRIPT} >& ${OUTPUT}
 EXITCODE=${?}
-[[ ${EXITCODE} != 0 ]] || exit 1
+[[ ${EXITCODE} != 0 ]] || test_result 1
 
-exit 0
+test_result 0

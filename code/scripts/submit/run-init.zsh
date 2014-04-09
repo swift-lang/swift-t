@@ -30,7 +30,10 @@ CHANGE_DIRECTORY=""
 export EXEC_SCRIPT=0 # 1 means execute script directly, e.g. if binary
 export TURBINE_STATIC_EXEC=0 # Use turbine_sh instead of tclsh
 INIT_SCRIPT=0
-export PROCS=0
+declare PROCS
+(( ! ${+PROCS} )) && PROCS=0
+[[ ${PROCS} == "" ]] && PROCS=0
+export PROCS
 if (( ! ${+TURBINE_OUTPUT_ROOT} ))
 then
   TURBINE_OUTPUT_ROOT=${HOME}/turbine-output
@@ -108,7 +111,12 @@ fi
 
 START=$( date +%s )
 
-[[ ${PROCS} != 0 ]] || abort "PROCS==0 - specify the process count!"
+if [[ ${PROCS} == 0 ]]
+  then
+  print "The process count was not specified!"
+  print "Use the -n argument or set environment variable PROCS."
+  exit 1
+fi
 
 RUN=$( date_path )
 

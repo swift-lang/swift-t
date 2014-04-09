@@ -21,6 +21,7 @@
 # > VAR1=VALUE1 VAR2=VALUE2 turbine-slurm-run.zsh <PROGRAM> <ARGS>*
 
 # ENVIRONMENT
+# TODO: User input should be PROCS, not NODES (#648)
 # NODES: Number of nodes to use
 # PPN:   Processes-per-node
 

@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+source tests/test-helpers.sh
+
 TESTS=$( dirname $0 )
 
 set -x
@@ -23,8 +25,8 @@ OUTPUT=${THIS%.sh}.out
 
 export PROCS=4
 ${TESTS}/run-mpi.zsh ${BIN} >& ${OUTPUT}
-[[ ${?} == 0 ]] || exit 1
+[[ ${?} == 0 ]] || test_result 1
 
-grep WARNING ${OUTPUT} && exit 1
+grep WARNING ${OUTPUT} && test_result 1
 
-exit 0
+test_result 0

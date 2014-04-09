@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+source tests/test-helpers.sh
+
 set -x
 
 THIS=$0
@@ -45,14 +47,14 @@ done
 
 if ps -p $pid &> /dev/null ; then
   echo "${TIME_LIMIT}s time limit expired"
-  exit 1  
+  test_result 1  
 fi
 
 wait $pid
 RC=${?}
-[[ ${RC} == 0 ]] || exit 1
+[[ ${RC} == 0 ]] || test_result 1
 
 # Filter out Valgrind leak messages, include only ADLB
-grep -v "LEAK SUMMARY" ${OUTPUT} | grep -q "LEAK DETECTED" && exit 1
+grep -v "LEAK SUMMARY" ${OUTPUT} | grep -q "LEAK DETECTED" && test_result 1
 
-exit 0
+test_result 0

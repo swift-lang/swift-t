@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+source tests/test-helpers.sh
+
 THIS=$0
 SCRIPT=${THIS%.sh}.tcl
 OUTPUT=${THIS%.sh}.out
@@ -20,11 +22,11 @@ OUTPUT=${THIS%.sh}.out
 source $( dirname $0 )/setup.sh > ${OUTPUT} 2>&1
 
 bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
-[[ ${?} == 0 ]] || exit 1
+[[ ${?} == 0 ]] || test_result 1
 
 set -x
 
-# grep -q "trace: 4"  ${OUTPUT} || exit 1
-# grep -q "trace: 72" ${OUTPUT} || exit 1
+# grep -q "trace: 4"  ${OUTPUT} || test_result 1
+# grep -q "trace: 72" ${OUTPUT} || test_result 1
 
-exit 0
+test_result 0

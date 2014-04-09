@@ -36,7 +36,9 @@ namespace eval turbine {
       exec_coaster $cmd $stdin_src $stdout_dst $stderr_dst {*}$args
     } else {
       set start [ clock milliseconds ]
-      exec $cmd {*}$args $stdin_src $stdout_dst $stderr_dst
+      if { [ catch { exec $cmd {*}$args $stdin_src $stdout_dst $stderr_dst } ] } {
+        turbine_error "external command failed: $cmd $args"
+      }
       set stop [ clock milliseconds ]
       set duration [ format "%0.3f" [ expr ($stop-$start)/1000.0 ] ]
       log "shell command duration: $duration"
@@ -81,7 +83,7 @@ namespace eval turbine {
   #         so we can concatenate any output arguments to string?
   proc async_exec_coasters { cmd outfiles cmdargs kwopts {continuation {}}} {
     setup_redirects $kwopts stdin_src stdout_dst stderr_dst
-    
+
     # Check to see if we were passed continuation
     set has_continuation [ expr [ string length $continuation ] > 0 ]
 
