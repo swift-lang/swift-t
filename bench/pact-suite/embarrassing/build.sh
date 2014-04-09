@@ -11,12 +11,13 @@ STC=$INST/stc
 source $TURBINE/scripts/turbine-build-config.sh
 
 CC=mpicc
-CFLAGS="-std=c99 -O2 ${TURBINE_INCLUDES}"
+CFLAGS="-std=c99 -Wall -O2 ${TURBINE_INCLUDES}"
 LDFLAGS="${TURBINE_LIBS} ${TURBINE_RPATH}"
 
 MKSTATIC=$TURBINE/scripts/mkstatic/mkstatic.tcl
 
 ${CC} ${CFLAGS} embarrassing.c  ${LDFLAGS} -o embarrassing 
+${CC} ${CFLAGS} -D LOGNORM embarrassing.c  ${LDFLAGS} -o embarrassing_lognorm 
 
 STC=$INST/stc/bin/stc
 STC_OPTLEVEL=${STC_OPTLEVEL:--O2}

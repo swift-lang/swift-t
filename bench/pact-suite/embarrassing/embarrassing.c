@@ -7,28 +7,29 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include <unistd.h>
 #include <adlb.h>
 
 // Work unit type
 #define WORKT 0
 
+#ifdef LOGNORM
+static double lognorm_sample(double mu, double sigma);
+#endif
+
 int main(int argc, char *argv[])
 {
-  FILE *fp;
-  int rc, i, done;
-  char c, cmdbuffer[1024];
+  int rc,  done;
 
-  int am_server, am_debug_server;
-  int num_servers, use_debug_server, aprintf_flag;
+  int am_server;
+  int num_servers;
   MPI_Comm app_comm;
   int my_world_rank, my_app_rank;
   int app_comm_size;
 
-  int num_types = 1;
   int type_vect[2] = {WORKT};
 
-  int quiet = 1;
 
   double start_time, end_time;
 
@@ -40,13 +41,11 @@ int main(int argc, char *argv[])
 
   MPI_Comm_rank( MPI_COMM_WORLD, &my_world_rank );
 
-  aprintf_flag = 0;		/* no output from adlb itself */
-  num_servers = 1;		/* one server should be enough */
+  num_servers = 1;
   if (getenv("ADLB_SERVERS") != NULL) {
     num_servers = atoi(getenv("ADLB_SERVERS"));
   }
 
-  use_debug_server = 0;		/* default: no debug server */
   rc = ADLB_Init(num_servers, 1, type_vect, &am_server, MPI_COMM_WORLD, &app_comm);
 
   if ( !am_server ) /* application process */
@@ -66,16 +65,29 @@ int main(int argc, char *argv[])
     ADLB_Server(3000000);
   }
   else
-  {                                 
+  { 
+#ifdef LOGNORM
+    if (argc != 5) {
+      printf("Got %i args\n", argc -1);
+      printf("usage: %s <N> <M> <mu> <sigma> \n", argv[0]);
+      ADLB_Fail(-1);
+    }
+#else
     if (argc != 4) {
       printf("Got %i args\n", argc -1);
       printf("usage: %s <N> <M> <sleeptime> \n", argv[0]);
       ADLB_Fail(-1);
     }
+#endif
 
     int N = atoi(argv[1]);
     int M = atoi(argv[2]);
+#ifdef LOGNORM
+    double mu = atof(argv[3]);
+    double sigma = atof(argv[4]);
+#else
     double F = atof(argv[3]);
+#endif
 
     int control_ratio = 8; // E.g. 1/8 workers start putting tasks
     if (getenv("CONTROL_RATIO") != NULL) {
@@ -119,10 +131,16 @@ int main(int argc, char *argv[])
       }
       int i, j;
       sscanf(cmdbuffer, "%i %i", &i, &j);
-      float spin_start = MPI_Wtime();
+      double sleep_time;
+#ifdef LOGNORM
+      sleep_time = lognorm_sample(mu, sigma);
+#else
+      sleep_time = F;
+#endif
 
+      double spin_start = MPI_Wtime();
       // Spin!
-      while (MPI_Wtime() - spin_start < F);
+      while (MPI_Wtime() - spin_start < sleep_time);
       //printf("%i %i\n", i, j);
       ndone++;
       if (ndone % 50000 == 0) {
@@ -142,3 +160,34 @@ int main(int argc, char *argv[])
 
   return(0);
 }
+
+#ifdef LOGNORM
+// Float in (0, 1) range
+static double rand_float(void)
+{
+  double v = (double)rand();
+
+  // scale, non-inclusive  
+
+  return (v + 1) / ((double)RAND_MAX + 2);
+}
+static double norm_sample(double mu, double sigma)
+{
+  while (true)
+  {
+    double r1 = rand_float() * 2 - 1;
+    double r2 = rand_float() * 2 - 1;
+    double s = r1*r1 + r2*r2;
+    if (s < 1)
+    {
+      double unscaled = r1 * sqrt((-2 * log(s))/s);
+      return mu + sigma * unscaled;
+    }
+  }
+}
+
+static double lognorm_sample(double mu, double sigma)
+{
+  return exp(norm_sample(mu, sigma));
+}
+#endif
