@@ -1,18 +1,24 @@
 #ifndef __UTS_INLINE
 #define __UTS_INLINE
 
-extern tree_t type;
-extern double shiftDepth;
-extern int gen_mx;
+#include "uts.h"
 
-static inline int uts_child_type_inline(int parent_height) {
-  switch (type) {
+static inline void uts_init_root(Node * root, tree_t type, int root_id) {
+  root->type = type;
+  root->height = 0;
+  root->numChildren = -1;      // means not yet determined
+  rng_init(root->state.state, root_id);
+}
+
+static inline int uts_child_type_inline(tree_t tree_type,
+      int shift_depth, int gen_mx, int parent_height) {
+  switch (tree_type) {
     case BIN:
       return BIN;
     case GEO:
       return GEO;
     case HYBRID:
-      if (parent_height < shiftDepth * gen_mx)
+      if (parent_height < shift_depth * gen_mx)
         return GEO;
       else 
         return BIN;

@@ -16,6 +16,13 @@
 
 #define COMPUTE_GRANULARITY 1
 
+typedef struct {
+  tree_t tree_type;
+  geoshape_t geoshape;
+  int gen_mx;
+  double shift_depth;
+} uts_params;
+
 // Side of node struct representation in bytes
 int uts_node_strlen(void)
 {
@@ -37,13 +44,27 @@ void uts_node_tostr(char *out, const struct node_t *node)
   out[pos++] = '\0';
 }
 
+// String must be uts_node_strlen long
+void uts_str_tonode(struct node_t *out, char *node_str, int node_strlen)
+{
+  assert(node_strlen == uts_node_strlen());
 
-static struct node_t nodes[NODE_ARRAY_SIZE];
+  char *data = (char*)out;
+  int pos = 0;
+  for (int i = 0; i < sizeof(*out); i++)
+  {
+    data[i] = (node_str[2*i] - '0') << 4 + (node_str[2*i+1] - '0');
+  }
+}
 
 // TODO: Tcl wrapper function
 
+
+static struct node_t nodes[NODE_ARRAY_SIZE];
+
 static inline void uts_child(struct node_t *child, int child_ix,
                         int parent_height, int parent_type,
+                        uts_params params,
                         struct state_t *parent_state)
 {
   for (int i = 0; i < COMPUTE_GRANULARITY; i++)
@@ -51,7 +72,8 @@ static inline void uts_child(struct node_t *child, int child_ix,
     rng_spawn(parent_state->state, child->state.state, child_ix);
   }
   child->height = parent_height + 1;
-  child->type = uts_child_type_inline(parent_height);
+  child->type = uts_child_type_inline(params.tree_type,
+      params.shift_depth, params.gen_mx, parent_height);
 }
 
 /*
@@ -59,7 +81,8 @@ static inline void uts_child(struct node_t *child, int child_ix,
  * nodes_size: output, number of valid nodes in nodes
  */
 static bool uts_step_bfs(struct node_t *init_node,
-    int max_nodes, int max_steps, int *head, int *tail)
+    uts_params params, int max_nodes, int max_steps,
+    int *head, int *tail)
 {
   if (max_nodes > MAX_NODE_RETURN_THRESHOLD)
   {
@@ -83,7 +106,7 @@ static bool uts_step_bfs(struct node_t *init_node,
     for (int i = 0; i < num_children; i++)
     {
       struct node_t *child = &nodes[(h + n) % NODE_ARRAY_SIZE];
-      uts_child(child, i, height, type, &state);
+      uts_child(child, i, height, type, params, &state);
       n++;
     }
 
@@ -107,8 +130,8 @@ static bool uts_step_bfs(struct node_t *init_node,
  * Perform step doing dfs tranversal
  * nodes_size: output, number of valid nodes in nodes
  */
-static bool uts_step_dfs(struct node_t *init_node, int max_nodes,
-    int max_steps, int *nodes_size)
+static bool uts_step_dfs(struct node_t *init_node, uts_params params,
+    int max_nodes, int max_steps, int *nodes_size)
 {
   if (max_nodes > MAX_NODE_RETURN_THRESHOLD)
   {
@@ -131,7 +154,7 @@ static bool uts_step_dfs(struct node_t *init_node, int max_nodes,
     for (int i = 0; i < num_children; i++)
     {
       struct node_t *child = &nodes[n++];
-      uts_child(child, i, height, type, &state);
+      uts_child(child, i, height, type, params, &state);
     }
 
     processed++;
