@@ -2,7 +2,7 @@ package provide lognorm 0.0
 
 # Log normal distribution implementation
 namespace eval lognorm {
-  namespace export sample samples norm_samples
+  namespace export sample samples norm_samples mean stdev
 
   proc mean { mu sigma } {
     return [ expr {exp($mu + ($sigma**2)/2)} ]
