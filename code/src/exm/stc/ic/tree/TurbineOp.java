@@ -2606,6 +2606,15 @@ public class TurbineOp extends Instruction {
       return Var.NONE;
     }
     
+    switch (op) {
+      case ASYNC_COPY:
+        // Async copy is special because it copies the entire structure 
+        return ICUtil.extractVars(inputs);
+      default:
+        // Fall through;
+        break;
+    }
+    
     // If async, assume that all scalar input vars are blocked on
     ArrayList<Var> blocksOn = new ArrayList<Var>();
     for (Arg oa: getInputs()) {
@@ -2616,7 +2625,7 @@ public class TurbineOp extends Instruction {
           blocksOn.add(v);
         } else if (Types.isPrimValue(t) || Types.isStruct(t) ||
             Types.isContainer(t) || Types.isPrimUpdateable(t)) {
-          // No turbine ops block on these types
+          // Not all turbine ops block on these types
         } else {
           throw new STCRuntimeError("Don't handle type "
                               + t.toString() + " here");

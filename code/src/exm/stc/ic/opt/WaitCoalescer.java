@@ -34,6 +34,7 @@ import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.WaitVar;
@@ -670,6 +671,10 @@ public class WaitCoalescer implements OptimizerPass {
                                 Block block, ExecContext currContext) {
     MultiMap<Var, InstOrCont> waitMap = buildWaiterMap(prog, block);
     
+    if (logger.isTraceEnabled()) {
+      logger.trace("waitMap keys: " + waitMap.keySet());
+    }
+    
     if (waitMap.isDefinitelyEmpty()) {
       // If waitMap is empty, can't push anything down, so just
       // shortcircuit
@@ -722,18 +727,17 @@ public class WaitCoalescer implements OptimizerPass {
           if (logger.isTraceEnabled()) {
             logger.trace("Pushdown at: " + pushdownPoint.toString());
           }
-          List<Var> writtenFutures = new ArrayList<Var>();
-          for (Var outv: pushdownPoint.getOutputs()) {
-            if (Types.isFuture(outv.type())) {
-              writtenFutures.add(outv);
-            }
-          }
           
           // Relocate instructions which depend on output future of this instruction
-          for (Var writtenFuture: writtenFutures) {
-            boolean success = tryPushdownClosedVar(logger, top, topContext, ancestors, curr,
-                currContext, waitMap, pushedDown, it, writtenFuture);
-            changed = changed || success;
+          for (Var out: pushdownPoint.getOutputs()) {
+            if (trackForPushdown(out)) {
+              if (logger.isTraceEnabled()) {
+                logger.trace("Check output for pushdown: " + out.name());
+              }
+              boolean success = tryPushdownClosedVar(logger, top, topContext, ancestors, curr,
+                  currContext, waitMap, pushedDown, it, out);
+              changed = changed || success;
+            }
           }
           break;
         }
@@ -1142,12 +1146,21 @@ public class WaitCoalescer implements OptimizerPass {
         List<Var> bi = inst.getBlockingInputs(prog);
         if (bi != null) {
           for (Var in: bi) {
-            if (Types.isFuture(in.type())) {
+            if (trackForPushdown(in)) {
               waitMap.put(in, new InstOrCont(inst));
             }
           }
         }
       }
     }
+  }
+
+  /**
+   * Check whether we should track for pushing down waits
+   * @param var
+   * @return
+   */
+  private static boolean trackForPushdown(Var var) {
+    return var.storage() != Alloc.LOCAL;
   }
 }
