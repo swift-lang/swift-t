@@ -495,11 +495,11 @@ See the script header for usage.
 
 === Blue Gene/Q
 
-*As of:* 0.4.0 - 07/29/2013
-
 ==== Vesta
 
 ===== Public installation
+
+*As of:* 0.4.0 - 07/29/2013
 
 * STC: +~wozniak/Public/stc-bgq/bin/stc+
 * Turbine: +~wozniak/Public/turbine-bgq/scrips/submit/cobalt/turbine-cobalt-run.zsh+
@@ -514,7 +514,27 @@ turbine-cobalt-run.zsh -n 3 program.tcl
 The normal Turbine environment variables are honored, plus the
 <<variables,Turbine scheduler variables>>.
 
+==== Cetus
+
+*As of:* 0.5.0 - 4/4/2014
+
+Add to +PATH+:
+* STC: +~wozniak/Public/ppc64/stc/bin+
+* Turbine:
++~wozniak/Public/ppc64/turbine/scripts/submit/cobalt+
+
+* Run as:
++
+----
+export MODE=BGQ
+export QUEUE=...
+export PROJECT=...
+turbine-cobalt-run.zsh -n 3 program.tcl
+----
+
 ===== Build procedure
+
+*As of:* 0.5.0 - 4/4/2014
 
 *Tcl:*
 
@@ -529,9 +549,9 @@ the problem.
 
 Put +/bgsys/drivers/ppcfloor/comm/gcc/bin+ in your +PATH+.
 
-* Compile c-utils with gcc
-* Configure ADLB with +mpicc+ and +--enable-mpi-2+
-* Configure Turbine
+* Compile c-utils with +/usr/bin/gcc+
+* Configure ADLB with +mpixlc --enable-mpi-2 --enable-xlc+
+* Configure Turbine with +/usr/bin/gcc --disable-static --with-tcl=/home/wozniak/Public/sfw/ppc64/tcl-8.5.12+
 
 *External scripting:*
 
