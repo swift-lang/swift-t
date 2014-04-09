@@ -416,7 +416,9 @@ systems>> that use Cobalt.
 
 ==== Surveyor/Intrepid/Challenger
 
-These machines are at the Argonne Leadership Computing Facility (ALCF).
+These machines were at the Argonne Leadership Computing Facility
+(ALCF).  Other existing Blue Gene/P systems may be configured in a
+similar way.
 
 ===== Public installation
 
