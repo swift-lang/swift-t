@@ -52,8 +52,6 @@ TURBINE_OUTPUT=${PBS_O_WORKDIR}
 
 export TURBINE_USER_LIB=
 export TURBINE_LOG=0
-
-export ADLB_SERVERS=2
 export ADLB_PERF_COUNTERS=1
 export ADLB_PRINT_TIME=1
 
@@ -79,8 +77,6 @@ echo "ADLB_PROG:    ${ADLB_PROG}"
 echo "PROCS:        ${PROCS}"
 echo "NODES:        ${NODES}"
 echo "PPN:          ${PPN}"
-echo
-echo "ADLB_SERVERS:    ${ADLB_SERVERS}"
 
 # Record the script
 cp $0 ${TURBINE_OUTPUT}/${PBS_JOBID}.submit
@@ -100,7 +96,7 @@ do
     #N=10000
     # TODO: scaled down
     N=100
-    M=$((NODES*2500))
+    M=$((NODES*1000))
     mu=-8.515
     sigma=1
     if [ $opt = adlb ]
@@ -111,9 +107,16 @@ do
       ARGS="--N=${N} --M=${M} --mu=${mu} --sigma=${sigma}"
       PROG=${SCRIPT}.${opt}
     fi
+
+    export ADLB_SERVERS=${APRUN_NODES}
+    APRUN_PROCS=$((APRUN_NODES*PPN))
+    echo
     echo "Run ${PROG} with args: ${ARGS}"
-    aprun -n ${PROCS} -N ${PPN} -cc none -d 1 ${TCLSH} ${PROG} ${ARGS} \
-            2>&1 > "${PBS_JOBID}.${opt}.p${PROCS}.aprun.out" &
+    echo "ADLB_SERVERS:    ${ADLB_SERVERS}"
+    echo "APRUN_NODES:     ${APRUN_NODES}"
+    echo "APRUN_PROCS:     ${APRUN_PROCS}"
+    aprun -n ${APRUN_PROCS} -N ${PPN} -cc none -d 1 ${TCLSH} ${PROG} ${ARGS} \
+            2>&1 > "${PBS_JOBID}.${opt}.p${APRUN_PROCS}.aprun.out" &
 
     if (( APRUN_NODES == NODES ))
     then
