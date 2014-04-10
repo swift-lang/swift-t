@@ -9,6 +9,7 @@
 #include <string.h>
 #include <math.h>
 #include <unistd.h>
+#include <sys/time.h>
 #include <adlb.h>
 
 // Work unit type
@@ -137,10 +138,18 @@ int main(int argc, char *argv[])
 #else
       sleep_time = F;
 #endif
-
-      double spin_start = MPI_Wtime();
-      // Spin!
-      while (MPI_Wtime() - spin_start < sleep_time);
+      
+      // Use this time API - same as Tcl
+      struct timeval spin_start, now;
+      gettimeofday(&spin_start, NULL);
+      long sleep_time_usec = (long)(sleep_time * 1e6);
+      
+      now = spin_start;
+      while (now.tv_sec * 1000000 + now.tv_usec >
+             spin_start.tv_sec * 1000000 + spin_start.tv_usec +
+             sleep_time_usec) {
+        gettimeofday(&now, NULL);
+      }
       //printf("%i %i\n", i, j);
       ndone++;
       if (ndone % 500000 == 0) {

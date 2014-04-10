@@ -92,9 +92,10 @@ do
 
   while ((APRUN_NODES > 0))
   do
-    N=10000
+    # ADLB partitions outer loop, ensure plenty of iterationss to be fair
+    N=100000
     #N=100
-    M=$((NODES*2500))
+    M=$((NODES*250))
     mu=-8.515
     sigma=1
     if [ $opt = adlb ]
