@@ -154,13 +154,13 @@ int main(int argc, char *argv[])
       for (int i = 0; i < N; i++) {
         double val = i;
         rc = ADLB_Store(ids[IX(i, 0, N)], ADLB_NO_SUB, ADLB_DATA_TYPE_FLOAT,
-                          &val, sizeof(val), ADLB_WRITE_RC);
+                          &val, sizeof(val), ADLB_WRITE_RC, ADLB_NO_RC);
         assert(rc == ADLB_SUCCESS);
         
         // Don't double-assign [0][0]
         if (i != 0) {
           rc = ADLB_Store(ids[IX(0, i, N)], ADLB_NO_SUB, ADLB_DATA_TYPE_FLOAT,
-                            &val, sizeof(val), ADLB_WRITE_RC);
+                            &val, sizeof(val), ADLB_WRITE_RC, ADLB_NO_RC);
           assert(rc == ADLB_SUCCESS);
         }
       }
@@ -213,7 +213,10 @@ int main(int argc, char *argv[])
           adlb_datum_id id;
           int c = sscanf(buffer, "close %li", &id);
           assert(c == 1);
-          int *rowcol = table_lp_search(&id_map, id);
+          int *rowcol;
+          
+          bool found = table_lp_search(&id_map, id, (void**)&rowcol);
+          assert(found);
           int row = rowcol[0];
           int col = rowcol[1];
           DEBUG("[%d][%d] notification\n", row, col);
@@ -285,7 +288,7 @@ int main(int argc, char *argv[])
 
         double new_val = pred_vals[0] + pred_vals[1] + pred_vals[2];
         rc = ADLB_Store(result_id, ADLB_NO_SUB, ADLB_DATA_TYPE_FLOAT,
-                          &new_val, sizeof(new_val), ADLB_WRITE_RC);   
+                      &new_val, sizeof(new_val), ADLB_WRITE_RC, ADLB_NO_RC);   
         assert(rc == ADLB_SUCCESS);
       }
     }

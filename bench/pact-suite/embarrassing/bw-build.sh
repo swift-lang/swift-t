@@ -12,7 +12,7 @@ source $TURBINE/scripts/turbine-build-config.sh
 
 CC=cc
 CFLAGS="-std=c99 -Wall -O2 ${TURBINE_INCLUDES}"
-LDFLAGS="${TURBINE_LIBS} ${TURBINE_RPATH}"
+LDFLAGS="${TURBINE_LIBS}"
 
 MKSTATIC=$TURBINE/scripts/mkstatic/mkstatic.tcl
 
