@@ -27,6 +27,6 @@ STC_FLAGS+=" -T no-engine"
 SWIFT_PROG=wavefront
 ${STC} ${STC_FLAGS} -C ${SWIFT_PROG}.ic ${SWIFT_PROG}.swift
 ${MKSTATIC} ${SWIFT_PROG}.manifest -c ${SWIFT_PROG}_tcl.c
-${CC} ${CFLAGS} ${SWIFT_PROG}_tcl.c  ${LDFLAGS} -o ${SWIFT_PROG}_lognorm_tcl
+${CC} ${CFLAGS} ${SWIFT_PROG}_tcl.c  ${LDFLAGS} -o ${SWIFT_PROG}_tcl
 
 echo "OK."
