@@ -5,6 +5,7 @@
 
 #include "uts.h"
 #include "uts_inline.h"
+#include "uts_leaf.h"
 
 // TODO: inline functions here?
 
@@ -50,15 +51,11 @@ void uts_str_tonode(struct node_t *out, char *node_str, int node_strlen)
   assert(node_strlen == uts_node_strlen());
 
   char *data = (char*)out;
-  int pos = 0;
   for (int i = 0; i < sizeof(*out); i++)
   {
-    data[i] = (node_str[2*i] - '0') << 4 + (node_str[2*i+1] - '0');
+    data[i] = ((node_str[2*i] - '0') << 4) + (node_str[2*i+1] - '0');
   }
 }
-
-// TODO: Tcl wrapper function
-
 
 static struct node_t nodes[NODE_ARRAY_SIZE];
 
@@ -170,3 +167,72 @@ static bool uts_step_dfs(struct node_t *init_node, uts_params params,
   *nodes_size = n;
   return true;
 }
+
+#define UTS_NAMESPACE "uts::"
+#define COMMAND(tcl_function, c_function) \
+    Tcl_CreateObjCommand(interp, UTS_NAMESPACE tcl_function, c_function, \
+                         NULL, NULL);
+
+#define CHECK(cond, msg) \
+  if (!(cond)) { fprintf(stderr, msg "\n"); return TCL_ERROR; }
+
+/*
+ * uts::uts_root <tree type> <root id>
+ *
+ */
+static int
+uts_root_cmd(ClientData cdata, Tcl_Interp *interp,
+                  int objc, Tcl_Obj *const objv[])
+{
+  int rc;
+  int tree_type;
+  int root_id;
+  CHECK(objc == 3, "expected 3 args");
+
+  rc = Tcl_GetIntFromObj(interp, objv[1], &tree_type);
+  CHECK(rc == TCL_OK, "bad tree_type");
+  
+  rc = Tcl_GetIntFromObj(interp, objv[2], &root_id);
+  CHECK(rc == TCL_OK, "bad root_id");
+
+  Node root;
+  uts_init_root(&root, tree_type, root_id);
+
+  Tcl_Obj *node_string = Tcl_NewObj();
+  // expand to node string length, print
+  rc = Tcl_AttemptSetObjLength(node_string, uts_node_strlen());
+  CHECK(rc == 1, "Could not expand obj");
+  uts_node_tostr(node_string->bytes, &root);
+
+  Tcl_SetObjResult(interp, node_string);
+  return TCL_OK;
+}
+
+/*
+ * uts::uts_run <node string> <tree_type> <geoshape> <gen_mx> <shift_depth>
+                <max_nodes> <max_steps>
+ */
+static int
+uts_run_cmd(ClientData cdata, Tcl_Interp *interp,
+                  int objc, Tcl_Obj *const objv[])
+{
+
+  return TCL_ERROR;
+}
+
+
+int DLLEXPORT
+uts_leaf_init(Tcl_Interp *interp)
+{
+  if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL)
+    return TCL_ERROR;
+
+  if (Tcl_PkgProvide(interp, "uts", "0.0") == TCL_ERROR)
+    return TCL_ERROR;
+
+
+  COMMAND("uts_root", uts_root_cmd);
+  COMMAND("uts_run", uts_run_cmd);
+  return TCL_OK;
+}
+

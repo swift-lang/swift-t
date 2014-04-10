@@ -10,7 +10,7 @@ LIB = libuts.a
 
 CC = gcc
 CFLAGS += -D BRG_RNG
-CFLAGS += -std=c99
+CFLAGS += -std=c99 -Wall
 CFLAGS += -I $(TCL_HOME)/include
 
 AR = ar

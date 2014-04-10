@@ -2,7 +2,7 @@ source lib/lognorm.tcl
 package require lognorm
 
 
-foreach mu [ list -8.515 -8.51 -8.505 ] {
+foreach mu [ list -6.905 -7.6 -7.61 -7.62 ] {
   foreach sigma [ list 1 ] {
     set mean [ lognorm::mean $mu $sigma ]
     set stdev [ lognorm::stdev $mu $sigma ]
