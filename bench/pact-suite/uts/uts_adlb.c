@@ -12,8 +12,7 @@
 
 #include "bench_util.h"
 
-// Just get all the code in here - fix later
-#include "uts-src/uts_leaf.c"
+#include "uts-src/uts_inline.h"
 
 // Work unit type
 #define WORKT 0

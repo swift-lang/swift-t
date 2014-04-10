@@ -21,5 +21,5 @@ all: $(LIB)
 $(LIB): $(OBJS)
 	$(AR) $(ARFLAGS) $(@) $(^)
 
-%.o: %.c uts.h $(RNG_HEADERS)
+%.o: %.c uts.h uts_inline.h $(RNG_HEADERS)
 	$(CC) $(CFLAGS) -c $(<) -o $(@)

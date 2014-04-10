@@ -20,7 +20,9 @@ LIBS="-L uts-src -luts ${TURBINE_LIBS} ${TURBINE_RPATH}"
 
 MKSTATIC=$TURBINE/scripts/mkstatic/mkstatic.tcl
 
-${CC} ${CFLAGS} ${LDFLAGS} -D BRG_RNG uts_adlb.c  ${LIBS} -o uts_adlb
+UTS_RNG=BRG_RNG
+
+${CC} ${CFLAGS} ${LDFLAGS} -D ${UTS_RNG} uts_adlb.c  ${LIBS} -o uts_adlb
 
 STC=$INST/stc/bin/stc
 

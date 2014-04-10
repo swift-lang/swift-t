@@ -99,12 +99,12 @@ do
 
       # Params, assuming sigma=1
       # Aim for a few minutes long job
-      mu=-8.515 # 0.2ms
-      SCALE_FACTOR=5
+      # mu=-8.515 # 0.2ms
+      #SCALE_FACTOR=5
       #mu=-7.60 # 0.5ms
       #SCALE_FACTOR=2
-      #mu=-6.905 # 1ms
-      #SCALE_FACTOR=1
+      mu=-6.905 # 1ms
+      SCALE_FACTOR=1
       
       # ADLB partitions outer loop, ensure plenty of iterations to be fair
       N=25000
