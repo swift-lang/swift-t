@@ -13,14 +13,15 @@ source $TURBINE/scripts/turbine-build-config.sh
 
 CC=cc
 CFLAGS="-std=c99 -Wall -O2 ${TURBINE_INCLUDES}"
-LDFLAGS="${TURBINE_LIBS}"
+LDFLAGS=""
+LIBS="${TURBINE_LIBS}"
 
 MKSTATIC=$TURBINE/scripts/mkstatic/mkstatic.tcl
 
 echo -n ADLB
-${CC} ${CFLAGS} embarrassing.c  ${LDFLAGS} -o embarrassing
+${CC} ${CFLAGS} ${LDFLAGS} embarrassing.c ${LIBS} -o embarrassing
 echo -n .
-${CC} ${CFLAGS} -D LOGNORM embarrassing.c  ${LDFLAGS} -o embarrassing_lognorm
+${CC} ${CFLAGS} ${LDFLAGS} -D LOGNORM embarrassing.c ${LIBS} -o embarrassing_lognorm
 echo .
 
 STC=$STC_INST/bin/stc
@@ -37,11 +38,14 @@ do
   PREFIX_TCL=${PREFIX}_tcl.O${OPT}
   ${STC} ${STC_FLAGS} -C ${PREFIX_OPT}.ic ${PREFIX}.swift ${PREFIX_OPT}.tcl
   echo -n .
-  ${MKSTATIC} ${PREFIX}.manifest -c ${PREFIX_TCL}.c
+  ${MKSTATIC} ${PREFIX}.manifest --main-script ${PREFIX_OPT}.tcl -c ${PREFIX_TCL}.c
   echo -n .
 
-  # Dynamically link
-  ${CC} -dynamic ${CFLAGS} ${PREFIX_TCL}.c ${LDFLAGS} -o ${PREFIX_TCL}
+  TCL_LDFLAGS="-dynamic" # Can't be linked statically
+  
+  ${CC} ${CFLAGS} ${TCL_LDFLAGS} ${LDFLAGS} ${PREFIX_TCL}.c \
+    $(${MKSTATIC} ${PREFIX}.manifest --link-objs --link-flags) \
+    ${LIBS} -o ${PREFIX_TCL}
   echo -n
 
 done
