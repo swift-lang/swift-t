@@ -52,7 +52,7 @@ static inline void spin(double sleep_time)
   long sleep_time_usec = (long)(sleep_time * 1e6);
   
   now = spin_start;
-  while (now.tv_sec * 1000000 + now.tv_usec >
+  while (now.tv_sec * 1000000 + now.tv_usec <
          spin_start.tv_sec * 1000000 + spin_start.tv_usec +
          sleep_time_usec) {
     gettimeofday(&now, NULL);
