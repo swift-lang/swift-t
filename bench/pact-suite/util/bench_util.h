@@ -3,6 +3,8 @@
 
 #include <sys/time.h>
 #include <math.h>
+#include <stdlib.h>
+#include <stdbool.h>
 
 // Random utils
 static double rand_float(void);
