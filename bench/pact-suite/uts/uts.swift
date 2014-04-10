@@ -28,10 +28,10 @@ type uts_node string;
  */
 @dispatch=WORKER
 (bag<uts_node> desc_nodes) uts_run_dfs(uts_node node, tree_t tree_type,
-    geoshape_t geoshape, int gen_mx, float shift_depth,
+    float b_0, geoshape_t geoshape, int gen_mx, float shift_depth,
     int max_nodes, int max_steps)
     "uts" "0.0" [
-    "set <<desc_nodes>> [ uts::uts_run_dfs <<node>> <<tree_type>> <<geoshape>> <<gen_mx>> <<shift_depth>> <<max_nodes>> <<max_steps>> ]"
+    "set <<desc_nodes>> [ uts::uts_run_dfs <<node>> <<tree_type>> <<b_0>> <<geoshape>> <<gen_mx>> <<shift_depth>> <<max_nodes>> <<max_steps>> ]"
 ];
 
 /**
@@ -39,10 +39,10 @@ type uts_node string;
  */
 @dispatch=WORKER
 (bag<uts_node> desc_nodes) uts_run_bfs(uts_node node, tree_t tree_type,
-    geoshape_t geoshape, int gen_mx, float shift_depth,
+    float b_0, geoshape_t geoshape, int gen_mx, float shift_depth,
     int max_nodes, int max_steps)
     "uts" "0.0" [
-    "set <<desc_nodes>> [ uts::uts_run_bfs <<node>> <<tree_type>> <<geoshape>> <<gen_mx>> <<shift_depth>> <<max_nodes>> <<max_steps>> ]"
+    "set <<desc_nodes>> [ uts::uts_run_bfs <<node>> <<tree_type>> <<b_0>> <<geoshape>> <<gen_mx>> <<shift_depth>> <<max_nodes>> <<max_steps>> ]"
 ];
 
 main {
@@ -52,39 +52,40 @@ main {
   geoshape_t geo_shape = GEO_LINEAR;
   float shift_depth = 0.5;
 
-  argv_accept("root_id", "gen_mx", "max_nodes", "max_steps");
+  argv_accept("root_id", "b_0", "gen_mx", "max_nodes", "max_steps");
 
   printf("Swift/T UTS") =>
     printf("args: %s", args()) =>
     printf("tree_type: %i geo_shape: %i shift_depth: %f",
           tree_type, geo_shape, shift_depth);
   int root_id = toint(argv("root_id", "0"));
+  float b_0 = tofloat(argv("b_0", "4"));
   int gen_mx = toint(argv("gen_mx", "6"));
-  int max_nodes = toint(argv("max_nodes", "1024"));
-  int max_steps = toint(argv("max_steps", "10000"));
+  int max_nodes = toint(argv("max_nodes", "128"));
+  int max_steps = toint(argv("max_steps", "1000000"));
 
 
   uts_node root = uts_root(tree_type, root_id);
 
   // first generate a bunch of parallel work
-  bag<uts_node> nodes1 = uts_run_bfs(root, tree_type, geo_shape, gen_mx, shift_depth,
+  bag<uts_node> nodes1 = uts_run_bfs(root, tree_type, b_0, geo_shape, gen_mx, shift_depth,
                                  max_nodes, 256);
   foreach n1 in nodes1 {
-    bag<uts_node> nodes2 = uts_run_bfs(n1, tree_type, geo_shape, gen_mx, shift_depth,
+    bag<uts_node> nodes2 = uts_run_bfs(n1, tree_type, b_0, geo_shape, gen_mx, shift_depth,
                                        max_nodes, 256);
     foreach n2 in nodes2 {
-      uts_rec(n2, tree_type, geo_shape, shift_depth, gen_mx, max_nodes, max_steps);
+      uts_rec(n2, tree_type, b_0, geo_shape, shift_depth, gen_mx, max_nodes, max_steps);
     }
   }
 }
 
-uts_rec(uts_node node, tree_t tree_type, geoshape_t geo_shape, float shift_depth,
+uts_rec(uts_node node, tree_t tree_type, float b_0, geoshape_t geo_shape, float shift_depth,
         int gen_mx, int max_nodes, int max_steps) {
 
-  bag<uts_node> nodes = uts_run_dfs(node, tree_type, geo_shape, gen_mx, shift_depth,
+  bag<uts_node> nodes = uts_run_dfs(node, tree_type, b_0, geo_shape, gen_mx, shift_depth,
                                     max_nodes, max_steps);
   foreach node2 in nodes {
-    uts_rec(node2, tree_type, geo_shape, shift_depth, gen_mx,
+    uts_rec(node2, tree_type, b_0, geo_shape, shift_depth, gen_mx,
             max_nodes, max_steps);
   }
 }

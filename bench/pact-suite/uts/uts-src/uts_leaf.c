@@ -7,7 +7,23 @@
 #include "uts_inline.h"
 #include "uts_leaf.h"
 
-// TODO: inline functions here?
+#define UTS_INFO_ENABLED
+
+#ifdef UTS_TRACE_ENABLED
+#define UTS_TRACE(fmt, args...) printf("TRACE: " fmt, ## args)
+#else
+#define UTS_TRACE(fmt, args...)
+#endif
+#ifdef UTS_DEBUG_ENABLED
+#define UTS_DEBUG(fmt, args...) printf("DEBUG: " fmt, ## args)
+#else
+#define UTS_DEBUG(fmt, args...)
+#endif
+#ifdef UTS_INFO_ENABLED
+#define UTS_INFO(fmt, args...) printf("INFO: " fmt, ## args)
+#else
+#define UTS_INFO(fmt, args...)
+#endif
 
 // Max node count before returning
 #define MAX_NODE_RETURN_THRESHOLD (10 * 1024)
@@ -17,12 +33,7 @@
 
 #define COMPUTE_GRANULARITY 1
 
-typedef struct {
-  tree_t tree_type;
-  geoshape_t geoshape;
-  int gen_mx;
-  double shift_depth;
-} uts_params;
+long int total_nodes_processed = 0;
 
 // Side of node struct representation in bytes
 int uts_node_strlen(void)
@@ -69,8 +80,7 @@ static inline void uts_child(struct node_t *child, int child_ix,
     rng_spawn(parent_state->state, child->state.state, child_ix);
   }
   child->height = parent_height + 1;
-  child->type = uts_child_type_inline(params.tree_type,
-      params.shift_depth, params.gen_mx, parent_height);
+  child->type = uts_child_type_inline(params, parent_height);
 }
 
 /*
@@ -79,7 +89,7 @@ static inline void uts_child(struct node_t *child, int child_ix,
  */
 static bool uts_step_bfs(struct node_t *init_node,
     uts_params params, int max_nodes, int max_steps,
-    int *head, int *tail)
+    int *head, int *tail, int *count)
 {
   if (max_nodes > MAX_NODE_RETURN_THRESHOLD)
   {
@@ -94,8 +104,10 @@ static bool uts_step_bfs(struct node_t *init_node,
   {
     int height = curr->height;
     int type = curr->type;
-    int num_children = uts_numChildren(curr);
+    int num_children = uts_num_children(curr, params);
     assert(num_children <= MAXNUMCHILDREN);
+
+    UTS_TRACE("BFS Node@height %i children %i h %i n %i\n", height, num_children, h, n);
 
     struct state_t state = curr->state;
 
@@ -117,9 +129,12 @@ static bool uts_step_bfs(struct node_t *init_node,
   while (n >= 0 && n < max_nodes &&
          processed < max_steps);
 
+  total_nodes_processed += processed;
+
   // Successful exit
   *head = h;
   *tail = (h + n) % NODE_ARRAY_SIZE;
+  *count = n;
   return true;
 }
 
@@ -142,8 +157,10 @@ static bool uts_step_dfs(struct node_t *init_node, uts_params params,
   {
     int height = curr->height;
     int type = curr->type;
-    int num_children = uts_numChildren(curr);
+    int num_children = uts_num_children(curr, params);
     assert(num_children <= MAXNUMCHILDREN);
+    
+    UTS_TRACE("DFS Node@height %i children %i\n", height, num_children);
 
     struct state_t state = curr->state;
 
@@ -162,6 +179,8 @@ static bool uts_step_dfs(struct node_t *init_node, uts_params params,
   }
   while (n >= 0 && n < max_nodes &&
          processed < max_steps);
+  
+  total_nodes_processed += processed;
 
   // Successful exit
   *nodes_size = n;
@@ -231,12 +250,13 @@ uts_run_impl(ClientData cdata, Tcl_Interp *interp,
 {
   int rc;
   int tree_type;
+  double b_0;
   int geoshape;
   int gen_mx;
   double shift_depth;
   int max_nodes;
   int max_steps;
-  CHECK(objc == 8, "expected 7 args");
+  CHECK(objc == 9, "expected 8 args");
 
   int node_string_len;
   const char *node_string = Tcl_GetStringFromObj(objv[1], &node_string_len);
@@ -244,19 +264,22 @@ uts_run_impl(ClientData cdata, Tcl_Interp *interp,
   rc = Tcl_GetIntFromObj(interp, objv[2], &tree_type);
   CHECK(rc == TCL_OK, "bad tree_type");
   
-  rc = Tcl_GetIntFromObj(interp, objv[3], &geoshape);
+  rc = Tcl_GetDoubleFromObj(interp, objv[3], &b_0);
+  CHECK(rc == TCL_OK, "bad b_0");
+
+  rc = Tcl_GetIntFromObj(interp, objv[4], &geoshape);
   CHECK(rc == TCL_OK, "bad geoshape");
   
-  rc = Tcl_GetIntFromObj(interp, objv[4], &gen_mx);
+  rc = Tcl_GetIntFromObj(interp, objv[5], &gen_mx);
   CHECK(rc == TCL_OK, "bad gen_mx");
   
-  rc = Tcl_GetDoubleFromObj(interp, objv[5], &shift_depth);
+  rc = Tcl_GetDoubleFromObj(interp, objv[6], &shift_depth);
   CHECK(rc == TCL_OK, "bad shift_depth");
   
-  rc = Tcl_GetIntFromObj(interp, objv[6], &max_nodes);
+  rc = Tcl_GetIntFromObj(interp, objv[7], &max_nodes);
   CHECK(rc == TCL_OK, "bad max_nodes");
   
-  rc = Tcl_GetIntFromObj(interp, objv[7], &max_steps);
+  rc = Tcl_GetIntFromObj(interp, objv[8], &max_steps);
   CHECK(rc == TCL_OK, "bad max_steps");
  
   struct node_t node;
@@ -264,6 +287,7 @@ uts_run_impl(ClientData cdata, Tcl_Interp *interp,
 
   uts_params params = {
     .tree_type = tree_type,
+    .b_0 = b_0,
     .geoshape = geoshape,
     .gen_mx = gen_mx,
     .shift_depth = shift_depth,
@@ -273,27 +297,29 @@ uts_run_impl(ClientData cdata, Tcl_Interp *interp,
   int result_node_count;
   int result_node_head = 0, result_node_tail = 0; // for bfs
 
-  //printf("STARTING STEP BFS %i height: %i\n",
-  //      (int)breadth_first, node.height);
+  int before_nodes_processed = total_nodes_processed;
+
+  UTS_TRACE("STARTING STEP BFS %i height: %i\n",
+        (int)breadth_first, node.height);
   if (breadth_first)
   {
     bool ok = uts_step_bfs(&node, params, max_nodes, max_steps,
-                           &result_node_head, &result_node_tail);
+                           &result_node_head, &result_node_tail, &result_node_count);
 
-    if (result_node_tail > result_node_head)
-    {
-      result_node_count = result_node_tail - result_node_head;
-    }
-    else
-    {
-      result_node_count = result_node_tail + (NODE_ARRAY_SIZE - result_node_head);
-    }
+    UTS_TRACE("h: %i t: %i n: %i\n", result_node_head, result_node_tail, result_node_count);
     CHECK(ok, "Error in step");
   }
   else
   {
     bool ok = uts_step_dfs(&node, params, max_nodes, max_steps, &result_node_count);
     CHECK(ok, "Error in step");
+  }
+
+  int report_interval = 10000;
+  if (total_nodes_processed / report_interval >
+      before_nodes_processed / report_interval )
+  {
+    UTS_INFO("Processed %ld nodes\n", total_nodes_processed);
   }
 
   Tcl_Obj *node_objs[result_node_count];
@@ -311,8 +337,8 @@ uts_run_impl(ClientData cdata, Tcl_Interp *interp,
     rc = tcl_node_string(result_node, &node_objs[i]);
     CHECK(rc == TCL_OK, "error with node string");
   }
-  //printf("FINISHED STEP BFS %i height: %i results: %i\n",
-  //      (int)breadth_first, node.height, result_node_count);
+  UTS_DEBUG("FINISHED STEP BFS %i height: %i results: %i\n",
+        (int)breadth_first, node.height, result_node_count);
   
   Tcl_Obj *node_list = Tcl_NewListObj(result_node_count, node_objs);
   Tcl_SetObjResult(interp, node_list);
