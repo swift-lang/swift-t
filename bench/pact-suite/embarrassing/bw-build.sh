@@ -3,6 +3,7 @@
 set -e
 
 INST=$HOME/soft/exm-sc14/v1/
+#INST=$HOME/soft/exm-sc14/v1-debug/
 TURBINE=$INST/turbine
 LB=$INST/lb
 CUTILS=$INST/c-utils
