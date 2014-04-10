@@ -14,7 +14,7 @@
 
 #PBS -N Swift
 #PBS -q normal
-#PBS -l walltime=4:00:00
+#PBS -l walltime=0:30:00
 
 ### Set the job size using appropriate directives for this system
 ### Blue Waters mode
@@ -86,51 +86,56 @@ cd ${TURBINE_OUTPUT}
 OPT_LEVELS="adlb O3 O2 O1 O0"
 
 
-for opt in ${OPT_LEVELS}
+for trial in 1 2 3
 do
-  APRUN_NODES=$NODES
-
-  while ((APRUN_NODES > 0))
+  for opt in ${OPT_LEVELS}
   do
-    # ADLB partitions outer loop, ensure plenty of iterationss to be fair
-    N=100000
-    #N=100
-    M=$((APRUN_NODES*250))
-    mu=-8.515
-    sigma=1
-    if [ $opt = adlb ]
-    then
-      ARGS="${N} ${M} ${mu} ${sigma}"
-      PROG=${ADLB_PROG}
-    else
-      ARGS="--N=${N} --M=${M} --mu=${mu} --sigma=${sigma}"
-      PROG=${SCRIPT}.${opt}
-    fi
+    APRUN_NODES=$NODES
 
-    export ADLB_SERVERS=${APRUN_NODES}
-    APRUN_PROCS=$((APRUN_NODES*PPN))
-    echo
-    echo "Run ${PROG} with args: ${ARGS}"
-    echo "ADLB_SERVERS:    ${ADLB_SERVERS}"
-    echo "APRUN_NODES:     ${APRUN_NODES}"
-    echo "APRUN_PROCS:     ${APRUN_PROCS}"
-    aprun -n ${APRUN_PROCS} -N ${PPN} -cc none -d 1 ${TCLSH} ${PROG} ${ARGS} \
-            2>&1 > "${PBS_JOBID}.${opt}.p${APRUN_PROCS}.aprun.out" &
+    while ((APRUN_NODES > 0))
+    do
+      # ADLB partitions outer loop, ensure plenty of iterationss to be fair
+      N=100000
+      #N=100
+      M=$((APRUN_NODES*250))
+      mu=-8.515 # 0.2ms
+      #mu=-6.905 # 1ms
+      # mu=-7.60 # 0.5ms
+      sigma=1
+      if [ $opt = adlb ]
+      then
+        ARGS="${N} ${M} ${mu} ${sigma}"
+        PROG=${ADLB_PROG}
+      else
+        ARGS="--N=${N} --M=${M} --mu=${mu} --sigma=${sigma}"
+        PROG=${SCRIPT}.${opt}
+      fi
 
-    if (( APRUN_NODES == NODES ))
-    then
-      # Don't have any free nodes
-      wait
-    fi
+      export ADLB_SERVERS=${APRUN_NODES}
+      APRUN_PROCS=$((APRUN_NODES*PPN))
+      echo
+      echo "Run ${PROG} with args: ${ARGS}"
+      echo "ADLB_SERVERS:    ${ADLB_SERVERS}"
+      echo "APRUN_NODES:     ${APRUN_NODES}"
+      echo "APRUN_PROCS:     ${APRUN_PROCS}"
+      aprun -n ${APRUN_PROCS} -N ${PPN} -cc none -d 1 ${TCLSH} ${PROG} ${ARGS} \
+              2>&1 > "${PBS_JOBID}.${opt}.p${APRUN_PROCS}.${trial}.aprun.out" &
 
-    # Launch smaller sized jobs in powers of two
-    # The remainder will add up to one less than the total number of
-    # nodes allocated, so that the remainder will fit in the largest
-    # job's allocate
-    APRUN_NODES=$((APRUN_NODES/2))
+      if (( APRUN_NODES == NODES ))
+      then
+        # Don't have any free nodes
+        wait
+      fi
+
+      # Launch smaller sized jobs in powers of two
+      # The remainder will add up to one less than the total number of
+      # nodes allocated, so that the remainder will fit in the largest
+      # job's allocate
+      APRUN_NODES=$((APRUN_NODES/2))
+      # APRUN_NODES=0
+    done
+
+    # Wait for jobs for this opt level
+    wait
   done
-
-  # Wait for jobs for this opt level
-  wait
 done
-
