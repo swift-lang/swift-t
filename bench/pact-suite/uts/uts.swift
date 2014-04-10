@@ -10,9 +10,9 @@ global const tree_t TREE_BALANCED = 3;
 
 typedef geoshape_t int;
 global const geoshape_t GEO_LINEAR = 0;
-global const geoshape_t EXPDEC = 1;
-global const geoshape_t CYCLIC = 2;
-global const geoshape_t FIXED = 3;
+global const geoshape_t GEO_EXPDEC = 1;
+global const geoshape_t GEO_CYCLIC = 2;
+global const geoshape_t GEO_FIXED = 3;
 
 // Represent as string
 type uts_node string;
@@ -46,8 +46,6 @@ type uts_node string;
 ];
 
 main {
-  // TODO: missing some geo params
-  // TODO: select params?
   tree_t tree_type = TREE_GEO;
   geoshape_t geo_shape = GEO_LINEAR;
   float shift_depth = 0.5;
