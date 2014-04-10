@@ -31,6 +31,7 @@ proc main { } {
   global SCRIPT_DIR
 
   set usage "mkstatic.tcl <manifest file> \[-c <output c file>\]\
+        \[--main-script <tcl main script, overriding manifest \]\
         \[--include-sys-lib <lib directory with Tcl built-ins>\]\
         \[--include-lib <Tcl lib directory with modules/source to include\]\
         \[--tcl-version <Tcl version number for lib selection>\]\
@@ -75,6 +76,7 @@ proc main { } {
   set sys_lib_dirs [ list ]
   set other_lib_dirs [ list ]
   set tcl_version ""
+  set main_script_override ""
 
   for { set argi 0 } { $argi < $::argc } { incr argi } {
     set arg [ lindex $::argv $argi ]
@@ -87,6 +89,10 @@ proc main { } {
           incr argi
           set c_output_file [ lindex $::argv $argi ]
           nonempty $c_output_file "Expected non-empty argument to -c"
+        }
+        --main-script {
+          incr argi
+          set main_script_override [ lindex $::argv $argi ]
         }
         -r {
           incr argi
@@ -159,7 +165,7 @@ proc main { } {
   }
   set manifest_filename [ lindex $non_flag_args 0 ]
 
-  set manifest_dict [ read_manifest $manifest_filename $ignore_no_manifest ]
+  set manifest_dict [ read_manifest $manifest_filename $ignore_no_manifest $main_script_override ]
  
   set all_lib_src [ locate_all_lib_src $tcl_version $sys_lib_dirs \
                                         $other_lib_dirs ]
@@ -214,7 +220,7 @@ proc setonce { varname val } {
 # All file paths in manifest are relative to the directory containing
 # the manifest file: filenames in returned dictionary for files that
 # are to be processed by this script are updated to account.
-proc read_manifest { manifest_filename ignore_no_manifest } {
+proc read_manifest { manifest_filename ignore_no_manifest main_script_override } {
   # Initial values of things that may be specified by manifest file
   set manifest_dir [ file dirname $manifest_filename ]
 
@@ -298,6 +304,10 @@ proc read_manifest { manifest_filename ignore_no_manifest } {
     }
 
     close $manifest
+  }
+
+  if { $main_script_override != "" } {
+    set main_script $main_script_override
   }
 
   return [ dict create manifest_dir $manifest_dir \
