@@ -13,6 +13,10 @@ extern "C" {
 #include <sys/time.h>
 #include <unistd.h>
 
+extern "C" {
+#include "bench_util.h"
+}
+
 #include <utility>
 using namespace std;
 
@@ -85,21 +89,6 @@ long getnum(adlb_datum_id id) {
           assert(code == ADLB_SUCCESS);
           //printf("Got <%ld> = %ld\n", id, result_val);
           return result_val;
-}
-
-static void spin(double sleep_time)
-{
-  // Use this time API - same as Tcl
-  struct timeval spin_start, now;
-  gettimeofday(&spin_start, NULL);
-  long sleep_time_usec = (long)(sleep_time * 1e6);
-  
-  now = spin_start;
-  while (now.tv_sec * 1000000 + now.tv_usec >
-         spin_start.tv_sec * 1000000 + spin_start.tv_usec +
-         sleep_time_usec) {
-    gettimeofday(&now, NULL);
-  }
 }
 
 int main(int argc, char *argv[])

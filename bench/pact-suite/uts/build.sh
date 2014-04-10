@@ -13,7 +13,7 @@ STC=$INST/stc
 source $TURBINE/scripts/turbine-build-config.sh
 
 CC=mpicc
-CFLAGS="-std=c99 -Wall -O2 ${TURBINE_INCLUDES} -I."
+CFLAGS="-std=c99 -Wall -O2 ${TURBINE_INCLUDES} -I. -I../util"
 LDFLAGS=""
 LIBS="${TURBINE_LIBS} ${TURBINE_RPATH}"
 

@@ -14,7 +14,7 @@ source $TURBINE/scripts/turbine-build-config.sh
 CC=cc
 CPP=c++
 CFLAGS="-std=c99 -Wall -O2 ${TURBINE_INCLUDES}"
-CPPFLAGS="-std=c++0x -Wall -O2 ${TURBINE_INCLUDES}"
+CPPFLAGS="-std=c++0x -Wall -O2 ${TURBINE_INCLUDES} -I ../util"
 LDFLAGS=""
 LIBS="${TURBINE_LIBS}"
 

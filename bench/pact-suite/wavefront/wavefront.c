@@ -1,7 +1,4 @@
 
-// For usleep
-#define _BSD_SOURCE
-
 
 #include <assert.h>
 #include <stdio.h>
@@ -13,6 +10,8 @@
 
 #include <adlb.h>
 #include <table_lp.h>
+
+#include "bench_util.h"
 
 // Work unit type
 #define WAVEFRONT_WORK 0
@@ -282,9 +281,7 @@ int main(int argc, char *argv[])
         }
 
         // do simulated work
-        if (sleep > 0.0) {
-            usleep((long)(sleep * 1000000));
-        }
+        spin(sleep);
 
         double new_val = pred_vals[0] + pred_vals[1] + pred_vals[2];
         rc = ADLB_Store(result_id, ADLB_NO_SUB, ADLB_DATA_TYPE_FLOAT,
