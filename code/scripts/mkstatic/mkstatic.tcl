@@ -160,10 +160,15 @@ proc main { } {
   }
   
   if { [ llength $non_flag_args ] != 1 } {
-    user_err "Expected exactly one non-flagged argument for manifest file\
-              but got: $non_flag_args"
+    if { $ignore_no_manifest } {
+      set manifest_filename ""
+    } else {
+      user_err "Expected exactly one non-flagged argument for manifest file\
+                but got: $non_flag_args"
+    }
+  } else {
+    set manifest_filename [ lindex $non_flag_args 0 ]
   }
-  set manifest_filename [ lindex $non_flag_args 0 ]
 
   set manifest_dict [ read_manifest $manifest_filename $ignore_no_manifest $main_script_override ]
  
