@@ -55,7 +55,7 @@ int thfribo_main(int argc, char** argv){
 ////// m denotes the pdb file number for which l_max time p runs will be running
 //------------------------------------------------------------------------------
     double chi_old[210], chi_new[210],chi_old_total, chi_new_total, chi_diff, chi_1, chi_2 ;
-    for (int m = 3901; m <= 4000; m++){
+    for (int m = 1; m <= 1; m++){
     double t = 0.5 ;
     int pseudo_penalty = 0 ;
     int flag = 0 ;
