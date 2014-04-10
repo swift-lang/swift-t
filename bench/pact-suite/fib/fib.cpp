@@ -1,7 +1,4 @@
 
-// For usleep
-#define _BSD_SOURCE
-
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
@@ -13,6 +10,7 @@ extern "C" {
 #include <adlb.h>
 }
 
+#include <sys/time.h>
 #include <unistd.h>
 
 #include <utility>
@@ -87,6 +85,21 @@ long getnum(adlb_datum_id id) {
           assert(code == ADLB_SUCCESS);
           //printf("Got <%ld> = %ld\n", id, result_val);
           return result_val;
+}
+
+static void spin(double sleep_time)
+{
+  // Use this time API - same as Tcl
+  struct timeval spin_start, now;
+  gettimeofday(&spin_start, NULL);
+  long sleep_time_usec = (long)(sleep_time * 1e6);
+  
+  now = spin_start;
+  while (now.tv_sec * 1000000 + now.tv_usec >
+         spin_start.tv_sec * 1000000 + spin_start.tv_usec +
+         sleep_time_usec) {
+    gettimeofday(&now, NULL);
+  }
 }
 
 int main(int argc, char *argv[])
@@ -182,6 +195,8 @@ int main(int argc, char *argv[])
         sscanf(cmdbuffer, "add %li %li %li", &dst, &src1, &src2);
         long val1 = getnum(src1);
         long val2 = getnum(src2);
+
+        spin(sleep);
         mystore(dst, val1 + val2);
       } else if (strncmp(cmdbuffer, "fin ", 4) == 0) {
         adlb_datum_id id;
