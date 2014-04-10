@@ -22,7 +22,9 @@ MKSTATIC=$TURBINE/scripts/mkstatic/mkstatic.tcl
 
 UTS_RNG=BRG_RNG
 
+echo -n ADLB
 ${CC} ${CFLAGS} ${LDFLAGS} -D ${UTS_RNG} uts_adlb.c  ${LIBS} -o uts_adlb
+echo .
 
 STC=$INST/stc/bin/stc
 

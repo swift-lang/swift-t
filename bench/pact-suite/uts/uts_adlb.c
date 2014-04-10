@@ -68,18 +68,63 @@ int main(int argc, char *argv[])
   }
   else
   {
-    // TODO: lotsa args
-    uts_params params;
-    int max_nodes, max_steps, root_id;
+    // NOTE: some params cannot be changed for now
+    uts_params params = {
+      .tree_type = GEO,
+      .geoshape = LINEAR,
+      .b_0 = 4.0,
+      .gen_mx = 6,
+      .shift_depth = 0.5,
+    };
+    int max_nodes = 128, max_steps = 1000000;
+    int root_id = 0;
+   
+    const char *help = "\n\
+    --b_0 <float initial branch factor>\n\
+    --gen_mx <int max depth>\n\
+    --shift_depth <float shift depth>\n\
+    --max_nodes <max node list size per task>\n\
+    --max_steps <max steps per task>\n\
+    --root_id <integer root id>\n";
+      
+    int argi = 1;
+    while (argi < argc)
+    {
+      const char *flag = argv[argi++];
+      if (argi == argc)
+      { 
+        printf("Stray flag: %s\n", flag); 
+        puts(help);
+        ADLB_Fail(-1);
+      }
+      const char *val = argv[argi++];
+      if (strcmp(flag, "--b_0") == 0) {
+        params.b_0 = atof(val);
+        assert(params.b_0 > 0.0);
+      } else if (strcmp(flag, "--gen_mx") == 0) {
+        params.gen_mx = atoi(val);
+        assert(params.gen_mx > 0);
+      } else if (strcmp(flag, "--shift_depth") == 0) {
+        params.shift_depth = atof(val);
+        assert(params.shift_depth > 0.0);
+      } else if (strcmp(flag, "--max_nodes") == 0) {
+        max_nodes = atoi(val);
+        assert(max_nodes > 0);
+      } else if (strcmp(flag, "--max_steps") == 0) {
+        max_steps = atoi(val);
+        assert(max_steps > 0);
+      } else if (strcmp(flag, "--root_id") == 0) {
+        root_id = atoi(val);
+        assert(root_id > 0);
+      } else {
+        printf("Unknown flag: %s\n", flag); 
+        puts(help);
+        ADLB_Fail(-1);
+      }
 
-    if (argc != 2 && argc != 3) {
-      printf("usage: %s <n> <sleep>", argv[0]);
-      ADLB_Fail(-1);
     }
 
-    int N = atoi(argv[1]);
-
-    if ( my_app_rank == 0 ) {
+if ( my_app_rank == 0 ) {
       Node root;
       uts_init_root(&root, params.tree_type, root_id);
       process_node(&root, params, max_nodes, max_steps);
