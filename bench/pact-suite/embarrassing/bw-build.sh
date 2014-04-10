@@ -20,14 +20,22 @@ ${CC} ${CFLAGS} embarrassing.c  ${LDFLAGS} -o embarrassing
 ${CC} ${CFLAGS} -D LOGNORM embarrassing.c  ${LDFLAGS} -o embarrassing_lognorm
 
 STC=$STC_INST/bin/stc
-STC_OPTLEVEL=${STC_OPTLEVEL:--O2}
-STC_FLAGS="$STC_OPTLEVEL"
-STC_FLAGS+=" -T no-engine"
 
-${STC} ${STC_FLAGS} -C embarrassing_lognorm.ic embarrassing_lognorm.swift
-${MKSTATIC} embarrassing_lognorm.manifest -c embarrassing_lognorm_tcl.c
+for OPT in 0 1 2 3
+do
+  STC_OPTLEVEL="-O$OPT"
+  STC_FLAGS="$STC_OPTLEVEL"
+  STC_FLAGS+=" -T no-engine"
 
-# Statically link
-${CC} ${CFLAGS} embarrassing_lognorm_tcl.c  ${LDFLAGS} -o embarrassing_lognorm_tcl
+  PREFIX=embarrassing_lognorm
+  PREFIX_OPT=${PREFIX}.O${OPT}
+  PREFIX_TCL=${PREFIX}_tcl.O${OPT}
+  ${STC} ${STC_FLAGS} -C ${PREFIX_OPT}.ic ${PREFIX}.swift ${PREFIX_OPT}.tcl
+  ${MKSTATIC} ${PREFIX}.manifest -c ${PREFIX_TCL}.c
+
+  # Dynamically link
+  ${CC} -dynamic ${CFLAGS} ${PREFIX_TCL}.c ${LDFLAGS} -o ${PREFIX_TCL}
+
+done
 
 echo "OK."
