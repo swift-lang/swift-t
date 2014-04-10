@@ -14,7 +14,7 @@
 
 #PBS -N Swift
 #PBS -q normal
-#PBS -l walltime=0:30:00
+#PBS -l walltime=2:00:00
 
 ### Set the job size using appropriate directives for this system
 ### Blue Waters mode
@@ -94,14 +94,22 @@ do
 
     while ((APRUN_NODES > 0))
     do
-      # ADLB partitions outer loop, ensure plenty of iterationss to be fair
-      N=100000
-      #N=100
-      M=$((APRUN_NODES*250))
-      mu=-8.515 # 0.2ms
-      #mu=-6.905 # 1ms
-      # mu=-7.60 # 0.5ms
+      APRUN_PROCS=$((APRUN_NODES*PPN))
       sigma=1
+
+      # Params, assuming sigma=1
+      # Aim for a few minutes long job
+      mu=-8.515 # 0.2ms
+      SCALE_FACTOR=5
+      #mu=-7.60 # 0.5ms
+      #SCALE_FACTOR=2
+      #mu=-6.905 # 1ms
+      #SCALE_FACTOR=1
+      
+      # ADLB partitions outer loop, ensure plenty of iterations to be fair
+      N=25000
+      #N=100
+      M=$((APRUN_PROCS*5*SCALE_FACTOR))
       if [ $opt = adlb ]
       then
         ARGS="${N} ${M} ${mu} ${sigma}"
@@ -112,7 +120,6 @@ do
       fi
 
       export ADLB_SERVERS=${APRUN_NODES}
-      APRUN_PROCS=$((APRUN_NODES*PPN))
       echo
       echo "Run ${PROG} with args: ${ARGS}"
       echo "ADLB_SERVERS:    ${ADLB_SERVERS}"
