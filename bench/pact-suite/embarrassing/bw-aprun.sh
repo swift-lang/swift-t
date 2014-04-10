@@ -34,7 +34,10 @@ module unload PrgEnv-cray
 module load PrgEnv-gnu
 
 # Set variables required for turbine-config.sh
-export TURBINE_HOME=/u/sciteam/tarmstro/soft/exm-sc14/v1/turbine
+#EXM_HOME=/u/sciteam/tarmstro/soft/exm-sc14/v1
+#TODO: no debugging
+EXM_HOME=/u/sciteam/tarmstro/soft/exm-sc14/v1-debug
+export TURBINE_HOME=${EXM_HOME}/turbine
 TURBINE_STATIC_EXEC=0
 EXEC_SCRIPT=1
 
@@ -49,8 +52,6 @@ TURBINE_OUTPUT=${PBS_O_WORKDIR}
 
 export TURBINE_USER_LIB=
 export TURBINE_LOG=0
-export TURBINE_DEBUG=
-export ADLB_DEBUG=
 
 export ADLB_SERVERS=2
 export ADLB_PERF_COUNTERS=1
@@ -81,6 +82,9 @@ echo "PPN:          ${PPN}"
 echo
 echo "ADLB_SERVERS:    ${ADLB_SERVERS}"
 
+# Record the script
+cp $0 ${TURBINE_OUTPUT}/${PBS_JOBID}.submit
+
 # Be sure we are in an accessible directory
 cd ${TURBINE_OUTPUT}
 
@@ -93,7 +97,9 @@ do
 
   while ((APRUN_NODES > 0))
   do
-    N=10000
+    #N=10000
+    # TODO: scaled down
+    N=100
     M=$((NODES*2500))
     mu=-8.515
     sigma=1

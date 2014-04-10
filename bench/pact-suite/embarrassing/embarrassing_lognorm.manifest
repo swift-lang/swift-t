@@ -6,7 +6,7 @@
 # ------------------------------------------------------------
 
 # Name and version of Tcl package
-pkg_name = lognorm
+pkg_name = lognorm_task
 pkg_version = 0.0
 
 # lib scripts are executed in specified order, before main_script and
