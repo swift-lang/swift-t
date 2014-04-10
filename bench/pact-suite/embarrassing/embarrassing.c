@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
 
   double start_time, end_time;
 
-  printf("HELLO!\n");
+  //printf("HELLO!\n");
   fflush(NULL);
 
   rc = MPI_Init( &argc, &argv );
@@ -143,7 +143,7 @@ int main(int argc, char *argv[])
       while (MPI_Wtime() - spin_start < sleep_time);
       //printf("%i %i\n", i, j);
       ndone++;
-      if (ndone % 50000 == 0) {
+      if (ndone % 500000 == 0) {
         printf("trace: rank %i finished %i\n", my_app_rank, ndone);
       }
     }
