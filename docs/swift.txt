@@ -1871,6 +1871,7 @@ We have described the most commonly-used options.  A full list of options
 and descriptions can be obtained by invoking +mkstatic.tcl -h+.
 Additional options include:
 
++--main-script+:: Specify Tcl main script (overrides manifest file)
 +-r+:: Specify non-standard variable prefix for C code
 +-v+:: Print verbose messages
 +--deps+:: Generate Makefile include for generating C file
