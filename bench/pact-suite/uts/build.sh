@@ -4,6 +4,7 @@ set -e
 pushd uts-src
 make
 popd
+
 INST=$HOME/ExM/inst
 TURBINE=$INST/turbine
 LB=$INST/lb
@@ -15,13 +16,11 @@ source $TURBINE/scripts/turbine-build-config.sh
 CC=mpicc
 CFLAGS="-std=c99 -Wall -O2 ${TURBINE_INCLUDES} -I. -I../util"
 LDFLAGS=""
-LIBS="${TURBINE_LIBS} ${TURBINE_RPATH}"
+LIBS="-L uts-src -luts ${TURBINE_LIBS} ${TURBINE_RPATH}"
 
 MKSTATIC=$TURBINE/scripts/mkstatic/mkstatic.tcl
 
-# TODO: C version
-#${CC} ${CFLAGS} ${LDFLAGS} embarrassing.c  ${LIBS} -o embarrassing 
-#${CC} ${CFLAGS} ${LDFLAGS} -D LOGNORM embarrassing.c  ${LIBS} -o embarrassing_lognorm 
+${CC} ${CFLAGS} ${LDFLAGS} -D BRG_RNG uts_adlb.c  ${LIBS} -o uts_adlb
 
 STC=$INST/stc/bin/stc
 
