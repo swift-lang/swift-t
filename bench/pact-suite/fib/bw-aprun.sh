@@ -14,11 +14,11 @@
 
 #PBS -N Swift
 #PBS -q normal
-#PBS -l walltime=0:30:00
+#PBS -l walltime=4:00:00
 
 ### Set the job size using appropriate directives for this system
 ### Blue Waters mode
-#PBS -l nodes=4:ppn=32
+#PBS -l nodes=8192:ppn=32
 ### End job size directives selection
 
 #PBS -o ${PBS_JOBID}.pbs.out
@@ -88,19 +88,19 @@ do
   for opt in ${OPT_LEVELS}
   do
     APRUN_NODES=$NODES
+    FIB_N=44
 
     while ((APRUN_NODES > 0))
     do
       APRUN_PROCS=$((APRUN_NODES*PPN))
-      n=30
       sleeptime=0
 
       if [ $opt = adlb ]
       then
-        ARGS="${n} ${sleeptime}"
+        ARGS="${FIB_N} ${sleeptime}"
         PROG=${ADLB_PROG}
       else
-        ARGS="--n=${n} --sleeptime=${sleeptime}"
+        ARGS="--n=${FIB_N} --sleeptime=${sleeptime}"
         PROG=${SCRIPT}.${opt}
       fi
 
@@ -125,6 +125,7 @@ do
       # job's allocate
       APRUN_NODES=$((APRUN_NODES/2))
       # APRUN_NODES=0
+      FIB_N=$((FIB_N - 1)) # Scale down
     done
 
     # Wait for jobs for this opt level
