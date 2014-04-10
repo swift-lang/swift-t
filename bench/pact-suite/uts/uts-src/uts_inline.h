@@ -36,6 +36,8 @@
 
 #define COMPUTE_GRANULARITY 1
 
+#define NODE_REPORT_INTERVAL (1024*1024)
+
 static long int total_nodes_processed = 0;
 
 typedef struct {

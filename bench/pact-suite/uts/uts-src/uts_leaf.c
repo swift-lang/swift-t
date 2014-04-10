@@ -133,9 +133,8 @@ uts_run_impl(ClientData cdata, Tcl_Interp *interp,
     CHECK(ok, "Error in step");
   }
 
-  int report_interval = 500000;
-  if (total_nodes_processed / report_interval >
-      before_nodes_processed / report_interval )
+  if (total_nodes_processed / NODE_REPORT_INTERVAL >
+      before_nodes_processed / NODE_REPORT_INTERVAL )
   {
     UTS_INFO("Processed %ld nodes\n", total_nodes_processed);
   }

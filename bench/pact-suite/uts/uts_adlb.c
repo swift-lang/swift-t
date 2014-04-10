@@ -25,8 +25,37 @@ void spawn_uts(const Node *node) {
 static void process_node(struct node_t *init_node, uts_params params,
     int max_nodes, int max_steps)
 {
-  // TODO: do stuff
-  // TODO: switch between bfs and dfs?
+  int count = 0, head = 0, tail = 0;
+  // switch between bfs and dfs in similar way to Swift
+  bool bfs = init_node->height <= 3;
+  if (bfs)
+  {
+    int steps = 256; // Get work out quick
+    bool ok = uts_step_bfs(init_node, params, max_nodes, steps,
+                           &head, &tail, &count);
+    assert(ok);
+  }
+  else
+  {
+    bool ok = uts_step_dfs(init_node, params, max_nodes, max_steps,
+                           &count);
+    assert(ok);
+  }
+
+  for (int i = 0; i < count; i++)
+  {
+    struct node_t *result_node;
+    if (bfs)
+    {
+      result_node = &nodes[(head + i) % NODE_ARRAY_SIZE];
+    }
+    else
+    {
+      result_node = &nodes[i];
+    }
+
+    spawn_uts(result_node);
+  }
 }
 
 int main(int argc, char *argv[])
@@ -124,7 +153,7 @@ int main(int argc, char *argv[])
 
     }
 
-if ( my_app_rank == 0 ) {
+    if ( my_app_rank == 0 ) {
       Node root;
       uts_init_root(&root, params.tree_type, root_id);
       process_node(&root, params, max_nodes, max_steps);
@@ -135,7 +164,9 @@ if ( my_app_rank == 0 ) {
     {
       //printf("Getting a command\n");
       MPI_Comm task_comm;
-      
+     
+      int before_nodes_processed = total_nodes_processed;
+
       Node node;
       int work_len, answer_rank, work_type;
       rc = ADLB_Get(WORKT, &node, &work_len, &answer_rank, &work_type,
@@ -148,6 +179,12 @@ if ( my_app_rank == 0 ) {
       
       assert(work_len == sizeof(Node));
       process_node(&node, params, max_nodes, max_steps);
+
+      if (total_nodes_processed / NODE_REPORT_INTERVAL >
+          before_nodes_processed / NODE_REPORT_INTERVAL )
+      {
+        UTS_INFO("Processed %ld nodes\n", total_nodes_processed);
+      }
     }
 
     if (my_app_rank == 0)
