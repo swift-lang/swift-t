@@ -315,7 +315,7 @@ uts_run_impl(ClientData cdata, Tcl_Interp *interp,
     CHECK(ok, "Error in step");
   }
 
-  int report_interval = 10000;
+  int report_interval = 500000;
   if (total_nodes_processed / report_interval >
       before_nodes_processed / report_interval )
   {
