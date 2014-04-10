@@ -46,7 +46,7 @@ void uts_node_tostr(char *out, const struct node_t *node)
 }
 
 // String must be uts_node_strlen long
-void uts_str_tonode(struct node_t *out, char *node_str, int node_strlen)
+void uts_str_tonode(struct node_t *out, const char *node_str, int node_strlen)
 {
   assert(node_strlen == uts_node_strlen());
 
@@ -176,6 +176,20 @@ static bool uts_step_dfs(struct node_t *init_node, uts_params params,
 #define CHECK(cond, msg) \
   if (!(cond)) { fprintf(stderr, msg "\n"); return TCL_ERROR; }
 
+static int tcl_node_string(const struct node_t *node, Tcl_Obj **string)
+{
+  int rc;
+  *string = Tcl_NewObj();
+  // expand to node cstring length, print
+  int len = uts_node_strlen();
+  rc = Tcl_AttemptSetObjLength(*string, len);
+  CHECK(rc == 1, "Could not expand obj");
+  uts_node_tostr((*string)->bytes, node);
+  (*string)->bytes[len] = '\0';
+
+  return TCL_OK;
+}
+
 /*
  * uts::uts_root <tree type> <root id>
  *
@@ -187,7 +201,7 @@ uts_root_cmd(ClientData cdata, Tcl_Interp *interp,
   int rc;
   int tree_type;
   int root_id;
-  CHECK(objc == 3, "expected 3 args");
+  CHECK(objc == 3, "expected 2 args");
 
   rc = Tcl_GetIntFromObj(interp, objv[1], &tree_type);
   CHECK(rc == TCL_OK, "bad tree_type");
@@ -198,12 +212,11 @@ uts_root_cmd(ClientData cdata, Tcl_Interp *interp,
   Node root;
   uts_init_root(&root, tree_type, root_id);
 
-  Tcl_Obj *node_string = Tcl_NewObj();
-  // expand to node string length, print
-  rc = Tcl_AttemptSetObjLength(node_string, uts_node_strlen());
-  CHECK(rc == 1, "Could not expand obj");
-  uts_node_tostr(node_string->bytes, &root);
+  Tcl_Obj *node_string;
+  rc = tcl_node_string(&root, &node_string);
+  CHECK(rc == TCL_OK, "error copying to string");
 
+    
   Tcl_SetObjResult(interp, node_string);
   return TCL_OK;
 }
@@ -213,13 +226,112 @@ uts_root_cmd(ClientData cdata, Tcl_Interp *interp,
                 <max_nodes> <max_steps>
  */
 static int
-uts_run_cmd(ClientData cdata, Tcl_Interp *interp,
-                  int objc, Tcl_Obj *const objv[])
+uts_run_impl(ClientData cdata, Tcl_Interp *interp,
+                  int objc, Tcl_Obj *const objv[], bool breadth_first)
 {
+  int rc;
+  int tree_type;
+  int geoshape;
+  int gen_mx;
+  double shift_depth;
+  int max_nodes;
+  int max_steps;
+  CHECK(objc == 8, "expected 7 args");
 
-  return TCL_ERROR;
+  int node_string_len;
+  const char *node_string = Tcl_GetStringFromObj(objv[1], &node_string_len);
+
+  rc = Tcl_GetIntFromObj(interp, objv[2], &tree_type);
+  CHECK(rc == TCL_OK, "bad tree_type");
+  
+  rc = Tcl_GetIntFromObj(interp, objv[3], &geoshape);
+  CHECK(rc == TCL_OK, "bad geoshape");
+  
+  rc = Tcl_GetIntFromObj(interp, objv[4], &gen_mx);
+  CHECK(rc == TCL_OK, "bad gen_mx");
+  
+  rc = Tcl_GetDoubleFromObj(interp, objv[5], &shift_depth);
+  CHECK(rc == TCL_OK, "bad shift_depth");
+  
+  rc = Tcl_GetIntFromObj(interp, objv[6], &max_nodes);
+  CHECK(rc == TCL_OK, "bad max_nodes");
+  
+  rc = Tcl_GetIntFromObj(interp, objv[7], &max_steps);
+  CHECK(rc == TCL_OK, "bad max_steps");
+ 
+  struct node_t node;
+  uts_str_tonode(&node, node_string, node_string_len);
+
+  uts_params params = {
+    .tree_type = tree_type,
+    .geoshape = geoshape,
+    .gen_mx = gen_mx,
+    .shift_depth = shift_depth,
+  };
+
+
+  int result_node_count;
+  int result_node_head = 0, result_node_tail = 0; // for bfs
+
+  //printf("STARTING STEP BFS %i height: %i\n",
+  //      (int)breadth_first, node.height);
+  if (breadth_first)
+  {
+    bool ok = uts_step_bfs(&node, params, max_nodes, max_steps,
+                           &result_node_head, &result_node_tail);
+
+    if (result_node_tail > result_node_head)
+    {
+      result_node_count = result_node_tail - result_node_head;
+    }
+    else
+    {
+      result_node_count = result_node_tail + (NODE_ARRAY_SIZE - result_node_head);
+    }
+    CHECK(ok, "Error in step");
+  }
+  else
+  {
+    bool ok = uts_step_dfs(&node, params, max_nodes, max_steps, &result_node_count);
+    CHECK(ok, "Error in step");
+  }
+
+  Tcl_Obj *node_objs[result_node_count];
+  for (int i = 0; i < result_node_count; i++)
+  {
+    struct node_t *result_node;
+    if (breadth_first)
+    {
+      result_node = &nodes[(result_node_head + i) % NODE_ARRAY_SIZE];
+    }
+    else
+    {
+      result_node = &nodes[i];
+    }
+    rc = tcl_node_string(result_node, &node_objs[i]);
+    CHECK(rc == TCL_OK, "error with node string");
+  }
+  //printf("FINISHED STEP BFS %i height: %i results: %i\n",
+  //      (int)breadth_first, node.height, result_node_count);
+  
+  Tcl_Obj *node_list = Tcl_NewListObj(result_node_count, node_objs);
+  Tcl_SetObjResult(interp, node_list);
+  return TCL_OK;
 }
 
+static int
+uts_run_bfs(ClientData cdata, Tcl_Interp *interp,
+                  int objc, Tcl_Obj *const objv[])
+{
+  return uts_run_impl(cdata, interp, objc, objv, true);
+}
+
+static int
+uts_run_dfs(ClientData cdata, Tcl_Interp *interp,
+                  int objc, Tcl_Obj *const objv[])
+{
+  return uts_run_impl(cdata, interp, objc, objv, false);
+}
 
 int DLLEXPORT
 uts_leaf_init(Tcl_Interp *interp)
@@ -232,7 +344,8 @@ uts_leaf_init(Tcl_Interp *interp)
 
 
   COMMAND("uts_root", uts_root_cmd);
-  COMMAND("uts_run", uts_run_cmd);
+  COMMAND("uts_run_bfs", uts_run_bfs);
+  COMMAND("uts_run_dfs", uts_run_dfs);
   return TCL_OK;
 }
 
