@@ -19,8 +19,8 @@ namespace eval lognorm_task {
   proc lognorm_task_body { o i j mu sigma } {
     set i_val [ turbine::retrieve_decr_integer $i ]
     set j_val [ turbine::retrieve_decr_integer $j ]
-    set mu_val [ turbine::retrieve_decr_integer $mu ]
-    set sigma_val [ turbine::retrieve_decr_integer $sigma ]
+    set mu_val [ turbine::retrieve_decr_float $mu ]
+    set sigma_val [ turbine::retrieve_decr_float $sigma ]
 
     turbine::store_float $o [ lognorm_task_impl $i_val $j_val $mu_val $sigma_val ]
   }
