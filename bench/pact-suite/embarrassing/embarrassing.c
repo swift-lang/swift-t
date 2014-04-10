@@ -93,11 +93,11 @@ int main(int argc, char *argv[])
     if (getenv("CONTROL_RATIO") != NULL) {
       control_ratio = atoi(getenv("CONTROL_RATIO"));
     }
-    if ( (my_app_rank % control_ratio) == 0 ) {
+    int control_task_count = ((app_comm_size - 1) / control_ratio) + 1;
+    if (my_app_rank < control_task_count ) {
       // Get a subset of procs to put in work
       // divide, rounding up to get control task count
-      int control_task_count = ((app_comm_size - 1) / control_ratio) + 1;
-      int my_control_rank = my_app_rank / control_ratio;
+      int my_control_rank = my_app_rank;
       int tasks_put = 0;
       // partition loop between ranks
       for (int i = my_control_rank; i < N; i+=control_task_count) {
