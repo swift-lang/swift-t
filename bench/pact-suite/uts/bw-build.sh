@@ -8,7 +8,7 @@ make
 popd
 
 
-INST=$HOME/soft/exm-sc14/v1/
+INST=$HOME/soft/exm-sc14/v2-opt/
 #INST=$HOME/soft/exm-sc14/v1-debug/
 TURBINE=$INST/turbine
 LB=$INST/lb
