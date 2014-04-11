@@ -261,7 +261,7 @@ double calc_intensity(int i,double x[], double y[], double z[], double q_val[], 
 		}
 	}
 	chi = sqrt((scat_int_ref[i] - scat_int_calc)*(scat_int_ref[i] - scat_int_calc));
-	cout <<  scat_int_calc << endl;
+	//cout <<  scat_int_calc << endl;
 	//chi_2 = chi/498/18000;
 	return chi;
 	//cout << chi << endl;

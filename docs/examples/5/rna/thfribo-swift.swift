@@ -9,6 +9,7 @@ main {
   int rc[];
   foreach i in [4801:4900:1]{
 	/*string x[] = [fromint(i)];*/
+	printf("Started %i th iteration", i);
    	rc[i] = thfribo_main([fromint(i)]); 
  	printf("exit code: %i", rc[i]);
  }
