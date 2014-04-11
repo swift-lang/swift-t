@@ -2616,34 +2616,57 @@ public class TurbineGenerator implements CompilerBackend {
         MultiMap<Var, RefCount> constIncrs) {
     boolean haveKeys = loopCountVar != null;
     
-    if (Types.isArray(container)) {
+    if (Types.isArray(container) || Types.isArrayLocal(container)) {
       assert(!haveKeys || 
             Types.isArrayKeyVal(container, loopCountVar.asArg()));
     } else {
-      assert(Types.isBag(container));
+      assert(Types.isBag(container) || Types.isBagLocal(container));
       assert(!haveKeys);
     }
+    
 
-    assert(Types.isElemValType(container, memberVar));
+    boolean localContainer = Types.isContainerLocal(container); 
+    
+    if (localContainer) {
+      if (!arrayClosed || splitDegree >= 0) {
+        throw new STCRuntimeError(
+            "Can't do async foreach with local container currently;");
+      }
+
+      assert(Types.isElemType(container, memberVar));
+    } else {
+      assert(Types.isElemValType(container, memberVar));
+    }
 
     if (!arrayClosed) {
       throw new STCRuntimeError("Loops over open containers not yet supported");
     }
 
-    String contentsVar = TCLTMP_ARRAY_CONTENTS;
-
+    Value tclContainer;
     if (splitDegree <= 0) {
-      // Load container contents and increment refcounts
-      pointAdd(Turbine.enumerateAll(contentsVar,
-                          varToExpr(container), haveKeys));
-      Value tclDict = new Value(contentsVar);
-      Expression containerSize = Turbine.dictSize(tclDict);
+      if (localContainer) {
+        tclContainer = varToExpr(container);
+      } else {
+        // Load container contents and increment refcounts
+        tclContainer = new Value(TCLTMP_ARRAY_CONTENTS);
+        pointAdd(Turbine.enumerateAll(tclContainer.variable(),
+                            varToExpr(container), haveKeys));
+      }
+      
+      Expression containerSize;
+      if (haveKeys) {
+        containerSize = Turbine.dictSize(tclContainer);
+      } else {
+        containerSize = Turbine.listLength(tclContainer);
+      }
       handleForeachContainerRefcounts(perIterIncrs, constIncrs, containerSize);
     } else {
-      startForeachSplit(loopName, container, contentsVar, splitDegree, 
-          leafDegree, haveKeys, passedVars, perIterIncrs, constIncrs);
+      tclContainer = new Value(TCLTMP_ARRAY_CONTENTS);
+      startForeachSplit(loopName, container, tclContainer.variable(),
+          splitDegree, leafDegree, haveKeys, passedVars, perIterIncrs,
+          constIncrs);
     }
-    startForeachInner(new Value(contentsVar), memberVar, loopCountVar);
+    startForeachInner(tclContainer, memberVar, loopCountVar);
   }
 
   private void handleForeachContainerRefcounts(List<RefCount> perIterIncrs,

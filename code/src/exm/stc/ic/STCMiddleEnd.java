@@ -285,8 +285,9 @@ public class STCMiddleEnd {
   public void startForeachLoop(String loopName,
           Var container, Var memberVar, Var loopCountVar, 
           int splitDegree, int leafDegree, boolean arrayClosed) {
-    assert(Types.isArray(container.type()) || Types.isBag(container.type())):
-          "foreach loop over bad type: " + container.toString(); 
+    assert(Types.isContainer(container) || Types.isContainerLocal(container)):
+          "foreach loop over bad type: " + container.toString();
+    
     assert(Types.isElemValType(container, memberVar)): container + " " + memberVar;
     if (Types.isArray(container)) {
       assert(loopCountVar == null || 
