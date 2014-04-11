@@ -73,6 +73,10 @@ int main(int argc, char *argv[])
   MPI_Comm_rank( MPI_COMM_WORLD, &my_world_rank );
 
   num_servers = 1;		/* one server should be enough */
+  if (getenv("ADLB_SERVERS") != NULL) {
+    num_servers = atoi(getenv("ADLB_SERVERS"));
+  }
+
   rc = ADLB_Init(num_servers, num_types, type_vect, &am_server, MPI_COMM_WORLD, &app_comm);
   if ( !am_server ) /* application process */
   {
