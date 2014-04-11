@@ -17,27 +17,34 @@
 // Work unit type
 #define WORKT 0
 
-void spawn_uts(const Node *node) {
-  int rc = ADLB_Put(node, sizeof(*node), ADLB_RANK_ANY, -1, WORKT, 1, 1);
+typedef struct {
+  Node node;
+  // Number of ancestor tasks, used to implement same algo as Swift version
+  int task_depth; 
+} uts_task;
+
+void spawn_uts(const uts_task *task) {
+  int rc = ADLB_Put(task, sizeof(*task), ADLB_RANK_ANY, -1, WORKT, 1, 1);
   assert(rc == ADLB_SUCCESS);
 }
 
-static void process_node(struct node_t *init_node, uts_params params,
+static void process_node(uts_task *init_node, uts_params params,
     int max_nodes, int max_steps)
 {
+  int task_depth = init_node->task_depth;
   int count = 0, head = 0, tail = 0;
-  // switch between bfs and dfs in similar way to Swift
-  bool bfs = init_node->height <= 3;
+  // switch between bfs and dfs in same way as Swift
+  bool bfs = task_depth <= 1;
   if (bfs)
   {
     int steps = 256; // Get work out quick
-    bool ok = uts_step_bfs(init_node, params, max_nodes, steps,
+    bool ok = uts_step_bfs(&init_node->node, params, max_nodes, steps,
                            &head, &tail, &count);
     assert(ok);
   }
   else
   {
-    bool ok = uts_step_dfs(init_node, params, max_nodes, max_steps,
+    bool ok = uts_step_dfs(&init_node->node, params, max_nodes, max_steps,
                            &count);
     assert(ok);
   }
@@ -53,8 +60,11 @@ static void process_node(struct node_t *init_node, uts_params params,
     {
       result_node = &nodes[i];
     }
-
-    spawn_uts(result_node);
+    
+    uts_task task;
+    task.node = *result_node;
+    task.task_depth = task_depth + 1;
+    spawn_uts(&task);
   }
 }
 
@@ -154,8 +164,9 @@ int main(int argc, char *argv[])
     }
 
     if ( my_app_rank == 0 ) {
-      Node root;
-      uts_init_root(&root, params.tree_type, root_id);
+      uts_task root;
+      root.task_depth = 0;
+      uts_init_root(&root.node, params.tree_type, root_id);
       process_node(&root, params, max_nodes, max_steps);
     }
   
@@ -167,9 +178,9 @@ int main(int argc, char *argv[])
      
       int before_nodes_processed = total_nodes_processed;
 
-      Node node;
+      uts_task task;
       int work_len, answer_rank, work_type;
-      rc = ADLB_Get(WORKT, &node, &work_len, &answer_rank, &work_type,
+      rc = ADLB_Get(WORKT, &task, &work_len, &answer_rank, &work_type,
                     &task_comm);
       if ( rc == ADLB_SHUTDOWN )
       {
@@ -177,8 +188,8 @@ int main(int argc, char *argv[])
 	break;
       }
       
-      assert(work_len == sizeof(Node));
-      process_node(&node, params, max_nodes, max_steps);
+      assert(work_len == sizeof(task));
+      process_node(&task, params, max_nodes, max_steps);
 
       if (total_nodes_processed / NODE_REPORT_INTERVAL >
           before_nodes_processed / NODE_REPORT_INTERVAL )
