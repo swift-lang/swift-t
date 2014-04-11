@@ -118,7 +118,7 @@ do
       echo "APRUN_NODES:     ${APRUN_NODES}"
       echo "APRUN_PROCS:     ${APRUN_PROCS}"
       aprun -n ${APRUN_PROCS} -N ${PPN} -cc none -d 1 ${TCLSH} ${PROG} ${ARGS} \
-              2>&1 > "${PBS_JOBID}.${opt}.p${APRUN_PROCS}.${trial}.aprun.out" &
+              > "${PBS_JOBID}.${opt}.p${APRUN_PROCS}.${trial}.aprun.out" 2>&1 &
 
       if (( APRUN_NODES == NODES ))
       then
