@@ -63,17 +63,42 @@ public class Pipeline extends FunctionOptimizerPass {
 
   @Override
   public void optimize(Logger logger, Function f) {
-    pipelineTasks(logger, f, f.mainBlock(), ExecContext.CONTROL);
+    boolean maybeInLoop = f.isAsync() ? false : true;
+    pipelineTasks(logger, f, f.mainBlock(), ExecContext.CONTROL, maybeInLoop);
   }
 
+  /**
+   * 
+   * @param logger
+   * @param f
+   * @param curr
+   * @param cx current exec context
+   * @param maybeInLoop if there's maybe a loop between the current
+   *                    context and the root of the task we're in
+   */
   private static void pipelineTasks(Logger logger, Function f, Block curr,
-      ExecContext cx) {
+      ExecContext cx, boolean maybeInLoop) {
     // Do a bottom-up tree walk
     for (Continuation cont: curr.allComplexStatements()) {
+      boolean contInLoop;
+      if (cont.isAsync()) {
+        // New task
+        contInLoop = false;
+      } else if (cont.isLoop()) {
+        // Sync loop
+        contInLoop = true;
+      } else {
+        contInLoop = maybeInLoop;
+      }
       ExecContext childCx = cont.childContext(cx);
       for (Block childBlock: cont.getBlocks()) {
-        pipelineTasks(logger, f, childBlock, childCx);
+        pipelineTasks(logger, f, childBlock, childCx, contInLoop);
       }
+    }
+    
+    if (maybeInLoop) {
+      // Don't try to optimize, might serialise things
+      return;
     }
 
     // Find candidates for merging: wait statements which are not
