@@ -2,6 +2,7 @@
 set -e
 
 pushd uts-src
+make clean
 make
 popd
 

@@ -29,3 +29,6 @@ $(LIB): $(OBJS)
 
 %.o: %.c uts.h uts_inline.h $(RNG_HEADERS)
 	$(CC) $(CFLAGS) -c $(<) -o $(@)
+
+clean:
+	rm -f $(LIB) $(OBJS)

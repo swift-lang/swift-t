@@ -2,6 +2,12 @@
 
 set -e
 
+pushd uts-src
+make clean
+make
+popd
+
+
 INST=$HOME/soft/exm-sc14/v1/
 #INST=$HOME/soft/exm-sc14/v1-debug/
 TURBINE=$INST/turbine
