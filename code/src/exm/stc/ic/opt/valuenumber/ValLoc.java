@@ -89,7 +89,7 @@ public class ValLoc {
   
   public static ValLoc buildResult(Opcode op, List<Arg> inputs, Arg valLocation,
       Closed locClosed, IsAssign isAssign) {
-    return buildResult(op, "", inputs, valLocation, locClosed,
+    return buildResult(op, ComputedValue.NO_SUBOP, inputs, valLocation, locClosed,
                        IsValCopy.NO, isAssign);
   }
   

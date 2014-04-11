@@ -48,6 +48,8 @@ public class ComputedValue<T> {
    * they should be put in a canonical sorted order
    */
   
+  public static final Object NO_SUBOP = "";
+
   /**
    * Define a notion of congruence between locations with the same computed
    * value.
@@ -82,11 +84,11 @@ public class ComputedValue<T> {
   }
   
   public ComputedValue(Opcode op, List<T> inputs) {
-    this(op, "", inputs);
+    this(op, NO_SUBOP, inputs);
   }
   
   public ComputedValue(Opcode op, T input) {
-    this(op, "", Collections.singletonList(input));
+    this(op, NO_SUBOP, Collections.singletonList(input));
   }
 
 
@@ -209,7 +211,7 @@ public class ComputedValue<T> {
     }
     
     throw new STCRuntimeError("Don't know how to assign to " + dst
-                              + (recursive ? " recursively" : ""));
+                              + (recursive ? " recursively" : NO_SUBOP));
   }
   
   public static ArgCV assignFileCompVal(Arg src, Arg setFilename) {
