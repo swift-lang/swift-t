@@ -196,9 +196,12 @@ int main(int argc, char *argv[])
 
   ADLB_Finalize();
 
-  // Print nodes so that we can actually work out throughput
-  UTS_INFO("[%i] total_nodes_processed: %ld\n", my_world_rank,
-         total_nodes_processed);
+  if (!am_server)
+  {
+    // Print nodes so that we can actually work out throughput
+    UTS_INFO("[%i] total_nodes_processed: %ld\n", my_world_rank,
+           total_nodes_processed);
+  }
 
   // Do MPI reduction to be able to print sum concisely
   int reduce_root = 0;

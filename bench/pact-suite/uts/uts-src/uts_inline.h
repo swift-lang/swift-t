@@ -10,8 +10,6 @@
 
 #include "uts.h"
 
-#define UTS_INFO_ENABLED
-
 #ifdef UTS_TRACE_ENABLED
 #define UTS_TRACE(fmt, args...) printf("TRACE: " fmt, ## args)
 #else
