@@ -30,6 +30,7 @@ void write_pdb(double x[], double y[], double z[], string c2[], string c4[], int
 
 int thfribo_main(int argc, char** argv){
 	//int iorder[100], ans, nsucc, count, loop0, repel, branch_sep, seg_restraint, loop_duplex ;
+	int iteration=atoi(argv[1]);
 	int nsucc ;
 	double x[100], y[100], z[100], x_old[100], y_old[100], z_old[100],rgyr ;
 	string c1[100],c3[100],c4[100],c5[100], c12[100];
@@ -54,7 +55,7 @@ int thfribo_main(int argc, char** argv){
 	////// m denotes the pdb file number for which l_max time p runs will be running
 	//------------------------------------------------------------------------------
 	double chi_old[210], chi_new[210],chi_old_total, chi_new_total, chi_diff, chi_1, chi_2 ;
-	for (int m = 1; m <= 1; m++){
+	for (int m = iteration; m <= iteration; m++){
 		double t = 0.5 ;
 		int pseudo_penalty = 0 ;
 		int flag = 0 ;
@@ -100,7 +101,7 @@ int thfribo_main(int argc, char** argv){
 					{
 						chi_old[i] = calc_intensity(i,x_old, y_old, z_old, q_val, scat_int_ref, glob_ff);
 						chi_new[i] = calc_intensity(i,x, y, z, q_val, scat_int_ref, glob_ff);
-						cout << tid <<"    "<<chi_old[i]<<"    "<<chi_new[i] << endl;
+						//cout << tid <<"    "<<chi_old[i]<<"    "<<chi_new[i] << endl;
 					}
 
 				}  /* end of parallel section */
@@ -246,8 +247,6 @@ int thfribo_main(int argc, char** argv){
 }
 
 
-
-
 double calc_intensity(int i,double x[], double y[], double z[], double q_val[], double scat_int_ref[], double glob_ff[])
 {
 	double scat_int_calc,chi,d;
@@ -268,7 +267,6 @@ double calc_intensity(int i,double x[], double y[], double z[], double q_val[], 
 	//cout << chi << endl;
 
 }
-
 
 /* Metropolis test for accepting or rejecting the move  */ 
 
@@ -300,6 +298,5 @@ void write_pdb(double x[], double y[], double z[], string c2[], string c4[], int
 	}
 	out2.close();
 }   
-
 
 
