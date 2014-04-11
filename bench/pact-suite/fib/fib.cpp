@@ -24,6 +24,13 @@ using namespace std;
 #define WORKT 0
 #define CONTROL 1
 
+#ifdef FIB_DEBUG
+#define FIB_DEBUG(fmt, args...) printf(fmt, ## args)
+#else
+#define FIB_DEBUG(fmt, args...)
+#endif
+
+
 void mystore(adlb_datum_id id, long val) {
     ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_INTEGER,
                &val, sizeof(long), ADLB_WRITE_RC, ADLB_NO_RC);
@@ -120,7 +127,7 @@ int main(int argc, char *argv[])
   rc = ADLB_Init(num_servers, num_types, type_vect, &am_server, MPI_COMM_WORLD, &app_comm);
   if ( !am_server ) /* application process */
   {
-    printf("[%i] I AM SERVER!\n", my_world_rank);
+    FIB_DEBUG("[%i] I AM SERVER!\n", my_world_rank);
     MPI_Comm_rank( app_comm, &my_app_rank );
   }
 
@@ -153,7 +160,7 @@ int main(int argc, char *argv[])
     int ndone = 0;
     while (!done)
     {
-      //printf("Getting a command\n");
+      //FIB_DEBUG("Getting a command\n");
       MPI_Comm task_comm;
       char cmdbuffer[1024];
       int work_len, answer_rank, work_type;
@@ -162,7 +169,7 @@ int main(int argc, char *argv[])
                     &task_comm);
       if ( rc == ADLB_SHUTDOWN )
       {
-	printf("trace: All jobs done\n");
+	FIB_DEBUG("trace: All jobs done\n");
 	break;
       }
 
@@ -197,7 +204,7 @@ int main(int argc, char *argv[])
       }
       ndone++;
       if (ndone % 50000 == 0) {
-        printf("trace: rank %i finished %i\n", my_app_rank, ndone);
+        FIB_DEBUG("trace: rank %i finished %i\n", my_app_rank, ndone);
       }
     }
 
