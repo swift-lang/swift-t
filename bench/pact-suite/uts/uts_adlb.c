@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
   rc = ADLB_Init(num_servers, num_types, type_vect, &am_server, MPI_COMM_WORLD, &app_comm);
   if ( !am_server ) /* application process */
   {
-    printf("[%i] I AM SERVER!\n", my_world_rank);
+    UTS_INFO("[%i] I AM SERVER!\n", my_world_rank);
     MPI_Comm_rank( app_comm, &my_app_rank );
   }
 
@@ -173,7 +173,7 @@ int main(int argc, char *argv[])
                     &task_comm);
       if ( rc == ADLB_SHUTDOWN )
       {
-	printf("trace: All jobs done\n");
+	UTS_INFO("trace: All jobs done\n");
 	break;
       }
       
@@ -195,6 +195,23 @@ int main(int argc, char *argv[])
   }
 
   ADLB_Finalize();
+
+  // Print nodes so that we can actually work out throughput
+  UTS_INFO("[%i] total_nodes_processed: %ld\n", my_world_rank,
+         total_nodes_processed);
+
+  // Do MPI reduction to be able to print sum concisely
+  int reduce_root = 0;
+  long global_total_nodes_processed;
+  rc = MPI_Reduce(&total_nodes_processed, &global_total_nodes_processed,
+      1, MPI_LONG, MPI_SUM, reduce_root, MPI_COMM_WORLD);
+  assert(rc == MPI_SUCCESS);
+  if (my_world_rank == reduce_root)
+  {
+    fprintf(stderr, "global_total_nodes_processed: %ld\n",
+                    global_total_nodes_processed);
+  }
+
   MPI_Finalize();
 
   return(0);
