@@ -406,6 +406,18 @@ public class ForeachLoops {
         return outerContext;
       }
     }
+
+    /**
+     * Switch to version iterating over local container
+     * @param var
+     */
+    public void switchToLocalForeach(Var localContainer) {
+      assert(localContainer.type().assignableTo(
+          Types.retrievedType(this.container, false)));
+      this.container = localContainer;
+      this.containerClosed = true;
+      this.splitDegree = -1; // Execute locally
+    }
   }
 
   public static class RangeLoop extends AbstractForeachLoop {

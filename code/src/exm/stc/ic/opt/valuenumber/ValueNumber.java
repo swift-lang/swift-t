@@ -60,6 +60,7 @@ import exm.stc.ic.opt.TreeWalk.TreeWalker;
 import exm.stc.ic.opt.valuenumber.Congruences.OptUnsafeError;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
 import exm.stc.ic.tree.Conditionals.Conditional;
+import exm.stc.ic.tree.ForeachLoops.ForeachLoop;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
@@ -151,7 +152,6 @@ public class ValueNumber implements OptimizerPass {
       // First pass finds all congruence classes and expands some instructions
       Map<Block, Congruences> congMap;
       congMap = findCongruences(prog, f, ExecContext.CONTROL);
-      // Check if we are safe to proceed with optimisation
   
       // Second pass replaces values based on congruence classes
       replaceVals(prog.constants(), f.mainBlock(), congMap, InitState.enterFunction(f));
@@ -457,6 +457,19 @@ public class ValueNumber implements OptimizerPass {
       int stmtIndex, Congruences state, Map<Block, Congruences> result)
           throws OptUnsafeError {
     logger.trace("Recursing on continuation " + cont.getType());
+    
+    if (finalizedVarEnabled) {
+      // TODO: prototype of this transformation
+      // more elegant approach should be possible
+      if (cont.getType() == ContinuationType.FOREACH_LOOP) {
+        ForeachLoop foreach = (ForeachLoop)cont;
+        Arg arrayVal = state.findRetrieveResult(foreach.getArrayVar(), false);
+        logger.trace("CHECKING FOREACH: " + arrayVal);
+        if (arrayVal != null) {
+          foreach.switchToLocalForeach(arrayVal.getVar());
+        }
+      }
+    }
 
     // additional variables may be close once we're inside continuation
     List<BlockingVar> contClosedVars = null;
