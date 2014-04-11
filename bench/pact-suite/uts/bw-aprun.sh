@@ -44,7 +44,7 @@ EXEC_SCRIPT=1
 source ${TURBINE_HOME}/scripts/turbine-config.sh
 BENCH_SRC=/mnt/a/u/sciteam/tarmstro/exm.sfw.git/stc/branches/issue-586/bench/pact-suite/uts
 SCRIPT=${BENCH_SRC}/uts_tcl
-ADLB_PROG=${BENCH_SRC}/uts-adlb
+ADLB_PROG=${BENCH_SRC}/uts_adlb
 
 # Put output in directory job was launched from
 TURBINE_OUTPUT=${PBS_O_WORKDIR}
