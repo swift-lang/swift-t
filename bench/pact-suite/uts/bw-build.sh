@@ -46,7 +46,7 @@ do
   ${STC} ${STC_FLAGS} -C ${PREFIX_OPT}.ic ${PREFIX}.swift ${PREFIX_OPT}.tcl
   echo -n .
 
-  MANIFEST="dummy.manifest --ignore-no-manifest"
+  MANIFEST=${PREFIX}.manifest
   ${MKSTATIC} ${MANIFEST} --main-script ${PREFIX_OPT}.tcl -c ${PREFIX_TCL}.c
   echo -n .
 
