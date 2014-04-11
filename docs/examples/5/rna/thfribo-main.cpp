@@ -31,6 +31,7 @@ void write_pdb(double x[], double y[], double z[], string c2[], string c4[], int
 int thfribo_main(int argc, char** argv){
 	//int iorder[100], ans, nsucc, count, loop0, repel, branch_sep, seg_restraint, loop_duplex ;
 	int iteration=atoi(argv[1]);
+        cout << "iteration: " << iteration << endl;
 	int nsucc ;
 	double x[100], y[100], z[100], x_old[100], y_old[100], z_old[100],rgyr ;
 	string c1[100],c3[100],c4[100],c5[100], c12[100];

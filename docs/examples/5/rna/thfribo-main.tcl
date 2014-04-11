@@ -2,7 +2,8 @@
 namespace eval thfribo_main {
 
     proc thfribo_main_wrap { rc A } {
-        deeprule $A 1 0 "thfribo_main::thfribo_main_wrap_impl $rc $A"
+        deeprule $A 1 0 "thfribo_main::thfribo_main_wrap_impl $rc $A" \
+            type $turbine::WORK
     }
 
     proc thfribo_main_wrap_impl { rc A } {
