@@ -15,6 +15,12 @@
 // Work unit type
 #define WORKT 0
 
+#ifdef EMB_DEBUG
+#define EMB_DEBUG(fmt, args...) printf(fmt, ## args)
+#else
+#define EMB_DEBUG(fmt, args...)
+#endif
+
 int main(int argc, char *argv[])
 {
   int rc,  done;
@@ -47,7 +53,7 @@ int main(int argc, char *argv[])
 
   if ( !am_server ) /* application process */
   {
-    printf("[%i] I AM NOT SERVER!\n", my_world_rank);
+    EMB_DEBUG("[%i] I AM NOT SERVER!\n", my_world_rank);
     
     MPI_Comm_rank( app_comm, &my_app_rank );
     MPI_Comm_size( app_comm, &app_comm_size );
@@ -58,7 +64,7 @@ int main(int argc, char *argv[])
 
   if ( am_server )
   {
-    printf("[%i] I AM SERVER!\n", my_world_rank);
+    EMB_DEBUG("[%i] I AM SERVER!\n", my_world_rank);
     ADLB_Server(3000000);
   }
   else
@@ -105,7 +111,7 @@ int main(int argc, char *argv[])
         }
         tasks_put += M;
       }
-      printf("[%i] put all tasks (%i)\n", my_app_rank,
+      EMB_DEBUG("[%i] put all tasks (%i)\n", my_app_rank,
               tasks_put);
     }
   
@@ -123,7 +129,7 @@ int main(int argc, char *argv[])
                     &task_comm);
       if ( rc == ADLB_SHUTDOWN )
       {
-	printf("trace: All jobs done\n");
+	EMB_DEBUG("trace: All jobs done\n");
 	break;
       }
       int i, j;
@@ -139,7 +145,7 @@ int main(int argc, char *argv[])
       //printf("%i %i\n", i, j);
       ndone++;
       if (ndone % 500000 == 0) {
-        printf("trace: rank %i finished %i\n", my_app_rank, ndone);
+        EMB_DEBUG("trace: rank %i finished %i\n", my_app_rank, ndone);
       }
     }
 
