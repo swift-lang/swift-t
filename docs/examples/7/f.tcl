@@ -8,7 +8,8 @@ namespace eval my_pkg {
         set x [ lindex $inputs  0 ]
         set y [ lindex $inputs  1 ]
         set z [ lindex $outputs 0 ]
-        rule [ list $x $y ] "my_pkg::f_body $z $x $y"
+        rule [ list $x $y ] "my_pkg::f_body $z $x $y" \
+            type $turbine::WORK
     }
 
     # Function called by Swift/T rule
