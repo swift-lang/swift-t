@@ -64,7 +64,6 @@ int main(int argc, char *argv[])
 
   double start_time, end_time;
 
-  printf("HELLO!\n");
   fflush(NULL);
 
   rc = MPI_Init( &argc, &argv );
@@ -82,6 +81,7 @@ int main(int argc, char *argv[])
   {
     MPI_Comm_rank( app_comm, &my_app_rank );
   }
+  DEBUG("Hello. I am a %s\n", am_server ? "SERVER" : "WORKER");
 
   rc = ADLB_Read_refcount_enable();
   assert(rc == ADLB_SUCCESS);
