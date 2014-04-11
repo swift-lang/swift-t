@@ -66,7 +66,7 @@ int junct_linkage(double x[], double y[], double z[]) // puts distance restraint
         //if (d1_bond < 4.5 or d1_bond > 5.5 or d2_bond < 4.5 or d2_bond > 5.5) bond ++ ;
         cout << bond<<"    "<<d1_bond <<"    "<< d2_bond << endl;
                                                                  }
-    /*for (int i = 0 ; i < (sizeof(duplex_2a)/sizeof(int)-1) ; i++){
+    for (int i = 0 ; i < (sizeof(duplex_2a)/sizeof(int)-1) ; i++){
         j1 = duplex_2a[i], j2 = duplex_2b[i] ;
         d1_bond = DIS(x[j1],x[j1+1],y[j1],y[j1+1],z[j1],z[j1+1]) ;
         d2_bond = DIS(x[j2],x[j2-1],y[j2],y[j2-1],z[j2],z[j2-1]) ;
