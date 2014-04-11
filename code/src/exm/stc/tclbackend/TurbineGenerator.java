@@ -136,6 +136,7 @@ public class TurbineGenerator implements CompilerBackend {
   private static final String TCLTMP_INIT_REFCOUNT = "tcltmp:init_rc";
   private static final String TCLTMP_SPLIT_START = "tcltmp:splitstart";
   private static final String TCLTMP_SKIP = "tcltmp:skip";
+  private static final String TCLTMP_IGNORE = "tcltmp:ignore";
   
   private static final String MAIN_FUNCTION_NAME = "swift:main";
   private static final String CONSTINIT_FUNCTION_NAME = "swift:constants";
@@ -2616,12 +2617,15 @@ public class TurbineGenerator implements CompilerBackend {
         MultiMap<Var, RefCount> constIncrs) {
     boolean haveKeys = loopCountVar != null;
     
+    boolean isKVContainer;
     if (Types.isArray(container) || Types.isArrayLocal(container)) {
       assert(!haveKeys || 
             Types.isArrayKeyVal(container, loopCountVar.asArg()));
+      isKVContainer = true;
     } else {
       assert(Types.isBag(container) || Types.isBagLocal(container));
       assert(!haveKeys);
+      isKVContainer = false;
     }
     
 
@@ -2642,31 +2646,38 @@ public class TurbineGenerator implements CompilerBackend {
       throw new STCRuntimeError("Loops over open containers not yet supported");
     }
 
+    boolean isDict;
     Value tclContainer;
     if (splitDegree <= 0) {
       if (localContainer) {
+        // Already have var
         tclContainer = varToExpr(container);
+        isDict = isKVContainer;
       } else {
         // Load container contents and increment refcounts
+        // Only get keys if needed
         tclContainer = new Value(TCLTMP_ARRAY_CONTENTS);
         pointAdd(Turbine.enumerateAll(tclContainer.variable(),
                             varToExpr(container), haveKeys));
+        isDict = haveKeys;
       }
       
       Expression containerSize;
-      if (haveKeys) {
+      if (isDict) {
         containerSize = Turbine.dictSize(tclContainer);
       } else {
         containerSize = Turbine.listLength(tclContainer);
       }
       handleForeachContainerRefcounts(perIterIncrs, constIncrs, containerSize);
     } else {
+      assert(!localContainer);
       tclContainer = new Value(TCLTMP_ARRAY_CONTENTS);
       startForeachSplit(loopName, container, tclContainer.variable(),
           splitDegree, leafDegree, haveKeys, passedVars, perIterIncrs,
           constIncrs);
+      isDict = haveKeys;
     }
-    startForeachInner(tclContainer, memberVar, loopCountVar);
+    startForeachInner(tclContainer, memberVar, loopCountVar, isDict);
   }
 
   private void handleForeachContainerRefcounts(List<RefCount> perIterIncrs,
@@ -2713,17 +2724,17 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   private void startForeachInner(
-      Value arrayContents, Var memberVar, Var loopCountVar) {
+      Value arrayContents, Var memberVar, Var loopCountVar, boolean isDict) {
     Sequence curr = point();
-    boolean haveKeys = loopCountVar != null;
     Sequence loopBody = new Sequence();
 
     String tclMemberVar = prefixVar(memberVar);
-    String tclCountVar = haveKeys ? prefixVar(loopCountVar) : null;
+    String tclCountVar = (loopCountVar != null) ?
+                  prefixVar(loopCountVar) : TCLTMP_IGNORE;
 
     /* Iterate over keys and values, or just values */
     Sequence tclLoop;
-    if (haveKeys) {
+    if (isDict) {
       tclLoop = new DictFor(new Token(tclCountVar), new Token(tclMemberVar),
                       arrayContents, loopBody);
     } else {
