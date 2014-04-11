@@ -36,7 +36,7 @@ int junct_linkage(double x[], double y[], double z[]) // puts distance restraint
     double d_bond, d1[20] ;
     int bond = 0 ;
     int junct[] = {20,21,22,23,55,56,57,64,65} ;
-    for (int i = 0 ; i < (sizeof(junct)/sizeof(int)-1) ; i++){
+    for (unsigned int i = 0 ; i < (sizeof(junct)/sizeof(int)-1) ; i++){
         int j1 = junct[i], j2 = junct[i+1] ;
         d_bond = DIS(x[j1],x[j2],y[j1],y[j2],z[j1],z[j2]) ;
         d1[i] = d_bond ;
