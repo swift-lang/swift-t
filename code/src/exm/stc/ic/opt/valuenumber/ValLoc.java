@@ -7,6 +7,7 @@ import java.util.List;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
@@ -287,7 +288,33 @@ public class ValLoc {
                       v.asArg(), Closed.MAYBE_NOT, copied, isAssign);
   }
   
+  public static ValLoc retrieve(Var dst, Var src, boolean recursive,
+      Closed isClosed, IsValCopy isCopy, IsAssign isAssign) {
+    Type retrievedType = Types.retrievedType(src, recursive);
+    assert(retrievedType.assignableTo(dst.type()));
+    if (recursive && retrievedType.equals(Types.retrievedType(src, false))) {
+      // Not really a recursive load, make canonical
+      recursive = false;
+    }
+    
+    return new ValLoc(ComputedValue.retrieveCompVal(src, recursive),
+                      dst.asArg(), Closed.MAYBE_NOT, IsValCopy.YES,
+                      isAssign);
+  }
+  
+  public static ValLoc assign(Var dst, Arg src, boolean recursive, 
+              Closed isClosed, IsValCopy isCopy, IsAssign isAssign) {
+    Type retrievedType = Types.retrievedType(dst, recursive);
+    assert(src.type().assignableTo(retrievedType));
 
+    if (recursive && retrievedType.equals(Types.retrievedType(dst, false))) {
+      // Not really a recursive load, make canonical
+      recursive = false;
+    }
+    
+    return new ValLoc(ComputedValue.assignCompVal(dst, src, recursive),
+                      dst.asArg(), isClosed, isCopy, isAssign);
+  }
   
   public List<ValLoc> asList() {
     return Collections.singletonList(this);

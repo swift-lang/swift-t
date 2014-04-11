@@ -3159,19 +3159,14 @@ public class TurbineOp extends Instruction {
         Arg src = getInput(0);
         Var dst = getOutput(0);
 
-        Closed outIsClosed;
-        if (op == Opcode.LOAD_REF) {
-          outIsClosed = Closed.MAYBE_NOT;
-        } else {
-          outIsClosed = Closed.YES_NOT_RECURSIVE;
-        }
-
         if (op == Opcode.LOAD_REF) {
           // use standard deref value
           return ValLoc.derefCompVal(dst, src.getVar(), IsValCopy.NO,
                                      IsAssign.NO).asList();
         } else {
-          return vanillaResult(outIsClosed, IsAssign.NO).asList();
+          boolean recursive = op == Opcode.LOAD_RECURSIVE;
+          return ValLoc.retrieve(dst, src.getVar(), recursive,
+                      Closed.MAYBE_NOT, IsValCopy.NO, IsAssign.NO).asList();
         }
       }
       case STORE_REF:
@@ -3181,20 +3176,22 @@ public class TurbineOp extends Instruction {
       case STORE_BAG:
       case STORE_STRUCT:
       case STORE_RECURSIVE: {
+        // add retrieve so we can avoid retrieving later
+        Var dst = getOutput(0);
+        Arg src = getInput(0);
+        
 
         // add assign so we can avoid recreating future 
         // (closed b/c this instruction closes val immediately)
-        ValLoc assign = vanillaResult(Closed.YES_NOT_RECURSIVE,
-                                      IsAssign.TO_LOCATION);
-        // add retrieve so we can avoid retrieving later
-        Arg dst = getOutput(0).asArg();
-        Arg src = getInput(0);
-
+        boolean recursive = (op == Opcode.STORE_RECURSIVE);
+        ValLoc assign = ValLoc.assign(dst, src, recursive,
+            recursive ? Closed.YES_RECURSIVE : Closed.YES_NOT_RECURSIVE,
+            IsValCopy.NO, IsAssign.NO);
 
         if (op == Opcode.STORE_REF) {
           // TODO: incorporate mutability here?
           // Use standard dereference computed value
-          ValLoc retrieve = ValLoc.derefCompVal(src.getVar(), dst.getVar(),
+          ValLoc retrieve = ValLoc.derefCompVal(src.getVar(), dst,
                                    IsValCopy.NO, IsAssign.NO);
           return Arrays.asList(retrieve, assign);
         } else {
