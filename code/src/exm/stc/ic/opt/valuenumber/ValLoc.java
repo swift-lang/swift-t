@@ -316,6 +316,16 @@ public class ValLoc {
                       dst.asArg(), isClosed, isCopy, isAssign);
   }
   
+
+  
+  public static ValLoc assignFile(Var dst, Arg src, Arg setFilename,
+                                        IsAssign isAssign) {
+    assert(Types.isFile(dst));
+    return ValLoc.build(ComputedValue.assignFileCompVal(src, setFilename),
+            dst.asArg(), Closed.YES_NOT_RECURSIVE, isAssign);
+  }
+  
+  
   public List<ValLoc> asList() {
     return Collections.singletonList(this);
   }

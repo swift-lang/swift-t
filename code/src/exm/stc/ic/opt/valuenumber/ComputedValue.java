@@ -203,11 +203,19 @@ public class ComputedValue<T> {
     }
     Opcode op = Opcode.assignOpcode(dst, recursive);
     if (op != null) {
+      assert(op != Opcode.STORE_FILE); // STORE_FILE has extra info, can't handle here
+      
       return new ArgCV(op, src.asList());
     }
     
     throw new STCRuntimeError("Don't know how to assign to " + dst
                               + (recursive ? " recursively" : ""));
+  }
+  
+  public static ArgCV assignFileCompVal(Arg src, Arg setFilename) {
+    assert(Types.isFileVal(src));
+    assert(Types.isBoolVal(setFilename));
+    return new ArgCV(Opcode.STORE_FILE, Arrays.asList(src, setFilename));
   }
   
   public static ValLoc assignValLoc(Var dst, Arg val,

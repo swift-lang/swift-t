@@ -3184,9 +3184,14 @@ public class TurbineOp extends Instruction {
         // add assign so we can avoid recreating future 
         // (closed b/c this instruction closes val immediately)
         boolean recursive = (op == Opcode.STORE_RECURSIVE);
-        ValLoc assign = ValLoc.assign(dst, src, recursive,
+        ValLoc assign;
+        if (op == Opcode.STORE_FILE) {
+          assign = ValLoc.assignFile(dst, src, getInput(1), IsAssign.NO);
+        } else {
+          assign = ValLoc.assign(dst, src, recursive,
             recursive ? Closed.YES_RECURSIVE : Closed.YES_NOT_RECURSIVE,
             IsValCopy.NO, IsAssign.NO);
+        }
 
         if (op == Opcode.STORE_REF) {
           // TODO: incorporate mutability here?
