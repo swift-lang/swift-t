@@ -3,6 +3,7 @@ import io;
 /*
 ret_type swift_app_func() pkg_name version tcl_func
 */
+@dispatch=WORKER
 (int v) thfribo_main(string A[]) "thfribo_main" "0.0" "thfribo_main_wrap";
 
 main {
