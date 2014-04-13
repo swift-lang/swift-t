@@ -1653,7 +1653,6 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isStruct(struct)) : struct;
     assert(Types.isStructField(struct, fields, output));
     Expression subscript = structSubscript(struct, fields);
-    System.err.println(output + " " + struct + " " + subscript + " from fields " + fields);
     pointAdd(Turbine.copyStructSubscript(varToExpr(output), varToExpr(struct),
               subscript, representationType(output.type())));
   }
