@@ -14,7 +14,7 @@
 
 #PBS -N Swift
 #PBS -q normal
-#PBS -l walltime=4:00:00
+#PBS -l walltime=0:30:00
 
 ### Set the job size using appropriate directives for this system
 ### Blue Waters mode
@@ -34,7 +34,7 @@ module unload PrgEnv-cray
 module load PrgEnv-gnu
 
 # Set variables required for turbine-config.sh
-EXM_HOME=/u/sciteam/tarmstro/soft/exm-sc14/v1
+EXM_HOME=/u/sciteam/tarmstro/soft/exm-sc14/v2-opt
 #EXM_HOME=/u/sciteam/tarmstro/soft/exm-sc14/v1-debug
 export TURBINE_HOME=${EXM_HOME}/turbine
 TURBINE_STATIC_EXEC=0
@@ -83,12 +83,12 @@ cd ${TURBINE_OUTPUT}
 OPT_LEVELS="adlb O3 O2 O1 O0"
 
 
-for trial in 1 2 3
+for opt in ${OPT_LEVELS}
 do
-  for opt in ${OPT_LEVELS}
+  for trial in 1
   do
     APRUN_NODES=$NODES
-    GEN_MX=45
+    GEN_MX=44
 
     while ((APRUN_NODES > 0))
     do
