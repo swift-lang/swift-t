@@ -7,6 +7,7 @@
 -O1 -T dataflow-op-inline
 -O1 -T dataflow-op-inline -T wait-coalesce
 -O1 -T dataflow-op-inline -T wait-coalesce -T function-signature -T loop-simplify
+-O1 -T dataflow-op-inline -T wait-coalesce -T function-signature -T loop-simplify -T hoisting
 -O2
 -O2 -T function-inline
 -O2 -T function-inline -T pipeline
