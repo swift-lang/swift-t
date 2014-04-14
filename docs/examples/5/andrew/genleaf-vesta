@@ -105,12 +105,13 @@ import io;
 ret_type swift_app_func() pkg_name version tcl_func
 */
 (int v) leaf_main(string A[]) "leaf_main" "0.0" "leaf_main_wrap";
-
 main
 {
-  string A[] = [ "2" ];
-  rc = leaf_main(A); // rc gets its type implicitly
-  printf("exit code: %i", rc);
+  int rc[];
+  foreach i in [0:15:1]{
+    rc[i] = leaf_main([fromint(i)]);
+    printf("exit code: %i", rc[i]);
+  }
 }
 
 EOF
