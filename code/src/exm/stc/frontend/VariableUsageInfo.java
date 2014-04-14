@@ -790,9 +790,12 @@ public class VariableUsageInfo {
         // Non-array type
         if (Ternary.and(assignedInBranch, this.assigned) ==
                                                           Ternary.TRUE) {
+
+          System.err.println("Assign error " + name);
+          new Exception().printStackTrace();
           result.add(new Violation(ViolationType.ERROR, "Variable " + name
               + " is assigned twice", context));
-           return result;
+          return result;
         }
         if (assignedInBranch == Ternary.MAYBE) {
           result.add(new Violation(ViolationType.WARNING, "Variable " + name

@@ -4,6 +4,7 @@ import assert;
 import math;
 import stats;
 import random;
+import sys;
 
 (PartialStats p) initPartial(float data) {
   p.n = 1;
@@ -13,7 +14,7 @@ import random;
 
 main {
   int data[];
-  nsamples = 10000;
+  nsamples = 1000;
   max = 200;
   min = 100;
 
@@ -35,7 +36,11 @@ main {
       PartialStats p;
       ps[i] = p;
       wait (sleep(0.002 * random())) {
-        p = initPartial(floatdata[i]);
+        // Workaround for bad variable usage analysis
+        p2 = initPartial(floatdata[i]);
+        p.n = p2.n;
+        p.mean = p2.mean;
+        p.M2 = p2.M2;
       }
     }
     else
