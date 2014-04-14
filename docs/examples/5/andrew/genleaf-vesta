@@ -8,7 +8,9 @@
 USER_SOURCE=$1
 USER_HEADER=$2
 
-TCL_HOME=$(cd $(dirname $(which tclsh8.5))/.. ; /bin/pwd)
+#TCL_HOME=$(cd $(dirname $(which tclsh8.5))/.. ; /bin/pwd)
+
+TCL_HOME=/home/wozniak/Public/tcl-8.5.12-bgq
 
 #step 1. Replace the main function in the source code with an ordinary function and push it into header
 sed 's/main(.*)/leaf_main(int argc, char** argv)/' $USER_SOURCE > user-leaf.c || echo "something went wrong"
@@ -115,16 +117,16 @@ EOF
 
 #step 6. Build userlib.so
 #compile user-leaf.c
-cc -I ${TCL_HOME}/include -fPIC -g -std=gnu99 -c -o user-leaf.o user-leaf.c
+/bgsys/drivers/ppcfloor/gnu-linux/bin/powerpc64-bgq-linux-gcc -I ${TCL_HOME}/include -fPIC -g -std=gnu99 -c -o user-leaf.o user-leaf.c
 
 #compile extension.c
-cc -I ${TCL_HOME}/include -fPIC -g -std=gnu99 -c -o extension.o extension.c
+/bgsys/drivers/ppcfloor/gnu-linux/bin/powerpc64-bgq-linux-gcc -I ${TCL_HOME}/include -fPIC -g -std=gnu99 -c -o extension.o extension.c
 
 #build userlib.so
-cc -shared -o userlib.so extension.o user-leaf.o -L ${TCL_HOME}/lib -l tcl8.5 -Wl,-rpath -Wl,${TCL_HOME}/lib
+/bgsys/drivers/ppcfloor/gnu-linux/bin/powerpc64-bgq-linux-gcc -shared -o userlib.so extension.o user-leaf.o -L ${TCL_HOME}/lib -l tcl8.5 -Wl,-rpath -Wl,${TCL_HOME}/lib
 
 #step 7. Call make-package
 tclsh make-package.tcl > pkgIndex.tcl
 
 #step 8. call stc
-stc -j /homes/ketan/jdk1.7.0_07/bin/java -r ${PWD} user-code.swift
+stc -r ${PWD} user-code.swift
