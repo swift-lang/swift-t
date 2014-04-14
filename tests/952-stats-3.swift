@@ -49,8 +49,10 @@ main {
     }
   }
 
-  n, mean, M2 = stat_combine(ps);
+  n, mean, stdev = stat_combine(ps);
   assertEqual(n, nsamples, "n");
-  assertLT(abs_float(mean - itof(max + min) / 2), 2, "mean");
+  assertLT(abs_float(mean - itof(max + min) / 2), 3, "mean");
   // TODO: stddev check
+
+  printf("n=%i mean=%f std=%f", n, mean, stdev);
 }
