@@ -579,8 +579,10 @@ Urbana-Champaign.
 Cray systems do not use +mpicc+.  We set +CC=gcc+ and use compiler
 flags to configure the MPI library.
 
-* Use the following settings in +exm-settings.sh+ (TODO: check these and
-  confirm that cc works)
+// TODO: check these and confirm that cc works #661
+
+* Use the following settings in +exm-settings.sh+
++
 ----
 export CC=cc
 
@@ -593,7 +595,8 @@ EXM_CRAY=1
 EXM_BUILD_STATIC=1
 ----
 
-Or if doing a manual build with +configure+ and make:
+Or, if doing a manual build with +configure+/+make+:
+
 * Configure ADLB with:
 +
 ----
