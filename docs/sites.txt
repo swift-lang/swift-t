@@ -634,11 +634,13 @@ QUEUE=normal BLUE_WATERS=true PPN=32 turbine-aprun-run.zsh -n 32 helloworld.tcl
 
 
 ==== Installing from source
+
 ===== Prerequisites
-* Tcl 8.5 installed: /usr/bin/tclsh
-* Swig is preinstalled: /usr/bin/swig (SWIG Version 1.3.36)
-* Now we need to ensure that the right modules are loaded.
-* Switch programming env to use gcc.
+
+* Tcl 8.5 is installed in: +/usr/bin/tclsh+
+* Swig 1.3.36 is installed in: +/usr/bin/swig+
+* The following steps ensure that the right compiler modules are loaded.
+* Switch your programming environment to use +gcc+.
 ----
 module unload PrgEnv-cray
 module load PrgEnv-gnu
@@ -647,7 +649,8 @@ module load PrgEnv-gnu
 ----
 module load java
 ----
-* Download and install the Apache Ant build tool (required for STC)
+* Download and install the Apache Ant build tool (required to
+  build STC)
 ----
 wget http://www.apache.org/dist/ant/binaries/apache-ant-1.9.2-bin.tar.bz2
 # Check archive is valid
@@ -670,12 +673,15 @@ ant -version
 ----
 
 ===== Installation
-- Need to install to a lustre fs:
-  - /scratch (not backed up, best performance)
-  - /u home directory (backed up, good performance)
-  - /projects (backed up, good performance)
 
-- I used a prepackaged distro built using "distro/construct.zsh -t" to build
+// TODO: Not sure what to do here. #661
+
+- Need to install to a lustre fs:
+  - +/scratch+ (not backed up, best performance)
+  - +/u+ home directory (backed up, good performance)
+  - +/projects+ (backed up, good performance)
+
+- I used a prepackaged distro built using +distro/construct.zsh -t+ to build
   from trunk. The following instructions are to install from this distro to
   trunk on Blue Waters.
 - First extract the tarball
