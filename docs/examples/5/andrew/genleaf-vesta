@@ -42,6 +42,7 @@ static int leaf_main_extension(ClientData cdata, Tcl_Interp *interp,
 
   // Clean up:
   free(argv);
+  return TCL_OK;
 }
 
 int Userlib_Init(Tcl_Interp* interp) {
@@ -130,4 +131,4 @@ EOF
 tclsh make-package.tcl > pkgIndex.tcl
 
 #step 8. call stc
-stc -r ${PWD} user-code.swift
+stc -t checkpointing -r ${PWD} user-code.swift

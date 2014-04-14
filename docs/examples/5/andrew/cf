@@ -3,4 +3,5 @@ export WALLTIME=00:10:00
 export PROJECT=ExM
 export PPN=16
 export QUEUE=default
-TURBINE_LOG=0
+export TURBINE_LOG=0
+export TURBINE_DEBUG=0
