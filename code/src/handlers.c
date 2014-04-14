@@ -156,6 +156,7 @@ xlb_handlers_init(void)
 {
   MPI_Comm_rank(adlb_comm, &mpi_rank);
 
+  handler_count = 0;
   memset(handlers, '\0', XLB_MAX_HANDLERS*sizeof(xlb_handler));
 
   register_handler(ADLB_TAG_SYNC_REQUEST, handle_sync);
