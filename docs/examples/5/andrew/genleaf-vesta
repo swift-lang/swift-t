@@ -102,9 +102,8 @@ EOF
 #step 5. Generate user-code.swift
 cat << EOF > user-code.swift
 import io;
-/*
-ret_type swift_app_func() pkg_name version tcl_func
-*/
+
+@dispatch=WORKER
 (int v) leaf_main(string A[]) "leaf_main" "0.0" "leaf_main_wrap";
 main
 {
