@@ -202,7 +202,7 @@ xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
   ADLB_CHECK(rc);
 
   // Store value, maybe accumulating more notification/ref setting work
-  rc = xlb_store(id, ADLB_NO_SUB, type, value, length, ADLB_WRITE_RC,
+  rc = xlb_store(id, subscript, type, value, length, ADLB_WRITE_RC,
                  transferred_refs, notifs);
   ADLB_CHECK(rc);
   TRACE("SET_REFERENCE DONE");
