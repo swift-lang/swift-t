@@ -40,6 +40,8 @@ extern double xlb_steal_last;
 
 extern int xlb_failed_steals_since_backoff;
 
+adlb_code xlb_steal_init(void);
+
 /**
    Are there any other servers?
    Are we allowed to steal yet?

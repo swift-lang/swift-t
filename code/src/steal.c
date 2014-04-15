@@ -52,9 +52,9 @@ get_target_server(int* result)
 }
 
 static adlb_code steal_sync(int target, int max_memory);
-
-static inline adlb_code steal_payloads(int target, int count,
-               int *single_count, int *par_count);
+static adlb_code discard_old_steals(void);
+static adlb_code steal_payloads(int target, int count,
+               int *single_count, int *par_count, bool discard);
 
 /*
  * Allocate steal request structure here instead of on
@@ -65,6 +65,46 @@ static struct {
   struct packed_steal_resp hdr;
   MPI_Request request;
 } xlb_steal_request;
+
+/**
+ * Initialize internal state for steal module
+ */
+adlb_code
+xlb_steal_init(void)
+{
+  adlb_code rc = discard_old_steals();
+  ADLB_CHECK(rc);
+  return ADLB_SUCCESS;
+}
+
+/*
+ * Workaround for problem with reusing communicators where
+ * other node may have eagerly been sending steal responses.
+ */
+static adlb_code discard_old_steals(void)
+{
+  while (true)
+  {
+    adlb_code rc;
+    MPI_Status status;
+    int old_steals;
+    struct packed_steal_resp *hdr = &xlb_steal_request.hdr;
+    IPROBE(MPI_ANY_SOURCE, ADLB_TAG_RESPONSE_STEAL_COUNT, &old_steals,
+           &status);
+    if (!old_steals)
+    {
+      break;
+    }
+    
+    RECV(hdr, sizeof(*hdr), MPI_BYTE, status.MPI_SOURCE,
+          ADLB_TAG_RESPONSE_STEAL_COUNT);
+    int single, par;
+    rc = steal_payloads(status.MPI_SOURCE, hdr->count, &single, &par, true);
+    ADLB_CHECK(rc);
+  }
+  return ADLB_SUCCESS;
+}
+
 
 adlb_code
 xlb_steal(bool* stole_single, bool *stole_par)
@@ -101,7 +141,7 @@ xlb_steal(bool* stole_single, bool *stole_par)
     WAIT(&xlb_steal_request.request, &status);
     if (hdr->count > 0) {
       int single, par;
-      rc = steal_payloads(target, hdr->count, &single, &par);
+      rc = steal_payloads(target, hdr->count, &single, &par, false);
       ADLB_CHECK(rc);
       total_single += single;
       total_par += par;
@@ -109,7 +149,7 @@ xlb_steal(bool* stole_single, bool *stole_par)
     if (hdr->last)
       break;
    
-  IRECV2(hdr, sizeof(*hdr), MPI_BYTE, target,
+    IRECV2(hdr, sizeof(*hdr), MPI_BYTE, target,
         ADLB_TAG_RESPONSE_STEAL_COUNT, &xlb_steal_request.request);
   }
   
@@ -174,9 +214,13 @@ steal_sync(int target, int max_memory)
   return code; 
 }
 
-static inline adlb_code
+/*
+ * discard: if true, discard the payloads.  If false, enqueue the work
+ */
+static adlb_code
 steal_payloads(int target, int count,
-               int *single_count, int *par_count)
+               int *single_count, int *par_count,
+               bool discard)
 {
   assert(count > 0);
   MPI_Status status;
@@ -191,10 +235,14 @@ steal_payloads(int target, int count,
     xlb_work_unit *work = work_unit_alloc((size_t)wus[i].length);
     RECV(work->payload, wus[i].length, MPI_BYTE, target,
          ADLB_TAG_RESPONSE_STEAL);
-    xlb_work_unit_init(work, wus[i].type, wus[i].putter, wus[i].priority,
-                  wus[i].answer, wus[i].target, wus[i].length,
-                  wus[i].parallelism);
-    xlb_workq_add(work);
+    if (!discard) {
+      xlb_work_unit_init(work, wus[i].type, wus[i].putter, wus[i].priority,
+                    wus[i].answer, wus[i].target, wus[i].length,
+                    wus[i].parallelism);
+      xlb_workq_add(work);
+    } else {
+      work_unit_free(work);
+    }
     if (wus[i].parallelism > 1)
     {
       par++;

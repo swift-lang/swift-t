@@ -177,6 +177,9 @@ xlb_server_init()
   
   code = xlb_sync_init();
   ADLB_CHECK(code);
+  
+  code = xlb_steal_init();
+  ADLB_CHECK(code);
 
   turbine_engine_code tc = turbine_engine_init(xlb_comm_rank);
   CHECK_MSG(tc == TURBINE_SUCCESS, "Error initializing engine");
