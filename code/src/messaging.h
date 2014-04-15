@@ -485,6 +485,7 @@ typedef enum
   ADLB_SYNC_STEAL, // Trying to steal work
   ADLB_SYNC_REFCOUNT, // Modify reference count
   ADLB_SYNC_SUBSCRIBE, // Subscribe to a datum
+  ADLB_SYNC_NOTIFY, // Notify aftern subscriptionto a datum
 
   ADLB_SYNC_ENUM_COUNT, // Dummy value: count of enum types
 } adlb_sync_mode;
@@ -496,7 +497,7 @@ struct packed_sync
   {
     struct packed_incr incr;   // if refcount increment
     struct packed_steal steal; // if steal
-    struct packed_subscribe_sync subscribe; // if subscribe
+    struct packed_subscribe_sync subscribe; // if subscribe or notify
   };
   /* Extra data depending on sync type.  Same size used by all servers to
      allow for fixed-size buffers to be used */

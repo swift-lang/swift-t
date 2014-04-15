@@ -64,19 +64,28 @@ adlb_code
 xlb_sync_subscribe(int target, adlb_datum_id id, adlb_subscript sub,
                    bool *subscribed);
 
+adlb_code
+xlb_sync_notify(int target, adlb_datum_id id, adlb_subscript sub);
+
 typedef enum {
   DEFERRED_SYNC, // Have not yet accepted
   ACCEPTED_RC,   // Have accepted but need to do refcount
+  DEFERRED_NOTIFY, // Have accepted but need to process notify
 } xlb_pending_kind;
 
 typedef struct {
   xlb_pending_kind kind; 
   int rank;
   struct packed_sync *hdr; // Header to be freed later
+  void *extra_data; // Extra data if needed for header type
 } xlb_pending;
 
 adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
                           bool defer_svr_ops);
+
+adlb_code xlb_handle_notify_sync(int rank,
+        const struct packed_subscribe_sync *hdr, const void *sync_data,
+        void *extra_data);
 
 // Inline functions to make it quick to check for pending sync requests
 
@@ -99,7 +108,7 @@ adlb_code xlb_pending_shrink(void);
  */
 __attribute__((always_inline))
 static inline adlb_code xlb_dequeue_pending(xlb_pending_kind *kind,
-                            int *rank, struct packed_sync **hdr)
+            int *rank, struct packed_sync **hdr, void **extra_data)
 {
   if (xlb_pending_sync_count == 0)
     return ADLB_NOTHING;
@@ -109,6 +118,7 @@ static inline adlb_code xlb_dequeue_pending(xlb_pending_kind *kind,
   *kind = pending->kind;
   *rank = pending->rank;
   *hdr = pending->hdr;
+  *extra_data = pending->extra_data;
 
   xlb_pending_sync_count--;
   xlb_pending_sync_head = (xlb_pending_sync_head + 1) %

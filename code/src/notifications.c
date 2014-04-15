@@ -269,6 +269,14 @@ xlb_notify_server(int server, adlb_datum_id id, adlb_subscript subscript)
 {
   MPI_Status status;
   MPI_Request request;
+
+  if (xlb_am_server)
+  {
+    // Must use sync for server->server
+    adlb_code ac = xlb_sync_notify(server, id, subscript);
+    ADLB_CHECK(ac);
+    return ADLB_SUCCESS;
+  }
   
   int subscript_len = adlb_has_sub(subscript) ? (int)subscript.length : 0;
   assert(subscript_len <= ADLB_DATA_SUBSCRIPT_MAX);
@@ -708,6 +716,9 @@ xlb_prepare_notif_work(adlb_notif_t *notifs,
   }
   else 
   {
+    // TODO: if disabling ADLB_CLIENT_NOTIFIES, would need
+    // to ensure that this is never called while already
+    // in a sync loop
     // Handle on server
     rc = xlb_notify_all(notifs);
     ADLB_CHECK(rc);

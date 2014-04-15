@@ -361,9 +361,11 @@ xlb_handle_pending_syncs(void)
   xlb_pending_kind kind;
   int rank;
   struct packed_sync *hdr;
+  void *extra_data;
 
   // Handle outstanding sync requests
-  while ((rc = xlb_dequeue_pending(&kind, &rank, &hdr)) == ADLB_SUCCESS)
+  while ((rc = xlb_dequeue_pending(&kind, &rank, &hdr, &extra_data))
+            == ADLB_SUCCESS)
   {
     DEBUG("server_sync: [%d] handling deferred sync from %d",
           xlb_comm_rank, rank);
@@ -376,6 +378,11 @@ xlb_handle_pending_syncs(void)
       case ACCEPTED_RC:
         dc = xlb_incr_rc_local(hdr->incr.id, hdr->incr.change, true);
         CHECK_MSG(dc == ADLB_DATA_SUCCESS, "unexpected error in refcount");
+        break;
+      case DEFERRED_NOTIFY:
+        rc = xlb_handle_notify_sync(rank, &hdr->subscribe, hdr->sync_data,
+                                    extra_data);
+        ADLB_CHECK(rc);
         break;
       default:
         ERR_PRINTF("Unexpected pending sync kind %i\n", kind);

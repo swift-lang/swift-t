@@ -46,8 +46,11 @@ static inline adlb_code msg_shutdown(adlb_sync_mode mode, int sync_target, bool*
 static adlb_code xlb_handle_subscribe_sync(int rank,
         const struct packed_subscribe_sync *hdr, const void *sync_data);
 
+static adlb_code enqueue_deferred_notify(int rank,
+      const struct packed_sync *hdr);
+
 static adlb_code enqueue_pending(xlb_pending_kind kind, int rank,
-                             const struct packed_sync *hdr);
+                         const struct packed_sync *hdr, void *extra_data);
 
 static inline bool is_simple_sync(adlb_sync_mode mode);
 
@@ -246,14 +249,13 @@ send_sync(int target, const struct packed_sync *hdr)
   return ADLB_SUCCESS;
 }
 
-adlb_code
-xlb_sync_subscribe(int target, adlb_datum_id id, adlb_subscript sub,
-                   bool *subscribed)
+static adlb_code
+send_subscribe_sync(adlb_sync_mode mode,
+      int target, adlb_datum_id id, adlb_subscript sub)
 {
-  // TODO: perf counter?
   char req_storage[PACKED_SYNC_SIZE]; // Temporary stack storage for struct
   struct packed_sync *req = (struct packed_sync *)req_storage;
-  req->mode = ADLB_SYNC_SUBSCRIBE;
+  req->mode = mode;
   req->subscribe.id = id;
   req->subscribe.subscript_len = (int)sub.length;
 
@@ -270,13 +272,7 @@ xlb_sync_subscribe(int target, adlb_datum_id id, adlb_subscript sub,
   {
     inlined_subscript = false;
   }
-
-  MPI_Status status;
-  MPI_Request request;
-  int subscribed_resp;
-  IRECV(&subscribed_resp, 1, MPI_INT, target, ADLB_TAG_RESPONSE);
-
-
+  
   int rc = xlb_sync2(target, req);
   ADLB_CHECK(rc);
 
@@ -285,10 +281,40 @@ xlb_sync_subscribe(int target, adlb_datum_id id, adlb_subscript sub,
     // send subscript separately with special tag
     SEND(sub.key, (int)sub.length, MPI_BYTE, target, ADLB_TAG_SYNC_SUB);
   }
+  
+  return ADLB_SUCCESS;
+}
+
+adlb_code
+xlb_sync_subscribe(int target, adlb_datum_id id, adlb_subscript sub,
+                   bool *subscribed)
+{
+
+  MPI_Status status;
+  MPI_Request request;
+  int subscribed_resp;
+
+  // NOTE: doing IRECV here assumes that we don't issue another request
+  // to the same server. That is not a sane thing to do and we would have
+  // much larger problems if that happens.
+  IRECV(&subscribed_resp, 1, MPI_INT, target, ADLB_TAG_RESPONSE);
+
+  adlb_code ac = send_subscribe_sync(ADLB_SYNC_SUBSCRIBE, target, id, sub);
+  ADLB_CHECK(ac);
 
   // Wait for response to find out if subscribed
   WAIT(&request, &status);
   *subscribed = subscribed_resp != 0;
+
+  return ADLB_SUCCESS;
+}
+
+adlb_code
+xlb_sync_notify(int target, adlb_datum_id id, adlb_subscript sub)
+{
+  // Send notification
+  adlb_code ac = send_subscribe_sync(ADLB_SYNC_NOTIFY, target, id, sub);
+  ADLB_CHECK(ac);
 
   return ADLB_SUCCESS;
 }
@@ -353,7 +379,7 @@ static adlb_code msg_from_other_server(int other_server, int target,
   else
   {
     // Don't handle right away, defer it
-    code = enqueue_pending(DEFERRED_SYNC, other_server, other_hdr);
+    code = enqueue_pending(DEFERRED_SYNC, other_server, other_hdr, NULL);
     ADLB_CHECK(code);
   }
   TRACE_END;
@@ -413,7 +439,7 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
     if (defer_svr_ops)
     {
       DEBUG("Defer refcount for <%"PRId64">", hdr->incr.id);
-      code = enqueue_pending(ACCEPTED_RC, rank, hdr);
+      code = enqueue_pending(ACCEPTED_RC, rank, hdr, NULL);
       ADLB_CHECK(code);
     }
     else
@@ -429,6 +455,24 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
   else if (mode == ADLB_SYNC_SUBSCRIBE)
   {
     code = xlb_handle_subscribe_sync(rank, &hdr->subscribe, hdr->sync_data);
+    ADLB_CHECK(code);
+  }
+  else if (mode == ADLB_SYNC_NOTIFY)
+  {
+    if (defer_svr_ops)
+    {
+      DEBUG("Defer notification for <%"PRId64">", hdr->subscribe.id);
+      code = enqueue_deferred_notify(rank, hdr);
+      ADLB_CHECK(code);
+    }
+    else
+    {
+      DEBUG("Handle notification now for <%"PRId64">", hdr->subscribe.id);
+      code = xlb_handle_notify_sync(rank, &hdr->subscribe, hdr->sync_data,
+                                    NULL);
+      ADLB_CHECK(code);
+    }
+
   }
   else
   {
@@ -482,13 +526,96 @@ static adlb_code xlb_handle_subscribe_sync(int rank,
   return ADLB_SUCCESS;
 }
 
+static adlb_code enqueue_deferred_notify(int rank,
+      const struct packed_sync *hdr)
+{
+  MPI_Status status;
+
+  void *malloced_subscript = NULL;
+  int sub_length = hdr->subscribe.subscript_len;
+
+  // Get subscript now to avoid having unreceived message sitting around
+  if (sub_length > SYNC_DATA_SIZE)
+  {
+    assert(sub_length <= ADLB_DATA_SUBSCRIPT_MAX);
+    malloced_subscript = malloc((size_t)sub_length);
+    ADLB_MALLOC_CHECK(malloced_subscript);
+    
+    // receive subscript as separate message with special tag
+    RECV(malloced_subscript, sub_length, MPI_BYTE,
+         rank, ADLB_TAG_SYNC_SUB);
+  }
+
+  adlb_code rc = enqueue_pending(DEFERRED_NOTIFY, rank, hdr,
+                                  malloced_subscript);
+  ADLB_CHECK(rc);
+
+  return ADLB_SUCCESS;
+}
+
+adlb_code xlb_handle_notify_sync(int rank,
+        const struct packed_subscribe_sync *hdr, const void *sync_data,
+        void *extra_data)
+{
+  MPI_Status status;
+
+  void *malloced_subscript = NULL;
+  adlb_subscript sub;
+  sub.length = (size_t)hdr->subscript_len;
+
+  if (hdr->subscript_len == 0)
+  {
+    sub.key = NULL; 
+  }
+  else if (hdr->subscript_len <= SYNC_DATA_SIZE)
+  {
+    // subscript small enough to store inline
+    sub.key = sync_data;
+  }
+  else if (extra_data != NULL)
+  {
+    sub.key = malloced_subscript = extra_data;
+  }
+  else
+  {
+    assert(hdr->subscript_len <= ADLB_DATA_SUBSCRIPT_MAX);
+    malloced_subscript = malloc((size_t)hdr->subscript_len);
+    ADLB_MALLOC_CHECK(malloced_subscript);
+    
+    // receive subscript as separate message with special tag
+    RECV(malloced_subscript, hdr->subscript_len, MPI_BYTE,
+         rank, ADLB_TAG_SYNC_SUB);
+    sub.key = malloced_subscript;
+  }
+
+  turbine_engine_code tc;
+  // process notification
+  if (adlb_has_sub(sub))
+  {
+    tc = turbine_sub_close(hdr->id, sub, &xlb_server_ready_work);
+    ADLB_TURBINE_CHECK(tc);
+  }
+  else
+  {
+    tc = turbine_close(hdr->id, &xlb_server_ready_work);
+    ADLB_TURBINE_CHECK(tc);
+  }
+
+  if (malloced_subscript != NULL)
+  {
+    free(malloced_subscript);
+  }
+  return ADLB_SUCCESS;
+
+}
+
 /*
   Add pending sync
   hdr: sync header.  This function will make a copy of it
   returns: ADLB_SUCCESS, or ADLB_ERROR on unexpected error
  */
 static adlb_code enqueue_pending(xlb_pending_kind kind, int rank,
-                             const struct packed_sync *hdr)
+                     const struct packed_sync *hdr, void *extra_data)
 {
   assert(xlb_pending_sync_count <= xlb_pending_sync_size);
   if (xlb_pending_sync_count == xlb_pending_sync_size)
@@ -513,6 +640,7 @@ static adlb_code enqueue_pending(xlb_pending_kind kind, int rank,
   xlb_pending *entry = &xlb_pending_syncs[tail];
   entry->kind = kind;
   entry->rank = rank;
+  entry->extra_data = extra_data;
   entry->hdr = malloc(PACKED_SYNC_SIZE);
   CHECK_MSG(entry->hdr != NULL, "could not allocate memory");
   memcpy(entry->hdr, hdr, PACKED_SYNC_SIZE);

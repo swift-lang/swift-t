@@ -82,6 +82,11 @@
     ERR_PRINTF("ADLB_DATA_CHECK FAILED: %s:%i\n", __FILE__, __LINE__); \
     return ADLB_ERROR; }}
 
+#define ADLB_TURBINE_CHECK(tc) { \
+  if (tc != TURBINE_SUCCESS) { \
+    ERR_PRINTF("ADLB_TURBINE_CHECK FAILED: %s:%i\n", __FILE__, __LINE__); \
+    return ADLB_ERROR; }}
+
 #define ADLB_MALLOC_CHECK(ptr) { \
   if (ptr == NULL) { \
     ERR_PRINTF("ADLB_MALLOC_CHECK FAILED: %s:%i\n", __FILE__, __LINE__); \
