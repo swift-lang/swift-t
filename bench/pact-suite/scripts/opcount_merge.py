@@ -10,11 +10,15 @@ for file in files:
   fileVals.append(vals)
   try:
     for line in open(file).readlines():
-      k, v = line.split()
-      vals[k] = v
-      keys.add(k)
+      toks = line.split()
+      if len(toks) != 2:
+        print >> sys.stderr, "Bad line: %s" % repr(toks)
+      else:
+        k, v = toks
+        vals[k] = v
+        keys.add(k)
   except Exception, e:
-    print "Error in line \"%s\" of file %s" % (line, file)
+    print >> sys.stderr, "Error in line \"%s\" of file %s" % (line, file)
     raise e
 
 
