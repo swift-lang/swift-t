@@ -13,7 +13,10 @@ int main(int argc, char** argv){
     f1 = fopen("file1.txt", "r");
     f2 = fopen("file2.txt", "r");
 
-	printf("%d\n", selnum(f1, f2, num));
+    printf("The resulting number is %d\n", selnum(f1, f2, num));
+    fclose(f1);
+    fclose(f2);
+
     return 0;
 }
 
