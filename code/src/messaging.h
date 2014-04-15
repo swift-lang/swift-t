@@ -498,7 +498,9 @@ struct packed_sync
     struct packed_steal steal; // if steal
     struct packed_subscribe_sync subscribe; // if subscribe
   };
-  char sync_data[]; // Extra data depending on sync type
+  /* Extra data depending on sync type.  Same size used by all servers to
+     allow for fixed-size buffers to be used */
+  char sync_data[];
 };
 
 #define SYNC_DATA_SIZE \

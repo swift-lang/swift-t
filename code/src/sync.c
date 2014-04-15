@@ -44,7 +44,7 @@ static adlb_code msg_from_other_server(int other_server,
 static inline adlb_code msg_shutdown(adlb_sync_mode mode, int sync_target, bool* done);
 
 static adlb_code xlb_handle_subscribe_sync(int rank,
-            const struct packed_subscribe_sync *hdr);
+        const struct packed_subscribe_sync *hdr, const void *sync_data);
 
 static adlb_code enqueue_pending(xlb_pending_kind kind, int rank,
                              const struct packed_sync *hdr);
@@ -258,11 +258,11 @@ xlb_sync_subscribe(int target, adlb_datum_id id, adlb_subscript sub,
   req->subscribe.subscript_len = (int)sub.length;
 
   bool inlined_subscript; 
-  if (sub.length <= PACKED_SYNC_EXTRA)
+  if (sub.length <= SYNC_DATA_SIZE)
   {
     if (sub.length > 0)
     {
-      memcpy(req->subscribe.inline_subscript, sub.key, sub.length);
+      memcpy(req->sync_data, sub.key, sub.length);
     }
     inlined_subscript = true;
   }
@@ -428,7 +428,7 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
   }
   else if (mode == ADLB_SYNC_SUBSCRIBE)
   {
-    code = xlb_handle_subscribe_sync(rank, &hdr->subscribe);
+    code = xlb_handle_subscribe_sync(rank, &hdr->subscribe, hdr->sync_data);
   }
   else
   {
@@ -439,7 +439,7 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
 }
 
 static adlb_code xlb_handle_subscribe_sync(int rank,
-            const struct packed_subscribe_sync *hdr)
+        const struct packed_subscribe_sync *hdr, const void *sync_data)
 {
   MPI_Status status;
 
@@ -451,10 +451,10 @@ static adlb_code xlb_handle_subscribe_sync(int rank,
   {
     sub.key = NULL; 
   }
-  else if (hdr->subscript_len <= PACKED_SYNC_EXTRA)
+  else if (hdr->subscript_len <= SYNC_DATA_SIZE)
   {
     // subscript small enough to store inline
-    sub.key = hdr->inline_subscript;
+    sub.key = sync_data;
   }
   else
   {
