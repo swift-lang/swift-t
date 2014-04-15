@@ -387,6 +387,7 @@ xlb_handle_pending_syncs(void)
       case UNSENT_NOTIFY:
         rc = xlb_send_unsent_notify(rank, hdr, extra_data);
         ADLB_CHECK(rc);
+        break;
       default:
         ERR_PRINTF("Unexpected pending sync kind %i\n", kind);
         return ADLB_ERROR;
