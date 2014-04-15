@@ -388,7 +388,7 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
   else if (mode == ADLB_SYNC_STEAL)
   {
     // Respond to steal
-    code = xlb_handle_steal(rank, &hdr->steal);
+    code = xlb_handle_steal(rank, &hdr->steal, (int*)hdr->sync_data);
   }
   else if (mode == ADLB_SYNC_REFCOUNT)
   {

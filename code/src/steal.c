@@ -193,7 +193,9 @@ steal_sync(int target, int max_memory)
   req->mode = ADLB_SYNC_STEAL;
   req->steal.max_memory = max_memory;
   req->steal.idle_check_attempt = xlb_idle_check_attempt;
-  xlb_workq_type_counts(req->steal.work_type_counts, xlb_types_size);
+
+  // Include work types in sync data field
+  xlb_workq_type_counts((int*)req->sync_data, xlb_types_size);
 
   adlb_code code = xlb_sync2(target, req);
   if (code == ADLB_SUCCESS)
@@ -224,8 +226,8 @@ steal_payloads(int target, int count,
 {
   assert(count > 0);
   MPI_Status status;
-  int length = count * (int)sizeof(struct packed_put);
-  struct packed_put* wus = malloc((size_t)length);
+  int length = count * (int)sizeof(struct packed_steal_work);
+  struct packed_steal_work* wus = malloc((size_t)length);
   valgrind_assert(wus);
   RECV(wus, length, MPI_BYTE, target, ADLB_TAG_RESPONSE_STEAL);
   int single = 0, par = 0;
@@ -285,10 +287,10 @@ send_steal_batch(steal_cb_state *batch, bool finish)
   if (count == 0)
     return ADLB_SUCCESS;
 
-  struct packed_put packed[count];
+  struct packed_steal_work packed[count];
   for (int i = 0; i < count; i++)
   {
-    xlb_pack_work_unit(&(packed[i]), batch->work_units[i]);
+    xlb_pack_steal_work(&(packed[i]), batch->work_units[i]);
   }
  
   // Store requests for wait
@@ -339,7 +341,8 @@ handle_steal_callback(void *cb_data, xlb_work_unit *work)
 }
 
 adlb_code
-xlb_handle_steal(int caller, const struct packed_steal *req)
+xlb_handle_steal(int caller, const struct packed_steal *req,
+                 const int *work_type_counts)
 {
   TRACE_START;
   MPE_LOG(xlb_mpe_svr_steal_start);
@@ -360,7 +363,7 @@ xlb_handle_steal(int caller, const struct packed_steal *req)
 
   // Maximum amount of memory to return- currently unused
   // Call steal.  This function will call back to send messages
-  code = xlb_workq_steal(req->max_memory, req->work_type_counts, cb);
+  code = xlb_workq_steal(req->max_memory, work_type_counts, cb);
   ADLB_CHECK(code);
  
   // send any remaining.  If nothing left (or nothing was stolen)

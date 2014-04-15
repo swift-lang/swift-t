@@ -83,14 +83,6 @@ AC_C_INLINE
 AC_C_RESTRICT
 
 
-ENABLE_ZLIB=0
-m4_include([m4/ax_check_zlib.m4])
-AX_CHECK_ZLIB([ENABLE_ZLIB=1],
-              AC_MSG_ERROR([Could not find zlib!]))
-CFLAGS="${CFLAGS} -I${ZLIB_HOME}/include"
-AC_SUBST(ZLIB_HOME)
-AC_SUBST(ENABLE_ZLIB)
-
 # We prefer to use cp -u for installation
 AC_CACHE_CHECK([for cp that supports -u], [ac_cv_path_cp_u],
             [AC_PATH_PROGS_FEATURE_CHECK([CP_U], [cp],
@@ -247,9 +239,17 @@ AC_ARG_ENABLE(checkpoint,
 AC_MSG_RESULT([checkpoints enabled])
 AC_SUBST(XLB_ENABLE_XPT)
 
-if [[ "$XLB_ENABLE_XPT" == "yes" -a  "$ENABLE_ZLIB" == 0 ]]; then
-  AC_MSG_ERROR([Must enable zlib for checkpointing])
+if [[ ${XLB_ENABLE_XPT} == yes ]]
+then
+  ENABLE_ZLIB=0
+  ZLIB_HOME=0
+  m4_include([m4/ax_check_zlib.m4])
+  AX_CHECK_ZLIB([ENABLE_ZLIB=1],
+                AC_MSG_ERROR([Could not find zlib!]))
+  CFLAGS="${CFLAGS} -I${ZLIB_HOME}/include"
 fi
+AC_SUBST(ZLIB_HOME)
+AC_SUBST(ENABLE_ZLIB)
 
 ENABLE_SHARED=1
 AC_ARG_ENABLE(shared,

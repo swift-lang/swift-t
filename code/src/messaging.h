@@ -423,7 +423,7 @@ struct packed_steal
 {
   int max_memory;
   int64_t idle_check_attempt; // Sender's last idle check number
-  int work_type_counts[]; // Sender's count of each work type
+  // Sender's work type counts packed into sync_data field as int[]
 };
 
 #define WORK_TYPES_SIZE (sizeof(int) * (size_t)xlb_types_size)
@@ -445,16 +445,34 @@ struct packed_notify_hdr
 };
 
 
-#define PACKED_SUBSCRIBE_INLINE_BYTES 32
+/*
+   Header for stolen task
+ */
+struct packed_steal_work
+{
+  int type;
+  int priority;
+  int putter;
+  int answer;
+  int target;
+  int length;
+  int parallelism;
+};
+
+/**
+ Sync can contain various types of control messages
+ */
+
 /**
  Subscribe header for sync message.
  Include small subscripts inline
  */
+#define PACKED_SUBSCRIBE_INLINE_BYTES 32
+
 struct packed_subscribe_sync
 {
   adlb_datum_id id;
   int subscript_len;
-  char inline_subscript[]; // Small subscripts inline
 };
 
 /**
@@ -480,19 +498,19 @@ struct packed_sync
     struct packed_steal steal; // if steal
     struct packed_subscribe_sync subscribe; // if subscribe
   };
+  char sync_data[]; // Extra data depending on sync type
 };
 
-#define PACKED_SYNC_EXTRA \
+#define SYNC_DATA_SIZE \
   (WORK_TYPES_SIZE > PACKED_SUBSCRIBE_INLINE_BYTES ? \
    WORK_TYPES_SIZE : PACKED_SUBSCRIBE_INLINE_BYTES)
-
-#define PACKED_SYNC_SIZE (sizeof(struct packed_sync) + PACKED_SYNC_EXTRA)
+#define PACKED_SYNC_SIZE (sizeof(struct packed_sync) + SYNC_DATA_SIZE)
 
 /**
    Simple data type transfer
  */
 static inline void
-xlb_pack_work_unit(struct packed_put* p, xlb_work_unit* wu)
+xlb_pack_steal_work(struct packed_steal_work* p, xlb_work_unit* wu)
 {
   p->answer = wu->answer;
   p->length = wu->length;
