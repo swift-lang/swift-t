@@ -112,6 +112,7 @@ xlb_sync_init(void)
     xlb_add_sync_type_name(ADLB_SYNC_STEAL);
     xlb_add_sync_type_name(ADLB_SYNC_REFCOUNT);
     xlb_add_sync_type_name(ADLB_SYNC_SUBSCRIBE);
+    xlb_add_sync_type_name(ADLB_SYNC_NOTIFY);
   }
   return ADLB_SUCCESS;
 }
@@ -526,6 +527,10 @@ static adlb_code xlb_handle_subscribe_sync(int rank,
   return ADLB_SUCCESS;
 }
 
+/*
+ * Enqueue a notification for later processing.
+ * This will receive any additional messages sent by the caller.
+ */
 static adlb_code enqueue_deferred_notify(int rank,
       const struct packed_sync *hdr)
 {
@@ -553,6 +558,12 @@ static adlb_code enqueue_deferred_notify(int rank,
   return ADLB_SUCCESS;
 }
 
+/*
+ * Handle a notification, either a deferred one or one with a waiting
+ * caller.
+ * extra_data: if not NULL and extra data is needed, assume we should
+ *            receive it from caller
+ */
 adlb_code xlb_handle_notify_sync(int rank,
         const struct packed_subscribe_sync *hdr, const void *sync_data,
         void *extra_data)
