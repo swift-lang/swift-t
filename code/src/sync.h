@@ -67,10 +67,15 @@ xlb_sync_subscribe(int target, adlb_datum_id id, adlb_subscript sub,
 adlb_code
 xlb_sync_notify(int target, adlb_datum_id id, adlb_subscript sub);
 
+adlb_code
+xlb_send_unsent_notify(int rank, const struct packed_sync *req_hdr,
+        void *malloced_subscript);
+
 typedef enum {
   DEFERRED_SYNC, // Have not yet accepted
   ACCEPTED_RC,   // Have accepted but need to do refcount
   DEFERRED_NOTIFY, // Have accepted but need to process notify
+  UNSENT_NOTIFY, // Need to notify other server
 } xlb_pending_kind;
 
 typedef struct {
