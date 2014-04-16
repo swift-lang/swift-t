@@ -42,7 +42,7 @@ int main() {
 
     // Check iteration works;
     int count = 0;
-    TABLE_LP_FOREACH(&T, item)
+    TABLE_IP_FOREACH(&T, item)
     {
       count++;
     }
@@ -58,7 +58,7 @@ int main() {
     void *val;
     bool found = table_ip_search(&T, key, &val);
     assert(found);
-    printf("Search: %"PRId64"=%li\n", key, (long)val);
+    printf("Search: %i=%li\n", key, (long)val);
     assert(((long)val) == key);
   }
   assert(T.size == N);
@@ -70,7 +70,7 @@ int main() {
     void *val;
     bool found = table_ip_remove(&T, key, &val);
     assert(found);
-    printf("Remove: %"PRId64"=%li\n", key, (long)val);
+    printf("Remove: %i=%li\n", key, (long)val);
     assert(((long)val) == key);
   }
   assert(T.size == 0);
