@@ -1,7 +1,0 @@
-export MODE=BGQ
-export WALLTIME=00:10:00
-export PROJECT=ExM
-export PPN=16
-export QUEUE=default
-export TURBINE_LOG=0
-export TURBINE_DEBUG=0
