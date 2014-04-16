@@ -171,7 +171,8 @@ adlb_data_code append_notifs(struct list_i *listeners, bool free_list_root,
   adlb_datum_id id, adlb_subscript sub, adlb_notif_ranks *notify);
 
 
-static bool container_contains(const adlb_container *c, adlb_subscript sub);
+static bool container_value_exists(const adlb_container *c,
+                                   adlb_subscript sub);
 static bool container_lookup(const adlb_container *c, adlb_subscript sub,
                              adlb_container_val *val);
 static bool container_set(adlb_container *c, adlb_subscript sub,
@@ -601,7 +602,8 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
             id);
     
     found = false; 
-    if ((is_container && container_contains(&d->data.CONTAINER, subscript)))
+    if (is_container &&
+        container_value_exists(&d->data.CONTAINER, subscript))
     {
       found = true;
     }
@@ -1304,12 +1306,6 @@ static bool container_set(adlb_container *c, adlb_subscript sub,
   return table_bp_set(c->members, sub.key, sub.length, val, (void**)prev);
 }
 
-static bool container_contains(const adlb_container *c, adlb_subscript sub)
-{
-  adlb_container_val tmp;
-  return container_lookup(c, sub, &tmp);
-}
-
 /**
    Helper function for looking up container
   */
@@ -1317,6 +1313,22 @@ static bool container_lookup(const adlb_container *c, adlb_subscript sub,
                              adlb_container_val *val)
 {
   return table_bp_search(c->members, sub.key, sub.length, (void**)val);
+}
+
+/**
+  Return true if the key exists and has a non-null value
+ */
+static bool container_value_exists(const adlb_container *c,
+                                   adlb_subscript sub)
+{
+  adlb_container_val tmp;
+  if (!container_lookup(c, sub, &tmp))
+  {
+    // Key doesn't exist
+    return false;
+  }
+
+  return (tmp != NULL);
 }
 
 static adlb_data_code
