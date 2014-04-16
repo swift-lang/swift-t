@@ -128,11 +128,23 @@ const char* xlb_get_tag_name(int tag);
   MPI_CHECK(_rc); \
   TRACE_MPI("WAITED"); }
 
+// MPI_Test, ignoring status
+#define MPI_TEST(r, flag) { \
+  TRACE_MPI("TEST"); \
+  int _rc = MPI_Test(r, flag, MPI_STATUS_IGNORE); \
+  MPI_CHECK(_rc);}
+
 /** Simplify cases when only a tag is sent */
 #define SEND_TAG(rank,tag) SEND(NULL,0,MPI_BYTE,rank,tag)
 
 /** Simplify cases when only a tag is recvd */
 #define RECV_TAG(rank,tag) RECV(NULL,0,MPI_BYTE,rank,tag)
+
+
+#define CANCEL(r) { \
+  TRACE_MPI("CANCEL"); \
+  int _rc = MPI_Cancel(r); \
+  MPI_CHECK(_rc); }
 
 /** MPI data type tags */
 // 64-bit int

@@ -36,11 +36,9 @@
 #include "steal.h"
 #include "sync.h"
 
-static inline adlb_code send_sync(int target, const struct packed_sync *hdr);
-static inline adlb_code msg_from_target(int target,
-                                  const struct packed_sync *hdr, bool* done);
+static inline adlb_code msg_from_target(int target, int response);
 static adlb_code msg_from_other_server(int other_server, 
-                  int target, const struct packed_sync *my_hdr);
+                  int target);
 static inline adlb_code msg_shutdown(adlb_sync_mode mode, int sync_target, bool* done);
 
 static adlb_code xlb_handle_subscribe_sync(int rank,
@@ -175,21 +173,53 @@ xlb_sync2(int target, const struct packed_sync *hdr)
 
   MPE_LOG(xlb_mpe_dmn_sync_start);
 
-  MPI_Status status1, status2, status3;
+  // Track sent sync message and response
+  MPI_Request isend_request, accept_request;
+  // Response from target if needed 
+  int accept_response;
+  bool accept_required = sync_accept_required(hdr->mode);
+
+  MPI_Status status;
   /// MPI_Request request1, request2;
   int flag1 = 0, flag2 = 0, flag3 = 0;
 
   assert(!xlb_server_sync_in_progress);
   xlb_server_sync_in_progress = true;
 
-  // If we need an accept response, must loop until we receive
-  // it from the target.  We use this to flag completion.
-  bool done = !sync_accept_required(hdr->mode);
+  // Flag completion of sync, either successfully or aborting if
+  // shutting down
+  bool done = false;
+  // If one of the requests is still pending
+  bool requests_pending = false;
 
   if (!xlb_server_shutting_down)
   {
-    // Send initial request:
-    send_sync(target, hdr);
+
+    if (xlb_perf_counters_enabled)
+    {
+      assert(hdr->mode >= 0 && hdr->mode < ADLB_SYNC_ENUM_COUNT);
+      xlb_sync_perf_counters[hdr->mode].sent++;
+    }
+
+    if (accept_required)
+    {
+      IRECV2(&accept_response, 1, MPI_INT, target, ADLB_TAG_SYNC_RESPONSE,
+            &accept_request);
+    }
+
+    /*
+     * Send initial request.
+     *
+     * Use non-blocking send to eliminate chance of blocking here if
+     * receiver's buffers are full, so that we can serve other sync
+     * requests no matter what.
+     */
+    ISEND(hdr, (int)PACKED_SYNC_SIZE, MPI_BYTE, target,
+          ADLB_TAG_SYNC_REQUEST, &isend_request);
+    requests_pending = true;
+    
+    DEBUG("server_sync: [%d] waiting for sync response from %d",
+                          xlb_comm_rank, target);
   }
   else
   {
@@ -197,38 +227,81 @@ xlb_sync2(int target, const struct packed_sync *hdr)
     // received shutdown message before going into sync loop
     done = true;
     rc = ADLB_SHUTDOWN;
+    DEBUG("server_sync: [%d] shutting down before sync to %d",
+                          xlb_comm_rank, target);
   }
-  
-  DEBUG("server_sync: [%d] waiting for sync response from %d",
-                        xlb_comm_rank, target);
 
+  /*
+   * Must loop until Isend completes at a minimum.
+   * We don't just block on it because we want to service any incoming
+   * requests.
+   * If we need an accept response, must also loop until we receive
+   * it from the target.
+   */
   while (!done)
   {
     TRACE("xlb_sync: loop");
-
-    IPROBE(target, ADLB_TAG_SYNC_RESPONSE, &flag1, &status1);
-    if (flag1)
+    
+    if (accept_required)
     {
-      msg_from_target(target, hdr, &done);
-      if (done) break;
+      // Check for response from target
+      MPI_TEST(&accept_request, &flag1);
+      
+      if (flag1)
+      {
+        rc = msg_from_target(target, accept_response);
+        ADLB_CHECK(rc);
+
+        requests_pending = false; // ISend must have completed too
+        done = true;
+        break;
+      }
+    }
+    else
+    {
+      // just check that send went through
+      MPI_TEST(&isend_request, &flag1);
+      
+      if (flag1)
+      {
+        requests_pending = false;
+        done = true;
+        break;
+      }
     }
 
-    IPROBE(MPI_ANY_SOURCE, ADLB_TAG_SYNC_REQUEST, &flag2, &status2);
+    IPROBE(MPI_ANY_SOURCE, ADLB_TAG_SYNC_REQUEST, &flag2, &status);
     if (flag2)
-      msg_from_other_server(status2.MPI_SOURCE, target, hdr);
+    {
+      rc = msg_from_other_server(status.MPI_SOURCE, target);
+      ADLB_CHECK(rc);
+    }
 
+    // TODO: this isn't necessary if master server syncs before shutdown
     IPROBE(MPI_ANY_SOURCE, ADLB_TAG_SHUTDOWN_SERVER, &flag3,
-           &status3);
+           &status);
     if (flag3)
     {
-      msg_shutdown(hdr->mode, target, &done);
+      rc = msg_shutdown(hdr->mode, target, &done);
+      ADLB_CHECK(rc);
       rc = ADLB_SHUTDOWN;
     }
 
     if (!flag1 && !flag2 && !flag3)
     {
-      // Nothing happened, don't poll too aggressively
-      xlb_backoff_sync();
+      // TODO: generally we don't want to wait longer than needed for
+      //  a response, and we should get a response pretty quickly.
+      // Maybe just go to no backoffs...
+      // xlb_backoff_sync();
+    }
+  }
+
+  if (requests_pending)
+  {
+    CANCEL(&isend_request);
+    if (accept_required)
+    {
+      CANCEL(&accept_request);
     }
   }
 
@@ -238,18 +311,6 @@ xlb_sync2(int target, const struct packed_sync *hdr)
   MPE_LOG(xlb_mpe_dmn_sync_end);
 
   return rc;
-}
-
-static inline adlb_code
-send_sync(int target, const struct packed_sync *hdr)
-{
-  if (xlb_perf_counters_enabled)
-  {
-    assert(hdr->mode >= 0 && hdr->mode < ADLB_SYNC_ENUM_COUNT);
-    xlb_sync_perf_counters[hdr->mode].sent++;
-  }
-  SEND(hdr, (int)PACKED_SYNC_SIZE, MPI_BYTE, target, ADLB_TAG_SYNC_REQUEST);
-  return ADLB_SUCCESS;
 }
 
 static adlb_code
@@ -283,6 +344,8 @@ send_subscribe_sync(adlb_sync_mode mode,
   if (!inlined_subscript)
   {
     // send subscript separately with special tag
+    // TODO: could block here, although large subscripts
+    // are generally quite rare.
     SEND(sub.key, (int)sub.length, MPI_BYTE, target, ADLB_TAG_SYNC_SUB);
   }
   
@@ -315,16 +378,12 @@ xlb_sync_notify(int target, adlb_datum_id id, adlb_subscript sub)
    @return adlb_code
  */
 static inline adlb_code
-msg_from_target(int target, const struct packed_sync *hdr, bool* done)
+msg_from_target(int target, int response)
 {
-  MPI_Status status;
   TRACE_START;
-  int response;
-  RECV(&response, 1, MPI_INT, target, ADLB_TAG_SYNC_RESPONSE);
   CHECK_MSG(response, "Unexpected sync response: %i", response);
   // Accepted
   DEBUG("server_sync: [%d] sync accepted by %d.", xlb_comm_rank, target);
-  *done = true;
   TRACE_END
   return ADLB_SUCCESS;
 }
@@ -355,8 +414,7 @@ static inline bool is_simple_sync(adlb_sync_mode mode)
   return mode == ADLB_SYNC_STEAL;
 }
 
-static adlb_code msg_from_other_server(int other_server, int target,
-                  const struct packed_sync *my_hdr)
+static adlb_code msg_from_other_server(int other_server, int target)
 {
   TRACE_START;
   MPI_Status status;
@@ -372,7 +430,7 @@ static adlb_code msg_from_other_server(int other_server, int target,
    * We need to avoid the case of circular deadlock, e.g. where A is waiting
    * to serve B, which is waiting to serve C, which is waiting to serve A, 
    * so don't serve lower ranked servers until we've finished our
-   * sync request.  An exception is sync where we don't need to response
+   * sync request.  An exception is sync where we don't need to respond
    * or receive any further data from the other server. */
   if (other_server > xlb_comm_rank || is_simple_sync(other_hdr->mode))
   {
@@ -414,6 +472,7 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
   {
     // Notify the waiting caller
     const int accepted_response = 1;
+    // This shouldn't block, since sender should have posted buffer
     SEND(&accepted_response, 1, MPI_INT, rank, ADLB_TAG_SYNC_RESPONSE);
   }
 
