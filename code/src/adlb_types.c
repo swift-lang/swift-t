@@ -922,24 +922,39 @@ static char *data_repr_container(const adlb_container *c)
 
   TABLE_BP_FOREACH(members, item)
   {
+    const char *null_str = "(null)";
     adlb_container_val v = item->data;
-    char *value_s = ADLB_Data_repr(v, c->val_type);
+    char *value_s = (v == NULL) ? NULL : ADLB_Data_repr(v, c->val_type);
+    size_t value_strlen = (value_s == NULL) ? sizeof(null_str) :
+                                              strlen(value_s);
     dc = xlb_resize_str(&cont_str, &cont_str_len, cont_str_pos,
-                   (item->key_len - 1) + strlen(value_s) + 7);
+                   (item->key_len - 1) + value_strlen + 7);
     assert(dc == ADLB_DATA_SUCCESS);
     if (c->key_type == ADLB_DATA_TYPE_STRING)
     {
-      cont_str_pos += sprintf(&cont_str[cont_str_pos], "\"%s\"={%s} ",
-                              (char*)table_bp_get_key(item), value_s);
+      cont_str_pos += sprintf(&cont_str[cont_str_pos], "\"%s\"=",
+                        (char*)table_bp_get_key(item));
     }
     else
     {
       // TODO: support binary keys
-      cont_str_pos += sprintf(&cont_str[cont_str_pos], "\"%s\"={%s} ",
-                              (char*)table_bp_get_key(item), value_s);
+      cont_str_pos += sprintf(&cont_str[cont_str_pos], "\"%s\"=",
+                              (char*)table_bp_get_key(item));
     }
 
-    free(value_s);
+    if (value_s != NULL)
+    {
+      cont_str_pos += sprintf(&cont_str[cont_str_pos], "{%s} ", value_s);
+    }
+    else
+    {
+      cont_str_pos += sprintf(&cont_str[cont_str_pos], "%s ", null_str);
+    }
+    
+    if (value_s != NULL)
+    {
+      free(value_s);
+    }
   }
   cont_str[cont_str_pos] = '\0';
   return cont_str;
