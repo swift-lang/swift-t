@@ -704,7 +704,7 @@ public class TurbineGenerator implements CompilerBackend {
     
     TypeName refType = refRepresentationType(dst.type());
     TclTree deref;
-    if (acquireWriteExpr.equals(Arg.ZERO)) {
+    if (acquireWrite.equals(Arg.ZERO)) {
       deref = Turbine.readRefGet(prefixVar(dst), varToExpr(src),
             refType, acquireReadExpr, argToExpr(decr));
     } else {
