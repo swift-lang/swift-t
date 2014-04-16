@@ -52,8 +52,6 @@ static adlb_code enqueue_pending(xlb_pending_kind kind, int rank,
 
 static inline bool sync_accept_required(adlb_sync_mode mode);
 
-static inline bool is_simple_sync(adlb_sync_mode mode);
-
 typedef struct {
   int64_t sent;     /** Sent to other servers */
   int64_t accepted; /** Accepted from other servers */
@@ -405,15 +403,6 @@ static inline bool sync_accept_required(adlb_sync_mode mode)
   }
 }
 
-/*
-  Sync types where we have no interaction with caller beyond the sync
-  acceptance.
- */
-static inline bool is_simple_sync(adlb_sync_mode mode)
-{
-  return mode == ADLB_SYNC_STEAL;
-}
-
 static adlb_code msg_from_other_server(int other_server, int target)
 {
   TRACE_START;
@@ -429,10 +418,10 @@ static adlb_code msg_from_other_server(int other_server, int target)
   /* Serve another server
    * We need to avoid the case of circular deadlock, e.g. where A is waiting
    * to serve B, which is waiting to serve C, which is waiting to serve A, 
-   * so don't serve lower ranked servers until we've finished our
-   * sync request.  An exception is sync where we don't need to respond
-   * or receive any further data from the other server. */
-  if (other_server > xlb_comm_rank || is_simple_sync(other_hdr->mode))
+   * so don't serve higher ranked servers until we've finished our
+   * sync request. We choose this ordering because the master server is
+   * somewhat more likely to be busy and should be unblocked. */
+  if (other_server < xlb_comm_rank)
   {
     // accept incoming sync
     DEBUG("server_sync: [%d] interrupted by incoming sync request from %d",
