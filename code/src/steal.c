@@ -52,19 +52,8 @@ get_target_server(int* result)
 }
 
 static adlb_code steal_sync(int target, int max_memory);
-static adlb_code discard_old_steals(void);
 static adlb_code steal_payloads(int target, int count,
                int *single_count, int *par_count, bool discard);
-
-/*
- * Allocate steal request structure here instead of on
- * stack so that we can abort the steal request on shutdown
- * without leaving MPI with pointers to invalid memory
- */
-static struct {
-  struct packed_steal_resp hdr;
-  MPI_Request request;
-} xlb_steal_request;
 
 /**
  * Initialize internal state for steal module
@@ -72,39 +61,8 @@ static struct {
 adlb_code
 xlb_steal_init(void)
 {
-  adlb_code rc = discard_old_steals();
-  ADLB_CHECK(rc);
   return ADLB_SUCCESS;
 }
-
-/*
- * Workaround for problem with reusing communicators where
- * other node may have eagerly been sending steal responses.
- */
-static adlb_code discard_old_steals(void)
-{
-  while (true)
-  {
-    adlb_code rc;
-    MPI_Status status;
-    int old_steals;
-    struct packed_steal_resp *hdr = &xlb_steal_request.hdr;
-    IPROBE(MPI_ANY_SOURCE, ADLB_TAG_RESPONSE_STEAL_COUNT, &old_steals,
-           &status);
-    if (!old_steals)
-    {
-      break;
-    }
-    
-    RECV(hdr, sizeof(*hdr), MPI_BYTE, status.MPI_SOURCE,
-          ADLB_TAG_RESPONSE_STEAL_COUNT);
-    int single, par;
-    rc = steal_payloads(status.MPI_SOURCE, hdr->count, &single, &par, true);
-    ADLB_CHECK(rc);
-  }
-  return ADLB_SUCCESS;
-}
-
 
 adlb_code
 xlb_steal(bool* stole_single, bool *stole_par)
@@ -113,6 +71,7 @@ xlb_steal(bool* stole_single, bool *stole_par)
   int target;
   *stole_single = false;
   *stole_par = false;
+  MPI_Request request;
   MPI_Status status;
 
   TRACE_START;
@@ -122,38 +81,42 @@ xlb_steal(bool* stole_single, bool *stole_par)
 
   DEBUG("[%i] stealing from %i", xlb_comm_rank, target);
 
-  struct packed_steal_resp *hdr = &xlb_steal_request.hdr;
+  struct packed_steal_resp hdr;
   
-  IRECV2(hdr, sizeof(*hdr), MPI_BYTE, target,
-        ADLB_TAG_RESPONSE_STEAL_COUNT, &xlb_steal_request.request);
+  IRECV2(&hdr, sizeof(hdr), MPI_BYTE, target,
+        ADLB_TAG_RESPONSE_STEAL_COUNT, &request);
 
   int max_memory = 1;
   int total_single = 0, total_par = 0;
   rc = steal_sync(target, max_memory);
   if (rc == ADLB_SHUTDOWN)
+  {
+    CANCEL(&request);
     goto end;
+  }
 
   ADLB_CHECK(rc);
 
   // Sender will stream work in groups, each with
   //  header.
   while (true) {
-    WAIT(&xlb_steal_request.request, &status);
-    if (hdr->count > 0) {
+    WAIT(&request, &status);
+    if (hdr.count > 0) {
       int single, par;
-      rc = steal_payloads(target, hdr->count, &single, &par, false);
+      rc = steal_payloads(target, hdr.count, &single, &par, false);
       ADLB_CHECK(rc);
       total_single += single;
       total_par += par;
     }
-    if (hdr->last)
+    if (hdr.last)
       break;
    
-    IRECV2(hdr, sizeof(*hdr), MPI_BYTE, target,
-        ADLB_TAG_RESPONSE_STEAL_COUNT, &xlb_steal_request.request);
+    IRECV2(&hdr, sizeof(hdr), MPI_BYTE, target,
+        ADLB_TAG_RESPONSE_STEAL_COUNT, &request);
   }
   
-  DEBUG("[%i] stole %i tasks from %i", xlb_comm_rank, hdr->count, target);
+  // TODO: reports wrong count with multiple batches
+  DEBUG("[%i] stole %i tasks from %i", xlb_comm_rank, hdr.count, target);
   // MPE_INFO(xlb_mpe_svr_info, "STOLE: %i FROM: %i", hdr->count, target);
   *stole_single = (total_single > 0);
   *stole_par = (total_par > 0);
@@ -162,7 +125,7 @@ xlb_steal(bool* stole_single, bool *stole_par)
   xlb_steal_last = MPI_Wtime();
 
   // Update failed steals
-  if (hdr->count > 0)
+  if (hdr.count > 0)
   {
     xlb_failed_steals_since_backoff = 0;
   }
