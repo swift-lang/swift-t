@@ -129,12 +129,15 @@ static inline adlb_code xlb_dequeue_pending(xlb_pending_kind *kind,
   xlb_pending_sync_head = (xlb_pending_sync_head + 1) %
                            xlb_pending_sync_size;
   DEBUG("POP: %d left", xlb_pending_sync_count);
+
+  // TODO: validate shrink code and reenable
+  /*
   if (xlb_pending_sync_size > PENDING_SYNC_INIT_SIZE &&
       xlb_pending_sync_count < (xlb_pending_sync_size / 4))
   {
     adlb_code code = xlb_pending_shrink();
     ADLB_CHECK(code);
-  }
+  }*/
 
   return ADLB_SUCCESS;
 }
