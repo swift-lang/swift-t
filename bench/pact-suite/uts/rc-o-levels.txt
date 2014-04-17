@@ -1,3 +1,4 @@
+-O1 -t refcounting
 -O1 -t merge-refcounts -t cancel-refcounts -t piggyback-refcounts -t batch-refcounts -t hoist-refcounts
 -O1 -T merge-refcounts -t cancel-refcounts -t piggyback-refcounts -t batch-refcounts -t hoist-refcounts
 -O1 -T merge-refcounts -T cancel-refcounts -t piggyback-refcounts -t batch-refcounts -t hoist-refcounts
