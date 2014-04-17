@@ -76,6 +76,7 @@ static void register_handler(adlb_tag tag, xlb_handler h);
 
 static adlb_code handle_sync(int caller);
 static adlb_code handle_sync_response(int caller);
+static adlb_code handle_steal_response(int caller);
 static adlb_code handle_do_nothing(int caller);
 static adlb_code handle_put(int caller);
 static adlb_code handle_put_rule(int caller);
@@ -161,6 +162,7 @@ xlb_handlers_init(void)
 
   register_handler(ADLB_TAG_SYNC_REQUEST, handle_sync);
   register_handler(ADLB_TAG_SYNC_RESPONSE, handle_sync_response);
+  register_handler(ADLB_TAG_RESPONSE_STEAL_COUNT, handle_steal_response);
   register_handler(ADLB_TAG_DO_NOTHING, handle_do_nothing);
   register_handler(ADLB_TAG_PUT, handle_put);
   register_handler(ADLB_TAG_PUT_RULE, handle_put_rule);
@@ -249,6 +251,21 @@ static adlb_code handle_sync_response(int caller)
   RECV(&response, 1, MPI_INT, caller, ADLB_TAG_SYNC_RESPONSE);
   return ADLB_SUCCESS;
 }
+
+/**
+  A similar situation can occur with stolen task counts to sync responses
+ */
+static adlb_code handle_steal_response(int caller)
+{
+  MPI_Status status;
+  struct packed_steal_resp hdr;
+  RECV(&hdr, sizeof(hdr), MPI_BYTE, caller,
+        ADLB_TAG_RESPONSE_STEAL_COUNT);
+
+  assert(hdr.count == 0); // Shouldn't be receiving work after shutdown
+  return ADLB_SUCCESS;
+}
+
 
 /**
   Placeholder request: do nothing.
