@@ -177,6 +177,12 @@ uts_run_dfs(ClientData cdata, Tcl_Interp *interp,
 }
 
 int DLLEXPORT
+Uts_Init(Tcl_Interp *interp)
+{
+  return uts_leaf_init(interp);
+}
+
+int
 uts_leaf_init(Tcl_Interp *interp)
 {
   if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL)

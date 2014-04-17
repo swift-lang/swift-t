@@ -27,4 +27,4 @@ ARGS="--graph_file=${SCS}/data/movie_graph.txt \
 
 export ARGS
 
-../scripts/o-level-test.sh $SCS/src/annealing-exm.swift ./o-levels.txt 
+../scripts/o-level-test.sh $SCS/src/annealing-exm.swift ./o-levels.txt ./o-levels-out

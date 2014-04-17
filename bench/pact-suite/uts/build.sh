@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
 set -e
 
-pushd uts-src
-make clean
-make
-popd
-
 INST=$HOME/ExM/inst
 TURBINE=$INST/turbine
 LB=$INST/lb
@@ -14,20 +9,34 @@ STC=$INST/stc
 
 source $TURBINE/scripts/turbine-build-config.sh
 
+pushd uts-src
+export UTS_PIC=1
+export TCL_HOME # Pass to Makefile
+make clean
+
+# For this build script, we're going to build a shared library
+make
+make libuts.so
+popd
+
+cp uts-src/libuts.so lib/libuts.so
+
+
 CC=mpicc
 CFLAGS="-std=c99 -Wall -O2 ${TURBINE_INCLUDES} -I. -I../util"
 LDFLAGS=""
 LIBS="-L uts-src -luts ${TURBINE_LIBS} ${TURBINE_RPATH}"
+LIBS+=" -L ${TCL_HOME}/lib -ltcl8.6"
 
 MKSTATIC=$TURBINE/scripts/mkstatic/mkstatic.tcl
 
 UTS_RNG=BRG_RNG
 
-echo -n ADLB
-${CC} ${CFLAGS} ${LDFLAGS} -D ${UTS_RNG} uts_adlb.c  ${LIBS} -o uts_adlb
-echo .
-
 STC=$INST/stc/bin/stc
+
+echo -n ADLB
+${CC} ${CFLAGS} ${LDFLAGS} -D ${UTS_RNG} uts_adlb.c ${LIBS} -o uts_adlb
+echo .
 
 for OPT in 0 1 2 3
 do

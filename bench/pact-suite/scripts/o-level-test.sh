@@ -2,14 +2,18 @@
 
 SWIFT=$1
 OLEVELS=$2
+OUTDIR=$3
 
-if [ ! -f "$SWIFT" -o ! -f "$OLEVELS" ]
+if [ ! -f "$SWIFT" -o ! -f "$OLEVELS" \
+    -o -z "$OUTDIR" ]
 then
-  echo "usage: $0 <Swift source file> <OLevels file>"
+  echo "usage: $0 <Swift source file> <OLevels file> <output dir>"
   echo "STC_FLAGS env var is added to stc command line"
   echo "ARGS env var is added to benchmark command line"
   exit 1
 fi
+
+mkdir -p ${OUTDIR}
 
 n=0
 while read olevel; do
@@ -21,10 +25,10 @@ done < ${OLEVELS}
 PREFIX=$(basename ${SWIFT%.*})
 
 #set -x
-for i in `seq $n`; do
+for i in `seq -w $n`; do
   olevel=${olevels[$i]}
   echo $i: ${olevel}
-  O_PREFIX=${PREFIX}.olevel$i
+  O_PREFIX=${OUTDIR}/${PREFIX}.olevel$i
   TCL=${O_PREFIX}.tcl
   stc ${STC_FLAGS} $olevel -C ${O_PREFIX}.ic ${STC_FLAGS} ${SWIFT} ${TCL}
 
@@ -45,7 +49,9 @@ for i in `seq $n`; do
   # CCGrid '13 draft
   #export ADLB_SERVERS=1
   #PROCS=6
-  export ADLB_SERVERS=2
+  #export ADLB_SERVERS=2
+  #PROCS=8
+  export ADLB_SERVERS=3
   PROCS=8
 
   turbine -n${PROCS} $TCL $ARGS 2>&1 | tee $OUT
