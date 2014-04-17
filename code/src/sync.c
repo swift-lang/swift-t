@@ -381,9 +381,9 @@ static inline adlb_code
 msg_from_target(int target, int response)
 {
   TRACE_START;
-  CHECK_MSG(response, "Unexpected sync response: %i", response);
   // Accepted
-  DEBUG("server_sync: [%d] sync accepted by %d.", xlb_comm_rank, target);
+  DEBUG("server_sync: [%d] sync response from %d: %d",
+         xlb_comm_rank, target, response);
   TRACE_END
   return ADLB_SUCCESS;
 }
