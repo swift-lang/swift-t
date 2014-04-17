@@ -27,9 +27,8 @@ main
   {
     foreach j in [1:N-1]
     {
-      {
-        A[i][j] = f(A[i-1][j-1],A[i-1][j],A[i][j-1], sleeptime);
-      }
+      a, b, c = A[i-1][j-1], A[i-1][j], A[i][j-1];
+      A[i][j] = h(f(g(a)), f(g(b)), f(g(c)));
     }
   }
   printf("result N: %i value: %.0f", N, A[N-1][N-1]);

@@ -21,7 +21,6 @@ ${CC} ${CFLAGS} ${LDFLAGS} embarrassing.c ${LIBS} -o embarrassing
 ${CC} ${CFLAGS} ${LDFLAGS} -D LOGNORM embarrassing.c ${LIBS} -o embarrassing_lognorm 
 
 STC=$INST/stc/bin/stc
-STC=$INST/stc/bin/stc
 
 for OPT in 0 1 2 3
 do
