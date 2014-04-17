@@ -50,7 +50,7 @@ adlb_data_code xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change,
     sync_msg.mode = ADLB_SYNC_REFCOUNT;
     sync_msg.incr.id = id;
     sync_msg.incr.change = change;
-    adlb_code code = xlb_sync2(server, &sync_msg);
+    adlb_code code = xlb_sync2(server, &sync_msg, NULL);
     check_verbose(code == ADLB_SUCCESS, ADLB_DATA_ERROR_UNKNOWN,
                   "Error syncing for refcount");
   }

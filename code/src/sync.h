@@ -54,8 +54,12 @@ adlb_code xlb_sync(int target);
 /* 
   More flexible version of xlb_sync.  See xlb_sync and packed_sync
   data header for details.
+  response: response code from target process, meaningful to some sync  
+            types.  Only set if that sync type must be accepted by target.
+            Can be NULL to ignore.
  */
-adlb_code xlb_sync2(int target, const struct packed_sync *hdr);
+adlb_code xlb_sync2(int target, const struct packed_sync *hdr,
+                    int *response);
 
 /*
   Subscribe to a datum on another server

@@ -149,7 +149,7 @@ xlb_sync(int target)
   memset(hdr, 0, PACKED_SYNC_SIZE);
 #endif
   hdr->mode = ADLB_SYNC_REQUEST;
-  return xlb_sync2(target, hdr);
+  return xlb_sync2(target, hdr, NULL);
 }
 
 /*
@@ -163,7 +163,7 @@ xlb_sync(int target)
    These numbers correspond to the variables in the function
  */
 adlb_code
-xlb_sync2(int target, const struct packed_sync *hdr)
+xlb_sync2(int target, const struct packed_sync *hdr, int *response)
 {
   TRACE_START;
   DEBUG("\t xlb_sync() target: %i", target);
@@ -249,7 +249,9 @@ xlb_sync2(int target, const struct packed_sync *hdr)
       {
         rc = msg_from_target(target, accept_response);
         ADLB_CHECK(rc);
-
+        
+        if (response != NULL)
+          *response = accept_response;
         requests_pending = false; // ISend must have completed too
         done = true;
         break;
@@ -334,9 +336,9 @@ send_subscribe_sync(adlb_sync_mode mode,
   {
     inlined_subscript = false;
   }
- 
+
   // Send sync message without waiting for response
-  int rc = xlb_sync2(target, req);
+  int rc = xlb_sync2(target, req, NULL);
   ADLB_CHECK(rc);
 
   if (!inlined_subscript)
@@ -429,6 +431,16 @@ static adlb_code msg_from_other_server(int other_server, int target)
     
     code = xlb_accept_sync(other_server, other_hdr, true);
     ADLB_CHECK(code);
+  }
+  else if (other_hdr->mode == ADLB_SYNC_STEAL)
+  {
+    // TODO: clean up code
+    // Prefer rejecting steal immediately to accepting it later:
+    // If we're busy syncing here, there's a good chance we're out of
+    // work too
+    const int rejected_response = 1;
+    // This shouldn't block, since sender should have posted buffer
+    SEND(&rejected_response, 1, MPI_INT, other_server, ADLB_TAG_SYNC_RESPONSE);
   }
   else
   {

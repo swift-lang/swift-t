@@ -51,7 +51,7 @@ get_target_server(int* result)
   } while (*result == xlb_comm_rank);
 }
 
-static adlb_code steal_sync(int target, int max_memory);
+static adlb_code steal_sync(int target, int max_memory, int *response);
 static adlb_code steal_payloads(int target, int count,
                int *single_count, int *par_count, bool discard);
 
@@ -88,10 +88,12 @@ xlb_steal(bool* stole_single, bool *stole_par)
 
   int max_memory = 1;
   int total_single = 0, total_par = 0;
-  rc = steal_sync(target, max_memory);
-  if (rc == ADLB_SHUTDOWN)
+  int response;
+  rc = steal_sync(target, max_memory, &response);
+  if (!response || rc == ADLB_SHUTDOWN)
   {
     CANCEL(&request);
+    *stole_single = *stole_par = false;
     goto end;
   }
 
@@ -144,9 +146,10 @@ xlb_steal(bool* stole_single, bool *stole_par)
   Send steal request and sync with server.
   Note that this can add requests to the pending_sync list that
   will need to be handled.
+  accepted: if true, steal response will be sent to us
  */
 static adlb_code
-steal_sync(int target, int max_memory)
+steal_sync(int target, int max_memory, int *response)
 {
   // Need to give server information about which work types we have:
   // we only want to steal work types where the other server has more
@@ -160,11 +163,19 @@ steal_sync(int target, int max_memory)
   // Include work types in sync data field
   xlb_workq_type_counts((int*)req->sync_data, xlb_types_size);
 
-  adlb_code code = xlb_sync2(target, req);
+  adlb_code code = xlb_sync2(target, req, response);
   if (code == ADLB_SUCCESS)
   {
-    DEBUG("[%i] synced with %i, receiving steal response",
-         xlb_comm_rank, target);
+    if (*response)
+    {
+      DEBUG("[%i] synced with %i, receiving steal response",
+           xlb_comm_rank, target);
+    }
+    else
+    {
+      DEBUG("[%i] synced with %i, no steal response",
+           xlb_comm_rank, target);
+    }
   }
   else if (code == ADLB_SHUTDOWN)
   {
