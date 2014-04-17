@@ -28,6 +28,6 @@ namespace eval lognorm_task {
   proc lognorm_task_impl { i j mu sigma } {
     set secs [ lognorm::sample $mu $sigma ]
     turbine::spin $secs
-    return $secs
+    return $i
   }
 }

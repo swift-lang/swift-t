@@ -37,11 +37,11 @@ do
   PREFIX=wavefront
   PREFIX_OPT=${PREFIX}.O${OPT}
   PREFIX_TCL=${PREFIX}_tcl.O${OPT}
-  ${STC} ${STC_FLAGS} -C ${PREFIX_OPT}.ic ${PREFIX}.swift ${PREFIX_OPT}.tcl
+  ${STC} -r ./lib ${STC_FLAGS} -C ${PREFIX_OPT}.ic ${PREFIX}.swift ${PREFIX_OPT}.tcl
   echo -n .
   ${MKSTATIC} ${PREFIX}.manifest --main-script ${PREFIX_OPT}.tcl -c ${PREFIX_TCL}.c
   echo -n .
-
+  
   ${CC} ${CFLAGS} ${LDFLAGS} ${PREFIX_TCL}.c \
     $(${MKSTATIC} ${PREFIX}.manifest --link-objs --link-flags) \
     ${LIBS} -o ${PREFIX_TCL}

@@ -4,7 +4,7 @@ export STC_FLAGS="-T no-engine"
 
 export TURBINE_USER_LIB=$(dirname $0)/lib
 
-ARGS="-N=100 --sleeptime=0"
+ARGS="-N=400 --mu=-15 --sigma=1"
 
 export ARGS
 

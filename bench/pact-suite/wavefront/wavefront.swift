@@ -3,17 +3,17 @@
    Wavefront pattern
 */
 
-#include <builtins.swift>
-#include <io.swift>
-#include <mpe.swift>
-#include <string.swift>
-#include <sys.swift>
+import io;
+import string;
+import sys;
+import math;
 
 main
 {
   int N = toint(argv("N"));
-  float sleeptime = tofloat(argv("sleeptime"));
-  printf("WAVEFRONT N=%d sleeptime=%f", N, sleeptime);
+  float mu = tofloat(argv("mu"));
+  float sigma = tofloat(argv("sigma"));
+  printf("WAVEFRONT N=%d mu=%f sigma=%f", N, mu, sigma);
   float A[][];
 
   A[0][0] = 0;
@@ -28,7 +28,9 @@ main
     foreach j in [1:N-1]
     {
       a, b, c = A[i-1][j-1], A[i-1][j], A[i][j-1];
-      A[i][j] = h(f(g(a)), f(g(b)), f(g(c)));
+      A[i][j] = h(f(g(a, mu, sigma), mu, sigma),
+                  f(g(b, mu, sigma), mu, sigma),
+                  f(g(c, mu, sigma), mu, sigma));
     }
   }
   printf("result N: %i value: %.0f", N, A[N-1][N-1]);
@@ -43,6 +45,15 @@ main
 } */
 
 @dispatch=WORKER
-(float v) f(float i, float j, float k, float seconds) "turbine" "0.0.4" [
-  "set <<v>> [ expr <<i>> + <<j>> + <<k>> ] ; if { <<seconds>> > 0 } { turbine::spin <<seconds>> }"
+(float v) f(float i, float mu, float sigma) "lognorm_task" "0.0.0" [
+  "set <<v>> [ lognorm_task::lognorm_task_impl <<i>> 0 <<mu>> <<sigma>> ] "
 ];
+
+@dispatch=WORKER
+(float v) g(float i, float mu, float sigma) "lognorm_task" "0.0.0" [
+  "set <<v>> [ lognorm_task::lognorm_task_impl <<i>> 0 <<mu>> <<sigma>> ] "
+];
+
+(float v) h(float x, float y, float z) {
+  v = sqrt(x + y + z);
+}
