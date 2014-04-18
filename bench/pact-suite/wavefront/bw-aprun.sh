@@ -1,4 +1,4 @@
-# Copyright 2013 University of Chicago and Argonne National Laboratory
+# cOPYRight 2013 University of Chicago and Argonne National Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -93,14 +93,15 @@ do
     while ((APRUN_NODES > 0))
     do
       APRUN_PROCS=$((APRUN_NODES*PPN))
-      sleeptime=0
+      mu=-6.905000
+      sigma=1
 
       if [ $opt = adlb ]
       then
-        ARGS="${WAVEFRONT_N} ${sleeptime}"
+        ARGS="${WAVEFRONT_N} ${mu} ${sigma}"
         PROG=${ADLB_PROG}
       else
-        ARGS="--N=${WAVEFRONT_N} --sleeptime=${sleeptime}"
+        ARGS="--N=${WAVEFRONT_N} --mu=${mu} --sigma=${sigma}"
         PROG=${SCRIPT}.${opt}
       fi
 

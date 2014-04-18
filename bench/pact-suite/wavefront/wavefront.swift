@@ -28,9 +28,10 @@ main
     foreach j in [1:N-1]
     {
       a, b, c = A[i-1][j-1], A[i-1][j], A[i][j-1];
-      A[i][j] = h(f(g(a, mu, sigma), mu, sigma),
+      /*A[i][j] = h(f(g(a, mu, sigma), mu, sigma),
                   f(g(b, mu, sigma), mu, sigma),
-                  f(g(c, mu, sigma), mu, sigma));
+                  f(g(c, mu, sigma), mu, sigma));*/
+      A[i][j]=work(a, b, c, mu, sigma);
     }
   }
   printf("result N: %i value: %.0f", N, A[N-1][N-1]);
@@ -57,3 +58,8 @@ main
 (float v) h(float x, float y, float z) {
   v = sqrt(x + y + z);
 }
+
+@dispatch=WORKER
+(float v) work(float i, float j, float k, float mu, float sigma) "lognorm_task" "0.0.0" [
+  "set <<v>> [ expr sqrt(<<i>> + <<j>> + <<k>>) + 1 ]; lognorm_task::lognorm_task_impl <<i>> <<j>> <<mu>> <<sigma>> "
+];
