@@ -95,16 +95,16 @@ int main(int argc, char *argv[])
   }
   else
   {                                 
-    if (argc != 2 && argc != 3) {
-      printf("usage: %s <n> <sleep>\n", argv[0]);
+    if (argc != 4) {
+      printf("usage: %s <n> <mu> <sigma>\n", argv[0]);
       ADLB_Fail(-1);
     }
     // N == number of rows and columns
     int N = atoi(argv[1]);
-    double sleep = 0.0;
-    if (argc == 3) {
-        sleep=atof(argv[2]);
-    }
+    double mu, sigma;
+    mu = atof(argv[2]);
+    sigma = atof(argv[3]);
+
     if ( my_app_rank == 0 ) {  /* if master app, put cmds */
 
       // Map id to board position (binary integer pair)
@@ -285,9 +285,9 @@ int main(int argc, char *argv[])
         }
 
         // do simulated work
-        spin(sleep);
+        spin(lognorm_sample(mu, sigma));
 
-        double new_val = pred_vals[0] + pred_vals[1] + pred_vals[2];
+        double new_val = sqrt(pred_vals[0] + pred_vals[1] + pred_vals[2]) + 1;
         rc = ADLB_Store(result_id, ADLB_NO_SUB, ADLB_DATA_TYPE_FLOAT,
                       &new_val, sizeof(new_val), ADLB_WRITE_RC, ADLB_NO_RC);   
         assert(rc == ADLB_SUCCESS);
