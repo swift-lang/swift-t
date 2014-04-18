@@ -4,7 +4,7 @@ import re
 import sys
 
 #adlb_op_re = re.compile(r"ADLB: handle: caller=(\d*) (\w*)\(\d*\)$")
-adlb_op_perf_count = re.compile(r"COUNTER: ([^=]*)=(\d*)$")
+adlb_op_perf_count = re.compile(r"COUNTER: ([^=]*)=(\d\d*)$")
 hang_check = re.compile(r"WAITING TRANSFORMS: ")
 trace = re.compile(r"trace:.*")
 

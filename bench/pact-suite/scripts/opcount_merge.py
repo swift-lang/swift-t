@@ -2,6 +2,13 @@
 import sys
 
 files = sys.argv[1:]
+# Write header
+sys.stdout.write("op")
+sys.stdout.write("\t")
+for file in files:
+  sys.stdout.write(file)
+  sys.stdout.write("\t")
+sys.stdout.write("\n")
 
 keys = set()
 fileVals = []
