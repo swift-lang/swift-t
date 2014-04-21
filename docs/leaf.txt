@@ -487,7 +487,9 @@ In this mode, the user provides the Swift/T runtime with dataflow
 information so that more complex operations may be performed.
 
 // TODO: Rename to "Manual mode"
-// TODO: note lack of optimizations in manual mode
+// TODO: Note lack of optimizations in manual mode
+// TODO: Check for Swift/T memory leaks in examples
+//      (must decrement read counts)
 
 === Complete example 7: Leaf task with dataflow
 
