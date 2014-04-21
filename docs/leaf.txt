@@ -486,6 +486,9 @@ include::examples/6/run.sh[]
 In this mode, the user provides the Swift/T runtime with dataflow
 information so that more complex operations may be performed.
 
+// TODO: Rename to "Manual mode"
+// TODO: note lack of optimizations in manual mode
+
 === Complete example 7: Leaf task with dataflow
 
 When using the advanced syntax, the final argument is the name of a
