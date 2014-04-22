@@ -151,7 +151,7 @@ else
        ${=MODE_ARG}            \
        -o ${TURBINE_OUTPUT}/output.txt \
        -e ${TURBINE_OUTPUT}/output.txt \
-        ${TCLSH} ${TURBINE_OUTPUT}/${SCRIPT_NAME} ${ARGS} | \
+        ${TCLSH} ${TURBINE_OUTPUT}/${SCRIPT_NAME} ${=ARGS} | \
     read JOB_ID
 fi
 
