@@ -165,8 +165,8 @@ proc main { } {
     if { $ignore_no_manifest } {
       set manifest_filename ""
     } else {
-      user_err "Expected exactly one non-flagged argument for manifest file\
-                but got: $non_flag_args"
+      user_err "Expected exactly one non-flagged argument for manifest file " \
+                "but received: [ something $non_flag_args ]"
     }
   } else {
     set manifest_filename [ lindex $non_flag_args 0 ]
@@ -207,8 +207,8 @@ proc main { } {
   }
 }
 
-proc user_err { msg } {
-  puts stderr "error: $msg"
+proc user_err { args } {
+  puts stderr "mkstatic: error: [ concat {*}$args ]"
   cleanup_on_error
   exit 1
 }
