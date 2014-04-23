@@ -21,6 +21,8 @@
 set SCRIPT_DIR [ file dirname [ info script ] ]
 set F2A [ file join $SCRIPT_DIR "file2array.sh" ]
 
+source [ file join $SCRIPT_DIR ".." ".." "lib" "helpers.tcl" ]
+
 set INIT_PKGS_FN "InitAllPackages"
 set MAIN_SCRIPT_STRING "__turbine_tcl_main"
 
@@ -172,6 +174,8 @@ proc main { } {
 
   set manifest_dict [ read_manifest $manifest_filename $ignore_no_manifest $main_script_override ]
  
+
+
   set all_lib_src [ locate_all_lib_src $tcl_version $sys_lib_dirs \
                                         $other_lib_dirs ]
 
@@ -288,7 +292,9 @@ proc read_manifest { manifest_filename ignore_no_manifest main_script_override }
           setonce main_script [ file join $manifest_dir $trimmed_val ]
         }
         lib_script {
+          if { ! [ string equal $trimmed_val "" ] } {
           lappend lib_scripts [ file join $manifest_dir $trimmed_val ]
+        }
         }
         lib_init {
           lappend lib_init_fns $trimmed_val
@@ -343,7 +349,7 @@ proc locate_all_lib_src { tcl_version sys_lib_dirs other_lib_dirs } {
       warn_msg "No Tcl library source located in $lib_dir"
     }
   }
-  verbose_msg "Will include following lib source files: $all_lib_src"
+  verbose_msg "Will include following lib Tcl source files: $all_lib_src"
   return $all_lib_src
 }
 
@@ -651,6 +657,9 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init sys_lib_dir \
   set c_template [ open $c_template_filename ]
   set c_output [ open_output_file $c_output_file ]
 
+  verbose_msg "making C file: $c_output_file for: " \
+              "package $pkg_name $pkg_version"
+
   set all_vars [ list ]
 
   # List of package info: {name version}
@@ -759,6 +768,7 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init sys_lib_dir \
         MAIN_SCRIPT_DATA {
           # Put main script data in output C file
           set main_script [ dict get $manifest_dict main_script ]
+          verbose_msg "ingesting main script:" $main_script
           if { [ string length $main_script ] == 0 } {
             # Output placeholder
             puts $c_output "static const char $MAIN_SCRIPT_STRING\[\] = {0x0};"
@@ -790,6 +800,7 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init sys_lib_dir \
           # of file. It is not clear if such .tm files occur in the wild
           # and the Tcl standard library doesn't include any as of writing
           foreach src_var $all_src_vars src_file $all_src_files {
+            verbose_msg "ingesting source: $src_var $src_file"
             puts $c_output "/* data from $src_file */"
             set rc [ catch { exec -ignorestderr $F2A -v $src_var \
                      -m "static const" $src_file >@${c_output} } ]
@@ -1017,10 +1028,10 @@ proc nonempty { var msg } {
   }
 }
 
-proc verbose_msg { msg } {
+proc verbose_msg { args } {
   global verbose_setting
   if { $verbose_setting } {
-    puts $msg
+    puts "mkstatic: [ concat {*}$args ]"
   }
 }
 
@@ -1044,6 +1055,7 @@ proc cleanup_on_error { } {
   global cleanup_error_files
   foreach cleanup_file $cleanup_error_files {
     file delete $cleanup_file
+    verbose_msg "deleted: $cleanup_file"
   }
   set cleanup_error_files [ list ]
 }
@@ -1052,3 +1064,8 @@ if { [ catch main ] } {
   cleanup_on_error
   puts stderr "$::errorInfo"
 }
+
+# Local Variables:
+# mode: tcl
+# tcl-indent-level: 2
+# End:
