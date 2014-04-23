@@ -493,6 +493,7 @@ $(TURBINE_EXECUTABLES): %: %.o ${STATIC_LIBS} ${STATIC_PKG_RESOURCE_H}
         $(MAC_FLAT) \
         $(TCL_TURBINE_LIB_FLAGS) \
         $(LIBS) \
+	-ltclturbinestatic -ltclturbinestaticres \
 	$(RPATHS) \
 	-o $(@)
 
