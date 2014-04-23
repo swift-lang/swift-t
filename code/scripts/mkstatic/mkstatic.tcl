@@ -173,8 +173,6 @@ proc main { } {
   }
 
   set manifest_dict [ read_manifest $manifest_filename $ignore_no_manifest $main_script_override ]
- 
-
 
   set all_lib_src [ locate_all_lib_src $tcl_version $sys_lib_dirs \
                                         $other_lib_dirs ]
@@ -293,11 +291,13 @@ proc read_manifest { manifest_filename ignore_no_manifest main_script_override }
         }
         lib_script {
           if { ! [ string equal $trimmed_val "" ] } {
-          lappend lib_scripts [ file join $manifest_dir $trimmed_val ]
-        }
+            lappend lib_scripts [ file join $manifest_dir $trimmed_val ]
+          }
         }
         lib_init {
-          lappend lib_init_fns $trimmed_val
+          if { ! [ string equal $trimmed_val "" ] } {
+            lappend lib_init_fns $trimmed_val
+          }
         }
         lib_include {
           lappend lib_includes $trimmed_val
