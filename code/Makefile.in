@@ -122,7 +122,7 @@ libs_static: $(TCL_TURBINE_STATIC_LIBS)
 
 srcdir = @srcdir@
 
-ifeq ($(V),0)
+ifeq ($(V),)
   # Prints a short description of the action, does not show command
   Q=@echo
   E=@
