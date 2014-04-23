@@ -14,10 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# Tcl script to generate entry point C code for statically linked 
-# application.  Uses template C code and manifest file to output
-# an appropriate C main program.
-
 # Convert file to a C array with provided name.
 #
 # Also produce length variable of type size_t with _len suffix.
