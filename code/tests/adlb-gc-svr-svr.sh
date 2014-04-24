@@ -32,7 +32,7 @@ export ADLB_PRINT_TIME=true
 export ADLB_PERF_COUNTERS=true
 
 # Test failed with deadlock - time limit it
-TIME_LIMIT=120
+TIME_LIMIT=240
 
 bin/turbine -l -n 8 ${SCRIPT} &> ${OUTPUT} &
 pid=$!
