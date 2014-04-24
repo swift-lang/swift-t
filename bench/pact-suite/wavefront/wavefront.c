@@ -189,7 +189,8 @@ int main(int argc, char *argv[])
           if (row != 0 && col != 0) {
             // Subscribe to get notification
             int subscribed;
-            ADLB_Subscribe(ids[IX(row, col, N)], ADLB_NO_SUB, &subscribed);
+            ADLB_Subscribe(ids[IX(row, col, N)], ADLB_NO_SUB, CONTROL_WORK,
+                          &subscribed);
             assert(subscribed);
 
           }
