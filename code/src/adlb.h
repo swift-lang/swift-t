@@ -52,7 +52,8 @@ adlb_code ADLB_Server(long max_memory);
 
 adlb_code ADLB_Version(version* output);
 
-adlb_code ADLB_Hostmap_stats(uint* count, uint* name_max);
+adlb_code ADLB_Hostmap_stats(unsigned int* count,
+                             unsigned int* name_max);
 
 adlb_code ADLB_Hostmap_lookup(const char* name, int count,
                               int* output, int* actual);
@@ -64,8 +65,8 @@ adlb_code ADLB_Hostmap_lookup(const char* name, int count,
    @param offset: Start with this hostname
    @param actual: OUT Number of hostnames written
  */
-adlb_code ADLB_Hostmap_list(char* output, uint max, uint offset,
-                            int* actual);
+adlb_code ADLB_Hostmap_list(char* output, unsigned int max,
+                            unsigned int offset, int* actual);
 
 adlb_code ADLBP_Put(const void* payload, int length, int target, int answer,
                     int type, int priority, int parallelism);
