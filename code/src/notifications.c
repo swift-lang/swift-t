@@ -198,10 +198,6 @@ xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
     return ADLB_SUCCESS;
   }
 
-  if (xlb_am_server)
-    rc = xlb_sync(server);
-  ADLB_CHECK(rc);
-
   // Store value, maybe accumulating more notification/ref setting work
   rc = xlb_store(id, subscript, type, value, length, ADLB_WRITE_RC,
                  transferred_refs, notifs);

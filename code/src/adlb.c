@@ -901,7 +901,6 @@ xlb_store(adlb_datum_id id, adlb_subscript subscript, adlb_data_type type,
   }
 
   int to_server_rank = ADLB_Locate(id);
-
   if (to_server_rank == xlb_comm_rank)
   {
     // This is a server-to-server operation on myself
@@ -913,6 +912,12 @@ xlb_store(adlb_datum_id id, adlb_subscript subscript, adlb_data_type type,
     ADLB_DATA_CHECK(dc);
 
     return ADLB_SUCCESS;
+  }
+
+  if (xlb_am_server)
+  {
+    code = xlb_sync(to_server_rank);
+    ADLB_CHECK(code);
   }
 
   struct packed_store_hdr hdr = { .id = id,
