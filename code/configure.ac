@@ -869,7 +869,7 @@ AC_ARG_WITH(tcl-syslib-dir,
 
 mktemp_system()
 {
-    if [[ ${USE_MAC} == 0 ]] 
+    if [[ ${USE_MAC} == "no" ]] 
     then 
         mktemp
     else 
@@ -989,7 +989,7 @@ AC_SUBST(CFLAGS)
 AC_SUBST(LDFLAGS)
 
 # We take system libraries out of arguments to the linker (#546)
-if [[ ${USE_MAC} == 0 ]] 
+if [[ ${USE_MAC} == "no" ]] 
 then
     # This does not work on the Mac
     ldconfig -v 2>/dev/null | grep -vP '\t' | cut -d : -f 1 > system-libs.txt
