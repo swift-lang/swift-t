@@ -7,8 +7,7 @@ ENABLE_STATIC = @ENABLE_STATIC@
 PACKAGE = lib/pkgIndex.tcl
 ENABLED_PACKAGES :=
 
-BUILD_ALL_TARGETS = libs executables
-# BUILD_ALL_TARGETS = libs executables
+BUILD_ALL_TARGETS = libs 
 
 ifeq ($(ENABLE_SHARED),1)
 # Shared libraries are required for tcl package
@@ -18,7 +17,7 @@ endif
 
 ifeq ($(ENABLE_STATIC),1)
 # Shared libraries are required for tcl package
-  BUILD_ALL_TARGETS += package_static
+  BUILD_ALL_TARGETS += executables package_static
   ENABLED_PACKAGES += package_static
 endif
 
@@ -95,7 +94,10 @@ STATIC_PKG_RESOURCE_LIB := tclturbinestaticres
 STATIC_PKG_RESOURCE_A := lib/lib$(STATIC_PKG_RESOURCE_LIB).a
 
 # Resource libs are used in all builds
-TCL_TURBINE_LIBS := $(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A)
+TCL_TURBINE_LIBS := 
+ifeq ($(ENABLE_STATIC),1)
+	TCL_TURBINE_LIBS += $(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A)
+endif
 # All available static libraries (some are always built)
 TCL_TURBINE_STATIC_LIBS := $(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A)
 
@@ -343,14 +345,19 @@ TEST_SRC_MANIFEST :=
 TEST_SRC :=
 include tests/module.mk
 TEST_DEPS := $(patsubst %.c, %.d, $(TEST_SRC))
-TEST_DEPS += $(patsubst %.manifest, %.manifest.d, $(TEST_SRC_MANIFEST))
-TEST_DEPS += $(patsubst %.manifest, %.x.d, $(TEST_SRC_MANIFEST))
+ifeq ($(ENABLE_STATIC),1)
+	TEST_DEPS += $(patsubst %.manifest, %.manifest.d, $(TEST_SRC_MANIFEST))
+	TEST_DEPS += $(patsubst %.manifest, %.x.d, $(TEST_SRC_MANIFEST))
+endif
 
 # Dependency files:
 # Remember that having a bad #include can cause dependency
 # file generation to fail silently
 # Solution: use target check_includes
-DEPS := $(TURBINE_DEPS) $(TURBINE_EXECUTABLE_DEPS) $(TEST_DEPS) $(STATIC_PKG_DEPS)
+DEPS := $(TURBINE_DEPS) $(TEST_DEPS) 
+ifeq ($(ENABLE_STATIC),1)
+	DEPS += $(STATIC_PKG_DEPS) $(TURBINE_EXECUTABLE_DEPS) 
+endif
 
 deps: $(DEPS)
 
@@ -511,6 +518,12 @@ TEST_OUTPUT  += $(patsubst %.tcl, %.out, $(TEST_SRC_TCL))
 # Test case results
 TEST_RESULTS := $(patsubst %.c,   %.result, $(TEST_SRC_C))
 TEST_RESULTS += $(patsubst %.tcl, %.result, $(TEST_SRC_TCL))
+ifeq ($(ENABLE_STATIC),1)
+    TEST_STATIC_PREREQS = $(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A)
+else 
+    TEST_STATIC_PREREQS =
+endif
+
 
 # Target to just build all C tests
 tests: $(TEST_BINS)
@@ -519,7 +532,7 @@ tests: $(TEST_BINS)
 test_results: $(TEST_RESULTS)
 
 # Binary executables in the test suite
-$(TEST_BINS): %.x: %.o install.txt $(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A)
+$(TEST_BINS): %.x: %.o install.txt $(TEST_STATIC_PREREQS)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(LDFLAGS) $(<) \
 	$(shell $(MKSTATIC_RUN) "$(@).manifest" --ignore-no-manifest --link-objs) \
@@ -590,10 +603,12 @@ ifeq ($(ENABLE_STATIC),1)
   TURBINE_HEADERS += $(STATIC_PKG_RESOURCE_H)
 endif
 
-BINS    = $(shell ls bin/turbine \
+BINS := $(shell ls bin/turbine \
                      bin/turbine-write-doubles \
-                     bin/turbine-read-doubles ) \
-          $(TURBINE_EXECUTABLES)
+                     bin/turbine-read-doubles ) 
+ifeq ($(ENABLE_STATIC),1)
+	BINS += $(TURBINE_EXECUTABLES)
+endif
 EXPORTS = $(shell ls export/*.swift )
 SCRIPTS = $(shell ls scripts/*.zsh scripts/*.sh scripts/*.tcl \
 		     scripts/mkstatic/* $(SCRIPTS_SUBMIT) )
@@ -666,7 +681,7 @@ distclean:: clean
 	@rm -fv scripts/turbine-build-config.sh
 	@rm -fv system-libs.txt
 
-.PHONY: clean install package test_results
+.PHONY: clean install package libs test_results
 
 ### DEBUG BUILD SYSTEM
 
