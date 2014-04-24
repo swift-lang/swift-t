@@ -310,6 +310,7 @@ datum_init_props(adlb_datum_id id, adlb_datum *d,
   xlb_data_init_status(&d->status); // default status
   d->status.permanent = props->permanent;
   d->status.release_write_refs = props->release_write_refs;
+  d->status.subscript_notifs = false;
 
   return ADLB_DATA_SUCCESS;
 }
@@ -674,6 +675,11 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
       list_i_unique_insert(listeners, rank);
       subscribed = true;
     }
+
+    if (subscribed)
+    {
+      d->status.subscript_notifs = true;
+    }
   }
   else
   {
@@ -948,11 +954,14 @@ data_store_root(adlb_datum_id id, adlb_datum *d,
           store_refcounts.read_refcount, store_refcounts.write_refcount);
     free(val_s);
   }
-  
-  // Need to handle subscript notifications
-  dc = add_recursive_notifs(d, id, ADLB_NO_SUB, &d->data, d->type,
-                            notifs, freed_datum);
-  DATA_CHECK(dc);
+
+  if (d->status.subscript_notifs)
+  {
+    // Need to handle subscript notifications
+    dc = add_recursive_notifs(d, id, ADLB_NO_SUB, &d->data, d->type,
+                              notifs, freed_datum);
+    DATA_CHECK(dc);
+  }
 
   return ADLB_DATA_SUCCESS;
 }
@@ -1063,10 +1072,13 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
         free(val_s);
       }
 
-      dc = insert_notifications(d, id, subscript,
-                entry, value, length, value_type,
-                notifs, freed_datum);
-      DATA_CHECK(dc);
+      if (d->status.subscript_notifs)
+      {
+        dc = insert_notifications(d, id, subscript,
+                  entry, value, length, value_type,
+                  notifs, freed_datum);
+        DATA_CHECK(dc);
+      }
       return ADLB_DATA_SUCCESS;
     }
     else if (data_type == ADLB_DATA_TYPE_STRUCT)
