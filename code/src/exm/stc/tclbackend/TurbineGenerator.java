@@ -1075,7 +1075,7 @@ public class TurbineGenerator implements CompilerBackend {
         // Strip off reference
         curr = Types.retrievedType(curr);
         if (includeRefs) {
-          typeList.add(Turbine.ADLB_REF_TYPE);  
+          typeList.add(refRepresentationType(curr));  
         }
       }
     } while ((Types.isContainer(curr) ||
@@ -1084,7 +1084,7 @@ public class TurbineGenerator implements CompilerBackend {
     while (followRefs && Types.isRef(curr)) {
       curr = Types.retrievedType(curr);
       if (includeRefs && includeBaseType) {
-        typeList.add(Turbine.ADLB_REF_TYPE);
+        typeList.add(refRepresentationType(curr));
       }
     }
 
