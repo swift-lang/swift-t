@@ -622,11 +622,26 @@ AC_ARG_ENABLE(shared,
     ])
 AC_SUBST(ENABLE_SHARED)
 
+ENABLE_STATIC_PKG=1
+AC_ARG_ENABLE(static-pkg,
+    AS_HELP_STRING([--enable-static-pkg],
+       [Create statically linkable Turbine Tcl package with Tcl srouce.
+        Default: yes]),
+    [
+       if test "$enableval" = no ; then
+         ENABLE_STATIC_PKG=0
+       elif test "$enable_val" = yes ; then
+         ENABLE_STATIC_PKG=1
+       fi
+    ])
+AC_SUBST(ENABLE_STATIC_PKG)
+
 ENABLE_STATIC=1
 AC_ARG_ENABLE(static,
     AS_HELP_STRING([--enable-static],
-                   [Default: enabled]),
-    [
+             [Create static libraries.
+              Default: enabled]),
+  [
        if test "$enableval" = no ; then
          ENABLE_STATIC=0
        fi

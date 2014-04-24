@@ -20,6 +20,9 @@ export TURBINE_LAUNCHER=@USE_LAUNCHER@
 export TURBINE_SH=${TURBINE_HOME}/bin/turbine_sh
 export TURBINE_MAC=@USE_MAC@
 
+# If we have pkgIndex.tcl/.so package
+TURBINE_PKG_AVAIL=@ENABLE_SHARED@
+
 TCLLIBPATH=
 if [[ -n ${TURBINE_USER_LIB:-} ]] ; then
   TCLLIBPATH="${TURBINE_USER_LIB} "
@@ -32,6 +35,11 @@ then
 elif (( TURBINE_STATIC_EXEC ))
 then
   # Use statically linked executable with builtin Turbine package
+  export TCLSH=${TURBINE_SH}
+elif (( !TURBINE_PKG_AVAIL ))
+then
+  # Don't have dynamically loadable package - must use statically linked
+  # executable
   export TCLSH=${TURBINE_SH}
 else
   # Use regular tclsh plus loadable Turbine Tcl package
