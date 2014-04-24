@@ -90,17 +90,13 @@ TCL_TURBINE_A = lib/lib$(TCL_TURBINE_LIB).a
 STATIC_PKG_LIB := tclturbinestatic
 STATIC_PKG_A := lib/lib$(STATIC_PKG_LIB).a
 
-# Static library for resources like Tcl source
-STATIC_PKG_RESOURCE_LIB := tclturbinestaticres
-STATIC_PKG_RESOURCE_A := lib/lib$(STATIC_PKG_RESOURCE_LIB).a
-
 # Resource libs are used in all builds
 TCL_TURBINE_LIBS := 
 ifeq ($(ENABLE_STATIC),1)
-	TCL_TURBINE_LIBS += $(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A)
+	TCL_TURBINE_LIBS += $(STATIC_PKG_A)
 endif
 # All available static libraries (some are always built)
-TCL_TURBINE_STATIC_LIBS := $(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A)
+TCL_TURBINE_STATIC_LIBS := $(STATIC_PKG_A)
 
 # Flags needed to link
 TCL_TURBINE_LIB_FLAGS := -L lib
@@ -115,7 +111,6 @@ ifeq ($(ENABLE_STATIC),1)
   TCL_TURBINE_STATIC_LIBS += $(TCL_TURBINE_A)
   # This order is required
   TCL_TURBINE_LIB_FLAGS += -l$(STATIC_PKG_LIB) \
-                           -l$(STATIC_PKG_RESOURCE_LIB) \
                            -l$(TCL_TURBINE_LIB)
 endif
 
@@ -431,9 +426,9 @@ endif
              $(RPATHS) \
              $(MAC_NAME)
 
-$(STATIC_PKG_A): $(STATIC_PKG_OBJS)
+$(STATIC_PKG_A): $(STATIC_PKG_OBJS) $(STATIC_PKG_RESOURCE_O)
 	$(Q) "  AR		$(@)"
-	$(E) $(AR) $(ARFLAGS) $(@) $(STATIC_PKG_OBJS)
+	$(E) $(AR) $(ARFLAGS) $(@) $(STATIC_PKG_OBJS) $(STATIC_PKG_RESOURCE_O)
 	$(E) $(RANLIB) $(@)
 
 ### TCL SOURCE LINKING
@@ -453,11 +448,6 @@ $(STATIC_PKG_RESOURCE_H): $(STATIC_PKG_RESOURCE_C) $(F2A_MKHDR)
 	mv "$(@).tmp" $(@)
 
 # Regular .o compilation rule generates .o files
-
-$(STATIC_PKG_RESOURCE_A): $(STATIC_PKG_RESOURCE_O)
-	$(Q) "  AR		$(@)"
-	$(E) $(AR) $(ARFLAGS) $(@) $(STATIC_PKG_RESOURCE_O)
-	$(E) $(RANLIB) $(@)
 
 ### LINK EXECUTABLES
 
@@ -664,7 +654,7 @@ clean::
 	@echo "  CLEAN"
 	@rm -fv  $(PACKAGE) install.txt
 	@rm -fv  $(TCL_TURBINE_A) $(TCL_TURBINE_SO)
-	@rm -fv  $(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A)
+	@rm -fv  $(STATIC_PKG_A)
 	@rm -fv  $(DEPS) $(TEST_DEPS) deps.txt deps_contents.txt TAGS
 	@rm -fv  $(TEST_BINS) $(TEST_OBJS) $(TEST_OUTPUT)
 	@rm -fv  $(TEST_RESULTS)
