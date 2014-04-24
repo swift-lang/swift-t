@@ -10,15 +10,15 @@ ENABLED_PACKAGES :=
 BUILD_ALL_TARGETS = libs 
 
 ifeq ($(ENABLE_SHARED),1)
-# Shared libraries are required for tcl package
-  BUILD_ALL_TARGETS += package
-  ENABLED_PACKAGES += package
+  # Shared libraries are required for tcl package
+  BUILD_ALL_TARGETS += $(PACKAGE)
+  ENABLED_PACKAGES += $(PACKAGE)
 endif
 
 ifeq ($(ENABLE_STATIC),1)
-# Shared libraries are required for tcl package
-  BUILD_ALL_TARGETS += executables package_static
-  ENABLED_PACKAGES += package_static
+  # Shared libraries are required for tcl package
+  BUILD_ALL_TARGETS += $(TURBINE_EXECUTABLES) $(PACKAGE_STATIC)
+  ENABLED_PACKAGES += $(PACKAGE_STATIC)
 endif
 
 all: $(BUILD_ALL_TARGETS)
@@ -28,6 +28,7 @@ turbine: $(TURBINE)
 package: $(PACKAGE) libs
 
 package_static: libs_static
+PACKAGE_STATIC = $(LIBS_STATIC)
 
 USE_MAC = @USE_MAC@
 
@@ -121,6 +122,7 @@ endif
 libs: $(TCL_TURBINE_LIBS)
 
 libs_static: $(TCL_TURBINE_STATIC_LIBS)
+LIBS_STATIC = $(TCL_TURBINE_STATIC_LIBS)
 
 srcdir = @srcdir@
 
@@ -681,7 +683,7 @@ distclean:: clean
 	@rm -fv scripts/turbine-build-config.sh
 	@rm -fv system-libs.txt
 
-.PHONY: clean install package libs test_results
+.PHONY: clean install package package_static libs test_results
 
 ### DEBUG BUILD SYSTEM
 
