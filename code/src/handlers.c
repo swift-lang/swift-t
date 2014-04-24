@@ -1268,7 +1268,11 @@ handle_subscribe(int caller)
   
   adlb_datum_id id;
   adlb_subscript subscript;
-  xlb_unpack_id_sub(xfer, &id, &subscript);
+  int work_type;
+  const char *xfer_pos = xfer;
+  MSG_UNPACK_BIN(xfer_pos, &work_type);
+  xlb_unpack_id_sub(xfer_pos, &id, &subscript);
+
 
   // TODO: support binary keys
   if (adlb_has_sub(subscript))
@@ -1281,7 +1285,8 @@ handle_subscribe(int caller)
     DEBUG("subscribe: <%"PRId64">", id);
   }
   struct pack_sub_resp resp;
-  resp.dc = xlb_data_subscribe(id, subscript, caller, &resp.subscribed);
+  resp.dc = xlb_data_subscribe(id, subscript, caller, work_type,
+                              &resp.subscribed);
   if (resp.dc != ADLB_DATA_SUCCESS)
     resp.subscribed = false;
   RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);

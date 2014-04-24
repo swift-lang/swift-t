@@ -42,7 +42,8 @@ xlb_prepare_for_send(adlb_notif_t *notifs,
     xlb_prepared_notifs *prepared);
 
 // Returns size of payload including null terminator
-static int fill_payload(char *payload, adlb_datum_id id, adlb_subscript subscript)
+static int fill_notif_payload(char *payload, adlb_datum_id id,
+                              adlb_subscript subscript)
 {
   int len_str;
   if (!adlb_has_sub(subscript))
@@ -58,11 +59,11 @@ static int fill_payload(char *payload, adlb_datum_id id, adlb_subscript subscrip
   return len_str + 1;
 }
 
-static adlb_code notify_local(int target, const char *payload, int length)
+static adlb_code notify_local(int target, const char *payload, int length,
+                              int work_type)
 {
   int answer_rank = -1;
   int work_prio = 1;
-  int work_type = 1; // work_type CONTROL
   int rc = xlb_put_targeted_local(work_type, xlb_comm_rank,
                work_prio, answer_rank,
                target, payload, length);
@@ -71,11 +72,11 @@ static adlb_code notify_local(int target, const char *payload, int length)
 }
 
 static adlb_code notify_nonlocal(int target, int server,
-                        const char *payload, int length)
+                        const char *payload, int length,
+                        int work_type)
 {
   int answer_rank = -1;
   int work_prio = 1;
-  int work_type = 1; // work_type CONTROL
   int rc;
   if (xlb_am_server)
   {
@@ -244,16 +245,18 @@ xlb_close_notify(adlb_notif_ranks *ranks)
                     notif->subscript.length != last_subscript.length)
       {
         // Skip refilling payload if possible 
-        payload_len = fill_payload(payload, notif->id, notif->subscript);
+        payload_len = fill_notif_payload(payload, notif->id,
+                                          notif->subscript);
       }
       if (server == xlb_comm_rank)
       {
-        rc = notify_local(target, payload, payload_len);
+        rc = notify_local(target, payload, payload_len, notif->work_type);
         ADLB_CHECK(rc);
       }
       else
       {
-        rc = notify_nonlocal(target, server, payload, payload_len);
+        rc = notify_nonlocal(target, server, payload, payload_len,
+                             notif->work_type);
         ADLB_CHECK(rc);
       }
     }
@@ -407,11 +410,13 @@ xlb_process_local_notif_ranks(adlb_notif_ranks *ranks)
                         notif->subscript.length != last_subscript.length)
           {
             // Skip refilling payload if possible 
-            payload_len = fill_payload(payload, notif->id, notif->subscript);
+            payload_len = fill_notif_payload(payload, notif->id,
+                                               notif->subscript);
           }
 
           // Swap with last and shorten array
-          adlb_code rc = notify_local(target, payload, payload_len);
+          adlb_code rc = notify_local(target, payload, payload_len,
+                                      notif->work_type);
           ADLB_CHECK(rc);
           processed_locally = true;
         }

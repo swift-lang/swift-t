@@ -1260,20 +1260,25 @@ ADLBP_Container_typeof(adlb_datum_id id, adlb_data_type* key_type,
 }
 
 /**
+   @param work_type work type to receive notification as
    @param subscribed output: false if data is already closed
                              or ADLB_ERROR on error
  */
 adlb_code
 ADLBP_Subscribe(adlb_datum_id id, adlb_subscript subscript,
-                int* subscribed)
+                int work_type, int* subscribed)
 {
   int to_server_rank;
   MPI_Status status;
   MPI_Request request;
 
   to_server_rank = ADLB_Locate(id);
+  
+  char *xfer_pos = xfer;
+  MSG_PACK_BIN(xfer_pos, work_type);
+  xfer_pos += xlb_pack_id_sub(xfer_pos, id, subscript);
 
-  int req_length = xlb_pack_id_sub(xfer, id, subscript);
+  int req_length = (int)(xfer_pos - xfer);
   assert(req_length > 0);
 
   struct pack_sub_resp result;

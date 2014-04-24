@@ -316,10 +316,10 @@ adlb_code ADLB_Container_typeof(adlb_datum_id id, adlb_data_type* key_type,
 
 adlb_code
 ADLB_Subscribe(adlb_datum_id id, adlb_subscript subscript,
-               int* subscribed)
+               int work_type, int* subscribed)
 {
   MPE_LOG(xlb_mpe_wkr_subscribe_start);
-  adlb_code rc = ADLBP_Subscribe(id, subscript, subscribed);
+  adlb_code rc = ADLBP_Subscribe(id, subscript, work_type, subscribed);
   MPE_LOG(xlb_mpe_wkr_subscribe_end);
   return rc;
 }

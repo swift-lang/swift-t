@@ -66,6 +66,7 @@ typedef struct {
   adlb_datum_id id;
   adlb_subscript subscript; // Optional subscript
   int rank;
+  int work_type;
 } adlb_notif_rank;
 
 typedef struct {
@@ -246,8 +247,19 @@ static inline adlb_code xlb_to_free_add(adlb_notif_t *notifs, void *data)
   return ADLB_SUCCESS;
 }
 
+static inline void xlb_notif_init(adlb_notif_rank *r,
+    int rank, adlb_datum_id id, adlb_subscript subscript,
+    int work_type)
+{
+  r->rank = rank;
+  r->id = id;
+  r->subscript = subscript;
+  r->work_type = work_type;
+}
+
 static inline adlb_code xlb_notifs_add(adlb_notif_ranks *notifs,
-        int rank, adlb_datum_id id, adlb_subscript subscript)
+        int rank, adlb_datum_id id, adlb_subscript subscript,
+        int work_type)
 {
   // Mark that caller should free
   if (notifs->count == notifs->size)
@@ -257,10 +269,7 @@ static inline adlb_code xlb_notifs_add(adlb_notif_ranks *notifs,
   }
 
   adlb_notif_rank *r = &notifs->notifs[notifs->count++];
-  r->rank = rank;
-  r->id = id;
-  r->subscript = subscript;
-
+  xlb_notif_init(r, rank, id, subscript, work_type);
   return ADLB_SUCCESS;
 }
 

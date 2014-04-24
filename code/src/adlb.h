@@ -267,9 +267,9 @@ adlb_code ADLB_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
        ADLB_DATA_ERROR_NOT_FOUND if datum not found (can indicate it was gced)
  */
 adlb_code ADLBP_Subscribe(adlb_datum_id id, adlb_subscript subscript,
-                          int* subscribed);
+                          int work_type, int* subscribed);
 adlb_code ADLB_Subscribe(adlb_datum_id id, adlb_subscript subscript,
-                          int* subscribed);
+                          int work_type, int* subscribed);
 
 adlb_code ADLBP_Container_reference(adlb_datum_id id, adlb_subscript subscript,
                 adlb_datum_id ref_id, adlb_subscript ref_subscript,

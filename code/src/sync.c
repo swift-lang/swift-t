@@ -586,7 +586,7 @@ static adlb_code xlb_handle_subscribe_sync(int rank,
 
   // call data module to subscribe
   bool subscribed;
-  dc = xlb_data_subscribe(sub_hdr->id, sub, rank, &subscribed);
+  dc = xlb_data_subscribe(sub_hdr->id, sub, rank, 0, &subscribed);
   ADLB_DATA_CHECK(dc);
 
   if (!subscribed)

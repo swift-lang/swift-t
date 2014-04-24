@@ -59,8 +59,7 @@ typedef struct {
 static struct table_bp container_references;
 
 /**
-   Map from "container,subscript" specifier to list of subscribers to that
-   subscript.
+   Map from "container,subscript" specifier to list of xlb_listeners
  */
 static struct table_bp container_ix_listeners;
 
@@ -150,14 +149,14 @@ struct_notifs_rec(adlb_datum *d, adlb_datum_id id,
 static adlb_data_code
 check_subscript_notifications(adlb_datum_id container_id,
     adlb_subscript subscript, struct list **ref_list,
-    struct list_i **subscribed_ranks);
+    struct list_b **listener_list);
 
 static adlb_data_code
 insert_notifications2(adlb_datum *d,
       adlb_datum_id id, adlb_subscript subscript,
       bool copy_sub, adlb_data_type value_type,
       const void *value_buffer, int value_len,
-      struct list *ref_list, struct list_i *sub_list,
+      struct list *ref_list, struct list_b *listener_list,
       adlb_notif_t *notifs, bool *garbage_collected);
 
 static 
@@ -167,7 +166,7 @@ adlb_data_code process_ref_list(struct list *subscribers,
           adlb_refcounts *to_acquire); 
 
 static 
-adlb_data_code append_notifs(struct list_i *listeners, bool free_list_root,
+adlb_data_code append_notifs(struct list_b *listeners, bool free_list_root,
   adlb_datum_id id, adlb_subscript sub, adlb_notif_ranks *notify);
 
 
@@ -247,7 +246,7 @@ xlb_data_create(adlb_datum_id id, adlb_data_type type,
   check_verbose(d != NULL, ADLB_DATA_ERROR_OOM,
                 "Out of memory while allocating datum");
   d->type = type;
-  list_i_init(&d->listeners);
+  list_b_init(&d->listeners);
 
   table_lp_add(&tds, id, d);
 
@@ -563,14 +562,16 @@ xlb_data_unlock(adlb_datum_id id)
 }
 
 /**
-   @param if not null and data type is container, subscribe
+   @param subscript if not null and data type is container, subscribe
           to this subscript
+   @param work_type send notification to worker with this work type.
+                If server, this has no effect
    @param result set to true iff subscribed, else false (td closed)
    @return ADLB_SUCCESS or ADLB_ERROR
  */
 adlb_data_code
 xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
-              int rank, bool* subscribed)
+              int rank, int work_type, bool* subscribed)
 {
   adlb_data_code dc;
 
@@ -629,18 +630,20 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
         (int)subscript.length, (const char*)subscript.key,
         (int)subscript.length);
 
-      struct list_i* listeners = NULL;
+      struct list_b* listeners = NULL;
       found = table_bp_search(&container_ix_listeners, key, key_len,
                                 (void*)&listeners);
       if (!found)
       {
         // Nobody else has subscribed to this pair yet
-        listeners = list_i_create();
+        listeners = list_b_create();
         table_bp_add(&container_ix_listeners, key, key_len, listeners);
       }
       TRACE("Added %i to listeners for %"PRId64"[%.*s]\n", rank,
           id, (int)subscript.length, (const char*)subscript.key);
-      list_i_unique_insert(listeners, rank);
+     
+      xlb_listener listener = { .rank = rank, .work_type = work_type };
+      list_b_add(listeners, &listener, sizeof(listener));
       *subscribed = true;
     }
     else
@@ -662,7 +665,8 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
     }
     else
     {
-      list_i_unique_insert(&d->listeners, rank);
+      xlb_listener listener = { .rank = rank, .work_type = work_type };
+      list_b_add(&d->listeners, &listener, sizeof(listener));
       *subscribed = true;
     }
   }
@@ -1579,18 +1583,18 @@ insert_notifications(adlb_datum *d, adlb_datum_id id,
   adlb_data_code dc;
 
   struct list *ref_list = NULL;
-  struct list_i *sub_list = NULL;
+  struct list_b *listener_list = NULL;
 
   // Find, remove, and return any listeners/references
   dc = check_subscript_notifications(id, subscript, &ref_list,
-                                     &sub_list);
+                                     &listener_list);
   DATA_CHECK(dc);
   
   DEBUG("Notifications for <%"PRId64">[%.*s] len %i refs %i "
         "subscribers %i", id, (int)subscript.length,
         (const char*)subscript.key, (int)subscript.length, 
         ref_list != NULL ? ref_list->size : 0,
-        sub_list != NULL ? sub_list->size : 0);
+        listener_list != NULL ? listener_list->size : 0);
 
   // Track whether we garbage collected the data
   assert(garbage_collected != NULL);
@@ -1598,7 +1602,7 @@ insert_notifications(adlb_datum *d, adlb_datum_id id,
   
   dc = insert_notifications2(d, id, subscript, false,
       value_type, value_buffer, value_len,
-      ref_list, sub_list, notifs, garbage_collected);
+      ref_list, listener_list, notifs, garbage_collected);
   DATA_CHECK(dc);
 
   TRACE("remove container_ref %"PRId64"[%.*s]: %i\n", id,
@@ -1618,7 +1622,7 @@ insert_notifications(adlb_datum *d, adlb_datum_id id,
 static adlb_data_code
 check_subscript_notifications(adlb_datum_id id,
     adlb_subscript subscript, struct list **ref_list,
-    struct list_i **sub_list) {
+    struct list_b **listener_list) {
   char s[xlb_id_sub_buflen(subscript)];
   size_t s_len = xlb_write_id_sub(s, id, subscript);
   void *data;
@@ -1633,7 +1637,7 @@ check_subscript_notifications(adlb_datum_id id,
 
   if (result)
   {
-    *sub_list = (struct list_i*) data;
+    *listener_list = (struct list_b*) data;
   }
 
   return ADLB_DATA_SUCCESS;
@@ -1653,7 +1657,7 @@ insert_notifications2(adlb_datum *d,
       adlb_datum_id id, adlb_subscript subscript,
       bool copy_sub, adlb_data_type value_type,
       const void *value_buffer, int value_len,
-      struct list *ref_list, struct list_i *sub_list,
+      struct list *ref_list, struct list_b *listener_list,
       adlb_notif_t *notifs, bool *garbage_collected)
 {
   adlb_data_code dc;
@@ -1684,7 +1688,7 @@ insert_notifications2(adlb_datum *d,
   }
 
   
-  if (sub_list != NULL && sub_list->size > 0)
+  if (listener_list != NULL && listener_list->size > 0)
   {
     if (copy_sub && adlb_has_sub(subscript))
     {
@@ -1697,7 +1701,7 @@ insert_notifications2(adlb_datum *d,
       dc = xlb_to_free_add(notifs, subscript_ptr);
       DATA_CHECK_ADLB(dc, ADLB_DATA_ERROR_OOM);
     }
-    dc = append_notifs(sub_list, true, id, subscript, &notifs->notify);
+    dc = append_notifs(listener_list, true, id, subscript, &notifs->notify);
     DATA_CHECK(dc);
   }
   return ADLB_DATA_SUCCESS;
@@ -1719,17 +1723,17 @@ all_notifs_step(adlb_datum *d, adlb_datum_id id, adlb_subscript sub,
 
   // Find, remove, and return any listeners/references
   struct list *ref_list = NULL;
-  struct list_i *sub_list = NULL;
-  dc = check_subscript_notifications(id, sub, &ref_list, &sub_list);
+  struct list_b *listener_list = NULL;
+  dc = check_subscript_notifications(id, sub, &ref_list, &listener_list);
   DATA_CHECK(dc);
 
   DEBUG("Notifications for <%"PRId64">[%.*s] len %i refs %i "
         "subscribers %i", id, (int)sub.length,
         (const char*)sub.key, (int)sub.length, 
         ref_list != NULL ? ref_list->size : 0,
-        sub_list != NULL ? sub_list->size : 0);
+        listener_list != NULL ? listener_list->size : 0);
 
-  if (ref_list != NULL || sub_list != NULL)
+  if (ref_list != NULL || listener_list != NULL)
   {
     adlb_binary_data val_data;
     if (ref_list != NULL)
@@ -1746,8 +1750,8 @@ all_notifs_step(adlb_datum *d, adlb_datum_id id, adlb_subscript sub,
       DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
     }
     dc = insert_notifications2(d, id, sub, copy_sub, val_type,
-                  val_data.data, val_data.length, ref_list, sub_list,
-                  notifs, garbage_collected);
+                val_data.data, val_data.length, ref_list, listener_list,
+                notifs, garbage_collected);
     DATA_CHECK(dc);
   }
   return ADLB_DATA_SUCCESS;
@@ -2049,7 +2053,7 @@ adlb_data_code process_ref_list(struct list *subscribers,
               if free_list_root is true
  */
 static 
-adlb_data_code append_notifs(struct list_i *listeners,
+adlb_data_code append_notifs(struct list_b *listeners,
   bool free_list_root,
   adlb_datum_id id, adlb_subscript sub, adlb_notif_ranks *notify)
 {
@@ -2063,19 +2067,21 @@ adlb_data_code append_notifs(struct list_i *listeners,
   adlb_code ac = xlb_notifs_expand(notify, nlisteners);
   DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
 
-  struct list_i_item *node = listeners->head;
+  struct list_b_item *node = listeners->head;
   for (int i = 0; i < nlisteners; i++)
   {
     assert(node != NULL); // If null, list size was wrong
+    
+    xlb_listener *listener = (xlb_listener*)node->data;
+    assert(node->data_len == sizeof(*listener));
+
     adlb_notif_rank *nrank = &notify->notifs[i + notify->count];
-    nrank->rank = node->data;
-    nrank->id = id;
-    nrank->subscript = sub;
+    xlb_notif_init(nrank, listener->rank, id, sub, listener->work_type);
 
     TRACE("Add notif <%"PRId64">[%.*s] to rank %i", id, (int)sub.length,
           (const char*)sub.key, nrank->rank);
 
-    struct list_i_item *next = node->next;
+    struct list_b_item *next = node->next;
     free(node);
     node = next;
   }
@@ -2190,7 +2196,7 @@ static void free_td_entry(adlb_datum_id id, void *val)
         printf("Error while freeing <%"PRId64">: %d\n", id, dc);
     }
 
-    list_i_clear(&d->listeners);
+    list_b_clear(&d->listeners);
 
     free(d);
   }

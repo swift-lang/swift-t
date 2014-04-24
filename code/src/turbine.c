@@ -482,7 +482,7 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *subscribed)
       if (server == xlb_comm_rank)
       {
         adlb_data_code dc = xlb_data_subscribe(id, sub_convert(subscript),
-                                              xlb_comm_rank, subscribed);
+                                              xlb_comm_rank, 0, subscribed);
         TRACE("xlb_data_subscribe => %i %i", (int)dc, (int)*subscribed);
         if (dc == ADLB_DATA_ERROR_NOT_FOUND)
         {
@@ -532,7 +532,7 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *subscribed)
       if (server == xlb_comm_rank)
       {
         adlb_data_code dc = xlb_data_subscribe(id, ADLB_NO_SUB,
-                                              xlb_comm_rank, subscribed);
+                                 xlb_comm_rank, 0, subscribed);
         TRACE("xlb_data_subscribe => %i %i", (int)dc, (int)*subscribed);
         if (dc == ADLB_DATA_ERROR_NOT_FOUND)
         {

@@ -24,6 +24,7 @@
 #include "adlb-defs.h"
 #include "adlb_types.h"
 #include "data.h"
+#include <list_b.h>
 
 /**
  * Set initial capacity to be fairly small since in practice most
@@ -61,10 +62,18 @@ static inline void xlb_data_init_status(adlb_data_status *s)
 #define ADLB_DATA_INIT_STATUS \
   { .set = 0, .permanent = 0, .release_write_refs = 0}
 
+/*
+ * Rank listening for notification
+ */
+typedef struct {
+  int rank;
+  int work_type;
+} xlb_listener;
+
 typedef struct
 {
   adlb_datum_storage data;
-  struct list_i listeners;
+  struct list_b listeners; /* list of xlb_listeners */
   int read_refcount; // Number of open read refs
   int write_refcount; // Number of open write refs
   adlb_data_type type;
