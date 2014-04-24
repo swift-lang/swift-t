@@ -18,6 +18,7 @@ export MPI=@USE_MPI@
 export MPI_LIB=@USE_MPI_LIB_DIR@
 export TURBINE_LAUNCHER=@USE_LAUNCHER@
 export TURBINE_SH=${TURBINE_HOME}/bin/turbine_sh
+export TURBINE_MAC=@USE_MAC@
 
 TCLLIBPATH=
 if [[ -n ${TURBINE_USER_LIB:-} ]] ; then
@@ -43,7 +44,6 @@ else
 fi
 
 export TCLLIBPATH
-
 
 export TURBINE_MACHINE=@USE_MACHINE@
 
