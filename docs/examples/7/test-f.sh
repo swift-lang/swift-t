@@ -1,6 +1,4 @@
-#!/bin/sh -ex
+#!/bin/sh
 
-./build.sh
-
-turbine -n 4 test-f.tcl
-
+stc -r $PWD test-f.swift test-f.tcl || exit 1
+turbine test-f.tcl

@@ -1,22 +1,27 @@
-namespace eval f {
 
-    proc f_tcl { outputs inputs args } {
+package provide my_pkg 0.0
+
+namespace eval my_pkg {
+
+    # Function called by Swift/T
+    proc f { outputs inputs } {
+        set x [ lindex $inputs  0 ]
+        set y [ lindex $inputs  1 ]
         set z [ lindex $outputs 0 ]
-        set k [ lindex $inputs 0 ]
-        rule $k "f::f_tcl_body $z $k" {*}$args type $turbine::WORK
+        rule [ list $x $y ] "my_pkg::f_body $z $x $y" \
+            type $turbine::WORK
     }
 
-    proc f_tcl_body { z k } {
-        # Retrieve k
-        set k_value [ retrieve_integer $k ]
-        # Look up MPI information
-        set comm [ turbine::c::task_comm ]
-        set rank [ turbine::c::task_rank ]
-        # Run the user code
-        set z_value [ f $comm $k_value ]
-        # Store result
-        if { $rank == 0 } {
-            store_float $z $z_value
-        }
+    # Function called by Swift/T rule
+    proc f_body { z x y } {
+        set x_value [ retrieve_integer $x ]
+        set y_value [ retrieve_integer $y ]
+        set z_value [ f_impl $x_value $y_value ]
+        store_integer $z $z_value
+    }
+
+    # Real Tcl implementation: does actual work
+    proc f_impl { x_value y_value } {
+        return [ expr $x_value + $y_value ]
     }
 }

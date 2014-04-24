@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/zsh -f
 
 # STC: Swift-Turbine Compiler
 
@@ -11,6 +11,9 @@
 
 # Exit codes: (cf. ExitCode.java)
 EXIT_ERROR_SCRIPT=6
+
+# Use this JVM (e.g., /usr/bin/java):
+JVM=unset
 
 STC_HOME=$( cd $( dirname $0 )/.. ; /bin/pwd )
 
@@ -254,6 +257,20 @@ verbose()
   fi
 }
 
+lookup_java()
+{
+  if [[ ${JVM} == "unset" ]]
+  then
+    # Set Java from PATH
+    JVM=$( which java || true )
+    if [[ ${JVM} == *"not found" ]]
+    then
+      # We didn't find it
+      JVM="unset"
+    fi
+  fi
+}
+
 report_version()
 {
   print "STC: Swift-Turbine Compiler"
@@ -261,20 +278,22 @@ report_version()
   cat ${STC_HOME}/turbine-version.txt
   print "TURBINE_INSTALL=${TURBINE_INSTALL}"
   print "TURBINE_HOME=${TURBINE_HOME}"
+  lookup_java
+  print "Using Java: ${JVM}"
   exit 0
 }
 
-while getopts "A:d:D:EhI:l:L:pt:T:O:C:r:uvVx" OPTION
+while getopts "A:d:D:EhI:j:l:L:pt:T:O:C:r:uvVx" OPTION
 do
   case ${OPTION}
     in
-    A)  
+    A)
       STC_ARGS+="-A${OPTARG}"
       ;;
     d) DEBUG_PORT=${OPTARG}
       verbose "DEBUG_PORT: ${DEBUG_PORT}"
       ;;
-    D) 
+    D)
       STC_ARGS+="-D${OPTARG}"
       verbose "MACRO: ${OPTARG}"
       ;;
@@ -286,6 +305,8 @@ do
       help
       ;;
     I) STC_ARGS+="-I${OPTARG}"
+      ;;
+    j) JVM=${OPTARG}
       ;;
     l) LOGFILE=${OPTARG}
       verbose "LOGFILE: ${LOGFILE}"
@@ -350,6 +371,14 @@ then
   export DEBUG=-agentlib:jdwp=transport=dt_socket,server=y,address=${DEBUG_PORT}
 fi
 
+lookup_java
+if [[ ${JVM} == "unset" ]]
+then
+  print "Could not find java!"
+  print "Put java in your PATH or use stc -j /path/to/java"
+  exit 1
+fi
+
 STC=${STC_HOME}/lib/stc.jar
 CLASSPATH="${STC}"
 for lib in stc antlr-3.5-complete-no-st3 log4j-1.2.16 \
@@ -357,7 +386,7 @@ for lib in stc antlr-3.5-complete-no-st3 log4j-1.2.16 \
 do
   CLASSPATH+=":${STC_HOME}/lib/$lib.jar"
 done
-        
+
 TURBINE_VERSION=$( < ${STC_HOME}/turbine-version.txt )
 
 FLAGS=( -ea -Dstc.turbine.version=${TURBINE_VERSION} )
@@ -413,7 +442,7 @@ JVM_FLAGS+="-enableassertions"
 # Group all JVM args together
 ARGS="${JVM_FLAGS} ${DEBUG} ${FLAGS} ${COMPILER_OPTS} -cp ${CLASSPATH}"
 
-java ${=ARGS} ${MAIN} ${STC_ARGS} ${INPUT} ${OUTPUT}
+${JVM} ${=ARGS} ${MAIN} ${STC_ARGS} ${INPUT} ${OUTPUT}
 
 # Return the exit code from the java process
 EXITCODE=${?}

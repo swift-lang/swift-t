@@ -13,7 +13,7 @@ Settings:
 :miscellaneous.newline: \n
 
 = Swift/T Guide
-v0.5.0, November 2013
+v0.5.0, April 2014
 
 The Swift/Turbine Compiler (STC) allows you to write Swift programs
 and run them using Turbine.
@@ -73,6 +73,7 @@ the manual build process).
    the http://swig.org[SWIG web site]
 
 === Installation of Swift/T from Source
+
 Once you have found all prerequisites, we can continue with building
 Swift/T from source.
 
@@ -135,7 +136,8 @@ code is stored in Tcl files +*.tcl+.  After writing the Swift program
 stc program.swift
 ----
 
-This will compile the program to +program.tcl+
+This will compile the program to +program.tcl+.  A second, optional
+argument may be given as an alternate output file name.
 
 Then, to run the program, use Turbine:
 
@@ -146,17 +148,31 @@ turbine -n 4 program.tcl
 See the <<Turbine,Turbine section>> for more information about
 running the program.
 
+[[stc_arguments]]
 STC accepts the following arguments:
 
-+-A+:: Set a command-line argument at compile-time
-+-D+:: Define C preprocessor macro
-+-E+:: Just run the C preprocessor: do not compile the program
-+-I+:: Add a directory to the import search path
-+-O+:: Set optimization level: 0, 1, 2, or 3.  See <<Optimizations>>
-+-p+:: Disable C preprocessor
-+-u+:: Only compile if output file is not up-to-date
-+-v+:: Output version number and exit
-+-V+:: Verbose output
++-A _name_=_value_+:: Set a command-line argument at
+compile-time. This may be found at runtime using the Swift
+<<argv,argument processing>> library. This option enables these
+arguments to be treated as compile-time constants for optimization.
++-D _macro_=_value_+:: Define a C preprocessor macro.
++-E+:: Just run the C preprocessor: do not compile the program.  The
+output goes into the STC output file (the second file name argument).
++-I+:: Add a directory to the import and include search path.
++-O+:: Set optimization level: 0, 1, 2, or 3.  See <<Optimizations>>.
++-j+:: Set the location of the +java+ executable.
++-p+:: Disable the C preprocessor.
++-u+:: Only compile if output file is not up-to-date.
++-v+:: Output version number and exit.
++-V+:: Verbose output.
+
+STC runs as a Java program.  You may use +-j+ to set the Java VM
+executable.  This Java VM must be compatible with the +javac+ used to
+compile STC.
+
+By default, STC runs the user script through the C preprocessor
+(+cpp+), enabling arbitrary macro processing, etc.  The +-D+, +-E+,
++-I+, and +-p+ options are relevant to this feature.
 
 Additional arguments for advanced users/developers:
 
@@ -218,7 +234,8 @@ starting with # are supported:
 == Modules
 
 Swift has a module system that allows you to import function and variable
-definitions into your source file.
+definitions into your source file.  Importing a module will import all
+function and variable definitions from that module into your program.
 ----
 import io;
 import mypackage.mymodule;
@@ -234,27 +251,15 @@ The mechanisms for locating source files is as follows:
 * Swift source files must have a +.swift+ suffix.  E.g. +import io;+
   looks for a file called +io.swift+.
 * In the case of a multi-part import name, E.g. +import mypackage.mymodule+,
-  then, we look for +mymodule.swift+ in subdirectory +mypackage+.
+  then, it looks for +mymodule.swift+ in subdirectory +mypackage+.
 
-Currently Swift has no notion of namespaces or selective import, so
-including a module will import all function and variable definitions
-into your current file.
 
-There are two additional ways to include files.
-
-This syntax is completely equivalent, but is also supported for
-compatibility:
-----
-import mypackage.mymodule;
-----
-
-The +#include+ syntax uses a different mechanism to import the file: it
-uses the C preprocessor to textually include an entire file into the
-current one.  Note that +#include+ will only work if the preprocessor
-is enabled on the current file.
-In contrast to +import+, +#include+ will run the C preprocessor on
-any included modules.  +import+ is recommended over +#include+ unless
-the imported module requires preprocessing.
+The alternative +#include+ statement textually includes an entire
+file using the C preprocessor at the point of the statement.
+Note that +#include+ will only work if the preprocessor is enabled
+on the current file.  In contrast to +import+, +#include+ will run the
+C preprocessor on any included modules.  +import+ is recommended over
++#include+ unless the imported module requires preprocessing.
 ----
 #include <mypackage/mymodule.swift>
 ----
@@ -279,10 +284,14 @@ is dependent only on a literal.  When +y+ is set, +f()+ runs, setting
 +x+.  Then, two invocations of +h()+ execute.  Finally, +z1+ and +z2+
 are set, allowing +r()+ to run.
 
-Variables may be assigned only once.  Multiple assignment is typically
-detected at compile time, although in some cases it will result in a
-run time error.  Unassigned variables that are inputs to functions
-will lead to a stall in progress.
+Variables may be assigned only once.  Multiple assignment is often
+detected at compile time, and will always be detected at run time,
+resulting in a run time error.  If variable is not assigned,
+expressions that depend on the variable cannot execute.  If the variable
+is never assigned during the course of program execution, these
+expressions will never execute.  Upon program completion, Swift/T will
+report the error and print debug information about any unexecuted
+expressions and identifiers of corresponding unassigned variables.
 
 == Composite functions
 
@@ -440,7 +449,7 @@ _greater-than-or-equal-to_.
 
 === Blobs
 
-Blobs represent native byte data.  They are primarily used to pass
+Blobs represent raw byte data.  They are primarily used to pass
 data to and from native code libraries callable from Swift.  They are
 like Swift strings but may contain arbitrary data.
 
@@ -650,6 +659,10 @@ main () {
 }
 ----
 
+*Note:* global constants provide no performance benefit compared with
+variables initialized to constant values at optimization levels +O1+
+or greater.
+
 *Note:* better support is planned in future for more flexible support for
 global variables and code.
 
@@ -677,8 +690,8 @@ else
 }
 ----
 
-As required by dataflow processing, progress blocks on the availability
-of the condition value.
+As required by dataflow processing, neither branch of the conditional can
+execute until the value of the condition expression is available.
 
 ==== Switch statement
 
@@ -699,6 +712,8 @@ switch (a)
 }
 printf("b: %i\n", b);
 ----
+
+*Note:* there is no fall-through between cases in switch statements.
 
 === Iteration
 
@@ -798,7 +813,7 @@ wait(x, y) {
 
 The chaining operator chains statements together so that a
 statement only executes after the previous statement's output
-value is closed.  This is meant to be
+value is closed.  This is
 a more concise way to express dependencies than the +wait+ statement.
 ----
 sleep(1) =>
@@ -807,7 +822,7 @@ sleep(1) =>
   trace("DONE!");
 ----
 
-In order for this to work we define a notion of the *output values*
+Chaining is based on the *output values*
 of a statement.  In the simple case of a function call +f() \=> ...+,
 the output values are the output values of the function.  In the
 case of and assignment +x = f() \=> ...+ or a declaration,
@@ -1014,14 +1029,6 @@ has _flagged_ arguments +v+, +a=file.txt+, +exec="prog thing1
 thing2"+, and +help+. The command has _unflagged_ arguments
 +file2.txt+ and +file4.txt+
 
-In addition to regular run-time arguments, a special feature called
-*compile-time arguments* allows keyword arguments to be provided at
-compile time.  This allows a specialized, optimized version of code to be
-compiled for a particular set of arguments.  Keyword arguments, accessible
-through the +argv+ function, can be specified at compile time with the
-+-A name=val+ argument to STC. Note that if the argument is re-specified
-at run-time, an error will occur.
-
 +argc()+::
 Get count of unflagged arguments
 
@@ -1030,6 +1037,13 @@ _(argument-value)_
 Given a string, returns the flagged argument with that key:
 +
 +argv("a") -> file1.txt+
++
+In addition to regular run-time arguments, the STC _compile-time
+arguments_ feature allows +argv()+ arguments to be provided at compile
+time.  This allows a specialized, optimized version of code to be
+compiled for a particular set of arguments.  See the +-A
+_name_=_value_+ <<stc_arguments,argument>> to +stc+.  Note that if the
+argument is re-specified at run-time, an error will occur.
 
 +argp(int)+::
 _(argument-positional)_
@@ -1043,8 +1057,8 @@ Given 0, returns the program name,
 
 +argv_accept(string...)+::
 
-If program is given command line arguments not contained in given list,
-abort.
+If program is given flagged command line arguments not contained in given
+list, abort.
 E.g., +argv_accept("x")+ would cause program failure at run time
 
 +argv_contains(string) -> boolean+::
@@ -1229,6 +1243,9 @@ stc -r <package directory> ...
 ----
 or set +TURBINE_USER_LIB+ at run time.
 
+* *Tip:* advanced users can also create <<mkstatic,standalone executables>>
+     with compiled code and Tcl code for the extension directly linked in.
+
 ==== Swift/Tcl data type mapping
 
 If you are defining Tcl functions in the way above with inline
@@ -1303,7 +1320,8 @@ App arguments can be:
 
 Standard input, output and error can be redirected to files.
 
-Join files together:
+Here is an example of an app function that joins multiple files
+with the +cat+ utility:
 ----
 import files;
 
@@ -1316,7 +1334,8 @@ main {
 }
 ----
 
-Sleep an arbitrary amount of time:
+Here is an example of an app function that sleeps for an arbitrary
+amount of time:
 ----
 
 app (void signal) sleep (int secs) {
@@ -1482,7 +1501,8 @@ STC performs a range of compiler optimizations that can significantly
 speed up most Swift programs.  The optimization level can be controlled
 by the +-O+ command line option.  The default optimization
 level +-O2+, or the increased optimization level +-O3+ are usually
-the best choices.
+the best choices.  Some applications benefit markedly from +-O3+,
+while others do not, and compile times can increase slightly.
 
 ----
 # No optimizations at all (not recommended)
@@ -1496,7 +1516,7 @@ stc example.swift example.tcl
 # OR
 stc -O2 example.swift example.tcl
 
-# All optimizations (including ones that sometimes hurt performance)
+# All optimizations (also recommended)
 stc -O3 example.swift example.tcl
 ----
 
@@ -1655,7 +1675,7 @@ on more complex systems.
 ==== Build troubleshooting
 
 If +exm-setup.zsh+ does not succeed, you may need to change how it
-tries to configure and compile Swift/T. 
+tries to configure and compile Swift/T.
 
 Troubleshooting a build problem can require a few steps.  The first
 step is to determine why the build failed.  +exm-setup.zsh+ will usually
@@ -1736,7 +1756,7 @@ If you are following the manual build process, configure Turbine with:
 +
 3. Specify +EXM_OPT_BUILD=1+ in +exm-settings.sh+ or configure everything
     with +--enable-fast+.  This disables assertions and other checks
-4. When making performance measurements, always subtract 1 second
+4. When making performance measurements, always subtract 0.1 seconds
    (or the value of +ADLB_EXHAUST_TIME+) from the Turbine run time
    due to the ADLB shutdown protocol, which does not start until the
    system is idle for that amount of time.
@@ -1758,47 +1778,87 @@ static linking.  If not, it is also possible to build an executable with
 a subset of Tcl scripts and code linked in, providing some performance
 benefits.
 
-1. Ensure that static versions of the c-utils, lb, and turbine libraries
-   were built, typically with a +.a+ suffix, e.g. libadlb.a.  These
+NOTE: Ensure that static versions of the +c-utils+, +lb+, and +turbine+ libraries
+   were built, typically with a +.a+ suffix, e.g. +libadlb.a+.  These
    are created by default, unless you specified +DISABLE_STATIC=0+ or
    +--disable-static+.  To build a fully standalone
    executable, you will also need to build a static version of Tcl
    (with the +--disable-shared+ configure option), and static versions
    of any other libraries your own code needs to link with, such
    as your MPI distribution or application code.
-2. Compile your Swift script, e.g. +my.swift+ with +stc+ to a Tcl
-   script, e.g. +my.tcl+.
-3. Write a manifest file, e.g. +my.manifest+, that describes the
-   resources to be bundled.
-   See scripts/mkstatic/example.manifest in the Turbine install directory
-   for examples and descriptions of all the the possible settings.  Note
-   that an empty manifest file corresponds to the +turbine_sh+ utility,
-   which is a replacement for +tclsh+ with required Turbine libraries
-   statically linked in.
-4. Invoke +mkstatic.tcl+ (found under script/mkstatic/mkstatic.tcl in
+
+1. Compile your Swift script
++
+----
+stc my.swift
+----
++
+producing the Turbine Tcl script +my.tcl+.
+
+2. Create a manifest file, e.g. +my.manifest+.  This file describes the
+   resources to be bundled, including the STC-generated code and any
+   user libraries.
++
+To do this, make a copy of +scripts/mkstatic/example.manifest+ from
+the Turbine installation directory.  This file contains examples and
+descriptions of all the the possible settings.  Note that an empty
+manifest file corresponds to the +turbine_sh+ utility, which is a
+replacement for +tclsh+ with required Turbine libraries statically
+linked in.
+
+3. Invoke +mkstatic.tcl+ (found under +scripts/mkstatic/mkstatic.tcl+ in
    the Turbine installation) to translate your Tcl script to a C main
-   program with Tcl source code included.  The minimal invocation is
-   +mkstatic.tcl my.manifest -c my_main.c+.  You will likely wish
-   to include Tcl system libraries with
-   +--include-sys-lib /home/example/tcl-install/lib --tcl-version 8.6+.
-   The Tcl system library directory is the one that contains +init.tcl+
-5. Link together the compiled code into a final executable using your
-  compiler or linker.  The details vary depending on the compiler:
-  we will assume +gcc+.  +mkstatic.tcl+ can help by outputting some of
-  the required link flags, e.g.
-  +mkstatic.tcl my.manifest --link-objs --link-flags+.  Turbine also
-  provides a helper bash script, +turbine-build-config.sh+, that can
-  be sourced to obtain link flags for Swift/T dependencies from the
-  +TURBINE_INCLUDES+ variable.
-  Note that, in the case of static linking, if *libA* depends on *libB*,
-  then the *-lA* flag must precede *-lB* on the command line.  To
+   program (e.g., +my_main.c+) with Tcl source code included.
+   The minimal invocation is
++
+----
+mkstatic.tcl my.manifest -c my_main.c
+----
++
+You will likely wish to include Tcl system libraries with
++--include-sys-lib /home/example/tcl-install/lib --tcl-version 8.6+.
+The Tcl system library directory can be identified by the fact that
+it contains the file +init.tcl+.  This directory must be specified
+with a special flag so that +mkstatic.tcl+ can correctly replace
+the regular Tcl initialization process.
++
+You can include additional libraries and packages with
++--include-lib /home/example/tcl-lib/+.  Any +.tcl+ or +.tm+ source files
+in the directory will be included.  Source-only packages can
+generally be completely linked into the executable, but if a package
+loads shared libraries, only the +pkgIndex.tcl+ file will be linked
+into the executable.  A package with compiled code can be converted to
+support static linking by specifying a package init function, plus
+static library or object files in the manifest file.
++
+4. Link together the compiled C main program with user libraries and
+  Swift/T libraries to produce a final executable.
+  The details vary depending on the compiler:
+  we assume GCC.  +mkstatic.tcl+ may be used to obtain the required
+  linker flags, for example:
++
+----
+mkstatic.tcl my.manifest --link-objs --link-flags
+----
++
+produces the necessary linker flags for your manifest.
++
+The Turbine distribution includes a helper script,
++turbine-build-config.sh+, that can be sourced to obtain linker flags
+for Swift/T dependencies.
++
+** Note that, in the case of static linking, if *libA* depends on *libB*,
+  then the +-lA+ flag must precede +-lB+ on the command line.  To
   actually do the linking, there are two further cases to consider:
-** If building a fully static executable, you can
+*** If building a fully static executable, you can
   provide the +-static+ flag, plus all object files, plus +-L+
   and +-l+ flags for all required library directories and libraries.
-  E.g. +gcc -static script_main.c file1.o file2.o -L/path/to/lib/dir -lsomething ... etc ...+.
-  TODO: note, need additional flags from mkstatic.
-** If you are building an executable that depends on one or more shared
++
+----
+gcc -static script_main.c file1.o file2.o -L/path/to/lib/dir -lsomething ...
+----
++
+*** If you are building an executable that depends on one or more shared
   libraries, you will need to provide the +-dynamic+ flag, and then
   ensure that static libraries are linked statically.  If a shared
   version of a library is available, +gcc+ will use that in preference
@@ -1806,7 +1866,18 @@ benefits.
   +-Wl,-Bstatic+ on the command line before the flags for the libraries
   you wish to statically link, then +-Wl,-Bdynamic+ to reset to
   dynamic linking for any libraries after those.
-  
+
+We have described the most commonly-used options.  A full list of options
+and descriptions can be obtained by invoking +mkstatic.tcl -h+.
+Additional options include:
+
++--main-script+:: Specify Tcl main script (overrides manifest file)
++-r+:: Specify non-standard variable prefix for C code
++-v+:: Print verbose messages
++--deps+:: Generate Makefile include for generating C file
++--link-deps+:: Generate Makefile include for linking executable
++--ignore-no-manifest+:: Pretend empty manifest present
+
 ////
 Local Variables:
 mode: doc

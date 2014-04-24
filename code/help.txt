@@ -21,6 +21,8 @@ OPTIONS
     -I <DIRECTORY>
        Add an include path
        TURBINE_HOME/export is always included to get standard library
+    -j </path/to/java>
+       Set JVM location.  Defaults to PATH entry for java
     -l <LOG>
        Log stc progress to given LOG.
     -L <LOG>
@@ -29,7 +31,7 @@ OPTIONS
        Set compiler optimization level:
          0 - no optimizations
          1,2,3 - standard optimizations (DEFAULT) (this will change later)
-    -p 
+    -p
        Disable preprocessing via CPP
     -r
        Add an RPATH for a Swift/T extension
@@ -46,6 +48,11 @@ OPTIONS
 
 COMPILER OPTION NAMES
 ----------------------------------------
+
+Features:
+--------
+checkpointing: enable checkpointing support (on by default)
+refcounting: enable garbage collection by refcounting (on by default)
 
 Optimization passes:
 -------------------

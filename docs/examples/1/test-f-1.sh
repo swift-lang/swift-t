@@ -1,2 +1,2 @@
-$ tclsh test-f.tcl
+$ tclsh test-f-1.tcl
 5

@@ -1,10 +1,10 @@
-
 import io;
 
-@par @dispatch=WORKER (float z) f(int k) "f" "0.0" "f_tcl";
+(int o) f(int i1, int i2) "my_pkg" "0.0" "f";
 
-main
-{
-  float z = @par=2 f(3);
-  printf("z: %0.3f", z);
+main {
+  int x = 2;
+  int y = 3;
+  int z = f(x,y);
+  printf("sum: %i", z);
 }
