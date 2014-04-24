@@ -52,6 +52,14 @@ proc empty { args } {
     }
 }
 
+# Sometimes it is confusing when an error message reports blankness
+proc something { x } { 
+    if { [ string length [ string trim $x ] ] == 0 } { 
+        return "(nothing)"
+    } 
+    return $x 
+}
+
 # Given: enum E { T1 T2 }
 # Defines global array E with members E(T1)=0, E(T2)=1
 proc enum { name members } {

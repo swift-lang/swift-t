@@ -44,6 +44,8 @@
 
 export TURBINE_HOME=$( cd $( dirname $0 )/../../.. ; /bin/pwd )
 
+source ${TURBINE_HOME}/scripts/turbine-config.sh
+
 source ${TURBINE_HOME}/scripts/submit/run-init.zsh
 
 # Log file for turbine-cobalt settings
@@ -56,8 +58,6 @@ SCRIPT_NAME=$( basename ${SCRIPT} )
 cp ${SCRIPT} ${TURBINE_OUTPUT}
 
 JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt
-
-source ${TURBINE_HOME}/scripts/turbine-config.sh
 
 # Turbine-specific environment (with defaults)
 TURBINE_ENGINES=${TURBINE_ENGINES:-1}
@@ -151,7 +151,7 @@ else
        ${=MODE_ARG}            \
        -o ${TURBINE_OUTPUT}/output.txt \
        -e ${TURBINE_OUTPUT}/output.txt \
-        ${TCLSH} ${TURBINE_OUTPUT}/${SCRIPT_NAME} ${ARGS} | \
+        ${TCLSH} ${TURBINE_OUTPUT}/${SCRIPT_NAME} ${=ARGS} | \
     read JOB_ID
 fi
 
