@@ -810,6 +810,8 @@ AC_MSG_RESULT([using tclConfig.sh in: ${USE_TCL_CFG_DIR}/])
 
 # Make copy of old version since it can be clobbered by tclConfig.sh
 TCL_OLD_VERSION="$TCL_VERSION"
+
+# Source tclConfig.sh to obtain Tcl settings
 source ${USE_TCL_CFG_DIR}/tclConfig.sh
 if [[ ${?} != 0 ]]
 then
@@ -865,10 +867,20 @@ AC_ARG_WITH(tcl-syslib-dir,
           root or tcl${TCL_VERSION} subdirectory]]),
         [USE_TCL_SYSLIB_DIR="${withval}"])
 
+mktemp_system()
+{
+    if [[ ${USE_MAC} == 0 ]] 
+    then 
+        mktemp
+    else 
+        mktemp -t TURBINE
+    fi
+}
+
 if [[ -z "${USE_TCL_SYSLIB_DIR}" ]]
 then
   # Put script in file as way to get tclsh to crash on invalid script
-  tmp_script=$(mktemp)
+  tmp_script=$(mktemp_system)
 
   # Try to find out the library directory from tclsh
   echo 'puts [[ file dir [ info library ] ]]' > ${tmp_script}
@@ -977,7 +989,13 @@ AC_SUBST(CFLAGS)
 AC_SUBST(LDFLAGS)
 
 # We take system libraries out of arguments to the linker (#546)
-ldconfig -v 2>/dev/null | grep -vP '\t' | cut -d : -f 1 > system-libs.txt
+if [[ ${USE_MAC} == 0 ]] 
+then
+    # This does not work on the Mac
+    ldconfig -v 2>/dev/null | grep -vP '\t' | cut -d : -f 1 > system-libs.txt
+else 
+     touch system-libs.txt
+fi
 
 AC_CONFIG_FILES(
         src/turbine/turbine-version.h
