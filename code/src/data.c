@@ -790,6 +790,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
     TRACE("add container_ref %"PRId64"[%.*s]", id,
           (int)subscript.length, subscript.key);
     table_bp_add(&container_references, key, key_len, listeners);
+    d->status.subscript_notifs = true;
   }
   else
   {
