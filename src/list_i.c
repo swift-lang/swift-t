@@ -246,7 +246,7 @@ create_item(int data)
 struct list_i_item*
 list_i_unique_insert(struct list_i* target, int data)
 {
-  struct list_i_item* new_item;
+  struct list_i_item* new_item = NULL;
   if (target->size == 0)
   {
     new_item = create_item(data);
