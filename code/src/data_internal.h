@@ -103,18 +103,18 @@ typedef struct
 
 /*
   Macro for printf arguments matching ADLB_PRI_DATUM.
-  Argument is an adlb_datum value
+  Arguments are id and symbol
  */
-#define ADLB_PRI_DATUM_ARGS(d) \
-  (d).id, ADLB_Debug_symbol((d).debug_symbol)
+#define ADLB_PRI_DATUM_ARGS(id, symbol) \
+  (id), ADLB_Debug_symbol(symbol)
 
 /*
   Macro for printf arguments matching ADLB_PRI_DATUM.
-  Arguments are an adlb_datum value, and a subscript value
+  Arguments are id and symbol and a subscript value
  */
-#define ADLB_PRI_DATUM_SUB_ARGS(d, sub) \
-  (d).id, ADLB_Debug_symbol((d).debug_symbol), \
-  (int)((sub).length), (const char*)((sub).key)
+#define ADLB_PRI_DATUM_SUB_ARGS(id, symbol, sub) \
+  (id), (int)((sub).length), (const char*)((sub).key), \
+  ADLB_Debug_symbol(symbol)
 
 
 adlb_data_code

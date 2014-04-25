@@ -161,7 +161,6 @@ static inline adlb_refcounts adlb_rc_negate(adlb_refcounts rc)
 typedef uint32_t adlb_debug_symbol;
 #define ADLB_DEBUG_SYMBOL_NULL 0u
 
-
 // Prefer to tightly pack these structs
 #pragma pack(push, 1)
 typedef struct
