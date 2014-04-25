@@ -254,10 +254,13 @@ xlb_data_create(adlb_datum_id id, adlb_data_type type,
   check_verbose(id != ADLB_DATA_ID_NULL, ADLB_DATA_ERROR_INVALID,
                 "ERROR: attempt to create data: id=%"PRId64"\n", id);
 
-  DEBUG("Create <%"PRId64"> t:%s r:%i w:%i", id, ADLB_Data_type_tostring(type),
-                                props->read_refcount, props->write_refcount);
+  DEBUG("Create "ADLB_PRI_DATUM" t:%s r:%i w:%i", 
+        ADLB_PRI_DATUM_ARGS(id, props->symbol),
+        ADLB_Data_type_tostring(type),
+        props->read_refcount, props->write_refcount);
   if (type == ADLB_DATA_TYPE_CONTAINER)
-    DEBUG("Create container <%"PRId64"> k:%s v:%s", id,
+    DEBUG("Create container "ADLB_PRI_DATUM" k:%s v:%s",
+          ADLB_PRI_DATUM_ARGS(id, props->symbol),
           ADLB_Data_type_tostring(type_extra->CONTAINER.key_type),
           ADLB_Data_type_tostring(type_extra->CONTAINER.val_type));
 
@@ -268,7 +271,8 @@ xlb_data_create(adlb_datum_id id, adlb_data_type type,
 
   if (props->read_refcount <= 0 && props->write_refcount <= 0)
   {
-    DEBUG("Skipped creation of <%"PRId64">", id);
+    DEBUG("Skipped creation of "ADLB_PRI_DATUM,
+          ADLB_PRI_DATUM_ARGS(id, props->symbol));
     return ADLB_DATA_SUCCESS;
   }
 
@@ -276,6 +280,7 @@ xlb_data_create(adlb_datum_id id, adlb_data_type type,
   check_verbose(d != NULL, ADLB_DATA_ERROR_OOM,
                 "Out of memory while allocating datum");
   d->type = type;
+  d->symbol = props->symbol;
   list_i_init(&d->listeners);
 
   table_lp_add(&tds, id, d);
@@ -329,13 +334,15 @@ xlb_data_exists(adlb_datum_id id, adlb_subscript subscript, bool* result)
         *result = false;
       else
         *result = true;
-      DEBUG("Exists: <%"PRId64"> => %s", id, bool2string(*result));
+      DEBUG("Exists: "ADLB_PRI_DATUM" => %s",
+        ADLB_PRI_DATUM_ARGS(id, d ? d->symbol : ADLB_DEBUG_SYMBOL_NULL),
+        bool2string(*result));
   }
   else
   {
     check_verbose(d != NULL, ADLB_DATA_ERROR_INVALID,
-        "<%"PRId64"> does not exist, can't check existence of subscript",
-        id);
+        ADLB_PRI_DATUM" does not exist, can't check existence of subscript",
+        ADLB_PRI_DATUM_ARGS(id, ADLB_DEBUG_SYMBOL_NULL));
     const adlb_datum_storage *lookup_result;
     adlb_data_type result_type;
     dc = lookup_subscript(id, &d->data, subscript, d->type,
@@ -344,8 +351,8 @@ xlb_data_exists(adlb_datum_id id, adlb_subscript subscript, bool* result)
                           
     *result = (lookup_result != NULL);
     // TODO: support binary keys
-    DEBUG("Exists: <%"PRId64">[%.*s] => %s", id, (int)subscript.length,
-            (const char*)subscript.key, bool2string(*result));
+    DEBUG("Exists: "ADLB_PRI_DATUM_SUB" => %s", ADLB_PRI_DATUM_SUB_ARGS(
+            id, d->symbol, subscript), bool2string(*result));
   }
   return ADLB_DATA_SUCCESS;
 }
@@ -2203,18 +2210,20 @@ static void free_cref_entry(const void *key, size_t key_len, void *val)
 
   for (curr = listeners->head; curr != NULL; curr = curr->next)
   {
-    // TODO: support binary key
-    adlb_datum_id id;
-    adlb_subscript sub;
-    read_id_sub(key, key_len, &id, &sub);
+    adlb_datum_id src_id;
+    adlb_subscript src_sub, dst_sub;
+    adlb_debug_symbol src_symbol, dst_symbol;
+    read_id_sub(key, key_len, &src_id, &src_sub);
+    src_symbol = dst_symbol = ADLB_DEBUG_SYMBOL_NULL; // TODO
     
-    container_reference *data = curr->data;
-    printf("UNFILLED CONTAINER REFERENCE <%"PRId64">[%.*s] => "
-           "<%"PRId64">[%.*s]\n", id, (int)sub.length,
-           (const char*)sub.key, data->id, (int)data->subscript_len,
-           (const char*)data->subscript_data);
-    free(curr->data);
-    curr->data = NULL;
+    container_reference dst = curr->data;
+    dst_sub.length = dst->subscript_len;
+    dst_sub.key = dst->subscript_data;
+
+    printf("UNFILLED CONTAINER REFERENCE "
+          ADLB_PRI_DATUM_SUB" => "ADLB_PRI_DATUM"\n",
+          ADLB_PRI_DATUM_SUB_ARGS(src_id, src_symbol, src_sub),
+          ADLB_PRI_DATUM_SUB_ARGS(dst->id, dst_symbol, dst_sub));
   }
   list_free(listeners);
 }
@@ -2267,12 +2276,14 @@ report_leaks()
       // Distinguish between leaked data, and unassigned data
       if (d->write_refcount == 0)
       {
-        DEBUG("LEAK: %"PRId64"", item->key);
+        DEBUG("LEAK: "ADLB_PRI_DATUM, ADLB_PRI_DATUM_ARGS(item->key,
+                                                        d->symbol));
         if (report_leaks_setting)
         {
           char *repr = ADLB_Data_repr(&d->data, d->type);
-          printf("LEAK DETECTED: <%"PRId64"> t:%s r:%i w:%i v:%s\n",
-                item->key, ADLB_Data_type_tostring(d->type),
+          printf("LEAK DETECTED: "ADLB_PRI_DATUM" t:%s r:%i w:%i v:%s\n",
+                ADLB_PRI_DATUM_ARGS(item->key, d->symbol),
+                ADLB_Data_type_tostring(d->type),
                 d->read_refcount, d->write_refcount,
                 repr);
           free(repr);
@@ -2280,10 +2291,12 @@ report_leaks()
       }
       else
       {
-        DEBUG("UNSET VARIABLE: %"PRId64"", item->key);
+        DEBUG("UNSET VARIABLE: "ADLB_PRI_DATUM, ADLB_PRI_DATUM_ARGS(
+                                              item->key, d->symbol));
         if (report_leaks_setting)
         {
-          printf("UNSET VARIABLE DETECTED: <%"PRId64">\n", item->key);
+          printf("UNSET VARIABLE DETECTED: "ADLB_PRI_DATUM"\n",
+              ADLB_PRI_DATUM_ARGS(item->key, d->symbol));
         }
       }
     }

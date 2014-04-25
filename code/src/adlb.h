@@ -52,7 +52,8 @@ adlb_code ADLB_Server(long max_memory);
 
 adlb_code ADLB_Version(version* output);
 
-adlb_code ADLB_Hostmap_stats(uint* count, uint* name_max);
+adlb_code ADLB_Hostmap_stats(unsigned int* count,
+                             unsigned int* name_max);
 
 adlb_code ADLB_Hostmap_lookup(const char* name, int count,
                               int* output, int* actual);
@@ -64,8 +65,8 @@ adlb_code ADLB_Hostmap_lookup(const char* name, int count,
    @param offset: Start with this hostname
    @param actual: OUT Number of hostnames written
  */
-adlb_code ADLB_Hostmap_list(char* output, uint max, uint offset,
-                            int* actual);
+adlb_code ADLB_Hostmap_list(char* output, unsigned int max,
+                            unsigned int offset, int* actual);
 
 adlb_code ADLBP_Put(const void* payload, int length, int target, int answer,
                     int type, int priority, int parallelism);
@@ -135,6 +136,25 @@ adlb_code ADLB_Create_multiset(adlb_datum_id id,
                                 adlb_data_type val_type, 
                                 adlb_create_props props,
                                 adlb_datum_id *new_id);
+/*
+  Add debug symbol entry, overwriting any existing entry.
+  
+  symbol: debug symbol identifier, should not be ADLB_DEBUG_SYMBOL_NULL
+  data: associated null-terminated data string, will be copied.
+ */
+adlb_code ADLBP_Add_debug_symbol(adlb_debug_symbol symbol,
+                                 const char *data);
+adlb_code ADLB_Add_debug_symbol(adlb_debug_symbol symbol,
+                                 const char *data);
+
+/*
+  Retrieve debug symbol entry.
+  
+  symbol: a debug symbol identifier
+  return: entry previous added for symbol, or NULL if not present
+ */
+const char *ADLBP_Debug_symbol(adlb_debug_symbol symbol);
+const char *ADLB_Debug_symbol(adlb_debug_symbol symbol);
 
 adlb_code ADLBP_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
                        adlb_refcounts decr);
