@@ -338,7 +338,13 @@ run_test()
   then
     print "executing: $( basename ${CHECK_SCRIPT} )"
     pushd $STC_TESTS_DIR
-    ./${CHECK_SCRIPT} >& ${CHECK_OUTPUT} || return $TEST_TRUE_FAIL
+    ./${CHECK_SCRIPT} >& ${CHECK_OUTPUT}
+    CHECK_CODE=$?
+    if [ ${CHECK_CODE} != 0 ]
+    then
+      cat ${CHECK_OUTPUT}
+      return $TEST_TRUE_FAIL
+    fi
     popd
   fi
 
