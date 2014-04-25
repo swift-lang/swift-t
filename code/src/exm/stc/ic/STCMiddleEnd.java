@@ -1064,6 +1064,14 @@ public class STCMiddleEnd {
     
     waitBlock.addStatements(instBuffer);
   }
+  
+  /**
+   * Should be called if checkpointing is required so that it can be
+   * correctly initialized.
+   */
+  public void requireCheckpointing() {
+    program.requireCheckpointing();
+  }
 
   public void checkpointWriteEnabled(Var v) {
     assert(Types.isBoolVal(v));

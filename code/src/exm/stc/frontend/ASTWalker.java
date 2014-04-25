@@ -1500,6 +1500,7 @@ public class ASTWalker {
                                        fdecl.getFunctionType());
       
       context.setFunctionProperty(function, FnProp.CHECKPOINTED);
+      backend.requireCheckpointing();
     } else {
       throw new InvalidAnnotationException(context, "function", annotation, false);
     }
