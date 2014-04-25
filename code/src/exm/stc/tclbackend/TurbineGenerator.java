@@ -294,7 +294,7 @@ public class TurbineGenerator implements CompilerBackend {
   }
   
   @Override
-  public void turbineStartup()
+  public void turbineStartup(boolean checkpointRequired)
   {
     tree.add(new Command("turbine::defaults"));
     tree.add(new Command("turbine::init $engines $servers \"Swift\""));
@@ -303,7 +303,9 @@ public class TurbineGenerator implements CompilerBackend {
         tree.add(Turbine.enableReferenceCounting());
       }
       
-      if (Settings.getBoolean(Settings.ENABLE_CHECKPOINTING)) {
+      boolean xptEnabled = Settings.getBoolean(Settings.ENABLE_CHECKPOINTING) 
+    		  				&& checkpointRequired ;
+      if (xptEnabled) {
         tree.add(Turbine.xptInit());
       }
       
@@ -319,7 +321,7 @@ public class TurbineGenerator implements CompilerBackend {
                                           " " + CONSTINIT_FUNCTION_NAME));
       tree.add(new Command("turbine::finalize"));
   
-      if (Settings.getBoolean(Settings.ENABLE_CHECKPOINTING)) {
+      if (xptEnabled) {
         tree.add(Turbine.xptFinalize());
       }
     } catch (InvalidOptionException e) {

@@ -103,6 +103,11 @@ public class ICTree {
     private final List<StructType> structTypes =
                                             new ArrayList<StructType>();
     
+    /**
+     * If checkpointing required
+     */
+    private boolean checkpointRequired = false;
+    
     public void generate(Logger logger, CompilerBackend gen)
         throws UserException {
       Map<String, List<Boolean>> blockVectors = new 
@@ -143,7 +148,7 @@ public class ICTree {
       }
       logger.debug("Done generating functions");
   
-      gen.turbineStartup();
+      gen.turbineStartup(checkpointRequired);
       
       constants.generate(logger, gen);
     }
@@ -260,6 +265,13 @@ public class ICTree {
     
     public GlobalConstants constants() {
       return constants;
+    }
+    
+    /** 
+     * Should be called if a function uses checkpointing
+     */
+    public void requireCheckpointing() {
+      this.checkpointRequired = true;
     }
     
     @Override

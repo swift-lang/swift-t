@@ -38,7 +38,7 @@ public interface CompilerBackend {
 
   public void header();
 
-  public void turbineStartup();
+  public void turbineStartup(boolean checkpointRequired);
 
   public void requirePackage(String pkg, String version);
   
