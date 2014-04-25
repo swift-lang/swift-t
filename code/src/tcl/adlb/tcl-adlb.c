@@ -4020,7 +4020,7 @@ ADLB_Xpt_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
                 "Error while initializing checkpointing");
   return TCL_OK;
 #else
-  TCL_RETURN_ERROR("Checkpointing not enabled");
+  TCL_RETURN_ERROR("Checkpointing not enabled in Turbine build");
   return TCL_ERROR;
 #endif
 }
@@ -4038,7 +4038,7 @@ ADLB_Xpt_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(ac == ADLB_SUCCESS, "Error while finalizing checkpointing");
   return TCL_OK;
 #else
-  TCL_RETURN_ERROR("Checkpointing not enabled");
+  TCL_RETURN_ERROR("Checkpointing not enabled in Turbine build");
   return TCL_ERROR;
 #endif
 }
@@ -4094,7 +4094,7 @@ ADLB_Xpt_Write_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(ac == ADLB_SUCCESS, "Error writing checkpoint");
   return TCL_OK;
 #else
-  TCL_RETURN_ERROR("Checkpointing not enabled");
+  TCL_RETURN_ERROR("Checkpointing not enabled in Turbine build");
   return TCL_ERROR;
 #endif
 }
@@ -4149,7 +4149,7 @@ ADLB_Xpt_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_SetObjResult(interp, Tcl_NewIntObj(found));
   return TCL_OK;
 #else
-  TCL_RETURN_ERROR("Checkpointing not enabled");
+  TCL_RETURN_ERROR("Checkpointing not enabled in Turbine build");
   return TCL_ERROR;
 #endif
 }
@@ -4406,7 +4406,7 @@ ADLB_Xpt_Reload_Cmd(ClientData cdata, Tcl_Interp *interp,
   Tcl_SetObjResult(interp, stat_dict);
   return TCL_OK;
 #else
-  TCL_RETURN_ERROR("Checkpointing not enabled");
+  TCL_RETURN_ERROR("Checkpointing not enabled in Turbine build");
   return TCL_ERROR;
 #endif
 }

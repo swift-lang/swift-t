@@ -375,9 +375,15 @@ namespace eval turbine {
     }
 
     # return the filename of a unique temporary file
-    # TODO: Do this w/o exec
+    # TODO: Do this w/o exec #364
     proc mktemp {} {
-        set result [ exec mktemp --suffix=.turbine ]
+        global env
+        # TODO: re-add this argument (#364): --suffix=.turbine
+        if [ string equal $env(TURBINE_MAC) "no" ] { 
+            set result [ exec mktemp --suffix=.turbine ]
+        } else {
+            set result [ exec mktemp -t turbine.XXXXXX ]
+        }
         # puts "mktemp: $result"
         return $result
     }

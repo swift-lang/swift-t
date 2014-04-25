@@ -622,11 +622,26 @@ AC_ARG_ENABLE(shared,
     ])
 AC_SUBST(ENABLE_SHARED)
 
+ENABLE_STATIC_PKG=1
+AC_ARG_ENABLE(static-pkg,
+    AS_HELP_STRING([--enable-static-pkg],
+       [Create statically linkable Turbine Tcl package with Tcl srouce.
+        Default: yes]),
+    [
+       if test "$enableval" = no ; then
+         ENABLE_STATIC_PKG=0
+       elif test "$enable_val" = yes ; then
+         ENABLE_STATIC_PKG=1
+       fi
+    ])
+AC_SUBST(ENABLE_STATIC_PKG)
+
 ENABLE_STATIC=1
 AC_ARG_ENABLE(static,
     AS_HELP_STRING([--enable-static],
-                   [Default: enabled]),
-    [
+             [Create static libraries.
+              Default: enabled]),
+  [
        if test "$enableval" = no ; then
          ENABLE_STATIC=0
        fi
@@ -810,6 +825,8 @@ AC_MSG_RESULT([using tclConfig.sh in: ${USE_TCL_CFG_DIR}/])
 
 # Make copy of old version since it can be clobbered by tclConfig.sh
 TCL_OLD_VERSION="$TCL_VERSION"
+
+# Source tclConfig.sh to obtain Tcl settings
 source ${USE_TCL_CFG_DIR}/tclConfig.sh
 if [[ ${?} != 0 ]]
 then
@@ -865,10 +882,20 @@ AC_ARG_WITH(tcl-syslib-dir,
           root or tcl${TCL_VERSION} subdirectory]]),
         [USE_TCL_SYSLIB_DIR="${withval}"])
 
+mktemp_system()
+{
+    if [[ ${USE_MAC} == "no" ]] 
+    then 
+        mktemp
+    else 
+        mktemp -t TURBINE
+    fi
+}
+
 if [[ -z "${USE_TCL_SYSLIB_DIR}" ]]
 then
   # Put script in file as way to get tclsh to crash on invalid script
-  tmp_script=$(mktemp)
+  tmp_script=$(mktemp_system)
 
   # Try to find out the library directory from tclsh
   echo 'puts [[ file dir [ info library ] ]]' > ${tmp_script}
@@ -977,7 +1004,13 @@ AC_SUBST(CFLAGS)
 AC_SUBST(LDFLAGS)
 
 # We take system libraries out of arguments to the linker (#546)
-ldconfig -v 2>/dev/null | grep -vP '\t' | cut -d : -f 1 > system-libs.txt
+if [[ ${USE_MAC} == "no" ]] 
+then
+    # This does not work on the Mac
+    ldconfig -v 2>/dev/null | grep -vP '\t' | cut -d : -f 1 > system-libs.txt
+else 
+     touch system-libs.txt
+fi
 
 AC_CONFIG_FILES(
         src/turbine/turbine-version.h
