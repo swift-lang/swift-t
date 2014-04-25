@@ -39,6 +39,7 @@ typedef struct
   adlb_data_status status;
   int read_refcount; // Number of open read refs
   int write_refcount; // Number of open write refs
+  adlb_debug_symbol symbol; // TODO: remove for opt build?
   adlb_datum_storage data;
   struct list_i listeners;
 } adlb_datum;
@@ -99,6 +100,22 @@ typedef struct
   array = realloc((array), sizeof((array)[0]) * (new_count));          \
   check_verbose(array != NULL, ADLB_DATA_ERROR_OOM, "out of memory");  \
 }
+
+/*
+  Macro for printf arguments matching ADLB_PRI_DATUM.
+  Argument is an adlb_datum value
+ */
+#define ADLB_PRI_DATUM_ARGS(d) \
+  (d).id, ADLB_Debug_symbol((d).debug_symbol)
+
+/*
+  Macro for printf arguments matching ADLB_PRI_DATUM.
+  Arguments are an adlb_datum value, and a subscript value
+ */
+#define ADLB_PRI_DATUM_SUB_ARGS(d, sub) \
+  (d).id, ADLB_Debug_symbol((d).debug_symbol), \
+  (int)((sub).length), (const char*)((sub).key)
+
 
 adlb_data_code
 xlb_datum_lookup(adlb_datum_id id, adlb_datum **d);

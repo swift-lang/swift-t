@@ -234,6 +234,7 @@ xlb_data_create(adlb_datum_id id, adlb_data_type type,
   check_verbose(d != NULL, ADLB_DATA_ERROR_OOM,
                 "Out of memory while allocating datum");
   d->type = type;
+  d->symbol = props->symbol;
   list_i_init(&d->listeners);
 
   table_lp_add(&tds, id, d);
