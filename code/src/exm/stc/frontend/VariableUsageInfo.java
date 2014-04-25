@@ -551,7 +551,7 @@ public class VariableUsageInfo {
         this.assigned = Ternary.TRUE;
       } else {
         assert(op == AssignOp.APPEND);
-        this.assigned = Ternary.TRUE;
+        this.appended = Ternary.TRUE;
       }
       return res;
     }
