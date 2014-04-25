@@ -1,14 +1,16 @@
 // Regression test for optimizations that might incorrectly execute function
-// on wrong process
+// on wrong process.
+// This test updated for merged engine/server
 
+// Check that worker task doesn't run twice in same context
 @dispatch=WORKER
 (int o) worker_task (int i) "turbine" "0.0.1" [
-  "set <<o>> <<i>>; if { $turbine::mode != \"WORKER\" } { error $turbine::mode }"
+  "set <<o>> <<i>>; if { $turbine::mode != \"WORKER\" } { error $turbine::mode }; if [ info exists __ranhere ] { error \"Already ran here \" } ; set __ranhere 1"
 ];
 
 @dispatch=CONTROL
 (int o) control_task (int i) "turbine" "0.0.1" [
-  "set <<o>> <<i>>; if { $turbine::mode != \"ENGINE\" } { error $turbine::mode }"
+  "set <<o>> <<i>>; if { $turbine::mode != \"WORKER\" } { error $turbine::mode }"
 ];
 
 import assert;
