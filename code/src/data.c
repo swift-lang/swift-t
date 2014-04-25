@@ -2216,12 +2216,12 @@ static void free_cref_entry(const void *key, size_t key_len, void *val)
     read_id_sub(key, key_len, &src_id, &src_sub);
     src_symbol = dst_symbol = ADLB_DEBUG_SYMBOL_NULL; // TODO
     
-    container_reference dst = curr->data;
+    container_reference *dst = curr->data;
     dst_sub.length = dst->subscript_len;
     dst_sub.key = dst->subscript_data;
 
     printf("UNFILLED CONTAINER REFERENCE "
-          ADLB_PRI_DATUM_SUB" => "ADLB_PRI_DATUM"\n",
+          ADLB_PRI_DATUM_SUB" => "ADLB_PRI_DATUM_SUB"\n",
           ADLB_PRI_DATUM_SUB_ARGS(src_id, src_symbol, src_sub),
           ADLB_PRI_DATUM_SUB_ARGS(dst->id, dst_symbol, dst_sub));
   }
