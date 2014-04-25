@@ -503,6 +503,7 @@ public class VariableUsageInfo {
       if (logger.isTraceEnabled()) {
         logger.trace("\nASSIGN: " + this.name + " " + fieldPath);
       }
+
       List<Violation> violations;
       if (fieldPath != null && fieldPath.size() > 0) {
         violations = structAssign(context, fieldPath, arrayDepth, op);
@@ -541,7 +542,7 @@ public class VariableUsageInfo {
       }
       
       if (op == AssignOp.ASSIGN) {
-        if (Types.isStruct(type)) {
+        if (this.structFields != null) {
           // All internal fields are assigned with this action
           for (VInfo fieldVI: this.structFields.values()) {
             fieldVI.plainAssign(context, op);
@@ -683,21 +684,26 @@ public class VariableUsageInfo {
       }
       
       mergeBranchReadInfo(branches, exhaustive);
-
-      ArrayList<Violation> errs = mergeBranchWriteInfo(context, branches, exhaustive);
-
+      
+      ArrayList<Violation> errs = new ArrayList<Violation>();
       if (structFields != null) {
-        for (VInfo fieldVI: this.structFields.values()) {
-          List<VInfo> vis = new ArrayList<VInfo>(branches.size());
+        for (Entry<String, VInfo> fieldE: this.structFields.entrySet()) {
+          String fieldName = fieldE.getKey();
+          VInfo fieldVI = fieldE.getValue();
+          List<VInfo> fieldBranches = new ArrayList<VInfo>(branches.size());
           for (int i = 0; i < branches.size(); i++) {
-            vis.add(branches.get(i).getFieldVInfo(fieldVI.getName()));
+            VInfo branchVI = branches.get(i).getFieldVInfo(fieldName);
+            assert(branchVI != null);
+            fieldBranches.add(branchVI);
           }
 
           ArrayList<Violation> mergeErrs = fieldVI.mergeBranchInfo(context,
-                                                     branches, exhaustive);
+                                                 fieldBranches, exhaustive);
           errs.addAll(mergeErrs);
         }
       }
+
+      errs.addAll(mergeBranchWriteInfo(context, branches, exhaustive));
       return errs;
     }
 
@@ -839,6 +845,7 @@ public class VariableUsageInfo {
               + " might be assigned twice", context));
         }
         this.assigned = Ternary.or(this.assigned, assignedInBranch);
+
         return result;
       }
     }
@@ -851,6 +858,7 @@ public class VariableUsageInfo {
       if (Types.isStruct(this.type)) {
 
         ArrayList<Violation> result = new ArrayList<Violation>();
+        Ternary assigned = isAssigned();
         if (assigned == Ternary.TRUE) {
           return result;
         } else if (assigned == Ternary.MAYBE) {
@@ -886,6 +894,8 @@ public class VariableUsageInfo {
 
     private void mergeStructFieldWriteInfo(Context context) {
       assert(structFields != null);
+      // TODO: maybe useful for some cases. Currently doesn't work for array fields
+      /*
       Ternary allFieldsAssigned = Ternary.TRUE;
       for (VInfo vi: structFields.values()) {
         allFieldsAssigned = Ternary.and(allFieldsAssigned, vi.assigned);
@@ -896,6 +906,7 @@ public class VariableUsageInfo {
           this.assigned == Ternary.FALSE) {
         this.assigned = Ternary.MAYBE;
       }
+      */
     }
 
     public Type getType() {
