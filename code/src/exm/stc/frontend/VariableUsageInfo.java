@@ -860,26 +860,31 @@ public class VariableUsageInfo {
         ArrayList<Violation> result = new ArrayList<Violation>();
         Ternary assigned = isAssigned();
         if (assigned == Ternary.TRUE) {
+          // No problems
           return result;
-        } else if (assigned == Ternary.MAYBE) {
+        } else if (assigned == Ternary.MAYBE &&
+                   isRead() != Ternary.FALSE) {
          result.add(new Violation(ViolationType.WARNING,
              this.getName() + " might not be assigned", context));
-         return result;
+         // May be problems, continue checking
         }
-
+        
         for (VInfo vi: structFields.values()) {
+          System.err.println(vi.name + " ASSIGNED " + vi.isAssigned()
+                             + " READ " + vi.isRead());  
           if (vi.isAssigned() != Ternary.TRUE) {
             if (vi.isAssigned() == Ternary.FALSE &&
                   vi.isRead() == Ternary.TRUE) {
               // certain deadlock
               result.add(new Violation(ViolationType.ERROR,
                   "Deadlock detected: " + vi.getName() + " is "
-                 + " never assigned but is read", context));
+                 + "never assigned but is read", context));
             } else if (assigned != Ternary.FALSE) {
               // If we might write somebut not all
               result.add(new Violation(ViolationType.WARNING,
                   vi.getName() + " is not guaranteed to be written to"
-                  + ", this has potential to cause havoc!", context));
+                  + ", this may result in an incomplete struct value",
+                  context));
             }
           }
           List<Violation> more = vi.isIncompletelyDefinedStruct(context);
