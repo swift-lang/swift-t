@@ -46,6 +46,9 @@ main {
   a = b + round(sum_float(A)/itof(size(A)));
 }
 
+
+// NOTE: this test sometimes fails since i isn't sorted into
+// canonical order
 @checkpoint
 (bag<string[]> o) g (bag<int> i[]) {
   trace("g executed");
