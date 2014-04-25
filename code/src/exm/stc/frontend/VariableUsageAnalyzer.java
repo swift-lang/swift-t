@@ -95,15 +95,15 @@ class VariableUsageAnalyzer {
     
     // Add input and output variables to initial variable info
     for (Var i: iList) {
-      argVui.declare(context, i.name(), i.type(), false);
-      argVui.assign(context, i.name(), AssignOp.ASSIGN);
+      argVui.declare(fnContext, i.name(), i.type(), false);
+      argVui.assign(fnContext, i.name(), AssignOp.ASSIGN);
       fnContext.declareVariable(i.type(), i.name(), i.storage(), 
             i.defType(), VarProvenance.unknown(), i.mappedDecl());
     }
     for (Var o: oList) {
-      argVui.declare(context, o.name(), o.type(), false);
+      argVui.declare(fnContext, o.name(), o.type(), false);
       // We should assume that return variables will be read
-      argVui.read(context, o.name());
+      argVui.read(fnContext, o.name());
       fnContext.declareVariable(o.type(), o.name(), o.storage(), 
           o.defType(), VarProvenance.unknown(), o.mappedDecl());
     }
@@ -278,6 +278,7 @@ class VariableUsageAnalyzer {
 
     // Collect and merge up info from branches
     ArrayList<VariableUsageInfo> ifBranchVus = new ArrayList<VariableUsageInfo>();
+
     ifBranchVus.add(walkBlock(new LocalContext(context),
         ifStmt.getThenBlock(), vu.createNested()));
     if (ifStmt.hasElse()) {

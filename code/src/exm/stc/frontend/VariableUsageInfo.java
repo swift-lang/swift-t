@@ -15,16 +15,26 @@
  */
 package exm.stc.frontend;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
+import org.apache.log4j.Logger;
+
+import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.exceptions.VariableUsageException;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.StructType;
-import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.StructType.StructField;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.frontend.tree.Assignment.AssignOp;
 
@@ -214,7 +224,7 @@ public class VariableUsageInfo {
         // v might be read
         if (Types.isArray(v.type)) {
           // ok to refer to entire array if not written
-          // Could do more sophisticated analysis of indices, but best toa void
+          // Could do more sophisticated analysis of indices, but best to avoid
           // emitting too much warning spam
         } else if (Types.isBag(v.type)) {
           // ok not to add anything
@@ -377,9 +387,9 @@ public class VariableUsageInfo {
       this.hasMapping = mapped;
       if (Types.isStruct(type)) {
         structFields = new HashMap<String, VInfo>();
-        for (StructField f:  ((StructType)type).getFields()) {
-          structFields.put(f.getName(),
-              new VInfo(f.getType(), mapped, name + "." + f.getName(), locallyDeclared));
+        for (StructField f:  ((StructType)type.getImplType()).getFields()) {
+          VInfo fieldVInfo = new VInfo(f.getType(), mapped, name + "." + f.getName(), locallyDeclared);
+          structFields.put(f.getName(), fieldVInfo);
         }
       } else {
         structFields = null;
@@ -465,7 +475,7 @@ public class VariableUsageInfo {
         }
       }
 
-      return new VInfo(type, hasMapping, structFields,
+      return new VInfo(type, hasMapping, structFieldsNew,
           locallyDeclared, name, Ternary.FALSE, Ternary.FALSE,
           Ternary.FALSE, 0, -1);
     }
@@ -485,23 +495,34 @@ public class VariableUsageInfo {
      * @param fieldPath the path of struct fields (can be null for no path)
      * @param arrayDepth the number of array indices at end of assignment
      * @param op 
+     * @return list of violations, should not be null
      */
     public List<Violation> assign(Context context,
         List<String> fieldPath, int arrayDepth, AssignOp op) {
+      Logger logger = Logging.getSTCLogger();
+      if (logger.isTraceEnabled()) {
+        logger.trace("\nASSIGN: " + this.name + " " + fieldPath);
+      }
+      List<Violation> violations;
       if (fieldPath != null && fieldPath.size() > 0) {
-        return structAssign(context, fieldPath, arrayDepth, op);
+        violations = structAssign(context, fieldPath, arrayDepth, op);
       } else if (arrayDepth > 0) {
-        return arrayAssign(context, arrayDepth, op);
+        violations = arrayAssign(context, arrayDepth, op);
       } else {
         // Assigning to the whole variable
         assert(arrayDepth == 0);
         assert(fieldPath == null || fieldPath.size() == 0);
-        return plainAssign(context, op);
+        violations = plainAssign(context, op);
       }
+      if (logger.isTraceEnabled()) {
+        logger.trace("VIOLATIONS: " + violations);
+      }
+      return violations;
     }
 
 
     private List<Violation> plainAssign(Context context, AssignOp op) {
+      
       if (assigned == Ternary.TRUE ||
           (op == AssignOp.ASSIGN && appended == Ternary.TRUE)) {
         // There will definitely be a double assignment
@@ -529,7 +550,7 @@ public class VariableUsageInfo {
         this.assigned = Ternary.TRUE;
       } else {
         assert(op == AssignOp.APPEND);
-        this.appended = Ternary.TRUE;
+        this.assigned = Ternary.TRUE;
       }
       return res;
     }
@@ -541,12 +562,12 @@ public class VariableUsageInfo {
         if (arrayAssignDepth != arrayDepth) {
           return Arrays.asList(makeArrDepthViolation(context, arrayDepth));
         }
-        assigned = Ternary.TRUE;
+        this.assigned = Ternary.TRUE;
       } else {
-        assigned = Ternary.TRUE;
+        this.assigned = Ternary.TRUE;
         arrayAssignDepth = arrayDepth;
       }
-      return null;
+      return Collections.emptyList();
     }
 
     private Violation makeArrDepthViolation(Context context,
@@ -561,11 +582,17 @@ public class VariableUsageInfo {
     private List<Violation> structAssign(Context context,
         List<String> fieldPath, int arrayDepth, AssignOp op) {
       VInfo fieldVInfo;
+      List<Violation> errs = new ArrayList<Violation>();
+      
       if (structFields != null) {
-        if (this.assigned != Ternary.FALSE) {
+        if (this.assigned == Ternary.TRUE) {
           return Arrays.asList(new Violation(ViolationType.ERROR,
-              "Assigning to field of variable " + this.name +
+              "Assigning to field " + fieldPath + " of variable " + this.name +
               " which was already assigned in full", context));
+        } else if (this.assigned == Ternary.MAYBE) {
+          errs.add(new Violation(ViolationType.WARNING,
+              "Assigning to field " + fieldPath + " of variable " + this.name +
+              " which may have already been assigned in full", context));
         }
         String field = fieldPath.get(0);
 
@@ -583,7 +610,11 @@ public class VariableUsageInfo {
                 this.name + " but variable isn't a struct", context));
       }
       fieldPath.remove(0);
-      return fieldVInfo.assign(context, fieldPath, arrayDepth, op);
+
+      errs.addAll(fieldVInfo.assign(context, fieldPath, arrayDepth, op));
+      mergeStructFieldWriteInfo(context);
+
+      return errs;
     }
 
     public Violation read(Context context,
@@ -650,19 +681,21 @@ public class VariableUsageInfo {
       if (branches.size() == 0) {
         throw new STCRuntimeError("branches in mergeBranchInfo had size 0");
       }
-
+      
       mergeBranchReadInfo(branches, exhaustive);
 
       ArrayList<Violation> errs = mergeBranchWriteInfo(context, branches, exhaustive);
+
       if (structFields != null) {
         for (VInfo fieldVI: this.structFields.values()) {
           List<VInfo> vis = new ArrayList<VInfo>(branches.size());
           for (int i = 0; i < branches.size(); i++) {
             vis.add(branches.get(i).getFieldVInfo(fieldVI.getName()));
-
           }
 
-          errs.addAll(fieldVI.mergeBranchInfo(context, branches, exhaustive));
+          ArrayList<Violation> mergeErrs = fieldVI.mergeBranchInfo(context,
+                                                     branches, exhaustive);
+          errs.addAll(mergeErrs);
         }
       }
       return errs;
@@ -790,9 +823,6 @@ public class VariableUsageInfo {
         // Non-array type
         if (Ternary.and(assignedInBranch, this.assigned) ==
                                                           Ternary.TRUE) {
-
-          System.err.println("Assign error " + name);
-          new Exception().printStackTrace();
           result.add(new Violation(ViolationType.ERROR, "Variable " + name
               + " is assigned twice", context));
           return result;
@@ -851,6 +881,20 @@ public class VariableUsageInfo {
         return result;
       } else {
         return null;
+      }
+    }
+
+    private void mergeStructFieldWriteInfo(Context context) {
+      assert(structFields != null);
+      Ternary allFieldsAssigned = Ternary.TRUE;
+      for (VInfo vi: structFields.values()) {
+        allFieldsAssigned = Ternary.and(allFieldsAssigned, vi.assigned);
+      }
+      if (allFieldsAssigned == Ternary.TRUE) {
+        this.assigned = Ternary.TRUE;
+      } else if (allFieldsAssigned == Ternary.MAYBE &&
+          this.assigned == Ternary.FALSE) {
+        this.assigned = Ternary.MAYBE;
       }
     }
 
