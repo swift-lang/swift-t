@@ -174,6 +174,10 @@ static inline adlb_refcounts adlb_rc_negate(adlb_refcounts rc)
   return result;
 }
 
+/** Identifier for adlb data debug symbol */
+typedef uint32_t adlb_debug_symbol;
+#define ADLB_DEBUG_SYMBOL_NULL 0u
+
 // Prefer to tightly pack these structs
 #pragma pack(push, 1)
 typedef struct
@@ -182,6 +186,7 @@ typedef struct
   int write_refcount;
   bool permanent : 1;
   bool release_write_refs : 1;
+  adlb_debug_symbol symbol;
 } adlb_create_props;
 
 // Default settings for new variables
@@ -190,6 +195,7 @@ static const adlb_create_props DEFAULT_CREATE_PROPS = {
   1, /* write_refcount */
   false, /* permanent */
   false, /* release_write_refs */
+  ADLB_DEBUG_SYMBOL_NULL, /* symbol */
 };
 
 // Information for new variable creation
@@ -289,5 +295,19 @@ typedef enum
 
 /** Maximum size for ADLB checkpoint value */
 #define ADLB_XPT_MAX (ADLB_DATA_MAX - 1)
+
+/**
+  printf specifiers for printing data identifier with debug symbol.
+  Matching arg types: adlb_datum_id (id), char* (debug symbol)
+ */
+#define ADLB_PRI_DATUM "<%"PRId64">:%s"
+
+/** 
+  printf specifiers for printing data identifier with subscript and
+  debug symbol.
+  Matching arg types: adlb_datum_id (id), int (subscript len),
+                      char* (subscript), char* (debug symbol)
+*/
+#define ADLB_PRI_DATUM_SUB "<%"PRId64">[%.*s]:%s"
 
 #endif

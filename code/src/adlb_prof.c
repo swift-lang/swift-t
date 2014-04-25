@@ -223,6 +223,17 @@ adlb_code ADLB_Multicreate(ADLB_create_spec *specs, int count)
   return rc;
 }
 
+adlb_code ADLB_Add_debug_symbol(adlb_debug_symbol symbol,
+                                 const char *data)
+{
+  return ADLBP_Add_debug_symbol(symbol, data);
+}
+
+const char *ADLB_Debug_symbol(adlb_debug_symbol symbol)
+{
+  return ADLBP_Debug_symbol(symbol);
+}
+
 adlb_code
 ADLB_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
             adlb_refcounts decr)
