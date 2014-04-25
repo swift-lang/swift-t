@@ -39,6 +39,7 @@
 #include "common.h"
 #include "data.h"
 #include "debug.h"
+#include "debug_symbols.h"
 #include "messaging.h"
 #include "mpe-tools.h"
 #include "mpi-tools.h"
@@ -154,7 +155,11 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
   }
 
   report_debug_ranks();
+
   setup_hostmap();
+
+  code = xlb_debug_symbols_init();
+  ADLB_CHECK(code);
 
   srandom((unsigned int)xlb_comm_rank+1);
 
@@ -1430,6 +1435,8 @@ ADLBP_Finalize()
   }
 
   free_hostmap();
+  
+  xlb_debug_symbols_finalize();
 
   bool failed;
   int fail_code;

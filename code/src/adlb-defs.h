@@ -173,12 +173,18 @@ static const adlb_create_props DEFAULT_CREATE_PROPS = {
   false, /* permanent */
 };
 
+/** Identifier for adlb data debug symbol */
+typedef uint32_t adlb_debug_symbol;
+#define ADLB_DEBUG_SYMBOL_NULL 0u
+
 // Information for new variable creation
 typedef struct {
   adlb_datum_id id;
   adlb_data_type type;
   adlb_type_extra type_extra;
   adlb_create_props props;
+  // TODO
+  // adlb_debug_symbol symbol;
 } ADLB_create_spec;
 
 #pragma pack(pop) // Undo pragma change
