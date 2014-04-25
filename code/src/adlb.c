@@ -913,6 +913,7 @@ xlb_store(adlb_datum_id id, adlb_subscript subscript, adlb_data_type type,
 
     return ADLB_SUCCESS;
   }
+  TRACE("Store to server %i", to_server_rank);
 
   if (xlb_am_server)
   {

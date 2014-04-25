@@ -291,11 +291,15 @@ static adlb_code cached_open_read(xlb_xpt_read_state **state,
   into our checkpoint index.
   TODO: will probably need to support some kind of filtering
  */
-adlb_code ADLB_Xpt_reload(const char *filename, adlb_xpt_load_stats *stats)
+adlb_code ADLB_Xpt_reload(const char *filename, adlb_xpt_load_stats *stats,
+                          int load_rank, int loaders)
 {
   CHECK_MSG(xlb_xpt_initialized, "Checkpointing must be initialized "
                                  "before reloading");
   CHECK_MSG(stats != NULL, "Must provide stats argument");
+  CHECK_MSG(loaders >= 0, "Invalid loaders count: %i", loaders);
+  CHECK_MSG(load_rank >= 0 && load_rank < loaders, "Load rank %i out of"
+            " range: [0,%i]", load_rank, loaders - 1);
 
   adlb_code rc;
   xlb_xpt_read_state *read_state;
@@ -320,13 +324,13 @@ adlb_code ADLB_Xpt_reload(const char *filename, adlb_xpt_load_stats *stats)
   {
     stats->rank_stats[i].loaded = false;
   }
-  // TODO: how to split ranks in checkpoint among ranks in current
-  // cluster.
-  for (uint32_t rank = 0; rank < ranks; rank++)
+  // Round-robin split of ranks in checkpoint among loading ranks
+  for (int rank = load_rank; rank < ranks; rank += loaders)
   {
     DEBUG("Reloading checkpoints from %s for rank %i\n", filename, rank);
     adlb_xpt_load_rank_stats *rstats = &stats->rank_stats[rank];
-    rc = xpt_reload_rank(filename, read_state, &buffer, rank, rstats);
+    rc = xpt_reload_rank(filename, read_state, &buffer, (uint32_t)rank,
+                         rstats);
     if (rc != ADLB_SUCCESS)
     {
       // Continue to next rank upon error

@@ -220,6 +220,8 @@ ADLB_Server(long max_memory)
 
   mm_set_max(mm_default, max_memory);
 
+  DEBUG("ADLB_Server(): %i entering server loop", xlb_comm_rank);
+
   update_cached_time(); // Initial timestamp
   while (true)
   {
