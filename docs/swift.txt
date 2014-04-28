@@ -1719,7 +1719,7 @@ cd ../turbine
 make install
 
 cd ../stc
-ant -Ddist.dir=... -Dturbine.home=...
+ant install -Ddist.dir=... -Dturbine.home=...
 ----
 
 * You may use +./configure --help+ and the
