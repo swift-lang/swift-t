@@ -247,6 +247,9 @@ xlb_sync2(int target, const struct packed_sync *hdr, int *response)
       
       if (flag1)
       {
+        int tmp_flag;
+        MPI_TEST(&isend_request, &tmp_flag);
+
         rc = msg_from_target(target, accept_response);
         ADLB_CHECK(rc);
         
