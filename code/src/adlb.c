@@ -139,7 +139,7 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
     *am_server = 0;
     MPI_Comm_split(adlb_comm, 0, xlb_comm_rank, &adlb_worker_comm);
     *worker_comm = adlb_worker_comm;
-    xlb_my_server = xlb_workers + (xlb_comm_rank % xlb_servers);
+    xlb_my_server = xlb_map_to_server(xlb_comm_rank);
     DEBUG("my_server_rank: %i", xlb_my_server);
     next_server = xlb_my_server;
   }
