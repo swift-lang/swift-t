@@ -8,7 +8,7 @@ crash()
 }
 
 echo "Running autoconf..."
-autoconf || crash "autoconf failed!"
+autoconf -f || crash "autoconf failed!"
 echo "Running autoheader..."
 autoheader || crash "autoheader failed!"
 
