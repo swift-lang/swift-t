@@ -96,6 +96,18 @@ typedef struct {
   void *extra_data; // Extra data if needed for header type
 } xlb_pending;
 
+static inline adlb_code xlb_dequeue_pending(xlb_pending_kind *kind,
+            int *rank, struct packed_sync **hdr, void **extra_data);
+
+/*
+ * return: true if we have pending notification work that could result
+ *         in tasks being released
+ */
+static inline bool xlb_have_pending_notifs(void);
+
+static inline bool xlb_is_pending_notif(xlb_pending_kind kind,
+                                const struct packed_sync *hdr);
+
 /*
  * Check if there incoming sync request messages to process.
  * return: ADLB_SUCCESS if message present, ADLB_NOTHING if no message,
@@ -152,6 +164,7 @@ extern xlb_pending *xlb_pending_syncs; // Array for ring buffer
 extern int xlb_pending_sync_head; // Head of ring buffer
 extern int xlb_pending_sync_count; // Valid entries in array
 extern int xlb_pending_sync_size; // Malloced size
+extern int xlb_pending_notif_count; // Entries that are notifications
 
 // Initial size of pending sync array
 #define PENDING_SYNC_INIT_SIZE 1024
@@ -180,7 +193,13 @@ static inline adlb_code xlb_dequeue_pending(xlb_pending_kind *kind,
   xlb_pending_sync_count--;
   xlb_pending_sync_head = (xlb_pending_sync_head + 1) %
                            xlb_pending_sync_size;
-  DEBUG("POP: %d left", xlb_pending_sync_count);
+
+  if (xlb_is_pending_notif(pending->kind, pending->hdr))
+  {
+    xlb_pending_notif_count--;
+  }
+
+  TRACE("POP PENDING: %d left", xlb_pending_sync_count);
 
   if (xlb_pending_sync_size > PENDING_SYNC_INIT_SIZE &&
       xlb_pending_sync_count < (xlb_pending_sync_size / 4))
@@ -190,6 +209,43 @@ static inline adlb_code xlb_dequeue_pending(xlb_pending_kind *kind,
   }
 
   return ADLB_SUCCESS;
+}
+
+static inline bool xlb_have_pending_notifs(void)
+{
+  return xlb_pending_notif_count > 0;
+}
+
+__attribute__((always_inline))
+static inline bool xlb_is_pending_notif_mode(adlb_sync_mode mode)
+{
+  switch (mode) {
+    case ADLB_SYNC_NOTIFY:
+    case ADLB_SYNC_SUBSCRIBE:
+    case ADLB_SYNC_REFCOUNT:
+      // Notification or may result in notification
+      return true;
+    default:
+      return false;
+  }
+}
+
+__attribute__((always_inline))
+static inline bool xlb_is_pending_notif(xlb_pending_kind kind,
+                                const struct packed_sync *hdr)
+{
+  switch (kind)
+  {
+    case DEFERRED_NOTIFY:
+    case UNSENT_NOTIFY:
+    case ACCEPTED_RC:
+      return true;
+    case DEFERRED_SYNC:
+      assert(hdr != NULL);
+      return xlb_is_pending_notif_mode(hdr->mode);
+    default:
+      return false;
+  }
 }
 
 #endif

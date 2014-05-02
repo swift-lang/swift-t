@@ -90,6 +90,7 @@ xlb_pending *xlb_pending_syncs = NULL;
 int xlb_pending_sync_count = 0;
 int xlb_pending_sync_head = 0;
 int xlb_pending_sync_size = 0; // Malloced size
+int xlb_pending_notif_count = 0; // Number that are notifs
 
 adlb_code
 xlb_sync_init(void)
@@ -138,6 +139,7 @@ xlb_sync_init(void)
   xlb_pending_syncs = malloc(sizeof(xlb_pending_syncs[0]) *
                                 (size_t)xlb_pending_sync_size);
   CHECK_MSG(xlb_pending_syncs != NULL, "could not allocate memory");
+  xlb_pending_notif_count = 0;
 
   /*
     Setup perf counters
@@ -180,6 +182,7 @@ void xlb_sync_finalize(void)
   free(xlb_pending_syncs);
   xlb_pending_sync_count = 0;
   xlb_pending_sync_size = 0;
+  xlb_pending_notif_count = 0;
 }
 
 void xlb_print_sync_counters(void)
@@ -947,6 +950,11 @@ static adlb_code enqueue_pending(xlb_pending_kind kind, int rank,
     memcpy(entry->hdr, hdr, PACKED_SYNC_SIZE);
   }
   xlb_pending_sync_count++;
+
+  if (xlb_is_pending_notif(kind, hdr))
+  {
+    xlb_pending_notif_count++;
+  }
   return ADLB_SUCCESS;
 }
 

@@ -1112,6 +1112,7 @@ ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
   MPI_Request request;
 
   int to_server_rank = ADLB_Locate(id);
+  DEBUG("START RETRIEVE: <%"PRId64"> SERVER: %i MY_SERVER: %i\n", id, to_server_rank, xlb_my_server);
 
   int subscript_len = adlb_has_sub(subscript) ? (int)subscript.length : 0;
 

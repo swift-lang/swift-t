@@ -157,7 +157,7 @@ xlb_server_init()
     if (xlb_map_to_server(i) == xlb_comm_rank)
     {
       xlb_my_workers++;
-      // printf("%i ", i);
+      DEBUG("my_worker_rank: %i", i);
     }
   }
   // printf("\n");
@@ -627,6 +627,16 @@ xlb_server_check_idle_local(bool master, int64_t check_attempt)
     // A worker is busy...
     return false;
 
+  if (xlb_have_pending_notifs())
+    // Notifications can create more work...
+    return false;
+
+  /*
+   * TODO:
+   * We currently use a timer to (heuristically) avoid some corner cases
+   * that aren't properly handled correctly.  E.g. if a worker puts
+   * targeted work to another server.
+   */
   // Current time
   double t = MPI_Wtime();
 
