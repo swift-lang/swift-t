@@ -727,7 +727,7 @@ rule_inputs(transform* T)
     char id_sub_key[id_sub_keylen];
     assert(td_sub->subscript.key != NULL);
     xlb_write_id_sub(id_sub_key, td_sub->td, sub_convert(td_sub->subscript));
-    // TODO: we might add duplicate list entries if id appears multiple
+    // We might add duplicate list entries if id appears multiple
     //      times. This is currently handled upon removal from list
     code = add_rule_blocker_sub(id_sub_key, id_sub_keylen, T);
     turbine_check_verbose(code);
