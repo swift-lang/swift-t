@@ -363,7 +363,6 @@ xlb_sync2(int target, const struct packed_sync *hdr, int *response)
     if (rc == ADLB_SUCCESS)
     {
       assert(other_rank != -1);
-      assert(other_rank >= 0 && other_rank < xlb_comm_size); // TODO: remove
       rc = msg_from_other_server(other_rank);
       ADLB_CHECK(rc);
 
@@ -505,7 +504,6 @@ static adlb_code msg_from_other_server(int other_server)
   TRACE_START;
   adlb_code code;
   
-  DEBUG("SYNC OTHER SERVER"); // TODO: remove
   xlb_sync_recv *sync = xlb_next_sync_msg();
   struct packed_sync *other_hdr = sync->buf;
 
@@ -548,7 +546,6 @@ static adlb_code msg_from_other_server(int other_server)
 
 static xlb_sync_recv *xlb_next_sync_msg(void)
 {
-  DEBUG("GET HEAD SYNC %i", xlb_sync_recv_head);
   xlb_sync_recv *head = &xlb_sync_recvs[xlb_sync_recv_head];
   return head;
 }
@@ -561,7 +558,6 @@ static adlb_code xlb_sync_msg_done(void)
 {
   xlb_sync_recv *head = &xlb_sync_recvs[xlb_sync_recv_head];
  
-  DEBUG("RECEIVE SYNC %i", xlb_sync_recv_head);
   IRECV2(head->buf, (int)PACKED_SYNC_SIZE, MPI_BYTE,
            MPI_ANY_SOURCE, ADLB_TAG_SYNC_REQUEST, &head->req);
 
@@ -574,15 +570,19 @@ static adlb_code xlb_sync_msg_done(void)
  */
 adlb_code xlb_handle_next_sync_msg(int caller)
 {
-  assert(caller >= 0 && caller < xlb_comm_size); // TODO: remove
   MPE_LOG(xlb_mpe_svr_sync_start);
 
   xlb_sync_recv *sync = xlb_next_sync_msg();
-  // TODO: don't really need to defer server ops..
-  adlb_code rc = xlb_accept_sync(caller, sync->buf, true);
 
-  adlb_code rc2 = xlb_sync_msg_done();
-  ADLB_CHECK(rc2);
+  // Copy header so we can release before handling
+  char hdr_storage[PACKED_SYNC_SIZE];
+  struct packed_sync *hdr = (struct packed_sync *)hdr_storage;
+  memcpy(hdr, sync->buf, PACKED_SYNC_SIZE);
+
+  adlb_code rc = xlb_sync_msg_done();
+  ADLB_CHECK(rc);
+  
+  rc = xlb_accept_sync(caller, hdr, false);
   MPE_LOG(xlb_mpe_svr_sync_end);
   return rc;
 }
@@ -595,7 +595,6 @@ adlb_code xlb_handle_next_sync_msg(int caller)
 adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
                           bool defer_svr_ops)
 {
-  assert(rank >= 0 && rank < xlb_comm_size); // TODO: remove
   adlb_sync_mode mode = hdr->mode;
   adlb_code code = ADLB_ERROR;
   
