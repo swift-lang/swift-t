@@ -321,6 +321,7 @@ ADLB_Hostmap_list(char* output, unsigned int max,
 }
 
 // Server to target with work
+__attribute__((always_inline))
 static inline adlb_code
 adlb_put_target_server(int target, int *to_server)
 {

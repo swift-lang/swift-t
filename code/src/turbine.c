@@ -1048,6 +1048,7 @@ transform_tostring(char* output, transform* t)
   return result;
 }
 
+__attribute__((always_inline))
 static inline bool
 input_td_closed(transform *T, int i)
 {
@@ -1056,6 +1057,7 @@ input_td_closed(transform *T, int i)
   return (field >> ((unsigned int)i % 8)) & 0x1;
 }
 
+__attribute__((always_inline))
 static inline bool
 input_td_sub_closed(transform *T, int i)
 {
@@ -1063,6 +1065,7 @@ input_td_sub_closed(transform *T, int i)
   return input_td_closed(T, i + T->input_tds);
 }
 
+__attribute__((always_inline))
 // Extract bit from closed_inputs
 static inline void
 mark_input_td_closed(transform *T, int i)
@@ -1072,6 +1075,7 @@ mark_input_td_closed(transform *T, int i)
   T->closed_inputs[i / 8] |= mask;
 }
 
+__attribute__((always_inline))
 static inline void
 mark_input_td_sub_closed(transform *T, int i)
 {
