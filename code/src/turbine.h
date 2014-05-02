@@ -18,31 +18,43 @@
  *  TURBINE
  *
  *  Created on: May 4, 2011
- *      Author: wozniak
+ *  Moved to ADLB codebase: Apr 2014
+ *      Authors: wozniak, armstrong
  *
- * TODO: performance counters for this module
- * */
+ * Data dependency engine to manage release of tasks.  This module was
+ * migrated and adapted from the Turbine engine code, and moved into
+ * the ADLB server.
+ */
 
 #ifndef TURBINE_H
 #define TURBINE_H
 
 #include <mpi.h>
 
-#include <turbine-defs.h>
-
 #include "workqueue.h"
 
-typedef struct {
-  char *key;
-  size_t length;
-} turbine_subscript;
+typedef struct
+{
+  char* name;
+} turbine_entry;
 
-static const turbine_subscript TURBINE_NO_SUB = { .key = NULL, .length = 0 };
+typedef enum
+{
+  TURBINE_SUCCESS = ADLB_DATA_SUCCESS,
+  /** Out of memory */
+  TURBINE_ERROR_OOM = ADLB_DATA_ERROR_OOM,
+  /** Invalid input */
+  TURBINE_ERROR_INVALID = ADLB_DATA_ERROR_INVALID,
+  /** Called function when Turbine uninitialized */
+  TURBINE_ERROR_UNINITIALIZED,
+  /** Unknown error */
+  TURBINE_ERROR_UNKNOWN = ADLB_DATA_ERROR_UNKNOWN,
+} turbine_engine_code;
 
-typedef struct {
-  adlb_datum_id td;
-  turbine_subscript subscript;
-} td_sub_pair;
+/**
+   The maximal length of a Turbine rule name string
+ */
+#define TURBINE_NAME_MAX 18
 
 /*
  * Array of ready work
@@ -91,12 +103,6 @@ turbine_engine_code turbine_sub_close(adlb_datum_id id, adlb_subscript sub,
                                turbine_work_array *ready);
 
 #define TURBINE_CODE_STRING_MAX 64
-
-/*
-  Convert code to string.
-  output: buffer of at least TURBINE_CODE_STRING_MAX bytes
- */
-int turbine_engine_code_tostring(char* output, turbine_engine_code code);
 
 void turbine_engine_finalize(void);
 

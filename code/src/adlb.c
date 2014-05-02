@@ -48,7 +48,6 @@
 #include "notifications.h"
 #include "server.h"
 #include "sync.h"
-#include "turbine-defs.h"
 
 static adlb_code next_server;
 

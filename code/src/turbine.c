@@ -18,15 +18,12 @@
  * turbine.c
  *
  *  Created on: May 4, 2011
+ *  Moved to ADLB codebase: Apr 2014
  *      Author: wozniak
  *
  * TD means Turbine Datum, which is a variable id stored in ADLB
  * TR means TRansform, the in-memory record from a rule
  * */
-
-/*
-  TODO: convert to using ADLB conventions for return codes, etc
- */
 
 #include <assert.h>
 #include <stdio.h>
@@ -72,6 +69,17 @@ static struct {
     xlb_engine_counters.name++;    \
   }
 
+typedef struct {
+  char *key;
+  size_t length;
+} turbine_subscript;
+
+static const turbine_subscript TURBINE_NO_SUB = { .key = NULL, .length = 0 };
+
+typedef struct {
+  adlb_datum_id td;
+  turbine_subscript subscript;
+} td_sub_pair;
 
 typedef enum
 {
@@ -125,6 +133,9 @@ turbine_close_update(struct list *blocked, adlb_datum_id id,
 
 static inline turbine_engine_code
 move_to_ready(turbine_work_array *ready, transform *T);
+
+static const char *
+turbine_engine_code_tostring(turbine_engine_code code);
 
 /** Has turbine_engine_init() been called? */
 bool turbine_engine_initialized = false;
@@ -185,9 +196,8 @@ static inline adlb_subscript sub_convert(turbine_subscript sub)
 #define turbine_check_verbose_impl(code, file, line)    \
   { if (code != TURBINE_SUCCESS)                        \
     {                                                   \
-      char output[TURBINE_CODE_STRING_MAX];             \
-      turbine_engine_code_tostring(output, code);              \
-      printf("turbine error: %s\n", output);            \
+      printf("turbine error: %s\n",                     \
+            turbine_engine_code_tostring(code));        \
       printf("\t at: %s:%i\n", file, line);             \
       return code;                                      \
     }                                                   \
@@ -938,60 +948,26 @@ progress(transform* T, bool* subscribed)
 }
 
 /**
-   @param output Should point to good storage for output,
-   at least TURBINE_CODE_STRING_MAX chars
-   @return Number of characters written
+   @return constant struct with name of code
 */
-int
-turbine_engine_code_tostring(char* output, turbine_engine_code code)
+static const char *
+turbine_engine_code_tostring(turbine_engine_code code)
 {
-  int result = -1;
   switch (code)
   {
     case TURBINE_SUCCESS:
-      result = sprintf(output, "TURBINE_SUCCESS");
-      break;
+      return "TURBINE_SUCCESS";
     case TURBINE_ERROR_OOM:
-      result = sprintf(output, "TURBINE_ERROR_OOM");
-      break;
-    case TURBINE_ERROR_DOUBLE_DECLARE:
-      result = sprintf(output, "TURBINE_ERROR_DOUBLE_DECLARE");
-      break;
-    case TURBINE_ERROR_DOUBLE_WRITE:
-      result = sprintf(output, "TURBINE_ERROR_DOUBLE_WRITE");
-      break;
-    case TURBINE_ERROR_UNSET:
-      result = sprintf(output, "TURBINE_ERROR_UNSET");
-      break;
-    case TURBINE_ERROR_NOT_FOUND:
-      result = sprintf(output, "TURBINE_ERROR_NOT_FOUND");
-      break;
-    case TURBINE_ERROR_NUMBER_FORMAT:
-      result = sprintf(output, "TURBINE_ERROR_NUMBER_FORMAT");
-      break;
+      return "TURBINE_ERROR_OOM";
     case TURBINE_ERROR_INVALID:
-      result = sprintf(output, "TURBINE_ERROR_INVALID");
-      break;
-    case TURBINE_ERROR_NULL:
-      result = sprintf(output, "TURBINE_ERROR_NULL");
-      break;
+      return "TURBINE_ERROR_INVALID";
     case TURBINE_ERROR_UNKNOWN:
-      result = sprintf(output, "TURBINE_ERROR_UNKNOWN");
-      break;
-    case TURBINE_ERROR_TYPE:
-      result = sprintf(output, "TURBINE_ERROR_TYPE");
-      break;
-    case TURBINE_ERROR_STORAGE:
-      result = sprintf(output, "TURBINE_ERROR_STORAGE");
-      break;
+      return "TURBINE_ERROR_UNKNOWN";
     case TURBINE_ERROR_UNINITIALIZED:
-      result = sprintf(output, "TURBINE_ERROR_UNINITIALIZED");
-      break;
+      return "TURBINE_ERROR_UNINITIALIZED";
     default:
-      sprintf(output, "<could not convert code %d to string>", code);
-      break;
+      return "<INVALID_ERROR_CODE>";
   }
-  return result;
 }
 
 static int
