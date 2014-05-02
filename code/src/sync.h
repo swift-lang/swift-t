@@ -20,6 +20,27 @@
  *
  *  Created on: Aug 20, 2012
  *      Author: wozniak
+ *
+ * The sync module manages server-to-server synchronization and
+ * communication.  When servers are communicating with each other,
+ * it is important to a) avoid deadlocks where a cycle of servers is
+ * waiting on each other for a response, b) avoid starvation, where
+ * servers are unable to progress waiting for other processes,
+ * particularly if we get chains of servers waiting for each other.
+ *
+ * Several techniques are implemented in this module.
+ *
+ * - Tie-breaking algorithms to avoid deadlocks if servers must perform
+ *   blocking synchronous RPCs on other servers
+ * - Asynchronous RPCs, where key server-to-server operations such
+ *   as work-stealing probes are sent immediately, with the respond
+ *   handled later.
+ * - Use of small, fixed-size sync messages to allow quick sending and
+ *   receiving into fixed-size buffers in the caller.
+ * - Asynchronous request handling where servers will continue to serve
+ *   requests from other servers, to avoid starvation propagating.
+ * - Request buffering, where we accumulate pending requests to be
+ *   processed later.
  */
 
 #ifndef SYNC_H
@@ -38,16 +59,16 @@ void xlb_print_sync_counters(void);
    server rank.  An MPI deadlock may be caused by two processes
    sending an RPC to each other simultaneously.  The sync
    functionality avoids this by doing special MPI probes and
-   breaking ties by allowing the higher rank process to always win
+   breaking ties to allow the higher rank process to always win
+
+   This is used for server-to-server RPCs that do not have special
+   support support in the sync module.
 
    After returning from this, this calling process may issue one RPC
    on the target process
 
    This function may add pending sync requests from other servers to
    the xlb_pending_syncs buffer, which will need to be serviced.
-
-   This is used for all server-to-server RPCs, including Put, Store,
-   Close, Steal, and Shutdown
  */
 adlb_code xlb_sync(int target);
 
