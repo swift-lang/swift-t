@@ -611,7 +611,7 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
     }
     else
     {
-      code = xlb_steal_probe_respond(rank);
+      code = xlb_handle_steal_probe(rank);
       ADLB_CHECK(code);
     }
   }
@@ -625,7 +625,7 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
     else
     {
       // Steal from other rank if appropriate
-      code = xlb_steal_probe_response(rank, hdr);
+      code = xlb_handle_steal_probe_resp(rank, hdr);
       ADLB_CHECK(code);
     }
   }
@@ -657,8 +657,6 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
     if (defer_svr_ops)
     {
       DEBUG("Defer refcount for <%"PRId64">", hdr->incr.id);
-      // TODO: send back sync probe response with counts
-      // void xlb_workq_type_counts(int *types, int size);
       code = enqueue_pending(ACCEPTED_RC, rank, hdr, NULL);
       ADLB_CHECK(code);
     }

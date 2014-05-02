@@ -103,7 +103,7 @@ xlb_random_steal_probe(void)
   return ADLB_SUCCESS;
 }
 
-adlb_code xlb_steal_probe_respond(int caller)
+adlb_code xlb_handle_steal_probe(int caller)
 {
   char hdr_storage[PACKED_SYNC_SIZE];
   struct packed_sync *hdr = (struct packed_sync *)hdr_storage;
@@ -127,7 +127,7 @@ adlb_code xlb_steal_probe_respond(int caller)
  * Should not be called when within sync loop: may initiate more syncs.
  */
 adlb_code
-xlb_steal_probe_response(int caller,
+xlb_handle_steal_probe_resp(int caller,
   const struct packed_sync *hdr)
 {
   adlb_code rc;

@@ -80,7 +80,7 @@ xlb_steal_allowed(void)
 
 adlb_code xlb_random_steal_probe(void);
 
-adlb_code xlb_steal_probe_respond(int caller);
+adlb_code xlb_handle_steal_probe(int caller);
 
 /**
    Handle incoming steal response, and carry out the steal if needed.
@@ -90,7 +90,7 @@ adlb_code xlb_steal_probe_respond(int caller);
    @param stole_single true if stole single-worker task, else false
    @param stole_par true if stole parallel task, else false
  */
-adlb_code xlb_steal_probe_response(int caller,
+adlb_code xlb_handle_steal_probe_resp(int caller,
                const struct packed_sync *msg);
 
 /**

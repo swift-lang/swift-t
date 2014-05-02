@@ -391,6 +391,14 @@ xlb_handle_pending_syncs(void)
         rc = xlb_send_unsent_notify(rank, hdr, extra_data);
         ADLB_CHECK(rc);
         break;
+      case DEFERRED_STEAL_PROBE:
+        rc = xlb_handle_steal_probe(rank);
+        ADLB_CHECK(rc);
+        break;
+      case DEFERRED_STEAL_PROBE_RESP:
+        rc = xlb_handle_steal_probe_resp(rank, hdr);
+        ADLB_CHECK(rc);
+        break;
       default:
         ERR_PRINTF("Unexpected pending sync kind %i\n", kind);
         return ADLB_ERROR;
