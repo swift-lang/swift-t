@@ -85,6 +85,8 @@ typedef enum {
   ACCEPTED_RC,   // Have accepted but need to do refcount
   DEFERRED_NOTIFY, // Have accepted but need to process notify
   UNSENT_NOTIFY, // Need to notify other server
+  DEFERRED_STEAL_PROBE, // Have accepted but need to respond
+  DEFERRED_STEAL_PROBE_RESP, // Have response, but have not acted
 } xlb_pending_kind;
 
 typedef struct {

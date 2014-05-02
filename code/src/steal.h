@@ -78,15 +78,20 @@ xlb_steal_allowed(void)
   return true;
 }
 
+adlb_code xlb_random_steal_probe(void);
+
+adlb_code xlb_steal_probe_respond(int caller);
+
 /**
-   Issue sync() and steal.
+   Handle incoming steal response, and carry out the steal if needed.
 
    Note that this may add sync requests to the xlb_pending_syncs list,
    which must be handled by the caller.
    @param stole_single true if stole single-worker task, else false
    @param stole_par true if stole parallel task, else false
  */
-adlb_code xlb_steal(bool* stole_single, bool *stole_par);
+adlb_code xlb_steal_probe_response(int caller,
+               const struct packed_sync *msg);
 
 /**
    Handle an accepted steal request

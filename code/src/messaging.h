@@ -433,7 +433,7 @@ xlb_unpack_id_sub(const void *buffer, adlb_datum_id *id,
                   adlb_subscript *subscript);
 
 /**
- * Request for steal
+ * Request to probe for steal work
  */
 struct packed_steal
 {
@@ -498,7 +498,9 @@ struct packed_subscribe_sync
 typedef enum
 {
   ADLB_SYNC_REQUEST, // Sync for a regular request
-  ADLB_SYNC_STEAL, // Trying to steal work
+  ADLB_SYNC_STEAL_PROBE, // Probe for work
+  ADLB_SYNC_STEAL_PROBE_RESP, // Respond to probe
+  ADLB_SYNC_STEAL, // Carry out steal
   ADLB_SYNC_REFCOUNT, // Modify reference count
   ADLB_SYNC_SUBSCRIBE, // Subscribe to a datum
   ADLB_SYNC_NOTIFY, // Notify aftern subscriptionto a datum

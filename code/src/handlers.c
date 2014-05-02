@@ -133,6 +133,10 @@ static inline adlb_code send_matched_work(int type, int putter,
       int priority, int answer, bool targeted,
       int worker, int length, const void *inline_data);
 
+static adlb_code xlb_recheck_single_queues(void);
+
+static adlb_code xlb_recheck_parallel_queues(void);
+
 static inline adlb_code xlb_check_parallel_tasks(int work_type);
 
 static inline adlb_code redirect_work(int type, int putter,
@@ -783,8 +787,26 @@ check_workqueue(int caller, int type)
   Check to see if anything in request queue can be matched to work
   queue for single-worker tasks.  E.g. after a steal.
  */
-adlb_code
-xlb_recheck_queues(void)
+adlb_code xlb_recheck_queues(bool single, bool parallel)
+{
+  adlb_code code;
+  if (single)
+  {
+    code = xlb_recheck_single_queues();
+    ADLB_CHECK(code);
+  }
+  
+  if (parallel)
+  {
+    code = xlb_recheck_parallel_queues();
+    ADLB_CHECK(code);
+  }
+
+  return ADLB_SUCCESS;
+}
+
+static adlb_code
+xlb_recheck_single_queues(void)
 {
   TRACE_START;
 
@@ -841,7 +863,8 @@ xlb_check_parallel_tasks(int type)
   return result;
 }
     
-adlb_code xlb_recheck_parallel_queues(void)
+static adlb_code
+xlb_recheck_parallel_queues(void)
 {
   TRACE("check_steal(): rechecking parallel...");
   for (int t = 0; t < xlb_types_size; t++)

@@ -428,7 +428,7 @@ send_subscribe_sync(adlb_sync_mode mode,
   if (!inlined_subscript)
   {
     // send subscript separately with special tag
-    // TODO: could block here, although large subscripts
+    // note: could block here, although large subscripts
     // are generally quite rare.
     SEND(sub.key, (int)sub.length, MPI_BYTE, target, ADLB_TAG_SYNC_SUB);
   }
@@ -479,7 +479,9 @@ static inline bool sync_accept_required(adlb_sync_mode mode)
 {
   if (mode == ADLB_SYNC_SUBSCRIBE ||
       mode == ADLB_SYNC_NOTIFY ||
-      mode == ADLB_SYNC_REFCOUNT)
+      mode == ADLB_SYNC_REFCOUNT ||
+      mode == ADLB_SYNC_STEAL_PROBE ||
+      mode == ADLB_SYNC_STEAL_PROBE_RESP)
   {
     return false;
   }
@@ -600,6 +602,33 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
   {
     code = xlb_serve_server(rank);
   }
+  else if (mode == ADLB_SYNC_STEAL_PROBE)
+  {
+    if (defer_svr_ops)
+    {
+      code = enqueue_pending(DEFERRED_STEAL_PROBE, rank, NULL, NULL);
+      ADLB_CHECK(code);
+    }
+    else
+    {
+      code = xlb_steal_probe_respond(rank);
+      ADLB_CHECK(code);
+    }
+  }
+  else if (mode == ADLB_SYNC_STEAL_PROBE_RESP)
+  {
+    if (defer_svr_ops)
+    {
+      code = enqueue_pending(DEFERRED_STEAL_PROBE_RESP, rank, hdr, NULL);
+      ADLB_CHECK(code);
+    }
+    else
+    {
+      // Steal from other rank if appropriate
+      code = xlb_steal_probe_response(rank, hdr);
+      ADLB_CHECK(code);
+    }
+  }
   else if (mode == ADLB_SYNC_STEAL)
   {
     // Respond to steal
@@ -628,6 +657,8 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
     if (defer_svr_ops)
     {
       DEBUG("Defer refcount for <%"PRId64">", hdr->incr.id);
+      // TODO: send back sync probe response with counts
+      // void xlb_workq_type_counts(int *types, int size);
       code = enqueue_pending(ACCEPTED_RC, rank, hdr, NULL);
       ADLB_CHECK(code);
     }
@@ -895,9 +926,16 @@ static adlb_code enqueue_pending(xlb_pending_kind kind, int rank,
   entry->kind = kind;
   entry->rank = rank;
   entry->extra_data = extra_data;
-  entry->hdr = malloc(PACKED_SYNC_SIZE);
-  CHECK_MSG(entry->hdr != NULL, "could not allocate memory");
-  memcpy(entry->hdr, hdr, PACKED_SYNC_SIZE);
+  if (hdr == NULL)
+  {
+    entry->hdr = NULL;
+  }
+  else
+  {
+    entry->hdr = malloc(PACKED_SYNC_SIZE);
+    CHECK_MSG(entry->hdr != NULL, "could not allocate memory");
+    memcpy(entry->hdr, hdr, PACKED_SYNC_SIZE);
+  }
   xlb_pending_sync_count++;
   return ADLB_SUCCESS;
 }

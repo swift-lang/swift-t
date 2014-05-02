@@ -54,8 +54,7 @@ adlb_code xlb_put_targeted_local(int type, int putter, int priority,
 
 void xlb_print_handler_counters(void);
 
-adlb_code xlb_recheck_queues(void);
-adlb_code xlb_recheck_parallel_queues(void);
+adlb_code xlb_recheck_queues(bool single, bool parallel);
 
 adlb_code send_parallel_work_unit(int *workers, xlb_work_unit *wu);
 
