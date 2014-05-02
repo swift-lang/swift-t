@@ -48,6 +48,8 @@ struct list2_b
 
 void list2_b_init(struct list2_b* target);
 
+void list2_b_clear(struct list2_b* target);
+
 struct list2_b* list2_b_create(void);
 
 static inline struct list2_b_item* list2_b_item_alloc(size_t data_len);

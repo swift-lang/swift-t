@@ -36,6 +36,22 @@ list2_b_init(struct list2_b* target)
   target->tail = NULL;
 }
 
+void list2_b_clear(struct list2_b* target)
+{
+  struct list2_b_item *curr, *next;
+  curr = target->head;
+  while (curr)
+  {
+    next = curr->next;
+    free(curr); // Free list node and inline data
+    curr = next;
+  }
+
+  target->size = 0;
+  target->head = NULL;
+  target->tail = NULL;
+}
+
 struct list2_b*
 list2_b_create()
 {
