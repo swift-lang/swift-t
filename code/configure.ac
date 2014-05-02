@@ -72,7 +72,7 @@ AC_PATH_PROG([SWIG],[swig],[0])
 ENABLE_ZLIB=0
 m4_include([m4/ax_check_zlib.m4])
 AX_CHECK_ZLIB([ENABLE_ZLIB=1],
-              AC_MSG_ERROR([Could not find zlib!]))
+   AC_MSG_ERROR([Could not find zlib: use --with-zlib or --disable-zlib.]))
 CFLAGS="${CFLAGS} -I${ZLIB_HOME}/include"
 AC_SUBST(ZLIB_HOME)
 AC_SUBST(ENABLE_ZLIB)
