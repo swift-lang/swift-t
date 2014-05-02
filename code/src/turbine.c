@@ -189,25 +189,35 @@ static struct table_lp td_subscribed;
 static struct table_bp td_sub_subscribed;
 
 /**
-  LRU cache for TDs that are known to be closed implemented with
-  doubly-linked list and hash table.  Hash table entries point to
-  linked list node.  Linked list node contains subscribe cache entry.
-  The head of the LRU is next in line for eviction.
-  We only cache remote subscribes, not local ones.
-
-  TODO: similar cache for TD/sub paris
+  LRU caches for TDs or TD/sub pairs known to be closed implemented with
+  doubly-linked list and hash table.  Hash table entries point to linked
+  list node.  Linked list node contains subscribe cache entry.  The head
+  of the LRU is next in line for eviction.  We only cache remote
+  subscribes, not local ones.
  */
 typedef struct {
   adlb_datum_id id;
 } td_closed_cache_entry;
 
+typedef struct {
+  adlb_datum_id id;
+  size_t subscript_len;
+  char subscript[];
+} td_sub_closed_cache_entry;
+
 #define DEFAULT_CLOSED_CACHE_SIZE 4096
 
 static int td_closed_cache_size; // Number of entries
 
+static int td_sub_closed_cache_size; // Number of entries
+
 static struct table_lp td_closed_cache;
 
+static struct table_bp td_sub_closed_cache;
+
 static struct list2_b td_closed_cache_lru;
+
+static struct list2_b td_sub_closed_cache_lru;
 
 // Maximum length of buffer required for key
 #define ID_SUB_KEY_MAX (ADLB_DATA_SUBSCRIPT_MAX + 30)
@@ -549,12 +559,18 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *subscribed)
       }
       else
       {
-        // TODO: cached subscribe
-        adlb_code ac = xlb_sync_subscribe(server, id,
-                            sub_convert(subscript), subscribed);
-        DATA_CHECK_ADLB(ac,  TURBINE_ERROR_UNKNOWN);
-        
-        INCR_COUNTER(id_sub_subscribe_remote);
+        if (td_sub_closed_cache_check(id, subscript))
+        {
+          INCR_COUNTER(id_sub_subscribe_cached);
+        }
+        else
+        {
+          adlb_code ac = xlb_sync_subscribe(server, id,
+                              sub_convert(subscript), subscribed);
+          DATA_CHECK_ADLB(ac,  TURBINE_ERROR_UNKNOWN);
+          
+          INCR_COUNTER(id_sub_subscribe_remote);
+        }
       }
 
       if (*subscribed)
@@ -1136,20 +1152,28 @@ static turbine_engine_code init_closed_caches(void)
     td_closed_cache_size = (int)tmp;
   }
 
+  // Same cache sizes for now
+  td_sub_closed_cache_size = td_closed_cache_size;
+
   // Initialize to size large enough for all entries
   table_lp_init_custom(&td_closed_cache, td_closed_cache_size, 1.0);
+  table_bp_init_custom(&td_sub_closed_cache, td_sub_closed_cache_size,
+                       1.0);
   
   list2_b_init(&td_closed_cache_lru);
+  list2_b_init(&td_sub_closed_cache_lru);
   return TURBINE_SUCCESS;
 }
 
 static void finalize_closed_caches(void)
 {
-  // Free table.  Values are pointers to list nodes, which we free next
+  // Free tables.  Values are pointers to list nodes, which we free next
   table_lp_free_callback(&td_closed_cache, false, NULL);
+  table_bp_free_callback(&td_sub_closed_cache, false, NULL);
 
   // Free LRU list
   list2_b_clear(&td_closed_cache_lru);
+  list2_b_clear(&td_sub_closed_cache_lru);
 }
 
 // Move to top of lru list
@@ -1163,6 +1187,16 @@ static void td_closed_update_lru(struct list2_b_item *entry)
   }
 }
 
+static void td_sub_closed_update_lru(struct list2_b_item *entry)
+{
+  if (td_sub_closed_cache_lru.tail != entry)
+  {
+    // Remove and add back at tail
+    list2_b_remove_item(&td_sub_closed_cache_lru, entry);
+    list2_b_add_item(&td_sub_closed_cache_lru, entry);
+  }
+}
+
 // Return true if closed
 static bool td_closed_cache_check(adlb_datum_id id)
 {
@@ -1171,6 +1205,24 @@ static bool td_closed_cache_check(adlb_datum_id id)
   {
     // Was closed, just need to update LRU
     td_closed_update_lru(entry);
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+
+// Return true if closed
+// TODO: sig
+static bool td_sub_closed_cache_check(adlb_datum_id id)
+{
+  struct list2_b_item *entry;
+  // TODO: key
+  if (table_bp_search(&td_sub_closed_cache, id, (void**)&entry))
+  {
+    // Was closed, just need to update LRU
+    td_sub_closed_update_lru(entry);
     return true;
   }
   else
@@ -1204,6 +1256,40 @@ static turbine_engine_code td_closed_cache_add(adlb_datum_id id)
   list2_b_add_item(&td_closed_cache_lru, node);
 
   bool ok = table_lp_add(&td_closed_cache, id, node);
+  if (!ok)
+    return TURBINE_ERROR_OOM;
+
+  return TURBINE_SUCCESS;
+}
+
+// TODO: sig
+static turbine_engine_code td_sub_closed_cache_add(adlb_datum_id id)
+{
+  if (td_sub_closed_cache.size >= td_sub_closed_cache_size)
+  {
+    // Evict an entry
+    struct list2_b_item *victim =
+                      list2_b_pop_item(&td_sub_closed_cache_lru);
+    td_sub_closed_cache_entry *victim_entry =
+                        (td_sub_closed_cache_entry*)victim->data;
+    void *tmp;
+    // TODO: key
+    bool removed = table_bp_remove(&td_sub_closed_cache,
+                        victim_entry->id, &tmp);
+    assert(removed && tmp == victim); // Should have had entry
+    free(victim);
+  }
+
+  td_sub_closed_cache_entry *entry;
+  struct list2_b_item *node = list2_b_item_alloc(sizeof(*entry));
+  entry = (td_sub_closed_cache_entry*)&node->data;
+  entry->id = id;
+  // TODO: sub, etc
+  node->data_len = sizeof(*entry); // TODO DATA AT END
+  
+  list2_b_add_item(&td_sub_closed_cache_lru, node);
+
+  bool ok = table_bp_add(&td_sub_closed_cache, id, node);
   if (!ok)
     return TURBINE_ERROR_OOM;
 
