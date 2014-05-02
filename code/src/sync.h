@@ -75,6 +75,11 @@ adlb_code
 xlb_send_unsent_notify(int rank, const struct packed_sync *req_hdr,
         void *malloced_subscript);
 
+typedef struct {
+  MPI_Request req;
+  struct packed_sync *buf;
+} xlb_sync_recv;
+
 typedef enum {
   DEFERRED_SYNC, // Have not yet accepted
   ACCEPTED_RC,   // Have accepted but need to do refcount
@@ -89,6 +94,20 @@ typedef struct {
   void *extra_data; // Extra data if needed for header type
 } xlb_pending;
 
+/*
+ * Check if there incoming sync request messages to process.
+ * return: true if message present
+ */
+static inline bool xlb_check_sync_msgs(int *caller);
+
+/*
+ * Handle sync message if check returns true
+ */
+adlb_code xlb_handle_next_sync_msg(int caller);
+
+/*
+ * Accept and handle sync.
+ */
 adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
                           bool defer_svr_ops);
 
@@ -97,6 +116,28 @@ adlb_code xlb_handle_notify_sync(int rank,
         void *extra_data);
 
 // Inline functions to make it quick to check for pending sync requests
+
+extern xlb_sync_recv *xlb_sync_recvs;
+extern int xlb_sync_recv_head;
+extern int xlb_sync_recv_size;
+
+static inline bool xlb_check_sync_msgs(int *caller)
+{
+  int flag;
+  MPI_Status status;
+  xlb_sync_recv *head = &xlb_sync_recvs[xlb_sync_recv_head];
+  MPI_TEST2(&head->req, &flag, &status);
+
+  if (flag)
+  {
+    *caller = status.MPI_SOURCE;
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
 
 // Info about pending sync requests: where sync request has been received
 // but we haven't responded yet.

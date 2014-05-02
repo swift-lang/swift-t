@@ -74,7 +74,6 @@ static const adlb_buffer xlb_scratch_buf =
 
 static void register_handler(adlb_tag tag, xlb_handler h);
 
-static adlb_code handle_sync(int caller);
 static adlb_code handle_sync_response(int caller);
 static adlb_code handle_steal_response(int caller);
 static adlb_code handle_do_nothing(int caller);
@@ -160,7 +159,6 @@ xlb_handlers_init(void)
   handler_count = 0;
   memset(handlers, '\0', XLB_MAX_HANDLERS*sizeof(xlb_handler));
 
-  register_handler(ADLB_TAG_SYNC_REQUEST, handle_sync);
   register_handler(ADLB_TAG_SYNC_RESPONSE, handle_sync_response);
   register_handler(ADLB_TAG_RESPONSE_STEAL_COUNT, handle_steal_response);
   register_handler(ADLB_TAG_DO_NOTHING, handle_do_nothing);
@@ -219,25 +217,6 @@ void xlb_print_handler_counters(void)
 }
 
 //// Individual handlers follow...
-
-/**
-   Incoming sync request: no collision detection necessary
-   because this process is not attempting a sync
- */
-static adlb_code
-handle_sync(int caller)
-{
-  MPE_LOG(xlb_mpe_svr_sync_start);
-  MPI_Status status;
-  char hdr_storage[PACKED_SYNC_SIZE]; // Temporary stack storage for struct
-  struct packed_sync *hdr = (struct packed_sync *)hdr_storage;
-  RECV(hdr, (int)PACKED_SYNC_SIZE, MPI_BYTE, caller, ADLB_TAG_SYNC_REQUEST);
-
-  adlb_code rc = xlb_accept_sync(caller, hdr, false);
-  ADLB_CHECK(rc);
-  MPE_LOG(xlb_mpe_svr_sync_end);
-  return rc;
-}
 
 /**
    Incoming sync response was received but not in sync mode.  This can

@@ -134,6 +134,10 @@ const char* xlb_get_tag_name(int tag);
   int _rc = MPI_Test(r, flag, MPI_STATUS_IGNORE); \
   MPI_CHECK(_rc);}
 
+#define MPI_TEST2(r, flag, status) { \
+  TRACE_MPI("TEST"); \
+  int _rc = MPI_Test(r, flag, status); \
+  MPI_CHECK(_rc);}
 /** Simplify cases when only a tag is sent */
 #define SEND_TAG(rank,tag) SEND(NULL,0,MPI_BYTE,rank,tag)
 

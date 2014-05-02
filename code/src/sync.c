@@ -36,9 +36,11 @@
 #include "steal.h"
 #include "sync.h"
 
+static xlb_sync_recv *xlb_next_sync_msg(void);
+static adlb_code xlb_sync_msg_done(void);
+
 static inline adlb_code msg_from_target(int target, int response);
-static adlb_code msg_from_other_server(int other_server, 
-                  int target);
+static adlb_code msg_from_other_server(int other_server);
 static inline adlb_code msg_shutdown(adlb_sync_mode mode, int sync_target, bool* done);
 
 static adlb_code xlb_handle_subscribe_sync(int rank,
@@ -64,6 +66,21 @@ static const char *xlb_sync_type_name[ADLB_SYNC_ENUM_COUNT];
             xlb_sync_type_name[name] = #name;
 
 /*
+  Ring buffer of MPI_Request objects and buffers used to receive incoming
+  sync requests, bypassing the MPI unexpected message queue.
+  Active MPI_IRecv requests exist for all buffers in this queue.
+
+  Size can be controlled by ADLB_SYNC_RECVS.
+ */
+xlb_sync_recv *xlb_sync_recvs = NULL;
+int xlb_sync_recv_head;
+int xlb_sync_recv_size = 0;
+
+// Default cap on number of buffers
+#define XLB_SYNC_RECV_DEFAULT_MAX 2048
+static adlb_code xlb_sync_recv_init_size(int servers, int *size);
+
+/*
   Pending sync requests that we deferred
   Implemented with FIFO ring buffer since we need FIFO in case refcount
   incr is followed by decr: processing in LIFO order could result in
@@ -77,12 +94,36 @@ int xlb_pending_sync_size = 0; // Malloced size
 adlb_code
 xlb_sync_init(void)
 {
+  adlb_code rc;
+  long tmp;
+
+  /*
+    Setup sync recv buffers
+   */
+  rc = xlb_sync_recv_init_size(xlb_servers, &xlb_sync_recv_size);
+  ADLB_CHECK(rc);
+  xlb_sync_recv_head = 0;
+  xlb_sync_recvs = malloc((size_t)xlb_sync_recv_size *
+                          sizeof(xlb_sync_recvs[0]));
+  ADLB_MALLOC_CHECK(xlb_sync_recvs);
+
+  for (int i = 0; i < xlb_sync_recv_size; i++)
+  {
+    xlb_sync_recvs[i].buf = malloc(PACKED_SYNC_SIZE);
+    ADLB_MALLOC_CHECK(xlb_sync_recvs[i].buf);
+    // Initiate requests for all in queue
+    IRECV2(xlb_sync_recvs[i].buf, (int)PACKED_SYNC_SIZE, MPI_BYTE,
+           MPI_ANY_SOURCE, ADLB_TAG_SYNC_REQUEST, &xlb_sync_recvs[i].req);
+  }
+
+  /*
+    Setup pending sync buffer
+   */
   xlb_pending_sync_size = PENDING_SYNC_INIT_SIZE;
 
   // Optionally have different min size - otherwise we won't cover the
   // resizing cases in testing`
-  long tmp;
-  adlb_code rc = xlb_env_long("ADLB_DEBUG_SYNC_BUFFER_SIZE", &tmp);
+  rc = xlb_env_long("ADLB_DEBUG_SYNC_BUFFER_SIZE", &tmp);
   ADLB_CHECK(rc);
 
   if (rc != ADLB_NOTHING)
@@ -97,6 +138,9 @@ xlb_sync_init(void)
                                 (size_t)xlb_pending_sync_size);
   CHECK_MSG(xlb_pending_syncs != NULL, "could not allocate memory");
 
+  /*
+    Setup perf counters
+   */
   if (xlb_perf_counters_enabled)
   {
     for (int i = 0; i < ADLB_SYNC_ENUM_COUNT; i++)
@@ -117,6 +161,21 @@ xlb_sync_init(void)
 
 void xlb_sync_finalize(void)
 {
+  /*
+    Free sync request buffers, cancel requests
+   */
+  for (int i = 0; i < xlb_sync_recv_size; i++)
+  {
+    MPI_Cancel(&xlb_sync_recvs[i].req);
+    free(xlb_sync_recvs[i].buf);
+  }
+  free(xlb_sync_recvs);
+  xlb_sync_recvs = NULL;
+  xlb_sync_recv_size = 0;
+
+  /*
+    Free pending syncs
+   */
   free(xlb_pending_syncs);
   xlb_pending_sync_count = 0;
   xlb_pending_sync_size = 0;
@@ -138,6 +197,27 @@ void xlb_print_sync_counters(void)
   }
 }
 
+static adlb_code xlb_sync_recv_init_size(int servers, int *size)
+{
+  long tmp;
+  adlb_code rc = xlb_env_long("ADLB_SYNC_RECVS", &tmp);
+  ADLB_CHECK(rc);
+
+  if (rc != ADLB_NOTHING)
+  {
+    assert(tmp > 0 && tmp <= INT_MAX);
+    *size = (int)tmp;
+    return ADLB_SUCCESS;
+  }
+
+  *size = servers * 4;
+  if (*size >= XLB_SYNC_RECV_DEFAULT_MAX)
+  {
+    *size = XLB_SYNC_RECV_DEFAULT_MAX;
+  }
+
+  return ADLB_SUCCESS;
+}
 
 adlb_code
 xlb_sync(int target)
@@ -273,10 +353,11 @@ xlb_sync2(int target, const struct packed_sync *hdr, int *response)
       }
     }
 
-    IPROBE(MPI_ANY_SOURCE, ADLB_TAG_SYNC_REQUEST, &flag2, &status);
+    int other_rank = -1;
+    flag2 = xlb_check_sync_msgs(&other_rank);
     if (flag2)
     {
-      rc = msg_from_other_server(status.MPI_SOURCE, target);
+      rc = msg_from_other_server(other_rank);
       ADLB_CHECK(rc);
     }
 
@@ -408,17 +489,13 @@ static inline bool sync_accept_required(adlb_sync_mode mode)
   }
 }
 
-static adlb_code msg_from_other_server(int other_server, int target)
+static adlb_code msg_from_other_server(int other_server)
 {
   TRACE_START;
-  MPI_Status status;
   adlb_code code;
 
-  // Store on stack - skip malloc
-  char hdr_storage[PACKED_SYNC_SIZE];
-  struct packed_sync *other_hdr = (struct packed_sync *)hdr_storage;
-
-  RECV(other_hdr, (int)PACKED_SYNC_SIZE, MPI_BYTE, other_server, ADLB_TAG_SYNC_REQUEST);
+  xlb_sync_recv *sync = xlb_next_sync_msg();
+  struct packed_sync *other_hdr = sync->buf;
 
   /* Serve another server
    * We need to avoid the case of circular deadlock, e.g. where A is waiting
@@ -437,7 +514,6 @@ static adlb_code msg_from_other_server(int other_server, int target)
   }
   else if (other_hdr->mode == ADLB_SYNC_STEAL)
   {
-    // TODO: clean up code
     // Prefer rejecting steal immediately to accepting it later:
     // If we're busy syncing here, there's a good chance we're out of
     // work too
@@ -451,8 +527,48 @@ static adlb_code msg_from_other_server(int other_server, int target)
     code = enqueue_pending(DEFERRED_SYNC, other_server, other_hdr, NULL);
     ADLB_CHECK(code);
   }
+  
+  code = xlb_sync_msg_done();
+  ADLB_CHECK(code);
   TRACE_END;
   return ADLB_SUCCESS;
+}
+
+static xlb_sync_recv *xlb_next_sync_msg(void)
+{
+  xlb_sync_recv *head = &xlb_sync_recvs[xlb_sync_recv_head];
+  return head;
+}
+
+/*
+ * After done processing msg from xlb_next_sync_msg(), mark it
+ * as done and reuse sync buffer it up to accept another sync.
+ */
+static adlb_code xlb_sync_msg_done(void)
+{
+  xlb_sync_recv *head = &xlb_sync_recvs[xlb_sync_recv_head];
+  
+  IRECV2(head->buf, (int)PACKED_SYNC_SIZE, MPI_BYTE,
+           MPI_ANY_SOURCE, ADLB_TAG_SYNC_REQUEST, &head->req);
+
+  xlb_sync_recv_head = (xlb_sync_recv_head + 1) % xlb_sync_recv_size;
+  return ADLB_SUCCESS;
+}
+
+/*
+  Handle sync in the case where this server isn't in a sync loop
+ */
+adlb_code xlb_handle_next_sync_msg(int caller)
+{
+  MPE_LOG(xlb_mpe_svr_sync_start);
+
+  xlb_sync_recv *sync = xlb_next_sync_msg();
+  adlb_code rc = xlb_accept_sync(caller, sync->buf, false);
+
+  adlb_code rc2 = xlb_sync_msg_done();
+  ADLB_CHECK(rc2);
+  MPE_LOG(xlb_mpe_svr_sync_end);
+  return rc;
 }
 
 /*

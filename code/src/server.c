@@ -120,7 +120,7 @@ static adlb_code setup_idle_time(void);
 static inline int xlb_server_number(int rank);
 
 __attribute__((always_inline))
-static inline adlb_code xlb_poll(int source, bool prefer_sync, MPI_Status *req_status);
+static inline adlb_code xlb_poll(int source, MPI_Status *req_status);
 
 // Service request from queue
 __attribute__((always_inline))
@@ -271,9 +271,16 @@ serve_several()
     MPI_Status req_status;
     adlb_code code;
     // Prioritize server-to-server syncs to avoid blocking other servers
-    bool prefer_sync = other_servers &&
-          (reqs % XLB_SERVER_SYNC_CHECK_FREQ == 0);
-    code = xlb_poll(MPI_ANY_SOURCE, prefer_sync, &req_status);
+    if (other_servers)
+    {
+      int sync_rank = -1;
+      if (xlb_check_sync_msgs(&sync_rank))
+      {
+        code = xlb_handle_next_sync_msg(sync_rank);
+      }
+    }
+
+    code = xlb_poll(MPI_ANY_SOURCE, &req_status);
     if (code == ADLB_SUCCESS)
     {
       code = xlb_handle_pending(&req_status);
@@ -329,15 +336,9 @@ serve_several()
    prefer_sync: if true, check for server-server syncs first
  */
 static inline adlb_code
-xlb_poll(int source, bool prefer_sync, MPI_Status *req_status)
+xlb_poll(int source, MPI_Status *req_status)
 {
   int new_message;
-  if (prefer_sync)
-  {
-    IPROBE(source, ADLB_TAG_SYNC_REQUEST, &new_message, req_status);
-    if (new_message)
-      return ADLB_SUCCESS;
-  }
   IPROBE(source, MPI_ANY_TAG, &new_message, req_status);
   return new_message ? ADLB_SUCCESS : ADLB_NOTHING;
 }
@@ -439,7 +440,7 @@ xlb_serve_one(int source)
   if (source > 0)
     TRACE("\t source: %i", source);
   MPI_Status status;
-  adlb_code code = xlb_poll(source, false, &status);
+  adlb_code code = xlb_poll(source, &status);
   ADLB_CHECK(code);
 
   if (code == ADLB_NOTHING)
