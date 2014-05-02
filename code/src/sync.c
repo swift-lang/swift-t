@@ -645,108 +645,106 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
     SEND(&accepted_response, 1, MPI_INT, rank, ADLB_TAG_SYNC_RESPONSE);
   }
 
-  if (mode == ADLB_SYNC_REQUEST)
+  switch (mode)
   {
-    code = xlb_serve_server(rank);
-  }
-  else if (mode == ADLB_SYNC_STEAL_PROBE)
-  {
-    if (defer_svr_ops)
-    {
-      code = enqueue_pending(DEFERRED_STEAL_PROBE, rank, NULL, NULL);
-      ADLB_CHECK(code);
-    }
-    else
-    {
-      code = xlb_handle_steal_probe(rank);
-      ADLB_CHECK(code);
-    }
-  }
-  else if (mode == ADLB_SYNC_STEAL_PROBE_RESP)
-  {
-    if (defer_svr_ops)
-    {
-      code = enqueue_pending(DEFERRED_STEAL_PROBE_RESP, rank, hdr, NULL);
-      ADLB_CHECK(code);
-    }
-    else
-    {
-      // Steal from other rank if appropriate
-      code = xlb_handle_steal_probe_resp(rank, hdr);
-      ADLB_CHECK(code);
-    }
-  }
-  else if (mode == ADLB_SYNC_STEAL)
-  {
-    // Respond to steal
-    code = xlb_handle_steal(rank, &hdr->steal, (int*)hdr->sync_data);
-  }
-  else if (mode == ADLB_SYNC_REFCOUNT)
-  {
-    /*
-      We defer handling of server->server refcounts to avoid potential
-      deadlocks if the refcount decrement triggers a cycle of reference
-      count decrements between servers and a deadlock.  Deferring
-      processing also has the benefit of giving the fastest possible
-      response to the other servers.  One downside is that we can't pass
-      errors all the way back to the caller - we will simply report them
-      and continue.
+    case ADLB_SYNC_REQUEST:
+      code = xlb_serve_server(rank);
+      break;
 
-      Rules about safety of deferring refcounts:
-       -> refcount increments - need to apply increment before processing
-            any operation that could decrement refcount
-       -> read refcount decrements - safe to defer indefinitely,
-            but delays freeing memory
-       -> write refcount decrements - safe to defer indefinitely, 
-            but will delay notifications
-     */
+    case ADLB_SYNC_STEAL_PROBE:
+      if (defer_svr_ops)
+      {
+        code = enqueue_pending(DEFERRED_STEAL_PROBE, rank, NULL, NULL);
+      }
+      else
+      {
+        code = xlb_handle_steal_probe(rank);
+      }
+      break;
 
-    if (defer_svr_ops)
-    {
-      DEBUG("Defer refcount for <%"PRId64">", hdr->incr.id);
-      code = enqueue_pending(ACCEPTED_RC, rank, hdr, NULL);
-      ADLB_CHECK(code);
-    }
-    else
-    {
-      DEBUG("Update refcount now for <%"PRId64">", hdr->incr.id);
-      adlb_data_code dc = xlb_incr_rc_local(hdr->incr.id,
-                                  hdr->incr.change, true);
-      CHECK_MSG(dc == ADLB_DATA_SUCCESS, "Unexpected error in refcount");
-    }
-    // Then we're done - already sent sync response to caller
-    return ADLB_SUCCESS;
-  }
-  else if (mode == ADLB_SYNC_SUBSCRIBE)
-  {
-    code = xlb_handle_subscribe_sync(rank, hdr, defer_svr_ops);
-  }
-  else if (mode == ADLB_SYNC_NOTIFY)
-  {
-    if (defer_svr_ops)
-    {
-      DEBUG("Defer notification for <%"PRId64">", hdr->subscribe.id);
-      code = enqueue_deferred_notify(rank, hdr);
-    }
-    else
-    {
-      DEBUG("Handle notification now for <%"PRId64">", hdr->subscribe.id);
-      code = xlb_handle_notify_sync(rank, &hdr->subscribe, hdr->sync_data,
-                                    NULL);
-    }
-  }
-  else if (mode == ADLB_SYNC_SHUTDOWN)
-  {
-    DEBUG("[%d] received shutdown!", xlb_comm_rank);
+    case ADLB_SYNC_STEAL_PROBE_RESP:
+      if (defer_svr_ops)
+      {
+        code = enqueue_pending(DEFERRED_STEAL_PROBE_RESP, rank, hdr, NULL);
+      }
+      else
+      {
+        // Steal from other rank if appropriate
+        code = xlb_handle_steal_probe_resp(rank, hdr);
+      }
+      break;
 
-    xlb_server_shutting_down = true;
-    
-    code = ADLB_SHUTDOWN;
-  }
-  else
-  {
-    printf("Invalid sync mode: %d\n", mode);
-    return ADLB_ERROR;
+    case ADLB_SYNC_STEAL:
+      // Respond to steal
+      code = xlb_handle_steal(rank, &hdr->steal, (int*)hdr->sync_data);
+      break;
+
+    case ADLB_SYNC_REFCOUNT:
+      /*
+        We defer handling of server->server refcounts to avoid potential
+        deadlocks if the refcount decrement triggers a cycle of reference
+        count decrements between servers and a deadlock.  Deferring
+        processing also has the benefit of giving the fastest possible
+        response to the other servers.  One downside is that we can't pass
+        errors all the way back to the caller - we will simply report them
+        and continue.
+
+        Rules about safety of deferring refcounts:
+         -> refcount increments - need to apply increment before
+             processing any operation that could decrement refcount
+         -> read refcount decrements - safe to defer indefinitely,
+              but delays freeing memory
+         -> write refcount decrements - safe to defer indefinitely, 
+              but will delay notifications
+       */
+
+      if (defer_svr_ops)
+      {
+        DEBUG("Defer refcount for <%"PRId64">", hdr->incr.id);
+        code = enqueue_pending(ACCEPTED_RC, rank, hdr, NULL);
+        ADLB_CHECK(code);
+      }
+      else
+      {
+        DEBUG("Update refcount now for <%"PRId64">", hdr->incr.id);
+        adlb_data_code dc = xlb_incr_rc_local(hdr->incr.id,
+                                    hdr->incr.change, true);
+        CHECK_MSG(dc == ADLB_DATA_SUCCESS, "Unexpected error in refcount");
+        code = ADLB_SUCCESS;
+      }
+      // Then we're done - already sent sync response to caller
+      break;
+
+    case ADLB_SYNC_SUBSCRIBE:
+      code = xlb_handle_subscribe_sync(rank, hdr, defer_svr_ops);
+      break;
+
+    case ADLB_SYNC_NOTIFY:
+      if (defer_svr_ops)
+      {
+        DEBUG("Defer notification for <%"PRId64">", hdr->subscribe.id);
+        code = enqueue_deferred_notify(rank, hdr);
+      }
+      else
+      {
+        DEBUG("Handle notification now for <%"PRId64">", hdr->subscribe.id);
+        code = xlb_handle_notify_sync(rank, &hdr->subscribe, hdr->sync_data,
+                                      NULL);
+      }
+      break;
+
+    case ADLB_SYNC_SHUTDOWN:
+      DEBUG("[%d] received shutdown!", xlb_comm_rank);
+
+      xlb_server_shutting_down = true;
+      
+      code = ADLB_SHUTDOWN;
+      break;
+
+    default:
+      ERR_PRINTF("Invalid sync mode: %d\n", mode);
+      code = ADLB_ERROR;
+      break;
   }
   return code;
 }
