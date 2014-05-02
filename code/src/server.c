@@ -777,6 +777,7 @@ server_shutdown()
   DEBUG("server down.");
   xlb_requestqueue_shutdown();
   xlb_workq_finalize();
+  xlb_steal_finalize();
   xlb_sync_finalize();
 
   turbine_engine_finalize();

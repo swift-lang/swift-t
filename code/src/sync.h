@@ -19,7 +19,7 @@
  * sync.h
  *
  *  Created on: Aug 20, 2012
- *      Author: wozniak
+ *      Authors: wozniak, armstrong
  *
  * The sync module manages server-to-server synchronization and
  * communication.  When servers are communicating with each other,

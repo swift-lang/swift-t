@@ -19,7 +19,7 @@
  * steal.c
  *
  *  Created on: Aug 20, 2012
- *      Author: wozniak
+ *      Authors: wozniak, armstrong
  */
 
 #include <mpi.h>
@@ -75,6 +75,12 @@ xlb_steal_init(void)
   CHECK_MSG(ok, "Error initing table_ip");
 
   return ADLB_SUCCESS;
+}
+
+void
+xlb_steal_finalize(void)
+{
+  table_ip_free_callback(&sent_steal_probes, false, NULL);
 }
 
 adlb_code

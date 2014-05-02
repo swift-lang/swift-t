@@ -19,7 +19,7 @@
  * sync.c
  *
  *  Created on: Aug 20, 2012
- *      Author: wozniak
+ *      Authors: wozniak, armstrong
  */
 
 #include <assert.h>
