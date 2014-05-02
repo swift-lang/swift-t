@@ -40,8 +40,9 @@ static xlb_sync_recv *xlb_next_sync_msg(void);
 static adlb_code xlb_sync_msg_done(void);
 
 static inline adlb_code msg_from_target(int target, int response);
-static adlb_code msg_from_other_server(int other_server);
-static inline adlb_code msg_shutdown(adlb_sync_mode mode, int sync_target, bool* done);
+static adlb_code msg_from_other_server(int other_server,
+                                       bool *shutting_down);
+static inline adlb_code cancel_sync(adlb_sync_mode mode, int sync_target);
 
 static adlb_code xlb_handle_subscribe_sync(int rank,
         const struct packed_sync *hdr, bool defer_svr_ops);
@@ -154,10 +155,13 @@ xlb_sync_init(void)
     
     // Register human-readable names
     xlb_add_sync_type_name(ADLB_SYNC_REQUEST);
+    xlb_add_sync_type_name(ADLB_SYNC_STEAL_PROBE);
+    xlb_add_sync_type_name(ADLB_SYNC_STEAL_PROBE_RESP);
     xlb_add_sync_type_name(ADLB_SYNC_STEAL);
     xlb_add_sync_type_name(ADLB_SYNC_REFCOUNT);
     xlb_add_sync_type_name(ADLB_SYNC_SUBSCRIBE);
     xlb_add_sync_type_name(ADLB_SYNC_NOTIFY);
+    xlb_add_sync_type_name(ADLB_SYNC_SHUTDOWN);
   }
   return ADLB_SUCCESS;
 }
@@ -261,9 +265,7 @@ xlb_sync2(int target, const struct packed_sync *hdr, int *response)
   int accept_response;
   bool accept_required = sync_accept_required(hdr->mode);
 
-  MPI_Status status;
-  /// MPI_Request request1, request2;
-  int flag1 = 0, flag2 = 0, flag3 = 0;
+  int flag1 = 0, flag2 = 0;
 
   assert(!xlb_server_sync_in_progress);
   xlb_server_sync_in_progress = true;
@@ -274,7 +276,8 @@ xlb_sync2(int target, const struct packed_sync *hdr, int *response)
   // If one of the requests is still pending
   bool requests_pending = false;
 
-  if (!xlb_server_shutting_down)
+  if (!xlb_server_shutting_down ||
+      hdr->mode == ADLB_SYNC_SHUTDOWN)
   {
 
     if (xlb_perf_counters_enabled)
@@ -363,23 +366,27 @@ xlb_sync2(int target, const struct packed_sync *hdr, int *response)
     if (rc == ADLB_SUCCESS)
     {
       assert(other_rank != -1);
-      rc = msg_from_other_server(other_rank);
+      bool shutting_down;
+      rc = msg_from_other_server(other_rank, &shutting_down);
       ADLB_CHECK(rc);
+
+      if (shutting_down)
+      {
+        // This server needs to exit sync loop even if it hasn't
+        // completed to avoid getting blocked on another server that
+        // has already shut down
+        DEBUG("server_sync: [%d] cancelled by shutdown!", xlb_comm_rank);
+
+        cancel_sync(hdr->mode, target);
+
+        done = true;
+        rc = ADLB_SHUTDOWN;
+      }
 
       flag2 = true;
     }
 
-    // TODO: this isn't necessary if master server syncs before shutdown
-    IPROBE(MPI_ANY_SOURCE, ADLB_TAG_SHUTDOWN_SERVER, &flag3,
-           &status);
-    if (flag3)
-    {
-      rc = msg_shutdown(hdr->mode, target, &done);
-      ADLB_CHECK(rc);
-      rc = ADLB_SHUTDOWN;
-    }
-
-    if (!flag1 && !flag2 && !flag3)
+    if (!flag1 && !flag2)
     {
       // TODO: generally we don't want to wait longer than needed for
       //  a response, and we should get a response pretty quickly.
@@ -403,6 +410,25 @@ xlb_sync2(int target, const struct packed_sync *hdr, int *response)
   MPE_LOG(xlb_mpe_dmn_sync_end);
 
   return rc;
+}
+
+/*
+  Tell target to shut down
+ */
+adlb_code xlb_sync_shutdown(int target)
+{
+  char hdr_storage[PACKED_SYNC_SIZE]; // Temporary stack storage for struct
+  struct packed_sync *hdr = (struct packed_sync *)hdr_storage;
+#ifndef NDEBUG
+  // Avoid send uninitialized bytes for memory checking tools
+  memset(hdr, 0, PACKED_SYNC_SIZE);
+#endif
+  hdr->mode = ADLB_SYNC_SHUTDOWN;
+
+  int rc = xlb_sync2(target, hdr, NULL);
+  ADLB_CHECK(rc);
+
+  return ADLB_SUCCESS;
 }
 
 static adlb_code
@@ -489,7 +515,8 @@ static inline bool sync_accept_required(adlb_sync_mode mode)
       mode == ADLB_SYNC_NOTIFY ||
       mode == ADLB_SYNC_REFCOUNT ||
       mode == ADLB_SYNC_STEAL_PROBE ||
-      mode == ADLB_SYNC_STEAL_PROBE_RESP)
+      mode == ADLB_SYNC_STEAL_PROBE_RESP ||
+      mode == ADLB_SYNC_SHUTDOWN)
   {
     return false;
   }
@@ -499,11 +526,13 @@ static inline bool sync_accept_required(adlb_sync_mode mode)
   }
 }
 
-static adlb_code msg_from_other_server(int other_server)
+static adlb_code msg_from_other_server(int other_server, bool *shutting_down)
 {
   TRACE_START;
   adlb_code code;
   
+  *shutting_down = false;
+
   xlb_sync_recv *sync = xlb_next_sync_msg();
   struct packed_sync *other_hdr = sync->buf;
 
@@ -521,6 +550,11 @@ static adlb_code msg_from_other_server(int other_server)
     
     code = xlb_accept_sync(other_server, other_hdr, true);
     ADLB_CHECK(code);
+
+    if (code == ADLB_SHUTDOWN)
+    {
+      *shutting_down = true;
+    }
   }
   else if (other_hdr->mode == ADLB_SYNC_STEAL)
   {
@@ -701,6 +735,14 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
       code = xlb_handle_notify_sync(rank, &hdr->subscribe, hdr->sync_data,
                                     NULL);
     }
+  }
+  else if (mode == ADLB_SYNC_SHUTDOWN)
+  {
+    DEBUG("[%d] received shutdown!", xlb_comm_rank);
+
+    xlb_server_shutting_down = true;
+    
+    code = ADLB_SHUTDOWN;
   }
   else
   {
@@ -1013,7 +1055,7 @@ adlb_code xlb_pending_shrink(void)
 }
 
 static inline adlb_code
-msg_shutdown(adlb_sync_mode mode, int sync_target, bool* done)
+cancel_sync(adlb_sync_mode mode, int sync_target)
 {
   TRACE_START;
   DEBUG("server_sync: [%d] cancelled by shutdown!", xlb_comm_rank);
@@ -1040,7 +1082,6 @@ msg_shutdown(adlb_sync_mode mode, int sync_target, bool* done)
     return ADLB_ERROR;
   }
 
-  *done = true;
   TRACE_END;
   return ADLB_SUCCESS;
 }

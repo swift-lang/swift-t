@@ -769,7 +769,7 @@ shutdown_all_servers()
   for (int rank = xlb_master_server_rank+1; rank < xlb_comm_size;
        rank++)
   {
-    int rc = ADLB_Server_shutdown(rank);
+    adlb_code rc = xlb_sync_shutdown(rank);
     ASSERT(rc == ADLB_SUCCESS);
   }
   TRACE_END;

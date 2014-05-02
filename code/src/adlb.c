@@ -1493,18 +1493,6 @@ ADLB_Server_idle(int rank, int64_t check_attempt, bool* result,
 }
 
 /**
-   Tell the server at rank to shutdown
- */
-adlb_code
-ADLB_Server_shutdown(int rank)
-{
-  TRACE_START;
-  SEND_TAG(rank, ADLB_TAG_SHUTDOWN_SERVER);
-  TRACE_END;
-  return ADLB_SUCCESS;
-}
-
-/**
    Tell the server that this worker is shutting down
  */
 static inline adlb_code

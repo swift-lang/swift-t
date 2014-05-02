@@ -62,6 +62,11 @@ adlb_code xlb_sync2(int target, const struct packed_sync *hdr,
                     int *response);
 
 /*
+  Tell target to shut down
+ */
+adlb_code xlb_sync_shutdown(int target);
+
+/*
   Subscribe to a datum on another server
  */
 adlb_code
@@ -122,6 +127,8 @@ adlb_code xlb_handle_next_sync_msg(int caller);
 
 /*
  * Accept and handle sync.
+ * return: ADLB_ERROR on error, ADLB_SHUTDOWN if got shutdown command,
+ *         ADLB_SUCCESS otherwise
  */
 adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
                           bool defer_svr_ops);
@@ -145,11 +152,7 @@ static inline adlb_code xlb_check_sync_msgs(int *caller)
 
   if (flag)
   {
-    DEBUG("SYNC READY: %i (%i)", xlb_sync_recv_head, status.MPI_SOURCE);
-
     *caller = status.MPI_SOURCE;
-    printf("CALLER: %i %i\n", *caller, xlb_comm_size);
-    assert(*caller >= 0 && *caller < xlb_comm_size); // TODO: remove
     return ADLB_SUCCESS;
   }
   else

@@ -101,7 +101,6 @@ static adlb_code handle_lock(int caller);
 static adlb_code handle_unlock(int caller);
 static adlb_code handle_check_idle(int caller);
 static adlb_code handle_shutdown_worker(int caller);
-static adlb_code handle_shutdown_server(int caller);
 static adlb_code handle_fail(int caller);
 
 static adlb_code find_req_bytes(int *bytes, int caller, adlb_tag tag);
@@ -190,7 +189,6 @@ xlb_handlers_init(void)
   register_handler(ADLB_TAG_UNLOCK, handle_unlock);
   register_handler(ADLB_TAG_CHECK_IDLE, handle_check_idle);
   register_handler(ADLB_TAG_SHUTDOWN_WORKER, handle_shutdown_worker);
-  register_handler(ADLB_TAG_SHUTDOWN_SERVER, handle_shutdown_server);
   register_handler(ADLB_TAG_FAIL, handle_fail);
 }
 
@@ -1731,19 +1729,6 @@ handle_shutdown_worker(int caller)
   ADLB_CHECK(code);
 
   return ADLB_SUCCESS;
-}
-
-static adlb_code
-handle_shutdown_server(int caller)
-{
-  MPE_LOG(xlb_mpe_svr_shutdown_start);
-  MPI_Status status;
-  RECV_TAG(caller, ADLB_TAG_SHUTDOWN_SERVER);
-
-  // caller is a server
-  xlb_server_shutdown();
-  MPE_LOG(xlb_mpe_svr_shutdown_end);
-  return ADLB_DONE;
 }
 
 static adlb_code

@@ -331,7 +331,6 @@ const char *ADLB_Data_type_tostring(adlb_data_type type);
 
 adlb_code ADLB_Server_idle(int rank, int64_t check_attempt, bool* result,
                  int *request_counts, int *untargeted_work_counts);
-adlb_code ADLB_Server_shutdown(int rank);
 
 adlb_code ADLBP_Finalize(void);
 adlb_code ADLB_Finalize(void);

@@ -503,7 +503,8 @@ typedef enum
   ADLB_SYNC_STEAL, // Carry out steal
   ADLB_SYNC_REFCOUNT, // Modify reference count
   ADLB_SYNC_SUBSCRIBE, // Subscribe to a datum
-  ADLB_SYNC_NOTIFY, // Notify aftern subscriptionto a datum
+  ADLB_SYNC_NOTIFY, // Notify after subscription to a datum
+  ADLB_SYNC_SHUTDOWN, // Shutdown server
 
   ADLB_SYNC_ENUM_COUNT, // Dummy value: count of enum types
 } adlb_sync_mode;
@@ -588,7 +589,6 @@ typedef enum
   ADLB_TAG_DO_NOTHING,
   ADLB_TAG_CHECK_IDLE,
   ADLB_TAG_SHUTDOWN_WORKER,
-  ADLB_TAG_SHUTDOWN_SERVER,
 
   /// tags outgoing from server
   ADLB_TAG_RESPONSE,

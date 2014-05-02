@@ -100,7 +100,6 @@ add_tags()
   add_tag(ADLB_TAG_SYNC_REQUEST);
   add_tag(ADLB_TAG_CHECK_IDLE);
   add_tag(ADLB_TAG_SHUTDOWN_WORKER);
-  add_tag(ADLB_TAG_SHUTDOWN_SERVER);
 
   // outgoing tags (server should not receive as request)
   add_tag(ADLB_TAG_RESPONSE);
