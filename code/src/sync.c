@@ -377,7 +377,8 @@ xlb_sync2(int target, const struct packed_sync *hdr, int *response)
         // has already shut down
         DEBUG("server_sync: [%d] cancelled by shutdown!", xlb_comm_rank);
 
-        cancel_sync(hdr->mode, target);
+        rc = cancel_sync(hdr->mode, target);
+        ADLB_CHECK(rc);
 
         done = true;
         rc = ADLB_SHUTDOWN;
@@ -1063,23 +1064,25 @@ cancel_sync(adlb_sync_mode mode, int sync_target)
   if (mode == ADLB_SYNC_REQUEST)
   {
     /* We're not going to follow up the sync request with an actual
-     * request.  To avoid the target getting stuck waiting for work,
-     * We send them a dummy piece of work. */
+     * request.  To avoid the target getting stuck waiting for
+     * something, we send them a dummy piece of work. */
     SEND_TAG(sync_target, ADLB_TAG_DO_NOTHING);
   }
-  else if (mode == ADLB_SYNC_STEAL)
+  else if (mode == ADLB_SYNC_STEAL_PROBE ||
+           mode == ADLB_SYNC_STEAL_PROBE_RESP ||
+           mode == ADLB_SYNC_STEAL ||
+           mode == ADLB_SYNC_REFCOUNT ||
+           mode == ADLB_SYNC_SUBSCRIBE ||
+           mode == ADLB_SYNC_NOTIFY ||
+           mode == ADLB_SYNC_SHUTDOWN)
   {
-    // Don't do anything, target doesn't expect response from this rank.
-    // There also won't be any work in system given we're shutting down
-  }
-  else if (mode == ADLB_SYNC_REFCOUNT)
-  {
-    // Don't do anything, target doesn't expect response from this rank.
+    // Don't do anything, the sync initiator doesn't block on any
+    // follow-up response from this server after it's accepted
   }
   else
   {
-    ERR_PRINTF("Unexpected sync mode %i\n", (int)mode);
-    return ADLB_ERROR;
+    ERR_PRINTF("WARNING: Unexpected sync mode %i\n", (int)mode);
+    return ADLB_SUCCESS;
   }
 
   TRACE_END;
