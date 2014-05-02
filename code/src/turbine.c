@@ -201,6 +201,8 @@ typedef struct {
   adlb_datum_id id;
 } td_closed_cache_entry;
 
+#define DEFAULT_CLOSED_CACHE_SIZE 4096
+
 static int td_closed_cache_size; // Number of entries
 
 static struct table_lp td_closed_cache;
@@ -217,6 +219,7 @@ static inline adlb_subscript sub_convert(turbine_subscript sub)
 }
 
 #define turbine_check(code) if (code != TURBINE_SUCCESS) return code;
+#define turbine_check_adlb(code) if (code != ADLB_SUCCESS) return code;
 
 #define turbine_check_verbose(code) \
     turbine_check_verbose_impl(code, __FILE__, __LINE__)
@@ -1120,8 +1123,18 @@ bitfield_size(int inputs) {
 
 static turbine_engine_code init_closed_caches(void)
 {
-  // TODO: work out cache size
-  td_closed_cache_size = 4096;
+  td_closed_cache_size = DEFAULT_CLOSED_CACHE_SIZE;
+
+  long tmp;
+  adlb_code rc = xlb_env_long("ADLB_CLOSED_CACHE_SIZE", &tmp);
+  turbine_check_adlb(rc);
+  if (rc == ADLB_SUCCESS)
+  {
+    turbine_condition(tmp >= 0 && tmp < INT_MAX,
+                              TURBINE_ERROR_INVALID,
+          "Invalid ADLB_CLOSED_CACHE_SIZE %li", tmp);
+    td_closed_cache_size = (int)tmp;
+  }
 
   // Initialize to size large enough for all entries
   table_lp_init_custom(&td_closed_cache, td_closed_cache_size, 1.0);
