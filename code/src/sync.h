@@ -98,9 +98,10 @@ typedef struct {
 
 /*
  * Check if there incoming sync request messages to process.
- * return: true if message present
+ * return: ADLB_SUCCESS if message present, ADLB_NOTHING if no message,
+ *         ADLB_ERROR on error
  */
-static inline bool xlb_check_sync_msgs(int *caller);
+static inline adlb_code xlb_check_sync_msgs(int *caller);
 
 /*
  * Handle sync message if check returns true
@@ -123,21 +124,25 @@ extern xlb_sync_recv *xlb_sync_recvs;
 extern int xlb_sync_recv_head;
 extern int xlb_sync_recv_size;
 
-static inline bool xlb_check_sync_msgs(int *caller)
+static inline adlb_code xlb_check_sync_msgs(int *caller)
 {
-  int flag;
+  int flag = 0;
   MPI_Status status;
   xlb_sync_recv *head = &xlb_sync_recvs[xlb_sync_recv_head];
   MPI_TEST2(&head->req, &flag, &status);
 
   if (flag)
   {
+    DEBUG("SYNC READY: %i (%i)", xlb_sync_recv_head, status.MPI_SOURCE);
+
     *caller = status.MPI_SOURCE;
-    return true;
+    printf("CALLER: %i %i\n", *caller, xlb_comm_size);
+    assert(*caller >= 0 && *caller < xlb_comm_size); // TODO: remove
+    return ADLB_SUCCESS;
   }
   else
   {
-    return false;
+    return ADLB_NOTHING;
   }
 }
 

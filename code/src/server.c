@@ -274,10 +274,12 @@ serve_several()
     if (other_servers)
     {
       int sync_rank = -1;
-      if (xlb_check_sync_msgs(&sync_rank))
+      code = xlb_check_sync_msgs(&sync_rank);
+      if (code == ADLB_SUCCESS)
       {
         code = xlb_handle_next_sync_msg(sync_rank);
       }
+      ADLB_CHECK(code);
     }
 
     code = xlb_poll(MPI_ANY_SOURCE, &req_status);

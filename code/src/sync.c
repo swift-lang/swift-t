@@ -114,6 +114,7 @@ xlb_sync_init(void)
     // Initiate requests for all in queue
     IRECV2(xlb_sync_recvs[i].buf, (int)PACKED_SYNC_SIZE, MPI_BYTE,
            MPI_ANY_SOURCE, ADLB_TAG_SYNC_REQUEST, &xlb_sync_recvs[i].req);
+    DEBUG("RECEIVE SYNC %i", i);
   }
 
   /*
@@ -354,11 +355,16 @@ xlb_sync2(int target, const struct packed_sync *hdr, int *response)
     }
 
     int other_rank = -1;
-    flag2 = xlb_check_sync_msgs(&other_rank);
-    if (flag2)
+    rc = xlb_check_sync_msgs(&other_rank);
+    ADLB_CHECK(rc);
+    if (rc == ADLB_SUCCESS)
     {
+      assert(other_rank != -1);
+      assert(other_rank >= 0 && other_rank < xlb_comm_size); // TODO: remove
       rc = msg_from_other_server(other_rank);
       ADLB_CHECK(rc);
+
+      flag2 = true;
     }
 
     // TODO: this isn't necessary if master server syncs before shutdown
@@ -495,7 +501,8 @@ static adlb_code msg_from_other_server(int other_server)
 {
   TRACE_START;
   adlb_code code;
-
+  
+  DEBUG("SYNC OTHER SERVER"); // TODO: remove
   xlb_sync_recv *sync = xlb_next_sync_msg();
   struct packed_sync *other_hdr = sync->buf;
 
@@ -538,6 +545,7 @@ static adlb_code msg_from_other_server(int other_server)
 
 static xlb_sync_recv *xlb_next_sync_msg(void)
 {
+  DEBUG("GET HEAD SYNC %i", xlb_sync_recv_head);
   xlb_sync_recv *head = &xlb_sync_recvs[xlb_sync_recv_head];
   return head;
 }
@@ -549,7 +557,8 @@ static xlb_sync_recv *xlb_next_sync_msg(void)
 static adlb_code xlb_sync_msg_done(void)
 {
   xlb_sync_recv *head = &xlb_sync_recvs[xlb_sync_recv_head];
-  
+ 
+  DEBUG("RECEIVE SYNC %i", xlb_sync_recv_head);
   IRECV2(head->buf, (int)PACKED_SYNC_SIZE, MPI_BYTE,
            MPI_ANY_SOURCE, ADLB_TAG_SYNC_REQUEST, &head->req);
 
@@ -562,10 +571,12 @@ static adlb_code xlb_sync_msg_done(void)
  */
 adlb_code xlb_handle_next_sync_msg(int caller)
 {
+  assert(caller >= 0 && caller < xlb_comm_size); // TODO: remove
   MPE_LOG(xlb_mpe_svr_sync_start);
 
   xlb_sync_recv *sync = xlb_next_sync_msg();
-  adlb_code rc = xlb_accept_sync(caller, sync->buf, false);
+  // TODO: don't really need to defer server ops..
+  adlb_code rc = xlb_accept_sync(caller, sync->buf, true);
 
   adlb_code rc2 = xlb_sync_msg_done();
   ADLB_CHECK(rc2);
@@ -581,6 +592,7 @@ adlb_code xlb_handle_next_sync_msg(int caller)
 adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
                           bool defer_svr_ops)
 {
+  assert(rank >= 0 && rank < xlb_comm_size); // TODO: remove
   adlb_sync_mode mode = hdr->mode;
   adlb_code code = ADLB_ERROR;
   
@@ -917,7 +929,7 @@ static adlb_code enqueue_pending(xlb_pending_kind kind, int rank,
             sizeof(xlb_pending_syncs[0]) * (size_t)xlb_pending_sync_head);
     }
   }
- 
+
   int tail = (xlb_pending_sync_head + xlb_pending_sync_count)
              % xlb_pending_sync_size;
   xlb_pending *entry = &xlb_pending_syncs[tail];
