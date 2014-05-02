@@ -464,8 +464,6 @@ table_ip_remove(table_ip* table, int key, void **value)
     return true;
   }
   return false;
-
-  return false;
 }
 
 /**
