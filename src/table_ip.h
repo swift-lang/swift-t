@@ -24,6 +24,7 @@
 #define TABLE_IP_H
 
 #include <stdbool.h>
+#include <stddef.h>
 
 #include "c-utils-types.h"
 
