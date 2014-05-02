@@ -37,6 +37,7 @@
 #include <adlb.h>
 
 #include <c-utils.h>
+#include <list2_b.h>
 #include <log.h>
 #include <table.h>
 #include <table_bp.h>
@@ -55,12 +56,14 @@ static struct {
   int64_t id_subscribed; /* Combine with existing subscribe */
   int64_t id_subscribe_local; /* Subscribe to local data */
   int64_t id_subscribe_remote; /* Subscribe to remote data */
+  int64_t id_subscribe_cached; /* Cached subscribe to remote data */
   int64_t id_ready; /* Already closed upon subscribe */
   
   // Counters for ID/subscript combo
   int64_t id_sub_subscribed; /* Combine with existing subscribe */
   int64_t id_sub_subscribe_local; /* Subscribe to local data */
   int64_t id_sub_subscribe_remote; /* Subscribe to remote data */
+  int64_t id_sub_subscribe_cached; /* Cached subscribe to remote data */
   int64_t id_sub_ready; /* Already closed upon subscribe */
 } xlb_engine_counters;
 
@@ -137,6 +140,12 @@ move_to_ready(turbine_work_array *ready, transform *T);
 static const char *
 turbine_engine_code_tostring(turbine_engine_code code);
 
+static turbine_engine_code init_closed_caches(void);
+static void finalize_closed_caches(void);
+
+static turbine_engine_code td_closed_cache_add(adlb_datum_id id);
+static bool td_closed_cache_check(adlb_datum_id id);
+
 /** Has turbine_engine_init() been called? */
 bool turbine_engine_initialized = false;
 
@@ -178,6 +187,25 @@ static struct table_lp td_subscribed;
    xlb_write_id_sub function
  */
 static struct table_bp td_sub_subscribed;
+
+/**
+  LRU cache for TDs that are known to be closed implemented with
+  doubly-linked list and hash table.  Hash table entries point to
+  linked list node.  Linked list node contains subscribe cache entry.
+  The head of the LRU is next in line for eviction.
+  We only cache remote subscribes, not local ones.
+
+  TODO: similar cache for TD/sub paris
+ */
+typedef struct {
+  adlb_datum_id id;
+} td_closed_cache_entry;
+
+static int td_closed_cache_size; // Number of entries
+
+static struct table_lp td_closed_cache;
+
+static struct list2_b td_closed_cache_lru;
 
 // Maximum length of buffer required for key
 #define ID_SUB_KEY_MAX (ADLB_DATA_SUBSCRIPT_MAX + 30)
@@ -284,13 +312,18 @@ turbine_engine_init(int rank)
     xlb_engine_counters.id_subscribed = 0;
     xlb_engine_counters.id_subscribe_local = 0;
     xlb_engine_counters.id_subscribe_remote = 0;
+    xlb_engine_counters.id_subscribe_cached = 0;
     xlb_engine_counters.id_ready = 0;
     
     xlb_engine_counters.id_sub_subscribed = 0;
     xlb_engine_counters.id_sub_subscribe_local = 0;
     xlb_engine_counters.id_sub_subscribe_remote = 0;
+    xlb_engine_counters.id_sub_subscribe_cached = 0;
     xlb_engine_counters.id_sub_ready = 0;
   }
+
+  turbine_engine_code tc = init_closed_caches();
+  turbine_check(tc);
   
   turbine_engine_initialized = true;
   return TURBINE_SUCCESS;
@@ -310,6 +343,9 @@ turbine_engine_print_counters(void)
   PRINT_COUNTER("engine_subscribe_remote=%"PRId64, 
         xlb_engine_counters.id_subscribe_remote +
         xlb_engine_counters.id_sub_subscribe_remote);
+  PRINT_COUNTER("engine_subscribe_cached=%"PRId64, 
+        xlb_engine_counters.id_subscribe_cached +
+        xlb_engine_counters.id_sub_subscribe_cached);
   PRINT_COUNTER("engine_ready=%"PRId64, xlb_engine_counters.id_ready +
                                 xlb_engine_counters.id_sub_ready);
 
@@ -319,6 +355,8 @@ turbine_engine_print_counters(void)
         xlb_engine_counters.id_subscribe_local);
   PRINT_COUNTER("engine_id_subscribe_remote=%"PRId64,
         xlb_engine_counters.id_subscribe_remote);
+  PRINT_COUNTER("engine_id_subscribe_cached=%"PRId64,
+        xlb_engine_counters.id_subscribe_cached);
   PRINT_COUNTER("engine_id_ready=%"PRId64,
         xlb_engine_counters.id_ready);
   
@@ -328,6 +366,8 @@ turbine_engine_print_counters(void)
         xlb_engine_counters.id_sub_subscribe_local);
   PRINT_COUNTER("engine_id_sub_subscribe_remote=%"PRId64,
         xlb_engine_counters.id_sub_subscribe_remote);
+  PRINT_COUNTER("engine_id_sub_subscribe_cached=%"PRId64,
+        xlb_engine_counters.id_sub_subscribe_cached);
   PRINT_COUNTER("engine_id_sub_ready=%"PRId64,
         xlb_engine_counters.id_sub_ready);
 }
@@ -506,6 +546,7 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *subscribed)
       }
       else
       {
+        // TODO: cached subscribe
         adlb_code ac = xlb_sync_subscribe(server, id,
                             sub_convert(subscript), subscribed);
         DATA_CHECK_ADLB(ac,  TURBINE_ERROR_UNKNOWN);
@@ -555,10 +596,17 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *subscribed)
       }
       else
       {
-        adlb_code ac = xlb_sync_subscribe(server, id, ADLB_NO_SUB,
-                                          subscribed);
-        DATA_CHECK_ADLB(ac,  TURBINE_ERROR_UNKNOWN);
-        INCR_COUNTER(id_subscribe_remote);
+        if (td_closed_cache_check(id))
+        {
+          INCR_COUNTER(id_subscribe_cached);
+        }
+        else
+        {
+          adlb_code ac = xlb_sync_subscribe(server, id, ADLB_NO_SUB,
+                                            subscribed);
+          DATA_CHECK_ADLB(ac,  TURBINE_ERROR_UNKNOWN);
+          INCR_COUNTER(id_subscribe_remote);
+        }
       }
     
       if (*subscribed)
@@ -742,6 +790,10 @@ turbine_close(adlb_datum_id id, turbine_work_array *ready)
   void *tmp;
   bool was_subscribed = table_lp_remove(&td_subscribed, id, &tmp);
   assert(was_subscribed);
+
+  // Cache subscribe result
+  turbine_engine_code tc = td_closed_cache_add(id);
+  turbine_check(tc);
 
   // Remove from table transforms that this td was blocking
   // Will need to free list later
@@ -1066,6 +1118,85 @@ bitfield_size(int inputs) {
   return (size_t)(inputs - 1) / 8 + 1;
 }
 
+static turbine_engine_code init_closed_caches(void)
+{
+  // TODO: work out cache size
+  td_closed_cache_size = 4096;
+
+  // Initialize to size large enough for all entries
+  table_lp_init_custom(&td_closed_cache, td_closed_cache_size, 1.0);
+  
+  list2_b_init(&td_closed_cache_lru);
+  return TURBINE_SUCCESS;
+}
+
+static void finalize_closed_caches(void)
+{
+  // Free table.  Values are pointers to list nodes, which we free next
+  table_lp_free_callback(&td_closed_cache, false, NULL);
+
+  // Free LRU list
+  list2_b_clear(&td_closed_cache_lru);
+}
+
+// Move to top of lru list
+static void td_closed_update_lru(struct list2_b_item *entry)
+{
+  if (td_closed_cache_lru.tail != entry)
+  {
+    // Remove and add back at tail
+    list2_b_remove_item(&td_closed_cache_lru, entry);
+    list2_b_add_item(&td_closed_cache_lru, entry);
+  }
+}
+
+// Return true if closed
+static bool td_closed_cache_check(adlb_datum_id id)
+{
+  struct list2_b_item *entry;
+  if (table_lp_search(&td_closed_cache, id, (void**)&entry))
+  {
+    // Was closed, just need to update LRU
+    td_closed_update_lru(entry);
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+
+// Add that it was closed to cache
+static turbine_engine_code td_closed_cache_add(adlb_datum_id id)
+{
+  if (td_closed_cache.size >= td_closed_cache_size)
+  {
+    // Evict an entry
+    struct list2_b_item *victim = list2_b_pop_item(&td_closed_cache_lru);
+    td_closed_cache_entry *victim_entry = (td_closed_cache_entry*)
+                                          victim->data;
+    void *tmp;
+    bool removed = table_lp_remove(&td_closed_cache, victim_entry->id,
+                                   &tmp);
+    assert(removed && tmp == victim); // Should have had entry
+    free(victim);
+  }
+
+  td_closed_cache_entry *entry;
+  struct list2_b_item *node = list2_b_item_alloc(sizeof(*entry));
+  entry = (td_closed_cache_entry*)&node->data;
+  entry->id = id;
+  node->data_len = sizeof(*entry);
+  
+  list2_b_add_item(&td_closed_cache_lru, node);
+
+  bool ok = table_lp_add(&td_closed_cache, id, node);
+  if (!ok)
+    return TURBINE_ERROR_OOM;
+
+  return TURBINE_SUCCESS;
+}
+
 static void
 info_waiting()
 {
@@ -1108,6 +1239,7 @@ void turbine_engine_finalize(void)
   table_lp_free_callback(&td_subscribed, false, NULL);
   table_bp_free_callback(&td_sub_subscribed, false, NULL);
 
+  finalize_closed_caches();
 }
 
 static void tbl_free_transform_cb(xlb_work_unit_id key, void *T)
