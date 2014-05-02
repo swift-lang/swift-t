@@ -105,6 +105,15 @@ static inline adlb_code xlb_dequeue_pending(xlb_pending_kind *kind,
             int *rank, struct packed_sync **hdr, void **extra_data);
 
 /*
+  Handle a dequeued pending sync.  Frees all memory associated
+  with it, so data pointed to will become invalid for caller.
+
+  This should not be called if already within a sync loop.
+ */
+adlb_code xlb_handle_pending_sync(xlb_pending_kind kind,
+      int rank, struct packed_sync *hdr, void *extra_data);
+
+/*
  * return: true if we have pending notification work that could result
  *         in tasks being released
  */

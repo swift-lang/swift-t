@@ -53,6 +53,8 @@ static adlb_code enqueue_deferred_notify(int rank,
 static adlb_code enqueue_pending(xlb_pending_kind kind, int rank,
                          const struct packed_sync *hdr, void *extra_data);
 
+static void free_pending_sync(xlb_pending *pending);
+
 static inline bool sync_accept_required(adlb_sync_mode mode);
 
 typedef struct {
@@ -180,9 +182,17 @@ void xlb_sync_finalize(void)
   xlb_sync_recvs = NULL;
   xlb_sync_recv_size = 0;
 
+  DEBUG("[%i] Pending syncs at finalize: %i", xlb_comm_rank,
+       xlb_pending_sync_count);
+
   /*
     Free pending syncs
    */
+  for (int i = 0; i < xlb_pending_sync_count; i++)
+  {
+    int ix = (xlb_pending_sync_head + i) % xlb_pending_sync_size;
+    free_pending_sync(&xlb_pending_syncs[ix]);
+  }
   free(xlb_pending_syncs);
   xlb_pending_sync_count = 0;
   xlb_pending_sync_size = 0;
@@ -753,6 +763,52 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
   return code;
 }
 
+adlb_code xlb_handle_pending_sync(xlb_pending_kind kind,
+      int rank, struct packed_sync *hdr, void *extra_data)
+{
+  adlb_code rc;
+  adlb_data_code dc;
+  DEBUG("server_sync: [%d] handling deferred sync from %d",
+        xlb_comm_rank, rank);
+  switch (kind)
+  {
+    case DEFERRED_SYNC:
+      rc = xlb_accept_sync(rank, hdr, false);
+      ADLB_CHECK(rc);
+      break;
+    case ACCEPTED_RC:
+      dc = xlb_incr_rc_local(hdr->incr.id, hdr->incr.change, true);
+      CHECK_MSG(dc == ADLB_DATA_SUCCESS, "unexpected error in refcount");
+      break;
+    case DEFERRED_NOTIFY:
+      rc = xlb_handle_notify_sync(rank, &hdr->subscribe, hdr->sync_data,
+                                  extra_data);
+      ADLB_CHECK(rc);
+      break;
+    case UNSENT_NOTIFY:
+      rc = xlb_send_unsent_notify(rank, hdr, extra_data);
+      ADLB_CHECK(rc);
+      break;
+    case DEFERRED_STEAL_PROBE:
+      rc = xlb_handle_steal_probe(rank);
+      ADLB_CHECK(rc);
+      break;
+    case DEFERRED_STEAL_PROBE_RESP:
+      rc = xlb_handle_steal_probe_resp(rank, hdr);
+      ADLB_CHECK(rc);
+      break;
+    default:
+      ERR_PRINTF("Unexpected pending sync kind %i\n", kind);
+      return ADLB_ERROR;
+  }
+
+  // Clean up memory
+  if (hdr != NULL)
+    free(hdr);
+
+  return ADLB_SUCCESS;
+}
+
 static adlb_code xlb_handle_subscribe_sync(int rank,
         const struct packed_sync *hdr, bool defer_svr_ops)
 {
@@ -998,6 +1054,19 @@ static adlb_code enqueue_pending(xlb_pending_kind kind, int rank,
     xlb_pending_notif_count++;
   }
   return ADLB_SUCCESS;
+}
+
+/*
+  Free memory for a pending sync (not including actual pending struct)
+ */
+static void free_pending_sync(xlb_pending *pending)
+{
+  // Assume that extra_data is a malloced pointer
+  if (pending->extra_data)
+    free(pending->extra_data);
+
+  if (pending->hdr != NULL)
+    free(pending->hdr);
 }
 
 

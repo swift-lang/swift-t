@@ -325,7 +325,7 @@ serve_several()
       exit_points += xlb_loop_request_points;
       reqs++;
     }
-    else if (code == ADLB_NOTHING)
+    else
     {
       // Check for shutdown
       if (xlb_server_shutting_down)
@@ -345,10 +345,6 @@ serve_several()
         exit_points += xlb_loop_poll_points;
       // Back off more
       curr_server_backoff++;
-    }
-    else
-    {
-      ADLB_CHECK(code);
     }
   }
 
@@ -384,7 +380,6 @@ static inline adlb_code
 xlb_handle_pending_syncs(void)
 {
   int rc;
-  adlb_data_code dc;
 
   xlb_pending_kind kind;
   int rank;
@@ -395,42 +390,8 @@ xlb_handle_pending_syncs(void)
   while ((rc = xlb_dequeue_pending(&kind, &rank, &hdr, &extra_data))
             == ADLB_SUCCESS)
   {
-    DEBUG("server_sync: [%d] handling deferred sync from %d",
-          xlb_comm_rank, rank);
-    switch (kind)
-    {
-      case DEFERRED_SYNC:
-        rc = xlb_accept_sync(rank, hdr, false);
-        ADLB_CHECK(rc);
-        break;
-      case ACCEPTED_RC:
-        dc = xlb_incr_rc_local(hdr->incr.id, hdr->incr.change, true);
-        CHECK_MSG(dc == ADLB_DATA_SUCCESS, "unexpected error in refcount");
-        break;
-      case DEFERRED_NOTIFY:
-        rc = xlb_handle_notify_sync(rank, &hdr->subscribe, hdr->sync_data,
-                                    extra_data);
-        ADLB_CHECK(rc);
-        break;
-      case UNSENT_NOTIFY:
-        rc = xlb_send_unsent_notify(rank, hdr, extra_data);
-        ADLB_CHECK(rc);
-        break;
-      case DEFERRED_STEAL_PROBE:
-        rc = xlb_handle_steal_probe(rank);
-        ADLB_CHECK(rc);
-        break;
-      case DEFERRED_STEAL_PROBE_RESP:
-        rc = xlb_handle_steal_probe_resp(rank, hdr);
-        ADLB_CHECK(rc);
-        break;
-      default:
-        ERR_PRINTF("Unexpected pending sync kind %i\n", kind);
-        return ADLB_ERROR;
-    }
-
-    // Clean up memory
-    free(hdr);
+    rc = xlb_handle_pending_sync(kind, rank, hdr, extra_data);
+    ADLB_CHECK(rc);
   }
   ADLB_CHECK(rc); // Check that not error instead of ADLB_NOTHING
   
