@@ -518,22 +518,19 @@ msg_from_target(int target, int response)
 }
 
 /*
- * Don't send accept: just return immediately
+  Return true if we need to wait for the sync to be accepted
+  before returning to the caller.
  */
 static inline bool sync_accept_required(adlb_sync_mode mode)
 {
-  if (mode == ADLB_SYNC_SUBSCRIBE ||
-      mode == ADLB_SYNC_NOTIFY ||
-      mode == ADLB_SYNC_REFCOUNT ||
-      mode == ADLB_SYNC_STEAL_PROBE ||
-      mode == ADLB_SYNC_STEAL_PROBE_RESP ||
-      mode == ADLB_SYNC_SHUTDOWN)
+  if (mode == ADLB_SYNC_REQUEST ||
+      mode == ADLB_SYNC_STEAL)
   {
-    return false;
+    return true;
   }
   else
   {
-    return true;
+    return false;
   }
 }
 
