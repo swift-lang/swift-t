@@ -135,6 +135,9 @@ xlb_handle_pending_syncs(void);
 static inline adlb_code
 xlb_handle_ready_work(void);
 
+static adlb_code
+xlb_process_ready_work(void);
+
 /**
    Serve a single request then return
    @param source MPI rank of allowable client: usually MPI_ANY_SOURCE unless syncing
@@ -270,6 +273,8 @@ serve_several()
   {
     MPI_Status req_status;
     adlb_code code;
+    bool handled = false;
+
     // Prioritize server-to-server syncs to avoid blocking other servers
     if (other_servers)
     {
@@ -278,16 +283,34 @@ serve_several()
       if (code == ADLB_SUCCESS)
       {
         code = xlb_handle_next_sync_msg(sync_rank);
+        ADLB_CHECK(code);
+
+        handled = true;
       }
-      ADLB_CHECK(code);
+      else if (code != ADLB_NOTHING)
+      {
+        ADLB_CHECK(code);
+      }
     }
 
-    code = xlb_poll(MPI_ANY_SOURCE, &req_status);
-    if (code == ADLB_SUCCESS)
+    if (!handled)
     {
-      code = xlb_handle_pending(&req_status);
-      ADLB_CHECK(code);
+      code = xlb_poll(MPI_ANY_SOURCE, &req_status);
+      if (code == ADLB_SUCCESS)
+      {
+        code = xlb_handle_pending(&req_status);
+        ADLB_CHECK(code);
 
+        handled = true;
+      }
+      else if (code != ADLB_NOTHING)
+      {
+        ADLB_CHECK(code);
+      }
+    }
+   
+    if (handled)
+    {
       // Previous request may have resulted in pending sync requests
       code = xlb_handle_pending_syncs();
       ADLB_CHECK(code);
@@ -420,12 +443,20 @@ xlb_handle_pending_syncs(void)
 static inline adlb_code
 xlb_handle_ready_work(void)
 {
-  adlb_code rc;
   if (xlb_server_ready_work.count == 0)
   {
     return ADLB_SUCCESS;
   }
+  
+  return xlb_process_ready_work();
+}
 
+/*
+ * Do heavy lifting here to allow inlining of check.
+ */
+static adlb_code xlb_process_ready_work(void)
+{
+  adlb_code rc;
   for (int i = 0; i < xlb_server_ready_work.count; i++)
   {
     rc = xlb_put_work_unit(xlb_server_ready_work.work[i]);
@@ -494,6 +525,10 @@ check_steal(void)
   if (xlb_requestqueue_size() == 0)
     // Our workers are busy
     return ADLB_SUCCESS;
+ 
+  // Should not get here if we have ready work
+  assert(xlb_server_ready_work.count == 0);
+  assert(!xlb_have_pending_notifs());
 
   // Initiate steal...
   TRACE_START;

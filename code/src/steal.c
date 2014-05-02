@@ -144,12 +144,18 @@ xlb_handle_steal_probe_resp(int caller,
     rc = xlb_steal(caller, &stole_single, &stole_par);
     ADLB_CHECK(rc);
   
-    DEBUG("Completed steal stole_single: %i stole_par: %i",
-          (int)stole_single, (int)stole_par);
+    DEBUG("[%i] Completed steal from %i stole_single: %i stole_par: %i",
+          xlb_comm_rank, caller, (int)stole_single, (int)stole_par);
     // Try to match stolen tasks
     rc = xlb_recheck_queues(stole_single, stole_par);
     ADLB_CHECK(rc);
   }
+  else
+  {
+    DEBUG("[%i] No matching work to steal from %i",
+          xlb_comm_rank, caller);
+  }
+
   return ADLB_SUCCESS;
 }
 
