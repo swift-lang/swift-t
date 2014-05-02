@@ -55,6 +55,7 @@ get_target_server(int* result)
   } while (*result == xlb_comm_rank);
 }
 
+static adlb_code xlb_can_steal(const int *work_type_counts);
 static adlb_code xlb_steal(int target, bool* stole_single, bool *stole_par);
 static adlb_code steal_sync(int target, int max_memory, int *response);
 static adlb_code steal_payloads(int target, int count,
@@ -150,6 +151,27 @@ xlb_steal_probe_response(int caller,
     ADLB_CHECK(rc);
   }
   return ADLB_SUCCESS;
+}
+
+/*
+ * Check if there's anything worth stealing from a target
+ *
+ * work_type_counts: Work type counts for steal target
+ */
+static adlb_code xlb_can_steal(const int *work_type_counts)
+{
+  int request_q_sizes[xlb_types_size];
+  requestqueue_type_counts(request_q_sizes, xlb_types_size);
+  for (int i = 0; i < xlb_types_size; i++)
+  {
+    if (request_q_sizes[i] > 0 &&
+        work_type_counts[i] > 0)
+    {
+      // Matching request here and work on other server
+      return true;
+    }
+  }
+  return false;
 }
 
 /**

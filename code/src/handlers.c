@@ -733,7 +733,7 @@ handle_get(int caller)
     // Try to initiate a steal to see if we can get work to the worker
     // immediately
     stealing = true;
-    int rc = xlb_steal_match();
+    int rc = xlb_try_steal();
     ADLB_CHECK(rc);
     stealing = false;
   }

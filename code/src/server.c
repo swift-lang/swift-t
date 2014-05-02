@@ -141,11 +141,6 @@ xlb_handle_ready_work(void);
  */
 static inline adlb_code xlb_serve_one(int source);
 
-/*
-  Try to initiate a steal
- */
-static adlb_code xlb_try_steal(void);
-
 adlb_code
 xlb_server_init()
 {
@@ -498,9 +493,9 @@ check_steal(void)
 }
 
 /*
-  Initiate
+  Initiate a steal attempt
  */
-static adlb_code xlb_try_steal(void)
+adlb_code xlb_try_steal(void)
 {
   DEBUG("Attempting steal");
   int rc = xlb_random_steal_probe();

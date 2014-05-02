@@ -78,10 +78,10 @@ adlb_code xlb_server_failed(bool* aborted, int* code);
 /** Get approximate time, updated frequently by server loop */
 double xlb_approx_time(void);
 
-/**
-  Try to steal and handle any necessary matching.
+/*
+  Try to initiate a steal
  */
-adlb_code xlb_steal_match(void);
+adlb_code xlb_try_steal(void);
 
 /**
    @param rank rank of worker belonging to this server
