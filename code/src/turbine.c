@@ -145,7 +145,7 @@ bool turbine_engine_initialized = false;
    Map from transform id to transform
    TODO: don't really need hash table for this - linked list?
  */
-struct table_lp transforms_waiting;
+static struct table_lp transforms_waiting;
 
 /**
    TD inputs blocking their transforms
@@ -155,7 +155,7 @@ struct table_lp transforms_waiting;
    in td_blockers: this must be handled when the notification is
    received.
  */
-struct table_lp td_blockers;
+static struct table_lp td_blockers;
 
 /**
    ID/subscript pairs blocking transforms
@@ -165,19 +165,19 @@ struct table_lp td_blockers;
    in td_sub_blockers: this must be handled when the notification is
    received.
  */
-struct table_bp td_sub_blockers;
+static struct table_bp td_sub_blockers;
 
 /**
   TDs to which this engine has subscribed, used to avoid
   subscribing multiple times
  */
-struct table_lp td_subscribed;
+static struct table_lp td_subscribed;
 
 /**
   TD/subscript pairs to which engine is subscribed.  Key is created using
    xlb_write_id_sub function
  */
-struct table_bp td_sub_subscribed;
+static struct table_bp td_sub_subscribed;
 
 // Maximum length of buffer required for key
 #define ID_SUB_KEY_MAX (ADLB_DATA_SUBSCRIPT_MAX + 30)
