@@ -33,6 +33,7 @@
        double xlb_max_idle          = 10;
        double xlb_steal_rate_limit  = 8;
        double xlb_steal_backoff     = 8;
+       double xlb_steal_concurrency_limit = 1;
 static double backoff_server_max    = 2;
 static int    backoff_server_no_delay_attempts  = 0;
 static int    backoff_server_min_delay_attempts = 1;
@@ -46,6 +47,7 @@ static double backoff_sync          = 1;
        double xlb_max_idle          = 4;
        double xlb_steal_rate_limit  = 0.5;
        double xlb_steal_backoff     = 0.5;
+       double xlb_steal_concurrency_limit = 1;
 static double backoff_server_max    = 0.001;
 static int    backoff_server_no_delay_attempts  = 0;
 static int    backoff_server_min_delay_attempts = 1;
@@ -63,6 +65,7 @@ static double backoff_sync          = 0.01;
  */
        double xlb_steal_rate_limit  = 0.0005;
        double xlb_steal_backoff     = 0.02;
+       double xlb_steal_concurrency_limit = 16;
 static double backoff_server_max    = 0.000001;
 static int    backoff_server_no_delay_attempts  = 1024;
 static int    backoff_server_min_delay_attempts = 4;

@@ -41,6 +41,10 @@
 double xlb_steal_last = 0.0;
 int xlb_failed_steals_since_backoff = 0;
 
+/*
+  Table to track ranks that we have sent steal probes to but not
+  received a response from.
+ */
 static struct table_ip sent_steal_probes;
 
 /**
@@ -76,6 +80,12 @@ xlb_steal_init(void)
 adlb_code
 xlb_random_steal_probe(void)
 {
+  if (sent_steal_probes.size >= xlb_steal_concurrency_limit)
+  {
+    // Already have too many steals
+    return ADLB_NOTHING;
+  }
+
   int target;
   get_target_server(&target);
 

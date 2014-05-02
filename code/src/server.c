@@ -503,7 +503,7 @@ check_steal(void)
  */
 adlb_code xlb_try_steal(void)
 {
-  DEBUG("Attempting steal");
+  TRACE("Attempting steal");
   int rc = xlb_random_steal_probe();
   ADLB_CHECK(rc);
 
