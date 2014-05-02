@@ -328,7 +328,7 @@ bool
 table_ip_add(table_ip *target, int key, void* data)
 {
   // Check to resize hash table
-  if (target->size >= target->resize_threshold)
+  if (target->size > target->resize_threshold)
   {
     bool ok = table_ip_expand(target);
     if (!ok)

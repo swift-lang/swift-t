@@ -309,7 +309,7 @@ table_bp_add(table_bp *target, const void* key, size_t key_len,
              void* data)
 {
   // Check to resize hash table
-  if (target->size >= target->resize_threshold)
+  if (target->size > target->resize_threshold)
   {
     bool ok = table_bp_expand(target);
     if (!ok)

@@ -328,7 +328,7 @@ bool
 table_lp_add(table_lp *target, int64_t key, void* data)
 {
   // Check to resize hash table
-  if (target->size >= target->resize_threshold)
+  if (target->size > target->resize_threshold)
   {
     bool ok = table_lp_expand(target);
     if (!ok)

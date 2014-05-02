@@ -298,7 +298,7 @@ bool
 table_add(struct table *target, const char* key, void* data)
 {
   // Check to resize hash table
-  if (target->size >= target->resize_threshold)
+  if (target->size > target->resize_threshold)
   {
     bool ok = table_expand(target);
     if (!ok)
