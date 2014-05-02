@@ -50,8 +50,6 @@ struct list_b_item* list_b_add(struct list_b* target, const void *data,
 
 bool list_b_remove(struct list_b* target, const void *data,
                    size_t data_len);
-bool list_b_erase(struct list_b* target, const void *data,
-                  size_t data_len, size_t n);
 
 /**
    Remove and return the head data item.
