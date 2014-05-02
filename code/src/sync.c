@@ -567,15 +567,6 @@ static adlb_code msg_from_other_server(int other_server, bool *shutting_down)
       *shutting_down = true;
     }
   }
-  else if (other_hdr->mode == ADLB_SYNC_STEAL)
-  {
-    // Prefer rejecting steal immediately to accepting it later:
-    // If we're busy syncing here, there's a good chance we're out of
-    // work too
-    const int rejected_response = 0;
-    // This shouldn't block, since sender should have posted buffer
-    SEND(&rejected_response, 1, MPI_INT, other_server, ADLB_TAG_SYNC_RESPONSE);
-  }
   else
   {
     // Don't handle right away, defer it
