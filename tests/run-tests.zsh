@@ -97,6 +97,7 @@ then
   set -x
 fi
 
+source "${STC_TESTS_DIR}/adlb-test-env.sh"
 if (( LEAK_CHECK ))
 then
   # Force reporting of leaks by ADLB
