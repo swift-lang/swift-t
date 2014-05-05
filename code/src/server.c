@@ -348,6 +348,8 @@ serve_several()
     }
   }
 
+  assert(xlb_server_ready_work.count == 0);
+  assert(!xlb_have_pending_notifs());
   return reqs > 0 ? ADLB_SUCCESS : ADLB_NOTHING;
 }
 

@@ -743,6 +743,7 @@ rule_inputs(transform* T)
   for (int i = 0; i < T->input_tds; i++)
   {
     adlb_datum_id id = T->input_td_list[i];
+    // TODO: don't add to list if subscribe cached
     turbine_engine_code code = add_rule_blocker(id, T);
     turbine_check_verbose(code);
   }
@@ -757,6 +758,7 @@ rule_inputs(transform* T)
     xlb_write_id_sub(id_sub_key, td_sub->td, sub_convert(td_sub->subscript));
     // We might add duplicate list entries if id appears multiple
     //      times. This is currently handled upon removal from list
+    // TODO: don't add to list if subscribe cached
     code = add_rule_blocker_sub(id_sub_key, id_sub_keylen, T);
     turbine_check_verbose(code);
   }
