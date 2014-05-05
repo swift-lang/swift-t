@@ -37,6 +37,7 @@
 #include <adlb.h>
 
 #include <c-utils.h>
+#include <list2.h>
 #include <list2_b.h>
 #include <log.h>
 #include <table.h>
@@ -103,6 +104,9 @@ typedef struct
   /** Task to release when inputs are ready */
   xlb_work_unit *work;
 
+  /** Entry in transforms_waiting */
+  struct list2_item *list_entry;
+
   /** Number of input tds */
   int input_tds;
   /** Array of input TDs */
@@ -154,11 +158,10 @@ static bool td_sub_closed_cache_check(adlb_datum_id id, adlb_subscript sub);
 bool turbine_engine_initialized = false;
 
 /**
-   Waiting transforms
-   Map from transform id to transform
-   TODO: don't really need hash table for this - linked list?
+   Waiting transforms.
+   List of transforms
  */
-static struct table_lp transforms_waiting;
+static struct list2 transforms_waiting;
 
 /**
    TD inputs blocking their transforms
@@ -304,9 +307,8 @@ turbine_engine_init(int rank)
   const int table_init_capacity = 65536;
 
   bool result;
-  result = table_lp_init(&transforms_waiting, table_init_capacity); 
-  if (!result)
-    return TURBINE_ERROR_OOM;
+
+  list2_init(&transforms_waiting); 
 
   result = table_lp_init(&td_blockers, table_init_capacity); 
   if (!result)
@@ -702,9 +704,10 @@ turbine_rule(const char* name, int name_strlen,
   {
     DEBUG_TURBINE("waiting: {%"PRId64"}", id);
     assert(T != NULL);
-    bool ok = table_lp_add(&transforms_waiting, id, T);
-    if (!ok)
+    struct list2_item *list_entry = list2_add(&transforms_waiting, T);
+    if (list_entry == NULL)
       return TURBINE_ERROR_OOM;
+    T->list_entry = list_entry;
     *ready = false;
   }
   else
@@ -958,9 +961,8 @@ move_to_ready(turbine_work_array *ready, transform *T)
   }
   ready->work[ready->count++] = T->work;
 
-  void *tmp;
-  table_lp_remove(&transforms_waiting, T->work->id, &tmp);
-  assert(tmp == T);
+  list2_remove_item(&transforms_waiting, T->list_entry);
+  T->list_entry = NULL;
   
   T->work = NULL; // Don't free work
   transform_free(T);
@@ -1309,7 +1311,8 @@ info_waiting()
 {
   printf("WAITING TRANSFORMS: %i\n", transforms_waiting.size);
   char buffer[1024];
-  TABLE_LP_FOREACH(&transforms_waiting, item)
+  struct list2_item *item = transforms_waiting.head;
+  while (item != NULL)
   {
     transform* t = item->data;
     assert(t != NULL);
@@ -1319,11 +1322,13 @@ info_waiting()
     int c = sprintf(buffer, "%10s ", id_string);
     transform_tostring(buffer+c, t);
     printf("TRANSFORM: %s\n", buffer);
+
+    item = item->next;
   }
 }
 
 // Callbacks to free data
-static void tbl_free_transform_cb(xlb_work_unit_id key, void *T);
+static void free_transforms_waiting(void);
 static void tbl_free_blockers_cb(adlb_datum_id key, void *L);
 static void tbl_free_sub_blockers_cb(const void *key, size_t key_len, void *L);
 
@@ -1337,7 +1342,7 @@ void turbine_engine_finalize(void)
     info_waiting();
 
   // Now we're done reporting, free everything
-  table_lp_free_callback(&transforms_waiting, false, tbl_free_transform_cb);
+  free_transforms_waiting();
   table_lp_free_callback(&td_blockers, false, tbl_free_blockers_cb);
   table_bp_free_callback(&td_sub_blockers, false, tbl_free_sub_blockers_cb);
 
@@ -1349,9 +1354,18 @@ void turbine_engine_finalize(void)
   finalize_closed_caches();
 }
 
-static void tbl_free_transform_cb(xlb_work_unit_id key, void *T)
+static void free_transforms_waiting(void)
 {
-  transform_free((transform*)T);
+  struct list2_item *item = transforms_waiting.head;
+  struct list2_item *next;
+  while (item != NULL)
+  {
+    transform *T = item->data; 
+    next = item->next;
+    transform_free(T);
+    free(item);
+    item = next;
+  }
 }
 
 static void tbl_free_blockers_cb(adlb_datum_id key, void *L)
