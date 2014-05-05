@@ -121,7 +121,7 @@ typedef struct
   unsigned char *closed_inputs;
   /** Index of next subscribed input (starts at 0 in input_td list,
       continues into input_td_sub_list) */
-  int blocker;
+  int blocker; // Next input we're waiting for
   transform_status status;
 } transform;
 
@@ -143,6 +143,12 @@ move_to_ready(turbine_work_array *ready, transform *T);
 
 static const char *
 turbine_engine_code_tostring(turbine_engine_code code);
+
+static turbine_engine_code
+subscribe_td(adlb_datum_id id, bool *subscribed);
+static turbine_engine_code
+subscribe_td_sub(adlb_datum_id id, turbine_subscript subscript,
+     const void *id_sub_key, size_t id_sub_key_len, bool *subscribed);
 
 static turbine_engine_code init_closed_caches(void);
 static void finalize_closed_caches(void);
@@ -514,138 +520,148 @@ transform_free(transform* T)
   free(T);
 }
 
-
 /**
- * Return true if subscribed, false if data already set
+ * subscribed: set to true if subscribed, false if data already set
  */
 static turbine_engine_code
-subscribe(adlb_datum_id id, turbine_subscript subscript, bool *subscribed)
+subscribe_td(adlb_datum_id id, bool *subscribed)
+{
+  turbine_condition(id != ADLB_DATA_ID_NULL, TURBINE_ERROR_INVALID,
+                    "Null ID provided to rule");
+  int server = ADLB_Locate(id);
+
+  DEBUG_TURBINE("Engine subscribe to <%"PRId64">", id);
+  if (table_lp_contains(&td_subscribed, id)) {
+    TRACE("already subscribed: <%"PRId64">", id);
+    // Already subscribed
+    *subscribed = true;
+    INCR_COUNTER(id_subscribed);
+  }
+  else
+  {
+    if (server == xlb_comm_rank)
+    {
+      adlb_data_code dc = xlb_data_subscribe(id, ADLB_NO_SUB,
+                               xlb_comm_rank, 0, subscribed);
+      TRACE("xlb_data_subscribe => %i %i", (int)dc, (int)*subscribed);
+      if (dc == ADLB_DATA_ERROR_NOT_FOUND)
+      {
+        // Handle case where read_refcount == 0 and write_refcount == 0
+        //      => datum was freed and we're good to go
+        *subscribed = false;
+      }
+      DATA_CHECK(dc);
+      INCR_COUNTER(id_subscribe_local);
+    }
+    else
+    {
+      if (td_closed_cache_check(id))
+      {
+        *subscribed = false;
+        INCR_COUNTER(id_subscribe_cached);
+      }
+      else
+      {
+        adlb_code ac = xlb_sync_subscribe(server, id, ADLB_NO_SUB,
+                                          subscribed);
+        DATA_CHECK_ADLB(ac,  TURBINE_ERROR_UNKNOWN);
+        INCR_COUNTER(id_subscribe_remote);
+      }
+    }
+  
+    if (*subscribed)
+    {
+      bool ok = table_lp_add(&td_subscribed, id, (void*)1);
+      if (!ok)
+        return TURBINE_ERROR_OOM;
+    }
+    else
+    {
+      INCR_COUNTER(id_ready);
+    }
+  }
+  
+  return TURBINE_SUCCESS;
+}
+
+/**
+ * Subscribe to td/subscribe pair
+ *
+ * id_sub_key/id_sub_key_len: key used for data structures,
+                              to avoid recomputing
+ */
+static turbine_engine_code
+subscribe_td_sub(adlb_datum_id id, turbine_subscript subscript,
+     const void *id_sub_key, size_t id_sub_key_len, bool *subscribed)
 {
   turbine_condition(id != ADLB_DATA_ID_NULL, TURBINE_ERROR_INVALID,
                     "Null ID provided to rule");
   
   int server = ADLB_Locate(id);
 
-  if (subscript.key != NULL)
+  assert(subscript.key != NULL);
+  DEBUG_TURBINE("Engine subscribe to <%"PRId64">[%.*s]", id,
+               (int)subscript.length, (const char*)subscript.key);
+
+  // Avoid multiple subscriptions for same data
+  void *tmp;
+  if (table_bp_search(&td_sub_subscribed, id_sub_key, id_sub_key_len,
+                      &tmp))
   {
-    DEBUG_TURBINE("Engine subscribe to <%"PRId64">[%.*s]", id,
-                 (int)subscript.length, (const char*)subscript.key);
-    // Create key from id and subscript
-    size_t id_sub_keylen = xlb_id_sub_buflen(sub_convert(subscript));
-    char id_sub_key[id_sub_keylen];
-    xlb_write_id_sub(id_sub_key, id, sub_convert(subscript));
+    // TODO: support binary subscript
+    DEBUG_TURBINE("Already subscribed: <%"PRId64">[\"%.*s\"]",
+                    id, (int)subscript.length, subscript.key);
+    *subscribed = true;
 
-    // Avoid multiple subscriptions for same data
-    void *tmp;
-    if (table_bp_search(&td_sub_subscribed, id_sub_key, id_sub_keylen,
-                        &tmp))
-    {
-      // TODO: support binary subscript
-      DEBUG_TURBINE("Already subscribed: <%"PRId64">[\"%.*s\"]",
-                      id, (int)subscript.length, subscript.key);
-      *subscribed = true;
-
-      INCR_COUNTER(id_sub_subscribed);
-    }
-    else
-    {
-      if (server == xlb_comm_rank)
-      {
-        adlb_data_code dc = xlb_data_subscribe(id, sub_convert(subscript),
-                                              xlb_comm_rank, 0, subscribed);
-        TRACE("xlb_data_subscribe => %i %i", (int)dc, (int)*subscribed);
-        if (dc == ADLB_DATA_ERROR_NOT_FOUND)
-        {
-          // Handle case where read_refcount == 0 and write_refcount == 0
-          //      => datum was freed and we're good to go
-          *subscribed = false;
-        }
-        DATA_CHECK(dc);
-      
-        INCR_COUNTER(id_sub_subscribe_local);
-      }
-      else
-      {
-        adlb_subscript adlb_sub = sub_convert(subscript);
-        if (td_sub_closed_cache_check(id_sub_key, id_sub_keylen))
-        {
-          INCR_COUNTER(id_sub_subscribe_cached);
-        }
-        else
-        {
-          adlb_code ac = xlb_sync_subscribe(server, id,
-                              adlb_sub, subscribed);
-          DATA_CHECK_ADLB(ac,  TURBINE_ERROR_UNKNOWN);
-          
-          INCR_COUNTER(id_sub_subscribe_remote);
-        }
-      }
-
-      if (*subscribed)
-      {
-        // Record it was subscribed
-        bool ok = table_bp_add(&td_sub_subscribed, id_sub_key,
-                              id_sub_keylen, (void*)1);
-
-        if (!ok)
-          return TURBINE_ERROR_OOM;
-      }
-      else
-      {
-        INCR_COUNTER(id_sub_ready);
-      }
-    }
+    INCR_COUNTER(id_sub_subscribed);
   }
   else
   {
-    DEBUG_TURBINE("Engine subscribe to <%"PRId64">", id);
-    if (table_lp_contains(&td_subscribed, id)) {
-      TRACE("already subscribed: <%"PRId64">", id);
-      // Already subscribed
-      *subscribed = true;
-      INCR_COUNTER(id_subscribed);
+    if (server == xlb_comm_rank)
+    {
+      adlb_data_code dc = xlb_data_subscribe(id, sub_convert(subscript),
+                                            xlb_comm_rank, 0, subscribed);
+      TRACE("xlb_data_subscribe => %i %i", (int)dc, (int)*subscribed);
+      if (dc == ADLB_DATA_ERROR_NOT_FOUND)
+      {
+        // Handle case where read_refcount == 0 and write_refcount == 0
+        //      => datum was freed and we're good to go
+        *subscribed = false;
+      }
+      DATA_CHECK(dc);
+    
+      INCR_COUNTER(id_sub_subscribe_local);
     }
     else
     {
-      if (server == xlb_comm_rank)
+      adlb_subscript adlb_sub = sub_convert(subscript);
+      if (td_sub_closed_cache_check(id_sub_key, id_sub_key_len))
       {
-        adlb_data_code dc = xlb_data_subscribe(id, ADLB_NO_SUB,
-                                 xlb_comm_rank, 0, subscribed);
-        TRACE("xlb_data_subscribe => %i %i", (int)dc, (int)*subscribed);
-        if (dc == ADLB_DATA_ERROR_NOT_FOUND)
-        {
-          // Handle case where read_refcount == 0 and write_refcount == 0
-          //      => datum was freed and we're good to go
-          *subscribed = false;
-        }
-        DATA_CHECK(dc);
-        INCR_COUNTER(id_subscribe_local);
+        *subscribed = false;
+        INCR_COUNTER(id_sub_subscribe_cached);
       }
       else
       {
-        if (td_closed_cache_check(id))
-        {
-          INCR_COUNTER(id_subscribe_cached);
-        }
-        else
-        {
-          adlb_code ac = xlb_sync_subscribe(server, id, ADLB_NO_SUB,
-                                            subscribed);
-          DATA_CHECK_ADLB(ac,  TURBINE_ERROR_UNKNOWN);
-          INCR_COUNTER(id_subscribe_remote);
-        }
+        adlb_code ac = xlb_sync_subscribe(server, id,
+                            adlb_sub, subscribed);
+        DATA_CHECK_ADLB(ac,  TURBINE_ERROR_UNKNOWN);
+        
+        INCR_COUNTER(id_sub_subscribe_remote);
       }
-    
-      if (*subscribed)
-      {
-        bool ok = table_lp_add(&td_subscribed, id, (void*)1);
-        if (!ok)
-          return TURBINE_ERROR_OOM;
-      }
-      else
-      {
-        INCR_COUNTER(id_ready);
-      }
+    }
+
+    if (*subscribed)
+    {
+      // Record it was subscribed
+      bool ok = table_bp_add(&td_sub_subscribed, id_sub_key,
+                            id_sub_key_len, (void*)1);
+
+      if (!ok)
+        return TURBINE_ERROR_OOM;
+    }
+    else
+    {
+      INCR_COUNTER(id_sub_ready);
     }
   }
 
@@ -730,8 +746,12 @@ static inline turbine_engine_code add_rule_blocker(adlb_datum_id id,
 static inline turbine_engine_code add_rule_blocker_sub(void *id_sub_key,
         size_t id_sub_keylen, transform *T);
 /**
-   Record that this transform is blocked by its inputs.  Do not yet
-   subscribe to any inputs
+  Do initial setup of subscribes so that notifications will update
+  the inputs of this transform
+
+  Currently this is implemented by subscribing to all inputs,
+  marking those that are already closed, and adding the remainder
+  to the blockers table.
 */
 static turbine_engine_code
 rule_inputs(transform* T)
@@ -740,15 +760,28 @@ rule_inputs(transform* T)
     We might add duplicate list entries if input appears multiple
     times. This is currently handled upon removal from list.
    */
+  turbine_engine_code tc;
+
   for (int i = 0; i < T->input_tds; i++)
   {
     adlb_datum_id id = T->input_td_list[i];
-    // TODO: don't add to list if subscribe cached
-    turbine_engine_code code = add_rule_blocker(id, T);
-    turbine_check_verbose(code);
+    bool subscribed;
+    tc = subscribe_td(id, &subscribed);
+    turbine_check_verbose(tc);
+
+    if (subscribed)
+    {
+      // We might add duplicate list entries if id appears multiple
+      //      times. This is currently handled upon removal from list
+      tc = add_rule_blocker(id, T);
+      turbine_check_verbose(tc);
+    }
+    else
+    {
+      mark_input_td_closed(T, i);
+    }
   }
 
-  turbine_engine_code code;
   for (int i = 0; i < T->input_td_subs; i++)
   {
     td_sub_pair *td_sub = &T->input_td_sub_list[i];
@@ -756,11 +789,23 @@ rule_inputs(transform* T)
     char id_sub_key[id_sub_keylen];
     assert(td_sub->subscript.key != NULL);
     xlb_write_id_sub(id_sub_key, td_sub->td, sub_convert(td_sub->subscript));
-    // We might add duplicate list entries if id appears multiple
-    //      times. This is currently handled upon removal from list
-    // TODO: don't add to list if subscribe cached
-    code = add_rule_blocker_sub(id_sub_key, id_sub_keylen, T);
-    turbine_check_verbose(code);
+
+    bool subscribed;
+    tc = subscribe_td_sub(td_sub->td, td_sub->subscript,
+                     id_sub_key, id_sub_keylen, &subscribed);
+    turbine_check_verbose(tc);
+
+    if (subscribed)
+    {
+      // We might add duplicate list entries if id appears multiple
+      //      times. This is currently handled upon removal from list
+      tc = add_rule_blocker_sub(id_sub_key, id_sub_keylen, T);
+      turbine_check_verbose(tc);
+    }
+    else
+    {
+      mark_input_td_sub_closed(T, i);
+    }
   }
   return TURBINE_SUCCESS;
 }
@@ -979,31 +1024,25 @@ move_to_ready(turbine_work_array *ready, transform *T)
 }
 
 /**
- * Make progress on transform. Provided is a list of
- * ids that are closed.  We contact server to check
- * status of any IDs not in list.
+ * Check if a transform is done, and initiate progress if needed.
+ *
+ * We initiated all subscribes on rule creation, so we just check
+ * to see if we're still waiting on anything.
+ *
+ * subscribed: set to true if still subscribed to data
  */
 static turbine_engine_code
 progress(transform* T, bool* subscribed)
 {
-  *subscribed = false;
-
   // first check TDs to see if all are ready
   for (; T->blocker < T->input_tds; T->blocker++)
   {
     if (!input_td_closed(T, T->blocker))
     {
-      // Contact server to check if available
-      adlb_datum_id td = T->input_td_list[T->blocker];
-      turbine_engine_code tc = subscribe(td, TURBINE_NO_SUB, subscribed);
-      if (tc != TURBINE_SUCCESS) {
-        return tc;
-      }
-      if (*subscribed) {
-        TRACE("{%"PRId64"} blocked on <%"PRId64">", T->work->id, td);
-        // Need to block on this id
-        return TURBINE_SUCCESS;
-      }
+      TRACE("{%"PRId64"} blocked on <%"PRId64">", T->work->id, td);
+      // Not yet done
+      *subscribed = true;
+      return TURBINE_SUCCESS;
     }
   }
 
@@ -1014,16 +1053,9 @@ progress(transform* T, bool* subscribed)
     int td_sub_ix = T->blocker - T->input_tds;
     if (!input_td_sub_closed(T, td_sub_ix))
     {
-      // Contact server to check if available
-      td_sub_pair ts = T->input_td_sub_list[td_sub_ix];
-      turbine_engine_code tc = subscribe(ts.td, ts.subscript, subscribed);
-      if (tc != TURBINE_SUCCESS) {
-        return tc;
-      }
-      if (*subscribed) {
-        // Need to block on this id
-        return TURBINE_SUCCESS;
-      }
+      // Not yet done
+      *subscribed = true;
+      return TURBINE_SUCCESS;
     }
   }
 
