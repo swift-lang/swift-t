@@ -150,9 +150,9 @@ static void finalize_closed_caches(void);
 static turbine_engine_code td_closed_cache_add(adlb_datum_id id);
 static bool td_closed_cache_check(adlb_datum_id id);
 
-static turbine_engine_code td_sub_closed_cache_add(adlb_datum_id id,
-                                const void *sub, size_t sub_len);
-static bool td_sub_closed_cache_check(adlb_datum_id id, adlb_subscript sub);
+static turbine_engine_code
+td_sub_closed_cache_add(const void *key, size_t key_len);
+static bool td_sub_closed_cache_check(const void *key, size_t key_len);
 
 /** Has turbine_engine_init() been called? */
 bool turbine_engine_initialized = false;
@@ -206,10 +206,10 @@ typedef struct {
   adlb_datum_id id;
 } td_closed_cache_entry;
 
+// Key created with xlb_write_id_sub
 typedef struct {
-  adlb_datum_id id;
-  size_t subscript_len;
-  char subscript[];
+  size_t key_len;
+  char key[];
 } td_sub_closed_cache_entry;
 
 #define DEFAULT_CLOSED_CACHE_SIZE 4096
@@ -566,7 +566,7 @@ subscribe(adlb_datum_id id, turbine_subscript subscript, bool *subscribed)
       else
       {
         adlb_subscript adlb_sub = sub_convert(subscript);
-        if (td_sub_closed_cache_check(id, adlb_sub))
+        if (td_sub_closed_cache_check(id_sub_key, id_sub_keylen))
         {
           INCR_COUNTER(id_sub_subscribe_cached);
         }
@@ -848,6 +848,10 @@ turbine_engine_code turbine_sub_close(adlb_datum_id id, adlb_subscript sub,
   bool was_subscribed = table_bp_remove(&td_sub_subscribed, key,
                                         key_len, &tmp);
   assert(was_subscribed);
+  
+  // Cache subscribe result
+  turbine_engine_code tc = td_sub_closed_cache_add(key, key_len);
+  turbine_check(tc);
 
   struct list* L;
   
@@ -1222,12 +1226,9 @@ static bool td_closed_cache_check(adlb_datum_id id)
 }
 
 // Return true if closed
-static bool td_sub_closed_cache_check(adlb_datum_id id, adlb_subscript sub)
+static bool td_sub_closed_cache_check(const void *key, size_t key_len)
 {
   struct list2_b_item *entry;
-  size_t key_len = xlb_id_sub_buflen(sub);
-  char key[key_len];
-  xlb_write_id_sub(key, id, sub);
 
   if (table_bp_search(&td_sub_closed_cache, key, key_len, (void**)&entry))
   {
@@ -1272,8 +1273,8 @@ static turbine_engine_code td_closed_cache_add(adlb_datum_id id)
   return TURBINE_SUCCESS;
 }
 
-static turbine_engine_code td_sub_closed_cache_add(adlb_datum_id id,
-                                    const void *sub, size_t sub_len)
+static turbine_engine_code
+td_sub_closed_cache_add(const void *key, size_t key_len)
 {
   if (td_sub_closed_cache.size >= td_sub_closed_cache_size)
   {
@@ -1282,24 +1283,23 @@ static turbine_engine_code td_sub_closed_cache_add(adlb_datum_id id,
                       list2_b_pop_item(&td_sub_closed_cache_lru);
     td_sub_closed_cache_entry *victim_entry =
                         (td_sub_closed_cache_entry*)victim->data;
+
     void *tmp;
-    // TODO: key
     bool removed = table_bp_remove(&td_sub_closed_cache,
-                        victim_entry->id, &tmp);
+        victim_entry->key, victim_entry->key_len, &tmp);
     assert(removed && tmp == victim); // Should have had entry
     free(victim);
   }
 
   td_sub_closed_cache_entry *entry;
-  size_t id_sub_size = sizeof(*entry) + sub_len;
-  struct list2_b_item *node = list2_b_item_alloc(id_sub_size);
+  struct list2_b_item *node = list2_b_item_alloc(key_len);
   entry = (td_sub_closed_cache_entry*)&node->data;
-  entry->id = id;
-  node->data_len = id_sub_size; 
+  memcpy(entry->key, key, key_len);
+  entry->key_len = key_len;
   
   list2_b_add_item(&td_sub_closed_cache_lru, node);
 
-  bool ok = table_bp_add(&td_sub_closed_cache, id, node);
+  bool ok = table_bp_add(&td_sub_closed_cache, key, key_len, node);
   if (!ok)
     return TURBINE_ERROR_OOM;
 
