@@ -1262,7 +1262,6 @@ static turbine_engine_code td_closed_cache_add(adlb_datum_id id)
   struct list2_b_item *node = list2_b_item_alloc(sizeof(*entry));
   entry = (td_closed_cache_entry*)&node->data;
   entry->id = id;
-  node->data_len = sizeof(*entry);
   
   list2_b_add_item(&td_closed_cache_lru, node);
 
