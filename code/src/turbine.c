@@ -1293,7 +1293,8 @@ td_sub_closed_cache_add(const void *key, size_t key_len)
   }
 
   td_sub_closed_cache_entry *entry;
-  struct list2_b_item *node = list2_b_item_alloc(key_len);
+  size_t entry_size = sizeof(*entry) + key_len;
+  struct list2_b_item *node = list2_b_item_alloc(entry_size);
   entry = (td_sub_closed_cache_entry*)&node->data;
   memcpy(entry->key, key, key_len);
   entry->key_len = key_len;
