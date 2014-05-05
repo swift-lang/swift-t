@@ -967,6 +967,7 @@ move_to_ready(turbine_work_array *ready, transform *T)
   ready->work[ready->count++] = T->work;
 
   list2_remove_item(&transforms_waiting, T->list_entry);
+  free(T->list_entry);
   T->list_entry = NULL;
   
   T->work = NULL; // Don't free work
