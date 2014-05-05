@@ -685,6 +685,28 @@ servers_idle()
       // Break so we can cleanup allocations
       break;
     }
+    
+    if (xlb_have_pending_notifs() ||
+        xlb_server_ready_work.count > 0)
+    {
+      // May have received notifications during sync
+      rc = xlb_handle_pending_syncs();
+      ADLB_CHECK(rc);
+
+      // Previous request may have resulted in pending work
+      rc = xlb_handle_ready_work();
+      ADLB_CHECK(rc);
+
+      // Notifications show we weren't idle yet
+      all_idle = false;
+      break;
+    }
+
+    if (xlb_server_ready_work.count > 0)
+    {
+
+    }
+
   }
 
   // Check to see if work stealing could match work to requests
