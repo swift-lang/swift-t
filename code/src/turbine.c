@@ -236,7 +236,7 @@ static inline adlb_subscript sub_convert(turbine_subscript sub)
 }
 
 #define turbine_check(code) if (code != TURBINE_SUCCESS) return code;
-#define turbine_check_adlb(code) if (code != ADLB_SUCCESS) return code;
+#define turbine_check_adlb(code) if (code == ADLB_ERROR) return code;
 
 #define turbine_check_verbose(code) \
     turbine_check_verbose_impl(code, __FILE__, __LINE__)
@@ -342,7 +342,8 @@ turbine_engine_init(int rank)
   }
 
   turbine_engine_code tc = init_closed_caches();
-  turbine_check(tc);
+  if (tc != TURBINE_SUCCESS)
+    return ADLB_ERROR;
   
   turbine_engine_initialized = true;
   return TURBINE_SUCCESS;
