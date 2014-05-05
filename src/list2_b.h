@@ -34,7 +34,6 @@ struct list2_b_item
 {
   struct list2_b_item* prev;
   struct list2_b_item* next;
-  size_t data_len;
   char data[]; // Inline data
 };
 

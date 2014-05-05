@@ -73,7 +73,6 @@ list2_b_add(struct list2_b* target, const void* data, size_t data_len)
     return NULL;
 
   memcpy(new_item->data, data, data_len);
-  new_item->data_len = data_len;
   list2_b_add_item(target, new_item);
   return new_item;
 }
