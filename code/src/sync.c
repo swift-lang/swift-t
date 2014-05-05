@@ -118,7 +118,6 @@ xlb_sync_init(void)
     // Initiate requests for all in queue
     IRECV2(xlb_sync_recvs[i].buf, (int)PACKED_SYNC_SIZE, MPI_BYTE,
            MPI_ANY_SOURCE, ADLB_TAG_SYNC_REQUEST, &xlb_sync_recvs[i].req);
-    DEBUG("RECEIVE SYNC %i", i);
   }
 
   /*
