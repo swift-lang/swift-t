@@ -541,8 +541,8 @@ static adlb_code msg_from_other_server(int other_server, bool *shutting_down)
   
   *shutting_down = false;
 
-  xlb_sync_recv *sync = xlb_next_sync_msg();
-  struct packed_sync *other_hdr = sync->buf;
+  xlb_sync_recv *sync_msg = xlb_next_sync_msg();
+  struct packed_sync *other_hdr = sync_msg->buf;
 
   /* Serve another server
    * We need to avoid the case of circular deadlock, e.g. where A is waiting
@@ -605,12 +605,12 @@ adlb_code xlb_handle_next_sync_msg(int caller)
 {
   MPE_LOG(xlb_mpe_svr_sync_start);
 
-  xlb_sync_recv *sync = xlb_next_sync_msg();
+  xlb_sync_recv *sync_msg = xlb_next_sync_msg();
 
   // Copy header so we can release before handling
   char hdr_storage[PACKED_SYNC_SIZE];
   struct packed_sync *hdr = (struct packed_sync *)hdr_storage;
-  memcpy(hdr, sync->buf, PACKED_SYNC_SIZE);
+  memcpy(hdr, sync_msg->buf, PACKED_SYNC_SIZE);
 
   adlb_code rc = xlb_sync_msg_done();
   ADLB_CHECK(rc);
