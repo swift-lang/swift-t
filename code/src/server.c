@@ -347,9 +347,7 @@ serve_several()
       curr_server_backoff++;
     }
   }
-
-  assert(xlb_server_ready_work.count == 0);
-  assert(!xlb_have_pending_notifs());
+  
   return reqs > 0 ? ADLB_SUCCESS : ADLB_NOTHING;
 }
 
@@ -594,7 +592,10 @@ check_idle()
   if (! servers_idle())
     // Some server is still not idle...
     return false;
-
+ 
+  // Ensure no notifications in system
+  assert(xlb_server_ready_work.count == 0);
+  assert(!xlb_have_pending_notifs());
 
   shutdown_all_servers();
   return true;
@@ -679,12 +680,6 @@ servers_idle()
     rc = ADLB_Server_idle(rank, xlb_idle_check_attempt, &idle,
                           req_subarray, work_subarray);
     ASSERT(rc == ADLB_SUCCESS);
-    if (! idle)
-    {
-      all_idle = false;
-      // Break so we can cleanup allocations
-      break;
-    }
     
     if (xlb_have_pending_notifs() ||
         xlb_server_ready_work.count > 0)
@@ -702,11 +697,12 @@ servers_idle()
       break;
     }
 
-    if (xlb_server_ready_work.count > 0)
+    if (! idle)
     {
-
+      all_idle = false;
+      // Break so we can cleanup allocations
+      break;
     }
-
   }
 
   // Check to see if work stealing could match work to requests
