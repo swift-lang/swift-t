@@ -97,6 +97,8 @@ then
   set -x
 fi
 
+export STC_TESTS_DIR=$( cd $( dirname $0 ) ; /bin/pwd )
+
 source "${STC_TESTS_DIR}/adlb-test-env.sh"
 if (( LEAK_CHECK ))
 then
@@ -116,7 +118,6 @@ crash()
   exit 1
 }
 
-export STC_TESTS_DIR=$( cd $( dirname $0 ) ; /bin/pwd )
 STC_ROOT_DIR=$( dirname $STC_TESTS_DIR )
 STC_TRIES=( ${STC_ROOT_DIR}/code ${STC_ROOT_DIR} )
 STC=""
