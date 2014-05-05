@@ -28,11 +28,6 @@ ADDTL_STC_ARGS=()
 LEAK_CHECK=1
 STC_TESTS_OUT_DIR=
 
-# Speed up the tests
-if [ -z ${ADLB_EXHAUST_TIME} ]; then
-#    export ADLB_EXHAUST_TIME=1
-fi
-
 while getopts "cCDek:n:p:P:VO:t:T:alo:" OPTION
 do
   case ${OPTION}
