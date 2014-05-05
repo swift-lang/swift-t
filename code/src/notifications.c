@@ -321,12 +321,12 @@ xlb_notify_server_self(adlb_notif_rank *notif)
   if (adlb_has_sub(notif->subscript))
   {
     dc = turbine_sub_close(notif->id, notif->subscript,
-                          &xlb_server_ready_work);
+                          false, &xlb_server_ready_work);
     ADLB_DATA_CHECK(dc);
   }
   else
   {
-    dc = turbine_close(notif->id, &xlb_server_ready_work);
+    dc = turbine_close(notif->id, false, &xlb_server_ready_work);
 
     ADLB_DATA_CHECK(dc);
   }

@@ -1316,12 +1316,12 @@ handle_notify(int caller)
           hdr->subscript_len, hdr->subscript);
     adlb_subscript sub = { .key = hdr->subscript,
                            .length = (size_t)hdr->subscript_len };
-    tc = turbine_sub_close(hdr->id, sub, &xlb_server_ready_work);
+    tc = turbine_sub_close(hdr->id, sub, true, &xlb_server_ready_work);
   }
   else
   {
     DEBUG("notification received: <%"PRId64">", hdr->id);
-    tc = turbine_close(hdr->id, &xlb_server_ready_work);
+    tc = turbine_close(hdr->id, true, &xlb_server_ready_work);
   }
 
   // TODO: report error?

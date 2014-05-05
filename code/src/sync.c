@@ -973,12 +973,12 @@ adlb_code xlb_handle_notify_sync(int rank,
   // process notification
   if (adlb_has_sub(sub))
   {
-    tc = turbine_sub_close(hdr->id, sub, &xlb_server_ready_work);
+    tc = turbine_sub_close(hdr->id, sub, true, &xlb_server_ready_work);
     ADLB_TURBINE_CHECK(tc);
   }
   else
   {
-    tc = turbine_close(hdr->id, &xlb_server_ready_work);
+    tc = turbine_close(hdr->id, true, &xlb_server_ready_work);
     ADLB_TURBINE_CHECK(tc);
   }
 

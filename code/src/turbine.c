@@ -555,6 +555,7 @@ subscribe_td(adlb_datum_id id, bool *subscribed)
     }
     else
     {
+      // Only cache closed data on other servers
       if (td_closed_cache_check(id))
       {
         *subscribed = false;
@@ -634,7 +635,7 @@ subscribe_td_sub(adlb_datum_id id, turbine_subscript subscript,
     }
     else
     {
-      adlb_subscript adlb_sub = sub_convert(subscript);
+      // Only cache closed data on other servers
       if (td_sub_closed_cache_check(id_sub_key, id_sub_key_len))
       {
         *subscribed = false;
@@ -643,7 +644,7 @@ subscribe_td_sub(adlb_datum_id id, turbine_subscript subscript,
       else
       {
         adlb_code ac = xlb_sync_subscribe(server, id,
-                            adlb_sub, subscribed);
+                            sub_convert(subscript), subscribed);
         DATA_CHECK_ADLB(ac,  TURBINE_ERROR_UNKNOWN);
         
         INCR_COUNTER(id_sub_subscribe_remote);
@@ -858,7 +859,8 @@ static inline turbine_engine_code add_rule_blocker_sub(void *id_sub_key,
 }
 
 turbine_engine_code
-turbine_close(adlb_datum_id id, turbine_work_array *ready)
+turbine_close(adlb_datum_id id, bool remote,
+              turbine_work_array *ready)
 {
   DEBUG_TURBINE("turbine_close(<%"PRId64">)", id);
   // Record no longer subscribed
@@ -866,9 +868,12 @@ turbine_close(adlb_datum_id id, turbine_work_array *ready)
   bool was_subscribed = table_lp_remove(&td_subscribed, id, &tmp);
   assert(was_subscribed);
 
-  // Cache subscribe result
-  turbine_engine_code tc = td_closed_cache_add(id);
-  turbine_check(tc);
+  if (remote)
+  {
+    // Cache remote subscribes
+    turbine_engine_code tc = td_closed_cache_add(id);
+    turbine_check(tc);
+  }
 
   // Remove from table transforms that this td was blocking
   // Will need to free list later
@@ -883,7 +888,7 @@ turbine_close(adlb_datum_id id, turbine_work_array *ready)
 }
 
 turbine_engine_code turbine_sub_close(adlb_datum_id id, adlb_subscript sub,
-                               turbine_work_array *ready)
+                               bool remote, turbine_work_array *ready)
 {
   DEBUG_TURBINE("turbine_sub_close(<%"PRId64">[\"%.*s\"])", id,
                 (int)sub.length, (const char*)sub.key);
@@ -897,9 +902,12 @@ turbine_engine_code turbine_sub_close(adlb_datum_id id, adlb_subscript sub,
                                         key_len, &tmp);
   assert(was_subscribed);
   
-  // Cache subscribe result
-  turbine_engine_code tc = td_sub_closed_cache_add(key, key_len);
-  turbine_check(tc);
+  if (remote)
+  {
+    // Cache remote subscribes
+    turbine_engine_code tc = td_sub_closed_cache_add(key, key_len);
+    turbine_check(tc);
+  }
 
   struct list* L;
   

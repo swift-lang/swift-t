@@ -87,20 +87,22 @@ turbine_engine_code turbine_rule(const char* name, int name_strlen,
 
 /*
   Should be called when turbine engine is notified that an id is closed
+  remote: true if data was remote
   ready: array to append with pointers to any newly ready tasks,
           ownership of pointers add is passed to caller
  */
-turbine_engine_code turbine_close(adlb_datum_id id,
+turbine_engine_code turbine_close(adlb_datum_id id, bool remote,
                            turbine_work_array *ready);
 
 /*
   Should be called when turbine engine is notified that an id/subscript
   is closed
+  remote: true if data was remote
   ready: array to append with pointers to any newly ready tasks,
           ownership of pointers add is passed to caller
  */
-turbine_engine_code turbine_sub_close(adlb_datum_id id, adlb_subscript sub, 
-                               turbine_work_array *ready);
+turbine_engine_code turbine_sub_close(adlb_datum_id id,
+     adlb_subscript sub, bool remote, turbine_work_array *ready);
 
 #define TURBINE_CODE_STRING_MAX 64
 
