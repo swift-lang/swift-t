@@ -3,6 +3,10 @@ set -e
 
 THISDIR=$( cd $(dirname $0) && pwd )
 
+if [ ! -f "${THISDIR}/exm-settings.sh" ]; then
+  cp ${THISDIR}/exm-settings.sh.template ${THISDIR}/exm-settings.sh
+fi
+
 pushd ${C_UTILS_SRC}
 echo
 echo "Building c-utils"
