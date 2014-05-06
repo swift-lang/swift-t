@@ -10,13 +10,12 @@ http://www.mcs.anl.gov/exm/local/guides/swift.html
 
 Prerequisites
 -------------
-Tcl8.5, including developer tools.  You need to have tclConfig.sh present
+Tcl8.6, including developer tools.  You need to have tclConfig.sh present
 in a lib or lib64 directory of your Tcl installation
 
 E.g. to install on Ubuntu:
 
-    sudo apt-get install tcl8.5 tcl8.5-dev
-
+    sudo apt-get install tcl8.6 tcl8.6-dev
 
 An implementation of MPI compatible with MPI2+. The easiest way to do this
 is to build MPICH from source, for which we provide an automated script.
@@ -24,14 +23,14 @@ See below.
 
 Swift/T Quick Build instructions
 --------------------------------
-These quick build instructions assume you have tcl8.5
+These quick build instructions assume you have tcl8.6
 installed on your system, and mpich2 or mpich3. They
 also assume you are using Linux.  See the Swift/T user
 guide for instructions on building for other platforms
 
 Checkout this project:
 
-    git clone git@github.com:timarmstrong/swift-t.git swift-t
+    git clone https://github.com/timarmstrong/swift-t.git swift-t
     cd swift-t
 
 Checkout all submodule projects:
@@ -39,29 +38,27 @@ Checkout all submodule projects:
     git submodule init
     git submodule update
 
-Add symlinks to mpi and tcl if not present:
+Create a build settings file:
 
-    mkdir inst
-    pushd inst
-    ln -s /path/to/tcl tcl  # For ubuntu, /path/to/tcl is /usr
-    ln -s /path/to/mpich mpich
-    popd
+    ./dev/build/init-settings.sh
 
-Now use the build script to configure, build and install:
+Inspect dev/build/exm-settings.sh for any settings you may need to change,
+for example install location (EXM\_PREFIX), MPI version (MPI\_VERSION), or
+source location (EXM\_SRC\_ROOT), then build with
 
-    pushd dev
-    ./rebuild_all.sh
-    popd
+    ./dev/build/build-all.sh
 
-Swift/T components should be installed into the inst directory.
+If you encounter an error while building, you may need to modify the
+configuration, for example to explicitly specify the location of
+Tcl or MPI.
 
-    ls inst
+Swift/T components should be installed into the directory specified by
+EXM\_PREFIX in the settings file.
 
-You can do a quick build and install of all components using
-the fast-build script:
+You can do a quick build and install of all components using the fast
+build script:
 
-    cd dev
-    ./fast-build.sh
+    ./dev/build/fast-build-all.sh
 
 MPICH3 Quick Build Instructions
 -------------------------------
