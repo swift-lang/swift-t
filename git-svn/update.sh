@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
 set -e
-branch_subrepos="c-utils lb turbine stc"
-nonbranch_subrepos="dev"
-subrepos="$branch_subrepos $nonbranch_subrepos"
+
+SCRIPT_DIR=$(dirname $0)
+source "${SCRIPT_DIR}/repos.sh"
 
 for subrepo in $branch_subrepos
 do
@@ -44,6 +44,11 @@ do
   done
   echo
   git checkout -q master
+  
+  
+  echo "Fetching github version"
+  git fetch github
+
   popd > /dev/null
 done
 
@@ -53,6 +58,10 @@ do
   pushd $subrepo > /dev/null
   git checkout master
   git svn rebase
+  
+  echo "Fetching github version"
+  git fetch github
+
   popd > /dev/null
 done
 

@@ -1,37 +1,53 @@
 #!/usr/bin/env bash
 
-subrepos="c-utils lb turbine stc dev"
+set -e
+
+SCRIPT_DIR=$(dirname $0)
+source "${SCRIPT_DIR}/repos.sh"
+
+ERRORS=0
 
 for subrepo in $subrepos
 do
   echo Pushing $subrepo        
   pushd $subrepo > /dev/null
-
-  if [[ $subrepo == dev ]] ; then
-    git_svn_remote="remotes/git-svn"
-  else
+  
+  if is_branch_subrepo $subrepo ; then
     git_svn_remote="remotes/svn/trunk"
+  else
+    git_svn_remote="remotes/git-svn"
   fi
 
-  git checkout master
-  git branch -D __tmp_master &> /dev/null
-  git fetch github
-  git checkout -b __tmp_master remotes/github/master
-  last_svn_rev=$(git log . | grep git-svn-id | head -n1 | grep -o '@[0-9]*' | sed 's/@/r/')
+  github_remote="remotes/github/master"
+  last_svn_rev=$(git log ${github_remote} | grep git-svn-id | head -n1 | grep -o '@[0-9]*' | sed 's/@/r/')
   echo "Last svn revision on github: $last_svn_rev"
-  git_svn_head_hash=$(git rev-parse $git_svn_remote)
-  last_merged_hash=$(git svn find-rev $last_svn_rev $git_svn_remote)
-  echo "need to merge $last_merged_hash..$git_svn_head_hash from git-svn"
-  if [[ "${git_svn_head_hash}" == "${last_merged_hash}" ]]; then
-    echo "No commits to merge"
-  else
-    git cherry-pick --ff ${last_merged_hash}..${git_svn_head_hash}
-    git push --tags github __tmp_master:master
+
+  git checkout -q --detach
+  if git branch -D __tmp_master &> /dev/null ; then
+    echo "Deleted old __tmp_master"
   fi
-  git checkout master
-  git branch -D __tmp_master
+  git fetch github
+  git checkout -b __tmp_master ${git_svn_remote}
+  #git_svn_head_hash=$(git rev-parse $git_svn_remote)
+  last_merged_hash=$(git svn find-rev $last_svn_rev $git_svn_remote)
+  echo "need to merge $last_merged_hash..$git_svn_remote from git-svn"
+  
+  
+  if ! git rebase ${last_merged_hash} --onto ${github_remote}
+  then
+    echo "ERROR: rebase unsuccessful"
+    ERRORS=1
+  elif ! git push --tags github HEAD:master
+  then
+    echo "ERROR: Not all refs were pushed ok, check previous output"
+    ERRORS=1
+  fi
+  
+  git checkout -q --detach
+  git branch -D __tmp_master &> /dev/null
   popd > /dev/null
   echo DONE
+  echo
   echo
 done
 set -e
@@ -42,12 +58,11 @@ for subrepo in $subrepos
 do
   echo "Updating submodule $subrepo"
   pushd $subrepo > /dev/null
-  git pull --rebase origin master
-  git submodule init
-  git submodule update
-  git submodule status
+  git checkout master
+  git rebase origin/master
   popd > /dev/null
 done
+
 # Commit any submodule updates
 if ! git diff-index --quiet HEAD --; then
   git commit -a -m "Update submodules to latest"
@@ -58,3 +73,10 @@ git pull --rebase github master
 git push github master
 popd > /dev/null
 
+if (( ERRORS ))
+then
+  echo "Previous errors, check earlier output"
+  exit 1
+else
+  echo "Completed with no errors"
+fi
