@@ -8,7 +8,8 @@ masterrepo="swift-t"
 allrepos="$subrepos $devrepo $masterrepo"
 
 EXM_SVN=https://svn.mcs.anl.gov/repos/exm/sfw
-GITHUB_ROOT=https://github.com/timarmstrong
+#GITHUB_ROOT=https://github.com/timarmstrong
+GITHUB_ROOT=git@github.com:timarmstrong
 
 for subrepo in $subrepos
 do
