@@ -2,12 +2,7 @@
 set -e
 THISDIR=`dirname $0`
 
-BUILDVARS=${THISDIR}/exm-settings.sh
-if [ ! -f ${BUILDVARS} ] ; then
-  echo "Need ${BUILDVARS} to exist"
-  exit 1
-fi
-source ${BUILDVARS}
+source "${THISDIR}/init-settings.sh"
 
 # Override build behaviour
 export RUN_AUTOTOOLS=1

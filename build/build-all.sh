@@ -4,11 +4,5 @@
 set -e
 THISDIR=`dirname $0`
 
-BUILDVARS=${THISDIR}/exm-settings.sh
-if [ ! -f ${BUILDVARS} ] ; then
-  echo "Need ${BUILDVARS} to exist"
-  exit 1
-fi
-source ${BUILDVARS}
-
-source ${THISDIR}/internal-build-all.sh
+source "${THISDIR}/init-settings.sh"
+source "${THISDIR}/internal-build-all.sh"
