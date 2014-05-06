@@ -59,7 +59,8 @@ do
   echo "Updating submodule $subrepo"
   pushd $subrepo > /dev/null
   git checkout master
-  git rebase origin/master
+  git fetch origin
+  git checkout origin/master
   popd > /dev/null
 done
 
