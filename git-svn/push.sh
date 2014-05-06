@@ -60,7 +60,7 @@ do
   pushd $subrepo > /dev/null
   git checkout master
   git fetch origin
-  git checkout origin/master
+  git rebase origin/master
   popd > /dev/null
 done
 
