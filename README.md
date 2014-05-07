@@ -24,17 +24,18 @@ version of MPI.  If you are installing on another style of system without
 MPI preinstalled, the recommended way way to get an up-to-date version of
 MPI is to general way to to build MPICH from source, for which we provide
 an automated script, as described in a later section.  Your system may
-supply a prepackaged distribution, e.g. the `mpich2` and `libmpich2-dev`.
+supply a prepackaged distribution, e.g. the `mpich2` and `libmpich2-dev`
 packages on Ubuntu.
 Swift/T will generally work fine with these, but many distributions are
 slow to update their MPI package.
 
 Swift/T Quick Build instructions
 --------------------------------
-These quick build instructions assume you have tcl8.6
-installed on your system, and mpich2 or mpich3. They
-also assume you are using Linux.  See the Swift/T user
-guide for instructions on building for other platform.
+These quick build instructions assume you have tcl8.6 or greater
+and an MPI distribution that supports the MPI 2 or MPI 3.0 standards.
+We do not cover building for all possible systems: if you encounter
+a problem, the Swift/T user guide has instructions on building on
+specific systems.
 
 Checkout this project:
 
@@ -67,7 +68,7 @@ You can build with this command:
     ./dev/build/build-all.sh
 
 The build script is often able to locate all dependencies without
-further explict configuration.  If you encounter an error while
+further explicit configuration.  If you encounter an error while
 building, or want to ensure that a specific version is used, you can
 modify configuration, for example to explicitly set the location of
 Tcl or MPI.
@@ -82,7 +83,7 @@ build system details.
 
 MPICH3 Quick Build Instructions
 -------------------------------
-Uncomment the MPI\_INSTALL setting in exm-settings.sh:
+Uncomment the `MPI\_INSTALL` setting in exm-settings.sh:
 
     MPI_INSTALL=${EXM_PREFIX}/mpi
 
