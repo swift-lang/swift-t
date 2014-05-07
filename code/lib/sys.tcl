@@ -351,6 +351,7 @@ namespace eval turbine {
         } else {
             set result_value ""
         }
+        log "getenv($key) => $result_value"
         return $result_value
     }
 
