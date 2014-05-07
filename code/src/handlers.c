@@ -66,12 +66,19 @@ int64_t handler_counters[XLB_MAX_HANDLERS];
 /** Copy of this processes' MPI rank */
 static int mpi_rank;
 
+/** Additional scratch space */
+#define XLB_SCRATCH_SIZE (1024 * 64)
+char xlb_scratch[XLB_SCRATCH_SIZE];
+static const adlb_buffer xlb_scratch_buf =
+          { .data = xlb_scratch, .length = XLB_SCRATCH_SIZE };
+
 static void register_handler(adlb_tag tag, xlb_handler h);
 
-static adlb_code handle_sync(int caller);
 static adlb_code handle_sync_response(int caller);
+static adlb_code handle_steal_response(int caller);
 static adlb_code handle_do_nothing(int caller);
 static adlb_code handle_put(int caller);
+static adlb_code handle_put_rule(int caller);
 static adlb_code handle_get(int caller);
 static adlb_code handle_iget(int caller);
 static adlb_code handle_create(int caller);
@@ -81,6 +88,8 @@ static adlb_code handle_store(int caller);
 static adlb_code handle_retrieve(int caller);
 static adlb_code handle_enumerate(int caller);
 static adlb_code handle_subscribe(int caller);
+static adlb_code handle_notify(int caller);
+static adlb_code handle_get_refcounts(int caller);
 static adlb_code handle_refcount_incr(int caller);
 static adlb_code handle_insert_atomic(int caller);
 static adlb_code handle_unique(int caller);
@@ -92,7 +101,6 @@ static adlb_code handle_lock(int caller);
 static adlb_code handle_unlock(int caller);
 static adlb_code handle_check_idle(int caller);
 static adlb_code handle_shutdown_worker(int caller);
-static adlb_code handle_shutdown_server(int caller);
 static adlb_code handle_fail(int caller);
 
 static adlb_code find_req_bytes(int *bytes, int caller, adlb_tag tag);
@@ -124,6 +132,10 @@ static inline adlb_code send_matched_work(int type, int putter,
       int priority, int answer, bool targeted,
       int worker, int length, const void *inline_data);
 
+static adlb_code xlb_recheck_single_queues(void);
+
+static adlb_code xlb_recheck_parallel_queues(void);
+
 static inline adlb_code xlb_check_parallel_tasks(int work_type);
 
 static inline adlb_code redirect_work(int type, int putter,
@@ -134,13 +146,7 @@ static inline adlb_code redirect_work(int type, int putter,
 static inline bool check_workqueue(int caller, int type);
 
 static adlb_code
-notify_helper(adlb_datum_id id, adlb_notif_ranks *notifications);
-
-static adlb_code
-send_notification_work(int caller, 
-        void *response, size_t response_len,
-        struct packed_notif_counts *inner_struct,
-        const adlb_notif_t *notifs, bool use_xfer);
+notify_helper(adlb_notif_t *notifs);
 
 static adlb_code
 refcount_decr_helper(adlb_datum_id id, adlb_refcounts decr);
@@ -153,12 +159,14 @@ xlb_handlers_init(void)
 {
   MPI_Comm_rank(adlb_comm, &mpi_rank);
 
+  handler_count = 0;
   memset(handlers, '\0', XLB_MAX_HANDLERS*sizeof(xlb_handler));
 
-  register_handler(ADLB_TAG_SYNC_REQUEST, handle_sync);
   register_handler(ADLB_TAG_SYNC_RESPONSE, handle_sync_response);
+  register_handler(ADLB_TAG_RESPONSE_STEAL_COUNT, handle_steal_response);
   register_handler(ADLB_TAG_DO_NOTHING, handle_do_nothing);
   register_handler(ADLB_TAG_PUT, handle_put);
+  register_handler(ADLB_TAG_PUT_RULE, handle_put_rule);
   register_handler(ADLB_TAG_GET, handle_get);
   register_handler(ADLB_TAG_IGET, handle_iget);
   register_handler(ADLB_TAG_CREATE_HEADER, handle_create);
@@ -168,6 +176,8 @@ xlb_handlers_init(void)
   register_handler(ADLB_TAG_RETRIEVE, handle_retrieve);
   register_handler(ADLB_TAG_ENUMERATE, handle_enumerate);
   register_handler(ADLB_TAG_SUBSCRIBE, handle_subscribe);
+  register_handler(ADLB_TAG_NOTIFY, handle_notify);
+  register_handler(ADLB_TAG_GET_REFCOUNTS, handle_get_refcounts);
   register_handler(ADLB_TAG_REFCOUNT_INCR, handle_refcount_incr);
   register_handler(ADLB_TAG_INSERT_ATOMIC, handle_insert_atomic);
   register_handler(ADLB_TAG_UNIQUE, handle_unique);
@@ -179,7 +189,6 @@ xlb_handlers_init(void)
   register_handler(ADLB_TAG_UNLOCK, handle_unlock);
   register_handler(ADLB_TAG_CHECK_IDLE, handle_check_idle);
   register_handler(ADLB_TAG_SHUTDOWN_WORKER, handle_shutdown_worker);
-  register_handler(ADLB_TAG_SHUTDOWN_SERVER, handle_shutdown_server);
   register_handler(ADLB_TAG_FAIL, handle_fail);
 }
 
@@ -212,25 +221,6 @@ void xlb_print_handler_counters(void)
 //// Individual handlers follow...
 
 /**
-   Incoming sync request: no collision detection necessary
-   because this process is not attempting a sync
- */
-static adlb_code
-handle_sync(int caller)
-{
-  MPE_LOG(xlb_mpe_svr_sync_start);
-  MPI_Status status;
-  char hdr_storage[PACKED_SYNC_SIZE]; // Temporary stack storage for struct
-  struct packed_sync *hdr = (struct packed_sync *)hdr_storage;
-  RECV(hdr, (int)PACKED_SYNC_SIZE, MPI_BYTE, caller, ADLB_TAG_SYNC_REQUEST);
-
-  adlb_code rc = xlb_accept_sync(caller, hdr, false);
-  ADLB_CHECK(rc);
-  MPE_LOG(xlb_mpe_svr_sync_end);
-  return rc;
-}
-
-/**
    Incoming sync response was received but not in sync mode.  This can
    occur if we aborted a sync attempt due to receiving a shutdown signal.
    Ignore the sync response in this case.
@@ -242,6 +232,21 @@ static adlb_code handle_sync_response(int caller)
   RECV(&response, 1, MPI_INT, caller, ADLB_TAG_SYNC_RESPONSE);
   return ADLB_SUCCESS;
 }
+
+/**
+  A similar situation can occur with stolen task counts to sync responses
+ */
+static adlb_code handle_steal_response(int caller)
+{
+  MPI_Status status;
+  struct packed_steal_resp hdr;
+  RECV(&hdr, sizeof(hdr), MPI_BYTE, caller,
+        ADLB_TAG_RESPONSE_STEAL_COUNT);
+
+  assert(hdr.count == 0); // Shouldn't be receiving work after shutdown
+  return ADLB_SUCCESS;
+}
+
 
 /**
   Placeholder request: do nothing.
@@ -283,6 +288,107 @@ handle_put(int caller)
 
   MPE_LOG(xlb_mpe_svr_put_end);
 
+  return ADLB_SUCCESS;
+}
+
+static adlb_code
+handle_put_rule(int caller)
+{
+  MPI_Status status;
+
+  MPE_LOG(xlb_mpe_svr_put_start);
+
+  RECV(xfer, XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_PUT_RULE);
+  const struct packed_put_rule *p = (struct packed_put_rule*)xfer;
+
+  // Put arrays first to avoid alignment issues  
+  const adlb_datum_id *wait_ids = p->inline_data;
+ 
+  // Remainder of data is packed into array in binary form
+  const void *p_pos = p->inline_data;
+  p_pos += (int)sizeof(wait_ids[0]) * p->id_count;
+
+  adlb_datum_id_sub wait_id_subs[p->id_sub_count];
+  for (int i = 0; i < p->id_sub_count; i++)
+  {
+    p_pos += xlb_unpack_id_sub(p_pos, &wait_id_subs[i].id,
+                               &wait_id_subs[i].subscript);
+  }
+
+  const char *name = NULL;
+  int name_strlen = 0;
+  #ifndef NDEBUG
+  // Don't pack name for optimized build
+  name_strlen = p->name_strlen;
+  name = p_pos;
+  p_pos += name_strlen;
+  #endif
+
+  const void *inline_data = NULL;
+  if (p->has_inline_data)
+  {
+    inline_data = p_pos;
+    p_pos += p->length;
+  }
+  #ifndef NDEBUG
+  // Sanity check size
+  int msg_size;
+  int mc = MPI_Get_count(&status, MPI_BYTE, &msg_size);
+  assert(mc == MPI_SUCCESS);
+  // Make sure we don't get garbage data
+  assert(((const char*)p_pos) - ((const char*) p) <= msg_size);
+  #endif
+
+  MPI_Request request;
+  xlb_work_unit *work = work_unit_alloc((size_t)p->length);
+  ADLB_MALLOC_CHECK(work);
+
+  xlb_work_unit_init(work, p->type, caller, p->priority, p->answer,
+                     p->target, p->length, p->parallelism);
+
+  if (inline_data == NULL) 
+  {
+    // Set up receive for payload into work unit
+    IRECV(work->payload, p->length, MPI_BYTE, caller, ADLB_TAG_WORK);
+  
+    // send initial response to prompt send
+    int send_work_response = ADLB_SUCCESS;
+    SEND(&send_work_response, 1, MPI_INT, caller, ADLB_TAG_RESPONSE_PUT);
+  }
+  else
+  {
+    memcpy(work->payload, inline_data, (size_t)p->length);
+  }
+  
+  if (inline_data == NULL)
+  {
+    // Wait to receive data
+    WAIT(&request, &status);
+  }
+
+  // We have rule now - caller can proceed.
+  // Any errors in rule will occur in server now.
+  int response = ADLB_SUCCESS;
+  SEND(&response, 1, MPI_INT, caller, ADLB_TAG_RESPONSE_PUT);
+
+  bool ready;
+  turbine_engine_code tc = turbine_rule(name, name_strlen,
+        p->id_count, wait_ids, p->id_sub_count, wait_id_subs,
+        work, &ready);
+  CHECK_MSG(tc == TURBINE_SUCCESS, "Error adding rule");
+
+  if (ready)
+  {
+    // Didn't put into engine, need to move to work queue
+    adlb_code ac = xlb_put_work_unit(work);
+    ADLB_CHECK(ac);
+  }
+
+  // Update performance counters
+  xlb_task_data_count(p->type, p->target >= 0, p->parallelism > 1,
+                      !ready);
+
+  MPE_LOG(xlb_mpe_svr_put_rule_end);
   return ADLB_SUCCESS;
 }
 
@@ -349,8 +455,79 @@ put(int type, int putter, int priority, int answer, int target,
     ADLB_CHECK(code);
   }
 
-  code = xlb_workq_add(type, putter, priority, answer, target,
-                length, parallelism, work);
+  xlb_work_unit_init(work, type, putter, priority, answer, target,
+                length, parallelism);
+  code = xlb_workq_add(work);
+  ADLB_CHECK(code);
+
+  return ADLB_SUCCESS;
+}
+
+/*
+  Put already-allocated work unit.
+  This takes ownership of entire work unit.
+  */
+adlb_code
+xlb_put_work_unit(xlb_work_unit *work)
+{
+  adlb_code code;
+  assert(work->length >= 0);
+
+  int target = work->target;
+  int type = work->type;
+  if (work->parallelism <= 1)
+  {
+    // Try to match to a worker
+    bool targeted = (target >= 0);
+    int worker;
+    // Attempt to redirect work unit to another worker
+    if (targeted)
+    {
+      CHECK_MSG(target < xlb_comm_size, "Invalid target: %i", target);
+      worker = xlb_requestqueue_matches_target(target, type);
+    }
+    else
+    {
+      worker = xlb_requestqueue_matches_type(type);
+    }
+
+    if (worker != ADLB_RANK_NULL)
+    {
+      code = send_work(worker, work->id, type, work->answer,
+                       work->payload, work->length, 1);                                  
+      ADLB_CHECK(code);
+      work_unit_free(work);
+      
+      if (xlb_perf_counters_enabled)
+      {
+        xlb_task_bypass_count(type, targeted, false);
+      }
+      return ADLB_SUCCESS;
+    }
+  }
+  else
+  {
+    code = attempt_match_par_work(type, work->answer,
+            work->payload, work->length, work->parallelism);
+    if (code == ADLB_SUCCESS)
+    {
+      // Successfully sent out task
+      work_unit_free(work);
+      
+      if (xlb_perf_counters_enabled)
+      {
+        xlb_task_bypass_count(type, false, true);
+      }
+      return ADLB_SUCCESS;
+    }
+    ADLB_CHECK(code);
+  }
+
+  // Store this work unit on this server
+  DEBUG("server storing work...");
+  DEBUG("work unit: x%i %s ", work->parallelism, work->payload);
+
+  code = xlb_workq_add(work);
   ADLB_CHECK(code);
 
   return ADLB_SUCCESS;
@@ -360,7 +537,8 @@ adlb_code xlb_put_targeted_local(int type, int putter, int priority,
       int answer, int target, const void* payload, int length)
 {
   assert(xlb_map_to_server(target) == xlb_comm_rank);
-  assert(target >= 0);
+  valgrind_assert(target >= 0 && target < xlb_workers);
+  assert(target >= 0 && target < xlb_workers);
   int worker;
   int rc;
 
@@ -380,9 +558,11 @@ adlb_code xlb_put_targeted_local(int type, int putter, int priority,
   {
     xlb_work_unit *work = work_unit_alloc((size_t)length);
     memcpy(work->payload, payload, (size_t)length);
+    
+    xlb_work_unit_init(work, type, putter, priority, answer, target,
+                       length, 1);
     DEBUG("xlb_put_targeted_local(): server storing work...");
-    xlb_workq_add(type, putter, priority, answer, target,
-                  length, 1, work);
+    xlb_workq_add(work);
   }
 
   return ADLB_SUCCESS;
@@ -551,7 +731,7 @@ handle_get(int caller)
     // Try to initiate a steal to see if we can get work to the worker
     // immediately
     stealing = true;
-    int rc = xlb_steal_match();
+    int rc = xlb_try_steal();
     ADLB_CHECK(rc);
     stealing = false;
   }
@@ -605,8 +785,26 @@ check_workqueue(int caller, int type)
   Check to see if anything in request queue can be matched to work
   queue for single-worker tasks.  E.g. after a steal.
  */
-adlb_code
-xlb_recheck_queues(void)
+adlb_code xlb_recheck_queues(bool single, bool parallel)
+{
+  adlb_code code;
+  if (single)
+  {
+    code = xlb_recheck_single_queues();
+    ADLB_CHECK(code);
+  }
+  
+  if (parallel)
+  {
+    code = xlb_recheck_parallel_queues();
+    ADLB_CHECK(code);
+  }
+
+  return ADLB_SUCCESS;
+}
+
+static adlb_code
+xlb_recheck_single_queues(void)
 {
   TRACE_START;
 
@@ -663,7 +861,8 @@ xlb_check_parallel_tasks(int type)
   return result;
 }
     
-adlb_code xlb_recheck_parallel_queues(void)
+static adlb_code
+xlb_recheck_parallel_queues(void)
 {
   TRACE("check_steal(): rechecking parallel...");
   for (int t = 0; t < xlb_types_size; t++)
@@ -716,6 +915,8 @@ static inline adlb_code
 send_work(int worker, xlb_work_unit_id wuid, int type, int answer,
           const void* payload, int length, int parallelism)
 {
+  assert(!xlb_server_shutting_down); // Shouldn't shutdown if have work
+
   DEBUG("send_work() to: %i wuid: %"PRId64"...", worker, wuid);
   TRACE("work_unit: %s\n", (char*) payload);
   struct packed_get_response g;
@@ -900,41 +1101,35 @@ handle_store(int caller)
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
 
   adlb_data_code dc = xlb_data_store(hdr.id, subscript, xfer, length,
-                      hdr.type, hdr.refcount_decr, &notifs);
+          hdr.type, hdr.refcount_decr, hdr.store_refcounts, &notifs);
 
-  struct packed_store_resp resp = {
-    .dc = dc,
-    .notifs.notify_count = 0,
-    .notifs.reference_count = 0,
-    .notifs.extra_data_count = 0,
-    .notifs.extra_data_bytes = 0};
+  struct packed_store_resp resp = { .dc = dc };
   // Can handle notifications on client or on server
   if (dc != ADLB_DATA_SUCCESS)
   {
     // Send failure return code
     RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
   }
-  else if (ADLB_CLIENT_NOTIFIES)
-  {
-    // process and remove any local notifications for this server
-    xlb_process_local_notif(hdr.id, &notifs.notify);
-
-    // TODO: process reference setting locally if possible.  This is slightly
-    // more complex as we might want to pass the notification work for the
-    // set references back to the client
-    
-    // Send remaining to client
-    adlb_code rc = send_notification_work(caller, &resp, sizeof(resp),
-                     &resp.notifs, &notifs, false);
-    ADLB_CHECK(rc);
-  }
   else
   {
-    // ADLB_CLIENT_NOTIFIES is not set:  send notifications by self
+    adlb_code rc;
+    int tmp_len = 8192;
+    char tmp[tmp_len];
+    adlb_buffer tmp_buf = { .data = tmp, .length= tmp_len };
+    xlb_prepared_notifs prep;
+    bool send_notifs;
+
+    rc = xlb_prepare_notif_work(&notifs, &tmp_buf, &resp.notifs,
+                                &prep, &send_notifs);
+    ADLB_CHECK(rc);
+
     RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
 
-    adlb_code rc = xlb_notify_all(&notifs, hdr.id);
-    ADLB_CHECK(rc);
+    if (send_notifs)
+    {
+      rc = xlb_send_notif_work(caller, &notifs, &resp.notifs, &prep);
+      ADLB_CHECK(rc)
+    }
   }
 
   xlb_free_notif(&notifs);
@@ -943,161 +1138,6 @@ handle_store(int caller)
   MPE_LOG(xlb_mpe_svr_store_end);
 
   return ADLB_SUCCESS;
-}
-
-/*
-  Finish filling in response with info about notifications,
-  then send to caller including additional notification work.
-  
-  Will use xfer buffer as scratch space if use_xfer is true.
-  response/response_len: pointer to response struct to be sent
-  inner_struct: struct inside outer struct to be updated before sending
-  
- */
-static adlb_code
-send_notification_work(int caller, 
-        void *response, size_t response_len,
-        struct packed_notif_counts *inner_struct,
-        const adlb_notif_t *notifs, bool use_xfer)
-{
-  // will send remaining to client
-  int notify_count = notifs->notify.count;
-  int refs_count = notifs->references.count;
-  assert(notify_count >= 0);
-  assert(refs_count >= 0);
-
-  /*
-   We need to send subscripts and values back to client, so we pack them
-   all into a buffer, and send them back.  We can then reference them by
-   their index in the buffer.
-   */
-  adlb_data_code dc;
-
-  /*
-   * Allocate some scratch space on stack.
-   */
-  int tmp_buf_size = 1024;
-  char tmp_buf_data[tmp_buf_size];
-  adlb_buffer static_buf;
-  if (use_xfer)
-  {
-    static_buf = xfer_buf;
-  }
-  else
-  {
-    static_buf.data = tmp_buf_data;
-    static_buf.length = tmp_buf_size;
-  }
-  bool using_static_buf = true;
-  
-  adlb_buffer extra_data;
-  int extra_pos = 0;
-
-  dc = ADLB_Init_buf(&static_buf, &extra_data, &using_static_buf, 0);
-  ADLB_DATA_CHECK(dc);
-
-  int extra_data_count = 0;
-  struct packed_notif *packed_notifs =
-            malloc(sizeof(struct packed_notif) * (size_t)notify_count);
-  struct packed_reference *packed_refs =
-            malloc(sizeof(struct packed_reference) * (size_t)refs_count);
-
-  // Track last subscript so we don't send redundant subscripts
-  const adlb_subscript *last_subscript = NULL;
-
-  for (int i = 0; i < notify_count; i++)
-  {
-    adlb_notif_rank *rank = &notifs->notify.notifs[i];
-    packed_notifs[i].rank = rank->rank;
-    if (adlb_has_sub(rank->subscript))
-    {
-      if (last_subscript != NULL &&
-          last_subscript->key == rank->subscript.key &&
-          last_subscript->length == rank->subscript.length)
-      {
-        // Same as last
-        packed_notifs[i].subscript_data = extra_data_count - 1;
-      }
-      else
-      {
-        packed_notifs[i].subscript_data = extra_data_count;
-
-        // pack into extra data
-        dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL,rank->subscript.key,
-            (int)rank->subscript.length, true, &extra_data,
-            &using_static_buf, &extra_pos);
-        ADLB_DATA_CHECK(dc);
-       
-        last_subscript = &rank->subscript;
-        extra_data_count++;
-      }
-    }
-    else
-    {
-      packed_notifs[i].subscript_data = -1; // No subscript
-    }
-  }
-
-  // Track last value so we don't send redundant values
-  const void *last_value = NULL;
-  int last_value_len;
-  for (int i = 0; i < refs_count; i++)
-  {
-    adlb_ref_datum *ref = &notifs->references.data[i];
-    packed_refs[i].id = ref->id;
-    packed_refs[i].type = ref->type;
-    if (last_value != NULL &&
-        last_value == ref->value &&
-        last_value_len == ref->value_len)
-    {
-      // Same as last
-      packed_refs[i].val_data = extra_data_count - 1;
-    }
-    else
-    {
-      packed_refs[i].val_data = extra_data_count;
-      dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL, ref->value,
-          ref->value_len, true, &extra_data, &using_static_buf,
-          &extra_pos);
-      ADLB_DATA_CHECK(dc);
-      
-      last_value = ref->value;
-      last_value_len = ref->value_len;
-      extra_data_count++;
-    }
-  }
-
-  // Fill in data and send response header
-  inner_struct->notify_count = notify_count;
-  inner_struct->reference_count = refs_count;
-  inner_struct->extra_data_count = extra_data_count;
-  inner_struct->extra_data_bytes = extra_pos;
-  RSEND(response, (int)response_len, MPI_BYTE, caller, ADLB_TAG_RESPONSE);
-
-  if (extra_pos > 0)
-  {
-    assert(extra_data_count > 0);
-    SEND(extra_data.data, extra_pos, MPI_BYTE, caller, ADLB_TAG_RESPONSE);
-  }
-  if (notify_count > 0)
-  {
-    SEND(packed_notifs, notify_count * (int)sizeof(packed_notifs[0]),
-         MPI_BYTE, caller, ADLB_TAG_RESPONSE);
-  }
-  if (refs_count > 0)
-  {
-    SEND(packed_refs, refs_count * (int)sizeof(packed_refs[0]), MPI_BYTE,
-         caller, ADLB_TAG_RESPONSE);
-  }
-
-  if (!using_static_buf)
-  {
-    free(extra_data.data);
-  }
-  
-  free(packed_notifs);
-  free(packed_refs);
-  return ADLB_DATA_SUCCESS;
 }
 
 static adlb_code
@@ -1127,46 +1167,52 @@ handle_retrieve(int caller)
           incr_referand.read_refcount, incr_referand.write_refcount);
       
 
-  adlb_binary_data result;
+  adlb_data_code dc;
   adlb_data_type type;
-  int dc = xlb_data_retrieve(hdr->id, subscript, &type, NULL, &result);
+  adlb_binary_data result;
+  adlb_notif_t notifs = ADLB_NO_NOTIFS;
+  dc = xlb_data_retrieve(hdr->id, subscript, decr_self, incr_referand,
+                          &type, &xlb_scratch_buf, &result, &notifs);
   assert(dc != ADLB_DATA_SUCCESS || result.length >= 0);
-
-  if (dc == ADLB_DATA_SUCCESS && !ADLB_RC_IS_NULL(decr_self)) {
-    // Need to copy result if don't own memory
-    dc = ADLB_Own_data(NULL, &result);
-   
-    if (dc == ADLB_DATA_SUCCESS)
-    {
-      adlb_notif_ranks notify = ADLB_NO_NOTIF_RANKS;
-      dc = xlb_incr_rc_scav(hdr->id, subscript,
-                               result.data, result.length,
-                               type, decr_self, incr_referand, &notify);
-      if (dc == ADLB_DATA_SUCCESS)
-      {
-        adlb_code rc = notify_helper(hdr->id, &notify);
-        ADLB_CHECK(rc);
-      }
-    }
-  }
-  else if (dc == ADLB_DATA_SUCCESS && !ADLB_RC_IS_NULL(incr_referand))
-  {
-    assert(ADLB_RC_NONNEGATIVE(incr_referand));
-    dc = xlb_data_referand_refcount(result.data, result.length, type, hdr->id,
-                                incr_referand);
-  }
 
   struct retrieve_response_hdr resp_hdr;
   resp_hdr.code = dc;
   resp_hdr.type = type;
   resp_hdr.length = result.length;
-  RSEND(&resp_hdr, sizeof(resp_hdr), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
   if (dc == ADLB_DATA_SUCCESS)
   {
+    adlb_code rc;
+    int tmp_len = 8192;
+    char tmp[tmp_len];
+    adlb_buffer tmp_buf = { .data = tmp, .length= tmp_len };
+    xlb_prepared_notifs prep;
+    bool send_notifs;
+
+    rc = xlb_prepare_notif_work(&notifs, &tmp_buf, &resp_hdr.notifs,
+                                &prep, &send_notifs);
+    ADLB_CHECK(rc);
+
+    RSEND(&resp_hdr, sizeof(resp_hdr), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+
+    // Send data then notifs
     SEND(result.data, result.length, MPI_BYTE, caller, ADLB_TAG_RESPONSE);
-    ADLB_Free_binary_data(&result);
     DEBUG("Retrieve: <%"PRId64">", hdr->id);
+
+    if (send_notifs)
+    {
+      rc = xlb_send_notif_work(caller, &notifs, &resp_hdr.notifs, &prep);
+      ADLB_CHECK(rc)
+    }
   }
+  else
+  {
+    // Send header only
+    RSEND(&resp_hdr, sizeof(resp_hdr), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+  }
+
+  xlb_free_notif(&notifs);
+  
+  ADLB_Free_binary_data2(&result, xlb_scratch);
 
   MPE_LOG(xlb_mpe_svr_retrieve_end);
   return ADLB_SUCCESS;
@@ -1224,7 +1270,11 @@ handle_subscribe(int caller)
   
   adlb_datum_id id;
   adlb_subscript subscript;
-  xlb_unpack_id_sub(xfer, &id, &subscript);
+  int work_type;
+  const char *xfer_pos = xfer;
+  MSG_UNPACK_BIN(xfer_pos, &work_type);
+  xlb_unpack_id_sub(xfer_pos, &id, &subscript);
+
 
   // TODO: support binary keys
   if (adlb_has_sub(subscript))
@@ -1237,16 +1287,73 @@ handle_subscribe(int caller)
     DEBUG("subscribe: <%"PRId64">", id);
   }
   struct pack_sub_resp resp;
-  int result;
-  resp.dc = xlb_data_subscribe(id, subscript, caller, &result);
-  if (resp.dc == ADLB_DATA_SUCCESS)
-    resp.subscribed = result != 0;
-  else
+  resp.dc = xlb_data_subscribe(id, subscript, caller, work_type,
+                              &resp.subscribed);
+  if (resp.dc != ADLB_DATA_SUCCESS)
     resp.subscribed = false;
   RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
 
   TRACE("ADLB_TAG_SUBSCRIBE done\n");
   MPE_LOG(xlb_mpe_svr_subscribe_end);
+  return ADLB_SUCCESS;
+}
+
+static adlb_code
+handle_notify(int caller)
+{
+  TRACE("ADLB_TAG_NOTIFY\n");
+
+  MPI_Status status;
+  RECV(xfer, XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_NOTIFY);
+  struct packed_notify_hdr *hdr = (struct packed_notify_hdr *)xfer;
+
+  turbine_engine_code tc;
+  
+  // TODO: support binary keys
+  if (hdr->subscript_len > 0)
+  {
+    DEBUG("notification received: <%"PRId64">[%.*s]", hdr->id,
+          hdr->subscript_len, hdr->subscript);
+    adlb_subscript sub = { .key = hdr->subscript,
+                           .length = (size_t)hdr->subscript_len };
+    tc = turbine_sub_close(hdr->id, sub, true, &xlb_server_ready_work);
+  }
+  else
+  {
+    DEBUG("notification received: <%"PRId64">", hdr->id);
+    tc = turbine_close(hdr->id, true, &xlb_server_ready_work);
+  }
+
+  // TODO: report error?
+  int resp = (tc == TURBINE_SUCCESS) ? ADLB_SUCCESS : ADLB_ERROR;
+  RSEND(&resp, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
+  return ADLB_SUCCESS;
+}
+
+static adlb_code
+handle_get_refcounts(int caller)
+{
+  adlb_code rc;
+  MPI_Status status;
+  struct packed_refcounts_req req;
+  RECV(&req, sizeof(req), MPI_BYTE, caller, ADLB_TAG_GET_REFCOUNTS);
+
+  DEBUG("Get_refcounts: <%"PRId64"> decr r: %i w: %i", req.id,
+        req.decr.read_refcount, req.decr.write_refcount);
+ 
+  struct packed_refcounts_resp resp;
+  resp.dc = xlb_data_get_reference_count(req.id, &resp.refcounts);
+
+  if (resp.dc == ADLB_DATA_SUCCESS)
+  {
+    rc = refcount_decr_helper(req.id, req.decr);
+    ADLB_CHECK(rc);
+  }
+  
+  // Compensate for decr
+  resp.refcounts.read_refcount -= req.decr.read_refcount;
+  resp.refcounts.write_refcount -= req.decr.write_refcount;
+  RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
   return ADLB_SUCCESS;
 }
 
@@ -1261,46 +1368,42 @@ handle_refcount_incr(int caller)
   DEBUG("Refcount_incr: <%"PRId64"> READ %i WRITE %i", msg.id,
         msg.change.read_refcount, msg.change.write_refcount);
   
-  adlb_notif_ranks notify_ranks = ADLB_NO_NOTIF_RANKS;
-  adlb_data_code dc = xlb_data_reference_count(msg.id, msg.change, NO_SCAVENGE,
-                                           NULL, NULL, &notify_ranks);
+  adlb_notif_t notifs = ADLB_NO_NOTIFS;
+  adlb_data_code dc = xlb_data_reference_count(msg.id, msg.change, XLB_NO_ACQUIRE,
+                                               NULL, &notifs);
+  
+  // Shouldn't set any references based on this
+  assert(notifs.references.count == 0);
 
   DEBUG("data_reference_count => %i", dc);
 
-  struct packed_refcount_resp resp = {
-      .success = (dc == ADLB_DATA_SUCCESS),
-      .notifs.notify_count = 0,
-      .notifs.reference_count = 0,
-      .notifs.extra_data_count = 0,
-      .notifs.extra_data_bytes = 0};
+  struct packed_incr_resp resp = {
+      .success = (dc == ADLB_DATA_SUCCESS)};
 
   if (dc != ADLB_DATA_SUCCESS)
   {
     RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
   }
-  else if (ADLB_CLIENT_NOTIFIES)
+  else
   {
-    // Remove any notifications that can be handled locally
-    xlb_process_local_notif(msg.id, &notify_ranks);
-    resp.notifs.notify_count = notify_ranks.count;
-    
-    // Send work back to client
-    adlb_notif_t send_notifs = ADLB_NO_NOTIFS;
-    send_notifs.notify.notifs = notify_ranks.notifs;
-    send_notifs.notify.count = notify_ranks.count;
-    rc = send_notification_work(caller, &resp, sizeof(resp),
-            &resp.notifs, &send_notifs, true);
+    xlb_prepared_notifs prep;
+    bool send_notifs;
+
+    rc = xlb_prepare_notif_work(&notifs, &xfer_buf, &resp.notifs,
+                                &prep, &send_notifs);
     ADLB_CHECK(rc);
-  }
-  else 
-  {
-    // Handle on server
+
     RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
-    rc = xlb_close_notify(msg.id, &notify_ranks);
-    ADLB_CHECK(rc);
+
+    if (send_notifs)
+    {
+      rc = xlb_send_notif_work(caller, &notifs, &resp.notifs, &prep);
+      ADLB_CHECK(rc)
+    }
   }
   
-  xlb_free_ranks(&notify_ranks);
+  xlb_free_notif(&notifs);
+
   return ADLB_SUCCESS;
 }
 
@@ -1318,38 +1421,88 @@ handle_insert_atomic(int caller)
   bool return_value;
   MSG_UNPACK_BIN(xfer_pos, &return_value);
 
+  adlb_retrieve_rc refcounts;
+  MSG_UNPACK_BIN(xfer_pos, &refcounts);
+
   struct packed_insert_atomic_resp resp;
   resp.value_len = -1; // Default: no data returned
 
   bool value_present;
   resp.dc = xlb_data_insert_atomic(id, subscript, &resp.created,
                                    &value_present);
-
-  // Only return value if it was already present
-  return_value = return_value && !resp.created;
-
-  adlb_binary_data value;
-  if (return_value && resp.dc == ADLB_DATA_SUCCESS && value_present)
-  {
-    // Retrieve, optionally using xfer for storage
-    resp.dc = xlb_data_retrieve(id, subscript, &resp.value_type,
-                                &xfer_buf, &value);
-    resp.value_len = value.length;
-  }
-  
+ 
   // TODO: support binary subscript
   DEBUG("Insert_atomic: <%"PRId64">[%.*s] => %i", id, (int)subscript.length,
         (const char*)subscript.key, resp.created);
 
-  // Send response header
+  if (resp.dc != ADLB_DATA_SUCCESS)
+  {
+    // Failed: send response header
+    RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+    return ADLB_SUCCESS;
+  }
+  
+  adlb_notif_t notifs = ADLB_NO_NOTIFS;
+  adlb_binary_data value;
+  bool send_data = return_value && value_present;
+  if (value_present)
+  {
+    // In these cases, need to apply refcount operation
+    if (return_value)
+    {
+      // Retrieve and update references
+      // Optionally use xlb_scratch_buf for storage
+      resp.dc = xlb_data_retrieve(id, subscript,
+            refcounts.decr_self, refcounts.incr_referand,
+            &resp.value_type, &xlb_scratch_buf, &value, &notifs);
+      resp.value_len = value.length;
+    }
+    else
+    {
+      xlb_acquire_rc acq = { .refcounts = refcounts.incr_referand,
+                          .subscript = subscript };
+      // Just update reference counts
+      resp.dc = xlb_data_reference_count(id,
+              adlb_rc_negate(refcounts.decr_self), acq , NULL, &notifs);
+    }
+  }
+    
+  if (resp.dc != ADLB_DATA_SUCCESS)
+  {
+    // Failed: send response header
+    RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+    return ADLB_SUCCESS;
+  }
+
+  adlb_code rc;
+  int tmp_len = 8192;
+  char tmp[tmp_len];
+  adlb_buffer tmp_buf = { .data = tmp, .length= tmp_len };
+  xlb_prepared_notifs prep;
+  bool send_notifs;
+
+  rc = xlb_prepare_notif_work(&notifs, &tmp_buf, &resp.notifs,
+                              &prep, &send_notifs);
+  ADLB_CHECK(rc);
+
   RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
   
-  if (return_value && value_present && resp.dc == ADLB_DATA_SUCCESS)
+  // Send data before notifs
+  if (send_data)
   {
     // Send response value
     SEND(value.data, value.length, MPI_BYTE, caller, ADLB_TAG_RESPONSE);
-    ADLB_Free_binary_data(&value);
+    ADLB_Free_binary_data2(&value, xlb_scratch);
   }
+
+  if (send_notifs)
+  {
+    rc = xlb_send_notif_work(caller, &notifs, &resp.notifs, &prep);
+    ADLB_CHECK(rc)
+  }
+  
+  xlb_free_notif(&notifs);
+  
   return ADLB_SUCCESS;
 }
 
@@ -1410,61 +1563,66 @@ handle_container_reference(int caller)
   MPI_Status status;
   RECV(xfer, XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_CONTAINER_REFERENCE);
 
-  adlb_datum_id container_id;
-  adlb_subscript subscript;
-  adlb_datum_id reference;
+  adlb_datum_id id, ref_id;
+  adlb_subscript subscript, ref_subscript;
   adlb_data_type ref_type;
+  adlb_refcounts transfer_refs; // Refcounts to transfer to dest
 
   // Unpack data from buffer
   void *xfer_read = xfer;
   MSG_UNPACK_BIN(xfer_read, &ref_type);
-  MSG_UNPACK_BIN(xfer_read, &reference);
 
-  xlb_unpack_id_sub(xfer_read, &container_id, &subscript);
+  xfer_read += xlb_unpack_id_sub(xfer_read, &id, &subscript);
+  xfer_read += xlb_unpack_id_sub(xfer_read, &ref_id, &ref_subscript);
+  
+  MSG_UNPACK_BIN(xfer_read, &transfer_refs);
 
   // TODO: support binary subscript
-  DEBUG("Container_reference: <%"PRId64">[%.*s] => <%"PRId64"> (%i)",
-        container_id, (int)subscript.length, (const char*)subscript.key,
-        reference, ref_type);
-  
+  DEBUG("Container_reference: <%"PRId64">[%.*s] => <%"PRId64">[%.*s] "
+        "(%s) r: %i w: %i",
+        id, (int)subscript.length, (const char*)subscript.key,
+        ref_id, (int)ref_subscript.length, (const char*)ref_subscript.key,
+        ADLB_Data_type_tostring(ref_type), transfer_refs.read_refcount,
+        transfer_refs.write_refcount);
+ 
+  // TODO: support custom decrement
+
+  adlb_notif_t notifs = ADLB_NO_NOTIFS;
   adlb_binary_data member;
-  adlb_data_code dc = xlb_data_container_reference(container_id,
-                        subscript, reference, ref_type, NULL,
-                        &member);
-  if (dc == ADLB_DATA_SUCCESS)
+  adlb_data_code dc = xlb_data_container_reference(id,
+                        subscript, ref_id, ref_subscript, false,
+                        ref_type, transfer_refs, 
+                        &xlb_scratch_buf, &member, &notifs);
+
+  struct packed_cont_ref_resp resp = { .dc = dc };
+  if (dc != ADLB_DATA_SUCCESS)
   {
-    // Data was set if the member is present
-    if (member.data != NULL)
+    RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+  }
+  else
+  {
+    adlb_code rc;
+    int tmp_len = 8192;
+    char tmp[tmp_len];
+    adlb_buffer tmp_buf = { .data = tmp, .length= tmp_len };
+    xlb_prepared_notifs prep;
+    bool send_notifs;
+
+    rc = xlb_prepare_notif_work(&notifs, &tmp_buf, &resp.notifs,
+                                &prep, &send_notifs);
+    ADLB_CHECK(rc);
+
+    RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
+
+    if (send_notifs)
     {
-      // Make sure we own array member data in case freed
-      dc = ADLB_Own_data(NULL, &member);
-      assert(dc == ADLB_DATA_SUCCESS);
-
-      adlb_notif_ranks notify = ADLB_NO_NOTIF_RANKS;
-      adlb_refcounts self_decr = ADLB_READ_RC;
-      adlb_refcounts referand_incr = ADLB_READ_RC;
-      // container_reference must consume a read reference, and we need
-      // to increment read refcount of referenced variable
-      dc = xlb_incr_rc_scav(container_id, subscript,
-                        member.data, member.length,
-                        ref_type, self_decr, referand_incr, &notify);
-
-      if (dc == ADLB_DATA_SUCCESS)
-      {
-        // TODO: offload to client?
-        adlb_code rc = xlb_set_ref_and_notify(reference, member.data,
-                                      member.length, ref_type);
-        ADLB_CHECK(rc);
-      }
-      if (dc == ADLB_DATA_SUCCESS)
-      {
-        adlb_code rc = notify_helper(container_id, &notify);
-        ADLB_CHECK(rc);
-      }
-      ADLB_Free_binary_data(&member);
+      rc = xlb_send_notif_work(caller, &notifs, &resp.notifs, &prep);
+      ADLB_CHECK(rc)
     }
   }
-  RSEND(&dc, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
+  
+  xlb_free_notif(&notifs);
+
   return ADLB_SUCCESS;
 }
 
@@ -1574,19 +1732,6 @@ handle_shutdown_worker(int caller)
 }
 
 static adlb_code
-handle_shutdown_server(int caller)
-{
-  MPE_LOG(xlb_mpe_svr_shutdown_start);
-  MPI_Status status;
-  RECV_TAG(caller, ADLB_TAG_SHUTDOWN_SERVER);
-
-  // caller is a server
-  xlb_server_shutdown();
-  MPE_LOG(xlb_mpe_svr_shutdown_end);
-  return ADLB_DONE;
-}
-
-static adlb_code
 handle_fail(int caller)
 {
   TRACE("");
@@ -1613,37 +1758,37 @@ static adlb_code find_req_bytes(int *bytes, int caller, adlb_tag tag) {
 
 /*
   Handle notifications server-side and free memory
-  TODO: option to offload to client
  */
 static adlb_code
-notify_helper(adlb_datum_id id, adlb_notif_ranks *notifications)
+notify_helper(adlb_notif_t *notifs)
 {
-  if (notifications->count > 0)
+  if (!xlb_notif_empty(notifs))
   {
     adlb_code rc;
-    rc = xlb_close_notify(id, notifications);
+    rc = xlb_notify_all(notifs);
     ADLB_CHECK(rc);
-    xlb_free_ranks(notifications);
+    xlb_free_notif(notifs);
   }
   return ADLB_SUCCESS;
 }
 
 /*
   Simple helper function to modify reference counts
-  TODO: option to offload to client
+  TODO: eliminate this, have option of sending all refcounts
+  back to client.
  */
 static adlb_code
 refcount_decr_helper(adlb_datum_id id, adlb_refcounts decr)
 {
   if (!ADLB_RC_IS_NULL(decr))
   {
-    adlb_notif_ranks notify = ADLB_NO_NOTIF_RANKS;
+    adlb_notif_t notifs = ADLB_NO_NOTIFS;
     adlb_data_code dc;
-    dc = xlb_data_reference_count(id, adlb_rc_negate(decr), NO_SCAVENGE,
-                              NULL, NULL, &notify);
+    dc = xlb_data_reference_count(id, adlb_rc_negate(decr), XLB_NO_ACQUIRE,
+                                  NULL, &notifs);
     if (dc == ADLB_DATA_SUCCESS)
     {
-      adlb_code rc = notify_helper(id, &notify);
+      adlb_code rc = notify_helper(&notifs);
       ADLB_CHECK(rc);
     }
   }

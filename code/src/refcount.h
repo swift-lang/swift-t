@@ -9,6 +9,12 @@
 #include "adlb-defs.h"
 #include "data.h"
 #include "data_internal.h"
+#include "notifications.h"
+
+/* Decrement reference count of given id.  Must be called on a server */
+adlb_data_code
+xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change,
+                adlb_notif_t *notifs);
 
 /* Modify reference count of locally stored datum.
    Send any consequent notifications or messages.
@@ -19,25 +25,8 @@ xlb_incr_rc_local(adlb_datum_id id, adlb_refcounts change,
 
 /* Modify refcount of referenced items */
 adlb_data_code
-xlb_incr_referand(adlb_datum_storage *d,
-        adlb_data_type type, adlb_refcounts change);
-
-/* Modify refcount of referenced items.  If to_scavenge is positive,
-   scavenge that number of read references to referands.
- */
-adlb_data_code
-xlb_incr_scav_referand(adlb_datum_storage *d, adlb_data_type type,
-        adlb_refcounts change, adlb_refcounts to_scavenge);
-
-/*
-  Decrements refcount of datum, while incrementing
-  refcount of other datums referred to by this datum
-  TODO: in future, ability to offload this work to client
- */
-adlb_data_code
-xlb_incr_rc_scav(adlb_datum_id id, adlb_subscript subscript,
-        const void *ref_data, int ref_data_len, adlb_data_type ref_type,
-        adlb_refcounts decr_self, adlb_refcounts incr_referand,
-        adlb_notif_ranks *notifications);
+xlb_incr_referand(adlb_datum_storage *d, adlb_data_type type,
+                  bool release_read, bool release_write,
+                  xlb_acquire_rc to_acquire, xlb_rc_changes *changes);
 
 #endif // __XLB_REFCOUNT_H

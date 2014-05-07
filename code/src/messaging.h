@@ -128,11 +128,27 @@ const char* xlb_get_tag_name(int tag);
   MPI_CHECK(_rc); \
   TRACE_MPI("WAITED"); }
 
+// MPI_Test, ignoring status
+#define MPI_TEST(r, flag) { \
+  TRACE_MPI("TEST"); \
+  int _rc = MPI_Test(r, flag, MPI_STATUS_IGNORE); \
+  MPI_CHECK(_rc);}
+
+#define MPI_TEST2(r, flag, status) { \
+  TRACE_MPI("TEST"); \
+  int _rc = MPI_Test(r, flag, status); \
+  MPI_CHECK(_rc);}
 /** Simplify cases when only a tag is sent */
 #define SEND_TAG(rank,tag) SEND(NULL,0,MPI_BYTE,rank,tag)
 
 /** Simplify cases when only a tag is recvd */
 #define RECV_TAG(rank,tag) RECV(NULL,0,MPI_BYTE,rank,tag)
+
+
+#define CANCEL(r) { \
+  TRACE_MPI("CANCEL"); \
+  int _rc = MPI_Cancel(r); \
+  MPI_CHECK(_rc); }
 
 /** MPI data type tags */
 // 64-bit int
@@ -181,6 +197,48 @@ struct packed_put
 #define PACKED_PUT_MAX (PACKED_PUT_SIZE(PUT_INLINE_DATA_MAX))
 
 /**
+   Put request with data dependencies
+ */
+struct packed_put_rule
+{
+  int type;
+  int priority;
+  int putter;
+  int answer;
+  int target;
+  int length;
+  int parallelism;
+  int id_count;
+  int id_sub_count;
+#ifndef NDEBUG
+  int name_strlen;
+#endif
+  bool has_inline_data;
+  /* Pack ids/subscripts and small tasks here.
+     Format is:
+     1. Array of ids with length id_count
+        Use type adlb_datum_id to get correct alignment for first array
+     2. id_sub_count packed ids/subscripts 
+     3. Name, unless NDEBUG enabled, packed w/o null terminator
+     4. Inline task, if has_inline_data is true
+   */
+  adlb_datum_id inline_data[]; 
+};
+
+/**
+  Struct with notification counts for embedding in other structure
+ */
+struct packed_notif_counts
+{
+  int notify_count;
+  int reference_count;
+  int rc_change_count;
+  int extra_data_count;
+  int extra_data_bytes;
+};
+
+
+/**
    Simple struct for message packing
  */
 struct packed_get_response
@@ -216,6 +274,7 @@ struct packed_code_id
  */
 struct retrieve_response_hdr
 {
+  struct packed_notif_counts notifs;
   adlb_data_code code;
   adlb_data_type type;
   int length;
@@ -243,25 +302,33 @@ struct packed_enumerate_result
   adlb_data_type val_type;
 };
 
-struct packed_notif_counts
-{
-  int notify_count;
-  int reference_count;
-  int extra_data_count;
-  int extra_data_bytes;
-};
-
 struct packed_notif
 {
-  int rank; // Rank to notify
+  adlb_datum_id id;
   int subscript_data; // index of extra data item, -1 for no subscript
+  int rank; // Rank to notify
 };
 
 struct packed_reference
 {
+  adlb_refcounts refcounts; // Refcounts transferred
   adlb_datum_id id; // ID to set
+  int subscript_data; // index of extra data subscript
   adlb_data_type type;
   int val_data; // index of extra data item
+};
+
+/**
+ * Request refcount info
+ */
+struct packed_refcounts_req {
+  adlb_datum_id id;
+  adlb_refcounts decr;
+};
+
+struct packed_refcounts_resp {
+  adlb_data_code dc;
+  adlb_refcounts refcounts;
 };
 
 /**
@@ -276,7 +343,7 @@ struct packed_incr
 /**
    Response to reference count operation
  */
-struct packed_refcount_resp
+struct packed_incr_resp
 {
   bool success;
   struct packed_notif_counts notifs;
@@ -290,6 +357,7 @@ struct packed_store_hdr
   adlb_datum_id id;
   adlb_data_type type; // Type of data
   adlb_refcounts refcount_decr;
+  adlb_refcounts store_refcounts; // Refcounts to store
   int subscript_len; // including null byte, 0 if no subscript
 };
 
@@ -318,6 +386,7 @@ struct packed_retrieve_hdr
           sizeof(adlb_datum_id) + sizeof(int))
 struct packed_insert_atomic_resp
 {
+  struct packed_notif_counts notifs;
   adlb_data_code dc;
   bool created;
   int value_len; // Value length, negative if not present
@@ -345,15 +414,26 @@ struct packed_bool_resp
   bool result;
 };
 
-int
+/**
+ * Response for container reference
+ */
+struct packed_cont_ref_resp
+{
+  adlb_data_code dc;
+  struct packed_notif_counts notifs;
+};
+
+__attribute__((always_inline))
+static inline int
 xlb_pack_id_sub(void *buffer, adlb_datum_id id, adlb_subscript subscript);
 
-int
+__attribute__((always_inline))
+static inline int
 xlb_unpack_id_sub(const void *buffer, adlb_datum_id *id,
                   adlb_subscript *subscript);
 
 /**
- * Request for steal
+ * Request to probe for steal work
  */
 struct packed_steal
 {
@@ -362,7 +442,7 @@ struct packed_steal
   // Sender's work type counts packed into sync_data field as int[]
 };
 
-#define WORK_TYPES_SIZE (sizeof(int) * (size_t)xlb_types_size) 
+#define WORK_TYPES_SIZE (sizeof(int) * (size_t)xlb_types_size)
 
 struct packed_steal_resp
 {
@@ -370,7 +450,18 @@ struct packed_steal_resp
   bool last; // whether last set of stolen work
 };
 
-/**
+/*
+  Notify server for closed data
+ */
+struct packed_notify_hdr
+{
+  adlb_datum_id id;
+  int subscript_len;
+  char subscript[]; // Small subscripts inline
+};
+
+
+/*
    Header for stolen task
  */
 struct packed_steal_work
@@ -387,11 +478,35 @@ struct packed_steal_work
 /**
  Sync can contain various types of control messages
  */
+
+/**
+ Subscribe header for sync message.
+ Include small subscripts inline
+ */
+#define PACKED_SUBSCRIBE_INLINE_BYTES 32
+
+struct packed_subscribe_sync
+{
+  adlb_datum_id id;
+  int subscript_len;
+};
+
+/**
+ Sync can contain various types of control messages.
+ These should be registered in sync.c for human-readable perf counters
+ */
 typedef enum
 {
   ADLB_SYNC_REQUEST, // Sync for a regular request
-  ADLB_SYNC_STEAL, // Trying to steal work
+  ADLB_SYNC_STEAL_PROBE, // Probe for work
+  ADLB_SYNC_STEAL_PROBE_RESP, // Respond to probe
+  ADLB_SYNC_STEAL, // Carry out steal
   ADLB_SYNC_REFCOUNT, // Modify reference count
+  ADLB_SYNC_SUBSCRIBE, // Subscribe to a datum
+  ADLB_SYNC_NOTIFY, // Notify after subscription to a datum
+  ADLB_SYNC_SHUTDOWN, // Shutdown server
+
+  ADLB_SYNC_ENUM_COUNT, // Dummy value: count of enum types
 } adlb_sync_mode;
 
 struct packed_sync
@@ -401,11 +516,16 @@ struct packed_sync
   {
     struct packed_incr incr;   // if refcount increment
     struct packed_steal steal; // if steal
+    struct packed_subscribe_sync subscribe; // if subscribe or notify
   };
-  char sync_data[]; // Extra data depending on sync type
+  /* Extra data depending on sync type.  Same size used by all servers to
+     allow for fixed-size buffers to be used */
+  char sync_data[];
 };
 
-#define SYNC_DATA_SIZE WORK_TYPES_SIZE
+#define SYNC_DATA_SIZE \
+  (WORK_TYPES_SIZE > PACKED_SUBSCRIBE_INLINE_BYTES ? \
+   WORK_TYPES_SIZE : PACKED_SUBSCRIBE_INLINE_BYTES)
 #define PACKED_SYNC_SIZE (sizeof(struct packed_sync) + SYNC_DATA_SIZE)
 
 /**
@@ -438,6 +558,7 @@ typedef enum
 
   // task operations
   ADLB_TAG_PUT = 1,
+  ADLB_TAG_PUT_RULE,
   ADLB_TAG_GET,
   ADLB_TAG_IGET,
 
@@ -452,7 +573,9 @@ typedef enum
   ADLB_TAG_RETRIEVE,
   ADLB_TAG_ENUMERATE,
   ADLB_TAG_SUBSCRIBE,
+  ADLB_TAG_NOTIFY,
   ADLB_TAG_PERMANENT,
+  ADLB_TAG_GET_REFCOUNTS,
   ADLB_TAG_REFCOUNT_INCR,
   ADLB_TAG_INSERT_ATOMIC,
   ADLB_TAG_UNIQUE,
@@ -466,15 +589,16 @@ typedef enum
   ADLB_TAG_DO_NOTHING,
   ADLB_TAG_CHECK_IDLE,
   ADLB_TAG_SHUTDOWN_WORKER,
-  ADLB_TAG_SHUTDOWN_SERVER,
 
   /// tags outgoing from server
   ADLB_TAG_RESPONSE,
   ADLB_TAG_RESPONSE_PUT,
   ADLB_TAG_RESPONSE_GET,
+  ADLB_TAG_RESPONSE_NOTIF,
   ADLB_TAG_RESPONSE_STEAL_COUNT,
   ADLB_TAG_RESPONSE_STEAL,
   ADLB_TAG_SYNC_RESPONSE,
+  ADLB_TAG_SYNC_SUB,
   ADLB_TAG_WORKUNIT,
   ADLB_TAG_FAIL,
 
@@ -483,6 +607,76 @@ typedef enum
   ADLB_TAG_WORK
 
 } adlb_tag;
+
+/*
+ Inline functions for message packing
+ */
+
+
+/*
+ Pack into buffer of size at least PACKED_SUBSCRIPT_MAX
+
+ len: output variable for bytes stored in buffer
+ returns the number of bytes used in buffer
+ */
+static inline int
+xlb_pack_id_sub(void *buffer, adlb_datum_id id,
+                adlb_subscript subscript)
+{
+  assert(buffer != NULL);
+  void *pos = buffer;
+
+  MSG_PACK_BIN(pos, id);
+
+  bool has_subscript = subscript.key != NULL;
+  int sub_packed_size = has_subscript ? (int)subscript.length : -1;
+  
+  MSG_PACK_BIN(pos, sub_packed_size);
+
+  if (has_subscript)
+  {
+    memcpy(pos, subscript.key, (size_t)sub_packed_size); 
+    pos += sub_packed_size;
+  }
+  assert(pos - buffer <= INT_MAX);
+  return (int)(pos - buffer);
+}
+
+
+/*
+  Extract id and subscript from buffer
+  NOTE: returned subscript is pointer into buffer
+  return the number of bytes consumed from buffer
+ */
+static inline int
+xlb_unpack_id_sub(const void *buffer, adlb_datum_id *id,
+                  adlb_subscript *subscript)
+{
+  assert(buffer != NULL);
+
+  const void *pos = buffer;
+  MSG_UNPACK_BIN(pos, id);
+
+  int subscript_packed_len;
+  MSG_UNPACK_BIN(pos, &subscript_packed_len);
+
+  bool has_subscript = subscript_packed_len > 0;
+  if (has_subscript)
+  {
+    subscript->key = pos;
+    subscript->length = (size_t)subscript_packed_len;
+    pos += subscript_packed_len;
+  }
+  else
+  {
+    subscript->key = NULL;
+    subscript->length = 0;
+  }
+  long length = (pos - buffer);
+  assert(length <= INT_MAX);
+  return (int)length;
+}
+
 
 // Revert to regular packing rules
 #pragma pack(pop)

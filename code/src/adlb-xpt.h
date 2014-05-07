@@ -104,9 +104,10 @@ typedef struct {
   If corrupted or partially written entries are encountered, ignore them.
 
   stats: info about loaded data.  Caller must free arrays.
-  TODO: currently this should only needs to be called on one node.
-  TODO: add ability to split reload work among ranks
+  load_rank: rank among loaders for splitting in range [0, loaders - 1]
+  loaders: total number of loaders
  */
-adlb_code ADLB_Xpt_reload(const char *filename, adlb_xpt_load_stats *stats);
+adlb_code ADLB_Xpt_reload(const char *filename, adlb_xpt_load_stats *stats,
+                          int load_rank, int loaders);
 
 #endif // __ADLB_XPT_H

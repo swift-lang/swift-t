@@ -67,7 +67,6 @@ typedef enum
   ADLB_DATA_TYPE_MULTISET,
   ADLB_DATA_TYPE_STRUCT,
   ADLB_DATA_TYPE_REF,
-  ADLB_DATA_TYPE_FILE_REF,
 } adlb_data_type;
 
 // More compact representation for data type
@@ -76,23 +75,33 @@ typedef short adlb_data_type_short;
 // Identifier for sub-types of ADLB struct
 typedef int adlb_struct_type;
 
+#define ADLB_STRUCT_TYPE_NULL (-1)
+
 // Additional type info for particular types
-typedef union {
-  struct {
-    adlb_data_type_short key_type;
-    adlb_data_type_short val_type;
-  } CONTAINER;
-  struct {
-    adlb_data_type_short val_type;
-  } MULTISET;
-  struct {
-    // Note: struct type isn't specified at creation
-    adlb_struct_type struct_type; 
-  } STRUCT;
-  void *NONE;
+typedef struct {
+  union {
+    struct {
+      adlb_data_type_short key_type;
+      adlb_data_type_short val_type;
+    } CONTAINER;
+    struct {
+      adlb_data_type_short val_type;
+    } MULTISET;
+    struct {
+      adlb_struct_type struct_type; 
+    } STRUCT;
+  };
+  bool valid; // If true, data is actually valid
 } adlb_type_extra;
 
-#define ADLB_TYPE_EXTRA_NULL ((adlb_type_extra) NULL)
+
+/* C++ doesn't support named initializers, no nice way to
+ * initialize the above struct in C++ */
+#ifndef __cplusplus
+static const adlb_type_extra ADLB_TYPE_EXTRA_NULL = {
+  .valid = false
+};
+#endif
 
 // Struct to specify a subscript into e.g. an ADLB data container
 typedef struct {
@@ -109,6 +118,11 @@ static inline bool adlb_has_sub(adlb_subscript sub)
 {
   return sub.key != NULL;
 }
+
+typedef struct {
+  adlb_datum_id id;
+  adlb_subscript subscript;
+} adlb_datum_id_sub;
 
 typedef enum
 {
@@ -137,6 +151,9 @@ static const adlb_refcounts ADLB_READWRITE_RC =
 
 #define ADLB_RC_IS_NULL(rc) \
     ((rc).read_refcount == 0 && (rc).write_refcount == 0)
+
+#define ADLB_RC_NOT_NULL(rc) \
+    ((rc).read_refcount != 0 || (rc).write_refcount != 0)
 
 #define ADLB_RC_POSITIVE(rc) \
     ((rc).read_refcount > 0 && (rc).write_refcount > 0)
@@ -167,7 +184,8 @@ typedef struct
 {
   int read_refcount;
   int write_refcount;
-  bool permanent;
+  bool permanent : 1;
+  bool release_write_refs : 1;
   adlb_debug_symbol symbol;
 } adlb_create_props;
 
@@ -176,6 +194,7 @@ static const adlb_create_props DEFAULT_CREATE_PROPS = {
   1, /* read_refcount */
   1, /* write_refcount */
   false, /* permanent */
+  false, /* release_write_refs */
   ADLB_DEBUG_SYMBOL_NULL, /* symbol */
 };
 
@@ -244,8 +263,8 @@ typedef enum
   ADLB_DATA_ERROR_NULL,
   /** Attempt to operate on wrong data type */
   ADLB_DATA_ERROR_TYPE,
-  /** Slot count fell below 0 */
-  ADLB_DATA_ERROR_SLOTS_NEGATIVE,
+  /** Refcount fell below 0 */
+  ADLB_DATA_ERROR_REFCOUNT_NEGATIVE,
   /** Exceeded some implementation-defined limit */
   ADLB_DATA_ERROR_LIMIT,
   /** Caller-provided buffer too small */

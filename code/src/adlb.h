@@ -28,7 +28,16 @@
 #include <stdbool.h>
 #include <limits.h>
 
+// Include mpi header can cause confusion for C++, since it will
+// try to link against C++ version of functions
+#ifdef __cplusplus
+#define __adlb_old_cplusplus __cplusplus
+#undef __cplusplus
+#endif
 #include <mpi.h>
+#ifdef __adlb_old_cplusplus
+#define __cplusplus __adlb_old_cplusplus
+#endif
 
 #include "adlb-defs.h"
 
@@ -72,6 +81,17 @@ adlb_code ADLBP_Put(const void* payload, int length, int target, int answer,
                     int type, int priority, int parallelism);
 adlb_code ADLB_Put(const void* payload, int length, int target, int answer,
                    int type, int priority, int parallelism);
+
+adlb_code ADLBP_Put_rule(const void* payload, int length, int target,
+        int answer, int type, int priority, int parallelism,
+        const char *name,
+        const adlb_datum_id *wait_ids, int wait_id_count, 
+        const adlb_datum_id_sub *wait_id_subs, int wait_id_sub_count);
+adlb_code ADLB_Put_rule(const void* payload, int length, int target,
+        int answer, int type, int priority, int parallelism,
+        const char *name,
+        const adlb_datum_id *wait_ids, int wait_id_count, 
+        const adlb_datum_id_sub *wait_id_subs, int wait_id_sub_count);
 
 adlb_code ADLBP_Get(int type_requested, void* payload, int* length,
                     int* answer, int* type_recvd, MPI_Comm* comm);
@@ -119,12 +139,12 @@ adlb_code ADLB_Create_blob(adlb_datum_id id, adlb_create_props props,
 
 adlb_code ADLB_Create_ref(adlb_datum_id id, adlb_create_props props,
                               adlb_datum_id *new_id);
-
-adlb_code ADLB_Create_file_ref(adlb_datum_id id, adlb_create_props props,
-                              adlb_datum_id *new_id);
-
+/**
+ * Struct type: specify struct type, or leave as ADLB_STRUCT_TYPE_NULL to
+ *              resolve upon assigning typed struct value
+ */
 adlb_code ADLB_Create_struct(adlb_datum_id id, adlb_create_props props,
-                              adlb_datum_id *new_id);
+                             adlb_struct_type struct_type, adlb_datum_id *new_id);
 
 adlb_code ADLB_Create_container(adlb_datum_id id,
                                 adlb_data_type key_type, 
@@ -161,21 +181,37 @@ adlb_code ADLBP_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
 adlb_code ADLB_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
                        adlb_refcounts decr);
 
+/**
+ * Find out the current reference counts for a datum.
+ *
+ * E.g. if you want to find out that the datum is closed with refcount 0
+ * This will succeed with zero refcounts if datum isn't found.
+ *
+ * result: refcounts of id after decr applied
+ * decr: amount to decrement refcounts
+ */
+adlb_code ADLBP_Get_refcounts(adlb_datum_id id, adlb_refcounts *result,
+                              adlb_refcounts decr);
+adlb_code ADLB_Get_refcounts(adlb_datum_id id, adlb_refcounts *result,
+                              adlb_refcounts decr);
+
 /*
   Store value into datum
   data: binary representation
   length: length of binary representation
+  refcount_decr: refcounts to to decrement on this id
+  store_refcounts: refcounts to include for any refs in this data
   returns: ADLB_SUCCESS if store succeeded
            ADLB_REJECTED if id/subscript already assigned and cannot be
                          overwritten
            ADLB_ERROR for other errors
  */
 adlb_code ADLBP_Store(adlb_datum_id id, adlb_subscript subscript,
-                      adlb_data_type type, const void *data, int length,
-                      adlb_refcounts refcount_decr);
+          adlb_data_type type, const void *data, int length,
+          adlb_refcounts refcount_decr, adlb_refcounts store_refcounts);
 adlb_code ADLB_Store(adlb_datum_id id, adlb_subscript subscript,
-                      adlb_data_type type, const void *data, int length,
-                      adlb_refcounts refcount_decr);
+          adlb_data_type type, const void *data, int length,
+          adlb_refcounts refcount_decr, adlb_refcounts store_refcounts);
 
 /*
    Retrieve contents of datum.
@@ -232,11 +268,17 @@ adlb_code ADLB_Refcount_incr(adlb_datum_id id, adlb_refcounts change);
         this buffer of at least size ADLB_DATA_MAX
   length: length of existing value, -1 if value not yet present
   type: type of existing value
+  refcounts: refcounts to apply.
+        if data exists, apply all refcounts
+        if placeholder exists, don't apply
+        if nothing exists, don't apply
  */
 adlb_code ADLBP_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
+                        adlb_retrieve_rc refcounts,
                         bool* result, void *data, int *length,
                         adlb_data_type *type);
 adlb_code ADLB_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
+                        adlb_retrieve_rc refcounts,
                        bool* result, void *data, int *length,
                        adlb_data_type *type);
 
@@ -245,16 +287,16 @@ adlb_code ADLB_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
        ADLB_DATA_ERROR_NOT_FOUND if datum not found (can indicate it was gced)
  */
 adlb_code ADLBP_Subscribe(adlb_datum_id id, adlb_subscript subscript,
-                          int* subscribed);
+                          int work_type, int* subscribed);
 adlb_code ADLB_Subscribe(adlb_datum_id id, adlb_subscript subscript,
-                          int* subscribed);
+                          int work_type, int* subscribed);
 
 adlb_code ADLBP_Container_reference(adlb_datum_id id, adlb_subscript subscript,
-                              adlb_datum_id reference,
-                              adlb_data_type ref_type);
+                adlb_datum_id ref_id, adlb_subscript ref_subscript,
+                adlb_data_type ref_type, adlb_refcounts transfer_refs);
 adlb_code ADLB_Container_reference(adlb_datum_id id, adlb_subscript subscript,
-                             adlb_datum_id reference,
-                              adlb_data_type ref_type);
+                adlb_datum_id ref_id, adlb_subscript ref_subscript,
+                adlb_data_type ref_type, adlb_refcounts transfer_refs);
 
 adlb_code ADLBP_Unique(adlb_datum_id *result);
 adlb_code ADLB_Unique(adlb_datum_id *result);
@@ -278,15 +320,17 @@ adlb_code ADLB_Lock(adlb_datum_id id, bool* result);
 adlb_code ADLBP_Unlock(adlb_datum_id id);
 adlb_code ADLB_Unlock(adlb_datum_id id);
 
+/**
+  Get information about a type based on name.
+  Returns error if not found
+ */
 adlb_code ADLB_Data_string_totype(const char* type_string,
-                                  adlb_data_type* type, bool *has_extra,
-                                  adlb_type_extra *extra);
+              adlb_data_type* type, adlb_type_extra *extra);
 
 const char *ADLB_Data_type_tostring(adlb_data_type type);
 
 adlb_code ADLB_Server_idle(int rank, int64_t check_attempt, bool* result,
                  int *request_counts, int *untargeted_work_counts);
-adlb_code ADLB_Server_shutdown(int rank);
 
 adlb_code ADLBP_Finalize(void);
 adlb_code ADLB_Finalize(void);

@@ -45,6 +45,7 @@
 #include "server.h"
 #include "steal.h"
 #include "sync.h"
+#include "turbine.h"
 #include "workqueue.h"
 
 // Check for sync requests this often so that can be handled in preference
@@ -111,12 +112,15 @@ static bool failed = false;
 /** If we failed, this contains the positive exit code */
 static bool fail_code = -1;
 
+/** Ready task queue for server */
+turbine_work_array xlb_server_ready_work;
+
 static adlb_code setup_idle_time(void);
 
 static inline int xlb_server_number(int rank);
 
 __attribute__((always_inline))
-static inline adlb_code xlb_poll(int source, bool prefer_sync, MPI_Status *req_status);
+static inline adlb_code xlb_poll(int source, MPI_Status *req_status);
 
 // Service request from queue
 __attribute__((always_inline))
@@ -127,6 +131,12 @@ xlb_handle_pending(MPI_Status *status);
 __attribute__((always_inline))
 static inline adlb_code
 xlb_handle_pending_syncs(void);
+
+static inline adlb_code
+xlb_handle_ready_work(void);
+
+static adlb_code
+xlb_process_ready_work(void);
 
 /**
    Serve a single request then return
@@ -150,7 +160,7 @@ xlb_server_init()
     if (xlb_map_to_server(i) == xlb_comm_rank)
     {
       xlb_my_workers++;
-      // printf("%i ", i);
+      DEBUG("my_worker_rank: %i", i);
     }
   }
   // printf("\n");
@@ -170,6 +180,16 @@ xlb_server_init()
   
   code = xlb_sync_init();
   ADLB_CHECK(code);
+  
+  code = xlb_steal_init();
+  ADLB_CHECK(code);
+
+  turbine_engine_code tc = turbine_engine_init(xlb_comm_rank);
+  CHECK_MSG(tc == TURBINE_SUCCESS, "Error initializing engine");
+
+  xlb_server_ready_work.work = NULL;
+  xlb_server_ready_work.size = 0;
+  xlb_server_ready_work.count = 0;
 
   TRACE_END
   return ADLB_SUCCESS;
@@ -202,6 +222,8 @@ ADLB_Server(long max_memory)
   }
 
   mm_set_max(mm_default, max_memory);
+
+  DEBUG("ADLB_Server(): %i entering server loop", xlb_comm_rank);
 
   update_cached_time(); // Initial timestamp
   while (true)
@@ -251,17 +273,50 @@ serve_several()
   {
     MPI_Status req_status;
     adlb_code code;
-    // Prioritize server-to-server syncs to avoid blocking other servers
-    bool prefer_sync = other_servers &&
-          (reqs % XLB_SERVER_SYNC_CHECK_FREQ == 0);
-    code = xlb_poll(MPI_ANY_SOURCE, prefer_sync, &req_status);
-    if (code == ADLB_SUCCESS)
-    {
-      code = xlb_handle_pending(&req_status);
-      ADLB_CHECK(code);
+    bool handled = false;
 
+    // Prioritize server-to-server syncs to avoid blocking other servers
+    if (other_servers)
+    {
+      int sync_rank = -1;
+      code = xlb_check_sync_msgs(&sync_rank);
+      if (code == ADLB_SUCCESS)
+      {
+        code = xlb_handle_next_sync_msg(sync_rank);
+        ADLB_CHECK(code);
+
+        handled = true;
+      }
+      else if (code != ADLB_NOTHING)
+      {
+        ADLB_CHECK(code);
+      }
+    }
+
+    if (!handled)
+    {
+      code = xlb_poll(MPI_ANY_SOURCE, &req_status);
+      if (code == ADLB_SUCCESS)
+      {
+        code = xlb_handle_pending(&req_status);
+        ADLB_CHECK(code);
+
+        handled = true;
+      }
+      else if (code != ADLB_NOTHING)
+      {
+        ADLB_CHECK(code);
+      }
+    }
+   
+    if (handled)
+    {
       // Previous request may have resulted in pending sync requests
       code = xlb_handle_pending_syncs();
+      ADLB_CHECK(code);
+
+      // Previous request may have resulted in pending work
+      code = xlb_handle_ready_work();
       ADLB_CHECK(code);
 
       // Back off less on each successful request
@@ -270,7 +325,7 @@ serve_several()
       exit_points += xlb_loop_request_points;
       reqs++;
     }
-    else if (code == ADLB_NOTHING)
+    else
     {
       // Check for shutdown
       if (xlb_server_shutting_down)
@@ -291,12 +346,8 @@ serve_several()
       // Back off more
       curr_server_backoff++;
     }
-    else
-    {
-      ADLB_CHECK(code);
-    }
   }
-
+  
   return reqs > 0 ? ADLB_SUCCESS : ADLB_NOTHING;
 }
 
@@ -306,15 +357,9 @@ serve_several()
    prefer_sync: if true, check for server-server syncs first
  */
 static inline adlb_code
-xlb_poll(int source, bool prefer_sync, MPI_Status *req_status)
+xlb_poll(int source, MPI_Status *req_status)
 {
   int new_message;
-  if (prefer_sync)
-  {
-    IPROBE(source, ADLB_TAG_SYNC_REQUEST, &new_message, req_status);
-    if (new_message)
-      return ADLB_SUCCESS;
-  }
   IPROBE(source, MPI_ANY_TAG, &new_message, req_status);
   return new_message ? ADLB_SUCCESS : ADLB_NOTHING;
 }
@@ -335,37 +380,58 @@ static inline adlb_code
 xlb_handle_pending_syncs(void)
 {
   int rc;
-  adlb_data_code dc;
 
   xlb_pending_kind kind;
   int rank;
   struct packed_sync *hdr;
+  void *extra_data;
 
   // Handle outstanding sync requests
-  while ((rc = xlb_dequeue_pending(&kind, &rank, &hdr)) == ADLB_SUCCESS)
+  while ((rc = xlb_dequeue_pending(&kind, &rank, &hdr, &extra_data))
+            == ADLB_SUCCESS)
   {
-    DEBUG("server_sync: [%d] handling deferred sync from %d",
-          xlb_comm_rank, rank);
-    switch (kind)
-    {
-      case DEFERRED_SYNC:
-        rc = xlb_accept_sync(rank, hdr, false);
-        ADLB_CHECK(rc);
-        break;
-      case ACCEPTED_RC:
-        dc = xlb_incr_rc_local(hdr->incr.id, hdr->incr.change, true);
-        CHECK_MSG(dc == ADLB_DATA_SUCCESS, "unexpected error in refcount");
-        break;
-      default:
-        ERR_PRINTF("Unexpected pending sync kind %i\n", kind);
-        return ADLB_ERROR;
-    }
-
-    // Clean up memory
-    free(hdr);
+    rc = xlb_handle_pending_sync(kind, rank, hdr, extra_data);
+    ADLB_CHECK(rc);
   }
   ADLB_CHECK(rc); // Check that not error instead of ADLB_NOTHING
   
+  return ADLB_SUCCESS;
+}
+
+/*
+ * Handle all ready work
+ */
+static inline adlb_code
+xlb_handle_ready_work(void)
+{
+  if (xlb_server_ready_work.count == 0)
+  {
+    return ADLB_SUCCESS;
+  }
+  
+  return xlb_process_ready_work();
+}
+
+/*
+ * Do heavy lifting here to allow inlining of check.
+ */
+static adlb_code xlb_process_ready_work(void)
+{
+  adlb_code rc;
+  for (int i = 0; i < xlb_server_ready_work.count; i++)
+  {
+    rc = xlb_put_work_unit(xlb_server_ready_work.work[i]);
+    ADLB_CHECK(rc);
+  }
+
+  if (xlb_server_ready_work.size > 1024)
+  {
+    // Prevent from growing too large
+    free(xlb_server_ready_work.work);
+    xlb_server_ready_work.work = NULL;
+    xlb_server_ready_work.size = 0;
+  }
+  xlb_server_ready_work.count = 0;
   return ADLB_SUCCESS;
 }
 
@@ -376,7 +442,7 @@ xlb_serve_one(int source)
   if (source > 0)
     TRACE("\t source: %i", source);
   MPI_Status status;
-  adlb_code code = xlb_poll(source, false, &status);
+  adlb_code code = xlb_poll(source, &status);
   ADLB_CHECK(code);
 
   if (code == ADLB_NOTHING)
@@ -420,44 +486,30 @@ check_steal(void)
   if (xlb_requestqueue_size() == 0)
     // Our workers are busy
     return ADLB_SUCCESS;
+ 
+  // Should not get here if we have ready work
+  assert(xlb_server_ready_work.count == 0);
+  assert(!xlb_have_pending_notifs());
 
-  // Steal...
+  // Initiate steal...
   TRACE_START;
-  adlb_code rc = xlb_steal_match();
+  adlb_code rc = xlb_try_steal();
   TRACE_END;
   return rc;
 }
 
 /*
-  Carry out everyything required for a steal attempt, including matching
-  of newly acquired tasks if neededd
+  Initiate a steal attempt
  */
-adlb_code xlb_steal_match(void)
+adlb_code xlb_try_steal(void)
 {
-  DEBUG("Attempting steal");
-  bool stole_single, stole_par;
-  int rc = xlb_steal(&stole_single, &stole_par);
+  TRACE("Attempting steal");
+  int rc = xlb_random_steal_probe();
   ADLB_CHECK(rc);
-  DEBUG("Completed steal stole_single: %i stole_par: %i",
-          (int)stole_single, (int)stole_par);
 
   // xlb_steal may have added pending syncs
   rc = xlb_handle_pending_syncs();
   ADLB_CHECK(rc);
-
-  // Try to match stolen tasks
-  if (stole_single)
-  {
-    TRACE("After steal rechecking single-worker...");
-    rc = xlb_recheck_queues();
-    ADLB_CHECK(rc);
-  }
-  if (stole_par)
-  {
-    TRACE("After steal rechecking parallel...");
-    rc = xlb_recheck_parallel_queues();
-    ADLB_CHECK(rc);
-  }
 
   return ADLB_SUCCESS;
 }
@@ -540,7 +592,10 @@ check_idle()
   if (! servers_idle())
     // Some server is still not idle...
     return false;
-
+ 
+  // Ensure no notifications in system
+  assert(xlb_server_ready_work.count == 0);
+  assert(!xlb_have_pending_notifs());
 
   shutdown_all_servers();
   return true;
@@ -571,6 +626,16 @@ xlb_server_check_idle_local(bool master, int64_t check_attempt)
     // A worker is busy...
     return false;
 
+  if (xlb_have_pending_notifs())
+    // Notifications can create more work...
+    return false;
+
+  /*
+   * TODO:
+   * We currently use a timer to (heuristically) avoid some corner cases
+   * that aren't properly handled correctly.  E.g. if a worker puts
+   * targeted work to another server.
+   */
   // Current time
   double t = MPI_Wtime();
 
@@ -615,6 +680,23 @@ servers_idle()
     rc = ADLB_Server_idle(rank, xlb_idle_check_attempt, &idle,
                           req_subarray, work_subarray);
     ASSERT(rc == ADLB_SUCCESS);
+    
+    if (xlb_have_pending_notifs() ||
+        xlb_server_ready_work.count > 0)
+    {
+      // May have received notifications during sync
+      rc = xlb_handle_pending_syncs();
+      ADLB_CHECK(rc);
+
+      // Previous request may have resulted in pending work
+      rc = xlb_handle_ready_work();
+      ADLB_CHECK(rc);
+
+      // Notifications show we weren't idle yet
+      all_idle = false;
+      break;
+    }
+
     if (! idle)
     {
       all_idle = false;
@@ -668,7 +750,7 @@ shutdown_all_servers()
   for (int rank = xlb_master_server_rank+1; rank < xlb_comm_size;
        rank++)
   {
-    int rc = ADLB_Server_shutdown(rank);
+    adlb_code rc = xlb_sync_shutdown(rank);
     ASSERT(rc == ADLB_SUCCESS);
   }
   TRACE_END;
@@ -715,7 +797,10 @@ server_shutdown()
   DEBUG("server down.");
   xlb_requestqueue_shutdown();
   xlb_workq_finalize();
+  xlb_steal_finalize();
   xlb_sync_finalize();
+
+  turbine_engine_finalize();
   return ADLB_SUCCESS;
 }
 
@@ -734,4 +819,6 @@ static inline void print_final_stats()
   // Print other performance counters
   xlb_print_handler_counters();
   xlb_print_workq_perf_counters();
+  xlb_print_sync_counters();
+  turbine_engine_print_counters();
 }

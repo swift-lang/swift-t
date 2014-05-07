@@ -34,6 +34,8 @@
 #ifndef CHECKS_H
 #define CHECKS_H
 
+#include <stdio.h>
+
 #define ADLB_IS_ERROR(rc) (rc == ADLB_ERROR)
 
 // printf-like macro for printing error info
@@ -78,6 +80,16 @@
 #define ADLB_DATA_CHECK(dc) { \
   if (dc != ADLB_DATA_SUCCESS) { \
     ERR_PRINTF("ADLB_DATA_CHECK FAILED: %s:%i\n", __FILE__, __LINE__); \
+    return ADLB_ERROR; }}
+
+#define ADLB_TURBINE_CHECK(tc) { \
+  if (tc != TURBINE_SUCCESS) { \
+    ERR_PRINTF("ADLB_TURBINE_CHECK FAILED: %s:%i\n", __FILE__, __LINE__); \
+    return ADLB_ERROR; }}
+
+#define ADLB_MALLOC_CHECK(ptr) { \
+  if (ptr == NULL) { \
+    ERR_PRINTF("ADLB_MALLOC_CHECK FAILED: %s:%i\n", __FILE__, __LINE__); \
     return ADLB_ERROR; }}
 
 #ifndef NDEBUG

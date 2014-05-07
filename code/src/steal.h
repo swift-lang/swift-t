@@ -19,7 +19,12 @@
  * steal.h
  *
  *  Created on: Aug 20, 2012
- *      Author: wozniak
+ *      Authors: wozniak, armstrong
+ *
+ * Module that implements server to server work-stealing.
+ * Other modules must call functions in this module to
+ * initiating steals, and to update steal state when work-stealing
+ * messages are received
  */
 
 #ifndef STEAL_H
@@ -41,11 +46,51 @@ extern double xlb_steal_last;
 extern int xlb_failed_steals_since_backoff;
 
 /**
-   Are there any other servers?
-   Are we allowed to steal yet?
+  Initialize steal internal state before use
  */
-static inline bool
-xlb_steal_allowed(void)
+adlb_code xlb_steal_init(void);
+
+/**
+  Finalize steal internal state before use
+ */
+void xlb_steal_finalize(void);
+
+/**
+  Check if this server is allowed to initiate a steal request
+  according to the steal throttling/backoff algorithms.
+
+  Implemented as inline function to allow rapid return in common cases.
+ */
+static inline bool xlb_steal_allowed(void);
+
+/**
+  Send a steal probe to check for work on a random caller 
+ */
+adlb_code xlb_random_steal_probe(void);
+
+/**
+  Handle a steal probe received from a caller
+ */
+adlb_code xlb_handle_steal_probe(int caller);
+
+/**
+   Handle steal probe response, and carry out the steal if needed.
+
+   Note that this may add sync requests to the xlb_pending_syncs list,
+   which must be handled by the caller.
+ */
+adlb_code xlb_handle_steal_probe_resp(int caller,
+               const struct packed_sync *msg);
+
+/**
+   Handle an accepted steal request
+   work_type_counts: array of size xlb_types_size
+  */
+adlb_code xlb_handle_steal(int caller, const struct packed_steal *req,
+                           const int *work_type_counts);
+
+// Inline functions:
+static inline bool xlb_steal_allowed(void)
 {
   if (xlb_servers == 1)
     // No other servers
@@ -75,22 +120,4 @@ xlb_steal_allowed(void)
   }
   return true;
 }
-
-/**
-   Issue sync() and steal.
-
-   Note that this may add sync requests to the xlb_pending_syncs list,
-   which must be handled by the caller.
-   @param stole_single true if stole single-worker task, else false
-   @param stole_par true if stole parallel task, else false
- */
-adlb_code xlb_steal(bool* stole_single, bool *stole_par);
-
-/**
-   Handle an accepted steal request
-   work_type_counts: array of size WORK_TYPES_SIZE
-  */
-adlb_code xlb_handle_steal(int caller, const struct packed_steal *req,
-                           const int *work_type_counts);
-
 #endif

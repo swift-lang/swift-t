@@ -70,6 +70,7 @@ add_tags()
 
   /// tags incoming to server
   add_tag(ADLB_TAG_PUT);
+  add_tag(ADLB_TAG_PUT_RULE);
   add_tag(ADLB_TAG_GET);
   add_tag(ADLB_TAG_IGET);
 
@@ -84,7 +85,9 @@ add_tags()
   add_tag(ADLB_TAG_RETRIEVE);
   add_tag(ADLB_TAG_ENUMERATE);
   add_tag(ADLB_TAG_SUBSCRIBE);
+  add_tag(ADLB_TAG_NOTIFY);
   add_tag(ADLB_TAG_PERMANENT);
+  add_tag(ADLB_TAG_GET_REFCOUNTS);
   add_tag(ADLB_TAG_REFCOUNT_INCR);
   add_tag(ADLB_TAG_INSERT_ATOMIC);
   add_tag(ADLB_TAG_UNIQUE);
@@ -97,7 +100,6 @@ add_tags()
   add_tag(ADLB_TAG_SYNC_REQUEST);
   add_tag(ADLB_TAG_CHECK_IDLE);
   add_tag(ADLB_TAG_SHUTDOWN_WORKER);
-  add_tag(ADLB_TAG_SHUTDOWN_SERVER);
 
   // outgoing tags (server should not receive as request)
   add_tag(ADLB_TAG_RESPONSE);
@@ -106,6 +108,7 @@ add_tags()
   add_tag(ADLB_TAG_RESPONSE_STEAL_COUNT);
   add_tag(ADLB_TAG_RESPONSE_STEAL);
   add_tag(ADLB_TAG_SYNC_RESPONSE);
+  add_tag(ADLB_TAG_SYNC_SUB);
   add_tag(ADLB_TAG_WORKUNIT);
   add_tag(ADLB_TAG_FAIL);
   
@@ -145,69 +148,5 @@ xlb_get_tag_name(int tag)
       return name;
     }
   }
-  return "<UNKNOWN TAG NAME>";
-}
-
-
-/*
- Pack into buffer of size at least PACKED_SUBSCRIPT_MAX
-
- len: output variable for bytes stored in buffer
- returns the number of bytes used in buffer
-
- */
-int
-xlb_pack_id_sub(void *buffer, adlb_datum_id id, adlb_subscript subscript)
-{
-  assert(buffer != NULL);
-  void *pos = buffer;
-
-  MSG_PACK_BIN(pos, id);
-
-  bool has_subscript = subscript.key != NULL;
-  int sub_packed_size = has_subscript ? (int)subscript.length : -1;
-  
-  MSG_PACK_BIN(pos, sub_packed_size);
-
-  if (has_subscript)
-  {
-    memcpy(pos, subscript.key, (size_t)sub_packed_size); 
-    pos += sub_packed_size;
-  }
-  assert(pos - buffer <= INT_MAX);
-  return (int)(pos - buffer);
-}
-
-
-/*
-  Extract id and subscript from buffer
-  NOTE: returned subscript is pointer into buffer
-  return the number of bytes consumed from buffer
- */
-int
-xlb_unpack_id_sub(const void *buffer, adlb_datum_id *id,
-                  adlb_subscript *subscript)
-{
-  assert(buffer != NULL);
-
-  const void *pos = buffer;
-  MSG_UNPACK_BIN(pos, id);
-
-  int subscript_packed_len;
-  MSG_UNPACK_BIN(pos, &subscript_packed_len);
-
-  bool has_subscript = subscript_packed_len > 0;
-  if (has_subscript)
-  {
-    subscript->key = pos;
-    subscript->length = (size_t)subscript_packed_len;
-    pos += subscript_packed_len;
-  }
-  else
-  {
-    subscript->key = NULL;
-  }
-  long length = (pos - buffer);
-  assert(length <= INT_MAX);
-  return (int)length;
+  return "<UNKNOWN_TAG_NAME>";
 }

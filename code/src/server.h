@@ -25,6 +25,8 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#include "turbine.h"
+
 /** Time of last activity: used to determine shutdown */
 extern double xlb_time_last_action;
 
@@ -39,6 +41,9 @@ extern bool server_sync_retry;
 
 // Number of workers associated with this server
 extern int xlb_my_workers;
+
+/** Ready task queue for server */
+extern turbine_work_array xlb_server_ready_work;
 
 adlb_code xlb_server_init(void);
 
@@ -73,10 +78,10 @@ adlb_code xlb_server_failed(bool* aborted, int* code);
 /** Get approximate time, updated frequently by server loop */
 double xlb_approx_time(void);
 
-/**
-  Try to steal and handle any necessary matching.
+/*
+  Try to initiate a steal
  */
-adlb_code xlb_steal_match();
+adlb_code xlb_try_steal(void);
 
 /**
    @param rank rank of worker belonging to this server
@@ -89,25 +94,24 @@ xlb_my_worker_ix(int rank)
   return rank / xlb_servers;
 }
 
+__attribute__((always_inline))
 static inline bool
 xlb_is_server(int rank)
 {
-  if (rank > xlb_comm_size - xlb_servers)
-    return true;
-  return false;
+  return (rank >= xlb_workers);
 }
 
 /**
    @param rank of worker
    @return rank of server for this worker rank
  */
+__attribute__((always_inline))
 static inline int
 xlb_map_to_server(int rank)
 {
   if (xlb_is_server(rank))
     return rank;
-  valgrind_assert(rank >= 0);
-  valgrind_assert(rank < xlb_comm_size);
+  assert(rank >= 0 && rank < xlb_workers);
   int w = rank % xlb_servers;
   return w + xlb_workers;
 }

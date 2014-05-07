@@ -59,10 +59,11 @@ typedef struct
 } adlb_blob_t;
 
 typedef struct {
-  adlb_datum_id status_id;
-  adlb_datum_id filename_id;
-  bool mapped;
-} adlb_file_ref;
+  adlb_datum_id id;
+  // Current count of references held
+  int read_refs;
+  int write_refs;
+} adlb_ref;
 
 typedef struct {
   // type of container keys
@@ -90,8 +91,7 @@ typedef union
   adlb_string_t STRING;
   adlb_blob_t BLOB;
   adlb_container CONTAINER;
-  adlb_datum_id REF;
-  adlb_file_ref FILE_REF;
+  adlb_ref REF;
 
   // Multiset struct too big for enum, store pointer
   adlb_multiset_ptr MULTISET;
@@ -115,15 +115,28 @@ typedef struct {
   slice_chunk_t chunks[];
 } adlb_slice_t;
 
+typedef struct {
+  adlb_datum_storage data;
+  bool initialized;
+} adlb_struct_field;
+
 typedef struct adlb_struct_s {
   adlb_struct_type type;
-  adlb_datum_storage data[];
+  adlb_struct_field fields[];
 } adlb_struct;
+
+typedef struct {
+  adlb_data_type type;
+  adlb_type_extra extra;
+} adlb_struct_field_type;
 
 /*
    Declare a struct type.  This function must be called on all
    processes separately.
    type: the index of the struct type
+   type_name: name of the type, which must not conflict with an
+         existing adlb type (e.g. int), or an already-declared struct
+         type.  This can be later used to create structs of that type.
    field_count: number of fields
    field_types: types of fields
    field_names: names of fields
@@ -132,16 +145,18 @@ adlb_data_code
 ADLB_Declare_struct_type(adlb_struct_type type,
                     const char *type_name,
                     int field_count,
-                    const adlb_data_type *field_types,
+                    const adlb_struct_field_type *field_types,
                     const char **field_names);
 
 /*
    Retrieve info about struct type. Returns type error if not found.
+   Any pointer arguments can be left NULL if info not needed.
  */
 adlb_data_code
 ADLB_Lookup_struct_type(adlb_struct_type type,
                   const char **type_name, int *field_count,
-                  const adlb_data_type **field_types, char ***field_names);
+                  const adlb_struct_field_type **field_types,
+                  char const* const** field_names);
 
 // adlb_binary_data: struct to represent
 typedef struct {
@@ -156,6 +171,45 @@ typedef struct {
   char *data;
   int length;
 } adlb_buffer;
+
+/**
+  Initialize data types module.  Required to look up types by name.
+ */
+adlb_data_code xlb_data_types_init(void);
+
+/**
+  Add a new data type.
+ */
+adlb_data_code xlb_data_type_add(const char *name,
+            adlb_data_type code, adlb_type_extra extra);
+
+/**
+  Lookup a data type.  If not found, set type to ADLB_DATA_TYPE_NULL.
+ */
+adlb_data_code xlb_data_type_lookup(const char* name,
+        adlb_data_type* type, adlb_type_extra *extra);
+
+/**
+  Finalize data types module and clean up memory.
+ */
+void xlb_data_types_finalize(void);
+
+/**
+ * Return true if the data type is a compound type that has multiple
+ * assignable subscripts
+ */
+static inline bool ADLB_Data_is_compound(adlb_data_type type)
+{
+  switch (type)
+  {
+    case ADLB_DATA_TYPE_CONTAINER:
+    case ADLB_DATA_TYPE_MULTISET:
+    case ADLB_DATA_TYPE_STRUCT:
+      return true;
+    default:
+      return false;
+  }
+}
 
 /*
    Get a packed representation, i.e. one in which the data is in
@@ -218,20 +272,24 @@ ADLB_Own_data(const adlb_buffer *caller_buffer, adlb_binary_data *data);
 /*
    Unpack data from buffer into adlb_datum_storage, allocating new
    memory if necessary.  The unpacked data won't hold any pointers
-   into the buffer.  Compound data types are initialized
+   into the buffer.  Compound data types are initialized.
+
+   refcounts: number of refcounts to initialize any refs inside
+              the unpacked data structure
  */
 adlb_data_code
 ADLB_Unpack(adlb_datum_storage *d, adlb_data_type type,
-            const void *buffer, int length);
+            const void *buffer, int length, adlb_refcounts refcounts);
 
 /*
-  Same as ADLB_Unpack2, except optionally we can specify that
+  Same as ADLB_Unpack, except optionally we can specify that
   compound data types (containers, etc) that support incremental
   appends were pre-initialized and shouldn't be reinitialized
  */
 adlb_data_code
 ADLB_Unpack2(adlb_datum_storage *d, adlb_data_type type,
-            const void *buffer, int length, bool init_compound);
+            const void *buffer, int length, adlb_refcounts refcounts,
+            bool init_compound);
 
 /*
   Helper to unpack data from buffer.  This will simply
@@ -284,26 +342,38 @@ static inline adlb_data_code
 ADLB_Resize_buf(adlb_buffer *buf, bool *using_caller_buf, int min_length);
 
 static inline void
+ADLB_Free_buf(adlb_buffer *buf, bool using_caller_buf);
+
+static inline void
 ADLB_Free_binary_data(adlb_binary_data *buffer);
 
 // Helper macro for packing and unpacking data types with no additional memory
 #define ADLB_PACK_SCALAR(d, result) {     \
   assert(result != NULL);                 \
-  assert(d != NULL);                      \
-  result->data = d;                       \
+  assert((d) != NULL);                    \
+  result->data = (d);                     \
   result->caller_data = NULL;             \
-  result->length = (int)sizeof(*d);       \
+  result->length = (int)sizeof(*(d));     \
 }
 
 #define ADLB_UNPACK_SCALAR(d, data, length) { \
-  if (length != (int)sizeof(*d))              \
+  if (length != (int)sizeof(*(d)))            \
   {                                           \
     printf("Could not unpack: expected length " \
-        "%zu actual length %i", sizeof(*d), length); \
+        "%zu actual length %i", sizeof(*(d)), length); \
     return ADLB_DATA_ERROR_INVALID;           \
   }                                           \
-  memcpy(d, data, sizeof(*d));                \
+  memcpy((d), data, sizeof(*(d)));            \
 }
+
+/**
+  Initialize a compound data type
+  must_init: if true, fail if cannot be initialized, e.g. if we don't
+             have full type info.
+ */
+adlb_data_code
+ADLB_Init_compound(adlb_datum_storage *d, adlb_data_type type,
+          adlb_type_extra type_extra, bool must_init);
 
 static inline adlb_data_code
 ADLB_Pack_integer(const adlb_int_t *d, adlb_binary_data *result)
@@ -320,30 +390,20 @@ ADLB_Unpack_integer(adlb_int_t *d, const void *data, int length)
 }
 
 static inline adlb_data_code
-ADLB_Pack_ref(const adlb_datum_id *d, adlb_binary_data *result)
+ADLB_Pack_ref(const adlb_ref *d, adlb_binary_data *result)
 {
-  ADLB_PACK_SCALAR(d, result);
+  // only pack ID
+  ADLB_PACK_SCALAR(&d->id, result);
   return ADLB_DATA_SUCCESS;
 }
 
 static inline adlb_data_code
-ADLB_Unpack_ref(adlb_datum_id *d, const void *data, int length)
+ADLB_Unpack_ref(adlb_ref *d, const void *data, int length,
+                adlb_refcounts refcounts)
 {
-  ADLB_UNPACK_SCALAR(d, data, length);
-  return ADLB_DATA_SUCCESS;
-}
-
-static inline adlb_data_code
-ADLB_Pack_file_ref(const adlb_file_ref *d, adlb_binary_data *result)
-{
-  ADLB_PACK_SCALAR(d, result);
-  return ADLB_DATA_SUCCESS;
-}
-
-static inline adlb_data_code
-ADLB_Unpack_file_ref(adlb_file_ref *d, const void *data, int length)
-{
-  ADLB_UNPACK_SCALAR(d, data, length);
+  ADLB_UNPACK_SCALAR(&d->id, data, length);
+  d->read_refs = refcounts.read_refcount;
+  d->write_refs = refcounts.write_refcount;
   return ADLB_DATA_SUCCESS;
 }
 
@@ -447,7 +507,8 @@ ADLB_Pack_container_hdr(int elems, adlb_data_type key_type,
  */
 adlb_data_code
 ADLB_Unpack_container(adlb_container *container,
-                      const void *data, int length, bool init_cont);
+    const void *data, int length, adlb_refcounts refcounts,
+    bool init_cont);
 
 adlb_data_code
 ADLB_Unpack_container_hdr(const void *data, int length, int *pos,
@@ -455,9 +516,8 @@ ADLB_Unpack_container_hdr(const void *data, int length, int *pos,
 
 adlb_data_code
 ADLB_Unpack_container_entry(adlb_data_type key_type,
-          adlb_data_type val_type,
-          const void *data, int length, int *pos,
-          const void **key, int *key_len,
+          adlb_data_type val_type, const void *data, int length,
+          int *pos, const void **key, int *key_len,
           const void **val, int *val_len);
 
 /*
@@ -474,8 +534,8 @@ ADLB_Pack_multiset_hdr(int elems, adlb_data_type elem_type,
     adlb_buffer *output, bool *output_caller_buffer, int *output_pos);
 
 adlb_data_code
-ADLB_Unpack_multiset(adlb_multiset_ptr *ms,
-          const void *data, int length, bool init_ms);
+ADLB_Unpack_multiset(adlb_multiset_ptr *ms, const void *data,
+        int length, adlb_refcounts refcounts, bool init_ms);
 
 adlb_data_code
 ADLB_Unpack_multiset_hdr(const void *data, int length, int *pos,
@@ -499,11 +559,19 @@ ADLB_Pack_struct(const adlb_struct *s, const adlb_buffer *caller_buffer,
                  adlb_binary_data *result);
 
 adlb_data_code
-ADLB_Unpack_struct(adlb_struct **s, const void *data, int length);
+ADLB_Unpack_struct(adlb_struct **s, const void *data, int length,
+                   adlb_refcounts refcounts, bool init_struct);
 
 // Free any memory used
 adlb_data_code
 ADLB_Free_storage(adlb_datum_storage *d, adlb_data_type type);
+
+/**
+ * Parse 64-bit integer from fixed-length string
+ */
+adlb_data_code
+ADLB_Int64_parse(const char *str, size_t length, int64_t *result);
+
 /*
    Create string with human-readable representation of datum.
    Caller must free string.
@@ -571,6 +639,18 @@ ADLB_Resize_buf(adlb_buffer *buf, bool *using_caller_buf, int min_length)
   return ADLB_DATA_SUCCESS;
 }
 
+static inline void
+ADLB_Free_buf(adlb_buffer *buf, bool using_caller_buf)
+{
+  if (!using_caller_buf && buf->data != NULL)
+  {
+    free(buf->data);
+    buf->data = NULL;
+    buf->length = 0;
+  }
+}
+
+
 
 static inline void
 ADLB_Free_binary_data(adlb_binary_data *buffer)
@@ -582,6 +662,21 @@ ADLB_Free_binary_data(adlb_binary_data *buffer)
   }
 }
 
+// Free only if pointer owned, and doesn't match
+// provided pointer
+static inline void
+ADLB_Free_binary_data2(adlb_binary_data *buffer,
+                       const void *owned)
+{
+  // Must free any memory allocated
+  if (buffer->caller_data != NULL &&
+      buffer->caller_data != owned)
+  {
+    free(buffer->caller_data);
+  }
+}
+
+__attribute__((always_inline))
 static inline adlb_data_code
 ADLB_Own_data(const adlb_buffer *caller_buffer, adlb_binary_data *data)
 {
@@ -605,4 +700,5 @@ ADLB_Own_data(const adlb_buffer *caller_buffer, adlb_binary_data *data)
   }
   return ADLB_DATA_SUCCESS;
 }
+
 #endif // __ADLB_TYPES_H

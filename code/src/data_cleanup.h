@@ -13,20 +13,15 @@
 
 /* Cleanup datum by freeing memory and decrementing referand reference
    counts */
-adlb_data_code xlb_datum_cleanup(adlb_datum_storage *d, adlb_data_type type,
-         adlb_datum_id id, refcount_scavenge scav);
-
-/* xlb_datum_cleanup with extra options that control how many reference
-   counts of referands are decremented */
-adlb_data_code
-xlb_datum_cleanup2(adlb_datum_storage *d, adlb_data_type type,
-             adlb_datum_id id, bool free_mem,
-             adlb_refcounts rc_change, refcount_scavenge scav);
-
+adlb_data_code xlb_datum_cleanup(adlb_datum_storage *d,
+     adlb_data_type type, bool free_mem,
+     bool release_read, bool release_write,
+     xlb_acquire_rc to_acquire, xlb_rc_changes *rc_changes);
 
 // Allow flexible freeing of memory/reference counts
 adlb_data_code xlb_members_cleanup(adlb_container *container, bool free_mem,
-                  adlb_refcounts change, refcount_scavenge scav);
+  bool release_read, bool release_write, xlb_acquire_rc to_acquire,
+  xlb_rc_changes *rc_changes);
 
 #endif // __XLB_DATA_CLEANUP_H
 

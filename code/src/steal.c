@@ -19,16 +19,18 @@
  * steal.c
  *
  *  Created on: Aug 20, 2012
- *      Author: wozniak
+ *      Authors: wozniak, armstrong
  */
 
 #include <mpi.h>
 
+#include <table_ip.h>
 #include <tools.h>
 
 #include "backoffs.h"
 #include "common.h"
 #include "debug.h"
+#include "handlers.h"
 #include "messaging.h"
 #include "mpe-tools.h"
 #include "requestqueue.h"
@@ -38,6 +40,12 @@
 
 double xlb_steal_last = 0.0;
 int xlb_failed_steals_since_backoff = 0;
+
+/*
+  Table to track ranks that we have sent steal probes to but not
+  received a response from.
+ */
+static struct table_ip sent_steal_probes;
 
 /**
    Target: another server
@@ -51,40 +59,180 @@ get_target_server(int* result)
   } while (*result == xlb_comm_rank);
 }
 
-static adlb_code steal_sync(int target, int max_memory);
+static adlb_code xlb_can_steal(const int *work_type_counts);
+static adlb_code xlb_steal(int target, bool* stole_single, bool *stole_par);
+static adlb_code steal_sync(int target, int max_memory, int *response);
+static adlb_code steal_payloads(int target, int count,
+               int *single_count, int *par_count, bool discard);
 
-static inline adlb_code steal_payloads(int target, int count,
-               int *single_count, int *par_count);
+/**
+ * Initialize internal state for steal module
+ */
+adlb_code
+xlb_steal_init(void)
+{
+  bool ok = table_ip_init(&sent_steal_probes, 128);
+  CHECK_MSG(ok, "Error initing table_ip");
+
+  return ADLB_SUCCESS;
+}
+
+void
+xlb_steal_finalize(void)
+{
+  table_ip_free_callback(&sent_steal_probes, false, NULL);
+}
 
 adlb_code
-xlb_steal(bool* stole_single, bool *stole_par)
+xlb_random_steal_probe(void)
+{
+  if (sent_steal_probes.size >= xlb_steal_concurrency_limit)
+  {
+    // Already have too many steals
+    return ADLB_NOTHING;
+  }
+
+  int target;
+  get_target_server(&target);
+
+  if (table_ip_contains(&sent_steal_probes, target))
+  {
+    // do nothing - already sent probe
+    return ADLB_NOTHING;
+  }
+ 
+  char hdr_storage[PACKED_SYNC_SIZE];
+  struct packed_sync *hdr = (struct packed_sync *)hdr_storage;
+#ifndef NDEBUG
+  // Avoid send uninitialized bytes for memory checking tools
+  memset(hdr, 0, PACKED_SYNC_SIZE);
+#endif
+  hdr->mode = ADLB_SYNC_STEAL_PROBE;
+
+  adlb_code rc = xlb_sync2(target, hdr, NULL);
+  ADLB_CHECK(rc);
+  
+  // Mark as sent to avoid duplicates
+  bool ok = table_ip_add(&sent_steal_probes, target, (void*)0x1);
+  CHECK_MSG(ok, "error adding to table");
+
+  return ADLB_SUCCESS;
+}
+
+adlb_code xlb_handle_steal_probe(int caller)
+{
+  char hdr_storage[PACKED_SYNC_SIZE];
+  struct packed_sync *hdr = (struct packed_sync *)hdr_storage;
+#ifndef NDEBUG
+  // Avoid send uninitialized bytes for memory checking tools
+  memset(hdr, 0, PACKED_SYNC_SIZE);
+#endif
+  hdr->mode = ADLB_SYNC_STEAL_PROBE_RESP;
+
+  // Fill counts
+  xlb_workq_type_counts((int*)hdr->sync_data, xlb_types_size);
+
+  adlb_code rc = xlb_sync2(caller, hdr, NULL);
+  ADLB_CHECK(rc);
+  return ADLB_SUCCESS;
+}
+
+/*
+ * Called when steal probe received.
+ *
+ * Should not be called when within sync loop: may initiate more syncs.
+ */
+adlb_code
+xlb_handle_steal_probe_resp(int caller,
+  const struct packed_sync *hdr)
 {
   adlb_code rc;
-  int target;
+
+  // Mark probe as received
+  void *tmp;
+  bool found = table_ip_remove(&sent_steal_probes, caller, &tmp);
+  CHECK_MSG(found, "probe not found");
+
+  const int *caller_type_counts = (int*)hdr->sync_data;
+  if (xlb_can_steal(caller_type_counts))
+  {
+    bool stole_single, stole_par;
+    rc = xlb_steal(caller, &stole_single, &stole_par);
+    ADLB_CHECK(rc);
+  
+    DEBUG("[%i] Completed steal from %i stole_single: %i stole_par: %i",
+          xlb_comm_rank, caller, (int)stole_single, (int)stole_par);
+    // Try to match stolen tasks
+    rc = xlb_recheck_queues(stole_single, stole_par);
+    ADLB_CHECK(rc);
+  }
+  else
+  {
+    DEBUG("[%i] No matching work to steal from %i",
+          xlb_comm_rank, caller);
+  }
+
+  return ADLB_SUCCESS;
+}
+
+/*
+ * Check if there's anything worth stealing from a target
+ *
+ * work_type_counts: Work type counts for steal target
+ */
+static adlb_code xlb_can_steal(const int *work_type_counts)
+{
+  int request_q_sizes[xlb_types_size];
+  requestqueue_type_counts(request_q_sizes, xlb_types_size);
+  for (int i = 0; i < xlb_types_size; i++)
+  {
+    if (request_q_sizes[i] > 0 &&
+        work_type_counts[i] > 0)
+    {
+      // Matching request here and work on other server
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+   Issue sync() and steal.
+
+   Note that this may add sync requests to the xlb_pending_syncs list,
+   which must be handled by the caller.
+   @param stole_single true if stole single-worker task, else false
+   @param stole_par true if stole parallel task, else false
+ */
+static adlb_code
+xlb_steal(int target, bool *stole_single, bool *stole_par)
+{
+  adlb_code rc;
   *stole_single = false;
   *stole_par = false;
+  MPI_Request request;
+  MPI_Status status;
 
   TRACE_START;
   MPE_LOG(xlb_mpe_dmn_steal_start);
 
-  get_target_server(&target);
-
   DEBUG("[%i] stealing from %i", xlb_comm_rank, target);
 
-
-  struct packed_steal_resp hdr = {
-        .count = 0, .last = false };
-  MPI_Request request;
-  MPI_Status status;
-
-  IRECV(&hdr, sizeof(hdr), MPI_BYTE, target,
-        ADLB_TAG_RESPONSE_STEAL_COUNT);
+  struct packed_steal_resp hdr;
+  
+  IRECV2(&hdr, sizeof(hdr), MPI_BYTE, target,
+        ADLB_TAG_RESPONSE_STEAL_COUNT, &request);
 
   int max_memory = 1;
   int total_single = 0, total_par = 0;
-  rc = steal_sync(target, max_memory);
-  if (rc == ADLB_SHUTDOWN)
+  int response;
+  rc = steal_sync(target, max_memory, &response);
+  if (!response || rc == ADLB_SHUTDOWN)
+  {
+    CANCEL(&request);
+    *stole_single = *stole_par = false;
     goto end;
+  }
 
   ADLB_CHECK(rc);
 
@@ -94,20 +242,21 @@ xlb_steal(bool* stole_single, bool *stole_par)
     WAIT(&request, &status);
     if (hdr.count > 0) {
       int single, par;
-      rc = steal_payloads(target, hdr.count, &single, &par);
+      rc = steal_payloads(target, hdr.count, &single, &par, false);
       ADLB_CHECK(rc);
       total_single += single;
       total_par += par;
     }
     if (hdr.last)
       break;
-    
-    IRECV(&hdr, sizeof(hdr), MPI_BYTE, target,
-          ADLB_TAG_RESPONSE_STEAL_COUNT);
+   
+    IRECV2(&hdr, sizeof(hdr), MPI_BYTE, target,
+        ADLB_TAG_RESPONSE_STEAL_COUNT, &request);
   }
   
+  // TODO: reports wrong count with multiple batches
   DEBUG("[%i] stole %i tasks from %i", xlb_comm_rank, hdr.count, target);
-  // MPE_INFO(xlb_mpe_svr_info, "STOLE: %i FROM: %i", hdr.count, target);
+  // MPE_INFO(xlb_mpe_svr_info, "STOLE: %i FROM: %i", hdr->count, target);
   *stole_single = (total_single > 0);
   *stole_par = (total_par > 0);
 
@@ -134,9 +283,10 @@ xlb_steal(bool* stole_single, bool *stole_par)
   Send steal request and sync with server.
   Note that this can add requests to the pending_sync list that
   will need to be handled.
+  accepted: if true, steal response will be sent to us
  */
 static adlb_code
-steal_sync(int target, int max_memory)
+steal_sync(int target, int max_memory, int *response)
 {
   // Need to give server information about which work types we have:
   // we only want to steal work types where the other server has more
@@ -150,14 +300,40 @@ steal_sync(int target, int max_memory)
   // Include work types in sync data field
   xlb_workq_type_counts((int*)req->sync_data, xlb_types_size);
 
-  adlb_code code = xlb_sync2(target, req);
-  DEBUG("[%i] synced with %i, receiving steal response", xlb_comm_rank, target);
+  adlb_code code = xlb_sync2(target, req, response);
+  if (code == ADLB_SUCCESS)
+  {
+    if (*response)
+    {
+      DEBUG("[%i] synced with %i, receiving steal response",
+           xlb_comm_rank, target);
+    }
+    else
+    {
+      DEBUG("[%i] synced with %i, no steal response",
+           xlb_comm_rank, target);
+    }
+  }
+  else if (code == ADLB_SHUTDOWN)
+  {
+    DEBUG("[%i] tried to sync with %i, received shutdown",
+         xlb_comm_rank, target);
+  }
+  else
+  {
+    DEBUG("[%i] tried to sync with %i, error!",
+         xlb_comm_rank, target);
+  }
   return code; 
 }
 
-static inline adlb_code
+/*
+ * discard: if true, discard the payloads.  If false, enqueue the work
+ */
+static adlb_code
 steal_payloads(int target, int count,
-               int *single_count, int *par_count)
+               int *single_count, int *par_count,
+               bool discard)
 {
   assert(count > 0);
   MPI_Status status;
@@ -172,9 +348,14 @@ steal_payloads(int target, int count,
     xlb_work_unit *work = work_unit_alloc((size_t)wus[i].length);
     RECV(work->payload, wus[i].length, MPI_BYTE, target,
          ADLB_TAG_RESPONSE_STEAL);
-    xlb_workq_add(wus[i].type, wus[i].putter, wus[i].priority,
-                  wus[i].answer, wus[i].target, wus[i].length,
-                  wus[i].parallelism, work);
+    if (!discard) {
+      xlb_work_unit_init(work, wus[i].type, wus[i].putter, wus[i].priority,
+                    wus[i].answer, wus[i].target, wus[i].length,
+                    wus[i].parallelism);
+      xlb_workq_add(work);
+    } else {
+      work_unit_free(work);
+    }
     if (wus[i].parallelism > 1)
     {
       par++;

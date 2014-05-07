@@ -42,7 +42,8 @@ uint xlb_multiset_size(const xlb_multiset *set) {
 }
 
 adlb_data_code xlb_multiset_add(xlb_multiset *set, const void *data,
-              int length, const adlb_datum_storage **stored) {
+                               int length, adlb_refcounts refcounts,
+                                  const adlb_datum_storage **stored) {
   xlb_multiset_chunk *chunk = NULL;
   if (set->last_chunk_elems >= XLB_MULTISET_CHUNK_SIZE)
   {
@@ -72,22 +73,25 @@ adlb_data_code xlb_multiset_add(xlb_multiset *set, const void *data,
   if (stored != NULL) {
     *stored = elem;
   }
-  return ADLB_Unpack(elem, set->elem_type, data, length);
+  return ADLB_Unpack(elem, set->elem_type, data, length, refcounts);
 }
 
 adlb_data_code
 xlb_multiset_cleanup(xlb_multiset *set, bool free_root, bool free_mem,
-                        adlb_refcounts change, refcount_scavenge scav)
+             bool release_read, bool release_write,
+             xlb_acquire_rc to_acquire, xlb_rc_changes *rc_changes)
 {
   // Can't support subscripts
-  assert(ADLB_RC_IS_NULL(scav.refcounts) || !adlb_has_sub(scav.subscript));
+  assert(ADLB_RC_IS_NULL(to_acquire.refcounts) ||
+         !adlb_has_sub(to_acquire.subscript));
   for (uint i = 0; i < set->chunk_count; i++) {
     xlb_multiset_chunk *chunk = set->chunks[i];
     uint clen = chunk_len(set, i);
     for (int j = 0; j < clen; j++) {
       adlb_datum_storage *d = &chunk->arr[j];
-      adlb_data_code dc = xlb_datum_cleanup2(d, set->elem_type,
-                          ADLB_DATA_ID_NULL, free_mem, change, scav);
+      adlb_data_code dc = xlb_datum_cleanup(d, set->elem_type,
+                    free_mem, release_read, release_write,
+                    to_acquire, rc_changes);
       DATA_CHECK(dc);
     }
     if (free_mem)

@@ -42,7 +42,8 @@ adlb_code xlb_xpt_index_init(void)
     adlb_datum_id container_id = id_for_rank(xlb_comm_rank);
 
     adlb_type_extra extra = { .CONTAINER.key_type = ADLB_DATA_TYPE_BLOB,
-                              .CONTAINER.val_type = ADLB_DATA_TYPE_BLOB };
+                              .CONTAINER.val_type = ADLB_DATA_TYPE_BLOB,
+                              .valid = true };
     adlb_create_props props = { .read_refcount = 1, .write_refcount = 1,
                                 .permanent = true };
     dc = xlb_data_create(container_id, ADLB_DATA_TYPE_CONTAINER, &extra,
@@ -179,7 +180,7 @@ adlb_code xlb_xpt_index_add(const void *key, int key_len,
   adlb_subscript subscript = { .key = key, .length = (size_t)key_len };
   assert(data_len <= INT_MAX);
   adlb_code rc = ADLB_Store(id, subscript, ADLB_DATA_TYPE_BLOB,
-                            data, (int)data_len, refcounts);
+                    data, (int)data_len, refcounts, ADLB_NO_RC);
   
   // Handle duplicate key gracefully: it is possible for the same
   //       function to be recomputed, and we need to handle it!

@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 
+#include <table.h>
 #include <vint.h>
 
 #include "adlb.h"
@@ -17,7 +18,211 @@
 #include "debug.h"
 #include "multiset.h"
 
+
+#define TYPE_NAME_INTEGER "integer"
+#define TYPE_NAME_FLOAT "float"
+#define TYPE_NAME_STRING "string"
+#define TYPE_NAME_BLOB "blob"
+#define TYPE_NAME_CONTAINER "container"
+#define TYPE_NAME_MULTISET "multiset"
+#define TYPE_NAME_REF "ref"
+#define TYPE_NAME_STRUCT "struct"
+#define TYPE_NAME_NULL "ADLB_DATA_TYPE_NULL"
+
 static char *data_repr_container(const adlb_container *c);
+
+struct type_entry
+{
+  adlb_data_type code;
+  const char *name;
+  size_t name_len;
+};
+
+static struct type_entry type_entries[] = {
+  { ADLB_DATA_TYPE_INTEGER, TYPE_NAME_INTEGER,
+    sizeof(TYPE_NAME_INTEGER) - 1 },
+  { ADLB_DATA_TYPE_FLOAT, TYPE_NAME_FLOAT,
+    sizeof(TYPE_NAME_FLOAT) - 1 },
+  { ADLB_DATA_TYPE_STRING, TYPE_NAME_STRING,
+    sizeof(TYPE_NAME_STRING) - 1 },
+  { ADLB_DATA_TYPE_BLOB, TYPE_NAME_BLOB,
+    sizeof(TYPE_NAME_BLOB) - 1 },
+  { ADLB_DATA_TYPE_CONTAINER, TYPE_NAME_CONTAINER,
+    sizeof(TYPE_NAME_CONTAINER) - 1 },
+  { ADLB_DATA_TYPE_MULTISET, TYPE_NAME_MULTISET,
+    sizeof(TYPE_NAME_MULTISET) - 1 },
+  { ADLB_DATA_TYPE_REF, TYPE_NAME_REF,
+    sizeof(TYPE_NAME_REF) - 1 },
+  { ADLB_DATA_TYPE_STRUCT, TYPE_NAME_STRUCT,
+    sizeof(TYPE_NAME_STRUCT) - 1 },
+  { ADLB_DATA_TYPE_NULL, TYPE_NAME_NULL,
+    sizeof(TYPE_NAME_NULL) - 1 },
+};
+
+static int type_entries_size = sizeof(type_entries) / sizeof(*type_entries);
+
+typedef struct {
+  adlb_data_type code;
+  adlb_type_extra extra;
+} xlb_data_type_info;
+
+/** Map from type name to xlb_data_type_info */
+struct table xlb_data_types;
+
+adlb_data_code
+xlb_data_types_init(void)
+{
+  bool ok = table_init(&xlb_data_types, 64);
+  check_verbose(ok, ADLB_DATA_ERROR_OOM, "Out of memory");
+  
+  // Add builtin types
+  for (int i = 0; i < type_entries_size; i++)
+  {
+    adlb_data_code dc = xlb_data_type_add(type_entries[i].name,
+            type_entries[i].code, ADLB_TYPE_EXTRA_NULL);
+    DATA_CHECK(dc);
+  }
+  return ADLB_DATA_SUCCESS;
+}
+
+adlb_data_code
+xlb_data_type_add(const char *name, adlb_data_type code,
+             adlb_type_extra extra)
+{
+  check_verbose(!table_contains(&xlb_data_types, name),
+                ADLB_DATA_ERROR_INVALID,
+                "Struct type name %s already in use", name);
+
+  xlb_data_type_info *entry = malloc(sizeof(xlb_data_type_info)); 
+  check_verbose(entry != NULL, ADLB_DATA_ERROR_OOM, "Out of memory");
+  entry->code = code;
+  entry->extra = extra;
+
+  bool ok = table_add(&xlb_data_types, name, entry);
+  check_verbose(ok, ADLB_DATA_ERROR_INVALID, 
+                "Failed adding new type %s to index", name);
+
+  return ADLB_DATA_SUCCESS;
+}
+
+adlb_data_code
+xlb_data_type_lookup(const char* name, adlb_data_type* type,
+                        adlb_type_extra *extra)
+{
+  xlb_data_type_info *entry;
+  bool found = table_search(&xlb_data_types, name, (void**)&entry);
+  if (!found)
+  {
+    *type = ADLB_DATA_TYPE_NULL;
+    return ADLB_DATA_SUCCESS;
+  }
+
+  assert(entry != NULL);
+  *type = entry->code;
+  *extra = entry->extra;
+
+  return ADLB_DATA_SUCCESS;
+}
+
+static void xlb_data_types_free_cb(const char *key, void *val)
+{
+  free(val);
+}
+
+void
+xlb_data_types_finalize(void)
+{
+  table_free_callback(&xlb_data_types, false, xlb_data_types_free_cb);
+}
+
+/**
+   Convert string representation of data type to data type number
+   plus additional info
+ */
+adlb_code
+ADLB_Data_string_totype(const char* type_string, adlb_data_type* type,
+                        adlb_type_extra *extra)
+{
+  adlb_data_code dc;
+
+  dc = xlb_data_type_lookup(type_string, type, extra);
+  ADLB_DATA_CHECK(dc);
+  CHECK_MSG(*type != ADLB_DATA_TYPE_NULL, "Type %s not found", type_string);
+  
+  return ADLB_SUCCESS;
+}
+
+/**
+   Convert given data type number to output string representation
+ */
+const char
+*ADLB_Data_type_tostring(adlb_data_type type)
+{
+  switch(type)
+  {
+    case ADLB_DATA_TYPE_INTEGER:
+      return TYPE_NAME_INTEGER;
+    case ADLB_DATA_TYPE_FLOAT:
+      return TYPE_NAME_FLOAT;
+    case ADLB_DATA_TYPE_STRING:
+      return TYPE_NAME_STRING;
+    case ADLB_DATA_TYPE_BLOB:
+      return TYPE_NAME_BLOB;
+    case ADLB_DATA_TYPE_CONTAINER:
+      return TYPE_NAME_CONTAINER;
+    case ADLB_DATA_TYPE_MULTISET:
+      return TYPE_NAME_MULTISET;
+    case ADLB_DATA_TYPE_REF:
+      return TYPE_NAME_REF;
+    case ADLB_DATA_TYPE_STRUCT:
+      return TYPE_NAME_STRUCT;
+    case ADLB_DATA_TYPE_NULL:
+      return TYPE_NAME_NULL;
+    default:
+      return "<invalid type>";
+  }
+}
+
+adlb_data_code
+ADLB_Init_compound(adlb_datum_storage *d, adlb_data_type type,
+          adlb_type_extra type_extra, bool must_init)
+{
+  adlb_data_code dc;
+  switch (type)
+  {
+    case ADLB_DATA_TYPE_CONTAINER:
+      assert(type_extra.valid);
+      d->CONTAINER.members = table_bp_create(CONTAINER_INIT_CAPACITY);
+      DATA_CHECK_MALLOC(d->CONTAINER.members);
+      d->CONTAINER.key_type = type_extra.CONTAINER.key_type;
+      d->CONTAINER.val_type = type_extra.CONTAINER.val_type;
+      break;
+    case ADLB_DATA_TYPE_MULTISET:
+      assert(type_extra.valid);
+      d->MULTISET = xlb_multiset_alloc(type_extra.MULTISET.val_type);
+      DATA_CHECK_MALLOC(d->MULTISET);
+      break;
+    case ADLB_DATA_TYPE_STRUCT:
+      if (type_extra.valid)
+      {
+        dc = xlb_new_struct(type_extra.STRUCT.struct_type, &d->STRUCT);
+        DATA_CHECK(dc);
+      }
+      else
+      {
+        check_verbose(!must_init, ADLB_DATA_ERROR_INVALID,
+          "Could not initialize struct, missing struct type info");
+        d->STRUCT = NULL;
+      }
+      break;
+    default:
+      // Do nothing
+      verbose_error(ADLB_DATA_ERROR_TYPE, "Do not support init "
+                    "non-compound type %i", type);
+                
+  }
+  return ADLB_DATA_SUCCESS;
+}
 
 /*
   Whether we pad the vint size to VINT_MAX_BYTES
@@ -46,8 +251,6 @@ ADLB_Pack(const adlb_datum_storage *d, adlb_data_type type,
       return ADLB_Pack_string(&d->STRING, result);
     case ADLB_DATA_TYPE_BLOB:
       return ADLB_Pack_blob(&d->BLOB, result);
-    case ADLB_DATA_TYPE_FILE_REF:
-      return ADLB_Pack_file_ref(&d->FILE_REF, result);
     case ADLB_DATA_TYPE_STRUCT:
       return ADLB_Pack_struct(d->STRUCT, caller_buffer, result);
     case ADLB_DATA_TYPE_CONTAINER:
@@ -106,8 +309,8 @@ ADLB_Append_buffer(adlb_data_type type, const void *data, int length,
     if (ADLB_pack_pad_size(type) && vint_len < (int)VINT_MAX_BYTES)
     {
       // We expect the size to be padded for these
-      int padding = VINT_MAX_BYTES - vint_len;
-      memset(output->data + *output_pos, 0, padding);
+      int padding = (int)VINT_MAX_BYTES - vint_len;
+      memset(output->data + *output_pos, 0, (size_t)padding);
       *output_pos += padding;
     }
   }
@@ -140,7 +343,7 @@ ADLB_Pack_buffer(const adlb_datum_storage *d, adlb_data_type type,
     if (prefix_len)
     {
       memset(output->data + start_pos, 0, VINT_MAX_BYTES);
-      *output_pos += VINT_MAX_BYTES;
+      *output_pos += (int)VINT_MAX_BYTES;
     }
     if (type == ADLB_DATA_TYPE_CONTAINER)
     {
@@ -159,7 +362,7 @@ ADLB_Pack_buffer(const adlb_datum_storage *d, adlb_data_type type,
     if (prefix_len)
     {
       // Add in actual size to reserved place
-      int serialized_len = *output_pos - start_pos - VINT_MAX_BYTES;
+      int serialized_len = *output_pos - start_pos - (int)VINT_MAX_BYTES;
       vint_encode(serialized_len, output->data + start_pos);
     }
     return ADLB_DATA_SUCCESS;
@@ -196,13 +399,15 @@ ADLB_Pack_container(const adlb_container *container,
 
   TABLE_BP_FOREACH(members, item)
   {
+    assert(item->key_len <= INT_MAX);
+    int key_len = (int)item->key_len;
     // append key; append val
-    int required = *output_pos + (int)VINT_MAX_BYTES + item->key_len;
+    int required = *output_pos + (int)VINT_MAX_BYTES + key_len;
     dc = ADLB_Resize_buf(output, output_caller_buffer, required);
     DATA_CHECK(dc);
 
     dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL,
-          table_bp_get_key(item), item->key_len,
+          table_bp_get_key(item), key_len,
           true, output, output_caller_buffer, output_pos);
     DATA_CHECK(dc);
 
@@ -257,9 +462,10 @@ ADLB_Pack_multiset(const adlb_multiset_ptr ms,
 {
   adlb_data_code dc;
 
-  int size = xlb_multiset_size(ms);
+  uint size = xlb_multiset_size(ms);
+  assert(size <= INT_MAX);
 
-  dc = ADLB_Pack_multiset_hdr(size, ms->elem_type, output,
+  dc = ADLB_Pack_multiset_hdr((int)size, ms->elem_type, output,
                         output_caller_buffer, output_pos);
   DATA_CHECK(dc);
 
@@ -345,7 +551,8 @@ ADLB_Unpack_buffer(adlb_data_type type,
        "Packed buffer encode entry length too long for int: %"PRId64,
        entry_length64);
   
-  int vint_padded_len = ADLB_pack_pad_size(type) ? VINT_MAX_BYTES : vint_len;
+  int vint_padded_len = ADLB_pack_pad_size(type) ?
+                        (int)VINT_MAX_BYTES : vint_len;
   int remaining = length - *pos - vint_padded_len;
   check_verbose(entry_length64 <= remaining,
         ADLB_DATA_ERROR_INVALID, "Decoded entry less than remaining data "
@@ -357,20 +564,21 @@ ADLB_Unpack_buffer(adlb_data_type type,
 }
 
 adlb_data_code ADLB_Unpack(adlb_datum_storage *d, adlb_data_type type,
-                          const void *buffer, int length)
+            const void *buffer, int length, adlb_refcounts refcounts)
 {
-  return ADLB_Unpack2(d, type, buffer, length, true);
+  return ADLB_Unpack2(d, type, buffer, length, refcounts, true);
 }
 
 adlb_data_code ADLB_Unpack2(adlb_datum_storage *d, adlb_data_type type,
-        const void *buffer, int length, bool init_compound)
+        const void *buffer, int length, adlb_refcounts refcounts,
+        bool init_compound)
 {
   switch (type)
   {
     case ADLB_DATA_TYPE_INTEGER:
       return ADLB_Unpack_integer(&d->INTEGER, buffer, length);
     case ADLB_DATA_TYPE_REF:
-      return ADLB_Unpack_ref(&d->REF, buffer, length);
+      return ADLB_Unpack_ref(&d->REF, buffer, length, refcounts);
     case ADLB_DATA_TYPE_FLOAT:
       return ADLB_Unpack_float(&d->FLOAT, buffer, length);
     case ADLB_DATA_TYPE_STRING:
@@ -379,16 +587,15 @@ adlb_data_code ADLB_Unpack2(adlb_datum_storage *d, adlb_data_type type,
     case ADLB_DATA_TYPE_BLOB:
       // Ok to cast from const buffer since we force it to copy
       return ADLB_Unpack_blob(&d->BLOB, (void *)buffer, length, true);
-    case ADLB_DATA_TYPE_FILE_REF:
-      return ADLB_Unpack_file_ref(&d->FILE_REF, buffer, length);
     case ADLB_DATA_TYPE_STRUCT:
-      return ADLB_Unpack_struct(&d->STRUCT, buffer, length);
+      return ADLB_Unpack_struct(&d->STRUCT, buffer, length, refcounts,
+                                init_compound);
     case ADLB_DATA_TYPE_CONTAINER:
       return ADLB_Unpack_container(&d->CONTAINER, buffer, length,
-                                   init_compound);
+                                   refcounts, init_compound);
     case ADLB_DATA_TYPE_MULTISET:
       return ADLB_Unpack_multiset(&d->MULTISET, buffer, length,
-                                  init_compound);
+                                  refcounts, init_compound);
     default:
       printf("data_store(): unknown type: %i\n", type);
       return ADLB_DATA_ERROR_INVALID;
@@ -399,7 +606,8 @@ adlb_data_code ADLB_Unpack2(adlb_datum_storage *d, adlb_data_type type,
 
 adlb_data_code
 ADLB_Unpack_container(adlb_container *container,
-      const void *data, int length, bool init_cont)
+    const void *data, int length, adlb_refcounts refcounts,
+    bool init_cont)
 {
   assert(container != NULL);
   assert(data != NULL);
@@ -435,18 +643,18 @@ ADLB_Unpack_container(adlb_container *container,
     // unpack key/value pair and add to container
     const void *key, *val;
     int key_len, val_len;
-    dc = ADLB_Unpack_container_entry(key_type, val_type,
-          data, length, &pos, &key, &key_len, &val, &val_len);
+    dc = ADLB_Unpack_container_entry(key_type, val_type, data, length,
+                                &pos, &key, &key_len, &val, &val_len);
     DATA_CHECK(dc);
 
     adlb_datum_storage *d = malloc(sizeof(adlb_datum_storage));
     check_verbose(d != NULL, ADLB_DATA_ERROR_OOM,
                   "error allocating memory");
-    dc = ADLB_Unpack(d, val_type, val, val_len);
+    dc = ADLB_Unpack(d, val_type, val, val_len, refcounts);
     DATA_CHECK(dc);
 
     // TODO: handle case where key already exists
-    bool ok = table_bp_add(container->members, key, key_len, d);
+    bool ok = table_bp_add(container->members, key, (size_t)key_len, d);
     check_verbose(ok, ADLB_DATA_ERROR_OOM, "Error adding to container");
   }
 
@@ -513,8 +721,8 @@ ADLB_Unpack_container_entry(adlb_data_type key_type,
 }
 
 adlb_data_code
-ADLB_Unpack_multiset(adlb_multiset_ptr *ms,
-                const void *data, int length, bool init_ms)
+ADLB_Unpack_multiset(adlb_multiset_ptr *ms, const void *data,
+        int length, adlb_refcounts refcounts, bool init_ms)
 {
   assert(ms != NULL);
   assert(data != NULL);
@@ -550,7 +758,7 @@ ADLB_Unpack_multiset(adlb_multiset_ptr *ms,
                                     &pos, &elem, &elem_len);
     DATA_CHECK(dc);
     
-    dc = xlb_multiset_add(*ms, elem, elem_len, NULL);
+    dc = xlb_multiset_add(*ms, elem, elem_len, refcounts, NULL);
     DATA_CHECK(dc);
   }
 
@@ -608,23 +816,23 @@ adlb_data_code ADLB_Free_storage(adlb_datum_storage *d, adlb_data_type type)
       break;
     case ADLB_DATA_TYPE_CONTAINER:
     {
-      dc = xlb_members_cleanup(&d->CONTAINER, true, ADLB_NO_RC, NO_SCAVENGE);
+      dc = xlb_members_cleanup(&d->CONTAINER, true, false, false,
+                               XLB_NO_ACQUIRE, NULL);
       DATA_CHECK(dc);
       break;
     }
     case ADLB_DATA_TYPE_MULTISET:
-      dc = xlb_multiset_cleanup(d->MULTISET, true, true, ADLB_NO_RC,
-                                NO_SCAVENGE);
+      dc = xlb_multiset_cleanup(d->MULTISET, true, true, false, false,
+                                XLB_NO_ACQUIRE, NULL);
       DATA_CHECK(dc);
       break;
     case ADLB_DATA_TYPE_STRUCT:
-      xlb_free_struct(d->STRUCT, true);
+      xlb_free_struct(d->STRUCT, true, true);
       break;
     // Types with no malloced storage:
     case ADLB_DATA_TYPE_INTEGER:
     case ADLB_DATA_TYPE_FLOAT:
     case ADLB_DATA_TYPE_REF:
-    case ADLB_DATA_TYPE_FILE_REF:
       break;
     default:
       check_verbose(false, ADLB_DATA_ERROR_TYPE,
@@ -667,7 +875,8 @@ char *ADLB_Data_repr(const adlb_datum_storage *d, adlb_data_type type)
       assert(rc >= 0);
       return tmp;
     case ADLB_DATA_TYPE_REF:
-      rc = asprintf(&tmp, "<%"PRId64">", d->REF);
+      rc = asprintf(&tmp, "<%"PRId64"> r:%d w:%d", d->REF.id,
+                    d->REF.read_refs, d->REF.write_refs);
       assert(rc >= 0);
       return tmp;
     case ADLB_DATA_TYPE_FLOAT:
@@ -677,12 +886,6 @@ char *ADLB_Data_repr(const adlb_datum_storage *d, adlb_data_type type)
       break;
     case ADLB_DATA_TYPE_BLOB:
       rc = asprintf(&tmp, "blob (%d bytes)", d->BLOB.length);
-      assert(rc >= 0);
-      return tmp;
-    case ADLB_DATA_TYPE_FILE_REF:
-      rc = asprintf(&tmp, "status:<%"PRId64"> filename:<%"PRId64"> mapped:%i",
-                    d->FILE_REF.status_id, d->FILE_REF.filename_id,
-                    d->FILE_REF.mapped);
       assert(rc >= 0);
       return tmp;
     case ADLB_DATA_TYPE_CONTAINER:
@@ -719,24 +922,39 @@ static char *data_repr_container(const adlb_container *c)
 
   TABLE_BP_FOREACH(members, item)
   {
+    const char *null_str = "(null)";
     adlb_container_val v = item->data;
-    char *value_s = ADLB_Data_repr(v, c->val_type);
+    char *value_s = (v == NULL) ? NULL : ADLB_Data_repr(v, c->val_type);
+    size_t value_strlen = (value_s == NULL) ? sizeof(null_str) :
+                                              strlen(value_s);
     dc = xlb_resize_str(&cont_str, &cont_str_len, cont_str_pos,
-                   (item->key_len - 1) + strlen(value_s) + 7);
+                   (item->key_len - 1) + value_strlen + 7);
     assert(dc == ADLB_DATA_SUCCESS);
     if (c->key_type == ADLB_DATA_TYPE_STRING)
     {
-      cont_str_pos += sprintf(&cont_str[cont_str_pos], "\"%s\"={%s} ",
-                              (char*)table_bp_get_key(item), value_s);
+      cont_str_pos += sprintf(&cont_str[cont_str_pos], "\"%s\"=",
+                        (char*)table_bp_get_key(item));
     }
     else
     {
       // TODO: support binary keys
-      cont_str_pos += sprintf(&cont_str[cont_str_pos], "\"%s\"={%s} ",
-                              (char*)table_bp_get_key(item), value_s);
+      cont_str_pos += sprintf(&cont_str[cont_str_pos], "\"%s\"=",
+                              (char*)table_bp_get_key(item));
     }
 
-    free(value_s);
+    if (value_s != NULL)
+    {
+      cont_str_pos += sprintf(&cont_str[cont_str_pos], "{%s} ", value_s);
+    }
+    else
+    {
+      cont_str_pos += sprintf(&cont_str[cont_str_pos], "%s ", null_str);
+    }
+    
+    if (value_s != NULL)
+    {
+      free(value_s);
+    }
   }
   cont_str[cont_str_pos] = '\0';
   return cont_str;
@@ -756,5 +974,78 @@ xlb_resize_str(char **str, size_t *curr_size, int pos, size_t needed)
     DATA_REALLOC(*str, new_size);
     *curr_size = new_size;
   }
+  return ADLB_DATA_SUCCESS;
+}
+
+/**
+ * Parse 64-bit integer. Return ADLB_SUCCESS if entire string is
+ * valid integer that fits in 64-bit signed representation
+ * If not successful return ADLB_DATA_ERROR_NUMBER_FORMAT and do not
+ * print anything.
+ */
+adlb_data_code
+ADLB_Int64_parse(const char *str, size_t length, int64_t *result)
+{
+  if (length == 0)
+  {
+    return ADLB_DATA_ERROR_INVALID;
+  }
+
+  int64_t val = 0;
+  int i = 0;
+  bool negative = false;
+  if (str[i] == '-') {
+    negative = true;
+    i++;
+    if (length == 1)
+    {
+      return ADLB_DATA_ERROR_INVALID;
+    }
+  }
+
+  int64_t limit = negative ? INT64_MIN : INT64_MAX;
+  // Limit that we can multiply by 10 without overflow
+  int64_t pre_limit = limit / 10; 
+
+  for (; i < length; i++)
+  {
+    char c = str[i];
+    int64_t digit = c - '0';
+    if (digit < 0 || digit > 9)
+    {
+      return ADLB_DATA_ERROR_INVALID;
+    }
+
+    if (negative)
+    {
+      if (val < pre_limit)
+      {
+        return ADLB_DATA_ERROR_INVALID;
+      }
+      val = 10 * val;
+      
+      if (val - limit < digit)
+      {
+        return ADLB_DATA_ERROR_INVALID;
+      }
+      val -= digit;
+    }
+    else
+    {
+      if (val > pre_limit)
+      {
+        return ADLB_DATA_ERROR_INVALID;
+      }
+      val = 10 * val;
+      if (limit - val < digit)
+      {
+        return ADLB_DATA_ERROR_INVALID;
+      }
+      val += digit;
+    }
+  }
+
+  *result = val;
+
   return ADLB_DATA_SUCCESS;
 }

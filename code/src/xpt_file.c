@@ -46,7 +46,7 @@ static const uint32_t xpt_sync_marker = 0x5F1C0B73;
  *Length of end-of-file marker record:
  * Sync marker, CRC marker, zero record length
  */
-#define EOF_REC_BYTES (2*sizeof(uint32_t) + vint_bytes(0))
+#define EOF_REC_BYTES (2*sizeof(uint32_t) + (size_t)vint_bytes(0))
 
 typedef struct
 {
@@ -421,7 +421,7 @@ adlb_code xlb_xpt_read_val_w(xlb_xpt_state *state, off_t val_offset,
     off_t read_offset = ((off_t)block) * XLB_XPT_BLOCK_SIZE + block_pos;
     off_t block_left = XLB_XPT_BLOCK_SIZE - block_pos;
     size_t to_read = block_left < val_remaining ?
-                     block_left : val_remaining ;
+                     block_left : val_remaining;
 
     DEBUG("Read val chunk: %zu bytes @ %llu", to_read,
           (long long unsigned)read_offset);
@@ -773,7 +773,7 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
       if (crc_calc != crc)
       {
         ERR_PRINTF("CRC check failed for record at offset %llu\n",
-                    (long long unsigned)(rec_offset - sizeof(crc)));
+                    (long long unsigned)rec_offset - sizeof(crc));
         ERR_PRINTF("Computed CRC32: %lx Expected CRC32: %lx\n",
                 (unsigned long)crc_calc, (unsigned long)crc);
         xpt_read_resync(state, resync_pos);
@@ -819,7 +819,7 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
     if (crc_calc != crc)
     {
       ERR_PRINTF("CRC check failed for record at offset %llu\n",
-                  (long long unsigned)(rec_offset - sizeof(crc)));
+                  (long long unsigned)rec_offset - sizeof(crc));
       ERR_PRINTF("Computed CRC32: %lx Expected CRC32: %lx\n",
               (unsigned long)crc_calc, (unsigned long)crc);
       xpt_read_resync(state, resync_pos);

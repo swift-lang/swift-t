@@ -47,6 +47,11 @@ extern double xlb_max_idle;
 extern double xlb_steal_backoff;
 
 /**
+  How many concurrent steal probes can be outstanding at once?
+ */
+extern double xlb_steal_concurrency_limit;
+
+/**
   Smallest gap between successive steal attempts.
  */
 extern double xlb_steal_rate_limit;

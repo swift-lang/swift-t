@@ -29,6 +29,8 @@
 
 #include "adlb-defs.h"
 
+#include "debug.h"
+
 typedef int64_t xlb_work_unit_id;
 
 #define XLB_WORK_UNIT_ID_NULL (-1)
@@ -37,8 +39,9 @@ typedef struct
 {
   /** Unique ID wrt this server */
   xlb_work_unit_id id;
-  /** Time at which this was enqueued */
-  double timestamp;
+  /** Time at which this was enqueued 
+      NOTE: unused */
+  // double timestamp;
   /** Work type */
   int type;
   /** Rank that put this work unit */
@@ -70,12 +73,25 @@ static inline xlb_work_unit *work_unit_alloc(size_t payload_length)
   return malloc(sizeof(xlb_work_unit) + payload_length);
 }
 
+/** Initialize work unit fields, aside from payload */
+static inline void xlb_work_unit_init(xlb_work_unit *wu, int type,
+      int putter, int priority, int answer, int target_rank, int length,
+      int parallelism)
+{
+  wu->id = xlb_workq_unique();
+  wu->type = type;
+  wu->putter = putter;
+  wu->priority = priority;
+  wu->answer = answer;
+  wu->target = target_rank;
+  wu->length = length;
+  wu->parallelism = parallelism;
+}
+
 /*
- * Initialize work unit fields and add to queue
+ * Add work unit to queue.  All fields of work unit must be init.
  */
-adlb_code xlb_workq_add(int type, int putter, int priority, int answer,
-                   int target, int length, int parallelism,
-                   xlb_work_unit *wu);
+adlb_code xlb_workq_add(xlb_work_unit *wu);
 
 /**
    Return work unit for rank target and given type.
@@ -131,6 +147,7 @@ void xlb_workq_finalize(void);
 
 
 typedef struct {
+
   /** Number of targeted tasks added to work queue */
   int64_t targeted_enqueued;
 
@@ -154,6 +171,28 @@ typedef struct {
 
   /** Parallel tasks stolen */
   int64_t parallel_stolen;
+
+  /*
+   * Data-dependent task counters:
+   */ 
+
+  /** Number of targeted tasks that must wait for input */
+  int64_t targeted_data_wait;
+
+  /** Number of targeted tasks that were ready immediately */
+  int64_t targeted_data_no_wait;
+  
+  /** Number of single tasks that must wait for input */
+  int64_t single_data_wait;
+
+  /** Number of single tasks that were ready immediately */
+  int64_t single_data_no_wait;
+  
+  /** Number of parallel tasks that must wait for input */
+  int64_t parallel_data_wait;
+
+  /** Number of parallel tasks that were ready immediately */
+  int64_t parallel_data_no_wait;
 } work_type_counters;
 
 extern work_type_counters *xlb_task_counters;
@@ -179,6 +218,40 @@ static inline void xlb_task_bypass_count(int type, bool targeted,
     else
     {
       tc->single_bypass++;
+    }
+  }
+}
+
+/*
+ * Mark that a rule task was created
+ * wait: if it has to wait for data
+ */
+static inline void xlb_task_data_count(int type, bool targeted,
+                                      bool parallel, bool wait)
+{
+  if (xlb_perf_counters_enabled)
+  {
+    work_type_counters *tc = &xlb_task_counters[type];
+    if (targeted)
+    {
+      if (wait)
+        tc->targeted_data_wait++;
+      else
+        tc->targeted_data_no_wait++;
+    }
+    else if (parallel)
+    {
+      if (wait)
+        tc->parallel_data_wait++;
+      else
+        tc->parallel_data_no_wait++;
+    }
+    else
+    {
+      if (wait)
+        tc->single_data_wait++;
+      else
+        tc->single_data_no_wait++;
     }
   }
 }

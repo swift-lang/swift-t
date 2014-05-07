@@ -60,15 +60,20 @@ static xlb_work_unit_id unique = 1;
    Only contains targeted work
 */
 static heap_t *targeted_work;
+static int targeted_work_size;
 
-static inline int targeted_work_entries(int work_types, int my_workers)
+static int targeted_work_entries(int work_types, int my_workers)
 {
+  TRACE("work_types: %i my_workers: %i", work_types, my_workers);
   return work_types * my_workers;
 }
 
-static inline int targeted_work_ix(int rank, adlb_data_type type)
+__attribute__((always_inline))
+static inline int targeted_work_ix(int rank, int type)
 {
-  return xlb_my_worker_ix(rank) * xlb_types_size + (int)type;
+  int ix = xlb_my_worker_ix(rank) * xlb_types_size + (int)type;
+  assert(ix >= 0 && ix < targeted_work_size);
+  return ix;
 }
 
 // Calculate index for one of my workers
@@ -104,6 +109,7 @@ xlb_workq_init(int work_types, int my_workers)
 
   int targeted_entries = targeted_work_entries(work_types, my_workers);
   targeted_work = malloc(sizeof(heap_t) * (size_t)targeted_entries);
+  targeted_work_size = targeted_entries;
   valgrind_assert(targeted_work != NULL);
   for (int i = 0; i < targeted_entries; i++)
   {
@@ -138,6 +144,13 @@ xlb_workq_init(int work_types, int my_workers)
       xlb_task_counters[i].parallel_enqueued = 0;
       xlb_task_counters[i].parallel_bypass = 0;
       xlb_task_counters[i].parallel_stolen = 0;
+
+      xlb_task_counters[i].targeted_data_wait = 0;
+      xlb_task_counters[i].targeted_data_no_wait = 0;
+      xlb_task_counters[i].single_data_wait = 0;
+      xlb_task_counters[i].single_data_no_wait = 0;
+      xlb_task_counters[i].parallel_data_wait = 0;
+      xlb_task_counters[i].parallel_data_no_wait = 0;
     }
   }
   else
@@ -155,55 +168,44 @@ xlb_workq_unique()
 }
 
 adlb_code
-xlb_workq_add(int type, int putter, int priority, int answer,
-              int target_rank, int length, int parallelism,
-              xlb_work_unit* wu)
+xlb_workq_add(xlb_work_unit* wu)
 {
-  wu->id = xlb_workq_unique();
-  wu->type = type;
-  wu->putter = putter;
-  wu->priority = priority;
-  wu->answer = answer;
-  wu->target = target_rank;
-  wu->length = length;
-  wu->parallelism = parallelism;
-
   DEBUG("xlb_workq_add(): %"PRId64": x%i %s",
         wu->id, wu->parallelism, (char*) wu->payload);
 
-  if (target_rank < 0 && parallelism == 1)
+  if (wu->target < 0 && wu->parallelism == 1)
   {
     // Untargeted single-process task
     TRACE("xlb_workq_add(): single-process");
-    struct rbtree* T = &typed_work[type];
-    rbtree_add(T, -priority, wu);
+    struct rbtree* T = &typed_work[wu->type];
+    rbtree_add(T, -wu->priority, wu);
     if (xlb_perf_counters_enabled)
     {
-      xlb_task_counters[type].single_enqueued++;
+      xlb_task_counters[wu->type].single_enqueued++;
     }
   }
-  else if (parallelism > 1)
+  else if (wu->parallelism > 1)
   {
     // Untargeted parallel task
     TRACE("xlb_workq_add(): parallel task: %p", wu);
-    struct rbtree* T = &parallel_work[type];
-    TRACE("rbtree_add: wu: %p key: %i\n", wu, -priority);
-    rbtree_add(T, -priority, wu);
+    struct rbtree* T = &parallel_work[wu->type];
+    TRACE("rbtree_add: wu: %p key: %i\n", wu, -wu->priority);
+    rbtree_add(T, -wu->priority, wu);
     xlb_workq_parallel_task_count++;
     if (xlb_perf_counters_enabled)
     {
-      xlb_task_counters[type].parallel_enqueued++;
+      xlb_task_counters[wu->type].parallel_enqueued++;
     }
   }
   else
   {
-    heap_t* H = &targeted_work[targeted_work_ix(target_rank, type)];
-    bool b = heap_add(H, -priority, wu);
+    heap_t* H = &targeted_work[targeted_work_ix(wu->target, wu->type)];
+    bool b = heap_add(H, -wu->priority, wu);
     CHECK_MSG(b, "out of memory expanding heap");
 
     if (xlb_perf_counters_enabled)
     {
-      xlb_task_counters[type].targeted_enqueued++;
+      xlb_task_counters[wu->type].targeted_enqueued++;
     }
   }
   return ADLB_SUCCESS;
@@ -478,6 +480,10 @@ void xlb_print_workq_perf_counters(void)
             t, c->targeted_enqueued);
     PRINT_COUNTER("worktype_%i_targeted_bypass=%"PRId64"\n",
             t, c->targeted_bypass);
+    PRINT_COUNTER("worktype_%i_targeted_data_wait=%"PRId64"\n",
+            t, c->targeted_data_wait);
+    PRINT_COUNTER("worktype_%i_targeted_data_no_wait=%"PRId64"\n",
+            t, c->targeted_data_no_wait);
     PRINT_COUNTER("worktype_%i_single_total=%"PRId64"\n",
             t, c->single_enqueued + c->single_bypass);
     PRINT_COUNTER("worktype_%i_single_net=%"PRId64"\n",
@@ -488,6 +494,10 @@ void xlb_print_workq_perf_counters(void)
             t, c->single_bypass);
     PRINT_COUNTER("worktype_%i_single_stolen=%"PRId64"\n",
             t, c->single_stolen);
+    PRINT_COUNTER("worktype_%i_single_data_wait=%"PRId64"\n",
+            t, c->single_data_wait);
+    PRINT_COUNTER("worktype_%i_single_data_no_wait=%"PRId64"\n",
+            t, c->single_data_no_wait);
     PRINT_COUNTER("worktype_%i_parallel_total=%"PRId64"\n",
             t, c->parallel_enqueued + c->parallel_bypass);
     PRINT_COUNTER("worktype_%i_parallel_net=%"PRId64"\n",
@@ -498,6 +508,10 @@ void xlb_print_workq_perf_counters(void)
             t, c->parallel_bypass);
     PRINT_COUNTER("worktype_%i_parallel_stolen=%"PRId64"\n",
             t, c->parallel_stolen);
+    PRINT_COUNTER("worktype_%i_parallel_data_wait=%"PRId64"\n",
+            t, c->parallel_data_wait);
+    PRINT_COUNTER("worktype_%i_parallel_data_no_wait=%"PRId64"\n",
+            t, c->parallel_data_no_wait);
   }
 }
 
