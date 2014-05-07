@@ -37,7 +37,7 @@ export CC=mpicc
 # TCL_SYSLIB_DIR=/path/to/tcl/lib
 
 # Location of MPI install to override autodetected location
-# MPI_INSTALL=${EXM_PREFIX}/mpich2
+# MPI_INSTALL=${EXM_PREFIX}/mpi
 # MPE_INSTALL=${EXM_PREFIX}/mpe
 # Set MPI version
 # (version 3 required for parallel tasks but version 2 is also allowed)
