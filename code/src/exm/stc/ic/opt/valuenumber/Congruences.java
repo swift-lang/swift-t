@@ -692,7 +692,14 @@ public class Congruences implements AliasFinder {
       Arg arr = byAlias.findCanonical(val.getInput(0));
       Arg ix = byValue.findCanonical(val.getInput(1));
       return Arrays.asList(arr, ix);
-    } else if (val.op == Opcode.GET_FILENAME_VAL) {
+    } else if (val.isStructFieldVal() || val.isStructFieldAlias() ||
+        val.isStructFieldCopy() || val.isStructFieldValRef()) {
+      Arg struct = byAlias.findCanonical(val.getInput(0));
+      Arg fieldName = byValue.findCanonical(val.getInput(1));
+      return Arrays.asList(struct, fieldName);
+    } else if (val.isFilenameValCV() ||
+               val.isFilenameAliasCV() ||
+               val.isLocalFilenameCV()) {
       return Arrays.asList(Arg.createStringLit("filename"),
                            byAlias.findCanonical(val.getInput(0)));
     } else {

@@ -268,7 +268,6 @@ public class ValLoc {
 
   public static ValLoc makeFilenameLocal(Arg outFilename, Var inFile,
           IsAssign isAssign) {
-    assert(isAssign != IsAssign.TO_VALUE);
     assert(Types.isFileVal(inFile));
     assert(outFilename.isImmediateString());
     return build(ComputedValue.localFilenameCV(inFile),

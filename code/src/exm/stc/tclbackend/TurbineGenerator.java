@@ -1593,6 +1593,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isStruct(struct));
     assert(Types.isStructField(struct, fields, fieldContents));
     Expression subscript = structSubscript(struct, fields);
+    // TODO
     throw new STCRuntimeError("TODO: Not yet implemented");
   }
   
@@ -1602,6 +1603,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isStructRef(structRef));
     assert(Types.isStructField(structRef, fields, fieldContents));
     Expression subscript = structSubscript(structRef, fields);
+    // TODO
     throw new STCRuntimeError("Not yet implemented");
   }
 
@@ -1611,6 +1613,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isStructRef(structRef));
     assert(Types.isStructField(structRef, fields, fieldContents));
     Expression subscript = structSubscript(structRef, fields);
+    // TODO
     throw new STCRuntimeError("Not yet implemented");
   }
   

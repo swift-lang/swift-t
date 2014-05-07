@@ -450,6 +450,14 @@ public class ComputedValue<T> {
   public boolean isStructFieldCopy() {
     return op == Opcode.STRUCT_CREATE_ALIAS;
   }
+    
+  /**
+   * If it represents an struct member that is a reference to something
+   * @return
+   */
+  public boolean isStructFieldVal() {
+    return op == Opcode.STRUCT_RETRIEVE_SUB;
+  }
   
   /**
    * If it represents an array member that is a reference to something

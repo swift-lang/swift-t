@@ -34,7 +34,6 @@ import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.WaitVar;

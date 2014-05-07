@@ -1006,11 +1006,11 @@ public class ICInstructions {
         // This is compatible with UNCACHED_INPUT_FILE preventing caching,
         // as we still assume that the input_file function is impure
         if (op == Opcode.CALL_FOREIGN) {
-          cvs.add(ValLoc.makeFilename(getInput(0), getOutput(0)));
+          cvs.add(ValLoc.makeFilename(getInput(0), getOutput(0), IsAssign.TO_VALUE));
         } else if (op == Opcode.CALL_FOREIGN_LOCAL){
           // Don't mark as IsAssign since standard cv catches this
           cvs.add(ValLoc.makeFilenameLocal(getInput(0), getOutput(0),
-                                        IsAssign.NO));
+                                           IsAssign.TO_VALUE));
         }
       } else if (op == Opcode.CALL_FOREIGN_LOCAL &&
           (isImpl(SpecialFunction.RANGE) ||
