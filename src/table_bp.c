@@ -302,7 +302,7 @@ bucket_add_tail(table_bp_entry *head, table_bp_entry *entry,
 }
 
 /**
-   Note: duplicates internal copy of key (in list_bp_add())
+   Note: duplicates internal copy of key
  */
 bool
 table_bp_add(table_bp *target, const void* key, size_t key_len,
