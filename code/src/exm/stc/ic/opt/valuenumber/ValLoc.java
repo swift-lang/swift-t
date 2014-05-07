@@ -217,15 +217,15 @@ public class ValLoc {
   }
   
   public static ValLoc makeStructFieldCopyResult(Var elem, Var struct,
-                                                   List<Arg> fields) {
+                                       List<Arg> fields, IsAssign assign) {
       return ValLoc.build(ComputedValue.structFieldCopyCV(struct, fields),
-                      elem.asArg(), Closed.MAYBE_NOT, IsAssign.NO);
+                      elem.asArg(), Closed.MAYBE_NOT, assign);
   }
 
   public static ValLoc makeStructFieldValResult(Arg val, Var struct,
-          List<Arg> fields) {
+          List<Arg> fields, IsAssign assign) {
     return ValLoc.build(ComputedValue.structFieldValCV(struct, fields),
-                          val, Closed.MAYBE_NOT, IsAssign.NO);
+                          val, Closed.MAYBE_NOT, assign);
   }
   
   public static ValLoc makeContainerSizeCV(Var arr, Arg size, boolean async,
@@ -249,12 +249,13 @@ public class ValLoc {
   }
 
   
-  public static ValLoc makeFilename(Arg outFilename, Var inFile) {
+  public static ValLoc makeFilename(Arg outFilename, Var inFile,
+            IsAssign assign) {
     assert(Types.isFile(inFile.type()));
     assert(outFilename.isVar());
     assert(Types.isString(outFilename.getVar().type()));
     return build(ComputedValue.filenameAliasCV(inFile),
-                      outFilename, Closed.MAYBE_NOT, IsAssign.NO);
+                      outFilename, Closed.MAYBE_NOT, assign);
   }
   
   public static ValLoc makeFilenameVal(Var file, Arg filenameVal,

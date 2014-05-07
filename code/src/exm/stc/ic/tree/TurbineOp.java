@@ -3166,7 +3166,7 @@ public class TurbineOp extends Instruction {
         } else {
           boolean recursive = op == Opcode.LOAD_RECURSIVE;
           return ValLoc.retrieve(dst, src.getVar(), recursive,
-                      Closed.MAYBE_NOT, IsValCopy.NO, IsAssign.NO).asList();
+                      Closed.MAYBE_NOT, IsValCopy.NO, IsAssign.TO_LOCATION).asList();
         }
       }
       case STORE_REF:
@@ -3186,18 +3186,19 @@ public class TurbineOp extends Instruction {
         boolean recursive = (op == Opcode.STORE_RECURSIVE);
         ValLoc assign;
         if (op == Opcode.STORE_FILE) {
-          assign = ValLoc.assignFile(dst, src, getInput(1), IsAssign.NO);
+          assign = ValLoc.assignFile(dst, src, getInput(1),
+                                     IsAssign.TO_LOCATION);
         } else {
           assign = ValLoc.assign(dst, src, recursive,
             recursive ? Closed.YES_RECURSIVE : Closed.YES_NOT_RECURSIVE,
-            IsValCopy.NO, IsAssign.NO);
+            IsValCopy.NO, IsAssign.TO_LOCATION);
         }
 
         if (op == Opcode.STORE_REF) {
           // TODO: incorporate mutability here?
           // Use standard dereference computed value
           ValLoc retrieve = ValLoc.derefCompVal(src.getVar(), dst,
-                                   IsValCopy.NO, IsAssign.NO);
+                                   IsValCopy.NO, IsAssign.TO_LOCATION);
           return Arrays.asList(retrieve, assign);
         } else {
           return assign.asList();
@@ -3221,12 +3222,12 @@ public class TurbineOp extends Instruction {
       case GET_FILENAME_ALIAS: {
         Arg filename = getOutput(0).asArg();
         Var file = getInput(0).getVar();
-        return ValLoc.makeFilename(filename, file).asList();
+        return ValLoc.makeFilename(filename, file, IsAssign.NO).asList();
       }
       case COPY_IN_FILENAME: {
         Arg filename = getInput(0);
         Var file = getOutput(0);
-        return ValLoc.makeFilename(filename, file).asList();
+        return ValLoc.makeFilename(filename, file, IsAssign.NO).asList();
       }
       case GET_LOCAL_FILENAME: {
         return ValLoc.makeFilenameLocal(getOutput(0).asArg(),
@@ -3240,12 +3241,13 @@ public class TurbineOp extends Instruction {
       case GET_FILENAME_VAL: {
         Var file = getInput(0).getVar();
         Var val = getOutput(0);
-        return ValLoc.makeFilenameVal(file, val.asArg(), IsAssign.NO).asList();
+        return ValLoc.makeFilenameVal(file, val.asArg(),
+                           IsAssign.TO_LOCATION).asList();
       }
       case DEREF_SCALAR: 
       case DEREF_FILE: {
         return ValLoc.derefCompVal(getOutput(0), getInput(0).getVar(),
-                                   IsValCopy.YES, IsAssign.NO).asList();
+                             IsValCopy.YES, IsAssign.TO_LOCATION).asList();
       }
 
       case STRUCT_CREATE_ALIAS: 
@@ -3254,14 +3256,17 @@ public class TurbineOp extends Instruction {
         // Ops that lookup field in struct somehow
         Var struct = getInput(0).getVar();
         List<Arg> fields = getInputsTail(1);
-        ValLoc copyV = ValLoc.makeStructFieldCopyResult(getOutput(0),
-                                                        struct, fields);
+
         if (op == Opcode.STRUCT_CREATE_ALIAS) {
           // Create values to repr both alias and value
+          ValLoc copyV = ValLoc.makeStructFieldCopyResult(getOutput(0),
+              struct, fields, IsAssign.NO);
           ValLoc aliasV = ValLoc.makeStructFieldAliasResult(getOutput(0),
                                 struct, fields);
           return Arrays.asList(aliasV, copyV);
         } else {
+          ValLoc copyV = ValLoc.makeStructFieldCopyResult(getOutput(0),
+              struct, fields, IsAssign.TO_LOCATION);
           // Not an alias - copy val only
           return copyV.asList();
         }
@@ -3270,7 +3275,7 @@ public class TurbineOp extends Instruction {
         Var struct = getInput(0).getVar();
         List<Arg> fields = getInputsTail(2);
         return ValLoc.makeStructFieldValResult(getOutput(0).asArg(),
-                                                struct, fields).asList();
+                              struct, fields, IsAssign.NO).asList();
       }
       case STRUCT_INIT_FIELDS: {
         List<ValLoc> results = new ArrayList<ValLoc>();
@@ -3283,7 +3288,7 @@ public class TurbineOp extends Instruction {
         assert(fieldPaths.val.size() == fieldVals.val.size());
         for (int i = 0; i < fieldPaths.val.size(); i++) {
           results.add(ValLoc.makeStructFieldValResult(fieldVals.val.get(i),
-                                  struct, fieldPaths.val.get(i)));
+                            struct, fieldPaths.val.get(i), IsAssign.NO));
         }
         
         return results;
@@ -3299,14 +3304,16 @@ public class TurbineOp extends Instruction {
           assert(op == Opcode.STRUCTREF_STORE_SUB);
           fields = getInputsTail(1);
         }
-        return ValLoc.makeStructFieldValResult(val, struct, fields).asList();
+        return ValLoc.makeStructFieldValResult(val, struct, fields,
+                                        IsAssign.TO_VALUE).asList();
       }
       case STRUCT_COPY_IN:
       case STRUCTREF_COPY_IN: {
         Var struct = getOutput(0);
         Var val = getInput(0).getVar();
         List<Arg> fields = getInputsTail(1);
-        return ValLoc.makeStructFieldCopyResult(val, struct, fields).asList();
+        return ValLoc.makeStructFieldCopyResult(val, struct, fields,
+                                        IsAssign.TO_VALUE).asList();
       }
       case ARR_STORE:
       case ARR_STORE_FUTURE:
@@ -3330,7 +3337,7 @@ public class TurbineOp extends Instruction {
         List<ValLoc> res = new ArrayList<ValLoc>();
         // Computed value for whole array
         res.add(ValLoc.buildResult(op, getInputs(), arr.asArg(),
-                       Closed.YES_NOT_RECURSIVE, IsAssign.NO));
+                       Closed.YES_NOT_RECURSIVE, IsAssign.TO_LOCATION));
         // For individual array elements
         assert(getInputs().size() % 2 == 0);
         int elemCount = getInputs().size() / 2;
@@ -3356,7 +3363,6 @@ public class TurbineOp extends Instruction {
         Arg ix = getInput(1);
         Var contents = getOutput(0);
         
-
         if (op == Opcode.ARR_RETRIEVE) {
           // This just retrieves the item immediately
           return ValLoc.makeArrayResult(arr, ix, contents.asArg(),
@@ -3414,22 +3420,26 @@ public class TurbineOp extends Instruction {
           Var out = outputs.get(i);
           res.add(ValLoc.buildResult(op, 
                    (Object)i, getInput(0).asList(), out.asArg(),
-                   Closed.YES_RECURSIVE, IsValCopy.NO, IsAssign.NO));
+                   Closed.YES_RECURSIVE, IsValCopy.NO, IsAssign.TO_LOCATION));
         }
         return res;
       }
       case PACK_VALUES:
-        return vanillaResult(Closed.YES_NOT_RECURSIVE, IsAssign.NO).asList();
+        return vanillaResult(Closed.YES_NOT_RECURSIVE,
+                             IsAssign.TO_LOCATION).asList();
       case CHECKPOINT_LOOKUP_ENABLED:
       case CHECKPOINT_WRITE_ENABLED:
-        return vanillaResult(Closed.YES_NOT_RECURSIVE, IsAssign.NO).asList();
+        return vanillaResult(Closed.YES_NOT_RECURSIVE,
+                             IsAssign.TO_LOCATION).asList();
       case UNPACK_ARRAY_TO_FLAT:
-        return vanillaResult(Closed.YES_NOT_RECURSIVE, IsAssign.NO).asList();
+        return vanillaResult(Closed.YES_NOT_RECURSIVE,
+                             IsAssign.TO_LOCATION).asList();
       case ARR_CONTAINS:
       case CONTAINER_SIZE:
       case ARR_LOCAL_CONTAINS:
       case CONTAINER_LOCAL_SIZE:
-        return vanillaResult(Closed.YES_NOT_RECURSIVE, IsAssign.NO).asList();
+        return vanillaResult(Closed.YES_NOT_RECURSIVE,
+                             IsAssign.TO_LOCATION).asList();
       case STRUCT_LOCAL_BUILD:
         // Worth optimising?
         return null;
