@@ -1318,7 +1318,9 @@ App arguments can be:
     multiple arguments.
 * Arbitrary expressions surrounded by parentheses.
 
-Standard input, output and error can be redirected to files.
+Standard input, output and error can be redirected to files via
++@stdin=+, +@stdout=+, and +@stderr=+ expressions.  If used, these should point
+to a +file+.
 
 Here is an example of an app function that joins multiple files
 with the +cat+ utility:
@@ -1719,7 +1721,7 @@ cd ../turbine
 make install
 
 cd ../stc
-ant -Ddist.dir=... -Dturbine.home=...
+ant install -Ddist.dir=... -Dturbine.home=...
 ----
 
 * You may use +./configure --help+ and the
