@@ -14,13 +14,10 @@ namespace eval funcs_165 {
   }
 
   proc fmt_person_async { out inputs } {
-    set person_dict [ lindex $inputs 0 ]
-    set name [ dict get $person_dict name ]
-    set age [ dict get $person_dict age ]
-    rule "$name $age" "funcs_165::fmt_person_async_body $out $name $age" 
+    set person [ lindex $inputs 0 ]
+    rule "$person" "funcs_165::fmt_person_async_body $out $person" 
   }
-  proc fmt_person_async_body { out name age } {
-    store_string $out [ fmt_person2 [ retrieve_decr_string $name ] \
-                                    [ retrieve_decr_integer $age ] ]
+  proc fmt_person_async_body { out person } {
+    store_string $out [ fmt_person [ retrieve_decr_struct $person ] ]
   }
 }

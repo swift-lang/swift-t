@@ -9,13 +9,13 @@ import assert;
 (int o) my_mult_helper(int i, int j, int s)
 {
   int t;
-  int k;
   int n;
   boolean m;
   n = 1;
   t = s + i;
   if (j)
   {
+    int k;
     k = j - n;
     o = my_mult_helper(i,k,t);
   }

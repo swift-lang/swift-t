@@ -1,9 +1,7 @@
 package exm.stc.ic.refcount;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Deque;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -22,15 +20,12 @@ import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.StructType;
-import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
-import exm.stc.common.lang.Var.DefType;
-import exm.stc.common.lang.Var.VarProvenance;
+import exm.stc.common.lang.Var.VarCount;
 import exm.stc.common.util.Counters;
 import exm.stc.common.util.Pair;
-import exm.stc.ic.opt.AliasTracker.AliasKey;
+import exm.stc.ic.aliases.AliasKey;
 import exm.stc.ic.opt.OptimizerPass;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ForeachLoops.AbstractForeachLoop;
@@ -39,7 +34,6 @@ import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICContinuations.Loop;
 import exm.stc.ic.tree.ICInstructions.Instruction;
-import exm.stc.ic.tree.ICInstructions.LoopBreak;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.CleanupAction;
@@ -47,8 +41,6 @@ import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.Statement;
 import exm.stc.ic.tree.ICTree.StatementType;
-import exm.stc.ic.tree.Opcode;
-import exm.stc.ic.tree.TurbineOp;
 import exm.stc.ic.tree.TurbineOp.RefCountOp;
 import exm.stc.ic.tree.TurbineOp.RefCountOp.RCDir;
 
@@ -92,9 +84,8 @@ public class RefcountPass implements OptimizerPass {
 
     for (Function f: program.getFunctions()) {
       logger.trace("Entering function " + f.getName());
-      lookupStructArgMembers(logger, f);
       recurseOnBlock(logger, f, f.mainBlock(), new RCTracker(),
-          new TopDownInfo());
+                     new TopDownInfo());
     }
 
     this.functionMap = null;
@@ -141,12 +132,7 @@ public class RefcountPass implements OptimizerPass {
       TopDownInfo info) {
     
     for (Block block: cont.getBlocks()) {
-
-      // Workaround for e.g. foreach loops: lookup all struct members 
-      lookupAllStructMembers(block, cont.constructDefinedVars());
-      
       // Build separate copy for each block
-
       TopDownInfo contInfo = info.makeChild(cont);
 
       RCTracker increments = new RCTracker(contInfo.aliases);
@@ -176,13 +162,6 @@ public class RefcountPass implements OptimizerPass {
   private void processBlock(Logger logger, Function fn, Block block,
       RCTracker increments, TopDownInfo parentInfo) {
     // First collect up all required reference counting ops in block
-    for (Var v: block.getVariables()) {
-      if (v.mapping() != null) {
-        // Add two since Turbine libraries want two references
-        increments.readIncr(v.mapping(), 2);
-      }
-    }
-
     countBlockIncrements(block, increments);
 
     countBlockDecrements(fn, block, increments);
@@ -193,7 +172,6 @@ public class RefcountPass implements OptimizerPass {
           parentInfo.initAliasVars);
     }
 
-    addTemporaryStructFields(block, increments, parentInfo);
   }
   
 
@@ -212,12 +190,12 @@ public class RefcountPass implements OptimizerPass {
       // If we're spawning off, increment once per iteration so that
       // each parallel task has a refcount to work with
       for (PassedVar v: loop.getAllPassedVars()) {
-        if (!v.writeOnly && RefCounting.hasReadRefCount(v.var)) {
+        if (!v.writeOnly && RefCounting.trackReadRefCount(v.var)) {
           readIncrs.increment(v.var);
         }
       }
       for (Var v: loop.getKeepOpenVars()) {
-        if (RefCounting.hasWriteRefCount(v)) {
+        if (RefCounting.trackWriteRefCount(v)) {
           writeIncrs.increment(v);
         }
       }
@@ -309,7 +287,7 @@ public class RefcountPass implements OptimizerPass {
       switch (stmt.type()) {
         case INSTRUCTION:
           Instruction inst = stmt.instruction();
-          updateCountsInstruction(inst, increments);
+          updateCountsInst(inst, increments);
           increments.updateForInstruction(inst);
           break;
         case CONDITIONAL:
@@ -372,9 +350,15 @@ public class RefcountPass implements OptimizerPass {
       // Alias variables aren't allocated here. Struct variables have
       // members separately allocated, so don't want to double-decrement
       // struct members.
-      if (var.storage() != Alloc.ALIAS && !Types.isStruct(var)) {
-        increments.readDecr(var);
-        increments.writeDecr(var);
+      if (var.storage() != Alloc.ALIAS) {
+        // Work out base refcounts that we'll have to start with for var
+        long baseReadRC = RefCounting.baseReadRefCount(var, true, false);
+        long baseWriteRC = RefCounting.baseWriteRefCount(var, true, false);
+        increments.readDecr(var, baseReadRC);
+        increments.writeDecr(var, baseWriteRC);
+        if (logger.isTraceEnabled()) {
+          logger.trace(var + " base r: " + baseReadRC + " w: " + baseWriteRC);
+        }
       }
     }
 
@@ -400,51 +384,45 @@ public class RefcountPass implements OptimizerPass {
     }
   }
 
-  private void updateCountsInstruction(Instruction inst, RCTracker increments) {
-    Pair<List<Var>, List<Var>> refIncrs = inst.getIncrVars(functionMap);
-    List<Var> readIncrVars = refIncrs.val1;
-    List<Var> writeIncrVars = refIncrs.val2;
+  /**
+   * Update reference count counters based on refcounts consumed and
+   * returned by instructions
+   * @param inst
+   * @param increments
+   */
+  private void updateCountsInst(Instruction inst, RCTracker increments) {
+    Pair<List<VarCount>, List<VarCount>> inRefs;
+    inRefs = inst.inRefCounts(functionMap);
+    
+    List<VarCount> inReadRefs = inRefs.val1;
+    List<VarCount> inWriteRefs = inRefs.val2;
 
-    for (Var v: readIncrVars) {
-      increments.readIncr(v);
+    for (VarCount vc: inReadRefs) {
+      increments.readIncr(vc.var, vc.count);
     }
-    for (Var v: writeIncrVars) {
-      increments.writeIncr(v);
+    for (VarCount vc: inWriteRefs) {
+      increments.writeIncr(vc.var, vc.count);
+    }
+
+    
+    Pair<List<VarCount>, List<VarCount>> outRefs;
+    outRefs = inst.outRefCounts(functionMap);
+    
+    List<VarCount> outReadRefs = outRefs.val1;
+    List<VarCount> outWriteRefs = outRefs.val2;
+    
+    for (VarCount vc: outReadRefs) {
+      increments.readDecr(vc.var, vc.count);
+    }
+    
+    for (VarCount vc: outWriteRefs) {
+      increments.writeDecr(vc.var, vc.count);
     }
 
     if (logger.isTraceEnabled()) {
-      logger.trace("At " + inst + " readIncr: " + readIncrVars +
-          " writeIncr: " + writeIncrVars);
-    }
-
-    if (inst.op == Opcode.COPY_REF) {
-      // Hack to handle COPY_REF
-      // We incremented refcounts for orig. var, now need to decrement
-      // refcount on alias vars
-      Var newAlias = inst.getOutput(0);
-      increments.readDecr(newAlias);
-      increments.writeDecr(newAlias);
-    }
-
-    if (inst.op == Opcode.LOAD_REF) {
-      // Hack to handle fact that the load_ref will increment
-      // reference count of referand
-      Var v = inst.getOutput(0);
-      increments.readDecr(v);
-    }
-
-    if (inst.op == Opcode.LOOP_BREAK) {
-      // Special case: decrement all variables passed into loop from outside
-      LoopBreak loopBreak = (LoopBreak) inst;
-      for (Var ko: loopBreak.getKeepOpenVars()) {
-        assert (RefCounting.hasWriteRefCount(ko));
-        increments.writeDecr(ko);
-      }
-      for (PassedVar pass: loopBreak.getLoopUsedVars()) {
-        if (!pass.writeOnly) {
-          increments.readDecr(pass.var);
-        }
-      }
+      logger.trace("At " + inst + 
+          " inReadRefs: " + inReadRefs + " inWriteRefs: " + inWriteRefs + 
+          " outReadRefs: " + outReadRefs + " outWriteRefs: " + outWriteRefs);
     }
   }
 
@@ -463,20 +441,20 @@ public class RefcountPass implements OptimizerPass {
       Set<Var> alreadyAdded = new HashSet<Var>();
       
       for (Var keepOpen: cont.getKeepOpenVars()) {
-        assert (RefCounting.hasWriteRefCount(keepOpen));
+        assert (RefCounting.trackWriteRefCount(keepOpen));
         alreadyAdded.add(keepOpen);
         increments.writeIncr(keepOpen, incr);
       }
 
       for (PassedVar passedIn: cont.getAllPassedVars()) {
         logger.trace(cont.getType() + ": passedIn: " + passedIn.var.name());
-        if (!passedIn.writeOnly && RefCounting.hasReadRefCount(passedIn.var)) {
+        if (!passedIn.writeOnly && RefCounting.trackReadRefCount(passedIn.var)) {
           increments.readIncr(passedIn.var, incr);
           alreadyAdded.add(passedIn.var);
         }
       }
       for (BlockingVar blockingVar: cont.blockingVars(false)) {
-        if (RefCounting.hasReadRefCount(blockingVar.var) &&
+        if (RefCounting.trackReadRefCount(blockingVar.var) &&
              !alreadyAdded.contains(blockingVar.var)) {
           increments.readIncr(blockingVar.var, incr);
         }
@@ -489,84 +467,28 @@ public class RefcountPass implements OptimizerPass {
 
   private void updateIncrementsPassIntoForeach(RCTracker increments,
       AbstractForeachLoop foreach) {
-    /*
-     * Hold a refcount until we get to this loop: do a switcheroo where 
-     * we pull an increment into the outer block, and balance by adding
-     * a decrement to loop.
-     */
+    long iterCount = foreach.constIterCount();
+    if (iterCount >= 0) {
+      // Constant iteration count: can hoist out increment
+      ListIterator<RefCount> it = foreach.startIncrementIterator();
+      while (it.hasNext()) {
+        RefCount rc = it.next();
+        if (rc.amount.isIntVal()) {
+          increments.incr(rc.var, rc.type, iterCount * rc.amount.getIntLit());
+          it.remove();
+        }
+      }
+    }
+    
     if (foreach.isAsync()) {
+      /*
+       * Hold a refcount until we get to this loop: do a switcheroo where 
+       * we pull an increment into the outer block, and balance by adding
+       * a decrement to loop.
+       */
       for (RefCount rc: foreach.getStartIncrements()) {
         increments.incr(rc.var, rc.type, 1);
         foreach.addConstantStartIncrement(rc.var, rc.type, Arg.createIntLit(-1));
-      }
-    }
-  }
-
-  /**
-   * Create temporary variables to hold struct aliases
-   * 
-   * @param increments
-   * @param parentAssignedAliasVars
-   */
-  private void addTemporaryStructFields(Block block, RCTracker increments,
-                                        TopDownInfo parentInfo) {
-    // Vars that were created out of order
-    Set<Var> alreadyCreated = new HashSet<Var>();
-    for (Var toCreate: increments.getCreatedTemporaries()) {
-      if (alreadyCreated.contains(toCreate))
-        continue;
-
-      // Keep track of insert position for instruction
-      ListIterator<Statement> insertPos = block.statementIterator();
-
-      AliasKey pathToCreate = increments.getAliases().getCanonical(toCreate);
-
-      Deque<Pair<String, Var>> stack = new ArrayDeque<Pair<String,Var>>();
-      int pos; // Track which the closest existing parent is
-      Var curr = toCreate;
-      for (pos = pathToCreate.pathLength() - 1; pos >= 0; pos--) {
-        stack.push(Pair.create(pathToCreate.structPath[pos], curr));
-        
-        AliasKey parentKey = pathToCreate.prefix(pos);
-        curr = increments.getAliases().findVar(parentKey);
-        assert(curr != null); // Should have been created previously
-        if (alreadyCreated.contains(curr) ||
-            !increments.getCreatedTemporaries().contains(curr)) {
-          // Should already be loaded, don't need to go further
-          break;
-        }
-      }
-      assert(pos >= 0); // At least the root should exist      
-      
-      // Track assigned alias vars in this block so we know where we can
-      // insert lookup instructions
-      TopDownInfo aliasInfo = parentInfo.makeChild();
-      Var parentStruct = curr;
-      // Do lookups in dependency order
-      while (!stack.isEmpty()) {
-        Pair<String, Var> toLookup = stack.pop();
-        String field = toLookup.val1;
-        Var child = toLookup.val2;
-        
-        // If curr is alias, may not be able to read yet:
-        // must scan down block for location where insert can occur
-        if (curr.storage() == Alloc.ALIAS) {
-          while (!aliasInfo.initAliasVars.contains(parentStruct)) {
-            assert (insertPos.hasNext()) : "Malformed IR, var not init: " +
-                    parentStruct;
-            Statement stmt = insertPos.next();
-            if (stmt.type() == StatementType.INSTRUCTION) {
-              aliasInfo.updateForInstruction(stmt.instruction());
-            }
-          }
-        }
-        Instruction newInst =
-              TurbineOp.structLookup(child, parentStruct, field);
-        insertPos.add(newInst);
-        aliasInfo.updateForInstruction(newInst);
-
-        alreadyCreated.add(child);
-        parentStruct = child;
       }
     }
   }
@@ -872,7 +794,7 @@ public class RefcountPass implements OptimizerPass {
     }
 
     for (PassedVar passedIn: cont.getAllPassedVars()) {
-      if (!passedIn.writeOnly && RefCounting.hasReadRefCount(passedIn.var)) {
+      if (!passedIn.writeOnly && RefCounting.trackReadRefCount(passedIn.var)) {
         increments.readDecr(passedIn.var, amount);
         alreadyAdded.add(passedIn.var);
       }
@@ -880,7 +802,7 @@ public class RefcountPass implements OptimizerPass {
 
     // Hold read reference for wait var if not already present
     for (BlockingVar blockingVar: cont.blockingVars(false)) {
-      if (RefCounting.hasReadRefCount(blockingVar.var) &&
+      if (RefCounting.trackReadRefCount(blockingVar.var) &&
           !alreadyAdded.contains(blockingVar.var)) {
         increments.readDecr(blockingVar.var, amount);
       }
@@ -917,61 +839,6 @@ public class RefcountPass implements OptimizerPass {
       }
     }
     return null;
-  }
-
-  /**
-   * Workaround for Issue #438: just lookup all struct members at top
-   * so that at least the fields are in scope.
-   * @param logger
-   * @param f
-   */
-  @SuppressWarnings("unchecked")
-  private void lookupStructArgMembers(Logger logger, Function f) {
-    Block block = f.mainBlock();
-    ListIterator<Statement> insertPos = block.statementIterator();
-    for (List<Var> args: Arrays.asList(f.getInputList(), f.getOutputList())) {
-      lookupAllStructMembers(block, insertPos, args);
-    }
-  }
-
-  private void lookupAllStructMembers(Block block, List<Var> args) {
-    // Start inserting lookups at top
-    lookupAllStructMembers(block, block.statementIterator(), args);
-  }
-  
-  private void lookupAllStructMembers(Block block,
-      ListIterator<Statement> insertPos, List<Var> args) {
-    for (Var arg: args) {
-      if (Types.isStruct(arg)) {
-        lookupAllStructMembers(block, insertPos, arg);
-      }
-    }
-  }
-
-  private void lookupAllStructMembers(Block block,
-          ListIterator<Statement> insertPos, Var arg) {
-    assert(Types.isStruct(arg));
-    StructType st = (StructType)arg.type().getImplType();
-    for (StructField field: st.getFields()) {
-      // Fetch field
-      String fieldVarName = block.uniqueVarName(
-                              Var.structFieldName(arg, field.getName()));
-      Var fieldVar = block.declareUnmapped(field.getType(), fieldVarName,
-               Alloc.ALIAS, DefType.LOCAL_COMPILER,
-               VarProvenance.structField(arg, field.getName()));
-      Instruction inst = TurbineOp.structLookup(fieldVar, arg, field.getName());
-      if (logger.isTraceEnabled()) {
-        logger.trace("Added struct loop for arg " + arg + "." + field.getName()
-                     + ": " + inst); 
-      }
-      insertPos.add(inst);
-      inst.setParent(block);
-      
-      // Recurse on all fields
-      if (Types.isStruct(field.getType())) {
-        lookupAllStructMembers(block, insertPos, fieldVar);
-      }
-    }
   }
 
   /**

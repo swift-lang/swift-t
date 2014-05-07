@@ -40,6 +40,12 @@ import exm.stc.common.util.Pair;
  * */
 public class Settings
 {
+  
+  // Whether we're using no engine
+  // TODO: remove eventually
+  public static boolean NO_TURBINE_ENGINE = false;
+  public static final String NO_TURBINE_ENGINE_KEY = "stc.turbine.no-engine";
+  
   public static final String TURBINE_VERSION = "stc.turbine.version";
   public static final String DEBUG_LEVEL = "stc.debugging";
 
@@ -53,7 +59,7 @@ public class Settings
   public static final String OPT_VALUE_NUMBER = "stc.opt.value-number";
   public static final String OPT_FINALIZED_VAR = "stc.opt.finalized-var";
   public static final String OPT_ALGEBRA = "stc.opt.algebra";
-  public static final String OPT_EXPAND_DATAFLOW_OPS = "stc.opt.expand-dataflow-ops";
+  public static final String OPT_DATAFLOW_OP_INLINE = "stc.opt.dataflow-op-inline";
   public static final String OPT_WAIT_COALESCE = "stc.opt.wait-coalesce";
   public static final String OPT_PIPELINE = "stc.opt.pipeline";
   public static final String OPT_CONTROLFLOW_FUSION =
@@ -87,6 +93,7 @@ public class Settings
   public static final String OPT_REORDER_INSTS = "stc.opt.reorder-insts";
   public static final String OPT_ARRAY_BUILD = "stc.opt.array-build";
   public static final String OPT_LOOP_SIMPLIFY = "stc.opt.loop-simplify";
+  public static final String OPT_PROPAGATE_ALIASES = "stc.opt.propagate-aliases";
   
   public static final String OPT_MERGE_REFCOUNTS = "stc.opt.merge-refcounts";
   public static final String OPT_CANCEL_REFCOUNTS = "stc.opt.cancel-refcounts";
@@ -139,6 +146,7 @@ public class Settings
     defaults.setProperty(TURBINE_VERSION, "0.0.5");
     defaults.setProperty(DEBUG_LEVEL, "COMMENTS");
     defaults.setProperty(IC_OUTPUT_FILE, "");
+    defaults.setProperty(NO_TURBINE_ENGINE_KEY, "true");
     defaults.setProperty(RPATH, "");
     defaults.setProperty(INPUT_FILENAME, "");
     defaults.setProperty(OUTPUT_FILENAME, "");
@@ -165,8 +173,8 @@ public class Settings
     defaults.setProperty(OPT_DISABLE_ASSERTS, "false");
     defaults.setProperty(OPT_VALUE_NUMBER, "true");
     defaults.setProperty(OPT_FINALIZED_VAR, "true");
-    defaults.setProperty(OPT_ALGEBRA, "false");
-    defaults.setProperty(OPT_EXPAND_DATAFLOW_OPS, "true");
+    defaults.setProperty(OPT_ALGEBRA, "true");
+    defaults.setProperty(OPT_DATAFLOW_OP_INLINE, "true");
     defaults.setProperty(OPT_WAIT_COALESCE, "true");
     defaults.setProperty(OPT_PIPELINE, "false");
     defaults.setProperty(OPT_CONTROLFLOW_FUSION, "true");
@@ -177,6 +185,7 @@ public class Settings
     defaults.setProperty(OPT_REORDER_INSTS, "false");
     defaults.setProperty(OPT_ARRAY_BUILD, "true");
     defaults.setProperty(OPT_LOOP_SIMPLIFY, "true");
+    defaults.setProperty(OPT_PROPAGATE_ALIASES, "true");
     defaults.setProperty(OPT_MERGE_REFCOUNTS, "true");
     defaults.setProperty(OPT_CANCEL_REFCOUNTS, "true");
     defaults.setProperty(OPT_PIGGYBACK_REFCOUNTS, "true");
@@ -298,6 +307,7 @@ public class Settings
    */
   private static void validateProperties() throws InvalidOptionException {
     // Check that boolean values are correct
+    NO_TURBINE_ENGINE = getBoolean(NO_TURBINE_ENGINE_KEY);
     getBoolean(OPT_FLATTEN_NESTED);
     getBoolean(OPT_CONSTANT_FOLD);
     getBoolean(OPT_DEAD_CODE_ELIM);
@@ -305,7 +315,7 @@ public class Settings
     getBoolean(OPT_VALUE_NUMBER);
     getBoolean(OPT_FINALIZED_VAR);
     getBoolean(OPT_ALGEBRA);
-    getBoolean(OPT_EXPAND_DATAFLOW_OPS);
+    getBoolean(OPT_DATAFLOW_OP_INLINE);
     getBoolean(OPT_WAIT_COALESCE);
     getBoolean(OPT_PIPELINE);
     getBoolean(OPT_CONTROLFLOW_FUSION);
@@ -319,6 +329,7 @@ public class Settings
     getBoolean(OPT_FULL_UNROLL);
     getBoolean(OPT_ARRAY_BUILD);
     getBoolean(OPT_LOOP_SIMPLIFY);
+    getBoolean(OPT_PROPAGATE_ALIASES);
     getLong(OPT_EXPAND_LOOP_THRESHOLD_ITERS);
     getLong(OPT_UNROLL_LOOP_THRESHOLD_ITERS);
     getLong(OPT_EXPAND_LOOP_THRESHOLD_INSTS);

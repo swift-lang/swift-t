@@ -15,15 +15,17 @@
  */
 package exm.stc.ic.opt.valuenumber;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Types.Typed;
 import exm.stc.common.lang.Var;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
@@ -46,6 +48,8 @@ public class ComputedValue<T> {
    * they should be put in a canonical sorted order
    */
   
+  public static final Object NO_SUBOP = "";
+
   /**
    * Define a notion of congruence between locations with the same computed
    * value.
@@ -56,8 +60,8 @@ public class ComputedValue<T> {
     // Matching ComputedValues indicates that locations are aliases for
     // each other.  E.g. writing to either location gives same result.
     ALIAS,
-  };
-  
+  }
+
   final Opcode op;
 
   /**
@@ -80,11 +84,11 @@ public class ComputedValue<T> {
   }
   
   public ComputedValue(Opcode op, List<T> inputs) {
-    this(op, "", inputs);
+    this(op, NO_SUBOP, inputs);
   }
   
   public ComputedValue(Opcode op, T input) {
-    this(op, "", Collections.singletonList(input));
+    this(op, NO_SUBOP, Collections.singletonList(input));
   }
 
 
@@ -180,53 +184,50 @@ public class ComputedValue<T> {
    * @param src
    * @return null if cannot be fetched
    */
-  public static ArgCV retrieveCompVal(Var src) {
+  public static ArgCV retrieveCompVal(Var src, boolean recursive) {
     Type srcType = src.type();
-    Opcode op = Opcode.retrieveOpcode(srcType);
+    Opcode op = Opcode.retrieveOpcode(srcType, recursive);
     if (op == null) {
       return null;
     }
     return new ArgCV(op, Arrays.asList(src.asArg()));
   }
 
-  public static ValLoc assignComputedVal(Var dst, Arg val,
-                                         IsAssign isAssign) {
-    Type dstType = dst.type();
-    if (Types.isPrimValue(dstType)) {
-        BuiltinOpcode op;
-        switch(dstType.primType()) {
-        case BOOL:
-          op = BuiltinOpcode.COPY_BOOL;
-          break;
-        case INT:
-          op = BuiltinOpcode.COPY_INT;
-          break;
-        case FLOAT:
-          op = BuiltinOpcode.COPY_FLOAT;
-          break;
-        case STRING:
-          op = BuiltinOpcode.COPY_STRING;
-          break;
-        case BLOB:
-          op = BuiltinOpcode.COPY_BLOB;
-          break;
-        case VOID:
-          op = BuiltinOpcode.COPY_VOID;
-          break;
-        default:
-          throw new STCRuntimeError("Unhandled type: " + dstType);
-        }
-        return ValLoc.buildResult(Opcode.LOCAL_OP, 
-            op.toString(), Arrays.asList(val), dst.asArg(), Closed.MAYBE_NOT,
-            isAssign);
+  public static ArgCV assignCompVal(Typed dst, Arg src, boolean recursive) {
+    if (recursive) {
+      assert(src.type().assignableTo(
+             Types.unpackedContainerType(dst)));
+
     } else {
-      Opcode op = Opcode.assignOpcode(dstType);
-      if (op != null) {
-        return ValLoc.buildResult(op, Arrays.asList(val), dst.asArg(),
-                                  Closed.YES_NOT_RECURSIVE, isAssign);
-      }
+      assert(Types.storeResultType(src, false)
+          .assignableTo(dst.type())) :
+            dst.type() + " <= " + src.type();
     }
-    throw new STCRuntimeError("DOn't know how to assign to " + dst);
+    Opcode op = Opcode.assignOpcode(dst, recursive);
+    if (op != null) {
+      assert(op != Opcode.STORE_FILE); // STORE_FILE has extra info, can't handle here
+      
+      return new ArgCV(op, src.asList());
+    }
+    
+    throw new STCRuntimeError("Don't know how to assign to " + dst
+                              + (recursive ? " recursively" : NO_SUBOP));
+  }
+  
+  public static ArgCV assignFileCompVal(Arg src, Arg setFilename) {
+    assert(Types.isFileVal(src));
+    assert(Types.isBoolVal(setFilename));
+    return new ArgCV(Opcode.STORE_FILE, Arrays.asList(src, setFilename));
+  }
+  
+  public static ValLoc assignValLoc(Var dst, Arg val,
+                           IsAssign isAssign, boolean recursive) {
+    Arg dstArg = dst.asArg();
+    ArgCV cv = assignCompVal(dst, val, recursive);
+    assert(cv != null) : val;
+    
+    Closed closed = recursive ? Closed.YES_RECURSIVE: Closed.YES_NOT_RECURSIVE;
+    return ValLoc.build(cv, dstArg, closed, isAssign);
   }
   
   /**
@@ -242,15 +243,29 @@ public class ComputedValue<T> {
     return this.op == Opcode.LOAD_REF;
   }
   
+  public boolean isRetrieve(boolean includeRecursive) {
+    return this.op.isRetrieve(includeRecursive);
+  }
+
   /**
-   * Computed value to indicate that something is a direct handle
-   * to array contents
+   * Computed value to indicate that something is a copy
    * @param arr
    * @param ix
    * @return
    */
-  public static ArgCV arrayCV(Var arr, Arg ix) {
-    return new ArgCV(Opcode.FAKE, ComputedValue.ARRAY_CONTENTS,
+  public static ArgCV arrayValCopyCV(Var arr, Arg ix) {
+    return new ArgCV(Opcode.FAKE, ComputedValue.ARRAY_ELEM_COPY,
+                              Arrays.asList(arr.asArg(), ix));
+  }
+  
+  /**
+   * Computed value to indicate that something is a direct alias
+   * @param arr
+   * @param ix
+   * @return
+   */
+  public static ArgCV arrayValAliasCV(Var arr, Arg ix) {
+    return new ArgCV(Opcode.FAKE, ComputedValue.ARRAY_ELEM_ALIAS,
                               Arrays.asList(arr.asArg(), ix));
   }
 
@@ -261,24 +276,33 @@ public class ComputedValue<T> {
    * @param ix
    * @return
    */
-  public static ArgCV arrayRefCV(Var arr, Arg ix) {
-    return new ArgCV(Opcode.FAKE,
-        ComputedValue.REF_TO_ARRAY_CONTENTS, Arrays.asList(arr.asArg(), ix));
+  public static ArgCV arrayValCV(Var arr, Arg ix) {
+    String subop = arrayValSubop(arr);
+    return new ArgCV(Opcode.FAKE, subop, Arrays.asList(arr.asArg(), ix));
+  }
+
+  /**
+   * We have different subops depending on array type, in order to distinguish
+   * between the casees where alias and value congruence occur.
+   * @param arrType
+   * @return
+   */
+  private static String arrayValSubop(Typed arrType) {
+    if (Types.isRef(Types.containerElemType(arrType))) {
+      return ARRAY_ELEM_VALUE_REF;  
+    } else {
+      return ARRAY_ELEM_VALUE_SCALAR;
+    }
   }
 
   public static ArgCV arrayRefNestedCV(Var arr, Arg ix) {
     return new ArgCV(Opcode.FAKE, 
-        ComputedValue.REF_TO_ARRAY_NESTED, Arrays.asList(arr.asArg(), ix));
+        ComputedValue.ARRAY_NESTED_REF, Arrays.asList(arr.asArg(), ix));
   }
 
   public static ArgCV arrayNestedCV(Var arr, Arg ix) {
     return new ArgCV(Opcode.FAKE, ComputedValue.ARRAY_NESTED,
         Arrays.asList(arr.asArg(), ix));
-  }
-  
-  public static ArgCV structMemberCV(Var struct, String fieldName) {
-    return new ArgCV(Opcode.STRUCT_LOOKUP, 
-            Arrays.asList(struct.asArg(), Arg.createStringLit(fieldName)));
   }
   
   public boolean isCopy() {
@@ -289,54 +313,163 @@ public class ComputedValue<T> {
     return this.op == Opcode.FAKE && this.subop.equals(ALIAS_OF); 
   }
   
-  public boolean isArrayMember() {
-    return (op == Opcode.FAKE && subop.equals(ComputedValue.ARRAY_NESTED)) ||
-           (op == Opcode.FAKE && subop.equals(ComputedValue.ARRAY_CONTENTS));
+
+  public boolean isArrayMemberAlias() {
+    return (op == Opcode.FAKE && subop.equals(ARRAY_ELEM_ALIAS));
   }
   
-  public boolean isArrayMemberRef() {
-    return (op == Opcode.FAKE && 
-          subop.equals(ComputedValue.REF_TO_ARRAY_NESTED)) ||
-        (op == Opcode.FAKE &&
-          subop.equals(ComputedValue.REF_TO_ARRAY_CONTENTS));
+  public boolean isArrayMemberVal() {
+    return isArrayMemberValScalar() || isArrayMemberValRef();
   }
   
   /**
-   * Convert a Array Member Ref to an Array Member value.
+   * If it represents an array member that is a reference to something
    * @return
    */
-  public static ArgCV derefArrayMemberRef(ArgCV memRef) {
-    assert(memRef.isArrayMemberRef());
-    Object newSubop;
-    if (memRef.subop.equals(REF_TO_ARRAY_NESTED)) {
-      newSubop = ARRAY_NESTED;
-    } else {
-      assert(memRef.subop.equals(REF_TO_ARRAY_CONTENTS));
-      newSubop = ARRAY_CONTENTS;
-    }
-    return new ArgCV(Opcode.FAKE, newSubop, memRef.inputs);
-  }
-
-
-  public List<T> componentOf() {
-    if (isArrayMember() || isArrayMemberRef()) {
-      return Collections.singletonList(inputs.get(0));
-    } else if (isCopy() || isAlias()) {
-      return Collections.singletonList(inputs.get(0));
-    } else if (isDerefCompVal()) {
-      return Collections.singletonList(inputs.get(0));
-    } else if (isStructMember()) {
-      return Collections.singletonList(inputs.get(0));
-    }
-    return Collections.emptyList();
+  public boolean isArrayMemberValRef() {
+    return (op == Opcode.FAKE && subop.equals(ComputedValue.ARRAY_NESTED)) ||
+           (op == Opcode.FAKE &&
+                         subop.equals(ComputedValue.ARRAY_ELEM_VALUE_REF));
   }
   
-  public boolean isStructMember() {
-    return op == Opcode.STRUCT_LOOKUP;
+  /**
+   * If it represents a scalar array member
+   * @return
+   */
+  public boolean isArrayMemberValScalar() {
+    return (op == Opcode.FAKE &&
+            subop.equals(ComputedValue.ARRAY_ELEM_VALUE_SCALAR));
+  }
+  
+  public boolean isArrayMember() {
+    return (op == Opcode.FAKE && 
+          subop.equals(ComputedValue.ARRAY_NESTED_REF)) ||
+        (op == Opcode.FAKE &&
+          subop.equals(ComputedValue.ARRAY_ELEM_COPY)) ||
+          isArrayMemberAlias();
+  }
+  
+  /**
+   * Convert a Array Member to an Array Member value.
+   * @return
+   */
+  public static ArgCV derefArrayMember(ArgCV mem) {
+    assert(mem.isArrayMember());
+    Object newSubop;
+    if (mem.subop.equals(ARRAY_NESTED_REF)) {
+      newSubop = ARRAY_NESTED;
+    } else {
+      assert(mem.subop.equals(ARRAY_ELEM_COPY) ||
+             mem.subop.equals(ARRAY_ELEM_ALIAS));
+      newSubop = arrayValSubop(mem.getInput(0));
+    }
+    return new ArgCV(Opcode.FAKE, newSubop, mem.inputs);
+  }
+
+  public static ArgCV arrayContainsCV(Var arr, Arg key) {
+    assert(Types.isArray(arr) || Types.isArrayRef(arr) ||
+           Types.isArrayLocal(arr)) : arr;
+    assert(Types.isArrayKeyVal(arr, key) ||
+            Types.isArrayKeyFuture(arr, key));
+    Opcode op = Types.isArray(arr) ? Opcode.ARR_CONTAINS :
+                               Opcode.ARR_LOCAL_CONTAINS;
+    ArgCV cv = new ArgCV(op, Arrays.asList(arr.asArg(), key));
+    return cv;
+  }
+  
+  public boolean isArrayContains() {
+    return op == Opcode.ARR_CONTAINS || op == Opcode.ARR_LOCAL_CONTAINS;
+  }
+  
+  /**
+   * Computed Value for alias of struct
+   * @param struct
+   * @param fieldName
+   * @return
+   */
+  public static ArgCV structFieldAliasCV(Var struct, List<Arg> fieldNames) {
+    List<Arg> inputs = structFieldInputs(struct, fieldNames);
+    return new ArgCV(Opcode.STRUCT_CREATE_ALIAS, inputs);
+  }
+  
+  
+  /**
+   * Computed Value for something with same value as field of struct
+   * @param struct
+   * @param fieldName
+   * @return
+   */
+  public static ArgCV structFieldCopyCV(Var struct, List<Arg> fieldNames) {
+    List<Arg> inputs = structFieldInputs(struct, fieldNames);
+    return new ArgCV(Opcode.STRUCT_COPY_OUT, inputs);
+  }
+  
+  /**
+   * Computed Value for value of field of struct
+   * @param struct
+   * @param fieldName
+   * @return
+   */
+  public static ArgCV structFieldValCV(Var struct, List<Arg> fieldNames) {
+    List<Arg> inputs = structFieldInputs(struct, fieldNames);
+    
+    Typed fieldType;
+    try {
+      fieldType = Types.structFieldType(struct,
+                      Arg.extractStrings(fieldNames));
+    } catch (TypeMismatchException e) {
+      throw new STCRuntimeError(e.getMessage());
+    }
+    if (Types.isRef(fieldType)) {
+      return new ArgCV(Opcode.FAKE, STRUCT_FIELD_VALUE_REF,  inputs);
+    } else {
+      return new ArgCV(Opcode.STRUCT_RETRIEVE_SUB, inputs);
+    }
+  }
+
+  /**
+   * Helper to convert struct fields to input list
+   * @param struct
+   * @param fieldNames
+   * @return
+   */
+  private static List<Arg> structFieldInputs(Var struct, List<Arg> fieldNames) {
+    List<Arg> inputs = new ArrayList<Arg>(fieldNames.size() + 1);
+    inputs.add(struct.asArg());
+    for (Arg fieldName: fieldNames) {
+      assert(fieldName.isStringVal()) : fieldName;
+      inputs.add(fieldName);
+    }
+    return inputs;
+  }
+
+  public boolean isStructFieldAlias() {
+    return op == Opcode.STRUCT_CREATE_ALIAS;
+  }
+  
+  public boolean isStructFieldCopy() {
+    return op == Opcode.STRUCT_CREATE_ALIAS;
+  }
+    
+  /**
+   * If it represents an struct member that is a reference to something
+   * @return
+   */
+  public boolean isStructFieldVal() {
+    return op == Opcode.STRUCT_RETRIEVE_SUB;
+  }
+  
+  /**
+   * If it represents an array member that is a reference to something
+   * @return
+   */
+  public boolean isStructFieldValRef() {
+    return (op == Opcode.FAKE &&
+                         subop.equals(ComputedValue.STRUCT_FIELD_VALUE_REF));
   }
   
   public boolean canSubstituteInputs(CongruenceType congType) {
-    if (op == Opcode.GET_FILENAME || op == Opcode.GET_FILENAME_VAL) {
+    if (op == Opcode.GET_FILENAME_ALIAS || op == Opcode.GET_FILENAME_VAL) {
       if (congType == CongruenceType.VALUE) {
         // Even if two file variables are congruent by value, they may
         // have different filename
@@ -353,9 +486,9 @@ public class ComputedValue<T> {
    * @param file
    * @return
    */
-  public static ArgCV filenameCV(Var file) {
+  public static ArgCV filenameAliasCV(Var file) {
     assert(Types.isFile(file));
-    return new ArgCV(Opcode.GET_FILENAME, file.asArg().asList());
+    return new ArgCV(Opcode.GET_FILENAME_ALIAS, file.asArg().asList());
   }
   
   /**
@@ -378,8 +511,8 @@ public class ComputedValue<T> {
     return new ArgCV(Opcode.GET_LOCAL_FILENAME, file.asArg().asList());
   }
   
-  public boolean isFilenameCV() {
-    return op == Opcode.GET_FILENAME;
+  public boolean isFilenameAliasCV() {
+    return op == Opcode.GET_FILENAME_ALIAS;
   }
   
   public boolean isFilenameValCV() {
@@ -390,14 +523,37 @@ public class ComputedValue<T> {
     return op == Opcode.GET_LOCAL_FILENAME;
   }
   
+  public static ArgCV containerSizeCV(Var arr, boolean async) {
+    boolean isLocal = Types.isContainerLocal(arr);
+    assert(Types.isContainer(arr) ||
+           isLocal) : arr;
+    
+    if (async) {
+      assert(!isLocal);
+      return new ArgCV(Opcode.FAKE, CONTAINER_SIZE_FUTURE,
+                       arr.asArg().asList());
+    } else {
+      Opcode op = isLocal ? Opcode.CONTAINER_LOCAL_SIZE :
+                            Opcode.CONTAINER_SIZE;
+      return new ArgCV(op, arr.asArg());
+    }
+  }
+
   /**
    * @return the equivalence type of this computed value,
    *         assuming it wasn't copied
    */
   public CongruenceType congType() {
-    if (isAlias() || isArrayMember() ||
-        op == Opcode.LOAD_REF || isStructMember() ||
-        op == Opcode.GET_FILENAME) {
+    if (isAlias() || op == Opcode.LOAD_REF ||
+        op == Opcode.GET_FILENAME_ALIAS) {
+      return CongruenceType.ALIAS;
+    } else if (isArrayMemberAlias()) {
+      return CongruenceType.ALIAS;
+    } else if (isArrayMemberValRef()) {
+      return CongruenceType.ALIAS;
+    } else if (isStructFieldAlias()) { 
+      return CongruenceType.ALIAS;
+    } else if (isStructFieldValRef()) {
       return CongruenceType.ALIAS;
     }
     // Assume value equivalence unless otherwise known
@@ -405,15 +561,35 @@ public class ComputedValue<T> {
   }
   
   /* Special subop strings to use with fake opcode */
-  public static final String ARRAY_SIZE_FUTURE = "array_size_future";
-  public static final String ARRAY_SIZE_VAL = "array_size_val";
-  public static final String ARRAY_CONTENTS = "array_contents";
-  public static final String REF_TO_ARRAY_CONTENTS = "ref_to_array_contents";
+  
+  /**
+   * Direct alias of array member
+   */
+  public static final String ARRAY_ELEM_ALIAS = "array_elem_alias";
+  
+  /**
+   * Copy of array member
+   */
+  public static final String ARRAY_ELEM_COPY = "array_elem_copy";
+  
+  /**
+   * Value of array element when scalar
+   */
+  public static final String ARRAY_ELEM_VALUE_SCALAR = "array_elem_value_scalar";
+  /**
+   * Value of array element when reference to something else
+   */
+  public static final String ARRAY_ELEM_VALUE_REF = "array_elem_value_ref";
+  
+  public static final String STRUCT_FIELD_VALUE_REF = "struct_field_value_ref";
+  
   public static final String ARRAY_NESTED = "autocreated_nested";
-  public static final String REF_TO_ARRAY_NESTED = "ref_to_autocreated_nested";
+  public static final String ARRAY_NESTED_REF = "autocreated_nested_ref";
   public static final String COPY_OF = "copy_of";
   public static final String ALIAS_OF = "alias_of";
 
+  private static final String CONTAINER_SIZE_FUTURE = "container_size_future";
+  
   /**
    * Shorter class name for ComputedValue parameterized with Args
    */

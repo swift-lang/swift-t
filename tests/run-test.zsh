@@ -2,7 +2,7 @@
 
 # usage: run-test <OPTIONS> <PROGRAM> <OUTPUT>
 # turbine must be in your PATH or in TURBINE
-#         or installed in TURBINE_HOME
+#         or installed in TURBINE_HOME or TURBINE_INSTALL
 # Set VALGRIND=/path/to/valgrind to run valgrind (Turbine feature)
 
 # Defaults:
@@ -58,6 +58,17 @@ then
   fi
 fi
 
+if [[ ${TURBINE_INSTALL} != "" ]]
+then
+  TURBINE=${TURBINE_INSTALL}/bin/turbine
+  if [[ ! -x ${TURBINE} ]]
+  then
+    print "Bad TURBINE_INSTALL!"
+    print "Not executable: ${TURBINE}"
+    exit 1
+  fi
+fi
+
 # Look for Turbine in PATH
 if [[ ${TURBINE} == "" ]]
   then
@@ -74,6 +85,10 @@ PROCS=$(( ENGINES + SERVERS + WORKERS ))
 # Setup environment variables to get info out of ADLB
 export ADLB_PERF_COUNTERS=${ADLB_PERF_COUNTERS:-true}
 export ADLB_PRINT_TIME=true
+
+# Setup environment vars for Turbine size
+export TURBINE_ENGINES=${ENGINES}
+export ADLB_SERVERS=${SERVERS}
 
 # Run Turbine:
 TURBINE_ARGS="-l ${TURBINE_VERBOSE} -n ${PROCS}"

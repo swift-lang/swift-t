@@ -1,2 +1,7 @@
 Conditional jump or move depends
 Invalid free
+Mismatched free
+Invalid read
+Invalid write
+Source and destination
+definitely lost: [^0]

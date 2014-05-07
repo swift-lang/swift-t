@@ -27,14 +27,15 @@ fi
 
 COMPILER_OPTS=()
 O0_OPTS=()
-O1_OPTS=("constant-fold" "dead-code-elim" "value-number" "finalized-var"
+O1_OPTS=("constant-fold" "dead-code-elim" "value-number" "algebra"
+         "finalized-var"
          "flatten-nested" "shared-constants" "unroll-loops"
-         "controlflow-fusion"
+         "controlflow-fusion" "propagate-aliases"
          "merge-refcounts" "cancel-refcounts" "piggyback-refcounts"
          "batch-refcounts" "hoist-refcounts")
-O2_OPTS=("expand-dataflow-ops" "wait-coalesce" "hoisting" "expand-loops"
+O2_OPTS=("dataflow-op-inline" "wait-coalesce" "hoisting"
          "function-signature" "array-build" "loop-simplify")
-O3_OPTS=("pipeline" "function-inline" "reorder-insts" "algebra" "full-unroll")
+O3_OPTS=("pipeline" "function-inline" "reorder-insts" "expand-loops" "full-unroll")
 EXPERIMENTAL_OPTS=()
 
 # OUTPUT_MODE= turbine or cpp
@@ -73,7 +74,7 @@ function get_compiler_opt_name() {
         algebra) echo "stc.opt.algebra"
                     return 0
                     ;;
-        expand-dataflow-ops) echo "stc.opt.expand-dataflow-ops"
+        dataflow-op-inline) echo "stc.opt.dataflow-op-inline"
                     return 0
                     ;;
         wait-coalesce) echo "stc.opt.wait-coalesce"
@@ -115,6 +116,9 @@ function get_compiler_opt_name() {
         loop-simplify) echo "stc.opt.loop-simplify"
                     return 0
                     ;;
+        propagate-aliases) echo "stc.opt.propagate-aliases"
+                    return 0
+                    ;;
         merge-refcounts) echo "stc.opt.merge-refcounts"
                     return 0
                     ;;
@@ -133,7 +137,9 @@ function get_compiler_opt_name() {
         array-switcheroo) echo "stc.array-ref-switcheroo"
                     return 0
                     ;;
-
+        no-engine) echo "stc.turbine.no-engine"
+                    return 0
+                    ;;
         no-stack)   echo "stc.codegen.no-stack"
                     return 0
                     ;;

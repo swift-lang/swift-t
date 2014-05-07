@@ -1,4 +1,3 @@
-// THIS-TEST-SHOULD-NOT-COMPILE
 // Don't support waiting on struct (for now...)
 // This should fail gracefully
 

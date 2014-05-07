@@ -20,7 +20,6 @@ import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Types.RefType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.Alloc;
 import exm.stc.frontend.tree.Assignment;
 import exm.stc.frontend.tree.Assignment.AssignOp;
 import exm.stc.frontend.tree.LValue;
@@ -77,8 +76,6 @@ public class LValWalker {
       if (walkMode != WalkMode.ONLY_DECLARATIONS) {
         // the variable we will evaluate expression into
         context.syncFilePos(lVal.tree, lineMapping);
-        backend.addComment("Swift l." + context.getLine()
-            + ": assigning expression to " + lVal.toString());
 
         // First do typechecking
         Type lValType = lVal.getType(context);
@@ -297,19 +294,27 @@ public class LValWalker {
     }
     final int structPathLen = structPathIndex;
 
-    Var curr = rootVar;
-    for (int i = 0; i < structPathLen; i++) {
-      List<String> currPath = fieldPath.subList(0, i + 1);
-      Var next = varCreator.createStructFieldTmp(context, rootVar,
-          lval.getType(context, i + 1), currPath, Alloc.ALIAS);
 
-      backend.structLookup(next, curr, fieldPath.get(i));
-      LogHelper
-          .trace(context, "Lookup " + curr.name() + "." + fieldPath.get(i));
-      curr = next;
+    Type fieldType = lval.getType(context, structPathLen);
+
+    Var field = varCreator.createStructFieldAlias(context, rootVar,
+                                          fieldType, fieldPath);
+
+    if (VarRepr.storeRefInStruct(fieldType)) {
+      // Lookup ref stored in struct
+      backend.structRetrieveSub(VarRepr.backendVar(field),
+                  VarRepr.backendVar(rootVar), fieldPath);
+    } else {
+      // Create an alias to data stored in struct
+      backend.structCreateAlias(VarRepr.backendVar(field),
+                  VarRepr.backendVar(rootVar), fieldPath);
+
     }
-    LValue newTarget = new LValue(lval, lval.tree, curr, lval.indices.subList(
-        structPathLen, lval.indices.size()));
+    
+    List<SwiftAST> indicesLeft =
+          lval.indices.subList(structPathLen, lval.indices.size());
+      LValue newTarget = new LValue(lval, lval.tree, field, indicesLeft);
+      
     LogHelper.trace(context, "Transform target " + lval.toString() + "<"
         + lval.getType(context).toString() + "> to " + newTarget.toString()
         + "<" + newTarget.getType(context).toString() + "> by looking up "
@@ -338,14 +343,23 @@ public class LValWalker {
       throws TypeMismatchException, UserException, UndefinedTypeException {
     assert (lval.indices.size() == 1);
     assert (Types.isArray(lval.var) || Types.isArrayRef(lval.var));
-    Var outerArray = lval.getOuterArray();
-    assert (Types.isArray(outerArray));
 
     // Check that it is a valid array
     final Var arr = lval.var;
 
     // Find or create variable to store expression result
-    boolean rValIsRef = Types.isRef(rValVar);
+    
+    // Work out whether we store or copy in result.
+    // E.g. if we store ints inline in container, storage type is int,
+    //      and we can store directly if we have a $int, or copy if we have
+    //      an int rval
+    Type elemStorageType = VarRepr.containerElemRepr(
+                    Types.containerElemType(arr), true);
+    boolean rValDeref = !rValVar.type().assignableTo(elemStorageType);
+    if (rValDeref) {
+      assert(rValVar.type().assignableTo(
+                             Types.retrievedType(elemStorageType)));
+    }
 
     // We know what variable the result will go into now
     // Now need to work out the index and generate code to insert the
@@ -362,12 +376,11 @@ public class LValWalker {
     if (Types.isInt(keyType) && literal != null) {
       long arrIx = literal;
       // Add this variable to array
-      backendArrayInsert(arr, arrIx, rValVar, isArrayRef, rValIsRef, outerArray);
+      backendArrayInsert(arr, arrIx, rValVar, isArrayRef, rValDeref);
     } else {
       // Handle the general case where the index must be computed
       Var indexVar = exprWalker.eval(context, indexExpr, keyType, false, null);
-      backendArrayInsert(arr, indexVar, rValVar, isArrayRef, rValIsRef,
-          outerArray);
+      backendArrayInsert(arr, indexVar, rValVar, isArrayRef, rValDeref);
     }
 
   }
@@ -398,24 +411,27 @@ public class LValWalker {
     }
 
     backend.startWaitStatement(
-        context.getFunctionContext().constructName("bag-create-wait"),
-        waitVars, WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
+        context.constructName("bag-create-wait"),
+        VarRepr.backendVars(waitVars), WaitMode.WAIT_ONLY,
+        false, false, TaskMode.LOCAL);
 
     Var derefArr; // Plain array (not reference);
     if (Types.isArrayRef(arr)) {
-      derefArr = varCreator.createTmpAlias(context, Types.derefResultType(arr));
-      backend.retrieveRef(derefArr, arr);
+      derefArr = varCreator.createTmpAlias(context, Types.retrievedType(arr));
+      exprWalker.retrieveRef(VarRepr.backendVar(derefArr),
+                             VarRepr.backendVar(arr), true);
     } else {
       derefArr = arr;
     }
 
-    Var keyVal = varCreator.fetchValueOf(context, key);
+    Var keyVal = exprWalker.retrieveToVar(context, key);
 
     Type bagType = Types.containerElemType(derefArr);
     assert (Types.isBag(bagType));
     Var bag = varCreator.createTmpAlias(context, bagType);
     // create or get nested bag instruction
-    backend.arrayCreateBag(bag, derefArr, keyVal.asArg());
+    backend.arrayCreateBag(VarRepr.backendVar(bag),
+        VarRepr.backendVar(derefArr), VarRepr.backendArg(keyVal));
     backendBagAppend(context, bag, elem);
 
     backend.endWaitStatement();
@@ -442,38 +458,42 @@ public class LValWalker {
     Var mVar; // Variable for member we're looking up
     if (Types.isArray(memberType)) {
       Long literal = Literals.extractIntLit(context, indexExpr);
+      Var backendLValArr = VarRepr.backendVar(lvalArr);
       if (literal != null) {
         long arrIx = literal;
         // Add this variable to array
         if (Types.isArray(lvalArr.type())) {
           mVar = varCreator.createTmpAlias(context, memberType);
-          backend.arrayCreateNestedImm(mVar, lvalArr, Arg.createIntLit(arrIx));
+          backend.arrayCreateNestedImm(VarRepr.backendVar(mVar),
+              backendLValArr, Arg.createIntLit(arrIx));
         } else {
           assert (Types.isArrayRef(lvalArr.type()));
-          mVar = varCreator.createTmp(context, new RefType(memberType));
-          backend.arrayRefCreateNestedImm(mVar, lval.getOuterArray(), lvalArr,
-              Arg.createIntLit(arrIx));
+          mVar = varCreator.createTmp(context, new RefType(memberType, true));
+          backend.arrayRefCreateNestedImm(VarRepr.backendVar(mVar),
+                          backendLValArr, Arg.createIntLit(arrIx));
         }
 
       } else {
         // Handle the general case where the index must be computed
-        mVar = varCreator.createTmp(context, new RefType(memberType));
+        mVar = varCreator.createTmp(context, new RefType(memberType, true));
         Var indexVar = evalKey(context, lvalArr, indexExpr);
 
+        Var backendIx = VarRepr.backendVar(indexVar);
         if (Types.isArray(lvalArr.type())) {
-          backend.arrayCreateNestedFuture(mVar, lvalArr, indexVar);
+          backend.arrayCreateNestedFuture(VarRepr.backendVar(mVar),
+                                        backendLValArr, backendIx);
         } else {
           assert (Types.isArrayRef(lvalArr.type()));
-          backend.arrayRefCreateNestedFuture(mVar, lval.getOuterArray(),
-              lvalArr, indexVar);
+          backend.arrayRefCreateNestedFuture(VarRepr.backendVar(mVar),
+                                            backendLValArr, backendIx);
         }
       }
     } else {
       /*
-       * Retrieve non-array member must use reference because we might have to
-       * wait for the result to be inserted
+       * Retrieving a member that isn't a container type must use reference
+       * because we might have to wait for the result to be inserted
        */
-      mVar = varCreator.createTmp(context, new RefType(memberType));
+      mVar = varCreator.createTmp(context, new RefType(memberType, true));
     }
 
     return new LValue(lval, lval.tree, mVar, lval.indices.subList(1,
@@ -514,37 +534,47 @@ public class LValWalker {
     return indexExpr.child(0);
   }
 
-  private void backendArrayInsert(final Var arr, long ix, Var member,
-              boolean isArrayRef, boolean rvalIsRef, Var outermostArray) {
-    if (isArrayRef && rvalIsRef) {
-      // This should only be run when assigning to nested array
-      backend.arrayRefDerefInsertImm(outermostArray, arr,
-                         Arg.createIntLit(ix), member);
-    } else if (isArrayRef && !rvalIsRef) {
-      // This should only be run when assigning to nested array
-      backend.arrayRefInsertImm(outermostArray, arr, Arg.createIntLit(ix),
-                                member);
-    } else if (!isArrayRef && rvalIsRef) {
-      backend.arrayDerefInsertImm(arr, Arg.createIntLit(ix),  member);
+  private void backendArrayInsert(Var arr, long ix, Var member,
+              boolean isArrayRef, boolean rValIsVal) {
+    Var backendArr = VarRepr.backendVar(arr);
+    Var backendMember = VarRepr.backendVar(member);
+    Arg ixArg = Arg.createIntLit(ix);
+    if (isArrayRef) {
+      if (rValIsVal) {
+        backend.arrayRefStoreImm(backendArr, ixArg,  backendMember.asArg());
+      } else {
+        // This should only be run when assigning to nested array
+        backend.arrayRefCopyInImm(backendArr, ixArg, backendMember);
+      }
     } else {
-      assert(!isArrayRef && !rvalIsRef);
-      backend.arrayInsertImm(arr, Arg.createIntLit(ix),  member);
+      assert(!isArrayRef);
+      if (rValIsVal) {
+        backend.arrayStore(backendArr, ixArg, backendMember.asArg());
+      } else {
+        backend.arrayCopyInImm(backendArr, ixArg, backendMember);
+      }
     }
   }
   
   private void backendArrayInsert(Var arr, Var ix, Var member,
-      boolean isArrayRef, boolean rvalIsRef, Var outermostArray) {
-    if (isArrayRef && rvalIsRef) {
-      backend.arrayRefDerefInsertFuture(outermostArray, arr, 
-                                        ix, member);
-    } else if (isArrayRef && !rvalIsRef) {
-      backend.arrayRefInsertFuture(outermostArray, arr, 
-                                        ix, member);
-    } else if (!isArrayRef && rvalIsRef) {
-      backend.arrayDerefInsertFuture(arr, ix, member);
+                                  boolean isArrayRef, boolean rValIsVal) {
+    Var backendArr = VarRepr.backendVar(arr);
+    Var backendIx = VarRepr.backendVar(ix);
+    Var backendMember = VarRepr.backendVar(member);
+    if (isArrayRef) {
+      if (rValIsVal) {
+        backend.arrayRefStoreFuture(backendArr, backendIx,
+                                    backendMember.asArg());
+      } else {
+        backend.arrayRefCopyInFuture(backendArr, backendIx, backendMember);
+      }
     } else {
-      assert(!isArrayRef && !rvalIsRef);
-      backend.arrayInsertFuture(arr, ix, member);
+      assert(!isArrayRef);
+      if (rValIsVal) {
+        backend.arrayStoreFuture(backendArr, backendIx, backendMember.asArg());
+      } else {
+        backend.arrayCopyInFuture(backendArr, backendIx, backendMember);
+      }
     }
   }
 
@@ -568,10 +598,10 @@ public class LValWalker {
     
     boolean bagRef = Types.isBagRef(bag);
     boolean elemRef = Types.isRefTo(elem, elemType); 
-    boolean openWait = bagRef || elemRef; 
+    boolean openWait1 = bagRef || elemRef; 
     
     // May need to open wait in order to deal with dereference bag or element
-    if (openWait) {
+    if (openWait1) {
       // Wait, then deref if needed
       String waitName = context.getFunctionContext().constructName(
                                                 "bag-deref-append");
@@ -584,14 +614,15 @@ public class LValWalker {
         waitVars.add(elem);
       }
           
-      backend.startWaitStatement(waitName, waitVars,
+      backend.startWaitStatement(waitName,VarRepr.backendVars(waitVars),
              WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
       
       if (bagRef) {
         // Dereference and use in place
         Var derefedBag = varCreator.createTmpAlias(context,
-                               Types.derefResultType(bag));
-        backend.retrieveRef(derefedBag, bag);
+                               Types.retrievedType(bag));
+        exprWalker.retrieveRef(VarRepr.backendVar(derefedBag),
+                               VarRepr.backendVar(bag), true);
         bag = derefedBag;
       }
       if (elemRef) {
@@ -600,15 +631,33 @@ public class LValWalker {
         
         // Dereference and use in place of old var
         Var derefedElem = varCreator.createTmpAlias(context, elemType);
-        backend.retrieveRef(derefedElem, elem);
+        exprWalker.retrieveRef(VarRepr.backendVar(derefedElem),
+                               VarRepr.backendVar(elem), true);
         elem = derefedElem;
       }
     }
     
-    // Do the actual insert
-    backend.bagInsert(bag, elem);
+    Var elemVal;
+    // May need to add another wait to retrieve value
+    boolean openWait2 = !VarRepr.storeRefInContainer(elem);
+    if (openWait2) {
+      String waitName = context.getFunctionContext().constructName(
+                                                "bag-load-append");
+      backend.startWaitStatement(waitName, VarRepr.backendVars(elem),
+              WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
+      elemVal = exprWalker.retrieveToVar(context, elem);
+    } else {
+      elemVal = elem;
+    }
     
-    if (openWait) {
+    // Do the actual insert
+    backend.bagInsert(VarRepr.backendVar(bag), VarRepr.backendArg(elemVal));
+    
+    if (openWait2) {
+      backend.endWaitStatement();
+    }
+
+    if (openWait1) {
       backend.endWaitStatement();
     }
     return stmtResultVar;

@@ -6,7 +6,6 @@
 #define INVALID_SYNTAX
 
 (int o) t (int i) {
-  int g;
 
   // Check preprocessor runs
   INVALID_SYNTAX

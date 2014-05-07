@@ -15,10 +15,8 @@
  */
 package exm.stc.frontend;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -35,10 +33,11 @@ import exm.stc.common.exceptions.VariableUsageException;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.StackLite;
 import exm.stc.frontend.VariableUsageInfo.Violation;
 import exm.stc.frontend.VariableUsageInfo.ViolationType;
 import exm.stc.frontend.tree.ArrayElems;
@@ -46,6 +45,7 @@ import exm.stc.frontend.tree.ArrayRange;
 import exm.stc.frontend.tree.Assignment;
 import exm.stc.frontend.tree.Assignment.AssignOp;
 import exm.stc.frontend.tree.ForLoopDescriptor;
+import exm.stc.frontend.tree.ForLoopDescriptor.LoopVar;
 import exm.stc.frontend.tree.ForeachLoop;
 import exm.stc.frontend.tree.If;
 import exm.stc.frontend.tree.IterateDescriptor;
@@ -53,9 +53,8 @@ import exm.stc.frontend.tree.LValue;
 import exm.stc.frontend.tree.Switch;
 import exm.stc.frontend.tree.Update;
 import exm.stc.frontend.tree.VariableDeclaration;
-import exm.stc.frontend.tree.Wait;
-import exm.stc.frontend.tree.ForLoopDescriptor.LoopVar;
 import exm.stc.frontend.tree.VariableDeclaration.VariableDescriptor;
+import exm.stc.frontend.tree.Wait;
 /**
  * This module collects information about variable dataflow in the program, e.g.
  * if a variable is read or not, whether it is assigned twice, etc.
@@ -96,17 +95,17 @@ class VariableUsageAnalyzer {
     
     // Add input and output variables to initial variable info
     for (Var i: iList) {
-      argVui.declare(context, i.name(), i.type(), false);
-      argVui.assign(context, i.name(), AssignOp.ASSIGN);
+      argVui.declare(fnContext, i.name(), i.type(), false);
+      argVui.assign(fnContext, i.name(), AssignOp.ASSIGN);
       fnContext.declareVariable(i.type(), i.name(), i.storage(), 
-            i.defType(), VarProvenance.unknown(), i.mapping());
+            i.defType(), VarProvenance.unknown(), i.mappedDecl());
     }
     for (Var o: oList) {
-      argVui.declare(context, o.name(), o.type(), false);
+      argVui.declare(fnContext, o.name(), o.type(), false);
       // We should assume that return variables will be read
-      argVui.read(context, o.name());
+      argVui.read(fnContext, o.name());
       fnContext.declareVariable(o.type(), o.name(), o.storage(), 
-          o.defType(), VarProvenance.unknown(), o.mapping());
+          o.defType(), VarProvenance.unknown(), o.mappedDecl());
     }
 
     // obtain info about variable usage in function by walking tree
@@ -279,6 +278,7 @@ class VariableUsageAnalyzer {
 
     // Collect and merge up info from branches
     ArrayList<VariableUsageInfo> ifBranchVus = new ArrayList<VariableUsageInfo>();
+
     ifBranchVus.add(walkBlock(new LocalContext(context),
         ifStmt.getThenBlock(), vu.createNested()));
     if (ifStmt.hasElse()) {
@@ -305,7 +305,7 @@ class VariableUsageAnalyzer {
       // mapped to a temporary var
       vu.declare(context, var.getName(), var.getType(), var.getMappingExpr() != null);
       context.declareVariable(var.getType(), var.getName(), Alloc.STACK,
-          DefType.LOCAL_USER, VarProvenance.unknown(), null);
+          DefType.LOCAL_USER, VarProvenance.unknown(), false);
       SwiftAST assignExpr = vd.getVarExpr(i);
       if (assignExpr != null) {
         LogHelper.debug(context, "Variable " + var.getName() + 
@@ -342,7 +342,7 @@ class VariableUsageAnalyzer {
           assert(lVal != null);
           vu.declare(context, lVal.var.name(), lVal.var.type(), false);
           context.declareVariable(lVal.var.type(), lVal.var.name(), 
-            Alloc.STACK, DefType.LOCAL_USER, VarProvenance.unknown(), null);
+            Alloc.STACK, DefType.LOCAL_USER, VarProvenance.unknown(), false);
         }
         
         singleAssignment(context, vu, lVal, assignments.op);
@@ -415,7 +415,7 @@ class VariableUsageAnalyzer {
     
     // Both loop variables are assigned before loop body runs
     initial.declare(context, loop.getMemberVarName(), 
-        loop.getMemberVar().type(), loop.getMemberVar().mapping() != null);
+        loop.getMemberVar().type(), loop.getMemberVar().mappedDecl());
     initial.assign(context, loop.getMemberVarName(), AssignOp.ASSIGN);
     if (loop.getCountVarName() != null) {
       initial.declare(context, loop.getCountVarName(), Types.F_INT, false);
@@ -463,7 +463,7 @@ class VariableUsageAnalyzer {
       
       if (!lv.declaredOutsideLoop) {
         outerLoopInfo.declare(context, v.name(), v.type(),
-                              v.mapping() != null);
+                              v.mappedDecl());
       }
       // we assume that each variable has an initializer and an update, so it
       // will be assigned before each loop iteration
@@ -506,7 +506,7 @@ class VariableUsageAnalyzer {
     
     Var v = loop.getLoopVar();
     LogHelper.debug(context, "declared loop var " + v.toString());
-    bodyInfo.declare(context, v.name(), v.type(), v.mapping() != null);
+    bodyInfo.declare(context, v.name(), v.type(), v.mappedDecl());
     // we assume that each variable has an initializer and an update, so it
     // will be assigned before each loop iteration
     bodyInfo.assign(context, v.name(), AssignOp.ASSIGN);
@@ -550,7 +550,7 @@ class VariableUsageAnalyzer {
 
     // Do a depth-first search of the expression tree to discover all
     // references to variables
-    Deque<SwiftAST> exprNodes = new ArrayDeque<SwiftAST>();
+    StackLite<SwiftAST> exprNodes = new StackLite<SwiftAST>();
     exprNodes.push(exprRoot);
     while (!exprNodes.isEmpty()) {
       SwiftAST node = exprNodes.pop();

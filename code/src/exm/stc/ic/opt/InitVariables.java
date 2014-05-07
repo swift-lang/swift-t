@@ -6,16 +6,12 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.Types.StructType;
-import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Var;
-import exm.stc.common.util.HierarchicalMap;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
@@ -37,26 +33,19 @@ public class InitVariables {
   public static class InitState {
     public final HierarchicalSet<Var> initVars;
     public final HierarchicalSet<Var> assignedVals;
-    /** Track which struct fields remain to be initialized
-     *  (if there is no entry, none are) */
-    public final HierarchicalMap<Var, List<String>> uninitStructFields;
     
     private InitState(HierarchicalSet<Var> initVars,
-        HierarchicalSet<Var> assignedVals,
-        HierarchicalMap<Var, List<String>> uninitStructFields) {
+        HierarchicalSet<Var> assignedVals) {
       this.initVars = initVars;
       this.assignedVals = assignedVals;
-      this.uninitStructFields = uninitStructFields;
     }
     
     private InitState() {
-      this(new HierarchicalSet<Var>(), new HierarchicalSet<Var>(),
-           new HierarchicalMap<Var, List<String>>());
+      this(new HierarchicalSet<Var>(), new HierarchicalSet<Var>());
     }
     
     private InitState makeChild() {
-      return new InitState(initVars.makeChild(), assignedVals.makeChild(),
-                           uninitStructFields.makeChildMap());
+      return new InitState(initVars.makeChild(), assignedVals.makeChild());
     }
 
     /**
@@ -190,61 +179,9 @@ public class InitVariables {
      * @param initVar
      */
     private void updatePartialInit(Instruction inst, Var initVar) {
-      if (Types.isStruct(initVar)) {
-        updatePartialInitStruct(inst, initVar);
-      } else {
-        throw new STCRuntimeError("Can't handle partial init for type " +
+      // TODO: might need to bring back in logic for partially init structs
+      throw new STCRuntimeError("Can't handle partial init for type " +
                                    initVar.type());
-      }
-    }
-
-    private void updatePartialInitStruct(Instruction inst, Var initVar) {
-      assert(inst.op == Opcode.STRUCT_INIT_FIELD) : "Expected STRUCT_INIT_FIELD";
-      String field = inst.getInput(0).getStringLit();
-
-      List<String> prevUninitFields = uninitStructFields.get(initVar);
-      List<String> newUninitFields; 
-      StructType st = (StructType)(initVar.type().getImplType());
-      if (prevUninitFields == null) {
-        // Initialize with fields
-        newUninitFields = new ArrayList<String>(st.getFieldCount() - 1);
-        for (StructField f: st.getFields()) {
-          // Add all except initialized
-          if (!f.getName().equals(field)) {
-            newUninitFields.add(f.getName());
-          }
-        }
-      } else {
-        // Create a new array to avoid modifying something higher up in 
-        // hierarchical map
-        newUninitFields = new ArrayList<String>(
-              Math.max(0, prevUninitFields.size() - 1));
-        // Add back all uninitialized fields except the new one
-        boolean wasUninit = false;
-        for (String prevUninit: prevUninitFields) {
-          if (prevUninit.equals(field)) {
-            wasUninit = true;
-          } else {
-            newUninitFields.add(prevUninit);
-          }
-        }
-        if (!wasUninit) {
-          throw new STCRuntimeError(initVar.name() + "." + field +
-                                    " was doubly initialized");
-        }
-      }
-
-      if (Logging.getSTCLogger().isTraceEnabled()) {
-        Logging.getSTCLogger().debug("At " + inst + ": uninit for " +
-                               initVar.name() + " " + newUninitFields);
-      }
-
-      uninitStructFields.put(initVar, newUninitFields);
-
-      if (newUninitFields.isEmpty()) {
-        // All initialized: struct is fully initialized
-        initVars.add(initVar);
-      }
     }
 
     /**
@@ -400,20 +337,6 @@ public class InitVariables {
 
   private static void recurseOnBlock(Logger logger,
       Block block, InitState state, boolean validate) {
-    if (validate) {
-      for (Var v: block.getVariables()) {
-        if (v.mapping() != null) {
-          if (varMustBeInitialized(v.mapping(), false)) {
-            assert (state.initVars.contains(v.mapping())):
-              v + " mapped to uninitialized var " + v.mapping();
-          }
-          if (assignBeforeRead(v.mapping())) {
-            assert(state.assignedVals.contains(v.mapping())) :
-              v + " mapped to unassigned var " + v.mapping();
-          }
-        }
-      }
-    }
     
     for (Statement stmt: block.getStatements()) {
       updateInitVars(logger, stmt, state, validate);

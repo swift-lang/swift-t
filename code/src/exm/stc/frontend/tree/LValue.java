@@ -132,7 +132,7 @@ public class LValue {
         Type newType = st.getFieldTypeByName(fieldName);
         if (newType == null) {
           throw new TypeMismatchException(context, "Struct type "
-              + st.getTypeName() + " does not have field called " + fieldName);
+              + st.getStructTypeName() + " does not have field called " + fieldName);
         }
         t = newType;
       } else {

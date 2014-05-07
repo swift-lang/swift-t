@@ -1,7 +1,4 @@
 
-// For usleep
-#define _BSD_SOURCE
-
 
 #include <assert.h>
 #include <stdio.h>
@@ -13,6 +10,8 @@
 
 #include <adlb.h>
 #include <table_lp.h>
+
+#include "bench_util.h"
 
 // Work unit type
 #define WAVEFRONT_WORK 0
@@ -65,7 +64,6 @@ int main(int argc, char *argv[])
 
   double start_time, end_time;
 
-  printf("HELLO!\n");
   fflush(NULL);
 
   rc = MPI_Init( &argc, &argv );
@@ -74,11 +72,16 @@ int main(int argc, char *argv[])
   MPI_Comm_rank( MPI_COMM_WORLD, &my_world_rank );
 
   num_servers = 1;		/* one server should be enough */
+  if (getenv("ADLB_SERVERS") != NULL) {
+    num_servers = atoi(getenv("ADLB_SERVERS"));
+  }
+
   rc = ADLB_Init(num_servers, num_types, type_vect, &am_server, MPI_COMM_WORLD, &app_comm);
   if ( !am_server ) /* application process */
   {
     MPI_Comm_rank( app_comm, &my_app_rank );
   }
+  DEBUG("Hello. I am a %s\n", am_server ? "SERVER" : "WORKER");
 
   rc = ADLB_Read_refcount_enable();
   assert(rc == ADLB_SUCCESS);
@@ -92,16 +95,16 @@ int main(int argc, char *argv[])
   }
   else
   {                                 
-    if (argc != 2 && argc != 3) {
-      printf("usage: %s <n> <sleep>\n", argv[0]);
+    if (argc != 4) {
+      printf("usage: %s <n> <mu> <sigma>\n", argv[0]);
       ADLB_Fail(-1);
     }
     // N == number of rows and columns
     int N = atoi(argv[1]);
-    double sleep = 0.0;
-    if (argc == 3) {
-        sleep=atof(argv[2]);
-    }
+    double mu, sigma;
+    mu = atof(argv[2]);
+    sigma = atof(argv[3]);
+
     if ( my_app_rank == 0 ) {  /* if master app, put cmds */
 
       // Map id to board position (binary integer pair)
@@ -154,13 +157,13 @@ int main(int argc, char *argv[])
       for (int i = 0; i < N; i++) {
         double val = i;
         rc = ADLB_Store(ids[IX(i, 0, N)], ADLB_NO_SUB, ADLB_DATA_TYPE_FLOAT,
-                          &val, sizeof(val), ADLB_WRITE_RC);
+                          &val, sizeof(val), ADLB_WRITE_RC, ADLB_NO_RC);
         assert(rc == ADLB_SUCCESS);
         
         // Don't double-assign [0][0]
         if (i != 0) {
           rc = ADLB_Store(ids[IX(0, i, N)], ADLB_NO_SUB, ADLB_DATA_TYPE_FLOAT,
-                            &val, sizeof(val), ADLB_WRITE_RC);
+                            &val, sizeof(val), ADLB_WRITE_RC, ADLB_NO_RC);
           assert(rc == ADLB_SUCCESS);
         }
       }
@@ -186,7 +189,8 @@ int main(int argc, char *argv[])
           if (row != 0 && col != 0) {
             // Subscribe to get notification
             int subscribed;
-            ADLB_Subscribe(ids[IX(row, col, N)], ADLB_NO_SUB, &subscribed);
+            ADLB_Subscribe(ids[IX(row, col, N)], ADLB_NO_SUB, CONTROL_WORK,
+                          &subscribed);
             assert(subscribed);
 
           }
@@ -213,7 +217,10 @@ int main(int argc, char *argv[])
           adlb_datum_id id;
           int c = sscanf(buffer, "close %li", &id);
           assert(c == 1);
-          int *rowcol = table_lp_search(&id_map, id);
+          int *rowcol;
+          
+          bool found = table_lp_search(&id_map, id, (void**)&rowcol);
+          assert(found);
           int row = rowcol[0];
           int col = rowcol[1];
           DEBUG("[%d][%d] notification\n", row, col);
@@ -279,13 +286,11 @@ int main(int argc, char *argv[])
         }
 
         // do simulated work
-        if (sleep > 0.0) {
-            usleep((long)(sleep * 1000000));
-        }
+        spin(lognorm_sample(mu, sigma));
 
-        double new_val = pred_vals[0] + pred_vals[1] + pred_vals[2];
+        double new_val = sqrt(pred_vals[0] + pred_vals[1] + pred_vals[2]) + 1;
         rc = ADLB_Store(result_id, ADLB_NO_SUB, ADLB_DATA_TYPE_FLOAT,
-                          &new_val, sizeof(new_val), ADLB_WRITE_RC);   
+                      &new_val, sizeof(new_val), ADLB_WRITE_RC, ADLB_NO_RC);   
         assert(rc == ADLB_SUCCESS);
       }
     }

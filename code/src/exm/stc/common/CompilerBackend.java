@@ -78,22 +78,18 @@ public interface CompilerBackend {
   
   /**
    * Set target=addressof(src)
+   * @param readRefs Number of read refs to transfer to reference var 
+   * @param writeRefs Number of write refs to transfer to reference var
    */
-  public void assignReference(Var target, Var src);
+  public void assignReference(Var target, Var src,
+                  long readRefs, long writeRefs);
 
-  public void dereferenceInt(Var target, Var src);
-  
-  public void dereferenceBool(Var target, Var src);
-  
-  public void dereferenceVoid(Var target, Var src);
-
-  public void dereferenceFloat(Var dst, Var src);
-  
-  public void dereferenceBlob(Var dst, Var src);
+  public void dereferenceScalar(Var target, Var src);
   
   public void dereferenceFile(Var dst, Var src);
 
-  public void retrieveRef(Var target, Var src, Arg decr);
+  public void retrieveRef(Var target, Var src, Arg acquireRead,
+                          Arg acquireWrite, Arg decr);
   
   /**
    * Copy the handle to a future, creating an alias
@@ -102,43 +98,27 @@ public interface CompilerBackend {
    */
   public void makeAlias(Var dst, Var src);
 
-  public void dereferenceString (Var target, Var src);
-
-  /**assignInt, which can take a value variable or a literal int in oparg
-   */
-  public void assignInt(Var target, Arg src);
-  public void retrieveInt(Var target, Var source, Arg decr);
-
-  public void assignVoid(Var target, Arg src);
   /**
-   * Used to represent dataflow dependency.  Sets target to
-   * arbitrary value
+   * Assign a scalar value to a future.
+   * @param src a value variable or a literal int in oparg
+   */
+  public void assignScalar(Var target, Arg src);
+  
+  /**
+   * Retrieve a scalar value from a future
    * @param target
    * @param source
+   * @param decr
    */
-  public void retrieveVoid(Var target, Var source, Arg decr);
-  
-  public void assignFloat(Var target, Arg src);
-  public void retrieveFloat(Var target, Var source, Arg decr);
-
-  /** assignString, which can take a value variable or a literal int in oparg
-   */
-  public void assignString(Var target, Arg src);
-
-  public void retrieveString(Var target, Var source, Arg decr);
-  
-  public void assignBool(Var target, Arg src);
-  public void retrieveBool(Var target, Var source, Arg decr);
-
-  public void assignBlob(Var target, Arg src);
-  public void retrieveBlob(Var target, Var src, Arg decr);
+  public void retrieveScalar(Var target, Var source, Arg decr);
   
   /**
    * Set file object.  Increment local file ref count
    * @param target
    * @param src dummy local variable
+   * @param setFilename if true, set filename
    */
-  public void assignFile(Var target, Arg src);
+  public void assignFile(Var target, Arg src, Arg setFilename);
 
   public void retrieveFile(Var target, Var src, Arg decr);
   
@@ -149,6 +129,16 @@ public interface CompilerBackend {
   public void assignBag(Var target, Arg src);
 
   public void retrieveBag(Var target, Var src, Arg decr);
+  
+  public void structInitFields(Var struct, List<List<String>> fieldPaths,
+                               List<Arg> fieldVals, Arg writeDecr);
+  
+  public void buildStructLocal(Var struct, List<List<String>> fieldPaths,
+                                List<Arg> fieldVals); 
+  
+  public void assignStruct(Var target, Arg src);
+
+  public void retrieveStruct(Var target, Var src, Arg decr);
   
   public void assignRecursive(Var target, Arg src);
   
@@ -169,7 +159,12 @@ public interface CompilerBackend {
   /**
    * Extract handle to filename future out of file variable
    */
-  public void getFileName(Var filename, Var file);
+  public void getFileNameAlias(Var filename, Var file);
+  
+  /**
+   * Copy filename from future to file
+   */
+  public void copyInFilename(Var file, Var filename);
   
   /**
    * Extract handle to filename future out of localfile variable
@@ -199,6 +194,12 @@ public interface CompilerBackend {
    */
   public void initLocalOutputFile(Var localFile, Arg filenameVal,
                                   Arg isMapped);
+  /**
+   * Get filename of file future to a local string value
+   * @param file file future
+   * @param filenameVal a local string value
+   */
+  public void getFilenameVal(Var filenameVal, Var file);
   
   /**
    * Set filename of file future to a local string value
@@ -240,27 +241,31 @@ public interface CompilerBackend {
            Redirects<Arg> redirects,
            boolean hasSideEffects, boolean deterministic);
   
+  public void structCreateAlias(Var output, Var struct,
+                                List<String> fields);
+  public void structRetrieveSub(Var output, Var struct,
+      List<String> fields, Arg readDecr);
+  public void structCopyOut(Var output, Var struct,
+      List<String> fields);
+  
+  public void structRefCopyOut(Var result, Var structVar,
+                              List<String> fields);
+
   /**
-   * lookup structVarName.structField and copy to oVarName
-   * @param result
-   * @param structVar
-   * @param structField
+   * Copy in value of variable to struct field 
+   * @param struct
+   * @param fieldName
+   * @param fieldContents
    */
-  public void structLookup(Var result, Var structVar,
-      String structField);
-  
-  public void structRefLookup(Var result, Var structVar,
-      String fieldName);
 
-  public void structInitField(Var structVar, String fieldName,
-                                          Var fieldContents);
-
-  public void arrayLookupFuture(Var oVar, Var arrayVar,
-      Var indexVar, boolean isArrayRef);
-
-  public void arrayLookupRefImm(Var oVar, Var arrayVar,
-      Arg arrayIndex, boolean isArrayRef);
-  
+  public void structStore(Var struct, List<String> fields,
+                           Arg fieldContents);
+  public void structCopyIn(Var struct, List<String> fields,
+      Var fieldContents);
+  public void structRefStoreSub(Var structRef, List<String> fields,
+                           Arg fieldContents);
+  public void structRefCopyIn(Var structRef, List<String> fields,
+                           Var fieldContents);
   /**
    * Direct lookup of array without any blocking at all.  This is only
    * safe to use if we know the array is closed, or if we know that the
@@ -268,34 +273,49 @@ public interface CompilerBackend {
    * @param oVar
    * @param arrayVar
    * @param arrayIndex
+   * @param readDecr
    */
-  public void arrayLookupImm(Var oVar, Var arrayVar,
-      Arg arrayIndex);
+  public void arrayRetrieve(Var oVar, Var arrayVar,
+                            Arg arrayIndex, Arg readDecr);
 
-  public void arrayInsertFuture(Var array,
+  public void arrayCreateAlias(Var oVar, Var arrayVar, Arg arrayIndex);
+  
+  public void arrayCopyOutImm(Var oVar, Var arrayVar, Arg arrayIndex);
+
+  public void arrayCopyOutFuture(Var oVar, Var arrayVar, Var indexVar);
+  
+  public void arrayRefCopyOutImm(Var oVar, Var arrayVar, Arg arrayIndex);
+
+  public void arrayRefCopyOutFuture(Var oVar, Var arrayVar, Var indexVar);
+
+  public void arrayContains(Var out, Var arr, Arg index);
+
+  public void containerSize(Var out, Var cont);
+
+  public void arrayLocalContains(Var out, Var arr, Arg index);
+
+  public void containerLocalSize(Var out, Var cont);
+  
+  public void arrayStoreFuture(Var array,
+      Var ix, Arg member, Arg writersDecr);
+  
+
+  public void arrayCopyInFuture(Var array,
       Var ix, Var member, Arg writersDecr);
   
-
-  public void arrayDerefInsertFuture(Var array,
-      Var ix, Var member, Arg writersDecr);
+  public void arrayRefStoreFuture(Var array, Var ix, Arg member);
   
-  public void arrayRefInsertFuture(Var outerArray,
-      Var array, Var ix, Var member);
-  
-  public void arrayRefDerefInsertFuture(Var outerArray,
-      Var array, Var ix, Var member);
+  public void arrayRefCopyInFuture(Var array, Var ix, Var member);
 
-  public void arrayInsertImm(Var array, Arg ix, Var member,
+  public void arrayStore(Var array, Arg ix, Arg member,
       Arg writersDecr);
 
-  public void arrayDerefInsertImm(Var array, Arg ix, Var member,
+  public void arrayCopyInImm(Var array, Arg ix, Var member,
       Arg writersDecr);
   
-  public void arrayRefInsertImm(Var outerArray, 
-      Var array, Arg ix, Var member);
+  public void arrayRefStoreImm(Var array, Arg ix, Arg member);
   
-  public void arrayRefDerefInsertImm(Var outerArray, 
-      Var array, Arg ix, Var member);
+  public void arrayRefCopyInImm(Var array, Arg ix, Var member);
 
 
   /**
@@ -304,8 +324,23 @@ public interface CompilerBackend {
    * @param keys
    * @param vals
    */
-  public void arrayBuild(Var array, List<Arg> keys, List<Var> vals);
+  public void arrayBuild(Var array, List<Arg> keys, List<Arg> vals);
 
+
+  /**
+   * Copy non-closed non-local data
+   * @param dst
+   * @param src
+   */
+  public void asyncCopy(Var dst, Var src);
+
+  /**
+   * Copy closed non-local data synchronously
+   * @param dst
+   * @param src
+   */
+  public void syncCopy(Var dst, Var src);
+  
   public void arrayCreateNestedFuture(Var arrayResult,
       Var array, Var ix);
 
@@ -316,20 +351,21 @@ public interface CompilerBackend {
    * @param ix
    * @param callerReadRefs number of refcounts to give back to caller
    * @param callerWriteRefs number of refcounts to give back to caller
+   * @param readDecr decrement array
+   * @param writeDecr decrement array
    */
   public void arrayCreateNestedImm(Var arrayResult,
-      Var array, Arg ix, Arg callerReadRefs, Arg callerWriteRefs);
+      Var array, Arg ix, Arg callerReadRefs, Arg callerWriteRefs,
+      Arg readDecr, Arg writeDecr);
 
-  public void arrayRefCreateNestedFuture(Var arrayResult,
-      Var outerArray, Var array, Var ix);
+  public void arrayRefCreateNestedFuture(Var arrayResult, Var array, Var ix);
 
-  public void arrayRefCreateNestedImm(Var arrayResult,
-      Var outerArray, Var array, Arg ix);
+  public void arrayRefCreateNestedImm(Var arrayResult, Var array, Arg ix);
 
-  public void bagInsert(Var bag, Var elem, Arg writersDecr);
+  public void bagInsert(Var bag, Arg elem, Arg writersDecr);
 
   public void arrayCreateBag(Var bag, Var arr, Arg ix, Arg callerReadRefs,
-                              Arg callerWriteRefs);
+                        Arg callerWriteRefs, Arg readDecr, Arg writeDecr);
 
   public void initUpdateable(Var updateable, Arg val);
   public void latestValue(Var result, Var updateable);

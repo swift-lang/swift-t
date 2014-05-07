@@ -44,7 +44,7 @@ public class ConstantFolder {
       case CALL_LOCAL_CONTROL:
       case CALL_SYNC:
         return foldFunctionCall(logger, sets, val);
-      case GET_FILENAME:
+      case GET_FILENAME_ALIAS:
         return foldGetFilename(logger, sets, val);
       default:
         // Can't fold others
@@ -149,7 +149,7 @@ public class ConstantFolder {
         // For some calling conventions, constants are used
         inputs.add(arg);
       } else {
-        Arg storedConst = sets.findRetrieveResult(arg);
+        Arg storedConst = sets.findRetrieveResult(arg, false);
         if (storedConst != null && storedConst.isConstant()) {
           inputs.add(storedConst);
         } else {

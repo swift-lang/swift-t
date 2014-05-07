@@ -2,10 +2,8 @@ package exm.stc.frontend;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -19,12 +17,13 @@ import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.ModuleLoadException;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.StackLite;
 import exm.stc.frontend.tree.Literals;
 
 public class LoadedModules {
   
   /** Stack of input files.  Top of stack is one currently processed */
-  private Deque<ParsedModule> moduleStack = new ArrayDeque<ParsedModule>();
+  private StackLite<ParsedModule> moduleStack = new StackLite<ParsedModule>();
 
   /** Map of canonical name to input file for all already loaded */
   private Map<String, ParsedModule> loadedModuleMap = 

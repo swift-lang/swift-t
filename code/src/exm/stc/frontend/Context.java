@@ -142,7 +142,7 @@ public abstract class Context {
    * @throws DoubleDefineException
    */
   public Var declareVariable(Type type, String name, Alloc scope,
-      DefType defType, VarProvenance provenance, Var mapping)
+      DefType defType, VarProvenance provenance, boolean mapped)
               throws DoubleDefineException {
     if (logger.isTraceEnabled()) {
       logger.trace("context: declareVariable: " +
@@ -150,7 +150,7 @@ public abstract class Context {
                  + "<" + defType.toString() + ">");
     }
 
-    Var variable = new Var(type, name, scope, defType, provenance, mapping);
+    Var variable = new Var(type, name, scope, defType, provenance, mapped);
     declareVariable(variable);
     return variable;
   }

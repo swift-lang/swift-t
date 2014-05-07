@@ -87,7 +87,7 @@ public class LocalContext extends Context {
       Alloc storage = storeInStack ? 
                   Alloc.STACK : Alloc.TEMP;
       return declareVariable(type, name, storage, DefType.LOCAL_COMPILER, 
-                             VarProvenance.exprTmp(getSourceLoc()), null);
+                             VarProvenance.exprTmp(getSourceLoc()), false);
   }
 
   @Override
@@ -99,7 +99,7 @@ public class LocalContext extends Context {
     } while (lookupDef(name) != null);
 
     return declareVariable(type, name, Alloc.ALIAS, DefType.LOCAL_COMPILER,
-                           VarProvenance.exprTmp(getSourceLoc()), null);
+                           VarProvenance.exprTmp(getSourceLoc()), false);
   }
 
   /**
@@ -123,10 +123,17 @@ public class LocalContext extends Context {
       prov = VarProvenance.exprTmp(getSourceLoc());
       varName = null;
     }
+    Alloc storage;
+    if (Types.isPrimValue(type) || Types.isContainerLocal(type)) {
+      storage = Alloc.LOCAL;
+    } else {
+      storage = Alloc.ALIAS;
+    }
+    
     String name = chooseVariableName(Var.LOCAL_VALUE_VAR_PREFIX, varName,
                                     "value_var");
-    return declareVariable(type, name, Alloc.LOCAL, DefType.LOCAL_COMPILER,
-                           prov, null);
+    return declareVariable(type, name, storage, DefType.LOCAL_COMPILER,
+                           prov, false);
   }
 
   /**
@@ -162,7 +169,7 @@ public class LocalContext extends Context {
     try {
       return declareVariable(Types.F_STRING, name,
           Alloc.ALIAS, DefType.LOCAL_COMPILER,
-          VarProvenance.filenameOf(fileVar, getSourceLoc()), null);
+          VarProvenance.filenameOf(fileVar, getSourceLoc()), false);
     } catch (DoubleDefineException e) {
       e.printStackTrace();
       throw new STCRuntimeError("Should be possible to have double defn");
@@ -256,7 +263,7 @@ public class LocalContext extends Context {
       VarProvenance prov =
            VarProvenance.structField(struct, fieldPath, getSourceLoc());
       return declareVariable(fieldType, name, storage, DefType.LOCAL_COMPILER,
-                             prov, null);
+                             prov, false);
     } catch (DoubleDefineException e) {
       e.printStackTrace();
       throw new STCRuntimeError("Shouldn't be possible to have double defn");

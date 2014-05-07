@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedVarError;
@@ -45,12 +46,17 @@ public class ForeignFunctions {
    */
   public static enum SpecialFunction {
     INPUT_FILE, UNCACHED_INPUT_FILE, INPUT_URL,
-    SIZE, RANGE, RANGE_STEP, ARGV;
+    SIZE, CONTAINS, RANGE, RANGE_STEP, ARGV;
     
     /** List of functions that will initialize output mapping */
     public static final SpecialFunction INITS_OUTPUT_MAPPING[] = new
         SpecialFunction[] {UNCACHED_INPUT_FILE, INPUT_FILE, INPUT_URL};
   }
+  
+  /**
+   * Track all foreign functions used in the program
+   */
+  private static final Set<String> foreignFunctions = new HashSet<String>();
   
   /**
    * Map from implementation function name to special function anme
@@ -98,6 +104,27 @@ public class ForeignFunctions {
   private static HashMap<String, TaskMode> taskModes
     = new HashMap<String, TaskMode>();
 
+  public static void addForeignFunction(String functionName) {
+    if (!foreignFunctions.add(functionName)) {
+      throw new STCRuntimeError("Tried to add foreign function " 
+                                      + functionName + " twice");                
+    }
+  }
+  
+  public static boolean isForeignFunction(String functionName) {
+    return foreignFunctions.contains(functionName);
+  }
+  
+  /**
+   * @param functionName
+   * @return true if the function expects inputs and outputs to be recursively
+   *              unpacked for local version (i.e. no ADLB ids in input)  
+   */
+  public static boolean recursivelyUnpackedInOut(String functionName) {
+    // For now, all foreign functions expect this 
+    return isForeignFunction(functionName);
+  }
+  
   /**
    * @param specialName
    * @return enum value if this is a valid name of a special function,
@@ -163,9 +190,9 @@ public class ForeignFunctions {
   }
   
 
-  public static void addOpEquiv(String builtinFunction, BuiltinOpcode op) {
-    equivalentOps.put(builtinFunction, op);
-    equivalentOpsInv.put(op, builtinFunction);
+  public static void addOpEquiv(String functionName, BuiltinOpcode op) {
+    equivalentOps.put(functionName, op);
+    equivalentOpsInv.put(op, functionName);
   }
   
   public static boolean hasOpEquiv(String builtinFunction) {

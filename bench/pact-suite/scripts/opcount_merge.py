@@ -2,16 +2,31 @@
 import sys
 
 files = sys.argv[1:]
+# Write header
+sys.stdout.write("op")
+sys.stdout.write("\t")
+for file in files:
+  sys.stdout.write(file)
+  sys.stdout.write("\t")
+sys.stdout.write("\n")
 
 keys = set()
 fileVals = []
 for file in files:
   vals = {}
   fileVals.append(vals)
-  for line in open(file).readlines():
-    k, v = line.split()
-    vals[k] = v
-    keys.add(k)
+  try:
+    for line in open(file).readlines():
+      toks = line.split()
+      if len(toks) != 2:
+        print >> sys.stderr, "Bad line: %s" % repr(toks)
+      else:
+        k, v = toks
+        vals[k] = v
+        keys.add(k)
+  except Exception, e:
+    print >> sys.stderr, "Error in line \"%s\" of file %s" % (line, file)
+    raise e
 
 
 for key in sorted(keys):

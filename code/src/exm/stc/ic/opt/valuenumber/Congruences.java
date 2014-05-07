@@ -18,7 +18,11 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.HierarchicalSet;
+import exm.stc.common.util.Pair;
 import exm.stc.common.util.TernaryLogic.Ternary;
+import exm.stc.ic.aliases.Alias;
+import exm.stc.ic.aliases.AliasKey;
+import exm.stc.ic.aliases.AliasTracker;
 import exm.stc.ic.opt.InitVariables.InitState;
 import exm.stc.ic.opt.valuenumber.ClosedVarTracker.AliasFinder;
 import exm.stc.ic.opt.valuenumber.ClosedVarTracker.ClosedEntry;
@@ -73,6 +77,7 @@ public class Congruences implements AliasFinder {
   private final ClosedVarTracker track;
   private final CongruentSets byValue;
   private final CongruentSets byAlias;
+  private final AliasTracker aliasTracker;
   private final HierarchicalSet<List<Arg>> maybeAssigned;
   private final boolean reorderingAllowed;
   
@@ -82,6 +87,7 @@ public class Congruences implements AliasFinder {
                         ClosedVarTracker track,
                         CongruentSets byValue,
                         CongruentSets byAlias,
+                        AliasTracker aliasTracker,
                         HierarchicalSet<List<Arg>> maybeAssigned,
                         boolean reorderingAllowed) {
     this.logger = logger;
@@ -90,6 +96,7 @@ public class Congruences implements AliasFinder {
     this.track = track;
     this.byValue = byValue;
     this.byAlias = byAlias;
+    this.aliasTracker = aliasTracker;
     this.maybeAssigned = maybeAssigned;
     this.reorderingAllowed = reorderingAllowed;
   }
@@ -100,6 +107,7 @@ public class Congruences implements AliasFinder {
         ClosedVarTracker.makeRoot(logger, reorderingAllowed),
         CongruentSets.makeRoot(CongruenceType.VALUE),
          CongruentSets.makeRoot(CongruenceType.ALIAS),
+         new AliasTracker(),
          new HierarchicalSet<List<Arg>>(),
          reorderingAllowed);
   }
@@ -110,6 +118,7 @@ public class Congruences implements AliasFinder {
              track.enterContinuation(parentStmtIndex),
              byValue.makeChild(varsFromParent),
              byAlias.makeChild(varsFromParent),
+             aliasTracker.makeChild(),
              maybeAssigned.makeChild(), reorderingAllowed);
     
     /*
@@ -124,13 +133,45 @@ public class Congruences implements AliasFinder {
      */
     return child;
   }
-
+  
+  /**
+   * Update state with values and alias info
+   * @param consts
+   * @param errContext
+   * @param resVals values for program point, may be null
+   * @param aliases aliases for program point, may be null
+   * @param stmtIndex
+   * @throws OptUnsafeError
+   */
+  public void update(GlobalConstants consts, String errContext,
+      List<ValLoc> resVals, List<Alias> aliases, int stmtIndex) 
+          throws OptUnsafeError {
+    if (aliases != null) {
+      // Get aliases up to date first since they don't depend on others here
+      aliasTracker.update(aliases);
+    }
+    
+    if (resVals != null) {
+      for (ValLoc resVal: resVals) {
+        update(consts, errContext, resVal, stmtIndex);
+      }
+    }
+  }
+  
+  /**
+   * Update the state with a ValLoc for a given program point
+   * @param consts
+   * @param errContext
+   * @param resVal
+   * @param stmtIndex
+   * @throws OptUnsafeError
+   */
   public void update(GlobalConstants consts, String errContext,
            ValLoc resVal, int stmtIndex) throws OptUnsafeError {
     if (logger.isTraceEnabled()) {
       logger.trace("update: " + resVal + " " + resVal.congType());
     }
-
+    
     if (resVal.congType() == CongruenceType.ALIAS) {
       // Update aliases only if congType matches
       update(consts, errContext, resVal.location(), resVal.value(),
@@ -220,16 +261,27 @@ public class Congruences implements AliasFinder {
       ComputedValue<Arg> cv = canonVal.cv();
       Arg invOutput = cv.getInput(0);
 
-      // Only add value congruences to be safe.
+      // Only add value congruences to be safe
       // It might be possible to handle ALIAS congruences, e.g. for
       // STORE_REF/LOAD_REF pair here later on (TODO)
-      if (cv.op().isAssign()) {
-        ArgCV invVal = ComputedValue.retrieveCompVal(canonLoc.getVar());
+      if (cv.op().isAssign(false)) {
+        ArgCV invVal = ComputedValue.retrieveCompVal(canonLoc.getVar(), false);
+        assert(invVal != null): canonLoc.getVar();
         updateInv(consts, errContext, invOutput, invVal, stmtIndex);
-      } else if (cv.op().isRetrieve()) {
-        Opcode invOp = Opcode.assignOpcode(invOutput.getVar());
-        assert(invOp != null);
-        ArgCV invVal = new ArgCV(invOp, canonLoc.asList());
+      } else if (cv.op().isRecursiveAssign()) {
+        ArgCV invVal = ComputedValue.retrieveCompVal(canonLoc.getVar(), true);
+        updateInv(consts, errContext, invOutput, invVal, stmtIndex);
+      } else if (cv.op().isRetrieve(false)) {
+        ArgCV invVal;
+        if (cv.op() == Opcode.LOAD_FILE) {
+          // Extra arg required
+          invVal = ComputedValue.assignFileCompVal(canonLoc, Arg.FALSE);
+        } else {
+          invVal = ComputedValue.assignCompVal(invOutput, canonLoc, false);
+        }
+        updateInv(consts, errContext, invOutput, invVal, stmtIndex);
+      } else if (cv.op().isRecursiveRetrieve()) {
+        ArgCV invVal = ComputedValue.assignCompVal(invOutput, canonLoc, true);    
         updateInv(consts, errContext, invOutput, invVal, stmtIndex);
       }
     } else if (canonVal.isArg() && canonVal.arg().isVar() &&
@@ -238,7 +290,7 @@ public class Congruences implements AliasFinder {
       Var globalConst = canonVal.arg().getVar();
       Arg constVal = consts.lookupByVar(globalConst);
       assert(constVal != null);
-      ArgCV invVal = ComputedValue.retrieveCompVal(globalConst);
+      ArgCV invVal = ComputedValue.retrieveCompVal(globalConst, false);
       updateInv(consts, errContext, constVal, invVal, stmtIndex);
     }
   }
@@ -247,10 +299,135 @@ public class Congruences implements AliasFinder {
       CongruentSets congruent, int stmtIndex, Arg canonLoc, ArgOrCV canonVal)
       throws OptUnsafeError {
     if (canonVal.isCV()) {
-      for (ArgCV extra: Algebra.tryAlgebra(this, canonVal.cv())) {
+      ArgCV cv = canonVal.cv();
+      for (ArgCV extra: Algebra.tryAlgebra(this, cv)) {
         update(consts, errContext, canonLoc, extra, IsAssign.NO,
                congruent, false, stmtIndex);
       }
+      if (cv.isArrayMemberVal() || cv.isArrayMember()) {
+        Var arr = cv.getInput(0).getVar();
+        Arg ix = cv.getInput(1);
+        update(consts, errContext, Arg.TRUE,
+                  ComputedValue.arrayContainsCV(arr, ix), IsAssign.NO,
+                  congruent, false, stmtIndex);
+      }
+      addInferredFilename(errContext, congruent, canonLoc, cv, stmtIndex);
+    }
+  }
+
+  /**
+   * Attempt to infer filenames when stores/retrieves occur
+   * @param errContext
+   * @param congruent
+   * @param canonLoc
+   * @param cv
+   * @throws OptUnsafeError 
+   */
+  private void addInferredFilename(String errContext,
+          CongruentSets congruent, Arg canonLoc, ArgCV cv, int stmtIndex)
+                  throws OptUnsafeError {
+    if (cv.op() == Opcode.STORE_FILE) {
+      addInferredStoreFile(errContext, congruent, canonLoc, cv, stmtIndex);
+    } else if (cv.op() == Opcode.LOAD_FILE) {
+      addInferredLoadFile(errContext, congruent, canonLoc, cv, stmtIndex);
+    } else if (cv.isFilenameAliasCV()) {
+      addInferredFilenameAlias(errContext, congruent, canonLoc, cv, stmtIndex);
+    } else if (cv.op().isRetrieveContainer(true)) {
+      addInferredRetrieveContainer(errContext, congruent, canonLoc, cv,
+                                   stmtIndex);
+    } else if (cv.op().isStoreContainer(true)) {
+      addInferredStoreContainer(errContext, congruent, canonLoc, cv,
+          stmtIndex);
+    }
+  }
+
+  private void addInferredFilenameAlias(String errContext,
+          CongruentSets congruent, Arg canonLoc, ArgCV cv, int stmtIndex) 
+                  throws OptUnsafeError {
+    Var file = cv.getInput(0).getVar();
+    // Retrieving alias == filename
+    equateValues(errContext, congruent, stmtIndex,
+            ComputedValue.filenameValCV(file),
+            ComputedValue.retrieveCompVal(canonLoc.getVar(), false));
+  }
+
+  private void addInferredLoadFile(String errContext, CongruentSets congruent,
+          Arg canonLoc, ArgCV cv, int stmtIndex) throws OptUnsafeError {
+    Var file = cv.getInput(0).getVar();
+    equateValues(errContext, congruent, stmtIndex,
+            ComputedValue.filenameValCV(file),
+            ComputedValue.localFilenameCV(canonLoc.getVar()));
+  }
+
+  private void addInferredStoreFile(String errContext, CongruentSets congruent,
+          Arg canonLoc, ArgCV cv, int stmtIndex) throws OptUnsafeError {
+    Var localFile = cv.getInput(0).getVar();
+    Arg setFilename = cv.getInput(1);
+    if (setFilename.isBoolVal() && setFilename.getBoolLit()) {
+      // Only if the filename was definitely set by store
+      ArgCV srcFilename = ComputedValue.localFilenameCV(localFile);
+      ArgCV dstFilename = ComputedValue.filenameValCV(canonLoc.getVar());
+      equateValues(errContext, congruent, stmtIndex,
+                          srcFilename, dstFilename);
+    }
+  }
+
+  private void addInferredRetrieveContainer(String errContext,
+      CongruentSets congruent, Arg canonLoc, ArgCV cv, int stmtIndex) 
+          throws OptUnsafeError {
+    // TODO: also transfer across element info, etc
+    Var src = cv.getInput(0).getVar();
+    equateValues(errContext, congruent, stmtIndex,
+            ComputedValue.containerSizeCV(src, false),
+            ComputedValue.containerSizeCV(canonLoc.getVar(), false));
+  }
+
+  private void addInferredStoreContainer(String errContext,
+      CongruentSets congruent, Arg canonLoc, ArgCV cv, int stmtIndex) 
+          throws OptUnsafeError {
+    // TODO: also transfer across element info, etc
+    Var src = cv.getInput(0).getVar();
+    equateValues(errContext, congruent, stmtIndex,
+            ComputedValue.containerSizeCV(src, false),
+            ComputedValue.containerSizeCV(canonLoc.getVar(), false));
+  }
+
+  /**
+   * Make two abstract locations equivalent.
+   * 
+   * @param errContext
+   * @param congruent
+   * @param stmtIndex
+   * @param val1
+   * @param val2
+   * @throws OptUnsafeError
+   */
+  private void equateValues(String errContext,
+          CongruentSets congruent, int stmtIndex,
+          ArgCV val1, ArgCV val2) throws OptUnsafeError {
+    /*
+     * Three cases:
+     * 1. Both already present
+     *    => merge canonical(val1) and canonical(val2)
+     * 2. One present (assume WLOG val1)
+     *    => add val2 to canonical(val1)
+     * 3. Neither present yet
+     *    => Save equivalence
+     *    => Later, WLOG, assume val1 added to canon(val1)
+     *       Then add val2 to canonical(val1)
+     */
+    Arg canon1 = congruent.findCanonical(consts, val1);
+    Arg canon2 = congruent.findCanonical(consts, val2);
+    if (canon1 != null && canon2 != null) {
+      mergeSets(errContext, "Equating " + val1 + " == " + val2, consts,
+                congruent, canon1, canon2, IsAssign.NO, stmtIndex);
+    } else if (canon1 == null && canon2 != null) {
+      congruent.addToSet(consts, new ArgOrCV(val1), canon2);
+    } else if (canon1 != null && canon2 == null) {
+      congruent.addToSet(consts, new ArgOrCV(val2), canon1);
+    } else {
+      assert(canon1 == null && canon2 == null);
+      congruent.addEquivalence(consts, val1, val2);
     }
   }
 
@@ -264,13 +441,13 @@ public class Congruences implements AliasFinder {
   /**
    * Merge two congruence sets that are newly connected via value
    * @param errContext
-   * @param resVal
+   * @param mergeCause object where toString() gets explanation of merge cause
    * @param congruent
    * @param newLoc representative of set with location just maybeAssigned
    * @param oldLoc representative of existing set
    * @throws OptUnsafeError 
    */
-  private void mergeSets(String errContext, ArgOrCV value,
+  private void mergeSets(String errContext, Object mergeCause,
       GlobalConstants consts, CongruentSets congruent,
       Arg oldLoc, Arg newLoc, IsAssign newIsAssign, int stmtIndex) throws OptUnsafeError {
     if (newLoc.equals(oldLoc)) {
@@ -279,7 +456,7 @@ public class Congruences implements AliasFinder {
     }
     
     checkNoContradiction(errContext, congruent.congType,
-                         value, newLoc, oldLoc);
+                          mergeCause, newLoc, oldLoc);
     
     // Must merge.  Select which is the preferred value
     // (for replacement purposes, etc.)
@@ -316,13 +493,13 @@ public class Congruences implements AliasFinder {
    * Check if vals contradict each other.
    * @param errContext
    * @param congType
-   * @param value
+   * @param mergeCause
    * @param val1
    * @param val2
    * @throw {@link OptUnsafeError} if problem found
    */
   private void checkNoContradiction(String errContext,
-    CongruenceType congType, ArgOrCV value, Arg val1, Arg val2) 
+    CongruenceType congType, Object mergeCause, Arg val1, Arg val2) 
     throws OptUnsafeError {
     boolean contradiction = false;
     if (congType == CongruenceType.VALUE) {
@@ -340,7 +517,8 @@ public class Congruences implements AliasFinder {
     }
     if (contradiction) {
       Logging.uniqueWarn("Invalid code detected during optimization. "
-          + "Conflicting values for " + value + ": " + val1 +
+          + "Conflicting values congruence type " + congType + " "
+          + mergeCause + ": " + val1 +
           " != " + val2 + " in " + errContext + ".\n"
           + "This may have been caused by a double-write to a variable. "
           + "Please look at any previous warnings emitted by compiler. "
@@ -432,6 +610,21 @@ public class Congruences implements AliasFinder {
     		    " canonical member in ALIAS congruence relationship";
     return canonical.getVar();
   }
+  
+  /**
+   * 
+   * @param vall
+   * @return Canonical alias, or null
+   */
+  private Var getCanonicalAlias(ArgCV val) {
+    Arg canonical = byAlias.findCanonicalInternal(val);
+    if (canonical == null) {
+      return null;
+    }
+    assert(canonical.isVar()) : "Should only have a variable as" +
+            " canonical member in ALIAS congruence relationship";
+    return canonical.getVar();
+  }
 
   /**
    * 
@@ -495,11 +688,18 @@ public class Congruences implements AliasFinder {
     //  (e.g. root var by alias and subscripts by value)
     // TODO: will need to recanonicalize?
     
-    if (val.isArrayMember() || val.isArrayMemberRef()) {
+    if (val.isArrayMemberVal() || val.isArrayMember()) {
       Arg arr = byAlias.findCanonical(val.getInput(0));
       Arg ix = byValue.findCanonical(val.getInput(1));
       return Arrays.asList(arr, ix);
-    } else if (val.op == Opcode.GET_FILENAME_VAL) {
+    } else if (val.isStructFieldVal() || val.isStructFieldAlias() ||
+        val.isStructFieldCopy() || val.isStructFieldValRef()) {
+      Arg struct = byAlias.findCanonical(val.getInput(0));
+      Arg fieldName = byValue.findCanonical(val.getInput(1));
+      return Arrays.asList(struct, fieldName);
+    } else if (val.isFilenameValCV() ||
+               val.isFilenameAliasCV() ||
+               val.isLocalFilenameCV()) {
       return Arrays.asList(Arg.createStringLit("filename"),
                            byAlias.findCanonical(val.getInput(0)));
     } else {
@@ -523,6 +723,17 @@ public class Congruences implements AliasFinder {
     }
 
     Var canonical = getCanonicalAlias(var.asArg());
+    markClosedInTracker(blockStart, stmtIndex, recursive, canonical);
+    
+    // use alias tracker to mark elems of alias closed
+    for (Var component: aliasTracker.getDatumComponents(canonical, recursive)) {
+      markClosedInTracker(blockStart, stmtIndex, recursive,
+                          getCanonicalAlias(component.asArg()));
+    }
+  }
+
+  private void markClosedInTracker(boolean blockStart, int stmtIndex,
+      boolean recursive, Var canonical) {
     if (blockStart) {
       track.closeBlockStart(canonical, recursive);
     } else {
@@ -539,12 +750,15 @@ public class Congruences implements AliasFinder {
   private void markClosed(Arg location, int stmtIndex, Closed closed) {
     if (closed != Closed.MAYBE_NOT && location.isVar()) {
       // Mark the canonical version of the variable closed
+      boolean recursive;
       if (closed == Closed.YES_NOT_RECURSIVE) {
-        markClosed(location.getVar(), stmtIndex, false);
+        recursive = false;
       } else {
         assert(closed == Closed.YES_RECURSIVE);
-        markClosed(location.getVar(), stmtIndex, true);
+        recursive = true;
       }
+      Var closedVar = location.getVar();
+      markClosed(closedVar, stmtIndex, recursive);
     }
   }
 
@@ -556,12 +770,20 @@ public class Congruences implements AliasFinder {
     return isClosed(varArg, stmtIndex, false);
   }
   
+  public boolean isClosed(ArgCV val, int stmtIndex) {
+    return isClosed(val, stmtIndex, false);
+  }
+  
   public boolean isRecClosed(Var var, int stmtIndex) {
     return isRecClosed(var.asArg(), stmtIndex);
   }
 
   public boolean isRecClosed(Arg varArg, int stmtIndex) {
     return isClosed(varArg, stmtIndex, true);
+  }
+  
+  public boolean isRecClosed(ArgCV val, int stmtIndex) {
+    return isClosed(val, stmtIndex, true);
   }
 
   /**
@@ -572,6 +794,11 @@ public class Congruences implements AliasFinder {
    * @return
    */
   private boolean isClosed(Arg varArg, int stmtIndex, boolean recursive) {
+    if (logger.isTraceEnabled()) {
+      logger.trace("Checking closed: " + varArg + "@" + stmtIndex + " rec: "
+                  + recursive);
+    }
+        
     // Find canonical var for alias, and check if that is closed.
     if (varArg.isConstant() || !trackClosed(varArg.getVar())) {
       // No write refcount - always closed
@@ -579,25 +806,79 @@ public class Congruences implements AliasFinder {
       return true;
     }
 
+
     Var canonicalAlias = getCanonicalAlias(varArg);
-    
-    ClosedEntry ce;
-    ce = track.getClosedEntry(canonicalAlias, recursive, stmtIndex, this);
-    if (logger.isTraceEnabled()) {
-      logger.trace("Closed " + varArg + "(" + canonicalAlias + "): " + ce);
+    ClosedEntry ce = getClosedEntry(canonicalAlias, stmtIndex, recursive);
+    if (ce != null && ce.matches(recursive, stmtIndex)) {
+      logger.trace(varArg + "/" + canonicalAlias + " closed @ "
+                 + ce.stmtIndex);
+      return true;
     }
-    if (ce != null) {
-      // Mark as closed to avoid having to trace back again like this.
-      track.close(canonicalAlias, ce);
-      if (ce.matches(recursive, stmtIndex)) {
-        logger.trace(varArg + "/" + canonicalAlias + " closed @ "
-                   + ce.stmtIndex);
-        return true;
+    
+
+    for (Pair<AliasKey, Boolean> ancestor: 
+              aliasTracker.getAncestors(canonicalAlias)) {
+      AliasKey ancestorKey = ancestor.val1;
+      boolean traversedRef = ancestor.val2;
+      Var ancestorVar = aliasTracker.findVar(ancestorKey);
+      
+      if (logger.isTraceEnabled()) {
+        logger.trace("Checking ancestor close: " + ancestorVar +
+                     " ancestor of " + canonicalAlias + 
+                     " traversed ref: " + traversedRef); 
+      }
+      
+      if (ancestorVar != null) {
+        boolean ancestorRecursive = recursive || traversedRef;
+        Var ancestorCanonical = getCanonicalAlias(ancestorVar.asArg());
+        ce = getClosedEntry(ancestorCanonical, stmtIndex, ancestorRecursive);
+        if (ce != null) {
+          // Mark whether this is closed
+          markClosed(canonicalAlias, ce.stmtIndex, recursive);
+          if (ce.matches(ancestorRecursive, stmtIndex)) {
+            logger.trace(varArg + "/" + canonicalAlias + " closed @ "
+                         + stmtIndex);
+            return true;
+          }
+        }
       }
     }
     return false;
   }
 
+  /**
+   * Lookup closed entry, updating info for subsequent lookups 
+   * @param canonicalAlias
+   * @param stmtIndex
+   * @param recursive
+   * @return
+   */
+  private ClosedEntry getClosedEntry(Var canonicalAlias, int stmtIndex,
+                                      boolean recursive) {
+    
+    ClosedEntry ce;
+    ce = track.getClosedEntry(canonicalAlias, recursive, stmtIndex, this);
+    if (logger.isTraceEnabled()) {
+      logger.trace("Closed " + canonicalAlias +": " + ce);
+    }
+    if (ce != null) {
+      // Mark as closed to avoid having to trace back again like this.
+      track.close(canonicalAlias, ce);
+    }
+    return ce;
+  }
+
+
+  private boolean isClosed(ArgCV val, int stmtIndex, boolean recursive) {
+    // See if we can resolve alias to variable
+    Var canon = getCanonicalAlias(val);
+    if (canon == null) {
+      // No info - assume not closed
+      return false;
+    }
+    return isClosed(canon.asArg(), stmtIndex, recursive);
+  }
+  
   /**
    * Whether we should track closed status for this var
    * @param var
@@ -615,6 +896,15 @@ public class Congruences implements AliasFinder {
   public Set<Var> getRecursivelyClosed(int stmtIndex) {
     return new ClosedSet(stmtIndex, true);
   }
+  
+  public Set<ArgCV> getClosedLocs(int stmtIndex) {
+    return new ClosedCVSet(stmtIndex, false);
+  }
+
+  public Set<ArgCV> getRecursivelyLocs(int stmtIndex) {
+    return new ClosedCVSet(stmtIndex, true);
+  }
+  
   
   /**
    * Return set of vars that were closed in this scope but
@@ -688,8 +978,12 @@ public class Congruences implements AliasFinder {
    * @param v
    * @return
    */
-  public Arg findRetrieveResult(Var v) {
-    return byValue.findRetrieveResult(v.asArg());
+  public Arg findRetrieveResult(Var v, boolean recursive) {
+    return byValue.findRetrieveResult(v.asArg(), recursive);
+  }
+  
+  public Set<Var> retrieveResultAvail() {
+    return new RetrieveAvailSet();
   }
 
   public Arg findValue(Var output) {
@@ -737,9 +1031,8 @@ public class Congruences implements AliasFinder {
     for (Var closed: unified.recursivelyClosed) {
       markClosed(closed, stmtIndex, true);
     }
-    for (ValLoc loc: unified.availableVals) {
-      update(consts, errContext, loc, stmtIndex);
-    }
+    
+    update(consts, errContext, unified.availableVals, null, stmtIndex);
   }
 
   /**
@@ -823,6 +1116,62 @@ public class Congruences implements AliasFinder {
       throw new STCRuntimeError("size() not supported");
     }
   }
+  
+  /**
+   * Implement set interface for checking if abstract location is closed
+   */
+  private class ClosedCVSet extends AbstractSet<ArgCV> {
+    ClosedCVSet(int stmtIndex, boolean recursive) {
+      this.stmtIndex = stmtIndex;
+      this.recursive = recursive;
+    }
+
+    private final int stmtIndex;
+    private final boolean recursive;
+  
+    @Override
+    public boolean contains(Object o) {
+      assert(o instanceof ArgCV);
+      ArgCV v = (ArgCV)o;
+      if (recursive) {
+        return isRecClosed(v, stmtIndex);
+      } else {
+        return isClosed(v, stmtIndex);
+      }
+    }
+
+    @Override
+    public Iterator<ArgCV> iterator() {
+      throw new STCRuntimeError("iterator() not supported");
+    }
+    
+    @Override
+    public int size() {
+      throw new STCRuntimeError("size() not supported");
+    }
+  }
+
+  private class RetrieveAvailSet extends AbstractSet<Var> {
+    private RetrieveAvailSet() {
+    }
+  
+    @Override
+    public boolean contains(Object o) {
+      assert(o instanceof Var);
+      Var v = (Var)o;
+      return findRetrieveResult(v, false) != null;
+    }
+
+    @Override
+    public Iterator<Var> iterator() {
+      throw new STCRuntimeError("iterator() not supported");
+    }
+    
+    @Override
+    public int size() {
+      throw new STCRuntimeError("size() not supported");
+    }
+  }
 
   static class OptUnsafeError extends Exception {
   
@@ -836,4 +1185,5 @@ public class Congruences implements AliasFinder {
     }
     
   }
+
 }

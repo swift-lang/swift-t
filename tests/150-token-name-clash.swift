@@ -3,7 +3,7 @@
 
 main {
 
- int declare_variable;
- int program;
+ int declare_variable = 0;
+ int program = 0;
 
 }

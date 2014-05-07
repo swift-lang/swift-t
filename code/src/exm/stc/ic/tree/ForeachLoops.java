@@ -27,11 +27,12 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.Var.VarCount;
 import exm.stc.common.lang.Var.VarProvenance;
-import exm.stc.common.util.Counters;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
+import exm.stc.ic.refcount.RefCountsToPlace;
 import exm.stc.ic.tree.ICContinuations.AbstractLoop;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.ContVarDefType;
@@ -99,6 +100,10 @@ public class ForeachLoops {
       return Collections.unmodifiableList(startIncrements);
     }
     
+    public ListIterator<RefCount> startIncrementIterator() {
+      return startIncrements.listIterator();
+    }
+    
     public void addStartIncrement(RefCount incr) {
       startIncrements.add(incr);
     }
@@ -151,14 +156,17 @@ public class ForeachLoops {
     /**
      * Try to piggyback constant incrs/decrs from outside continuation.
      * 
+     * Called repeatedly until it returns null.
+     * 
      * @param increments
      * @param type
      * @param dir whether to piggyback decrements or increments
-     * @return list of vars for which increments were piggybacked
+     * @return if piggybacked, the var for which increments were piggybacked
+     *          and amount (e.g. -2 if 2 decrements were piggybacked),
+     *          otherwise null
      */
-    public List<Var> tryPiggyBack(Counters<Var> increments, RefCountType type,
-                                  RCDir dir) {
-      List<Var> result = new ArrayList<Var>();
+    public VarCount tryPiggyBack(RefCountsToPlace increments,
+            RefCountType type, RCDir dir) {
       for (RefCount startIncr: startIncrements) {
         // Only consider piggybacking where we already are modifying
         // that particular count
@@ -168,11 +176,19 @@ public class ForeachLoops {
           if ((dir == RCDir.DECR && incr < 0) ||
               (dir == RCDir.INCR && incr > 0)) {
             addConstantStartIncrement(startIncr.var, type, Arg.createIntLit(incr));
-            result.add(startIncr.var);
+            return new VarCount(startIncr.var, incr);
           }
         }
       }
-      return result;
+      return null;
+    }
+
+    /**
+     * Constant iteration count 
+     * @return -1 if iter count not known, otherwise iteration count
+     */
+    public long constIterCount() {
+      return -1;
     }
   }
 
@@ -345,7 +361,7 @@ public class ForeachLoops {
                 Arrays.asList(loopVar)
               : Arrays.asList(loopCounterVar, loopVar);
       } else {
-        return Collections.emptyList();
+        return Var.NONE;
       }
     }
 
@@ -389,6 +405,18 @@ public class ForeachLoops {
       } else {
         return outerContext;
       }
+    }
+
+    /**
+     * Switch to version iterating over local container
+     * @param var
+     */
+    public void switchToLocalForeach(Var localContainer) {
+      assert(localContainer.type().assignableTo(
+          Types.retrievedType(this.container, false)));
+      this.container = localContainer;
+      this.containerClosed = true;
+      this.splitDegree = -1; // Execute locally
     }
   }
 
@@ -655,7 +683,7 @@ public class ForeachLoops {
           return Arrays.asList(loopVar);
         }
       } else {
-        return Collections.emptyList();
+        return Var.NONE;
       }
     }
 
@@ -679,14 +707,13 @@ public class ForeachLoops {
         return Pair.create(true, doUnroll(logger, outerBlock, desiredUnroll));
       } else if (expandLoops || fullUnroll) {
         long instCount = loopBody.getInstructionCount();
-        if (expandLoops && start.isIntVal() && end.isIntVal() && increment.isIntVal()) {
-          // See if the loop has a small number of iterations, could just expand
-          long iters = calcIterations(start.getIntLit(), end.getIntLit(),
-                                      increment.getIntLit());
-          if (iters <= getUnrollMaxIters(true)) {
-            long extraInstructions = instCount * (iters - 1);
+        long iterCount = constIterCount();
+        if (expandLoops && iterCount >= 0) {
+          // See if the loop has a small number of iterations, could just expand;
+          if (iterCount <= getUnrollMaxIters(true)) {
+            long extraInstructions = instCount * (iterCount - 1);
             if (extraInstructions <= getUnrollMaxExtraInsts(true)) {
-              return Pair.create(true, doUnroll(logger, outerBlock, (int)iters));
+              return Pair.create(true, doUnroll(logger, outerBlock, (int)iterCount));
             }
           }
         } 
@@ -768,7 +795,7 @@ public class ForeachLoops {
       logger.debug("Unrolling range loop " + this.loopName 
                         + " " + desiredUnroll + " times ");
       
-      String vPrefix = Var.OPT_VALUE_VAR_PREFIX + loopName;
+      String vPrefix = Var.VALUEOF_VAR_PREFIX + loopName;
       String bigStepName = outerBlock.uniqueVarName(vPrefix + ":unrollincr"); 
       VarProvenance prov = VarProvenance.optimizerTmp();
       Var bigIncr = new Var(Types.V_INT, bigStepName, Alloc.LOCAL,
@@ -860,6 +887,16 @@ public class ForeachLoops {
       return Collections.<Continuation>singletonList(unrolled);
     }
 
+    @Override
+    public long constIterCount() {
+      if ( start.isIntVal() && end.isIntVal() && increment.isIntVal()) {
+        return calcIterations(start.getIntLit(), end.getIntLit(),
+                              increment.getIntLit());
+      } else {
+        return -1;
+      }
+    }
+    
     private long calcIterations(long startV, long endV, long incV) {
       long diff = (endV - startV + 1);
       // Number of loop iterations

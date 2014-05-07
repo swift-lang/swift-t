@@ -38,17 +38,19 @@ import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.WaitVar;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
+import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.WrapUtil;
+import exm.stc.ic.aliases.Alias;
 import exm.stc.ic.opt.ICOptimizer;
 import exm.stc.ic.opt.InitVariables;
 import exm.stc.ic.opt.InitVariables.InitState;
 import exm.stc.ic.opt.OptUtil;
+import exm.stc.ic.opt.OptUtil.OptVarCreator;
 import exm.stc.ic.opt.OptimizerPass;
 import exm.stc.ic.opt.ProgressOpcodes;
 import exm.stc.ic.opt.ProgressOpcodes.Category;
@@ -58,6 +60,7 @@ import exm.stc.ic.opt.TreeWalk.TreeWalker;
 import exm.stc.ic.opt.valuenumber.Congruences.OptUnsafeError;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
 import exm.stc.ic.tree.Conditionals.Conditional;
+import exm.stc.ic.tree.ForeachLoops.ForeachLoop;
 import exm.stc.ic.tree.ICContinuations.BlockingVar;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
@@ -68,6 +71,7 @@ import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Instruction.Fetched;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmRequest;
+import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmVar;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.GlobalConstants;
@@ -125,7 +129,7 @@ public class ValueNumber implements OptimizerPass {
 
   @Override
   public String getPassName() {
-    return "Forward dataflow";
+    return "Value numbering";
   }
 
   @Override
@@ -148,7 +152,6 @@ public class ValueNumber implements OptimizerPass {
       // First pass finds all congruence classes and expands some instructions
       Map<Block, Congruences> congMap;
       congMap = findCongruences(prog, f, ExecContext.CONTROL);
-      // Check if we are safe to proceed with optimisation
   
       // Second pass replaces values based on congruence classes
       replaceVals(prog.constants(), f.mainBlock(), congMap, InitState.enterFunction(f));
@@ -170,8 +173,8 @@ public class ValueNumber implements OptimizerPass {
         Arg val = constants.lookupByVar(v);
         assert (val != null) : v.name();
         
-        ValLoc assign = ComputedValue.assignComputedVal(v, val,
-                                                IsAssign.TO_LOCATION);
+        ValLoc assign = ComputedValue.assignValLoc(v, val,
+                                        IsAssign.TO_LOCATION, false);
         int stmtIndex = -1;
         congruent.update(constants, f.getName(), assign, stmtIndex);
       }
@@ -377,13 +380,6 @@ public class ValueNumber implements OptimizerPass {
       ExecContext execCx, Congruences state, Map<Block, Congruences> result)
           throws OptUnsafeError {
     result.put(block, state);
-    for (Var v : block.getVariables()) {
-      if (v.mapping() != null && Types.isFile(v.type())) {
-        // Track the mapping
-        ValLoc filenameVal = ValLoc.makeFilename(v.mapping().asArg(), v);
-        state.update(program.constants(), f.getName(), filenameVal, 0);
-      }
-    }
     
     ListIterator<Statement> stmts = block.statementIterator();
     while (stmts.hasNext()) {
@@ -461,6 +457,19 @@ public class ValueNumber implements OptimizerPass {
       int stmtIndex, Congruences state, Map<Block, Congruences> result)
           throws OptUnsafeError {
     logger.trace("Recursing on continuation " + cont.getType());
+    
+    if (finalizedVarEnabled) {
+      // TODO: prototype of this transformation
+      // more elegant approach should be possible
+      if (cont.getType() == ContinuationType.FOREACH_LOOP) {
+        ForeachLoop foreach = (ForeachLoop)cont;
+        Arg arrayVal = state.findRetrieveResult(foreach.getArrayVar(), false);
+        logger.trace("CHECKING FOREACH: " + arrayVal);
+        if (arrayVal != null) {
+          foreach.switchToLocalForeach(arrayVal.getVar());
+        }
+      }
+    }
 
     // additional variables may be close once we're inside continuation
     List<BlockingVar> contClosedVars = null;
@@ -525,9 +534,9 @@ public class ValueNumber implements OptimizerPass {
               init.isInitialized(output, true)) {
             if (Types.isScalarFuture(output)) {
               // Replace a computation with future output with a store
-              Arg val = state.findRetrieveResult(output);
+              Arg val = state.findRetrieveResult(output, false);
               if (val != null && init.isInitialized(val, false)) {
-                Instruction futureSet = ICInstructions.futureSet(output, val);
+                Instruction futureSet = TurbineOp.storePrim(output, val);
                 stmtIt.set(futureSet);
                 logger.trace("Replaced with " + futureSet);
               }
@@ -749,18 +758,14 @@ public class ValueNumber implements OptimizerPass {
   private static void updateCongruent(Logger logger, GlobalConstants consts,
             Function function, Instruction inst, int stmtIndex,
             Congruences state) throws OptUnsafeError {
-    List<ValLoc> irs = inst.getResults();
+    List<ValLoc> resVals = inst.getResults();
+    List<Alias> aliases = inst.getAliases();
     
-    if (irs != null) {
-      if (logger.isTraceEnabled()) {
-        logger.trace("irs: " + irs.toString());
-      }
-      for (ValLoc resVal : irs) {
-        state.update(consts, function.getName(), resVal, stmtIndex);
-      }
-    } else {
-      logger.trace("no icvs");
+    if (logger.isTraceEnabled()) {
+      logger.trace("resVals: " + resVals);
+      logger.trace("aliases: " + aliases);
     }
+    state.update(consts, function.getName(), resVals, aliases, stmtIndex);
   }
 
   /**
@@ -783,7 +788,9 @@ public class ValueNumber implements OptimizerPass {
     }
     
     // First see if we can replace some futures with values
-    MakeImmRequest req = inst.canMakeImmediate(state.getClosed(stmtIndex), false);
+    MakeImmRequest req = inst.canMakeImmediate(state.getClosed(stmtIndex),
+                               state.getClosedLocs(stmtIndex),
+                               state.retrieveResultAvail(), false);
 
     if (req == null) {
       return false;
@@ -813,20 +820,27 @@ public class ValueNumber implements OptimizerPass {
     }
 
     // Now load the values
-    List<Instruction> alt = new ArrayList<Instruction>();
+    List<Statement> alt = new ArrayList<Statement>();
     List<Fetched<Arg>> inVals = fetchInputsForSwitch(state, req,
                                     insertContext, noWaitRequired, alt);
-    
+    if (logger.isTraceEnabled()) {
+      logger.trace("Fetched " + inVals + " for " + inst
+                 + " req.in: " + req.in);
+    }
+
     // Need filenames for output file values
     Map<Var, Var> filenameVals = loadOutputFileNames(state, stmtIndex,
-                      req.out, insertContext, insertPoint, req.mapOutVars);
+                req.out, insertContext, insertPoint);
+    
     
     List<Var> outFetched = OptUtil.createLocalOpOutputVars(insertContext,
-                      insertPoint, req.out, filenameVals, req.mapOutVars);
+                insertPoint, req.out, filenameVals);
+
     MakeImmChange change;
-    change = inst.makeImmediate(Fetched.makeList(req.out, outFetched), inVals);
+    change = inst.makeImmediate(new OptVarCreator(block),
+          Fetched.makeList(req.out, outFetched, true), inVals);
     OptUtil.fixupImmChange(block, insertContext, inst, change, alt,
-                           outFetched, req.out, req.mapOutVars);
+                           outFetched, req.out);
 
     if (logger.isTraceEnabled()) {
       logger.trace("Replacing instruction <" + inst + "> with sequence "
@@ -834,8 +848,8 @@ public class ValueNumber implements OptimizerPass {
     }
 
     // Add new instructions at insert point
-    for (Instruction newInst : alt) {
-      insertPoint.add(newInst);
+    for (Statement newStmt : alt) {
+      insertPoint.add(newStmt);
     }
 
     // Rewind argument iterator to instruction before replaced one
@@ -848,19 +862,24 @@ public class ValueNumber implements OptimizerPass {
   private static List<Fetched<Arg>> fetchInputsForSwitch(
       Congruences state,
       MakeImmRequest req, Block insertContext, boolean noWaitRequired,
-      List<Instruction> alt) {
+      List<Statement> alt) {
     List<Fetched<Arg>> inVals = new ArrayList<Fetched<Arg>>(req.in.size());
 
     // same var might appear multiple times
     HashMap<Var, Arg> alreadyFetched = new HashMap<Var, Arg>();
-    for (Var toFetch: req.in) {
+    for (MakeImmVar input: req.in) {
+      if (!input.fetch) {
+        continue;
+      }
+      Var toFetch = input.var;
+      
       Arg maybeVal;
       boolean fetchedHere;
       if (alreadyFetched.containsKey(toFetch)) {
         maybeVal = alreadyFetched.get(toFetch);
         fetchedHere = true;
       } else {
-        maybeVal = state.findRetrieveResult(toFetch);
+        maybeVal = state.findRetrieveResult(toFetch, false);
         fetchedHere = false;
       }
       // Can only retrieve value of future or reference
@@ -878,7 +897,8 @@ public class ValueNumber implements OptimizerPass {
         alreadyFetched.put(toFetch, maybeVal);
       } else {
         // Generate instruction to fetch val, append to alt
-        Var fetchedV = OptUtil.fetchForLocalOp(insertContext, alt, toFetch);
+        Var fetchedV = OptUtil.fetchForLocalOp(insertContext, alt, toFetch,
+                                  input.recursive, input.acquireWriteRefs);
         Arg fetched = Arg.createVar(fetchedV);
         inVals.add(new Fetched<Arg>(toFetch, fetched));
         alreadyFetched.put(toFetch, fetched);
@@ -888,38 +908,27 @@ public class ValueNumber implements OptimizerPass {
   }
 
   private static Map<Var, Var> loadOutputFileNames(Congruences state,
-      int oldStmtIndex, List<Var> outputs,
-      Block insertContext, ListIterator<Statement> insertPoint,
-      boolean mapOutVars) {
-    if (outputs == null)
-      outputs = Collections.emptyList();
-    
+      int oldStmtIndex, List<MakeImmVar> outputs,
+      Block insertContext, ListIterator<Statement> insertPoint) {
     Map<Var, Var> filenameVals = new HashMap<Var, Var>();
-    for (Var output: outputs) {
-      if (Types.isFile(output) && mapOutVars) {
+    for (MakeImmVar output: outputs) {
+      Var outVar = output.var;
+      if (Types.isFile(outVar) && output.preinitOutputMapping) {
         Var filenameVal = insertContext.declareUnmapped(Types.V_STRING,
-            OptUtil.optFilenamePrefix(insertContext, output),
+            OptUtil.optFilenamePrefix(insertContext, outVar),
             Alloc.LOCAL, DefType.LOCAL_COMPILER,
-            VarProvenance.filenameOf(output));
+            VarProvenance.filenameOf(outVar));
 
-        if (output.isMapped() == Ternary.FALSE) {
+        if (outVar.isMapped() == Ternary.FALSE) {
           // Initialize unmapped var
-          assert (output.type().fileKind().supportsTmpImmediate());
-          WrapUtil.initTemporaryFileName(insertPoint, output, filenameVal);
+          assert (outVar.type().fileKind().supportsTmpImmediate());
+          WrapUtil.initTemporaryFileName(insertPoint, outVar, filenameVal);
         } else {
           // Load existing mapping
           // Should only get here if value of mapped var is available.
-          assert(output.mapping() != null);
-          assert(state.isClosed(output.mapping(), oldStmtIndex))
-               : output.mapping() + " not closed @ " + oldStmtIndex;
-          Var filenameAlias = insertContext.declareUnmapped(Types.F_STRING,
-              OptUtil.optFilenamePrefix(insertContext, output),
-              Alloc.ALIAS, DefType.LOCAL_COMPILER,
-              VarProvenance.filenameOf(output));
-          insertPoint.add(TurbineOp.getFileName(filenameAlias, output));
-          insertPoint.add(TurbineOp.retrieveString(filenameVal, filenameAlias));
+          insertPoint.add(TurbineOp.getFilenameVal(filenameVal, outVar));
         }
-        filenameVals.put(output, filenameVal);
+        filenameVals.put(outVar, filenameVal);
       }
     }
     return filenameVals;

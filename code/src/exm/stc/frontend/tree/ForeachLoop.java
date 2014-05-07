@@ -36,6 +36,7 @@ import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LocalContext;
 import exm.stc.frontend.TypeChecker;
+import exm.stc.frontend.VarRepr;
 
 public class ForeachLoop {
   private static final int DEFAULT_SPLIT_DEGREE = 16;
@@ -48,7 +49,11 @@ public class ForeachLoop {
   private LocalContext loopBodyContext = null;
   private Var loopCountVal = null;
   private Type keyType = null;
+  
+  /** Array member var as future */ 
   private Var memberVar = null;
+  /** Array member value */
+  private Var memberVal = null;
   private final ArrayList<String> annotations;
   private int unroll = 1;
   private int splitDegree = DEFAULT_SPLIT_DEGREE;
@@ -76,6 +81,10 @@ public class ForeachLoop {
 
   public Var getMemberVar() {
     return memberVar;
+  }
+  
+  public Var getMemberVal() {
+    return memberVal;
   }
 
   public Var getLoopCountVal() {
@@ -283,7 +292,7 @@ public class ForeachLoop {
                               + "loop over " + arrayType.typeName());
       }
       keyType = Types.arrayKeyType(arrayType);
-      Type keyValType = Types.derefResultType(keyType);
+      Type keyValType = Types.retrievedType(keyType);
 
       Var countVar = createCountVar(context);
       loopCountVal = context.createLocalValueVariable(keyValType, countVar);
@@ -294,11 +303,20 @@ public class ForeachLoop {
       loopCountVal = null;
     }
 
-    Alloc memberVarStorage = rangeLoop ? Alloc.TEMP : Alloc.ALIAS;
-    
+    // MemberVar is the logical future type for user code
     memberVar = loopBodyContext.declareVariable(findElemType(arrayType),
-        getMemberVarName(), memberVarStorage, DefType.LOCAL_USER,
-        VarProvenance.userVar(context.getSourceLoc()), null);
+        getMemberVarName(), Alloc.TEMP, DefType.LOCAL_USER,
+        VarProvenance.userVar(context.getSourceLoc()), false);
+
+    // This is the value type that we'll use internally too
+    Type memberValRepr = VarRepr.containerElemRepr(memberVar.type(), false);
+    if (Types.isRef(memberValRepr)) {
+      memberVal = null;
+    } else {
+      Type memberValType = Types.retrievedType(memberValRepr);
+      memberVal = loopBodyContext.createLocalValueVariable(
+                                     memberValType, memberVar);
+    }
     return loopBodyContext;
   }
 }

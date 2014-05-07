@@ -4,10 +4,17 @@
 
 # See About.txt for notes
 
+# Test error codes
+TEST_OK=0
+TEST_TRUE_FAIL=1 # Failure in actual test
+TEST_SETUP_FAIL=2 # Failure pre-test
+TEST_LEAK_FAIL=3 # Failure due to memory leak
+
 # Defaults
 EXIT_ON_FAIL=1
 MAX_TESTS=-1 # by default, unlimited
-PATTERN=""
+PATTERNS=()
+SKIP_PATTERNS=()
 SKIP_COUNT=0
 
 COMPILE_ONLY=0
@@ -21,12 +28,7 @@ ADDTL_STC_ARGS=()
 LEAK_CHECK=1
 STC_TESTS_OUT_DIR=
 
-# Speed up the tests
-if [ -z ${ADLB_EXHAUST_TIME} ]; then
-    export ADLB_EXHAUST_TIME=1
-fi
-
-while getopts "cCDek:n:p:VO:t:T:alo:" OPTION
+while getopts "cCDek:n:p:P:VO:t:T:alo:" OPTION
 do
   case ${OPTION}
     in
@@ -55,8 +57,12 @@ do
       MAX_TESTS=${OPTARG}
       ;;
     p)
-      # run only tests that match the pattern
-      PATTERN=${OPTARG}
+      # run only tests that match one of the patterns
+      PATTERNS+=${OPTARG}
+      ;;
+    P)
+      # don't run tests that match one of the patterns
+      SKIP_PATTERNS+=${OPTARG}
       ;;
     t)
       ADDTL_STC_ARGS+="-t${OPTARG}"
@@ -91,6 +97,9 @@ then
   set -x
 fi
 
+export STC_TESTS_DIR=$( cd $( dirname $0 ) ; /bin/pwd )
+
+source "${STC_TESTS_DIR}/adlb-test-env.sh"
 if (( LEAK_CHECK ))
 then
   # Force reporting of leaks by ADLB
@@ -109,7 +118,6 @@ crash()
   exit 1
 }
 
-export STC_TESTS_DIR=$( cd $( dirname $0 ) ; /bin/pwd )
 STC_ROOT_DIR=$( dirname $STC_TESTS_DIR )
 STC_TRIES=( ${STC_ROOT_DIR}/code ${STC_ROOT_DIR} )
 STC=""
@@ -132,6 +140,17 @@ then
   exit 1
 fi
 print "using stc: ${STC}\n"
+
+STC_ENV="$(dirname $(dirname ${STC} ))/conf/stc-env.sh"
+
+if [ ! -f "${STC_ENV}" ]
+then
+  echo "Expected file ${STC_ENV} to exist"
+  exit 1
+fi
+
+source ${STC_ENV}
+export TURBINE_INSTALL # needed by run-test.zsh
 
 RUN_TEST=${STC_TESTS_DIR}/run-test.zsh
 
@@ -163,8 +182,16 @@ compile_test()
     ARGS=$(cat ${STC_ARGS})
   fi
 
+  STC_LOG_FLAG=-l
+  if (( VERBOSE ))
+  then
+    # Enable trace-level logging
+    STC_LOG_FLAG=-L
+  fi
+
   pushd $STC_TESTS_DIR
-  ${STC} -l ${STC_LOG_FILE} -O ${STC_OPT_LEVEL} -C ${STC_IC_FILE} \
+  ${STC} ${STC_LOG_FLAG} ${STC_LOG_FILE} \
+      -O ${STC_OPT_LEVEL} -C ${STC_IC_FILE} \
             ${ADDTL_STC_ARGS} ${ARGS} \
             ${SWIFT_FILE} ${TCL_FILE} \
             > ${STC_OUT_FILE} 2> ${STC_ERR_FILE}
@@ -172,8 +199,9 @@ compile_test()
   popd
 }
 
-run_test()
 # Run test under Turbine/MPI
+# Return approriate error code on failure
+run_test()
 {
   # Run program, check and setup scripts with test directory as
   # working directory
@@ -183,8 +211,8 @@ run_test()
   SETUP_OUTPUT=${TCL_FILE%.tcl}.setup.out
   CHECK_OUTPUT=${TCL_FILE%.tcl}.check.out
   EXP_OUTPUT=${TEST_PATH}.exp
-  TURBINE_OUTPUT=${TCL_FILE%.tcl}.out
-  TURBINE_XPT_RELOAD_OUTPUT=${TCL_FILE%.tcl}.reload.out
+  TURBINE_OUTPUT=${TEST_OUT_PATH}.out
+  TURBINE_XPT_RELOAD_OUTPUT=${TEST_OUT_PATH}.reload.out
   export TURBINE_XPT_RELOAD_OUTPUT
 
   ARGS=""
@@ -209,15 +237,20 @@ run_test()
     if [ -f ${STC_TESTS_DIR}/${SETUP_SCRIPT} ]
     then
       print "sourcing:  $( basename ${SETUP_SCRIPT} )"
-      source ./${SETUP_SCRIPT} >& ${SETUP_OUTPUT} || return 2
+      if ! source ./${SETUP_SCRIPT} >& ${SETUP_OUTPUT}
+      then 
+        return $TEST_SETUP_FAIL
+      fi
     fi
+    
     print "running:   $( basename ${TCL_FILE} )"
-    ${RUN_TEST} ${TCL_FILE} ${TURBINE_OUTPUT} ${ARGS}
+
+    ${RUN_TEST} ${TCL_FILE} ${TURBINE_OUTPUT} ${ARGS} 
     CODE=${?}
-    if (( CODE != 0 ))
+    if (( CODE != TEST_OK )) 
     then
       (( REPORT_ERRORS )) && cat ${TURBINE_OUTPUT}
-      return 1
+      return $TEST_TRUE_FAIL
     fi
 
     if [ ! -z "${TURBINE_XPT_FILE}" ]
@@ -225,27 +258,35 @@ run_test()
       print "rerunning with checkpoint: ${TURBINE_XPT_FILE}"
       export TURBINE_XPT_RELOAD="${TURBINE_XPT_FILE}"
       unset TURBINE_XPT_FILE
-      ${RUN_TEST} ${TCL_FILE} ${TURBINE_XPT_RELOAD_OUTPUT} ${ARGS} || return 1
+      ${RUN_TEST} ${TCL_FILE} ${TURBINE_XPT_RELOAD_OUTPUT} ${ARGS}
+      CODE=${?}
+      if (( CODE != TEST_OK ))
+      then
+        return $TEST_TRUE_FAIL
+      fi
+
       # Test reload from checkpoint file
     fi
   )
   EXIT_CODE=${?}
   popd
 
-  if [ $EXIT_CODE = 2 ]
+  if [ $EXIT_CODE = $TEST_SETUP_FAIL ]
   then
     echo "Setup script failed"
-    return 1
+    return $EXIT_CODE
   fi
 
   if grep -F -q "THIS-TEST-SHOULD-NOT-RUN" ${SWIFT_FILE}
   then
-    if [ $EXIT_CODE = 0 ]
+    # This test was intended to fail at run time
+    if (( EXIT_CODE == TEST_OK ))
     then
       echo "Should have failed at runtime, but succeeded"
+      EXIT_CODE=$TEST_TRUE_FAIL
+    else
+      EXIT_CODE=$TEST_OK
     fi
-    # This test was intended to fail at run time
-    EXIT_CODE=$(( ! EXIT_CODE ))
   else
     # Check for unexecuted transforms
     grep -F -q "WAITING TRANSFORMS" ${TURBINE_OUTPUT}
@@ -254,28 +295,53 @@ run_test()
     if (( WAITING_TRANSFORMS ))
       then
       print "Transforms were left in the rule engine!"
-      return 1
+      return $TEST_TRUE_FAIL
     fi
+    
+    LEAK_FOUND=0
 
     # Check for leaks
     if grep -F -q "LEAK DETECTED:" ${TURBINE_OUTPUT}
     then
-      LEAK_TEST_COUNT=$((LEAK_TEST_COUNT + 1))
+      LEAK_FOUND=1
+    fi
+
+    if grep -F -q "UNSET VARIABLE DETECTED:" ${TURBINE_OUTPUT}
+    then
+      # Some tests may expect unset variables
+      if ! grep -F -q "UNSET-VARIABLE-EXPECTED" ${SWIFT_FILE}
+      then
+        LEAK_FOUND=1
+      fi
+    fi
+
+    if  (( LEAK_FOUND ))
+    then
       if (( LEAK_CHECK ))
         then
         print "Memory leak!"
-        return 1
+        return $TEST_LEAK_FAIL
       fi
     fi
   fi
-  (( EXIT_CODE )) && return ${EXIT_CODE}
+
+  if (( EXIT_CODE != TEST_OK ))
+  then
+    return ${EXIT_CODE}
+  fi
 
   # Check the test output with the test-specific check script
   if [ -x ${STC_TESTS_DIR}/${CHECK_SCRIPT} ]
   then
     print "executing: $( basename ${CHECK_SCRIPT} )"
     pushd $STC_TESTS_DIR
-    ./${CHECK_SCRIPT} >& ${CHECK_OUTPUT} || return 1
+    ./${CHECK_SCRIPT} >& ${CHECK_OUTPUT}
+    CHECK_CODE=$?
+    if [ ${CHECK_CODE} != 0 ]
+    then
+      cat ${CHECK_OUTPUT}
+      return $TEST_TRUE_FAIL
+    fi
     popd
   fi
 
@@ -294,10 +360,10 @@ run_test()
       fi
     done <  ${EXP_OUTPUT}
     if [ $LINE_MISSING = true ]; then
-      return 1
+      return $TEST_TRUE_FAIL
     fi
   fi
-  return 0
+  return $TEST_OK
 }
 
 report_result()
@@ -306,17 +372,26 @@ report_result()
   local OPT_LEVEL=$2
   local EXIT_CODE=$3
 
-  if (( EXIT_CODE == 0 ))
+  if [ ${#STC_OPT_LEVELS} -eq 1 ]
+  then
+    local TEST_DESC=${TEST_PATH}
+  else
+    local TEST_DESC="${TEST_PATH}@O${OPT_LEVEL}"
+  fi
+
+  if (( EXIT_CODE == TEST_OK ))
   then
     printf "PASSED\n\n"
   else
     printf "FAILED\n\n"
-    if [ ${#STC_OPT_LEVELS} -eq 1 ]
+    FAILED_TESTS+=${TEST_DESC}
+    if (( EXIT_CODE == TEST_LEAK_FAIL ))
     then
-      FAILED_TESTS+=${TEST_PATH}
+      LEAKY_TESTS+=${TEST_DESC}
     else
-      FAILED_TESTS+="${TEST_PATH}@O${OPT_LEVEL}"
+      HARD_FAILED_TESTS+=${TEST_DESC}
     fi
+
     if (( EXIT_ON_FAIL ))
       then
       print "EXIT CODE: ${EXIT_CODE}"
@@ -337,25 +412,20 @@ report_stats_and_exit()
   fi
 
   print "tests run: ${TESTS_RUN}"
-  if [ "${FAILED_TESTS}" != "" ]; then
-      print "failed tests: ${#FAILED_TESTS} (${FAILED_TESTS})"
-  fi
-
-  if [ ${LEAK_TEST_COUNT} != 0 ]; then
-      print "leaky tests: ${LEAK_TEST_COUNT}"
-  fi
-
-  if [ "${DISABLED_TESTS}" != "" ]; then
-      print "disabled tests: ${#DISABLED_TESTS} (${DISABLED_TESTS})"
-  fi
+  print "failed tests: ${#FAILED_TESTS} (${FAILED_TESTS})"
+  print "hard failed tests: ${#HARD_FAILED_TESTS} (${HARD_FAILED_TESTS})"
+  print "leaky tests: ${#LEAKY_TESTS} (${LEAKY_TESTS})"
+  print "disabled tests: ${#DISABLED_TESTS} (${DISABLED_TESTS})"
+  
   exit ${EXIT_CODE}
 }
 
 TESTS_RUN=0
 SWIFT_FILES=( ${STC_TESTS_DIR}/*.swift )
 SWIFT_FILE_TOTAL=${#SWIFT_FILES}
-FAILED_TESTS=()
-LEAK_TEST_COUNT=0
+FAILED_TESTS=() # Failed for any reason
+HARD_FAILED_TESTS=() # Failed for non-leak reason
+LEAKY_TESTS=() # Failed due to leak
 DISABLED_TESTS=()
 
 # Setup signal handler for early termination
@@ -367,7 +437,6 @@ do
   TEST_PATH=${SWIFT_FILE%.swift}
   STC_ARGS="${TEST_PATH}.stcargs"
   TEST_NAME=$( basename ${TEST_PATH} )
-  TEST_OUT_PATH="${STC_TESTS_OUT_DIR}/${TEST_NAME}"
 
   if (( SKIP_COUNT ))
   then
@@ -389,19 +458,41 @@ do
     continue
   fi
 
-  if [[ ${PATTERN} != "" ]]
+  if [[ ${#PATTERNS} > 0 ]]
   then
-    if [[ ! ${SWIFT_FILE} =~ ${PATTERN} ]]
+    PATTERN_MATCH=0
+    for PATTERN in ${PATTERNS}
+    do
+      if [[ ${TEST_NAME} =~ ${PATTERN} ]]
       then
+        PATTERN_MATCH=1
+        break
+      fi
+    done
+
+    if (( ! PATTERN_MATCH ))
+    then
       continue
     fi
   fi
+  
+  if [[ ${#SKIP_PATTERNS} > 0 ]]
+  then
+    PATTERN_MATCH=0
+    for PATTERN in ${SKIP_PATTERNS}
+    do
+      if [[ ${TEST_NAME} =~ ${PATTERN} ]]
+      then
+        PATTERN_MATCH=1
+        break
+      fi
+    done
 
-  TCL_FILE=${TEST_OUT_PATH}.tcl
-  STC_OUT_FILE=${TEST_OUT_PATH}.stc.out
-  STC_ERR_FILE=${TEST_OUT_PATH}.stc.err
-  STC_LOG_FILE=${TEST_OUT_PATH}.stc.log
-  STC_IC_FILE=${TEST_OUT_PATH}.ic
+    if (( PATTERN_MATCH ))
+    then
+      continue
+    fi
+  fi
 
   print "test: ${TESTS_RUN} (${i}/${SWIFT_FILE_TOTAL})"
   for OPT_LEVEL in $STC_OPT_LEVELS
@@ -416,6 +507,20 @@ do
       DISABLED_TESTS+="${TEST_NAME}@O${OPT_LEVEL}"
       continue
     fi
+
+
+    TEST_OUT_PATH="${STC_TESTS_OUT_DIR}/${TEST_NAME}"
+    if [ ${#STC_OPT_LEVELS} -gt 1 ]
+    then
+      # Disambiguate test output if running multiple opt levels at same 
+      # time so it's not overwritten
+      TEST_OUT_PATH+=".O${OPT_LEVEL}"
+    fi
+    TCL_FILE=${TEST_OUT_PATH}.tcl
+    STC_OUT_FILE=${TEST_OUT_PATH}.stc.out
+    STC_ERR_FILE=${TEST_OUT_PATH}.stc.err
+    STC_LOG_FILE=${TEST_OUT_PATH}.stc.log
+    STC_IC_FILE=${TEST_OUT_PATH}.ic
 
     compile_test ${OPT_LEVEL}
 
@@ -447,10 +552,10 @@ do
     then
       if (( COMPILE_ONLY ))
       then
-          EXIT_CODE=0
+          EXIT_CODE=$TEST_OK
       elif grep -F -q "COMPILE-ONLY-TEST" ${SWIFT_FILE}
       then
-          EXIT_CODE=0
+          EXIT_CODE=$TEST_OK
       else
           run_test
           EXIT_CODE=${?}
@@ -463,7 +568,7 @@ do
       then
           :
       else
-          EXIT_CODE=1
+          EXIT_CODE=$TEST_TRUE_FAIL
           printf "No warning in stc output\n"
       fi
     fi

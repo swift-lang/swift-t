@@ -24,6 +24,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
@@ -36,7 +37,9 @@ import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.Sets;
-import exm.stc.ic.opt.AliasTracker.AliasKey;
+import exm.stc.ic.ICUtil;
+import exm.stc.ic.aliases.AliasKey;
+import exm.stc.ic.aliases.AliasTracker;
 import exm.stc.ic.tree.ICContinuations.ContVarDefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
@@ -53,6 +56,15 @@ import exm.stc.ic.tree.Opcode;
  * to make sure variables are visible.
  */
 public class FixupVariables implements OptimizerPass {
+  
+  /**
+   * Control whether we update passed var lists.
+   */
+  public static enum FixupVarMode {
+    NO_UPDATE, // Don't change
+    REBUILD, // Rebuild from scratch
+    ADD, // Only add
+  }
 
   @Override
   public String getPassName() {
@@ -79,8 +91,19 @@ public class FixupVariables implements OptimizerPass {
                                   boolean updateLists) {
     Set<Var> referencedGlobals = new HashSet<Var>();
     for (Function fn : prog.getFunctions()) {
-      fixupFunction(logger, prog.constants(), fn, referencedGlobals,
-                    updateLists);
+      
+      if (updateLists) {
+        fixupFunction(logger, prog.constants(), fn, referencedGlobals,
+                      FixupVarMode.REBUILD);
+        // Need to do a second pass to resolve recursive dependencies,
+        // e.g. loop_continue instructions that pass things back to
+        // the top of the loop
+        fixupFunction(logger, prog.constants(), fn, referencedGlobals,
+                      FixupVarMode.ADD);
+      } else {
+        fixupFunction(logger, prog.constants(), fn, referencedGlobals,
+                     FixupVarMode.NO_UPDATE);
+      }
     }
     
     if (updateLists)
@@ -88,7 +111,7 @@ public class FixupVariables implements OptimizerPass {
   }
 
   public static void fixupFunction(Logger logger, GlobalConstants constants,
-          Function fn, Set<Var> referencedGlobals, boolean updateLists) {
+          Function fn, Set<Var> referencedGlobals, FixupVarMode fixupMode) {
     HierarchicalSet<Var> fnargs = new HierarchicalSet<Var>();
     for (Var v : fn.getInputList()) {
       fnargs.add(v);
@@ -102,8 +125,8 @@ public class FixupVariables implements OptimizerPass {
     
     Result res = fixupBlockRec(logger, fn, fn.mainBlock(),
                        ExecContext.CONTROL, fnargs,
-                       referencedGlobals, aliases, updateLists);
-    if (updateLists) {
+                       referencedGlobals, aliases, fixupMode);
+    if (fixupMode != FixupVarMode.NO_UPDATE) {
       // Mark write-only outputs
       for (int i = 0; i < fn.getOutputList().size(); i++) {
         Var output = fn.getOutput(i);
@@ -217,6 +240,7 @@ public class FixupVariables implements OptimizerPass {
     Var canonicalWriteVar(Var var, AliasTracker aliases) {
       AliasKey key = aliases.getCanonical(var);
       assert(key != null) : var;
+      assert(!key.hasUnknown()) : key + " " + var;
       Var canonical = aliases.findVar(key);
       assert(canonical != null) : var + " " + key;
       return canonical;
@@ -276,15 +300,15 @@ public class FixupVariables implements OptimizerPass {
    *          variables logically visible in this block. will be modified in fn
    * @param referencedGlobals updated with names of any globals used
    * @param aliases 
-   * @param updateLists 
+   * @param fixupMode  
    * @return
    */
   private static Result fixupBlockRec(Logger logger,
       Function function, Block block, ExecContext execCx, 
       HierarchicalSet<Var> visible, Set<Var> referencedGlobals,
-      AliasTracker aliases, boolean updateLists) {
+      AliasTracker aliases, FixupVarMode fixupMode) {
 
-    if (updateLists)
+    if (fixupMode == FixupVarMode.REBUILD)
       // Remove global imports to be readded later if needed
       removeGlobalImports(block);
     
@@ -306,7 +330,7 @@ public class FixupVariables implements OptimizerPass {
     for (Continuation c : block.allComplexStatements()) {
       fixupContinuationRec(logger, function, execCx, c,
               visible, referencedGlobals, aliases,
-              blockVars, result, updateLists);
+              blockVars, result, fixupMode);
     }
 
     
@@ -321,15 +345,19 @@ public class FixupVariables implements OptimizerPass {
     // Outer scopes don't have anything to do with vars declared here
     result.removeReadWrite(blockVars);
     
-    if (execCx == ExecContext.CONTROL) {
+    if (canImportGlobals(execCx)) {
       // Global constants can be imported in control blocks only
-      Set<Var> globals = addGlobalImports(block, visible, updateLists,
+      Set<Var> globals = addGlobalImports(block, visible, fixupMode,
                                           result.allSets());
   
       referencedGlobals.addAll(globals);
       result.removeReadWrite(globals);
     }
     return result;
+  }
+
+  private static boolean canImportGlobals(ExecContext execCx) {
+    return execCx == ExecContext.CONTROL || Settings.NO_TURBINE_ENGINE;
   }
 
   /**
@@ -341,11 +369,6 @@ public class FixupVariables implements OptimizerPass {
    */
   private static void findBlockNeeded(Block block, Result result,
                     AliasTracker aliases, List<Pair<Var, Var>> createdAliases) {
-    for (Var v: block.getVariables()) {
-      if (v.mapping() != null) {
-        result.addRead(v.mapping());
-      }
-    }
     
     for (Statement stmt: block.getStatements()) {
       switch (stmt.type()) {
@@ -408,13 +431,13 @@ public class FixupVariables implements OptimizerPass {
    * @param aliases 
    * @param outerBlockVars
    * @param neededVars
-   * @param updateLists 
+   * @param fixupMode ! 
    */
   private static void fixupContinuationRec(Logger logger, Function function,
           ExecContext outerCx,
           Continuation continuation, HierarchicalSet<Var> visible,
           Set<Var> referencedGlobals, AliasTracker outerAliases, Set<Var> outerBlockVars,
-          Result result, boolean updateLists) {
+          Result result, FixupVarMode fixupMode) {
     // First see what variables the continuation defines inside itself
     List<Var> constructVars = continuation.constructDefinedVars(ContVarDefType.NEW_DEF);
     ExecContext innerCx = continuation.childContext(outerCx);
@@ -428,7 +451,7 @@ public class FixupVariables implements OptimizerPass {
       AliasTracker blockAliases = contAliases.makeChild();
       Result inner = fixupBlockRec(logger,
           function, innerBlock, innerCx, childVisible,
-          referencedGlobals, blockAliases, updateLists);
+          referencedGlobals, blockAliases, fixupMode);
       
       // construct will provide some vars
       if (!constructVars.isEmpty()) {
@@ -439,20 +462,23 @@ public class FixupVariables implements OptimizerPass {
         // Might be some variables not yet defined in this scope
         inner.removeReadWrite(outerBlockVars);
         result.add(inner);
-      } else if (updateLists) {
+      } else if (fixupMode != FixupVarMode.NO_UPDATE) {
         // Update the passed in vars
-        rebuildContinuationPassedVars(function, continuation, visible,
-              outerBlockVars, outerAliases, result, inner);
+        rebuildContinuationPassedVars(function, continuation, innerCx,
+            visible, outerBlockVars, outerAliases, result, inner,
+            fixupMode);
         rebuildContinuationKeepOpenVars(function, continuation,
-                  visible, outerBlockVars, outerAliases, result, inner);
+                  visible, outerBlockVars, outerAliases, result, inner,
+                  fixupMode);
       }
     }
   }
 
   private static void rebuildContinuationPassedVars(Function function,
-          Continuation continuation, HierarchicalSet<Var> visibleVars,
+          Continuation continuation, ExecContext contCx,
+          HierarchicalSet<Var> visibleVars,
           Set<Var> outerBlockVars, AliasTracker outerAliases,
-          Result outer, Result inner) {
+          Result outer, Result inner, FixupVarMode fixupMode) {
     // Rebuild passed in vars
     List<PassedVar> passedIn = new ArrayList<PassedVar>();
     for (Var needed: inner.allNeeded()) {
@@ -486,17 +512,39 @@ public class FixupVariables implements OptimizerPass {
         }
       }
       if (mustAdd) {
-        passedIn.add(addtl);
+
+        if (addtl.var.storage() == Alloc.GLOBAL_CONST) {
+          // Only pass global const if needed
+          if (canImportGlobals(contCx)) {
+            for (Block b: continuation.getBlocks()) {
+              if (!b.getVariables().contains(addtl.var)) {
+                b.addVariable(addtl.var);
+              }
+            }
+          } else {
+            passedIn.add(addtl);
+          }
+        } else {
+          passedIn.add(addtl);
+        }
       }
     }
     
-    continuation.setPassedVars(passedIn);
+    if (fixupMode == FixupVarMode.REBUILD) {
+      continuation.setPassedVars(passedIn);
+    } else {
+      assert(fixupMode == FixupVarMode.ADD);
+      Collection<PassedVar> newPassedVars;
+      Collection<PassedVar> oldPassedVars = continuation.getPassedVars();
+      newPassedVars = PassedVar.mergeLists(passedIn, oldPassedVars);
+      continuation.setPassedVars(newPassedVars);
+    }
   }
 
   private static void rebuildContinuationKeepOpenVars(Function function,
       Continuation continuation, HierarchicalSet<Var> visible,
       Set<Var> outerBlockVars, AliasTracker outerAliases,
-      Result outer, Result inner) {
+      Result outer, Result inner, FixupVarMode fixupMode) {
     List<Var> keepOpen = new ArrayList<Var>();
     for (Var v: inner.written) {
       // If not declared in this scope
@@ -508,11 +556,19 @@ public class FixupVariables implements OptimizerPass {
             + " should have been " + "visible but wasn't in "
             + function.getName());
       }
-      if (RefCounting.hasWriteRefCount(v)) {
+      if (RefCounting.trackWriteRefCount(v)) {
         keepOpen.add(v);
       }
     }
-    continuation.setKeepOpenVars(keepOpen);
+    
+    if (fixupMode == FixupVarMode.REBUILD) {
+      continuation.setKeepOpenVars(keepOpen);
+    } else {
+      assert(fixupMode == FixupVarMode.ADD);
+      keepOpen.addAll(continuation.getKeepOpenVars());
+      ICUtil.removeDuplicates(keepOpen);
+      continuation.setKeepOpenVars(keepOpen);
+    }
   }
 
   private static void removeGlobalImports(Block block) {
@@ -530,26 +586,35 @@ public class FixupVariables implements OptimizerPass {
    * @param block
    * @param visible
    * @param neededSets sets of vars needed from outside bock
-   * @return set of global vars
+   * @return set of global vars needed from outside
    */
   private static Set<Var> addGlobalImports(Block block,
           HierarchicalSet<Var> visible,
-          boolean updateLists, List<Set<Var>> neededSets) {
+          FixupVarMode fixupMode, List<Set<Var>> neededSets) {
     // if global constant missing, just add it
-    Set<Var> addedGlobals = new HashSet<Var>();
+    Set<Var> existingGlobals = new HashSet<Var>();
+    if (fixupMode == FixupVarMode.ADD) {
+      for (Var v: block.getVariables()) {
+        if (v.storage() == Alloc.GLOBAL_CONST) {
+          existingGlobals.add(v);
+        }
+      }
+    }
+    
     for (Set<Var> neededSet: neededSets) {
       for (Var var: neededSet) {
         if (visible.contains(var)) {
           if (var.storage() == Alloc.GLOBAL_CONST) {
             // Add at top in case used as mapping var
-            if (updateLists && !addedGlobals.contains(var))
+            if (fixupMode != FixupVarMode.NO_UPDATE
+                && !existingGlobals.contains(var))
               block.addVariable(var, true);
-            addedGlobals.add(var);
+            existingGlobals.add(var);
           }
         }
       }
     }
-    return addedGlobals;
+    return existingGlobals;
   }
 
   private static void removeUnusedGlobals(GlobalConstants constants,

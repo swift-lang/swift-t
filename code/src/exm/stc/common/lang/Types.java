@@ -27,6 +27,8 @@ import java.util.Map;
 import java.util.Set;
 
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.exceptions.TypeMismatchException;
+import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Var.Alloc;
 
 /**
@@ -181,12 +183,20 @@ public class Types {
     public Type getImplType() {
       Type implKey = keyType.getImplType();
       Type implMember = memberType.getImplType();
-      if (implMember == memberType && implKey == keyType)
+      if (implMember == memberType && implKey == keyType) {
         return this;
-      else if (implMember == null || implKey == null)
-        return null;
-      else
+      } else {
         return new ArrayType(local, implKey, implMember);
+      }
+    }
+    
+    @Override
+    public boolean isConcrete() {
+      return keyType.isConcrete() && memberType.isConcrete();
+    }
+    
+    public Type substituteElemType(Type newElem) {
+      return new ArrayType(local, keyType, newElem);
     }
   }
 
@@ -317,31 +327,55 @@ public class Types {
       else
         return new BagType(local, implElem);
     }
+    
+    @Override
+    public boolean isConcrete() {
+      return elemType.isConcrete();
+    }
+
+    public Type substituteElemType(Type newElem) {
+      return new BagType(local, newElem);
+    }
   }
   
   public static class RefType extends Type {
     private final Type referencedType;
-    public RefType(Type referencedType) {
+    private final boolean mutable;
+    
+    public RefType(Type referencedType, boolean mutable) {
       this.referencedType = referencedType;
+      this.mutable = mutable;
     }
 
     @Override
     public StructureType structureType() {
-      return StructureType.REFERENCE;
+      if (mutable) {
+        return StructureType.MUTABLE_REFERENCE;
+      } else {
+        return StructureType.CONST_REFERENCE;
+      }
     }
     @Override
     public Type memberType() {
       return referencedType;
     }
 
+    private String refSigil() {
+      if (mutable) {
+        return "*rw";
+      } else {
+        return "*r";
+      }
+    }
+    
     @Override
     public String toString() {
-      return "*(" + referencedType.toString() + ")";
+      return refSigil() + "(" + referencedType.toString() + ")";
     }
 
     @Override
     public String typeName() {
-      return "*(" + referencedType.typeName() + ")";
+      return refSigil() + "(" + referencedType.typeName() + ")";
     }
 
     @Override
@@ -359,13 +393,29 @@ public class Types {
     }
 
     @Override
+    public boolean assignableTo(Type otherT) {
+      if (!(otherT instanceof RefType)) {
+        return false;
+      }
+      
+      RefType otherRef = (RefType)otherT;
+      /* TODO: currently treat mutable and non-mutable as separate types
+      if (otherRef.mutable && !this.mutable) {
+        return false;
+      }*/
+      return referencedType.assignableTo(otherRef.referencedType);
+    }
+
+    
+    @Override
     public int hashCode() {
-      return referencedType.hashCode() ^ RefType.class.hashCode();
+      return (referencedType.hashCode() * 13 + RefType.class.hashCode()) +
+              (mutable ? 1 : 0);
     }
 
     @Override
     public Type bindTypeVars(Map<String, Type> vals) {
-      return new RefType(referencedType.bindTypeVars(vals));
+      return new RefType(referencedType.bindTypeVars(vals), mutable);
     }
 
     @Override
@@ -384,7 +434,7 @@ public class Types {
       Type cMember = referencedType.concretize(concrete.memberType());
       if (cMember == this.referencedType)
         return this;
-      return new RefType(cMember);
+      return new RefType(cMember, mutable);
     }
 
     @Override
@@ -400,7 +450,12 @@ public class Types {
       else if (implMember == null)
         return null;
       else
-        return new RefType(implMember);
+        return new RefType(implMember, mutable);
+    }
+    
+    @Override
+    public boolean isConcrete() {
+      return referencedType.isConcrete();
     }
   }
 
@@ -422,21 +477,52 @@ public class Types {
       }
     }
 
-    public StructType(String typeName, List<StructField> fields) {
+    public StructType(boolean local, String typeName,
+                       List<StructField> fields) {
+      this.local = local;
       this.typeName = typeName;
       this.fields = new ArrayList<StructField>(fields);
+      this.hashCode = calcHashCode();
     }
 
+    private final boolean local;
     private final List<StructField> fields;
     private final String typeName;
-
-    public String getTypeName() {
+    
+    private final int hashCode;
+    
+    public static StructType localStruct(StructType structType) {
+      return new StructType(true, structType.typeName, structType.fields);
+    }
+    
+    public static StructType sharedStruct(StructType structType) {
+      return new StructType(false, structType.typeName, structType.fields);
+    }
+    
+    public static StructType localStruct(String typeName,
+                                   List<StructField> fields) {
+      return new StructType(true, typeName, fields);
+    }
+    
+    public static StructType sharedStruct(String typeName,
+                                  List<StructField> fields) {
+      return new StructType(false, typeName, fields);
+    }
+    
+    /**
+     * @return struct type name without any sigils
+     */
+    public String getStructTypeName() {
       return typeName;
     }
 
+    public boolean isLocal() {
+      return local;
+    }
+    
     @Override
     public StructureType structureType() {
-      return StructureType.STRUCT;
+      return local ? StructureType.STRUCT_LOCAL : StructureType.STRUCT;
     }
 
     public List<StructField> getFields() {
@@ -456,6 +542,32 @@ public class Types {
       }
       return null;
     }
+    
+    /**
+     * Follow field path through one or more levels of structs to
+     * find type
+     * @param fields
+     * @return
+     * @throw {@link TypeMismatchException} if path invalid
+     */
+    public Type getFieldTypeByPath(List<String> fields) 
+        throws TypeMismatchException {
+      Type curr = this;
+      for (String field: fields) {
+        curr = curr.getImplType();
+        if (!(curr instanceof StructType)) {
+          throw new TypeMismatchException("Can't lookup field " + field +
+                                          " in non-struct type: " + curr);
+        }
+        Type fieldType = ((StructType)curr).getFieldTypeByName(field);
+        if (fieldType == null) {
+          throw new TypeMismatchException("Field " + field + " does not "
+                                      + " exist in struct type " + curr);
+        }
+        curr = fieldType;
+      }
+      return curr;
+    }
 
     public int getFieldIndexByName(String name) {
       for (int i=0; i < fields.size(); i++) {
@@ -474,16 +586,25 @@ public class Types {
               "non-type object");
       }
       Type otherT = (Type) other;
-      if (!otherT.structureType().equals(StructureType.STRUCT)) {
+      if (!isStruct(otherT) && !isStructLocal(otherT)) {
         return false;
       } else {
         // Type names should match, along with fields
         StructType otherST = (StructType)otherT;
-        if (!otherST.getTypeName().equals(typeName)) {
+        if (otherST.local != this.local ||
+                !otherST.getStructTypeName().equals(typeName)) {
           return false;
         } else {
-          // assume that if the names match, the types match, because the
-          // language doesn't permit the same type name to be used twice
+          // Names match, now check that fields match.
+          if (otherST.fields.size() != fields.size()) {
+            return false;
+          }
+          for (int i = 0; i < fields.size(); i++) {
+            StructField f1 = fields.get(i), f2 = otherST.fields.get(i);
+            if (!f1.name.equals(f2.name) || !f1.type.equals(f2.type)) {
+              return false;
+            }
+          }
           return true;
         }
       }
@@ -491,7 +612,11 @@ public class Types {
 
     @Override
     public String toString() {
-      StringBuilder s = new StringBuilder("struct " + this.typeName + " {");
+      StringBuilder s = new StringBuilder();
+      if (local) {
+        s.append(VALUE_SIGIL);
+      }
+      s.append("struct " + this.typeName + " {");
       boolean first = true;
       for (StructField f: fields) {
         if (first) {
@@ -509,12 +634,29 @@ public class Types {
 
     @Override
     public String typeName() {
-      return this.typeName;
+      if (local) {
+        return VALUE_SIGIL + this.typeName;
+      } else {
+        return this.typeName;
+      }
     }
 
     @Override
     public int hashCode() {
-      return StructType.class.hashCode() ^ typeName.hashCode();
+      // Use cached hashcode
+      return hashCode;
+    }
+    
+    private int calcHashCode() {
+      int code = ((StructType.class.hashCode() * 13) +
+               typeName.hashCode()) * 2 + (local ? 0 : 1);
+      
+     for (StructField field: fields) {
+       code *= 13;
+       code += (field.name.hashCode() * 7) + field.type.hashCode();
+     }
+      
+      return code;
     }
 
     @Override
@@ -553,6 +695,17 @@ public class Types {
     @Override
     public Type getImplType() {
       return this;
+    }
+    
+    @Override
+    public boolean isConcrete() {
+      // Concrete if all fields are concrete (they probably should be..)
+      for (StructField f: fields) {
+        if (!f.getType().isConcrete()) {
+          return false;
+        }
+      }
+      return true;
     }
   }
 
@@ -601,7 +754,12 @@ public class Types {
       // This is a primitive type: implements itself
       return this;
     }
-
+    
+    @Override
+    public boolean isConcrete() {
+      return true;
+    }
+    
     @Override
     public Type bindTypeVars(Map<String, Type> vals) {
       // No type vars in primitive
@@ -1048,7 +1206,16 @@ public class Types {
     
     @Override
     public Type getImplType() {
-      return null;
+      ArrayList<Type> implAlts = new ArrayList<Type>();
+      for (Type t: alts) {
+        implAlts.add(t.getImplType());
+      }
+      return new UnionType(implAlts);
+    }
+    
+    @Override
+    public boolean isConcrete() {
+      return false;
     }
   }
   
@@ -1159,7 +1326,12 @@ public class Types {
     
     @Override
     public Type getImplType() {
-      return null;
+      return this;
+    }
+    
+    @Override
+    public boolean isConcrete() {
+      return false;
     }
   }
   
@@ -1222,9 +1394,13 @@ public class Types {
     
     @Override
     public Type getImplType() {
-      return null;
+      return this;
     }
     
+    @Override
+    public boolean isConcrete() {
+      return false;
+    }
   }
   
   private enum StructureType
@@ -1236,9 +1412,9 @@ public class Types {
     FILE_VALUE,
     ARRAY, ARRAY_LOCAL,
     BAG, BAG_LOCAL,
-    /** Reference is only used internally in compiler */
-    REFERENCE,
-    STRUCT,
+    /** Reference types are only used internally in compiler */
+    MUTABLE_REFERENCE, CONST_REFERENCE,
+    STRUCT, STRUCT_LOCAL,
     TYPE_VARIABLE,
     WILDCARD,
     TYPE_UNION,
@@ -1336,11 +1512,10 @@ public class Types {
 
     /**
      * @return the base type which is used to implement this type.
-     *        This will find the implementation type of any paremeter types.
-     *          Null if not concrete type
+     *        This will find the implementation type of any parameter types.
+     *        If not a concrete type, e.g. type var, return original type
      */
     public abstract Type getImplType();
-    
     
     /**
      * Get the base type of this type.  This doesn't do anything
@@ -1354,9 +1529,7 @@ public class Types {
     /**
      * @return true if the type is something we can actually instantiate
      */
-    public boolean isConcrete() {
-      return getImplType() != null;
-    }
+    public abstract boolean isConcrete();
 
     /**
      * Convert to a concrete type that is assignable to the argument.
@@ -1555,20 +1728,20 @@ public class Types {
       List<Type> ins = new ArrayList<Type>(inputs.size());
       List<Type> outs = new ArrayList<Type>(outputs.size());
       for (Type in: inputs) {
-        Type implType = in.getImplType();
-        if (implType == null)
-          return null;
-        ins.add(implType);
+        ins.add(in.getImplType());
       }
       
       for (Type out: outputs) {
-        Type implType = out.getImplType();
-        if (implType == null)
-          return null;
-        outs.add(implType);
+        outs.add(out.getImplType());
       }
       
       return new FunctionType(ins, outs, varargs);
+    }
+    
+    @Override
+    public boolean isConcrete() {
+      // Should be able to instantiate function in principle
+      return true;
     }
   }
 
@@ -1709,6 +1882,11 @@ public class Types {
       return baseType.getImplType();
     }
     
+    @Override
+    public boolean isConcrete() {
+      return baseType.isConcrete();
+    }
+    
     public Type baseType() {
       // Default
       return baseType.baseType();
@@ -1754,6 +1932,10 @@ public class Types {
   public static boolean isArrayRef(Typed t) {
     return isRef(t) && isArray(t.type().memberType());
   }
+  
+  public static boolean isArrayRef(Typed t, boolean mutable) {
+    return isRef(t, mutable) && isArray(t.type().memberType());
+  }
 
   public static boolean isArrayLocalRef(Typed t) {
     return isRef(t) && isArrayLocal(t.type().memberType());
@@ -1769,6 +1951,10 @@ public class Types {
   
   public static boolean isBagRef(Typed t) {
     return isRef(t) && isBag(t.type().memberType());
+  }
+  
+  public static boolean isBagRef(Typed t, boolean mutable) {
+    return isRef(t, mutable) && isBag(t.type().memberType());
   }
   
   public static boolean isBagLocalRef(Typed t) {
@@ -1812,33 +1998,43 @@ public class Types {
           + " type " + t.toString());
     }
   }
+  
+  public static Type containerElemValType(Typed t) {
+    return retrievedType(containerElemType(t));
+  }
 
-  public static boolean isMemberType(Typed arr, Typed member) {
-    Type memberType = containerElemType(arr.type());
-    return (member.type().assignableTo(memberType));
+  public static boolean isElemType(Typed cont, Typed elem) {
+    Type expected = containerElemType(cont.type());
+    return (elem.type().assignableTo(expected));
   }
   
-  /**
-   * @param member
-   * @param arr
-   * @return true if member is a reference to the member type of arr,
-   *          false if it is the same as member type of arr
-   * @throws STCRuntimeError if member can't be a member or ref to 
-   *                                      member of array
-   */
-  public static boolean isMemberReference(Typed member,
-                                          Typed arr) 
-          throws STCRuntimeError{
-    Type memberType = containerElemType(arr);
-    if (memberType.equals(member.type())) {
-      return false;
-    } else if (isRefTo(member, memberType)) {
-      return true;
-    }
-    throw new STCRuntimeError("Inconsistent types: array of type " 
-        + arr.type() + " with member of type " + member.type());
+  public static boolean isElemValType(Typed cont, Typed elem) {
+    Type expected = containerElemValType(cont.type());
+    return (elem.type().assignableTo(expected));
   }
-
+  
+  public static Type substituteElemType(Typed cont, Type newElem) {
+    boolean isRef = isRef(cont);
+    boolean isMutableRef = isMutableRef(cont);
+    if (isRef) {
+      cont = cont.type().memberType();
+    }
+    
+    Type newCont;
+    if (isArray(cont) || isArrayLocal(cont)) {
+      newCont = ((ArrayType)cont).substituteElemType(newElem);
+    } else {
+      assert(isBag(cont) || isBagLocal(cont));
+      newCont = ((BagType)cont).substituteElemType(newElem);
+    }
+    
+    if (isRef) {
+      return new RefType(newCont, isMutableRef);
+    } else {
+      return newCont;
+    }
+  }
+  
   public static Type arrayKeyType(Typed arr) {
     if (isArray(arr) || isArrayLocal(arr)) {
       return ((ArrayType)arr.type().baseType()).keyType;
@@ -1852,7 +2048,7 @@ public class Types {
     // Interpret arg type as a value
     Type actual = key.typeInternal(false);
     // Get the value type of the array key
-    Type expected = derefResultType(arrayKeyType(arr));
+    Type expected = retrievedType(arrayKeyType(arr));
     return actual.assignableTo(expected);
   }
   
@@ -1878,10 +2074,48 @@ public class Types {
     return key.type().assignableTo(arrayKeyType(arr));
   }
 
-  public static boolean isBagElem(Typed bag, Typed elem) {
-    return elem.type().assignableTo(containerElemType(bag));
+  public static boolean isStructField(Typed struct,
+            List<String> fieldPath, Typed field) {
+    Type fieldType;
+    try {
+      fieldType = structFieldType(struct, fieldPath);
+    } catch (TypeMismatchException e) {
+      return false;
+    }
+    return field.type().assignableTo(fieldType);
   }
 
+  /**
+   * 
+   * @param struct
+   * @param fieldPath
+   * @throw TypeMismatchException if not a field
+   * @return
+   * @throws TypeMismatchException 
+   */
+  public static Type structFieldType(Typed struct, List<String> fieldPath) throws TypeMismatchException {
+    assert(Types.isStruct(struct) || Types.isStructRef(struct) ||
+            isStructLocal(struct));
+    StructType structType;
+    if (isStruct(struct) || isStructLocal(struct)) {
+      structType = (StructType)struct.type().getImplType();
+    } else {
+      structType = (StructType)struct.type().getImplType().memberType();
+    }
+    return structType.getFieldTypeByPath(fieldPath);
+  }
+  
+  public static boolean isStructFieldVal(Typed struct,
+      List<String> fieldPath, Typed field) {
+    Type fieldType;
+    try {
+      fieldType = structFieldType(struct, fieldPath);
+    } catch (TypeMismatchException e) {
+      return false;
+    }
+    return field.type().assignableTo(retrievedType(fieldType));
+  }
+  
   /**
    * Return true if the type is one that we can subscribe to
    * the final value of 
@@ -1890,7 +2124,7 @@ public class Types {
    */
   public static boolean canWaitForFinalize(Typed type) {
     return isFuture(type) || isPrimUpdateable(type) ||
-            isContainer(type);
+            isContainer(type) || isStruct(type);
   }
   
   /**
@@ -1934,16 +2168,37 @@ public class Types {
   }
 
   public static boolean isRef(Typed t) {
-    return t.type().structureType() == StructureType.REFERENCE;
+    return isConstRef(t) || isMutableRef(t);
+  }
+  
+  public static boolean isRef(Typed t, boolean mutable) {
+    return mutable ? isMutableRef(t): isConstRef(t);
+  }
+  
+  public static boolean isConstRef(Typed t) {
+    return t.type().structureType() == StructureType.CONST_REFERENCE;
+  }
+  
+  public static boolean isMutableRef(Typed t) {
+    return t.type().structureType() == StructureType.MUTABLE_REFERENCE;
   }
 
   public static boolean isStruct(Typed t) {
     return t.type().structureType() == StructureType.STRUCT;
   }
   
+  public static boolean isStructLocal(Typed t) {
+    return t.type().structureType() == StructureType.STRUCT_LOCAL;
+  }
+  
   public static boolean isStructRef(Typed t) {
     return isRef(t) && isStruct(t.type().memberType());
   }
+  
+  public static boolean isStructRef(Typed t, boolean mutable) {
+    return isRef(t, mutable) && isStruct(t.type().memberType());
+  }
+  
   
   public static boolean isFuture(PrimType primType, Typed t) {
     return isPrimFuture(t) && t.type().primType() == primType;
@@ -2046,8 +2301,19 @@ public class Types {
            refType.type().memberType().equals(valType.type());
   }
   
+  public static boolean isRefTo(Typed refType, Typed valType, boolean mutable) {
+    return isRef(refType, mutable) && 
+           refType.type().memberType().equals(valType.type());
+  }
+  
   public static boolean isAssignableRefTo(Typed refType, Typed valType) {
     return isRef(refType) && 
+        refType.type().memberType().assignableTo(valType.type());
+  }
+  
+  public static boolean isAssignableRefTo(Typed refType, Typed valType,
+                                          boolean mutable) {
+    return isRef(refType, mutable) && 
         refType.type().memberType().assignableTo(valType.type());
   }
   
@@ -2057,23 +2323,105 @@ public class Types {
               future.type().primType() == up.type().primType();
   }
   
-  public static Type derefResultType(Typed t) {
+  /**
+   * Check if we can dereference the type
+   * @param t
+   * @return
+   */
+  public static boolean canRetrieve(Type t) {
+    if (isContainer(t) || isRef(t) || isPrimFuture(t)) {
+      return true;
+    } else if (isStruct(t)) {
+      return true;
+    } else if (isPrimValue(t) || isContainerLocal(t) ||
+               isStructLocal(t)) {
+      return false;
+    } else {
+      throw new STCRuntimeError("Not sure if can deref " + t);
+    }
+  }
+
+  /**
+   * The type that would result from a non-recursive retrieve operation
+   * @param t
+   * @return
+   */
+  public static Type retrievedType(Typed t) {
+    return retrievedType(t, false);
+  }
+  
+  /**
+   * The type that would result from a retrieve operation
+   * @param t
+   * @return
+   */
+  public static Type retrievedType(Typed t, boolean recursive) {
     if (isScalarFuture(t) || isScalarUpdateable(t))  {
       return new ScalarValueType(t.type().primType());
     } else if (isFile(t)) {
       return new FileValueType(t.type().fileKind());
     } else if (isRef(t)) {
       return t.type().baseType().memberType();
+    } else if (recursive && 
+        (isContainer(t) || isContainerLocal(t))) {
+      return unpackedContainerType(t);
     } else if (isArray(t)) {
+      assert(!recursive);
       ArrayType at = (ArrayType)t.type().getImplType();
-      return new ArrayType(true, at.keyType(), at.memberType());
+      Type retrievedMemberType = retrievedType(at.memberType(), false);
+      return ArrayType.localArray(at.keyType(), retrievedMemberType);
     } else if (isBag(t)) {
+      assert(!recursive);
       BagType bt = (BagType)t.type().getImplType();
-      return new BagType(true, bt.memberType());
+      Type retrievedMemberType = retrievedType(bt.memberType(), false);
+      return BagType.localBag(retrievedMemberType);
+    } else if (isStruct(t)) {
+      StructType st = (StructType)t.type().getImplType();
+      if (recursive) {
+        for (StructField f: st.getFields()) {
+          if (Types.isRef(f.getType())) {
+            throw new STCRuntimeError("Recursive fetch of struct with ref field "
+                                     + "not supported yet " + st);
+          }
+        }
+      }
+      return StructType.localStruct(st);
     } else {
       throw new STCRuntimeError(t.type() + " can't be dereferenced");
     }
   }
+  
+  /**
+   * Type that would result from storing this type
+   * @param t
+   * @param mutable if should be mutable
+   * @return
+   */
+  public static Type storeResultType(Typed t, boolean mutable) {
+    if (isScalarFuture(t) || isScalarUpdateable(t) ||
+            isFile(t) || isRef(t) || isContainer(t) || isStruct(t))  {
+      return new RefType(t.type(), mutable);
+    } else if (isScalarValue(t)) {
+      return new ScalarFutureType(t.type().primType());
+    } else if (isFileVal(t)) {
+      FileValueType fv = (FileValueType)t.type().getImplType();
+      return new FileFutureType(fv.fileKind());
+    } else if (isArrayLocal(t)) {
+      ArrayType at = (ArrayType)t.type().getImplType();
+      Type storedMemberType = storeResultType(at.memberType(), mutable);
+      return ArrayType.sharedArray(at.keyType(), storedMemberType);
+    } else if (isBagLocal(t)) {
+      BagType bt = (BagType)t.type().getImplType();
+      Type storedMemberType = storeResultType(bt.memberType(), mutable);
+      return BagType.sharedBag(storedMemberType);
+    } else if (isStructLocal(t)) {
+      StructType st = (StructType)t.type().getImplType();
+      return StructType.sharedStruct(st);
+    } else {
+      throw new STCRuntimeError(t.type() + " can't be stored");
+    }
+  }
+  
   
   /**
    * Work out type of container variable if we extract all
@@ -2082,20 +2430,32 @@ public class Types {
    * @return
    */
   public static Type unpackedContainerType(Typed t) {
-    assert(Types.isContainer(t));
+    assert(Types.isContainer(t) || Types.isContainerRef(t) ||
+           Types.isContainerLocal(t));
     Type elemType = Types.containerElemType(t);
+    
+    // Strip off references
+    while (Types.isRef(elemType)) {
+      elemType = Types.retrievedType(elemType);
+    }
+    
     Type elemValType;
-    if (Types.isContainer(elemType)) {
+    if (Types.isContainer(elemType) ||
+        Types.isContainerLocal(elemType)) {
+      // Recursively unpack
       elemValType = unpackedContainerType(elemType);
     } else {
-      elemValType = Types.derefResultType(elemType);
+      elemValType = elemType;
+      while (Types.canRetrieve(elemValType)) {
+        elemValType = retrievedType(elemValType );
+      }
     }
-    if (Types.isArray(t)) {
+    if (Types.isArray(t) || Types.isArrayLocal(t)) {
       ArrayType at = (ArrayType)t.type().getImplType();
-      return new ArrayType(true, at.keyType(), elemValType);
+      return ArrayType.localArray(at.keyType(), elemValType);
     } else {
-      assert(Types.isBag(t));
-      return new BagType(true, elemValType);
+      assert(Types.isBag(t) || Types.isBagLocal(t));
+      return BagType.localBag(elemValType);
     }
   }
   
@@ -2149,11 +2509,41 @@ public class Types {
    * @return
    */
   public static boolean inputRequiresInitialization(Var input) {
+    if (Types.isStruct(input)) {
+      return structRequiresInputInit(input);
+    }
     return input.storage() == Alloc.ALIAS 
-        || isPrimUpdateable(input)
-        || isStruct(input); // Need to load all struct members
+        || isPrimUpdateable(input);
   }
   
+  private static boolean structRequiresInputInit(Typed typed) {
+    StructType type = (StructType)typed.type().getImplType();
+    for (StructField f: type.getFields()) {
+      if (structFieldRequiresInit(f)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Check if a struct field needs to be initialised
+   * @param f
+   * @return
+   */
+  private static boolean structFieldRequiresInit(StructField f) {
+    if (Types.isStruct(f.getType()) &&
+        structRequiresInputInit(f.getType())) {
+      return true;
+    } else if (Types.isRef(f.getType())) {
+      // Refs need to be initialized since STC middle end assumes that
+      // refs in an initialized struct are set
+      return true;
+    } else {
+      return false;
+    }
+  }
+
   /**
    * Returns true if the variable requires initialiation before being used
    * in output context
@@ -2191,9 +2581,9 @@ public class Types {
      * @param type
      */
     public NestedContainerInfo(Typed type) {
-      assert(isContainer(type));
+      assert(isContainer(type) || isContainerRef(type));
       int depth = 0;
-      while (isContainer(type)) {
+      while (isContainer(type) || isContainerRef(type)) {
         type = containerElemType(type);
         depth++;
       }
@@ -2285,36 +2675,28 @@ public class Types {
 
   public static final Type F_INT = new ScalarFutureType(PrimType.INT);
   public static final Type V_INT = new ScalarValueType(PrimType.INT);
-  public static final Type R_INT = new RefType(F_INT);
 
   public static final Type F_STRING = new ScalarFutureType(PrimType.STRING);
   public static final Type V_STRING = new ScalarValueType(PrimType.STRING);
-  public static final Type R_STRING = new RefType(F_STRING);
 
   public static final Type F_FLOAT = new ScalarFutureType(PrimType.FLOAT);
   public static final Type V_FLOAT = new ScalarValueType(PrimType.FLOAT);
-  public static final Type R_FLOAT = new RefType(F_FLOAT);
   public static final Type UP_FLOAT = new ScalarUpdateableType(PrimType.FLOAT);
 
   public static final Type F_BOOL = new ScalarFutureType(PrimType.BOOL);
   public static final Type V_BOOL = new ScalarValueType(PrimType.BOOL);
-  public static final Type R_BOOL = new RefType(F_BOOL);
   
   public static final Type F_BLOB = new ScalarFutureType(PrimType.BLOB);
-  public static final Type R_BLOB = new RefType(F_BLOB);
   public static final Type V_BLOB = new ScalarValueType(PrimType.BLOB);
   
   public static final Type F_FILE = new FileFutureType(FileKind.LOCAL_FS);
   public static final Type V_FILE = new FileValueType(FileKind.LOCAL_FS);
-  public static final Type REF_FILE = new RefType(F_FILE);
   
   public static final Type F_URL = new FileFutureType(FileKind.URL);
   public static final Type V_URL = new FileValueType(FileKind.URL);
-  public static final Type REF_URL = new RefType(F_URL);
   
   public static final Type V_VOID = new ScalarValueType(PrimType.VOID);
   public static final Type F_VOID = new ScalarFutureType(PrimType.VOID);
-  public static final Type REF_VOID = new RefType(F_VOID);
   
   /**
    * Represents location of execution 

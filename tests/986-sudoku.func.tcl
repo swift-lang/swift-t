@@ -32,11 +32,10 @@ namespace eval sudoku {
         return 1
     }
 
-    proc sudoku_step { output solved board breadthfirst quota } {
+    proc sudoku_step { solved board breadthfirst quota } {
 
         if { $solved > 0.0 } {
             turbine::log "solved elsewhere!"
-            adlb::write_refcount_decr $output
             return
         }
 
@@ -79,12 +78,8 @@ namespace eval sudoku {
 
         set n [ llength $boardl ]
         puts stderr "${n} new boards at [ clock clicks -milliseconds ]"
-        if { $n == 0 } {
-            set tds [ list ]
-        } else {
-            set tds [ adlb::multicreate {*}[ lrepeat $n [ list blob 1 ] \
-                                                     [ list integer 1 ] ] ]
-        }
+        
+        set output [ dict create ]
 
         for { set i 0 } { $i < $n } { incr i } {
             set board [ lindex $boardl $i ]
@@ -92,23 +87,15 @@ namespace eval sudoku {
             puts stderr "Next board: \"${board}\" filled ${filled}"
 
             # Set the blob
-            set board_td [ lindex $tds [ expr 2 * $i ] ]
-            set filled_td [ lindex $tds [ expr 2 * $i + 1 ] ]
             set board_blob [ adlb::blob_from_string $board ]
-            turbine::store_blob $board_td $board_blob
-            adlb::local_blob_free $board_blob
-            unset board_blob
-            turbine::store_integer $filled_td $filled
+            # TODO: free blob?
 
-            set struct [ dict create "board" $board_td "filledSquares" $filled_td ]
-            # TODO: better struct naming convention: this assumes that
-            #       struct type was given name "0"
-            turbine::container_insert $output $i $struct struct0
+            set struct [ dict create "board" $board_blob "filledSquares" $filled ]
+            dict append output $i $struct
         }
 
-        adlb::write_refcount_decr $output
-        
         turbine::log "sudoku_step_body done => $output"
+        return $output
     }
 
     proc print_board_tcl { board } {

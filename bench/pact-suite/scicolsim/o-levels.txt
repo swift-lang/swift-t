@@ -1,13 +1,15 @@
 -O0 
--O0 -T value-number -T dead-code-elim
--O0 -T value-number -T dead-code-elim -T shared-constants -T constant-fold
--O0 -T value-number -T dead-code-elim -T shared-constants -T constant-fold -T finalized-var
--O0 -T value-number -T dead-code-elim -T shared-constants -T constant-fold -T finalized-var -T controlflow-fusion
+-O0 -T value-number -T propagate-aliases -T dead-code-elim
+-O0 -T value-number -T propagate-aliases -T dead-code-elim -T shared-constants -T constant-fold
+-O0 -T value-number -T propagate-aliases -T dead-code-elim -T shared-constants -T constant-fold -T controlflow-fusion
+-O0 -T value-number -T propagate-aliases -T dead-code-elim -T shared-constants -T constant-fold -T controlflow-fusion -T merge-refcounts -T cancel-refcounts -T piggyback-refcounts -T batch-refcounts -T hoist-refcounts
 -O1
--O1 -T expand-dataflow-ops
--O1 -T expand-dataflow-ops -T expand-loops
--O1 -T expand-dataflow-ops -T expand-loops -T hoisting
+-O1 -T dataflow-op-inline
+-O1 -T dataflow-op-inline -T wait-coalesce
+-O1 -T dataflow-op-inline -T wait-coalesce -T function-signature -T loop-simplify
+-O1 -T dataflow-op-inline -T wait-coalesce -T function-signature -T loop-simplify -T hoisting
 -O2
 -O2 -T function-inline
 -O2 -T function-inline -T pipeline
--O2 -T function-inline -T pipeline -T reorder-insts  -T algebra -T full-unroll
+-O2 -T function-inline -T pipeline -T reorder-insts
+-O3

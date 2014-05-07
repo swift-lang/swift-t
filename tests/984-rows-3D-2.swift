@@ -3,6 +3,10 @@
    Related to RDCEP work
 */
 
+// Skip tests - see issue 628
+// SKIP-O0-TEST
+// SKIP-O1-TEST
+
 import io;
 import string;
 import stats;

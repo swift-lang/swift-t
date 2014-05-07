@@ -15,21 +15,26 @@
  */
 package exm.stc.frontend;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Stack;
 
+import org.apache.log4j.Logger;
+
+import exm.stc.common.Logging;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
+import exm.stc.common.util.StackLite;
 import exm.stc.ic.STCMiddleEnd;
 
 /**
@@ -40,10 +45,12 @@ import exm.stc.ic.STCMiddleEnd;
  *
  */
 public class VarCreator {
-  private STCMiddleEnd backend;
+  private final STCMiddleEnd backend;
+  private final Logger logger;
 
   public VarCreator(STCMiddleEnd backend) {
     super();
+    this.logger = Logging.getSTCLogger();
     this.backend = backend;
   }
 
@@ -55,9 +62,9 @@ public class VarCreator {
    */
   public Var createVariable(Context context, Var var) throws UserException {
 
-    if (var.mapping() != null && (!Types.isMappable(var))) {
+    if (var.mappedDecl() && (!Types.isMappable(var))) {
       throw new UserException(context, "Variable " + var.name() + " of type "
-          + var.type().toString() + " cannot be mapped to " + var.mapping());
+          + var.type().toString() + " cannot be mapped to");
     }
 
     try {
@@ -69,63 +76,110 @@ public class VarCreator {
     return var;
   }
   
-  public Var createVariable(Context context, Type type, String name,
+  
+  public Var createMappedVariable(Context context, Type type, String name,
       Alloc storage, DefType defType, VarProvenance prov, Var mapping)
                                                 throws UserException {
+    Var v = createVariable(context,
+        new Var(type, name, storage, defType, prov, mapping != null));
+    
+    if (mapping != null) {
+      if (Types.isFile(v)) {
+        backend.copyInFilename(VarRepr.backendVar(v),
+                          VarRepr.backendVar(mapping));
+      } else {
+        throw new STCRuntimeError("Mapping type " + v.type() +
+                                  " not implemented");
+      }
+    }
+    
+    return v;
+  }
+  
+  public Var createVariable(Context context, Type type, String name,
+      Alloc storage, DefType defType, VarProvenance prov, boolean mapped)
+                                                throws UserException {
     return createVariable(context,
-        new Var(type, name, storage, defType, prov, mapping));
+        new Var(type, name, storage, defType, prov, mapped));
   }
 
   public void initialiseVariable(Context context, Var v)
       throws UndefinedTypeException, DoubleDefineException {
-    if (!Types.isStruct(v.type())) {
-      declare(v);
-    } else {
-      // Need to handle structs specially because they have lots of nested
-      // variables created at declaration time
-      initialiseStruct(context, v, v, new Stack<String>());
+    backendInit(v);
+    if (Types.isStruct(v)) {
+      initialiseStruct(context, v);
     }
   }
 
   /**
-   * Convenience function to declare var in backend 
+   * Convenience function to declare var in backend with appropriate
+   * converted type
    * @param var
    * @throws UndefinedTypeException
    */
-  public void declare(Var var) throws UndefinedTypeException {
-    backend.declare(var);
+  public void backendInit(Var var) throws UndefinedTypeException {
+    backend.declare(VarRepr.backendVar(var));
   }
 
-  private void initialiseStruct(Context context, Var rootStruct,
-              Var structToInit, Stack<String> path)
+  private void initialiseStruct(Context context, Var struct)
       throws UndefinedTypeException, DoubleDefineException {
-    assert(Types.isStruct(structToInit.type()));
+    StructType structType = (StructType)struct.type().getImplType();
     
-    declare(structToInit);
-    
-    if (structToInit.storage() == Alloc.ALIAS) {
-      // Skip recursive initialisation if its just an alias
-      return;
-    } else {
-      StructType type = (StructType)structToInit.type();
-  
-      for (StructField f: type.getFields()) {
-        path.push(f.getName());
-  
-        Var tmp = context.createStructFieldTmp(
-            rootStruct, f.getType(), path, Alloc.TEMP);
-  
-        if (Types.isStruct(f.getType())) {
-          // Continue recursive structure initialisation,
-          // while keeping track of the full path
-          initialiseStruct(context, rootStruct, tmp, path);
-        } else {
-          initialiseVariable(context, tmp);
-        }
-        backend.structInitField(structToInit, f.getName(), tmp);
-        path.pop();
-      }
+    List<List<String>> fieldPaths = new ArrayList<List<String>>();
+    List<Arg> fieldVals = new ArrayList<Arg>();
+
+    StackLite<String> currFieldPath = new StackLite<String>();
+    int initFieldCount = initialiseStructRec(context, struct, currFieldPath,
+        structType, fieldPaths, fieldVals);
+    if (initFieldCount > 0) {
+      logger.trace("Init struct: " + struct.name() +
+               " type: " + struct.type() + "\n" +
+               "Paths: " + fieldPaths + "\n" + "Vals: " + fieldVals);
+      backend.structInitFields(VarRepr.backendVar(struct), fieldPaths,
+          VarRepr.backendArgs(fieldVals), Arg.createIntLit(initFieldCount));
     }
+  }
+
+  /**
+   * 
+   * @param rootStruct
+   * @param currFieldPath path from root to here
+   * @param structType type of current path
+   * @param fieldPaths Field paths - added to
+   * @param fieldVals Field values - added to
+   * @return number of fields initialised
+   * @throws DoubleDefineException 
+   * @throws UndefinedTypeException 
+   */
+  private int initialiseStructRec(Context context,
+      Var rootStruct, StackLite<String> currFieldPath, StructType structType,
+      List<List<String>> fieldPaths, List<Arg> fieldVals)
+          throws UndefinedTypeException, DoubleDefineException {
+    int initFieldCount = 0;
+    
+    for (StructField field: structType.getFields()) {
+      currFieldPath.push(field.getName());
+      
+      Type fieldT = field.getType();
+      if (VarRepr.storeRefInStruct(fieldT)) {
+        ArrayList<String> fieldPath = new ArrayList<String>(currFieldPath);
+        // initialize data being referenced and put into struct
+        Var fieldVar = createStructFieldTmp(context, rootStruct, fieldT,
+                                              fieldPath, Alloc.TEMP);
+        
+        fieldPaths.add(fieldPath);
+        fieldVals.add(VarRepr.backendVar(fieldVar).asArg());
+        
+        initFieldCount++;
+      } else if (Types.isStruct(fieldT)) {
+        initFieldCount += initialiseStructRec(context, rootStruct,
+            currFieldPath, (StructType)fieldT.getImplType(),
+            fieldPaths, fieldVals);
+      }
+      
+      currFieldPath.pop();
+    }
+    return initFieldCount;
   }
 
   /**
@@ -191,16 +245,24 @@ public class VarCreator {
         throws UserException {
     assert(Types.isPrimValue(type));
     Var val = context.createLocalValueVariable(type);
-    declare(val);
+    backendInit(val);
     return val;
+  }
+  
+  
+  public Var createStructFieldAlias(Context context, Var rootStruct, 
+      Type memType, List<String> fieldPath)
+          throws UndefinedTypeException, DoubleDefineException {
+    return createStructFieldTmp(context, rootStruct, memType, fieldPath,
+            Alloc.ALIAS);
   }
   
   public Var createStructFieldTmp(Context context, Var rootStruct, 
                   Type memType, List<String> fieldPath,
-                  Alloc storage) throws UndefinedTypeException {
+                  Alloc storage) throws UndefinedTypeException, DoubleDefineException {
     Var tmp = context.createStructFieldTmp(rootStruct, memType,
           fieldPath, storage);
-    declare(tmp);
+    initialiseVariable(context, tmp);
     return tmp;
   }
 
@@ -220,7 +282,7 @@ public class VarCreator {
    */
   public Var createValueOfVar(Context context, Var future,
         boolean initialise) throws UserException {
-    Type valType = Types.derefResultType(future.type());
+    Type valType = Types.retrievedType(future.type());
     assert(valType != null) : future.type() + " could not be derefed";
     Var val = createValueVar(context, valType, future, initialise);
     return val;
@@ -247,71 +309,6 @@ public class VarCreator {
     Var filename = context.createFilenameAliasVariable(fileVar);
     initialiseVariable(context, filename);
     return filename;
-  }
-  
-  
-  /**
-   * Create a value variable and retrieve value of future into it
-   * @param context
-   * @param future
-   * @return
-   * @throws UserException
-   * @throws UndefinedTypeException
-   * @throws DoubleDefineException
-   */
-  public Var fetchValueOf(Context context, Var future) 
-      throws UserException, UndefinedTypeException, DoubleDefineException {
-    Type futureType = future.type();
-    Var val = createValueOfVar(context, future);
-    if (Types.isPrimFuture(future.type())) {
-      switch (futureType.primType()) {
-      case BOOL:
-        backend.retrieveBool(val, future);
-        break;
-      case INT:
-        backend.retrieveInt(val, future);
-        break;
-      case STRING:
-        backend.retrieveString(val, future);
-        break;
-      case FLOAT:
-        backend.retrieveFloat(val, future);
-        break;
-      case BLOB:
-        backend.retrieveBlob(val, future);
-        break;
-      case VOID:
-        backend.retrieveVoid(val, future);
-        break;
-      case FILE:
-        backend.retrieveFile(val, future);
-        break;
-      default:
-        throw new STCRuntimeError("Don't know how to retrieve value of "
-            + " type " + futureType.typeName() + " for variable " 
-            + future.name());
-      }
-    } else if (Types.isArray(future)) {
-      // TODO: recursively?
-      backend.retrieveArray(val, future);
-    } else if (Types.isBag(future)) {
-      // TODO: recursively?
-      backend.retrieveBag(val, future);
-    } else {
-      throw new STCRuntimeError("Don't know how to fetch " + futureType);
-    }
-    
-    return val;
-  }
-
-  public Var fetchContainerValues(Context context, Var c)
-          throws UserException {
-    assert(Types.isContainer(c));
-    Type unpackedT = Types.unpackedContainerType(c.type());
-    Var val = createValueVar(context, unpackedT, c, true);
-    backend.retrieveRecursive(val, c);
-    // TODO: recursively free e.g. blobs in list
-    return val;
   }
   
 }

@@ -1,9 +1,5 @@
-// THIS-TEST-SHOULD-NOT-COMPILE
 // Regression test for compiler internal error where we substitute invalid
 // type into typevar 
-
-// NOTE: if we allow passing structs into TCL code directly, will need
-// to modify test
 
 type test {
   int a;

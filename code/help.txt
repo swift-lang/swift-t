@@ -73,7 +73,7 @@ unroll-loops: unroll loops with @unroll annotation
 expand-loops: expand small loops with fixed bounds
 full-unroll: aggressively unroll loops based on code size heuristic
 controlflow-fusion: fuse together loops over same range, etc
-expand-dataflow-ops: expand dataflow version of functions or operations
+dataflow-op-inline: expand dataflow version of functions or operations
       int explicit wait, loads, local calls, and stores
 wait-coalesce: rearrange task dependencies to minimise the number
                of tasks/variable subscribes

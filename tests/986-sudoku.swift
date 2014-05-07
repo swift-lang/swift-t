@@ -56,7 +56,7 @@ type boardinfo {
 (boardinfo nextboards[]) sudoku_step(updateable_float solved, blob board, 
                                         boolean breadthfirst, int quota)
                                         "sudoku" "0.0" [
-    "sudoku::sudoku_step <<nextboards>> <<solved>> <<board>> <<breadthfirst>> <<quota>>"
+    "set <<nextboards>> [ sudoku::sudoku_step <<solved>> <<board>> <<breadthfirst>> <<quota>> ]"
 ];
 
 // Total squares on board

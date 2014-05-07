@@ -1,6 +1,4 @@
 import assert;
-// need to fix array closing logic
-
 
 type soa {
     int A[];

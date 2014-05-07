@@ -87,8 +87,7 @@ public class HoistLoops implements OptimizerPass {
       
       // Set up map for top block of function
       HoistTracking mainBlockState =
-          global.makeChild(f.mainBlock(), ExecContext.CONTROL,
-                           0, 0);
+          global.makeChild(f.mainBlock(), true, ExecContext.CONTROL, 0, 0);
       
       // Inputs are written elsewhere
       for (Var in: f.getInputList()) {
@@ -177,7 +176,7 @@ public class HoistLoops implements OptimizerPass {
      * Create root for whole program
      */
     public HoistTracking() {
-      this(null, null, ExecContext.CONTROL, 0, 0,
+      this(null, null, false, ExecContext.CONTROL, 0, 0,
            new HierarchicalMap<Var, Block>(),
            new HierarchicalMap<Var, Block>(),
            new HierarchicalMap<Var, Block>(),
@@ -192,8 +191,10 @@ public class HoistLoops implements OptimizerPass {
      */
     public HoistTracking makeChild(Continuation c, Block childBlock) {
       int childHoist = canHoistThrough(c) ? maxHoist + 1 : 0;
+
+      Logging.getSTCLogger().trace("Child of " + c.getType() + " " + " childHoist: " + childHoist);
       int childLoopHoist = c.isLoop() ? 0 : maxLoopHoist + 1;
-      HoistTracking childState = makeChild(childBlock,
+      HoistTracking childState = makeChild(childBlock, c.isAsync(),
           c.childContext(execCx), childHoist, childLoopHoist);
       // make sure loop iteration variables, etc are tracked
       for (Var v: c.constructDefinedVars()) {
@@ -211,7 +212,7 @@ public class HoistLoops implements OptimizerPass {
     }
 
     private HoistTracking(HoistTracking parent,
-        Block block, ExecContext execCx, 
+        Block block, boolean async, ExecContext execCx, 
         int maxHoist, int maxLoopHoist,
         HierarchicalMap<Var, Block> writeMap,
         HierarchicalMap<Var, Block> piecewiseWriteMap,
@@ -220,6 +221,7 @@ public class HoistLoops implements OptimizerPass {
       super();
       this.parent = parent;
       this.block = block;
+      this.async = async;
       this.execCx = execCx;
       this.maxHoist = maxHoist;
       this.maxLoopHoist = maxLoopHoist;
@@ -234,6 +236,9 @@ public class HoistLoops implements OptimizerPass {
     
     /** Current block */
     public final Block block;
+    
+    /** Whether it executes asynchronously from parent */
+    public final boolean async;
     
     /** Execution context */
     public final ExecContext execCx;
@@ -270,17 +275,23 @@ public class HoistLoops implements OptimizerPass {
     public final HierarchicalMap<Var, Block> initializedMap;
 
     public HoistTracking getAncestor(int links) {
+      Logger logger = Logging.getSTCLogger();
+      
       HoistTracking curr = this;
       for (int i = 0; i < links; i++) {
-        curr = this.parent;
+        if (logger.isTraceEnabled()) {
+          logger.trace("Ancestor of " + this.block.getType() +
+                           ": " + this.parent.block.getType());
+        }
+        curr = curr.parent;
       }
       return curr;
     }
     
-    public HoistTracking makeChild(Block childBlock,
+    public HoistTracking makeChild(Block childBlock, boolean async,
                        ExecContext newExecCx,
                        int maxHoist, int maxLoopHoist) {
-      return new HoistTracking(this, childBlock, execCx,
+      return new HoistTracking(this, childBlock, async, execCx,
                               maxHoist, maxLoopHoist,
                               writeMap.makeChildMap(),
                               piecewiseWriteMap.makeChildMap(),
@@ -307,9 +318,24 @@ public class HoistLoops implements OptimizerPass {
     
     public void write(Var v, boolean piecewise) {
       if (piecewise) {
-        piecewiseWriteMap.put(v, this.block);
+        this.piecewiseWriteMap.put(v, this.block);
       } else {
-        writeMap.put(v, this.block);
+        this.writeMap.put(v, this.block);
+      }
+      
+      /*
+       * Also mark as written in parent continuation if synchronous -
+       * e.g. branches of if.
+       * This is because code in the parent continuation can reasonably
+       * assume that this var was written, so hoisting it out would
+       * be unreasonable. 
+       */
+      HoistTracking taskRoot = this;
+      while (!taskRoot.async && taskRoot.parent != null) {
+        taskRoot = taskRoot.parent;
+      }
+      if (taskRoot != this) {
+        taskRoot.write(v, piecewise);
       }
     }
 
@@ -344,7 +370,7 @@ public class HoistLoops implements OptimizerPass {
       return true;
     } else if (c.getType() == ContinuationType.WAIT_STATEMENT &&
             !((WaitStatement)c).hasExplicit() &&
-            ((WaitStatement)c).targetLocation() != null) {
+            ((WaitStatement)c).targetLocation() == null) {
       // Don't hoist through wait statements that have explicit
       // ordering constraints or locations.
       // TODO: Could relax this assumption for target locations for basic operations
@@ -395,7 +421,10 @@ public class HoistLoops implements OptimizerPass {
       }
     }
     for (Var readOutput: inst.getReadOutputs()) {
-      maxHoist = Math.min(maxHoist, maxInputHoist(logger, state, readOutput));
+      int inputHoist = maxInputHoist(logger, state, readOutput);
+      maxHoist = Math.min(maxHoist, inputHoist);
+      logger.trace("Hoist limited to " + inputHoist + " by read output: "
+                    + readOutput.name()); 
     }
     
     for (Var out: inst.getOutputs()) {
@@ -454,7 +483,8 @@ public class HoistLoops implements OptimizerPass {
       return false;
     }
     
-    int maxCorrectContext = maxHoistContext(logger, state, maxHoist);
+    int maxCorrectContext = maxHoistContext(logger, state,
+                      inst.supportedContexts(), maxHoist);
     
     maxHoist = Math.max(maxHoist, maxCorrectContext);
     
@@ -467,27 +497,26 @@ public class HoistLoops implements OptimizerPass {
   }
 
   /**
-   * Find maximum hoist with same execution context as state
-   * TODO: could be less conservative if we know which instructions can
-   * run in which context
+   * Find maximum hoist with compatible execution context
    * @param logger
    * @param state
    * @param maxHoist
    * @return
    */
-  public int maxHoistContext(Logger logger, HoistTracking state, int maxHoist) {
+  private int maxHoistContext(Logger logger, HoistTracking state, 
+                        List<ExecContext> supportedContexts, int maxHoist) {
     int maxCorrectContext = 0;
     HoistTracking curr = state;
     for (int hoist = 1; hoist <= maxHoist; hoist++) {
       curr = state.parent;
-      if (curr.execCx == state.execCx) {
+      if (supportedContexts.contains(curr.execCx)) {
         maxCorrectContext = hoist;
       }
     }
     
     if (logger.isTraceEnabled()) {
-      logger.trace("Hoist limited to " + maxCorrectContext + " by exec context "
-          + state.execCx);
+      logger.trace("Hoist limited to " + maxCorrectContext + " by supported " +
+                   "exec contexts " + supportedContexts);
     }
     return maxCorrectContext;
   }
@@ -495,6 +524,10 @@ public class HoistLoops implements OptimizerPass {
   private int maxInputHoist(Logger logger, HoistTracking state,
                                    Var inVar) {
     int depth = state.writeMap.getDepth(inVar);
+    if (logger.isTraceEnabled()) {
+      logger.trace("Write depth of " + inVar.name() + ": " + depth);
+    }
+    
     if (Types.isPiecewiseAssigned(inVar.type()) && !aggressive) {
       // We might want to avoid moving before a piecewise write since it could
       // hurt future optimization opportunities
@@ -536,39 +569,46 @@ public class HoistLoops implements OptimizerPass {
           int hoistDepth, HoistTracking state) {
     assert(hoistDepth > 0);
     
-    
     logger.trace("Hoisting instruction up " + hoistDepth + " blocks: "
                  + inst.toString());
+    HoistTracking ancestor = state.getAncestor(hoistDepth);
+    logger.trace("Ancestor block " + ancestor.block.getType());
     
-    state.getAncestor(hoistDepth).addInstruction(inst);
+    ancestor.addInstruction(inst);
     
     // Move variable declaration if needed to outer block.
-    relocateVarDefs(state, inst, hoistDepth);
+    relocateVarDefs(state, inst, ancestor);
     
     // need to update write map to reflect moved instruction
-    state.getAncestor(hoistDepth).updateState(inst);
+    ancestor.updateState(inst);
   }
 
+  /**
+   * Relocate var defs from this block and any in-between ancestors
+   * to target block
+   * @param state
+   * @param inst
+   * @param targetAncestor
+   */
   private static void relocateVarDefs(HoistTracking state,
-      Instruction inst, int hoistDepth) {
+      Instruction inst, HoistTracking targetAncestor) {
     HoistTracking ancestor = state;
-    HoistTracking target = state.getAncestor(hoistDepth);
-    assert(target != null && state != target);
-    while (ancestor != target) {
+    assert(targetAncestor != null && state != targetAncestor);
+    while (ancestor != targetAncestor) {
       assert(ancestor != null);
       // Relocate all output variable definitions to target block 
-      relocateVarDefs(ancestor, target, inst);
-      ancestor = state.parent;
+      relocateVarDefsFromBlock(ancestor, targetAncestor, inst);
+      ancestor = ancestor.parent;
     }
   }
 
   /**
-   * Relocate output variables to target block
+   * Relocate output variables from one block to target block
    * @param source
    * @param target
    * @param inst
    */
-  private static void relocateVarDefs(HoistTracking source, 
+  private static void relocateVarDefsFromBlock(HoistTracking source, 
       HoistTracking target, Instruction inst) {
     assert(source != target);
     ListIterator<Var> varIt = source.block.variableIterator();

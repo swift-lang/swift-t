@@ -21,14 +21,17 @@ import java.util.List;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Types.Typed;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.tclbackend.tree.TclString;
 
-public class Arg implements Comparable<Arg> {
+public class Arg implements Comparable<Arg>, Typed {
   public static final Arg ZERO = Arg.createIntLit(0);
   public static final Arg ONE = Arg.createIntLit(1);
   public static final Arg TRUE = Arg.createBoolLit(true);
   public static final Arg FALSE = Arg.createBoolLit(false);
+  
+  public static final List<Arg> NONE = Collections.emptyList();
   
   
   public static enum ArgKind {
@@ -106,7 +109,8 @@ public class Arg implements Comparable<Arg> {
     if (kind == ArgKind.STRINGVAL) {
       return stringlit;
     } else {
-      throw new STCRuntimeError("getStringVal for non-string type " + kind);
+      throw new STCRuntimeError("getStringVal for non-string type " + kind
+                                 + " " + this);
     }
   }
 
@@ -114,7 +118,8 @@ public class Arg implements Comparable<Arg> {
     if (kind == ArgKind.INTVAL) {
       return intlit;
     } else {
-      throw new STCRuntimeError("getIntVal for non-int type " + kind);
+      throw new STCRuntimeError("getIntVal for non-int type " + kind
+                                 + " " + this);
     }
   }
 
@@ -122,7 +127,8 @@ public class Arg implements Comparable<Arg> {
     if (kind == ArgKind.FLOATVAL) {
       return floatlit;
     } else {
-      throw new STCRuntimeError("getFloatVal for non-float type " + kind);
+      throw new STCRuntimeError("getFloatVal for non-float type " + kind
+                                 + " " + this);
     }
   }
 
@@ -130,7 +136,8 @@ public class Arg implements Comparable<Arg> {
     if (kind == ArgKind.BOOLVAL) {
       return boollit;
     } else {
-      throw new STCRuntimeError("getBoolLit for non-bool type " + kind);
+      throw new STCRuntimeError("getBoolLit for non-bool type " + kind
+                                 + " " + this);  
     }
   }
 
@@ -138,7 +145,8 @@ public class Arg implements Comparable<Arg> {
     if (kind == ArgKind.VAR) {
       return var;
     } else {
-      throw new STCRuntimeError("getVariable for non-variable type " + kind);
+      throw new STCRuntimeError("getVariable for non-variable type " + kind
+                                + " " + this);
     }
   }
 
@@ -269,6 +277,14 @@ public class Arg implements Comparable<Arg> {
   }
 
   /**
+   * Translate to string with type info
+   * @return
+   */
+  public String toStringTyped() {
+    return toString() + ":" + this.type().typeName();
+  }
+
+  /**
    * Define hashCode and equals so this can be used as key in hash table
    */
   @Override
@@ -379,5 +395,19 @@ public class Arg implements Comparable<Arg> {
 
   public List<Arg> asList() {
     return Collections.singletonList(this);
+  }
+
+  /**
+   * Extract string literals from list, assuming all members
+   * are string literals
+   * @param l a list of string args
+   * @return
+   */
+  public static List<String> extractStrings(List<Arg> l) {
+    ArrayList<String> result = new ArrayList<String>(l.size());
+    for (Arg a: l) {
+      result.add(a.getStringLit());
+    }
+    return result;
   }
 }

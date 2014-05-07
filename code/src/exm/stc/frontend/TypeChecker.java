@@ -43,6 +43,7 @@ import exm.stc.common.lang.Types.ScalarFutureType;
 import exm.stc.common.lang.Types.ScalarUpdateableType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.Type;
+import exm.stc.common.lang.Types.Typed;
 import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.MultiMap;
@@ -117,46 +118,9 @@ public class TypeChecker {
     case ExMParser.OPERATOR:
       return findOperatorResultType(context, tree);
     case ExMParser.STRUCT_LOAD:
-      ExprType structTypeL = findExprType(context, tree.child(0));
-      String fieldName = tree.child(1).getText();
-      if (structTypeL.elems() != 1) {
-        throw new TypeMismatchException(context,
-            "Trying to lookup field on return value of function with"
-                + " zero or multiple return values");
-      }
-      Type structType = structTypeL.get(0);
-      Type fieldType;
-      fieldType = findStructFieldType(context, fieldName, structType);
-      
-
-      if (fieldType == null) {
-        throw new TypeMismatchException(context, "No field called " + fieldName
-            + " in structure type " + ((StructType) structType).getTypeName());
-      }
-      if (Types.isStruct(structType)) {
-        return new ExprType(fieldType);
-      } else { assert(Types.isStructRef(structType));
-        return new ExprType(dereferenceResultType(fieldType));
-      }
-
+      return structLoad(context, tree);
     case ExMParser.ARRAY_LOAD:
-      Type arrType = findSingleExprType(context, tree.child(0));
-
-      List<Type> resultAlts = new ArrayList<Type>();
-      for (Type arrAlt: UnionType.getAlternatives(arrType)) {
-        if (Types.isArray(arrAlt) || Types.isArrayRef(arrAlt)) {
-          Type memberType = Types.containerElemType(arrAlt);
-
-          // Depending on the member type of the array, the result type might be
-          // the actual member type, or a reference to the member type
-          resultAlts.add(dereferenceResultType(memberType));
-        } else {
-          throw new TypeMismatchException(context,
-              "Trying to index into non-array expression of type "
-                  + arrType.toString());
-        }
-      }
-      return new ExprType(UnionType.makeUnion(resultAlts));
+      return arrayLoad(context, tree);
     case ExMParser.ARRAY_RANGE: {
       // Check the arguments for type validity
       ArrayRange ar = ArrayRange.fromAST(context, tree);
@@ -172,6 +136,14 @@ public class TypeChecker {
       throw new STCRuntimeError("Unexpected token type in expression context: "
           + LogHelper.tokName(token));
     }
+  }
+  
+  public static Type findStructFieldType(Context context,
+      List<String> fields, Type type) throws TypeMismatchException {
+    for (String f: fields) {
+      type = findStructFieldType(context, f, type);
+    }
+    return type;
   }
 
   /**
@@ -308,7 +280,6 @@ public class TypeChecker {
     List<Op> matched = new ArrayList<Op>();
     
     for (Op candidate: Operators.getOps(opTok)) {
-      // TODO: check input types
       OpType opType = candidate.type;
       
       if (opOutputMatches(outType, opType) &&
@@ -397,27 +368,6 @@ public class TypeChecker {
     return argTypes;
   }
 
-  /**
-   * The type of the internal variable that will be created from an array
-   * dereference
-   *
-   * @param memberType
-   *          the type of array memebrs for the array being dereferenced
-   * @return
-   */
-  public static Type dereferenceResultType(Type memberType) {
-    Type resultType;
-    if (Types.isPrimFuture(memberType)) {
-      resultType = memberType;
-    } else if (Types.isContainer(memberType) || Types.isStruct(memberType)) {
-      resultType = new RefType(memberType);
-    } else {
-      throw new STCRuntimeError("Unexpected array member type"
-          + memberType.toString());
-    }
-    return resultType;
-  }
-
   private static TypeMismatchException argumentTypeException(Context context,
       int argPos, Type expType, Type actType, String errContext) {
     return new TypeMismatchException(context, "Expected argument " +
@@ -452,7 +402,7 @@ public class TypeChecker {
   }
 
   /**
-   * Check if an expression type can be used for function argument
+   * Check if an expression type can be used for function input argument
    * @param argType non-polymorphic function argument type
    * @param exprType type of argument expression
    * @return concretized argType if compatible, null if incompatible
@@ -464,7 +414,7 @@ public class TypeChecker {
       return exprType.concretize(argType);
     } else if (Types.isAssignableRefTo(exprType, argType)) {
       // We can block on reference, so we can transform type here
-      return exprType.concretize(new RefType(argType));
+      return exprType.concretize(new RefType(argType, false));
     } else {
       return null;
     }
@@ -648,7 +598,7 @@ public class TypeChecker {
   }
 
   /**
-   * Check function argument type
+   * Check function input argument type
    * Returns a tuple indicating which formal argument type is selected and
    * what type the input argument expression should be interpreted as having.
    * Does not handle type variables
@@ -824,6 +774,55 @@ public class TypeChecker {
     return res;
   }
 
+  private static ExprType arrayLoad(Context context, SwiftAST tree)
+          throws UserException, TypeMismatchException {
+    Type arrType = findSingleExprType(context, tree.child(0));
+  
+    List<Type> resultAlts = new ArrayList<Type>();
+    for (Type arrAlt: UnionType.getAlternatives(arrType)) {
+      if (Types.isArray(arrAlt) || Types.isArrayRef(arrAlt)) {
+        Type memberType = containerElemType(arrAlt, false);
+  
+        // Depending on the member type of the array, the result type might be
+        // the actual member type, or a reference to the member type
+        Type resultAlt = VarRepr.containerElemRepr(memberType, false);
+        resultAlts.add(resultAlt);
+      } else {
+        throw new TypeMismatchException(context,
+            "Trying to index into non-array expression of type "
+                + arrType.toString());
+      }
+    }
+    return new ExprType(UnionType.makeUnion(resultAlts));
+  }
+
+  private static ExprType structLoad(Context context, SwiftAST tree)
+          throws UserException, TypeMismatchException {
+    ExprType structTypeL = findExprType(context, tree.child(0));
+    String fieldName = tree.child(1).getText();
+    if (structTypeL.elems() != 1) {
+      throw new TypeMismatchException(context,
+          "Trying to lookup field on return value of function with"
+              + " zero or multiple return values");
+    }
+    Type structType = structTypeL.get(0);
+    Type fieldType;
+    fieldType = findStructFieldType(context, fieldName, structType);
+    
+
+    if (fieldType == null) {
+      throw new TypeMismatchException(context, "No field called " + fieldName
+          + " in structure type " + ((StructType) structType).getStructTypeName());
+    }
+    if (Types.isStruct(structType)) {
+      // Look up immediately
+      return new ExprType(fieldType);
+    } else { assert(Types.isStructRef(structType));
+      // Will get copy
+      return new ExprType(VarRepr.containerElemRepr(fieldType, false));
+    }
+  }
+  
   public static void checkCopy(Context context, Type srctype, Type dsttype)
       throws TypeMismatchException {
     if (!(srctype.assignableTo(dsttype) &&
@@ -915,5 +914,25 @@ public class TypeChecker {
       }
     }
     return possible;
+  }
+  
+
+  /**
+   * Get container elem type, modifying const/mutable status as
+   * appropriate
+   * @param typed
+   * @param mutable
+   * @return
+   */
+  public static Type containerElemType(Typed typed, boolean mutable) {
+    Type result = Types.containerElemType(typed);
+    if (!mutable && Types.isMutableRef(result)) {
+      // Should be read-only ref
+      result = new RefType(result.memberType(), false);
+    } else if (mutable && Types.isConstRef(result)) {
+      throw new STCRuntimeError("Wanted mutable field, got " + result);
+    }
+    
+    return result;
   }
 }

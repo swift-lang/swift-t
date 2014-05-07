@@ -16,11 +16,9 @@
 package exm.stc.ic.tree;
 
 import java.io.PrintStream;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -44,7 +42,6 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.RefCounting;
-import exm.stc.common.lang.WaitVar;
 import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
@@ -55,8 +52,9 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
+import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.Pair;
-import exm.stc.common.util.TernaryLogic.Ternary;
+import exm.stc.common.util.StackLite;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICContinuations.Continuation;
@@ -715,7 +713,7 @@ public class ICTree {
 
 
     private void addUsedVarsRec(Block rootBlock) {
-      Deque<Block> work = new ArrayDeque<Block>();
+      StackLite<Block> work = new StackLite<Block>();
       work.push(rootBlock);
     
       while (!work.isEmpty()) {
@@ -914,7 +912,7 @@ public class ICTree {
      * @param parentFunction
      */
     void fixParentLinksRec(Function parentFunction) {
-      Deque<Block> work = new ArrayDeque<Block>();
+      StackLite<Block> work = new StackLite<Block>();
       work.push(this);
       while (!work.isEmpty()) {
         Block curr = work.pop();
@@ -1058,31 +1056,7 @@ public class ICTree {
 
       logger.trace("Generate code for block of type " + this.type.toString());
       // Pass variable declarations as batch
-      List<VarDecl> declarations = new ArrayList<VarDecl>(variables.size());
-      for (Var v: variables) {
-        logger.trace("generating variable decl for " + v.toString());
-        Arg initReaders = initReadRefcounts.get(v);
-        Arg initWriters = initWriteRefcounts.get(v);
-        
-        // Initialize refcounts to default value if not
-        //  explicitly overridden and check for bad refcounts
-        if (v.storage() != Alloc.ALIAS && 
-            RefCounting.hasReadRefCount(v)) {
-          if (initReaders == null)
-            initReaders = Arg.ONE;
-        } else {
-          assert(initReaders == null) : v + " " +   initReaders;
-        }
-        if (v.storage() != Alloc.ALIAS && 
-            RefCounting.hasWriteRefCount(v)) {
-          if (initWriters == null)
-            initWriters = Arg.ONE;
-        } else {
-          assert(initWriters == null);
-        }
-        declarations.add(new VarDecl(v, initReaders, initWriters));
-      }
-      gen.declare(declarations);
+      generateBlockVariables(logger, gen);
       
       for (Statement stmt: statements) {
         stmt.generate(logger, gen, info);
@@ -1106,14 +1080,67 @@ public class ICTree {
 
     }
 
+    private void generateBlockVariables(Logger logger, CompilerBackend gen) {
+      List<VarDecl> declarations = new ArrayList<VarDecl>(variables.size());
+      for (Var v: variables) {
+        logger.trace("generating variable decl for " + v.toString());
+        Arg initReaders = initReadRefcounts.get(v);
+        Arg initWriters = initWriteRefcounts.get(v);
+        
+        if (initReaders == null) {
+          logger.trace("Init readers: " + v.name() + " null");
+        } else {
+          logger.trace("Init readers: " + v.name() + " " + initReaders);
+        }
+        
+        if (initWriters == null) {
+          logger.trace("Init writers: " + v.name() + " null");
+        } else {
+          logger.trace("Init writers: " + v.name() + " " + initWriters);
+        }
+        
+        // Initialize refcounts to default value if not
+        //  explicitly overridden and check for bad refcounts
+        if (v.storage() == Alloc.ALIAS || 
+            !RefCounting.trackReadRefCount(v)) {
+          // Check we don't have refcount for untracked var
+          assert(initReaders == null) : v + " " +   initReaders;
+        }
+
+        if (v.storage() == Alloc.ALIAS || 
+            !RefCounting.trackWriteRefCount(v)) {
+          // Check we don't have refcount for untracked var
+          assert(initWriters == null);
+        }
+        
+        if (v.storage() != Alloc.ALIAS) {
+          // If not an alias, need to select refcount
+          if (initReaders == null) {
+            // Init to default refcount
+            long baseReaders = RefCounting.baseReadRefCount(v, true, true);
+            initReaders = Arg.createIntLit(baseReaders);
+          }
+
+          if (initWriters == null) {
+            // Init to default refcount
+            long baseWriters = RefCounting.baseWriteRefCount(v, true, true);
+            initWriters = Arg.createIntLit(baseWriters);
+          }
+        }
+        
+        declarations.add(new VarDecl(v, initReaders, initWriters));
+      }
+      gen.declare(declarations);
+    }
+
     public void prettyPrint(StringBuilder sb, String indent) {
       for (Var v: variables) {
         sb.append(indent);
         sb.append("alloc " + v.type().typeName() + " " + v.name() + 
                 " <" + v.storage().toString().toLowerCase() + ">");
         
-        if (v.mapping() != null) {
-          sb.append(" @mapping=" + v.mapping().name());
+        if (v.mappedDecl()) {
+          sb.append(" @mapped");
         }
         if (initReadRefcounts.containsKey(v)) {
           sb.append(" <readers=" + initReadRefcounts.get(v) + ">");
@@ -1357,15 +1384,11 @@ public class ICTree {
     }
 
     private void renameInDefs(Map<Var, Arg> renames, RenameMode mode) {
-      // Track any changes to mapped vars, list of (original, new)
-      List<Pair<Var, Var>> changedMappedVars = new ArrayList<Pair<Var, Var>>();
-      
       ListIterator<Var> it = variables.listIterator();
       while (it.hasNext()) {
         // The original variable and the current one
-        Var original, var;
-        var = original = it.next();
-        boolean removed = false;
+        Var var;
+        var = it.next();
         if (mode == RenameMode.REPLACE_VAR) {
           if (renames.containsKey(var)) {
             Arg replacement = renames.get(var);
@@ -1375,42 +1398,8 @@ public class ICTree {
             } else {
               // value replaced with constant
               it.remove();
-              removed = true;
             }
           }
-        }
-
-        // Check to see if string variable for mapping is replaced
-        if (!removed && var.mapping() != null && renames.containsKey(var.mapping())) { 
-          // Can't have double mapping
-          assert(var.mapping().isMapped() != Ternary.TRUE);
-          if (mode == RenameMode.VALUE) {
-            // TODO: can't replace mapping since we rely on the rest of
-            //      the rename pass to fix up references to the old instance
-            //      of the variable
-          } else {
-            Arg newMapping = renames.get(var.mapping());
-            if (newMapping.isVar() &&
-                !newMapping.getVar().equals(var.mapping())) {
-              // Need to maintain variable ordering so that mapped vars appear
-              // after the variables containing the mapping string. Remove
-              // var declaration here and put it at end of list
-              it.remove();
-              var = var.replaceMapping(newMapping.getVar());
-              
-              changedMappedVars.add(Pair.create(original, var));
-            }
-          }
-        }
-      }
-
-      if (!changedMappedVars.isEmpty()) {
-        //  Update mapped variable instances in child blocks
-        for (Pair<Var, Var> change: changedMappedVars) {
-          Var oldV = change.val1;
-          Var newV = change.val2;
-          addVariable(newV);
-          renames.put(oldV, Arg.createVar(newV));
         }
       }
     }
@@ -1514,13 +1503,17 @@ public class ICTree {
 
     public Var declareUnmapped(Type t, String name, Alloc storage,
         DefType defType, VarProvenance provenance) {
-      return declareMapped(t, name, storage, defType, provenance, null);
+      return declare(t, name, storage, defType, provenance, false);
     }
     
     public Var declareMapped(Type t, String name, Alloc storage,
-          DefType defType, VarProvenance provenance, Var mapping) {
-      assert(mapping == null || Types.isString(mapping.type()));
-      Var v = new Var(t, name, storage, defType, provenance, mapping);
+          DefType defType, VarProvenance provenance) {
+      return declare(t, name, storage, defType, provenance, true);
+    }
+    
+    public Var declare(Type t, String name, Alloc storage,
+        DefType defType, VarProvenance provenance, boolean mapped) {
+      Var v = new Var(t, name, storage, defType, provenance, mapped);
       addVariable(v);
       return v;
     }
@@ -1698,7 +1691,7 @@ public class ICTree {
      * @return
      */
     public int getInstructionCount() {
-      Deque<Block> blocks = new ArrayDeque<Block>();
+      StackLite<Block> blocks = new StackLite<Block>();
       blocks.push(this);
       int count = 0;
       while (!blocks.isEmpty()) {
@@ -1713,6 +1706,19 @@ public class ICTree {
       }
       return count;
     }
+    
+    /**
+     * Set the initial refcount to the base refcount, plus amount provided.
+     * Should be called at most once per var
+     * @param blockVar
+     * @param refcountType
+     * @param incr
+     */
+    public void modifyInitRefcount(Var blockVar, RefCountType rcType,
+                                   long incr) {
+      long baseRC = RefCounting.baseRefCount(blockVar, rcType, true, true);
+      setInitRefcount(blockVar, rcType, baseRC + incr);
+    }
 
     /**
      * Set the initial reference count of a variable to something
@@ -1720,14 +1726,14 @@ public class ICTree {
      * @param refcountType
      * @param val
      */
-    public void setInitRefcount(Var blockVar, RefCountType refcountType,
+    public void setInitRefcount(Var blockVar, RefCountType rcType,
                                    long val) {
       assert(val >= 0);
       HashMap<Var, Arg> refcountMap;
-      if (refcountType == RefCountType.READERS) {
+      if (rcType == RefCountType.READERS) {
         refcountMap = this.initReadRefcounts;
       } else {
-        assert(refcountType == RefCountType.WRITERS);
+        assert(rcType == RefCountType.WRITERS);
         refcountMap = this.initWriteRefcounts;
       }
       assert(!refcountMap.containsKey(blockVar)) :

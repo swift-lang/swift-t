@@ -7,25 +7,32 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.Logging;
 import exm.stc.common.Settings;
+import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.VarCount;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.Pair;
+import exm.stc.ic.aliases.AliasKey;
+import exm.stc.ic.aliases.AliasTracker;
 import exm.stc.ic.opt.InitVariables.InitState;
-import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.Instruction.InitType;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.Function;
+import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.Statement;
 import exm.stc.ic.tree.ICTree.StatementType;
 import exm.stc.ic.tree.Opcode;
@@ -35,7 +42,7 @@ import exm.stc.ic.tree.TurbineOp;
  * Try to merge multiple array inserts into a single build instruction.
  * TODO: optimise multisets
  */
-public class ArrayBuild extends FunctionOptimizerPass {
+public class ArrayBuild implements OptimizerPass {
 
   @Override
   public String getPassName() {
@@ -48,28 +55,64 @@ public class ArrayBuild extends FunctionOptimizerPass {
   }
 
   @Override
-  public void optimize(Logger logger, Function f) throws UserException {
-    InfoMap info = buildInfo(logger, f);
-    optimize(logger, f, info);
+  public void optimize(Logger logger, Program prog) throws UserException {
+    Map<String, Function> funcMap = prog.getFunctionMap();
+    for (Function f: prog.getFunctions()) {
+      ArrayInfo info = buildInfo(logger, funcMap, f);
+      optimize(logger, f, info);
+    }
   }
 
-  private static class InfoMap extends HashMap<Pair<Var, Block>, BlockVarInfo> {
+  private static class ArrayInfo {
+    
+    private final Map<Block, AliasTracker> aliasMap 
+                      = new HashMap<Block, AliasTracker>();
 
-    /** Prevent warnings by providing version */
-    private static final long serialVersionUID = 1L;
-
+    private final Map<Pair<AliasKey, Block>, BlockVarInfo> varMap
+                      = new HashMap<Pair<AliasKey, Block>, BlockVarInfo>();
+    
+    /**
+     * Mark correspondence between block and aliases
+     * @param block
+     * @param aliases
+     */
+    void addAliasTracker(Block block, AliasTracker aliases) {
+      aliasMap.put(block, aliases);
+    }
+    
     BlockVarInfo getEntry(Block block, Var arr) {
-      Pair<Var, Block> key = Pair.create(arr, block);
-      BlockVarInfo entry = this.get(key);
+      AliasTracker aliases = aliasMap.get(block);
+      assert(aliases != null) : "Alias map must be init";
+      return getEntry(block, aliases.getCanonical(arr));
+    }
+    
+    BlockVarInfo getEntry(Block block, AliasKey arr) {
+      Pair<AliasKey, Block> key = Pair.create(arr, block);
+      BlockVarInfo entry = varMap.get(key);
       if (entry == null) {
         entry = new BlockVarInfo();
-        this.put(key, entry);
+        varMap.put(key, entry);
       }
+      
       return entry;
+    }
+
+    /**
+     * Get aliases for block, raises error if not present
+     * @param block
+     * @return
+     */
+    public AliasTracker getAliases(Block block) {
+      AliasTracker aliases = aliasMap.get(block);
+      assert(aliases != null) : "Alias map must be init";
+      return aliases;
     }
   }
   
   static class BlockVarInfo {
+    /** If var was declared in this block */
+    boolean declaredHere = false;
+
     /** If immediate insert instruction found in this block */
     boolean insertImmHere = false;
     
@@ -97,11 +140,17 @@ public class ArrayBuild extends FunctionOptimizerPass {
     
     @Override
     public String toString() {
-      return "insertImmHere: " + insertImmHere + " " +
-             "otherModHere: " + otherModHere + " " +
-             "insertImmRec: " + insertImmRec + " " +
-             "otherModRec: " + otherModRec + " " +
+      return "declaredHere: " + declaredHere + ", " +
+              "insertImmHere: " + insertImmHere + ", " +
+             "otherModHere: " + otherModHere + ", " +
+             "insertImmRec: " + insertImmRec + ", " +
+             "otherModRec: " + otherModRec + ", " +
              "insertImmOnce: " + insertImmOnce;
+    }
+
+    public boolean noInserts() {
+      return !insertImmHere && !otherModHere &&
+             !insertImmRec && !otherModRec;
     }
   }
 
@@ -110,38 +159,99 @@ public class ArrayBuild extends FunctionOptimizerPass {
    * blocks of function
    * @param logger
    * @param f
+   * @param funcMap 
    * @return
    */
-  private InfoMap buildInfo(Logger logger, Function f) {
+  private ArrayInfo buildInfo(Logger logger, Map<String, Function> funcMap,
+                              Function f) {
     // Set to track candidates in scope 
     HierarchicalSet<Var> candidates = new HierarchicalSet<Var>();
-    InfoMap info = new InfoMap();
-    buildInfoRec(logger, f, f.mainBlock(), info, candidates);
+    ArrayInfo info = new ArrayInfo();
+    
+    // First build up complete alias info for each block, to avoid
+    // complications with alias info being incrementally refined
+    buildAliasInfoRec(logger, f, f.mainBlock(), info, new AliasTracker());
+    
+    buildInfoRec(logger, funcMap,f, f.mainBlock(), info, candidates);
     return info;
   }
 
 
-  private boolean isValidCandidate(Var var) {
-    return Types.isArray(var) && var.storage() != Alloc.ALIAS;
-  }
-
-  private void addValidCandidates(Collection<Var> candidates,
-                                  Collection<Var> vars) {
-    for (Var var: vars) {
-      if (isValidCandidate(var)){
-        candidates.add(var);
+  /**
+   * Build up alias info for all blocks and subblocks, adding them
+   * to info
+   * @param logger
+   * @param f
+   * @param block
+   * @param info
+   * @param aliases
+   */
+  private void buildAliasInfoRec(Logger logger, Function f, Block block,
+          ArrayInfo info, AliasTracker aliases) {
+    info.addAliasTracker(block, aliases);
+    
+    for (Statement stmt: block.getStatements()) {
+      switch(stmt.type()) {
+        case INSTRUCTION:
+          aliases.update(stmt.instruction());
+          break;
+        case CONDITIONAL:
+          for (Block child: stmt.conditional().getBlocks()) {
+            buildAliasInfoRec(logger, f, child, info, aliases.makeChild());
+          }
+          break;
+        default:
+          throw new STCRuntimeError("Unexpected " + stmt.type());
+      }
+    }
+    
+    for (Continuation c: block.getContinuations()) {
+      for (Block child: c.getBlocks()) {
+        buildAliasInfoRec(logger, f, child, info, aliases.makeChild());
       }
     }
   }
 
-  private void buildInfoRec(Logger logger, Function f,
-      Block block, InfoMap info, HierarchicalSet<Var> candidates) {
-    addBlockCandidates(f, block, candidates);
+  /**
+   * Check if this is a valid candidate for optimisation
+   * @param var
+   * @param canonicalOnly if true, return false if not canonical
+   * @return
+   */
+  private boolean isValidCandidate(Var var, boolean canonicalOnly) {
+    /*
+     * Only attempt to optimise non-alias arrays. Optimising
+     * some alias arrays, e.g. nested ones, would require further
+     * analysis since there is not a single canonical non-alias
+     * variable for the nested array.
+     */
+    return Types.isArray(var) && 
+            !(canonicalOnly && var.storage() == Alloc.ALIAS);
+  }
+
+  private void addBlockCandidates(Block block,
+      ArrayInfo info, Collection<Var> candidates,
+      Collection<Var> vars) {
+    for (Var var: vars) {
+      if (isValidCandidate(var, true)) {
+        candidates.add(var);
+        info.getEntry(block, var).declaredHere = true;
+        Logging.getSTCLogger().trace(var + " declared here! " +
+                                System.identityHashCode(block));
+      }
+    }
+  }
+
+  private void buildInfoRec(Logger logger, Map<String, Function> funcMap, 
+      Function f, Block block, ArrayInfo info,
+      HierarchicalSet<Var> candidates) {
+    addBlockCandidates(f, block, info, candidates);
     
     for (Statement stmt: block.getStatements()) {
       switch (stmt.type()) {
         case INSTRUCTION:
-          updateInfo(block, info, stmt.instruction(), candidates);
+          updateInfo(logger, funcMap, block, info, stmt.instruction(), 
+                      candidates);
           break;
         default:
           // Do nothing: handle conditionals below
@@ -151,7 +261,7 @@ public class ArrayBuild extends FunctionOptimizerPass {
     
     for (Continuation c: block.allComplexStatements()) {
       for (Block inner: c.getBlocks()) {
-        buildInfoRec(logger, f, inner, info, candidates.makeChild());
+        buildInfoRec(logger, funcMap, f, inner, info, candidates.makeChild());
       }
     }
     
@@ -173,16 +283,18 @@ public class ArrayBuild extends FunctionOptimizerPass {
    * @param block
    * @param candidates
    */
-  private void addBlockCandidates(Function f, Block block, Set<Var> candidates) {
+  private void addBlockCandidates(Function f, Block block, ArrayInfo info,
+                                  Set<Var> candidates) {
     if (block.getType() ==  BlockType.MAIN_BLOCK) {
-      addValidCandidates(candidates, f.getOutputList());
+      addBlockCandidates(block, info, candidates, f.getOutputList());
     }
-    addValidCandidates(candidates, block.getVariables());
+    addBlockCandidates(block, info, candidates, block.getVariables());
   }
 
-  private void updateInfo(Block block, InfoMap info, Instruction inst,
-                          Set<Var> candidates) {
-    if (inst.op == Opcode.ARRAY_INSERT_IMM) {
+  private void updateInfo(Logger logger, Map<String, Function> funcMap, 
+      Block block, ArrayInfo info, Instruction inst, Set<Var> candidates) {
+    
+    if (inst.op == Opcode.ARR_STORE) {
       Var arr = inst.getOutput(0);
       if (candidates.contains(arr)) {
         BlockVarInfo entry = info.getEntry(block, arr);
@@ -190,13 +302,42 @@ public class ArrayBuild extends FunctionOptimizerPass {
       }
     } else {
       for (Var out: inst.getOutputs()) {
-        if (isValidCandidate(out) && candidates.contains(out)) {
+        if (isValidCandidate(out, false) &&
+             !initsAlias(inst, out)) {
           // Can't optimize variables that are modified by other instructions
+          // It's ok if the instruction initialises aliases
           BlockVarInfo entry = info.getEntry(block, out);
           entry.otherModHere = true;
+          if (logger.isTraceEnabled()) {
+            logger.trace("Modified " + out + " due to " + inst);
+          }
+        }
+      }
+      Pair<List<VarCount>, List<VarCount>> inRC = inst.inRefCounts(funcMap);
+      List<VarCount> inWriteRC = inRC.val2;
+      for (VarCount written: inWriteRC) {
+        if (written.count != 0 && isValidCandidate(written.var, false)) {
+          // Write reference count transferred somewhere
+          BlockVarInfo entry = info.getEntry(block, written.var);
+          entry.otherModHere = true;
+          if (logger.isTraceEnabled()) {
+            logger.trace("Write RC " + written + " taken by " + inst);
+          }
         }
       }
     }
+  }
+
+  private boolean initsAlias(Instruction inst, Var out) {
+    if (out.storage() == Alloc.ALIAS) {
+      for (Pair<Var, InitType> e: inst.getInitialized()) {
+        if (out.equals(e.val1) && e.val2 == InitType.FULL) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
   }
 
 
@@ -208,7 +349,7 @@ public class ArrayBuild extends FunctionOptimizerPass {
    * @param candidates update info for these vars
    */
   private void updateInfoBottomUp(Logger logger, Block block,
-          InfoMap info, Set<Var> candidates) {
+          ArrayInfo info, Set<Var> candidates) {
     for (Var candidate: candidates) {
       BlockVarInfo ci = info.getEntry(block, candidate);
       ci.insertImmRec = ci.insertImmHere;
@@ -254,7 +395,7 @@ public class ArrayBuild extends FunctionOptimizerPass {
     }
   }
 
-  private void optimize(Logger logger, Function f, InfoMap info) {
+  private void optimize(Logger logger, Function f, ArrayInfo info) {
     InitState init = InitState.enterFunction(f);
     
     optRecurseOnBlock(logger, f, f.mainBlock(), info, init,
@@ -262,12 +403,15 @@ public class ArrayBuild extends FunctionOptimizerPass {
   }
 
   private void optRecurseOnBlock(Logger logger, Function f, Block block,
-      InfoMap info, InitState init, 
+      ArrayInfo info, InitState init, 
       HierarchicalSet<Var> cands, HierarchicalSet<Var> invalid) {
-    addBlockCandidates(f, block, cands);
+    addBlockCandidates(f, block, info, cands);
     
     for (Var cand: cands) {
       if (!invalid.contains(cand)) {
+        AliasTracker blockAliases = info.getAliases(block);
+        AliasKey candKey = blockAliases.getCanonical(cand);
+        
         BlockVarInfo vi = info.getEntry(block, cand);
         if (logger.isTraceEnabled()) {
           logger.trace("Candidate: " + cand + " in block " +
@@ -275,12 +419,20 @@ public class ArrayBuild extends FunctionOptimizerPass {
           logger.trace(vi);
         }
         if (vi.otherModRec) {
-          logger.trace("Can't optimize due other other inserts!");
+          logger.trace("Can't optimize due to other inserts!");
           invalid.add(cand);
-        } else if (vi.insertImmOnce && vi.insertImmHere) {
-          // Optimize here
+        } else if ((vi.insertImmOnce && vi.insertImmHere) ||
+                    (vi.noInserts() && vi.declaredHere)) {
+          // Criteria 1: declared here && no inserts here or in children
+          // TODO
+          // Criteria 2: declared in ancestor && not modified on any
+          //        non-mutually-exclusive path
+          
+          // Optimize here: cases where only inserted in this block,
+          // or no inserts at all
           logger.trace("Can optimize!");
-          replaceInserts(logger, block, init, cand);
+          replaceInserts(logger, block, blockAliases, init, cand, candKey);
+          invalid.add(cand); // Don't try to opt in descendants
         } else if (vi.insertImmOnce) {
           logger.trace("Try to optimize in descendant block!");
           // Do nothing: handle in child block
@@ -312,7 +464,7 @@ public class ArrayBuild extends FunctionOptimizerPass {
   }
 
   private void optRecurseOnCont(Logger logger, Function f,
-      Continuation cont, InfoMap info, InitState init,
+      Continuation cont, ArrayInfo info, InitState init,
       HierarchicalSet<Var> cands, HierarchicalSet<Var> invalid) {
     InitState contInit = init.enterContinuation(cont);
     
@@ -332,21 +484,23 @@ public class ArrayBuild extends FunctionOptimizerPass {
   /**
    * Replace arrayInsertImm instructions with an arrayBuild
    * @param block
-   * @param arr
+   * @param candKey
    * @param init initialized state from outside.  Not modified
    */
   private void replaceInserts(Logger logger, Block block,
-                              InitState init, Var arr) {
+          AliasTracker blockAliases, InitState init,
+          Var cand, AliasKey candKey) {
     
     // First remove the old instructions and gather keys and vals
-    Pair<List<Arg>, List<Arg>> keyVals = removeOldInserts(block, arr);
+    Pair<List<Arg>, List<Arg>> keyVals = 
+            removeOldInserts(block, blockAliases, candKey);
     List<Arg> keys = keyVals.val1;
     List<Arg> vals = keyVals.val2;
     
     ListIterator<Statement> insertPos;
-    insertPos = findArrayBuildPos(logger, block, init, arr, keys, vals);
+    insertPos = findArrayBuildPos(logger, block, init, cand, keys, vals);
     
-    insertPos.add(TurbineOp.arrayBuild(arr, keys, vals));
+    insertPos.add(TurbineOp.arrayBuild(cand, keys, vals));
   }
 
   /**
@@ -383,11 +537,16 @@ public class ArrayBuild extends FunctionOptimizerPass {
       }
     }
     for (Arg val: vals) {
-      assert(val.isVar());
-      if (InitVariables.varMustBeInitialized(val.getVar(), false)) {
-        // Must init alias
-        if (!outerInit.initVars.contains(val.getVar())) {
-          needsInit.add(val.getVar());
+      if (val.isVar()) {
+        Var var = val.getVar(); 
+       if (InitVariables.assignBeforeRead(var) &&
+           !outerInit.assignedVals.contains(var)) {
+         // Must assign value
+         needsInit.add(var);         
+       } else if (InitVariables.varMustBeInitialized(var, false) &&
+           !outerInit.initVars.contains(var)) {
+          // Must init alias
+          needsInit.add(var);
         }
       }
     }
@@ -423,7 +582,8 @@ public class ArrayBuild extends FunctionOptimizerPass {
     return insertPos;
   }
 
-  private Pair<List<Arg>, List<Arg>> removeOldInserts(Block block, Var arr) {
+  private Pair<List<Arg>, List<Arg>> removeOldInserts(Block block,
+                  AliasTracker blockAliases, AliasKey candKey) {
     List<Arg> keys = new ArrayList<Arg>();
     List<Arg> vals = new ArrayList<Arg>();
     ListIterator<Statement> it = block.statementIterator();
@@ -431,13 +591,15 @@ public class ArrayBuild extends FunctionOptimizerPass {
       Statement stmt = it.next();
       if (stmt.type() == StatementType.INSTRUCTION) {
         Instruction inst = stmt.instruction();
-        if (inst.op == Opcode.ARRAY_INSERT_IMM) {
-          if (inst.getOutput(0).equals(arr)) {
+        if (inst.op == Opcode.ARR_STORE) {
+          Var arrVar = inst.getOutput(0);
+          AliasKey arrKey = blockAliases.getCanonical(arrVar);
+          if (arrKey.equals(candKey)) {
             it.remove();
             Arg key = inst.getInput(0);
             Arg val = inst.getInput(1);
-            assert(Types.isArrayKeyVal(arr, key));
-            assert(Types.isMemberType(arr, val.getVar()));
+            assert(Types.isArrayKeyVal(candKey, key));
+            assert(Types.isElemValType(candKey, val));
             keys.add(key);
             vals.add(val);
           }

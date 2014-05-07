@@ -44,26 +44,28 @@ public class Var implements Comparable<Var>, Typed {
   private final Alloc storage;
   private final DefType defType;
   private final VarProvenance provenance;
-  private final Var mapping;
+  /**
+   * True if the variable was mapped at definition time
+   */
+  private final boolean mappedDecl;
   private final int hashCode; // Cache hashcode
 
-  public static final String TMP_VAR_PREFIX = "__t";
-  public static final String ALIAS_VAR_PREFIX = "__alias";
-  public static final String STRUCT_FIELD_VAR_PREFIX = "__sf_";
-  public static final String LOCAL_VALUE_VAR_PREFIX = "__v_";
-  public static final String FILENAME_OF_PREFIX = "__filename_";
-  public static final String WRAP_FILENAME_PREFIX = "__wfilename_";
+  public static final String TMP_VAR_PREFIX = "__t:";
+  public static final String ALIAS_VAR_PREFIX = "__alias:";
+  public static final String STRUCT_FIELD_VAR_PREFIX = "__sf:";
+  public static final String LOCAL_VALUE_VAR_PREFIX = "__v:";
+  public static final String FILENAME_OF_PREFIX = "__filename:";
+  public static final String WRAP_FILENAME_PREFIX = "__wfilename:";
   /* Separate prefixes to avoid name clashes for optimizer 
    *    inserted variables */
-  public static final String OPT_VAR_PREFIX = "__o_";
-  public static final String OPT_VALUE_VAR_PREFIX = "__ov_";
-  public static final String OPT_FILENAME_PREFIX = "__of_";
-  public static final String LOOP_INDEX_VAR_PREFIX = "__i";
-  public static final String GLOBAL_CONST_VAR_PREFIX = "__c";
-  public static final String DEREF_COMPILER_VAR_PREFIX = "__dr_";
-  public static final String COMPILER_ARG_PREFIX = "__ca_";
-  public static final String LOOP_COND_PREFIX = "__xcond";
-  public static final String OUTER_VAR_PREFIX = "__outer";
+  public static final String OPT_VAR_PREFIX = "__o:";
+  public static final String OPT_FILENAME_PREFIX = "__of:";
+  public static final String LOOP_INDEX_VAR_PREFIX = "__i:";
+  public static final String GLOBAL_CONST_VAR_PREFIX = "__c:";
+  public static final String VALUEOF_VAR_PREFIX = "__v:";
+  public static final String COMPILER_ARG_PREFIX = "__ca:";
+  public static final String LOOP_COND_PREFIX = "__xcond:";
+  public static final String OUTER_VAR_PREFIX = "__outer:";
   
   // Convenience constant
   public static final List<Var> NONE = Collections.emptyList();
@@ -117,18 +119,17 @@ public class Var implements Comparable<Var>, Typed {
   public Var(Type type, String name, Alloc storage, DefType defType,
              VarProvenance provenance)
   {
-    this(type, name, storage, defType, provenance, null);
+    this(type, name, storage, defType, provenance, false);
   }
   
   public Var(Type type, String name, Alloc storage, DefType defType,
-             VarProvenance provenance, Var mapping) {
+             VarProvenance provenance, boolean mappedDecl) {
     assert(provenance != null);
     this.type = type;
     this.name = name;
     this.storage = storage;
     this.defType = defType;
-    assert(mapping == null || Types.isString(mapping.type()));
-    this.mapping = mapping;
+    this.mappedDecl = mappedDecl;
     this.hashCode = calcHashCode();
     this.provenance = provenance;
   }
@@ -143,17 +144,13 @@ public class Var implements Comparable<Var>, Typed {
       return this;
     } else {
       return new Var(newType, name, storage, defType, 
-                     provenance, mapping);
+                     provenance, mappedDecl);
     }
-  }
-  
-  public Var replaceMapping(Var newMapping) {
-    return new Var(type, name, storage, defType, provenance, newMapping);
   }
 
   public Var makeRenamed(String newName) {
     return new Var(type(), newName, storage(), defType(),
-                    VarProvenance.renamed(this), mapping());
+                    VarProvenance.renamed(this), mappedDecl);
   }
 
   @Override
@@ -193,7 +190,7 @@ public class Var implements Comparable<Var>, Typed {
   public boolean identical(Var o) {
     return name.equals(o.name) &&
            type.equals(o.type) &&
-           (mapping == o.mapping || mapping.identical(o.mapping)) &&
+           mappedDecl == o.mappedDecl &&
            storage == o.storage &&
            defType == o.defType;
   }
@@ -215,22 +212,22 @@ public class Var implements Comparable<Var>, Typed {
     return defType;
   }
 
-  public Var mapping() {
-    return mapping;
-  }
-  
   public VarProvenance provenance() {
     return provenance;
   }
+  
+  public boolean mappedDecl() {
+    return mappedDecl;
+  }
 
   /**
-   * Determine if variable is mapped.  This is not trivial, as
+   * Determine if variable is mappedDecl.  This is not trivial, as
    * we sometimes don't have visibility of whether a variable is
-   * mapped or not if, e.g., it is passed in as a function argument.
+   * mappedDecl or not if, e.g., it is passed in as a function argument.
    * @return
    */
   public Ternary isMapped() {
-    if (mapping != null) {
+    if (mappedDecl) {
       return Ternary.TRUE;
     } else if (!Types.isMappable(this)) {
       return Ternary.FALSE;
@@ -243,7 +240,27 @@ public class Var implements Comparable<Var>, Typed {
     // Can't be sure
     return Ternary.MAYBE;
   }
-
+  
+  /**
+   * Determine if the variable may be an alias at runtime
+   * @return
+   */
+  public Ternary isRuntimeAlias() {
+    if (storage == Alloc.ALIAS) {
+      return Ternary.TRUE;
+    } else if (storage == Alloc.GLOBAL_CONST ||
+               storage == Alloc.LOCAL)
+    {
+      return Ternary.FALSE;
+    } else if (storage != Alloc.ALIAS &&
+        (defType == DefType.LOCAL_USER ||
+         defType == DefType.LOCAL_COMPILER)) {
+      // Was declared in this scope, can be sure wasn't alias
+      return Ternary.FALSE;
+    }
+    // Otherwise not sure
+    return Ternary.MAYBE;
+  }
 
 
   public static String names(List<Var> list)
@@ -308,15 +325,35 @@ public class Var implements Comparable<Var>, Typed {
     return diff;
   }
   
+
+  /**
+   * Represent variable plus a count
+   */
   public static class VarCount {
-    public Var var;
-    public int count;
-    public VarCount(Var var, int count) {
-      super();
+    public final Var var;
+    public final long count;
+    
+    public VarCount(Var var, long count) {
       this.var = var;
       this.count = count;
     }
+    
+    public static VarCount one(Var var) {
+      return new VarCount(var, 1);
+    }
+    
+    public List<VarCount> asList() {
+      return Collections.singletonList(this);
+    }
+    
+    @Override
+    public String toString() {
+      return var.name() + "=" + count;
+    }
+    
+    public static final List<VarCount> NONE = Collections.emptyList();
   }
+  
   public static List<VarCount> countVars(List<Var> list) {
     ArrayList<Var> sorted = new ArrayList<Var>(list);
     Collections.sort(sorted, new Comparator<Var>() {
@@ -326,15 +363,24 @@ public class Var implements Comparable<Var>, Typed {
       }
     });
     ArrayList<VarCount> res = new ArrayList<VarCount>();
-    VarCount curr = null;
+    Var curr = null;
+    long currCount = 0; 
     for (Var v: sorted) {
-      if (curr == null || !v.name().equals(curr.var.name())) {
-        curr = new VarCount(v, 1);
-        res.add(curr);
+      if (curr == null) {
+        curr = v;
+        currCount = 1;
+      } else if (!v.equals(curr)) {
+        res.add(new VarCount(curr, currCount));
+        curr = v;
+        currCount = 1;
       } else {
-        curr.count++;
+        currCount++;
       }
     }
+    if (curr != null && currCount != 0) {
+      res.add(new VarCount(curr, currCount));
+    }
+      
     return res;
   }
 
@@ -421,6 +467,19 @@ public class Var implements Comparable<Var>, Typed {
   public static String structFieldName(Var struct, String fieldPath) {
     return Var.STRUCT_FIELD_VAR_PREFIX
         + struct.name() + "_" + fieldPath.replace('.', '_');
+  }
+  
+  /**
+   * Create neated prefixed vars
+   * @param prefix
+   * @param name
+   * @return
+   */
+  public static String joinPrefix(String prefix, String name) {
+    if (name.startsWith("__")) {
+      name = name.substring(2);
+    }
+    return prefix + name;
   }
   
   /**

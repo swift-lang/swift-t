@@ -19,6 +19,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 
+/**
+ * Represent a pair of data.  Supports equality and hash comparison.
+ * @param <T1>
+ * @param <T2>
+ */
 public class Pair<T1, T2> {
   public final T1 val1;
   public final T2 val2;
@@ -33,23 +38,46 @@ public class Pair<T1, T2> {
     return new Pair<T1, T2>(f, s);
   }
 
+  
   @Override
-  public boolean equals(Object obj) {
-    if (!(obj instanceof Pair<?, ?>)) {
-      return false;
-    }
-    Pair<?, ?> p2 = (Pair<?, ?>)obj;
-    return val1.equals(p2.val1) && val2.equals(p2.val2);
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((val1 == null) ? 0 : val1.hashCode());
+    result = prime * result + ((val2 == null) ? 0 : val2.hashCode());
+    return result;
   }
 
   @Override
-  public int hashCode() {
-    return (17 * val1.hashCode()) ^ val2.hashCode();
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null) {
+      return false;
+    }
+    assert(obj instanceof Pair) : "Comparing pair with non-pair";
+    
+    Pair<?, ?> other = (Pair<?, ?>) obj;
+    if (val1 == null) {
+      if (other.val1 != null)
+        return false;
+    } else if (other.val2 == null) {
+      return false;
+    } else if (!val1.equals(other.val1))
+      return false;
+    if (val2 == null) {
+      if (other.val2 != null)
+        return false;
+    } else if (other.val2 == null) {
+      return false;
+    } else if (!val2.equals(other.val2))
+      return false;
+    return true;
   }
-  
+
   @Override
   public String toString() {
-    return "(" + val1.toString() + ", " + val2.toString() + ")";
+    return "(" + val1 + ", " + val2 + ")";
   }
   
   public static <T, S> List<T> extract1(List<Pair<T, S>> list) {

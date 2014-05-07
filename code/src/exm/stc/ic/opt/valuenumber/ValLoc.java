@@ -7,6 +7,7 @@ import java.util.List;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ComputedValue.CongruenceType;
@@ -88,7 +89,7 @@ public class ValLoc {
   
   public static ValLoc buildResult(Opcode op, List<Arg> inputs, Arg valLocation,
       Closed locClosed, IsAssign isAssign) {
-    return buildResult(op, "", inputs, valLocation, locClosed,
+    return buildResult(op, ComputedValue.NO_SUBOP, inputs, valLocation, locClosed,
                        IsValCopy.NO, isAssign);
   }
   
@@ -147,63 +148,114 @@ public class ValLoc {
     return build(ComputedValue.makeAlias(src.asArg()), dst.asArg(),
                  Closed.MAYBE_NOT, IsAssign.NO);
   }
-  
+
+  /**
+   * Make a standard computed value for direct alias of array member
+   * @param arr
+   * @param ix
+   * @param contents
+   * @return
+   */
+  public static ValLoc makeArrayAlias(Var arr, Arg ix,
+          Arg contents, IsAssign isAssign) {
+
+  assert(Types.isElemType(arr, contents)) :
+          "not member: " + contents.toStringTyped() + " " + arr;
+  ArgCV val = ComputedValue.arrayValAliasCV(arr, ix);
+  return new ValLoc(val, contents, Closed.MAYBE_NOT, IsValCopy.NO, isAssign);
+  }
 
   /**
    * Make a standard computed value for array contents
    * @param arr
    * @param ix
    * @param contents
-   * @param refResult if contents is ref
+   * @param valResult if contents is of value type of elem
    * @return
    */
-  public static ValLoc makeArrayResult(Var arr, Arg ix, Var contents,
-        boolean refResult, IsAssign isAssign) {
-    Arg contentsArg = contents.asArg();
+  public static ValLoc makeArrayResult(Var arr, Arg ix,
+          Arg contents, boolean valResult, IsAssign isAssign) {
+    assert(Types.isArray(arr) || Types.isArrayRef(arr) ||
+           Types.isArrayLocal(arr));
     ArgCV val;
-    // TODO: how to handle assigns to array references?
-    //       Will need to make sure that everything is respected if
-    //       we created a dereferenced one.
-    if (refResult) {
-      assert(Types.isMemberReference(contents, arr)) :
-            "not member ref: " + contents + " " + arr;
-      val = ComputedValue.arrayRefCV(arr, ix);
+    // Local arrays already use derefed type internally
+    boolean derefMemberType = valResult && !Types.isArrayLocal(arr);
+    if (derefMemberType) {
+      assert(Types.isElemValType(arr, contents)) :
+            "not member val: " + contents.toStringTyped() + " " + arr;
+      val = ComputedValue.arrayValCV(arr, ix);
     } else {
-      assert(Types.isMemberType(arr, contents)) :
-            "not member: " + contents + " " + arr;
-      val = ComputedValue.arrayCV(arr, ix);
+      assert(Types.isElemType(arr, contents)) :
+            "not member: " + contents.toStringTyped() + " " + arr;
+      val = ComputedValue.arrayValCopyCV(arr, ix);
     }
-    return new ValLoc(val, contentsArg, Closed.MAYBE_NOT, IsValCopy.NO,
-                       isAssign);
+    return new ValLoc(val, contents, Closed.MAYBE_NOT, IsValCopy.NO, isAssign);
   }
   
   public static ValLoc makeCreateNestedResult(Var arr, Arg ix, Var contents,
-      boolean refResult) {
+      boolean nonRefResult) {
+    assert(Types.isArray(arr) || Types.isArrayRef(arr) ||
+        Types.isArrayLocal(arr));
     Arg contentsArg = contents == null ? null : Arg.createVar(contents);
     ArgCV val;
-    if (refResult) {
-      val = ComputedValue.arrayRefNestedCV(arr, ix);
-    } else {
-      assert(contents == null || Types.isMemberType(arr, contents)) :
-            "not member: " + contents + " " + arr;
+    if (nonRefResult) {
+      assert(contents == null || Types.isElemValType(arr, contents)) :
+        "not elem: " + contents + " " + arr;
       val = ComputedValue.arrayNestedCV(arr, ix);
+    } else {
+      assert(contents == null || Types.isElemType(arr, contents)) :
+        "not elem: " + contents + " " + arr;
+      val = ComputedValue.arrayRefNestedCV(arr, ix);
     }
     return ValLoc.build(val, contentsArg, Closed.MAYBE_NOT, IsAssign.NO);
   }
   
-  public static ValLoc makeStructLookupResult(Var elem, Var struct,
-                                                 String fieldName) {
-    return ValLoc.build(ComputedValue.structMemberCV(struct, fieldName),
+  public static ValLoc makeStructFieldAliasResult(Var elem, Var struct,
+                                                List<Arg> fields) {
+    return ValLoc.build(ComputedValue.structFieldAliasCV(struct, fields),
                          elem.asArg(), Closed.MAYBE_NOT, IsAssign.NO);
   }
   
+  public static ValLoc makeStructFieldCopyResult(Var elem, Var struct,
+                                       List<Arg> fields, IsAssign assign) {
+      return ValLoc.build(ComputedValue.structFieldCopyCV(struct, fields),
+                      elem.asArg(), Closed.MAYBE_NOT, assign);
+  }
 
-  public static ValLoc makeFilename(Arg outFilename, Var inFile) {
+  public static ValLoc makeStructFieldValResult(Arg val, Var struct,
+          List<Arg> fields, IsAssign assign) {
+    return ValLoc.build(ComputedValue.structFieldValCV(struct, fields),
+                          val, Closed.MAYBE_NOT, assign);
+  }
+  
+  public static ValLoc makeContainerSizeCV(Var arr, Arg size, boolean async,
+                                IsAssign isAssign) {
+    ArgCV cv = ComputedValue.containerSizeCV(arr, async);
+    
+    assert((!async && size.isImmediateInt()) ||
+           (async && Types.isInt(size.type())));
+
+    return ValLoc.build(cv, size, Closed.MAYBE_NOT, isAssign);
+  }
+
+  public static ValLoc makeArrayContainsCV(Var arr, Arg key, Arg out, 
+                        boolean future, IsAssign isAssign) {
+    assert(Types.isArray(arr) ||
+            Types.isArrayLocal(arr)) : arr;
+     assert((!future && Types.isArrayKeyVal(arr, key)) ||
+            (future && Types.isArrayKeyFuture(arr, key)));
+    ArgCV cv = ComputedValue.arrayContainsCV(arr, key);
+    return ValLoc.build(cv, out, Closed.MAYBE_NOT, isAssign);
+  }
+
+  
+  public static ValLoc makeFilename(Arg outFilename, Var inFile,
+            IsAssign assign) {
     assert(Types.isFile(inFile.type()));
     assert(outFilename.isVar());
     assert(Types.isString(outFilename.getVar().type()));
-    return build(ComputedValue.filenameCV(inFile),
-                      outFilename, Closed.MAYBE_NOT, IsAssign.NO);
+    return build(ComputedValue.filenameAliasCV(inFile),
+                      outFilename, Closed.MAYBE_NOT, assign);
   }
   
   public static ValLoc makeFilenameVal(Var file, Arg filenameVal,
@@ -216,7 +268,6 @@ public class ValLoc {
 
   public static ValLoc makeFilenameLocal(Arg outFilename, Var inFile,
           IsAssign isAssign) {
-    assert(isAssign != IsAssign.TO_VALUE);
     assert(Types.isFileVal(inFile));
     assert(outFilename.isImmediateString());
     return build(ComputedValue.localFilenameCV(inFile),
@@ -237,7 +288,43 @@ public class ValLoc {
                       v.asArg(), Closed.MAYBE_NOT, copied, isAssign);
   }
   
+  public static ValLoc retrieve(Var dst, Var src, boolean recursive,
+      Closed isClosed, IsValCopy isCopy, IsAssign isAssign) {
+    Type retrievedType = Types.retrievedType(src, recursive);
+    assert(retrievedType.assignableTo(dst.type()));
+    if (recursive && retrievedType.equals(Types.retrievedType(src, false))) {
+      // Not really a recursive load, make canonical
+      recursive = false;
+    }
+    
+    return new ValLoc(ComputedValue.retrieveCompVal(src, recursive),
+                      dst.asArg(), Closed.MAYBE_NOT, IsValCopy.YES,
+                      isAssign);
+  }
+  
+  public static ValLoc assign(Var dst, Arg src, boolean recursive, 
+              Closed isClosed, IsValCopy isCopy, IsAssign isAssign) {
+    Type retrievedType = Types.retrievedType(dst, recursive);
+    assert(src.type().assignableTo(retrievedType));
 
+    if (recursive && retrievedType.equals(Types.retrievedType(dst, false))) {
+      // Not really a recursive load, make canonical
+      recursive = false;
+    }
+    
+    return new ValLoc(ComputedValue.assignCompVal(dst, src, recursive),
+                      dst.asArg(), isClosed, isCopy, isAssign);
+  }
+  
+
+  
+  public static ValLoc assignFile(Var dst, Arg src, Arg setFilename,
+                                        IsAssign isAssign) {
+    assert(Types.isFile(dst));
+    return ValLoc.build(ComputedValue.assignFileCompVal(src, setFilename),
+            dst.asArg(), Closed.YES_NOT_RECURSIVE, isAssign);
+  }
+  
   
   public List<ValLoc> asList() {
     return Collections.singletonList(this);

@@ -25,6 +25,7 @@ import org.apache.log4j.Logger;
 import exm.stc.common.Settings;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.Location;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
@@ -62,17 +63,42 @@ public class Pipeline extends FunctionOptimizerPass {
 
   @Override
   public void optimize(Logger logger, Function f) {
-    pipelineTasks(logger, f, f.mainBlock(), ExecContext.CONTROL);
+    boolean maybeInLoop = f.isAsync() ? false : true;
+    pipelineTasks(logger, f, f.mainBlock(), ExecContext.CONTROL, maybeInLoop);
   }
 
+  /**
+   * 
+   * @param logger
+   * @param f
+   * @param curr
+   * @param cx current exec context
+   * @param maybeInLoop if there's maybe a loop between the current
+   *                    context and the root of the task we're in
+   */
   private static void pipelineTasks(Logger logger, Function f, Block curr,
-      ExecContext cx) {
+      ExecContext cx, boolean maybeInLoop) {
     // Do a bottom-up tree walk
     for (Continuation cont: curr.allComplexStatements()) {
+      boolean contInLoop;
+      if (cont.isAsync()) {
+        // New task
+        contInLoop = false;
+      } else if (cont.isLoop()) {
+        // Sync loop
+        contInLoop = true;
+      } else {
+        contInLoop = maybeInLoop;
+      }
       ExecContext childCx = cont.childContext(cx);
       for (Block childBlock: cont.getBlocks()) {
-        pipelineTasks(logger, f, childBlock, childCx);
+        pipelineTasks(logger, f, childBlock, childCx, contInLoop);
       }
+    }
+    
+    if (maybeInLoop) {
+      // Don't try to optimize, might serialise things
+      return;
     }
 
     // Find candidates for merging: wait statements which are not
@@ -85,9 +111,21 @@ public class Pipeline extends FunctionOptimizerPass {
         boolean compatible = true;
         if (!w.getWaitVars().isEmpty()) {
           compatible = false;
-        } else if (w.childContext(cx) != cx) {
+        } else if (!Settings.NO_TURBINE_ENGINE 
+                    && w.childContext(cx) != cx) {
+          // We can't merge if WORKER and CONTROL contexts are different
+          compatible = false;
+        } else if (Settings.NO_TURBINE_ENGINE &&
+              cx == ExecContext.CONTROL) {
+          /* 
+           * Don't merge work into control, since we might defer important
+           * control work, e.g. work task inside foreach loop
+           */
           compatible = false;
         } else if (w.isParallel()) {
+          compatible = false;
+        } else if (w.targetLocation() != null &&
+                  !w.targetLocation().equals(Location.ANY_LOCATION)) {
           compatible = false;
         }
         
@@ -167,7 +205,8 @@ public class Pipeline extends FunctionOptimizerPass {
    * Heuristic score
    * 
    * TODO: this is simplistic, since this doesn't incorporate whether the
-   * variable is written in the child, or if 
+   * variable is produced or consumed by the child or the exact mechanism
+   * of data transfer
    * @param logger
    * @param t
    * @return

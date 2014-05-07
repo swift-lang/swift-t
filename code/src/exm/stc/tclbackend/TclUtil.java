@@ -24,6 +24,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
+import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.tclbackend.tree.Expression;
 import exm.stc.tclbackend.tree.Expression.ExprContext;
 import exm.stc.tclbackend.tree.LiteralFloat;
@@ -85,7 +86,7 @@ public class TclUtil {
     }
     
     Value val = new Value(TclNamer.prefixVar(v.name()));
-    if (representationIsTclList(v.type())) {
+    if (representationMaybeTclList(v)) {
       val.setTreatAsList(true);
     }
     val.setSupportsStringList(supportsStringList(v.type()));
@@ -109,12 +110,33 @@ public class TclUtil {
     return true;
   }
 
-  public static boolean representationIsTclList(Type type) {
-    if (Types.isFile(type) || Types.isStruct(type) ||
+  public static boolean representationMaybeTclList(Var v) {
+    return representationMaybeTclList(v.type(), v.isRuntimeAlias());
+  }
+  
+  public static boolean representationMaybeTclList(Type type,
+                                   Ternary isRuntimeAlias) {
+    if (Types.isFile(type) || Types.isStructLocal(type) ||
         Types.isFileVal(type) || Types.isContainerLocal(type)) {
+      // These always are lists
+      return true;
+    } else if (isHandle(type) && isRuntimeAlias != Ternary.FALSE) {
+      // if it's an alias at runtime, might be a list of id + subscript,
+      // so assume it needs to be handled specially
       return true;
     }
     return false;
+  }
+
+  /**
+   * If it's a handle to shared data
+   * @param type
+   * @return
+   */
+  private static boolean isHandle(Type type) {
+    return Types.isPrimFuture(type) || Types.isStruct(type) ||
+               Types.isContainer(type) || Types.isPrimUpdateable(type) ||
+               Types.isRef(type);
   }
 
   public static List<Expression> varsToExpr(List<Var> inputs) {

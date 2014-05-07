@@ -4,7 +4,7 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.HierarchicalSet;
 import exm.stc.common.util.Pair;
-import exm.stc.ic.opt.AliasTracker;
+import exm.stc.ic.aliases.AliasTracker;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICInstructions.Instruction.InitType;

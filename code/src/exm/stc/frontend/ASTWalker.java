@@ -58,10 +58,10 @@ import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ArrayType;
-import exm.stc.common.lang.Types.NestedContainerInfo;
 import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Types.FileKind;
 import exm.stc.common.lang.Types.FunctionType;
+import exm.stc.common.lang.Types.NestedContainerInfo;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.SubType;
@@ -392,9 +392,7 @@ public class ASTWalker {
           // Set up nested stack frame
 
           backend.startNestedBlock();
-          backend.addComment("start of block@" + context.getFileLine());
           block(nestedContext, tree);
-          backend.addComment("end of block@" + context.getFileLine());
           backend.endNestedBlock();
           break;
 
@@ -484,8 +482,8 @@ public class ASTWalker {
       }
       
       String waitName = context.getFunctionContext().constructName("chain");
-      backend.startWaitStatement(waitName, stmtResults, WaitMode.WAIT_ONLY,
-             true, false, TaskMode.LOCAL);
+      backend.startWaitStatement(waitName, VarRepr.backendVars(stmtResults),
+             WaitMode.WAIT_ONLY, true, false, TaskMode.LOCAL);
     }
     
     // Evaluate the final statement
@@ -539,8 +537,8 @@ public class ASTWalker {
     
     backend.startWaitStatement(
           context.getFunctionContext().constructName("explicit-wait"),
-          waitEvaled, WaitMode.WAIT_ONLY, true, wait.isDeepWait(),
-          TaskMode.LOCAL_CONTROL);
+          VarRepr.backendVars(waitEvaled),
+          WaitMode.WAIT_ONLY, true, wait.isDeepWait(), TaskMode.LOCAL_CONTROL);
     block(new LocalContext(context), wait.getBlock());
     backend.endWaitStatement();
   }
@@ -594,12 +592,13 @@ public class ASTWalker {
     
     FunctionContext fc = context.getFunctionContext();
     backend.startWaitStatement( fc.constructName("if"), 
-              Arrays.asList(conditionVar),
+                VarRepr.backendVar(conditionVar).asList(),
                 WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
 
     Context waitContext = new LocalContext(context);
-    Var condVal = varCreator.fetchValueOf(waitContext, conditionVar);
-    backend.startIfStatement(Arg.createVar(condVal), ifStmt.hasElse());
+    Var condVal = exprWalker.retrieveToVar(waitContext, conditionVar);
+    backend.startIfStatement(VarRepr.backendArg(condVal),
+                             ifStmt.hasElse());
     block(new LocalContext(waitContext), ifStmt.getThenBlock());
 
     if (ifStmt.hasElse()) {
@@ -708,18 +707,18 @@ public class ASTWalker {
     // Generate all of the code
     FunctionContext fc = context.getFunctionContext();
     backend.startWaitStatement( fc.constructName("switch"),
-                Arrays.asList(switchVar),
+                VarRepr.backendVar(switchVar).asList(),
                 WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
 
     Context waitContext = new LocalContext(context);
     Var switchVal = varCreator.createValueOfVar(waitContext,
                                                      switchVar); 
 
-    backend.retrieveInt(switchVal, switchVar);
+    exprWalker.retrieve(switchVal, switchVar);
 
     LogHelper.trace(context, "switch: " + 
             sw.getCaseBodies().size() + " cases");
-    backend.startSwitch(Arg.createVar(switchVal), sw.getCaseLabels(),
+    backend.startSwitch(VarRepr.backendArg(switchVal), sw.getCaseLabels(),
                                                          sw.hasDefault());
     for (SwiftAST caseBody : sw.getCaseBodies()) {
       block(new LocalContext(waitContext), caseBody);
@@ -761,8 +760,7 @@ public class ASTWalker {
       step = exprWalker.eval(context, range.getStep(), Types.F_INT, false, null);
     } else {
       // Inefficient but constant folding will clean up
-      step = varCreator.createTmp(context, Types.F_INT);
-      backend.assignInt(step, Arg.createIntLit(1));
+      step = exprWalker.assignToVar(context, Arg.ONE, false);
     }
     FunctionContext fc = context.getFunctionContext();
     int loopNum = fc.getCounterVal("foreach-range");
@@ -770,12 +768,12 @@ public class ASTWalker {
     // Need to pass in futures along with user vars
     List<Var> rangeBounds = Arrays.asList(start, end, step);
     backend.startWaitStatement(fc.getFunctionName() + "-wait-range" + loopNum,
-             rangeBounds, WaitMode.WAIT_ONLY, false, false,
-             TaskMode.LOCAL_CONTROL);
+             VarRepr.backendVars(rangeBounds), WaitMode.WAIT_ONLY, false,
+             false, TaskMode.LOCAL_CONTROL);
     Context waitContext = new LocalContext(context);
-    Var startVal = varCreator.fetchValueOf(waitContext, start);
-    Var endVal = varCreator.fetchValueOf(waitContext, end);
-    Var stepVal = varCreator.fetchValueOf(waitContext, step);
+    Var startVal = exprWalker.retrieveToVar(waitContext, start);
+    Var endVal = exprWalker.retrieveToVar(waitContext, end);
+    Var stepVal = exprWalker.retrieveToVar(waitContext, step);
     Context bodyContext = loop.setupLoopBodyContext(waitContext, true, false);
     
     // The per-iteration value of the range
@@ -784,28 +782,29 @@ public class ASTWalker {
     Var counterVal = loop.getLoopCountVal();
     
     backend.startRangeLoop(fc.getFunctionName() + "-range" + loopNum,
-            memberVal, counterVal,
-            Arg.createVar(startVal), Arg.createVar(endVal), 
-            Arg.createVar(stepVal),
+            VarRepr.backendVar(memberVal), 
+            (counterVal == null) ? null : VarRepr.backendVar(counterVal),
+            VarRepr.backendArg(startVal), VarRepr.backendArg(endVal), 
+            VarRepr.backendArg(stepVal),
             loop.getDesiredUnroll(), loop.getSplitDegree(),
             loop.getLeafDegree());
     // Need to spawn off task per iteration
     if (!loop.isSyncLoop()) {
       backend.startWaitStatement(fc.getFunctionName() + "range-iter" + loopNum,
-          Arrays.<Var>asList(),
-          WaitMode.TASK_DISPATCH, false, false, TaskMode.CONTROL);
+          Var.NONE, WaitMode.TASK_DISPATCH, false, false, TaskMode.CONTROL);
     }
     
     // We have the current value, but need to put it in a future in case user
     //  code refers to it
+
     varCreator.initialiseVariable(bodyContext, loop.getMemberVar());
-    backend.assignInt(loop.getMemberVar(), Arg.createVar(memberVal));
+    exprWalker.assign(loop.getMemberVar(), memberVal.asArg());
     if (loop.getCountVarName() != null) {
       Var loopCountVar = varCreator.createVariable(bodyContext,
           Types.F_INT, loop.getCountVarName(), Alloc.STACK,
           DefType.LOCAL_USER, VarProvenance.userVar(context.getSourceLoc()),
-          null);
-      backend.assignInt(loopCountVar, Arg.createVar(counterVal));
+          false);
+      exprWalker.assign(loopCountVar, counterVal.asArg());
     }
     block(bodyContext, loop.getBody());
     if (!loop.isSyncLoop()) {
@@ -850,13 +849,13 @@ public class ASTWalker {
       // If its a reference, wrap a wait() around the loop call
       backend.startWaitStatement(
           fc.getFunctionName() + "-foreach-refwait" + loopNum,
-          Arrays.asList(arrayVar),
+          VarRepr.backendVar(arrayVar).asList(),
           WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
 
       outsideLoopContext = new LocalContext(context);
       realArray = varCreator.createTmp(outsideLoopContext,
                               arrayVar.type().memberType(), false, true);
-      backend.retrieveRef(realArray, arrayVar);
+      exprWalker.retrieveRef(realArray, arrayVar, false);
     } else {
       assert(Types.isContainer(arrayVar));
       realArray = arrayVar;
@@ -866,21 +865,40 @@ public class ASTWalker {
     // Block on array
     backend.startWaitStatement(
         fc.getFunctionName() + "-foreach-wait" + loopNum,
-        Arrays.asList(realArray),
+        VarRepr.backendVar(realArray).asList(),
         WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
     
     loop.setupLoopBodyContext(outsideLoopContext, false, false);
     Context loopBodyContext = loop.getBodyContext();
 
+    Var loopCountVal = loop.getLoopCountVal();
+
+    boolean memberIsVal = (loop.getMemberVal() != null);
+    Var backendIterVar = null;
+    if (memberIsVal) {
+      backendIterVar = VarRepr.backendVar(loop.getMemberVal());
+    } else {
+      backendIterVar = VarRepr.backendVar(loop.getMemberVar());
+    }
+    
     backend.startForeachLoop(fc.getFunctionName() + "-foreach" + loopNum,
-        realArray, loop.getMemberVar(), loop.getLoopCountVal(),
-        loop.getSplitDegree(), loop.getLeafDegree(), true);
+            VarRepr.backendVar(realArray), backendIterVar,
+            loopCountVal == null ? null : VarRepr.backendVar(loopCountVal),
+            loop.getSplitDegree(), loop.getLeafDegree(), true);
+
+    
+    if (memberIsVal) {
+      // Need to store to value that will be referenced by later generated code
+      varCreator.initialiseVariable(loopBodyContext, loop.getMemberVar());
+      exprWalker.assign(VarRepr.backendVar(loop.getMemberVar()),
+                        backendIterVar.asArg());
+    }
+    
     // May need to spawn off each iteration as task - use wait for this
     if (!loop.isSyncLoop()) {
       backend.startWaitStatement(
           fc.getFunctionName() + "-foreach-spawn" + loopNum,
-          Arrays.<Var>asList(),
-          WaitMode.TASK_DISPATCH, false, false, TaskMode.CONTROL);
+          Var.NONE, WaitMode.TASK_DISPATCH, false, false, TaskMode.CONTROL);
     }
     // If the user's code expects a loop count var, need to create it here
     if (loop.getCountVarName() != null) {
@@ -904,7 +922,7 @@ public class ASTWalker {
       backend.endWaitStatement();
     }
   }
-
+  
   private void forLoop(Context context, SwiftAST tree) throws UserException {
     ForLoopDescriptor forLoop = ForLoopDescriptor.fromAST(context, tree);
     
@@ -930,9 +948,10 @@ public class ASTWalker {
                   Var.OUTER_VAR_PREFIX + lv.var.name(),
                   Alloc.ALIAS, DefType.LOCAL_COMPILER,
                   VarProvenance.userVar(context.getSourceLoc()),
-                  lv.var.mapping());
+                  lv.var.mappedDecl());
         // Copy turbine ID
-        backend.makeAlias(parentAlias, lv.var);
+        backend.makeAlias(VarRepr.backendVar(parentAlias),
+                          VarRepr.backendVar(lv.var));
         parentLoopVarAliases.put(lv.var.name(), parentAlias);
       }
     }
@@ -956,7 +975,7 @@ public class ASTWalker {
     Var condArg = 
         loopIterContext.declareVariable(condType, Var.LOOP_COND_PREFIX + 
             loopNum, Alloc.TEMP, DefType.INARG,
-            VarProvenance.exprTmp(context.getSourceLoc()), null);
+            VarProvenance.exprTmp(context.getSourceLoc()), false);
 
 
 
@@ -976,14 +995,14 @@ public class ASTWalker {
     
     initVals.add(0, initCond.asArg());
     
-    backend.startLoop(loopName, loopVars, definedHere, initVals, 
-                      blockingVector);
+    backend.startLoop(loopName, VarRepr.backendVars(loopVars), definedHere,
+                      VarRepr.backendArgs(initVals), blockingVector);
     
     // get value of condVar
-    Var condVal = varCreator.fetchValueOf(loopIterContext, condArg);
+    Var condVal = exprWalker.retrieveToVar(loopIterContext, condArg);
     
     // branch depending on if loop should start
-    backend.startIfStatement(Arg.createVar(condVal), true);
+    backend.startIfStatement(VarRepr.backendArg(condVal), true);
     
     // Create new context for loop body to execute when condition passes
     Context loopBodyContext = new LocalContext(loopIterContext);
@@ -1007,7 +1026,7 @@ public class ASTWalker {
     Var nextCond = exprWalker.eval(loopBodyContext, 
               forLoop.getCondition(), condType, true, nextRenames);
     newLoopVars.add(0, nextCond.asArg());
-    backend.loopContinue(newLoopVars, blockingVector);
+    backend.loopContinue(VarRepr.backendArgs(newLoopVars), blockingVector);
     backend.startElseBlock();
     // Terminate loop, clean up open arrays and copy out final vals 
     // of loop vars
@@ -1015,8 +1034,7 @@ public class ASTWalker {
     for (LoopVar lv: forLoop.getLoopVars()) {
       if (lv.declaredOutsideLoop) {
         exprWalker.copyByValue(loopFinalizeContext, 
-            lv.var, parentLoopVarAliases.get(lv.var.name()), 
-            lv.var.type());
+            parentLoopVarAliases.get(lv.var.name()), lv.var);
       }
     }
     
@@ -1031,11 +1049,8 @@ public class ASTWalker {
     IterateDescriptor loop = IterateDescriptor.fromAST(context, tree);
     
     // Initial iteration should succeed
-    Var falseV = varCreator.createTmp(context, Types.F_BOOL);
-    backend.assignBool(falseV, Arg.createBoolLit(false));
-    
-    Var zero = varCreator.createTmp(context, Types.F_INT);
-    backend.assignInt(zero, Arg.createIntLit(0));
+    Var falseV = exprWalker.assignToVar(context, Arg.FALSE, false);
+    Var zero = exprWalker.assignToVar(context, Arg.ZERO, false);
     
     FunctionContext fc = context.getFunctionContext();
     int loopNum = fc.getCounterVal("iterate");
@@ -1046,17 +1061,18 @@ public class ASTWalker {
     // Start the loop construct with some initial values
     Var condArg = iterContext.declareVariable(Types.F_BOOL,
             Var.LOOP_COND_PREFIX + loopNum, Alloc.TEMP, DefType.INARG, 
-            VarProvenance.exprTmp(context.getSourceLoc()), null);
+            VarProvenance.exprTmp(context.getSourceLoc()), false);
     
     List<Boolean> blockingVars = Arrays.asList(true, false);
     backend.startLoop(loopName, 
-        Arrays.asList(condArg, loop.getLoopVar()), Arrays.asList(true, true),
-        Arrays.asList(falseV.asArg(), zero.asArg()), blockingVars);
+        VarRepr.backendVars(condArg, loop.getLoopVar()),
+        Arrays.asList(true, true),
+        VarRepr.backendArgs(falseV.asArg(), zero.asArg()), blockingVars);
     
     // get value of condVar
-    Var condVal = varCreator.fetchValueOf(iterContext, condArg); 
+    Var condVal = exprWalker.retrieveToVar(iterContext, condArg); 
     
-    backend.startIfStatement(Arg.createVar(condVal), true);
+    backend.startIfStatement(VarRepr.backendArg(condVal), true);
     backend.loopBreak();
     backend.startElseBlock();
     Context bodyContext = new LocalContext(iterContext);
@@ -1075,19 +1091,18 @@ public class ASTWalker {
     
     Var nextCounter = varCreator.createTmp(bodyContext,
                                       Types.F_INT);
-    Var one = varCreator.createTmp(bodyContext, Types.F_INT);
 
-    backend.assignInt(one, Arg.createIntLit(1));
-    backend.asyncOp(BuiltinOpcode.PLUS_INT, nextCounter, 
-        Arrays.asList(Arg.createVar(loop.getLoopVar()), Arg.createVar(one)));
+    Var one = exprWalker.assignToVar(bodyContext, Arg.ONE, false);
+    exprWalker.asyncOp(BuiltinOpcode.PLUS_INT, nextCounter, Arrays.asList(
+                      loop.getLoopVar().asArg(), one.asArg()));
     
-    backend.loopContinue(Arrays.asList(nextCond.asArg(), nextCounter.asArg()),
-                         blockingVars);
+    backend.loopContinue(
+        VarRepr.backendArgs(nextCond.asArg(), nextCounter.asArg()),
+        blockingVars);
 
     backend.endIfStatement();
     backend.endLoop();
   }
-
 
   private ArrayList<Var> evalLoopVarExprs(Context context,
       ForLoopDescriptor forLoop, Map<String, SwiftAST> loopVarExprs)
@@ -1168,7 +1183,8 @@ public class ASTWalker {
           throw new STCRuntimeError("Don't yet support non-constant" +
                   " initialisers for updateable variables");
         }
-        backend.initUpdateable(var, Arg.createFloatLit(initVal));
+        backend.initUpdateable(VarRepr.backendVar(var),
+                               Arg.createFloatLit(initVal));
       } else {
         throw new STCRuntimeError("Non-float updateables not yet" +
                 " implemented for type " + var.type());
@@ -1201,7 +1217,7 @@ public class ASTWalker {
       }
     }
 
-    Var var = varCreator.createVariable(context, definedType, 
+    Var var = varCreator.createMappedVariable(context, definedType, 
         vDesc.getName(), Alloc.STACK, DefType.LOCAL_USER, 
         VarProvenance.userVar(context.getSourceLoc()), mappedVar);
     return var;
@@ -1265,9 +1281,6 @@ public class ASTWalker {
     SwiftAST expr = tree.child(0);
 
     ExprType exprType = TypeChecker.findExprType(context, expr);
-    backend.addComment("Swift l." + context.getLine() + " evaluating "
-        + " expression and throwing away " + exprType.elems() +
-        " results");
 
     // Need to create throwaway temporaries for return values
     List<Var> oList = new ArrayList<Var>();
@@ -1286,7 +1299,8 @@ public class ASTWalker {
     Update up = Update.fromAST(context, tree);
     Type exprType = up.typecheck(context);
     Var evaled = exprWalker.eval(context, up.getExpr(), exprType, false, null);
-    backend.update(up.getTarget(), up.getMode(), evaled);
+    backend.update(VarRepr.backendVar(up.getTarget()), up.getMode(),
+                   VarRepr.backendVar(evaled));
   }
 
   private void defineBuiltinFunction(Context context, SwiftAST tree)
@@ -1336,6 +1350,9 @@ public class ASTWalker {
       pos++;
     }
     
+    // Register as foreign function
+    ForeignFunctions.addForeignFunction(function);
+    
     // Read annotations at end of child list
     for (; pos < tree.getChildCount(); pos++) {
       handleBuiltinFunctionAnnotation(context, function, fdecl, tree.child(pos),
@@ -1353,9 +1370,10 @@ public class ASTWalker {
     }
     
     context.defineFunction(function, ft);
+    FunctionType backendFT = VarRepr.backendFnType(ft);
     if (impl != null) {
       context.setFunctionProperty(function, FnProp.BUILTIN);
-      backend.defineBuiltinFunction(function, ft, impl);
+      backend.defineBuiltinFunction(function, backendFT, impl);
     } else {
       if (inlineTcl == null) {
         throw new UserException(context, "Must provide TCL implementation or " +
@@ -1371,7 +1389,7 @@ public class ASTWalker {
       }
       
       // Defer generation of wrapper until it is called
-      wrapper.saveWrapper(function, ft, fdecl,
+      wrapper.saveWrapper(function, backendFT, fdecl,
                           taskMode, isParallel, isTargetable);
     }
   }
@@ -1641,6 +1659,9 @@ public class ASTWalker {
     List<Var> iList = fdecl.getInVars(context);
     List<Var> oList = fdecl.getOutVars(context);
     
+    List<Var> backendIList = VarRepr.backendVars(iList);
+    List<Var> backendOList = VarRepr.backendVars(oList);
+    
     // Analyse variable usage inside function and annotate AST
     syncFilePos(context, tree);
     varAnalyzer.analyzeVariableUsage(context, lineMap(), function,
@@ -1652,7 +1673,7 @@ public class ASTWalker {
     
     TaskMode mode = context.hasFunctionProp(function, FnProp.SYNC) ?
                           TaskMode.SYNC : TaskMode.CONTROL;
-    backend.startFunction(function, oList, iList, mode);
+    backend.startFunction(function, backendOList, backendIList, mode);
     block(functionContext, block);
     backend.endFunction();
 
@@ -1693,15 +1714,20 @@ public class ASTWalker {
     List<Var> outArgs = decl.getOutVars(context);
     List<Var> inArgs = decl.getInVars(context);
     
+    List<Var> backendOutArgs = VarRepr.backendVars(outArgs);
+    
     /* Pass in e.g. location */
-    List<Var> realInArgs = new ArrayList<Var>();
-    realInArgs.addAll(inArgs);
+    List<Var> backendInArgs = new ArrayList<Var>();
+    for (Var inArg: inArgs) {
+      backendInArgs.add(VarRepr.backendVar(inArg));
+    } 
+
     TaskProps props = new TaskProps();
     // Need to pass location arg into task dispatch wait statement
     // Priority is passed implicitly
-    Var loc = new Var(Types.V_INT, Var.DEREF_COMPILER_VAR_PREFIX + "location",
+    Var loc = new Var(Types.V_INT, Var.VALUEOF_VAR_PREFIX + "location",
         Alloc.LOCAL, DefType.INARG, VarProvenance.exprTmp(context.getSourceLoc()));
-    realInArgs.add(loc);
+    backendInArgs.add(loc);
     props.put(TaskPropKey.LOCATION, loc.asArg());
     
     
@@ -1732,7 +1758,7 @@ public class ASTWalker {
     appContext.addDeclaredVariables(inArgs);
     
     
-    backend.startFunction(function, outArgs, realInArgs, TaskMode.SYNC);
+    backend.startFunction(function, backendOutArgs, backendInArgs, TaskMode.SYNC);
     genAppFunctionBody(appContext, appBodyT, inArgs, outArgs, 
                        hasSideEffects, deterministic, exec.val, props,
                        suppressions);
@@ -1792,7 +1818,7 @@ public class ASTWalker {
     // use wait to wait for data then dispatch task to worker
     String waitName = context.getFunctionContext().constructName("app-leaf");
     // do deep wait for array args
-    backend.startWaitStatement(waitName, waitVars,
+    backend.startWaitStatement(waitName, VarRepr.backendWaitVars(waitVars),
         WaitMode.TASK_DISPATCH, true, TaskMode.WORKER, props);
     // On worker, just execute the required command directly
     Pair<List<Arg>, Redirects<Arg>> retrieved = retrieveAppArgs(context,
@@ -1805,7 +1831,7 @@ public class ASTWalker {
     List<Arg> localInFiles = new ArrayList<Arg>();
     for (Var inArg: inArgs) {
       if (Types.isFile(inArg.type())) {
-        Var localInputFile = varCreator.fetchValueOf(context, inArg);
+        Var localInputFile = exprWalker.retrieveToVar(context, inArg);
         localInFiles.add(Arg.createVar(localInputFile));
       }
     }
@@ -1818,25 +1844,33 @@ public class ASTWalker {
       Arg localOutputFileName = null;
       if (Types.isFile(output.type())) {
         localOutputFileName = Arg.createVar(
-            varCreator.fetchValueOf(context, fileNames.get(output.name())));
+            exprWalker.retrieveToVar(context, fileNames.get(output.name())));
 
         // Initialize the output with a filename
-        backend.initLocalOutFile(localOutput, localOutputFileName, output);
+        backend.initLocalOutFile(VarRepr.backendVar(localOutput),
+                                 VarRepr.backendArg(localOutputFileName),
+                                 VarRepr.backendVar(output));
       }
     }
     
+    List<Arg> beLocalArgs = VarRepr.backendArgs(localArgs);
+    List<Var> beLocalOutputs = VarRepr.backendVars(localOutputs);
+    List<Arg> beLocalInfiles = VarRepr.backendArgs(localInFiles);
+    Redirects<Arg> beLocalRedirects = new Redirects<Arg>(
+                VarRepr.backendArg(localRedirects.stdin, true),
+                VarRepr.backendArg(localRedirects.stdout, true),
+                VarRepr.backendArg(localRedirects.stderr, true));
     if (asyncExec == null) {
-      backend.runExternal(appName, localArgs, localInFiles, localOutputs,
-                        localRedirects, hasSideEffects, deterministic);
+      backend.runExternal(appName, beLocalArgs, beLocalInfiles, beLocalOutputs,
+                        beLocalRedirects, hasSideEffects, deterministic);
     } else {
       String aeName = context.constructName("async-exec");
       Map<String, Arg> taskProps = new HashMap<String, Arg>();
-      localRedirects.addProps(taskProps);
+      beLocalRedirects.addProps(taskProps);
       
-      // TODO: nicer solution?
       backend.startAsyncExec(aeName, asyncExec, appName,
-                    localOutputs, localArgs,
-                    taskProps, !deterministic);
+          beLocalOutputs, beLocalArgs,
+          taskProps, !deterministic);
       // Rest of code executes in continuation after execution finishes
     }
     
@@ -1844,15 +1878,22 @@ public class ASTWalker {
       Var output = outArgs.get(i);
       Var localOutput = localOutputs.get(i);
       if (Types.isFile(output.type())) {
-        backend.assignFile(output, Arg.createVar(localOutput));
+        Var outIsMapped = varCreator.createTmpLocalVal(context, Types.V_BOOL);
+        Var setOutFilename = varCreator.createTmpLocalVal(context, Types.V_BOOL);
+        backend.isMapped(VarRepr.backendVar(outIsMapped),
+                         VarRepr.backendVar(output));
+        exprWalker.localOp(BuiltinOpcode.NOT, setOutFilename,
+                           outIsMapped.asArg().asList());
+        exprWalker.assignFile(output, Arg.createVar(localOutput),
+                              setOutFilename.asArg());
         if (output.isMapped() != Ternary.TRUE &&
             output.type().fileKind().supportsTmpImmediate()) {
           // Cleanup temporary local file if needed
-          backend.decrLocalFileRef(localOutput); 
+          backend.decrLocalFileRef(VarRepr.backendVar(localOutput)); 
         }
       } else {
         assert(Types.isVoid(output.type()));
-        backend.assignVoid(output, Arg.createVar(localOutput));
+        exprWalker.assign(output, localOutput.asArg());
       }
     }
     
@@ -2023,16 +2064,17 @@ public class ASTWalker {
     if (Types.isFile(in.type())) {
       Var filenameFuture = fileNames.get(in.name());
       assert(filenameFuture != null);
-      localInput = varCreator.fetchValueOf(context, filenameFuture);
+      localInput = exprWalker.retrieveToVar(context, filenameFuture);
     } else if (Types.isArray(in.type())) {
       // Unpack to flat representation
       NestedContainerInfo ci = new NestedContainerInfo(in.type());
-      Type memberValType = Types.derefResultType(ci.baseType);
+      Type memberValType = Types.retrievedType(ci.baseType);
       Type localInType =  new ArrayType(true, Types.F_INT, memberValType);
       localInput = varCreator.createValueVar(context, localInType, in, true);
-      backend.unpackArrayToFlat(localInput, in.asArg());
+      backend.unpackArrayToFlat(VarRepr.backendVar(localInput),
+                                VarRepr.backendArg(in));
     } else {
-      localInput = varCreator.fetchValueOf(context, in);
+      localInput = exprWalker.retrieveToVar(context, in);
     }
     return localInput;
   }
@@ -2070,7 +2112,7 @@ public class ASTWalker {
             NestedContainerInfo info = new NestedContainerInfo(baseType);
             baseType = info.baseType;
           } else if (Types.isRef(baseType)) {
-            baseType = Types.derefResultType(baseType);
+            baseType = Types.retrievedType(baseType);
           } else {
             break;
           }
@@ -2097,15 +2139,16 @@ public class ASTWalker {
       // Replace refs with dereferenced
       backend.startWaitStatement(
           context.getFunctionContext().constructName("ref-argwait"),
-          refArgs, WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
+          VarRepr.backendVars(refArgs), 
+          WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
       
       for (int i = 0; i < args.size(); i++) {
         Var oldArg = args.get(i);
         if (Types.isRef(oldArg)) {
           // Replace old arg with dereferenced version
           Var derefedArg = varCreator.createTmpAlias(context,
-                              Types.derefResultType(oldArg));
-          backend.retrieveRef(derefedArg, oldArg);
+                              Types.retrievedType(oldArg));
+          exprWalker.retrieveRef(derefedArg, oldArg, false);
           args.set(i, derefedArg);
         }
       }
@@ -2183,9 +2226,11 @@ public class ASTWalker {
     if (fileVar.defType() == DefType.OUTARG &&
         fileVar.type().fileKind().supportsTmpImmediate()) {
       // If output may be unmapped, need to assign file name
-      backend.getFileName(filenameFuture, fileVar, true);
+      backend.getFileNameAlias(VarRepr.backendVar(filenameFuture),
+                          VarRepr.backendVar(fileVar), true);
     } else {
-      backend.getFileName(filenameFuture, fileVar, false);
+      backend.getFileNameAlias(VarRepr.backendVar(filenameFuture),
+                          VarRepr.backendVar(fileVar), false);
     }
     waitVars.add(new WaitVar(filenameFuture, false));
     if (fileVar.defType() != DefType.OUTARG) {
@@ -2257,9 +2302,9 @@ public class ASTWalker {
       usedFieldNames.add(name);
     }
 
-    StructType newType = new StructType(typeName, fields);
+    StructType newType = StructType.sharedStruct(typeName, fields);
     context.defineType(typeName, newType);
-    backend.defineStructType(newType);
+    backend.defineStructType((StructType)VarRepr.backendType(newType, false));
     LogHelper.debug(context, "Defined new type called " + typeName + ": "
         + newType.toString());
   }
@@ -2281,7 +2326,7 @@ public class ASTWalker {
     }
     Var v = context.declareVariable(vDesc.getType(), vDesc.getName(),
                    Alloc.GLOBAL_CONST, DefType.GLOBAL_CONST,
-                   VarProvenance.userVar(context.getSourceLoc()), null);
+                   VarProvenance.userVar(context.getSourceLoc()), false);
     
     
     SwiftAST val = vd.getVarExpr(0);
@@ -2296,21 +2341,23 @@ public class ASTWalker {
     
     String msg = "Don't support non-literal "
         + "expressions for global constants";
+
+    Var backendVar = VarRepr.backendVar(v);
     switch (v.type().primType()) {
     case BOOL:
       String bval = Literals.extractBoolLit(context, val);
       if (bval == null) {
         throw new UserException(context, msg);
       }
-      backend.addGlobal(v, Arg.createBoolLit(
-                                  Boolean.parseBoolean(bval)));
+      backend.addGlobal(backendVar, Arg.createBoolLit(
+                                        Boolean.parseBoolean(bval)));
       break;
     case INT:
       Long ival = Literals.extractIntLit(context, val);
       if (ival == null) {
         throw new UserException(context, msg);
       }
-      backend.addGlobal(v, Arg.createIntLit(ival));
+      backend.addGlobal(backendVar, Arg.createIntLit(ival));
       break;
     case FLOAT:
       Double fval = Literals.extractFloatLit(context, val);
@@ -2323,14 +2370,14 @@ public class ASTWalker {
         }
       }
       assert(fval != null);
-      backend.addGlobal(v, Arg.createFloatLit(fval));
+      backend.addGlobal(backendVar, Arg.createFloatLit(fval));
       break;
     case STRING:
       String sval = Literals.extractStringLit(context, val);
       if (sval == null) {
         throw new UserException(context, msg);
       }
-      backend.addGlobal(v, Arg.createStringLit(sval));
+      backend.addGlobal(backendVar, Arg.createStringLit(sval));
       break;
     default:
       throw new STCRuntimeError("Unexpect value tree type in "

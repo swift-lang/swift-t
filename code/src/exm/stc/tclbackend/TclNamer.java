@@ -18,6 +18,7 @@ package exm.stc.tclbackend;
 import java.util.ArrayList;
 import java.util.List;
 
+import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Var;
 
 public class TclNamer {
@@ -30,7 +31,6 @@ public class TclNamer {
   private static final String TCL_USER_VAR_PREFIX = "u:";
   private static final String TCL_VALUE_VAR_PREFIX = "v:";
   private static final String TCL_OPT_VAR_PREFIX = "opt:";
-  private static final String TCL_OPT_VALUE_VAR_PREFIX = "optv:";
   private static final String TCL_OPT_FILENAME_PREFIX = "optf:";
   private static final String TCL_STRUCT_FIELD_VAR_PREFIX = "sf:";
   private static final String TCL_LOOPINDEX_VAR_PREFIX = "i:";
@@ -44,9 +44,23 @@ public class TclNamer {
   public static final String TCL_TMP_LOOP_COND = "t:loopcond";
   public static final String TCL_NEXTITER_PREFIX = "nextiter:";
   
+  /**
+   * Replace internal names of variables with readable ones that
+   * are also valid in Tcl 
+   * @param varname
+   * @return
+   */
   public static String prefixVar(String varname) {
-    // Replace the internal names of temporary variables with
-    // shorter ones for generated tcl code
+    String prefixed = prefixVarInternal(varname);
+    // Check that variable name is valid
+    if (prefixed.indexOf("::") >= 0) {
+      throw new STCRuntimeError("Bad Tcl variable name, " +
+                      "contains '::': '" + prefixed + "'");
+    }
+    return prefixed;
+  }
+
+  private static String prefixVarInternal(String varname) {
     if (varname.startsWith(Var.TMP_VAR_PREFIX)) {
       return TCL_TMP_VAR_PREFIX + varname.substring(
               Var.TMP_VAR_PREFIX.length());
@@ -58,9 +72,6 @@ public class TclNamer {
     } else if (varname.startsWith(Var.LOCAL_VALUE_VAR_PREFIX))  {
       return TCL_VALUE_VAR_PREFIX +
           varname.substring(Var.LOCAL_VALUE_VAR_PREFIX.length());
-    } else if (varname.startsWith(Var.OPT_VALUE_VAR_PREFIX))  {
-      return TCL_OPT_VALUE_VAR_PREFIX +
-          varname.substring(Var.OPT_VALUE_VAR_PREFIX.length());
     } else if (varname.startsWith(Var.OPT_VAR_PREFIX))  {
       return TCL_OPT_VAR_PREFIX +
           varname.substring(Var.OPT_VAR_PREFIX.length());
@@ -73,9 +84,9 @@ public class TclNamer {
     } else if (varname.startsWith(Var.GLOBAL_CONST_VAR_PREFIX)) {
       return TCL_GLOBAL_CONST_VAR_PREFIX +
           varname.substring(Var.GLOBAL_CONST_VAR_PREFIX.length());
-    } else if (varname.startsWith(Var.DEREF_COMPILER_VAR_PREFIX)) {
+    } else if (varname.startsWith(Var.VALUEOF_VAR_PREFIX)) {
       return TCL_DEREF_COMPILER_VAR_PREFIX +
-          varname.substring(Var.DEREF_COMPILER_VAR_PREFIX.length());
+          varname.substring(Var.VALUEOF_VAR_PREFIX.length());
     } else if (varname.startsWith(Var.LOOP_INDEX_VAR_PREFIX)) {
       return TCL_LOOP_INDEX_VAR_PREFIX +
           varname.substring(Var.LOOP_INDEX_VAR_PREFIX.length());

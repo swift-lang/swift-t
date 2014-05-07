@@ -25,12 +25,12 @@ import exm.stc.ic.tree.ICContinuations.ContinuationType;
 import exm.stc.ic.tree.ICContinuations.Loop;
 import exm.stc.ic.tree.ICContinuations.LoopInstructions;
 import exm.stc.ic.tree.ICContinuations.WaitStatement;
-import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.LoopContinue;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Statement;
 import exm.stc.ic.tree.ICTree.StatementType;
+import exm.stc.ic.tree.TurbineOp;
 
 
 /**
@@ -205,7 +205,7 @@ public class LoopSimplify extends FunctionOptimizerPass {
          */
         loop.getLoopBody().addVariable(oldLoopVar);
         loop.getLoopBody().addInstructionFront(
-            ICInstructions.futureSet(oldLoopVar, newLoopVar.asArg()));
+            TurbineOp.storePrim(oldLoopVar, newLoopVar.asArg()));
       }
     }
   }
@@ -246,7 +246,7 @@ public class LoopSimplify extends FunctionOptimizerPass {
     assert(replaceLoopVarWithVal(var));
     String valName = OptUtil.optVPrefix(targetBlock, var);
     return WrapUtil.fetchValueOf(targetBlock, fetches, var,
-                                 valName, recursive);
+                                 valName, recursive, false);
   }
 
   /**

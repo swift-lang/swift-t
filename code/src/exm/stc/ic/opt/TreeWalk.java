@@ -15,13 +15,11 @@
  */
 package exm.stc.ic.opt;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-
 import org.apache.log4j.Logger;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Var;
+import exm.stc.common.util.StackLite;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
@@ -110,7 +108,7 @@ public class TreeWalk {
   public static void walkSyncChildren(
       Logger logger, Function fn,
       Block block, boolean includeThisBlock, TreeWalker walker) {
-    Deque<Block> stack = new ArrayDeque<Block>();
+    StackLite<Block> stack = new StackLite<Block>();
     if (includeThisBlock) {
       stack.push(block);
     } else {
@@ -143,7 +141,7 @@ public class TreeWalk {
   }
 
   private static void walkSyncChildren(Logger logger, Function fn,
-      TreeWalker walker, Deque<Block> stack, Continuation cont) {
+      TreeWalker walker, StackLite<Block> stack, Continuation cont) {
     walker.visit(logger, fn, cont);
     if (!cont.isAsync()) {
       stack.addAll(cont.getBlocks());

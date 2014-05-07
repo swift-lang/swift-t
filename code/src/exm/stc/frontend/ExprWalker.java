@@ -20,7 +20,6 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Stack;
 
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
@@ -60,6 +59,7 @@ import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.StackLite;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.frontend.Context.FnProp;
 import exm.stc.frontend.VariableUsageInfo.VInfo;
@@ -72,7 +72,7 @@ import exm.stc.ic.STCMiddleEnd;
 /**
  * This module contains logic to walk individual expression in Swift and generate code to evaluate them
  */
-public class ExprWalker {
+public class  ExprWalker {
 
   private final VarCreator varCreator;
   private final WrapperGen wrappers;
@@ -133,8 +133,7 @@ public class ExprWalker {
         break;
 
       case ExMParser.INT_LITERAL:
-        assignIntLit(context, tree, oVar, 
-                Literals.extractIntLit(context, tree));
+        assignIntLit(context, oVar, Literals.extractIntLit(context, tree));
         break;
 
       case ExMParser.FLOAT_LITERAL:
@@ -142,13 +141,11 @@ public class ExprWalker {
         break;
 
       case ExMParser.STRING_LITERAL:
-        assignStringLit(context, tree, oVar, 
-                  Literals.extractStringLit(context, tree));
+        assignStringLit(context, tree, oVar);
         break;
 
       case ExMParser.BOOL_LITERAL:
-        assignBoolLit(context, tree, oVar, 
-                  Literals.extractBoolLit(context, tree));
+        assignBoolLit(context, tree, oVar);
         break;
 
       case ExMParser.OPERATOR:
@@ -156,7 +153,7 @@ public class ExprWalker {
         Long intLit = Literals.extractIntLit(context, tree);
         Double floatLit = Literals.extractFloatLit(context, tree);
         if (intLit != null) {
-          assignIntLit(context, tree, oVar, intLit);
+          assignIntLit(context, oVar, intLit);
         } else if (floatLit != null ) {
           assignFloatLit(context, tree, oVar);
         } else {
@@ -173,7 +170,7 @@ public class ExprWalker {
         break;
 
       case ExMParser.STRUCT_LOAD:
-        structLoad(context, tree, oVar, renames);
+        structLoad(context, tree, oVar.type(), false, oVar, renames);
         break;
         
       case ExMParser.ARRAY_RANGE:
@@ -217,68 +214,49 @@ public class ExprWalker {
       }
     }
   
-    if (tree.getType() == ExMParser.STRUCT_LOAD
-          && Types.isStruct(
+    if (tree.getType() == ExMParser.STRUCT_LOAD && Types.isStruct(
                 TypeChecker.findSingleExprType(context, tree.child(0)))) {
-      return lookupStructField(context, tree, type, storeInStack, null,
-                                                               renames);
+      return structLoad(context, tree, type, storeInStack, null, renames);
     } else { 
       Var tmp = varCreator.createTmp(context, type, storeInStack, false);
       LogHelper.debug(context, "Create tmp " + tmp + " to eval expr " +
                       LogHelper.tokName(tree.getType()));
-      ArrayList<Var> childOList = new ArrayList<Var>(1);
-      childOList.add(tmp);
-      evalToVars(context, tree, childOList, renames);
+      evalToVars(context, tree, tmp.asList(), renames);
       return tmp;
     }
   }
-
 
   /**
    * Do a by-value copy from src to dst
    *
    * @param context
-   * @param src
    * @param dst
+   * @param src
    * @param type
    * @throws UserException
    */
-  public void copyByValue(Context context, Var src, Var dst,
-      Type type) throws UserException {
-    if (Types.isInt(type)) {
-      backend.asyncOp(BuiltinOpcode.COPY_INT, dst,src.asArg().asList());
-    } else if (Types.isString(type)) {
-      backend.asyncOp(BuiltinOpcode.COPY_STRING, dst,src.asArg().asList());
-    } else if (Types.isFloat(type)) {
-      backend.asyncOp(BuiltinOpcode.COPY_FLOAT, dst, src.asArg().asList());
-    } else if (Types.isBool(type)) {
-      backend.asyncOp(BuiltinOpcode.COPY_BOOL, dst, src.asArg().asList());
-    } else if (Types.isBlob(type)) {
-      backend.asyncOp(BuiltinOpcode.COPY_BLOB, dst, src.asArg().asList());
-    } else if (Types.isVoid(type)) {
-      // Sort of silly, but might be needed
-      backend.asyncOp(BuiltinOpcode.COPY_VOID, dst, src.asArg().asList());
-    } else if (Types.isFile(type)) {
+  public void copyByValue(Context context, Var dst, Var src)
+                           throws UserException {
+    assert(src.type().assignableTo(dst.type()));
+    
+    Var backendSrc = VarRepr.backendVar(src);
+    Var backendDst = VarRepr.backendVar(dst);
+    if (Types.isScalarFuture(src) ||
+        Types.isStruct(src) || Types.isContainer(src) ||
+        Types.isRef(src)) {
+       backendAsyncCopy(context, dst, src);
+    } else if (Types.isFile(src)) {
       if (dst.isMapped() == Ternary.FALSE || 
           dst.type().fileKind().supportsPhysicalCopy()) {
-          backend.copyFile(dst, src);
+          backend.copyFile(backendDst, backendSrc);
       } else {
         throw new TypeMismatchException("Do not support physical copy " +
             "to (possibly) mapped variable " + dst.name() + " with " +
             "type " + dst.type().typeName());       
       }
-    } else if (Types.isStruct(type)) {
-      copyStructByValue(context, src, dst, new Stack<String>(), new Stack<String>(),
-                src, dst, type);
-    } else if (Types.isArray(type)) {
-      copyContainerByValue(context, dst, src);
-    } else if (Types.isBag(type)) {
-      copyContainerByValue(context, dst, src);
-    } else if (Types.isRef(type)) {
-      copyRefByValue(context, src, dst, type);
     } else {
       throw new STCRuntimeError(context.getFileLine() +
-          " copying type " + type + " by value not yet "
+          " copying type " + src + " by value not yet "
           + " supported by compiler");
     }
   }
@@ -287,41 +265,57 @@ public class ExprWalker {
    * 
    * @param context
    * @param structVar Variable of type struct or struct ref
-   * @param fieldName
+   * @param fieldName Path from struct to lookup
    * @param storeInStack
-   * @param rootStruct top level variable for structure
-   * @param fieldPath path from top level
    * @return the contents of the struct field if structVar is a non-ref, 
    *        a reference to the contents of the struct field if structVar is 
    *        a ref
    * @throws UserException
    * @throws UndefinedTypeException
    */
-  public Var structLookup(Context context, Var structVar,
-      String fieldName, boolean storeInStack, Var rootStruct,
-      List<String> fieldPath, Var outVar) throws UserException,
+  public Var structLookup(Context context, Var struct,
+      List<String> fieldPath, boolean storeInStack, Var outVar)
+          throws UserException,
       UndefinedTypeException {
-    assert(rootStruct != null);
+    assert(struct != null);
     assert(fieldPath != null);
     assert(fieldPath.size() > 0);
-    Type memType = TypeChecker.findStructFieldType(context, fieldName,
-                                                    structVar.type());
+    Type memType = TypeChecker.findStructFieldType(context, fieldPath,
+                                                   struct.type());
+    boolean storedAsRef = VarRepr.storeRefInStruct(memType);
+    
     Var result;
-    if (Types.isStructRef(structVar.type())) {
-      RefType resultType = new RefType(memType);
+    Var backendStruct = VarRepr.backendVar(struct);
+    if (Types.isStructRef(struct)) {
+      Type resultType = memType;
       if (outVar == null || !resultType.assignableTo(outVar.type())) {
         result = varCreator.createStructFieldTmp(context, 
-            rootStruct, resultType,
-            fieldPath, Alloc.TEMP); 
+            struct, resultType, fieldPath, Alloc.TEMP); 
       } else {
         result = outVar;
       }
-      backend.structRefLookup(result, structVar, fieldName);
+      backend.structRefCopyOut(VarRepr.backendVar(result),
+                               backendStruct, fieldPath);
     } else {
-      assert(Types.isStruct(structVar.type()));
-      result = varCreator.createStructFieldTmp(context, 
-          rootStruct, memType, fieldPath, Alloc.ALIAS);
-      backend.structLookup(result, structVar, fieldName);
+      assert(Types.isStruct(struct));
+      if (storedAsRef)  {
+        // Lookup ref data into tmp alias
+        result = varCreator.createTmpAlias(context, memType);
+        backend.structRetrieveSub(VarRepr.backendVar(result), 
+                                  backendStruct, fieldPath);
+      } else if (!storedAsRef && outVar == null) {
+        // Just create alias to data in struct for later use
+        result = varCreator.createStructFieldAlias(context, 
+                            struct, memType, fieldPath);
+        backend.structCreateAlias(VarRepr.backendVar(result), 
+                                  backendStruct, fieldPath);
+      } else {
+        assert(!storedAsRef && outVar != null);
+        // Copy data in struct to existing output variable
+        backend.structCopyOut(VarRepr.backendVar(outVar), 
+                              backendStruct, fieldPath);
+        result = outVar;
+      }
     }
 
     // If necessary, copy result to outVar
@@ -332,11 +326,10 @@ public class ExprWalker {
     }
   }
 
-  public Var structLookup(Context context, Var structVar,
-      String fieldName, boolean storeInStack, Var rootStruct,
-      List<String> fieldPath) throws UserException, UndefinedTypeException {
-    return structLookup(context, structVar, fieldName, storeInStack,
-                        rootStruct, fieldPath, null);
+  public Var structLookup(Context context, Var struct,
+      List<String> fieldPath, boolean storeInStack)
+          throws UserException, UndefinedTypeException {
+    return structLookup(context, struct, fieldPath, storeInStack, null);
   }
   
   /**
@@ -352,21 +345,14 @@ public class ExprWalker {
     assert(Types.isRef(src.type()));
     assert(Types.isAssignableRefTo(src.type(), dst.type()));
   
+    Var backendDst = VarRepr.backendVar(dst);
+    Var backendSrc = VarRepr.backendVar(src);
+    
     Type dstType = dst.type();
-    if (Types.isInt(dstType)) {
-      backend.dereferenceInt(dst, src);
-    } else if (Types.isVoid(dstType)) {
-      backend.dereferenceVoid(dst, src);
-    } else if (Types.isString(dstType)) {
-      backend.dereferenceString(dst, src);
-    } else if (Types.isFloat(dstType)) {
-      backend.dereferenceFloat(dst, src);
-    } else if (Types.isBool(dstType)) {
-      backend.dereferenceBool(dst, src);
+    if (Types.isScalarFuture(dstType)) {
+      backend.derefScalar(backendDst, backendSrc);
     } else if (Types.isFile(dstType)) {
-      backend.dereferenceFile(dst, src);
-    } else if (Types.isBlob(dstType)) {
-      backend.dereferenceBlob(dst, src);
+      backend.derefFile(backendDst, backendSrc);
     } else if (Types.isContainer(dstType)) {
       derefThenCopyContainer(context, dst, src);
     } else if (Types.isStruct(dstType)) {
@@ -377,43 +363,123 @@ public class ExprWalker {
   }
 
   public void assign(Var dst, Arg src) {
-    assert(src.type().assignableTo(Types.derefResultType(dst.type()))) :
+    assert(src.type().assignableTo(Types.retrievedType(dst.type()))) :
                       dst + " = " + src;
-    if (Types.isPrimFuture(dst)) {
-      switch (src.type().primType()) {
-        case INT:
-          backend.assignInt(dst, src);
-          break;
-        case BOOL:
-          backend.assignBool(dst, src);
-          break;
-        case FLOAT:
-          backend.assignFloat(dst, src);
-          break;
-        case STRING:
-          backend.assignString(dst, src);
-          break;
-        case BLOB:
-          backend.assignBlob(dst, src);
-          break;
-        case VOID:
-          backend.assignVoid(dst, src);
-          break;
-        case FILE:
-          backend.assignFile(dst, src);
-          break;
-        default:
-          throw new STCRuntimeError("assigning from type " + src.type()
-                  + " not supported internally");
-      }
+    Var backendDst = VarRepr.backendVar(dst);
+    Arg backendSrc = VarRepr.backendArg(src);
+    if (Types.isScalarFuture(dst)) {
+      backend.assignScalar(backendDst, backendSrc);
     } else if (Types.isArray(dst)) {
-      backend.assignArray(dst, src);
+      backend.assignArray(backendDst, backendSrc);
     } else if (Types.isBag(dst)) {
-      backend.assignBag(dst, src);
+      backend.assignBag(backendDst, backendSrc);
+    } else if (Types.isStruct(dst)) {
+      backend.assignStruct(backendDst, backendSrc);
+    } else if (Types.isFile(dst)) {
+      // TODO: is it right to always assign filename here?
+      assignFile(dst, src, Arg.TRUE);
     } else {
       throw new STCRuntimeError("Can't assign: " + dst);
     }
-    
+  }
+
+  public void assignFile(Var dst, Arg src, Arg setFilename) {
+    Var backendDst = VarRepr.backendVar(dst);
+    Arg backendSrc = VarRepr.backendArg(src);
+    Arg backendSetFileName = VarRepr.backendArg(setFilename);
+    backend.assignFile(backendDst, backendSrc, backendSetFileName);
+  }
+  
+  public void retrieve(Var dst, Var src) {
+    Var backendDst = VarRepr.backendVar(dst);
+    Var backendSrc = VarRepr.backendVar(src);
+    if (Types.isScalarFuture(src)) {
+      backend.retrieveScalar(backendDst, backendSrc);
+    } else if (Types.isFile(src)) {
+      backend.retrieveFile(backendDst, backendSrc);
+    } else if (Types.isArray(src)) {
+      // TODO: recursively?
+      backend.retrieveArray(backendDst, backendSrc);
+    } else if (Types.isBag(src)) {
+      // TODO: recursively?
+      backend.retrieveBag(backendDst, backendSrc);
+    } else if (Types.isStruct(src)) {
+      // TODO: recursively?
+      backend.retrieveStruct(backendDst, backendSrc);
+    } else {
+      throw new STCRuntimeError("Don't know how to fetch " + src);
+    }
+  }
+
+  /**
+   * Create a value variable and retrieve value of future into it
+   * @param context
+   * @param future
+   * @return
+   * @throws UserException
+   * @throws UndefinedTypeException
+   * @throws DoubleDefineException
+   */
+  public Var retrieveToVar(Context context, Var future) 
+      throws UserException, UndefinedTypeException, DoubleDefineException {
+    Var val = varCreator.createValueOfVar(context, future);
+    retrieve(val, future);
+    return val;
+  }
+
+  public Var retrieveContainerValues(Context context, Var c)
+          throws UserException {
+    assert(Types.isContainer(c));
+    Type unpackedT = Types.unpackedContainerType(c.type());
+    Var val = varCreator.createValueVar(context, unpackedT, c, true);
+    backend.retrieveRecursive(VarRepr.backendVar(val), VarRepr.backendVar(c));
+    // TODO: recursively free e.g. blobs in list
+    return val;
+  }
+
+  public void retrieveRef(Var dst, Var src, boolean mutable) {
+    backend.retrieveRef(VarRepr.backendVar(dst), VarRepr.backendVar(src),
+                        mutable);
+  }
+  
+  public void assignRef(Var dst, Var src, boolean mutable) {
+    // Only assign single refcounts 
+    long readRefs = 1;
+    long writeRefs = mutable ? 1 : 0;
+    backend.assignRef(VarRepr.backendVar(dst), VarRepr.backendVar(src),
+                      readRefs, writeRefs);
+  }
+
+  /**
+   * Create a future of the appropriate type for the argument 
+   * @param bodyContext
+   * @param value
+   * @param mutableRef if storing to a ref, does it need to be mutable
+   * @return
+   * @throws UserException
+   * @throws UndefinedTypeException
+   */
+  public Var assignToVar(Context bodyContext, Arg value, boolean mutableRef)
+      throws UserException, UndefinedTypeException {
+    assert(value.isConstant() || value.getVar().storage() == Alloc.LOCAL);
+    Type resultType = Types.storeResultType(value.type(), mutableRef);
+    Var result = varCreator.createTmp(bodyContext, resultType);
+    assign(result, value);
+    return result;
+  }
+  
+  /**
+   * emit intermediate code for an async op
+   * @param op
+   * @param out
+   * @param inputs
+   */
+  public void asyncOp(BuiltinOpcode op, Var out, List<Arg> inputs) {
+    backend.asyncOp(op, VarRepr.backendVar(out), VarRepr.backendArgs(inputs));
+  }
+  
+  public void localOp(BuiltinOpcode op, Var out, List<Arg> inputs) {
+    backend.localOp(op, VarRepr.backendVar(out), VarRepr.backendArgs(inputs));
   }
 
   private void callOperator(Context context, SwiftAST tree, 
@@ -439,9 +505,8 @@ public class ExprWalker {
       Var arg = eval(context, tree.child(i + 1), type, false, renames);
       iList.add(Arg.createVar(arg));
     }
-    backend.asyncOp(op.code, out, iList);
+    asyncOp(op.code, out, iList);
   }
-  
 
   /**
    * Generate code for a call to a function, where the arguments might be
@@ -508,12 +573,13 @@ public class ExprWalker {
         propFutures.add(Pair.create(ann, future));
       }
       
-      backend.startWaitStatement(context.getFunctionContext().constructName("ann-wait"), 
-                        waitVars, WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
+      backend.startWaitStatement(context.constructName("ann-wait"),
+              VarRepr.backendVars(waitVars),
+              WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
       openedWait = true;
       callContext = new LocalContext(context);
       for (Pair<TaskPropKey,Var> x: propFutures) {
-        Var value = varCreator.fetchValueOf(callContext,
+        Var value = retrieveToVar(callContext,
                                             x.val2);
         propVals.put(x.val1, value.asArg());
       }
@@ -551,13 +617,6 @@ public class ExprWalker {
     }
   }
   
-  private void structLoad(Context context, SwiftAST tree, Var oVar,
-      Map<String, String> renames) throws UserException {
-    LogHelper.trace(context, "structLoad");
-    lookupStructField(context, tree, oVar.type(), false, oVar, renames);
-  }
-  
-
   /**
    * Handle an expression which is an array access. Copies a member of an array,
    * specified by index, into another variable. If the other variable is an
@@ -580,26 +639,10 @@ public class ExprWalker {
     // Work out the type of the array so we know the type of the temp var
     SwiftAST arrayTree = tree.child(0);
     Type arrExprType = TypeChecker.findSingleExprType(context, arrayTree);
-    Type arrType = null;
-    
-    for (Type altType: UnionType.getAlternatives(arrExprType)) {
-      assert(Types.isArray(altType) || Types.isArrayRef(altType));
-      Type lookupRes = TypeChecker.dereferenceResultType(
-                                Types.containerElemType(altType));
-      if (lookupRes.equals(oVar.type())) {
-        arrType = altType;
-        break;
-      }
-    }
-    if (arrType == null) {
-      throw new STCRuntimeError("No viable array type for lookup up "
-              + arrExprType + " into " + oVar);
-    }
+    Type arrType = chooseArrayTypeForLookup(oVar, arrExprType);
 
     // Evaluate the array
     Var arrayVar = eval(context, arrayTree, arrType, false, renames);
-
-    Type memberType = Types.containerElemType(arrType);
 
     // Any integer expression can index into array
     SwiftAST arrayIndexTree = tree.child(1);
@@ -611,38 +654,71 @@ public class ExprWalker {
           + "expression was " + indexType.typeName());
     }
 
-    // The direct result of the array lookup
-    Var lookupIntoVar;
-    boolean doDereference;
-    if (memberType.equals(oVar.type())) {
-      // Need to dereference into temporary var
-      lookupIntoVar = varCreator.createTmp(context, 
-              new RefType(memberType));
-      doDereference = true;
+    Var backendArray = VarRepr.backendVar(arrayVar);
+    Type backendElemType =
+        TypeChecker.containerElemType(backendArray, false);
+    
+    Var backendOVar = VarRepr.backendVar(oVar);
+    
+    // The direct output of the array op
+    Var copyDst;
+    boolean mustDereference;
+    if (backendElemType.assignableTo(backendOVar.type())) {
+      // Want to copy out
+      copyDst = oVar;
+      mustDereference = false;
     } else {
-      assert(Types.isAssignableRefTo(oVar.type(), memberType));
-      lookupIntoVar = oVar;
-      doDereference = false;
+      assert(Types.isRefTo(backendElemType, backendOVar)) :
+            backendElemType + " => " + backendOVar;
+      // Need to dereference into temporary var
+      Type readOnlyElemType = TypeChecker.containerElemType(arrayVar, false);
+      copyDst = varCreator.createTmp(context,
+              new RefType(readOnlyElemType, false));
+      mustDereference = true;
     }
+    
 
-    Long arrayIndex = Literals.extractIntLit(context, 
-                                          arrayIndexTree);
+    Var backendCopyDst = VarRepr.backendVar(copyDst);
+    Long arrayIndex = Literals.extractIntLit(context, arrayIndexTree);
     if (arrayIndex != null) {
       // Handle the special case where the index is a constant.
-      backend.arrayLookupRefImm(lookupIntoVar, arrayVar, 
-          Arg.createIntLit(arrayIndex), Types.isArrayRef(arrType));
+      if (Types.isArrayRef(arrType)) {
+        backend.arrayRefCopyOutImm(backendCopyDst,
+            backendArray, Arg.createIntLit(arrayIndex));
+      } else {
+        backend.arrayCopyOutImm(backendCopyDst,
+                backendArray, Arg.createIntLit(arrayIndex));
+      }
     } else {
       // Handle the general case where the index must be computed
       Var indexVar = eval(context, arrayIndexTree,
                           Types.arrayKeyType(arrayVar), false, renames);
-      backend.arrayLookupFuture(lookupIntoVar, arrayVar, indexVar,
-                                Types.isArrayRef(arrType));
+      if (Types.isArrayRef(arrType)) {
+        backend.arrayRefCopyOutFuture(backendCopyDst, backendArray,
+              VarRepr.backendVar(indexVar));
+      } else {
+        backend.arrayCopyOutFuture(backendCopyDst, backendArray,
+                VarRepr.backendVar(indexVar));
+      }
     }
     // Do the dereference down here so that it is generated in a more logical
     // order
-    if (doDereference) {
-      dereference(context, oVar, lookupIntoVar);
+    if (mustDereference) {
+      dereference(context, oVar, copyDst);
     }
+  }
+
+  private Type chooseArrayTypeForLookup(Var oVar, Type arrExprType) {
+    for (Type altType: UnionType.getAlternatives(arrExprType)) {
+      assert(Types.isArray(altType) || Types.isArrayRef(altType));
+      Type lookupRes = VarRepr.containerElemRepr(
+                                Types.containerElemType(altType), false);
+      if (lookupRes.equals(oVar.type())) {
+        return altType;
+      }
+    }
+    throw new STCRuntimeError("No viable array type for lookup up "
+              + arrExprType + " into " + oVar);
   }
   
 
@@ -661,7 +737,7 @@ public class ExprWalker {
    * @throws UndefinedTypeException
    * @throws UserException
    */
-  private Var lookupStructField(Context context, SwiftAST tree,
+  private Var structLoad(Context context, SwiftAST tree,
       Type type, boolean storeInStack, Var outVar, 
       Map<String, String> renames) throws UndefinedTypeException,
       UserException {
@@ -676,49 +752,33 @@ public class ExprWalker {
     assert (tree.getType() == ExMParser.STRUCT_LOAD);
     assert (tree.getChildCount() == 2);
     
-    LinkedList<String> path = new LinkedList<String>();
-    path.add(tree.child(1).getText());
     SwiftAST structTree = tree.child(0);
-
-    
-    Var parent;
-    SwiftAST parentTree = tree.child(0);
-    String fieldName = tree.child(1).getText();
-
-    if (parentTree.getType() == ExMParser.VARIABLE) {
-      parent = context.lookupVarUser(parentTree.child(0).getText());
-    } else {
-      Type parentType = TypeChecker.findSingleExprType(context, parentTree);
-      // Type error should have been caught earlier
-      assert(Types.isStruct(parentType) || Types.isStructRef(parentType));
-      parent = eval(context, parentTree, parentType, false, renames);
-    }
-    
-
+    LinkedList<String> pathFromRoot = new LinkedList<String>();
+    pathFromRoot.addFirst(tree.child(1).getText());
     /* 
      * Walk the tree to find out the full path if we are accessing a nested 
      * struct.  rootStruct should be the name of the outermost nested struct 
      */
     while (structTree.getType() == ExMParser.STRUCT_LOAD) {
       assert (structTree.getChildCount() == 2);
-      path.addFirst(structTree.child(1).getText());
+      pathFromRoot.addFirst(structTree.child(1).getText());
       structTree = structTree.child(0);
     }
-    Var rootStruct = null;
-    List<String> pathFromRoot = null;
+    
+    Var rootStruct;
     if (structTree.getType() == ExMParser.VARIABLE) {
       // The root is a local variable
       assert (structTree.getChildCount() == 1);
       String structVarName = structTree.child(0).getText();
-      rootStruct = context.lookupVarUnsafe(structVarName);
-      pathFromRoot = path;
+      rootStruct = context.lookupVarUser(structVarName);
     } else {
-      rootStruct = parent;
-      pathFromRoot = Arrays.asList(fieldName);
+      Type parentType = TypeChecker.findSingleExprType(context, structTree);
+      // Type error should have been caught earlier
+      assert(Types.isStruct(parentType) || Types.isStructRef(parentType));
+      rootStruct = eval(context, structTree, parentType, false, renames);
     }
-
-    return structLookup(context, parent, fieldName,
-        storeInStack, rootStruct, pathFromRoot, outVar);
+    
+    return structLookup(context, rootStruct, pathFromRoot, storeInStack, outVar);
   }
 
   
@@ -731,7 +791,7 @@ public class ExprWalker {
         dereference(context, outVar, lookupResult);
         return outVar;
       } else {
-        copyByValue(context, lookupResult, outVar, outVar.type());
+        copyByValue(context, outVar, lookupResult);
         return outVar;
       }
     } catch (RuntimeException e) {
@@ -768,7 +828,8 @@ public class ExprWalker {
     if (impl == null) {
       throw new STCRuntimeError("could not find implementation for " + fn);
     }
-    backend.builtinFunctionCall(impl, inArgs, Arrays.asList(oVar));
+    backend.builtinFunctionCall(impl, VarRepr.backendVars(inArgs),
+                                VarRepr.backendVars(oVar));
   }
 
   /**
@@ -797,26 +858,65 @@ public class ExprWalker {
       vals.add(eval(context, val, valType, false, renames));
     }
     
+    Var backendOVar = VarRepr.backendVar(oVar);
+    boolean elemIsRef = VarRepr.storeRefInContainer(Types.containerElemType(oVar));
+    /* We can only use arrayBuild operation if we have the keys and values in
+     * the appropriate format for the internal container representation.
+     * If user specified keys, they will be futures so we can't use them here.
+     * If the container representation stores values inline, can't use 
+     * those either. */
     if (ae.hasKeys()) {
-      // If user specified keys, they will be futures so we can't use
-      // arrayBuild operation.
-      List<Var> keyFutures = new ArrayList<Var>(ae.getElemCount());
+      List<Var> backendKeys = new ArrayList<Var>(ae.getElemCount());
       for (SwiftAST key: ae.getKeys()) {
-        keyFutures.add(eval(context, key, keyType, false, renames));
+        Var keyVar = eval(context, key, keyType, false, renames);
+        backendKeys.add(VarRepr.backendVar(keyVar));
       }
+      
       for (int i = 0; i < ae.getElemCount(); i++) {
-        backend.arrayInsertFuture(oVar, keyFutures.get(i), vals.get(i));
+        Var backendVal = VarRepr.backendVar(vals.get(i));
+        if (elemIsRef) {
+          // Store reference to future
+          backend.arrayStoreFuture(backendOVar, backendKeys.get(i),
+                                   backendVal.asArg());
+        } else {
+          // Must copy from future into container
+          backend.arrayCopyInFuture(backendOVar, backendKeys.get(i),
+                                    backendVal);
+        }
       }
     } else {
-      // We know keys ahead of time, use arrayBuild operation
+      assert(!ae.hasKeys());
       assert(Types.isInt(keyType));
-      List<Arg> keys = new ArrayList<Arg>(ae.getElemCount());
-      for (int i = 0; i < ae.getElemCount(); i++) {
-        keys.add(Arg.createIntLit(i));
+      List<Arg> backendKeys = arrayElemsDefaultKeys(ae);
+      if (elemIsRef) {
+        // We know keys ahead of time and elem storage format matches our
+        // input variables, use arrayBuild operation
+        backend.arrayBuild(backendOVar, backendKeys,
+                           VarRepr.backendVars(vals));
+      } else {
+        for (int i = 0; i < ae.getElemCount(); i++) {
+          Var backendVal = VarRepr.backendVar(vals.get(i));
+          if (elemIsRef) {
+            // Store reference to future
+            backend.arrayStore(backendOVar, backendKeys.get(i),
+                                     backendVal.asArg());
+          } else {
+            // Must copy from future into container
+            backend.arrayCopyInImm(backendOVar, backendKeys.get(i),
+                                   backendVal);
+          }
+        }
       }
-      backend.arrayBuild(oVar, keys, vals);
     }
     
+  }
+
+  private List<Arg> arrayElemsDefaultKeys(ArrayElems ae) {
+    List<Arg> backendKeys = new ArrayList<Arg>(ae.getElemCount());
+    for (int i = 0; i < ae.getElemCount(); i++) {
+      backendKeys.add(Arg.createIntLit(i));
+    }
+    return backendKeys;
   }
 
   private void callFunction(Context context, String function,
@@ -847,6 +947,8 @@ public class ExprWalker {
         waitVars.add(input);
         derefVars.add(derefed);
         realIList.add(derefed);
+        Logging.getSTCLogger().trace("Deref function input " + input +
+                                     " to " + derefed);
       } else if (Types.isUpdateableEquiv(inputType, expType)) {
         realIList.add(snapshotUpdateable(context, input));
       } else {
@@ -861,22 +963,19 @@ public class ExprWalker {
       
       // Only want to maintain priority for wait
       TaskProps waitProps = props.filter(TaskPropKey.PRIORITY);
-      backend.startWaitStatement(
-           fc.constructName("call-" + function), waitVars, WaitMode.WAIT_ONLY,
-           false, false, TaskMode.LOCAL_CONTROL, waitProps);
+      backend.startWaitStatement( fc.constructName("call-" + function),
+           VarRepr.backendVars(waitVars), WaitMode.WAIT_ONLY,
+           false, false, TaskMode.LOCAL_CONTROL,
+           VarRepr.backendProps(waitProps));
 
       assert(waitVars.size() == derefVars.size());
       // Generate code to fetch actual array IDs  inside
       // wait statement
       for (int i = 0; i < waitVars.size(); i++) {
         Var derefVar = derefVars.get(i);
-        varCreator.declare(derefVar);
-        if (Types.isContainerRef(waitVars.get(i).type())) {
-          backend.retrieveRef(derefVar, waitVars.get(i));
-        } else {
-          throw new STCRuntimeError("Don't know how to " +
-              "deref non-container function arg " + derefVar);
-        }
+        varCreator.backendInit(derefVar);
+        assert(Types.isRef(waitVars.get(i).type()));
+        retrieveRef(derefVar, waitVars.get(i), false);
       }
     }
 
@@ -885,7 +984,8 @@ public class ExprWalker {
 
     if (checkpointed) {
 
-      Var lookupEnabled = varCreator.createTmpLocalVal(context, Types.V_BOOL);
+      Var lookupEnabled = VarRepr.backendVar(
+                varCreator.createTmpLocalVal(context, Types.V_BOOL));
       backend.checkpointLookupEnabled(lookupEnabled);
       
       backend.startIfStatement(lookupEnabled.asArg(), true);
@@ -933,7 +1033,7 @@ public class ExprWalker {
       // Do recursive wait to get container contents
       backend.startWaitStatement(
           context.constructName(function + "-checkpoint-wait"),
-          checkpointKeyFutures, WaitMode.WAIT_ONLY,
+          VarRepr.backendVars(checkpointKeyFutures), WaitMode.WAIT_ONLY,
           false, true, TaskMode.LOCAL);
       Var keyBlob = packCheckpointKey(context, function,
                                        checkpointKeyFutures);
@@ -945,7 +1045,7 @@ public class ExprWalker {
       
       backend.lookupCheckpoint(checkpointExists, existingVal, keyBlob.asArg());
       
-      backend.startIfStatement(checkpointExists.asArg(), true);
+      backend.startIfStatement(VarRepr.backendArg(checkpointExists), true);
       setVarsFromCheckpoint(context, oList, existingVal);
       backend.startElseBlock();
     }
@@ -957,7 +1057,7 @@ public class ExprWalker {
     Var writeEnabled = varCreator.createTmpLocalVal(context, Types.V_BOOL);
     backend.checkpointWriteEnabled(writeEnabled);
     
-    backend.startIfStatement(writeEnabled.asArg(), false);
+    backend.startIfStatement(VarRepr.backendArg(writeEnabled), false);
     // checkpoint output values once set
     List<Var> checkpointVal = oList; // TODO: right?
     
@@ -973,7 +1073,8 @@ public class ExprWalker {
     }
     backend.startWaitStatement(
         context.constructName(function + "-checkpoint-wait"),
-        waitVals, WaitMode.WAIT_ONLY, false, true, TaskMode.LOCAL);
+        VarRepr.backendVars(waitVals), WaitMode.WAIT_ONLY,
+        false, true, TaskMode.LOCAL);
     
     // Lookup checkpoint key again since variable might not be able to be
     // passed through wait.  Rely on optimizer to clean up redundancy
@@ -1030,19 +1131,20 @@ public class ExprWalker {
         Var fetched;
         if (Types.isContainer(v)) {
           // Recursively fetch to get nested lists/dicts
-          fetched = varCreator.fetchContainerValues(context, v);
+          fetched = retrieveContainerValues(context, v);
         } else {
-          fetched = varCreator.fetchValueOf(context, v);
+          fetched = retrieveToVar(context, v);
         }
         elems.add(fetched.asArg());
       }
     }
     
     Var blob = varCreator.createTmpLocalVal(context, Types.V_BLOB);
-    backend.packValues(blob, elems);
+    Var backendBlob = VarRepr.backendVar(blob);
+    backend.packValues(backendBlob, VarRepr.backendArgs(elems));
     
     // Make sure it gets freed at end of block
-    backend.freeBlob(blob);
+    backend.freeBlob(backendBlob);
     return blob;
   }
   
@@ -1062,7 +1164,8 @@ public class ExprWalker {
       }
     }
     
-    backend.unpackValues(values, checkpointVal);
+    backend.unpackValues(VarRepr.backendVars(values),
+                         VarRepr.backendVar(checkpointVal));
     
     assert(values.size() == functionOutputs.size());
     for (int i = 0; i < values.size(); i++) {
@@ -1070,7 +1173,8 @@ public class ExprWalker {
       Var functionOutput = functionOutputs.get(i);
       if (!value.equals(functionOutput)) {
         if (Types.isContainer(functionOutput)) {
-          backend.storeRecursive(functionOutput, value.asArg());
+          backend.storeRecursive(VarRepr.backendVar(functionOutput),
+                                 VarRepr.backendArg(value));
         } else {
           assign(functionOutput, value.asArg());
         }
@@ -1102,18 +1206,26 @@ public class ExprWalker {
       LogHelper.warn(context, "Call to deprecated function: " + function);
     }
     
+    List<Var> backendIList = VarRepr.backendVars(iList);
+    List<Var> backendOList = VarRepr.backendVars(oList);
+    
+    TaskProps backendProps = VarRepr.backendProps(props);
     if (context.isIntrinsic(function)) {
       IntrinsicFunction intF = context.lookupIntrinsic(function);
-      backend.intrinsicCall(intF, iList, oList, props);
+      backend.intrinsicCall(intF, backendIList, backendOList,
+                            backendProps);
     } else if (context.hasFunctionProp(function, FnProp.BUILTIN)) {
       if (ForeignFunctions.hasOpEquiv(function)) {
         assert(oList.size() <= 1);
-        Var out = oList.size() == 0 ? null : oList.get(0);
+        Var backendOut = (backendOList.size() == 0 ?
+                   null : backendOList.get(0));
 
-        backend.asyncOp(ForeignFunctions.getOpEquiv(function), out, 
-                        Arg.fromVarList(iList), props);
+        backend.asyncOp(ForeignFunctions.getOpEquiv(function), backendOut, 
+                        Arg.fromVarList(backendIList),
+                        backendProps);
       } else {
-        backend.builtinFunctionCall(function, iList, oList, props);
+        backend.builtinFunctionCall(function, backendIList, backendOList,
+                                    backendProps);
       }
     } else if (context.hasFunctionProp(function, FnProp.COMPOSITE)) {
       TaskMode mode;
@@ -1122,9 +1234,11 @@ public class ExprWalker {
       } else {
         mode = TaskMode.CONTROL;
       }
-      backend.functionCall(function, Var.asArgList(iList), oList, mode, props);
+      backend.functionCall(function, Var.asArgList(backendIList), backendOList,
+                           mode, backendProps);
     } else {
-      backendCallWrapped(context, function, concrete, oList, iList, props);
+      backendCallWrapped(context, function, concrete, backendOList,
+                         backendIList, backendProps);
     }
   }
 
@@ -1133,26 +1247,27 @@ public class ExprWalker {
    * @param context
    * @param function
    * @param concrete
-   * @param oList
-   * @param iList
+   * @param backendOList
+   * @param backendIList
    * @param props
    * @throws UserException
    */
   private void backendCallWrapped(Context context, String function,
       FunctionType concrete,
-      List<Var> oList, List<Var> iList, TaskProps props)
+      List<Var> backendOList, List<Var> backendIList, TaskProps props)
       throws UserException {
     String wrapperFnName; // The name of the wrapper to call
     if (context.hasFunctionProp(function, FnProp.WRAPPED_BUILTIN)) {
       // Wrapper may need to be generated
-      wrapperFnName = wrappers.generateWrapper(context, function, concrete);
+      wrapperFnName = wrappers.generateWrapper(context, function,
+                                               concrete);
     } else {
       assert(context.hasFunctionProp(function, FnProp.APP));
       // Wrapper has same name for apps
       wrapperFnName = function;
     }
     List<Arg> realInputs = new ArrayList<Arg>();
-    for (Var in: iList) {
+    for (Var in: backendIList) {
       realInputs.add(in.asArg());
     }
   
@@ -1166,12 +1281,12 @@ public class ExprWalker {
         throw new UserException(context, "Parallelism not specified for " +
             "call to parallel function " + function);
       }
-      realInputs.add(par);
+      realInputs.add(VarRepr.backendArg(par));
     }
     if (context.hasFunctionProp(function, FnProp.TARGETABLE)) {
       // Target is optional but we have to pass something in
       Arg target = props.getWithDefault(TaskPropKey.LOCATION);
-      realInputs.add(target);
+      realInputs.add(VarRepr.backendArg(target));
     }
     
     // Other code always creates sync wrapper
@@ -1181,117 +1296,135 @@ public class ExprWalker {
     // Only priority property is used directly in sync instruction,
     // but other properties are useful to have here so that the optimizer
     // can replace instruction with local version and correct props
-    backend.functionCall(wrapperFnName, realInputs, oList, mode, props);
+    backend.functionCall(wrapperFnName, realInputs, backendOList, mode,
+                         VarRepr.backendProps(props));
   }
 
-
-  private void assignIntLit(Context context, SwiftAST tree,
-                            Var oVar, Long value)
- throws UserException {
-   LogHelper.trace(context, oVar.toString()+"="+value);
-   if(Types.isInt(oVar.type())) {
-     backend.assignInt(oVar, Arg.createIntLit(value));
-   } else if (Types.isFloat(oVar.type())) {
-     double floatval = Literals.interpretIntAsFloat(context, value);
-     backend.assignFloat(oVar, Arg.createFloatLit(floatval));
-     
+  /**
+   * Assign int literal value
+   * @param context
+   * @param dst
+   * @param val value
+   * @throws UserException
+   */
+  private void assignIntLit(Context context, Var dst, Long val)
+                                  throws UserException {
+   LogHelper.trace(context, dst.toString()+"="+val);
+   if (Types.isInt(dst)) {
+     assign(dst, Arg.createIntLit(val));
    } else {
-     assert false : "assignIntLit to variable" + oVar;
+     assert(Types.isFloat(dst)) : dst; 
+     double fVal = Literals.interpretIntAsFloat(context, val);
+     assign(dst, Arg.createFloatLit(fVal));
    }
   }
 
-  private void assignBoolLit(Context context, SwiftAST tree, Var oVar,
-      String value) throws UserException {
-   assert(Types.isBool(oVar.type()));
-   backend.assignBool(oVar, Arg.createBoolLit(Boolean.parseBoolean(value)));
+  /**
+   * Assign bool literal value from tree
+   * @param context
+   * @param dst
+   * @param tree
+   * @throws UserException
+   */
+  private void assignBoolLit(Context context, SwiftAST tree, Var dst)
+            throws UserException {
+   assert(Types.isBool(dst));
+   String val = Literals.extractBoolLit(context, tree);
+  assign(dst, Arg.createBoolLit(Boolean.parseBoolean(val)));
   }
 
-  private void assignFloatLit(Context context, SwiftAST tree, Var oVar) 
+  /**
+   * Assign float literal value from tree
+   * @param context
+   * @param tree
+   * @param dst
+   * @throws UserException
+   */
+  private void assignFloatLit(Context context, SwiftAST tree, Var dst) 
   throws UserException {
-   assert(Types.isFloat(oVar.type()));
+   assert(Types.isFloat(dst));
    double val = Literals.extractFloatLit(context, tree);
-   backend.assignFloat(oVar, Arg.createFloatLit(val));
+   assign(dst, Arg.createFloatLit(val));
   }
 
-  private void assignStringLit(Context context, SwiftAST tree, Var oVar,
-      String value) throws UserException {
-    assert(Types.isString(oVar.type()));
-    backend.assignString(oVar, Arg.createStringLit(value));
+  /**
+   * Assign float literal value from tree
+   * @param context
+   * @param tree
+   * @param dst
+   * @throws UserException
+   */
+  private void assignStringLit(Context context, SwiftAST tree, Var dst)
+          throws UserException {
+    assert(Types.isString(dst));
+    String val = Literals.extractStringLit(context, tree);
+    assign(dst, Arg.createStringLit(val));
   }
 
-  private void assignVariable(Context context, Var oVar,
-      Var src) throws UserException {
-    if (Types.isPrimUpdateable(src.type())) {
+  /**
+   * Handle variable assignment, assigning src to dst
+   * @param context
+   * @param dst
+   * @param src
+   * @throws UserException
+   */
+  private void assignVariable(Context context, Var dst, Var src)
+                                  throws UserException {
+    if (Types.isPrimUpdateable(src)) {
       Var snapshot = snapshotUpdateable(context, src);
       src = snapshot;
     }
     
-    Type srctype = src.type();
-    Type dsttype = oVar.type();
-    TypeChecker.checkCopy(context, srctype, dsttype);
+    Type srcType = src.type();
+    Type dstType = dst.type();
+    TypeChecker.checkCopy(context, srcType, dstType);
 
-    copyByValue(context, src, oVar, srctype);
+    copyByValue(context, dst, src);
   }
-
+  
+  /**
+   * Get a snapshot of an updateable and assign to future
+   * @param context
+   * @param src
+   * @return
+   * @throws UserException
+   * @throws UndefinedTypeException
+   */
   private Var snapshotUpdateable(Context context, Var src)
       throws UserException, UndefinedTypeException {
-    assert(Types.isPrimUpdateable(src.type()));
+    assert(Types.isPrimUpdateable(src));
     // Create a future alias to the updateable type so that
     // types match
     Var val = varCreator.createTmpLocalVal(context,
-        ScalarUpdateableType.asScalarValue(src.type()));
+                          ScalarUpdateableType.asScalarValue(src.type()));
+    Var backendVal = VarRepr.backendVar(val);
 
-    backend.latestValue(val, src);
+    backend.latestValue(backendVal, src);
+
+    if (!src.type().assignableTo(Types.UP_FLOAT)) {
+      throw new STCRuntimeError(src.type() + " not yet supported");
+    }
+
     /* Create a future with a snapshot of the value of the updateable
      * By making the retrieve and store explicit the optimizer should be
      * able to optimize out the future in many cases
      */
-    Var snapshot = varCreator.createTmp(context,
-        ScalarUpdateableType.asScalarFuture(src.type()));
-
-    if (!src.type().equals(Types.UP_FLOAT)) {
-      throw new STCRuntimeError(src.type() + " not yet supported");
-    }
-    backend.assignFloat(snapshot, Arg.createVar(val));
+    Var snapshot = assignToVar(context, val.asArg(), false);
     return snapshot;
   }
 
-  private void copyContainerByValue(Context context, Var dst, Var src) 
+  /**
+   * Copy non-local data by value
+   * @param context
+   * @param dst
+   * @param src
+   * @throws UserException
+   */
+  private void backendAsyncCopy(Context context, Var dst, Var src) 
                                                 throws UserException {
     assert(src.type().assignableTo(dst.type()));
-    assert(Types.isArray(src) || Types.isBag(src));
-    LocalContext copyContext = new LocalContext(context);
-    Type t = src.type();
-    Type memType;
-    Type ixType; 
-    Var ix;
-    if (Types.isArray(src)) {
-      memType = Types.containerElemType(t);
-      ixType = Types.derefResultType(Types.arrayKeyType(src));
-      ix = copyContext.createLocalValueVariable(ixType);
-    } else {
-      assert(Types.isBag(src));
-      memType= Types.containerElemType(t);
-      ixType = null;
-      ix = null;
-    }
-    Var member = copyContext.createTmpAliasVar(memType);
- 
-    List<Var> waitVars = Arrays.asList(src);
-    backend.startWaitStatement(
-        context.getFunctionContext().constructName(dst.name() + "-copy-wait"),
-        waitVars, WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
-    backend.startForeachLoop(
-            context.getFunctionContext().constructName(dst.name() + "-copy"),
-            src, member, ix, -1, 1, true);
-    if (Types.isArray(src)) {
-      backend.arrayInsertImm(dst, ix.asArg(), member);
-    } else {
-      assert(Types.isBag(src));
-      backend.bagInsert(dst, member);
-    }
-    backend.endForeachLoop();
-    backend.endWaitStatement();
+    assert(src.storage() != Alloc.LOCAL);
+    backend.asyncCopy(VarRepr.backendVar(dst), VarRepr.backendVar(src));
   }
 
   private void derefThenCopyContainer(Context context, Var dst, Var src)
@@ -1300,61 +1433,16 @@ public class ExprWalker {
     assert(Types.isRefTo(src, dst));
     String wName = context.getFunctionContext().constructName("copy-wait");
     List<Var> waitVars = Arrays.asList(src);
-    backend.startWaitStatement(wName, waitVars,
+    backend.startWaitStatement(wName, VarRepr.backendVars(waitVars),
             WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
     Var derefed = varCreator.createTmpAlias(context, dst.type());
-    backend.retrieveRef(derefed, src);
-    copyContainerByValue(context, dst, derefed);
+    retrieveRef(derefed, src, false);
+    backendAsyncCopy(context, dst, derefed);
     backend.endWaitStatement();
-  }
-
-  private void copyStructByValue(Context context,
-      Var srcRoot, Var dstRoot,
-      Stack<String> srcPath, Stack<String> dstPath,
-      Var src, Var dst, Type type)
-          throws UserException, UndefinedTypeException {
-    assert(src.type().equals(dst.type()));
-    assert(Types.isStruct(src.type()));
-
-    // recursively copy struct members
-    StructType st = (StructType) type;
-    for (StructField f : st.getFields()) {
-      // get handles to both src and dst field
-      Type fieldType = f.getType();
-      srcPath.push(f.getName());
-      dstPath.push(f.getName());
-      Var fieldSrc = structLookup(context, src, f.getName(),
-          false, srcRoot, srcPath);
-
-      Var fieldDst = structLookup(context, dst, f.getName(),
-          false, dstRoot, dstPath);
-
-      if (Types.isStruct(fieldType)) {
-        copyStructByValue(context, srcRoot, dstRoot,
-          srcPath, dstPath, fieldSrc, fieldDst, fieldType);
-      } else {
-        copyByValue(context, fieldSrc, fieldDst, fieldType);
-      }
-      srcPath.pop(); dstPath.pop();
-    }
   }
   
-
-  private void copyRefByValue(Context context, Var src, Var dst, Type type)
-      throws UserException, UndefinedTypeException {
-    backend.startWaitStatement(
-        context.getFunctionContext().constructName("copy-ref-wait"),
-        src.asList(), WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
-    Var srcVal = varCreator.createTmpAlias(context, type.memberType());
-    backend.retrieveRef(srcVal, src);
-    backend.assignReference(dst, srcVal);
-    backend.endWaitStatement();
-  }
-
   /**
-   * Copy a struct reference to a struct.  We need to do this in the
-   * compiler front-end because we want to generate specialized code
-   * to walk the structure and copy all struct members
+   * Copy a struct reference to a struct.
    * @param context
    * @param dst
    * @param src
@@ -1364,45 +1452,40 @@ public class ExprWalker {
   private void dereferenceStruct(Context context, Var dst, Var src)
       throws UserException, UndefinedTypeException {
     List<Var> waitVars = Arrays.asList(src);
-    backend.startWaitStatement( 
-                    context.getFunctionContext().constructName("copystruct"), 
-                    waitVars, WaitMode.WAIT_ONLY,
+    backend.startWaitStatement( context.constructName("copystruct"), 
+                    VarRepr.backendVars(waitVars), WaitMode.WAIT_ONLY,
                     false, false, TaskMode.LOCAL);
     Var rValDerefed = varCreator.createTmp(context, 
             src.type().memberType(), false, true);
-    backend.retrieveRef(rValDerefed, src);
-    copyByValue(context, rValDerefed, dst, dst.type());
+    retrieveRef(rValDerefed, src, false);
+    backendAsyncCopy(context, dst, rValDerefed);
     backend.endWaitStatement();
-  } 
-  
+  }
+
   void findArraysInStruct(Context context,
       Var root, VInfo structVInfo, List<Pair<Var, VInfo>> arrays)
           throws UndefinedTypeException, UserException {
-    findArraysInStructToClose(context, root, root, structVInfo,
-        new Stack<String>(), arrays);
+    findArraysInStructToClose(context, root, structVInfo,
+                              new StackLite<String>(), arrays);
   }
 
   private void findArraysInStructToClose(Context context,
-      Var root, Var struct, VInfo structVInfo,
-      Stack<String> fieldPath, List<Pair<Var, VInfo>> arrays) throws UndefinedTypeException,
+      Var struct, VInfo structVInfo,
+      StackLite<String> fieldPath, List<Pair<Var, VInfo>> arrays) throws UndefinedTypeException,
                                                                       UserException {
     assert(structVInfo != null);
     StructType vtype = (StructType)struct.type();
     for (StructField f: vtype.getFields()) {
       fieldPath.push(f.getName());
       if (Types.isArray(f.getType())) {
-        Var fieldVar = structLookup(context, struct, 
-            f.getName(), false, root, fieldPath);
+        Var fieldVar = structLookup(context, struct, fieldPath, false);
         VInfo fieldInfo = structVInfo != null ?
             structVInfo.getFieldVInfo(f.getName()) : null;
         arrays.add(Pair.create(fieldVar, fieldInfo));
       } else if (Types.isStruct(f.getType())) {
         VInfo nestedVInfo = structVInfo.getFieldVInfo(f.getName());
-        Var field = structLookup(context, struct, f.getName(),
-                                  false, root, fieldPath);
-
-        findArraysInStructToClose(context, root, field, nestedVInfo, fieldPath,
-            arrays);
+        findArraysInStructToClose(context, struct, nestedVInfo, fieldPath,
+                                  arrays);
       }
       fieldPath.pop();
     }

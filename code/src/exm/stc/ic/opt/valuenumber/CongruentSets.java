@@ -1,10 +1,8 @@
 package exm.stc.ic.opt.valuenumber;
 
 import java.util.AbstractMap;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -23,6 +21,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.StackLite;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.opt.InitVariables.InitState;
 import exm.stc.ic.opt.Semantics;
@@ -63,6 +62,11 @@ class CongruentSets {
    * from X -> Y in here doesn't imply that X is still canonical.
    */
   private final MultiMap<Arg, ArgOrCV> canonicalInv;
+  
+  /**
+   * Record congruence between values without canonical location
+   */
+  private final MultiMap<ArgCV, ArgCV> equivalences;
   
   /**
    * Track sets that were merged into this one.  Allows
@@ -108,6 +112,7 @@ class CongruentSets {
     this.parent = parent;
     this.canonical = new HashMap<ArgOrCV, Arg>();
     this.canonicalInv = new MultiMap<Arg, ArgOrCV>();
+    this.equivalences = new MultiMap<ArgCV, ArgCV>();
     this.mergedInto = new MultiMap<Arg, Arg>();
     this.componentIndex = new HashMap<Arg, Set<ArgCV>>();
     this.varsFromParent = varsFromParent;
@@ -139,10 +144,19 @@ class CongruentSets {
       MultiMap<Arg, ArgOrCV> sets = activeSets(consts);
       for (Entry<Arg, List<ArgOrCV>> e: sets.entrySet()) {
         assert(e.getValue().size() > 0);
+        boolean printSet = true;
         if (e.getValue().size() == 1) {
           // Should be self-reference, don't print
-          assert(e.getValue().get(0).arg().equals(e.getKey()));
-        } else {
+          if (e.getValue().get(0).arg().equals(e.getKey())) {
+            printSet = false;
+          } else {
+            // TODO: this happens occasionally, e..g test 385
+            logger.debug("INTERNAL ERROR: Bad set: " + 
+                         e.getKey() + " " + e.getValue());
+          }
+        }
+        
+        if (printSet) {
           logger.trace(congType + " cong. class " + e.getKey() + 
                        " => " + e.getValue());
         }
@@ -389,11 +403,11 @@ class CongruentSets {
    * @param var
    * @return
    */
-  public Arg findRetrieveResult(Arg var) {
+  public Arg findRetrieveResult(Arg var, boolean recursive) {
     assert(var.isVar());
     Arg canonVar = findCanonical(var);
     assert(canonVar.isVar());
-    ArgCV cv = ComputedValue.retrieveCompVal(canonVar.getVar());
+    ArgCV cv = ComputedValue.retrieveCompVal(canonVar.getVar(), recursive);
     return findCanonicalInternal(cv);
   }
 
@@ -456,6 +470,17 @@ class CongruentSets {
     if (val.isCV()) {
       checkForRecanonicalization(canonicalVal, val.cv());
     }
+    
+    // Also add any equivalent values
+    for (ArgCV equiv: lookupEquivalences(val)) {
+      // Note: should avoid infinite recursion because of newEntry check above
+      if (logger.isTraceEnabled()) {
+        logger.trace("Add set entry from equiv: "
+                     + equiv + " in " + canonicalVal);
+      }
+      addSetEntry(new ArgOrCV(equiv), canonicalVal);
+    }
+
   }
 
   /**
@@ -522,7 +547,7 @@ class CongruentSets {
     // Check that types are compatible in sets being merged
     assert(oldCanon.type().getImplType().equals(
            newCanon.type().getImplType())) : "Types don't match: " +
-           oldCanon + ":" + oldCanon.type() +
+           oldCanon + ":" + oldCanon.type() + " " +
             newCanon + " " + newCanon.type();  
     
     // Handle situation where oldCanonical is part of another ArgOrCV 
@@ -616,6 +641,7 @@ class CongruentSets {
           if (canonical != null) {
             addUpdatedCV(oldComponent, newComponent, newOuterCV2, canonical);
           }
+          updateEquivCanonicalization(outerCV, newOuterCV2);
         }
       }
       curr = curr.parent;
@@ -776,10 +802,10 @@ class CongruentSets {
     }
     
     // Try to resolve dereferenced references
-    if (val.isDerefCompVal()) {
-      ArgCV resolvedRef = tryResolveRef(val);
-      if (resolvedRef != null) {
-        val = resolvedRef;
+    if (val.isRetrieve(false)) {
+      ArgCV resolved = tryResolve(val);
+      if (resolved != null) {
+        val = resolved;
       }
     } 
     
@@ -870,19 +896,19 @@ class CongruentSets {
   }
   
   /**
-   * Try to resolve a reference lookup to the original thing
+   * Try to resolve a lookup to the original thing
    * dereferenced
    * @param val
    * @return
    */
-  private ArgCV tryResolveRef(ComputedValue<Arg> val) {
-    assert(val.isDerefCompVal());
-    Arg ref = val.getInput(0);
-    for (ArgOrCV v: findCongruentValues(ref)) {
+  private ArgCV tryResolve(ComputedValue<Arg> val) {
+    assert(val.isRetrieve(false));
+    Arg src = val.getInput(0);
+    for (ArgOrCV v: findCongruentValues(src)) {
       if (v.isCV()) {
         ArgCV v2 = v.cv();
-        if (v2.isArrayMemberRef()) {
-          return ComputedValue.derefArrayMemberRef(v2);
+        if (v2.isArrayMember()) {
+          return ComputedValue.derefArrayMember(v2);
         }
       }
     }
@@ -906,7 +932,7 @@ class CongruentSets {
         logger.trace("Enqueue future with val " + future);
       }
       recanonicalizeQueue.add(future);
-    } else if (val.isArrayMemberRef()) {
+    } else if (val.isArrayMember()) {
       // Might be able to dereference
       Arg arrayMemberRef = val.getInput(0);
       if (logger.isTraceEnabled()) {
@@ -938,8 +964,8 @@ class CongruentSets {
                 boolean followAncestors) {
     List<Arg> allMerged = new ArrayList<Arg>();
     
-    Deque<Pair<CongruentSets, Arg>> work =
-          new ArrayDeque<Pair<CongruentSets, Arg>>();
+    StackLite<Pair<CongruentSets, Arg>> work =
+          new StackLite<Pair<CongruentSets, Arg>>();
     work.push(Pair.create(this, canonical));
     
     while (!work.isEmpty()) {
@@ -957,6 +983,65 @@ class CongruentSets {
       }
     }
     return allMerged;
+  }
+
+  /**
+   * Add equivalence for the case where we don't have a location
+   * for either.  Should only be called if findCanonical() was null
+   * for both values
+   * @param val1
+   * @param val2
+   */
+  public void addEquivalence(GlobalConstants consts, ArgCV val1, ArgCV val2) {
+    ArgOrCV canon1 = canonicalizeInternal(consts, val1);
+    ArgOrCV canon2 = canonicalizeInternal(consts, val2);
+    // Shouldn't have canonical arg value if calling this function
+    assert(canon1.isCV());
+    assert(canon2.isCV());
+  
+    addEquivalenceEntry(canon1.cv(), canon2.cv());
+    // TODO: when new CV added to canonical, check equivalence map
+  }
+
+  /**
+   * Update equivalences when recanonicalization occurs
+   * @param oldCV
+   * @param newCV
+   */
+  private void updateEquivCanonicalization(ArgCV oldCV, ArgOrCV newCV) {
+    if (newCV.isCV()) {
+      for (ArgCV equiv: lookupEquivalences(oldCV)) {
+        addEquivalenceEntry(equiv, newCV.cv());
+      }
+    }
+  }
+  
+  private void addEquivalenceEntry(ArgCV val1, ArgCV val2) {
+    // add to equivalence map in both directions
+    equivalences.put(val1, val2);
+    equivalences.put(val2, val1);
+  }
+
+  private List<ArgCV> lookupEquivalences(ArgOrCV val) {
+    if (val.isCV()) {
+      return lookupEquivalences(val.cv());
+    } else {
+      return Collections.emptyList();
+    }
+  }
+  /**
+   * Lookup equivalent value here and in parents
+   * @param val
+   * @return
+   */
+  private List<ArgCV> lookupEquivalences(ArgCV val) {
+    CongruentSets curr = this;
+    List<ArgCV> res = new ArrayList<ArgCV>();
+    while (curr != null) {
+      res.addAll(curr.equivalences.get(val));
+      curr = curr.parent;
+    }
+    return res;
   }
 
   /**
@@ -1026,7 +1111,7 @@ class CongruentSets {
      */
     private Arg findAltReplacement(Var orig, Arg replace) {
       // Check alternative canonical vals using DFS
-      Deque<Arg> replacementStack = new ArrayDeque<Arg>();
+      StackLite<Arg> replacementStack = new StackLite<Arg>();
       do {
         logger.trace(orig + " => " + replace + "(" + congType + ")" +
                          ": NOT INITIALIZED");

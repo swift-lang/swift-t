@@ -10,28 +10,33 @@
 #include <unistd.h>
 #include <adlb.h>
 
+#include "bench_util.h"
+
 // Work unit type
 #define WORKT 0
 
+#ifdef EMB_DEBUG
+#define EMB_DEBUG(fmt, args...) printf(fmt, ## args)
+#else
+#define EMB_DEBUG(fmt, args...)
+#endif
+
 int main(int argc, char *argv[])
 {
-  FILE *fp;
-  int rc, i, done;
-  char c, cmdbuffer[1024];
+  int rc,  done;
 
-  int am_server, am_debug_server;
-  int num_servers, use_debug_server, aprintf_flag;
+  int am_server;
+  int num_servers;
   MPI_Comm app_comm;
   int my_world_rank, my_app_rank;
+  int app_comm_size;
 
-  int num_types = 1;
   int type_vect[2] = {WORKT};
 
-  int quiet = 1;
 
   double start_time, end_time;
 
-  printf("HELLO!\n");
+  //printf("HELLO!\n");
   fflush(NULL);
 
   rc = MPI_Init( &argc, &argv );
@@ -39,18 +44,19 @@ int main(int argc, char *argv[])
 
   MPI_Comm_rank( MPI_COMM_WORLD, &my_world_rank );
 
-  aprintf_flag = 0;		/* no output from adlb itself */
-  num_servers = 1;		/* one server should be enough */
+  num_servers = 1;
   if (getenv("ADLB_SERVERS") != NULL) {
     num_servers = atoi(getenv("ADLB_SERVERS"));
   }
 
-  use_debug_server = 0;		/* default: no debug server */
   rc = ADLB_Init(num_servers, 1, type_vect, &am_server, MPI_COMM_WORLD, &app_comm);
+
   if ( !am_server ) /* application process */
   {
-    printf("[%i] I AM NOT SERVER!\n", my_world_rank);
+    EMB_DEBUG("[%i] I AM NOT SERVER!\n", my_world_rank);
+    
     MPI_Comm_rank( app_comm, &my_app_rank );
+    MPI_Comm_size( app_comm, &app_comm_size );
   }
 
   //rc = MPI_Barrier( MPI_COMM_WORLD );
@@ -58,31 +64,58 @@ int main(int argc, char *argv[])
 
   if ( am_server )
   {
-    printf("[%i] I AM SERVER!\n", my_world_rank);
+    EMB_DEBUG("[%i] I AM SERVER!\n", my_world_rank);
     ADLB_Server(3000000);
   }
   else
-  {                                 
+  { 
+#ifdef LOGNORM
+    if (argc != 5) {
+      printf("Got %i args\n", argc -1);
+      printf("usage: %s <N> <M> <mu> <sigma> \n", argv[0]);
+      ADLB_Fail(-1);
+    }
+#else
     if (argc != 4) {
       printf("Got %i args\n", argc -1);
       printf("usage: %s <N> <M> <sleeptime> \n", argv[0]);
       ADLB_Fail(-1);
     }
+#endif
 
     int N = atoi(argv[1]);
     int M = atoi(argv[2]);
+#ifdef LOGNORM
+    double mu = atof(argv[3]);
+    double sigma = atof(argv[4]);
+#else
     double F = atof(argv[3]);
+#endif
 
-    if ( my_app_rank == 0 ) {  /* if master app, read and put cmds */
-      for (int i = 0; i < N; i++) {
+    int control_ratio = 8; // E.g. 1/8 workers start putting tasks
+    if (getenv("CONTROL_RATIO") != NULL) {
+      control_ratio = atoi(getenv("CONTROL_RATIO"));
+    }
+    int control_task_count = ((app_comm_size - 1) / control_ratio) + 1;
+    if (my_app_rank < control_task_count ) {
+      // Get a subset of procs to put in work
+      // divide, rounding up to get control task count
+      int my_control_rank = my_app_rank;
+      int tasks_put = 0;
+      // partition loop between ranks
+      for (int i = my_control_rank; i < N; i+=control_task_count) {
         for (int j = 0; j < M; j++) {
           char buf[1024];
           int len = sprintf(buf, "%i %i\n", i, j);
           ADLB_Put(buf, len+1, ADLB_RANK_ANY, -1, WORKT, 1, 1);
         }
+        tasks_put += M;
       }
+      EMB_DEBUG("[%i] put all tasks (%i)\n", my_app_rank,
+              tasks_put);
     }
   
+    // Now all processes should try to complete tasks
     done = 0;
     int ndone = 0;
     while (!done)
@@ -96,16 +129,23 @@ int main(int argc, char *argv[])
                     &task_comm);
       if ( rc == ADLB_SHUTDOWN )
       {
-	printf("trace: All jobs done\n");
+	EMB_DEBUG("trace: All jobs done\n");
 	break;
       }
       int i, j;
       sscanf(cmdbuffer, "%i %i", &i, &j);
-      usleep((int) F * 1000000);
+      double sleep_time;
+#ifdef LOGNORM
+      sleep_time = lognorm_sample(mu, sigma);
+#else
+      sleep_time = F;
+#endif
+      spin(sleep_time);
+      
       //printf("%i %i\n", i, j);
       ndone++;
-      if (ndone % 50000 == 0) {
-        printf("trace: rank %i finished %i\n", my_app_rank, ndone);
+      if (ndone % 500000 == 0) {
+        EMB_DEBUG("trace: rank %i finished %i\n", my_app_rank, ndone);
       }
     }
 
@@ -121,3 +161,4 @@ int main(int argc, char *argv[])
 
   return(0);
 }
+

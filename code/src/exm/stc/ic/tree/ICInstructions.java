@@ -31,6 +31,7 @@ import exm.stc.common.CompilerBackend;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.CompileTimeArgs;
+import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
 import exm.stc.common.lang.Operators;
@@ -42,16 +43,22 @@ import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
-import exm.stc.common.util.Counters;
+import exm.stc.common.lang.Var.VarCount;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.ICUtil;
+import exm.stc.ic.aliases.Alias;
+import exm.stc.ic.componentaliases.Component;
+import exm.stc.ic.componentaliases.ComponentAlias;
 import exm.stc.ic.opt.Semantics;
 import exm.stc.ic.opt.valuenumber.ComputedValue;
+import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
 import exm.stc.ic.opt.valuenumber.ValLoc;
 import exm.stc.ic.opt.valuenumber.ValLoc.Closed;
 import exm.stc.ic.opt.valuenumber.ValLoc.IsAssign;
+import exm.stc.ic.refcount.RefCountsToPlace;
 import exm.stc.ic.tree.Conditionals.Conditional;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
@@ -160,47 +167,153 @@ public class ICInstructions {
       return false;
     }
     
-    public boolean writesMappedVar() {
-      // Writes to alias variables can have non-local effects
-      for (Var out: this.getOutputs()) {
-        if (out.mapping() != null) {
-          return true;
-        }
+    /**
+     * Class helping to specify how a variable should be handled when
+     * making immediate
+     */
+    public static class MakeImmVar {
+      public MakeImmVar(Var var, boolean fetch, boolean recursive,
+          boolean initOutputMapping, boolean acquireWriteRefs) {
+        super();
+        this.var = var;
+        this.fetch = fetch;
+        this.recursive = recursive;
+        this.preinitOutputMapping = initOutputMapping;
+        this.acquireWriteRefs = acquireWriteRefs;
       }
-      return false;
+      
+      public static MakeImmVar in(Var var, boolean fetch, boolean recursive,
+                                   boolean acquireWriteRefs) {
+        return new MakeImmVar(var, fetch, recursive, false, acquireWriteRefs);
+      }
+      
+      public static MakeImmVar out(Var var, boolean recursive, boolean initOutputMapping) {
+        return new MakeImmVar(var, false, recursive, initOutputMapping, false);
+      }
+
+      public static final List<MakeImmVar> NONE = Collections.emptyList();;
+
+      public final Var var;
+      
+      /** For inputs, if we should fetch (otherwise just wait) */
+      public final boolean fetch;
+      
+      /** For inputs and outputs, if we should fetch recursively */
+      public final boolean recursive;
+      
+      /** For outputs, whether output mapping should initialized 
+       * before calling this instruction */
+      public final boolean preinitOutputMapping;
+      
+      /**
+       * For inputs that are refs, if write refcounts should be acquired 
+       */
+      public final boolean acquireWriteRefs;
+      
+      @Override
+      public String toString() {
+        return var.name() + " fetch: " + fetch + " recursive: " + recursive +
+              " preinitOutputMapping: " + preinitOutputMapping + 
+              " acquireWriteRefs: " + acquireWriteRefs;
+      }
     }
     
     public static class MakeImmRequest {
-      public final List<Var> out;
-      public final List<Var> in;
+      /** Output variables to replace and store after changing instruction */
+      public final List<MakeImmVar> out;
+      
+      /** Input variables to fetch before changing instruction */
+      public final List<MakeImmVar> in;
+      
       /** Where immediate code should run.  Default is local: in the current context */
       public final TaskMode mode;
-      /** If inputs should be recursively closed */
-      public final boolean recursiveClose;
-      /** If outputs should have mapping initialized */
-      public final boolean mapOutVars;
       
-      public MakeImmRequest(List<Var> out, List<Var> in) {
-        this(out, in, TaskMode.LOCAL);
+      private static final TaskMode DEFAULT_MODE = TaskMode.LOCAL;
+      private static final boolean DEFAULT_RECURSIVE = false;
+      private static final boolean DEFAULT_PREINIT_OUTPUT_MAPPING = false;
+      private static final boolean DEFAULT_ACQUIRE_WRITE_REFS = false;
+      
+      public static MakeImmRequest fromVars(Var out, Var in) {
+        return fromVars(out.asList(), in.asList());
       }
       
-      public MakeImmRequest(List<Var> out, List<Var> in, TaskMode mode) {
-        this(out, in, mode, false);
+      public static MakeImmRequest fromVars(Var out, List<Var> in) {
+        return fromVars(out.asList(), in);
       }
-      public MakeImmRequest(List<Var> out, List<Var> in, TaskMode mode,
-                            boolean recursiveClose) {
-        this(out, in, mode, recursiveClose, true);
-      } 
-      public MakeImmRequest(List<Var> out, List<Var> in, TaskMode mode,
-          boolean recursiveClose, boolean mapOutVars) {
-        this.out = out;
-        this.in = in;
+      
+
+      public static MakeImmRequest fromVars(List<Var> out, Var in) {
+        return fromVars(out, in.asList());
+      }
+      
+      public static MakeImmRequest fromVars(List<Var> out, List<Var> in) {
+        return MakeImmRequest.fromVars(out, in, null, DEFAULT_MODE,
+            DEFAULT_RECURSIVE, DEFAULT_PREINIT_OUTPUT_MAPPING,
+            DEFAULT_ACQUIRE_WRITE_REFS);
+      }
+      
+      public static MakeImmRequest fromVars(List<Var> out,
+          List<Var> in, TaskMode mode) {
+        return fromVars(out, in, null, mode,
+            DEFAULT_RECURSIVE, DEFAULT_PREINIT_OUTPUT_MAPPING,
+            DEFAULT_ACQUIRE_WRITE_REFS);
+      }
+
+      public static MakeImmRequest fromVars(List<Var> out, List<Var> in,
+            List<Var> wait, TaskMode mode, boolean recursive,
+            boolean preinitOutputMapping, boolean acquireWriteRefs) {
+        return new MakeImmRequest(buildOutList(out, recursive, preinitOutputMapping),
+             buildInList(in, wait, recursive, acquireWriteRefs),
+             mode);
+      }
+      
+      public MakeImmRequest(List<MakeImmVar> out, List<MakeImmVar> in) {
+        this(out, in, DEFAULT_MODE);
+      }
+
+      public MakeImmRequest(List<MakeImmVar> out, List<MakeImmVar> in,
+          TaskMode mode) {
+        this.out = (out == null) ? MakeImmVar.NONE : out;
+        this.in = (in == null) ? MakeImmVar.NONE : in ;
         this.mode = mode;
-        this.recursiveClose = recursiveClose;
-        this.mapOutVars = mapOutVars;
       }
+
+      private static List<MakeImmVar> buildOutList(List<Var> out, boolean recursive,
+          boolean initsOutputMapping) {
+        List<MakeImmVar> l = new ArrayList<MakeImmVar>(out.size());
+        if (out != null) {
+          for (Var v: out) {
+            l.add(MakeImmVar.out(v, recursive, initsOutputMapping));
+          }
+        }
+        return l;
+      }
+
+      private static List<MakeImmVar> buildInList(List<Var> in, List<Var> wait,
+          boolean recursive, boolean acquireWriteRefs) {
+        List<MakeImmVar> l = new ArrayList<MakeImmVar>();
+        if (in != null) {
+          for (Var v: in) {
+            l.add(MakeImmVar.in(v, true, recursive, acquireWriteRefs));
+          }
+        }
+        if (wait != null) {
+          for (Var v: wait) {
+            l.add(MakeImmVar.in(v, false, recursive, acquireWriteRefs));
+          }
+        }
+        return l;
+      }
+
     }
     
+    /**
+     * Interface to let instruction logic create variables
+     */
+    public interface VarCreator {
+      public Var createDerefTmp(Var toDeref);
+    }
+
     public static class MakeImmChange {
       /** Optional: if the output variable of op changed */
       public final Var newOut;
@@ -277,8 +390,17 @@ public class ICInstructions {
       public final Var original;
       public final V fetched;
       
+      /**
+       * 
+       * @param original
+       * @param fetched
+       * @param includeAll if true, all were fetched.  If false, check 
+       *        fetched field of original
+       * @return
+       */
       public static <T> List<Fetched<T>> makeList(
-          List<Var> original, List<T> fetched) {
+          List<MakeImmVar> original, List<T> fetched,
+          boolean includeAll) {
         // Handle nulls gracefully
         if (original == null) {
           original = Collections.emptyList();
@@ -286,11 +408,21 @@ public class ICInstructions {
         if (fetched == null) {
           fetched = Collections.emptyList();
         }
-        assert(original.size() == fetched.size());
+        assert(original.size() >= fetched.size());
+        
+        int j = 0; // fetched index 
         List<Fetched<T>> result = new ArrayList<Fetched<T>>(fetched.size());
-        for (int i = 0; i < fetched.size(); i++) {
-          result.add(new Fetched<T>(original.get(i), fetched.get(i)));
+        for (int i = 0; i < original.size(); i++) {
+          MakeImmVar orig = original.get(i);
+          if (includeAll || orig.fetch) {
+            assert(j < fetched.size());
+            result.add(new Fetched<T>(orig.var, fetched.get(j)));
+            j++;
+          }
         }
+        
+        // Check all were included
+        assert(j == fetched.size()) : original + " " + fetched;
         return result;
       }
 
@@ -321,11 +453,19 @@ public class ICInstructions {
         Arg res = findFetched(fetched, v);
         return (res == null) ? null : res.getVar(); 
       }
+      
+      public String toString() {
+        return "Fetched: " + original.toString() + " => " + fetched.toString();
+      }
     }
     
     /**
      * 
      * @param closedVars variables closed at point of current instruction
+     * @param closedLocations abstract locations closed at point of current
+     *          instruction
+     * @param valueAvail variables where the retrieve resultis available at
+     *                  current point (implies closed too)
      * @param waitForClose if true, allowed to (must don't necessarily
      *        have to) request that unclosed vars be waited for
      * @return null if it cannot be made immediate, if true,
@@ -333,7 +473,8 @@ public class ICInstructions {
      *            and output vars that need to be have value vars created
      */
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-                                           boolean waitForClose) {
+                      Set<ArgCV> closedLocations, Set<Var> valueAvail,
+                      boolean waitForClose) {
       // Not implemented
       return null;
     }
@@ -344,9 +485,10 @@ public class ICInstructions {
      * @param inValues any input values loaded
      * @return
      */
-    public MakeImmChange makeImmediate(List<Fetched<Var>> outVals,
+    public MakeImmChange makeImmediate(VarCreator creator,
+                                       List<Fetched<Var>> outVals,
                                        List<Fetched<Arg>> inValues) {
-      throw new STCRuntimeError("makeImmediate not valid on " + type());
+      throw new STCRuntimeError("makeImmediate not valid  on " + type());
     }
 
     /**
@@ -363,6 +505,24 @@ public class ICInstructions {
      */
     public abstract TaskMode getMode();
     
+    /**
+     * @return which execution contexts are supported
+     */
+    public abstract List<ExecContext> supportedContexts();
+    
+    /**
+     * @return true if instruction is cheap: i.e. doesn't consume much CPU or IO
+     *        time so doesn't need to be run in parallel 
+     */
+    public abstract boolean isCheap();
+    
+    /**
+     * @return true if instruction doesn't spawn or enable further work
+     *           (e.g. by assigning future), so can be put off without problem
+     */
+    public abstract boolean isProgressEnabling();
+
+   
     /**
      * @return List of outputs closed immediately after instruction returns
      */
@@ -414,6 +574,17 @@ public class ICInstructions {
     }
     
     /**
+     * Specify more granular information about effect of instruction on
+     * output variable.  If this returns non-null, it overrides info in
+     * getModifiedOutputs().  Note that getModifiedOutputs() must be
+     * specified for op regardless
+     * @return list of components modified.
+     */
+    public List<Component> getModifiedComponents() {
+      return null;
+    }
+    
+    /**
      * @param fns map of functions (can optionally be null)
      * @return list of outputs for which previous value is read
      */
@@ -446,54 +617,57 @@ public class ICInstructions {
     }
     
     public abstract Instruction clone();
-
     
-    public Pair<List<Var>, List<Var>> getIncrVars(Map<String, Function> functions) {
-      return getIncrVars();
-    }
-
     /**
-     * @return (read vars to be incremented, write vars to be incremented)
+     * @return vars with refcounts to be incremented: (read, write)
+     *         NOTE: can include repeats
      */
-    protected Pair<List<Var>, List<Var>> getIncrVars() {
-      return Pair.create(getReadIncrVars(), getWriteIncrVars());
+    public Pair<List<VarCount>, List<VarCount>> inRefCounts(
+        Map<String, Function> functions) {
+      return Pair.create(VarCount.NONE, VarCount.NONE);
     }
 
     /**
-     * @return list of vars that need read refcount increment
+     * @return vars with refcounts to be incremented: (read, write)
+     *         NOTE: can include repeats
      */
-    public List<Var> getReadIncrVars() {
-      return Var.NONE;
+    public Pair<List<VarCount>, List<VarCount>> outRefCounts(
+                        Map<String, Function> functions) {
+      return Pair.create(VarCount.NONE, VarCount.NONE);
     }
-
+    
     /**
-     * @return list of vars that need write refcount increment
-     */
-    public List<Var> getWriteIncrVars() {
-      return Var.NONE;
-    }
-
-    /**
-     * Try to piggyback increments or decrements to instruction
+     * Try to piggyback increments or decrements to instruction.
+     * Repeatedly called until it returns null;
      * @param increments count of increment or decrement operations per var
      * @param type
-     * @return empty list if not successful, otherwise list of vars for which
-     *      piggyback occurred
+     * @return null if not successful, var for which piggyback occurred and change 
+     *        (-ive if decrement)
      *          
      */
-    public List<Var> tryPiggyback(Counters<Var> increments, RefCountType type) {
-      return Var.NONE;
+    public VarCount tryPiggyback(RefCountsToPlace increments, RefCountType type) {
+      return null;
     }
+    
+    /**
+     * Return list of all aliases created by function
+     * @return
+     */
+    public List<Alias> getAliases() {
+      // Default implementation: no aliases
+      return Alias.NONE;
+    }
+
 
     /**
      * If this instruction makes an output a part of another
      * variable such that modifying the output modifies something
      * else
-     * @return null if nothing
+     * @return empty list if nothing
      */
-    public Pair<Var, Var> getComponentAlias() {
+    public List<ComponentAlias> getComponentAliases() {
       // Default is nothing, few instructions do this
-      return null;
+      return Collections.emptyList();
     }
 
     /**
@@ -543,7 +717,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars, 
-                                           boolean waitForClose) {
+        Set<ArgCV> closedLocations, Set<Var> valueAvail, boolean waitForClose) {
       return null;
     }
 
@@ -566,6 +740,22 @@ public class ICInstructions {
     public TaskMode getMode() {
       return TaskMode.SYNC;
     }
+    
+    @Override
+    public List<ExecContext> supportedContexts() {
+      return ExecContext.ALL;
+    }
+
+    @Override
+    public boolean isCheap() {
+      return true;
+    }
+    
+    @Override
+    public boolean isProgressEnabling() {
+      return false;
+    }
+    
   }
 
   // Maximum number of array element CVs to insert
@@ -816,18 +1006,20 @@ public class ICInstructions {
         // This is compatible with UNCACHED_INPUT_FILE preventing caching,
         // as we still assume that the input_file function is impure
         if (op == Opcode.CALL_FOREIGN) {
-          cvs.add(ValLoc.makeFilename(getInput(0), getOutput(0)));
+          cvs.add(ValLoc.makeFilename(getInput(0), getOutput(0), IsAssign.TO_VALUE));
         } else if (op == Opcode.CALL_FOREIGN_LOCAL){
           // Don't mark as IsAssign since standard cv catches this
           cvs.add(ValLoc.makeFilenameLocal(getInput(0), getOutput(0),
-                                        IsAssign.NO));
+                                           IsAssign.TO_VALUE));
         }
       } else if (op == Opcode.CALL_FOREIGN_LOCAL &&
           (isImpl(SpecialFunction.RANGE) ||
            isImpl(SpecialFunction.RANGE_STEP))) {
         addRangeCVs(cvs);
       } else if (isImpl(SpecialFunction.SIZE)) {
-          cvs.add(makeContainerSizeCV(IsAssign.NO));
+        cvs.add(makeContainerSizeCV(IsAssign.NO));
+      } else if (isImpl(SpecialFunction.CONTAINS)) {
+        cvs.add(makeArrayContainsCV(IsAssign.NO));
       }
     }
 
@@ -873,12 +1065,15 @@ public class ICInstructions {
         // We can work out array contents 
         long arrSize = Math.max(0, (end - start) / step + 1);
         Var arr = getOutput(0);
-        cvs.add(makeContainerSizeCV(arr, Arg.createIntLit(arrSize),
+        cvs.add(ValLoc.makeContainerSizeCV(arr, Arg.createIntLit(arrSize),
                                 false, IsAssign.NO));
         // add array elements up to some limit
         int max_elems = 64;
-        for (int i = 0; i <= (end - start) && i < max_elems; i++) {
-          // TODO: can't represent value_of(A[i]) 
+        for (long val = start, key = 0;
+                  val <= end && key < max_elems;
+                  val += step, key++) { 
+          cvs.add(ValLoc.makeArrayResult(arr, Arg.createIntLit(key),
+                      Arg.createIntLit(val), true, IsAssign.TO_VALUE));
         }
       }
     }
@@ -891,22 +1086,23 @@ public class ICInstructions {
         assert(Types.isIntVal(getOutput(0)));
         isFuture = false;
       }
-      return makeContainerSizeCV(getInput(0).getVar(), getOutput(0).asArg(),
-                             isFuture, isAssign);
+      return ValLoc.makeContainerSizeCV(getInput(0).getVar(),
+                      getOutput(0).asArg(), isFuture, isAssign);
     }
+    
 
-    static ValLoc makeContainerSizeCV(Var arr, Arg size, boolean future,
-                                  IsAssign isAssign) {
-      assert(Types.isContainer(arr.type()));
-      assert((!future && size.isImmediateInt()) ||
-             (future && Types.isInt(size.type())));
-      String subop = future ? ComputedValue.ARRAY_SIZE_FUTURE :
-                              ComputedValue.ARRAY_SIZE_VAL;
-      return ValLoc.buildResult(Opcode.FAKE, subop,
-              arr.asArg(), size, Closed.MAYBE_NOT, isAssign);
+    private ValLoc makeArrayContainsCV(IsAssign isAssign) {
+      boolean isFuture;
+      if (Types.isBool(getOutput(0))) {
+        isFuture = true;
+      } else {
+        assert(Types.isBoolVal(getOutput(0)));
+        isFuture = false;
+      }
+      return ValLoc.makeArrayContainsCV(getInput(0).getVar(), getInput(1),
+                      getOutput(0).asArg(), isFuture, isAssign);
     }
-
-
+    
     /**
      * Check if we should try to constant fold. To enable constant
      * folding for a funciton it needs ot have an entry here and
@@ -955,31 +1151,32 @@ public class ICInstructions {
     }
 
     @Override
-    public Pair<List<Var>, List<Var>> getIncrVars(Map<String, Function> functions) {
+    public Pair<List<VarCount>, List<VarCount>> inRefCounts(
+                            Map<String, Function> functions) {
       switch (op) { 
         case CALL_FOREIGN:
         case CALL_FOREIGN_LOCAL:
         case CALL_CONTROL:
         case CALL_LOCAL:
         case CALL_LOCAL_CONTROL: {
-          List<Var> readIncr = new ArrayList<Var>();
-          List<Var> writeIncr = new ArrayList<Var>();
+          List<VarCount> readIncr = new ArrayList<VarCount>();
+          List<VarCount> writeIncr = new ArrayList<VarCount>();
           for (Arg inArg: inputs) {
             if (inArg.isVar()) {
               Var inVar = inArg.getVar();
-              if (RefCounting.hasReadRefCount(inVar)) {
-                readIncr.add(inVar);
+              if (RefCounting.trackReadRefCount(inVar)) {
+                readIncr.add(VarCount.one(inVar));
               }
               if (Types.isScalarUpdateable(inVar) &&
                   treatUpdInputsAsOutputs()) {
-                writeIncr.add(inVar);
+                writeIncr.add(VarCount.one(inVar));
               }
             }
           }
           for (int i = 0; i < outputs.size(); i++) {
             Var outVar = outputs.get(i);
-            if (RefCounting.hasWriteRefCount(outVar)) {
-              writeIncr.add(outVar);
+            if (RefCounting.trackWriteRefCount(outVar)) {
+              writeIncr.add(VarCount.one(outVar));
             }
             boolean readRC = false;
             if (op != Opcode.CALL_FOREIGN &&
@@ -988,19 +1185,19 @@ public class ICInstructions {
               boolean writeOnly = f.isOutputWriteOnly(i);
               
               // keep read references to output vars
-              if (!writeOnly && RefCounting.hasReadRefCount(outVar)) {
+              if (!writeOnly && RefCounting.trackReadRefCount(outVar)) {
                 readRC = true;
               }
             }
-            if (readRC && RefCounting.hasReadRefCount(outVar)) {
-              readIncr.add(outVar);
+            if (readRC && RefCounting.trackReadRefCount(outVar)) {
+              readIncr.add(VarCount.one(outVar));
             }
           }
           return Pair.create(readIncr, writeIncr);
         }
         case CALL_SYNC:
           // Sync calls must acquire their own references
-          return super.getIncrVars();
+          return Pair.create(VarCount.NONE, VarCount.NONE);
         default:
           throw new STCRuntimeError("Unexpected function type: " + op);
       }
@@ -1114,34 +1311,27 @@ public class ICInstructions {
  
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-                                           boolean waitForClose) {
-      // See which arguments are closed
-      boolean allClosed = true;
-      if (!waitForClose) {
-        for (int i = 0; i < this.inputs.size(); i++) {
-          Arg in = this.inputs.get(i);
-          if (in.isVar()) {
-            if (closedVars.contains(in.getVar())) {
-              this.closedInputs.set(i, true);
-            } else {
-              allClosed = false;
-            }
-          }
+        Set<ArgCV> closedLocations, Set<Var> valueAvail, boolean waitForClose) {
+      if (isImpl(SpecialFunction.SIZE)) {
+        if (waitForClose || allInputsClosed(closedVars)) {
+          // Input array closed, can lookup right away
+          return MakeImmRequest.fromVars(getOutput(0), getInput(0).getVar());
         }
+        return null;
+      } else if (isImpl(SpecialFunction.CONTAINS)) {
+        if (waitForClose || allInputsClosed(closedVars)) {
+          // Need input array to be closed, and need value for index
+          return MakeImmRequest.fromVars(getOutput(0), getInput(1).getVar());
+        }
+        return null;
       }
       
-      // Deal with mapped variables, which are effectively side-channels
-      for (int i = 0; i < this.outputs.size(); i++) {
-        Var out = this.outputs.get(i);
-        if (Types.isFile(out)) {
-          // Need to wait for filename, unless unmapped
-          if (!(waitForClose || Semantics.outputMappingAvail(closedVars, out))) {
-            allClosed = false;
-          }
-        }
-      }
+      // By default, need all arguments to be closed
+      boolean allNeededClosed = waitForClose || 
+          (allInputsClosed(closedVars) &&
+              allOutputSideChannelsClosed(closedVars, closedLocations));
       
-      if (allClosed && (ForeignFunctions.hasOpEquiv(this.functionName)
+      if (allNeededClosed && (ForeignFunctions.hasOpEquiv(this.functionName)
                 || ForeignFunctions.hasInlineVersion(this.functionName))) {
         TaskMode mode = ForeignFunctions.getTaskMode(this.functionName);
         if (mode == null) {
@@ -1149,24 +1339,83 @@ public class ICInstructions {
         }
         
         // True unless the function alters mapping itself
-        boolean mapOutVars = true;
+        boolean preinitOutputMapping = true;
         if (isImpl(SpecialFunction.INITS_OUTPUT_MAPPING)) {
-          mapOutVars = false;
+          preinitOutputMapping = false;
         }
-        
+
         // All args are closed!
-        return new MakeImmRequest(
+        return MakeImmRequest.fromVars(
             Collections.unmodifiableList(this.outputs),
             Collections.unmodifiableList(this.varInputs(true)),
-            mode, false, mapOutVars);
+            Var.NONE,
+            mode, recursiveInOut(this.op, this.functionName),
+            preinitOutputMapping, false);
 
       }
       return null;
     }
     
+    private boolean allInputsClosed(Set<Var> closedVars) {
+      for (int i = 0; i < this.inputs.size(); i++) {
+        if (!inputClosed(closedVars, i)) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    private boolean inputClosed(Set<Var> closedVars, int i) {
+      Arg in = this.inputs.get(i);
+      if (!in.isVar()) {
+        return true;
+      }
+      if (closedVars.contains(in.getVar())) {
+        this.closedInputs.set(i, true);
+        return true;
+      } else {
+        return false;
+      }
+    }
+
+    /**
+     * Check if side channels from mapped variables are closed.
+     * @param closedVars
+     * @return
+     */
+    private boolean allOutputSideChannelsClosed(Set<Var> closedVars,
+        Set<ArgCV> closedLocations) {
+      for (Var out: this.outputs) {
+        if (Types.isFile(out)) {
+          // Need to wait for filename, unless unmapped
+          if (!Semantics.outputMappingAvail(closedVars, closedLocations,
+                                            out)) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+
     @Override
-    public MakeImmChange makeImmediate(List<Fetched<Var>> outVars, 
+    public MakeImmChange makeImmediate(VarCreator creator,
+                                       List<Fetched<Var>> outVars, 
                                        List<Fetched<Arg>> values) {
+      if (isImpl(SpecialFunction.SIZE)) {
+        // Don't use fetched array value
+        Var newOut = outVars.get(0).fetched;
+        Var arr = getInput(0).getVar();
+        return new MakeImmChange(TurbineOp.containerSize(newOut, arr));
+      } else if (isImpl(SpecialFunction.CONTAINS)) {
+        // Don't use fetched array value
+        Var newOut = outVars.get(0).fetched;
+        Var arr = getInput(0).getVar();
+        Var keyFuture = getInput(1).getVar();
+        Arg key = Fetched.findFetched(values, keyFuture);
+        return new MakeImmChange(TurbineOp.arrayContains(newOut, arr, key));
+      }
+    
+      
       // Discard non-future inputs.  These are things like priorities or
       // targets which do not need to be retained for the local version
       List<Var> retainedInputs = varInputs(true);
@@ -1205,12 +1454,9 @@ public class ICInstructions {
      * @param newOut
      */
     private void checkSwappedOutput(Var oldOut, Var newOut) {
-      if (Types.isArray(oldOut.type())) {
-        assert(Types.isArray(newOut.type()));
-      } else {
-        assert(Types.derefResultType(oldOut.type()).equals(
-                newOut.type()));
-      }
+      Type exp = Types.retrievedType(oldOut.type(),
+                  recursiveInOut(op, functionName));
+      assert(exp.equals(newOut.type()));
     }
 
     @Override
@@ -1249,6 +1495,31 @@ public class ICInstructions {
     }
     
       
+    /**
+     * Returns true if we recursively pack and unpack inputs and outputs for
+     * this type of function call if converting to local version
+     * @param op
+     */
+    private static boolean recursiveInOut(Opcode op, String functionName) {
+      switch (op) {
+        case CALL_SYNC:
+        case CALL_LOCAL:
+        case CALL_LOCAL_CONTROL:
+        case CALL_CONTROL:
+        case CALL_FOREIGN:
+          // Foreign functions get unpack representations
+          // Note: we may be calling wrapper of foreign funciton -
+          // can't assume that it is not foreign based on opcode
+          if (ForeignFunctions.isForeignFunction(functionName)) {
+            return ForeignFunctions.recursivelyUnpackedInOut(functionName);
+          } else {
+            return false;
+          }
+        default:
+          throw new STCRuntimeError("Unexpected function call opcode: " + op);
+      }
+    }
+
     @Override
     public TaskMode getMode() {
       switch (op) {
@@ -1266,7 +1537,42 @@ public class ICInstructions {
           throw new STCRuntimeError("Unexpected function call opcode: " + op);
       }
     }
+    
+    @Override
+    public List<ExecContext> supportedContexts() {
+      switch (op) {
+        case CALL_SYNC:
+        case CALL_LOCAL_CONTROL:
+          return ExecContext.CONTROL_LIST;
+        case CALL_LOCAL:
+          // Can run anywhere
+          return ExecContext.ALL;
+        case CALL_FOREIGN:
+        case CALL_CONTROL:
+          // Task is spawned: doesn't matter
+          return ExecContext.ALL;
+        default:
+          throw new STCRuntimeError("Unexpected function call opcode: " + op);
+      }
+    }
 
+    @Override
+    public boolean isCheap() {
+      if (op == Opcode.CALL_SYNC) {
+        // Not sure how much work it will involve without looking at
+        // function def
+        return false;
+      } else {
+        // Just spawns the task here
+        return true;
+      }
+    }
+    
+    @Override
+    public boolean isProgressEnabling() {
+      return true; // Function may have side-effects, etc
+    }
+    
     @Override
     public Instruction clone() {
       // Variables are immutable so just need to clone lists
@@ -1313,7 +1619,7 @@ public class ICInstructions {
     
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-                                           boolean waitForClose) {
+        Set<ArgCV> closedLocations, Set<Var> valueAvail, boolean waitForClose) {
       return null; // already immediate
     }
 
@@ -1326,6 +1632,45 @@ public class ICInstructions {
     @Override
     public TaskMode getMode() {
       return TaskMode.SYNC;
+    }
+    
+    @Override
+    public List<ExecContext> supportedContexts() {
+      TaskMode fnMode = ForeignFunctions.getTaskMode(functionName);
+      switch (fnMode) {
+        case CONTROL:
+        case LOCAL_CONTROL:
+          return ExecContext.CONTROL_LIST;
+        case WORKER:
+          return ExecContext.WORKER_LIST;
+        case LOCAL:
+        case SYNC:
+          return ExecContext.ALL;
+        default:
+          throw new STCRuntimeError("Unexpected: " + fnMode);
+      }
+    }
+
+    @Override
+    public boolean isCheap() {
+      TaskMode fnMode = ForeignFunctions.getTaskMode(functionName);
+      switch (fnMode) {
+        case LOCAL_CONTROL:
+        case LOCAL:
+        case SYNC:
+          return true;
+        case CONTROL:
+        case WORKER:
+          return false;
+        default:
+          throw new STCRuntimeError("Unexpected: " + fnMode);
+      }
+    }
+    
+    @Override
+    public boolean isProgressEnabling() {
+      // Only assigns value
+      return false;
     }
     
     @Override
@@ -1429,13 +1774,14 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-                                           boolean waitForClose) {
+        Set<ArgCV> closedLocations, Set<Var> valueAvail, boolean waitForClose) {
       // Don't support reducing this
       return null;
     }
 
     @Override
-    public MakeImmChange makeImmediate(List<Fetched<Var>> outVals,
+    public MakeImmChange makeImmediate(VarCreator creator,
+                                       List<Fetched<Var>> outVals,
                                        List<Fetched<Arg>> inValues) {
       // Already immediate
       return null;
@@ -1452,6 +1798,22 @@ public class ICInstructions {
     @Override
     public TaskMode getMode() {
       return TaskMode.SYNC;
+    }
+    
+    @Override
+    public List<ExecContext> supportedContexts() {
+      // Only run external commands on workers
+      return ExecContext.WORKER_LIST;
+    }
+
+    @Override
+    public boolean isCheap() {
+      return false;
+    }
+    
+    @Override
+    public boolean isProgressEnabling() {
+      return false;
     }
     
     @Override
@@ -1588,7 +1950,7 @@ public class ICInstructions {
     @Override
     public List<Arg> getInputs() {
       // need to make sure that these variables are avail in scope
-      ArrayList<Arg> res = new ArrayList<Arg>(newLoopVars.size());
+      ArrayList<Arg> res = new ArrayList<Arg>();
       for (Arg v: newLoopVars) {
         res.add(v);
       }
@@ -1599,6 +1961,7 @@ public class ICInstructions {
           res.add(uva);
         }
       }
+      
       return res;
     }
   
@@ -1615,7 +1978,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-                                           boolean waitForClose) {
+        Set<ArgCV> closedLocations, Set<Var> valueAvail, boolean waitForClose) {
       // Variables we need to wait for to make immediate
       List<Var> waitForInputs = new ArrayList<Var>();
       
@@ -1644,24 +2007,31 @@ public class ICInstructions {
       if (waitForInputs.isEmpty()) {
         return null;
       } else {
-        return new MakeImmRequest(
-            Collections.<Var>emptyList(),
-            waitForInputs,
-            TaskMode.LOCAL, false, false);
+        return MakeImmRequest.fromVars(
+                Var.NONE, waitForInputs,
+                TaskMode.LOCAL);
       }
     }
     
     @Override
-    public MakeImmChange makeImmediate(List<Fetched<Var>> outVals,
+    public MakeImmChange makeImmediate(VarCreator creator,
+        List<Fetched<Var>> outVals,
         List<Fetched<Arg>> inValues) {
       // TODO: we waited for vars, for now don't actually change instruction
       return new MakeImmChange(this);
     }
 
     @Override
-    public List<Var> getReadIncrVars() {
+    public Pair<List<VarCount>, List<VarCount>> inRefCounts(
+        Map<String, Function> functions) {
+      List<VarCount> writeRefs = new ArrayList<VarCount>();
+      for (Arg loopVar: newLoopVars) {
+        if (loopVar.isVar()) {
+          writeRefs.add(VarCount.one(loopVar.getVar()));
+        }
+      }
       // Increment variables passed to next iter
-      return Collections.unmodifiableList(ICUtil.extractVars(newLoopVars));
+      return Pair.create(writeRefs, VarCount.NONE);
     }
 
     @Override
@@ -1685,7 +2055,25 @@ public class ICInstructions {
       return TaskMode.CONTROL;
     }
     
+    @Override
+    public List<ExecContext> supportedContexts() {
+      return ExecContext.ALL;
+    }
+
+    @Override
+    public boolean isCheap() {
+      return true;
+    }
+    
+    @Override
+    public boolean isProgressEnabling() {
+      return true;
+    }
+    
     public void setLoopUsedVars(Collection<Var> variables) {
+      //System.err.println(this + " USED VARS CHANGE: " + loopUsedVars + " => " + variables);
+      //new Exception().printStackTrace();
+      
       loopUsedVars.clear();
       loopUsedVars.addAll(variables);
     }
@@ -1781,7 +2169,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-                                           boolean waitForClose) {
+        Set<ArgCV> closedLocations, Set<Var> valueAvail, boolean waitForClose) {
       return null;
     }
    
@@ -1794,11 +2182,47 @@ public class ICInstructions {
     public TaskMode getMode() {
       return TaskMode.SYNC;
     }
+    
+    @Override
+    public List<ExecContext> supportedContexts() {
+      return ExecContext.ALL;
+    }
+
+    @Override
+    public boolean isCheap() {
+      return true;
+    }
+    
+    @Override
+    public boolean isProgressEnabling() {
+      // ending loop might allow vars to be closed
+      return !keepOpenVars.isEmpty();
+    }
    
     @Override
     public List<ValLoc> getResults() {
       // nothing
       return null;
+    }
+    
+
+    @Override
+    public Pair<List<VarCount>, List<VarCount>> outRefCounts(
+                   Map<String, Function> functions) {
+      // Decrement all variables passed into loop from outside
+      // NOTE: include multiple copies of vars
+      List<VarCount> readOut = new ArrayList<VarCount>();
+      List<VarCount> writeOut = new ArrayList<VarCount>();
+      for (Var ko: this.getKeepOpenVars()) {
+        assert (RefCounting.trackWriteRefCount(ko));
+        writeOut.add(VarCount.one(ko));
+      }
+      for (PassedVar pass: this.getLoopUsedVars()) {
+        if (!pass.writeOnly) {
+          readOut.add(VarCount.one(pass.var));
+        }
+      }
+      return Pair.create(readOut, writeOut);
     }
 
     @Override
@@ -1999,7 +2423,8 @@ public class ICInstructions {
 
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
-                                           boolean waitForClose) {
+        Set<ArgCV> closedLocations, Set<Var> valueAvail,
+        boolean waitForClose) {
       if (op == Opcode.LOCAL_OP) {
         // already is immediate
         return null; 
@@ -2008,9 +2433,6 @@ public class ICInstructions {
         if (!hasLocalVersion(subop)) {
           return null;
         }
-        
-        // COPY_FILE wants to initialize its own output file
-        boolean mapOutputVars = true;
         
         // See which arguments are closed
         if (!waitForClose) {
@@ -2023,26 +2445,29 @@ public class ICInstructions {
             }
           }
         }
-        
-        if (Types.isFile(output) && !mapOutputVars) {
+
+        boolean preinitOutputMapping = true;
+        if (Types.isFile(output) && preinitOutputMapping) {
           // Need to wait for filename, unless unmapped
           if (!(waitForClose ||
-                Semantics.outputMappingAvail(closedVars, output))) {
+                Semantics.outputMappingAvail(closedVars, closedLocations,
+                                             output))) {
             return null;
           }
         }
       
           // All args are closed!
-        return new MakeImmRequest(
+        return MakeImmRequest.fromVars(
             (this.output == null) ? 
                   null : Collections.singletonList(this.output),
             ICUtil.extractVars(this.inputs),
-            TaskMode.LOCAL, false, mapOutputVars);
+            Var.NONE, TaskMode.LOCAL, false, preinitOutputMapping, false);
       }
     }
 
     @Override
-    public MakeImmChange makeImmediate(List<Fetched<Var>> newOut,
+    public MakeImmChange makeImmediate(VarCreator creator,
+                                       List<Fetched<Var>> newOut,
                                        List<Fetched<Arg>> newIn) {
       if (op == Opcode.LOCAL_OP) {
         throw new STCRuntimeError("Already immediate!");
@@ -2051,7 +2476,7 @@ public class ICInstructions {
         List<Arg> newInArgs = Fetched.getFetched(newIn);
         if (output != null) {
           assert(newOut.size() == 1);
-          assert(Types.derefResultType(output.type()).equals(
+          assert(Types.retrievedType(output.type()).equals(
                  newOut.get(0).fetched.type()));
           return new MakeImmChange(
               Builtin.createLocal(subop, newOut.get(0).fetched, newInArgs));
@@ -2088,7 +2513,29 @@ public class ICInstructions {
       if (op == Opcode.ASYNC_OP) {
         return TaskMode.CONTROL;
       } else {
+        assert(op == Opcode.LOCAL_OP);
         return TaskMode.SYNC;
+      }
+    }
+    
+    @Override
+    public List<ExecContext> supportedContexts() {
+      return ExecContext.ALL;
+    }
+
+    @Override
+    public boolean isCheap() {
+      // Ops are generally cheap
+      return true;
+    }
+    
+    @Override
+    public boolean isProgressEnabling() {
+      if (op == Opcode.ASYNC_OP) {
+        return true; // Assigns future
+      } else {
+        assert(op == Opcode.LOCAL_OP);
+        return false;
       }
     }
     
@@ -2153,17 +2600,18 @@ public class ICInstructions {
 
 
     @Override
-    public List<Var> getReadIncrVars() {
+    public Pair<List<VarCount>, List<VarCount>> inRefCounts(
+                   Map<String, Function> functions) {
       if (op == Opcode.ASYNC_OP) {
-        List<Var> res = new ArrayList<Var>(inputs.size());
+        List<VarCount> readRCs = new ArrayList<VarCount>(inputs.size());
         for (Arg in: inputs) {
-          if (RefCounting.hasReadRefCount(in.getVar())) {
-            res.add(in.getVar());
+          if (RefCounting.trackReadRefCount(in.getVar())) {
+            readRCs.add(VarCount.one(in.getVar()));
           }
         }
-        return res;
+        return Pair.create(readRCs, VarCount.NONE);
       }
-      return Var.NONE;
+      return Pair.create(VarCount.NONE, VarCount.NONE);
     }
 
 
@@ -2209,59 +2657,16 @@ public class ICInstructions {
         + " assign " + value.toString() + " to " + dst.toString());
   }
 
- 
-  public static Instruction retrieveValueOf(Var dst, Var src) {
-    assert(Types.isPrimValue(dst.type()));
-    assert(Types.isPrimFuture(src.type())
-            || Types.isPrimUpdateable(src.type()));
-    switch (src.type().primType()) {
-      case BOOL:
-        return TurbineOp.retrieveBool(dst, src);
-      case INT:
-        return TurbineOp.retrieveInt(dst, src);
-      case FLOAT:
-        return TurbineOp.retrieveFloat(dst, src);
-      case STRING:
-        return TurbineOp.retrieveString(dst, src);
-      case BLOB:
-        return TurbineOp.retrieveBlob(dst, src);
-      case VOID:
-        return TurbineOp.retrieveVoid(dst, src);
-      case FILE:
-        return TurbineOp.retrieveFile(dst, src);
-      default:
-        throw new STCRuntimeError("method to retrieve " +
-              src.type().typeName() + " is not known yet");
-    }
-  }
-
-  public static Instruction futureSet(Var dst, Arg src) {
-    assert(Types.isPrimFuture(dst.type()));
-    switch (dst.type().primType()) {
-    case BOOL:
-      assert(src.isImmediateBool());
-      return TurbineOp.assignBool(dst, src);
-    case INT:
-      assert(src.isImmediateInt());
-      return TurbineOp.assignInt(dst, src);
-    case FLOAT:
-      assert(src.isImmediateFloat());
-      return TurbineOp.assignFloat(dst, src);
-    case STRING:
-      assert(src.isImmediateString());
-      return TurbineOp.assignString(dst, src);
-    case BLOB:
-      assert(src.isImmediateBlob());
-      return TurbineOp.assignBlob(dst, src);
-    case VOID:
-      assert(src.isVar() && Types.isVoidVal(src.getVar()));
-      return TurbineOp.assignVoid(dst, src);
-    case FILE:
-      assert(src.isVar() && Types.isFileVal(src.getVar()));
-      return TurbineOp.assignFile(dst, src);
-    default:
-      throw new STCRuntimeError("method to set " +
-          dst.type().typeName() + " is not known yet");
+  public static Instruction retrievePrim(Var dst, Var src) {
+    assert(Types.isPrimValue(dst));
+    assert(Types.isPrimFuture(src));
+    if (Types.isScalarFuture(src)) {
+      return TurbineOp.retrieveScalar(dst, src);
+    } else if (Types.isFile(src)) {
+      return TurbineOp.retrieveFile(dst, src);
+    } else {
+      throw new STCRuntimeError("method to retrieve " +
+            src.type().typeName() + " is not known yet");
     }
   }
   

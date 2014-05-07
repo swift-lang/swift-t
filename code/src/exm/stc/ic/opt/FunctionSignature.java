@@ -22,13 +22,13 @@ import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.WrapUtil;
-import exm.stc.ic.tree.ICInstructions;
 import exm.stc.ic.tree.ICInstructions.FunctionCall;
 import exm.stc.ic.tree.ICInstructions.Instruction;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.RenameMode;
+import exm.stc.ic.tree.TurbineOp;
 
 /**
  * Optimize function signature
@@ -86,7 +86,7 @@ public class FunctionSignature implements OptimizerPass {
     for (WaitVar input: fn.blockingInputs()) {
       // See if we can switch to value version
       if (Types.isPrimFuture(input.var.type())) {
-        Type valueT = Types.derefResultType(input.var.type());
+        Type valueT = Types.retrievedType(input.var.type());
         if (Semantics.canPassToChildTask(valueT)) {
           switchVars.add(input.var);
         }
@@ -121,7 +121,7 @@ public class FunctionSignature implements OptimizerPass {
                           RenameMode.REPLACE_VAR, true);
       newBlock.addVariable(tmpfuture);
       Instruction store = 
-              ICInstructions.futureSet(tmpfuture, fv.val2.asArg());
+          TurbineOp.storePrim(tmpfuture, fv.val2.asArg());
       newBlock.addInstructionFront(store);
     }
     
@@ -145,7 +145,7 @@ public class FunctionSignature implements OptimizerPass {
     // these vars should already be closed.
     // load values and call new function
     
-    List<Arg> fetched = OptUtil.fetchValuesOf(main, switched);
+    List<Arg> fetched = OptUtil.fetchValuesOf(main, switched, false, false);
     
     List<Arg> callInputs = new ArrayList<Arg>(fn.getInputList().size());
     for (Var inArg: fn.getInputList()) {
@@ -183,7 +183,7 @@ public class FunctionSignature implements OptimizerPass {
       // a value var that will have unique name in new context
       String valVarName = OptUtil.optVPrefix(fn.mainBlock(), toSwitch);
       Var valVar = WrapUtil.createValueVar(valVarName,
-          Types.derefResultType(toSwitch.type()), toSwitch);
+          Types.retrievedType(toSwitch.type()), toSwitch);
       
       futValPairs.add(Pair.create(toSwitch, valVar));
     }

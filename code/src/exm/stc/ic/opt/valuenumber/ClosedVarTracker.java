@@ -1,10 +1,8 @@
 package exm.stc.ic.opt.valuenumber;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
@@ -15,6 +13,7 @@ import org.apache.log4j.Logger;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.MultiMap;
+import exm.stc.common.util.StackLite;
 
 /**
  * ClosedVarTracker keep tracks of which variables are closed and which computed
@@ -142,7 +141,7 @@ public class ClosedVarTracker {
       return null;
     }
     
-    Deque<Var> depStack = new ArrayDeque<Var>();
+    StackLite<Var> depStack = new StackLite<Var>();
     for (Var varAlias: varAliases) {
       depStack.addAll(directDeps(varAlias));
     }

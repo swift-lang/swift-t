@@ -21,12 +21,10 @@
 package exm.stc.tclbackend;
 
 import java.io.File;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -43,6 +41,7 @@ import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCFatal;
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.AsyncExecutor;
@@ -50,6 +49,7 @@ import exm.stc.common.lang.CompileTimeArgs;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ForeignFunctions;
+import exm.stc.common.lang.Unimplemented;
 import exm.stc.common.lang.ForeignFunctions.TclOpTemplate;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
@@ -65,14 +65,19 @@ import exm.stc.common.lang.Types.FileKind;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.NestedContainerInfo;
 import exm.stc.common.lang.Types.PrimType;
+import exm.stc.common.lang.Types.RefType;
 import exm.stc.common.lang.Types.StructType;
+import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.Typed;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarCount;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.StackLite;
+import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.tclbackend.Turbine.CacheMode;
 import exm.stc.tclbackend.Turbine.RuleProps;
 import exm.stc.tclbackend.Turbine.StackFrameType;
@@ -118,6 +123,7 @@ public class TurbineGenerator implements CompilerBackend {
   private static final String TCLTMP_SPLITEND = "tcltmp:splitend";
   private static final String TCLTMP_CONTAINER_SIZE = "tcltmp:container_sz";
   private static final String TCLTMP_ARRAY_CONTENTS = "tcltmp:contents";
+  private static final String TCLTMP_RETRIEVED = "tcltmp:retrieved";
   private static final String TCLTMP_RANGE_LO = "tcltmp:lo";
   private static final Value TCLTMP_RANGE_LO_V = new Value(TCLTMP_RANGE_LO);
   private static final String TCLTMP_RANGE_HI = "tcltmp:hi";
@@ -130,6 +136,7 @@ public class TurbineGenerator implements CompilerBackend {
   private static final String TCLTMP_INIT_REFCOUNT = "tcltmp:init_rc";
   private static final String TCLTMP_SPLIT_START = "tcltmp:splitstart";
   private static final String TCLTMP_SKIP = "tcltmp:skip";
+  private static final String TCLTMP_IGNORE = "tcltmp:ignore";
   
   private static final String MAIN_FUNCTION_NAME = "swift:main";
   private static final String CONSTINIT_FUNCTION_NAME = "swift:constants";
@@ -154,7 +161,8 @@ public class TurbineGenerator implements CompilerBackend {
      First entry is the sequence
      Second entry is a list of things to add at end of sequence
    */
-  Deque<Pair<Sequence, Sequence>> pointStack = new ArrayDeque<Pair<Sequence, Sequence>>();
+  StackLite<Pair<Sequence, Sequence>> pointStack = 
+      new StackLite<Pair<Sequence, Sequence>>();
 
   /**
    * Shortcut for current sequence in pointStack
@@ -182,10 +190,6 @@ public class TurbineGenerator implements CompilerBackend {
   private void pointAddEnd(TclTree cmd) {
     pointStack.peek().val2.add(cmd);
   }  
-
-  private void pointAppendEnd(Sequence seq) {
-    pointStack.peek().val2.append(seq);
-  }
   
   /**
    * Remove current sequence after adding any deferred commands
@@ -202,12 +206,12 @@ public class TurbineGenerator implements CompilerBackend {
   /**
    * Stack for (name, execImmediate) of loop functions
    */
-  Deque<EnclosingLoop> loopStack = new ArrayDeque<EnclosingLoop>();
+  StackLite<EnclosingLoop> loopStack = new StackLite<EnclosingLoop>();
 
   /**
    * Stack for what context we're in. 
    */
-  Deque<ExecContext> execContextStack = new ArrayDeque<ExecContext>();
+  StackLite<ExecContext> execContextStack = new StackLite<ExecContext>();
 
   String turbineVersion = Settings.get(Settings.TURBINE_VERSION);
 
@@ -297,7 +301,11 @@ public class TurbineGenerator implements CompilerBackend {
   public void turbineStartup(boolean checkpointRequired)
   {
     tree.add(new Command("turbine::defaults"));
-    tree.add(new Command("turbine::init $engines $servers \"Swift\""));
+    if (Settings.NO_TURBINE_ENGINE) {
+      tree.add(new Command("turbine::init $servers \"Swift\""));
+    } else {
+      tree.add(new Command("turbine::init $engines $servers \"Swift\""));
+    }
     try {
       if (Settings.getBoolean(Settings.ENABLE_REFCOUNTING)) {
         tree.add(Turbine.enableReferenceCounting());
@@ -384,37 +392,42 @@ public class TurbineGenerator implements CompilerBackend {
   private Sequence structTypeDeclarations() {
     Sequence result = new Sequence();
     
+    // TODO: sort struct types in order in case one type appears
+    // inside another. I think for now the frontend will guarantee
+    // this order, so we'll just check that it's true.
+    // Note that we can't have recursive struct types.
+    Set<StructType> declared = new HashSet<StructType>();
+    
     for (Pair<Integer, StructType> type: structTypes.getTypeList()) {
       int typeId = type.val1;
       StructType st = type.val2;
-      List<Pair<String, Type>> fields = structTypes.getFields(st);
      
       // Tcl expression list describing fields;
       List<Expression> fieldInfo = new ArrayList<Expression>();
-      for (Pair<String, Type> field: fields) {
-        // Field name, then reference type
-        fieldInfo.add(new TclString(field.val1, true));
-        fieldInfo.add(refRepresentationType(field.val2, true));
+      for (StructField field: st.getFields()) {
+        // Field name and type
+        fieldInfo.add(new TclString(field.getName(), true));
+        fieldInfo.addAll(dataDeclarationFullType(field.getType()));
+        if (Types.isStruct(field.getType())) {
+          assert(declared.contains(field.getType())) :
+            field.getType() + " struct type was not initialized";
+        }
       }
       
       Command decl = Turbine.declareStructType(new LiteralInt(typeId),
-                                      new TclString(st.getTypeName()),
-                                      new TclList(fieldInfo));
+                          structTypeName(st), new TclList(fieldInfo));
       result.add(decl);
+      declared.add(st);
     }
     return result;
   }
   
-  private TypeName structTypeName(Type type, boolean includeSubtype) {
-    assert(Types.isStruct(type));
-    if (includeSubtype) {
-      int structTypeId = structTypes.getIDForType((StructType)type);
-      // Form type name through concatenation
-      return Turbine.structTypeName(structTypeId);
-    } else {
-      // Don't include subtype
-      return Turbine.ADLB_STRUCT_REF_TYPE;
-    }
+  private TypeName structTypeName(Type type) {
+    assert(Types.isStruct(type) || Types.isStructLocal(type));
+    // Prefix Swift name with prefix to indicate struct type
+    
+    StructType st = (StructType)type.getImplType();
+    return new TypeName("s:" + st.getStructTypeName());
   }
 
   @Override
@@ -428,7 +441,7 @@ public class TurbineGenerator implements CompilerBackend {
       Arg initReaders = decl.initReaders;
       Arg initWriters = decl.initWriters;
       Type t = var.type();
-      assert(var.mapping() == null || Types.isMappable(t));
+      assert(!var.mappedDecl() || Types.isMappable(t));
       if (var.storage() == Alloc.ALIAS) {
         assert(initReaders == null && initWriters == null);
         continue;
@@ -436,10 +449,6 @@ public class TurbineGenerator implements CompilerBackend {
       // For now, just add provenance info as a comment
       pointAdd(new Comment("Var: " + t.typeName() + " " +
                 prefixVar(var.name()) + " " + var.provenance().logFormat()));
-     
-      // Check that init refcounts are valid
-      assert(RefCounting.hasReadRefCount(var) ^ initReaders == null);
-      assert(RefCounting.hasWriteRefCount(var) ^ initWriters == null);
   
       if (var.storage() == Alloc.GLOBAL_CONST) {
         // If global, it should already be in TCL global scope, just need to
@@ -447,7 +456,6 @@ public class TurbineGenerator implements CompilerBackend {
         pointAdd(Turbine.makeTCLGlobal(prefixVar(var)));
         continue;
       }
-      
   
       try {
         if (!Settings.getBoolean(Settings.ENABLE_REFCOUNTING)) {
@@ -462,27 +470,18 @@ public class TurbineGenerator implements CompilerBackend {
       if (Types.isFile(t)) {
         batchedFiles.add(decl);
       } else if (Types.isPrimFuture(t) || Types.isPrimUpdateable(t) ||
-          Types.isArray(t) || Types.isRef(t) || Types.isBag(t)) {
+          Types.isArray(t) || Types.isRef(t) || Types.isBag(t) ||
+          Types.isStruct(t)) {
         List<Expression> createArgs = new ArrayList<Expression>();
-        // Data type
-        createArgs.add(representationType(t, true));
-        // Subscript and value type for containers only
-        if (Types.isArray(t)) {
-          createArgs.add(arrayKeyType(t, true)); // key
-          createArgs.add(arrayValueType(t, true)); // value
-        } else if (Types.isBag(t)) {
-          createArgs.add(bagValueType(t, true));
-        }
+        createArgs.addAll(dataDeclarationFullType(t));
         if (initReaders != null)
           createArgs.add(argToExpr(initReaders));
         if (initWriters != null)
           createArgs.add(argToExpr(initWriters));
         batched.add(new TclList(createArgs));
         batchedVarNames.add(tclVarName);
-      } else if (Types.isStruct(t)) {
-        // don't allocate in data store
-        pointAdd(Turbine.allocateStruct(prefixVar(var)));
-      } else if (Types.isPrimValue(t) || Types.isContainerLocal(t)) {
+      } else if (Types.isPrimValue(t) || Types.isContainerLocal(t) ||
+                  Types.isStructLocal(t)) {
         assert(var.storage() == Alloc.LOCAL);
         // don't need to do anything
       } else {
@@ -528,6 +527,28 @@ public class TurbineGenerator implements CompilerBackend {
     }
   }
 
+  /**
+   * Return the full type required to create data by ADLB.
+   * In case of simple data, just the name - e.g. "int", or "mystruct"
+   * For containers, may need to have key/value/etc as separate arguments
+   * @param type
+   * @param createArgs
+   * @return
+   */
+  private List<Expression> dataDeclarationFullType(Type type) {
+    List<Expression> typeExprList = new ArrayList<Expression>();
+    // Basic data type
+    typeExprList.add(representationType(type));
+    // Subscript and value type for containers only
+    if (Types.isArray(type)) {
+      typeExprList.add(arrayKeyType(type, true)); // key
+      typeExprList.add(arrayValueType(type, true)); // value
+    } else if (Types.isBag(type)) {
+      typeExprList.add(bagValueType(type, true));
+    }
+    return typeExprList;
+  }
+
   private TypeName adlbPrimType(PrimType pt) {
     switch (pt) {
       case INT:
@@ -541,8 +562,7 @@ public class TurbineGenerator implements CompilerBackend {
       case STRING:
         return Turbine.ADLB_STRING_TYPE;
       default:
-        throw new STCRuntimeError("Unknown ADLB representation for "
-            + pt);
+        throw new STCRuntimeError("Unknown ADLB representation for " + pt);
     }
   }
   
@@ -550,25 +570,27 @@ public class TurbineGenerator implements CompilerBackend {
    * @param t
    * @return ADLB representation type
    */
-  private TypeName representationType(Type t, boolean creation) {
+  private TypeName representationType(Type t) {
     if (Types.isScalarFuture(t) || Types.isScalarUpdateable(t)) {
       return adlbPrimType(t.primType());
     } else if (Types.isRef(t)) {
-      return refRepresentationType(t.memberType(), creation);
+      return refRepresentationType(t.memberType());
     } else if (Types.isArray(t)) {
       return Turbine.ADLB_CONTAINER_TYPE;
     } else if (Types.isBag(t)) {
       return Turbine.ADLB_MULTISET_TYPE;
+    } else if (Types.isStruct(t)) {
+      return structTypeName(t);
+    } else if (Types.isFile(t)) {
+      return Turbine.ADLB_FILE_TYPE;
     } else {
       throw new STCRuntimeError("Unknown ADLB representation type for " + t);
     }
   }
 
-  private TypeName refRepresentationType(Type memberType, boolean creation) {
-      if (Types.isStruct(memberType)) {
-        return structTypeName(memberType, !creation);
-      } else if (Types.isFile(memberType)) {
-    	return Turbine.ADLB_FILE_REF_TYPE;
+  private TypeName refRepresentationType(Type memberType) {
+      if (Types.isFile(memberType)) {
+        return Turbine.ADLB_FILE_REF_TYPE;
       } else {
         return Turbine.ADLB_REF_TYPE;
       }
@@ -593,61 +615,55 @@ public class TurbineGenerator implements CompilerBackend {
                Types.isRef(t)) {
       // Local handle to remote data
       return Turbine.ADLB_REF_TYPE; 
-    } else if (Types.isStruct(t)) {
-      return structTypeName(t, true);
+    } else if (Types.isStructLocal(t)) {
+      return structTypeName(t);
     } else {
       throw new STCRuntimeError("Unknown ADLB representation type for " + t);
     }
   }
 
   private TypeName arrayKeyType(Typed arr, boolean creation) {
-    return representationType(Types.arrayKeyType(arr), creation);
+    return representationType(Types.arrayKeyType(arr));
   }
   
   private TypeName arrayValueType(Typed arrType, boolean creation) {
-    return refRepresentationType(Types.containerElemType(arrType), creation);
+    return representationType(Types.containerElemType(arrType));
   }
   
   private TypeName bagValueType(Typed bagType, boolean creation) {
-    return refRepresentationType(Types.containerElemType(bagType), creation);
+    return representationType(Types.containerElemType(bagType));
   }
   
   private void allocateFile(Var var, Arg initReaders) {
-    Value mapExpr = (var.mapping() == null) ? 
-                    null : varToExpr(var.mapping());
-    pointAdd(
-        Turbine.allocateFile(mapExpr, prefixVar(var),
+    Expression mappedExpr = LiteralInt.boolValue(var.mappedDecl());
+    pointAdd(Turbine.allocateFile(mappedExpr, prefixVar(var),
                              argToExpr(initReaders)));
   }
 
   @Override
   public void decrWriters(Var var, Arg amount) {
-    assert(RefCounting.hasWriteRefCount(var));
-    assert(!Types.isStruct(var.type()));
+    assert(RefCounting.trackWriteRefCount(var));
     // Close array by removing the slot we created at startup
     decrementWriters(Arrays.asList(var), argToExpr(amount));
   }
   
   @Override
   public void decrRef(Var var, Arg amount) {
-    assert(RefCounting.hasReadRefCount(var));
-    assert(!Types.isStruct(var.type()));
+    assert(RefCounting.trackReadRefCount(var));
     decrementReaders(Arrays.asList(var), argToExpr(amount));
   }
   
   @Override
   public void incrRef(Var var, Arg amount) {
-    assert(RefCounting.hasReadRefCount(var));
+    assert(RefCounting.trackReadRefCount(var));
     assert(amount.isImmediateInt());
-    assert(!Types.isStruct(var.type()));
     incrementReaders(Arrays.asList(var), argToExpr(amount));
   }
   
   @Override
   public void incrWriters(Var var, Arg amount) {
-    assert(RefCounting.hasWriteRefCount(var));
+    assert(RefCounting.trackWriteRefCount(var));
     assert(amount.isImmediateInt());
-    assert(!Types.isStruct(var.type()));
     incrementWriters(Arrays.asList(var), argToExpr(amount));
   }
   
@@ -655,22 +671,50 @@ public class TurbineGenerator implements CompilerBackend {
    * Set target=addressof(src)
    */
   @Override
-  public void assignReference(Var target, Var src) {
+  public void assignReference(Var target, Var src,
+                     long readRefs, long writeRefs) {
     assert(Types.isRef(target.type()));
     assert(target.type().memberType().equals(src.type()));
-    if (Types.isStructRef((target.type()))) {
-      pointAdd(Turbine.structRefSet(
-          varToExpr(target), varToExpr(src),
-          structTypeName(target.type(), false)));
-    } else if (Types.isFileRef(target.type())) {
+    if (Types.isFileRef(target.type())) {
     	pointAdd(Turbine.fileRefSet(
-    	          varToExpr(target), varToExpr(src)));
+    	          varToExpr(target), varToExpr(src),
+    	          new LiteralInt(readRefs), new LiteralInt(writeRefs)));
     } else {
       pointAdd(Turbine.refSet(
-          varToExpr(target), varToExpr(src)));
+          varToExpr(target), varToExpr(src),
+          new LiteralInt(readRefs), new LiteralInt(writeRefs)));
     }
   }
 
+
+  @Override
+  public void retrieveRef(Var dst, Var src, Arg acquireRead,
+                          Arg acquireWrite, Arg decr) {
+    assert(Types.isRef(src.type()));
+    assert(acquireRead.isIntVal());
+    assert(acquireWrite.isIntVal());
+    if (acquireWrite.isVar() || acquireWrite.getIntLit() > 0) {
+      assert(Types.isAssignableRefTo(src.type(), dst.type(), true));
+    } else {
+      assert(Types.isAssignableRefTo(src.type(), dst.type()));
+    }
+
+    assert(decr.isImmediateInt());
+    
+    Expression acquireReadExpr = argToExpr(acquireRead);
+    Expression acquireWriteExpr = argToExpr(acquireWrite);
+    
+    TypeName refType = refRepresentationType(dst.type());
+    TclTree deref;
+    if (acquireWrite.equals(Arg.ZERO)) {
+      deref = Turbine.readRefGet(prefixVar(dst), varToExpr(src),
+            refType, acquireReadExpr, argToExpr(decr));
+    } else {
+      deref = Turbine.readWriteRefGet(prefixVar(dst), varToExpr(src),
+            refType, acquireReadExpr, acquireWriteExpr, argToExpr(decr));
+    }
+    pointAdd(deref);
+  }
 
   @Override
   public void makeAlias(Var dst, Var src) {
@@ -681,152 +725,123 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void assignInt(Var target, Arg src) {
-    assert(src.isImmediateInt());
-    if (!Types.isInt(target.type())) {
-      throw new STCRuntimeError("Expected variable to be int, "
-          + " but was " + target.type().toString());
-    }
-
-    pointAdd(Turbine.integerSet(
-        varToExpr(target), argToExpr(src)));
-  }
-
-  @Override
-  public void retrieveInt(Var target, Var source, Arg decr) {
-    assert(Types.isIntVal(target));
-    assert(Types.isInt(source.type()));
-    assert(decr.isImmediateInt());
-    if (decr.equals(Arg.ZERO)) {
-      pointAdd(Turbine.integerGet(prefixVar(target),
-                                  varToExpr(source)));
-    } else {
-      pointAdd(Turbine.integerDecrGet(prefixVar(target),
-                            varToExpr(source), argToExpr(decr)));
-    }
-  }
-
-  @Override
-  public void assignBool(Var target, Arg src) {
-    assert(src.isImmediateBool());
-    if (!Types.isBool(target.type())) {
-      throw new STCRuntimeError("Expected variable to be bool, "
-          + " but was " + target.type().toString());
-    }
-
-    pointAdd(Turbine.integerSet(
-        varToExpr(target), argToExpr(src)));
-  }
-
-  @Override
-  public void retrieveBool(Var target, Var source, Arg decr) {
-    assert(Types.isBoolVal(target));
-    assert(Types.isBool(source.type()));
-
-    assert(decr.isImmediateInt());
-    if (decr.equals(Arg.ZERO)) {
-      pointAdd(Turbine.integerGet(prefixVar(target),
-          varToExpr(source)));
-    } else {
-      pointAdd(Turbine.integerDecrGet(prefixVar(target),
-          varToExpr(source), argToExpr(decr)));
+  public void assignScalar(Var dst, Arg src) {
+    assert(Types.isScalarFuture(dst));
+    assert(Types.isScalarValue(src));
+    assert(src.type().assignableTo(Types.retrievedType(dst)));
+    
+    PrimType primType = src.type().getImplType().primType();
+    switch (primType) {
+      case BLOB:
+        pointAdd(Turbine.blobSet(varToExpr(dst), argToExpr(src)));
+        break;
+      case FLOAT:
+        pointAdd(Turbine.floatSet(varToExpr(dst), argToExpr(src)));
+        break;
+      case BOOL:
+      case INT:
+        // Bool and int are represented internally as integers
+        pointAdd(Turbine.integerSet(varToExpr(dst), argToExpr(src)));
+        break;
+      case STRING:
+        pointAdd(Turbine.stringSet(varToExpr(dst), argToExpr(src)));
+        break;
+      case VOID:
+        // Don't need to provide input value to void
+        pointAdd(Turbine.voidSet(varToExpr(dst)));
+        break;
+      default:
+        throw new STCRuntimeError("Unknown or non-scalar prim type "
+                                   + primType);
     }
   }
-  
-  @Override
-  public void assignVoid(Var target, Arg src) {
-    assert(Types.isVoid(target.type()));
-    assert(Types.isVoidVal(src.type()));
-    pointAdd(Turbine.voidSet(varToExpr(target)));
-  }
 
   @Override
-  public void retrieveVoid(Var target, Var source, Arg decr) {
-    assert(Types.isVoidVal(target));
-    assert(Types.isVoid(source.type()));
+  public void retrieveScalar(Var dst, Var src, Arg decr) {
+    assert(Types.isScalarValue(dst));
+    assert(Types.isScalarFuture(src.type()));
+    assert(Types.retrievedType(src).assignableTo(dst.type()));
     assert(decr.isImmediateInt());
     
-    // Don't actually need to retrieve value as it has no contents
-    pointAdd(new SetVariable(prefixVar(target),
-                          Turbine.VOID_DUMMY_VAL));
+    PrimType primType = dst.type().getImplType().primType();
+    boolean hasDecrement = !decr.equals(Arg.ZERO);
+    switch (primType) {
+      case BLOB:
+        if (hasDecrement) {
+          pointAdd(Turbine.blobDecrGet(prefixVar(dst), varToExpr(src),
+                                      argToExpr(decr)));
+        } else {
+          pointAdd(Turbine.blobGet(prefixVar(dst), varToExpr(src)));
+        }
+        break;
+      case FLOAT:
+        if (hasDecrement) {
+          pointAdd(Turbine.floatDecrGet(prefixVar(dst), varToExpr(src),
+                                      argToExpr(decr)));
+        } else {
+          pointAdd(Turbine.floatGet(prefixVar(dst), varToExpr(src)));
+        }
+        break;
+      case BOOL:
+      case INT:
+        // Bool and int are represented internally as integers
+        if (hasDecrement) {
+          pointAdd(Turbine.integerDecrGet(prefixVar(dst), varToExpr(src),
+                                      argToExpr(decr)));
+        } else {
+          pointAdd(Turbine.integerGet(prefixVar(dst), varToExpr(src)));
+        }
+        break;
+      case STRING:
+        if (hasDecrement) {
+          pointAdd(Turbine.stringDecrGet(prefixVar(dst), varToExpr(src),
+              argToExpr(decr)));
+        } else {
+          pointAdd(Turbine.stringGet(prefixVar(dst), varToExpr(src)));
+        }
+        break;
+      case VOID:
+        // Don't actually need to retrieve value as it has no contents
+        pointAdd(new SetVariable(prefixVar(dst), Turbine.VOID_DUMMY_VAL));
 
-    if (!decr.equals(Arg.ZERO)) {
-      decrRef(source, decr);
+        if (hasDecrement) {
+          decrRef(src, decr);
+        }
+        break;
+      default:
+        throw new STCRuntimeError("Unknown or non-scalar prim type "
+                                   + primType);
     }
   }
 
   @Override
-  public void assignFloat(Var target, Arg src) {
-    assert(src.isImmediateFloat());
-    if (!Types.isFloat(target.type())) {
-      throw new STCRuntimeError("Expected variable to be float, "
-          + " but was " + target.type().toString());
-    }
-
-    pointAdd(Turbine.floatSet(
-          varToExpr(target), argToExpr(src)));
-  }
-
-  @Override
-  public void retrieveFloat(Var target, Var source, Arg decr) {
-    assert(Types.isFloatVal(target));
-    assert(Types.isFloat(source));
-
-    assert(decr.isImmediateInt());
-    if (decr.equals(Arg.ZERO)) {
-      pointAdd(Turbine.floatGet(prefixVar(target),
-                                                    varToExpr(source)));
-    } else {
-      pointAdd(Turbine.floatDecrGet(prefixVar(target),
-          varToExpr(source), argToExpr(decr)));
-    }
-  }
-
-  @Override
-  public void assignString(Var target, Arg src) {
-    assert(src.isImmediateString());
-    if (!Types.isString(target.type())) {
-      throw new STCRuntimeError("Expected variable to be string, "
-          + " but was " + target.type().toString());
-    }
-
-    pointAdd(Turbine.stringSet(
-        varToExpr(target), argToExpr(src)));
-  }
-
-  @Override
-  public void retrieveString(Var target, Var source, Arg decr) {
-    assert(Types.isString(source));
-    assert(Types.isStringVal(target));
-    assert(decr.isImmediateInt());
-    if (decr.equals(Arg.ZERO)) {
-      pointAdd(Turbine.stringGet(prefixVar(target),
-                                                      varToExpr(source)));
-    } else {
-      pointAdd(Turbine.stringDecrGet(prefixVar(target),
-          varToExpr(source), argToExpr(decr)));
-    }
-  }
-
-  @Override
-  public void assignBlob(Var target, Arg src) {
-    assert(Types.isBlob(target.type()));
-    assert(src.isImmediateBlob());
-    pointAdd(Turbine.blobSet(varToExpr(target),
-                                          argToExpr(src)));
-  }
-
-  @Override
-  public void retrieveBlob(Var target, Var src, Arg decr) {
-    assert(Types.isBlobVal(target));
-    assert(Types.isBlob(src.type()));
-    assert(decr.isImmediateInt());
-    if (decr.equals(Arg.ZERO)) {
-      pointAdd(Turbine.blobGet(prefixVar(target),
-                                                  varToExpr(src)));
-    } else {
-      pointAdd(Turbine.blobDecrGet(prefixVar(target),
-                                      varToExpr(src), argToExpr(decr)));
+  public void dereferenceScalar(Var dst, Var src) {
+    assert(Types.isScalarFuture(dst));
+    assert(Types.isRef(src));
+    assert(src.type().memberType().assignableTo(dst.type()));
+    
+    PrimType primType = dst.type().getImplType().primType();
+    switch (primType) {
+      case BLOB:
+        pointAdd(Turbine.dereferenceBlob(varToExpr(dst), varToExpr(src)));
+        break;
+      case FLOAT:
+        pointAdd(Turbine.dereferenceFloat(varToExpr(dst), varToExpr(src)));
+        break;
+      case BOOL:
+      case INT:
+        // Bool and int are represented by int
+        pointAdd(Turbine.dereferenceInteger(varToExpr(dst), varToExpr(src)));
+        break;
+      case STRING:
+        pointAdd(Turbine.dereferenceString(varToExpr(dst), varToExpr(src)));
+        break;
+      case VOID:
+        pointAdd(Turbine.dereferenceVoid(varToExpr(dst), varToExpr(src)));
+        break;
+      default:
+        throw new STCRuntimeError("Unknown or non-scalar prim type "
+                                   + primType);
     }
   }
 
@@ -837,11 +852,18 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void assignFile(Var target, Arg src) {
-    assert(Types.isFile(target.type()));
+  public void assignFile(Var dst, Arg src, Arg setFilename) {
+    assert(Types.isFile(dst.type()));
     assert(Types.isFileVal(src.type()));
-    pointAdd(Turbine.fileSet(varToExpr(target),
-                            prefixVar(src.getVar())));
+    // Sanity check that we're not setting mapped file
+    assert(setFilename.isImmediateBool());
+    if (setFilename.isBoolVal() && setFilename.getBoolLit()) {
+      // Sanity check that we're not setting mapped file
+      assert(dst.isMapped() != Ternary.TRUE) : dst;
+    }
+    
+    pointAdd(Turbine.fileSet(varToExpr(dst),
+              prefixVar(src.getVar()), argToExpr(setFilename)));
   }
 
   @Override
@@ -858,11 +880,20 @@ public class TurbineGenerator implements CompilerBackend {
   }
   
   @Override
+  public void dereferenceFile(Var target, Var src) {
+    assert(Types.isFile(target));
+    assert(Types.isFileRef(src));
+    Command deref = Turbine.dereferenceFile(varToExpr(target),
+                                            varToExpr(src));
+    pointAdd(deref);
+  }
+
+  @Override
   public void assignArray(Var target, Arg src) {
     assert(Types.isArray(target));
     assert(Types.isArrayLocal(src.type()));
     assert(Types.containerElemType(src.type()).assignableTo(
-              Types.containerElemType(target)));
+              Types.containerElemValType(target)));
     assert(Types.arrayKeyType(src.type()).assignableTo(
             Types.arrayKeyType(target.type())));
     
@@ -873,7 +904,7 @@ public class TurbineGenerator implements CompilerBackend {
   public void retrieveArray(Var target, Var src, Arg decr) {
     assert(Types.isArray(src));
     assert(Types.isArrayLocal(target));
-    assert(Types.containerElemType(src).assignableTo(
+    assert(Types.containerElemValType(src).assignableTo(
                     Types.containerElemType(target)));
 
     assert(Types.arrayKeyType(src.type()).assignableTo(
@@ -889,10 +920,9 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isBag(target));
     assert(Types.isBagLocal(src.type()));
     assert(Types.containerElemType(src.type()).assignableTo(
-              Types.containerElemType(target)));    
+              Types.containerElemValType(target)));    
 
-    TypeName elemType = representationType(Types.containerElemType(target),
-                                          false);
+    TypeName elemType = representationType(Types.containerElemType(target));
     pointAdd(Turbine.multisetBuild(varToExpr(target), argToExpr(src), LiteralInt.ONE,
                                    Collections.singletonList(elemType)));
   }
@@ -902,10 +932,94 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isBag(src));
     assert(Types.isBagLocal(target));
     assert(decr.isImmediateInt());
-    assert(Types.containerElemType(src).assignableTo(
+    assert(Types.containerElemValType(src).assignableTo(
                     Types.containerElemType(target)));
-    pointAdd(Turbine.enumerateAll(prefixVar(target), varToExpr(src),
-                                       false, argToExpr(decr)));
+
+    pointAdd(Turbine.enumerateAll(prefixVar(target), varToExpr(src), false,
+            argToExpr(decr)));
+  }
+  
+  @Override
+  public void structInitFields(Var struct, List<List<String>> fieldPaths,
+      List<Arg> fieldVals, Arg writeDecr) {
+    /*
+     * Implement by storing a local struct with missing fields.
+     * ADLB/Turbine semantics allow us to do this: only the required
+     * fields will be overwritten.
+     */
+    // TODO: assertions
+    assert(Types.isStruct(struct));
+    assert(fieldPaths.size() == fieldVals.size());
+    assert(writeDecr.isImmediateInt());
+    
+
+    Dict dict = localStructDict(struct, fieldPaths, fieldVals);
+    
+    List<TypeName> structTypeName = Collections.singletonList(
+            representationType(struct.type()));
+    
+    // Struct should own both refcount types
+    Expression storeReadRC = LiteralInt.ONE;
+    Expression storeWriteRC = LiteralInt.ONE;
+    
+    pointAdd(Turbine.adlbStore(varToExpr(struct),
+            dict, structTypeName, argToExpr(writeDecr),
+            LiteralInt.ZERO, storeReadRC, storeWriteRC));
+  }
+
+  private Dict localStructDict(Var struct, List<List<String>> fieldPaths,
+      List<Arg> fieldVals) {
+    // Restructure into pairs
+    List<Pair<List<String>, Arg>> fields =
+              new ArrayList<Pair<List<String>,Arg>>(fieldPaths.size());
+    for (int i = 0; i < fieldPaths.size(); i++) {
+      List<String> fieldPath = fieldPaths.get(i);
+      Arg fieldVal = fieldVals.get(i);
+      assert(Types.isStructFieldVal(struct, fieldPath, fieldVal));
+      fields.add(Pair.create(fieldPath, fieldVal));
+    }
+    
+    // Build dict containing only fields to initialise
+    Dict dict = TurbineStructs.buildNestedDict(fields);
+    return dict;
+  }
+  
+  @Override
+  public void buildStructLocal(Var struct, List<List<String>> fieldPaths,
+                                List<Arg> fieldVals) {
+    assert(Types.isStructLocal(struct));
+    Dict dictExpr = localStructDict(struct, fieldPaths, fieldVals);
+    
+    pointAdd(new SetVariable(prefixVar(struct), dictExpr));
+  }
+  
+  @Override
+  public void assignStruct(Var target, Arg src) {
+    assert(Types.isStruct(target));
+    assert(Types.isStructLocal(src.type()));
+    assert(StructType.sharedStruct((StructType)src.type().getImplType())
+            .assignableTo(target.type()));
+    
+    // Must decrement any refcounts not explicitly tracked since
+    // we're assigning the struct in whole
+    long writeDecr = RefCounting.baseWriteRefCount(target, true, true);
+    
+    TypeName structType = representationType(target.type());
+    pointAdd(Turbine.structSet(varToExpr(target), argToExpr(src),
+                          structType, new LiteralInt(writeDecr)));
+  }
+
+  @Override
+  public void retrieveStruct(Var target, Var src, Arg decr) {
+    assert(Types.isStruct(src));
+    assert(Types.isStructLocal(target));
+    assert(decr.isImmediateInt());
+
+    assert(StructType.sharedStruct((StructType)target.type().getImplType())
+            .assignableTo(src.type()));
+    
+    pointAdd(Turbine.structDecrGet(prefixVar(target), varToExpr(src),
+                                   argToExpr(decr)));
   }
   
   @Override
@@ -915,10 +1029,9 @@ public class TurbineGenerator implements CompilerBackend {
     assert(src.type().assignableTo(
               Types.unpackedContainerType(target)));    
 
-    // TODO: move to Turbine.java
-    List<TypeName> typeList = nestedTypeList(target.type(), true, false, true); 
-    pointAdd(new Command("turbine::build_rec", Arrays.asList(
-         varToExpr(target), argToExpr(src), new TclList(typeList))));
+    List<TypeName> typeList = recursiveTypeList(target.type(), false, true,
+                                                true, true, true); 
+    pointAdd(Turbine.buildRec(typeList, varToExpr(target), argToExpr(src)));
   }
   
   @Override
@@ -927,46 +1040,71 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isContainerLocal(target));
     assert(Types.unpackedContainerType(src).assignableTo(target.type()));
 
-    List<TypeName> typeList = nestedTypeList(src.type(), false, false, true);
+    List<TypeName> typeList =
+        recursiveTypeList(src.type(), false, false, true, true, true);
     
     pointAdd(Turbine.enumerateRec(prefixVar(target), typeList,
               varToExpr(src), argToExpr(decr)));
   }
 
-  private List<TypeName> nestedTypeList(Type type,
-            boolean includeKeyTypes, boolean valueType,
-            boolean includeBaseType) {
+  /**
+   * 
+   * @param type
+   * @param valueType
+   * @param includeKeyTypes
+   * @param includeBaseType
+   * @param followRefs if false, stop at first reference type
+   * @param includeRefs Include ref types followed in output
+   * @return
+   */
+  private List<TypeName> recursiveTypeList(Type type,
+        boolean valueType, boolean includeKeyTypes,
+        boolean includeBaseType, boolean followRefs,
+        boolean includeRefs) {
     List<TypeName> typeList = new ArrayList<TypeName>();
     Type curr = type;
     do {
-      TypeName reprType;
-      if (valueType) {
-        reprType = valRepresentationType(curr);
-      } else {
-        reprType = representationType(curr, false);
-      }
-      typeList.add(reprType);
+      typeList.add(reprTypeHelper(valueType, curr));
       if (includeKeyTypes &&
           (Types.isArray(curr) || Types.isArrayLocal(curr))) {
         // Include key type if requested
         typeList.add(representationType(Types.arrayKeyType(
-                curr), false));
+        curr)));
       }
       
       curr = Types.containerElemType(curr);
-    } while (Types.isContainer(curr) || Types.isContainerLocal(curr));
-    
-    if (includeBaseType) {
-      TypeName reprType;
-      if (valueType) {
-        reprType = valRepresentationType(curr); 
-      } else {
-        reprType = representationType(curr, false);
+      if (followRefs && Types.isContainerRef(curr)) {
+        // Strip off reference
+        curr = Types.retrievedType(curr);
+        if (includeRefs) {
+          typeList.add(refRepresentationType(curr));  
+        }
       }
-      typeList.add(reprType);
+    } while ((Types.isContainer(curr) ||
+              Types.isContainerLocal(curr)));
+    
+    while (followRefs && Types.isRef(curr)) {
+      curr = Types.retrievedType(curr);
+      if (includeRefs && includeBaseType) {
+        typeList.add(refRepresentationType(curr));
+      }
+    }
+
+    if (includeBaseType) {
+      typeList.add(reprTypeHelper(valueType, curr));
     }
     
     return typeList;
+  }
+
+  private TypeName reprTypeHelper(boolean valueType, Type type) {
+    TypeName reprType;
+    if (valueType) {
+      reprType = valRepresentationType(type);
+    } else {
+      reprType = representationType(type);
+    }
+    return reprType;
   }
 
   @Override
@@ -976,7 +1114,7 @@ public class TurbineGenerator implements CompilerBackend {
   }
   
   @Override
-  public void getFileName(Var filename, Var file) {
+  public void getFileNameAlias(Var filename, Var file) {
     assert(Types.isString(filename.type()));
     assert(filename.storage() == Alloc.ALIAS);
     assert(Types.isFile(file.type()));
@@ -984,6 +1122,15 @@ public class TurbineGenerator implements CompilerBackend {
     SetVariable cmd = new SetVariable(prefixVar(filename),
                           Turbine.getFileName(varToExpr(file)));
     pointAdd(cmd);
+  }
+  
+  /**
+   * Copy filename from future to file
+   */
+  public void copyInFilename(Var file, Var filename) {
+    assert(Types.isString(filename));
+    assert(Types.isFile(file));
+    pointAdd(Turbine.copyInFilename(varToExpr(file), varToExpr(filename)));
   }
   
   @Override
@@ -1000,6 +1147,14 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isBoolVal(isMapped));
     pointAdd(Turbine.isMapped(prefixVar(isMapped),
                                            varToExpr(file)));
+  }
+
+  @Override
+  public void getFilenameVal(Var filenameVal, Var file) {
+    assert(Types.isFile(file.type()));
+    assert(Types.isStringVal(filenameVal));
+    pointAdd(new SetVariable(prefixVar(filenameVal),
+            Turbine.getFilenameVal(varToExpr(file))));
   }
   
   @Override
@@ -1105,99 +1260,6 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void dereferenceInt(Var target, Var src) {
-    assert(Types.isInt(target.type()));
-    assert(Types.isIntRef(src));
-    Command deref = Turbine.dereferenceInteger(varToExpr(target),
-                                               varToExpr(src));
-    pointAdd(deref);
-  }
-
-  @Override
-  public void dereferenceVoid(Var target, Var src) {
-    assert(Types.isVoid(target.type()));
-    assert(Types.isVoidRef(src));
-    Command deref = Turbine.dereferenceVoid(varToExpr(target),
-                                               varToExpr(src));
-    pointAdd(deref);
-  }
-  
-  @Override
-  public void dereferenceBool(Var target, Var src) {
-    assert(Types.isBool(target.type()));
-    assert(Types.isBoolRef(src));
-    Command deref = Turbine.dereferenceInteger(varToExpr(target),
-                                               varToExpr(src));
-    pointAdd(deref);
-  }
-
-  @Override
-  public void dereferenceFloat(Var target, Var src) {
-    assert(Types.isFloat(target));
-    assert(Types.isFloatRef(src));
-    Command deref = Turbine.dereferenceFloat(varToExpr(target),
-                                             varToExpr(src));
-    pointAdd(deref);
-  }
-
-  @Override
-  public void dereferenceString(Var target, Var src) {
-    assert(Types.isString(target));
-    assert(Types.isStringRef(src));
-    Command deref = Turbine.dereferenceString(varToExpr(target), 
-                                              varToExpr(src));
-    pointAdd(deref);
-  }
-
-  @Override
-  public void dereferenceBlob(Var target, Var src) {
-    assert(Types.isBlob(target));
-    assert(Types.isBlobRef(src));
-    Command deref = Turbine.dereferenceBlob(varToExpr(target), varToExpr(src));
-    pointAdd(deref);
-  }
-  
-  @Override
-  public void dereferenceFile(Var target, Var src) {
-    assert(Types.isFile(target));
-    assert(Types.isFileRef(src));
-    Command deref = Turbine.dereferenceFile(varToExpr(target),
-                                            varToExpr(src));
-    pointAdd(deref);
-  }
-
-  @Override
-  public void retrieveRef(Var target, Var src, Arg decr) {
-    assert(Types.isRef(src.type()));
-    assert(Types.isAssignableRefTo(src.type(), target.type()));
-    assert(decr.isImmediateInt());
-    TclTree deref;
-    if (Types.isStructRef(src.type())) {
-      if (decr.equals(Arg.ZERO)) {
-        deref = Turbine.structRefGet(prefixVar(target), varToExpr(src));
-      } else {
-        deref = Turbine.structRefDecrGet(prefixVar(target), varToExpr(src),
-                                      argToExpr(decr));
-      }
-    } else if (Types.isFileRef(src.type())) {
-      if (decr.equals(Arg.ZERO)) {
-        deref = Turbine.fileRefGet(prefixVar(target), varToExpr(src));
-      } else {
-        deref = Turbine.fileRefDecrGet(prefixVar(target), varToExpr(src),
-            argToExpr(decr));
-      }
-    } else {
-      if (decr.equals(Arg.ZERO)) {
-        deref = Turbine.refGet(prefixVar(target), varToExpr(src));
-      } else {
-        deref = Turbine.refDecrGet(prefixVar(target), varToExpr(src),
-                                    argToExpr(decr));
-      }
-    }
-    pointAdd(deref);
-  }
-
-  @Override
   public void arrayCreateNestedFuture(Var arrayResult,
       Var array, Var ix) {
     assert(Types.isArray(array.type()));
@@ -1212,16 +1274,15 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void arrayRefCreateNestedFuture(Var arrayResult,
-      Var outerArray, Var arrayRefVar, Var ix) {
+  public void arrayRefCreateNestedFuture(Var arrayResult, Var arrayRefVar,
+                                         Var ix) {
     assert(Types.isArrayRef(arrayRefVar.type()));
     assert(Types.isArrayRef(arrayResult.type()));
     assert(arrayResult.storage() != Alloc.ALIAS);
     assert(Types.isArrayKeyFuture(arrayRefVar, ix));
 
     TclTree t = Turbine.containerRefCreateNested(
-        varToExpr(arrayResult), varToExpr(arrayRefVar),
-        varToExpr(ix), varToExpr(outerArray),
+        varToExpr(arrayResult), varToExpr(arrayRefVar), varToExpr(ix),
         arrayKeyType(arrayResult, true), arrayValueType(arrayResult, true));
     pointAdd(t);
   }
@@ -1229,50 +1290,55 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void arrayCreateNestedImm(Var arrayResult, Var array, Arg ix,
-        Arg callerReadRefs, Arg callerWriteRefs) {
+        Arg callerReadRefs, Arg callerWriteRefs,
+        Arg readDecr, Arg writeDecr) {
     assert(Types.isArray(array.type()));
     assert(Types.isArray(arrayResult.type()));
     assert(arrayResult.storage() == Alloc.ALIAS);
     assert(Types.isArrayKeyVal(array, ix));
     assert(callerReadRefs.isImmediateInt());
     assert(callerWriteRefs.isImmediateInt());
+    assert(readDecr.isImmediateInt());
+    assert(writeDecr.isImmediateInt());
     
     TclTree t = Turbine.containerCreateNestedImmIx(
         prefixVar(arrayResult), varToExpr(array), argToExpr(ix),
         arrayKeyType(arrayResult, true), arrayValueType(arrayResult, true),
-        argToExpr(callerReadRefs), argToExpr(callerWriteRefs));
+        argToExpr(callerReadRefs), argToExpr(callerWriteRefs),
+        argToExpr(readDecr), argToExpr(writeDecr));
     pointAdd(t);
   }
 
   @Override
-  public void arrayRefCreateNestedImm(Var arrayResult,
-      Var outerArray, Var array, Arg ix) {
+  public void arrayRefCreateNestedImm(Var arrayResult, Var array, Arg ix) {
     assert(Types.isArrayRef(array.type()));
     assert(Types.isArrayRef(arrayResult.type()));
     assert(arrayResult.storage() != Alloc.ALIAS);
     assert(Types.isArrayKeyVal(array, ix));
 
     TclTree t = Turbine.containerRefCreateNestedImmIx(
-        varToExpr(arrayResult), varToExpr(array),
-        argToExpr(ix), varToExpr(outerArray),
+        varToExpr(arrayResult), varToExpr(array), argToExpr(ix),
         arrayKeyType(arrayResult, true), arrayValueType(arrayResult, true));
     pointAdd(t);
   }
 
   @Override
   public void arrayCreateBag(Var bag, Var arr, Arg ix, Arg callerReadRefs,
-      Arg callerWriteRefs) {
+      Arg callerWriteRefs, Arg readDecr, Arg writeDecr) {
     assert(Types.isBag(bag));
     assert(bag.storage() == Alloc.ALIAS);
     assert(Types.isArrayKeyVal(arr, ix));
-    assert(Types.isMemberType(arr, bag));
+    assert(Types.isElemValType(arr, bag)) : arr + " " + bag;
     assert(callerReadRefs.isImmediateInt());
     assert(callerWriteRefs.isImmediateInt());
+    assert(readDecr.isImmediateInt());
+    assert(writeDecr.isImmediateInt());
     
     TclTree t = Turbine.containerCreateNestedBag(
             prefixVar(bag), varToExpr(arr), argToExpr(ix),
             bagValueType(bag, true),
-            argToExpr(callerReadRefs), argToExpr(callerWriteRefs));
+            argToExpr(callerReadRefs), argToExpr(callerWriteRefs),
+            argToExpr(readDecr), argToExpr(writeDecr));
     pointAdd(t);
   }
 
@@ -1343,18 +1409,14 @@ public class TurbineGenerator implements CompilerBackend {
               List<Boolean> blocking, TaskMode mode, TaskProps props)  {
     props.assertInternalTypesValid();
     
-    List<Value> blockOn = new ArrayList<Value>();
-    Set<Var> alreadyBlocking = new HashSet<Var>();
+    List<Var> blockinInputVars = new ArrayList<Var>();
     for (int i = 0; i < inputs.size(); i++) {
-      Arg arg = inputs.get(i);
-      if (arg.isVar()) {
-        Var v = arg.getVar();
-        if (blocking.get(i) && !alreadyBlocking.contains(v)) {
-          blockOn.add(varToExpr(v));
-          alreadyBlocking.add(v);
-        }
+      Arg input = inputs.get(i);
+      if (input.isVar() && blocking.get(i)) {
+        blockinInputVars.add(input.getVar());
       }
     }
+    List<Expression> blockOn = getTurbineWaitIDs(blockinInputVars);
 
     String swiftFuncName = TclNamer.swiftFuncName(function);
     if (mode == TaskMode.CONTROL || mode == TaskMode.LOCAL ||
@@ -1466,127 +1528,298 @@ public class TurbineGenerator implements CompilerBackend {
       pointAdd(Turbine.setPriority(argToExpr(priority)));
     }
   }
+  
+  /**
+   * Construct subscript expression for struct
+   * @param struct
+   * @param fields
+   * @return
+   */
+  public static Expression structSubscript(Var struct,
+                                           List<String> fields) {
+    assert(Types.isStruct(struct) || Types.isStructRef(struct));
 
-  @Override
-  public void structInitField(Var structVar, String fieldName,
-      Var fieldContents) {
-    pointAdd(
-        Turbine.structInsert(prefixVar(structVar),
-            fieldName, varToExpr(fieldContents)));
+    Type curr = struct.type().getImplType();
+    if (Types.isStructRef(curr)) {
+      curr = curr.memberType();
+    }
+    
+    int[] indices = structFieldIndices(curr, fields);
+    return Turbine.structSubscript(indices);
   }
 
+  private static int[] structFieldIndices(Type type, List<String> fields) {
+    // use struct type info to construct index list
+    int indices[] = new int[fields.size()];
+    for (int i = 0; i < fields.size(); i++) {
+      assert(type instanceof StructType);
+      String field = fields.get(i);
+      int fieldIx = ((StructType)type).getFieldIndexByName(field);
+      assert(fieldIx >= 0) : field + " " + type;
+      indices[i] = fieldIx;
+      // Get inner type
+      type = ((StructType)type).getFields().get(fieldIx).getType();
+    }
+    return indices;
+  }
+
+  @Override
+  public void structStore(Var struct, List<String> fields,
+      Arg fieldContents) {
+    assert(Types.isStruct(struct));
+    assert(Types.isStructFieldVal(struct, fields, fieldContents));
+    
+    int[] indices = structFieldIndices(struct.type(), fields);
+    
+    // Work out write refcounts for field (might be > 1 if struct)
+    Type fieldType;
+    try {
+      fieldType = Types.structFieldType(struct, fields);
+    } catch (TypeMismatchException e) {
+      throw new STCRuntimeError(e.getMessage());
+    }
+    long writeDecr = RefCounting.baseRefCount(fieldType, DefType.LOCAL_COMPILER,
+                                          RefCountType.WRITERS, false, true);
+    
+    pointAdd(Turbine.insertStruct(varToExpr(struct),
+        Turbine.structSubscript(indices), argToExpr(fieldContents),
+        Collections.singletonList(valRepresentationType(fieldContents.type())),
+        new LiteralInt(writeDecr)));
+  }
+  
+  @Override
+  public void structCopyIn(Var struct, List<String> fields,
+                           Var fieldContents) {
+    assert(Types.isStruct(struct));
+    assert(Types.isStructField(struct, fields, fieldContents));
+    Expression subscript = structSubscript(struct, fields);
+    // TODO
+    throw new STCRuntimeError("TODO: Not yet implemented");
+  }
+  
+  @Override
+  public void structRefCopyIn(Var structRef, List<String> fields,
+                           Var fieldContents) {
+    assert(Types.isStructRef(structRef));
+    assert(Types.isStructField(structRef, fields, fieldContents));
+    Expression subscript = structSubscript(structRef, fields);
+    // TODO
+    throw new STCRuntimeError("Not yet implemented");
+  }
+
+  @Override
+  public void structRefStoreSub(Var structRef, List<String> fields,
+      Arg fieldContents) {
+    assert(Types.isStructRef(structRef));
+    assert(Types.isStructField(structRef, fields, fieldContents));
+    Expression subscript = structSubscript(structRef, fields);
+    // TODO
+    throw new STCRuntimeError("Not yet implemented");
+  }
+  
   /**
-   * load the turbine id of the field into alias
+   * Create alias for a struct field
    * @param structVar
    * @param structField
    * @param alias
    */
   @Override
-  public void structLookup(Var alias, Var structVar,
-        String structField) {
-    pointAdd(
-        Turbine.structLookupFieldID(varToExpr(structVar),
-            structField, prefixVar(alias)));
+  public void structCreateAlias(Var alias, Var struct,
+                           List<String> fields) {
+    assert(alias.storage() == Alloc.ALIAS) : alias;
+    assert(Types.isStruct(struct));
+    assert(Types.isStructField(struct, fields, alias));
+    // Simple create alias as handle
+    Expression aliasExpr = Turbine.structAlias(varToExpr(struct), 
+                       structFieldIndices(struct.type(), fields));
+    pointAdd(new SetVariable(prefixVar(alias), aliasExpr));
   }
 
+
   @Override
-  public void structRefLookup(Var alias, Var structVar,
-        String structField) {
-    assert(Types.isRef(alias.type()));
-    assert(Types.isStructRef(structVar));
+  public void structRetrieveSub(Var output, Var struct, List<String> fields,
+      Arg readDecr) {
+    assert(Types.isStruct(struct));
+    assert(Types.isStructFieldVal(struct, fields, output));
+
+    Expression subscript = structSubscript(struct, fields);
+    Expression readAcquire = LiteralInt.ONE;
     
-    StructType structType = (StructType)structVar.type().memberType();
-    int fieldID = structTypes.getFieldID(structType, structField);
+    // TODO: may want to support acquiring write in future
+    Expression expr = Turbine.lookupStruct(varToExpr(struct),
+                subscript, argToExpr(readDecr), readAcquire,
+                null, null);
+    pointAdd(new SetVariable(prefixVar(output), expr));
+  }
+
+  @Override
+  public void structCopyOut(Var output, Var struct,
+      List<String> fields) {
+    assert(Types.isStruct(struct)) : struct;
+    assert(Types.isStructField(struct, fields, output));
+    Expression subscript = structSubscript(struct, fields);
+    pointAdd(Turbine.copyStructSubscript(varToExpr(output), varToExpr(struct),
+              subscript, representationType(output.type())));
+  }
+  
+  @Override
+  public void structRefCopyOut(Var output, Var structRef,
+                              List<String> fields) {
+    assert(Types.isStructRef(structRef)) : structRef;
+    assert(Types.isStructField(structRef, fields, output)) :
+      structRef.name() + ":" + structRef.type() + " " 
+      + fields + " " + output;
     
-    pointAdd(
-        Turbine.structRefLookupFieldID(varToExpr(structVar),
-            fieldID, varToExpr(alias),
-            refRepresentationType(alias.type().memberType(), false)));
-  }
-
-
-  @Override
-  public void arrayLookupFuture(Var oVar, Var arrayVar, Var indexVar,
-        boolean isArrayRef) {
-    arrayLoadCheckTypes(oVar, arrayVar, isArrayRef);
-    assert(Types.isArrayKeyFuture(arrayVar, indexVar));
-    assert(Types.isRef(oVar.type()));
-    // Nested arrays - oVar should be a reference type
-    Command getRef = Turbine.arrayLookupComputed(varToExpr(oVar), 
-        refRepresentationType(oVar.type().memberType(), false),
-        varToExpr(arrayVar), varToExpr(indexVar), isArrayRef);
-    pointAdd(getRef);
+    Expression subscript = structSubscript(structRef, fields);
+    
+    pointAdd(Turbine.copyStructRefSubscript(varToExpr(output),
+        varToExpr(structRef), subscript, representationType(output.type())));
   }
 
   @Override
-  public void arrayLookupRefImm(Var oVar, Var arrayVar, Arg arrIx,
-        boolean isArrayRef) {
+  public void arrayRetrieve(Var oVar, Var arrayVar, Arg arrIx, Arg readDecr) {
     assert(Types.isArrayKeyVal(arrayVar, arrIx));
+    assert(Types.isElemValType(arrayVar, oVar));
+    pointAdd(Turbine.arrayLookupImm(prefixVar(oVar), varToExpr(arrayVar),
+             argToExpr(arrIx), argToExpr(readDecr)));
+  }
+
+  @Override
+  public void arrayCreateAlias(Var alias, Var arrayVar, Arg arrIx) {
+    assert(alias.storage() == Alloc.ALIAS) : alias;
+    assert(Types.isArrayKeyVal(arrayVar, arrIx));
+    assert(Types.isArray(arrayVar)) : arrayVar;
+    assert(Types.isElemType(arrayVar, alias));
     
-    arrayLoadCheckTypes(oVar, arrayVar, isArrayRef);
+    // Check that we can generate valid code for it
+    assert(Unimplemented.subscriptAliasSupported(arrayVar));
+    
+    // Simple create alias as handle
+    Expression aliasExpr = Turbine.arrayAlias(varToExpr(arrayVar), 
+                                              argToExpr(arrIx));
+    pointAdd(new SetVariable(prefixVar(alias), aliasExpr));
+  }
+  
+  
+  @Override
+  public void arrayCopyOutImm(Var oVar, Var arrayVar, Arg arrIx) {
+    assert(Types.isArrayKeyVal(arrayVar, arrIx));
+    assert(Types.isArray(arrayVar)) : arrayVar;
+    assert(Types.isElemType(arrayVar, oVar));
+    
     Command getRef = Turbine.arrayLookupImmIx(
           varToExpr(oVar),
           arrayValueType(arrayVar.type(), false),
           varToExpr(arrayVar),
-          argToExpr(arrIx), isArrayRef);
+          argToExpr(arrIx), false);
 
+    pointAdd(getRef);
+  }
+  
+  @Override
+  public void arrayCopyOutFuture(Var oVar, Var arrayVar, Var indexVar) {
+    assert(Types.isArrayKeyFuture(arrayVar, indexVar));
+    assert(Types.isArray(arrayVar));
+    assert(Types.isElemType(arrayVar, oVar));
+    // Nested arrays - oVar should be a reference type
+    Command getRef = Turbine.arrayLookupComputed(varToExpr(oVar), 
+        representationType(oVar.type()),
+        varToExpr(arrayVar), varToExpr(indexVar), false);
     pointAdd(getRef);
   }
 
   @Override
-  public void arrayLookupImm(Var oVar, Var arrayVar, Arg arrIx) {
+  public void arrayRefCopyOutImm(Var oVar, Var arrayVar, Arg arrIx) {
     assert(Types.isArrayKeyVal(arrayVar, arrIx));
-    assert(oVar.type().equals(Types.containerElemType(arrayVar.type())));
-     pointAdd(Turbine.arrayLookupImm(
-         prefixVar(oVar),
-         varToExpr(arrayVar),
-         argToExpr(arrIx)));
+    assert(Types.isArrayRef(arrayVar));
+    assert(Types.isElemType(arrayVar, oVar));
+
+    Command getRef = Turbine.arrayLookupImmIx(
+          varToExpr(oVar),
+          arrayValueType(arrayVar.type(), false),
+          varToExpr(arrayVar),
+          argToExpr(arrIx), true);
+
+    pointAdd(getRef);
   }
-
-  /**
-   * Make sure that types are valid for array load invocation
-   * @param oVar The variable the result of the array should go into
-   * @param arrayVar
-   * @param isReference
-   * @return the member type of the array
-   */
-  private Type arrayLoadCheckTypes(Var oVar, Var arrayVar,
-      boolean isReference) {
-    // Check that the types of the array variable are correct
-    if (isReference) {
-      assert(Types.isArrayRef(arrayVar));
-    } else {
-      assert(Types.isArray(arrayVar.type()));
-    }
-    Type memberType = Types.containerElemType(arrayVar);
-
-
-    Type oType = oVar.type();
-    if (!Types.isRef(oType)) {
-      throw new STCRuntimeError("Output variable for " +
-          "array lookup should be a reference " +
-          " but had type " + oType.toString());
-    }
-    if (!oType.memberType().equals(memberType)) {
-      throw new STCRuntimeError("Output variable for "
-          +" array lookup should be reference to "
-          + memberType.toString() + ", but was reference to"
-          + oType.memberType().toString());
-    }
-
-    return memberType;
+  
+  @Override
+  public void arrayRefCopyOutFuture(Var oVar, Var arrayVar, Var indexVar) {
+    assert(Types.isArrayRef(arrayVar));
+    assert(Types.isElemType(arrayVar, oVar));
+    assert(Types.isArrayKeyFuture(arrayVar, indexVar));
+    
+    // Nested arrays - oVar should be a reference type
+    Command getRef = Turbine.arrayLookupComputed(varToExpr(oVar), 
+        representationType(oVar.type()),
+        varToExpr(arrayVar), varToExpr(indexVar), true);
+    pointAdd(getRef);
   }
 
   @Override
-  public void arrayInsertFuture(Var array, Var ix, Var member,
-                                Arg writersDecr) {
+  public void arrayContains(Var out, Var arr, Arg index) {
+    assert(Types.isBoolVal(out));
+    assert(Types.isArray(arr));
+    assert(Types.isArrayKeyVal(arr, index));
+    pointAdd(new SetVariable(prefixVar(out),
+         Turbine.arrayContains(varToExpr(arr), argToExpr(index))));
+  }
+
+  @Override
+  public void containerSize(Var out, Var cont) {
+    assert(Types.isIntVal(out));
+    assert(Types.isContainer(cont));
+    pointAdd(Turbine.containerSize(prefixVar(out), varToExpr(cont)));
+  }
+
+  @Override
+  public void arrayLocalContains(Var out, Var arr, Arg index) {
+    assert(Types.isBoolVal(out));
+    assert(Types.isArrayLocal(arr));
+    assert(Types.isArrayKeyVal(arr, index));
+    pointAdd(new SetVariable(prefixVar(out), 
+        Turbine.dictExists(varToExpr(arr), argToExpr(index))));
+  }
+
+  @Override
+  public void containerLocalSize(Var out, Var cont) {
+    assert(Types.isIntVal(out));
+    assert(Types.isContainerLocal(cont));
+    Expression sizeExpr;
+    if (Types.isArrayLocal(cont)) {
+      sizeExpr = Turbine.dictSize(varToExpr(cont));
+    } else {
+      assert(Types.isBagLocal(cont));
+      sizeExpr = Turbine.listLength(varToExpr(cont));
+    }
+    pointAdd(new SetVariable(prefixVar(out), 
+             sizeExpr));
+  }
+
+  @Override
+  public void arrayStore(Var array, Arg arrIx, Arg member, Arg writersDecr) {
     assert(Types.isArray(array.type()));
-    assert(member.type().assignableTo(Types.containerElemType(array.type())));
+    assert(Types.isArrayKeyVal(array, arrIx));
+    assert(writersDecr.isImmediateInt());
+    assert(Types.isElemValType(array, member));
+    
+    Command r = Turbine.arrayStoreImmediate(
+        argToExpr(member), varToExpr(array),
+        argToExpr(arrIx), argToExpr(writersDecr),
+        arrayValueType(array, false));
+    pointAdd(r);
+  }
+
+  @Override
+  public void arrayStoreFuture(Var array, Var ix, Arg member,
+                                Arg writersDecr) {
+    assert(Types.isArray(array));
+    assert(Types.isElemValType(array, member));
     assert(writersDecr.isImmediateInt());
     assert(Types.isArrayKeyFuture(array, ix));
 
     Command r = Turbine.arrayStoreComputed(
-        varToExpr(member), varToExpr(array),
+        argToExpr(member), varToExpr(array),
         varToExpr(ix), argToExpr(writersDecr),
         arrayValueType(array, false));
 
@@ -1594,13 +1827,49 @@ public class TurbineGenerator implements CompilerBackend {
   }
   
   @Override
-  public void arrayDerefInsertFuture(Var array, Var ix, Var member,
+  public void arrayRefStoreImm(Var array, Arg arrIx, Arg member) {
+    assert(Types.isArrayRef(array.type()));
+    assert(Types.isArrayKeyVal(array, arrIx));
+    assert(Types.isElemValType(array, member));
+    
+    Command r = Turbine.arrayRefStoreImmediate(
+        argToExpr(member), varToExpr(array), argToExpr(arrIx),
+        arrayValueType(array, false));
+    pointAdd(r);
+  }
+
+  @Override
+  public void arrayRefStoreFuture(Var array, Var ix, Arg member) {
+    assert(Types.isArrayRef(array.type()));
+    assert(Types.isArrayKeyFuture(array, ix));
+    assert(Types.isElemValType(array, member));
+    Command r = Turbine.arrayRefStoreComputed(
+        argToExpr(member), varToExpr(array),
+        varToExpr(ix), arrayValueType(array, false));
+  
+    pointAdd(r);
+  }
+
+  @Override
+  public void arrayCopyInImm(Var array, Arg arrIx, Var member, Arg writersDecr) {
+    assert(Types.isArray(array.type()));
+    assert(Types.isArrayKeyVal(array, arrIx));
+    assert(writersDecr.isImmediateInt());
+    assert(Types.isElemType(array, member));
+    Command r = Turbine.arrayDerefStore(
+        varToExpr(member), varToExpr(array),
+        argToExpr(arrIx), argToExpr(writersDecr),
+        arrayValueType(array, false));
+    pointAdd(r);
+  }
+
+  @Override
+  public void arrayCopyInFuture(Var array, Var ix, Var member,
                                 Arg writersDecr) {
     assert(Types.isArray(array.type()));
     assert(Types.isArrayKeyFuture(array, ix));
     assert(writersDecr.isImmediateInt());
-    assert(Types.isAssignableRefTo(member.type(),
-                                   Types.containerElemType(array.type())));
+    assert(Types.isElemType(array, member));
     
     Command r = Turbine.arrayDerefStoreComputed(
         varToExpr(member), varToExpr(array),
@@ -1611,38 +1880,32 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void arrayRefInsertFuture(Var outerArray, Var array, Var ix, Var member) {
+  public void arrayRefCopyInImm(Var array, Arg arrIx, Var member) {
     assert(Types.isArrayRef(array.type()));
-    assert(Types.isArray(outerArray.type()));
-    assert(Types.isArrayKeyFuture(array, ix));
-    assert(member.type().assignableTo(Types.containerElemType(array.type())));
-    Command r = Turbine.arrayRefStoreComputed(
+    assert(Types.isArrayKeyVal(array, arrIx));
+    assert(Types.isElemType(array, member));
+    
+    Command r = Turbine.arrayRefDerefStore(
         varToExpr(member), varToExpr(array),
-        varToExpr(ix), varToExpr(outerArray),
-        arrayValueType(array, false));
-
+        argToExpr(arrIx), arrayValueType(array, false));
     pointAdd(r);
   }
-  
+
   @Override
-  public void arrayRefDerefInsertFuture(Var outerArray, Var array, Var ix,
-                                        Var member) {
+  public void arrayRefCopyInFuture(Var array, Var ix, Var member) {
     assert(Types.isArrayRef(array.type()));
-    assert(Types.isArray(outerArray.type()));
     assert(Types.isArrayKeyFuture(array, ix));
-    assert(Types.isAssignableRefTo(member.type(),
-                                   Types.containerElemType(array.type())));
-    
+    assert(Types.isElemType(array, member));
+
     Command r = Turbine.arrayRefDerefStoreComputed(
         varToExpr(member), varToExpr(array),
-        varToExpr(ix), varToExpr(outerArray),
-        arrayValueType(array, false));
+        varToExpr(ix), arrayValueType(array, false));
 
     pointAdd(r);
   }
 
   @Override
-  public void arrayBuild(Var array, List<Arg> keys, List<Var> vals) {
+  public void arrayBuild(Var array, List<Arg> keys, List<Arg> vals) {
     assert(Types.isArray(array.type()));
     assert(keys.size() == vals.size());
     int elemCount = keys.size();
@@ -1652,17 +1915,91 @@ public class TurbineGenerator implements CompilerBackend {
         new ArrayList<Pair<Expression, Expression>>(elemCount);
     for (int i = 0; i < elemCount; i++) {
       Arg key = keys.get(i);
-      Var val = vals.get(i);
-      assert(Types.isMemberType(array, val));
+      Arg val = vals.get(i);
+      assert(Types.isElemValType(array, val));
       assert(Types.isArrayKeyVal(array, key));
       kvExprs.add(Pair.<Expression, Expression>create(
-                  argToExpr(key), varToExpr(val)));
+                  argToExpr(key), argToExpr(val)));
     }
 
     Dict dict = Dict.dictCreate(true, kvExprs);
     
-    
     pointAdd(arrayBuild(array, dict));
+  }
+  
+  @Override
+  public void asyncCopy(Var dst, Var src) {
+    assert(src.type().assignableTo(dst.type()));
+    
+    startAsync("copy-" + src.name() + "_" + dst.name(),
+               src.asList(), Arrays.asList(src, dst), false,
+               TaskMode.LOCAL, new TaskProps());
+    syncCopy(dst, src);
+    endAsync();
+  }
+  
+  @Override
+  public void syncCopy(Var dst, Var src) {
+    assert(dst.storage() != Alloc.LOCAL);
+    assert(src.type().assignableTo(dst.type()));
+    
+    syncCopy(dst, src, copyIncrReferand(dst));
+  }
+
+  /**
+   * Compute number we need to increment referand
+   * @param dst
+   * @return
+   */
+  private static Expression copyIncrReferand(Var dst) {
+    // Depending on type, see if there are any refcounts
+    // that need to be incremented
+    if (Types.isContainer(dst)) {
+      Type elemType = Types.containerElemType(dst);
+      boolean refElems = Types.isRef(elemType);
+      return refElems ? LiteralInt.ONE : LiteralInt.ZERO;
+    } else if (Types.isStruct(dst)) {
+      // Could check to see if any ref elems
+      return LiteralInt.ONE;
+    } else if (Types.isPrimFuture(dst)) {
+      return LiteralInt.ZERO;
+    } else if (Types.isRef(dst)) {
+      return LiteralInt.ONE;
+    }
+    // Default to one: safe since ignored if not needed
+    return LiteralInt.ONE;
+
+  }
+  
+  /**
+   * Helper to synchronously copy a compound type
+   * @param dst
+   * @param src
+   * @param incrReferand
+   */
+  private void syncCopy(Var dst, Var src, Expression incrReferand) {
+    // Implement as load followed by store
+    Value tmpVal = new Value(TCLTMP_RETRIEVED);
+    TypeName simpleReprType = representationType(src.type());
+    pointAdd(Turbine.retrieveAcquire(tmpVal.variable(), varToExpr(src),
+                               simpleReprType, incrReferand, LiteralInt.ONE));
+    
+
+    // Must decrement any refcounts not explicitly tracked since
+    // we're assigning the struct in whole
+    long writeDecr = RefCounting.baseWriteRefCount(dst, true, true);
+    
+    List<TypeName> fullReprType;
+    
+    if (Types.isContainer(src)) {
+      fullReprType = recursiveTypeList(dst.type(), false, true,
+                                          true, false, false);
+    } else {
+      fullReprType = Collections.singletonList(
+                                  representationType(src.type()));
+    }
+    pointAdd(Turbine.adlbStore(varToExpr(dst), tmpVal, fullReprType,
+                              new LiteralInt(writeDecr), null));
   }
 
   /**
@@ -1672,84 +2009,19 @@ public class TurbineGenerator implements CompilerBackend {
    * @param dict
    */
   private Command arrayBuild(Var array, Expression dict) {
-    TypeName keyType = representationType(Types.arrayKeyType(array), false);
+    TypeName keyType = representationType(Types.arrayKeyType(array));
     Type valType2 = Types.containerElemType(array);
-    TypeName valType = valRepresentationType(valType2);
+    TypeName valType = representationType(valType2);
 
     return Turbine.arrayBuild(varToExpr(array), dict, LiteralInt.ONE,
                 keyType, Collections.singletonList(valType));
   }
   
   @Override
-  public void arrayInsertImm(Var array, Arg arrIx, Var member, Arg writersDecr) {
-    assert(Types.isArray(array.type()));
-    assert(Types.isArrayKeyVal(array, arrIx));
-    assert(writersDecr.isImmediateInt());
-    assert(Types.isMemberType(array, member));
-    
-    Command r = Turbine.arrayStoreImmediate(
-        varToExpr(member), varToExpr(array),
-        argToExpr(arrIx), argToExpr(writersDecr),
-        arrayValueType(array, false));
-    pointAdd(r);
-  }
-  
-  
-  @Override
-  public void arrayDerefInsertImm(Var array, Arg arrIx, Var member, Arg writersDecr) {
-    assert(Types.isArray(array.type()));
-    assert(Types.isArrayKeyVal(array, arrIx));
-    assert(writersDecr.isImmediateInt());
-    // Check that we get the right thing when we dereference it
-    assert(Types.isAssignableRefTo(member.type(),
-                                   Types.containerElemType(array.type())));
-    Command r = Turbine.arrayDerefStore(
-        varToExpr(member), varToExpr(array),
-        argToExpr(arrIx), argToExpr(writersDecr),
-        arrayValueType(array, false));
-    pointAdd(r);
-  }
-
-  @Override
-  public void arrayRefInsertImm(Var outerArray, Var array, Arg arrIx,
-                                Var member) {
-    assert(Types.isArrayRef(array.type()));
-    assert(Types.isArray(outerArray.type()));
-    assert(Types.isArrayKeyVal(array, arrIx));
-    assert(member.type().assignableTo(Types.containerElemType(array.type())));
-    Command r = Turbine.arrayRefStoreImmediate(
-        varToExpr(member), varToExpr(array),
-        argToExpr(arrIx), varToExpr(outerArray),
-        arrayValueType(array, false));
-    pointAdd(r);
-  }
-  
-  @Override
-  public void arrayRefDerefInsertImm(Var outerArray, Var array, Arg arrIx,
-                                     Var member) {
-    assert(Types.isArrayRef(array.type()));
-    assert(Types.isArray(outerArray.type()));
-    assert(Types.isArrayKeyVal(array, arrIx));
-    Type memberType = array.type().memberType().memberType();
-    // Check that we get the right thing when we dereference it
-    assert(Types.isAssignableRefTo(member.type(),
-                                   Types.containerElemType(array.type())));
-    if (!member.type().memberType().equals(memberType)) {
-      throw new STCRuntimeError("Type mismatch when trying to store " +
-          "from variable " + member.toString() + " into array " + array.toString());
-    }
-    Command r = Turbine.arrayRefDerefStore(
-        varToExpr(member), varToExpr(array),
-        argToExpr(arrIx), varToExpr(outerArray),
-        arrayValueType(array, false));
-    pointAdd(r);
-  }
-
-  @Override
-  public void bagInsert(Var bag, Var elem, Arg writersDecr) {
-    assert(Types.isBagElem(bag, elem));
+  public void bagInsert(Var bag, Arg elem, Arg writersDecr) {
+    assert(Types.isElemValType(bag, elem));
     pointAdd(Turbine.bagAppend(varToExpr(bag),
-          refRepresentationType(elem.type(), false), varToExpr(elem),
+          arrayValueType(bag, false), argToExpr(elem),
           argToExpr(writersDecr)));
   }
   
@@ -2034,55 +2306,29 @@ public class TurbineGenerator implements CompilerBackend {
       Proc proc = new Proc(uniqueName, usedTclFunctionNames, args);
       tree.add(proc);
 
-      boolean useDeepWait = false; // True if we have to use special wait impl. 
+      // True if we have to use special wait impl
+      boolean useDeepWait = recursive &&
+              anySupportRecursiveWait(waitVars);
+      
+      List<Expression> waitFor = getTurbineWaitIDs(waitVars);
       
       // Build up the rule string
-      List<Expression> waitFor = new ArrayList<Expression>();
-      for (Var w: waitVars) {
-        if (recursive) {
-          Type baseType = w.type();
-          if (Types.isArray(w.type()) || Types.isBag(w.type())) {
-            baseType = new NestedContainerInfo(w.type()).baseType;
-            useDeepWait = true;
-          }
-          if (Types.isPrimFuture(baseType)) {
-            // ok
-          } else if (Types.isRef(baseType)) {
-            // TODO: might not be really recursive, but works for now
-          } else {
-            throw new STCRuntimeError("Recursive wait not yet supported"
-                + " for type: " + w.type().typeName());
-          }
-        }
-        
-        Expression waitExpr = getTurbineWaitId(w);
-        waitFor.add(waitExpr);
-      }
-      
-      
       List<Expression> action = buildActionFromVars(uniqueName, passIn);
 
       RuleProps ruleProps = buildRuleProps(props);      
       if (useDeepWait) {
         // Nesting depth of arrays (0 == not array)
         int depths[] = new int[waitVars.size()];
-        boolean isFile[] = new boolean[waitVars.size()];
+        TypeName baseTypes[] = new TypeName[waitVars.size()];
         for (int i = 0; i < waitVars.size(); i++) {
           Type waitVarType = waitVars.get(i).type();
-          Type baseType;
-          if (Types.isContainer(waitVarType)) {
-            NestedContainerInfo ai = new NestedContainerInfo(waitVarType);
-            depths[i] = ai.nesting;
-            baseType = ai.baseType;
-          } else {
-            depths[i] = 0;
-            baseType = waitVarType;
-          }
-          isFile[i] = Types.isFile(baseType);
+          Pair<Integer, TypeName> data = recursiveContainerType(waitVarType);
+          depths[i] = data.val1;
+          baseTypes[i] = data.val2;
         }
 
         Sequence rule = Turbine.deepRule(uniqueName, waitFor, depths,
-              isFile, action, mode, execContextStack.peek(), ruleProps);
+              baseTypes, action, mode, execContextStack.peek(), ruleProps);
         point().append(rule);
 
       } else {
@@ -2103,6 +2349,81 @@ public class TurbineGenerator implements CompilerBackend {
         newExecContext = execContextStack.peek();
       }
       execContextStack.push(newExecContext);
+    }
+
+    private boolean anySupportRecursiveWait(List<Var> waitVars) {
+      for (Var w: waitVars) {
+        if (checkRecursiveWait(w))
+          return true;
+      }
+      return false;
+    }
+
+    /**
+     * Return true if recursive and non-recursive wait are different for variable.
+     * Throw exception if not supported yet
+     * @param var
+     * @return
+     */
+    private boolean checkRecursiveWait(Typed typed) {
+      boolean requiresRecursion = false;
+      Type baseType = typed.type();
+      if (Types.isContainer(typed)) {
+        baseType = new NestedContainerInfo(typed.type()).baseType;
+        requiresRecursion = true;
+      }
+
+      if (Types.isPrimFuture(baseType)) {
+        // ok
+      } else if (Types.isRef(baseType)) {
+        // Can follow refs
+        
+        // Check valid
+        checkRecursiveWait(Types.retrievedType(baseType));
+        requiresRecursion = true;
+      } else if (Types.isStruct(baseType)) {
+        // Can't follow struct field refs yet
+        for (StructField f: ((StructType)baseType.getImplType()).getFields()) {
+          if (checkRecursiveWait(f.getType())) {
+            requiresRecursion = true;
+            throw new STCRuntimeError("Recursively waiting on structs with " +
+                         " references to other datums is not yet implemented");
+          }
+        }
+      } else {
+        throw new STCRuntimeError("Recursive wait not yet supported"
+            + " for type: " + typed.type().typeName());
+      }
+      return requiresRecursion;
+    }
+
+    /**
+     * @param depths
+     * @param i
+     * @param type
+     * @return (nesting depth, base type name)
+     */
+    private Pair<Integer, TypeName> recursiveContainerType(Type type) {
+      Type baseType;
+      int depth;
+      if (Types.isContainer(type)) {
+        NestedContainerInfo ai = new NestedContainerInfo(type);
+        depth = ai.nesting;
+        baseType = ai.baseType;
+      } else if (Types.isFuture((type))) {
+        depth = 0;
+        // Indicate that it's a future not a value
+        // TODO: does mutability matter?
+        baseType = new RefType(type, false);
+      } else if (Types.isPrimValue(type)) {
+        depth = 0;
+        baseType = type;
+      } else {
+        throw new STCRuntimeError("Not sure how to deep wait on type "
+                                  + type);
+      }
+      TypeName baseReprType = representationType(baseType);
+      return Pair.create(depth, baseReprType);
     }
 
     private void endAsync() {
@@ -2133,7 +2454,7 @@ public class TurbineGenerator implements CompilerBackend {
       Sequence seq = new Sequence();
       for (VarCount vc: Var.countVars(vars)) {
         Var var = vc.var;
-        if (!RefCounting.hasReadRefCount(var)) {
+        if (!RefCounting.trackReadRefCount(var)) {
           continue;
         }
         Expression amount;
@@ -2168,7 +2489,7 @@ public class TurbineGenerator implements CompilerBackend {
           Expression incr) {
       Sequence seq = new Sequence();
       for (VarCount vc: Var.countVars(keepOpenVars)) {
-        if (!RefCounting.hasWriteRefCount(vc.var)) {
+        if (!RefCounting.trackWriteRefCount(vc.var)) {
           continue;
         }
         
@@ -2188,7 +2509,7 @@ public class TurbineGenerator implements CompilerBackend {
                                              Expression decr) {
       Sequence seq = new Sequence();
       for (VarCount vc: Var.countVars(vars)) {
-        if (!RefCounting.hasWriteRefCount(vc.var)) {
+        if (!RefCounting.trackWriteRefCount(vc.var)) {
           continue;
         }
         if (decr == null) {
@@ -2235,7 +2556,7 @@ public class TurbineGenerator implements CompilerBackend {
           } else {
             throw new STCRuntimeError("Don't know how to pass var " + v);
           } 
-        } else if (Types.isContainerLocal(t)) {
+        } else if (Types.isContainerLocal(t) || Types.isStructLocal(t)) {
           exprs.add(varToExpr(v));
         } else {
           throw new STCRuntimeError("Don't know how to pass var with type "
@@ -2298,37 +2619,69 @@ public class TurbineGenerator implements CompilerBackend {
         Var loopCountVar, int splitDegree, int leafDegree, boolean arrayClosed,
         List<PassedVar> passedVars, List<RefCount> perIterIncrs, 
         MultiMap<Var, RefCount> constIncrs) {
-
     boolean haveKeys = loopCountVar != null;
     
-    if (Types.isArray(container)) {
+    boolean isKVContainer;
+    if (Types.isArray(container) || Types.isArrayLocal(container)) {
       assert(!haveKeys || 
             Types.isArrayKeyVal(container, loopCountVar.asArg()));
-      assert(Types.isMemberType(container, memberVar));
+      isKVContainer = true;
     } else {
-      assert(Types.isBag(container));
+      assert(Types.isBag(container) || Types.isBagLocal(container));
       assert(!haveKeys);
-      assert(Types.isBagElem(container, memberVar));
+      isKVContainer = false;
+    }
+    
+
+    boolean localContainer = Types.isContainerLocal(container); 
+    
+    if (localContainer) {
+      if (!arrayClosed || splitDegree >= 0) {
+        throw new STCRuntimeError(
+            "Can't do async foreach with local container currently;");
+      }
+
+      assert(Types.isElemType(container, memberVar));
+    } else {
+      assert(Types.isElemValType(container, memberVar));
     }
 
     if (!arrayClosed) {
       throw new STCRuntimeError("Loops over open containers not yet supported");
     }
 
-    String contentsVar = TCLTMP_ARRAY_CONTENTS;
-
+    boolean isDict;
+    Value tclContainer;
     if (splitDegree <= 0) {
-      // Load container contents and increment refcounts
-      pointAdd(Turbine.enumerateAll(contentsVar,
-                          varToExpr(container), haveKeys));
-      Value tclDict = new Value(contentsVar);
-      Expression containerSize = Turbine.dictSize(tclDict);
+      if (localContainer) {
+        // Already have var
+        tclContainer = varToExpr(container);
+        isDict = isKVContainer;
+      } else {
+        // Load container contents and increment refcounts
+        // Only get keys if needed
+        tclContainer = new Value(TCLTMP_ARRAY_CONTENTS);
+        pointAdd(Turbine.enumerateAll(tclContainer.variable(),
+                            varToExpr(container), haveKeys));
+        isDict = haveKeys;
+      }
+      
+      Expression containerSize;
+      if (isDict) {
+        containerSize = Turbine.dictSize(tclContainer);
+      } else {
+        containerSize = Turbine.listLength(tclContainer);
+      }
       handleForeachContainerRefcounts(perIterIncrs, constIncrs, containerSize);
     } else {
-      startForeachSplit(loopName, container, contentsVar, splitDegree, 
-          leafDegree, haveKeys, passedVars, perIterIncrs, constIncrs);
+      assert(!localContainer);
+      tclContainer = new Value(TCLTMP_ARRAY_CONTENTS);
+      startForeachSplit(loopName, container, tclContainer.variable(),
+          splitDegree, leafDegree, haveKeys, passedVars, perIterIncrs,
+          constIncrs);
+      isDict = haveKeys;
     }
-    startForeachInner(new Value(contentsVar), memberVar, loopCountVar);
+    startForeachInner(tclContainer, memberVar, loopCountVar, isDict);
   }
 
   private void handleForeachContainerRefcounts(List<RefCount> perIterIncrs,
@@ -2375,17 +2728,17 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   private void startForeachInner(
-      Value arrayContents, Var memberVar, Var loopCountVar) {
+      Value arrayContents, Var memberVar, Var loopCountVar, boolean isDict) {
     Sequence curr = point();
-    boolean haveKeys = loopCountVar != null;
     Sequence loopBody = new Sequence();
 
     String tclMemberVar = prefixVar(memberVar);
-    String tclCountVar = haveKeys ? prefixVar(loopCountVar) : null;
+    String tclCountVar = (loopCountVar != null) ?
+                  prefixVar(loopCountVar) : TCLTMP_IGNORE;
 
     /* Iterate over keys and values, or just values */
     Sequence tclLoop;
-    if (haveKeys) {
+    if (isDict) {
       tclLoop = new DictFor(new Token(tclCountVar), new Token(tclMemberVar),
                       arrayContents, loopBody);
     } else {
@@ -2784,16 +3137,29 @@ public class TurbineGenerator implements CompilerBackend {
     Expression waitExpr;
     if (Types.isFile(var)) {
       // Block on file status
-      waitExpr = Turbine.getFileStatus(wv);
+      waitExpr = Turbine.getFileID(wv);
     } else if (Types.isScalarFuture(var) || Types.isRef(var) ||
             Types.isArray(var) || Types.isScalarUpdateable(var)||
-            Types.isBag(var)) {
+            Types.isBag(var) || Types.isStruct(var)) {
       waitExpr = wv;
     } else {
       throw new STCRuntimeError("Don't know how to wait on var: "
               + var.toString());
     }
     return waitExpr;
+  }
+  
+  private List<Expression> getTurbineWaitIDs(List<Var> waitVars) {
+    List<Expression> waitFor = new ArrayList<Expression>();
+    Set<Var> alreadyBlocking = new HashSet<Var>();
+    for (Var v: waitVars) {
+      if (!alreadyBlocking.contains(v)) {
+        Expression waitExpr = getTurbineWaitId(v);
+        waitFor.add(waitExpr);
+        alreadyBlocking.add(v);
+      }
+    }
+    return waitFor;
   }
 
   private Expression argToExpr(Arg in) {
@@ -3093,6 +3459,7 @@ public class TurbineGenerator implements CompilerBackend {
   }
   
   /**
+   * Used on local value types
    * Make a list of values, with each value preceded by the ADLB type.
    * For compound ADLB types, we have multiple expressions to describe
    * the "layers" of the type.
@@ -3103,7 +3470,7 @@ public class TurbineGenerator implements CompilerBackend {
     List<Expression> result = new ArrayList<Expression>();
     for (Arg val: vals) {
       if (Types.isContainerLocal(val.type())) {
-        result.addAll(nestedTypeList(val.type(), true, true, true)); 
+        result.addAll(recursiveTypeList(val.type(), true, true, true, true, false)); 
       } else {
         result.add(valRepresentationType(val.type()));
       }
@@ -3129,18 +3496,27 @@ public class TurbineGenerator implements CompilerBackend {
     assert(Types.isArray(inputArray.type()));
     NestedContainerInfo c = new NestedContainerInfo(inputArray.type());
     assert(Types.isArrayLocal(flatLocalArray));
-    Type memberValT = Types.derefResultType(c.baseType);
-    assert(memberValT.assignableTo(Types.containerElemType(flatLocalArray)));
+    Type baseType = c.baseType;
+    
+    // Get type inside reference
+    if (Types.isRef(baseType)) {
+      baseType = Types.retrievedType(baseType);
+    }
+   
+    Type memberValT = Types.retrievedType(baseType);    
+    
+    assert(memberValT.assignableTo(Types.containerElemType(flatLocalArray)))
+      : memberValT + " " + flatLocalArray;
+    
     
     pointAdd(new SetVariable(prefixVar(flatLocalArray),
                               unpackArrayInternal(inputArray)));
   }
 
   private Expression unpackArrayInternal(Arg arg) {
-    NestedContainerInfo ai = new NestedContainerInfo(arg.type());
+    Pair<Integer, TypeName> rct = recursiveContainerType(arg.type());
     Expression unpackArrayExpr = Turbine.unpackArray(
-                            argToExpr(arg), ai.nesting,
-                            Types.isFile(ai.baseType));
+                            argToExpr(arg), rct.val1, rct.val2);
     return unpackArrayExpr;
   }
   

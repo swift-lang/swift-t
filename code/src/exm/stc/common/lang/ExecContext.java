@@ -15,6 +15,10 @@
  */
 package exm.stc.common.lang;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 import exm.stc.common.exceptions.STCRuntimeError;
 
 /**
@@ -32,5 +36,14 @@ public enum ExecContext {
     default:
       throw new STCRuntimeError("Unknown ExecContext " + this);
     }
+  }
+  
+  public static final List<ExecContext> ALL = Arrays.asList(values());
+  public static final List<ExecContext> CONTROL_LIST = CONTROL.asList();
+  public static final List<ExecContext> WORKER_LIST = WORKER.asList();
+  
+  
+  public List<ExecContext> asList() {
+    return Collections.singletonList(this);
   }
 }

@@ -28,20 +28,26 @@ import org.apache.log4j.Logger;
 import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.Types;
+import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
+import exm.stc.common.util.Pair;
+import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.WrapUtil;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICInstructions.Instruction;
+import exm.stc.ic.tree.ICInstructions.Instruction.InitType;
 import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmChange;
+import exm.stc.ic.tree.ICInstructions.Instruction.MakeImmVar;
+import exm.stc.ic.tree.ICInstructions.Instruction.VarCreator;
 import exm.stc.ic.tree.ICTree.Block;
 import exm.stc.ic.tree.ICTree.BlockType;
 import exm.stc.ic.tree.ICTree.RenameMode;
 import exm.stc.ic.tree.ICTree.Statement;
-import exm.stc.ic.tree.TurbineOp;
 
 public class OptUtil {
 
@@ -55,7 +61,7 @@ public class OptUtil {
   }
   
   public static String optVPrefix(Block b, String name) {
-    return b.uniqueVarName(Var.OPT_VALUE_VAR_PREFIX + name);
+    return b.uniqueVarName(Var.joinPrefix(Var.VALUEOF_VAR_PREFIX, name));
   }
   
   public static String optFilenamePrefix(Block b, Var v) {
@@ -63,9 +69,48 @@ public class OptUtil {
   }
   
   public static String optFilenamePrefix(Block b, String name) {
-    return b.uniqueVarName(Var.OPT_FILENAME_PREFIX + name);
+    return b.uniqueVarName(Var.joinPrefix(Var.OPT_FILENAME_PREFIX, name));
   }
   
+  /**
+   * Build wait var list
+   * @param block
+   * @param it
+   * @param in
+   * @param out
+   * @param filenameMap
+   * @param waitVars the variable, and whether it must be waited
+   *                  for recursively
+   */
+  public static void buildWaitVars(Block block, ListIterator<Statement> it,
+            List<MakeImmVar> inputs, List<MakeImmVar> outputs, 
+            Map<Var, Var> filenameMap, List<Pair<Var, Ternary>> waitVars) {
+    
+    for (MakeImmVar in: inputs) {
+      if (WrapUtil.inputMustWait(in.var)) {
+        waitVars.add(makeWaitVarTernary(in.var, in.recursive));
+      }
+    }
+    
+    for (MakeImmVar out: outputs) {
+      Var toWaitVar = WrapUtil.getWaitOutputMapping(block, it,
+        out.preinitOutputMapping, filenameMap, out.var);
+      if (toWaitVar != null) {
+        waitVars.add(makeWaitVarTernary(toWaitVar, true));
+      }
+    }
+  }
+
+  private static Pair<Var, Ternary> makeWaitVarTernary(Var var, boolean recursive) {
+    Pair<Var, Ternary> recCloseVar;
+    if (!RefCounting.recursiveClosePossible(var)) {
+      recCloseVar = Pair.create(var, Ternary.MAYBE);
+    } else {
+      recCloseVar = Pair.create(var, Ternary.fromBool(recursive));
+    }
+    return recCloseVar;
+  }
+
   /**
    * Same as fetchValue of, but more times
    * @param block
@@ -74,38 +119,27 @@ public class OptUtil {
    * @return
    */
   public static List<Arg> fetchValuesOf(Block block, List<Instruction> instBuffer,
-          List<Var> vars) {
+          List<Var> vars, boolean recursive, boolean acquireWrite) {
     List<Arg> inVals = new ArrayList<Arg>(vars.size());
 
     for (Var v: vars) {
       String name = optVPrefix(block, v);
-      Var valueV = WrapUtil.fetchValueOf(block, instBuffer, v, name);
+      Var valueV = WrapUtil.fetchValueOf(block, instBuffer, v, name,
+                                         recursive, acquireWrite);
       Arg value = Arg.createVar(valueV);
       inVals.add(value);
     }
     return inVals;
   }
 
-  public static List<Arg> fetchValuesOf(Block block, List<Var> vars) {
+  public static List<Arg> fetchValuesOf(Block block, List<Var> vars,
+                                        boolean recursive, boolean acquireWrite) {
     List<Instruction> instBuffer = new ArrayList<Instruction>();
-    List<Arg> vals = fetchValuesOf(block, instBuffer, vars);
+    List<Arg> vals = fetchValuesOf(block, instBuffer, vars, recursive, acquireWrite);
     block.addInstructions(instBuffer);
     return vals;
   }
 
-  /**
-   * Do the manipulation necessary to allow an old instruction
-   * output variable to be replaced with a new one. Assume that
-   * newOut is a value type of oldOut
-   * @param targetBlock 
-   * @param instBuffer append any fixup instructions here
-   * @param newOut
-   * @param oldOut
-   */
-  public static void replaceInstructionOutputVar(Block block,
-          Block targetBlock, List<Instruction> instBuffer, Var newOut, Var oldOut) {
-            replaceInstOutput(block, targetBlock, instBuffer, newOut, oldOut);
-          }
 
   /**
    * Do the manipulation necessary to allow an old instruction
@@ -116,33 +150,38 @@ public class OptUtil {
    * @param instBuffer append any fixup instructions here
    * @param newOut
    * @param oldOut
+   * @param recursive if it's to be fetched recursively
    */
   public static void replaceInstOutput(Block srcBlock,
-          Block targetBlock, List<Instruction> instBuffer, Var newOut, Var oldOut) {
-    targetBlock.addVariable(newOut); // must be declared in new scope
-    
-    if (Types.isRefTo(oldOut.type(), newOut.type())) {
-      Var refVar;
-      if (oldOut.storage() == Alloc.ALIAS) {
+          Block targetBlock, List<Statement> instBuffer, Var newOut, Var oldOut,
+          boolean initialisesOutput) {
+    boolean isDerefResult = 
+        Types.retrievedType(oldOut).assignableTo(newOut.type());
+    if (isDerefResult) {
+      Var oldOutReplacement;
+      if (oldOut.storage() == Alloc.ALIAS  &&
+          initialisesOutput) {
         // Will need to initialise variable in this scope as before we
         // were relying on instruction to initialise it
-        
-        refVar = new Var(oldOut.type(),
+        oldOutReplacement = new Var(oldOut.type(),
             oldOut.name(), Alloc.TEMP,
-            oldOut.defType(), oldOut.provenance(), oldOut.mapping());
+            oldOut.defType(), oldOut.provenance(), oldOut.mappedDecl());
         
         // Replace variable in block and in buffered instructions
-        replaceVarDeclaration(srcBlock, oldOut, refVar);
+        replaceVarDeclaration(srcBlock, oldOut, oldOutReplacement);
         
         Map<Var, Arg> renames = Collections.singletonMap(
-                                oldOut, Arg.createVar(refVar));
-        for (Instruction inst: instBuffer) {
+                                oldOut, Arg.createVar(oldOutReplacement));
+        for (Statement inst: instBuffer) {
           inst.renameVars(renames, RenameMode.REPLACE_VAR);
         }
       } else {
-        refVar = oldOut;
+        oldOutReplacement = oldOut;
       }
-      instBuffer.add(TurbineOp.addressOf(refVar, newOut));
+
+      WrapUtil.assignOutput(targetBlock, instBuffer,
+                false, oldOutReplacement, newOut,
+                false);
     } else {
       throw new STCRuntimeError("Tried to replace instruction"
           + " output var " + oldOut + " with " + newOut + ": this doesn't make sense"
@@ -176,22 +215,84 @@ public class OptUtil {
       }
     }
   }
+  
+  /**
+   * Declare and fetch inputs for conversion to local operation
+   * @param block
+   * @param inputs
+   * @param instBuffer
+   * @return
+   */
+  public static List<Arg> fetchMakeImmInputs(Block block, List<MakeImmVar> inputs,
+      List<Statement> instBuffer) {
+    if (inputs == null) {
+      // Gracefully handle null as empty list
+      inputs = MakeImmVar.NONE;
+    }
+    List<Arg> inVals = new ArrayList<Arg>(inputs.size());
+    for (MakeImmVar inArg: inputs) {
+      if (inArg.fetch) {
+        String name = optVPrefix(block, inArg.var.name());
+        inVals.add(WrapUtil.fetchValueOf(block, instBuffer,
+                   inArg.var, name, inArg.recursive,
+                   inArg.acquireWriteRefs).asArg());
+      }
+    }
+    return inVals;
+  }
+  
+  /**
+   * Build output variable list for conversion to local operation
+   * @param block
+   * @param outputFutures
+   * @param filenameVars
+   * @param instBuffer
+   * @param uniquifyNames if it isn't safe to use default name prefix,
+   *      e.g. if we're in the middle of optimizations
+   * @param preinitOutputMapping 
+   * @param store recursively
+   * @return
+   */
+  public static List<Var> createMakeImmOutputs(Block block,
+      List<MakeImmVar> outputFutures, Map<Var, Var> filenameVars,
+      List<Statement> instBuffer) {
+    if (outputFutures == null) {
+      // Gracefully handle null as empty list
+      outputFutures = MakeImmVar.NONE;
+    }
+    List<Var> outVals = new ArrayList<Var>();
+    for (MakeImmVar outArg: outputFutures) {
+      if (Types.isPrimUpdateable(outArg.var.type())) {
+        // Use standard representation
+        outVals.add(outArg.var);
+      } else {
+        outVals.add(WrapUtil.createLocalOutputVar(outArg.var, filenameVars,
+                   block, instBuffer, true, outArg.preinitOutputMapping,
+                   outArg.recursive));
+      }
+    }
+    return outVals;
+  }
+
 
   public static List<Var> createLocalOpOutputVars(Block block,
           ListIterator<Statement> insertPos,
-          List<Var> outputFutures, Map<Var, Var> outputFilenames,
-          boolean mapOutVars) {
-    if (outputFutures == null) {
+          List<MakeImmVar> outFutures, Map<Var, Var> outputFilenames) {
+    if (outFutures == null) {
       return Collections.emptyList();
     }
     
-    List<Instruction> instBuffer = new ArrayList<Instruction>();
+    List<Statement> instBuffer = new ArrayList<Statement>();
     
-    List<Var> outValVars = WrapUtil.createLocalOpOutputs(block, outputFutures,
-                               outputFilenames, instBuffer, true, mapOutVars);
+    List<Var> outValVars = new ArrayList<Var>(outFutures.size());
+    for (MakeImmVar outFut: outFutures) {
+      outValVars.add(WrapUtil.createLocalOutputVar(outFut.var,
+           outputFilenames, block, instBuffer, true, 
+           outFut.preinitOutputMapping, outFut.recursive));
+    }
     
-    for (Instruction inst: instBuffer) {
-      insertPos.add(inst);
+    for (Statement stmt: instBuffer) {
+      insertPos.add(stmt);
     }
 
     return outValVars;
@@ -200,9 +301,8 @@ public class OptUtil {
   public static void fixupImmChange(Block srcBlock,
           Block targetBlock, Instruction oldInst,
           MakeImmChange change,
-          List<Instruction> instBuffer, 
-          List<Var> newOutVars, List<Var> oldOutVars,
-          boolean mapOutputFiles) {
+          List<Statement> instBuffer, 
+          List<Var> newOutVars, List<MakeImmVar> oldOutVars) {
     instBuffer.addAll(Arrays.asList(change.newInsts));
 
     Logger logger = Logging.getSTCLogger();
@@ -215,15 +315,49 @@ public class OptUtil {
       // Output variable of instruction changed, need to fix up
       Var newOut = change.newOut;
       Var oldOut = change.oldOut;
+      boolean initOutput = false;
+      for (Pair<Var, InitType> init: oldInst.getInitialized()) {
+        if (init.val2 == InitType.FULL &&
+            init.val1.equals(oldOut)) {
+          initOutput = true;
+          break;
+        }
+      }
       
       replaceInstOutput(srcBlock, targetBlock, instBuffer,
-                                  newOut, oldOut);
+                         newOut, oldOut, initOutput);
     }
-
+    
     // Now copy back values into future
     if (change.storeOutputVals) {
-      WrapUtil.setLocalOpOutputs(targetBlock, oldOutVars, newOutVars,
-                                 instBuffer, !mapOutputFiles);
+      setLocalOutputs(targetBlock, oldOutVars, newOutVars, instBuffer);
+    }
+  }
+  
+  /**
+   * Set futures from output values
+   * @param outFuts
+   * @param outVals
+   * @param instBuffer
+   */
+  public static void setLocalOutputs(Block block,
+      List<MakeImmVar> outFuts, List<Var> outVals,
+      List<Statement> instBuffer) {
+    if (outFuts == null) {
+      assert(outVals == null || outVals.isEmpty());
+      return;
+    }
+    assert(outVals.size() == outFuts.size());
+    for (int i = 0; i < outVals.size(); i++) {
+      MakeImmVar outArg = outFuts.get(i);
+      Var outVal = outVals.get(i);
+
+      if (outArg.var.equals(outVal)) {
+        // Do nothing: the variable wasn't substituted
+      } else {
+        WrapUtil.assignOutput(block, instBuffer, !outArg.preinitOutputMapping,
+                              outArg.var, outVal, outArg.recursive);
+      }
     }
   }
   
@@ -287,29 +421,58 @@ public class OptUtil {
     }
   }
 
-  public static Var fetchForLocalOp(Block block, List<Instruction> instBuffer,
-      Var var) {
-    if (Types.isContainer(var)) {
-      // TODO: fetch value eventually
-      return var;
-    }
+  public static Var fetchForLocalOp(Block block,
+          List<? super Instruction> instBuffer, Var var,
+          boolean recursive, boolean acquireWrite) {
     return WrapUtil.fetchValueOf(block, instBuffer, var,
-                             OptUtil.optVPrefix(block, var));
+                             OptUtil.optVPrefix(block, var),
+                             recursive, acquireWrite);
   }
-  
 
-  
+  public static class OptVarCreator implements VarCreator {
+    public OptVarCreator(Block block) {
+      this.block = block;
+    }
+
+    private final Block block;
+    
+    @Override
+    public Var createDerefTmp(Var toDeref) {
+      return OptUtil.createDerefTmp(block, toDeref);
+    }
+    
+  }
   
   /**
    * Create dereferenced variable given a reference
    */
-  public static Var createDerefTmp(Var ref, Alloc storage) {
-    assert(Types.isRef(ref.type()));
-    Var res = new Var(ref.type().memberType(),
-        Var.DEREF_COMPILER_VAR_PREFIX + ref.name(),
+  public static Var createDerefTmp(Block block, Var toDeref) {
+    Alloc storage;
+    if (Types.isRef(toDeref.type())) {
+      storage = Alloc.ALIAS;
+    } else {
+      storage = Alloc.LOCAL;
+    }
+    
+    Type resType = Types.retrievedType(toDeref);
+    String name = block.uniqueVarName(
+        Var.joinPrefix(Var.VALUEOF_VAR_PREFIX, toDeref.name()));
+    Var res = new Var(resType, name,
         storage, DefType.LOCAL_COMPILER, 
-        VarProvenance.valueOf(ref));
-    assert(Types.isAssignableRefTo(ref.type(), res.type()));
+        VarProvenance.valueOf(toDeref));
+
+    block.addVariable(res);
+    return res;
+  }
+  
+  public static Var createTmpAlias(Block block, Var orig) {
+    String name = block.uniqueVarName(
+        Var.joinPrefix(Var.ALIAS_VAR_PREFIX, orig.name()));
+    Var res = new Var(orig.type(), name,
+        Alloc.ALIAS, DefType.LOCAL_COMPILER, 
+        VarProvenance.renamed(orig));
+
+    block.addVariable(res);
     return res;
   }
 }

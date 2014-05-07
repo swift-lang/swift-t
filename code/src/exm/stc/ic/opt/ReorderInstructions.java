@@ -1,13 +1,10 @@
 package exm.stc.ic.opt;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map.Entry;
 
 import org.apache.log4j.Logger;
 
@@ -19,6 +16,7 @@ import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
+import exm.stc.common.util.StackLite;
 import exm.stc.ic.opt.OptimizerPass.FunctionOptimizerPass;
 import exm.stc.ic.opt.TreeWalk.TreeWalker;
 import exm.stc.ic.tree.Conditionals.Conditional;
@@ -98,17 +96,18 @@ public class ReorderInstructions extends FunctionOptimizerPass {
     }
     
     // Accumulate instructions into this array
-    ArrayList<Statement> newStmts = new ArrayList<Statement>();
+    ArrayList<Integer> newStmts = new ArrayList<Integer>();
     
-    // Keep track of which instructions should go after (x -> goes after y)
-    MultiMap<Statement, Statement> after = new MultiMap<Statement, Statement>();
+    // Keep track of which instructions should go after (x -> goes beforey)
+    // Instructions are identified by index of instruction before modifications
+    MultiMap<Integer, Integer> before = new MultiMap<Integer, Integer>();
     HashSet<Statement> mustMove = new HashSet<Statement>(); 
     boolean moved = false;
     
     for (int i = 0; i < stmtInfos.size(); i++) {
       StatementInfo info1 = stmtInfos.get(i);
-      boolean move = searchForInputWriter(logger, fn, stmtInfos, i, info1,
-                                          after, mustMove);
+      boolean move = addDependencies(logger, fn, stmtInfos, i, info1,
+                                          before, mustMove);
 
       if (logger.isTraceEnabled())
         logger.trace("Inst " + info1 + " move: " + move);
@@ -116,17 +115,17 @@ public class ReorderInstructions extends FunctionOptimizerPass {
         // Note that we should put it later
         moved = true;
         if (logger.isTraceEnabled())
-          logger.trace("Inst " + info1 + " after: " + after.get(info1.stmt));
+          logger.trace("Inst " + info1 + " before: " + before.get(i));
       } else {
         // Don't move
-        newStmts.add(info1.stmt);
+        newStmts.add(i);
       }
     }
     
 
     if (moved) {
-      rebuildInstructions(block, block.getStatements(), newStmts, after);
-      block.replaceStatements(newStmts);
+      block.replaceStatements(rebuildInstructions(logger, block,
+                                            newStmts, before));
       move++;
     } else {
       noMove++;
@@ -135,52 +134,104 @@ public class ReorderInstructions extends FunctionOptimizerPass {
       logger.trace("reorder instructions: moved " + move + "/" + (move + noMove));
   }
 
-  private void rebuildInstructions(Block block,
-      List<Statement> oldStatements,
-      ArrayList<Statement> newStatements,
-      MultiMap<Statement, Statement> after) {
+  /**
+   * Rebuild instruction list based on dependency info.
+   * 
+   * Note that there are multiple possible valid orders.
+   * @param block
+   * @param newStatements list of indices of instructions that should be
+   *              placed at start of block.  Other instructions are placed
+   *              after this
+   * @param before constraints.  if i -> j, then j must go before i
+   * @return rebuilt list of instructions: should contain same as
+   *      oldStatements in different order, subject to ordering constraints
+   */
+  private List<Statement> rebuildInstructions(Logger logger, Block block,
+      List<Integer> newStatements, MultiMap<Integer, Integer> before) {
+    List<Statement> oldStatements = block.getStatements();
+    
     // Put all instructions back.  We do a topological sort to
     // make sure they end up in correct order
-    ArrayDeque<Statement> stack = new ArrayDeque<Statement>();
-    HashSet<Statement> visited = new HashSet<Statement>();
-    visited.addAll(newStatements);
-    while (!after.isEmpty()) {
-      for (Entry<Statement, List<Statement>> e: after.entrySet()) {
-        Iterator<Statement> it = e.getValue().iterator();
-        while (it.hasNext()) {
-          Statement inst = it.next();
-          // Find instruction with nothing dependent on it
-          if (visited.contains(inst)) {
-            // Already added
-            it.remove();
-          } else if (after.get(inst).isEmpty()) {
-            stack.push(inst);
-            visited.add(inst);
-            it.remove();
+    HashSet<Integer> visited = new HashSet<Integer>();
+    
+    for (Integer alreadyAdded: newStatements) {
+      visited.add(alreadyAdded);
+      before.remove(alreadyAdded);
+    }
+    
+    if (logger.isTraceEnabled()) {
+      logger.trace("New statements: " + newStatements + "\n"
+                  + before);
+    }
+    
+    // Allow changing order of topological sort.  Useful for debugging
+    List<Integer> startNodes = new ArrayList<Integer>();
+    for (int i = 0; i < oldStatements.size(); i++) {
+      startNodes.add(i);
+    }
+    
+    //Collections.reverse(startNodes);
+    
+    // Do a topological sort with depth first search
+    for (int dfsStart: startNodes) {
+      if (visited.contains(dfsStart)) {
+        // Already added
+        continue;
+      }
+      logger.trace("dfsStart: " + dfsStart);
+      
+      // (Statement index, whether processed)
+      StackLite<Pair<Integer, Boolean>> stack =
+            new StackLite<Pair<Integer, Boolean>>();
+      stack.push(Pair.create(dfsStart, false));
+      while (!stack.isEmpty()) {
+        Pair<Integer, Boolean> curr = stack.pop();
+        Integer currIx = curr.val1;
+        Boolean processed = curr.val2;
+        
+        logger.trace("visit: " + curr);
+        
+        if (processed) {
+          // All dependencies already added: add this below them
+          newStatements.add(currIx);
+        } else if (visited.contains(currIx)) {
+          // Already visited: do nothing
+        } else {
+          // First time processing this node
+          visited.add(currIx);
+          stack.push(Pair.create(currIx, true));
+          List<Integer> beforeIxs = before.remove(currIx);
+          if (!beforeIxs.isEmpty()) {
+            // sort into canonical order to elim non-determinism
+            beforeIxs = new ArrayList<Integer>(beforeIxs);
+            Collections.sort(beforeIxs);
+            
+            for (int beforeIx: beforeIxs) {
+              stack.push(Pair.create(beforeIx, false));
+            }
           }
         }
       }
+      
     }
+    assert(before.isEmpty()) : before + " " + visited + " " + newStatements;
     
-    // Add any instructions nothing is dependent on at top
-    if (visited.size() < oldStatements.size()) {
-      for (Statement stmt: oldStatements) {
-        if (!visited.contains(stmt)) {
-          stack.push(stmt);
-        }
-      }
-    }
-    
-    while (!stack.isEmpty()) {
-      newStatements.add(stack.pop());
-    }
     assert(newStatements.size() == oldStatements.size());
+    
+    List<Statement> rebuilt = new ArrayList<Statement>(newStatements.size());
+    for (int stmtIx: newStatements) {
+      rebuilt.add(oldStatements.get(stmtIx));
+    }
+    if (logger.isTraceEnabled()) {
+      logger.trace("New instruction order: " + newStatements);
+    }
+    return rebuilt;
   }
 
-  private boolean searchForInputWriter(Logger logger,
+  private boolean addDependencies(Logger logger,
           Function fn,
           ArrayList<StatementInfo> stmtInfos, int i,
-          StatementInfo info1, MultiMap<Statement, Statement> after,
+          StatementInfo info1, MultiMap<Integer, Integer> before,
           HashSet<Statement> mustMove) {
     if (logger.isTraceEnabled())
       logger.trace("Try to move " + info1);
@@ -191,9 +242,11 @@ public class ReorderInstructions extends FunctionOptimizerPass {
     boolean canMoveFurther = true;
     for (int j = i + 1; j < stmtInfos.size(); j++) {
       StatementInfo info2 = stmtInfos.get(j);
+      // TODO: should check for "expensive" statements to avoid 
+      // deferring execution by putting instruction after it
       if (writesInputs(logger, info2, info1, false)) {
-        // These edges wont create cycle - forward edge
-        after.put(info1.stmt, info2.stmt);
+        // These edges wont create cycle - backward edge
+        before.put(j, i);
         // We must place inst2 based on dependencies
         mustMove.add(info2.stmt);
         canMoveFurther = false;
@@ -206,10 +259,10 @@ public class ReorderInstructions extends FunctionOptimizerPass {
       if (canMoveFurther && 
           writesInputs(logger, info1, info2, true)) {
         // Check that there isn't a path from inst1 to inst2
-        if (pathExists(after, info1.stmt, info2.stmt)) {
+        if (pathExists(before, j, i)) {
           canMoveFurther = false;
         } else {
-          after.put(info2.stmt, info1.stmt);
+          before.put(i, j);
           move = true;
         }
       }
@@ -217,13 +270,13 @@ public class ReorderInstructions extends FunctionOptimizerPass {
     return move;
   }
 
-  private boolean pathExists(MultiMap<Statement, Statement> after,
-      Statement from, Statement to) {
-    ArrayDeque<Statement> stack = new ArrayDeque<Statement>();
+  private boolean pathExists(MultiMap<Integer, Integer> after,
+      int from, int to) {
+    StackLite<Integer> stack = new StackLite<Integer>();
     stack.push(from);
     while (!stack.isEmpty()) {
-      Statement curr = stack.pop();
-      if (curr == to) {
+      Integer curr = stack.pop();
+      if (curr.equals(to)) {
         return true;
       }
       stack.addAll(after.get(curr));
@@ -427,9 +480,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
     }
     @Override
     protected void visitDeclaration(Var declared) {
-      if (declared.mapping() != null) {
-        info.inputVars.add(declared.mapping());
-      }
+      
     }
     @Override
     protected void visit(Instruction inst) {

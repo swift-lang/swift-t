@@ -131,6 +131,7 @@ public class ICOptimizer {
       if ((iteration % 3) == 2) {
         // Try to merge instructions into array build
         pipe.addPass(new ArrayBuild());
+        pipe.addPass(new StructBuild());
         
         // Try occasionally to unroll loops.  Don't do it on first iteration
         // so the code can be shrunk a little first
@@ -153,6 +154,10 @@ public class ICOptimizer {
       // in original order, then in a different but valid order
       if (canReorder && (iteration % 2 == 1)) {
         pipe.addPass(new ReorderInstructions(lastHalf));
+      }
+      
+      if (iteration % 3 == 0) {
+        pipe.addPass(new PropagateAliases());
       }
       
       if (iteration == nIterations - 2) {
@@ -184,10 +189,16 @@ public class ICOptimizer {
           pipe.addPass(Validate.standardValidator());
       }
       
+      // Expand ops about halfway through
+      boolean doInlineOps = iteration == nIterations / 2;
+      if (doInlineOps) {
+        pipe.addPass(new DataflowOpInline());
+      }
+      
       // Do merges near end since it can be detrimental to other optimizations
-      boolean doWaitMerges = iteration == nIterations - (nIterations / 4) - 2;
-      boolean doExplode = iteration == nIterations / 2;
-      pipe.addPass(new WaitCoalescer(doExplode, doWaitMerges, canReorder));
+      boolean doWaitMerges = (iteration >= nIterations - (nIterations / 4) - 2)
+                              && iteration % 2 == 0;
+      pipe.addPass(new WaitCoalescer(doWaitMerges, canReorder));
       
       if (debug)
         pipe.addPass(Validate.standardValidator());
