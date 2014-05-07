@@ -65,12 +65,16 @@ namespace eval turbine {
     adlb::xpt_init $xpt_filename $flush_mode $xpt_index_max
 
     foreach reload_file $xpt_reload {
-      #TODO: this has each rank reload all checkpoints. Should divide
-      #       up somehow.
-      log "Reloading checkpoint file $reload_file"
-      set reload_stats [ adlb::xpt_reload $reload_file ]
-      log "Finished reloading checkpoint file $reload_file"
-      log "Reload stats for $reload_file: $reload_stats"
+      # Note: don't get servers to load checkpoint data because they're
+      # needed to serve requests
+      if { ! [ adlb::amserver ] } {
+        set loader_rank [ adlb::worker_rank ]
+        set loaders [ adlb::workers ]
+        log "Reloading checkpoint file $reload_file loader $loader_rank/$loaders"
+        set reload_stats [ adlb::xpt_reload $reload_file $loader_rank $loaders ]
+        log "Finished reloading checkpoint file $reload_file"
+        log "Reload stats for $reload_file: $reload_stats"
+      }
     }
 
     #Determine mode based on what was provided

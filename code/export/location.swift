@@ -14,8 +14,11 @@
    "set <<loc>> [ ::turbine::random_worker ]"
 ];
 
+/*
+  deprecated: no longer engine/worker distinction
+ */
 (location loc) random_engine() "turbine" "0.1.1" [
-   "set <<loc>> [ ::turbine::random_engine ]"
+   "set <<loc>> [ ::turbine::random_worker ]"
 ];
 
 (location rank) hostmap_one(string name) "turbine" "0.0.2" [

@@ -71,7 +71,7 @@ namespace eval turbine {
             literal s integer $s_value
             container_insert $result $h $s ref
         }
-        adlb::write_refcount_decr $result
+        write_refcount_decr $result
     }
 
     proc reduce_splice_string { result S } {
@@ -104,6 +104,6 @@ namespace eval turbine {
             literal s string $s_value
             container_insert $result $h $s ref
         }
-        adlb::write_refcount_decr $result
+        write_refcount_decr $result
     }
 }

@@ -17,7 +17,7 @@ package require turbine 0.0.1
 
 
 turbine::defaults
-turbine::init $engines $servers
+turbine::init $servers
 turbine::enable_read_refcount
 
 if { ! [ adlb::amserver ] } {

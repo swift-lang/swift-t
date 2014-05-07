@@ -23,7 +23,7 @@ package require turbine 0.0.1
 namespace import turbine::string_*
 
 turbine::defaults
-turbine::init $engines $servers
+turbine::init $servers
 
 if { [ info exists env(TURBINE_TEST_PARAM_1) ] } {
     set iterations $env(TURBINE_TEST_PARAM_1)

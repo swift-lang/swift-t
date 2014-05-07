@@ -13,6 +13,8 @@
 # limitations under the License
 
 # Test rule on worker and control
+# This distinction no longer exists, but this test will check
+# backwards compability
 
 package require turbine 0.0.1
 namespace import turbine::*
@@ -20,13 +22,13 @@ namespace import turbine::*
 proc worker_fn { x } {
     # Send to worker
     puts "worker_fn..."
-    spawn_rule [ list ] "puts \"RAN RULE ON WORKER\"" \
+    rule [ list ] "puts \"RAN RULE ON WORKER\"" \
          name "worker" type $turbine::WORK 
-    spawn_rule [ list $x ] "puts \"RAN RULE AFTER X\"" \
+    rule [ list $x ] "puts \"RAN RULE AFTER X\"" \
          name "after-x" type $turbine::WORK 
-    spawn_rule [ list ] "puts \"RAN RULE LOCAL\"" \
+    rule [ list ] "puts \"RAN RULE LOCAL\"" \
          name "local" type $turbine::LOCAL 
-    spawn_rule [ list ] "puts \"RAN RULE ON ENGINE\"" \
+    rule [ list ] "puts \"RAN RULE ON ENGINE\"" \
          name "engine" type $turbine::CONTROL 
 }
 
@@ -40,7 +42,7 @@ proc rules { } {
 }
 
 turbine::defaults
-turbine::init $engines $servers
+turbine::init $servers
 turbine::start rules
 turbine::finalize
 

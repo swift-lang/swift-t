@@ -315,10 +315,6 @@ namespace eval turbine {
 
         variable turbine_argv
 
-        if { [ adlb::rank ] != 0 } {
-            return
-        }
-
         set accepted [ list ]
         foreach td $args {
             lappend accepted [ retrieve_decr_string $td ]
@@ -368,9 +364,9 @@ namespace eval turbine {
 
     # Busy wait for a number of seconds.  Up to microsecond precision
     proc spin { time_s } {
-        set us { expr round($time_s * 1000000) }
+        set us [ expr {round($time_s * 1000000)} ]
         set start [ clock microseconds ]
-        while { [ clock microseconds ] < $start + $us } {
+        while { [ clock microseconds ] < [ expr {$start + $us}] } {
             # Spin
         }
     }

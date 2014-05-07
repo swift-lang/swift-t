@@ -17,28 +17,28 @@ package require turbine 0.0.1
 namespace import turbine::*
 
 proc main { } {
-  test_1D
-  test_1D_file
-  test_2D
+  test_1D_val
+  test_1D_ref
+  test_1D_file_ref
+  test_2D_ref
 }
 
-proc test_1D { } {
-  puts "test_1D"
+# Test 1D array with values stored in container
+proc test_1D_val { } {
+  puts "test_1D_val"
   allocate_container C integer string
-  allocate x1 integer
-  allocate x2 string
-  allocate x3 float
-  allocate x4 string
+  
+  set x1 1234
+  set x2 "word"
+  set x3 3.14
+  set x4 "quick brown fox"
+  
   container_insert $C 4 $x2 string
   container_insert $C 1 $x1 string
   container_insert $C 8 $x3 string
   container_insert $C 12 $x4 string
-  store_integer $x1 1234
-  store_string $x2 "word"
-  store_float $x3 3.14
-  store_string $x4 "quick brown fox"
 
-  set res [ unpack_args $C 1 0 ]
+  set res [ unpack_args $C 1 string ]
   puts "res: $res"
   if { [ llength $res ] != 4 } {
     error "length of res wrong"
@@ -57,9 +57,45 @@ proc test_1D { } {
   }
 }
 
-proc test_1D_file { } {
-  puts "test_1D_file"
-  allocate_container C string string
+# Test 1D array with refs to values stored in container
+proc test_1D_ref { } {
+  puts "test_1D_ref"
+  allocate_container C integer ref
+  allocate x1 integer
+  allocate x2 string
+  allocate x3 float
+  allocate x4 string
+  container_insert $C 4 $x2 ref
+  container_insert $C 1 $x1 ref
+  container_insert $C 8 $x3 ref
+  container_insert $C 12 $x4 ref
+  store_integer $x1 1234
+  store_string $x2 "word"
+  store_float $x3 3.14
+  store_string $x4 "quick brown fox"
+
+  set res [ unpack_args $C 1 ref ]
+  puts "res: $res"
+  if { [ llength $res ] != 4 } {
+    error "length of res wrong"
+  }
+  if { [ lindex $res 0 ] != 1234 } {
+    error {C[1]}
+  }
+  if { ! [ string equal [ lindex $res 1 ] "word" ] } {
+    error {C[4]}
+  }
+  if { [ lindex $res 2 ] != 3.14 } {
+    error {C[8]}
+  }
+  if { ! [ string equal [ lindex $res 3 ] "quick brown fox" ] } {
+    error {C[12]}
+  }
+}
+
+proc test_1D_file_ref { } {
+  puts "test_1D_file_ref"
+  allocate_container C string file_ref
   allocate name1 string
   allocate name2 string
   allocate name3 string
@@ -68,17 +104,21 @@ proc test_1D_file { } {
   store_string $name2 "name2.txt"
   store_string $name3 "name3.swift"
 
-  allocate_file2 x1 $name1
-  allocate_file2 x2 $name2
-  allocate_file2 x3 $name1
-  allocate_file2 x4 $name3
+  allocate_file x1 1
+  set_filename_val $x1 [ retrieve $name1 ]
+  allocate_file x2 1
+  set_filename_val $x2 [ retrieve $name2 ]
+  allocate_file x3 1
+  set_filename_val $x3 [ retrieve $name1 ]
+  allocate_file x4 1
+  set_filename_val $x4 [ retrieve $name3 ]
 
-  container_insert $C 1 $x1 string
-  container_insert $C 4 $x2 string
-  container_insert $C 8 $x3 string
-  container_insert $C 12 $x4 string
+  container_insert $C 1 $x1 file_ref
+  container_insert $C 4 $x2 file_ref
+  container_insert $C 8 $x3 file_ref
+  container_insert $C 12 $x4 file_ref
 
-  set res [ unpack_args $C 1 1 ]
+  set res [ unpack_args $C 1 file_ref ]
   puts "res: $res"
   if { [ llength $res ] != 4 } {
     error "length of res wrong"
@@ -97,16 +137,16 @@ proc test_1D_file { } {
   }
 }
 
-proc test_2D { } {
-  puts "test_2D"
+proc test_2D_ref { } {
+  puts "test_2D_ref"
   # Outer
   allocate_container C integer ref
   
   # inner container
-  allocate_container C1 integer string
-  allocate_container C2 integer string
-  allocate_container C3 integer string
-  allocate_container C4 integer string
+  allocate_container C1 integer ref
+  allocate_container C2 integer ref
+  allocate_container C3 integer ref
+  allocate_container C4 integer ref 
 
   container_insert $C 0 $C1 ref
   container_insert $C 1 $C2 ref
@@ -127,22 +167,22 @@ proc test_2D { } {
   store_integer $c 4
 
   set expected [ list 1 1 1 1 2 2 2 2 1234 321 ]
-  container_insert $C1 0 $x string
-  container_insert $C1 1 $x string
-  container_insert $C1 2 $x string
-  container_insert $C1 3 $x string
+  container_insert $C1 0 $x ref
+  container_insert $C1 1 $x ref
+  container_insert $C1 2 $x ref
+  container_insert $C1 3 $x ref
   
-  container_insert $C2 0 $y string
-  container_insert $C2 1 $y string
-  container_insert $C2 2 $y string
-  container_insert $C2 3 $y string
+  container_insert $C2 0 $y ref
+  container_insert $C2 1 $y ref
+  container_insert $C2 2 $y ref
+  container_insert $C2 3 $y ref
 
   # Leave C3 empty
   
-  container_insert $C4 0 $z string
-  container_insert $C4 1 $a string
+  container_insert $C4 0 $z ref
+  container_insert $C4 1 $a ref
 
-  set res [ unpack_args $C 2 0 ]
+  set res [ unpack_args $C 2 ref ]
   puts "res: $res"
 
   if { [ llength $expected ] != [ llength $res ] } {
@@ -158,7 +198,7 @@ proc test_2D { } {
 }
 
 turbine::defaults
-turbine::init $engines $servers
+turbine::init $servers
 turbine::start main
 turbine::finalize
 

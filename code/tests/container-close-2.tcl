@@ -63,7 +63,7 @@ proc rules { } {
 }
 
 turbine::defaults
-turbine::init $engines $servers
+turbine::init $servers
 turbine::start rules
 turbine::finalize
 

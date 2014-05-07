@@ -24,40 +24,27 @@ namespace eval turbine {
         set container [ lindex $inputs 0 ]
 
         rule $container \
-            "sum_integer_body $container $result 0 0 -1" \
+            "sum_integer_body $container $result" \
             name "sum-$result-$container" 
     }
 
-    proc sum_integer_body { container result accum next_index n } {
-        debug "sum_integer $container => $result"
-        set CHUNK_SIZE 1024
+    proc sum_integer_body { container result } {
         # TODO: could divide and conquer instead of doing linear search
-        if { $n == -1 } {
-          set n [ adlb::enumerate $container count all 0 ]
-        }
-        set i $next_index
-        while { $i < $n } {
-          set this_chunk_size [ expr {min( $CHUNK_SIZE, $n - $i )} ]
-          set members [ adlb::enumerate $container members $this_chunk_size $i ]
+        set CHUNK_SIZE 65536
+        set accum 0
+        set pos 0
+        set maybe_more 1
+
+        while { $maybe_more } {
+          set members [ adlb::enumerate $container members $CHUNK_SIZE $pos ]
+          set members_len [ llength $members ]
+          set maybe_more [ expr $members_len == $CHUNK_SIZE ]
+          incr pos $members_len
+
           # puts "members of $container $i $this_chunk_size : $members"
-          foreach turbine_id $members {
-            # puts "turbine_id: $turbine_id"
-            if { [ adlb::exists $turbine_id ] } {
-                # add to the sum
-                set val [ retrieve_integer $turbine_id ]
-                #puts "C\[$i\] = $val"
-                set accum [ expr {$accum + $val} ]
-                incr i
-            } else {
-                # block until the next turbine id is finished,
-                #   then continue running
-                # puts "sum_integer_body $container $result $accum $i $n"
-                rule $turbine_id \
-                    "sum_integer_body $container $result $accum $i $n" \
-                    name "sum-$container" 
-                # return immediately without setting result
-                return
-            }
+          foreach val $members {
+            # add to the sum
+            set accum [ expr {$accum + $val} ]
           }
         }
         # If we get out of loop, we're done
@@ -73,40 +60,27 @@ namespace eval turbine {
         set container [ lindex $inputs 0 ]
 
         rule $container \
-            "sum_float_body $container $result 0 0 -1" \
-            name "sum-$container" 
+            "sum_float_body $container $result" \
+            name "sum-$result-$container" 
     }
 
-    proc sum_float_body { container result accum next_index n } {
-        debug "sum_float $container => $result"
-        set CHUNK_SIZE 1024
+    proc sum_float_body { container result } {
         # TODO: could divide and conquer instead of doing linear search
-        if { $n == -1 } {
-          set n [ adlb::enumerate $container count all 0 ]
-        }
-        set i $next_index
-        while { $i < $n } {
-          set this_chunk_size [ expr {min( $CHUNK_SIZE, $n - $i )} ]
-          set members [ adlb::enumerate $container members $this_chunk_size $i ]
+        set CHUNK_SIZE 65536
+        set accum 0
+        set pos 0
+        set maybe_more 1
+
+        while { $maybe_more } {
+          set members [ adlb::enumerate $container members $CHUNK_SIZE $pos ]
+          set members_len [ llength $members ]
+          set maybe_more [ expr $members_len == $CHUNK_SIZE ]
+          incr pos $members_len
+
           # puts "members of $container $i $this_chunk_size : $members"
-          foreach turbine_id $members {
-            # puts "turbine_id: $turbine_id"
-            if { [ adlb::exists $turbine_id ] } {
-                # add to the sum
-                set val [ retrieve_float $turbine_id ]
-                #puts "C\[$i\] = $val"
-                set accum [ expr {$accum + $val} ]
-                incr i
-            } else {
-                # block until the next turbine id is finished,
-                #   then continue running
-                # puts "sum_float_body $container $result $accum $i $n"
-                rule $turbine_id \
-                    "sum_float_body $container $result $accum $i $n" \
-                    name "sum-$container" 
-                # return immediately without setting result
-                return
-            }
+          foreach val $members {
+            # add to the sum
+            set accum [ expr {$accum + $val} ]
           }
         }
         # If we get out of loop, we're done
@@ -146,73 +120,73 @@ namespace eval turbine {
                     max_out min_out } {
         rule $container \
             "stats_body $container $n_out $sum_out $mean_out $M2_out \
-             $samp_std_out $pop_std_out $max_out $min_out \
-             0.0 0.0 0.0 NOMIN NOMAX 0 -1" \
+             $samp_std_out $pop_std_out $max_out $min_out" \
             name "stats-body-$container" 
     }
 
     # Calculate mean, standard deviation, max, min for array of float or int
     proc stats_body { container n_out sum_out mean_out M2_out \
-                samp_std_out pop_std_out\
-                max_out min_out sum_accum mean_accum M2_accum min_accum\
-                max_accum next_index n } {
-      debug "stats_body $container"
-      set CHUNK_SIZE 1024
-      if { $n == -1 } {
-        set n [ adlb::enumerate $container count all 0 ]
-      }
-      set i $next_index
-      while { $i < $n } {
-        set this_chunk_size [ expr {min( $CHUNK_SIZE, $n - $i )} ]
-        set members [ adlb::enumerate $container members $this_chunk_size $i ]
-        foreach turbine_id $members {
-          #puts "turbine_id: $turbine_id"
-          if { [ adlb::exists $turbine_id ] } {
-            # retrieve value and make sure it's floating point
-            # so we don't get surprised by integer division
-            set x [ retrieve $turbine_id ]
-            set x [ expr {double($x)} ]
-            puts "c\[$i\] = $x"
-            if { $sum_out != 0 } {
-              # avoid potential of overflow
-              set sum_accum [ expr {$sum_accum $x} ]
-            }
-            if { $min_accum == {NOMIN} } {
-              set min_accum $x
-            } else {
-              set min_accum [ expr {min($min_accum, $x)} ]
-            }
-            if { $max_accum == {NOMAX} } {
-              set max_accum $x
-            } else {
-              set max_accum [ expr {max($max_accum, $x)} ]
-            }
-            # Note: use knuth's online algorithm for mean and std
-            set delta [ expr {$x - $mean_accum} ]
-            set mean_accum [ expr {$mean_accum + ( $delta / ($i + 1) )} ]
-            puts "mean_accum = $mean_accum"
-            set M2_accum [ expr {$M2_accum + $delta*($x - $mean_accum)} ]
-            incr i
-          } else {
-            # block until the next turbine id is finished then continue running
-            rule $turbine_id \
-              "stats_body $container $n_out $sum_out \
-                 $mean_out $M2_out \
-                 $samp_std_out $pop_std_out $max_out $min_out \
-                 $sum_accum $mean_accum $M2_accum \
-                 $min_accum $max_accum $i $n" \
-                name "stats_body-$container" 
-            # return immediately without setting result
-            return
-          }
-        }
-      }
-      # If we get out of loop, we're done
+                samp_std_out pop_std_out max_out min_out } {
+      set sum_accum 0.0
+      set mean_accum 0.0 
+      set M2_accum 0.0
+      set min_accum NOMIN
+      set max_accum NOMAX
+
+      set CHUNK_SIZE 65536
+      set n [ adlb::enumerate $container count all 0 ]
+      
+      # Store n immediately
       if { $n_out != 0 } {
-        puts "DEBUG n = $n n_out = $n_out"
         store_integer $n_out $n
       }
 
+      set i 0
+      while { $i < $n } {
+        set last_chunk [ expr { $i + $CHUNK_SIZE >= $n } ]
+
+        if { $last_chunk } {
+          set this_chunk_size [ expr {$n - $i} ]
+          set read_decr 1
+        } else {
+          set this_chunk_size $CHUNK_SIZE
+          set read_decr 0
+        }
+
+        set vals [ adlb::enumerate $container members $this_chunk_size $i $read_decr ]
+
+        foreach x $vals {
+          # Make sure it's floating point so we don't get surprised by
+          # integer division
+          set x [ expr {double($x)} ]
+          if { $sum_out != 0 } {
+            # avoid potential of overflow
+            set sum_accum [ expr {$sum_accum + $x} ]
+          }
+          if { $min_accum == {NOMIN} } {
+            set min_accum $x
+          } else {
+            set min_accum [ expr {min($min_accum, $x)} ]
+          }
+          if { $max_accum == {NOMAX} } {
+            set max_accum $x
+          } else {
+            set max_accum [ expr {max($max_accum, $x)} ]
+          }
+          # Note: use knuth's online algorithm for mean and std
+          set delta [ expr {$x - $mean_accum} ]
+          set mean_accum [ expr {$mean_accum + ( $delta / ($i + 1) )} ]
+          set M2_accum [ expr {$M2_accum + $delta*($x - $mean_accum)} ]
+          incr i
+        }
+      }
+      
+      if { $n == 0 } {
+        # Handle corner case of empty container correctly
+        read_refcount_decr $container
+      }
+
+      # We're done - store results
       if { $sum_out != 0 } {
         store_float $sum_out $sum_accum
       }
@@ -255,79 +229,135 @@ namespace eval turbine {
         }
         store_float $pop_std_out [ expr {sqrt($M2_accum / $n)} ]
       }
-      read_refcount_decr $container
     }
 
 
-    # take a container of PartialStats and summarize them
-    # outputs are mean, stddev
-    # note: we return population std dev
-    proc stat_combine { outputs container } {
-      set n_out [ lindex $outputs 0 ]
-      set mean_out [ lindex $outputs 1 ]
-      set std_out [ lindex $outputs 2 ]
-      rule $container \
-          "stat_combine_body $container $n_out $mean_out $std_out 0 0.0 0.0 0" \
-          name "stats-combine-$container" 
+  # take a container of PartialStats and summarize them
+  # outputs are mean, stddev
+  # note: we return population std dev
+  proc stat_combine { outputs container } {
+    set n_out [ lindex $outputs 0 ]
+    set mean_out [ lindex $outputs 1 ]
+    set std_out [ lindex $outputs 2 ]
+    rule $container "stat_combine_body $container $n_out $mean_out $std_out" \
+        name "stats-combine-$container" 
+  }
+  
+  # Setup reduction tree to calculate statistics
+  # container: closed container
+  proc stat_combine_body { container n_out mean_out std_out } {
+
+    # TODO: don't really need keys, but enumerate doesn't support
+    # acquiring references
+    set contents [ adlb::acquire_ref $container container 1 1 ]
+    set structs [ dict values $contents ]
+    set n [ llength $structs ]
+    
+    if { $n == 0 } {
+      error "mean and standard deviation not defined for sample size 0"
+    }
+    
+    # Set up a k-way reduction tree
+    set k 16
+
+    # Number of internal nodes in reduce tree
+    set reduce_node_count 0
+    set level_nodes $n
+    while { $level_nodes > $k } {
+      # ceil(level_nodes / k)
+      set level_nodes [ expr {($level_nodes - 1) / $k + 1} ]
+      incr reduce_node_count $level_nodes
     }
 
-    proc stat_combine_body { container n_out mean_out std_out \
-                    n_accum mean_accum \
-                    M2_accum next_index } {
-      set keys [ container_list $container ]
-      set keycount [ llength $keys ]
-      set i $next_index
-      while { $i < $keycount } {
-        set key [ lindex $keys $i ]
-        set struct [ container_lookup $container $key ]
-        # puts "key: $key"
-        # struct should be closed
-        set n_id [ dict get $struct "n" ]
-        set mean_id [ dict get $struct "mean" ]
-        set M2_id [ dict get $struct "M2" ]
-        if { [ adlb::exists $n_id ] && [ adlb::exists $mean_id ] \
-            && [ adlb::exists $M2_id ] } {
-          set n [ retrieve_integer $n_id ]
-          set mean [ retrieve_float $mean_id ]
-          set M2 [ retrieve_float $M2_id ]
-          if { $i > 0 } {
-            # combine statistics
-            set mean2 $mean_accum
-            set n2 $n_accum
-            # n' := n1 + n2
-            set n_accum [ expr {$n_accum + $n} ]
+    # Allocate intermediate nodes
+    if { $reduce_node_count > 0 } {
+      set node_create_spec [ list s:PartialStats 1 ]
+      set node_create_specs [ lrepeat $reduce_node_count $node_create_spec ]
+      set reduce_nodes [ adlb::multicreate {*}$node_create_specs ]
+    }
+   
+    # Setup intermediate reduction
+    set curr_structs $structs
+    # Index into allocated reduce nodes
+    set reduce_node_ix 0
+    while { [ llength $curr_structs ] > $k } {
+      set next_structs [ list ]
 
-            # weighted mean
-            # mean' := (mean1 * n1 + mean2 * n2) / (n1 + n2)
-            set mean_accum [ expr ( $mean2 * $n2 + $mean * $n) / \
-                                              double( $n_accum ) ]
+      set n [ llength $curr_structs ]
+      for {set i 0} {$i < $n} {incr i $k} {
+        # Slice of structs to reduce
+        set slice [ lrange $curr_structs $i [ expr {$i + $k - 1} ]]
 
-            #  diff := mean2 - mean1
-            set diff [ expr {$mean - $mean2} ]
-
-            # M2' := M2_1 + M2_2 + diff^2 * ( n1*n2 / (n1 + n2))
-            set M2_accum [ expr $M2_accum + $M2 + \
-                          (($diff**2) * ($n2 * $n / double($n_accum))) ]
-          } else {
-            set n_accum $n
-            set mean_accum $mean
-            set M2_accum $M2
-          }
-          incr i
-        } else {
-          rule "$n_id $mean_id $M2_id" \
-            "stat_combine_body $container $n_out $mean_out $std_out \
-              $n_accum $mean_accum $M2_accum $i" \
-            name "stats-combine-$container" 
-          return
-        }
+        # Output of reduction
+        set output [ lindex $reduce_nodes $reduce_node_ix ]
+        incr reduce_node_ix
+        rule $slice [ list stat_combine_reduce $slice $output ]
+        lappend next_structs $output
       }
+
+      set curr_structs $next_structs
+    }
+    
+    # Produce final output
+    rule $curr_structs [ list stat_combine_final \
+      [ lindex $curr_structs ] $n_out $mean_out $std_out ]
+
+  }
+  
+  proc stat_combine_step { partials n_var mean_var M2_var } {
+    upvar 1 $n_var n_accum
+    upvar 1 $mean_var mean_accum
+    upvar 1 $M2_var M2_accum
+    set n_accum 0
+
+    foreach struct_td $partials { 
+      set struct [ retrieve_decr_struct $struct_td ]
+      set n [ dict get $struct "n" ]
+      set mean [ dict get $struct "mean" ]
+      set M2 [ dict get $struct "M2" ]
+
       if { $n_accum == 0 } {
-        error "mean and standard deviation not defined for sample size 0"
+        set n_accum $n
+        set mean_accum $mean
+        set M2_accum $M2
+      } else {
+        # combine statistics
+        set mean2 $mean_accum
+        set n2 $n_accum
+        # n' := n1 + n2
+        set n_accum [ expr {$n_accum + $n} ]
+
+        # weighted mean
+        # mean' := (mean1 * n1 + mean2 * n2) / (n1 + n2)
+        set mean_accum [ expr ( $mean2 * $n2 + $mean * $n) / \
+                                          double( $n_accum ) ]
+
+        #  diff := mean2 - mean1
+        set diff [ expr {$mean - $mean2} ]
+
+        # M2' := M2_1 + M2_2 + diff^2 * ( n1*n2 / (n1 + n2))
+        set M2_accum [ expr $M2_accum + $M2 + \
+                      (($diff**2) * ($n2 * $n / double($n_accum))) ]
       }
-      store_integer $n_out $n_accum
-      store_float $mean_out $mean_accum
-      store_float $std_out [ expr {sqrt($M2_accum / (double($n_accum)))} ]
-      read_refcount_decr $container
     }
+  }
+  
+  # Intermediate reduction
+  proc stat_combine_reduce { partials out } {
+    #puts "REDUCE: $partials => $out"
+    stat_combine_step $partials n mean M2
+    set out_val [ dict create n $n mean $mean M2 $M2 ]
+    store_struct $out $out_val s:PartialStats
+  }
+
+  # Final step of reduction: assign output variables
+  proc stat_combine_final { partials n_out mean_out std_out } {
+    #puts "REDUCE FINAL: $partials => $n_out $mean_out $std_out"
+    stat_combine_step $partials n mean M2
+
+    store_integer $n_out $n
+    store_float $mean_out $mean
+    store_float $std_out [ expr {sqrt($M2 / (double($n)))} ]
+  }
 }
+

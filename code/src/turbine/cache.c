@@ -264,4 +264,5 @@ turbine_cache_finalize()
   table_lp_delete(&entries);
   table_lp_release(&entries);
   rbtree_clear(&lru);
+  initialized = false;
 }

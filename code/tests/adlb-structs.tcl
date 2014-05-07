@@ -25,18 +25,25 @@ namespace import turbine::string_*
 set iterations 10
 
 turbine::defaults
-turbine::init $engines $servers
+turbine::init $servers
 turbine::enable_read_refcount
 
-global TYPE_A TYPE_B
+global TYPE_A TYPE_B TYPENAME_A TYPENAME_B
 set TYPE_A 1
+set TYPENAME_A struct:A
 set TYPE_B 2
+set TYPENAME_B struct:B
 
-adlb::declare_struct_type $TYPE_A type1 [ list a integer b string c float ]
+adlb::declare_struct_type $TYPE_A $TYPENAME_A [ list a integer b string c float ]
 puts "Declared struct type $TYPE_A"
-adlb::declare_struct_type $TYPE_B type2 [ list a integer b.one string \
+adlb::declare_struct_type $TYPE_B $TYPENAME_B [ list a integer b.one string \
                                             b.two float c.three.a ref ]
 puts "Declared struct type $TYPE_B"
+
+# Check double declare caught
+if { ! [ catch { adlb::declare_struct_type 1234 $TYPENAME_B [ list ] } ] } {
+  error "Didn't catch double declare of struct type"
+}
 
 
 proc check_a { act exp int_val str_val float_val } {
@@ -59,7 +66,7 @@ proc check_b { act exp int_val str_val float_val ref } {
 }
 
 proc do_test { i } {
-    global TYPE_A TYPE_B
+    global TYPE_A TYPE_B TYPENAME_A TYPENAME_B
     # Testing first type
     set id [ adlb::create $::adlb::NULL_ID struct ]
     puts "Created <$id>"
@@ -78,7 +85,7 @@ proc do_test { i } {
     check_a $v2 $v $int_val $str_val $float_val
 
     # Testing second type with nested structs
-    set id_2 [ adlb::create $::adlb::NULL_ID struct ]
+    set id_2 [ adlb::create $::adlb::NULL_ID $TYPENAME_B ]
     puts "Created <$id_2>"
 
     set int_val $i
@@ -99,7 +106,7 @@ proc do_test { i } {
       error "Expected error when not specifying subtype"
     }
 
-    adlb::store $id_2 struct$TYPE_B $v
+    adlb::store $id_2 $TYPENAME_B $v
     puts "Stored <$id_2>=$v"
     
     # Check for error when we don't specify struct subtype
@@ -107,7 +114,7 @@ proc do_test { i } {
       error "Expected error when specifying wrong struct subtype"
     }
 
-    set v2 [ adlb::retrieve_decr $id_2 1 struct$TYPE_B ]
+    set v2 [ adlb::retrieve_decr $id_2 1 $TYPENAME_B ]
     puts "Retrieved <$id_2>=$v2"
     check_b $v2 $v $int_val $str_val $float_val $ref
 

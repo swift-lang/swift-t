@@ -34,18 +34,10 @@ proc rules { } {
     set c 1
     turbine::create_container $c integer integer
 
-    turbine::create_integer 2
-    turbine::store_integer 2 12345
-    turbine::create_integer 3
-    turbine::create_integer 4 
-    turbine::store_integer 4 -1
-    turbine::create_integer 5 
     # 12345 + 4 - 1 + 3 = 12351
-
     # set <container> <subscript> <member> <type>
-    turbine::container_immediate_insert $c "0" 2 integer
-    turbine::container_immediate_insert $c "2" 4 integer
-    turbine::container_immediate_insert $c "3" 5 integer
+    turbine::container_immediate_insert $c "0" 12345 integer
+    turbine::container_immediate_insert $c "2" -1 integer
     
     # initialise the result
     turbine::create_integer 6
@@ -55,13 +47,10 @@ proc rules { } {
     # trace the result
     turbine::trace [ list ] [ list 6 ]
     
-    # only finalise the container later make sure
-    # sum handles non-finished array correctly
-    turbine::c::rule "3 5" "insert_last $c 1 3"
-    
     # wait until we assign 
-    turbine::c::rule "" "turbine::store_integer 3 4"
-    turbine::c::rule "" "turbine::store_integer 5 3"
+    turbine::c::rule "" "turbine::container_immediate_insert $c \"1\" 4 integer"
+    turbine::c::rule [ list [ adlb::subscript_container $c 1 ] ] \
+            "insert_last $c \"3\" 3"
 }
 
 turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)

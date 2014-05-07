@@ -114,6 +114,9 @@ turbine_debug(const char* token, const char* format, ...)
 void
 turbine_debug_finalize()
 {
+  if (!initialized)
+    return;
   if (buffer)
     free(buffer);
+  initialized = false;
 }

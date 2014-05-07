@@ -18,9 +18,51 @@
 # TODO: Need some Turbine tests for this
 
 namespace eval turbine {
-    namespace export get_file_status get_file_path is_file_mapped \
-                     filename2 copy_file close_file file_read file_write \
-                     swift_filename
+    namespace export get_file_status get_file_path is_file_mapped       \
+        allocate_file                                                   \
+        set_filename_val get_filename_val                               \
+        filename2 copy_file close_file file_read file_write             \
+        swift_filename                                                  \
+        create_file store_file                                          \
+        create_file_ref store_file_ref                                  \
+        retrieve_file_ref retrieve_decr_file_ref acquire_file_ref       \
+        retrieve_file retrieve_decr_file store_file
+
+    # Initialize file struct types, should be called when initializing
+    # Turbine
+    proc init_file_types { } {
+      # Setup file and file_ref struct types
+      # File is represented by path.  Status of td reflects whether file
+      # data available
+      adlb::declare_struct_type 0 file [ list path string ]
+      adlb::declare_struct_type 1 file_ref \
+                [ list file ref is_mapped integer ]
+    }
+    
+    # usage: <name> <is_mapped> [<create props>]
+    # is_mapped: if true, file mapping will be set;
+    #            if false, temporary file can be generated
+    proc allocate_file { name is_mapped {read_refcount 1} {write_refcount 1} args } {
+        # use void to signal file availability
+        set file_td [ allocate_custom "$name" file \
+                              $read_refcount $write_refcount {*}${args} ]
+
+        # Format matches file_ref struct type
+        set u [ dict create file $file_td is_mapped $is_mapped ]
+        upvar 1 $name v
+        set v $u
+        return $u
+    }
+    
+    proc file_handle_from_td { td is_mapped } {
+      return [ dict create file $td is_mapped $is_mapped ]
+    }
+
+    proc create_file { id {read_refcount 1} {write_refcount 1} \
+                             {permanent 0} } {
+        return [ adlb::create $id file $read_refcount \
+                              $write_refcount $permanent ]
+    }
 
     # Handles files that are input to a builtin function
     # Increments reference count to avoid file deletion
@@ -31,27 +73,140 @@ namespace eval turbine {
         set result [ lindex $file_handle 0 ]
         return $result
     }
+    
+    proc get_file_td { file_handle } {
+      return [ dict get $file_handle file ]
+    }
 
-    # Extract file status future from handle
+    # Extract file status handle from file handle
     proc get_file_status { file_handle } {
-      return [ lindex $file_handle 0 ]
+      # Create handle for subscript of struct variable
+      return [ get_file_td $file_handle ]
     }
 
     # Extract filename future from handle
     proc get_file_path { file_handle } {
-      return [ lindex $file_handle 1 ]
+      # Create handle for subscript of struct variable (first elem)
+      return [ adlb::subscript_struct [ get_file_td $file_handle ] 0 ]
     }
 
     # return tcl bool value
     proc is_file_mapped { file_handle } {
-      return [ lindex $file_handle 2 ]
+      return [ dict get $file_handle is_mapped ]
+    }
+  
+    proc store_file_from_local { file_handle local_f_varname } {
+       upvar 1 $local_f_varname local_f
+       # Increment refcount so not cleaned up locally
+       lset local_f 1 [ expr {[ lindex $local_f 1 ] + 1} ]
+       store_void [ get_file_status $f ]
     }
 
+    # store file and update local file var refcounts
+    # second argument must be var name so we can manipulate refcounts
+    proc store_file { file_handle local_f_varname {set_filename 1} } {
+      upvar 1 $local_f_varname local_f
+      # Increment refcount so not cleaned up locally
+      lset local_f 1 [ expr {[ lindex $local_f 1 ] + 1} ]
+
+      set value [ dict create path [ local_file_path $local_f ] ]
+      
+      if { $set_filename } {
+        set id [ get_file_td $file_handle ]
+        log "store: <$id>=$value"
+        adlb::store $id file $value
+        c::cache_store $id file $value
+      } else {
+        # Close without modifying filename
+        close_file $file_handle
+      }
+    }
+
+    proc retrieve_file { file_handle {cachemode CACHED} {decrref 0} } {
+        set id [ get_file_td $file_handle ]
+        set cache [ string equal $cachemode CACHED ]
+        if { $cache && [ c::cache_check $id ] } {
+            set result [ c::cache_retrieve $id ]
+            if { $decrref } {
+              read_refcount_decr $id $decrref
+            }
+        } else {
+            if { $decrref } {
+              set result [ adlb::retrieve_decr $id $decrref file ]
+            } else {
+              set result [ adlb::retrieve $id file ]
+            }
+
+            if { $cache } {
+              c::cache_store $id file $result
+            }
+        }
+        debug "retrieve: <$id>=$result"
+        return [ create_local_file_ref [ dict get $result path ] 2 ]
+    }
+
+    proc retrieve_decr_file { file_handle {cachemode CACHED} } {
+      return [ retrieve_file $file_handle $cachemode 1 ]
+    }
+    
+    proc create_file_ref { id {read_refcount 1} {write_refcount 1} \
+                             {permanent 0} } {
+        return [ adlb::create $id file_ref $read_refcount \
+                              $write_refcount $permanent ]
+    }
+
+    proc store_file_ref { id value {store_read_refs 1} {store_write_refs 0}} {
+        log "store: <$id>=$value"
+        adlb::store $id file_ref $value $store_read_refs $store_write_refs
+        c::cache_store $id file_ref $value
+    }
+
+    proc retrieve_file_ref { id {cachemode CACHED} {decrref 0} } {
+        set cache [ string equal $cachemode CACHED ]
+        if { $cache && [ c::cache_check $id ] } {
+            set result [ c::cache_retrieve $id ]
+            if { $decrref } {
+              read_refcount_decr $id
+            }
+        } else {
+            if { $decrref } {
+              set result [ adlb::retrieve_decr $id $decrref file_ref ]
+            } else {
+              set result [ adlb::retrieve $id file_ref ]
+            }
+
+            if { $cache } {
+              c::cache_store $id file_ref $result
+            }
+        }
+        debug "retrieve: <$id>=$result"
+        return $result
+    }
+
+    proc retrieve_decr_file_ref { id {cachemode CACHED} } {
+      return [ retrieve_file_ref $id $cachemode 1 ]
+    }
+
+    proc acquire_file_ref { id {incrref 1} {decrref 0} } {
+        set result [ adlb::acquire_ref $id file_ref $incrref $decrref ]
+        debug "acquire_file_ref: <$id>=$result"
+        return $result
+    }
+    
     # get the filename from the file handle
     proc filename2 { out in } {
       set file_handle [ lindex $in 0 ]
       copy_string $out [ get_file_path $file_handle ]
-      read_refcount_decr [ get_file_status $file_handle ]
+    }
+
+    # Copy in filename from future
+    proc copy_in_filename { file filename } {
+      rule $filename "copy_in_filename_body {$file} $filename"
+    }
+
+    proc copy_in_filename_body { file filename } {
+      set filename_val [ retrieve_decr_string $filename ]
+      set_filename_val $file $filename_val
     }
 
     # get the filename if mapped, assign if unmapped
@@ -86,10 +241,8 @@ namespace eval turbine {
         }
 
         foreach infile $infiles {
-            # Wait for both path and status
-            set inpath [ get_file_path $infile ]
-            set instatus [ get_file_status $infile ]
-            lappend waitfor $inpath $instatus
+            # Wait for file to be closed, not just path
+            lappend waitfor [ get_file_td $infile ]
         }
         rule $waitfor $cmd  name $msg target $target
     }
@@ -113,8 +266,8 @@ namespace eval turbine {
       if { ! [ file exists $filepath_val ] } {
         error "input_file: file '$filepath_val' does not exist"
       }
-      store_string [ get_file_path $outfile ] $filepath_val
-      store_void [ get_file_status $outfile ]
+      # Set filename and close
+      set_filename_val $outfile $filepath_val 1
     }
 
     # fname: filename as tcl string
@@ -123,7 +276,7 @@ namespace eval turbine {
       if { ! [ file exists $fname ] } {
         error "input_file: file $fname does not exist"
       }
-      return [ create_local_file_ref $fname ]
+      return [ create_local_file_ref $fname 100 ]
     }
 
     proc input_url { out filepath } {
@@ -142,19 +295,13 @@ namespace eval turbine {
     }
 
     proc input_url_impl { outfile filepath_val } {
-      store_string [ get_file_path $outfile ] $filepath_val
-      store_void [ get_file_status $outfile ]
+      # Set filename and close
+      set_filename_val $outfile $filepath_val 1
     }
 
     proc input_url_local { url } {
       # Create local file ref with extra refcount so that it is never deleted
-      return [ create_local_file_ref $fname 100 ]
-    }
-
-    # fname: filename as tcl string
-    # return: local file handle
-    proc input_url_local { fname } {
-      return [ create_local_file_ref $fname ]
+      return [ create_local_file_ref $url 100 ]
     }
 
     # initialise an unmapped file to a temporary location
@@ -168,7 +315,7 @@ namespace eval turbine {
               <$file_handle>"
       }
       set filename [ mktemp ]
-      store_string [ get_file_path $file_handle ] $filename
+      set_filename_val $file_handle $filename
       return $filename
     }
 
@@ -177,41 +324,54 @@ namespace eval turbine {
     proc copy_file { outputs inputs } {
       set dst [ lindex $outputs 0 ]
       set src [ lindex $inputs 0 ]
+      log "copy_file $src => $dst"
       #  puts "dst: $dst"
       set mapped [ is_file_mapped $dst ]
+      set src_td [ get_file_td $src ]
       if { $mapped } {
         # is mapped, so need to make sure that file is at mapped path
         set dstpath [ get_file_path $dst ]
-        set srcpath [ get_file_path $src ]
-        set srcstatus [ get_file_status $src ]
-        rule "$dstpath $srcpath $srcstatus" \
-            [ list copy_file_body $dst $src ] \
-            name "copy_file-$dst-$src" type $::turbine::WORK
+        rule [ list $dstpath $src_td ] \
+            "copy_file_body {$dst} {$src}" \
+            name "copy_file-{$dst}-{$src}" type $::turbine::WORK
       } else {
         # not mapped.  As shortcut, just make them both point to the
         # same file and update status once src file is closed
-        copy_void [ get_file_status $dst ] [ get_file_status $src ]
-        copy_string [ get_file_path $dst ] [ get_file_path $src ]
+        rule $src_td [ list copy_file_td_body $dst $src ]
       }
     }
 
+    proc copy_file_td_body { dst src } {
+      set tmp [ retrieve_decr_file $src ]
+      store_file $dst $tmp
+    }
+
     proc copy_file_body { dst src } {
-      set dstpath [ get_file_path $dst ]
-      set dstpath_val [ retrieve_string $dstpath ]
-      set srcpath [ get_file_path $src ]
-      set srcpath_val [ retrieve_string $srcpath ]
+      set dstpath_val [ get_filename_val $dst ]
+      set src_val [ retrieve_decr_file $src ]
+      set srcpath_val [ local_file_path $src_val ]
+      log "physical file copy \"$srcpath_val\" => \"$dstpath_val\""
       # do the copy: srcpath to dstpath
       # TODO: is this the best way to do this?
       file copy -force $srcpath_val $dstpath_val
       # signal that output is now available
-      store_void [ get_file_status $dst ]
-      file_read_refcount_decr $src
+      close_file $dst
     }
 
     proc copy_local_file_contents { dst src } {
       set dstpath [ local_file_path $dst ]
       set srcpath [ local_file_path $src ]
       file copy -force $srcpath $dstpath
+    }
+    
+    proc dereference_file { v r } {
+        rule $r "dereference_file_body {$v} $r" \
+            name "dereference_file"
+    }
+    proc dereference_file_body { v r } {
+        # Get the TD from the reference
+        set handle [ acquire_file_ref $r 1 1 ]
+        copy_file [ list $v ] [ list $handle ]
     }
 
     # return the filename of a unique temporary file
@@ -229,19 +389,22 @@ namespace eval turbine {
     }
 
     # set the filename to a string
-    proc set_filename_val { file_handle filename } {
-      store_string [ get_file_path $file_handle ] $filename
+    proc set_filename_val { file_handle filename {write_decr 0}} {
+      # TODO: different struct store function?
+      adlb::insert [ get_file_td $file_handle ] 0 $filename string $write_decr
+    }
+
+    proc get_filename_val { file_handle {read_decr 0} } {
+      # TODO: different struct retrieve function?
+      return [ adlb::lookup [ get_file_td $file_handle ] 0 $read_decr ]
     }
 
     proc close_file { handle } {
-      store_void [ get_file_status $handle ]
+      write_refcount_decr [ get_file_td $handle ]
     }
 
     proc file_read_refcount_incr { handle { amount 1 } } {
-      set status [ get_file_status $handle ]
-      set path [ get_file_path $handle ]
-      read_refcount_incr $status $amount
-      read_refcount_incr $path $amount
+      read_refcount_incr [ get_file_td $handle ] $amount
     }
 
     proc file_read_refcount_decr { handle { amount 1 } } {
@@ -259,16 +422,17 @@ namespace eval turbine {
 
         set i 0
         foreach v $r_value {
-            # allocate filename with read refcount 2
-            allocate_custom split_token string 2
-            store_string $split_token $v
-            # Allocate file with given filename that is already closed
-            set f [ allocate_file2 "<$result>\[$i\]" $split_token 1 0 ]
+            # Allocate file with given filename
+            # TODO: this binds lots of variable names in this scope
+            #       - sorta bad
+            set f [ allocate_file "<$result>\[$i\]" 1 ]
+            # Set filename and close file in one operation
+            set_filename_val $f $v 1
             container_insert $result $i $f file_ref
             incr i
         }
         # close container
-        adlb::write_refcount_decr $result
+        write_refcount_decr $result
     }
 
     # Create a reference to track local file
@@ -281,23 +445,12 @@ namespace eval turbine {
         return [ lindex $local_file 0 ]
     }
 
-    # f: Turbine file handle
-    # returns: local file ref
-    proc get_file { f {decrref 0}} {
-        set fname [ retrieve_string [ get_file_path $f ] CACHED $decrref ]
-        if { $decrref > 0 } {
-          set status [ get_file_status $f ]
-          read_refcount_decr $status $decrref
-        }
-        # two references: global file future, local one
-        return [ create_local_file_ref $fname 2 ]
-    }
-
     proc set_file { f local_f_varname } {
        upvar 1 $local_f_varname local_f
        # Increment refcount so not cleaned up locally
        lset local_f 1 [ expr {[ lindex $local_f 1 ] + 1} ]
-       store_void [ get_file_status $f ]
+       # Decrement write refcount to close file
+       close_file $f
     }
 
     proc incr_local_file_refcount { varname levels } {
@@ -332,8 +485,7 @@ namespace eval turbine {
     }
 
     proc file_read_body { result src } {
-	set s [retrieve_decr_string [ get_file_path $src ] ]
-        read_refcount_decr [ get_file_status $src ]
+	set s [ get_filename_val $src 1 ]
         set fp [ ::open $s r ]
 	set file_data [ read $fp ]
         close $fp
@@ -356,12 +508,11 @@ namespace eval turbine {
 
     proc file_write_body { dst str } {
         set str_val [ retrieve_decr_string $str ]
-	set dstpath [ get_file_path $dst ]
-	set d [ retrieve_string $dstpath ]
+	set d [ get_filename_val $dst ]
 	set fp [ ::open $d w+ ]
         puts -nonewline $fp $str_val
 	close $fp
-	store_void [ get_file_status $dst ]
+	close_file $dst
     }
 
     # local_file: local file object
@@ -382,8 +533,9 @@ namespace eval turbine {
             [ list blob_read_body $result $src ]
     }
     proc blob_read_body { result input } {
-	set input_name [ retrieve_decr_string [ get_file_path $input ] ]
-        read_refcount_decr [ get_file_status $input ]
+	set val [ retrieve_decr_file $src ]
+	set input_name [ dict get $val path ]
+
         set blob [ new_turbine_blob ]
         log "blob_read: $input_name"
         blobutils_read $input_name $blob
@@ -412,21 +564,26 @@ namespace eval turbine {
             [ list file_lines_body $result $src ]
     }
     proc file_lines_body { result input } {
-	set input_name [ retrieve_decr_string [ get_file_path $input ] ]
-        read_refcount_decr [ get_file_status $input ]
+        set input_val [ retrieve_decr_file $input ]
+        set lines_val [ file_lines_impl $input_val ]
+        array_kv_build $result $lines_val 1 integer string
+    }
+
+    # input_file: local file representation
+    proc file_lines_impl { input_file } {
+        set input_name [ local_file_path $input_file ]
         set fp [ ::open $input_name r ]
         set line_number 0
-
+        set lines [ dict create ]
         while { [ gets $fp line ] >= 0 } {
             regsub "#.*" $line "" line
             set line [ string trim $line ]
             if { [ string length $line ] > 0 } {
-                literal td string $line
-                container_insert $result $line_number $td ref 0
+                dict append lines $line_number $line
             }
             incr line_number
         }
         close $fp
-        adlb::write_refcount_decr $result
+        return $lines
     }
 }

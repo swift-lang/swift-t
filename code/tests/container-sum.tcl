@@ -27,7 +27,7 @@ package require turbine 0.0.1
 
 proc rules { } {
 
-    turbine::create_container 11 integer string
+    turbine::create_container 11 integer integer
     # adlb::write_refcount_incr 1
 
     turbine::create_integer 12
@@ -38,13 +38,14 @@ proc rules { } {
     turbine::store_integer 14 -1
     turbine::create_integer 15
     turbine::store_integer 15 3
-    # 12345 + 4 - 1 + 3 = 12351
 
     # set <container> <subscript> <member> <type>
-    turbine::container_immediate_insert 11 "0" 12 string
-    turbine::container_immediate_insert 11 "1" 13 string
-    turbine::container_immediate_insert 11 "2" 14 string
-    turbine::container_immediate_insert 11 "3" 15 string
+    turbine::container_immediate_insert 11 "0" 12345 integer
+    turbine::container_immediate_insert 11 "1" 4 integer
+    turbine::container_immediate_insert 11 "2" -1 integer
+    turbine::container_immediate_insert 11 "3" 3 integer
+    # 12345 + 4 - 1 + 3 = 12351
+
     # close the container
     adlb::write_refcount_decr 11
 
@@ -58,7 +59,7 @@ proc rules { } {
 }
 
 turbine::defaults
-turbine::init $engines $servers
+turbine::init $servers
 turbine::start rules
 turbine::finalize
 

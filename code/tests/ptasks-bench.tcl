@@ -39,7 +39,7 @@ proc ptasks_1 { result inputs } {
 }
 
 turbine::defaults
-turbine::init $engines $servers
+turbine::init $servers
 turbine::start rules
 turbine::finalize
 

@@ -80,26 +80,21 @@ namespace eval turbine {
 
     # This accepts an optional delimiter
     # (STC does not yet support optional arguments)
-    proc split { args } {
-        set result [ lindex $args 0 ]
-        set inputs [ lreplace $args 0 0 ]
-
-        # Unpack inputs
-        set inputs [ lindex $inputs 0 ]
-
+    proc split { result inputs } {
         set s [ lindex $inputs 0 ]
         if { [ llength $inputs ] == 2 } {
             set delimiter [ lindex $inputs 1 ]
-            rule [ list $s $delimiter ] \
-                "split_body $result $s $delimiter" \
-                name "split-$result"
+            set inputs [ list $delimiter $s ]
         } elseif { [ llength $inputs ] == 1 } {
             # Use default delimiter: " "
             set delimiter 0
-            rule $s "split_body $result $s 0" name "split-$result"
+            set inputs $s
         } else {
             error "split requires 1 or 2 arguments"
         }
+        rule $inputs \
+            "split_body $result $s $delimiter" \
+            name "split-$result"
     }
 
     # Split string s with delimiter d into result container r
@@ -112,16 +107,20 @@ namespace eval turbine {
         } else {
             set d_value [ retrieve_decr_string $delimiter ]
         }
-        set r_value [ ::split $s_value $d_value ]
-        set n [ llength $r_value ]
-        log "split: $s_value on: $d_value tokens: $n"
-        for { set i 0 } { $i < $n } { incr i } {
-            set v [ lindex $r_value $i ]
-            literal split_token string $v
-            container_insert $result $i $split_token ref
+        #debug "split: $s_value on: $d_value tokens: $n"
+
+        set r_val [ split_impl $s_value $d_value ]
+        array_kv_build $result $r_val 1 integer string
+    }
+
+    proc split_impl { s delimiter } {
+        set result_dict [ list ]
+        set i 0
+        foreach tok [ ::split $s $delimiter ] {
+          dict append result_dict $i $tok
+          incr i
         }
-        # close container
-        adlb::write_refcount_decr $result
+        return $result_dict
     }
 
     proc sprintf { result inputs } {
@@ -317,32 +316,28 @@ namespace eval turbine {
     }
 
     proc string_join { result inputs } {
-        rule $inputs "string_join_body $result $inputs" \
+        set container [ lindex $inputs 0 ]
+        set separator [ lindex $inputs 1 ]
+        rule $inputs "string_join_body $result $container $separator" \
             name "string_join-$result"
     }
-    proc string_join_body { result container separator } {
-
-        set type [ container_typeof $container ]
-        c::log "string_join_body start"
-        deeprule $container 1 0 \
-            "string_join_store $result $container $separator"
-    }
+    
     # This is called when every entry in container is set
-    proc string_join_store { result container separator } {
+    proc string_join_body { result container separator } {
         set separator_value [ retrieve_decr_string $separator ]
+        set container_val [ adlb::enumerate $container dict all 0 1 ]
+        store_string $result [ string_join_impl $container_val $separator ]
+    }
+    
+    proc string_join_impl { container separator } {
         set A [ list ]
-        # TODO: borrow refcount directly from container
-        set read_decr 0
-        set contents [ adlb::enumerate $container dict all 0 $read_decr ]
-        set sorted_keys [ lsort -integer [ dict keys $contents ] ]
+        puts "cont: $container"
+        set sorted_keys [ lsort -integer [ dict keys $container ] ]
+        puts "Keys: $sorted_keys cont: $container"
         foreach i $sorted_keys {
-            set td [ dict get $contents $i ]
-            set v  [ retrieve_string $td ]
-            lappend A $v
+            lappend A [ dict get $container $i ]
         }
-        read_refcount_decr $container
-        set s [ join $A $separator_value ]
-        store_string $result $s
+        return [ join $A $separator ]
     }
 
     proc string_from_floats { result input } {

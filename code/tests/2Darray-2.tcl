@@ -46,7 +46,7 @@ proc rules { } {
     turbine::allocate r1 ref
     adlb::write_refcount_incr $A 2
     turbine::c_f_create $r1 $A $i1 integer string
-    turbine::cr_f_insert $r1 $j1 $k1 string $A
+    turbine::cr_f_insert $r1 $j1 $k1 string
 
     turbine::literal i2 integer 32
     turbine::literal j2 integer 42
@@ -55,7 +55,7 @@ proc rules { } {
     turbine::allocate r2 ref
     adlb::write_refcount_incr $A 2
     turbine::c_f_create $r2 $A $i2 integer string
-    turbine::cr_f_insert $r2 $j2 $k2 string $A
+    turbine::cr_f_insert $r2 $j2 $k2 string
 
     turbine::literal i3 integer 31
     turbine::literal j3 integer 43
@@ -64,12 +64,12 @@ proc rules { } {
     turbine::allocate r3 ref
     adlb::write_refcount_incr $A 2
     turbine::c_f_create $r3 $A $i3 integer string
-    turbine::cr_f_insert $r3 $j3 $k3 string $A
+    turbine::cr_f_insert $r3 $j3 $k3 string
     adlb::write_refcount_decr $A 1
 }
 
 turbine::defaults
-turbine::init $engines $servers
+turbine::init $servers
 turbine::start rules
 turbine::finalize
 

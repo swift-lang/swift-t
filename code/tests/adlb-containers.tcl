@@ -20,7 +20,7 @@ package require turbine 0.0.1
 namespace import turbine::string_*
 
 turbine::defaults
-turbine::init $engines $servers
+turbine::init $servers
 
 if { ! [ adlb::amserver ] } {
 

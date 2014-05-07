@@ -12,17 +12,17 @@ proc main {  } {
     turbine::store_string ${w2} "brown"
     turbine::store_string ${w3} "fox"
     turbine::array_build ${words} [ list ${w1} ${w2} ${w3} ] 1 ref
-    turbine::deeprule [ list ${words} ] [ list 1 ] [ list 0 ] "echo ${stack} ${words}" target -100 type ${::turbine::WORK}
+    turbine::deeprule [ list ${words} ] [ list 1 ] [ list ref ] "echo ${stack} ${words}" target -100 type ${::turbine::WORK}
 }
 
 proc echo { stack args } {
-    turbine::c::log [ list exec: /bin/echo {*}[ turbine::unpack_args ${args} 1 0 ] [ dict create ] ]
-    turbine::exec_external "/bin/echo" [ dict create ] "echo:" {*}[ turbine::unpack_args ${args} 1 0 ]
+    turbine::c::log [ list exec: /bin/echo {*}[ turbine::unpack_args ${args} 1 ref ] [ dict create ] ]
+    turbine::exec_external "/bin/echo" [ dict create ] "echo:" {*}[ turbine::unpack_args ${args} 1 ref ]
     turbine::read_refcount_decr ${args} 1
 }
 
 turbine::defaults
-turbine::init $engines $servers
+turbine::init $servers
 turbine::enable_read_refcount
 turbine::start main
 turbine::finalize

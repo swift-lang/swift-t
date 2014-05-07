@@ -16,7 +16,9 @@
 
 namespace eval turbine {
 
+    namespace import ::adlb::refcount_incr
     namespace import ::adlb::read_refcount_*
+    namespace import ::adlb::write_refcount_*
     namespace export                                  \
         allocate retrieve                             \
         create_string  store_string                   \
@@ -30,8 +32,6 @@ namespace eval turbine {
         retrieve_blob retrieve_decr_blob              \
         create_ref     store_ref                      \
         retrieve_ref retrieve_decr_ref acquire_ref    \
-        create_file_ref     store_file_ref            \
-        retrieve_file_ref retrieve_decr_file_ref acquire_file_ref \
         create_struct     store_struct                \
         retrieve_struct retrieve_decr_struct acquire_struct \
         retrieve_decr_blob_string                     \
@@ -39,7 +39,8 @@ namespace eval turbine {
         container_lookup container_list               \
         container_insert notify_waiter                \
         read_refcount_incr read_refcount_decr         \
-        allocate_file2 filename
+        write_refcount_incr write_refcount_decr
+
 
     # Shorten strings in the log if the user requested that
     # log_string_mode is set at init time
@@ -134,46 +135,6 @@ namespace eval turbine {
         return $id
     }
 
-    # usage: <name> <mapping> [<create props>]
-    # if unmapped, mapping should be set to the empty string
-    # if mapped, mapping should be  turbine # string that will
-    # at some point be set to a value.  This function expects that
-    # a reference count be pre-incremented by two on the mapping string
-    proc allocate_file2 { name filename {read_refcount 1} {write_refcount 1} args } {
-        set is_mapped [ expr {! [ string equal $filename "" ]} ]
-        # use void to signal file availability
-        set signal [ allocate_custom "signal:$name" void \
-                              $read_refcount $write_refcount {*}${args} ]
-        if { $is_mapped } {
-            log "file: $name=\[ <$signal> <$filename> \] mapped"
-
-            # We got passed two references to the mapping string.
-            # Adjust if this is off
-            if { $read_refcount != 1 } {
-                read_refcount_incr $filename [ expr $read_refcount - 1 ]
-            }
-
-        } else {
-            # use new string that will be set later to something arbitrary
-            # add an extra refcount for the closing rule below
-            set filename [ allocate_custom "filename:$name" string \
-                              [ expr $read_refcount + 1] {*}${args} ]
-            log "file: $name=\[ <$signal> <$filename> \] unmapped"
-
-        }
-        # Filename may be read before assigning file.  To make sure
-        # that filename isn't gc'ed before file is assigned, add a rule
-        # to decrement the filename reference count once file status
-        # is assigned
-        rule $signal "read_refcount_decr $filename 1" \
-            name "decr-filename-\[ $signal $filename \]"
-
-        set u [ list $signal $filename $is_mapped ]
-        upvar 1 $name v
-        set v $u
-        return $u
-    }
-
     # usage: retrieve <id>
     # Not type checked
     # Always stores result as Tcl string
@@ -213,7 +174,7 @@ namespace eval turbine {
         if { $cache && [ c::cache_check $id ] } {
             set result [ c::cache_retrieve $id ]
             if { $decrref } {
-              read_refcount_decr $id
+              read_refcount_decr $id $decrref
             }
         } else {
             if { $decrref } {
@@ -240,10 +201,15 @@ namespace eval turbine {
                               $write_refcount $permanent ]
     }
 
-    proc store_ref { id value } {
+    proc store_ref { id value {store_read_refs 1} {store_write_refs 0}} {
         log "store: <$id>=$value"
-        adlb::store $id ref $value
+        adlb::store $id ref $value 1 0 $store_read_refs $store_write_refs
         c::cache_store $id ref $value
+    }
+
+    # Store ref with both read and write refcount
+    proc store_rw_ref { id value } {
+      store_ref $id $value 1 1
     }
 
     proc retrieve_ref { id {cachemode CACHED} {decrref 0} } {
@@ -251,7 +217,7 @@ namespace eval turbine {
         if { $cache && [ c::cache_check $id ] } {
             set result [ c::cache_retrieve $id ]
             if { $decrref } {
-              read_refcount_decr $id
+              read_refcount_decr $id $decrref
             }
         } else {
             if { $decrref } {
@@ -277,61 +243,20 @@ namespace eval turbine {
       return [ retrieve_ref $id $cachemode 1 ]
     }
 
-    proc create_file_ref { id {read_refcount 1} {write_refcount 1} \
-                             {permanent 0} } {
-        return [ adlb::create $id file_ref $read_refcount \
-                              $write_refcount $permanent ]
-    }
-
-    proc store_file_ref { id value } {
-        log "store: <$id>=$value"
-        adlb::store $id file_ref $value
-        c::cache_store $id file_ref $value
-    }
-
-    proc retrieve_file_ref { id {cachemode CACHED} {decrref 0} } {
-        set cache [ string equal $cachemode CACHED ]
-        if { $cache && [ c::cache_check $id ] } {
-            set result [ c::cache_retrieve $id ]
-            if { $decrref } {
-              read_refcount_decr $id
-            }
-        } else {
-            if { $decrref } {
-              set result [ adlb::retrieve_decr $id $decrref file_ref ]
-            } else {
-              set result [ adlb::retrieve $id file_ref ]
-            }
-
-            if { $cache } {
-              c::cache_store $id file_ref $result
-            }
-        }
-        debug "retrieve: <$id>=$result"
-        return $result
-    }
-
-    proc retrieve_decr_file_ref { id {cachemode CACHED} } {
-      return [ retrieve_file_ref $id $cachemode 1 ]
-    }
-
-    proc acquire_file_ref { id {incrref 1} {decrref 0} } {
-        set result [ adlb::acquire_ref $id file_ref $incrref $decrref ]
-        debug "acquire_file_ref: <$id>=$result"
-        return $result
-    }
-
     proc create_struct { id {read_refcount 1} {write_refcount 1} \
                              {permanent 0} } {
         return [ adlb::create $id struct $read_refcount \
                               $write_refcount $permanent ]
     }
 
-    # store_struct <id> <value> <typename>
+    # store_struct <id> <value> <typename> <write decr>?
     # typename is a struct typename including struct subtype, e.g. "struct1"
-    proc store_struct { id value typename } {
+    # or "name_of_struct_type"
+    # write decr is the number of write refcounts to remove: default 1
+    proc store_struct { id value typename {write_decr 1}} {
         log "store: <$id>=$value"
-        adlb::store $id $typename $value
+        adlb::store $id $typename $value $write_decr
+        # TODO: only store if have all fields present?
         c::cache_store $id $typename $value
     }
 
@@ -340,7 +265,7 @@ namespace eval turbine {
         if { $cache && [ c::cache_check $id ] } {
             set result [ c::cache_retrieve $id ]
             if { $decrref } {
-              read_structcount_decr $id
+              read_refcount_decr $id $decrref
             }
         } else {
             if { $decrref } {
@@ -375,7 +300,6 @@ namespace eval turbine {
         return $result
     }
 
-
     proc create_float { id {read_refcount 1} {write_refcount 1} \
                            {permanent 0} } {
         return [ adlb::create $id float $read_refcount \
@@ -392,7 +316,7 @@ namespace eval turbine {
         if { $cache && [ c::cache_check $id ] } {
             set result [ c::cache_retrieve $id ]
             if { $decrref } {
-              read_refcount_decr $id
+              read_refcount_decr $id $decrref
             }
         } else {
             if { $decrref } {
@@ -429,7 +353,7 @@ namespace eval turbine {
         if { $cache && [ c::cache_check $id ] } {
             set result [ c::cache_retrieve $id ]
             if { $decrref } {
-              read_refcount_decr $id
+              read_refcount_decr $id $decrref
             }
         } else {
             if { $decrref } {
@@ -495,7 +419,7 @@ namespace eval turbine {
       } else {
         set result [ adlb::retrieve_blob $id ]
       }
-      log [ format "retrieve_blob: <%d>=\[%x %d\]" $id \
+      log [ format "retrieve_blob: <%s>=\[%x %d\]" $id \
                     [ lindex $result 0 ] [ lindex $result 1 ] ]
       return $result
     }
@@ -512,7 +436,7 @@ namespace eval turbine {
     # Free local blob
     proc free_local_blob { blob } {
       if { [ llength $blob ] == 3 } {
-        debug [ format "free_local_blob: \[%x %d %d\]" \
+        debug [ format "free_local_blob: \[%x %d %s\]" \
                     [ lindex $blob 0 ] [ lindex $blob 1 ] \
                     [ lindex $blob 2 ] ]
       } else {
@@ -538,14 +462,17 @@ namespace eval turbine {
       return [ retrieve_blob_string $id 1 ]
     }
     
-    proc multi_retrieve { ids {cachemode CACHED} args } {
+    proc multi_retrieve { ids {cachemode CACHED} {read_decr 0} args } {
       set result [ list ]
       foreach id $ids {
         if { [ string equal $cachemode CACHED ] &&
               [ c::cache_check $id ] } {
           set val [ c::cache_retrieve $id ]
+          if { $read_decr != 0 } {
+            read_refcount_decr $id $read_decr
+          }
         } else {
-          set val [ adlb::retrieve $id {*}$args ]
+          set val [ adlb::retrieve_decr $id $read_decr {*}$args ]
         }
         lappend result $val
       }
@@ -553,15 +480,17 @@ namespace eval turbine {
       return $result
     }
     
-    proc multi_retrieve_kv { ids {cachemode CACHED} args } {
+    proc multi_retrieve_kv { ids {cachemode CACHED} {read_decr 0} args } {
       set result [ dict create ]
-
       dict for {key id} $ids {
         if { [ string equal $cachemode CACHED ] &&
               [ c::cache_check $id ] } {
           set val [ c::cache_retrieve $id ]
+          if { $read_decr != 0 } {
+            read_refcount_decr $id $read_decr
+          }
         } else {
-          set val [ adlb::retrieve $id {*}$args ]
+          set val [ adlb::retrieve_decr $id $read_decr {*}$args ]
         }
         dict append result $key $val
       }
@@ -611,11 +540,14 @@ namespace eval turbine {
                             $read_refcount $write_refcount $permanent]
     }
 
-    # usage: container_insert <id> <subscript> <member> <type> [<drops>]
-    # @param drops = 0 by default
-    proc container_insert { id subscript member type {drops 0} } {
+    # usage: container_insert <id> <subscript> <member> <type>
+    #                           [<read_drops>] [<write_drops>]
+    # @param read_drops = 0 by default
+    # @param write_drops = 0 by default
+    proc container_insert { id subscript member type \
+          {read_drops 0} {write_drops 0} } {
         log "insert: <$id>\[\"$subscript\"\]=<$member>"
-        adlb::insert $id $subscript $member $type $drops
+        adlb::insert $id $subscript $member $type $read_drops $write_drops
     }
 
     # Returns 0 if subscript is not found

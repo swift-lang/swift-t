@@ -69,7 +69,7 @@ proc check_members { c j1 j2 } {
 }
 
 turbine::defaults
-turbine::init $engines $servers
+turbine::init $servers
 turbine::start rules
 turbine::finalize
 

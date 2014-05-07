@@ -118,6 +118,16 @@ endif
 
 PACKAGE_ARTIFACTS += $(TCL_TURBINE_LIBS)
 
+ifeq ($(ENABLE_SHARED),1)
+  # Shared libraries are one of the file build targets
+  ENABLED_PACKAGES += $(TCL_TURBINE_LIBS)
+endif
+
+ifeq ($(ENABLE_STATIC),1)
+  # Shared libraries are one of the file build targets
+  ENABLED_PACKAGES += $(TCL_TURBINE_STATIC_LIBS)
+endif
+
 srcdir = @srcdir@
 
 ifeq ($(V),)

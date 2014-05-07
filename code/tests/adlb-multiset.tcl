@@ -20,7 +20,7 @@ package require turbine 0.0.1
 namespace import turbine::string_*
 
 turbine::defaults
-turbine::init $engines $servers
+turbine::init $servers
 turbine::enable_read_refcount
 
 proc check_multiset_range { ms offset count start_val end_val } {

@@ -28,25 +28,47 @@ package require turbine 0.0.1
 
 proc rules { } {
 
-    # By analysis, we determine that A has one insertion
-    # in this scope: an anonymous container t1
-    # By analysis, we determine that t1 has one insertion in this
-    # scope
+    # By analysis, we determine that A has two insertions
+    # in this scope
     turbine::allocate_container A integer ref
+    turbine::write_refcount_incr $A
     turbine::allocate_container t1 integer ref
 
     turbine::literal i integer 37
     turbine::literal j integer 41
     turbine::literal k integer 59
-
+    
+    # Setup r1 and r2
     turbine::allocate r1 ref
-    turbine::c_f_lookup $A $i $r1 ref
-    turbine::c_f_insert $A $i $t1 ref
-    turbine::cr_f_insert $r1 $j $t1 ref $A
+    turbine::allocate r3 ref
+    turbine::c_f_create $r1 $A $i integer ref
+    turbine::cr_f_insert $r1 $j $t1 ref
+    turbine::cr_f_lookup $r1 $j $r3 ref
+
+    # Check r3
+    turbine::allocate r3_exp ref
+    turbine::allocate r3_msg string
+    turbine::allocate tmp_out integer
+    turbine::store_string $r3_msg "r3_exp"
+    turbine::store_ref $r3_exp $t1
+    turbine::assertEqual [ list $tmp_out ] [ list $r3 $r3_exp $r3_msg ]
+    
+    # Setup r2
+    turbine::allocate r2 ref
+    turbine::c_f_lookup $A $k $r2 ref
+    turbine::c_f_insert $A $k $t1 ref
+    
+    # Check r2
+    turbine::allocate r2_exp ref
+    turbine::allocate r2_msg string
+    turbine::allocate tmp_out integer
+    turbine::store_string $r2_msg "r2_exp"
+    turbine::store_ref $r2_exp $t1
+    turbine::assertEqual [ list $tmp_out ] [ list $r2 $r2_exp $r2_msg ]
 }
 
 turbine::defaults
-turbine::init $engines $servers
+turbine::init $servers
 turbine::start rules
 turbine::finalize
 

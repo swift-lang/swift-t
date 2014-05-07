@@ -15,7 +15,7 @@
 package require turbine 0.0.1
 
 turbine::defaults
-turbine::init $engines $servers
+turbine::init $servers
 
 set iterations 20
 

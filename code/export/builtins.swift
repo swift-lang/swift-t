@@ -77,16 +77,14 @@ type external void;
 // Container operations
 @pure @implements=range
 (int res[]) range(int start, int end) "turbine" "0.0.2" "range"
-  [ "turbine::range_work <<res>> <<start>> <<end>> 1" ];
+  [ "set <<res>> [ turbine::build_range_dict <<start>> <<end>> 1 ]" ];
 @pure @implements=range_step
 (int res[]) rangestep(int start, int end, int step) "turbine" "0.0.2" "rangestep"
-  [ "turbine::range_work <<res>> <<start>> <<end>> <<step>>" ];
+  [ "set <<res>> [ turbine::build_range_dict <<start>> <<end>> <<step>> ]" ];
 @pure @implements=size
-<T> (int n) size(T A[]) "turbine" "0.0.5" "container_size"
-  [ "set <<n>> [ turbine::container_size_local <<A>> 1 ]" ];
-@pure
-<K, V> (boolean o) contains(V A[K], K key) "turbine" "0.0.5" "contains"
-  [ "set <<o>> [ adlb::exists_sub <<A>> <<key>> 1 ]" ];
+<T> (int n) size(T A[]) "turbine" "0.0.5" "container_size";
+@pure @implements=contains
+<K, V> (boolean o) contains(V A[K], K key) "turbine" "0.0.5" "contains";
 
 @pure @implements=size
 <T> (int n) bag_size(bag<T> B) "turbine" "0.0.5" "container_size"
@@ -100,9 +98,13 @@ type external void;
 @pure
 (int n) adlb_servers() "turbine" "0.0.2" "adlb_servers_future"
     [ "set <<n>> [ turbine::adlb_servers ]" ];
+
+/*
+ deprecated: engines no longer exist
+ */
 @pure
-(int n) turbine_engines() "turbine" "0.0.2" "turbine_engines_future"
-    [ "set <<n>> [ turbine::turbine_engines ]" ];
+(int n) turbine_engines() "turbine" "0.0.2"
+    [ "set <<n>> 0" ];
 @pure
 (int n) turbine_workers() "turbine" "0.0.2" "turbine_workers_future"
     [ "set <<n>> [ turbine::turbine_workers ]" ];

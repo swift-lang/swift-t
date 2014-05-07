@@ -230,7 +230,10 @@ static inline Tcl_Obj *Tcl_NewPtr(void *ptr)
   return Tcl_NewLongObj((long)ptr);
 }
 
-
+/**
+ * Attempt to extract int of appropriate width for ADLB
+ * interp: if non-NULL, leave error message here
+ */
 static inline int Tcl_GetADLBInt(Tcl_Interp *interp, Tcl_Obj *objPtr,
                                  adlb_int_t *intPtr)
 {
@@ -239,6 +242,10 @@ static inline int Tcl_GetADLBInt(Tcl_Interp *interp, Tcl_Obj *objPtr,
   return Tcl_GetWideIntFromObj(interp, objPtr, (Tcl_WideInt*)intPtr);
 }
 
+/**
+ * Attempt to extract ADLB data ID
+ * interp: if non-NULL, leave error message here
+ */
 static inline int Tcl_GetADLB_ID(Tcl_Interp *interp, Tcl_Obj *objPtr,
                                  adlb_datum_id *intPtr)
 {
@@ -247,6 +254,10 @@ static inline int Tcl_GetADLB_ID(Tcl_Interp *interp, Tcl_Obj *objPtr,
   return Tcl_GetWideIntFromObj(interp, objPtr, (Tcl_WideInt*)intPtr);
 }
 
+/**
+ * Attempt to extract pointer stored in Tcl obj
+ * interp: if non-NULL, leave error message here
+ */
 static inline int Tcl_GetPtr(Tcl_Interp *interp, Tcl_Obj *objPtr,
                                  void **ptr)
 {
@@ -271,6 +282,54 @@ static inline int Tcl_GetADLB_Subscript(Tcl_Obj *objPtr, adlb_subscript *sub)
     return TCL_ERROR;
   }
   sub->length = ((size_t)keylen) + 1; // Account for null terminator
+  return TCL_OK;
+}
+
+/**
+ * Parse the subscript part of an ADLB handle, ie. suffixed to an ID.
+ * Handle subscripts of forms:
+ * - "" => no subscript
+ * - ".123.424.53" (struct indices - each introduced by .)
+ * - "[5]test " - arbitrary subscript prefixed by length
+ *                (to allow for future support for multiple subscripts
+ *                 with binary data)
+ */
+static inline int adlb_subscript_convert(
+      Tcl_Interp *interp, Tcl_Obj *const objv[],
+      const char *str, size_t length, adlb_subscript *sub, bool *alloced)
+{
+  if (length == 0)
+  {
+    *sub = ADLB_NO_SUB;
+    *alloced = false;
+  }
+  else if (str[0] == '.')
+  {
+    // Include everything after '.'
+    sub->key = &str[1];
+    sub->length = length; // include null terminator, exclude .
+    *alloced = false;
+  }
+  else if (str[0] == '[')
+  {
+    char *endstr;
+    long sublen = strtol(&str[1], &endstr, 10);
+    TCL_CONDITION(endstr[0] == ']' && sublen >= 0,
+        "Invalid prefixed length in subscript %.*s", (int)length, str);
+    const char *sub_start = &endstr[1];
+    sub->key = sub_start;
+    // TODO: don't handle multiple subscripts yet
+    long exp_sublen = (long)length - (sub_start - str);
+    TCL_CONDITION(sublen == exp_sublen,
+      "Invalid subscript length: expected to be rest of string (%li), "
+      "but was %li", exp_sublen, sublen);
+    sub->length = (size_t)sublen;
+    *alloced = false;
+  }
+  else
+  {
+    TCL_RETURN_ERROR("Invalid subscript: %.*s", (int)length, str);
+  }
   return TCL_OK;
 }
 

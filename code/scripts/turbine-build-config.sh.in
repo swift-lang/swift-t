@@ -42,13 +42,21 @@ TURBINE_LIBS="-L${TURBINE_HOME}/lib \
               -L${ADLB_HOME}/lib -ladlb \
               -L${C_UTILS_HOME}/lib -lexmcutils \
               ${TCL_LIB_SPEC} ${TCL_LIB_SPEC_EXTRA}"
+
+# Rpath including all ExM libraries and dependencies
+TURBINE_RPATH="-Wl,-rpath,${TURBINE_HOME}/lib \
+               -Wl,-rpath,${ADLB_HOME}/lib \
+               -Wl,-rpath,${C_UTILS_HOME}/lib"
+
 if [ ! -z "$MPI_LIB_DIR" -a "$MPI_LIB_DIR" != 0 ]; then
   TURBINE_LIBS+=" -L$MPI_LIB_DIR"
+  TURBINE_RPATH+=" -Wl,-rpath,${MPI_LIB_DIR}"
 fi
 TURBINE_LIBS+=" ${MPI_LIB_SPEC}"
 
 if [ "$ENABLE_MPE" = 1 ]; then
   TURBINE_LIBS+=" -L${MPE}/lib -lmpe"
   TURBINE_INCLUDES+=" -I${MPE}/include"
+  TURBINE_RPATH+=" -Wl,-rpath,${MPE}/lib"
 fi
 

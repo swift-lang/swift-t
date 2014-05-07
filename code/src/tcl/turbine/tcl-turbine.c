@@ -63,13 +63,15 @@
 #include "src/tcl/r/tcl-r.h"
 
 #define TURBINE_ADLB_WORK_TYPE_WORK 0
-#define TURBINE_ADLB_WORK_TYPE_CONTROL 1
+// Out-of-range work type to signal that it should be sent back to this
+// rank with type WORK
+#define TURBINE_ADLB_WORK_TYPE_LOCAL -1
 
 static int
 turbine_extract_ids(Tcl_Interp* interp, Tcl_Obj *const objv[],
             Tcl_Obj* list, int max,
-            turbine_datum_id* ids, int* id_count,
-            td_sub_pair* id_subs, int* id_sub_count);
+            adlb_datum_id* ids, int* id_count,
+            adlb_datum_id_sub* id_subs, int* id_sub_count);
 
 /**
    @see TURBINE_CHECK
@@ -183,17 +185,13 @@ log_setup(int rank)
 static void
 set_namespace_constants(Tcl_Interp* interp)
 {
-  tcl_set_integer(interp, "::turbine::LOCAL",   TURBINE_ACTION_LOCAL);
-  tcl_set_integer(interp, "::turbine::CONTROL", TURBINE_ACTION_CONTROL);
-  tcl_set_integer(interp, "::turbine::WORK",    TURBINE_ACTION_WORK);
-}
-
-static int
-Turbine_Engine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
-                        int objc, Tcl_Obj *const objv[])
-{
-  turbine_engine_init();
-  return TCL_OK;
+  tcl_set_integer(interp, "::turbine::WORK", TURBINE_ADLB_WORK_TYPE_WORK);
+  // Map control to work for backwards compatibility with Tcl code
+  // that distinguishes between the two
+  tcl_set_integer(interp, "::turbine::CONTROL",
+        TURBINE_ADLB_WORK_TYPE_WORK);
+  tcl_set_integer(interp, "::turbine::LOCAL",
+        TURBINE_ADLB_WORK_TYPE_LOCAL);
 }
 
 static int
@@ -236,7 +234,7 @@ static inline void rule_set_name_default(char* name, int size,
 struct rule_opts
 {
   char* name;
-  turbine_action_type type;
+  int work_type;
   int target;
   int parallelism;
 };
@@ -254,8 +252,7 @@ rule_opts_from_list(Tcl_Interp* interp, Tcl_Obj *const objv[],
 
 /**
    usage:
-   OLD rule name [ list inputs ] action_type target parallelism action => id
-   NEW rule [ list inputs ] action [ name ... ] [ action_type ... ]
+   rule [ list inputs ] action [ name ... ] [ work_type ... ]
                                    [ target ... ] [ parallelism ... ]
              keyword args are optional
    DEFAULTS: name=<first token of action plus output list>
@@ -272,29 +269,17 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp* interp,
   TCL_CONDITION(objc >= BASIC_ARGS,
                 "turbine::c::rule requires at least %i args!",
                 BASIC_ARGS);
-
-  /* Intercept calls to rule not on engine and send to engine.
-     Need to call back into turbine::spawn_rule with same arguments,
-     which is defined in Tcl
-   */
-  if (!turbine_is_engine())
-  {
-    Tcl_Obj *newObjv[objc];
-    memcpy(newObjv, objv, sizeof(newObjv));
-    newObjv[0] = SPAWN_RULE_CMD;
-    return Tcl_EvalObjv(interp, objc, newObjv, 0);
-  }
-
   int rc;
-  turbine_transform_id id;
   int inputs = 0, input_pairs = 0;
-  turbine_datum_id input_list[TCL_TURBINE_MAX_INPUTS];
-  td_sub_pair input_pair_list[TCL_TURBINE_MAX_INPUTS];
+  adlb_datum_id input_list[TCL_TURBINE_MAX_INPUTS];
+  adlb_datum_id_sub input_pair_list[TCL_TURBINE_MAX_INPUTS];
   char name_buffer[TURBINE_NAME_MAX];
 
   // Get the action string
-  char* action = Tcl_GetStringFromObj(objv[2], NULL);
+  int action_len;
+  char* action = Tcl_GetStringFromObj(objv[2], &action_len);
   assert(action);
+  action_len++; // Include null terminator
 
   struct rule_opts opts = {NULL, 0, 0, 0};
 
@@ -313,18 +298,23 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp* interp,
   }
 
   // Get the input list - done last so we can report name on error
-  // TODO: also support id/subscript pairs
   rc = turbine_extract_ids(interp, objv, objv[1], TCL_TURBINE_MAX_INPUTS,
               input_list, &inputs, input_pair_list, &input_pairs);
   TCL_CHECK_MSG(rc, "could not parse inputs list as ids or id/subscript "
-                "pairs:\n in rule: <%"PRId64"> %s inputs: \"%s\"",
-                id, opts.name, Tcl_GetString(objv[1]));
+                "pairs:\n in rule: %s inputs: \"%s\"",
+                opts.name, Tcl_GetString(objv[1]));
 
-  turbine_code code =
-      turbine_rule(opts.name, inputs, input_list, input_pairs, input_pair_list,
-                   opts.type, action,
-                   ADLB_curr_priority, opts.target, opts.parallelism, &id);
-  TURBINE_CHECK(code, "could not process rule!");
+
+  adlb_code ac = ADLB_Put_rule(action, action_len, opts.target,
+        adlb_comm_rank, opts.work_type, ADLB_curr_priority, opts.parallelism,
+        opts.name, input_list, inputs, input_pair_list, input_pairs);
+  TCL_CONDITION(ac == ADLB_SUCCESS, "could not process rule!");
+  
+  // Free subscripts that were allocated
+  for (int i = 0; i < input_pairs; i++)
+  {
+    free((void*)input_pair_list[i].subscript.key);
+  }
   return TCL_OK;
 }
 
@@ -338,7 +328,7 @@ rule_set_opts_default(struct rule_opts* opts,
     assert(opts->name != NULL);
     rule_set_name_default(opts->name, buffer_size, action);
   }
-  opts->type = TURBINE_ACTION_LOCAL;
+  opts->work_type = TURBINE_ADLB_WORK_TYPE_WORK;
   opts->target = TURBINE_RANK_ANY;
   opts->parallelism = 1;
 }
@@ -455,7 +445,16 @@ rule_opt_from_kv(Tcl_Interp* interp, Tcl_Obj *const objv[],
         int t;
         rc = Tcl_GetIntFromObj(interp, val, &t);
         TCL_CHECK_MSG(rc, "type argument must be integer");
-        opts->type = t;
+        if (t == TURBINE_ADLB_WORK_TYPE_LOCAL)
+        {
+          // Ensure sent back here
+          opts->work_type = TURBINE_ADLB_WORK_TYPE_WORK;
+          opts->target = adlb_comm_rank;
+        }
+        else
+        {
+          opts->work_type = t;
+        }
         return TCL_OK;
       }
       break;
@@ -463,91 +462,6 @@ rule_opt_from_kv(Tcl_Interp* interp, Tcl_Obj *const objv[],
 
   TCL_RETURN_ERROR("rule options: unknown key: %s", k);
   return TCL_ERROR; // unreachable
-}
-
-static int
-Turbine_Push_Cmd(ClientData cdata, Tcl_Interp *interp,
-                  int objc, Tcl_Obj *const objv[])
-{
-  TCL_ARGS(1);
-  turbine_code code = turbine_rules_push();
-  TURBINE_CHECK(code, "failure while pushing rules");
-  return TCL_OK;
-}
-
-/*
-  Pop a ready transform. All arguments are output arguments
-  turbine::pop_or_break <transform id> <type> <action> <priority> <target>
-  If no ready transform, will return TCL_BREAK to signal this
-  condition.
- */
-static int
-Turbine_Pop_Or_Break_Cmd(ClientData cdata, Tcl_Interp *interp,
-                int objc, Tcl_Obj *const objv[])
-{
-  TCL_ARGS(7);
-
-  turbine_transform_id transform_id;
-  turbine_action_type type;
-  char *action;
-  int priority;
-  int target;
-  int parallelism;
-
-  turbine_code code = turbine_pop(&type, &transform_id, &action,
-                                  &priority, &target, &parallelism);
-  TCL_CONDITION(code == TURBINE_SUCCESS, "could not pop transform id");
-  if (type == TURBINE_ACTION_NULL)
-  {
-    DEBUG_TURBINE("No ready transforms, sending TCL_BREAK signal");
-    return TCL_BREAK;
-  }
-
-  Tcl_ObjSetVar2(interp, objv[1], NULL, Tcl_NewWideIntObj(transform_id),
-                 EMPTY_FLAG);
-  Tcl_ObjSetVar2(interp, objv[2], NULL, Tcl_NewIntObj(type),
-                 EMPTY_FLAG);
-  Tcl_ObjSetVar2(interp, objv[3], NULL, Tcl_NewStringObj(action, -1),
-                 EMPTY_FLAG);
-  free(action);
-  Tcl_ObjSetVar2(interp, objv[4], NULL, Tcl_NewIntObj(priority), EMPTY_FLAG);
-  Tcl_ObjSetVar2(interp, objv[5], NULL, Tcl_NewIntObj(target), EMPTY_FLAG);
-  Tcl_ObjSetVar2(interp, objv[6], NULL, Tcl_NewIntObj(parallelism), EMPTY_FLAG);
-  return TCL_OK;
-}
-
-/**
-  turbine::close <id> [<subscript>]
-  Handle close notification message
- */
-static int
-Turbine_Close_Cmd(ClientData cdata, Tcl_Interp *interp,
-                  int objc, Tcl_Obj *const objv[])
-{
-  TCL_CONDITION(objc == 2 || objc == 3,
-                "turbine::close requires 1 or 2 args!");
-
-  turbine_datum_id id;
-  int error = Tcl_GetADLB_ID(interp, objv[1], &id);
-  TCL_CHECK(error);
-
-  if (objc == 2)
-  {
-    turbine_code code = turbine_close(id);
-    TCL_CONDITION(code == TURBINE_SUCCESS,
-                  "could not close datum id: %"PRId64"", id);
-  }
-  else
-  {
-    int sub_strlen;
-    const char *sub = Tcl_GetStringFromObj(objv[2], &sub_strlen);
-    size_t sub_len = (size_t) sub_strlen + 1; // Account for null byte
-    turbine_code code = turbine_sub_close(id, sub, sub_len);
-    TCL_CONDITION(code == TURBINE_SUCCESS,
-                  "could not close %"PRId64"[\"%s\"]", id, sub);
-  }
-
-  return TCL_OK;
 }
 
 static int
@@ -576,10 +490,22 @@ Turbine_Cache_Check_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(2);
   turbine_datum_id td;
-  int error = Tcl_GetADLB_ID(interp, objv[1], &td);
+  const char *subscript;
+  int subscript_len;
+  int error = ADLB_EXTRACT_HANDLE(objv[1], &td, &subscript,
+                                  &subscript_len);
   TCL_CHECK(error);
 
-  bool found = turbine_cache_check(td);
+  bool found;
+  if (subscript_len == 0)
+  {
+    found = turbine_cache_check(td);
+  }
+  else
+  {
+    // TODO: handle caching subscripts - currently just ignore
+    found = false;
+  }
 
   Tcl_Obj* result = Tcl_NewBooleanObj(found);
   Tcl_SetObjResult(interp, result);
@@ -592,8 +518,14 @@ Turbine_Cache_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(2);
   turbine_datum_id td;
-  int error = Tcl_GetADLB_ID(interp, objv[1], &td);
+  const char *subscript;
+  int subscript_len;
+  int error = ADLB_EXTRACT_HANDLE(objv[1], &td, &subscript,
+                                  &subscript_len);
   TCL_CHECK(error);
+
+  // TODO: handle caching subscripts
+  TCL_CONDITION(subscript_len == 0, "Don't handle caching subscripts");
 
   turbine_type type;
   void* data;
@@ -602,8 +534,8 @@ Turbine_Cache_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
   TURBINE_CHECK(rc, "cache retrieve failed: %"PRId64"", td);
 
   Tcl_Obj* result = NULL;
-  int tcl_code = adlb_data_to_tcl_obj(interp, objv, td, type, NULL,
-                                      data, length, &result);
+  int tcl_code = adlb_data_to_tcl_obj(interp, objv, td, type,
+                      ADLB_TYPE_EXTRA_NULL, data, length, &result);
   TCL_CHECK(tcl_code);
   Tcl_SetObjResult(interp, result);
   return TCL_OK;
@@ -612,7 +544,7 @@ Turbine_Cache_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
 static int
 tcl_obj_to_binary(Tcl_Interp* interp, Tcl_Obj *const objv[],
                turbine_datum_id td, turbine_type type,
-               const adlb_type_extra *extra,
+               adlb_type_extra extra,
                Tcl_Obj* obj, void** result, int* length);
 
 /**
@@ -629,20 +561,28 @@ Turbine_Cache_Store_Cmd(ClientData cdata, Tcl_Interp* interp,
   int length = 0;
 
   int argpos = 1;
-
   int error;
-  error = Tcl_GetADLB_ID(interp, objv[argpos++], &td);
+
+  const char *subscript;
+  int subscript_len;
+  error = ADLB_EXTRACT_HANDLE(objv[argpos++], &td, &subscript,
+                                  &subscript_len);
   TCL_CHECK(error);
 
+  if (subscript_len != 0)
+  {
+    // TODO: handle caching subscripts
+    return TCL_OK;
+  }
+
   adlb_data_type type;
-  bool has_extra;
   adlb_type_extra extra;
   error = type_from_obj_extra(interp, objv, objv[argpos++], &type,
-                              &has_extra, &extra);
+                              &extra);
   TCL_CHECK(error);
 
   TCL_CONDITION(argpos < objc, "not enough arguments");
-  error = tcl_obj_to_binary(interp, objv, td, type, has_extra ? &extra : NULL,
+  error = tcl_obj_to_binary(interp, objv, td, type, extra,
                          objv[argpos++], &data, &length);
   TCL_CHECK_MSG(error, "object extraction failed: <%"PRId64">", td);
 
@@ -659,7 +599,7 @@ Turbine_Cache_Store_Cmd(ClientData cdata, Tcl_Interp* interp,
 static int
 tcl_obj_to_binary(Tcl_Interp* interp, Tcl_Obj *const objv[],
                turbine_datum_id td, turbine_type type,
-               const adlb_type_extra *extra,
+               adlb_type_extra extra,
                Tcl_Obj* obj, void** result, int* length)
 {
   adlb_binary_data data;
@@ -712,10 +652,6 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp* interp,
 }
 
 static int
-create_autoclose_rule(Tcl_Interp *interp, Tcl_Obj *const objv[],
-                      adlb_datum_id wait_on, adlb_datum_id to_close);
-
-static int
 Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[], adlb_data_type type)
 {
@@ -759,34 +695,39 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
     TCL_CHECK(rc);
     type_extra.MULTISET.val_type = tmp;
   }
+  type_extra.valid = true;
 
-  // Increments for inner container (default no extras)
-  adlb_refcounts nested_incr = ADLB_NO_RC;
+
+  // Increments/decrements for outer and inner containers
+  // (default no extras)
+  adlb_retrieve_rc refcounts = ADLB_RETRIEVE_NO_RC;
+
   if (argpos < objc)
   {
     rc = Tcl_GetIntFromObj(interp, objv[argpos++],
-                                   &nested_incr.read_refcount);
+                    &refcounts.incr_referand.read_refcount);
     TCL_CHECK(rc);
   }
   if (argpos < objc)
   {
     rc = Tcl_GetIntFromObj(interp, objv[argpos++],
-                                   &nested_incr.write_refcount);
+                    &refcounts.incr_referand.write_refcount);
     TCL_CHECK(rc);
   }
 
-  // Decrements for outer container
-  adlb_refcounts decr = ADLB_NO_RC;
   if (argpos < objc)
   {
-    rc = Tcl_GetIntFromObj(interp, objv[argpos++], &decr.write_refcount);
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++],
+                           &refcounts.decr_self.write_refcount);
     TCL_CHECK(rc);
   }
   if (argpos < objc)
   {
-    rc = Tcl_GetIntFromObj(interp, objv[argpos++], &decr.read_refcount);
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++],
+                           &refcounts.decr_self.read_refcount);
     TCL_CHECK(rc);
   }
+
   TCL_CONDITION(argpos == objc, "Trailing args starting at %i", argpos);
 
   if (type == ADLB_DATA_TYPE_CONTAINER) {
@@ -806,29 +747,55 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
   bool created;
   int value_len;
   adlb_data_type outer_value_type;
-  adlb_code code = ADLB_Insert_atomic(id, subscript, &created,
-                              xfer, &value_len, &outer_value_type);
+
+  // Initial trial at inserting.
+  // Refcounts are only applied here if we got back the data
+  adlb_code code = ADLB_Insert_atomic(id, subscript, refcounts,
+                        &created, xfer, &value_len, &outer_value_type);
   TCL_CONDITION(code == ADLB_SUCCESS, "error in Insert_atomic!");
 
   if (created)
   {
     // Need to create container and insert
-    adlb_datum_id new_id;
+
+    /*
+     * Initial refcounts for container passed to caller
+     * We set to a fairly high number since this lets us give refcounts
+     * from outer container to callers without also touching inner
+     * datum.  Remainder will be freed all at once when outer container
+     * is closed/garbage collected.
+     */
+    int init_count = (2 << 24);
+    adlb_refcounts init_refs = { .read_refcount = init_count,
+                                 .write_refcount = init_count };
     adlb_create_props props = DEFAULT_CREATE_PROPS;
-    // Initial read refcount - 1 for container, plus more
-    // Initial write refcount - 1 for container, plus more
-    props.read_refcount = 1 + nested_incr.read_refcount;
-    props.write_refcount = 1 + nested_incr.write_refcount;
+
+    props.release_write_refs = turbine_release_write_rc_policy(type);
+
+    props.read_refcount = init_refs.read_refcount +
+                          refcounts.incr_referand.read_refcount;
+    props.write_refcount = init_refs.write_refcount +
+                           refcounts.incr_referand.write_refcount;
+    
+    adlb_datum_id new_id;
     code = ADLB_Create(ADLB_DATA_ID_NULL, type, type_extra, props, &new_id);
     TCL_CONDITION(code == ADLB_SUCCESS, "Error while creating nested");
 
-    code = ADLB_Store(id, subscript, ADLB_DATA_TYPE_REF, &new_id,
-                    (int)sizeof(new_id), decr);
+    // ID is only relevant data, so init refcounts to any value
+    adlb_ref new_ref = { .id = new_id, .read_refs = 0, .write_refs = 0 };
+   
+    // Pack using standard api.  Checks should be mostly optimized out
+    adlb_binary_data packed;
+    adlb_data_code dc = ADLB_Pack_ref(&new_ref, &packed);
+    TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error packing ref");
+
+
+    // Store and apply remaining refcounts
+    code = ADLB_Store(id, subscript, ADLB_DATA_TYPE_REF, packed.data,
+                      packed.length, refcounts.decr_self, init_refs);
     TCL_CONDITION(code == ADLB_SUCCESS, "Error while inserting nested");
 
-    // Set up rule to close container
-    rc = create_autoclose_rule(interp, objv, id, new_id);
-    TCL_CHECK(rc);
+    ADLB_Free_binary_data(&packed);
 
     // Return the ID of the new container
     Tcl_SetObjResult(interp, Tcl_NewADLB_ID(new_id));
@@ -837,47 +804,22 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
   else
   {
     // Wasn't able to create.  Entry may or may not already have value.
-    bool must_do_rc = !ADLB_RC_IS_NULL(decr);
     while (value_len < 0)
     {
       // Need to poll until value exists
-      // Try to decrement reference counts with this operation
-      adlb_retrieve_rc ret_decr = ADLB_RETRIEVE_NO_RC;
-      if (must_do_rc)
-        ret_decr.decr_self = decr;
-      code = ADLB_Retrieve(id, subscript, ret_decr, &outer_value_type,
+      // This will decrement reference counts if it succeeds
+      code = ADLB_Retrieve(id, subscript, refcounts, &outer_value_type,
                          xfer, &value_len);
       TCL_CONDITION(code == ADLB_SUCCESS,
           "unexpected error while polling for container value");
 
-      must_do_rc = false;
     }
     TCL_CONDITION(outer_value_type == ADLB_DATA_TYPE_REF,
             "only works on containers with values of type ref");
 
-    if (!ADLB_RC_IS_NULL(nested_incr))
-    {
-      // Do any necessary changes to refcounts
-      adlb_datum_id nested_id;
-      adlb_data_code dc = ADLB_Unpack_ref(&nested_id, xfer, value_len);
-      TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
-            "unexpected error unpacked reference data");
-      code = ADLB_Refcount_incr(nested_id, nested_incr);
-      TCL_CONDITION(code == ADLB_SUCCESS,
-            "unexpected error incrementing nested reference counts");
-    }
-
-    if (must_do_rc)
-    {
-      // do decrement as separate operation
-      code = ADLB_Refcount_incr(id, adlb_rc_negate(decr));
-      TCL_CONDITION(code == ADLB_SUCCESS,
-          "unexpected error when update reference count");
-    }
-
     Tcl_Obj* result = NULL;
-    adlb_data_to_tcl_obj(interp, objv, id, ADLB_DATA_TYPE_REF, NULL,
-                         xfer, value_len, &result);
+    adlb_data_to_tcl_obj(interp, objv, id, ADLB_DATA_TYPE_REF,
+            ADLB_TYPE_EXTRA_NULL, xfer, value_len, &result);
     Tcl_SetObjResult(interp, result);
     return TCL_OK;
   }
@@ -909,47 +851,6 @@ Turbine_Create_Nested_Bag_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   return Turbine_Create_Nested_Impl(cdata, interp, objc, objv,
                                   ADLB_DATA_TYPE_MULTISET);
-}
-
-static int
-create_autoclose_rule(Tcl_Interp *interp, Tcl_Obj *const objv[],
-                      adlb_datum_id wait_on, adlb_datum_id to_close)
-{
-  const int i64_len = 21; // Upper bound on int64_t string length
-
-  int tmp_len;
-  const int name_len = 10 + i64_len; // enough for text+id
-  char name[name_len];
-  tmp_len = sprintf(name, "autoclose-%"PRId64"", to_close);
-  assert(tmp_len > 0 && tmp_len < name_len);
-
-  const int action_len = 30 + i64_len; // enough for function name+id
-  char action[action_len];
-  tmp_len = sprintf(action, "adlb::write_refcount_decr %"PRId64"", to_close);
-  assert(tmp_len > 0 && tmp_len < action_len);
-
-  if (turbine_is_engine())
-  {
-    turbine_transform_id transform_id;
-    turbine_code tc = turbine_rule(name, 1, &wait_on, 0, NULL,
-                  TURBINE_ACTION_LOCAL, action, ADLB_curr_priority,
-                  TURBINE_RANK_ANY, 1, &transform_id);
-    TCL_CONDITION(tc == TURBINE_SUCCESS, "Failed creating autoclose rule");
-  }
-  else
-  {
-    // We're not on an engine, need to send this to an engine to process
-    const int rule_cmd_len = name_len + action_len + 20 + i64_len;
-    char rule_cmd[rule_cmd_len];
-    tmp_len = sprintf(rule_cmd, "rule %"PRId64" \"%s\" name \"%s\"",
-                      wait_on, action, name);
-    assert(tmp_len > 0 && tmp_len < rule_cmd_len);
-
-    adlb_code code = ADLB_Put(rule_cmd, tmp_len + 1, ADLB_RANK_ANY, adlb_comm_rank,
-                        TURBINE_ADLB_WORK_TYPE_CONTROL, ADLB_curr_priority, 1);
-    TCL_CONDITION(code == ADLB_SUCCESS, "Error in ADLB put");
-  }
-  return TCL_OK;
 }
 
 static int
@@ -1089,12 +990,14 @@ Turbine_StrInt_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 /*
   Extract IDs and ID/Sub pairs
+
+  Ownership of subscript memory in id_subs is passed to caller.
  */
 static int
 turbine_extract_ids(Tcl_Interp* interp, Tcl_Obj *const objv[],
             Tcl_Obj* list, int max,
-            turbine_datum_id* ids, int* id_count,
-            td_sub_pair* id_subs, int* id_sub_count)
+            adlb_datum_id* ids, int* id_count,
+            adlb_datum_id_sub* id_subs, int* id_sub_count)
 {
   Tcl_Obj** entry;
   int n;
@@ -1102,41 +1005,39 @@ turbine_extract_ids(Tcl_Interp* interp, Tcl_Obj *const objv[],
   assert(code == TCL_OK);
   TCL_CONDITION(n < max, "Rule IDs exceed supported max: %i > %i",
                 n, max);
-  assert(sizeof(Tcl_WideInt) == sizeof(turbine_datum_id));
   for (int i = 0; i < n; i++)
   {
     Tcl_Obj *obj = entry[i];
-    // First try to interpret as ID
-    code = Tcl_GetWideIntFromObj(interp, obj,
-                                (Tcl_WideInt*)&ids[*id_count]);
-    if (code == TCL_OK)
+
+    // Parse, allocating memory for subscripts
+    tcl_adlb_handle handle;
+    code = ADLB_PARSE_HANDLE(obj, &handle, false);
+    TCL_CHECK_MSG(code, "Error parsing handle %s", Tcl_GetString(obj));
+    if (handle.sub.val.key == NULL)
     {
-      (*id_count)++;
+      ids[(*id_count)++] = handle.id;
     }
     else
     {
-      // Try to interpret as id/sub pair
-      Tcl_Obj** id_pair_list;
-      int id_pair_llen;
-      code = Tcl_ListObjGetElements(interp, obj, &id_pair_llen, &id_pair_list);
-      TCL_CONDITION(code == TCL_OK && id_pair_llen == 2, "Could not "
-              "interpret %s as id or id/subscript pair", Tcl_GetString(obj));
-      turbine_datum_id id;
-      char *subscript;
-      int subscript_strlen;
-      code = Tcl_GetWideIntFromObj(interp, id_pair_list[0],
-                                  (Tcl_WideInt*)&id);
-      TCL_CONDITION(code == TCL_OK, "Could not interpret %s as "
-            "id/subscript pair", Tcl_GetString(obj));
-      subscript = Tcl_GetStringFromObj(id_pair_list[1], &subscript_strlen);
-      size_t subscript_len = (size_t)subscript_strlen + 1;
-      td_sub_pair *pair = &id_subs[(*id_sub_count)++];
-      pair->td = id;
-      pair->subscript.key = malloc(subscript_len);
-      TCL_CONDITION(pair->subscript.key != NULL,
-                    "Could not allocate memory");
-      memcpy(pair->subscript.key, subscript, subscript_len);
-      pair->subscript.length = subscript_len;
+      adlb_datum_id_sub *pair = &id_subs[(*id_sub_count)++];
+
+      pair->id = handle.id;
+      pair->subscript.length = handle.sub.val.length;
+
+      // check if key memory was allocated and owned by us
+      if (handle.sub.buf.data == handle.sub.val.key)
+      {
+        pair->subscript.key = handle.sub.buf.data;
+      }
+      else
+      {
+        // Don't own data, alloc and copy
+        // TODO: avoid malloc somehow?
+        char *tmp_key = malloc(handle.sub.val.length);
+        TCL_MALLOC_CHECK(tmp_key);
+        memcpy(tmp_key, handle.sub.val.key, handle.sub.val.length);
+        pair->subscript.key = tmp_key;
+      }
     }
   }
   return TURBINE_SUCCESS;
@@ -1175,13 +1076,9 @@ Tclturbine_Init(Tcl_Interp* interp)
   Blob_Init(interp);
 
   COMMAND("init",        Turbine_Init_Cmd);
-  COMMAND("engine_init", Turbine_Engine_Init_Cmd);
   COMMAND("version",     Turbine_Version_Cmd);
   COMMAND("rule",        Turbine_Rule_Cmd);
   COMMAND("ruleopts",    Turbine_RuleOpts_Cmd);
-  COMMAND("push",        Turbine_Push_Cmd);
-  COMMAND("pop_or_break",Turbine_Pop_Or_Break_Cmd);
-  COMMAND("close",       Turbine_Close_Cmd);
   COMMAND("log",         Turbine_Log_Cmd);
   COMMAND("normalize",   Turbine_Normalize_Cmd);
   COMMAND("worker_loop", Turbine_Worker_Loop_Cmd);

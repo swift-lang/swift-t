@@ -21,7 +21,7 @@ package require turbine 0.0.1
 proc rules { } { }
 
 turbine::defaults
-turbine::init $engines $servers "Swift"
+turbine::init $servers "Swift"
 turbine::start rules
 turbine::finalize
 

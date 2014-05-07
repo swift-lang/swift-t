@@ -41,43 +41,25 @@ namespace eval turbine {
       array_kv_build $c $kv_dict $write_decr integer {*}$args
     }
 
-    proc swift_array_build { c elems var_type } { 
+    proc swift_array_build { elems var_type } { 
         set n [ llength $elems ]
-        log "swift_array_build: <$c> elems: $n var_type: $var_type"
+        log "swift_array_build: elems: $n var_type: $var_type"
 
-        if [ string equal $var_type "file" ] {
-            set L [ list ] 
-            # Mass create filename tds.  Requires 2 initial read refcounts
-            if { $n > 0 } {
-              set filename_tds [ adlb::multicreate {*}[ lrepeat \
-                                      $n [ list string 2 ] ] ]
-            } else {
-              # Avoid lrepeat not support 0 repeats in tcl < 8.6
-              set filename_tds [ list ]
-            }
+        if { $var_type == "file" } {
+            set result [ dict create ] 
             set type "file_ref"
             for { set i 0 } { $i < $n } { incr i } { 
                 set elem [ lindex $elems $i ] 
-                set filename_td [ lindex $filename_tds $i ]
-                store_string $filename_td $elem
-                turbine::allocate_file2 td $filename_td 1 0
-                lappend L $td
+                
+                dict append result $i [ create_local_file_ref $elem 1 ]
             }
         } else { 
-            set type "ref"
-            if { $n > 0 } {
-              set L [ adlb::multicreate {*}[ lrepeat $n [ list $type ] ] ]
-            } else {
-              # Avoid lrepeat not support 0 repeats in tcl < 8.6
-              set L [ list ]
-            }
+            set result [ dict create ]
             for { set i 0 } { $i < $n } { incr i } { 
                 set elem [ lindex $elems $i ] 
-                set td [ lindex $L $i ]
-                adlb::store $td $var_type $elem
-            }            
+                dict append result $i $elem
+            }
         }
-        array_build $c $L 1 $type
     }
 
     # build array by inserting items into a container starting at 0
@@ -127,15 +109,16 @@ namespace eval turbine {
       adlb::store $ms multiset {*}$args $elems $write_decr
     }
     
-    proc type_create_slice { outer_type type_list start_pos } {
+    proc type_create_slice { type_list pos } {
+      set outer_type [ lindex $type_list $pos ]
       switch $outer_type {
         container {
           # Include key and value types
-          return [ lrange $type_list $start_pos [ expr {$start_pos + 2} ] ]
+          return [ lrange $type_list $pos [ expr {$pos + 2} ] ]
         }
         multiset {
           # Include value type
-          return [ lrange $type_list $start_pos [ expr {$start_pos + 1} ] ]
+          return [ lrange $type_list $pos [ expr {$pos + 1} ] ]
         }
         default {
           return [ list $outer_type ]
@@ -162,57 +145,81 @@ namespace eval turbine {
           set key_type [ lindex $types $key_type_pos ]
           set val_type_pos [ expr {$types_pos + 2} ]
           set val_type [ lindex $types $val_type_pos ]
-          # appropriate slice of types depending on value type
-          set create_types [ type_create_slice $val_type $types $val_type_pos ]
-          # initial refcounts
-          lappend create_types 1 1
-          if { $n > 0 } {
-            set val_ids [ adlb::multicreate {*}[ lrepeat $n $create_types ] ]
-          } else {
-            # Avoid lrepeat not support 0 repeats in tcl < 8.6
-            set val_ids [ list ]
-          }
-          set val_dict [ dict create ]
+          # TODO: check if val_type is ref
+         
+          switch $val_type {
+            ref -
+            file_ref {
+              # Refs must be handled by creating inner TDs
+              # appropriate slice of types depending on type
+              set create_types [ type_create_slice $types \
+                                      [ expr {$val_type_pos + 1} ] ]
+              # initial refcounts
+              lappend create_types 1 1
+              if { $n > 0 } {
+                set val_ids [ adlb::multicreate {*}[ lrepeat $n \
+                                                      $create_types ] ]
+              } else {
+                # Avoid lrepeat not support 0 repeats in tcl < 8.6
+                set val_ids [ list ]
+              }
+              set val_dict [ dict create ]
 
-          set i 0
-          dict for { key val } $cval {
-            set val_id [ lindex $val_ids $i ]
+              set i 0
+              dict for { key val } $cval {
+                set val_id [ lindex $val_ids $i ]
 
-            # build inner data structure
-            build_rec $val_id $val $types $val_type_pos 1
-            
-            dict append val_dict $key $val_id
-            incr i
+                # build inner data structure
+                build_rec $val_id $val $types [ expr {$val_type_pos + 1 } ] 1
+                
+                dict append val_dict $key $val_id
+                incr i
+              }
+            }
+            default {
+              # Not a ref: data stored directly in dict
+              set val_dict $cval
+            }
           }
           # Store values all at once
-          adlb::store $id container $key_type ref $val_dict $write_decr
+          adlb::store $id container $key_type $val_type $val_dict $write_decr
         }
         multiset {
           set n [ llength $cval ]
           set val_type_pos [ expr {$types_pos + 1} ]
           set val_type [ lindex $types $val_type_pos ]
-          # appropriate slice of types depending on value type
-          set create_types [ type_create_slice $val_type $types $val_type_pos ]
-          # initial refcounts
-          lappend create_types 1 1
-          if { $n > 0 } {
-            set val_ids [ adlb::multicreate {*}[ lrepeat $n $create_types ] ]
-          } else {
-            # Avoid lrepeat not support 0 repeats in tcl < 8.6
-            set val_ids [ list ]
-          }
+          switch $val_type {
+            ref -
+            file_ref {
+              # Refs must be handled by creating inner TDs
+              # appropriate slice of types depending on type
+              set create_types [ type_create_slice $types \
+                                      [ expr {$val_type_pos + 1} ] ]
+              # initial refcounts
+              lappend create_types 1 1
+              if { $n > 0 } {
+                set val_list [ adlb::multicreate {*}[ lrepeat $n $create_types ] ]
+              } else {
+                # Avoid lrepeat not support 0 repeats in tcl < 8.6
+                set val_list [ list ]
+              }
 
-          set i 0
-          foreach val $cval {
-            set val_id [ lindex $val_ids $i ]
+              set i 0
+              foreach val $cval {
+                set val_id [ lindex $val_list $i ]
 
-            # build inner data structure
-            build_rec $val_id $val $types $val_type_pos 1
+                # build inner data structure
+                build_rec $val_id $val $types [ expr {$val_type_pos + 1 } ] 1
 
-            incr i
+                incr i
+              }
+            }
+            default {
+              set val_list $cval
+            }
           }
           # Store values all at once
-          adlb::store $id multiset ref $val_ids $write_decr
+          adlb::store $id multiset $val_type $val_list $write_decr
         }
         default {
           if [ expr {$types_pos + 1 == [ llength $types ]} ] {
@@ -233,12 +240,9 @@ namespace eval turbine {
     }
 
     # Same as container_lookup, but fail if item does not exist
+    # deprecated: container_lookup now checks
     proc container_lookup_checked { c i } {
-        set res [ container_lookup $c $i ]
-        if { $res == 0 } {
-            error "lookup failed: container_lookup <$c>\[$i\]"
-        }
-        return $res
+        return [ container_lookup $c $i ]
     }
 
     # CFRI
@@ -275,7 +279,7 @@ namespace eval turbine {
         nonempty c i t d
 
         if { $write_refcount_incr } {
-            adlb::write_refcount_incr $c
+            write_refcount_incr $c
         }
 
         rule $i [ list turbine::c_f_insert_body $c $i $d $t $write_refcount_decrs ] \
@@ -294,7 +298,7 @@ namespace eval turbine {
         nonempty c i r t
 
         if { $write_refcount_incr } {
-            adlb::write_refcount_incr $c
+            write_refcount_incr $c
         }
 
         rule "$i $r" \
@@ -317,7 +321,7 @@ namespace eval turbine {
         nonempty c i r t
 
         if { $write_refcount_incr } {
-            adlb::write_refcount_incr $c
+            write_refcount_incr $c
         }
 
         rule $r "c_v_insert_r_body $c $i $r $t $write_refcount_decrs" \
@@ -336,7 +340,7 @@ namespace eval turbine {
     # d: the data
     # outputs: ignored.
     proc container_immediate_insert { c i d t {drops 0} } {
-        # adlb::write_refcount_incr $c
+        # write_refcount_incr $c
         container_insert $c $i $d $t $drops
     }
 
@@ -371,7 +375,7 @@ namespace eval turbine {
     }
     proc dereference_integer_body { v r } {
         # Get the TD from the reference
-        set id [ acquire_ref $r 1 1 ]
+        set id [ adlb::acquire_ref $r ref 1 1 ]
         copy_integer $v $id
     }
 
@@ -382,7 +386,7 @@ namespace eval turbine {
             name "DRV-$v-$r"
     }
     proc dereference_void_body { v r } {
-        set id [ acquire_ref $r 1 1 ]
+        set id [ adlb::acquire_ref $r ref 1 1 ]
         copy_void $v $id
     }
 
@@ -395,7 +399,7 @@ namespace eval turbine {
 
     proc dereference_float_body { v r } {
         # Get the TD from the reference
-        set id [ acquire_ref $r 1 1 ]
+        set id [ adlb::acquire_ref $r ref 1 1 ]
         copy_float $v $id
     }
 
@@ -406,7 +410,7 @@ namespace eval turbine {
             name "DRS-$v-$r"
     }
     proc dereference_string_body { v r } {
-        set id [ acquire_ref $r 1 1 ]
+        set id [ adlb::acquire_ref $r ref 1 1 ]
         copy_string $v $id
     }
 
@@ -417,18 +421,8 @@ namespace eval turbine {
             name "DRB-$v-$r"
     }
     proc dereference_blob_body { v r } {
-        set id [ acquire_ref $r 1 1 ]
+        set id [ adlb::acquire_ref $r ref 1 1 ]
         copy_blob [ list $v ] [ list $id ]
-    }
-
-    proc dereference_file { v r } {
-        rule $r "dereference_file_body {$v} $r" \
-            name "dereference_file"
-    }
-    proc dereference_file_body { v r } {
-        # Get the TD from the reference
-        set handle [ acquire_file_ref $r 1 1 ]
-        copy_file [ list $v ] [ list $handle ]
     }
 
     # CRVL
@@ -450,7 +444,7 @@ namespace eval turbine {
     proc cr_v_lookup_body { cr i d d_type } {
         # When this procedure is run, cr should be set and
         # i should be the literal index
-        set c [ acquire_ref $cr 1 1 ]
+        set c [ adlb::acquire_ref $cr ref 1 1 ]
         container_reference $c $i $d $d_type
     }
 
@@ -470,7 +464,7 @@ namespace eval turbine {
 
     proc cr_f_lookup_body { cr i d d_type } {
         # When this procedure is run, cr and i should be set
-        set c [ acquire_ref $cr 1 1 ]
+        set c [ adlb::acquire_ref $cr ref 1 1 ]
         set t1 [ retrieve_decr $i ]
         container_reference $c $t1 $d $d_type
     }
@@ -478,86 +472,61 @@ namespace eval turbine {
     # CRFI
     # When reference r on c[i] is closed, store c[i][j] = d
     # Blocks on r and j
-    # oc is outer container
-    # inputs: r j d oc
+    # inputs: r j d
     # outputs: ignored
-    proc cr_f_insert {cr j d t oc {write_refcount_incr 1}} {
+    proc cr_f_insert {cr j d t} {
         log "insert (future): <*$cr>\[<$j>\]=<$d>"
 
-        if { $write_refcount_incr } {
-            adlb::write_refcount_incr $oc
-        }
-
-        rule "$cr $j" "cr_f_insert_body $cr $j $d $t $oc" \
+        rule "$cr $j" "cr_f_insert_body $cr $j $d $t" \
             name "CRFI-$cr"
     }
-    proc cr_f_insert_body { cr j d t oc } {
+    proc cr_f_insert_body { cr j d t } {
         # s: The subscripted container
-        # don't need read reference
-        set c [ acquire_ref $cr 0 1 ]
+        set c [ adlb::acquire_write_ref $cr ref 1 1 1 ]
         set s [ retrieve_decr $j ]
-        container_insert $c $s $d $t
+        container_insert $c $s $d $t 1 1
         log "insert: (now) <$c>\[$s\]=<$d>"
-        adlb::write_refcount_decr $oc
     }
 
     # CRVI
     # When reference cr on c[i] is closed, store c[i][j] = d
     # Blocks on cr, j must be a tcl integer
-    # oc is a direct handle to the top-level container
-    #       which cr will be inside
-    # inputs: r j d oc
+    # inputs: r j d
     # outputs: ignored
-    proc cr_v_insert { cr j d t oc {write_refcount_incr 1} } {
-        if { $write_refcount_incr } {
-            adlb::write_refcount_incr $oc
-        }
-
-        rule "$cr" "cr_v_insert_body $cr $j $d $t $oc" \
-            name "CRVI-$cr-$j-$d-$oc"
+    proc cr_v_insert { cr j d t } {
+        rule "$cr" "cr_v_insert_body $cr $j $d $t" \
+            name "CRVI-$cr-$j-$d"
     }
-    proc cr_v_insert_body { cr j d t oc } {
-        # don't need read reference
-        set c [ acquire_ref $cr 0 1 ]
+    proc cr_v_insert_body { cr j d t } {
+        set c [ adlb::acquire_write_ref $cr ref 1 1 1 ]
         # insert and drop slot
-        container_insert $c $j $d $t
-        adlb::write_refcount_decr $oc
+        container_insert $c $j $d $t 1 1
     }
 
     # CRVIR
     # j: tcl integer index
-    # oc: direct handle to outer container
-    proc cr_v_insert_r { cr j dr t oc {write_refcount_incr 1}} {
-        if { $write_refcount_incr } {
-            adlb::write_refcount_incr $oc
-        }
-
+    proc cr_v_insert_r { cr j dr t } {
         rule [ list $cr $dr ] \
-            "cr_v_insert_r_body $cr $j $dr $t $oc" \
+            "cr_v_insert_r_body $cr $j $dr $t" \
             name "CRVIR"
     }
-    proc cr_v_insert_r_body { cr j dr t oc } {
-        set c [ acquire_ref $cr 0 1 ]
+    proc cr_v_insert_r_body { cr j dr t } {
+        set c [ adlb::acquire_write_ref $cr ref 1 1 1 ]
         set d [ adlb::acquire_ref $dr $t 1 1 ]
-        container_insert $c $j $d $t
-        adlb::write_refcount_decr $oc
+        container_insert $c $j $d $t 1 1
     }
 
-    proc cr_f_insert_r { cr j dr t oc {write_refcount_incr 1}} {
-        if { $write_refcount_incr } {
-            adlb::write_refcount_incr $oc
-        }
-
+    proc cr_f_insert_r { cr j dr t } {
         rule [ list $cr $j $dr ] \
-            "cr_f_insert_r_body $cr $j $dr $t $oc" \
+            "cr_f_insert_r_body $cr $j $dr $t" \
             name "CRFIR"
     }
-    proc cr_f_insert_r_body { cr j dr t oc } {
-        set c [ acquire_ref $cr 1 1 ]
+    proc cr_f_insert_r_body { cr j dr t } {
+        set c [ adlb::acquire_write_ref $cr ref 1 1 1 ]
         set d [ adlb::acquire_ref $dr $t 1 1 ]
         set jval [ retrieve_decr $j ]
-        container_insert $c $jval $d $t
-        adlb::write_refcount_decr $oc
+        # Insert and drop refcounts we acquired
+        container_insert $c $jval $d $t 1 1
     }
 
     # CVC
@@ -597,56 +566,39 @@ namespace eval turbine {
         debug "c_f_create: $r $c\[$i\] $key_type $val_type"
 
         set s [ retrieve_decr $i ]
-        # Acquire 1 read refcount for container
-        set res [ create_nested $c $s $key_type $val_type 1 0 $decr_write $decr_read ]
-        store_ref $r $res
+        # Acquire 1 read & 1 write refcount for container
+        set res [ create_nested $c $s $key_type $val_type 1 1 $decr_write $decr_read ]
+        store_rw_ref $r $res
     }
 
     # Create container at c[i]
     # Set r, a reference TD on (cr*)[i]
-    # oa: outer array
-    # write_refcount_incr: if false, caller has created slot on oa
-    proc cr_v_create { r cr i key_type val_type oa {write_refcount_incr 1}} {
-        if { $write_refcount_incr } {
-            # create slot on outer array
-            adlb::write_refcount_incr $oa
-        }
-
+    proc cr_v_create { r cr i key_type val_type } {
         rule "$cr" \
-          "cr_v_create_body $r $cr $i $key_type $val_type $oa" \
+          "cr_v_create_body $r $cr $i $key_type $val_type" \
            name crvc
     }
 
-    proc cr_v_create_body { r cr i key_type val_type oa } {
-        set c [ acquire_ref $cr 1 1 ]
-        # Acquire 1 read refcount for container
-        set res [ create_nested $c $i $key_type $val_type 1 0 0 1 ]
-        # Pass read refcount into ref
-        store_ref $r $res
-        adlb::write_refcount_decr $oa
+    proc cr_v_create_body { r cr i key_type val_type } {
+        set c [ adlb::acquire_write_ref $cr ref 1 1 1 ]
+        # Transfer 1 read & write refcount to ref
+        set res [ create_nested $c $i $key_type $val_type 1 1 1 1 ]
+        store_rw_ref $r $res
     }
 
     # Create container at c[i]
     # Set r, a reference TD on (cr*)[i]
-    # oa: outer array of nested
-    # write_refcount_incr: if false, caller has created slot on oa
-    proc cr_f_create { r cr i key_type val_type oa {write_refcount_incr 1}} {
-        if { $write_refcount_incr } {
-            # create slot on outer array
-            adlb::write_refcount_incr $oa
-        }
-
-        rule "$cr $i" "cr_f_create_body $r $cr $i $key_type $val_type $oa" \
+    proc cr_f_create { r cr i key_type val_type} {
+        rule "$cr $i" "cr_f_create_body $r $cr $i $key_type $val_type" \
            name crfc
     }
 
-    proc cr_f_create_body { r cr i key_type val_type oa } {
-        set c [ acquire_ref $cr 1 1 ]
+    proc cr_f_create_body { r cr i key_type val_type } {
+        set c [ adlb::acquire_write_ref $cr ref 1 1 1 ]
         set s [ retrieve_decr $i ]
-        # Acquire 1 read refcount for container
-        set res [ create_nested $c $s $key_type $val_type 1 0 0 1 ]
-        store_ref $r $res
-        adlb::write_refcount_decr $oa
+        # Transfer 1 read & write refcount to ref
+        set res [ create_nested $c $s $key_type $val_type 1 1 1 1 ]
+        store_rw_ref $r $res
     }
 
     # When container is closed, concatenate its keys in result
@@ -693,19 +645,16 @@ namespace eval turbine {
         store_integer $result [ adlb::exists_sub $c $i_val 1 ]
     }
 
-    # If a reference to a struct is represented as a Turbine string
-    # future containing a serialized TCL dict, then lookup a
-    # struct member
-    proc struct_ref_lookup { structr field_id result type } {
+    # Dereference a struct reference, then copy out a struct member
+    proc structref_reference { structr subscript result type } {
         rule  "$structr" \
-            "struct_ref_lookup_body $structr $field_id $result $type" \
-            name "struct_ref_lookup-$structr-$field_id"
+            "structref_reference_body $structr $subscript $result $type" \
+            name "structref_reference-$structr-$subscript"
     }
 
-    proc struct_ref_lookup_body { structr field_id result type } {
-        set result_val [ acquire_subscript $structr $field_id $type 1 1 ]
-        debug "<${result}> <= ${result_val}"
-        adlb::store $result $type $result_val
+    proc structref_reference_body { structr subscript result type } {
+        set struct [ adlb::acquire_ref $structr ref 1 1 ]
+        adlb::struct_reference $struct $subscript $result $type
     }
 
     # Wait, recursively for container contents
@@ -713,30 +662,36 @@ namespace eval turbine {
     # inputs: list of tds to wait on
     # nest_levels: list corresponding to inputs with nesting level
     #             of containers
-    # is_file: list of booleans: whether file
+    # base_types: type of data in innermost of containers
     # action: command to execute when closed
     # args: additional keyword args (same as rule)
-    proc deeprule { inputs nest_levels is_file action args } {
+    proc deeprule { inputs nest_levels base_types action args } {
       # signals: list of variables that must be closed to signal deep closing
       # allocated_signals: signal variables that were allocated
       set signals [ list ]
       set allocated_signals [ list ]
       check { [ llength $inputs ] == [ llength $nest_levels ] } \
         "deeprule: list lengths do not agree: inputs and nest_levels"
-      check { [ llength $inputs ] == [ llength $is_file ] } \
-        "deeprule: list lengths do not agree: inputs and is_file"
+      check { [ llength $inputs ] == [ llength $base_types ] } \
+        "deeprule: list lengths do not agree: inputs and base_types"
       set i 0
       foreach input $inputs {
-        set isf [ lindex $is_file $i ]
+        set base_type [ lindex $base_types $i ]
         set nest_level [ lindex $nest_levels $i ]
         check { $nest_level >= 0 } \
             "deeprule: negative nest_level: $nest_level"
         if { $nest_level == 0 } {
           # Just need to wait on right thing
-          if { $isf } {
-            lappend signals [ get_file_status $input ]
-          } else {
-            lappend signals $input
+          switch $base_type {
+            case file_ref {
+              lappend signals [ get_file_status $input ]
+            }
+            case ref {
+              lappend signals $input
+            }
+            default {
+              # Assume don't need to wait
+            }
           }
         } else {
           # Wait for deep close of container
@@ -745,7 +700,7 @@ namespace eval turbine {
           lappend signals $signal
           # make sure cleaned up later
           lappend allocated_signals $signal
-          container_deep_wait $input $nest_level $isf $signal
+          container_deep_wait $input $nest_level $base_type $signal
         }
         incr i
       }
@@ -764,21 +719,32 @@ namespace eval turbine {
     # Check for container contents being closed and once true,
     # set signal
     # Called after container itself is closed
-    proc container_deep_wait { container nest_level is_file signal } {
+    proc container_deep_wait { container nest_level base_type signal } {
 
         debug "container_deep_wait: $container $nest_level"
         if { $nest_level == 1 } {
-            # First wait for container to be closed
-            rule $container [ list container_deep_wait_continue $container \
-                                  0 -1 $nest_level $is_file $signal ]
+            switch $base_type {
+              ref -
+              file_ref {
+                # Need to 
+                set action [ list container_deep_wait_continue $container \
+                                      0 -1 $nest_level $base_type $signal ]
+              }
+              default {
+                set action "store_void $signal"
+              }
+            }
+            
         } else {
-            rule $container [ list container_rec_deep_wait $container \
-                                  $nest_level $is_file $signal ]
+            set action [ list container_rec_deep_wait $container \
+                                  $nest_level $base_type $signal ]
         }
+        # Execute action after container is closed
+        rule $container $action
     }
 
     proc container_deep_wait_continue { container progress n
-                                        nest_level is_file signal } {
+                                        nest_level base_type signal } {
       set MAX_CHUNK_SIZE 64
       # TODO: could divide and conquer instead of doing linear search
       if { $n == -1 } {
@@ -789,17 +755,23 @@ namespace eval turbine {
         set members [ adlb::enumerate $container members \
                                       $chunk_size $progress ]
         foreach member $members {
-          if {$is_file} {
-            set td [ get_file_status $member ]
-          } else {
-            set td $member
+          switch $base_type {
+            file_ref {
+              set td [ get_file_status $member ]
+            }
+            ref {
+              set td $member
+            }
+            default {
+              error "Don't know how to wait on type: $base_type"
+            }
           }
-          if { [ adlb::exists $td ] } {
+          if { [ adlb::closed $td ] } {
             incr progress
           } else {
             # Suspend execution until next item closed
             rule $td [ list container_deep_wait_continue $container \
-                          $progress $n $nest_level $is_file $signal ]
+                          $progress $n $nest_level $base_type $signal ]
             return
           }
         }
@@ -809,7 +781,7 @@ namespace eval turbine {
       store_void $signal
     }
 
-    proc container_rec_deep_wait { container nest_level is_file signal } {
+    proc container_rec_deep_wait { container nest_level base_type signal } {
       set inner_signals [ list ]
 
       set members [ adlb::enumerate $container members all 0 ]
@@ -820,13 +792,13 @@ namespace eval turbine {
       } elseif { [ llength $members ] == 1 } {
         # skip allocating new signal
         set inner [ lindex $members 0 ]
-        container_deep_wait $inner [ expr {$nest_level - 1} ] $is_file \
+        container_deep_wait $inner [ expr {$nest_level - 1} ] $base_type \
                             $signal
       } else {
         foreach inner $members {
           set inner_signal [ allocate void ]
           lappend inner_signals $inner_signal
-          container_deep_wait $inner [ expr {$nest_level - 1} ] $is_file \
+          container_deep_wait $inner [ expr {$nest_level - 1} ] $base_type \
                             $inner_signal
         }
         rule $inner_signals \
@@ -853,50 +825,81 @@ namespace eval turbine {
     # inside container.  Unpack into a dict or list as appropriate
     # types: list of nested types, from outer container to inner value
     #
+    # E.g. valid type lists would be:
+    # container int
+    # container ref int
+    # multiset container int
+    #
     # Consumes read refcounts from outer container
+
+
+
     proc enumerate_rec { container types {depth 0} {read_decr 0}} {
       set container_type [ lindex $types $depth ]
       set member_type [ lindex $types [ expr {$depth + 1} ] ]
-      # If there are more than two entries left in the type list
-      # (the leaf type, and another container type), we will
-      # recurse to handle that.
-      set recurse [ expr {$depth < [ llength $types ] - 2} ]
 
+      # If there is a ref type, followed by another type, we will
+      # recurse to handle that.
+      set ref_value [ string equal $member_type ref ]
+      if { $ref_value } {
+        set ref_root_type [ lindex $types [ expr {$depth + 1} ] ]
+        if { $ref_root_type == "container" || \
+             $ref_root_type == "multiset" } {
+          set recurse 1
+        } else {
+          set recurse 0
+          set member_ref_type [ lindex $types [ expr {$depth + 2} ] ]
+        }
+      }
+      
       switch $container_type {
         container {
-          set vals [ adlb::enumerate $container dict all 0 0 ]
-          if { $recurse } {
+          if { $ref_value } {
+            set vals [ adlb::enumerate $container dict all 0 0 ]
             set result_dict [ dict create ]
-            dict for { key subcontainer } $vals {
-              dict append result_dict $key [ enumerate_rec $subcontainer \
-                    $types [ expr {$depth + 1} ] 0 ]
+
+            if { $recurse } {
+              dict for { key subcontainer } $vals {
+                dict append result_dict $key [ enumerate_rec $subcontainer \
+                      $types [ expr {$depth + 2} ] 0 ]
+              }
+            } else {
+              # Optimization: do multiget on references
+              set result_dict [ multi_retrieve_kv $vals CACHED 0 \
+                                $member_ref_type ]
             }
-            set rv $result_dict
+            # Decrement here to avoid freeing contents
+            read_refcount_decr $container $read_decr
+            return $result_dict
           } else {
-            set rv [ multi_retrieve_kv $vals CACHED $member_type ]
+            return [ adlb::enumerate $container dict all 0 $read_decr ]
           }
         }
         multiset {
-          set vals [ adlb::enumerate $container members all 0 0 ]
-          if { $recurse } {
+          if { $ref_value } {
+            set vals [ adlb::enumerate $container members all 0 0 ]
             set result_list [ list ]
-            foreach subcontainer $vals {
-              lappend result_dict [ enumerate_rec $subcontainer \
-                                    $types [ expr {$depth + 1} ] 0 ]
+            if { $recurse } {
+              foreach subcontainer $vals {
+                lappend result_dict [ enumerate_rec $subcontainer \
+                                      $types [ expr {$depth + 2} ] 0 ]
+              }
+            } else {
+              # Optimization: do multiget on references
+              set result_dict [ multi_retrieve $vals CACHED 0 \
+                                $member_ref_type ]
             }
-            set rv $result_list
+            # Decrement here to avoid freeing contents
+            read_refcount_decr $container $read_decr
+            return $result_dict
           } else {
-            set rv [ multi_retrieve $vals CACHED $member_type ]
+            return [ adlb::enumerate $container members all 0 $read_decr ]
           }
         }
         default {
           error "Expected container type to enumerate: $container_type"
         }
       }
-      
-      # Decrement at end to avoid freeing members
-      adlb::read_refcount_decr $container $read_decr
-      return $rv
     }
 }
 

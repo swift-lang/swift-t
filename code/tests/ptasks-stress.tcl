@@ -42,7 +42,7 @@ proc ptasks_1 { result inputs us_dur } {
 }
 
 turbine::defaults
-turbine::init $engines $servers
+turbine::init $servers
 turbine::start rules
 turbine::finalize
 

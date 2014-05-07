@@ -32,16 +32,13 @@ namespace eval turbine {
 
     # Export work types accessible
     variable WORK_TASK
-    variable CONTROL_TASK
-    namespace export WORK_TASK CONTROL_TASK
+    namespace export WORK_TASK
 
-    # Mode is ENGINE, WORKER, or SERVER
+    # Mode is WORKER, or SERVER
     variable mode
-    variable is_engine
 
-    # Counts of engines, servers, workers
+    # Counts of servers and workers
     variable n_adlb_servers
-    variable n_engines
     variable n_workers
 
     # How to display string values in the log
@@ -61,36 +58,32 @@ namespace eval turbine {
     set error_code 10
 
     # User function
-    # param e Number of engines
     # param s Number of ADLB servers
     proc init { args } {
 
         variable language
 
-        if { [ llength $args ] < 2 } {
-            error "use: turbine::init <engines> <servers> \[<language>\]"
+        if { [ llength $args ] < 1 } {
+            error "use: turbine::init <servers> \[<language>\]"
         }
-        set engines [ lindex $args 0 ]
-        set servers [ lindex $args 1 ]
-        if { [ llength $args ] > 2 } {
-            set language [ lindex $args 2 ]
+        set servers [ lindex $args 0 ]
+        if { [ llength $args ] > 1 } {
+            set language [ lindex $args 1 ]
         }
 
-        assert_control_sanity $engines $servers
+        assert_control_sanity $servers
         setup_log_string
 
         reset_priority
 
         # Set up work types
-        enum WORK_TYPE { WORK CONTROL }
+        enum WORK_TYPE { WORK }
         global WORK_TYPE
         set types [ array size WORK_TYPE ]
 
         # Set up variables
         variable WORK_TASK
-        variable CONTROL_TASK
         set WORK_TASK $WORK_TYPE(WORK)
-        set CONTROL_TASK $WORK_TYPE(CONTROL)
 
         if { [ info exists ::TURBINE_ADLB_COMM ] } {
             adlb::init $servers $types $::TURBINE_ADLB_COMM
@@ -101,9 +94,11 @@ namespace eval turbine {
 
         c::init [ adlb::amserver ] [ adlb::rank ] [ adlb::size ]
 
-        setup_mode $engines $servers
+        setup_mode $servers
 
         turbine::init_rng
+
+        turbine::init_file_types
 
         adlb::barrier
         c::normalize
@@ -111,37 +106,25 @@ namespace eval turbine {
         argv_init
     }
 
-    proc assert_control_sanity { n_engines n_adlb_servers } {
-        if { $n_engines <= 0 } {
-            error "ERROR: ENGINES==0"
-        }
+    proc assert_control_sanity { n_adlb_servers } {
         if { $n_adlb_servers <= 0 } {
             error "ERROR: SERVERS==0"
         }
     }
 
-    proc setup_mode { engines servers } {
+    proc setup_mode { servers } {
 
-        variable n_engines
         variable n_workers
         variable n_adlb_servers
 
-        set n_engines $engines
-        set n_workers [ expr {[ adlb::size ] - $servers - $engines} ]
+        set n_workers [ expr {[ adlb::size ] - $servers } ]
         set n_adlb_servers $servers
 
         variable mode
-	variable is_engine
-        if { [ adlb::rank ] < $engines } {
-	    set mode ENGINE
-	    set is_engine 1
-
-        } elseif { [ adlb::amserver ] == 1 } {
+        if { [ adlb::amserver ] == 1 } {
             set mode SERVER
-	    set is_engine 0
         } else {
 	    set mode WORKER
-	    set is_engine 0
         }
 
         log "MODE: $mode"
@@ -151,24 +134,21 @@ namespace eval turbine {
     }
 
     proc assert_sufficient_procs { } {
-        if { [ adlb::size ] < 3 } {
+        if { [ adlb::size ] < 2 } {
             error "Too few Turbine processes specified by user:\
-                    [adlb::size], must be at least 3"
+                    [adlb::size], must be at least 2"
         }
     }
 
     proc log_rank_layout { } {
 
-        variable n_engines
         variable n_workers
         variable n_adlb_servers
 
-        set first_worker $n_engines
+        set first_worker 0
         set first_server [ expr [adlb::size] - $n_adlb_servers ]
         set last_worker  [ expr $first_server - 1 ]
         set last_server  [ expr [adlb::size] - 1 ]
-        log [ cat "ENGINES: $n_engines" \
-                  "RANKS: 0 - [ expr $first_worker - 1 ]" ]
         log [ cat "WORKERS: $n_workers" \
                   "RANKS: $first_worker - $last_worker" ]
         log [ cat "SERVERS: $n_adlb_servers" \
@@ -183,36 +163,35 @@ namespace eval turbine {
 
         set rules [ lindex $args 0 ]
         if { [ llength $args ] > 1 } {
-            set engine_startup [ lindex $args 1 ]
+            set startup_cmd [ lindex $args 1 ]
         } else {
-            set engine_startup ""
+            set startup_cmd ""
         }
 
-        if { [ catch { enter_mode $rules $engine_startup } e d ] } {
+        if { [ catch { enter_mode $rules $startup_cmd } e d ] } {
             fail $e $d
         }
     }
 
-    proc enter_mode { rules engine_startup } {
+    proc enter_mode { rules startup_cmd } {
         global tcl_version
         if { $tcl_version >= 8.6 } {
           try {
-            enter_mode_unchecked $rules $engine_startup
+            enter_mode_unchecked $rules $startup_cmd
           } trap {TURBINE ERROR} {msg} {
               turbine::abort $msg
           }
         } else {
-          enter_mode_unchecked $rules $engine_startup
+          enter_mode_unchecked $rules $startup_cmd
         }
     }
 
     # Inner function without error trapping
-    proc enter_mode_unchecked { rules engine_startup } {
+    proc enter_mode_unchecked { rules startup_cmd } {
         variable mode
         switch $mode {
-            ENGINE  { engine $rules $engine_startup }
             SERVER  { adlb::server }
-            WORKER  { worker }
+            WORKER  { worker $rules $startup_cmd}
             default { error "UNKNOWN MODE: $mode" }
         }
     }
@@ -277,22 +256,12 @@ namespace eval turbine {
         }
     }
 
-    # Set engines and servers in the caller's stack frame
+    # Set servers in the caller's stack frame
     # Used to get tests running, etc.
     proc defaults { } {
 
         global env
-        upvar 1 engines e
         upvar 1 servers s
-
-        if [ info exists env(TURBINE_ENGINES) ] {
-            set e $env(TURBINE_ENGINES)
-        } else {
-            set e ""
-        }
-        if { [ string length $e ] == 0 } {
-            set e 1
-        }
 
         if [ info exists env(ADLB_SERVERS) ] {
             set s $env(ADLB_SERVERS)
@@ -345,15 +314,6 @@ namespace eval turbine {
         store_integer $output [ turbine_workers ]
     }
 
-    proc turbine_engines { } {
-        variable n_engines
-        return $n_engines
-    }
-
-    proc turbine_engines_future { output inputs } {
-        store_integer $output [ turbine_engines ]
-    }
-
     proc adlb_servers { } {
         variable n_adlb_servers
         return $n_adlb_servers
@@ -379,57 +339,6 @@ namespace eval turbine {
       }
     }
 
-    # Get option from rule opts: if not found, return default
-    proc opt_get { opts key } {
-        switch $key {
-            parallelism {
-                if [ dict exists $opts parallelism ] {
-                    return [ dict get $opts parallelism ]
-                } else {
-                    return 1
-                }
-            }
-            target {
-                if [ dict exists $opts target ] {
-                    return [ dict get $opts target ]
-                } else {
-                    return $::adlb::RANK_ANY
-                }
-            }
-            type {
-                if [ dict exists $opts type ] {
-                    return [ dict get $opts type ]
-                } else {
-                    return $::turbine::LOCAL
-                }
-            }
-            default {
-                error "rule_opt_get: unknown key: $key"
-            }
-        }
-    }
-
-    # Augment rule so that it can be run on worker
-    # args: inputs action opts
-    # opts: optional: dict of options: see tcl-turbine.c:Turbine_Rule_Cmd()
-    # default: action type: $turbine::LOCAL
-    proc spawn_rule { inputs action args } {
-        variable is_engine
-        global WORK_TYPE
-
-        debug "turbine::rule..."
-        if { $is_engine } {
-            rule $inputs $action {*}$args
-        } elseif { [ llength $inputs ] == 0 } {
-            release -1 \
-                [ opt_get $args type   ] $action                     \
-                [ opt_get $args target ] [ opt_get $args parallelism ]
-        } else {
-            adlb::put $::adlb::RANK_ANY $WORK_TYPE(CONTROL) \
-                [ list rule $inputs $action {*}$args ] \
-                [ get_priority ] 1
-        }
-    }
 }
 
 # Local Variables:

@@ -6,7 +6,8 @@
 
 @pure
 (float A[][]) matrix_from_blob_fortran(blob b, int m, int n)
-"turbine" "0.0.2" "matrix_from_blob_fortran";
+"turbine" "0.0.2" 
+  [ "set <<A>> [ turbine::matrix_from_blob_fortran_impl <<b>> <<m>> <<n>> ] " ];
 
 (void v)
 vector_print(float x[], int rows)

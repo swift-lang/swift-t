@@ -26,10 +26,10 @@ proc rules { } {
 
     turbine::store_string 11 "hi how are you"
 
-    turbine::create_container 18 integer ref
+    turbine::create_container 18 integer string
     turbine::split 18 11
 
-    turbine::create_container 19 integer ref
+    turbine::create_container 19 integer string
     turbine::store_string 12 "/bin:/usr/evil name/p:/usr/bin"
     turbine::store_string 13 ":"
     turbine::split 19 { 12 13 }
@@ -38,16 +38,14 @@ proc rules { } {
 }
 
 proc check { container } {
-    set td [ turbine::container_lookup $container 1 ]
-    set s1 [ turbine::retrieve_string $td ]
+    set s1 [ turbine::container_lookup $container 1 ]
     puts "s1: $s1"
-    set td [ turbine::container_lookup $container 2 ]
-    set s2 [ turbine::retrieve_string $td ]
+    set s2 [ turbine::container_lookup $container 2 ]
     puts "s2: $s2"
 }
 
 turbine::defaults
-turbine::init $engines $servers
+turbine::init $servers
 turbine::start rules
 turbine::finalize
 

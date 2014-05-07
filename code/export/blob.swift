@@ -31,11 +31,16 @@
 (string o) string_from_blob(blob b) "turbine" "0.0.2" "string_from_blob"
  [ "set <<o>> [ adlb::blob_to_string <<b>> ]" ];
 @pure
-(blob o) blob_from_floats(float f[]) "turbine" "0.0.2" "blob_from_floats";
+(blob o) blob_from_floats(float f[]) "turbine" "0.0.2"
+  [ "set <<o>> [ turbine::blob_from_floats_impl <<f>> ]" ];
 @pure
-(blob o) blob_from_ints(int i[]) "turbine" "0.0.2" "blob_from_ints";
+(blob o) blob_from_ints(int i[]) "turbine" "0.0.2"
+  [ "set <<o>> [ turbine::blob_from_ints_impl <<i>> ] " ];
 @pure
-(float f[]) floats_from_blob(blob b) "turbine" "0.0.2" "floats_from_blob";
+(float f[]) floats_from_blob(blob b) "turbine" "0.0.2"
+  [ "set <<f>> [ turbine::floats_from_blob_impl <<b>> ] " ];
+
+// TODO: inline version of blob_read
 @pure @dispatch=WORKER
 (blob o) blob_read(file f) "turbine" "0.0.2" "blob_read";
 @pure @dispatch=WORKER

@@ -37,6 +37,10 @@ static void task_error(Tcl_Interp* interp, int tcl_rc, char* command);
 #define service_log(format, args...) \
   log_printf("TURBINE_WORKER_SERVICE: " format, ## args)
 
+/*
+  Main worker loop
+  TODO: priority isn't inherited from parent tasks
+ */
 turbine_code
 turbine_worker_loop(Tcl_Interp* interp, void* buffer, size_t buffer_size,
                     int work_type)
@@ -63,12 +67,15 @@ turbine_worker_loop(Tcl_Interp* interp, void* buffer, size_t buffer_size,
     assert(type_recved == work_type);
 
     // Work unit is prepended with rule ID, followed by space.
-    char* rule_id_end = strchr(buffer, ' ');
-    assert(rule_id_end != NULL);
+    //char* rule_id_end = strchr(buffer, ' ');
+    //assert(rule_id_end != NULL);
     // Set pointer to start of Tcl work unit string
-    char* command = rule_id_end + 1;
+    //char* command = rule_id_end + 1;
 
-    DEBUG_TURBINE("rule_id: %"PRId64"", atol(buffer));
+    // DEBUG_TURBINE("rule_id: %"PRId64"", atol(buffer));
+
+    // Don't set rule_id
+    char *command = buffer;
     DEBUG_TURBINE("eval: %s", command);
 
     // Work out length | null byte | prefix

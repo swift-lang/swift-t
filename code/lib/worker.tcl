@@ -20,8 +20,14 @@ namespace eval turbine {
     namespace import ::adlb::get
 
     # Main worker loop
-    proc worker { } {
+    proc worker { rules startup_cmd } {
 
+        eval $startup_cmd
+        if { [ adlb::rank ] == 0 } {
+            # First rank should start execution
+            eval $rules
+        }
+        
         # Alternative GEMTC worker is enabled by environment variable
         # TURBINE_GEMTC_WORKER=1, or another non-zero value
         # An empty string is treated as false, other values are invalid

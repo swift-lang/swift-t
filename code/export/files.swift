@@ -54,6 +54,7 @@
 
 @pure
 (string s[]) file_lines(file f)
-    "turbine" "0.1" "file_lines";
+    "turbine" "0.1" "file_lines"
+  [ "set <<s>> [ turbine::file_lines_impl <<f>> ] " ];
 
 #endif // FILES_SWIFT
