@@ -146,7 +146,7 @@ public class Settings
     defaults.setProperty(TURBINE_VERSION, "0.0.5");
     defaults.setProperty(DEBUG_LEVEL, "COMMENTS");
     defaults.setProperty(IC_OUTPUT_FILE, "");
-    defaults.setProperty(NO_TURBINE_ENGINE_KEY, "false");
+    defaults.setProperty(NO_TURBINE_ENGINE_KEY, "true");
     defaults.setProperty(RPATH, "");
     defaults.setProperty(INPUT_FILENAME, "");
     defaults.setProperty(OUTPUT_FILENAME, "");
