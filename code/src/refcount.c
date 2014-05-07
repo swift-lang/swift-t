@@ -202,7 +202,7 @@ xlb_update_rc_id(adlb_datum_id id, int *read_rc, int *write_rc,
             to_acquire.read_refcount, &read_acquired, &read_remainder);
     check_verbose(dc == ADLB_DATA_SUCCESS, dc, "Error updating read "
             "refcount of <%"PRId64"> r=%i acquiring %i release:%i",
-            id, *read_rc, to_acquire.read_refcount, (int)read_remainder);
+            id, *read_rc, to_acquire.read_refcount, (int)release_read);
   }
   else
   {
@@ -213,7 +213,7 @@ xlb_update_rc_id(adlb_datum_id id, int *read_rc, int *write_rc,
           to_acquire.write_refcount, &write_acquired, &write_remainder);
   check_verbose(dc == ADLB_DATA_SUCCESS, dc, "Error updating write "
             "refcount of <%"PRId64"> w=%i acquiring %i release:%i",
-            id, *write_rc, to_acquire.write_refcount, (int)write_remainder);
+            id, *write_rc, to_acquire.write_refcount, (int)release_write);
 
   if (read_remainder != 0 || write_remainder != 0)
   {
