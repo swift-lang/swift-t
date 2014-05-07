@@ -20,3 +20,7 @@ is_branch_subrepo() {
   done
   return 1
 }
+
+# Directories with ./setup.sh script to run autotools
+autotools_dirs="c-utils lb/code turbine/code"
+

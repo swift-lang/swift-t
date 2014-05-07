@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
-autotools_dirs="c-utils lb/code turbine/code"
+
+set -e
+
+SCRIPT_DIR=$(dirname $0)
+source "${SCRIPT_DIR}/repos.sh"
 
 for dir in $autotools_dirs; do
   echo "Entering $dir"
   pushd $dir > /dev/null
-  git checkout master 
-  git branch -D __autotools_update &> /dev/null
-  git checkout -b __autotools_update github/master
+  git checkout -q --detach
+  if git branch -D __autotools_update &> /dev/null ; then
+    echo "Removed old autotools temporary branch"
+  fi
+  git checkout -q -b __autotools_update github/master
   if git diff-index --quiet HEAD --; then
     ./setup.sh
     git commit -a -m "Regenerate build scripts"
