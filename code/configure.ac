@@ -245,7 +245,12 @@ then
   ZLIB_HOME=0
   m4_include([m4/ax_check_zlib.m4])
   AX_CHECK_ZLIB([ENABLE_ZLIB=1],
-                AC_MSG_ERROR([Could not find zlib!]))
+                AC_MSG_ERROR([Could not find zlib! (required for checkpoint)]))
+  # Check that we got a sensible location
+  if [[ ! -d "$ZLIB_HOME" ]]
+  then
+    AC_MSG_ERROR([Could not find zlib! (required for checkpoint)])
+  fi
   CFLAGS="${CFLAGS} -I${ZLIB_HOME}/include"
 fi
 AC_SUBST(ZLIB_HOME)

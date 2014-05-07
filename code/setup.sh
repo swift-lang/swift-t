@@ -10,6 +10,6 @@ crash()
 echo "Running autoheader..."
 autoheader || crash "autoconf failed!"
 echo "Running autoconf..."
-autoreconf || crash "autoconf failed!"
+autoreconf -f || crash "autoconf failed!"
 echo "ADLB/setup.sh: OK"
 exit 0
