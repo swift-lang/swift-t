@@ -21,7 +21,11 @@ do
   github_remote="remotes/github/master"
   last_svn_rev=$(git log ${github_remote} | grep git-svn-id | head -n1 | grep -o '@[0-9]*' | sed 's/@/r/')
   echo "Last svn revision on github: $last_svn_rev"
-
+  
+  git checkout -q --detach
+  if git branch -D __tmp_master &> /dev/null ; then
+    echo "Removed old __tmp_master temporary branch"
+  fi
   git checkout -b __tmp_master ${git_svn_remote}
   #git_svn_head_hash=$(git rev-parse $git_svn_remote)
   last_merged_hash=$(git svn find-rev $last_svn_rev $git_svn_remote)
