@@ -5,7 +5,7 @@ set -e
 SCRIPT_DIR=$(dirname $0)
 source "${SCRIPT_DIR}/repos.sh"
 
-for subrepo in $branch_subrepos
+for subrepo in $subrepos
 do
   echo Updating $subrepo        
   pushd $subrepo > /dev/null
@@ -45,26 +45,11 @@ do
   echo
   git checkout -q master
   
-  
   echo "Fetching github version"
   git fetch github
 
   popd > /dev/null
 done
-
-for subrepo in $nonbranch_subrepos
-do
-  echo "Updating $subrepo"
-  pushd $subrepo > /dev/null
-  git checkout master
-  git svn rebase
-  
-  echo "Fetching github version"
-  git fetch github
-
-  popd > /dev/null
-done
-
 
 echo "Updating swift-t"
 pushd swift-t > /dev/null
