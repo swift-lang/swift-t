@@ -4312,22 +4312,8 @@ public class TurbineOp extends Instruction {
 
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
-      switch (op) {
-        case DECR_WRITERS:
-          gen.decrWriters(getRCTarget(this), getRCAmount(this));
-          break;
-        case INCR_WRITERS:
-          gen.incrWriters(getRCTarget(this), getRCAmount(this));
-          break;
-        case DECR_READERS:
-          gen.decrRef(getRCTarget(this), getRCAmount(this));
-          break;
-        case INCR_READERS:
-          gen.incrRef(getRCTarget(this), getRCAmount(this));
-          break;
-        default:
-          throw new STCRuntimeError("Unknown op type: " + op);
-      }
+      gen.modifyRefCount(getRCTarget(this), getRCType(this.op),
+                         getRefcountDir(this.op), getRCAmount(this));
     }
 
     @Override

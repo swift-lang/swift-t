@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.StringWriter;
 import java.util.ArrayList;
@@ -97,7 +98,7 @@ public class Main {
     // Use intermediate file so we don't create invalid output in case of
     // compilation errors
     File tmpOutput = setupTmpOutput();
-    PrintStream outStream = openForOutput(tmpOutput);
+    OutputStream outStream = openForOutput(tmpOutput);
 
     try {
       if (preprocessOnly()) {
@@ -385,11 +386,10 @@ public class Main {
     }
   }
   
-  private static PrintStream openForOutput(File outfile) {
+  private static OutputStream openForOutput(File outfile) {
     try {
       FileOutputStream stream = new FileOutputStream(outfile);
-      BufferedOutputStream buffer = new BufferedOutputStream(stream);
-      return new PrintStream(buffer);
+      return new BufferedOutputStream(stream);
     } catch (FileNotFoundException e) {
       e.printStackTrace();
       System.err.println("Unexpected error opening " +

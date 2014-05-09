@@ -15,6 +15,8 @@
  */
 package exm.stc.ui;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintStream;
 
 import org.apache.log4j.Logger;
@@ -50,7 +52,7 @@ public class STCompiler {
    * @param output
    * @param icOutput
    */
-  public void compile(String inputFile, boolean preprocessed, PrintStream output,
+  public void compile(String inputFile, boolean preprocessed, OutputStream output,
           PrintStream icOutput) {
     try {
       logger.info("STC starting: " + Misc.timestamp());
@@ -96,7 +98,7 @@ public class STCompiler {
   }
 
   private void compileOnce(String inputFile, boolean preprocessed,
-      PrintStream output, PrintStream icOutput) throws UserException {
+      OutputStream output, PrintStream icOutput) throws UserException {
     STCMiddleEnd intermediate = new STCMiddleEnd(logger, icOutput);
     ASTWalker walker = new ASTWalker(intermediate);
     walker.walk(inputFile, preprocessed);
@@ -111,9 +113,13 @@ public class STCompiler {
     /* Generate output tcl code from intermediate representation */
     TurbineGenerator codeGen = new TurbineGenerator(logger, Misc.timestamp());
     intermediate.regenerate(codeGen);
-    String code = codeGen.code();
-
-    output.println(code);
+    try {
+      codeGen.generate(output);
+    } catch (IOException e) {
+      System.err.println("I/O error while writing to output");
+      System.err.println(e.getMessage());
+      throw new STCFatal(ExitCode.ERROR_IO.code());
+    }
   }
 
   public static void reportInternalError(Throwable e) {

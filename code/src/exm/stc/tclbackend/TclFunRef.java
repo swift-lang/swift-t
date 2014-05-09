@@ -13,9 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License
  */
-package exm.stc.common;
+package exm.stc.tclbackend;
 
-public class TclFunRef {
+import exm.stc.common.ForeignFunction;
+
+public class TclFunRef extends ForeignFunction {
   
   public TclFunRef(String pkg, String symbol) {
     this(pkg, symbol, "0.0");
@@ -29,4 +31,9 @@ public class TclFunRef {
   public final String pkg;
   public final String version;
   public final String symbol;
+  
+  @Override
+  public String toString() {
+    return pkg + "::" + version + " (" + symbol + ")";
+  }
 }

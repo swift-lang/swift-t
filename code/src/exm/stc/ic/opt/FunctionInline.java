@@ -27,7 +27,6 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Logging;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
@@ -39,6 +38,7 @@ import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Var;
+import exm.stc.common.lang.WaitMode;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.MultiMap;

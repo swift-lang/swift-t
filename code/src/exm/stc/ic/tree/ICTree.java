@@ -34,9 +34,11 @@ import java.util.TreeMap;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
+import exm.stc.common.CompilerBackend.CodeGenOptions;
 import exm.stc.common.CompilerBackend.VarDecl;
+import exm.stc.common.ForeignFunction;
 import exm.stc.common.Logging;
-import exm.stc.common.TclFunRef;
+import exm.stc.common.RequiredPackage;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
@@ -53,7 +55,6 @@ import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.lang.WaitVar;
-import exm.stc.common.util.Pair;
 import exm.stc.common.util.StackLite;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.Conditionals.Conditional;
@@ -95,11 +96,9 @@ public class ICTree {
     private final ArrayList<BuiltinFunction> builtinFuns =
                                             new ArrayList<BuiltinFunction>();
     
-    private final Set<Pair<String, String>> required =
-                                            new HashSet<Pair<String, String>>();
+    private final Set<RequiredPackage> required = new HashSet<RequiredPackage>();
     
-    private final List<StructType> structTypes =
-                                            new ArrayList<StructType>();
+    private final List<StructType> structTypes = new ArrayList<StructType>();
     
     /**
      * If checkpointing required
@@ -119,11 +118,11 @@ public class ICTree {
       GenInfo info = new GenInfo(blockVectors);
       
       logger.debug("Starting to generate program from Swift IC");
-      gen.header();
+      gen.initialize(new CodeGenOptions(checkpointRequired));
       
       logger.debug("Generating required packages");
-      for (Pair<String, String> req: required) {
-        gen.requirePackage(req.val1, req.val2);
+      for (RequiredPackage pkg: required) {
+        gen.requirePackage(pkg);
       }
       logger.debug("Done generating required packages");
       
@@ -146,13 +145,13 @@ public class ICTree {
       }
       logger.debug("Done generating functions");
   
-      gen.turbineStartup(checkpointRequired);
+      gen.finalize();
       
       constants.generate(logger, gen);
     }
     
-    public void addRequiredPackage(String pkg, String version) {
-      required.add(Pair.create(pkg, version));
+    public void addRequiredPackage(RequiredPackage pkg) {
+      required.add(pkg);
     }
   
     public void addStructType(StructType newType) {
@@ -280,8 +279,8 @@ public class ICTree {
     }
   
     public void prettyPrint(StringBuilder out) {
-      for (Pair<String, String> req: required) {
-        out.append("require " + req.val1 + "::" + req.val2 + "\n");
+      for (RequiredPackage rp: required) {
+        out.append("require " + rp.toString() + "\n");
       }
       
       for (StructType st: structTypes) {
@@ -438,9 +437,9 @@ public class ICTree {
       // Global Constants
       logger.debug("Generating global constants");
       for (Entry<Var, Arg> c: globalConsts.entrySet()) {
-        String name = c.getKey().name();
+        Var var = c.getKey();
         Arg val = c.getValue();
-        gen.addGlobal(name, val);
+        gen.addGlobalConst(var, val);
       }
       logger.debug("Done generating global constants");
     }
@@ -460,12 +459,12 @@ public class ICTree {
 
   public static class BuiltinFunction {
     private final String name;
-    private final TclFunRef impl;
+    private final ForeignFunction impl;
     private final FunctionType fType;
     
 
     public BuiltinFunction(String name, FunctionType fType,
-                           TclFunRef impl) {
+                           ForeignFunction impl) {
       this.name = name;
       this.impl = impl;
       this.fType = fType;
@@ -499,10 +498,7 @@ public class ICTree {
         out.append(t.typeName());
       }
       out.append(") { ");
-      out.append(impl.pkg + "::" + impl.symbol + " ");
-      out.append("pkgversion: " + impl.version + " ");
-      
-      
+      out.append(impl.toString());
       out.append(" }\n");
       
     }
@@ -510,7 +506,7 @@ public class ICTree {
     public void generate(Logger logger, CompilerBackend gen, GenInfo info)
     throws UserException {
       logger.debug("generating: " + name);
-      gen.defineBuiltinFunction(name, fType, impl);
+      gen.defineForeignFunction(name, fType, impl);
     }
   }
 

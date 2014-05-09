@@ -6,11 +6,11 @@ import java.util.ListIterator;
 
 import org.apache.log4j.Logger;
 
-import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.TaskMode;
+import exm.stc.common.lang.WaitMode;
 import exm.stc.common.lang.WaitVar;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;

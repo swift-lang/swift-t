@@ -23,7 +23,6 @@ import java.util.Map;
 
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
-import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Logging;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.DoubleDefineException;
@@ -38,6 +37,7 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Annotations;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ForeignFunctions;
+import exm.stc.common.lang.WaitMode;
 import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
 import exm.stc.common.lang.Intrinsics;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;

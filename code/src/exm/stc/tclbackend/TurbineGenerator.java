@@ -21,6 +21,9 @@
 package exm.stc.tclbackend;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -35,9 +38,10 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
+import exm.stc.common.ForeignFunction;
 import exm.stc.common.Logging;
+import exm.stc.common.RequiredPackage;
 import exm.stc.common.Settings;
-import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCFatal;
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -49,7 +53,6 @@ import exm.stc.common.lang.CompileTimeArgs;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ForeignFunctions;
-import exm.stc.common.lang.Unimplemented;
 import exm.stc.common.lang.ForeignFunctions.TclOpTemplate;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
@@ -70,6 +73,7 @@ import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.Typed;
+import exm.stc.common.lang.Unimplemented;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
@@ -78,6 +82,7 @@ import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.StackLite;
 import exm.stc.common.util.TernaryLogic.Ternary;
+import exm.stc.ic.tree.TurbineOp.RefCountOp.RCDir;
 import exm.stc.tclbackend.Turbine.CacheMode;
 import exm.stc.tclbackend.Turbine.RuleProps;
 import exm.stc.tclbackend.Turbine.StackFrameType;
@@ -113,6 +118,11 @@ import exm.stc.ui.ExitCode;
 
 public class TurbineGenerator implements CompilerBackend {
 
+  /**
+   * Stored options
+   */
+  private CodeGenOptions options = null;
+  
   /** 
      This prevents duplicate "lappend auto_path" statements
      We use a List because these should stay in order  
@@ -245,8 +255,9 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void header()
-  {
+  public void initialize(CodeGenOptions options) {
+    this.options = options;
+
     //String[] rpaths = Settings.getRpaths();
     File input_file   = new File(Settings.get(Settings.INPUT_FILENAME));
     File output_file  = new File(Settings.get(Settings.OUTPUT_FILENAME));
@@ -297,8 +308,7 @@ public class TurbineGenerator implements CompilerBackend {
       tree.add(new Command("lappend auto_path \"" + p + "\""));
   }
   
-  @Override
-  public void turbineStartup(boolean checkpointRequired)
+  private void turbineStartup()
   {
     tree.add(new Command("turbine::defaults"));
     if (Settings.NO_TURBINE_ENGINE) {
@@ -312,7 +322,7 @@ public class TurbineGenerator implements CompilerBackend {
       }
       
       boolean xptEnabled = Settings.getBoolean(Settings.ENABLE_CHECKPOINTING) 
-    		  				&& checkpointRequired ;
+    		  				         && options.checkpointRequired();
       if (xptEnabled) {
         tree.add(Turbine.xptInit());
       }
@@ -353,18 +363,21 @@ public class TurbineGenerator implements CompilerBackend {
   /**
    * Check that we finished code generation in a valid state
    */
-  public void finalizeTree() {
+  @Override
+  public void finalize() {
     pointPop();
     assert(pointStack.isEmpty());
+    
+    // Generate startup code at bottom of file
+    turbineStartup();
   }
 
   /**
-     Generate and return Tcl from  our internal TclTree
+     Generate and output Tcl from  our internal TclTree
+   * @throws IOException
    */
   @Override
-  public String code() {
-    finalizeTree();
-      
+  public void generate(OutputStream output) throws IOException {
     StringBuilder sb = new StringBuilder(10*1024);
     try
     {
@@ -380,7 +393,10 @@ public class TurbineGenerator implements CompilerBackend {
       System.out.println("exiting");
       throw new STCFatal(ExitCode.ERROR_INTERNAL.code());
     }
-    return sb.toString();
+    OutputStreamWriter w = new OutputStreamWriter(output);
+    w.write(sb.toString());
+    // Check everything is flushed to underlying stream
+    w.flush();
   }
 
     
@@ -641,32 +657,30 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void decrWriters(Var var, Arg amount) {
-    assert(RefCounting.trackWriteRefCount(var));
-    // Close array by removing the slot we created at startup
-    decrementWriters(Arrays.asList(var), argToExpr(amount));
-  }
-  
-  @Override
-  public void decrRef(Var var, Arg amount) {
-    assert(RefCounting.trackReadRefCount(var));
-    decrementReaders(Arrays.asList(var), argToExpr(amount));
-  }
-  
-  @Override
-  public void incrRef(Var var, Arg amount) {
-    assert(RefCounting.trackReadRefCount(var));
+  public void modifyRefCount(Var var, RefCountType rcType, RCDir dir,
+                             Arg amount) {
     assert(amount.isImmediateInt());
-    incrementReaders(Arrays.asList(var), argToExpr(amount));
+    if (rcType == RefCountType.READERS) {
+      assert(RefCounting.trackReadRefCount(var));
+      if (dir == RCDir.INCR) {
+        incrementReaders(Arrays.asList(var), argToExpr(amount));
+      } else {
+        assert(dir == RCDir.DECR);
+        decrementReaders(Arrays.asList(var), argToExpr(amount));
+      }
+    } else {
+      assert(rcType == RefCountType.WRITERS);
+      assert(RefCounting.trackWriteRefCount(var));
+      if (dir == RCDir.INCR) {
+        incrementWriters(Arrays.asList(var), argToExpr(amount));
+      } else {
+        assert(dir == RCDir.DECR);
+        // Close array by removing the slot we created at startup
+        decrementWriters(Arrays.asList(var), argToExpr(amount));
+      }
+    }    
   }
-  
-  @Override
-  public void incrWriters(Var var, Arg amount) {
-    assert(RefCounting.trackWriteRefCount(var));
-    assert(amount.isImmediateInt());
-    incrementWriters(Arrays.asList(var), argToExpr(amount));
-  }
-  
+
   /**
    * Set target=addressof(src)
    */
@@ -805,7 +819,7 @@ public class TurbineGenerator implements CompilerBackend {
         pointAdd(new SetVariable(prefixVar(dst), Turbine.VOID_DUMMY_VAL));
 
         if (hasDecrement) {
-          decrRef(src, decr);
+          decrementReaders(src.asList(), argToExpr(decr));
         }
         break;
       default:
@@ -2101,23 +2115,34 @@ public class TurbineGenerator implements CompilerBackend {
   private final Set<String> requiredPackages = new HashSet<String>();
 
   @Override
-  public void requirePackage(String pkg, String version) {
-    String pv = pkg + version;
-    if (!pkg.equals("turbine")) {
+  public void requirePackage(RequiredPackage pkg) {
+    if (!(pkg instanceof TclPackage)) {
+      throw new STCRuntimeError("Expected Tcl package, but got: " +
+                                 pkg.getClass().getCanonicalName());
+    }
+    
+    TclPackage tclPkg = (TclPackage)pkg;
+    String pv = tclPkg.name + tclPkg.version;
+    if (!tclPkg.name.equals("turbine")) {
       if (!requiredPackages.contains(pv))
       {
-        PackageRequire pr = new PackageRequire(pkg, version);
+        PackageRequire pr = new PackageRequire(tclPkg.name, tclPkg.version);
         pointAdd(pr);
-        requiredPackages.add(pv);
+        requiredPackages.add(tclPkg.name);
         pointAdd(new Command(""));
       }
     }
   }
   
   @Override
-  public void defineBuiltinFunction(String name, FunctionType type,
-            TclFunRef impl) {
-    builtinSymbols.put(name, impl);
+  public void defineForeignFunction(String name, FunctionType type,
+                                    ForeignFunction impl) {
+    if (!(impl instanceof TclFunRef)) {
+      throw new STCRuntimeError("Bad foreign function type: " +
+                            impl.getClass().getCanonicalName());
+    }
+    TclFunRef tclImpl = (TclFunRef)impl;
+    builtinSymbols.put(name, tclImpl);
     logger.debug("TurbineGenerator: Defined built-in " + name);
   }
 
@@ -3086,8 +3111,8 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void addGlobal(String name, Arg val) {
-    String tclName = prefixVar(name);
+  public void addGlobalConst(Var var, Arg val) {
+    String tclName = prefixVar(var);
     Value tclVal = new Value(tclName);
     globInit.add(Turbine.makeTCLGlobal(tclName));
     TypeName typePrefix;

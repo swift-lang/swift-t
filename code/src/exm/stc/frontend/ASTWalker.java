@@ -27,9 +27,7 @@ import java.util.Set;
 import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
-import exm.stc.common.CompilerBackend.WaitMode;
 import exm.stc.common.Logging;
-import exm.stc.common.TclFunRef;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.InvalidAnnotationException;
 import exm.stc.common.exceptions.ModuleLoadException;
@@ -47,7 +45,6 @@ import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.Checkpointing;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ForeignFunctions;
-import exm.stc.common.lang.WaitVar;
 import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
 import exm.stc.common.lang.ForeignFunctions.TclOpTemplate;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
@@ -71,6 +68,8 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
+import exm.stc.common.lang.WaitMode;
+import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.Out;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.StringUtil;
@@ -97,6 +96,8 @@ import exm.stc.frontend.tree.VariableDeclaration;
 import exm.stc.frontend.tree.VariableDeclaration.VariableDescriptor;
 import exm.stc.frontend.tree.Wait;
 import exm.stc.ic.STCMiddleEnd;
+import exm.stc.tclbackend.TclFunRef;
+import exm.stc.tclbackend.TclPackage;
 /**
  * This class walks the Swift AST.
  * It performs typechecking and dataflow analysis as it goes
@@ -1327,7 +1328,9 @@ public class ASTWalker {
     
     String pkg = Literals.extractLiteralString(context, tclPackage.child(0)); 
     String version = Literals.extractLiteralString(context, tclPackage.child(1));
-    backend.requirePackage(pkg, version);
+    
+    // TODO: other types of packages
+    backend.requirePackage(new TclPackage(pkg, version));
     
     int pos = REQUIRED_CHILDREN;
     TclFunRef impl = null;
