@@ -1275,7 +1275,7 @@ public class ICInstructions {
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       switch(this.op) {
       case CALL_FOREIGN:
-        gen.builtinFunctionCall(functionName, inputs, outputs, props);
+        gen.callForeignFunctionWrapped(functionName, inputs, outputs, props);
         break;
       case CALL_SYNC:
       case CALL_CONTROL:
@@ -1332,7 +1332,7 @@ public class ICInstructions {
               allOutputSideChannelsClosed(closedVars, closedLocations));
       
       if (allNeededClosed && (ForeignFunctions.hasOpEquiv(this.functionName)
-                || ForeignFunctions.hasInlineVersion(this.functionName))) {
+                || ForeignFunctions.hasLocalImpl(this.functionName))) {
         TaskMode mode = ForeignFunctions.getTaskMode(this.functionName);
         if (mode == null) {
           mode = TaskMode.LOCAL;
@@ -1436,13 +1436,14 @@ public class ICInstructions {
           inst = Builtin.createLocal(newOp, null, fetchedVals);
         }
       } else {
-        assert(ForeignFunctions.hasInlineVersion(functionName));
+        String localFunctionName = ForeignFunctions.getLocalImpl(functionName);
+        assert(localFunctionName != null);
         for (int i = 0; i < outputs.size(); i++) {
           assert(outputs.get(i).equals(outVars.get(i).original));
           checkSwappedOutput(outputs.get(i), outVars.get(i).fetched);
         }
         List<Var> fetchedOut = Fetched.getFetched(outVars);
-        inst = new LocalFunctionCall(functionName, fetchedVals, fetchedOut);
+        inst = new LocalFunctionCall(localFunctionName, fetchedVals, fetchedOut);
       }
       return new MakeImmChange(inst);
     }
@@ -1604,7 +1605,7 @@ public class ICInstructions {
   
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
-      gen.builtinLocalFunctionCall(functionName, inputs, outputs);
+      gen.callForeignFunctionLocal(functionName, inputs, outputs);
     }
     
     @SuppressWarnings("unchecked")

@@ -21,13 +21,12 @@ import java.util.List;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.ForeignFunctions.TclOpTemplate;
-import exm.stc.common.lang.ForeignFunctions.TemplateElem;
-import exm.stc.common.lang.ForeignFunctions.TemplateElem.ElemKind;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.StringUtil;
+import exm.stc.tclbackend.TclOpTemplate.TemplateElem;
+import exm.stc.tclbackend.TclOpTemplate.TemplateElem.ElemKind;
 import exm.stc.tclbackend.tree.Expression;
 import exm.stc.tclbackend.tree.TclTree;
 import exm.stc.tclbackend.tree.Token;

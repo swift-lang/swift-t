@@ -15,9 +15,9 @@
  */
 package exm.stc.tclbackend;
 
-import exm.stc.common.ForeignFunction;
+import exm.stc.common.lang.WrappedForeignFunction;
 
-public class TclFunRef extends ForeignFunction {
+public class TclFunRef extends WrappedForeignFunction {
   
   public TclFunRef(String pkg, String symbol) {
     this(pkg, symbol, "0.0");

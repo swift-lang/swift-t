@@ -1,7 +1,7 @@
 package exm.stc.tclbackend;
 
-import exm.stc.common.RequiredPackage;
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.lang.RequiredPackage;
 
 public class TclPackage extends RequiredPackage {
   

@@ -1,4 +1,4 @@
-package exm.stc.common;
+package exm.stc.common.lang;
 
 /**
  * This class should be inherited from for different backends.

@@ -38,9 +38,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
-import exm.stc.common.ForeignFunction;
 import exm.stc.common.Logging;
-import exm.stc.common.RequiredPackage;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCFatal;
@@ -52,14 +50,16 @@ import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.CompileTimeArgs;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.WrappedForeignFunction;
 import exm.stc.common.lang.ForeignFunctions;
-import exm.stc.common.lang.ForeignFunctions.TclOpTemplate;
+import exm.stc.common.lang.LocalForeignFunction;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.UpdateMode;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
+import exm.stc.common.lang.RequiredPackage;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
@@ -231,11 +231,11 @@ public class TurbineGenerator implements CompilerBackend {
   private final TurbineStructs structTypes = new TurbineStructs();
   
   /**
-   * TCL symbol names for builtins
-   * Swift function name -> TCL proc name
+   * Tcl symbol names for builtins
+   * Swift function name -> (Tcl proc name, Tcl op template)
    */
-  private final HashMap<String, TclFunRef> builtinSymbols =
-                      new HashMap<String, TclFunRef>();
+  private final HashMap<String, Pair<TclOpTemplate, TclFunRef>> tclFuncSymbols
+          = new HashMap<String, Pair<TclOpTemplate, TclFunRef>>();
 
   /**
      If true, enable debug comments in Tcl source
@@ -1233,8 +1233,7 @@ public class TurbineGenerator implements CompilerBackend {
   }
   
   @Override
-  public void localOp(BuiltinOpcode op, Var out,
-                                            List<Arg> in) {
+  public void localOp(BuiltinOpcode op, Var out, List<Arg> in) {
     ArrayList<Expression> argExpr = new ArrayList<Expression>(in.size());
     for (Arg a: in) {
       argExpr.add(argToExpr(a));
@@ -1249,7 +1248,7 @@ public class TurbineGenerator implements CompilerBackend {
     assert(props != null);
     props.assertInternalTypesValid();
     
-    //TODO: for time being, share code with built-in function generation
+    // Generate in same way as built-in function
     TclFunRef fn = BuiltinOps.getBuiltinOpImpl(op);
     if (fn == null) {
       List<String> impls = ForeignFunctions.findOpImpl(op);
@@ -1263,13 +1262,13 @@ public class TurbineGenerator implements CompilerBackend {
         Logging.getSTCLogger().warn("Multiple implementations for operation " +
             op + ": " + impls.toString());
       }
-      fn = builtinSymbols.get(impls.get(0));
+      fn = tclFuncSymbols.get(impls.get(0)).val2;
     }
     
     List<Var> outL = (out == null) ? 
           Arrays.<Var>asList() : Arrays.asList(out);
 
-    builtinFunctionCall("operator: " + op.toString(), fn, 
+    callTclFunction("operator: " + op.toString(), fn, 
                         in, outL, props);
   }
 
@@ -1357,19 +1356,19 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void builtinFunctionCall(String function,
+  public void callForeignFunctionWrapped(String function,
           List<Arg> inputs, List<Var> outputs, TaskProps props) {
     assert(props != null);
     props.assertInternalTypesValid();
     logger.debug("call builtin: " + function);
-    TclFunRef tclf = builtinSymbols.get(function);
+    TclFunRef tclf = tclFuncSymbols.get(function).val2;
     assert tclf != null : "Builtin " + function + "not found";
     ForeignFunctions.getTaskMode(function).checkSpawn(execContextStack.peek());
 
-    builtinFunctionCall(function, tclf, inputs, outputs, props);
+    callTclFunction(function, tclf, inputs, outputs, props);
   }
 
-  private void builtinFunctionCall(String function, TclFunRef tclf,
+  private void callTclFunction(String function, TclFunRef tclf,
       List<Arg> inputs, List<Var> outputs, TaskProps props) {
     assert(props != null);
     props.assertInternalTypesValid();
@@ -1403,20 +1402,20 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void builtinLocalFunctionCall(String functionName,
+  public void callForeignFunctionLocal(String function,
           List<Arg> inputs, List<Var> outputs) {
-    TclOpTemplate template = ForeignFunctions.getInlineTemplate(functionName);
+    Pair<TclOpTemplate, TclFunRef> impls = tclFuncSymbols.get(function);
+    assert(impls != null) : "No foreign function impls for " + function;
+    TclOpTemplate template = impls.val1;
     assert(template != null);
     
     List<TclTree> result = TclTemplateProcessor.processTemplate(
-                        functionName, template, inputs, outputs);
+                            function, template, inputs, outputs);
     
     Command cmd = new Command(result.toArray(new TclTree[result.size()]));
     pointAdd(cmd);
   }
 
-  
-  
   @Override
   public void functionCall(String function,
               List<Arg> inputs, List<Var> outputs,
@@ -2136,13 +2135,19 @@ public class TurbineGenerator implements CompilerBackend {
   
   @Override
   public void defineForeignFunction(String name, FunctionType type,
-                                    ForeignFunction impl) {
-    if (!(impl instanceof TclFunRef)) {
+        LocalForeignFunction localImpl, WrappedForeignFunction wrappedImpl) {
+    if (wrappedImpl != null && !(wrappedImpl instanceof TclFunRef)) {
       throw new STCRuntimeError("Bad foreign function type: " +
-                            impl.getClass().getCanonicalName());
+                         wrappedImpl.getClass().getCanonicalName());
     }
-    TclFunRef tclImpl = (TclFunRef)impl;
-    builtinSymbols.put(name, tclImpl);
+    if (localImpl != null && !(localImpl instanceof TclOpTemplate)) {
+      throw new STCRuntimeError("Bad foreign function type: " +
+                          localImpl.getClass().getCanonicalName());
+    }
+    
+    TclFunRef tclWrappedImpl = (TclFunRef)wrappedImpl;
+    TclOpTemplate tclLocalImpl = (TclOpTemplate)localImpl;
+    tclFuncSymbols.put(name, Pair.create(tclLocalImpl, tclWrappedImpl));
     logger.debug("TurbineGenerator: Defined built-in " + name);
   }
 

@@ -26,7 +26,6 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.CompilerBackend.RefCount;
-import exm.stc.common.RequiredPackage;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
@@ -34,10 +33,12 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
+import exm.stc.common.lang.LocalForeignFunction;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Redirects;
+import exm.stc.common.lang.RequiredPackage;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
@@ -52,6 +53,7 @@ import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.lang.WaitMode;
 import exm.stc.common.lang.WaitVar;
+import exm.stc.common.lang.WrappedForeignFunction;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.StackLite;
@@ -80,7 +82,6 @@ import exm.stc.ic.tree.ICTree.Function;
 import exm.stc.ic.tree.ICTree.Program;
 import exm.stc.ic.tree.ICTree.Statement;
 import exm.stc.ic.tree.TurbineOp;
-import exm.stc.tclbackend.TclFunRef;
 
 /**
  * This class can be used to create the intermediate representation for a 
@@ -140,13 +141,20 @@ public class STCMiddleEnd {
     program.addStructType(newType);
   }
   
-  public void defineBuiltinFunction(String name,
-                                    FunctionType fType,
-                                    TclFunRef impl)
+  /**
+   * 
+   * @param name
+   * @param fType
+   * @param localImpl can be null
+   * @param wrappedImpl can be null
+   * @throws UserException
+   */
+  public void defineBuiltinFunction(String name, FunctionType fType,
+      LocalForeignFunction localImpl, WrappedForeignFunction wrappedImpl)
   throws UserException {
     assert(blockStack.size() == 0);
     assert(currFunction == null);
-    BuiltinFunction bf = new BuiltinFunction(name, fType, impl);
+    BuiltinFunction bf = new BuiltinFunction(name, fType, localImpl, wrappedImpl);
     program.addBuiltin(bf);
   }
 

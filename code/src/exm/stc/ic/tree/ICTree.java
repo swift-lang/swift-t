@@ -36,15 +36,15 @@ import org.apache.log4j.Logger;
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.CompilerBackend.CodeGenOptions;
 import exm.stc.common.CompilerBackend.VarDecl;
-import exm.stc.common.ForeignFunction;
 import exm.stc.common.Logging;
-import exm.stc.common.RequiredPackage;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.LocalForeignFunction;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
+import exm.stc.common.lang.RequiredPackage;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -55,6 +55,7 @@ import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.common.lang.WaitVar;
+import exm.stc.common.lang.WrappedForeignFunction;
 import exm.stc.common.util.StackLite;
 import exm.stc.ic.ICUtil;
 import exm.stc.ic.tree.Conditionals.Conditional;
@@ -459,15 +460,17 @@ public class ICTree {
 
   public static class BuiltinFunction {
     private final String name;
-    private final ForeignFunction impl;
+    private final LocalForeignFunction localImpl;
+    private final WrappedForeignFunction wrappedImpl;
     private final FunctionType fType;
     
 
     public BuiltinFunction(String name, FunctionType fType,
-                           ForeignFunction impl) {
+        LocalForeignFunction localImpl, WrappedForeignFunction wrappedImpl) {
       this.name = name;
-      this.impl = impl;
       this.fType = fType;
+      this.localImpl = localImpl;
+      this.wrappedImpl = wrappedImpl;
     }
 
     public String getName() {
@@ -497,16 +500,26 @@ public class ICTree {
         }
         out.append(t.typeName());
       }
-      out.append(") { ");
-      out.append(impl.toString());
-      out.append(" }\n");
+      out.append(")");
+      
+      if (localImpl != null) {
+        out.append(" local { ");
+        out.append(localImpl.toString());
+        out.append(" }\n");
+      }
+      
+      if (wrappedImpl != null) {
+        out.append(" wrapped { ");
+        out.append(wrappedImpl.toString());
+        out.append(" }\n");
+      }
       
     }
 
-    public void generate(Logger logger, CompilerBackend gen, GenInfo info)
+  public void generate(Logger logger, CompilerBackend gen, GenInfo info)
     throws UserException {
       logger.debug("generating: " + name);
-      gen.defineForeignFunction(name, fType, impl);
+      gen.defineForeignFunction(name, fType, localImpl, wrappedImpl);
     }
   }
 

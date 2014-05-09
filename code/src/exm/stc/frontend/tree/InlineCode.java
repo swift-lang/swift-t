@@ -17,10 +17,10 @@ package exm.stc.frontend.tree;
 
 import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.ForeignFunctions.TclOpTemplate;
-import exm.stc.common.lang.ForeignFunctions.TemplateElem;
-import exm.stc.common.lang.ForeignFunctions.TemplateElem.ElemKind;
 import exm.stc.frontend.Context;
+import exm.stc.tclbackend.TclOpTemplate;
+import exm.stc.tclbackend.TclOpTemplate.TemplateElem;
+import exm.stc.tclbackend.TclOpTemplate.TemplateElem.ElemKind;
 
 public class InlineCode {
   

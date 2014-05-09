@@ -46,7 +46,6 @@ import exm.stc.common.lang.Checkpointing;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
-import exm.stc.common.lang.ForeignFunctions.TclOpTemplate;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Redirects;
@@ -97,6 +96,7 @@ import exm.stc.frontend.tree.VariableDeclaration.VariableDescriptor;
 import exm.stc.frontend.tree.Wait;
 import exm.stc.ic.STCMiddleEnd;
 import exm.stc.tclbackend.TclFunRef;
+import exm.stc.tclbackend.TclOpTemplate;
 import exm.stc.tclbackend.TclPackage;
 /**
  * This class walks the Swift AST.
@@ -1374,9 +1374,10 @@ public class ASTWalker {
     
     context.defineFunction(function, ft);
     FunctionType backendFT = VarRepr.backendFnType(ft);
+    backend.defineBuiltinFunction(function, backendFT, inlineTcl, impl);
+
     if (impl != null) {
       context.setFunctionProperty(function, FnProp.BUILTIN);
-      backend.defineBuiltinFunction(function, backendFT, impl);
     } else {
       if (inlineTcl == null) {
         throw new UserException(context, "Must provide TCL implementation or " +

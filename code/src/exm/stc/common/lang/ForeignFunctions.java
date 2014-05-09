@@ -16,21 +16,16 @@
 package exm.stc.common.lang;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.exceptions.UndefinedVarError;
-import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.ForeignFunctions.TemplateElem.ElemKind;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.MultiMap.ListFactory;
-import exm.stc.frontend.Context;
 
 /**
  * Static class to track info about semantics of foreign functions.
@@ -95,11 +90,10 @@ public class ForeignFunctions {
   
   
   /**
-   * Templates for inline tcl code that can be used to generate
-   * local implementation of function
+   * Functions that have a local implementation
+   * Map from Swift function name to function name of local
    */
-  private static HashMap<String, TclOpTemplate> inlineTemplates
-    = new HashMap<String, TclOpTemplate>();
+  private static Map<String, String> localImpls = new HashMap<String, String>();
   
   private static HashMap<String, TaskMode> taskModes
     = new HashMap<String, TaskMode>();
@@ -250,17 +244,21 @@ public class ForeignFunctions {
     return assertVariants.contains(fnName);
   }
   
-  
-  public static void addInlineTemplate(String fnName, TclOpTemplate tmp) {
-    inlineTemplates.put(fnName, tmp);
+  /**
+   * Mark that there is a local version of function
+   * @param swiftFunction
+   * @param localFunction
+   */
+  public static void addLocalImpl(String swiftFunction, String localFunction) {
+    localImpls.put(swiftFunction, localFunction);
   }
   
-  public static boolean hasInlineVersion(String fnName) {
-    return inlineTemplates.containsKey(fnName);
+  public static boolean hasLocalImpl(String swiftFunction) {
+    return localImpls.containsKey(swiftFunction);
   }
   
-  public static TclOpTemplate getInlineTemplate(String fnName) {
-    return inlineTemplates.get(fnName);
+  public static String getLocalImpl(String swiftFunction) {
+    return localImpls.get(swiftFunction);
   }
   
   public static void addTaskMode(String functionName, TaskMode mode) {
@@ -279,158 +277,6 @@ public class ForeignFunctions {
       return mode;
     } else {
       return TaskMode.DEFAULT_BUILTIN_MODE;
-    }
-  }
-
-  public static class TemplateElem {
-    public static enum ElemKind {
-      TEXT,
-      VARIABLE,
-      DEREF_VARIABLE,
-      REF_VARIABLE,
-    }
-    
-    private final ElemKind kind;
-    private final String contents;
-    
-    private TemplateElem(ElemKind kind, String contents) {
-      super();
-      this.kind = kind;
-      this.contents = contents;
-    }
-    
-    public static TemplateElem createTok(String text) {
-      return new TemplateElem(ElemKind.TEXT, text);
-    }
-    
-    public static TemplateElem createVar(String varName, ElemKind kind) {
-      return new TemplateElem(kind, varName);
-    }
-    
-    public ElemKind getKind() {
-      return kind;
-    }
-    
-    public String getText() {
-      if (kind == ElemKind.TEXT) {
-        return contents;
-      } else {
-        throw new STCRuntimeError("not text, was: " + kind); 
-      }
-    }
-    
-    public String getVarName() {
-      if (kind == ElemKind.VARIABLE || kind == ElemKind.DEREF_VARIABLE ||
-          kind == ElemKind.REF_VARIABLE) {
-        return contents;
-      } else {
-        throw new STCRuntimeError("not var, was: " + kind); 
-      }
-    }
-    
-    public String toString() {
-      if (kind == ElemKind.VARIABLE) {
-        return contents;
-      } else if (kind == ElemKind.DEREF_VARIABLE) {
-        return "$" + contents;
-      } else if (kind == ElemKind.REF_VARIABLE) {
-        return "&" + contents;
-      } else {
-        assert(kind == ElemKind.TEXT);
-        return "\"" + contents + "\"";
-      }
-    }
-  }
-  
-  public static class TclOpTemplate {
-    private final ArrayList<TemplateElem> elems = 
-                              new ArrayList<TemplateElem>();
-    
-    /**
-     * Names of positional input variables for template
-     */
-    private final ArrayList<String> outNames =
-                              new ArrayList<String>();
-    
-    /**
-     * Names of positional output variables for template
-     */
-    private final ArrayList<String> inNames =
-                              new ArrayList<String>();
-    
-    /**
-     * Name of varargs (null if no varargs)
-     */
-    private String varArgIn = null;
-    
-    public boolean addInName(String e) {
-      return inNames.add(e);
-    }
-
-    public boolean addInNames(Collection<? extends String> c) {
-      return inNames.addAll(c);
-    }
-
-    public boolean addOutName(String e) {
-      return outNames.add(e);
-    }
-
-    public boolean addOutNames(Collection<? extends String> c) {
-      return outNames.addAll(c);
-    }
-    
-    public void setVarArgIn(String varArgIn) {
-      this.varArgIn = varArgIn;
-    }
-
-    public List<String> getInNames() {
-      return Collections.unmodifiableList(inNames);
-    }
-    
-    public List<String> getOutNames() {
-      return Collections.unmodifiableList(outNames);
-    }
-
-    public String getVarArgIn() {
-      return varArgIn;
-    }
-
-    public boolean hasVarArgs() {
-      return varArgIn != null;
-    }
-
-    public void addElem(TemplateElem elem) {
-      elems.add(elem);
-    }
-    
-    public List<TemplateElem> getElems() {
-      return Collections.unmodifiableList(elems);
-    }
-
-    public String toString() {
-      return elems.toString();
-    }
-
-    /**
-     * Check all variables reference in template are in names or out names
-     * @throws UserException 
-     */
-    public void verifyNames(Context context) throws UserException {
-      List<String> badNames = new ArrayList<String>();
-      for (TemplateElem elem: elems) {
-        if (elem.getKind() == ElemKind.VARIABLE ||
-            elem.getKind() == ElemKind.DEREF_VARIABLE ||
-            elem.getKind() == ElemKind.REF_VARIABLE) {
-          String varName = elem.getVarName();
-          if (!outNames.contains(varName) && 
-              !inNames.contains(varName)) {
-            badNames.add(varName);
-          }
-        }
-      }
-      if (badNames.size() > 0) {
-        throw UndefinedVarError.fromNames(context, badNames);
-      }
     }
   }
 }

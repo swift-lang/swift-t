@@ -26,7 +26,10 @@ import javax.lang.model.type.ArrayType;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.AsyncExecutor;
+import exm.stc.common.lang.WrappedForeignFunction;
+import exm.stc.common.lang.LocalForeignFunction;
 import exm.stc.common.lang.Operators;
+import exm.stc.common.lang.RequiredPackage;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Redirects;
@@ -105,28 +108,32 @@ public interface CompilerBackend {
   
   /**
    * Define a foreign function.
-   * TODO: more info? generalize beyond tcl.
    * @param name
    * @param type
-   * @param impl tcl function implementing this.  Must be provided
+   * @param localImpl implementation of function that can be called directly
+   * @param wrappedImpl wrapped version of function, may be null
    * @throws UserException
    */
   public void defineForeignFunction(String name, FunctionType type,
-                        ForeignFunction impl) throws UserException;
+        LocalForeignFunction localImpl, WrappedForeignFunction wrappedImpl)
+        throws UserException;
   
   /**
-   * 
+   * Start a function and enter main block
    * @param functionName
-   * @param oList
-   * @param iList
+   * @param outArgs function output arguments
+   * @param inArgs function input arguments
    * @param mode the context the function will run in (e.g. SYNC if
    *        called synchronously).  This is needed for optimizer correctness.
    * @throws UserException
    */
   public void startFunction(String functionName,
-      List<Var> oList, List<Var> iList, TaskMode mode)
+      List<Var> outArgs, List<Var> inArgs, TaskMode mode)
             throws UserException;
 
+  /**
+   * End code generation for function.
+   */
   public void endFunction();
 
   /**
@@ -374,7 +381,8 @@ public interface CompilerBackend {
    * @param direction of refcount change
    * @param amount non-negative change in reference count
    */
-  public void modifyRefCount(Var var, RefCountType rcType, RCDir dir, Arg amount);
+  public void modifyRefCount(Var var, RefCountType rcType, RCDir dir,
+                             Arg amount);
   
   /**
    * Local version of builtin operation operating on local value variables, e.g.
@@ -394,7 +402,41 @@ public interface CompilerBackend {
    */
   public void asyncOp(BuiltinOpcode op, Var out,  List<Arg> in,
                       TaskProps props);  
+
+  /**
+   * Call a previously defined foreign function.  This will use the version
+   * defined by the {@link LocalForeignFunction} implementation. 
+   * @param function name of the function
+   * @param inputs 
+   * @param outputs
+   * @param props 
+   */
+  public void callForeignFunctionLocal(String functionName,
+          List<Arg> inputs, List<Var> outputs);
+
+  /**
+   * Call a previously defined foreign function.  This will use the version
+   * defined by the {@link WrappedForeignFunction} implementation. 
+   * @param function name of the function
+   * @param inputs 
+   * @param outputs
+   * @param props 
+   */
+  public void callForeignFunctionWrapped(String function,
+      List<Arg> inputs, List<Var> outputs, TaskProps props);
   
+  public void functionCall(String function,
+      List<Arg> inputs, List<Var> outputs, List<Boolean> blockOn, 
+      TaskMode mode, TaskProps props);
+  
+  /**
+   * Generate command to run an external application immediately
+   * @param redirects 
+   */
+  public void runExternal(String cmd, List<Arg> args,
+           List<Arg> inFiles, List<Var> outFiles, 
+           Redirects<Arg> redirects,
+           boolean hasSideEffects, boolean deterministic);
   /**
    * Assign a scalar value to a future.
    * @param dst a scalar future variable (i.e. of {@link ScalarFutureType})
@@ -584,32 +626,6 @@ public interface CompilerBackend {
    * @param src an input file value initialised with file name
    */
   public void copyFileContents(Var dst, Var src);
-
-  /**
-   * NOTE: all built-ins should be defined before other functions
-   * @param function
-   * @param inputs
-   * @param outputs
-   * @param props 
-   */
-  public void builtinFunctionCall(String function,
-      List<Arg> inputs, List<Var> outputs, TaskProps props);
-
-  public void functionCall(String function,
-      List<Arg> inputs, List<Var> outputs, List<Boolean> blockOn, 
-      TaskMode mode, TaskProps props);
-
-  public void builtinLocalFunctionCall(String functionName,
-          List<Arg> inputs, List<Var> outputs);
-  
-  /**
-   * Generate command to run an external application immediately
-   * @param redirects 
-   */
-  public void runExternal(String cmd, List<Arg> args,
-           List<Arg> inFiles, List<Var> outFiles, 
-           Redirects<Arg> redirects,
-           boolean hasSideEffects, boolean deterministic);
   
   public void structCreateAlias(Var output, Var struct,
                                 List<String> fields);

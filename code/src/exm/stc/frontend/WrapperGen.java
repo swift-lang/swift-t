@@ -17,7 +17,6 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.ForeignFunctions;
-import exm.stc.common.lang.ForeignFunctions.TclOpTemplate;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -29,6 +28,7 @@ import exm.stc.frontend.tree.FunctionDecl;
 import exm.stc.frontend.tree.InlineCode;
 import exm.stc.frontend.tree.Literals;
 import exm.stc.ic.STCMiddleEnd;
+import exm.stc.tclbackend.TclOpTemplate;
 
 /**
  * Manage wrapper functions
@@ -79,7 +79,7 @@ public class WrapperGen {
     }
     inlineTcl.addOutNames(fdecl.getOutNames());
     inlineTcl.verifyNames(context);
-    ForeignFunctions.addInlineTemplate(function, inlineTcl);
+    ForeignFunctions.addLocalImpl(function, function);
     return inlineTcl;
   }
   
@@ -154,10 +154,10 @@ public class WrapperGen {
    */
   public void saveWrapper(String function, FunctionType ft, FunctionDecl decl,
       TaskMode taskMode, boolean isParallel, boolean isTargetable) {
-    TclOpTemplate template = ForeignFunctions.getInlineTemplate(function);
-    assert(template != null) : "Expected save template for " + function;
+    assert(ForeignFunctions.hasLocalImpl(function)) :
+              "Expected inline version for " + function;
     SavedWrapper wrapper = new SavedWrapper(function, ft, decl, taskMode,
-                                    isParallel, isTargetable, template);
+                                    isParallel, isTargetable);
     saved.put(function, wrapper);
   }
   
@@ -245,8 +245,7 @@ public class WrapperGen {
     
 
     // Copy over template
-    ForeignFunctions.addInlineTemplate(chosenName, 
-                    ForeignFunctions.getInlineTemplate(wrapper.function));
+    ForeignFunctions.addLocalImpl(chosenName, wrapper.function);
     return chosenName;
   }
 
@@ -309,11 +308,9 @@ public class WrapperGen {
     final TaskMode taskMode;
     final boolean isParallel;
     final boolean isTargetable;
-    final TclOpTemplate template;
     
     public SavedWrapper(String function, FunctionType type, FunctionDecl decl,
-        TaskMode taskMode, boolean isParallel, boolean isTargetable,
-        TclOpTemplate template) {
+        TaskMode taskMode, boolean isParallel, boolean isTargetable) {
       super();
       this.function = function;
       this.type = type;
@@ -321,7 +318,6 @@ public class WrapperGen {
       this.taskMode = taskMode;
       this.isParallel = isParallel;
       this.isTargetable = isTargetable;
-      this.template = template;
     }
   }
   
