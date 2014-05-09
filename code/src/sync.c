@@ -60,13 +60,13 @@ static inline bool sync_accept_required(adlb_sync_mode mode);
 typedef struct {
   int64_t sent;     /** Sent to other servers */
   int64_t accepted; /** Accepted from other servers */
-} xlb_sync_type_counter;
+} xlb_sync_mode_counter;
 
-static xlb_sync_type_counter xlb_sync_perf_counters[ADLB_SYNC_ENUM_COUNT];
-static const char *xlb_sync_type_name[ADLB_SYNC_ENUM_COUNT];
+static xlb_sync_mode_counter xlb_sync_perf_counters[ADLB_SYNC_ENUM_COUNT];
+static const char *xlb_sync_mode_name[ADLB_SYNC_ENUM_COUNT];
 
 #define xlb_add_sync_type_name(name) \
-            xlb_sync_type_name[name] = #name;
+            xlb_sync_mode_name[name] = #name;
 
 /*
   Ring buffer of MPI_Request objects and buffers used to receive incoming
@@ -207,9 +207,9 @@ void xlb_print_sync_counters(void)
 
   for (int i = 0; i < ADLB_SYNC_ENUM_COUNT; i++)
   {
-    PRINT_COUNTER("SYNC_SENT_%s=%"PRId64"\n", xlb_sync_type_name[i],
+    PRINT_COUNTER("SYNC_SENT_%s=%"PRId64"\n", xlb_sync_mode_name[i],
                   xlb_sync_perf_counters[i].sent);
-    PRINT_COUNTER("SYNC_ACCEPTED_%s=%"PRId64"\n", xlb_sync_type_name[i],
+    PRINT_COUNTER("SYNC_ACCEPTED_%s=%"PRId64"\n", xlb_sync_mode_name[i],
                   xlb_sync_perf_counters[i].accepted);
   }
 }
@@ -263,7 +263,8 @@ adlb_code
 xlb_sync2(int target, const struct packed_sync *hdr, int *response)
 {
   TRACE_START;
-  DEBUG("\t xlb_sync() target: %i", target);
+  DEBUG("[%i] xlb_sync() target: %i sync_mode: %s", xlb_comm_rank,
+        target, xlb_sync_mode_name[hdr->mode]);
   int rc = ADLB_SUCCESS;
 
   MPE_LOG(xlb_mpe_dmn_sync_start);
@@ -629,6 +630,9 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
 {
   adlb_sync_mode mode = hdr->mode;
   adlb_code code = ADLB_ERROR;
+
+  DEBUG("[%i] xlb_accept_sync() from: %i sync_mode: %s", xlb_comm_rank,
+        rank, xlb_sync_mode_name[mode]);
   
   if (xlb_perf_counters_enabled)
   {
