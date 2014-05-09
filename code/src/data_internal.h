@@ -51,7 +51,7 @@ typedef struct {
   bool release_write_refs : 1;
   /** SUBSCRIPT_NOTIFS: If true, at least one subscript subscription or
       reference for this datum. */
-  bool subscript_notifs;
+  bool subscript_notifs : 1;
 } adlb_data_status;
 
 
