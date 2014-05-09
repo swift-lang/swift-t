@@ -10,6 +10,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
+import exm.stc.common.CompilerBackend.DirRefCount;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgKind;
@@ -327,7 +328,7 @@ public class TurbineOp extends Instruction {
       gen.freeBlob(getOutput(0));
       break;
     case DECR_LOCAL_FILE_REF:
-      gen.decrLocalFileRef(getInput(0).getVar());
+      gen.decrLocalFileRefCount(getInput(0).getVar());
       break;
     case INIT_UPDATEABLE_FLOAT:
       gen.initScalarUpdateable(getOutput(0), getInput(0));
@@ -4312,8 +4313,10 @@ public class TurbineOp extends Instruction {
 
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
-      gen.modifyRefCount(getRCTarget(this), getRCType(this.op),
-                         getRefcountDir(this.op), getRCAmount(this));
+      // TODO: batching for reference counts?
+      gen.modifyRefCounts(Collections.singletonList(new DirRefCount(
+                    getRCTarget(this), getRCType(this.op),
+                    getRefcountDir(this.op), getRCAmount(this))));
     }
 
     @Override

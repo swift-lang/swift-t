@@ -50,7 +50,6 @@ import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.CompileTimeArgs;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ExecContext;
-import exm.stc.common.lang.WrappedForeignFunction;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.LocalForeignFunction;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
@@ -78,6 +77,7 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarCount;
+import exm.stc.common.lang.WrappedForeignFunction;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.StackLite;
@@ -657,7 +657,15 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void modifyRefCount(Var var, RefCountType rcType, RCDir dir,
+  public void modifyRefCounts(List<DirRefCount> refcounts) {
+    // TODO: could combine read/write refcounts for same variable
+    for (DirRefCount refcount: refcounts) {
+      modifyRefCount(refcount.var, refcount.type,
+                     refcount.dir, refcount.amount);
+    }
+  }
+  
+  private void modifyRefCount(Var var, RefCountType rcType, RCDir dir,
                              Arg amount) {
     assert(amount.isImmediateInt());
     if (rcType == RefCountType.READERS) {
@@ -1122,7 +1130,7 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void decrLocalFileRef(Var localFile) {
+  public void decrLocalFileRefCount(Var localFile) {
     assert(Types.isFileVal(localFile));
     pointAdd(Turbine.decrLocalFileRef(prefixVar(localFile)));
   }
@@ -2312,7 +2320,6 @@ public class TurbineGenerator implements CompilerBackend {
      * @param procName
      * @param waitVars
      * @param passIn
-     * @param keepOpenVars
      * @param priority 
      * @param recursive
      */
@@ -2857,7 +2864,6 @@ public class TurbineGenerator implements CompilerBackend {
    * @param endE end of range (inclusive)
    * @param incrE
    * @param usedVariables
-   * @param keepOpenVars
    */
   private void startRangeSplit(String loopName,
           List<PassedVar> passedVars, List<RefCount> perIterIncrs, int splitDegree,
@@ -3233,8 +3239,8 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void startLoop(String loopName, List<Var> loopVars,
-      List<Boolean> definedHere, List<Arg> initVals, List<Var> usedVariables,
-      List<Var> keepOpenVars, List<Var> initWaitVars,
+      List<Arg> initVals, List<Var> usedVariables,
+      List<Var> initWaitVars,
       boolean simpleLoop) {
     assert(initWaitVars.isEmpty() || !simpleLoop) : initWaitVars;
     List<String> tclLoopVars = new ArrayList<String>(); 

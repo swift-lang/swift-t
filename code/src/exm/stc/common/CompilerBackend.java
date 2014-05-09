@@ -24,6 +24,7 @@ import java.util.Map;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.AsyncExecutor;
+import exm.stc.common.lang.Types.ArrayType;
 import exm.stc.common.lang.WrappedForeignFunction;
 import exm.stc.common.lang.LocalForeignFunction;
 import exm.stc.common.lang.Operators;
@@ -48,6 +49,15 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.util.MultiMap;
 import exm.stc.ic.tree.TurbineOp.RefCountOp.RCDir;
 
+/**
+ * The generic interface for a code generation backend to the compiler.
+ * 
+ * TODO: better document which operations consume/return reference counts.
+ * Generally asynchronous operations consume reference counts (read/write
+ * depending on whether modified or not) by default, while synchronous
+ * operations will not consume reference counts aside from when explicitly
+ * told to.
+ */
 public interface CompilerBackend {
   
   public static class CodeGenOptions {
@@ -90,7 +100,6 @@ public interface CompilerBackend {
    */
   public void requirePackage(RequiredPackage pkg);
   
-
   /**
    * Add a global constant variable.
    * Called before any functions or executable code is generated.
@@ -309,26 +318,25 @@ public interface CompilerBackend {
    * @param loopName
    * @param loopVars first one is loop condition
    * @param initVals initial values for loop variables
-   * @param usedVariables
-   * @param keepOpenVars
+   * @param usedVariables variables from outer scope used in loop
+   * @param keepOpenVars variable to keep open from one iteration to the next
    * @param initWaitVars values to wait for before executing first iteration
    * @param simpleLoop if this is a simple loop that does not require waiting
    *                    between iterations 
    */
   public void startLoop(String loopName, List<Var> loopVars,
-      List<Boolean> definedHere, List<Arg> initVals, List<Var> usedVariables,
-      List<Var> keepOpenVars, List<Var> initWaitVars,
-      boolean simpleLoop);
+      List<Arg> initVals, List<Var> usedVariables,
+      List<Var> initWaitVars, boolean simpleLoop);
   
   /**
    * Run next iteration of ordered loop with new values of loop variables.
-   * @param newVals
-   * @param usedVariables
-   * @param blockingVars
+   * @param newVals new values for loop variable
+   * @param usedVariables variables used in next iteration of loop
+   * @param blockingVars variables we should wait for before starting next
+   *                      iteration
    */
   public void loopContinue(List<Arg> newVals,
-      List<Var> usedVariables,
-      List<Boolean> blockingVars);
+      List<Var> usedVariables, List<Boolean> blockingVars);
   
   /**
    * Called at end of last iteration of ordered loop.
@@ -344,8 +352,9 @@ public interface CompilerBackend {
   public void endLoop();
 
   /**
-   * Represents a refcount operation
-   * TODO: direction?
+   * Represents a refcount operation.
+   * Direction is implied by context.
+   * Variables must have a tracked refcount as defined in {@link RefCounting}.
    */
   public static class RefCount {
     public final Var var;
@@ -353,7 +362,6 @@ public interface CompilerBackend {
     public final Arg amount;
     
     public RefCount(Var var, RefCountType type, Arg amount) {
-      super();
       this.var = var;
       this.type = type;
       this.amount = amount;
@@ -368,21 +376,43 @@ public interface CompilerBackend {
   }
   
   /**
+   * Represents a refcount operation with explicit direction.
+   * Variables must have a tracked refcount as defined in {@link RefCounting}.
+   */
+  public static class DirRefCount {
+    public final Var var;
+    public final RefCountType type;
+    public final RCDir dir;
+    public final Arg amount;
+    
+    public DirRefCount(Var var, RefCountType type, RCDir dir, Arg amount) {
+      this.var = var;
+      this.type = type;
+      this.dir = dir;
+      this.amount = amount;
+    }
+    
+    @Override
+    public String toString() {
+      return var.name() + "<" + type.toString() + ">" +
+             "<" + dir.toString() + ">" + amount;
+    }
+    
+    public static final List<DirRefCount> NONE = Collections.emptyList();
+  }
+  
+  /**
    * Add comment to output code.  
    * @param comment
    */
   public void addComment(String comment);
 
   /**
-   * Modify a reference count for a variable.  Variable must have a
-   * tracked refcount as defined in {@link RefCounting}.
-   * @param var variable with refcount to modify
-   * @param rcType reference count type
-   * @param direction of refcount change
-   * @param amount non-negative change in reference count
+   * Modify the reference counts of several variables.  A batch is provided
+   * to allow backend to optimize if possible.
+   * @param refcounts list of reference count operations
    */
-  public void modifyRefCount(Var var, RefCountType rcType, RCDir dir,
-                             Arg amount);
+  public void modifyRefCounts(List<DirRefCount> refcounts);
   
   /**
    * Local version of builtin operation operating on local value variables, e.g.
@@ -453,7 +483,7 @@ public interface CompilerBackend {
   public void retrieveScalar(Var dst, Var src, Arg decr);
 
   /**
-   * Assign a file future object.  Increment local file ref count.
+   * Assign a file future object.  Increment local file refcount.
    * @param dst file future (i.e. of {@link FileFutureType})
    * @param src local file variable (i.e. of {@link FileValueType})
    * @param setFilename if true, set filename on dst (otherwise assume already was set)
@@ -619,14 +649,14 @@ public interface CompilerBackend {
                                 List<Arg> fieldVals); 
   
   /**
-   * Used to cleanup local file if needed
-   * @param fileVal
+   * Decrement local file refcount, deleting referenced file if needed
+   * @param fileVal a {@link FileValueType} file
    */
-  public void decrLocalFileRef(Var fileVal);
+  public void decrLocalFileRefCount(Var fileVal);
 
   /**
    * Free local blob value
-   * @param blobval
+   * @param blobval a {@link ScalarValueType} blob
    */
   public void freeBlob(Var blobval);
   
@@ -681,7 +711,7 @@ public interface CompilerBackend {
    */
   public void getFilenameVal(Var filenameVal, Var file);
   
-  /**
+  /** 
    * Set filename of file future to a local string value
    * @param file a {@link FileFutureType} to set filename of 
    * @param filenameVal a {@link ScalarValueType} string
@@ -695,45 +725,87 @@ public interface CompilerBackend {
    */
   public void copyFileContents(Var dst, Var src);
   
-  public void structCreateAlias(Var output, Var struct,
-                                List<String> fields);
-  public void structRetrieveSub(Var output, Var struct,
-      List<String> fields, Arg readDecr);
-  public void structCopyOut(Var output, Var struct,
-      List<String> fields);
+  /**
+   * Create an alias to a struct field
+   * @param dst a variable of time matching the field, of alias type.
+   * @param struct a non-local {@link StructType}
+   * @param fields the field path (may refer to a field in a nested struct)
+   */
+  public void structCreateAlias(Var dst, Var struct, List<String> fields);
+ 
+  /**
+   * Retrieve the value of a struct field.
+   * @param dst output var with retrieved type of field 
+   * @param struct a non-local {@link StructType}
+   * @param fields the field path (may refer to a field in a nested struct)
+   * @param decr read reference counts to decrement from struct
+   */
+  public void structRetrieveSub(Var dst, Var struct, List<String> fields,
+                                Arg decr);
+  
+  /**
+   * Asynchronous copy of struct field to another variable.
+   * Consumes a read refcount for the struct.
+   * @param dst output var with same type as field 
+   * @param struct a non-local {@link StructType}
+   * @param fields the field path (may refer to a field in a nested struct)
+   */
+  public void structCopyOut(Var dst, Var struct, List<String> fields);
   
   public void structRefCopyOut(Var result, Var structVar,
                               List<String> fields);
 
   /**
-   * Copy in value of variable to struct field 
-   * @param struct
-   * @param fieldName
-   * @param fieldContents
+   * Assign variable to struct field 
+   * @param struct the non-local {@link StructType} to modify
+   * @param fields the field path (may refer to a field in a nested struct)
+   * @param src var with retrieved type of field 
    */
+  public void structStore(Var struct, List<String> fields, Arg src);
+  
+  /**
+   * Copy variable to struct field asynchronously 
+   * @param struct the non-local {@link StructType} to modify
+   * @param fields the field path (may refer to a field in a nested struct)
+   * @param src var with same type as field 
+   */
+  public void structCopyIn(Var struct, List<String> fields, Var src);
+  
+  /**
+   * Assign variable to struct field through a reference to the struct 
+   * @param structRef a {@link RefType} to a non-local {@link StructType}
+   * @param fields the field path (may refer to a field in a nested struct)
+   * @param src var with retrieved type of field 
+   */
+  public void structRefStoreSub(Var structRef, List<String> fields, Arg src);
+  
+  /**
+   * Assign variable to struct field through a reference to the struct 
+   * @param structRef a {@link RefType} to a non-local {@link StructType}
+   * @param fields the field path (may refer to a field in a nested struct)
+   * @param src var with same type as field 
+   */
+  public void structRefCopyIn(Var structRef, List<String> fields, Var src);
+  
+  /**
+   * Create an alias to an array member
+   * @param dst a variable of time matching the member, of alias type
+   * @param array a non-local {@link ArrayType}
+   * @param key key into array
+   */
+  public void arrayCreateAlias(Var dst, Var array, Arg key);
 
-  public void structStore(Var struct, List<String> fields,
-                           Arg fieldContents);
-  public void structCopyIn(Var struct, List<String> fields,
-      Var fieldContents);
-  public void structRefStoreSub(Var structRef, List<String> fields,
-                           Arg fieldContents);
-  public void structRefCopyIn(Var structRef, List<String> fields,
-                           Var fieldContents);
   /**
    * Direct lookup of array without any blocking at all.  This is only
    * safe to use if we know the array is closed, or if we know that the
    * item at this index is already there
-   * @param oVar
-   * @param arrayVar
-   * @param arrayIndex
-   * @param readDecr
+   * @param dst variable with retrieved type of array member
+   * @param array non-local {@link ArrayType}
+   * @param key key into array
+   * @param decr decrement read refcount of array
    */
-  public void arrayRetrieve(Var oVar, Var arrayVar,
-                            Arg arrayIndex, Arg readDecr);
+  public void arrayRetrieve(Var dst, Var array, Arg key, Arg decr);
 
-  public void arrayCreateAlias(Var oVar, Var arrayVar, Arg arrayIndex);
-  
   public void arrayCopyOutImm(Var oVar, Var arrayVar, Arg arrayIndex);
 
   public void arrayCopyOutFuture(Var oVar, Var arrayVar, Var indexVar);

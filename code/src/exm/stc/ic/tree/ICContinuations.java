@@ -764,8 +764,8 @@ public class ICContinuations {
       
       boolean simpleLoop = allBlockingClosed() && loopContinueSynchronous();
       
-      gen.startLoop(loopName, loopVars, definedHere, initVals,
-                    PassedVar.extractVars(passedVars), keepOpenVars,
+      gen.startLoop(loopName, loopVars, initVals,
+                    PassedVar.extractVars(passedVars),
                     initWait, simpleLoop);
       this.loopBody.generate(logger, gen, info);
       gen.endLoop();
