@@ -917,7 +917,7 @@ public class STCMiddleEnd {
     program.constants().add(var, val);
   }
 
-  public void initUpdateable(Var updateable, Arg val) {
+  public void initScalarUpdateable(Var updateable, Arg val) {
     assert(Types.isPrimUpdateable(updateable.type()));
     if (!updateable.type().equals(Types.UP_FLOAT)) {
       throw new STCRuntimeError(updateable.type() +
@@ -936,7 +936,7 @@ public class STCMiddleEnd {
           TurbineOp.latestValue(result, updateable));
   }
 
-  public void update(Var updateable, Operators.UpdateMode updateMode, Var val) {
+  public void updateScalarFuture(Var updateable, Operators.UpdateMode updateMode, Var val) {
     assert(Types.isPrimUpdateable(updateable.type()));
     assert(Types.isPrimFuture(val.type()));
     assert(updateable.type().primType() == val.type().primType());
@@ -946,7 +946,7 @@ public class STCMiddleEnd {
           TurbineOp.update(updateable, updateMode, val));
   }
   
-  public void updateImm(Var updateable, Operators.UpdateMode updateMode,
+  public void updateScalarImm(Var updateable, Operators.UpdateMode updateMode,
                                                 Arg val) {
     assert(Types.isPrimUpdateable(updateable.type()));
     if (updateable.type().equals(Types.UP_FLOAT)) {

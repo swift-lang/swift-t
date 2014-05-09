@@ -274,7 +274,7 @@ public class TurbineOp extends Instruction {
       gen.dereferenceFile(getOutput(0), getInput(0).getVar());
       break;
     case LOAD_REF:
-      gen.retrieveRef(getOutput(0), getInput(0).getVar(), getInput(1),
+      gen.retrieveReference(getOutput(0), getInput(0).getVar(), getInput(1),
             getInput(2), getInput(3));
       break;
     case COPY_REF:
@@ -330,28 +330,28 @@ public class TurbineOp extends Instruction {
       gen.decrLocalFileRef(getInput(0).getVar());
       break;
     case INIT_UPDATEABLE_FLOAT:
-      gen.initUpdateable(getOutput(0), getInput(0));
+      gen.initScalarUpdateable(getOutput(0), getInput(0));
       break;
     case LATEST_VALUE:
       gen.latestValue(getOutput(0), getInput(0).getVar());
       break;
     case UPDATE_INCR:
-      gen.update(getOutput(0), UpdateMode.INCR, getInput(0).getVar());
+      gen.updateScalarFuture(getOutput(0), UpdateMode.INCR, getInput(0).getVar());
       break;
     case UPDATE_MIN:
-      gen.update(getOutput(0), UpdateMode.MIN, getInput(0).getVar());
+      gen.updateScalarFuture(getOutput(0), UpdateMode.MIN, getInput(0).getVar());
       break;
     case UPDATE_SCALE:
-      gen.update(getOutput(0), UpdateMode.SCALE, getInput(0).getVar());
+      gen.updateScalarFuture(getOutput(0), UpdateMode.SCALE, getInput(0).getVar());
       break;
     case UPDATE_INCR_IMM:
-      gen.updateImm(getOutput(0), UpdateMode.INCR, getInput(0));
+      gen.updateScalarImm(getOutput(0), UpdateMode.INCR, getInput(0));
       break;
     case UPDATE_MIN_IMM:
-      gen.updateImm(getOutput(0), UpdateMode.MIN, getInput(0));
+      gen.updateScalarImm(getOutput(0), UpdateMode.MIN, getInput(0));
       break;
     case UPDATE_SCALE_IMM:
-      gen.updateImm(getOutput(0), UpdateMode.SCALE, getInput(0));
+      gen.updateScalarImm(getOutput(0), UpdateMode.SCALE, getInput(0));
       break;
     case GET_FILENAME_ALIAS:
       gen.getFileNameAlias(getOutput(0), getInput(0).getVar());

@@ -21,8 +21,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import javax.lang.model.type.ArrayType;
-
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.AsyncExecutor;
@@ -39,9 +37,11 @@ import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types.BagType;
 import exm.stc.common.lang.Types.FileFutureType;
+import exm.stc.common.lang.Types.FileValueType;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.RefType;
 import exm.stc.common.lang.Types.ScalarFutureType;
+import exm.stc.common.lang.Types.ScalarUpdateableType;
 import exm.stc.common.lang.Types.ScalarValueType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Var;
@@ -486,7 +486,7 @@ public interface CompilerBackend {
    * @param acquireWrite how many refcounts for contents of src to acquire
    * @param decr read refcounts to decrement from src
    */
-  public void retrieveRef(Var dst, Var src, Arg acquireRead,
+  public void retrieveReference(Var dst, Var src, Arg acquireRead,
                           Arg acquireWrite, Arg decr);
 
   /**
@@ -534,25 +534,87 @@ public interface CompilerBackend {
    */
   public void retrieveStruct(Var target, Var src, Arg decr);
 
-  public void assignRecursive(Var target, Arg src);
+  /**
+   * Store a local data value to a compound data type.
+   * The exact behaviour should depend on the type of dst, which
+   * may or may not have {@link RefType} indirection in it. 
+   * @param dst
+   * @param src
+   */
+  public void assignRecursive(Var dst, Arg src);
 
-  public void retrieveRecursive(Var target, Var src, Arg decr);
+  /**
+   * Retrieve from a compound data type to a local value
+   * The exact behaviour should depend on the type of src, which
+   * may or may not have {@link RefType} indirection in it.
+   * @param dst
+   * @param src
+   * @param decr
+   */
+  public void retrieveRecursive(Var dst, Var src, Arg decr);
+  
+  /**
+   * Unpack a nested array into a local flat array 
+   * @param flatLocalArray local {@link ArrayType} for output
+   * @param inputArray a shared {@link ArrayType}, maybe nested, for input 
+   */
+  public void unpackArrayToFlat(Var flatLocalArray, Arg inputArray);
 
+  /**
+   * Wait for and copy the value of the referand of src to dst
+   * @param dst destination {@link ScalarFutureType}
+   * @param src a {@link RefType} variable
+   */
   public void dereferenceScalar(Var dst, Var src);
   
+  /**
+   * Wait for and copy the value of the referand of src to dst
+   * @param dst destination of {@link FileFutureType}
+   * @param src a {@link RefType} variable
+   */
   public void dereferenceFile(Var dst, Var src);
 
   /**
-   * Copy the handle to a future, creating an alias
+   * Make dst an alias of src.
    * @param dst
    * @param src
    */
   public void makeAlias(Var dst, Var src);
 
-  
+  /**
+   * Copy non-closed non-local data once src is closed.
+   * @param dst
+   * @param src
+   */
+  public void asyncCopy(Var dst, Var src);
+
+  /**
+   * Copy closed non-local data synchronously, assuming src is closed
+   * @param dst
+   * @param src
+   */
+  public void syncCopy(Var dst, Var src);
+
+  /**
+   * Initialize fields of a {@link StructType} variable.
+   * Do not have to initialize all fields, can assign some others later.
+   * 
+   * @param struct a non-local {@link StructType} to initialize
+   * @param fieldPaths paths to assign, with multiple entries for
+   *                   nested structs
+   * @param fieldVals values to initialize paths to
+   * @param writeDecr write reference counts to decrement
+   */
   public void structInitFields(Var struct, List<List<String>> fieldPaths,
                                List<Arg> fieldVals, Arg writeDecr);
   
+  /**
+   * Build a complete local struct value.
+   * @param struct a local {@link StructType} to initialize.
+   * @param fieldPaths paths to assign, with multiple entries for
+   *                   nested structs
+   * @param fieldVals values of paths to assign
+   */
   public void buildStructLocal(Var struct, List<List<String>> fieldPaths,
                                 List<Arg> fieldVals); 
   
@@ -570,60 +632,66 @@ public interface CompilerBackend {
   
   /**
    * Extract handle to filename future out of file variable
+   * @param filename {@link ScalarFutureType} string for output, must be alias
+   * @param file {@link FileFutureType} with filename
    */
   public void getFileNameAlias(Var filename, Var file);
   
   /**
    * Copy filename from future to file
+   * @param file {@link FileFutureType} to set filename on
+   * @param filename {@link ScalarFutureType} string
    */
   public void copyInFilename(Var file, Var filename);
   
   /**
    * Extract handle to filename future out of localfile variable
+   * @param filename {@link ScalarValueType} string for output
+   * @param file {@link FileValueType} with filename
    */
   public void getLocalFileName(Var filename, Var file);
   
   /**
    * Determine if a file is mapped
-   * @param isMapped a local boolean var
-   * @param file
+   * @param isMapped a {@link ScalarValueType} boolean for output
+   * @param file a {@link FileFutureType} variable
    */
   public void isMapped(Var isMapped, Var file);
   
   /**
    * Choose a temporary file name
-   * @param filenameVal
+   * @param filenameVal a {@link ScalarValueType} of string for output
    */
   public void chooseTmpFilename(Var filenameVal);
   
 
   /**
-   * Initialise a local file with a filename
-   * @param localFile an uninitialized local file var
-   * @param filenameVal an immediate string containing the filename
-   * @param isMapped an immediate bool saying whether the file is mapped
-   *                - i.e. whether it must be retained in all cases
+   * Initialise a local file with a filename.
+   * @param localFile an uninitialized {@link FileValueType}
+   * @param filenameVal a {@link ScalarValueType} string with the filename
+   * @param isMapped a {@link ScalarValueType} bool saying whether the file is
+   *            mapped - i.e. whether it must be retained in all cases
    */
   public void initLocalOutputFile(Var localFile, Arg filenameVal,
                                   Arg isMapped);
   /**
    * Get filename of file future to a local string value
-   * @param file file future
-   * @param filenameVal a local string value
+   * @param filenameVal a {@link ScalarValueType} string for output
+   * @param file a {@link FileFutureType}
    */
   public void getFilenameVal(Var filenameVal, Var file);
   
   /**
    * Set filename of file future to a local string value
-   * @param file file future
-   * @param filenameVal a local string value
+   * @param file a {@link FileFutureType} to set filename of 
+   * @param filenameVal a {@link ScalarValueType} string
    */
   public void setFilenameVal(Var file, Arg filenameVal);
 
   /**
    * Copy file contents for files represented by local file values
-   * @param dst an output file value initialised with file name
-   * @param src an input file value initialised with file name
+   * @param dst {@link FileValueType} for output initialised with file name
+   * @param src a {@link FileValueType} for input initialised with file name
    */
   public void copyFileContents(Var dst, Var src);
   
@@ -713,20 +781,6 @@ public interface CompilerBackend {
   public void arrayBuild(Var array, List<Arg> keys, List<Arg> vals);
 
 
-  /**
-   * Copy non-closed non-local data
-   * @param dst
-   * @param src
-   */
-  public void asyncCopy(Var dst, Var src);
-
-  /**
-   * Copy closed non-local data synchronously
-   * @param dst
-   * @param src
-   */
-  public void syncCopy(Var dst, Var src);
-  
   public void arrayCreateNestedFuture(Var arrayResult,
       Var array, Var ix);
 
@@ -753,32 +807,79 @@ public interface CompilerBackend {
   public void arrayCreateBag(Var bag, Var arr, Arg ix, Arg callerReadRefs,
                         Arg callerWriteRefs, Arg readDecr, Arg writeDecr);
 
-  public void initUpdateable(Var updateable, Arg val);
+  /**
+   * Initialize an updateable variable with an initial value
+   * @param updateable a {@link ScalarUpdateableType} variable
+   * @param val a {@link ScalarValueType} variable
+   */
+  public void initScalarUpdateable(Var updateable, Arg val);
+  
+  /**
+   * Get the latest value of an updateable variable
+   * @param result a {@link ScalarValueType} variable for output
+   * @param updateable a {@link ScalarFutureType} variable
+   */
   public void latestValue(Var result, Var updateable);
   
-  public void update(Var updateable, Operators.UpdateMode updateMode,
-                              Var val);
-  /** Same as above, but takes a value or constant as arg */
-  public void updateImm(Var updateable, Operators.UpdateMode updateMode,
-      Arg val);
-
-  public void checkpointLookupEnabled(Var out);
+  /**
+   * Update a scalar updateable variable once value of val is available
+   * @param updateable a {@link ScalarUpdateableType} variable
+   * @param updateMode the mode of updating
+   * @param val a {@link ScalarFutureType} variable for the value
+   */
+  public void updateScalarFuture(Var updateable,
+      Operators.UpdateMode updateMode, Var val);
   
-  public void checkpointWriteEnabled(Var out);
-  
-  public void writeCheckpoint(Arg key, Arg val);
-
-  public void lookupCheckpoint(Var checkpointExists, Var value, Arg key);
-
-  public void packValues(Var packed, List<Arg> unpacked);
-  
-  public void unpackValues(List<Var> unpacked, Arg packed);
+  /**
+   * Update a scalar updateable variable immediately
+   * @param updateable a {@link ScalarUpdateableType} variable
+   * @param updateMode the mode of updating
+   * @param val a {@link ScalarValueType} variable for the value
+   */
+  public void updateScalarImm(Var updateable,
+      Operators.UpdateMode updateMode, Arg val);
 
   /**
-   * Unpack a nested array into a local flat array 
-   * @param flatLocalArray
-   * @param inputArray
+   * Whether retrieving checkpoints is enabled
+   * @param out variable with {@link ScalarValueType} bool
    */
-  public void unpackArrayToFlat(Var flatLocalArray, Arg inputArray);
+  public void checkpointLookupEnabled(Var out);
+
+  /**
+   * Whether writing checkpoints is enabled
+   * @param out variable with {@link ScalarValueType} bool
+   */
+  public void checkpointWriteEnabled(Var out);
+  
+  /**
+   * Write an encoded checkpoint out
+   * @param key a {@link ScalarValueType} of blob
+   * @param val a {@link ScalarValueType} of blob
+   */
+  public void writeCheckpoint(Arg key, Arg val);
+
+  /**
+   * Lookup an encoded checkpoint,
+   * @param checkpointExists a {@link ScalarValueType} of bool for output,
+   *            whether the checkpoint exists
+   * @param val a {@link ScalarValueType} of blob for output, only set if
+   *            the checkpoint exists
+   * @param key a {@link ScalarValueType} of blob
+   */
+  public void lookupCheckpoint(Var checkpointExists, Var val, Arg key);
+
+  /**
+   * @param packed a {@link ScalarValueType} of blob for output
+   * @param unpacked local value variables for packing
+   */
+  public void packValues(Var packed, List<Arg> unpacked);
+  
+  /**
+   * Unpack data packed using packValues
+   * @param unpacked a list of local value variables for output,
+   *        matching input to packValues
+   * @param packed a packed {@link ScalarValueType} of blob
+   */
+  public void unpackValues(List<Var> unpacked, Arg packed);
 
 }

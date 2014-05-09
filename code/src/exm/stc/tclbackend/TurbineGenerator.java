@@ -702,7 +702,7 @@ public class TurbineGenerator implements CompilerBackend {
 
 
   @Override
-  public void retrieveRef(Var dst, Var src, Arg acquireRead,
+  public void retrieveReference(Var dst, Var src, Arg acquireRead,
                           Arg acquireWrite, Arg decr) {
     assert(Types.isRef(src.type()));
     assert(acquireRead.isIntVal());
@@ -2039,7 +2039,7 @@ public class TurbineGenerator implements CompilerBackend {
   }
   
   @Override
-  public void initUpdateable(Var updateable, Arg val) {
+  public void initScalarUpdateable(Var updateable, Arg val) {
     assert(Types.isScalarUpdateable(updateable.type()));
     if (!updateable.type().equals(Types.UP_FLOAT)) {
       throw new STCRuntimeError(updateable.type() +
@@ -2066,7 +2066,7 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void update(Var updateable, UpdateMode updateMode, Var val) {
+  public void updateScalarFuture(Var updateable, UpdateMode updateMode, Var val) {
     assert(Types.isScalarUpdateable(updateable.type()));
     assert(Types.isScalarFuture(val.type()));
     assert(updateable.type().primType() == val.type().primType());
@@ -2095,7 +2095,7 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void updateImm(Var updateable, UpdateMode updateMode,
+  public void updateScalarImm(Var updateable, UpdateMode updateMode,
                                                 Arg val) {
     assert(Types.isScalarUpdateable(updateable.type()));
     if (updateable.type().equals(Types.UP_FLOAT)) {
@@ -3459,6 +3459,8 @@ public class TurbineGenerator implements CompilerBackend {
   
   @Override
   public void writeCheckpoint(Arg key, Arg val) {
+    assert(Types.isBlobVal(key));
+    assert(Types.isBlobVal(val));
     // Write checkpoint with binary keys
     // Want to persist data to disk.
     // Don't need to store new entries in index.
@@ -3467,13 +3469,13 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void lookupCheckpoint(Var checkpointExists, Var value, Arg key) {
+  public void lookupCheckpoint(Var checkpointExists, Var val, Arg key) {
     assert(Types.isBoolVal(checkpointExists));
-    assert(Types.isBlobVal(key.type()));
-    assert(Types.isBlobVal(value));
+    assert(Types.isBlobVal(key));
+    assert(Types.isBlobVal(val));
     
     pointAdd(Turbine.xptLookupStmt(prefixVar(checkpointExists),
-            prefixVar(value), argToExpr(key)));
+            prefixVar(val), argToExpr(key)));
   }
 
   @Override

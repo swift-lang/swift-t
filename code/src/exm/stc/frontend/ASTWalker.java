@@ -1184,7 +1184,7 @@ public class ASTWalker {
           throw new STCRuntimeError("Don't yet support non-constant" +
                   " initialisers for updateable variables");
         }
-        backend.initUpdateable(VarRepr.backendVar(var),
+        backend.initScalarUpdateable(VarRepr.backendVar(var),
                                Arg.createFloatLit(initVal));
       } else {
         throw new STCRuntimeError("Non-float updateables not yet" +
@@ -1300,7 +1300,7 @@ public class ASTWalker {
     Update up = Update.fromAST(context, tree);
     Type exprType = up.typecheck(context);
     Var evaled = exprWalker.eval(context, up.getExpr(), exprType, false, null);
-    backend.update(VarRepr.backendVar(up.getTarget()), up.getMode(),
+    backend.updateScalarFuture(VarRepr.backendVar(up.getTarget()), up.getMode(),
                    VarRepr.backendVar(evaled));
   }
 
