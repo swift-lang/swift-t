@@ -144,7 +144,8 @@ public class FunctionInline implements OptimizerPass {
       List<String> usages = finder.functionUsages.get(f.getName());
       if (usages.size() == 0 && ! ForeignFunctions.hasOpEquiv(f.getName())) {
         logger.debug("Prune builtin: " + f.getName());
-        it.remove();
+        // TODO: reenable, need to consider local impls
+        // it.remove();
       }
     }
   }
