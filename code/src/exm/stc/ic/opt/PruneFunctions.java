@@ -42,6 +42,8 @@ public class PruneFunctions implements OptimizerPass {
     DepFinder deps = new DepFinder();
     TreeWalk.walk(logger, program, deps);
     
+    addLocalImpls(deps);
+    
     Set<String> needed = findNeeded(deps);
     
     pruneFunctions(program, needed);
@@ -92,6 +94,16 @@ public class PruneFunctions implements OptimizerPass {
     return needed;
   }
 
+  /**
+   * Functions may be translated into local implementation
+   * @param deps
+   */
+  private void addLocalImpls(DepFinder deps) {
+    for (String func: ForeignFunctions.getLocalImplKeys()) {
+      deps.depGraph.put(func, ForeignFunctions.getLocalImpl(func));
+    }
+  }
+
   private void addFunction(Set<String> needed, StackLite<String> workQueue,
                            String fnName) {
     boolean added = needed.add(fnName);
@@ -113,8 +125,7 @@ public class PruneFunctions implements OptimizerPass {
     while (bIt.hasNext()) {
       BuiltinFunction f = bIt.next();
       if (!needed.contains(f.getName())) {
-        // TODO: need to check for local impls through ForeignFunctions
-        //bIt.remove();
+        bIt.remove();
       }
     }
   }

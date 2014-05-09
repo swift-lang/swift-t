@@ -16,6 +16,7 @@
 package exm.stc.common.lang;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -94,6 +95,7 @@ public class ForeignFunctions {
    * Map from Swift function name to function name of local
    */
   private static Map<String, String> localImpls = new HashMap<String, String>();
+  private static MultiMap<String, String> localImplsInv = new MultiMap<String, String>();
   
   private static HashMap<String, TaskMode> taskModes
     = new HashMap<String, TaskMode>();
@@ -251,6 +253,7 @@ public class ForeignFunctions {
    */
   public static void addLocalImpl(String swiftFunction, String localFunction) {
     localImpls.put(swiftFunction, localFunction);
+    localImplsInv.put(localFunction, swiftFunction);
   }
   
   public static boolean hasLocalImpl(String swiftFunction) {
@@ -259,6 +262,14 @@ public class ForeignFunctions {
   
   public static String getLocalImpl(String swiftFunction) {
     return localImpls.get(swiftFunction);
+  }
+  
+  public static boolean isLocalImpl(String localFunction) {
+    return localImplsInv.containsKey(localFunction);
+  }
+  
+  public static Set<String> getLocalImplKeys() {
+    return Collections.unmodifiableSet(localImpls.keySet());
   }
   
   public static void addTaskMode(String functionName, TaskMode mode) {
