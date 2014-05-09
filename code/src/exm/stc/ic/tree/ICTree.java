@@ -505,7 +505,7 @@ public class ICTree {
       if (localImpl != null) {
         out.append(" local { ");
         out.append(localImpl.toString());
-        out.append(" }\n");
+        out.append(" }");
       }
       
       if (wrappedImpl != null) {

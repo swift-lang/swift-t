@@ -113,7 +113,8 @@ public class PruneFunctions implements OptimizerPass {
     while (bIt.hasNext()) {
       BuiltinFunction f = bIt.next();
       if (!needed.contains(f.getName())) {
-        bIt.remove();
+        // TODO: need to check for local impls through ForeignFunctions
+        //bIt.remove();
       }
     }
   }
