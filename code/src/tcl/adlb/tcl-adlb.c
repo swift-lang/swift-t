@@ -1082,11 +1082,11 @@ extract_create_props(Tcl_Interp *interp, bool accept_id, int argstart,
   memset(props, 0, sizeof(*props));
   
   if (accept_id) {
-    TCL_CONDITION(objc - argstart >= 2, "adlb::create requires >= 2 args!");
+    TCL_CONDITION(objc - argstart >= 2, "requires >= 2 args!");
     rc = Tcl_GetADLB_ID(interp, objv[argpos++], id);
-    TCL_CHECK_MSG(rc, "adlb::create could not get data id");
+    TCL_CHECK_MSG(rc, "could not get data id");
   } else {
-    TCL_CONDITION(objc - argstart >= 1, "adlb::create requires >= 1 args!");
+    TCL_CONDITION(objc - argstart >= 1, "requires >= 1 args!");
     *id = ADLB_DATA_ID_NULL;
   }
 
@@ -1100,18 +1100,25 @@ extract_create_props(Tcl_Interp *interp, bool accept_id, int argstart,
 
   if (argpos < objc) {
     rc = Tcl_GetIntFromObj(interp, objv[argpos++], &(props->read_refcount));
-    TCL_CHECK_MSG(rc, "adlb::create could not get read_refcount argument");
+    TCL_CHECK_MSG(rc, "could not get read_refcount argument");
   }
 
   if (argpos < objc) {
     rc = Tcl_GetIntFromObj(interp, objv[argpos++], &(props->write_refcount));
-    TCL_CHECK_MSG(rc, "adlb::create could not get write_refcount argument");
+    TCL_CHECK_MSG(rc, "could not get write_refcount argument");
+  }
+  
+  if (argpos < objc) {
+    int symbol;
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++], &symbol);
+    TCL_CHECK_MSG(rc, "could not get debug symbol argument");
+    props->symbol = (adlb_debug_symbol)symbol;
   }
 
   if (argpos < objc) {
     int permanent;
     rc = Tcl_GetBooleanFromObj(interp, objv[argpos++], &permanent);
-    TCL_CHECK_MSG(rc, "adlb::create could not get permanent argument");
+    TCL_CHECK_MSG(rc, "could not get permanent argument");
     props->permanent = permanent != 0;
   }
 
@@ -4955,6 +4962,59 @@ ADLB_Subscript_Container_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
+   usage: adlb::add_debug_symbol <symbol> <string>
+   symbol: integer debug symbol
+   string: string associated with debug symbol
+ */
+static int
+ADLB_Add_Debug_Symbol_Cmd(ClientData cdata, Tcl_Interp *interp,
+               int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(3);
+  
+  int rc;
+  int symbol;
+  rc = Tcl_GetIntFromObj(interp, objv[1], &symbol);
+  TCL_CHECK_MSG(rc, "symbol must be integer");
+  TCL_CONDITION(symbol >= 0, "Symbol must be non-negative");
+
+  const char *symbol_string = Tcl_GetString(objv[2]);
+
+  adlb_code ac = ADLB_Add_debug_symbol((uint32_t)symbol, symbol_string);
+  TCL_CONDITION(ac == ADLB_SUCCESS, "Error adding debug symbol");
+
+  return TCL_OK;
+}
+
+/**
+   usage: adlb::debug_symbol <symbol>
+   symbol: integer debug symbol
+   returns: string for debug symbol, empty string if none
+ */
+static int
+ADLB_Debug_Symbol_Cmd(ClientData cdata, Tcl_Interp *interp,
+               int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+
+  int rc;
+  int symbol;
+  rc = Tcl_GetIntFromObj(interp, objv[1], &symbol);
+  TCL_CHECK_MSG(rc, "symbol must be integer");
+  TCL_CONDITION(symbol >= 0, "Symbol must be non-negative");
+  
+  const char *symbol_string = ADLB_Debug_symbol((uint32_t)symbol);
+  if (symbol_string == NULL)
+  {
+    symbol_string = "";
+  }
+  
+  Tcl_SetObjResult(interp, Tcl_NewStringObj(symbol_string, -1));
+
+  return TCL_OK;
+}
+
+/**
    usage: adlb::fail
  */
 static int
@@ -5126,6 +5186,8 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("dict_create", ADLB_Dict_Create_Cmd);
   COMMAND("subscript_struct", ADLB_Subscript_Struct_Cmd);
   COMMAND("subscript_container", ADLB_Subscript_Container_Cmd);
+  COMMAND("add_debug_symbol", ADLB_Add_Debug_Symbol_Cmd);
+  COMMAND("debug_symbol", ADLB_Debug_Symbol_Cmd);
   COMMAND("fail",      ADLB_Fail_Cmd);
   COMMAND("abort",     ADLB_Abort_Cmd);
   COMMAND("finalize",  ADLB_Finalize_Cmd);
