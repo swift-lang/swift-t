@@ -885,28 +885,81 @@ public interface CompilerBackend {
    *                  or {@link BagType}
    */
   public void containerLocalSize(Var dst, Var container);
-  
-  public void arrayStoreFuture(Var array,
-      Var ix, Arg member, Arg writersDecr);
-  
 
-  public void arrayCopyInFuture(Var array,
-      Var ix, Var member, Arg writersDecr);
+  /**
+   * Store member to the array slot identified by key.  Executes synchronously.
+   * @param array a non-local {@link ArrayType} to modify
+   * @param key array key
+   * @param member value with retrieved type of array member
+   * @param writeDecr number of write refcounts to decrement
+   */
+  public void arrayStore(Var array, Arg key, Arg member,
+                         Arg writeDecr);
   
-  public void arrayRefStoreFuture(Var array, Var ix, Arg member);
-  
-  public void arrayRefCopyInFuture(Var array, Var ix, Var member);
+  /**
+   * Store member to the array slot identified by key.  Executes once key is
+   * set.
+   * @param array a non-local {@link ArrayType} to modify
+   * @param key future for array key
+   * @param member future with type of array member
+   * @param writeDecr number of write refcounts to decrement
+   */
+  public void arrayStoreFuture(Var array, Var key, Arg member, Arg writeDecr);
 
-  public void arrayStore(Var array, Arg ix, Arg member,
-      Arg writersDecr);
-
-  public void arrayCopyInImm(Var array, Arg ix, Var member,
-      Arg writersDecr);
+  /**
+   * Copy member to the array slot identified by key.  Executes synchronously.
+   * @param array a non-local {@link ArrayType} to modify
+   * @param key array key
+   * @param member value with retrieved type of array member
+   * @param writeDecr number of write refcounts to decrement
+   */
+  public void arrayCopyInImm(Var array, Arg key, Var member, Arg writeDecr);
+ 
+  /**
+   * Store member to the array slot identified by key.  Executes once key is
+   * set.
+   * @param array a non-local {@link ArrayType} to modify
+   * @param key future for array key
+   * @param member future with type of array member
+   * @param writeDecr number of write refcounts to decrement
+   */
+  public void arrayCopyInFuture(Var array, Var key, Var member, Arg writeDecr);
   
-  public void arrayRefStoreImm(Var array, Arg ix, Arg member);
+  /**
+   * Store member to the array slot identified by key.  Executes once key is
+   * set. Acquires write refcount from reference.
+   * @param array {@link RefType} to a non-local {@link ArrayType} to modify
+   * @param key array key
+   * @param member retrieved type of array member
+   */
+  public void arrayRefStoreImm(Var array, Arg key, Arg member);
   
+  /**
+   * Store member to the array slot identified by key.  Executes once key is
+   * set. Acquires write refcount from reference.
+   * @param array {@link RefType} to a non-local {@link ArrayType} to modify
+   * @param key future for array key
+   * @param member retrieved type of array member
+   */
+  public void arrayRefStoreFuture(Var array, Var key, Arg member);
+  
+  /**
+   * Store member to the array slot identified by key.  Executes once key is
+   * set. Acquires write refcount from reference.
+   * @param array {@link RefType} to a non-local {@link ArrayType} to modify
+   * @param key value of array key
+   * @param member future for array member
+   */
   public void arrayRefCopyInImm(Var array, Arg ix, Var member);
-
+  
+  /**
+   * Store member to the array slot identified by key.  Executes once key is
+   * set. Acquires write refcount from reference.
+   * @param array {@link RefType} to a non-local {@link ArrayType} to modify
+   * @param key array key
+   * @param member future for array member
+   */
+  public void arrayRefCopyInFuture(Var array, Var ix, Var member);
 
   /**
    * Build array with specified key-value pairs 
