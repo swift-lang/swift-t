@@ -236,7 +236,8 @@ xlb_data_create(adlb_datum_id id, adlb_data_type type,
 
 #ifndef NDEBUG
   check_verbose(!table_lp_contains(&tds, id), ADLB_DATA_ERROR_DOUBLE_DECLARE,
-                "<%"PRId64"> already exists", id);
+                ADLB_PRI_DATUM" already exists", 
+                ADLB_PRI_DATUM_ARGS(id, props->symbol));
 #endif
 
   if (props->read_refcount <= 0 && props->write_refcount <= 0)
@@ -444,10 +445,12 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
     check_verbose(d->read_refcount > 0 &&
                    d->read_refcount + read_incr >= 0,
                 ADLB_DATA_ERROR_REFCOUNT_NEGATIVE,
-                "<%"PRId64"> read_refcount: %i incr: %i",
-                id, d->read_refcount, read_incr);
+                ADLB_PRI_DATUM" read_refcount: %i incr: %i",
+                ADLB_PRI_DATUM_ARGS(id, d->symbol),
+                d->read_refcount, read_incr);
     d->read_refcount += read_incr;
-    DEBUG("read_refcount: <%"PRId64"> => %i", id, d->read_refcount);
+    DEBUG("read_refcount: "ADLB_PRI_DATUM" => %i",
+          ADLB_PRI_DATUM_ARGS(id, d->symbol), d->read_refcount);
   }
 
   // True if we just closed the ID here
@@ -458,8 +461,9 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
     check_verbose(d->write_refcount > 0 &&
                    d->write_refcount + write_incr >= 0,
                 ADLB_DATA_ERROR_REFCOUNT_NEGATIVE,
-                "<%"PRId64"> write_refcount: %i incr: %i",
-                id, d->write_refcount, write_incr);
+                ADLB_PRI_DATUM" write_refcount: %i incr: %i",
+                ADLB_PRI_DATUM_ARGS(id, d->symbol),
+                d->write_refcount, write_incr);
     d->write_refcount += write_incr;
     if (d->write_refcount == 0) {
       // If we're keeping around read-only version, release
@@ -469,7 +473,8 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
 
       closed = true;
     }
-    DEBUG("write_refcount: <%"PRId64"> => %i", id, d->write_refcount);
+    DEBUG("write_refcount: "ADLB_PRI_DATUM" => %i",
+      ADLB_PRI_DATUM_ARGS(id, d->symbol), d->write_refcount);
   }
 
   if (d->read_refcount == 0 && d->write_refcount == 0)
@@ -507,7 +512,8 @@ static adlb_data_code
 datum_gc(adlb_datum_id id, adlb_datum* d,
            xlb_acquire_rc to_acquire, xlb_rc_changes *rc_changes)
 {
-  DEBUG("datum_gc: <%"PRId64">", id);
+  DEBUG("datum_gc: "ADLB_PRI_DATUM,
+      ADLB_PRI_DATUM_ARGS(id, d->symbol));
   check_verbose(!d->status.permanent, ADLB_DATA_ERROR_UNKNOWN,
           "Garbage collecting permanent data");
 
@@ -521,8 +527,8 @@ datum_gc(adlb_datum_id id, adlb_datum* d,
 
   // This list should be empty since data being destroyed
   check_verbose(d->listeners.size == 0, ADLB_DATA_ERROR_TYPE,
-                "%i listeners for garbage collected td <%"PRId64">",
-                d->listeners.size, id);
+        "%i listeners for garbage collected datum "ADLB_PRI_DATUM,
+        d->listeners.size, ADLB_PRI_DATUM_ARGS(id, d->symbol));
 
   void *tmp;
   table_lp_remove(&tds, id, &tmp);
@@ -538,7 +544,8 @@ xlb_data_lock(adlb_datum_id id, int rank, bool* result)
   adlb_datum* d;
   bool found = table_lp_search(&tds, id, (void**)&d);
   check_verbose(found, ADLB_DATA_ERROR_NOT_FOUND,
-                "not found: <%"PRId64">", id);
+                "not found: "ADLB_PRI_DATUM,
+                ADLB_PRI_DATUM_ARGS(id, ADLB_DEBUG_SYMBOL_NULL));
   assert(d != NULL);
 
   if (table_lp_contains(&locked, id))
@@ -563,7 +570,8 @@ xlb_data_unlock(adlb_datum_id id)
   int* r;
   bool found = table_lp_remove(&locked, id, (void**)&r);
   check_verbose(found, ADLB_DATA_ERROR_NOT_FOUND,
-                "not found: <%"PRId64">", id);
+                "not found: "ADLB_PRI_DATUM,
+                ADLB_PRI_DATUM_ARGS(id, ADLB_DEBUG_SYMBOL_NULL));
   free(r);
   return ADLB_DATA_SUCCESS;
 }
@@ -581,23 +589,24 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
               int rank, int work_type, bool* subscribed)
 {
   adlb_data_code dc;
-
-  if (!adlb_has_sub(subscript))
-  {
-    DEBUG("data_subscribe(): <%"PRId64">", id);
-  }
-  else
-  {
-    // TODO: support binary keys
-    DEBUG("data_subscribe(): <%"PRId64">[%.*s]", id, (int)subscript.length,
-            (const char*)subscript.key);
-  }
-
   adlb_datum* d;
   bool found = table_lp_search(&tds, id, (void**)&d);
   check_verbose(found, ADLB_DATA_ERROR_NOT_FOUND,
                 "not found: <%"PRId64">", id);
   assert(d != NULL);
+
+  if (!adlb_has_sub(subscript))
+  {
+    DEBUG("data_subscribe(): "ADLB_PRI_DATUM,
+          ADLB_PRI_DATUM_ARGS(id, d->symbol));
+  }
+  else
+  {
+    // TODO: support binary keys
+    DEBUG("data_subscribe(): "ADLB_PRI_DATUM_SUB,
+          ADLB_PRI_DATUM_SUB_ARGS(id, d->symbol, subscript));
+  }
+
 
   if (adlb_has_sub(subscript))
   {
@@ -605,10 +614,10 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
     bool is_container = d->type == ADLB_DATA_TYPE_CONTAINER;
     bool is_struct = d->type == ADLB_DATA_TYPE_STRUCT; 
     check_verbose(is_container || is_struct,
-            ADLB_DATA_ERROR_INVALID, "subscribing to subscript %.*s on "
-            "invalid type: %s for <%"PRId64">", (int)subscript.length,
-            (const char*)subscript.key, ADLB_Data_type_tostring(d->type),
-            id);
+            ADLB_DATA_ERROR_INVALID, "subscribing to subscript on "
+            "invalid type: %s for "ADLB_PRI_DATUM_SUB,
+            ADLB_Data_type_tostring(d->type), ADLB_PRI_DATUM_SUB_ARGS(
+            id, d->symbol, subscript));
     
     found = false; 
     if (is_container &&
@@ -619,12 +628,13 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
     else if (is_struct)
     {
       check_verbose(d->status.set, ADLB_DATA_ERROR_INVALID, "Can't set "
-          "subscript of struct initialized without type <%"PRId64">", id);
+          "subscript of struct initialized without type "ADLB_PRI_DATUM,
+          ADLB_PRI_DATUM_ARGS(id, d->symbol));
       // This will check validity of subscript as side-effect
       dc = xlb_struct_subscript_init(d->data.STRUCT, subscript,
                                     true, &found);
       DATA_CHECK(dc);
-      DEBUG("Struct subscript initialized: %i", (int)found);
+      TRACE("Struct subscript initialized: %i", (int)found);
     }
     
     if (!found)
@@ -633,9 +643,8 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
       char key[xlb_id_sub_buflen(subscript)];
       size_t key_len = xlb_write_id_sub(key, id, subscript);
       
-      DEBUG("Subscribe to <%"PRId64">[%.*s] len %i", id,
-        (int)subscript.length, (const char*)subscript.key,
-        (int)subscript.length);
+      DEBUG("Subscribe to "ADLB_PRI_DATUM_SUB,
+        ADLB_PRI_DATUM_SUB_ARGS(id, d->symbol, subscript));
 
       struct list_b* listeners = NULL;
       found = table_bp_search(&container_ix_listeners, key, key_len,
@@ -646,8 +655,8 @@ xlb_data_subscribe(adlb_datum_id id, adlb_subscript subscript,
         listeners = list_b_create();
         table_bp_add(&container_ix_listeners, key, key_len, listeners);
       }
-      TRACE("Added %i to listeners for %"PRId64"[%.*s]\n", rank,
-          id, (int)subscript.length, (const char*)subscript.key);
+      TRACE("Added %i to listeners for "ADLB_PRI_DATUM_SUB, rank,
+          ADLB_PRI_DATUM_SUB_ARGS(id, d->symbol, subscript));
      
       xlb_listener listener = { .rank = rank, .work_type = work_type };
       list_b_add(listeners, &listener, sizeof(listener));
@@ -704,7 +713,8 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
   adlb_datum* d;
   bool found = table_lp_search(&tds, id, (void**)&d);
   check_verbose(found, ADLB_DATA_ERROR_NOT_FOUND,
-                "not found: <%"PRId64">", id);
+        "not found: "ADLB_PRI_DATUM,
+        ADLB_PRI_DATUM_ARGS(id, ADLB_DEBUG_SYMBOL_NULL));
   assert(d != NULL);
 
   // Is the subscript already pointing to a data identifier?
@@ -715,11 +725,12 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
                         &val_data, &val_type);
   DATA_CHECK(dc);
 
-  TRACE("lookup datum for ref: %"PRId64"[%.*s]: %p", id,
-          (int)subscript.length, subscript.key, val_data );
+  TRACE("lookup datum for ref: "ADLB_PRI_DATUM_SUB": %p",
+          ADLB_PRI_DATUM_SUB_ARGS(id, d->symbol, subscript), val_data);
 
   check_verbose(ref_type == val_type, ADLB_DATA_ERROR_TYPE,
-    "Type mismatch when setting up reference expected %i actual %i\n",
+    ADLB_PRI_DATUM_SUB" type mismatch when setting up reference expected"
+    " %i actual %i\n", ADLB_PRI_DATUM_SUB_ARGS(id, d->symbol, subscript),
     ref_type, val_type);
 
   if (val_data != NULL)
