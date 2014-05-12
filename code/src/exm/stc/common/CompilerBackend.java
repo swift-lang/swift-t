@@ -806,21 +806,69 @@ public interface CompilerBackend {
    */
   public void arrayRetrieve(Var dst, Var array, Arg key, Arg decr);
 
-  public void arrayCopyOutImm(Var oVar, Var arrayVar, Arg arrayIndex);
+  /**
+   * Copy out array member once it is assigned.
+   * @param dst variable with same type as array member
+   * @param array non-local {@link ArrayType}
+   * @param key key into array
+   */
+  public void arrayCopyOutImm(Var dst, Var array, Arg key);
 
-  public void arrayCopyOutFuture(Var oVar, Var arrayVar, Var indexVar);
+  /**
+   * Copy out array member once it is assigned.
+   * @param dst variable with same type as array member
+   * @param array non-local {@link ArrayType}
+   * @param key future for key
+   */
+  public void arrayCopyOutFuture(Var dst, Var array, Var key);
   
-  public void arrayRefCopyOutImm(Var oVar, Var arrayVar, Arg arrayIndex);
+  /**
+   * Copy out array member once it is assigned.
+   * @param dst variable with same type as array member
+   * @param array reference to non-local {@link ArrayType}
+   * @param key key into array
+   */
+  public void arrayRefCopyOutImm(Var dst, Var array, Arg key);
 
-  public void arrayRefCopyOutFuture(Var oVar, Var arrayVar, Var indexVar);
+  /**
+   * Copy out array member once it is assigned.
+   * @param dst variable with same type as array member
+   * @param array reference to non-local {@link ArrayType}
+   * @param key future for key
+   */
+  public void arrayRefCopyOutFuture(Var dst, Var array, Var key);
 
-  public void arrayContains(Var out, Var arr, Arg index);
+  /**
+   * Check if array currently contains a key (doesn't wait for close) 
+   * @param dst {@link ScalarValueType} boolean for output
+   * @param array a non-local {@link ArrayType}
+   * @param key key for array
+   */
+  public void arrayContains(Var dst, Var array, Arg key);
 
-  public void containerSize(Var out, Var cont);
+  /**
+   * Check if local array contains a key
+   * @param dst {@link ScalarValueType} boolean for output
+   * @param array a local {@link ArrayType}
+   * @param key key for array
+   */
+  public void arrayLocalContains(Var dst, Var array, Arg key);
 
-  public void arrayLocalContains(Var out, Var arr, Arg index);
+  /**
+   * Lookup current size of contain (don't wait for close)
+   * @param dst {@link ScalarValueType} int for output
+   * @param container non-local container type e.g {@link ArrayType}
+   *                  or {@link BagType}
+   */
+  public void containerSize(Var dst, Var container);
 
-  public void containerLocalSize(Var out, Var cont);
+  /**
+   * Lookup current size of contain (don't wait for close)
+   * @param dst {@link ScalarValueType} int for output
+   * @param container local container type e.g {@link ArrayType}
+   *                  or {@link BagType}
+   */
+  public void containerLocalSize(Var dst, Var container);
   
   public void arrayStoreFuture(Var array,
       Var ix, Arg member, Arg writersDecr);
