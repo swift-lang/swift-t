@@ -266,6 +266,9 @@ class Turbine {
   public static Token XPT_LOOKUP_ENABLED = turbFn("xpt_lookup_enabled");
   public static Token XPT_PACK = adlbFn("xpt_pack");
   public static Token XPT_UNPACK = adlbFn("xpt_unpack");
+  
+  // Debug symbols
+  public static Token ADD_DEBUG_SYMBOL = adlbFn("add_debug_symbol");
 
   // Subscript/handle manipulation
   public static Token MAKE_CONTAINER_SUBSCRIPT = adlbFn("subscript_container");
@@ -1760,6 +1763,11 @@ class Turbine {
           String resultVarName, Expression packedKey) {
     return new SetVariable(existsVarName, xptLookupExpr(resultVarName,
             packedKey));
+  }
+
+  public static Command addDebugSymbol(int symbol, String data) {
+    return new Command(ADD_DEBUG_SYMBOL, new LiteralInt(symbol),
+                       new TclString(data, true));
   }
   
 }

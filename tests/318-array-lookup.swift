@@ -1,6 +1,6 @@
 // THIS-TEST-SHOULD-NOT-RUN
 
-// Test failing array looking
+// Test failing array lookup
 
 main {
   A[0] = 1;

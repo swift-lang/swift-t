@@ -219,6 +219,11 @@ public class TurbineGenerator implements CompilerBackend {
   StackLite<EnclosingLoop> loopStack = new StackLite<EnclosingLoop>();
 
   /**
+   * Stack for function names
+   */
+  StackLite<String> functionStack = new StackLite<String>();
+  
+  /**
    * Stack for what context we're in. 
    */
   StackLite<ExecContext> execContextStack = new StackLite<ExecContext>();
@@ -237,11 +242,29 @@ public class TurbineGenerator implements CompilerBackend {
   private final HashMap<String, Pair<TclOpTemplate, TclFunRef>> tclFuncSymbols
           = new HashMap<String, Pair<TclOpTemplate, TclFunRef>>();
 
-  /**
-     If true, enable debug comments in Tcl source
-   */
-  boolean debuggerComments = false;
 
+  /**
+   * First valid debug symbol is 1 (0 is reserved to represent no debug symbol)
+   */
+  private static final int FIRST_DEBUG_SYMBOL = 1;
+  /**
+    Assign debug symbol numbers.
+   */
+  private int nextDebugSymbol = FIRST_DEBUG_SYMBOL;
+  
+  /**
+   * Map (function, variable) to debug symbol. 
+   * Function is "" if not inside scope of function.
+   */
+  private final HashMap<Pair<String, Var>, Integer> debugSymbolIndex =
+                 new HashMap<Pair<String, Var>, Integer>();
+  
+  /**
+   * List of all debug symbols created
+   */
+  private final List<Pair<Integer, String>> debugSymbols 
+              = new ArrayList<Pair<Integer, String>>();
+  
   public TurbineGenerator(Logger logger, String timestamp)
   {
     this.logger = logger;
@@ -249,9 +272,6 @@ public class TurbineGenerator implements CompilerBackend {
     pointPush(tree);
     
     execContextStack.push(ExecContext.CONTROL);
-
-    if (Settings.get("DEBUGGER") == "COMMENTS")
-      debuggerComments = true;
   }
 
   @Override
@@ -329,6 +349,8 @@ public class TurbineGenerator implements CompilerBackend {
       
       // Initialize struct types
       tree.append(structTypeDeclarations());
+      
+      tree.append(debugSymbolInit());
       
       // Insert code to check versions
       tree.add(Turbine.checkConstants());
@@ -446,6 +468,47 @@ public class TurbineGenerator implements CompilerBackend {
     return new TypeName("s:" + st.getStructTypeName());
   }
 
+  private Sequence debugSymbolInit() {
+    Sequence seq = new Sequence();
+    for (Pair<Integer, String> e: debugSymbols) {
+      Integer symbol = e.val1;
+      String data = e.val2;
+      
+      seq.add(Turbine.addDebugSymbol(symbol, data));
+    }
+    return seq;
+  }
+
+  private int nextDebugSymbol(Var var) {
+    int symbol = nextDebugSymbol++;
+
+    String data = debugSymbolString(var);
+    debugSymbols.add(Pair.create(symbol, data));
+    
+    String function;
+    if (functionStack.isEmpty()) {
+      function = "";
+    } else {
+      function = functionStack.peek();
+    }
+    debugSymbolIndex.put(Pair.create(function, var), symbol);
+    
+    return symbol;
+  }
+
+  /**
+   * @param var
+   * @return a string suitable for describing debug symbol
+   */
+  private String debugSymbolString(Var var) {
+    StringBuilder sb = new StringBuilder();
+    sb.append(var.name());
+    sb.append("[");
+    sb.append(var.provenance().logFormat());
+    sb.append("]");
+    return sb.toString();
+  }
+
   @Override
   public void declare(List<VarDecl> decls) {
     List<VarDecl> batchedFiles = new ArrayList<VarDecl>();
@@ -456,6 +519,7 @@ public class TurbineGenerator implements CompilerBackend {
       Var var = decl.var;
       Arg initReaders = decl.initReaders;
       Arg initWriters = decl.initWriters;
+      
       Type t = var.type();
       assert(!var.mappedDecl() || Types.isMappable(t));
       if (var.storage() == Alloc.ALIAS) {
@@ -472,7 +536,7 @@ public class TurbineGenerator implements CompilerBackend {
         pointAdd(Turbine.makeTCLGlobal(prefixVar(var)));
         continue;
       }
-  
+      
       try {
         if (!Settings.getBoolean(Settings.ENABLE_REFCOUNTING)) {
           // Have initial* set to regular amount to avoid bugs with reference counting
@@ -490,10 +554,9 @@ public class TurbineGenerator implements CompilerBackend {
           Types.isStruct(t)) {
         List<Expression> createArgs = new ArrayList<Expression>();
         createArgs.addAll(dataDeclarationFullType(t));
-        if (initReaders != null)
-          createArgs.add(argToExpr(initReaders));
-        if (initWriters != null)
-          createArgs.add(argToExpr(initWriters));
+        createArgs.add(argToExpr(initReaders));
+        createArgs.add(argToExpr(initWriters));
+        createArgs.add(new LiteralInt(nextDebugSymbol(var)));
         batched.add(new TclList(createArgs));
         batchedVarNames.add(tclVarName);
       } else if (Types.isPrimValue(t) || Types.isContainerLocal(t) ||
@@ -511,6 +574,7 @@ public class TurbineGenerator implements CompilerBackend {
 
       // Log in small batches to avoid turbine log limitations
       // and overly long lines
+      // TODO: deprecate in favour of debug symbols
       final int logBatch = 5;
       for (int start = 0; start < batchedVarNames.size(); start += logBatch) {
         List<Expression> logExprs = new ArrayList<Expression>();
@@ -530,7 +594,7 @@ public class TurbineGenerator implements CompilerBackend {
     for (VarDecl file: batchedFiles) {
       // TODO: allocate filename/signal vars in batch and build file
       //      handle here
-      allocateFile(file.var, file.initReaders);
+      allocateFile(file.var, file.initReaders, nextDebugSymbol(file.var));
     }
     
     for (VarDecl decl: decls) {
@@ -650,8 +714,9 @@ public class TurbineGenerator implements CompilerBackend {
     return representationType(Types.containerElemType(bagType));
   }
   
-  private void allocateFile(Var var, Arg initReaders) {
+  private void allocateFile(Var var, Arg initReaders, int debugSymbol) {
     Expression mappedExpr = LiteralInt.boolValue(var.mappedDecl());
+    // TODO: include debug symbol
     pointAdd(Turbine.allocateFile(mappedExpr, prefixVar(var),
                              argToExpr(initReaders)));
   }
@@ -2224,11 +2289,13 @@ public class TurbineGenerator implements CompilerBackend {
     }
 
     pointPush(s);
+    functionStack.push(functionName);
   }
 
   @Override
   public void endFunction() {
     pointPop();
+    functionStack.pop();
   }
 
   @Override

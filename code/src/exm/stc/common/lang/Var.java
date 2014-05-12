@@ -444,11 +444,10 @@ public class Var implements Comparable<Var>, Typed {
   }
   
   @Override
-  public String toString()
-  {
+  public String toString() {
     return type.typeName() + ':' + name;
   }
-
+  
   public static Var findByName(List<Var> vars, String name) {
     for (Var v: vars) {
       if (v.name().equals(name)) {
@@ -606,7 +605,6 @@ public class Var implements Comparable<Var>, Typed {
       }
       return res;
     }
-    
   }
   
   public static enum VarProvType {
