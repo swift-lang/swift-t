@@ -36,6 +36,8 @@
 #include "steal.h"
 #include "sync.h"
 
+static adlb_code xlb_sync2(int target, const struct packed_sync *hdr,
+                           int *response);
 static xlb_sync_recv *xlb_next_sync_msg(void);
 static adlb_code xlb_sync_msg_done(void);
 
@@ -250,6 +252,11 @@ xlb_sync(int target)
 }
 
 /*
+  Core function for sending a sync message.  Sends a pre-assembled message.
+  response: response code from target process, meaningful to some sync  
+            types.  Only set if that sync type must be accepted by target.
+            Can be NULL to ignore.
+   
    While attempting a sync, one of three things may happen:
    1) The target responds.  It either accepts or rejects the sync
       request.  If it rejects, this process retries
@@ -257,9 +264,8 @@ xlb_sync(int target)
       This process either accepts and serves the request; stores the
       request in xlb_pending_syncs to process later, or rejects it
    3) The master server tells this process to shut down
-   These numbers correspond to the variables in the function
  */
-adlb_code
+static adlb_code
 xlb_sync2(int target, const struct packed_sync *hdr, int *response)
 {
   TRACE_START;
@@ -308,6 +314,10 @@ xlb_sync2(int target, const struct packed_sync *hdr, int *response)
      * Use non-blocking send to eliminate chance of blocking here if
      * receiver's buffers are full, so that we can serve other sync
      * requests no matter what.
+     *
+     * TODO: get other callers to pass in ownership of sync header buffer,
+     *       so we can return even if receiver's buffers are full, e.g. if
+     *       sync target is extremely congested
      */
     ISEND(hdr, (int)PACKED_SYNC_SIZE, MPI_BYTE, target,
           ADLB_TAG_SYNC_REQUEST, &isend_request);
@@ -501,6 +511,70 @@ xlb_sync_notify(int target, adlb_datum_id id, adlb_subscript sub)
   ADLB_CHECK(ac);
 
   return ADLB_SUCCESS;
+}
+
+adlb_code xlb_sync_steal_probe(int target)
+{
+  char hdr_storage[PACKED_SYNC_SIZE];
+  struct packed_sync *hdr = (struct packed_sync *)hdr_storage;
+#ifndef NDEBUG
+  // Avoid send uninitialized bytes for memory checking tools
+  memset(hdr, 0, PACKED_SYNC_SIZE);
+#endif
+  hdr->mode = ADLB_SYNC_STEAL_PROBE;
+
+  return xlb_sync2(target, hdr, NULL);
+}
+
+adlb_code
+xlb_sync_steal_probe_resp(int target, const int *work_counts,
+                          int size)
+{
+  char hdr_storage[PACKED_SYNC_SIZE];
+  struct packed_sync *hdr = (struct packed_sync *)hdr_storage;
+#ifndef NDEBUG
+  // Avoid send uninitialized bytes for memory checking tools
+  memset(hdr, 0, PACKED_SYNC_SIZE);
+#endif
+  hdr->mode = ADLB_SYNC_STEAL_PROBE_RESP;
+
+  // Fill counts
+  memcpy(hdr->sync_data, work_counts,
+         sizeof(work_counts[0]) * (size_t)size);
+  
+  return xlb_sync2(target, hdr, NULL);
+}
+
+adlb_code
+xlb_sync_steal(int target, const int *work_counts, int size,
+               int max_memory, int *response)
+{
+  char req_storage[PACKED_SYNC_SIZE]; // Temporary stack storage for struct
+  struct packed_sync *req = (struct packed_sync *)req_storage;
+  req->mode = ADLB_SYNC_STEAL;
+  req->steal.max_memory = max_memory;
+  req->steal.idle_check_attempt = xlb_idle_check_attempt;
+
+  // Include work types in sync data field
+  memcpy(req->sync_data, work_counts,
+         sizeof(work_counts[0] * (size_t)xlb_types_size));
+
+  return xlb_sync2(target, req, response);
+}
+
+adlb_code xlb_sync_refcount(int target, adlb_datum_id id,
+                            adlb_refcounts change)
+{
+  char hdr_storage[PACKED_SYNC_SIZE];
+  struct packed_sync *hdr = (struct packed_sync *)hdr_storage;
+#ifndef NDEBUG
+  // Avoid send uninitialized bytes for memory checking tools
+  memset(hdr, 0, PACKED_SYNC_SIZE);
+#endif
+  hdr->mode = ADLB_SYNC_REFCOUNT;
+  hdr->incr.id = id;
+  hdr->incr.change = change;
+  return xlb_sync2(target, hdr, NULL);
 }
 
 /**

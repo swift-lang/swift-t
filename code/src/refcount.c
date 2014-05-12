@@ -46,13 +46,8 @@ adlb_data_code xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change,
      * response or notification to come back - might as well have the
      * other server do the work as this one
      */
-    struct packed_sync sync_msg;
-    sync_msg.mode = ADLB_SYNC_REFCOUNT;
-    sync_msg.incr.id = id;
-    sync_msg.incr.change = change;
-    adlb_code code = xlb_sync2(server, &sync_msg, NULL);
-    check_verbose(code == ADLB_SUCCESS, ADLB_DATA_ERROR_UNKNOWN,
-                  "Error syncing for refcount");
+    adlb_code code = xlb_sync_refcount(server, id, change);
+    DATA_CHECK_ADLB(code, ADLB_DATA_ERROR_UNKNOWN);
   }
   return ADLB_DATA_SUCCESS;
 }

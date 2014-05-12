@@ -72,16 +72,6 @@ void xlb_print_sync_counters(void);
  */
 adlb_code xlb_sync(int target);
 
-/* 
-  More flexible version of xlb_sync.  See xlb_sync and packed_sync
-  data header for details.
-  response: response code from target process, meaningful to some sync  
-            types.  Only set if that sync type must be accepted by target.
-            Can be NULL to ignore.
- */
-adlb_code xlb_sync2(int target, const struct packed_sync *hdr,
-                    int *response);
-
 /*
   Tell target to shut down
  */
@@ -100,6 +90,42 @@ xlb_sync_notify(int target, adlb_datum_id id, adlb_subscript sub);
 adlb_code
 xlb_send_unsent_notify(int rank, const struct packed_sync *req_hdr,
         void *malloced_subscript);
+
+/*
+  Send a steal probe
+ */
+adlb_code
+xlb_sync_steal_probe(int target);
+
+/*
+  Send a steal probe response
+  work_counts: counts of request types
+  size: number of entries in work_counts array
+ */
+adlb_code
+xlb_sync_steal_probe_resp(int target, const int *work_counts,
+                          int size);
+
+/*
+  Send a request to initiate a steal, to be followed up by actual steal
+  communication once accepted.
+  work_counts: counts of request types
+  size: number of entries in work_counts array
+  max_memory: max additional memory to accept
+  response: logical, true if we will receive work
+ */
+adlb_code
+xlb_sync_steal(int target, const int *work_counts, int size,
+               int max_memory, int *response);
+
+/*
+  Send a refcount operation to another server, and return as soon
+  as it is sent.
+  TODO: can we guarantee in all circumstances that this operation will
+  be applied without a decrement-before-increment race?
+ */
+adlb_code
+xlb_sync_refcount(int target, adlb_datum_id id, adlb_refcounts change);
 
 typedef struct {
   MPI_Request req;

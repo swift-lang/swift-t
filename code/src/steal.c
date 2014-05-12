@@ -101,15 +101,7 @@ xlb_random_steal_probe(void)
     return ADLB_NOTHING;
   }
  
-  char hdr_storage[PACKED_SYNC_SIZE];
-  struct packed_sync *hdr = (struct packed_sync *)hdr_storage;
-#ifndef NDEBUG
-  // Avoid send uninitialized bytes for memory checking tools
-  memset(hdr, 0, PACKED_SYNC_SIZE);
-#endif
-  hdr->mode = ADLB_SYNC_STEAL_PROBE;
-
-  adlb_code rc = xlb_sync2(target, hdr, NULL);
+  adlb_code rc = xlb_sync_steal_probe(target);
   ADLB_CHECK(rc);
   
   // Mark as sent to avoid duplicates
@@ -121,19 +113,15 @@ xlb_random_steal_probe(void)
 
 adlb_code xlb_handle_steal_probe(int caller)
 {
-  char hdr_storage[PACKED_SYNC_SIZE];
-  struct packed_sync *hdr = (struct packed_sync *)hdr_storage;
-#ifndef NDEBUG
-  // Avoid send uninitialized bytes for memory checking tools
-  memset(hdr, 0, PACKED_SYNC_SIZE);
-#endif
-  hdr->mode = ADLB_SYNC_STEAL_PROBE_RESP;
+  int work_counts[xlb_types_size];
 
   // Fill counts
-  xlb_workq_type_counts((int*)hdr->sync_data, xlb_types_size);
+  xlb_workq_type_counts(work_counts, xlb_types_size);
 
-  adlb_code rc = xlb_sync2(caller, hdr, NULL);
+  adlb_code rc = xlb_sync_steal_probe_resp(caller, work_counts, 
+                                           xlb_types_size);
   ADLB_CHECK(rc);
+
   return ADLB_SUCCESS;
 }
 
@@ -291,16 +279,13 @@ steal_sync(int target, int max_memory, int *response)
   // Need to give server information about which work types we have:
   // we only want to steal work types where the other server has more
   // of them than us.
-  char req_storage[PACKED_SYNC_SIZE]; // Temporary stack storage for struct
-  struct packed_sync *req = (struct packed_sync *)req_storage;
-  req->mode = ADLB_SYNC_STEAL;
-  req->steal.max_memory = max_memory;
-  req->steal.idle_check_attempt = xlb_idle_check_attempt;
+  int work_counts[xlb_types_size];
 
-  // Include work types in sync data field
-  xlb_workq_type_counts((int*)req->sync_data, xlb_types_size);
+  // Fill counts
+  xlb_workq_type_counts(work_counts, xlb_types_size);
 
-  adlb_code code = xlb_sync2(target, req, response);
+  adlb_code code = xlb_sync_steal(target, work_counts, xlb_types_size,
+                        max_memory, response);
   if (code == ADLB_SUCCESS)
   {
     if (*response)
