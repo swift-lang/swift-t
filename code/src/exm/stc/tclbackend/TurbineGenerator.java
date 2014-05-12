@@ -1365,7 +1365,7 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void callForeignFunctionWrapped(String function,
-          List<Arg> inputs, List<Var> outputs, TaskProps props) {
+          List<Var> outputs, List<Arg> inputs, TaskProps props) {
     assert(props != null);
     props.assertInternalTypesValid();
     logger.debug("call builtin: " + function);
@@ -1411,7 +1411,7 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void callForeignFunctionLocal(String function,
-          List<Arg> inputs, List<Var> outputs) {
+          List<Var> outputs, List<Arg> inputs) {
     Pair<TclOpTemplate, TclFunRef> impls = tclFuncSymbols.get(function);
     assert(impls != null) : "No foreign function impls for " + function;
     TclOpTemplate template = impls.val1;
@@ -1426,7 +1426,7 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void functionCall(String function,
-              List<Arg> inputs, List<Var> outputs,
+              List<Var> outputs, List<Arg> inputs,
               List<Boolean> blocking, TaskMode mode, TaskProps props)  {
     props.assertInternalTypesValid();
     
@@ -1477,7 +1477,7 @@ public class TurbineGenerator implements CompilerBackend {
 
   @Override
   public void runExternal(String cmd, List<Arg> args,
-          List<Arg> inFiles, List<Var> outFiles, 
+          List<Var> outFiles, List<Arg> inFiles, 
           Redirects<Arg> redirects,
           boolean hasSideEffects, boolean deterministic) {
     for (Arg inFile: inFiles) {

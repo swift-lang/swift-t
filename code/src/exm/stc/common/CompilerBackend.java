@@ -436,27 +436,37 @@ public interface CompilerBackend {
   /**
    * Call a previously defined foreign function.  This will use the version
    * defined by the {@link LocalForeignFunction} implementation. 
-   * @param function name of the function
-   * @param inputs 
    * @param outputs
+   * @param inputs 
+   * @param function name of the function
    * @param props 
    */
   public void callForeignFunctionLocal(String functionName,
-          List<Arg> inputs, List<Var> outputs);
+          List<Var> outputs, List<Arg> inputs);
 
   /**
    * Call a previously defined foreign function.  This will use the version
    * defined by the {@link WrappedForeignFunction} implementation. 
    * @param function name of the function
-   * @param inputs 
    * @param outputs
+   * @param inputs 
    * @param props 
    */
   public void callForeignFunctionWrapped(String function,
-      List<Arg> inputs, List<Var> outputs, TaskProps props);
+      List<Var> outputs, List<Arg> inputs, TaskProps props);
   
+  /**
+   * Call an IR function (i.e. one created with startFunction() and endFunction()) 
+   * @param function name of function
+   * @param outputs outputs
+   * @param inputs inputs
+   * @param blockOn which inputs to defer executions of function (only application
+   *              to asynchronously executing functions
+   * @param mode calling mode for function
+   * @param props task properties (if function is asynchronous)
+   */
   public void functionCall(String function,
-      List<Arg> inputs, List<Var> outputs, List<Boolean> blockOn, 
+      List<Var> outputs, List<Arg> inputs, List<Boolean> blockOn, 
       TaskMode mode, TaskProps props);
   
   /**
@@ -464,7 +474,7 @@ public interface CompilerBackend {
    * @param redirects 
    */
   public void runExternal(String cmd, List<Arg> args,
-           List<Arg> inFiles, List<Var> outFiles, 
+           List<Var> outFiles, List<Arg> inFiles, 
            Redirects<Arg> redirects,
            boolean hasSideEffects, boolean deterministic);
   /**
@@ -752,8 +762,14 @@ public interface CompilerBackend {
    */
   public void structCopyOut(Var dst, Var struct, List<String> fields);
   
-  public void structRefCopyOut(Var result, Var structVar,
-                              List<String> fields);
+  /**
+   * Asynchronous copy of struct field to another variable.
+   * Consumes a read refcount for the struct.
+   * @param dst output var with same type as field 
+   * @param struct a {@link RefType} to a non-local {@link StructType}
+   * @param fields the field path (may refer to a field in a nested struct)
+   */
+  public void structRefCopyOut(Var dst, Var struct, List<String> fields);
 
   /**
    * Assign variable to struct field 

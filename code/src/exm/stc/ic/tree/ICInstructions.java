@@ -1275,7 +1275,7 @@ public class ICInstructions {
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       switch(this.op) {
       case CALL_FOREIGN:
-        gen.callForeignFunctionWrapped(functionName, inputs, outputs, props);
+        gen.callForeignFunctionWrapped(functionName, outputs, inputs, props);
         break;
       case CALL_SYNC:
       case CALL_CONTROL:
@@ -1301,7 +1301,7 @@ public class ICInstructions {
           needToBlock.add(blocking.get(i) && (!this.closedInputs.get(i)));
         }
                            
-        gen.functionCall(functionName, inputs, outputs, needToBlock,
+        gen.functionCall(functionName, outputs, inputs, needToBlock,
                                             mode, props);
         break;
       default:
@@ -1605,7 +1605,7 @@ public class ICInstructions {
   
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
-      gen.callForeignFunctionLocal(functionName, inputs, outputs);
+      gen.callForeignFunctionLocal(functionName, outputs, inputs);
     }
     
     @SuppressWarnings("unchecked")
@@ -1746,7 +1746,7 @@ public class ICInstructions {
 
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
-      gen.runExternal(cmd, args, inFiles, outFiles, 
+      gen.runExternal(cmd, args, outFiles, inFiles, 
                   redirects, hasSideEffects, deterministic);
     }
 
