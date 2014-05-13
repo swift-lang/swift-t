@@ -524,6 +524,7 @@ xlb_workq_finalize()
   int targeted_entries = targeted_work_entries(xlb_types_size, xlb_my_workers);
   for (int i = 0; i < targeted_entries; i++)
   {
+    // TODO: report unmatched targeted work
     targeted_heap_clear(&targeted_work[i]);
   }
   free(targeted_work);
@@ -532,6 +533,7 @@ xlb_workq_finalize()
   // Clear up typed_work
   for (int i = 0; i < xlb_types_size; i++)
   {
+    // TODO: pass waiting tasks to higher-level handling code
     int count = (&typed_work[i])->size;
     if (count > 0)
       printf("WARNING: server contains %i work units of type: %i\n",
@@ -544,6 +546,7 @@ xlb_workq_finalize()
   // Clear up parallel_work
   for (int i = 0; i < xlb_types_size; i++)
   {
+    // TODO: pass waiting tasks to higher-level handling code
     if (parallel_work[i].size > 0)
       printf("WARNING: server contains %i "
              "parallel work units of type %i:\n",

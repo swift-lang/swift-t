@@ -308,6 +308,6 @@ typedef enum
   Matching arg types: adlb_datum_id (id), int (subscript len),
                       char* (subscript), char* (debug symbol)
 */
-#define ADLB_PRI_DATUM_SUB "<%"PRId64">[%.*s]:%s"
+#define ADLB_PRI_DATUM_SUB "<%"PRId64">:%s[%.*s]"
 
 #endif

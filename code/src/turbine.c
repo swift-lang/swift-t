@@ -19,7 +19,7 @@
  *
  *  Created on: May 4, 2011
  *  Moved to ADLB codebase: Apr 2014
- *      Author: wozniak
+ *      Author: wozniak, armstrong
  *
  * TD means Turbine Datum, which is a variable id stored in ADLB
  * TR means TRansform, the in-memory record from a rule
@@ -1119,10 +1119,13 @@ transform_tostring(char* output, transform* t)
       append(p, " ");
     }
     // Highlight the blocking variable
-    bool blocking = (i == t->blocker);
+    bool blocking = !input_td_closed(t, i);
     if (blocking)
       append(p, "/");
-    append(p, "%"PRId64"", t->input_td_list[i]);
+    // TODO: debug symbol?
+    adlb_datum_id td = t->input_td_list[i];
+    append(p, ADLB_PRI_DATUM, ADLB_PRI_DATUM_ARGS(td,
+                                 xlb_get_debug_symbol(td)));
     if (blocking)
       append(p, "/");
   }
@@ -1134,13 +1137,13 @@ transform_tostring(char* output, transform* t)
       append(p, " ");
 
     // Highlight the blocking variable
-    bool blocking = (i + t->input_tds == t->blocker);
+    bool blocking = !input_td_sub_closed(t, i);
     td_sub_pair ts = t->input_td_sub_list[i];
     if (blocking)
       append(p, "/");
-    // TODO: support binary subscript
-    append(p, "%"PRId64"[\"%.*s\"]", ts.td, (int)ts.subscript.length,
-           ts.subscript.key);
+    // TODO: debug symbol?
+    append(p, ADLB_PRI_DATUM_SUB, ADLB_PRI_DATUM_SUB_ARGS(
+            ts.td, xlb_get_debug_symbol(ts.td), sub_convert(ts.subscript)));
     if (blocking)
       append(p, "/");
   }
@@ -1353,7 +1356,8 @@ td_sub_closed_cache_add(const void *key, size_t key_len)
 static void
 info_waiting()
 {
-  printf("WAITING TRANSFORMS: %i\n", transforms_waiting.size);
+  // TODO: pass waiting tasks to higher-level handling code
+  printf("WAITING WORK: %i\n", transforms_waiting.size);
   char buffer[1024];
   struct list2_item *item = transforms_waiting.head;
   while (item != NULL)
@@ -1365,7 +1369,7 @@ info_waiting()
     sprintf(id_string, "{%"PRId64"}", t->work->id);
     int c = sprintf(buffer, "%10s ", id_string);
     transform_tostring(buffer+c, t);
-    printf("TRANSFORM: %s\n", buffer);
+    printf("\t%s\n", buffer);
 
     item = item->next;
   }

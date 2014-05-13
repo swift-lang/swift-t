@@ -159,8 +159,9 @@ typedef struct
   Arguments are id and symbol and a subscript value
  */
 #define ADLB_PRI_DATUM_SUB_ARGS(id, symbol, sub) \
-  (id), (int)((sub).length), (const char*)((sub).key), \
-  ADLB_Debug_symbol(symbol)
+  (id), ADLB_Debug_symbol(symbol), (int)((sub).length), \
+  (const char*)((sub).key)
+  
 
 
 adlb_data_code

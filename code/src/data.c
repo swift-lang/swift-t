@@ -2202,6 +2202,22 @@ xlb_data_rc_type_tostring(adlb_refcount_type rc_type)
   }
 }
 
+/*
+  Attempt to get debug symbol for id locally, return
+  ADLB_DEBUG_SYMBOL_NULL if not possible.
+ */
+adlb_debug_symbol xlb_get_debug_symbol(adlb_datum_id id)
+{
+  adlb_datum* d;
+  bool found = table_lp_search(&tds, id, (void**)&d);
+  if (found)
+  {
+    assert(d != NULL);
+    return d->symbol;
+  }
+  return ADLB_DEBUG_SYMBOL_NULL;
+}
+
 static void free_td_entry(adlb_datum_id id, void *val)
 {
   adlb_data_code dc;
@@ -2233,12 +2249,14 @@ static void free_cref_entry(const void *key, size_t key_len, void *val)
     adlb_subscript src_sub, dst_sub;
     adlb_debug_symbol src_symbol, dst_symbol;
     xlb_read_id_sub(key, key_len, &src_id, &src_sub);
-    src_symbol = dst_symbol = ADLB_DEBUG_SYMBOL_NULL; // TODO
+    src_symbol = xlb_get_debug_symbol(src_id);
     
     container_reference *dst = curr->data;
     dst_sub.length = dst->subscript_len;
     dst_sub.key = dst->subscript_data;
+    dst_symbol = xlb_get_debug_symbol(dst->id);
 
+    // TODO: pass waiting tasks to higher-level handling code
     printf("UNFILLED CONTAINER REFERENCE "
           ADLB_PRI_DATUM_SUB" => "ADLB_PRI_DATUM_SUB"\n",
           ADLB_PRI_DATUM_SUB_ARGS(src_id, src_symbol, src_sub),
@@ -2251,6 +2269,25 @@ static void free_ix_l_entry(const void *key, size_t key_len, void *val)
 {
   assert(key != NULL && val != NULL);
   struct list_b* listeners = val;
+
+  struct list_b_item *curr;
+  for (curr = listeners->head; curr != NULL; curr = curr->next)
+  {
+    adlb_datum_id src_id;
+    adlb_subscript src_sub;
+    adlb_debug_symbol src_symbol;
+    xlb_read_id_sub(key, key_len, &src_id, &src_sub);
+    src_symbol = xlb_get_debug_symbol(src_id);
+    
+    xlb_listener *listener = (xlb_listener*)curr->data;
+
+    // TODO: pass waiting tasks to higher-level handling code
+    printf("UNFILLED CONTAINER SUBSCRIBE "
+          ADLB_PRI_DATUM_SUB" rank: %i work_type: %i\n",
+          ADLB_PRI_DATUM_SUB_ARGS(src_id, src_symbol, src_sub),
+          listener->rank, listener->work_type);
+  }
+
   list_b_free(listeners);
 }
 
@@ -2266,13 +2303,15 @@ xlb_data_finalize()
   // First report any leaks or other problems
   report_leaks();
 
-  // Secondly free up memory allocated in this module
-  table_lp_free_callback(&tds, false, free_td_entry);
-
+  // Second free and report problems with subscriptions.
+  // This step may lookup tds table, so free that later.
   table_bp_free_callback(&container_references, false, free_cref_entry);
   table_bp_free_callback(&container_ix_listeners, false, free_ix_l_entry);
 
   table_lp_free_callback(&locked, false, free_locked_entry);
+  
+  // Finally free up memory allocated in this module
+  table_lp_free_callback(&tds, false, free_td_entry);
 
   adlb_data_code dc = xlb_struct_finalize();
   DATA_CHECK(dc);
