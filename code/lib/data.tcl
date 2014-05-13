@@ -153,9 +153,9 @@ namespace eval turbine {
     }
 
     proc create_integer { id {read_refcount 1} {write_refcount 1} \
-                             {permanent 0} } {
+                             {debug_symbol 0} {permanent 0} } {
         return [ adlb::create $id integer $read_refcount \
-                              $write_refcount $permanent ]
+                      $write_refcount $debug_symbol $permanent ]
     }
 
     proc store_integer { id value } {
@@ -196,9 +196,9 @@ namespace eval turbine {
     }
 
     proc create_ref { id {read_refcount 1} {write_refcount 1} \
-                             {permanent 0} } {
+                           {debug_symbol 0} {permanent 0} } {
         return [ adlb::create $id ref $read_refcount \
-                              $write_refcount $permanent ]
+                        $write_refcount $debug_symbol $permanent ]
     }
 
     proc store_ref { id value {store_read_refs 1} {store_write_refs 0}} {
@@ -244,9 +244,9 @@ namespace eval turbine {
     }
 
     proc create_struct { id {read_refcount 1} {write_refcount 1} \
-                             {permanent 0} } {
+                             {debug_symbol 0} {permanent 0} } {
         return [ adlb::create $id struct $read_refcount \
-                              $write_refcount $permanent ]
+                  $write_refcount $debug_symbol $permanent ]
     }
 
     # store_struct <id> <value> <typename> <write decr>?
@@ -301,9 +301,9 @@ namespace eval turbine {
     }
 
     proc create_float { id {read_refcount 1} {write_refcount 1} \
-                           {permanent 0} } {
+                           {debug_symbol 0} {permanent 0} } {
         return [ adlb::create $id float $read_refcount \
-                              $write_refcount $permanent ]
+                        $write_refcount $debug_symbol $permanent ]
     }
 
     proc store_float { id value } {
@@ -338,9 +338,9 @@ namespace eval turbine {
     }
 
     proc create_string { id {read_refcount 1} {write_refcount 1} \
-                            {permanent 0} } {
+                            {debug_symbol 0} {permanent 0} } {
         return [ adlb::create $id string $read_refcount \
-                              $write_refcount $permanent ]
+                    $write_refcount $debug_symbol $permanent ]
     }
 
     proc store_string { id value } {
@@ -375,10 +375,10 @@ namespace eval turbine {
     }
 
     proc create_void { id {read_refcount 1} {write_refcount 1} \
-                          {permanent 0} } {
+                          {debug_symbol 0} {permanent 0} } {
         # emulating void with integer
         return [ adlb::create $id integer $read_refcount \
-                              $write_refcount $permanent ]
+                      $write_refcount $debug_symbol $permanent ]
     }
 
     proc store_void { id } {
@@ -391,9 +391,9 @@ namespace eval turbine {
 
     # Create blob
     proc create_blob { id {read_refcount 1} {write_refcount 1} \
-                          {permanent 0} } {
+                          {debug_symbol 0} {permanent 0} } {
         return [ adlb::create $id blob $read_refcount \
-                              $write_refcount $permanent ]
+                      $write_refcount $debug_symbol $permanent ]
     }
 
     proc store_blob { id value } {
@@ -535,9 +535,9 @@ namespace eval turbine {
     }
 
     proc create_container { id key_type val_type {read_refcount 1} \
-                          {write_refcount 1} {permanent 0}} {
+                    {write_refcount 1} {debug_symbol 0} {permanent 0}} {
         return [ adlb::create $id container $key_type $val_type \
-                            $read_refcount $write_refcount $permanent]
+                    $read_refcount $write_refcount $debug_symbol $permanent]
     }
 
     # usage: container_insert <id> <subscript> <member> <type>
