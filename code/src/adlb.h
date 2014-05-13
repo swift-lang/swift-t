@@ -158,23 +158,24 @@ adlb_code ADLB_Create_multiset(adlb_datum_id id,
                                 adlb_datum_id *new_id);
 /*
   Add debug symbol entry, overwriting any existing entry.
+  Only adds to local table (not on other ranks).
   
   symbol: debug symbol identifier, should not be ADLB_DEBUG_SYMBOL_NULL
   data: associated null-terminated data string, will be copied.
  */
 adlb_code ADLBP_Add_debug_symbol(adlb_debug_symbol symbol,
-                                 const char *data);
+                                 adlb_debug_symbol_data data);
 adlb_code ADLB_Add_debug_symbol(adlb_debug_symbol symbol,
-                                 const char *data);
+                                 adlb_debug_symbol_data data);
 
 /*
-  Retrieve debug symbol entry.
+  Retrieve debug symbol entry from local debug symbol table.
   
   symbol: a debug symbol identifier
-  return: entry previous added for symbol, or NULL if not present
+  return: entry previous added for symbol, or NULL values if not present
  */
-const char *ADLBP_Debug_symbol(adlb_debug_symbol symbol);
-const char *ADLB_Debug_symbol(adlb_debug_symbol symbol);
+adlb_debug_symbol_data ADLBP_Debug_symbol(adlb_debug_symbol symbol);
+adlb_debug_symbol_data ADLB_Debug_symbol(adlb_debug_symbol symbol);
 
 adlb_code ADLBP_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
                        adlb_refcounts decr);

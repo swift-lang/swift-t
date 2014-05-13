@@ -152,15 +152,16 @@ typedef struct
   Arguments are id and symbol
  */
 #define ADLB_PRI_DATUM_ARGS(id, symbol) \
-  (id), ADLB_Debug_symbol(symbol)
+  (id), ADLB_Debug_symbol(symbol).name, \
+  ADLB_Debug_symbol(symbol).context
 
 /*
   Macro for printf arguments matching ADLB_PRI_DATUM.
   Arguments are id and symbol and a subscript value
  */
 #define ADLB_PRI_DATUM_SUB_ARGS(id, symbol, sub) \
-  (id), ADLB_Debug_symbol(symbol), (int)((sub).length), \
-  (const char*)((sub).key)
+  (id), ADLB_Debug_symbol(symbol).name, (int)((sub).length), \
+  (const char*)((sub).key), ADLB_Debug_symbol(symbol).context
   
 
 

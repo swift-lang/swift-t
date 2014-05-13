@@ -224,12 +224,12 @@ adlb_code ADLB_Multicreate(ADLB_create_spec *specs, int count)
 }
 
 adlb_code ADLB_Add_debug_symbol(adlb_debug_symbol symbol,
-                                 const char *data)
+                                adlb_debug_symbol_data data)
 {
   return ADLBP_Add_debug_symbol(symbol, data);
 }
 
-const char *ADLB_Debug_symbol(adlb_debug_symbol symbol)
+adlb_debug_symbol_data ADLB_Debug_symbol(adlb_debug_symbol symbol)
 {
   return ADLBP_Debug_symbol(symbol);
 }

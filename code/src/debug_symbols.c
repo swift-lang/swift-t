@@ -24,6 +24,14 @@
 
 #include <table_lp.h>
 
+static const adlb_debug_symbol_data NULL_DATA = { .name = NULL,
+                                                  .context = NULL };
+
+typedef struct {
+  char *name;
+  char *context;
+} symbol_table_entry;
+
 static bool debug_symbols_init = false;
 
 /*
@@ -57,41 +65,54 @@ void xlb_debug_symbols_finalize(void)
 }
 
 adlb_code ADLBP_Add_debug_symbol(adlb_debug_symbol symbol,
-                                 const char *data)
+                                 adlb_debug_symbol_data data)
 {
   CHECK_MSG(debug_symbols_init, "Debug symbols module not init");
   CHECK_MSG(symbol != ADLB_DEBUG_SYMBOL_NULL, "Cannot add "
-      "ADLB_DEBUG_SYMBOL_NULL as debug symbol for %s", data);
-  CHECK_MSG(data != NULL, "data for debug symbol was NULL");
+      "ADLB_DEBUG_SYMBOL_NULL as debug symbol for %s:%s",
+      data.name, data.context);
+  CHECK_MSG(data.name != NULL, "name for debug symbol was NULL");
+  CHECK_MSG(data.context != NULL, "context for debug symbol was NULL");
   
   // free existing entry if needed
-  char *prev_data;
-  if (table_lp_remove(&debug_symbols, symbol, (void **)&prev_data))
+  symbol_table_entry *prev_entry;
+  if (table_lp_remove(&debug_symbols, symbol, (void **)&prev_entry))
   {
-    DEBUG("Overwriting old symbol entry %"PRIu32"=%s",
-         symbol, prev_data);
-    free(prev_data);
+    DEBUG("Overwriting old symbol entry %"PRIu32"=%s:%s",
+         symbol, prev_entry->name, prev_entry->context);
+    free(prev_entry->name);
+    free(prev_entry->context);
+    free(prev_entry);
   }
 
-  char *data_copy = strdup(data);
+  symbol_table_entry *e = malloc(sizeof(symbol_table_entry));
+  ADLB_MALLOC_CHECK(e);
+
+  e->name = strdup(data.name);
+  ADLB_MALLOC_CHECK(e->name);
   
-  bool ok = table_lp_add(&debug_symbols, symbol, data_copy);
+  e->context = strdup(data.context);
+  ADLB_MALLOC_CHECK(e->context);
+  
+  bool ok = table_lp_add(&debug_symbols, symbol, e);
   CHECK_MSG(ok, "Unexpected error adding debug symbol to table");
 
   return ADLB_SUCCESS;
 }
 
-const char *ADLBP_Debug_symbol(adlb_debug_symbol symbol)
+adlb_debug_symbol_data ADLBP_Debug_symbol(adlb_debug_symbol symbol)
 {
   if (!debug_symbols_init)
   {
-    return NULL;
+    return NULL_DATA;
   }
 
-  char *data;
+  symbol_table_entry *data;
   if (table_lp_search(&debug_symbols, symbol, (void**)&data))
   {
-    return data;
+    adlb_debug_symbol_data result = { .name = data->name,
+                              .context = data->context };
+    return result;
   }
-  return NULL;
+  return NULL_DATA;
 }

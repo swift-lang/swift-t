@@ -178,6 +178,15 @@ static inline adlb_refcounts adlb_rc_negate(adlb_refcounts rc)
 typedef uint32_t adlb_debug_symbol;
 #define ADLB_DEBUG_SYMBOL_NULL 0u
 
+/** Data associated with adlb data debug symbol */
+typedef struct {
+  /** Short name identifying data */
+  const char *name;
+
+  /** Additional contextual information */
+  const char *context;
+} adlb_debug_symbol_data;
+
 // Prefer to tightly pack these structs
 #pragma pack(push, 1)
 typedef struct
@@ -298,16 +307,18 @@ typedef enum
 
 /**
   printf specifiers for printing data identifier with debug symbol.
-  Matching arg types: adlb_datum_id (id), char* (debug symbol)
+  Matching arg types: adlb_datum_id (id), char* (debug symbol name),
+    char* (debug symbol context)
  */
-#define ADLB_PRI_DATUM "<%"PRId64">:%s"
+#define ADLB_PRI_DATUM "<%"PRId64">:%s (%s)"
 
 /** 
   printf specifiers for printing data identifier with subscript and
   debug symbol.
-  Matching arg types: adlb_datum_id (id), int (subscript len),
-                      char* (subscript), char* (debug symbol)
+  Matching arg types: adlb_datum_id (id), char* (debug symbol name),
+          int (subscript len), char* (subscript),
+          char* (debug symbol context)
 */
-#define ADLB_PRI_DATUM_SUB "<%"PRId64">:%s[%.*s]"
+#define ADLB_PRI_DATUM_SUB "<%"PRId64">:%s[%.*s] (%s)"
 
 #endif
