@@ -289,12 +289,12 @@ run_test()
     fi
   else
     # Check for unexecuted transforms
-    grep -F -q "WAITING TRANSFORMS" ${TURBINE_OUTPUT}
+    grep -F -q "WAITING WORK" ${TURBINE_OUTPUT}
     # This is 0 if nothing was found
-    WAITING_TRANSFORMS=$(( ! ${?} ))
-    if (( WAITING_TRANSFORMS ))
+    WAITING_WORK=$(( ! ${?} ))
+    if (( WAITING_WORK ))
       then
-      print "Transforms were left in the rule engine!"
+      print "Unfilled data dependencies for work!"
       return $TEST_TRUE_FAIL
     fi
     

@@ -503,9 +503,9 @@ public class TurbineGenerator implements CompilerBackend {
   private String debugSymbolString(Var var) {
     StringBuilder sb = new StringBuilder();
     sb.append(var.name());
-    sb.append("[");
+    sb.append("(");
     sb.append(var.provenance().conciseFormat());
-    sb.append("]");
+    sb.append(")");
     return sb.toString();
   }
 
