@@ -1765,9 +1765,9 @@ class Turbine {
             packedKey));
   }
 
-  public static Command addDebugSymbol(int symbol, String data) {
+  public static Command addDebugSymbol(int symbol, String name, String context) {
     return new Command(ADD_DEBUG_SYMBOL, new LiteralInt(symbol),
-                       new TclString(data, true));
+                       new TclString(name, true), new TclString(context, true));
   }
   
 }

@@ -259,11 +259,21 @@ public class TurbineGenerator implements CompilerBackend {
   private final HashMap<Pair<String, Var>, Integer> debugSymbolIndex =
                  new HashMap<Pair<String, Var>, Integer>();
   
+  private static class DebugSymbolData {
+    public DebugSymbolData(String name, String context) {
+      this.name = name;
+      this.context = context;
+    }
+    
+    public final String name;
+    public final String context;
+  }
+  
   /**
    * List of all debug symbols created
    */
-  private final List<Pair<Integer, String>> debugSymbols 
-              = new ArrayList<Pair<Integer, String>>();
+  private final List<Pair<Integer, DebugSymbolData>> debugSymbols 
+              = new ArrayList<Pair<Integer, DebugSymbolData>>();
   
   public TurbineGenerator(Logger logger, String timestamp)
   {
@@ -470,11 +480,11 @@ public class TurbineGenerator implements CompilerBackend {
 
   private Sequence debugSymbolInit() {
     Sequence seq = new Sequence();
-    for (Pair<Integer, String> e: debugSymbols) {
+    for (Pair<Integer, DebugSymbolData> e: debugSymbols) {
       Integer symbol = e.val1;
-      String data = e.val2;
+      DebugSymbolData data = e.val2;
       
-      seq.add(Turbine.addDebugSymbol(symbol, data));
+      seq.add(Turbine.addDebugSymbol(symbol, data.name, data.context));
     }
     return seq;
   }
@@ -482,7 +492,7 @@ public class TurbineGenerator implements CompilerBackend {
   private int nextDebugSymbol(Var var) {
     int symbol = nextDebugSymbol++;
 
-    String data = debugSymbolString(var);
+    DebugSymbolData data = debugSymbolData(var);
     debugSymbols.add(Pair.create(symbol, data));
     
     String function;
@@ -500,13 +510,8 @@ public class TurbineGenerator implements CompilerBackend {
    * @param var
    * @return a string suitable for describing debug symbol
    */
-  private String debugSymbolString(Var var) {
-    StringBuilder sb = new StringBuilder();
-    sb.append(var.name());
-    sb.append("(");
-    sb.append(var.provenance().conciseFormat());
-    sb.append(")");
-    return sb.toString();
+  private DebugSymbolData debugSymbolData(Var var) {
+    return new DebugSymbolData(var.name(), var.provenance().conciseFormat());
   }
 
   @Override
