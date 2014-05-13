@@ -382,19 +382,22 @@ class Turbine {
     return result;
   }
 
-  public static TclTree allocate(String tclName, TypeName typePrefix) {
-    return allocate(tclName, typePrefix, LiteralInt.ONE, LiteralInt.ONE, false);
+  public static TclTree allocate(String tclName, TypeName typePrefix, int debugSymbol) {
+    return allocate(tclName, typePrefix, LiteralInt.ONE,
+                    LiteralInt.ONE, debugSymbol, false);
   }
 
-  public static TclTree allocatePermanent(String tclName, TypeName typePrefix) {
-    return allocate(tclName, typePrefix, LiteralInt.ONE, LiteralInt.ONE, true);
+  public static TclTree allocatePermanent(String tclName, TypeName typePrefix,
+                                          int debugSymbol) {
+    return allocate(tclName, typePrefix, LiteralInt.ONE, LiteralInt.ONE,
+                    debugSymbol, true);
   }
 
   public static TclTree allocate(String tclName, TypeName typePrefix,
           Expression initReadRefcount, Expression initWriteRefcount,
-          boolean permanent) {
+          int debugSymbol, boolean permanent) {
     return new Command(ALLOCATE_CUSTOM, new Token(tclName), typePrefix,
-            initReadRefcount, initWriteRefcount,
+            initReadRefcount, initWriteRefcount, new LiteralInt(debugSymbol),
             LiteralInt.boolValue(permanent));
   }
 
@@ -405,9 +408,10 @@ class Turbine {
   }
 
   public static TclTree allocateFile(Expression isMapped, String tclName,
-          Expression initReaders) {
+          Expression initReaders, int debugSymbol) {
+    Expression initWriters = LiteralInt.ONE;
     return new Command(ALLOCATE_FILE, new Token(tclName), isMapped,
-                       initReaders);
+           initReaders, initWriters, new LiteralInt(debugSymbol));
   }
 
   public static SetVariable stackLookup(String stackName, String tclVarName,
@@ -1444,10 +1448,6 @@ class Turbine {
 
   public static TclTree turbineLog(List<Expression> logMsg) {
     return new Command(TURBINE_LOG, new TclList(logMsg));
-  }
-
-  public static TclTree declareReference(String refVarName) {
-    return allocate(refVarName, ADLB_INT_TYPE);
   }
 
   public static TclTree callFunctionSync(String function,

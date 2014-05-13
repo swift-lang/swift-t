@@ -607,7 +607,11 @@ public class Var implements Comparable<Var>, Typed {
     }
 
     public String conciseFormat() {
-      return sourceLoc.conciseString();
+      if (sourceLoc != null) {
+        return sourceLoc.conciseString();
+      } else {
+        return "";
+      }
     }
   }
   

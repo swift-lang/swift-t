@@ -718,7 +718,7 @@ public class TurbineGenerator implements CompilerBackend {
     Expression mappedExpr = LiteralInt.boolValue(var.mappedDecl());
     // TODO: include debug symbol
     pointAdd(Turbine.allocateFile(mappedExpr, prefixVar(var),
-                             argToExpr(initReaders)));
+                             argToExpr(initReaders), debugSymbol));
   }
 
   @Override
@@ -3221,7 +3221,8 @@ public class TurbineGenerator implements CompilerBackend {
       throw new STCRuntimeError("Non-constant oparg type "
           + val.getKind());
     }
-    globInit.add(Turbine.allocatePermanent(tclName, typePrefix));
+    int debugSymbol = nextDebugSymbol(var);
+    globInit.add(Turbine.allocatePermanent(tclName, typePrefix, debugSymbol));
     globInit.add(setCmd);
   }
 
