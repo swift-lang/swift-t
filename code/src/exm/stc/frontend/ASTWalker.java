@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.io.FilenameUtils;
+
 import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
@@ -133,15 +135,22 @@ public class ASTWalker {
   /**
    * Walk the AST and make calls to backend to generate lower level code.
    * This function is called to start the walk at the top level file
+   * @param mainFilePath the main file path to process
+   * @param originalMainFilePath original main file, in case a temporary file
+   *                             is being directly parsed
+   * @param preprocessed true if module was preprocessed
    * @throws UserException
    */
-  public void walk(String mainFilePath, boolean preprocessed) throws UserException {
+  public void walk(String mainFilePath, String originalMainFilePath,
+                 boolean preprocessed) throws UserException {
 
     GlobalContext context = new GlobalContext(mainFilePath,
                                               Logging.getSTCLogger());
 
-    // Assume root module for now (TODO)
-    LocatedModule mainModule = new LocatedModule(mainFilePath, "", preprocessed);
+    // Assume root module for now
+    String mainModuleName =  FilenameUtils.getBaseName(originalMainFilePath);
+    LocatedModule mainModule = new LocatedModule(mainFilePath, mainModuleName,
+                                                 preprocessed);
     LocatedModule builtins = LocatedModule.fromPath(context,
                           Arrays.asList("builtins"), false);
     

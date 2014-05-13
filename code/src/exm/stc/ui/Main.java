@@ -105,7 +105,8 @@ public class Main {
         copyToOutput(inputFile, finalOutput);
       } else {
         STCompiler stc = new STCompiler(logger);
-        stc.compile(inputFile.getPath(), preprocess, outStream, icOutput);
+        stc.compile(inputFile.getPath(), stcArgs.inputFilename, preprocess,
+                     outStream, icOutput);
         copyToOutput(tmpOutput, finalOutput);
       }
 

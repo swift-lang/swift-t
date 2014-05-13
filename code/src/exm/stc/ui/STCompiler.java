@@ -43,16 +43,18 @@ public class STCompiler {
   }
 
   /**
-   * Compile a Swift file (input stream) to TCL output (output stream) and
+   * Compile a Swift file (input file) to TCL output (output stream) and
    * log intermediate code to icOutput.
    * 
    * This function contains the high-level logic orchestrating the different
    * passes of the compiler
    * @param inputFile
+   * @param originalInputFile
    * @param output
    * @param icOutput
    */
-  public void compile(String inputFile, boolean preprocessed, OutputStream output,
+  public void compile(String inputFile, String originalInputFile,
+                      boolean preprocessed, OutputStream output,
           PrintStream icOutput) {
     try {
       logger.info("STC starting: " + Misc.timestamp());
@@ -65,7 +67,7 @@ public class STCompiler {
        */
       int compileIterations = profile ? 100000 : 1;
       for (int i = 0; i < compileIterations; i++) {
-        compileOnce(inputFile, preprocessed, output, icOutput);
+        compileOnce(inputFile, originalInputFile, preprocessed, output, icOutput);
       }
 
       output.close();
@@ -97,11 +99,12 @@ public class STCompiler {
     }
   }
 
-  private void compileOnce(String inputFile, boolean preprocessed,
+  private void compileOnce(String inputFile, String originalInputFile,
+      boolean preprocessed,
       OutputStream output, PrintStream icOutput) throws UserException {
     STCMiddleEnd intermediate = new STCMiddleEnd(logger, icOutput);
     ASTWalker walker = new ASTWalker(intermediate);
-    walker.walk(inputFile, preprocessed);
+    walker.walk(inputFile, originalInputFile, preprocessed);
     
     /* Optimise intermediate representation by repeatedly rewriting tree
      * NOTE: currently the optimizer pass is actually required for correctness,
