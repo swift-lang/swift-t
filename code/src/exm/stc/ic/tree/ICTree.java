@@ -145,10 +145,10 @@ public class ICTree {
         f.generate(logger, gen, info);
       }
       logger.debug("Done generating functions");
-  
-      gen.finalize();
       
       constants.generate(logger, gen);
+  
+      gen.finalize();
     }
     
     public void addRequiredPackage(RequiredPackage pkg) {
