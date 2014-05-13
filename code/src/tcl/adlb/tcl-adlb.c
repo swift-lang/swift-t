@@ -4962,15 +4962,16 @@ ADLB_Subscript_Container_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb::add_debug_symbol <symbol> <string>
+   usage: adlb::add_debug_symbol <symbol> <name> <context>
    symbol: integer debug symbol
-   string: string associated with debug symbol
+   name: name associated with debug symbol
+   context: additional context string
  */
 static int
 ADLB_Add_Debug_Symbol_Cmd(ClientData cdata, Tcl_Interp *interp,
                int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(3);
+  TCL_ARGS(4);
   
   int rc;
   int symbol;
@@ -4978,9 +4979,11 @@ ADLB_Add_Debug_Symbol_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CHECK_MSG(rc, "symbol must be integer");
   TCL_CONDITION(symbol >= 0, "Symbol must be non-negative");
 
-  const char *symbol_string = Tcl_GetString(objv[2]);
+  const char *name = Tcl_GetString(objv[2]);
+  const char *context = Tcl_GetString(objv[3]);
+  adlb_debug_symbol_data data = { .name = name, .context = context };
 
-  adlb_code ac = ADLB_Add_debug_symbol((uint32_t)symbol, symbol_string);
+  adlb_code ac = ADLB_Add_debug_symbol((uint32_t)symbol, data);
   TCL_CONDITION(ac == ADLB_SUCCESS, "Error adding debug symbol");
 
   return TCL_OK;
@@ -4989,7 +4992,8 @@ ADLB_Add_Debug_Symbol_Cmd(ClientData cdata, Tcl_Interp *interp,
 /**
    usage: adlb::debug_symbol <symbol>
    symbol: integer debug symbol
-   returns: string for debug symbol, empty string if none
+   returns: two element list with two strings for name and context,
+            empty strings if none
  */
 static int
 ADLB_Debug_Symbol_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -5003,13 +5007,15 @@ ADLB_Debug_Symbol_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CHECK_MSG(rc, "symbol must be integer");
   TCL_CONDITION(symbol >= 0, "Symbol must be non-negative");
   
-  const char *symbol_string = ADLB_Debug_symbol((uint32_t)symbol);
-  if (symbol_string == NULL)
-  {
-    symbol_string = "";
-  }
-  
-  Tcl_SetObjResult(interp, Tcl_NewStringObj(symbol_string, -1));
+  adlb_debug_symbol_data data = ADLB_Debug_symbol((uint32_t)symbol);
+  const char *name = data.name == NULL ? "" : data.name;
+  const char *context = data.context == NULL ? "" : data.context;
+ 
+  Tcl_Obj *result_items[2];
+  result_items[0] = Tcl_NewStringObj(name, -1);
+  result_items[1] = Tcl_NewStringObj(context, -1);
+
+  Tcl_SetObjResult(interp, Tcl_NewListObj(2, result_items));
 
   return TCL_OK;
 }
