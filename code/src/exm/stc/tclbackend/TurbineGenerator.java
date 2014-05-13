@@ -504,7 +504,7 @@ public class TurbineGenerator implements CompilerBackend {
     StringBuilder sb = new StringBuilder();
     sb.append(var.name());
     sb.append("[");
-    sb.append(var.provenance().logFormat());
+    sb.append(var.provenance().conciseFormat());
     sb.append("]");
     return sb.toString();
   }

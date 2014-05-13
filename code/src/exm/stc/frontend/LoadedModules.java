@@ -60,7 +60,8 @@ public class LoadedModules {
       didLoad = true;
       // Load the file
       try {
-        parsed = ParsedModule.parse(module.filePath, module.preprocessed);
+        parsed = ParsedModule.parse(module.canonicalName, module.filePath,
+                                    module.preprocessed);
       } catch (IOException e) {
         throw new ModuleLoadException(context, module.filePath, e);
       }
@@ -77,6 +78,10 @@ public class LoadedModules {
    */
   public boolean wasCompiled(LocatedModule module) {
     return compiledInputFiles.contains(module.canonicalName);
+  }
+  
+  public ParsedModule currentModule() {
+    return moduleStack.peek();
   }
   
   /**

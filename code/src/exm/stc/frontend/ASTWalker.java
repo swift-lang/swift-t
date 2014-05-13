@@ -126,7 +126,7 @@ public class ASTWalker {
     this.varCreator = new VarCreator(backend);
     this.wrapper = new WrapperGen(backend);
     this.exprWalker = new ExprWalker(wrapper, varCreator, backend, modules);
-    this.lValWalker = new LValWalker(backend, varCreator, exprWalker);
+    this.lValWalker = new LValWalker(backend, varCreator, exprWalker, modules);
     this.varAnalyzer = new VariableUsageAnalyzer();
   }
 
@@ -194,7 +194,7 @@ public class ASTWalker {
    * @param tree
    */
   private void syncFilePos(Context context, SwiftAST tree) {
-    context.syncFilePos(tree, lineMap());
+    context.syncFilePos(tree, modules.currentModule().moduleName(), lineMap());
   }
 
   private void walkTopLevel(GlobalContext context, SwiftAST fileTree,
@@ -219,11 +219,11 @@ public class ASTWalker {
   private void walkTopLevelDefs(GlobalContext context, SwiftAST fileTree)
       throws UserException, DoubleDefineException, UndefinedTypeException {
     assert(fileTree.getType() == ExMParser.PROGRAM);
-    context.syncFilePos(fileTree, lineMap());
+    syncFilePos(context, fileTree);
     
     for (SwiftAST topLevelDefn: fileTree.children()) {
       int type = topLevelDefn.getType();
-      context.syncFilePos(topLevelDefn, lineMap());
+      syncFilePos(context, topLevelDefn);
       switch (type) {
       case ExMParser.IMPORT:
         importModule(context, topLevelDefn, FrontendPass.DEFINITIONS);
@@ -277,11 +277,11 @@ public class ASTWalker {
   private void walkTopLevelCompile(GlobalContext context, SwiftAST fileTree)
       throws UserException {
     assert(fileTree.getType() == ExMParser.PROGRAM);
-    context.syncFilePos(fileTree, lineMap());
+    syncFilePos(context, fileTree);
     // Second pass to compile functions
     for (int i = 0; i < fileTree.getChildCount(); i++) {
       SwiftAST topLevelDefn = fileTree.child(i);
-      context.syncFilePos(topLevelDefn, lineMap());
+      syncFilePos(context, topLevelDefn);
       int type = topLevelDefn.getType();
       switch (type) {
       case ExMParser.IMPORT:
@@ -1263,8 +1263,8 @@ public class ASTWalker {
           throws UserException {
     // First do any preparation/reduction of lvals and obtain vars
     // to evaluate the R.H.S. expression(s) into
-    LRVals target = lValWalker.prepareLVals(context, lineMap(), op, lVals,
-                                            rValExpr, walkMode);
+    LRVals target = lValWalker.prepareLVals(context, op, lVals, rValExpr,
+                                            walkMode);
 
     // Evaluate the R.H.S. expressions(s)
     if (!target.skipREval && walkMode != WalkMode.ONLY_DECLARATIONS) {
@@ -1668,7 +1668,8 @@ public class ASTWalker {
     
     // Analyse variable usage inside function and annotate AST
     syncFilePos(context, tree);
-    varAnalyzer.analyzeVariableUsage(context, lineMap(), function,
+    String moduleName = modules.currentModule().moduleName;
+    varAnalyzer.analyzeVariableUsage(context, lineMap(), moduleName, function,
                                      iList, oList, block);
 
     LocalContext functionContext = new LocalContext(context, function);

@@ -605,6 +605,10 @@ public class Var implements Comparable<Var>, Typed {
       }
       return res;
     }
+
+    public String conciseFormat() {
+      return sourceLoc.conciseString();
+    }
   }
   
   public static enum VarProvType {
@@ -625,13 +629,17 @@ public class Var implements Comparable<Var>, Typed {
    * Location in a source file.
    */
   public static class SourceLoc {
-    public SourceLoc(String file, String func, int line, int column) {
+    public SourceLoc(String file, String moduleName,
+                      String func, int line, int column) {
       this.file = file;
+      this.moduleName = moduleName;
       this.func = func;
       this.line = line;
       this.column = column;
     }
+    
     public final String file;
+    public final String moduleName;
     public final String func;
     public final int line;
     public final int column;
@@ -645,6 +653,22 @@ public class Var implements Comparable<Var>, Typed {
       }
       res += this.line + ":" + this.column;
       return res;
+    }
+    
+
+    /**
+     * @return concise human-readable string with logical location
+     */
+    public String conciseString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append(moduleName);
+      sb.append(':');
+      sb.append(func);
+      sb.append("():");
+      sb.append(this.line);
+      sb.append(":");
+      sb.append(this.column);
+      return sb.toString();
     }
   }
 }

@@ -102,7 +102,7 @@ public class  ExprWalker {
     LogHelper.debug(context, "walkExpr " + tree.getText() +
           " assigning to vars: " + oList);
     int token = tree.getType();
-    context.syncFilePos(tree, modules.currLineMap());
+    syncFilePos(context, tree);
 
     if (token == ExMParser.CALL_FUNCTION) {
       callFunctionExpression(context, tree, oList, renames);
@@ -198,7 +198,7 @@ public class  ExprWalker {
   public Var eval(Context context, SwiftAST tree, Type type,
       boolean storeInStack, Map<String, String> renames) throws UserException {
     assert(type != null);
-    context.syncFilePos(tree, modules.currLineMap());
+    syncFilePos(context, tree);
     if (tree.getType() == ExMParser.VARIABLE) {
       // Base case: don't need to create new variable
       String varName = tree.child(0).getText();
@@ -480,6 +480,16 @@ public class  ExprWalker {
   
   public void localOp(BuiltinOpcode op, Var out, List<Arg> inputs) {
     backend.localOp(op, VarRepr.backendVar(out), VarRepr.backendArgs(inputs));
+  }
+
+  /**
+   * Synchronize file position to line mapping
+   * @param context
+   * @param tree
+   */
+  private void syncFilePos(Context context, SwiftAST tree) {
+    context.syncFilePos(tree, modules.currentModule().moduleName(),
+                        modules.currLineMap());
   }
 
   private void callOperator(Context context, SwiftAST tree, 

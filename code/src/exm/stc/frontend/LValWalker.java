@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -15,11 +14,11 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
-import exm.stc.common.lang.WaitMode;
 import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Types.RefType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
+import exm.stc.common.lang.WaitMode;
 import exm.stc.frontend.tree.Assignment;
 import exm.stc.frontend.tree.Assignment.AssignOp;
 import exm.stc.frontend.tree.LValue;
@@ -32,15 +31,17 @@ import exm.stc.ic.STCMiddleEnd;
 public class LValWalker {
   
   public LValWalker(STCMiddleEnd backend, VarCreator varCreator,
-                    ExprWalker exprWalker) {
+                    ExprWalker exprWalker, LoadedModules modules) {
     this.backend = backend;
     this.varCreator = varCreator;
     this.exprWalker = exprWalker;
+    this.modules = modules;
   }
   
   private final STCMiddleEnd backend;
   private final VarCreator varCreator;
   private final ExprWalker exprWalker;
+  private final LoadedModules modules;
   
   /**
    * Setup LValues of expression for assignment
@@ -56,8 +57,8 @@ public class LValWalker {
    *         that evaluating the R.H.S. can be skipped
    * @throws UserException
    */
-  public LRVals prepareLVals(Context context, LineMapping lineMapping,
-      AssignOp op, List<LValue> lVals, SwiftAST rValExpr, WalkMode walkMode)
+  public LRVals prepareLVals(Context context, AssignOp op, List<LValue> lVals,
+      SwiftAST rValExpr, WalkMode walkMode)
       throws UserException {
     ExprType rValTs = Assignment.checkAssign(context, lVals, rValExpr);
 
@@ -75,7 +76,8 @@ public class LValWalker {
 
       if (walkMode != WalkMode.ONLY_DECLARATIONS) {
         // the variable we will evaluate expression into
-        context.syncFilePos(lVal.tree, lineMapping);
+        context.syncFilePos(lVal.tree, modules.currentModule().moduleName,
+                            modules.currLineMap());
 
         // First do typechecking
         Type lValType = lVal.getType(context);

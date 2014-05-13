@@ -83,6 +83,11 @@ public abstract class Context {
   protected String inputFile;
   
   /**
+   * Logical name of current module
+   */
+  protected String moduleName;
+  
+  /**
      Current line in input file
    */
   protected int line = 0;
@@ -286,13 +291,15 @@ public abstract class Context {
    * Synchronize preprocessed line numbers with input file
    * line numbers
    * @param tree antlr tree for current position
+   * @param moduleName logical name of current module
    * @param lineMapping map from input lines to source lines
    */
-  public void syncFilePos(SwiftAST tree, LineMapping lineMapping) {
+  public void syncFilePos(SwiftAST tree, String moduleName, LineMapping lineMapping) {
     // Sometime antlr nodes give bad line info - negative numbers
     if (tree.getLine() > 0) {
       FilePosition pos = lineMapping.getFilePosition(tree.getLine());
       this.inputFile = pos.file;
+      this.moduleName = moduleName;
       this.line = pos.line;
       this.col = tree.getCharPositionInLine();
     }
@@ -328,7 +335,7 @@ public abstract class Context {
     } else {
       function = fc.getFunctionName();
     }
-    return new SourceLoc(getInputFile(), function, getLine(), getColumn());
+    return new SourceLoc(getInputFile(), moduleName, function, getLine(), getColumn());
   }
   
   /**

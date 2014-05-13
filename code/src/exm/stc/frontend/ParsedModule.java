@@ -25,11 +25,15 @@ import exm.stc.ui.ExitCode;
  */
 public class ParsedModule {
   
-  public ParsedModule(String filePath, SwiftAST ast, LineMapping lineMapping) {
+  public ParsedModule(String moduleName, String filePath, SwiftAST ast,
+                      LineMapping lineMapping) {
+    this.moduleName = moduleName;
     this.inputFilePath = filePath;
     this.ast = ast;
     this.lineMapping = lineMapping;
   }
+  
+  public final String moduleName;
   public final String inputFilePath;
   public final SwiftAST ast;
   public final LineMapping lineMapping;
@@ -41,8 +45,8 @@ public class ParsedModule {
    * @return
    * @throws IOException
    */
-  public static ParsedModule parse(String path, boolean preprocessed)
-                                                throws IOException {
+  public static ParsedModule parse(String moduleName, String path,
+                                   boolean preprocessed) throws IOException {
     FileInputStream inputStream = setupInput(path);
     /* Parse the input file and build AST */
     ANTLRInputStream antlrInput = new ANTLRInputStream(inputStream);
@@ -57,7 +61,7 @@ public class ParsedModule {
     }
     SwiftAST tree = runANTLR(antlrInput, lineMapping);
     
-    return new ParsedModule(path, tree, lineMapping);
+    return new ParsedModule(moduleName, path, tree, lineMapping);
   }
   /**
    * @param filePath
@@ -69,6 +73,10 @@ public class ParsedModule {
   }
   
 
+  public String moduleName() {
+    return this.moduleName;
+  }
+  
   private static FileInputStream setupInput(String inputFilename) {
     FileInputStream input = null;
     try {

@@ -66,6 +66,9 @@ class VariableUsageAnalyzer {
   /** Store line mapping as attribute to avoid passing everywhere */
   private LineMapping lineMapping;
   
+  /** Store current module as attribute to avoid passing everywhere */
+  private String currModuleName;
+  
   /**
    * Analyse the variables that are present in the block and add
    * VariableUsageInfo object to the BLOCK AST nodes
@@ -76,11 +79,12 @@ class VariableUsageAnalyzer {
    * @throws UserException
    */
   public void analyzeVariableUsage(Context context, 
-          LineMapping lineMapping,
+          LineMapping lineMapping, String currModuleName,
           String function, List<Var> iList, List<Var> oList, SwiftAST block)
         throws UserException {
     LogHelper.debug(context, "analyzer: starting: " + function);
     this.lineMapping = lineMapping;
+    this.currModuleName = currModuleName;
     
     VariableUsageInfo globVui = new VariableUsageInfo(); 
     // Add global constants
@@ -129,6 +133,9 @@ class VariableUsageAnalyzer {
     LogHelper.debug(context, "analyzer: done: " + function);
   }
 
+  private void syncFilePos(Context context, SwiftAST tree) {
+    context.syncFilePos(tree, currModuleName, lineMapping);
+  }
   
   private VariableUsageInfo walkBlock(Context context, SwiftAST block,
       VariableUsageInfo initialVu) throws UserException {
@@ -149,7 +156,7 @@ class VariableUsageAnalyzer {
                  VariableUsageInfo initialVu, boolean checkMisuse) 
                                                    throws UserException {
     assert(block.getType() == ExMParser.BLOCK);
-    context.syncFilePos(block, lineMapping);
+    syncFilePos(context, block);
 
     VariableUsageInfo vu;
     if (initialVu != null) {
@@ -159,13 +166,13 @@ class VariableUsageAnalyzer {
     }
 
     for (SwiftAST t: block.children()) {
-      context.syncFilePos(t, lineMapping);
+      syncFilePos(context, t);
       walk(context, t , vu);
     }
     
     // After having collected data for block, check for unread/unwritten vars
     if (checkMisuse) {
-      context.syncFilePos(block, lineMapping);
+      syncFilePos(context, block);
       vu.detectVariableMisuse(context);
     }
 
@@ -182,7 +189,7 @@ class VariableUsageAnalyzer {
                                                 throws UserException {
     int token = tree.getType();
 
-    context.syncFilePos(tree, lineMapping);
+    syncFilePos(context, tree);
     LogHelper.trace(context, "walk " + context.getLocation() +
                     LogHelper.tokName(token));
     switch (token) {
@@ -286,7 +293,7 @@ class VariableUsageAnalyzer {
           ifStmt.getElseBlock(), vu.createNested()));
     }
     
-    context.syncFilePos(tree, lineMapping);
+    syncFilePos(context, tree);
     vu.mergeNestedScopes(context,  ifBranchVus, ifStmt.hasElse());
   }
 
@@ -300,7 +307,7 @@ class VariableUsageAnalyzer {
         walkExpr(context, vu, var.getMappingExpr());
       }
       
-      context.syncFilePos(tree, lineMapping);
+      syncFilePos(context, tree);
       // Don't retain mapping information in this pass since it might be
       // mapped to a temporary var
       vu.declare(context, var.getName(), var.getType(), var.getMappingExpr() != null);
@@ -335,7 +342,7 @@ class VariableUsageAnalyzer {
      
       for (int i = 0; i < lVals.size(); i++) {
         LValue lVal = lVals.get(i);
-        context.syncFilePos(lVal.tree, lineMapping);
+        syncFilePos(context, lVal.tree);
         if (lVal.var == null) {
           // Auto-declare variable
           lVal = lVal.varDeclarationNeeded(context, rValTs.get(i));
@@ -396,7 +403,7 @@ class VariableUsageAnalyzer {
       caseVus.add(walkBlock(new LocalContext(context), caseBody,
                                         vu.createNested()));
     }
-    context.syncFilePos(tree, lineMapping);
+    syncFilePos(context, tree);
     vu.mergeNestedScopes(context, caseVus, sw.hasDefault());
   }
 
@@ -433,7 +440,7 @@ class VariableUsageAnalyzer {
     VariableUsageInfo loopBodyInfo = walkBlock(loopContext,
         loop.getBody(), loopInfo);
 
-    context.syncFilePos(tree, lineMapping);
+    syncFilePos(context, tree);
     // Merge inner up into outer
     initial.mergeNestedScopes(context, 
             Arrays.asList(loopBodyInfo, loopBodyInfo), false);
@@ -455,7 +462,7 @@ class VariableUsageAnalyzer {
     Context bodyContext = forLoop.createIterationContext(context);
     forLoop.validateCond(bodyContext);
     
-    context.syncFilePos(tree, lineMapping);
+    syncFilePos(context, tree);
     for (LoopVar lv: forLoop.getLoopVars()) {
       Var v = lv.var;
       LogHelper.debug(context, "declared loop var " + v.toString());
@@ -483,7 +490,7 @@ class VariableUsageAnalyzer {
       walkExpr(bodyContext, bodyInfo, updateExpr);
     }
     
-    context.syncFilePos(tree, lineMapping);
+    syncFilePos(context, tree);
     // After walking the update expressions, check for warnings or errors
     bodyInfo.detectVariableMisuse(context);
     
@@ -517,7 +524,7 @@ class VariableUsageAnalyzer {
     //  defined in the block
     walkExpr(bodyContext, bodyInfo, loop.getCond());
     
-    context.syncFilePos(tree, lineMapping);
+    syncFilePos(context, tree);
     outerLoopInfo.mergeNestedScopes(context, 
     Arrays.asList(bodyInfo, bodyInfo), false);
     vu.mergeNestedScopes(context, 
@@ -534,7 +541,7 @@ class VariableUsageAnalyzer {
     VariableUsageInfo waitVU = vu.createNested();
     walkBlock(waitContext, wait.getBlock(), waitVU);
     
-    context.syncFilePos(tree, lineMapping);
+    syncFilePos(context, tree);
     vu.mergeNestedScopes(context, Arrays.asList(waitVU), true);
   }
   
@@ -554,7 +561,7 @@ class VariableUsageAnalyzer {
     exprNodes.push(exprRoot);
     while (!exprNodes.isEmpty()) {
       SwiftAST node = exprNodes.pop();
-      context.syncFilePos(node, lineMapping);
+      syncFilePos(context, node);
       int token = node.getType();
       /*context.getLogger().debug("walkExpr: token " +
               ExMParser.tokenNames[token] + " at " + context.getInputFile()
