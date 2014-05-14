@@ -16,7 +16,7 @@
 grammar ExM;
 
 // TODO: need backtracking to disambiguate between function type
-// signature and function call statements in top_level_statement
+// signature and function call statements in stmt
 options {output=AST; backtrack=true;}
 
 tokens {
@@ -177,15 +177,46 @@ import exm.stc.ast.FilePosition.LineMapping;
 }
 
 program:
-        top_level_statement* EOF -> ^( PROGRAM top_level_statement* EOF )
+        stmt* EOF -> ^( PROGRAM stmt* EOF )
     ;
 
-top_level_statement:
-        (function_definition |
-            new_type_definition |
-            global_const_definition |
-            import_statement |
-            stmt)
+stmt:
+        SEMICOLON ->
+    |   (real_stmt) -> real_stmt
+    ;
+
+real_stmt:
+        (function_definition)
+    |   (new_type_definition)
+    |   (global_const_definition)
+    |   (import_statement)
+    |   (stmt_chain)
+    |   (if_stmt)
+    |   (switch_stmt)
+    |   (block)
+    |   (foreach_loop)
+    |   (for_loop)
+    |   (iterate_loop)
+    |   (wait_stmt)
+    |   (update_stmt)
+    ;
+
+stmt_chain:
+        chainable_stmt
+          (  SEMICOLON
+                    -> chainable_stmt
+          | stmt_chain_op real_stmt
+                    ->  ^( STATEMENT_CHAIN chainable_stmt real_stmt ))
+    ;
+
+chainable_stmt:
+        (declaration_multi)
+    |   (assignment_expr)
+    |   (expr_stmt)
+    ;
+
+ stmt_chain_op:
+        '=' '>'
     ;
 
 new_type_definition:
@@ -357,42 +388,6 @@ standalone_type:
 	;
 
 block: LBRACE stmt* RBRACE -> ^( BLOCK stmt* )
-    ;
-
-
-stmt:
-        SEMICOLON ->
-    |   (real_stmt) -> real_stmt
-    ;
-
-real_stmt:
-        (stmt_chain)
-    |   (if_stmt)
-    |   (switch_stmt)
-    |   (block)
-    |   (foreach_loop)
-    |   (for_loop)
-    |   (iterate_loop)
-    |   (wait_stmt)
-    |   (update_stmt)
-    ;
-
-stmt_chain:
-        chainable_stmt
-          (  SEMICOLON
-                    -> chainable_stmt
-          | stmt_chain_op real_stmt
-                    ->  ^( STATEMENT_CHAIN chainable_stmt real_stmt ))
-    ;
-
-chainable_stmt:
-        (declaration_multi)
-    |   (assignment_expr)
-    |   (expr_stmt)
-    ;
-
- stmt_chain_op:
-        '=' '>'
     ;
 
 if_stmt:
