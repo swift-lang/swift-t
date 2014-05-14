@@ -1794,6 +1794,8 @@ tcl_dict_to_packed_container(Tcl_Interp *interp, Tcl_Obj *const objv[],
     Tcl_DecrRefCount(dict_keys);
     dict_keys = Tcl_GetObjResult(interp);
     assert(dict_keys != NULL);
+    Tcl_IncrRefCount(dict_keys);
+    Tcl_ResetResult(interp);
 
     Tcl_Obj **dict_keysv;
     int dict_keysc;
@@ -1805,7 +1807,7 @@ tcl_dict_to_packed_container(Tcl_Interp *interp, Tcl_Obj *const objv[],
       Tcl_Obj *key, *val;
 
       key = dict_keysv[i];
-      
+      assert(key != NULL);
       rc = Tcl_DictObjGet(interp, dict, key, &val);
       TCL_CHECK(rc);
 
@@ -1854,7 +1856,20 @@ tcl_list_to_packed_multiset(Tcl_Interp *interp, Tcl_Obj *const objv[],
   int rc;
   adlb_data_code dc;
 
-  // TODO: need to sort list if canonicalizing
+  if (canonicalize)
+  {
+    // Need to sort list if canonicalize
+    Tcl_Obj *lsort_str = Tcl_NewStringObj("lsort", 5);
+    Tcl_Obj *lsort_objv[] = {lsort_str, list};
+    int lsort_objc = 2;
+    rc = Tcl_EvalObjv(interp, lsort_objc, lsort_objv, 0);
+    TCL_CHECK(rc);
+    Tcl_DecrRefCount(lsort_str);
+    list = Tcl_GetObjResult(interp);
+    assert(list != NULL);
+    Tcl_IncrRefCount(list);
+    Tcl_ResetResult(interp);
+  }
   int listc;
   Tcl_Obj **listv;
   rc = Tcl_ListObjGetElements(interp, list, &listc, &listv);
