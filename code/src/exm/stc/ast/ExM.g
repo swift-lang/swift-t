@@ -15,7 +15,9 @@
  */
 grammar ExM;
 
-options {output=AST;}
+// TODO: need backtracking to disambiguate between function type
+// signature and function call statements in top_level_statement
+options {output=AST; backtrack=true;}
 
 tokens {
     PLUS    = '+' ;
@@ -182,7 +184,8 @@ top_level_statement:
         (function_definition |
             new_type_definition |
             global_const_definition |
-            import_statement)
+            import_statement |
+            stmt)
     ;
 
 new_type_definition:
@@ -734,8 +737,9 @@ assign_path_element:
     ;
 
 // only allow function calls as non-assignment statements
-expr_stmt: e=function_call -> ^( EXPR_STMT $e )
-    |      e=variable -> ^( EXPR_STMT $e )
+expr_stmt: 
+      e=function_call -> ^( EXPR_STMT $e )      
+    | e=variable -> ^( EXPR_STMT $e )
     ;
 
 update_stmt: v=ID LT cmd=ID GT MUTATE expr SEMICOLON
