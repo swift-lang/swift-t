@@ -417,7 +417,7 @@ namespace eval turbine {
     }
     proc glob_body { result s } {
         set s_value [ retrieve_decr_string $s ]
-        set r_value [ ::glob $s_value ]
+        set r_value [ ::glob -nocomplain $s_value ]
         log "glob: $s_value"
 
         set i 0
