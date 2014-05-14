@@ -42,7 +42,10 @@ static struct table_lp debug_symbols;
 
 void debug_symbol_free_cb(int64_t key, void *data)
 {
-  free(data);
+  symbol_table_entry *entry = data;
+  free(entry->name);
+  free(entry->context);
+  free(entry);
 }
 
 adlb_code xlb_debug_symbols_init(void)
