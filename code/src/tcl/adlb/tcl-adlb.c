@@ -1778,7 +1778,11 @@ tcl_dict_to_packed_container(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
     Tcl_Obj *dict_keys = Tcl_GetObjResult(interp);
     assert(dict_keys != NULL);
-    
+    // Need to get reference count to prevent result from being
+    // overwritten too early by lsort
+    Tcl_IncrRefCount(dict_keys);
+    Tcl_ResetResult(interp);
+
     Tcl_Obj *lsort_str = Tcl_NewStringObj("lsort", 5);
     Tcl_Obj *lsort_objv[] = {lsort_str, dict_keys};
     int lsort_objc = 2;
@@ -1787,6 +1791,7 @@ tcl_dict_to_packed_container(Tcl_Interp *interp, Tcl_Obj *const objv[],
     Tcl_DecrRefCount(lsort_str);
     
     // Now have sorted keys
+    Tcl_DecrRefCount(dict_keys);
     dict_keys = Tcl_GetObjResult(interp);
     assert(dict_keys != NULL);
 
