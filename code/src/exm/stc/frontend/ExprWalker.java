@@ -1190,6 +1190,8 @@ public class  ExprWalker {
         }
       }
     }
+    
+    backend.freeBlob(VarRepr.backendVar(checkpointVal));
   }
 
   /**
