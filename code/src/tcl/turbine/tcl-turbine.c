@@ -544,8 +544,8 @@ Turbine_Cache_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
 static int
 tcl_obj_to_binary(Tcl_Interp* interp, Tcl_Obj *const objv[],
                turbine_datum_id td, turbine_type type,
-               adlb_type_extra extra,
-               Tcl_Obj* obj, void** result, int* length);
+               adlb_type_extra extra, Tcl_Obj* obj,
+               bool canonicalize, void** result, int* length);
 
 /**
    usage turbine::cache_store $td $type [ extra type info ] $value
@@ -583,7 +583,7 @@ Turbine_Cache_Store_Cmd(ClientData cdata, Tcl_Interp* interp,
 
   TCL_CONDITION(argpos < objc, "not enough arguments");
   error = tcl_obj_to_binary(interp, objv, td, type, extra,
-                         objv[argpos++], &data, &length);
+                         objv[argpos++], false, &data, &length);
   TCL_CHECK_MSG(error, "object extraction failed: <%"PRId64">", td);
 
   TCL_CONDITION(argpos == objc, "extra trailing arguments from %i", argpos);
@@ -599,12 +599,13 @@ Turbine_Cache_Store_Cmd(ClientData cdata, Tcl_Interp* interp,
 static int
 tcl_obj_to_binary(Tcl_Interp* interp, Tcl_Obj *const objv[],
                turbine_datum_id td, turbine_type type,
-               adlb_type_extra extra,
-               Tcl_Obj* obj, void** result, int* length)
+               adlb_type_extra extra, Tcl_Obj* obj,
+               bool canonicalize, void** result, int* length)
 {
   adlb_binary_data data;
 
-  int rc = tcl_obj_to_bin(interp, objv, type, extra, obj, NULL, &data);
+  int rc = tcl_obj_to_bin(interp, objv, type, extra, obj, canonicalize,
+                          NULL, &data);
   TCL_CHECK_MSG(rc, "failed serializing tcl object to ADLB <%"PRId64">: \"%s\"",
                     td, Tcl_GetString(obj));
 
