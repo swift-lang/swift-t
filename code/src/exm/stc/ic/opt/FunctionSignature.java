@@ -117,8 +117,9 @@ public class FunctionSignature implements OptimizerPass {
       Var tmpfuture = new Var(fv.val1.type(), fv.val1.name(),
                        Alloc.STACK, DefType.LOCAL_USER,
                        VarProvenance.renamed(fv.val1));
-      newBlock.renameVars(Collections.singletonMap(fv.val1, tmpfuture.asArg()),
-                          RenameMode.REPLACE_VAR, true);
+      newBlock.renameVars(fn.getName(),
+            Collections.singletonMap(fv.val1, tmpfuture.asArg()),
+            RenameMode.REPLACE_VAR, true);
       newBlock.addVariable(tmpfuture);
       Instruction store = 
           TurbineOp.storePrim(tmpfuture, fv.val2.asArg());

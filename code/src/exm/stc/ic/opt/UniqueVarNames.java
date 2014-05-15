@@ -78,7 +78,7 @@ public class UniqueVarNames implements OptimizerPass {
   
     if (!renames.isEmpty()) {
       // Rename variables in Block (and nested blocks) according to map
-      block.renameVars(renames, RenameMode.REPLACE_VAR, false);
+      block.renameVars(fn.getName(), renames, RenameMode.REPLACE_VAR, false);
     }
   
     // Recurse through nested blocks, making sure that all used variable
@@ -112,7 +112,8 @@ public class UniqueVarNames implements OptimizerPass {
       
       if (contVarRenames.size() > 0) {
         // Update construct vars as required
-        cont.renameVars(contVarRenames, RenameMode.REPLACE_VAR, false);
+        cont.renameVars(fn.getName(), contVarRenames, RenameMode.REPLACE_VAR,
+                        false);
         renames.putAll(contVarRenames);
       }
     }

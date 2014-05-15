@@ -63,7 +63,7 @@ public class ContinuationFusion extends FunctionOptimizerPass {
     if (block.getContinuations().size() > 1) {
       // no point trying to fuse anything if we don't have two continuations
       // to rub together
-      fuseNonRecursive(block);
+      fuseNonRecursive(f.getName(), block);
     }
     
     // Recurse on child blocks
@@ -74,7 +74,7 @@ public class ContinuationFusion extends FunctionOptimizerPass {
     }
   }
 
-  private static void fuseNonRecursive(Block block) {
+  private static void fuseNonRecursive(String function, Block block) {
     Iterator<Continuation> it = block.continuationIterator();
     
     /* We want to check all pairs of continuations.  
@@ -103,10 +103,10 @@ public class ContinuationFusion extends FunctionOptimizerPass {
           fuseIfStatement(it, mergeCands, (IfStatement)c);
           break;
         case FOREACH_LOOP:
-          fuseForeachLoop(it, mergeCands, (ForeachLoop)c);
+          fuseForeachLoop(function, it, mergeCands, (ForeachLoop)c);
           break;
         case RANGE_LOOP:
-          fuseRangeLoop(it, mergeCands, (RangeLoop)c);
+          fuseRangeLoop(function, it, mergeCands, (RangeLoop)c);
           break;
         default:
           // don't do anything, can't handle
@@ -146,13 +146,14 @@ public class ContinuationFusion extends FunctionOptimizerPass {
    * @param mergeCands
    * @param loop1
    */
-  private static void fuseForeachLoop(Iterator<Continuation> it,
-      LinkedList<Continuation> mergeCands, ForeachLoop loop1) {
+  private static void fuseForeachLoop(String function,
+      Iterator<Continuation> it, LinkedList<Continuation> mergeCands,
+      ForeachLoop loop1) {
     for (Continuation c2: mergeCands) {
       if (c2.getType() == ContinuationType.FOREACH_LOOP) {
         ForeachLoop loop2 = (ForeachLoop)c2;
         if (loop2.fuseable(loop1)) {
-          loop2.fuseInto(loop1, true);
+          loop2.fuseInto(function, loop1, true);
           it.remove();  // Remove first loop
           return; // was removed
         }
@@ -166,14 +167,14 @@ public class ContinuationFusion extends FunctionOptimizerPass {
    * @param mergeCands
    * @param loop1
    */
-  private static void fuseRangeLoop(Iterator<Continuation> it,
+  private static void fuseRangeLoop(String function, Iterator<Continuation> it,
       LinkedList<Continuation> mergeCands, RangeLoop loop1) {
     for (Continuation c2: mergeCands) {
       if (c2.getType() == ContinuationType.RANGE_LOOP) {
         RangeLoop loop2 = (RangeLoop)c2;
         if (loop2.fuseable(loop1)) {
           assert(loop2 != loop1);
-          loop2.fuseInto(loop1, true);
+          loop2.fuseInto(function, loop1, true);
           it.remove();  // Remove first loop
           return; // First loop was removed from block, can't fuse again
         }

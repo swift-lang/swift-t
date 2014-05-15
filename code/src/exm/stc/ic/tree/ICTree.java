@@ -812,8 +812,9 @@ public class ICTree {
       return false;
     }
     
-    public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
-      action.renameVars(renames, mode);
+    public void renameVars(String function, Map<Var, Arg> renames, 
+                           RenameMode mode) {
+      action.renameVars(function, renames, mode);
 
       if (mode != RenameMode.VALUE && 
           canMoveToAlias() && renames.containsKey(var)) {
@@ -1381,15 +1382,17 @@ public class ICTree {
     /**
      * Rename variables in block (and nested blocks) according to map.
      * If the map doesn't have an entry, we don't rename anything
+     * @param function
      * @param renames OldName -> NewName
      * @param mode
      * @param recursive if it should be done on child blocks
      */
-    public void renameVars(Map<Var, Arg> renames, RenameMode mode, boolean recursive) {
+    public void renameVars(String function, Map<Var, Arg> renames,
+                            RenameMode mode, boolean recursive) {
       if (renames.isEmpty())
         return;
       renameInDefs(renames, mode);
-      renameInCode(renames, mode, recursive);
+      renameInCode(function, renames, mode, recursive);
     }
 
     private void renameInDefs(Map<Var, Arg> renames, RenameMode mode) {
@@ -1413,27 +1416,28 @@ public class ICTree {
       }
     }
 
-    private void renameInCode(Map<Var, Arg> renames, RenameMode mode,
-                              boolean recursive) {
+    private void renameInCode(String function, Map<Var, Arg> renames,
+          RenameMode mode, boolean recursive) {
       for (Statement stmt: statements) {
         if (stmt.type() == StatementType.INSTRUCTION) {
-          stmt.instruction().renameVars(renames, mode);
+          stmt.instruction().renameVars(function, renames, mode);
         } else {
           assert(stmt.type() == StatementType.CONDITIONAL);
-          stmt.conditional().renameVars(renames, mode, recursive);
+          stmt.conditional().renameVars(function, renames, mode, recursive);
         }
       }
 
       // Rename in nested blocks
       for (Continuation c: continuations) {
-        c.renameVars(renames, mode, recursive);
+        c.renameVars(function, renames, mode, recursive);
       }
-      renameCleanupActions(renames, mode);
+      renameCleanupActions(function, renames, mode);
     }
     
-    public void renameCleanupActions(Map<Var, Arg> renames, RenameMode mode) {
+    public void renameCleanupActions(String function, Map<Var, Arg> renames,
+                                     RenameMode mode) {
       for (CleanupAction a: cleanupActions) {
-        a.renameVars(renames, mode);
+        a.renameVars(function, renames, mode);
       }
     }
 
@@ -1610,7 +1614,8 @@ public class ICTree {
       }
     }
     
-    public boolean replaceVarDeclaration(Var oldV, Var newV) {
+    public boolean replaceVarDeclaration(String function,
+                                         Var oldV, Var newV) {
       if (!this.variables.contains(oldV)) {
         return false;
       }
@@ -1618,7 +1623,7 @@ public class ICTree {
       Map<Var, Arg> replacement = 
           Collections.singletonMap(oldV, Arg.createVar(newV));
       // Must replace everywhere
-      this.renameVars(replacement, RenameMode.REPLACE_VAR, true);
+      this.renameVars(function, replacement, RenameMode.REPLACE_VAR, true);
       return true;
     }
 
@@ -1772,11 +1777,12 @@ public class ICTree {
     public Statement cloneStatement();
     /**
      * Rename vars throughout statement
+     * @param function TODO
      * @param replaceInputs
      * @param value
      */
-    public void renameVars(Map<Var, Arg> replaceInputs,
-                           RenameMode value);
+    public void renameVars(String function,
+                           Map<Var, Arg> replaceInputs, RenameMode value);
   }
   
   /** State to pass around when doing code generation from SwiftIC */

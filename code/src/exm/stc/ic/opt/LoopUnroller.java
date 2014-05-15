@@ -61,7 +61,8 @@ public class LoopUnroller implements OptimizerPass {
         boolean res = unrollLoops(logger, prog, f, b);
         unrolled = unrolled || res;
       }
-      Pair<Boolean, List<Continuation>> cRes = c.tryUnroll(logger, block);
+      Pair<Boolean, List<Continuation>> cRes;
+      cRes = c.tryUnroll(logger, f.getName(), block);
       if (cRes.val1) {
         unrolled = true;
         for (Continuation newC: cRes.val2) {

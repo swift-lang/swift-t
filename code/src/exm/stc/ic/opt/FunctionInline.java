@@ -453,7 +453,8 @@ public class FunctionInline implements OptimizerPass {
     
     if (logger.isTraceEnabled())
         logger.trace("inlining renames: " + renames);
-    inlineBlock.renameVars(renames, RenameMode.REPLACE_VAR, true);
+    inlineBlock.renameVars(contextFunction.getName(), renames, 
+                           RenameMode.REPLACE_VAR, true);
     
     if (fnCall.getMode() == TaskMode.SYNC) {
       insertBlock = block;

@@ -28,6 +28,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
+import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.CompileTimeArgs;
@@ -117,7 +118,8 @@ public class ICInstructions {
      * Replace instruction variables according to mode
      * @param renames
      */
-    public abstract void renameVars(Map<Var, Arg> renames, RenameMode mode);
+    public abstract void renameVars(String function, Map<Var, Arg> renames,
+                                    RenameMode mode);
 
     @Override
     public abstract String toString();
@@ -696,7 +698,7 @@ public class ICInstructions {
     }
   
     @Override
-    public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
+    public void renameVars(String function, Map<Var, Arg> renames, RenameMode mode) {
       // Don't do anything
     }
   
@@ -1136,7 +1138,7 @@ public class ICInstructions {
     }
 
     @Override
-    public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
+    public void renameVars(String function, Map<Var, Arg> renames, RenameMode mode) {
       if (mode == RenameMode.REPLACE_VAR || mode == RenameMode.REFERENCE) {
         ICUtil.replaceVarsInList(renames, outputs, false);
       }
@@ -1715,7 +1717,7 @@ public class ICInstructions {
     }
 
     @Override
-    public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
+    public void renameVars(String function, Map<Var, Arg> renames, RenameMode mode) {
       ICUtil.replaceArgsInList(renames, args);
       ICUtil.replaceArgsInList(renames, inFiles);
       redirects.stdin = ICUtil.replaceArg(renames, redirects.stdin, true);
@@ -1894,7 +1896,7 @@ public class ICInstructions {
     }
     
     @Override
-    public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
+    public void renameVars(String function, Map<Var, Arg> renames, RenameMode mode) {
       ICUtil.replaceArgsInList(renames, newLoopVars, false);
       if (mode == RenameMode.REFERENCE || mode == RenameMode.REPLACE_VAR) {
         ICUtil.replaceVarsInList(renames, loopUsedVars, true);
@@ -2111,7 +2113,7 @@ public class ICInstructions {
     }
   
     @Override
-    public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
+    public void renameVars(String function, Map<Var, Arg> renames, RenameMode mode) {
       // do nothing
     }
 
@@ -2288,7 +2290,8 @@ public class ICInstructions {
 
 
     @Override
-    public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
+    public void renameVars(String functionName, Map<Var, Arg> renames,
+                           RenameMode mode) {
       if (mode == RenameMode.REFERENCE || mode == RenameMode.REPLACE_VAR) {
         if (output != null && renames.containsKey(this.output)) {
           this.output = renames.get(this.output).getVar();
@@ -2303,8 +2306,7 @@ public class ICInstructions {
       if (op == Opcode.LOCAL_OP && 
           (this.subop == BuiltinOpcode.ASSERT || 
           this.subop == BuiltinOpcode.ASSERT_EQ)) {
-        // TODO: get enclosing function name
-        compileTimeAssertCheck(subop, this.inputs, "...");
+        compileTimeAssertCheck(subop, this.inputs, functionName);
       }
     }
 
@@ -2411,11 +2413,9 @@ public class ICInstructions {
         errMessage = "<RUNTIME ERROR MESSAGE>";
       }
         
-      System.err.println("Warning: assertion in " + enclosingFnName +
-          " with error message: \"" + errMessage + 
-          "\" will fail at runtime because " + reason + "\n"
-          + "This may be a compiler internal error: check your code" +
-              " and report if this warning is faulty");
+      Logging.uniqueWarn("Assertion in function " + enclosingFnName +
+          " with error message \"" + errMessage + 
+          "\" will fail at runtime because " + reason);
     }
 
     private static boolean hasLocalVersion(BuiltinOpcode op) {

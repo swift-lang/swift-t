@@ -124,12 +124,12 @@ public class ICContinuations {
      * @param mode what sort of renaming
      * @param recursive recursively do replacement in inner blocks
      */
-    public void renameVars(Map<Var, Arg> renames, RenameMode mode,
-                                     boolean recursive) {
+    public void renameVars(String function, Map<Var, Arg> renames,
+                           RenameMode mode, boolean recursive) {
       if (renames.isEmpty())
         return;
       if (recursive) {
-        this.replaceVarsInBlocks(renames, mode);
+        this.replaceVarsInBlocks(function, renames, mode);
       }
       this.replaceConstructVars(renames, mode);
     }
@@ -139,8 +139,8 @@ public class ICContinuations {
      * @param renames
      * @param mode
      */
-    public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
-      renameVars(renames, mode, true);
+    public void renameVars(String function, Map<Var, Arg> renames, RenameMode mode) {
+      renameVars(function, renames, mode, true);
     }
     
     protected abstract void replaceConstructVars(Map<Var, Arg> renames,
@@ -156,10 +156,10 @@ public class ICContinuations {
        // Do nothing by default 
     }
     
-    protected void replaceVarsInBlocks(Map<Var, Arg> renames,
+    protected void replaceVarsInBlocks(String function, Map<Var, Arg> renames,
                                        RenameMode mode) {
       for (Block b: this.getBlocks()) {
-        b.renameVars(renames, mode, true);
+        b.renameVars(function, renames, mode, true);
       }
     }
 
@@ -307,11 +307,13 @@ public class ICContinuations {
      * nested blocks (so long as they don't shadow each other) - a
      * subsequent pass will make those names unique
      * @param logger
+     * @param function
      * @param outerBlock
      * @return true if change made, also any additional continuations to be
      *        added by caller to outerBlock
      */
-    public Pair<Boolean, List<Continuation>> tryUnroll(Logger logger, Block outerBlock) {
+    public Pair<Boolean, List<Continuation>> tryUnroll(Logger logger,
+                                   String function, Block outerBlock) {
       // default: do nothing
       return Pair.create(false, Collections.<Continuation>emptyList());
     }

@@ -145,6 +145,7 @@ public class OptUtil {
    * Do the manipulation necessary to allow an old instruction
    * output variable to be replaced with a new one. Assume that
    * newOut is a value type of oldOut
+   * @param function
    * @param srcBlock source block for instruction 
    * @param targetBlock target block for instruction
    * @param instBuffer append any fixup instructions here
@@ -152,7 +153,7 @@ public class OptUtil {
    * @param oldOut
    * @param recursive if it's to be fetched recursively
    */
-  public static void replaceInstOutput(Block srcBlock,
+  public static void replaceInstOutput(String function, Block srcBlock,
           Block targetBlock, List<Statement> instBuffer, Var newOut, Var oldOut,
           boolean initialisesOutput) {
     boolean isDerefResult = 
@@ -173,7 +174,7 @@ public class OptUtil {
         Map<Var, Arg> renames = Collections.singletonMap(
                                 oldOut, Arg.createVar(oldOutReplacement));
         for (Statement inst: instBuffer) {
-          inst.renameVars(renames, RenameMode.REPLACE_VAR);
+          inst.renameVars(function, renames, RenameMode.REPLACE_VAR);
         }
       } else {
         oldOutReplacement = oldOut;
@@ -201,7 +202,8 @@ public class OptUtil {
     assert(oldVar.name().equals(newVar.name()));
     Block curr = block;
     while (true) {
-      if (curr.replaceVarDeclaration(oldVar, newVar)) {
+      if (curr.replaceVarDeclaration(block.getFunction().getName(), 
+                                     oldVar, newVar)) {
         // Success
         return;
       }
@@ -298,7 +300,7 @@ public class OptUtil {
     return outValVars;
   }  
 
-  public static void fixupImmChange(Block srcBlock,
+  public static void fixupImmChange(String function, Block srcBlock,
           Block targetBlock, Instruction oldInst,
           MakeImmChange change,
           List<Statement> instBuffer, 
@@ -324,7 +326,7 @@ public class OptUtil {
         }
       }
       
-      replaceInstOutput(srcBlock, targetBlock, instBuffer,
+      replaceInstOutput(function, srcBlock, targetBlock, instBuffer,
                          newOut, oldOut, initOutput);
     }
     

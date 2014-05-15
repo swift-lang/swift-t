@@ -154,7 +154,8 @@ public class ValueNumber implements OptimizerPass {
       congMap = findCongruences(prog, f, ExecContext.CONTROL);
   
       // Second pass replaces values based on congruence classes
-      replaceVals(prog.constants(), f.mainBlock(), congMap, InitState.enterFunction(f));
+      replaceVals(prog.constants(), f.getName(), f.mainBlock(), congMap,
+                  InitState.enterFunction(f));
       
       // Third pass inlines continuations
       inlinePass(prog.constants(), f.mainBlock(), congMap);
@@ -508,8 +509,8 @@ public class ValueNumber implements OptimizerPass {
     }
   }
   
-  private void replaceVals(GlobalConstants consts, Block block,
-      Map<Block, Congruences> congruences, InitState init) {
+  private void replaceVals(GlobalConstants consts, String function,
+      Block block, Map<Block, Congruences> congruences, InitState init) {
     Congruences state = congruences.get(block);
 
     if (logger.isTraceEnabled()) {
@@ -526,7 +527,7 @@ public class ValueNumber implements OptimizerPass {
       if (stmt.type() == StatementType.INSTRUCTION) {
         // Replace vars in instruction
         Instruction inst = stmt.instruction();
-        replaceCongruent(inst, state, init);
+        replaceCongruent(function, inst, state, init);
         
         if (!inst.hasSideEffects() && inst.getOutputs().size() == 1) {
           Var output = inst.getOutput(0);
@@ -557,27 +558,28 @@ public class ValueNumber implements OptimizerPass {
         assert(stmt.type() == StatementType.CONDITIONAL);
         /* Replace vars recursively in conditional.  Init state
          * is updated in this function */ 
-        replaceCongruentNonRec(stmt.conditional(), state, init);
-        replaceValsRec(consts, stmt.conditional(), congruences, init);
+        replaceCongruentNonRec(function, stmt.conditional(), state, init);
+        replaceValsRec(consts, function, stmt.conditional(), congruences, init);
       }
     }
     
     // Replace in cleanups
-    replaceCleanupCongruent(block, state, init);
+    replaceCleanupCongruent(function, block, state, init);
     
     for (Continuation cont: block.getContinuations()) {
-      replaceCongruentNonRec(cont, state, init);
-      replaceValsRec(consts, cont, congruences, init);
+      replaceCongruentNonRec(function, cont, state, init);
+      replaceValsRec(consts, function, cont, congruences, init);
     }
   }
 
-  private void replaceValsRec(GlobalConstants consts, Continuation cont,
-          Map<Block, Congruences> congruences, InitState init) {
+  private void replaceValsRec(GlobalConstants consts, String function, 
+          Continuation cont, Map<Block, Congruences> congruences,
+          InitState init) {
     InitState contInit = init.enterContinuation(cont);
     List<InitState> branchInits = new ArrayList<InitState>();
     for (Block contBlock: cont.getBlocks()) {
       InitState branchInit = contInit.enterBlock(contBlock);
-      replaceVals(consts, contBlock, congruences, branchInit);
+      replaceVals(consts, function, contBlock, congruences, branchInit);
       branchInits.add(branchInit);
     }
     
@@ -727,31 +729,32 @@ public class ValueNumber implements OptimizerPass {
   private static final List<RenameMode> RENAME_MODES =
       Arrays.asList(RenameMode.VALUE, RenameMode.REFERENCE);
   
-  private static void replaceCongruentNonRec(Continuation cont,
+  private static void replaceCongruentNonRec(String function, Continuation cont,
                               Congruences congruent, InitState init) {
     for (RenameMode mode: RENAME_MODES) {
-      cont.renameVars(congruent.replacements(mode, init), mode, false); 
+      cont.renameVars(function, congruent.replacements(mode, init), mode, false); 
     }
   }
 
-  private void replaceCongruent(Instruction inst, Congruences congruent,
-                                                            InitState init) {
+  private void replaceCongruent(String function, Instruction inst,
+                                Congruences congruent, InitState init) {
     if (logger.isTraceEnabled()) {
       logger.trace("Instruction before replacement: " + inst);
     }
     for (RenameMode mode: RENAME_MODES) {
-      inst.renameVars(congruent.replacements(mode, init), mode);
+      inst.renameVars(function, congruent.replacements(mode, init), mode);
     }
     if (logger.isTraceEnabled()) {
       logger.trace("Instruction after replacement: " + inst);
     }
   }
   
-  private static void replaceCleanupCongruent(Block block,
+  private static void replaceCleanupCongruent(String function, Block block,
                             Congruences congruent, InitState init) {
 
     for (RenameMode mode: RENAME_MODES) {
-      block.renameCleanupActions(congruent.replacements(mode, init), mode);
+      block.renameCleanupActions(function, congruent.replacements(mode, init),
+                                 mode);
     }
   }
 
@@ -839,7 +842,7 @@ public class ValueNumber implements OptimizerPass {
     MakeImmChange change;
     change = inst.makeImmediate(new OptVarCreator(block),
           Fetched.makeList(req.out, outFetched, true), inVals);
-    OptUtil.fixupImmChange(block, insertContext, inst, change, alt,
+    OptUtil.fixupImmChange(fn.getName(), block, insertContext, inst, change, alt,
                            outFetched, req.out);
 
     if (logger.isTraceEnabled()) {

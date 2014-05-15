@@ -1626,7 +1626,7 @@ public class TurbineOp extends Instruction {
   }
   
   @Override
-  public void renameVars(Map<Var, Arg> renames, RenameMode mode) {
+  public void renameVars(String function, Map<Var, Arg> renames, RenameMode mode) {
     if (mode == RenameMode.VALUE) {
       // Fall through
     } else if (mode == RenameMode.REPLACE_VAR) {

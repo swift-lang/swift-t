@@ -382,7 +382,7 @@ public class ForeachLoops {
           && this.splitDegree == o.splitDegree;
     }
 
-    public void fuseInto(ForeachLoop o, boolean insertAtTop) {
+    public void fuseInto(String function, ForeachLoop o, boolean insertAtTop) {
       Map<Var, Arg> renames = new HashMap<Var, Arg>();
       renames.put(o.loopVar, Arg.createVar(this.loopVar));
       // Handle optional loop counter var
@@ -393,7 +393,7 @@ public class ForeachLoops {
           this.loopCounterVar = o.loopCounterVar;
         }
       }
-      o.renameVars(renames, RenameMode.REPLACE_VAR, true);
+      o.renameVars(function, renames, RenameMode.REPLACE_VAR, true);
       
       fuseIntoAbstract(o, insertAtTop);
     }
@@ -692,7 +692,7 @@ public class ForeachLoops {
                                   Pair.create(false, Collections.<Continuation>emptyList());
     @Override
     public Pair<Boolean, List<Continuation>> tryUnroll(Logger logger,
-                                                       Block outerBlock) {
+        String function, Block outerBlock) {
       logger.trace("DesiredUnroll for " + loopName + ": " + desiredUnroll);
       boolean expandLoops = isExpandLoopsEnabled();
       boolean fullUnroll = isFullUnrollEnabled();
@@ -704,7 +704,8 @@ public class ForeachLoops {
                       " ignoring unroll annotation");
           return NO_UNROLL;
         }
-        return Pair.create(true, doUnroll(logger, outerBlock, desiredUnroll));
+        return Pair.create(true, doUnroll(logger, function, outerBlock,
+                                          desiredUnroll));
       } else if (expandLoops || fullUnroll) {
         long instCount = loopBody.getInstructionCount();
         long iterCount = constIterCount();
@@ -713,7 +714,8 @@ public class ForeachLoops {
           if (iterCount <= getUnrollMaxIters(true)) {
             long extraInstructions = instCount * (iterCount - 1);
             if (extraInstructions <= getUnrollMaxExtraInsts(true)) {
-              return Pair.create(true, doUnroll(logger, outerBlock, (int)iterCount));
+              return Pair.create(true, doUnroll(logger, function, outerBlock, 
+                                 (int)iterCount));
             }
           }
         } 
@@ -731,7 +733,8 @@ public class ForeachLoops {
         long unrollFactor = Math.min(getUnrollMaxIters(false),
                                      (threshold / instCount) + 1);
         if (unrollFactor > 1) {
-          return Pair.create(true, doUnroll(logger, outerBlock, (int)unrollFactor));
+          return Pair.create(true, doUnroll(logger, function, outerBlock,
+                                            (int)unrollFactor));
         }
       }
       return NO_UNROLL;
@@ -791,7 +794,8 @@ public class ForeachLoops {
      *  range_loop [remainder_start  : end : step]
      *  
      */
-    private List<Continuation> doUnroll(Logger logger, Block outerBlock, int unrollFactor) {
+    private List<Continuation> doUnroll(Logger logger, String function, 
+                                        Block outerBlock, int unrollFactor) {
       logger.debug("Unrolling range loop " + this.loopName 
                         + " " + desiredUnroll + " times ");
       
@@ -879,7 +883,7 @@ public class ForeachLoops {
           unrolledBody.addInstruction(Builtin.createLocal(BuiltinOpcode.PLUS_INT,
               currIterLoopVar, Arrays.asList(Arg.createVar(lastIterLoopVar), oldIncr)));
           // Replace references to the iteration counter in nested block
-          nb.renameVars(Collections.singletonMap(unrolled.loopVar,
+          nb.renameVars(function, Collections.singletonMap(unrolled.loopVar,
                        Arg.createVar(currIterLoopVar)), RenameMode.REPLACE_VAR, true);
         }
         lastIterLoopVar = currIterLoopVar;
@@ -918,13 +922,13 @@ public class ForeachLoops {
     /**
      * Fuse the other loop into this loop
      */
-    public void fuseInto(RangeLoop o, boolean insertAtTop) {
+    public void fuseInto(String function, RangeLoop o, boolean insertAtTop) {
       Map<Var, Arg> renames = new HashMap<Var, Arg>();
       // Update loop var in other loop
       renames.put(o.loopVar, Arg.createVar(this.loopVar));
       if (loopCounterVar != null)
         renames.put(o.loopCounterVar, Arg.createVar(this.loopCounterVar));
-      o.renameVars(renames, RenameMode.REPLACE_VAR, true);
+      o.renameVars(function, renames, RenameMode.REPLACE_VAR, true);
      
       this.fuseIntoAbstract(o, insertAtTop);
     }

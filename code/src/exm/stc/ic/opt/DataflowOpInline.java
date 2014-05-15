@@ -155,8 +155,8 @@ public class DataflowOpInline extends FunctionOptimizerPass {
                                   new OptVarCreator(insideWaitBlock),
                                   Fetched.makeList(req.out, localOutputs, true),
                                   Fetched.makeList(req.in, inVals, false));
-      OptUtil.fixupImmChange(block, insideWaitBlock, inst, change, instBuffer,
-                                 localOutputs, req.out);
+      OptUtil.fixupImmChange(fn.getName(), block, insideWaitBlock, inst,
+                 change, instBuffer, localOutputs, req.out);
       
       // Remove old instruction, add new one inside wait block
       insideWaitBlock.addStatements(instBuffer);
