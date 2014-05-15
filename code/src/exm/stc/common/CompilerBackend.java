@@ -962,38 +962,93 @@ public interface CompilerBackend {
   public void arrayRefCopyInFuture(Var array, Var ix, Var member);
 
   /**
-   * Build array with specified key-value pairs 
-   * @param array
-   * @param keys
-   * @param vals
+   * Build array with specified key-value pairs.
+   * 
+   * Decrements a write refcount from the array.
+   * 
+   * @param array an output non-local {@link ArrayType}
+   * @param keys list of key values for build array
+   * @param vals list of values with retrieved type of array member
    */
   public void arrayBuild(Var array, List<Arg> keys, List<Arg> vals);
 
-
-  public void arrayCreateNestedFuture(Var arrayResult,
-      Var array, Var ix);
-
   /**
-   * Create a nested array inside an array
-   * @param arrayResult
-   * @param array
-   * @param ix
+   * Create a nested array in outerArray or return the existing
+   * array if it currently exists.
+   * @param innerArray alias for the created or retrieved inner array
+   * @param outerArray outer array, modified if new array is created
+   * @param key key for outerArray
    * @param callerReadRefs number of refcounts to give back to caller
    * @param callerWriteRefs number of refcounts to give back to caller
    * @param readDecr decrement array
    * @param writeDecr decrement array
    */
-  public void arrayCreateNestedImm(Var arrayResult,
-      Var array, Arg ix, Arg callerReadRefs, Arg callerWriteRefs,
+  public void arrayCreateNestedImm(Var innerArray,
+      Var outerArray, Arg key, Arg callerReadRefs, Arg callerWriteRefs,
       Arg readDecr, Arg writeDecr);
 
-  public void arrayRefCreateNestedFuture(Var arrayResult, Var array, Var ix);
-
+  /**
+   * Create a nested array in outerArray or return the existing
+   * array if it currently exists.  Executes asynchronously and
+   * uses output reference. 
+   * @param innerArray reference that is set to inner array
+   * @param outerArray outer array, modified if new array is created
+   * @param key key future for outerArray
+   * @param callerReadRefs number of refcounts to give back to caller
+   * @param callerWriteRefs number of refcounts to give back to caller
+   * @param readDecr decrement array
+   * @param writeDecr decrement array
+   */
+  public void arrayCreateNestedFuture(Var innerArray, Var outerArray, Var key);
+  
+  /**
+   * Create a nested array in outerArray or return the existing
+   * array if it currently exists.  Executes asynchronously and
+   * uses output reference. 
+   * @param innerArray reference that is set to inner array
+   * @param outerArray writable reference to outer array, modified if new array is created
+   * @param key key for outerArray
+   * @param callerReadRefs number of refcounts to give back to caller
+   * @param callerWriteRefs number of refcounts to give back to caller
+   * @param readDecr decrement array
+   * @param writeDecr decrement array
+   */
   public void arrayRefCreateNestedImm(Var arrayResult, Var array, Arg ix);
 
-  public void bagInsert(Var bag, Arg elem, Arg writersDecr);
+  /**
+   * Create a nested array in outerArray or return the existing
+   * array if it currently exists.  Executes asynchronously and
+   * uses output reference. 
+   * @param innerArray reference that is set to inner array
+   * @param outerArray writable reference to outer array, modified if new array is created
+   * @param key key future for outerArray
+   * @param callerReadRefs number of refcounts to give back to caller
+   * @param callerWriteRefs number of refcounts to give back to caller
+   * @param readDecr decrement array
+   * @param writeDecr decrement array
+   */
+  public void arrayRefCreateNestedFuture(Var arrayResult, Var array, Var ix);
 
-  public void arrayCreateBag(Var bag, Var arr, Arg ix, Arg callerReadRefs,
+  /**
+   * Insert a value into a bag
+   * @param bag a non-local {@link BagType}
+   * @param value a value with the retrieved type of the bag member
+   * @param writeDecr write reference counts to decrement from bag
+   */
+  public void bagInsert(Var bag, Arg value, Arg writeDecr);
+  
+  /**
+   * Create a nested bag in outerArray or return the existing
+   * bag if it currently exists.
+   * @param innerBag alias for the created or retrieved inner array
+   * @param outerArray outer array, modified if new array is created
+   * @param key key for outerArray
+   * @param callerReadRefs number of refcounts to give back to caller
+   * @param callerWriteRefs number of refcounts to give back to caller
+   * @param readDecr decrement array
+   * @param writeDecr decrement array
+   */
+  public void arrayCreateBag(Var innerBag, Var outerArray, Arg key, Arg callerReadRefs,
                         Arg callerWriteRefs, Arg readDecr, Arg writeDecr);
 
   /**
