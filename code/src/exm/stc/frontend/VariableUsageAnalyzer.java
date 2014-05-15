@@ -25,6 +25,7 @@ import org.apache.log4j.Level;
 import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
+import exm.stc.common.exceptions.InvalidConstructException;
 import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.InvalidWriteException;
 import exm.stc.common.exceptions.STCRuntimeError;
@@ -244,7 +245,27 @@ class VariableUsageAnalyzer {
       case ExMParser.STATEMENT_CHAIN:
         walkStmtChain(context, tree, vu);
         break;
+
+      case ExMParser.IMPORT:
+        throw new InvalidConstructException(context, "Import statements"
+                + " are only allowed at top level of program");
+
+      case ExMParser.DEFINE_BUILTIN_FUNCTION:
+      case ExMParser.DEFINE_FUNCTION:
+      case ExMParser.DEFINE_APP_FUNCTION:
+        throw new InvalidConstructException(context, "Function definitions"
+            + " are only allowed at top level of program");
+  
+      case ExMParser.DEFINE_NEW_STRUCT_TYPE:
+      case ExMParser.DEFINE_NEW_TYPE:
+      case ExMParser.TYPEDEF:
+        throw new InvalidConstructException(context, "Type definitions"
+            + " are only allowed at top level of program");
         
+      case ExMParser.GLOBAL_CONST:
+        throw new InvalidConstructException(context, "Global constant"
+            + " definitions are only allowed at top level of program");
+              
       default:
         throw new STCRuntimeError
         ("Unexpected token type inside procedure: " +

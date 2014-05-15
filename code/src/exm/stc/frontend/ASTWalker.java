@@ -32,6 +32,7 @@ import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.Logging;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.InvalidAnnotationException;
+import exm.stc.common.exceptions.InvalidConstructException;
 import exm.stc.common.exceptions.ModuleLoadException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
@@ -304,6 +305,8 @@ public class ASTWalker {
       case ExMParser.DEFINE_APP_FUNCTION:
         compileAppFunction(context, topLevelDefn);
         break;
+      
+      // TODO: handle other program statements here
       }
     }
   }
@@ -447,6 +450,26 @@ public class ASTWalker {
         case ExMParser.STATEMENT_CHAIN:
           stmtChain(context, tree);
           break;
+          
+        case ExMParser.IMPORT:
+          throw new InvalidConstructException(context, "Import statements"
+                  + " are only allowed at top level of program");
+
+        case ExMParser.DEFINE_BUILTIN_FUNCTION:
+        case ExMParser.DEFINE_FUNCTION:
+        case ExMParser.DEFINE_APP_FUNCTION:
+          throw new InvalidConstructException(context, "Function definitions"
+              + " are only allowed at top level of program");
+    
+        case ExMParser.DEFINE_NEW_STRUCT_TYPE:
+        case ExMParser.DEFINE_NEW_TYPE:
+        case ExMParser.TYPEDEF:
+          throw new InvalidConstructException(context, "Type definitions"
+              + " are only allowed at top level of program");
+          
+        case ExMParser.GLOBAL_CONST:
+          throw new InvalidConstructException(context, "Global constant"
+              + " definitions are only allowed at top level of program");
           
         default:
           throw new STCRuntimeError
