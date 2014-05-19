@@ -47,7 +47,7 @@ cd tests
 
 export TURBINE_HOME=${TURBINE}
 export ADLB_PERF_COUNTERS=0
-source ./run-tests.zsh -c -k ${TESTS_SKIP} -n ${TESTS_TOTAL} -p 318 |& \
+source ./run-tests.zsh -c -k ${TESTS_SKIP} -n ${TESTS_TOTAL} |& \
       tee results.out
 check_error ${pipestatus[1]} "run-tests.zsh"
 
