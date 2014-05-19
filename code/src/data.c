@@ -38,6 +38,7 @@
 #include "data_structs.h"
 #include "debug.h"
 #include "multiset.h"
+#include "notifications.h"
 #include "refcount.h"
 #include "sync.h"
 
