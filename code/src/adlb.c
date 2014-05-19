@@ -1522,7 +1522,10 @@ ADLBP_Finalize()
   ADLB_Xpt_finalize();
 #endif
 
-  xlb_data_finalize();
+  adlb_data_code dc = xlb_data_finalize();
+  if (dc != ADLB_DATA_SUCCESS)
+    xlb_server_fail(1);
+
   if (xlb_comm_rank >= xlb_master_server_rank)
   {
     // Server:

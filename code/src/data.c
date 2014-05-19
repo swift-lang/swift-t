@@ -2204,6 +2204,12 @@ static void free_td_entry(adlb_datum_id id, void *val)
   }
 }
 
+/** True iff we failed during finalize */
+static bool failed_during_finalize = false;
+
+/**
+   This function is only used inside table_bp_free_callback()
+ */
 static void free_cref_entry(const void *key, size_t key_len, void *val)
 {
   assert(key != NULL && val != NULL);
@@ -2228,6 +2234,7 @@ static void free_cref_entry(const void *key, size_t key_len, void *val)
           ADLB_PRI_DATUM_SUB" => "ADLB_PRI_DATUM_SUB"\n",
           ADLB_PRI_DATUM_SUB_ARGS(src_id, src_symbol, src_sub),
           ADLB_PRI_DATUM_SUB_ARGS(dst->id, dst_symbol, dst_sub));
+    failed_during_finalize = true;
   }
   list_free(listeners);
 }
@@ -2253,6 +2260,7 @@ static void free_ix_l_entry(const void *key, size_t key_len, void *val)
           ADLB_PRI_DATUM_SUB" rank: %i work_type: %i\n",
           ADLB_PRI_DATUM_SUB_ARGS(src_id, src_symbol, src_sub),
           listener->rank, listener->work_type);
+    failed_during_finalize = true;
   }
 
   list_b_free(listeners);
@@ -2284,6 +2292,8 @@ xlb_data_finalize()
   DATA_CHECK(dc);
 
   xlb_data_types_finalize();
+  if (failed_during_finalize)
+    return ADLB_DATA_ERROR_UNRESOLVED;
   return ADLB_DATA_SUCCESS;
 }
 

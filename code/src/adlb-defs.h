@@ -276,6 +276,8 @@ typedef enum
   ADLB_DATA_ERROR_REFCOUNT_NEGATIVE,
   /** Exceeded some implementation-defined limit */
   ADLB_DATA_ERROR_LIMIT,
+  /** Unresolved future */
+  ADLB_DATA_ERROR_UNRESOLVED,
   /** Caller-provided buffer too small */
   ADLB_DATA_BUFFER_TOO_SMALL,
   /** Finished */
