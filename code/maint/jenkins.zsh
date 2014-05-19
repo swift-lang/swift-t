@@ -8,11 +8,7 @@ set -eu
 
 df /tmp
 
-ls /tmp
-
-
-
-if [[ ! -f /tmp/mpich-install ]]
+if [[ ! -d /tmp/mpich-install ]]
 then
   print "MPICH disappeared!"
   print "You must manually run the MPICH Jenkins test to restore MPICH"
