@@ -26,3 +26,6 @@ make clean
 rm -rf autom4te.cache
 rm -rf /tmp/exm-install/lb
 make V=1 install
+make V=1 apps/batcher.x
+ldd apps/batcher.x
+exit 0
