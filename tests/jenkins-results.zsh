@@ -1,5 +1,7 @@
 #!/bin/zsh
 
+# STC TESTS JENKINS-RESULTS.ZSH
+
 # Copyright 2013 University of Chicago and Argonne National Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+# Aggregates results into Jenkins XML file
 # Note: All stdout from this script goes into the Jenkins XML
 
 # Print a message on stderr to avoid putting it in the Jenkins XML
@@ -70,6 +73,11 @@ do
 
     STC_OUTPUT=${T_swift%.swift}.stc.out
     STC_ERROR=${T_swift%.swift}.stc.err
+
+    # STC directives
+    print "STC directives from ${T_swift}:"
+    grep "THIS-TEST" ${T_swift}
+    print
 
     # STC stdout from failed case
     print "STC outputs from ${T_swift}:"

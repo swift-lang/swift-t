@@ -1,5 +1,7 @@
 #!/bin/zsh
 
+# STC TESTS JENKINS.ZSH
+
 # Copyright 2013 University of Chicago and Argonne National Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +15,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License
+
+# Runs test suite on Jenkins server
 
 check_error()
 {
@@ -43,7 +47,7 @@ cd tests
 
 export TURBINE_HOME=${TURBINE}
 export ADLB_PERF_COUNTERS=0
-source ./run-tests.zsh -c -k ${TESTS_SKIP} -n ${TESTS_TOTAL} |& \
+source ./run-tests.zsh -c -k ${TESTS_SKIP} -n ${TESTS_TOTAL} -p 318 |& \
       tee results.out
 check_error ${pipestatus[1]} "run-tests.zsh"
 
