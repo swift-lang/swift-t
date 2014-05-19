@@ -132,8 +132,12 @@ ZLIB = @ZLIB_HOME@
 
 ifeq ($(ENABLE_ZLIB),1)
   CFLAGS += -I$(ZLIB)/include
-  LIBS += -L $(ZLIB)/lib -lz
-  RPATH += -Wl,-rpath -Wl,$(ZLIB)/lib
+  ifneq ($(ZLIB),/usr)
+    # Do not refer to /usr/lib - this can clobber the MPICH location
+    LIBS += -L $(ZLIB)/lib
+    RPATH += -Wl,-rpath -Wl,$(ZLIB)/lib
+  endif
+  LIBS += -lz
 endif
 
 ENABLE_XPT = @XLB_ENABLE_XPT@
