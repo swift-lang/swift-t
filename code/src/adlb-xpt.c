@@ -441,6 +441,7 @@ static inline adlb_code xpt_reload_rank(const char *filename,
     // If we made it this far, should be valid
     stats->valid++;
   }
+  return ADLB_SUCCESS;
 }
 
 /*
