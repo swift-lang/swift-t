@@ -862,6 +862,9 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
 
     return ADLB_SUCCESS;
   }
+  // Should never get here:
+  assert(false);
+  return ADLB_ERROR;
 }
 
 static xpt_file_pos xpt_read_pos(const xlb_xpt_read_state *state)
