@@ -8,6 +8,10 @@ set -eu
 
 df /tmp
 
+ls /tmp
+
+
+
 if [[ ! -f /tmp/mpich-install ]]
 then
   print "MPICH disappeared!"
