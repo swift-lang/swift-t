@@ -6,8 +6,6 @@
 
 set -eu
 
-df /tmp
-
 if [[ ! -d /tmp/mpich-install ]]
 then
   print "MPICH disappeared!"
@@ -15,6 +13,10 @@ then
   exit 1
 fi
 
+rm -rf autom4te.cache
+rm -rf /tmp/exm-install/lb
+
+set -x
 PATH=/tmp/mpich-install/bin:$PATH
 which mpicc
 mpicc -show
@@ -23,9 +25,8 @@ mpicc -show
 mkdir -p /tmp/exm-install
 ./configure CC=$(which mpicc) --prefix=/tmp/exm-install/lb --with-c-utils=/tmp/exm-install/c-utils
 make clean
-rm -rf autom4te.cache
-rm -rf /tmp/exm-install/lb
 make V=1 install
-make V=1 apps/batcher.x
-ldd apps/batcher.x
+ldd lib/libadlb.so
+# make V=1 apps/batcher.x
+# ldd apps/batcher.x
 exit 0
