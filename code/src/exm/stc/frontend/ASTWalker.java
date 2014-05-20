@@ -270,6 +270,11 @@ public class ASTWalker {
   
       default:
         String name = LogHelper.tokName(type);
+        if (isTopLevelStatement(type)) {
+          throw new InvalidConstructException(context, 
+              "Statement type not yet supported at program top level: " 
+                  + name.toLowerCase());
+        }
         throw new STCRuntimeError("Unexpected token: " + name
             + " at program top level");
       }
@@ -295,7 +300,7 @@ public class ASTWalker {
       int type = topLevelDefn.getType();
       switch (type) {
       case ExMParser.IMPORT:
-        // Don't recurse: we invoke compilation of modules elsewher
+        // Don't recurse: we invoke compilation of modules elsewhere
         break;
         
       case ExMParser.DEFINE_FUNCTION:
@@ -306,8 +311,40 @@ public class ASTWalker {
         compileAppFunction(context, topLevelDefn);
         break;
       
-      // TODO: handle other program statements here
+      default:
+        String name = LogHelper.tokName(type);
+        if (isTopLevelStatement(type)) {
+          throw new InvalidConstructException(context, 
+              "Statement type not yet supported at program top level: " 
+                  + name.toLowerCase());
+        }
       }
+    }
+  }
+
+  /**
+   * @param token a AST token type 
+   * @return true if token is a statement token type that is syntactically
+   *        valid at top level of program but isn't yet supported
+   */
+  private boolean isTopLevelStatement(int token) {
+    switch (token) {
+      case ExMParser.BLOCK:
+      case ExMParser.IF_STATEMENT:
+      case ExMParser.SWITCH_STATEMENT:
+      case ExMParser.DECLARATION:
+      case ExMParser.ASSIGN_EXPRESSION:
+      case ExMParser.EXPR_STMT:
+      case ExMParser.FOREACH_LOOP:
+      case ExMParser.FOR_LOOP:
+      case ExMParser.ITERATE:
+      case ExMParser.WAIT_STATEMENT:
+      case ExMParser.WAIT_DEEP_STATEMENT:
+      case ExMParser.UPDATE:
+      case ExMParser.STATEMENT_CHAIN:
+        return true;
+      default:
+        return false;
     }
   }
 
