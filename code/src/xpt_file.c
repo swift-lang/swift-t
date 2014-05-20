@@ -688,134 +688,85 @@ static adlb_code seek_read(xlb_xpt_read_state *state, off_t offset)
 adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
    int *key_len, void **key, int *val_len, void **val, off_t *val_offset)
 {
+  adlb_code rc;
+  assert(state->file != NULL);
+  assert(buffer->data != NULL);
 
-  while (true) // Retry loop // Does this ever loop? -Justin
+  uint32_t crc;
+  uLong crc_calc;
+
+  // Length in bytes of encoded vint values
+  int rec_len_encb;
+  int64_t rec_len64, key_len64;
+
+  xpt_file_pos record_start = xpt_read_pos(state);
+  off_t rec_offset = xpt_read_offset(state);
+
+  // If we resync, it should be 1 bytes offset from prev sync marker
+  xpt_file_pos resync_pos = file_pos_add(xpt_read_pos(state), 1);
+
+  // sync marker comes before record
+  uint32_t sync_val;
+  rc = blkread_uint32(state, &sync_val);
+  if (rc != ADLB_SUCCESS)
+    return rc;
+
+  if (sync_val != xpt_sync_marker)
   {
-    adlb_code rc;
-    assert(state->file != NULL);
-    assert(buffer->data != NULL);
+    // Can't do much if sync marker bad, try to continue
+    DEBUG("Sync marker at start of record doesn't match expected: %"PRIx32
+          " vs %"PRIx32". Proceeding anyway", sync_val, xpt_sync_marker);
+  }
 
-    uint32_t crc;
-    uLong crc_calc;
+  // Get crc
+  rc = blkread_uint32(state, &crc);
+  if (rc != ADLB_SUCCESS)
+    return rc;
 
-    // Length in bytes of encoded vint values
-    int rec_len_encb;
-    int64_t rec_len64, key_len64;
+  DEBUG("Reading entry at offset %llu", (long long unsigned)rec_offset);
 
-    xpt_file_pos record_start = xpt_read_pos(state);
-    off_t rec_offset = xpt_read_offset(state);
+  Byte rec_len_enc[VINT_MAX_BYTES];
+  // get record length from file reading byte-by-byte
+  rc = blkread_vint(state, &rec_len64, rec_len_enc, &rec_len_encb);
+  if (rc != ADLB_SUCCESS)
+  {
+    // distinguish between read error and decode error
+    ERR_PRINTF("Could not decode record length from file\n");
 
-    // If we resync, it should be 1 bytes offset from prev sync marker
-    xpt_file_pos resync_pos = file_pos_add(xpt_read_pos(state), 1);
-
-    // sync marker comes before record
-    uint32_t sync_val;
-    rc = blkread_uint32(state, &sync_val);
-    if (rc != ADLB_SUCCESS)
-      return rc;
-
-    if (sync_val != xpt_sync_marker)
+    if (rec_len_encb > 0)
     {
-      // Can't do much if sync marker bad, try to continue
-      DEBUG("Sync marker at start of record doesn't match expected: %"PRIx32
-            " vs %"PRIx32". Proceeding anyway", sync_val, xpt_sync_marker);
-    }
-
-    // Get crc
-    rc = blkread_uint32(state, &crc);
-    if (rc != ADLB_SUCCESS)
-      return rc;
-
-    DEBUG("Reading entry at offset %llu", (long long unsigned)rec_offset);
-
-    Byte rec_len_enc[VINT_MAX_BYTES];
-    // get record length from file reading byte-by-byte
-    rc = blkread_vint(state, &rec_len64, rec_len_enc, &rec_len_encb);
-    if (rc != ADLB_SUCCESS)
-    {
-      // distinguish between read error and decode error
-      ERR_PRINTF("Could not decode record length from file\n");
-
-      if (rec_len_encb > 0)
-      {
-        // Decoding error rather than I/O error
-        // Try to get place again
-        xpt_read_resync(state, resync_pos);
-        return ADLB_NOTHING;
-      }
-      return ADLB_ERROR;
-    }
-
-    DEBUG("Record length %"PRId64, rec_len64);
-
-    // sanity check for record length
-    if(rec_len64 < 0 || rec_len64 > INT_MAX)
-    {
-      ERR_PRINTF("Out of range record length: %"PRId64"\n", rec_len64);
-
+      // Decoding error rather than I/O error
+      // Try to get place again
       xpt_read_resync(state, resync_pos);
       return ADLB_NOTHING;
     }
+    return ADLB_ERROR;
+  }
 
-    // Reconstitute encoded vint for crc check
-    uInt tmp = (uInt)vint_encode(rec_len64, rec_len_enc);
-    assert(tmp == rec_len_encb);
+  DEBUG("Record length %"PRId64, rec_len64);
 
-    // Zero-length record indicates end of file.
-    // NOTE: if we had a small hole at end of block that CRC+rec len
-    // doesn't fit in, we would have detected end of file earlier when
-    // trying to advance to next blok
-    if (rec_len64 == 0)
-    {
-      // check crc of encoded record
-      crc_calc = crc32(0L, Z_NULL, 0);
-      crc_calc = crc32(crc_calc, rec_len_enc, (uInt)rec_len_encb);
-      if (crc_calc != crc)
-      {
-        ERR_PRINTF("CRC check failed for record at offset %llu\n",
-                    (long long unsigned)rec_offset - sizeof(crc));
-        ERR_PRINTF("Computed CRC32: %lx Expected CRC32: %lx\n",
-                (unsigned long)crc_calc, (unsigned long)crc);
-        xpt_read_resync(state, resync_pos);
-        return ADLB_NOTHING;
-      }
-      // This appears to be a valid end of file marker
-      return ADLB_DONE;
-    }
+  // sanity check for record length
+  if(rec_len64 < 0 || rec_len64 > INT_MAX)
+  {
+    ERR_PRINTF("Out of range record length: %"PRId64"\n", rec_len64);
 
-    // buffer too small: signal caller
-    if (buffer->length < rec_len64)
-    {
-      // consider case where record length is corrupted: check CRC by
-      // reading directly from file to avoid danger of allocating
-      // too-big buffer.
-      if (!check_crc(state, (int)rec_len64, crc, buffer))
-      {
-        ERR_PRINTF("CRC check failed for record at offset %llu\n",
-                    (long long unsigned)rec_offset);
-        // Bad record, get caller to call again
-        xpt_read_resync(state, resync_pos);
-        return ADLB_NOTHING;
-      }
-      // reset position to start of record for re-reading
-      seek_file_pos(state, record_start);
+    xpt_read_resync(state, resync_pos);
+    return ADLB_NOTHING;
+  }
 
-      *key_len = (int)rec_len64;
-      DEBUG("Buffer too small for record");
-      return ADLB_RETRY;
-    }
+  // Reconstitute encoded vint for crc check
+  uInt tmp = (uInt)vint_encode(rec_len64, rec_len_enc);
+  assert(tmp == rec_len_encb);
 
-    off_t data_offset = xpt_read_offset(state);
-
-    // Load rest of record into caller buffer
-    rc = blkread(state, buffer->data, (size_t)rec_len64);
-    if (rc != ADLB_SUCCESS)
-      return rc;
-
-    // Now we can check crc
+  // Zero-length record indicates end of file.
+  // NOTE: if we had a small hole at end of block that CRC+rec len
+  // doesn't fit in, we would have detected end of file earlier when
+  // trying to advance to next blok
+  if (rec_len64 == 0)
+  {
+    // check crc of encoded record
     crc_calc = crc32(0L, Z_NULL, 0);
     crc_calc = crc32(crc_calc, rec_len_enc, (uInt)rec_len_encb);
-    crc_calc = crc32(crc_calc, (Byte*)buffer->data, (uInt)rec_len64);
     if (crc_calc != crc)
     {
       ERR_PRINTF("CRC check failed for record at offset %llu\n",
@@ -825,46 +776,88 @@ adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
       xpt_read_resync(state, resync_pos);
       return ADLB_NOTHING;
     }
-
-    // CRC check passed: checkpoint record is probably intact
-    int key_len_encb = vint_decode(buffer->data, (int)rec_len64, &key_len64);
-    if (key_len_encb < 0)
-    {
-      ERR_PRINTF("Error decoding vint for key length\n");
-      xpt_read_resync(state, resync_pos);
-      return ADLB_NOTHING;
-    }
-    if (key_len64 < 0 || key_len64 > INT_MAX)
-    {
-      ERR_PRINTF("Out of range key length: %"PRId64"\n", key_len64);
-      xpt_read_resync(state, resync_pos);
-      return ADLB_NOTHING;
-    }
-    if (key_len64 > rec_len64 - key_len_encb)
-    {
-      ERR_PRINTF("Key length too long for record: %"PRId64" v. %"PRId64"\n",
-                  key_len64, rec_len64);
-      xpt_read_resync(state, resync_pos);
-      return ADLB_NOTHING;
-    }
-
-    DEBUG("Key length is %"PRId64, key_len64);
-
-    *key_len = (int)key_len64;
-    *val_len = (int)(rec_len64 - (int64_t)key_len_encb - key_len64);
-
-    // Work out relative offsets of key/value data from record start
-    int key_rel = key_len_encb;
-    int val_rel = key_rel + *key_len;
-    *key = buffer->data + key_rel;
-    *val = buffer->data + val_rel;
-    *val_offset = data_offset + (off_t)val_rel;
-
-    return ADLB_SUCCESS;
+    // This appears to be a valid end of file marker
+    return ADLB_DONE;
   }
-  // Should never get here:
-  assert(false);
-  return ADLB_ERROR;
+
+  // buffer too small: signal caller
+  if (buffer->length < rec_len64)
+  {
+    // consider case where record length is corrupted: check CRC by
+    // reading directly from file to avoid danger of allocating
+    // too-big buffer.
+    if (!check_crc(state, (int)rec_len64, crc, buffer))
+    {
+      ERR_PRINTF("CRC check failed for record at offset %llu\n",
+                  (long long unsigned)rec_offset);
+      // Bad record, get caller to call again
+      xpt_read_resync(state, resync_pos);
+      return ADLB_NOTHING;
+    }
+    // reset position to start of record for re-reading
+    seek_file_pos(state, record_start);
+
+    *key_len = (int)rec_len64;
+    DEBUG("Buffer too small for record");
+    return ADLB_RETRY;
+  }
+
+  off_t data_offset = xpt_read_offset(state);
+
+  // Load rest of record into caller buffer
+  rc = blkread(state, buffer->data, (size_t)rec_len64);
+  if (rc != ADLB_SUCCESS)
+    return rc;
+
+  // Now we can check crc
+  crc_calc = crc32(0L, Z_NULL, 0);
+  crc_calc = crc32(crc_calc, rec_len_enc, (uInt)rec_len_encb);
+  crc_calc = crc32(crc_calc, (Byte*)buffer->data, (uInt)rec_len64);
+  if (crc_calc != crc)
+  {
+    ERR_PRINTF("CRC check failed for record at offset %llu\n",
+                (long long unsigned)rec_offset - sizeof(crc));
+    ERR_PRINTF("Computed CRC32: %lx Expected CRC32: %lx\n",
+            (unsigned long)crc_calc, (unsigned long)crc);
+    xpt_read_resync(state, resync_pos);
+    return ADLB_NOTHING;
+  }
+
+  // CRC check passed: checkpoint record is probably intact
+  int key_len_encb = vint_decode(buffer->data, (int)rec_len64, &key_len64);
+  if (key_len_encb < 0)
+  {
+    ERR_PRINTF("Error decoding vint for key length\n");
+    xpt_read_resync(state, resync_pos);
+    return ADLB_NOTHING;
+  }
+  if (key_len64 < 0 || key_len64 > INT_MAX)
+  {
+    ERR_PRINTF("Out of range key length: %"PRId64"\n", key_len64);
+    xpt_read_resync(state, resync_pos);
+    return ADLB_NOTHING;
+  }
+  if (key_len64 > rec_len64 - key_len_encb)
+  {
+    ERR_PRINTF("Key length too long for record: %"PRId64" v. %"PRId64"\n",
+                key_len64, rec_len64);
+    xpt_read_resync(state, resync_pos);
+    return ADLB_NOTHING;
+  }
+
+  DEBUG("Key length is %"PRId64, key_len64);
+
+  *key_len = (int)key_len64;
+  *val_len = (int)(rec_len64 - (int64_t)key_len_encb - key_len64);
+
+  // Work out relative offsets of key/value data from record start
+  int key_rel = key_len_encb;
+  int val_rel = key_rel + *key_len;
+  *key = buffer->data + key_rel;
+  *val = buffer->data + val_rel;
+  *val_offset = data_offset + (off_t)val_rel;
+
+  return ADLB_SUCCESS;
 }
 
 static xpt_file_pos xpt_read_pos(const xlb_xpt_read_state *state)
