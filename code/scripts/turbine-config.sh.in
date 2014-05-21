@@ -55,13 +55,4 @@ export TCLLIBPATH
 
 export TURBINE_MACHINE=@USE_MACHINE@
 
-if [[ ${TURBINE_MACHINE} == "sicortex" ]]
-then
-  # Fast string functions for the SiCortex
-  # Turbine will not run without this
-  export LD_PRELOAD=/usr/lib64/libscstr.so
-  # For some reason, the SiCortex cannot find this in rpath
-  export LD_LIBRARY_PATH=${TURBINE_HOME}/lib:${LD_LIBRARY_PATH}
-fi
-
 return 0

@@ -161,7 +161,7 @@ AC_ARG_WITH(c-utils,
 AC_SUBST(USE_C_UTILS)
 
 USE_LIBCUTILS_A=""
-echo "CHECK ${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}" 
+echo "CHECK ${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}"
 if [[ -f "${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}" ]]; then
   USE_LIBCUTILS_A="${USE_C_UTILS}/lib/libexmcutils.${AR_SUFFIX}"
 fi
@@ -201,20 +201,6 @@ AC_ARG_ENABLE(custom-mpi,
     [
         ENABLE_CUSTOM_MPI=1
         USE_MACHINE=custom
-        USE_LAUNCHER=mpiexec
-    ],
-    [])
-
-# Special systems:
-# On the SiCortex, we use srun and libmpiP.a
-AC_ARG_ENABLE(sicortex,
-    AS_HELP_STRING([--enable-sicortex],
-                   [Required if running on SiCortex]),
-    [
-        USE_MACHINE=sicortex
-        USE_LAUNCHER=srun
-        USE_MPI_DIR=/usr
-        USE_MPI_LIB_NAME=scmpi
     ],
     [])
 
@@ -347,7 +333,6 @@ then
     fi
   done
 fi
-
 
 if (( ! MPI_LIB_FOUND ))
 then
@@ -884,10 +869,10 @@ AC_ARG_WITH(tcl-syslib-dir,
 
 mktemp_system()
 {
-    if [[ ${USE_MAC} == "no" ]] 
-    then 
+    if [[ ${USE_MAC} == "no" ]]
+    then
         mktemp
-    else 
+    else
         mktemp -t TURBINE
     fi
 }
@@ -1004,11 +989,11 @@ AC_SUBST(CFLAGS)
 AC_SUBST(LDFLAGS)
 
 # We take system libraries out of arguments to the linker (#546)
-if [[ ${USE_MAC} == "no" ]] 
+if [[ ${USE_MAC} == "no" ]]
 then
     # This does not work on the Mac
     ldconfig -v 2>/dev/null | grep -vP '\t' | cut -d : -f 1 > system-libs.txt
-else 
+else
      touch system-libs.txt
 fi
 
