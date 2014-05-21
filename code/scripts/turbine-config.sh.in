@@ -1,5 +1,5 @@
 
-# BASH-formatted setup script processed by turbine/configure
+# BASH-formatted setup script filtered by turbine/configure
 #
 # Influential environment variables include:
 # TURBINE_USER_LIB - directory for user library code
