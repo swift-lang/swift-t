@@ -170,9 +170,8 @@ AC_SUBST(USE_LIBCUTILS_A)
 # MPI defaults (may be overridden on special systems)
 USE_MACHINE=normal
 # The "launcher" is used by job submission systems to launch jobs
-# Usually a path to mpiexec, srun, or aprun
-# Full path to launcher (optional):
-USE_LAUNCHER=mpiexec
+# Usually a path to mpiexec- schedulers are handled by their scripts
+USE_LAUNCHER=0
 USE_MPI_DIR=0
 USE_MPI_INCLUDE=0
 USE_MPI_LIB_DIR=0
@@ -233,6 +232,29 @@ then
                                   or mpicc in PATH .])
    fi
 fi
+
+if [[ ${USE_LAUNCHER} == 0 ]]
+then
+    # Try to set launcher based on MPI_DIR
+    if [[ -x ${USE_MPI_DIR}/bin/mpiexec ]]
+    then
+        AC_MSG_RESULT([Found ${USE_MPI_DIR}/bin/mpiexec])
+        USE_LAUNCHER=${USE_MPI_DIR}/bin/mpiexec
+    fi
+fi
+
+if [[ ${USE_LAUNCHER} == 0 ]]
+then
+    # Try to set launcher based on PATH
+    program=$( which mpiexec )
+    if [[ ${?} != 0 ]]
+    then
+        AC_MSG_WARN([mpiexec not found: no default Turbine launcher])
+        USE_LAUNCHER=mpiexec-not-found
+    fi
+fi
+
+AC_MSG_RESULT([Using MPI launcher: ${USE_LAUNCHER}])
 
 # Look for mpi.h at its APT location
 if [[ ! -f ${USE_MPI_INCLUDE}/mpi.h ]]
@@ -342,8 +364,6 @@ then
                    location or library may not
                    have been built.])
 fi
-
-AC_MSG_RESULT([Using MPI launcher: ${USE_LAUNCHER}])
 
 # Write out MPI settings
 AC_SUBST(USE_MACHINE)
