@@ -125,7 +125,7 @@ xlb_sync_steal(int target, const int *work_counts, int size,
   be applied without a decrement-before-increment race?
  */
 adlb_code
-xlb_sync_refcount(int target, adlb_datum_id id, adlb_refcounts change);
+xlb_sync_refcount(int target, adlb_datum_id id, adlb_refc change);
 
 typedef struct {
   MPI_Request req;
@@ -134,7 +134,7 @@ typedef struct {
 
 typedef enum {
   DEFERRED_SYNC, // Have not yet accepted
-  ACCEPTED_RC,   // Have accepted but need to do refcount
+  ACCEPTED_REFC,   // Have accepted but need to do refcount
   DEFERRED_NOTIFY, // Have accepted but need to process notify
   UNSENT_NOTIFY, // Need to notify other server
   DEFERRED_STEAL_PROBE, // Have accepted but need to respond
@@ -297,7 +297,7 @@ static inline bool xlb_is_pending_notif(xlb_pending_kind kind,
   {
     case DEFERRED_NOTIFY:
     case UNSENT_NOTIFY:
-    case ACCEPTED_RC:
+    case ACCEPTED_REFC:
       return true;
     case DEFERRED_SYNC:
       assert(hdr != NULL);

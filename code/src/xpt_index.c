@@ -63,7 +63,7 @@ adlb_code xlb_xpt_index_lookup(const void *key, int key_len,
   adlb_datum_id id = id_for_hash(calc_hash(key, key_len));
   adlb_subscript subscript = { .key = key, .length = (size_t)key_len };
 
-  adlb_retrieve_rc refcounts = ADLB_RETRIEVE_NO_RC;
+  adlb_retrieve_refc refcounts = ADLB_RETRIEVE_NO_REFC;
 
   void *buffer = xfer; 
   adlb_data_type type;
@@ -175,12 +175,12 @@ adlb_code xlb_xpt_index_add(const void *key, int key_len,
     data = xfer;
     data_len = entry->DATA.length + 1;
   }
-  adlb_refcounts refcounts = ADLB_NO_RC;
+  adlb_refc refcounts = ADLB_NO_REFC;
   adlb_datum_id id = id_for_hash(calc_hash(key, key_len));
   adlb_subscript subscript = { .key = key, .length = (size_t)key_len };
   assert(data_len <= INT_MAX);
   adlb_code rc = ADLB_Store(id, subscript, ADLB_DATA_TYPE_BLOB,
-                    data, (int)data_len, refcounts, ADLB_NO_RC);
+                    data, (int)data_len, refcounts, ADLB_NO_REFC);
   
   // Handle duplicate key gracefully: it is possible for the same
   //       function to be recomputed, and we need to handle it!

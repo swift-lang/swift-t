@@ -42,7 +42,7 @@ uint xlb_multiset_size(const xlb_multiset *set) {
 }
 
 adlb_data_code xlb_multiset_add(xlb_multiset *set, const void *data,
-                               int length, adlb_refcounts refcounts,
+                               int length, adlb_refc refcounts,
                                   const adlb_datum_storage **stored) {
   xlb_multiset_chunk *chunk = NULL;
   if (set->last_chunk_elems >= XLB_MULTISET_CHUNK_SIZE)
@@ -79,10 +79,10 @@ adlb_data_code xlb_multiset_add(xlb_multiset *set, const void *data,
 adlb_data_code
 xlb_multiset_cleanup(xlb_multiset *set, bool free_root, bool free_mem,
              bool release_read, bool release_write,
-             xlb_acquire_rc to_acquire, xlb_rc_changes *rc_changes)
+             xlb_refc_acquire to_acquire, xlb_refc_changes *refcs)
 {
   // Can't support subscripts
-  assert(ADLB_RC_IS_NULL(to_acquire.refcounts) ||
+  assert(ADLB_REFC_IS_NULL(to_acquire.refcounts) ||
          !adlb_has_sub(to_acquire.subscript));
   for (uint i = 0; i < set->chunk_count; i++) {
     xlb_multiset_chunk *chunk = set->chunks[i];
@@ -91,7 +91,7 @@ xlb_multiset_cleanup(xlb_multiset *set, bool free_root, bool free_mem,
       adlb_datum_storage *d = &chunk->arr[j];
       adlb_data_code dc = xlb_datum_cleanup(d, set->elem_type,
                     free_mem, release_read, release_write,
-                    to_acquire, rc_changes);
+                    to_acquire, refcs);
       DATA_CHECK(dc);
     }
     if (free_mem)

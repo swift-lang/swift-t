@@ -45,7 +45,7 @@
 typedef struct {
   adlb_datum_id id; // ID to set
   adlb_subscript subscript; // Subscript of ID to set
-  adlb_refcounts refcounts; // Refcounts to transfer
+  adlb_refc refcounts; // Refcounts to transfer
   adlb_data_type type;
   // Data to set it to:
   const void *value;
@@ -78,33 +78,33 @@ typedef struct {
 /** Represent change in refcount that must be applied */
 typedef struct {
   adlb_datum_id id;
-  adlb_refcounts rc;
+  adlb_refc rc;
   
   /** If true, we don't have ownership of reference:
       must acquire before doing anything to avoid
       race condition on freeing */
   bool must_preacquire;
-} xlb_rc_change;
+} xlb_refc_change;
 
-#ifndef XLB_INDEX_RC_CHANGES
-#define XLB_INDEX_RC_CHANGES 0
+#ifndef XLB_INDEX_REFC_CHANGES
+#define XLB_INDEX_REFC_CHANGES 0
 #endif
 
 /** List of refcount changes */
 typedef struct {
-#if XLB_INDEX_RC_CHANGES
+#if XLB_INDEX_REFC_CHANGES
   // Index changes by ID to allow merging
   table_lp index;
 #endif
-  xlb_rc_change *arr;
+  xlb_refc_change *arr;
   int count;
   int size;
-} xlb_rc_changes;
+} xlb_refc_changes;
 
 typedef struct {
   adlb_notif_ranks notify;
   adlb_ref_data references;
-  xlb_rc_changes rc_changes;
+  xlb_refc_changes refcs;
 
   // All data that needs to be freed after notifications, e.g. subscripts
   // (may be NULL)
@@ -118,7 +118,7 @@ typedef struct {
  */
 #define XLB_NOTIFS_INIT_SIZE 16
 #define XLB_REFS_INIT_SIZE 16
-#define XLB_RC_CHANGES_INIT_SIZE 16
+#define XLB_REFC_CHANGES_INIT_SIZE 16
 #define XLB_TO_FREE_INIT_SIZE 16
 
 
@@ -127,7 +127,7 @@ static inline bool xlb_notif_ranks_empty(const adlb_notif_ranks *notif)
   return notif->count == 0;
 }
 
-static inline bool xlb_rc_changes_empty(const xlb_rc_changes *changes)
+static inline bool xlb_refc_changes_empty(const xlb_refc_changes *changes)
 {
   return changes->count == 0;
 }
@@ -139,15 +139,15 @@ static inline bool xlb_refs_empty(const adlb_ref_data *refs)
 static inline bool xlb_notif_empty(const adlb_notif_t *notif)
 {
   return notif->notify.count == 0 && notif->references.count == 0 &&
-         notif->rc_changes.count == 0;
+         notif->refcs.count == 0;
 }
 
 #define ADLB_NO_NOTIF_RANKS { .count = 0, .size = 0, .notifs = NULL }
 #define ADLB_NO_DATUMS { .count = 0, .size = 0, .data = NULL }
-#define ADLB_NO_RC_CHANGES { .size = 0, .count = 0, .arr = NULL }
+#define ADLB_NO_REFC_CHANGES { .size = 0, .count = 0, .arr = NULL }
 #define ADLB_NO_NOTIFS { .notify = ADLB_NO_NOTIF_RANKS,  \
                          .references = ADLB_NO_DATUMS,   \
-                         .rc_changes = ADLB_NO_RC_CHANGES, \
+                         .refcs = ADLB_NO_REFC_CHANGES, \
                          .to_free = NULL, .to_free_length = 0, \
                          .to_free_size = 0 }
 
@@ -162,7 +162,7 @@ void xlb_free_datums(adlb_ref_data *datums);
  */
 adlb_code xlb_notifs_expand(adlb_notif_ranks *notifs, int to_add);
 adlb_code xlb_refs_expand(adlb_ref_data *refs, int to_add);
-adlb_code xlb_rc_changes_expand(xlb_rc_changes *c, int to_add);
+adlb_code xlb_refc_changes_expand(xlb_refc_changes *c, int to_add);
 adlb_code xlb_to_free_expand(adlb_notif_t *notifs, int to_add);
 
 /*
@@ -280,7 +280,7 @@ static inline adlb_code xlb_notifs_add(adlb_notif_ranks *notifs,
  */
 static inline adlb_code xlb_refs_add(adlb_ref_data *refs,
       adlb_datum_id id, adlb_subscript sub, adlb_data_type type,
-      const void *value, int value_len, adlb_refcounts refcounts)
+      const void *value, int value_len, adlb_refc refcounts)
 {
   // Mark that caller should free
   if (refs->count == refs->size)
@@ -301,7 +301,7 @@ static inline adlb_code xlb_refs_add(adlb_ref_data *refs,
 }
 
 // Inline functions
-static inline adlb_code xlb_rc_changes_init(xlb_rc_changes *c)
+static inline adlb_code xlb_refc_changes_init(xlb_refc_changes *c)
 {
   c->arr = NULL;
   c->count = 0;
@@ -311,17 +311,17 @@ static inline adlb_code xlb_rc_changes_init(xlb_rc_changes *c)
 
 
 static inline bool
-xlb_rc_change_merge_existing(xlb_rc_changes *c,
+xlb_refc_change_merge_existing(xlb_refc_changes *c,
     adlb_datum_id id, int read_change, int write_change,
     bool must_preacquire)
 {
-#if XLB_INDEX_RC_CHANGES
+#if XLB_INDEX_REFC_CHANGES
   void *tmp;
   if (table_lp_search(&c->index, id, &tmp))
   {
     unsigned long change_ix = (unsigned long)tmp;
     assert(change_ix < c->count);
-    xlb_rc_change *change = &c->arr[change_ix];
+    xlb_refc_change *change = &c->arr[change_ix];
     assert(change->id == id);
     change->rc.read_refcount += read_change;
     change->rc.write_refcount += write_change;
@@ -337,22 +337,22 @@ xlb_rc_change_merge_existing(xlb_rc_changes *c,
   return false;
 }
 
-static inline adlb_code xlb_rc_changes_add(xlb_rc_changes *c,
+static inline adlb_code xlb_refc_changes_add(xlb_refc_changes *c,
     adlb_datum_id id, int read_change, int write_change,
     bool must_preacquire)
 {
-  xlb_rc_change *change;
+  xlb_refc_change *change;
   adlb_code ac;
 
   // Ensure index initialized
   if (c->count == 0 ||
-      !xlb_rc_change_merge_existing(c, id, read_change, write_change,
+      !xlb_refc_change_merge_existing(c, id, read_change, write_change,
                                     must_preacquire))
   {
     // New ID, add to array
     if (c->count == c->size)
     {
-      ac = xlb_rc_changes_expand(c, 1);
+      ac = xlb_refc_changes_expand(c, 1);
       ADLB_CHECK(ac);
     }
 
@@ -365,7 +365,7 @@ static inline adlb_code xlb_rc_changes_add(xlb_rc_changes *c,
     // that would cause referand to be freed
     change->must_preacquire = must_preacquire;
 
-#if XLB_INDEX_RC_CHANGES
+#if XLB_INDEX_REFC_CHANGES
     bool added = table_lp_add(&c->index, id, (void*)change_ix);
     CHECK_MSG(added, "Could not add to refcount index table");
 #endif
@@ -378,11 +378,11 @@ static inline adlb_code xlb_rc_changes_add(xlb_rc_changes *c,
   return ADLB_SUCCESS;
 }
 
-static inline void xlb_rc_changes_free(xlb_rc_changes *c)
+static inline void xlb_refc_changes_free(xlb_refc_changes *c)
 {
   if (c->arr != NULL) {
     free(c->arr);
-#if XLB_INDEX_RC_CHANGES
+#if XLB_INDEX_REFC_CHANGES
     table_lp_free_callback(&c->index, false, NULL);
 #endif
   }

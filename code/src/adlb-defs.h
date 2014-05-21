@@ -135,42 +135,42 @@ typedef enum
 typedef struct {
   int read_refcount;
   int write_refcount;
-} adlb_refcounts;
+} adlb_refc;
 
-static const adlb_refcounts ADLB_NO_RC =
+static const adlb_refc ADLB_NO_REFC =
   { 0 /* read_refcount */, 0 /* write_refcount */ };
 
-static const adlb_refcounts ADLB_READ_RC =
+static const adlb_refc ADLB_READ_REFC =
   { 1 /*read_refcount */, 0 /* write_refcount */ };
 
-static const adlb_refcounts ADLB_WRITE_RC =
+static const adlb_refc ADLB_WRITE_REFC =
   { 0 /* read_refcount */, 1 /* write_refcount */ };
 
-static const adlb_refcounts ADLB_READWRITE_RC =
+static const adlb_refc ADLB_READWRITE_REFC =
   { 1 /* read_refcount */, 1 /* write_refcount */ };
 
-#define ADLB_RC_IS_NULL(rc) \
-    ((rc).read_refcount == 0 && (rc).write_refcount == 0)
+#define ADLB_REFC_IS_NULL(refc) \
+    ((refc).read_refcount == 0 && (refc).write_refcount == 0)
 
-#define ADLB_RC_NOT_NULL(rc) \
-    ((rc).read_refcount != 0 || (rc).write_refcount != 0)
+#define ADLB_REFC_NOT_NULL(refc) \
+    ((refc).read_refcount != 0 || (refc).write_refcount != 0)
 
-#define ADLB_RC_POSITIVE(rc) \
-    ((rc).read_refcount > 0 && (rc).write_refcount > 0)
+#define ADLB_REFC_POSITIVE(refc) \
+    ((refc).read_refcount > 0 && (refc).write_refcount > 0)
 
-#define ADLB_RC_NONNEGATIVE(rc) \
-    ((rc).read_refcount >= 0 && (rc).write_refcount >= 0)
+#define ADLB_REFC_NONNEGATIVE(refc) \
+    ((refc).read_refcount >= 0 && (refc).write_refcount >= 0)
 
-#define ADLB_RC_NEGATIVE(rc) \
-    ((rc).read_refcount < 0 && (rc).write_refcount < 0)
+#define ADLB_REFC_NEGATIVE(refc) \
+    ((refc).read_refcount < 0 && (refc).write_refcount < 0)
 
-#define ADLB_RC_NONPOSITIVE(rc) \
-    ((rc).read_refcount <= 0 && (rc).write_refcount <= 0)
+#define ADLB_REFC_NONPOSITIVE(refc) \
+    ((refc).read_refcount <= 0 && (refc).write_refcount <= 0)
 
-static inline adlb_refcounts adlb_rc_negate(adlb_refcounts rc)
+static inline adlb_refc adlb_refc_negate(adlb_refc refc)
 {
-  adlb_refcounts result = { -rc.read_refcount, /* read_refcount */
-                            -rc.write_refcount /* write_refcount */ };
+  adlb_refc result = { -refc.read_refcount, /* read_refcount */
+                            -refc.write_refcount /* write_refcount */ };
   return result;
 }
 
@@ -223,24 +223,24 @@ typedef struct {
 typedef struct
 {
   // decrease reference count of this datum
-  adlb_refcounts decr_self;
+  adlb_refc decr_self;
   // increase reference count of anything referenced by this datum
-  adlb_refcounts incr_referand;
-} adlb_retrieve_rc;
+  adlb_refc incr_referand;
+} adlb_retrieve_refc;
 
-static const adlb_retrieve_rc ADLB_RETRIEVE_NO_RC = { 
+static const adlb_retrieve_refc ADLB_RETRIEVE_NO_REFC = { 
       { 0, 0 }, /* decr_self read and write refcounts */
       { 0, 0 }, /* incr_reference read and write refcounts */
 };
 
 // Read a value variable
-static const adlb_retrieve_rc ADLB_RETRIEVE_READ_RC = { 
+static const adlb_retrieve_refc ADLB_RETRIEVE_READ_REFC = { 
       { 1, 0 }, /* decr_self read and write refcounts */
       { 0, 0 }, /* incr_reference read and write refcounts */
 };
 
 // Read a reference variable and acquire reference to referand
-static const adlb_retrieve_rc ADLB_RETRIEVE_ACQUIRE_RC = { 
+static const adlb_retrieve_refc ADLB_RETRIEVE_ACQUIRE_REFC = { 
       { 1, 0 }, /* decr_self read and write refcounts */
       { 1, 0 }, /* incr_reference read and write refcounts */
 };

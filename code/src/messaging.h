@@ -232,7 +232,7 @@ struct packed_notif_counts
 {
   int notify_count;
   int reference_count;
-  int rc_change_count;
+  int refc_count;
   int extra_data_count;
   int extra_data_bytes;
 };
@@ -290,7 +290,7 @@ struct packed_enumerate
   char request_members;
   int count;
   int offset;
-  adlb_refcounts decr;
+  adlb_refc decr;
 };
 
 struct packed_enumerate_result
@@ -311,7 +311,7 @@ struct packed_notif
 
 struct packed_reference
 {
-  adlb_refcounts refcounts; // Refcounts transferred
+  adlb_refc refcounts; // Refcounts transferred
   adlb_datum_id id; // ID to set
   int subscript_data; // index of extra data subscript
   adlb_data_type type;
@@ -323,12 +323,12 @@ struct packed_reference
  */
 struct packed_refcounts_req {
   adlb_datum_id id;
-  adlb_refcounts decr;
+  adlb_refc decr;
 };
 
 struct packed_refcounts_resp {
   adlb_data_code dc;
-  adlb_refcounts refcounts;
+  adlb_refc refcounts;
 };
 
 /**
@@ -337,7 +337,7 @@ struct packed_refcounts_resp {
 struct packed_incr
 {
   adlb_datum_id id;
-  adlb_refcounts change;
+  adlb_refc change;
 };
 
 /**
@@ -356,8 +356,8 @@ struct packed_store_hdr
 {
   adlb_datum_id id;
   adlb_data_type type; // Type of data
-  adlb_refcounts refcount_decr;
-  adlb_refcounts store_refcounts; // Refcounts to store
+  adlb_refc refcount_decr;
+  adlb_refc store_refcounts; // Refcounts to store
   int subscript_len; // including null byte, 0 if no subscript
 };
 
@@ -377,7 +377,7 @@ struct packed_store_resp
 struct packed_retrieve_hdr
 {
   adlb_datum_id id;
-  adlb_retrieve_rc refcounts;
+  adlb_retrieve_refc refcounts;
   int subscript_len; // including null byte, 0 if no subscript
   char subscript[];
 };
@@ -402,7 +402,7 @@ struct pack_sub_resp
 struct packed_size_req
 {
   adlb_datum_id id;
-  adlb_refcounts decr;
+  adlb_refc decr;
 };
 
 /*

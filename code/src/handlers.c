@@ -149,7 +149,7 @@ static adlb_code
 notify_helper(adlb_notif_t *notifs);
 
 static adlb_code
-refcount_decr_helper(adlb_datum_id id, adlb_refcounts decr);
+refcount_decr_helper(adlb_datum_id id, adlb_refc decr);
 
 /** Is this process currently stealing work? */
 static bool stealing = false;
@@ -1045,7 +1045,7 @@ handle_exists(int caller)
   char *xfer_pos = xfer;
   xfer_pos += xlb_unpack_id_sub(xfer_pos, &id, &subscript);
 
-  adlb_refcounts decr;
+  adlb_refc decr;
   MSG_UNPACK_BIN(xfer_pos, &decr);
 
   resp.dc = xlb_data_exists(id, subscript, &resp.result);
@@ -1159,8 +1159,8 @@ handle_retrieve(int caller)
    subscript.length = (size_t)hdr->subscript_len;
   }
 
-  adlb_refcounts decr_self = hdr->refcounts.decr_self;
-  adlb_refcounts incr_referand = hdr->refcounts.incr_referand;
+  adlb_refc decr_self = hdr->refcounts.decr_self;
+  adlb_refc incr_referand = hdr->refcounts.incr_referand;
 
   TRACE("Retrieve: <%"PRId64">[%s] decr_self r:%i w:%i incr_referand r:%i w:%i",
           hdr->id, subscript, decr_self.read_refcount, decr_self.write_refcount,
@@ -1421,7 +1421,7 @@ handle_insert_atomic(int caller)
   bool return_value;
   MSG_UNPACK_BIN(xfer_pos, &return_value);
 
-  adlb_retrieve_rc refcounts;
+  adlb_retrieve_refc refcounts;
   MSG_UNPACK_BIN(xfer_pos, &refcounts);
 
   struct packed_insert_atomic_resp resp;
@@ -1459,11 +1459,11 @@ handle_insert_atomic(int caller)
     }
     else
     {
-      xlb_acquire_rc acq = { .refcounts = refcounts.incr_referand,
+      xlb_refc_acquire acq = { .refcounts = refcounts.incr_referand,
                           .subscript = subscript };
       // Just update reference counts
       resp.dc = xlb_data_reference_count(id,
-              adlb_rc_negate(refcounts.decr_self), acq , NULL, &notifs);
+              adlb_refc_negate(refcounts.decr_self), acq , NULL, &notifs);
     }
   }
     
@@ -1566,7 +1566,7 @@ handle_container_reference(int caller)
   adlb_datum_id id, ref_id;
   adlb_subscript subscript, ref_subscript;
   adlb_data_type ref_type;
-  adlb_refcounts transfer_refs; // Refcounts to transfer to dest
+  adlb_refc transfer_refs; // Refcounts to transfer to dest
 
   // Unpack data from buffer
   void *xfer_read = xfer;
@@ -1778,13 +1778,13 @@ notify_helper(adlb_notif_t *notifs)
   back to client.
  */
 static adlb_code
-refcount_decr_helper(adlb_datum_id id, adlb_refcounts decr)
+refcount_decr_helper(adlb_datum_id id, adlb_refc decr)
 {
-  if (!ADLB_RC_IS_NULL(decr))
+  if (!ADLB_REFC_IS_NULL(decr))
   {
     adlb_notif_t notifs = ADLB_NO_NOTIFS;
     adlb_data_code dc;
-    dc = xlb_data_reference_count(id, adlb_rc_negate(decr), XLB_NO_ACQUIRE,
+    dc = xlb_data_reference_count(id, adlb_refc_negate(decr), XLB_NO_ACQUIRE,
                                   NULL, &notifs);
     if (dc == ADLB_DATA_SUCCESS)
     {

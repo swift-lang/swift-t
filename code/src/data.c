@@ -49,7 +49,7 @@ static struct table_lp tds;
 
 typedef struct {
   adlb_datum_id id;
-  adlb_refcounts acquire;
+  adlb_refc acquire;
   size_t subscript_len;
   char subscript_data[];
 } container_reference;
@@ -99,7 +99,7 @@ lookup_subscript(adlb_datum_id id, const adlb_datum_storage *d,
     const adlb_datum_storage **result, adlb_data_type *result_type);
 
 static adlb_data_code datum_gc(adlb_datum_id id, adlb_datum* d,
-           xlb_acquire_rc acquire, xlb_rc_changes *rc_changes);
+           xlb_refc_acquire acquire, xlb_refc_changes *refcs);
 
 static container_reference *
 alloc_container_reference(size_t subscript_len);
@@ -107,13 +107,13 @@ alloc_container_reference(size_t subscript_len);
 static adlb_data_code
 data_store_root(adlb_datum_id id, adlb_datum *d,
     const void* buffer, int length, adlb_data_type type,
-    adlb_refcounts store_refcounts,
+    adlb_refc store_refcounts,
     adlb_notif_t *notifs, bool *freed_datum);
 
 static adlb_data_code
 data_store_subscript(adlb_datum_id id, adlb_datum *d,
     adlb_subscript subscript, const void* buffer, int length,
-    adlb_data_type type, adlb_refcounts store_refcounts,
+    adlb_data_type type, adlb_refc store_refcounts,
     adlb_notif_t *notifs, bool *freed_datum);
 
 static adlb_data_code
@@ -164,7 +164,7 @@ static
 adlb_data_code process_ref_list(struct list *subscribers,
           adlb_notif_t *notifs, adlb_data_type type,
           const void *value, int value_len,
-          adlb_refcounts *to_acquire); 
+          adlb_refc *to_acquire); 
 
 static 
 adlb_data_code append_notifs(struct list_b *listeners, bool free_list_root,
@@ -390,7 +390,7 @@ xlb_datum_lookup(adlb_datum_id id, adlb_datum **d)
 }
 
 adlb_data_code xlb_data_get_reference_count(adlb_datum_id id,
-          adlb_refcounts *result)
+          adlb_refc *result)
 {
   adlb_datum *d;
   adlb_data_code dc = xlb_datum_lookup(id, &d);
@@ -408,19 +408,19 @@ adlb_data_code xlb_data_get_reference_count(adlb_datum_id id,
    Caller must free result
  */
 adlb_data_code
-xlb_data_reference_count(adlb_datum_id id, adlb_refcounts change,
-          xlb_acquire_rc acquire, bool *garbage_collected,
+xlb_data_reference_count(adlb_datum_id id, adlb_refc change,
+          xlb_refc_acquire acquire, bool *garbage_collected,
           adlb_notif_t *notifs)
 {
   adlb_datum* d;
   adlb_data_code dc = xlb_datum_lookup(id, &d);
   DATA_CHECK(dc);
-  return xlb_rc_impl(d, id, change, acquire, garbage_collected, notifs);
+  return xlb_refc_incr(d, id, change, acquire, garbage_collected, notifs);
 }
 
 adlb_data_code
-xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
-          adlb_refcounts change, xlb_acquire_rc acquire,
+xlb_refc_incr(adlb_datum *d, adlb_datum_id id,
+          adlb_refc change, xlb_refc_acquire acquire,
           bool *garbage_collected, adlb_notif_t *notifs)
 {
   adlb_data_code dc;
@@ -482,13 +482,13 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
   {
     if (garbage_collected != NULL)
       *garbage_collected = true;
-    dc = datum_gc(id, d, acquire, &notifs->rc_changes);
+    dc = datum_gc(id, d, acquire, &notifs->refcs);
     DATA_CHECK(dc);
   }
   else
   {
     bool release_write_refs = closed && d->status.release_write_refs;
-    if (release_write_refs || ADLB_RC_NOT_NULL(acquire.refcounts))
+    if (release_write_refs || ADLB_REFC_NOT_NULL(acquire.refcounts))
     {
       DEBUG("Updating referand refcounts. release write refs: %i, "
             "Acquire sub: [%.*s] r: %i w: %i ", (int)release_write_refs,
@@ -496,7 +496,7 @@ xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
             acquire.refcounts.read_refcount, acquire.refcounts.write_refcount);
       // Have to release or acquire references
       dc = xlb_incr_referand(&d->data, d->type, false, release_write_refs,
-                   acquire, &notifs->rc_changes); 
+                   acquire, &notifs->refcs); 
       DATA_CHECK(dc);
     }
   }
@@ -511,7 +511,7 @@ extract_members(adlb_container *c, int count, int offset,
 
 static adlb_data_code
 datum_gc(adlb_datum_id id, adlb_datum* d,
-           xlb_acquire_rc to_acquire, xlb_rc_changes *rc_changes)
+           xlb_refc_acquire to_acquire, xlb_refc_changes *refcs)
 {
   DEBUG("datum_gc: "ADLB_PRI_DATUM,
       ADLB_PRI_DATUM_ARGS(id, d->symbol));
@@ -522,7 +522,7 @@ datum_gc(adlb_datum_id id, adlb_datum* d,
   {
     // Cleanup the storage if initialized
     adlb_data_code dc = xlb_datum_cleanup(&d->data, d->type, true,
-                                true, true, to_acquire, rc_changes);
+                                true, true, to_acquire, refcs);
     DATA_CHECK(dc);
   }
 
@@ -697,7 +697,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
                                         adlb_subscript ref_sub,
                                         bool copy_subscript,
                                         adlb_data_type ref_type,
-                                        adlb_refcounts to_acquire,
+                                        adlb_refc to_acquire,
                                         const adlb_buffer *caller_buffer,
                                         adlb_binary_data *result,
                                         adlb_notif_t *notifs)
@@ -760,11 +760,11 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
                  to_acquire);
 
     // Need to acquire references 
-    adlb_refcounts decr = { .read_refcount = -1,
+    adlb_refc decr = { .read_refcount = -1,
                             .write_refcount = 0 };
-    xlb_acquire_rc to_acquire2 = { .subscript = subscript,
+    xlb_refc_acquire to_acquire2 = { .subscript = subscript,
                                    .refcounts = to_acquire };
-    dc = xlb_rc_impl(d, id, decr, to_acquire2, NULL, notifs);
+    dc = xlb_refc_incr(d, id, decr, to_acquire2, NULL, notifs);
     DATA_CHECK(dc);
 
     return ADLB_DATA_SUCCESS;
@@ -854,7 +854,7 @@ alloc_container_reference(size_t subscript_len)
 adlb_data_code
 xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
           const void* buffer, int length, adlb_data_type type,
-          adlb_refcounts refcount_decr, adlb_refcounts store_refcounts, 
+          adlb_refc refcount_decr, adlb_refc store_refcounts, 
           adlb_notif_t *notifs)
 {
   assert(length >= 0);
@@ -897,10 +897,10 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
     check_verbose(!freed_datum, ADLB_DATA_ERROR_REFCOUNT_NEGATIVE,
         "Taking write reference count below zero on datum <%"PRId64">", id);
 
-    adlb_refcounts incr = { .read_refcount = xlb_read_refcount_enabled ?
+    adlb_refc incr = { .read_refcount = xlb_read_refcount_enabled ?
                                             -refcount_decr.read_refcount : 0,
                             .write_refcount = -refcount_decr.write_refcount };
-    dc = xlb_rc_impl(d, id, incr, XLB_NO_ACQUIRE,
+    dc = xlb_refc_incr(d, id, incr, XLB_NO_ACQUIRE,
                      NULL, notifs);
     DATA_CHECK(dc);
   }
@@ -915,7 +915,7 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
 static adlb_data_code
 data_store_root(adlb_datum_id id, adlb_datum *d,
     const void* buffer, int length, adlb_data_type type,
-    adlb_refcounts store_refcounts,
+    adlb_refc store_refcounts,
     adlb_notif_t *notifs, bool *freed_datum)
 {
   adlb_data_code dc;
@@ -957,7 +957,7 @@ data_store_root(adlb_datum_id id, adlb_datum *d,
 static adlb_data_code
 data_store_subscript(adlb_datum_id id, adlb_datum *d,
     adlb_subscript subscript, const void* value, int length,
-    adlb_data_type value_type, adlb_refcounts store_refcounts,
+    adlb_data_type value_type, adlb_refc store_refcounts,
     adlb_notif_t *notifs, bool *freed_datum)
 {
   adlb_data_code dc;
@@ -1171,7 +1171,7 @@ add_close_notifs(adlb_datum_id id, adlb_datum *d, adlb_notif_t *notifs)
 
 adlb_data_code
 xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
-                 adlb_refcounts decr, adlb_refcounts to_acquire,
+                 adlb_refc decr, adlb_refc to_acquire,
                  adlb_data_type* type, const adlb_buffer *caller_buffer,
                  adlb_binary_data *result, adlb_notif_t *notifs)
 {
@@ -1216,17 +1216,17 @@ xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
 
   *type = val_type;
   
-  if (ADLB_RC_NOT_NULL(decr) || ADLB_RC_NOT_NULL(to_acquire)) {
+  if (ADLB_REFC_NOT_NULL(decr) || ADLB_REFC_NOT_NULL(to_acquire)) {
     // own data in case we free it
-    if (ADLB_RC_NOT_NULL(decr))
+    if (ADLB_REFC_NOT_NULL(decr))
     {
       dc = ADLB_Own_data(caller_buffer, result);
       DATA_CHECK(dc);
     }
 
-    xlb_acquire_rc to_acquire2 = { .refcounts = to_acquire,
+    xlb_refc_acquire to_acquire2 = { .refcounts = to_acquire,
                                    .subscript = subscript };
-    dc = xlb_rc_impl(d, id, adlb_rc_negate(decr),
+    dc = xlb_refc_incr(d, id, adlb_refc_negate(decr),
                 to_acquire2, NULL, notifs);
     DATA_CHECK(dc);
   }
@@ -1666,7 +1666,7 @@ insert_notifications2(adlb_datum *d,
   if (ref_list != NULL)
   {
     DEBUG("Processing references for subscript assign");
-    xlb_acquire_rc referand_acquire = XLB_NO_ACQUIRE;
+    xlb_refc_acquire referand_acquire = XLB_NO_ACQUIRE;
     referand_acquire.subscript = subscript;
 
     dc = process_ref_list(ref_list, notifs, value_type,
@@ -1675,7 +1675,7 @@ insert_notifications2(adlb_datum *d,
     DATA_CHECK(dc);
 
     // Need to free refcount we were holding for reference notifs
-    adlb_refcounts read_decr = { .read_refcount = -1,
+    adlb_refc read_decr = { .read_refcount = -1,
                                  .write_refcount = 0 };
     if (!xlb_read_refcount_enabled)
     {
@@ -1684,7 +1684,7 @@ insert_notifications2(adlb_datum *d,
     }
     
     // Update refcounts if necessary
-    dc = xlb_rc_impl(d, id, read_decr, referand_acquire,
+    dc = xlb_refc_incr(d, id, read_decr, referand_acquire,
                      garbage_collected, notifs);
     DATA_CHECK(dc);
   }
@@ -2003,7 +2003,7 @@ static
 adlb_data_code process_ref_list(struct list *subscribers,
           adlb_notif_t *notifs, adlb_data_type type,
           const void *value, int value_len,
-          adlb_refcounts *to_acquire)
+          adlb_refc *to_acquire)
 {
   assert(subscribers != NULL);
   adlb_ref_data *references = &notifs->references;
@@ -2153,9 +2153,9 @@ xlb_data_unique(adlb_datum_id* result)
 }
 
 const char*
-xlb_data_rc_type_tostring(adlb_refcount_type rc_type)
+xlb_data_refc_type_tostring(adlb_refcount_type refc_type)
 {
-  switch (rc_type)
+  switch (refc_type)
   {
     case ADLB_READ_REFCOUNT:
       return "r";
@@ -2164,7 +2164,7 @@ xlb_data_rc_type_tostring(adlb_refcount_type rc_type)
     case ADLB_READWRITE_REFCOUNT:
       return "rw";
     default:
-      return "<UNKNOWN_RC_TYPE>";
+      return "<UNKNOWN_REFCOUNT_TYPE>";
   }
 }
 

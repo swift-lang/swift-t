@@ -12,11 +12,11 @@
 #include "sync.h"
 
 static adlb_data_code
-xlb_update_rc_id(adlb_datum_id id, int *read_rc, int *write_rc,
-       bool release_read, bool release_write, adlb_refcounts to_acquire,
-       xlb_rc_changes *changes);
+xlb_update_refc_id(adlb_datum_id id, int *read_refc, int *write_refc,
+       bool release_read, bool release_write, adlb_refc to_acquire,
+       xlb_refc_changes *changes);
 
-adlb_data_code xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change,
+adlb_data_code xlb_incr_refc_svr(adlb_datum_id id, adlb_refc change,
                                adlb_notif_t *notifs)
 {
   assert(xlb_am_server); // Only makes sense to run on server
@@ -29,7 +29,7 @@ adlb_data_code xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change,
   DEBUG("server->server refcount <%"PRId64"> r += %i w += %i", id,
         change.read_refcount, change.write_refcount);
   
-  if (ADLB_RC_IS_NULL(change))
+  if (ADLB_REFC_IS_NULL(change))
     return ADLB_DATA_SUCCESS;
 
   int server = ADLB_Locate(id);
@@ -52,7 +52,7 @@ adlb_data_code xlb_incr_rc_svr(adlb_datum_id id, adlb_refcounts change,
   return ADLB_DATA_SUCCESS;
 }
 
-adlb_data_code xlb_incr_rc_local(adlb_datum_id id, adlb_refcounts change,
+adlb_data_code xlb_incr_refc_local(adlb_datum_id id, adlb_refc change,
                                  bool suppress_errors)
 {
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
@@ -71,8 +71,8 @@ adlb_data_code xlb_incr_rc_local(adlb_datum_id id, adlb_refcounts change,
 adlb_data_code
 xlb_incr_referand(adlb_datum_storage *d, adlb_data_type type,
                   bool release_read, bool release_write,
-                  xlb_acquire_rc to_acquire,
-                  xlb_rc_changes *changes)
+                  xlb_refc_acquire to_acquire,
+                  xlb_refc_changes *changes)
 {
   assert(d != NULL);
   adlb_data_code dc;
@@ -104,7 +104,7 @@ xlb_incr_referand(adlb_datum_storage *d, adlb_data_type type,
       assert(!adlb_has_sub(to_acquire.subscript));
       // decrement reference
       TRACE("xlb_incr_referand: <%"PRId64">", d->REF.id);
-      dc = xlb_update_rc_id(d->REF.id, &d->REF.read_refs,
+      dc = xlb_update_refc_id(d->REF.id, &d->REF.read_refs,
          &d->REF.write_refs, release_read, release_write,
          to_acquire.refcounts, changes); 
       DATA_CHECK(dc);
@@ -121,68 +121,68 @@ xlb_incr_referand(adlb_datum_storage *d, adlb_data_type type,
 /**
   Work out refcount change
   releasing: if we're releasing the local count
-  curr_rc: int holding current refcount, will be updated
-  acquire_rc: number to acquire
+  curr_refc: int holding current refcount, will be updated
+  acquire_refc: number to acquire
   acquired: if acquired at least one ref
   remainder: remaining change to apply, can be +ive or -ive
  */
 static adlb_data_code
-apply_rc_update(bool releasing, int *curr_rc, int acquire_rc,
+apply_refc(bool releasing, int *curr_refc, int acquire_refc,
                 int *acquired, int *remainder)
 {
-  assert(*curr_rc >= 0);
-  assert(acquire_rc >= 0);
+  assert(*curr_refc >= 0);
+  assert(acquire_refc >= 0);
 
-  TRACE("RC UP curr: %i", *curr_rc);
+  TRACE("RC UP curr: %i", *curr_refc);
 
-  check_verbose(acquire_rc == 0 || *curr_rc > 0,
+  check_verbose(acquire_refc == 0 || *curr_refc > 0,
         ADLB_DATA_ERROR_REFCOUNT_NEGATIVE, "Trying to acquire refcount,"
         " but own no references");
 
   if (releasing)
   {
     // if releasing refcount, must go to zero
-    *remainder = acquire_rc - *curr_rc;
-    *acquired = *remainder <= 0 ? acquire_rc
-                                : acquire_rc - *remainder;
-    *curr_rc = 0;
-    TRACE("RC UP releasing: curr: %i acq: %i rem: %i", *curr_rc, *acquired,
+    *remainder = acquire_refc - *curr_refc;
+    *acquired = *remainder <= 0 ? acquire_refc
+                                : acquire_refc - *remainder;
+    *curr_refc = 0;
+    TRACE("RC UP releasing: curr: %i acq: %i rem: %i", *curr_refc, *acquired,
                                                  *remainder);
   }
-  else if (acquire_rc == 0)
+  else if (acquire_refc == 0)
   {
     // Do nothing
     *acquired = 0;
     *remainder = 0;
     TRACE("RC UP do nothing: curr: %i acq: %i rem: %i",
-           *curr_rc, *acquired, *remainder);
+           *curr_refc, *acquired, *remainder);
   }
   else
   {
     // if not releasing refcount, must end up >= 1
-    int max_acquire = *curr_rc - 1;
+    int max_acquire = *curr_refc - 1;
 
-    *acquired = acquire_rc <= max_acquire ?
-                acquire_rc : max_acquire;
-    *curr_rc -= *acquired;
-    *remainder = acquire_rc - *acquired;
+    *acquired = acquire_refc <= max_acquire ?
+                acquire_refc : max_acquire;
+    *curr_refc -= *acquired;
+    *remainder = acquire_refc - *acquired;
     TRACE("RC acquire: curr: %i acq: %i rem: %i",
-           *curr_rc, *acquired, *remainder);
+           *curr_refc, *acquired, *remainder);
   }
 
   return ADLB_DATA_SUCCESS;
 }
 
 static adlb_data_code
-xlb_update_rc_id(adlb_datum_id id, int *read_rc, int *write_rc,
-       bool release_read, bool release_write, adlb_refcounts to_acquire,
-       xlb_rc_changes *changes)
+xlb_update_refc_id(adlb_datum_id id, int *read_refc, int *write_refc,
+       bool release_read, bool release_write, adlb_refc to_acquire,
+       xlb_refc_changes *changes)
 {
   adlb_data_code dc;
   adlb_code ac;
 
-  DEBUG("xlb_update_rc_id r: %i w:%i release_r: %i release_w: %i\
-         acquire_r: %i acquire_w: %i", *read_rc, *write_rc,
+  DEBUG("xlb_update_refc_id r: %i w:%i release_r: %i release_w: %i\
+         acquire_r: %i acquire_w: %i", *read_refc, *write_refc,
           (int)release_read, (int)release_write,
           to_acquire.read_refcount, to_acquire.write_refcount);
 
@@ -193,29 +193,29 @@ xlb_update_rc_id(adlb_datum_id id, int *read_rc, int *write_rc,
 
   if (xlb_read_refcount_enabled)
   {
-    dc = apply_rc_update(release_read, read_rc,
+    dc = apply_refc(release_read, read_refc,
             to_acquire.read_refcount, &read_acquired, &read_remainder);
     check_verbose(dc == ADLB_DATA_SUCCESS, dc, "Error updating read "
             "refcount of <%"PRId64"> r=%i acquiring %i release:%i",
-            id, *read_rc, to_acquire.read_refcount, (int)release_read);
+            id, *read_refc, to_acquire.read_refcount, (int)release_read);
   }
   else
   {
     read_acquired = read_remainder = 0;
   }
 
-  dc = apply_rc_update(release_write, write_rc,
+  dc = apply_refc(release_write, write_refc,
           to_acquire.write_refcount, &write_acquired, &write_remainder);
   check_verbose(dc == ADLB_DATA_SUCCESS, dc, "Error updating write "
             "refcount of <%"PRId64"> w=%i acquiring %i release:%i",
-            id, *write_rc, to_acquire.write_refcount, (int)release_write);
+            id, *write_refc, to_acquire.write_refcount, (int)release_write);
 
   if (read_remainder != 0 || write_remainder != 0)
   {
     // Need to apply further changes
     bool must_preacquire = (read_remainder > 0 && read_acquired == 0) ||
                               (write_remainder > 0 && write_acquired == 0);
-    ac = xlb_rc_changes_add(changes, id, read_remainder, write_remainder,
+    ac = xlb_refc_changes_add(changes, id, read_remainder, write_remainder,
                             must_preacquire);
     DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
   }

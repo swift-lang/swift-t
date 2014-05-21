@@ -563,7 +563,7 @@ xlb_sync_steal(int target, const int *work_counts, int size,
 }
 
 adlb_code xlb_sync_refcount(int target, adlb_datum_id id,
-                            adlb_refcounts change)
+                            adlb_refc change)
 {
   char hdr_storage[PACKED_SYNC_SIZE];
   struct packed_sync *hdr = (struct packed_sync *)hdr_storage;
@@ -778,13 +778,13 @@ adlb_code xlb_accept_sync(int rank, const struct packed_sync *hdr,
       if (defer_svr_ops)
       {
         DEBUG("Defer refcount for <%"PRId64">", hdr->incr.id);
-        code = enqueue_pending(ACCEPTED_RC, rank, hdr, NULL);
+        code = enqueue_pending(ACCEPTED_REFC, rank, hdr, NULL);
         ADLB_CHECK(code);
       }
       else
       {
         DEBUG("Update refcount now for <%"PRId64">", hdr->incr.id);
-        adlb_data_code dc = xlb_incr_rc_local(hdr->incr.id,
+        adlb_data_code dc = xlb_incr_refc_local(hdr->incr.id,
                                     hdr->incr.change, true);
         CHECK_MSG(dc == ADLB_DATA_SUCCESS, "Unexpected error in refcount");
         code = ADLB_SUCCESS;
@@ -839,8 +839,8 @@ adlb_code xlb_handle_pending_sync(xlb_pending_kind kind,
       rc = xlb_accept_sync(rank, hdr, false);
       ADLB_CHECK(rc);
       break;
-    case ACCEPTED_RC:
-      dc = xlb_incr_rc_local(hdr->incr.id, hdr->incr.change, true);
+    case ACCEPTED_REFC:
+      dc = xlb_incr_refc_local(hdr->incr.id, hdr->incr.change, true);
       CHECK_MSG(dc == ADLB_DATA_SUCCESS, "unexpected error in refcount");
       break;
     case DEFERRED_NOTIFY:

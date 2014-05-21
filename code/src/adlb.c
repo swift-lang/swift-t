@@ -810,7 +810,7 @@ adlb_code ADLB_Create_multiset(adlb_datum_id id,
 
 adlb_code
 ADLBP_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
-             adlb_refcounts decr)
+             adlb_refc decr)
 {
   int to_server_rank = ADLB_Locate(id);
 
@@ -837,8 +837,8 @@ ADLBP_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
   return ADLB_SUCCESS;
 }
 adlb_code
-ADLBP_Get_refcounts(adlb_datum_id id, adlb_refcounts *result,
-                              adlb_refcounts decr)
+ADLBP_Get_refcounts(adlb_datum_id id, adlb_refc *result,
+                              adlb_refc decr)
 {
   int to_server_rank = ADLB_Locate(id);
 
@@ -865,7 +865,7 @@ ADLBP_Get_refcounts(adlb_datum_id id, adlb_refcounts *result,
 adlb_code
 ADLBP_Store(adlb_datum_id id, adlb_subscript subscript,
           adlb_data_type type, const void *data, int length,
-          adlb_refcounts refcount_decr, adlb_refcounts store_refcounts)
+          adlb_refc refcount_decr, adlb_refc store_refcounts)
 {
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
   adlb_code rc, final_rc;
@@ -885,8 +885,8 @@ ADLBP_Store(adlb_datum_id id, adlb_subscript subscript,
 
 adlb_code
 xlb_store(adlb_datum_id id, adlb_subscript subscript, adlb_data_type type,
-            const void *data, int length, adlb_refcounts refcount_decr,
-            adlb_refcounts store_refcounts, adlb_notif_t *notifs)
+            const void *data, int length, adlb_refc refcount_decr,
+            adlb_refc store_refcounts, adlb_notif_t *notifs)
 {
   adlb_code code;
   adlb_data_code dc;
@@ -990,7 +990,7 @@ ADLBP_Read_refcount_enable(void)
 }
 
 adlb_code
-ADLBP_Refcount_incr(adlb_datum_id id, adlb_refcounts change)
+ADLBP_Refcount_incr(adlb_datum_id id, adlb_refc change)
 {
   adlb_code rc;
   
@@ -1007,7 +1007,7 @@ ADLBP_Refcount_incr(adlb_datum_id id, adlb_refcounts change)
 }
 
 adlb_code
-xlb_refcount_incr(adlb_datum_id id, adlb_refcounts change,
+xlb_refcount_incr(adlb_datum_id id, adlb_refc change,
                     adlb_notif_t *notifs)
 {
   int rc;
@@ -1020,7 +1020,7 @@ xlb_refcount_incr(adlb_datum_id id, adlb_refcounts change,
   if (!xlb_read_refcount_enabled)
     change.read_refcount = 0;
 
-  if (ADLB_RC_IS_NULL(change))
+  if (ADLB_REFC_IS_NULL(change))
     return ADLB_SUCCESS;
 
   int to_server_rank = ADLB_Locate(id);
@@ -1047,7 +1047,7 @@ xlb_refcount_incr(adlb_datum_id id, adlb_refcounts change,
 
 adlb_code
 ADLBP_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
-                        adlb_retrieve_rc refcounts,
+                        adlb_retrieve_refc refcounts,
                         bool* result, void *data, int *length,
                         adlb_data_type *type)
 {
@@ -1105,7 +1105,7 @@ ADLBP_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
  */
 adlb_code
 ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
-               adlb_retrieve_rc refcounts, adlb_data_type* type,
+               adlb_retrieve_refc refcounts, adlb_data_type* type,
                void *data, int *length)
 {
   MPI_Status status;
@@ -1166,7 +1166,7 @@ ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
  */
 adlb_code
 ADLBP_Enumerate(adlb_datum_id container_id,
-                int count, int offset, adlb_refcounts decr,
+                int count, int offset, adlb_refc decr,
                 bool include_keys, bool include_vals,
                 void** data, int* length, int* records,
                 adlb_type_extra *kv_type)
@@ -1343,7 +1343,7 @@ ADLBP_Subscribe(adlb_datum_id id, adlb_subscript subscript,
 adlb_code
 ADLBP_Container_reference(adlb_datum_id id, adlb_subscript subscript,
             adlb_datum_id ref_id, adlb_subscript ref_subscript,
-            adlb_data_type ref_type, adlb_refcounts transfer_refs)
+            adlb_data_type ref_type, adlb_refc transfer_refs)
 {
   MPI_Status status;
   MPI_Request request;
@@ -1386,7 +1386,7 @@ ADLBP_Container_reference(adlb_datum_id id, adlb_subscript subscript,
 /** Return ADLB_ERROR and size=-1 if container is not closed */
 adlb_code
 ADLBP_Container_size(adlb_datum_id container_id, int* size,
-                     adlb_refcounts decr)
+                     adlb_refc decr)
 {
   MPI_Status status;
   MPI_Request request;

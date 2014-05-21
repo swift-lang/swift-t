@@ -21,7 +21,7 @@ static adlb_code
 xlb_notify_server_self(adlb_notif_rank *notif);
 
 static adlb_code
-xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
+xlb_refc_changes_apply(adlb_notif_t *notifs, bool apply_all,
                                bool apply_local, bool apply_preacquire);
 
 static adlb_code
@@ -30,7 +30,7 @@ xlb_set_refs(adlb_notif_t *notifs, bool local_only);
 static adlb_code
 xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
           const void *value, int length, adlb_data_type type,
-          adlb_refcounts transferred_refs, adlb_notif_t *notifs);
+          adlb_refc transferred_refs, adlb_notif_t *notifs);
 
 static adlb_code
 xlb_notify_server(int server, adlb_datum_id id, adlb_subscript subscript);
@@ -94,7 +94,7 @@ void xlb_free_notif(adlb_notif_t *notifs)
 {
   xlb_free_ranks(&notifs->notify);
   xlb_free_datums(&notifs->references);
-  xlb_rc_changes_free(&notifs->rc_changes);
+  xlb_refc_changes_free(&notifs->refcs);
   for (int i = 0; i < notifs->to_free_length; i++)
   {
     free(notifs->to_free[i]);
@@ -180,7 +180,7 @@ xlb_set_refs(adlb_notif_t *notifs, bool local_only)
 static adlb_code
 xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
             const void *value, int length, adlb_data_type type,
-            adlb_refcounts transferred_refs, adlb_notif_t *notifs)
+            adlb_refc transferred_refs, adlb_notif_t *notifs)
 {
   DEBUG("xlb_set_ref: <%"PRId64">[%.*s]=%p[%i] r: %i w: %i", id,
       (int)subscript.length, (const char*)subscript.key, value, length,
@@ -192,14 +192,14 @@ xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
   if (server == xlb_comm_rank)
   {
     adlb_data_code dc = xlb_data_store(id, subscript, value, length,
-                     type, ADLB_WRITE_RC, transferred_refs, notifs);
+                     type, ADLB_WRITE_REFC, transferred_refs, notifs);
     ADLB_DATA_CHECK(dc);
 
     return ADLB_SUCCESS;
   }
 
   // Store value, maybe accumulating more notification/ref setting work
-  rc = xlb_store(id, subscript, type, value, length, ADLB_WRITE_RC,
+  rc = xlb_store(id, subscript, type, value, length, ADLB_WRITE_REFC,
                  transferred_refs, notifs);
   ADLB_CHECK(rc);
   TRACE("SET_REFERENCE DONE");
@@ -340,7 +340,7 @@ xlb_process_local_notif(adlb_notif_t *notifs)
   
   adlb_code ac;
 
-  // Whether there may be refs or rc_changes left to process locally
+  // Whether there may be refs or refcs left to process locally
   bool maybe_local_remaining = true;
   do
   {
@@ -353,7 +353,7 @@ xlb_process_local_notif(adlb_notif_t *notifs)
 
     // Do local refcounts second, since they can add additional notifs
     // Also do pre-increments here, since we can't send them
-    ac = xlb_rc_changes_apply(notifs, false, true, true);
+    ac = xlb_refc_changes_apply(notifs, false, true, true);
     ADLB_CHECK(ac);
     
     // Check if any new refs appeared, they may be local
@@ -449,12 +449,12 @@ xlb_notify_all(adlb_notif_t *notifs)
    */
   do
   {
-    if (!xlb_rc_changes_empty(&notifs->rc_changes))
+    if (!xlb_refc_changes_empty(&notifs->refcs))
     {
-      rc = xlb_rc_changes_apply(notifs, true, true, true);
+      rc = xlb_refc_changes_apply(notifs, true, true, true);
       ADLB_CHECK(rc);
     }
-    assert(xlb_rc_changes_empty(&notifs->rc_changes));
+    assert(xlb_refc_changes_empty(&notifs->refcs));
 
     if (!xlb_refs_empty(&notifs->references))
     {
@@ -462,10 +462,10 @@ xlb_notify_all(adlb_notif_t *notifs)
       ADLB_CHECK(rc);
     }
     assert(xlb_refs_empty(&notifs->references));
-  } while (!xlb_rc_changes_empty(&notifs->rc_changes));
+  } while (!xlb_refc_changes_empty(&notifs->refcs));
   
   assert(xlb_refs_empty(&notifs->references));
-  assert(xlb_rc_changes_empty(&notifs->rc_changes));
+  assert(xlb_refc_changes_empty(&notifs->refcs));
 
   // Sending notifications doesn't result in additional work
   if (!xlb_notif_ranks_empty(&notifs->notify))
@@ -474,7 +474,7 @@ xlb_notify_all(adlb_notif_t *notifs)
     ADLB_CHECK(rc);
   }
   assert(xlb_notif_ranks_empty(&notifs->notify));
-  assert(xlb_rc_changes_empty(&notifs->rc_changes));
+  assert(xlb_refc_changes_empty(&notifs->refcs));
   assert(xlb_refs_empty(&notifs->references));
 
   // Check all were cleared
@@ -495,16 +495,16 @@ xlb_notify_all(adlb_notif_t *notifs)
  * apply_preacquire: if true, apply changes that must be applied early
  */
 static adlb_code
-xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
+xlb_refc_changes_apply(adlb_notif_t *notifs, bool apply_all,
                                bool apply_local, bool apply_preacquire)
 {
   adlb_data_code dc;
-  xlb_rc_changes *c = &notifs->rc_changes;
+  xlb_refc_changes *c = &notifs->refcs;
   for (int i = 0; i < c->count; i++)
   {
     bool applied = false;
-    xlb_rc_change *change = &c->arr[i];
-    if (ADLB_RC_IS_NULL(change->rc))
+    xlb_refc_change *change = &c->arr[i];
+    if (ADLB_REFC_IS_NULL(change->rc))
     {
       // Don't need to apply null refcounts
       applied = true;
@@ -515,7 +515,7 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
       if (xlb_am_server)
       {
         // update reference count (can be local or remote)
-        dc = xlb_incr_rc_svr(change->id, change->rc, notifs);
+        dc = xlb_incr_refc_svr(change->id, change->rc, notifs);
         ADLB_DATA_CHECK(dc);
       }
       else
@@ -539,7 +539,7 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
     {
       // Array may have been realloced, old pointer maybe invalid
       change = &c->arr[i];
-#if XLB_INDEX_RC_CHANGES
+#if XLB_INDEX_REFC_CHANGES
       // Will need to update or invalidate index if not processing all
       bool maintain_index = !apply_all;
       if (maintain_index)
@@ -560,7 +560,7 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
         // Swap last to here
         *change = c->arr[c->count];
         i--; // Process new entry next
-#if XLB_INDEX_RC_CHANGES
+#if XLB_INDEX_REFC_CHANGES
         if (maintain_index)
         {
           void *ptr;
@@ -580,7 +580,7 @@ xlb_rc_changes_apply(adlb_notif_t *notifs, bool apply_all,
   if (c->count == 0)
   {
     // Remove all from list
-    xlb_rc_changes_free(c);
+    xlb_refc_changes_free(c);
   }
 
   return ADLB_SUCCESS;
@@ -634,7 +634,7 @@ xlb_refs_expand(adlb_ref_data *refs, int to_add)
 }
 
 adlb_code
-xlb_rc_changes_expand(xlb_rc_changes *c, int to_add)
+xlb_refc_changes_expand(xlb_refc_changes *c, int to_add)
 {
   assert(to_add >= 0);
   int needed = c->count + to_add;
@@ -643,14 +643,14 @@ xlb_rc_changes_expand(xlb_rc_changes *c, int to_add)
     return ADLB_SUCCESS;
   }
 
-  int new_size = (c->size == 0) ? XLB_RC_CHANGES_INIT_SIZE : c->size * 2;
+  int new_size = (c->size == 0) ? XLB_REFC_CHANGES_INIT_SIZE : c->size * 2;
   if (new_size < needed)
     new_size = needed;
 
   void *ptr = realloc(c->arr, (size_t)new_size * sizeof(c->arr[0]));
   ADLB_MALLOC_CHECK(ptr);
 
-#if XLB_INDEX_RC_CHANGES
+#if XLB_INDEX_REFC_CHANGES
   // Init index, use 1.0 load factor so realloced at same pace as array
   if (!table_lp_init_custom(&c->index, new_size, 1.0))
   {
@@ -745,10 +745,10 @@ xlb_prepare_for_send(adlb_notif_t *notifs,
 {
   int notify_count = notifs->notify.count;
   int refs_count = notifs->references.count;
-  int rc_count = notifs->rc_changes.count;
+  int refcs_count = notifs->refcs.count;
   assert(notify_count >= 0);
   assert(refs_count >= 0);
-  assert(rc_count >= 0);
+  assert(refcs_count >= 0);
 
   adlb_data_code dc;
 
@@ -913,7 +913,7 @@ xlb_prepare_for_send(adlb_notif_t *notifs,
 
   client_counts->notify_count = notify_count;
   client_counts->reference_count = refs_count;
-  client_counts->rc_change_count = rc_count;
+  client_counts->refc_count = refcs_count;
   client_counts->extra_data_count = extra_data_count;
   client_counts->extra_data_bytes = extra_pos;
 
@@ -928,7 +928,7 @@ xlb_send_notif_work(int caller, adlb_notif_t *notifs,
   int extra_data_bytes = counts->extra_data_bytes;
   int notify_count = counts->notify_count;
   int refs_count = counts->reference_count;
-  int rc_count = counts->rc_change_count;
+  int refcs_count = counts->refc_count;
 
   if (extra_data_bytes > 0)
   {
@@ -965,12 +965,12 @@ xlb_send_notif_work(int caller, adlb_notif_t *notifs,
       free(packed_refs);
     }
   }
-  if (rc_count > 0)
+  if (refcs_count > 0)
   {
-    TRACE("Sending %i rc changes", rc_count);
+    TRACE("Sending %i rc changes", refcs_count);
     
-    SEND(notifs->rc_changes.arr, 
-         rc_count * (int)sizeof(notifs->rc_changes.arr[0]), MPI_BYTE,
+    SEND(notifs->refcs.arr, 
+         refcs_count * (int)sizeof(notifs->refcs.arr[0]), MPI_BYTE,
          caller, ADLB_TAG_RESPONSE_NOTIF);
   }
 
@@ -1130,38 +1130,38 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
     free(tmp);
   }
 
-  if (counts->rc_change_count > 0)
+  if (counts->refc_count > 0)
   {
-    int rc_change_count = counts->rc_change_count;
+    int refc_count = counts->refc_count;
 
-    xlb_rc_changes *c = &notifs->rc_changes; 
-    TRACE("Receiving %i rc changes", rc_change_count);
-    ac = xlb_rc_changes_expand(c, rc_change_count);
+    xlb_refc_changes *c = &notifs->refcs; 
+    TRACE("Receiving %i rc changes", refc_count);
+    ac = xlb_refc_changes_expand(c, refc_count);
     ADLB_CHECK(ac);
 
     RECV(&c->arr[c->count], 
-         rc_change_count * (int)sizeof(c->arr[0]),
+         refc_count * (int)sizeof(c->arr[0]),
          MPI_BYTE, to_server_rank, ADLB_TAG_RESPONSE_NOTIF);
 
-#if XLB_INDEX_RC_CHANGES
+#if XLB_INDEX_REFC_CHANGES
     // Rebuild index
     //  - Merge new data into existing ones
     //  - Index remaining new data
     bool has_existing_counts = c->count > 0;
-    for (int i = 0; i < rc_change_count; i++)
+    for (int i = 0; i < refc_count; i++)
     {
       int change_ix = c->count + i;
       adlb_datum_id change_id = c->arr[change_ix].id;
       if (has_existing_counts &&
-          xlb_rc_change_merge_existing(c, change_id, 
+          xlb_refc_change_merge_existing(c, change_id, 
             c->arr[change_ix].rc.read_refcount,
             c->arr[change_ix].rc.write_refcount,
             false)) {
         // Merged - move last one here
         c->arr[change_ix] =
-          c->arr[c->count + rc_change_count - 1];
+          c->arr[c->count + refc_count - 1];
         i--;
-        rc_change_count--;
+        refc_count--;
       }
       else
       {
@@ -1174,7 +1174,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
 
     // Only extend to cover new ones now that we've finished
     // manipulating index
-    notifs->rc_changes.count += rc_change_count;
+    notifs->refcs.count += refc_count;
   }
   
   TRACE("Done receiving notifs");

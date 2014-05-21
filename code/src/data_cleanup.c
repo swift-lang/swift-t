@@ -14,7 +14,7 @@ adlb_data_code
 xlb_datum_cleanup(adlb_datum_storage *d,
      adlb_data_type type, bool free_mem,
      bool release_read, bool release_write,
-     xlb_acquire_rc to_acquire, xlb_rc_changes *rc_changes)
+     xlb_refc_acquire to_acquire, xlb_refc_changes *refcs)
 {
   // Sanity-check acquire amounts
   assert(to_acquire.refcounts.read_refcount >= 0);
@@ -26,28 +26,28 @@ xlb_datum_cleanup(adlb_datum_storage *d,
     // Optimization: do single pass over container for freeing memory and
     // reference counting
     return xlb_members_cleanup(&d->CONTAINER, free_mem, release_read,
-            release_write, to_acquire, rc_changes);
+            release_write, to_acquire, refcs);
   }
   else if (type == ADLB_DATA_TYPE_MULTISET)
   {
     return xlb_multiset_cleanup(d->MULTISET, free_mem, free_mem, release_read,
-            release_write, to_acquire, rc_changes);
+            release_write, to_acquire, refcs);
   }
   else if (type == ADLB_DATA_TYPE_STRUCT)
   {
     return xlb_struct_cleanup(d->STRUCT, free_mem, release_read,
               release_write, to_acquire,
-              rc_changes);
+              refcs);
   }
   else
   {
     if (release_read || release_write ||
-        !ADLB_RC_IS_NULL(to_acquire.refcounts))
+        !ADLB_REFC_IS_NULL(to_acquire.refcounts))
     {
       // Decrement any reference counts required
       assert(!adlb_has_sub(to_acquire.subscript));
       dc = xlb_incr_referand(d, type, release_read, release_write,
-                             to_acquire, rc_changes);
+                             to_acquire, refcs);
       DATA_CHECK(dc);
     }
 
@@ -64,21 +64,21 @@ xlb_datum_cleanup(adlb_datum_storage *d,
 /*
   Free memory held by container data structure
   Decrement reference counts for other data if required
-  rc_changes: changes resulting from refcount manipulation.
+  refcs: changes resulting from refcount manipulation.
         Not touched if release_read == released_write == false and
         to_acquire is (0, 0), so can be NULL in that case
  */
 adlb_data_code
 xlb_members_cleanup(adlb_container *container, bool free_mem,
-  bool release_read, bool release_write, xlb_acquire_rc to_acquire,
-  xlb_rc_changes *rc_changes)
+  bool release_read, bool release_write, xlb_refc_acquire to_acquire,
+  xlb_refc_changes *refcs)
 {
   adlb_data_code dc;
   struct table_bp* members = container->members;
 
   // Whether we are making any refcount changes
   bool refcount_change = release_read || release_write ||
-                          !ADLB_RC_IS_NULL(to_acquire.refcounts);
+                          !ADLB_REFC_IS_NULL(to_acquire.refcounts);
 
   TRACE("Freeing container %p", container);
   for (int i = 0; i < members->capacity; i++)
@@ -108,7 +108,7 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
              table_bp_key_match(sub->key, sub->length, item));
 
         // create new acquire to remove subscript
-        xlb_acquire_rc field_acquire;
+        xlb_refc_acquire field_acquire;
         field_acquire.subscript = ADLB_NO_SUB;
         if (acquire_field)
         {
@@ -116,11 +116,11 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
         }
         else
         {
-          field_acquire.refcounts = ADLB_NO_RC;
+          field_acquire.refcounts = ADLB_NO_REFC;
         }
 
         dc = xlb_incr_referand(d, container->val_type,
-                release_read, release_write, field_acquire, rc_changes);
+                release_read, release_write, field_acquire, refcs);
         DATA_CHECK(dc);
       }
       // Free the memory for value and key

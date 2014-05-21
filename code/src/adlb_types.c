@@ -564,13 +564,13 @@ ADLB_Unpack_buffer(adlb_data_type type,
 }
 
 adlb_data_code ADLB_Unpack(adlb_datum_storage *d, adlb_data_type type,
-            const void *buffer, int length, adlb_refcounts refcounts)
+            const void *buffer, int length, adlb_refc refcounts)
 {
   return ADLB_Unpack2(d, type, buffer, length, refcounts, true);
 }
 
 adlb_data_code ADLB_Unpack2(adlb_datum_storage *d, adlb_data_type type,
-        const void *buffer, int length, adlb_refcounts refcounts,
+        const void *buffer, int length, adlb_refc refcounts,
         bool init_compound)
 {
   switch (type)
@@ -606,7 +606,7 @@ adlb_data_code ADLB_Unpack2(adlb_datum_storage *d, adlb_data_type type,
 
 adlb_data_code
 ADLB_Unpack_container(adlb_container *container,
-    const void *data, int length, adlb_refcounts refcounts,
+    const void *data, int length, adlb_refc refcounts,
     bool init_cont)
 {
   assert(container != NULL);
@@ -722,7 +722,7 @@ ADLB_Unpack_container_entry(adlb_data_type key_type,
 
 adlb_data_code
 ADLB_Unpack_multiset(adlb_multiset_ptr *ms, const void *data,
-        int length, adlb_refcounts refcounts, bool init_ms)
+        int length, adlb_refc refcounts, bool init_ms)
 {
   assert(ms != NULL);
   assert(data != NULL);

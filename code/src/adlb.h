@@ -178,9 +178,9 @@ adlb_debug_symbol_data ADLBP_Debug_symbol(adlb_debug_symbol symbol);
 adlb_debug_symbol_data ADLB_Debug_symbol(adlb_debug_symbol symbol);
 
 adlb_code ADLBP_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
-                       adlb_refcounts decr);
+                       adlb_refc decr);
 adlb_code ADLB_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
-                       adlb_refcounts decr);
+                       adlb_refc decr);
 
 /**
  * Find out the current reference counts for a datum.
@@ -191,10 +191,10 @@ adlb_code ADLB_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
  * result: refcounts of id after decr applied
  * decr: amount to decrement refcounts
  */
-adlb_code ADLBP_Get_refcounts(adlb_datum_id id, adlb_refcounts *result,
-                              adlb_refcounts decr);
-adlb_code ADLB_Get_refcounts(adlb_datum_id id, adlb_refcounts *result,
-                              adlb_refcounts decr);
+adlb_code ADLBP_Get_refcounts(adlb_datum_id id, adlb_refc *result,
+                              adlb_refc decr);
+adlb_code ADLB_Get_refcounts(adlb_datum_id id, adlb_refc *result,
+                              adlb_refc decr);
 
 /*
   Store value into datum
@@ -209,10 +209,10 @@ adlb_code ADLB_Get_refcounts(adlb_datum_id id, adlb_refcounts *result,
  */
 adlb_code ADLBP_Store(adlb_datum_id id, adlb_subscript subscript,
           adlb_data_type type, const void *data, int length,
-          adlb_refcounts refcount_decr, adlb_refcounts store_refcounts);
+          adlb_refc refcount_decr, adlb_refc store_refcounts);
 adlb_code ADLB_Store(adlb_datum_id id, adlb_subscript subscript,
           adlb_data_type type, const void *data, int length,
-          adlb_refcounts refcount_decr, adlb_refcounts store_refcounts);
+          adlb_refc refcount_decr, adlb_refc store_refcounts);
 
 /*
    Retrieve contents of datum.
@@ -226,10 +226,10 @@ adlb_code ADLB_Store(adlb_datum_id id, adlb_subscript subscript,
    length: output arg for data size in bytes
  */
 adlb_code ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
-      adlb_retrieve_rc refcounts,
+      adlb_retrieve_refc refcounts,
       adlb_data_type *type, void *data, int *length);
 adlb_code ADLB_Retrieve(adlb_datum_id id, adlb_subscript subscript,
-      adlb_retrieve_rc refcounts, adlb_data_type *type, 
+      adlb_retrieve_refc refcounts, adlb_data_type *type, 
       void *data, int *length);
 
 /*
@@ -245,12 +245,12 @@ adlb_code ADLB_Retrieve(adlb_datum_id id, adlb_subscript subscript,
    records: number of elements returned
  */
 adlb_code ADLBP_Enumerate(adlb_datum_id container_id,
-                   int count, int offset, adlb_refcounts decr,
+                   int count, int offset, adlb_refc decr,
                    bool include_keys, bool include_vals,
                    void** data, int* length, int* records,
                    adlb_type_extra *kv_type);
 adlb_code ADLB_Enumerate(adlb_datum_id container_id,
-                   int count, int offset, adlb_refcounts decr,
+                   int count, int offset, adlb_refc decr,
                    bool include_keys, bool include_vals,
                    void** data, int* length, int* records,
                    adlb_type_extra *kv_type);
@@ -259,8 +259,8 @@ adlb_code ADLB_Enumerate(adlb_datum_id container_id,
 adlb_code ADLBP_Read_refcount_enable(void);
 adlb_code ADLB_Read_refcount_enable(void);
 
-adlb_code ADLBP_Refcount_incr(adlb_datum_id id, adlb_refcounts change);
-adlb_code ADLB_Refcount_incr(adlb_datum_id id, adlb_refcounts change);
+adlb_code ADLBP_Refcount_incr(adlb_datum_id id, adlb_refc change);
+adlb_code ADLB_Refcount_incr(adlb_datum_id id, adlb_refc change);
 
 /*
   Try to reserve an insert position in container
@@ -275,11 +275,11 @@ adlb_code ADLB_Refcount_incr(adlb_datum_id id, adlb_refcounts change);
         if nothing exists, don't apply
  */
 adlb_code ADLBP_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
-                        adlb_retrieve_rc refcounts,
+                        adlb_retrieve_refc refcounts,
                         bool* result, void *data, int *length,
                         adlb_data_type *type);
 adlb_code ADLB_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
-                        adlb_retrieve_rc refcounts,
+                        adlb_retrieve_refc refcounts,
                        bool* result, void *data, int *length,
                        adlb_data_type *type);
 
@@ -294,10 +294,10 @@ adlb_code ADLB_Subscribe(adlb_datum_id id, adlb_subscript subscript,
 
 adlb_code ADLBP_Container_reference(adlb_datum_id id, adlb_subscript subscript,
                 adlb_datum_id ref_id, adlb_subscript ref_subscript,
-                adlb_data_type ref_type, adlb_refcounts transfer_refs);
+                adlb_data_type ref_type, adlb_refc transfer_refs);
 adlb_code ADLB_Container_reference(adlb_datum_id id, adlb_subscript subscript,
                 adlb_datum_id ref_id, adlb_subscript ref_subscript,
-                adlb_data_type ref_type, adlb_refcounts transfer_refs);
+                adlb_data_type ref_type, adlb_refc transfer_refs);
 
 adlb_code ADLBP_Unique(adlb_datum_id *result);
 adlb_code ADLB_Unique(adlb_datum_id *result);
@@ -311,9 +311,9 @@ adlb_code ADLB_Container_typeof(adlb_datum_id id, adlb_data_type* key_type,
                                  adlb_data_type* val_type);
 
 adlb_code ADLBP_Container_size(adlb_datum_id container_id, int* size,
-                               adlb_refcounts decr);
+                               adlb_refc decr);
 adlb_code ADLB_Container_size(adlb_datum_id container_id, int* size,
-                              adlb_refcounts decr);
+                              adlb_refc decr);
 
 adlb_code ADLBP_Lock(adlb_datum_id id, bool* result);
 adlb_code ADLB_Lock(adlb_datum_id id, bool* result);

@@ -82,7 +82,7 @@ adlb_data_code
 xlb_data_container_reference(adlb_datum_id id, adlb_subscript subscript,
          adlb_datum_id ref_id, adlb_subscript ref_sub,
          bool copy_subscript,
-         adlb_data_type ref_type, adlb_refcounts to_acquire, 
+         adlb_data_type ref_type, adlb_refc to_acquire, 
          const adlb_buffer *caller_buffer, adlb_binary_data *result,
          adlb_notif_t *notifs);
 
@@ -103,14 +103,14 @@ adlb_data_code xlb_data_container_size(adlb_datum_id container_id,
          caller if contains allocated memory
  notifications: notifications to process.  Only will be filled if
         manipulating refcounts through decr or to_acquire.
-        Can be NULL if decr == to_acquire == ADLB_NO_RC.
+        Can be NULL if decr == to_acquire == ADLB_NO_REFC.
         If not NULL, must be initialized by caller.
  returns ADLB_DATA_ERROR_NOT_FOUND if id not found
             ADLB_DATA_ERROR_SUBSCRIPT_NOT_FOUND if id found, but not subscript
  */
 adlb_data_code
 xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
-                 adlb_refcounts decr, adlb_refcounts to_acquire,
+                 adlb_refc decr, adlb_refc to_acquire,
                  adlb_data_type* type, const adlb_buffer *caller_buffer,
                  adlb_binary_data *result, adlb_notif_t *notifs);
 
@@ -123,11 +123,11 @@ xlb_data_enumerate(adlb_datum_id id, int count, int offset,
 
 adlb_data_code xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
           const void* buffer, int length, adlb_data_type type,
-          adlb_refcounts refcount_decr, adlb_refcounts store_refcounts,
+          adlb_refc refcount_decr, adlb_refc store_refcounts,
           adlb_notif_t *notifs);
 
 adlb_data_code xlb_data_get_reference_count(adlb_datum_id id,
-          adlb_refcounts *result);
+          adlb_refc *result);
 
 /*
    Struct used to specify if refcounts of referands should be reused
@@ -137,10 +137,10 @@ typedef struct {
   // Optional: if non-null, only acquire refcount for this subscript
   adlb_subscript subscript; 
   // how many refcounts to try to acquire on referands
-  adlb_refcounts refcounts;
-} xlb_acquire_rc;
+  adlb_refc refcounts;
+} xlb_refc_acquire;
 
-static const xlb_acquire_rc XLB_NO_ACQUIRE = 
+static const xlb_refc_acquire XLB_NO_ACQUIRE = 
       { .subscript.key = NULL, .subscript.length = 0,
         .refcounts.read_refcount = 0, .refcounts.write_refcount = 0 };
 
@@ -152,12 +152,12 @@ static const xlb_acquire_rc XLB_NO_ACQUIRE =
   garbage_collected: can be NULL if you don't need info
  */
 adlb_data_code xlb_data_reference_count(adlb_datum_id id,
-                adlb_refcounts change,
-                xlb_acquire_rc acquire, bool *garbage_collected,
+                adlb_refc change,
+                xlb_refc_acquire acquire, bool *garbage_collected,
                 adlb_notif_t *notifs);
 
 const char*
-xlb_data_rc_type_tostring(adlb_refcount_type rc_type);
+xlb_data_refc_type_tostring(adlb_refcount_type refc_type);
 
 adlb_data_code xlb_data_insert_atomic(adlb_datum_id container_id,
                                   adlb_subscript subscript,

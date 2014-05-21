@@ -27,12 +27,12 @@
 #include "notifications.h"
 
 adlb_code
-xlb_refcount_incr(adlb_datum_id id, adlb_refcounts change,
+xlb_refcount_incr(adlb_datum_id id, adlb_refc change,
                     adlb_notif_t *notifs);
 
 adlb_code
 xlb_store(adlb_datum_id id, adlb_subscript subscript, adlb_data_type type,
-            const void *data, int length, adlb_refcounts refcount_decr,
-            adlb_refcounts store_refcounts, adlb_notif_t *notifs);
+            const void *data, int length, adlb_refc refcount_decr,
+            adlb_refc store_refcounts, adlb_notif_t *notifs);
 
 #endif // __XLB_DATA_INTERNAL_H

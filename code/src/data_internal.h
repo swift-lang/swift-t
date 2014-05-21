@@ -173,8 +173,8 @@ xlb_datum_lookup(adlb_datum_id id, adlb_datum **d);
   that directly takes datum reference
  */
 adlb_data_code
-xlb_rc_impl(adlb_datum *d, adlb_datum_id id,
-          adlb_refcounts change, xlb_acquire_rc acquire,
+xlb_refc_incr(adlb_datum *d, adlb_datum_id id,
+          adlb_refc change, xlb_refc_acquire acquire,
           bool *garbage_collected, adlb_notif_t *notifs);
 
 /*

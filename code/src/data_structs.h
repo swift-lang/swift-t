@@ -88,11 +88,11 @@ adlb_data_code xlb_struct_subscript_init(adlb_struct *s, adlb_subscript subscrip
 
 adlb_data_code xlb_struct_assign_field(adlb_struct_field *field,
         adlb_struct_field_type field_type, const void *data, int length,
-        adlb_data_type data_type, adlb_refcounts refcounts);
+        adlb_data_type data_type, adlb_refc refcounts);
 
 adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,
                 const void *data, int length, adlb_data_type type,
-                adlb_refcounts refcounts);
+                adlb_refc refcounts);
 
 /**
  * Set struct field at subscript
@@ -101,13 +101,13 @@ adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,
 adlb_data_code xlb_struct_set_subscript(adlb_struct *s,
       adlb_subscript subscript, bool init_nested,
       const void *data, int length, adlb_data_type type,
-      adlb_refcounts refcounts);
+      adlb_refc refcounts);
 
 adlb_data_code
 xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
                    bool release_write, 
-                   xlb_acquire_rc to_acquire,
-                   xlb_rc_changes *rc_changes);
+                   xlb_refc_acquire to_acquire,
+                   xlb_refc_changes *refcs);
 
 char *xlb_struct_repr(adlb_struct *s);
 

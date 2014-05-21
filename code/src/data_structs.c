@@ -284,7 +284,7 @@ static adlb_struct *alloc_struct(xlb_struct_type_info *t)
 
 adlb_data_code
 ADLB_Unpack_struct(adlb_struct **s, const void *data, int length,
-                   adlb_refcounts refcounts, bool init_struct)
+                   adlb_refc refcounts, bool init_struct)
 {
   adlb_data_code dc;
 
@@ -588,7 +588,7 @@ adlb_data_code xlb_struct_subscript_init(adlb_struct *s, adlb_subscript subscrip
 
 adlb_data_code xlb_struct_assign_field(adlb_struct_field *field,
         adlb_struct_field_type field_type, const void *data, int length,
-        adlb_data_type data_type, adlb_refcounts refcounts)
+        adlb_data_type data_type, adlb_refc refcounts)
 {
   adlb_data_code dc;
 
@@ -613,7 +613,7 @@ adlb_data_code xlb_struct_assign_field(adlb_struct_field *field,
 
 adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,
                 const void *data, int length, adlb_data_type type,
-                adlb_refcounts refcounts)
+                adlb_refc refcounts)
 {
   adlb_struct_field *f;
   xlb_struct_type_info *st;
@@ -627,7 +627,7 @@ adlb_data_code xlb_struct_set_field(adlb_struct *s, int field_ix,
 adlb_data_code xlb_struct_set_subscript(adlb_struct *s,
       adlb_subscript subscript, bool init_nested,
       const void *data, int length, adlb_data_type type,
-      adlb_refcounts refcounts)
+      adlb_refc refcounts)
 {
   adlb_data_code dc;
 
@@ -683,13 +683,13 @@ adlb_data_code xlb_free_struct(adlb_struct *s, bool free_root_ptr,
 adlb_data_code
 xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
                    bool release_write, 
-                   xlb_acquire_rc to_acquire, xlb_rc_changes *rc_changes)
+                   xlb_refc_acquire to_acquire, xlb_refc_changes *refcs)
 {
   assert(s != NULL);
   check_valid_type(s->type);
   adlb_data_code dc;
   xlb_struct_type_info *t = &struct_types[s->type];
-  bool acquiring = !ADLB_RC_IS_NULL(to_acquire.refcounts);
+  bool acquiring = !ADLB_REFC_IS_NULL(to_acquire.refcounts);
   
   int acquire_ix = -1; // negative means acquire all subscripts
   if (adlb_has_sub(to_acquire.subscript)) 
@@ -731,7 +731,7 @@ xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
     // TODO: need to recurse here on nested structs/containers
     bool acquiring_field = acquiring &&
                          (acquire_ix < 0 || acquire_ix == i);
-    xlb_acquire_rc acquire_field = acquiring_field ? to_acquire
+    xlb_refc_acquire acquire_field = acquiring_field ? to_acquire
                                                    : XLB_NO_ACQUIRE;
 
     TRACE("Field %i of %s: acquiring %i", i, t->type_name,
@@ -741,12 +741,12 @@ xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
       case ADLB_DATA_TYPE_STRUCT:
         // Call directly so fewer recursive calls for nested structs
         dc = xlb_struct_cleanup(field_data->STRUCT, free_mem,
-              release_read, release_write, acquire_field, rc_changes);
+              release_read, release_write, acquire_field, refcs);
         DATA_CHECK(dc);
         break;
       default:
         dc = xlb_datum_cleanup(field_data, field_type, free_mem,
-                release_read, release_write, acquire_field, rc_changes);
+                release_read, release_write, acquire_field, refcs);
         DATA_CHECK(dc);
         break;
     }

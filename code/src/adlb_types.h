@@ -279,7 +279,7 @@ ADLB_Own_data(const adlb_buffer *caller_buffer, adlb_binary_data *data);
  */
 adlb_data_code
 ADLB_Unpack(adlb_datum_storage *d, adlb_data_type type,
-            const void *buffer, int length, adlb_refcounts refcounts);
+            const void *buffer, int length, adlb_refc refcounts);
 
 /*
   Same as ADLB_Unpack, except optionally we can specify that
@@ -288,7 +288,7 @@ ADLB_Unpack(adlb_datum_storage *d, adlb_data_type type,
  */
 adlb_data_code
 ADLB_Unpack2(adlb_datum_storage *d, adlb_data_type type,
-            const void *buffer, int length, adlb_refcounts refcounts,
+            const void *buffer, int length, adlb_refc refcounts,
             bool init_compound);
 
 /*
@@ -399,7 +399,7 @@ ADLB_Pack_ref(const adlb_ref *d, adlb_binary_data *result)
 
 static inline adlb_data_code
 ADLB_Unpack_ref(adlb_ref *d, const void *data, int length,
-                adlb_refcounts refcounts)
+                adlb_refc refcounts)
 {
   ADLB_UNPACK_SCALAR(&d->id, data, length);
   d->read_refs = refcounts.read_refcount;
@@ -507,7 +507,7 @@ ADLB_Pack_container_hdr(int elems, adlb_data_type key_type,
  */
 adlb_data_code
 ADLB_Unpack_container(adlb_container *container,
-    const void *data, int length, adlb_refcounts refcounts,
+    const void *data, int length, adlb_refc refcounts,
     bool init_cont);
 
 adlb_data_code
@@ -535,7 +535,7 @@ ADLB_Pack_multiset_hdr(int elems, adlb_data_type elem_type,
 
 adlb_data_code
 ADLB_Unpack_multiset(adlb_multiset_ptr *ms, const void *data,
-        int length, adlb_refcounts refcounts, bool init_ms);
+        int length, adlb_refc refcounts, bool init_ms);
 
 adlb_data_code
 ADLB_Unpack_multiset_hdr(const void *data, int length, int *pos,
@@ -560,7 +560,7 @@ ADLB_Pack_struct(const adlb_struct *s, const adlb_buffer *caller_buffer,
 
 adlb_data_code
 ADLB_Unpack_struct(adlb_struct **s, const void *data, int length,
-                   adlb_refcounts refcounts, bool init_struct);
+                   adlb_refc refcounts, bool init_struct);
 
 // Free any memory used
 adlb_data_code
