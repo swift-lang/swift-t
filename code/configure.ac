@@ -1016,6 +1016,7 @@ AC_CONFIG_FILES(
         src/turbine/turbine-version.h
         src/turbine/module.mk
         src/util/module.mk
+        src/util/debug-tokens.tcl
         src/tcl/module.mk
         src/tcl/adlb/module.mk
         src/tcl/blob/module.mk
