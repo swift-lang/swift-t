@@ -701,7 +701,7 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
 
   // Increments/decrements for outer and inner containers
   // (default no extras)
-  adlb_retrieve_rc refcounts = ADLB_RETRIEVE_NO_RC;
+  adlb_retrieve_refc refcounts = ADLB_RETRIEVE_NO_REFC;
 
   if (argpos < objc)
   {
@@ -767,7 +767,7 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
      * is closed/garbage collected.
      */
     int init_count = (2 << 24);
-    adlb_refcounts init_refs = { .read_refcount = init_count,
+    adlb_refc init_refs = { .read_refcount = init_count,
                                  .write_refcount = init_count };
     adlb_create_props props = DEFAULT_CREATE_PROPS;
 

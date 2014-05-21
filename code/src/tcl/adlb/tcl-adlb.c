@@ -1265,7 +1265,7 @@ ADLB_Exists_Impl(ClientData cdata, Tcl_Interp *interp,
     argpos = 3;
   }
 
-  adlb_refcounts decr = ADLB_NO_RC;
+  adlb_refc decr = ADLB_NO_REFC;
   if (argpos < objc)
   {
     rc = Tcl_GetIntFromObj(interp, objv[argpos++],
@@ -1342,7 +1342,7 @@ ADLB_Closed_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CHECK_MSG(rc, "Invalid handle %s", Tcl_GetString(objv[1]));
 
   int argpos = 2;
-  adlb_refcounts decr = ADLB_NO_RC;
+  adlb_refc decr = ADLB_NO_REFC;
   if (argpos < objc)
   {
     rc = Tcl_GetIntFromObj(interp, objv[argpos++],
@@ -1360,7 +1360,7 @@ ADLB_Closed_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(argpos == objc,
                 "unexpected trailing args at %ith arg", argpos);
 
-  adlb_refcounts curr_refcounts;
+  adlb_refc curr_refcounts;
   rc = ADLB_Get_refcounts(handle.id, &curr_refcounts, decr);
   
   TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", handle.id);
@@ -2269,7 +2269,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
 
   // Handle optional refcount spec
-  adlb_refcounts decr = ADLB_WRITE_RC; // default is to decr writers
+  adlb_refc decr = ADLB_WRITE_REFC; // default is to decr writers
   if (argpos < objc) {
     rc = Tcl_GetIntFromObj(interp, objv[argpos++], &decr.write_refcount);
     TCL_CHECK_MSG(rc, "decrement arg must be int!");
@@ -2281,7 +2281,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
 
   // Handle optional number of refcounts to store
-  adlb_refcounts store_refcounts = ADLB_READ_RC;
+  adlb_refc store_refcounts = ADLB_READ_REFC;
   if (argpos < objc) {
     rc = Tcl_GetIntFromObj(interp, objv[argpos++],
                  &store_refcounts.read_refcount);
@@ -2378,7 +2378,7 @@ ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
   // Retrieve the data, actual type, and length from server
   adlb_data_type type;
   int length;
-  adlb_retrieve_rc refcounts = ADLB_RETRIEVE_NO_RC;
+  adlb_retrieve_refc refcounts = ADLB_RETRIEVE_NO_REFC;
   refcounts.decr_self.read_refcount = decr_amount;
   int ret_rc = ADLB_Retrieve(handle.id, handle.sub.val, refcounts,
                      &type, xfer, &length);
@@ -2431,7 +2431,7 @@ adlb_data_to_tcl_obj(Tcl_Interp *interp, Tcl_Obj *const objv[], adlb_datum_id id
       *result = Tcl_NewADLBInt(tmp.INTEGER);
       break;
     case ADLB_DATA_TYPE_REF:
-      dc = ADLB_Unpack_ref(&tmp.REF, data, length, ADLB_NO_RC);
+      dc = ADLB_Unpack_ref(&tmp.REF, data, length, ADLB_NO_REFC);
       TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
             "Retrieve failed due to error unpacking data %i", dc);
       *result = Tcl_NewADLB_ID(tmp.REF.id);
@@ -2577,7 +2577,7 @@ ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
                           &extra);
   TCL_CHECK(rc);
 
-  adlb_retrieve_rc refcounts = ADLB_RETRIEVE_NO_RC;
+  adlb_retrieve_refc refcounts = ADLB_RETRIEVE_NO_REFC;
   rc = Tcl_GetIntFromObj(interp, objv[argpos++],
             &refcounts.incr_referand.read_refcount);
   TCL_CHECK_MSG(rc, "requires incr referand read amount!");
@@ -2679,7 +2679,7 @@ ADLB_Enumerate_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = Tcl_GetIntFromObj(interp, objv[argpos++], &offset);
   TCL_CHECK_MSG(rc, "requires offset!");
 
-  adlb_refcounts decr = ADLB_NO_RC;
+  adlb_refc decr = ADLB_NO_REFC;
   if (argpos < objc)
   {
     rc = Tcl_GetIntFromObj(interp, objv[argpos++], &decr.read_refcount);
@@ -2934,7 +2934,7 @@ ADLB_Retrieve_Blob_Impl(ClientData cdata, Tcl_Interp *interp,
   TCL_CHECK_MSG(rc, "Invalid handle %s",
                 Tcl_GetString(objv[1]));
 
-  adlb_retrieve_rc refcounts = ADLB_RETRIEVE_NO_RC;
+  adlb_retrieve_refc refcounts = ADLB_RETRIEVE_NO_REFC;
   /* Only decrement if refcounting enabled */
   if  (decr) {
     rc = Tcl_GetIntFromObj(interp, objv[2],
@@ -3204,14 +3204,14 @@ ADLB_Store_Blob_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = Tcl_GetIntFromObj(interp, objv[3], &length);
   TCL_CHECK_MSG(rc, "requires length!");
 
-  adlb_refcounts decr = ADLB_WRITE_RC;
+  adlb_refc decr = ADLB_WRITE_REFC;
   if (objc == 5) {
     rc = Tcl_GetIntFromObj(interp, objv[4], &decr.write_refcount);
     TCL_CHECK_MSG(rc, "decr must be int!");
   }
 
   rc = ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_BLOB, pointer, length,
-                  decr, ADLB_NO_RC);
+                  decr, ADLB_NO_REFC);
   CHECK_ADLB_STORE(rc, id);
 
   return TCL_OK;
@@ -3247,14 +3247,14 @@ ADLB_Blob_store_floats_Cmd(ClientData cdata, Tcl_Interp *interp,
     memcpy(xfer+(size_t)i*sizeof(double), &v, sizeof(double));
   }
 
-  adlb_refcounts decr = ADLB_WRITE_RC;
+  adlb_refc decr = ADLB_WRITE_REFC;
   if (objc == 4) {
     rc = Tcl_GetIntFromObj(interp, objv[3], &decr.write_refcount);
     TCL_CHECK_MSG(rc, "decr must be int!");
 
   }
   rc = ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_BLOB,
-        xfer, length*(int)sizeof(double), decr, ADLB_NO_RC);
+        xfer, length*(int)sizeof(double), decr, ADLB_NO_REFC);
   CHECK_ADLB_STORE(rc, id);
 
   return TCL_OK;
@@ -3290,14 +3290,14 @@ ADLB_Blob_store_ints_Cmd(ClientData cdata, Tcl_Interp *interp,
     memcpy(xfer+(size_t)i*sizeof(int), &v, sizeof(int));
   }
 
-  adlb_refcounts decr = ADLB_WRITE_RC;
+  adlb_refc decr = ADLB_WRITE_REFC;
   if (objc == 4) {
     rc = Tcl_GetIntFromObj(interp, objv[3], &decr.write_refcount);
     TCL_CHECK_MSG(rc, "decr must be int!");
 
   }
   rc = ADLB_Store(id, ADLB_NO_SUB, ADLB_DATA_TYPE_BLOB,
-        xfer, length*(int)sizeof(int), decr, ADLB_NO_RC);
+        xfer, length*(int)sizeof(int), decr, ADLB_NO_REFC);
   CHECK_ADLB_STORE(rc, id);
 
   return TCL_OK;
@@ -3454,7 +3454,7 @@ ADLB_Insert_Impl(ClientData cdata, Tcl_Interp *interp,
                handle.id, (int)handle.sub.val.length, (const char*)handle.sub.val.key,
                Tcl_GetStringFromObj(member_obj, NULL));
 
-  adlb_refcounts decr = ADLB_NO_RC;
+  adlb_refc decr = ADLB_NO_REFC;
   if (argpos < objc)
   {
     rc = Tcl_GetIntFromObj(interp, objv[argpos++], &decr.write_refcount);
@@ -3472,7 +3472,7 @@ ADLB_Insert_Impl(ClientData cdata, Tcl_Interp *interp,
 
 
   // TODO: support accepting this as arg
-  adlb_refcounts store_rc = ADLB_READ_RC;
+  adlb_refc store_rc = ADLB_READ_REFC;
   rc = ADLB_Store(handle.id, handle.sub.val, type,
                   member.data, member.length, decr, store_rc);
 
@@ -3535,7 +3535,7 @@ ADLB_Insert_Atomic_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   // Increments/decrements for outer and inner containers
   // (default no extras)
-  adlb_retrieve_rc refcounts = ADLB_RETRIEVE_NO_RC;
+  adlb_retrieve_refc refcounts = ADLB_RETRIEVE_NO_REFC;
 
   if (argpos < objc)
   {
@@ -3611,7 +3611,7 @@ ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
   int len;
 
   // Optional reference decrement argument, defaults to 0
-  adlb_retrieve_rc refcounts = ADLB_RETRIEVE_NO_RC;
+  adlb_retrieve_refc refcounts = ADLB_RETRIEVE_NO_REFC;
   if (argpos < objc)
   {
     rc = Tcl_GetIntFromObj(interp, objv[argpos++],
@@ -3949,7 +3949,7 @@ ADLB_Reference_Impl(ClientData cdata, Tcl_Interp *interp,
   TCL_CHECK(rc);
 
   // TODO: optionally take num of read/write references to transfer
-  adlb_refcounts transfer_rc = ADLB_READ_RC;
+  adlb_refc transfer_rc = ADLB_READ_REFC;
 
   // DEBUG_ADLB("adlb::container_reference: <%"PRId64">[%s] => <%"PRId64">\n",
   //            id, subscript, reference);
@@ -3978,7 +3978,7 @@ ADLB_Container_Size_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = Tcl_GetADLB_ID(interp, objv[argpos++], &container_id);
   TCL_CHECK_MSG(rc, "argument is not a valid ID!");
 
-  adlb_refcounts decr = ADLB_NO_RC;
+  adlb_refc decr = ADLB_NO_REFC;
   if (argpos < objc)
   {
     rc = Tcl_GetIntFromObj(interp, objv[argpos++], &decr.read_refcount);
@@ -4018,7 +4018,7 @@ ADLB_Write_Refcount_Incr_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = ADLB_EXTRACT_HANDLE_ID(objv[1], &container_id);
   TCL_CHECK(rc);
 
-  adlb_refcounts incr = ADLB_WRITE_RC;
+  adlb_refc incr = ADLB_WRITE_REFC;
   if (objc == 3)
   {
     rc = Tcl_GetIntFromObj(interp, objv[2], &incr.write_refcount);
@@ -4055,7 +4055,7 @@ ADLB_Write_Refcount_Decr_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
 
   // DEBUG_ADLB("adlb::write_refcount_decr: <%"PRId64">", container_id);
-  adlb_refcounts decr = { .read_refcount = 0, .write_refcount = -decr_w };
+  adlb_refc decr = { .read_refcount = 0, .write_refcount = -decr_w };
   rc = ADLB_Refcount_incr(container_id, decr);
 
   if (rc != ADLB_SUCCESS)
@@ -4095,7 +4095,7 @@ ADLB_Refcount_Incr_Impl(ClientData cdata, Tcl_Interp *interp,
 
  // DEBUG_ADLB("adlb::refcount_incr: <%"PRId64">", id);
 
-  adlb_refcounts incr = ADLB_NO_RC;
+  adlb_refc incr = ADLB_NO_REFC;
   if (type == ADLB_READ_REFCOUNT || type == ADLB_READWRITE_REFCOUNT)
   {
     incr.read_refcount = change;
