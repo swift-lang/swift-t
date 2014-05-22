@@ -1361,7 +1361,7 @@ ADLB_Closed_Cmd(ClientData cdata, Tcl_Interp *interp,
                 "unexpected trailing args at %ith arg", argpos);
 
   adlb_refc curr_refcounts;
-  rc = ADLB_Get_refcounts(handle.id, &curr_refcounts, decr);
+  rc = ADLB_Refcount_get(handle.id, &curr_refcounts, decr);
   
   TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64"> failed!", handle.id);
 
