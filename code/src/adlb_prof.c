@@ -244,11 +244,11 @@ ADLB_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
   MPE_LOG(xlb_mpe_wkr_exists_end);
 }
 
-adlb_code ADLB_Get_refcounts(adlb_datum_id id, adlb_refc *result,
+adlb_code ADLB_Refcount_get(adlb_datum_id id, adlb_refc *result,
                               adlb_refc decr)
 {
   MPE_LOG(xlb_mpe_wkr_get_refcounts_start);
-  return ADLBP_Get_refcounts(id, result, decr);
+  return ADLBP_Refcount_get(id, result, decr);
   MPE_LOG(xlb_mpe_wkr_get_refcounts_end);
 }
 

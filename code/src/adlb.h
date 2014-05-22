@@ -226,9 +226,9 @@ adlb_code ADLB_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
  * result: refcounts of id after decr applied
  * decr: amount to decrement refcounts
  */
-adlb_code ADLBP_Get_refcounts(adlb_datum_id id, adlb_refc *result,
+adlb_code ADLBP_Refcount_get(adlb_datum_id id, adlb_refc *result,
                               adlb_refc decr);
-adlb_code ADLB_Get_refcounts(adlb_datum_id id, adlb_refc *result,
+adlb_code ADLB_Refcount_get(adlb_datum_id id, adlb_refc *result,
                               adlb_refc decr);
 
 /*

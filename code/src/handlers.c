@@ -1338,7 +1338,7 @@ handle_get_refcounts(int caller)
   struct packed_refcounts_req req;
   RECV(&req, sizeof(req), MPI_BYTE, caller, ADLB_TAG_GET_REFCOUNTS);
 
-  DEBUG("Get_refcounts: <%"PRId64"> decr r: %i w: %i", req.id,
+  DEBUG("Refcount_get: <%"PRId64"> decr r: %i w: %i", req.id,
         req.decr.read_refcount, req.decr.write_refcount);
  
   struct packed_refcounts_resp resp;

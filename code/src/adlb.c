@@ -836,7 +836,7 @@ ADLBP_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
   return ADLB_SUCCESS;
 }
 adlb_code
-ADLBP_Get_refcounts(adlb_datum_id id, adlb_refc *result,
+ADLBP_Refcount_get(adlb_datum_id id, adlb_refc *result,
                               adlb_refc decr)
 {
   int to_server_rank = ADLB_Locate(id);
@@ -844,7 +844,7 @@ ADLBP_Get_refcounts(adlb_datum_id id, adlb_refc *result,
   MPI_Status status;
   MPI_Request request;
 
-  TRACE("ADLB_Get_refcounts: <%"PRId64">\n", id);
+  TRACE("ADLB_Refcount_get: <%"PRId64">\n", id);
 
   struct packed_refcounts_req req = { .id = id, .decr = decr };
 
