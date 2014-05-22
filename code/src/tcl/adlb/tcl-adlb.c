@@ -1115,7 +1115,7 @@ extract_create_props(Tcl_Interp *interp, bool accept_id, int argstart,
     int symbol;
     rc = Tcl_GetIntFromObj(interp, objv[argpos++], &symbol);
     TCL_CHECK_MSG(rc, "could not get debug symbol argument");
-    props->symbol = (adlb_debug_symbol)symbol;
+    props->symbol = (adlb_dsym)symbol;
   }
 
   if (argpos < objc) {
@@ -5056,7 +5056,7 @@ ADLB_Subscript_Container_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb::add_debug_symbol <symbol> <name> <context>
+   usage: adlb::add_dsym <symbol> <name> <context>
    symbol: integer debug symbol
    name: name associated with debug symbol
    context: additional context string
@@ -5075,16 +5075,16 @@ ADLB_Add_Debug_Symbol_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   const char *name = Tcl_GetString(objv[2]);
   const char *context = Tcl_GetString(objv[3]);
-  adlb_debug_symbol_data data = { .name = name, .context = context };
+  adlb_dsym_data data = { .name = name, .context = context };
 
-  adlb_code ac = ADLB_Add_debug_symbol((uint32_t)symbol, data);
+  adlb_code ac = ADLB_Add_dsym((uint32_t)symbol, data);
   TCL_CONDITION(ac == ADLB_SUCCESS, "Error adding debug symbol");
 
   return TCL_OK;
 }
 
 /**
-   usage: adlb::debug_symbol <symbol>
+   usage: adlb::dsym <symbol>
    symbol: integer debug symbol
    returns: two element list with two strings for name and context,
             empty strings if none
@@ -5101,7 +5101,7 @@ ADLB_Debug_Symbol_Cmd(ClientData cdata, Tcl_Interp *interp,
   TCL_CHECK_MSG(rc, "symbol must be integer");
   TCL_CONDITION(symbol >= 0, "Symbol must be non-negative");
   
-  adlb_debug_symbol_data data = ADLB_Debug_symbol((uint32_t)symbol);
+  adlb_dsym_data data = ADLB_Dsym((uint32_t)symbol);
   const char *name = data.name == NULL ? "" : data.name;
   const char *context = data.context == NULL ? "" : data.context;
  
@@ -5286,8 +5286,8 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("dict_create", ADLB_Dict_Create_Cmd);
   COMMAND("subscript_struct", ADLB_Subscript_Struct_Cmd);
   COMMAND("subscript_container", ADLB_Subscript_Container_Cmd);
-  COMMAND("add_debug_symbol", ADLB_Add_Debug_Symbol_Cmd);
-  COMMAND("debug_symbol", ADLB_Debug_Symbol_Cmd);
+  COMMAND("add_dsym", ADLB_Add_Debug_Symbol_Cmd);
+  COMMAND("dsym", ADLB_Debug_Symbol_Cmd);
   COMMAND("fail",      ADLB_Fail_Cmd);
   COMMAND("abort",     ADLB_Abort_Cmd);
   COMMAND("finalize",  ADLB_Finalize_Cmd);
