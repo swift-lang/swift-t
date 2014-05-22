@@ -428,8 +428,7 @@ ADLBP_Put(const void* payload, int length, int target, int answer,
   return ADLB_SUCCESS;
 }
 
-// TODO: ADLB_Put_dep? Something else?
-adlb_code ADLBP_Put_rule(const void* payload, int length, int target,
+adlb_code ADLBP_Dput(const void* payload, int length, int target,
         int answer, int type, int priority, int parallelism,
         const char *name,
         const adlb_datum_id *wait_ids, int wait_id_count, 
@@ -439,7 +438,7 @@ adlb_code ADLBP_Put_rule(const void* payload, int length, int target,
   MPI_Request request;
   int response, rc;
 
-  DEBUG("ADLB_Put_rule: target=%i x%i %.*s",
+  DEBUG("ADLB_Dput: target=%i x%i %.*s",
         target, parallelism, length, (char*) payload);
   
   rc = adlb_put_check_params(target, type, parallelism);
@@ -533,7 +532,7 @@ adlb_code ADLBP_Put_rule(const void* payload, int length, int target,
     WAIT(&request, &status);
     ADLB_CHECK(response);
   }
-  TRACE("ADLB_Put_rule: DONE");
+  TRACE("ADLB_Dput: DONE");
 
   return ADLB_SUCCESS;
 }

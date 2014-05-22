@@ -71,33 +71,70 @@ adlb_code ADLB_Hostmap_lookup(const char* name, int count,
    Obtain RS-separated buffer of host names
    @param output: OUT Buffer into which to write result
    @param max: Maximal number of characters to write
-   @param offset: Start with this hostname
-   @param actual: OUT Number of hostnames written
+   @param offset: start with this hostname
+   @param actual: out number of hostnames written
  */
-adlb_code ADLB_Hostmap_list(char* output, unsigned int max,
+adlb_code adlb_hostmap_list(char* output, unsigned int max,
                             unsigned int offset, int* actual);
 
-adlb_code ADLBP_Put(const void* payload, int length, int target, int answer,
+/*
+  put a task into the global task queue.
+
+  @param payload: data buffer containing task data
+  @param length: length of the payload in bytes
+  @param target: target rank for task, adlb_rank_any if any target
+  @param answer: answer rank passed to receiver of task
+  @param type: task type
+  @param priority: priority of task
+  @param parallelism: number of ranks to execute task
+              (1 for serial tasks, > 1 for parallel tasks)
+ */
+adlb_code adlbp_put(const void* payload, int length, int target, int answer,
                     int type, int priority, int parallelism);
-adlb_code ADLB_Put(const void* payload, int length, int target, int answer,
+adlb_code adlb_put(const void* payload, int length, int target, int answer,
                    int type, int priority, int parallelism);
 
-adlb_code ADLBP_Put_rule(const void* payload, int length, int target,
+/*
+  Put a data-dependent task into the global task queue.  The task will
+  be released and eligible to be matched to an ADLB_Get call once all
+  specified ids reach write refcount 0, and all specified id/subscript
+  pairs are assigned.  Most parameters are identical to adlb_put, except:
+  @param wait_ids: array of ids to wait for
+  @param wait_id_count: length of wait_ids array
+  @param wait_id_subs: array of id/subscript pairs to wait for
+  @param wait_id_sub_count: length of wait_id_subs array
+ */
+adlb_code ADLBP_Dput(const void* payload, int length, int target,
         int answer, int type, int priority, int parallelism,
         const char *name,
         const adlb_datum_id *wait_ids, int wait_id_count, 
         const adlb_datum_id_sub *wait_id_subs, int wait_id_sub_count);
-adlb_code ADLB_Put_rule(const void* payload, int length, int target,
+adlb_code ADLB_Dput(const void* payload, int length, int target,
         int answer, int type, int priority, int parallelism,
         const char *name,
         const adlb_datum_id *wait_ids, int wait_id_count, 
         const adlb_datum_id_sub *wait_id_subs, int wait_id_sub_count);
 
+/*
+  Get a task from the global task queue.
+  @param type_requested: the type of work requested
+  @param payload buffer to receive task data into (TODO: min size?)
+  @param length output parameter for actual length of task data
+  @param answer output parameter for answer rank specified in ADLB_Put
+                for task
+  @param type_recvd output parameter for actual type of task
+  @param comm output parameter for MPI communicator to use for
+                executing parallel task
+ */
 adlb_code ADLBP_Get(int type_requested, void* payload, int* length,
                     int* answer, int* type_recvd, MPI_Comm* comm);
 adlb_code ADLB_Get(int type_requested, void* payload, int* length,
                    int* answer, int* type_recvd, MPI_Comm* comm);
 
+/*
+ Non-blocking equivalent of ADLB_Get.  Returns ADLB_NOTHING if no
+ matching task are available.
+*/
 adlb_code ADLBP_Iget(int type_requested, void* payload, int* length,
                      int* answer, int* type_recvd);
 adlb_code ADLB_Iget(int type_requested, void* payload, int* length,
