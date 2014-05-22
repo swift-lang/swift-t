@@ -77,7 +77,7 @@ typedef struct
   int read_refcount; // Number of open read refs
   int write_refcount; // Number of open write refs
   adlb_data_type type;
-  adlb_debug_symbol symbol; // TODO: remove for opt build?
+  adlb_dsym symbol; // TODO: remove for opt build?
   adlb_data_status status;
 } adlb_datum;
 
@@ -152,16 +152,16 @@ typedef struct
   Arguments are id and symbol
  */
 #define ADLB_PRI_DATUM_ARGS(id, symbol) \
-  (id), ADLB_Debug_symbol(symbol).name, \
-  ADLB_Debug_symbol(symbol).context
+  (id), ADLB_Dsym(symbol).name, \
+  ADLB_Dsym(symbol).context
 
 /*
   Macro for printf arguments matching ADLB_PRI_DATUM.
   Arguments are id and symbol and a subscript value
  */
 #define ADLB_PRI_DATUM_SUB_ARGS(id, symbol, sub) \
-  (id), ADLB_Debug_symbol(symbol).name, (int)((sub).length), \
-  (const char*)((sub).key), ADLB_Debug_symbol(symbol).context
+  (id), ADLB_Dsym(symbol).name, (int)((sub).length), \
+  (const char*)((sub).key), ADLB_Dsym(symbol).context
   
 
 

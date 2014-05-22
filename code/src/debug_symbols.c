@@ -24,7 +24,7 @@
 
 #include <table_lp.h>
 
-static const adlb_debug_symbol_data NULL_DATA = { .name = NULL,
+static const adlb_dsym_data NULL_DATA = { .name = NULL,
                                                   .context = NULL };
 
 typedef struct {
@@ -32,15 +32,15 @@ typedef struct {
   char *context;
 } symbol_table_entry;
 
-static bool debug_symbols_init = false;
+static bool dsyms_init = false;
 
 /*
- * Map from adlb_debug_symbol to strings.
+ * Map from adlb_dsym to strings.
  * Key type is wider than needed, but this shouldn't be a problem.
  */
-static struct table_lp debug_symbols;
+static struct table_lp dsyms;
 
-void debug_symbol_free_cb(int64_t key, void *data)
+void dsym_free_cb(int64_t key, void *data)
 {
   symbol_table_entry *entry = data;
   free(entry->name);
@@ -48,29 +48,29 @@ void debug_symbol_free_cb(int64_t key, void *data)
   free(entry);
 }
 
-adlb_code xlb_debug_symbols_init(void)
+adlb_code xlb_dsyms_init(void)
 {
-  assert(!debug_symbols_init);
-  bool ok = table_lp_init(&debug_symbols, 1024);
+  assert(!dsyms_init);
+  bool ok = table_lp_init(&dsyms, 1024);
 
   CHECK_MSG(ok, "Error initialising debug symbols");
 
-  debug_symbols_init = true;
+  dsyms_init = true;
   return ADLB_DATA_SUCCESS;
 }
 
-void xlb_debug_symbols_finalize(void)
+void xlb_dsyms_finalize(void)
 {
-  assert(debug_symbols_init);
-  table_lp_free_callback(&debug_symbols, false, debug_symbol_free_cb);
+  assert(dsyms_init);
+  table_lp_free_callback(&dsyms, false, dsym_free_cb);
   
-  debug_symbols_init = false;
+  dsyms_init = false;
 }
 
-adlb_code ADLBP_Add_debug_symbol(adlb_debug_symbol symbol,
-                                 adlb_debug_symbol_data data)
+adlb_code ADLBP_Add_dsym(adlb_dsym symbol,
+                                 adlb_dsym_data data)
 {
-  CHECK_MSG(debug_symbols_init, "Debug symbols module not init");
+  CHECK_MSG(dsyms_init, "Debug symbols module not init");
   CHECK_MSG(symbol != ADLB_DEBUG_SYMBOL_NULL, "Cannot add "
       "ADLB_DEBUG_SYMBOL_NULL as debug symbol for %s:%s",
       data.name, data.context);
@@ -79,7 +79,7 @@ adlb_code ADLBP_Add_debug_symbol(adlb_debug_symbol symbol,
   
   // free existing entry if needed
   symbol_table_entry *prev_entry;
-  if (table_lp_remove(&debug_symbols, symbol, (void **)&prev_entry))
+  if (table_lp_remove(&dsyms, symbol, (void **)&prev_entry))
   {
     DEBUG("Overwriting old symbol entry %"PRIu32"=%s:%s",
          symbol, prev_entry->name, prev_entry->context);
@@ -97,23 +97,23 @@ adlb_code ADLBP_Add_debug_symbol(adlb_debug_symbol symbol,
   e->context = strdup(data.context);
   ADLB_MALLOC_CHECK(e->context);
   
-  bool ok = table_lp_add(&debug_symbols, symbol, e);
+  bool ok = table_lp_add(&dsyms, symbol, e);
   CHECK_MSG(ok, "Unexpected error adding debug symbol to table");
 
   return ADLB_SUCCESS;
 }
 
-adlb_debug_symbol_data ADLBP_Debug_symbol(adlb_debug_symbol symbol)
+adlb_dsym_data ADLBP_Dsym(adlb_dsym symbol)
 {
-  if (!debug_symbols_init)
+  if (!dsyms_init)
   {
     return NULL_DATA;
   }
 
   symbol_table_entry *data;
-  if (table_lp_search(&debug_symbols, symbol, (void**)&data))
+  if (table_lp_search(&dsyms, symbol, (void**)&data))
   {
-    adlb_debug_symbol_data result = { .name = data->name,
+    adlb_dsym_data result = { .name = data->name,
                               .context = data->context };
     return result;
   }

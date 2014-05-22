@@ -161,7 +161,7 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
 
   setup_hostmap();
 
-  code = xlb_debug_symbols_init();
+  code = xlb_dsyms_init();
   ADLB_CHECK(code);
 
   srandom((unsigned int)xlb_comm_rank+1);
@@ -1542,7 +1542,7 @@ ADLBP_Finalize()
 
   free_hostmap();
   
-  xlb_debug_symbols_finalize();
+  xlb_dsyms_finalize();
 
   bool failed;
   int fail_code;

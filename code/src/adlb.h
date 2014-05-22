@@ -74,11 +74,11 @@ adlb_code ADLB_Hostmap_lookup(const char* name, int count,
    @param offset: start with this hostname
    @param actual: out number of hostnames written
  */
-adlb_code adlb_hostmap_list(char* output, unsigned int max,
+adlb_code ADLB_Hostmap_list(char* output, unsigned int max,
                             unsigned int offset, int* actual);
 
 /*
-  put a task into the global task queue.
+  Put a task into the global task queue.
 
   @param payload: data buffer containing task data
   @param length: length of the payload in bytes
@@ -89,9 +89,9 @@ adlb_code adlb_hostmap_list(char* output, unsigned int max,
   @param parallelism: number of ranks to execute task
               (1 for serial tasks, > 1 for parallel tasks)
  */
-adlb_code adlbp_put(const void* payload, int length, int target, int answer,
+adlb_code ADLBP_Put(const void* payload, int length, int target, int answer,
                     int type, int priority, int parallelism);
-adlb_code adlb_put(const void* payload, int length, int target, int answer,
+adlb_code ADLB_Put(const void* payload, int length, int target, int answer,
                    int type, int priority, int parallelism);
 
 /*
@@ -200,10 +200,8 @@ adlb_code ADLB_Create_multiset(adlb_datum_id id,
   symbol: debug symbol identifier, should not be ADLB_DEBUG_SYMBOL_NULL
   data: associated null-terminated data string, will be copied.
  */
-adlb_code ADLBP_Add_debug_symbol(adlb_debug_symbol symbol,
-                                 adlb_debug_symbol_data data);
-adlb_code ADLB_Add_debug_symbol(adlb_debug_symbol symbol,
-                                 adlb_debug_symbol_data data);
+adlb_code ADLBP_Add_dsym(adlb_dsym symbol, adlb_dsym_data data);
+adlb_code ADLB_Add_dsym(adlb_dsym symbol, adlb_dsym_data data);
 
 /*
   Retrieve debug symbol entry from local debug symbol table.
@@ -211,8 +209,8 @@ adlb_code ADLB_Add_debug_symbol(adlb_debug_symbol symbol,
   symbol: a debug symbol identifier
   return: entry previous added for symbol, or NULL values if not present
  */
-adlb_debug_symbol_data ADLBP_Debug_symbol(adlb_debug_symbol symbol);
-adlb_debug_symbol_data ADLB_Debug_symbol(adlb_debug_symbol symbol);
+adlb_dsym_data ADLBP_Dsym(adlb_dsym symbol);
+adlb_dsym_data ADLB_Dsym(adlb_dsym symbol);
 
 adlb_code ADLBP_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
                        adlb_refc decr);

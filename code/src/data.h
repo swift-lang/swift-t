@@ -169,7 +169,7 @@ adlb_data_code xlb_data_unique(adlb_datum_id* result);
   Get local debug symbol, return ADLB_DEBUG_SYMBOL_NULL if not local,
   non-existent, or freed
  */
-adlb_debug_symbol xlb_get_debug_symbol(adlb_datum_id id);
+adlb_dsym xlb_get_dsym(adlb_datum_id id);
 
 adlb_data_code xlb_data_finalize(void);
 

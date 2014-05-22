@@ -1125,7 +1125,7 @@ transform_tostring(char* output, transform* t)
     // TODO: debug symbol?
     adlb_datum_id td = t->input_td_list[i];
     append(p, ADLB_PRI_DATUM, ADLB_PRI_DATUM_ARGS(td,
-                                 xlb_get_debug_symbol(td)));
+                                 xlb_get_dsym(td)));
     if (blocking)
       append(p, "/");
   }
@@ -1143,7 +1143,7 @@ transform_tostring(char* output, transform* t)
       append(p, "/");
     // TODO: debug symbol?
     append(p, ADLB_PRI_DATUM_SUB, ADLB_PRI_DATUM_SUB_ARGS(
-            ts.td, xlb_get_debug_symbol(ts.td), sub_convert(ts.subscript)));
+            ts.td, xlb_get_dsym(ts.td), sub_convert(ts.subscript)));
     if (blocking)
       append(p, "/");
   }

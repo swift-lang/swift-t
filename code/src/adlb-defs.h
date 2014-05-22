@@ -175,7 +175,7 @@ static inline adlb_refc adlb_refc_negate(adlb_refc refc)
 }
 
 /** Identifier for adlb data debug symbol */
-typedef uint32_t adlb_debug_symbol;
+typedef uint32_t adlb_dsym;
 #define ADLB_DEBUG_SYMBOL_NULL 0u
 
 /** Data associated with adlb data debug symbol */
@@ -185,7 +185,7 @@ typedef struct {
 
   /** Additional contextual information */
   const char *context;
-} adlb_debug_symbol_data;
+} adlb_dsym_data;
 
 // Prefer to tightly pack these structs
 #pragma pack(push, 1)
@@ -195,7 +195,7 @@ typedef struct
   int write_refcount;
   bool permanent : 1;
   bool release_write_refs : 1;
-  adlb_debug_symbol symbol;
+  adlb_dsym symbol;
 } adlb_create_props;
 
 // Default settings for new variables

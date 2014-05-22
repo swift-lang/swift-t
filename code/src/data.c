@@ -2172,7 +2172,7 @@ xlb_data_refc_type_tostring(adlb_refcount_type refc_type)
   Attempt to get debug symbol for id locally, return
   ADLB_DEBUG_SYMBOL_NULL if not possible.
  */
-adlb_debug_symbol xlb_get_debug_symbol(adlb_datum_id id)
+adlb_dsym xlb_get_dsym(adlb_datum_id id)
 {
   adlb_datum* d;
   bool found = table_lp_search(&tds, id, (void**)&d);
@@ -2220,14 +2220,14 @@ static void free_cref_entry(const void *key, size_t key_len, void *val)
   {
     adlb_datum_id src_id;
     adlb_subscript src_sub, dst_sub;
-    adlb_debug_symbol src_symbol, dst_symbol;
+    adlb_dsym src_symbol, dst_symbol;
     xlb_read_id_sub(key, key_len, &src_id, &src_sub);
-    src_symbol = xlb_get_debug_symbol(src_id);
+    src_symbol = xlb_get_dsym(src_id);
     
     container_reference *dst = curr->data;
     dst_sub.length = dst->subscript_len;
     dst_sub.key = dst->subscript_data;
-    dst_symbol = xlb_get_debug_symbol(dst->id);
+    dst_symbol = xlb_get_dsym(dst->id);
 
     // TODO: pass waiting tasks to higher-level handling code
     printf("UNFILLED CONTAINER REFERENCE "
@@ -2249,9 +2249,9 @@ static void free_ix_l_entry(const void *key, size_t key_len, void *val)
   {
     adlb_datum_id src_id;
     adlb_subscript src_sub;
-    adlb_debug_symbol src_symbol;
+    adlb_dsym src_symbol;
     xlb_read_id_sub(key, key_len, &src_id, &src_sub);
-    src_symbol = xlb_get_debug_symbol(src_id);
+    src_symbol = xlb_get_dsym(src_id);
     
     xlb_listener *listener = (xlb_listener*)curr->data;
 

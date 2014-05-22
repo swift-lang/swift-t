@@ -223,15 +223,15 @@ adlb_code ADLB_Multicreate(ADLB_create_spec *specs, int count)
   return rc;
 }
 
-adlb_code ADLB_Add_debug_symbol(adlb_debug_symbol symbol,
-                                adlb_debug_symbol_data data)
+adlb_code ADLB_Add_dsym(adlb_dsym symbol,
+                                adlb_dsym_data data)
 {
-  return ADLBP_Add_debug_symbol(symbol, data);
+  return ADLBP_Add_dsym(symbol, data);
 }
 
-adlb_debug_symbol_data ADLB_Debug_symbol(adlb_debug_symbol symbol)
+adlb_dsym_data ADLB_Dsym(adlb_dsym symbol)
 {
-  return ADLBP_Debug_symbol(symbol);
+  return ADLBP_Dsym(symbol);
 }
 
 adlb_code

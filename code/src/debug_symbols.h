@@ -22,7 +22,7 @@
 /*
  * Init and finalize: should be called before using debug symbols.
  */
-adlb_code xlb_debug_symbols_init(void);
-void xlb_debug_symbols_finalize(void);
+adlb_code xlb_dsyms_init(void);
+void xlb_dsyms_finalize(void);
 
 #endif // __XLB_DEBUG_SYMBOLS
