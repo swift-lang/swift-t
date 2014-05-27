@@ -305,11 +305,11 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp* interp,
                 opts.name, Tcl_GetString(objv[1]));
 
 
-  adlb_code ac = ADLB_Put_rule(action, action_len, opts.target,
+  adlb_code ac = ADLB_Dput(action, action_len, opts.target,
         adlb_comm_rank, opts.work_type, ADLB_curr_priority, opts.parallelism,
         opts.name, input_list, inputs, input_pair_list, input_pairs);
   TCL_CONDITION(ac == ADLB_SUCCESS, "could not process rule!");
-  
+
   // Free subscripts that were allocated
   for (int i = 0; i < input_pairs; i++)
   {
@@ -777,14 +777,14 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
                           refcounts.incr_referand.read_refcount;
     props.write_refcount = init_refs.write_refcount +
                            refcounts.incr_referand.write_refcount;
-    
+
     adlb_datum_id new_id;
     code = ADLB_Create(ADLB_DATA_ID_NULL, type, type_extra, props, &new_id);
     TCL_CONDITION(code == ADLB_SUCCESS, "Error while creating nested");
 
     // ID is only relevant data, so init refcounts to any value
     adlb_ref new_ref = { .id = new_id, .read_refs = 0, .write_refs = 0 };
-   
+
     // Pack using standard api.  Checks should be mostly optimized out
     adlb_binary_data packed;
     adlb_data_code dc = ADLB_Pack_ref(&new_ref, &packed);
