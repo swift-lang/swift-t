@@ -5056,7 +5056,7 @@ ADLB_Subscript_Container_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb::add_dsym <symbol> <name> <context>
+   usage: adlb::add_debug_symbol <symbol> <name> <context>
    symbol: integer debug symbol
    name: name associated with debug symbol
    context: additional context string
@@ -5084,7 +5084,7 @@ ADLB_Add_Debug_Symbol_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb::dsym <symbol>
+   usage: adlb::debug_symbol <symbol>
    symbol: integer debug symbol
    returns: two element list with two strings for name and context,
             empty strings if none
@@ -5286,8 +5286,8 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("dict_create", ADLB_Dict_Create_Cmd);
   COMMAND("subscript_struct", ADLB_Subscript_Struct_Cmd);
   COMMAND("subscript_container", ADLB_Subscript_Container_Cmd);
-  COMMAND("add_dsym", ADLB_Add_Debug_Symbol_Cmd);
-  COMMAND("dsym", ADLB_Debug_Symbol_Cmd);
+  COMMAND("add_debug_symbol", ADLB_Add_Debug_Symbol_Cmd);
+  COMMAND("debug_symbol", ADLB_Debug_Symbol_Cmd);
   COMMAND("fail",      ADLB_Fail_Cmd);
   COMMAND("abort",     ADLB_Abort_Cmd);
   COMMAND("finalize",  ADLB_Finalize_Cmd);
