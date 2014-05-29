@@ -65,6 +65,14 @@ typedef enum {
   // TODO: more info - e.g. if bad arg, or invalid state
 } turbine_exec_code;
 
+/*
+  Info about available/used slots in executor
+ */
+typedef struct {
+  int used;
+  int total;
+} turbine_exec_slot_state;
+
 // Function pointer types.  All are passed void state pointer for
 // any state needed
 typedef turbine_exec_code (*turbine_exec_shutdown)(void *state);
@@ -80,7 +88,8 @@ typedef turbine_exec_code (*turbine_exec_wait)(void *state,
           turbine_completed_task **completed, int *ncompleted);
 
 // Slots: return count of slots
-typedef turbine_exec_code (*turbine_exec_slots)(void *state, int *slots);
+typedef turbine_exec_code (*turbine_exec_slots)(void *state,
+                                  turbine_exec_slot_state *slots);
 
 // Executor notification model
 // TODO: only polling based currently used
@@ -103,8 +112,7 @@ typedef struct {
   turbine_exec_shutdown shutdown;
   turbine_exec_wait wait;
   turbine_exec_poll poll;
-  turbine_exec_slots slots; // Total number of slots
-  turbine_exec_slots used_slots; // Total number of slots in use
+  turbine_exec_slots slots;
 } turbine_executor;
 
 static turbine_exec_code
@@ -129,7 +137,6 @@ void init_coasters_executor(turbine_executor *exec /*TODO: coasters params */)
   exec->poll = NULL;
   exec->wait = NULL;
   exec->slots = NULL;
-  exec->used_slots = NULL;
 }
 
 
@@ -142,19 +149,16 @@ turbine_code async_worker_loop(turbine_executor *executor,
   turbine_exec_code ec;
   while (true)
   {
-    int slots, used_slots;
+    turbine_exec_slot_state slots;
     ec = executor->slots(executor->state, &slots);
     TMP_EXEC_CHECK(ec);
 
-    ec = executor->used_slots(executor->state, &used_slots);
-    TMP_EXEC_CHECK(ec);
-
-    if (used_slots < slots)
+    if (slots.used < slots.total)
     {
-      int max_tasks = slots - used_slots;
+      int max_tasks = slots.total - slots.used;
 
       // Need to do non-blocking get if we're polling executor too
-      bool poll = (used_slots != 0);
+      bool poll = (slots.used != 0);
       
       ec = get_tasks(executor, buffer, buffer_size, poll, max_tasks);
       if (ec == TURBINE_EXEC_SHUTDOWN)
@@ -165,16 +169,13 @@ turbine_code async_worker_loop(turbine_executor *executor,
     }
 
     // Update count in case work added 
-    ec = executor->used_slots(executor->state, &used_slots);
+    ec = executor->slots(executor->state, &slots);
     TMP_EXEC_CHECK(ec);
 
-    if (used_slots > 0)
+    if (slots.used > 0)
     {
-      ec = executor->slots(executor->state, &slots);
-      TMP_EXEC_CHECK(ec);
-      
       // Need to do non-blocking check if we want to request more work
-      bool poll = used_slots < slots;
+      bool poll = (slots.used < slots.total);
       ec = check_tasks(executor, poll);
       TMP_EXEC_CHECK(ec);
     }
