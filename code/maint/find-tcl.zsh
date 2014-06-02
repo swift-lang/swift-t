@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 
-# Find working Tcl
+# Find working Tcl in directory DIR ($1)
 # Refers to TCL_VERSION in the environment
 # Currently used by configure
 
@@ -19,6 +19,12 @@ exitcode "\n Not given: Tcl directory" > /dev/stderr
 [[ -d ${DIR} ]]
 exitcode "\n Could not find Tcl directory: ${DIR}" > /dev/stderr
 
+if [[ ${TCL_VERSION} == "" ]] 
+then 
+  print "Not set: TCL_VERSION" > /dev/stderr
+  exit 1
+fi
+  
 # Loop over F: the tclsh executable file
 FILES=( ${DIR}/bin/tclsh${TCL_VERSION} ${DIR}/bin/tclsh )
 for F in ${FILES}
