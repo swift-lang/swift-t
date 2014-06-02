@@ -100,7 +100,6 @@ namespace eval turbine {
 
         turbine::init_file_types
 
-        adlb::barrier
         c::normalize
 
         argv_init

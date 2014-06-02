@@ -642,18 +642,6 @@ ADLB_Workers_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
-/**
-   usage: no args, barrier for workers
-*/
-static int
-ADLB_Barrier_Cmd(ClientData cdata, Tcl_Interp *interp,
-                 int objc, Tcl_Obj *const objv[])
-{
-  int rc = MPI_Barrier(MPI_COMM_WORLD);
-  ASSERT(rc == MPI_SUCCESS);
-  return TCL_OK;
-}
-
 static int
 ADLB_Hostmap_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
                         int objc, Tcl_Obj *const objv[])
@@ -5221,7 +5209,6 @@ tcl_adlb_init(Tcl_Interp* interp)
   COMMAND("size",      ADLB_Size_Cmd);
   COMMAND("servers",   ADLB_Servers_Cmd);
   COMMAND("workers",   ADLB_Workers_Cmd);
-  COMMAND("barrier",   ADLB_Barrier_Cmd);
   COMMAND("hostmap_lookup",   ADLB_Hostmap_Lookup_Cmd);
   COMMAND("hostmap_list",     ADLB_Hostmap_List_Cmd);
   COMMAND("get_priority",   ADLB_Get_Priority_Cmd);
