@@ -25,6 +25,7 @@
 
 #include "config.h"
 
+#include <inttypes.h>
 #include <limits.h>
 
 #ifdef HAVE_MALLOC_H
