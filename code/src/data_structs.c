@@ -734,8 +734,7 @@ xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
     xlb_refc_acquire acquire_field = acquiring_field ? to_acquire
                                                    : XLB_NO_ACQUIRE;
 
-    TRACE("Field %i of %s: acquiring %i", i, t->type_name,
-                                      (int)acquire_field);
+    TRACE("Field %i of %s: acquiring ", i, t->type_name);
     switch (field_type)
     {
       case ADLB_DATA_TYPE_STRUCT:
