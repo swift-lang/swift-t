@@ -595,6 +595,8 @@ else
     echo "R disabled"
 fi
 
+HAVE_JULIA=0
+USE_JULIA=0
 AC_ARG_WITH(julia,
    AS_HELP_STRING([--with-julia],
                    [Use this julia source directory]),
@@ -607,6 +609,13 @@ AC_ARG_WITH(julia,
 AC_DEFINE_UNQUOTED(HAVE_JULIA,${HAVE_JULIA},[Enables Julia])
 AC_SUBST(HAVE_JULIA)
 AC_SUBST(USE_JULIA)
+
+if (( HAVE_JULIA ))
+then
+    echo "Julia enabled"
+else
+    echo "Julia disabled"
+fi
 
 # tclsh is used in the build process (cf. debug-auto.tcl)
 # Allow user to specify a native tclsh for use when cross-compiling
