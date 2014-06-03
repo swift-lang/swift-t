@@ -10,7 +10,7 @@ PACKAGE = lib/pkgIndex.tcl
 # Components of enabled Tcl packages (libraries, index files, etc)
 PACKAGE_ARTIFACTS :=
 
-BUILD_ALL_TARGETS = libs 
+BUILD_ALL_TARGETS = libs
 
 ifeq ($(ENABLE_SHARED),1)
   # Shared libraries are required for tcl package
@@ -91,7 +91,7 @@ STATIC_PKG_LIB := tclturbinestatic
 STATIC_PKG_A := lib/lib$(STATIC_PKG_LIB).a
 
 # Resource libs are used in all builds
-TCL_TURBINE_LIBS := 
+TCL_TURBINE_LIBS :=
 ifeq ($(ENABLE_STATIC_PKG),1)
 	TCL_TURBINE_LIBS += $(STATIC_PKG_A)
 endif
@@ -141,7 +141,7 @@ ifeq ($(V),1)
   E=
 else # V=2
   # Echoes the description and the command
-  Q=@echo ; echo 
+  Q=@echo ; echo
   E=
 endif
 endif
@@ -223,6 +223,9 @@ USE_PYTHON_NAME    = @USE_PYTHON_NAME@
 HAVE_R = @HAVE_R@
 USE_R  = @USE_R@
 
+HAVE_JULIA = @HAVE_JULIA@
+USE_JULIA  = @USE_JULIA@
+
 CFLAGS += $(STD)
 CFLAGS += -g
 CFLAGS += $(WARNS)
@@ -241,6 +244,11 @@ ifeq ($(HAVE_PYTHON),1)
 endif
 ifeq ($(HAVE_R),1)
 	CFLAGS += -I $(USE_R)/include
+endif
+ifeq ($(HAVE_JULIA),1)
+	CFLAGS += -I $(USE_JULIA)/src
+	CFLAGS += -I $(USE_JULIA)/usr/include
+	CFLAGS += -I $(USE_JULIA)/src/support
 endif
 
 # LIBS: links to ADLB, c-utils, MPE, and MPI
@@ -266,6 +274,10 @@ endif
 ifeq ($(HAVE_R),1)
 	R_LIB = $(USE_R)/lib
 	LIBS += -L$(R_LIB) -lR
+endif
+ifeq ($(HAVE_JULIA),1)
+	JULIA_LIB = $(USE_JULIA)/usr/lib
+	LIBS += -L$(JULIA_LIB) -ljulia
 endif
 
 # If we are using libtcl*.a, need to always include these libraries
@@ -293,6 +305,9 @@ endif
 ifeq ($(HAVE_R),1)
 	RPATHS += -Wl,-rpath -Wl,$(R_LIB)
 endif
+ifeq ($(HAVE_JULIA),1)
+	RPATHS += -Wl,-rpath -Wl,$(JULIA_LIB)
+endif
 
 ### INCLUDES
 
@@ -309,6 +324,7 @@ include src/tcl/c-utils/module.mk
 include src/tcl/adlb/module.mk
 include src/tcl/blob/module.mk
 include src/tcl/mpe/module.mk
+include src/tcl/julia/module.mk
 include src/tcl/python/module.mk
 include src/tcl/r/module.mk
 include src/tcl/static-pkg/module.mk
@@ -321,6 +337,7 @@ TURBINE_SRC += $(TCL_ADLB_SRC)
 TURBINE_SRC += $(TCL_C_UTILS_SRC)
 TURBINE_SRC += $(TCL_BLOB_SRC)
 TURBINE_SRC += $(TCL_MPE_SRC)
+TURBINE_SRC += $(TCL_JULIA_SRC)
 TURBINE_SRC += $(TCL_PYTHON_SRC)
 TURBINE_SRC += $(TCL_R_SRC)
 TURBINE_SRC += $(TCL_TURBINE_SRC)
@@ -361,9 +378,9 @@ endif
 # Remember that having a bad #include can cause dependency
 # file generation to fail silently
 # Solution: use target check_includes
-DEPS := $(TURBINE_DEPS) $(TEST_DEPS) 
+DEPS := $(TURBINE_DEPS) $(TEST_DEPS)
 ifeq ($(ENABLE_STATIC_PKG),1)
-	DEPS += $(STATIC_PKG_DEPS) $(TURBINE_EXECUTABLE_DEPS) 
+	DEPS += $(STATIC_PKG_DEPS) $(TURBINE_EXECUTABLE_DEPS)
 endif
 
 deps: $(DEPS)
@@ -521,7 +538,7 @@ TEST_RESULTS := $(patsubst %.c,   %.result, $(TEST_SRC_C))
 TEST_RESULTS += $(patsubst %.tcl, %.result, $(TEST_SRC_TCL))
 ifeq ($(ENABLE_STATIC_PKG),1)
     TEST_STATIC_PREREQS = $(STATIC_PKG_A) $(STATIC_PKG_RESOURCE_A)
-else 
+else
     TEST_STATIC_PREREQS =
 endif
 
@@ -606,7 +623,7 @@ endif
 
 BINS := $(shell ls bin/turbine \
                      bin/turbine-write-doubles \
-                     bin/turbine-read-doubles ) 
+                     bin/turbine-read-doubles )
 ifeq ($(ENABLE_STATIC_PKG),1)
 	BINS += $(TURBINE_EXECUTABLES)
 endif

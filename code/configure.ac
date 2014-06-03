@@ -595,6 +595,19 @@ else
     echo "R disabled"
 fi
 
+AC_ARG_WITH(julia,
+   AS_HELP_STRING([--with-julia],
+                   [Use this julia source directory]),
+  [
+      HAVE_JULIA=1
+      USE_JULIA=${withval}
+      AC_CHECK_FILE(${USE_JULIA}/src/julia.h, [],
+                    [AC_MSG_ERROR([Could not find julia header!])])
+  ])
+AC_DEFINE_UNQUOTED(HAVE_JULIA,${HAVE_JULIA},[Enables Julia])
+AC_SUBST(HAVE_JULIA)
+AC_SUBST(USE_JULIA)
+
 # tclsh is used in the build process (cf. debug-auto.tcl)
 # Allow user to specify a native tclsh for use when cross-compiling
 # The user has not yet provided tclsh-local (default to USE_TCLSH):
@@ -1027,6 +1040,7 @@ AC_CONFIG_FILES(
         src/tcl/blob/module.mk
         src/tcl/c-utils/module.mk
         src/tcl/mpe/module.mk
+        src/tcl/julia/module.mk
         src/tcl/python/module.mk
         src/tcl/r/module.mk
         src/tcl/static-pkg/module.mk
