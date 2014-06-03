@@ -1047,7 +1047,7 @@ progress(transform* T, bool* subscribed)
   {
     if (!input_td_closed(T, T->blocker))
     {
-      TRACE("{%"PRId64"} blocked on <%"PRId64">", T->work->id, td);
+      // TRACE("{%"PRId64"} blocked on <%"PRId64">", T->work->id, T->blocker);
       // Not yet done
       *subscribed = true;
       return TURBINE_SUCCESS;
