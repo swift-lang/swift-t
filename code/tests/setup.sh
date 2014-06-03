@@ -15,15 +15,10 @@
 
 source tests/test-helpers.sh
 # Re-usable test setup lines
-# Helps automate selection of process mode (engine, server, worker)
+# Helps automate selection of process mode (server, worker)
 # Prints the "SETUP:" header in the *.out file
 
 export ADLB_EXHAUST_TIME=1
-
-if [[ ${TURBINE_ENGINES} == "" ]]
-then
-  export TURBINE_ENGINES=1
-fi
 
 if [[ ${TURBINE_WORKERS} == "" ]]
 then
@@ -35,7 +30,7 @@ then
   export ADLB_SERVERS=1
 fi
 
-PROCS=$(( ${TURBINE_ENGINES} + ${TURBINE_WORKERS} + ${ADLB_SERVERS} ))
+PROCS=$(( ${TURBINE_WORKERS} + ${ADLB_SERVERS} ))
 
 display()
 {
@@ -46,12 +41,11 @@ display()
   printf "%-16s %3i RANKS: %3i - %3i\n" ${T}: ${V} ${I} ${J}
 }
 
-TURBINE_RANKS=$(( ${TURBINE_ENGINES} + ${TURBINE_WORKERS} ))
+TURBINE_RANKS=$(( ${TURBINE_WORKERS} ))
 
 echo SETUP:
 date "+%m/%d/%Y %I:%M%p"
-display TURBINE_ENGINES 0 $(( TURBINE_ENGINES-1 ))
-display TURBINE_WORKERS ${TURBINE_ENGINES} $(( TURBINE_RANKS-1 ))
+display TURBINE_WORKERS ${TURBINE_WORKERS} $(( TURBINE_RANKS-1 ))
 display ADLB_SERVERS ${TURBINE_RANKS} $(( PROCS-1 ))
 echo PROCS: ${PROCS}
 echo
