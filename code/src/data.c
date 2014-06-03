@@ -1607,8 +1607,8 @@ insert_notifications(adlb_datum *d, adlb_datum_id id,
       ref_list, listener_list, notifs, garbage_collected);
   DATA_CHECK(dc);
 
-  TRACE("remove container_ref %"PRId64"[%.*s]: %i\n", id,
-        (int)subscript.length, subscript.key, (int)result);
+  TRACE("remove container_ref %"PRId64"[%.*s]\n", id,
+        (int)subscript.length, subscript.key);
   
   dc = add_recursive_notifs(d, id, subscript, value,
               value_type, notifs, garbage_collected);
