@@ -16,6 +16,6 @@ sleeping for 5 seconds...
 turbine test-g-n.tcl  30.60s user 2.26s system 108% cpu 30.300 total
 
 # Many worker mode:
-> time turbine -n 8 test-g-n.tcl
+> time turbine -n 7 test-g-n.tcl
 ...
-turbine -n 8 test-g-n.tcl  7.30s user 0.56s system 146% cpu 5.375 total
+turbine -n 7 test-g-n.tcl  7.30s user 0.56s system 146% cpu 5.375 total

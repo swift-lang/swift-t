@@ -241,8 +241,8 @@ include::examples/2/test-g-n.sh[]
 ----
 
 Thus, providing 1 worker for each loop iteration yields perfect
-speedup.  Note that we had to provide 8 MPI processes: one for each of
-the 6 loop iterations, one Turbine engine, and one ADLB server.
+speedup.  Note that we had to provide 7 MPI processes: one for each of
+the 6 loop iterations and one ADLB server.
 
 === Complete example 3: C function with binary data
 

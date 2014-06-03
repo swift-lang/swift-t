@@ -1078,7 +1078,6 @@ If condition is false, report +message+ and exit immediately.
 ==== Turbine information
 
 +adlb_servers()    -> int+:: Number of ADLB servers
-+turbine_engines() -> int+:: Number of Turbine engines
 +turbine_workers() -> int+:: Number of Turbine workers
 
 === Files
@@ -1542,17 +1541,14 @@ Turbine runs as an MPI program consisting of many processes.  Turbine
 programs are ADLB programs.  Thus, they produce and execute discrete
 tasks that are distributed and load balanced at run time.
 
-Each process runs in a _mode_: _engine_, _worker_, or _server_.
+Each process runs in a _mode_: _worker_, or _server_.
 
-Engines:: Evaluate the Swift logic.  Produces tasks
-Workers:: Performs tasks
-Servers:: Distributes tasks
+Workers:: Evaluate the Swift logic. Produce tasks. Execute tasks.
+Servers:: Distributes tasks. Manages data.
 
 Typical Swift programs perform compute-intensive work in leaf
-functions.  These always execute on workers.
-
-Engines split up the control logic work among themselves.  This
-results in the generation of calls to extension functions.
+functions that execute on workers.
+Execution of the Swift logic is split and distributed among workers.
 
 Servers distribute tasks in a scalable, load balanced manner.  They
 also store Swift data (integers, strings, etc.).
@@ -1567,9 +1563,9 @@ limited by the following factors:
   branching function calls may be evaluated concurrently
 * The number of workers available to process leaf functions
   concurrently
-* The number of engines and servers available to control the Turbine
-  run.  Adding more engines and servers usually improves performance
-  but costs processes
+* The number of servers available to control the Turbine run.
+  Adding more servers can improve performance for applications with
+  small tasks or complex data dependencies but ties up processes
 
 === Invocation
 
@@ -1597,8 +1593,6 @@ Turbine accepts the following arguments:
 
 The user controls the Turbine run time configuration through
 environment variables:
-
-+TURBINE_ENGINES+:: Number of Turbine engines
 
 +ADLB_SERVERS+:: Number of ADLB servers
 
@@ -1778,7 +1772,12 @@ It is possible to build a fully self-contained executable, including
 all Tcl scripts and compiled code, provided that all dependencies support
 static linking.  If not, it is also possible to build an executable with
 a subset of Tcl scripts and code linked in, providing some performance
-benefits.
+benefits. 
+
+The provided +mkstatic.tcl+ utility can produce a C source
+file with Tcl scripts bundled in, which can then be compiled and linked
+with a C compiler.  This is a multi-step process that can be automated
+as part of your build process.
 
 NOTE: Ensure that static versions of the +c-utils+, +lb+, and +turbine+ libraries
    were built, typically with a +.a+ suffix, e.g. +libadlb.a+.  These
@@ -1803,10 +1802,13 @@ producing the Turbine Tcl script +my.tcl+.
 +
 To do this, make a copy of +scripts/mkstatic/example.manifest+ from
 the Turbine installation directory.  This file contains examples and
-descriptions of all the the possible settings.  Note that an empty
-manifest file corresponds to the +turbine_sh+ utility, which is a
-replacement for +tclsh+ with required Turbine libraries statically
-linked in.
+descriptions of all the the possible settings.
+#Note that an empty
+#manifest file corresponds to the +turbine_sh+ utility, which is a
+#replacement for +tclsh+ with required Turbine libraries statically
+#linked in. 
+For a simple Swift program with no user Tcl libraries,
+you only need to set +main_script = my.tcl+.
 
 3. Invoke +mkstatic.tcl+ (found under +scripts/mkstatic/mkstatic.tcl+ in
    the Turbine installation) to translate your Tcl script to a C main
