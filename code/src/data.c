@@ -94,7 +94,8 @@ add_close_notifs(adlb_datum_id id, adlb_datum *d,
                     adlb_notif_t *notifs);
 
 static adlb_data_code
-lookup_subscript(adlb_datum_id id, const adlb_datum_storage *d,
+lookup_subscript(adlb_datum_id id, adlb_dsym dsym,
+    const adlb_datum_storage *d,
     adlb_subscript subscript, adlb_data_type type,
     const adlb_datum_storage **result, adlb_data_type *result_type);
 
@@ -168,7 +169,7 @@ adlb_data_code process_ref_list(struct list *subscribers,
 
 static 
 adlb_data_code append_notifs(struct list_b *listeners, bool free_list_root,
-  adlb_datum_id id, adlb_subscript sub, adlb_notif_ranks *notify);
+  adlb_datum_id id, adlb_dsym dsym, adlb_subscript sub, adlb_notif_ranks *notify);
 
 
 static bool container_value_exists(const adlb_container *c,
@@ -317,7 +318,7 @@ xlb_data_exists(adlb_datum_id id, adlb_subscript subscript, bool* result)
         ADLB_PRI_DATUM_ARGS(id, ADLB_DEBUG_SYMBOL_NULL));
     const adlb_datum_storage *lookup_result;
     adlb_data_type result_type;
-    dc = lookup_subscript(id, &d->data, subscript, d->type,
+    dc = lookup_subscript(id, d->symbol, &d->data, subscript, d->type,
                           &lookup_result, &result_type);
     DATA_CHECK(dc);
                           
@@ -712,7 +713,7 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
   const adlb_datum_storage *val_data;
   adlb_data_type val_type;
 
-  dc = lookup_subscript(id, &d->data, subscript, d->type,
+  dc = lookup_subscript(id, d->symbol, &d->data, subscript, d->type,
                         &val_data, &val_type);
   DATA_CHECK(dc);
 
@@ -812,8 +813,8 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
       assert(d->read_refcount >= 2);
       d->read_refcount--;
       
-      DEBUG("read_refcount in container_reference: <%"PRId64"> => %i",
-            id, d->read_refcount);
+      DEBUG("read_refcount in container_reference: "ADLB_PRI_DATUM
+            " => %i", ADLB_PRI_DATUM_ARGS(id, d->symbol), d->read_refcount);
     }
   }
 
@@ -823,8 +824,6 @@ adlb_data_code xlb_data_container_reference(adlb_datum_id id,
                 "for:  "ADLB_PRI_DATUM_SUB, ADLB_PRI_DATUM_SUB_ARGS(id,
                 d->symbol, subscript));
 
-  TRACE("Added %"PRId64" to listeners for "ADLB_PRI_DATUM_SUB,
-          ADLB_PRI_DATUM_SUB_ARGS(id, d->symbol, subscript));
   container_reference *entry = alloc_container_reference(ref_sub.length);
   check_verbose(entry != NULL, ADLB_DATA_ERROR_OOM,
                 "Could not allocate memory");
@@ -895,13 +894,13 @@ xlb_data_store(adlb_datum_id id, adlb_subscript subscript,
   {
     // Avoid accessing freed memory
     check_verbose(!freed_datum, ADLB_DATA_ERROR_REFCOUNT_NEGATIVE,
-        "Taking write reference count below zero on datum <%"PRId64">", id);
+        "Taking write reference count below zero on datum "
+        ADLB_PRI_DATUM, ADLB_PRI_DATUM_ARGS(id, d->symbol));
 
     adlb_refc incr = { .read_refcount = xlb_read_refcount_enabled ?
                                             -refcount_decr.read_refcount : 0,
                             .write_refcount = -refcount_decr.write_refcount };
-    dc = xlb_refc_incr(d, id, incr, XLB_NO_ACQUIRE,
-                     NULL, notifs);
+    dc = xlb_refc_incr(d, id, incr, XLB_NO_ACQUIRE, NULL, notifs);
     DATA_CHECK(dc);
   }
 
@@ -1130,9 +1129,9 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
     }
     else
     {
-      verbose_error(ADLB_DATA_ERROR_TYPE,
-                    "type %s not subscriptable: <%"PRId64">",
-                    ADLB_Data_type_tostring(data_type), id);
+      verbose_error(ADLB_DATA_ERROR_TYPE, "type %s not subscriptable: "
+              ADLB_PRI_DATUM, ADLB_Data_type_tostring(data_type),
+              ADLB_PRI_DATUM_ARGS(id, d->symbol));
     }
   }
 
@@ -1152,9 +1151,10 @@ static adlb_data_code
 add_close_notifs(adlb_datum_id id, adlb_datum *d, adlb_notif_t *notifs)
 {
   assert(d != NULL);
-  DEBUG("data_close: <%"PRId64"> listeners: %i", id, d->listeners.size);
-  adlb_data_code dc = append_notifs(&d->listeners, false, id, ADLB_NO_SUB,
-                                    &notifs->notify);
+  DEBUG("data_close: "ADLB_PRI_DATUM" listeners: %i",
+        ADLB_PRI_DATUM_ARGS(id, d->symbol), d->listeners.size);
+  adlb_data_code dc = append_notifs(&d->listeners, false, id, d->symbol,
+                                    ADLB_NO_SUB, &notifs->notify);
   DATA_CHECK(dc);
 
   return ADLB_DATA_SUCCESS;
@@ -1165,7 +1165,8 @@ add_close_notifs(adlb_datum_id id, adlb_datum *d, adlb_notif_t *notifs)
 */
 #define CHECK_SET(id, d)                              \
   if (!d->status.set) {                               \
-    printf("not set: %"PRId64"\n", id);                    \
+    printf("not set: "ADLB_PRI_DATUM,                 \
+           ADLB_PRI_DATUM_ARGS(id, d->symbol));       \
     return ADLB_DATA_ERROR_UNSET;                     \
   }
 
@@ -1200,7 +1201,7 @@ xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
   }
   else
   {
-    dc = lookup_subscript(id, &d->data, subscript, d->type,
+    dc = lookup_subscript(id, d->symbol, &d->data, subscript, d->type,
                           &val_data, &val_type);
     DATA_CHECK(dc);
 
@@ -1240,7 +1241,8 @@ xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
   result_type is always set
  */
 static adlb_data_code
-lookup_subscript(adlb_datum_id id, const adlb_datum_storage *d,
+lookup_subscript(adlb_datum_id id, adlb_dsym dsym,
+    const adlb_datum_storage *d,
     adlb_subscript subscript, adlb_data_type type,
     const adlb_datum_storage **result, adlb_data_type *result_type)
 {
@@ -1267,7 +1269,8 @@ lookup_subscript(adlb_datum_id id, const adlb_datum_storage *d,
       case ADLB_DATA_TYPE_STRUCT:
       {
         check_verbose(d->STRUCT != NULL, ADLB_DATA_ERROR_INVALID, "Can't set "
-            "subscript of struct initialized without type <%"PRId64">", id);
+            "subscript of struct initialized without type "ADLB_PRI_DATUM,
+            ADLB_PRI_DATUM_ARGS(id, dsym));
         
         adlb_struct_field *field;
         adlb_struct_field_type field_type;
@@ -1301,8 +1304,9 @@ lookup_subscript(adlb_datum_id id, const adlb_datum_storage *d,
         break;
       }
       default:
-        verbose_error(ADLB_DATA_ERROR_TYPE, "Expected <%"PRId64"> to "
-              "support subscripting, but type %s doesn't", id,
+        verbose_error(ADLB_DATA_ERROR_TYPE, "Expected "ADLB_PRI_DATUM
+              "to support subscripting, but type %s doesn't",
+              ADLB_PRI_DATUM_ARGS(id, dsym),
               ADLB_Data_type_tostring(type));
         return ADLB_DATA_ERROR_UNKNOWN;
     }
@@ -1515,8 +1519,9 @@ xlb_data_enumerate(adlb_datum_id id, int count, int offset,
   }
   else if (d->type == ADLB_DATA_TYPE_MULTISET)
   {
-    check_verbose(!include_keys, ADLB_DATA_ERROR_TYPE, "<%"PRId64"> "
-        " with type multiset does not have keys to enumerate", id);
+    check_verbose(!include_keys, ADLB_DATA_ERROR_TYPE, ADLB_PRI_DATUM
+        " with type multiset does not have keys to enumerate",
+        ADLB_PRI_DATUM_ARGS(id, d->symbol));
     int slice_size = enumerate_slice_size(offset, count,
                               (int)xlb_multiset_size(d->data.MULTISET));
 
@@ -1536,8 +1541,9 @@ xlb_data_enumerate(adlb_datum_id id, int count, int offset,
   }
   else
   {
-    verbose_error(ADLB_DATA_ERROR_TYPE, "enumeration of <%"PRId64"> with "
-            "type %s not supported", id, ADLB_Data_type_tostring(d->type));
+    verbose_error(ADLB_DATA_ERROR_TYPE, "enumeration of "ADLB_PRI_DATUM
+      " with type %s not supported", ADLB_PRI_DATUM_ARGS(id, d->symbol),
+      ADLB_Data_type_tostring(d->type));
   }
   // Unreachable
   return ADLB_DATA_ERROR_UNKNOWN;
@@ -1592,11 +1598,10 @@ insert_notifications(adlb_datum *d, adlb_datum_id id,
                                      &listener_list);
   DATA_CHECK(dc);
   
-  DEBUG("Notifications for <%"PRId64">[%.*s] len %i refs %i "
-        "subscribers %i", id, (int)subscript.length,
-        (const char*)subscript.key, (int)subscript.length, 
-        ref_list != NULL ? ref_list->size : 0,
-        listener_list != NULL ? listener_list->size : 0);
+  DEBUG("Notifications for "ADLB_PRI_DATUM_SUB" refs %i subscribers %i",
+    ADLB_PRI_DATUM_SUB_ARGS(id, d->symbol, subscript),
+    ref_list != NULL ? ref_list->size : 0,
+    listener_list != NULL ? listener_list->size : 0);
 
   // Track whether we garbage collected the data
   assert(garbage_collected != NULL);
@@ -1607,8 +1612,8 @@ insert_notifications(adlb_datum *d, adlb_datum_id id,
       ref_list, listener_list, notifs, garbage_collected);
   DATA_CHECK(dc);
 
-  TRACE("remove container_ref %"PRId64"[%.*s]\n", id,
-        (int)subscript.length, subscript.key);
+  TRACE("remove container_ref "ADLB_PRI_DATUM_SUB,
+      ADLB_PRI_DATUM_SUB_ARGS(id, d->symbol, subscript));
   
   dc = add_recursive_notifs(d, id, subscript, value,
               value_type, notifs, garbage_collected);
@@ -1703,7 +1708,8 @@ insert_notifications2(adlb_datum *d,
       dc = xlb_to_free_add(notifs, subscript_ptr);
       DATA_CHECK_ADLB(dc, ADLB_DATA_ERROR_OOM);
     }
-    dc = append_notifs(listener_list, true, id, subscript, &notifs->notify);
+    dc = append_notifs(listener_list, true, id, d->symbol, subscript,
+                       &notifs->notify);
     DATA_CHECK(dc);
   }
   return ADLB_DATA_SUCCESS;
@@ -1729,9 +1735,8 @@ all_notifs_step(adlb_datum *d, adlb_datum_id id, adlb_subscript sub,
   dc = check_subscript_notifications(id, sub, &ref_list, &listener_list);
   DATA_CHECK(dc);
 
-  DEBUG("Notifications for <%"PRId64">[%.*s] len %i refs %i "
-        "subscribers %i", id, (int)sub.length,
-        (const char*)sub.key, (int)sub.length, 
+  DEBUG("Notifications for "ADLB_PRI_DATUM_SUB" refs %i subscribers %i",
+        ADLB_PRI_DATUM_SUB_ARGS(id, d->symbol, sub),
         ref_list != NULL ? ref_list->size : 0,
         listener_list != NULL ? listener_list->size : 0);
 
@@ -2056,8 +2061,8 @@ adlb_data_code process_ref_list(struct list *subscribers,
  */
 static 
 adlb_data_code append_notifs(struct list_b *listeners,
-  bool free_list_root,
-  adlb_datum_id id, adlb_subscript sub, adlb_notif_ranks *notify)
+  bool free_list_root, adlb_datum_id id, adlb_dsym dsym,
+  adlb_subscript sub, adlb_notif_ranks *notify)
 {
   assert(listeners != NULL);
   assert(notify->count >= 0);
@@ -2080,8 +2085,8 @@ adlb_data_code append_notifs(struct list_b *listeners,
     adlb_notif_rank *nrank = &notify->notifs[i + notify->count];
     xlb_notif_init(nrank, listener->rank, id, sub, listener->work_type);
 
-    TRACE("Add notif <%"PRId64">[%.*s] to rank %i", id, (int)sub.length,
-          (const char*)sub.key, nrank->rank);
+    TRACE("Add notif "ADLB_PRI_DATUM_SUB" to rank %i",
+          ADLB_PRI_DATUM_SUB(id, dsym, sub), nrank->rank);
 
     struct list_b_item *next = node->next;
     free(node);
