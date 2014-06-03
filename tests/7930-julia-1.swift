@@ -1,4 +1,7 @@
 
+// SKIP-THIS-TEST
+// this should work but we do not assume everyone has Julia installed
+
 import io;
 import julia;
 import string;
