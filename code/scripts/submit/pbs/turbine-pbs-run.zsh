@@ -53,9 +53,8 @@ JOB_ID_FILE=${TURBINE_OUTPUT}/jobid.txt
 
 # Turbine-specific environment (with defaults)
 export TURBINE_JOBNAME=${TURBINE_JOBNAME:-TURBINE}
-export TURBINE_ENGINES=${TURBINE_ENGINES:-1}
 export ADLB_SERVERS=${ADLB_SERVERS:-1}
-export TURBINE_WORKERS=$(( PROCS - TURBINE_ENGINES - ADLB_SERVERS ))
+export TURBINE_WORKERS=$(( PROCS - ADLB_SERVERS ))
 export ADLB_EXHAUST_TIME=${ADLB_EXHAUST_TIME:-1}
 export TURBINE_LOG=${TURBINE_LOG:-1}
 export TURBINE_DEBUG=${TURBINE_DEBUG:-1}
@@ -102,7 +101,6 @@ declare JOB_ID
   print "HOSTNAME:          $( hostname -d )"
   print "SUBMITTED:         $( date_nice )"
   print "PROCS:             ${PROCS}"
-  print "TURBINE_ENGINES:   ${TURBINE_ENGINES}"
   print "TURBINE_WORKERS:   ${TURBINE_WORKERS}"
   print "ADLB_SERVERS:      ${ADLB_SERVERS}"
   print "WALLTIME:          ${WALLTIME}"

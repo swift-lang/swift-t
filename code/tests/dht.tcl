@@ -19,7 +19,7 @@ package require turbine 0.0.1
 
 namespace import turbine::string_*
 
-turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)
+turbine::init $env(ADLB_SERVERS)
 
 if { ! [ adlb::amserver ] } {
 

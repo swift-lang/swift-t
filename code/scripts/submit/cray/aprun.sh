@@ -37,7 +37,6 @@ USER_WORK=/lustre/beagle/wozniak
 #PBS -m n
 
 # USER: Set configuration of Turbine processes
-export TURBINE_ENGINES=1
 export ADLB_SERVERS=1
 
 echo "Turbine: aprun.sh"
@@ -61,6 +60,6 @@ then
 fi
 
 # Send environment variables to PBS job:
-#PBS -v TURBINE_ENGINES ADLB_SERVERS TURBINE_HOME
+#PBS -v ADLB_SERVERS TURBINE_HOME
 # USER: Set aprun parameters to agree with PBS -l settings
 aprun -n 3 -N 1 -cc none -d 1 ${TCLSH} ${PROGRAM}

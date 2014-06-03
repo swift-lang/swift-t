@@ -253,7 +253,7 @@ void
 turbine_cache_finalize()
 {
   if (!initialized)
-    // This process is not an engine/worker
+    // This process is not a worker
     return;
   DEBUG_CACHE("finalize");
   TABLE_LP_FOREACH(&entries, item)

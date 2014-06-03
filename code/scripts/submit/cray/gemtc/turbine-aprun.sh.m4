@@ -66,10 +66,8 @@ export ADLB_DEBUG=getenv(ADLB_DEBUG)
 export PATH=getenv(PATH)
 
 # Set configuration of Turbine processes
-export TURBINE_ENGINES=getenv(TURBINE_ENGINES)
 export ADLB_SERVERS=getenv(ADLB_SERVERS)
 # Default to 1
-TURBINE_ENGINES=${TURBINE_ENGINES:-1}
 ADLB_SERVERS=${ADLB_SERVERS:-1}
 
 export ADLB_PRINT_TIME=getenv(ADLB_PRINT_TIME)
@@ -80,7 +78,7 @@ date "+%m/%d/%Y %I:%M%p"
 echo
 
 PROCS=getenv(`PROCS')
-TURBINE_WORKERS=$(( ${PROCS} - ${TURBINE_ENGINES} - ${ADLB_SERVERS} ))
+TURBINE_WORKERS=$(( ${PROCS} - ${ADLB_SERVERS} ))
 
 # Log the parameters
 echo "TURBINE_HOME: ${TURBINE_HOME}"
@@ -90,7 +88,6 @@ echo "NODES:        ${NODES}"
 echo "PPN:          ${PPN}"
 echo "WALLTIME:     ${WALLTIME}"
 echo
-echo "TURBINE_ENGINES: ${TURBINE_ENGINES}"
 echo "TURBINE_WORKERS: ${TURBINE_WORKERS}"
 echo "ADLB_SERVERS:    ${ADLB_SERVERS}"
 echo

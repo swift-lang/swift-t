@@ -132,7 +132,6 @@ LOG_FILE=${TURBINE_OUTPUT}/turbine.log
   print "PROCS:             ${PROCS}"
   print "PPN:               ${PPN}"
   print "NODES:             ${NODES}"
-  print "TURBINE_ENGINES:   ${TURBINE_ENGINES}"
   print "TURBINE_WORKERS:   ${TURBINE_WORKERS}"
   print "ADLB_SERVERS:      ${ADLB_SERVERS}"
   print "WALLTIME:          ${WALLTIME}"

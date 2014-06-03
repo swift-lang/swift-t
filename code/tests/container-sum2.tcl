@@ -53,7 +53,7 @@ proc rules { } {
             "insert_last $c \"3\" 3"
 }
 
-turbine::init $env(TURBINE_ENGINES) $env(ADLB_SERVERS)
+turbine::init $env(ADLB_SERVERS)
 turbine::start rules
 turbine::finalize
 
