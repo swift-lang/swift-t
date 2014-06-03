@@ -5,7 +5,7 @@
 Turbine Internals
 ================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
-v0.3.0, July 2013
+v0.5.0, June 2014
 
 ////
 
@@ -79,30 +79,24 @@ bin/turbine -l -n ${N} test/something.tcl
 
 The Turbine MPI environment is set by the +mpiexec -n+ number and the
 inputs to +turbine::init+.  As a result, each MPI process will become
-a Turbine Engine, Turbine Worker, or ADLB Server.  Turbine Engines and
-Workers are workers from the perspective of ADLB.
-
-Turbine Engine::
-
-Processes Turbine dependency rules.  Cf. +lib/engine.tcl:engine+.
-Runs on the lowest MPI ranks.  Rank 0 calls the user +rules+
-procedure, starting the program.  Work from this procedure may be
-distributed to other engines.
+a Turbine Worker or ADLB Server.
 
 Turbine Worker::
 
-Processes leaf work units.  Cf. +lib/engine.tcl:worker+.  Runs on the
-middle MPI ranks.
+Runs on the lowest MPI ranks.  Rank 0 calls the user +rules+
+procedure, starting the program.  Work from this procedure may be
+distributed to other workers.
 
 ADLB Server::
 
-Performs ADLB services.  Enters +ADLB_Server()+ and does not exit
+Performs ADLB services, including task queues, data storage, and
+data-dependent task release.  Enters +ADLB_Server()+ and does not exit
 until the run is complete.
 Cf. +src/tcl/adlb/tcl-adlb.c::ADLB_Server_Cmd()+.  Runs on the highest
 MPI ranks.
 
-In Tcl, the mode is stored in +turbine::mode+ and is either +ENGINE+,
-+WORKER+, or +SERVER+.
+In Tcl, the mode is stored in +turbine::mode+ and is either
++WORKER+ or +SERVER+.
 
 == Software structure
 
@@ -111,9 +105,9 @@ Tcl, some are hand-coded Tcl extensions, and some are SWIG-generated
 Tcl extensions.
 
 * All Tcl source is in +lib+
-* The Turbine rule engine core is in +src/turbine+
+* Turbine C code, e.g. for caches and the worker loop is in +src/turbine+
 * Tcl extensions are in +src/tcl+
-** +src/tcl/turbine+ wraps up the Turbine rule engine API for Tcl
+** +src/tcl/turbine+ wraps up Turbine C code for Tcl
 ** +src/tcl/adlb+ is the Tcl extension for the ADLB code in the ADLB
    package. This includes the ADLB data calls
 ** +src/tcl/blob+ is a SWIG-generated module for advanced blob
@@ -137,21 +131,21 @@ open (unset) or closed (set).  TD IDs are represented in the log as
 
 Rules::
 
-Turbine makes progress by evaluating Turbine rules.
-* A rule has a a input TD list, a rule type,
+The ADLB/Turbine data dependency engine makes progress by evaluating
+Turbine rules.
+* A rule has a a input TD list, a TD/subscript list, a rule type,
   and an action, and optional arguments.
 * The action is a simple Tcl string that is +eval+'d by a possibly
   different Tcl process.  This allows actions to be load balanced by
   ADLB.
 * Rule types are:
-** +LOCAL+: evaluate this action on the local engine
 ** +CONTROL+: put the action into ADLB for evaluation elsewhere
 ** +WORK+: put the action into ADLB for evaluation by a worker
+** +LOCAL+: send the task to local worker (deprecated) 
 * When rules are evaluated, they produce in-memory records called
   transforms.
-* A transform has a state (waiting, ready, running, complete), and the
-  rule data.  When the transform is ready, the engine pulls its data
-  and releases it as an ADLB task.
+* When the transform is ready, it is released to the appropriate
+  ADLB task queue to be retrieved by a worker.
 * The function body targeted by the action can contain arbitrary Tcl code,
   lookup data from the given TDs, launch external processes via Tcl
   +exec+, and store TDs, and issue more rule statements.
@@ -170,9 +164,9 @@ resulted in TD 8.
 
 Subscribe::
 
-TRs are stored in the distributed rule engines.  To make progress,
+TRs are stored in the ADLB servers.  To make progress,
 the TRs are activated when their input data is ready.  Thus, the
-rule engines subscribe to data stored in ADLB and are notified when
+servers subscribe to data stored in ADLB and are notified when
 data is ready.
 
 == Symbols
@@ -203,7 +197,7 @@ The following code is found in nearly every Turbine program:
 ----
 package require turbine 0.1
 turbine::defaults
-turbine::init $engines $servers
+turbine::init $servers
 turbine::start rules
 turbine::finalize
 ----
@@ -212,18 +206,17 @@ It loads the Turbine Tcl package, loads defaults and environment
 settings, initializes Turbine, starts progress, and finalizes.
 
 The rules proc contains the initial calls to get the program
-running. It is only executed by the engine with rank 0.
+running. It is only executed by the worker with rank 0.
 
 Other code may be placed in functions.
 
 ==== Startup/shutdown
 
 +defaults+::
-Sets variables engines and servers in the caller's scope
+Sets variable servers in the caller's scope
 +ADLB_SERVERS+ is stored in servers, defaults to 1
-+TURBINE_ENGINES+ is stored in engines, defaults to 1
 
-+init engines servers+::
++init servers+::
 Initialize Turbine
 Initializes ADLB
 
@@ -445,7 +438,7 @@ To implement a Swift function, we often have three Tcl
 functions. Consider Swift function +f()+:
 
 * The "rule" function: conventionally called +f+. This is called to
-register the function call with the Turbine dataflow engine
+register the function call with the ADLB/Turbine dataflow engine
 * The rule statement stores the action until the inputs are ready
 * The "body" function: conventionally called +f_body+. This is
   called when the inputs are ready. The body function retrieves data,
