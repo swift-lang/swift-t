@@ -38,7 +38,7 @@ usage()
   echo
   printf "\t environment: \n"
   printf "\t\t TCL_VERSION \t The Tcl version (default 8.5).\n"
-  echo 
+  echo
   echo "known machine types:"
   show_machine_files
 }
@@ -130,7 +130,7 @@ fi
 #step 1. Replace the main function in the source code with an ordinary function and push it into header
 if (( $MAIN == 1 )) ; then
     sed "s/main(.*)/leaf_main(int argc, char** argv)/" "${USER_SOURCE}" > "${USER_LEAF}".c || echo "something went wrong"
-    
+
     #add main to header
     {
      cat $USER_HEADER
@@ -150,7 +150,7 @@ else
 fi
 
 #step 2. Generate extension.c
-if (( $MAIN == 1 )) 
+if (( $MAIN == 1 ))
 then
   echo "creating extension.c"
   m4 $GENLEAF_HOME/templates/extension-main.template.c > extension.c
@@ -262,7 +262,7 @@ action $CC $CFLAGS -c -o extension.o extension.c
 
 MKSTATIC=$TURBINE_HOME/scripts/mkstatic/mkstatic.tcl
 
-if (( $STATIC == 0 )) 
+if (( $STATIC == 0 ))
 then
   # c. link shared library
   action $CC $SHARED -o ${USER_LEAF}.so \
@@ -272,7 +272,7 @@ then
 else
   # c. link static library and executable
   action ar -cr leaf_main.a \
-             extension.o "${USER_LEAF}".o 
+             extension.o "${USER_LEAF}".o
   action $MKSTATIC $MANIFEST -c static_leaf_main.c
   action $CC $CFLAGS -I . \
     -I{$MPI_HOME,$TURBINE_HOME,$ADLB_HOME,$C_UTILS_HOME}/include \
@@ -289,6 +289,6 @@ else
 fi
 
 #step 8. Invoke make-package
-action $TCLSH ./make-package.tcl 
+action $TCLSH ./make-package.tcl
 
 #$(for i in "${USER_FUNC_ARGS[@]}"; do type=$(echo "${i}" | cut -f1 -d' '); varname=$(echo "${i}"|cut -f2 -d' '); echo $type $varnaeme = ($type) malloc(sizeof($type)); done)
