@@ -88,7 +88,7 @@ USER_FUNC=$(echo "${3}" | awk -F: '{print $2}') #field after colon
 USER_HEADER=$4
 USER_SWIFT=$5
 
-USER_LEAF="${USER_SOURCE%.*}"_wrap
+export USER_LEAF="${USER_SOURCE%.*}"_wrap
 
 MACHINE_FILE=$GENLEAF_HOME/settings/machine.$MACHINE.sh
 [[ -f $MACHINE_FILE ]] || crash "unknown machine type: $MACHINE"
@@ -150,102 +150,17 @@ else
 fi
 
 #step 2. Generate extension.c
-if (( $MAIN == 1 )) ; then
-cat << EOF > extension.c
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <tcl.h>
-
-#include "${USER_LEAF}.h"
-
-static int ${USER_LEAF}_extension(ClientData cdata, Tcl_Interp *interp,
-                     int objc, Tcl_Obj*const objv[]) {
-  // Create argc/argv from Tcl objects:
-  int argc = objc;
-  char** argv = (char**) malloc(argc * sizeof(argv));
-  for (int i = 0; i < argc; i++)
-    argv[i] = Tcl_GetString(objv[i]);
-
-  // Call the user function:
-  int rc = leaf_main(argc, argv);
-
-  // Return the exit code as the Tcl return code:
-  Tcl_Obj* result = Tcl_NewIntObj(rc);
-  Tcl_SetObjResult(interp, result);
-
-  // Clean up:
-  free(argv);
-  return TCL_OK;
-}
-
-int $(echo ${USER_LEAF} | sed 's/./\U&/')_Init(Tcl_Interp* interp) {
-  int rc;
-
-  Tcl_PkgProvide(interp, "leaf_main", "0.0");
-
-  Tcl_CreateObjCommand(interp,
-                       "${USER_LEAF}_extension", ${USER_LEAF}_extension,
-                       NULL, NULL);
-  return TCL_OK;
-}
-
-EOF
-
+if (( $MAIN == 1 )) 
+then
+  echo "creating extension.c"
+  m4 $GENLEAF_HOME/templates/extension-main.template.c > extension.c
 else
-echo "pass for now"
-cat << EOF > extension.c
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <tcl.h>
-
-#include "${USER_LEAF}.h"
-
-static int ${USER_LEAF}_extension(ClientData cdata, Tcl_Interp *interp,
-                     int objc, Tcl_Obj*const objv[]){
-    assert(objc==$EXPECTED_ARGC);
-    int rc;
-
-    $(for i in "${USER_FUNC_ARGS[@]}"; do vartype=$(echo "${i}"|awk '{print $1}') ; varname=$(echo "${i}"|awk '{print $2}') ; echo "$vartype $varname;"  ; done)
-    
-    /* get values from Tcl */
-    $(for i in $(seq 0 $(($EXPECTED_ARGC-2))); do vartype=$(echo "${USER_FUNC_ARGS[$i]}"|awk '{print $1}'); varname=$( echo "${USER_FUNC_ARGS[$i]}"|awk '{print $2}'); echo "rc = ($vartype*) Tcl_GetTypeFromObj(interp, objv[$i], &$varname);" ; done )
-    
-    /* invoke user function */
-    $RET_TYPE rc2 = $USER_FUNC($(for i in "${USER_FUNC_ARGS[@]}"; do varname=$(echo "${i}" | awk '{print $2}'); echo -n '*'$varname, ;  done | sed 's/,$//'));
-
-    // Return the exit code as the Tcl return code:
-    Tcl_Obj* result = Tcl_NewLongObj(rc);
-    Tcl_SetObjResult(interp, result);
-
-    return TCL_OK;
-}
-
-int $(echo ${USER_LEAF} | sed 's/./\U&/')_Init(Tcl_Interp* interp) {
-  int rc;
-
-  Tcl_PkgProvide(interp, "leaf_main", "0.0");
-
-  Tcl_CreateObjCommand(interp,
-                       "${USER_LEAF}_extension", ${USER_LEAF}_extension,
-                       NULL, NULL);
-  return TCL_OK;
-}
-EOF
-
+  crash "We only support main functions!"
 fi
 
 #step 3 Generate make-package.tcl
-cat << EOF > make-package.tcl
-set name     leaf_main
-set version  0.0
-set leaf_so  ${USER_LEAF}.so
-set leaf_tcl ${USER_LEAF}.tcl
-
-exec echo [ ::pkg::create -name \$name -version \$version \
-           -load \$leaf_so -source \$leaf_tcl ] > pkgIndex.tcl
-EOF
+echo "creating make-package.tcl"
+m4 $GENLEAF_HOME/templates/make-package.template.tcl > make-package.tcl
 
 #step 4. Generate user leaf *.tcl
 if (( $MAIN == 1 )) ; then
