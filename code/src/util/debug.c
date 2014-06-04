@@ -27,7 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <memory.h>
+#include <exm-memory.h>
 #include <tools.h>
 
 #include "src/util/debug.h"
