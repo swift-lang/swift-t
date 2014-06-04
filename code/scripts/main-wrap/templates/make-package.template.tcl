@@ -8,7 +8,7 @@ set USER_LEAF getenv(USER_LEAF)
 
 set name     leaf_main
 set version  0.0
-set leaf_so  ${USER_LEAF}.so
+set leaf_so  lib${USER_LEAF}.so
 set leaf_tcl ${USER_LEAF}.tcl
 
 exec echo [ ::pkg::create -name $name -version $version \

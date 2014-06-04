@@ -33,7 +33,7 @@ static int getenv_nospace(USER_LEAF)_extension(ClientData cdata, Tcl_Interp *int
   return TCL_OK;
 }
 
-int getenv_nospace(USER_LEAF)_Init(Tcl_Interp* interp) {
+int getenv_nospace(USER_LEAF_INIT)(Tcl_Interp* interp) {
   int rc;
 
   Tcl_PkgProvide(interp, "leaf_main", "0.0");
@@ -44,4 +44,3 @@ int getenv_nospace(USER_LEAF)_Init(Tcl_Interp* interp) {
                        NULL, NULL);
   return TCL_OK;
 }
-

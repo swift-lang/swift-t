@@ -88,7 +88,10 @@ USER_FUNC=$(echo "${3}" | awk -F: '{print $2}') #field after colon
 USER_HEADER=$4
 USER_SWIFT=$5
 
-export USER_LEAF="${USER_SOURCE%.*}"_wrap
+export USER_LEAF=${USER_SOURCE%.*}_wrap
+# Capitalize first letter of symbol
+#       - required for Tcl extension init function
+export USER_LEAF_INIT=${USER_LEAF^}_Init
 
 MACHINE_FILE=$GENLEAF_HOME/settings/machine.$MACHINE.sh
 [[ -f $MACHINE_FILE ]] || crash "unknown machine type: $MACHINE"
@@ -152,77 +155,22 @@ fi
 #step 2. Generate extension.c
 if (( $MAIN == 1 ))
 then
-  echo "creating extension.c"
+  echo "creating: extension.c"
   m4 $GENLEAF_HOME/templates/extension-main.template.c > extension.c
 else
   crash "We only support main functions!"
 fi
 
 #step 3 Generate make-package.tcl
-echo "creating make-package.tcl"
+echo "creating: make-package.tcl"
 m4 $GENLEAF_HOME/templates/make-package.template.tcl > make-package.tcl
 
 #step 4. Generate user leaf *.tcl
 if (( $MAIN == 1 )) ; then
-echo "creating: ${USER_LEAF}.tcl"
-cat << EOF > ${USER_LEAF}.tcl
-namespace eval leaf_main {
-
-    proc leaf_main_wrap { rc A } {
-	deeprule \$A 1 0 "leaf_main::leaf_main_wrap_impl \$rc \$A" type $::turbine::WORK
-    }
-
-    proc leaf_main_wrap_impl { rc A } {
-
-        set length [ adlb::container_size \$A ]
-        set tds [ adlb::enumerate \$A dict all 0 ]
-        set argv [ list ]
-        # Fill argv with blanks
-        dict for { i v } \$tds {
-            lappend argv 0
-        }
-        # Set values at ordered list positions
-        dict for { i v } \$tds {
-            lset argv \$i \$v
-        }
-        set rc_value [ ${USER_LEAF}_extension {*}\$argv ]
-        turbine::store_integer \$rc \$rc_value
-    }
-}
-
-EOF
-
+  echo "creating: ${USER_LEAF}.tcl"
+  m4 $GENLEAF_HOME/templates/leaf-main.template.tcl > ${USER_LEAF}.tcl
 else
-
-#generate Tcl leaf function for non-main
-
-cat << EOF > ${USER_LEAF}.tcl
-namespace eval leaf_main {
-
-    proc leaf_main_wrap { rc A } {
-	deeprule \$A 1 0 "leaf_main::leaf_main_wrap_impl \$rc \$A" type $::turbine::WORK
-    }
-
-    proc leaf_main_wrap_impl { rc A } {
-
-        set length [ adlb::container_size \$A ]
-        set tds [ adlb::enumerate \$A dict all 0 ]
-        set argv [ list ]
-        # Fill argv with blanks
-        dict for { i td } \$tds {
-            lappend argv 0
-        }
-        # Set values at ordered list positions
-        dict for { i td } \$tds {
-            set s [ adlb::retrieve \$td ]
-            lset argv \$i \$s
-        }
-        set rc_value [ ${USER_LEAF}_extension {*}\$argv ]
-        turbine::store_integer \$rc \$rc_value
-    }
-}
-EOF
-
+  crash "We only support main functions!"
 fi
 
 #step 5. Generate USER_SWIFT if it does not exist
@@ -265,10 +213,10 @@ MKSTATIC=$TURBINE_HOME/scripts/mkstatic/mkstatic.tcl
 if (( $STATIC == 0 ))
 then
   # c. link shared library
-  action $CC $SHARED -o ${USER_LEAF}.so \
-    extension.o "${USER_LEAF}".o \
-    -L ${TCL_HOME}/lib -l tcl$TCL_VERSION \
-    -Wl,-rpath -Wl,${TCL_HOME}/lib
+  action $CC $SHARED -o lib$USER_LEAF.so     \
+    extension.o $USER_LEAF.o              \
+    -L $TCL_HOME/lib -l tcl$TCL_VERSION   \
+    -Wl,-rpath -Wl,$TCL_HOME/lib
 else
   # c. link static library and executable
   action ar -cr leaf_main.a \
