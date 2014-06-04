@@ -6,7 +6,7 @@
 # user-code.c --> user-leaf.tcl
 
 # If 1, do static build
-STATIC=0
+export STATIC=0
 VERBOSE=0
 
 MAIN=0
