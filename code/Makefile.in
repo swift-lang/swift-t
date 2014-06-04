@@ -330,6 +330,7 @@ include src/tcl/r/module.mk
 include src/tcl/static-pkg/module.mk
 include src/tcl/turbine/module.mk
 include lib/module.mk
+include scripts/main-wrap/module.mk
 include scripts/submit/module.mk
 include src/executables/module.mk
 
@@ -629,7 +630,7 @@ ifeq ($(ENABLE_STATIC_PKG),1)
 endif
 EXPORTS = $(shell ls export/*.swift )
 SCRIPTS = $(shell ls scripts/*.zsh scripts/*.sh scripts/*.tcl \
-		     scripts/mkstatic/* $(SCRIPTS_SUBMIT) )
+		     scripts/mkstatic/* $(SCRIPTS_MAINWRAP) $(SCRIPTS_SUBMIT) )
 
 install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) $(SCRIPTS) $(TURBINE_HEADERS)
 #       Note: this is re-run if anything changes
@@ -644,6 +645,7 @@ install.txt: $(PACKAGE_ARTIFACTS) $(BINS) $(EXPORTS) $(SCRIPTS) $(TURBINE_HEADER
 	$(E) cp $(CP_ARGS) $(BINS)               $(INSTALL_BIN)
 	$(E) cp $(CP_ARGS) lib/*.tcl             $(INSTALL_LIB)
 	$(E) cp $(CP_ARGS) $(TCL_TURBINE_LIBS)    $(INSTALL_LIB)
+	echo MAINWRAP $(SCRIPTS_MAINWRAP)
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(SCRIPTS) $(INSTALL_PREFIX)
 	$(E) $(CP_PARENTS) $(CP_ARGS) $(EXPORTS) $(INSTALL_PREFIX)
 	$(E) cp $(CP_ARGS) $(TURBINE_HEADERS)    $(INSTALL_INCLUDE)
