@@ -1,0 +1,377 @@
+#!/bin/bash -eu
+
+# set -x
+
+# Generate leaf function, given a C/C++ source
+# user-code.c --> user-leaf.tcl
+
+# If 1, do static build
+STATIC=0
+VERBOSE=0
+
+MAIN=0
+
+show_machine_files()
+{
+  ( cd $GENLEAF_HOME
+    ls machine.*.sh | sed 's/machine\.\(.*\).sh/ \t * \1/' )
+}
+
+usage()
+{
+  echo "genleaf: usage:"
+  echo
+  printf "\t\t genleaf <OPTIONS> <MACHINE> <USER_SOURCE>[:<FUNCNAME>] <USER_HEADER> <USER_SWIFT>\n"
+  echo
+  printf "\t where: \n"
+  printf "\t\t MACHINE     is the machine type\n"
+  printf "\t\t USER_SOURCE is a *.c file\n"
+  printf "\t\t FUNCNAME is a user function other than main (feature under development)\n"
+  printf "\t\t USER_HEADER is the corresponding *.h file\n"
+  printf "\t\t USER_SWIFT  is the input Swift file\n"
+  echo
+  printf "\t options: \n"
+  printf "\t\t -h \t Show usage guide.\n"
+  printf "\t\t -s \t Do a static build.\n"
+  printf "\t\t -v \t Increase verbosity.  May be given up to twice.\n"
+  echo
+  printf "\t environment: \n"
+  printf "\t\t TCL_VERSION \t The Tcl version (default 8.5).\n"
+  echo 
+  echo "known machine types:"
+  show_machine_files
+}
+
+crash()
+{
+  MSG=$*
+  echo crash!
+  echo $MSG
+  exit 1
+}
+
+GENLEAF_HOME=$( cd $( dirname $0 ) ; /bin/pwd )
+
+while getopts "hsv" OPTION
+do
+  case $OPTION in
+    h) usage ; exit 0             ;;
+    s) STATIC=1                   ;;
+    v) VERBOSE=$(( VERBOSE + 1 )) ;;
+  esac
+done
+shift $(( OPTIND - 1 ))
+(( VERBOSE > 1 )) && set -x
+
+action()
+# An action important enough to show the user what we are doing
+{
+  if (( $VERBOSE == 1 ))
+  then
+    echo $*
+    echo
+  fi
+  $*
+}
+
+if (( ${#*} != 4 ))
+then
+  usage
+  exit 1
+fi
+
+MACHINE=$1
+USER_SOURCE=$(echo "${2}" | awk -F: '{print $1}') #field before colon
+USER_FUNC=$(echo "${2}" | awk -F: '{print $2}') #field after colon
+USER_HEADER=$3
+USER_SWIFT=$4
+
+USER_LEAF="${USER_SOURCE%.*}"_wrap
+
+MACHINE_FILE=machine.$MACHINE.sh
+[[ -f $MACHINE_FILE ]] || crash "unknown machine type: $MACHINE"
+source $MACHINE_FILE
+
+for f in $USER_SOURCE $USER_HEADER
+do
+  [[ -f $f ]] || crash "File not found:" $f
+done
+
+TCLSH=${TCLSH:-}
+if [[ $TCLSH == "" ]]
+then
+  TCLS=$( ls $TCL_HOME/bin/tclsh* )
+  for t in $TCLS
+  do
+    if [[ -x $t ]]
+    then
+      TCLSH=$t
+      break
+    fi
+  done
+  [[ $TCLSH == "" ]] && crash "Could not find a tclsh!"
+fi
+
+#check if main or non-main
+if [ -z "${USER_FUNC}" ] ; then
+    MAIN=1
+else
+    # get user function signature
+    RET_TYPE=$(grep "${USER_FUNC}" ${USER_SOURCE} | head -1 | cut -f1 -d' ')
+    USER_FUNC_SIG=$(grep "${USER_FUNC}" ${USER_SOURCE} | head -1 | cut -f1 -d' ' --complement | grep -o '^.*)' )
+    #put comma seperated arg list into array
+    TMP=$(echo "${USER_FUNC_SIG}" | sed 's/.*(\(.*\))/\1/')
+    IFS=',' read -a USER_FUNC_ARGS <<< "${TMP}"
+    EXPECTED_ARGC=$((${#USER_FUNC_ARGS[@]} + 1))
+fi
+
+#step 1. Replace the main function in the source code with an ordinary function and push it into header
+if (( $MAIN == 1 )) ; then
+    sed "s/main(.*)/leaf_main(int argc, char** argv)/" "${USER_SOURCE}" > "${USER_LEAF}".c || echo "something went wrong"
+    
+    #add main to header
+    {
+     cat $USER_HEADER
+     echo 'int leaf_main(int argc, char** argv);'
+    } > "${USER_LEAF}".h
+
+else
+
+   cp $USER_SOURCE "${USER_LEAF}".c
+
+   #add func to header
+   if [ -f $USER_HEADER ] ; then
+       cp $USER_HEADER "${USER_LEAF}".h
+   else
+       echo $RET_TYPE $USER_FUNC_SIG';' > "${USER_LEAF}".h
+   fi
+fi
+
+#step 2. Generate extension.c
+if (( $MAIN == 1 )) ; then
+cat << EOF > extension.c
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <tcl.h>
+
+#include "${USER_LEAF}.h"
+
+static int ${USER_LEAF}_extension(ClientData cdata, Tcl_Interp *interp,
+                     int objc, Tcl_Obj*const objv[]) {
+  // Create argc/argv from Tcl objects:
+  int argc = objc;
+  char** argv = (char**) malloc(argc * sizeof(argv));
+  for (int i = 0; i < argc; i++)
+    argv[i] = Tcl_GetString(objv[i]);
+
+  // Call the user function:
+  int rc = leaf_main(argc, argv);
+
+  // Return the exit code as the Tcl return code:
+  Tcl_Obj* result = Tcl_NewIntObj(rc);
+  Tcl_SetObjResult(interp, result);
+
+  // Clean up:
+  free(argv);
+  return TCL_OK;
+}
+
+int $(echo ${USER_LEAF} | sed 's/./\U&/')_Init(Tcl_Interp* interp) {
+  int rc;
+
+  Tcl_PkgProvide(interp, "leaf_main", "0.0");
+
+  Tcl_CreateObjCommand(interp,
+                       "${USER_LEAF}_extension", ${USER_LEAF}_extension,
+                       NULL, NULL);
+  return TCL_OK;
+}
+
+EOF
+
+else
+echo "pass for now"
+cat << EOF > extension.c
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <tcl.h>
+
+#include "${USER_LEAF}.h"
+
+static int ${USER_LEAF}_extension(ClientData cdata, Tcl_Interp *interp,
+                     int objc, Tcl_Obj*const objv[]){
+    assert(objc==$EXPECTED_ARGC);
+    int rc;
+
+    $(for i in "${USER_FUNC_ARGS[@]}"; do vartype=$(echo "${i}"|awk '{print $1}') ; varname=$(echo "${i}"|awk '{print $2}') ; echo "$vartype $varname;"  ; done)
+    
+    /* get values from Tcl */
+    $(for i in $(seq 0 $(($EXPECTED_ARGC-2))); do vartype=$(echo "${USER_FUNC_ARGS[$i]}"|awk '{print $1}'); varname=$( echo "${USER_FUNC_ARGS[$i]}"|awk '{print $2}'); echo "rc = ($vartype*) Tcl_GetTypeFromObj(interp, objv[$i], &$varname);" ; done )
+    
+    /* invoke user function */
+    $RET_TYPE rc2 = $USER_FUNC($(for i in "${USER_FUNC_ARGS[@]}"; do varname=$(echo "${i}" | awk '{print $2}'); echo -n '*'$varname, ;  done | sed 's/,$//'));
+
+    // Return the exit code as the Tcl return code:
+    Tcl_Obj* result = Tcl_NewLongObj(rc);
+    Tcl_SetObjResult(interp, result);
+
+    return TCL_OK;
+}
+
+int $(echo ${USER_LEAF} | sed 's/./\U&/')_Init(Tcl_Interp* interp) {
+  int rc;
+
+  Tcl_PkgProvide(interp, "leaf_main", "0.0");
+
+  Tcl_CreateObjCommand(interp,
+                       "${USER_LEAF}_extension", ${USER_LEAF}_extension,
+                       NULL, NULL);
+  return TCL_OK;
+}
+EOF
+
+fi
+
+#step 3 Generate make-package.tcl
+cat << EOF > make-package.tcl
+set name     leaf_main
+set version  0.0
+set leaf_so  ${USER_LEAF}.so
+set leaf_tcl ${USER_LEAF}.tcl
+
+exec echo [ ::pkg::create -name \$name -version \$version \
+           -load \$leaf_so -source \$leaf_tcl ] > pkgIndex.tcl
+EOF
+
+#step 4. Generate user leaf *.tcl
+if (( $MAIN == 1 )) ; then
+echo "creating: ${USER_LEAF}.tcl"
+cat << EOF > ${USER_LEAF}.tcl
+namespace eval leaf_main {
+
+    proc leaf_main_wrap { rc A } {
+	deeprule \$A 1 0 "leaf_main::leaf_main_wrap_impl \$rc \$A" type $::turbine::WORK
+    }
+
+    proc leaf_main_wrap_impl { rc A } {
+
+        set length [ adlb::container_size \$A ]
+        set tds [ adlb::enumerate \$A dict all 0 ]
+        set argv [ list ]
+        # Fill argv with blanks
+        dict for { i v } \$tds {
+            lappend argv 0
+        }
+        # Set values at ordered list positions
+        dict for { i v } \$tds {
+            lset argv \$i \$v
+        }
+        set rc_value [ ${USER_LEAF}_extension {*}\$argv ]
+        turbine::store_integer \$rc \$rc_value
+    }
+}
+
+EOF
+
+else
+
+#generate Tcl leaf function for non-main
+
+cat << EOF > ${USER_LEAF}.tcl
+namespace eval leaf_main {
+
+    proc leaf_main_wrap { rc A } {
+	deeprule \$A 1 0 "leaf_main::leaf_main_wrap_impl \$rc \$A" type $::turbine::WORK
+    }
+
+    proc leaf_main_wrap_impl { rc A } {
+
+        set length [ adlb::container_size \$A ]
+        set tds [ adlb::enumerate \$A dict all 0 ]
+        set argv [ list ]
+        # Fill argv with blanks
+        dict for { i td } \$tds {
+            lappend argv 0
+        }
+        # Set values at ordered list positions
+        dict for { i td } \$tds {
+            set s [ adlb::retrieve \$td ]
+            lset argv \$i \$s
+        }
+        set rc_value [ ${USER_LEAF}_extension {*}\$argv ]
+        turbine::store_integer \$rc \$rc_value
+    }
+}
+EOF
+
+fi
+
+#step 5. Generate USER_SWIFT if it does not exist
+if [ ! -f $USER_SWIFT ] ; then
+cat << EOF > $USER_SWIFT
+import io;
+import string;
+
+mainapp;
+
+main{
+ /* sample user code */
+ foreach i in [1:10]{
+  leaf_main(["prot.txt", sprintf("peptides/pept%i.txt", i), "2"]);
+ }
+}
+EOF
+fi
+
+sed 's/mainapp/(int v) leaf_main(string A[]) "leaf_main" "0.0" "leaf_main_wrap"/' < $USER_SWIFT > user-code.swift
+
+(( $VERBOSE )) && echo
+
+(( $STATIC == 1 )) && PIC=""
+
+CFLAGS="-I ${TCL_HOME}/include $PIC -g $STD"
+
+#step 6. call stc
+action $STC -j $(\which java) -t checkpointing -r ${PWD} user-code.swift
+
+#step 7. Build user library
+# a. compile user-leaf.c
+action $CC $CFLAGS -c -o "${USER_LEAF}".o "${USER_LEAF}".c
+
+# b. compile extension.c
+action $CC $CFLAGS -c -o extension.o extension.c
+
+MKSTATIC=$TURBINE_HOME/scripts/mkstatic/mkstatic.tcl
+
+if (( $STATIC == 0 )) 
+then
+  # c. link shared library
+  action $CC $SHARED -o ${USER_LEAF}.so \
+    extension.o "${USER_LEAF}".o \
+    -L ${TCL_HOME}/lib -l tcl$TCL_VERSION \
+    -Wl,-rpath -Wl,${TCL_HOME}/lib
+else
+  # c. link static library and executable
+  action ar -cr leaf_main.a \
+             extension.o "${USER_LEAF}".o 
+  action $MKSTATIC leaf_main.manifest -c static_leaf_main.c
+  action $CC $CFLAGS -I . \
+    -I{$MPI_HOME,$TURBINE_HOME,$ADLB_HOME,$C_UTILS_HOME}/include \
+    -c -o static_leaf_main.{o,c}
+  action $MPICC -o static_leaf_main static_leaf_main.o leaf_main.a \
+    -L $TCL_HOME/lib -ltcl${TCL_VERSION} \
+    -L $TURBINE_HOME/lib \
+       -l tclturbine -l tclturbinestatic -l tclturbine -l tclturbinestaticres \
+    -L $ADLB_HOME/lib -l adlb \
+    -L $C_UTILS_HOME/lib -l exmcutils \
+    -l m -l dl
+  #link
+  #/soft/compilers/wrappers/xl/mpixlcxx -o static_leaf_main static_leaf_main.o leaf_main.a -L /home/wozniak/Public/sfw/ppc64/bgq-gcc/tcl-8.5.12/lib -ltcl8.5 -L/home/wozniak/Public/sfw/ppc64/turbine/lib -L/home/wozniak/Public/sfw/ppc64/lb/lib -L/home/wozniak/Public/sfw/ppc64/c-utils/lib -ltclturbinestatic -ltclturbine -ltclturbinestaticres -ladlb -lexmcutils -lm
+fi
+
+#step 8. Invoke make-package
+action $TCLSH ./make-package.tcl 
+
+#$(for i in "${USER_FUNC_ARGS[@]}"; do type=$(echo "${i}" | cut -f1 -d' '); varname=$(echo "${i}"|cut -f2 -d' '); echo $type $varnaeme = ($type) malloc(sizeof($type)); done)
