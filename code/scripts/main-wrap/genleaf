@@ -69,7 +69,7 @@ do
   esac
 done
 shift $(( OPTIND - 1 ))
-(( VERBOSE > 1 )) && set -x
+(( VERBOSE > 2 )) && set -x
 
 message()
 {
@@ -231,10 +231,10 @@ else
   action $MPICC -o static_leaf_main static_leaf_main.o leaf_main.a \
     -L $TCL_HOME/lib -ltcl${TCL_VERSION} \
     -L $TURBINE_HOME/lib \
-       -l tclturbine -l tclturbinestatic -l tclturbine -l tclturbinestaticres \
+       -l tclturbine -l tclturbinestatic -l tclturbine  \
     -L $ADLB_HOME/lib -l adlb \
     -L $C_UTILS_HOME/lib -l exmcutils \
-    -l m -l dl
+    -l m -l dl 
   #link
   #/soft/compilers/wrappers/xl/mpixlcxx -o static_leaf_main static_leaf_main.o leaf_main.a -L /home/wozniak/Public/sfw/ppc64/bgq-gcc/tcl-8.5.12/lib -ltcl8.5 -L/home/wozniak/Public/sfw/ppc64/turbine/lib -L/home/wozniak/Public/sfw/ppc64/lb/lib -L/home/wozniak/Public/sfw/ppc64/c-utils/lib -ltclturbinestatic -ltclturbine -ltclturbinestaticres -ladlb -lexmcutils -lm
 fi
@@ -242,5 +242,9 @@ fi
 #step 8. Invoke make-package
 message "running make-package: creating pkgIndex.tcl"
 action $TCLSH ./make-package.tcl
+
+# Declare victory.
+message "genleaf successful."
+
 
 #$(for i in "${USER_FUNC_ARGS[@]}"; do type=$(echo "${i}" | cut -f1 -d' '); varname=$(echo "${i}"|cut -f2 -d' '); echo $type $varnaeme = ($type) malloc(sizeof($type)); done)

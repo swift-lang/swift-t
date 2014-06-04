@@ -3,6 +3,8 @@
 changecom(`dnl')
 define(`getenv', `esyscmd(printf -- "$`$1' ")')
 
+package provide leaf_main 0.0
+
 # dnl Receive USER_LEAF from environment for m4 processing
 set USER_LEAF getenv(USER_LEAF)
 

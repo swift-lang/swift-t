@@ -12,4 +12,4 @@ set leaf_so  lib${USER_LEAF}.so
 set leaf_tcl ${USER_LEAF}.tcl
 
 exec echo [ ::pkg::create -name $name -version $version \
-           -load $leaf_so -source $leaf_tcl ] > pkgIndex.tcl
+            -source $leaf_tcl ] > pkgIndex.tcl
