@@ -197,7 +197,7 @@ adlb_code ADLB_Create_multiset(adlb_datum_id id,
   Add debug symbol entry, overwriting any existing entry.
   Only adds to local table (not on other ranks).
   
-  symbol: debug symbol identifier, should not be ADLB_DEBUG_SYMBOL_NULL
+  symbol: debug symbol identifier, should not be ADLB_DSYM_NULL
   data: associated null-terminated data string, will be copied.
  */
 adlb_code ADLBP_Add_dsym(adlb_dsym symbol, adlb_dsym_data data);

@@ -71,8 +71,8 @@ adlb_code ADLBP_Add_dsym(adlb_dsym symbol,
                                  adlb_dsym_data data)
 {
   CHECK_MSG(dsyms_init, "Debug symbols module not init");
-  CHECK_MSG(symbol != ADLB_DEBUG_SYMBOL_NULL, "Cannot add "
-      "ADLB_DEBUG_SYMBOL_NULL as debug symbol for %s:%s",
+  CHECK_MSG(symbol != ADLB_DSYM_NULL, "Cannot add "
+      "ADLB_DSYM_NULL as debug symbol for %s:%s",
       data.name, data.context);
   CHECK_MSG(data.name != NULL, "name for debug symbol was NULL");
   CHECK_MSG(data.context != NULL, "context for debug symbol was NULL");

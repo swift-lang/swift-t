@@ -166,7 +166,7 @@ adlb_data_code xlb_data_insert_atomic(adlb_datum_id container_id,
 adlb_data_code xlb_data_unique(adlb_datum_id* result);
 
 /*
-  Get local debug symbol, return ADLB_DEBUG_SYMBOL_NULL if not local,
+  Get local debug symbol, return ADLB_DSYM_NULL if not local,
   non-existent, or freed
  */
 adlb_dsym xlb_get_dsym(adlb_datum_id id);

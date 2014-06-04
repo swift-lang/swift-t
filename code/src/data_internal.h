@@ -147,24 +147,6 @@ typedef struct
   DATA_CHECK_MALLOC(array);                                            \
 }
 
-/*
-  Macro for printf arguments matching ADLB_PRI_DATUM.
-  Arguments are id and symbol
- */
-#define ADLB_PRI_DATUM_ARGS(id, symbol) \
-  (id), ADLB_Dsym(symbol).name, \
-  ADLB_Dsym(symbol).context
-
-/*
-  Macro for printf arguments matching ADLB_PRI_DATUM.
-  Arguments are id and symbol and a subscript value
- */
-#define ADLB_PRI_DATUM_SUB_ARGS(id, symbol, sub) \
-  (id), ADLB_Dsym(symbol).name, (int)((sub).length), \
-  (const char*)((sub).key), ADLB_Dsym(symbol).context
-  
-
-
 adlb_data_code
 xlb_datum_lookup(adlb_datum_id id, adlb_datum **d);
 

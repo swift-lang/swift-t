@@ -977,7 +977,6 @@ handle_create(int caller)
   struct packed_create_response resp = { .dc = dc, .id = id };
   RSEND(&resp, sizeof(resp), MPI_BYTE, caller, ADLB_TAG_RESPONSE);
 
-  // DEBUG("CREATE: <%"PRId64"> %s\n", id, (char*) work_buf);
   TRACE("ADLB_TAG_CREATE done\n");
   MPE_LOG(xlb_mpe_svr_create_end);
 
@@ -1079,12 +1078,13 @@ handle_store(int caller)
          ADLB_TAG_STORE_SUBSCRIPT);
     subscript.key = subscript_buf;
     // TODO: support binary subscript
-    DEBUG("Store: <%"PRId64">[\"%.*s\"]", hdr.id, (int)subscript.length,
-          (const char*)subscript.key);
+    DEBUG("Store: "ADLB_PRIDSUB, ADLB_PRIDSUB_ARGS(hdr.id,
+                                        ADLB_DSYM_NULL, subscript));
   }
   else
   {
-    DEBUG("Store: <%"PRId64">", hdr.id);
+    DEBUG("Store: "ADLB_PRID,
+        ADLB_PRID_ARGS(hdr.id, ADLB_DSYM_NULL));
   }
 
   // #if HAVE_MALLOC_H
@@ -1162,8 +1162,9 @@ handle_retrieve(int caller)
   adlb_refc decr_self = hdr->refcounts.decr_self;
   adlb_refc incr_referand = hdr->refcounts.incr_referand;
 
-  TRACE("Retrieve: <%"PRId64">[%s] decr_self r:%i w:%i incr_referand r:%i w:%i",
-          hdr->id, (char*) subscript.key, decr_self.read_refcount, decr_self.write_refcount,
+  TRACE("Retrieve: "ADLB_PRIDSUB" decr_self r:%i w:%i incr_referand r:%i w:%i",
+          ADLB_PRIDSUB_ARGS(hdr->id, ADLB_DSYM_NULL, subscript),
+          decr_self.read_refcount, decr_self.write_refcount,
           incr_referand.read_refcount, incr_referand.write_refcount);
       
 
@@ -1196,7 +1197,7 @@ handle_retrieve(int caller)
 
     // Send data then notifs
     SEND(result.data, result.length, MPI_BYTE, caller, ADLB_TAG_RESPONSE);
-    DEBUG("Retrieve: <%"PRId64">", hdr->id);
+    DEBUG("Retrieve: "ADLB_PRID, ADLB_PRID_ARGS(hdr->id, ADLB_DSYM_NULL));
 
     if (send_notifs)
     {
@@ -1279,12 +1280,12 @@ handle_subscribe(int caller)
   // TODO: support binary keys
   if (adlb_has_sub(subscript))
   {
-    DEBUG("subscribe: <%"PRId64">[%.*s]", id, (int)subscript.length,
-          (const char*)subscript.key);
+    DEBUG("subscribe: "ADLB_PRIDSUB, ADLB_PRIDSUB_ARGS(id, ADLB_DSYM_NULL,
+          subscript));
   }
   else
   {
-    DEBUG("subscribe: <%"PRId64">", id);
+    DEBUG("subscribe: "ADLB_PRID, ADLB_PRID_ARGS(id, ADLB_DSYM_NULL));
   }
   struct pack_sub_resp resp;
   resp.dc = xlb_data_subscribe(id, subscript, caller, work_type,
@@ -1312,15 +1313,18 @@ handle_notify(int caller)
   // TODO: support binary keys
   if (hdr->subscript_len > 0)
   {
-    DEBUG("notification received: <%"PRId64">[%.*s]", hdr->id,
-          hdr->subscript_len, hdr->subscript);
     adlb_subscript sub = { .key = hdr->subscript,
                            .length = (size_t)hdr->subscript_len };
+
+    DEBUG("notification received: "ADLB_PRIDSUB, ADLB_PRIDSUB_ARGS(
+          hdr->id, ADLB_DSYM_NULL, sub));
+
     tc = turbine_sub_close(hdr->id, sub, true, &xlb_server_ready_work);
   }
   else
   {
-    DEBUG("notification received: <%"PRId64">", hdr->id);
+    DEBUG("notification received: "ADLB_PRID, ADLB_PRID_ARGS(hdr->id,
+           ADLB_DSYM_NULL));
     tc = turbine_close(hdr->id, true, &xlb_server_ready_work);
   }
 
@@ -1338,7 +1342,8 @@ handle_get_refcounts(int caller)
   struct packed_refcounts_req req;
   RECV(&req, sizeof(req), MPI_BYTE, caller, ADLB_TAG_GET_REFCOUNTS);
 
-  DEBUG("Refcount_get: <%"PRId64"> decr r: %i w: %i", req.id,
+  DEBUG("Refcount_get: "ADLB_PRID" decr r: %i w: %i",
+        ADLB_PRID_ARGS(req.id, ADLB_DSYM_NULL),
         req.decr.read_refcount, req.decr.write_refcount);
  
   struct packed_refcounts_resp resp;
@@ -1365,7 +1370,8 @@ handle_refcount_incr(int caller)
   struct packed_incr msg;
   RECV(&msg, sizeof(msg), MPI_BYTE, caller, ADLB_TAG_REFCOUNT_INCR);
 
-  DEBUG("Refcount_incr: <%"PRId64"> READ %i WRITE %i", msg.id,
+  DEBUG("Refcount_incr: "ADLB_PRID" READ %i WRITE %i",
+        ADLB_PRID_ARGS(msg.id, ADLB_DSYM_NULL),
         msg.change.read_refcount, msg.change.write_refcount);
   
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
@@ -1432,8 +1438,8 @@ handle_insert_atomic(int caller)
                                    &value_present);
  
   // TODO: support binary subscript
-  DEBUG("Insert_atomic: <%"PRId64">[%.*s] => %i", id, (int)subscript.length,
-        (const char*)subscript.key, resp.created);
+  DEBUG("Insert_atomic: "ADLB_PRIDSUB" => %i", ADLB_PRIDSUB_ARGS(id,
+        ADLB_DSYM_NULL, subscript), resp.created);
 
   if (resp.dc != ADLB_DATA_SUCCESS)
   {
@@ -1518,7 +1524,7 @@ handle_unique(int caller)
   xlb_data_unique(&id);
 
   RSEND(&id, 1, MPI_ADLB_ID, caller, ADLB_TAG_RESPONSE);
-  DEBUG("Unique: <%"PRId64">", id);
+  DEBUG("Unique: "ADLB_PRID, ADLB_PRID_ARGS(id, ADLB_DSYM_NULL));
   // MPE_LOG_EVENT(mpe_svr_unique_end);
   return ADLB_SUCCESS;
 }
@@ -1578,10 +1584,10 @@ handle_container_reference(int caller)
   MSG_UNPACK_BIN(xfer_read, &transfer_refs);
 
   // TODO: support binary subscript
-  DEBUG("Container_reference: <%"PRId64">[%.*s] => <%"PRId64">[%.*s] "
+  DEBUG("Container_reference: "ADLB_PRIDSUB" => "ADLB_PRIDSUB" "
         "(%s) r: %i w: %i",
-        id, (int)subscript.length, (const char*)subscript.key,
-        ref_id, (int)ref_subscript.length, (const char*)ref_subscript.key,
+        ADLB_PRIDSUB_ARGS(id, ADLB_DSYM_NULL, subscript),
+        ADLB_PRIDSUB_ARGS(ref_id, ADLB_DSYM_NULL, ref_subscript),
         ADLB_Data_type_tostring(ref_type), transfer_refs.read_refcount,
         transfer_refs.write_refcount);
  
@@ -1636,7 +1642,8 @@ handle_container_size(int caller)
 
   int size;
   adlb_data_code dc = xlb_data_container_size(req.id, &size);
-  DEBUG("CONTAINER_SIZE: <%"PRId64"> => <%i>", req.id, size);
+  DEBUG("CONTAINER_SIZE: "ADLB_PRID" => %i",
+         ADLB_PRID_ARGS(req.id, ADLB_DSYM_NULL), size);
 
   if (dc == ADLB_DATA_SUCCESS)
   {
@@ -1659,7 +1666,8 @@ handle_lock(int caller)
   MPI_Status status;
   RECV(&id, 1, MPI_ADLB_ID, caller, ADLB_TAG_LOCK);
 
-  DEBUG("Lock: <%"PRId64"> by rank: %i", id, caller);
+  DEBUG("Lock: "ADLB_PRID" by rank: %i",
+        ADLB_PRID_ARGS(id, ADLB_DSYM_NULL), caller);
 
   bool result;
   adlb_data_code dc = xlb_data_lock(id, caller, &result);
@@ -1684,7 +1692,8 @@ handle_unlock(int caller)
   MPI_Status status;
   RECV(&id, 1, MPI_ADLB_ID, caller, ADLB_TAG_UNLOCK);
 
-  DEBUG("Unlock: <%"PRId64"> by rank: %i ", id, caller);
+  DEBUG("Unlock: "ADLB_PRID" by rank: %i ",
+        ADLB_PRID_ARGS(id, ADLB_DSYM_NULL), caller);
 
   adlb_data_code dc = xlb_data_unlock(id);
 

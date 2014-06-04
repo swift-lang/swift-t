@@ -176,7 +176,7 @@ static inline adlb_refc adlb_refc_negate(adlb_refc refc)
 
 /** Identifier for adlb data debug symbol */
 typedef uint32_t adlb_dsym;
-#define ADLB_DEBUG_SYMBOL_NULL 0u
+#define ADLB_DSYM_NULL 0u
 
 /** Data associated with adlb data debug symbol */
 typedef struct {
@@ -204,7 +204,7 @@ static const adlb_create_props DEFAULT_CREATE_PROPS = {
   1, /* write_refcount */
   false, /* permanent */
   false, /* release_write_refs */
-  ADLB_DEBUG_SYMBOL_NULL, /* symbol */
+  ADLB_DSYM_NULL, /* symbol */
 };
 
 // Information for new variable creation
@@ -312,7 +312,15 @@ typedef enum
   Matching arg types: adlb_datum_id (id), char* (debug symbol name),
     char* (debug symbol context)
  */
-#define ADLB_PRI_DATUM "<%"PRId64">:%s (%s)"
+#define ADLB_PRID "<%"PRId64">:%s (%s)"
+
+/*
+  Macro for printf arguments matching ADLB_PRID.
+  Arguments are id and symbol
+ */
+#define ADLB_PRID_ARGS(id, symbol) \
+  (id), ADLB_Dsym(symbol).name, \
+  ADLB_Dsym(symbol).context
 
 /** 
   printf specifiers for printing data identifier with subscript and
@@ -321,6 +329,14 @@ typedef enum
           int (subscript len), char* (subscript),
           char* (debug symbol context)
 */
-#define ADLB_PRI_DATUM_SUB "<%"PRId64">:%s[%.*s] (%s)"
+#define ADLB_PRIDSUB "<%"PRId64">:%s[%.*s] (%s)"
+
+/*
+  Macro for printf arguments matching ADLB_PRID.
+  Arguments are id and symbol and a subscript value
+ */
+#define ADLB_PRIDSUB_ARGS(id, symbol, sub) \
+  (id), ADLB_Dsym(symbol).name, (int)((sub).length), \
+  (const char*)((sub).key), ADLB_Dsym(symbol).context
 
 #endif
