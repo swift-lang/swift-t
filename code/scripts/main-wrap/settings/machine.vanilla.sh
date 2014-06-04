@@ -21,4 +21,4 @@ MPICC=$( which mpicc ; true )
 CC=gcc
 STC=stc
 
-source $GENLEAF_HOME/flags.gcc.sh
+source $GENLEAF_HOME/settings/flags.gcc.sh

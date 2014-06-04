@@ -13,7 +13,7 @@ MAIN=0
 
 show_machine_files()
 {
-  ( cd $GENLEAF_HOME
+  ( cd $GENLEAF_HOME/settings
     ls machine.*.sh | sed 's/machine\.\(.*\).sh/ \t * \1/' )
 }
 
@@ -90,7 +90,7 @@ USER_SWIFT=$5
 
 USER_LEAF="${USER_SOURCE%.*}"_wrap
 
-MACHINE_FILE=$GENLEAF_HOME/machine.$MACHINE.sh
+MACHINE_FILE=$GENLEAF_HOME/settings/machine.$MACHINE.sh
 [[ -f $MACHINE_FILE ]] || crash "unknown machine type: $MACHINE"
 source $MACHINE_FILE
 

@@ -9,4 +9,4 @@ STC=/home/wozniak/Public/sfw/ppc64/stc/bin/stc
 
 TURBINE_HOME=/home/wozniak/Public/sfw/ppc64/turbine
 
-source $GENLEAF_HOME/flags.xlc.sh
+source $GENLEAF_HOME/settings/flags.xlc.sh

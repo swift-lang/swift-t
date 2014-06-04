@@ -16,4 +16,4 @@ TURBINE_HOME=/home/wozniak/Public/sfw/ppc64/turbine
 ADLB_HOME=/home/wozniak/Public/sfw/ppc64/lb
 C_UTILS_HOME=/home/wozniak/Public/sfw/ppc64/c-utils
 
-source $GENLEAF_HOME/flags.gcc.sh
+source $GENLEAF_HOME/settings/flags.gcc.sh
