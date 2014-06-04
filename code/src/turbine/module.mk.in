@@ -6,3 +6,4 @@ TURBINE_SRC += $(DIR)/cache.c
 TURBINE_SRC += $(DIR)/run.c
 TURBINE_SRC += $(DIR)/worker.c
 TURBINE_SRC += $(DIR)/async_exec.c
+TURBINE_SRC += $(DIR)/executors/noop_executor.c

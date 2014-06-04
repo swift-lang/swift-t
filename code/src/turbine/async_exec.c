@@ -1,4 +1,20 @@
 /*
+ * Copyright 2014 University of Chicago and Argonne National Laboratory
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License
+ */
+
+/*
   Code sketch for generic async executor interface
 
   Created by Tim Armstrong, Nov 2013
@@ -38,10 +54,12 @@ Implications of Assumptions
 
  */
 
+#include "src/turbine/async_exec.h"
+
 #include <assert.h>
 
 #include <adlb.h>
-#include "src/turbine/turbine-defs.h"
+#include <table.h>
     
 
 // To be replaced with correct check
@@ -49,71 +67,10 @@ Implications of Assumptions
 #define TMP_WARN(fmt, args...) fprintf(stderr, fmt "\n", ##args)
 
 #define TMP_EXEC_CHECK(code) assert((code) == TURBINE_EXEC_SUCCESS)
+#define TMP_MALLOC_CHECK(p) assert(p != NULL)
 
-/*
-  Represent state of a completed task
- */
-typedef struct {
-  bool success;
-  // TODO: callbacks
-} turbine_completed_task;
-
-typedef enum {
-  TURBINE_EXEC_SUCCESS,
-  TURBINE_EXEC_ERROR,
-  TURBINE_EXEC_SHUTDOWN,
-  // TODO: more info - e.g. if bad arg, or invalid state
-} turbine_exec_code;
-
-/*
-  Info about available/used slots in executor
- */
-typedef struct {
-  int used;
-  int total;
-} turbine_exec_slot_state;
-
-// Function pointer types.  All are passed void state pointer for
-// any state needed
-typedef turbine_exec_code (*turbine_exec_shutdown)(void *state);
-
-// Polling: periodically called on an executor with active tasks.
-//          updates completed with completed task info
-typedef turbine_exec_code (*turbine_exec_poll)(void *state,
-          turbine_completed_task **completed, int *ncompleted);
-
-// Waiting: called on an executor with active tasks.
-//          updates completed with completed task info
-typedef turbine_exec_code (*turbine_exec_wait)(void *state,
-          turbine_completed_task **completed, int *ncompleted);
-
-// Slots: return count of slots
-typedef turbine_exec_code (*turbine_exec_slots)(void *state,
-                                  turbine_exec_slot_state *slots);
-
-// Executor notification model
-// TODO: only polling based currently used
-typedef enum
-{
-  EXEC_POLLING, /* We have to periodically poll for status */
-  //EXEC_BG_THREAD, /* Executor has background thread */
-} async_exec_notif;
-
-typedef struct {
-  const char *name;
-  int adlb_work_type; // Type to request from adlb
-  async_exec_notif notif_mode;
-
-  void *state; // Internal state to pass to executor functions
-
-  /*
-    Function pointers for executors
-   */
-  turbine_exec_shutdown shutdown;
-  turbine_exec_wait wait;
-  turbine_exec_poll poll;
-  turbine_exec_slots slots;
-} turbine_executor;
+static bool executors_init = false;
+static struct table executors;
 
 static turbine_exec_code
 get_tasks(turbine_executor *executor, void *buffer, int buffer_size,
@@ -132,21 +89,59 @@ void init_coasters_executor(turbine_executor *exec /*TODO: coasters params */)
   // TODO: could make use of background thread
   exec->notif_mode = EXEC_POLLING;
 
-  exec->state = NULL; // TODO: pointer to coasters client
+  exec->initialize = NULL; 
   exec->shutdown = NULL; // TODO: shutdown
   exec->poll = NULL;
   exec->wait = NULL;
   exec->slots = NULL;
+  
+  exec->context = NULL; // Any settings, etc 
+  exec->state = NULL; // TODO: pointer to coasters client
+}
+
+turbine_code
+turbine_add_async_exec(turbine_executor executor)
+{
+  // Initialize table on demand
+  if (!executors_init)
+  {
+    bool ok = table_init(&executors, 16);
+    assert(ok); // TODO
+    executors_init = true;
+  }
+
+  // TODO: ownership of pointers, etc
+  // TODO: validate executor
+  turbine_executor *exec_ptr = malloc(sizeof(executor));
+  TMP_MALLOC_CHECK(exec_ptr);
+  *exec_ptr = executor;
+
+  table_add(&executors, executor.name, exec_ptr);
+
+  return TURBINE_SUCCESS;
 }
 
 
-turbine_code async_worker_loop(turbine_executor *executor,
-                      void *buffer, int buffer_size) {
-  // Check we were initialised properly
-  assert(executor != NULL);
+turbine_code
+turbine_async_worker_loop(const char *exec_name, void *buffer, int buffer_size)
+{
+  turbine_exec_code ec;
+
+  assert(exec_name != NULL);
+  assert(buffer != NULL);
+  assert(buffer_size > 0);
   // TODO: check buffer large enough for work units
 
-  turbine_exec_code ec;
+  turbine_executor *executor;
+  if (!table_search(&executors, exec_name, (void**)&executor)) {
+    printf("Could not find executor: \"%s\"\n", exec_name);
+    return TURBINE_ERROR_INVALID;
+  }
+  assert(executor != NULL);
+
+  assert(executor->initialize != NULL);
+  ec = executor->initialize(executor->context, &executor->state);
+  TMP_EXEC_CHECK(ec);
   while (true)
   {
     turbine_exec_slot_state slots;
@@ -273,4 +268,13 @@ shutdown_executors(turbine_executor *executors, int nexecutors)
       // TODO: warn about error 
     }
   }
+}
+
+turbine_code
+turbine_async_exec_finalize(void)
+{
+  // TODO: free memory for executors
+
+  executors_init = false;
+  return TURBINE_SUCCESS;
 }
