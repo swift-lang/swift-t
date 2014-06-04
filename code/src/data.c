@@ -1176,7 +1176,8 @@ xlb_data_retrieve(adlb_datum_id id, adlb_subscript subscript,
                  adlb_data_type* type, const adlb_buffer *caller_buffer,
                  adlb_binary_data *result, adlb_notif_t *notifs)
 {
-  TRACE("data_retrieve(%"PRId64", %s)", id, subscript);
+  // TODO: How to get subscript key as string safely?
+  TRACE("data_retrieve(%"PRId64")", id); // subscript.key
 
   adlb_data_code dc;
 
@@ -2085,8 +2086,10 @@ adlb_data_code append_notifs(struct list_b *listeners,
     adlb_notif_rank *nrank = &notify->notifs[i + notify->count];
     xlb_notif_init(nrank, listener->rank, id, sub, listener->work_type);
 
+    // #define ADLB_PRI_DATUM_SUB "<%"PRId64">:%s[%.*s] (%s)"
     TRACE("Add notif "ADLB_PRI_DATUM_SUB" to rank %i",
-          ADLB_PRI_DATUM_SUB(id, dsym, sub), nrank->rank);
+          id, ADLB_Dsym(dsym).name, (int) sub.length, (char*) sub.key,
+          ADLB_Dsym(dsym).context, nrank->rank);
 
     struct list_b_item *next = node->next;
     free(node);

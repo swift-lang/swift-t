@@ -1163,7 +1163,7 @@ handle_retrieve(int caller)
   adlb_refc incr_referand = hdr->refcounts.incr_referand;
 
   TRACE("Retrieve: <%"PRId64">[%s] decr_self r:%i w:%i incr_referand r:%i w:%i",
-          hdr->id, subscript, decr_self.read_refcount, decr_self.write_refcount,
+          hdr->id, (char*) subscript.key, decr_self.read_refcount, decr_self.write_refcount,
           incr_referand.read_refcount, incr_referand.write_refcount);
       
 
