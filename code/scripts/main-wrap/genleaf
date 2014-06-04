@@ -25,7 +25,6 @@ usage()
   echo
   printf "\t where: \n"
   printf "\t\t MACHINE     is the machine type\n"
-  printf "\t\t MANIFEST    is the mkstatic manifest file\n"
   printf "\t\t USER_SOURCE is a *.c file\n"
   printf "\t\t FUNCNAME is a user function other than main (feature under development)\n"
   printf "\t\t USER_HEADER is the corresponding *.h file\n"
