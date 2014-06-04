@@ -21,10 +21,11 @@ usage()
 {
   echo "genleaf: usage:"
   echo
-  printf "\t\t genleaf <OPTIONS> <MACHINE> <USER_SOURCE>[:<FUNCNAME>] <USER_HEADER> <USER_SWIFT>\n"
+  printf "\t\t genleaf <OPTIONS> <MACHINE> <MANIFEST> <USER_SOURCE>[:<FUNCNAME>] <USER_HEADER> <USER_SWIFT>\n"
   echo
   printf "\t where: \n"
   printf "\t\t MACHINE     is the machine type\n"
+  printf "\t\t MANIFEST    is the mkstatic manifest file\n"
   printf "\t\t USER_SOURCE is a *.c file\n"
   printf "\t\t FUNCNAME is a user function other than main (feature under development)\n"
   printf "\t\t USER_HEADER is the corresponding *.h file\n"
@@ -45,7 +46,7 @@ usage()
 crash()
 {
   MSG=$*
-  echo crash!
+  echo "crash!"
   echo $MSG
   exit 1
 }
@@ -74,21 +75,22 @@ action()
   $*
 }
 
-if (( ${#*} != 4 ))
+if (( ${#*} != 5 ))
 then
   usage
   exit 1
 fi
 
 MACHINE=$1
-USER_SOURCE=$(echo "${2}" | awk -F: '{print $1}') #field before colon
-USER_FUNC=$(echo "${2}" | awk -F: '{print $2}') #field after colon
-USER_HEADER=$3
-USER_SWIFT=$4
+MANIFEST=$2
+USER_SOURCE=$(echo "${3}" | awk -F: '{print $1}') #field before colon
+USER_FUNC=$(echo "${3}" | awk -F: '{print $2}') #field after colon
+USER_HEADER=$4
+USER_SWIFT=$5
 
 USER_LEAF="${USER_SOURCE%.*}"_wrap
 
-MACHINE_FILE=machine.$MACHINE.sh
+MACHINE_FILE=$GENLEAF_HOME/machine.$MACHINE.sh
 [[ -f $MACHINE_FILE ]] || crash "unknown machine type: $MACHINE"
 source $MACHINE_FILE
 
@@ -356,7 +358,7 @@ else
   # c. link static library and executable
   action ar -cr leaf_main.a \
              extension.o "${USER_LEAF}".o 
-  action $MKSTATIC leaf_main.manifest -c static_leaf_main.c
+  action $MKSTATIC $MANIFEST -c static_leaf_main.c
   action $CC $CFLAGS -I . \
     -I{$MPI_HOME,$TURBINE_HOME,$ADLB_HOME,$C_UTILS_HOME}/include \
     -c -o static_leaf_main.{o,c}
