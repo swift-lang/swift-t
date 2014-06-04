@@ -53,7 +53,7 @@ init_noop_executor(turbine_executor *exec, int adlb_work_type)
   exec->slots = noop_slots;
 }
 
-static void
+void
 noop_executor_register(int adlb_work_type)
 {
   turbine_executor exec;
