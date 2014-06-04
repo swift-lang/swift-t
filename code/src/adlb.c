@@ -816,7 +816,8 @@ ADLBP_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
   MPI_Status status;
   MPI_Request request;
 
-  TRACE("ADLB_Exists: <%"PRId64">\n", id);
+  TRACE("ADLB_Exists: "ADLB_PRID"\n",
+        ADLB_PRID_ARGS(id, ADLB_DSYM_NULL));
 
   char req[PACKED_SUBSCRIPT_MAX + sizeof(decr)];
   char *req_ptr = req;
@@ -844,7 +845,8 @@ ADLBP_Refcount_get(adlb_datum_id id, adlb_refc *result,
   MPI_Status status;
   MPI_Request request;
 
-  TRACE("ADLB_Refcount_get: <%"PRId64">\n", id);
+  TRACE("ADLB_Refcount_get: "ADLB_PRID,
+        ADLB_PRID_ARGS(id, ADLB_DSYM_NULL));
 
   struct packed_refcounts_req req = { .id = id, .decr = decr };
 
@@ -899,12 +901,14 @@ xlb_store(adlb_datum_id id, adlb_subscript subscript, adlb_data_type type,
   if (adlb_has_sub(subscript))
   {
     // TODO: support binary subscript
-    DEBUG("ADLB_Store: <%"PRId64">[%.*s]=%p[%i]", id,
-        (int)subscript.length, (const char*)subscript.key, data, length);
+    DEBUG("ADLB_Store: "ADLB_PRIDSUB"=%p[%i]",
+        ADLB_PRIDSUB_ARGS(id, ADLB_DSYM_NULL, subscript),
+        data, length);
   }
   else
   {
-    DEBUG("ADLB_Store: <%"PRId64">=%p[%i]", id, data, length);
+    DEBUG("ADLB_Store: "ADLB_PRID"=%p[%i]",
+          ADLB_PRID_ARGS(id, ADLB_DSYM_NULL), data, length);
   }
 
   int to_server_rank = ADLB_Locate(id);
@@ -1013,7 +1017,8 @@ xlb_refcount_incr(adlb_datum_id id, adlb_refc change,
   MPI_Status status;
   MPI_Request request;
   
-  DEBUG("ADLB_Refcount_incr: <%"PRId64"> READ %i WRITE %i", id,
+  DEBUG("ADLB_Refcount_incr: "ADLB_PRID" READ %i WRITE %i",
+            ADLB_PRID_ARGS(id, ADLB_DSYM_NULL),
             change.read_refcount, change.write_refcount);
 
   if (!xlb_read_refcount_enabled)
@@ -1056,8 +1061,8 @@ ADLBP_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
   struct packed_insert_atomic_resp resp;
 
   // TODO: support binary subscript
-  DEBUG("ADLB_Insert_atomic: <%"PRId64">[\"%.*s\"]", id,
-        (int)subscript.length, (const char*)subscript.key);
+  DEBUG("ADLB_Insert_atomic: "ADLB_PRIDSUB,
+        ADLB_PRIDSUB_ARGS(id, ADLB_DSYM_NULL, subscript));
   char *xfer_pos = xfer;
   xfer_pos += xlb_pack_id_sub(xfer_pos, id, subscript);
 
@@ -1150,7 +1155,8 @@ ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
   // Set length and type output parameters
   *length = resp_hdr.length;
   *type = resp_hdr.type;
-  DEBUG("RETRIEVE: <%"PRId64"> (%i bytes)\n", id, *length);
+  DEBUG("RETRIEVE: "ADLB_PRID" (%i bytes)\n",
+        ADLB_PRID_ARGS(id, ADLB_DSYM_NULL), *length);
   
   adlb_code ac = xlb_handle_client_notif_work(&resp_hdr.notifs,
                                               to_server_rank);
@@ -1241,7 +1247,8 @@ ADLBP_Typeof(adlb_datum_id id, adlb_data_type* type)
   SEND(&id, 1, MPI_ADLB_ID, to_server_rank, ADLB_TAG_TYPEOF);
   WAIT(&request, &status);
 
-  DEBUG("ADLB_Typeof <%"PRId64">=>%i", id, *type);
+  DEBUG("ADLB_Typeof "ADLB_PRID"=>%i", ADLB_PRID_ARGS(id, ADLB_DSYM_NULL),
+        *type);
 
   if (*type == -1)
     return ADLB_ERROR;
@@ -1262,7 +1269,8 @@ ADLBP_Container_typeof(adlb_datum_id id, adlb_data_type* key_type,
   SEND(&id, 1, MPI_ADLB_ID, to_server_rank, ADLB_TAG_CONTAINER_TYPEOF);
   WAIT(&request, &status);
 
-  DEBUG("ADLB_Container_typeof <%"PRId64">=>(%i,%i)", id, types[0], types[1]);
+  DEBUG("ADLB_Container_typeof "ADLB_PRID"=>(%i,%i)",
+        ADLB_PRID_ARGS(id, ADLB_DSYM_NULL), types[0], types[1]);
 
   if (types[0] == -1 || types[1] == -1)
     return ADLB_ERROR;
@@ -1304,32 +1312,35 @@ ADLBP_Subscribe(adlb_datum_id id, adlb_subscript subscript,
     *subscribed = result.subscribed;
     if (!adlb_has_sub(subscript))
     {
-      DEBUG("ADLB_Subscribe: <%"PRId64"> => %i", id, *subscribed);
+      DEBUG("ADLB_Subscribe: "ADLB_PRID" => %i",
+            ADLB_PRID_ARGS(id, ADLB_DSYM_NULL), *subscribed);
     }
     else
     {
       // TODO: support binary subscript
-      DEBUG("ADLB_Subscribe: <%"PRId64">[\"%.*s\"] => %i", id,
-            (int)subscript.length, (const char*)subscript.key, *subscribed);
+      DEBUG("ADLB_Subscribe: "ADLB_PRIDSUB" => %i",
+          ADLB_PRIDSUB_ARGS(id, ADLB_DSYM_NULL, subscript), *subscribed);
     }
     return ADLB_SUCCESS;
   }
   else if (result.dc == ADLB_DATA_ERROR_NOT_FOUND)
   {
-    DEBUG("ADLB_Subscribe: <%"PRId64"> not found", id);
+    DEBUG("ADLB_Subscribe: "ADLB_PRID" not found",
+           ADLB_PRID_ARGS(id, ADLB_DSYM_NULL));
     return ADLB_DATA_ERROR_NOT_FOUND;
   }
   else
   {
     if (!adlb_has_sub(subscript))
     {
-      DEBUG("ADLB_Subscribe: <%"PRId64"> => error", id);
+      DEBUG("ADLB_Subscribe: "ADLB_PRID" => error",
+            ADLB_PRID_ARGS(id, ADLB_DSYM_NULL));
     }
     else
     {
       // TODO: support binary subscript
-      DEBUG("ADLB_Subscribe: <%"PRId64">[\"%.*s\"] => error", id,
-            (int)subscript.length, (const char*)subscript.key);
+      DEBUG("ADLB_Subscribe: "ADLB_PRIDSUB" => error",
+            ADLB_PRIDSUB_ARGS(id, ADLB_DSYM_NULL, subscript));
     }
     return ADLB_ERROR;
   }
@@ -1374,10 +1385,9 @@ ADLBP_Container_reference(adlb_datum_id id, adlb_subscript subscript,
   ADLB_CHECK(ac);
 
   // TODO: support binary subscript
-  DEBUG("ADLB_Container_reference: <%"PRId64">[%.*s] => "
-        "<%"PRId64">[%.*s] (%i)",
-        id, (int)subscript.length, (const char*)subscript.key, ref_id,
-        (int)ref_subscript.length, (const char*)ref_subscript.key, ref_type);
+  DEBUG("ADLB_Container_reference: "ADLB_PRIDSUB" => "ADLB_PRIDSUB
+    " (%i)", ADLB_PRIDSUB_ARGS(id, ADLB_DSYM_NULL, subscript),
+    ADLB_PRIDSUB_ARGS(ref_id, ADLB_DSYM_NULL, ref_subscript), ref_type);
 
   return ADLB_SUCCESS;
 }
@@ -1398,8 +1408,8 @@ ADLBP_Container_size(adlb_datum_id container_id, int* size,
                 ADLB_TAG_CONTAINER_SIZE);
   WAIT(&request, &status);
 
-  DEBUG("ADLB_Container_size: <%"PRId64"> => %i",
-        container_id, *size);
+  DEBUG("ADLB_Container_size: "ADLB_PRID" => %i",
+        ADLB_PRID_ARGS(container_id, ADLB_DSYM_NULL), *size);
 
   if (*size < 0)
     return ADLB_ERROR;
