@@ -21,7 +21,7 @@ usage()
 {
   echo "genleaf: usage:"
   echo
-  printf "\t\t genleaf <OPTIONS> <MACHINE> <MANIFEST> <USER_SOURCE>[:<FUNCNAME>] <USER_HEADER> <USER_SWIFT>\n"
+  printf "\t\t genleaf <OPTIONS> <MACHINE> <USER_SOURCE>[:<FUNCNAME>] <USER_HEADER> <USER_SWIFT>\n"
   echo
   printf "\t where: \n"
   printf "\t\t MACHINE     is the machine type\n"
@@ -32,9 +32,9 @@ usage()
   printf "\t\t USER_SWIFT  is the input Swift file\n"
   echo
   printf "\t options: \n"
-  printf "\t\t -h \t Show usage guide.\n"
-  printf "\t\t -s \t Do a static build.\n"
-  printf "\t\t -v \t Increase verbosity.  May be given up to thrice.\n"
+  printf "\t\t -h            \t Show usage guide.\n"
+  printf "\t\t -s <MANIFEST> \t Do a static build with the provided manifest file.\n"
+  printf "\t\t -v            \t Increase verbosity.  May be given up to thrice.\n"
   echo
   printf "\t environment: \n"
   printf "\t\t TCL_VERSION \t The Tcl version (default 8.5).\n"
@@ -53,12 +53,20 @@ crash()
 
 GENLEAF_HOME=$( cd $( dirname $0 ) ; /bin/pwd )
 
-while getopts "hsv" OPTION
+while getopts "hs:v" OPTION
 do
   case $OPTION in
-    h) usage ; exit 0             ;;
-    s) STATIC=1                   ;;
-    v) VERBOSE=$(( VERBOSE + 1 )) ;;
+    h)
+      usage
+      exit 0
+      ;;
+    s)
+      STATIC=1
+      MANIFEST=$OPTARG
+      ;;
+    v)
+      VERBOSE=$(( VERBOSE + 1 ))
+      ;;
   esac
 done
 shift $(( OPTIND - 1 ))
@@ -83,18 +91,17 @@ action()
   $*
 }
 
-if (( ${#*} != 5 ))
+if (( ${#*} != 4 ))
 then
   usage
   exit 1
 fi
 
 MACHINE=$1
-MANIFEST=$2
-USER_SOURCE=$(echo "${3}" | awk -F: '{print $1}') #field before colon
-USER_FUNC=$(echo "${3}" | awk -F: '{print $2}') #field after colon
-USER_HEADER=$4
-USER_SWIFT=$5
+USER_SOURCE=$(echo "${2}" | awk -F: '{print $1}') #field before colon
+USER_FUNC=$(echo "${2}" | awk -F: '{print $2}') #field after colon
+USER_HEADER=$3
+USER_SWIFT=$4
 
 export USER_LEAF=${USER_SOURCE%.*}_wrap
 # Capitalize first letter of symbol
