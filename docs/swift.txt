@@ -13,7 +13,7 @@ Settings:
 :miscellaneous.newline: \n
 
 = Swift/T Guide
-v0.5.0, April 2014
+v0.5.0, June 2014
 
 The Swift/Turbine Compiler (STC) allows you to write Swift programs
 and run them using Turbine.
@@ -1772,7 +1772,7 @@ It is possible to build a fully self-contained executable, including
 all Tcl scripts and compiled code, provided that all dependencies support
 static linking.  If not, it is also possible to build an executable with
 a subset of Tcl scripts and code linked in, providing some performance
-benefits. 
+benefits.
 
 The provided +mkstatic.tcl+ utility can produce a C source
 file with Tcl scripts bundled in, which can then be compiled and linked
@@ -1806,7 +1806,7 @@ descriptions of all the the possible settings.
 #Note that an empty
 #manifest file corresponds to the +turbine_sh+ utility, which is a
 #replacement for +tclsh+ with required Turbine libraries statically
-#linked in. 
+#linked in.
 For a simple Swift program with no user Tcl libraries,
 you only need to set +main_script = my.tcl+.
 
