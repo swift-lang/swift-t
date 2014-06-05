@@ -55,13 +55,13 @@
 #include "workqueue.h"
 
 /** Map from incoming message tag to handler function */
-xlb_handler handlers[XLB_MAX_HANDLERS];
+xlb_handler xlb_handlers[XLB_MAX_HANDLERS];
 
 /** Count how many handlers have been registered */
-static int handler_count = 0;
+static int xlb_handler_count = 0;
 
 /** Count how many calls to each handler */
-int64_t handler_counters[XLB_MAX_HANDLERS];
+int64_t xlb_handler_counters[XLB_MAX_HANDLERS];
 
 /** Copy of this processes' MPI rank */
 static int mpi_rank;
@@ -159,8 +159,8 @@ xlb_handlers_init(void)
 {
   MPI_Comm_rank(adlb_comm, &mpi_rank);
 
-  handler_count = 0;
-  memset(handlers, '\0', XLB_MAX_HANDLERS*sizeof(xlb_handler));
+  xlb_handler_count = 0;
+  memset(xlb_handlers, '\0', XLB_MAX_HANDLERS*sizeof(xlb_handler));
 
   register_handler(ADLB_TAG_SYNC_RESPONSE, handle_sync_response);
   register_handler(ADLB_TAG_RESPONSE_STEAL_COUNT, handle_steal_response);
@@ -195,10 +195,10 @@ xlb_handlers_init(void)
 static void
 register_handler(adlb_tag tag, xlb_handler h)
 {
-  handlers[tag] = h;
-  handler_count++;
-  valgrind_assert(handler_count < XLB_MAX_HANDLERS);
-  handler_counters[tag] = 0;
+  xlb_handlers[tag] = h;
+  xlb_handler_count++;
+  valgrind_assert(xlb_handler_count < XLB_MAX_HANDLERS);
+  xlb_handler_counters[tag] = 0;
 }
 
 void xlb_print_handler_counters(void)
@@ -210,10 +210,10 @@ void xlb_print_handler_counters(void)
 
   for (int tag = 0; tag < XLB_MAX_HANDLERS; tag++)
   {
-    if (handlers[tag] != NULL)
+    if (xlb_handlers[tag] != NULL)
     {
       PRINT_COUNTER("%s=%"PRId64"\n",
-              xlb_get_tag_name(tag), handler_counters[tag]);
+              xlb_get_tag_name(tag), xlb_handler_counters[tag]);
     }
   }
 }

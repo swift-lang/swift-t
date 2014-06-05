@@ -69,13 +69,14 @@ typedef adlb_code (*xlb_handler)(int caller);
 /** Maximal number of handlers that may be registered */
 #define XLB_MAX_HANDLERS XLB_MAX_TAGS
 
-extern xlb_handler handlers[];
-extern int64_t handler_counters[];
+extern xlb_handler xlb_handlers[];
+extern int64_t xlb_handler_counters[];
 
 static inline bool
 xlb_handler_valid(adlb_tag tag)
 {
-  return (tag >= 0) && (tag < XLB_MAX_HANDLERS) && (handlers[tag] != NULL);
+  return (tag >= 0) && (tag < XLB_MAX_HANDLERS) &&
+         (xlb_handlers[tag] != NULL);
 }
 
 static inline adlb_code
@@ -89,11 +90,11 @@ xlb_handle(adlb_tag tag, int caller)
 
   if (xlb_perf_counters_enabled)
   {
-    handler_counters[tag]++;
+    xlb_handler_counters[tag]++;
   }
 
   // Call handler:
-  adlb_code result = handlers[tag](caller);
+  adlb_code result = xlb_handlers[tag](caller);
 
   MPE_LOG(xlb_mpe_svr_busy_end);
 

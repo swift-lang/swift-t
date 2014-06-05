@@ -99,7 +99,7 @@ static inline void update_cached_time()
 }
 
 /** Workers that have called ADLB_Shutdown() */
-struct list_i workers_shutdown;
+static struct list_i workers_shutdown;
 
 bool xlb_server_sync_in_progress = false;
 
