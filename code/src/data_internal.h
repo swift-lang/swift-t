@@ -39,7 +39,7 @@
 #define XLB_STACK_BUFFER_LEN 4096
 
 /**
-   Status vector for Turbine variables
+   Status vector for ADLB data variables
  */
 typedef struct {
   /** SET: Whether the value has been filled in */

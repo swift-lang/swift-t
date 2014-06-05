@@ -25,7 +25,7 @@
 #ifndef SERVER_H
 #define SERVER_H
 
-#include "turbine.h"
+#include "engine.h"
 
 /** Time of last activity: used to determine shutdown */
 extern double xlb_time_last_action;
@@ -43,7 +43,7 @@ extern bool server_sync_retry;
 extern int xlb_my_workers;
 
 /** Ready task queue for server */
-extern turbine_work_array xlb_server_ready_work;
+extern xlb_engine_work_array xlb_server_ready_work;
 
 adlb_code xlb_server_init(void);
 

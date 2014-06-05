@@ -15,9 +15,9 @@
  */
 
 /**
- *  TURBINE
+ * ENGINE  
  *
- *  Created on: May 4, 2011
+ *  Turbine engine created on: May 4, 2011
  *  Moved to ADLB codebase: Apr 2014
  *      Authors: wozniak, armstrong
  *
@@ -26,8 +26,8 @@
  * the ADLB server.
  */
 
-#ifndef TURBINE_H
-#define TURBINE_H
+#ifndef __ENGINE_H
+#define __ENGINE_H
 
 #include <mpi.h>
 
@@ -36,25 +36,25 @@
 typedef struct
 {
   char* name;
-} turbine_entry;
+} xlb_engine_entry;
 
 typedef enum
 {
-  TURBINE_SUCCESS = ADLB_DATA_SUCCESS,
+  XLB_ENGINE_SUCCESS = ADLB_DATA_SUCCESS,
   /** Out of memory */
-  TURBINE_ERROR_OOM = ADLB_DATA_ERROR_OOM,
+  XLB_ENGINE_ERROR_OOM = ADLB_DATA_ERROR_OOM,
   /** Invalid input */
-  TURBINE_ERROR_INVALID = ADLB_DATA_ERROR_INVALID,
+  XLB_ENGINE_ERROR_INVALID = ADLB_DATA_ERROR_INVALID,
   /** Called function when Turbine uninitialized */
-  TURBINE_ERROR_UNINITIALIZED,
+  XLB_ENGINE_ERROR_UNINITIALIZED,
   /** Unknown error */
-  TURBINE_ERROR_UNKNOWN = ADLB_DATA_ERROR_UNKNOWN,
-} turbine_engine_code;
+  XLB_ENGINE_ERROR_UNKNOWN = ADLB_DATA_ERROR_UNKNOWN,
+} xlb_engine_code;
 
 /**
    The maximal length of a Turbine rule name string
  */
-#define TURBINE_NAME_MAX 18
+#define XLB_ENGINE_NAME_MAX 18
 
 /*
  * Array of ready work
@@ -63,36 +63,36 @@ typedef struct {
   xlb_work_unit **work;
   int size; // allocated size
   int count; // entry count
-} turbine_work_array;
+} xlb_engine_work_array;
 
-turbine_engine_code turbine_engine_init(int rank);
+xlb_engine_code xlb_engine_init(int rank);
 
-void turbine_engine_print_counters(void);
+void xlb_engine_print_counters(void);
 
 /**
-   input_td_list, input_td_sub_list:
+   input_id_list, input_id_sub_list:
         ownership of arrays and array contents is retained by caller
    work: ownership of this task is passed into the engine module
             until released
    ready: if true, rule is ready to run, and ownership stays with
           caller
-   returns TURBINE_SUCCESS/TURBINE_ERROR_*
+   returns XLB_ENGINE_SUCCESS/XLB_ENGINE_ERROR_*
  */
-turbine_engine_code turbine_rule(const char* name, int name_strlen,
+xlb_engine_code xlb_engine_rule(const char* name, int name_strlen,
                           int input_tds,
-                          const adlb_datum_id* input_td_list,
-                          int input_td_subs,
-                          const adlb_datum_id_sub* input_td_sub_list,
+                          const adlb_datum_id* input_id_list,
+                          int input_id_subs,
+                          const adlb_datum_id_sub* input_id_sub_list,
                           xlb_work_unit *work, bool *ready);
 
 /*
-  Should be called when turbine engine is notified that an id is closed
+  Should be called when engine is notified that an id is closed
   remote: true if data was remote
   ready: array to append with pointers to any newly ready tasks,
           ownership of pointers add is passed to caller
  */
-turbine_engine_code turbine_close(adlb_datum_id id, bool remote,
-                           turbine_work_array *ready);
+xlb_engine_code xlb_engine_close(adlb_datum_id id, bool remote,
+                           xlb_engine_work_array *ready);
 
 /*
   Should be called when turbine engine is notified that an id/subscript
@@ -101,16 +101,11 @@ turbine_engine_code turbine_close(adlb_datum_id id, bool remote,
   ready: array to append with pointers to any newly ready tasks,
           ownership of pointers add is passed to caller
  */
-turbine_engine_code turbine_sub_close(adlb_datum_id id,
-     adlb_subscript sub, bool remote, turbine_work_array *ready);
+xlb_engine_code xlb_engine_sub_close(adlb_datum_id id,
+     adlb_subscript sub, bool remote, xlb_engine_work_array *ready);
 
-#define TURBINE_CODE_STRING_MAX 64
+#define XLB_ENGINE_CODE_STRING_MAX 64
 
-void turbine_engine_finalize(void);
-
-// Temporary hack to get working ok
-// TODO: move elsewhere
-#include "debug.h"
-#define DEBUG_TURBINE(s, args...) DEBUG("ENGINE:" s, ## args)
+void xlb_engine_finalize(void);
 
 #endif

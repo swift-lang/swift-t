@@ -45,7 +45,7 @@
 #include "server.h"
 #include "steal.h"
 #include "sync.h"
-#include "turbine.h"
+#include "engine.h"
 #include "workqueue.h"
 
 // Check for sync requests this often so that can be handled in preference
@@ -113,7 +113,7 @@ static bool failed = false;
 static bool fail_code = -1;
 
 /** Ready task queue for server */
-turbine_work_array xlb_server_ready_work;
+xlb_engine_work_array xlb_server_ready_work;
 
 static adlb_code setup_idle_time(void);
 
@@ -184,8 +184,8 @@ xlb_server_init()
   code = xlb_steal_init();
   ADLB_CHECK(code);
 
-  turbine_engine_code tc = turbine_engine_init(xlb_comm_rank);
-  CHECK_MSG(tc == TURBINE_SUCCESS, "Error initializing engine");
+  xlb_engine_code tc = xlb_engine_init(xlb_comm_rank);
+  CHECK_MSG(tc == XLB_ENGINE_SUCCESS, "Error initializing engine");
 
   xlb_server_ready_work.work = NULL;
   xlb_server_ready_work.size = 0;
@@ -800,7 +800,7 @@ server_shutdown()
   xlb_steal_finalize();
   xlb_sync_finalize();
 
-  turbine_engine_finalize();
+  xlb_engine_finalize();
   return ADLB_SUCCESS;
 }
 
@@ -820,5 +820,5 @@ static inline void print_final_stats()
   xlb_print_handler_counters();
   xlb_print_workq_perf_counters();
   xlb_print_sync_counters();
-  turbine_engine_print_counters();
+  xlb_engine_print_counters();
 }

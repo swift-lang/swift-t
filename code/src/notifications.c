@@ -7,7 +7,7 @@
 #include "refcount.h"
 #include "server.h"
 #include "sync.h"
-#include "turbine.h"
+#include "engine.h"
 
 #define MAX_NOTIF_PAYLOAD (32+ADLB_DATA_SUBSCRIPT_MAX)
 
@@ -320,13 +320,13 @@ xlb_notify_server_self(adlb_notif_rank *notif)
   adlb_data_code dc;
   if (adlb_has_sub(notif->subscript))
   {
-    dc = turbine_sub_close(notif->id, notif->subscript,
+    dc = xlb_engine_sub_close(notif->id, notif->subscript,
                           false, &xlb_server_ready_work);
     ADLB_DATA_CHECK(dc);
   }
   else
   {
-    dc = turbine_close(notif->id, false, &xlb_server_ready_work);
+    dc = xlb_engine_close(notif->id, false, &xlb_server_ready_work);
 
     ADLB_DATA_CHECK(dc);
   }

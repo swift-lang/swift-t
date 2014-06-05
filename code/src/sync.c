@@ -1047,17 +1047,17 @@ adlb_code xlb_handle_notify_sync(int rank,
     sub.key = malloced_subscript;
   }
 
-  turbine_engine_code tc;
+  xlb_engine_code tc;
   // process notification
   if (adlb_has_sub(sub))
   {
-    tc = turbine_sub_close(hdr->id, sub, true, &xlb_server_ready_work);
-    ADLB_TURBINE_CHECK(tc);
+    tc = xlb_engine_sub_close(hdr->id, sub, true, &xlb_server_ready_work);
+    ADLB_ENGINE_CHECK(tc);
   }
   else
   {
-    tc = turbine_close(hdr->id, true, &xlb_server_ready_work);
-    ADLB_TURBINE_CHECK(tc);
+    tc = xlb_engine_close(hdr->id, true, &xlb_server_ready_work);
+    ADLB_ENGINE_CHECK(tc);
   }
 
   if (malloced_subscript != NULL)

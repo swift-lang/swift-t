@@ -372,10 +372,10 @@ handle_put_rule(int caller)
   SEND(&response, 1, MPI_INT, caller, ADLB_TAG_RESPONSE_PUT);
 
   bool ready;
-  turbine_engine_code tc = turbine_rule(name, name_strlen,
+  xlb_engine_code tc = xlb_engine_rule(name, name_strlen,
         p->id_count, wait_ids, p->id_sub_count, wait_id_subs,
         work, &ready);
-  CHECK_MSG(tc == TURBINE_SUCCESS, "Error adding rule");
+  CHECK_MSG(tc == XLB_ENGINE_SUCCESS, "Error adding rule");
 
   if (ready)
   {
@@ -1308,7 +1308,7 @@ handle_notify(int caller)
   RECV(xfer, XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_NOTIFY);
   struct packed_notify_hdr *hdr = (struct packed_notify_hdr *)xfer;
 
-  turbine_engine_code tc;
+  xlb_engine_code tc;
   
   // TODO: support binary keys
   if (hdr->subscript_len > 0)
@@ -1319,17 +1319,17 @@ handle_notify(int caller)
     DEBUG("notification received: "ADLB_PRIDSUB, ADLB_PRIDSUB_ARGS(
           hdr->id, ADLB_DSYM_NULL, sub));
 
-    tc = turbine_sub_close(hdr->id, sub, true, &xlb_server_ready_work);
+    tc = xlb_engine_sub_close(hdr->id, sub, true, &xlb_server_ready_work);
   }
   else
   {
     DEBUG("notification received: "ADLB_PRID, ADLB_PRID_ARGS(hdr->id,
            ADLB_DSYM_NULL));
-    tc = turbine_close(hdr->id, true, &xlb_server_ready_work);
+    tc = xlb_engine_close(hdr->id, true, &xlb_server_ready_work);
   }
 
   // TODO: report error?
-  int resp = (tc == TURBINE_SUCCESS) ? ADLB_SUCCESS : ADLB_ERROR;
+  int resp = (tc == XLB_ENGINE_SUCCESS) ? ADLB_SUCCESS : ADLB_ERROR;
   RSEND(&resp, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
   return ADLB_SUCCESS;
 }
