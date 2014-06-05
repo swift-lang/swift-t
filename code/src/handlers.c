@@ -107,7 +107,7 @@ static adlb_code find_req_bytes(int *bytes, int caller, adlb_tag tag);
 
 static inline adlb_code send_work_unit(int worker, xlb_work_unit* wu);
 
-static inline adlb_code send_work(int worker, xlb_work_unit_id wuid, int type,
+static adlb_code send_work(int worker, xlb_work_unit_id wuid, int type,
                                   int answer,
                                   const void* payload, int length,
                                   int parallelism);
@@ -911,7 +911,7 @@ send_work_unit(int worker, xlb_work_unit* wu)
    Send the work unit to a worker
    Workers are blocked on the recv for this
  */
-static inline adlb_code
+static adlb_code
 send_work(int worker, xlb_work_unit_id wuid, int type, int answer,
           const void* payload, int length, int parallelism)
 {
