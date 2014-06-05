@@ -21,7 +21,7 @@
  *      Author: wozniak
  */
 
-#include "memory.h"
+#include "exm-memory.h"
 
 long KB;
 long MB;
