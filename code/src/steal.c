@@ -171,7 +171,7 @@ xlb_handle_steal_probe_resp(int caller,
 static adlb_code xlb_can_steal(const int *work_type_counts)
 {
   int request_q_sizes[xlb_types_size];
-  requestqueue_type_counts(request_q_sizes, xlb_types_size);
+  xlb_requestqueue_type_counts(request_q_sizes, xlb_types_size);
   for (int i = 0; i < xlb_types_size; i++)
   {
     if (request_q_sizes[i] > 0 &&
@@ -339,7 +339,7 @@ steal_payloads(int target, int count,
                     wus[i].parallelism);
       xlb_workq_add(work);
     } else {
-      work_unit_free(work);
+      xlb_work_unit_free(work);
     }
     if (wus[i].parallelism > 1)
     {
@@ -410,7 +410,7 @@ send_steal_batch(steal_cb_state *batch, bool finish)
 
   for (int i = 0; i < count; i++)
   {
-    work_unit_free(batch->work_units[i]);
+    xlb_work_unit_free(batch->work_units[i]);
   }
 
   batch->size = 0;

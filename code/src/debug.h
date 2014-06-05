@@ -48,7 +48,7 @@ extern bool xlb_debug_gc_enabled;
 /**
    Check environment to see if user disabled ADLB_DEBUG, ADLB_TRACE
  */
-adlb_code debug_check_environment(void);
+adlb_code xlb_debug_check_environment(void);
 
 /**
    Most warnings will result in fatal errors at some point,

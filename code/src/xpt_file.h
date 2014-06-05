@@ -86,7 +86,7 @@ adlb_code xlb_xpt_flush(xlb_xpt_state *state);
 /* Open existing checkpoint file.  Defaults to reading checkpoints
    from rank 0. This can be changed with a call to xlb_xpt_read_select.
  */
-adlb_code xlb_xpt_open_read(xlb_xpt_read_state *state, const char *filename);
+adlb_code xlb_xlb_xpt_open_read(xlb_xpt_read_state *state, const char *filename);
 
 /* Close checkpoint read file */
 adlb_code xlb_xpt_close_read(xlb_xpt_read_state *state);

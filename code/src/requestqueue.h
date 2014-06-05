@@ -51,7 +51,7 @@ int xlb_requestqueue_size(void);
    @param types array to be filled in with result
    @param size size of the array (greater than xlb_types_size)
  */
-void requestqueue_type_counts(int *types, int size);
+void xlb_requestqueue_type_counts(int *types, int size);
 
 /**
    Get number of workers (in result) equal to parallelism

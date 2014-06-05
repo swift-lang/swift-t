@@ -35,7 +35,7 @@
 
 #include "checks.h"
 
-char xfer[XFER_SIZE];
+char xlb_xfer[XLB_XFER_SIZE];
 
 int xlb_comm_size;
 int xlb_comm_rank = -1;

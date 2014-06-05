@@ -33,7 +33,7 @@ static adlb_xpt_flush_policy flush_policy;
 static int max_index_val_bytes;
 
 // Open files for reading
-struct table xpt_open_read;
+struct table xlb_xpt_open_read;
 
 // Interval to flush checkpoint entries (TODO: configurable)
 #define FLUSH_INTERVAL_S 30
@@ -85,7 +85,7 @@ adlb_code ADLB_Xpt_init(const char *filename, adlb_xpt_flush_policy fp,
     last_flush_time = MPI_Wtime();
   }
 
-  table_init(&xpt_open_read, 128);
+  table_init(&xlb_xpt_open_read, 128);
   return ADLB_SUCCESS;
 }
 
@@ -259,13 +259,13 @@ static adlb_code read_file_val(xpt_file_loc *file_loc,
 
 /*
   If already open, return previous handle to file.
-  Otherwise, open file for reading, store in xpt_open_read for reuse.
+  Otherwise, open file for reading, store in xlb_xpt_open_read for reuse.
  */
 static adlb_code cached_open_read(xlb_xpt_read_state **state,
                                   const char *filename)
 {
   xlb_xpt_read_state *tmp;
-  if (table_search(&xpt_open_read, filename, (void**)&tmp))
+  if (table_search(&xlb_xpt_open_read, filename, (void**)&tmp))
   {
     DEBUG("Found existing handle for file %s: %p", filename, tmp);
     *state = tmp;
@@ -274,13 +274,13 @@ static adlb_code cached_open_read(xlb_xpt_read_state **state,
 
   tmp = malloc(sizeof(xlb_xpt_read_state));
   CHECK_MSG(tmp != NULL, "Error allocating memory");
-  adlb_code rc = xlb_xpt_open_read(tmp, filename);
+  adlb_code rc = xlb_xlb_xpt_open_read(tmp, filename);
   if (rc != ADLB_SUCCESS)
   {
     free(tmp);
   }
   ADLB_CHECK(rc);
-  table_add(&xpt_open_read, filename, tmp);
+  table_add(&xlb_xpt_open_read, filename, tmp);
   *state = tmp;
   DEBUG("Created new handle for file %s: %p", filename, tmp);
   return ADLB_SUCCESS;
@@ -469,7 +469,7 @@ static adlb_code xpt_check_flush(void)
   }
 
   // Cleanup any files open for reading
-  table_free_callback(&xpt_open_read, false, free_open_read);
+  table_free_callback(&xlb_xpt_open_read, false, free_open_read);
   return ADLB_SUCCESS;
 }
 

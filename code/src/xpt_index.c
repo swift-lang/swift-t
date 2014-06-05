@@ -65,12 +65,13 @@ adlb_code xlb_xpt_index_lookup(const void *key, int key_len,
 
   adlb_retrieve_refc refcounts = ADLB_RETRIEVE_NO_REFC;
 
-  void *buffer = xfer; 
+  void *buffer = xlb_xfer; 
   adlb_data_type type;
   int length;
-  adlb_code rc = ADLB_Retrieve(id, subscript, refcounts, &type, buffer, &length);
-  CHECK_MSG(rc == ADLB_SUCCESS, "Error looking up checkpoint in container "
-                                "%"PRId64, id);
+  adlb_code rc = ADLB_Retrieve(id, subscript, refcounts, &type,
+                               buffer, &length);
+  CHECK_MSG(rc == ADLB_SUCCESS, "Error looking up checkpoint in "
+            "container %"PRId64, id);
   if (length < 0)
   {
     // Not present
@@ -89,7 +90,7 @@ adlb_code xlb_xpt_index_lookup(const void *key, int key_len,
     char *pos = (char*)buffer;
     size_t filename_len;
     CHECK_MSG(length >= sizeof(filename_len), "Buffer not large enough "
-              "for filename len: %d v %zu", length, sizeof(filename_len));
+            "for filename len: %d v %zu", length, sizeof(filename_len));
     MSG_UNPACK_BIN(pos, &filename_len);
 
     // Check buffer was expected size (members plus in_file byte)
@@ -136,8 +137,9 @@ adlb_code xlb_xpt_index_add(const void *key, int key_len,
   assert(key != NULL);
   assert(key_len >= 0);
 
-  // Using xfer limits the checkpoint size to ADLB_XPT_MAX == ADLB_DATA_MAX - 1
-  // NOTE: assuming that ADLB_Store doesn't use xfer
+  // Using xlb_xfer limits the checkpoint size to ADLB_XPT_MAX ==
+  // ADLB_DATA_MAX - 1
+  // NOTE: assuming that ADLB_Store doesn't use xlb_xfer
   assert(ADLB_XPT_MAX <= ADLB_DATA_MAX - 1);
 
   const void *data; // Pointer to binary repr
@@ -145,7 +147,7 @@ adlb_code xlb_xpt_index_add(const void *key, int key_len,
   if (entry->in_file)
   {
     // Write info to binary buffer
-    char *xfer_pos = xfer;
+    char *xfer_pos = xlb_xfer;
     size_t filename_len = entry->FILE_LOC.file != NULL ?
             strlen(entry->FILE_LOC.file) : 0;
     MSG_PACK_BIN(xfer_pos, filename_len);
@@ -160,8 +162,8 @@ adlb_code xlb_xpt_index_add(const void *key, int key_len,
     *xfer_pos = (char) 1; // File flag
     xfer_pos++;
 
-    data = xfer;
-    data_len = xfer_pos - xfer;
+    data = xlb_xfer;
+    data_len = xfer_pos - xlb_xfer;
     assert(data_len <= ADLB_XPT_MAX); // Should certainly be smaller
   }
   else
@@ -169,10 +171,10 @@ adlb_code xlb_xpt_index_add(const void *key, int key_len,
     CHECK_MSG(entry->DATA.length <= ADLB_XPT_MAX, 
       "Checkpoint data too long: %i vs. %i", key_len, ADLB_XPT_MAX);
     // Set file flag
-    memcpy(xfer, entry->DATA.data, (size_t)entry->DATA.length);
-    xfer[entry->DATA.length] = (char)0; // file flag
+    memcpy(xlb_xfer, entry->DATA.data, (size_t)entry->DATA.length);
+    xlb_xfer[entry->DATA.length] = (char)0; // file flag
 
-    data = xfer;
+    data = xlb_xfer;
     data_len = entry->DATA.length + 1;
   }
   adlb_refc refcounts = ADLB_NO_REFC;

@@ -29,7 +29,7 @@ bool xlb_debug_enabled = true;
 bool xlb_trace_enabled = true;
 
 adlb_code
-debug_check_environment()
+xlb_debug_check_environment()
 {
   bool rc;
     

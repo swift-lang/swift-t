@@ -663,7 +663,7 @@ servers_idle()
   int *work_counts = malloc(sizeof(int) *
                               (size_t)(xlb_types_size * xlb_servers));
   // First fill in counts from this server
-  requestqueue_type_counts(request_counts, xlb_types_size);
+  xlb_requestqueue_type_counts(request_counts, xlb_types_size);
   xlb_workq_type_counts(work_counts, xlb_types_size);
   
   int rc;

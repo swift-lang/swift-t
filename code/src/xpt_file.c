@@ -497,7 +497,7 @@ adlb_code xlb_xpt_flush(xlb_xpt_state *state)
 /*
   Open a checkpoint file for reading.
  */
-adlb_code xlb_xpt_open_read(xlb_xpt_read_state *state, const char *filename)
+adlb_code xlb_xlb_xpt_open_read(xlb_xpt_read_state *state, const char *filename)
 {
   state->file = fopen(filename, "rb");
   CHECK_MSG(state->file != NULL, "Could not open %s for read", filename);

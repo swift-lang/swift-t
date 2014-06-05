@@ -283,7 +283,7 @@ xlb_requestqueue_size()
   return request_queue_size;
 }
 
-void requestqueue_type_counts(int* types, int size) {
+void xlb_requestqueue_type_counts(int* types, int size) {
   assert(size >= xlb_types_size);
   int total = 0;
   for (int t = 0; t < xlb_types_size; t++) {

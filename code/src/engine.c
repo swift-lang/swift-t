@@ -507,7 +507,7 @@ transform_free(transform* T)
   if (T->name != NULL)
     free(T->name);
   if (T->work)
-    work_unit_free(T->work);
+    xlb_work_unit_free(T->work);
   if (T->input_id_list)
     free(T->input_id_list);
   if (T->input_id_sub_list)

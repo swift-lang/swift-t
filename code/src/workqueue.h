@@ -95,7 +95,7 @@ adlb_code xlb_workq_add(xlb_work_unit *wu);
 
 /**
    Return work unit for rank target and given type.
-   Caller must work_unit_free() the result if
+   Caller must xlb_work_unit_free() the result if
    Returns NULL if nothing found
  */
 xlb_work_unit* xlb_workq_get(int target, int type);
@@ -139,7 +139,7 @@ adlb_code xlb_workq_steal(int max_memory, const int *steal_type_counts,
  */
 void xlb_workq_type_counts(int *types, int size);
 
-void work_unit_free(xlb_work_unit* wu);
+void xlb_work_unit_free(xlb_work_unit* wu);
 
 void xlb_print_workq_perf_counters(void);
 

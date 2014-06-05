@@ -418,7 +418,7 @@ void xlb_workq_type_counts(int *types, int size)
 }
 
 void
-work_unit_free(xlb_work_unit* wu)
+xlb_work_unit_free(xlb_work_unit* wu)
 {
   free(wu);
 }
@@ -427,7 +427,7 @@ static bool
 wu_rbtree_clear_callback(struct rbtree_node *node, void *data)
 {
   // Just free the work unit
-  work_unit_free((xlb_work_unit*)data);
+  xlb_work_unit_free((xlb_work_unit*)data);
   return true;
 }
 
@@ -435,7 +435,7 @@ static void
 wu_heap_clear_callback(heap_key_t k, heap_val_t v)
 {
   // Just free the work unit
-  work_unit_free((xlb_work_unit*)v);
+  xlb_work_unit_free((xlb_work_unit*)v);
 }
 
 static void
