@@ -23,18 +23,22 @@ typedef struct {
   turbine_exec_slot_state slots;
 } noop_state;
 
-turbine_exec_code noop_initialize(const void *context, void **state);
+static turbine_exec_code
+noop_initialize(const void *context, void **state);
 
-turbine_exec_code noop_shutdown(void *state);
+static turbine_exec_code
+noop_shutdown(void *state);
 
-turbine_exec_code noop_wait(void *state,
-        turbine_completed_task **completed, int *ncompleted);
+static turbine_exec_code
+noop_wait(void *state, turbine_completed_task **completed,
+          int *ncompleted);
 
-turbine_exec_code noop_poll(void *state,
-        turbine_completed_task **completed, int *ncompleted);
+static turbine_exec_code
+noop_poll(void *state, turbine_completed_task **completed,
+          int *ncompleted);
 
-turbine_exec_code noop_slots(void *state,
-        turbine_exec_slot_state *slots);
+static turbine_exec_code
+noop_slots(void *state, turbine_exec_slot_state *slots);
 
 static void
 init_noop_executor(turbine_executor *exec, int adlb_work_type)
@@ -61,7 +65,8 @@ noop_executor_register(int adlb_work_type)
   turbine_add_async_exec(exec);
 }
 
-turbine_exec_code noop_initialize(const void *context, void **state)
+static turbine_exec_code
+noop_initialize(const void *context, void **state)
 {
   assert(context == NOOP_CONTEXT);
   noop_state *tmp = malloc(sizeof(noop_state)); 
@@ -73,14 +78,16 @@ turbine_exec_code noop_initialize(const void *context, void **state)
   return TURBINE_EXEC_SUCCESS;
 }
 
-turbine_exec_code noop_shutdown(void *state)
+static turbine_exec_code
+noop_shutdown(void *state)
 {
   free(state);
   return TURBINE_EXEC_SUCCESS;
 }
 
-turbine_exec_code noop_wait(void *state,
-        turbine_completed_task **completed, int *ncompleted)
+static turbine_exec_code
+noop_wait(void *state, turbine_completed_task **completed,
+          int *ncompleted)
 {
   // TODO: determine number finished
 
@@ -88,8 +95,9 @@ turbine_exec_code noop_wait(void *state,
   return TURBINE_EXEC_SUCCESS;
 }
 
-turbine_exec_code noop_poll(void *state,
-        turbine_completed_task **completed, int *ncompleted)
+static turbine_exec_code
+noop_poll(void *state, turbine_completed_task **completed,
+          int *ncompleted)
 {
   // TODO: determine number finished
 
@@ -97,8 +105,8 @@ turbine_exec_code noop_poll(void *state,
   return TURBINE_EXEC_SUCCESS;
 }
 
-turbine_exec_code noop_slots(void *state,
-        turbine_exec_slot_state *slots)
+static turbine_exec_code
+noop_slots(void *state, turbine_exec_slot_state *slots)
 {
   *slots = ((noop_state*)state)->slots;
   return TURBINE_EXEC_SUCCESS;
