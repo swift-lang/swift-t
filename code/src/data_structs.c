@@ -124,7 +124,10 @@ adlb_data_code ADLB_Declare_struct_type(adlb_struct_type type,
   }
   
   // Add struct type name to index
-  adlb_type_extra extra = { .valid = true, .STRUCT.struct_type=type };
+  adlb_type_extra extra;
+  extra.valid = true;
+  extra.STRUCT.struct_type = type;
+  
   dc = xlb_data_type_add(type_name, ADLB_DATA_TYPE_STRUCT, extra);
   DATA_CHECK(dc);
 
