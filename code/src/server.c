@@ -27,7 +27,7 @@
 #include <mpi.h>
 
 #include <list_i.h>
-#include <memory.h>
+#include <exm-memory.h>
 #include <tools.h>
 
 #include "adlb.h"
