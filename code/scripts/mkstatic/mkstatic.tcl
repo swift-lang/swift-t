@@ -240,6 +240,9 @@ proc read_manifest { manifest_filename ignore_no_manifest main_script_override }
   # lib scripts are executed before main script
   set lib_scripts [ list ]
 
+  # bundled files to be extracted
+  set bundled_files [ list ]
+
   # C function names to initialise Tcl modules
   set lib_init_fns [ list ]
 
@@ -294,6 +297,11 @@ proc read_manifest { manifest_filename ignore_no_manifest main_script_override }
             lappend lib_scripts [ file join $manifest_dir $trimmed_val ]
           }
         }
+        bundled_file {
+          if { ! [ string equal $trimmed_val "" ] } {
+            lappend bundled_files [ file join $manifest_dir $trimmed_val ]
+          }
+        }
         lib_init {
           if { ! [ string equal $trimmed_val "" ] } {
             lappend lib_init_fns $trimmed_val
@@ -324,6 +332,7 @@ proc read_manifest { manifest_filename ignore_no_manifest main_script_override }
   return [ dict create manifest_dir $manifest_dir \
             pkg_name $pkg_name pkg_version $pkg_version \
             main_script $main_script lib_scripts $lib_scripts \
+            bundled_files $bundled_files \
             lib_init_fns $lib_init_fns lib_includes $lib_includes \
             lib_objects $lib_objects linker_libs $linker_libs ]
 }
@@ -629,6 +638,10 @@ proc varname_from_file { var_prefix fname used_names } {
   return $name
 }
 
+proc bundled_file_basename { path } {
+  return [ file tail $path ]
+}
+
 # Fill in C template
 # manifest_dict: data from manifest file
 # skip_tcl_init: if true, skip regular Tcl_Init function
@@ -698,6 +711,21 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init sys_lib_dir \
                                            $lib_script $all_vars ]
     lappend lib_script_vars $lib_script_var 
     lappend all_vars $lib_script_var
+  }
+
+  set bundled_files [ dict get $manifest_dict bundled_files ]
+  set bundled_basenames [ list ]
+  set bundled_vars [ list ]
+  foreach bundled_file $bundled_files {
+    set bundled_var [ varname_from_file $resource_var_prefix \
+                                            $bundled_file $all_vars ]
+    lappend bundled_vars $bundled_var
+    lappend all_vars $bundled_var
+
+    set bundled_basename [ bundled_file_basename $bundled_file ]
+    if { [ lsearch -exact $bundled_basenames $bundled_basename ] >= 0 } {
+      user_err "Duplicate base names for bundled files: $bundled_basename"    
+    }
   }
 
   set all_src_vars [ concat $init_lib_src_vars {*}$lib_script_vars ]
@@ -771,7 +799,7 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init sys_lib_dir \
           verbose_msg "ingesting main script:" $main_script
           if { [ string length $main_script ] == 0 } {
             # Output placeholder
-            puts $c_output "static const char $MAIN_SCRIPT_STRING\[\] = {0x0};"
+            puts $c_output "static const unsigned char $MAIN_SCRIPT_STRING\[\] = {0x0};"
           } else {
             set rc [ catch { exec -ignorestderr $F2A \
                 -v $MAIN_SCRIPT_STRING -m "static const" $main_script \
@@ -789,10 +817,46 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init sys_lib_dir \
         RESOURCE_DECLS {
           # iterate through resource files, output declarations
           foreach var $all_src_vars src_file $all_src_files {
-            puts $c_output "static const char $var\[\];\
+            puts $c_output "static const unsigned char $var\[\];\
                             /* $src_file */"
             puts $c_output "static const size_t ${var}_len;"
           }
+
+          foreach var $bundled_vars bundled_file $bundled_files {
+            puts $c_output "static const unsigned char $var\[\];\
+                            /* $bundled_file */"
+            puts $c_output "static const size_t ${var}_len;"
+          }
+
+          puts $c_output "static const unsigned char *bundled_file_data\[\] = {"
+          foreach var $bundled_vars {
+            puts $c_output "$var, " 
+          }
+          puts $c_output "};"
+          
+          puts $c_output "static const size_t *bundled_file_lens\[\] = {"
+          foreach var $bundled_vars {
+            puts $c_output "&${var}_len, " 
+          }
+          puts $c_output "};"
+          
+          puts $c_output "static const char *bundled_file_names\[\] = {"
+          foreach bundled_file $bundled_files {
+            puts $c_output "\"[ bundled_file_basename $bundled_file ]\", " 
+          }
+          puts $c_output "};"
+        }
+        BUNDLED_FILES_COUNT {
+          puts -nonewline $c_output [ llength $bundled_files ]
+        }
+        BUNDLED_FILE_NAMES {
+          puts -nonewline $c_output "bundled_file_names"
+        }
+        BUNDLED_FILE_DATA {
+          puts -nonewline $c_output "bundled_file_data"
+        }
+        BUNDLED_FILE_LENS {
+          puts -nonewline $c_output "bundled_file_lens"
         }
         RESOURCE_DATA {
           # TODO: Ctrl-D in .tm file not handled right - .tm files can
@@ -806,6 +870,18 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init sys_lib_dir \
                      -m "static const" $src_file >@${c_output} } ]
             if { $rc } {
               user_err "could not convert tcl file $src_file to C array"
+            }
+          }
+          
+          foreach var $bundled_vars bundled_file $bundled_files {
+            #TODO: strip directory
+            #TODO: check for duplicate names
+            verbose_msg "ingesting file: $var $bundled_file"
+            puts $c_output "/* data from $bundled_file */"
+            set rc [ catch { exec -ignorestderr $F2A -v $var \
+                     -m "static const" $bundled_file >@${c_output} } ]
+            if { $rc } {
+              user_err "could not convert file $bundled_file to C array"
             }
           }
         }
@@ -988,8 +1064,8 @@ proc gen_pkg_init_fn { outf init_fn_name lib_init_fns \
 # from C function upon failure. Assumes that there is a matching var,
 # ${var}_len that has length of source
 proc eval_resource_var { outf var resource_file } {
-  puts $outf "  if \(tcl_eval_bundled_file(interp, $var, (int)${var}_len, \
-                              \"$resource_file\") != TCL_OK) {"
+  puts $outf "  if \(tcl_eval_bundled_file(interp, (const char*)$var, \
+                      (int)${var}_len, \"$resource_file\") != TCL_OK) {"
   # Error info printing handled in function
   puts $outf "    return TCL_ERROR;"
   puts $outf "  }"

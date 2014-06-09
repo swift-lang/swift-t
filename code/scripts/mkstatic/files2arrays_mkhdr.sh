@@ -89,7 +89,7 @@ echo
 # Print out header file
 for arrname in "${arrnames[@]}"
 do
-  echo "extern $modifiers char $arrname[];"
+  echo "extern $modifiers unsigned char $arrname[];"
   echo "extern $modifiers size_t ${arrname}_len;"
 done
 echo

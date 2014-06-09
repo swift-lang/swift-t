@@ -73,7 +73,7 @@ fi
 echo "/*FILE2ARRAY:$arrname:$infile*/"
 echo "#include <stddef.h>" # For size_t
 echo
-echo "$modifiers char $arrname[] = {"
+echo "$modifiers unsigned char $arrname[] = {"
 data=$(mktemp)
 if ! (cat $infile && head -c 1 /dev/zero ) > $data; then
   rm $data

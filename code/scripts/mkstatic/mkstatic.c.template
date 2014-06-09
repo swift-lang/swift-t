@@ -32,10 +32,12 @@
 #include <tcl-turbine.h>
 #include <static-pkg.h>
 
+static bool extract_bundled_files(void);
+
 @USER_HEADERS@
 
 static const bool has_main_string = @HAS_MAIN_SCRIPT_STRING@;
-static const char @MAIN_SCRIPT_STRING@[];
+static const unsigned char @MAIN_SCRIPT_STRING@[];
 
 @RESOURCE_DECLS@
 
@@ -82,6 +84,12 @@ int MkStatic_Tcl_Init(Tcl_Interp *interp)
 int
 main(int argc, char **argv)
 {
+  if (!extract_bundled_files())
+  {
+    exit(1);
+  }
+
+
   Tcl_Interp *interp = Tcl_CreateInterp();
 
   if (MkStatic_Tcl_Init(interp) != TCL_OK)
@@ -93,7 +101,7 @@ main(int argc, char **argv)
   char *script_file = NULL;
   if (has_main_string)
   {
-    tc = turbine_run_string(MPI_COMM_NULL, @MAIN_SCRIPT_STRING@,
+    tc = turbine_run_string(MPI_COMM_NULL, (const char*)@MAIN_SCRIPT_STRING@,
                             argc, argv, NULL, interp);
   }
   else
@@ -138,6 +146,46 @@ main(int argc, char **argv)
     return 2;
   }
   return 0;
+}
+
+static bool extract_bundled_files(void)
+{
+  // TODO: other tmp dir
+  // Note: assume tmp dir exists
+  const char *dst_dir = "/tmp";
+
+  for (int i = 0; i < @BUNDLED_FILES_COUNT@; i++)
+  {
+    const char *name = @BUNDLED_FILE_NAMES@[i];
+    const unsigned char *data = @BUNDLED_FILE_DATA@[i];
+    size_t len = *@BUNDLED_FILE_LENS@[i];
+
+    char path[strlen(dst_dir) + strlen(name) + 1];
+    sprintf(path, "%s/%s", dst_dir, name);
+    FILE *out = fopen(path, "wb");
+    if (out == NULL)
+    {
+      fprintf(stderr, "Could not open %s for writing\n", path);
+      return false;
+    }
+
+    if (fwrite(data, 1, len, out) != len)
+    {
+      // TODO: retry?
+      fprintf(stderr, "Error writing to file %s\n", path);
+      return false;
+    }
+
+    if (fclose(out) != 0)
+    {
+      // TODO: retry?
+      fprintf(stderr, "Error closing file %s\n", path);
+      return false;
+    }
+
+  }
+
+  return true;
 }
 
 // Binary data for Tcl main script
