@@ -24,12 +24,16 @@ source ${TESTS}/setup.sh > ${OUTPUT} 2>&1
 set -x
 export TURBINE_USER_LIB=${THIS%.sh}/
 
+export MKSTATIC_TMPDIR=$(mktemp -d)
+
+echo "MKSTATIC_TMPDIR=${MKSTATIC_TMPDIR}"
+
 ${TESTS}/run-mpi.zsh ${BIN} >& ${OUTPUT}
 [[ ${?} == 0 ]] || test_result 1
 
 for f in ${THIS%.sh}.data*
 do
-  dst=/tmp/$(basename $f)
+  dst="${MKSTATIC_TMPDIR}/$(basename $f)"
   if [ ! -f "$dst" ]
   then
     echo "Expected data file to be extracted at $dst"
@@ -42,5 +46,7 @@ do
     exit 1
   fi  
 done
+
+rm -rf "${MKSTATIC_TMPDIR}"
 
 test_result 0

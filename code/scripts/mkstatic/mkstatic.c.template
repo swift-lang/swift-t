@@ -22,8 +22,10 @@
  */
 
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <tcl.h>
 #include <mpi.h>
@@ -150,9 +152,20 @@ main(int argc, char **argv)
 
 static bool extract_bundled_files(void)
 {
-  // TODO: other tmp dir
-  // Note: assume tmp dir exists
   const char *dst_dir = "/tmp";
+
+  // Check POSIX temporary dir location
+  if (getenv("TMPDIR") != NULL)
+  {
+    dst_dir = getenv("TMPDIR");
+  }
+
+  if (getenv("MKSTATIC_TMPDIR") != NULL)
+  {
+    dst_dir = getenv("MKSTATIC_TMPDIR");
+  }
+  
+  // Note: assume dst_dir exists
 
   for (int i = 0; i < @BUNDLED_FILES_COUNT@; i++)
   {
@@ -171,15 +184,15 @@ static bool extract_bundled_files(void)
 
     if (fwrite(data, 1, len, out) != len)
     {
-      // TODO: retry?
-      fprintf(stderr, "Error writing to file %s\n", path);
+      fprintf(stderr, "Error writing to file %s: %s\n", path,
+                      strerror(errno));
       return false;
     }
 
     if (fclose(out) != 0)
     {
-      // TODO: retry?
-      fprintf(stderr, "Error closing file %s\n", path);
+      fprintf(stderr, "Error closing file %s: %s\n", path,
+                       strerror(errno));
       return false;
     }
 

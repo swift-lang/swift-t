@@ -525,7 +525,7 @@ proc lib_init_order { tcl_version lib1 lib2 } {
 # Return list of source command args if successful
 proc pkg_analyse { name version init_script } {
   # TODO: naive parsing into commands that may give incorrect results
-  # sometimes, # but should be good enough for 99% of cases (we can
+  # sometimes, but should be good enough for 99% of cases (we can
   # just revert to doing nothing in cases where it doesn't work)
   set subs [ list "\\\n" " " ";" "\n" ]
   set init_script_cmds [ split [ string map $subs $init_script ] "\n" ]
@@ -874,8 +874,6 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init sys_lib_dir \
           }
           
           foreach var $bundled_vars bundled_file $bundled_files {
-            #TODO: strip directory
-            #TODO: check for duplicate names
             verbose_msg "ingesting file: $var $bundled_file"
             puts $c_output "/* data from $bundled_file */"
             set rc [ catch { exec -ignorestderr $F2A -v $var \
