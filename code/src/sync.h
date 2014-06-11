@@ -203,6 +203,11 @@ static inline adlb_code xlb_check_sync_msgs(int *caller)
 {
   int flag = 0;
   MPI_Status status;
+  if (xlb_sync_recv_size <= 0)
+  {
+    return ADLB_NOTHING;
+  }
+
   xlb_sync_recv *head = &xlb_sync_recvs[xlb_sync_recv_head];
   MPI_TEST2(&head->req, &flag, &status);
 

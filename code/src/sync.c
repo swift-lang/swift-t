@@ -82,7 +82,10 @@ int xlb_sync_recv_head;
 int xlb_sync_recv_size = 0;
 
 // Default cap on number of buffers
-#define XLB_SYNC_RECV_DEFAULT_MAX 2048
+// This affects performance:
+// Too high, and we have many posted receives to match messages against
+// Too small, and messages go into the unexpected message queue
+#define XLB_SYNC_RECV_DEFAULT_MAX 16
 static adlb_code xlb_sync_recv_init_size(int servers, int *size);
 
 /*
@@ -109,9 +112,18 @@ xlb_sync_init(void)
   rc = xlb_sync_recv_init_size(xlb_servers, &xlb_sync_recv_size);
   ADLB_CHECK(rc);
   xlb_sync_recv_head = 0;
-  xlb_sync_recvs = malloc((size_t)xlb_sync_recv_size *
-                          sizeof(xlb_sync_recvs[0]));
-  ADLB_MALLOC_CHECK(xlb_sync_recvs);
+  if (xlb_sync_recv_size > 0)
+  {
+    xlb_sync_recvs = malloc((size_t)xlb_sync_recv_size *
+                            sizeof(xlb_sync_recvs[0]));
+    ADLB_MALLOC_CHECK(xlb_sync_recvs);
+  }
+  else
+  {
+    xlb_sync_recvs = NULL;
+  }
+
+  DEBUG("Allocate %i sync recv buffers\n", xlb_sync_recv_size);
 
   for (int i = 0; i < xlb_sync_recv_size; i++)
   {
@@ -216,6 +228,9 @@ void xlb_print_sync_counters(void)
   }
 }
 
+/*
+  Decide number of sync receive buffers to use.
+ */
 static adlb_code xlb_sync_recv_init_size(int servers, int *size)
 {
   long tmp;
@@ -229,7 +244,9 @@ static adlb_code xlb_sync_recv_init_size(int servers, int *size)
     return ADLB_SUCCESS;
   }
 
-  *size = servers * 4;
+  // Base size on number of other servers
+  // Can be zero.
+  *size = (servers - 1) * 4;
   if (*size >= XLB_SYNC_RECV_DEFAULT_MAX)
   {
     *size = XLB_SYNC_RECV_DEFAULT_MAX;
