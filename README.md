@@ -39,7 +39,7 @@ specific systems.
 
 Checkout this project:
 
-    git clone https://github.com/timarmstrong/swift-t.git swift-t
+    git clone https://github.com/swift-lang/swift-t.git swift-t
     cd swift-t
 
 Checkout all submodule projects:
