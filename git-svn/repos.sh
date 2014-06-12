@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+EXM_SVN=https://svn.mcs.anl.gov/repos/exm/sfw
+
+GITHUB_ROOT=git@github.com:swift-lang
+
 # Subrepos with trunk/branch/tags
 branch_subrepos="c-utils lb turbine stc"
 # Subrepos with no branches
