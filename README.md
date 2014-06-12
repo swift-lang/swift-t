@@ -118,12 +118,12 @@ running autotools.
 
 Documentation
 -------------
-The main documentation for Swift/T is under +stc/docs+.  The documentation
-is in +asciidoc+ format.  You can look at the main documentation in text
-format in +swift.txt+.  You can also compile the documentation to html
+The main documentation for Swift/T is under `stc/docs`.  The documentation
+is in `asciidoc` format.  You can look at the main documentation in text
+format in `swift.txt`.  You can also compile the documentation to html
 by running:
 
   ./make-stc-docs.zsh 
 
 A sites guide that provides guidance for configuring Swift/T on various
-systems is at +turbine/docs/sites.txt+.
+systems is at `turbine/docs/sites.txt`.
