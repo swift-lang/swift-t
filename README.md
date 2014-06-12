@@ -5,8 +5,12 @@ and command-line executables into massively parallel applications.
 If you are not doing development, prepackaged distributions are available
 at http://www.mcs.anl.gov/exm/local/guides/swift.html
 
-The Swift/T user guide is currently available at:
+The Swift/T user guide is available online at:
 http://www.mcs.anl.gov/exm/local/guides/swift.html
+
+You can find the documentation corresponding to this version of Swift/T
+in the stc sub-project under docs.  See Documentation section for
+instructions on building.
 
 Prerequisites
 -------------
@@ -83,7 +87,7 @@ build system details.
 
 MPICH3 Quick Build Instructions
 -------------------------------
-Uncomment the `MPI\_INSTALL` setting in exm-settings.sh:
+Uncomment the `MPI_INSTALL` setting in exm-settings.sh:
 
     MPI_INSTALL=${EXM_PREFIX}/mpi
 
@@ -111,3 +115,15 @@ build that module from the module's source directory.  The two most useful
 helper scripts are `fast-build-all.sh`, for quickly rebuilding all modules,
 and `rebuild-all.sh`, to do a complete reconfiguration and build, including
 running autotools.
+
+Documentation
+-------------
+The main documentation for Swift/T is under +stc/docs+.  The documentation
+is in +asciidoc+ format.  You can look at the main documentation in text
+format in +swift.txt+.  You can also compile the documentation to html
+by running:
+
+  ./make-stc-docs.zsh 
+
+A sites guide that provides guidance for configuring Swift/T on various
+systems is at +turbine/docs/sites.txt+.
