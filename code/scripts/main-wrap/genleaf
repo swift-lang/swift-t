@@ -62,6 +62,7 @@ do
     s)
       STATIC=1
       MANIFEST=$OPTARG
+      echo "using manifest: $MANIFEST"
       ;;
     v)
       VERBOSE=$(( VERBOSE + 1 ))
