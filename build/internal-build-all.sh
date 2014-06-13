@@ -23,7 +23,7 @@ echo
 echo "Building lb"
 pwd
 echo "================"
-${THISDIR}/adlb-build.sh
+${THISDIR}/lb-build.sh
 popd
 
 pushd ${TURBINE_SRC}
