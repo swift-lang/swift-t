@@ -138,5 +138,6 @@ turbine_async_exec_finalize(void);
 
 #define TMP_EXEC_CHECK(code) assert((code) == TURBINE_EXEC_SUCCESS)
 #define TMP_MALLOC_CHECK(p) assert(p != NULL)
+#define TMP_CONDITION(cond) assert(cond);
 
 #endif //__ASYNC_EXEC_H

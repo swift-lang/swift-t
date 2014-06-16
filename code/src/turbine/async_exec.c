@@ -115,6 +115,22 @@ turbine_add_async_exec(turbine_executor executor)
   return TURBINE_SUCCESS;
 }
 
+static turbine_executor *
+get_mutable_async_exec(const char *name)
+{
+  turbine_executor *executor;
+  if (!table_search(&executors, name, (void**)&executor)) {
+    printf("Could not find executor: \"%s\"\n", name);
+    return NULL;
+  }
+  return executor;
+}
+
+const turbine_executor *
+turbine_get_async_exec(const char *name)
+{
+  return get_mutable_async_exec(name);
+}
 
 turbine_code
 turbine_async_worker_loop(const char *exec_name, void *buffer,
@@ -127,12 +143,8 @@ turbine_async_worker_loop(const char *exec_name, void *buffer,
   assert(buffer_size > 0);
   // TODO: check buffer large enough for work units
 
-  turbine_executor *executor;
-  if (!table_search(&executors, exec_name, (void**)&executor)) {
-    printf("Could not find executor: \"%s\"\n", exec_name);
-    return TURBINE_ERROR_INVALID;
-  }
-  assert(executor != NULL);
+  turbine_executor *executor = get_mutable_async_exec(exec_name);
+  TMP_CONDITION(executor != NULL);
 
   assert(executor->initialize != NULL);
   ec = executor->initialize(executor->context, &executor->state);

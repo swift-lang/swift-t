@@ -66,6 +66,7 @@ TEST_SRC_TCL := $(DIR)/error.tcl               \
                 $(DIR)/deep_rule.tcl           \
                 $(DIR)/deep_rule-2.tcl         \
                 $(DIR)/subscript_rule.tcl      \
+                $(DIR)/noop-exec-1.tcl      \
 
 #                 $(DIR)/blob-big.tcl            \
 
