@@ -20,9 +20,9 @@
 
 #define NOOP_CONTEXT ((void*)0x1)
 
-struct noop_state {
+typedef struct noop_state {
   turbine_exec_slot_state slots;
-};
+} noop_state;
 
 static turbine_exec_code
 noop_initialize(const void *context, void **state);
@@ -44,7 +44,7 @@ noop_slots(void *state, turbine_exec_slot_state *slots);
 static void
 init_noop_executor(turbine_executor *exec, int adlb_work_type)
 {
-  exec->name = "Noop";
+  exec->name = NOOP_EXECUTOR_NAME;
   exec->adlb_work_type = adlb_work_type;
   exec->notif_mode = EXEC_POLLING;
 
@@ -58,12 +58,16 @@ init_noop_executor(turbine_executor *exec, int adlb_work_type)
   exec->slots = noop_slots;
 }
 
-void
+turbine_exec_code
 noop_executor_register(int adlb_work_type)
 {
+  turbine_exec_code ec;
   turbine_executor exec;
   init_noop_executor(&exec, adlb_work_type);
-  turbine_add_async_exec(exec);
+  ec = turbine_add_async_exec(exec);
+  TMP_EXEC_CHECK(ec);
+
+  return TURBINE_EXEC_SUCCESS;
 }
 
 static turbine_exec_code
@@ -87,10 +91,11 @@ noop_shutdown(void *state)
 }
 
 turbine_exec_code
-noop_execute(noop_state *state, const void *work, int length)
+noop_execute(void *state, const void *work, int length)
 {
-  assert(state->slots.used < state->slots.total);
-  state->slots.used++;
+  noop_state *s = state;
+  assert(s->slots.used < s->slots.total);
+  s->slots.used++;
 
   return TURBINE_EXEC_SUCCESS;
 }

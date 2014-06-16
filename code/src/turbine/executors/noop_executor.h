@@ -20,12 +20,16 @@
 #include "src/turbine/async_exec.h"
 #include "src/turbine/turbine-defs.h"
 
-void
-noop_executor_register(int adlb_work_type);
-
-typedef struct noop_state noop_state;
+// Registered name for noop executor
+#define NOOP_EXECUTOR_NAME "Noop"
 
 turbine_exec_code
-noop_execute(noop_state *state, const void *work, int length);
+noop_executor_register(int adlb_work_type);
+
+/*
+  Execute a task
+ */
+turbine_exec_code
+noop_execute(void *state, const void *work, int length);
 
 #endif //__NOOP_EXECUTOR_H

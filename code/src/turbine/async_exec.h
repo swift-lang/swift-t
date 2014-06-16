@@ -111,11 +111,23 @@ typedef struct {
   turbine_exec_slots slots;
 } turbine_executor;
 
+/*
+  Register executor
+ */
 turbine_code
 turbine_add_async_exec(turbine_executor executor);
 
+/*
+  Lookup registered executor.
+  Returns executor, or NULL if not registered.
+  Pointer to executor remains valid until shut down
+ */
+const turbine_executor *
+turbine_get_async_exec(const char *name);
+
 turbine_code
-turbine_async_worker_loop(const char *exec_name, void *buffer, int buffer_size);
+turbine_async_worker_loop(const char *exec_name, void *buffer,
+                          size_t buffer_size);
 
 turbine_code
 turbine_async_exec_finalize(void);

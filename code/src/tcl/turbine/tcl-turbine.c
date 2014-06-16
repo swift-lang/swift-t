@@ -53,6 +53,9 @@
 #include "src/turbine/cache.h"
 #include "src/turbine/worker.h"
 
+#include "src/turbine/async_exec.h"
+#include "src/turbine/executors/noop_executor.h"
+
 #include "src/tcl/util.h"
 #include "src/tcl/turbine/tcl-turbine.h"
 
@@ -639,16 +642,17 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp* interp,
   // used in code that we call.
   size_t buffer_size = ADLB_DATA_MAX;
   void* buffer = malloc(buffer_size);
+  TCL_CONDITION(buffer != NULL, "Out of memory");
 
   turbine_code code = turbine_worker_loop(interp, buffer, buffer_size,
                                           work_type);
+  free(buffer);
+
   if (code == TURBINE_ERROR_EXTERNAL)
     // turbine_worker_loop() has added the error info
     rc = TCL_ERROR;
   else
     TCL_CONDITION(code == TURBINE_SUCCESS, "Unknown worker error!");
-
-  free(buffer);
   return rc;
 }
 
@@ -1057,6 +1061,82 @@ turbine_extract_ids(Tcl_Interp* interp, Tcl_Obj *const objv[],
 // See the tcl/blob module
 int Blob_Init(Tcl_Interp* interp);
 
+
+/*
+  turbine::noop_exec_register <adlb work type>
+ */
+static int
+Noop_Exec_Register_Cmd(ClientData cdata, Tcl_Interp *interp,
+                  int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+  int work_type;
+  int rc;
+  rc = Tcl_GetIntFromObj(interp, objv[1], &work_type);
+  TCL_CHECK(rc);
+
+  turbine_exec_code ec;
+  ec = noop_executor_register(work_type);
+  TCL_CONDITION(ec == TURBINE_EXEC_SUCCESS,
+                "Could not register noop executor");
+  
+  return TCL_OK;
+}
+
+/*
+  turbine::noop_exec_worker_loop
+ */
+static int
+Noop_Exec_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
+                  int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(1);
+ 
+
+  // Maintain separate buffer from xfer, since xfer may be
+  // used in code that we call.
+  size_t buffer_size = ADLB_DATA_MAX;
+  void* buffer = malloc(buffer_size);
+  TCL_CONDITION(buffer != NULL, "Out of memory");
+
+  turbine_code tc = turbine_async_worker_loop(NOOP_EXECUTOR_NAME,
+                                              buffer, buffer_size);
+  free(buffer);
+  
+  if (tc == TURBINE_ERROR_EXTERNAL)
+    // turbine_async_worker_loop() has added the error info
+   return TCL_ERROR; 
+  else
+    TCL_CONDITION(tc == TURBINE_SUCCESS, "Unknown worker error!");
+  
+  return TCL_OK;
+}
+
+/*
+  turbine::noop_exec_run <work string>
+ */
+static int
+Noop_Exec_Run_Cmd(ClientData cdata, Tcl_Interp *interp,
+                  int objc, Tcl_Obj *const objv[])
+{
+  TCL_ARGS(2);
+  turbine_exec_code ec;
+ 
+  const turbine_executor *noop_exec;
+  noop_exec = turbine_get_async_exec(NOOP_EXECUTOR_NAME);
+  TCL_CONDITION(noop_exec != NULL, "Noop executor not registered");
+  TCL_CONDITION(noop_exec->state != NULL, "Noop executor not init");
+
+  char *str;
+  int len;
+  str = Tcl_GetStringFromObj(objv[1], &len);
+
+  ec = noop_execute(noop_exec->state, str, len);
+  TCL_CONDITION(ec == TURBINE_EXEC_SUCCESS, "Error executing noop task");
+  
+  return TCL_OK;
+}
+
 /**
    Called when Tcl loads this extension
  */
@@ -1095,6 +1175,10 @@ Tclturbine_Init(Tcl_Interp* interp)
   COMMAND("debug_on",    Turbine_Debug_On_Cmd);
   COMMAND("debug",       Turbine_Debug_Cmd);
   COMMAND("check_str_int", Turbine_StrInt_Cmd);
+  
+  COMMAND("noop_exec_register", Noop_Exec_Register_Cmd);
+  COMMAND("noop_exec_worker_loop", Noop_Exec_Worker_Loop_Cmd);
+  COMMAND("noop_exec_run", Noop_Exec_Run_Cmd);
 
   Tcl_Namespace* turbine =
     Tcl_FindNamespace(interp, "::turbine::c", NULL, 0);

@@ -67,7 +67,7 @@ static bool executors_init = false;
 static struct table executors;
 
 static turbine_exec_code
-get_tasks(turbine_executor *executor, void *buffer, int buffer_size,
+get_tasks(turbine_executor *executor, void *buffer, size_t buffer_size,
           bool poll, int max_tasks);
 
 static turbine_exec_code
@@ -117,7 +117,8 @@ turbine_add_async_exec(turbine_executor executor)
 
 
 turbine_code
-turbine_async_worker_loop(const char *exec_name, void *buffer, int buffer_size)
+turbine_async_worker_loop(const char *exec_name, void *buffer,
+                          size_t buffer_size)
 {
   turbine_exec_code ec;
 
@@ -181,7 +182,7 @@ turbine_async_worker_loop(const char *exec_name, void *buffer, int buffer_size)
  * TODO: currently only executes one task, but could do multiple
  */
 static turbine_exec_code
-get_tasks(turbine_executor *executor, void *buffer, int buffer_size,
+get_tasks(turbine_executor *executor, void *buffer, size_t buffer_size,
           bool poll, int max_tasks)
 {
   adlb_code ac;
