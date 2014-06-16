@@ -16,12 +16,13 @@
 #include "src/turbine/executors/noop_executor.h"
 
 #include <assert.h>
+#include <unistd.h>
 
 #define NOOP_CONTEXT ((void*)0x1)
 
-typedef struct {
+struct noop_state {
   turbine_exec_slot_state slots;
-} noop_state;
+};
 
 static turbine_exec_code
 noop_initialize(const void *context, void **state);
@@ -30,11 +31,11 @@ static turbine_exec_code
 noop_shutdown(void *state);
 
 static turbine_exec_code
-noop_wait(void *state, turbine_completed_task **completed,
+noop_wait(void *state, turbine_completed_task *completed,
           int *ncompleted);
 
 static turbine_exec_code
-noop_poll(void *state, turbine_completed_task **completed,
+noop_poll(void *state, turbine_completed_task *completed,
           int *ncompleted);
 
 static turbine_exec_code
@@ -85,23 +86,73 @@ noop_shutdown(void *state)
   return TURBINE_EXEC_SUCCESS;
 }
 
-static turbine_exec_code
-noop_wait(void *state, turbine_completed_task **completed,
-          int *ncompleted)
+turbine_exec_code
+noop_execute(noop_state *state, const void *work, int length)
 {
-  // TODO: determine number finished
+  assert(state->slots.used < state->slots.total);
+  state->slots.used++;
 
-  *ncompleted = 0;
   return TURBINE_EXEC_SUCCESS;
 }
 
 static turbine_exec_code
-noop_poll(void *state, turbine_completed_task **completed,
+fill_completed(noop_state *state, turbine_completed_task *completed,
+               int *ncompleted)
+{
+  int completed_size = *ncompleted;
+  assert(completed_size >= 1);
+
+  // TODO: fill in additional data
+  if (state->slots.used > 1 && rand() > 0.5 &&
+      completed_size >= 2)
+  {
+    // Return multiple
+    completed[0].success = true;
+    completed[1].success = true;
+    *ncompleted = 2;
+  }
+  else
+  {
+    completed[0].success = true;
+    *ncompleted = 1;
+  }
+
+  return TURBINE_EXEC_SUCCESS;
+}
+
+
+static turbine_exec_code
+noop_wait(void *state, turbine_completed_task *completed,
           int *ncompleted)
 {
-  // TODO: determine number finished
+  noop_state *s = state;
+  if (s->slots.used > 0)
+  {
+    usleep(20 * 1000);
+    turbine_exec_code ec = fill_completed(s, completed, ncompleted);
+    TMP_EXEC_CHECK(ec);
+  }
+  else
+  {
+    *ncompleted = 0;
+  }
+  return TURBINE_EXEC_SUCCESS;
+}
 
-  *ncompleted = 0;
+static turbine_exec_code
+noop_poll(void *state, turbine_completed_task *completed,
+          int *ncompleted)
+{
+  noop_state *s = state;
+  if (s->slots.used > 0 && rand() > 0.2)
+  {
+    turbine_exec_code ec = fill_completed(s, completed, ncompleted);
+    TMP_EXEC_CHECK(ec);
+  }
+  else
+  {
+    *ncompleted = 0;
+  }
   return TURBINE_EXEC_SUCCESS;
 }
 

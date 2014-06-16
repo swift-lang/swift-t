@@ -42,29 +42,47 @@ typedef struct {
   int total;
 } turbine_exec_slot_state;
 
-// Function pointer types.  All are passed void state pointer for
-// any state needed
+/*
+  Function pointer types.  All are passed void state pointer for
+  any state needed.  A context pointer allows context to be
+  passed in for initialization
+ */
 
-// Initialize: initialize executor before running tasks.
-///            Passed context pointer.
-//             Should initialize state pointer
+/*
+  Initialize: initialize executor before running tasks.
+               Passed context pointer.
+               Should initialize state pointer
+ */
 typedef turbine_exec_code (*turbine_exec_init)(const void *context,
                                                void **state);
 
-// Shutdown: shut down executor
+/*
+  Shutdown: shut down executor
+ */
 typedef turbine_exec_code (*turbine_exec_shutdown)(void *state);
 
-// Waiting: called on an executor with active tasks.
-//          updates completed with completed task info
+/* 
+  Waiting: called on an executor with active tasks.
+          updates completed with completed task info
+  state: executor state pointer
+  completed: output array allocated by caller
+  ncompleted: input/output, set to array size by caller,
+              set to actual number complted by callee
+ */
 typedef turbine_exec_code (*turbine_exec_wait)(void *state,
-          turbine_completed_task **completed, int *ncompleted);
+          turbine_completed_task *completed, int *ncompleted);
 
-// Polling: periodically called on an executor with active tasks.
-//          updates completed with completed task info
+/*
+  Polling: periodically called on an executor with active tasks.
+           updates completed with completed task info.
+           Arguments same as wait
+ */
 typedef turbine_exec_code (*turbine_exec_poll)(void *state,
-          turbine_completed_task **completed, int *ncompleted);
+          turbine_completed_task *completed, int *ncompleted);
 
-// Slots: return count of slots
+/*
+  Slots: fill in counts of slots
+ */
 typedef turbine_exec_code (*turbine_exec_slots)(void *state,
                                   turbine_exec_slot_state *slots);
 
@@ -101,5 +119,12 @@ turbine_async_worker_loop(const char *exec_name, void *buffer, int buffer_size);
 
 turbine_code
 turbine_async_exec_finalize(void);
+
+// To be replaced with correct check
+#define TMP_ADLB_CHECK(code) assert((code) == ADLB_SUCCESS)
+#define TMP_WARN(fmt, args...) fprintf(stderr, fmt "\n", ##args)
+
+#define TMP_EXEC_CHECK(code) assert((code) == TURBINE_EXEC_SUCCESS)
+#define TMP_MALLOC_CHECK(p) assert(p != NULL)
 
 #endif //__ASYNC_EXEC_H

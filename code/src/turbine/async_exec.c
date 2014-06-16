@@ -60,14 +60,8 @@ Implications of Assumptions
 
 #include <adlb.h>
 #include <table.h>
-    
 
-// To be replaced with correct check
-#define TMP_ADLB_CHECK(code) assert((code) == ADLB_SUCCESS)
-#define TMP_WARN(fmt, args...) fprintf(stderr, fmt "\n", ##args)
-
-#define TMP_EXEC_CHECK(code) assert((code) == TURBINE_EXEC_SUCCESS)
-#define TMP_MALLOC_CHECK(p) assert(p != NULL)
+#define COMPLETED_BUFFER_SIZE 16
 
 static bool executors_init = false;
 static struct table executors;
@@ -142,6 +136,7 @@ turbine_async_worker_loop(const char *exec_name, void *buffer, int buffer_size)
   assert(executor->initialize != NULL);
   ec = executor->initialize(executor->context, &executor->state);
   TMP_EXEC_CHECK(ec);
+
   while (true)
   {
     turbine_exec_slot_state slots;
@@ -227,16 +222,17 @@ static turbine_exec_code
 check_tasks(turbine_executor *executor, bool poll)
 {
   turbine_exec_code ec;
-  int ncompleted;
-  turbine_completed_task *completed;
+  
+  turbine_completed_task completed[COMPLETED_BUFFER_SIZE];
+  int ncompleted = COMPLETED_BUFFER_SIZE; // Pass in size
   if (poll)
   {
-    ec = executor->poll(executor->state, &completed, &ncompleted);
+    ec = executor->poll(executor->state, completed, &ncompleted);
     TMP_EXEC_CHECK(ec);
   }
   else
   {
-    ec = executor->wait(executor->state, &completed, &ncompleted);
+    ec = executor->wait(executor->state, completed, &ncompleted);
     TMP_EXEC_CHECK(ec);
   }
 

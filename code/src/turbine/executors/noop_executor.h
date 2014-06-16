@@ -20,4 +20,12 @@
 #include "src/turbine/async_exec.h"
 #include "src/turbine/turbine-defs.h"
 
+void
+noop_executor_register(int adlb_work_type);
+
+typedef struct noop_state noop_state;
+
+turbine_exec_code
+noop_execute(noop_state *state, const void *work, int length);
+
 #endif //__NOOP_EXECUTOR_H
