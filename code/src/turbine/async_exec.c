@@ -214,12 +214,12 @@ get_tasks(turbine_executor *executor, void *buffer, size_t buffer_size,
     MPI_Comm tmp_comm;
     ac = ADLB_Get(executor->adlb_work_type, buffer, &work_len,
                     &answer_rank, &type_recved, &tmp_comm);
-    TMP_ADLB_CHECK(ac);
-    
     if (ac == ADLB_SHUTDOWN)
     {
       return TURBINE_EXEC_SHUTDOWN;
     }
+    TMP_ADLB_CHECK(ac);
+    
     got_work = true;
   }
   

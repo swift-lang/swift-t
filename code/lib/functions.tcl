@@ -167,7 +167,7 @@ namespace eval turbine {
             set e [ expr {$s + $step - 1} ]
 
             set prio [ get_priority ]
-            adlb::put $::adlb::RANK_ANY $WORK_TYPE(CONTROL) \
+            adlb::put $::adlb::RANK_ANY $WORK_TYPE(WORK) \
                 "priority_command $prio range_work $c $s $e 1" \
                 $prio 1
         }

@@ -58,17 +58,16 @@ namespace eval turbine {
     set error_code 10
 
     # User function
-    # param s Number of ADLB servers
-    proc init { args } {
+    # servers: Number of ADLB servers
+    # lang: language to use in error messages
+    # async_work_types: additional work types for async executors.
+    #          These are allocated type numbers from 1 onwards
+    proc init { servers {lang ""} {async_work_types {}}} {
 
         variable language
-
-        if { [ llength $args ] < 1 } {
-            error "use: turbine::init <servers> \[<language>\]"
-        }
-        set servers [ lindex $args 0 ]
-        if { [ llength $args ] > 1 } {
-            set language [ lindex $args 1 ]
+        
+        if { $lang != "" } {
+            set language $lang
         }
 
         assert_control_sanity $servers
@@ -76,8 +75,10 @@ namespace eval turbine {
 
         reset_priority
 
+        set work_types [ concat [ list WORK ] $async_work_types ]
+        
         # Set up work types
-        enum WORK_TYPE { WORK }
+        enum WORK_TYPE $work_types
         global WORK_TYPE
         set types [ array size WORK_TYPE ]
 

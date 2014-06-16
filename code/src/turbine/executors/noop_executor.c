@@ -97,6 +97,8 @@ noop_execute(void *state, const void *work, int length)
   assert(s->slots.used < s->slots.total);
   s->slots.used++;
 
+  printf("NOOP: Launched task: %.*s\n", length, (const char*)work);
+
   return TURBINE_EXEC_SUCCESS;
 }
 
@@ -111,6 +113,7 @@ fill_completed(noop_state *state, turbine_completed_task *completed,
   if (state->slots.used > 1 && rand() > 0.5 &&
       completed_size >= 2)
   {
+    printf("NOOP: 2 completed\n");
     // Return multiple
     completed[0].success = true;
     completed[1].success = true;
@@ -118,6 +121,7 @@ fill_completed(noop_state *state, turbine_completed_task *completed,
   }
   else
   {
+    printf("NOOP: 1 completed\n");
     completed[0].success = true;
     *ncompleted = 1;
   }

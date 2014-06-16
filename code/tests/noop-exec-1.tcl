@@ -16,18 +16,18 @@
 
 package require turbine 0.5.0
 
-proc main {} {
-
-}
-
-# TODO: mechanism for specifying work types
 set NOOP_WORK_TYPE 1
 
+proc main {} {
+  global NOOP_WORK_TYPE
+  turbine::rule "" "DUMMY TASK" type $NOOP_WORK_TYPE
+}
+
 turbine::defaults
-turbine::init $servers
+turbine::init $servers Turbine [ list NOOP ]
 
 # Manually allocate rank to executor for now
-if { [ adlb::rank ] == 0 } {
+if { [ adlb::rank ] == 1 } {
   turbine::c::noop_exec_register $NOOP_WORK_TYPE
   turbine::c::noop_exec_worker_loop
 } else { 
