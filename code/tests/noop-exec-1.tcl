@@ -30,8 +30,11 @@ proc main {} {
     # Add a task to the noop executor
     turbine::allocate x integer
     turbine::rule "" "\
-      turbine::c::noop_exec_run \"NOOP TASK rank: \[ adlb::rank \]\" \n\
-      turbine::store_integer $x $i" type $NOOP_WORK_TYPE
+      turbine::c::noop_exec_run \"NOOP TASK rank: \[ adlb::rank \]\" \
+        \"turbine::store_integer $x $i\"" type $NOOP_WORK_TYPE
+
+    turbine::rule [ list $x ] "puts \"NOOP task output set: $i\"; \
+                               turbine::read_refcount_decr $x"
   }
 }
 

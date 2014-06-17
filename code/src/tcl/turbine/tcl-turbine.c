@@ -1114,13 +1114,14 @@ Noop_Exec_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /*
-  turbine::noop_exec_run <work string>
+  turbine::noop_exec_run <work string> [<success callback>]
+                         [<failure callback>]
  */
 static int
 Noop_Exec_Run_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(2);
+  TCL_CONDITION(objc >= 2 && objc <= 4, "Wrong # args");
   turbine_exec_code ec;
  
   const turbine_executor *noop_exec;
@@ -1132,10 +1133,19 @@ Noop_Exec_Run_Cmd(ClientData cdata, Tcl_Interp *interp,
   int len;
   str = Tcl_GetStringFromObj(objv[1], &len);
 
-  // TODO: callbacks
   turbine_task_callbacks callbacks;
   callbacks.success.code = NULL;
   callbacks.failure.code = NULL;
+
+  if (objc >= 3)
+  {
+    callbacks.success.code = objv[2];
+  }
+
+  if (objc >= 4)
+  {
+    callbacks.success.code = objv[3];
+  }
 
   ec = noop_execute(interp, noop_exec->state, str, len, callbacks);
   TCL_CONDITION(ec == TURBINE_EXEC_SUCCESS, "Error executing noop task");
