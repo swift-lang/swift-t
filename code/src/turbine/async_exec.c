@@ -107,9 +107,11 @@ void init_coasters_executor(turbine_executor *exec /*TODO: coasters params */)
 turbine_code
 turbine_async_exec_initialize(void)
 {
-  TMP_CONDITION(!executors_init);
+  turbine_condition(!executors_init, TURBINE_ERROR_INVALID,
+                    "Executors already init");
   bool ok = table_init(&executors, 16);
-  TMP_CONDITION(ok);
+  turbine_condition(ok, TURBINE_ERROR_OOM, "Error initializing table");
+
   executors_init = true;
   return TURBINE_EXEC_SUCCESS;
 }
@@ -120,7 +122,7 @@ turbine_add_async_exec(turbine_executor executor)
   // TODO: ownership of pointers, etc
   // TODO: validate executor
   turbine_executor *exec_ptr = malloc(sizeof(executor));
-  TMP_MALLOC_CHECK(exec_ptr);
+  TURBINE_MALLOC_CHECK(exec_ptr);
   *exec_ptr = executor;
 
   table_add(&executors, executor.name, exec_ptr);
@@ -157,7 +159,8 @@ turbine_async_worker_loop(Tcl_Interp *interp, const char *exec_name,
   // TODO: check buffer large enough for work units
 
   turbine_executor *executor = get_mutable_async_exec(exec_name);
-  TMP_CONDITION(executor != NULL);
+  turbine_condition(executor != NULL, TURBINE_ERROR_INVALID,
+                    "Executor %s not registered", exec_name);
 
   assert(executor->initialize != NULL);
   ec = executor->initialize(executor->context, &executor->state);
@@ -223,7 +226,8 @@ get_tasks(Tcl_Interp *interp, turbine_executor *executor,
   {
     ac = ADLB_Iget(executor->adlb_work_type, buffer, &work_len,
                     &answer_rank, &type_recved);
-    TMP_ADLB_CHECK(ac);
+    EXEC_ADLB_CHECK_MSG(ac, TURBINE_EXEC_ERROR,
+                        "Error getting work from ADLB");
 
     got_work = (ac != ADLB_NOTHING);
   }
@@ -236,7 +240,8 @@ get_tasks(Tcl_Interp *interp, turbine_executor *executor,
     {
       return TURBINE_EXEC_SHUTDOWN;
     }
-    TMP_ADLB_CHECK(ac);
+    EXEC_ADLB_CHECK_MSG(ac, TURBINE_EXEC_ERROR,
+                        "Error getting work from ADLB");
     
     got_work = true;
   }

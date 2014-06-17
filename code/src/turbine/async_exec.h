@@ -51,6 +51,7 @@ typedef enum {
   TURBINE_EXEC_SUCCESS,
   TURBINE_EXEC_ERROR,
   TURBINE_EXEC_SHUTDOWN,
+  TURBINE_EXEC_OOM,
   // TODO: more info - e.g. if bad arg, or invalid state
 } turbine_exec_code;
 
@@ -159,13 +160,5 @@ turbine_get_async_exec(const char *name);
 turbine_code
 turbine_async_worker_loop(Tcl_Interp *interp, const char *exec_name,
                           void *buffer, size_t buffer_size);
-
-
-// To be replaced with correct check
-#define TMP_ADLB_CHECK(code) assert((code) == ADLB_SUCCESS)
-#define TMP_WARN(fmt, args...) fprintf(stderr, fmt "\n", ##args)
-
-#define TMP_MALLOC_CHECK(p) assert(p != NULL)
-#define TMP_CONDITION(cond) assert(cond);
 
 #endif //__ASYNC_EXEC_H

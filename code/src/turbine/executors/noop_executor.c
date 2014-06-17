@@ -93,7 +93,7 @@ noop_initialize(const void *context, void **state)
   tmp->slots.used = 0;
   tmp->slots.total = NOOP_EXEC_SLOTS;
   tmp->tasks = malloc(sizeof(tmp->tasks[0]) * (size_t)tmp->slots.total);
-  TMP_MALLOC_CHECK(tmp->tasks);
+  EXEC_MALLOC_CHECK(tmp->tasks);
   for (int i = 0; i < tmp->slots.total; i++)
   {
     tmp->tasks[i].active = false;
