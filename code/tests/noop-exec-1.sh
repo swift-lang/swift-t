@@ -25,4 +25,12 @@ PROCS=3
 bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
 [[ ${?} == 0 ]] || test_result 1
 
+dummy_exp=100
+dummy_count=$(grep -q -c -F "DUMMY TASK rank: 1" ${OUTPUT})
+if [ $dummy_count -ne 100 ]
+then
+  echo "Dummy tasks: expected $dummy_act actual $dummy_count"
+  exit 1
+fi
+
 test_result 0
