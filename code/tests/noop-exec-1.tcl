@@ -26,6 +26,12 @@ proc main {} {
     turbine::rule "" {
       puts "DUMMY TASK rank: [ adlb::rank ]"
     } type $NOOP_WORK_TYPE
+
+    # Add a task to the noop executor
+    turbine::allocate x integer
+    turbine::rule "" "\
+      turbine::c::noop_exec_run \"NOOP TASK rank: \[ adlb::rank \]\" \n\
+      turbine::store_integer $x $i" type $NOOP_WORK_TYPE
   }
 }
 
