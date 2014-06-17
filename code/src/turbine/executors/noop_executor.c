@@ -16,14 +16,25 @@
 #include "src/turbine/executors/noop_executor.h"
 
 #include "src/turbine/turbine-checks.h"
+#include "src/util/debug.h"
 
 #include <assert.h>
 #include <unistd.h>
 
 #define NOOP_CONTEXT ((void*)0x1)
 
+// Fixed slot count for this executor
+#define NOOP_EXEC_SLOTS 4
+
+typedef struct {
+  turbine_task_callbacks callbacks;
+  bool active; // If being used
+} noop_active_task;
+
 typedef struct noop_state {
   turbine_exec_slot_state slots;
+  // Array with one task per slot
+  noop_active_task *tasks;
 } noop_state;
 
 static turbine_exec_code
@@ -80,8 +91,14 @@ noop_initialize(const void *context, void **state)
   noop_state *tmp = malloc(sizeof(noop_state)); 
   assert(tmp != NULL);
   tmp->slots.used = 0;
-  tmp->slots.total = 4;
-  
+  tmp->slots.total = NOOP_EXEC_SLOTS;
+  tmp->tasks = malloc(sizeof(tmp->tasks[0]) * (size_t)tmp->slots.total);
+  TMP_MALLOC_CHECK(tmp->tasks);
+  for (int i = 0; i < tmp->slots.total; i++)
+  {
+    tmp->tasks[i].active = false;
+  }
+
   *state = tmp;
   return TURBINE_EXEC_SUCCESS;
 }
@@ -101,6 +118,20 @@ noop_execute(Tcl_Interp *interp, void *state, const void *work, int length,
   assert(s->slots.used < s->slots.total);
   s->slots.used++;
 
+  bool found_slot = false;
+  for (int i = 0; i < s->slots.total; i++)
+  {
+    if (!s->tasks[i].active)
+    {
+      DEBUG_TURBINE("Noop task assigned to slot %i\n", i);
+      s->tasks[i].callbacks = callbacks;
+      s->tasks[i].active = true;
+      found_slot = true;
+      break;
+    }
+  }
+  assert(found_slot);
+
   printf("NOOP: Launched task: %.*s\n", length, (const char*)work);
 
   if (callbacks.success.code != NULL)
@@ -116,6 +147,25 @@ noop_execute(Tcl_Interp *interp, void *state, const void *work, int length,
   return TURBINE_EXEC_SUCCESS;
 }
 
+// Choose a random completed task
+static void
+choose_completed(noop_state *state, turbine_completed_task *completed)
+{
+  assert(state->slots.used > 0);
+  while (true)
+  {
+    int slot = rand() % state->slots.total;
+    if (state->tasks[slot].active)
+    {
+      DEBUG_TURBINE("Noop task in slot %i completed\n", slot);
+      state->tasks[slot].active = false;
+      completed->success = true;
+      completed->callbacks = state->tasks[slot].callbacks;
+      break;
+    }
+  }
+}
+
 static turbine_exec_code
 fill_completed(noop_state *state, turbine_completed_task *completed,
                int *ncompleted)
@@ -123,27 +173,20 @@ fill_completed(noop_state *state, turbine_completed_task *completed,
   int completed_size = *ncompleted;
   assert(completed_size >= 1);
 
-  if (state->slots.used > 1 && rand() > 0.5 &&
+  if (state->slots.used > 1 && rand() > (RAND_MAX / 2) &&
       completed_size >= 2)
   {
     printf("NOOP: 2 completed\n");
     // Return multiple
-    completed[0].success = true;
-    completed[1].success = true;
+    choose_completed(state, &completed[0]);
+    choose_completed(state, &completed[1]);
     *ncompleted = 2;
   }
   else
   {
     printf("NOOP: 1 completed\n");
-    completed[0].success = true;
+    choose_completed(state, &completed[0]);
     *ncompleted = 1;
-  }
-  
-  for (int i = 0; i < *ncompleted; i++)
-  {
-    // TODO: restore callback info
-    completed[i].callbacks.success.code = NULL;
-    completed[i].callbacks.failure.code = NULL;
   }
 
   state->slots.used -= *ncompleted;
@@ -176,7 +219,7 @@ noop_poll(void *state, turbine_completed_task *completed,
           int *ncompleted)
 {
   noop_state *s = state;
-  if (s->slots.used > 0 && rand() > 0.2)
+  if (s->slots.used > 0 && rand() > (RAND_MAX / 5))
   {
     turbine_exec_code ec = fill_completed(s, completed, ncompleted);
     EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL, "error filling "

@@ -40,6 +40,7 @@ proc main {} {
 
 turbine::defaults
 turbine::init $servers Turbine [ list NOOP ]
+turbine::enable_read_refcount
 
 # Manually allocate rank to executor for now
 if { [ adlb::rank ] == 1 } {
