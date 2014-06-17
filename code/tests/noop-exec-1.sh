@@ -52,5 +52,6 @@ then
   exit 1
 fi
 
+grep -q "WAITING WORK" ${OUTPUT} && test_result 1
 
 test_result 0

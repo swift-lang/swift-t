@@ -42,7 +42,9 @@
 
 #include "src/util/debug.h"
 
+#include "turbine-checks.h"
 #include "turbine-version.h"
+#include "async_exec.h"
 #include "cache.h"
 #include "turbine.h"
 
@@ -53,32 +55,8 @@ MPI_Comm turbine_task_comm = MPI_COMM_NULL;
 */
 static bool initialized = false;
 
-
-#define turbine_check(code) if (code != TURBINE_SUCCESS) return code;
-
-#define turbine_check_verbose(code) \
-    turbine_check_verbose_impl(code, __FILE__, __LINE__)
-
-#define turbine_check_verbose_impl(code, file, line)    \
-  { if (code != TURBINE_SUCCESS)                        \
-    {                                                   \
-      char output[TURBINE_CODE_STRING_MAX];             \
-      turbine_code_tostring(output, code);              \
-      printf("turbine error: %s\n", output);            \
-      printf("\t at: %s:%i\n", file, line);             \
-      return code;                                      \
-    }                                                   \
-  }
-
 static int mpi_size = -1;
 static int mpi_rank = -1;
-
-#define turbine_condition(condition, code, format, args...) \
-  { if (! (condition))                                      \
-    {                                                       \
-       printf(format, ## args);                             \
-       return code;                                         \
-    }}
 
 static void
 check_versions()
@@ -153,6 +131,8 @@ turbine_init(int amserver, int rank, int size)
   bool b = setup_cache();
   if (!b) return TURBINE_ERROR_NUMBER_FORMAT;
 
+  turbine_code tc = turbine_async_exec_initialize();
+  turbine_check(tc);
   return TURBINE_SUCCESS;
 }
 
@@ -252,5 +232,6 @@ void
 turbine_finalize(void)
 {
   turbine_cache_finalize();
+  turbine_async_exec_finalize();
 }
 

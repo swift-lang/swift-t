@@ -15,6 +15,8 @@
  */
 #include "src/turbine/executors/noop_executor.h"
 
+#include "src/turbine/turbine-checks.h"
+
 #include <assert.h>
 #include <unistd.h>
 

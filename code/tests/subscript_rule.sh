@@ -26,6 +26,6 @@ set -x
 bin/turbine -l -n 4 ${SCRIPT} >> ${OUTPUT} 2>&1
 [[ ${?} == 0 ]] || test_result 1
 
-grep -q "WAITING TRANSFORM" ${OUTPUT} && test_result 1
+grep -q "WAITING WORK" ${OUTPUT} && test_result 1
 
 test_result 0

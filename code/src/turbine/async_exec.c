@@ -15,7 +15,7 @@
  */
 
 /*
-  Code sketch for generic async executor interface
+  Generic async executor interface
 
   Created by Tim Armstrong, Nov 2013
 
@@ -56,6 +56,7 @@ Implications of Assumptions
 #define _GNU_SOURCE // for asprintf()
 #include <stdio.h>
 
+#include "src/turbine/turbine-checks.h"
 #include "src/turbine/async_exec.h"
 
 #include <assert.h>
@@ -104,16 +105,18 @@ void init_coasters_executor(turbine_executor *exec /*TODO: coasters params */)
 }
 
 turbine_code
+turbine_async_exec_initialize(void)
+{
+  TMP_CONDITION(!executors_init);
+  bool ok = table_init(&executors, 16);
+  TMP_CONDITION(ok);
+  executors_init = true;
+  return TURBINE_EXEC_SUCCESS;
+}
+
+turbine_code
 turbine_add_async_exec(turbine_executor executor)
 {
-  // Initialize table on demand
-  if (!executors_init)
-  {
-    bool ok = table_init(&executors, 16);
-    assert(ok); // TODO
-    executors_init = true;
-  }
-
   // TODO: ownership of pointers, etc
   // TODO: validate executor
   turbine_executor *exec_ptr = malloc(sizeof(executor));
@@ -336,7 +339,6 @@ check_tasks(Tcl_Interp *interp, turbine_executor *executor, bool poll)
     }
   }
 
-  // TODO: free completed
   return TURBINE_EXEC_SUCCESS;
 }
 
@@ -354,11 +356,25 @@ shutdown_executors(turbine_executor *executors, int nexecutors)
   }
 }
 
+static void exec_free_cb(const char *key, void *val)
+{
+  turbine_executor *exec_ptr = val;
+  if (exec_ptr->free != NULL)
+  {
+    exec_ptr->free(exec_ptr->context);
+  }
+  free(exec_ptr);
+}
+
 turbine_code
 turbine_async_exec_finalize(void)
 {
-  // TODO: free memory for executors
+  if (executors_init)
+  {
+    table_free_callback(&executors, false, exec_free_cb);
 
-  executors_init = false;
+    executors_init = false;
+  }
+
   return TURBINE_SUCCESS;
 }

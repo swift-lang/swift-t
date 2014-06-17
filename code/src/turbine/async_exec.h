@@ -77,9 +77,14 @@ typedef turbine_exec_code (*turbine_exec_init)(const void *context,
                                                void **state);
 
 /*
-  Shutdown: shut down executor
+  Shutdown: shut down initialized executor
  */
 typedef turbine_exec_code (*turbine_exec_shutdown)(void *state);
+
+/*
+  Free: free memory for shut down executor
+ */
+typedef turbine_exec_code (*turbine_exec_free)(const void *context);
 
 /* 
   Waiting: called on an executor with active tasks.
@@ -126,10 +131,16 @@ typedef struct {
    */
   turbine_exec_init initialize;
   turbine_exec_shutdown shutdown;
+  turbine_exec_free free;
   turbine_exec_wait wait;
   turbine_exec_poll poll;
   turbine_exec_slots slots;
 } turbine_executor;
+
+
+turbine_code turbine_async_exec_initialize(void);
+
+turbine_code turbine_async_exec_finalize(void);
 
 /*
   Register executor
@@ -149,21 +160,10 @@ turbine_code
 turbine_async_worker_loop(Tcl_Interp *interp, const char *exec_name,
                           void *buffer, size_t buffer_size);
 
-turbine_code
-turbine_async_exec_finalize(void);
 
 // To be replaced with correct check
 #define TMP_ADLB_CHECK(code) assert((code) == ADLB_SUCCESS)
 #define TMP_WARN(fmt, args...) fprintf(stderr, fmt "\n", ##args)
-
-#define EXEC_CHECK(code) { \
-  if (code != TURBINE_EXEC_SUCCESS) return code; }
-
-#define EXEC_CHECK_MSG(code, err_code, fmt, args...) { \
-  if (code != TURBINE_EXEC_SUCCESS) { \
-      fprintf(stderr, "CHECK FAILED: %s:%i\n", __FILE__, __LINE__);   \
-      fprintf(stderr, fmt "\n", ##args); \
-      return err_code; }}
 
 #define TMP_MALLOC_CHECK(p) assert(p != NULL)
 #define TMP_CONDITION(cond) assert(cond);
