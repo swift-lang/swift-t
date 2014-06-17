@@ -27,10 +27,30 @@ bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
 
 dummy_exp=100
 dummy_count=$(grep -q -c -F "DUMMY TASK rank: 1" ${OUTPUT})
-if [ $dummy_count -ne 100 ]
+if [ $dummy_count -ne $dummy_exp ]
 then
   echo "Dummy tasks: expected $dummy_act actual $dummy_count"
   exit 1
 fi
+
+noop_exp=100
+noop_count=$(grep -q -c -F "Launched task: NOOP TASK rank: 1" ${OUTPUT})
+if [ $noop_count -ne $noop_exp ]
+then
+  echo "Noop tasks: expected $noop_act actual $noop_count"
+  exit 1
+fi
+
+noop_completions=$(
+    grep 'NOOP: [0-9]* completed' tests/noop-exec-1.out |
+    sed 's/^.* NOOP: \([0-9]*\) completed.*$/\1/' |
+    awk '{ sum += $1 } END { print sum }')
+
+if [ $noop_completions -ne $noop_exp ]
+then
+  echo "Noop completions: expected $noop_act actual $noop_completions"
+  exit 1
+fi
+
 
 test_result 0

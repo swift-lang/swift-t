@@ -127,6 +127,8 @@ fill_completed(noop_state *state, turbine_completed_task *completed,
     *ncompleted = 1;
   }
 
+  state->slots.used -= *ncompleted;
+
   return TURBINE_EXEC_SUCCESS;
 }
 
