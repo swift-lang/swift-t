@@ -19,6 +19,8 @@
 
 #include "src/turbine/turbine-defs.h"
 
+#include <tcl.h>
+
 /*
   Represent state of a completed task
  */
@@ -126,8 +128,8 @@ const turbine_executor *
 turbine_get_async_exec(const char *name);
 
 turbine_code
-turbine_async_worker_loop(const char *exec_name, void *buffer,
-                          size_t buffer_size);
+turbine_async_worker_loop(Tcl_Interp *interp, const char *exec_name,
+                          void *buffer, size_t buffer_size);
 
 turbine_code
 turbine_async_exec_finalize(void);
@@ -136,7 +138,15 @@ turbine_async_exec_finalize(void);
 #define TMP_ADLB_CHECK(code) assert((code) == ADLB_SUCCESS)
 #define TMP_WARN(fmt, args...) fprintf(stderr, fmt "\n", ##args)
 
-#define TMP_EXEC_CHECK(code) assert((code) == TURBINE_EXEC_SUCCESS)
+#define EXEC_CHECK(code) { \
+  if (code != TURBINE_EXEC_SUCCESS) return code; }
+
+#define EXEC_CHECK_MSG(code, err_code, fmt, args...) { \
+  if (code != TURBINE_EXEC_SUCCESS) { \
+      fprintf(stderr, "CHECK FAILED: %s:%i\n", __FILE__, __LINE__);   \
+      fprintf(stderr, fmt "\n", ##args); \
+      return err_code; }}
+
 #define TMP_MALLOC_CHECK(p) assert(p != NULL)
 #define TMP_CONDITION(cond) assert(cond);
 

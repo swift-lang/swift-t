@@ -1099,8 +1099,9 @@ Noop_Exec_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
   void* buffer = malloc(buffer_size);
   TCL_CONDITION(buffer != NULL, "Out of memory");
 
-  turbine_code tc = turbine_async_worker_loop(NOOP_EXECUTOR_NAME,
-                                              buffer, buffer_size);
+  turbine_code tc;
+  tc = turbine_async_worker_loop(interp, NOOP_EXECUTOR_NAME,
+                                       buffer, buffer_size);
   free(buffer);
   
   if (tc == TURBINE_ERROR_EXTERNAL)

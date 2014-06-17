@@ -53,6 +53,8 @@ Implications of Assumptions
   async worker code doesn't know if task code added work.
 
  */
+#define _GNU_SOURCE // for asprintf()
+#include <stdio.h>
 
 #include "src/turbine/async_exec.h"
 
@@ -67,14 +69,18 @@ static bool executors_init = false;
 static struct table executors;
 
 static turbine_exec_code
-get_tasks(turbine_executor *executor, void *buffer, size_t buffer_size,
-          bool poll, int max_tasks);
+get_tasks(Tcl_Interp *interp, turbine_executor *executor,
+          void *buffer, size_t buffer_size, bool poll, int max_tasks);
 
 static turbine_exec_code
 check_tasks(turbine_executor *executor, bool poll);
 
 static void
 shutdown_executors(turbine_executor *executors, int nexecutors);
+
+static void
+launch_error(Tcl_Interp* interp, turbine_executor *exec, int tcl_rc,
+             const char *command);
 
 void init_coasters_executor(turbine_executor *exec /*TODO: coasters params */)
 {
@@ -133,8 +139,8 @@ turbine_get_async_exec(const char *name)
 }
 
 turbine_code
-turbine_async_worker_loop(const char *exec_name, void *buffer,
-                          size_t buffer_size)
+turbine_async_worker_loop(Tcl_Interp *interp, const char *exec_name,
+                          void *buffer, size_t buffer_size)
 {
   turbine_exec_code ec;
 
@@ -148,13 +154,15 @@ turbine_async_worker_loop(const char *exec_name, void *buffer,
 
   assert(executor->initialize != NULL);
   ec = executor->initialize(executor->context, &executor->state);
-  TMP_EXEC_CHECK(ec);
+  EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL,
+               "error initializing executor %s", executor->name);
 
   while (true)
   {
     turbine_exec_slot_state slots;
     ec = executor->slots(executor->state, &slots);
-    TMP_EXEC_CHECK(ec);
+    EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL,
+               "error getting executor slot count %s", executor->name);
 
     if (slots.used < slots.total)
     {
@@ -163,24 +171,26 @@ turbine_async_worker_loop(const char *exec_name, void *buffer,
       // Need to do non-blocking get if we're polling executor too
       bool poll = (slots.used != 0);
       
-      ec = get_tasks(executor, buffer, buffer_size, poll, max_tasks);
+      ec = get_tasks(interp, executor, buffer, buffer_size,
+                     poll, max_tasks);
       if (ec == TURBINE_EXEC_SHUTDOWN)
       {
         break;
       }
-      TMP_EXEC_CHECK(ec);
+      EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL,
+               "error getting tasks for executor %s", executor->name);
     }
-
     // Update count in case work added 
     ec = executor->slots(executor->state, &slots);
-    TMP_EXEC_CHECK(ec);
+    EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL,
+               "error getting executor slot count %s", executor->name);
 
     if (slots.used > 0)
     {
       // Need to do non-blocking check if we want to request more work
       bool poll = (slots.used < slots.total);
       ec = check_tasks(executor, poll);
-      TMP_EXEC_CHECK(ec);
+      EXEC_CHECK(ec);
     }
   }
 
@@ -194,10 +204,11 @@ turbine_async_worker_loop(const char *exec_name, void *buffer,
  * TODO: currently only executes one task, but could do multiple
  */
 static turbine_exec_code
-get_tasks(turbine_executor *executor, void *buffer, size_t buffer_size,
-          bool poll, int max_tasks)
+get_tasks(Tcl_Interp *interp, turbine_executor *executor,
+          void *buffer, size_t buffer_size, bool poll, int max_tasks)
 {
   adlb_code ac;
+  int rc;
 
   int work_len, answer_rank, type_recved;
   bool got_work;
@@ -225,10 +236,35 @@ get_tasks(turbine_executor *executor, void *buffer, size_t buffer_size,
   
   if (got_work)
   {
-    // TODO: tcl_eval task
+    int cmd_len = work_len - 1;
+    rc = Tcl_EvalEx(interp, buffer, cmd_len, 0);
+    if (rc != TCL_OK)
+    {
+      launch_error(interp, executor, rc, buffer);
+      return TURBINE_ERROR_EXTERNAL;
+    }
   }
 
   return TURBINE_EXEC_SUCCESS;
+}
+
+static void
+launch_error(Tcl_Interp* interp, turbine_executor *exec, int tcl_rc,
+             const char *command)
+{
+  if (tcl_rc != TCL_ERROR)
+  {
+    printf("WARNING: Unexpected return code when running task for "
+           "executor %s: %d", exec->name, tcl_rc);
+  }
+
+  // Pass error to calling script
+  char* msg;
+  int rc = asprintf(&msg, "Turbine %s worker task error in: %s",
+                           exec->name, command);
+  assert(rc != -1);
+  Tcl_AddErrorInfo(interp, msg);
+  free(msg);
 }
 
 static turbine_exec_code
@@ -241,12 +277,12 @@ check_tasks(turbine_executor *executor, bool poll)
   if (poll)
   {
     ec = executor->poll(executor->state, completed, &ncompleted);
-    TMP_EXEC_CHECK(ec);
+    EXEC_CHECK(ec);
   }
   else
   {
     ec = executor->wait(executor->state, completed, &ncompleted);
-    TMP_EXEC_CHECK(ec);
+    EXEC_CHECK(ec);
   }
 
   for (int i = 0; i < ncompleted; i++)

@@ -65,7 +65,8 @@ noop_executor_register(int adlb_work_type)
   turbine_executor exec;
   init_noop_executor(&exec, adlb_work_type);
   ec = turbine_add_async_exec(exec);
-  TMP_EXEC_CHECK(ec);
+  EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL,
+               "error registering Noop executor");
 
   return TURBINE_EXEC_SUCCESS;
 }
@@ -139,7 +140,8 @@ noop_wait(void *state, turbine_completed_task *completed,
   {
     usleep(20 * 1000);
     turbine_exec_code ec = fill_completed(s, completed, ncompleted);
-    TMP_EXEC_CHECK(ec);
+    EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL, "error checking for "
+                  "completed tasks Noop executor");
   }
   else
   {
@@ -156,7 +158,8 @@ noop_poll(void *state, turbine_completed_task *completed,
   if (s->slots.used > 0 && rand() > 0.2)
   {
     turbine_exec_code ec = fill_completed(s, completed, ncompleted);
-    TMP_EXEC_CHECK(ec);
+    EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL, "error filling "
+                  "completed task in Noop executor");
   }
   else
   {
