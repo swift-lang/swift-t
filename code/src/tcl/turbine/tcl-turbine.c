@@ -112,8 +112,6 @@ turbine_check_failed(Tcl_Interp* interp, turbine_code code,
 
 static void set_namespace_constants(Tcl_Interp* interp);
 
-static Tcl_Obj *SPAWN_RULE_CMD;
-
 static int log_setup(int rank);
 
 static int
@@ -137,11 +135,6 @@ Turbine_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
     Tcl_AddErrorInfo(interp, " Could not initialize Turbine!\n");
     return TCL_ERROR;
   }
-
-  set_namespace_constants(interp);
-
-  // Name of Tcl command
-  SPAWN_RULE_CMD = Tcl_NewStringObj("::turbine::spawn_rule", -1);
 
   log_setup(rank);
 
@@ -195,6 +188,9 @@ set_namespace_constants(Tcl_Interp* interp)
         TURBINE_ADLB_WORK_TYPE_WORK);
   tcl_set_integer(interp, "::turbine::LOCAL",
         TURBINE_ADLB_WORK_TYPE_LOCAL);
+
+  tcl_set_string(interp, "::turbine::NOOP_EXEC_NAME",
+                 NOOP_EXECUTOR_NAME);
 }
 
 static int
@@ -893,9 +889,6 @@ static int
 Turbine_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
                      int objc, Tcl_Obj *const objv[])
 {
-  // Free allocated object
-  Tcl_DecrRefCount(SPAWN_RULE_CMD);
-
   turbine_finalize();
   return TCL_OK;
 }
@@ -1084,13 +1077,13 @@ Noop_Exec_Register_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /*
-  turbine::noop_exec_worker_loop
+  turbine::async_exec_worker_loop <executor name>
  */
 static int
-Noop_Exec_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
+Async_Exec_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(1);
+  TCL_ARGS(2);
  
 
   // Maintain separate buffer from xfer, since xfer may be
@@ -1099,8 +1092,10 @@ Noop_Exec_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
   void* buffer = malloc(buffer_size);
   TCL_CONDITION(buffer != NULL, "Out of memory");
 
+  const char *exec_name = Tcl_GetString(objv[1]);
+  
   turbine_code tc;
-  tc = turbine_async_worker_loop(interp, NOOP_EXECUTOR_NAME,
+  tc = turbine_async_worker_loop(interp, exec_name,
                                        buffer, buffer_size);
   free(buffer);
   
@@ -1192,13 +1187,16 @@ Tclturbine_Init(Tcl_Interp* interp)
   COMMAND("debug",       Turbine_Debug_Cmd);
   COMMAND("check_str_int", Turbine_StrInt_Cmd);
   
+  COMMAND("async_exec_worker_loop", Async_Exec_Worker_Loop_Cmd);
+
   COMMAND("noop_exec_register", Noop_Exec_Register_Cmd);
-  COMMAND("noop_exec_worker_loop", Noop_Exec_Worker_Loop_Cmd);
   COMMAND("noop_exec_run", Noop_Exec_Run_Cmd);
 
   Tcl_Namespace* turbine =
     Tcl_FindNamespace(interp, "::turbine::c", NULL, 0);
   Tcl_Export(interp, turbine, "*", 0);
+
+  set_namespace_constants(interp);
 
   return TCL_OK;
 }

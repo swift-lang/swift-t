@@ -1,4 +1,4 @@
-# Copyright 2013 University of Chicago and Argonne National Laboratory
+# Copyright 2014 University of Chicago and Argonne National Laboratory
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -39,16 +39,13 @@ proc main {} {
 }
 
 turbine::defaults
-turbine::init $servers Turbine [ list NOOP ]
+turbine::init $servers Turbine [ list $turbine::NOOP_EXEC_NAME ]
 turbine::enable_read_refcount
 
-# Manually allocate rank to executor for now
-if { [ adlb::rank ] == 1 } {
-  turbine::c::noop_exec_register $NOOP_WORK_TYPE
-  turbine::c::noop_exec_worker_loop
-} else { 
- turbine::start main 
-}
+set noop_work_type [ turbine::adlb_work_type $turbine::NOOP_EXEC_NAME ]
+
+turbine::c::noop_exec_register $noop_work_type
+turbine::start main 
 turbine::finalize
 
 puts OK

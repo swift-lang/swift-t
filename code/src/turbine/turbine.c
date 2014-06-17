@@ -121,15 +121,15 @@ turbine_init(int amserver, int rank, int size)
 
   gdb_check(rank);
 
-  if (amserver)
-    return TURBINE_SUCCESS;
+  if (!amserver)
+  {
+    mpi_size = size;
+    mpi_rank = rank;
+    initialized = true;
 
-  mpi_size = size;
-  mpi_rank = rank;
-  initialized = true;
-
-  bool b = setup_cache();
-  if (!b) return TURBINE_ERROR_NUMBER_FORMAT;
+    bool b = setup_cache();
+    if (!b) return TURBINE_ERROR_NUMBER_FORMAT;
+  }
 
   turbine_code tc = turbine_async_exec_initialize();
   turbine_check(tc);

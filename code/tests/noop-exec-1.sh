@@ -22,6 +22,7 @@ OUTPUT=${THIS%.sh}.out
 source $( dirname $0 )/setup.sh > ${OUTPUT} 2>&1
 
 PROCS=3
+export TURBINE_NOOP_WORKERS=1
 bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
 [[ ${?} == 0 ]] || test_result 1
 

@@ -119,6 +119,7 @@ turbine_async_exec_initialize(void)
 turbine_code
 turbine_add_async_exec(turbine_executor executor)
 {
+  assert(executors_init);
   // TODO: ownership of pointers, etc
   // TODO: validate executor
   turbine_executor *exec_ptr = malloc(sizeof(executor));
@@ -133,6 +134,7 @@ turbine_add_async_exec(turbine_executor executor)
 static turbine_executor *
 get_mutable_async_exec(const char *name)
 {
+  assert(executors_init);
   turbine_executor *executor;
   if (!table_search(&executors, name, (void**)&executor)) {
     printf("Could not find executor: \"%s\"\n", name);

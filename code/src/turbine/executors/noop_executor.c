@@ -40,8 +40,9 @@ typedef struct noop_state {
 static turbine_exec_code
 noop_initialize(const void *context, void **state);
 
-static turbine_exec_code
-noop_shutdown(void *state);
+static turbine_exec_code noop_shutdown(void *state);
+
+static turbine_exec_code noop_free(const void *context);
 
 static turbine_exec_code
 noop_wait(void *state, turbine_completed_task *completed,
@@ -66,6 +67,7 @@ init_noop_executor(turbine_executor *exec, int adlb_work_type)
 
   exec->initialize = noop_initialize;
   exec->shutdown = noop_shutdown;
+  exec->free = noop_free;
   exec->wait = noop_wait;
   exec->poll = noop_poll;
   exec->slots = noop_slots;
@@ -88,25 +90,54 @@ static turbine_exec_code
 noop_initialize(const void *context, void **state)
 {
   assert(context == NOOP_CONTEXT);
-  noop_state *tmp = malloc(sizeof(noop_state)); 
-  assert(tmp != NULL);
-  tmp->slots.used = 0;
-  tmp->slots.total = NOOP_EXEC_SLOTS;
-  tmp->tasks = malloc(sizeof(tmp->tasks[0]) * (size_t)tmp->slots.total);
-  EXEC_MALLOC_CHECK(tmp->tasks);
-  for (int i = 0; i < tmp->slots.total; i++)
+  noop_state *s = malloc(sizeof(noop_state)); 
+  assert(s != NULL);
+  s->slots.used = 0;
+  s->slots.total = NOOP_EXEC_SLOTS;
+  s->tasks = malloc(sizeof(s->tasks[0]) * (size_t)s->slots.total);
+  EXEC_MALLOC_CHECK(s->tasks);
+  for (int i = 0; i < s->slots.total; i++)
   {
-    tmp->tasks[i].active = false;
+    s->tasks[i].active = false;
   }
 
-  *state = tmp;
+  *state = s;
   return TURBINE_EXEC_SUCCESS;
 }
 
 static turbine_exec_code
 noop_shutdown(void *state)
 {
-  free(state);
+  noop_state *s = state;
+  for (int i = 0; i < s->slots.total; i++)
+  {
+    if (s->tasks[i].active)
+    {
+      fprintf(stderr, "Noop executor slot %i still active at shutdown\n",
+                      i);
+
+      Tcl_Obj *cb = s->tasks[i].callbacks.success.code;
+      if (cb != NULL)
+      {
+        Tcl_DecrRefCount(cb);
+      }
+
+      cb = s->tasks[i].callbacks.failure.code;
+      if (cb != NULL)
+      {
+        Tcl_DecrRefCount(cb);
+      }
+    }
+  }
+  free(s->tasks);
+  free(s);
+  return TURBINE_EXEC_SUCCESS;
+}
+
+static turbine_exec_code
+noop_free(const void *context)
+{
+  // Don't need to do anything
   return TURBINE_EXEC_SUCCESS;
 }
 

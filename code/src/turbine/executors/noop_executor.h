@@ -21,7 +21,7 @@
 #include "src/turbine/turbine-defs.h"
 
 // Registered name for noop executor
-#define NOOP_EXECUTOR_NAME "Noop"
+#define NOOP_EXECUTOR_NAME "NOOP"
 
 turbine_exec_code
 noop_executor_register(int adlb_work_type);

@@ -34,12 +34,16 @@ namespace eval turbine {
     variable WORK_TASK
     namespace export WORK_TASK
 
-    # Mode is WORKER, or SERVER
+    # Mode is SERVER, WORK, or name of asynchronous executor
     variable mode
 
     # Counts of servers and workers
     variable n_adlb_servers
     variable n_workers
+
+    # Count of particular worker types (dict from type name to count)
+    variable n_workers_by_type
+
 
     # How to display string values in the log
     variable log_string_mode
@@ -91,6 +95,7 @@ namespace eval turbine {
         } else {
             adlb::init $servers $types
         }
+
         assert_sufficient_procs
 
         c::init [ adlb::amserver ] [ adlb::rank ] [ adlb::size ]
@@ -111,7 +116,10 @@ namespace eval turbine {
             error "ERROR: SERVERS==0"
         }
     }
-
+    
+    # Setup which mode this and other ranks will be running in
+    # Assumes that WORK_TYPE array is created and filled, and that
+    # Sets n_workers and n_adlb_servers variables
     proc setup_mode { servers } {
 
         variable n_workers
@@ -120,11 +128,58 @@ namespace eval turbine {
         set n_workers [ expr {[ adlb::size ] - $servers } ]
         set n_adlb_servers $servers
 
+        variable n_workers_by_type
+        set n_workers_by_type [ dict create ]
+        set workers_running_sum 0
+
+        global WORK_TYPE
+        global env
+        foreach work_type [ lsort [array names WORK_TYPE] ] {
+          if { $work_type != "WORK" } {
+            set env_var "TURBINE_${work_type}_WORKERS"
+            set work_type_count 0
+            if { [ info exists env($env_var) ] } {
+              set work_type_count $env($env_var)
+            }
+            incr workers_running_sum $work_type_count
+            dict set n_workers_by_type $work_type $work_type_count
+          }
+        }
+        
+        if { $workers_running_sum >= $n_workers } {
+          error "Too many workers allocated to executor types: \
+                  {$n_workers_by_type}.\n \
+                  Have $n_workers total workers, allocated 
+                  $workers_running_sum already, need at least one to \
+                  serve as regular worker"
+        }
+        
+        # Remainder goes to regular workers
+        set n_regular_workers [ expr {$n_workers - $workers_running_sum} ]
+        dict set n_workers_by_type WORK $n_regular_workers
+
+        debug "WORKER TYPE COUNTS: $n_workers_by_type"
+
         variable mode
         if { [ adlb::amserver ] == 1 } {
-            set mode SERVER
+          set mode SERVER
+        } elseif { [ adlb::rank ] < $n_regular_workers } {
+          # Allocate workers to specific types in order of WORK_TYPE array
+          set mode WORK
         } else {
-	    set mode WORKER
+          # Work out which other work type we have
+          # Regular workers go first, after that alphabetic order
+          set k $n_regular_workers
+          foreach work_type [ lsort [array names WORK_TYPE] ] {
+            if { $work_type != "WORK" } {
+              set n [ dict get $n_workers_by_type $work_type ]
+              incr k $n
+              if { [ adlb::rank ] < $k } {
+                set mode $work_type
+                break
+              }
+            }
+          }
         }
 
         log "MODE: $mode"
@@ -135,15 +190,27 @@ namespace eval turbine {
 
     proc assert_sufficient_procs { } {
         if { [ adlb::size ] < 2 } {
-            error "Too few Turbine processes specified by user:\
+            error "Too few processes specified by user:\
                     [adlb::size], must be at least 2"
         }
     }
 
+    # Get ADLB work type for name
+    proc adlb_work_type { name } {
+      global WORK_TYPE
+      set adlb_type $WORK_TYPE($name)
+      if { ! [ string is integer -strict $adlb_type ] } {
+        error "Could not locate ADLB work type for $name"
+      }
+      return $adlb_type
+    }
+
     proc log_rank_layout { } {
+        global WORK_TYPE
 
         variable n_workers
         variable n_adlb_servers
+        variable n_workers_by_type
 
         set first_worker 0
         set first_server [ expr [adlb::size] - $n_adlb_servers ]
@@ -151,11 +218,32 @@ namespace eval turbine {
         set last_server  [ expr [adlb::size] - 1 ]
         log [ cat "WORKERS: $n_workers" \
                   "RANKS: $first_worker - $last_worker" ]
+
         log [ cat "SERVERS: $n_adlb_servers" \
                   "RANKS: $first_server - $last_server" ]
 
         if { $n_workers <= 0 } {
             turbine_error "No workers!"
+        }
+        
+        # Report on how workers are subdivided
+        set n_regular_workers [ dict get $n_workers_by_type WORK ]
+        set first_regular_worker $first_worker
+        set last_regular_worker [ expr {$first_regular_worker +
+                                        $n_regular_workers - 1} ]
+        log [ cat "REGULAR WORKERS: $n_regular_workers" \
+                  "RANKS: $first_regular_worker - $last_regular_worker" ]
+
+        set curr_rank $n_regular_workers
+        foreach work_type [ lsort [array names WORK_TYPE] ] {
+          if { $work_type != "WORK" } {
+            set n_x_workers [ dict get $n_workers_by_type $work_type ]
+            set first_x_worker $curr_rank
+            incr curr_rank $n_x_workers
+            set last_x_worker [ expr {$curr_rank - 1} ]
+            log [ cat "$work_type WORKERS: $n_x_workers" \
+                  "RANKS: $first_x_worker - $last_x_worker" ]
+          }
         }
     }
 
@@ -191,8 +279,11 @@ namespace eval turbine {
         variable mode
         switch $mode {
             SERVER  { adlb::server }
-            WORKER  { worker $rules $startup_cmd}
-            default { error "UNKNOWN MODE: $mode" }
+            WORK  { worker $rules $startup_cmd}
+            default {
+              # Must be named executor
+              c::async_exec_worker_loop $mode
+            }
         }
     }
 

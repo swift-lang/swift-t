@@ -39,7 +39,7 @@ Tclturbine_InitStatic(Tcl_Interp *interp)
   for (int i = 0; i < turbine_lib_src_len; i++)
   {
     // These are null terminated strings so we can use directly
-    int rc = tcl_eval_bundled_file(interp, turbine_lib_src[i],
+    int rc = tcl_eval_bundled_file(interp, (const char *)turbine_lib_src[i],
                                    (int)turbine_lib_src_lens[i],
                                    turbine_lib_src_filenames[i]);
     if (rc != TCL_OK)
