@@ -92,7 +92,8 @@ noop_shutdown(void *state)
 }
 
 turbine_exec_code
-noop_execute(void *state, const void *work, int length)
+noop_execute(Tcl_Interp *interp, void *state, const void *work, int length,
+             turbine_task_callbacks callbacks)
 {
   noop_state *s = state;
   assert(s->slots.used < s->slots.total);
@@ -100,6 +101,16 @@ noop_execute(void *state, const void *work, int length)
 
   printf("NOOP: Launched task: %.*s\n", length, (const char*)work);
 
+  if (callbacks.success.code != NULL)
+  {
+    Tcl_IncrRefCount(callbacks.success.code);
+  }
+  
+  if (callbacks.failure.code != NULL)
+  {
+    Tcl_IncrRefCount(callbacks.failure.code);
+  }
+  
   return TURBINE_EXEC_SUCCESS;
 }
 
@@ -110,7 +121,6 @@ fill_completed(noop_state *state, turbine_completed_task *completed,
   int completed_size = *ncompleted;
   assert(completed_size >= 1);
 
-  // TODO: fill in additional data
   if (state->slots.used > 1 && rand() > 0.5 &&
       completed_size >= 2)
   {
@@ -125,6 +135,13 @@ fill_completed(noop_state *state, turbine_completed_task *completed,
     printf("NOOP: 1 completed\n");
     completed[0].success = true;
     *ncompleted = 1;
+  }
+  
+  for (int i = 0; i < *ncompleted; i++)
+  {
+    // TODO: restore callback info
+    completed[i].callbacks.success.code = NULL;
+    completed[i].callbacks.failure.code = NULL;
   }
 
   state->slots.used -= *ncompleted;

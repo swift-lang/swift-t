@@ -1132,7 +1132,12 @@ Noop_Exec_Run_Cmd(ClientData cdata, Tcl_Interp *interp,
   int len;
   str = Tcl_GetStringFromObj(objv[1], &len);
 
-  ec = noop_execute(noop_exec->state, str, len);
+  // TODO: callbacks
+  turbine_task_callbacks callbacks;
+  callbacks.success.code = NULL;
+  callbacks.failure.code = NULL;
+
+  ec = noop_execute(interp, noop_exec->state, str, len, callbacks);
   TCL_CONDITION(ec == TURBINE_EXEC_SUCCESS, "Error executing noop task");
   
   return TCL_OK;

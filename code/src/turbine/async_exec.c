@@ -73,7 +73,7 @@ get_tasks(Tcl_Interp *interp, turbine_executor *executor,
           void *buffer, size_t buffer_size, bool poll, int max_tasks);
 
 static turbine_exec_code
-check_tasks(turbine_executor *executor, bool poll);
+check_tasks(Tcl_Interp *interp, turbine_executor *executor, bool poll);
 
 static void
 shutdown_executors(turbine_executor *executors, int nexecutors);
@@ -81,6 +81,10 @@ shutdown_executors(turbine_executor *executors, int nexecutors);
 static void
 launch_error(Tcl_Interp* interp, turbine_executor *exec, int tcl_rc,
              const char *command);
+
+static void
+callback_error(Tcl_Interp* interp, turbine_executor *exec, int tcl_rc,
+               Tcl_Obj *command);
 
 void init_coasters_executor(turbine_executor *exec /*TODO: coasters params */)
 {
@@ -189,7 +193,7 @@ turbine_async_worker_loop(Tcl_Interp *interp, const char *exec_name,
     {
       // Need to do non-blocking check if we want to request more work
       bool poll = (slots.used < slots.total);
-      ec = check_tasks(executor, poll);
+      ec = check_tasks(interp, executor, poll);
       EXEC_CHECK(ec);
     }
   }
@@ -267,8 +271,27 @@ launch_error(Tcl_Interp* interp, turbine_executor *exec, int tcl_rc,
   free(msg);
 }
 
+static void
+callback_error(Tcl_Interp* interp, turbine_executor *exec, int tcl_rc,
+               Tcl_Obj *command)
+{
+  if (tcl_rc != TCL_ERROR)
+  {
+    printf("WARNING: Unexpected return code when running task for "
+           "executor %s: %d", exec->name, tcl_rc);
+  }
+
+  // Pass error to calling script
+  char* msg;
+  int rc = asprintf(&msg, "Turbine %s worker task error in callback: %s",
+                           exec->name, Tcl_GetString(command));
+  assert(rc != -1);
+  Tcl_AddErrorInfo(interp, msg);
+  free(msg);
+}
+
 static turbine_exec_code
-check_tasks(turbine_executor *executor, bool poll)
+check_tasks(Tcl_Interp *interp, turbine_executor *executor, bool poll)
 {
   turbine_exec_code ec;
   
@@ -287,13 +310,29 @@ check_tasks(turbine_executor *executor, bool poll)
 
   for (int i = 0; i < ncompleted; i++)
   {
-    if (completed[i].success)
+    Tcl_Obj *cb, *succ_cb, *fail_cb;
+    succ_cb = completed[i].callbacks.success.code;
+    fail_cb = completed[i].callbacks.failure.code;
+    cb = (completed[i].success) ? succ_cb : fail_cb;
+
+    if (cb != NULL)
     {
-      // TODO: eval success callback
+      int rc = Tcl_EvalObjEx(interp, cb, 0);
+      if (rc != TCL_OK)
+      {
+        callback_error(interp, executor, rc, cb);
+        return TURBINE_ERROR_EXTERNAL;
+      }
     }
-    else
+
+    if (succ_cb != NULL)
     {
-      // TODO: eval fail callback
+      Tcl_DecrRefCount(succ_cb);
+    }
+    
+    if (fail_cb != NULL)
+    {
+      Tcl_DecrRefCount(fail_cb);
     }
   }
 

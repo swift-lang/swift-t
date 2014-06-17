@@ -22,11 +22,29 @@
 #include <tcl.h>
 
 /*
+  Callback info: Tcl code to eval.
+
+  Reference counts on objects will be incremented on task launch
+  and decremented once task finishes.
+ */
+typedef struct {
+  Tcl_Obj *code;
+} turbine_task_callback;
+
+/*
+  Metadata to maintain with task.
+ */
+typedef struct {
+  turbine_task_callback success;
+  turbine_task_callback failure;
+} turbine_task_callbacks;
+
+/*
   Represent state of a completed task
  */
 typedef struct {
   bool success;
-  // TODO: callbacks
+  turbine_task_callbacks callbacks;
 } turbine_completed_task;
 
 typedef enum {
