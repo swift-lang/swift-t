@@ -65,18 +65,25 @@
     return TURBINE_EXEC_OOM; }}
 
 #define EXEC_CHECK(code) { \
-  if (code != TURBINE_EXEC_SUCCESS) return code; }
+  turbine_exec_code __ec = (code); \
+  if (__ec != TURBINE_EXEC_SUCCESS) return __ec; }
+
+#define EXEC_ADLB_CONDITION(cond, err_code, fmt, args...) { \
+  if (!(cond)) { \
+      TURBINE_ERR_PRINTF("CHECK FAILED: %s:%i\n", __FILE__, __LINE__);   \
+      TURBINE_ERR_PRINTF(fmt "\n", ##args); \
+      return (err_code); }}
 
 #define EXEC_ADLB_CHECK_MSG(code, err_code, fmt, args...) { \
-  if (code == ADLB_ERROR) { \
+  if ((code) == ADLB_ERROR) { \
       TURBINE_ERR_PRINTF("CHECK FAILED: %s:%i\n", __FILE__, __LINE__);   \
       TURBINE_ERR_PRINTF(fmt "\n", ##args); \
-      return err_code; }}
+      return (err_code); }}
 
 #define EXEC_CHECK_MSG(code, err_code, fmt, args...) { \
-  if (code != TURBINE_EXEC_SUCCESS) { \
+  if ((code) != TURBINE_EXEC_SUCCESS) { \
       TURBINE_ERR_PRINTF("CHECK FAILED: %s:%i\n", __FILE__, __LINE__);   \
       TURBINE_ERR_PRINTF(fmt "\n", ##args); \
-      return err_code; }}
+      return (err_code); }}
 
 #endif // __TURBINE_CHECKS_H
