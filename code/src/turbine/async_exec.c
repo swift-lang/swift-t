@@ -58,6 +58,7 @@ Implications of Assumptions
 
 #include "src/turbine/turbine-checks.h"
 #include "src/turbine/async_exec.h"
+#include "src/turbine/executors/exec_interface.h"
 
 #include <assert.h>
 
@@ -166,14 +167,14 @@ turbine_async_worker_loop(Tcl_Interp *interp, const char *exec_name,
 
   assert(executor->initialize != NULL);
   ec = executor->initialize(executor->context, &executor->state);
-  EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL,
+  TURBINE_EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL,
                "error initializing executor %s", executor->name);
 
   while (true)
   {
     turbine_exec_slot_state slots;
     ec = executor->slots(executor->state, &slots);
-    EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL,
+    TURBINE_EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL,
                "error getting executor slot count %s", executor->name);
 
     if (slots.used < slots.total)
@@ -189,12 +190,12 @@ turbine_async_worker_loop(Tcl_Interp *interp, const char *exec_name,
       {
         break;
       }
-      EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL,
+      TURBINE_EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL,
                "error getting tasks for executor %s", executor->name);
     }
     // Update count in case work added 
     ec = executor->slots(executor->state, &slots);
-    EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL,
+    TURBINE_EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL,
                "error getting executor slot count %s", executor->name);
 
     if (slots.used > 0)
@@ -202,7 +203,7 @@ turbine_async_worker_loop(Tcl_Interp *interp, const char *exec_name,
       // Need to do non-blocking check if we want to request more work
       bool poll = (slots.used < slots.total);
       ec = check_tasks(interp, executor, poll);
-      EXEC_CHECK(ec);
+      TURBINE_EXEC_CHECK(ec, TURBINE_ERROR_EXTERNAL);
     }
   }
 
@@ -228,7 +229,7 @@ get_tasks(Tcl_Interp *interp, turbine_executor *executor,
   {
     ac = ADLB_Iget(executor->adlb_work_type, buffer, &work_len,
                     &answer_rank, &type_recved);
-    EXEC_ADLB_CHECK_MSG(ac, TURBINE_EXEC_ERROR,
+    EXEC_ADLB_CHECK_MSG(ac, TURBINE_EXEC_OTHER,
                         "Error getting work from ADLB");
 
     got_work = (ac != ADLB_NOTHING);
@@ -242,7 +243,7 @@ get_tasks(Tcl_Interp *interp, turbine_executor *executor,
     {
       return TURBINE_EXEC_SHUTDOWN;
     }
-    EXEC_ADLB_CHECK_MSG(ac, TURBINE_EXEC_ERROR,
+    EXEC_ADLB_CHECK_MSG(ac, TURBINE_EXEC_OTHER,
                         "Error getting work from ADLB");
     
     got_work = true;

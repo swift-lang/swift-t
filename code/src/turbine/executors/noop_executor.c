@@ -15,6 +15,8 @@
  */
 #include "src/turbine/executors/noop_executor.h"
 
+#include "src/turbine/executors/exec_interface.h"
+
 #include "src/turbine/turbine-checks.h"
 #include "src/util/debug.h"
 
@@ -73,15 +75,14 @@ init_noop_executor(turbine_executor *exec, int adlb_work_type)
   exec->slots = noop_slots;
 }
 
-turbine_exec_code
+turbine_code
 noop_executor_register(int adlb_work_type)
 {
-  turbine_exec_code ec;
+  turbine_code tc;
   turbine_executor exec;
   init_noop_executor(&exec, adlb_work_type);
-  ec = turbine_add_async_exec(exec);
-  EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL,
-               "error registering Noop executor");
+  tc = turbine_add_async_exec(exec);
+  turbine_check(tc);
 
   return TURBINE_EXEC_SUCCESS;
 }
@@ -141,11 +142,15 @@ noop_free(void *context)
   return TURBINE_EXEC_SUCCESS;
 }
 
-turbine_exec_code
-noop_execute(Tcl_Interp *interp, void *state, const void *work, int length,
+turbine_code
+noop_execute(Tcl_Interp *interp, const turbine_executor *exec,
+             const void *work, int length,
              turbine_task_callbacks callbacks)
 {
-  noop_state *s = state;
+  noop_state *s = exec->state;
+  turbine_condition(exec != NULL, TURBINE_ERROR_INVALID,
+                    "Null state for noop executor");
+
   assert(s->slots.used < s->slots.total);
   s->slots.used++;
 
@@ -175,7 +180,7 @@ noop_execute(Tcl_Interp *interp, void *state, const void *work, int length,
     Tcl_IncrRefCount(callbacks.failure.code);
   }
   
-  return TURBINE_EXEC_SUCCESS;
+  return TURBINE_SUCCESS;
 }
 
 // Choose a random completed task
@@ -235,8 +240,8 @@ noop_wait(void *state, turbine_completed_task *completed,
   {
     usleep(20 * 1000);
     turbine_exec_code ec = fill_completed(s, completed, ncompleted);
-    EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL, "error checking for "
-                  "completed tasks Noop executor");
+    EXEC_CHECK_MSG(ec, "error checking for completed tasks Noop "
+                       "executor");
   }
   else
   {
@@ -253,8 +258,7 @@ noop_poll(void *state, turbine_completed_task *completed,
   if (s->slots.used > 0 && rand() > (RAND_MAX / 5))
   {
     turbine_exec_code ec = fill_completed(s, completed, ncompleted);
-    EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL, "error filling "
-                  "completed task in Noop executor");
+    EXEC_CHECK_MSG(ec, "error filling completed task in Noop executor");
   }
   else
   {

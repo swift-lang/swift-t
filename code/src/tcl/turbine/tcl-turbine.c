@@ -1068,9 +1068,9 @@ Noop_Exec_Register_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = Tcl_GetIntFromObj(interp, objv[1], &work_type);
   TCL_CHECK(rc);
 
-  turbine_exec_code ec;
-  ec = noop_executor_register(work_type);
-  TCL_CONDITION(ec == TURBINE_EXEC_SUCCESS,
+  turbine_code tc;
+  tc = noop_executor_register(work_type);
+  TCL_CONDITION(tc == TURBINE_SUCCESS,
                 "Could not register noop executor");
   
   return TCL_OK;
@@ -1117,12 +1117,11 @@ Noop_Exec_Run_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
   TCL_CONDITION(objc >= 2 && objc <= 4, "Wrong # args");
-  turbine_exec_code ec;
+  turbine_code tc;
  
   const turbine_executor *noop_exec;
   noop_exec = turbine_get_async_exec(NOOP_EXECUTOR_NAME);
   TCL_CONDITION(noop_exec != NULL, "Noop executor not registered");
-  TCL_CONDITION(noop_exec->state != NULL, "Noop executor not init");
 
   char *str;
   int len;
@@ -1142,8 +1141,8 @@ Noop_Exec_Run_Cmd(ClientData cdata, Tcl_Interp *interp,
     callbacks.success.code = objv[3];
   }
 
-  ec = noop_execute(interp, noop_exec->state, str, len, callbacks);
-  TCL_CONDITION(ec == TURBINE_EXEC_SUCCESS, "Error executing noop task");
+  tc = noop_execute(interp, noop_exec, str, len, callbacks);
+  TCL_CONDITION(tc == TURBINE_SUCCESS, "Error executing noop task");
   
   return TCL_OK;
 }

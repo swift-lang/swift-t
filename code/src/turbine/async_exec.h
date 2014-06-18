@@ -14,6 +14,10 @@
  * limitations under the License
  */
 
+/*
+  External generic API for async executors.
+ */
+
 #ifndef __ASYNC_EXEC_H
 #define __ASYNC_EXEC_H
 
@@ -21,8 +25,12 @@
 
 #include <tcl.h>
 
+// Forward declare turbine executor
+typedef struct turbine_executor turbine_executor;
+
 /*
-  Callback info: Tcl code to eval.
+  We implement callbacks by evaluating Tcl code on task completion.  This
+  is not especially generic, but simplifies matters for the time being.
 
   Reference counts on objects will be incremented on task launch
   and decremented once task finishes.
@@ -39,115 +47,9 @@ typedef struct {
   turbine_task_callback failure;
 } turbine_task_callbacks;
 
-/*
-  Represent state of a completed task
- */
-typedef struct {
-  bool success;
-  turbine_task_callbacks callbacks;
-} turbine_completed_task;
-
-typedef enum {
-  TURBINE_EXEC_SUCCESS,
-  TURBINE_EXEC_ERROR,
-  TURBINE_EXEC_SHUTDOWN,
-  TURBINE_EXEC_OOM,
-  // TODO: more info - e.g. if bad arg, or invalid state
-} turbine_exec_code;
-
-/*
-  Info about available/used slots in executor
- */
-typedef struct {
-  int used;
-  int total;
-} turbine_exec_slot_state;
-
-/*
-  Function pointer types.  All are passed void state pointer for
-  any state needed.  A context pointer allows context to be
-  passed in for initialization
- */
-
-/*
-  Initialize: initialize executor before running tasks.
-               Passed context pointer.
-               Should initialize state pointer
- */
-typedef turbine_exec_code (*turbine_exec_init)(void *context,
-                                               void **state);
-
-/*
-  Shutdown: shut down initialized executor
- */
-typedef turbine_exec_code (*turbine_exec_shutdown)(void *state);
-
-/*
-  Free: free memory for shut down executor
- */
-typedef turbine_exec_code (*turbine_exec_free)(void *context);
-
-/* 
-  Waiting: called on an executor with active tasks.
-          updates completed with completed task info
-  state: executor state pointer
-  completed: output array allocated by caller
-  ncompleted: input/output, set to array size by caller,
-              set to actual number complted by callee
- */
-typedef turbine_exec_code (*turbine_exec_wait)(void *state,
-          turbine_completed_task *completed, int *ncompleted);
-
-/*
-  Polling: periodically called on an executor with active tasks.
-           updates completed with completed task info.
-           Arguments same as wait
- */
-typedef turbine_exec_code (*turbine_exec_poll)(void *state,
-          turbine_completed_task *completed, int *ncompleted);
-
-/*
-  Slots: fill in counts of slots
- */
-typedef turbine_exec_code (*turbine_exec_slots)(void *state,
-                                  turbine_exec_slot_state *slots);
-
-// Executor notification model
-// TODO: only polling based currently used
-typedef enum
-{
-  EXEC_POLLING, /* We have to periodically poll for status */
-  //EXEC_BG_THREAD, /* Executor has background thread */
-} async_exec_notif;
-
-typedef struct {
-  const char *name;
-  int adlb_work_type; // Type to request from adlb
-  async_exec_notif notif_mode;
-  void *context; // Context info
-  void *state; // Internal state to pass to executor functions
-
-  /*
-    Function pointers for executors
-   */
-  turbine_exec_init initialize;
-  turbine_exec_shutdown shutdown;
-  turbine_exec_free free;
-  turbine_exec_wait wait;
-  turbine_exec_poll poll;
-  turbine_exec_slots slots;
-} turbine_executor;
-
-
 turbine_code turbine_async_exec_initialize(void);
 
 turbine_code turbine_async_exec_finalize(void);
-
-/*
-  Register executor
- */
-turbine_code
-turbine_add_async_exec(turbine_executor executor);
 
 /*
   Lookup registered executor.

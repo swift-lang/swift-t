@@ -23,14 +23,15 @@
 // Registered name for noop executor
 #define NOOP_EXECUTOR_NAME "NOOP"
 
-turbine_exec_code
+turbine_code
 noop_executor_register(int adlb_work_type);
 
 /*
   Execute a task
  */
-turbine_exec_code
-noop_execute(Tcl_Interp *interp, void *state, const void *work, int length,
+turbine_code
+noop_execute(Tcl_Interp *interp, const turbine_executor *exec,
+             const void *work, int length,
              turbine_task_callbacks callbacks);
 
 #endif //__NOOP_EXECUTOR_H
