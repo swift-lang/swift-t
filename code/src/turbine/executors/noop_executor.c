@@ -38,11 +38,11 @@ typedef struct noop_state {
 } noop_state;
 
 static turbine_exec_code
-noop_initialize(const void *context, void **state);
+noop_initialize(void *context, void **state);
 
 static turbine_exec_code noop_shutdown(void *state);
 
-static turbine_exec_code noop_free(const void *context);
+static turbine_exec_code noop_free(void *context);
 
 static turbine_exec_code
 noop_wait(void *state, turbine_completed_task *completed,
@@ -87,7 +87,7 @@ noop_executor_register(int adlb_work_type)
 }
 
 static turbine_exec_code
-noop_initialize(const void *context, void **state)
+noop_initialize(void *context, void **state)
 {
   assert(context == NOOP_CONTEXT);
   noop_state *s = malloc(sizeof(noop_state)); 
@@ -135,7 +135,7 @@ noop_shutdown(void *state)
 }
 
 static turbine_exec_code
-noop_free(const void *context)
+noop_free(void *context)
 {
   // Don't need to do anything
   return TURBINE_EXEC_SUCCESS;

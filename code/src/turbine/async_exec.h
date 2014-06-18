@@ -74,7 +74,7 @@ typedef struct {
                Passed context pointer.
                Should initialize state pointer
  */
-typedef turbine_exec_code (*turbine_exec_init)(const void *context,
+typedef turbine_exec_code (*turbine_exec_init)(void *context,
                                                void **state);
 
 /*
@@ -85,7 +85,7 @@ typedef turbine_exec_code (*turbine_exec_shutdown)(void *state);
 /*
   Free: free memory for shut down executor
  */
-typedef turbine_exec_code (*turbine_exec_free)(const void *context);
+typedef turbine_exec_code (*turbine_exec_free)(void *context);
 
 /* 
   Waiting: called on an executor with active tasks.
@@ -124,7 +124,7 @@ typedef struct {
   const char *name;
   int adlb_work_type; // Type to request from adlb
   async_exec_notif notif_mode;
-  const void *context; // Context info that is not modified
+  void *context; // Context info
   void *state; // Internal state to pass to executor functions
 
   /*
