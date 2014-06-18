@@ -63,6 +63,13 @@ MPI_VERSION=3
 # ENABLE_R=1
 # R_INSTALL=/usr/
 
+# Enable Julia integration
+# ENABLE_JULIA=1
+# JULIA_INSTALL=/usr/
+
+# Enable task execution through Coasters C interface
+# COASTERS_INSTALL=/path/to/coaster-c-client
+
 # Enable MPE support
 # ENABLE_MPE=1
 

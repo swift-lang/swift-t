@@ -48,6 +48,19 @@ if [ ! -z "$R_INSTALL" ]; then
   EXTRA_ARGS+=" --with-r=${R_INSTALL}"
 fi
 
+if (( ENABLE_JULIA )); then
+  if [ ! -z "$JULIA_INSTALL" ]; then
+    EXTRA_ARGS+=" --with-julia=${JULIA_INSTALL}"
+  else
+    echo "Have to specify julia install directory if enabling"
+    exit 1
+  fi
+fi
+
+if [ ! -z "$COASTERS_INSTALL" ]; then
+  EXTRA_ARGS+=" --with-coasters=${COASTERS_INSTALL}" 
+fi
+
 if [ ! -z "$TCL_INSTALL" ]; then
   EXTRA_ARGS+=" --with-tcl=${TCL_INSTALL}"
 fi
