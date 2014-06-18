@@ -39,18 +39,6 @@ if (( EXM_STATIC_BUILD )); then
   EXTRA_ARGS+=" --disable-shared"
 fi
 
-if (( EXM_CRAY )); then
-  if (( EXM_STATIC_BUILD )); then
-    export CC="cc"
-    export CFLAGS="-g -O2"
-  else
-    export CC="gcc"
-    export CFLAGS="-g -O2 -I${MPI_INSTALL}/include"
-    export LDFLAGS="-L${MPI_INSTALL}/lib -lmpich"
-  fi
-  EXTRA_ARGS+=" --enable-mpi-2"
-fi
-
 if (( DISABLE_XPT )); then
     EXTRA_ARGS+=" --enable-checkpoint=no"
 fi

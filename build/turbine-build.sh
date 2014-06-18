@@ -33,15 +33,6 @@ if (( EXM_STATIC_BUILD )); then
   EXTRA_ARGS+=" --disable-shared"
 fi
 
-if (( EXM_CRAY )); then
-  if (( EXM_STATIC_BUILD )); then
-    export CC=cc
-  else
-    export CC=gcc
-  fi
-  EXTRA_ARGS+=" --enable-custom-mpi"
-fi
-
 if (( ENABLE_PYTHON )); then
   EXTRA_ARGS+=" --enable-python"
 fi

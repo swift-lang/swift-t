@@ -38,15 +38,6 @@ if (( DISABLE_STATIC )); then
   EXTRA_ARGS+=" --disable-static"
 fi
 
-if (( EXM_CRAY )); then
-  if (( EXM_STATIC_BUILD )); then
-    export CC=cc
-  else
-    export CC=gcc
-  fi
-  export CFLAGS="-g -O2"
-fi
-
 if (( CONFIGURE )); then
   ./configure --enable-shared --prefix=${C_UTILS_INSTALL} ${EXTRA_ARGS}
 fi
