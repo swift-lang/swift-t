@@ -66,10 +66,6 @@ MPI_VERSION=3
 # Enable MPE support
 # ENABLE_MPE=1
 
-# Cray systems.  Will perform a dynamic or static build depending on
-# EXM_BUILD_STATIC
-# EXM_CRAY=1
-
 # Disable ADLB checkpoint functionality
 # DISABLE_XPT=1
 
