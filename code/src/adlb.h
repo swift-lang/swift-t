@@ -130,7 +130,7 @@ adlb_code ADLB_Iget(int type_requested, void* payload, int* length,
 
   TODO: not implemented yet
   payload: will be retained by ADLB until request is completed.
-  req: handle used to check for completion.
+  req: handle used to check for completion, filled in by function
  */
 adlb_code ADLBP_Aget(int type_requested, adlb_payload_buf payload,
                      adlb_get_req *req);
@@ -143,7 +143,7 @@ adlb_code ADLB_Aget(int type_requested, adlb_payload_buf payload,
   TODO: not implemented yet
   nreqs: number of requests to initiate
   payloads: array of nreqs payload buffers
-  reqs: array of nreqs requests
+  reqs: array of nreqs requests, filled in with request handles
  */
 adlb_code ADLBP_Amget(int type_requested, int nreqs,
                      const adlb_payload_buf* payloads,
