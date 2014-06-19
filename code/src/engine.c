@@ -27,13 +27,13 @@
 #include "engine.h"
 
 #include <assert.h>
+#include <inttypes.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-
-#include <stdint.h>
-#include <inttypes.h>
+#include <unistd.h>
 
 #include <adlb.h>
 

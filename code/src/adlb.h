@@ -18,17 +18,7 @@
 #ifndef ADLB_H
 #define ADLB_H
 
-// Need _GNU_SOURCE for asprintf()
-#define _GNU_SOURCE
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdarg.h>
-#include <limits.h>
-
 #include "adlb-defs.h"
-
 #include "version.h"
 
 #define XLB

@@ -27,6 +27,8 @@
 #ifndef MESSAGING_H
 #define MESSAGING_H
 
+#include <limits.h>
+
 #include "adlb.h"
 #include "checks.h"
 #include "debug.h"
