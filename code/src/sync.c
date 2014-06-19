@@ -154,7 +154,7 @@ xlb_sync_init(void)
   xlb_pending_sync_head = 0;
   xlb_pending_syncs = malloc(sizeof(xlb_pending_syncs[0]) *
                                 (size_t)xlb_pending_sync_size);
-  CHECK_MSG(xlb_pending_syncs != NULL, "could not allocate memory");
+  ADLB_MALLOC_CHECK(xlb_pending_syncs);
   xlb_pending_notif_count = 0;
 
   /*
@@ -1100,7 +1100,7 @@ static adlb_code enqueue_pending(xlb_pending_kind kind, int rank,
     DEBUG("Resizing to accommodate %i pending", xlb_pending_sync_size);
     xlb_pending_syncs = realloc(xlb_pending_syncs,
                       sizeof(xlb_pending_syncs[0]) * (size_t)xlb_pending_sync_size);
-    CHECK_MSG(xlb_pending_syncs != NULL, "could not allocate memory");
+    ADLB_MALLOC_CHECK(xlb_pending_syncs);
     /* Entries are in: [head..count) ++ [0..head)
      * Copy [0..head) to [count..count+head) to account for new size
      * End result is all entries in [head..head+count] */
@@ -1124,7 +1124,7 @@ static adlb_code enqueue_pending(xlb_pending_kind kind, int rank,
   else
   {
     entry->hdr = malloc(PACKED_SYNC_SIZE);
-    CHECK_MSG(entry->hdr != NULL, "could not allocate memory");
+    ADLB_MALLOC_CHECK(entry->hdr);
     memcpy(entry->hdr, hdr, PACKED_SYNC_SIZE);
   }
   xlb_pending_sync_count++;

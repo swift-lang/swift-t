@@ -83,7 +83,7 @@ xlb_requestqueue_init(int my_workers)
 {
   assert(my_workers >= 0);
   targets = malloc(sizeof(targets[0]) * (size_t)my_workers);
-  CHECK_MSG(targets != NULL, "error allocating memory");
+  ADLB_MALLOC_CHECK(targets);
 
   for (int i = 0; i < my_workers; i++)
   {
@@ -91,7 +91,7 @@ xlb_requestqueue_init(int my_workers)
   }
 
   type_requests = malloc(sizeof(struct list2) * (size_t)xlb_types_size);
-  CHECK_MSG(type_requests != NULL, "error allocating memory");
+  ADLB_MALLOC_CHECK(type_requests);
   for (int i = 0; i < xlb_types_size; i++)
     list2_init(&type_requests[i]);
 
@@ -104,7 +104,7 @@ xlb_requestqueue_init(int my_workers)
   for (int i = 0; i < list2_node_pool.free_array_size; i++)
   {
     struct list2_item *item = malloc(sizeof(struct list2_item));
-    CHECK_MSG(item != NULL, "error allocating memory");
+    ADLB_MALLOC_CHECK(item);
     list2_node_pool.free_array[i] = item;
   }
 
@@ -131,13 +131,13 @@ xlb_requestqueue_add(int rank, int type)
   {
     // Otherwise store on heap 
     R = malloc(sizeof(*R));
-    CHECK_MSG(R != NULL, "out of memory");
+    ADLB_MALLOC_CHECK(R);
   }
   
   struct list2* L = &type_requests[type];
 
   struct list2_item* item = alloc_list2_node();
-  CHECK_MSG(item != NULL, "out of memory");
+  ADLB_MALLOC_CHECK(item);
 
   R->rank = rank;
   R->type = type;

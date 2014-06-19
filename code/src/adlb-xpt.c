@@ -213,7 +213,7 @@ adlb_code ADLB_Xpt_lookup(const void *key, int key_len, adlb_binary_data *result
     int val_len = res.FILE_LOC.val_len;
     result->data = result->caller_data = malloc((size_t)val_len);
     result->length = val_len;
-    CHECK_MSG(result->data != NULL, "Could not allocate buffer");
+    ADLB_MALLOC_CHECK(result->data);
     
     rc = read_file_val(&res.FILE_LOC, result->caller_data, val_len);
     // Make sure memory is freed before returning
@@ -273,7 +273,7 @@ static adlb_code cached_open_read(xlb_xpt_read_state **state,
   }
 
   tmp = malloc(sizeof(xlb_xpt_read_state));
-  CHECK_MSG(tmp != NULL, "Error allocating memory");
+  ADLB_MALLOC_CHECK(tmp);
   adlb_code rc = xlb_xlb_xpt_open_read(tmp, filename);
   if (rc != ADLB_SUCCESS)
   {
@@ -314,12 +314,12 @@ adlb_code ADLB_Xpt_reload(const char *filename, adlb_xpt_load_stats *stats,
   //                           max_index_val_bytes + key_size);
   buffer.length = 4 * 1024 * 1024;
   buffer.data = malloc((size_t)buffer.length);
-  CHECK_MSG(buffer.data != NULL, "Error allocating buffer");
+  ADLB_MALLOC_CHECK(buffer.data);
 
   const uint32_t ranks = read_state->ranks;
   stats->ranks = ranks;
   stats->rank_stats = malloc(sizeof(stats->rank_stats[0]) * ranks);
-  CHECK_MSG(stats->rank_stats != NULL, "Out of memory");
+  ADLB_MALLOC_CHECK(stats->rank_stats);
   for (int i = 0; i < ranks; i++)
   {
     stats->rank_stats[i].loaded = false;
@@ -384,7 +384,7 @@ static inline adlb_code xpt_reload_rank(const char *filename,
       // Allocate larger buffer to fit
       buffer->length = key_len;
       buffer->data = realloc(buffer->data, (size_t)buffer->length);
-      CHECK_MSG(buffer->data != NULL, "Error allocating buffer");
+      ADLB_MALLOC_CHECK(buffer->data);
       rc = xlb_xpt_read(read_state, buffer, &key_len, &key_ptr,
                         &val_len, &val_ptr, &val_offset);
     }
