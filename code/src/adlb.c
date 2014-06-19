@@ -661,6 +661,18 @@ adlb_code ADLBP_Amget(int type_requested, int nreqs,
   return ADLB_ERROR;
 }
 
+adlb_code ADLBP_Aget_test(adlb_get_req *req)
+{
+  // TODO: run MPI_test on all MPI_request objects
+  return ADLB_ERROR;
+}
+
+adlb_code ADLBP_Aget_wait(adlb_get_req *req)
+{
+  // TODO: run MPI_wait on all MPI_request objects
+  return ADLB_ERROR;
+}
+
 int
 ADLB_Locate(adlb_datum_id id)
 {

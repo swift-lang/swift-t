@@ -65,6 +65,8 @@ declare_pair(wkr, get);
 declare_pair(wkr, iget);
 declare_pair(wkr, aget);
 declare_pair(wkr, amget);
+declare_pair(wkr, aget_test);
+declare_pair(wkr, aget_wait);
 declare_pair(wkr, unique);
 declare_pair(wkr, create);
 declare_pair(wkr, subscribe);

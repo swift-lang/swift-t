@@ -219,6 +219,22 @@ ADLB_Amget(int type_requested, int nreqs, const adlb_payload_buf* payloads,
   return rc;
 }
 
+adlb_code ADLB_Aget_test(adlb_get_req *req)
+{
+  MPE_LOG(xlb_mpe_wkr_aget_test_start);
+  adlb_code rc = ADLBP_Aget_test(req);
+  MPE_LOG(xlb_mpe_wkr_aget_test_end);
+  return rc;
+}
+
+adlb_code ADLB_Aget_wait(adlb_get_req *req)
+{
+  MPE_LOG(xlb_mpe_wkr_aget_wait_start);
+  adlb_code rc = ADLBP_Aget_wait(req);
+  MPE_LOG(xlb_mpe_wkr_aget_wait_end);
+  return rc;
+}
+
 /**
    Applications should use the ADLB_Create_type functions in adlb.h
  */

@@ -113,7 +113,8 @@ adlb_code ADLB_Get(int type_requested, void* payload, int* length,
 
 /*
  Polling equivalent of ADLB_Get.  Returns ADLB_NOTHING if no
- matching task are available.
+ matching task are available.  Other return codes are same as
+ ADLB_Get
 
   NOTE: Iget does not currently support parallel tasks
 */
@@ -150,6 +151,21 @@ adlb_code ADLBP_Amget(int type_requested, int nreqs,
 adlb_code ADLB_Amget(int type_requested, int nreqs,
                      const adlb_payload_buf* payloads,
                      adlb_get_req *reqs);
+
+/*
+  Test if a get request completed without blocking.
+
+  Return codes match ADLB_Iget
+ */
+adlb_code ADLBP_Aget_test(adlb_get_req *req);
+adlb_code ADLB_Aget_test(adlb_get_req *req);
+
+/*
+  Wait until a get request completes.
+  Return codes match ADLB_Get
+ */
+adlb_code ADLBP_Aget_wait(adlb_get_req *req);
+adlb_code ADLB_Aget_wait(adlb_get_req *req);
 
 /**
    Obtain server rank responsible for data id
