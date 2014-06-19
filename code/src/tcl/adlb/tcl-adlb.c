@@ -43,9 +43,10 @@
 #include <exm-memory.h>
 #include <exm-string.h>
 
+#include <limits.h>
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <inttypes.h>
 
 #include <tcl.h>
 #include <mpi.h>
