@@ -76,8 +76,12 @@ static int disable_hostmap;
 
 typedef struct {
   struct packed_get_response hdr;
-  MPI_Comm *task_comm; // Communicator for parallel tasks
-  // TODO: MPI_Request objects?
+  MPI_Comm task_comm; // Communicator for parallel tasks
+  // MPI_Request objects
+  MPI_Request reqs[3];
+  int ntotal; // Total number of reqs issued
+  int ncomplete; // Number of reqs which completed
+
   bool in_use; // Whether being used for a request
 } xlb_get_req_impl;
 
@@ -95,16 +99,19 @@ static struct {
 
 static adlb_code xlb_get_reqs_init(void);
 static adlb_code xlb_get_reqs_finalize(void);
-static adlb_code xlb_get_reqs_alloc(adlb_get_req *handles, int count);
+static adlb_code xlb_get_reqs_alloc(adlb_get_req* handles, int count);
 static adlb_code xlb_get_req_lookup(adlb_get_req handle,
-                                    xlb_get_req_impl **req);
+                                    xlb_get_req_impl** req);
 static adlb_code xlb_get_reqs_expand(int min_size);
 
 static adlb_code xlb_block_worker(bool blocking);
 
-static adlb_code xlb_aget_test(xlb_get_req_impl *req, int* length,
-                    int* answer, int* type_recvd, MPI_Comm* comm);
-
+static adlb_code xlb_aget_test(adlb_get_req *req, int* length,
+                    int* answer, int* type_recvd, MPI_Comm* comm,
+                    xlb_get_req_impl *req_impl);
+static adlb_code xlb_aget_progress(xlb_get_req_impl *req, bool blocking);
+static adlb_code xlb_get_req_release(adlb_get_req* req,
+                    xlb_get_req_impl* impl);
 
 static void
 check_versions()
@@ -806,23 +813,99 @@ adlb_code ADLBP_Amget(int type_requested, int nreqs,
   return ADLB_ERROR;
 }
 
-adlb_code ADLBP_Aget_test(adlb_get_req *req, int* length,
+adlb_code ADLBP_Aget_test(adlb_get_req* req, int* length,
                     int* answer, int* type_recvd, MPI_Comm* comm)
 {
   adlb_code ac;
-  xlb_get_req_impl *impl;
-  ac = xlb_get_req_lookup(*req, &impl);
+  xlb_get_req_impl *req_impl;
+  ac = xlb_get_req_lookup(*req, &req_impl);
   ADLB_CHECK(ac);
 
-  return xlb_aget_test(impl, length, answer, type_recvd, comm);
+  return xlb_aget_test(req, length, answer, type_recvd, comm, req_impl);
 }
 
-static adlb_code xlb_aget_test(xlb_get_req_impl *req, int* length,
-                    int* answer, int* type_recvd, MPI_Comm* comm)
+/*
+  Test for completion.  Release request and do other cleanup
+  on success.
+ */
+static adlb_code xlb_aget_test(adlb_get_req *req, int* length,
+                    int* answer, int* type_recvd, MPI_Comm* comm,
+                    xlb_get_req_impl *req_impl)
 {
-  // TODO: run MPI_test on all MPI_request objects
-  // TODO: if completed, fill in output args
+  adlb_code ac;
+  ac = xlb_aget_progress(req_impl, false);
+  ADLB_CHECK(ac);
+  
+  if (ac == ADLB_NOTHING)
+  {
+    return ADLB_NOTHING;
+  }
+    
+  *length = req_impl->hdr.length;
+  *answer = req_impl->hdr.answer_rank;
+  *type_recvd = req_impl->hdr.type;
+  *comm = req_impl->task_comm;
+  
+  // Release and invalidate request 
+  ac = xlb_get_req_release(req, req_impl);
+  ADLB_CHECK(ac);
+
+  return ADLB_SUCCESS;
+}
+
+/*
+  Make progress on get request.
+
+  Returns ADLB_SUCCESS if completed, ADLB_NOTHING if not complete,
+    ADLB_ERROR if error encountered
+
+  blocking: if true, don't return until completed
+ */
+static adlb_code xlb_aget_progress(xlb_get_req_impl *req, bool blocking)
+{
+  int rc;
+  if (blocking)
+  {
+    // Wait for all outstanding requests
+    rc = MPI_Waitall(req->ntotal - req->ncomplete,
+                         &req->reqs[req->ncomplete],
+                         MPI_STATUSES_IGNORE);
+    MPI_CHECK(rc);
+
+    req->ncomplete = req->ntotal;
+  }
+  else
+  {
+    while (req->ncomplete < req->ntotal)
+    {
+      int flag;
+      rc = MPI_Test(&req->reqs[req->ncomplete], &flag,
+                    MPI_STATUS_IGNORE);
+      MPI_CHECK(rc);
+
+      if (!flag)
+      {
+        return ADLB_NOTHING;
+      }
+      req->ncomplete++;
+    }
+  }
+
+  // TODO: handle any additional logic, e.g. communicator creation
   return ADLB_ERROR;
+}
+
+static adlb_code xlb_get_req_release(adlb_get_req* req,
+                    xlb_get_req_impl* impl)
+{
+  // Should be completed
+  assert(impl->in_use);
+  assert(impl->ncomplete == impl->ntotal);
+
+  *req = ADLB_GET_REQ_NULL;
+  impl->in_use = false;
+
+  return ADLB_SUCCESS;
 }
 
 adlb_code ADLBP_Aget_wait(adlb_get_req *req, int* length,
@@ -830,11 +913,11 @@ adlb_code ADLBP_Aget_wait(adlb_get_req *req, int* length,
 {
   adlb_code ac;
 
-  xlb_get_req_impl *impl;
-  ac = xlb_get_req_lookup(*req, &impl);
+  xlb_get_req_impl *req_impl;
+  ac = xlb_get_req_lookup(*req, &req_impl);
   ADLB_CHECK(ac);
 
-  ac = xlb_aget_test(impl, length, answer, type_recvd, comm);
+  ac = xlb_aget_test(req, length, answer, type_recvd, comm, req_impl);
   ADLB_CHECK(ac);
   if (ac == ADLB_SUCCESS)
   {
@@ -846,14 +929,23 @@ adlb_code ADLBP_Aget_wait(adlb_get_req *req, int* length,
   ac = xlb_block_worker(true);
   ADLB_CHECK(ac);
 
-  // TODO: run MPI_wait on all MPI_request objects
-  // TODO: if completed, fill in output args
- 
+  ac = xlb_aget_progress(req_impl, true);
+  ADLB_CHECK(ac);
+  assert(ac == ADLB_SUCCESS); // Shouldn't be ADLB_NOTHING
+
   // Notify we're unblocked
   ac = xlb_block_worker(false);
   ADLB_CHECK(ac);
+  
+  *length = req_impl->hdr.length;
+  *answer = req_impl->hdr.answer_rank;
+  *type_recvd = req_impl->hdr.type;
+  *comm = req_impl->task_comm;
+ 
+  ac = xlb_get_req_release(req, req_impl);
+  ADLB_CHECK(ac);
 
-  return ADLB_ERROR;
+  return ADLB_SUCCESS;
 }
 
 /*
