@@ -635,7 +635,29 @@ ADLBP_Iget(int type_requested, void* payload, int* length,
   *answer = g.answer_rank;
   *type_recvd = g.type;
 
+  // TODO: Iget doesn't support parallel tasks
+  ASSERT_MSG(g.parallelism <= 1,
+    "Do not support parallel tasks with Iget yet");
+
   return ADLB_SUCCESS;
+}
+
+adlb_code ADLBP_Aget(int type_requested, void* payload,
+                     adlb_get_req *req)
+{
+  // Special case of Amget
+  return ADLBP_Amget(type_requested, 1, &payload, req);
+}
+
+adlb_code ADLBP_Amget(int type_requested, int nreqs, void** payload,
+                     adlb_get_req *reqs)
+{
+  // TODO: need to implement
+  // - initiate Irecvs for each request
+  // TODO: need to know buffer size to initiate request
+  // - send request to server
+  // - fill in req objects
+  return ADLB_ERROR;
 }
 
 int

@@ -16,15 +16,25 @@
 
 
 /**
- * Basic definitions used by the ADLB Data module
+ * Basic definitions used by ADLB
  * */
 
 #ifndef ADLB_DEFS_H
 #define ADLB_DEFS_H
 
-#include <list_i.h>
-#include <list.h>
-#include <list_l.h>
+#include <stdbool.h>
+#include <stddef.h>
+
+// Include mpi header can cause confusion for C++, since it will
+// try to link against C++ version of functions
+#ifdef __cplusplus
+#define __adlb_old_cplusplus __cplusplus
+#undef __cplusplus
+#endif
+#include <mpi.h>
+#ifdef __adlb_old_cplusplus
+#define __cplusplus __adlb_old_cplusplus
+#endif
 
 /**
    ADLB common return codes
@@ -46,6 +56,18 @@ typedef enum
  /** Indicate something is finished and shouldn't call again */
  ADLB_DONE = -6,
 } adlb_code;
+
+/**
+  Request handle for asynchronous get request
+ */
+typedef struct {
+  int *length; // Length of task data in buffer
+  int *answer; // Answer rank for task
+  int *type_recvd; // Type of work received
+  int *parallelism; // Parallelism of tasks
+  MPI_Comm *task_comm; // Communicator for parallel tasks
+  // TODO: MPI_Request objects?
+} adlb_get_req;
 
 /**
    Identifier for all ADLB data module user data.

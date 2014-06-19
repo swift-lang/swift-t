@@ -174,14 +174,14 @@ ADLB_Get(int type_requested, void* payload, int* length,
 {
 #ifdef ENABLE_MPE
   mpe_log_user_state(-1);
-  MPE_Log_bare_event(xlb_mpe_wkr_get_start);
 #endif
+  MPE_LOG(xlb_mpe_wkr_get_start);
 
   int rc = ADLBP_Get(type_requested, payload, length, answer,
                      type_recvd, comm);
 
+  MPE_LOG(xlb_mpe_wkr_get_end);
 #ifdef ENABLE_MPE
-  MPE_Log_bare_event(xlb_mpe_wkr_get_end);
   if (rc == ADLB_SUCCESS)
     mpe_log_user_state(*type_recvd);
 #endif
@@ -193,10 +193,29 @@ adlb_code
 ADLB_Iget(int type_requested, void* payload, int* length,
          int* answer, int* type_recvd)
 {
-  // MPE_LOG(xlb_mpe_wkr_iget_start);
+  MPE_LOG(xlb_mpe_wkr_iget_start);
   adlb_code rc = ADLBP_Iget(type_requested, payload, length, answer,
                             type_recvd);
-  // MPE_LOG(xlb_mpe_wkr_iget_start);
+  MPE_LOG(xlb_mpe_wkr_iget_end);
+  return rc;
+}
+
+adlb_code
+ADLB_Aget(int type_requested, void* payload, adlb_get_req *req)
+{
+  MPE_LOG(xlb_mpe_wkr_aget_start);
+  adlb_code rc = ADLBP_Aget(type_requested, payload, req);
+  MPE_LOG(xlb_mpe_wkr_aget_end);
+  return rc;
+}
+
+adlb_code
+ADLB_Amget(int type_requested, int nreqs, void** payloads,
+          adlb_get_req *reqs)
+{
+  MPE_LOG(xlb_mpe_wkr_amget_start);
+  adlb_code rc = ADLBP_Amget(type_requested, nreqs, payloads, reqs);
+  MPE_LOG(xlb_mpe_wkr_amget_end);
   return rc;
 }
 

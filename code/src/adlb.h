@@ -25,19 +25,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdarg.h>
-#include <stdbool.h>
 #include <limits.h>
-
-// Include mpi header can cause confusion for C++, since it will
-// try to link against C++ version of functions
-#ifdef __cplusplus
-#define __adlb_old_cplusplus __cplusplus
-#undef __cplusplus
-#endif
-#include <mpi.h>
-#ifdef __adlb_old_cplusplus
-#define __cplusplus __adlb_old_cplusplus
-#endif
 
 #include "adlb-defs.h"
 
@@ -118,7 +106,9 @@ adlb_code ADLB_Dput(const void* payload, int length, int target,
 /*
   Get a task from the global task queue.
   @param type_requested: the type of work requested
-  @param payload buffer to receive task data into (TODO: min size?)
+  @param payload buffer to receive task data into.  Caller is responsible
+          for ensuring that it is big enough for any task added by user
+          code. (TODO: caller specifies size?) 
   @param length output parameter for actual length of task data
   @param answer output parameter for answer rank specified in ADLB_Put
                 for task
@@ -132,13 +122,39 @@ adlb_code ADLB_Get(int type_requested, void* payload, int* length,
                    int* answer, int* type_recvd, MPI_Comm* comm);
 
 /*
- Non-blocking equivalent of ADLB_Get.  Returns ADLB_NOTHING if no
+ Polling equivalent of ADLB_Get.  Returns ADLB_NOTHING if no
  matching task are available.
+
+  NOTE: Iget does not currently support parallel tasks
 */
 adlb_code ADLBP_Iget(int type_requested, void* payload, int* length,
                      int* answer, int* type_recvd);
 adlb_code ADLB_Iget(int type_requested, void* payload, int* length,
                     int* answer, int* type_recvd);
+/*
+  Non-blocking equivalent of ADLB_Get.
+
+  TODO: not implemented yet
+  payload: will be retained by ADLB until request is completed.
+  req: handle used to check for completion.
+ */
+adlb_code ADLBP_Aget(int type_requested, void* payload,
+                     adlb_get_req *req);
+adlb_code ADLB_Aget(int type_requested, void* payload,
+                     adlb_get_req *req);
+
+/*
+  Same as ADLB_Aget except initiates multiple requests at once.
+  
+  TODO: not implemented yet
+  nreqs: number of requests to initiate
+  payloads: array of nreqs payload buffers
+  reqs: array of nreqs requests
+ */
+adlb_code ADLBP_Amget(int type_requested, int nreqs, void** payload,
+                     adlb_get_req *reqs);
+adlb_code ADLB_Amget(int type_requested, int nreqs, void** payload,
+                     adlb_get_req *reqs);
 
 /**
    Obtain server rank responsible for data id

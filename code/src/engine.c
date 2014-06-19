@@ -38,6 +38,7 @@
 #include <adlb.h>
 
 #include <c-utils.h>
+#include <list.h>
 #include <list2.h>
 #include <list2_b.h>
 #include <log.h>
