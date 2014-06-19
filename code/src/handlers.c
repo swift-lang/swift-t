@@ -718,7 +718,7 @@ handle_get(int caller)
   bool matched = check_workqueue(caller, type);
   if (matched) goto end;
     
-  code = xlb_requestqueue_add(caller, type);
+  code = xlb_requestqueue_add(caller, type, true);
   ADLB_CHECK(code);
 
   // New request might allow us to release a parallel task

@@ -38,11 +38,30 @@ typedef struct
 
 adlb_code xlb_requestqueue_init(int my_workers);
 
-adlb_code xlb_requestqueue_add(int rank, int type);
+/*
+  Add a request to the queue
+  blocking: true if the rank won't make progress until request filled
+ */
+adlb_code xlb_requestqueue_add(int rank, int type, bool blocking);
 
 int xlb_requestqueue_matches_target(int target_rank, int type);
 
 int xlb_requestqueue_matches_type(int type);
+
+/*
+  Return number of workers that are blocked on requests
+ */
+int xlb_requestqueue_nblocked(void);
+
+/*
+  Called when a worker blocks on a non-blocking request
+ */
+int xlb_requestqueue_incr_blocked(void);
+
+/*
+  Called when an upgraded request was satisfied
+ */
+int xlb_requestqueue_decr_blocked(void);
 
 int xlb_requestqueue_size(void);
 

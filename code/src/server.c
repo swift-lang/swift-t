@@ -556,15 +556,15 @@ master_server()
 static inline bool
 workers_idle(void)
 {
-  int queued = xlb_requestqueue_size();
+  int blocked = xlb_requestqueue_nblocked();
   int shutdown = list_i_size(&workers_shutdown);
 
-  assert(queued+shutdown <= xlb_my_workers);
+  assert(blocked+shutdown <= xlb_my_workers);
 
-  // TRACE("workers_idle(): workers queued:   %i\n", queued);
+  // TRACE("workers_idle(): workers blocked:   %i\n", blocked);
   // TRACE("workers_idle(): workers shutdown: %i\n", shutdown);
 
-  if (queued+shutdown == xlb_my_workers)
+  if (blocked+shutdown == xlb_my_workers)
     return true;
 
   return false;

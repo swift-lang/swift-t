@@ -38,15 +38,19 @@
 
 typedef struct
 {
-  int rank;
-  int type;
   /** Item in type_requests */
   struct list2_item* item;
+  int rank;
+  int type;
+  bool blocking;
 } request;
 
 
 /** Total number of requests in queue */
 static int request_queue_size;
+
+/** Total number of workers blocked on requests */
+static int nblocked;
 
 /** Type-indexed array of list of request object */
 static struct list2* type_requests;
@@ -69,7 +73,8 @@ static request* targets;
 static int pop_rank(struct list2 *type_list);
 static inline void remove_request(request *R);
 __attribute__((always_inline))
-static inline void remove_types_entry(int type, struct list2_item *item);
+static inline void remove_types_entry(int type, bool blocking,
+                                     struct list2_item *item);
 static inline void invalidate_request(request *R);
 static inline void free_request(request *R);
 
@@ -109,11 +114,12 @@ xlb_requestqueue_init(int my_workers)
   }
 
   request_queue_size = 0;
+  nblocked = 0;
   return ADLB_SUCCESS;
 }
 
 adlb_code
-xlb_requestqueue_add(int rank, int type)
+xlb_requestqueue_add(int rank, int type, bool blocking)
 {
   DEBUG("requestqueue_add(rank=%i,type=%i)", rank, type);
   request* R;
@@ -141,18 +147,24 @@ xlb_requestqueue_add(int rank, int type)
 
   R->rank = rank;
   R->type = type;
+  R->blocking = blocking;
   R->item = item;
   item->data = R;
 
   list2_add_item(L, item);
   request_queue_size++;
+
+  if (blocking)
+  {
+    nblocked++;
+  }
   return ADLB_SUCCESS;
 }
 
 /* Unlink entry from all data structures and free memory */
 static inline void remove_request(request *R)
 {
-  remove_types_entry(R->type, R->item);
+  remove_types_entry(R->type, R->blocking, R->item);
   free_request(R);
 }
 
@@ -160,13 +172,18 @@ static inline void remove_request(request *R)
   Internal helper.
   Remove entry from list, updates request count, and free item.
  */
-static inline void remove_types_entry(int type, struct list2_item *item)
+static inline void remove_types_entry(int type, bool blocking, struct list2_item *item)
 {
   struct list2* L = &type_requests[type];
   list2_remove_item(L, item);
   free(item);
   request_queue_size--;
   assert(request_queue_size >= 0);
+  if (blocking)
+  {
+    nblocked--;
+  }
+  assert(nblocked >= 0);
 }
 
 /* Mark request as empty */
@@ -202,6 +219,7 @@ static int pop_rank(struct list2 *type_list)
   }
   request* R = (request*)item->data;
   int rank = R->rank;
+  bool blocking = R->blocking;
   
   // Release memory:
   free_list2_node(item);
@@ -209,6 +227,11 @@ static int pop_rank(struct list2 *type_list)
   
   request_queue_size--;
   assert(request_queue_size >= 0);
+  if (blocking)
+  {
+    nblocked--;
+  }
+  assert(nblocked >= 0);
   return rank;
 }
 
@@ -226,7 +249,7 @@ xlb_requestqueue_matches_target(int target_rank, int type)
   request* R = &targets[targets_ix];
   if (R->item != NULL && R->type == type && R->rank == target_rank)
   {
-    remove_types_entry(type, R->item);
+    remove_types_entry(type, R->blocking, R->item);
     invalidate_request(R);
     return target_rank;
   }
@@ -281,6 +304,12 @@ int
 xlb_requestqueue_size()
 {
   return request_queue_size;
+}
+
+int
+xlb_requestqueue_nblocked(void)
+{
+  return nblocked;
 }
 
 void xlb_requestqueue_type_counts(int* types, int size) {
