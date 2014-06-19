@@ -92,7 +92,10 @@ typedef struct {
 static struct {
   xlb_get_req_impl *reqs;
   int size; // Size of array
-  int used; // Number of array entries used
+
+  // Track unused entries
+  struct list_i unused_reqs;
+  struct list_i spare_nodes; // Save spare list nodes here
 } xlb_get_reqs;
 
 #define XLB_GET_REQS_INIT_SIZE 16
@@ -689,7 +692,9 @@ static adlb_code xlb_get_reqs_init(void)
 {
   xlb_get_reqs.reqs = NULL;
   xlb_get_reqs.size = 0;
-  xlb_get_reqs.used = 0;
+
+  list_i_init(&xlb_get_reqs.unused_reqs);
+  list_i_init(&xlb_get_reqs.spare_nodes);
   return ADLB_SUCCESS;
 }
 
@@ -703,15 +708,13 @@ static adlb_code xlb_get_reqs_finalize(void)
   }
   xlb_get_reqs.reqs = NULL;
   xlb_get_reqs.size = 0;
-  xlb_get_reqs.used = 0;
+  list_i_clear(&xlb_get_reqs.unused_reqs);
+  list_i_clear(&xlb_get_reqs.spare_nodes);
   return ADLB_SUCCESS;
 }
 
 /*
   Allocate handles for get requests.
-  NOTE: this does a linear search through array, which isn't ideal if
-        there are many outstanding requests, but works well for small
-        numbers.
  */
 static adlb_code xlb_get_reqs_alloc(adlb_get_req *handles, int count)
 {
@@ -719,25 +722,30 @@ static adlb_code xlb_get_reqs_alloc(adlb_get_req *handles, int count)
   assert(count >= 0);
 
   // Check array is large enough for all requests
-  int required_size = xlb_get_reqs.used + count;
-  if (required_size > xlb_get_reqs.size)
+  if (count > xlb_get_reqs.unused_reqs.size)
   {
+    int curr_used = xlb_get_reqs.size - xlb_get_reqs.unused_reqs.size;
+    int required_size = curr_used + count; 
     ac = xlb_get_reqs_expand(required_size);
     ADLB_CHECK(ac);
   }
 
-  int nfound = 0;
-  for (int i = 0; i < xlb_get_reqs.size; i++)
+  for (int i = 0; i < count; i++)
   {
-    xlb_get_req_impl *req = &xlb_get_reqs.reqs[i];
-    if (!req->in_use)
-    {
-      handles[nfound++] = i; 
-      req->in_use = true;
-    }
+    struct list_i_item *node;
+    node = list_i_pop_item(&xlb_get_reqs.unused_reqs);
+    assert(node != NULL);
+
+    int req_ix = node->data;
+    list_i_add_item(&xlb_get_reqs.spare_nodes, node);
+
+    xlb_get_req_impl *req = &xlb_get_reqs.reqs[req_ix];
+    assert(!req->in_use);
+    req->in_use = true;
+    
+    handles[i] = req_ix; 
   }
 
-  assert(nfound == count);
   return ADLB_SUCCESS;
 }
 
@@ -784,6 +792,12 @@ static adlb_code xlb_get_reqs_expand(int min_size)
   for (int i = old_size; i < new_size; i++)
   {
     xlb_get_reqs.reqs[i].in_use = false;
+
+    // Track unused entries
+    struct list_i_item *node = malloc(sizeof(struct list_i_item));
+    ADLB_MALLOC_CHECK(node);
+    node->data = i;
+    list_i_add_item(&xlb_get_reqs.unused_reqs, node);
   }
   
   return ADLB_SUCCESS;
@@ -901,10 +915,15 @@ static adlb_code xlb_get_req_release(adlb_get_req* req,
   // Should be completed
   assert(impl->in_use);
   assert(impl->ncomplete == impl->ntotal);
+  
+  impl->in_use = false;
+    
+  struct list_i_item *node = list_i_pop_item(&xlb_get_reqs.spare_nodes);
+  assert(node != NULL);
+  node->data = *req;
+  list_i_add_item(&xlb_get_reqs.unused_reqs, node);
 
   *req = ADLB_GET_REQ_NULL;
-  impl->in_use = false;
-
   return ADLB_SUCCESS;
 }
 
