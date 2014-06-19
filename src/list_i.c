@@ -54,23 +54,9 @@ list_i_add(struct list_i* target, int data)
   struct list_i_item* new_item = malloc(sizeof(struct list_i_item));
   if (! new_item)
     return NULL;
-
+  
   new_item->data = data;
-  new_item->next = NULL;
-
-  if (target->size == 0)
-  {
-    target->head = new_item;
-    target->tail = new_item;
-  }
-  else
-  {
-    target->tail->next = new_item;
-  }
-
-  target->tail = new_item;
-  target->size++;
-
+  list_i_add_item(target, new_item);
   return new_item;
 }
 
@@ -154,27 +140,10 @@ list_i_peek(struct list_i* target)
  */
 int
 list_i_pop(struct list_i* target)
-{
-  // NOTE_F;
-
-  int data;
-  if (target->size == 0)
-    return -1;
-  if (target->size == 1)
-  {
-    data = target->head->data;
-    free(target->head);
-    target->head = NULL;
-    target->tail = NULL;
-    target->size = 0;
-    return data;
-  }
-
-  struct list_i_item* delendum = target->head;
-  data = target->head->data;
-  target->head = target->head->next;
+{ 
+  struct list_i_item* delendum = list_i_pop_item(target);
+  int data = delendum->data;
   free(delendum);
-  target->size--;
   return data;
 }
 

@@ -82,4 +82,46 @@ void list_i_free(struct list_i* target);
 
 bool list_i_toints(struct list_i* target, int** result, int* count);
 
+/*
+  Efficient item adding for inlining when client library wants to manage
+  its own list nodes.
+ */
+static inline void list_i_add_item(struct list_i* target,
+                                   struct list_i_item* item)
+{
+  item->next = NULL;
+
+  if (target->size == 0)
+  {
+    target->head = item;
+    target->tail = item;
+  }
+  else
+  {
+    target->tail->next = item;
+  }
+
+  target->tail = item;
+  target->size++;
+}
+
+static inline struct list_i_item*
+list_i_pop_item(struct list_i* target)
+{
+  if (target->size == 0)
+  {
+    return NULL;
+  }
+  
+  struct list_i_item* head = target->head;
+  target->head = head->next;
+  target->size--;
+
+  if (target->size == 1)
+  {
+    target->tail = NULL;
+  }
+  return head;
+}
+
 #endif
