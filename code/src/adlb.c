@@ -821,8 +821,10 @@ adlb_code ADLBP_Aget_wait(adlb_get_req *req, int* length,
   ac = xlb_get_req_lookup(*req, &impl);
   ADLB_CHECK(ac);
 
+  // TODO: need to let server know we're blocking for purposes of
+  //       idle detection (run MPI_Test first?)
   // TODO: run MPI_wait on all MPI_request objects
-  // TODO: fill in output args
+  // TODO: if completed, fill in output args
   return ADLB_ERROR;
 }
 
