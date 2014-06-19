@@ -58,6 +58,14 @@ typedef enum
 } adlb_code;
 
 /**
+  Buffer for work payload data.
+ */
+typedef struct {
+  void *payload; 
+  int size; // Size of buffer
+} adlb_payload_buf;
+
+/**
   Request handle for asynchronous get request
  */
 typedef struct {

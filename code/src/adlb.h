@@ -122,15 +122,18 @@ adlb_code ADLBP_Iget(int type_requested, void* payload, int* length,
 adlb_code ADLB_Iget(int type_requested, void* payload, int* length,
                     int* answer, int* type_recvd);
 /*
-  Non-blocking equivalent of ADLB_Get.
+  Non-blocking equivalent of ADLB_Get.  Matching requests should be
+  filled in in the order that they are posted (i.e. if work matches two
+  requests from a client, the first request that was posted will be
+  filled first.
 
   TODO: not implemented yet
   payload: will be retained by ADLB until request is completed.
   req: handle used to check for completion.
  */
-adlb_code ADLBP_Aget(int type_requested, void* payload,
+adlb_code ADLBP_Aget(int type_requested, adlb_payload_buf payload,
                      adlb_get_req *req);
-adlb_code ADLB_Aget(int type_requested, void* payload,
+adlb_code ADLB_Aget(int type_requested, adlb_payload_buf payload,
                      adlb_get_req *req);
 
 /*
@@ -141,9 +144,11 @@ adlb_code ADLB_Aget(int type_requested, void* payload,
   payloads: array of nreqs payload buffers
   reqs: array of nreqs requests
  */
-adlb_code ADLBP_Amget(int type_requested, int nreqs, void** payload,
+adlb_code ADLBP_Amget(int type_requested, int nreqs,
+                     const adlb_payload_buf* payloads,
                      adlb_get_req *reqs);
-adlb_code ADLB_Amget(int type_requested, int nreqs, void** payload,
+adlb_code ADLB_Amget(int type_requested, int nreqs,
+                     const adlb_payload_buf* payloads,
                      adlb_get_req *reqs);
 
 /**

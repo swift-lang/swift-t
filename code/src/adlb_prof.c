@@ -201,7 +201,7 @@ ADLB_Iget(int type_requested, void* payload, int* length,
 }
 
 adlb_code
-ADLB_Aget(int type_requested, void* payload, adlb_get_req *req)
+ADLB_Aget(int type_requested, adlb_payload_buf payload, adlb_get_req *req)
 {
   MPE_LOG(xlb_mpe_wkr_aget_start);
   adlb_code rc = ADLBP_Aget(type_requested, payload, req);
@@ -210,7 +210,7 @@ ADLB_Aget(int type_requested, void* payload, adlb_get_req *req)
 }
 
 adlb_code
-ADLB_Amget(int type_requested, int nreqs, void** payloads,
+ADLB_Amget(int type_requested, int nreqs, const adlb_payload_buf* payloads,
           adlb_get_req *reqs)
 {
   MPE_LOG(xlb_mpe_wkr_amget_start);
