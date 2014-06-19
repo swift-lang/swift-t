@@ -157,15 +157,19 @@ adlb_code ADLB_Amget(int type_requested, int nreqs,
 
   Return codes match ADLB_Iget
  */
-adlb_code ADLBP_Aget_test(adlb_get_req *req);
-adlb_code ADLB_Aget_test(adlb_get_req *req);
+adlb_code ADLBP_Aget_test(adlb_get_req *req, int* length,
+                    int* answer, int* type_recvd, MPI_Comm* comm);
+adlb_code ADLB_Aget_test(adlb_get_req *req, int* length,
+                    int* answer, int* type_recvd, MPI_Comm* comm);
 
 /*
   Wait until a get request completes.
   Return codes match ADLB_Get
  */
-adlb_code ADLBP_Aget_wait(adlb_get_req *req);
-adlb_code ADLB_Aget_wait(adlb_get_req *req);
+adlb_code ADLBP_Aget_wait(adlb_get_req *req, int* length,
+                    int* answer, int* type_recvd, MPI_Comm* comm);
+adlb_code ADLB_Aget_wait(adlb_get_req *req, int* length,
+                    int* answer, int* type_recvd, MPI_Comm* comm);
 
 /**
    Obtain server rank responsible for data id

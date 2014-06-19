@@ -66,16 +66,11 @@ typedef struct {
 } adlb_payload_buf;
 
 /**
-  Request handle for asynchronous get request
+  Request handle for asynchronous get request.
  */
-typedef struct {
-  int *length; // Length of task data in buffer
-  int *answer; // Answer rank for task
-  int *type_recvd; // Type of work received
-  int *parallelism; // Parallelism of tasks
-  MPI_Comm *task_comm; // Communicator for parallel tasks
-  // TODO: MPI_Request objects?
-} adlb_get_req;
+typedef int adlb_get_req;
+
+#define ADLB_GET_REQ_NULL ((adlb_get_req)-1)
 
 /**
    Identifier for all ADLB data module user data.

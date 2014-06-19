@@ -219,18 +219,20 @@ ADLB_Amget(int type_requested, int nreqs, const adlb_payload_buf* payloads,
   return rc;
 }
 
-adlb_code ADLB_Aget_test(adlb_get_req *req)
+adlb_code ADLB_Aget_test(adlb_get_req *req, int* length,
+                    int* answer, int* type_recvd, MPI_Comm* comm)
 {
   MPE_LOG(xlb_mpe_wkr_aget_test_start);
-  adlb_code rc = ADLBP_Aget_test(req);
+  adlb_code rc = ADLBP_Aget_test(req, length, answer, type_recvd, comm);
   MPE_LOG(xlb_mpe_wkr_aget_test_end);
   return rc;
 }
 
-adlb_code ADLB_Aget_wait(adlb_get_req *req)
+adlb_code ADLB_Aget_wait(adlb_get_req *req, int* length,
+                    int* answer, int* type_recvd, MPI_Comm* comm)
 {
   MPE_LOG(xlb_mpe_wkr_aget_wait_start);
-  adlb_code rc = ADLBP_Aget_wait(req);
+  adlb_code rc = ADLBP_Aget_wait(req, length, answer, type_recvd, comm);
   MPE_LOG(xlb_mpe_wkr_aget_wait_end);
   return rc;
 }

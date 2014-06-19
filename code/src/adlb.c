@@ -74,6 +74,32 @@ static inline int choose_data_server();
 
 static int disable_hostmap;
 
+typedef struct {
+  struct packed_get_response hdr;
+  MPI_Comm *task_comm; // Communicator for parallel tasks
+  // TODO: MPI_Request objects?
+  bool in_use; // Whether being used for a request
+} xlb_get_req_impl;
+
+/*
+  Dynamically sized array to store active get requests.
+  adlb_get_req handles are indices of this table.
+ */
+static struct {
+  xlb_get_req_impl *reqs;
+  int size; // Size of array
+  int used; // Number of array entries used
+} xlb_get_reqs;
+
+#define XLB_GET_REQS_INIT_SIZE 16
+
+static adlb_code xlb_get_reqs_init(void);
+static adlb_code xlb_get_reqs_finalize(void);
+static adlb_code xlb_get_reqs_alloc(adlb_get_req *handles, int count);
+static adlb_code xlb_get_req_lookup(adlb_get_req handle,
+                                    xlb_get_req_impl **req);
+static adlb_code xlb_get_reqs_expand(int min_size);
+
 static void
 check_versions()
 {
@@ -172,6 +198,9 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
 
   adlb_data_code dc = xlb_data_types_init();
   ADLB_DATA_CHECK(dc);
+
+  code = xlb_get_reqs_init();
+  ADLB_CHECK(code);
   
   TRACE_END;
   return ADLB_SUCCESS;
@@ -643,6 +672,110 @@ ADLBP_Iget(int type_requested, void* payload, int* length,
   return ADLB_SUCCESS;
 }
 
+static adlb_code xlb_get_reqs_init(void)
+{
+  xlb_get_reqs.reqs = NULL;
+  xlb_get_reqs.size = 0;
+  xlb_get_reqs.used = 0;
+  return ADLB_SUCCESS;
+}
+
+static adlb_code xlb_get_reqs_finalize(void)
+{
+  // TODO: cancel any outstanding requests
+
+  if (xlb_get_reqs.reqs != NULL)
+  {
+    free(xlb_get_reqs.reqs);
+  }
+  xlb_get_reqs.reqs = NULL;
+  xlb_get_reqs.size = 0;
+  xlb_get_reqs.used = 0;
+  return ADLB_SUCCESS;
+}
+
+/*
+  Allocate handles for get requests.
+  NOTE: this does a linear search through array, which isn't ideal if
+        there are many outstanding requests, but works well for small
+        numbers.
+ */
+static adlb_code xlb_get_reqs_alloc(adlb_get_req *handles, int count)
+{
+  adlb_code ac;
+  assert(count >= 0);
+
+  // Check array is large enough for all requests
+  int required_size = xlb_get_reqs.used + count;
+  if (required_size > xlb_get_reqs.size)
+  {
+    ac = xlb_get_reqs_expand(required_size);
+    ADLB_CHECK(ac);
+  }
+
+  int nfound = 0;
+  for (int i = 0; i < xlb_get_reqs.size; i++)
+  {
+    xlb_get_req_impl *req = &xlb_get_reqs.reqs[i];
+    if (!req->in_use)
+    {
+      handles[nfound++] = i; 
+      req->in_use = true;
+    }
+  }
+
+  assert(nfound == count);
+  return ADLB_SUCCESS;
+}
+
+static adlb_code xlb_get_req_lookup(adlb_get_req handle,
+                                    xlb_get_req_impl **req)
+{
+  CHECK_MSG(handle >= 0 && handle < xlb_get_reqs.size,
+            "Invalid adlb_get_req: out of range (%i)", handle);
+
+  xlb_get_req_impl *tmp = &xlb_get_reqs.reqs[handle];
+  CHECK_MSG(tmp->in_use, "Invalid or old adlb_get_req (%i)", handle);
+
+  *req = tmp;
+  return ADLB_SUCCESS;
+}
+
+static adlb_code xlb_get_reqs_expand(int min_size)
+{
+  if (xlb_get_reqs.size >= min_size)
+  {
+    return ADLB_SUCCESS;
+  }
+
+  int old_size = xlb_get_reqs.size;
+  int new_size;
+  if (old_size == 0)
+  {
+    new_size = XLB_GET_REQS_INIT_SIZE;
+  }
+  else
+  {
+    new_size = old_size * 2;
+  }
+
+  new_size = (new_size >= min_size) ? new_size : min_size;
+
+  xlb_get_req_impl *new_reqs;
+  new_reqs = malloc(sizeof(xlb_get_req_impl) * (size_t) new_size);
+  ADLB_MALLOC_CHECK(new_reqs);
+
+  xlb_get_reqs.reqs = new_reqs;
+  xlb_get_reqs.size = new_size;
+
+  for (int i = old_size; i < new_size; i++)
+  {
+    xlb_get_reqs.reqs[i].in_use = false;
+  }
+  
+  return ADLB_SUCCESS;
+}
+
 adlb_code ADLBP_Aget(int type_requested, adlb_payload_buf payload,
                      adlb_get_req *req)
 {
@@ -654,6 +787,12 @@ adlb_code ADLBP_Amget(int type_requested, int nreqs,
                       const adlb_payload_buf* payload,
                       adlb_get_req *reqs)
 {
+  adlb_code ac;
+  assert(nreqs >= 0);
+
+  ac = xlb_get_reqs_alloc(reqs, nreqs);
+  ADLB_CHECK(ac);
+
   // TODO: need to implement
   // - initiate Irecvs for each request
   // - send request to server
@@ -661,15 +800,29 @@ adlb_code ADLBP_Amget(int type_requested, int nreqs,
   return ADLB_ERROR;
 }
 
-adlb_code ADLBP_Aget_test(adlb_get_req *req)
+adlb_code ADLBP_Aget_test(adlb_get_req *req, int* length,
+                    int* answer, int* type_recvd, MPI_Comm* comm)
 {
+  adlb_code ac;
+  xlb_get_req_impl *impl;
+  ac = xlb_get_req_lookup(*req, &impl);
+  ADLB_CHECK(ac);
+
   // TODO: run MPI_test on all MPI_request objects
+  // TODO: if completed, fill in output args
   return ADLB_ERROR;
 }
 
-adlb_code ADLBP_Aget_wait(adlb_get_req *req)
+adlb_code ADLBP_Aget_wait(adlb_get_req *req, int* length,
+                    int* answer, int* type_recvd, MPI_Comm* comm)
 {
+  adlb_code ac;
+  xlb_get_req_impl *impl;
+  ac = xlb_get_req_lookup(*req, &impl);
+  ADLB_CHECK(ac);
+
   // TODO: run MPI_wait on all MPI_request objects
+  // TODO: fill in output args
   return ADLB_ERROR;
 }
 
@@ -1614,6 +1767,9 @@ ADLBP_Finalize()
     printf("FAILED: EXIT(%i)\n", fail_code);
     exit(fail_code);
   }
+
+  rc = xlb_get_reqs_finalize();
+  ADLB_CHECK(rc);
 
   // Get messaging module to clean up state
   xlb_msg_finalize();
