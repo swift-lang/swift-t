@@ -111,6 +111,8 @@ adlb_code ADLBP_Get(int type_requested, void* payload, int* length,
 adlb_code ADLB_Get(int type_requested, void* payload, int* length,
                    int* answer, int* type_recvd, MPI_Comm* comm);
 
+// TODO: ADLB_Mget for symmetry?
+
 /*
  Polling equivalent of ADLB_Get.  Returns ADLB_NOTHING if no
  matching task are available.  Other return codes are same as
