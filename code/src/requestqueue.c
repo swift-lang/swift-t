@@ -312,6 +312,20 @@ xlb_requestqueue_nblocked(void)
   return nblocked;
 }
 
+adlb_code xlb_requestqueue_incr_blocked(void)
+{
+  nblocked++;
+  assert(nblocked <= xlb_my_workers);
+  return ADLB_SUCCESS;
+}
+
+adlb_code xlb_requestqueue_decr_blocked(void)
+{
+  nblocked--;
+  assert(nblocked >= 0);
+  return ADLB_SUCCESS;
+}
+
 void xlb_requestqueue_type_counts(int* types, int size) {
   assert(size >= xlb_types_size);
   int total = 0;

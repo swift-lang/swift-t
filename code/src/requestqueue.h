@@ -56,12 +56,12 @@ int xlb_requestqueue_nblocked(void);
 /*
   Called when a worker blocks on a non-blocking request
  */
-int xlb_requestqueue_incr_blocked(void);
+adlb_code xlb_requestqueue_incr_blocked(void);
 
 /*
   Called when an upgraded request was satisfied
  */
-int xlb_requestqueue_decr_blocked(void);
+adlb_code xlb_requestqueue_decr_blocked(void);
 
 int xlb_requestqueue_size(void);
 

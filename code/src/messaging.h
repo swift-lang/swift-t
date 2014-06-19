@@ -590,6 +590,7 @@ typedef enum
   ADLB_TAG_SYNC_REQUEST,
   ADLB_TAG_DO_NOTHING,
   ADLB_TAG_CHECK_IDLE,
+  ADLB_TAG_BLOCK_WORKER,
   ADLB_TAG_SHUTDOWN_WORKER,
 
   /// tags outgoing from server

@@ -100,6 +100,7 @@ static adlb_code handle_container_size(int caller);
 static adlb_code handle_lock(int caller);
 static adlb_code handle_unlock(int caller);
 static adlb_code handle_check_idle(int caller);
+static adlb_code handle_block_worker(int caller);
 static adlb_code handle_shutdown_worker(int caller);
 static adlb_code handle_fail(int caller);
 
@@ -192,6 +193,7 @@ xlb_handlers_init(void)
   register_handler(ADLB_TAG_LOCK, handle_lock);
   register_handler(ADLB_TAG_UNLOCK, handle_unlock);
   register_handler(ADLB_TAG_CHECK_IDLE, handle_check_idle);
+  register_handler(ADLB_TAG_BLOCK_WORKER, handle_block_worker);
   register_handler(ADLB_TAG_SHUTDOWN_WORKER, handle_shutdown_worker);
   register_handler(ADLB_TAG_FAIL, handle_fail);
 }
@@ -1742,6 +1744,33 @@ handle_check_idle(int caller)
   }
   return ADLB_SUCCESS;
 }
+
+/**
+  The calling worker rank is blocking on a non-blocking request,
+  or unblocked itself
+ */
+static adlb_code
+handle_block_worker(int caller)
+{
+  MPI_Status status;
+  int positive;
+  RECV(&positive, 1, MPI_INT, caller, ADLB_TAG_BLOCK_WORKER);
+
+  adlb_code ac;
+  if (positive)
+  {
+     ac = xlb_requestqueue_incr_blocked();
+     ADLB_CHECK(ac);
+  }
+  else
+  {
+     ac = xlb_requestqueue_decr_blocked();
+     ADLB_CHECK(ac);
+  }
+
+  return ADLB_SUCCESS;
+}
+
 /**
    The calling worker rank is shutting down
  */

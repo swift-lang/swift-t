@@ -100,6 +100,12 @@ static adlb_code xlb_get_req_lookup(adlb_get_req handle,
                                     xlb_get_req_impl **req);
 static adlb_code xlb_get_reqs_expand(int min_size);
 
+static adlb_code xlb_block_worker(bool blocking);
+
+static adlb_code xlb_aget_test(xlb_get_req_impl *req, int* length,
+                    int* answer, int* type_recvd, MPI_Comm* comm);
+
+
 static void
 check_versions()
 {
@@ -808,6 +814,12 @@ adlb_code ADLBP_Aget_test(adlb_get_req *req, int* length,
   ac = xlb_get_req_lookup(*req, &impl);
   ADLB_CHECK(ac);
 
+  return xlb_aget_test(impl, length, answer, type_recvd, comm);
+}
+
+static adlb_code xlb_aget_test(xlb_get_req_impl *req, int* length,
+                    int* answer, int* type_recvd, MPI_Comm* comm)
+{
   // TODO: run MPI_test on all MPI_request objects
   // TODO: if completed, fill in output args
   return ADLB_ERROR;
@@ -817,15 +829,46 @@ adlb_code ADLBP_Aget_wait(adlb_get_req *req, int* length,
                     int* answer, int* type_recvd, MPI_Comm* comm)
 {
   adlb_code ac;
+
   xlb_get_req_impl *impl;
   ac = xlb_get_req_lookup(*req, &impl);
   ADLB_CHECK(ac);
 
-  // TODO: need to let server know we're blocking for purposes of
-  //       idle detection (run MPI_Test first?)
+  ac = xlb_aget_test(impl, length, answer, type_recvd, comm);
+  ADLB_CHECK(ac);
+  if (ac == ADLB_SUCCESS)
+  {
+    // Completed already!
+    return ADLB_SUCCESS;
+  }
+
+  // Get ready to block
+  ac = xlb_block_worker(true);
+  ADLB_CHECK(ac);
+
   // TODO: run MPI_wait on all MPI_request objects
   // TODO: if completed, fill in output args
+ 
+  // Notify we're unblocked
+  ac = xlb_block_worker(false);
+  ADLB_CHECK(ac);
+
   return ADLB_ERROR;
+}
+
+/*
+  Notify server that worker is blocking or unblocking on get request.
+  blocking: true if becoming blocked, false if unblocking
+ */
+static adlb_code xlb_block_worker(bool blocking)
+{
+  int msg = blocking ? 1 : 0;
+
+  SEND(&msg, 1, MPI_INT, xlb_my_server, ADLB_TAG_BLOCK_WORKER);
+
+  // Don't wait for response
+
+  return ADLB_SUCCESS;
 }
 
 int
