@@ -111,8 +111,6 @@ adlb_code ADLBP_Get(int type_requested, void* payload, int* length,
 adlb_code ADLB_Get(int type_requested, void* payload, int* length,
                    int* answer, int* type_recvd, MPI_Comm* comm);
 
-// TODO: ADLB_Mget for symmetry?
-
 /*
  Polling equivalent of ADLB_Get.  Returns ADLB_NOTHING if no
  matching task are available.  Other return codes are same as
@@ -143,6 +141,8 @@ adlb_code ADLB_Aget(int type_requested, adlb_payload_buf payload,
   Same as ADLB_Aget except initiates multiple requests at once.
   
   TODO: not implemented yet
+  TODO: could return message round-trips if we had a flag to
+        block on the first request
   nreqs: number of requests to initiate
   payloads: array of nreqs payload buffers
   reqs: array of nreqs requests, filled in with request handles
