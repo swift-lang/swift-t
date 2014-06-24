@@ -93,6 +93,9 @@ action()
 
 if (( ${#*} != 4 ))
 then
+  echo "genleaf requires 4 arguments."
+  echo "genleaf received ${#*} arguments!"
+  echo
   usage
   exit 1
 fi
@@ -117,6 +120,11 @@ do
   [[ -f $f ]] || crash "File not found:" $f
 done
 
+if [[ ! -d $TCL_HOME ]] 
+then
+  crash "Could not find TCL_HOME: $TCL_HOME"
+fi
+
 TCLSH=${TCLSH:-}
 if [[ $TCLSH == "" ]]
 then
@@ -139,7 +147,7 @@ else
     # get user function signature
     RET_TYPE=$(grep "${USER_FUNC}" ${USER_SOURCE} | head -1 | cut -f1 -d' ')
     USER_FUNC_SIG=$(grep "${USER_FUNC}" ${USER_SOURCE} | head -1 | cut -f1 -d' ' --complement | grep -o '^.*)' )
-    #put comma seperated arg list into array
+    #put comma separated arg list into array
     TMP=$(echo "${USER_FUNC_SIG}" | sed 's/.*(\(.*\))/\1/')
     IFS=',' read -a USER_FUNC_ARGS <<< "${TMP}"
     EXPECTED_ARGC=$((${#USER_FUNC_ARGS[@]} + 1))
@@ -147,6 +155,7 @@ fi
 
 #step 1. Replace the main function in the source code with an ordinary function and push it into header
 if (( $MAIN == 1 )) ; then
+    message "creating: $USER_LEAF.c"
     sed "s/main(.*)/leaf_main(int argc, char** argv)/" "${USER_SOURCE}" > "${USER_LEAF}".c || echo "something went wrong"
 
     #add main to header
@@ -167,11 +176,13 @@ else
    fi
 fi
 
-#step 2. Generate extension.c
+#step 2. Generate extension.[ch]
 if (( $MAIN == 1 ))
 then
   message "creating: extension.c"
   m4 $GENLEAF_HOME/templates/extension-main.template.c > extension.c
+  message "creating: extension.h"
+  m4 $GENLEAF_HOME/templates/extension-main.template.h > extension.h
 else
   crash "We only support main functions!"
 fi
@@ -224,7 +235,7 @@ then
 else
   # c. link static library and executable
   action ar -cr leaf_main.a \
-             extension.o "${USER_LEAF}".o
+             extension.o $USER_LEAF.o
   action $MKSTATIC $MANIFEST -c static_leaf_main.c
   action $CC $CFLAGS -I . \
     -I{$MPI_HOME,$TURBINE_HOME,$ADLB_HOME,$C_UTILS_HOME}/include \

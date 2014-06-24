@@ -9,8 +9,8 @@ define(`getenv_nospace', `esyscmd(printf -- "$`$1'")')
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <tcl.h>
 
+#include "extension.h"
 #include "getenv_nospace(USER_LEAF).h"
 
 static int getenv_nospace(USER_LEAF)_extension(ClientData cdata, Tcl_Interp *interp,
