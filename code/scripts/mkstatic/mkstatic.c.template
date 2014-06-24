@@ -206,3 +206,9 @@ static bool extract_bundled_files(void)
 
 // Binary data for resources
 @RESOURCE_DATA@
+
+/*
+  Local Variables:
+  mode: c
+  End:
+*/
