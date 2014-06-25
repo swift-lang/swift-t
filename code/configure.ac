@@ -652,7 +652,7 @@ AC_SUBST(ENABLE_SHARED)
 ENABLE_STATIC_PKG=1
 AC_ARG_ENABLE(static-pkg,
     AS_HELP_STRING([--enable-static-pkg],
-       [Create statically linkable Turbine Tcl package with Tcl srouce.
+       [Create statically linkable Turbine Tcl package with Tcl source.
         Default: yes]),
     [
        if test "$enableval" = no ; then
