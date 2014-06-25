@@ -3,3 +3,7 @@
 # +=======================================================+
 
 # This is a bare-bones manifest to generate a generic launcher
+
+
+# On the BG/Q, set: 
+# linker_libs = -L /bgsys/drivers/V1R2M1/ppc64/comm/lib -lpami-gcc -lm -pthread -lmpl-gcc -lm
