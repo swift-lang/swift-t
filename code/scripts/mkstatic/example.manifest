@@ -6,6 +6,8 @@
 # ------------------------------------------------------------
 
 # Name and version of Tcl package
+#   * This must be the same as the Tcl package name referred to by the 
+#     Swift extension function
 pkg_name = user_stuff
 pkg_version = 0.1
 
