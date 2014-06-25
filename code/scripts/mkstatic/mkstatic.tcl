@@ -888,6 +888,7 @@ proc fill_c_template { manifest_dict tcl_version skip_tcl_init sys_lib_dir \
         }
       }
 
+      # Text after match
       set line [ string range $line [ expr {$match_end + 1} ] \
                                     [ string length $line ] ]
     }
