@@ -252,6 +252,7 @@ else
 fi
 
 #step 8. Invoke make-package
+message
 message "running make-package: creating pkgIndex.tcl"
 action $TCLSH ./make-package.tcl
 
