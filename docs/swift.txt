@@ -1803,10 +1803,10 @@ producing the Turbine Tcl script +my.tcl+.
 To do this, make a copy of +scripts/mkstatic/example.manifest+ from
 the Turbine installation directory.  This file contains examples and
 descriptions of all the the possible settings.
-#Note that an empty
-#manifest file corresponds to the +turbine_sh+ utility, which is a
-#replacement for +tclsh+ with required Turbine libraries statically
-#linked in.
+Note that an empty
+manifest file corresponds to the +turbine_sh+ utility, which is a
+replacement for +tclsh+ with required Turbine libraries statically
+linked in.
 For a simple Swift program with no user Tcl libraries,
 you only need to set +main_script = my.tcl+.
 
