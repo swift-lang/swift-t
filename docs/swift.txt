@@ -1095,6 +1095,12 @@ automatic operations and optimizations are disabled
 
 +read(file) -> string+::   Read file as a string
 +write(string) -> file+::  Write string to file
+
++file_lines(file) -> string[]+:: 
+Reads the whole file, returning each line as a separate entry in the
+output array.  Comments with +#+ are excised and blank lines are
+omitted. 
+
 +glob(string) -> file[]+:: Perform glob operation, returning files
 that match.  Available glob symbols include:
 +
