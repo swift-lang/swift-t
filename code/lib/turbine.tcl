@@ -239,21 +239,15 @@ namespace eval turbine {
         variable mode
         if { [ adlb::amserver ] == 1 } {
           set mode SERVER
-        } elseif { [ adlb::rank ] < $n_regular_workers } {
-          # Allocate workers to specific types in order of WORK_TYPE array
-          set mode WORK
         } else {
           # Work out which other work type we have
-          # Regular workers go first, after that alphabetic order
-          set k $n_regular_workers
+          set k 0
           foreach work_type $work_types {
-            if { $work_type != "WORK" } {
-              set n [ dict get $n_workers_by_type $work_type ]
-              incr k $n
-              if { [ adlb::rank ] < $k } {
-                set mode $work_type
-                break
-              }
+            set n [ dict get $n_workers_by_type $work_type ]
+            incr k $n
+            if { [ adlb::rank ] < $k } {
+              set mode $work_type
+              break
             }
           }
         }
@@ -304,23 +298,14 @@ namespace eval turbine {
         }
         
         # Report on how workers are subdivided
-        set n_regular_workers [ dict get $n_workers_by_type WORK ]
-        set first_regular_worker $first_worker
-        set last_regular_worker [ expr {$first_regular_worker +
-                                        $n_regular_workers - 1} ]
-        log [ cat "REGULAR WORKERS: $n_regular_workers" \
-                  "RANKS: $first_regular_worker - $last_regular_worker" ]
-
-        set curr_rank $n_regular_workers
+        set curr_rank 0
         foreach work_type $work_types {
-          if { $work_type != "WORK" } {
-            set n_x_workers [ dict get $n_workers_by_type $work_type ]
-            set first_x_worker $curr_rank
-            incr curr_rank $n_x_workers
-            set last_x_worker [ expr {$curr_rank - 1} ]
-            log [ cat "$work_type WORKERS: $n_x_workers" \
-                  "RANKS: $first_x_worker - $last_x_worker" ]
-          }
+          set n_x_workers [ dict get $n_workers_by_type $work_type ]
+          set first_x_worker $curr_rank
+          incr curr_rank $n_x_workers
+          set last_x_worker [ expr {$curr_rank - 1} ]
+          log [ cat "$work_type WORKERS: $n_x_workers" \
+                "RANKS: $first_x_worker - $last_x_worker" ]
         }
     }
 
