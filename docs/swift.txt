@@ -906,7 +906,7 @@ block again until +A[key]+ is stored.
 
 +trace(anything, anything, ...)+:: Report the value of any variable
 
- import io;
+*Import:* +io+
 
 +printf(string format, int|float|string|boolean...)+::
 As +printf()+ in C
