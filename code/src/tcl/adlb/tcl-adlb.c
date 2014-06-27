@@ -76,17 +76,26 @@
 #define USE_ADLB
 #endif
 
+/** If ADLB communicator initialized */
+static bool adlb_comm_init = false;
+
+/** If ADLB fully initialized */
+static bool adlb_init = false;
+
 /** The communicator to use in our ADLB instance */
-MPI_Comm adlb_comm;
+MPI_Comm adlb_comm = MPI_COMM_NULL;
+
+/** Size of adlb_comm */
+int adlb_comm_size = -1;
 
 /** The rank of this process in adlb_comm */
-int adlb_comm_rank;
+int adlb_comm_rank = -1;
 
 /** Number of workers */
-static int adlb_workers;
+static int adlb_workers = -1;
 
 /** Number of servers */
-static int adlb_servers;
+static int adlb_servers = -1;
 
 static int am_server;
 
@@ -94,14 +103,11 @@ static int am_server;
 static int am_debug_server;
 #endif
 
-/** Size of MPI_COMM_WORLD */
-static int mpi_size = -1;
-
-/** Rank in MPI_COMM_WORLD */
-static int mpi_rank = -1;
-
 /** Communicator for ADLB workers */
-static MPI_Comm adlb_worker_comm;
+static MPI_Comm adlb_worker_comm = MPI_COMM_NULL;
+
+/** Rank in adlb_comm */
+static int adlb_worker_comm_rank = -1;
 
 /**
  Large buffer for receiving ADLB payloads, etc.
@@ -163,6 +169,8 @@ typedef struct {
   adlb_type_extra *extras; /* E.g. for struct subtype */
 } compound_type;
 
+static int adlb_setup_comm(Tcl_Interp *interp, Tcl_Obj *const objv[],
+                           MPI_Comm *comm);
 static void set_namespace_constants(Tcl_Interp* interp);
 
 static int refcount_mode(Tcl_Interp *interp, Tcl_Obj *const objv[],
@@ -301,12 +309,84 @@ static int
 ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
           int objc, Tcl_Obj *const objv[], bool write_ref,
           adlb_subscript_kind sub_kind);
+
+/**
+   usage: adlb::init_comm [<comm>]?
+   
+   Setup ADLB communicator and MPI if needed, but no other parts of ADLB.
+
+   If comm is given, run ADLB in that communicator
+   Else, run ADLB in a dup of MPI_COMM_WORLD
+
+   After this is run, adlb::size and adlb::rank can be used.
+ */
+static int
+ADLB_Init_Comm_Cmd(ClientData cdata, Tcl_Interp *interp,
+                   int objc, Tcl_Obj *const objv[])
+{
+  TCL_CONDITION(objc == 1 || objc == 2,
+                "adlb::init requires 0 or 1 arguments!");
+  int rc;
+
+  MPI_Comm *adlb_comm_ptr = NULL;
+  if (objc == 2)
+  {
+    long tmp_ptr = 0;
+    rc = Tcl_GetLongFromObj(interp, objv[1], &tmp_ptr);
+    TCL_CHECK(rc);
+    adlb_comm_ptr = (MPI_Comm*)tmp_ptr;
+  }
+
+  rc = adlb_setup_comm(interp, objv, adlb_comm_ptr);
+  TCL_CHECK(rc);
+
+  adlb_init = true;
+
+  return TCL_OK;
+}
+
+/*
+ * Setup the ADLB communicator
+ *
+ * comm: if NULL, use MPI_COMM_WORLD
+ */
+static int adlb_setup_comm(Tcl_Interp *interp, Tcl_Obj *const objv[],
+                           MPI_Comm *comm)
+{
+  TCL_CONDITION(!adlb_comm_init, "ADLB Communicator already initialized");
+  int rc;
+
+  if (comm == NULL)
+  {
+    // Start with MPI_Init() and MPI_COMM_WORLD
+    int argc = 0;
+    char** argv = NULL;
+    must_comm_free = true;
+    rc = MPI_Init(&argc, &argv);
+    assert(rc == MPI_SUCCESS);
+    MPI_Comm_dup(MPI_COMM_WORLD, &adlb_comm);
+  }
+  else
+  {
+    adlb_comm = *comm;
+  }
+  
+  MPI_Comm_size(adlb_comm, &adlb_comm_size);
+  MPI_Comm_rank(adlb_comm, &adlb_comm_rank);
+
+  adlb_comm_init = true;
+  
+  return TCL_OK;
+}
+
+
 /**
    usage: adlb::init <servers> <types> [<comm>]?
    Simplified use of ADLB_Init type_vect: just give adlb_init
    a number ntypes, and the valid types will be: [0..ntypes-1]
-   If comm is given, run ADLB in that communicator
-   Else, run ADLB in a dup of MPI_COMM_WORLD
+
+   If adlb::init_comm was run, use that communicator, otherwise
+   set up using the optional communicator provided.
  */
 static int
 ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -314,6 +394,7 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_CONDITION(objc == 3 || objc == 4,
                 "adlb::init requires 2 or 3 arguments!");
+  TCL_CONDITION(!adlb_init, "ADLB already initialized");
 
   mm_init();
   turbine_debug_init();
@@ -338,30 +419,23 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = field_name_objs_init(interp, objv);
   TCL_CHECK(rc);
 
-  if (objc == 3)
+  MPI_Comm *adlb_comm_ptr = NULL;
+  if (objc == 4)
   {
-    // Start with MPI_Init() and MPI_COMM_WORLD
-    int argc = 0;
-    char** argv = NULL;
-    must_comm_free = true;
-    rc = MPI_Init(&argc, &argv);
-    assert(rc == MPI_SUCCESS);
-    MPI_Comm_dup(MPI_COMM_WORLD, &adlb_comm);
-  }
-  else if (objc == 4)
-  {
-    long adlb_comm_ptr = 0;
-    rc = Tcl_GetLongFromObj(interp, objv[3], &adlb_comm_ptr);
+    long tmp_comm_ptr = 0;
+    rc = Tcl_GetLongFromObj(interp, objv[3], &tmp_comm_ptr);
     TCL_CHECK(rc);
-    memcpy(&adlb_comm, (void*) adlb_comm_ptr, sizeof(MPI_Comm));
+    adlb_comm_ptr = (MPI_Comm *) tmp_comm_ptr;
   }
-  else
-    assert(false);
+ 
+  if (!adlb_comm_init)
+  {
+    rc = adlb_setup_comm(interp, objv, adlb_comm_ptr);
+    TCL_CHECK(rc);
+  }
 
-  MPI_Comm_size(adlb_comm, &mpi_size);
-  MPI_Comm_rank(adlb_comm, &mpi_rank);
-  int workers = mpi_size - servers;
-  if (mpi_rank == 0)
+  int workers = adlb_comm_size - servers;
+  if (adlb_comm_rank == 0)
   {
     if (workers <= 0)
       puts("WARNING: No workers");
@@ -383,7 +457,7 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
     return TCL_ERROR;
 
   if (! am_server)
-    MPI_Comm_rank(adlb_worker_comm, &adlb_comm_rank);
+    MPI_Comm_rank(adlb_worker_comm, &adlb_worker_comm_rank);
 
   // Set static variables
   adlb_workers = workers;
@@ -391,6 +465,7 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   set_namespace_constants(interp);
 
+  adlb_init = true;
   Tcl_SetObjResult(interp, Tcl_NewIntObj(ADLB_SUCCESS));
   return TCL_OK;
 }
@@ -551,6 +626,7 @@ static int
 ADLB_Server_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
 {
+  TCL_CONDITION(adlb_init, "ADLB not initialized");
   if (!am_server)
   {
     printf("adlb::server: This process is not a server!\n");
@@ -580,7 +656,8 @@ static int
 ADLB_Rank_Cmd(ClientData cdata, Tcl_Interp *interp,
               int objc, Tcl_Obj *const objv[])
 {
-  Tcl_SetObjResult(interp, Tcl_NewIntObj(mpi_rank));
+  TCL_CONDITION(adlb_comm_init, "ADLB communicator not initialized");
+  Tcl_SetObjResult(interp, Tcl_NewIntObj(adlb_comm_rank));
   return TCL_OK;
 }
 
@@ -591,10 +668,8 @@ static int
 ADLB_Worker_Rank_Cmd(ClientData cdata, Tcl_Interp *interp,
               int objc, Tcl_Obj *const objv[])
 {
-  int worker_rank;
-  int rc = MPI_Comm_rank(adlb_worker_comm, &worker_rank);
-  TCL_CONDITION(rc == MPI_SUCCESS, "Error getting worker rank");
-  Tcl_SetObjResult(interp, Tcl_NewIntObj(worker_rank));
+  TCL_CONDITION(adlb_init, "ADLB not initialized");
+  Tcl_SetObjResult(interp, Tcl_NewIntObj(adlb_worker_comm_rank));
   return TCL_OK;
 }
 
@@ -605,18 +680,20 @@ static int
 ADLB_AmServer_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
+  TCL_CONDITION(adlb_init, "ADLB not initialized");
   Tcl_SetObjResult(interp, Tcl_NewBooleanObj(am_server));
   return TCL_OK;
 }
 
 /**
-   usage: no args, returns number of MPI world ranks
+   usage: no args, returns size of MPI communicator ADLB is running on
 */
 static int
 ADLB_Size_Cmd(ClientData cdata, Tcl_Interp *interp,
               int objc, Tcl_Obj *const objv[])
 {
-  Tcl_SetObjResult(interp, Tcl_NewIntObj(mpi_size));
+  TCL_CONDITION(adlb_comm_init, "ADLB communicator not initialized");
+  Tcl_SetObjResult(interp, Tcl_NewIntObj(adlb_comm_size));
   return TCL_OK;
 }
 
@@ -627,6 +704,7 @@ static int
 ADLB_Servers_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
+  TCL_CONDITION(adlb_init, "ADLB not initialized");
   Tcl_SetObjResult(interp, Tcl_NewIntObj(adlb_servers));
   return TCL_OK;
 }
@@ -638,6 +716,7 @@ static int
 ADLB_Workers_Cmd(ClientData cdata, Tcl_Interp *interp,
                  int objc, Tcl_Obj *const objv[])
 {
+  TCL_CONDITION(adlb_init, "ADLB not initialized");
   Tcl_SetObjResult(interp, Tcl_NewIntObj(adlb_workers));
   return TCL_OK;
 }
@@ -5148,6 +5227,9 @@ ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   if (must_comm_free)
     MPI_Comm_free(&adlb_comm);
+  
+  adlb_comm_init = false;
+  adlb_init = false;
 
   if (b)
     MPI_Finalize();
@@ -5200,6 +5282,7 @@ Tcladlb_Init(Tcl_Interp* interp)
 void
 tcl_adlb_init(Tcl_Interp* interp)
 {
+  COMMAND("init_comm", ADLB_Init_Comm_Cmd);
   COMMAND("init",      ADLB_Init_Cmd);
   COMMAND("declare_struct_type", ADLB_Declare_Struct_Type_Cmd);
   COMMAND("server",    ADLB_Server_Cmd);

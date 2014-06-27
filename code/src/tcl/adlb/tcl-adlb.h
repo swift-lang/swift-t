@@ -23,6 +23,10 @@ void tcl_adlb_init(Tcl_Interp* interp);
 
 extern int ADLB_curr_priority;
 
+extern MPI_Comm adlb_comm;
+
+extern int adlb_comm_size;
+
 extern int adlb_comm_rank;
 
 /* Return a pointer to a shared buffer */
