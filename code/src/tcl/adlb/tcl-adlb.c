@@ -103,9 +103,6 @@ static int mpi_rank = -1;
 /** Communicator for ADLB workers */
 static MPI_Comm adlb_worker_comm;
 
-/** If the controlling code passed us a communicator, it is here */
-long adlb_comm_ptr = 0;
-
 /**
  Large buffer for receiving ADLB payloads, etc.
  */
@@ -353,6 +350,7 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
   else if (objc == 4)
   {
+    long adlb_comm_ptr = 0;
     rc = Tcl_GetLongFromObj(interp, objv[3], &adlb_comm_ptr);
     TCL_CHECK(rc);
     memcpy(&adlb_comm, (void*) adlb_comm_ptr, sizeof(MPI_Comm));
