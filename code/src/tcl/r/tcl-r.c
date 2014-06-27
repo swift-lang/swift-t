@@ -37,6 +37,8 @@
 #include <R_ext/Print.h>
 #endif
 
+#include <list.h>
+
 #include "src/tcl/util.h"
 
 #include "tcl-r.h"
