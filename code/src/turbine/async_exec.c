@@ -59,6 +59,7 @@ Implications of Assumptions
 #include "src/turbine/turbine-checks.h"
 #include "src/turbine/async_exec.h"
 #include "src/turbine/executors/exec_interface.h"
+#include "src/turbine/services.h"
 
 #include <assert.h>
 
@@ -155,6 +156,10 @@ turbine_async_worker_loop(Tcl_Interp *interp, const char *exec_name,
                           void *buffer, size_t buffer_size)
 {
   turbine_exec_code ec;
+  turbine_code tc;
+
+  tc = turbine_service_init();
+  turbine_check(tc);
 
   assert(exec_name != NULL);
   assert(buffer != NULL);
@@ -259,6 +264,8 @@ get_tasks(Tcl_Interp *interp, turbine_executor *executor,
       return TURBINE_ERROR_EXTERNAL;
     }
   }
+
+  turbine_service_finalize();
 
   return TURBINE_EXEC_SUCCESS;
 }
