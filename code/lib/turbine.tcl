@@ -30,6 +30,11 @@ namespace eval turbine {
     namespace export put get RANK_ANY \
                      get_priority reset_priority set_priority
 
+    # Import executor commands
+    namespace import ::turbine::c::noop_exec_* \
+                     ::turbine::c::coaster_*
+    namespace export noop_exec_* coaster_*
+
     # Export work types accessible
     variable WORK_TASK
     namespace export WORK_TASK
