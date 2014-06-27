@@ -52,6 +52,12 @@ turbine_code turbine_async_exec_initialize(void);
 turbine_code turbine_async_exec_finalize(void);
 
 /*
+  Register executor with async executors module
+ */
+turbine_code
+turbine_add_async_exec(turbine_executor executor);
+
+/*
   Lookup registered executor.
   Returns executor, or NULL if not registered.
   Pointer to executor remains valid until shut down

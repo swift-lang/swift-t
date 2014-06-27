@@ -131,11 +131,4 @@ typedef struct turbine_executor {
   turbine_exec_slots slots;
 } turbine_executor;
 
-/*
-  Register executor with async executors mode
- */
-turbine_code
-turbine_add_async_exec(turbine_executor executor);
-
-
 #endif //__EXEC_INTERFACE_H
