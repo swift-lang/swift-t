@@ -1098,8 +1098,8 @@ automatic operations and optimizations are disabled
 
 +file_lines(file) -> string[]+:: 
 Reads the whole file, returning each line as a separate entry in the
-output array.  Comments with +#+ are excised and blank lines are
-omitted. 
+output array.  Comments with +#+ are excised, leading and trailing
+whitespace is trimmed, and blank lines are omitted. 
 
 +glob(string) -> file[]+:: Perform glob operation, returning files
 that match.  Available glob symbols include:
