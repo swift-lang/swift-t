@@ -340,8 +340,6 @@ ADLB_Init_Comm_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = adlb_setup_comm(interp, objv, adlb_comm_ptr);
   TCL_CHECK(rc);
 
-  adlb_init = true;
-
   return TCL_OK;
 }
 

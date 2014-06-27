@@ -38,8 +38,9 @@ proc main {} {
   }
 }
 
-turbine::defaults
-turbine::init $servers Turbine [ list $turbine::NOOP_EXEC_NAME ]
+set layout [ dict create servers 1 workers 2 workers_by_type \
+                  [ dict create WORK 1 $turbine::NOOP_EXEC_NAME 1 ] ]
+turbine::init $layout Turbine
 turbine::enable_read_refcount
 
 set noop_work_type [ turbine::adlb_work_type $turbine::NOOP_EXEC_NAME ]

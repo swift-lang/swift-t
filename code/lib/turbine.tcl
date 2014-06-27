@@ -62,11 +62,31 @@ namespace eval turbine {
     set error_code 10
 
     # User function
-    # servers: Number of ADLB servers
+    # rank_config: If an empty string, configure ranks based on environment.
+    #     If an integer, interpret as a server count and do old-style
+    #     worker/server split for backwards compatibility.
+    #     Otherwise interpret as a custom rank ayout object as documented by
+    #     the rank_allocation function
     # lang: language to use in error messages
-    # async_work_types: additional work types for async executors.
-    #          These are allocated type numbers from 1 onwards
-    proc init { servers {lang ""} {async_work_types {}}} {
+    proc init { rank_config {lang ""} } {
+        
+        # Setup communicator so we can get size later
+        if { [ info exists ::TURBINE_ADLB_COMM ] } {
+            adlb::init_comm $::TURBINE_ADLB_COMM
+        } else {
+            adlb::init_comm
+        }
+        
+        if { $rank_config == {}} {
+            # Use standard rank configuration mechanism
+            set rank_allocation [ rank_allocation [ adlb::size ] ]
+        } elseif { [ string is integer -strict $rank_config ] } {
+            # Interpret as servers count
+            set rank_allocation [ basic_rank_allocation $rank_config ]
+        } else {
+            # Interpret as custom rank configuration
+            set rank_allocation $rank_config
+        }
 
         variable language
         
@@ -74,12 +94,13 @@ namespace eval turbine {
             set language $lang
         }
 
+        set servers [ dict get $rank_allocation servers ]
         assert_control_sanity $servers
         setup_log_string
 
         reset_priority
 
-        set work_types [ concat [ list WORK ] $async_work_types ]
+        set work_types [ work_types_from_allocation $rank_allocation ]
         
         # Set up work types
         enum WORK_TYPE $work_types
@@ -90,17 +111,13 @@ namespace eval turbine {
         variable WORK_TASK
         set WORK_TASK $WORK_TYPE(WORK)
 
-        if { [ info exists ::TURBINE_ADLB_COMM ] } {
-            adlb::init $servers $types $::TURBINE_ADLB_COMM
-        } else {
-            adlb::init $servers $types
-        }
+        adlb::init $servers $types
 
         assert_sufficient_procs
 
         c::init [ adlb::amserver ] [ adlb::rank ] [ adlb::size ]
 
-        setup_mode $servers
+        setup_mode $rank_allocation $work_types
 
         turbine::init_rng
 
@@ -116,33 +133,43 @@ namespace eval turbine {
             error "ERROR: SERVERS==0"
         }
     }
-    
-    # Setup which mode this and other ranks will be running in
-    # Assumes that WORK_TYPE array is created and filled, and that
-    # Sets n_workers and n_adlb_servers variables
-    proc setup_mode { servers } {
 
-        variable n_workers
-        variable n_adlb_servers
+    # Determine rank allocation to workers/servers based on environment
+    # vars, etc
+    # adlb_size: the number of ranks in the ADLB communicator
+    # 
+    # Returns a rank allocation object, a dict with the following keys:
+    # servers: the number of ADLB servers
+    # workers: the total number of ADLB workers
+    # workers_by_type: a tcl dictionary mapping work type to the number
+    #         of workers. Keys can be an executor name, or WORK for
+    #         a generic CPU worker.  The counts will sum to workers.
+    #         Only types with at least one workers will be included.
+    proc rank_allocation { adlb_size } {
+        global env
+        if [ info exists env(ADLB_SERVERS) ] {
+            set n_servers $env(ADLB_SERVERS)
+        } else {
+            set n_servers 1
+        }
 
-        set n_workers [ expr {[ adlb::size ] - $servers } ]
-        set n_adlb_servers $servers
-
-        variable n_workers_by_type
         set n_workers_by_type [ dict create ]
+        set n_workers [ expr { $adlb_size - $n_servers } ]
+        
         set workers_running_sum 0
 
-        global WORK_TYPE
         global env
-        foreach work_type [ lsort [array names WORK_TYPE] ] {
-          if { $work_type != "WORK" } {
-            set env_var "TURBINE_${work_type}_WORKERS"
-            set work_type_count 0
-            if { [ info exists env($env_var) ] } {
-              set work_type_count $env($env_var)
-            }
-            incr workers_running_sum $work_type_count
-            dict set n_workers_by_type $work_type $work_type_count
+        foreach executor [ available_executors ] {
+          set env_var "TURBINE_${executor}_WORKERS"
+          set exec_worker_count 0
+          if { [ info exists env($env_var) ] } {
+            set exec_worker_count $env($env_var)
+          }
+
+          if { $exec_worker_count > 0 } {
+            # Only include enabled workers
+            incr workers_running_sum $exec_worker_count
+            dict set n_workers_by_type $executor $exec_worker_count
           }
         }
         
@@ -160,6 +187,55 @@ namespace eval turbine {
 
         debug "WORKER TYPE COUNTS: $n_workers_by_type"
 
+        return [ dict create servers $n_servers workers $n_workers \
+                             workers_by_type $n_workers_by_type ]
+    }
+
+    # TODO: have executors register themselves
+    proc available_executors {} {
+      return [ list $::turbine::NOOP_EXEC_NAME ]
+    }
+
+    # Basic rank allocation with only servers and regular workers
+    proc basic_rank_allocation { servers } {
+        set workers [ expr {[ adlb::size ] - $servers } ]
+        return [ dict create servers $servers workers $workers \
+                 workers_by_type [ dict create WORK $workers ] ]
+    }
+
+    # Return list of work types in canonical order based on rank layout
+    proc work_types_from_allocation { rank_allocation } {
+        set workers_by_type [ dict get $rank_allocation workers_by_type ]
+
+        set work_types [ dict keys $workers_by_type ]
+
+        set work_pos [ lsearch -exact $work_types WORK ]
+
+        # Put in canonical lexical order without WORK
+        set executors [ lsort [ lreplace $work_types $work_pos $work_pos ] ]
+
+        return [ concat [ list WORK ] $executors ]
+    }
+    
+    # Setup which mode this and other ranks will be running in
+    # 
+    # rank_allocation: a rank allocation object
+    # work_types: list of ADLB work type names (matching those in rank_allocation)
+    #             with list index corresponding to integer ADLB work type
+    #
+    # Sets n_workers, n_workers_by_type, and n_adlb_servers variables
+    proc setup_mode { rank_allocation work_types } {
+
+        variable n_workers
+        variable n_adlb_servers
+
+        set n_workers [ dict get $rank_allocation workers ]
+        set n_adlb_servers [ dict get $rank_allocation servers ]
+
+        variable n_workers_by_type
+        set n_workers_by_type [ dict get $rank_allocation workers_by_type ]
+        set n_regular_workers [ dict get $n_workers_by_type WORK ]
+
         variable mode
         if { [ adlb::amserver ] == 1 } {
           set mode SERVER
@@ -170,7 +246,7 @@ namespace eval turbine {
           # Work out which other work type we have
           # Regular workers go first, after that alphabetic order
           set k $n_regular_workers
-          foreach work_type [ lsort [array names WORK_TYPE] ] {
+          foreach work_type $work_types {
             if { $work_type != "WORK" } {
               set n [ dict get $n_workers_by_type $work_type ]
               incr k $n
@@ -184,7 +260,7 @@ namespace eval turbine {
 
         log "MODE: $mode"
         if { [ adlb::rank ] == 0 } {
-            log_rank_layout
+            log_rank_layout $work_types
         }
     }
 
@@ -205,12 +281,13 @@ namespace eval turbine {
       return $adlb_type
     }
 
-    proc log_rank_layout { } {
-        global WORK_TYPE
+    proc log_rank_layout { work_types } {
 
         variable n_workers
         variable n_adlb_servers
         variable n_workers_by_type
+      
+        log "WORK TYPES: $work_types"
 
         set first_worker 0
         set first_server [ expr [adlb::size] - $n_adlb_servers ]
@@ -235,7 +312,7 @@ namespace eval turbine {
                   "RANKS: $first_regular_worker - $last_regular_worker" ]
 
         set curr_rank $n_regular_workers
-        foreach work_type [ lsort [array names WORK_TYPE] ] {
+        foreach work_type $work_types {
           if { $work_type != "WORK" } {
             set n_x_workers [ dict get $n_workers_by_type $work_type ]
             set first_x_worker $curr_rank
@@ -347,21 +424,15 @@ namespace eval turbine {
         }
     }
 
-    # Set servers in the caller's stack frame
+    # DEPRECATED
+    # Set servers in the caller's stack frame to {} to invoke new rank
+    # allocation method upon init.
     # Used to get tests running, etc.
     proc defaults { } {
 
-        global env
         upvar 1 servers s
 
-        if [ info exists env(ADLB_SERVERS) ] {
-            set s $env(ADLB_SERVERS)
-        } else {
-            set s ""
-        }
-        if { [ string length $s ] == 0 } {
-            set s 1
-        }
+        set s {}
     }
 
     # Default error handling for any errors
