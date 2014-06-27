@@ -340,6 +340,8 @@ public class TurbineGenerator implements CompilerBackend {
   
   private void turbineStartup()
   {
+    // TODO: don't need defaults anymore with newer Turbine engines, 
+    //       remove once we move to new version.
     tree.add(new Command("turbine::defaults"));
     if (Settings.NO_TURBINE_ENGINE) {
       tree.add(new Command("turbine::init $servers \"Swift\""));
