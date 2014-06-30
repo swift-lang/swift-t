@@ -29,20 +29,13 @@ namespace eval turbine {
     setup_redirects $kwopts stdin_src stdout_dst stderr_dst
     log "shell: $cmd $args $stdin_src $stdout_dst $stderr_dst"
 
-    # TODO: remove this - STC will call a coasters-specific launch function
-    #       directly
-    if {[string match "coaster*" $cmd]} {
-      set cmd [string triml $cmd "coaster"]
-      exec_coaster $cmd $stdin_src $stdout_dst $stderr_dst {*}$args
-    } else {
-      set start [ clock milliseconds ]
-      if { [ catch { exec $cmd {*}$args $stdin_src $stdout_dst $stderr_dst } ] } {
-        turbine_error "external command failed: $cmd $args"
-      }
-      set stop [ clock milliseconds ]
-      set duration [ format "%0.3f" [ expr ($stop-$start)/1000.0 ] ]
-      log "shell command duration: $duration"
+    set start [ clock milliseconds ]
+    if { [ catch { exec $cmd {*}$args $stdin_src $stdout_dst $stderr_dst } ] } {
+      turbine_error "external command failed: $cmd $args"
     }
+    set stop [ clock milliseconds ]
+    set duration [ format "%0.3f" [ expr ($stop-$start)/1000.0 ] ]
+    log "shell command duration: $duration"
   }
 
   # Set specified vars in outer scope for stdin, stdout and stderr
