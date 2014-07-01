@@ -648,7 +648,7 @@ public class Congruences implements AliasFinder {
     if (maybeAssigned.contains(assigned)) {
       // Potential double assignment: avoid doing any optimizations on
       // the contents of this location.
-      logger.debug("Potential double assignment to " + assigned);
+      logger.debug("Potential double assignment to " + assigned + " from " + vl);
 
       Logging.uniqueWarn("Invalid code detected during optimization. "
           + "Double assignment to " + printableAssignValue(assigned) + " in " + errContext + ".\n"
