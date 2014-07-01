@@ -47,6 +47,8 @@ public class Logging {
   public static void uniqueWarn(String msg) {
     if (Logging.addEmitted(Level.WARN, msg)) {
       Logging.getSTCLogger().warn(msg); 
+    } else {
+      Logging.getSTCLogger().debug("Duplicate Warning: " + msg);
     }
   }
 }
