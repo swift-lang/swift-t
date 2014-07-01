@@ -190,6 +190,34 @@ public class ForeachLoops {
     public long constIterCount() {
       return -1;
     }
+    
+
+    protected Collection<Var> abstractForeachRequiredVars(boolean forDeadCodeElim) {
+      Collection<Var> res = new ArrayList<Var>();
+      if (!forDeadCodeElim) {
+        // Need reference count vars
+        addRefCountVars(res, startIncrements);
+        addRefCountVars2(res, constStartIncrements.values());
+        addRefCountVars(res, endDecrements);
+      }
+      return res;
+    }
+
+
+    private void addRefCountVars(Collection<Var> res,
+                      Collection<RefCount> refcounts) {
+      for (RefCount rc: refcounts) {
+        res.add(rc.var);
+      }
+    }
+    
+
+    private void addRefCountVars2(Collection<Var> res,
+        Collection<? extends Collection<RefCount>> refcounts) {
+      for (Collection<RefCount> rcs: refcounts) {
+        addRefCountVars(res, rcs);
+      }
+    }
   }
 
   public static class ForeachLoop extends AbstractForeachLoop {
@@ -334,9 +362,9 @@ public class ForeachLoops {
 
     @Override
     public Collection<Var> requiredVars(boolean forDeadCodeElim) {
-      Collection<Var> res = new ArrayList<Var>(
-          super.requiredVars(forDeadCodeElim));
+      Collection<Var> res = new ArrayList<Var>();
       res.add(container);
+      res.addAll(abstractForeachRequiredVars(forDeadCodeElim));
       return res;
     }
 
@@ -565,13 +593,14 @@ public class ForeachLoops {
 
     @Override
     public Collection<Var> requiredVars(boolean forDeadCodeElim) {
-      Collection<Var> res = new ArrayList<Var>(
-          super.requiredVars(forDeadCodeElim));
+      Collection<Var> res = new ArrayList<Var>();
       for (Arg o: Arrays.asList(start, end, increment)) {
         if (o.isVar()) {
           res.add(o.getVar());
         }
       }
+      
+      res.addAll(abstractForeachRequiredVars(forDeadCodeElim));
       return res;
     }
 
