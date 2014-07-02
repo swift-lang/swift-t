@@ -362,8 +362,8 @@ xlb_data_container_typeof(adlb_datum_id id, adlb_data_type* key_type,
   check_verbose(t == ADLB_DATA_TYPE_CONTAINER, ADLB_DATA_ERROR_TYPE,
                 "not a container: "ADLB_PRID,
                 ADLB_PRID_ARGS(id, d->symbol));
-  *key_type = d->data.CONTAINER.key_type;
-  *val_type = d->data.CONTAINER.val_type;
+  *key_type = (adlb_data_type)d->data.CONTAINER.key_type;
+  *val_type = (adlb_data_type)d->data.CONTAINER.val_type;
   DEBUG("container_type: "ADLB_PRID" => (%i, %i)",
         ADLB_PRID_ARGS(id, d->symbol), *key_type, *val_type);
   return ADLB_DATA_SUCCESS;
@@ -978,7 +978,8 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
     {
       // Any subscript appends to multiset
       assert(adlb_has_sub(curr_sub));
-      adlb_data_type elem_type = data->MULTISET->elem_type;
+      adlb_data_type elem_type;
+      elem_type = (adlb_data_type)data->MULTISET->elem_type;
       check_verbose(value_type == elem_type, ADLB_DATA_ERROR_TYPE,
               "Type mismatch for multiset val: expected %s actual %s\n",
               ADLB_Data_type_tostring(elem_type), ADLB_Data_type_tostring(value_type));
@@ -1005,7 +1006,8 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
 
       adlb_container *c = &data->CONTAINER;
 
-      check_verbose(value_type == c->val_type, ADLB_DATA_ERROR_TYPE,
+      check_verbose(value_type == (adlb_data_type)c->val_type,
+                    ADLB_DATA_ERROR_TYPE,
                     "Type mismatch for container value: "
                     "given: %s required: %s\n",
                     ADLB_Data_type_tostring(value_type),
@@ -1028,7 +1030,7 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
       
       // Now we are guaranteed to succeed
       adlb_datum_storage *entry = malloc(sizeof(adlb_datum_storage));
-      dc = ADLB_Unpack(entry, c->val_type, value, length,
+      dc = ADLB_Unpack(entry, (adlb_data_type)c->val_type, value, length,
                       store_refcounts);
       DATA_CHECK(dc);
 
@@ -1123,7 +1125,7 @@ data_store_subscript(adlb_datum_id id, adlb_datum *d,
         // update data, subscript, etc. for next iteration
         data = &field->data;
         data_type = field_type.type;
-        curr_sub.key += curr_sub_pos;
+        curr_sub.key = ((const char*)curr_sub.key) + curr_sub_pos;
         curr_sub.length -= curr_sub_pos;
       }
     }
@@ -1254,7 +1256,7 @@ lookup_subscript(adlb_datum_id id, adlb_dsym dsym,
     {
       case ADLB_DATA_TYPE_CONTAINER:
         // Assume remainder of subscript is container key
-        *result_type = d->CONTAINER.val_type;
+        *result_type = (adlb_data_type)d->CONTAINER.val_type;
         adlb_container_val tmp_val;
         
         // We don't distinguish unlinked and non-existent subscript here
@@ -1298,7 +1300,7 @@ lookup_subscript(adlb_datum_id id, adlb_dsym dsym,
         {
           // update subscript, type and data for next iteration
           subscript.length -= sub_pos;
-          subscript.key += sub_pos;
+          subscript.key = ((const char*)subscript.key) + sub_pos;
           type = field_type.type;
           d = &field->data;
         }
@@ -1382,7 +1384,7 @@ extract_members(adlb_container *cont, int count, int offset,
   bool use_caller_buf;
 
   dc = ADLB_Init_buf(caller_buffer, output, &use_caller_buf, 65536);
-  ADLB_DATA_CHECK(dc);
+  DATA_CHECK(dc);
 
   // Allocate some temporary storage on stack
   adlb_buffer tmp_buf;
@@ -1444,8 +1446,8 @@ pack_member(adlb_container *cont, table_bp_entry *item,
   }
   if (include_vals)
   {
-    dc = ADLB_Pack_buffer(item->data, cont->val_type, true,
-                tmp_buf, result, result_caller_buffer, result_pos);
+    dc = ADLB_Pack_buffer(item->data, (adlb_data_type)cont->val_type,
+          true, tmp_buf, result, result_caller_buffer, result_pos);
     DATA_CHECK(dc);
   }
 
@@ -1512,8 +1514,8 @@ xlb_data_enumerate(adlb_datum_id id, int count, int offset,
     }
 
     *actual = slice_size;
-    *key_type = d->data.CONTAINER.key_type;
-    *val_type = d->data.CONTAINER.val_type;
+    *key_type = (adlb_data_type)d->data.CONTAINER.key_type;
+    *val_type = (adlb_data_type)d->data.CONTAINER.val_type;
     TRACE("Enumerate container: %i elems %i bytes\n", slice_size,
                                                       data->length);
     return ADLB_DATA_SUCCESS;
@@ -1535,7 +1537,7 @@ xlb_data_enumerate(adlb_datum_id id, int count, int offset,
 
     *actual = slice_size;
     *key_type = ADLB_DATA_TYPE_NULL;
-    *val_type = d->data.MULTISET->elem_type;
+    *val_type = (adlb_data_type)d->data.MULTISET->elem_type;
     TRACE("Enumerate multiset: %i elems %i bytes\n", slice_size,
                                                      data->length);
     return ADLB_DATA_SUCCESS;
@@ -1706,8 +1708,8 @@ insert_notifications2(adlb_datum *d,
       memcpy(subscript_ptr, subscript.key, subscript.length);
       subscript.key = subscript_ptr;
 
-      dc = xlb_to_free_add(notifs, subscript_ptr);
-      DATA_CHECK_ADLB(dc, ADLB_DATA_ERROR_OOM);
+      adlb_code ac = xlb_to_free_add(notifs, subscript_ptr);
+      DATA_CHECK_ADLB(ac, ADLB_DATA_ERROR_OOM);
     }
     dc = append_notifs(listener_list, true, id, d->symbol, subscript,
                        &notifs->notify);
@@ -1868,8 +1870,7 @@ container_notifs_rec(adlb_datum *d, adlb_datum_id id,
    * It's possible that sub_buf is reallocated, in which case
    * we need to keep the subscript pointer pointed to it
    */
-  bool subscript_uses_buf = (subscript.key == sub_buf->data);
-
+  bool subscript_uses_buf = (subscript.key == sub_buf->data); 
   TABLE_BP_FOREACH(c->members, item)
   {
     adlb_subscript component = { .key = table_bp_get_key(item),
@@ -1894,7 +1895,7 @@ container_notifs_rec(adlb_datum *d, adlb_datum_id id,
 
     // Check for subscriptions on this subscript
     dc = all_notifs_step(d, id, child_sub, true, item->data,
-                         c->val_type, notifs, garbage_collected);
+            (adlb_data_type)c->val_type, notifs, garbage_collected);
     DATA_CHECK(dc);
 
     if (*garbage_collected)
@@ -1904,9 +1905,9 @@ container_notifs_rec(adlb_datum *d, adlb_datum_id id,
       return ADLB_DATA_SUCCESS;
     }
 
-    dc = subscript_notifs_rec(d, id, item->data, c->val_type,
-        sub_buf, sub_caller_buf, child_sub, notifs,
-        garbage_collected);
+    dc = subscript_notifs_rec(d, id, item->data,
+        (adlb_data_type)c->val_type, sub_buf, sub_caller_buf, child_sub,
+        notifs, garbage_collected);
     DATA_CHECK(dc);
 
     if (*garbage_collected)
