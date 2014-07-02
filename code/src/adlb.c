@@ -523,7 +523,7 @@ adlb_code ADLBP_Dput(const void* payload, int length, int target,
   int p_len = (int)sizeof(struct packed_put_rule);
 
   // pack in all needed data at end
-  void *p_data = p->inline_data;
+  char *p_data = (char*)p->inline_data;
 
   size_t wait_id_len = sizeof(wait_ids[0]) * (size_t)wait_id_count;
   memcpy(p_data, wait_ids, wait_id_len);
@@ -565,7 +565,7 @@ adlb_code ADLBP_Dput(const void* payload, int length, int target,
  //    to_server_rank = next_server++;
 //    if (next_server >= (master_server_rank+num_servers))
 //      next_server = master_server_rank;
-    return response;
+    return (adlb_code)response;
   }
 
   // Check response before sending any payload data
@@ -1365,6 +1365,7 @@ xlb_refcount_incr(adlb_datum_id id, adlb_refc change,
                     adlb_notif_t *notifs)
 {
   int rc;
+  adlb_code ac;
   MPI_Status status;
   MPI_Request request;
   
@@ -1394,8 +1395,8 @@ xlb_refcount_incr(adlb_datum_id id, adlb_refc change,
   if (!resp.success)
     return ADLB_ERROR;
 
-  rc = xlb_recv_notif_work(&resp.notifs, to_server_rank, notifs);
-  ADLB_CHECK(rc);
+  ac = xlb_recv_notif_work(&resp.notifs, to_server_rank, notifs);
+  ADLB_CHECK(ac);
 
   return ADLB_SUCCESS;
 }
