@@ -699,7 +699,6 @@ xlb_engine_rule(const char* name, int name_strlen,
               xlb_work_unit *work, bool *ready)
 {
   xlb_engine_code tc;
-  xlb_work_unit_id id = work->id;
 
   if (!xlb_engine_initialized)
     return XLB_ENGINE_ERROR_UNINITIALIZED;
@@ -717,15 +716,15 @@ xlb_engine_rule(const char* name, int name_strlen,
   if (tc != XLB_ENGINE_SUCCESS)
   {
     DEBUG_ENGINE("xlb_engine_rule failed:\n");
-    DEBUG_XLB_ENGINE_RULE(T, id);
+    DEBUG_XLB_ENGINE_RULE(T, work->id);
     return tc;
   }
 
-  DEBUG_XLB_ENGINE_RULE(T, id);
+  DEBUG_XLB_ENGINE_RULE(T, work->id);
 
   if (subscribed)
   {
-    DEBUG_ENGINE("waiting: {%"PRId64"}", id);
+    DEBUG_ENGINE("waiting: {%"PRId64"}", work->id);
     assert(T != NULL);
     struct list2_item *list_entry = list2_add(&transforms_waiting, T);
     if (list_entry == NULL)
@@ -735,7 +734,7 @@ xlb_engine_rule(const char* name, int name_strlen,
   }
   else
   {
-    DEBUG_ENGINE("ready: {%"PRId64"}", id);
+    DEBUG_ENGINE("ready: {%"PRId64"}", work->id);
     *ready = true;
 
     // Free transform except for work unit
