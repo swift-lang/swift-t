@@ -26,18 +26,15 @@ namespace eval turbine {
         set signal [ lindex $outputs 0 ]
         rule $inputs "printf_body {$signal} $inputs" name "printf"
     }
+
     proc printf_body { signal args } {
         set L [ list ]
         foreach a $args {
-            lappend L [ retrieve_decr $a ]
-        }
-        if { [ catch { set s [ eval format $L ] } ] } {
-            set fmt [ lindex $L 0 ]
-            turbine_error \
-                [ format "error in printf(): format: \"%s\"" $fmt ]
+            set t [ retrieve_decr $a ]
+            lappend L $t
         }
 
-        puts $s
+        printf_local {*}$L
 
         if { ! [ string equal $signal "" ] } {
           store_void $signal
@@ -55,7 +52,22 @@ namespace eval turbine {
                 [ format "error in printf(): format: \"%s\"" $fmt ]
         }
 
-        puts $s
+        if [ newline ] {
+            puts $s
+        } else {
+            puts -nonewline $s
+        }
         return 0
+    }
+
+    # Should we put a newline after printf()?
+    # By default, yes.
+    proc newline { } {
+        global env
+        if { [ info exists env(TURBINE_PRINTF_NL) ] &&
+             [ string equal $env(TURBINE_PRINTF_NL) 0 ] } {
+            return 0
+        }
+        return 1
     }
 }
