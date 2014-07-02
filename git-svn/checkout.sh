@@ -53,6 +53,8 @@ fi
 git remote add github "$GITHUB_ROOT/$masterrepo.git"
 echo "Fetching $masterrepo from github"
 git fetch github
+git submodule init
+git submodule update
 popd > /dev/null
 
 echo "Checkout finished."
