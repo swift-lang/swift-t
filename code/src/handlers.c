@@ -311,7 +311,7 @@ handle_put_rule(int caller)
   const adlb_datum_id *wait_ids = p->inline_data;
  
   // Remainder of data is packed into array in binary form
-  const void *p_pos = p->inline_data;
+  const char *p_pos = (const char*)p->inline_data;
   p_pos += (int)sizeof(wait_ids[0]) * p->id_count;
 
   adlb_datum_id_sub wait_id_subs[p->id_sub_count];
@@ -546,7 +546,7 @@ adlb_code xlb_put_targeted_local(int type, int putter, int priority,
   valgrind_assert(target >= 0 && target < xlb_workers);
   assert(target >= 0 && target < xlb_workers);
   int worker;
-  int rc;
+  adlb_code rc;
 
   DEBUG("xlb_put_targeted_local: to: %i payload: %s", target,
         (char*) payload);
@@ -738,7 +738,7 @@ handle_get(int caller)
     // Try to initiate a steal to see if we can get work to the worker
     // immediately
     stealing = true;
-    int rc = xlb_try_steal();
+    adlb_code rc = xlb_try_steal();
     ADLB_CHECK(rc);
     stealing = false;
   }
@@ -894,7 +894,7 @@ static inline adlb_code send_parallel_work(int *workers,
 {
   for (int i = 0; i < parallelism; i++)
   {
-    int rc = send_work(workers[i], wuid, type, answer,
+    adlb_code rc = send_work(workers[i], wuid, type, answer,
                        payload, length, parallelism);
     ADLB_CHECK(rc);
     SEND(workers, parallelism, MPI_INT, workers[i],
@@ -909,10 +909,8 @@ static inline adlb_code send_parallel_work(int *workers,
 static inline adlb_code
 send_work_unit(int worker, xlb_work_unit* wu)
 {
-  int rc = send_work(worker,
-                     wu->id, wu->type, wu->answer,
+  return send_work(worker, wu->id, wu->type, wu->answer,
                      wu->payload, wu->length, wu->parallelism);
-  return rc;
 }
 
 /**
@@ -1235,7 +1233,7 @@ handle_enumerate(int caller)
 {
   TRACE("ENUMERATE\n");
   struct packed_enumerate opts;
-  int rc;
+  adlb_code rc;
   MPI_Status status;
   RECV(&opts, sizeof(struct packed_enumerate), MPI_BYTE, caller,
        ADLB_TAG_ENUMERATE);
@@ -1552,11 +1550,18 @@ handle_typeof(int caller)
   RECV(&id, 1, MPI_ADLB_ID, caller, ADLB_TAG_TYPEOF);
 
   adlb_data_type type;
+  int resp;
   adlb_data_code dc = xlb_data_typeof(id, &type);
-  if (dc != ADLB_DATA_SUCCESS)
-    type = -1;
+  if (dc == ADLB_DATA_SUCCESS)
+  {
+    resp = (int)type;
+  }
+  else
+  {
+    resp = -1;
+  }
 
-  RSEND(&type, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
+  RSEND(&resp, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
   return ADLB_SUCCESS;
 }
 
@@ -1568,14 +1573,20 @@ handle_container_typeof(int caller)
   RECV(&id, 1, MPI_ADLB_ID, caller, ADLB_TAG_CONTAINER_TYPEOF);
 
   adlb_data_type types[2];
+  int resp[2];
   adlb_data_code dc;
   dc = xlb_data_container_typeof(id, &types[0], &types[1]);
-  if (dc != ADLB_DATA_SUCCESS) {
-   types[0] = -1;
-   types[1] = -1;
+  if (dc == ADLB_DATA_SUCCESS) {
+    resp[0] = (int)types[0];
+    resp[1] = (int)types[1];
+  }
+  else
+  {
+   resp[0] = -1;
+   resp[1] = -1;
   }
 
-  RSEND(types, 2, MPI_INT, caller, ADLB_TAG_RESPONSE);
+  RSEND(resp, 2, MPI_INT, caller, ADLB_TAG_RESPONSE);
   return ADLB_SUCCESS;
 }
 
@@ -1592,7 +1603,7 @@ handle_container_reference(int caller)
   adlb_refc transfer_refs; // Refcounts to transfer to dest
 
   // Unpack data from buffer
-  void *xfer_read = xlb_xfer;
+  const char *xfer_read = (const char*)xlb_xfer;
   MSG_UNPACK_BIN(xfer_read, &ref_type);
 
   xfer_read += xlb_unpack_id_sub(xfer_read, &id, &subscript);
