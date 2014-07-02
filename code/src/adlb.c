@@ -453,7 +453,7 @@ ADLBP_Put(const void* payload, int length, int target, int answer,
  //    to_server_rank = next_server++;
 //    if (next_server >= (master_server_rank+num_servers))
 //      next_server = master_server_rank;
-    return response;
+    return (adlb_code)response;
   }
 
   if (p->has_inline_data)

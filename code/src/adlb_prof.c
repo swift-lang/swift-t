@@ -69,7 +69,7 @@ ADLB_Init(int num_servers, int num_types, int* types,
   setup_mpe_events(num_types, types);
 
   MPE_LOG(xlb_mpe_all_init_start);
-  int rc = ADLBP_Init(num_servers, num_types, types, am_server,
+  adlb_code rc = ADLBP_Init(num_servers, num_types, types, am_server,
                       comm, worker_comm);
   MPE_LOG(xlb_mpe_all_init_end);
 
@@ -111,7 +111,7 @@ ADLB_Put(const void *work_buf, int work_len, int reserve_rank,
 {
   MPE_LOG(xlb_mpe_wkr_put_start);
 
-  int rc = ADLBP_Put(work_buf, work_len, reserve_rank, answer_rank,
+  adlb_code rc = ADLBP_Put(work_buf, work_len, reserve_rank, answer_rank,
                      work_type, work_prio, parallelism);
 
   MPE_LOG(xlb_mpe_wkr_put_end);
@@ -127,7 +127,7 @@ adlb_code ADLB_Dput(const void* payload, int length, int target,
 {
   MPE_LOG(xlb_mpe_wkr_put_rule_start);
 
-  int rc = ADLBP_Dput(payload, length, target, answer,
+  adlb_code rc = ADLBP_Dput(payload, length, target, answer,
                      type, priority, parallelism, name,
                      wait_ids, wait_id_count, wait_id_subs, wait_id_sub_count);
 
@@ -177,7 +177,7 @@ ADLB_Get(int type_requested, void* payload, int* length,
 #endif
   MPE_LOG(xlb_mpe_wkr_get_start);
 
-  int rc = ADLBP_Get(type_requested, payload, length, answer,
+  adlb_code rc = ADLBP_Get(type_requested, payload, length, answer,
                      type_recvd, comm);
 
   MPE_LOG(xlb_mpe_wkr_get_end);
@@ -276,7 +276,7 @@ ADLB_Exists(adlb_datum_id id, adlb_subscript subscript, bool* result,
             adlb_refc decr)
 {
   MPE_LOG(xlb_mpe_wkr_exists_start);
-  int rc = ADLBP_Exists(id, subscript, result, decr);
+  adlb_code rc = ADLBP_Exists(id, subscript, result, decr);
   return rc;
   MPE_LOG(xlb_mpe_wkr_exists_end);
 }
@@ -295,8 +295,8 @@ ADLB_Store(adlb_datum_id id, adlb_subscript subscript,
           adlb_refc refcount_decr, adlb_refc store_refcounts)
 {
   MPE_LOG(xlb_mpe_wkr_store_start);
-  int rc = ADLBP_Store(id, subscript, type, data, length, refcount_decr,
-                       store_refcounts);
+  adlb_code rc = ADLBP_Store(id, subscript, type, data, length,
+                             refcount_decr, store_refcounts);
   MPE_LOG(xlb_mpe_wkr_store_end);
   return rc;
 }
