@@ -412,7 +412,7 @@ adlb_code xlb_xpt_read_val_w(xlb_xpt_state *state, off_t val_offset,
 
   uint32_t block = (uint32_t) (val_offset / XLB_XPT_BLOCK_SIZE);
   uint32_t block_pos = (uint32_t) (val_offset % XLB_XPT_BLOCK_SIZE);
-  void *buf_pos = buffer;
+  char *buf_pos = (char*)buffer;
   size_t val_remaining = (size_t)val_len;
   DEBUG("Reading val %zu bytes @ offset %llu of current file",
         val_remaining , (long long unsigned) val_offset);
@@ -567,7 +567,7 @@ adlb_code xlb_xpt_read_select(xlb_xpt_read_state *state, uint32_t rank)
 {
   assert(state->file != NULL);
   DEBUG("Select rank %"PRIu32" for reading", rank);
-  CHECK_MSG(rank >= 0 && rank < state->ranks, "Invalid rank: %"PRId32, rank);
+  CHECK_MSG(rank < state->ranks, "Invalid rank: %"PRId32, rank);
   state->curr_rank = rank;
   uint32_t rank_block1 = first_block(state->curr_rank, state->ranks);
   adlb_code rc = block_read_move(state, rank_block1);
@@ -986,6 +986,8 @@ static adlb_code bufwrite(xlb_xpt_state *state,
 {
   TRACE("bufwrite %zu bytes", length);
 
+  const char *data_ptr = (const char*)data;
+
   if (state->curr_block_pos == 0 && state->buffer_used == 0)
   {
     // Make sure magic number gets written in case where buffer
@@ -1023,7 +1025,7 @@ static adlb_code bufwrite(xlb_xpt_state *state,
 
     TRACE("Append %zu bytes to write buffer (%zu already used)", write_size,
           state->buffer_used);
-    memcpy(state->buffer + state->buffer_used, data, write_size);
+    memcpy(state->buffer + state->buffer_used, data_ptr, write_size);
 
     // Update buffer size before calling flush_buffers
     state->buffer_used += write_size;
@@ -1034,7 +1036,7 @@ static adlb_code bufwrite(xlb_xpt_state *state,
       ADLB_CHECK(ac);
     }
 
-    data += write_size;
+    data_ptr += write_size;
     length -= write_size;
 
     if (append_magic_num)
@@ -1142,11 +1144,12 @@ static adlb_code blkread(xlb_xpt_read_state *state, void *buf,
                                  size_t length)
 {
   assert(state->file != NULL);
-  assert(state->curr_block_pos >= 0);
   assert(state->curr_block_pos <= state->block_size);
 
   if (state->end_of_stream)
     return ADLB_DONE;
+
+  char *buf_ptr = (char*)buf;
 
   adlb_code ac;
   while (length > 0)
@@ -1162,7 +1165,7 @@ static adlb_code blkread(xlb_xpt_read_state *state, void *buf,
     }
 
     size_t read_length = block_left < length ? block_left : length;
-    ac = checked_fread(state, buf, read_length);
+    ac = checked_fread(state, buf_ptr, read_length);
     if (ac == ADLB_DONE)
     {
       state->end_of_stream = true;
@@ -1173,7 +1176,7 @@ static adlb_code blkread(xlb_xpt_read_state *state, void *buf,
     }
 
     length -= read_length;
-    buf += read_length;
+    buf_ptr += read_length;
   } while (length > 0);
   return ADLB_SUCCESS;
 }
@@ -1181,7 +1184,6 @@ static adlb_code blkread(xlb_xpt_read_state *state, void *buf,
 static adlb_code blkgetc(xlb_xpt_read_state *state, unsigned char *c)
 {
   assert(state->file != NULL);
-  assert(state->curr_block_pos >= 0);
   assert(state->curr_block_pos <= state->block_size);
 
   if (state->end_of_stream)
