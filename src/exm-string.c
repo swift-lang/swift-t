@@ -45,7 +45,7 @@ string_dup_word(char* src)
 void
 chomp(char* s)
 {
-  size_t length = strlen(s) - 1;
-  if (length >= 0 && s[length] == '\n')
-    s[length] = '\0';
+  size_t length = strlen(s);
+  if (length > 0 && s[length - 1] == '\n')
+    s[length - 1] = '\0';
 }
