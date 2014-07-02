@@ -1884,7 +1884,7 @@ ADLBP_Finalize()
 {
   TRACE_START;
 
-  int rc;
+  adlb_code rc;
   int flag;
   MPI_Finalized(&flag);
   CHECK_MSG(!flag,
