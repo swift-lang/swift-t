@@ -288,7 +288,7 @@ xlb_sync2(int target, const struct packed_sync *hdr, int *response)
   TRACE_START;
   DEBUG("[%i] xlb_sync() target: %i sync_mode: %s", xlb_comm_rank,
         target, xlb_sync_mode_name[hdr->mode]);
-  int rc = ADLB_SUCCESS;
+  adlb_code rc = ADLB_SUCCESS;
 
   MPE_LOG(xlb_mpe_dmn_sync_start);
 
@@ -463,7 +463,7 @@ adlb_code xlb_sync_shutdown(int target)
 #endif
   hdr->mode = ADLB_SYNC_SHUTDOWN;
 
-  int rc = xlb_sync2(target, hdr, NULL);
+  adlb_code rc = xlb_sync2(target, hdr, NULL);
   ADLB_CHECK(rc);
 
   return ADLB_SUCCESS;
@@ -494,7 +494,7 @@ send_subscribe_sync(adlb_sync_mode mode,
   }
 
   // Send sync message without waiting for response
-  int rc = xlb_sync2(target, req, NULL);
+  adlb_code rc = xlb_sync2(target, req, NULL);
   ADLB_CHECK(rc);
 
   if (!inlined_subscript)

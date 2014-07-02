@@ -58,7 +58,7 @@ adlb_data_code xlb_incr_refc_local(adlb_datum_id id, adlb_refc change,
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
   adlb_data_code dc = xlb_data_reference_count(id, change,
                            XLB_NO_ACQUIRE, NULL, &notifs);
-  ADLB_DATA_CHECK(dc);
+  DATA_CHECK(dc);
   
   // handle notifications here if needed
   adlb_code rc = xlb_notify_all(&notifs);

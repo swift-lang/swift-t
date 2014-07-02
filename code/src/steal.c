@@ -59,7 +59,7 @@ get_target_server(int* result)
   } while (*result == xlb_comm_rank);
 }
 
-static adlb_code xlb_can_steal(const int *work_type_counts);
+static bool xlb_can_steal(const int *work_type_counts);
 static adlb_code xlb_steal(int target, bool* stole_single, bool *stole_par);
 static adlb_code steal_sync(int target, int max_memory, int *response);
 static adlb_code steal_payloads(int target, int count,
@@ -168,7 +168,7 @@ xlb_handle_steal_probe_resp(int caller,
  *
  * work_type_counts: Work type counts for steal target
  */
-static adlb_code xlb_can_steal(const int *work_type_counts)
+static bool xlb_can_steal(const int *work_type_counts)
 {
   int request_q_sizes[xlb_types_size];
   xlb_requestqueue_type_counts(request_q_sizes, xlb_types_size);

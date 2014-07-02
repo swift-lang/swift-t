@@ -367,11 +367,12 @@ xlb_poll(int source, MPI_Status *req_status)
 static inline adlb_code
 xlb_handle_pending(MPI_Status* status)
 {
+  adlb_tag tag = (adlb_tag)status->MPI_TAG;
   // Call appropriate RPC handler:
-  adlb_code rc = xlb_handle(status->MPI_TAG, status->MPI_SOURCE);
+  adlb_code rc = xlb_handle(tag, status->MPI_SOURCE);
 
   // Track for idle time
-  update_time_last_action(status->MPI_TAG);
+  update_time_last_action(tag);
   ADLB_CHECK(rc);
   return rc;
 }
@@ -379,7 +380,7 @@ xlb_handle_pending(MPI_Status* status)
 static inline adlb_code
 xlb_handle_pending_syncs(void)
 {
-  int rc;
+  adlb_code rc;
 
   xlb_pending_kind kind;
   int rank;
@@ -448,7 +449,7 @@ xlb_serve_one(int source)
   if (code == ADLB_NOTHING)
     return ADLB_NOTHING;
 
-  int rc = xlb_handle_pending(&status);
+  adlb_code rc = xlb_handle_pending(&status);
 
   TRACE_END;
 
@@ -460,7 +461,7 @@ xlb_serve_server(int source)
 {
   TRACE_START;
   DEBUG("\t serve_server: [%i] serving %i", xlb_comm_rank, source);
-  int rc = ADLB_NOTHING;
+  adlb_code rc = ADLB_NOTHING;
   while (true)
   {
     rc = xlb_serve_one(source);
@@ -504,7 +505,7 @@ check_steal(void)
 adlb_code xlb_try_steal(void)
 {
   TRACE("Attempting steal");
-  int rc = xlb_random_steal_probe();
+  adlb_code rc = xlb_random_steal_probe();
   ADLB_CHECK(rc);
 
   // xlb_steal may have added pending syncs
@@ -666,7 +667,7 @@ servers_idle()
   xlb_requestqueue_type_counts(request_counts, xlb_types_size);
   xlb_workq_type_counts(work_counts, xlb_types_size);
   
-  int rc;
+  adlb_code rc;
   bool all_idle = true;
   for (int rank = xlb_master_server_rank+1; rank < xlb_comm_size;
        rank++)
