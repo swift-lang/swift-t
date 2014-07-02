@@ -404,7 +404,8 @@ ADLBP_Put(const void* payload, int length, int target, int answer,
 {
   MPI_Status status;
   MPI_Request request;
-  int rc, response;
+  adlb_code rc;
+  int response;
 
   DEBUG("ADLB_Put: target=%i x%i %.*s",
         target, parallelism, length, (char*) payload);
@@ -458,7 +459,7 @@ ADLBP_Put(const void* payload, int length, int target, int answer,
   if (p->has_inline_data)
   {
     // Successfully sent: just check response
-    ADLB_CHECK(response);
+    ADLB_CHECK((adlb_code)response);
   }
   else
   {
@@ -483,7 +484,8 @@ adlb_code ADLBP_Dput(const void* payload, int length, int target,
 {
   MPI_Status status;
   MPI_Request request;
-  int response, rc;
+  int response;
+  adlb_code rc;
 
   DEBUG("ADLB_Dput: target=%i x%i %.*s",
         target, parallelism, length, (char*) payload);
@@ -558,7 +560,7 @@ adlb_code ADLBP_Dput(const void* payload, int length, int target,
   SEND(p, (int)p_len, MPI_BYTE, to_server, ADLB_TAG_PUT_RULE);
 
   WAIT(&request, &status);
-  if (response == ADLB_REJECTED)
+  if ((adlb_code)response == ADLB_REJECTED)
   {
  //    to_server_rank = next_server++;
 //    if (next_server >= (master_server_rank+num_servers))
@@ -567,7 +569,7 @@ adlb_code ADLBP_Dput(const void* payload, int length, int target,
   }
 
   // Check response before sending any payload data
-  ADLB_CHECK(response);
+  ADLB_CHECK((adlb_code)response);
   if (!p->has_inline_data)
   {
     // Second response to confirm entered ok
@@ -577,7 +579,7 @@ adlb_code ADLBP_Dput(const void* payload, int length, int target,
     // Use RSEND so that server can pre-allocate a buffer
     RSEND(payload, length, MPI_BYTE, to_server, ADLB_TAG_WORK);
     WAIT(&request, &status);
-    ADLB_CHECK(response);
+    ADLB_CHECK((adlb_code)response);
   }
   TRACE("ADLB_Dput: DONE");
 
