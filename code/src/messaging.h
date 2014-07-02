@@ -627,7 +627,7 @@ xlb_pack_id_sub(void *buffer, adlb_datum_id id,
                 adlb_subscript subscript)
 {
   assert(buffer != NULL);
-  void *pos = buffer;
+  char *pos = (char*)buffer;
 
   MSG_PACK_BIN(pos, id);
 
@@ -641,8 +641,10 @@ xlb_pack_id_sub(void *buffer, adlb_datum_id id,
     memcpy(pos, subscript.key, (size_t)sub_packed_size); 
     pos += sub_packed_size;
   }
-  assert(pos - buffer <= INT_MAX);
-  return (int)(pos - buffer);
+
+  long bytes_written = pos - (char*)buffer;
+  assert(bytes_written <= INT_MAX);
+  return (int)bytes_written;
 }
 
 
@@ -657,7 +659,7 @@ xlb_unpack_id_sub(const void *buffer, adlb_datum_id *id,
 {
   assert(buffer != NULL);
 
-  const void *pos = buffer;
+  const char *pos = (const char*)buffer;
   MSG_UNPACK_BIN(pos, id);
 
   int subscript_packed_len;
@@ -675,9 +677,9 @@ xlb_unpack_id_sub(const void *buffer, adlb_datum_id *id,
     subscript->key = NULL;
     subscript->length = 0;
   }
-  long length = (pos - buffer);
-  assert(length <= INT_MAX);
-  return (int)length;
+  long bytes_read = (pos - (const char*)buffer);
+  assert(bytes_read <= INT_MAX);
+  return (int)bytes_read;
 }
 
 
