@@ -1663,7 +1663,7 @@ handle_container_reference(int caller)
 static adlb_code
 handle_container_size(int caller)
 {
-  int rc;
+  adlb_code rc;
   MPI_Status status;
   struct packed_size_req req;
   RECV(&req, sizeof(req), MPI_BYTE, caller, ADLB_TAG_CONTAINER_SIZE);

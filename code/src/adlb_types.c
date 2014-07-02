@@ -637,8 +637,8 @@ ADLB_Unpack_container(adlb_container *container,
     check_verbose(key_type == (adlb_data_type)container->key_type &&
          val_type == (adlb_data_type)container->val_type, ADLB_DATA_ERROR_TYPE,
         "Unpacked container type does not match: expected %s[%s] vs. %s[%s]",
-        ADLB_Data_type_tostring(container->val_type),
-        ADLB_Data_type_tostring(container->key_type),
+        ADLB_Data_type_tostring((adlb_data_type)container->val_type),
+        ADLB_Data_type_tostring((adlb_data_type)container->key_type),
         ADLB_Data_type_tostring(val_type), ADLB_Data_type_tostring(key_type));
   }
 
@@ -748,7 +748,7 @@ ADLB_Unpack_multiset(adlb_multiset_ptr *ms, const void *data,
   else
   {
     assert(*ms != NULL);
-    check_verbose((adlb_data_type)(*ms)->elem_type == elem_type,
+    check_verbose(elem_type == (adlb_data_type)(*ms)->elem_type,
         ADLB_DATA_ERROR_TYPE,
         "Unpacked multiset elem type does not match: expected %s vs. %s",
         ADLB_Data_type_tostring((*ms)->elem_type),
