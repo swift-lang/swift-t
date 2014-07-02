@@ -327,7 +327,7 @@ ADLB_Unpack_struct(adlb_struct **s, const void *data, int length,
 
     if (field_init)
     {
-      const void *field_start = data + data_offset;
+      const void *field_start = ((const char*)data) + data_offset;
       int field_len;
       if (i == t->field_count - 1)
       {

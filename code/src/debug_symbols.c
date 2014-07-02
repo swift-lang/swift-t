@@ -56,7 +56,7 @@ adlb_code xlb_dsyms_init(void)
   CHECK_MSG(ok, "Error initialising debug symbols");
 
   dsyms_init = true;
-  return ADLB_DATA_SUCCESS;
+  return ADLB_SUCCESS;
 }
 
 void xlb_dsyms_finalize(void)

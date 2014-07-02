@@ -119,7 +119,7 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
           field_acquire.refcounts = ADLB_NO_REFC;
         }
 
-        dc = xlb_incr_referand(d, container->val_type,
+        dc = xlb_incr_referand(d, (adlb_data_type)container->val_type,
                 release_read, release_write, field_acquire, refcs);
         DATA_CHECK(dc);
       }
@@ -128,7 +128,7 @@ xlb_members_cleanup(adlb_container *container, bool free_mem,
       {
         if (d != NULL)
         {
-          dc = ADLB_Free_storage(d, container->val_type);
+          dc = ADLB_Free_storage(d, (adlb_data_type)container->val_type);
           DATA_CHECK(dc);
           free(d);
         }

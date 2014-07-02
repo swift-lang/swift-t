@@ -246,28 +246,60 @@ static inline adlb_subscript sub_convert(engine_sub sub)
   return asub;
 }
 
-#define xlb_engine_check(code) if (code != XLB_ENGINE_SUCCESS) return code;
-#define xlb_engine_check_adlb(code) if (code == ADLB_ERROR) return code;
-
-#define xlb_engine_check_verbose(code) \
-    xlb_engine_check_verbose_impl(code, __FILE__, __LINE__)
-
-#define xlb_engine_check_verbose_impl(code, file, line)    \
-  { if (code != XLB_ENGINE_SUCCESS)                        \
-    {                                                   \
-      printf("xlb engine error: %s\n",                     \
-            xlb_engine_code_tostring(code));        \
-      printf("\t at: %s:%i\n", file, line);             \
-      return code;                                      \
-    }                                                   \
-  }
-
-#define xlb_engine_condition(condition, code, format, args...) \
+#define ENGINE_CONDITION(condition, code, format, args...) \
   { if (! (condition))                                      \
     {                                                       \
        printf(format, ## args);                             \
        return code;                                         \
     }}
+
+#if ENABLE_LOG_DEBUG
+// Include traceback
+#define ENGINE_CHECK(rc) \
+  { xlb_engine_code _rc = (rc);                             \
+    if (_rc != XLB_ENGINE_SUCCESS) {                       \
+      printf("ADLB ENGINE CHECK FAILED: %s:%s:%i\n",        \
+         __FUNCTION__, __FILE__, __LINE__);                 \
+      return _rc;                                           \
+  }}
+
+#define ENGINE_CHECK_DATA(rc, err_rc) \
+  { adlb_data_code _rc = (rc);                              \
+    if (_rc != ADLB_DATA_SUCCESS) {                         \
+      printf("ADLB ENGINE CHECK FAILED: %s:%s:%i\n",        \
+         __FUNCTION__, __FILE__, __LINE__);                 \
+      return (err_rc);                                      \
+  }}
+
+#define ENGINE_CHECK_ADLB(rc, err_rc) \
+  { adlb_code _rc = (rc);                                   \
+    if (_rc == ADLB_ERROR) {                                \
+      printf("ADLB ENGINE CHECK FAILED: %s:%s:%i\n",        \
+         __FUNCTION__, __FILE__, __LINE__);                 \
+      return (err_rc);                                      \
+  }}
+
+#else
+// Just return
+#define ENGINE_CHECK(rc) \
+  { adlb_data_code _rc = (rc);                              \
+    if (_rc != XLB_ENGINE_SUCCESS) {                       \
+      return _rc;                                           \
+  }}
+
+#define ENGINE_CHECK_DATA(rc, err_rc) \
+  { adlb_data_code _rc = (rc);                              \
+    if (_rc != ADLB_DATA_SUCCESS) {                         \
+      return (err_rc);                                      \
+  }}
+
+#define ENGINE_CHECK_ADLB(rc, err_rc) \
+  { adlb_code _rc = (rc);                                   \
+    if (_rc == ADLB_ERROR) {                                \
+      return (err_rc);                                      \
+  }}
+
+#endif
 
 /**
    This is a separate function so we can set a function breakpoint
@@ -354,7 +386,7 @@ xlb_engine_init(int rank)
 
   xlb_engine_code tc = init_closed_caches();
   if (tc != XLB_ENGINE_SUCCESS)
-    return ADLB_ERROR;
+    return tc;
   
   xlb_engine_initialized = true;
   return XLB_ENGINE_SUCCESS;
@@ -531,7 +563,7 @@ transform_free(transform* T)
 static xlb_engine_code
 subscribe_td(adlb_datum_id id, bool *subscribed)
 {
-  xlb_engine_condition(id != ADLB_DATA_ID_NULL, XLB_ENGINE_ERROR_INVALID,
+  ENGINE_CONDITION(id != ADLB_DATA_ID_NULL, XLB_ENGINE_ERROR_INVALID,
                     "Null ID provided to rule");
   int server = ADLB_Locate(id);
 
@@ -555,7 +587,7 @@ subscribe_td(adlb_datum_id id, bool *subscribed)
         //      => datum was freed and we're good to go
         *subscribed = false;
       }
-      DATA_CHECK(dc);
+      ENGINE_CHECK_DATA(dc, XLB_ENGINE_ERROR_UNKNOWN);
       INCR_COUNTER(id_subscribe_local);
     }
     else
@@ -570,7 +602,7 @@ subscribe_td(adlb_datum_id id, bool *subscribed)
       {
         adlb_code ac = xlb_sync_subscribe(server, id, ADLB_NO_SUB,
                                           subscribed);
-        DATA_CHECK_ADLB(ac,  XLB_ENGINE_ERROR_UNKNOWN);
+        ENGINE_CHECK_ADLB(ac,  XLB_ENGINE_ERROR_UNKNOWN);
         INCR_COUNTER(id_subscribe_remote);
       }
     }
@@ -600,7 +632,7 @@ static xlb_engine_code
 subscribe_id_sub(adlb_datum_id id, engine_sub subscript,
      const void *id_sub_key, size_t id_sub_key_len, bool *subscribed)
 {
-  xlb_engine_condition(id != ADLB_DATA_ID_NULL, XLB_ENGINE_ERROR_INVALID,
+  ENGINE_CONDITION(id != ADLB_DATA_ID_NULL, XLB_ENGINE_ERROR_INVALID,
                     "Null ID provided to rule");
   
   int server = ADLB_Locate(id);
@@ -634,7 +666,7 @@ subscribe_id_sub(adlb_datum_id id, engine_sub subscript,
         //      => datum was freed and we're good to go
         *subscribed = false;
       }
-      DATA_CHECK(dc);
+      ENGINE_CHECK_DATA(dc, XLB_ENGINE_ERROR_UNKNOWN);
     
       INCR_COUNTER(id_sub_subscribe_local);
     }
@@ -650,7 +682,7 @@ subscribe_id_sub(adlb_datum_id id, engine_sub subscript,
       {
         adlb_code ac = xlb_sync_subscribe(server, id,
                             sub_convert(subscript), subscribed);
-        DATA_CHECK_ADLB(ac,  XLB_ENGINE_ERROR_UNKNOWN);
+        ENGINE_CHECK_ADLB(ac,  XLB_ENGINE_ERROR_UNKNOWN);
         
         INCR_COUNTER(id_sub_subscribe_remote);
       }
@@ -706,10 +738,10 @@ xlb_engine_rule(const char* name, int name_strlen,
   tc = transform_create(name, name_strlen, input_tds, input_id_list,
                        input_id_subs, input_id_sub_list, work, &T);
 
-  xlb_engine_check(tc);
+  ENGINE_CHECK(tc);
 
   tc = rule_inputs(T);
-  xlb_engine_check(tc);
+  ENGINE_CHECK(tc);
 
   bool subscribed;
   tc = progress(T, &subscribed);
@@ -772,14 +804,14 @@ rule_inputs(transform* T)
     adlb_datum_id id = T->input_id_list[i];
     bool subscribed;
     tc = subscribe_td(id, &subscribed);
-    xlb_engine_check_verbose(tc);
+    ENGINE_CHECK(tc);
 
     if (subscribed)
     {
       // We might add duplicate list entries if id appears multiple
       //      times. This is currently handled upon removal from list
       tc = add_rule_blocker(id, T);
-      xlb_engine_check_verbose(tc);
+      ENGINE_CHECK(tc);
     }
     else
     {
@@ -798,14 +830,14 @@ rule_inputs(transform* T)
     bool subscribed;
     tc = subscribe_id_sub(id_sub->td, id_sub->subscript,
                      id_sub_key, id_sub_keylen, &subscribed);
-    xlb_engine_check_verbose(tc);
+    ENGINE_CHECK(tc);
 
     if (subscribed)
     {
       // We might add duplicate list entries if id appears multiple
       //      times. This is currently handled upon removal from list
       tc = add_rule_blocker_sub(id_sub_key, id_sub_keylen, T);
-      xlb_engine_check_verbose(tc);
+      ENGINE_CHECK(tc);
     }
     else
     {
@@ -876,7 +908,7 @@ xlb_engine_close(adlb_datum_id id, bool remote,
   {
     // Cache remote subscribes
     xlb_engine_code tc = id_closed_cache_add(id);
-    xlb_engine_check(tc);
+    ENGINE_CHECK(tc);
   }
 
   // Remove from table transforms that this td was blocking
@@ -910,7 +942,7 @@ xlb_engine_code xlb_engine_sub_close(adlb_datum_id id, adlb_subscript sub,
   {
     // Cache remote subscribes
     xlb_engine_code tc = id_sub_closed_cache_add(key, key_len);
-    xlb_engine_check(tc);
+    ENGINE_CHECK(tc);
   }
 
   struct list* L;
@@ -994,7 +1026,7 @@ xlb_engine_close_update(struct list *blocked, adlb_datum_id id,
     {
       DEBUG_ENGINE("Ready {%"PRId64"}", T->work->id);
       tc = move_to_ready(ready, T);
-      xlb_engine_check(tc);
+      ENGINE_CHECK(tc);
     }
   }
 
@@ -1205,10 +1237,10 @@ static xlb_engine_code init_closed_caches(void)
 
   long tmp;
   adlb_code rc = xlb_env_long("ADLB_CLOSED_CACHE_SIZE", &tmp);
-  xlb_engine_check_adlb(rc);
+  ENGINE_CHECK_ADLB(rc, XLB_ENGINE_ERROR_INVALID);
   if (rc == ADLB_SUCCESS)
   {
-    xlb_engine_condition(tmp >= 0 && tmp < INT_MAX,
+    ENGINE_CONDITION(tmp >= 0 && tmp < INT_MAX,
                               XLB_ENGINE_ERROR_INVALID,
           "Invalid ADLB_CLOSED_CACHE_SIZE %li", tmp);
     id_closed_cache_size = (int)tmp;
