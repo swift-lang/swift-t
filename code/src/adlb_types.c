@@ -634,8 +634,8 @@ ADLB_Unpack_container(adlb_container *container,
   else
   {
     assert(container->members != NULL);
-    check_verbose((adlb_data_type)container->key_type == key_type &&
-         (adlb_data_type)container->val_type == val_type, ADLB_DATA_ERROR_TYPE,
+    check_verbose(key_type == (adlb_data_type)container->key_type &&
+         val_type == (adlb_data_type)container->val_type, ADLB_DATA_ERROR_TYPE,
         "Unpacked container type does not match: expected %s[%s] vs. %s[%s]",
         ADLB_Data_type_tostring(container->val_type),
         ADLB_Data_type_tostring(container->key_type),
