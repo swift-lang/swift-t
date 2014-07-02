@@ -64,7 +64,7 @@ static adlb_code notify_local(int target, const char *payload, int length,
 {
   int answer_rank = -1;
   int work_prio = 1;
-  int rc = xlb_put_targeted_local(work_type, xlb_comm_rank,
+  adlb_code rc = xlb_put_targeted_local(work_type, xlb_comm_rank,
                work_prio, answer_rank,
                target, payload, length);
   ADLB_CHECK(rc);
@@ -77,7 +77,7 @@ static adlb_code notify_nonlocal(int target, int server,
 {
   int answer_rank = -1;
   int work_prio = 1;
-  int rc;
+  adlb_code rc;
   if (xlb_am_server)
   {
     rc = xlb_sync(server);
@@ -186,7 +186,7 @@ xlb_set_ref(adlb_datum_id id, adlb_subscript subscript,
       (int)subscript.length, (const char*)subscript.key, value, length,
       transferred_refs.read_refcount, transferred_refs.write_refcount);
 
-  int rc = ADLB_SUCCESS;
+  adlb_code rc = ADLB_SUCCESS;
   int server = ADLB_Locate(id);
 
   if (server == xlb_comm_rank)
@@ -317,18 +317,18 @@ xlb_notify_server_self(adlb_notif_rank *notif)
     released.  This will be stored in xlb_server_ready_work to be
     later processed by the server loop
    */
-  adlb_data_code dc;
+  xlb_engine_code ec;
   if (adlb_has_sub(notif->subscript))
   {
-    dc = xlb_engine_sub_close(notif->id, notif->subscript,
+    ec = xlb_engine_sub_close(notif->id, notif->subscript,
                           false, &xlb_server_ready_work);
-    ADLB_DATA_CHECK(dc);
+    ADLB_ENGINE_CHECK(ec);
   }
   else
   {
-    dc = xlb_engine_close(notif->id, false, &xlb_server_ready_work);
+    ec = xlb_engine_close(notif->id, false, &xlb_server_ready_work);
 
-    ADLB_DATA_CHECK(dc);
+    ADLB_ENGINE_CHECK(ec);
   }
   return ADLB_SUCCESS;
 }
@@ -976,7 +976,7 @@ xlb_send_notif_work(int caller, adlb_notif_t *notifs,
 
   TRACE("Done sending notifs");
   
-  return ADLB_DATA_SUCCESS;
+  return ADLB_SUCCESS;
 }
 
 /*
@@ -1007,6 +1007,7 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
     int to_server_rank, adlb_notif_t *notifs)
 {
   adlb_code ac;
+  adlb_data_code dc;
   MPI_Status status;
 
   void *extra_data = NULL;
@@ -1037,9 +1038,9 @@ xlb_recv_notif_work(const struct packed_notif_counts *counts,
     int pos = 0;
     for (int i = 0; i < extra_data_count; i++)
     {
-      ac = ADLB_Unpack_buffer(ADLB_DATA_TYPE_NULL, extra_data, bytes, &pos,
+      dc = ADLB_Unpack_buffer(ADLB_DATA_TYPE_NULL, extra_data, bytes, &pos,
               &extra_data_ptrs[i].data, &extra_data_ptrs[i].length);
-      ADLB_CHECK(ac);
+      ADLB_DATA_CHECK(dc);
     }
     assert(pos == bytes); // Should consume all of buffer
   }

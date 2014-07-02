@@ -73,7 +73,8 @@ adlb_data_code xlb_multiset_add(xlb_multiset *set, const void *data,
   if (stored != NULL) {
     *stored = elem;
   }
-  return ADLB_Unpack(elem, set->elem_type, data, length, refcounts);
+  return ADLB_Unpack(elem, (adlb_data_type)set->elem_type, data, length,
+                     refcounts);
 }
 
 adlb_data_code
@@ -89,7 +90,8 @@ xlb_multiset_cleanup(xlb_multiset *set, bool free_root, bool free_mem,
     uint clen = chunk_len(set, i);
     for (int j = 0; j < clen; j++) {
       adlb_datum_storage *d = &chunk->arr[j];
-      adlb_data_code dc = xlb_datum_cleanup(d, set->elem_type,
+      adlb_data_code dc;
+      dc = xlb_datum_cleanup(d, (adlb_data_type)set->elem_type,
                     free_mem, release_read, release_write,
                     to_acquire, refcs);
       DATA_CHECK(dc);
@@ -168,7 +170,7 @@ xlb_multiset_extract_slice(xlb_multiset *set, int start, int count,
   adlb_data_code dc;
   bool use_caller_buf;
 
-  adlb_data_type elem_type = set->elem_type;
+  adlb_data_type elem_type = (adlb_data_type)set->elem_type;
   
   dc = ADLB_Init_buf(caller_buffer, output, &use_caller_buf, 65536);
   DATA_CHECK(dc);
@@ -229,7 +231,8 @@ xlb_multiset_repr(xlb_multiset *set, char **repr)
     uint chunk_elems = chunk_len(set, chunk_ix);
     for (int i = 0; i < chunk_elems; i++)
     {
-      char *elem_s = ADLB_Data_repr(&chunk->arr[i], set->elem_type);
+      char *elem_s = ADLB_Data_repr(&chunk->arr[i],
+                  (adlb_data_type)set->elem_type);
       size_t elem_strlen = strlen(elem_s);
       // String plus additional chars
       size_t elem_repr_len = elem_strlen + 4;
