@@ -282,8 +282,8 @@ static inline adlb_subscript sub_convert(engine_sub sub)
 #else
 // Just return
 #define ENGINE_CHECK(rc) \
-  { adlb_data_code _rc = (rc);                              \
-    if (_rc != XLB_ENGINE_SUCCESS) {                       \
+  { xlb_engine_code _rc = (rc);                             \
+    if (_rc != XLB_ENGINE_SUCCESS) {                        \
       return _rc;                                           \
   }}
 
