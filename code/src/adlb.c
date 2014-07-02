@@ -1687,7 +1687,7 @@ ADLBP_Subscribe(adlb_datum_id id, adlb_subscript subscript,
   {
     DEBUG("ADLB_Subscribe: "ADLB_PRID" not found",
            ADLB_PRID_ARGS(id, ADLB_DSYM_NULL));
-    return ADLB_DATA_ERROR_NOT_FOUND;
+    return ADLB_NOTHING;
   }
   else
   {

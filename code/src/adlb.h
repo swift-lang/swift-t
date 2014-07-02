@@ -353,7 +353,7 @@ adlb_code ADLB_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
 
 /*
   returns: ADLB_SUCCESS if datum found
-       ADLB_DATA_ERROR_NOT_FOUND if datum not found (can indicate it was gced)
+       ADLB_NOTHING if datum not found (can indicate it was gced)
  */
 adlb_code ADLBP_Subscribe(adlb_datum_id id, adlb_subscript subscript,
                           int work_type, int* subscribed);
