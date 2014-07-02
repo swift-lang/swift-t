@@ -50,7 +50,7 @@
 #include "server.h"
 #include "sync.h"
 
-static adlb_code next_server;
+static int next_server;
 
 static void print_proc_self_status(void);
 
