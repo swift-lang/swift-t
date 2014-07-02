@@ -199,7 +199,8 @@ ADLB_Init_compound(adlb_datum_storage *d, adlb_data_type type,
       break;
     case ADLB_DATA_TYPE_MULTISET:
       assert(type_extra.valid);
-      d->MULTISET = xlb_multiset_alloc(type_extra.MULTISET.val_type);
+      d->MULTISET = xlb_multiset_alloc((adlb_data_type)
+                         type_extra.MULTISET.val_type);
       DATA_CHECK_MALLOC(d->MULTISET);
       break;
     case ADLB_DATA_TYPE_STRUCT:
@@ -388,11 +389,13 @@ ADLB_Pack_container(const adlb_container *container,
           const adlb_buffer *tmp_buf, adlb_buffer *output,
           bool *output_caller_buffer, int *output_pos)
 {
-  int dc;
+  adlb_data_code dc;
 
   const table_bp *members = container->members;
-  dc = ADLB_Pack_container_hdr(members->size, container->key_type,
-      container->val_type, output, output_caller_buffer, output_pos);
+  dc = ADLB_Pack_container_hdr(members->size,
+      (adlb_data_type)container->key_type,
+      (adlb_data_type)container->val_type,
+      output, output_caller_buffer, output_pos);
   DATA_CHECK(dc);
   
   int appended = 0;
@@ -411,7 +414,7 @@ ADLB_Pack_container(const adlb_container *container,
           true, output, output_caller_buffer, output_pos);
     DATA_CHECK(dc);
 
-    dc = ADLB_Pack_buffer(item->data, container->val_type,
+    dc = ADLB_Pack_buffer(item->data, (adlb_data_type)container->val_type,
             true, tmp_buf, output, output_caller_buffer, output_pos);
     DATA_CHECK(dc);
 
@@ -465,8 +468,8 @@ ADLB_Pack_multiset(const adlb_multiset_ptr ms,
   uint size = xlb_multiset_size(ms);
   assert(size <= INT_MAX);
 
-  dc = ADLB_Pack_multiset_hdr((int)size, ms->elem_type, output,
-                        output_caller_buffer, output_pos);
+  dc = ADLB_Pack_multiset_hdr((int)size, (adlb_data_type)ms->elem_type,
+                      output, output_caller_buffer, output_pos);
   DATA_CHECK(dc);
 
   int appended = 0;
@@ -479,7 +482,7 @@ ADLB_Pack_multiset(const adlb_multiset_ptr ms,
     for (uint j = 0; j < chunk_len; j++)
     {
       // append value
-      dc = ADLB_Pack_buffer(&chunk->arr[j], ms->elem_type,
+      dc = ADLB_Pack_buffer(&chunk->arr[j], (adlb_data_type)ms->elem_type,
               true, tmp_buf, output, output_caller_buffer, output_pos);
       DATA_CHECK(dc);
 
@@ -540,25 +543,26 @@ ADLB_Unpack_buffer(adlb_data_type type,
   {
     return ADLB_DATA_DONE;
   }
-  int64_t entry_length64;
-  int vint_len = vint_decode(buffer + *pos, length - *pos,
-                             &entry_length64);
+  int64_t entry_len64;
+  const int curr_pos = *pos;
+  const char *buf_ptr = (const char*)buffer + curr_pos;
+  int vint_len = vint_decode(buf_ptr, length - curr_pos, &entry_len64);
   check_verbose(vint_len >= 1, ADLB_DATA_ERROR_INVALID,
       "Error decoding entry length when unpacking buffer");
-  check_verbose(entry_length64 >= 0, ADLB_DATA_ERROR_INVALID,
+  check_verbose(entry_len64 >= 0, ADLB_DATA_ERROR_INVALID,
        "Packed buffer entry length < 0");
-  check_verbose(entry_length64 <= INT_MAX, ADLB_DATA_ERROR_INVALID,
+  check_verbose(entry_len64 <= INT_MAX, ADLB_DATA_ERROR_INVALID,
        "Packed buffer encode entry length too long for int: %"PRId64,
-       entry_length64);
+       entry_len64);
   
   int vint_padded_len = ADLB_pack_pad_size(type) ?
                         (int)VINT_MAX_BYTES : vint_len;
-  int remaining = length - *pos - vint_padded_len;
-  check_verbose(entry_length64 <= remaining,
+  int remaining = length - curr_pos - vint_padded_len;
+  check_verbose(entry_len64 <= remaining,
         ADLB_DATA_ERROR_INVALID, "Decoded entry less than remaining data "
-        "in buffer: %d remains, length %"PRId64, remaining, entry_length64);
-  *entry_length = (int)entry_length64;
-  *entry = buffer + *pos + vint_padded_len;
+        "in buffer: %d remains, length %"PRId64, remaining, entry_len64);
+  *entry_length = (int)entry_len64;
+  *entry = buf_ptr + vint_padded_len;
   *pos += vint_padded_len + *entry_length;
   return ADLB_DATA_SUCCESS;
 }
@@ -623,15 +627,15 @@ ADLB_Unpack_container(adlb_container *container,
 
   if (init_cont)
   {
-    container->key_type = key_type;
-    container->val_type = val_type;
+    container->key_type = (adlb_data_type_short)key_type;
+    container->val_type = (adlb_data_type_short)val_type;
     container->members = table_bp_create(CONTAINER_INIT_CAPACITY);
   }
   else
   {
     assert(container->members != NULL);
-    check_verbose(container->key_type == key_type &&
-         container->val_type == val_type, ADLB_DATA_ERROR_TYPE,
+    check_verbose((adlb_data_type)container->key_type == key_type &&
+         (adlb_data_type)container->val_type == val_type, ADLB_DATA_ERROR_TYPE,
         "Unpacked container type does not match: expected %s[%s] vs. %s[%s]",
         ADLB_Data_type_tostring(container->val_type),
         ADLB_Data_type_tostring(container->key_type),
@@ -665,10 +669,11 @@ adlb_data_code
 ADLB_Unpack_container_hdr(const void *data, int length, int *pos,
         int *entries, adlb_data_type *key_type, adlb_data_type *val_type)
 {
+  const char *ptr = (const char*)data;
   DEBUG("Unpack container: %d/%d", length, *pos);
   int vint_len;
   int64_t key_type64;
-  vint_len = vint_decode(data + *pos, length - *pos, &key_type64);
+  vint_len = vint_decode(ptr + *pos, length - *pos, &key_type64);
   check_verbose(vint_len >= 1, ADLB_DATA_ERROR_INVALID,
                 "Could not decode vint for key type (%i)", vint_len);
   *pos += vint_len;
@@ -677,7 +682,7 @@ ADLB_Unpack_container_hdr(const void *data, int length, int *pos,
               "Container key type is out of range: %"PRId64, key_type64);
   
   int64_t val_type64;
-  vint_len = vint_decode(data + *pos, length - *pos, &val_type64);
+  vint_len = vint_decode(ptr + *pos, length - *pos, &val_type64);
   check_verbose(vint_len >= 1, ADLB_DATA_ERROR_INVALID,
                 "Could not decode vint for value type (%i)", vint_len);
   *pos += vint_len;
@@ -686,14 +691,14 @@ ADLB_Unpack_container_hdr(const void *data, int length, int *pos,
               "Container val type is out of range: %"PRId64, val_type64);
 
   int64_t entries64;
-  vint_len = vint_decode(data + *pos, length, &entries64);
+  vint_len = vint_decode(ptr + *pos, length, &entries64);
   check_verbose(vint_len >= 0, ADLB_DATA_ERROR_INVALID,
                 "Could not extract multiset entry count (%i)", vint_len);
   check_verbose(entries64 >= 0 && entries64 <= INT_MAX,
       ADLB_DATA_ERROR_INVALID, "Entries out of range: %"PRId64, entries64);
   *entries = (int)entries64;
   *pos += vint_len;
-  
+
   DEBUG("Unpack container:  entries: %i, key: %s, val: %s, pos: %d",
         *entries, ADLB_Data_type_tostring(*key_type), 
         ADLB_Data_type_tostring(*val_type), *pos);
@@ -709,7 +714,7 @@ ADLB_Unpack_container_entry(adlb_data_type key_type,
           const void **val, int *val_len)
 {
   // Key data not stored in typed way
-  int dc;
+  adlb_data_code dc;
   dc = ADLB_Unpack_buffer(ADLB_DATA_TYPE_NULL, data, length,
                   pos, key, key_len);
   DATA_CHECK(dc);
@@ -743,7 +748,8 @@ ADLB_Unpack_multiset(adlb_multiset_ptr *ms, const void *data,
   else
   {
     assert(*ms != NULL);
-    check_verbose((*ms)->elem_type == elem_type, ADLB_DATA_ERROR_TYPE,
+    check_verbose((adlb_data_type)(*ms)->elem_type == elem_type,
+        ADLB_DATA_ERROR_TYPE,
         "Unpacked multiset elem type does not match: expected %s vs. %s",
         ADLB_Data_type_tostring((*ms)->elem_type),
         ADLB_Data_type_tostring(elem_type));
@@ -771,7 +777,8 @@ ADLB_Unpack_multiset_hdr(const void *data, int length, int *pos,
 {
   int vint_len;
   int64_t elem_type64;
-  vint_len = vint_decode(data + *pos, length - *pos, &elem_type64);
+  const char *ptr = (const char*)data;
+  vint_len = vint_decode(ptr + *pos, length - *pos, &elem_type64);
   assert(vint_len >= 1);
   *pos += vint_len;
   *elem_type = (adlb_data_type)elem_type64; 
@@ -779,7 +786,7 @@ ADLB_Unpack_multiset_hdr(const void *data, int length, int *pos,
               "Multiset elem type is out of range: %"PRId64, elem_type64);
 
   int64_t entries64;
-  vint_len = vint_decode(data + *pos, length, &entries64);
+  vint_len = vint_decode(ptr + *pos, length, &entries64);
   check_verbose(vint_len >= 0, ADLB_DATA_ERROR_INVALID,
                 "Could not extract multiset entry count");
   check_verbose(entries64 >= 0 && entries64 <= INT_MAX,
@@ -913,8 +920,8 @@ static char *data_repr_container(const adlb_container *c)
   char *cont_str = malloc(cont_str_len);
   int cont_str_pos = 0;
 
-  const char *kts = ADLB_Data_type_tostring(c->key_type);
-  const char *vts = ADLB_Data_type_tostring(c->val_type);
+  const char *kts = ADLB_Data_type_tostring((adlb_data_type)c->key_type);
+  const char *vts = ADLB_Data_type_tostring((adlb_data_type)c->val_type);
   dc = xlb_resize_str(&cont_str, &cont_str_len, cont_str_pos,
                  strlen(kts) + strlen(vts) + 4);
   assert(dc == ADLB_DATA_SUCCESS);
@@ -924,7 +931,8 @@ static char *data_repr_container(const adlb_container *c)
   {
     const char *null_str = "(null)";
     adlb_container_val v = item->data;
-    char *value_s = (v == NULL) ? NULL : ADLB_Data_repr(v, c->val_type);
+    char *value_s = (v == NULL) ? NULL :
+          ADLB_Data_repr(v, (adlb_data_type)c->val_type);
     size_t value_strlen = (value_s == NULL) ? sizeof(null_str) :
                                               strlen(value_s);
     dc = xlb_resize_str(&cont_str, &cont_str_len, cont_str_pos,
