@@ -3510,15 +3510,25 @@ public class TurbineGenerator implements CompilerBackend {
       }
     });
 
-    List<Expression> continuation = null;
+    List<Expression> continuation = new ArrayList<Expression>();
     if (hasContinuation) {
-      continuation = new ArrayList<Expression>();
       continuation.add(new Token(proc.name()));
       continuation.addAll(continuationArgVals);
     }
     
-    pointAdd(Turbine.asyncExec(executor, cmdName,
-                  outVarNames, taskArgExprs, taskPropExprs, continuation));
+    // TODO: information about stageIns/stageOuts
+    List<Expression> stageIns = new ArrayList<Expression>();
+    List<Expression> stageOuts = new ArrayList<Expression>();
+
+    // TODO: proper failure continuation
+    List<Expression> failureContinuation = new ArrayList<Expression>();
+    failureContinuation.add(new Token("error"));
+    failureContinuation.add(
+        new TclString("Execution of " + cmdName + " failed", true));
+    
+    pointAdd(Turbine.asyncExec(executor, cmdName, outVarNames,
+              taskArgExprs, taskPropExprs, stageIns, stageOuts,
+              continuation, failureContinuation));
 
     if (hasContinuation) {
       // Enter proc body for code generation of continuation

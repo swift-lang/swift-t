@@ -1653,14 +1653,18 @@ class Turbine {
    * @param outVarNames
    * @param taskArgExprs
    * @param taskPropExprs
-   * @param continuation
+   * @param successContinuation
+   *          may be null if no continuation to call
+   * @param failureContinuation
    *          may be null if no continuation to call
    * @return
    */
   public static Command asyncExec(AsyncExecutor executor, String cmdName,
           List<Token> outVarNames, List<Expression> taskArgExprs,
           List<Pair<String, Expression>> taskPropExprs,
-          List<Expression> continuation) {
+          List<Expression> stageIns, List<Expression> stageOuts,
+          List<Expression> successContinuation, List<Expression> failureContinuation) {
+    
     Token execCmd;
     switch (executor) {
     case COASTERS:
@@ -1673,11 +1677,19 @@ class Turbine {
 
     List<Expression> execArgs = new ArrayList<Expression>();
     execArgs.add(new TclString(cmdName, true));
-    execArgs.add(new TclList(outVarNames));
+    //execArgs.add(new TclList(outVarNames));
+    
     execArgs.add(new TclList(taskArgExprs));
+    execArgs.add(new TclList(stageIns));
+    execArgs.add(new TclList(stageOuts));
+    
     execArgs.add(Dict.dictCreateSE(true, taskPropExprs));
-    if (continuation != null && !continuation.isEmpty()) {
-      execArgs.add(new TclList(continuation));
+    if (successContinuation != null) {
+      execArgs.add(TclUtil.tclStringAsList(successContinuation));
+    }
+    if (failureContinuation != null) {
+      assert(successContinuation != null);
+      execArgs.add(TclUtil.tclStringAsList(failureContinuation));
     }
 
     return new Command(execCmd, execArgs);
