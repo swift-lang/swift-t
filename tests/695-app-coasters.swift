@@ -19,5 +19,5 @@ main {
 
 
   string x = read(echo2(["hello", "world"]));
-  assertEqual(x, "hello world", "echo2");
+  assertEqual(x, "hello world\n", "echo2");
 }
