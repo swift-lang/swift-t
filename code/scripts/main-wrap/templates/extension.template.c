@@ -33,6 +33,9 @@ static int getenv_nospace(USER_LEAF)_extension(ClientData cdata, Tcl_Interp *int
   return TCL_OK;
 }
 
+#ifdef __cplusplus
+extern "C"
+#endif
 int getenv_nospace(USER_LEAF)_Init(Tcl_Interp* interp) {
   int rc;
 

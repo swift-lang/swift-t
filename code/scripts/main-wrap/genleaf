@@ -7,7 +7,10 @@
 
 # If 1, do static build
 export STATIC=0
+# Verbosity (0-3)
 VERBOSE=0
+# File extension (c or cc (for C++))
+LANG=c
 
 MAIN=0
 
@@ -37,6 +40,7 @@ usage()
   echo
   printf "\t environment: \n"
   printf "\t\t TCL_VERSION \t The Tcl version (default 8.5).\n"
+  printf "\t\t FLAGS       \t Extra C/C++ compiler flags.\n"
   echo
   echo "known machine types:"
   show_machine_files
@@ -52,7 +56,7 @@ crash()
 
 GENLEAF_HOME=$( cd $( dirname $0 ) ; /bin/pwd )
 
-while getopts "hs:v" OPTION
+while getopts "hs:vx:" OPTION
 do
   case $OPTION in
     h)
@@ -66,6 +70,9 @@ do
       ;;
     v)
       VERBOSE=$(( VERBOSE + 1 ))
+      ;;
+    x) 
+      LANG=$OPTARG
       ;;
   esac
 done
@@ -115,6 +122,19 @@ MACHINE_FILE=$GENLEAF_HOME/settings/machine.$MACHINE.sh
 [[ -f $MACHINE_FILE ]] || crash "unknown machine type: $MACHINE"
 source $MACHINE_FILE
 
+CFLAGS+=" $FLAGS -I ${TCL_HOME}/include $PIC -g $STD"
+CXXFLAGS+=" $FLAGS -I ${TCL_HOME}/include $PIC -g"
+
+# The compiler to use for user code
+COMPILER=$CC
+FLAGS=$CFLAGS
+if [[ $LANG == "cc" ]]
+then 
+  COMPILER=$CXX
+  FLAGS=$CXXFLAGS
+fi
+message "using COMPILER=$COMPILER"
+
 for f in $USER_SOURCE $USER_HEADER
 do
   [[ -f $f ]] || crash "File not found:" $f
@@ -155,8 +175,8 @@ fi
 
 #step 1. Replace the main function in the source code with an ordinary function and push it into header
 if (( $MAIN == 1 )) ; then
-    message "creating: $USER_LEAF.c"
-    sed "s/main(.*)/leaf_main(int argc, char** argv)/" "${USER_SOURCE}" > "${USER_LEAF}".c || echo "something went wrong"
+    message "creating: $USER_LEAF.$LANG"
+    sed "s/main(.*)/leaf_main(int argc, char** argv)/" "${USER_SOURCE}" > "${USER_LEAF}".$LANG || echo "something went wrong"
 
     #add main to header
     {
@@ -166,7 +186,7 @@ if (( $MAIN == 1 )) ; then
 
 else
 
-   cp $USER_SOURCE "${USER_LEAF}".c
+   cp $USER_SOURCE "${USER_LEAF}".$LANG
 
    #add func to header
    if [ -f $USER_HEADER ] ; then
@@ -179,8 +199,8 @@ fi
 #step 2. Generate extension.[ch]
 if (( $MAIN == 1 ))
 then
-  message "creating: extension.c"
-  m4 $GENLEAF_HOME/templates/extension-main.template.c > extension.c
+  message "creating: extension.$LANG"
+  m4 $GENLEAF_HOME/templates/extension-main.template.c > extension.$LANG
   message "creating: extension.h"
   m4 $GENLEAF_HOME/templates/extension-main.template.h > extension.h
 else
@@ -207,20 +227,18 @@ sed 's/mainapp/(int v) leaf_main(string A[]) "leaf_main" "0.0" "leaf_main_wrap"/
 
 (( $STATIC == 1 )) && PIC=""
 
-CFLAGS="-I ${TCL_HOME}/include $PIC -g $STD"
-
 #step 6. call stc
 message "running STC: user-code.swift -> user-code.tcl"
-action $STC -j $(\which java) -t checkpointing -r ${PWD} user-code.swift
+action $STC -u -j $(\which java) -t checkpointing -r ${PWD} user-code.swift
 
 #step 7. Build user library
 # a. compile user-leaf.c
-message "compiling: ${USER_LEAF}.c"
-action $CC $CFLAGS -c -o "${USER_LEAF}".o "${USER_LEAF}".c
+message "compiling: ${USER_LEAF}.$LANG"
+action $COMPILER $FLAGS -c -o "${USER_LEAF}".o "${USER_LEAF}".$LANG
 
 # b. compile extension.c
-message "compiling: extension.c"
-action $CC $CFLAGS -c -o extension.o extension.c
+message "compiling: extension.$LANG"
+action $COMPILER $FLAGS -c -o extension.o extension.$LANG
 
 MKSTATIC=$TURBINE_HOME/scripts/mkstatic/mkstatic.tcl
 
@@ -244,9 +262,13 @@ else
     -L $TCL_HOME/lib -ltcl${TCL_VERSION} \
     -L $TURBINE_HOME/lib \
        -l tclturbine -l tclturbinestatic -l tclturbine  \
-    -L $ADLB_HOME/lib -l adlb \
-    -L $C_UTILS_HOME/lib -l exmcutils \
-    -l m -l dl 
+    $( $MKSTATIC $MANIFEST --link-objs ) \
+    $( $MKSTATIC $MANIFEST --link-flags ) \
+    -l m -l dl -pthread 
+
+    # -L $ADLB_HOME/lib -l adlb \
+    # -L $C_UTILS_HOME/lib -l exmcutils \
+
   #link
   #/soft/compilers/wrappers/xl/mpixlcxx -o static_leaf_main static_leaf_main.o leaf_main.a -L /home/wozniak/Public/sfw/ppc64/bgq-gcc/tcl-8.5.12/lib -ltcl8.5 -L/home/wozniak/Public/sfw/ppc64/turbine/lib -L/home/wozniak/Public/sfw/ppc64/lb/lib -L/home/wozniak/Public/sfw/ppc64/c-utils/lib -ltclturbinestatic -ltclturbine -ltclturbinestaticres -ladlb -lexmcutils -lm
 fi
