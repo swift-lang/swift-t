@@ -1,5 +1,5 @@
 
-# MIRA GCC
+# MACHINE MIRA G++
 
 #TCL_HOME=/home/wozniak/Public/sfw/ppc64/tcl-8.5.12
 TCL_HOME=/home/wozniak/Public/sfw/ppc64/bgxlc/static/tcl-8.5.12

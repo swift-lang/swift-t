@@ -1,8 +1,10 @@
 
 # MIRA GCC
 
-#TCL_HOME=/home/wozniak/Public/sfw/ppc64/tcl-8.5.12
-TCL_HOME=/home/wozniak/Public/sfw/ppc64/bgxlc/static/tcl-8.5.12
+# TCL_HOME=/home/wozniak/Public/sfw/ppc64/tcl-8.5.12
+# TCL_HOME=/home/wozniak/Public/sfw/ppc64/bgxlc/tcl-8.5.12
+# TCL_HOME=/home/wozniak/Public/sfw/ppc64/tcl-8.5.12-bgxlc
+TCL_HOME=/home/wozniak/Public/sfw/ppc64/bgq-gcc/tcl-8.5.12
 TCL_VERSION=8.5
 
 CC=/bgsys/drivers/ppcfloor/gnu-linux/bin/powerpc64-bgq-linux-gcc

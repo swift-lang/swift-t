@@ -122,6 +122,7 @@ MACHINE_FILE=$GENLEAF_HOME/settings/machine.$MACHINE.sh
 [[ -f $MACHINE_FILE ]] || crash "unknown machine type: $MACHINE"
 source $MACHINE_FILE
 
+FLAGS=${FLAGS:-}
 CFLAGS+=" $FLAGS -I ${TCL_HOME}/include $PIC -g $STD"
 CXXFLAGS+=" $FLAGS -I ${TCL_HOME}/include $PIC -g"
 
@@ -264,6 +265,8 @@ else
        -l tclturbine -l tclturbinestatic -l tclturbine  \
     $( $MKSTATIC $MANIFEST --link-objs ) \
     $( $MKSTATIC $MANIFEST --link-flags ) \
+    -L $ADLB_HOME/lib -ladlb \
+    -L $C_UTILS_HOME/lib -lexmcutils \
     -l m -l dl -pthread 
 
     # -L $ADLB_HOME/lib -l adlb \
