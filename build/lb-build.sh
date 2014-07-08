@@ -16,6 +16,9 @@ fi
 
 if (( RUN_AUTOTOOLS )); then
   ./setup.sh
+elif [ ! -f configure ]; then
+  # Attempt to run autotools
+  ./setup.sh
 fi
 
 EXTRA_ARGS=
