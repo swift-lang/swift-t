@@ -148,13 +148,7 @@ fi
 
 if (( ${LINE_PREFIX_ENABLED} ))
 then
-  if [[ ${MPI_IMPL} == "MPICH2" ]]
-  then
-    LINE_PREFIX="-l"
-  elif [[ ${MPI_IMPL} == OpenMPI1.[3-5] ]]
-  then
-    LINE_PREFIX="-tag-output"
-  fi
+  LINE_PREFIX="${MPI_LINE_OUTPUT_FLAG}"
 fi
 
 OPTIONS=

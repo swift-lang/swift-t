@@ -436,6 +436,12 @@ then
                          head -1 | cut -d ' ' -f 3 )
    MPI_IMPL=OpenMPI_1.${OMPI_MINOR_VERSION}
    MPI_LINE_OUTPUT_FLAG=
+   if (( OMPI_MINOR_VERSION >= 3 ))
+   then
+     LINE_PREFIX="-tag-output"
+   else
+     LINE_PREFIX=
+   fi
 elif grep -q MPICH_NAME ${MPI_H} > /dev/null 2>&1
 then
    MPI_IMPL=MPICH2
