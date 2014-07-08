@@ -24,6 +24,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 // Include mpi header can cause confusion for C++, since it will
 // try to link against C++ version of functions
