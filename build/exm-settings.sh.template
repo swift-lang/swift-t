@@ -127,7 +127,7 @@ SCRIPT_DIR=$(cd $(dirname $0); pwd)
 
 # Root of source directory. Default is current directory.
 # Override with EXM_SRC_ROOT environment variable
-EXM_SRC_ROOT=${EXM_SRC_ROOT:-${SCRIPT_DIR}}
+EXM_SRC_ROOT=${EXM_SRC_ROOT:-$(${SCRIPT_DIR}/locate-src-root.sh ${SCRIPT_DIR} 3)}
 
 # Source subdirectories. Modify to match your layout if needed
 C_UTILS_SRC=${EXM_SRC_ROOT}/c-utils/
