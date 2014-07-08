@@ -63,6 +63,14 @@ then
 fi
 AR_SUFFIX=a
 
+DPKG_ARCH=
+# Debian distros may put in architecture-specific subdirectory
+if which dpkg-architecture > /dev/null
+then
+  DPKG_ARCH=$(dpkg-architecture -qDEB_HOST_MULTIARCH)
+  AC_MSG_RESULT([dpkg-architecture: ${DPKG_ARCH}])
+fi
+
 # Checks for programs
 AC_PROG_CC
 AC_PATH_PROG([SWIG],[swig],[0])
@@ -175,7 +183,8 @@ USE_LAUNCHER=0
 USE_MPI_DIR=0
 USE_MPI_INCLUDE=0
 USE_MPI_LIB_DIR=0
-USE_MPI_LIB_NAME=mpich
+USE_MPI_LIB_NAME=
+USE_MPI_LIB_DIR=
 ENABLE_CUSTOM_MPI=0
 
 # Set MPI_DIR directly
@@ -188,7 +197,6 @@ AC_ARG_WITH(mpi,
         fi
         USE_MPI_DIR=${withval}
         USE_MPI_INCLUDE=${USE_MPI_DIR}/include
-        USE_MPI_LIB_DIR=${USE_MPI_DIR}/lib
         AC_MSG_RESULT([Trying MPI directory: ${USE_MPI_DIR}])
     ],
     [])
@@ -223,7 +231,6 @@ then
        AC_MSG_RESULT([PATH contains: ${program}])
        USE_MPI_DIR=$( cd $(dirname ${program})/.. ; /bin/pwd )
        USE_MPI_INCLUDE=${USE_MPI_DIR}/include
-       USE_MPI_LIB_DIR=${USE_MPI_DIR}/lib
        AC_MSG_RESULT([Trying MPI directory: ${USE_MPI_DIR}])
    elif (( ! ENABLE_CUSTOM_MPI ))
    then
@@ -306,20 +313,56 @@ AC_ARG_WITH(mpi-lib-extra,
 
 # Now check MPI settings
 
-AC_CHECK_FILE(${USE_MPI_LIB_DIR},
-              [], [AC_MSG_ERROR(Could not find MPI library directory ${USE_MPI_LIB_DIR})])
-
 AC_CHECK_FILE(${USE_MPI_INCLUDE}/mpi.h,
               [],
               [AC_MSG_ERROR([Could not find mpi.h in ${USE_MPI_INCLUDE}])])
 
-MPI_LIB_SO=${USE_MPI_LIB_DIR}/lib${USE_MPI_LIB_NAME}.${SO_SUFFIX}
-MPI_LIB_A=${USE_MPI_LIB_DIR}/lib${USE_MPI_LIB_NAME}.${AR_SUFFIX}
 MPI_LIB_FOUND=0
-if [[ -f ${MPI_LIB_SO} ]]
+
+if [[ -z "${USE_MPI_LIB_DIR}" ]]
 then
-  MPI_LIB_FOUND=1
+  MPI_LIB_DIR_ALTS="${USE_MPI_DIR}/lib"
+
+  if [[ ! -z "${DPKG_ARCH}" ]]
+  then
+    MPI_LIB_DIR_ALTS+=" ${USE_MPI_DIR}/lib/${DPKG_ARCH}"
+  fi
+else
+  MPI_LIB_DIR_ALTS="${USE_MPI_LIB_DIR}"
 fi
+
+if [[ -z "${USE_MPI_LIB_NAME}" ]]
+then
+  MPI_LIB_NAME_ALTS="mpi mpich"
+else
+  MPI_LIB_NAME_ALTS="${USE_MPI_LIB_NAME}"
+fi
+
+for MPI_LIB_DIR_ALT in ${MPI_LIB_DIR_ALTS}
+do
+  for MPI_LIB_NAME_ALT in ${MPI_LIB_NAME_ALTS}
+  do
+    MPI_LIB_SO=${MPI_LIB_DIR_ALT}/lib${MPI_LIB_NAME_ALT}.${SO_SUFFIX}
+    MPI_LIB_A=${MPI_LIB_DIR_ALT}/lib${MPI_LIB_NAME_ALT}.${AR_SUFFIX}
+    AC_MSG_CHECKING([for MPI library lib${MPI_LIB_NAME_ALT} at ${MPI_LIB_DIR_ALT}])
+    if [[ -f "${MPI_LIB_SO}" -o -f "${MPI_LIB_A}"  ]]
+    then
+      AC_MSG_RESULT([yes])
+      MPI_LIB_FOUND=1
+      USE_MPI_LIB_DIR="${MPI_LIB_DIR_ALT}"
+      USE_MPI_LIB_NAME="${MPI_LIB_NAME_ALT}"
+      break 2
+    else
+      AC_MSG_RESULT([no])
+    fi
+  done
+done
+
+if (( ! MPI_LIB_FOUND ))
+then
+  AC_MSG_ERROR([Could not find MPI library in any alternative locations])
+fi
+
 
 USE_MPI_LIB_SPEC="-l${USE_MPI_LIB_NAME}"
 for extra_lib in ${MPI_EXTRA_LIBS}
@@ -766,9 +809,8 @@ do
     LIB_DIR_OPTS="${USE_TCL}/lib ${USE_TCL}/lib64"
 
     # Debian distros may put in architecture-specific subdirectory
-    if which dpkg-architecture > /dev/null
+    if [[ ! -z "${DPKG_ARCH}" ]]
     then
-      DPKG_ARCH=$(dpkg-architecture -qDEB_HOST_MULTIARCH)
       LIB_DIR_ARCH_OPTS=""
       for opt in $LIB_DIR_OPTS
       do
