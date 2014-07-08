@@ -12,4 +12,7 @@ echo "${TURBINE_LAUNCHER}"
 set -x
 source scripts/turbine-config.sh
 
-${TURBINE_LAUNCHER} -l -n ${PROCS} ${VALGRIND} ${BIN} "$@"
+FLAGS="${TURBINE_LINE_OUTPUT_FLAG}"
+
+
+${TURBINE_LAUNCHER} ${FLAGS} -n ${PROCS} ${VALGRIND} ${BIN} "$@"

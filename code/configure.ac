@@ -421,6 +421,8 @@ AC_SUBST(USE_MPI_LIB_EXTRA_A)
 # Discover MPI implementation:
 # MPI_IMPL will be unknown, OpenMPI, or MPICH
 MPI_IMPL=unknown
+# Set to flag for line numbers if supported
+MPI_LINE_OUTPUT_FLAG=
 if [[ ${USE_MPI_INCLUDE} != 0 ]]
 then
    MPI_H=${USE_MPI_INCLUDE}/mpi.h
@@ -433,12 +435,15 @@ then
    OMPI_MINOR_VERSION=$( grep OMPI_MINOR_VERSION ${MPI_H} | \
                          head -1 | cut -d ' ' -f 3 )
    MPI_IMPL=OpenMPI_1.${OMPI_MINOR_VERSION}
+   MPI_LINE_OUTPUT_FLAG=
 elif grep -q MPICH_NAME ${MPI_H} > /dev/null 2>&1
 then
    MPI_IMPL=MPICH2
+   MPI_LINE_OUTPUT_FLAG=-l
 fi
 AC_MSG_RESULT([${MPI_IMPL}])
 AC_SUBST(MPI_IMPL)
+AC_SUBST(MPI_LINE_OUTPUT_FLAG)
 
 # We assume libmpe.so is in the MPE/lib directory
 # See Turbine - Build for explanation
