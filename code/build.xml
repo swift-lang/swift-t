@@ -1,6 +1,6 @@
 
 <project name="stc"
-         default="jar">
+         default="build.all">
 
   <!-- ExM STC build file
 
@@ -30,6 +30,7 @@
             value="${antlr.jar}:${log4j.jar}:${commons-cli.jar}:${commons-io.jar}:${commons-lang.jar}"/>
   <property name="build.dir"
             value="classes"/>
+  <target name="build.all" depends="jar" />
 
   <target name="jar"
           depends="compile">
@@ -215,15 +216,25 @@
     <echo message="${user.dir}${line.separator}" file="source.txt"/>
   </target>
 
-  <!-- Install: User must have set dist.dir -->
-  <target name="install"
-          depends="jar,source.txt">
-
-    <fail unless="dist.dir"
-          message="Target install requires -Ddist.dir=..."/>
+  <!-- Config: setup config -->
+  <target name="config">
     <!-- Empty turbine home unless already provided -->
     <property name="turbine.home"
               value=""/>
+    <copy file="conf/stc-env.sh.template" toFile="conf/stc-env.sh"
+          overwrite="true">
+      <filterset>
+        <filter token="TURBINE_INSTALL" value="${turbine.home}"/>
+      </filterset>
+    </copy>
+  </target>
+
+  <!-- Install: User must have set dist.dir -->
+  <target name="install"
+          depends="jar,source.txt,config">
+
+    <fail unless="dist.dir"
+          message="Target install requires -Ddist.dir=..."/>
 
     <echo message="INSTALL: dist.dir=${dist.dir} turbine.home=${turbine.home}"/>
 
@@ -236,12 +247,7 @@
     <copy file="etc/version.txt" todir="${dist.dir}/etc"/>
     <copy file="source.txt" todir="${dist.dir}/etc"/>
     <copy file="bin/stc" todir="${dist.dir}/bin"/>
-    <copy file="conf/stc-env.sh.template" toFile="${dist.dir}/conf/stc-env.sh"
-          overwrite="true">
-      <filterset>
-        <filter token="TURBINE_INSTALL" value="${turbine.home}"/>
-      </filterset>
-    </copy>
+    <copy file="conf/stc-env.sh" todir="${dist.dir}/conf"/>
 
     <copy todir="${dist.dir}/lib">
       <fileset dir="lib" includes="*.jar"/>
