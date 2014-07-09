@@ -42,7 +42,7 @@ adlb_code xlb_requestqueue_init(int my_workers);
   Add a request to the queue
   blocking: true if the rank won't make progress until request filled
  */
-adlb_code xlb_requestqueue_add(int rank, int type, bool blocking);
+adlb_code xlb_requestqueue_add(int rank, int type, int count, bool blocking);
 
 int xlb_requestqueue_matches_target(int target_rank, int type);
 

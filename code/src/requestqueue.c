@@ -40,8 +40,10 @@ typedef struct
 {
   /** Item in type_requests */
   struct list2_item* item;
-  int rank;
-  int type;
+  int rank; // Rank request was from
+  int type; // ADLB Work Type
+  int count; // Number of work units
+  /** Whether the worker is blocking on the first request */
   bool blocking;
 } request;
 
@@ -70,13 +72,10 @@ static struct {
 static request* targets;
 
 /** Helper functions for manipulating data structures */
-static int pop_rank(struct list2 *type_list);
-static inline void remove_request(request *R);
-__attribute__((always_inline))
-static inline void remove_types_entry(int type, bool blocking,
-                                     struct list2_item *item);
+static int pop_rank_from_types(struct list2 *type_list);
+static void request_match_update(request *R, bool in_targets);
 static inline void invalidate_request(request *R);
-static inline void free_request(request *R);
+static inline bool in_targets_array(request *R);
 
 /** Node pool functions */
 static inline struct list2_item *alloc_list2_node(void);
@@ -119,9 +118,11 @@ xlb_requestqueue_init(int my_workers)
 }
 
 adlb_code
-xlb_requestqueue_add(int rank, int type, bool blocking)
+xlb_requestqueue_add(int rank, int type, int count, bool blocking)
 {
-  DEBUG("requestqueue_add(rank=%i,type=%i)", rank, type);
+  DEBUG("requestqueue_add(rank=%i,type=%i,count=%i,blocking=%s)", rank,
+         type, count, blocking ? "true" : "false");
+  assert(count >= 1);
   request* R;
 
   // Store in targets if it is one of our workers
@@ -129,6 +130,9 @@ xlb_requestqueue_add(int rank, int type, bool blocking)
   {
     int targets_ix = xlb_my_worker_ix(rank);
     // Assert rank was not already entered
+    // TODO: will need to change this to support aget
+    //       -> linked list?
+    // TODO: compress entries if multiple matching
     valgrind_assert_msg(targets[targets_ix].item == NULL,
           "requestqueue: double add: rank: %i", rank);
      R = &targets[targets_ix];
@@ -147,6 +151,7 @@ xlb_requestqueue_add(int rank, int type, bool blocking)
 
   R->rank = rank;
   R->type = type;
+  R->count = count;
   R->blocking = blocking;
   R->item = item;
   item->data = R;
@@ -161,27 +166,38 @@ xlb_requestqueue_add(int rank, int type, bool blocking)
   return ADLB_SUCCESS;
 }
 
-/* Unlink entry from all data structures and free memory */
-static inline void remove_request(request *R)
-{
-  remove_types_entry(R->type, R->blocking, R->item);
-  free_request(R);
-}
-
 /*
   Internal helper.
-  Remove entry from list, updates request count, and free item.
+  Update data structures for a single match to the request object.
+  in_targets: if true, is target array entry
  */
-static inline void remove_types_entry(int type, bool blocking, struct list2_item *item)
+static void request_match_update(request *R, bool in_targets)
 {
-  struct list2* L = &type_requests[type];
-  list2_remove_item(L, item);
-  free(item);
-  request_queue_size--;
-  assert(request_queue_size >= 0);
-  if (blocking)
+  if (R->blocking)
   {
     nblocked--;
+  }
+
+  assert(R->count >= 1);
+  if (R->count == 1)
+  {
+    struct list2* L = &type_requests[R->type];
+    struct list2_item *item = R->item;
+    list2_remove_item(L, item);
+    free_list2_node(item);
+    request_queue_size--;
+    assert(request_queue_size >= 0);
+
+    invalidate_request(R);
+    if (!in_targets)
+    {
+      free(R);
+    }
+  }
+  else
+  {
+    R->count--;
+    R->blocking = false;
   }
   assert(nblocked >= 0);
 }
@@ -192,46 +208,29 @@ static inline void invalidate_request(request *R)
   R->item = NULL; // Clear item if needed for targets array
 }
 
-/* Reset entry from targets array or reset heap-allocated storage
-   as appropriate */
-static inline void free_request(request *R)
+/*
+  Return true if request is stored directly in targets array
+ */
+static inline bool in_targets_array(request *R)
 {
-  int rank = R->rank;
-  invalidate_request(R);
-  int targets_ix = xlb_my_worker_ix(rank);
-  if (R != &targets[targets_ix])
-  {
-    // Not in targets array - heap allocated
-    free(R);
-  }
+  int targets_ix = xlb_my_worker_ix(R->rank);
+  return R == &targets[targets_ix];
 }
 
 /*
   Internal helper.
   Pop a rank from the type list.  Return ADLB_RANK_NULL if not present
  */
-static int pop_rank(struct list2 *type_list)
+static int pop_rank_from_types(struct list2 *type_list)
 {
-  struct list2_item *item = list2_pop_item(type_list);
+  struct list2_item *item = type_list->head;
   if (item == NULL)
   {
     return ADLB_RANK_NULL;
   }
   request* R = (request*)item->data;
   int rank = R->rank;
-  bool blocking = R->blocking;
-
-  // Release memory:
-  free_list2_node(item);
-  free_request(R);
-
-  request_queue_size--;
-  assert(request_queue_size >= 0);
-  if (blocking)
-  {
-    nblocked--;
-  }
-  assert(nblocked >= 0);
+  request_match_update(R, false);
   return rank;
 }
 
@@ -249,8 +248,7 @@ xlb_requestqueue_matches_target(int target_rank, int type)
   request* R = &targets[targets_ix];
   if (R->item != NULL && R->type == type && R->rank == target_rank)
   {
-    remove_types_entry(type, R->blocking, R->item);
-    invalidate_request(R);
+    request_match_update(R, true);
     return target_rank;
   }
   return ADLB_RANK_NULL;
@@ -261,7 +259,7 @@ xlb_requestqueue_matches_type(int type)
 {
   DEBUG("requestqueue_matches_type(%i)...", type);
   struct list2* L = &type_requests[type];
-  return pop_rank(L);
+  return pop_rank_from_types(L);
 }
 
 bool
@@ -280,7 +278,7 @@ xlb_requestqueue_parallel_workers(int type, int parallelism, int* ranks)
     result = true;
     for (int i = 0; i < parallelism; i++)
     {
-      ranks[i] = pop_rank(L);
+      ranks[i] = pop_rank_from_types(L);
       assert(ranks[i] != ADLB_RANK_NULL);
     }
   }
@@ -297,7 +295,7 @@ xlb_requestqueue_remove(xlb_request_entry *e)
   assert(r != NULL);
   e->_internal = NULL; // Invalidate in case of reuse
 
-  remove_request(r);
+  request_match_update(r, in_targets_array(r));
 }
 
 int
@@ -377,7 +375,7 @@ xlb_requestqueue_shutdown()
   {
     while (true)
     {
-      int rank = pop_rank(&type_requests[i]);
+      int rank = pop_rank_from_types(&type_requests[i]);
       if (rank == ADLB_RANK_NULL)
         break;
       adlb_code rc = shutdown_rank(rank);

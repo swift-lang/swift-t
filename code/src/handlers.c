@@ -718,9 +718,9 @@ handle_get(int caller)
   RECV(&type, 1, MPI_INT, caller, ADLB_TAG_GET);
 
   bool matched = check_workqueue(caller, type);
-  if (matched) goto end;
+  if (matched) goto end
 
-  code = xlb_requestqueue_add(caller, type, true);
+  code = xlb_requestqueue_add(caller, type, 1, true);
   ADLB_CHECK(code);
 
   // New request might allow us to release a parallel task
