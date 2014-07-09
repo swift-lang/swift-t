@@ -633,7 +633,7 @@ xlb_pack_id_sub(void *buffer, adlb_datum_id id,
 
   bool has_subscript = subscript.key != NULL;
   int sub_packed_size = has_subscript ? (int)subscript.length : -1;
-  
+
   MSG_PACK_BIN(pos, sub_packed_size);
 
   if (has_subscript)

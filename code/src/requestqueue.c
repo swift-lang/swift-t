@@ -139,7 +139,7 @@ xlb_requestqueue_add(int rank, int type, bool blocking)
     R = malloc(sizeof(*R));
     ADLB_MALLOC_CHECK(R);
   }
-  
+
   struct list2* L = &type_requests[type];
 
   struct list2_item* item = alloc_list2_node();
@@ -220,11 +220,11 @@ static int pop_rank(struct list2 *type_list)
   request* R = (request*)item->data;
   int rank = R->rank;
   bool blocking = R->blocking;
-  
+
   // Release memory:
   free_list2_node(item);
   free_request(R);
-  
+
   request_queue_size--;
   assert(request_queue_size >= 0);
   if (blocking)
@@ -334,7 +334,7 @@ void xlb_requestqueue_type_counts(int* types, int size) {
     types[t] = L->size;
     total += L->size;
   }
-  
+
   // Internal consistency check
   assert(total == request_queue_size);
 }

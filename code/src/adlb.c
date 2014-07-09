@@ -217,7 +217,7 @@ ADLBP_Init(int nservers, int ntypes, int type_vect[],
 
   code = xlb_get_reqs_init();
   ADLB_CHECK(code);
-  
+
   TRACE_END;
   return ADLB_SUCCESS;
 }
@@ -489,7 +489,7 @@ adlb_code ADLBP_Dput(const void* payload, int length, int target,
 
   DEBUG("ADLB_Dput: target=%i x%i %.*s",
         target, parallelism, length, (char*) payload);
-  
+
   rc = adlb_put_check_params(target, type, parallelism);
   ADLB_CHECK(rc);
 
@@ -519,7 +519,7 @@ adlb_code ADLBP_Dput(const void* payload, int length, int target,
   p->has_inline_data = inline_data_len > 0;
   p->id_count = wait_id_count;
   p->id_sub_count = wait_id_sub_count;
-  
+
   int p_len = (int)sizeof(struct packed_put_rule);
 
   // pack in all needed data at end
@@ -545,7 +545,7 @@ adlb_code ADLBP_Dput(const void* payload, int length, int target,
   p_data += p->name_strlen;
   p_len += p->name_strlen;
   #endif
-  
+
   if (p->has_inline_data)
   {
     memcpy(p_data, payload, (size_t)inline_data_len);
@@ -744,7 +744,7 @@ static adlb_code xlb_get_reqs_alloc(adlb_get_req *handles, int count)
     xlb_get_req_impl *req = &xlb_get_reqs.reqs[req_ix];
     assert(!req->in_use);
     req->in_use = true;
-    
+
     handles[i] = req_ix; 
   }
 
@@ -801,7 +801,7 @@ static adlb_code xlb_get_reqs_expand(int min_size)
     node->data = i;
     list_i_add_item(&xlb_get_reqs.unused_reqs, node);
   }
-  
+
   return ADLB_SUCCESS;
 }
 
@@ -851,17 +851,17 @@ static adlb_code xlb_aget_test(adlb_get_req *req, int* length,
   adlb_code ac;
   ac = xlb_aget_progress(req_impl, false);
   ADLB_CHECK(ac);
-  
+
   if (ac == ADLB_NOTHING)
   {
     return ADLB_NOTHING;
   }
-    
+
   *length = req_impl->hdr.length;
   *answer = req_impl->hdr.answer_rank;
   *type_recvd = req_impl->hdr.type;
   *comm = req_impl->task_comm;
-  
+
   // Release and invalidate request 
   ac = xlb_get_req_release(req, req_impl);
   ADLB_CHECK(ac);
@@ -917,9 +917,9 @@ static adlb_code xlb_get_req_release(adlb_get_req* req,
   // Should be completed
   assert(impl->in_use);
   assert(impl->ncomplete == impl->ntotal);
-  
+
   impl->in_use = false;
-    
+
   struct list_i_item *node = list_i_pop_item(&xlb_get_reqs.spare_nodes);
   assert(node != NULL);
   node->data = *req;
@@ -957,12 +957,12 @@ adlb_code ADLBP_Aget_wait(adlb_get_req *req, int* length,
   // Notify we're unblocked
   ac = xlb_block_worker(false);
   ADLB_CHECK(ac);
-  
+
   *length = req_impl->hdr.length;
   *answer = req_impl->hdr.answer_rank;
   *type_recvd = req_impl->hdr.type;
   *comm = req_impl->task_comm;
- 
+
   ac = xlb_get_req_release(req, req_impl);
   ADLB_CHECK(ac);
 
@@ -1219,11 +1219,11 @@ ADLBP_Store(adlb_datum_id id, adlb_subscript subscript,
 {
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
   adlb_code rc, final_rc;
-  
+
   final_rc = xlb_store(id, subscript, type, data, length, refcount_decr,
                  store_refcounts, &notifs);
   ADLB_CHECK(final_rc); // Check for ADLB_ERROR, not other codes
-  
+
   rc = xlb_notify_all(&notifs);
   ADLB_CHECK(rc);
 
@@ -1347,7 +1347,7 @@ adlb_code
 ADLBP_Refcount_incr(adlb_datum_id id, adlb_refc change)
 {
   adlb_code rc;
-  
+
   adlb_notif_t notifs = ADLB_NO_NOTIFS;
   rc = xlb_refcount_incr(id, change, &notifs);
   ADLB_CHECK(rc);
@@ -1368,7 +1368,7 @@ xlb_refcount_incr(adlb_datum_id id, adlb_refc change,
   adlb_code ac;
   MPI_Status status;
   MPI_Request request;
-  
+
   DEBUG("ADLB_Refcount_incr: "ADLB_PRID" READ %i WRITE %i",
             ADLB_PRID_ARGS(id, ADLB_DSYM_NULL),
             change.read_refcount, change.write_refcount);
@@ -1436,7 +1436,7 @@ ADLBP_Insert_atomic(adlb_datum_id id, adlb_subscript subscript,
 
   if (resp.dc != ADLB_DATA_SUCCESS)
     return ADLB_ERROR;
-  
+
   // Receive data before handling notifications
   if (return_value)
   {
@@ -1505,7 +1505,7 @@ ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
   {
     return ADLB_ERROR;
   }
-  
+
   assert(resp_hdr.length <= ADLB_PAYLOAD_MAX);
   RECV(data, resp_hdr.length, MPI_BYTE, to_server_rank,
        ADLB_TAG_RESPONSE);
@@ -1514,7 +1514,7 @@ ADLBP_Retrieve(adlb_datum_id id, adlb_subscript subscript,
   *type = resp_hdr.type;
   DEBUG("RETRIEVE: "ADLB_PRID" (%i bytes)\n",
         ADLB_PRID_ARGS(id, ADLB_DSYM_NULL), *length);
-  
+
   adlb_code ac = xlb_handle_client_notif_work(&resp_hdr.notifs,
                                               to_server_rank);
   ADLB_CHECK(ac);
@@ -1652,7 +1652,7 @@ ADLBP_Subscribe(adlb_datum_id id, adlb_subscript subscript,
   MPI_Request request;
 
   to_server_rank = ADLB_Locate(id);
-  
+
   char *xfer_pos = xlb_xfer;
   MSG_PACK_BIN(xfer_pos, work_type);
   xfer_pos += xlb_pack_id_sub(xfer_pos, id, subscript);
@@ -1915,7 +1915,7 @@ ADLBP_Finalize()
   }
 
   free_hostmap();
-  
+
   xlb_dsyms_finalize();
 
   bool failed;
@@ -1944,7 +1944,7 @@ ADLBP_Finalize()
 
   free(xlb_types);
   xlb_types = NULL;
-  
+
   xlb_data_types_finalize();
 
   return ADLB_SUCCESS;
@@ -1961,7 +1961,7 @@ free_hostmap()
     {
       table_entry *e, *next;
       bool is_head;
-      
+
       for (e = head, is_head = true; e != NULL;
            e = next, is_head = false)
       {
@@ -1971,7 +1971,7 @@ free_hostmap()
         struct list_i* L = e->data;
         free(name);
         list_i_free(L);
-        
+
         if (!is_head)
         {
           // Free unless inline in array
