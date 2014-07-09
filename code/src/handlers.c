@@ -137,6 +137,9 @@ static inline adlb_code send_matched_work(int type, int putter,
       int priority, int answer, bool targeted,
       int worker, int length, const void *inline_data);
 
+static adlb_code
+process_get_request(int caller, int type, int count, bool blocking);
+
 static adlb_code xlb_recheck_single_queues(void);
 
 static adlb_code xlb_recheck_parallel_queues(void);
@@ -148,7 +151,7 @@ static inline adlb_code redirect_work(int type, int putter,
                                       int worker, int length);
 
 
-static inline bool check_workqueue(int caller, int type);
+static inline int check_workqueue(int caller, int type, int count);
 
 static adlb_code
 notify_helper(adlb_notif_t *notifs);
@@ -719,33 +722,9 @@ handle_get(int caller)
 
   RECV(&type, 1, MPI_INT, caller, ADLB_TAG_GET);
 
-  bool matched = check_workqueue(caller, type);
-  if (matched) goto end;
-
-  code = xlb_requestqueue_add(caller, type, 1, true);
+  code = process_get_request(caller, type, 1, true);
   ADLB_CHECK(code);
 
-  // New request might allow us to release a parallel task
-  if (xlb_workq_parallel_tasks() > 0)
-  {
-    code = xlb_check_parallel_tasks(type);
-    if (code == ADLB_SUCCESS)
-      goto end;
-    else if (code != ADLB_NOTHING)
-      ADLB_CHECK(code);
-  }
-
-  if (!stealing && xlb_steal_allowed())
-  {
-    // Try to initiate a steal to see if we can get work to the worker
-    // immediately
-    stealing = true;
-    adlb_code rc = xlb_try_steal();
-    ADLB_CHECK(rc);
-    stealing = false;
-  }
-
-end:
   MPE_LOG(xlb_mpe_svr_get_end);
 
   return ADLB_SUCCESS;
@@ -760,9 +739,9 @@ handle_iget(int caller)
   // MPE_LOG(xlb_mpe_svr_iget_start);
 
   RECV(&type, 1, MPI_INT, caller, ADLB_TAG_IGET);
-  bool b = check_workqueue(caller, type);
+  int matched = check_workqueue(caller, type, 1);
 
-  if (!b)
+  if (matched == 0)
     send_no_work(caller);
 
   // MPE_LOG(xlb_mpe_svr_iget_end);
@@ -774,36 +753,79 @@ static adlb_code
 handle_amget(int caller)
 {
   MPI_Status status;
+  adlb_code code;
   struct packed_mget_request req;
   MPE_LOG(xlb_mpe_svr_amget_start);
 
   RECV(&req, sizeof(req), MPI_BYTE, caller, ADLB_TAG_AMGET);
-  // TODO: Similar logic to handle_get?
-  // Can maybe use same logic
+
+  code = process_get_request(caller, req.type, req.count, false);
+  ADLB_CHECK(code);
 
   MPE_LOG(xlb_mpe_svr_amget_end);
 
   return ADLB_ERROR;
 }
 
+static adlb_code
+process_get_request(int caller, int type, int count, bool blocking)
+{
+  adlb_code code;
+
+  int matched = check_workqueue(caller, type, count);
+  if (matched == count) return ADLB_SUCCESS;
+
+  code = xlb_requestqueue_add(caller, type, count - matched, blocking);
+  ADLB_CHECK(code);
+
+  // New request might allow us to release a parallel task
+  if (xlb_workq_parallel_tasks() > 0)
+  {
+    // TODO: for count > 0 this early exit may leave unmatched work
+    // without initiating a steal
+    code = xlb_check_parallel_tasks(type);
+    if (code == ADLB_SUCCESS)
+      return ADLB_SUCCESS;
+    else if (code != ADLB_NOTHING)
+      ADLB_CHECK(code);
+  }
+
+  if (!stealing && xlb_steal_allowed())
+  {
+    // Try to initiate a steal to see if we can get work to the worker
+    // immediately
+    stealing = true;
+    adlb_code rc = xlb_try_steal();
+    ADLB_CHECK(rc);
+    stealing = false;
+  }
+
+  return ADLB_SUCCESS;
+}
+
 /**
    Find work and send it!
-   @return True if work was found and sent, else false.
+   @return number of matched requests
  */
-static inline bool
-check_workqueue(int caller, int type)
+static inline int
+check_workqueue(int caller, int type, int count)
 {
   TRACE_START;
-  xlb_work_unit* wu = xlb_workq_get(caller, type);
-  bool result = false;
-  if (wu != NULL)
+  int matched = 0;
+  while (matched < count)
   {
+    xlb_work_unit* wu = xlb_workq_get(caller, type);
+    if (wu == NULL)
+    {
+      break;
+    }
+
     send_work_unit(caller, wu);
     xlb_work_unit_free(wu);
-    result = true;
+    matched++;
   }
   TRACE_END;
-  return result;
+  return matched;
 }
 
 /**
@@ -838,8 +860,13 @@ xlb_recheck_single_queues(void)
   N = xlb_requestqueue_get(r, N);
 
   for (int i = 0; i < N; i++)
-    if (check_workqueue(r[i].rank, r[i].type))
-      xlb_requestqueue_remove(&r[i]);
+  {
+    int matched = check_workqueue(r[i].rank, r[i].type, r[i].count);
+    if (matched > 0)
+    {
+     xlb_requestqueue_remove(&r[i], matched);
+    }
+  }
 
   free(r);
   TRACE_END;

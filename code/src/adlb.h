@@ -128,6 +128,9 @@ adlb_code ADLB_Iget(int type_requested, void* payload, int* length,
   requests from a client, the first request that was posted will be
   filled first.
 
+  If a work unit doesn't fit in the posted buffer, a runtime error
+  will occur.
+
   TODO: not implemented yet
   payload: will be retained by ADLB until request is completed.
   req: handle used to check for completion, filled in by function

@@ -287,15 +287,22 @@ xlb_requestqueue_parallel_workers(int type, int parallelism, int* ranks)
 }
 
 void
-xlb_requestqueue_remove(xlb_request_entry *e)
+xlb_requestqueue_remove(xlb_request_entry *e, int count)
 {
   TRACE("pequestqueue_remove(%i)", e->rank);
   // Recover request from stored pointer
   request *r = (request*)e->_internal;
   assert(r != NULL);
-  e->_internal = NULL; // Invalidate in case of reuse
+  if (count >= r->count)
+  {
+    e->_internal = NULL; // Invalidate in case of reuse
+  }
 
-  request_match_update(r, in_targets_array(r));
+  bool in_targets = in_targets_array(r);
+  for (int i = 0; i < count; i++)
+  {
+    request_match_update(r, in_targets);
+  }
 }
 
 int
@@ -350,6 +357,7 @@ xlb_requestqueue_get(xlb_request_entry* r, int max)
       request* rq = (request*) item->data;
       r[ix].rank = rq->rank;
       r[ix].type = rq->type;
+      r[ix].count = rq->count;
       r[ix]._internal = rq; // Store for later reference
       ix++;
       if (ix == max)

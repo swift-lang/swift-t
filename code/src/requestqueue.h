@@ -33,6 +33,7 @@ typedef struct
 {
   int rank;
   int type;
+  int count;
   void *_internal; /* Internal pointer, caller should not touch */
 } xlb_request_entry;
 
@@ -88,10 +89,11 @@ bool xlb_requestqueue_parallel_workers(int type, int parallelism,
 int xlb_requestqueue_get(xlb_request_entry* r, int max);
 
 /**
-  Remove an entry from the request queue
-  This should not be called twice for the same entry.
+  Remove requests from the request queue.
+  It is invalid and will result in undefined behaviour if more
+  than the original count is removed.
  */
-void xlb_requestqueue_remove(xlb_request_entry *e);
+void xlb_requestqueue_remove(xlb_request_entry *e, int count);
 
 void xlb_requestqueue_shutdown(void);
 
