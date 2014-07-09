@@ -240,6 +240,12 @@ struct packed_notif_counts
 };
 
 
+struct packed_mget_request
+{
+  int type;
+  int count;
+};
+
 /**
    Simple struct for message packing
  */
@@ -563,6 +569,7 @@ typedef enum
   ADLB_TAG_PUT_RULE,
   ADLB_TAG_GET,
   ADLB_TAG_IGET,
+  ADLB_TAG_AMGET,
 
   // data operations
   ADLB_TAG_CREATE_HEADER,

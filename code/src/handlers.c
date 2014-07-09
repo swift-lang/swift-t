@@ -81,6 +81,7 @@ static adlb_code handle_put(int caller);
 static adlb_code handle_put_rule(int caller);
 static adlb_code handle_get(int caller);
 static adlb_code handle_iget(int caller);
+static adlb_code handle_amget(int caller);
 static adlb_code handle_create(int caller);
 static adlb_code handle_multicreate(int caller);
 static adlb_code handle_exists(int caller);
@@ -173,6 +174,7 @@ xlb_handlers_init(void)
   register_handler(ADLB_TAG_PUT_RULE, handle_put_rule);
   register_handler(ADLB_TAG_GET, handle_get);
   register_handler(ADLB_TAG_IGET, handle_iget);
+  register_handler(ADLB_TAG_AMGET, handle_amget);
   register_handler(ADLB_TAG_CREATE_HEADER, handle_create);
   register_handler(ADLB_TAG_MULTICREATE, handle_multicreate);
   register_handler(ADLB_TAG_EXISTS, handle_exists);
@@ -718,7 +720,7 @@ handle_get(int caller)
   RECV(&type, 1, MPI_INT, caller, ADLB_TAG_GET);
 
   bool matched = check_workqueue(caller, type);
-  if (matched) goto end
+  if (matched) goto end;
 
   code = xlb_requestqueue_add(caller, type, 1, true);
   ADLB_CHECK(code);
@@ -766,6 +768,22 @@ handle_iget(int caller)
   // MPE_LOG(xlb_mpe_svr_iget_end);
 
   return ADLB_SUCCESS;
+}
+
+static adlb_code
+handle_amget(int caller)
+{
+  MPI_Status status;
+  struct packed_mget_request req;
+  MPE_LOG(xlb_mpe_svr_amget_start);
+
+  RECV(&req, sizeof(req), MPI_BYTE, caller, ADLB_TAG_AMGET);
+  // TODO: Similar logic to handle_get?
+  // Can maybe use same logic
+
+  MPE_LOG(xlb_mpe_svr_amget_end);
+
+  return ADLB_ERROR;
 }
 
 /**

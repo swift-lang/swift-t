@@ -230,7 +230,7 @@ static int pop_rank_from_types(struct list2 *type_list)
   }
   request* R = (request*)item->data;
   int rank = R->rank;
-  request_match_update(R, false);
+  request_match_update(R, in_targets_array(R));
   return rank;
 }
 

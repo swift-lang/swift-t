@@ -74,6 +74,9 @@ static inline int choose_data_server();
 
 static int disable_hostmap;
 
+#define XLB_GET_RESP_HDR_IX 0
+#define XLB_GET_RESP_PAYLOAD_IX 1
+
 typedef struct {
   struct packed_get_response hdr;
   MPI_Comm task_comm; // Communicator for parallel tasks
@@ -818,14 +821,39 @@ adlb_code ADLBP_Amget(int type_requested, int nreqs,
 {
   adlb_code ac;
   assert(nreqs >= 0);
+  assert(payload->size >= 0);
+
+  CHECK_MSG(xlb_type_index(type_requested) != -1,
+                "ADLB_Amget(): Bad work type: %i\n", type_requested);
 
   ac = xlb_get_reqs_alloc(reqs, nreqs);
   ADLB_CHECK(ac);
 
-  // TODO: need to implement
-  // - initiate Irecvs for each request
-  // - send request to server
-  // - fill in req objects
+  for (int i = 0; i < nreqs; i++)
+  {
+    // TODO: this assumes that requests won't be matched out of the
+    //  order they're initiated in.  We would need to use MPI tags
+    //  to avoid this problem.
+    adlb_get_req handle = reqs[i];
+    xlb_get_req_impl *R = &xlb_get_reqs.reqs[handle];
+    IRECV2(&R->hdr, sizeof(R->hdr), MPI_BYTE, xlb_my_server,
+          ADLB_TAG_RESPONSE_GET, &R->reqs[XLB_GET_RESP_HDR_IX]);
+
+    // Initiate a receive for up to the max payload expected
+    IRECV2(payload->payload, payload->size, MPI_BYTE, xlb_my_server,
+          ADLB_TAG_WORK, &R->reqs[XLB_GET_RESP_PAYLOAD_IX]);
+
+    R->ntotal = 2;
+    R->ncomplete = 0;
+
+    // TODO: how to handle par task ranks
+  }
+
+  // Send request after receives initiated
+  struct packed_mget_request hdr = { .type = type_requested,
+                                     .count = nreqs };
+  SEND(&hdr, sizeof(hdr), MPI_BYTE, xlb_my_server, ADLB_TAG_AMGET);
+
   return ADLB_ERROR;
 }
 
