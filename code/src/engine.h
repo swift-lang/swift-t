@@ -108,4 +108,6 @@ xlb_engine_code xlb_engine_sub_close(adlb_datum_id id,
 
 void xlb_engine_finalize(void);
 
+const char *xlb_engine_code_tostring(xlb_engine_code code);
+
 #endif
