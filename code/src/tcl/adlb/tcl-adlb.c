@@ -3083,10 +3083,7 @@ static int extract_tcl_blob(Tcl_Interp *interp, Tcl_Obj *const objv[],
   rc = Tcl_GetPtr(interp, elems[0], &blob->value);
   TCL_CHECK_MSG(rc, "Error extracting pointer from %s", Tcl_GetString(elems[0]));
 
-  Tcl_WideInt wint;
-  rc = Tcl_GetWideIntFromObj(interp, elems[1], &wint);
-  // TODO: this truncates it back down to int: what is intended?
-  blob->length = wint;
+  rc = Tcl_GetIntFromObj(interp, elems[1], &blob->length);
   TCL_CHECK_MSG(rc, "Error extracting blob length from %s",
                 Tcl_GetString(elems[1]));
   if (elem_count == 2)
