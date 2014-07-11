@@ -30,27 +30,32 @@
 #define XLB_XPT_BLOCK_SIZE (4 * 1024 * 1024)
 #define XLB_XPT_BUFFER_SIZE (128 * 1024)
 
+typedef off_t xpt_file_pos_t;
+typedef uint32_t xpt_block_num_t;
+typedef uint32_t xpt_block_pos_t;
+typedef uint32_t xpt_rank_t;
+
 /* State for checkpoint file being written */
 typedef struct {
   int fd; // File descriptor for file being written
-  uint32_t curr_block; // Number of current block
-  off_t curr_block_start; // Offset of current block in file
-  uint32_t curr_block_pos; // Position in current block that has been written
+  xpt_block_num_t curr_block; // Number of current block
+  xpt_file_pos_t curr_block_start; // Offset of current block in file
+  xpt_block_pos_t curr_block_pos; // Position in current block that has been written
   unsigned char *buffer; // buffer of size XLB_XPT_BUFFER_SIZE
-  size_t buffer_used; // Amount of buffer currently used
+  xpt_block_pos_t buffer_used; // Amount of buffer currently used
 } xlb_xpt_state;
 
 /* Metadata for reading back checkpoint file */
 typedef struct {
   FILE *file;
   char *filename; // Filename
-  uint32_t block_size; // Block size
-  uint32_t ranks;      // Number of ranks
-  uint32_t curr_rank;  // Log from current rank being read
+  xpt_block_pos_t block_size; // Block size
+  xpt_rank_t ranks;      // Number of ranks
+  xpt_rank_t curr_rank;  // Log from current rank being read
  
   // Position in file, must be maintained to be in sync with file object
-  uint32_t curr_block;
-  uint32_t curr_block_pos;
+  xpt_block_num_t curr_block;
+  xpt_block_pos_t curr_block_pos;
   bool end_of_stream; // End of entries for current rank
 } xlb_xpt_read_state;
 
@@ -66,18 +71,18 @@ adlb_code xlb_xpt_write_close(xlb_xpt_state *state);
 /* Write a checkpoint record.
   val_offset: offset of value record in file. */
 adlb_code xlb_xpt_write(const void *key, int key_len, const void *val,
-                int val_len, xlb_xpt_state *state, off_t *val_offset);
+                int val_len, xlb_xpt_state *state, xpt_file_pos_t *val_offset);
 
 /* Read a checkpoint value from the file being written, 
    The value offset must match that returned by xlb_xpt_write.
    buffer must be at least val_len in size 
    if file is null, indicates current checkpoint file being written,
       otherwise open previously written file. */
-adlb_code xlb_xpt_read_val_w(xlb_xpt_state *state, off_t val_offset,
+adlb_code xlb_xpt_read_val_w(xlb_xpt_state *state, xpt_file_pos_t val_offset,
                 int val_len, void *buffer);
 
 /* Read a checkpoint value from a file open for reading */
-adlb_code xlb_xpt_read_val_r(xlb_xpt_read_state *state, off_t val_offset,
+adlb_code xlb_xpt_read_val_r(xlb_xpt_read_state *state, xpt_file_pos_t val_offset,
                 int val_len, void *buffer);
 
 /* Flush checkpoint writes */
@@ -93,7 +98,7 @@ adlb_code xlb_xpt_close_read(xlb_xpt_read_state *state);
 
 /* Start reading the checkpoint stream of the specified rank. Called after
   the checkpoint file has been opened */
-adlb_code xlb_xpt_read_select(xlb_xpt_read_state *state, uint32_t rank);
+adlb_code xlb_xpt_read_select(xlb_xpt_read_state *state, xpt_rank_t rank);
 
 /* Read a checkpoint entry.
 
@@ -109,7 +114,8 @@ adlb_code xlb_xpt_read_select(xlb_xpt_read_state *state, uint32_t rank);
   val_offset: file offset for value entry
  */
 adlb_code xlb_xpt_read(xlb_xpt_read_state *state, adlb_buffer *buffer,
-       int *key_len, void **key, int *val_len, void **val, off_t *val_offset);
+       int *key_len, void **key, int *val_len, void **val,
+       xpt_file_pos_t *val_offset);
 
 #endif // __XLB_XPT_FILE_H
 #endif // XLB_ENABLE_XPT
