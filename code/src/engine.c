@@ -144,9 +144,6 @@ xlb_engine_close_update(struct list *blocked, adlb_datum_id id,
 static inline xlb_engine_code
 move_to_ready(xlb_engine_work_array *ready, transform *T);
 
-static const char *
-xlb_engine_code_tostring(xlb_engine_code code);
-
 static xlb_engine_code
 subscribe_td(adlb_datum_id id, bool *subscribed);
 static xlb_engine_code
@@ -1112,7 +1109,7 @@ progress(transform* T, bool* subscribed)
 /**
    @return constant struct with name of code
 */
-static const char *
+const char *
 xlb_engine_code_tostring(xlb_engine_code code)
 {
   switch (code)
