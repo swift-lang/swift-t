@@ -1225,10 +1225,10 @@ function.
 
 If your function has a long running time and should be dispatched to a
 worker process for execution, then you need to label the function as a
-leaf function, for example:
+worker function, for example:
 
 ----
-@dispatch=LEAF
+@dispatch=WORKER
 (int o) process (int i) "pkg" "0.0.1" [
   "set <<o>> [ pkg::process <<i>> ]"
 ];
