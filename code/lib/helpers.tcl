@@ -88,9 +88,11 @@ proc readfile { filename } {
 }
 
 # Debugging helper
-proc show { v } {
-    upvar $v t
-    puts "$v: $t"
+proc show { args } {
+    foreach v $args {
+        upvar $v t
+        puts "$v: $t"
+    }
 }
 
 set KB 1024
