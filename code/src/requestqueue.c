@@ -270,8 +270,9 @@ xlb_requestqueue_matches_target(int target_rank, int type)
 
   int targets_ix = xlb_my_worker_ix(target_rank);
   request* R = &targets[targets_ix];
-  if (R->item != NULL && R->type == type && R->rank == target_rank)
+  if (R->item != NULL && R->type == type)
   {
+    assert(R->rank == target_rank);
     request_match_update(R, true);
     return target_rank;
   }
