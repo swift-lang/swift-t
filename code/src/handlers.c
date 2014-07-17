@@ -764,7 +764,7 @@ handle_amget(int caller)
 
   MPE_LOG(xlb_mpe_svr_amget_end);
 
-  return ADLB_ERROR;
+  return ADLB_SUCCESS;
 }
 
 static adlb_code

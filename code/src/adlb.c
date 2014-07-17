@@ -854,7 +854,7 @@ adlb_code ADLBP_Amget(int type_requested, int nreqs,
                                      .count = nreqs };
   SEND(&hdr, sizeof(hdr), MPI_BYTE, xlb_my_server, ADLB_TAG_AMGET);
 
-  return ADLB_ERROR;
+  return ADLB_SUCCESS;
 }
 
 adlb_code ADLBP_Aget_test(adlb_get_req* req, int* length,
