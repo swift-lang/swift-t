@@ -48,7 +48,8 @@ typedef struct
 } request;
 
 
-/** Total number of requests in queue */
+/** Total number of entries in queue
+    Counting entries with count > 1 as one) */
 static int request_queue_size;
 
 /** Total number of workers blocked on requests */
@@ -64,7 +65,7 @@ static struct {
   int nfree; // Number of items in free array
 } list2_node_pool;
 
-/** Table of ranks requesting work so we can match targeted work to them. 
+/** Table of ranks requesting work so we can match targeted work to them.
     We only store ranks belonging to this server, since targeted work for
     other ranks won't arrive here.  We store pointers to the respective
     list entries in type_requests, NULL if there is no request.
@@ -125,44 +126,67 @@ xlb_requestqueue_add(int rank, int type, int count, bool blocking)
   assert(count >= 1);
   request* R;
 
+  // Whether we need to merge requests
+  bool merge = false;
+
   // Store in targets if it is one of our workers
   if (xlb_map_to_server(rank) == xlb_comm_rank)
   {
     int targets_ix = xlb_my_worker_ix(rank);
     // Assert rank was not already entered
-    // TODO: will need to change this to support aget
-    //       -> linked list?
-    // TODO: compress entries if multiple matching
     valgrind_assert_msg(targets[targets_ix].item == NULL,
           "requestqueue: double add: rank: %i", rank);
-     R = &targets[targets_ix];
+    R = &targets[targets_ix];
+    if (R->item != NULL) {
+      merge = true;
+    }
   }
   else
   {
-    // Otherwise store on heap 
+    // Otherwise store on heap
     R = malloc(sizeof(*R));
     ADLB_MALLOC_CHECK(R);
   }
 
-  struct list2* L = &type_requests[type];
+  if (merge) {
+    assert(R->rank == rank);
+    assert(R->item != NULL);
+    /*
+     * Assuming that types match avoid complications with responding to
+     * requests out of order, and with more complicated data structures.
+     * We leave it to the client code to avoid doing this for now.
+     */
+    CHECK_MSG(R->type == type, "Do not yet support simultaneous requests"
+          " for different work types from same rank."
+          " Rank: %i Types: %i, %i", rank, R->type, type);
 
-  struct list2_item* item = alloc_list2_node();
-  ADLB_MALLOC_CHECK(item);
+    R->count += count;
+    if (blocking)
+    {
+      assert(!R->blocking); // Shouldn't already be blocked
+      nblocked++;
+    }
+  } else {
+    struct list2* L = &type_requests[type];
+    struct list2_item* item = alloc_list2_node();
+    ADLB_MALLOC_CHECK(item);
 
-  R->rank = rank;
-  R->type = type;
-  R->count = count;
-  R->blocking = blocking;
-  R->item = item;
-  item->data = R;
+    R->rank = rank;
+    R->type = type;
+    R->count = count;
+    R->blocking = blocking;
+    R->item = item;
+    item->data = R;
 
-  list2_add_item(L, item);
-  request_queue_size++;
+    list2_add_item(L, item);
+    request_queue_size++;
 
-  if (blocking)
-  {
-    nblocked++;
+    if (blocking)
+    {
+      nblocked++;
+    }
   }
+
   return ADLB_SUCCESS;
 }
 
