@@ -130,7 +130,7 @@ static inline adlb_code attempt_match_work(int type, int putter,
       int priority, int answer, int target, int length, int parallelism,
       const void *inline_data);
 
-static adlb_code attempt_match_par_work(int type, 
+static adlb_code attempt_match_par_work(int type,
       int answer, const void *payload, int length, int parallelism);
 
 static inline adlb_code send_matched_work(int type, int putter,
@@ -192,7 +192,7 @@ xlb_handlers_init(void)
   register_handler(ADLB_TAG_UNIQUE, handle_unique);
   register_handler(ADLB_TAG_TYPEOF, handle_typeof);
   register_handler(ADLB_TAG_CONTAINER_TYPEOF, handle_container_typeof);
-  register_handler(ADLB_TAG_CONTAINER_REFERENCE,  
+  register_handler(ADLB_TAG_CONTAINER_REFERENCE,
                                            handle_container_reference);
   register_handler(ADLB_TAG_CONTAINER_SIZE, handle_container_size);
   register_handler(ADLB_TAG_LOCK, handle_lock);
@@ -312,7 +312,7 @@ handle_put_rule(int caller)
   RECV(xlb_xfer, XLB_XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_PUT_RULE);
   const struct packed_put_rule *p = (struct packed_put_rule*)xlb_xfer;
 
-  // Put arrays first to avoid alignment issues  
+  // Put arrays first to avoid alignment issues
   const adlb_datum_id *wait_ids = p->inline_data;
 
   // Remainder of data is packed into array in binary form
@@ -357,7 +357,7 @@ handle_put_rule(int caller)
   xlb_work_unit_init(work, p->type, caller, p->priority, p->answer,
                      p->target, p->length, p->parallelism);
 
-  if (inline_data == NULL) 
+  if (inline_data == NULL)
   {
     // Set up receive for payload into work unit
     IRECV(work->payload, p->length, MPI_BYTE, caller, ADLB_TAG_WORK);
@@ -404,7 +404,7 @@ handle_put_rule(int caller)
 }
 
 /*
-  Handle a put 
+  Handle a put
   inline_data: if task data already available here, otherwise NULL
  */
 static adlb_code
@@ -432,7 +432,7 @@ put(int type, int putter, int priority, int answer, int target,
   MPI_Request req;
 
   xlb_work_unit *work = NULL;
-  if (inline_data == NULL) 
+  if (inline_data == NULL)
   {
     // Set up receive for payload into work unit
     work = work_unit_alloc((size_t)length);
@@ -505,7 +505,7 @@ xlb_put_work_unit(xlb_work_unit *work)
     if (worker != ADLB_RANK_NULL)
     {
       code = send_work(worker, work->id, type, work->answer,
-                       work->payload, work->length, 1);               
+                       work->payload, work->length, 1);
       ADLB_CHECK(code);
       xlb_work_unit_free(work);
 
@@ -624,12 +624,12 @@ static adlb_code attempt_match_work(int type, int putter,
 }
 
 /*
-  Attempt to match parallel work.  Return ADLB_NOTHING if couldn't 
+  Attempt to match parallel work.  Return ADLB_NOTHING if couldn't
   redirect, ADLB_SUCCESS on successful redirect, ADLB_ERROR on error.
 
   inline_data: non-null if we already have task body
  */
-static adlb_code attempt_match_par_work(int type, 
+static adlb_code attempt_match_par_work(int type,
       int answer, const void *payload, int length, int parallelism)
 {
   CHECK_MSG(parallelism <= xlb_my_workers + 1,
@@ -681,7 +681,7 @@ static inline adlb_code send_matched_work(int type, int putter,
 
     // Sent to matched
     code = send_work(worker, XLB_WORK_UNIT_ID_NULL, type, answer,
-                     inline_data, length, 1);   
+                     inline_data, length, 1);
     ADLB_CHECK(code);
 
     WAIT(&req, &status);
@@ -773,7 +773,11 @@ process_get_request(int caller, int type, int count, bool blocking)
   adlb_code code;
 
   int matched = check_workqueue(caller, type, count);
-  if (matched == count) return ADLB_SUCCESS;
+  if (matched > 0)
+  {
+    if (matched == count) return ADLB_SUCCESS;
+    blocking = false; // Match should have unblocked
+  }
 
   code = xlb_requestqueue_add(caller, type, count - matched, blocking);
   ADLB_CHECK(code);
@@ -1670,7 +1674,7 @@ handle_container_reference(int caller)
   adlb_binary_data member;
   adlb_data_code dc = xlb_data_container_reference(id,
                         subscript, ref_id, ref_subscript, false,
-                        ref_type, transfer_refs, 
+                        ref_type, transfer_refs,
                         &xlb_scratch_buf, &member, &notifs);
 
   struct packed_cont_ref_resp resp = { .dc = dc };
