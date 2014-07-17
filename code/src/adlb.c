@@ -482,7 +482,7 @@ ADLBP_Put(const void* payload, int length, int target, int answer,
 adlb_code ADLBP_Dput(const void* payload, int length, int target,
         int answer, int type, int priority, int parallelism,
         const char *name,
-        const adlb_datum_id *wait_ids, int wait_id_count, 
+        const adlb_datum_id *wait_ids, int wait_id_count,
         const adlb_datum_id_sub *wait_id_subs, int wait_id_sub_count)
 {
   MPI_Status status;
@@ -557,7 +557,7 @@ adlb_code ADLBP_Dput(const void* payload, int length, int target,
   }
 
   // xlb_xfer is much larger than we need for ids/subs plus inline data
-  assert(p_len < XLB_XFER_SIZE); 
+  assert(p_len < XLB_XFER_SIZE);
 
   IRECV(&response, 1, MPI_INT, to_server, ADLB_TAG_RESPONSE_PUT);
   SEND(p, (int)p_len, MPI_BYTE, to_server, ADLB_TAG_PUT_RULE);
@@ -730,7 +730,7 @@ static adlb_code xlb_get_reqs_alloc(adlb_get_req *handles, int count)
   if (count > xlb_get_reqs.unused_reqs.size)
   {
     int curr_used = xlb_get_reqs.size - xlb_get_reqs.unused_reqs.size;
-    int required_size = curr_used + count; 
+    int required_size = curr_used + count;
     ac = xlb_get_reqs_expand(required_size);
     ADLB_CHECK(ac);
   }
@@ -748,7 +748,7 @@ static adlb_code xlb_get_reqs_alloc(adlb_get_req *handles, int count)
     assert(!req->in_use);
     req->in_use = true;
 
-    handles[i] = req_ix; 
+    handles[i] = req_ix;
   }
 
   return ADLB_SUCCESS;
@@ -846,7 +846,7 @@ adlb_code ADLBP_Amget(int type_requested, int nreqs,
     R->ntotal = 2;
     R->ncomplete = 0;
 
-    // TODO: how to handle par task ranks
+    // TODO: don't handle parallel task ranks
   }
 
   // Send request after receives initiated
@@ -890,7 +890,7 @@ static adlb_code xlb_aget_test(adlb_get_req *req, int* length,
   *type_recvd = req_impl->hdr.type;
   *comm = req_impl->task_comm;
 
-  // Release and invalidate request 
+  // Release and invalidate request
   ac = xlb_get_req_release(req, req_impl);
   ADLB_CHECK(ac);
 
@@ -935,8 +935,14 @@ static adlb_code xlb_aget_progress(xlb_get_req_impl *req, bool blocking)
     }
   }
 
-  // TODO: handle any additional logic, e.g. communicator creation
-  return ADLB_ERROR;
+  // TODO: remove when we support parallel tasks with Amget
+  CHECK_MSG(req->hdr.parallelism == 1, "Don't yet support "
+            "receiving parallel tasks with ADLB_Aget or ADLB_Amget");
+
+  // TODO: parallel task logic e.g. communicator creation
+
+  req->task_comm = MPI_COMM_SELF;
+  return ADLB_SUCCESS;
 }
 
 static adlb_code xlb_get_req_release(adlb_get_req* req,
@@ -1172,7 +1178,7 @@ ADLB_Create_container(adlb_datum_id id, adlb_data_type key_type,
 }
 
 adlb_code ADLB_Create_multiset(adlb_datum_id id,
-                                adlb_data_type val_type, 
+                                adlb_data_type val_type,
                                 adlb_create_props props,
                                 adlb_datum_id *new_id)
 {
