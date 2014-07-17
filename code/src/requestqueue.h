@@ -35,9 +35,9 @@ typedef struct
   int type;
   int count;
   void *_internal; /* Internal pointer, caller should not touch */
-} xlb_request_entry;
+} xlb_request_entry; 
 
-adlb_code xlb_requestqueue_init(int my_workers);
+adlb_code xlb_requestqueue_init(int work_types, int my_workers);
 
 /*
   Add a request to the queue

@@ -166,7 +166,7 @@ xlb_server_init()
   // printf("\n");
 
   list_i_init(&workers_shutdown);
-  code = xlb_requestqueue_init(xlb_my_workers);
+  code = xlb_requestqueue_init(xlb_types_size, xlb_my_workers);
   ADLB_CHECK(code);
   code = xlb_workq_init(xlb_types_size, xlb_my_workers);
   ADLB_CHECK(code);
