@@ -60,7 +60,7 @@ if (( ENABLE_JULIA )); then
 fi
 
 if [ ! -z "$COASTER_INSTALL" ]; then
-  EXTRA_ARGS+=" --with-coasters=${COASTER_INSTALL}"
+  EXTRA_ARGS+=" --with-coaster=${COASTER_INSTALL}"
 fi
 
 if [ ! -z "$TCL_INSTALL" ]; then
