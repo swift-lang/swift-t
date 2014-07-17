@@ -26,7 +26,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.Location;
-import exm.stc.common.lang.TaskMode;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.StringUtil;
 import exm.stc.tclbackend.tree.Command;
@@ -630,28 +630,26 @@ class Turbine {
     return new SetVariable(target, fnCall);
   }
 
-  private static Expression tclRuleType(TaskMode t) {
+  private static Expression tclRuleType(ExecTarget t) {
+    assert(t.isAsync());
+    
     if (Settings.NO_TURBINE_ENGINE) {
-      switch (t) {
-        case LOCAL:
-        case LOCAL_CONTROL:
-          // Just implement as work
-          return adlbWorkTypeVal(TaskMode.WORKER);
-        default:
-          // Same as ADLB work types
-          return adlbWorkTypeVal(t);
+      if (t.isDispatched()) {
+        // Same as ADLB work types
+        return adlbWorkTypeVal(t.targetContext());
+      } else {
+        // Just implement as control
+        return adlbWorkTypeVal(ExecContext.control());
       }
     } else {
-      switch (t) {
-      case LOCAL:
-      case LOCAL_CONTROL:
+      if (!t.isDispatched()) {
         return turbConst("LOCAL");
-      case CONTROL:
+      } else if (t.targetContext().isControlContext()) {
         return turbConst("CONTROL");
-      case WORKER:
+      } else {
+        assert(t.targetContext().isAnyWorkContext());
+        // TODO: multiple work types
         return turbConst("WORK");
-      default:
-        throw new STCRuntimeError("Unexpected rule type: " + t);
       }
     }
   }
@@ -668,7 +666,7 @@ class Turbine {
    */
   private static Sequence ruleHelper(String symbol,
           List<? extends Expression> inputs, List<Expression> action,
-          TaskMode type, ExecContext execCx, RuleProps props) {
+          ExecTarget type, ExecContext execCx, RuleProps props) {
     assert (action != null);
     for (Expression e : action) {
       assert (e != null) : action;
@@ -677,7 +675,7 @@ class Turbine {
     assert (props.target != null);
 
     if (inputs.isEmpty()) {
-      if (!type.isLocal()) {
+      if (type.isDispatched()) {
         return spawnTask(action, type, execCx, props);
       }
     }
@@ -691,7 +689,7 @@ class Turbine {
       // No worker/control distinction
       ruleCmd = RULE;
     } else {
-      ruleCmd = (execCx == ExecContext.CONTROL) ? RULE : SPAWN_RULE;
+      ruleCmd = (execCx.isControlContext()) ? RULE : SPAWN_RULE;
     }
 
     List<Expression> args = new ArrayList<Expression>();
@@ -712,14 +710,14 @@ class Turbine {
     return ruleKeywordArgs(null, target, parallelism);
   }
 
-  public static List<Expression> ruleKeywordArgs(TaskMode type,
+  public static List<Expression> ruleKeywordArgs(ExecTarget type,
           TclTarget target, Expression parallelism) {
     ArrayList<Expression> res = new ArrayList<Expression>();
     ruleAddKeywordArgs(type, target, parallelism, res);
     return res;
   }
 
-  private static void ruleAddKeywordArgs(TaskMode type, TclTarget target,
+  private static void ruleAddKeywordArgs(ExecTarget type, TclTarget target,
           Expression parallelism, List<Expression> args) {
     if (!target.rankAny) {
       args.add(RULE_KEYWORD_TARGET);
@@ -728,7 +726,7 @@ class Turbine {
 
     // Only a single rule type with no turbine engines
     if (!Settings.NO_TURBINE_ENGINE) {
-      if (type != null && type != TaskMode.LOCAL && type != TaskMode.CONTROL) {
+      if (type != null && type.isAsync()) {
         args.add(RULE_KEYWORD_TYPE);
         args.add(tclRuleType(type));
       }
@@ -740,8 +738,10 @@ class Turbine {
     }
   }
 
-  private static Sequence spawnTask(List<Expression> action, TaskMode type,
+  private static Sequence spawnTask(List<Expression> action, ExecTarget type,
           ExecContext execCx, RuleProps props) {
+    assert(type.isAsync());
+    
     Sequence res = new Sequence();
 
     // Store in var for readability
@@ -756,15 +756,16 @@ class Turbine {
     res.add(new SetVariable(TCLTMP_PRIO, prio));
 
     List<Expression> taskTokens = new ArrayList<Expression>();
+    ExecContext targetContext = type.targetContext();
     // Different task formats for work types
-    if (type == TaskMode.WORKER) {
+    if (targetContext.isAnyWorkContext()) {
       // TODO: handle priorities?
       if (!Settings.NO_TURBINE_ENGINE) {
         taskTokens.add(TURBINE_NULL_RULE);
       }
       taskTokens.addAll(action);
     } else {
-      assert (type == TaskMode.CONTROL);
+      assert (targetContext.isControlContext());
       if (Settings.NO_TURBINE_ENGINE) {
         // Treat as work task - no prefix
         // TODO: handle priorities?
@@ -783,7 +784,7 @@ class Turbine {
     Expression par = props.parallelism;
     if (props.target.rankAny && par == null) {
       // Use simple spawn
-      res.append(spawnTask(type, priorityVar, task));
+      res.append(spawnTask(targetContext, priorityVar, task));
       return res;
     } else {
       if (par == null) {
@@ -792,12 +793,12 @@ class Turbine {
 
       // Use put, which takes more arguments
       res.add(new Command(ADLB_PUT, props.target.toTcl(),
-              adlbWorkTypeVal(type), task, priorityVar, par));
+              adlbWorkTypeVal(targetContext), task, priorityVar, par));
       return res;
     }
   }
 
-  private static Sequence spawnTask(TaskMode type, Value priority,
+  private static Sequence spawnTask(ExecContext type, Value priority,
           Expression task) {
     Sequence res = new Sequence();
     if (priority != null)
@@ -808,24 +809,18 @@ class Turbine {
     return res;
   }
 
-  public static Expression adlbWorkType(TaskMode type) {
+  public static Expression adlbWorkType(ExecContext target) {
     if (Settings.NO_TURBINE_ENGINE) {
-      switch (type) {
-      case CONTROL:
-      case WORKER:
-        return new Value("turbine::WORK_TASK");
-      default:
-        throw new STCRuntimeError("Can't create task of type " + type);
-      }
+      // TODO: multiple work types
+      return new Value("turbine::WORK_TASK");
     } else {
-      switch (type) {
-        case CONTROL:
-          return new Value("turbine::CONTROL_TASK");
-        case WORKER:
-          return new Value("turbine::WORK_TASK");
-        default:
-          throw new STCRuntimeError("Can't create task of type " + type);
-        }
+      if (target.isControlContext()) {
+        return new Value("turbine::CONTROL_TASK");
+      } else {
+        assert(target.isAnyWorkContext());
+        // TODO: multiple work types
+        return new Value("turbine::WORK_TASK");
+      }
     }
   }
 
@@ -833,23 +828,16 @@ class Turbine {
    * Tcl is inefficient at looking up namespace vars. Have option of hardcoding
    * work ids
    */
-  public static Expression adlbWorkTypeVal(TaskMode type) {
+  public static Expression adlbWorkTypeVal(ExecContext target) {
     if (Settings.NO_TURBINE_ENGINE) {
-      switch (type) {
-        case CONTROL:
-        case WORKER:
-          return TURBINE_WORKER_WORK_ID;
-        default:
-          throw new STCRuntimeError("Can't create task of type " + type);
-      }
+      // TODO: multiple work types
+      return TURBINE_WORKER_WORK_ID;
     } else {
-      switch (type) {
-      case CONTROL:
+      if (target.isControlContext()) {
         return TURBINE_CONTROL_WORK_ID;
-      case WORKER:
+      } else {
+        assert(target.isAnyWorkContext());
         return TURBINE_WORKER_WORK_ID;
-      default:
-        throw new STCRuntimeError("Can't create task of type " + type);
       }
     }
   }
@@ -861,10 +849,12 @@ class Turbine {
   public static Command checkConstants() {
     List<Expression> args = new ArrayList<Expression>();
     // Check work types
-    for (TaskMode taskMode : Arrays.asList(TaskMode.WORKER, TaskMode.CONTROL)) {
-      args.add(new TclString(taskMode.toString(), true));
-      args.add(adlbWorkType(taskMode));
-      args.add(adlbWorkTypeVal(taskMode));
+    // TODO: multiple work types
+    for (ExecContext target : Arrays.asList(ExecContext.defaultWorker(),
+                                            ExecContext.control())) {
+      args.add(new TclString(target.toString(), true));
+      args.add(adlbWorkType(target));
+      args.add(adlbWorkTypeVal(target));
     }
 
     // Check ADLB_RANK_ANY value
@@ -906,13 +896,13 @@ class Turbine {
    */
   public static Sequence rule(String symbol,
           List<? extends Expression> blockOn, List<Expression> action,
-          TaskMode mode, ExecContext execCx, RuleProps props) {
+          ExecTarget mode, ExecContext execCx, RuleProps props) {
     return ruleHelper(symbol, blockOn, action, mode, execCx, props);
   }
 
   public static Sequence deepRule(String symbol,
           List<? extends Expression> inputs, int[] depths,
-          TypeName[] baseTypes, List<Expression> action, TaskMode mode,
+          TypeName[] baseTypes, List<Expression> action, ExecTarget mode,
           ExecContext execCx, RuleProps props) {
     assert (inputs.size() == depths.length);
     assert (inputs.size() == baseTypes.length);
@@ -949,15 +939,15 @@ class Turbine {
           List<? extends Expression> args, List<? extends Expression> blockOn,
           ExecContext execCx) {
     // Assume executes on control for now
-    assert (execCx == ExecContext.CONTROL);
+    assert (execCx.isControlContext()) : execCx;
 
     List<Expression> action = new ArrayList<Expression>();
     action.add(new Token(symbol));
     for (Expression arg : args) {
       action.add(arg);
     }
-    return ruleHelper(symbol, blockOn, action, TaskMode.CONTROL, execCx,
-            RuleProps.DEFAULT);
+    return ruleHelper(symbol, blockOn, action, ExecTarget.dispatchedControl(),
+                      execCx, RuleProps.DEFAULT);
   }
 
   /**

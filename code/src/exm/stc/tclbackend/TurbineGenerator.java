@@ -59,7 +59,7 @@ import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.RequiredPackage;
-import exm.stc.common.lang.TaskMode;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
@@ -281,7 +281,7 @@ public class TurbineGenerator implements CompilerBackend {
     this.timestamp = timestamp;
     pointPush(tree);
     
-    execContextStack.push(ExecContext.CONTROL);
+    execContextStack.push(ExecContext.control());
   }
 
   @Override
@@ -1443,7 +1443,7 @@ public class TurbineGenerator implements CompilerBackend {
     logger.debug("call builtin: " + function);
     TclFunRef tclf = tclFuncSymbols.get(function).val2;
     assert tclf != null : "Builtin " + function + "not found";
-    ForeignFunctions.getTaskMode(function).checkSpawn(execContextStack.peek());
+    ForeignFunctions.getTaskMode(function).checkCanRunIn(execContextStack.peek());
 
     callTclFunction(function, tclf, inputs, outputs, props);
   }
@@ -1499,7 +1499,7 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void functionCall(String function,
               List<Var> outputs, List<Arg> inputs,
-              List<Boolean> blocking, TaskMode mode, TaskProps props)  {
+              List<Boolean> blocking, ExecTarget mode, TaskProps props)  {
     props.assertInternalTypesValid();
     
     List<Var> blockinInputVars = new ArrayList<Var>();
@@ -1512,8 +1512,7 @@ public class TurbineGenerator implements CompilerBackend {
     List<Expression> blockOn = getTurbineWaitIDs(blockinInputVars);
 
     String swiftFuncName = TclNamer.swiftFuncName(function);
-    if (mode == TaskMode.CONTROL || mode == TaskMode.LOCAL ||
-        mode == TaskMode.LOCAL_CONTROL) {
+    if (mode.isAsync()) {
       List<Expression> args = new ArrayList<Expression>();
       args.addAll(TclUtil.varsToExpr(outputs));
       args.addAll(TclUtil.argsToExpr(inputs));
@@ -1523,7 +1522,7 @@ public class TurbineGenerator implements CompilerBackend {
                        execContextStack.peek(), buildRuleProps(props));
       point().append(rule);
       
-    } else if (mode == TaskMode.SYNC) {
+    } else {
       // Calling synchronously, can't guarantee anything blocks
       assert blockOn.size() == 0 : function + ": " + blockOn;
       
@@ -1532,8 +1531,6 @@ public class TurbineGenerator implements CompilerBackend {
       
       pointAdd(Turbine.callFunctionSync(
           swiftFuncName, outVars, inVars));
-    } else {
-      throw new STCRuntimeError("Unexpected mode: " + mode);
     }
   }
 
@@ -2026,7 +2023,7 @@ public class TurbineGenerator implements CompilerBackend {
     
     startAsync("copy-" + src.name() + "_" + dst.name(),
                src.asList(), Arrays.asList(src, dst), false,
-               TaskMode.LOCAL, new TaskProps());
+               ExecTarget.nonDispatchedAny(), new TaskProps());
     syncCopy(dst, src);
     endAsync();
   }
@@ -2235,7 +2232,7 @@ public class TurbineGenerator implements CompilerBackend {
   public void startFunction(String functionName,
                                      List<Var> oList,
                                      List<Var> iList,
-                                     TaskMode mode)
+                                     ExecTarget mode)
   throws UserException
   {
     List<String> outputs = prefixVars(oList);
@@ -2376,7 +2373,7 @@ public class TurbineGenerator implements CompilerBackend {
 
     @Override
     public void startWaitStatement(String procName, List<Var> waitVars,
-        List<Var> passIn, boolean recursive, TaskMode target,
+        List<Var> passIn, boolean recursive, ExecTarget target,
         TaskProps props) {
       logger.trace("startWaitStatement()...");
       startAsync(procName, waitVars, passIn, recursive, target, props);
@@ -2398,9 +2395,9 @@ public class TurbineGenerator implements CompilerBackend {
      * @param recursive
      */
     private void startAsync(String procName, List<Var> waitVars,
-        List<Var> passIn, boolean recursive, TaskMode mode, TaskProps props) {
+        List<Var> passIn, boolean recursive, ExecTarget mode, TaskProps props) {
       props.assertInternalTypesValid();
-      mode.checkSpawn(execContextStack.peek());
+      mode.checkCanRunIn(execContextStack.peek());
       for (Var v: passIn) {
         if (Types.isBlobVal(v)) {
           throw new STCRuntimeError("Can't directly pass blob value");
@@ -2450,16 +2447,7 @@ public class TurbineGenerator implements CompilerBackend {
       
       pointPush(proc.getBody());
       
-      ExecContext newExecContext;
-      if (mode == TaskMode.WORKER) {
-        newExecContext = ExecContext.WORKER;
-      } else if (mode == TaskMode.CONTROL) {
-        newExecContext = ExecContext.CONTROL;
-      } else {
-        // Executes on same node
-        newExecContext = execContextStack.peek();
-      }
-      execContextStack.push(newExecContext);
+      execContextStack.push(mode.actualContext(execContextStack.peek()));
     }
 
     private boolean anySupportRecursiveWait(List<Var> waitVars) {
@@ -3090,7 +3078,7 @@ public class TurbineGenerator implements CompilerBackend {
     outerRecCall.add(inc);
 
     splitLoop.loopBody().add(Turbine.rule(outerProcName, new ArrayList<Value>(0),
-                    outerRecCall, TaskMode.CONTROL, 
+                    outerRecCall, ExecTarget.dispatchedControl(), 
                     execContextStack.peek(), RuleProps.DEFAULT));
     
     

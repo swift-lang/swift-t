@@ -17,7 +17,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.ForeignFunctions;
-import exm.stc.common.lang.TaskMode;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.Type;
@@ -153,7 +153,7 @@ public class WrapperGen {
    * @param isTargetable
    */
   public void saveWrapper(String function, FunctionType ft, FunctionDecl decl,
-      TaskMode taskMode, boolean isParallel, boolean isTargetable) {
+      ExecTarget taskMode, boolean isParallel, boolean isTargetable) {
     assert(ForeignFunctions.hasLocalImpl(function)) :
               "Expected inline version for " + function;
     SavedWrapper wrapper = new SavedWrapper(function, ft, decl, taskMode,
@@ -305,12 +305,12 @@ public class WrapperGen {
     final String function;
     final FunctionType type;
     final FunctionDecl decl;
-    final TaskMode taskMode;
+    final ExecTarget taskMode;
     final boolean isParallel;
     final boolean isTargetable;
     
     public SavedWrapper(String function, FunctionType type, FunctionDecl decl,
-        TaskMode taskMode, boolean isParallel, boolean isTargetable) {
+        ExecTarget taskMode, boolean isParallel, boolean isTargetable) {
       super();
       this.function = function;
       this.type = type;

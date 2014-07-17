@@ -13,21 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License
  */
-
 package exm.stc.common.exceptions;
 
-/**
- * This represents a parser internal error.
- * These always indicate a parser bug (or missing feature).
- * @author wozniak
- * */
-public class STCRuntimeError extends RuntimeException {
-  public STCRuntimeError(String msg) {
-    super(msg);
-  }
-  
-  public STCRuntimeError(String msg, Throwable cause) {
-    super(msg, cause);
+import exm.stc.frontend.Context;
+
+public class UndefinedExecTargetException
+extends UserException
+{
+
+  public UndefinedExecTargetException(Context context, String name)
+  {
+    super(context, "The following execution target was not defined in " +
+    		"the current context: " + name);
   }
 
   private static final long serialVersionUID = 1L;

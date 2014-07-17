@@ -38,7 +38,7 @@ import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.RefCounting;
-import exm.stc.common.lang.TaskMode;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.WaitMode;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
@@ -1247,14 +1247,14 @@ public class ICContinuations {
      * already closed*/
     private WaitMode mode;
     private boolean recursive;
-    private TaskMode target;
+    private ExecTarget target;
     
     private final TaskProps props;
 
     public WaitStatement(String procName, List<WaitVar> waitVars,
                     List<PassedVar> passedVars,
                     List<Var> keepOpenVars,
-                    WaitMode mode, boolean recursive, TaskMode target,
+                    WaitMode mode, boolean recursive, ExecTarget target,
                     TaskProps props) {
       this(procName, new Block(BlockType.WAIT_BLOCK, null), true, waitVars,
            passedVars, keepOpenVars, mode, recursive, target, props);
@@ -1264,7 +1264,7 @@ public class ICContinuations {
     private WaitStatement(String procName, Block block,
         boolean newBlock, List<WaitVar> waitVars, List<PassedVar> passedVars,
         List<Var> keepOpenVars,
-        WaitMode mode, boolean recursive, TaskMode target,
+        WaitMode mode, boolean recursive, ExecTarget target,
         TaskProps props) {
       super(passedVars, keepOpenVars);
       assert(waitVars != null);
@@ -1352,7 +1352,7 @@ public class ICContinuations {
       return recursive;
     }
     
-    public TaskMode getTarget() {
+    public ExecTarget getTarget() {
       return target;
     }
     @Override
@@ -1360,7 +1360,7 @@ public class ICContinuations {
       return ContinuationType.WAIT_STATEMENT;
     }
 
-    public void setTarget(TaskMode target) {
+    public void setTarget(ExecTarget target) {
       this.target = target;
     }
 
@@ -1576,21 +1576,7 @@ public class ICContinuations {
 
     @Override
     public ExecContext childContext(ExecContext outerContext) {
-      switch (target) {
-      case SYNC:
-      case LOCAL:
-        return outerContext;
-      case LOCAL_CONTROL:
-        // Check used validly
-        assert(outerContext == ExecContext.CONTROL);
-        return outerContext;
-      case CONTROL:
-        return ExecContext.CONTROL;
-      case WORKER:
-        return ExecContext.WORKER;
-      default:
-        throw new STCRuntimeError("Unknown wait target: " + target);
-      }
+      return target.actualContext(outerContext);
     }
   }
   

@@ -97,8 +97,8 @@ public class ForeignFunctions {
   private static Map<String, String> localImpls = new HashMap<String, String>();
   private static MultiMap<String, String> localImplsInv = new MultiMap<String, String>();
   
-  private static HashMap<String, TaskMode> taskModes
-    = new HashMap<String, TaskMode>();
+  private static HashMap<String, ExecTarget> taskModes
+    = new HashMap<String, ExecTarget>();
 
   public static void addForeignFunction(String functionName) {
     if (!foreignFunctions.add(functionName)) {
@@ -272,7 +272,7 @@ public class ForeignFunctions {
     return Collections.unmodifiableSet(localImpls.keySet());
   }
   
-  public static void addTaskMode(String functionName, TaskMode mode) {
+  public static void addTaskMode(String functionName, ExecTarget mode) {
     taskModes.put(functionName, mode);
   }
   
@@ -280,14 +280,14 @@ public class ForeignFunctions {
    * Return the intended task mode for the function (e.g. if it should run on worker
    * or locally)
    * @param functionName
-   * @return
+   * @return non-null target
    */
-  public static TaskMode getTaskMode(String functionName) {
-    TaskMode mode = taskModes.get(functionName);
+  public static ExecTarget getTaskMode(String functionName) {
+    ExecTarget mode = taskModes.get(functionName);
     if (mode != null) {
       return mode;
     } else {
-      return TaskMode.DEFAULT_BUILTIN_MODE;
+      return ExecTarget.DEFAULT_BUILTIN_MODE;
     }
   }
 }

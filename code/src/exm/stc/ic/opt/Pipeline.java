@@ -64,7 +64,7 @@ public class Pipeline extends FunctionOptimizerPass {
   @Override
   public void optimize(Logger logger, Function f) {
     boolean maybeInLoop = f.isAsync() ? false : true;
-    pipelineTasks(logger, f, f.mainBlock(), ExecContext.CONTROL, maybeInLoop);
+    pipelineTasks(logger, f, f.mainBlock(), ExecContext.control(), maybeInLoop);
   }
 
   /**
@@ -115,8 +115,7 @@ public class Pipeline extends FunctionOptimizerPass {
                     && w.childContext(cx) != cx) {
           // We can't merge if WORKER and CONTROL contexts are different
           compatible = false;
-        } else if (Settings.NO_TURBINE_ENGINE &&
-              cx == ExecContext.CONTROL) {
+        } else if (Settings.NO_TURBINE_ENGINE && cx.isControlContext()) {
           /* 
            * Don't merge work into control, since we might defer important
            * control work, e.g. work task inside foreach loop

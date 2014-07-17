@@ -12,7 +12,7 @@ import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.TaskMode;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.lang.Types.RefType;
@@ -415,7 +415,7 @@ public class LValWalker {
     backend.startWaitStatement(
         context.constructName("bag-create-wait"),
         VarRepr.backendVars(waitVars), WaitMode.WAIT_ONLY,
-        false, false, TaskMode.LOCAL);
+        false, false, ExecTarget.nonDispatchedAny());
 
     Var derefArr; // Plain array (not reference);
     if (Types.isArrayRef(arr)) {
@@ -617,7 +617,7 @@ public class LValWalker {
       }
           
       backend.startWaitStatement(waitName,VarRepr.backendVars(waitVars),
-             WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
+             WaitMode.WAIT_ONLY, false, false, ExecTarget.nonDispatchedAny());
       
       if (bagRef) {
         // Dereference and use in place
@@ -646,7 +646,7 @@ public class LValWalker {
       String waitName = context.getFunctionContext().constructName(
                                                 "bag-load-append");
       backend.startWaitStatement(waitName, VarRepr.backendVars(elem),
-              WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
+              WaitMode.WAIT_ONLY, false, false, ExecTarget.nonDispatchedAny());
       elemVal = exprWalker.retrieveToVar(context, elem);
     } else {
       elemVal = elem;

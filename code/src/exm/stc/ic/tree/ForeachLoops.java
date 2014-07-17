@@ -429,7 +429,7 @@ public class ForeachLoops {
     @Override
     public ExecContext childContext(ExecContext outerContext) {
       if (splitDegree > 0) {
-        return ExecContext.CONTROL;
+        return ExecContext.control();
       } else {
         return outerContext;
       }
@@ -965,7 +965,7 @@ public class ForeachLoops {
     @Override
     public ExecContext childContext(ExecContext outerContext) {
       if (splitDegree > 0) {
-        return ExecContext.CONTROL;
+        return ExecContext.control();
       } else {
         return outerContext;
       }

@@ -5,7 +5,7 @@ import java.util.Collections;
 import java.util.List;
 
 import exm.stc.common.lang.Arg;
-import exm.stc.common.lang.TaskMode;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Var;
@@ -124,14 +124,14 @@ public class ValLoc {
    * @param copyType method of copying (i.e. whether it is an alias) 
    * @return
    */
-  public ValLoc copyOf(Var copiedTo, TaskMode copyMode,
+  public ValLoc copyOf(Var copiedTo, ExecTarget copyMode,
                        CongruenceType copyType) {
     // See if we can determine that new location is closed
     Closed newLocClosed; 
-    if (copyMode == TaskMode.SYNC) {
-      newLocClosed = locClosed;
-    } else {
+    if (copyMode.isAsync()) {
       newLocClosed = Closed.MAYBE_NOT;
+    } else {
+      newLocClosed = locClosed;
     }
     // See if we still have an alias
     boolean newIsValCopy = isValCopy || copyType != CongruenceType.ALIAS;

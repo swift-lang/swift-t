@@ -47,12 +47,13 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.Checkpointing;
 import exm.stc.common.lang.Constants;
+import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Redirects;
-import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
@@ -553,7 +554,7 @@ public class ASTWalker {
       
       String waitName = context.getFunctionContext().constructName("chain");
       backend.startWaitStatement(waitName, VarRepr.backendVars(stmtResults),
-             WaitMode.WAIT_ONLY, true, false, TaskMode.LOCAL);
+             WaitMode.WAIT_ONLY, true, false, ExecTarget.nonDispatchedAny());
     }
     
     // Evaluate the final statement
@@ -608,7 +609,7 @@ public class ASTWalker {
     backend.startWaitStatement(
           context.getFunctionContext().constructName("explicit-wait"),
           VarRepr.backendVars(waitEvaled),
-          WaitMode.WAIT_ONLY, true, wait.isDeepWait(), TaskMode.LOCAL_CONTROL);
+          WaitMode.WAIT_ONLY, true, wait.isDeepWait(), ExecTarget.nonDispatchedControl());
     block(new LocalContext(context), wait.getBlock());
     backend.endWaitStatement();
   }
@@ -663,7 +664,7 @@ public class ASTWalker {
     FunctionContext fc = context.getFunctionContext();
     backend.startWaitStatement( fc.constructName("if"), 
                 VarRepr.backendVar(conditionVar).asList(),
-                WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
+                WaitMode.WAIT_ONLY, false, false, ExecTarget.nonDispatchedControl());
 
     Context waitContext = new LocalContext(context);
     Var condVal = exprWalker.retrieveToVar(waitContext, conditionVar);
@@ -778,7 +779,7 @@ public class ASTWalker {
     FunctionContext fc = context.getFunctionContext();
     backend.startWaitStatement( fc.constructName("switch"),
                 VarRepr.backendVar(switchVar).asList(),
-                WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
+                WaitMode.WAIT_ONLY, false, false, ExecTarget.nonDispatchedControl());
 
     Context waitContext = new LocalContext(context);
     Var switchVal = varCreator.createValueOfVar(waitContext,
@@ -839,7 +840,7 @@ public class ASTWalker {
     List<Var> rangeBounds = Arrays.asList(start, end, step);
     backend.startWaitStatement(fc.getFunctionName() + "-wait-range" + loopNum,
              VarRepr.backendVars(rangeBounds), WaitMode.WAIT_ONLY, false,
-             false, TaskMode.LOCAL_CONTROL);
+             false, ExecTarget.nonDispatchedControl());
     Context waitContext = new LocalContext(context);
     Var startVal = exprWalker.retrieveToVar(waitContext, start);
     Var endVal = exprWalker.retrieveToVar(waitContext, end);
@@ -861,7 +862,7 @@ public class ASTWalker {
     // Need to spawn off task per iteration
     if (!loop.isSyncLoop()) {
       backend.startWaitStatement(fc.getFunctionName() + "range-iter" + loopNum,
-          Var.NONE, WaitMode.TASK_DISPATCH, false, false, TaskMode.CONTROL);
+          Var.NONE, WaitMode.TASK_DISPATCH, false, false, ExecTarget.dispatchedControl());
     }
     
     // We have the current value, but need to put it in a future in case user
@@ -920,7 +921,7 @@ public class ASTWalker {
       backend.startWaitStatement(
           fc.getFunctionName() + "-foreach-refwait" + loopNum,
           VarRepr.backendVar(arrayVar).asList(),
-          WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
+          WaitMode.WAIT_ONLY, false, false, ExecTarget.nonDispatchedControl());
 
       outsideLoopContext = new LocalContext(context);
       realArray = varCreator.createTmp(outsideLoopContext,
@@ -936,7 +937,7 @@ public class ASTWalker {
     backend.startWaitStatement(
         fc.getFunctionName() + "-foreach-wait" + loopNum,
         VarRepr.backendVar(realArray).asList(),
-        WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
+        WaitMode.WAIT_ONLY, false, false, ExecTarget.nonDispatchedControl());
     
     loop.setupLoopBodyContext(outsideLoopContext, false, false);
     Context loopBodyContext = loop.getBodyContext();
@@ -968,7 +969,7 @@ public class ASTWalker {
     if (!loop.isSyncLoop()) {
       backend.startWaitStatement(
           fc.getFunctionName() + "-foreach-spawn" + loopNum,
-          Var.NONE, WaitMode.TASK_DISPATCH, false, false, TaskMode.CONTROL);
+          Var.NONE, WaitMode.TASK_DISPATCH, false, false, ExecTarget.dispatchedControl());
     }
     // If the user's code expects a loop count var, need to create it here
     if (loop.getCountVarName() != null) {
@@ -1431,12 +1432,12 @@ public class ASTWalker {
                                 inlineTcl != null);
     }
 
-    TaskMode taskMode = ForeignFunctions.getTaskMode(function);
+    ExecTarget taskMode = ForeignFunctions.getTaskMode(function);
     
     // TODO: assume for now that all non-local builtins are targetable
     // This is still not quite right (See issue #230)
     boolean isTargetable = false;
-    if (!taskMode.isLocal()) {
+    if (taskMode.isDispatched()) {
       isTargetable = true;
       context.setFunctionProperty(function, FnProp.TARGETABLE);
     }
@@ -1456,7 +1457,9 @@ public class ASTWalker {
       context.setFunctionProperty(function, FnProp.WRAPPED_BUILTIN);
       context.setFunctionProperty(function, FnProp.SYNC);
       boolean isParallel = context.hasFunctionProp(function, FnProp.PARALLEL);
-      if (isParallel && taskMode != TaskMode.WORKER) {
+      if (isParallel && 
+          (!taskMode.isAsync() || 
+           !taskMode.targetContext().isAnyWorkContext()) ) {
         throw new UserException(context,
                         "Parallel tasks must execute on workers");
       }
@@ -1514,17 +1517,14 @@ public class ASTWalker {
         ForeignFunctions.addSpecialImpl(special, function);
       } else if (key.equals(Annotations.FN_DISPATCH)) {
         try {
-          TaskMode mode;
-          if (val.equals("LEAF")) {
-            // Renamed from LEAF to worker, keep this for compatibility
-            mode = TaskMode.WORKER;
-          } else { 
-            mode = TaskMode.valueOf(val);
-          }
+          ExecTarget mode = context.lookupExecTarget(val);
           ForeignFunctions.addTaskMode(function, mode);
         } catch (IllegalArgumentException e) {
+          List<String> dispatchNames = new ArrayList<String>(context.execTargetNames());
+          Collections.sort(dispatchNames);
+          
           throw new UserException(context, "Unknown dispatch mode " + val + ". "
-              + " Valid options are: " + StringUtil.concat(TaskMode.values()));
+              + " Valid options are: " + StringUtil.concat(dispatchNames));
         }
       } else {
         throw new InvalidAnnotationException(context, "Tcl function",
@@ -1745,8 +1745,8 @@ public class ASTWalker {
     functionContext.addDeclaredVariables(iList);
     functionContext.addDeclaredVariables(oList);
     
-    TaskMode mode = context.hasFunctionProp(function, FnProp.SYNC) ?
-                          TaskMode.SYNC : TaskMode.CONTROL;
+    ExecTarget mode = context.hasFunctionProp(function, FnProp.SYNC) ?
+                  ExecTarget.syncControl() : ExecTarget.dispatchedControl();
     backend.startFunction(function, backendOList, backendIList, mode);
     block(functionContext, block);
     backend.endFunction();
@@ -1832,7 +1832,8 @@ public class ASTWalker {
     appContext.addDeclaredVariables(inArgs);
     
     
-    backend.startFunction(function, backendOutArgs, backendInArgs, TaskMode.SYNC);
+    backend.startFunction(function, backendOutArgs, backendInArgs,
+                          ExecTarget.syncControl());
     genAppFunctionBody(appContext, appBodyT, inArgs, outArgs, 
                        hasSideEffects, deterministic, exec.val, props,
                        suppressions);
@@ -1889,11 +1890,15 @@ public class ASTWalker {
     Map<String, Var> fileNames = wait.val1; 
     List<WaitVar> waitVars = wait.val2;
     
+    // Ensure it executes in correct context
+    ExecContext targetCx = (asyncExec == null) ? ExecContext.defaultWorker() :
+                                                 asyncExec.execContext();
+    
     // use wait to wait for data then dispatch task to worker
     String waitName = context.getFunctionContext().constructName("app-leaf");
     // do deep wait for array args
     backend.startWaitStatement(waitName, VarRepr.backendWaitVars(waitVars),
-        WaitMode.TASK_DISPATCH, true, TaskMode.WORKER, props);
+        WaitMode.TASK_DISPATCH, true, ExecTarget.dispatched(targetCx), props);
     // On worker, just execute the required command directly
     Pair<List<Arg>, Redirects<Arg>> retrieved = retrieveAppArgs(context,
                                           cmdArgs, redirFutures, fileNames);
@@ -2214,7 +2219,7 @@ public class ASTWalker {
       backend.startWaitStatement(
           context.getFunctionContext().constructName("ref-argwait"),
           VarRepr.backendVars(refArgs), 
-          WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
+          WaitMode.WAIT_ONLY, false, false, ExecTarget.nonDispatchedAny());
       
       for (int i = 0; i < args.size(); i++) {
         Var oldArg = args.get(i);

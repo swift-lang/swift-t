@@ -31,6 +31,7 @@ import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.AsyncExecutor;
+import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.LocalForeignFunction;
@@ -39,7 +40,7 @@ import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.RequiredPackage;
-import exm.stc.common.lang.TaskMode;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
@@ -159,7 +160,7 @@ public class STCMiddleEnd {
   }
 
   public void startFunction(String functionName, List<Var> oList,
-      List<Var> iList, TaskMode mode) throws UserException {
+      List<Var> iList, ExecTarget mode) throws UserException {
     assert(blockStack.size() == 0);
     assert(currFunction == null);
     currFunction = new Function(functionName, iList, oList, mode);
@@ -231,20 +232,20 @@ public class STCMiddleEnd {
    * @param target
    */
   public void startWaitStatement(String procName, List<Var> waitVars,
-      WaitMode mode, boolean explicit, boolean recursive, TaskMode target) {
+      WaitMode mode, boolean explicit, boolean recursive, ExecTarget target) {
     startWaitStatement(procName, waitVars, mode, explicit, recursive, target, 
                         new TaskProps());
   }
 
   public void startWaitStatement(String procName, List<Var> waitVars,
-      WaitMode mode, boolean explicit, boolean recursive, TaskMode target,
+      WaitMode mode, boolean explicit, boolean recursive, ExecTarget target,
       TaskProps props) {
     startWaitStatement(procName, WaitVar.makeList(waitVars, explicit),
                              mode, recursive, target, props);      
   }
   
   public void startWaitStatement(String procName, List<WaitVar> waitVars,
-        WaitMode mode, boolean recursive, TaskMode target, TaskProps props) {
+        WaitMode mode, boolean recursive, ExecTarget target, TaskProps props) {
     assert(currFunction != null);
     props.assertInternalTypesValid();
 
@@ -414,7 +415,7 @@ public class STCMiddleEnd {
   }
   
   public void functionCall(String function, List<Arg> inputs,
-      List<Var> outputs, TaskMode mode, TaskProps props) {
+      List<Var> outputs, ExecTarget mode, TaskProps props) {
     props.assertInternalTypesValid();
     currBlock().addInstruction(
           FunctionCall.createFunctionCall(
@@ -683,15 +684,14 @@ public class STCMiddleEnd {
     }
     
     WaitMode waitMode;
-    TaskMode taskMode;
+    ExecTarget taskMode;
     if (compileForTargetMapped) {
       // Do physical copy on worker
       waitMode = WaitMode.TASK_DISPATCH;
-      taskMode = TaskMode.WORKER;
-      System.err.println("HERE");
+      taskMode = ExecTarget.dispatched(ExecContext.defaultWorker());
     } else {
       waitMode = WaitMode.WAIT_ONLY;
-      taskMode = TaskMode.LOCAL;
+      taskMode = ExecTarget.nonDispatchedAny();
     }
                            
     WaitStatement wait = new WaitStatement(
@@ -989,7 +989,7 @@ public class STCMiddleEnd {
 
   public void generateWrappedBuiltin(String wrapperName,
       String builtinName, FunctionType ft,
-      List<Var> outArgs, List<Var> userInArgs, TaskMode mode,
+      List<Var> outArgs, List<Var> userInArgs, ExecTarget mode,
       boolean isParallel, boolean isTargetable)
           throws UserException {
     
@@ -1021,12 +1021,12 @@ public class STCMiddleEnd {
       props.put(TaskPropKey.LOCATION, location.asArg());
     }
     
-    Function fn = new Function(wrapperName, realInArgs, outArgs, TaskMode.SYNC);
+    Function fn = new Function(wrapperName, realInArgs, outArgs,
+                               ExecTarget.syncControl());
     this.program.addFunction(fn);
     
     WaitMode waitMode;
-    if ((mode == TaskMode.LOCAL || mode == TaskMode.SYNC) &&
-        !isParallel) {
+    if (!mode.isDispatched() && !isParallel) {
       // Cases where function can execute on any node
       waitMode = WaitMode.WAIT_ONLY;
     } else {

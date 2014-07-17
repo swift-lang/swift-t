@@ -34,13 +34,12 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.PassedVar;
-import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.WaitMode;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
+import exm.stc.common.lang.WaitMode;
 import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.ICUtil;
@@ -151,7 +150,7 @@ public class ValueNumber implements OptimizerPass {
     try {
       // First pass finds all congruence classes and expands some instructions
       Map<Block, Congruences> congMap;
-      congMap = findCongruences(prog, f, ExecContext.CONTROL);
+      congMap = findCongruences(prog, f, ExecContext.control());
   
       // Second pass replaces values based on congruence classes
       replaceVals(prog.constants(), f.getName(), f.mainBlock(), congMap,
@@ -802,14 +801,13 @@ public class ValueNumber implements OptimizerPass {
     // Create replacement sequence
     Block insertContext;
     ListIterator<Statement> insertPoint;
-    boolean noWaitRequired = req.mode == TaskMode.LOCAL
-        || req.mode == TaskMode.SYNC
-        || (req.mode == TaskMode.LOCAL_CONTROL && execCx == ExecContext.CONTROL);
+    boolean waitRequired = req.mode.isDispatched() ||
+             !req.mode.targetContextMatches(execCx);
     
     // First remove old instruction
     stmts.remove();
     
-    if (noWaitRequired) {
+    if (!waitRequired) {
       insertContext = block;
       insertPoint = stmts;
     } else {
@@ -825,7 +823,7 @@ public class ValueNumber implements OptimizerPass {
     // Now load the values
     List<Statement> alt = new ArrayList<Statement>();
     List<Fetched<Arg>> inVals = fetchInputsForSwitch(state, req,
-                                    insertContext, noWaitRequired, alt);
+                                    insertContext, !waitRequired, alt);
     if (logger.isTraceEnabled()) {
       logger.trace("Fetched " + inVals + " for " + inst
                  + " req.in: " + req.in);

@@ -36,7 +36,8 @@ import exm.stc.ic.tree.ICTree.StatementType;
 public class ProgressOpcodes {
   
   public static boolean isCheapWorkerInst(Instruction i) {
-    return i.isCheap() && i.supportedContexts().contains(ExecContext.WORKER);
+    // TODO: default worker isn't right
+    return i.isCheap() && i.execMode().canRunIn(ExecContext.defaultWorker());
   }
 
   public static enum Category {
@@ -68,7 +69,7 @@ public class ProgressOpcodes {
   }
   
   public static boolean isNonProgress(Block rootBlock, ExecContext cx) {
-    if (cx == ExecContext.CONTROL) {
+    if (cx.isControlContext()) {
       return isNonProgress(rootBlock);
     } else {
       return isNonProgressWorker(rootBlock);

@@ -9,7 +9,7 @@ import org.apache.log4j.Logger;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.PassedVar;
-import exm.stc.common.lang.TaskMode;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.WaitMode;
 import exm.stc.common.lang.WaitVar;
 import exm.stc.common.lang.TaskProp.TaskProps;
@@ -121,8 +121,8 @@ public class LoopSimplify extends FunctionOptimizerPass {
     if (!recWaitVars.isEmpty()) {
       String name = loop.loopName() + "-init-recwait";
       wrapper = new WaitStatement(name, recWaitVars, PassedVar.NONE,
-                    Var.NONE, WaitMode.WAIT_ONLY, true, TaskMode.LOCAL,
-                    new TaskProps());
+                    Var.NONE, WaitMode.WAIT_ONLY, true,
+                    ExecTarget.nonDispatchedAny(), new TaskProps());
       wrapper.getBlock().addContinuation(inner);
       inner = wrapper;
     }
@@ -130,8 +130,8 @@ public class LoopSimplify extends FunctionOptimizerPass {
     if (!waitVars.isEmpty()) {
       String name = loop.loopName() + "-init-wait";
       wrapper = new WaitStatement(name, waitVars, PassedVar.NONE,
-                    Var.NONE, WaitMode.WAIT_ONLY, false, TaskMode.LOCAL,
-                    new TaskProps());
+                    Var.NONE, WaitMode.WAIT_ONLY, false,
+                    ExecTarget.nonDispatchedAny(), new TaskProps());
       wrapper.getBlock().addContinuation(inner);
       inner = wrapper;
     }

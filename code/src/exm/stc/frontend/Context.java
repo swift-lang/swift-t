@@ -30,9 +30,11 @@ import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.ast.SwiftAST;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.exceptions.UndefinedExecTargetException;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -399,6 +401,19 @@ public abstract class Context {
     types.put(typeName, newType);
     addDef(typeName, DefKind.TYPE);
   }
+  
+  /**
+   * Lookup execution target by name in global scope.
+   * @param name
+   * @return
+   */
+  public abstract ExecTarget lookupExecTarget(String name)
+                    throws UndefinedExecTargetException;
+  
+  /**
+   * @return valid names of execution targets
+   */
+  public abstract Collection<String> execTargetNames();
 
   protected String buildPathStr(List<String> fieldPath) {
     StringBuilder build = new StringBuilder();
@@ -486,4 +501,5 @@ public abstract class Context {
     public final int line;
     public final int col;
   }
+
 }

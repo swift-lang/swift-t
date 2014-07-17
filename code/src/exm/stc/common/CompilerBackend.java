@@ -34,7 +34,7 @@ import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
-import exm.stc.common.lang.TaskMode;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types.BagType;
 import exm.stc.common.lang.Types.FileFutureType;
@@ -137,7 +137,7 @@ public interface CompilerBackend {
    * @throws UserException
    */
   public void startFunction(String functionName,
-      List<Var> outArgs, List<Var> inArgs, TaskMode mode)
+      List<Var> outArgs, List<Var> inArgs, ExecTarget mode)
             throws UserException;
 
   /**
@@ -285,7 +285,7 @@ public interface CompilerBackend {
   public void startWaitStatement(String procName,
       List<Var> waitVars,
       List<Var> usedVars, boolean recursive,
-      TaskMode target, TaskProps props);
+      ExecTarget target, TaskProps props);
 
   public void endWaitStatement();
 
@@ -467,7 +467,7 @@ public interface CompilerBackend {
    */
   public void functionCall(String function,
       List<Var> outputs, List<Arg> inputs, List<Boolean> blockOn, 
-      TaskMode mode, TaskProps props);
+      ExecTarget mode, TaskProps props);
   
   /**
    * Generate command to run an external application immediately

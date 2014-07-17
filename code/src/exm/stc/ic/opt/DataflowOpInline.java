@@ -15,7 +15,7 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.PassedVar;
-import exm.stc.common.lang.TaskMode;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.WaitMode;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
@@ -60,7 +60,7 @@ public class DataflowOpInline extends FunctionOptimizerPass {
     HierarchicalSet<Var> waitedFor = new HierarchicalSet<Var>();
     waitedFor.addAll(WaitVar.asVarList(f.blockingInputs()));
     
-    inlineOpsRec(logger, f, ExecContext.CONTROL, f.mainBlock(), waitedFor);
+    inlineOpsRec(logger, f, ExecContext.control(), f.mainBlock(), waitedFor);
   }
   
 
@@ -202,7 +202,7 @@ public class DataflowOpInline extends FunctionOptimizerPass {
       
       // First get rec
       block = enterWait(fn, block, inst, true, WaitMode.WAIT_ONLY,
-                        TaskMode.LOCAL, recWaitVars);
+                        ExecTarget.nonDispatchedAny(), recWaitVars);
       // then non-rec
       return enterWait(fn, block, inst, false, 
           selectWaitMode(execCx, req.mode), req.mode, nonRecWaitVars);
@@ -223,7 +223,7 @@ public class DataflowOpInline extends FunctionOptimizerPass {
   }
 
   private static Block enterWait(Function fn, Block block,
-      Instruction inst, boolean recursive, WaitMode waitMode, TaskMode taskMode, 
+      Instruction inst, boolean recursive, WaitMode waitMode, ExecTarget taskMode, 
       List<WaitVar> waitVars) {
     TaskProps props = inst.getTaskProps();
     if (props == null) {
@@ -244,12 +244,15 @@ public class DataflowOpInline extends FunctionOptimizerPass {
     return wait.getBlock();
   }
 
-  private static WaitMode selectWaitMode(ExecContext execCx, TaskMode taskMode) {
-    // TODO: this is a little restrictive
+  /**
+   * Select the wait mode required given a target.
+   * @param outerCx context outside of wait
+   * @param target target for wait
+   * @return
+   */
+  private static WaitMode selectWaitMode(ExecContext outerCx, ExecTarget target) {
     WaitMode waitMode;
-    if (taskMode == TaskMode.SYNC || taskMode == TaskMode.LOCAL ||
-          (taskMode == TaskMode.LOCAL_CONTROL &&
-            execCx == ExecContext.CONTROL)) {
+    if (!target.isDispatched() && target.targetContextMatches(outerCx)) {
       waitMode = WaitMode.WAIT_ONLY;
     } else {
       waitMode = WaitMode.TASK_DISPATCH;

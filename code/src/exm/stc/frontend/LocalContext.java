@@ -17,11 +17,14 @@
 package exm.stc.frontend;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.exceptions.UndefinedExecTargetException;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -243,7 +246,19 @@ public class LocalContext extends Context {
       return parent.lookupTypeUnsafe(typeName);
     }
   }
+  
 
+  @Override
+  public ExecTarget lookupExecTarget(String name)
+              throws UndefinedExecTargetException {
+    return globals.lookupExecTarget(name);
+  }
+
+  @Override
+  public Collection<String> execTargetNames() {
+    return globals.execTargetNames();
+  }
+  
   /**
    * Called when we want to create a new alias for a structure filed
    */

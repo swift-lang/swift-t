@@ -45,7 +45,7 @@ import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
 import exm.stc.common.lang.RequiredPackage;
-import exm.stc.common.lang.TaskMode;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.StructType;
@@ -550,25 +550,25 @@ public class ICTree {
     /** Wait until the below inputs are available before running function. */
     private final List<WaitVar> blockingInputs;
 
-    private TaskMode mode;
+    private ExecTarget mode;
     
     private final HashSet<String> usedVarNames;
 
     public Function(String name, List<Var> iList,
-        List<Var> oList, TaskMode mode) {
+        List<Var> oList, ExecTarget mode) {
       this(name, iList, Collections.<WaitVar>emptyList(), oList,
            mode, new Block(BlockType.MAIN_BLOCK, null), true);
     }
     
     public Function(String name, List<Var> iList,
             List<WaitVar> blockingInputs,
-            List<Var> oList, TaskMode mode, Block mainBlock) {
+            List<Var> oList, ExecTarget mode, Block mainBlock) {
       this(name, iList, blockingInputs, oList, mode, mainBlock, false);
     }
       
     private Function(String name, List<Var> iList,
         List<WaitVar> blockingInputs,
-        List<Var> oList, TaskMode mode, Block mainBlock,
+        List<Var> oList, ExecTarget mode, Block mainBlock,
         boolean emptyBlock) {
       if (mainBlock.getType() != BlockType.MAIN_BLOCK) {
         throw new STCRuntimeError("Expected main block " +
@@ -701,12 +701,12 @@ public class ICTree {
       blockingInputs.add(newWaitVar);
     }
     
-    public TaskMode mode() {
+    public ExecTarget mode() {
       return this.mode;
     }
     
     public boolean isAsync() {
-      return this.mode != TaskMode.SYNC;
+      return this.mode.isAsync();
     }
 
 

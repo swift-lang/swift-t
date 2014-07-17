@@ -29,13 +29,13 @@ import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.PassedVar;
-import exm.stc.common.lang.TaskMode;
-import exm.stc.common.lang.WaitMode;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.WaitMode;
 import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.MultiMap.LinkedListFactory;
@@ -191,7 +191,7 @@ public class WaitCoalescer implements OptimizerPass {
   public void optimize(Logger logger, Program prog) {
     for (Function f: prog.getFunctions()) {
       logger.trace("Wait coalescer entering function " + f.getName());
-      rearrangeWaits(logger, prog, f, f.mainBlock(), ExecContext.CONTROL);
+      rearrangeWaits(logger, prog, f, f.mainBlock(), ExecContext.control());
     }
   }
 
@@ -257,28 +257,33 @@ public class WaitCoalescer implements OptimizerPass {
   private boolean tryReduce(Logger logger,
       Function fn, ExecContext currContext,
       ExecContext innerContext, WaitStatement wait) {
-    if ((currContext == innerContext &&
+    if ((currContext.equals(innerContext) &&
         ProgressOpcodes.isCheap(wait.getBlock())) ||
-        (currContext == ExecContext.WORKER && 
-         innerContext == ExecContext.CONTROL &&
+        (currContext.isAnyWorkContext() && 
+         innerContext.isControlContext() &&
          canSwitchControlToWorker(logger, fn, wait))) {
       
       // Fix any waits inside that expect to be execute in CONTROL context
-      if (currContext == ExecContext.WORKER &&
-          innerContext == ExecContext.CONTROL) {
-        replaceLocalControl(wait.getBlock());
+      if (currContext.isAnyWorkContext() &&
+          innerContext.isControlContext()) {
+        replaceLocalControl(wait.getBlock(), currContext);
       }
       
       if (wait.getWaitVars().isEmpty()) {
+        // Can remove wait
         return true;
       } else {
         // Still have to wait but maybe can reduce overhead
-        if (wait.getTarget() == TaskMode.CONTROL) {
-          // Don't load-balance
-          if (currContext == ExecContext.CONTROL) {
-            wait.setTarget(TaskMode.LOCAL_CONTROL);
+        ExecTarget waitTarget = wait.getTarget();
+        ExecContext waitTargetContext = waitTarget.targetContext();
+        if (waitTarget.isDispatched() && waitTargetContext.isControlContext()) {
+          if (currContext.isControlContext()) {
+            // Don't load-balance: assume control work is cheap
+            wait.setTarget(ExecTarget.nonDispatchedControl());
           } else {
-            wait.setTarget(TaskMode.LOCAL);
+            // Don't load-balance: assume control work can safely run in
+            // current work context
+            wait.setTarget(ExecTarget.nonDispatchedAny());
           }
         }
         if (wait.getMode() == WaitMode.TASK_DISPATCH) {
@@ -435,17 +440,17 @@ public class WaitCoalescer implements OptimizerPass {
     
     // Check that contexts are compatible 
     ExecContext possibleMergedContext;
-    if (innerContext == waitContext) {
+    if (innerContext.equals(waitContext)) {
       possibleMergedContext = waitContext;
     } else {
-      if (waitContext == ExecContext.WORKER) {
-        assert(innerContext == ExecContext.CONTROL);
-        // Don't try to move work from worker to control
-        logger.trace("Contexts incompatible (outer is worker)");
+      if (waitContext.isAnyWorkContext()) {
+        // Don't try to move work from worker context to another context
+        logger.trace("Contexts incompatible (outer is " + waitContext + 
+                     " and inner is " + innerContext);
         return false;
       } else {
-        assert(waitContext == ExecContext.CONTROL);
-        assert(innerContext == ExecContext.WORKER);
+        assert(waitContext.isControlContext());
+        assert(innerContext.isAnyWorkContext());
         // Inner wait is on worker, try to see if we can
         // move context of outer wait to worker
         logger.trace("Outer is control: maybe change to worker");
@@ -478,23 +483,13 @@ public class WaitCoalescer implements OptimizerPass {
       // In either case, need to make sure tasks get dispatched
       wait.setMode(WaitMode.TASK_DISPATCH);
     }
-    if (possibleMergedContext != waitContext) {
-      if (possibleMergedContext == ExecContext.CONTROL) {
-        wait.setTarget(TaskMode.CONTROL);
-      } else {
-        assert(possibleMergedContext == ExecContext.WORKER);
-        wait.setTarget(TaskMode.WORKER);
-      }
+    if (!possibleMergedContext.equals(waitContext)) {
+      wait.setTarget(ExecTarget.dispatched(possibleMergedContext));
     }
     
-    // Fixup any LOCAL_CONTROL waits in block
-    if (possibleMergedContext == ExecContext.WORKER) {
-      if (innerContext == ExecContext.CONTROL) {
-        replaceLocalControl(innerWait.getBlock());
-      } else if (waitContext == ExecContext.CONTROL) {
-        replaceLocalControl(wait.getBlock());
-      }
-    }
+    // Fixup any local waits in block
+    fixupNonDispatched(innerWait, possibleMergedContext);
+    fixupNonDispatched(wait, possibleMergedContext);
     
     if (logger.isTraceEnabled()) {
       logger.trace("Squash succeeded: wait(" + wait.getWaitVars() + ") "
@@ -574,7 +569,7 @@ public class WaitCoalescer implements OptimizerPass {
         // of the above.
         WaitStatement newWait = new WaitStatement(fn.getName() + "-optmerged",
             mergedWaitVars, PassedVar.NONE, Var.NONE,
-            WaitMode.WAIT_ONLY, allRecursive, TaskMode.LOCAL,
+            WaitMode.WAIT_ONLY, allRecursive, ExecTarget.nonDispatchedAny(),
             new TaskProps());
 
         // Put the old waits under the new one, remove redundant wait vars
@@ -862,19 +857,13 @@ public class WaitCoalescer implements OptimizerPass {
         return null;
       }
       if (w.getMode() == WaitMode.TASK_DISPATCH) {
-        if (w.getTarget() == TaskMode.LOCAL_CONTROL ||
-            w.getTarget() == TaskMode.LOCAL) {
-          if (curr == ExecContext.WORKER &&
-                w.getTarget() == TaskMode.LOCAL_CONTROL) {
-            throw new STCRuntimeError("Can't have local control wait in leaf"); 
-          }
+        ExecTarget target = w.getTarget();
+        if (target.isDispatched()) {
+          return target.targetContext();
+        } else {
+          assert(target.canRunIn(curr));
           // Context doesn't change
           return curr;
-        } else if (w.getTarget() == TaskMode.CONTROL) {
-          return ExecContext.CONTROL;
-        } else {
-          assert(w.getTarget() == TaskMode.WORKER);
-          return ExecContext.WORKER;
         }
       } else {
         return curr;
@@ -967,20 +956,17 @@ public class WaitCoalescer implements OptimizerPass {
       }
     }
     
-    if (currContext == ExecContext.WORKER) {
+    if (currContext.isAnyWorkContext()) {
       if (cont.getType() != ContinuationType.WAIT_STATEMENT) {
         canRelocate = false;
       } else {
         WaitStatement w = (WaitStatement)cont;
         // Make sure gets dispatched to right place
-        if (w.getTarget() == TaskMode.CONTROL ||
-            w.getTarget() == TaskMode.WORKER ||
-            w.getTarget() == TaskMode.LOCAL || 
-            w.getTarget() == TaskMode.LOCAL_CONTROL) {
+        if (w.getTarget().isAsync()) {
           canRelocate = true;
           
-          if (w.getTarget().isLocal()) {
-            replaceLocalControl(w);
+          if (!w.getTarget().isDispatched()) {
+            fixupNonDispatched(w, currContext);
           }
         } else {
           canRelocate = false;
@@ -999,30 +985,34 @@ public class WaitCoalescer implements OptimizerPass {
 
   /**
    * Replace local control waits recursively
+   * TODO: do we want a more generic approach?
    * @param w
    */
-  private void replaceLocalControl(WaitStatement w) {
-    if (w.getTarget() == TaskMode.LOCAL_CONTROL) {
+  private void fixupNonDispatched(WaitStatement w, ExecContext currContext) {
+    if (!w.getTarget().canRunIn(currContext)) {
       w.setMode(WaitMode.TASK_DISPATCH);
-      w.setTarget(TaskMode.CONTROL);
+      ExecContext targetCx = w.getTarget().targetContext();
+      assert(targetCx != null);
+      w.setTarget(ExecTarget.dispatched(targetCx));
     }
     
-    if (w.getTarget().isLocal()) {
-      replaceLocalControl(w.getBlock());
+    // Check if we need to recurse
+    if (!w.getTarget().isDispatched()) {
+      replaceLocalControl(w.getBlock(), currContext);
     }
   }
 
-  private void replaceLocalControl(Block block) {
+  private void replaceLocalControl(Block block, ExecContext currContext) {
     for (Continuation c: block.allComplexStatements()) {
       if (!c.isAsync()) {
         // Locate any inner waits that are sync
         for (Block inner: c.getBlocks()) {
-          replaceLocalControl(inner);
+          replaceLocalControl(inner, currContext);
         }
       }
       if (c.getType() == ContinuationType.WAIT_STATEMENT) {
         WaitStatement w = (WaitStatement) c;
-        replaceLocalControl(w);
+        fixupNonDispatched(w, currContext);
       }
     }
   }
@@ -1032,22 +1022,12 @@ public class WaitCoalescer implements OptimizerPass {
       Block currBlock,
       ListIterator<Statement> currBlockIt,
       Set<Instruction> movedI, Instruction inst) {
-    boolean canRelocate = true;
     
-    if (currContext == ExecContext.WORKER &&
-             inst.getMode() != TaskMode.SYNC) {
-      // Can't push down async tasks to leaf yet due to issues with
-      // spawning tasks from worker.
-      // TODO: possible now?
-      canRelocate = false;
-    }
-    
-    if (canRelocate) {
-      inst.setParent(currBlock);
-      currBlockIt.add(inst);
-      movedI.add(inst);
-    }
-    return canRelocate;
+    inst.setParent(currBlock);
+    currBlockIt.add(inst);
+    movedI.add(inst);
+
+    return true;
   }
 
   /**

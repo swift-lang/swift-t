@@ -124,7 +124,7 @@ public class FixupVariables implements OptimizerPass {
     AliasTracker aliases = new AliasTracker();
     
     Result res = fixupBlockRec(logger, fn, fn.mainBlock(),
-                       ExecContext.CONTROL, fnargs,
+                       ExecContext.control(), fnargs,
                        referencedGlobals, aliases, fixupMode);
     if (fixupMode != FixupVarMode.NO_UPDATE) {
       // Mark write-only outputs
@@ -357,7 +357,7 @@ public class FixupVariables implements OptimizerPass {
   }
 
   private static boolean canImportGlobals(ExecContext execCx) {
-    return execCx == ExecContext.CONTROL || Settings.NO_TURBINE_ENGINE;
+    return execCx.isControlContext() || Settings.NO_TURBINE_ENGINE;
   }
 
   /**

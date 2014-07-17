@@ -25,6 +25,7 @@ import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.WaitVar;
@@ -87,7 +88,7 @@ public class HoistLoops implements OptimizerPass {
       
       // Set up map for top block of function
       HoistTracking mainBlockState =
-          global.makeChild(f.mainBlock(), true, ExecContext.CONTROL, 0, 0);
+          global.makeChild(f.mainBlock(), true, ExecContext.control(), 0, 0);
       
       // Inputs are written elsewhere
       for (Var in: f.getInputList()) {
@@ -176,7 +177,7 @@ public class HoistLoops implements OptimizerPass {
      * Create root for whole program
      */
     public HoistTracking() {
-      this(null, null, false, ExecContext.CONTROL, 0, 0,
+      this(null, null, false, ExecContext.control(), 0, 0,
            new HierarchicalMap<Var, Block>(),
            new HierarchicalMap<Var, Block>(),
            new HierarchicalMap<Var, Block>(),
@@ -484,7 +485,7 @@ public class HoistLoops implements OptimizerPass {
     }
     
     int maxCorrectContext = maxHoistContext(logger, state,
-                      inst.supportedContexts(), maxHoist);
+                                inst.execMode(), maxHoist);
     
     maxHoist = Math.max(maxHoist, maxCorrectContext);
     
@@ -504,19 +505,19 @@ public class HoistLoops implements OptimizerPass {
    * @return
    */
   private int maxHoistContext(Logger logger, HoistTracking state, 
-                        List<ExecContext> supportedContexts, int maxHoist) {
+                        ExecTarget target, int maxHoist) {
     int maxCorrectContext = 0;
     HoistTracking curr = state;
     for (int hoist = 1; hoist <= maxHoist; hoist++) {
       curr = state.parent;
-      if (supportedContexts.contains(curr.execCx)) {
+      if (target.canRunIn(curr.execCx)) {
         maxCorrectContext = hoist;
       }
     }
     
     if (logger.isTraceEnabled()) {
-      logger.trace("Hoist limited to " + maxCorrectContext + " by supported " +
-                   "exec contexts " + supportedContexts);
+      logger.trace("Hoist limited to " + maxCorrectContext + " by execution " +
+                   "target " + target);
     }
     return maxCorrectContext;
   }

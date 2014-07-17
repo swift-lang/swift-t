@@ -18,7 +18,7 @@ import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.Operators.UpdateMode;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
-import exm.stc.common.lang.TaskMode;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
@@ -2603,7 +2603,7 @@ public class TurbineOp extends Instruction {
 
   @Override
   public List<Var> getBlockingInputs(Program prog) {
-    if (getMode() == TaskMode.SYNC) {
+    if (!execMode().isAsync()) {
       return Var.NONE;
     }
     
@@ -2638,7 +2638,7 @@ public class TurbineOp extends Instruction {
 
 
   @Override
-  public TaskMode getMode() {
+  public ExecTarget execMode() {
     switch (op) {
     case STORE_SCALAR:
     case STORE_FILE:
@@ -2675,7 +2675,6 @@ public class TurbineOp extends Instruction {
     case GET_FILENAME_ALIAS:
     case GET_LOCAL_FILENAME:
     case IS_MAPPED:
-    case COPY_FILE_CONTENTS:
     case ARR_RETRIEVE:
     case COPY_REF:
     case CHOOSE_TMP_FILENAME:
@@ -2697,8 +2696,12 @@ public class TurbineOp extends Instruction {
     case ARR_LOCAL_CONTAINS:
     case CONTAINER_LOCAL_SIZE:
     case STRUCT_LOCAL_BUILD:
-      return TaskMode.SYNC;
+      return ExecTarget.syncAny();
     
+    case COPY_FILE_CONTENTS:
+      // Should run on worker in case large file
+      return ExecTarget.sync(ExecContext.defaultWorker());
+      
     case ARR_COPY_IN_IMM:
     case ARR_STORE_FUTURE:
     case ARR_COPY_IN_FUTURE:
@@ -2722,144 +2725,10 @@ public class TurbineOp extends Instruction {
     case STRUCT_COPY_OUT:
     case STRUCTREF_COPY_OUT:
     case COPY_IN_FILENAME:
-      return TaskMode.LOCAL;
+      return ExecTarget.nonDispatchedAny();
     default:
       throw new STCRuntimeError("Need to add opcode " + op.toString()
           + " to getMode");
-    }
-  }
-  
-  @Override
-  public List<ExecContext> supportedContexts() {
-    switch (op) {
-      case LOAD_ARRAY:
-      case LOAD_BAG:
-      case LOAD_FILE:
-      case LOAD_RECURSIVE:
-      case LOAD_REF:
-      case LOAD_SCALAR:
-      case LOAD_STRUCT:
-      case LATEST_VALUE:
-      case STORE_ARRAY:
-      case STORE_BAG:
-      case STORE_FILE:
-      case STORE_RECURSIVE:
-      case STORE_REF:
-      case STORE_SCALAR:
-      case STORE_STRUCT:
-      case ARRAY_BUILD:
-        // Loads and stores can run anywhere
-        return ExecContext.ALL;
-
-      case SET_FILENAME_VAL:
-      case GET_FILENAME_VAL:
-      case COPY_IN_FILENAME:
-        // Filename loads and stores can run anywhere
-        return ExecContext.ALL;
-        
-      case INIT_LOCAL_OUTPUT_FILE:
-      case INIT_UPDATEABLE_FLOAT:
-        // Init operations can run anywhere
-        return ExecContext.ALL;
-
-      case UPDATE_INCR:
-      case UPDATE_INCR_IMM:
-      case UPDATE_MIN:
-      case UPDATE_MIN_IMM:
-      case UPDATE_SCALE:
-      case UPDATE_SCALE_IMM:
-        // Update operations can run anywhere
-        return ExecContext.ALL;
-        
-      case COPY_REF:
-      case STRUCT_CREATE_ALIAS:
-      case GET_FILENAME_ALIAS:
-      case ARR_CREATE_ALIAS:
-        // Alias can be created anywhere
-        return ExecContext.ALL;
-        
-      case DEREF_FILE:
-      case DEREF_SCALAR:
-        // Deref can be done anywhere
-        return ExecContext.ALL;
-        
-      case ARR_CONTAINS:
-      case ARR_COPY_IN_FUTURE:
-      case ARR_COPY_IN_IMM:
-      case ARR_COPY_OUT_FUTURE:
-      case ARR_COPY_OUT_IMM:
-      case ARR_CREATE_NESTED_FUTURE:
-      case ARR_CREATE_NESTED_IMM:
-      case ARR_LOCAL_CONTAINS:
-      case ARR_RETRIEVE:
-      case ARR_STORE:
-      case ARR_STORE_FUTURE:
-      case ARR_CREATE_BAG:
-      case AREF_COPY_IN_FUTURE:
-      case AREF_COPY_IN_IMM:
-      case AREF_COPY_OUT_FUTURE:
-      case AREF_COPY_OUT_IMM:
-      case AREF_CREATE_NESTED_FUTURE:
-      case AREF_CREATE_NESTED_IMM:
-      case AREF_STORE_FUTURE:
-      case AREF_STORE_IMM:
-      case BAG_INSERT:
-      case CONTAINER_SIZE:
-      case CONTAINER_LOCAL_SIZE:
-        // Array ops can be done anywhere
-        return ExecContext.ALL;
-        
-      case STRUCT_COPY_IN:
-      case STRUCT_COPY_OUT:
-      case STRUCT_INIT_FIELDS:
-      case STRUCT_RETRIEVE_SUB:
-      case STRUCT_STORE_SUB:
-      case STRUCTREF_COPY_IN:
-      case STRUCTREF_COPY_OUT:
-      case STRUCTREF_STORE_SUB:
-        // Struct ops can be done anywhere
-        return ExecContext.ALL;
-      
-      case ASYNC_COPY:
-        // Copy ops can be done anywhere
-        return ExecContext.ALL;
-        
-      case SYNC_COPY:
-        // Copy ops can be done anywhere
-        return ExecContext.ALL;
-        
-      case CHECKPOINT_LOOKUP_ENABLED:
-      case CHECKPOINT_WRITE_ENABLED:
-      case CHOOSE_TMP_FILENAME:
-      case IS_MAPPED:
-      case GET_LOCAL_FILENAME:
-        // Utility operations can be done anywhere
-        return ExecContext.ALL;
-        
-      case COPY_FILE_CONTENTS:
-        // Copying a file can take some time - only do on worker
-        return ExecContext.WORKER_LIST;
-        
-      case DECR_LOCAL_FILE_REF:
-      case FREE_BLOB:
-        // Local refcount manipulations
-        return ExecContext.ALL;
-        
-      case LOOKUP_CHECKPOINT:
-        return ExecContext.ALL;
-        
-      case PACK_VALUES:
-      case UNPACK_ARRAY_TO_FLAT:
-      case UNPACK_VALUES:
-      case STRUCT_LOCAL_BUILD:
-        return ExecContext.ALL;
-        
-      case WRITE_CHECKPOINT:
-        // Should checkpoint data where it is created
-        return ExecContext.ALL;
-        
-      default:
-        throw new STCRuntimeError("Missing: " + op);
     }
   }
 
@@ -4320,16 +4189,11 @@ public class TurbineOp extends Instruction {
     }
 
     @Override
-    public TaskMode getMode() {
+    public ExecTarget execMode() {
       // Executes right away
-      return TaskMode.SYNC;
+      return ExecTarget.syncAny();
     }
-
-    @Override
-    public List<ExecContext> supportedContexts() {
-      return ExecContext.ALL;
-    }
-
+    
     @Override
     public boolean isCheap() {
       return true;

@@ -36,10 +36,9 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.PassedVar;
-import exm.stc.common.lang.TaskMode;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.WaitMode;
 import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.lang.WaitMode;
 import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.MultiMap;
 import exm.stc.common.util.Pair;
@@ -456,7 +455,7 @@ public class FunctionInline implements OptimizerPass {
     inlineBlock.renameVars(contextFunction.getName(), renames, 
                            RenameMode.REPLACE_VAR, true);
     
-    if (fnCall.getMode() == TaskMode.SYNC) {
+    if (!fnCall.execMode().isAsync()) {
       insertBlock = block;
       insertPos = it;
     } else {
@@ -482,7 +481,7 @@ public class FunctionInline implements OptimizerPass {
       WaitStatement wait = new WaitStatement(
           contextFunction.getName() + "-" + toInline.getName() + "-call",
           blockingInputs, PassedVar.NONE, Var.NONE,
-          waitMode, false, fnCall.getMode(), fnCall.getTaskProps());
+          waitMode, false, fnCall.execMode(), fnCall.getTaskProps());
       block.addContinuation(wait);
       insertBlock = wait.getBlock();
       insertPos = insertBlock.statementIterator();

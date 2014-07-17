@@ -17,6 +17,8 @@
 package exm.stc.frontend;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -26,7 +28,10 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.exceptions.DoubleDefineException;
+import exm.stc.common.exceptions.STCRuntimeError;
+import exm.stc.common.exceptions.UndefinedExecTargetException;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -54,6 +59,13 @@ public class GlobalContext extends Context {
   private final Map<String, IntrinsicFunction> intrinsics =
                         new HashMap<String, IntrinsicFunction>();
   
+  /**
+   * Track name to exec target mapping
+   * @param inputFile
+   * @param logger
+   */
+  private final Map<String, ExecTarget> execTargets =
+                              new HashMap<String, ExecTarget>();
   
   public GlobalContext(String inputFile, Logger logger) {
     super(logger, 0);
@@ -61,10 +73,12 @@ public class GlobalContext extends Context {
 
     // Add all predefined types into type name dict
     types.putAll(Types.getBuiltInTypes());
-  }
-
-  GlobalContext(String inputFile) {
-    this(inputFile, null);
+    try {
+      addExecTargets(ExecTarget.builtinExecTargets());
+    } catch (DoubleDefineException e) {
+      throw new STCRuntimeError("Unexpected exception while initializing exec " +
+      		"targets", e);
+    }
   }
   
   @Override
@@ -166,6 +180,39 @@ public class GlobalContext extends Context {
   @Override
   public Type lookupTypeUnsafe(String typeName) {
     return types.get(typeName);
+  }
+  
+  public void addExecTargets(List<Pair<String, ExecTarget>> targets)
+      throws DoubleDefineException {
+    for (Pair<String, ExecTarget> target: targets) {
+      addExecTarget(target.val1, target.val2);
+    }
+  }
+  
+  public void addExecTarget(String name, ExecTarget target)
+      throws DoubleDefineException {
+    ExecTarget oldTarget = execTargets.get(name);
+    if (oldTarget != null) {
+      throw new DoubleDefineException(this, 
+          "Redefined execution target " + name);
+    }
+    execTargets.put(name, target);    
+  }
+  
+  @Override
+  public ExecTarget lookupExecTarget(String name) 
+      throws UndefinedExecTargetException {
+    ExecTarget target = execTargets.get(name);
+    if (target == null) {
+      throw new UndefinedExecTargetException(this, name);
+    }
+    
+    return target;
+  }
+  
+  @Override
+  public Collection<String> execTargetNames() {
+    return Collections.unmodifiableSet(execTargets.keySet());
   }
   
   @Override

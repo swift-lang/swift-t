@@ -41,7 +41,7 @@ import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
-import exm.stc.common.lang.TaskMode;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
@@ -228,9 +228,9 @@ public class ICInstructions {
       public final List<MakeImmVar> in;
       
       /** Where immediate code should run.  Default is local: in the current context */
-      public final TaskMode mode;
+      public final ExecTarget mode;
       
-      private static final TaskMode DEFAULT_MODE = TaskMode.LOCAL;
+      private static final ExecTarget DEFAULT_MODE = ExecTarget.nonDispatchedAny();
       private static final boolean DEFAULT_RECURSIVE = false;
       private static final boolean DEFAULT_PREINIT_OUTPUT_MAPPING = false;
       private static final boolean DEFAULT_ACQUIRE_WRITE_REFS = false;
@@ -255,14 +255,14 @@ public class ICInstructions {
       }
       
       public static MakeImmRequest fromVars(List<Var> out,
-          List<Var> in, TaskMode mode) {
+          List<Var> in, ExecTarget mode) {
         return fromVars(out, in, null, mode,
             DEFAULT_RECURSIVE, DEFAULT_PREINIT_OUTPUT_MAPPING,
             DEFAULT_ACQUIRE_WRITE_REFS);
       }
 
       public static MakeImmRequest fromVars(List<Var> out, List<Var> in,
-            List<Var> wait, TaskMode mode, boolean recursive,
+            List<Var> wait, ExecTarget mode, boolean recursive,
             boolean preinitOutputMapping, boolean acquireWriteRefs) {
         return new MakeImmRequest(buildOutList(out, recursive, preinitOutputMapping),
              buildInList(in, wait, recursive, acquireWriteRefs),
@@ -274,7 +274,7 @@ public class ICInstructions {
       }
 
       public MakeImmRequest(List<MakeImmVar> out, List<MakeImmVar> in,
-          TaskMode mode) {
+          ExecTarget mode) {
         this.out = (out == null) ? MakeImmVar.NONE : out;
         this.in = (in == null) ? MakeImmVar.NONE : in ;
         this.mode = mode;
@@ -502,16 +502,12 @@ public class ICInstructions {
     public abstract List<Var> getBlockingInputs(Program prog);
     
     /**
-     * Some instructions will spawn off asynchronous tasks
-     * @return SYNC if nothing spawned, otherwise the variety of task spawned
+     * This must return information about the execution mode of the 
+     * instruction: whether it spawns asynchronous work and where it
+     * expects to be run.
+     * @return execution mode of instruction 
      */
-    public abstract TaskMode getMode();
-    
-    /**
-     * @return which execution contexts are supported
-     */
-    public abstract List<ExecContext> supportedContexts();
-    
+    public abstract ExecTarget execMode();
     /**
      * @return true if instruction is cheap: i.e. doesn't consume much CPU or IO
      *        time so doesn't need to be run in parallel 
@@ -739,13 +735,8 @@ public class ICInstructions {
     }
 
     @Override
-    public TaskMode getMode() {
-      return TaskMode.SYNC;
-    }
-    
-    @Override
-    public List<ExecContext> supportedContexts() {
-      return ExecContext.ALL;
+    public ExecTarget execMode() {
+      return ExecTarget.syncAny();
     }
 
     @Override
@@ -1231,18 +1222,23 @@ public class ICInstructions {
     
     public static FunctionCall createFunctionCall(
         String functionName, List<Var> outputs, List<Arg> inputs,
-        TaskMode mode, TaskProps props) {
+        ExecTarget mode, TaskProps props) {
       Opcode op;
-      if (mode == TaskMode.SYNC) {
+      ExecContext targetCx = mode.targetContext();
+      if (!mode.isAsync()) {
+        assert(targetCx != null && targetCx.isControlContext()) : mode;
         op = Opcode.CALL_SYNC;
-      } else if (mode == TaskMode.CONTROL) {
+      } else if (mode.isDispatched()) {
+        assert(targetCx != null && targetCx.isControlContext()) : mode;
         op = Opcode.CALL_CONTROL;
-      } else if (mode == TaskMode.LOCAL) {
-        op = Opcode.CALL_LOCAL;
-      } else if (mode == TaskMode.LOCAL_CONTROL) {
-        op = Opcode.CALL_LOCAL_CONTROL;
       } else {
-        throw new STCRuntimeError("Task mode " + mode + " not yet supported");
+        if (targetCx == null) {
+          op = Opcode.CALL_LOCAL;
+        } else if (targetCx.isControlContext()) {
+          op = Opcode.CALL_LOCAL_CONTROL;
+        } else {
+          throw new STCRuntimeError("Unexpected: " + mode);
+        }
       }
       return new FunctionCall(op, functionName, outputs, inputs, props);
     }
@@ -1283,19 +1279,7 @@ public class ICInstructions {
       case CALL_CONTROL:
       case CALL_LOCAL:
       case CALL_LOCAL_CONTROL:
-        TaskMode mode;
-        if (op == Opcode.CALL_CONTROL) {
-          mode = TaskMode.CONTROL;
-        } else if (op == Opcode.CALL_SYNC) {
-          mode = TaskMode.SYNC;
-        } else if (op == Opcode.CALL_LOCAL) {
-          mode = TaskMode.LOCAL;
-        } else if (op == Opcode.CALL_LOCAL_CONTROL) {
-          mode = TaskMode.LOCAL;
-        } else {
-          throw new STCRuntimeError("Unexpected op " + op);
-        }
-        List<Boolean> blocking = info.getBlockingInputVector(functionName);
+          List<Boolean> blocking = info.getBlockingInputVector(functionName);
         assert(blocking != null && blocking.size() == inputs.size()) :
           this + "; blocking: " + blocking;
         List<Boolean> needToBlock = new ArrayList<Boolean>(inputs.size());
@@ -1304,7 +1288,7 @@ public class ICInstructions {
         }
                            
         gen.functionCall(functionName, outputs, inputs, needToBlock,
-                                            mode, props);
+                                            execMode(), props);
         break;
       default:
         throw new STCRuntimeError("Huh?");
@@ -1335,10 +1319,7 @@ public class ICInstructions {
       
       if (allNeededClosed && (ForeignFunctions.hasOpEquiv(this.functionName)
                 || ForeignFunctions.hasLocalImpl(this.functionName))) {
-        TaskMode mode = ForeignFunctions.getTaskMode(this.functionName);
-        if (mode == null) {
-          mode = TaskMode.LOCAL;
-        }
+        ExecTarget mode = ForeignFunctions.getTaskMode(this.functionName);
         
         // True unless the function alters mapping itself
         boolean preinitOutputMapping = true;
@@ -1524,36 +1505,18 @@ public class ICInstructions {
     }
 
     @Override
-    public TaskMode getMode() {
+    public ExecTarget execMode() {
       switch (op) {
         case CALL_SYNC:
-          return TaskMode.SYNC;
+          return ExecTarget.syncControl();
         case CALL_LOCAL:
-          return TaskMode.LOCAL;
+          return ExecTarget.nonDispatchedAny();
         case CALL_LOCAL_CONTROL:
-          return TaskMode.LOCAL_CONTROL;
+          return ExecTarget.nonDispatchedControl();
         case CALL_FOREIGN:
           return ForeignFunctions.getTaskMode(functionName);
         case CALL_CONTROL:
-          return TaskMode.CONTROL;
-        default:
-          throw new STCRuntimeError("Unexpected function call opcode: " + op);
-      }
-    }
-    
-    @Override
-    public List<ExecContext> supportedContexts() {
-      switch (op) {
-        case CALL_SYNC:
-        case CALL_LOCAL_CONTROL:
-          return ExecContext.CONTROL_LIST;
-        case CALL_LOCAL:
-          // Can run anywhere
-          return ExecContext.ALL;
-        case CALL_FOREIGN:
-        case CALL_CONTROL:
-          // Task is spawned: doesn't matter
-          return ExecContext.ALL;
+          return ExecTarget.dispatchedControl();
         default:
           throw new STCRuntimeError("Unexpected function call opcode: " + op);
       }
@@ -1633,41 +1596,19 @@ public class ICInstructions {
     }
 
     @Override
-    public TaskMode getMode() {
-      return TaskMode.SYNC;
+    public ExecTarget execMode() {
+      ExecTarget fnMode = ForeignFunctions.getTaskMode(functionName);
+      
+      // Executes synchronously in desired context
+      return ExecTarget.sync(fnMode.targetContext());
     }
     
     @Override
-    public List<ExecContext> supportedContexts() {
-      TaskMode fnMode = ForeignFunctions.getTaskMode(functionName);
-      switch (fnMode) {
-        case CONTROL:
-        case LOCAL_CONTROL:
-          return ExecContext.CONTROL_LIST;
-        case WORKER:
-          return ExecContext.WORKER_LIST;
-        case LOCAL:
-        case SYNC:
-          return ExecContext.ALL;
-        default:
-          throw new STCRuntimeError("Unexpected: " + fnMode);
-      }
-    }
-
-    @Override
     public boolean isCheap() {
-      TaskMode fnMode = ForeignFunctions.getTaskMode(functionName);
-      switch (fnMode) {
-        case LOCAL_CONTROL:
-        case LOCAL:
-        case SYNC:
-          return true;
-        case CONTROL:
-        case WORKER:
-          return false;
-        default:
-          throw new STCRuntimeError("Unexpected: " + fnMode);
-      }
+      ExecTarget fnMode = ForeignFunctions.getTaskMode(functionName);
+      // The logic is that any functions which were designated to execute
+      // non-locally must involve some amount of work.
+      return !fnMode.isDispatched();
     }
     
     @Override
@@ -1799,14 +1740,8 @@ public class ICInstructions {
     }
 
     @Override
-    public TaskMode getMode() {
-      return TaskMode.SYNC;
-    }
-    
-    @Override
-    public List<ExecContext> supportedContexts() {
-      // Only run external commands on workers
-      return ExecContext.WORKER_LIST;
+    public ExecTarget execMode() {
+      return ExecTarget.sync(ExecContext.defaultWorker());
     }
 
     @Override
@@ -2012,7 +1947,7 @@ public class ICInstructions {
       } else {
         return MakeImmRequest.fromVars(
                 Var.NONE, waitForInputs,
-                TaskMode.LOCAL);
+                ExecTarget.nonDispatchedAny());
       }
     }
     
@@ -2054,13 +1989,8 @@ public class ICInstructions {
 
 
     @Override
-    public TaskMode getMode() {
-      return TaskMode.CONTROL;
-    }
-    
-    @Override
-    public List<ExecContext> supportedContexts() {
-      return ExecContext.ALL;
+    public ExecTarget execMode() {
+      return ExecTarget.dispatchedControl();
     }
 
     @Override
@@ -2182,15 +2112,10 @@ public class ICInstructions {
     }
 
     @Override
-    public TaskMode getMode() {
-      return TaskMode.SYNC;
+    public ExecTarget execMode() {
+      return ExecTarget.syncAny();
     }
     
-    @Override
-    public List<ExecContext> supportedContexts() {
-      return ExecContext.ALL;
-    }
-
     @Override
     public boolean isCheap() {
       return true;
@@ -2461,8 +2386,8 @@ public class ICInstructions {
         return MakeImmRequest.fromVars(
             (this.output == null) ? 
                   null : Collections.singletonList(this.output),
-            ICUtil.extractVars(this.inputs),
-            Var.NONE, TaskMode.LOCAL, false, preinitOutputMapping, false);
+            ICUtil.extractVars(this.inputs), Var.NONE,
+            ExecTarget.nonDispatchedAny(), false, preinitOutputMapping, false);
       }
     }
 
@@ -2510,20 +2435,15 @@ public class ICInstructions {
       }
     }
     @Override
-    public TaskMode getMode() {
+    public ExecTarget execMode() {
       if (op == Opcode.ASYNC_OP) {
-        return TaskMode.CONTROL;
+        return ExecTarget.dispatchedControl();
       } else {
         assert(op == Opcode.LOCAL_OP);
-        return TaskMode.SYNC;
+        return ExecTarget.syncAny();
       }
     }
     
-    @Override
-    public List<ExecContext> supportedContexts() {
-      return ExecContext.ALL;
-    }
-
     @Override
     public boolean isCheap() {
       // Ops are generally cheap

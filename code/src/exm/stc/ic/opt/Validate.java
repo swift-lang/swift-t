@@ -28,6 +28,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
@@ -326,7 +327,7 @@ public class Validate implements OptimizerPass {
   private void checkExecCx(Logger logger, Program program, Function fn) {
     // Don't need to check context if no distinct contexts
     if (!Settings.NO_TURBINE_ENGINE) {
-      checkExecCx(logger, program, fn.mainBlock(), ExecContext.CONTROL);
+      checkExecCx(logger, program, fn.mainBlock(), ExecContext.control());
     }
   }
 
@@ -336,9 +337,9 @@ public class Validate implements OptimizerPass {
     for (Statement stmt: block.getStatements()) {
       switch (stmt.type()) {
         case INSTRUCTION:
-          List<ExecContext> valid = stmt.instruction().supportedContexts();
-          assert(valid.contains(execCx)) : stmt + " expects to execute in " +
-                "one of these contexts: " + valid + " but is in " + execCx; 
+          ExecTarget mode = stmt.instruction().execMode();
+          assert(mode.canRunIn(execCx)) : stmt + " has execution "
+                + "mode: " + mode + " but is in context" + execCx; 
           break;
         case CONDITIONAL:
           checkExecCxRecurse(logger, program, execCx, stmt.conditional());

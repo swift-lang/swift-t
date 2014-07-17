@@ -43,7 +43,7 @@ import exm.stc.common.lang.Intrinsics;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Operators.Op;
-import exm.stc.common.lang.TaskMode;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.TaskProp;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
@@ -585,7 +585,7 @@ public class  ExprWalker {
       
       backend.startWaitStatement(context.constructName("ann-wait"),
               VarRepr.backendVars(waitVars),
-              WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL_CONTROL);
+              WaitMode.WAIT_ONLY, false, false, ExecTarget.nonDispatchedControl());
       openedWait = true;
       callContext = new LocalContext(context);
       for (Pair<TaskPropKey,Var> x: propFutures) {
@@ -975,7 +975,7 @@ public class  ExprWalker {
       TaskProps waitProps = props.filter(TaskPropKey.PRIORITY);
       backend.startWaitStatement( fc.constructName("call-" + function),
            VarRepr.backendVars(waitVars), WaitMode.WAIT_ONLY,
-           false, false, TaskMode.LOCAL_CONTROL,
+           false, false, ExecTarget.nonDispatchedControl(),
            VarRepr.backendProps(waitProps));
 
       assert(waitVars.size() == derefVars.size());
@@ -1044,7 +1044,7 @@ public class  ExprWalker {
       backend.startWaitStatement(
           context.constructName(function + "-checkpoint-wait"),
           VarRepr.backendVars(checkpointKeyFutures), WaitMode.WAIT_ONLY,
-          false, true, TaskMode.LOCAL);
+          false, true, ExecTarget.nonDispatchedAny());
       Var keyBlob = packCheckpointKey(context, function,
                                        checkpointKeyFutures);
       
@@ -1084,7 +1084,7 @@ public class  ExprWalker {
     backend.startWaitStatement(
         context.constructName(function + "-checkpoint-wait"),
         VarRepr.backendVars(waitVals), WaitMode.WAIT_ONLY,
-        false, true, TaskMode.LOCAL);
+        false, true, ExecTarget.nonDispatchedAny());
     
     // Lookup checkpoint key again since variable might not be able to be
     // passed through wait.  Rely on optimizer to clean up redundancy
@@ -1240,11 +1240,11 @@ public class  ExprWalker {
                                     backendProps);
       }
     } else if (context.hasFunctionProp(function, FnProp.COMPOSITE)) {
-      TaskMode mode;
+      ExecTarget mode;
       if (context.hasFunctionProp(function, FnProp.SYNC)) {
-        mode = TaskMode.SYNC;
+        mode = ExecTarget.syncControl();
       } else {
-        mode = TaskMode.CONTROL;
+        mode = ExecTarget.dispatchedControl();
       }
       backend.functionCall(function, Var.asArgList(backendIList), backendOList,
                            mode, backendProps);
@@ -1303,7 +1303,7 @@ public class  ExprWalker {
     
     // Other code always creates sync wrapper
     assert(context.hasFunctionProp(function, FnProp.SYNC));
-    TaskMode mode = TaskMode.SYNC;
+    ExecTarget mode = ExecTarget.syncControl();
     
     // Only priority property is used directly in sync instruction,
     // but other properties are useful to have here so that the optimizer
@@ -1446,7 +1446,7 @@ public class  ExprWalker {
     String wName = context.getFunctionContext().constructName("copy-wait");
     List<Var> waitVars = Arrays.asList(src);
     backend.startWaitStatement(wName, VarRepr.backendVars(waitVars),
-            WaitMode.WAIT_ONLY, false, false, TaskMode.LOCAL);
+            WaitMode.WAIT_ONLY, false, false, ExecTarget.nonDispatchedAny());
     Var derefed = varCreator.createTmpAlias(context, dst.type());
     retrieveRef(derefed, src, false);
     backendAsyncCopy(context, dst, derefed);
@@ -1466,7 +1466,7 @@ public class  ExprWalker {
     List<Var> waitVars = Arrays.asList(src);
     backend.startWaitStatement( context.constructName("copystruct"), 
                     VarRepr.backendVars(waitVars), WaitMode.WAIT_ONLY,
-                    false, false, TaskMode.LOCAL);
+                    false, false, ExecTarget.nonDispatchedAny());
     Var rValDerefed = varCreator.createTmp(context, 
             src.type().memberType(), false, true);
     retrieveRef(rValDerefed, src, false);

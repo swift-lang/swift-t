@@ -93,7 +93,7 @@ public class STCompiler {
       throw new STCFatal(ExitCode.ERROR_INTERNAL.code());
     }
     catch (Throwable e) {
-      // Other error, possibly ParserRuntimeException
+      // Other error, possibly STCRuntimeError
       reportInternalError(e);
       throw new STCFatal(ExitCode.ERROR_INTERNAL.code());
     }
