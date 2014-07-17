@@ -131,7 +131,8 @@ adlb_code ADLB_Iget(int type_requested, void* payload, int* length,
   If a work unit doesn't fit in the posted buffer, a runtime error
   will occur.
 
-  TODO: not implemented yet
+  TODO: currently we assume that only requests for the same type
+        will be issues concurrently
   payload: will be retained by ADLB until request is completed.
   req: handle used to check for completion, filled in by function
  */
@@ -143,8 +144,7 @@ adlb_code ADLB_Aget(int type_requested, adlb_payload_buf payload,
 /*
   Same as ADLB_Aget except initiates multiple requests at once.
   
-  TODO: not implemented yet
-  TODO: could return message round-trips if we had a flag to
+  TODO: could reduce message round-trips if we had a flag to
         block on the first request
   nreqs: number of requests to initiate
   payloads: array of nreqs payload buffers
