@@ -115,9 +115,12 @@ static adlb_code xlb_block_worker(bool blocking);
 static adlb_code xlb_aget_test(adlb_get_req *req, int* length,
                     int* answer, int* type_recvd, MPI_Comm* comm,
                     xlb_get_req_impl *req_impl);
-static adlb_code xlb_aget_progress(xlb_get_req_impl *req, bool blocking);
+static adlb_code xlb_aget_progress(adlb_get_req *req_handle,
+                    xlb_get_req_impl *req, bool blocking);
+static adlb_code xlb_get_req_cancel(adlb_get_req *req,
+                             xlb_get_req_impl *impl);
 static adlb_code xlb_get_req_release(adlb_get_req* req,
-                    xlb_get_req_impl* impl);
+                    xlb_get_req_impl* impl, bool cancelled);
 
 static void
 check_versions()
@@ -705,7 +708,19 @@ static adlb_code xlb_get_reqs_init(void)
 
 static adlb_code xlb_get_reqs_finalize(void)
 {
-  // TODO: cancel any outstanding requests
+  adlb_code ac;
+
+  // Cancel any outstanding requests
+  for (int i = 0; i < xlb_get_reqs.size; i++)
+  {
+    xlb_get_req_impl *req = &xlb_get_reqs.reqs[i];
+    if (req->in_use)
+    {
+      adlb_get_req tmp_handle = i;
+      ac = xlb_get_req_cancel(&tmp_handle, req);
+      ADLB_CHECK(ac);
+    }
+  }
 
   if (xlb_get_reqs.reqs != NULL)
   {
@@ -877,12 +892,12 @@ static adlb_code xlb_aget_test(adlb_get_req *req, int* length,
                     xlb_get_req_impl *req_impl)
 {
   adlb_code ac;
-  ac = xlb_aget_progress(req_impl, false);
+  ac = xlb_aget_progress(req, req_impl, false);
   ADLB_CHECK(ac);
 
-  if (ac == ADLB_NOTHING)
+  if (ac == ADLB_NOTHING || ac == ADLB_SHUTDOWN)
   {
-    return ADLB_NOTHING;
+    return ac;
   }
 
   *length = req_impl->hdr.length;
@@ -891,7 +906,7 @@ static adlb_code xlb_aget_test(adlb_get_req *req, int* length,
   *comm = req_impl->task_comm;
 
   // Release and invalidate request
-  ac = xlb_get_req_release(req, req_impl);
+  ac = xlb_get_req_release(req, req_impl, false);
   ADLB_CHECK(ac);
 
   return ADLB_SUCCESS;
@@ -900,27 +915,31 @@ static adlb_code xlb_aget_test(adlb_get_req *req, int* length,
 /*
   Make progress on get request.
 
-  Returns ADLB_SUCCESS if completed, ADLB_NOTHING if not complete,
-    ADLB_ERROR if error encountered
-
   blocking: if true, don't return until completed
+
+  Returns ADLB_SUCCESS if completed, ADLB_NOTHING if not complete,
+    ADLB_ERROR if error encountered, ADLB_SHUTDOWN on shutdown
+
+  Note that on errors we can't yet cleanly terminate requests.
+  In this situation subsequent requests may be matched to wrong thing.
  */
-static adlb_code xlb_aget_progress(xlb_get_req_impl *req, bool blocking)
+static adlb_code xlb_aget_progress(adlb_get_req *req_handle,
+              xlb_get_req_impl *req, bool blocking)
 {
   int rc;
-  if (blocking)
+  while (req->ncomplete < req->ntotal)
   {
-    // Wait for all outstanding requests
-    rc = MPI_Waitall(req->ntotal - req->ncomplete,
-                         &req->reqs[req->ncomplete],
-                         MPI_STATUSES_IGNORE);
-    MPI_CHECK(rc);
+    int mpireq_num = req->ncomplete;
 
-    req->ncomplete = req->ntotal;
-  }
-  else
-  {
-    while (req->ncomplete < req->ntotal)
+    if (blocking)
+    {
+      // Wait for all outstanding requests
+      rc = MPI_Wait(&req->reqs[req->ncomplete], MPI_STATUS_IGNORE);
+      MPI_CHECK(rc);
+      
+      req->ncomplete++;
+    }
+    else
     {
       int flag;
       rc = MPI_Test(&req->reqs[req->ncomplete], &flag,
@@ -932,6 +951,17 @@ static adlb_code xlb_aget_progress(xlb_get_req_impl *req, bool blocking)
         return ADLB_NOTHING;
       }
       req->ncomplete++;
+    }
+
+    // Special handling for requests
+    if (mpireq_num == XLB_GET_RESP_HDR_IX &&
+        req->hdr.code != ADLB_SUCCESS)
+    {
+      /* E.g. shutdown or error */
+      adlb_code ac = xlb_get_req_cancel(req_handle, req);
+      ADLB_CHECK(ac);
+
+      return req->hdr.code;
     }
   }
 
@@ -945,12 +975,38 @@ static adlb_code xlb_aget_progress(xlb_get_req_impl *req, bool blocking)
   return ADLB_SUCCESS;
 }
 
+/*
+ * Cancel a get request.
+ * Note that this doesn't cleanly cancel it, since messages may end up
+ * being matched to the wrong thing.
+ */
+static adlb_code xlb_get_req_cancel(adlb_get_req *req,
+                             xlb_get_req_impl *impl)
+{
+  assert(impl->in_use);
+
+  adlb_code ac;
+
+  // Cancel outstanding MPI requests, regardless of whether they
+  // completed or not.
+  for (int i = impl->ncomplete; i < impl->ntotal; i++)
+  {
+    CANCEL(&impl->reqs[i]);
+  }
+
+  // Release the request object
+  ac = xlb_get_req_release(req, impl, true);
+  ADLB_CHECK(ac);
+
+  return ADLB_SUCCESS;
+}
+
 static adlb_code xlb_get_req_release(adlb_get_req* req,
-                    xlb_get_req_impl* impl)
+                    xlb_get_req_impl* impl, bool cancelled)
 {
   // Should be completed
   assert(impl->in_use);
-  assert(impl->ncomplete == impl->ntotal);
+  assert(cancelled || impl->ncomplete == impl->ntotal);
 
   impl->in_use = false;
 
@@ -984,8 +1040,12 @@ adlb_code ADLBP_Aget_wait(adlb_get_req *req, int* length,
   ac = xlb_block_worker(true);
   ADLB_CHECK(ac);
 
-  ac = xlb_aget_progress(req_impl, true);
+  ac = xlb_aget_progress(req, req_impl, true);
   ADLB_CHECK(ac);
+  if (ac == ADLB_SHUTDOWN)
+  {
+    return ADLB_SHUTDOWN;
+  }
   assert(ac == ADLB_SUCCESS); // Shouldn't be ADLB_NOTHING
 
   // Notify we're unblocked
@@ -997,7 +1057,7 @@ adlb_code ADLBP_Aget_wait(adlb_get_req *req, int* length,
   *type_recvd = req_impl->hdr.type;
   *comm = req_impl->task_comm;
 
-  ac = xlb_get_req_release(req, req_impl);
+  ac = xlb_get_req_release(req, req_impl, false);
   ADLB_CHECK(ac);
 
   return ADLB_SUCCESS;

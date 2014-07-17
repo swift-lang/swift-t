@@ -250,6 +250,7 @@ struct packed_mget_request
  */
 struct packed_get_response
 {
+  /** Response code: ADLB_SUCCESS, ADLB_ERROR, or ADLB_SHUTDOWN */
   adlb_code code;
   int length;
   int answer_rank;

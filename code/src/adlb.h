@@ -160,7 +160,7 @@ adlb_code ADLB_Amget(int type_requested, int nreqs,
 /*
   Test if a get request completed without blocking.
 
-  Return codes match ADLB_Iget
+  Return codes match ADLB_Get
  */
 adlb_code ADLBP_Aget_test(adlb_get_req *req, int* length,
                     int* answer, int* type_recvd, MPI_Comm* comm);
