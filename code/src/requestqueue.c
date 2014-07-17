@@ -133,9 +133,6 @@ xlb_requestqueue_add(int rank, int type, int count, bool blocking)
   if (xlb_map_to_server(rank) == xlb_comm_rank)
   {
     int targets_ix = xlb_my_worker_ix(rank);
-    // Assert rank was not already entered
-    valgrind_assert_msg(targets[targets_ix].item == NULL,
-          "requestqueue: double add: rank: %i", rank);
     R = &targets[targets_ix];
     if (R->item != NULL) {
       /*
