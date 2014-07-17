@@ -13,7 +13,7 @@ import exm.stc.common.util.Pair;
  * Represent an asynchronous execution provider
  */
 public enum AsyncExecutor {
-  COASTERS,
+  COASTER,
   ;
   
   /**
@@ -60,7 +60,7 @@ public enum AsyncExecutor {
    */
   public boolean isCommandLine() {
     switch (this) {
-      case COASTERS:
+      case COASTER:
         return true;
       default:
         throw new STCRuntimeError("Unimplemented for " + this);

@@ -179,8 +179,8 @@ class Turbine {
   private static final Token RULE_KEYWORD_TARGET = new Token("target");
 
   // Async task execution
-  private static final Token ASYNC_EXEC_COASTERS =
-          turbFn("async_exec_coasters");
+  private static final Token ASYNC_EXEC_COASTER =
+          turbFn("async_exec_coaster");
 
   // Dereference functions
   private static final Token DEREFERENCE_INTEGER =
@@ -1657,8 +1657,8 @@ class Turbine {
     
     Token execCmd;
     switch (executor) {
-    case COASTERS:
-      execCmd = ASYNC_EXEC_COASTERS;
+    case COASTER:
+      execCmd = ASYNC_EXEC_COASTER;
       break;
     default:
       throw new STCRuntimeError("code generation not implemented for "

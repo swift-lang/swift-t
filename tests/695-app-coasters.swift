@@ -2,14 +2,14 @@ import assert;
 import files;
 
 // SKIP-THIS-TEST
-// Work in progress on coasters
+// Work in progress on coaster app functions
 
-@dispatch=coasters
+@dispatch=coaster
 app () echo (string arg) {
   "echo" arg
 }
 
-@dispatch=coasters
+@dispatch=coaster
 app (file out) echo2 (string args[]) {
   "echo" args @stdout=out
 }
