@@ -20,7 +20,7 @@ import java.util.List;
 
 /**
  * Where a bit of code will execute.
- * 
+ *
  * We treat control and work contexts differently even if they run on the same
  * resources: nothing that will block for an indeterminate or long amount of
  * time should run in a control context.
@@ -30,71 +30,75 @@ public class ExecContext {
    * Represent a general kind of context
    */
   public static enum Kind {
-    WORKER, CONTROL,; 
+    WORKER, CONTROL,;
   }
-  
+
   /**
    * Represent a specific kind of worker.
-   * 
+   *
    * Compare based on identity
    * Include string to identify in debug messages, etc.
    */
   public static class WorkerContext {
     private String name;
-    
+
     public WorkerContext(String name) {
       this.name = name;
     }
-    
+
     @Override
     public String toString() {
-      return "WorkerContext <" + name + ">";
+      return name;
     }
-    
+
     private static WorkerContext DEFAULT = new WorkerContext("WORKER");
   }
-  
+
   private ExecContext(Kind kind, WorkerContext workContext) {
-    if (this.kind == Kind.WORKER) {
+    if (kind == Kind.WORKER) {
       assert(workContext != null);
+    } else {
+      assert( kind == Kind.CONTROL);
+      assert(workContext == null);
     }
     this.kind = kind;
     this.workContext = workContext;
   }
-  
+
   private final Kind kind;
   private final WorkerContext workContext;
-  
+
+  private static final ExecContext CONTROL_CONTEXT =
+                  new ExecContext(Kind.CONTROL, null);
+  private static final ExecContext DEFAULT_WORKER_CONTEXT =
+                  new ExecContext(Kind.WORKER, WorkerContext.DEFAULT);
+
   public WorkerContext workContext() {
     return workContext;
   }
-  
-  private static final ExecContext CONTROL_CONTEXT =
-                new ExecContext(Kind.CONTROL, null);
+
   public static ExecContext control() {
     return CONTROL_CONTEXT;
   }
-  
+
   public static ExecContext worker(WorkerContext workContext) {
-    return new ExecContext(Kind.CONTROL, workContext);
+    return new ExecContext(Kind.WORKER, workContext);
   }
-  
-  private static final ExecContext DEFAULT_WORKER_CONTEXT = 
-            new ExecContext(Kind.WORKER, WorkerContext.DEFAULT);
+
   public static ExecContext defaultWorker() {
     return DEFAULT_WORKER_CONTEXT;
   }
-  
+
   public List<ExecContext> asList() {
     return Collections.singletonList(this);
   }
 
   public boolean isControlContext() {
-    return kind == Kind.CONTROL; 
+    return kind == Kind.CONTROL;
   }
-  
+
   public boolean isAnyWorkContext() {
-    return kind == Kind.WORKER; 
+    return kind == Kind.WORKER;
   }
 
   @Override
@@ -112,7 +116,7 @@ public class ExecContext {
     if (this == obj) {
       return true;
     }
-    
+
     assert (obj != null) : "Compare " + this + " with null";
     assert(obj instanceof ExecContext) :
         "Compare ExecContext with " + obj.getClass().getCanonicalName();
@@ -121,7 +125,7 @@ public class ExecContext {
     if (kind != other.kind) {
       return false;
     }
-    
+
     if (workContext == null) {
       if (other.workContext != null) {
         return false;
