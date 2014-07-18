@@ -359,8 +359,6 @@ TURBINE_DEPS := $(patsubst %.c, %.d, $(TURBINE_SRC))
 TURBINE_EXECUTABLE_DEPS := $(patsubst %.c, %.d, $(TURBINE_EXECUTABLE_SRC))
 TURBINE_EXECUTABLE_DEPS += $(patsubst %.manifest, %.manifest.d, \
 			     $(TURBINE_EXECUTABLE_MANIFESTS))
-TURBINE_EXECUTABLE_DEPS += $(patsubst %.manifest, %.x.d, \
-			     $(TURBINE_EXECUTABLE_MANIFESTS))
 
 STATIC_PKG_DEPS := $(patsubst %.c, %.d, $(STATIC_PKG_SRC))
 
@@ -370,7 +368,6 @@ include tests/module.mk
 TEST_DEPS := $(patsubst %.c, %.d, $(TEST_SRC))
 ifeq ($(ENABLE_STATIC_PKG),1)
 	TEST_DEPS += $(patsubst %.manifest, %.manifest.d, $(TEST_SRC_MANIFEST))
-	TEST_DEPS += $(patsubst %.manifest, %.x.d, $(TEST_SRC_MANIFEST))
 endif
 
 # Dependency files:
@@ -486,24 +483,14 @@ LD_EXEC_SYMBOL_EXPORT = -Wl,--export-dynamic
 
 # Rule to build C source file based on manifest
 # Also create deps file so it can be correctly recreated upon change.
-%.c: %.manifest %.manifest.d %.x.d $(MKSTATIC) $(MKSTATIC_TEMPLATE)
+%.c: %.manifest %.manifest.d $(MKSTATIC) $(MKSTATIC_TEMPLATE)
 	$(Q) "  MKSTATIC	$(@)"
-	$(E) $(MKSTATIC_RUN) $< -c $(@) \
-	      --link-deps $(patsubst %.manifest, %.x.d, $<) \
-			  $(patsubst %.manifest, %.x, $<)
+	$(E) $(MKSTATIC_RUN) $< -c $(@)
 
 %.manifest.d: %.manifest $(MKSTATIC) $(MKSTATIC_TEMPLATE)
 	$(Q) "  MKSTATIC_DEPS	$(@)"
 	$(E) $(MKSTATIC_RUN) $< \
 	  --deps $(@) $(patsubst %.manifest, %.c, $<)
-
-# Dependency rules for executable with .x or no extension
-%.x.d: %.manifest $(MKSTATIC) $(MKSTATIC_TEMPLATE)
-	$(Q) "  LINK_DEPS	$(@)"
-	$(E) $(MKSTATIC_RUN) $< --link-deps $(@) \
-			  $(patsubst %.manifest, %.x, $<)
-	$(E) $(MKSTATIC_RUN) $< --link-deps $(@) \
-			  $(patsubst %.manifest, %, $<)
 
 # Binary executables - link from .o
 # Currently builds a dynamically linked executable
