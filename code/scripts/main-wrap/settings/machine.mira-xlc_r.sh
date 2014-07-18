@@ -1,5 +1,5 @@
 
-# MIRA XLC
+# MIRA XLC_R
 
 TCL_HOME=/home/wozniak/Public/sfw/ppc64/bgxlc/static_r/tcl-8.5.12
 TCL_VERSION=8.5
