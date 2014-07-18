@@ -34,23 +34,23 @@ import exm.stc.common.util.Pair;
 /**
  * General STC settings
  * @author wozniak
- * 
- * List of Java properties not processed here: 
- * stc.logfile: used to set up logging in Main 
+ *
+ * List of Java properties not processed here:
+ * stc.logfile: used to set up logging in Main
  * */
 public class Settings
 {
-  
-  // Whether we're using no engine
-  // TODO: remove eventually
-  public static boolean NO_TURBINE_ENGINE = false;
-  public static final String NO_TURBINE_ENGINE_KEY = "stc.turbine.no-engine";
-  
+
+  // Whether we're using a separate engine (old design)
+  public static boolean SEPARATE_TURBINE_ENGINE = false;
+  public static final String SEPARATE_TURBINE_ENGINE_KEY =
+                              "stc.turbine.separate-engine";
+
   public static final String TURBINE_VERSION = "stc.turbine.version";
   public static final String DEBUG_LEVEL = "stc.debugging";
 
   public static final String RPATH = "stc.rpath";
-  
+
   public static final String IC_OUTPUT_FILE = "stc.ic.output-file";
   public static final String OPT_CONSTANT_FOLD = "stc.opt.constant-fold";
   public static final String OPT_SHARED_CONSTANTS = "stc.opt.shared-constants";
@@ -67,10 +67,10 @@ public class Settings
   public static final String OPT_FUNCTION_INLINE = "stc.opt.function-inline";
   public static final String OPT_FUNCTION_INLINE_THRESHOLD =
                               "stc.opt.function-inline-threshold";
-  public static final String OPT_FUNCTION_SIGNATURE = 
+  public static final String OPT_FUNCTION_SIGNATURE =
                               "stc.opt.function-signature";
   public static final String OPT_DISABLE_ASSERTS = "stc.opt.disable-asserts";
-  /* Master switch for loop unrolling pass.  At minimum manually 
+  /* Master switch for loop unrolling pass.  At minimum manually
    * annotated loops are unrolled */
   public static final String OPT_UNROLL_LOOPS = "stc.opt.unroll-loops";
   /* Expand short loops with known bounds */
@@ -94,32 +94,32 @@ public class Settings
   public static final String OPT_ARRAY_BUILD = "stc.opt.array-build";
   public static final String OPT_LOOP_SIMPLIFY = "stc.opt.loop-simplify";
   public static final String OPT_PROPAGATE_ALIASES = "stc.opt.propagate-aliases";
-  
+
   public static final String OPT_MERGE_REFCOUNTS = "stc.opt.merge-refcounts";
   public static final String OPT_CANCEL_REFCOUNTS = "stc.opt.cancel-refcounts";
   public static final String OPT_PIGGYBACK_REFCOUNTS = "stc.opt.piggyback-refcounts";
   public static final String OPT_BATCH_REFCOUNTS = "stc.opt.batch-refcounts";
   public static final String OPT_HOIST_REFCOUNTS = "stc.opt.hoist-refcounts";
-  
+
   public static final String OPT_MAX_ITERATIONS = "stc.opt.max-iterations";
   public static final String TURBINE_NO_STACK = "stc.codegen.no-stack";
   public static final String TURBINE_NO_STACK_VARS = "stc.codegen.no-stack-vars";
 
   public static final String ENABLE_REFCOUNTING = "stc.refcounting";
   public static final String ENABLE_CHECKPOINTING = "stc.checkpointing";
-  
+
   public static final String AUTO_DECLARE = "stc.auto-declare";
-  
+
   public static final String INPUT_FILENAME = "stc.input_filename";
   public static final String OUTPUT_FILENAME = "stc.output_filename";
   public static final String STC_HOME = "stc.stc_home";
   public static final String STC_VERSION = "stc.version";
   public static final String TURBINE_HOME = "stc.turbine_home";
-  
+
   public static final String LOG_FILE = "stc.log.file";
   public static final String LOG_TRACE = "stc.log.trace";
   public static final String COMPILER_DEBUG = "stc.compiler-debug";
-  
+
   /** Run compiler repeatedly so can be profiled */
   public static final String PROFILE_STC = "stc.profile";
 
@@ -127,26 +127,26 @@ public class Settings
   public static final String PREPROCESS_ONLY = "stc.preprocess_only";
   public static final String PREPROCESSOR_FORCE_GCC = "stc.preproc.force-gcc";
   public static final String PREPROCESSOR_FORCE_CPP = "stc.preproc.force-cpp";
-  
+
 
   /** Record assumption that we need to pass waited-on vars into block */
   public static final String MUST_PASS_WAIT_VARS = "stc.must_pass_wait_vars";
-  
+
   private static final Properties properties;
-  
+
   private static final List<String> modulePath = new ArrayList<String>();
-  
+
   /** Additional metadata */
-  private static final List<Pair<String, String>> metadata = 
+  private static final List<Pair<String, String>> metadata =
             new ArrayList<Pair<String, String>>();
-  
+
   static {
     Properties defaults = new Properties();
     // Set defaults here
     defaults.setProperty(TURBINE_VERSION, "0.0.5");
     defaults.setProperty(DEBUG_LEVEL, "COMMENTS");
     defaults.setProperty(IC_OUTPUT_FILE, "");
-    defaults.setProperty(NO_TURBINE_ENGINE_KEY, "true");
+    defaults.setProperty(SEPARATE_TURBINE_ENGINE_KEY, "false");
     defaults.setProperty(RPATH, "");
     defaults.setProperty(INPUT_FILENAME, "");
     defaults.setProperty(OUTPUT_FILENAME, "");
@@ -157,7 +157,7 @@ public class Settings
     defaults.setProperty(PREPROCESS_ONLY, "false");
     defaults.setProperty(PREPROCESSOR_FORCE_CPP, "false");
     defaults.setProperty(PREPROCESSOR_FORCE_GCC, "false");
-    
+
     // Code optimisation settings - defaults
     defaults.setProperty(OPT_FLATTEN_NESTED, "true");
     defaults.setProperty(OPT_CONSTANT_FOLD, "true");
@@ -199,11 +199,11 @@ public class Settings
     defaults.setProperty(LOG_FILE, "");
     defaults.setProperty(LOG_TRACE, "false");
 
-    
+
 
     // True for all current targets
     defaults.setProperty(MUST_PASS_WAIT_VARS, "true");
-    
+
     // Turbine code generation
     // Turbine version
     defaults.setProperty(TURBINE_VERSION, "unknown");
@@ -219,13 +219,13 @@ public class Settings
      with value from System
    */
   public static void initSTCProperties() throws InvalidOptionException {
-    // Pull in properties from wrapper script	 
+    // Pull in properties from wrapper script
     for (String key: properties.stringPropertyNames()) {
       String sysVal = System.getProperty(key);
       if (sysVal != null) {
         properties.setProperty(key, sysVal);
       }
-    } 
+    }
     validateProperties();
     loadVersionNumber();
     initModulePath();
@@ -241,7 +241,7 @@ public class Settings
     // Search current directory last
     modulePath.add(".");
   }
-  
+
   public static void addModulePath(String dir) {
     modulePath.add(dir);
   }
@@ -252,7 +252,7 @@ public class Settings
   public static List<String> getModulePath() {
     return Collections.unmodifiableList(modulePath);
   }
-  
+
   public static void addMetadata(String key, String val) {
     metadata.add(Pair.create(key, val));
   }
@@ -266,8 +266,8 @@ public class Settings
 
   private static void loadVersionNumber() {
     String homeDir = get(STC_HOME);
-    File versionFile = new File(homeDir + File.separator + 
-                                "etc" + File.separator + 
+    File versionFile = new File(homeDir + File.separator +
+                                "etc" + File.separator +
                                 "version.txt");
     try {
       BufferedReader r = new BufferedReader(new FileReader(versionFile));
@@ -289,7 +289,7 @@ public class Settings
     Collections.sort(keys);
     return keys;
   }
-  
+
   /**
      RPATH should be a Unix-style colon-separated list of directories
      @return Possibly empty String array
@@ -300,14 +300,14 @@ public class Settings
       return new String[0];
     return rpaths.split(":");
   }
-  
+
   /**
    * Do any checks for correctness of properties
    * @throws InvalidOptionException
    */
   private static void validateProperties() throws InvalidOptionException {
     // Check that boolean values are correct
-    NO_TURBINE_ENGINE = getBoolean(NO_TURBINE_ENGINE_KEY);
+    SEPARATE_TURBINE_ENGINE = getBoolean(SEPARATE_TURBINE_ENGINE_KEY);
     getBoolean(OPT_FLATTEN_NESTED);
     getBoolean(OPT_CONSTANT_FOLD);
     getBoolean(OPT_DEAD_CODE_ELIM);
@@ -419,7 +419,7 @@ public class Settings
       key + ": " + strVal);
     }
   }
-  
+
   public static int getInt(String key) throws InvalidOptionException {
     String strVal = properties.getProperty(key);
     if (strVal == null) {

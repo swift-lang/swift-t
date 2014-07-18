@@ -23,7 +23,6 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
@@ -56,8 +55,8 @@ public class Validate implements OptimizerPass {
   private final boolean checkCleanups;
   private final boolean noNestedBlocks;
   private final boolean checkExecContext;
-  
-  
+
+
   private Validate(boolean checkVarPassing,
                    boolean checkCleanups,
                    boolean noNestedBlocks,
@@ -72,7 +71,7 @@ public class Validate implements OptimizerPass {
   public static Validate standardValidator() {
     return new Validate(true, true, false, true);
   }
-  
+
   /**
    * @returns validator for final form with additional refcounting
    *                    where we don't do cleanup location check or
@@ -81,7 +80,7 @@ public class Validate implements OptimizerPass {
   public static Validate finalValidator() {
     return new Validate(false, false, false, true);
   }
-  
+
   @Override
   public String getPassName() {
     return "Validate";
@@ -121,15 +120,15 @@ public class Validate implements OptimizerPass {
     for (Var consts: constants.vars()) {
       declared.put(consts.name(), consts);
     }
-    
+
     for (Var in: fn.getInputList()) {
       declared.put(in.name(), in);
     }
-    
+
     for (Var out: fn.getOutputList()) {
       declared.put(out.name(), out);
     }
-    
+
     checkUniqueVarNames(logger, fn, fn.mainBlock(), declared);
   }
 
@@ -138,17 +137,17 @@ public class Validate implements OptimizerPass {
     for (Var v: block.getVariables()) {
       checkVarUnique(logger, fn, declared, v);
     }
- 
+
     checkVarReferences(logger, fn, block, declared);
-      
+
     if (checkCleanups)
       checkCleanups(logger, fn, block);
-    
+
     for (Continuation c: block.getContinuations()) {
       for (Var v: c.constructDefinedVars(ContVarDefType.NEW_DEF)) {
         checkVarUnique(logger, fn, declared, v);
       }
-      for (Block inner: c.getBlocks()) { 
+      for (Block inner: c.getBlocks()) {
         checkUniqueVarNames(logger, fn, inner, declared);
       }
     }
@@ -171,11 +170,11 @@ public class Validate implements OptimizerPass {
     for (Statement stmt: block.getStatements()) {
       checkVarReferences(f, declared, stmt);
     }
-    
+
     for (Continuation c: block.getContinuations()) {
       checkVarReferencesCont(f, declared, c);
     }
-    
+
     for (CleanupAction ca: block.getCleanups()) {
       checkVarReference(f, declared, ca.var(), ca);
       checkVarReferencesInstruction(f, declared, ca.action());
@@ -203,7 +202,7 @@ public class Validate implements OptimizerPass {
     }
   }
 
-  private void checkVarReferencesInstruction(Function f, 
+  private void checkVarReferencesInstruction(Function f,
           Map<String, Var> declared, Instruction inst) {
     for (Arg i: inst.getInputs()) {
       if (i.isVar()) {
@@ -220,7 +219,7 @@ public class Validate implements OptimizerPass {
     assert(declared.containsKey(referencedVar.name())): referencedVar +
                               " not among declared vars in scope: " + declared;
     Var declaredVar = declared.get(referencedVar.name());
-    assert(referencedVar.identical(declaredVar)) : 
+    assert(referencedVar.identical(declaredVar)) :
               context.toString() + " : " +
               declaredVar + " " + referencedVar + " | " +
               declaredVar.storage() + " " + referencedVar.storage() + " | " +
@@ -231,7 +230,7 @@ public class Validate implements OptimizerPass {
 
   private void checkCleanups(Logger logger, Function fn, Block block) {
     Set<Var> blockVars = new HashSet<Var>(block.getVariables());
-    
+
     if (block.getType() == BlockType.MAIN_BLOCK) {
       // Cleanup actions for args valid in outer block of function
       blockVars.addAll(fn.getInputList());
@@ -241,8 +240,8 @@ public class Validate implements OptimizerPass {
       List<Var> constructVars = block.getParentCont().constructDefinedVars();
       blockVars.addAll(constructVars);
     }
-    
-    
+
+
     for (CleanupAction ca: block.getCleanups()) {
       // Don't expect these operations to appear yet
       if (RefCountOp.isRefcountOp(ca.action().op)) {
@@ -253,17 +252,17 @@ public class Validate implements OptimizerPass {
       if (!blockVars.contains(ca.var())) {
         logger.debug("Cleanup action for var not defined in " +
             "block: " + ca.var() + " in function " + fn.getName() + ". " +
-            " Valid variables are: " + blockVars); 
+            " Valid variables are: " + blockVars);
       }
     }
   }
 
-  private void checkVarUnique(Logger logger, 
+  private void checkVarUnique(Logger logger,
           Function fn, Map<String, Var> declared, Var var) {
     checkUsed(fn, var);
     if (var.defType() == DefType.GLOBAL_CONST) {
       Var declaredGlobal = declared.get(var.name());
-      if (declaredGlobal == null) { 
+      if (declaredGlobal == null) {
         throw new STCRuntimeError("Missing global constant: " + var.name());
       } else {
         // Check that definitions matcch
@@ -294,52 +293,49 @@ public class Validate implements OptimizerPass {
     assert(mainBlock.getType() == BlockType.MAIN_BLOCK);
     checkParentLinksRec(logger, program, fn, mainBlock);
   }
-  
+
   private void checkParentLinksRec(Logger logger, Program prog,
           Function fn, Block block) {
     Function fn2 = block.getParentFunction();
-    assert(fn2 == fn) : 
+    assert(fn2 == fn) :
       "Parent function should be " + fn.getName() + " but was "
       + (fn2 == null ? null : fn2.getName());
-    
+
     for (Continuation c: block.allComplexStatements()) {
       if (noNestedBlocks && c.getType() == ContinuationType.NESTED_BLOCK) {
         throw new STCRuntimeError("Nested block present");
       }
-      
-      assert(c.parent() == block) : "Bad continuation parent for " + c 
+
+      assert(c.parent() == block) : "Bad continuation parent for " + c
         + "\n\n\nis " + c.parent()
         + "\n\n\nbut should be: " + block;
       for (Block innerBlock: c.getBlocks()) {
         assert(innerBlock.getType() != BlockType.MAIN_BLOCK);
-        assert(innerBlock.getParentCont() == c) : 
-          "Bad parent for block of type " + innerBlock.getType() 
-                           + "\n" + innerBlock 
+        assert(innerBlock.getParentCont() == c) :
+          "Bad parent for block of type " + innerBlock.getType()
+                           + "\n" + innerBlock
                            + "\n\n\nis " + innerBlock.getParentCont()
                            + "\n\n\nbut should be: " + c;
         checkParentLinksRec(logger, prog, fn, innerBlock);
       }
     }
   }
-  
+
 
 
   private void checkExecCx(Logger logger, Program program, Function fn) {
-    // Don't need to check context if no distinct contexts
-    if (!Settings.NO_TURBINE_ENGINE) {
-      checkExecCx(logger, program, fn.mainBlock(), ExecContext.control());
-    }
+    checkExecCx(logger, program, fn.mainBlock(), ExecContext.control());
   }
 
   private void checkExecCx(Logger logger, Program program,
       Block block, ExecContext execCx) {
-    
+
     for (Statement stmt: block.getStatements()) {
       switch (stmt.type()) {
         case INSTRUCTION:
           ExecTarget mode = stmt.instruction().execMode();
           assert(mode.canRunIn(execCx)) : stmt + " has execution "
-                + "mode: " + mode + " but is in context" + execCx; 
+                + "mode: " + mode + " but is in context" + execCx;
           break;
         case CONDITIONAL:
           checkExecCxRecurse(logger, program, execCx, stmt.conditional());
@@ -348,7 +344,7 @@ public class Validate implements OptimizerPass {
           throw new STCRuntimeError("Unexpected: " + stmt.type());
       }
     }
-    
+
   }
 
   private void checkExecCxRecurse(Logger logger, Program program,

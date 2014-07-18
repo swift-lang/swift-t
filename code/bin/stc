@@ -137,7 +137,7 @@ function get_compiler_opt_name() {
         array-switcheroo) echo "stc.array-ref-switcheroo"
                     return 0
                     ;;
-        no-engine) echo "stc.turbine.no-engine"
+        separate-engine) echo "stc.turbine.separate-engine"
                     return 0
                     ;;
         no-stack)   echo "stc.codegen.no-stack"

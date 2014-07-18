@@ -633,15 +633,7 @@ class Turbine {
   private static Expression tclRuleType(ExecTarget t) {
     assert(t.isAsync());
 
-    if (Settings.NO_TURBINE_ENGINE) {
-      if (t.isDispatched()) {
-        // Same as ADLB work types
-        return adlbWorkTypeVal(t.targetContext());
-      } else {
-        // Just implement as control
-        return adlbWorkTypeVal(ExecContext.control());
-      }
-    } else {
+    if (Settings.SEPARATE_TURBINE_ENGINE) {
       if (!t.isDispatched()) {
         return turbConst("LOCAL");
       } else if (t.targetContext().isControlContext()) {
@@ -650,6 +642,14 @@ class Turbine {
         assert(t.targetContext().isAnyWorkContext());
         // TODO: multiple work types
         return turbConst("WORK");
+      }
+    } else {
+      if (t.isDispatched()) {
+        // Same as ADLB work types
+        return adlbWorkTypeVal(t.targetContext());
+      } else {
+        // Just implement as control
+        return adlbWorkTypeVal(ExecContext.control());
       }
     }
   }
@@ -685,11 +685,11 @@ class Turbine {
       res.add(setPriority(props.priority));
     // Use different command on worker
     Token ruleCmd;
-    if (Settings.NO_TURBINE_ENGINE) {
+    if (Settings.SEPARATE_TURBINE_ENGINE) {
+      ruleCmd = (execCx.isControlContext()) ? RULE : SPAWN_RULE;
+    } else {
       // No worker/control distinction
       ruleCmd = RULE;
-    } else {
-      ruleCmd = (execCx.isControlContext()) ? RULE : SPAWN_RULE;
     }
 
     List<Expression> args = new ArrayList<Expression>();
@@ -745,7 +745,10 @@ class Turbine {
     assert(type.isAsync()) : type;
 
     ExecContext targetContext = type.targetContext();
-    if (Settings.NO_TURBINE_ENGINE) {
+    if (Settings.SEPARATE_TURBINE_ENGINE) {
+      // Default is executing locally
+      return !type.isDispatched();
+    } else {
       if (targetContext == null) {
         // Don't care about target
         return true;
@@ -756,8 +759,6 @@ class Turbine {
       } else {
         return false;
       }
-    } else {
-      return !type.isDispatched();
     }
   }
 
@@ -783,13 +784,13 @@ class Turbine {
     // Different task formats for work types
     if (targetContext.isAnyWorkContext()) {
       // TODO: handle priorities?
-      if (!Settings.NO_TURBINE_ENGINE) {
+      if (Settings.SEPARATE_TURBINE_ENGINE) {
         taskTokens.add(TURBINE_NULL_RULE);
       }
       taskTokens.addAll(action);
     } else {
       assert (targetContext.isControlContext());
-      if (Settings.NO_TURBINE_ENGINE) {
+      if (!Settings.SEPARATE_TURBINE_ENGINE) {
         // Treat as work task - no prefix
         // TODO: handle priorities?
       } else if (props.priority == null) {
@@ -833,10 +834,7 @@ class Turbine {
   }
 
   public static Expression adlbWorkType(ExecContext target) {
-    if (Settings.NO_TURBINE_ENGINE) {
-      // TODO: multiple work types
-      return new Value("turbine::WORK_TASK");
-    } else {
+    if (Settings.SEPARATE_TURBINE_ENGINE) {
       if (target.isControlContext()) {
         return new Value("turbine::CONTROL_TASK");
       } else {
@@ -844,6 +842,9 @@ class Turbine {
         // TODO: multiple work types
         return new Value("turbine::WORK_TASK");
       }
+    } else {
+      // TODO: multiple work types
+      return new Value("turbine::WORK_TASK");
     }
   }
 
@@ -852,16 +853,16 @@ class Turbine {
    * work ids
    */
   public static Expression adlbWorkTypeVal(ExecContext target) {
-    if (Settings.NO_TURBINE_ENGINE) {
-      // TODO: multiple work types
-      return TURBINE_WORKER_WORK_ID;
-    } else {
+    if (Settings.SEPARATE_TURBINE_ENGINE) {
       if (target.isControlContext()) {
         return TURBINE_CONTROL_WORK_ID;
       } else {
         assert(target.isAnyWorkContext());
         return TURBINE_WORKER_WORK_ID;
       }
+    } else {
+      // TODO: multiple work types
+      return TURBINE_WORKER_WORK_ID;
     }
   }
 

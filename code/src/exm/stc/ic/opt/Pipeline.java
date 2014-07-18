@@ -45,10 +45,10 @@ import exm.stc.ic.tree.ICTree.Function;
  * Compile-time pipelining optimization where we merge sequentially dependent
  * tasks.  This reduces scheduling/task dispatch/load balancing overhead, and
  * also eliminates the need to move intermediate data.
- * 
+ *
  * This is a pass that should be run once near end of optimization.
- * 
- * Running it multiple times can result in reduction in parallelism 
+ *
+ * Running it multiple times can result in reduction in parallelism
  */
 public class Pipeline extends FunctionOptimizerPass {
   @Override
@@ -68,7 +68,7 @@ public class Pipeline extends FunctionOptimizerPass {
   }
 
   /**
-   * 
+   *
    * @param logger
    * @param f
    * @param curr
@@ -95,7 +95,7 @@ public class Pipeline extends FunctionOptimizerPass {
         pipelineTasks(logger, f, childBlock, childCx, contInLoop);
       }
     }
-    
+
     if (maybeInLoop) {
       // Don't try to optimize, might serialise things
       return;
@@ -110,16 +110,10 @@ public class Pipeline extends FunctionOptimizerPass {
         WaitStatement w = (WaitStatement)cont;
         boolean compatible = true;
         if (!w.getWaitVars().isEmpty()) {
+          // Can't merge if we have to wait before execution
           compatible = false;
-        } else if (!Settings.NO_TURBINE_ENGINE 
-                    && w.childContext(cx) != cx) {
-          // We can't merge if WORKER and CONTROL contexts are different
-          compatible = false;
-        } else if (Settings.NO_TURBINE_ENGINE && cx.isControlContext()) {
-          /* 
-           * Don't merge work into control, since we might defer important
-           * control work, e.g. work task inside foreach loop
-           */
+        } else if (!w.childContext(cx).compatibleWith(cx)) {
+          // We can't merge if contexts are incompatible
           compatible = false;
         } else if (w.isParallel()) {
           compatible = false;
@@ -127,7 +121,7 @@ public class Pipeline extends FunctionOptimizerPass {
                   !w.targetLocation().equals(Location.ANY_LOCATION)) {
           compatible = false;
         }
-        
+
         if (compatible) {
           candidates.add(w);
         }
@@ -138,11 +132,11 @@ public class Pipeline extends FunctionOptimizerPass {
       // Nothing to merge up
       return;
     }
-    
+
     logger.trace("Found " + candidates.size() + " candidates for " +
     		" wait pipelining");
     WaitStatement bestCand = candidates.get(0);
-    
+
     if (candidates.size() > 1) {
       int bestCost = heuristicCost(logger, f, curr, bestCand);
       for (int i = 1; i < candidates.size(); i++) {
@@ -154,7 +148,7 @@ public class Pipeline extends FunctionOptimizerPass {
         }
       }
     }
-    
+
     if (candidates.size() == 1) {
       bestCand.inlineInto(curr);
     } else {
@@ -165,8 +159,8 @@ public class Pipeline extends FunctionOptimizerPass {
       curr.addContinuation(nested);
     }
   }
-  
-  
+
+
   private static int heuristicCost(Logger logger, Function f,
                       Block curr, WaitStatement cand) {
 
@@ -186,13 +180,13 @@ public class Pipeline extends FunctionOptimizerPass {
             protected void visit(Block block) {
               varsDeclaredWithinChildTask.addAll(block.getVariables());
             }};
-            
+
     // Find variables used in child task
     TreeWalk.walkSyncChildren(logger, f, cand.getBlock(), true, walker);
-    
+
     // Only count variables that were passed in
     varsReadByChildTask.removeAll(varsDeclaredWithinChildTask);
-    
+
     int cost = 0;
     for (Var passed: varsReadByChildTask) {
       cost += costOfPassing(logger, passed.type());
@@ -202,7 +196,7 @@ public class Pipeline extends FunctionOptimizerPass {
 
   /**
    * Heuristic score
-   * 
+   *
    * TODO: this is simplistic, since this doesn't incorporate whether the
    * variable is produced or consumed by the child or the exact mechanism
    * of data transfer

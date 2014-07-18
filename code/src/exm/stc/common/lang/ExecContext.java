@@ -18,6 +18,8 @@ package exm.stc.common.lang;
 import java.util.Collections;
 import java.util.List;
 
+import exm.stc.common.Settings;
+
 /**
  * Where a bit of code will execute.
  *
@@ -147,5 +149,23 @@ public class ExecContext {
       assert(kind == Kind.WORKER);
       return "WORKER[" + workContext + "]";
     }
+  }
+
+  /**
+   * @param cx
+   * @return true if this and other context are same at runtime
+   */
+  public boolean compatibleWith(ExecContext other) {
+    if (!Settings.SEPARATE_TURBINE_ENGINE) {
+      if ((this.isControlContext() && other.isDefaultWorkContext()) ||
+          this.isDefaultWorkContext() && other.isControlContext()) {
+        // Merged control and worker contexts
+        return true;
+      }
+      return true;
+    }
+
+    // Otherwise, contexts are different at runtime
+    return this.equals(other);
   }
 }

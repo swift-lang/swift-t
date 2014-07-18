@@ -56,7 +56,7 @@ import exm.stc.ic.tree.Opcode;
  * to make sure variables are visible.
  */
 public class FixupVariables implements OptimizerPass {
-  
+
   /**
    * Control whether we update passed var lists.
    */
@@ -91,7 +91,7 @@ public class FixupVariables implements OptimizerPass {
                                   boolean updateLists) {
     Set<Var> referencedGlobals = new HashSet<Var>();
     for (Function fn : prog.getFunctions()) {
-      
+
       if (updateLists) {
         fixupFunction(logger, prog.constants(), fn, referencedGlobals,
                       FixupVarMode.REBUILD);
@@ -105,7 +105,7 @@ public class FixupVariables implements OptimizerPass {
                      FixupVarMode.NO_UPDATE);
       }
     }
-    
+
     if (updateLists)
       removeUnusedGlobals(prog.constants(), referencedGlobals);
   }
@@ -120,9 +120,9 @@ public class FixupVariables implements OptimizerPass {
       fnargs.add(v);
     }
     fnargs.addAll(constants.vars());
-    
+
     AliasTracker aliases = new AliasTracker();
-    
+
     Result res = fixupBlockRec(logger, fn, fn.mainBlock(),
                        ExecContext.control(), fnargs,
                        referencedGlobals, aliases, fixupMode);
@@ -135,7 +135,7 @@ public class FixupVariables implements OptimizerPass {
         }
       }
     }
-    
+
     // Check that all variables referred to are available as args
     res.removeRead(fn.getInputList());
     res.removeReadWrite(fn.getOutputList());
@@ -150,12 +150,12 @@ public class FixupVariables implements OptimizerPass {
       throw new STCRuntimeError("Reference in IC function "
           + fn.getName() + " to undefined variables " + res.read.toString());
     }
-    
+
     if (res.written.size() > 0) {
       throw new STCRuntimeError("Unexpected write IC function "
           + fn.getName() + " to variables " + res.written.toString());
     }
-    
+
     if (res.aliasWritten.size() > 0) {
       throw new STCRuntimeError("Unexpected write IC function "
           + fn.getName() + " to variables " + res.aliasWritten.toString());
@@ -168,7 +168,7 @@ public class FixupVariables implements OptimizerPass {
     /** Original aliases for write variables, to make sure that redundant
      * aliases are passed correctly in case of suboptimal code */
     final Set<Var> aliasWritten;
-    
+
     Result() {
       super();
       this.read = new HashSet<Var>();
@@ -187,7 +187,7 @@ public class FixupVariables implements OptimizerPass {
     Set<Var> allNeeded() {
       return Sets.union(allSets());
     }
-    
+
     /**
      * Add everything from another result
      */
@@ -196,7 +196,7 @@ public class FixupVariables implements OptimizerPass {
       written.addAll(other.written);
       aliasWritten.addAll(other.aliasWritten);
     }
-    
+
     /**
      * Add everything from another result with exclusions
      */
@@ -206,7 +206,7 @@ public class FixupVariables implements OptimizerPass {
       fromTos.add(Pair.create(other.read, read));
       fromTos.add(Pair.create(other.written, written));
       fromTos.add(Pair.create(other.aliasWritten, aliasWritten));
-                      
+
       for (Pair<Set<Var>, Set<Var>> fromTo: fromTos) {
         for (Var var: fromTo.val1) {
           if (!exclusion.contains(var)) {
@@ -279,7 +279,7 @@ public class FixupVariables implements OptimizerPass {
       this.written.remove(var);
       this.aliasWritten.remove(var);
     }
-    
+
     /**
      * Remove variable without canonicalizing them
      * @param vars
@@ -291,65 +291,65 @@ public class FixupVariables implements OptimizerPass {
       }
     }
   }
-  
+
   /**
-   * 
+   *
    * @param logger
-   * @param block 
+   * @param block
    * @param visible all
    *          variables logically visible in this block. will be modified in fn
    * @param referencedGlobals updated with names of any globals used
-   * @param aliases 
-   * @param fixupMode  
+   * @param aliases
+   * @param fixupMode
    * @return
    */
   private static Result fixupBlockRec(Logger logger,
-      Function function, Block block, ExecContext execCx, 
+      Function function, Block block, ExecContext execCx,
       HierarchicalSet<Var> visible, Set<Var> referencedGlobals,
       AliasTracker aliases, FixupVarMode fixupMode) {
 
     if (fixupMode == FixupVarMode.REBUILD)
       // Remove global imports to be readded later if needed
       removeGlobalImports(block);
-    
+
     // blockVars: variables defined in this block
     Set<Var> blockVars = new HashSet<Var>();
-    
+
     // update block variables and visible variables
     for (Var v: block.getVariables()) {
       blockVars.add(v);
       visible.add(v);
     }
-    
+
     List<Pair<Var, Var>> createdAliases = new ArrayList<Pair<Var, Var>>();
-    
+
     // Work out which variables are read/writte which aren't locally declared
     Result result = new Result();
     findBlockNeeded(block, result, aliases, createdAliases);
-    
+
     for (Continuation c : block.allComplexStatements()) {
       fixupContinuationRec(logger, function, execCx, c,
               visible, referencedGlobals, aliases,
               blockVars, result, fixupMode);
     }
 
-    
+
     // TODO: Partial fix for copy_refed variable that is then written
     for (Pair<Var, Var> a: createdAliases) {
       if (result.written.contains(a.val2)) {
         result.addWritten(a.val1, aliases);
       }
     }
-    
+
     // Get ready to return to outer scope
     // Outer scopes don't have anything to do with vars declared here
     result.removeReadWrite(blockVars);
-    
+
     if (canImportGlobals(execCx)) {
       // Global constants can be imported in control blocks only
       Set<Var> globals = addGlobalImports(block, visible, fixupMode,
                                           result.allSets());
-  
+
       referencedGlobals.addAll(globals);
       result.removeReadWrite(globals);
     }
@@ -357,19 +357,19 @@ public class FixupVariables implements OptimizerPass {
   }
 
   private static boolean canImportGlobals(ExecContext execCx) {
-    return execCx.isControlContext() || Settings.NO_TURBINE_ENGINE;
+    return execCx.isControlContext() || !Settings.SEPARATE_TURBINE_ENGINE;
   }
 
   /**
    * Find all referenced vars in scope
    * @param block
    * @param result accumulate needed vars
-   * @param aliases 
-   * @param createdAliases 
+   * @param aliases
+   * @param createdAliases
    */
   private static void findBlockNeeded(Block block, Result result,
                     AliasTracker aliases, List<Pair<Var, Var>> createdAliases) {
-    
+
     for (Statement stmt: block.getStatements()) {
       switch (stmt.type()) {
         case INSTRUCTION: {
@@ -377,7 +377,7 @@ public class FixupVariables implements OptimizerPass {
 
           // This line keeps aliases up to data for e.g. struct insertions
           aliases.update(i);
-          
+
           for (Arg in: i.getInputs()) {
             if (in.isVar()) {
               result.addRead(in.getVar());
@@ -387,14 +387,14 @@ public class FixupVariables implements OptimizerPass {
             result.addRead(read);
           }
           result.addWritten(i.getOutputs(), aliases);
-          
-          
+
+
           // TODO: hack to get around aliasing issues
           if (i.op == Opcode.COPY_REF) {
             createdAliases.add(Pair.create(i.getInput(0).getVar(),
                                            i.getOutput(0)));
           }
-          
+
           break;
         }
         case CONDITIONAL: {
@@ -405,11 +405,11 @@ public class FixupVariables implements OptimizerPass {
           throw new STCRuntimeError("Unknown statement type " + stmt.type());
       }
     }
-    
+
     for (Continuation cont: block.getContinuations()) {
       result.addRead(cont.requiredVars(false));
     }
-    
+
     for (CleanupAction cleanup: block.getCleanups()) {
       // ignore outputs - the cleaned up vars should already be in scope
       for (Arg in: cleanup.action().getInputs()) {
@@ -428,10 +428,10 @@ public class FixupVariables implements OptimizerPass {
    * @param continuation
    * @param visible
    * @param referencedGlobals
-   * @param aliases 
+   * @param aliases
    * @param outerBlockVars
    * @param neededVars
-   * @param fixupMode ! 
+   * @param fixupMode !
    */
   private static void fixupContinuationRec(Logger logger, Function function,
           ExecContext outerCx,
@@ -442,7 +442,7 @@ public class FixupVariables implements OptimizerPass {
     List<Var> constructVars = continuation.constructDefinedVars(ContVarDefType.NEW_DEF);
     ExecContext innerCx = continuation.childContext(outerCx);
     AliasTracker contAliases = outerAliases.makeChild();
-    
+
     for (Block innerBlock : continuation.getBlocks()) {
       HierarchicalSet<Var> childVisible = visible.makeChild();
       for (Var v : constructVars) {
@@ -452,7 +452,7 @@ public class FixupVariables implements OptimizerPass {
       Result inner = fixupBlockRec(logger,
           function, innerBlock, innerCx, childVisible,
           referencedGlobals, blockAliases, fixupMode);
-      
+
       // construct will provide some vars
       if (!constructVars.isEmpty()) {
         inner.removeReadWrite(constructVars);
@@ -491,10 +491,10 @@ public class FixupVariables implements OptimizerPass {
       boolean writeOnly = !inner.read.contains(needed);
       passedIn.add(new PassedVar(needed, writeOnly));
     }
-    
+
     // Copy out any additional variables
     outer.addExcluding(inner, outerBlockVars);
-    
+
     // Handle any additional variables that need to be passed in,
     // for example if a variable is waited on but not otherwise passed
     for (PassedVar addtl: continuation.getMustPassVars()) {
@@ -529,7 +529,7 @@ public class FixupVariables implements OptimizerPass {
         }
       }
     }
-    
+
     if (fixupMode == FixupVarMode.REBUILD) {
       continuation.setPassedVars(passedIn);
     } else {
@@ -560,7 +560,7 @@ public class FixupVariables implements OptimizerPass {
         keepOpen.add(v);
       }
     }
-    
+
     if (fixupMode == FixupVarMode.REBUILD) {
       continuation.setKeepOpenVars(keepOpen);
     } else {
@@ -582,7 +582,7 @@ public class FixupVariables implements OptimizerPass {
   }
 
   /**
-   * 
+   *
    * @param block
    * @param visible
    * @param neededSets sets of vars needed from outside bock
@@ -600,7 +600,7 @@ public class FixupVariables implements OptimizerPass {
         }
       }
     }
-    
+
     for (Set<Var> neededSet: neededSets) {
       for (Var var: neededSet) {
         if (visible.contains(var)) {
