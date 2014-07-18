@@ -53,8 +53,7 @@ do
   TCL_LDFLAGS="-dynamic" # Can't be linked statically
   
   ${CC} ${CFLAGS} ${TCL_LDFLAGS} ${LDFLAGS} ${PREFIX_TCL}.c \
-    $(${MKSTATIC} ${MANIFEST} --link-objs --link-flags) \
-    ${LIBS} -o ${PREFIX_TCL}
+    uts-src/libuts.a ${LIBS} -o ${PREFIX_TCL}
   echo -n
 
 done

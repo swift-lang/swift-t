@@ -54,8 +54,7 @@ do
   echo -n .
 
   ${CC} ${CFLAGS} ${LDFLAGS} ${PREFIX_TCL}.c \
-    $(${MKSTATIC} ${PREFIX}.manifest --link-objs --link-flags) \
-    ${LIBS} -o ${PREFIX_TCL}
+    uts-src/libuts.a ${LIBS} -o ${PREFIX_TCL}
   echo -n
 
 done

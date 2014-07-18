@@ -15,5 +15,3 @@ lib_include = uts-src/uts_leaf.h
 # main script. If provided, always runs this main script.  Otherwise
 # script file is specified as first command line argument (like tclsh)
 main_script = uts.tcl
-
-lib_object = uts-src/libuts.a
