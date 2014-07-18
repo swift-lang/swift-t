@@ -6,8 +6,8 @@ TCL_VERSION=8.5
 
 MPI_HOME=/bgsys/drivers/V1R2M1/ppc64/comm
 
-CC=bgxlc_r
-MPICC=mpixlc_r
+CC=bgxlc
+MPICC=mpixlc
 
 C_UTILS_HOME=/home/wozniak/Public/sfw/ppc64/static/c-utils
 ADLB_HOME=/home/wozniak/Public/sfw/ppc64/static/lb
