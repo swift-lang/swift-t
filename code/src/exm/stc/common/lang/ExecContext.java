@@ -97,6 +97,10 @@ public class ExecContext {
     return kind == Kind.CONTROL;
   }
 
+  public boolean isDefaultWorkContext() {
+    return this.equals(DEFAULT_WORKER_CONTEXT);
+  }
+
   public boolean isAnyWorkContext() {
     return kind == Kind.WORKER;
   }

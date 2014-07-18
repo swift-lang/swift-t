@@ -25,8 +25,8 @@ import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.ExecContext;
-import exm.stc.common.lang.Location;
 import exm.stc.common.lang.ExecTarget;
+import exm.stc.common.lang.Location;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.StringUtil;
 import exm.stc.tclbackend.tree.Command;
@@ -45,9 +45,9 @@ import exm.stc.tclbackend.tree.Value;
 
 /**
  * Automates creation of Turbine-specific Tcl constructs
- * 
+ *
  * @author wozniak
- * 
+ *
  *         This class is package-private: only TurbineGenerator uses it
  * */
 class Turbine {
@@ -135,7 +135,7 @@ class Turbine {
 
   /**
    * Used to specify what caching is allowed for retrieve
-   * 
+   *
    * @author tga
    */
   public enum CacheMode {
@@ -152,10 +152,10 @@ class Turbine {
   private static final Token STORE_FILE_REF = turbFn("store_file_ref");
   private static final Token STORE_STRUCT = turbFn("store_struct");
   private static final Token INIT_UPD_FLOAT = turbFn("init_updateable_float");
-  
+
   // Struct functions
   private static final Token STRUCT_REFERENCE = adlbFn("struct_reference");
-  private static final Token STRUCTREF_REFERENCE = 
+  private static final Token STRUCTREF_REFERENCE =
                                                 turbFn("structref_reference");
   private static final Token LOOKUP_STRUCT = adlbFn("lookup_struct");
   private static final Token INSERT_STRUCT = adlbFn("insert_struct");
@@ -266,7 +266,7 @@ class Turbine {
   public static Token XPT_LOOKUP_ENABLED = turbFn("xpt_lookup_enabled");
   public static Token XPT_PACK = adlbFn("xpt_pack");
   public static Token XPT_UNPACK = adlbFn("xpt_unpack");
-  
+
   // Debug symbols
   public static Token ADD_DEBUG_SYMBOL = adlbFn("add_debug_symbol");
 
@@ -447,13 +447,13 @@ class Turbine {
 
   public static Command refSet(Value turbineDstVar, Expression src,
           Expression storeReaders, Expression storeWriters) {
-    return new Command(STORE_REF, turbineDstVar, src, 
+    return new Command(STORE_REF, turbineDstVar, src,
                        storeReaders, storeWriters);
   }
 
   public static Command fileRefSet(Value turbineDstVar, Expression src,
           Expression storeReaders, Expression storeWriters) {
-    return new Command(STORE_FILE_REF, turbineDstVar, src, 
+    return new Command(STORE_FILE_REF, turbineDstVar, src,
                         storeReaders, storeWriters);
   }
 
@@ -509,13 +509,13 @@ class Turbine {
     // Calling convention requires separate pointer and length args
     return new Command(STORE_BLOB, target, src);
   }
-  
+
   public static SetVariable readRefGet(String target, Value variable,
       TypeName refType, Expression acquireReadExpr, Expression decrRead) {
     return new SetVariable(target, new Square(ACQUIRE_REF, variable,
                            refType, acquireReadExpr, decrRead));
   }
-  
+
   public static SetVariable readWriteRefGet(String target, Value variable,
       TypeName refType,
           Expression acquireReadExpr, Expression acquireWriteExpr,
@@ -536,7 +536,7 @@ class Turbine {
 
   /**
    * General-purpose acquire primitive
-   * 
+   *
    * @param dst
    * @param src
    * @param srcType
@@ -562,7 +562,7 @@ class Turbine {
     return adlbStore(dst, src, dstTypeInfo, decrWriters, decrReaders,
                      null, null);
   }
-  
+
   public static Command adlbStore(Value dst, Expression src,
           List<TypeName> dstTypeInfo, Expression decrWriters,
           Expression decrReaders, Expression storeReaders,
@@ -632,7 +632,7 @@ class Turbine {
 
   private static Expression tclRuleType(ExecTarget t) {
     assert(t.isAsync());
-    
+
     if (Settings.NO_TURBINE_ENGINE) {
       if (t.isDispatched()) {
         // Same as ADLB work types
@@ -656,7 +656,7 @@ class Turbine {
 
   /**
    * Generate code for a rule
-   * 
+   *
    * @param symbol
    * @param inputs
    * @param action
@@ -725,11 +725,9 @@ class Turbine {
     }
 
     // Only a single rule type with no turbine engines
-    if (!Settings.NO_TURBINE_ENGINE) {
-      if (type != null && type.isAsync()) {
-        args.add(RULE_KEYWORD_TYPE);
-        args.add(tclRuleType(type));
-      }
+    if (!isDefaultExecTarget(type)) {
+      args.add(RULE_KEYWORD_TYPE);
+      args.add(tclRuleType(type));
     }
 
     if (parallelism != null && !LiteralInt.ONE.equals(parallelism)) {
@@ -738,10 +736,35 @@ class Turbine {
     }
   }
 
+  private static boolean isDefaultExecTarget(ExecTarget type) {
+    if (type == null) {
+      return true;
+    }
+
+    // Should be async if using with rule
+    assert(type.isAsync()) : type;
+
+    ExecContext targetContext = type.targetContext();
+    if (Settings.NO_TURBINE_ENGINE) {
+      if (targetContext == null) {
+        // Don't care about target
+        return true;
+      } else if (targetContext.isControlContext() ||
+              targetContext.isDefaultWorkContext()) {
+        // Target matches (control and worker are the same)
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      return !type.isDispatched();
+    }
+  }
+
   private static Sequence spawnTask(List<Expression> action, ExecTarget type,
           ExecContext execCx, RuleProps props) {
     assert(type.isAsync());
-    
+
     Sequence res = new Sequence();
 
     // Store in var for readability
@@ -952,7 +975,7 @@ class Turbine {
 
   /**
    * Put reference to arrayVar[arrayIndex] into refVar once it is ready
-   * 
+   *
    * @param refVar
    * @param arrayIndex
    * @param isArrayRef
@@ -979,7 +1002,7 @@ class Turbine {
 
   /**
    * Convert list of field indices into internal subscript representation
-   * 
+   *
    * @param fieldIndices
    * @return
    */
@@ -989,11 +1012,11 @@ class Turbine {
     {
       assert(fieldIndices[i] >= 0) : Arrays.toString(fieldIndices);
     }
-    
+
     if (fieldIndices.length == 1) {
       int fieldIndex = fieldIndices[0];
 
-      return new LiteralInt(fieldIndex);  
+      return new LiteralInt(fieldIndex);
     } else {
       // String separated by "."s
       List<Integer> indexList = new ArrayList<Integer>(fieldIndices.length);
@@ -1007,7 +1030,7 @@ class Turbine {
 
   /**
    * Construct a new handle to a subscript of the array
-   * 
+   *
    * @param var
    *          may be a plain ID, or a pre-existing alias
    * @param sub array subscript (only one supported for onw)
@@ -1016,10 +1039,10 @@ class Turbine {
   public static Expression arrayAlias(Value var, Expression sub) {
     return Square.fnCall(MAKE_CONTAINER_SUBSCRIPT, var, sub);
   }
-  
+
   /**
    * Construct a new handle to a subscript of the struct
-   * 
+   *
    * @param var
    *          may be a plain ID, or a pre-existing alias
    * @param fields
@@ -1038,7 +1061,7 @@ class Turbine {
 
   /**
    * Lookup subscript in a variable
-   * 
+   *
    * @param var
    * @param subscript
    * @return
@@ -1078,10 +1101,10 @@ class Turbine {
     args.add(decrWrite);
     return new Command(INSERT_STRUCT, args);
   }
-  
+
   /**
    * Copy subscript of a variable to another variable
-   * 
+   *
    * @param arrayVar
    * @param arrayIndex
    * @return
@@ -1099,7 +1122,7 @@ class Turbine {
 
   /**
    * Put a reference to arrayVar[indexVar] into refVar
-   * 
+   *
    * @param refVar
    * @param arrayVar
    * @param indexVar
@@ -1251,7 +1274,7 @@ class Turbine {
 
   /**
    * Modify reference count by amount
-   * 
+   *
    * @param var
    * @param change
    * @return
@@ -1274,7 +1297,7 @@ class Turbine {
 
   /**
    * Modify reference count by amount
-   * 
+   *
    * @param var
    * @param change
    * @return
@@ -1305,7 +1328,7 @@ class Turbine {
 
   /**
    * Modify reference count by amount
-   * 
+   *
    * @param var
    * @param change
    * @return
@@ -1359,7 +1382,7 @@ class Turbine {
 
   /**
    * Return the size of a container
-   * 
+   *
    * @param resultVar
    * @param arr
    * @return
@@ -1371,7 +1394,7 @@ class Turbine {
 
   /**
    * Get entire contents of container
-   * 
+   *
    * @param resultVar
    * @param arr
    * @param includeKeys
@@ -1391,7 +1414,7 @@ class Turbine {
   /**
    * Retrieve partial contents of container from start to end inclusive start to
    * end are not the logical array indices, but rather physical indices
-   * 
+   *
    * @param resultVar
    * @param arr
    * @param includeKeys
@@ -1419,7 +1442,7 @@ class Turbine {
 
   /**
    * Get all of container
-   * 
+   *
    * @param resultVar
    * @param arr
    * @return
@@ -1500,7 +1523,7 @@ class Turbine {
 
   /**
    * Expression that extracts the ID to wait on for a file variable
-   * 
+   *
    * @param fileVar
    * @return
    */
@@ -1510,7 +1533,7 @@ class Turbine {
 
   /**
    * Expression that extracts the filename string future a file variable
-   * 
+   *
    * @param fileVar
    * @return
    */
@@ -1567,7 +1590,7 @@ class Turbine {
   public static SetVariable mkTemp(String varName) {
     return new SetVariable(varName, new Square(MKTEMP));
   }
-  
+
   public static Expression getFilenameVal(Value fileFuture) {
     return Square.fnCall(GET_FILENAME_VAL, fileFuture);
   }
@@ -1637,7 +1660,7 @@ class Turbine {
   }
 
   /**
-   * 
+   *
    * @param executor
    * @param cmdName
    * @param outVarNames
@@ -1654,7 +1677,7 @@ class Turbine {
           List<Pair<String, Expression>> taskPropExprs,
           List<Expression> stageIns, List<Expression> stageOuts,
           List<Expression> successContinuation, List<Expression> failureContinuation) {
-    
+
     Token execCmd;
     switch (executor) {
     case COASTER:
@@ -1668,11 +1691,11 @@ class Turbine {
     List<Expression> execArgs = new ArrayList<Expression>();
     execArgs.add(new TclString(cmdName, true));
     //execArgs.add(new TclList(outVarNames));
-    
+
     execArgs.add(new TclList(taskArgExprs));
     execArgs.add(new TclList(stageIns));
     execArgs.add(new TclList(stageOuts));
-    
+
     execArgs.add(Dict.dictCreateSE(true, taskPropExprs));
     if (successContinuation != null) {
       execArgs.add(TclUtil.tclStringAsList(successContinuation));
@@ -1730,7 +1753,7 @@ class Turbine {
   /**
    * Both lists are alternating types and values, allowing them to be serialized
    * with the correct type
-   * 
+   *
    * @param packedKey
    * @param packedVal
    * @param persist
@@ -1771,5 +1794,5 @@ class Turbine {
     return new Command(ADD_DEBUG_SYMBOL, new LiteralInt(symbol),
                        new TclString(name, true), new TclString(context, true));
   }
-  
+
 }
