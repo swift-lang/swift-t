@@ -22,17 +22,3 @@ lib_script = staticapp-1-lib.tcl
 
 # main scripts
 main_script = staticapp-1.tcl
-
-# Build info follows: required to compile and link executable
-# -----------------------------------------------------------
-
-# lib objects are linked into executable
-#lib_object = user_stuff.a
-#lib_object = other_stuff.o
-
-# lib shared object (linked against - not preferred).
-# This goes last on link command
-#linker_libs = -lm -L/home/blah/mysharedlib-lmysharedlib
-#CFLAGS = 
-# linker flags - appear before arguments to linker
-#LDFLAGS =

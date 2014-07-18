@@ -66,6 +66,8 @@ ifeq ($(USE_MAC),no)
 		STD =
 		SHARED = -qmkshrobj -qnostaticlink -qnostaticlink=libgcc
 		WARNS =
+# TODO: from manifest, should be applied here if anywhere
+# On the BG/Q, set: -L /bgsys/drivers/V1R2M1/ppc64/comm/lib -lpami-gcc -lm -pthread -lmpl-gcc -lm
 	endif
 
 	SO_SUFFIX = so
@@ -510,8 +512,6 @@ LD_EXEC_SYMBOL_EXPORT = -Wl,--export-dynamic
 $(TURBINE_EXECUTABLES): %: %.o ${TCL_TURBINE_LIBS} ${STATIC_PKG_RESOURCE_H}
 	$(Q) "  LINK X	$(@)"
 	$(E) $(CC) $(LDFLAGS) $(LD_EXEC_SYMBOL_EXPORT) $(<) \
-	$(shell $(MKSTATIC_RUN) "$(@).manifest" --ignore-no-manifest --link-objs) \
-	$(shell $(MKSTATIC_RUN) "$(@).manifest" --ignore-no-manifest --link-flags) \
         $(MAC_FLAT) \
         $(TCL_TURBINE_LIB_FLAGS) \
         $(LIBS) \
@@ -549,9 +549,7 @@ test_results: $(TEST_RESULTS)
 $(TEST_BINS): %.x: %.o install.txt $(TEST_STATIC_PREREQS)
 	$(Q) "  LINK		$(@)"
 	$(E) $(CC) $(LDFLAGS) $(<) \
-	$(shell $(MKSTATIC_RUN) "$(@).manifest" --ignore-no-manifest --link-objs) \
         $(MAC_FLAT) \
-	$(shell $(MKSTATIC_RUN) "$(@).manifest" --ignore-no-manifest --link-flags) \
         $(TCL_TURBINE_LIB_FLAGS) \
         $(LIBS) \
 	$(RPATHS) \

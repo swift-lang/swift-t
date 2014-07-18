@@ -39,14 +39,3 @@ main_script = user_script.tcl
 # preserved upon unpacking (i.e. all files are extracted into the root
 # of the temporary directory)
 bundled_file = libspecial.so
-
-# Build info follows: required to compile and link executable
-# -----------------------------------------------------------
-
-# lib objects are linked into executable
-lib_object = user_stuff.a
-lib_object = other_stuff.o
-
-# lib shared object (linked against - not preferred).
-# This goes last on link command
-linker_libs = -lm -L/home/blah/mysharedlib -lmysharedlib
