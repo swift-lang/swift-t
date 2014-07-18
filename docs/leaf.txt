@@ -69,7 +69,7 @@ Additionally, you may call Swift/T from native code.
 
 Complete code samples for each example are found in this tar file:
 
-* link:examples.tar.gz[] (12 KB)
+* link:downloads/examples.tar.gz[] (12 KB)
 
 NOTE: In many scripts, we use shell options +set -ex+.
 
