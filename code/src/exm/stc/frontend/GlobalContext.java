@@ -183,10 +183,11 @@ public class GlobalContext extends Context {
   }
 
   public void declareWorkType(String name) throws DoubleDefineException {
-    LogHelper.debug(this, "Defined work type " + name);
-
-    ExecContext.WorkContext workCx = new ExecContext.WorkContext(name);
-    addExecContext(name, ExecContext.worker(workCx));
+    // Should be case insensitive
+    String canonicalName = name.toUpperCase();
+    LogHelper.debug(this, "Defined work type " + canonicalName);
+    ExecContext.WorkContext workCx = new ExecContext.WorkContext(canonicalName);
+    addExecContext(canonicalName, ExecContext.worker(workCx));
   }
 
   public void addExecContexts(List<Pair<String, ExecContext>> contexts)
@@ -198,20 +199,22 @@ public class GlobalContext extends Context {
 
   public void addExecContext(String name, ExecContext context)
       throws DoubleDefineException {
-    ExecContext oldContext = execContexts.get(name);
+    String canonicalName = name.toUpperCase();
+    ExecContext oldContext = execContexts.get(canonicalName);
     if (oldContext != null) {
       throw new DoubleDefineException(this,
-          "Redefined execution target " + name);
+          "Redefined execution target " + canonicalName);
     }
-    execContexts.put(name, context);
+    execContexts.put(canonicalName, context);
   }
 
   @Override
   public ExecContext lookupExecContext(String name)
       throws UndefinedExecContextException {
-    ExecContext cx = execContexts.get(name);
+    String canonicalName = name.toUpperCase();
+    ExecContext cx = execContexts.get(canonicalName);
     if (cx == null) {
-      throw new UndefinedExecContextException(this, name);
+      throw new UndefinedExecContextException(this, canonicalName);
     }
 
     return cx;
