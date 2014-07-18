@@ -41,10 +41,10 @@ public class ExecContext {
    * Compare based on identity
    * Include string to identify in debug messages, etc.
    */
-  public static class WorkerContext {
+  public static class WorkContext {
     private String name;
 
-    public WorkerContext(String name) {
+    public WorkContext(String name) {
       this.name = name;
     }
 
@@ -53,10 +53,10 @@ public class ExecContext {
       return name;
     }
 
-    private static WorkerContext DEFAULT = new WorkerContext("WORKER");
+    private static WorkContext DEFAULT = new WorkContext("WORKER");
   }
 
-  private ExecContext(Kind kind, WorkerContext workContext) {
+  private ExecContext(Kind kind, WorkContext workContext) {
     if (kind == Kind.WORKER) {
       assert(workContext != null);
     } else {
@@ -68,14 +68,14 @@ public class ExecContext {
   }
 
   private final Kind kind;
-  private final WorkerContext workContext;
+  private final WorkContext workContext;
 
   private static final ExecContext CONTROL_CONTEXT =
                   new ExecContext(Kind.CONTROL, null);
   private static final ExecContext DEFAULT_WORKER_CONTEXT =
-                  new ExecContext(Kind.WORKER, WorkerContext.DEFAULT);
+                  new ExecContext(Kind.WORKER, WorkContext.DEFAULT);
 
-  public WorkerContext workContext() {
+  public WorkContext workContext() {
     return workContext;
   }
 
@@ -83,7 +83,7 @@ public class ExecContext {
     return CONTROL_CONTEXT;
   }
 
-  public static ExecContext worker(WorkerContext workContext) {
+  public static ExecContext worker(WorkContext workContext) {
     return new ExecContext(Kind.WORKER, workContext);
   }
 

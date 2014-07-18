@@ -151,27 +151,27 @@ public class TurbineGenerator implements CompilerBackend {
   private static final String MAIN_FUNCTION_NAME = "swift:main";
   private static final String CONSTINIT_FUNCTION_NAME = "swift:constants";
 
-  final String timestamp;
-  final Logger logger;
+  private final String timestamp;
+  private final Logger logger;
 
   /**
      Our output Tcl
      Convenience reference to bottom of pointStack
    */
-  Sequence tree = new Sequence();
+  private final Sequence tree = new Sequence();
 
 
   /**
    * For function that initializes globals
    */
-  Sequence globInit = new Sequence();
+  private final Sequence globInit = new Sequence();
 
   /**
      Stack for previous values of point.
      First entry is the sequence
      Second entry is a list of things to add at end of sequence
    */
-  StackLite<Pair<Sequence, Sequence>> pointStack =
+  private final StackLite<Pair<Sequence, Sequence>> pointStack =
       new StackLite<Pair<Sequence, Sequence>>();
 
   /**
@@ -211,27 +211,33 @@ public class TurbineGenerator implements CompilerBackend {
     return p.val1;
   }
 
-
-
   /**
    * Stack for (name, execImmediate) of loop functions
    */
-  StackLite<EnclosingLoop> loopStack = new StackLite<EnclosingLoop>();
+  private final StackLite<EnclosingLoop> loopStack = new StackLite<EnclosingLoop>();
 
   /**
    * Stack for function names
    */
-  StackLite<String> functionStack = new StackLite<String>();
+  private final StackLite<String> functionStack = new StackLite<String>();
 
   /**
    * Stack for what context we're in.
    */
-  StackLite<ExecContext> execContextStack = new StackLite<ExecContext>();
+  private final StackLite<ExecContext> execContextStack = new StackLite<ExecContext>();
 
-  String turbineVersion = Settings.get(Settings.TURBINE_VERSION);
+  private final String turbineVersion = Settings.get(Settings.TURBINE_VERSION);
 
-  HashSet<String> usedTclFunctionNames = new HashSet<String>();
+  private final HashSet<String> usedTclFunctionNames = new HashSet<String>();
 
+  /**
+   * Track work contexts this program may execute things in.
+   */
+  private final Set<ExecContext> usedExecContexts = new HashSet<ExecContext>();
+  {
+    // Always use control
+    usedExecContexts.add(ExecContext.control());
+  }
 
   private final TurbineStructs structTypes = new TurbineStructs();
 
@@ -347,6 +353,7 @@ public class TurbineGenerator implements CompilerBackend {
       tree.add(new Command("turbine::init $engines $servers \"Swift\""));
     } else {
       tree.add(new Command("turbine::init $servers \"Swift\""));
+      tree.add(checkExecContexts());
     }
     try {
       if (Settings.getBoolean(Settings.ENABLE_REFCOUNTING)) {
@@ -378,6 +385,24 @@ public class TurbineGenerator implements CompilerBackend {
       }
     } catch (InvalidOptionException e) {
       throw new STCRuntimeError(e.getMessage());
+    }
+  }
+
+  private TclTree checkExecContexts() {
+    List<Expression> checkExprs = new ArrayList<Expression>();
+    for (ExecContext worker: usedExecContexts) {
+      if (worker.isControlContext() ||
+          worker.isDefaultWorkContext()) {
+        // Don't need to check
+      } else {
+        checkExprs.add(Turbine.asyncWorkerName(worker.workContext()));
+      }
+    }
+
+    if (checkExprs.size() > 0) {
+      return new Command("turbine::check_can_execute", checkExprs);
+    } else {
+      return new Sequence();
     }
   }
 
@@ -2399,6 +2424,12 @@ public class TurbineGenerator implements CompilerBackend {
         List<Var> passIn, boolean recursive, ExecTarget mode, TaskProps props) {
       props.assertInternalTypesValid();
       mode.checkCanRunIn(execContextStack.peek());
+
+      if (mode.targetContext() != null) {
+        // Track target contexts
+        usedExecContexts.add(mode.targetContext());
+      }
+
       for (Var v: passIn) {
         if (Types.isBlobVal(v)) {
           throw new STCRuntimeError("Can't directly pass blob value");

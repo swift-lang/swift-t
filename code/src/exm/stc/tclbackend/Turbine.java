@@ -25,6 +25,7 @@ import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.ExecContext.WorkContext;
 import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.Location;
 import exm.stc.common.util.Pair;
@@ -639,8 +640,7 @@ class Turbine {
       } else if (t.targetContext().isControlContext()) {
         return turbConst("CONTROL");
       } else {
-        assert(t.targetContext().isAnyWorkContext());
-        // TODO: multiple work types
+        checkSeparateEngineWorkContext(t.targetContext());
         return turbConst("WORK");
       }
     } else {
@@ -833,6 +833,13 @@ class Turbine {
     return res;
   }
 
+  public static Expression asyncWorkerName(WorkContext worker) {
+    AsyncExecutor exec = AsyncExecutor.fromWorkContext(worker);
+    assert(exec != null);
+    // Directly use enum name
+    return new Token(exec.name());
+  }
+
   public static Expression adlbWorkType(ExecContext target) {
     if (Settings.SEPARATE_TURBINE_ENGINE) {
       if (target.isControlContext()) {
@@ -843,10 +850,13 @@ class Turbine {
         return new Value("turbine::WORK_TASK");
       }
     } else {
-      // TODO: multiple work types
-      assert(target.isDefaultWorkContext() ||
-             target.isControlContext()) : "Not implemented";
-      return new Value("turbine::WORK_TASK");
+      if (target.isDefaultWorkContext() ||
+             target.isControlContext()) {
+        return new Value("turbine::WORK_TASK");
+      } else {
+        // TODO: multiple work types
+        throw new STCRuntimeError("Unimplemented");
+      }
     }
   }
 
@@ -864,10 +874,12 @@ class Turbine {
         return TURBINE_WORKER_WORK_ID;
       }
     } else {
-      // TODO: multiple work types
-      assert(target.isDefaultWorkContext() ||
-          target.isControlContext()) : "Not implemented";
-      return TURBINE_WORKER_WORK_ID;
+      if (target.isControlContext() ||
+          target.isDefaultWorkContext()) {
+        return TURBINE_WORKER_WORK_ID;
+      } else {
+        throw new STCRuntimeError("Unimplemented");
+      }
     }
   }
 
