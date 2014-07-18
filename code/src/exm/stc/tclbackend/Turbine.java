@@ -839,11 +839,13 @@ class Turbine {
         return new Value("turbine::CONTROL_TASK");
       } else {
         assert(target.isAnyWorkContext());
-        // TODO: multiple work types
+        checkSeparateEngineWorkContext(target);
         return new Value("turbine::WORK_TASK");
       }
     } else {
       // TODO: multiple work types
+      assert(target.isDefaultWorkContext() ||
+             target.isControlContext()) : "Not implemented";
       return new Value("turbine::WORK_TASK");
     }
   }
@@ -858,11 +860,21 @@ class Turbine {
         return TURBINE_CONTROL_WORK_ID;
       } else {
         assert(target.isAnyWorkContext());
+        checkSeparateEngineWorkContext(target);
         return TURBINE_WORKER_WORK_ID;
       }
     } else {
       // TODO: multiple work types
+      assert(target.isDefaultWorkContext() ||
+          target.isControlContext()) : "Not implemented";
       return TURBINE_WORKER_WORK_ID;
+    }
+  }
+
+  private static void checkSeparateEngineWorkContext(ExecContext target) {
+    if (!target.isDefaultWorkContext() && !target.isControlContext()) {
+      throw new STCRuntimeError("Work context " + target +
+              " not supported with old Turbine engines");
     }
   }
 
