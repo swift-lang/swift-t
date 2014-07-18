@@ -29,9 +29,9 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.exceptions.UndefinedExecTargetException;
+import exm.stc.common.exceptions.UndefinedExecContextException;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.ExecTarget;
+import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -48,7 +48,7 @@ import exm.stc.common.util.Pair;
  */
 public class GlobalContext extends Context {
   /**
-   * Properties of functions  
+   * Properties of functions
    */
   private final Set<Pair<String, FnProp>> functionProps =
                         new HashSet<Pair<String, FnProp>>();
@@ -58,15 +58,15 @@ public class GlobalContext extends Context {
    */
   private final Map<String, IntrinsicFunction> intrinsics =
                         new HashMap<String, IntrinsicFunction>();
-  
+
   /**
    * Track name to exec target mapping
    * @param inputFile
    * @param logger
    */
-  private final Map<String, ExecTarget> execTargets =
-                              new HashMap<String, ExecTarget>();
-  
+  private final Map<String, ExecContext> execContexts =
+                              new HashMap<String, ExecContext>();
+
   public GlobalContext(String inputFile, Logger logger) {
     super(logger, 0);
     this.inputFile = inputFile;
@@ -74,36 +74,36 @@ public class GlobalContext extends Context {
     // Add all predefined types into type name dict
     types.putAll(Types.getBuiltInTypes());
     try {
-      addExecTargets(ExecTarget.builtinExecTargets());
+      addExecContexts(ExecContext.builtinExecContexts());
     } catch (DoubleDefineException e) {
       throw new STCRuntimeError("Unexpected exception while initializing exec " +
       		"targets", e);
     }
   }
-  
+
   @Override
   public DefInfo lookupDef(String name) {
     return allDefs.get(name);
   }
 
   @Override
-  public void defineFunction(String name, FunctionType type) 
+  public void defineFunction(String name, FunctionType type)
       throws UserException {
     checkNotDefined(name);
     declareVariable(type, name, Alloc.GLOBAL_CONST, DefType.GLOBAL_CONST,
                     VarProvenance.userVar(getSourceLoc()), false);
   }
-  
+
   @Override
   public void setFunctionProperty(String name, FnProp prop) {
     functionProps.add(new Pair<String, FnProp>(name, prop));
   }
-  
+
   @Override
   public boolean hasFunctionProp(String name, FnProp prop) {
     return functionProps.contains(new Pair<String, FnProp>(name, prop));
   }
-  
+
   @Override
   public List<FnProp> getFunctionProps(String function) {
     List<FnProp> props = new ArrayList<FnProp>();
@@ -114,8 +114,8 @@ public class GlobalContext extends Context {
     }
     return props;
   }
-  
-  
+
+
   @Override
   public void addIntrinsic(String function, IntrinsicFunction intrinsic) {
     intrinsics.put(function, intrinsic);
@@ -125,10 +125,10 @@ public class GlobalContext extends Context {
   public IntrinsicFunction lookupIntrinsic(String function) {
     return intrinsics.get(function);
   }
-  
+
   /**
      Declare a global variable
-   * @throws DoubleDefineException 
+   * @throws DoubleDefineException
    */
   @Override
   public Var declareVariable(Type type, String name, Alloc scope,
@@ -181,40 +181,47 @@ public class GlobalContext extends Context {
   public Type lookupTypeUnsafe(String typeName) {
     return types.get(typeName);
   }
-  
-  public void addExecTargets(List<Pair<String, ExecTarget>> targets)
+
+  public void declareWorkType(String name) throws DoubleDefineException {
+    LogHelper.debug(this, "Defined work type " + name);
+
+    ExecContext.WorkContext workCx = new ExecContext.WorkContext(name);
+    addExecContext(name, ExecContext.worker(workCx));
+  }
+
+  public void addExecContexts(List<Pair<String, ExecContext>> contexts)
       throws DoubleDefineException {
-    for (Pair<String, ExecTarget> target: targets) {
-      addExecTarget(target.val1, target.val2);
+    for (Pair<String, ExecContext> cx: contexts) {
+      addExecContext(cx.val1, cx.val2);
     }
   }
-  
-  public void addExecTarget(String name, ExecTarget target)
+
+  public void addExecContext(String name, ExecContext context)
       throws DoubleDefineException {
-    ExecTarget oldTarget = execTargets.get(name);
-    if (oldTarget != null) {
-      throw new DoubleDefineException(this, 
+    ExecContext oldContext = execContexts.get(name);
+    if (oldContext != null) {
+      throw new DoubleDefineException(this,
           "Redefined execution target " + name);
     }
-    execTargets.put(name, target);    
+    execContexts.put(name, context);
   }
-  
+
   @Override
-  public ExecTarget lookupExecTarget(String name) 
-      throws UndefinedExecTargetException {
-    ExecTarget target = execTargets.get(name);
-    if (target == null) {
-      throw new UndefinedExecTargetException(this, name);
+  public ExecContext lookupExecContext(String name)
+      throws UndefinedExecContextException {
+    ExecContext cx = execContexts.get(name);
+    if (cx == null) {
+      throw new UndefinedExecContextException(this, name);
     }
-    
-    return target;
+
+    return cx;
   }
-  
+
   @Override
   public Collection<String> execTargetNames() {
-    return Collections.unmodifiableSet(execTargets.keySet());
+    return Collections.unmodifiableSet(execContexts.keySet());
   }
-  
+
   @Override
   public Var createStructFieldTmp(Var struct, Type fieldType,
       List<String> fieldPath, Alloc storage) {
@@ -225,4 +232,5 @@ public class GlobalContext extends Context {
   public FunctionContext getFunctionContext() {
     return null;
   }
+
 }

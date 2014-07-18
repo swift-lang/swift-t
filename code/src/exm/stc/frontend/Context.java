@@ -30,11 +30,11 @@ import exm.stc.ast.FilePosition.LineMapping;
 import exm.stc.ast.SwiftAST;
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.exceptions.UndefinedExecTargetException;
+import exm.stc.common.exceptions.UndefinedExecContextException;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.ExecTarget;
+import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -407,8 +407,8 @@ public abstract class Context {
    * @param name
    * @return
    */
-  public abstract ExecTarget lookupExecTarget(String name)
-                    throws UndefinedExecTargetException;
+  public abstract ExecContext lookupExecContext(String name)
+                    throws UndefinedExecContextException;
   
   /**
    * @return valid names of execution targets

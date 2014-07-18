@@ -414,19 +414,42 @@ public class ASTWalker {
   }
 
   private void pragmaTopLevel(GlobalContext context, SwiftAST pragmaT)
-                                    throws UndefinedPragmaException {
+                                    throws UserException {
     assert(pragmaT.getType() == ExMParser.PRAGMA);
     assert(pragmaT.childCount() >= 1) : pragmaT.childCount();
     SwiftAST pragmaNameT = pragmaT.child(0);
+    List<SwiftAST> pragmaArgs = pragmaT.children(1);
+
     assert(pragmaNameT.getType() == ExMParser.ID);
     String pragmaName = pragmaNameT.getText();
 
-    if (pragmaName.equals("donothing")) {
-      // Ignore this pragma
+    if (pragmaName.equals("worktypedef")) {
+      workTypeDef(context, pragmaArgs);
     } else {
       throw new UndefinedPragmaException(context, "Invalid pragma name: "
                                                       + pragmaName);
     }
+  }
+
+  /**
+   * Define a new work type
+   * @param context
+   * @param args args for pragma
+   * @throws UserException
+   */
+  private void workTypeDef(GlobalContext context, List<SwiftAST> args)
+                          throws UserException {
+    if (args.size() != 1) {
+      throw new UserException(context, "Expected worktypedef pragma to "
+                            + "have 1 argument, but got " + args.size());
+    }
+    SwiftAST workTypeT = args.get(0);
+    if (workTypeT.getType() != ExMParser.VARIABLE) {
+      throw new UserException(context, "Expected worktypedef pragma to "
+                                  + "have identifier name as argument");
+    }
+    String workTypeName = workTypeT.child(0).getText();
+    context.declareWorkType(workTypeName);
   }
 
   /**
@@ -1542,8 +1565,8 @@ public class ASTWalker {
         ForeignFunctions.addSpecialImpl(special, function);
       } else if (key.equals(Annotations.FN_DISPATCH)) {
         try {
-          ExecTarget mode = context.lookupExecTarget(val);
-          ForeignFunctions.addTaskMode(function, mode);
+          ExecContext cx = context.lookupExecContext(val);
+          ForeignFunctions.addTaskMode(function, ExecTarget.dispatched(cx));
         } catch (IllegalArgumentException e) {
           List<String> dispatchNames = new ArrayList<String>(context.execTargetNames());
           Collections.sort(dispatchNames);

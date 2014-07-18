@@ -17,11 +17,11 @@ package exm.stc.common.exceptions;
 
 import exm.stc.frontend.Context;
 
-public class UndefinedExecTargetException
+public class UndefinedExecContextException
 extends UserException
 {
 
-  public UndefinedExecTargetException(Context context, String name)
+  public UndefinedExecContextException(Context context, String name)
   {
     super(context, "The following execution target was not defined in " +
     		"the current context: " + name);

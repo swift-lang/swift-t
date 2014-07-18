@@ -15,10 +15,13 @@
  */
 package exm.stc.common.lang;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 import exm.stc.common.Settings;
+import exm.stc.common.util.Pair;
 
 /**
  * Where a bit of code will execute.
@@ -167,5 +170,24 @@ public class ExecContext {
 
     // Otherwise, contexts are different at runtime
     return this.equals(other);
+  }
+
+
+  /**
+   * Return builtin context names.
+   */
+  public static List<Pair<String, ExecContext>> builtinExecContexts() {
+    List<Pair<String, ExecContext>> targets = new
+        ArrayList<Pair<String, ExecContext>>(Arrays.asList(
+          Pair.create("CONTROL", CONTROL_CONTEXT),
+          Pair.create("WORKER", DEFAULT_WORKER_CONTEXT),
+          /* Deprecated synonym */
+          Pair.create("LEAF", DEFAULT_WORKER_CONTEXT)));
+
+    for (Pair<String, ExecContext> cx: AsyncExecutor.execContexts()) {
+      targets.add(Pair.create(cx.val1, cx.val2));
+    }
+
+    return targets;
   }
 }

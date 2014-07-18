@@ -22,9 +22,9 @@ import java.util.List;
 
 import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.exceptions.UndefinedExecTargetException;
+import exm.stc.common.exceptions.UndefinedExecContextException;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.ExecTarget;
+import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -249,9 +249,9 @@ public class LocalContext extends Context {
   
 
   @Override
-  public ExecTarget lookupExecTarget(String name)
-              throws UndefinedExecTargetException {
-    return globals.lookupExecTarget(name);
+  public ExecContext lookupExecContext(String name)
+              throws UndefinedExecContextException {
+    return globals.lookupExecContext(name);
   }
 
   @Override
