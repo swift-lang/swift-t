@@ -1096,10 +1096,10 @@ automatic operations and optimizations are disabled
 +read(file) -> string+::   Read file as a string
 +write(string) -> file+::  Write string to file
 
-+file_lines(file) -> string[]+:: 
++file_lines(file) -> string[]+::
 Reads the whole file, returning each line as a separate entry in the
 output array.  Comments with +#+ are excised, leading and trailing
-whitespace is trimmed, and blank lines are omitted. 
+whitespace is trimmed, and blank lines are omitted.
 
 +glob(string) -> file[]+:: Perform glob operation, returning files
 that match.  Available glob symbols include:
@@ -1842,22 +1842,17 @@ support static linking by specifying a package init function, plus
 static library or object files in the manifest file.
 +
 4. Link together the compiled C main program with user libraries and
-  Swift/T libraries to produce a final executable.
-  The details vary depending on the compiler:
-  we assume GCC.  +mkstatic.tcl+ may be used to obtain the required
-  linker flags, for example:
-+
-----
-mkstatic.tcl my.manifest --link-objs --link-flags
-----
-+
-produces the necessary linker flags for your manifest.
-+
-The Turbine distribution includes a helper script,
-+turbine-build-config.sh+, that can be sourced to obtain linker flags
-for Swift/T dependencies.
-+
-** Note that, in the case of static linking, if *libA* depends on *libB*,
+  Swift/T libraries to produce a final executable.  The details of the
+  process vary depending on the compiler and system: we assume GCC.
+  You will need to provide the correct flags to link in all libraries
+  required by Swift/T or your own user code.
+** *User code:* you must identify the libraries used by your application
+  and ensure link flags are provided.  If linking static libraries, ensure
+  that any indirect dependencies of these libraries are also linked.
+** *Swift/T system:* The Turbine distribution includes a helper script,
+  +turbine-build-config.sh+, that can be sourced to obtain linker flags
+  for Swift/T dependencies.
+** *Link order:* In the case of static linking, if *libA* depends on *libB*,
   then the +-lA+ flag must precede +-lB+ on the command line.  To
   actually do the linking, there are two further cases to consider:
 *** If building a fully static executable, you can
@@ -1885,7 +1880,6 @@ Additional options include:
 +-r+:: Specify non-standard variable prefix for C code
 +-v+:: Print verbose messages
 +--deps+:: Generate Makefile include for generating C file
-+--link-deps+:: Generate Makefile include for linking executable
 +--ignore-no-manifest+:: Pretend empty manifest present
 
 ////
