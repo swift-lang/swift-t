@@ -299,10 +299,15 @@ function.  This is performed in +b.tcl+:
 include::examples/3/b.tcl[]
 ----
 Thus, Swift calls the Tcl wrapper, which calls the C function.
+Additional information about blobs is found in the 
+link:blob.html[Blob Utilities Guide].
+
+////
 Additional documentation for writing Tcl wrappers that use the Turbine API
 may be found in the link:internals.html[Turbine Internals Guide];
 the +blobutils+ tools are described in the
 link:internals.html#_blob_manipulation[blobs section].
+////
 
 // TODO: complete the blobs section
 
