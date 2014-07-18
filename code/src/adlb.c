@@ -831,12 +831,11 @@ adlb_code ADLBP_Aget(int type_requested, adlb_payload_buf payload,
 }
 
 adlb_code ADLBP_Amget(int type_requested, int nreqs,
-                      const adlb_payload_buf* payload,
+                      const adlb_payload_buf* payloads,
                       adlb_get_req *reqs)
 {
   adlb_code ac;
   assert(nreqs >= 0);
-  assert(payload->size >= 0);
 
   CHECK_MSG(xlb_type_index(type_requested) != -1,
                 "ADLB_Amget(): Bad work type: %i\n", type_requested);
@@ -853,6 +852,11 @@ adlb_code ADLBP_Amget(int type_requested, int nreqs,
     xlb_get_req_impl *R = &xlb_get_reqs.reqs[handle];
     IRECV2(&R->hdr, sizeof(R->hdr), MPI_BYTE, xlb_my_server,
           ADLB_TAG_RESPONSE_GET, &R->reqs[XLB_GET_RESP_HDR_IX]);
+
+    const adlb_payload_buf* payload = &payloads[i];
+    DEBUG("ADLB_Amget(): post payload buffer %i/%i: %p %i",
+          i + 1, nreqs, payload->payload, payload->size);
+    assert(payload->size >= 0);
 
     // Initiate a receive for up to the max payload expected
     IRECV2(payload->payload, payload->size, MPI_BYTE, xlb_my_server,
@@ -936,7 +940,7 @@ static adlb_code xlb_aget_progress(adlb_get_req *req_handle,
       // Wait for all outstanding requests
       rc = MPI_Wait(&req->reqs[req->ncomplete], MPI_STATUS_IGNORE);
       MPI_CHECK(rc);
-      
+
       req->ncomplete++;
     }
     else
