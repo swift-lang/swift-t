@@ -98,6 +98,15 @@ if [[ "$ENABLE_STATIC" = 1 ]]; then
   AC_PROG_RANLIB
 fi
 
+USE_XLC=0
+AC_ARG_ENABLE(xlc,
+              AS_HELP_STRING(
+                    [--enable-xlc],
+                    [Enable IBM XLC flags]),
+              [
+                USE_XLC=1
+              ])
+AC_SUBST(USE_XLC)
 
 ENABLE_FAST=
 AC_ARG_ENABLE(fast,

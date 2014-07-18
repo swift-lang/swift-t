@@ -12,9 +12,22 @@ USE_MAC = @USE_MAC@
 # GCC shared library creation argument:
 #            Linux: -shared; Mac: -dynamiclib
 ifeq ($(USE_MAC),no)
-  MAC_NAME =
-  SO_SUFFIX = so
-  SHARED = -shared
+	MAC_NAME =
+	SO_SUFFIX = so
+	USE_XLC = @USE_XLC@
+	ifeq ($(USE_XLC),0)
+#       	Not XLC: GCC/Linux
+		PIC_FLAG = -fPIC
+		STD = -std=gnu99
+		SHARED = -shared
+		WARNS = -Wall
+	else
+#       	Using XLC
+		PIC_FLAG = -qpic
+		STD =
+		SHARED = -qmkshrobj -qnostaticlink -qnostaticlink=libgcc
+		WARNS =
+	endif
 else
   MAC_NAME = -install_name $(INSTALL_LIB)/libexmcutils.dylib
   SO_SUFFIX = dylib
@@ -103,10 +116,9 @@ dirname = $(patsubst %/,%,$(dir $(1)))
 CC = @CC@
 CFLAGS := @CFLAGS@
 LDFLAGS := @LDFLAGS@
-CFLAGS += -I $(srcdir) -I $(srcdir)/src -std=gnu99 -Wall
-CFLAGS += -Wconversion
+CFLAGS += -I $(srcdir) -I $(srcdir)/src $(STD) $(WARNS)
 ifeq ($(ENABLE_SHARED),1)
-	PIC = -fPIC
+	PIC = $(PIC_FLAG)
 	CFLAGS += $(PIC)
 endif
 
