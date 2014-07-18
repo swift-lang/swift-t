@@ -190,6 +190,7 @@ real_stmt:
     |   (new_type_definition)
     |   (global_const_definition)
     |   (import_statement)
+    |   (pragma_stmt)
     |   (stmt_chain)
     |   (if_stmt)
     |   (switch_stmt)
@@ -247,6 +248,10 @@ module_subscript:
         '.' module_name -> module_name
     ;
 
+pragma_stmt:
+        PRAGMA ID expr* SEMICOLON ->
+            ^( PRAGMA ID expr* )
+    ;
 
 type_field:
         type=type_prefix name=var_name array_marker* SEMICOLON ->
@@ -795,6 +800,7 @@ CONST: 'const';
 TYPE:  'type';
 TYPEDEF:  'typedef';
 IMPORT: 'import';
+PRAGMA: 'pragma';
 
 STDIN: 'stdin';
 STDOUT: 'stdout';

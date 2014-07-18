@@ -37,6 +37,7 @@ import exm.stc.common.exceptions.ModuleLoadException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
+import exm.stc.common.exceptions.UndefinedPragmaException;
 import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
@@ -115,7 +116,7 @@ public class ASTWalker {
   private final ExprWalker exprWalker;
   private final VariableUsageAnalyzer varAnalyzer;
   private final WrapperGen wrapper;
-  
+
   /** Track which modules are loaded and compiled */
   private LoadedModules modules = null;
 
@@ -123,7 +124,7 @@ public class ASTWalker {
     DEFINITIONS, // Process top level defs
     COMPILE,     // Compile functions
   }
-    
+
   public ASTWalker(STCMiddleEnd backend) {
     this.backend = backend;
     this.modules = new LoadedModules();
@@ -155,16 +156,16 @@ public class ASTWalker {
                                                  preprocessed);
     LocatedModule builtins = LocatedModule.fromPath(context,
                           Arrays.asList("builtins"), false);
-    
+
     // Two passes: first to find definitions, second to compile functions
     loadModule(context, FrontendPass.DEFINITIONS, builtins);
     loadModule(context, FrontendPass.DEFINITIONS, mainModule);
     for (LocatedModule loadedModule: modules.loadedModules()) {
       loadModule(context, FrontendPass.COMPILE, loadedModule);
     }
-    
+
     FunctionType fn = context.lookupFunction(Constants.MAIN_FUNCTION);
-    if (fn == null || 
+    if (fn == null ||
         !context.hasFunctionProp(Constants.MAIN_FUNCTION, FnProp.COMPOSITE)) {
       throw new UndefinedFunctionException(context,
           "No composite main function was defined in the script");
@@ -198,7 +199,7 @@ public class ASTWalker {
   private LineMapping lineMap() {
     return modules.currLineMap();
   }
-  
+
   /**
    * Synchronize file position to line mapping
    * @param context
@@ -231,7 +232,7 @@ public class ASTWalker {
       throws UserException, DoubleDefineException, UndefinedTypeException {
     assert(fileTree.getType() == ExMParser.PROGRAM);
     syncFilePos(context, fileTree);
-    
+
     for (SwiftAST topLevelDefn: fileTree.children()) {
       int type = topLevelDefn.getType();
       syncFilePos(context, topLevelDefn);
@@ -239,41 +240,45 @@ public class ASTWalker {
       case ExMParser.IMPORT:
         importModule(context, topLevelDefn, FrontendPass.DEFINITIONS);
         break;
-        
+
       case ExMParser.DEFINE_BUILTIN_FUNCTION:
         defineBuiltinFunction(context, topLevelDefn);
         break;
-  
+
       case ExMParser.DEFINE_FUNCTION:
         defineFunction(context, topLevelDefn);
         break;
-  
+
       case ExMParser.DEFINE_APP_FUNCTION:
         defineAppFunction(context, topLevelDefn);
         break;
-  
+
       case ExMParser.DEFINE_NEW_STRUCT_TYPE:
         defineNewStructType(context, topLevelDefn);
         break;
-        
+
       case ExMParser.DEFINE_NEW_TYPE:
       case ExMParser.TYPEDEF:
         defineNewType(context, topLevelDefn, type == ExMParser.TYPEDEF);
         break;
-        
+
       case ExMParser.GLOBAL_CONST:
         globalConst(context, topLevelDefn);
         break;
-      
+
+      case ExMParser.PRAGMA:
+        pragmaTopLevel(context, topLevelDefn);
+        break;
+
       case ExMParser.EOF:
         // Do nothing
         break;
-  
+
       default:
         String name = LogHelper.tokName(type);
         if (isTopLevelStatement(type)) {
-          throw new InvalidConstructException(context, 
-              "Statement type not yet supported at program top level: " 
+          throw new InvalidConstructException(context,
+              "Statement type not yet supported at program top level: "
                   + name.toLowerCase());
         }
         throw new STCRuntimeError("Unexpected token: " + name
@@ -303,7 +308,7 @@ public class ASTWalker {
       case ExMParser.IMPORT:
         // Don't recurse: we invoke compilation of modules elsewhere
         break;
-        
+
       case ExMParser.DEFINE_FUNCTION:
         compileFunction(context, topLevelDefn);
         break;
@@ -311,12 +316,12 @@ public class ASTWalker {
       case ExMParser.DEFINE_APP_FUNCTION:
         compileAppFunction(context, topLevelDefn);
         break;
-      
+
       default:
         String name = LogHelper.tokName(type);
         if (isTopLevelStatement(type)) {
-          throw new InvalidConstructException(context, 
-              "Statement type not yet supported at program top level: " 
+          throw new InvalidConstructException(context,
+              "Statement type not yet supported at program top level: "
                   + name.toLowerCase());
         }
       }
@@ -324,7 +329,7 @@ public class ASTWalker {
   }
 
   /**
-   * @param token a AST token type 
+   * @param token a AST token type
    * @return true if token is a statement token type that is syntactically
    *        valid at top level of program but isn't yet supported
    */
@@ -362,7 +367,7 @@ public class ASTWalker {
     assert(tree.getType() == ExMParser.IMPORT);
     assert(tree.getChildCount() == 1);
     SwiftAST moduleID = tree.child(0);
-    
+
     LocatedModule module = LocatedModule.fromModuleNameAST(context,
                                                   moduleID, false);
     loadModule(context, pass, module);
@@ -382,7 +387,7 @@ public class ASTWalker {
     Pair<ParsedModule, Boolean> loaded = modules.loadIfNeeded(context, module);
     ParsedModule parsed = loaded.val1;
     boolean newlyLoaded = loaded.val2;
-    
+
     // Now file is parsed, we decide how to handle import
     if (pass == FrontendPass.DEFINITIONS) {
       // Don't reload definitions
@@ -393,8 +398,8 @@ public class ASTWalker {
                                       module.canonicalName);
           LogHelper.debug(context, parsed.ast.printTree());
         }
-          
-        
+
+
         walkFile(context, module, parsed, pass);
       }
     } else {
@@ -407,7 +412,23 @@ public class ASTWalker {
       }
     }
   }
-  
+
+  private void pragmaTopLevel(GlobalContext context, SwiftAST pragmaT)
+                                    throws UndefinedPragmaException {
+    assert(pragmaT.getType() == ExMParser.PRAGMA);
+    assert(pragmaT.childCount() >= 1) : pragmaT.childCount();
+    SwiftAST pragmaNameT = pragmaT.child(0);
+    assert(pragmaNameT.getType() == ExMParser.ID);
+    String pragmaName = pragmaNameT.getText();
+
+    if (pragmaName.equals("donothing")) {
+      // Ignore this pragma
+    } else {
+      throw new UndefinedPragmaException(context, "Invalid pragma name: "
+                                                      + pragmaName);
+    }
+  }
+
   /**
    * Walk a tree that is a procedure statement.
    *
@@ -423,9 +444,9 @@ public class ASTWalker {
   throws UserException {
       int token = tree.getType();
       syncFilePos(context, tree);
-      
-      
-      if (walkMode == WalkMode.ONLY_DECLARATIONS) { 
+
+
+      if (walkMode == WalkMode.ONLY_DECLARATIONS) {
         if (token == ExMParser.DECLARATION){
           return declareVariables(context, tree, walkMode);
         } else if (token == ExMParser.ASSIGN_EXPRESSION) {
@@ -435,7 +456,7 @@ public class ASTWalker {
           return null;
         }
       }
-      
+
       switch (token) {
         case ExMParser.BLOCK:
           // Create a local context (stack frame) for this nested block
@@ -467,28 +488,28 @@ public class ASTWalker {
         case ExMParser.FOREACH_LOOP:
           foreach(context, tree);
           break;
-        
+
         case ExMParser.FOR_LOOP:
           forLoop(context, tree);
           break;
-          
+
         case ExMParser.ITERATE:
           iterate(context, tree);
           break;
-          
+
         case ExMParser.WAIT_STATEMENT:
         case ExMParser.WAIT_DEEP_STATEMENT:
           waitStmt(context, tree);
           break;
-          
+
         case ExMParser.UPDATE:
           updateStmt(context, tree);
           break;
-          
+
         case ExMParser.STATEMENT_CHAIN:
           stmtChain(context, tree);
           break;
-          
+
         case ExMParser.IMPORT:
           throw new InvalidConstructException(context, "Import statements"
                   + " are only allowed at top level of program");
@@ -498,17 +519,21 @@ public class ASTWalker {
         case ExMParser.DEFINE_APP_FUNCTION:
           throw new InvalidConstructException(context, "Function definitions"
               + " are only allowed at top level of program");
-    
+
         case ExMParser.DEFINE_NEW_STRUCT_TYPE:
         case ExMParser.DEFINE_NEW_TYPE:
         case ExMParser.TYPEDEF:
           throw new InvalidConstructException(context, "Type definitions"
               + " are only allowed at top level of program");
-          
+
         case ExMParser.GLOBAL_CONST:
           throw new InvalidConstructException(context, "Global constant"
               + " definitions are only allowed at top level of program");
-          
+
+        case ExMParser.PRAGMA:
+          throw new InvalidConstructException(context, "No pragmas"
+              + " are valid within functions");
+
         default:
           throw new STCRuntimeError
           ("Unexpected token type for statement: " +
@@ -520,28 +545,28 @@ public class ASTWalker {
 
   private void stmtChain(Context context, SwiftAST tree) throws UserException {
     assert(tree.getType() == ExMParser.STATEMENT_CHAIN);
-    
+
     // Evaluate multiple chainings iteratively
-    
-    // list of statements being waited on 
+
+    // list of statements being waited on
     List<SwiftAST> stmts = new ArrayList<SwiftAST>();
     while (tree.getType() == ExMParser.STATEMENT_CHAIN) {
       assert(tree.getChildCount() == 2);
       stmts.add(tree.child(0));
       tree = tree.child(1);
     }
-    
+
     // final statement in chain
     SwiftAST finalStmt = tree;
-    // result futures of last statement 
-    List<Var> stmtResults = null; 
-    
+    // result futures of last statement
+    List<Var> stmtResults = null;
+
     // Process declarations for outer block
     for (SwiftAST stmt: stmts) {
       walkStatement(context, stmt, WalkMode.ONLY_DECLARATIONS);
     }
     walkStatement(context, finalStmt, WalkMode.ONLY_DECLARATIONS);
-    
+
     // Evaluate statements into nested waits
     for (SwiftAST stmt: stmts) {
       stmtResults = walkStatement(context, stmt, WalkMode.ONLY_EVALUATION);
@@ -551,15 +576,15 @@ public class ASTWalker {
             + " of statement of type " + LogHelper.tokName(stmt.getType())
             + " but statement doesn't have output future to wait on");
       }
-      
+
       String waitName = context.getFunctionContext().constructName("chain");
       backend.startWaitStatement(waitName, VarRepr.backendVars(stmtResults),
              WaitMode.WAIT_ONLY, true, false, ExecTarget.nonDispatchedAny());
     }
-    
+
     // Evaluate the final statement
     walkStatement(context, finalStmt, WalkMode.ONLY_EVALUATION);
-    
+
     // Close all waits
     for (int i = 0; i < stmts.size(); i++) {
       backend.endWaitStatement();
@@ -567,7 +592,7 @@ public class ASTWalker {
   }
 
 
-  private void waitStmt(Context context, SwiftAST tree) 
+  private void waitStmt(Context context, SwiftAST tree)
                                   throws UserException {
     Wait wait = Wait.fromAST(context, tree);
     ArrayList<Var> waitEvaled = new ArrayList<Var>();
@@ -589,23 +614,23 @@ public class ASTWalker {
       Var res = exprWalker.eval(context, expr, waitExprType, false, null);
       waitEvaled.add(res);
     }
-    
+
     ArrayList<Var> keepOpenVars = new ArrayList<Var>();
-    summariseBranchVariableUsage(context, 
+    summariseBranchVariableUsage(context,
           Arrays.asList(wait.getBlock().getVariableUsage()), keepOpenVars);
-    
-    
+
+
     // Quick sanity check to see we're not directly blocking
     // on any arrays written inside
-    HashSet<String> waitVarSet = 
+    HashSet<String> waitVarSet =
         new HashSet<String>(Var.nameList(waitEvaled));
     waitVarSet.retainAll(Var.nameList(keepOpenVars));
     if (waitVarSet.size() > 0) {
-      throw new UserException(context, 
+      throw new UserException(context,
           "Deadlock in wait statement. The following arrays are written "
         + "inside the body of the wait: " + waitVarSet.toString());
     }
-    
+
     backend.startWaitStatement(
           context.getFunctionContext().constructName("explicit-wait"),
           VarRepr.backendVars(waitEvaled),
@@ -613,7 +638,7 @@ public class ASTWalker {
     block(new LocalContext(context), wait.getBlock());
     backend.endWaitStatement();
   }
-  
+
   /**
    * block operates on a BLOCK node of the AST. This should be called for every
    * logical code block (e.g. function bodies, condition bodies, etc) in the
@@ -637,11 +662,11 @@ public class ASTWalker {
   }
 
   private void ifStatement(Context context, SwiftAST tree)
-      throws UserException {    
+      throws UserException {
     LogHelper.trace(context, "if...");
-    If ifStmt = If.fromAST(context, tree); 
-    
-    
+    If ifStmt = If.fromAST(context, tree);
+
+
     // Condition must be boolean and stored to be fetched later
     Var conditionVar = exprWalker.eval(context,
         ifStmt.getCondition(), ifStmt.getCondType(context),
@@ -660,9 +685,9 @@ public class ASTWalker {
 
     // Check that condition var isn't assigned inside block - would be deadlock
     checkConditionalDeadlock(context, conditionVar, branchVUs);
-    
+
     FunctionContext fc = context.getFunctionContext();
-    backend.startWaitStatement( fc.constructName("if"), 
+    backend.startWaitStatement( fc.constructName("if"),
                 VarRepr.backendVar(conditionVar).asList(),
                 WaitMode.WAIT_ONLY, false, false, ExecTarget.nonDispatchedControl());
 
@@ -758,13 +783,13 @@ public class ASTWalker {
 
   private void switchStatement(Context context, SwiftAST tree)
        throws UserException {
-    LogHelper.trace(context, "switch...");    
-    
+    LogHelper.trace(context, "switch...");
+
     // Evaluate into a temporary variable. Only int supported now
-    
+
     Switch sw = Switch.fromAST(context, tree);
     sw.typeCheck(context);
-    
+
     Var switchVar = exprWalker.eval(context, sw.getSwitchExpr(), Types.F_INT,
                                     true, null);
 
@@ -783,11 +808,11 @@ public class ASTWalker {
 
     Context waitContext = new LocalContext(context);
     Var switchVal = varCreator.createValueOfVar(waitContext,
-                                                     switchVar); 
+                                                     switchVar);
 
     exprWalker.retrieve(switchVal, switchVar);
 
-    LogHelper.trace(context, "switch: " + 
+    LogHelper.trace(context, "switch: " +
             sw.getCaseBodies().size() + " cases");
     backend.startSwitch(VarRepr.backendArg(switchVal), sw.getCaseLabels(),
                                                          sw.hasDefault());
@@ -800,8 +825,8 @@ public class ASTWalker {
   }
 
   private void foreach(Context context, SwiftAST tree) throws UserException {
-    ForeachLoop loop = ForeachLoop.fromAST(context, tree); 
-    
+    ForeachLoop loop = ForeachLoop.fromAST(context, tree);
+
     if (loop.iteratesOverRange() && loop.getCountVarName() == null) {
       foreachRange(context, loop);
     } else {
@@ -816,14 +841,14 @@ public class ASTWalker {
    * @throws UserException
    * @throws UndefinedTypeException
    */
-  private void foreachRange(Context context, ForeachLoop loop) 
+  private void foreachRange(Context context, ForeachLoop loop)
                                           throws UserException {
     ArrayRange range = ArrayRange.fromAST(context, loop.getArrayVarTree());
     range.typeCheck(context);
-    
+
     /* Just evaluate all of the expressions into futures and rely
      * on constant folding in IC to clean up where possible
-     */ 
+     */
     Var start = exprWalker.eval(context, range.getStart(), Types.F_INT, false, null);
     Var end = exprWalker.eval(context, range.getEnd(), Types.F_INT, false, null);
     Var step;
@@ -835,7 +860,7 @@ public class ASTWalker {
     }
     FunctionContext fc = context.getFunctionContext();
     int loopNum = fc.getCounterVal("foreach-range");
-    
+
     // Need to pass in futures along with user vars
     List<Var> rangeBounds = Arrays.asList(start, end, step);
     backend.startWaitStatement(fc.getFunctionName() + "-wait-range" + loopNum,
@@ -846,16 +871,16 @@ public class ASTWalker {
     Var endVal = exprWalker.retrieveToVar(waitContext, end);
     Var stepVal = exprWalker.retrieveToVar(waitContext, step);
     Context bodyContext = loop.setupLoopBodyContext(waitContext, true, false);
-    
+
     // The per-iteration value of the range
     Var memberVal = varCreator.createValueOfVar(bodyContext,
                                             loop.getMemberVar(), false);
     Var counterVal = loop.getLoopCountVal();
-    
+
     backend.startRangeLoop(fc.getFunctionName() + "-range" + loopNum,
-            VarRepr.backendVar(memberVal), 
+            VarRepr.backendVar(memberVal),
             (counterVal == null) ? null : VarRepr.backendVar(counterVal),
-            VarRepr.backendArg(startVal), VarRepr.backendArg(endVal), 
+            VarRepr.backendArg(startVal), VarRepr.backendArg(endVal),
             VarRepr.backendArg(stepVal),
             loop.getDesiredUnroll(), loop.getSplitDegree(),
             loop.getLeafDegree());
@@ -864,7 +889,7 @@ public class ASTWalker {
       backend.startWaitStatement(fc.getFunctionName() + "range-iter" + loopNum,
           Var.NONE, WaitMode.TASK_DISPATCH, false, false, ExecTarget.dispatchedControl());
     }
-    
+
     // We have the current value, but need to put it in a future in case user
     //  code refers to it
 
@@ -884,7 +909,7 @@ public class ASTWalker {
     backend.endRangeLoop();
     backend.endWaitStatement();
   }
-  
+
   /**
    * Handle the general foreach loop where we are looping over array
    * @param context
@@ -909,11 +934,11 @@ public class ASTWalker {
                   "causes a deadlock due to technical limitations");
       }
     }
-    
+
     // Need to get handle to real array before running loop
     FunctionContext fc = context.getFunctionContext();
     int loopNum = fc.getCounterVal("foreach-array");
-    
+
     Var realArray;
     Context outsideLoopContext;
     if (Types.isContainerRef(arrayVar)) {
@@ -932,13 +957,13 @@ public class ASTWalker {
       realArray = arrayVar;
       outsideLoopContext = context;
     }
-    
+
     // Block on array
     backend.startWaitStatement(
         fc.getFunctionName() + "-foreach-wait" + loopNum,
         VarRepr.backendVar(realArray).asList(),
         WaitMode.WAIT_ONLY, false, false, ExecTarget.nonDispatchedControl());
-    
+
     loop.setupLoopBodyContext(outsideLoopContext, false, false);
     Context loopBodyContext = loop.getBodyContext();
 
@@ -951,20 +976,20 @@ public class ASTWalker {
     } else {
       backendIterVar = VarRepr.backendVar(loop.getMemberVar());
     }
-    
+
     backend.startForeachLoop(fc.getFunctionName() + "-foreach" + loopNum,
             VarRepr.backendVar(realArray), backendIterVar,
             loopCountVal == null ? null : VarRepr.backendVar(loopCountVal),
             loop.getSplitDegree(), loop.getLeafDegree(), true);
 
-    
+
     if (memberIsVal) {
       // Need to store to value that will be referenced by later generated code
       varCreator.initialiseVariable(loopBodyContext, loop.getMemberVar());
       exprWalker.assign(VarRepr.backendVar(loop.getMemberVar()),
                         backendIterVar.asArg());
     }
-    
+
     // May need to spawn off each iteration as task - use wait for this
     if (!loop.isSyncLoop()) {
       backend.startWaitStatement(
@@ -977,9 +1002,9 @@ public class ASTWalker {
                                      loop.createCountVar(context));
       exprWalker.assign(loopCountVar, loop.getLoopCountVal().asArg());
     }
-    
+
     block(loopBodyContext, loop.getBody());
-    
+
     // Close spawn wait
     if (!loop.isSyncLoop()) {
       backend.endWaitStatement();
@@ -993,28 +1018,28 @@ public class ASTWalker {
       backend.endWaitStatement();
     }
   }
-  
+
   private void forLoop(Context context, SwiftAST tree) throws UserException {
     ForLoopDescriptor forLoop = ForLoopDescriptor.fromAST(context, tree);
-    
+
     // Evaluate initial values of loop vars
     List<Arg> initVals = new ArrayList<Arg>();
-    
+
     for (Var initVal: evalLoopVarExprs(context, forLoop,
                                        forLoop.getInitExprs())) {
       initVals.add(initVal.asArg());
     }
-    
+
     FunctionContext fc = context.getFunctionContext();
     int loopNum = fc.getCounterVal("forloop");
     String loopName = fc.getFunctionName() + "-forloop-" + loopNum;
-    
-    HashMap<String, Var> parentLoopVarAliases = 
+
+    HashMap<String, Var> parentLoopVarAliases =
         new HashMap<String, Var>();
     for (LoopVar lv: forLoop.getLoopVars()) {
       if (lv.declaredOutsideLoop) {
         // Need to copy over value of loop variable on last iteration
-        Var parentAlias = 
+        Var parentAlias =
             varCreator.createVariable(context, lv.var.type(),
                   Var.OUTER_VAR_PREFIX + lv.var.name(),
                   Alloc.ALIAS, DefType.LOCAL_COMPILER,
@@ -1026,25 +1051,25 @@ public class ASTWalker {
         parentLoopVarAliases.put(lv.var.name(), parentAlias);
       }
     }
-    
+
     // Create context with loop variables
     Context loopIterContext = forLoop.createIterationContext(context);
     forLoop.validateCond(loopIterContext);
-    Type condType = TypeChecker.findSingleExprType(loopIterContext, 
+    Type condType = TypeChecker.findSingleExprType(loopIterContext,
                                               forLoop.getCondition());
 
     // Evaluate the conditional expression for the first iteration outside the
     // loop, directly using temp names for loop variables
     HashMap<String, String> initRenames = new HashMap<String, String>();
     for (int i = 0; i < forLoop.loopVarCount(); i++) {
-      initRenames.put(forLoop.getLoopVars().get(i).var.name(), 
+      initRenames.put(forLoop.getLoopVars().get(i).var.name(),
             initVals.get(i).getVar().name());
     }
     Var initCond = exprWalker.eval(context, forLoop.getCondition(), condType, true, initRenames);
-    
+
     // Start the loop construct with some initial values
-    Var condArg = 
-        loopIterContext.declareVariable(condType, Var.LOOP_COND_PREFIX + 
+    Var condArg =
+        loopIterContext.declareVariable(condType, Var.LOOP_COND_PREFIX +
             loopNum, Alloc.TEMP, DefType.INARG,
             VarProvenance.exprTmp(context.getSourceLoc()), false);
 
@@ -1059,114 +1084,114 @@ public class ASTWalker {
     for (LoopVar lv: forLoop.getLoopVars()) {
       definedHere.add(!lv.declaredOutsideLoop);
     }
-    
+
     List<Boolean> blockingVector = new ArrayList<Boolean>(loopVars.size());
     blockingVector.add(true); // block on condition
     blockingVector.addAll(forLoop.blockingLoopVarVector());
-    
+
     initVals.add(0, initCond.asArg());
-    
+
     backend.startLoop(loopName, VarRepr.backendVars(loopVars), definedHere,
                       VarRepr.backendArgs(initVals), blockingVector);
-    
+
     // get value of condVar
     Var condVal = exprWalker.retrieveToVar(loopIterContext, condArg);
-    
+
     // branch depending on if loop should start
     backend.startIfStatement(VarRepr.backendArg(condVal), true);
-    
+
     // Create new context for loop body to execute when condition passes
     Context loopBodyContext = new LocalContext(loopIterContext);
-    
+
     // If this iteration is good, run all of the stuff in the block
     block(loopBodyContext, forLoop.getBody());
-    
+
     forLoop.validateUpdates(loopBodyContext);
     //evaluate update expressions
     List<Arg> newLoopVars = new ArrayList<Arg>();
-    for (Var newLoopVar: evalLoopVarExprs(loopBodyContext, forLoop, 
+    for (Var newLoopVar: evalLoopVarExprs(loopBodyContext, forLoop,
                                           forLoop.getUpdateRules())) {
       newLoopVars.add(newLoopVar.asArg());
     }
-    
+
     HashMap<String, String> nextRenames = new HashMap<String, String>();
     for (int i = 0; i < forLoop.loopVarCount(); i++) {
-      nextRenames.put(forLoop.getLoopVars().get(i).var.name(), 
+      nextRenames.put(forLoop.getLoopVars().get(i).var.name(),
                        newLoopVars.get(i).getVar().name());
     }
-    Var nextCond = exprWalker.eval(loopBodyContext, 
+    Var nextCond = exprWalker.eval(loopBodyContext,
               forLoop.getCondition(), condType, true, nextRenames);
     newLoopVars.add(0, nextCond.asArg());
     backend.loopContinue(VarRepr.backendArgs(newLoopVars), blockingVector);
     backend.startElseBlock();
-    // Terminate loop, clean up open arrays and copy out final vals 
+    // Terminate loop, clean up open arrays and copy out final vals
     // of loop vars
     Context loopFinalizeContext = new LocalContext(loopIterContext);
     for (LoopVar lv: forLoop.getLoopVars()) {
       if (lv.declaredOutsideLoop) {
-        exprWalker.copyByValue(loopFinalizeContext, 
+        exprWalker.copyByValue(loopFinalizeContext,
             parentLoopVarAliases.get(lv.var.name()), lv.var);
       }
     }
-    
+
     backend.loopBreak();
     backend.endIfStatement();
-    
+
     // finish loop construct
     backend.endLoop();
   }
-  
+
   private void iterate(Context context, SwiftAST tree) throws UserException {
     IterateDescriptor loop = IterateDescriptor.fromAST(context, tree);
-    
+
     // Initial iteration should succeed
     Var falseV = exprWalker.assignToVar(context, Arg.FALSE, false);
     Var zero = exprWalker.assignToVar(context, Arg.ZERO, false);
-    
+
     FunctionContext fc = context.getFunctionContext();
     int loopNum = fc.getCounterVal("iterate");
     String loopName = fc.getFunctionName() + "-iterate-" + loopNum;
 
     Context iterContext = loop.createIterContext(context);
-    
+
     // Start the loop construct with some initial values
     Var condArg = iterContext.declareVariable(Types.F_BOOL,
-            Var.LOOP_COND_PREFIX + loopNum, Alloc.TEMP, DefType.INARG, 
+            Var.LOOP_COND_PREFIX + loopNum, Alloc.TEMP, DefType.INARG,
             VarProvenance.exprTmp(context.getSourceLoc()), false);
-    
+
     List<Boolean> blockingVars = Arrays.asList(true, false);
-    backend.startLoop(loopName, 
+    backend.startLoop(loopName,
         VarRepr.backendVars(condArg, loop.getLoopVar()),
         Arrays.asList(true, true),
         VarRepr.backendArgs(falseV.asArg(), zero.asArg()), blockingVars);
-    
+
     // get value of condVar
-    Var condVal = exprWalker.retrieveToVar(iterContext, condArg); 
-    
+    Var condVal = exprWalker.retrieveToVar(iterContext, condArg);
+
     backend.startIfStatement(VarRepr.backendArg(condVal), true);
     backend.loopBreak();
     backend.startElseBlock();
     Context bodyContext = new LocalContext(iterContext);
     block(bodyContext, loop.getBody());
-    
+
     // Check the condition type now that all loop body vars have been declared
     Type condType = TypeChecker.findSingleExprType(iterContext,
         loop.getCond());
     if (!condType.assignableTo(Types.F_BOOL)) {
-      throw new TypeMismatchException(bodyContext, 
+      throw new TypeMismatchException(bodyContext,
           "iterate condition had invalid type: " + condType.typeName());
     }
-    
+
     Var nextCond = exprWalker.eval(bodyContext, loop.getCond(),
                                           Types.F_BOOL, false, null);
-    
+
     Var nextCounter = varCreator.createTmp(bodyContext,
                                       Types.F_INT);
 
     Var one = exprWalker.assignToVar(bodyContext, Arg.ONE, false);
     exprWalker.asyncOp(BuiltinOpcode.PLUS_INT, nextCounter, Arrays.asList(
                       loop.getLoopVar().asArg(), one.asArg()));
-    
+
     backend.loopContinue(
         VarRepr.backendArgs(nextCond.asArg(), nextCounter.asArg()),
         blockingVars);
@@ -1194,7 +1219,7 @@ public class ASTWalker {
 
 
 
-  
+
   private List<Var> declareVariables(Context context, SwiftAST tree, WalkMode walkMode)
           throws UserException {
     LogHelper.trace(context, "declareVariable...");
@@ -1202,25 +1227,25 @@ public class ASTWalker {
     int count = tree.getChildCount();
     if (count < 2)
       throw new STCRuntimeError("declare_multi: child count < 2");
-    VariableDeclaration vd =  VariableDeclaration.fromAST(context, 
+    VariableDeclaration vd =  VariableDeclaration.fromAST(context,
                                                     tree);
     List<Var> assignedVars = new ArrayList<Var>();
-    
+
     for (int i = 0; i < vd.count(); i++) {
       VariableDescriptor vDesc = vd.getVar(i);
       SwiftAST declTree = vd.getDeclTree(i);
       SwiftAST assignedExpr = vd.getVarExpr(i);
-      
+
       Var var;
       if (walkMode == WalkMode.ONLY_EVALUATION) {
         var = context.lookupVarInternal(vDesc.getName());
       } else {
         var = declareVariable(context, vDesc);
-      } 
+      }
       if (Types.isPrimUpdateable(var.type())) {
         if (walkMode == WalkMode.ONLY_DECLARATIONS) {
           throw new TypeMismatchException(context, var.name() +
-                  " is an updateable and its declaration cannot be chained");  
+                  " is an updateable and its declaration cannot be chained");
         }
         // Have to init at declare time
         initUpdateableVar(context, var, assignedExpr);
@@ -1249,7 +1274,7 @@ public class ASTWalker {
           if (intLit != null) {
             initVal = Literals.interpretIntAsFloat(context, intLit);
           }
-        } 
+        }
         if (initVal == null) {
           throw new STCRuntimeError("Don't yet support non-constant" +
                   " initialisers for updateable variables");
@@ -1274,7 +1299,7 @@ public class ASTWalker {
     // First evaluate the mapping expr
     if (vDesc.getMappingExpr() != null) {
       if (Types.isMappable(vDesc.getType())) {
-        Type mapType = TypeChecker.findSingleExprType(context, 
+        Type mapType = TypeChecker.findSingleExprType(context,
                                           vDesc.getMappingExpr());
         if (!Types.isString(mapType)) {
           throw new TypeMismatchException(context, "Tried to map using " +
@@ -1288,8 +1313,8 @@ public class ASTWalker {
       }
     }
 
-    Var var = varCreator.createMappedVariable(context, definedType, 
-        vDesc.getName(), Alloc.STACK, DefType.LOCAL_USER, 
+    Var var = varCreator.createMappedVariable(context, definedType,
+        vDesc.getName(), Alloc.STACK, DefType.LOCAL_USER,
         VarProvenance.userVar(context.getSourceLoc()), mappedVar);
     return var;
   }
@@ -1298,7 +1323,7 @@ public class ASTWalker {
         WalkMode walkMode) throws UserException {
     LogHelper.debug(context, "assignment: ");
     LogHelper.logChildren(context.getLevel(), tree);
-    
+
     Assignment assign = Assignment.fromAST(context, tree);
     return assignMultiRVal(context, assign, walkMode);
   }
@@ -1316,10 +1341,10 @@ public class ASTWalker {
     }
     return multiAssignTargets;
   }
-  
+
   /**
    * Handle an assignment from a single RValue expression to one
-   * or more LValues 
+   * or more LValues
    * @param context
    * @param op
    * @param lVals
@@ -1329,7 +1354,7 @@ public class ASTWalker {
    * @throws UserException
    */
   private List<Var> assignSingleRVal(Context context, AssignOp op,
-      List<LValue> lVals, SwiftAST rValExpr, WalkMode walkMode) 
+      List<LValue> lVals, SwiftAST rValExpr, WalkMode walkMode)
           throws UserException {
     // First do any preparation/reduction of lvals and obtain vars
     // to evaluate the R.H.S. expression(s) into
@@ -1340,7 +1365,7 @@ public class ASTWalker {
     if (!target.skipREval && walkMode != WalkMode.ONLY_DECLARATIONS) {
       exprWalker.evalToVars(context, rValExpr, target.rValTargets, null);
     }
-    
+
     // Do any final transformations/updates required
     return lValWalker.finalizeLVals(context, op, target);
   }
@@ -1365,7 +1390,7 @@ public class ASTWalker {
     return oList;
   }
 
-  private void updateStmt(Context context, SwiftAST tree) 
+  private void updateStmt(Context context, SwiftAST tree)
         throws UserException {
     Update up = Update.fromAST(context, tree);
     Type exprType = up.typecheck(context);
@@ -1387,34 +1412,34 @@ public class ASTWalker {
     assert(outputs.getType() == ExMParser.FORMAL_ARGUMENT_LIST);
     assert(tclPackage.getType() == ExMParser.TCL_PACKAGE);
     assert(tclPackage.getChildCount() == 2);
-    
+
     Set<String> typeParams = extractTypeParams(typeParamsT);
 
     FunctionDecl fdecl = FunctionDecl.fromAST(context, function, inputs,
                                               outputs, typeParams);
-    
+
     FunctionType ft = fdecl.getFunctionType();
     LogHelper.debug(context, "builtin: " + function + " " + ft);
-    
-    String pkg = Literals.extractLiteralString(context, tclPackage.child(0)); 
+
+    String pkg = Literals.extractLiteralString(context, tclPackage.child(0));
     String version = Literals.extractLiteralString(context, tclPackage.child(1));
-    
+
     // TODO: other types of packages
     backend.requirePackage(new TclPackage(pkg, version));
-    
+
     int pos = REQUIRED_CHILDREN;
     TclFunRef impl = null;
-    if (pos < tree.getChildCount() && 
+    if (pos < tree.getChildCount() &&
               tree.child(pos).getType() == ExMParser.TCL_FUN_REF) {
       SwiftAST tclImplRef = tree.child(pos);
-      String symbol  = Literals.extractLiteralString(context, 
+      String symbol  = Literals.extractLiteralString(context,
                                                      tclImplRef.child(0));
       impl = new TclFunRef(pkg, symbol, version);
       pos++;
     }
-    
+
     TclOpTemplate inlineTcl = null;
-    if (pos < tree.getChildCount() && 
+    if (pos < tree.getChildCount() &&
           tree.child(pos).getType() == ExMParser.INLINE_TCL) {
       /* See if a template is provided for inline TCL code for function */
       SwiftAST inlineTclTree = tree.child(pos);
@@ -1422,10 +1447,10 @@ public class ASTWalker {
                                           inlineTclTree);
       pos++;
     }
-    
+
     // Register as foreign function
     ForeignFunctions.addForeignFunction(function);
-    
+
     // Read annotations at end of child list
     for (; pos < tree.getChildCount(); pos++) {
       handleBuiltinFunctionAnnotation(context, function, fdecl, tree.child(pos),
@@ -1433,7 +1458,7 @@ public class ASTWalker {
     }
 
     ExecTarget taskMode = ForeignFunctions.getTaskMode(function);
-    
+
     // TODO: assume for now that all non-local builtins are targetable
     // This is still not quite right (See issue #230)
     boolean isTargetable = false;
@@ -1441,7 +1466,7 @@ public class ASTWalker {
       isTargetable = true;
       context.setFunctionProperty(function, FnProp.TARGETABLE);
     }
-    
+
     context.defineFunction(function, ft);
     FunctionType backendFT = VarRepr.backendFnType(ft);
     backend.defineBuiltinFunction(function, backendFT, inlineTcl, impl);
@@ -1457,13 +1482,13 @@ public class ASTWalker {
       context.setFunctionProperty(function, FnProp.WRAPPED_BUILTIN);
       context.setFunctionProperty(function, FnProp.SYNC);
       boolean isParallel = context.hasFunctionProp(function, FnProp.PARALLEL);
-      if (isParallel && 
-          (!taskMode.isAsync() || 
+      if (isParallel &&
+          (!taskMode.isAsync() ||
            !taskMode.targetContext().isAnyWorkContext()) ) {
         throw new UserException(context,
                         "Parallel tasks must execute on workers");
       }
-      
+
       // Defer generation of wrapper until it is called
       wrapper.saveWrapper(function, backendFT, fdecl,
                           taskMode, isParallel, isTargetable);
@@ -1487,10 +1512,10 @@ public class ASTWalker {
       FunctionDecl fdecl,
       SwiftAST annotTree, boolean hasLocalVersion) throws UserException {
     assert(annotTree.getType() == ExMParser.ANNOTATION);
-    
+
     assert(annotTree.getChildCount() > 0);
     String key = annotTree.child(0).getText();
-    if (annotTree.getChildCount() == 1) { 
+    if (annotTree.getChildCount() == 1) {
       registerFunctionAnnotation(context, function, fdecl, key);
     } else {
       assert(annotTree.getChildCount() == 2);
@@ -1512,7 +1537,7 @@ public class ASTWalker {
           throw new InvalidAnnotationException(context, "\"" + val +
               "\" is not the name of a specially handled function in STC. " +
               "Valid options are: " +
-              StringUtil.concat(SpecialFunction.values())); 
+              StringUtil.concat(SpecialFunction.values()));
         }
         ForeignFunctions.addSpecialImpl(special, function);
       } else if (key.equals(Annotations.FN_DISPATCH)) {
@@ -1522,7 +1547,7 @@ public class ASTWalker {
         } catch (IllegalArgumentException e) {
           List<String> dispatchNames = new ArrayList<String>(context.execTargetNames());
           Collections.sort(dispatchNames);
-          
+
           throw new UserException(context, "Unknown dispatch mode " + val + ". "
               + " Valid options are: " + StringUtil.concat(dispatchNames));
         }
@@ -1550,7 +1575,7 @@ public class ASTWalker {
    * add it to the known semantic info
    * @param function
    * @param annotation
-   * @throws UserException 
+   * @throws UserException
    */
   private void registerFunctionAnnotation(Context context, String function,
         FunctionDecl fdecl, String annotation) throws UserException {
@@ -1571,13 +1596,13 @@ public class ASTWalker {
     } else if (annotation.equals(Annotations.FN_CHECKPOINT)) {
       Checkpointing.checkCanCheckpoint(context, function,
                                        fdecl.getFunctionType());
-      
+
       context.setFunctionProperty(function, FnProp.CHECKPOINTED);
       backend.requireCheckpointing();
     } else {
       throw new InvalidAnnotationException(context, "function", annotation, false);
     }
-    
+
   }
 
 
@@ -1591,21 +1616,21 @@ public class ASTWalker {
     SwiftAST typeParams = tree.child(1);
     SwiftAST outputs = tree.child(2);
     SwiftAST inputs = tree.child(3);
-    
+
     assert(typeParams.getType() == ExMParser.TYPE_PARAMETERS);
     if (typeParams.getChildCount() != 0) {
       throw new UserException(context, "Cannot provide type parameters for "
                                       + "Swift functions");
     }
-    
+
     Set<Suppression> suppressions = new HashSet<Suppression>();
     List<String> annotations = extractFunctionAnnotations(context, tree, 5,
                                                           suppressions);
-    
+
     FunctionDecl fdecl = FunctionDecl.fromAST(context, function, inputs,
                           outputs, Collections.<String>emptySet());
     FunctionType ft = fdecl.getFunctionType();
-    
+
     if (ft.hasVarargs()) {
       throw new TypeMismatchException(context, "composite function cannot" +
               " have variable-length argument lists");
@@ -1616,7 +1641,7 @@ public class ASTWalker {
                 "cannot have polymorphic input argument types, such as: " + it);
       }
     }
-    
+
     // Handle main as special case of regular function declaration
     if (function.equals(Constants.MAIN_FUNCTION) &&
         (ft.getInputs().size() > 0 || ft.getOutputs().size() > 0))
@@ -1631,7 +1656,7 @@ public class ASTWalker {
         registerFunctionAnnotation(context, function, fdecl, annotation);
       }
     }
-    
+
     context.defineFunction(function, ft);
     context.setFunctionProperty(function, FnProp.COMPOSITE);
     if (!async) {
@@ -1645,7 +1670,7 @@ public class ASTWalker {
    * @param tree
    * @param firstChild
    * @return
-   * @throws InvalidAnnotationException 
+   * @throws InvalidAnnotationException
    */
   private List<String> extractFunctionAnnotations(Context context,
       SwiftAST tree, int firstChild, Set<Suppression> supps)
@@ -1660,7 +1685,7 @@ public class ASTWalker {
     return extractFunctionAnnotations(context, tree, firstChild,
               true, exec, supps);
   }
-  
+
   /**
    * Extract function annotations for Swift or app function
    * @param context
@@ -1670,11 +1695,11 @@ public class ASTWalker {
    * @throws InvalidAnnotationException
    */
   private List<String> extractFunctionAnnotations(Context context,
-          SwiftAST tree, int firstChild, boolean appFn,          
+          SwiftAST tree, int firstChild, boolean appFn,
           Out<AsyncExecutor> exec, Set<Suppression> suppressions)
               throws InvalidAnnotationException {
     exec.val = null;
-    
+
     List<String> annotations = new ArrayList<String>();
     for (SwiftAST subtree: tree.children(firstChild)) {
       syncFilePos(context, subtree);
@@ -1708,7 +1733,7 @@ public class ASTWalker {
         } else {
           throw new InvalidAnnotationException(context, "function definition",
               annotation, true);
-        } 
+        }
       }
     }
     return annotations;
@@ -1726,15 +1751,15 @@ public class ASTWalker {
     SwiftAST inputs = tree.child(3);
     SwiftAST block = tree.child(4);
 
-    FunctionDecl fdecl = FunctionDecl.fromAST(context, function, 
+    FunctionDecl fdecl = FunctionDecl.fromAST(context, function,
                   inputs, outputs, Collections.<String>emptySet());
-    
+
     List<Var> iList = fdecl.getInVars(context);
     List<Var> oList = fdecl.getOutVars(context);
-    
+
     List<Var> backendIList = VarRepr.backendVars(iList);
     List<Var> backendOList = VarRepr.backendVars(oList);
-    
+
     // Analyse variable usage inside function and annotate AST
     syncFilePos(context, tree);
     String moduleName = modules.currentModule().moduleName;
@@ -1744,7 +1769,7 @@ public class ASTWalker {
     LocalContext functionContext = new LocalContext(context, function);
     functionContext.addDeclaredVariables(iList);
     functionContext.addDeclaredVariables(oList);
-    
+
     ExecTarget mode = context.hasFunctionProp(function, FnProp.SYNC) ?
                   ExecTarget.syncControl() : ExecTarget.dispatchedControl();
     backend.startFunction(function, backendOList, backendIList, mode);
@@ -1763,7 +1788,7 @@ public class ASTWalker {
     String function = functionT.getText();
     SwiftAST outArgsT = tree.child(1);
     SwiftAST inArgsT = tree.child(2);
-    
+
     FunctionDecl decl = FunctionDecl.fromAST(context, function, inArgsT,
                         outArgsT,   Collections.<String>emptySet());
     context.defineFunction(function, decl.getFunctionType());
@@ -1782,19 +1807,19 @@ public class ASTWalker {
     SwiftAST outArgsT = tree.child(1);
     SwiftAST inArgsT = tree.child(2);
     SwiftAST appBodyT = tree.child(3);
-    
+
     FunctionDecl decl = FunctionDecl.fromAST(context, function, inArgsT,
                         outArgsT,   Collections.<String>emptySet());
     List<Var> outArgs = decl.getOutVars(context);
     List<Var> inArgs = decl.getInVars(context);
-    
+
     List<Var> backendOutArgs = VarRepr.backendVars(outArgs);
-    
+
     /* Pass in e.g. location */
     List<Var> backendInArgs = new ArrayList<Var>();
     for (Var inArg: inArgs) {
       backendInArgs.add(VarRepr.backendVar(inArg));
-    } 
+    }
 
     TaskProps props = new TaskProps();
     // Need to pass location arg into task dispatch wait statement
@@ -1803,14 +1828,14 @@ public class ASTWalker {
         Alloc.LOCAL, DefType.INARG, VarProvenance.exprTmp(context.getSourceLoc()));
     backendInArgs.add(loc);
     props.put(TaskPropKey.LOCATION, loc.asArg());
-    
-    
+
+
     syncFilePos(context, tree);
     Out<AsyncExecutor> exec = new Out<AsyncExecutor>();
     Set<Suppression> suppressions = new HashSet<Suppression>();
     List<String> annotations = extractAppFunctionAnnotations(context,
                                         tree, 4, exec, suppressions);
-    
+
     syncFilePos(context, tree);
     boolean hasSideEffects = true, deterministic = false;
     for (String annotation: annotations) {
@@ -1826,15 +1851,15 @@ public class ASTWalker {
                                              annotation, false);
       }
     }
-    
+
     LocalContext appContext = new LocalContext(context, function);
     appContext.addDeclaredVariables(outArgs);
     appContext.addDeclaredVariables(inArgs);
-    
-    
+
+
     backend.startFunction(function, backendOutArgs, backendInArgs,
                           ExecTarget.syncControl());
-    genAppFunctionBody(appContext, appBodyT, inArgs, outArgs, 
+    genAppFunctionBody(appContext, appBodyT, inArgs, outArgs,
                        hasSideEffects, deterministic, exec.val, props,
                        suppressions);
     backend.endFunction();
@@ -1848,9 +1873,9 @@ public class ASTWalker {
    * @param outArgs output arguments for app function
    * @param hasSideEffects
    * @param deterministic
-   * @param val 
-   * @param props 
-   * @param suppressions 
+   * @param val
+   * @param props
+   * @param suppressions
    * @throws UserException
    */
   private void genAppFunctionBody(Context context, SwiftAST appBody,
@@ -1862,7 +1887,7 @@ public class ASTWalker {
     //    uses output variable in expression context
     assert(appBody.getType() == ExMParser.APP_BODY);
     assert(appBody.getChildCount() >= 1);
-    
+
     // Extract command from AST
     SwiftAST cmd = appBody.child(0);
     assert(cmd.getType() == ExMParser.COMMAND);
@@ -1870,30 +1895,30 @@ public class ASTWalker {
     SwiftAST appNameT = cmd.child(0);
     assert(appNameT.getType() == ExMParser.STRING);
     String appName = Literals.extractLiteralString(context, appNameT);
-    
+
     // Evaluate any argument expressions
     Pair<List<Var>, Boolean> evaledArgs = evalAppCmdArgs(context, cmd);
-    
+
     List<Var> cmdArgs = evaledArgs.val1;
     boolean openedEvalWait = evaledArgs.val2;
-    
+
     // Process any redirections
     Redirects<Var> redirFutures = processAppRedirects(context,
                                                     appBody.children(1));
-    
+
     checkAppOutputs(context, appName, outArgs, cmdArgs, redirFutures,
                     suppressions);
-    
+
     // Work out what variables must be closed before command line executes
     Pair<Map<String, Var>, List<WaitVar>> wait = selectAppWaitVars(context,
                                   cmdArgs, inArgs, outArgs, redirFutures);
-    Map<String, Var> fileNames = wait.val1; 
+    Map<String, Var> fileNames = wait.val1;
     List<WaitVar> waitVars = wait.val2;
-    
+
     // Ensure it executes in correct context
     ExecContext targetCx = (asyncExec == null) ? ExecContext.defaultWorker() :
                                                  asyncExec.execContext();
-    
+
     // use wait to wait for data then dispatch task to worker
     String waitName = context.getFunctionContext().constructName("app-leaf");
     // do deep wait for array args
@@ -1902,9 +1927,9 @@ public class ASTWalker {
     // On worker, just execute the required command directly
     Pair<List<Arg>, Redirects<Arg>> retrieved = retrieveAppArgs(context,
                                           cmdArgs, redirFutures, fileNames);
-    List<Arg> localArgs = retrieved.val1; 
+    List<Arg> localArgs = retrieved.val1;
     Redirects<Arg> localRedirects = retrieved.val2;
-    
+
     // Create dummy dependencies for input files to avoid wait
     // being optimised out
     List<Arg> localInFiles = new ArrayList<Arg>();
@@ -1914,7 +1939,7 @@ public class ASTWalker {
         localInFiles.add(Arg.createVar(localInputFile));
       }
     }
-    
+
     // Declare local dummy output vars
     List<Var> localOutputs = new ArrayList<Var>(outArgs.size());
     for (Var output: outArgs) {
@@ -1931,7 +1956,7 @@ public class ASTWalker {
                                  VarRepr.backendVar(output));
       }
     }
-    
+
     List<Arg> beLocalArgs = VarRepr.backendArgs(localArgs);
     List<Var> beLocalOutputs = VarRepr.backendVars(localOutputs);
     List<Arg> beLocalInfiles = VarRepr.backendArgs(localInFiles);
@@ -1946,13 +1971,13 @@ public class ASTWalker {
       String aeName = context.constructName("async-exec");
       Map<String, Arg> taskProps = new HashMap<String, Arg>();
       beLocalRedirects.addProps(taskProps);
-      
+
       backend.startAsyncExec(aeName, asyncExec, appName,
           beLocalOutputs, beLocalArgs,
           taskProps, !deterministic);
       // Rest of code executes in continuation after execution finishes
     }
-    
+
     for (int i = 0; i < outArgs.size(); i++) {
       Var output = outArgs.get(i);
       Var localOutput = localOutputs.get(i);
@@ -1968,14 +1993,14 @@ public class ASTWalker {
         if (output.isMapped() != Ternary.TRUE &&
             output.type().fileKind().supportsTmpImmediate()) {
           // Cleanup temporary local file if needed
-          backend.decrLocalFileRef(VarRepr.backendVar(localOutput)); 
+          backend.decrLocalFileRef(VarRepr.backendVar(localOutput));
         }
       } else {
         assert(Types.isVoid(output.type()));
         exprWalker.assign(output, localOutput.asArg());
       }
     }
-    
+
     if (asyncExec != null) {
       backend.endAsyncExec();
     }
@@ -1986,7 +2011,7 @@ public class ASTWalker {
   }
 
   private Redirects<Var> processAppRedirects(Context context,
-                             List<SwiftAST> redirects) throws UserException {    
+                             List<SwiftAST> redirects) throws UserException {
     Redirects<Var> redir = new Redirects<Var>();
 
     // Process redirections
@@ -1996,7 +2021,7 @@ public class ASTWalker {
       SwiftAST redirType = redirT.child(0);
       SwiftAST redirExpr = redirT.child(1);
       String redirTypeName = LogHelper.tokName(redirType.getType());
-      
+
       // Now typecheck
       Type type = TypeChecker.findSingleExprType(context, redirExpr);
       // TODO: maybe could have plain string for filename, e.g. /dev/null?
@@ -2005,10 +2030,10 @@ public class ASTWalker {
             " app redirection, must be file: " + type.typeName());
       } else if (type.fileKind() != FileKind.LOCAL_FS) {
         throw new TypeMismatchException(context, "Cannot redirect " +
-              redirTypeName + " to/from variable type " + type.typeName() + 
+              redirTypeName + " to/from variable type " + type.typeName() +
               ". Expected a regular file.");
       }
-      
+
       Var result = exprWalker.eval(context, redirExpr, type, false, null);
       boolean mustBeOutArg = false;
       boolean doubleDefine = false;
@@ -2027,9 +2052,9 @@ public class ASTWalker {
           break;
         default:
           throw new STCRuntimeError("Unexpected token type: " +
-                              LogHelper.tokName(redirType.getType())); 
+                              LogHelper.tokName(redirType.getType()));
       }
-      if (result.defType() != DefType.OUTARG && mustBeOutArg) { 
+      if (result.defType() != DefType.OUTARG && mustBeOutArg) {
         throw new UserException(context, redirTypeName + " parameter "
           + " must be output file");
       }
@@ -2049,8 +2074,8 @@ public class ASTWalker {
    * @param context
    * @param outputs
    * @param outArgs
-   * @param redir 
-   * @throws UserException 
+   * @param redir
+   * @throws UserException
    */
   private void checkAppOutputs(Context context, String function,
       List<Var> outArgs, List<Var> args,
@@ -2072,7 +2097,7 @@ public class ASTWalker {
       Var output = redirFutures.stdout;
       outMap.put(output.name(), output);
     }
-    
+
     for (Var arg: args) {
       if (arg.defType() == DefType.OUTARG) {
         outMap.remove(arg.name());
@@ -2083,11 +2108,11 @@ public class ASTWalker {
         outMap.remove(redir.name());
       }
     }
-    
+
     for (Var unreferenced: outMap.values()) {
       if (!Types.isVoid(unreferenced.type()) &&
           !suppressions.contains(Suppression.UNUSED_OUTPUT)) {
-        LogHelper.warn(context, "Output argument " + unreferenced.name() 
+        LogHelper.warn(context, "Output argument " + unreferenced.name()
           + " is not referenced in app command line.  This usually " +
           "indicates an error.  However, if this is intended, for example " +
           "if the file location is implicit, you can suppress this warning " +
@@ -2131,7 +2156,7 @@ public class ASTWalker {
       redirValues.stderr = Arg.createVar(retrieveAppArg(context, fileNames,
                                                  redirFutures.stderr));
     }
-    
+
     return Pair.create(localInputs, redirValues);
   }
 
@@ -2167,7 +2192,7 @@ public class ASTWalker {
    * @throws UserException
    */
   private Pair<List<Var>, Boolean>
-      evalAppCmdArgs(Context context, SwiftAST cmdArgs) 
+      evalAppCmdArgs(Context context, SwiftAST cmdArgs)
           throws TypeMismatchException, UserException {
     List<Var> refArgs = new ArrayList<Var>();
     List<Var> args = new ArrayList<Var>();
@@ -2196,7 +2221,7 @@ public class ASTWalker {
             break;
           }
         }
-        
+
         if (Types.isString(baseType) || Types.isInt(baseType) ||
             Types.isFloat(baseType) || Types.isBool(baseType) ||
             Types.isFile(baseType)) {
@@ -2211,16 +2236,16 @@ public class ASTWalker {
         }
       }
     }
-    
+
     if (refArgs.isEmpty()) {
       return Pair.create(args, false);
     } else {
       // Replace refs with dereferenced
       backend.startWaitStatement(
           context.getFunctionContext().constructName("ref-argwait"),
-          VarRepr.backendVars(refArgs), 
+          VarRepr.backendVars(refArgs),
           WaitMode.WAIT_ONLY, false, false, ExecTarget.nonDispatchedAny());
-      
+
       for (int i = 0; i < args.size(); i++) {
         Var oldArg = args.get(i);
         if (Types.isRef(oldArg)) {
@@ -2231,19 +2256,19 @@ public class ASTWalker {
           args.set(i, derefedArg);
         }
       }
-      
+
       // Caller will close wait
       return Pair.create(args, true);
     }
-    
+
   }
 
   /**
    * Choose which inputs/outputs to an app invocation should be blocked
    * upon.  This is somewhat complex since we sometimes need to block
-   * on filenames/file statuses/etc  
+   * on filenames/file statuses/etc
    * @param context
-   * @param redirFutures 
+   * @param redirFutures
    * @param cmdArgs arguments for command line
    * @param inArgs input arguments for app function
    * @param outArgs output arguments for app function
@@ -2260,9 +2285,9 @@ public class ASTWalker {
     List<Var> allCmdArgs = new ArrayList<Var>();
     allCmdArgs.addAll(cmdArgs);
     allCmdArgs.addAll(redirFutures.redirections(true, true));
-    
+
     // map from file var to filename
-    Map<String, Var> fileNames = new HashMap<String, Var>(); 
+    Map<String, Var> fileNames = new HashMap<String, Var>();
     List<WaitVar> waitVars = new ArrayList<WaitVar>();
     for (Var arg: allCmdArgs) {
       if (Types.isFile(arg)) {
@@ -2274,7 +2299,7 @@ public class ASTWalker {
         waitVars.add(new WaitVar(arg, false));
       }
     }
-    
+
     for (Var inArg: inArgs) {
       // Handle input files not referenced in command line
       if (!allCmdArgs.contains(inArg)) {
@@ -2284,14 +2309,14 @@ public class ASTWalker {
         waitVars.add(new WaitVar(inArg, explicit));
       }
     }
-    
+
     // Fetch missing output arguments that weren't on command line
     for (Var outArg: outArgs) {
       if (Types.isFile(outArg.type()) && !fileNames.containsKey(outArg.name())) {
         loadAppFilename(context, fileNames, waitVars, outArg);
       }
     }
-    
+
     return Pair.create(fileNames, waitVars);
   }
 
@@ -2329,16 +2354,16 @@ public class ASTWalker {
     assert(children == 2);
     String typeName = defnTree.child(0).getText();
     SwiftAST baseTypeT = defnTree.child(1);
-    
+
     Type baseType = TypeTree.extractStandaloneType(context, baseTypeT);
-    
+
     Type newType;
     if (aliasOnly) {
       newType = baseType;
     } else {
       newType = new SubType(baseType, typeName);
     }
-    
+
     context.defineType(typeName, newType);
   }
 
@@ -2387,15 +2412,15 @@ public class ASTWalker {
     LogHelper.debug(context, "Defined new type called " + typeName + ": "
         + newType.toString());
   }
-  
-  private void globalConst(Context context, SwiftAST tree) 
+
+  private void globalConst(Context context, SwiftAST tree)
         throws UserException {
     assert(tree.getType() == ExMParser.GLOBAL_CONST);
     assert(tree.getChildCount() == 1);
-    
+
     SwiftAST varTree = tree.child(0);
     assert(varTree.getType() == ExMParser.DECLARATION);
-    
+
     VariableDeclaration vd = VariableDeclaration.fromAST(context,
                     varTree);
     assert(vd.count() == 1);
@@ -2406,18 +2431,18 @@ public class ASTWalker {
     Var v = context.declareVariable(vDesc.getType(), vDesc.getName(),
                    Alloc.GLOBAL_CONST, DefType.GLOBAL_CONST,
                    VarProvenance.userVar(context.getSourceLoc()), false);
-    
-    
+
+
     SwiftAST val = vd.getVarExpr(0);
     assert(val != null);
-    
+
     Type valType = TypeChecker.findSingleExprType(context, val);
     if (!valType.assignableTo(v.type())) {
       throw new TypeMismatchException(context, "trying to assign expression "
-          + " of type " + valType.typeName() + " to global constant " 
+          + " of type " + valType.typeName() + " to global constant "
           + v.name() + " which has type " + v.type());
     }
-    
+
     String msg = "Don't support non-literal "
         + "expressions for global constants";
 
@@ -2441,7 +2466,7 @@ public class ASTWalker {
     case FLOAT:
       Double fval = Literals.extractFloatLit(context, val);
       if (fval == null) {
-        Long sfval = Literals.extractIntLit(context, val); 
+        Long sfval = Literals.extractIntLit(context, val);
         if (sfval == null) {
           throw new UserException(context, msg);
         } else {
