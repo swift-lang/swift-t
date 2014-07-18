@@ -112,8 +112,8 @@ public class Pipeline extends FunctionOptimizerPass {
         if (!w.getWaitVars().isEmpty()) {
           // Can't merge if we have to wait before execution
           compatible = false;
-        } else if (!w.childContext(cx).compatibleWith(cx)) {
-          // We can't merge if contexts are incompatible
+        } else if (!w.childContext(cx).equals(cx)) {
+          // Can't merge different contexts
           compatible = false;
         } else if (w.isParallel()) {
           compatible = false;
