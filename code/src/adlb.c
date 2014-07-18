@@ -854,7 +854,7 @@ adlb_code ADLBP_Amget(int type_requested, int nreqs,
           ADLB_TAG_RESPONSE_GET, &R->reqs[XLB_GET_RESP_HDR_IX]);
 
     const adlb_payload_buf* payload = &payloads[i];
-    DEBUG("ADLB_Amget(): post payload buffer %i/%i: %p %i",
+    TRACE("ADLB_Amget(): post payload buffer %i/%i: %p %i",
           i + 1, nreqs, payload->payload, payload->size);
     assert(payload->size >= 0);
 
