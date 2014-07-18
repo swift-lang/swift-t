@@ -7,6 +7,7 @@ import java.util.Map;
 
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.ExecContext.WorkContext;
+import exm.stc.common.util.Misc;
 import exm.stc.common.util.Pair;
 
 /**
@@ -21,6 +22,8 @@ public enum AsyncExecutor {
    */
   public static final Map<AsyncExecutor, ExecContext> contexts =
                                               initExecContexts();
+  public static final Map<ExecContext, AsyncExecutor> contextsInv =
+                                          Misc.invertSurjective(contexts);
 
   private static HashMap<AsyncExecutor, ExecContext> initExecContexts() {
     HashMap<AsyncExecutor, ExecContext> map =
@@ -56,8 +59,7 @@ public enum AsyncExecutor {
   }
 
   public static AsyncExecutor fromWorkContext(WorkContext workContext) {
-    // TODO
-    throw new STCRuntimeError("Unimplemented");
+    return contextsInv.get(ExecContext.worker(workContext));
   }
 
   /**

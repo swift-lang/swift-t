@@ -20,39 +20,50 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import exm.stc.common.exceptions.STCRuntimeError;
 
 /**
  * Miscellaneous utility functions
  * @author wozniak
  * */
-public class Misc
-{
+public class Misc {
   static DateFormat df = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 
   /**
      @return Current time formatted as human-readable String
    */
-  public static String timestamp()
-  {
+  public static String timestamp() {
     return df.format(new Date());
   }
 
-  public static String stackTrace(Throwable e)
-  {
+  public static String stackTrace(Throwable e) {
     StringWriter sw = new StringWriter();
     PrintWriter pw = new PrintWriter(sw);
     e.printStackTrace(pw);
     return sw.toString();
   }
 
-  public static boolean arrayContains(Object[] a, Object o)
-  {
-    for (Object x : a)
-    {
-      if (x.equals(o))
-        return true;
+  /**
+   * Invert mapping, assuming surjective (i.e. each key maps to unique value)
+   * @param m
+   * @return
+   */
+  public static <K, V> Map<V, K> invertSurjective(Map<K, V> m) {
+    Map<V, K> result = new HashMap<V, K>();
+    for (Map.Entry<K, V> e: m.entrySet()) {
+      K k = e.getKey();
+      V v = e.getValue();
+      K prev = result.put(v, k);
+      if (prev != null) {
+        throw new STCRuntimeError("Duplicate value when inverting: "
+                             + v + " for keys " + prev + ", " + k);
+      }
     }
-    return false;
+
+    return result;
   }
 }

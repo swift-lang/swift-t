@@ -52,6 +52,7 @@ import exm.stc.tclbackend.tree.Value;
  *         This class is package-private: only TurbineGenerator uses it
  * */
 class Turbine {
+
   public static class TypeName extends Token {
     public TypeName(String token) {
       super(token);
@@ -321,6 +322,7 @@ class Turbine {
   // Misc
   private static final Token TURBINE_LOG = turbFn("c::log");
   private static final Token ARGV_ADD_CONSTANT = turbFn("argv_add_constant");
+  private static final Token ADLB_WORK_TYPE = turbFn("adlb_work_type");
 
   private static Token turbFn(String functionName) {
     return new Token("turbine::" + functionName);
@@ -854,10 +856,13 @@ class Turbine {
              target.isControlContext()) {
         return new Value("turbine::WORK_TASK");
       } else {
-        // TODO: multiple work types
-        throw new STCRuntimeError("Unimplemented");
+        return nonDefaultWorkType(target.workContext());
       }
     }
+  }
+
+  private static Expression nonDefaultWorkType(WorkContext workContext) {
+    return Square.fnCall(ADLB_WORK_TYPE, asyncWorkerName(workContext));
   }
 
   /**
@@ -878,7 +883,7 @@ class Turbine {
           target.isDefaultWorkContext()) {
         return TURBINE_WORKER_WORK_ID;
       } else {
-        throw new STCRuntimeError("Unimplemented");
+        return nonDefaultWorkType(target.workContext());
       }
     }
   }
