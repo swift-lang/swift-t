@@ -81,6 +81,7 @@ static adlb_code handle_put(int caller);
 static adlb_code handle_put_rule(int caller);
 static adlb_code handle_get(int caller);
 static adlb_code handle_iget(int caller);
+static adlb_code handle_amget(int caller);
 static adlb_code handle_create(int caller);
 static adlb_code handle_multicreate(int caller);
 static adlb_code handle_exists(int caller);
@@ -129,12 +130,15 @@ static inline adlb_code attempt_match_work(int type, int putter,
       int priority, int answer, int target, int length, int parallelism,
       const void *inline_data);
 
-static adlb_code attempt_match_par_work(int type, 
+static adlb_code attempt_match_par_work(int type,
       int answer, const void *payload, int length, int parallelism);
 
 static inline adlb_code send_matched_work(int type, int putter,
       int priority, int answer, bool targeted,
       int worker, int length, const void *inline_data);
+
+static adlb_code
+process_get_request(int caller, int type, int count, bool blocking);
 
 static adlb_code xlb_recheck_single_queues(void);
 
@@ -147,7 +151,7 @@ static inline adlb_code redirect_work(int type, int putter,
                                       int worker, int length);
 
 
-static inline bool check_workqueue(int caller, int type);
+static inline int check_workqueue(int caller, int type, int count);
 
 static adlb_code
 notify_helper(adlb_notif_t *notifs);
@@ -173,6 +177,7 @@ xlb_handlers_init(void)
   register_handler(ADLB_TAG_PUT_RULE, handle_put_rule);
   register_handler(ADLB_TAG_GET, handle_get);
   register_handler(ADLB_TAG_IGET, handle_iget);
+  register_handler(ADLB_TAG_AMGET, handle_amget);
   register_handler(ADLB_TAG_CREATE_HEADER, handle_create);
   register_handler(ADLB_TAG_MULTICREATE, handle_multicreate);
   register_handler(ADLB_TAG_EXISTS, handle_exists);
@@ -187,7 +192,7 @@ xlb_handlers_init(void)
   register_handler(ADLB_TAG_UNIQUE, handle_unique);
   register_handler(ADLB_TAG_TYPEOF, handle_typeof);
   register_handler(ADLB_TAG_CONTAINER_TYPEOF, handle_container_typeof);
-  register_handler(ADLB_TAG_CONTAINER_REFERENCE,  
+  register_handler(ADLB_TAG_CONTAINER_REFERENCE,
                                            handle_container_reference);
   register_handler(ADLB_TAG_CONTAINER_SIZE, handle_container_size);
   register_handler(ADLB_TAG_LOCK, handle_lock);
@@ -307,7 +312,7 @@ handle_put_rule(int caller)
   RECV(xlb_xfer, XLB_XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_PUT_RULE);
   const struct packed_put_rule *p = (struct packed_put_rule*)xlb_xfer;
 
-  // Put arrays first to avoid alignment issues  
+  // Put arrays first to avoid alignment issues
   const adlb_datum_id *wait_ids = p->inline_data;
 
   // Remainder of data is packed into array in binary form
@@ -352,7 +357,7 @@ handle_put_rule(int caller)
   xlb_work_unit_init(work, p->type, caller, p->priority, p->answer,
                      p->target, p->length, p->parallelism);
 
-  if (inline_data == NULL) 
+  if (inline_data == NULL)
   {
     // Set up receive for payload into work unit
     IRECV(work->payload, p->length, MPI_BYTE, caller, ADLB_TAG_WORK);
@@ -399,7 +404,7 @@ handle_put_rule(int caller)
 }
 
 /*
-  Handle a put 
+  Handle a put
   inline_data: if task data already available here, otherwise NULL
  */
 static adlb_code
@@ -427,7 +432,7 @@ put(int type, int putter, int priority, int answer, int target,
   MPI_Request req;
 
   xlb_work_unit *work = NULL;
-  if (inline_data == NULL) 
+  if (inline_data == NULL)
   {
     // Set up receive for payload into work unit
     work = work_unit_alloc((size_t)length);
@@ -500,7 +505,7 @@ xlb_put_work_unit(xlb_work_unit *work)
     if (worker != ADLB_RANK_NULL)
     {
       code = send_work(worker, work->id, type, work->answer,
-                       work->payload, work->length, 1);               
+                       work->payload, work->length, 1);
       ADLB_CHECK(code);
       xlb_work_unit_free(work);
 
@@ -619,12 +624,12 @@ static adlb_code attempt_match_work(int type, int putter,
 }
 
 /*
-  Attempt to match parallel work.  Return ADLB_NOTHING if couldn't 
+  Attempt to match parallel work.  Return ADLB_NOTHING if couldn't
   redirect, ADLB_SUCCESS on successful redirect, ADLB_ERROR on error.
 
   inline_data: non-null if we already have task body
  */
-static adlb_code attempt_match_par_work(int type, 
+static adlb_code attempt_match_par_work(int type,
       int answer, const void *payload, int length, int parallelism)
 {
   CHECK_MSG(parallelism <= xlb_my_workers + 1,
@@ -676,7 +681,7 @@ static inline adlb_code send_matched_work(int type, int putter,
 
     // Sent to matched
     code = send_work(worker, XLB_WORK_UNIT_ID_NULL, type, answer,
-                     inline_data, length, 1);   
+                     inline_data, length, 1);
     ADLB_CHECK(code);
 
     WAIT(&req, &status);
@@ -717,33 +722,9 @@ handle_get(int caller)
 
   RECV(&type, 1, MPI_INT, caller, ADLB_TAG_GET);
 
-  bool matched = check_workqueue(caller, type);
-  if (matched) goto end;
-
-  code = xlb_requestqueue_add(caller, type, true);
+  code = process_get_request(caller, type, 1, true);
   ADLB_CHECK(code);
 
-  // New request might allow us to release a parallel task
-  if (xlb_workq_parallel_tasks() > 0)
-  {
-    code = xlb_check_parallel_tasks(type);
-    if (code == ADLB_SUCCESS)
-      goto end;
-    else if (code != ADLB_NOTHING)
-      ADLB_CHECK(code);
-  }
-
-  if (!stealing && xlb_steal_allowed())
-  {
-    // Try to initiate a steal to see if we can get work to the worker
-    // immediately
-    stealing = true;
-    adlb_code rc = xlb_try_steal();
-    ADLB_CHECK(rc);
-    stealing = false;
-  }
-
-end:
   MPE_LOG(xlb_mpe_svr_get_end);
 
   return ADLB_SUCCESS;
@@ -758,9 +739,9 @@ handle_iget(int caller)
   // MPE_LOG(xlb_mpe_svr_iget_start);
 
   RECV(&type, 1, MPI_INT, caller, ADLB_TAG_IGET);
-  bool b = check_workqueue(caller, type);
+  int matched = check_workqueue(caller, type, 1);
 
-  if (!b)
+  if (matched == 0)
     send_no_work(caller);
 
   // MPE_LOG(xlb_mpe_svr_iget_end);
@@ -768,24 +749,87 @@ handle_iget(int caller)
   return ADLB_SUCCESS;
 }
 
+static adlb_code
+handle_amget(int caller)
+{
+  MPI_Status status;
+  adlb_code code;
+  struct packed_mget_request req;
+  MPE_LOG(xlb_mpe_svr_amget_start);
+
+  RECV(&req, sizeof(req), MPI_BYTE, caller, ADLB_TAG_AMGET);
+
+  code = process_get_request(caller, req.type, req.count, false);
+  ADLB_CHECK(code);
+
+  MPE_LOG(xlb_mpe_svr_amget_end);
+
+  return ADLB_SUCCESS;
+}
+
+static adlb_code
+process_get_request(int caller, int type, int count, bool blocking)
+{
+  adlb_code code;
+
+  int matched = check_workqueue(caller, type, count);
+  if (matched > 0)
+  {
+    if (matched == count) return ADLB_SUCCESS;
+    blocking = false; // Match should have unblocked
+  }
+
+  code = xlb_requestqueue_add(caller, type, count - matched, blocking);
+  ADLB_CHECK(code);
+
+  // New request might allow us to release a parallel task
+  if (xlb_workq_parallel_tasks() > 0)
+  {
+    // TODO: for count > 0 this early exit may leave unmatched work
+    // without initiating a steal
+    code = xlb_check_parallel_tasks(type);
+    if (code == ADLB_SUCCESS)
+      return ADLB_SUCCESS;
+    else if (code != ADLB_NOTHING)
+      ADLB_CHECK(code);
+  }
+
+  if (!stealing && xlb_steal_allowed())
+  {
+    // Try to initiate a steal to see if we can get work to the worker
+    // immediately
+    stealing = true;
+    adlb_code rc = xlb_try_steal();
+    ADLB_CHECK(rc);
+    stealing = false;
+  }
+
+  return ADLB_SUCCESS;
+}
+
 /**
    Find work and send it!
-   @return True if work was found and sent, else false.
+   @return number of matched requests
  */
-static inline bool
-check_workqueue(int caller, int type)
+static inline int
+check_workqueue(int caller, int type, int count)
 {
   TRACE_START;
-  xlb_work_unit* wu = xlb_workq_get(caller, type);
-  bool result = false;
-  if (wu != NULL)
+  int matched = 0;
+  while (matched < count)
   {
+    xlb_work_unit* wu = xlb_workq_get(caller, type);
+    if (wu == NULL)
+    {
+      break;
+    }
+
     send_work_unit(caller, wu);
     xlb_work_unit_free(wu);
-    result = true;
+    matched++;
   }
   TRACE_END;
-  return result;
+  return matched;
 }
 
 /**
@@ -820,8 +864,13 @@ xlb_recheck_single_queues(void)
   N = xlb_requestqueue_get(r, N);
 
   for (int i = 0; i < N; i++)
-    if (check_workqueue(r[i].rank, r[i].type))
-      xlb_requestqueue_remove(&r[i]);
+  {
+    int matched = check_workqueue(r[i].rank, r[i].type, r[i].count);
+    if (matched > 0)
+    {
+     xlb_requestqueue_remove(&r[i], matched);
+    }
+  }
 
   free(r);
   TRACE_END;
@@ -1625,7 +1674,7 @@ handle_container_reference(int caller)
   adlb_binary_data member;
   adlb_data_code dc = xlb_data_container_reference(id,
                         subscript, ref_id, ref_subscript, false,
-                        ref_type, transfer_refs, 
+                        ref_type, transfer_refs,
                         &xlb_scratch_buf, &member, &notifs);
 
   struct packed_cont_ref_resp resp = { .dc = dc };

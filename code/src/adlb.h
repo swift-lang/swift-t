@@ -128,7 +128,11 @@ adlb_code ADLB_Iget(int type_requested, void* payload, int* length,
   requests from a client, the first request that was posted will be
   filled first.
 
-  TODO: not implemented yet
+  If a work unit doesn't fit in the posted buffer, a runtime error
+  will occur.
+
+  TODO: currently we assume that only requests for the same type
+        will be issues concurrently
   payload: will be retained by ADLB until request is completed.
   req: handle used to check for completion, filled in by function
  */
@@ -140,8 +144,7 @@ adlb_code ADLB_Aget(int type_requested, adlb_payload_buf payload,
 /*
   Same as ADLB_Aget except initiates multiple requests at once.
   
-  TODO: not implemented yet
-  TODO: could return message round-trips if we had a flag to
+  TODO: could reduce message round-trips if we had a flag to
         block on the first request
   nreqs: number of requests to initiate
   payloads: array of nreqs payload buffers
@@ -157,7 +160,7 @@ adlb_code ADLB_Amget(int type_requested, int nreqs,
 /*
   Test if a get request completed without blocking.
 
-  Return codes match ADLB_Iget
+  Return codes match ADLB_Get
  */
 adlb_code ADLBP_Aget_test(adlb_get_req *req, int* length,
                     int* answer, int* type_recvd, MPI_Comm* comm);

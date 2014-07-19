@@ -220,11 +220,11 @@ struct packed_put_rule
      Format is:
      1. Array of ids with length id_count
         Use type adlb_datum_id to get correct alignment for first array
-     2. id_sub_count packed ids/subscripts 
+     2. id_sub_count packed ids/subscripts
      3. Name, unless NDEBUG enabled, packed w/o null terminator
      4. Inline task, if has_inline_data is true
    */
-  adlb_datum_id inline_data[]; 
+  adlb_datum_id inline_data[];
 };
 
 /**
@@ -239,12 +239,18 @@ struct packed_notif_counts
   int extra_data_bytes;
 };
 
+struct packed_mget_request
+{
+  int type;
+  int count;
+};
 
 /**
    Simple struct for message packing
  */
 struct packed_get_response
 {
+  /** Response code: ADLB_SUCCESS, ADLB_ERROR, or ADLB_SHUTDOWN */
   adlb_code code;
   int length;
   int answer_rank;
@@ -365,7 +371,7 @@ struct packed_store_hdr
 
 
 /**
- * Response for store 
+ * Response for store
  */
 struct packed_store_resp
 {
@@ -461,7 +467,6 @@ struct packed_notify_hdr
   int subscript_len;
   char subscript[]; // Small subscripts inline
 };
-
 
 /*
    Header for stolen task
@@ -563,6 +568,7 @@ typedef enum
   ADLB_TAG_PUT_RULE,
   ADLB_TAG_GET,
   ADLB_TAG_IGET,
+  ADLB_TAG_AMGET,
 
   // data operations
   ADLB_TAG_CREATE_HEADER,
@@ -638,7 +644,7 @@ xlb_pack_id_sub(void *buffer, adlb_datum_id id,
 
   if (has_subscript)
   {
-    memcpy(pos, subscript.key, (size_t)sub_packed_size); 
+    memcpy(pos, subscript.key, (size_t)sub_packed_size);
     pos += sub_packed_size;
   }
 

@@ -38,21 +38,30 @@
 
 typedef struct
 {
-  /** Item in type_requests */
+  /** Item in type_requests.  NULL indicates invalid request. */
   struct list2_item* item;
+
+  /** Rank request was from */
   int rank;
+
+  /** ADLB work type requested */
   int type;
+
+  /** Number of work units requested */
+  int count;
+
+  /** Whether the worker is blocking on the first request */
   bool blocking;
 } request;
 
-
-/** Total number of requests in queue */
+/** Total number of entries in queue.
+    Entries with count > 1 only contribute 1 to total. */
 static int request_queue_size;
 
 /** Total number of workers blocked on requests */
 static int nblocked;
 
-/** Type-indexed array of list of request object */
+/** Array of lists of request object.  Index is work type. */
 static struct list2* type_requests;
 
 /** Cache list nodes to avoid malloc/free calls on critical path */
@@ -62,7 +71,7 @@ static struct {
   int nfree; // Number of items in free array
 } list2_node_pool;
 
-/** Table of ranks requesting work so we can match targeted work to them. 
+/** Table of ranks requesting work so we can match targeted work to them.
     We only store ranks belonging to this server, since targeted work for
     other ranks won't arrive here.  We store pointers to the respective
     list entries in type_requests, NULL if there is no request.
@@ -70,23 +79,25 @@ static struct {
 static request* targets;
 
 /** Helper functions for manipulating data structures */
-static int pop_rank(struct list2 *type_list);
-static inline void remove_request(request *R);
-__attribute__((always_inline))
-static inline void remove_types_entry(int type, bool blocking,
-                                     struct list2_item *item);
+static inline adlb_code
+merge_request(request *R, int rank, int type, int count, bool blocking);
+static int pop_rank_from_types(struct list2 *type_list);
+static void request_match_update(request *R, bool in_targets, int count);
 static inline void invalidate_request(request *R);
-static inline void free_request(request *R);
+static inline bool in_targets_array(request *R);
 
 /** Node pool functions */
+static inline adlb_code list2_node_pool_init(int size);
+static inline void list2_node_pool_finalize(void);
 static inline struct list2_item *alloc_list2_node(void);
 static inline void free_list2_node(struct list2_item *node);
-static inline void free_list2_node_pool(void);
 
 adlb_code
-xlb_requestqueue_init(int my_workers)
+xlb_requestqueue_init(int work_types, int my_workers)
 {
   assert(my_workers >= 0);
+  assert(work_types >= 1);
+
   targets = malloc(sizeof(targets[0]) * (size_t)my_workers);
   ADLB_MALLOC_CHECK(targets);
 
@@ -95,23 +106,14 @@ xlb_requestqueue_init(int my_workers)
     targets[i].item = NULL;
   }
 
-  type_requests = malloc(sizeof(struct list2) * (size_t)xlb_types_size);
+  type_requests = malloc(sizeof(struct list2) * (size_t)work_types);
   ADLB_MALLOC_CHECK(type_requests);
-  for (int i = 0; i < xlb_types_size; i++)
+  for (int i = 0; i < work_types; i++)
     list2_init(&type_requests[i]);
 
-  // Assume one request per node - otherwise fallback to malloc/free
-  // Allocate ahead of time to get non-fragmented memory
-  list2_node_pool.free_array =
-          malloc(sizeof(list2_node_pool.free_array[0]) * (size_t)my_workers);
-  list2_node_pool.free_array_size = my_workers;
-  list2_node_pool.nfree = my_workers;
-  for (int i = 0; i < list2_node_pool.free_array_size; i++)
-  {
-    struct list2_item *item = malloc(sizeof(struct list2_item));
-    ADLB_MALLOC_CHECK(item);
-    list2_node_pool.free_array[i] = item;
-  }
+  // Allocate one list node per worker - otherwise will fallback to malloc/free
+  adlb_code ac = list2_node_pool_init(my_workers);
+  ADLB_CHECK(ac);
 
   request_queue_size = 0;
   nblocked = 0;
@@ -119,34 +121,45 @@ xlb_requestqueue_init(int my_workers)
 }
 
 adlb_code
-xlb_requestqueue_add(int rank, int type, bool blocking)
+xlb_requestqueue_add(int rank, int type, int count, bool blocking)
 {
-  DEBUG("requestqueue_add(rank=%i,type=%i)", rank, type);
+  DEBUG("requestqueue_add(rank=%i,type=%i,count=%i,blocking=%s)", rank,
+         type, count, blocking ? "true" : "false");
+  assert(count >= 1);
   request* R;
 
+  // Whether we need to merge requests
   // Store in targets if it is one of our workers
   if (xlb_map_to_server(rank) == xlb_comm_rank)
   {
     int targets_ix = xlb_my_worker_ix(rank);
-    // Assert rank was not already entered
-    valgrind_assert_msg(targets[targets_ix].item == NULL,
-          "requestqueue: double add: rank: %i", rank);
-     R = &targets[targets_ix];
+    R = &targets[targets_ix];
+    if (R->item != NULL) {
+      /*
+       * Assuming that types match avoid complications with responding to
+       * requests out of order, and with more complicated data structures.
+       * We leave it to the client code to avoid doing this for now.
+       */
+      CHECK_MSG(R->type == type, "Do not yet support simultaneous requests"
+            " for different work types from same rank."
+            " Rank: %i Types: %i, %i", rank, R->type, type);
+      return merge_request(R, rank, type, count, blocking);
+    }
   }
   else
   {
-    // Otherwise store on heap 
+    // Otherwise store on heap
     R = malloc(sizeof(*R));
     ADLB_MALLOC_CHECK(R);
   }
 
   struct list2* L = &type_requests[type];
-
   struct list2_item* item = alloc_list2_node();
   ADLB_MALLOC_CHECK(item);
 
   R->rank = rank;
   R->type = type;
+  R->count = count;
   R->blocking = blocking;
   R->item = item;
   item->data = R;
@@ -158,30 +171,66 @@ xlb_requestqueue_add(int rank, int type, bool blocking)
   {
     nblocked++;
   }
+
   return ADLB_SUCCESS;
 }
 
-/* Unlink entry from all data structures and free memory */
-static inline void remove_request(request *R)
+/*
+ * Merge new request into existing request.
+ * Caller is responsible for ensuring types and ranks match.
+ */
+static inline adlb_code
+merge_request(request *R, int rank, int type, int count, bool blocking)
 {
-  remove_types_entry(R->type, R->blocking, R->item);
-  free_request(R);
+  assert(R->rank == rank);
+  assert(R->type == type);
+  assert(R->item != NULL);
+
+  R->count += count;
+  if (blocking)
+  {
+    assert(!R->blocking); // Shouldn't already be blocked
+    nblocked++;
+  }
+
+  return ADLB_SUCCESS;
 }
 
 /*
   Internal helper.
-  Remove entry from list, updates request count, and free item.
+  Update data structures for a single match to the request object.
+  in_targets: if true, is target array entry
+  count: number to remove, must be >= 1
  */
-static inline void remove_types_entry(int type, bool blocking, struct list2_item *item)
+static void request_match_update(request *R, bool in_targets, int count)
 {
-  struct list2* L = &type_requests[type];
-  list2_remove_item(L, item);
-  free(item);
-  request_queue_size--;
-  assert(request_queue_size >= 0);
-  if (blocking)
+  assert(count >= 1);
+
+  if (R->blocking)
   {
     nblocked--;
+  }
+
+  assert(R->count >= count);
+  if (R->count == count)
+  {
+    struct list2* L = &type_requests[R->type];
+    struct list2_item *item = R->item;
+    list2_remove_item(L, item);
+    free_list2_node(item);
+    request_queue_size--;
+    assert(request_queue_size >= 0);
+
+    invalidate_request(R);
+    if (!in_targets)
+    {
+      free(R);
+    }
+  }
+  else
+  {
+    R->count -= count;
+    R->blocking = false;
   }
   assert(nblocked >= 0);
 }
@@ -192,52 +241,40 @@ static inline void invalidate_request(request *R)
   R->item = NULL; // Clear item if needed for targets array
 }
 
-/* Reset entry from targets array or reset heap-allocated storage
-   as appropriate */
-static inline void free_request(request *R)
+/*
+  Return true if request is stored directly in targets array
+ */
+static inline bool in_targets_array(request *R)
 {
-  int rank = R->rank;
-  invalidate_request(R);
-  int targets_ix = xlb_my_worker_ix(rank);
-  if (R != &targets[targets_ix])
-  {
-    // Not in targets array - heap allocated
-    free(R);
+  if (xlb_map_to_server(R->rank) != xlb_comm_rank) {
+    return false;
   }
+  int targets_ix = xlb_my_worker_ix(R->rank);
+  return R == &targets[targets_ix];
 }
 
 /*
   Internal helper.
   Pop a rank from the type list.  Return ADLB_RANK_NULL if not present
  */
-static int pop_rank(struct list2 *type_list)
+static int pop_rank_from_types(struct list2 *type_list)
 {
-  struct list2_item *item = list2_pop_item(type_list);
+  struct list2_item *item = type_list->head;
   if (item == NULL)
   {
     return ADLB_RANK_NULL;
   }
   request* R = (request*)item->data;
   int rank = R->rank;
-  bool blocking = R->blocking;
-
-  // Release memory:
-  free_list2_node(item);
-  free_request(R);
-
-  request_queue_size--;
-  assert(request_queue_size >= 0);
-  if (blocking)
-  {
-    nblocked--;
-  }
-  assert(nblocked >= 0);
+  request_match_update(R, in_targets_array(R), 1);
   return rank;
 }
 
 /**
    If target_rank is in the request_queue and requests work of
    given type, pop and return that rank.  Else return ADLB_RANK_NULL.
+
+   Assumes that the rank is one of our workers.
  */
 int
 xlb_requestqueue_matches_target(int target_rank, int type)
@@ -247,10 +284,10 @@ xlb_requestqueue_matches_target(int target_rank, int type)
 
   int targets_ix = xlb_my_worker_ix(target_rank);
   request* R = &targets[targets_ix];
-  if (R->item != NULL && R->type == type && R->rank == target_rank)
+  if (R->item != NULL && R->type == type)
   {
-    remove_types_entry(type, R->blocking, R->item);
-    invalidate_request(R);
+    assert(R->rank == target_rank);
+    request_match_update(R, true, 1);
     return target_rank;
   }
   return ADLB_RANK_NULL;
@@ -261,7 +298,7 @@ xlb_requestqueue_matches_type(int type)
 {
   DEBUG("requestqueue_matches_type(%i)...", type);
   struct list2* L = &type_requests[type];
-  return pop_rank(L);
+  return pop_rank_from_types(L);
 }
 
 bool
@@ -280,7 +317,7 @@ xlb_requestqueue_parallel_workers(int type, int parallelism, int* ranks)
     result = true;
     for (int i = 0; i < parallelism; i++)
     {
-      ranks[i] = pop_rank(L);
+      ranks[i] = pop_rank_from_types(L);
       assert(ranks[i] != ADLB_RANK_NULL);
     }
   }
@@ -289,15 +326,19 @@ xlb_requestqueue_parallel_workers(int type, int parallelism, int* ranks)
 }
 
 void
-xlb_requestqueue_remove(xlb_request_entry *e)
+xlb_requestqueue_remove(xlb_request_entry *e, int count)
 {
   TRACE("pequestqueue_remove(%i)", e->rank);
   // Recover request from stored pointer
   request *r = (request*)e->_internal;
   assert(r != NULL);
-  e->_internal = NULL; // Invalidate in case of reuse
+  if (count >= r->count)
+  {
+    e->_internal = NULL; // Invalidate in case of reuse
+  }
 
-  remove_request(r);
+  bool in_targets = in_targets_array(r);
+  request_match_update(r, in_targets, count);
 }
 
 int
@@ -352,6 +393,7 @@ xlb_requestqueue_get(xlb_request_entry* r, int max)
       request* rq = (request*) item->data;
       r[ix].rank = rq->rank;
       r[ix].type = rq->type;
+      r[ix].count = rq->count;
       r[ix]._internal = rq; // Store for later reference
       ix++;
       if (ix == max)
@@ -377,7 +419,7 @@ xlb_requestqueue_shutdown()
   {
     while (true)
     {
-      int rank = pop_rank(&type_requests[i]);
+      int rank = pop_rank_from_types(&type_requests[i]);
       if (rank == ADLB_RANK_NULL)
         break;
       adlb_code rc = shutdown_rank(rank);
@@ -389,7 +431,7 @@ xlb_requestqueue_shutdown()
   free(type_requests);
   free(targets);
 
-  free_list2_node_pool();
+  list2_node_pool_finalize();
 }
 
 static adlb_code
@@ -406,6 +448,50 @@ shutdown_rank(int rank)
   g.parallelism = 0;
   SEND(&g, sizeof(g), MPI_BYTE, rank, ADLB_TAG_RESPONSE_GET);
   return ADLB_SUCCESS;
+}
+
+/*
+  Initialize fixed-size array of list nodes.
+  Allocate ahead of time to get non-fragmented memory.
+ */
+static inline adlb_code list2_node_pool_init(int size)
+{
+  assert(size >= 0);
+
+  if (size == 0)
+  {
+    list2_node_pool.free_array = NULL;
+  }
+  else
+  {
+    list2_node_pool.free_array =
+            malloc(sizeof(list2_node_pool.free_array[0]) * (size_t)size);
+  }
+
+  list2_node_pool.free_array_size = size;
+  list2_node_pool.nfree = size;
+
+  for (int i = 0; i < size; i++)
+  {
+    struct list2_item *item = malloc(sizeof(struct list2_item));
+    ADLB_MALLOC_CHECK(item);
+    list2_node_pool.free_array[i] = item;
+  }
+
+  return ADLB_SUCCESS;
+}
+
+static inline void list2_node_pool_finalize(void)
+{
+  for (int i = 0; i < list2_node_pool.nfree; i++)
+  {
+    free(list2_node_pool.free_array[i]);
+  }
+
+  free(list2_node_pool.free_array);
+  list2_node_pool.free_array = NULL;
+  list2_node_pool.free_array_size = 0;
+  list2_node_pool.nfree = 0;
 }
 
 static inline struct list2_item *alloc_list2_node(void)
@@ -432,17 +518,3 @@ static inline void free_list2_node(struct list2_item *node)
     list2_node_pool.free_array[list2_node_pool.nfree++] = node;
   }
 }
-
-static inline void free_list2_node_pool(void)
-{
-  for (int i = 0; i < list2_node_pool.nfree; i++)
-  {
-    free(list2_node_pool.free_array[i]);
-  }
-
-  free(list2_node_pool.free_array);
-  list2_node_pool.free_array = NULL;
-  list2_node_pool.free_array_size = 0;
-  list2_node_pool.nfree = 0;
-}
-
