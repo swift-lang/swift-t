@@ -9,7 +9,8 @@ do
   echo "Cloning $subrepo from svn, writing log to $LOG"
   if is_branch_subrepo $subrepo; then
     # include releases but not branches
-    git svn clone --trunk=trunk --tags=release \
+    git svn clone --trunk=trunk --branches=branches --branches=release \
+            --tags=tags \
             --prefix="svn/" -A "$SCRIPT_DIR/svn-authors.txt" \
             "$EXM_SVN/$subrepo" "$subrepo" &> "$LOG" &
   else
