@@ -323,6 +323,8 @@ class Turbine {
   private static final Token TURBINE_LOG = turbFn("c::log");
   private static final Token ARGV_ADD_CONSTANT = turbFn("argv_add_constant");
   private static final Token ADLB_WORK_TYPE = turbFn("adlb_work_type");
+  private static final Token DECLARE_CUSTOM_WORK_TYPES =
+                                  turbFn("declare_custom_work_types");
 
   private static Token turbFn(String functionName) {
     return new Token("turbine::" + functionName);
@@ -334,6 +336,10 @@ class Turbine {
 
   private static Value turbConst(String name) {
     return new Value("::turbine::" + name);
+  }
+
+  public static Command declareCustomWorkTypes(List<Expression> args) {
+    return new Command(DECLARE_CUSTOM_WORK_TYPES, args);
   }
 
   public static Command declareStructType(Expression typeId,
@@ -873,16 +879,21 @@ class Turbine {
     }
   }
 
-  public static Expression nonDefaultWorkType(WorkContext workContext) {
+  public static Expression nonDefaultWorkTypeName(WorkContext workContext) {
     Expression workTypeName = asyncWorkerName(workContext);
     if (workTypeName != null) {
-      return Square.fnCall(ADLB_WORK_TYPE, workTypeName);
+      return workTypeName;
     }
     workTypeName = definedWorkerName(workContext);
     if (workTypeName != null) {
-      return Square.fnCall(ADLB_WORK_TYPE, workTypeName);
+      return workTypeName;
     }
+
     throw new STCRuntimeError("Unknown WorkContext: " + workContext);
+  }
+
+  public static Expression nonDefaultWorkType(WorkContext workContext) {
+    return Square.fnCall(ADLB_WORK_TYPE, nonDefaultWorkTypeName(workContext));
   }
 
   /**

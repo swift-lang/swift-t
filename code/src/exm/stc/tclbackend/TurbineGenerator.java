@@ -50,6 +50,7 @@ import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.CompileTimeArgs;
 import exm.stc.common.lang.Constants;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.ExecContext.WorkContext;
 import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.LocalForeignFunction;
@@ -241,6 +242,8 @@ public class TurbineGenerator implements CompilerBackend {
 
   private final TurbineStructs structTypes = new TurbineStructs();
 
+  private final List<WorkContext> customWorkTypes = new ArrayList<WorkContext>();
+
   /**
    * Tcl symbol names for builtins
    * Swift function name -> (Tcl proc name, Tcl op template)
@@ -352,8 +355,9 @@ public class TurbineGenerator implements CompilerBackend {
     if (Settings.SEPARATE_TURBINE_ENGINE) {
       tree.add(new Command("turbine::init $engines $servers \"Swift\""));
     } else {
+      tree.add(initCustomWorkTypes());
       tree.add(new Command("turbine::init $servers \"Swift\""));
-      tree.add(checkExecContexts());
+      tree.add(checkWorkTypes());
     }
     try {
       if (Settings.getBoolean(Settings.ENABLE_REFCOUNTING)) {
@@ -388,14 +392,26 @@ public class TurbineGenerator implements CompilerBackend {
     }
   }
 
-  private TclTree checkExecContexts() {
+  /**
+   * Define any additional custom work types for runtime
+   * @return
+   */
+  private Command initCustomWorkTypes() {
+    List<Expression> args = new ArrayList<Expression>();
+    for (WorkContext wt: customWorkTypes) {
+      args.add(Turbine.nonDefaultWorkTypeName(wt));
+    }
+    return Turbine.declareCustomWorkTypes(args);
+  }
+
+  private TclTree checkWorkTypes() {
     List<Expression> checkExprs = new ArrayList<Expression>();
     for (ExecContext worker: usedExecContexts) {
       if (worker.isControlContext() ||
           worker.isDefaultWorkContext()) {
         // Don't need to check
       } else {
-        checkExprs.add(Turbine.nonDefaultWorkType(worker.workContext()));
+        checkExprs.add(Turbine.nonDefaultWorkTypeName(worker.workContext()));
       }
     }
 
@@ -462,6 +478,11 @@ public class TurbineGenerator implements CompilerBackend {
   @Override
   public void declareStructType(StructType st) {
     structTypes.newType(st);
+  }
+
+  @Override
+  public void declareWorkType(WorkContext workType) {
+    customWorkTypes.add(workType);
   }
 
   private Sequence structTypeDeclarations() {

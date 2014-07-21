@@ -32,6 +32,8 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.ExecContext.WorkContext;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.LocalForeignFunction;
@@ -40,7 +42,6 @@ import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.RequiredPackage;
-import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
@@ -85,10 +86,10 @@ import exm.stc.ic.tree.ICTree.Statement;
 import exm.stc.ic.tree.TurbineOp;
 
 /**
- * This class can be used to create the intermediate representation for a 
+ * This class can be used to create the intermediate representation for a
  * program.  The intermediate representation is built up by calling methods
  * on this class in body.  Once the IR is built up, it can be optimised,
- * or it can be "replayed" with the regenerate method in order to 
+ * or it can be "replayed" with the regenerate method in order to
  * do the final code generation.
  */
 public class STCMiddleEnd {
@@ -99,9 +100,9 @@ public class STCMiddleEnd {
   // Keep track of current place in program
   private Function currFunction = null;
   private final StackLite<Block> blockStack = new StackLite<Block>();
-  
+
   private final StackLite<Loop> loopStack = new StackLite<Loop>();
-  
+
 //Place to log IC to (can be null for no output)
   private PrintStream icOutput;
 
@@ -135,15 +136,17 @@ public class STCMiddleEnd {
   public void requirePackage(RequiredPackage pkg) {
     program.addRequiredPackage(pkg);
   }
-  
-
 
   public void defineStructType(StructType newType) {
     program.addStructType(newType);
   }
-  
+
+  public void declareWorkType(WorkContext workType) {
+    program.addWorkType(workType);
+  }
+
   /**
-   * 
+   *
    * @param name
    * @param fType
    * @param localImpl can be null
@@ -233,7 +236,7 @@ public class STCMiddleEnd {
    */
   public void startWaitStatement(String procName, List<Var> waitVars,
       WaitMode mode, boolean explicit, boolean recursive, ExecTarget target) {
-    startWaitStatement(procName, waitVars, mode, explicit, recursive, target, 
+    startWaitStatement(procName, waitVars, mode, explicit, recursive, target,
                         new TaskProps());
   }
 
@@ -241,9 +244,9 @@ public class STCMiddleEnd {
       WaitMode mode, boolean explicit, boolean recursive, ExecTarget target,
       TaskProps props) {
     startWaitStatement(procName, WaitVar.makeList(waitVars, explicit),
-                             mode, recursive, target, props);      
+                             mode, recursive, target, props);
   }
-  
+
   public void startWaitStatement(String procName, List<WaitVar> waitVars,
         WaitMode mode, boolean recursive, ExecTarget target, TaskProps props) {
     assert(currFunction != null);
@@ -293,14 +296,14 @@ public class STCMiddleEnd {
   }
 
   public void startForeachLoop(String loopName,
-          Var container, Var memberVar, Var loopCountVar, 
+          Var container, Var memberVar, Var loopCountVar,
           int splitDegree, int leafDegree, boolean arrayClosed) {
     assert(Types.isContainer(container) || Types.isContainerLocal(container)):
           "foreach loop over bad type: " + container.toString();
-    
+
     assert(Types.isElemValType(container, memberVar)): container + " " + memberVar;
     if (Types.isArray(container)) {
-      assert(loopCountVar == null || 
+      assert(loopCountVar == null ||
           Types.isArrayKeyVal(container, loopCountVar.asArg()));
     } else {
       assert(Types.isBag(container));
@@ -325,7 +328,7 @@ public class STCMiddleEnd {
     RangeLoop loop = new RangeLoop(loopName, loopVar, countVar,
                     start, end, increment,
                     PassedVar.NONE, Var.NONE, desiredUnroll, false,
-                    splitDegree, leafDegree, RefCount.NONE, 
+                    splitDegree, leafDegree, RefCount.NONE,
                     new MultiMap<Var, RefCount>(), RefCount.NONE);
     currBlock().addContinuation(loop);
     blockStack.push(loop.getLoopBody());
@@ -346,7 +349,7 @@ public class STCMiddleEnd {
     loopStack.push(loop);
   }
 
-  public void loopContinue(List<Arg> newVals, 
+  public void loopContinue(List<Arg> newVals,
                            List<Boolean> blockingVars) {
     LoopContinue inst = new LoopContinue(newVals, Var.NONE, blockingVars);
     currBlock().addInstruction(inst);
@@ -364,25 +367,25 @@ public class STCMiddleEnd {
     loopStack.pop();
     assert(b.getType() == BlockType.LOOP_BODY);
   }
-  
-  public void startAsyncExec(String procName, 
+
+  public void startAsyncExec(String procName,
       AsyncExecutor executor, String cmdName, List<Var> taskOutputs,
       List<Arg> taskArgs, Map<String, Arg> taskProps,
       boolean hasSideEffects) {
-    
+
     AsyncExec stmt = new AsyncExec(procName, executor, cmdName,
           PassedVar.NONE, Var.NONE,
           taskOutputs, taskArgs, taskProps, hasSideEffects);
     currBlock().addContinuation(stmt);
-    
+
     blockStack.push(stmt.getBlock());
   }
-  
+
   public void endAsyncExec() {
     assert(currBlock().getType() == BlockType.ASYNC_EXEC_CONTINUATION);
     blockStack.pop();
   }
-  
+
   public void declare(Var var) throws UndefinedTypeException {
     assert(!var.mappedDecl()|| Types.isMappable(var));
     currBlock().addVariable(var);
@@ -399,7 +402,7 @@ public class STCMiddleEnd {
       List<Var> outputs) {
     builtinFunctionCall(function, inputs, outputs, new TaskProps());
   }
-  
+
   public void builtinFunctionCall(String function, List<Var> inputs,
       List<Var> outputs, TaskProps props) {
     props.assertInternalTypesValid();
@@ -407,13 +410,13 @@ public class STCMiddleEnd {
         FunctionCall.createBuiltinCall(
             function, outputs, Var.asArgList(inputs), props));
   }
-  
+
   public void builtinLocalFunctionCall(String functionName,
           List<Arg> inputs, List<Var> outputs) {
     currBlock().addInstruction(new LocalFunctionCall(functionName,
             inputs, outputs));
   }
-  
+
   public void functionCall(String function, List<Arg> inputs,
       List<Var> outputs, ExecTarget mode, TaskProps props) {
     props.assertInternalTypesValid();
@@ -428,16 +431,16 @@ public class STCMiddleEnd {
     for (Var o: outFiles) {
       assert(Types.isFileVal(o) || Types.isVoidVal(o));
     }
-    
+
     for (Arg i: inFiles) {
       assert(Types.isFileVal(i.type()));
     }
-    
 
-    currBlock().addInstruction(new RunExternal(cmd, inFiles, outFiles, 
+
+    currBlock().addInstruction(new RunExternal(cmd, inFiles, outFiles,
                       args, redirects, hasSideEffects, deterministic));
   }
-  
+
   public void initLocalOutFile(Var localOutFile, Arg fileName,
                                                  Var fileFuture) {
     Var isMapped = WrapUtil.getIsMapped(currBlock(),
@@ -445,7 +448,7 @@ public class STCMiddleEnd {
     currBlock().addInstruction(TurbineOp.initLocalOutFile(
                             localOutFile, fileName, isMapped.asArg()));
   }
-  
+
   public void arrayRetrieve(Var dst, Var arrayVar, Arg arrIx) {
     currBlock().addInstruction(
         TurbineOp.arrayRetrieve(dst, arrayVar, arrIx, Arg.ZERO));
@@ -466,18 +469,18 @@ public class STCMiddleEnd {
     currBlock().addInstruction(
           TurbineOp.arrayCopyOutImm(dst, arrayVar, arrIx));
   }
-  
-  
+
+
   public void arrayCopyOutFuture(Var dst, Var arrayVar, Var indexVar) {
     currBlock().addInstruction(
           TurbineOp.arrayCopyOutFuture(dst, arrayVar, indexVar));
   }
-  
+
   public void arrayRefCopyOutImm(Var dst, Var arrayVar, Arg arrIx) {
     currBlock().addInstruction(
         TurbineOp.arrayRefCopyOutImm(dst, arrayVar, arrIx));
   }
-  
+
   public void arrayRefCopyOutFuture(Var dst, Var arrayVar,
                                      Var indexVar) {
     currBlock().addInstruction(
@@ -506,7 +509,7 @@ public class STCMiddleEnd {
     currBlock().addInstruction(
         TurbineOp.arrayCopyInImm(array, ix, member));
   }
-  
+
   public void arrayCopyInFuture(Var array, Var ix, Var member) {
     currBlock().addInstruction(
         TurbineOp.arrayCopyInFuture(array, ix, member));
@@ -521,12 +524,12 @@ public class STCMiddleEnd {
     currBlock().addInstruction(
         TurbineOp.arrayRefCopyInFuture(array, ix, member));
   }
-  
+
   public void arrayBuild(Var array, List<Arg> keys, List<Var> vals) {
     currBlock().addInstruction(
         TurbineOp.arrayBuild(array, keys, Arg.fromVarList(vals)));
   }
-  
+
   public void arrayCreateNestedFuture(Var arrayResult,
       Var array, Var ix) {
     currBlock().addInstruction(
@@ -550,11 +553,11 @@ public class STCMiddleEnd {
     currBlock().addInstruction(
         TurbineOp.arrayRefCreateNestedComputed(arrayResult, array, ix));
   }
-  
+
   public void asyncCopy(Var dst, Var src) {
     currBlock().addInstruction(TurbineOp.asyncCopy(dst, src));
   }
-  
+
   public void syncCopy(Var dst, Var src) {
     currBlock().addInstruction(TurbineOp.syncCopy(dst, src));
   }
@@ -579,19 +582,19 @@ public class STCMiddleEnd {
     currBlock().addInstruction(
         TurbineOp.derefScalar(dst, src));
   }
-  
+
   public void derefFile(Var target, Var src) {
     assert(Types.isFile(target.type()));
     assert(Types.isFileRef(src));
     currBlock().addInstruction(
         TurbineOp.derefFile(target, src));
   }
-  
+
   public void retrieveRef(Var target, Var src, boolean mutable) {
     currBlock().addInstruction(
         TurbineOp.retrieveRef(target, src, mutable));
   }
-  
+
   public void makeAlias(Var dst, Var src) {
     assert(src.type().equals(dst.type()));
     assert(dst.storage() == Alloc.ALIAS);
@@ -602,20 +605,20 @@ public class STCMiddleEnd {
   public void retrieveScalar(Var dst, Var src) {
     currBlock().addInstruction(TurbineOp.retrieveScalar(dst, src));
   }
-  
+
   public void assignScalar(Var dst, Arg src) {
     currBlock().addInstruction(TurbineOp.assignScalar(dst, src));
   }
-    
+
   public void freeBlob(Var blobVal) {
     assert(Types.isBlobVal(blobVal));
     currBlock().addCleanup(blobVal, TurbineOp.freeBlob(blobVal));
   }
-  
+
   public void isMapped(Var dst, Var file) {
     currBlock().addInstruction(TurbineOp.isMapped(dst, file));
   }
-  
+
   public void assignFile(Var target, Arg src, Arg setName) {
     currBlock().addInstruction(TurbineOp.assignFile(target, src, setName));
   }
@@ -623,7 +626,7 @@ public class STCMiddleEnd {
   public void retrieveFile(Var target, Var src) {
     currBlock().addInstruction(TurbineOp.retrieveFile(target, src));
   }
-  
+
   public void copyFile(Var target, Var src) {
     assert(Types.isFile(src));
     assert(Types.isFile(target));
@@ -654,7 +657,7 @@ public class STCMiddleEnd {
    * @param target
    * @param src
    * @param compileForTargetMapped whether to compile code for the target
-   *          being mapped or not 
+   *          being mapped or not
    * @param targetMapped runtime value of mapping
    */
   private void copyFile(Block block, Var target, Var src,
@@ -665,7 +668,7 @@ public class STCMiddleEnd {
     assert(!compileForTargetMapped ||
         target.type().fileKind().supportsPhysicalCopy());
     assert(Types.isBoolVal(targetMapped));
-    
+
     Var targetFilename = null;
     List<WaitVar> waitVars;
     if (compileForTargetMapped) {
@@ -673,16 +676,16 @@ public class STCMiddleEnd {
       targetFilename = block.declareUnmapped(Types.F_STRING,
           OptUtil.optFilenamePrefix(block, target),
           Alloc.ALIAS, DefType.LOCAL_COMPILER, VarProvenance.filenameOf(target));
-      
+
       block.addInstruction(TurbineOp.getFileNameAlias(targetFilename, target));
-      
+
       waitVars = Arrays.asList(new WaitVar(src, false),
                        new WaitVar(targetFilename, false));
     } else {
       // Don't need target filename, just wait for src file
       waitVars = Arrays.asList(new WaitVar(src, false));
     }
-    
+
     WaitMode waitMode;
     ExecTarget taskMode;
     if (compileForTargetMapped) {
@@ -693,7 +696,7 @@ public class STCMiddleEnd {
       waitMode = WaitMode.WAIT_ONLY;
       taskMode = ExecTarget.nonDispatchedAny();
     }
-                           
+
     WaitStatement wait = new WaitStatement(
         currFunction.getName() + ":wait:" + src.name(), waitVars,
         PassedVar.NONE, Var.NONE,
@@ -707,7 +710,7 @@ public class STCMiddleEnd {
         OptUtil.optVPrefix(waitBlock, src), Alloc.LOCAL,
         DefType.LOCAL_COMPILER, VarProvenance.valueOf(src));
     waitBlock.addInstruction(TurbineOp.retrieveFile(srcVal, src));
-    
+
     // Assign filename if unmapped
     Var assignFilename = waitBlock.declareUnmapped(Types.V_BOOL,
             waitBlock.uniqueVarName(Var.OPT_VAR_PREFIX + "assignfile"),
@@ -715,7 +718,7 @@ public class STCMiddleEnd {
             VarProvenance.unknown());
     waitBlock.addInstruction(Builtin.createLocal(BuiltinOpcode.NOT,
                                     assignFilename, targetMapped));
-    
+
     if (compileForTargetMapped) {
       Var targetFilenameVal = waitBlock.declareUnmapped(Types.V_STRING,
           OptUtil.optVPrefix(waitBlock, targetFilename), Alloc.LOCAL,
@@ -723,16 +726,16 @@ public class STCMiddleEnd {
       Var targetVal = waitBlock.declareUnmapped(Types.retrievedType(target),
           OptUtil.optVPrefix(waitBlock, target), Alloc.LOCAL,
           DefType.LOCAL_COMPILER, VarProvenance.valueOf(target));
-      
+
       // Setup local targetfile
       waitBlock.addInstruction(TurbineOp.retrieveScalar(
               targetFilenameVal, targetFilename));
       waitBlock.addInstruction(TurbineOp.initLocalOutFile(
               targetVal, targetFilenameVal.asArg(), Arg.TRUE));
-      
+
       // Actually do the copy of file contents
       waitBlock.addInstruction(TurbineOp.copyFileContents(targetVal, srcVal));
-      
+
       // Set target.  Since mapped, will not set target filename
       // Provide targetMapped arg to avoid confusing optimiser
       waitBlock.addInstruction(TurbineOp.assignFile(
@@ -744,7 +747,7 @@ public class STCMiddleEnd {
               target, srcVal.asArg(), assignFilename.asArg()));
     }
   }
-  
+
   public void assignArray(Var target, Arg src) {
     currBlock().addInstruction(TurbineOp.assignArray(target, src));
   }
@@ -752,33 +755,33 @@ public class STCMiddleEnd {
   public void retrieveArray(Var target, Var src) {
     currBlock().addInstruction(TurbineOp.retrieveArray(target, src));
   }
-  
+
   public void assignBag(Var target, Arg src) {
     currBlock().addInstruction(TurbineOp.assignBag(target, src));
   }
-  
+
   public void retrieveBag(Var target, Var src) {
     currBlock().addInstruction(TurbineOp.retrieveBag(target, src));
   }
-  
+
   public void structInitFields(Var struct, List<List<String>> fieldNames,
         List<Arg> fieldVals, Arg writeDecr) {
     currBlock().addInstruction(
         TurbineOp.structInitFields(struct, fieldNames, fieldVals, writeDecr));
   }
-  
+
   public void assignStruct(Var target, Arg src) {
     currBlock().addInstruction(TurbineOp.assignStruct(target, src));
   }
-  
+
   public void retrieveStruct(Var target, Var src) {
     currBlock().addInstruction(TurbineOp.retrieveStruct(target, src));
   }
-  
+
   public void storeRecursive(Var target, Arg src) {
     currBlock().addInstruction(TurbineOp.storeRecursive(target, src));
   }
-  
+
   public void retrieveRecursive(Var target, Var src) {
     currBlock().addInstruction(TurbineOp.retrieveRecursive(target, src));
   }
@@ -787,11 +790,11 @@ public class STCMiddleEnd {
     assert(Types.isFileVal(fileVal));
     currBlock().addCleanup(fileVal, TurbineOp.decrLocalFileRef(fileVal));
   }
-  
+
   public void intrinsicCall(IntrinsicFunction intF, List<Var> iList,
       List<Var> oList, TaskProps props) {
     Block block = currBlock();
-    
+
     switch (intF) {
       case FILENAME: {
         assert(iList.size() == 1) : "Wrong # input args for filename";
@@ -835,12 +838,12 @@ public class STCMiddleEnd {
   public void asyncOp(BuiltinOpcode op, Var out, List<Arg> in) {
     asyncOp(op, out, in, new TaskProps());
   }
-  
-  public void asyncOp(BuiltinOpcode op, Var out, 
+
+  public void asyncOp(BuiltinOpcode op, Var out,
                                     List<Arg> in, TaskProps props) {
     assert(props != null);
     props.assertInternalTypesValid();
-    
+
     if (out != null) {
       assert(Types.isPrimFuture(out.type()));
     }
@@ -853,19 +856,19 @@ public class STCMiddleEnd {
     NestedContainerInfo c = new NestedContainerInfo(inputArray.type());
     assert(Types.isArrayLocal(flatLocalArray));
     Type baseType = c.baseType;
-    
+
     // Get type inside reference
     if (Types.isRef(baseType)) {
       baseType = Types.retrievedType(baseType);
     }
-  
+
     Type memberValT = Types.retrievedType(baseType);
-  
-    //System.err.println(c.baseType + " => " + memberValT); 
-    
+
+    //System.err.println(c.baseType + " => " + memberValT);
+
     assert(memberValT.assignableTo(Types.containerElemType(flatLocalArray)))
       : memberValT + " " + flatLocalArray;
-    
+
     currBlock().addInstruction(
         TurbineOp.unpackArrayToFlat(flatLocalArray, inputArray));
   }
@@ -875,19 +878,19 @@ public class STCMiddleEnd {
     currBlock().addInstruction(
         TurbineOp.structCreateAlias(fieldAlias, struct, fieldPath));
   }
-  
+
   public void structRetrieveSub(Var target, Var struct,
       List<String> fieldPath) {
     currBlock().addInstruction(
         TurbineOp.structRetrieveSub(target, struct, fieldPath, Arg.ZERO));
   }
-  
+
   public void structCopyOut(Var target, Var struct,
                             List<String> fieldPath) {
     currBlock().addInstruction(
         TurbineOp.structCopyOut(target, struct, fieldPath));
   }
-  
+
   public void structRefCopyOut(Var target, Var struct,
                                 List<String> fieldPath) {
     currBlock().addInstruction(
@@ -905,13 +908,13 @@ public class STCMiddleEnd {
     currBlock().addInstruction(TurbineOp.structCopyIn(struct,
                                 fieldPath, fieldVar));
   }
-  
+
   public void structRefCopyIn(Var struct, List<String> fieldPath,
                               Var fieldVar) {
     currBlock().addInstruction(TurbineOp.structRefCopyIn(struct,
                                           fieldPath, fieldVar));
   }
-  
+
   public void addGlobal(Var var, Arg val) {
     assert(val.isConstant());
     program.constants().add(var, val);
@@ -924,10 +927,10 @@ public class STCMiddleEnd {
           " not yet supported");
     }
     assert(val.isImmediateFloat());
-    
+
     currBlock().addInstruction(TurbineOp.initUpdateableFloat(updateable, val));
   }
-  
+
   public void latestValue(Var result, Var updateable) {
     assert(Types.isPrimUpdateable(updateable.type()));
     assert(Types.isPrimValue(result.type()));
@@ -941,11 +944,11 @@ public class STCMiddleEnd {
     assert(Types.isPrimFuture(val.type()));
     assert(updateable.type().primType() == val.type().primType());
     assert(updateMode != null);
-    
+
     currBlock().addInstruction(
           TurbineOp.update(updateable, updateMode, val));
   }
-  
+
   public void updateScalarImm(Var updateable, Operators.UpdateMode updateMode,
                                                 Arg val) {
     assert(Types.isPrimUpdateable(updateable.type()));
@@ -956,7 +959,7 @@ public class STCMiddleEnd {
           + " implemented so far");
     }
     assert(updateMode != null);
-    
+
     currBlock().addInstruction(
           TurbineOp.updateImm(updateable, updateMode, val));
   }
@@ -974,7 +977,7 @@ public class STCMiddleEnd {
       currBlock().addInstruction(TurbineOp.getFileNameAlias(filename, file));
     }
   }
-  
+
   public void setFilenameVal(Var file, Arg filenameVal) {
     currBlock().addInstruction(
             TurbineOp.setFilenameVal(file, filenameVal));
@@ -992,12 +995,12 @@ public class STCMiddleEnd {
       List<Var> outArgs, List<Var> userInArgs, ExecTarget mode,
       boolean isParallel, boolean isTargetable)
           throws UserException {
-    
+
     // TODO: add arg for parallelism and target
     // Need to pass in additional args for e.g. parallelism
     List<Var> realInArgs = new ArrayList<Var>();
     realInArgs.addAll(userInArgs);
-    
+
 
     TaskProps props = new TaskProps();
     if (isParallel) {
@@ -1012,7 +1015,7 @@ public class STCMiddleEnd {
       throw new STCRuntimeError("Don't support generating wrappers " +
           "for parallel functions yet");
     }
-    
+
     if (isTargetable) {
       // declare compiler arg for target
       Var location = new Var(Types.V_INT, Var.VALUEOF_VAR_PREFIX + "location",
@@ -1020,11 +1023,11 @@ public class STCMiddleEnd {
       realInArgs.add(location);
       props.put(TaskPropKey.LOCATION, location.asArg());
     }
-    
+
     Function fn = new Function(wrapperName, realInArgs, outArgs,
                                ExecTarget.syncControl());
     this.program.addFunction(fn);
-    
+
     WaitMode waitMode;
     if (!mode.isDispatched() && !isParallel) {
       // Cases where function can execute on any node
@@ -1037,43 +1040,43 @@ public class STCMiddleEnd {
     Block mainBlock = fn.mainBlock();
 
     // Check if we need to initialize mappings of output files
-    boolean mapOutFiles = !ForeignFunctions.initsOutputMapping(builtinName);  
-    
+    boolean mapOutFiles = !ForeignFunctions.initsOutputMapping(builtinName);
+
     Pair<List<WaitVar>, Map<Var, Var>> p;
     p = WrapUtil.buildWaitVars(mainBlock, mainBlock.statementIterator(),
                                userInArgs, Var.NONE, outArgs, mapOutFiles);
-    
+
     // Variables we must wait for
     List<WaitVar> waitVars = p.val1;
 
     // Track filenames corresponding to inputs
     Map<Var, Var> filenameVars = p.val2;
-    
-    
+
+
     WaitStatement wait = new WaitStatement(wrapperName + "-argwait",
                   waitVars, PassedVar.NONE, Var.NONE,
                   waitMode, true, mode, props);
-    
+
     mainBlock.addContinuation(wait);
-    
+
     Block waitBlock = wait.getBlock();
-    
+
     // List of instructions to go inside wait
     List<Statement> instBuffer = new ArrayList<Statement>();
     List<Arg> inVals = WrapUtil.fetchLocalOpInputs(waitBlock, userInArgs,
                                                   instBuffer, false);
-    
+
     List<Var> outVals = WrapUtil.createLocalOpOutputs(waitBlock, outArgs,
                             filenameVars, instBuffer, false, mapOutFiles,
                             true);
     instBuffer.add(new LocalFunctionCall(builtinName, inVals, outVals));
-    
+
     WrapUtil.setLocalOpOutputs(waitBlock, outArgs, outVals, instBuffer,
                                !mapOutFiles, true);
-    
+
     waitBlock.addStatements(instBuffer);
   }
-  
+
   /**
    * Should be called if checkpointing is required so that it can be
    * correctly initialized.
@@ -1087,7 +1090,7 @@ public class STCMiddleEnd {
     currBlock().addInstruction(
             TurbineOp.checkpointWriteEnabled(v));
   }
-  
+
   public void checkpointLookupEnabled(Var v) {
     assert(Types.isBoolVal(v));
     currBlock().addInstruction(
@@ -1113,7 +1116,7 @@ public class STCMiddleEnd {
     currBlock().addInstruction(
         TurbineOp.packValues(packedValues, values));
   }
-  
+
   public void unpackValues(List<Var> values, Var packedValues) {
     assert(Types.isBlobVal(packedValues));
     currBlock().addInstruction(
