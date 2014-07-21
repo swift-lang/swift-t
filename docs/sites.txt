@@ -328,25 +328,6 @@ LDFLAGS="-Wl,-rpath -Wl,/software/openmpi-1.6-el6-x86_64/lib" --enable-mpi-2
  --with-mpi-lib-name=mpi
 ----
 
-=== Eureka
-
-Eureka is a 100-node x86 cluster at the Argonne Leadership Computing
-Facility (ALCF).  It uses the Cobalt scheduler.
-
-==== Build procedure
-
-* Configure Tcl and c-utils with gcc
-* Configure ADLB with mpicc
-
-To run:
-----
-export MODE=cluster
-submit/cobalt/turbine-cobalt-run.zsh -n 3 ~/program.tcl
-----
-
-The normal Turbine environment variables are honored, plus the
-<<variables,Turbine scheduler variables>>.
-
 === Tukey
 
 https://www.alcf.anl.gov/user-guides/tukey[Tukey] is a 96-node x86
@@ -514,7 +495,7 @@ turbine-cobalt-run.zsh -n 3 program.tcl
 The normal Turbine environment variables are honored, plus the
 <<variables,Turbine scheduler variables>>.
 
-==== Cetus
+==== Mira/Cetus
 
 *As of:* 0.5.0 - 4/4/2014
 
@@ -547,11 +528,11 @@ You may get errors that say +wrong digit+.  This is apparently a bgxlc
 bug when applied to Tcl's +StrToD.c+.  Compiling this file with +-O3+ fixes
 the problem.
 
-Put +/bgsys/drivers/ppcfloor/comm/gcc/bin+ in your +PATH+.
+Put +/bgsys/drivers/V1R2M1/ppc64/comm/bin/gcc+ in your +PATH+.
 
-* Compile c-utils with +/usr/bin/gcc+
-* Configure ADLB with +mpixlc --enable-mpi-2 --enable-xlc+
-* Configure Turbine with +/usr/bin/gcc --disable-static --with-tcl=/home/wozniak/Public/sfw/ppc64/tcl-8.5.12+
+* Compile c-utils with +CC=/usr/bin/gcc+
+* Configure ADLB with +CC=mpixlc --enable-mpi-2 --enable-xlc+
+* Configure Turbine with +CC=/usr/bin/gcc --disable-static --with-tcl=/home/wozniak/Public/sfw/ppc64/tcl-8.5.12 --with-mpi=/bgsys/drivers/V1R2M1/ppc64/comm --with-mpi-lib-name=mpich-gcc+
 
 *External scripting:*
 
