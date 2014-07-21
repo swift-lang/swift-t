@@ -339,6 +339,7 @@ the Cobalt scheduler.
 ==== Public installation
 
 Add to +PATH+:
+
 * STC: +~wozniak/Public/sfw/x86/stc/bin+
 * Turbine submit script: +~wozniak/Public/sfw/x86/turbine/scripts/submit/cobalt+
 
