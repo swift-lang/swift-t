@@ -148,8 +148,12 @@ CC = @CC@
 CFLAGS := @CFLAGS@
 LDFLAGS := @LDFLAGS@
 
+# Separate different types of CFLAGS
+INCLUDES := 
+DEFINES  := 
+
 # Set includes
-CFLAGS += -I . -I src/turbine -I src/tcl/turbine -I src/tcl/static-pkg/
+INCLUDES += -I . -I src/turbine -I src/tcl/turbine -I src/tcl/static-pkg/
 ifeq ($(USE_XLC),1)
 	CFLAGS += -qpack_semantic=gnu
 endif
@@ -186,7 +190,7 @@ MACHINE = @USE_MACHINE@
 MPI_INCLUDE = @USE_MPI_INCLUDE@
 MPI_LIB_DIR = @USE_MPI_LIB_DIR@
 # The actual linker arguments:
-CFLAGS += -I $(MPI_INCLUDE)
+INCLUDES += -I $(MPI_INCLUDE)
 MPI_LIB :=
 ifeq ($(filter $(MPI_LIB_DIR),$(SYSTEM_LIBS)),)
   MPI_LIB += -L$(MPI_LIB_DIR)
@@ -201,7 +205,7 @@ LAUNCHER = @USE_LAUNCHER@
 
 ADLB = @USE_ADLB@
 ifneq ($(ADLB),0)
-	CFLAGS += -I $(ADLB)/include
+	INCLUDES += -I $(ADLB)/include
 endif
 LIBADLB_A := @USE_LIBADLB_A@
 
@@ -210,7 +214,7 @@ USE_MPE = @USE_MPE@
 
 ENABLE_XPT = @ENABLE_XPT@
 ifeq ($(ENABLE_XPT),yes)
-  CFLAGS += -D ENABLE_XPT
+  DEFINES += -D ENABLE_XPT
 endif
 
 HAVE_PYTHON        = @HAVE_PYTHON@
@@ -231,23 +235,25 @@ ifeq ($(ENABLE_SHARED),1)
   CFLAGS += $(PIC)
 endif
 # This is referenced in lookup3.c - may want to drop this for speed
-CFLAGS += -D VALGRIND
-CFLAGS += -I $(C_UTILS)/include
-CFLAGS += @TCL_INCLUDE_SPEC@
+DEFINES += -D VALGRIND
+INCLUDES += -I $(C_UTILS)/include
+INCLUDES += @TCL_INCLUDE_SPEC@
 ifeq ($(ENABLE_MPE),1)
-	CFLAGS += -I $(USE_MPE)/include
+	INCLUDES += -I $(USE_MPE)/include
 endif
 ifeq ($(HAVE_PYTHON),1)
-	CFLAGS += -I $(USE_PYTHON_INCLUDE)
+	INCLUDES += -I $(USE_PYTHON_INCLUDE)
 endif
 ifeq ($(HAVE_R),1)
-	CFLAGS += -I $(USE_R)/include
+	INCLUDES += -I $(USE_R)/include
 endif
 ifeq ($(HAVE_JULIA),1)
-	CFLAGS += -I $(USE_JULIA)/src
-	CFLAGS += -I $(USE_JULIA)/usr/include
-	CFLAGS += -I $(USE_JULIA)/src/support
+	INCLUDES += -I $(USE_JULIA)/src
+	INCLUDES += -I $(USE_JULIA)/usr/include
+	INCLUDES += -I $(USE_JULIA)/src/support
 endif
+
+CFLAGS += $(DEFINES) $(INCLUDES)
 
 # LIBS: links to ADLB, c-utils, MPE, and MPI
 LIBS :=
@@ -381,10 +387,14 @@ endif
 
 deps: $(DEPS)
 
+# Assume we always have gcc for deps processing
+DEPCC = gcc
+
 %.d: %.c
 	$(Q) "  DEP		$(@)"
-	$(E) CC="$(CC)" $(srcdir)/maint/depend.sh \
-             $(call dirname, $(*)) $(<) $(@) $(CFLAGS)
+	$(E) CC="$(DEPCC)" $(srcdir)/maint/depend.sh \
+             $(call dirname, $(*)) $(<) $(@) $(DEFINES) \
+	     $(INCLUDES) $(DEFINES) 
 
 ifeq (,$(filter clean deps,$(MAKECMDGOALS)))
  -include $(DEPS)
@@ -498,7 +508,7 @@ LD_EXEC_SYMBOL_EXPORT = -Wl,--export-dynamic
 #   Static libs must be compiled with -fPIC or -fPIE
 $(TURBINE_EXECUTABLES): %: %.o ${TCL_TURBINE_LIBS} ${STATIC_PKG_RESOURCE_H}
 	$(Q) "  LINK X	$(@)"
-	$(E) $(CC) $(LDFLAGS) $(LD_EXEC_SYMBOL_EXPORT) $(<) \
+	$(E) $(CC) $(LDFLAGS) $(SHARED) $(LD_EXEC_SYMBOL_EXPORT) $(<) \
         $(MAC_FLAT) \
         $(TCL_TURBINE_LIB_FLAGS) \
         $(LIBS) \
