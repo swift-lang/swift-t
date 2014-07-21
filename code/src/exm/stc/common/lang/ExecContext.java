@@ -56,6 +56,10 @@ public class ExecContext {
       return name;
     }
 
+    public String name() {
+      return name;
+    }
+
     private static WorkContext DEFAULT = new WorkContext("WORKER");
   }
 

@@ -5,7 +5,6 @@ import io;
  */
 
 // COMPILE-ONLY-TEST
-// SKIP-THIS-TEST
 
 pragma worktypedef a_new_work_type;
 

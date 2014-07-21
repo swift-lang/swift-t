@@ -395,7 +395,7 @@ public class TurbineGenerator implements CompilerBackend {
           worker.isDefaultWorkContext()) {
         // Don't need to check
       } else {
-        checkExprs.add(Turbine.asyncWorkerName(worker.workContext()));
+        checkExprs.add(Turbine.nonDefaultWorkType(worker.workContext()));
       }
     }
 
