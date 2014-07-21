@@ -35,7 +35,7 @@ on a range of systems.  We first cover locating and/or installing
 prerequisite software packages, then we cover building Swift/T
 from a source package.
 
-The http://www.mcs.anl.gov/exm/local/guides/turbine-sites.html[Turbine Sites Guide]
+The link:turbine-sites.html[Turbine Sites Guide]
 is a accompanying resource for configuration settings and preinstalled software
 for specific systems.
 
