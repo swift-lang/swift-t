@@ -835,11 +835,23 @@ class Turbine {
     return res;
   }
 
+  /**
+   * Return NULL if not a valid async worker name.
+   * @param worker
+   * @return
+   */
   public static Expression asyncWorkerName(WorkContext worker) {
     AsyncExecutor exec = AsyncExecutor.fromWorkContext(worker);
-    assert(exec != null);
+    if (exec == null) {
+      return null;
+    }
     // Directly use enum name
     return new Token(exec.name());
+  }
+
+  public static Expression definedWorkerName(WorkContext worker) {
+    // TODO: check name was defined in frontend?
+    return new Token(worker.name());
   }
 
   public static Expression adlbWorkType(ExecContext target) {
@@ -861,8 +873,16 @@ class Turbine {
     }
   }
 
-  private static Expression nonDefaultWorkType(WorkContext workContext) {
-    return Square.fnCall(ADLB_WORK_TYPE, asyncWorkerName(workContext));
+  public static Expression nonDefaultWorkType(WorkContext workContext) {
+    Expression workTypeName = asyncWorkerName(workContext);
+    if (workTypeName != null) {
+      return Square.fnCall(ADLB_WORK_TYPE, workTypeName);
+    }
+    workTypeName = definedWorkerName(workContext);
+    if (workTypeName != null) {
+      return Square.fnCall(ADLB_WORK_TYPE, workTypeName);
+    }
+    throw new STCRuntimeError("Unknown WorkContext: " + workContext);
   }
 
   /**
