@@ -78,7 +78,7 @@ snip 1 examples/6/prog-f90.f90
 snip 1 examples/6/prog-swift.swift
 snip 1 examples/8/f.c
 
-DOCS=( swift leaf internals )
+DOCS=( guide leaf internals )
 
 for NAME in ${DOCS}
 do
