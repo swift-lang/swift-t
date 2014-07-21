@@ -62,6 +62,16 @@ void xlb_add_tag_name(int tag, char* name);
  */
 const char* xlb_get_tag_name(int tag);
 
+#if ADLB_MPI_VERSION == 2
+// Then MPI_Send accepts a void*
+// In MPI-3, this is a const void*
+// So, for MPI-2, we cast to void*
+// Cf. http://blogs.cisco.com/performance/more-mpi-3-newness-const
+#define VOID (void*)
+#else
+#define VOID
+#endif
+
 /*
    All of these client/handler functions (adlb.c,handlers.c,etc.)
    use messaging the same way:
@@ -76,23 +86,23 @@ const char* xlb_get_tag_name(int tag);
 
 #define SEND(data,length,type,rank,tag) { \
   TRACE_MPI("SEND(to=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
-  int _rc = MPI_Send(data,length,type,rank,tag,adlb_comm); \
+  int _rc = MPI_Send(VOID data,length,type,rank,tag,adlb_comm); \
   MPI_CHECK(_rc); }
 
 #define RSEND(data,length,type,rank,tag) { \
   TRACE_MPI("RSEND(to=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
-  int _rc = MPI_Rsend(data,length,type,rank,tag,adlb_comm); \
+  int _rc = MPI_Rsend(VOID data,length,type,rank,tag,adlb_comm); \
   MPI_CHECK(_rc); }
 
 #define SSEND(data,length,type,rank,tag) { \
   TRACE_MPI("SSEND(to=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
-  int _rc = MPI_Ssend(data,length,type,rank,tag,adlb_comm); \
+  int _rc = MPI_Ssend(VOID data,length,type,rank,tag,adlb_comm); \
   TRACE_MPI("SSENT"); \
   MPI_CHECK(_rc); }
 
 #define ISEND(data,length,type,rank,tag,req) { \
   TRACE_MPI("ISEND(to=%i,tag=%s)", rank, xlb_get_tag_name(tag)); \
-  int _rc = MPI_Isend(data,length,type,rank,tag,adlb_comm,req); \
+  int _rc = MPI_Isend(VOID data,length,type,rank,tag,adlb_comm,req);      \
   MPI_CHECK(_rc); }
 
 #define IRSEND(data,length,type,rank,tag,req) { \
