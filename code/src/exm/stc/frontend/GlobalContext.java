@@ -182,12 +182,13 @@ public class GlobalContext extends Context {
     return types.get(typeName);
   }
 
-  public void declareWorkType(String name) throws DoubleDefineException {
+  public ExecContext.WorkContext declareWorkType(String name) throws DoubleDefineException {
     // Should be case insensitive
     String canonicalName = name.toUpperCase();
     LogHelper.debug(this, "Defined work type " + canonicalName);
     ExecContext.WorkContext workCx = new ExecContext.WorkContext(canonicalName);
     addExecContext(canonicalName, ExecContext.worker(workCx));
+    return workCx;
   }
 
   public void addExecContexts(List<Pair<String, ExecContext>> contexts)

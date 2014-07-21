@@ -449,7 +449,8 @@ public class ASTWalker {
                                   + "have identifier name as argument");
     }
     String workTypeName = workTypeT.child(0).getText();
-    context.declareWorkType(workTypeName);
+    ExecContext.WorkContext workCx = context.declareWorkType(workTypeName);
+    backend.declareWorkType(workCx);
   }
 
   /**

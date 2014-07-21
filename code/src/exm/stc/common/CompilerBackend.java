@@ -24,18 +24,18 @@ import java.util.Map;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.AsyncExecutor;
-import exm.stc.common.lang.Types.ArrayType;
-import exm.stc.common.lang.WrappedForeignFunction;
+import exm.stc.common.lang.ExecContext.WorkContext;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.LocalForeignFunction;
 import exm.stc.common.lang.Operators;
-import exm.stc.common.lang.RequiredPackage;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
-import exm.stc.common.lang.ExecTarget;
+import exm.stc.common.lang.RequiredPackage;
 import exm.stc.common.lang.TaskProp.TaskProps;
+import exm.stc.common.lang.Types.ArrayType;
 import exm.stc.common.lang.Types.BagType;
 import exm.stc.common.lang.Types.FileFutureType;
 import exm.stc.common.lang.Types.FileValueType;
@@ -46,12 +46,13 @@ import exm.stc.common.lang.Types.ScalarUpdateableType;
 import exm.stc.common.lang.Types.ScalarValueType;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Var;
+import exm.stc.common.lang.WrappedForeignFunction;
 import exm.stc.common.util.MultiMap;
 import exm.stc.ic.tree.TurbineOp.RefCountOp.RCDir;
 
 /**
  * The generic interface for a code generation backend to the compiler.
- * 
+ *
  * TODO: better document which operations consume/return reference counts.
  * Generally asynchronous operations consume reference counts (read/write
  * depending on whether modified or not) by default, while synchronous
@@ -59,21 +60,21 @@ import exm.stc.ic.tree.TurbineOp.RefCountOp.RCDir;
  * told to.
  */
 public interface CompilerBackend {
-  
+
   public static class CodeGenOptions {
 
-    private final boolean checkpointRequired; 
-  
+    private final boolean checkpointRequired;
+
     public CodeGenOptions(boolean checkpointRequired) {
       this.checkpointRequired = checkpointRequired;
     }
-    
+
     public boolean checkpointRequired() {
       return checkpointRequired;
     }
 
   }
-  
+
   /**
    * Called once before code generation starts to initialize generation.
    * @param options
@@ -94,12 +95,12 @@ public interface CompilerBackend {
 
   /**
    * A package that must be loaded.
-   * 
+   *
    * Called before any functions or executable code is generated.
    * @param pkg
    */
   public void requirePackage(RequiredPackage pkg);
-  
+
   /**
    * Add a global constant variable.
    * Called before any functions or executable code is generated.
@@ -107,14 +108,24 @@ public interface CompilerBackend {
    * @param val
    */
   public void addGlobalConst(Var var, Arg val);
-  
+
   /**
    * Let backend know about struct type that will be used.
    * Called before any functions or executable code is generated.
    * @param structType
    */
   public void declareStructType(StructType structType);
-  
+
+  /**
+   * Declare a new work type that behaves the same as, but is separate from
+   * the regular work context.  Not all backends will implement this.
+   * This will only be called for custom work types outside of the regular
+   * control/work contexts and builtin async executors.  It should be called
+   * only once for any custom work type that is declared in the program.
+   * @param workType
+   */
+  public void declareWorkType(WorkContext workType);
+
   /**
    * Define a foreign function.
    * @param name
@@ -126,7 +137,7 @@ public interface CompilerBackend {
   public void defineForeignFunction(String name, FunctionType type,
         LocalForeignFunction localImpl, WrappedForeignFunction wrappedImpl)
         throws UserException;
-  
+
   /**
    * Start a function and enter main block
    * @param functionName
@@ -154,7 +165,7 @@ public interface CompilerBackend {
       this.initReaders = initReaders;
       this.initWriters = initWriters;
     }
-    
+
     public final Var var;
     public final Arg initReaders;
     public final Arg initWriters;
@@ -162,7 +173,7 @@ public interface CompilerBackend {
 
   /**
    * Declare and initialize a number of variables.
-   * Called before any of these variables are used. 
+   * Called before any of these variables are used.
    * @param decls variable declarations
    */
   public void declare(List<VarDecl> decls);
@@ -189,7 +200,7 @@ public interface CompilerBackend {
    * Move onto the else block, if any
    */
   public void startElseBlock();
-  
+
   /**
    * End if statement.
    */
@@ -221,7 +232,7 @@ public interface CompilerBackend {
    * @param memberVar
    * @param loopCountVar counter variable, can be null
    * @param splitDegree
-   * @param leafDegree 
+   * @param leafDegree
    * @param arrayClosed if true, assume array is already closed
    * @param passedVars
    * @param perIterIncrs per-iteration increments
@@ -251,7 +262,7 @@ public interface CompilerBackend {
    * @param loopName unique name for loop
    * @param loopVar variable (integer value) used to store iteration parameter
    * @param countVar variable (integer value) used to store iteration number starting
-   *                from 0 (optional) 
+   *                from 0 (optional)
    * @param start start (inclusive) of the loop: should be int or int value var
    * @param end end (inclusive) of the loop: should be int or int value var
    * @param increment increment of the loop: should be int or int value var
@@ -261,17 +272,17 @@ public interface CompilerBackend {
    * @param constIncrs constant increments
    */
   public void startRangeLoop(String loopName, Var loopVar, Var countVar,
-      Arg start, Arg end, Arg increment, int splitDegree, int leafDegree, 
+      Arg start, Arg end, Arg increment, int splitDegree, int leafDegree,
       List<PassedVar> passedVars, List<RefCount> perIterIncrs,
       MultiMap<Var, RefCount> constIncrs);
-  
+
   /**
    * Finish the range loop
    * @param splitDegree
    * @param perIterDecrs decrements per iteration at end of loop body
    */
   public void endRangeLoop(int splitDegree, List<RefCount> perIterDecrs);
-   
+
   /**
    * Start code that will execute asynchronously
    * @param procName the name of the wait block (useful so generated
@@ -296,23 +307,23 @@ public interface CompilerBackend {
    * for code generation if present.
    * @param procName
    * @param executor
-   * @param cmdName 
+   * @param cmdName
    * @param taskOutputs
    * @param taskArgs
    * @param taskProps
    * @param hasContinuation true if we have a continuation to run after task
    */
-  public void startAsyncExec(String procName, List<Var> passIn, 
+  public void startAsyncExec(String procName, List<Var> passIn,
       AsyncExecutor executor, String cmdName, List<Var> taskOutputs,
       List<Arg> taskArgs, Map<String, Arg> taskProps,
       boolean hasContinuation);
-  
+
   /**
-   * Finish asynchronous executor continuation. 
+   * Finish asynchronous executor continuation.
    * @param hasContinuation
    */
   public void endAsyncExec(boolean hasContinuation);
-  
+
   /**
    * Start ordered loop.
    * @param loopName
@@ -322,12 +333,12 @@ public interface CompilerBackend {
    * @param keepOpenVars variable to keep open from one iteration to the next
    * @param initWaitVars values to wait for before executing first iteration
    * @param simpleLoop if this is a simple loop that does not require waiting
-   *                    between iterations 
+   *                    between iterations
    */
   public void startLoop(String loopName, List<Var> loopVars,
       List<Arg> initVals, List<Var> usedVariables,
       List<Var> initWaitVars, boolean simpleLoop);
-  
+
   /**
    * Run next iteration of ordered loop with new values of loop variables.
    * @param newVals new values for loop variable
@@ -337,7 +348,7 @@ public interface CompilerBackend {
    */
   public void loopContinue(List<Arg> newVals,
       List<Var> usedVariables, List<Boolean> blockingVars);
-  
+
   /**
    * Called at end of last iteration of ordered loop.
    * @param loopUsedVars variables from outside loop referred to in loop.
@@ -345,7 +356,7 @@ public interface CompilerBackend {
    * @param keepOpenVars
    */
   public void loopBreak(List<Var> loopUsedVars, List<Var> keepOpenVars);
-  
+
   /**
    * Finish ordered loop code generation.
    */
@@ -360,21 +371,21 @@ public interface CompilerBackend {
     public final Var var;
     public final RefCountType type;
     public final Arg amount;
-    
+
     public RefCount(Var var, RefCountType type, Arg amount) {
       this.var = var;
       this.type = type;
       this.amount = amount;
     }
-    
+
     @Override
     public String toString() {
       return var.name() + "<" + type.toString() + ">" + amount;
     }
-    
+
     public static final List<RefCount> NONE = Collections.emptyList();
   }
-  
+
   /**
    * Represents a refcount operation with explicit direction.
    * Variables must have a tracked refcount as defined in {@link RefCounting}.
@@ -384,25 +395,25 @@ public interface CompilerBackend {
     public final RefCountType type;
     public final RCDir dir;
     public final Arg amount;
-    
+
     public DirRefCount(Var var, RefCountType type, RCDir dir, Arg amount) {
       this.var = var;
       this.type = type;
       this.dir = dir;
       this.amount = amount;
     }
-    
+
     @Override
     public String toString() {
       return var.name() + "<" + type.toString() + ">" +
              "<" + dir.toString() + ">" + amount;
     }
-    
+
     public static final List<DirRefCount> NONE = Collections.emptyList();
   }
-  
+
   /**
-   * Add comment to output code.  
+   * Add comment to output code.
    * @param comment
    */
   public void addComment(String comment);
@@ -413,7 +424,7 @@ public interface CompilerBackend {
    * @param refcounts list of reference count operations
    */
   public void modifyRefCounts(List<DirRefCount> refcounts);
-  
+
   /**
    * Local version of builtin operation operating on local value variables, e.g.
    * {@link ScalarValueType}.
@@ -422,7 +433,7 @@ public interface CompilerBackend {
    * @param in input variables or values
    */
   public void localOp(BuiltinOpcode op, Var out, List<Arg> in);
-  
+
   /**
    * Local version of builtin operation operating on shared variables, e.g.
    * {@link ScalarFutureType}.
@@ -431,32 +442,32 @@ public interface CompilerBackend {
    * @param in input variables
    */
   public void asyncOp(BuiltinOpcode op, Var out,  List<Arg> in,
-                      TaskProps props);  
+                      TaskProps props);
 
   /**
    * Call a previously defined foreign function.  This will use the version
-   * defined by the {@link LocalForeignFunction} implementation. 
+   * defined by the {@link LocalForeignFunction} implementation.
    * @param outputs
-   * @param inputs 
+   * @param inputs
    * @param function name of the function
-   * @param props 
+   * @param props
    */
   public void callForeignFunctionLocal(String functionName,
           List<Var> outputs, List<Arg> inputs);
 
   /**
    * Call a previously defined foreign function.  This will use the version
-   * defined by the {@link WrappedForeignFunction} implementation. 
+   * defined by the {@link WrappedForeignFunction} implementation.
    * @param function name of the function
    * @param outputs
-   * @param inputs 
-   * @param props 
+   * @param inputs
+   * @param props
    */
   public void callForeignFunctionWrapped(String function,
       List<Var> outputs, List<Arg> inputs, TaskProps props);
-  
+
   /**
-   * Call an IR function (i.e. one created with startFunction() and endFunction()) 
+   * Call an IR function (i.e. one created with startFunction() and endFunction())
    * @param function name of function
    * @param outputs outputs
    * @param inputs inputs
@@ -466,15 +477,15 @@ public interface CompilerBackend {
    * @param props task properties (if function is asynchronous)
    */
   public void functionCall(String function,
-      List<Var> outputs, List<Arg> inputs, List<Boolean> blockOn, 
+      List<Var> outputs, List<Arg> inputs, List<Boolean> blockOn,
       ExecTarget mode, TaskProps props);
-  
+
   /**
    * Generate command to run an external application immediately
-   * @param redirects 
+   * @param redirects
    */
   public void runExternal(String cmd, List<Arg> args,
-           List<Var> outFiles, List<Arg> inFiles, 
+           List<Var> outFiles, List<Arg> inFiles,
            Redirects<Arg> redirects,
            boolean hasSideEffects, boolean deterministic);
   /**
@@ -507,12 +518,12 @@ public interface CompilerBackend {
    * @param decr read refcounts to decrement from src
    */
   public void retrieveFile(Var dst, Var src, Arg decr);
-  
+
   /**
    * Set target=addressof(src)
    * @param dst reference future type (i.e. of {@link RefType})
    * @param src any type of shared data that we can have a reference to
-   * @param readRefs Number of read refs to transfer to reference var 
+   * @param readRefs Number of read refs to transfer to reference var
    * @param writeRefs Number of write refs to transfer to reference var
    */
   public void assignReference(Var dst, Var src,
@@ -535,7 +546,7 @@ public interface CompilerBackend {
    * @param src local var of {@link ArrayType}
    */
   public void assignArray(Var dst, Arg src);
-  
+
   /**
    * Retrieve contents of array to dst
    * @param dst local var of {@link ArrayType}
@@ -577,7 +588,7 @@ public interface CompilerBackend {
   /**
    * Store a local data value to a compound data type.
    * The exact behaviour should depend on the type of dst, which
-   * may or may not have {@link RefType} indirection in it. 
+   * may or may not have {@link RefType} indirection in it.
    * @param dst
    * @param src
    */
@@ -592,11 +603,11 @@ public interface CompilerBackend {
    * @param decr
    */
   public void retrieveRecursive(Var dst, Var src, Arg decr);
-  
+
   /**
-   * Unpack a nested array into a local flat array 
+   * Unpack a nested array into a local flat array
    * @param flatLocalArray local {@link ArrayType} for output
-   * @param inputArray a shared {@link ArrayType}, maybe nested, for input 
+   * @param inputArray a shared {@link ArrayType}, maybe nested, for input
    */
   public void unpackArrayToFlat(Var flatLocalArray, Arg inputArray);
 
@@ -606,7 +617,7 @@ public interface CompilerBackend {
    * @param src a {@link RefType} variable
    */
   public void dereferenceScalar(Var dst, Var src);
-  
+
   /**
    * Wait for and copy the value of the referand of src to dst
    * @param dst destination of {@link FileFutureType}
@@ -638,7 +649,7 @@ public interface CompilerBackend {
   /**
    * Initialize fields of a {@link StructType} variable.
    * Do not have to initialize all fields, can assign some others later.
-   * 
+   *
    * @param struct a non-local {@link StructType} to initialize
    * @param fieldPaths paths to assign, with multiple entries for
    *                   nested structs
@@ -647,7 +658,7 @@ public interface CompilerBackend {
    */
   public void structInitFields(Var struct, List<List<String>> fieldPaths,
                                List<Arg> fieldVals, Arg writeDecr);
-  
+
   /**
    * Build a complete local struct value.
    * @param struct a local {@link StructType} to initialize.
@@ -656,8 +667,8 @@ public interface CompilerBackend {
    * @param fieldVals values of paths to assign
    */
   public void buildStructLocal(Var struct, List<List<String>> fieldPaths,
-                                List<Arg> fieldVals); 
-  
+                                List<Arg> fieldVals);
+
   /**
    * Decrement local file refcount, deleting referenced file if needed
    * @param fileVal a {@link FileValueType} file
@@ -669,41 +680,41 @@ public interface CompilerBackend {
    * @param blobval a {@link ScalarValueType} blob
    */
   public void freeBlob(Var blobval);
-  
+
   /**
    * Extract handle to filename future out of file variable
    * @param filename {@link ScalarFutureType} string for output, must be alias
    * @param file {@link FileFutureType} with filename
    */
   public void getFileNameAlias(Var filename, Var file);
-  
+
   /**
    * Copy filename from future to file
    * @param file {@link FileFutureType} to set filename on
    * @param filename {@link ScalarFutureType} string
    */
   public void copyInFilename(Var file, Var filename);
-  
+
   /**
    * Extract handle to filename future out of localfile variable
    * @param filename {@link ScalarValueType} string for output
    * @param file {@link FileValueType} with filename
    */
   public void getLocalFileName(Var filename, Var file);
-  
+
   /**
    * Determine if a file is mapped
    * @param isMapped a {@link ScalarValueType} boolean for output
    * @param file a {@link FileFutureType} variable
    */
   public void isMapped(Var isMapped, Var file);
-  
+
   /**
    * Choose a temporary file name
    * @param filenameVal a {@link ScalarValueType} of string for output
    */
   public void chooseTmpFilename(Var filenameVal);
-  
+
 
   /**
    * Initialise a local file with a filename.
@@ -720,10 +731,10 @@ public interface CompilerBackend {
    * @param file a {@link FileFutureType}
    */
   public void getFilenameVal(Var filenameVal, Var file);
-  
-  /** 
+
+  /**
    * Set filename of file future to a local string value
-   * @param file a {@link FileFutureType} to set filename of 
+   * @param file a {@link FileFutureType} to set filename of
    * @param filenameVal a {@link ScalarValueType} string
    */
   public void setFilenameVal(Var file, Arg filenameVal);
@@ -734,7 +745,7 @@ public interface CompilerBackend {
    * @param src a {@link FileValueType} for input initialised with file name
    */
   public void copyFileContents(Var dst, Var src);
-  
+
   /**
    * Create an alias to a struct field
    * @param dst a variable of time matching the field, of alias type.
@@ -742,67 +753,67 @@ public interface CompilerBackend {
    * @param fields the field path (may refer to a field in a nested struct)
    */
   public void structCreateAlias(Var dst, Var struct, List<String> fields);
- 
+
   /**
    * Retrieve the value of a struct field.
-   * @param dst output var with retrieved type of field 
+   * @param dst output var with retrieved type of field
    * @param struct a non-local {@link StructType}
    * @param fields the field path (may refer to a field in a nested struct)
    * @param decr read reference counts to decrement from struct
    */
   public void structRetrieveSub(Var dst, Var struct, List<String> fields,
                                 Arg decr);
-  
+
   /**
    * Asynchronous copy of struct field to another variable.
    * Consumes a read refcount for the struct.
-   * @param dst output var with same type as field 
+   * @param dst output var with same type as field
    * @param struct a non-local {@link StructType}
    * @param fields the field path (may refer to a field in a nested struct)
    */
   public void structCopyOut(Var dst, Var struct, List<String> fields);
-  
+
   /**
    * Asynchronous copy of struct field to another variable.
    * Consumes a read refcount for the struct.
-   * @param dst output var with same type as field 
+   * @param dst output var with same type as field
    * @param struct a {@link RefType} to a non-local {@link StructType}
    * @param fields the field path (may refer to a field in a nested struct)
    */
   public void structRefCopyOut(Var dst, Var struct, List<String> fields);
 
   /**
-   * Assign variable to struct field 
+   * Assign variable to struct field
    * @param struct the non-local {@link StructType} to modify
    * @param fields the field path (may refer to a field in a nested struct)
-   * @param src var with retrieved type of field 
+   * @param src var with retrieved type of field
    */
   public void structStore(Var struct, List<String> fields, Arg src);
-  
+
   /**
-   * Copy variable to struct field asynchronously 
+   * Copy variable to struct field asynchronously
    * @param struct the non-local {@link StructType} to modify
    * @param fields the field path (may refer to a field in a nested struct)
-   * @param src var with same type as field 
+   * @param src var with same type as field
    */
   public void structCopyIn(Var struct, List<String> fields, Var src);
-  
+
   /**
-   * Assign variable to struct field through a reference to the struct 
+   * Assign variable to struct field through a reference to the struct
    * @param structRef a {@link RefType} to a non-local {@link StructType}
    * @param fields the field path (may refer to a field in a nested struct)
-   * @param src var with retrieved type of field 
+   * @param src var with retrieved type of field
    */
   public void structRefStoreSub(Var structRef, List<String> fields, Arg src);
-  
+
   /**
-   * Assign variable to struct field through a reference to the struct 
+   * Assign variable to struct field through a reference to the struct
    * @param structRef a {@link RefType} to a non-local {@link StructType}
    * @param fields the field path (may refer to a field in a nested struct)
-   * @param src var with same type as field 
+   * @param src var with same type as field
    */
   public void structRefCopyIn(Var structRef, List<String> fields, Var src);
-  
+
   /**
    * Create an alias to an array member
    * @param dst a variable of time matching the member, of alias type
@@ -837,7 +848,7 @@ public interface CompilerBackend {
    * @param key future for key
    */
   public void arrayCopyOutFuture(Var dst, Var array, Var key);
-  
+
   /**
    * Copy out array member once it is assigned.
    * @param dst variable with same type as array member
@@ -855,7 +866,7 @@ public interface CompilerBackend {
   public void arrayRefCopyOutFuture(Var dst, Var array, Var key);
 
   /**
-   * Check if array currently contains a key (doesn't wait for close) 
+   * Check if array currently contains a key (doesn't wait for close)
    * @param dst {@link ScalarValueType} boolean for output
    * @param array a non-local {@link ArrayType}
    * @param key key for array
@@ -895,7 +906,7 @@ public interface CompilerBackend {
    */
   public void arrayStore(Var array, Arg key, Arg member,
                          Arg writeDecr);
-  
+
   /**
    * Store member to the array slot identified by key.  Executes once key is
    * set.
@@ -914,7 +925,7 @@ public interface CompilerBackend {
    * @param writeDecr number of write refcounts to decrement
    */
   public void arrayCopyInImm(Var array, Arg key, Var member, Arg writeDecr);
- 
+
   /**
    * Store member to the array slot identified by key.  Executes once key is
    * set.
@@ -924,7 +935,7 @@ public interface CompilerBackend {
    * @param writeDecr number of write refcounts to decrement
    */
   public void arrayCopyInFuture(Var array, Var key, Var member, Arg writeDecr);
-  
+
   /**
    * Store member to the array slot identified by key.  Executes once key is
    * set. Acquires write refcount from reference.
@@ -933,7 +944,7 @@ public interface CompilerBackend {
    * @param member retrieved type of array member
    */
   public void arrayRefStoreImm(Var array, Arg key, Arg member);
-  
+
   /**
    * Store member to the array slot identified by key.  Executes once key is
    * set. Acquires write refcount from reference.
@@ -942,7 +953,7 @@ public interface CompilerBackend {
    * @param member retrieved type of array member
    */
   public void arrayRefStoreFuture(Var array, Var key, Arg member);
-  
+
   /**
    * Store member to the array slot identified by key.  Executes once key is
    * set. Acquires write refcount from reference.
@@ -951,7 +962,7 @@ public interface CompilerBackend {
    * @param member future for array member
    */
   public void arrayRefCopyInImm(Var array, Arg ix, Var member);
-  
+
   /**
    * Store member to the array slot identified by key.  Executes once key is
    * set. Acquires write refcount from reference.
@@ -963,9 +974,9 @@ public interface CompilerBackend {
 
   /**
    * Build array with specified key-value pairs.
-   * 
+   *
    * Decrements a write refcount from the array.
-   * 
+   *
    * @param array an output non-local {@link ArrayType}
    * @param keys list of key values for build array
    * @param vals list of values with retrieved type of array member
@@ -990,7 +1001,7 @@ public interface CompilerBackend {
   /**
    * Create a nested array in outerArray or return the existing
    * array if it currently exists.  Executes asynchronously and
-   * uses output reference. 
+   * uses output reference.
    * @param innerArray reference that is set to inner array
    * @param outerArray outer array, modified if new array is created
    * @param key key future for outerArray
@@ -1000,11 +1011,11 @@ public interface CompilerBackend {
    * @param writeDecr decrement array
    */
   public void arrayCreateNestedFuture(Var innerArray, Var outerArray, Var key);
-  
+
   /**
    * Create a nested array in outerArray or return the existing
    * array if it currently exists.  Executes asynchronously and
-   * uses output reference. 
+   * uses output reference.
    * @param innerArray reference that is set to inner array
    * @param outerArray writable reference to outer array, modified if new array is created
    * @param key key for outerArray
@@ -1018,7 +1029,7 @@ public interface CompilerBackend {
   /**
    * Create a nested array in outerArray or return the existing
    * array if it currently exists.  Executes asynchronously and
-   * uses output reference. 
+   * uses output reference.
    * @param innerArray reference that is set to inner array
    * @param outerArray writable reference to outer array, modified if new array is created
    * @param key key future for outerArray
@@ -1036,7 +1047,7 @@ public interface CompilerBackend {
    * @param writeDecr write reference counts to decrement from bag
    */
   public void bagInsert(Var bag, Arg value, Arg writeDecr);
-  
+
   /**
    * Create a nested bag in outerArray or return the existing
    * bag if it currently exists.
@@ -1057,14 +1068,14 @@ public interface CompilerBackend {
    * @param val a {@link ScalarValueType} variable
    */
   public void initScalarUpdateable(Var updateable, Arg val);
-  
+
   /**
    * Get the latest value of an updateable variable
    * @param result a {@link ScalarValueType} variable for output
    * @param updateable a {@link ScalarFutureType} variable
    */
   public void latestValue(Var result, Var updateable);
-  
+
   /**
    * Update a scalar updateable variable once value of val is available
    * @param updateable a {@link ScalarUpdateableType} variable
@@ -1073,7 +1084,7 @@ public interface CompilerBackend {
    */
   public void updateScalarFuture(Var updateable,
       Operators.UpdateMode updateMode, Var val);
-  
+
   /**
    * Update a scalar updateable variable immediately
    * @param updateable a {@link ScalarUpdateableType} variable
@@ -1094,7 +1105,7 @@ public interface CompilerBackend {
    * @param out variable with {@link ScalarValueType} bool
    */
   public void checkpointWriteEnabled(Var out);
-  
+
   /**
    * Write an encoded checkpoint out
    * @param key a {@link ScalarValueType} of blob
@@ -1117,7 +1128,7 @@ public interface CompilerBackend {
    * @param unpacked local value variables for packing
    */
   public void packValues(Var packed, List<Arg> unpacked);
-  
+
   /**
    * Unpack data packed using packValues
    * @param unpacked a list of local value variables for output,
