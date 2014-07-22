@@ -18,6 +18,7 @@ pragma worktypedef a_new_work_type;
   "puts \"f2(<<i>>) ran on $turbine::mode ([ adlb::rank ])\""
 ];
 
+@dispatch=WORKER
 (void o) f3(int i) "turbine" "0.0" [
   "puts \"f3(<<i>>) ran on $turbine::mode ([ adlb::rank ])\""
 ];
