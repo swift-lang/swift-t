@@ -23,22 +23,17 @@ pragma worktypedef a_new_work_type;
 ];
 
 main () {
-  foreach i in [0:100] {
-    f1(i);
-    f2(i);
-    f3(i);
-  }
 
   // Try to trick into running in wrong context
-  f1(-1) =>
-    f2(-1) =>
-    f3(-1);
+  f1(1) =>
+    f2(1) =>
+    f3(1);
 
-  f3(-2) =>
-    f1(-2) =>
-    f2(-2);
+  f3(2) =>
+    f1(2) =>
+    f2(2);
   
-  f1(-3) =>
-    f3(-3) =>
-    f2(-3);
+  f1(3) =>
+    f3(3) =>
+    f2(3);
 }
