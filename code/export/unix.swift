@@ -19,6 +19,17 @@
 #ifndef UNIX_SWIFT
 #define UNIX_SWIFT
 
+// cat-print (to stdout)
+app catp(file f[])
+{
+  "cat" f;
+}
+
+app (file o) cat(file f[])
+{
+  "cat" f @stdout=o;
+}
+
 app (file o) sed(file i, string command)
 {
   "sed" command i @stdout=o;
