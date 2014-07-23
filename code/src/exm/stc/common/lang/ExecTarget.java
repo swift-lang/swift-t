@@ -15,7 +15,6 @@
  */
 package exm.stc.common.lang;
 
-import exm.stc.ic.opt.Semantics;
 
 
 /**

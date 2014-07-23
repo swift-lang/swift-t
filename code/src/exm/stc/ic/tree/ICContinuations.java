@@ -1392,8 +1392,11 @@ public class ICContinuations {
       return props.get(TaskPropKey.PARALLELISM);
     }
 
+    /**
+     * @return target location.  Non-null.
+     */
     public Arg targetLocation() {
-      return props.get(TaskPropKey.LOCATION);
+      return props.getWithDefault(TaskPropKey.LOCATION);
     }
 
     @Override

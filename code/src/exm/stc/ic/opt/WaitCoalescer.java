@@ -25,6 +25,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import exm.stc.common.Logging;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
@@ -353,6 +354,11 @@ public class WaitCoalescer implements OptimizerPass {
 
   private boolean compatibleLocPar(Arg location1, Arg location2, Arg par1,
           Arg par2) {
+    Logger logger = Logging.getSTCLogger();
+    if (logger.isTraceEnabled()) {
+      logger.trace("compatibleLocPar(" + location1 + " " + location2 +
+                    " " + par1 + " " + par2 + ")");
+    }
     if (location1 != null && location2 != null) {
       if (!location1.equals(location2)) {
         return false;

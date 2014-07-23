@@ -1516,7 +1516,7 @@ public class TurbineGenerator implements CompilerBackend {
 
     // Properties can be null
     Arg priority = props.get(TaskPropKey.PRIORITY);
-    TclTarget target = TclTarget.fromArg(props.get(TaskPropKey.LOCATION));
+    TclTarget target = TclTarget.fromArg(props.getWithDefault(TaskPropKey.LOCATION));
     Expression parExpr = TclUtil.argToExpr(props.get(TaskPropKey.PARALLELISM),
                                            true);
 
@@ -1589,7 +1589,7 @@ public class TurbineGenerator implements CompilerBackend {
   private RuleProps buildRuleProps(TaskProps props) {
     Expression priority = TclUtil.argToExpr(
                     props.get(TaskPropKey.PRIORITY), true);
-    TclTarget target = TclTarget.fromArg(props.get(TaskPropKey.LOCATION));
+    TclTarget target = TclTarget.fromArg(props.getWithDefault(TaskPropKey.LOCATION));
     Expression parallelism = TclUtil.argToExpr(
                       props.get(TaskPropKey.PARALLELISM), true);
     RuleProps ruleProps = new RuleProps(target, parallelism, priority);
