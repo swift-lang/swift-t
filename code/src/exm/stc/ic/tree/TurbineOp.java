@@ -15,10 +15,10 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgKind;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.Operators.UpdateMode;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
-import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
@@ -54,15 +54,15 @@ import exm.stc.ic.tree.ICTree.Statement;
  * of arguments
  */
 public class TurbineOp extends Instruction {
-  
+
   /** Private constructor: use static methods to create */
   private TurbineOp(Opcode op, List<Var> outputs, List<Arg> inputs) {
     super(op);
     this.outputs = initArgList(outputs);
     this.inputs = initArgList(inputs);
   }
-  
-  
+
+
   private static Class<? extends Object> SINGLETON_LIST =
                            Collections.singletonList(null).getClass();
   /**
@@ -85,14 +85,14 @@ public class TurbineOp extends Instruction {
   private TurbineOp(Opcode op, Var output, Arg ...inputs) {
     this(op, Arrays.asList(output), Arrays.asList(inputs));
   }
-  
+
   private TurbineOp(Opcode op, List<Var> outputs, Arg ...inputs) {
     this(op, outputs, Arrays.asList(inputs));
   }
 
   private List<Var> outputs; /** Variables that are modified by this instruction */
   private List<Arg> inputs; /** Variables that are read-only */
-      
+
   @Override
   public String toString() {
     String result = op.toString().toLowerCase();
@@ -240,7 +240,7 @@ public class TurbineOp extends Instruction {
       Out<List<List<String>>> fieldPaths = new Out<List<List<String>>>();
       Out<List<Arg>> fieldVals = new Out<List<Arg>>();
       Arg writeDecr = unpackStructInitArgs(fieldPaths, null, fieldVals);
-      
+
       gen.structInitFields(getOutput(0), fieldPaths.val, fieldVals.val, writeDecr);
       break;
     }
@@ -248,7 +248,7 @@ public class TurbineOp extends Instruction {
       Out<List<List<String>>> fieldPaths = new Out<List<List<String>>>();
       Out<List<Arg>> fieldVals = new Out<List<Arg>>();
       unpackStructBuildArgs(fieldPaths, null, fieldVals);
-      
+
       gen.buildStructLocal(getOutput(0), fieldPaths.val, fieldVals.val);
       break;
     }
@@ -282,7 +282,7 @@ public class TurbineOp extends Instruction {
       gen.makeAlias(getOutput(0), getInput(0).getVar());
       break;
     case ARR_CREATE_NESTED_FUTURE:
-      gen.arrayCreateNestedFuture(getOutput(0), getOutput(1), 
+      gen.arrayCreateNestedFuture(getOutput(0), getOutput(1),
                                   getInput(0).getVar());
       break;
     case AREF_CREATE_NESTED_FUTURE:
@@ -423,7 +423,7 @@ public class TurbineOp extends Instruction {
     assert(Types.isArrayKeyVal(arrayVar, arrIx));
     assert(Types.isElemValType(arrayVar, dst));
     assert(decrRead.isImmediateInt());
-    
+
     return new TurbineOp(Opcode.ARR_RETRIEVE,
         dst, arrayVar.asArg(), arrIx, decrRead);
   }
@@ -451,14 +451,14 @@ public class TurbineOp extends Instruction {
     assert(Types.isArrayKeyVal(arrayVar, arrIx));
     assert(Types.isElemType(arrayVar, dst)) : arrayVar + " " + dst;
     assert(dst.storage() == Alloc.ALIAS);
-    
+
     // Check that we can generate valid code for it
     assert(Unimplemented.subscriptAliasSupported(arrayVar));
 
     return new TurbineOp(Opcode.ARR_CREATE_ALIAS,
                          dst, arrayVar.asArg(), arrIx);
   }
-  
+
   /**
    * Copy out value of field from array once set
    * @param dst
@@ -469,7 +469,7 @@ public class TurbineOp extends Instruction {
   public static Instruction arrayCopyOutImm(Var dst, Var arrayVar,
       Arg arrIx) {
     assert(Types.isArray(arrayVar));
-    assert(Types.isArrayKeyVal(arrayVar, arrIx)) : 
+    assert(Types.isArrayKeyVal(arrayVar, arrIx)) :
                 arrayVar.type() + " " + arrIx.type();
     assert(Types.isElemType(arrayVar, dst)) : arrayVar + " " + dst;
     assert(!Types.isMutableRef(dst)) : dst; // Doesn't acquire write ref
@@ -510,27 +510,27 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.AREF_COPY_OUT_FUTURE, dst,
                           arrayRefVar.asArg(), indexVar.asArg());
   }
-  
+
   public static Instruction arrayContains(Var out, Var array, Arg ix) {
     assert(Types.isBoolVal(out));
     assert(Types.isArray(array));
     assert(Types.isArrayKeyVal(array, ix));
     return new TurbineOp(Opcode.ARR_CONTAINS, out, array.asArg(), ix);
   }
-  
+
   public static Instruction containerSize(Var out, Var container) {
     assert(Types.isIntVal(out));
     assert(Types.isContainer(container));
     return new TurbineOp(Opcode.CONTAINER_SIZE, out, container.asArg());
   }
-  
+
   public static Instruction arrayLocalContains(Var out, Var array, Arg ix) {
     assert(Types.isBoolVal(out));
     assert(Types.isArrayLocal(array));
     assert(Types.isArrayKeyVal(array, ix));
     return new TurbineOp(Opcode.ARR_LOCAL_CONTAINS, out, array.asArg(), ix);
   }
-  
+
   public static Instruction containerLocalSize(Var out, Var container) {
     assert(Types.isIntVal(out));
     assert(Types.isContainerLocal(container));
@@ -597,7 +597,7 @@ public class TurbineOp extends Instruction {
     assert(Types.isArray(array));
     assert(Types.isArrayKeyVal(array, ix));
     assert(Types.isElemType(array, member));
-    
+
     return new TurbineOp(Opcode.ARR_COPY_IN_IMM,
                          array, ix, member.asArg());
   }
@@ -632,7 +632,7 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.AREF_COPY_IN_IMM,
                          array, ix, member.asArg());
   }
-  
+
   public static Instruction arrayRefCopyInFuture(Var array, Var ix,
                                                   Var member) {
     assert(Types.isArrayKeyFuture(array, ix));
@@ -649,23 +649,23 @@ public class TurbineOp extends Instruction {
    * @param vals
    */
   public static Instruction arrayBuild(Var array, List<Arg> keys, List<Arg> vals) {
-    assert(Types.isArray(array.type()));    
+    assert(Types.isArray(array.type()));
     int elemCount = keys.size();
     assert(vals.size() == elemCount);
-    
+
     ArrayList<Arg> inputs = new ArrayList<Arg>(elemCount * 2);
     for (int i = 0; i < elemCount; i++) {
       Arg key = keys.get(i);
       Arg val = vals.get(i);
       assert(Types.isArrayKeyVal(array, key));
       assert(Types.isElemValType(array, val));
-      
+
       inputs.add(key);
       inputs.add(val);
     }
     return new TurbineOp(Opcode.ARRAY_BUILD, array.asList(), inputs);
   }
-  
+
   /**
    * Generic async copy instruction for non-local data
    */
@@ -674,7 +674,7 @@ public class TurbineOp extends Instruction {
     assert(dst.storage() != Alloc.LOCAL);
     return new TurbineOp(Opcode.ASYNC_COPY, dst, src.asArg());
   }
-  
+
   /**
    * Generic sync copy instruction for non-local data.
    * Assumes input data closed
@@ -701,7 +701,7 @@ public class TurbineOp extends Instruction {
 
   /**
    * Retrieve value of a struct entry
-   * 
+   *
    * TODO: for case of ref entries, separate op to get writable reference?
    * @param dst
    * @param structVar
@@ -716,9 +716,9 @@ public class TurbineOp extends Instruction {
           "(" + structVar.name()  + ":" + structVar.type()  + ")." + fields
           + " => " + dst;
     assert (readDecr.isImmediateInt());
-    
+
     List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
-    
+
     in.add(structVar.asArg());
     in.add(readDecr);
     for (String field: fields) {
@@ -733,16 +733,16 @@ public class TurbineOp extends Instruction {
     assert(Types.isStructField(structVar, fields, fieldAlias)):
       structVar + " " + fields + " " + fieldAlias;
     assert(fieldAlias.storage() == Alloc.ALIAS) : fieldAlias;
-    
+
     List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
-    
+
     in.add(structVar.asArg());
     for (String field: fields) {
       in.add(Arg.createStringLit(field));
     }
     return new TurbineOp(Opcode.STRUCT_CREATE_ALIAS, fieldAlias.asList(), in);
   }
-  
+
   /**
    * Copy out value of field from a struct to a destination variable
    * @param dst
@@ -755,9 +755,9 @@ public class TurbineOp extends Instruction {
     // TODO: support piggybacked refcount ops for this and other struct operations
     assert(Types.isStruct(struct));
     assert(Types.isStructField(struct, fields, dst));
-    
+
     List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
-    
+
     in.add(struct.asArg());
     for (String field: fields) {
       in.add(Arg.createStringLit(field));
@@ -776,7 +776,7 @@ public class TurbineOp extends Instruction {
                                           List<String> fields) {
     assert(Types.isStructRef(struct));
     assert(Types.isStructField(struct, fields, dst));
-    
+
     List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
 
     in.add(struct.asArg());
@@ -797,7 +797,7 @@ public class TurbineOp extends Instruction {
         List<String> fields, Arg fieldVal) {
     assert(Types.isStruct(structVar)) : structVar;
     assert(Types.isStructFieldVal(structVar, fields, fieldVal));
-    
+
     List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
 
     in.add(fieldVal);
@@ -806,7 +806,7 @@ public class TurbineOp extends Instruction {
     }
     return new TurbineOp(Opcode.STRUCT_STORE_SUB, structVar.asList(), in);
   }
-  
+
   /**
    * Copy a value into a field of a struct
    * @param structVar
@@ -818,7 +818,7 @@ public class TurbineOp extends Instruction {
       List<String> fields, Var fieldVar) {
     assert(Types.isStruct(structVar));
     assert(Types.isStructField(structVar, fields, fieldVar));
-    
+
     List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
 
     for (String field: fields) {
@@ -827,7 +827,7 @@ public class TurbineOp extends Instruction {
     in.add(fieldVar.asArg());
     return new TurbineOp(Opcode.STRUCT_COPY_IN, structVar.asList(), in);
   }
-  
+
   public static Instruction structRefStoreSub(Var structVar,
       List<String> fields, Arg fieldVal) {
     List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
@@ -838,7 +838,7 @@ public class TurbineOp extends Instruction {
     in.add(fieldVal);
     return new TurbineOp(Opcode.STRUCTREF_STORE_SUB, structVar.asList(), in);
   }
-  
+
   /**
    * Copy a value into a field of the struct referenced by structRef
    * @param structRef
@@ -849,7 +849,7 @@ public class TurbineOp extends Instruction {
                         List<String> fields, Var fieldVar) {
     assert(Types.isStructRef(structRef, true));
     assert(Types.isStructField(structRef, fields, fieldVar));
-    
+
     List<Arg> in = new ArrayList<Arg>(fields.size() + 1);
 
     for (String field: fields) {
@@ -858,7 +858,7 @@ public class TurbineOp extends Instruction {
     in.add(fieldVar.asArg());
     return new TurbineOp(Opcode.STRUCTREF_COPY_IN, structRef.asList(), in);
   }
-  
+
   /**
    * Assign any scalar data type
    * @param dst shared scalar
@@ -869,16 +869,16 @@ public class TurbineOp extends Instruction {
     assert(Types.isScalarFuture(dst)) : dst;
     assert(Types.isScalarValue(src));
     assert(src.type().assignableTo(Types.retrievedType(dst)));
-    
+
     return new TurbineOp(Opcode.STORE_SCALAR, dst, src);
   }
 
   /**
    * Assign a file future from a file value
-   * 
+   *
    * NOTE: the setFilename parameter is not strictly necessary: at runtime
    *       we could set the filename conditionally on the file not being
-   *       mapped.  However, making it explicit simplifies correct optimisation 
+   *       mapped.  However, making it explicit simplifies correct optimisation
    * @param dst
    * @param src
    * @param setFilename if true, set filename, if false assume already
@@ -897,7 +897,7 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.STORE_FILE, dst, src,
                           setFilename);
   }
-  
+
   /**
    * Store array directly from local array representation to shared.
    * Does not follow refs, e.g. if it is an array of refs, dst must
@@ -914,7 +914,7 @@ public class TurbineOp extends Instruction {
               Types.containerElemValType(dst)));
     return new TurbineOp(Opcode.STORE_ARRAY, dst, src);
   }
-  
+
   /**
    * Store bag directly from local bag representation to shared.
    * Does not follow refs, e.g. if it is a bag of refs, dst must
@@ -930,23 +930,23 @@ public class TurbineOp extends Instruction {
               Types.containerElemValType(dst)));
     return new TurbineOp(Opcode.STORE_BAG, dst, src);
   }
-  
+
   public static Statement structLocalBuild(Var struct,
       List<List<String>> fieldPaths, List<Arg> fieldVals) {
     assert(Types.isStructLocal(struct));
-    
+
     List<Arg> inputs = new ArrayList<Arg>();
 
     packFieldData(struct, fieldPaths, fieldVals, inputs);
-    
+
     return new TurbineOp(Opcode.STRUCT_LOCAL_BUILD, struct.asList(), inputs);
   }
-  
+
   /**
    * Initialize all struct fields that need initialization,
    * e.g. references to other data.
    * Should be called only once on each struct that needs
-   * initialization. 
+   * initialization.
    * @param struct
    * @param fields
    * @param writeDecr
@@ -955,17 +955,17 @@ public class TurbineOp extends Instruction {
       List<List<String>> fieldPaths, List<Arg> fieldVals, Arg writeDecr) {
     assert(Types.isStruct(struct));
     assert(writeDecr.isImmediateInt());
-    
+
     List<Arg> inputs = new ArrayList<Arg>();
 
     packFieldData(struct, fieldPaths, fieldVals, inputs);
     inputs.add(writeDecr);
-    
+
     return new TurbineOp(Opcode.STRUCT_INIT_FIELDS, struct.asList(), inputs);
   }
 
   /**
-   * 
+   *
    * @param fieldPaths if null, not filled
    * @param fieldPathsArgs if null, not filled
    * @param fieldVals if null, not filled
@@ -977,13 +977,13 @@ public class TurbineOp extends Instruction {
     assert(op == Opcode.STRUCT_INIT_FIELDS) : op;
 
     List<Arg> packedFieldData = inputs.subList(0, inputs.size() - 1);
-    
+
     unpackFieldData(packedFieldData, fieldPaths, fieldPathsArgs, fieldVals);
-    
+
     Arg writeDecr = getInput(inputs.size() - 1);
     return writeDecr;
   }
-  
+
   public void unpackStructBuildArgs(Out<List<List<String>>> fieldPaths,
       Out<List<List<Arg>>> fieldPathsArgs,
       Out<List<Arg>> fieldVals) {
@@ -1024,50 +1024,50 @@ public class TurbineOp extends Instruction {
     if (fieldPaths != null) {
       fieldPaths.val = new ArrayList<List<String>>();
     }
-    
+
     if (fieldPathsArgs != null) {
       fieldPathsArgs.val = new ArrayList<List<Arg>>();
     }
-    
+
     if (fieldVals != null) {
       fieldVals.val = new ArrayList<Arg>();
     }
-    
+
     int pos = 0;
     while (pos < packedFieldData.size()) {
       long pathLength = packedFieldData.get(pos).getIntLit();
       assert(pathLength > 0 && pathLength <= Integer.MAX_VALUE);
       pos++;
-      
+
       List<String> fieldPath = (fieldPaths == null) ? null:
                             new ArrayList<String>((int)pathLength);
-      
+
       List<Arg> fieldPathArgs = (fieldPathsArgs == null) ? null:
                             new ArrayList<Arg>((int)pathLength);
 
-      
+
       for (int i = 0; i < pathLength; i++) {
         if (fieldPath != null) {
           fieldPath.add(packedFieldData.get(pos).getStringLit());
         }
-        
+
         if (fieldPathArgs != null) {
           fieldPathArgs.add(packedFieldData.get(pos));
         }
         pos++;
       }
-      
-      Arg fieldVal = packedFieldData.get(pos); 
+
+      Arg fieldVal = packedFieldData.get(pos);
       pos++;
-      
+
       if (fieldPaths != null) {
         fieldPaths.val.add(fieldPath);
       }
-      
+
       if (fieldPathsArgs != null) {
         fieldPathsArgs.val.add(fieldPathArgs);
       }
-      
+
       if (fieldVals != null) {
         fieldVals.val.add(fieldVal);
       }
@@ -1086,7 +1086,7 @@ public class TurbineOp extends Instruction {
     assert(Types.isStructLocal(src)) : src.type();
     assert(StructType.sharedStruct((StructType)src.type().getImplType())
                                             .assignableTo(dst.type()));
-    
+
     return new TurbineOp(Opcode.STORE_STRUCT, dst, src);
   }
 
@@ -1102,7 +1102,7 @@ public class TurbineOp extends Instruction {
     assert(Types.retrievedType(src).assignableTo(dst.type()));
     return new TurbineOp(Opcode.LOAD_SCALAR, dst, src.asArg());
   }
-  
+
   /**
    * Retrieve a file value from a file future
    * @param target
@@ -1114,7 +1114,7 @@ public class TurbineOp extends Instruction {
     assert(Types.isFileVal(target));
     return new TurbineOp(Opcode.LOAD_FILE, target, src.asArg());
   }
-  
+
   /**
    * Retrieve an array directly to a local array, without following
    * any references
@@ -1129,7 +1129,7 @@ public class TurbineOp extends Instruction {
               Types.containerElemType(dst)));
     return new TurbineOp(Opcode.LOAD_ARRAY, dst, src.asArg());
   }
-  
+
   /**
    * Retrieve a bag directly to a local bag, without following
    * any references
@@ -1144,7 +1144,7 @@ public class TurbineOp extends Instruction {
               Types.containerElemType(target)));
     return new TurbineOp(Opcode.LOAD_BAG, target, src.asArg());
   }
-  
+
   /**
    * Retrieve a struct directly to a local struct, without following
    * any references
@@ -1159,7 +1159,7 @@ public class TurbineOp extends Instruction {
                                             .assignableTo(dst.type()));
     return new TurbineOp(Opcode.LOAD_STRUCT, dst, src.asArg());
   }
-  
+
   /**
    * Store a completely unpacked array/bag/etc to the standard shared
    * representation
@@ -1175,7 +1175,7 @@ public class TurbineOp extends Instruction {
                                                           + " " + target;
     return new TurbineOp(Opcode.STORE_RECURSIVE, target, src);
   }
-  
+
   /**
    * Retrieve an array/bag/etc, following all references to included.
    * src must be recursively closed
@@ -1192,7 +1192,7 @@ public class TurbineOp extends Instruction {
 
     return new TurbineOp(Opcode.LOAD_RECURSIVE, target, src.asArg());
   }
-  
+
   public static Instruction freeBlob(Var blobVal) {
     // View refcounted var as output
     return new TurbineOp(Opcode.FREE_BLOB, blobVal);
@@ -1200,13 +1200,13 @@ public class TurbineOp extends Instruction {
 
   public static Instruction decrLocalFileRef(Var fileVal) {
     assert(Types.isFileVal(fileVal));
-    // We should only be freeing local file refs if we allocated a temporary 
+    // We should only be freeing local file refs if we allocated a temporary
     assert(fileVal.type().fileKind().supportsTmpImmediate());
     // View all as inputs: only used in cleanupaction context
     return new TurbineOp(Opcode.DECR_LOCAL_FILE_REF, Collections.<Var>emptyList(),
                                                      fileVal.asArg());
   }
-  
+
   public static Instruction storeRef(Var dst, Var src, boolean mutable) {
     return storeRef(dst, src, 1, mutable ? 1 : 0);
   }
@@ -1230,7 +1230,7 @@ public class TurbineOp extends Instruction {
       assert(Types.isMutableRef(dst)) : dst;
     }
     assert(src.type().assignableTo(Types.retrievedType(dst)));
-    
+
     return new TurbineOp(Opcode.STORE_REF, dst, src.asArg(),
            Arg.createIntLit(readRefs), Arg.createIntLit(writeRefs));
   }
@@ -1280,7 +1280,7 @@ public class TurbineOp extends Instruction {
       throw new STCRuntimeError("Don't know how to store to " + dst);
     }
   }
-  
+
   /**
    * Helper to generate appropriate instruction for primitive type
    * @param dst
@@ -1300,24 +1300,24 @@ public class TurbineOp extends Instruction {
           dst.type().typeName() + " is not known yet");
     }
   }
-  
+
   public static Instruction derefScalar(Var target, Var src) {
     return new TurbineOp(Opcode.DEREF_SCALAR, target, src.asArg());
   }
-  
+
   public static Instruction derefFile(Var target, Var src) {
     return new TurbineOp(Opcode.DEREF_FILE, target, src.asArg());
   }
-  
+
 
   public static Instruction retrieveRef(Var dst, Var src, boolean mutable) {
     long defaultAcquire = 1;
     return retrieveRef(dst, src, defaultAcquire, mutable ? defaultAcquire : 0,
                        Arg.ZERO);
   }
-  
+
   /**
-   * Retrieve a reference to a local handle 
+   * Retrieve a reference to a local handle
    * @param dst alias variable to hold handle to referenced data
    * @param src Closed reference
    * @param acquireRead num of read refcounts to acquire
@@ -1332,7 +1332,7 @@ public class TurbineOp extends Instruction {
     assert(acquireRead >= 0);
     assert(acquireWrite >= 0);
     assert(decrRead.isImmediateInt());
-    
+
     if (acquireWrite > 0) {
       assert(Types.isAssignableRefTo(src.type(), dst.type(), true));
     } else {
@@ -1343,7 +1343,7 @@ public class TurbineOp extends Instruction {
           Arg.createIntLit(acquireRead), Arg.createIntLit(acquireWrite),
           decrRead);
   }
-  
+
   public static Instruction copyRef(Var dst, Var src) {
     return new TurbineOp(Opcode.COPY_REF, dst, src.asArg());
   }
@@ -1376,7 +1376,7 @@ public class TurbineOp extends Instruction {
     return arrayCreateNestedImm(arrayResult, arrayVar, arrIx,
                         Arg.ONE, Arg.ONE, Arg.ZERO, Arg.ZERO);
   }
-  
+
   /**
    * Create a nested array inside the current one, or return current
    * nested array if not present.  Acquire read + write reference
@@ -1397,7 +1397,7 @@ public class TurbineOp extends Instruction {
     assert(writeAcquire.isImmediateInt());
     assert(readDecr.isImmediateInt());
     assert(writeDecr.isImmediateInt());
-    
+
     // Both arrays are modified, so outputs
     return new TurbineOp(Opcode.ARR_CREATE_NESTED_IMM,
         Arrays.asList(arrayResult, arrayVar),
@@ -1419,7 +1419,7 @@ public class TurbineOp extends Instruction {
   }
 
   /**
-   * 
+   *
    * @param arrayResult
    * @param outerArray
    * @param array
@@ -1439,14 +1439,14 @@ public class TurbineOp extends Instruction {
         Arrays.asList(arrayResult, array),
         ix);
   }
-  
+
 
   public static Instruction arrayCreateBag(Var bag,
       Var arr, Arg key) {
     return arrayCreateBag(bag, arr, key, Arg.ONE, Arg.ONE,
                           Arg.ZERO, Arg.ZERO);
   }
-  
+
   /**
    * Create a nested bag inside an array.
    * Similar to arrayCreateNestedImm
@@ -1466,7 +1466,7 @@ public class TurbineOp extends Instruction {
     assert(writeAcquire.isImmediateInt());
     assert(readDecr.isImmediateInt());
     assert(writeDecr.isImmediateInt());
-    
+
     // Both arrays are modified, so outputs
     return new TurbineOp(Opcode.ARR_CREATE_BAG,
         Arrays.asList(bag, arr),
@@ -1475,13 +1475,13 @@ public class TurbineOp extends Instruction {
 
   public static Instruction initUpdateableFloat(Var updateable, Arg val) {
     return new TurbineOp(Opcode.INIT_UPDATEABLE_FLOAT, updateable, val);
-    
+
   }
 
   public static Instruction latestValue(Var result, Var updateable) {
     return new TurbineOp(Opcode.LATEST_VALUE, result, updateable.asArg());
   }
-  
+
   public static Instruction update(Var updateable,
       UpdateMode updateMode, Var val) {
     Opcode op;
@@ -1520,15 +1520,15 @@ public class TurbineOp extends Instruction {
     }
     return new TurbineOp(op, updateable, val);
   }
-  
+
   public static Instruction getFileNameAlias(Var filename, Var file) {
     return new TurbineOp(Opcode.GET_FILENAME_ALIAS, filename, file.asArg());
   }
-  
+
   public static Instruction copyInFilename(Var file, Var filename) {
     return new TurbineOp(Opcode.COPY_IN_FILENAME, file, filename.asArg());
   }
-  
+
   public static Instruction getLocalFileName(Var filename, Var file) {
     assert(Types.isFileVal(file));
     assert(Types.isStringVal(filename));
@@ -1558,7 +1558,7 @@ public class TurbineOp extends Instruction {
   public static Instruction copyFileContents(Var target, Var src) {
     return new TurbineOp(Opcode.COPY_FILE_CONTENTS, target, src.asArg());
   }
-  
+
   /**
    * Check if file is mapped
    * @param isMapped
@@ -1574,7 +1574,7 @@ public class TurbineOp extends Instruction {
   public static Instruction chooseTmpFilename(Var filenameVal) {
     return new TurbineOp(Opcode.CHOOSE_TMP_FILENAME, filenameVal);
   }
-  
+
   public static Instruction initLocalOutFile(Var localOutFile,
                                 Arg outFilename, Arg isMapped) {
     assert(Types.isFileVal(localOutFile));
@@ -1583,11 +1583,11 @@ public class TurbineOp extends Instruction {
     return new TurbineOp(Opcode.INIT_LOCAL_OUTPUT_FILE, localOutFile.asList(),
                          outFilename, isMapped);
   }
-  
+
   public static Instruction checkpointLookupEnabled(Var v) {
     return new TurbineOp(Opcode.CHECKPOINT_LOOKUP_ENABLED, v);
   }
-  
+
   public static Instruction checkpointWriteEnabled(Var v) {
     return new TurbineOp(Opcode.CHECKPOINT_WRITE_ENABLED, v);
   }
@@ -1611,20 +1611,20 @@ public class TurbineOp extends Instruction {
     for (Arg val: values) {
       assert(val.isConstant() || val.getVar().storage() == Alloc.LOCAL);
     }
-    return new TurbineOp(Opcode.PACK_VALUES, packedValues.asList(), values); 
+    return new TurbineOp(Opcode.PACK_VALUES, packedValues.asList(), values);
   }
-  
+
   public static Instruction unpackValues(List<Var> values, Arg packedValues) {
     for (Var val: values) {
       assert(val.storage() == Alloc.LOCAL);
     }
-    return new TurbineOp(Opcode.UNPACK_VALUES, values, packedValues); 
+    return new TurbineOp(Opcode.UNPACK_VALUES, values, packedValues);
   }
 
   public static Instruction unpackArrayToFlat(Var flatLocalArray, Arg inputArray) {
-    return new TurbineOp(Opcode.UNPACK_ARRAY_TO_FLAT, flatLocalArray, inputArray); 
+    return new TurbineOp(Opcode.UNPACK_ARRAY_TO_FLAT, flatLocalArray, inputArray);
   }
-  
+
   @Override
   public void renameVars(String function, Map<Var, Arg> renames, RenameMode mode) {
     if (mode == RenameMode.VALUE) {
@@ -1657,7 +1657,7 @@ public class TurbineOp extends Instruction {
     renameInputs(renames);
   }
 
-  public void renameInputs(Map<Var, Arg> renames) {     
+  public void renameInputs(Map<Var, Arg> renames) {
      ICUtil.replaceArgsInList(renames, inputs);
   }
 
@@ -1686,7 +1686,7 @@ public class TurbineOp extends Instruction {
 
     case BAG_INSERT:
       return false;
-    
+
     case UPDATE_INCR:
     case UPDATE_MIN:
     case UPDATE_SCALE:
@@ -1695,7 +1695,7 @@ public class TurbineOp extends Instruction {
     case UPDATE_SCALE_IMM:
     case INIT_UPDATEABLE_FLOAT:
       return true;
-    
+
     case STORE_SCALAR:
     case STORE_FILE:
     case STORE_ARRAY:
@@ -1712,7 +1712,7 @@ public class TurbineOp extends Instruction {
     case LOAD_RECURSIVE:
     case STRUCT_LOCAL_BUILD:
       return false;
-      
+
     case ARR_COPY_OUT_IMM:
     case ARR_COPY_OUT_FUTURE:
     case AREF_COPY_OUT_FUTURE:
@@ -1768,17 +1768,17 @@ public class TurbineOp extends Instruction {
         // Always has alias as output because the instructions initialises
         // the aliases
         return false;
-        
+
     case ARR_CREATE_NESTED_FUTURE:
     case AREF_CREATE_NESTED_FUTURE:
     case ARR_CREATE_NESTED_IMM:
     case AREF_CREATE_NESTED_IMM:
     case ARR_CREATE_BAG:
-        /* It might seem like these nested creation primitives have a 
-         * side-effect, but for optimisation purposes they can be treated as 
-         * side-effect free, as the side-effect is only relevant if the array 
+        /* It might seem like these nested creation primitives have a
+         * side-effect, but for optimisation purposes they can be treated as
+         * side-effect free, as the side-effect is only relevant if the array
          * created is subsequently used in a store operation
-         */ 
+         */
       return false;
     case FREE_BLOB:
     case DECR_LOCAL_FILE_REF:
@@ -1801,8 +1801,9 @@ public class TurbineOp extends Instruction {
           + " to hasSideEffects");
     }
   }
-  
 
+
+  @Override
   public boolean canChangeTiming() {
     return !hasSideEffects() && op != Opcode.LATEST_VALUE;
   }
@@ -1811,12 +1812,12 @@ public class TurbineOp extends Instruction {
   public List<Var> getOutputs() {
     return Collections.unmodifiableList(outputs);
   }
-  
+
   @Override
   public Arg getInput(int i) {
     return inputs.get(i);
   }
-  
+
   @Override
   public Var getOutput(int i) {
     return outputs.get(i);
@@ -1826,7 +1827,7 @@ public class TurbineOp extends Instruction {
   public List<Arg> getInputs() {
     return Collections.unmodifiableList(inputs);
   }
-  
+
   public List<Arg> getInputsTail(int start) {
     return Collections.unmodifiableList(inputs.subList(start, inputs.size()));
   }
@@ -1838,11 +1839,11 @@ public class TurbineOp extends Instruction {
   @Override
   public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
       Set<ArgCV> closedLocations, Set<Var> valueAvail, boolean waitForClose) {
-    // Try to take advantage of closed variables 
+    // Try to take advantage of closed variables
     switch (op) {
     case ARR_COPY_OUT_IMM: {
       // If array is closed or this index already inserted,
-      // don't need to block on array.  
+      // don't need to block on array.
       // NOTE: could try to reduce other forms to this in one step,
       //      but its probably just easier to do it in multiple steps
       //      on subsequent passes
@@ -1887,7 +1888,7 @@ public class TurbineOp extends Instruction {
       if (valueAvail.contains(arr)) {
         return MakeImmRequest.fromVars(Var.NONE, arr);
       }
-      break;  
+      break;
     }
     case CONTAINER_SIZE: {
       Var cont = getInput(0).getVar();
@@ -1896,7 +1897,7 @@ public class TurbineOp extends Instruction {
       if (valueAvail.contains(cont)) {
         return MakeImmRequest.fromVars(Var.NONE, cont);
       }
-      break;  
+      break;
     }
     case STRUCT_COPY_IN: {
       Var val = getInput(0).getVar();
@@ -1908,12 +1909,12 @@ public class TurbineOp extends Instruction {
     case STRUCTREF_COPY_IN: {
       Var structRef = getOutput(0);
       Var val = getInput(0).getVar();
-      
+
       List<Var> inputs = Arrays.asList(structRef, val);
       List<Boolean> acquireWrite = Arrays.asList(true, false);
       List<MakeImmVar> vs = mkImmVarListAcquire(waitForClose,
           closedVars, true, false, inputs, acquireWrite);
-      
+
       if (vs.size() > 0) {
         return new MakeImmRequest(MakeImmVar.NONE, vs);
       }
@@ -1943,12 +1944,12 @@ public class TurbineOp extends Instruction {
       if (waitForClose || closedVars.contains(structRef)) {
         return MakeImmRequest.fromVars(Var.NONE, structRef);
       }
-      break;  
+      break;
     }
     case ARR_COPY_IN_IMM: {
       // See if we can get deref arg
       Var mem = getInput(1).getVar();
-      List<MakeImmVar> vs = mkImmVarList(waitForClose, closedVars, 
+      List<MakeImmVar> vs = mkImmVarList(waitForClose, closedVars,
           true, false, false, mem);
       if (vs.size() > 0) {
         return new MakeImmRequest(null, vs);
@@ -1962,7 +1963,7 @@ public class TurbineOp extends Instruction {
       List<Var> candVs;
       if (op == Opcode.ARR_STORE_FUTURE) {
         candVs = ix.asList();
-      } else { 
+      } else {
         assert(op == Opcode.ARR_COPY_IN_FUTURE);
         candVs = Arrays.asList(ix, val.getVar());
       }
@@ -1973,7 +1974,7 @@ public class TurbineOp extends Instruction {
       }
       break;
     }
-    case AREF_STORE_IMM: 
+    case AREF_STORE_IMM:
     case AREF_COPY_IN_IMM: {
       List<Var> candVs;
       List<Boolean> candAcquireWrite;
@@ -1989,13 +1990,13 @@ public class TurbineOp extends Instruction {
       }
       List<MakeImmVar> vs = mkImmVarListAcquire(waitForClose, closedVars,
                                  true, false, candVs, candAcquireWrite);
-      
+
       if (vs.size() > 0) {
         return new MakeImmRequest(null, vs);
       }
       break;
     }
-    case AREF_STORE_FUTURE: 
+    case AREF_STORE_FUTURE:
     case AREF_COPY_IN_FUTURE: {
       Var arrRef = getOutput(0);
       Var ix = getInput(0).getVar();
@@ -2029,7 +2030,7 @@ public class TurbineOp extends Instruction {
     }
     case AREF_CREATE_NESTED_IMM: {
       Var arrRef = getOutput(1);
-      List<MakeImmVar> vs = mkImmVarList(waitForClose, closedVars, 
+      List<MakeImmVar> vs = mkImmVarList(waitForClose, closedVars,
                   true, false, true, arrRef.asList());
       if (vs.size() > 0) {
         return new MakeImmRequest(null, vs);
@@ -2039,12 +2040,12 @@ public class TurbineOp extends Instruction {
     case AREF_CREATE_NESTED_FUTURE: {
       Var arrRef = getOutput(1);
       Var ix = getInput(0).getVar();
-      
+
       List<Var> candVs;
       List<Boolean> candAcquireWrite;
       candVs = Arrays.asList(arrRef, ix);
       candAcquireWrite = Arrays.asList(true, false);
-      
+
       List<MakeImmVar> vs = mkImmVarListAcquire(waitForClose, closedVars,
                                  true, false, candVs, candAcquireWrite);
       if (vs.size() > 0) {
@@ -2103,10 +2104,10 @@ public class TurbineOp extends Instruction {
       Set<Var> closedVars, boolean fetch,
       boolean recursive, List<Var> inputs, List<Boolean> acquireWrite) {
     List<MakeImmVar> vs = new ArrayList<MakeImmVar>();
-    
+
     assert(inputs.size() == acquireWrite.size());
     for (int i = 0; i < inputs.size(); i++) {
-      MakeImmVar check = checkMkImmInput(waitForClose, closedVars, 
+      MakeImmVar check = checkMkImmInput(waitForClose, closedVars,
                       fetch, recursive, acquireWrite.get(i), inputs.get(i));
       if (check != null) {
         vs.add(check);
@@ -2114,14 +2115,14 @@ public class TurbineOp extends Instruction {
     }
     return vs;
   }
-  
+
   private List<MakeImmVar> mkImmVarList(boolean waitForClose,
       Set<Var> closedVars, boolean fetch,
       boolean recursive, boolean acquireWriteRefs,
       Var... args) {
     return mkImmVarList(waitForClose, closedVars,
         fetch, recursive, acquireWriteRefs, Arrays.asList(args));
-    
+
   }
   private List<MakeImmVar> mkImmVarList(boolean waitForClose,
       Set<Var> closedVars, boolean fetch, boolean recursive,
@@ -2172,19 +2173,19 @@ public class TurbineOp extends Instruction {
     }
     case AREF_COPY_OUT_FUTURE: {
       assert(values.size() == 1 || values.size() == 2);
-      Var mem = getOutput(0); 
+      Var mem = getOutput(0);
       Var arrRef = getInput(0).getVar();
       Var ix = getInput(1).getVar();
       Arg newIx = Fetched.findFetched(values, ix);
       Var newArr = Fetched.findFetchedVar(values, arrRef);
-      
+
       Instruction inst;
       // Could be either array ref, index, or both
       if (newIx != null && newArr != null) {
         inst = arrayCopyOutImm(mem, newArr, newIx);
       } else if (newIx != null && newArr == null){
         inst = arrayRefCopyOutImm(mem, arrRef, newIx);
-      } else { 
+      } else {
         assert(newIx == null && newArr != null);
         inst = arrayCopyOutFuture(mem, newArr, ix);
       }
@@ -2221,7 +2222,7 @@ public class TurbineOp extends Instruction {
       List<String> fields = Arg.extractStrings(getInputsTail(1));
       return new MakeImmChange(
           structStoreSub(newStruct, fields, getInput(0)));
-    } 
+    }
     case STRUCTREF_COPY_IN: {
       Var structRef = getOutput(0);
       Var val = getInput(0).getVar();
@@ -2229,7 +2230,7 @@ public class TurbineOp extends Instruction {
       Arg newVal = Fetched.findFetched(values, val);
 
       List<String> fields = Arg.extractStrings(getInputsTail(1));
-      
+
       Instruction newI;
       if (newStruct != null && newVal != null) {
         newI = structStoreSub(newStruct, fields, newVal);
@@ -2239,7 +2240,7 @@ public class TurbineOp extends Instruction {
         assert(newStruct == null && newVal != null);
         newI = structRefStoreSub(structRef, fields, newVal);
       }
-      
+
       return new MakeImmChange(newI);
     }
     case STRUCT_COPY_OUT: {
@@ -2283,7 +2284,7 @@ public class TurbineOp extends Instruction {
       if (newIx != null && newMem != null) {
         inst = arrayStore(arr, newIx, newMem);
       } else if (newIx != null && newMem == null) {
-        inst = arrayCopyInImm(arr, newIx, mem); 
+        inst = arrayCopyInImm(arr, newIx, mem);
       } else {
         assert(newIx == null && newMem != null);
         inst = arrayStoreFuture(arr, ix, newMem);
@@ -2311,7 +2312,7 @@ public class TurbineOp extends Instruction {
         assert(newArr == null && newMem != null);
         newI = arrayRefStoreImm(arrRef, ix, newMem);
       }
-      
+
       return new MakeImmChange(newI);
     }
     case AREF_STORE_FUTURE:
@@ -2319,7 +2320,7 @@ public class TurbineOp extends Instruction {
       Var arrRef = getOutput(0);
       Var ix = getInput(0).getVar();
       Arg mem = getInput(1);
-      
+
       // Various combinations are possible
       Var newArr = Fetched.findFetchedVar(values, arrRef);
       Arg newIx = Fetched.findFetched(values, ix);
@@ -2327,7 +2328,7 @@ public class TurbineOp extends Instruction {
       if (mem.isVar()) {
         derefMem = Fetched.findFetched(values, mem.getVar());
       }
-      
+
       Instruction inst;
       if (derefMem != null || op == Opcode.AREF_STORE_FUTURE) {
         if (derefMem == null) {
@@ -2378,10 +2379,10 @@ public class TurbineOp extends Instruction {
       Var arrResult = getOutput(0);
       Var arrRef = getOutput(1);
       Var ix = getInput(0).getVar();
-      
+
       Var newArr = Fetched.findFetchedVar(values, arrRef);
       Arg newIx = Fetched.findFetched(values, ix);
-      
+
       if (newArr != null && newIx != null) {
         Var oldOut = getOutput(0);
         assert(Types.isArrayRef(oldOut.type()));
@@ -2468,7 +2469,7 @@ public class TurbineOp extends Instruction {
         return Arrays.asList(Pair.create(getOutput(0), InitType.FULL));
 
       case ARR_RETRIEVE:
-      case ARR_CREATE_ALIAS: 
+      case ARR_CREATE_ALIAS:
       case STRUCT_RETRIEVE_SUB:
       case STRUCT_CREATE_ALIAS:{
         // May initialise alias if we're looking up a reference
@@ -2485,11 +2486,11 @@ public class TurbineOp extends Instruction {
         Var struct = getOutput(0);
         return Arrays.asList(Pair.create(struct, InitType.FULL));
       }
-      
+
       case INIT_UPDATEABLE_FLOAT:
         // Initializes updateable
         return Arrays.asList(Pair.create(getOutput(0), InitType.FULL));
-      
+
       case INIT_LOCAL_OUTPUT_FILE:
       case LOAD_FILE:
         // Initializes output file value
@@ -2502,11 +2503,12 @@ public class TurbineOp extends Instruction {
   /**
    * @return list of outputs for which previous value is read
    */
+  @Override
   public List<Var> getReadOutputs(Map<String, Function> fns) {
     switch (op) {
     case ARR_CREATE_NESTED_IMM:
     case ARR_CREATE_NESTED_FUTURE:
-      // In create_nested instructions the 
+      // In create_nested instructions the
       // second array being inserted into is needed
       return Arrays.asList(getOutput(1));
     case ARR_CREATE_BAG:
@@ -2514,14 +2516,15 @@ public class TurbineOp extends Instruction {
       return getOutput(1).asList();
     case AREF_CREATE_NESTED_IMM:
     case AREF_CREATE_NESTED_FUTURE:
-      // In ref_create_nested instructions the 
+      // In ref_create_nested instructions the
       // second array being inserted into is needed
       return Arrays.asList(getOutput(1));
       default:
         return Var.NONE;
     }
   }
-  
+
+  @Override
   public List<Var> getModifiedOutputs() {
     switch (op) {
     case ARR_CREATE_NESTED_IMM:
@@ -2529,14 +2532,14 @@ public class TurbineOp extends Instruction {
     case AREF_CREATE_NESTED_IMM:
     case AREF_CREATE_NESTED_FUTURE:
     case ARR_CREATE_BAG:
-      // In create_nested instructions only the 
+      // In create_nested instructions only the
       // first output (the created array) is needed
       return Collections.singletonList(getOutput(0));
     default:
         return this.getOutputs();
     }
   }
-  
+
   @Override
   public List<Component> getModifiedComponents() {
     switch (op) {
@@ -2556,6 +2559,7 @@ public class TurbineOp extends Instruction {
   /**
    * @return List of outputs that are piecewise assigned
    */
+  @Override
   public List<Var> getPiecewiseAssignedOutputs() {
     switch (op) {
       case ARR_STORE_FUTURE:
@@ -2573,7 +2577,7 @@ public class TurbineOp extends Instruction {
       case ARR_CREATE_BAG:
       case AREF_CREATE_NESTED_FUTURE:
       case AREF_CREATE_NESTED_IMM: {
-        // All arrays except the newly created array; 
+        // All arrays except the newly created array;
         List<Var> outputs = getOutputs();
         return outputs.subList(1, outputs.size());
       }
@@ -2606,16 +2610,16 @@ public class TurbineOp extends Instruction {
     if (!execMode().isAsync()) {
       return Var.NONE;
     }
-    
+
     switch (op) {
       case ASYNC_COPY:
-        // Async copy is special because it copies the entire structure 
+        // Async copy is special because it copies the entire structure
         return ICUtil.extractVars(inputs);
       default:
         // Fall through;
         break;
     }
-    
+
     // If async, assume that all scalar input vars are blocked on
     ArrayList<Var> blocksOn = new ArrayList<Var>();
     for (Arg oa: getInputs()) {
@@ -2697,11 +2701,11 @@ public class TurbineOp extends Instruction {
     case CONTAINER_LOCAL_SIZE:
     case STRUCT_LOCAL_BUILD:
       return ExecTarget.syncAny();
-    
+
     case COPY_FILE_CONTENTS:
       // Should run on worker in case large file
       return ExecTarget.sync(ExecContext.defaultWorker());
-      
+
     case ARR_COPY_IN_IMM:
     case ARR_STORE_FUTURE:
     case ARR_COPY_IN_FUTURE:
@@ -2759,7 +2763,7 @@ public class TurbineOp extends Instruction {
       case COPY_IN_FILENAME:
         // Filename loads and stores aren't expensive
         return true;
-        
+
       case INIT_LOCAL_OUTPUT_FILE:
       case INIT_UPDATEABLE_FLOAT:
         // Init operations
@@ -2773,19 +2777,19 @@ public class TurbineOp extends Instruction {
       case UPDATE_SCALE_IMM:
         // Update operations
         return true;
-        
+
       case COPY_REF:
       case STRUCT_CREATE_ALIAS:
       case GET_FILENAME_ALIAS:
       case ARR_CREATE_ALIAS:
         // Creating alias is cheap
         return true;
-        
+
       case DEREF_FILE:
       case DEREF_SCALAR:
         // Spawning deref is cheap
         return true;
-        
+
       case ARR_CONTAINS:
       case ARR_COPY_IN_FUTURE:
       case ARR_COPY_IN_IMM:
@@ -2811,7 +2815,7 @@ public class TurbineOp extends Instruction {
       case CONTAINER_LOCAL_SIZE:
         // Container operations aren't too expensive
         return true;
-        
+
       case STRUCT_COPY_IN:
       case STRUCT_COPY_OUT:
       case STRUCT_INIT_FIELDS:
@@ -2822,7 +2826,7 @@ public class TurbineOp extends Instruction {
       case STRUCTREF_STORE_SUB:
         // Struct operations aren't too expensive
         return true;
-      
+
       case ASYNC_COPY:
         // Spawning the task isn't expensive
         return true;
@@ -2830,7 +2834,7 @@ public class TurbineOp extends Instruction {
       case SYNC_COPY:
         // Copying a large container may be expensive
         return false;
-        
+
       case CHECKPOINT_LOOKUP_ENABLED:
       case CHECKPOINT_WRITE_ENABLED:
       case CHOOSE_TMP_FILENAME:
@@ -2838,34 +2842,34 @@ public class TurbineOp extends Instruction {
       case GET_LOCAL_FILENAME:
         // Utility operations are cheap
         return true;
-        
+
       case COPY_FILE_CONTENTS:
         // Copying a file can take some time
         return false;
-        
+
       case DECR_LOCAL_FILE_REF:
       case FREE_BLOB:
         // Local refcount manipulations
         return true;
-        
+
       case LOOKUP_CHECKPOINT:
         return true;
-        
+
       case PACK_VALUES:
       case UNPACK_ARRAY_TO_FLAT:
       case UNPACK_VALUES:
       case STRUCT_LOCAL_BUILD:
         return true;
-        
+
       case WRITE_CHECKPOINT:
         // May require I/O
         return false;
-        
+
       default:
         throw new STCRuntimeError("Missing: " + op);
     }
   }
-  
+
   @Override
   public boolean isProgressEnabling() {
     switch (op) {
@@ -2880,7 +2884,7 @@ public class TurbineOp extends Instruction {
       case GET_FILENAME_VAL:
         // Loads don't do anything
         return false;
-        
+
       case STORE_ARRAY:
       case STORE_BAG:
       case STORE_FILE:
@@ -2893,7 +2897,7 @@ public class TurbineOp extends Instruction {
       case COPY_IN_FILENAME:
         // Stores can enable progress
         return true;
-        
+
       case INIT_LOCAL_OUTPUT_FILE:
       case INIT_UPDATEABLE_FLOAT:
       case STRUCT_INIT_FIELDS:
@@ -2908,19 +2912,19 @@ public class TurbineOp extends Instruction {
       case UPDATE_SCALE_IMM:
         // Don't want to defer updates
         return true;
-        
+
       case COPY_REF:
       case STRUCT_CREATE_ALIAS:
       case GET_FILENAME_ALIAS:
       case ARR_CREATE_ALIAS:
         // Creating alias doesn't make progress
         return false;
-        
+
       case DEREF_FILE:
       case DEREF_SCALAR:
         // Deref assigns future
         return true;
-        
+
 
       case ARR_COPY_IN_FUTURE:
       case ARR_COPY_IN_IMM:
@@ -2933,7 +2937,7 @@ public class TurbineOp extends Instruction {
       case BAG_INSERT:
         // Adding to container can enable progress
         return true;
-        
+
       case ARR_CREATE_NESTED_FUTURE:
       case ARR_CREATE_NESTED_IMM:
       case AREF_CREATE_NESTED_FUTURE:
@@ -2941,7 +2945,7 @@ public class TurbineOp extends Instruction {
       case ARR_CREATE_BAG:
         // Creating nested containers can release write refcount on outer
         return true;
-        
+
       case ARR_CONTAINS:
       case ARR_LOCAL_CONTAINS:
       case ARR_RETRIEVE:
@@ -2956,14 +2960,14 @@ public class TurbineOp extends Instruction {
       case AREF_COPY_OUT_IMM:
         // Copying to future can enable progress
         return true;
-        
+
       case STRUCT_COPY_IN:
       case STRUCT_STORE_SUB:
       case STRUCTREF_COPY_IN:
       case STRUCTREF_STORE_SUB:
         // Adding to struct can enable progress
         return true;
- 
+
       case STRUCT_RETRIEVE_SUB:
         // Retrieving from struct won't enable progress
         return false;
@@ -2972,15 +2976,15 @@ public class TurbineOp extends Instruction {
       case STRUCTREF_COPY_OUT:
         // Copying to future can enable progress
         return true;
-      
+
       case ASYNC_COPY:
         // Copying can enable progress
         return true;
-        
+
       case SYNC_COPY:
         // Copying can enable progress
         return true;
-        
+
       case CHECKPOINT_LOOKUP_ENABLED:
       case CHECKPOINT_WRITE_ENABLED:
       case CHOOSE_TMP_FILENAME:
@@ -2988,29 +2992,29 @@ public class TurbineOp extends Instruction {
       case GET_LOCAL_FILENAME:
         // Utility operations don't enable progress
         return true;
-        
+
       case COPY_FILE_CONTENTS:
         // Copying a file doesn't assign future
         return false;
-        
+
       case DECR_LOCAL_FILE_REF:
       case FREE_BLOB:
         // Local refcount manipulations
         return false;
-        
+
       case LOOKUP_CHECKPOINT:
         return false;
-        
+
       case PACK_VALUES:
       case UNPACK_ARRAY_TO_FLAT:
       case UNPACK_VALUES:
       case STRUCT_LOCAL_BUILD:
         return false;
-        
+
       case WRITE_CHECKPOINT:
         // Don't defer writing checkpoint
         return true;
-        
+
       default:
         throw new STCRuntimeError("Missing: " + op);
     }
@@ -3020,7 +3024,7 @@ public class TurbineOp extends Instruction {
   public List<ValLoc> getResults() {
     switch(op) {
       case LOAD_SCALAR:
-      case LOAD_REF: 
+      case LOAD_REF:
       case LOAD_FILE:
       case LOAD_ARRAY:
       case LOAD_BAG:
@@ -3049,9 +3053,9 @@ public class TurbineOp extends Instruction {
         // add retrieve so we can avoid retrieving later
         Var dst = getOutput(0);
         Arg src = getInput(0);
-        
 
-        // add assign so we can avoid recreating future 
+
+        // add assign so we can avoid recreating future
         // (closed b/c this instruction closes val immediately)
         boolean recursive = (op == Opcode.STORE_RECURSIVE);
         ValLoc assign;
@@ -3114,13 +3118,13 @@ public class TurbineOp extends Instruction {
         return ValLoc.makeFilenameVal(file, val.asArg(),
                            IsAssign.TO_LOCATION).asList();
       }
-      case DEREF_SCALAR: 
+      case DEREF_SCALAR:
       case DEREF_FILE: {
         return ValLoc.derefCompVal(getOutput(0), getInput(0).getVar(),
                              IsValCopy.YES, IsAssign.TO_LOCATION).asList();
       }
 
-      case STRUCT_CREATE_ALIAS: 
+      case STRUCT_CREATE_ALIAS:
       case STRUCT_COPY_OUT:
       case STRUCTREF_COPY_OUT: {
         // Ops that lookup field in struct somehow
@@ -3154,16 +3158,16 @@ public class TurbineOp extends Instruction {
         unpackStructInitArgs(null, fieldPaths, fieldVals);
 
         Var struct = getOutput(0);
-        
+
         assert(fieldPaths.val.size() == fieldVals.val.size());
         for (int i = 0; i < fieldPaths.val.size(); i++) {
           results.add(ValLoc.makeStructFieldValResult(fieldVals.val.get(i),
                             struct, fieldPaths.val.get(i), IsAssign.NO));
         }
-        
+
         return results;
       }
-      case STRUCT_STORE_SUB: 
+      case STRUCT_STORE_SUB:
       case STRUCTREF_STORE_SUB: {
         Var struct = getOutput(0);
         Arg val = getInput(0);
@@ -3191,7 +3195,7 @@ public class TurbineOp extends Instruction {
       case AREF_STORE_FUTURE:
       case ARR_COPY_IN_IMM:
       case ARR_COPY_IN_FUTURE:
-      case AREF_COPY_IN_IMM: 
+      case AREF_COPY_IN_IMM:
       case AREF_COPY_IN_FUTURE: {
         // STORE <out array> <in index> <in var>
         Var arr;
@@ -3217,7 +3221,7 @@ public class TurbineOp extends Instruction {
           res.add(ValLoc.makeArrayResult(arr, key, val, true,
                                          IsAssign.TO_VALUE));
         }
-        
+
         res.add(ValLoc.makeContainerSizeCV(arr,
                     Arg.createIntLit(elemCount), false, IsAssign.NO));
         return res;
@@ -3232,7 +3236,7 @@ public class TurbineOp extends Instruction {
         Var arr = getInput(0).getVar();
         Arg ix = getInput(1);
         Var contents = getOutput(0);
-        
+
         if (op == Opcode.ARR_RETRIEVE) {
           // This just retrieves the item immediately
           return ValLoc.makeArrayResult(arr, ix, contents.asArg(),
@@ -3253,16 +3257,16 @@ public class TurbineOp extends Instruction {
       case ARR_CREATE_NESTED_FUTURE:
       case ARR_CREATE_NESTED_IMM:
       case AREF_CREATE_NESTED_FUTURE:
-      case AREF_CREATE_NESTED_IMM: 
+      case AREF_CREATE_NESTED_IMM:
       case ARR_CREATE_BAG: {
         // CREATE_NESTED <out inner array> <in array> <in index>
         // OR
-        // CREATE_BAG <out inner bag> <in array> <in index> 
+        // CREATE_BAG <out inner bag> <in array> <in index>
         Var nestedArr = getOutput(0);
         Var arr = getOutput(1);
         Arg ix = getInput(0);
         List<ValLoc> res = new ArrayList<ValLoc>();
-        
+
         boolean returnsNonRef = op == Opcode.ARR_CREATE_NESTED_IMM ||
                                 op == Opcode.ARR_CREATE_BAG;
         // Mark as not substitutable since this op may have
@@ -3273,7 +3277,7 @@ public class TurbineOp extends Instruction {
                                               returnsNonRef));
         return res;
       }
-      case SYNC_COPY: 
+      case SYNC_COPY:
       case ASYNC_COPY: {
         return ValLoc.makeCopy(getOutput(0), getInput(0),
                                IsAssign.TO_LOCATION).asList();
@@ -3285,11 +3289,11 @@ public class TurbineOp extends Instruction {
       case LOOKUP_CHECKPOINT:
       case UNPACK_VALUES: {
         // Both have multiple outputs
-        List<ValLoc> res = new ArrayList<ValLoc>(outputs.size()); 
+        List<ValLoc> res = new ArrayList<ValLoc>(outputs.size());
         for (int i = 0; i < outputs.size(); i++) {
           Var out = outputs.get(i);
-          res.add(ValLoc.buildResult(op, 
-                   (Object)i, getInput(0).asList(), out.asArg(),
+          res.add(ValLoc.buildResult(op,
+                   i, getInput(0).asList(), out.asArg(),
                    Closed.YES_RECURSIVE, IsValCopy.NO, IsAssign.TO_LOCATION));
         }
         return res;
@@ -3395,9 +3399,9 @@ public class TurbineOp extends Instruction {
                            writeRefs);
       }
       case STORE_BAG:
-      case STORE_ARRAY: 
+      case STORE_ARRAY:
       case STORE_STRUCT:
-      case STORE_RECURSIVE: { 
+      case STORE_RECURSIVE: {
         // Inputs stored into array need to have refcount incremented
         // This finalizes array so will consume refcount
         return Pair.create(VarCount.one(getInput(0).getVar()).asList(),
@@ -3438,7 +3442,7 @@ public class TurbineOp extends Instruction {
         // Increment reference to memberif needed
         List<VarCount> readIncr;
         if (mem.isVar() && RefCounting.trackReadRefCount(mem.getVar())) {
-          readIncr = VarCount.one(mem.getVar()).asList(); 
+          readIncr = VarCount.one(mem.getVar()).asList();
         } else {
           readIncr = VarCount.NONE;
         }
@@ -3451,7 +3455,7 @@ public class TurbineOp extends Instruction {
         return Pair.create(VarCount.one(mem).asList(),
                            VarCount.one(getOutput(0)).asList());
       }
-      case ARR_STORE_FUTURE: 
+      case ARR_STORE_FUTURE:
       case ARR_COPY_IN_FUTURE: {
         // Increment reference to member/member ref and index future
         // Increment writers count on array
@@ -3469,7 +3473,7 @@ public class TurbineOp extends Instruction {
       }
       case AREF_STORE_IMM:
       case AREF_COPY_IN_IMM:
-      case AREF_STORE_FUTURE: 
+      case AREF_STORE_FUTURE:
       case AREF_COPY_IN_FUTURE: {
         Arg ix = getInput(0);
         Arg mem = getInput(1);
@@ -3490,7 +3494,7 @@ public class TurbineOp extends Instruction {
         // Management of reference counts from array ref is handled by runtime
         return Pair.create(readers, VarCount.NONE);
       }
-      case ARR_CREATE_NESTED_IMM: 
+      case ARR_CREATE_NESTED_IMM:
       case ARR_CREATE_BAG: {
         long readDecr = getInput(3).getIntLit();
         long writeDecr = getInput(4).getIntLit();
@@ -3531,7 +3535,7 @@ public class TurbineOp extends Instruction {
       case STRUCT_INIT_FIELDS: {
         Out<List<Arg>> fieldVals = new Out<List<Arg>>();
         unpackStructInitArgs(null, null, fieldVals);
-        
+
         List<VarCount> readIncr = new ArrayList<VarCount>();
         List<VarCount> writeIncr = new ArrayList<VarCount>();
         for (Arg fieldVal: fieldVals.val) {
@@ -3546,7 +3550,7 @@ public class TurbineOp extends Instruction {
             }
           }
         }
-        
+
         return Pair.create(readIncr, writeIncr);
       }
       case STRUCTREF_COPY_OUT:
@@ -3585,7 +3589,7 @@ public class TurbineOp extends Instruction {
         return Pair.create(VarCount.NONE, VarCount.NONE);
     }
   }
-  
+
   @Override
   public Pair<List<VarCount>, List<VarCount>> outRefCounts(
                  Map<String, Function> functions) {
@@ -3602,7 +3606,7 @@ public class TurbineOp extends Instruction {
         Var v = getOutput(0);
         long readRefs = getInput(1).getIntLit();
         long writeRefs = getInput(2).getIntLit();
-        return Pair.create(new VarCount(v, readRefs).asList(), 
+        return Pair.create(new VarCount(v, readRefs).asList(),
                            new VarCount(v, writeRefs).asList());
       }
       case STRUCT_RETRIEVE_SUB: {
@@ -3615,7 +3619,7 @@ public class TurbineOp extends Instruction {
         // Gives back a refcount to the result if relevant
         return Pair.create(VarCount.one(getOutput(0)).asList(), VarCount.NONE);
       }
-      case ARR_CREATE_NESTED_IMM: 
+      case ARR_CREATE_NESTED_IMM:
       case ARR_CREATE_BAG: {
         long readIncr = getInput(1).getIntLit();
         long writeIncr = getInput(2).getIntLit();
@@ -3628,7 +3632,7 @@ public class TurbineOp extends Instruction {
         return Pair.create(VarCount.NONE, VarCount.NONE);
     }
   }
-  
+
   @Override
   public VarCount tryPiggyback(RefCountsToPlace increments, RefCountType type) {
     switch (op) {
@@ -3658,7 +3662,7 @@ public class TurbineOp extends Instruction {
         if (success != null) {
           return success;
         }
-        
+
         success = piggybackCancelIncr(increments, getOutput(0), type,
                                       1, 2);
         if (success != null) {
@@ -3667,8 +3671,8 @@ public class TurbineOp extends Instruction {
         return null;
       }
       case ARR_STORE:
-      case ARR_COPY_IN_IMM: 
-      case ARR_STORE_FUTURE: 
+      case ARR_COPY_IN_IMM:
+      case ARR_STORE_FUTURE:
       case ARR_COPY_IN_FUTURE: {
         Var arr = getOutput(0);
         if (type == RefCountType.WRITERS) {
@@ -3695,7 +3699,7 @@ public class TurbineOp extends Instruction {
         Var res = getOutput(0);
         Var outerArr = getOutput(1);
         assert(getInputs().size() == 5);
-        
+
         // piggyback decrements here
         VarCount success = piggyBackDecrHelper(increments, type, outerArr,
                                                3, 4);
@@ -3707,7 +3711,7 @@ public class TurbineOp extends Instruction {
         if (success != null) {
           return success;
         }
-        
+
         // Instruction can give additional refcounts back
         long resIncr = increments.getCount(res);
         if (resIncr > 0) {
@@ -3778,7 +3782,7 @@ public class TurbineOp extends Instruction {
       RefCountType type, int readIncrInput, int writeIncrInput) {
     long decrAmt = increments.getCount(var);
     if (decrAmt < 0) {
-      int pos = (type == RefCountType.READERS) ? 
+      int pos = (type == RefCountType.READERS) ?
                 readIncrInput : writeIncrInput;
       if (pos < 0) {
         return null;
@@ -3795,7 +3799,7 @@ public class TurbineOp extends Instruction {
         updatedVal = 0;
         piggybackedAmt = -currVal;
       }
-      
+
       inputs.set(pos, Arg.createIntLit(updatedVal));
       if (piggybackedAmt != 0) {
         assert(piggybackedAmt < 0);
@@ -3850,7 +3854,7 @@ public class TurbineOp extends Instruction {
         // need to track if ref is alias to struct field
         Var ref = getOutput(0);
         Var val = getInput(0).getVar();
-        
+
         return new Alias(ref, Collections.<String>emptyList(),
                          AliasTransform.RETRIEVE, val).asList();
       }
@@ -3858,7 +3862,7 @@ public class TurbineOp extends Instruction {
         // need to track if ref is alias to struct field
         Var val = getOutput(0);
         Var ref = getInput(0).getVar();
-        
+
         return new Alias(ref, Collections.<String>emptyList(),
                          AliasTransform.RETRIEVE, val).asList();
       }
@@ -3889,7 +3893,7 @@ public class TurbineOp extends Instruction {
       case ARR_CREATE_NESTED_IMM:
       case ARR_CREATE_BAG:
         // From inner object to immediately enclosing
-        return new ComponentAlias(getOutput(1), Component.deref(getInput(0).asList()), 
+        return new ComponentAlias(getOutput(1), Component.deref(getInput(0).asList()),
                    getOutput(0)).asList();
       case ARR_CREATE_NESTED_FUTURE: {
         // From inner array to immediately enclosing
@@ -3917,7 +3921,7 @@ public class TurbineOp extends Instruction {
           } else {
             key = Arrays.asList(ix, Component.DEREF);
           }
-          
+
           return new ComponentAlias(arr, key, getInput(1).getVar()).asList();
         }
         break;
@@ -3937,7 +3941,7 @@ public class TurbineOp extends Instruction {
           } else {
             key = ix.asList();
           }
-          
+
           return new ComponentAlias(arr, key, getInput(1).getVar()).asList();
         }
         break;
@@ -3951,7 +3955,7 @@ public class TurbineOp extends Instruction {
       case AREF_COPY_OUT_FUTURE:
       case AREF_COPY_OUT_IMM: {
         Var arr = getInput(0).getVar();
-        
+
         if (Types.isRef(Types.arrayKeyType(arr))) {
           Arg ix = getInput(1);
           List<Arg> key;
@@ -3982,7 +3986,7 @@ public class TurbineOp extends Instruction {
         assert (fieldPaths.val.size() == fieldVals.val.size());
 
         Var struct = getOutput(0);
-        
+
         for (int i = 0; i < fieldPaths.val.size(); i++) {
           List<Arg> fieldPath = fieldPaths.val.get(i);
           Arg fieldVal = fieldVals.val.get(i);
@@ -4053,6 +4057,7 @@ public class TurbineOp extends Instruction {
     return Collections.emptyList();
   }
 
+  @Override
   public boolean isIdempotent() {
     switch (op) {
       case ARR_CREATE_NESTED_FUTURE:
@@ -4065,21 +4070,21 @@ public class TurbineOp extends Instruction {
         return false;
     }
   }
-  
-  
+
+
   /**
    * Instruction class specifically for reference counting operations with
    * defaults derived from TurbineOp
    */
   public static class RefCountOp extends TurbineOp {
-    
+
     /**
      * Direction of change (increment or decrement)
      */
     public static enum RCDir {
       INCR,
       DECR;
-      
+
       public static RCDir fromAmount(long amount) {
         if (amount >= 0) {
           return INCR;
@@ -4088,36 +4093,36 @@ public class TurbineOp extends Instruction {
         }
       }
     };
-    
+
     public RefCountOp(Var target, RCDir dir, RefCountType type, Arg amount) {
       super(getRefCountOp(dir, type), Var.NONE,
             Arrays.asList(target.asArg(), amount));
     }
-    
+
     public static RefCountOp decrWriters(Var target, Arg amount) {
       return new RefCountOp(target, RCDir.DECR, RefCountType.WRITERS, amount);
     }
-    
+
     public static RefCountOp incrWriters(Var target, Arg amount) {
       return new RefCountOp(target, RCDir.INCR, RefCountType.WRITERS, amount);
     }
-    
+
     public static RefCountOp decrRef(Var target, Arg amount) {
       return new RefCountOp(target, RCDir.DECR, RefCountType.READERS, amount);
     }
-    
+
     public static RefCountOp incrRef(Var target, Arg amount) {
       return new RefCountOp(target, RCDir.INCR, RefCountType.READERS, amount);
     }
-    
+
     public static RefCountOp decrRef(RefCountType rcType, Var v, Arg amount) {
       return new RefCountOp(v, RCDir.DECR, rcType, amount);
     }
-    
+
     public static RefCountOp incrRef(RefCountType rcType, Var v, Arg amount) {
       return new RefCountOp(v, RCDir.INCR, rcType, amount);
     }
-    
+
     public static RefCountType getRCType(Opcode op) {
       assert(isRefcountOp(op));
       if (op == Opcode.INCR_READERS || op == Opcode.DECR_READERS) {
@@ -4132,14 +4137,14 @@ public class TurbineOp extends Instruction {
       assert(isRefcountOp(refcountOp.op));
       return refcountOp.getInput(0).getVar();
     }
-    
+
     public static Arg getRCAmount(Instruction refcountOp) {
       assert(isRefcountOp(refcountOp.op));
       return refcountOp.getInput(1);
     }
-    
-    
-    
+
+
+
     private static Opcode getRefCountOp(RCDir dir, RefCountType type) {
       if (type == RefCountType.READERS) {
         if (dir == RCDir.INCR) {
@@ -4158,7 +4163,7 @@ public class TurbineOp extends Instruction {
         }
       }
     }
-    
+
     private static RCDir getRefcountDir(Opcode op) {
       if (isIncrement(op)) {
         return RCDir.INCR;
@@ -4171,7 +4176,7 @@ public class TurbineOp extends Instruction {
     public static boolean isIncrement(Opcode op) {
       return (op == Opcode.INCR_READERS || op == Opcode.INCR_WRITERS);
     }
-    
+
     public static boolean isDecrement(Opcode op) {
       return (op == Opcode.DECR_READERS || op == Opcode.DECR_WRITERS);
     }
@@ -4193,18 +4198,18 @@ public class TurbineOp extends Instruction {
       // Executes right away
       return ExecTarget.syncAny();
     }
-    
+
     @Override
     public boolean isCheap() {
       return true;
     }
-    
+
     @Override
     public boolean isProgressEnabling() {
       // Decrementing write refcount can close
       return getRCType(op) == RefCountType.WRITERS;
     }
-    
+
     @Override
     public boolean hasSideEffects() {
       // Model refcount change as side-effect

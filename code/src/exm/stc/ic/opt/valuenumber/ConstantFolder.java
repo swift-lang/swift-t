@@ -27,7 +27,7 @@ public class ConstantFolder {
    * @return the folded value if successful.  Note that this may be
    *         a constant, a variable, or a computed value representing
    *         one of these stored in a future.  Returns null if not
-   *         successful. 
+   *         successful.
    */
   public static ArgOrCV constantFold(Logger logger, CongruentSets sets,
                                    ComputedValue<Arg> val) {
@@ -79,7 +79,7 @@ public class ConstantFolder {
     }
     return null;
   }
-  
+
 
   private static ArgOrCV foldIsMapped(ComputedValue<Arg> val) {
     Arg fileCV = val.getInput(0);
@@ -119,22 +119,25 @@ public class ConstantFolder {
    * Convert arg representing result of computation (maybe constant)
    * into a computed value
    * @param futureResult
-   * @param constant
+   * @param arg
    * @return
    */
-  private static ArgOrCV valFromArg(boolean futureResult, Arg constant) {
+  private static ArgOrCV valFromArg(boolean futureResult, Arg arg) {
     if (!futureResult) {
       // Can use directly
-      return new ArgOrCV(constant);
-    } else {
+      return new ArgOrCV(arg);
+    } else if (arg.isConstant()){
       // Record stored future
-      return new ArgOrCV(Opcode.assignOpcode(constant.futureType()),
-                                             constant.asList());
+      return new ArgOrCV(Opcode.assignOpcode(arg.futureType()),
+                                             arg.asList());
+    } else {
+      // Should be future
+      return new ArgOrCV(arg);
     }
   }
 
   /**
-   * Try to find constant values of futures  
+   * Try to find constant values of futures
    * @param val
    * @param congruent
    * @return a list with constants in places with constant values,
