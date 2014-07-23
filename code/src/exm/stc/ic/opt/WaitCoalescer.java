@@ -31,6 +31,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ExecTarget;
+import exm.stc.common.lang.Location;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
@@ -359,11 +360,13 @@ public class WaitCoalescer implements OptimizerPass {
       logger.trace("compatibleLocPar(" + location1 + " " + location2 +
                     " " + par1 + " " + par2 + ")");
     }
-    if (location1 != null && location2 != null) {
+    boolean targeted1 = !Location.isAnyLocation(location1, true);
+    boolean targeted2 = !Location.isAnyLocation(location2, true);
+    if (targeted1 && targeted2) {
       if (!location1.equals(location2)) {
         return false;
       }
-    } else if (location1 != null || location2 != null) {
+    } else if (targeted1 || targeted2) {
       // If only one location present
       return false;
     }
