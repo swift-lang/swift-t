@@ -201,6 +201,18 @@ namespace eval turbine {
     proc blob_debug { b } {
         puts [ blob_fmt $b ]
     }
+
+    proc blob_dict_to_dbl_array { d } { 
+        set L [ dict size $d ]
+        set bytes [ expr $L * [ blobutils_sizeof_int ] ]
+        set ptr [ blobutils_malloc $bytes ]
+        set ptr [ blobutils_cast_to_int_ptr $ptr ]
+        for { set i 0 } { $i < $L } { incr i } { 
+            set v [ dict get $d $i ] 
+            blobutils_set_int $ptr $i $v 
+        }
+        return $ptr
+    }
 }
 
 # Local Variables:
