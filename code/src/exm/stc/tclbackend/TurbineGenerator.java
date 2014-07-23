@@ -396,12 +396,16 @@ public class TurbineGenerator implements CompilerBackend {
    * Define any additional custom work types for runtime
    * @return
    */
-  private Command initCustomWorkTypes() {
+  private Sequence initCustomWorkTypes() {
     List<Expression> args = new ArrayList<Expression>();
     for (WorkContext wt: customWorkTypes) {
       args.add(Turbine.nonDefaultWorkTypeName(wt));
     }
-    return Turbine.declareCustomWorkTypes(args);
+    if (args.isEmpty()) {
+      return new Sequence();
+    } else {
+      return new Sequence(Turbine.declareCustomWorkTypes(args));
+    }
   }
 
   private TclTree checkWorkTypes() {
