@@ -20,31 +20,31 @@ import exm.stc.common.lang.Location;
 import exm.stc.tclbackend.TclUtil;
 
 /**
- * The target of a Turbine rule 
+ * The target of a Turbine rule
  * Becomes the target of the ADLB task
  * The target is either ADLB_RANK_ANY or an non-negative integer rank
  * @author wozniak
  * */
 public class TclTarget {
   public static final TclTarget RANK_ANY = new TclTarget(true, new LiteralInt(-1));
-  
+
   public final boolean rankAny;
   public final Expression targetRank;
-  
+
   public static final Value ADLB_RANK_ANY = new Value("adlb::RANK_ANY");
-  
+
   public TclTarget(boolean rankAny, Expression targetRank) {
     this.rankAny = rankAny;
     this.targetRank = targetRank;
   }
-  
+
   /**
      Constructor: Targets task to specific target rank
    */
   public static TclTarget rank(Expression targetRank) {
     return new TclTarget(false, targetRank);
   }
-  
+
   public Expression toTcl() {
     if (rankAny) {
       return ADLB_RANK_ANY;
@@ -54,9 +54,9 @@ public class TclTarget {
   }
 
   public static TclTarget fromArg(Arg arg) {
-    if (arg == null) {
-      return RANK_ANY;
-    } else if (arg.equals(Location.ANY_LOCATION)) {
+    assert(arg != null);
+
+    if (Location.isAnyLocation(arg, true)) {
       return RANK_ANY;
     } else {
       return TclTarget.rank(TclUtil.argToExpr(arg));

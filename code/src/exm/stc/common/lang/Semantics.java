@@ -1,15 +1,12 @@
-package exm.stc.ic.opt;
+package exm.stc.common.lang;
 
 import java.util.Set;
 
 import exm.stc.common.Settings;
-import exm.stc.common.lang.ExecContext;
-import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.Typed;
-import exm.stc.common.lang.Var;
 import exm.stc.common.util.TernaryLogic.Ternary;
 import exm.stc.ic.opt.valuenumber.ComputedValue;
 import exm.stc.ic.opt.valuenumber.ComputedValue.ArgCV;
