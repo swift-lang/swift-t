@@ -23,8 +23,22 @@ import java.util.List;
  * Line after line sequence of Tcl code
  * @author wozniak
  * */
-public class Sequence extends TclTree
-{
+public class Sequence extends TclTree {
+
+
+  public Sequence() {
+    super();
+  }
+
+
+  public Sequence(TclTree... elems) {
+    this();
+    for (TclTree elem: elems) {
+      add(elem);
+    }
+  }
+
+
   List<TclTree> members = new ArrayList<TclTree>();
 
   public void add(TclTree tree)
@@ -37,7 +51,7 @@ public class Sequence extends TclTree
     for (TclTree tree : trees)
       add(tree);
   }
-  
+
   /**
    * Append at end of current sequence
    * @param seq
