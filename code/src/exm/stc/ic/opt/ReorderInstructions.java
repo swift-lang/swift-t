@@ -44,10 +44,6 @@ import exm.stc.ic.tree.Opcode;
  */
 public class ReorderInstructions extends FunctionOptimizerPass {
 
-  // Track statistics about how many times we moved something
-  private static int move = 0;
-  private static int noMove = 0;
-
   // If true, try to move multiple instructions.  Requires more processing
   // but in some cases will expose more opportunities for reduction
   private final boolean aggressive;
@@ -97,48 +93,27 @@ public class ReorderInstructions extends FunctionOptimizerPass {
       stmtInfos.add(StatementInfo.make(logger, fn, stmt));
     }
 
-    // Accumulate instructions into this array
-    ArrayList<Integer> newStmts = new ArrayList<Integer>();
-
-    // Keep track of which instructions should go after (x -> goes beforey)
+    // Keep track of which instructions should go after (x -> goes before)
     // Instructions are identified by index of instruction before modifications
     MultiMap<Integer, Integer> before = new MultiMap<Integer, Integer>();
-    HashSet<Statement> mustMove = new HashSet<Statement>();
-    boolean moved = false;
+
+    // Do two passes for forward and backward edges.  Treat as hard and soft
+    // dependencies respectively to avoid creating cycles
+    for (int i = 0; i < stmtInfos.size(); i++) {
+      addDependencies(logger, fn, stmtInfos, i, true, before);
+    }
+
+    for (int i = 0; i < stmtInfos.size(); i++) {
+      addDependencies(logger, fn, stmtInfos, i, false, before);
+    }
 
     for (int i = 0; i < stmtInfos.size(); i++) {
       StatementInfo info1 = stmtInfos.get(i);
-      boolean move = addDependencies(logger, fn, stmtInfos, i, info1,
-                                          before, mustMove);
-
       if (logger.isTraceEnabled())
-        logger.trace("Inst " + info1 + "(" + i + ") move: " + move);
-      if (move) {
-        // Note that we should put it later
-        moved = true;
-        if (logger.isTraceEnabled())
-          logger.trace("Inst " + info1 + "(" + i + ") before: " + before.get(i));
-      } else {
-        // Don't move
-        newStmts.add(i);
-      }
+        logger.trace("Inst " + info1 + "(" + i + ") before: " + before.get(i));
     }
 
-
-    if (moved) {
-      block.replaceStatements(rebuildInstructions(logger, block,
-                                            newStmts, before));
-      move++;
-    } else {
-      noMove++;
-    }
-    if (logger.isTraceEnabled())
-      logger.trace("reorder instructions: moved " + move + "/" + (move + noMove));
-  }
-
-  private static enum VisitState {
-    IN_STACK,
-    DONE,
+    block.replaceStatements(rebuildInstructions(logger, block, before));
   }
 
   /**
@@ -146,16 +121,16 @@ public class ReorderInstructions extends FunctionOptimizerPass {
    *
    * Note that there are multiple possible valid orders.
    * @param block
-   * @param newStatements list of indices of instructions that should be
-   *              placed at start of block.  Other instructions are placed
-   *              after this
    * @param before constraints.  if i -> j, then j must go before i
    * @return rebuilt list of instructions: should contain same as
    *      oldStatements in different order, subject to ordering constraints
    */
   private List<Statement> rebuildInstructions(Logger logger, Block block,
-      List<Integer> newStatements, MultiMap<Integer, Integer> before) {
+      MultiMap<Integer, Integer> before) {
     List<Statement> oldStatements = block.getStatements();
+
+    // Accumulate instructions into this array
+    ArrayList<Integer> newStatements = new ArrayList<Integer>();
 
     // Put all instructions back.  We do a topological sort to
     // make sure they end up in correct order
@@ -167,8 +142,7 @@ public class ReorderInstructions extends FunctionOptimizerPass {
     }
 
     if (logger.isTraceEnabled()) {
-      logger.trace("New statements: " + newStatements + "\n"
-                  + before);
+      logger.trace(before);
     }
 
     // Allow changing order of topological sort.  Useful for debugging
@@ -252,46 +226,36 @@ public class ReorderInstructions extends FunctionOptimizerPass {
     return rebuilt;
   }
 
-  private boolean addDependencies(Logger logger,
-          Function fn,
-          ArrayList<StatementInfo> stmtInfos, int i,
-          StatementInfo info1, MultiMap<Integer, Integer> before,
-          HashSet<Statement> mustMove) {
+  private void addDependencies(Logger logger, Function fn,
+          ArrayList<StatementInfo> stmtInfos, int i, boolean forwardEdges,
+          MultiMap<Integer, Integer> before) {
+    StatementInfo info1 = stmtInfos.get(i);
+
     if (logger.isTraceEnabled())
-      logger.trace("Try to move " + info1);
+      logger.trace("addDependencies " + info1);
 
     // Find last instruction that writes inputs of inst1
     // Build a DAG of dependences between instructions
-    boolean move = mustMove.contains(info1.stmt) || aggressive;
-    boolean canMoveFurther = true;
     for (int j = i + 1; j < stmtInfos.size(); j++) {
       StatementInfo info2 = stmtInfos.get(j);
       // TODO: should check for "expensive" statements to avoid
       // deferring execution by putting instruction after it
-      if (writesInputs(logger, info2, info1, false)) {
+      if (forwardEdges && writesInputs(logger, info2, info1, false)) {
         // These edges wont create cycle - backward edge
         before.put(j, i);
-        // We must place inst2 based on dependencies
-        mustMove.add(info2.stmt);
-        canMoveFurther = false;
-        if (!move) {
-          // Not going to move
-          break;
-        }
       }
 
-      if (canMoveFurther &&
-          writesInputs(logger, info1, info2, true)) {
+      if (!forwardEdges && writesInputs(logger, info1, info2, true)) {
         // Check that there isn't a path from inst1 to inst2
         if (pathExists(before, j, i)) {
-          canMoveFurther = false;
+          if (logger.isTraceEnabled()) {
+            logger.trace("Drop edge " + j + " => " + i + " to avoid cycle");
+          }
         } else {
           before.put(i, j);
-          move = true;
         }
       }
     }
-    return move;
   }
 
   private boolean pathExists(MultiMap<Integer, Integer> after,
@@ -342,6 +306,9 @@ public class ReorderInstructions extends FunctionOptimizerPass {
 
   /**
    * Return true if inst2 writes some of inst1's required vars
+   *
+   * TODO: the current approach can result in false positives, e.g.
+   * alias instructions look like they're reading variable.
    * @param logger
    * @param inst1
    * @param inst1Inputs
@@ -400,6 +367,11 @@ public class ReorderInstructions extends FunctionOptimizerPass {
       }
     }
     return false;
+  }
+
+  private static enum VisitState {
+    IN_STACK,
+    DONE,
   }
 
   /**
