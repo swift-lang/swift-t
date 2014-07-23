@@ -65,16 +65,16 @@ import exm.stc.ic.tree.ICTree.StatementType;
  * - Enable further optimizations by, in some cases, putting instructions more
  *    in order of data dependencies
  * E.g. consider this code:
- * 
+ *
  * int x = f(); // f is a composite
  * int y = x * x + 1 - 2 * 3;
- * 
+ *
  * Without this pass, since we don't know when the return value of f() will be
  * available, we are forced to create a chain of dataflow operations to
  * evaluate the expression.  With this pass, we simply wait for x and then
- * do the arithmetic locally. 
+ * do the arithmetic locally.
  *
- * 
+ *
  * Stage 1: Op conversion
  * ----------------------
  * In block B.
@@ -85,25 +85,25 @@ import exm.stc.ic.tree.ICTree.StatementType;
  *   call local_f [lv3] [lv1, lv2]
  *   store v3 lv2
  * }
- * 
+ *
  * This mainly is done to enable the subsequent stages, but does provide
  * benefits in the situation where some but not all of the arguments are
- * immediately available (e.g. suppose v1 is a constant) and we can eliminate 
+ * immediately available (e.g. suppose v1 is a constant) and we can eliminate
  * some futures, or eliminate waits on the futures
- * 
+ *
  * Stage 2: Wait Merging
  * ---------------------
  * After the introduction of all the waits in the step above, there might
- * be a lot of redundancy: waits with overlapping argument lists.  This 
+ * be a lot of redundancy: waits with overlapping argument lists.  This
  * step finds wait statements in the block B with overlap in argument lists,
- * and then combines them, reducing redundant subscribe operations, and 
+ * and then combines them, reducing redundant subscribe operations, and
  * often enabling further optimisations within the blocks.  There are multiple
  * ways that waits can be combined and it's difficult to find the optimal one
  * since this is some kind of graph partitioning problem, and furthermore that
- * subsequent optimization passes may change the problem parameters.  
- * 
- * We use a greedy heuristic in an attempt to merge waits in the best way.  
- * Intuition is that this algorithm should do the 100% right thing most of 
+ * subsequent optimization passes may change the problem parameters.
+ *
+ * We use a greedy heuristic in an attempt to merge waits in the best way.
+ * Intuition is that this algorithm should do the 100% right thing most of
  * the time, and most of  the rest of the time do something reasonable
  *
  * until converged:
@@ -127,27 +127,27 @@ import exm.stc.ic.tree.ICTree.StatementType;
  *
  * Stage 3: Statement Pushdown
  * --------------------------
- * 
+ *
  * So by now we have a block B and some number of wait statements hanging off it.
  * There may be an instruction I1 or continuation C in block B that
- * logically cannot run until an instruction I2 buried in one of the waits 
+ * logically cannot run until an instruction I2 buried in one of the waits
  * executes.   So it would make sense to push I1 or C down into the wait statement
  * after I2, as this will at the very least defer the insertion of the task
  * until it has some chance of running, but in many cases will enable many further
  * optimizations.
- * 
+ *
  * There may be multiple such places where an instruction will be moved to, we
- * just do use a greedy heuristic and put it in the first place we find. 
- * Again, the intuition is that in many cases, this will do exactly the 
- * right thing, in others it will do something acceptable.  
- * 
+ * just do use a greedy heuristic and put it in the first place we find.
+ * Again, the intuition is that in many cases, this will do exactly the
+ * right thing, in others it will do something acceptable.
+ *
  * In some cases as well, once we recurse down into the wait statements, we
  * will push the isntruction/continuation down even further
- * 
+ *
  * Pseudocode:
- *   - For many instructions or continuations, we know the set of blocking 
+ *   - For many instructions or continuations, we know the set of blocking
  *     input variables: variables which must be closed before anything can
- *     execute. 
+ *     execute.
  *   - look at all instructions and continuations, and based on the blocking
  *      inputs, build this map: {
  *           v1: {inst1, cont1, inst2}
@@ -155,12 +155,12 @@ import exm.stc.ic.tree.ICTree.StatementType;
  *           }
  *   - The above data structure should only include instructions which can be
  *      safely relocated: in particular we should avoid relocating anything which
- *      doesn't have exclusively futures as outputs 
+ *      doesn't have exclusively futures as outputs
  *   - Iterate recursively over all child blocks:
  *     * If a variable v1 is written here, stick the dependent instructions/
- *          continuations at the end of the block in which its written, 
- *          and then update parent block B and the map 
- * 
+ *          continuations at the end of the block in which its written,
+ *          and then update parent block B and the map
+ *
  * Stage 4: Recurse
  * ---------------
  * Go to all subblocks and do the same
@@ -171,12 +171,12 @@ public class WaitCoalescer implements OptimizerPass {
   private final boolean doMerges;
   // If true, retain explicit waits even if removing them is valid
   private final boolean retainExplicit;
-  
+
   public WaitCoalescer(boolean doMerges, boolean retainExplicit) {
     this.doMerges = doMerges;
     this.retainExplicit = retainExplicit;
   }
-  
+
   @Override
   public String getPassName() {
     return "Wait coalescing";
@@ -203,10 +203,10 @@ public class WaitCoalescer implements OptimizerPass {
       logger.trace("Merging Waits...");
       merged = mergeWaits(logger, fn, block, currContext);
     }
-    
+
     logger.trace("Pushing down waits...");
     boolean pushedDown = pushDownWaits(logger, prog, fn, block, currContext);
-    
+
     // Recurse on child blocks
     boolean recChanged = rearrangeWaitsRec(logger, prog, fn, block, currContext);
     return merged || pushedDown || recChanged;
@@ -217,19 +217,19 @@ public class WaitCoalescer implements OptimizerPass {
     // List of waits to inline (to avoid modifying continuations while
     //          iterating over them)
     List<WaitStatement> toInline = new ArrayList<WaitStatement>();
-    
+
     boolean changed = false;
-    
+
     for (Continuation c: block.allComplexStatements()) {
       ExecContext newContext = c.childContext(currContext);
-      
+
       for (Block childB: c.getBlocks()) {
         if (rearrangeWaits(logger, prog, fn, childB,
                            newContext)) {
-          changed = true; 
+          changed = true;
         }
       }
-      
+
       if (c.getType() == ContinuationType.WAIT_STATEMENT) {
         WaitStatement wait = (WaitStatement)c;
         if (tryReduce(logger, fn, currContext, newContext, wait)) {
@@ -259,16 +259,16 @@ public class WaitCoalescer implements OptimizerPass {
       ExecContext innerContext, WaitStatement wait) {
     if ((currContext.equals(innerContext) &&
         ProgressOpcodes.isCheap(wait.getBlock())) ||
-        (currContext.isAnyWorkContext() && 
+        (currContext.isAnyWorkContext() &&
          innerContext.isControlContext() &&
          canSwitchControlToWorker(logger, fn, wait))) {
-      
+
       // Fix any waits inside that expect to be execute in CONTROL context
       if (currContext.isAnyWorkContext() &&
           innerContext.isControlContext()) {
         replaceLocalControl(wait.getBlock(), currContext);
       }
-      
+
       if (wait.getWaitVars().isEmpty()) {
         // Can remove wait
         return true;
@@ -304,17 +304,17 @@ public class WaitCoalescer implements OptimizerPass {
     if (!ProgressOpcodes.isCheapWorker(wait.getBlock())) {
       return false;
     }
-    
+
     // Hack to allow inner class to modify
     final boolean safe[] = new boolean[1];
     safe[0] = true;
-    
+
     TreeWalker walker = new TreeWalker() {
       @Override
       protected void visit(Continuation cont) {
         if (!cont.isAsync())
           return;
-        
+
         switch (cont.getType()) {
           case WAIT_STATEMENT:
           case LOOP:
@@ -325,7 +325,7 @@ public class WaitCoalescer implements OptimizerPass {
             safe[0] = false;
         }
       }
-      
+
     };
     TreeWalk.walkSyncChildren(logger, fn, wait, walker);
     return safe[0];
@@ -347,7 +347,7 @@ public class WaitCoalescer implements OptimizerPass {
     if (!c1.equals(c2)) {
       return false;
     }
-    
+
     return compatibleLocPar(location1, location2, par1, par2);
   }
 
@@ -361,7 +361,7 @@ public class WaitCoalescer implements OptimizerPass {
       // If only one location present
       return false;
     }
-    
+
     if (par1 != null || par2 != null) {
       if (!par1.equals(par2)) {
         return false;
@@ -369,8 +369,8 @@ public class WaitCoalescer implements OptimizerPass {
     }
     return true;
   }
-  
-  
+
+
   /**
    * Try to squash together waits, e.g.
    * wait (x) {
@@ -379,7 +379,7 @@ public class WaitCoalescer implements OptimizerPass {
    *    < do some real work >
    *   }
    * }
-   * 
+   *
    * gets changed to
    * wait (x, y) {
    *  ...
@@ -407,16 +407,16 @@ public class WaitCoalescer implements OptimizerPass {
         }
       }
     }
-    
+
     if (innerWait == null)
       return false;
-    
+
     return trySquash(logger, wait, waitContext, waitBlock, innerWait);
   }
 
   private boolean trySquash(Logger logger, WaitStatement wait,
           ExecContext waitContext, Block waitBlock, WaitStatement innerWait) {
-    
+
     if (logger.isTraceEnabled()) {
       logger.trace("Attempting squash of  wait(" + wait.getWaitVars() + ") " +
                    wait.getTarget() + " " + wait.getMode() +
@@ -424,40 +424,44 @@ public class WaitCoalescer implements OptimizerPass {
                    innerWait.getTarget() + " " + innerWait.getMode());
     }
     ExecContext innerContext = innerWait.childContext(waitContext);
-    
+
     // Check that locations are compatible
     if (!compatibleLocPar(wait.targetLocation(), innerWait.targetLocation(),
                              wait.parallelism(), innerWait.parallelism())) {
       logger.trace("Locations incompatible");
       return false;
     }
-    
+
     // Check that recursiveness matches
     if (wait.isRecursive() != innerWait.isRecursive()) {
       logger.trace("Recursiveness incompatible");
       return false;
     }
-    
-    // Check that contexts are compatible 
+
+    // Check that contexts are compatible
     ExecContext possibleMergedContext;
     if (innerContext.equals(waitContext)) {
       possibleMergedContext = waitContext;
     } else {
       if (waitContext.isAnyWorkContext()) {
         // Don't try to move work from worker context to another context
-        logger.trace("Contexts incompatible (outer is " + waitContext + 
+        logger.trace("Contexts incompatible (outer is " + waitContext +
                      " and inner is " + innerContext);
         return false;
+      } else if (waitContext.isWildcardContext()) {
+        logger.trace("Outer is wildcard: maybe change to worker");
+        possibleMergedContext = innerContext;
       } else {
         assert(waitContext.isControlContext());
-        assert(innerContext.isAnyWorkContext());
+        assert(innerContext.isAnyWorkContext() ||
+               innerContext.isWildcardContext());
         // Inner wait is on worker, try to see if we can
         // move context of outer wait to worker
         logger.trace("Outer is control: maybe change to worker");
         possibleMergedContext = innerContext;
       }
     }
-    
+
     // Check that wait variables not defined in this block
     for (WaitVar waitVar: innerWait.getWaitVars()) {
       if (waitBlock.getVariables().contains(waitVar.var)) {
@@ -465,13 +469,13 @@ public class WaitCoalescer implements OptimizerPass {
         return false;
       }
     }
-    
+
     if (!ProgressOpcodes.isNonProgress(waitBlock, possibleMergedContext)) {
       // Progress might be deferred by squashing
       logger.trace("Squash failed: progress would be deferred");
       return false;
     }
-    
+
     // Pull inner up
     if (logger.isTraceEnabled())
       logger.trace("Squash wait(" + innerWait.getWaitVars() + ")" +
@@ -486,11 +490,11 @@ public class WaitCoalescer implements OptimizerPass {
     if (!possibleMergedContext.equals(waitContext)) {
       wait.setTarget(ExecTarget.dispatched(possibleMergedContext));
     }
-    
+
     // Fixup any local waits in block
     fixupNonDispatched(innerWait, possibleMergedContext);
     fixupNonDispatched(wait, possibleMergedContext);
-    
+
     if (logger.isTraceEnabled()) {
       logger.trace("Squash succeeded: wait(" + wait.getWaitVars() + ") "
                   + wait.getTarget() + " " + wait.getMode());
@@ -514,7 +518,7 @@ public class WaitCoalescer implements OptimizerPass {
       if (logger.isTraceEnabled()) {
         logger.trace("Wait keys: " + waitMap.keySet());
         for (Entry<Var, List<WaitStatement>> e: waitMap.entrySet()) {
-          logger.trace("Waiting on : " + e.getKey() + ": " 
+          logger.trace("Waiting on : " + e.getKey() + ": "
                        + e.getValue().size());
         }
       }
@@ -526,13 +530,13 @@ public class WaitCoalescer implements OptimizerPass {
         List<WaitStatement> waits = waitMap.get(winner);
         assert(waits != null && waits.size() >= 2);
         logger.trace("Merging " + waits.size() + " Waits...");
-        
+
         // If one of the waits is explicit, new one must be also
-        boolean explicit = false; 
-        
+        boolean explicit = false;
+
         // If all waits are recursive
         boolean allRecursive = true;
-        
+
         // Find out which variables are in common with all waits
         Set<Var> explicitVars = new HashSet<Var>();
         Set<Var> notExplicitVars = new HashSet<Var>();
@@ -556,7 +560,7 @@ public class WaitCoalescer implements OptimizerPass {
           allRecursive = allRecursive && wait.isRecursive();
         }
         assert(intersection != null && !intersection.isEmpty());
-        
+
         List<WaitVar> mergedWaitVars = new ArrayList<WaitVar>();
         for (Var v: intersection) {
           // Only should be explicit if both are, to avoid adding
@@ -576,7 +580,7 @@ public class WaitCoalescer implements OptimizerPass {
         // Exception: don't eliminate task dispatch waits
         for (WaitStatement wait: waits) {
           wait.removeWaitVars(mergedWaitVars, allRecursive, retainExplicit);
-          
+
           boolean compatible = compatibleContexts(execCx,
               wait.childContext(execCx), null, wait.targetLocation(),
               null, wait.parallelism());
@@ -589,7 +593,7 @@ public class WaitCoalescer implements OptimizerPass {
             newWait.getBlock().addContinuation(wait);
           }
         }
-        
+
         block.addContinuation(newWait);
         block.removeContinuations(waits);
       }
@@ -599,16 +603,16 @@ public class WaitCoalescer implements OptimizerPass {
   }
 
   /**
-   * Build a map of <variable> --> wait statements blocking on that value 
+   * Build a map of <variable> --> wait statements blocking on that value
    * @param block
    * @return
    */
   public static  MultiMap<Var, WaitStatement> buildWaitMap(Block block) {
-    MultiMap<Var, WaitStatement> waitMap = new MultiMap<Var, WaitStatement>(); 
+    MultiMap<Var, WaitStatement> waitMap = new MultiMap<Var, WaitStatement>();
     for (Continuation c: block.getContinuations()) {
       if (c.getType() == ContinuationType.WAIT_STATEMENT) {
         WaitStatement wait = (WaitStatement)c;
-        
+
         // Defensively check for duplicates since duplicates cause issues here
         List<WaitVar> waitVars = new ArrayList<WaitVar>(wait.getWaitVars());
         WaitVar.removeDuplicates(waitVars);
@@ -641,11 +645,11 @@ public class WaitCoalescer implements OptimizerPass {
     }
     return winner;
   }
-  
+
   private static class PushDownResult {
     public final boolean anyChanges;
     public final List<Continuation> relocated;
-    
+
     public PushDownResult(boolean anyChanges, List<Continuation> relocated) {
       super();
       this.anyChanges = anyChanges;
@@ -664,33 +668,33 @@ public class WaitCoalescer implements OptimizerPass {
   private boolean pushDownWaits(Logger logger, Program prog, Function fn,
                                 Block block, ExecContext currContext) {
     MultiMap<Var, InstOrCont> waitMap = buildWaiterMap(prog, block);
-    
+
     if (logger.isTraceEnabled()) {
       logger.trace("waitMap keys: " + waitMap.keySet());
     }
-    
+
     if (waitMap.isDefinitelyEmpty()) {
       // If waitMap is empty, can't push anything down, so just
       // shortcircuit
       return false;
     }
     boolean changed = false;
-    
+
     HashSet<Continuation> allPushedDown = new HashSet<Continuation>();
-    ArrayList<Continuation> contCopy = 
+    ArrayList<Continuation> contCopy =
                 new ArrayList<Continuation>(block.getContinuations());
     for (Continuation c: contCopy) {
       if (allPushedDown.contains(c)) {
         // Was moved
         continue;
       }
-      ExecContext newContext = canPushDownInto(c, currContext); 
+      ExecContext newContext = canPushDownInto(c, currContext);
       if (newContext != null) {
         for (Block innerBlock: c.getBlocks()) {
           StackLite<Continuation> ancestors =
                                         new StackLite<Continuation>();
           ancestors.push(c);
-          PushDownResult pdRes = 
+          PushDownResult pdRes =
                pushDownWaitsRec(logger, fn, block, currContext, ancestors,
                                 innerBlock, newContext, waitMap);
            changed = changed || pdRes.anyChanges;
@@ -702,7 +706,7 @@ public class WaitCoalescer implements OptimizerPass {
     }
     return changed;
   }
-  
+
   private PushDownResult pushDownWaitsRec(
                 Logger logger,  Function fn,
                 Block top, ExecContext topContext,
@@ -721,7 +725,7 @@ public class WaitCoalescer implements OptimizerPass {
           if (logger.isTraceEnabled()) {
             logger.trace("Pushdown at: " + pushdownPoint.toString());
           }
-          
+
           // Relocate instructions which depend on output future of this instruction
           for (Var out: pushdownPoint.getOutputs()) {
             if (trackForPushdown(out)) {
@@ -738,7 +742,7 @@ public class WaitCoalescer implements OptimizerPass {
         case CONDITIONAL: {
           // Can't push down into conditional
           // TODO: maybe could push down to both branches in some cases?
-          
+
           // Find futures assigned on all branches
           Set<Var> writtenFutures = findConditionalAssignedFutures(logger, stmt.conditional());
 
@@ -753,9 +757,9 @@ public class WaitCoalescer implements OptimizerPass {
         default:
           throw new STCRuntimeError("unknown statement type " + stmt.type());
       }
-      
+
     }
-    
+
     // Update the stack with child continuations
     for (Continuation c: curr.getContinuations()) {
       ExecContext newContext = canPushDownInto(c, currContext);
@@ -783,7 +787,7 @@ public class WaitCoalescer implements OptimizerPass {
     if (!conditional.isExhaustiveSyncConditional()) {
       return Collections.emptySet();
     }
-    
+
     Set<Var> initState = new HashSet<Var>();
     findConditionalAssignedFutures(logger, conditional, initState);
     return initState;
@@ -792,14 +796,14 @@ public class WaitCoalescer implements OptimizerPass {
   private void findConditionalAssignedFutures(Logger logger,
       Conditional conditional, Set<Var> initState) {
     assert(conditional.isExhaustiveSyncConditional());
-    
+
     List<Set<Var>> branchStates = new ArrayList<Set<Var>>();
     for (Block b: conditional.getBlocks()) {
       Set<Var> branchState = new HashSet<Var>();
       addWrittenFuturesFromBlock(logger, b, branchState);
       branchStates.add(branchState);
     }
-    
+
     // unify states from different branches
     for (Var closedFirstBranch: Sets.intersectionIter(branchStates)) {
       initState.add(closedFirstBranch);
@@ -833,16 +837,16 @@ public class WaitCoalescer implements OptimizerPass {
     boolean changed = false;
     if (waitMap.containsKey(v)) {
       Pair<Boolean, Set<Continuation>> pdRes =
-          relocateDependentInstructions(logger, top, topContext, ancestors, 
+          relocateDependentInstructions(logger, top, topContext, ancestors,
                                     curr, currContext, it,  waitMap, v);
       changed = pdRes.val1;
       pushedDown.addAll(pdRes.val2);
     }
     return changed;
   }
-  
+
   /**
-   * 
+   *
    * @param c
    * @param curr
    * @return null if can't push down into
@@ -873,13 +877,13 @@ public class WaitCoalescer implements OptimizerPass {
   }
 
   /**
-   * 
+   *
    * @param logger
    * @param ancestorBlock the block the instructions are moved from
-   * @param ancestors 
+   * @param ancestors
    * @param currBlock the block they are moved too (a descendant of the prior
    *              block)
-   * @param currContext 
+   * @param currContext
    * @param currBlockIt  all changes to instructions in curr block
    *    are made through this iterator, and it is rewound to the previous position
    *    before the function exits
@@ -901,7 +905,7 @@ public class WaitCoalescer implements OptimizerPass {
     Set<Continuation> movedC = new HashSet<Continuation>();
     // Rely on later forward Dataflow pass to remove
     // unneeded wait vars
-    
+
     /*
      * NOTE: instructions/ continuations retain the same relative
      * order they were in in the original block, this should help
@@ -917,9 +921,9 @@ public class WaitCoalescer implements OptimizerPass {
             logger.trace("Relocating " + ic.continuation().getType());
           relocated = relocateContinuation(ancestors, currBlock,
               currContext, movedC, ic.continuation());
-          
+
           break;
-        } 
+        }
         case INSTRUCTION:
           if (logger.isTraceEnabled())
             logger.trace("Relocating " + ic.instruction());
@@ -934,11 +938,11 @@ public class WaitCoalescer implements OptimizerPass {
     // Remove instructions from old block
     ancestorBlock.removeContinuations(movedC);
     ancestorBlock.removeStatements(movedI);
-    
+
     // Rewind iterator so that next instruction returned
     // will be the first one added
     ICUtil.rewindIterator(currBlockIt, movedI.size());
-    
+
     // Rebuild wait map to reflect changes
     updateWaiterMap(waitMap, movedC, movedI);
     return Pair.create(changed, movedC);
@@ -955,7 +959,7 @@ public class WaitCoalescer implements OptimizerPass {
         break;
       }
     }
-    
+
     if (currContext.isAnyWorkContext()) {
       if (cont.getType() != ContinuationType.WAIT_STATEMENT) {
         canRelocate = false;
@@ -964,7 +968,7 @@ public class WaitCoalescer implements OptimizerPass {
         // Make sure gets dispatched to right place
         if (w.getTarget().isAsync()) {
           canRelocate = true;
-          
+
           if (!w.getTarget().isDispatched()) {
             fixupNonDispatched(w, currContext);
           }
@@ -973,7 +977,7 @@ public class WaitCoalescer implements OptimizerPass {
         }
       }
     }
-    
+
     if (canRelocate) {
       currBlock.addContinuation(cont);
       movedC.add(cont);
@@ -992,10 +996,9 @@ public class WaitCoalescer implements OptimizerPass {
     if (!w.getTarget().canRunIn(currContext)) {
       w.setMode(WaitMode.TASK_DISPATCH);
       ExecContext targetCx = w.getTarget().targetContext();
-      assert(targetCx != null);
       w.setTarget(ExecTarget.dispatched(targetCx));
     }
-    
+
     // Check if we need to recurse
     if (!w.getTarget().isDispatched()) {
       replaceLocalControl(w.getBlock(), currContext);
@@ -1022,7 +1025,7 @@ public class WaitCoalescer implements OptimizerPass {
       Block currBlock,
       ListIterator<Statement> currBlockIt,
       Set<Instruction> movedI, Instruction inst) {
-    
+
     inst.setParent(currBlock);
     currBlockIt.add(inst);
     movedI.add(inst);
@@ -1062,7 +1065,7 @@ public class WaitCoalescer implements OptimizerPass {
           }
           break;
         default:
-          throw new STCRuntimeError("shouldn't get here, unexpected enum " + 
+          throw new STCRuntimeError("shouldn't get here, unexpected enum " +
                               ic.type());
         }
       }
@@ -1079,13 +1082,13 @@ public class WaitCoalescer implements OptimizerPass {
     }
   }
 
-  private static ListFactory<InstOrCont> LL_FACT = 
+  private static ListFactory<InstOrCont> LL_FACT =
                     new LinkedListFactory<InstOrCont>();
   private static MultiMap<Var, InstOrCont> buildWaiterMap(Program prog,
                                                           Block block) {
     // Use linked list to support more efficient removal in middle of list
     MultiMap<Var, InstOrCont> waitMap =
-                        new MultiMap<Var, InstOrCont>(LL_FACT); 
+                        new MultiMap<Var, InstOrCont>(LL_FACT);
     findRelocatableBlockingInstructions(prog, block, waitMap);
     findBlockingContinuations(block, waitMap);
     return waitMap;
@@ -1109,7 +1112,7 @@ public class WaitCoalescer implements OptimizerPass {
       if (stmt.type() != StatementType.INSTRUCTION) {
         continue; // Only interested in instructions
       }
-      
+
       Instruction inst = stmt.instruction();
       // check all outputs are non-alias futures - if not can't safely reorder
       boolean canMove = true;

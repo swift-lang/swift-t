@@ -29,10 +29,12 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.CompilerBackend;
 import exm.stc.common.Logging;
+import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.CompileTimeArgs;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
 import exm.stc.common.lang.Operators;
@@ -41,7 +43,6 @@ import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
-import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
@@ -80,76 +81,82 @@ public class ICInstructions {
 
   public static abstract class Instruction implements Statement {
     public final Opcode op;
-  
+
     public Instruction(Opcode op) {
       super();
       this.op = op;
     }
-    
 
+
+    @Override
     public StatementType type() {
       return StatementType.INSTRUCTION;
     }
+    @Override
     public Conditional conditional() {
       throw new STCRuntimeError("Not a conditional");
     }
+    @Override
     public Instruction instruction() {
       return this;
     }
-  
+
     /**
      * @return a short name for the operation used for human-readable
-     *        diagnostics 
+     *        diagnostics
      */
     public String shortOpName() {
       return op.toString().toLowerCase();
     }
-    
+
     @Override
     public void setParent(Block parent) {
       // Do nothing
     }
-   
+
     public void removeVars(Set<Var> removeVars) {
       // default impl: do nothing
     }
-  
+
     /**
      * Replace instruction variables according to mode
      * @param renames
      */
+    @Override
     public abstract void renameVars(String function, Map<Var, Arg> renames,
                                     RenameMode mode);
 
     @Override
     public abstract String toString();
-    
+
+    @Override
     public void prettyPrint(StringBuilder sb, String indent) {
       sb.append(indent);
       sb.append(this.toString());
       sb.append("\n");
     }
-  
+
+    @Override
     public abstract void generate(Logger logger, CompilerBackend gen,
             GenInfo info);
-  
-  
+
+
     /** List of variables the instruction reads */
     public abstract List<Arg> getInputs();
-  
+
     /** List of variables the instruction writes */
     public abstract List<Var> getOutputs();
-    
+
     public Arg getInput(int i) {
       return getInputs().get(i);
     }
-    
+
     public Var getOutput(int i) {
       return getOutputs().get(i);
     }
-  
+
     public abstract boolean hasSideEffects();
-  
+
     /**
      * @return true if it is safe to change timing relative
      * to other tasks (e.g. if it is necessary that it should
@@ -168,7 +175,7 @@ public class ICInstructions {
       }
       return false;
     }
-    
+
     /**
      * Class helping to specify how a variable should be handled when
      * making immediate
@@ -183,12 +190,12 @@ public class ICInstructions {
         this.preinitOutputMapping = initOutputMapping;
         this.acquireWriteRefs = acquireWriteRefs;
       }
-      
+
       public static MakeImmVar in(Var var, boolean fetch, boolean recursive,
                                    boolean acquireWriteRefs) {
         return new MakeImmVar(var, fetch, recursive, false, acquireWriteRefs);
       }
-      
+
       public static MakeImmVar out(Var var, boolean recursive, boolean initOutputMapping) {
         return new MakeImmVar(var, false, recursive, initOutputMapping, false);
       }
@@ -196,64 +203,64 @@ public class ICInstructions {
       public static final List<MakeImmVar> NONE = Collections.emptyList();;
 
       public final Var var;
-      
+
       /** For inputs, if we should fetch (otherwise just wait) */
       public final boolean fetch;
-      
+
       /** For inputs and outputs, if we should fetch recursively */
       public final boolean recursive;
-      
-      /** For outputs, whether output mapping should initialized 
+
+      /** For outputs, whether output mapping should initialized
        * before calling this instruction */
       public final boolean preinitOutputMapping;
-      
+
       /**
-       * For inputs that are refs, if write refcounts should be acquired 
+       * For inputs that are refs, if write refcounts should be acquired
        */
       public final boolean acquireWriteRefs;
-      
+
       @Override
       public String toString() {
         return var.name() + " fetch: " + fetch + " recursive: " + recursive +
-              " preinitOutputMapping: " + preinitOutputMapping + 
+              " preinitOutputMapping: " + preinitOutputMapping +
               " acquireWriteRefs: " + acquireWriteRefs;
       }
     }
-    
+
     public static class MakeImmRequest {
       /** Output variables to replace and store after changing instruction */
       public final List<MakeImmVar> out;
-      
+
       /** Input variables to fetch before changing instruction */
       public final List<MakeImmVar> in;
-      
+
       /** Where immediate code should run.  Default is local: in the current context */
       public final ExecTarget mode;
-      
+
       private static final ExecTarget DEFAULT_MODE = ExecTarget.nonDispatchedAny();
       private static final boolean DEFAULT_RECURSIVE = false;
       private static final boolean DEFAULT_PREINIT_OUTPUT_MAPPING = false;
       private static final boolean DEFAULT_ACQUIRE_WRITE_REFS = false;
-      
+
       public static MakeImmRequest fromVars(Var out, Var in) {
         return fromVars(out.asList(), in.asList());
       }
-      
+
       public static MakeImmRequest fromVars(Var out, List<Var> in) {
         return fromVars(out.asList(), in);
       }
-      
+
 
       public static MakeImmRequest fromVars(List<Var> out, Var in) {
         return fromVars(out, in.asList());
       }
-      
+
       public static MakeImmRequest fromVars(List<Var> out, List<Var> in) {
         return MakeImmRequest.fromVars(out, in, null, DEFAULT_MODE,
             DEFAULT_RECURSIVE, DEFAULT_PREINIT_OUTPUT_MAPPING,
             DEFAULT_ACQUIRE_WRITE_REFS);
       }
-      
+
       public static MakeImmRequest fromVars(List<Var> out,
           List<Var> in, ExecTarget mode) {
         return fromVars(out, in, null, mode,
@@ -268,7 +275,7 @@ public class ICInstructions {
              buildInList(in, wait, recursive, acquireWriteRefs),
              mode);
       }
-      
+
       public MakeImmRequest(List<MakeImmVar> out, List<MakeImmVar> in) {
         this(out, in, DEFAULT_MODE);
       }
@@ -308,7 +315,7 @@ public class ICInstructions {
       }
 
     }
-    
+
     /**
      * Interface to let instruction logic create variables
      */
@@ -320,11 +327,11 @@ public class ICInstructions {
       /** Optional: if the output variable of op changed */
       public final Var newOut;
       public final Var oldOut;
-      
+
       /** Whether caller should store output results */
       public final boolean storeOutputVals;
       public final Instruction newInsts[];
-      
+
       /**
        * If the output variable changed from reference to plain future
        * @param newOut
@@ -334,7 +341,7 @@ public class ICInstructions {
       public MakeImmChange(Var newOut, Var oldOut, Instruction newInst) {
         this(newOut, oldOut, new Instruction[] {newInst});
       }
-      
+
       /**
        * If the output variable changed from reference to plain future
        * @param newOut
@@ -344,7 +351,7 @@ public class ICInstructions {
       public MakeImmChange(Var newOut, Var oldOut, Instruction newInsts[]) {
         this(newOut, oldOut, newInsts, true);
       }
-      
+
       public MakeImmChange(Var newOut, Var oldOut, Instruction newInsts[],
           boolean storeOutputVals) {
         this.newOut = newOut;
@@ -352,7 +359,7 @@ public class ICInstructions {
         this.newInsts = newInsts;
         this.storeOutputVals = storeOutputVals;
       }
-      
+
       /**
        * If we're just changing the instruction
        * @param newInst
@@ -360,7 +367,7 @@ public class ICInstructions {
       public MakeImmChange(Instruction newInst) {
         this(null, null, newInst);
       }
-      
+
       /**
        * If we're just changing the instructions
        * @param newInsts
@@ -368,7 +375,7 @@ public class ICInstructions {
       public MakeImmChange(Instruction newInsts[]) {
         this(null, null, newInsts);
       }
-      
+
       public MakeImmChange(Instruction[] newInsts, boolean storeOutputVals) {
         this(null, null, newInsts, storeOutputVals);
       }
@@ -382,7 +389,7 @@ public class ICInstructions {
         return newOut == null;
       }
     }
-    
+
     public static class Fetched<V> {
       public Fetched(Var original, V fetched) {
         super();
@@ -391,12 +398,12 @@ public class ICInstructions {
       }
       public final Var original;
       public final V fetched;
-      
+
       /**
-       * 
+       *
        * @param original
        * @param fetched
-       * @param includeAll if true, all were fetched.  If false, check 
+       * @param includeAll if true, all were fetched.  If false, check
        *        fetched field of original
        * @return
        */
@@ -411,8 +418,8 @@ public class ICInstructions {
           fetched = Collections.emptyList();
         }
         assert(original.size() >= fetched.size());
-        
-        int j = 0; // fetched index 
+
+        int j = 0; // fetched index
         List<Fetched<T>> result = new ArrayList<Fetched<T>>(fetched.size());
         for (int i = 0; i < original.size(); i++) {
           MakeImmVar orig = original.get(i);
@@ -422,7 +429,7 @@ public class ICInstructions {
             j++;
           }
         }
-        
+
         // Check all were included
         assert(j == fetched.size()) : original + " " + fetched;
         return result;
@@ -444,7 +451,7 @@ public class ICInstructions {
         }
         return null;
       }
-      
+
       /**
        * Find fetched and cast to var if returned
        * @param fetched
@@ -453,16 +460,17 @@ public class ICInstructions {
        */
       public static Var findFetchedVar(Collection<Fetched<Arg>> fetched, Var v) {
         Arg res = findFetched(fetched, v);
-        return (res == null) ? null : res.getVar(); 
+        return (res == null) ? null : res.getVar();
       }
-      
+
+      @Override
       public String toString() {
         return "Fetched: " + original.toString() + " => " + fetched.toString();
       }
     }
-    
+
     /**
-     * 
+     *
      * @param closedVars variables closed at point of current instruction
      * @param closedLocations abstract locations closed at point of current
      *          instruction
@@ -500,27 +508,27 @@ public class ICInstructions {
      *        but all variables returned must be blocked on
      */
     public abstract List<Var> getBlockingInputs(Program prog);
-    
+
     /**
-     * This must return information about the execution mode of the 
+     * This must return information about the execution mode of the
      * instruction: whether it spawns asynchronous work and where it
      * expects to be run.
-     * @return execution mode of instruction 
+     * @return execution mode of instruction
      */
     public abstract ExecTarget execMode();
     /**
      * @return true if instruction is cheap: i.e. doesn't consume much CPU or IO
-     *        time so doesn't need to be run in parallel 
+     *        time so doesn't need to be run in parallel
      */
     public abstract boolean isCheap();
-    
+
     /**
      * @return true if instruction doesn't spawn or enable further work
      *           (e.g. by assigning future), so can be put off without problem
      */
     public abstract boolean isProgressEnabling();
 
-   
+
     /**
      * @return List of outputs closed immediately after instruction returns
      */
@@ -534,7 +542,7 @@ public class ICInstructions {
     public List<Var> getPiecewiseAssignedOutputs() {
       return Var.NONE;
     }
-    
+
     public static enum InitType {
       PARTIAL, // In case multiple init instructions are needed
       FULL;    // If this fully initializes variable
@@ -545,7 +553,7 @@ public class ICInstructions {
     public List<Pair<Var, InitType>> getInitialized() {
       return Collections.emptyList();
     }
-    
+
     /**
      * Return true if var is initialized by instruction
      * @param var
@@ -559,7 +567,7 @@ public class ICInstructions {
       }
       return false;
     }
-    
+
     /**
      * @return list of output variables that are actually modified
      *      typically this is all outputs, but in some special cases
@@ -570,7 +578,7 @@ public class ICInstructions {
     public List<Var> getModifiedOutputs() {
       return this.getOutputs();
     }
-    
+
     /**
      * Specify more granular information about effect of instruction on
      * output variable.  If this returns non-null, it overrides info in
@@ -581,7 +589,7 @@ public class ICInstructions {
     public List<Component> getModifiedComponents() {
       return null;
     }
-    
+
     /**
      * @param fns map of functions (can optionally be null)
      * @return list of outputs for which previous value is read
@@ -589,7 +597,7 @@ public class ICInstructions {
     public List<Var> getReadOutputs(Map<String, Function> fns) {
       return Var.NONE;
     }
-    
+
     public final List<Var> getReadOutputs() {
       return getReadOutputs(null);
     }
@@ -601,21 +609,22 @@ public class ICInstructions {
     public TaskProps getTaskProps() {
       return null;
     }
-    
+
     /**
      * @return a list of all values computed by expression.  Each ComputedValue
-     *        returned should have the out field set so we know where to find 
-     *        it 
+     *        returned should have the out field set so we know where to find
+     *        it
      */
     public abstract List<ValLoc> getResults();
-    
+
     @Override
     public Statement cloneStatement() {
       return clone();
     }
-    
+
+    @Override
     public abstract Instruction clone();
-    
+
     /**
      * @return vars with refcounts to be incremented: (read, write)
      *         NOTE: can include repeats
@@ -633,20 +642,20 @@ public class ICInstructions {
                         Map<String, Function> functions) {
       return Pair.create(VarCount.NONE, VarCount.NONE);
     }
-    
+
     /**
      * Try to piggyback increments or decrements to instruction.
      * Repeatedly called until it returns null;
      * @param increments count of increment or decrement operations per var
      * @param type
-     * @return null if not successful, var for which piggyback occurred and change 
+     * @return null if not successful, var for which piggyback occurred and change
      *        (-ive if decrement)
-     *          
+     *
      */
     public VarCount tryPiggyback(RefCountsToPlace increments, RefCountType type) {
       return null;
     }
-    
+
     /**
      * Return list of all aliases created by function
      * @return
@@ -682,39 +691,39 @@ public class ICInstructions {
       super(Opcode.COMMENT);
       this.text = text;
     }
-  
+
     @Override
     public String toString() {
       return "# " + text;
     }
-  
+
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       gen.addComment(text);
     }
-  
+
     @Override
     public void renameVars(String function, Map<Var, Arg> renames, RenameMode mode) {
       // Don't do anything
     }
-  
+
     @Override
     public List<Arg> getInputs() {
       return new ArrayList<Arg>(0);
     }
-  
+
     @Override
     public List<Var> getOutputs() {
       return new ArrayList<Var>(0);
     }
-  
+
     @Override
     public boolean hasSideEffects() {
       return false;
     }
 
     @Override
-    public MakeImmRequest canMakeImmediate(Set<Var> closedVars, 
+    public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
         Set<ArgCV> closedLocations, Set<Var> valueAvail, boolean waitForClose) {
       return null;
     }
@@ -743,25 +752,25 @@ public class ICInstructions {
     public boolean isCheap() {
       return true;
     }
-    
+
     @Override
     public boolean isProgressEnabling() {
       return false;
     }
-    
+
   }
 
   // Maximum number of array element CVs to insert
   public static final long MAX_ARRAY_ELEM_CVS = 128L;
-  
+
   public static abstract class CommonFunctionCall extends Instruction {
     protected final String functionName;
     protected final List<Var> outputs;
     protected final List<Arg> inputs;
     protected final TaskProps props;
-    
+
     private final boolean hasUpdateableInputs;
-    
+
     public CommonFunctionCall(Opcode op, String functionName,
         List<Var> outputs, List<Arg> inputs, TaskProps props) {
       super(op);
@@ -769,9 +778,9 @@ public class ICInstructions {
       this.outputs = new ArrayList<Var>(outputs);
       this.inputs = new ArrayList<Arg>(inputs);
       this.props = props;
-      
 
-      boolean hasUpdateableInputs = false; 
+
+      boolean hasUpdateableInputs = false;
       for(Arg v: inputs) {
         assert(v != null);
         if (v.isVar() && Types.isScalarUpdateable(v.getVar())) {
@@ -784,7 +793,7 @@ public class ICInstructions {
     public String functionName() {
       return functionName;
     }
-    
+
     /**
     * @return function input arguments
     */
@@ -796,7 +805,7 @@ public class ICInstructions {
     public Arg getFunctionInput(int i) {
       return inputs.get(i);
     }
-    
+
     /**
     * @return function output arguments
     */
@@ -808,7 +817,7 @@ public class ICInstructions {
     public Var getFunctionOutput(int i) {
       return outputs.get(i);
     }
-    
+
     @Override
     public List<Arg> getInputs() {
       List<Arg> inputVars = new ArrayList<Arg>(inputs);
@@ -869,7 +878,7 @@ public class ICInstructions {
     @Override
     public List<Var> getReadOutputs(Map<String, Function> fns) {
       switch (op) {
-        case CALL_FOREIGN: 
+        case CALL_FOREIGN:
         case CALL_FOREIGN_LOCAL: {
           List<Var> res = new ArrayList<Var>();
           // Only some output types might be read
@@ -909,18 +918,18 @@ public class ICInstructions {
       }
     }
 
-    
+
     @Override
     public String shortOpName() {
       return op.toString().toLowerCase() + "-" + functionName;
     }
-    
+
     @Override
     public TaskProps getTaskProps() {
       // Return null if not found
       return props;
     }
-    
+
     /**
      * @param fnCallOp
      * @return true if arguments should be local values
@@ -939,7 +948,7 @@ public class ICInstructions {
           throw new STCRuntimeError("Unexpected op: " + fnCallOp);
       }
     }
-    
+
     private boolean isCopyFunction() {
       if (ForeignFunctions.isCopyFunction(functionName)) {
         return true;
@@ -954,7 +963,7 @@ public class ICInstructions {
     public boolean hasSideEffects() {
       return (!ForeignFunctions.isPure(functionName));
     }
-    
+
     @Override
     public List<ValLoc> getResults() {
       if (ForeignFunctions.isPure(functionName)) {
@@ -975,9 +984,9 @@ public class ICInstructions {
               Collections.sort(cvArgs);
             }
             cvArgs.add(Arg.createIntLit(output)); // Disambiguate outputs
-            
-            res.add(ValLoc.buildResult(this.op, 
-                canonicalFunctionName, cvArgs, 
+
+            res.add(ValLoc.buildResult(this.op,
+                canonicalFunctionName, cvArgs,
                 getOutput(output).asArg(), outputClosed, IsAssign.TO_LOCATION));
           }
           addSpecialCVs(res);
@@ -1022,7 +1031,7 @@ public class ICInstructions {
     public boolean isImpl(SpecialFunction ...specials) {
       return isImpl(this.functionName, specials);
     }
-    
+
     public static boolean isImpl(String functionName,
                                  SpecialFunction ...specials) {
       for (SpecialFunction special: specials) {
@@ -1035,8 +1044,8 @@ public class ICInstructions {
 
     private void addRangeCVs(List<ValLoc> cvs) {
       boolean allValues = true;
-      long start = 0, end = 0, step = 1; 
-      
+      long start = 0, end = 0, step = 1;
+
       if (getInput(0).isIntVal()) {
         start = getInput(0).getIntLit();
       } else {
@@ -1055,7 +1064,7 @@ public class ICInstructions {
         }
       }
       if (allValues) {
-        // We can work out array contents 
+        // We can work out array contents
         long arrSize = Math.max(0, (end - start) / step + 1);
         Var arr = getOutput(0);
         cvs.add(ValLoc.makeContainerSizeCV(arr, Arg.createIntLit(arrSize),
@@ -1064,7 +1073,7 @@ public class ICInstructions {
         int max_elems = 64;
         for (long val = start, key = 0;
                   val <= end && key < max_elems;
-                  val += step, key++) { 
+                  val += step, key++) {
           cvs.add(ValLoc.makeArrayResult(arr, Arg.createIntLit(key),
                       Arg.createIntLit(val), true, IsAssign.TO_VALUE));
         }
@@ -1082,7 +1091,7 @@ public class ICInstructions {
       return ValLoc.makeContainerSizeCV(getInput(0).getVar(),
                       getOutput(0).asArg(), isFuture, isAssign);
     }
-    
+
 
     private ValLoc makeArrayContainsCV(IsAssign isAssign) {
       boolean isFuture;
@@ -1095,7 +1104,7 @@ public class ICInstructions {
       return ValLoc.makeArrayContainsCV(getInput(0).getVar(), getInput(1),
                       getOutput(0).asArg(), isFuture, isAssign);
     }
-    
+
     /**
      * Check if we should try to constant fold. To enable constant
      * folding for a funciton it needs ot have an entry here and
@@ -1106,7 +1115,7 @@ public class ICInstructions {
     public static boolean canConstantFold(ComputedValue<?> cv) {
       return isImpl((String)cv.subop(), SpecialFunction.ARGV);
     }
-    
+
     /**
      * Try to constant fold any special functions.
      * @param cv
@@ -1138,7 +1147,7 @@ public class ICInstructions {
         ICUtil.replaceArgValsInMap(renames, props);
       }
     }
-    
+
     private boolean treatUpdInputsAsOutputs() {
       return hasUpdateableInputs && RefCounting.WRITABLE_UPDATEABLE_INARGS;
     }
@@ -1146,7 +1155,7 @@ public class ICInstructions {
     @Override
     public Pair<List<VarCount>, List<VarCount>> inRefCounts(
                             Map<String, Function> functions) {
-      switch (op) { 
+      switch (op) {
         case CALL_FOREIGN:
         case CALL_FOREIGN_LOCAL:
         case CALL_CONTROL:
@@ -1173,10 +1182,10 @@ public class ICInstructions {
             }
             boolean readRC = false;
             if (op != Opcode.CALL_FOREIGN &&
-                op != Opcode.CALL_FOREIGN_LOCAL) {              
+                op != Opcode.CALL_FOREIGN_LOCAL) {
               Function f = functions.get(this.functionName);
               boolean writeOnly = f.isOutputWriteOnly(i);
-              
+
               // keep read references to output vars
               if (!writeOnly && RefCounting.trackReadRefCount(outVar)) {
                 readRC = true;
@@ -1196,10 +1205,10 @@ public class ICInstructions {
       }
     }
   }
-  
+
   public static class FunctionCall extends CommonFunctionCall {
     private final List<Boolean> closedInputs; // which inputs are closed
-  
+
     private FunctionCall(Opcode op, String functionName,
         List<Var> outputs, List<Arg> inputs, TaskProps props) {
       super(op, functionName, outputs, inputs, props);
@@ -1214,12 +1223,12 @@ public class ICInstructions {
         this.closedInputs.add(false);
       }
       assert(props != null);
-      
+
       for(Var v: outputs) {
         assert(v != null);
       }
     }
-    
+
     public static FunctionCall createFunctionCall(
         String functionName, List<Var> outputs, List<Arg> inputs,
         ExecTarget mode, TaskProps props) {
@@ -1232,7 +1241,7 @@ public class ICInstructions {
         assert(targetCx != null && targetCx.isControlContext()) : mode;
         op = Opcode.CALL_CONTROL;
       } else {
-        if (targetCx == null) {
+        if (targetCx.isWildcardContext()) {
           op = Opcode.CALL_LOCAL;
         } else if (targetCx.isControlContext()) {
           op = Opcode.CALL_LOCAL_CONTROL;
@@ -1242,14 +1251,14 @@ public class ICInstructions {
       }
       return new FunctionCall(op, functionName, outputs, inputs, props);
     }
-  
+
     public static FunctionCall createBuiltinCall(
         String functionName, List<Var> outputs, List<Arg> inputs,
         TaskProps props) {
       return new FunctionCall(Opcode.CALL_FOREIGN, functionName,
           outputs, inputs, props);
     }
-  
+
     @Override
     public String toString() {
       String result = op.toString().toLowerCase() + " " + functionName;
@@ -1262,13 +1271,13 @@ public class ICInstructions {
         result += " " + v.toString();
       }
       result += " ]";
-      
+
       result += ICUtil.prettyPrintProps(props);
-      
+
       result += " closed=" + closedInputs;
       return result;
     }
-  
+
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       switch(this.op) {
@@ -1286,7 +1295,7 @@ public class ICInstructions {
         for (int i = 0; i < inputs.size(); i++) {
           needToBlock.add(blocking.get(i) && (!this.closedInputs.get(i)));
         }
-                           
+
         gen.functionCall(functionName, outputs, inputs, needToBlock,
                                             execMode(), props);
         break;
@@ -1294,7 +1303,7 @@ public class ICInstructions {
         throw new STCRuntimeError("Huh?");
       }
     }
- 
+
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
         Set<ArgCV> closedLocations, Set<Var> valueAvail, boolean waitForClose) {
@@ -1311,16 +1320,16 @@ public class ICInstructions {
         }
         return null;
       }
-      
+
       // By default, need all arguments to be closed
-      boolean allNeededClosed = waitForClose || 
+      boolean allNeededClosed = waitForClose ||
           (allInputsClosed(closedVars) &&
               allOutputSideChannelsClosed(closedVars, closedLocations));
-      
+
       if (allNeededClosed && (ForeignFunctions.hasOpEquiv(this.functionName)
                 || ForeignFunctions.hasLocalImpl(this.functionName))) {
         ExecTarget mode = ForeignFunctions.getTaskMode(this.functionName);
-        
+
         // True unless the function alters mapping itself
         boolean preinitOutputMapping = true;
         if (isImpl(SpecialFunction.INITS_OUTPUT_MAPPING)) {
@@ -1338,7 +1347,7 @@ public class ICInstructions {
       }
       return null;
     }
-    
+
     private boolean allInputsClosed(Set<Var> closedVars) {
       for (int i = 0; i < this.inputs.size(); i++) {
         if (!inputClosed(closedVars, i)) {
@@ -1382,7 +1391,7 @@ public class ICInstructions {
 
     @Override
     public MakeImmChange makeImmediate(VarCreator creator,
-                                       List<Fetched<Var>> outVars, 
+                                       List<Fetched<Var>> outVars,
                                        List<Fetched<Arg>> values) {
       if (isImpl(SpecialFunction.SIZE)) {
         // Don't use fetched array value
@@ -1397,8 +1406,8 @@ public class ICInstructions {
         Arg key = Fetched.findFetched(values, keyFuture);
         return new MakeImmChange(TurbineOp.arrayContains(newOut, arr, key));
       }
-    
-      
+
+
       // Discard non-future inputs.  These are things like priorities or
       // targets which do not need to be retained for the local version
       List<Var> retainedInputs = varInputs(true);
@@ -1409,7 +1418,7 @@ public class ICInstructions {
       if (ForeignFunctions.hasOpEquiv(functionName)) {
         BuiltinOpcode newOp = ForeignFunctions.getOpEquiv(functionName);
         assert(newOp != null);
-        
+
         if (outputs.size() == 1) {
           checkSwappedOutput(outputs.get(0), outVars.get(0).fetched);
           inst = Builtin.createLocal(newOp, outVars.get(0).fetched,
@@ -1462,7 +1471,7 @@ public class ICInstructions {
         return Var.NONE;
       } else if (op == Opcode.CALL_CONTROL ) {
         Function f = prog.lookupFunction(this.functionName);
-        
+
         List<Boolean> blocking = f.getBlockingInputVector();
         List<Var> blockingVars = new ArrayList<Var>();
         assert(blocking.size() == inputs.size());
@@ -1477,8 +1486,8 @@ public class ICInstructions {
       }
       return blocksOn;
     }
-    
-      
+
+
     /**
      * Returns true if we recursively pack and unpack inputs and outputs for
      * this type of function call if converting to local version
@@ -1508,7 +1517,9 @@ public class ICInstructions {
     public ExecTarget execMode() {
       switch (op) {
         case CALL_SYNC:
-          return ExecTarget.syncControl();
+          return Settings.SEPARATE_TURBINE_ENGINE ?
+                 ExecTarget.syncControl() :
+                 ExecTarget.syncAny();
         case CALL_LOCAL:
           return ExecTarget.nonDispatchedAny();
         case CALL_LOCAL_CONTROL:
@@ -1533,46 +1544,46 @@ public class ICInstructions {
         return true;
       }
     }
-    
+
     @Override
     public boolean isProgressEnabling() {
       return true; // Function may have side-effects, etc
     }
-    
+
     @Override
     public Instruction clone() {
       // Variables are immutable so just need to clone lists
-      return new FunctionCall(op, functionName, 
+      return new FunctionCall(op, functionName,
           new ArrayList<Var>(outputs), new ArrayList<Arg>(inputs),
           props.clone());
     }
   }
-  
+
   public static class LocalFunctionCall extends CommonFunctionCall {
-  
+
     public LocalFunctionCall(String functionName,
         List<Arg> inputs, List<Var> outputs) {
-      super(Opcode.CALL_FOREIGN_LOCAL, functionName, 
+      super(Opcode.CALL_FOREIGN_LOCAL, functionName,
             outputs, inputs, null);
       for(Var v: outputs) {
         assert(v != null);
       }
-      
+
       for(Arg a: inputs) {
         assert(a != null);
       }
     }
-  
+
     @Override
     public String toString() {
       return formatFunctionCall(op, functionName, outputs, inputs);
     }
-  
+
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       gen.callForeignFunctionLocal(functionName, outputs, inputs);
     }
-    
+
     @SuppressWarnings("unchecked")
     @Override
     public List<Pair<Var, InitType>> getInitialized() {
@@ -1582,7 +1593,7 @@ public class ICInstructions {
       }
       return Collections.emptyList();
     }
-    
+
     @Override
     public MakeImmRequest canMakeImmediate(Set<Var> closedVars,
         Set<ArgCV> closedLocations, Set<Var> valueAvail, boolean waitForClose) {
@@ -1598,11 +1609,11 @@ public class ICInstructions {
     @Override
     public ExecTarget execMode() {
       ExecTarget fnMode = ForeignFunctions.getTaskMode(functionName);
-      
+
       // Executes synchronously in desired context
       return ExecTarget.sync(fnMode.targetContext());
     }
-    
+
     @Override
     public boolean isCheap() {
       ExecTarget fnMode = ForeignFunctions.getTaskMode(functionName);
@@ -1610,13 +1621,13 @@ public class ICInstructions {
       // non-locally must involve some amount of work.
       return !fnMode.isDispatched();
     }
-    
+
     @Override
     public boolean isProgressEnabling() {
       // Only assigns value
       return false;
     }
-    
+
     @Override
     public List<Var> getClosedOutputs() {
       if (isImpl(SpecialFunction.RANGE) ||
@@ -1630,11 +1641,11 @@ public class ICInstructions {
     @Override
     public Instruction clone() {
       // Variables are immutable so just need to clone lists
-      return new LocalFunctionCall(functionName, 
+      return new LocalFunctionCall(functionName,
           new ArrayList<Arg>(inputs), new ArrayList<Var>(outputs));
     }
   }
-  
+
   public static class RunExternal extends Instruction {
     private final String cmd;
     private final ArrayList<Arg> inFiles;
@@ -1643,8 +1654,8 @@ public class ICInstructions {
     private final Redirects<Arg> redirects;
     private final boolean hasSideEffects;
     private final boolean deterministic;
-    
-    public RunExternal(String cmd, List<Arg> inFiles, List<Var> outFiles, 
+
+    public RunExternal(String cmd, List<Arg> inFiles, List<Var> outFiles,
                List<Arg> args, Redirects<Arg> redirects,
                boolean hasSideEffects, boolean deterministic) {
       super(Opcode.RUN_EXTERNAL);
@@ -1680,7 +1691,7 @@ public class ICInstructions {
       res.append(" infiles=[");
       ICUtil.prettyPrintArgList(res, inFiles);
       res.append("]");
-      
+
       res.append(" outfiles=[");
       ICUtil.prettyPrintVarList(res, outFiles);
       res.append("]");
@@ -1689,7 +1700,7 @@ public class ICInstructions {
 
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
-      gen.runExternal(cmd, args, outFiles, inFiles, 
+      gen.runExternal(cmd, args, outFiles, inFiles,
                   redirects, hasSideEffects, deterministic);
     }
 
@@ -1734,7 +1745,7 @@ public class ICInstructions {
     @Override
     public List<Var> getBlockingInputs(Program prog) {
       // This instruction runs immediately: we won't actually block on any inputs
-      
+
       // However, the compiler should act as if we depend on input file vars
       return ICUtil.extractVars(inFiles);
     }
@@ -1748,12 +1759,12 @@ public class ICInstructions {
     public boolean isCheap() {
       return false;
     }
-    
+
     @Override
     public boolean isProgressEnabling() {
       return false;
     }
-    
+
     @Override
     public List<Var> getClosedOutputs() {
       return getOutputs();
@@ -1785,16 +1796,16 @@ public class ICInstructions {
       return new RunExternal(cmd, inFiles, outFiles,
               args, redirects, hasSideEffects, deterministic);
     }
-    
+
   }
-  
+
   public static class LoopContinue extends Instruction {
     private final ArrayList<Arg> newLoopVars;
     private final ArrayList<Var> loopUsedVars;
     private final ArrayList<Boolean> blockingVars;
     private final ArrayList<Boolean> closedVars;
 
-    public LoopContinue(List<Arg> newLoopVars, 
+    public LoopContinue(List<Arg> newLoopVars,
                         List<Var> loopUsedVars,
                         List<Boolean> blockingVars,
                         List<Boolean> closedVars) {
@@ -1804,9 +1815,9 @@ public class ICInstructions {
       this.blockingVars = new ArrayList<Boolean>(blockingVars);
       this.closedVars = new ArrayList<Boolean>(closedVars);
     }
-    
 
-    public LoopContinue(List<Arg> newLoopVars, 
+
+    public LoopContinue(List<Arg> newLoopVars,
                         List<Var> loopUsedVars,
                         List<Boolean> blockingVars) {
       this(newLoopVars, loopUsedVars, blockingVars,
@@ -1829,7 +1840,7 @@ public class ICInstructions {
     public void setBlocking(int i, boolean b) {
       this.blockingVars.set(i, b);
     }
-    
+
     @Override
     public void renameVars(String function, Map<Var, Arg> renames, RenameMode mode) {
       ICUtil.replaceArgsInList(renames, newLoopVars, false);
@@ -1860,13 +1871,13 @@ public class ICInstructions {
       sb.append("]");
       return sb.toString();
     }
-  
+
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       List<Boolean> waitFor = new ArrayList<Boolean>(this.blockingVars.size());
       // See if we need to block on all inputs
       Set<Var> alreadySeen = new HashSet<Var>();
-      
+
       for (int i = 0; i < this.blockingVars.size(); i++) {
         // Add those that we need to wait for and that aren't closed
         Arg initVal = this.newLoopVars.get(i);
@@ -1880,11 +1891,11 @@ public class ICInstructions {
       }
       gen.loopContinue(this.newLoopVars, this.loopUsedVars, waitFor);
     }
-  
+
     public Arg getNewLoopVar(int i) {
       return newLoopVars.get(i);
     }
-    
+
     @Override
     public List<Arg> getInputs() {
       // need to make sure that these variables are avail in scope
@@ -1892,23 +1903,23 @@ public class ICInstructions {
       for (Arg v: newLoopVars) {
         res.add(v);
       }
-      
+
       for (Var uv: loopUsedVars) {
         Arg uva = uv.asArg();
         if (!res.contains(uva)) {
           res.add(uva);
         }
       }
-      
+
       return res;
     }
-  
+
     @Override
     public List<Var> getOutputs() {
       // No outputs
       return new ArrayList<Var>(0);
     }
-  
+
     @Override
     public boolean hasSideEffects() {
       return true;
@@ -1919,14 +1930,14 @@ public class ICInstructions {
         Set<ArgCV> closedLocations, Set<Var> valueAvail, boolean waitForClose) {
       // Variables we need to wait for to make immediate
       List<Var> waitForInputs = new ArrayList<Var>();
-      
+
       for (int i = 0; i < this.newLoopVars.size(); i++) {
         Arg v = this.newLoopVars.get(i);
         if (v.isConstant() || closedVars.contains(v.getVar())) {
           // Mark as closed
           this.closedVars.set(i, true);
         }
-        
+
         if (this.blockingVars.get(i)) {
           if (this.closedVars.get(i)) {
             // TODO: if we were actually changing instruction,
@@ -1936,10 +1947,10 @@ public class ICInstructions {
           } else if (waitForClose && v.isVar()) {
               // Would be nice to have closed
               waitForInputs.add(v.getVar());
-          } 
+          }
         }
       }
-      
+
       // TODO: not actually changing instruction - only change if
       //      there are additional things we want to wait for
       if (waitForInputs.isEmpty()) {
@@ -1950,7 +1961,7 @@ public class ICInstructions {
                 ExecTarget.nonDispatchedAny());
       }
     }
-    
+
     @Override
     public MakeImmChange makeImmediate(VarCreator creator,
         List<Fetched<Var>> outVals,
@@ -1976,7 +1987,7 @@ public class ICInstructions {
     public List<Var> getBlockingInputs(Program prog) {
       return Var.NONE;
     }
-    
+
 
     public boolean isLoopVarClosed(int i) {
       return closedVars.get(i);
@@ -1997,20 +2008,20 @@ public class ICInstructions {
     public boolean isCheap() {
       return true;
     }
-    
+
     @Override
     public boolean isProgressEnabling() {
       return true;
     }
-    
+
     public void setLoopUsedVars(Collection<Var> variables) {
       //System.err.println(this + " USED VARS CHANGE: " + loopUsedVars + " => " + variables);
       //new Exception().printStackTrace();
-      
+
       loopUsedVars.clear();
       loopUsedVars.addAll(variables);
     }
-    
+
     @Override
     public List<ValLoc> getResults() {
       // Nothing
@@ -2024,7 +2035,7 @@ public class ICInstructions {
     }
 
   }
-  
+
   public static class LoopBreak extends Instruction {
     /**
      * Variables where refcount should be decremented upon loop termination
@@ -2035,13 +2046,13 @@ public class ICInstructions {
      * Variables to be closed upon loop termination
      */
     private final ArrayList<Var> keepOpenVars;
-  
+
     public LoopBreak(List<PassedVar> loopUsedVars, List<Var> keepOpenVars) {
       super(Opcode.LOOP_BREAK);
       this.loopUsedVars = new ArrayList<PassedVar>(loopUsedVars);
       this.keepOpenVars = new ArrayList<Var>(keepOpenVars);
     }
-  
+
     @Override
     public void renameVars(String function, Map<Var, Arg> renames, RenameMode mode) {
       // do nothing
@@ -2050,11 +2061,11 @@ public class ICInstructions {
     public List<PassedVar> getLoopUsedVars() {
       return Collections.unmodifiableList(loopUsedVars);
     }
-    
+
     public List<Var> getKeepOpenVars() {
       return Collections.unmodifiableList(keepOpenVars);
     }
-    
+
     public void setLoopUsedVars(Collection<PassedVar> passedVars) {
       this.loopUsedVars.clear();
       this.loopUsedVars.addAll(passedVars);
@@ -2065,7 +2076,7 @@ public class ICInstructions {
       this.keepOpenVars.addAll(keepOpen);
     }
 
-    
+
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder();
@@ -2079,22 +2090,22 @@ public class ICInstructions {
       sb.append(']');
       return sb.toString();
     }
-  
+
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       gen.loopBreak(PassedVar.extractVars(loopUsedVars), keepOpenVars);
     }
-  
+
     @Override
     public List<Arg> getInputs() {
       return new ArrayList<Arg>(0);
     }
-  
+
     @Override
     public List<Var> getOutputs() {
       return new ArrayList<Var>(0);
     }
-  
+
     @Override
     public boolean hasSideEffects() {
       return true;
@@ -2105,7 +2116,7 @@ public class ICInstructions {
         Set<ArgCV> closedLocations, Set<Var> valueAvail, boolean waitForClose) {
       return null;
     }
-   
+
     @Override
     public List<Var> getBlockingInputs(Program prog) {
       return Var.NONE;
@@ -2115,24 +2126,24 @@ public class ICInstructions {
     public ExecTarget execMode() {
       return ExecTarget.syncAny();
     }
-    
+
     @Override
     public boolean isCheap() {
       return true;
     }
-    
+
     @Override
     public boolean isProgressEnabling() {
       // ending loop might allow vars to be closed
       return !keepOpenVars.isEmpty();
     }
-   
+
     @Override
     public List<ValLoc> getResults() {
       // nothing
       return null;
     }
-    
+
 
     @Override
     public Pair<List<VarCount>, List<VarCount>> outRefCounts(
@@ -2158,7 +2169,7 @@ public class ICInstructions {
       return new LoopBreak(loopUsedVars, keepOpenVars);
     }
   }
-  
+
   /**
    * Builtin operation.  Depending on the opcode (LOCAL_OP or ASYNC_OP),
    * it applied to and returns local value variables or futures.
@@ -2166,12 +2177,12 @@ public class ICInstructions {
    */
   public static class Builtin extends Instruction {
     public final BuiltinOpcode subop;
-    
+
     private Var output; // null if no output
     private List<Arg> inputs;
     private final TaskProps props; // only defined for async
 
-    private Builtin(Opcode op, BuiltinOpcode subop, Var output, 
+    private Builtin(Opcode op, BuiltinOpcode subop, Var output,
           List<Arg> inputs, TaskProps props) {
       super(op);
       if (op == Opcode.LOCAL_OP) {
@@ -2185,30 +2196,30 @@ public class ICInstructions {
       this.inputs = new ArrayList<Arg>(inputs);
       this.props = props;
     }
-    
+
 
     @Override
     public String shortOpName() {
       return op.toString().toLowerCase() + "-" + subop.toString().toLowerCase();
     }
-    
-    public static Builtin createLocal(BuiltinOpcode subop, Var output, 
+
+    public static Builtin createLocal(BuiltinOpcode subop, Var output,
         Arg input) {
       return new Builtin(Opcode.LOCAL_OP, subop, output, Arrays.asList(input),
                           null);
     }
-    
-    public static Builtin createLocal(BuiltinOpcode subop, Var output, 
+
+    public static Builtin createLocal(BuiltinOpcode subop, Var output,
         List<Arg> inputs) {
       return new Builtin(Opcode.LOCAL_OP, subop, output, inputs, null);
     }
-    
-    public static Builtin createAsync(BuiltinOpcode subop, Var output, 
+
+    public static Builtin createAsync(BuiltinOpcode subop, Var output,
         List<Arg> inputs, TaskProps props) {
       return new Builtin(Opcode.ASYNC_OP, subop, output, inputs, props);
     }
 
-    public static Builtin createAsync(BuiltinOpcode subop, Var output, 
+    public static Builtin createAsync(BuiltinOpcode subop, Var output,
         List<Arg> inputs) {
       return createAsync(subop, output, inputs, new TaskProps());
     }
@@ -2226,10 +2237,10 @@ public class ICInstructions {
       if (props != null) {
         ICUtil.replaceArgValsInMap(renames, props);
       }
-      
+
       // After we replace values, see if we can check assert
-      if (op == Opcode.LOCAL_OP && 
-          (this.subop == BuiltinOpcode.ASSERT || 
+      if (op == Opcode.LOCAL_OP &&
+          (this.subop == BuiltinOpcode.ASSERT ||
           this.subop == BuiltinOpcode.ASSERT_EQ)) {
         compileTimeAssertCheck(subop, this.inputs, functionName);
       }
@@ -2283,7 +2294,7 @@ public class ICInstructions {
         return new ArrayList<Var>(0);
       }
     }
-    
+
     @Override
     public boolean hasSideEffects() {
       return Operators.isImpure(subop);
@@ -2291,7 +2302,7 @@ public class ICInstructions {
 
     private static void compileTimeAssertCheck(BuiltinOpcode subop2,
         List<Arg> inputs, String enclosingFnName) {
-      
+
       List<Arg> inputVals = new ArrayList<Arg>(inputs.size());
       // Check that all inputs are available
       for (Arg input: inputs) {
@@ -2302,19 +2313,19 @@ public class ICInstructions {
           return;
         }
       }
-      
-      
+
+
       if (subop2 == BuiltinOpcode.ASSERT) {
         Arg cond = inputVals.get(0);
-        
+
         assert(cond.isBoolVal());
         if(!cond.getBoolLit()) {
-          compileTimeAssertWarn(enclosingFnName, 
+          compileTimeAssertWarn(enclosingFnName,
               "constant condition evaluated to false", inputs.get(1));
         }
       } else {
         assert(subop2 == BuiltinOpcode.ASSERT_EQ);
-        
+
         Arg a1 = inputVals.get(0);
         Arg a2 = inputVals.get(1);
         assert(a1.isConstant()) : a1 + " " + a1.getKind();
@@ -2337,9 +2348,9 @@ public class ICInstructions {
       } else {
         errMessage = "<RUNTIME ERROR MESSAGE>";
       }
-        
+
       Logging.uniqueWarn("Assertion in function " + enclosingFnName +
-          " with error message \"" + errMessage + 
+          " with error message \"" + errMessage +
           "\" will fail at runtime because " + reason);
     }
 
@@ -2353,13 +2364,13 @@ public class ICInstructions {
         boolean waitForClose) {
       if (op == Opcode.LOCAL_OP) {
         // already is immediate
-        return null; 
-      } else { 
+        return null;
+      } else {
         assert(op == Opcode.ASYNC_OP);
         if (!hasLocalVersion(subop)) {
           return null;
         }
-        
+
         // See which arguments are closed
         if (!waitForClose) {
           for (Arg inarg: this.inputs) {
@@ -2381,10 +2392,10 @@ public class ICInstructions {
             return null;
           }
         }
-      
+
           // All args are closed!
         return MakeImmRequest.fromVars(
-            (this.output == null) ? 
+            (this.output == null) ?
                   null : Collections.singletonList(this.output),
             ICUtil.extractVars(this.inputs), Var.NONE,
             ExecTarget.nonDispatchedAny(), false, preinitOutputMapping, false);
@@ -2443,13 +2454,13 @@ public class ICInstructions {
         return ExecTarget.syncAny();
       }
     }
-    
+
     @Override
     public boolean isCheap() {
       // Ops are generally cheap
       return true;
     }
-    
+
     @Override
     public boolean isProgressEnabling() {
       if (op == Opcode.ASYNC_OP) {
@@ -2459,14 +2470,14 @@ public class ICInstructions {
         return false;
       }
     }
-    
+
     @Override
     public List<ValLoc> getResults() {
       if (this.hasSideEffects()) {
         // Two invocations of this aren't equivalent
         return null;
       }
-      
+
       ValLoc basic = makeBasicComputedValue();
       if (basic != null) {
         return basic.asList();
@@ -2506,7 +2517,7 @@ public class ICInstructions {
           cvInputs = this.inputs;
           cvOp = subop;
         }
-        
+
         return ValLoc.buildResult(this.op, cvOp, cvInputs,
                                 this.output.asArg(), outputClosed(op),
                                 IsAssign.TO_LOCATION);
@@ -2590,8 +2601,8 @@ public class ICInstructions {
             src.type().typeName() + " is not known yet");
     }
   }
-  
-  private static String formatFunctionCall(Opcode op, 
+
+  private static String formatFunctionCall(Opcode op,
       String functionName, List<Var> outputs, List<Arg> inputs) {
     String result = op.toString().toLowerCase() + " " + functionName;
     result += " [";
@@ -2605,5 +2616,5 @@ public class ICInstructions {
     result += " ]";
     return result;
   }
-  
+
 }

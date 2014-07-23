@@ -15,6 +15,8 @@
  */
 package exm.stc.common.lang;
 
+import exm.stc.ic.opt.Semantics;
+
 
 /**
  * Class that represents where a bit of code should be executed.
@@ -36,23 +38,22 @@ public class ExecTarget {
    */
   private static void validate(boolean async, boolean dispatched,
                                ExecContext targetContext) {
+    assert (targetContext != null);
     if (!async) {
       // Must be local if synchronous
       assert(!dispatched);
     } else if (dispatched) {
-      // Must specify context if we're doing non-locally
-      assert (targetContext != null);
+      // Must specify context if we're dispatching
+      // (for now, to simplify, but there's no fundamental reason)
+      assert (!targetContext.isWildcardContext());
     }
   }
 
-  private static final ExecTarget SYNC_ANY = sync(null);
+  private static final ExecTarget SYNC_ANY = sync(ExecContext.wildcard());
   private static final ExecTarget SYNC_CONTROL = sync(ExecContext.control());
-  private static final ExecTarget NON_DISPATCHED_ANY = nonDispatched(null);
+  private static final ExecTarget NON_DISPATCHED_ANY = nonDispatched(ExecContext.wildcard());
   private static final ExecTarget NON_DISPATCHED_CONTROL = nonDispatched(ExecContext.control());
   private static final ExecTarget DISPATCHED_CONTROL = dispatched(ExecContext.control());
-  @SuppressWarnings("unused")
-  private static final ExecTarget DISPATCHED_DEFAULT_WORK =
-                                                dispatched(ExecContext.defaultWorker());
 
   public static ExecTarget sync(ExecContext targetContext) {
     return new ExecTarget(false, false, targetContext);
@@ -129,18 +130,28 @@ public class ExecTarget {
    * @return true if target context is compatible with provided context
    */
   public boolean targetContextMatches(ExecContext context) {
-    return targetContext == null || targetContext.equals(context);
+    if (targetContext.isWildcardContext()) {
+      return true;
+    } else if (context.isWildcardContext()) {
+      return false;
+    }
+    return targetContext.equals(context);
   }
 
   /**
    * @param curr the current context
-   * @return non-null context that will result if run from curr
+   * @return context that will result if run from curr, can be wildcard
    */
   public ExecContext actualContext(ExecContext curr) {
-    if (dispatched) {
-      return targetContext;
+    if (targetContext.isWildcardContext()) {
+      return Semantics.wildcardActualContext(curr, dispatched);
     } else {
-      return curr;
+      if (dispatched || Semantics.nonDispatchedCanChangeContext()) {
+        return targetContext;
+      } else {
+        assert(curr.equals(targetContext));
+        return curr;
+      }
     }
   }
 
