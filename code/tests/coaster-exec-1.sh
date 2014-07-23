@@ -15,22 +15,30 @@
 
 source tests/test-helpers.sh
 
-TESTS=$( dirname $0 )
-
-set -x
-
 THIS=$0
-BIN=${THIS%.sh}.x
+SCRIPT=${THIS%.sh}.tcl
 OUTPUT=${THIS%.sh}.out
 
-export PROCS=2
-${TESTS}/run-mpi.zsh ${BIN} >& ${OUTPUT}
+source $( dirname $0 )/setup.sh > ${OUTPUT} 2>&1
+
+PROCS=3
+export TURBINE_COASTER_WORKERS=1
+
+#TODO: start service
+export COASTER_SERVICE_URL="127.0.0.1:53001"
+export TURBINE_COASTER_CONFIG=""
+
+bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
 [[ ${?} == 0 ]] || test_result 1
 
-SIZE=$( grep -c "size: 16" ${OUTPUT} )
-(( ${SIZE} == 2 )) || test_result 1
+grep -q "WAITING WORK" ${OUTPUT} && test_result 1
 
-R=$( grep -c "r: 8" ${OUTPUT} )
-(( ${R} == 2 )) || test_result 1
+coaster_exp=100
+coaster_count=$(grep -q -c -F "COASTER task output set:" ${OUTPUT})
+if [ $coaster_count -ne $coaster_exp ]
+then
+  echo "Coaster tasks: expected $coaster_act actual $coaster_count"
+  exit 1
+fi
 
 test_result 0

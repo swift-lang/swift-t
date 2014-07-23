@@ -22,4 +22,5 @@ set INPUT {
     TCL_TURBINE OFF
     ADLB OFF
     CACHE OFF
+    COASTER OFF
 }

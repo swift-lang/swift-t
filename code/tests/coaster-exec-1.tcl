@@ -12,40 +12,47 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-# Test noop executor - basic sanity test for async executors
+# Test Coaster executor - basic sanity test
+# NOTE: currently requires coaster service to be started (TODO)
 
 package require turbine 0.5.0
 
-set NOOP_WORK_TYPE 1
+set COASTER_WORK_TYPE 1
+
+proc coaster_task { x i } {
+  turbine::coaster_run "echo" [ list Hello World ] \
+          "coaster_task_success $x $i" "coaster_task_fail"
+}
+
+proc coaster_task_success { x i } {
+  turbine::store_integer $x $i
+}
+
+proc coaster_task_fail { } {
+
+}
 
 proc main {} {
-  global NOOP_WORK_TYPE
+  global COASTER_WORK_TYPE
 
   for { set i 0 } { $i < 100 } { incr i } {
-    # A dummy task that doesn't actually add anything to executor
-    turbine::rule "" {
-      puts "DUMMY TASK rank: [ adlb::rank ]"
-    } type $NOOP_WORK_TYPE
-
     # Add a task to the noop executor
     turbine::allocate x integer
-    turbine::rule "" "\
-      turbine::noop_exec_run \"NOOP TASK rank: \[ adlb::rank \]\" \
-        \"turbine::store_integer $x $i\"" type $NOOP_WORK_TYPE
+    turbine::rule "" "coaster_task $x $i" type $COASTER_WORK_TYPE
 
-    turbine::rule [ list $x ] "puts \"NOOP task output set: $i\"; \
+    turbine::rule [ list $x ] "puts \"COASTER task output set: $i\"; \
                                turbine::read_refcount_decr $x"
   }
 }
 
 set layout [ dict create servers 1 workers 2 workers_by_type \
-                  [ dict create WORK 1 $turbine::NOOP_EXEC_NAME 1 ] ]
+                  [ dict create WORK 1 $turbine::COASTER_EXEC_NAME 1 ] ]
 turbine::init $layout Turbine
 turbine::enable_read_refcount
 
-set noop_work_type [ turbine::adlb_work_type $turbine::NOOP_EXEC_NAME ]
+set coaster_work_type [ turbine::adlb_work_type $turbine::COASTER_EXEC_NAME ]
 
-turbine::check_can_execute $turbine::NOOP_EXEC_NAME
+turbine::check_can_execute $turbine::COASTER_EXEC_NAME
 turbine::start main 
 turbine::finalize
 

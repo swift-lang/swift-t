@@ -1,7 +1,11 @@
 import files;
+import string;
+import io;
+import sys;
 
+@dispatch=coasters
 app (file out, file err) date () {
-    "coaster/bin/date" @stderr=err @stdout=out;
+    "/bin/date" @stderr=err @stdout=out;
 }
 
 /**
@@ -9,7 +13,10 @@ app (file out, file err) date () {
  */
 main()
 {
-    file f_out<"/homes/yadunand/bin/exm-trunk/sfw/turbine/trunk/code/tests/coasters/test-2.out">;
-    file f_err<"/homes/yadunand/bin/exm-trunk/sfw/turbine/trunk/code/tests/coasters/test-2.err">;
+    argv_accept("d");
+    string dir = argv("d");
+
+    file f_out<strcat(dir, "/test2.out")>;
+    file f_err<strcat(dir, "/test2.err")>;
     (f_out, f_err) = date();
 }

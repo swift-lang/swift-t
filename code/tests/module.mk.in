@@ -74,6 +74,10 @@ ifeq ($(USE_MPE),1)
 	TEST_SRC_TCL += $(DIR)/mpe-3.tcl
 endif
 
+ifeq ($(USE_COASTER),1)
+	TEST_SRC_TCL += $(DIR)/coaster-exec-1.tcl
+endif
+
 ifeq ($(ENABLE_STATIC_PKG),1)
 	TEST_SRC_MANIFEST += $(DIR)/staticapp-1.manifest
 	TEST_SRC_MANIFEST += $(DIR)/staticapp-bundled-1.manifest

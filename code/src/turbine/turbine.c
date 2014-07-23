@@ -131,6 +131,8 @@ turbine_init(int amserver, int rank, int size)
     if (!b) return TURBINE_ERROR_NUMBER_FORMAT;
   }
 
+  turbine_debug_init();
+
   turbine_code tc = turbine_async_exec_initialize();
   turbine_check(tc);
   return TURBINE_SUCCESS;

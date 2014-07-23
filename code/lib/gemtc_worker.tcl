@@ -12,6 +12,29 @@ namespace eval turbine {
     variable gemtc_running
     # Maximal number concurrent GEMTC tasks to run
     variable gemtc_limit
+      
+    # Check to run alternative GeMTC worker.
+    # Return 1 if ran GeMTC worker, 0 otherwise
+    proc gemtc_alt_worker {} {
+        # Alternative GEMTC worker is enabled by environment variable
+        # TURBINE_GEMTC_WORKER=1, or another non-zero value
+        # An empty string is treated as false, other values are invalid
+        global env
+        if { [ info exists env(TURBINE_GEMTC_WORKER) ] &&
+             $env(TURBINE_GEMTC_WORKER) != "" } {
+            set gemtc_setting $env(TURBINE_GEMTC_WORKER)
+            if { ! [ string is integer -strict $gemtc_setting ] } {
+              error "Invalid TURBINE_GEMTC_WORKER setting, must be int:\
+                     ${gemtc_setting}"
+            }
+
+            if { $gemtc_setting } {
+             gemtc_worker
+             return 1
+            }
+        }
+        return 0
+    }
 
     # Main worker loop
     proc gemtc_worker { } {

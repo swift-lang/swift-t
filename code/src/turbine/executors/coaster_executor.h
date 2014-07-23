@@ -14,24 +14,30 @@
  * limitations under the License
  */
 
-#ifndef __NOOP_EXECUTOR_H
-#define __NOOP_EXECUTOR_H
+#ifndef __COASTER_EXECUTOR_H
+#define __COASTER_EXECUTOR_H
 
 #include "src/turbine/async_exec.h"
 #include "src/turbine/turbine-defs.h"
 
-// Registered name for noop executor
-#define NOOP_EXECUTOR_NAME "NOOP"
+// Use C-based coaster API
+#include <coaster.h>
 
-turbine_code
-noop_executor_register();
+// Registered name for coaster executor
+#define COASTER_EXECUTOR_NAME "COASTER"
 
 /*
-  Execute a task
+  Register a coaster executor with basic configuration settings.
  */
 turbine_code
-noop_execute(Tcl_Interp *interp, const turbine_executor *exec,
-             const void *work, int length,
-             turbine_task_callbacks callbacks);
+coaster_executor_register(void);
 
-#endif //__NOOP_EXECUTOR_H
+/*
+  Execute a coaster job.  The job should be constructed with functions
+  in the coaster C API.
+ */
+turbine_code
+coaster_execute(Tcl_Interp *interp, const turbine_executor *exec,
+                coaster_job *job, turbine_task_callbacks callbacks);
+
+#endif //__COASTER_EXECUTOR_H

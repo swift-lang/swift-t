@@ -40,9 +40,12 @@ typedef struct noop_state {
 } noop_state;
 
 static turbine_exec_code
-noop_initialize(void *context, void **state);
+noop_configure(void **context, const char *config, size_t config_len);
 
-static turbine_exec_code noop_shutdown(void *state);
+static turbine_exec_code
+noop_start(void *context, void **state);
+
+static turbine_exec_code noop_stop(void *state);
 
 static turbine_exec_code noop_free(void *context);
 
@@ -58,17 +61,18 @@ static turbine_exec_code
 noop_slots(void *state, turbine_exec_slot_state *slots);
 
 static void
-init_noop_executor(turbine_executor *exec, int adlb_work_type)
+init_noop_executor(turbine_executor *exec)
 {
   exec->name = NOOP_EXECUTOR_NAME;
-  exec->adlb_work_type = adlb_work_type;
   exec->notif_mode = EXEC_POLLING;
 
-  exec->context = NOOP_CONTEXT;
+  exec->context = NULL;
   exec->state = NULL;
+  exec->started = false;
 
-  exec->initialize = noop_initialize;
-  exec->shutdown = noop_shutdown;
+  exec->configure = noop_configure;
+  exec->start = noop_start;
+  exec->stop = noop_stop;
   exec->free = noop_free;
   exec->wait = noop_wait;
   exec->poll = noop_poll;
@@ -76,11 +80,11 @@ init_noop_executor(turbine_executor *exec, int adlb_work_type)
 }
 
 turbine_code
-noop_executor_register(int adlb_work_type)
+noop_executor_register(void)
 {
   turbine_code tc;
   turbine_executor exec;
-  init_noop_executor(&exec, adlb_work_type);
+  init_noop_executor(&exec);
   tc = turbine_add_async_exec(exec);
   turbine_check(tc);
 
@@ -88,7 +92,14 @@ noop_executor_register(int adlb_work_type)
 }
 
 static turbine_exec_code
-noop_initialize(void *context, void **state)
+noop_configure(void **context, const char *config, size_t config_len)
+{
+  *context = NOOP_CONTEXT; 
+  return TURBINE_EXEC_SUCCESS;
+}
+
+static turbine_exec_code
+noop_start(void *context, void **state)
 {
   assert(context == NOOP_CONTEXT);
   noop_state *s = malloc(sizeof(noop_state)); 
@@ -107,7 +118,7 @@ noop_initialize(void *context, void **state)
 }
 
 static turbine_exec_code
-noop_shutdown(void *state)
+noop_stop(void *state)
 {
   noop_state *s = state;
   for (int i = 0; i < s->slots.total; i++)

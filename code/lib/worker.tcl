@@ -16,38 +16,57 @@
 # Code executed on worker processes
 
 namespace eval turbine {
-    # Import adlb commands
-    namespace import ::adlb::get
 
     # Main worker loop
-    proc worker { rules startup_cmd } {
+    proc standard_worker { rules startup_cmd {mode WORK}} {
 
         eval $startup_cmd
         if { [ adlb::rank ] == 0 } {
             # First rank should start execution
             eval $rules
         }
-        
-        # Alternative GEMTC worker is enabled by environment variable
-        # TURBINE_GEMTC_WORKER=1, or another non-zero value
-        # An empty string is treated as false, other values are invalid
-        global env
-        if { [ info exists env(TURBINE_GEMTC_WORKER) ] &&
-             $env(TURBINE_GEMTC_WORKER) != "" } {
-            set gemtc_setting $env(TURBINE_GEMTC_WORKER)
-            if { ! [ string is integer -strict $gemtc_setting ] } {
-              error "Invalid TURBINE_GEMTC_WORKER setting, must be int:\
-                     ${gemtc_setting}"
-            }
 
-            if { $gemtc_setting } {
-             gemtc_worker
-             return
-            }
+        if { [ gemtc_alt_worker ] } {
+          # Rank alternative gemtc worker
+          # TODO: replace with proper gemtc async worker
+          return
         }
 
         global WORK_TYPE
 
-        c::worker_loop $WORK_TYPE(WORK)
+        c::worker_loop $WORK_TYPE($mode)
+    }
+    
+    proc custom_worker { rules startup_cmd mode } {
+        variable custom_work_types
+        if { [ lsearch -exact $custom_work_types $mode ] != -1 } {
+            # Standard worker with custom work type
+            standard_worker $rules $startup_cmd $mode
+        } else {
+            # Must be named async executor
+            async_exec_worker $mode $rules $startup_cmd
+        }
+    }
+
+    # Worker that executes tasks via async executor
+    proc async_exec_worker { work_type rules startup_cmd  } {
+        global env
+        set config_key "TURBINE_${work_type}_CONFIG"
+        set config_str ""
+        if [ info exists env($config_key) ] {
+          set config_str $env($config_key)
+        }
+        async_exec_configure $work_type $config_str
+      
+        eval $startup_cmd
+        if { [ adlb::rank ] == 0 } {
+            # First rank should start execution
+            eval $rules
+        }
+        
+
+        global WORK_TYPE
+        
+        c::async_exec_worker_loop $work_type $WORK_TYPE($work_type)
     }
 }

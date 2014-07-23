@@ -51,7 +51,7 @@ turbine_debug_init()
 {
   if (initialized)
   {
-    printf("turbine_debug: already initialized\n");
+    DEBUG_TURBINE("turbine_debug: already initialized\n");
     return;
   }
   initialized = true;

@@ -32,12 +32,19 @@ namespace eval turbine {
 
     # Import executor commands
     namespace import ::turbine::c::noop_exec_* \
-                     ::turbine::c::coaster_*
-    namespace export noop_exec_* coaster_*
+                     ::turbine::c::coaster_* \
+                     ::turbine::c::async_exec_configure \
+                     ::turbine::c::async_exec_names
+    namespace export noop_exec_* coaster_* async_exec_configure \
+                     async_exec_names
 
     # Export work types accessible
     variable WORK_TASK
     namespace export WORK_TASK
+
+    # Custom work type list
+    variable custom_work_types
+    set custom_work_types [ list ]
 
     # Mode is SERVER, WORK, or name of asynchronous executor
     variable mode
@@ -74,14 +81,19 @@ namespace eval turbine {
     #     the rank_allocation function
     # lang: language to use in error messages
     proc init { rank_config {lang ""} } {
-        
+        # Initialise debugging in case other functions want to debug
+        c::init_debug
+
         # Setup communicator so we can get size later
         if { [ info exists ::TURBINE_ADLB_COMM ] } {
             adlb::init_comm $::TURBINE_ADLB_COMM
         } else {
             adlb::init_comm
         }
-        
+
+        # Ensure all executors are known to system before setting up ranks
+        register_all_executors
+
         if { $rank_config == {}} {
             # Use standard rank configuration mechanism
             set rank_allocation [ rank_allocation [ adlb::size ] ]
@@ -94,7 +106,7 @@ namespace eval turbine {
         }
 
         variable language
-        
+
         if { $lang != "" } {
             set language $lang
         }
@@ -106,7 +118,8 @@ namespace eval turbine {
         reset_priority
 
         set work_types [ work_types_from_allocation $rank_allocation ]
-        
+
+        debug "work_types: $work_types"
         # Set up work types
         enum WORK_TYPE $work_types
         global WORK_TYPE
@@ -142,7 +155,7 @@ namespace eval turbine {
     # Determine rank allocation to workers/servers based on environment
     # vars, etc
     # adlb_size: the number of ranks in the ADLB communicator
-    # 
+    #
     # Returns a rank allocation object, a dict with the following keys:
     # servers: the number of ADLB servers
     # workers: the total number of ADLB workers
@@ -160,32 +173,38 @@ namespace eval turbine {
 
         set n_workers_by_type [ dict create ]
         set n_workers [ expr { $adlb_size - $n_servers } ]
-        
+
         set workers_running_sum 0
 
+        variable custom_work_types
+        set other_work_types [ concat [ available_executors ] \
+                                      $custom_work_types ]
+
         global env
-        foreach executor [ available_executors ] {
-          set env_var "TURBINE_${executor}_WORKERS"
-          set exec_worker_count 0
+        foreach work_type $other_work_types {
+          set env_var "TURBINE_${work_type}_WORKERS"
+          set worker_count 0
           if { [ info exists env($env_var) ] } {
-            set exec_worker_count $env($env_var)
+            set worker_count $env($env_var)
           }
 
-          if { $exec_worker_count > 0 } {
+          debug "$work_type: $worker_count workers"
+
+          if { $worker_count > 0 } {
             # Only include enabled workers
-            incr workers_running_sum $exec_worker_count
-            dict set n_workers_by_type $executor $exec_worker_count
+            incr workers_running_sum $worker_count
+            dict set n_workers_by_type $work_type $worker_count
           }
         }
-        
+
         if { $workers_running_sum >= $n_workers } {
           error "Too many workers allocated to executor types: \
                   {$n_workers_by_type}.\n \
-                  Have $n_workers total workers, allocated 
+                  Have $n_workers total workers, allocated
                   $workers_running_sum already, need at least one to \
                   serve as regular worker"
         }
-        
+
         # Remainder goes to regular workers
         set n_regular_workers [ expr {$n_workers - $workers_running_sum} ]
         dict set n_workers_by_type WORK $n_regular_workers
@@ -196,9 +215,15 @@ namespace eval turbine {
                              workers_by_type $n_workers_by_type ]
     }
 
-    # TODO: have executors register themselves
+    # Return names of all registered async executors
     proc available_executors {} {
-      return [ list $::turbine::NOOP_EXEC_NAME ]
+      return [ async_exec_names ]
+    }
+
+    # Register all async executors
+    proc register_all_executors {} {
+      noop_exec_register
+      coaster_register
     }
 
     # Basic rank allocation with only servers and regular workers
@@ -209,6 +234,7 @@ namespace eval turbine {
     }
 
     # Return list of work types in canonical order based on rank layout
+    # Also checks that all requested executors are assigned a work type
     proc work_types_from_allocation { rank_allocation } {
         set workers_by_type [ dict get $rank_allocation workers_by_type ]
 
@@ -221,9 +247,9 @@ namespace eval turbine {
 
         return [ concat [ list WORK ] $executors ]
     }
-    
+
     # Setup which mode this and other ranks will be running in
-    # 
+    #
     # rank_allocation: a rank allocation object
     # work_types: list of ADLB work type names (matching those in rank_allocation)
     #             with list index corresponding to integer ADLB work type
@@ -285,7 +311,7 @@ namespace eval turbine {
         variable n_workers
         variable n_adlb_servers
         variable n_workers_by_type
-      
+
         log "WORK TYPES: $work_types"
 
         set first_worker 0
@@ -301,7 +327,7 @@ namespace eval turbine {
         if { $n_workers <= 0 } {
             turbine_error "No workers!"
         }
-        
+
         # Report on how workers are subdivided
         set curr_rank 0
         foreach work_type $work_types {
@@ -311,6 +337,29 @@ namespace eval turbine {
           set last_x_worker [ expr {$curr_rank - 1} ]
           log [ cat "$work_type WORKERS: $n_x_workers" \
                 "RANKS: $first_x_worker - $last_x_worker" ]
+        }
+    }
+
+    # Declare custom work types to be implemented by regular worker.
+    # Must be declared before turbine::init
+    proc declare_custom_work_types { args } {
+        variable custom_work_types
+        foreach work_type $args {
+            lappend custom_work_types $work_type
+        }
+    }
+
+
+    # Check that all executors in list have assigned workers and throw
+    # error otherwise.  Run after turbine::init
+    proc check_can_execute { exec_names } {
+        variable n_workers_by_type
+        foreach exec_name $exec_names {
+            set n_workers [ dict get $n_workers_by_type $exec_name ]
+
+            if { $n_workers == "" || $n_workers < 1 } {
+              error "Executor $exec_name has no assigned workers"
+            }
         }
     }
 
@@ -346,10 +395,9 @@ namespace eval turbine {
         variable mode
         switch $mode {
             SERVER  { adlb::server }
-            WORK  { worker $rules $startup_cmd}
+            WORK  { standard_worker $rules $startup_cmd }
             default {
-              # Must be named executor
-              c::async_exec_worker_loop $mode
+              custom_worker $rules $startup_cmd $mode 
             }
         }
     }

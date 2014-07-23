@@ -228,6 +228,9 @@ USE_R  = @USE_R@
 HAVE_JULIA = @HAVE_JULIA@
 USE_JULIA  = @USE_JULIA@
 
+HAVE_COASTER = @HAVE_COASTER@
+USE_COASTER  = @USE_COASTER@
+
 CFLAGS += $(STD)
 CFLAGS += -g
 CFLAGS += $(WARNS)
@@ -251,6 +254,9 @@ ifeq ($(HAVE_JULIA),1)
 	INCLUDES += -I $(USE_JULIA)/src
 	INCLUDES += -I $(USE_JULIA)/usr/include
 	INCLUDES += -I $(USE_JULIA)/src/support
+endif
+ifeq ($(HAVE_COASTER),1)
+	CFLAGS += -I $(USE_COASTER)/include
 endif
 
 CFLAGS += $(DEFINES) $(INCLUDES)
@@ -284,6 +290,11 @@ ifeq ($(HAVE_JULIA),1)
 	LIBS += -L$(JULIA_LIB) -ljulia
 endif
 
+ifeq ($(HAVE_COASTER),1)
+	COASTER_LIB := $(USE_COASTER)/lib
+	LIBS += -L$(COASTER_LIB) -lcoasterclient
+endif
+
 # If we are using libtcl*.a, need to always include these libraries
 # TODO: would also be needed if we're doing full static link
 ifeq ($(strip $(TCL_LIB_SO)),)
@@ -311,6 +322,9 @@ ifeq ($(HAVE_R),1)
 endif
 ifeq ($(HAVE_JULIA),1)
 	RPATHS += -Wl,-rpath -Wl,$(JULIA_LIB)
+endif
+ifeq ($(HAVE_COASTER),1)
+	RPATHS += -Wl,-rpath -Wl,$(COASTER_LIB)
 endif
 
 ### INCLUDES

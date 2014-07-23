@@ -43,6 +43,7 @@ typedef enum {
   TURBINE_EXEC_SUCCESS,
   TURBINE_EXEC_SHUTDOWN,
   TURBINE_EXEC_OOM,
+  TURBINE_EXEC_TASK, // Error in task
   TURBINE_EXEC_INVALID, // Invalid API usage or input
   TURBINE_EXEC_OTHER, // Unexpected or generic error, prob unrecoverable
   // TODO: more info - e.g. if bad arg, or invalid state
@@ -63,24 +64,33 @@ typedef struct {
  */
 
 /*
-  Initialize: initialize executor before running tasks.
+  Configure: before starting executor, do any configuration.
+  Input is a single string, which can be interpreted in an
+  executor-specific way
+ */
+typedef turbine_exec_code (*turbine_exec_configure)(void **context,
+                           const char *config, size_t config_len);
+
+/*
+  Start: start executor before running tasks.
                Passed context pointer.
                Should initialize state pointer
  */
-typedef turbine_exec_code (*turbine_exec_init)(void *context,
+typedef turbine_exec_code (*turbine_exec_start)(void *context,
                                                void **state);
 
 /*
-  Shutdown: shut down initialized executor
+  Stop: stop started executor
  */
-typedef turbine_exec_code (*turbine_exec_shutdown)(void *state);
+typedef turbine_exec_code (*turbine_exec_stop)(void *state);
 
 /*
-  Free: free memory for shut down executor
+  Free: free memory for stopped executor.  Executor may or may not
+        have been started or configured
  */
 typedef turbine_exec_code (*turbine_exec_free)(void *context);
 
-/* 
+/*
   Waiting: called on an executor with active tasks.
           updates completed with completed task info
   state: executor state pointer
@@ -120,20 +130,34 @@ typedef enum
 struct turbine_executor
 {
   const char *name;
-  int adlb_work_type; // Type to request from adlb
   async_exec_notif notif_mode;
-  void *context; // Context info
-  void *state; // Internal state to pass to executor functions
 
   /*
     Function pointers for executors
    */
-  turbine_exec_init initialize;
-  turbine_exec_shutdown shutdown;
+  turbine_exec_configure configure;
+  turbine_exec_start start;
+  turbine_exec_stop stop;
   turbine_exec_free free;
   turbine_exec_wait wait;
   turbine_exec_poll poll;
   turbine_exec_slots slots;
+
+  void *context; // Context info
+  void *state; // Internal state to pass to executor functions
+  bool started; // True if started
 };
+
+/*
+  Register executor with async executors module.
+  This can be called anytime, including before the module is
+  initialized.  Ownership of all memory stays with the caller:
+  this will copy any data such as the executor name as needed.
+
+  All function pointers must be non-null.
+ */
+turbine_code
+turbine_add_async_exec(turbine_executor executor);
+
 
 #endif //__EXEC_INTERFACE_H

@@ -1,0 +1,56 @@
+
+Steps to run the coaster tests
+==============================
+
+1. Get Coaster client tcl package
+----------------------------------
+mkdir swift-devel
+cd swift-devel
+svn co https://svn.code.sf.net/p/cogkit/svn/trunk/src/cog
+cd cog/modules
+svn co https://svn.ci.uchicago.edu/svn/vdl2/trunk swift
+cd swift
+ant redist
+cd ../provider-coaster-c-client/
+./autogen.sh
+./configure --enable-swig --with-tcl-version=8.5 --with-tcl=<PATH_TO_TCL>
+make
+
+Now, the tcl folder contains the tcl packages necessary for loading
+the coaster client package.
+
+Use  export TCLLIBPATH=<PWD>/tcl
+
+2. Start a coaster service
+---------------------------
+
+cd cog/modules/provider-coaster-c-client/tests/coasters
+start-coaster-service
+
+The coaster service is configured using the coaster-service.conf file.
+The configurations that go into that file, is beyond the scope of this
+README. The current configuration is set for the service to run on
+thrash.mcs.anl.gov with a worker each on crush.mcs.anl.gov and
+grind.mcs.anl.gov. The service port is 53001, and the SwiftT code is not
+hardcoded to use that particular port as of 11/8/2013.
+
+You can stop a running coaster-service using stop-coaster-service.
+
+
+3. Run SwiftT leaf apps through coasters
+----------------------------------------
+
+Get SwiftT sources. Compile (details beyond scope) the turbine sources
+in exm-trunk/sfw/turbine/branches/issue-503/code.
+
+There are tests that you can run in exm-trunk/sfw/turbine/branches/issue-503/code/tests/coasters.
+
+There is a run-test.sh script there which does the job of adding the
+TCLLIBPATH to the right path settings for turbine and runs the specified
+SwiftT program.
+
+
+4. Notes
+---------
+
+THere is a sample output from one of the runs in stdout.log

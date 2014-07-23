@@ -14,17 +14,15 @@
 # Turbine APP.TCL
 
 # Functions for launching external apps
-namespace eval turbine {
-  namespace export unpack_args exec_external
 
+namespace eval turbine {
+  namespace export unpack_args exec_external poll_mock async_exec_coaster
   # Run external application
   # cmd: executable to run
   # kwopts: keyword options.  Valid are:
   #         stdout=file stderr=file
   # args: command line args as strings
   proc exec_external { cmd kwopts args } {
-    #FIXME: strange behaviour can happen if user args have e.g "<"
-    # or ">" or "|" at start
 
     setup_redirects $kwopts stdin_src stdout_dst stderr_dst
     log "shell: $cmd $args $stdin_src $stdout_dst $stderr_dst"
@@ -41,6 +39,8 @@ namespace eval turbine {
   # Set specified vars in outer scope for stdin, stdout and stderr
   # based on parameters present in provided dictionary
   proc setup_redirects { kwopts stdin_var stdout_var stderr_var } {
+    #FIXME: strange behaviour can happen if user args have e.g "<"
+    # or ">" or "|" at start
     upvar 1 $stdin_var stdin_src
     upvar 1 $stdout_var stdout_dst
     upvar 1 $stderr_var stderr_dst
@@ -50,7 +50,7 @@ namespace eval turbine {
     set stdout_dst ">@stdout"
     set stderr_dst "2>@stderr"
 
-    if { [ dict exists $kwopts stdin ] } {
+    if { [ dict exists $kwopts stdin ] } {;
       set stdin_src "<[ dict get $kwopts stdin ]"
     }
     if { [ dict exists $kwopts stdout ] } {
@@ -65,68 +65,17 @@ namespace eval turbine {
     }
   }
 
-  # Launch a coasters job that will execute asynchronously
+  # Launch a coaster job that will execute asynchronously
   # cmd: command to run
-  # outfiles: list of output files
-  # TODO: also list input files?
   # cmdargs: arguments for command
+  # infiles: input files (e.g. for staging in)
+  # outfiles: output files (e.g. for staging out)
   # kwopts: options, including input/output redirects and other settings
-  # continuation: optionally, a code fragment to run after finishing the
-  #         task.  TODO: may want to assume that this is a function call
-  #         so we can concatenate any output arguments to string?
-  proc async_exec_coasters { cmd outfiles cmdargs kwopts {continuation {}}} {
-    setup_redirects $kwopts stdin_src stdout_dst stderr_dst
-
-    # Check to see if we were passed continuation
-    set has_continuation [ expr [ string length $continuation ] > 0 ]
-
-    # TODO: handle rest
-    error "async_exec_coasters not implemented"
-  }
-
-  #Issue #501
-  proc exec_coaster { cmd stdin_src stdout_dst stderr_dst args} {
-    log "exec_coaster: cmd : $cmd"
-    log "exec_coaster: args : $args"
-
-    set stdout_dst [string trim $stdout_dst <>]
-    if { $stdout_dst == "@stdout" } {
-      log "exec_coaster : stdout not defined, setting to empty"
-      set stdout_dst ""
-    }
-    log "exec_coaster: stdout_dst : $stdout_dst"
-
-    set stderr_dst [string trim $stderr_dst 2>]
-    if { $stderr_dst == "2>@stderr" } {
-      log "exec_coaster : stdout not defined, setting to empty"
-      set stderr_dst ""
-    }
-    log "exec_coaster: stderr_dst : $stderr_dst"
-
-    package require coaster 0.0
-
-    set loop_ptr [CoasterSWIGLoopCreate]
-    set client_ptr [CoasterSWIGClientCreate $loop_ptr 140.221.8.81:34959]
-    set x [CoasterSWIGClientSettings $client_ptr "SLOTS=1,MAX_NODES=1,JOBS_PER_NODE=2,WORKER_MANAGER=passive"]
-    log "exec_coaster: Error code from CoasterSWIGClientSettings $x"
-
-    # Job stuff
-    set job1 [CoasterSWIGJobCreate $cmd]
-
-    #CoasterSWIGJobSettings job_obj dir args attributes env_vars stdout_loc stderr_loc"
-    log "exec_coaster : CoasterSWIGJobSettings $job1 \"\" $args \"\" \"\" $stdout_dst $stderr_dst "
-    set rcode [CoasterSWIGJobSettings $job1 "" $args "" "" $stdout_dst $stderr_dst]
-
-    set rcode [CoasterSWIGSubmitJob $client_ptr $job1]
-    log "exec_coaster: Job1 submitted"
-
-    log "exec_coaster: Waiting for Job1"
-    set rcode [CoasterSWIGWaitForJob $client_ptr $job1]
-    log "exec_coaster: Job1 complete"
-
-    set rcode [CoasterSWIGClientDestroy $client_ptr]
-
-    set rcode [CoasterSWIGLoopDestroy $loop_ptr]
+  # success: a code fragment to run after finishing the
+  #         task.  TODO: want to set vars for this continuation to access
+  # failure: failure continuation
+  proc async_exec_coaster { cmd cmdargs infiles outfiles kwopts success failure } {
+    return [ coaster_run $cmd $cmdargs $infiles $outfiles $kwopts $success $failure ]
   }
 
   # Alternative implementation
