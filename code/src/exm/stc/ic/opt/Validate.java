@@ -335,7 +335,7 @@ public class Validate implements OptimizerPass {
         case INSTRUCTION:
           ExecTarget mode = stmt.instruction().execMode();
           assert(mode.canRunIn(execCx)) : stmt + " has execution "
-                + "mode: " + mode + " but is in context" + execCx;
+                + "mode: " + mode + " but is in context " + execCx;
           break;
         case CONDITIONAL:
           checkExecCxRecurse(logger, program, execCx, stmt.conditional());
@@ -343,6 +343,10 @@ public class Validate implements OptimizerPass {
         default:
           throw new STCRuntimeError("Unexpected: " + stmt.type());
       }
+    }
+
+    for (Continuation c: block.getContinuations()) {
+      checkExecCxRecurse(logger, program, execCx, c);
     }
 
   }

@@ -757,7 +757,7 @@ class Turbine {
       // Default is executing locally
       return !type.isDispatched();
     } else {
-      if (targetContext == null) {
+      if (targetContext.isWildcardContext()) {
         // Don't care about target
         return true;
       } else if (targetContext.isControlContext() ||
@@ -797,7 +797,8 @@ class Turbine {
       }
       taskTokens.addAll(action);
     } else {
-      assert (targetContext.isControlContext());
+      assert (targetContext.isControlContext() ||
+              targetContext.isWildcardContext());
       if (!Settings.SEPARATE_TURBINE_ENGINE) {
         // Treat as work task - no prefix
         // TODO: handle priorities?

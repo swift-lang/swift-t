@@ -108,11 +108,14 @@ public class Pipeline extends FunctionOptimizerPass {
     for (Continuation cont: curr.getContinuations()) {
       if (cont.getType() == ContinuationType.WAIT_STATEMENT) {
         WaitStatement w = (WaitStatement)cont;
+        ExecContext waitChildContext = w.childContext(cx);
+
         boolean compatible = true;
         if (!w.getWaitVars().isEmpty()) {
           // Can't merge if we have to wait before execution
           compatible = false;
-        } else if (!w.childContext(cx).equals(cx)) {
+        } else if (!waitChildContext.equals(cx) &&
+                   !waitChildContext.isWildcardContext()) {
           // Can't merge different contexts
           compatible = false;
         } else if (w.isParallel()) {

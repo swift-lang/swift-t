@@ -412,7 +412,8 @@ public class TurbineGenerator implements CompilerBackend {
     List<Expression> checkExprs = new ArrayList<Expression>();
     for (ExecContext worker: usedExecContexts) {
       if (worker.isControlContext() ||
-          worker.isDefaultWorkContext()) {
+          worker.isDefaultWorkContext() ||
+          worker.isWildcardContext()) {
         // Don't need to check
       } else {
         checkExprs.add(Turbine.nonDefaultWorkTypeName(worker.workContext()));
@@ -2448,12 +2449,9 @@ public class TurbineGenerator implements CompilerBackend {
     private void startAsync(String procName, List<Var> waitVars,
         List<Var> passIn, boolean recursive, ExecTarget mode, TaskProps props) {
       props.assertInternalTypesValid();
-      mode.checkCanRunIn(execContextStack.peek());
 
-      if (mode.targetContext() != null) {
-        // Track target contexts
-        usedExecContexts.add(mode.targetContext());
-      }
+      // Track target contexts
+      usedExecContexts.add(mode.targetContext());
 
       for (Var v: passIn) {
         if (Types.isBlobVal(v)) {

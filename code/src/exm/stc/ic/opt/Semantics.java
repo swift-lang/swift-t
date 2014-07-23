@@ -2,6 +2,8 @@ package exm.stc.ic.opt;
 
 import java.util.Set;
 
+import exm.stc.common.Settings;
+import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.StructType.StructField;
@@ -41,9 +43,9 @@ public class Semantics {
       return true;
     } else {
       return true;
-    }        
+    }
   }
-  
+
 
 
   /**
@@ -54,7 +56,7 @@ public class Semantics {
    * @param out
    * @return
    */
-  public static boolean outputMappingAvail(Set<Var> closedVars, 
+  public static boolean outputMappingAvail(Set<Var> closedVars,
                             Set<ArgCV> closedLocations, Var out) {
     // Two cases where we can get mapping right away:
     // - if it's definitely unmapped
@@ -62,6 +64,53 @@ public class Semantics {
     // TODO: How to get mapping?
     return out.isMapped() == Ternary.FALSE ||
            closedLocations.contains(ComputedValue.filenameAliasCV(out));
+  }
+
+
+  /**
+   * @return true if we should preferentially stay in same context
+   */
+  public static boolean stickyContexts() {
+    if (nonDispatchedCanChangeContext()) {
+      return false;
+    } else {
+      // Must stay in same place
+      return true;
+    }
+  }
+
+  /**
+   * Whether a non-dispatched task can change context.
+   * @return
+   */
+  public static boolean nonDispatchedCanChangeContext() {
+    return true;
+  }
+
+  /**
+   * Determine actual context for wildcard dispatch.
+   * @param outer
+   * @param dispatch
+   * @return a concrete context (not wildcard)
+   */
+  public static ExecContext wildcardActualContext(ExecContext outer, boolean dispatch) {
+    if (Settings.SEPARATE_TURBINE_ENGINE) {
+      if (dispatch) {
+        // Send back to control by default
+        return ExecContext.control();
+      } else {
+        // Can only run local rule on engine
+        assert(outer.isControlContext());
+        return outer;
+      }
+    } else {
+      if (dispatch || !stickyContexts()) {
+        // Preferentially send back to control
+        return ExecContext.control();
+      } else {
+        return outer;
+      }
+    }
   }
 
 }

@@ -36,14 +36,14 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Arg.ArgKind;
 import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.RefCounting;
-import exm.stc.common.lang.ExecTarget;
-import exm.stc.common.lang.WaitMode;
 import exm.stc.common.lang.TaskProp.TaskPropKey;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Var;
+import exm.stc.common.lang.WaitMode;
 import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.Pair;
 import exm.stc.common.util.StackLite;
@@ -63,10 +63,10 @@ import exm.stc.ic.tree.ICTree.StatementType;
  * This module contains definitions of all of the continuation varieties used
  * in the intermediate representation.  Each continuation is some sort of
  * control flow structure.
- * 
+ *
  * Each continuation object is responsible for being able to perform particular
  * transformations and report information about itself.  See the Continuation
- * base class to see what methods must be implemented. 
+ * base class to see what methods must be implemented.
  *
  */
 public class ICContinuations {
@@ -74,13 +74,13 @@ public class ICContinuations {
 
   public static abstract class Continuation {
     private Block parent;
-    
+
     protected Continuation() {
       this.parent = null;
     }
-    
+
     public abstract ContinuationType getType();
-    
+
     public Block parent() {
       return this.parent;
     }
@@ -105,20 +105,21 @@ public class ICContinuations {
         }
       }
     }
-    
+
     public abstract void generate(Logger logger, CompilerBackend gen, GenInfo info);
 
     public abstract void prettyPrint(StringBuilder sb, String currentIndent);
 
+    @Override
     public String toString() {
       StringBuilder sb = new StringBuilder();
       prettyPrint(sb, "");
       return sb.toString();
     }
-    
+
     /** Returns all nested blocks in this continuation */
     public abstract List<Block> getBlocks();
-    
+
     /**
      * @param renames
      * @param mode what sort of renaming
@@ -133,7 +134,7 @@ public class ICContinuations {
       }
       this.replaceConstructVars(renames, mode);
     }
-    
+
     /**
      * Rename recursively
      * @param renames
@@ -142,7 +143,7 @@ public class ICContinuations {
     public void renameVars(String function, Map<Var, Arg> renames, RenameMode mode) {
       renameVars(function, renames, mode, true);
     }
-    
+
     protected abstract void replaceConstructVars(Map<Var, Arg> renames,
                                                  RenameMode mode);
 
@@ -153,9 +154,9 @@ public class ICContinuations {
      * @param newV
      */
     public void removeRedef(Var oldV, Var newV) {
-       // Do nothing by default 
+       // Do nothing by default
     }
-    
+
     protected void replaceVarsInBlocks(String function, Map<Var, Arg> renames,
                                        RenameMode mode) {
       for (Block b: this.getBlocks()) {
@@ -193,7 +194,7 @@ public class ICContinuations {
     public abstract boolean isNoop();
 
     public abstract boolean isAsync();
-    
+
     /** @return true if continuation is async and a single task is spawned from
      *    current context */
     public boolean spawnsSingleTask() {
@@ -211,7 +212,7 @@ public class ICContinuations {
       assert(!isAsync());
       return Collections.emptyList();
     }
-    
+
     /**
      * Return list of variables closed inside continuation.  At a minimum this
      * is a superset of blockingVars.
@@ -230,7 +231,7 @@ public class ICContinuations {
     public List<Var> constructDefinedVars(ContVarDefType type) {
       return Var.NONE;
     }
-    
+
     public final List<Var> constructDefinedVars() {
       // In most cases don't care about redefs
       return constructDefinedVars(ContVarDefType.NEW_DEF);
@@ -253,7 +254,7 @@ public class ICContinuations {
     public Collection<PassedVar> getPassedVars() {
       throw new STCRuntimeError("not implemented");
     }
-    
+
     /**
      * Only applies to async continuations
      * @return List of all variables that are used within continuation,
@@ -262,11 +263,11 @@ public class ICContinuations {
     public Collection<PassedVar> getAllPassedVars() {
       throw new STCRuntimeError("not implemented");
     }
-    
+
     /**
-     * Only applies to async continuations 
+     * Only applies to async continuations
      * @return List of variables kept open in this scope.
-     *        empty list means none 
+     *        empty list means none
      */
     public Collection<Var> getKeepOpenVars() {
       throw new STCRuntimeError("not implemented");
@@ -275,8 +276,8 @@ public class ICContinuations {
     public void setPassedVars(Collection<PassedVar> passedIn) {
       throw new STCRuntimeError("not implemented");
     }
-    
-    /** 
+
+    /**
      * Set all keep open vars for continuation
      */
     public void setKeepOpenVars(Collection<Var> keepOpen) {
@@ -296,7 +297,7 @@ public class ICContinuations {
       if (parent != null)
         parent.removeContinuation(this);
     }
-    
+
     public void inlineInto(Block block, Block predictedBranch) {
       inlineInto(block, predictedBranch, null);
     }
@@ -339,21 +340,21 @@ public class ICContinuations {
     /**
      * Return the execution context inside the continuation
      * @param outerContext the context outside
-     * @return
+     * @return a context, or null if any context
      */
     public ExecContext childContext(ExecContext outerContext) {
       // Default implementation for sync continuations
       assert(!isAsync());
       return outerContext;
     }
-    
+
     /**
      * Create a copy of the continuation.  Do not set any
      * parent links.
      */
     @Override
     public abstract Continuation clone();
-    
+
     /**
      * If the continuation should be put after all other continuations
      */
@@ -417,21 +418,21 @@ public class ICContinuations {
     NEW_DEF, // Doesn't shadow outer variables
     REDEF, // Redefines value of variable from outer scope
     INIT, // Initializes existing variable or defines new var
-    ;  
+    ;
 
     public boolean includesRedefs() {
       return this == ANY_DEF || this == REDEF || this == INIT;
     }
-    
+
     public boolean includesNewDefs() {
       return this == ANY_DEF || this == NEW_DEF || this == INIT;
     }
-    
+
     public boolean includesInitOnly() {
       return this == INIT;
     }
   }
-  
+
   /**
    * A variable that must be closed for a computation to proceed
    */
@@ -440,14 +441,15 @@ public class ICContinuations {
     /** Whether variable must be recursively closed */
     public final boolean recursive;
     public final boolean explicit;
-    
+
     public BlockingVar(Var var, boolean recursive, boolean explicit) {
       super();
       this.var = var;
       this.recursive = recursive;
       this.explicit = explicit;
     }
-    
+
+    @Override
     public String toString() {
       String out = var.name();
       if (recursive)
@@ -457,12 +459,12 @@ public class ICContinuations {
       return out;
     }
   }
-  
+
   public static abstract class AsyncContinuation extends Continuation {
     protected final List<PassedVar> passedVars;
     protected final List<Var> keepOpenVars;
-    
-    
+
+
     public AsyncContinuation(List<PassedVar> passedVars,
                             List<Var> keepOpenVars) {
       this.passedVars = new ArrayList<PassedVar>(passedVars);
@@ -472,19 +474,19 @@ public class ICContinuations {
     public Collection<PassedVar> getPassedVars() {
       return Collections.unmodifiableList(this.passedVars);
     }
-    
+
     @Override
     public Collection<PassedVar> getAllPassedVars() {
       // By default, no extras
       return getPassedVars();
     }
-    
+
     @Override
     public void setPassedVars(Collection<PassedVar> passedVars) {
       this.passedVars.clear();
       this.passedVars.addAll(passedVars);
     }
-    
+
     @Override
     public void setKeepOpenVars(Collection<Var> keepOpenVars) {
       this.keepOpenVars.clear();
@@ -495,35 +497,35 @@ public class ICContinuations {
     public Collection<Var> getKeepOpenVars() {
       return Collections.unmodifiableList(this.keepOpenVars);
     }
-    
+
     /**
      * For overriding by child class
      * @param renames
      * @param mode
      */
-    public abstract void replaceConstructVars_(Map<Var, Arg> renames, 
+    public abstract void replaceConstructVars_(Map<Var, Arg> renames,
                   RenameMode mode);
-    
+
     @Override
-    public final void replaceConstructVars(Map<Var, Arg> renames, 
+    public final void replaceConstructVars(Map<Var, Arg> renames,
                                             RenameMode mode) {
       this.replaceConstructVars_(renames, mode);
     }
-    
+
     /**
      * For overriding by child class
      */
     public abstract void removeVars_(Set<Var> removeVars);
-    
+
     @Override
     public final void removeVars(Set<Var> removeVars) {
       removeVars_(removeVars);
       removeVarsInBlocks(removeVars);
     }
-    
+
     @Override
     public abstract ExecContext childContext(ExecContext outerContext);
-    
+
   }
 
   public static abstract class AbstractLoop extends AsyncContinuation {
@@ -539,12 +541,12 @@ public class ICContinuations {
     public Block getLoopBody() {
       return loopBody;
     }
-    
+
     @Override
     public boolean isLoop() {
       return true;
     }
-    
+
     @Override
     public boolean isConditional() {
       return false;
@@ -554,7 +556,7 @@ public class ICContinuations {
     public boolean executesBlockOnce() {
       return false;
     }
-    
+
     @Override
     public List<Block> getBlocks() {
       return Arrays.asList(loopBody);
@@ -586,7 +588,7 @@ public class ICContinuations {
       this.loopBody.insertInline(o.loopBody, insertAtTop);
     }
   }
-  
+
   public static class Loop extends AbstractLoop {
     private final String loopName;
     private final Var condVar;
@@ -601,10 +603,10 @@ public class ICContinuations {
     private LoopBreak loopBreak;
 
     private LoopContinue loopContinue;
-    
+
     /** Which vars must be closed before executing loop body */
     private final List<Boolean> blockingVars;
-    
+
     /** Which initial vals are closed */
     private final List<Boolean> closedInitVals;
 
@@ -694,7 +696,7 @@ public class ICContinuations {
             }
           }
         }
-        
+
         for (Continuation cont: curr.allComplexStatements()) {
           // Don't go into inner loops, as they will have their own
           // break/continue instructions
@@ -705,7 +707,7 @@ public class ICContinuations {
           }
         }
       }
-      
+
       assert(breakInst != null) : "No loop break for loop\n" + this;
       assert(continueInst != null) : "No loop continue for loop\n" + this;
       assert(breakInstBlock != null);
@@ -718,7 +720,7 @@ public class ICContinuations {
     public ContinuationType getType() {
       return ContinuationType.LOOP;
     }
-    
+
     public String loopName() {
       return loopName;
     }
@@ -727,7 +729,7 @@ public class ICContinuations {
     public boolean isAsync() {
       return true;
     }
-    
+
     @Override
     public boolean spawnsSingleTask() {
       // Only one task is spawned right away.  That tasks spawns further
@@ -763,9 +765,9 @@ public class ICContinuations {
         // TODO: support recursive waits?
         initWait.add(init.var);
       }
-      
+
       boolean simpleLoop = allBlockingClosed() && loopContinueSynchronous();
-      
+
       gen.startLoop(loopName, loopVars, initVals,
                     PassedVar.extractVars(passedVars),
                     initWait, simpleLoop);
@@ -785,8 +787,8 @@ public class ICContinuations {
       Block curr = insts.continueInstBlock;
       while (curr != this.loopBody) {
         assert(curr != null);
-        
-        
+
+
         Continuation cont = curr.getParentCont();
         assert(cont != null);
         if (cont.isAsync()) {
@@ -844,7 +846,7 @@ public class ICContinuations {
       loopBody.prettyPrint(sb, currentIndent + indent);
       sb.append(currentIndent + "}\n");
     }
-    
+
     @Override
     public void replaceConstructVars_(Map<Var, Arg> renames,
                                       RenameMode mode) {
@@ -853,7 +855,7 @@ public class ICContinuations {
         ICUtil.replaceVarsInList(renames, loopVars, false);
       }
     }
-    
+
     @Override
     public void removeRedef(Var oldV, Var newV) {
       for (int i = 0; i < loopVars.size(); i++) {
@@ -919,7 +921,7 @@ public class ICContinuations {
         // Second must be conditional
         return false;
       }
-      
+
       // TODO: need more sophisticated analysis to check if
       //       operations have side-effect, or if they write
       //       variables outside of loop, since most loops
@@ -933,7 +935,7 @@ public class ICContinuations {
         // Must have loop control instructions
         // TODO: must ignore comments here
         if(thenB.getStatements().get(0).instruction().op ==
-               Opcode.LOOP_CONTINUE && 
+               Opcode.LOOP_CONTINUE &&
            elseB.getStatements().get(0).instruction().op ==
                Opcode.LOOP_BREAK) {
           // TODO?
@@ -995,14 +997,15 @@ public class ICContinuations {
       }
       return res;
     }
-    
+
+    @Override
     public List<BlockingVar> closedVars(Set<Var> closed, Set<Var> recClosed) {
       // Always includes blocking vars
       List<BlockingVar> res = blockingVars(true);
       for (int i = 0; i < loopVars.size(); i++) {
         Arg init = initVals.get(i);
         // Check for variables that are closed
-        
+
         if (!closedInitVals.get(i) && init.isVar()
              && closed.contains(init.getVar())) {
           closedInitVals.set(i, true); // Record for later
@@ -1016,10 +1019,10 @@ public class ICContinuations {
       }
       return res;
     }
-    
+
     /**
      * @return vars that are blocking but where initial value isn't
-     *        closed outside of wait, forcing us to wait for them 
+     *        closed outside of wait, forcing us to wait for them
      */
     public List<BlockingVar> unclosedBlockingInitVals() {
       List<BlockingVar> res = new ArrayList<BlockingVar>();
@@ -1031,7 +1034,7 @@ public class ICContinuations {
       }
       return res;
     }
-    
+
     /**
      * Check that all blocking vars are closed
      */
@@ -1059,13 +1062,14 @@ public class ICContinuations {
       this.loopContinue.setLoopUsedVars(PassedVar.extractVars(passedVars));
       this.loopBreak.setLoopUsedVars(passedVars);
     }
-    
+
     @Override
     public void setKeepOpenVars(Collection<Var> keepOpen) {
       super.setKeepOpenVars(keepOpen);
       this.loopBreak.setKeepOpenVars(keepOpen);
     }
-    
+
+    @Override
     public Collection<PassedVar> getAllPassedVars() {
       // Initial vals of loop vars are also passed in
       List<PassedVar> result = new ArrayList<PassedVar>();
@@ -1077,12 +1081,12 @@ public class ICContinuations {
       }
       return result;
     }
-    
-    
+
+
     public Arg getInitCond() {
       return this.initVals.get(0);
     }
-    
+
     @Override
     public ExecContext childContext(ExecContext outerContext) {
       return outerContext;
@@ -1121,13 +1125,13 @@ public class ICContinuations {
       initVals.set(index, initVal);
       loopContinue.setNewLoopVar(index, updateVal);
       blockingVars.set(index, blocking);
-      
-      // Reset closed info to be safe 
+
+      // Reset closed info to be safe
       closedInitVals.set(index, false);
       loopContinue.setLoopVarClosed(index, false);
     }
   }
-  
+
   public static class LoopInstructions {
     private LoopInstructions(Block breakInstBlock, LoopBreak breakInst,
         Block continueInstBlock, LoopContinue continueInst) {
@@ -1194,24 +1198,24 @@ public class ICContinuations {
     public boolean isAsync() {
       return false;
     }
-    
+
     @Override
     public boolean isLoop() {
       return false;
     }
-    
+
     @Override
     public boolean isConditional() {
       return false;
     }
-    
+
     @Override
     public boolean executesBlockOnce() {
       return true;
     }
 
     @Override
-    protected void replaceConstructVars(Map<Var, Arg> renames, 
+    protected void replaceConstructVars(Map<Var, Arg> renames,
                                         RenameMode mode) {
       // Do nothing
     }
@@ -1231,7 +1235,7 @@ public class ICContinuations {
       return block.isEmpty();
     }
   }
-  
+
   /**
    * A new construct that blocks on a list of variables (blockVars),
    * and only runs the contents once all of those variables are closed
@@ -1241,14 +1245,14 @@ public class ICContinuations {
     private final String procName;
     private final Block block;
     private final List<WaitVar> waitVars;
-    
+
     /* True if this wait was compiler-generated so can be removed if needed
      * We can only remove an explicit wait if we know that the variables are
      * already closed*/
     private WaitMode mode;
     private boolean recursive;
     private ExecTarget target;
-    
+
     private final TaskProps props;
 
     public WaitStatement(String procName, List<WaitVar> waitVars,
@@ -1297,7 +1301,7 @@ public class ICContinuations {
 
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
-      gen.startWaitStatement(procName, WaitVar.asVarList(waitVars), 
+      gen.startWaitStatement(procName, WaitVar.asVarList(waitVars),
           PassedVar.extractVars(passedVars), recursive, target, props);
       this.block.generate(logger, gen, info);
       gen.endWaitStatement();
@@ -1325,7 +1329,7 @@ public class ICContinuations {
     }
 
     @Override
-    public void replaceConstructVars_(Map<Var, Arg> renames, 
+    public void replaceConstructVars_(Map<Var, Arg> renames,
                                       RenameMode mode) {
       boolean replaced = false;
       ListIterator<WaitVar> it = waitVars.listIterator();
@@ -1340,18 +1344,18 @@ public class ICContinuations {
       if (replaced) {
         WaitVar.removeDuplicates(waitVars);
       }
-      
+
       ICUtil.replaceArgValsInMap(renames, props);
     }
-    
+
     public WaitMode getMode() {
       return mode;
     }
-    
+
     public boolean isRecursive() {
       return recursive;
     }
-    
+
     public ExecTarget getTarget() {
       return target;
     }
@@ -1372,38 +1376,38 @@ public class ICContinuations {
     public boolean isAsync() {
       return true;
     }
-    
+
     @Override
     public boolean spawnsSingleTask() {
       return !isParallel();
     }
-    
+
     public boolean isParallel() {
       Arg parallelism = parallelism();
       return parallelism != null && !(parallelism.isIntVal() &&
                                       parallelism.getIntLit() > 1);
     }
-    
+
     public Arg parallelism() {
       return props.get(TaskPropKey.PARALLELISM);
     }
-    
+
     public Arg targetLocation() {
       return props.get(TaskPropKey.LOCATION);
     }
-    
+
     @Override
     public boolean isLoop() {
       // The parallel annotation means that the contents of block can execute
       // multiple times => basically a loop
       return isParallel();
     }
-    
+
     @Override
     public boolean isConditional() {
       return false;
     }
-    
+
     @Override
     public boolean executesBlockOnce() {
       return true;
@@ -1414,7 +1418,7 @@ public class ICContinuations {
       ArrayList<Var> res = new ArrayList<Var>();
       for (WaitVar wv: waitVars) {
         // Explicit variables cannot be eliminated
-        if (!forDeadCodeElim || wv.explicit) { 
+        if (!forDeadCodeElim || wv.explicit) {
           res.add(wv.var);
         }
       }
@@ -1426,7 +1430,8 @@ public class ICContinuations {
       }
       return res; // can later eliminate waitVars, etc
     }
-    
+
+    @Override
     public List<PassedVar> getMustPassVars() {
       try {
         if (Settings.getBoolean(Settings.MUST_PASS_WAIT_VARS)) {
@@ -1489,7 +1494,7 @@ public class ICContinuations {
         }
       }
       // Can't eliminate if purpose of wait is to dispatch task
-      if (varsLeft || mode == WaitMode.TASK_DISPATCH || 
+      if (varsLeft || mode == WaitMode.TASK_DISPATCH ||
           isParallel() || targetLocation() != null) {
         return null;
       } else {
@@ -1497,7 +1502,7 @@ public class ICContinuations {
         return block;
       }
     }
-    
+
     public void removeWaitVars(List<WaitVar> toRemove,
         boolean allRecursive, boolean retainExplicit) {
       ListIterator<WaitVar> it = waitVars.listIterator();
@@ -1532,11 +1537,11 @@ public class ICContinuations {
         recursive = false;
       }
     }
-    
+
     public void inlineInto(Block dstBlock) {
       inlineInto(dstBlock, this.block);
     }
-    
+
     /**
      * @param wv
      * @return true if we need to recursively check closing for variable, i.e.
@@ -1570,7 +1575,7 @@ public class ICContinuations {
           return true;
         }
       }
-      
+
       return false;
     }
 
@@ -1579,7 +1584,7 @@ public class ICContinuations {
       return target.actualContext(outerContext);
     }
   }
-  
+
   /**
    * A new construct that dispatches a task to an asynchronous executor,
    * which runs the provided block once execution is finished.
@@ -1593,28 +1598,28 @@ public class ICContinuations {
      * Executor that it will execute on
      */
     private final AsyncExecutor executor;
-    
+
     /**
      * Name of command for executor
      */
     private final String cmdName;
-    
+
     /**
      * Output variables assigned by task, generally
      * local values
      */
     private final List<Var> taskOutputs;
-    
+
     /**
      * Arguments that describe task
      */
     private final List<Arg> taskArgs;
-    
+
     /**
      * Key-value properties to pass to executor
      */
     private final Map<String, Arg> taskProps;
-    
+
     /**
      * If the task should be treated as having side effects
      */
@@ -1633,7 +1638,7 @@ public class ICContinuations {
     private AsyncExec(String procName, Block block, boolean newBlock,
         AsyncExecutor executor,
         String cmdName, List<PassedVar> passedVars, List<Var> keepOpenVars,
-        List<Var> taskOutputs, 
+        List<Var> taskOutputs,
         List<Arg> taskArgs, Map<String, Arg> taskProps,
         boolean hasSideEffects) {
       super(passedVars, keepOpenVars);
@@ -1708,7 +1713,7 @@ public class ICContinuations {
     }
 
     @Override
-    public void replaceConstructVars_(Map<Var, Arg> renames, 
+    public void replaceConstructVars_(Map<Var, Arg> renames,
                                       RenameMode mode) {
       if (mode == RenameMode.REFERENCE ||
           mode == RenameMode.REPLACE_VAR)
@@ -1727,22 +1732,22 @@ public class ICContinuations {
     public boolean isAsync() {
       return true;
     }
-    
+
     @Override
     public boolean spawnsSingleTask() {
       return true;
     }
-    
+
     @Override
     public boolean isLoop() {
       return false;
     }
-    
+
     @Override
     public boolean isConditional() {
       return false;
     }
-    
+
     @Override
     public boolean executesBlockOnce() {
       return true;
@@ -1786,7 +1791,7 @@ public class ICContinuations {
 
     @Override
     public List<Var> constructDefinedVars(ContVarDefType type) {
-      
+
       if (type.includesInitOnly()) {
         List<Var> assigned = new ArrayList<Var>();
         for (Var taskOutput: taskOutputs) {

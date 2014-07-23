@@ -35,7 +35,10 @@ public class ExecContext {
    * Represent a general kind of context
    */
   public static enum Kind {
-    WORKER, CONTROL,;
+    WORKER,
+    CONTROL,
+    WILDCARD, /* Wildcard type*/
+    ;
   }
 
   /**
@@ -67,7 +70,8 @@ public class ExecContext {
     if (kind == Kind.WORKER) {
       assert(workContext != null);
     } else {
-      assert( kind == Kind.CONTROL);
+      assert(kind == Kind.CONTROL ||
+             kind == Kind.WILDCARD);
       assert(workContext == null);
     }
     this.kind = kind;
@@ -77,6 +81,8 @@ public class ExecContext {
   private final Kind kind;
   private final WorkContext workContext;
 
+  private static final ExecContext WILDCARD_CONTEXT =
+      new ExecContext(Kind.WILDCARD, null);
   private static final ExecContext CONTROL_CONTEXT =
                   new ExecContext(Kind.CONTROL, null);
   private static final ExecContext DEFAULT_WORKER_CONTEXT =
@@ -84,6 +90,10 @@ public class ExecContext {
 
   public WorkContext workContext() {
     return workContext;
+  }
+
+  public static ExecContext wildcard() {
+    return WILDCARD_CONTEXT;
   }
 
   public static ExecContext control() {
@@ -100,6 +110,10 @@ public class ExecContext {
 
   public List<ExecContext> asList() {
     return Collections.singletonList(this);
+  }
+
+  public boolean isWildcardContext() {
+    return kind == Kind.WILDCARD;
   }
 
   public boolean isControlContext() {
@@ -150,8 +164,9 @@ public class ExecContext {
 
   @Override
   public String toString() {
-    if (kind == Kind.CONTROL) {
-      return "CONTROL";
+    if (kind == Kind.CONTROL ||
+        kind == Kind.WILDCARD) {
+      return kind.name();
     } else {
       assert(kind == Kind.WORKER);
       return "WORKER[" + workContext + "]";

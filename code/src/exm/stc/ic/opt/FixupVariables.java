@@ -357,7 +357,8 @@ public class FixupVariables implements OptimizerPass {
   }
 
   private static boolean canImportGlobals(ExecContext execCx) {
-    return execCx.isControlContext() || !Settings.SEPARATE_TURBINE_ENGINE;
+    return execCx.isControlContext() ||
+            !Settings.SEPARATE_TURBINE_ENGINE;
   }
 
   /**
