@@ -51,6 +51,13 @@ do
   then
     a=( ${=line} )
     T_swift=${a[2]}
+    if [[ ${a[3]} = "at" ]]
+    then
+      T_opt=${a[4]}
+    else
+      T_opt=default
+    fi
+    T_name="${T_swift}@${T_opt}"
   elif [[ $line == running:* ]]
   then
     a=( ${=line} )
@@ -59,16 +66,18 @@ do
   then
     message "Test count : $T_count"
     message "Test swift : $T_swift"
+    message "Test opt : $T_opt"
     message "Test turbine : $T_turbine"
     message "Status: $line"
-    print "  <testcase name=\"${T_swift}\" />"
+    print "  <testcase name=\"${T_name}\" />"
   elif [[ $line == "FAILED" ]]
   then
     message "Test count : $T_count";
     message "Test swift : $T_swift";
+    message "Test opt : $T_opt"
     message "Test turbine : $T_turbine";
     message "Status: $line"
-    print "  <testcase name=\"${T_swift}\" >"
+    print "  <testcase name=\"${T_name}\" >"
     print "     <failure type=\"generic\">"
 
     STC_OUTPUT=${T_swift%.swift}.stc.out
@@ -80,12 +89,12 @@ do
     print
 
     # STC stdout from failed case
-    print "STC outputs from ${T_swift}:"
+    print "STC outputs from ${T_name}:"
     xml_escape ${STC_OUTPUT}
     print
 
     # STC stderr from failed case
-    print "STC errors from ${T_swift}:"
+    print "STC errors from ${T_name}:"
     xml_escape ${STC_ERROR}
     print
 
@@ -93,7 +102,7 @@ do
     TURBINE_OUTPUT=${T_swift%.swift}.out
     if [[ -f ${TURBINE_OUTPUT} ]]
     then
-      print "Turbine output from ${T_swift}:"
+      print "Turbine output from ${T_name}:"
       xml_escape ${TURBINE_OUTPUT}
     fi
 
@@ -101,7 +110,7 @@ do
     TURBINE_CHECK=${T_swift%.swift}.check.out
     if [[ -f ${TURBINE_CHECK} ]]
     then
-      print "Turbine check output from ${T_swift}:"
+      print "Turbine check output from ${T_name}:"
       xml_escape ${TURBINE_CHECK}
     fi
 

@@ -34,8 +34,9 @@ check_error()
 pwd
 TESTS_SKIP=0
 TESTS_TOTAL=-1 # May set to -1 to run all
-TURBINE=/tmp/exm-install/turbine
-STC=/tmp/exm-install/stc
+INSTALL_ROOT=/tmp/exm-install
+TURBINE=${INSTALL_ROOT}/turbine
+STC=${INSTALL_ROOT}/stc
 MPICH=/tmp/mpich-install
 export PATH=${MPICH}/bin:${TURBINE}/bin:${STC}/bin:${PATH}
 # print -l ${path}
@@ -47,7 +48,8 @@ cd tests
 
 export TURBINE_HOME=${TURBINE}
 export ADLB_PERF_COUNTERS=0
-source ./run-tests.zsh -c -k ${TESTS_SKIP} -n ${TESTS_TOTAL} |& \
+source ./run-tests.zsh -O0 -O1 -O2 -O3 \
+      -c -k ${TESTS_SKIP} -n ${TESTS_TOTAL} |& \
       tee results.out
 check_error ${pipestatus[1]} "run-tests.zsh"
 
