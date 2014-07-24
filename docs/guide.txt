@@ -1161,9 +1161,6 @@ C/C++ functions from Swift.
 Several components are required to implement a Swift native code function:
 
 -  Tcl bindings to your function.
--  For complex types such as structures, arrays and files, you may need
-   additional logic to marshal inputs and outputs to/from the global
-   data store.
 -  The requisite files required to build a Tcl package
    (e.g +pkgIndex.tcl+)
 -  Swift declarations for the function that specify the type of the
@@ -1264,6 +1261,9 @@ Tcl code, Swift types are mapped to Tcl types in the following way:
   which is the ADLB ID of the blob
 * files are represented as a list, with the first element the
   file path, and the second element a reference count
+* arrays are represented by Tcl dictionaries with keys and values
+  represented according to their type.
+* bags are represented by Tcl lists with elements in an arbitrary order.
 
 ==== Calling native libraries from Swift
 
@@ -1281,8 +1281,7 @@ Tcl bindings.
 
 ==== Writing custom Tcl interfaces
 
-For Tcl functions that take complex argument types, such as arrays or
-structures, you may need to write a Tcl wrapper function that is
+It is possible to write a Tcl wrapper function that is
 directly passed references to data in Swift's global data store.  In
 this case your function must manually retrieve/store data from/to the
 global distributed data store.  In this case, you do not use the STC
