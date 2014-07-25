@@ -21,6 +21,7 @@ set COASTER_WORK_TYPE 1
 
 proc coaster_task { x i } {
   turbine::coaster_run "echo" [ list Hello World ] \
+          [ list ] [ list ] [ dict create ] \
           "coaster_task_success $x $i" "coaster_task_fail"
 }
 
