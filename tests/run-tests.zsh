@@ -573,6 +573,17 @@ do
       fi
     fi
     report_result ${TEST_NAME} ${OPT_LEVEL} ${EXIT_CODE}
+   
+    CLEANUP_SCRIPT=${TEST_PATH}.cleanup.sh
+    CLEANUP_OUTPUT=${TEST_PATH}.cleanup.out
+    if [ -f "${CLEANUP_SCRIPT}" ]
+    then
+      print "cleaning:  $( basename ${CLEANUP_SCRIPT} )"
+      if ! ${CLEANUP_SCRIPT} &> ${CLEANUP_OUTPUT}
+      then
+        print "Cleanup script failed, output in ${CLEANUP_OUTPUT}"
+      fi
+    fi
   done
   (( TESTS_RUN++ ))
 done
