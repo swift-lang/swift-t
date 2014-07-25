@@ -117,7 +117,7 @@ list_i_pop_item(struct list_i* target)
   target->head = head->next;
   target->size--;
 
-  if (target->size == 1)
+  if (target->size == 0)
   {
     target->tail = NULL;
   }
