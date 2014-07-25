@@ -1,8 +1,7 @@
 import assert;
 import files;
 
-// SKIP-THIS-TEST
-// Work in progress on coaster app functions
+// Coaster app functions
 
 @dispatch=coaster
 app () echo (string arg) {
