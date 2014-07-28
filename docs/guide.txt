@@ -1254,11 +1254,11 @@ If you are defining Tcl functions in the way above with inline
 Tcl code, Swift types are mapped to Tcl types in the following way:
 
 * +int+/+float+/+string+/+bool+ are converted to the standard
-  Tcl representations
+  Tcl representations.
 * blobs are represented as a Tcl list with first element a pointer
   to the data, the second element the length of the data, and if
   the blob was loaded from the ADLB data store, a third element
-  which is the ADLB ID of the blob
+  which is the ADLB ID of the blob.
 * files are represented as a list, with the first element the
   file path, and the second element a reference count
 * arrays are represented by Tcl dictionaries with keys and values
