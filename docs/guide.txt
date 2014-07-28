@@ -1263,7 +1263,9 @@ Tcl code, Swift types are mapped to Tcl types in the following way:
   file path, and the second element a reference count
 * arrays are represented by Tcl dictionaries with keys and values
   represented according to their type.
-* bags are represented by Tcl lists with elements in an arbitrary order.
+* bags are represented by Tcl lists with elements in an arbitrary
+  order.
+* output voids are set automatically.  
 
 ==== Calling native libraries from Swift
 
