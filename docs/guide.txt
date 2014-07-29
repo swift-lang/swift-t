@@ -1708,7 +1708,12 @@ layout on a given machine is as intended.
 +ADLB_DEBUG_HOSTMAP=1+:: Enable a report showing the hostmap, which
 maps hostnames to ranks for use with the location functionality.
 
-+ADLB_DISABLE_HOSTMAP=1+:: Prevent the hostmap from being constructed.
++ADLB_DISABLE_HOSTMAP=1+:: Prevent the hostmap from being constructed
+(avoiding some communication overhead).  
+
++VALGRIND+:: Enable valgrind debugging.  Cf. <<valgrind,valgrind>>. 
+
++GDB_RANK+:: Enable GDB debugging.  Cf. <<gdb,GDB>>.  
 
 [[Build_configuration]]
 === Build configuration
@@ -1923,6 +1928,51 @@ Additional options include:
 +-v+:: Print verbose messages
 +--deps+:: Generate Makefile include for generating C file
 +--ignore-no-manifest+:: Pretend empty manifest present
+
+[[debugging]]
+=== Debugging Swift/T runs
+
+Applying the debugger allows you to debug native code linked to Swift/T
+from a normal debugger.  This will allow you to step through your code
+(and the Swift/T run time libraries). 
+
+* When using Swift/T dynamically with Tcl packages (the default), you
+  need to attach to the +tclsh+ process.  This process loads your
+  native code and calls into it.  
+* When using +mkstatic+, you generate a complete executable.  You can
+  debug this in the normal method for debugging MPI programs. 
+
+[[valgrind]]
+==== Valgrind
+
+The Swift/T launcher scripts support http://valgrind.org[valgrind].
+Simply set the environment variable +VALGRIND+ to the valgrind command
+you wish to use.  A suppressions file is distributed with Turbine to
+ignore known issues.  (Swift/T is valgrind-clean but there are some
+issues in Tcl.) 
+
+----
+export VALGRIND="valgrind --suppressions=$HOME/turbine/turbine.supp"
+turbine program.tcl
+----
+
+[[gdb]]
+==== GDB
+
+The Turbine library provides a convenient attachment mechanism
+compatible with debuggers like GDB, Eclipse, etc.  You attach to a
+Turbine execution by using the +GDB_RANK+ variable:
+
+----
+$ export GDB_RANK=0
+$ turbine program.tcl
+Waiting for gdb: rank: 0 pid: 23274
+...
+----
+
+Rank 0, running in process +23274+, has blocked (in a loop) and is
+waiting for the debugger to attach.  When you attach, set the variable
++t=1+ to break out of the loop.  Then you can debug normally.
 
 ////
 Local Variables:
