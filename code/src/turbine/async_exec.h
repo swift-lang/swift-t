@@ -25,11 +25,19 @@
 
 #include <tcl.h>
 
+#include <adlb-defs.h>
+
 // Limit on number of registered async executors
 #define TURBINE_ASYNC_EXEC_LIMIT 64
 
 // Limit on number of concurrent get requests
 #define TURBINE_ASYNC_EXEC_MAX_REQS 256
+
+// Default number of buffers to allocate
+#define TURBINE_ASYNC_EXEC_DEFAULT_BUFFER_COUNT 16
+
+// Default size of buffers to allocate
+#define TURBINE_ASYNC_EXEC_DEFAULT_BUFFER_SIZE ADLB_DATA_MAX
 
 // Forward declare turbine executor
 typedef struct turbine_executor turbine_executor;

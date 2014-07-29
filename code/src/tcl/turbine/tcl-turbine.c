@@ -1207,12 +1207,17 @@ Async_Exec_Configure_Cmd(ClientData cdata, Tcl_Interp* interp,
 
 /*
   turbine::async_exec_worker_loop <executor name> <adlb work type>
+                                  [<key> <value>]*
+  Optional key-value arguments:
+    buffer_count: number of payload buffers to allocate
+    buffer_size: size of payload buffers in bytes (must be large enough
+                                                   for work units)
  */
 static int
 Async_Exec_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
-  TCL_ARGS(3);
+  TCL_CONDITION(objc >= 3, "Need at least three arguments");
 
   int rc;
   turbine_code tc;
@@ -1226,23 +1231,52 @@ Async_Exec_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = Tcl_GetIntFromObj(interp, objv[2], &adlb_work_type);
   TCL_CHECK(rc);
 
-  // TODO: make configurable?
-  const int ASYNC_EXEC_BUFFERS = 4;
-  adlb_payload_buf bufs[ASYNC_EXEC_BUFFERS];
+  int buffer_count = TURBINE_ASYNC_EXEC_DEFAULT_BUFFER_COUNT;
+  int buffer_size = TURBINE_ASYNC_EXEC_DEFAULT_BUFFER_SIZE;
 
-  for (int i = 0; i < ASYNC_EXEC_BUFFERS; i++)
+  for (int arg = 3; arg < objc; arg += 2)
+  {
+    TCL_CONDITION(arg + 1 < objc,
+                  "Missing value for last key-value argument")
+
+    const char *key = Tcl_GetString(objv[arg]);
+    if (strcmp(key, "buffer_count") == 0)
+    {
+      rc = Tcl_GetIntFromObj(interp, objv[arg + 1], &buffer_count);
+      TCL_CHECK_MSG(rc, "Expected integer value for buffer_count");
+    }
+    else if (strcmp(key, "buffer_size") == 0)
+    {
+      rc = Tcl_GetIntFromObj(interp, objv[arg + 1], &buffer_size);
+      TCL_CHECK_MSG(rc, "Expected integer value for buffer_size");
+
+      TCL_CONDITION(buffer_size >= 0, "Positive value for buffer_size "
+                                   "expected, but got %i", buffer_size);
+    }
+    else
+    {
+      TCL_RETURN_ERROR("Invalid key for key-value argument: %s\n", key);
+      return TCL_ERROR;
+    }
+  }
+
+  adlb_payload_buf *bufs = malloc(sizeof(adlb_payload_buf) *
+                                  (size_t)buffer_count);
+  TCL_MALLOC_CHECK(bufs);
+
+  for (int i = 0; i < buffer_count; i++)
   {
 
     // Maintain separate buffers from xfer, since xfer may be
     // used in code that we call.
 
-    bufs[i].payload = malloc(ADLB_DATA_MAX);
+    bufs[i].payload = malloc((size_t)buffer_size);
     TCL_MALLOC_CHECK(bufs[i].payload);
-    bufs[i].size = ADLB_DATA_MAX;
+    bufs[i].size = buffer_size;
   }
 
   tc = turbine_async_worker_loop(interp, exec, adlb_work_type,
-                                  bufs, ASYNC_EXEC_BUFFERS);
+                                  bufs, buffer_count);
 
   if (tc == TURBINE_ERROR_EXTERNAL)
     // turbine_async_worker_loop() has added the error info
@@ -1250,7 +1284,7 @@ Async_Exec_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
   else
     TCL_CONDITION(tc == TURBINE_SUCCESS, "Unknown worker error!");
 
-  for (int i = 0; i < ASYNC_EXEC_BUFFERS; i++)
+  for (int i = 0; i < buffer_count; i++)
   {
     free(bufs[i].payload);
   }
