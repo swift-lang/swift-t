@@ -24,12 +24,33 @@ source $( dirname $0 )/setup.sh > ${OUTPUT} 2>&1
 PROCS=3
 export TURBINE_COASTER_WORKERS=1
 
-#TODO: start service
-export COASTER_SERVICE_URL="127.0.0.1:53001"
+START_SVC=start-coaster-service
+STOP_SVC=stop-coaster-service
+SVC_CONF="$(dirname $0)/coaster-exec-local.conf"
+
+#TODO: assumes start-coaster-service on path
+if ! which $START_SVC &> /dev/null ; then
+  echo "${START_SVC} not on path"
+  exit 1
+fi
+
+if ! which $STOP_SVC &> /dev/null ; then
+  echo "${STOP_SVC} not on path"
+  exit 1
+fi
+
+"${STOP_SVC}" -conf "${SVC_CONF}"
+"${START_SVC}" -conf "${SVC_CONF}"
+
+export COASTER_SERVICE_URL="127.0.0.1:53363"
 export TURBINE_COASTER_CONFIG=""
 
 bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
-[[ ${?} == 0 ]] || test_result 1
+TURBINE_RC=${?}
+
+"${STOP_SVC}" -conf "${SVC_CONF}"
+
+[[ ${TURBINE_RC} == 0 ]] || test_result 1
 
 grep -q "WAITING WORK" ${OUTPUT} && test_result 1
 
