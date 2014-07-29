@@ -1799,10 +1799,12 @@ of each process.  This allows you to determine whether your process
 layout on a given machine is as intended.
 
 anchor:env_hostmap_debug[]
+
 +ADLB_DEBUG_HOSTMAP=1+:: Enable a report showing the hostmap, which
 maps hostnames to ranks for use with the location functionality.
 
 anchor:env_hostmap_disable[]
+
 +ADLB_DISABLE_HOSTMAP=1+:: Prevent the hostmap from being constructed
 (avoiding some communication overhead).
 
@@ -1813,7 +1815,7 @@ anchor:env_hostmap_disable[]
 [[Build_configuration]]
 === Build configuration
 
-The following describes how to turn Swift/T programs in Turbine
+The following describes how to run Swift/T programs in Turbine
 on more complex systems.
 
 ==== Build troubleshooting
