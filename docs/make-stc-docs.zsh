@@ -4,6 +4,7 @@
 # 1) Extracts snippets for code samples
 # 2) Runs asciidoc
 
+# Extract snippet from file.
 snip()
 {
   N=$1
