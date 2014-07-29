@@ -260,7 +260,6 @@ turbine_async_worker_loop(Tcl_Interp *interp, turbine_executor *exec,
     .head = 0,
     .tail = 0,
   };
-  // TODO: check buffers large enough for work units?
 
   assert(exec->start != NULL);
   bool must_start = !exec->started;
@@ -353,8 +352,8 @@ get_tasks(Tcl_Interp *interp, turbine_executor *executor,
   {
     DEBUG_TURBINE("Issuing %i more requests for work type %i",
                   extra_reqs, adlb_work_type);
+
     // Use temporary arrays to get contiguous items
-    // TODO: avoid copying if possible?
     adlb_get_req tmp_reqs[extra_reqs];
     adlb_payload_buf tmp_bufs[extra_reqs];
     for (int i = 0; i < extra_reqs; i++)
@@ -500,7 +499,7 @@ check_tasks(Tcl_Interp *interp, turbine_executor *executor, bool poll,
     ec = executor->wait(executor->state, completed, &ncompleted);
     EXEC_CHECK(ec);
   }
-  
+
   DEBUG_TURBINE("check_tasks: executor=%s poll=%s ncompleted=%i",
                 executor->name, poll ? "true" : "false", ncompleted);
 
