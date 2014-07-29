@@ -13,7 +13,7 @@ Settings:
 :miscellaneous.newline: \n
 
 = Swift/T Guide
-v0.6.0, July 2014
+v0.6.1, July 2014
 
 The Swift/Turbine Compiler (STC) allows you to write Swift programs
 and run them using Turbine.
@@ -1779,7 +1779,7 @@ Sometimes simply specifying the MPI directory is not enough to
 configure Swift/T.
 
 You can modify these settings in +exm-settings.sh+ to more precisely
-define locations of MPI resources
+define locations of MPI resources:
 
 ----
 EXM_CUSTOM_MPI=1
