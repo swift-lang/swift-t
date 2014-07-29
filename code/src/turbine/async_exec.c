@@ -432,12 +432,9 @@ get_tasks(Tcl_Interp *interp, turbine_executor *executor,
     *got_tasks = true;
     reqs->tail = (reqs->tail + 1) % reqs->max_reqs;
     reqs->nreqs--;
-    if (!poll)
-    {
-      // Don't want to block
-      // TODO: would be nice to check more if we waited without blocking
-       break;
-    }
+
+    // We got at least one result: future checks should not block
+    poll = true;
   }
 
   return TURBINE_EXEC_SUCCESS;
