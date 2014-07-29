@@ -1140,19 +1140,19 @@ as 64-bit integers).
 blob.
 
 [[library_location]]
-=== Location 
+=== Location
 
-See the section about <<location,location>>. 
+See the section about <<location,location>>.
 
 +location_from_rank(int) -> location+:: Convert the rank integer to a
-+location+ variable compatible with +@location+. 
++location+ variable compatible with +@location+.
 
-+random_worker() -> location+:: Obtain a worker at random. 
++random_worker() -> location+:: Obtain a worker at random.
 
-+hostmap_list() -> string[]+:: Obtain the whole hostmap. 
++hostmap_list() -> string[]+:: Obtain the whole hostmap.
 
 +hostmap_one(string) -> location+:: Lookup the string as a host in the
-hostmap and return one rank running on that host. 
+hostmap and return one rank running on that host.
 
 +hostmap_one_worker(string) -> location+:: Lookup the string as a host
 in the hostmap and return one worker rank running on that host.
@@ -1283,7 +1283,7 @@ Tcl code, Swift types are mapped to Tcl types in the following way:
   represented according to their type.
 * bags are represented by Tcl lists with elements in an arbitrary
   order.
-* output voids are set automatically.  
+* output voids are set automatically.
 
 ==== Calling native libraries from Swift
 
@@ -1550,20 +1550,20 @@ end
 }
 ----
 
-In this example, a http://julialang.org[Julia] script is placed in 
+In this example, a http://julialang.org[Julia] script is placed in
 string +f+.  It is parameterized three times by +sprintf()+.  Each
 Julia invocation runs concurrently (if enough processes are provided
-to Swift/T).  
+to Swift/T).
 
 NOTE: To use this, Turbine must be configured with Julia enabled
  before compiling, by  providing the +--enable-julia+ argument
  to +configure+.  This feature is implemented by linking to Julia
  as a shared library, enabling better performance than calling the
  +julia+ program (which may be done by using a normal Swift
- <<app_functions,app function>>). 
+ <<app_functions,app function>>).
 
 [[annotations]]
-== Annotations 
+== Annotations
 
 Swift/T supports many annotations to influence the behavior of the
 run.
@@ -1574,15 +1574,15 @@ Leaf tasks resulting from Swift dataflow may be prioritized by using
 the +@priority+ annotation:
 
 ----
-foreach i in [0:n-1] { 
+foreach i in [0:n-1] {
   @priority=i f(i);
 }
 ----
 
 In this case, +f()+ will operate on higher values of +i+ first.
-Priority is best-effort; it is local to the ADLB server. 
+Priority is best-effort; it is local to the ADLB server.
 
-This annotation is applied to the leaf task call.  
+This annotation is applied to the leaf task call.
 
 [[location]]
 === Location
@@ -1591,15 +1591,15 @@ Leaf tasks resulting from Swift dataflow may be assigned to a given
 processor by using the +@location+ annotation:
 
 ----
-foreach i in [0:n-1] { 
-  location L = location_from_rank(i); 
+foreach i in [0:n-1] {
+  location L = location_from_rank(i);
   @location=L f(i);
 }
 ----
 
-In this case, each +f(i)+ will execute on a different worker. 
+In this case, each +f(i)+ will execute on a different worker.
 
-This annotation is applied to the leaf task call.  
+This annotation is applied to the leaf task call.
 
 ==== Hostmap
 
@@ -1613,7 +1613,7 @@ features to send work to assigned hostnames.  See the
 === Dispatch
 
 This simply dispatches tasks to the given process type: +WORKER+ or
-+SERVER+. By default, work executes on a +SERVER+. 
++SERVER+. By default, work executes on a +SERVER+.
 
 ----
 @dispatch=WORKER
@@ -1622,18 +1622,18 @@ This simply dispatches tasks to the given process type: +WORKER+ or
 ];
 ----
 
-Swift/T builtin functions (+strcat()+, arithmetic, etc.) are typically 
+Swift/T builtin functions (+strcat()+, arithmetic, etc.) are typically
 implemented in this way as tasks that execute on the server.  User
 work should be performed on workers to keep servers free to process
-dataflow.  
+dataflow.
 
-This annotation is applied to the leaf task definition.  
+This annotation is applied to the leaf task definition.
 
 ////
 
 === Work types
 
-Tim? 
+Tim?
 
 ////
 
@@ -1804,11 +1804,11 @@ maps hostnames to ranks for use with the location functionality.
 
 anchor:env_hostmap_disable[]
 +ADLB_DISABLE_HOSTMAP=1+:: Prevent the hostmap from being constructed
-(avoiding some communication overhead).  
+(avoiding some communication overhead).
 
-+VALGRIND+:: Enable valgrind debugging.  Cf. <<valgrind,valgrind>>. 
++VALGRIND+:: Enable valgrind debugging.  Cf. <<valgrind,valgrind>>.
 
-+GDB_RANK+:: Enable GDB debugging.  Cf. <<gdb,GDB>>.  
++GDB_RANK+:: Enable GDB debugging.  Cf. <<gdb,GDB>>.
 
 [[Build_configuration]]
 === Build configuration
@@ -2029,13 +2029,13 @@ Additional options include:
 
 Applying the debugger allows you to debug native code linked to Swift/T
 from a normal debugger.  This will allow you to step through your code
-(and the Swift/T run time libraries). 
+(and the Swift/T run time libraries).
 
 * When using Swift/T dynamically with Tcl packages (the default), you
   need to attach to the +tclsh+ process.  This process loads your
-  native code and calls into it.  
+  native code and calls into it.
 * When using +mkstatic+, you generate a complete executable.  You can
-  debug this in the normal method for debugging MPI programs. 
+  debug this in the normal method for debugging MPI programs.
 
 [[valgrind]]
 ==== Valgrind
@@ -2044,7 +2044,7 @@ The Swift/T launcher scripts support http://valgrind.org[valgrind].
 Simply set the environment variable +VALGRIND+ to the valgrind command
 you wish to use.  A suppressions file is distributed with Turbine to
 ignore known issues.  (Swift/T is valgrind-clean but there are some
-issues in Tcl.) 
+issues in Tcl.)
 
 ----
 export VALGRIND="valgrind --suppressions=$HOME/turbine/turbine.supp"
@@ -2075,5 +2075,3 @@ mode: doc
 eval: (auto-fill-mode 1)
 End:
 ////
-
-
