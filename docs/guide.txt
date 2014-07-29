@@ -1139,6 +1139,24 @@ as 64-bit integers).
 +blob_from_file(file) -> blob+:: Reads whole file, returning it as a
 blob.
 
+[[library_location]]
+=== Location 
+
+See the section about <<location,location>>. 
+
++location_from_rank(int) -> location+:: Convert the rank integer to a
++location+ variable compatible with +@location+. 
+
++random_worker() -> location+:: Obtain a worker at random. 
+
++hostmap_list() -> string[]+:: Obtain the whole hostmap. 
+
++hostmap_one(string) -> location+:: Lookup the string as a host in the
+hostmap and return one rank running on that host. 
+
++hostmap_one_worker(string) -> location+:: Lookup the string as a host
+in the hostmap and return one worker rank running on that host.
+
 == Defining leaf functions
 
 In typical Swift applications, the computationally intensive parts of
@@ -1544,6 +1562,81 @@ NOTE: To use this, Turbine must be configured with Julia enabled
  +julia+ program (which may be done by using a normal Swift
  <<app_functions,app function>>). 
 
+[[annotations]]
+== Annotations 
+
+Swift/T supports many annotations to influence the behavior of the
+run.
+
+=== Priority
+
+Leaf tasks resulting from Swift dataflow may be prioritized by using
+the +@priority+ annotation:
+
+----
+foreach i in [0:n-1] { 
+  @priority=i f(i);
+}
+----
+
+In this case, +f()+ will operate on higher values of +i+ first.
+Priority is best-effort; it is local to the ADLB server. 
+
+This annotation is applied to the leaf task call.  
+
+[[location]]
+=== Location
+
+Leaf tasks resulting from Swift dataflow may be assigned to a given
+processor by using the +@location+ annotation:
+
+----
+foreach i in [0:n-1] { 
+  location L = location_from_rank(i); 
+  @location=L f(i);
+}
+----
+
+In this case, each +f(i)+ will execute on a different worker. 
+
+This annotation is applied to the leaf task call.  
+
+==== Hostmap
+
+At startup, by default, Turbine obtains all hostnames used in the run
+and builds up a data structure called the hostmap to map hostnames to
+ranks.  You may combine the location features with the hostmap
+features to send work to assigned hostnames.  See the
+<<library_location,Location library>> for usage.  The hostmap may be
+<<env_hostmap_debug,debugged>> or <<env_hostmap_disable,disabled>>.
+
+=== Dispatch
+
+This simply dispatches tasks to the given process type: +WORKER+ or
++SERVER+. By default, work executes on a +SERVER+. 
+
+----
+@dispatch=WORKER
+(int o) process (int i) "pkg" "0.0.1" [
+  "set <<o>> [ pkg::process <<i>> ]"
+];
+----
+
+Swift/T builtin functions (+strcat()+, arithmetic, etc.) are typically 
+implemented in this way as tasks that execute on the server.  User
+work should be performed on workers to keep servers free to process
+dataflow.  
+
+This annotation is applied to the leaf task definition.  
+
+////
+
+=== Work types
+
+Tim? 
+
+////
+
 [[Optimizations]]
 == Optimizations
 STC performs a range of compiler optimizations that can significantly
@@ -1705,9 +1798,11 @@ The seed is recorded in the log.
 of each process.  This allows you to determine whether your process
 layout on a given machine is as intended.
 
+anchor:env_hostmap_debug[]
 +ADLB_DEBUG_HOSTMAP=1+:: Enable a report showing the hostmap, which
 maps hostnames to ranks for use with the location functionality.
 
+anchor:env_hostmap_disable[]
 +ADLB_DISABLE_HOSTMAP=1+:: Prevent the hostmap from being constructed
 (avoiding some communication overhead).  
 
@@ -1980,3 +2075,5 @@ mode: doc
 eval: (auto-fill-mode 1)
 End:
 ////
+
+
