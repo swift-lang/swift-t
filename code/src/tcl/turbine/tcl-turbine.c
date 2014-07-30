@@ -124,8 +124,8 @@ static int tcllist_to_strings(Tcl_Interp *interp, Tcl_Obj *const objv[],
       Tcl_Obj *list, int *count, const char ***strs, size_t **str_lens);
 
 static int
-process_worker_keyword_args(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
-                            int startarg, int *buffer_count, int *buffer_size);
+worker_keyword_args(Tcl_Interp *interp, Tcl_Obj *const objv[],
+                    Tcl_Obj *dict, int *buffer_count, int *buffer_size);
 
 #if HAVE_COASTER == 1
 static int parse_coaster_stages(Tcl_Interp *interp, Tcl_Obj *const objv[],
@@ -663,26 +663,32 @@ tcl_obj_to_binary(Tcl_Interp* interp, Tcl_Obj *const objv[],
   return TCL_OK;
 }
 
-/* usage: worker_loop <work type>
+/* usage: worker_loop <work type> [<keyword arg dict>]
    Repeatedly run units of work from ADLB of provided type
+  Optional key-value arguments:
+    buffer_size: size of payload buffer in bytes (must be large enough
+                                                   for work units)
  */
 static int
 Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp* interp,
                         int objc, Tcl_Obj* const objv[])
 {
-  TCL_CONDITION(objc >= 2, "Need at least 1 argument");
+  TCL_CONDITION(objc == 2 || objc == 3, "Need 1 or 2 arguments");
 
   int work_type;
   int rc = TCL_OK;
   rc = Tcl_GetIntFromObj(interp, objv[1], &work_type);
   TCL_CHECK(rc);
 
-  int buffer_count = 1;
   int buffer_size = TURBINE_ASYNC_EXEC_DEFAULT_BUFFER_SIZE;
 
-  rc = process_worker_keyword_args(interp, objc, objv, 2,
-                        &buffer_count, &buffer_size);
-  TCL_CHECK(rc);
+  if (objc >= 3)
+  {
+    int buffer_count = 1;
+    rc = worker_keyword_args(interp, objv, objv[2], &buffer_count,
+                             &buffer_size);
+    TCL_CHECK(rc);
+  }
 
   // Maintain separate buffer from xfer, since xfer may be
   // used in code that we call.
@@ -709,19 +715,22 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp* interp,
  * This will validate any values received.
  */
 static int
-process_worker_keyword_args(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
-                            int startarg, int *buffer_count, int *buffer_size) {
+worker_keyword_args(Tcl_Interp *interp, Tcl_Obj *const objv[],
+                    Tcl_Obj *dict, int *buffer_count, int *buffer_size) {
   int rc;
+  Tcl_DictSearch search;
+  Tcl_Obj *key_obj, *val_obj;
+  int done;
 
-  for (int arg = startarg; arg < objc; arg += 2)
+  rc = Tcl_DictObjFirst(interp, dict, &search, &key_obj, &val_obj, &done);
+  TCL_CHECK_MSG(rc, "Error iterating over dict: %s", Tcl_GetString(dict));
+
+  for (; !done; Tcl_DictObjNext(&search, &key_obj, &val_obj, &done))
   {
-    TCL_CONDITION(arg + 1 < objc,
-                  "Missing value for last key-value argument")
-
-    const char *key = Tcl_GetString(objv[arg]);
+    const char *key = Tcl_GetString(key_obj);
     if (strcmp(key, "buffer_count") == 0)
     {
-      rc = Tcl_GetIntFromObj(interp, objv[arg + 1], buffer_count);
+      rc = Tcl_GetIntFromObj(interp, val_obj, buffer_count);
       TCL_CHECK_MSG(rc, "Expected integer value for buffer_count");
 
       TCL_CONDITION(*buffer_count >= 0, "Positive value for buffer_count "
@@ -729,7 +738,7 @@ process_worker_keyword_args(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
     }
     else if (strcmp(key, "buffer_size") == 0)
     {
-      rc = Tcl_GetIntFromObj(interp, objv[arg + 1], buffer_size);
+      rc = Tcl_GetIntFromObj(interp, val_obj, buffer_size);
       TCL_CHECK_MSG(rc, "Expected integer value for buffer_size");
 
       TCL_CONDITION(*buffer_size >= 0, "Positive value for buffer_size "
@@ -741,6 +750,8 @@ process_worker_keyword_args(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
       return TCL_ERROR;
     }
   }
+
+  Tcl_DictObjDone(&search);
 
   return TCL_OK;
 }
@@ -1261,7 +1272,7 @@ Async_Exec_Configure_Cmd(ClientData cdata, Tcl_Interp* interp,
 
 /*
   turbine::async_exec_worker_loop <executor name> <adlb work type>
-                                  [<key> <value>]*
+                                  [<keyword arg dict>]
   Optional key-value arguments:
     buffer_count: number of payload buffers to allocate
     buffer_size: size of payload buffers in bytes (must be large enough
@@ -1271,7 +1282,7 @@ static int
 Async_Exec_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
-  TCL_CONDITION(objc >= 3, "Need at least 2 arguments");
+  TCL_CONDITION(objc == 3 || objc == 4, "Need 2 or 3 arguments");
 
   int rc;
   turbine_code tc;
@@ -1287,10 +1298,13 @@ Async_Exec_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   int buffer_count = TURBINE_ASYNC_EXEC_DEFAULT_BUFFER_COUNT;
   int buffer_size = TURBINE_ASYNC_EXEC_DEFAULT_BUFFER_SIZE;
-
-  rc = process_worker_keyword_args(interp, objc, objv, 3,
-                        &buffer_count, &buffer_size);
-  TCL_CHECK(rc);
+  
+  if (objc >= 4)
+  {
+    rc = worker_keyword_args(interp, objv, objv[3], &buffer_count,
+                             &buffer_size);
+    TCL_CHECK(rc);
+  }
 
   // TODO: only allocate as many buffers as max slots
   adlb_payload_buf *bufs = malloc(sizeof(adlb_payload_buf) *

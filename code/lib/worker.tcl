@@ -32,17 +32,17 @@ namespace eval turbine {
           return
         }
 
-        set keyword_args [ list ]
+        set keyword_args [ dict create ]
 
         set buffer_size_val [ configured_buffer_size $mode ]
 
         if { $buffer_size_val != "" }  {
-          lappend keyword_args buffer_size $buffer_size_val
+          dict append keyword_args buffer_size $buffer_size_val
         }
 
         global WORK_TYPE
 
-        c::worker_loop $WORK_TYPE($mode) {*}$keyword_args
+        c::worker_loop $WORK_TYPE($mode) $keyword_args
     }
 
     proc custom_worker { rules startup_cmd mode } {
@@ -65,21 +65,21 @@ namespace eval turbine {
           set config_str $env($config_key)
         }
 
-        set keyword_args [ list ]
+        set keyword_args [ dict create ]
 
         set buffer_size_val [ configured_buffer_size $work_type ]
 
         if { $buffer_size_val != "" }  {
-          lappend keyword_args buffer_size $buffer_size_val
+          dict append keyword_args buffer_size $buffer_size_val
         }
 
         set buffer_count_val [ configured_buffer_count $work_type ]
 
         if { $buffer_count_val != "" }  {
-          lappend keyword_args buffer_count $buffer_count_val
+          dict append keyword_args buffer_count $buffer_count_val
         }
 
-        async_exec_configure $work_type $config_str {*}$keyword_args
+        async_exec_configure $work_type $config_str
 
         eval $startup_cmd
         if { [ adlb::rank ] == 0 } {
@@ -90,7 +90,7 @@ namespace eval turbine {
 
         global WORK_TYPE
 
-        c::async_exec_worker_loop $work_type $WORK_TYPE($work_type)
+        c::async_exec_worker_loop $work_type $WORK_TYPE($work_type) $keyword_args
     }
 
     # returns empty string for default, or configured task buffer size
