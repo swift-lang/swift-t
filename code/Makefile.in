@@ -256,7 +256,7 @@ ifeq ($(HAVE_JULIA),1)
 	INCLUDES += -I $(USE_JULIA)/src/support
 endif
 ifeq ($(HAVE_COASTER),1)
-	CFLAGS += -I $(USE_COASTER)/include
+	INCLUDES += -I $(USE_COASTER)/include
 endif
 
 CFLAGS += $(DEFINES) $(INCLUDES)
