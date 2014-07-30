@@ -74,7 +74,7 @@ ifeq ($(USE_MPE),1)
 	TEST_SRC_TCL += $(DIR)/mpe-3.tcl
 endif
 
-ifeq ($(USE_COASTER),1)
+ifeq ($(HAVE_COASTER),1)
 	TEST_SRC_TCL += $(DIR)/coaster-exec-1.tcl
 endif
 
