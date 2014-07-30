@@ -110,7 +110,9 @@ typedef turbine_exec_code (*turbine_exec_poll)(void *state,
           turbine_completed_task *completed, int *ncompleted);
 
 /*
-  Slots: fill in counts of slots
+  Slots: fill in counts of slots.
+  May be called any time after configure.
+  If maximum slots is unlimited or unknown, should be set to -1
  */
 typedef turbine_exec_code (*turbine_exec_slots)(void *state,
                                   turbine_exec_slot_state *slots);

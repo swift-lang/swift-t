@@ -123,6 +123,10 @@ static int log_setup(int rank);
 static int tcllist_to_strings(Tcl_Interp *interp, Tcl_Obj *const objv[],
       Tcl_Obj *list, int *count, const char ***strs, size_t **str_lens);
 
+static int
+process_worker_keyword_args(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
+                            int startarg, int *buffer_count, int *buffer_size);
+
 #if HAVE_COASTER == 1
 static int parse_coaster_stages(Tcl_Interp *interp, Tcl_Obj *const objv[],
       Tcl_Obj *list, coaster_staging_mode default_stage_mode,
@@ -666,17 +670,23 @@ static int
 Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp* interp,
                         int objc, Tcl_Obj* const objv[])
 {
-  TCL_ARGS(2);
+  TCL_CONDITION(objc >= 2, "Need at least 1 argument");
 
   int work_type;
   int rc = TCL_OK;
   rc = Tcl_GetIntFromObj(interp, objv[1], &work_type);
   TCL_CHECK(rc);
 
+  int buffer_count = 1;
+  int buffer_size = TURBINE_ASYNC_EXEC_DEFAULT_BUFFER_SIZE;
+
+  rc = process_worker_keyword_args(interp, objc, objv, 2,
+                        &buffer_count, &buffer_size);
+  TCL_CHECK(rc);
+
   // Maintain separate buffer from xfer, since xfer may be
   // used in code that we call.
-  size_t buffer_size = ADLB_DATA_MAX;
-  void* buffer = malloc(buffer_size);
+  void* buffer = malloc((size_t)buffer_size);
   TCL_CONDITION(buffer != NULL, "Out of memory");
 
   turbine_code code = turbine_worker_loop(interp, buffer, buffer_size,
@@ -689,6 +699,50 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp* interp,
   else
     TCL_CONDITION(code == TURBINE_SUCCESS, "Unknown worker error!");
   return rc;
+}
+
+/*
+ * Process worker keyword arguments.
+ * Only modifies arguments if the keyword arg was encountered, i.e.
+ * caller should initialise the arguments to their default values.
+ *
+ * This will validate any values received.
+ */
+static int
+process_worker_keyword_args(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
+                            int startarg, int *buffer_count, int *buffer_size) {
+  int rc;
+
+  for (int arg = startarg; arg < objc; arg += 2)
+  {
+    TCL_CONDITION(arg + 1 < objc,
+                  "Missing value for last key-value argument")
+
+    const char *key = Tcl_GetString(objv[arg]);
+    if (strcmp(key, "buffer_count") == 0)
+    {
+      rc = Tcl_GetIntFromObj(interp, objv[arg + 1], buffer_count);
+      TCL_CHECK_MSG(rc, "Expected integer value for buffer_count");
+
+      TCL_CONDITION(*buffer_count >= 0, "Positive value for buffer_count "
+                                   "expected, but got %i", *buffer_count);
+    }
+    else if (strcmp(key, "buffer_size") == 0)
+    {
+      rc = Tcl_GetIntFromObj(interp, objv[arg + 1], buffer_size);
+      TCL_CHECK_MSG(rc, "Expected integer value for buffer_size");
+
+      TCL_CONDITION(*buffer_size >= 0, "Positive value for buffer_size "
+                                   "expected, but got %i", *buffer_size);
+    }
+    else
+    {
+      TCL_RETURN_ERROR("Invalid key for key-value argument: %s\n", key);
+      return TCL_ERROR;
+    }
+  }
+
+  return TCL_OK;
 }
 
 static int
@@ -1217,7 +1271,7 @@ static int
 Async_Exec_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
                   int objc, Tcl_Obj *const objv[])
 {
-  TCL_CONDITION(objc >= 3, "Need at least three arguments");
+  TCL_CONDITION(objc >= 3, "Need at least 2 arguments");
 
   int rc;
   turbine_code tc;
@@ -1234,32 +1288,11 @@ Async_Exec_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
   int buffer_count = TURBINE_ASYNC_EXEC_DEFAULT_BUFFER_COUNT;
   int buffer_size = TURBINE_ASYNC_EXEC_DEFAULT_BUFFER_SIZE;
 
-  for (int arg = 3; arg < objc; arg += 2)
-  {
-    TCL_CONDITION(arg + 1 < objc,
-                  "Missing value for last key-value argument")
+  rc = process_worker_keyword_args(interp, objc, objv, 3,
+                        &buffer_count, &buffer_size);
+  TCL_CHECK(rc);
 
-    const char *key = Tcl_GetString(objv[arg]);
-    if (strcmp(key, "buffer_count") == 0)
-    {
-      rc = Tcl_GetIntFromObj(interp, objv[arg + 1], &buffer_count);
-      TCL_CHECK_MSG(rc, "Expected integer value for buffer_count");
-    }
-    else if (strcmp(key, "buffer_size") == 0)
-    {
-      rc = Tcl_GetIntFromObj(interp, objv[arg + 1], &buffer_size);
-      TCL_CHECK_MSG(rc, "Expected integer value for buffer_size");
-
-      TCL_CONDITION(buffer_size >= 0, "Positive value for buffer_size "
-                                   "expected, but got %i", buffer_size);
-    }
-    else
-    {
-      TCL_RETURN_ERROR("Invalid key for key-value argument: %s\n", key);
-      return TCL_ERROR;
-    }
-  }
-
+  // TODO: only allocate as many buffers as max slots
   adlb_payload_buf *bufs = malloc(sizeof(adlb_payload_buf) *
                                   (size_t)buffer_count);
   TCL_MALLOC_CHECK(bufs);
