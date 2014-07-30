@@ -113,6 +113,9 @@ static turbine_exec_code
 coaster_slots(void *state, turbine_exec_slot_state *slots);
 
 static turbine_exec_code
+coaster_max_slots(void *context, int *max);
+
+static turbine_exec_code
 check_completed(coaster_state *state, turbine_completed_task *completed,
                int *ncompleted, bool wait_for_completion);
 
@@ -134,6 +137,7 @@ init_coaster_executor(turbine_executor *exec)
   exec->wait = coaster_wait;
   exec->poll = coaster_poll;
   exec->slots = coaster_slots;
+  exec->max_slots = coaster_max_slots;
 
   return TURBINE_EXEC_SUCCESS;
 }
@@ -458,5 +462,12 @@ static turbine_exec_code
 coaster_slots(void *state, turbine_exec_slot_state *slots)
 {
   *slots = ((coaster_state*)state)->slots;
+  return TURBINE_EXEC_SUCCESS;
+}
+
+static turbine_exec_code
+coaster_max_slots(void *context, int *max) {
+  assert(context != NULL);
+  *max = ((coaster_context*)context)->total_slots;
   return TURBINE_EXEC_SUCCESS;
 }

@@ -92,6 +92,13 @@ turbine_configure_exec(turbine_executor *exec, const char *config,
                        size_t config_len);
 
 /*
+ * Can be called after configuration.
+ * max: upper bound on slots, or -1 if unknown/unlimited
+ */
+turbine_code
+turbine_async_exec_max_slots(const turbine_executor *exec, int *max);
+
+/*
   Start an async worker loop.
   exec: executor to use.  Will be started by this function if not started.
         If this function had to start it, it will stop it.

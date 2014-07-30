@@ -230,6 +230,20 @@ turbine_configure_exec(turbine_executor *exec, const char *config,
 }
 
 turbine_code
+turbine_async_exec_max_slots(const turbine_executor *exec, int *max)
+{
+  assert(exec->max_slots != NULL);
+
+  turbine_exec_code ec;
+
+  ec = exec->max_slots(exec->context, max);
+  TURBINE_EXEC_CHECK_MSG(ec, TURBINE_ERROR_EXTERNAL,
+           "error determining max slots for executor %s", exec->name);
+   
+  return TURBINE_SUCCESS;
+}
+
+turbine_code
 turbine_async_worker_loop(Tcl_Interp *interp, turbine_executor *exec,
                 int adlb_work_type, adlb_payload_buf *payload_buffers,
                 int nbuffers)

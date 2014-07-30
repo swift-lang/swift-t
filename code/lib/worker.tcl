@@ -36,6 +36,7 @@ namespace eval turbine {
 
         set buffer_size_val [ configured_buffer_size $mode ]
 
+        puts "VAL $buffer_size_val"
         if { $buffer_size_val != "" }  {
           dict append keyword_args buffer_size $buffer_size_val
         }
@@ -95,19 +96,23 @@ namespace eval turbine {
 
     # returns empty string for default, or configured task buffer size
     proc configured_buffer_size { {work_type WORK} } {
+        global env
         set buffer_size_key "TURBINE_${work_type}_MAX_TASK_SIZE"
         if [ info exists env($buffer_size_key) ] {
           return $env($buffer_size_key)
+        } else {
+          return ""
         }
-        return ""
     }
 
     # returns empty string for default, or configured task buffer count
     proc configured_buffer_count { {work_type WORK} } {
+        global env
         set buffer_count_key "TURBINE_${work_type}_BUFFER_COUNT"
         if [ info exists env($buffer_count_key) ] {
           return $env($buffer_count_key)
+        } else {
+          return ""
         }
-        return ""
     }
 }

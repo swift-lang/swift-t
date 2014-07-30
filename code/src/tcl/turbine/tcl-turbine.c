@@ -684,7 +684,7 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp* interp,
 
   if (objc >= 3)
   {
-    int buffer_count = 1;
+    int buffer_count = 1; // Deliberately ignored
     rc = worker_keyword_args(interp, objv, objv[2], &buffer_count,
                              &buffer_size);
     TCL_CHECK(rc);
@@ -1301,12 +1301,26 @@ Async_Exec_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
   
   if (objc >= 4)
   {
+    DEBUG_TURBINE("Keyword args for %s: %s", exec_name,
+                  Tcl_GetString(objv[3]));
     rc = worker_keyword_args(interp, objv, objv[3], &buffer_count,
                              &buffer_size);
     TCL_CHECK(rc);
   }
 
-  // TODO: only allocate as many buffers as max slots
+  DEBUG_TURBINE("Allocating %i buffers of %i bytes each for %s",
+                buffer_count, buffer_size, exec_name);
+
+  int max_slots;
+  tc = turbine_async_exec_max_slots(exec, &max_slots);
+  TCL_CONDITION(tc == TURBINE_SUCCESS, "Executor error in %s getting "
+                                       "max slots!", exec_name);
+
+  // Only allocate as many buffers as can be used
+  if (max_slots >= 1 && max_slots < buffer_count) {
+    buffer_count = max_slots;
+  }
+
   adlb_payload_buf *bufs = malloc(sizeof(adlb_payload_buf) *
                                   (size_t)buffer_count);
   TCL_MALLOC_CHECK(bufs);

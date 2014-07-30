@@ -23,6 +23,8 @@ source $( dirname $0 )/setup.sh > ${OUTPUT} 2>&1
 
 PROCS=3
 export TURBINE_NOOP_WORKERS=1
+export TURBINE_NOOP_BUFFER_COUNT=16
+export TURBINE_NOOP_MAX_TASK_SIZE=512
 bin/turbine -l -n ${PROCS} ${SCRIPT} >> ${OUTPUT} 2>&1
 [[ ${?} == 0 ]] || test_result 1
 

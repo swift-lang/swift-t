@@ -60,6 +60,9 @@ noop_poll(void *state, turbine_completed_task *completed,
 static turbine_exec_code
 noop_slots(void *state, turbine_exec_slot_state *slots);
 
+static turbine_exec_code
+noop_max_slots(void *context, int *max);
+
 static void
 init_noop_executor(turbine_executor *exec)
 {
@@ -77,6 +80,7 @@ init_noop_executor(turbine_executor *exec)
   exec->wait = noop_wait;
   exec->poll = noop_poll;
   exec->slots = noop_slots;
+  exec->max_slots = noop_max_slots;
 }
 
 turbine_code
@@ -282,5 +286,13 @@ static turbine_exec_code
 noop_slots(void *state, turbine_exec_slot_state *slots)
 {
   *slots = ((noop_state*)state)->slots;
+  return TURBINE_EXEC_SUCCESS;
+}
+
+static turbine_exec_code
+noop_max_slots(void *context, int *max)
+{
+  assert(context == NOOP_CONTEXT);
+  *max = NOOP_EXEC_SLOTS;
   return TURBINE_EXEC_SUCCESS;
 }
