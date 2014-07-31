@@ -5,6 +5,8 @@
 # Generate leaf function, given a C/C++ source
 # user-code.c --> user-leaf.tcl
 
+# If not 0, include this list of dynamic objects
+OBJLISTFILE=0
 # If 1, do static build
 export STATIC=0
 # Verbosity (0-3)
@@ -56,9 +58,12 @@ crash()
 
 GENLEAF_HOME=$( cd $( dirname $0 ) ; /bin/pwd )
 
-while getopts "hs:vx:" OPTION
+while getopts "f:hs:vx:" OPTION
 do
   case $OPTION in
+    f) 
+      OBJLISTFILE=$OPTARG 
+      ;;
     h)
       usage
       exit 0
@@ -74,6 +79,9 @@ do
     x) 
       LANG=$OPTARG
       ;;
+    *)
+      # Bash prints an error message
+      exit 1
   esac
 done
 shift $(( OPTIND - 1 ))
@@ -243,13 +251,22 @@ action $COMPILER $FLAGS -c -o extension.o extension.$LANG
 
 MKSTATIC=$TURBINE_HOME/scripts/mkstatic/mkstatic.tcl
 
+# Slurp shared object list if necessary
+if [[ $OBJLISTFILE != 0 ]] 
+then
+  OBJLIST=( $( cat $OBJLISTFILE ) )
+else 
+  OBJLIST=""
+fi
+
 if (( $STATIC == 0 ))
 then
   # c. link shared library
   message "creating: lib$USER_LEAF.so"
-  action $CC $SHARED -o lib$USER_LEAF.so     \
+  action $CC $SHARED -o lib$USER_LEAF.so  \
     extension.o $USER_LEAF.o              \
     -L $TCL_HOME/lib -l tcl$TCL_VERSION   \
+    $OBJLIST                              \
     -Wl,-rpath -Wl,$TCL_HOME/lib
 else
   # c. link static library and executable
