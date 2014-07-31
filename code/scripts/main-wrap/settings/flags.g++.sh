@@ -1,8 +1,6 @@
 
 # Flags for G++
 
-# C only
-STD="-std=gnu99"
-# C and C++:
+STD=
 PIC=-fPIC
 SHARED=-shared
