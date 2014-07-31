@@ -265,8 +265,8 @@ then
   message "creating: lib$USER_LEAF.so"
   action $CC $SHARED -o lib$USER_LEAF.so  \
     extension.o $USER_LEAF.o              \
+    ${OBJLIST[@]}                         \
     -L $TCL_HOME/lib -l tcl$TCL_VERSION   \
-    $OBJLIST                              \
     -Wl,-rpath -Wl,$TCL_HOME/lib
 else
   # c. link static library and executable
