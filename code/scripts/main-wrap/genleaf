@@ -56,7 +56,7 @@ crash()
   exit 1
 }
 
-GENLEAF_HOME=$( cd $( dirname $0 ) ; /bin/pwd )
+export GENLEAF_HOME=$( cd $( dirname $0 ) ; /bin/pwd )
 
 while getopts "f:hs:vx:" OPTION
 do
