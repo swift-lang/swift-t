@@ -38,7 +38,7 @@ fi
 # TURBINE_INCLUDES has the flags for all library dependencies of
 # Turbine that user code may reference
 TURBINE_LIBS="-L${TURBINE_HOME}/lib \
-              -ltclturbinestatic -ltclturbinestaticres -ltclturbine \
+              -ltclturbinestatic -ltclturbine \
               -L${ADLB_HOME}/lib -ladlb \
               -L${C_UTILS_HOME}/lib -lexmcutils \
               ${TCL_LIB_SPEC} ${TCL_LIB_SPEC_EXTRA}"
