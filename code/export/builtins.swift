@@ -138,4 +138,15 @@ type external void;
 (int o) ternary(boolean b, int i1, int i2) "turbine" "0.0.2"
 [ "if { <<b>> } { set <<o>> <<i1>> } else { set <<o>> <<i2>> }" ];
 
+// Get internal representation of type
+@pure
+<T> (string o) repr(T i) "turbine" "0.4.0" [
+  "set <<o>> <<i>>" // Use Tcl string conversion
+];
+
+@pure
+<T> (string O[]) array_repr(T I[]) "turbine" "0.4.0" [
+  "set <<O>> <<I>>" // Use Tcl string conversion
+];
+
 #endif

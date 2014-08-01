@@ -79,8 +79,10 @@
   [ "set <<h>> [ c_utils::hash <<s>> ]" ];
 
 @pure
-(string s) string_from_floats(float f[])
-  "turbine" "0.4.0" "string_from_floats";
+(string s) string_from_floats(float f[]) {
+  // Assume internal repr give correctly formatted floats
+  s = string_join(array_repr(f), ",");
+}
 
 @pure (string s) string_join(string A[], string separator)
   "turbine" "0.4.0" // "string_join"
