@@ -1,6 +1,7 @@
 
 import io;
 import string;
+import assert;
 
 main
 {
@@ -17,4 +18,9 @@ main
   A[13] = "g";
   string s = string_join(A, ":");
   printf("s:%s", s);
+
+  // Check string_from_floats
+  string fs = string_from_floats([1.0,2.5,3.25]);
+  printf("fs:%s", fs);
+  assertEqual(fs, "1.0,2.5,3.25", "string_from_floats");
 }

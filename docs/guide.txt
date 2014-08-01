@@ -901,6 +901,12 @@ block again until +A[key]+ is stored.
 +fromfloat(float) -> string+:: Convert float to string
 +tofloat(string)  -> float+::  Convert string to float
 +itof(int)        -> float+::  Convert integer to float
++repr(*)          -> string+:: Convert any type to internal
+          string representation (exact format not guaranteed
+          to be consistent, even from call to call)
++array_repr(*[])  -> string[]+:: Convert array of any type to internal
+          string representation (exact format not guaranteed
+          to be consistent, even from call to call)
 
 === Output
 
