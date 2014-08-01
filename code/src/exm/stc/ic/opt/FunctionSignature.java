@@ -13,7 +13,6 @@ import org.apache.log4j.Logger;
 import exm.stc.common.Settings;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.Semantics;
-import exm.stc.common.lang.WaitVar;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
@@ -21,6 +20,7 @@ import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
+import exm.stc.common.lang.WaitVar;
 import exm.stc.common.util.Pair;
 import exm.stc.ic.WrapUtil;
 import exm.stc.ic.tree.ICInstructions.FunctionCall;
@@ -66,12 +66,12 @@ public class FunctionSignature implements OptimizerPass {
         fnIt.remove(); // Remove old function
         fnIt.add(newFn);
         usedFunctionNames.add(newFn.getName());
-        
+
         // We should inline
         toInline.put(fn.getName(), fn);
       }
     }
-    
+
     // Inline all calls to the old function
     FunctionInline.inlineAllOccurrences(logger, program, toInline);
   }
@@ -80,10 +80,10 @@ public class FunctionSignature implements OptimizerPass {
                                      Set<String> usedFunctionNames) {
     if (fn.blockingInputs().isEmpty())
       return null;
-    
+
     // Collect list of variables we could switch
-    List<Var> switchVars = new ArrayList<Var>(); 
-    
+    List<Var> switchVars = new ArrayList<Var>();
+
     for (WaitVar input: fn.blockingInputs()) {
       // See if we can switch to value version
       if (Types.isPrimFuture(input.var.type())) {
@@ -93,10 +93,10 @@ public class FunctionSignature implements OptimizerPass {
         }
       }
     }
-    
+
     if (switchVars.isEmpty())
       return null;
-    
+
     List<Pair<Var, Var>> futValPairs = createValueVars(fn, switchVars);
     Map<Var, Var> switched = new HashMap<Var, Var>();
     for (Pair<Var, Var> fv: futValPairs) {
@@ -105,16 +105,16 @@ public class FunctionSignature implements OptimizerPass {
     }
     List<Var> newIList = buildNewInputList(fn, switched);
     String newName = selectUniqueName(fn.getName(), usedFunctionNames);
-    
+
     // Block that calls into new version
     Block callNewFunction = callNewFunctionCode(fn, newName, switchVars);
     Block newBlock = fn.swapBlock(callNewFunction);
-    
+
 
     // Declare variables in new block and load values
     // Other optimization passes will clear up later
     for (Pair<Var, Var> fv: futValPairs) {
-      // declare local stack var and replace argument in 
+      // declare local stack var and replace argument in
       Var tmpfuture = new Var(fv.val1.type(), fv.val1.name(),
                        Alloc.STACK, DefType.LOCAL_USER,
                        VarProvenance.renamed(fv.val1));
@@ -122,11 +122,11 @@ public class FunctionSignature implements OptimizerPass {
             Collections.singletonMap(fv.val1, tmpfuture.asArg()),
             RenameMode.REPLACE_VAR, true);
       newBlock.addVariable(tmpfuture);
-      Instruction store = 
+      Instruction store =
           TurbineOp.storePrim(tmpfuture, fv.val2.asArg());
       newBlock.addInstructionFront(store);
     }
-    
+
     List<WaitVar> newBlocking = new ArrayList<WaitVar>();
     for (WaitVar wv: fn.blockingInputs()) {
       if (!switchVars.contains(wv.var)) {
@@ -138,7 +138,7 @@ public class FunctionSignature implements OptimizerPass {
   }
 
   /**
-   * 
+   *
    * @return new main block for fn
    */
   private Block callNewFunctionCode(Function fn, String newFunctionName,
@@ -146,9 +146,9 @@ public class FunctionSignature implements OptimizerPass {
     Block main = new Block(fn);
     // these vars should already be closed.
     // load values and call new function
-    
+
     List<Arg> fetched = OptUtil.fetchValuesOf(main, switched, false, false);
-    
+
     List<Arg> callInputs = new ArrayList<Arg>(fn.getInputList().size());
     for (Var inArg: fn.getInputList()) {
       int ix = switched.indexOf(inArg);
@@ -158,9 +158,10 @@ public class FunctionSignature implements OptimizerPass {
         callInputs.add(inArg.asArg());
       }
     }
-    
+
+    String frontendName = null;
     FunctionCall callNew = FunctionCall.createFunctionCall(newFunctionName,
-                            fn.getOutputList(), callInputs, fn.mode(),
+                            frontendName, fn.getOutputList(), callInputs, fn.mode(),
                             new TaskProps());
     main.addInstruction(callNew);
     return main;
@@ -186,7 +187,7 @@ public class FunctionSignature implements OptimizerPass {
       String valVarName = OptUtil.optVPrefix(fn.mainBlock(), toSwitch);
       Var valVar = WrapUtil.createValueVar(valVarName,
           Types.retrievedType(toSwitch.type()), toSwitch);
-      
+
       futValPairs.add(Pair.create(toSwitch, valVar));
     }
     return futValPairs;

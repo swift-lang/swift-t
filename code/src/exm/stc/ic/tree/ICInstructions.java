@@ -36,7 +36,6 @@ import exm.stc.common.lang.CompileTimeArgs;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ExecTarget;
 import exm.stc.common.lang.ForeignFunctions;
-import exm.stc.common.lang.Semantics;
 import exm.stc.common.lang.ForeignFunctions.SpecialFunction;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
@@ -44,6 +43,7 @@ import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Redirects;
 import exm.stc.common.lang.RefCounting;
 import exm.stc.common.lang.RefCounting.RefCountType;
+import exm.stc.common.lang.Semantics;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.Type;
@@ -765,6 +765,7 @@ public class ICInstructions {
 
   public static abstract class CommonFunctionCall extends Instruction {
     protected final String functionName;
+    protected final String frontendName; // Original name in source (can be null)
     protected final List<Var> outputs;
     protected final List<Arg> inputs;
     protected final TaskProps props;
@@ -772,9 +773,11 @@ public class ICInstructions {
     private final boolean hasUpdateableInputs;
 
     public CommonFunctionCall(Opcode op, String functionName,
+        String frontendName,
         List<Var> outputs, List<Arg> inputs, TaskProps props) {
       super(op);
       this.functionName = functionName;
+      this.frontendName = frontendName;
       this.outputs = new ArrayList<Var>(outputs);
       this.inputs = new ArrayList<Arg>(inputs);
       this.props = props;
@@ -950,9 +953,11 @@ public class ICInstructions {
     }
 
     private boolean isCopyFunction() {
-      if (ForeignFunctions.isCopyFunction(functionName)) {
+      if (frontendName != null &&
+          ForeignFunctions.isCopyFunction(frontendName)) {
         return true;
-      } else if (ForeignFunctions.isMinMaxFunction(functionName)
+      } else if (frontendName != null &&
+              ForeignFunctions.isMinMaxFunction(frontendName)
               && getInput(0).equals(getInput(1))) {
         return true;
       }
@@ -961,12 +966,13 @@ public class ICInstructions {
 
     @Override
     public boolean hasSideEffects() {
-      return (!ForeignFunctions.isPure(functionName));
+      return (frontendName == null || !ForeignFunctions.isPure(frontendName));
     }
 
     @Override
     public List<ValLoc> getResults() {
-      if (ForeignFunctions.isPure(functionName)) {
+      if (frontendName != null &&
+          ForeignFunctions.isPure(frontendName)) {
         if (isCopyFunction()) {
           // Handle copy as a special case
           return ValLoc.makeCopy(getOutput(0), getInput(0),
@@ -979,7 +985,8 @@ public class ICInstructions {
             List<Arg> inputs = getInputs();
             List<Arg> cvArgs = new ArrayList<Arg>(inputs.size() + 1);
             cvArgs.addAll(inputs);
-            if (ForeignFunctions.isCommutative(this.functionName)) {
+            if (frontendName != null &&
+                ForeignFunctions.isCommutative(this.frontendName)) {
               // put in canonical order
               Collections.sort(cvArgs);
             }
@@ -1029,13 +1036,14 @@ public class ICInstructions {
      * @return true if this instruction calls any of the given special functions
      */
     public boolean isImpl(SpecialFunction ...specials) {
-      return isImpl(this.functionName, specials);
+      return frontendName != null &&
+          isImpl(this.frontendName, specials);
     }
 
-    public static boolean isImpl(String functionName,
+    public static boolean isImpl(String frontendFunctionName,
                                  SpecialFunction ...specials) {
       for (SpecialFunction special: specials) {
-        if (ForeignFunctions.isSpecialImpl(functionName, special)) {
+        if (ForeignFunctions.isSpecialImpl(frontendFunctionName, special)) {
           return true;
         }
       }
@@ -1210,8 +1218,9 @@ public class ICInstructions {
     private final List<Boolean> closedInputs; // which inputs are closed
 
     private FunctionCall(Opcode op, String functionName,
+        String frontendName,
         List<Var> outputs, List<Arg> inputs, TaskProps props) {
-      super(op, functionName, outputs, inputs, props);
+      super(op, functionName, frontendName, outputs, inputs, props);
       if (op != Opcode.CALL_FOREIGN && op != Opcode.CALL_CONTROL &&
           op != Opcode.CALL_SYNC && op != Opcode.CALL_LOCAL &&
           op != Opcode.CALL_LOCAL_CONTROL) {
@@ -1230,7 +1239,8 @@ public class ICInstructions {
     }
 
     public static FunctionCall createFunctionCall(
-        String functionName, List<Var> outputs, List<Arg> inputs,
+        String functionName, String frontendName,
+        List<Var> outputs, List<Arg> inputs,
         ExecTarget mode, TaskProps props) {
       Opcode op;
       ExecContext targetCx = mode.targetContext();
@@ -1249,19 +1259,24 @@ public class ICInstructions {
           throw new STCRuntimeError("Unexpected: " + mode);
         }
       }
-      return new FunctionCall(op, functionName, outputs, inputs, props);
+      return new FunctionCall(op, functionName, frontendName,
+                              outputs, inputs, props);
     }
 
     public static FunctionCall createBuiltinCall(
-        String functionName, List<Var> outputs, List<Arg> inputs,
+        String functionName, String frontendName,
+        List<Var> outputs, List<Arg> inputs,
         TaskProps props) {
-      return new FunctionCall(Opcode.CALL_FOREIGN, functionName,
-          outputs, inputs, props);
+      return new FunctionCall(Opcode.CALL_FOREIGN, functionName, frontendName,
+                              outputs, inputs, props);
     }
 
     @Override
     public String toString() {
       String result = op.toString().toLowerCase() + " " + functionName;
+      if (frontendName != null) {
+        result += "(" + frontendName + ")";
+      }
       result += " [";
       for (Var v: outputs) {
         result += " " + v.name();
@@ -1341,7 +1356,7 @@ public class ICInstructions {
             Collections.unmodifiableList(this.outputs),
             Collections.unmodifiableList(this.varInputs(true)),
             Var.NONE,
-            mode, recursiveInOut(this.op, this.functionName),
+            mode, recursiveInOut(this.op, this.frontendName),
             preinitOutputMapping, false);
 
       }
@@ -1435,7 +1450,8 @@ public class ICInstructions {
           checkSwappedOutput(outputs.get(i), outVars.get(i).fetched);
         }
         List<Var> fetchedOut = Fetched.getFetched(outVars);
-        inst = new LocalFunctionCall(localFunctionName, fetchedVals, fetchedOut);
+        inst = new LocalFunctionCall(localFunctionName, frontendName,
+                                     fetchedVals, fetchedOut);
       }
       return new MakeImmChange(inst);
     }
@@ -1448,7 +1464,7 @@ public class ICInstructions {
      */
     private void checkSwappedOutput(Var oldOut, Var newOut) {
       Type exp = Types.retrievedType(oldOut.type(),
-                  recursiveInOut(op, functionName));
+                  recursiveInOut(op, frontendName));
       assert(exp.equals(newOut.type()));
     }
 
@@ -1487,13 +1503,13 @@ public class ICInstructions {
       return blocksOn;
     }
 
-
     /**
      * Returns true if we recursively pack and unpack inputs and outputs for
      * this type of function call if converting to local version
      * @param op
+     * @param frontendName frontendName, or null if unknown
      */
-    private static boolean recursiveInOut(Opcode op, String functionName) {
+    private static boolean recursiveInOut(Opcode op, String frontendName) {
       switch (op) {
         case CALL_SYNC:
         case CALL_LOCAL:
@@ -1501,10 +1517,11 @@ public class ICInstructions {
         case CALL_CONTROL:
         case CALL_FOREIGN:
           // Foreign functions get unpack representations
-          // Note: we may be calling wrapper of foreign funciton -
+          // Note: we may be calling wrapper of foreign function -
           // can't assume that it is not foreign based on opcode
-          if (ForeignFunctions.isForeignFunction(functionName)) {
-            return ForeignFunctions.recursivelyUnpackedInOut(functionName);
+          if (frontendName != null &&
+              ForeignFunctions.isForeignFunction(frontendName)) {
+            return ForeignFunctions.recursivelyUnpackedInOut(frontendName);
           } else {
             return false;
           }
@@ -1553,7 +1570,7 @@ public class ICInstructions {
     @Override
     public Instruction clone() {
       // Variables are immutable so just need to clone lists
-      return new FunctionCall(op, functionName,
+      return new FunctionCall(op, functionName, frontendName,
           new ArrayList<Var>(outputs), new ArrayList<Arg>(inputs),
           props.clone());
     }
@@ -1561,9 +1578,9 @@ public class ICInstructions {
 
   public static class LocalFunctionCall extends CommonFunctionCall {
 
-    public LocalFunctionCall(String functionName,
+    public LocalFunctionCall(String functionName, String frontendName,
         List<Arg> inputs, List<Var> outputs) {
-      super(Opcode.CALL_FOREIGN_LOCAL, functionName,
+      super(Opcode.CALL_FOREIGN_LOCAL, functionName, frontendName,
             outputs, inputs, null);
       for(Var v: outputs) {
         assert(v != null);
@@ -1641,7 +1658,7 @@ public class ICInstructions {
     @Override
     public Instruction clone() {
       // Variables are immutable so just need to clone lists
-      return new LocalFunctionCall(functionName,
+      return new LocalFunctionCall(functionName, frontendName,
           new ArrayList<Arg>(inputs), new ArrayList<Var>(outputs));
     }
   }

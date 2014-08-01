@@ -394,35 +394,37 @@ public class STCMiddleEnd {
 
   /**
    * Call with default properties
-   * @param function
+   * @param functionName
    * @param inputs
    * @param outputs
    */
-  public void builtinFunctionCall(String function, List<Var> inputs,
-      List<Var> outputs) {
-    builtinFunctionCall(function, inputs, outputs, new TaskProps());
+  public void builtinFunctionCall(String functionName, String frontendName,
+      List<Var> inputs, List<Var> outputs) {
+    builtinFunctionCall(functionName, frontendName, inputs, outputs,
+                        new TaskProps());
   }
 
-  public void builtinFunctionCall(String function, List<Var> inputs,
+  public void builtinFunctionCall(String functionName, String frontendName,
+      List<Var> inputs,
       List<Var> outputs, TaskProps props) {
     props.assertInternalTypesValid();
     currBlock().addInstruction(
-        FunctionCall.createBuiltinCall(
-            function, outputs, Var.asArgList(inputs), props));
+        FunctionCall.createBuiltinCall(functionName, frontendName,
+            outputs, Var.asArgList(inputs), props));
   }
 
-  public void builtinLocalFunctionCall(String functionName,
+  public void builtinLocalFunctionCall(String functionName, String frontendName,
           List<Arg> inputs, List<Var> outputs) {
-    currBlock().addInstruction(new LocalFunctionCall(functionName,
-            inputs, outputs));
+    currBlock().addInstruction(new LocalFunctionCall(
+        functionName, frontendName, inputs, outputs));
   }
 
-  public void functionCall(String function, List<Arg> inputs,
-      List<Var> outputs, ExecTarget mode, TaskProps props) {
+  public void functionCall(String functionName, String frontendName,
+      List<Arg> inputs, List<Var> outputs, ExecTarget mode, TaskProps props) {
     props.assertInternalTypesValid();
     currBlock().addInstruction(
-          FunctionCall.createFunctionCall(
-              function, outputs, inputs, mode, props));
+          FunctionCall.createFunctionCall(functionName, frontendName,
+                outputs, inputs, mode, props));
   }
 
   public void runExternal(String cmd, List<Arg> args, List<Arg> inFiles,
@@ -1069,7 +1071,7 @@ public class STCMiddleEnd {
     List<Var> outVals = WrapUtil.createLocalOpOutputs(waitBlock, outArgs,
                             filenameVars, instBuffer, false, mapOutFiles,
                             true);
-    instBuffer.add(new LocalFunctionCall(builtinName, inVals, outVals));
+    instBuffer.add(new LocalFunctionCall(builtinName, builtinName, inVals, outVals));
 
     WrapUtil.setLocalOpOutputs(waitBlock, outArgs, outVals, instBuffer,
                                !mapOutFiles, true);
