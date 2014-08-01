@@ -29,9 +29,9 @@ public class Proc extends TclTree
   Sequence body;
 
   /**
-   * 
+   *
    * @param name
-   * @param usedFunctionNames used to ensure we're not generating duplicate 
+   * @param usedFunctionNames used to ensure we're not generating duplicate
    *                          functions
    * @param args
    * @param body
@@ -46,12 +46,12 @@ public class Proc extends TclTree
     this.args = args;
     this.body = body;
   }
-  
+
   public Proc(String name, Set<String> usedFunctionNames,
       List<String> args) {
     this(name, usedFunctionNames, args, new Sequence());
   }
-  
+
   public String name() {
     return name;
   }
@@ -67,7 +67,8 @@ public class Proc extends TclTree
     for (int i = 0; i < name.length(); i++) {
       char c = name.charAt(i);
       if (Character.isLetter(c) || Character.isDigit(c) ||
-          c == ':' || c == '_' || c == '=' || c == '-') {
+          c == ':' || c == '_' || c == '=' || c == '-' ||
+          c == '<' || c == '>') {
         // Whitelist of characters
       } else {
         throw new STCRuntimeError("Bad character '" + c +
