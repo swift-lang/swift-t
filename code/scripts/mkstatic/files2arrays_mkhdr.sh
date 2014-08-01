@@ -63,16 +63,16 @@ arrnames=()
 filenames=()
 for file in "$@"
 do
+  sed_pattern='^.*\/\*FILE2ARRAY:\([a-zA-Z_0-9]*\):\(.*\)\*\/.*$'
+
   # Extract array name from FILE2ARRAY comment
-  # TODO: Not use sed -r on Mac (#728)
-  arrname=$(sed -rn 's/^.*\/\*FILE2ARRAY:([a-zA-Z_0-9]*):(.*)\*\/.*$/\1/p' $file)
+  arrname=$(sed -n "s/${sed_pattern}/\1/p" $file)
   if [ -z "$arrname" ]; then
     echo "Could not extract array name from $file" >&2
     exit 1
   fi
   arrnames=( "${arrnames[@]}" "${arrname}" )
-  # TODO: Not use sed -r on Mac (#728)
-  filename=$(sed -rn 's/^.*\/\*FILE2ARRAY:([a-zA-Z_0-9]*):(.*)\*\/.*$/\2/p' $file)
+  filename=$(sed -n "s/${sed_pattern}/\2/p" $file)
   if [ -z "$filename" ]; then
     echo "Could not extract file name from $file"  >&2
     exit 1
