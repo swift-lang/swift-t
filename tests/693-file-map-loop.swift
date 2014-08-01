@@ -1,7 +1,4 @@
 
-// SKIP-O3-TEST
-// see issue #717
-
 app (file out) runcommand (string instr){
    "/bin/sh" "-c" instr @stdout=out;
 }

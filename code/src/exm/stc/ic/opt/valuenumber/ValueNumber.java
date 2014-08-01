@@ -88,29 +88,29 @@ import exm.stc.ic.tree.TurbineOp;
  * We use this information to do constant folding/propagation, and remove
  * redundant computations and variables by consolidating variables in the same
  * congruence class.
- * 
+ *
  * The information about aliases is also very useful for finding out which
  * variables are closed at each point in the program, so we do a closed
  * variable analysis as part of this pass using the alias info.  This analysis
  * allows us to do strength reduction of operations, and inline wait statements.
- * 
- * Using the propagated constants also allows us to predict branches.  
- * 
+ *
+ * Using the propagated constants also allows us to predict branches.
+ *
  * This optimization pass doesn't remove any instructions: it simply modifies
  * the arguments to each instruction in a way that will hopefully lead a bunch
  * of dead code, which can be cleaned up in a pass of the dead code eliminator.
- * 
+ *
  */
 public class ValueNumber implements OptimizerPass {
 
   private Logger logger;
-  
+
   /**
    * True if this pass is allowed to reorder instructions. If false, guarantees
    * that future passes won't try reordering.
    */
   private boolean reorderingAllowed;
-  
+
   /**
    * True if we should try to infer which variables are closed/finalized
    */
@@ -151,11 +151,11 @@ public class ValueNumber implements OptimizerPass {
       // First pass finds all congruence classes and expands some instructions
       Map<Block, Congruences> congMap;
       congMap = findCongruences(prog, f, ExecContext.control());
-  
+
       // Second pass replaces values based on congruence classes
       replaceVals(prog.constants(), f.getName(), f.mainBlock(), congMap,
                   InitState.enterFunction(f));
-      
+
       // Third pass inlines continuations
       inlinePass(prog.constants(), f.mainBlock(), congMap);
     } catch (OptUnsafeError e) {
@@ -172,14 +172,14 @@ public class ValueNumber implements OptimizerPass {
       if (v.storage() == Alloc.GLOBAL_CONST) {
         Arg val = constants.lookupByVar(v);
         assert (val != null) : v.name();
-        
+
         ValLoc assign = ComputedValue.assignValLoc(v, val,
                                         IsAssign.TO_LOCATION, false);
         int stmtIndex = -1;
         congruent.update(constants, f.getName(), assign, stmtIndex);
       }
     }
-    
+
     if (finalizedVarEnabled) {
       for (WaitVar wv : f.blockingInputs()) {
         congruent.markClosedBlockStart(wv.var, false);
@@ -192,7 +192,7 @@ public class ValueNumber implements OptimizerPass {
                            Block block) {
     // First apply to this block
     liftWait(logger, prog, f, block);
-    
+
     for (Continuation c: block.allComplexStatements()) {
       for (Block inner: c.getBlocks()) {
         liftWaitRec(logger, prog, f, inner);
@@ -203,9 +203,9 @@ public class ValueNumber implements OptimizerPass {
   /**
    * If we have something of the below form, can just block on a as far of
    * function call protocol (..) f (a, b, c) { wait (a) {
-   * 
+   *
    * } }
-   * 
+   *
    * @param logger
    * @param program
    * @param f
@@ -232,14 +232,14 @@ public class ValueNumber implements OptimizerPass {
     }
 
     logger.trace("liftWait() on " + f.getName() + " " + block.getType());
-    
+
     List<WaitVar> blockingVariables;
     blockingVariables = findBlockingVariables(logger, program, f, block);
 
     if (blockingVariables != null) {
       // Apply changes
       logger.trace("blockingVariables: " + blockingVariables);
-      
+
       switch (block.getType()) {
         case MAIN_BLOCK: {
           List<Var> locals = f.getInputList();
@@ -277,7 +277,7 @@ public class ValueNumber implements OptimizerPass {
   /**
    * Find the set of variables required to be closed (recursively or not) to
    * make progress in block.
-   * 
+   *
    * @param block
    * @return
    */
@@ -287,7 +287,7 @@ public class ValueNumber implements OptimizerPass {
      * TODO: could exploit the information we have in getBlockingInputs() to
      * explore dependencies between variables and work out which variables are
      * needed to make progress
-     * 
+     *
      * TODO: this is necessary for optimizing some for loops, e.g. test 900
      */
 
@@ -316,7 +316,7 @@ public class ValueNumber implements OptimizerPass {
     }
 
     private final Program prog;
-    
+
     // Set of blocking variables. May contain duplicates for explicit/not
     // explicit -
     // we eliminate these at end
@@ -365,6 +365,8 @@ public class ValueNumber implements OptimizerPass {
    * @param f
    * @param execCx
    * @return a map from block to the congruence info for the block.
+   *         Will include all blocks except those that won't be executed,
+   *         e.g. untaken branches
    * @throw OptUnsafeError if optimisation isn't safe
    *      for this function.
    */
@@ -375,17 +377,17 @@ public class ValueNumber implements OptimizerPass {
           initFuncState(logger, program.constants(), f), result);
     return result;
   }
-  
+
   private void findCongruencesRec(Program program, Function f, Block block,
       ExecContext execCx, Congruences state, Map<Block, Congruences> result)
           throws OptUnsafeError {
     result.put(block, state);
-    
+
     ListIterator<Statement> stmts = block.statementIterator();
     while (stmts.hasNext()) {
       int stmtIndex = stmts.nextIndex();
       Statement stmt = stmts.next();
-      
+
       if (stmt.type() == StatementType.INSTRUCTION) {
         /* First try to see if we can expand instruction sequence */
 
@@ -395,11 +397,11 @@ public class ValueNumber implements OptimizerPass {
           logger.trace("-----------------------------");
           logger.trace("At instruction: " + inst);
         }
-        
+
         if (switchToImmediate(logger, f, execCx, block, state, inst, stmts,
                               stmtIndex)) {
           /*
-           * We switched the instruction for a new sequence of instructions. 
+           * We switched the instruction for a new sequence of instructions.
            * Restart iteration and *don't* increment statement index to account.
            */
           continue;
@@ -417,20 +419,20 @@ public class ValueNumber implements OptimizerPass {
         state.addUnifiedValues(program.constants(), f.getName(), stmtIndex, unified);
       }
     }
-    
+
     int stmtCount = block.getStatements().size();
     for (Continuation cont: block.getContinuations()) {
       findCongruencesContRec(program, f, execCx, cont, stmtCount,
                              state, result);
     }
-    
+
     validateState(program.constants(), state);
   }
 
   private void findCongruencesInst(Program prog, Function f,
       ExecContext execCx, Block block, ListIterator<Statement> stmts,
       Instruction inst, int stmtIndex, Congruences state) throws OptUnsafeError {
-    
+
     /*
      * See if value is already computed somewhere and see if we should replace
      * variables going forward
@@ -439,10 +441,10 @@ public class ValueNumber implements OptimizerPass {
      */
     updateCongruent(logger, prog.constants(), f, inst, stmtIndex, state);
 
-    
+
     if (finalizedVarEnabled) {
       updateTransitiveDeps(prog, inst, state);
-  
+
       for (Var out: inst.getClosedOutputs()) {
         if (logger.isTraceEnabled()) {
           logger.trace("Output " + out.name() + " is closed");
@@ -457,7 +459,7 @@ public class ValueNumber implements OptimizerPass {
       int stmtIndex, Congruences state, Map<Block, Congruences> result)
           throws OptUnsafeError {
     logger.trace("Recursing on continuation " + cont.getType());
-    
+
     if (finalizedVarEnabled) {
       // TODO: prototype of this transformation
       // more elegant approach should be possible
@@ -478,12 +480,44 @@ public class ValueNumber implements OptimizerPass {
                                        state.getRecursivelyClosed(stmtIndex));
     }
 
+    // Try to avoid going down invalid branches
+    if (cont.isConditional()) {
+      return tryUnifyBranches(prog, fn, execCx, cont, stmtIndex, state, result,
+                              contClosedVars);
+    } else {
+      return UnifiedValues.EMPTY;
+    }
+  }
+
+  private UnifiedValues tryUnifyBranches(Program prog, Function fn,
+      ExecContext execCx, Continuation cont, int stmtIndex, Congruences state,
+      Map<Block, Congruences> result, List<BlockingVar> contClosedVars)
+      throws OptUnsafeError {
+    Conditional cond = ((Conditional)cont);
+    Arg condValue = cond.conditionArg();
+    if (condValue.isVar()) {
+      condValue = state.findValue(condValue.getVar());
+    }
+
+    Block predicted = cond.branchPredict(condValue);
+
+    boolean unifyBranches;
+    List<Block> branchBlocks;
+    if (predicted != null) {
+      // Only go down branch that will be executed
+      // NOTE: this helps avoid spurious warnings, e.g. issue #717
+      unifyBranches = true;
+      branchBlocks = Collections.singletonList(predicted);
+    } else {
+      unifyBranches = cont.isExhaustiveSyncConditional();
+      branchBlocks = cont.getBlocks();
+    }
+
     // For conditionals, find variables closed on all branches
-    boolean unifyBranches = cont.isExhaustiveSyncConditional();
     List<Congruences> branchStates = unifyBranches ?
                       new ArrayList<Congruences>() : null;
 
-    for (Block contBlock: cont.getBlocks()) {
+    for (Block contBlock: branchBlocks) {
       Congruences blockState = state.enterContBlock(
                     cont.inheritsParentVars(), stmtIndex);
       if (contClosedVars != null) {
@@ -502,23 +536,32 @@ public class ValueNumber implements OptimizerPass {
     if (unifyBranches) {
       return UnifiedValues.unify(logger, prog.constants(), fn,
                     reorderingAllowed, stmtIndex, state, cont,
-                              branchStates, cont.getBlocks());
+                              branchStates, branchBlocks);
     } else {
       return UnifiedValues.EMPTY;
     }
   }
-  
+
   private void replaceVals(GlobalConstants consts, String function,
       Block block, Map<Block, Congruences> congruences, InitState init) {
     Congruences state = congruences.get(block);
 
+    // Wasn't visited
+    if (state != null) {
+      replaceVals(consts, function, block, congruences, init, state);
+    }
+  }
+
+  private void replaceVals(GlobalConstants consts, String function,
+      Block block, Map<Block, Congruences> congruences, InitState init,
+      Congruences state) {
     if (logger.isTraceEnabled()) {
       logger.trace("=======================================");
       logger.trace("Replacing on block " + System.identityHashCode(block)
                    + ": " + block.getType());
       state.printTraceInfo(logger, consts);
     }
-    
+
     // TODO: ideally, use closed info when replacing to ensure correctness
     ListIterator<Statement> stmtIt = block.statementIterator();
     while (stmtIt.hasNext()) {
@@ -527,7 +570,7 @@ public class ValueNumber implements OptimizerPass {
         // Replace vars in instruction
         Instruction inst = stmt.instruction();
         replaceCongruent(function, inst, state, init);
-        
+
         if (!inst.hasSideEffects() && inst.getOutputs().size() == 1) {
           Var output = inst.getOutput(0);
           if (!InitVariables.varMustBeInitialized(output, true) ||
@@ -550,28 +593,28 @@ public class ValueNumber implements OptimizerPass {
             }
           }
         }
-        
+
         // Update init state
         InitVariables.updateInitVars(logger, stmt, init, false);
       } else {
         assert(stmt.type() == StatementType.CONDITIONAL);
         /* Replace vars recursively in conditional.  Init state
-         * is updated in this function */ 
+         * is updated in this function */
         replaceCongruentNonRec(function, stmt.conditional(), state, init);
         replaceValsRec(consts, function, stmt.conditional(), congruences, init);
       }
     }
-    
+
     // Replace in cleanups
     replaceCleanupCongruent(function, block, state, init);
-    
+
     for (Continuation cont: block.getContinuations()) {
       replaceCongruentNonRec(function, cont, state, init);
       replaceValsRec(consts, function, cont, congruences, init);
     }
   }
 
-  private void replaceValsRec(GlobalConstants consts, String function, 
+  private void replaceValsRec(GlobalConstants consts, String function,
           Continuation cont, Map<Block, Congruences> congruences,
           InitState init) {
     InitState contInit = init.enterContinuation(cont);
@@ -581,7 +624,7 @@ public class ValueNumber implements OptimizerPass {
       replaceVals(consts, function, contBlock, congruences, branchInit);
       branchInits.add(branchInit);
     }
-    
+
     if (InitState.canUnifyBranches(cont)) {
       init.unifyBranches(cont, branchInits);
     }
@@ -595,17 +638,21 @@ public class ValueNumber implements OptimizerPass {
   private void inlinePass(GlobalConstants consts, Block block,
                           Map<Block, Congruences> cong) {
     Congruences blockState = cong.get(block);
-    assert(blockState != null);
+    if (blockState == null) {
+      // Dead code
+      return;
+    }
+
     if (logger.isTraceEnabled()) {
       logger.trace("=======================================");
-      logger.trace("Inlining statements on block " + 
+      logger.trace("Inlining statements on block " +
                     System.identityHashCode(block) + ": " + block.getType());
       blockState.printTraceInfo(logger, consts);
     }
-    
+
     // Use original statement count from when block was constructed
     int origStmtCount = block.getStatements().size();
-    
+
     ListIterator<Statement> stmtIt = block.statementIterator();
     while (stmtIt.hasNext()) {
       Statement stmt = stmtIt.next();
@@ -619,9 +666,9 @@ public class ValueNumber implements OptimizerPass {
     }
 
     // Block state will reflect closed vars as of end of block
-    Set<Var> closedVars; 
+    Set<Var> closedVars;
     Set<Var> recClosedVars;
-    
+
     if (finalizedVarEnabled) {
       recClosedVars = blockState.getRecursivelyClosed(origStmtCount);
       closedVars = blockState.getClosed(origStmtCount);
@@ -629,10 +676,10 @@ public class ValueNumber implements OptimizerPass {
       recClosedVars = Collections.emptySet();
       closedVars = Collections.emptySet();
     }
-    
+
     if (logger.isTraceEnabled()) {
       logger.trace("=======================================");
-      logger.trace("Inlining continuations on block " + 
+      logger.trace("Inlining continuations on block " +
                     System.identityHashCode(block) + ": " + block.getType());
       blockState.printTraceInfo(logger, consts);
     }
@@ -641,9 +688,9 @@ public class ValueNumber implements OptimizerPass {
       Continuation cont = contIt.next();
       // First recurse
       inlinePassRecurse(consts, cont, cong);
-      
+
       if (logger.isTraceEnabled()) {
-        logger.trace("Return to block " +  System.identityHashCode(block) + 
+        logger.trace("Return to block " +  System.identityHashCode(block) +
                     " checking " + cont.getType());
       }
       // Then try to inline
@@ -677,7 +724,7 @@ public class ValueNumber implements OptimizerPass {
       ListIterator<Statement> stmtIt, Conditional conditional,
       Map<Block, Congruences> cong) {
     inlinePassRecurse(consts, conditional, cong);
-    
+
     // Then see if we can inline
     Block predicted = conditional.branchPredict();
     if (conditional.isNoop()) {
@@ -704,10 +751,10 @@ public class ValueNumber implements OptimizerPass {
       inlinePass(consts, inner, cong);
     }
   }
-  
+
   private void updateTransitiveDeps(Program prog, Instruction inst,
       Congruences state) {
-    
+
     /*
      * Track transitive dependencies of variables. Future passes depend on
      * explicit dependencies and may not correctly handling transitive deps.
@@ -727,16 +774,18 @@ public class ValueNumber implements OptimizerPass {
 
   private static final List<RenameMode> RENAME_MODES =
       Arrays.asList(RenameMode.VALUE, RenameMode.REFERENCE);
-  
+
   private static void replaceCongruentNonRec(String function, Continuation cont,
                               Congruences congruent, InitState init) {
     for (RenameMode mode: RENAME_MODES) {
-      cont.renameVars(function, congruent.replacements(mode, init), mode, false); 
+      cont.renameVars(function, congruent.replacements(mode, init), mode, false);
     }
   }
 
   private void replaceCongruent(String function, Instruction inst,
                                 Congruences congruent, InitState init) {
+    assert(congruent != null);
+
     if (logger.isTraceEnabled()) {
       logger.trace("Instruction before replacement: " + inst);
     }
@@ -747,7 +796,7 @@ public class ValueNumber implements OptimizerPass {
       logger.trace("Instruction after replacement: " + inst);
     }
   }
-  
+
   private static void replaceCleanupCongruent(String function, Block block,
                             Congruences congruent, InitState init) {
 
@@ -762,7 +811,7 @@ public class ValueNumber implements OptimizerPass {
             Congruences state) throws OptUnsafeError {
     List<ValLoc> resVals = inst.getResults();
     List<Alias> aliases = inst.getAliases();
-    
+
     if (logger.isTraceEnabled()) {
       logger.trace("resVals: " + resVals);
       logger.trace("aliases: " + aliases);
@@ -771,7 +820,7 @@ public class ValueNumber implements OptimizerPass {
   }
 
   /**
-   * 
+   *
    * @param logger
    * @param fn
    * @param block
@@ -788,7 +837,7 @@ public class ValueNumber implements OptimizerPass {
     if (!finalizedVarEnabled) {
       return false;
     }
-    
+
     // First see if we can replace some futures with values
     MakeImmRequest req = inst.canMakeImmediate(state.getClosed(stmtIndex),
                                state.getClosedLocs(stmtIndex),
@@ -797,16 +846,16 @@ public class ValueNumber implements OptimizerPass {
     if (req == null) {
       return false;
     }
-    
+
     // Create replacement sequence
     Block insertContext;
     ListIterator<Statement> insertPoint;
     boolean waitRequired = req.mode.isDispatched() ||
              !req.mode.targetContextMatches(execCx);
-    
+
     // First remove old instruction
     stmts.remove();
-    
+
     if (!waitRequired) {
       insertContext = block;
       insertPoint = stmts;
@@ -832,8 +881,8 @@ public class ValueNumber implements OptimizerPass {
     // Need filenames for output file values
     Map<Var, Var> filenameVals = loadOutputFileNames(state, stmtIndex,
                 req.out, insertContext, insertPoint);
-    
-    
+
+
     List<Var> outFetched = OptUtil.createLocalOpOutputVars(insertContext,
                 insertPoint, req.out, filenameVals);
 
@@ -873,7 +922,7 @@ public class ValueNumber implements OptimizerPass {
         continue;
       }
       Var toFetch = input.var;
-      
+
       Arg maybeVal;
       boolean fetchedHere;
       if (alreadyFetched.containsKey(toFetch)) {

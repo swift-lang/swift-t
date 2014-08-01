@@ -27,19 +27,22 @@ import exm.stc.ic.tree.ICTree.StatementType;
 
 public class Conditionals {
   public static final String indent = ICUtil.indent;
-  
+
   public static abstract class Conditional extends Continuation
       implements Statement {
+    @Override
     public StatementType type() {
       return StatementType.CONDITIONAL;
     }
+    @Override
     public Conditional conditional() {
       return this;
     }
+    @Override
     public Instruction instruction() {
       throw new STCRuntimeError("Not an instruction");
     }
-    
+
     @Override
     public boolean isAsync() {
       return false;
@@ -48,22 +51,22 @@ public class Conditionals {
     public boolean isLoop() {
       return false;
     }
-    
+
     @Override
     public boolean isConditional() {
       return true;
     }
-    
+
     @Override
     public boolean isExhaustiveSyncConditional() {
       return true;
     }
-    
+
     @Override
     public boolean executesBlockOnce() {
       return false;
     }
-    
+
     @Override
     public boolean isNoop() {
       for (Block b: getBlocks()) {
@@ -73,36 +76,50 @@ public class Conditionals {
       }
       return true;
     }
-    
+
     @Override
     public Statement cloneStatement() {
       return clone();
     }
-    
+
     @Override
     public abstract Conditional clone();
-    
+
+
+    /**
+     * @return value of argument it is conditional on
+     */
+    public abstract Arg conditionArg();
+
+
+    @Override
+    public Block tryInline(Set<Var> closedVars, Set<Var> recClosedVars,
+                           boolean keepExplicitDependencies) {
+      return branchPredict(this.conditionArg());
+    }
 
     /**
      * See if we can predict branch and flatten this to a block
      * @return a block which is the branch that will run
      */
+    public abstract Block branchPredict(Arg condition);
+
     public Block branchPredict() {
-      return tryInline(Collections.<Var>emptySet(),
-                       Collections.<Var>emptySet(), false);
+      return branchPredict(this.conditionArg());
     }
+
   }
-  
+
   public static class IfStatement extends Conditional {
     private final Block thenBlock;
     private final Block elseBlock;
     private Arg condition;
-  
+
     public IfStatement(Arg condition) {
       this(condition, new Block(BlockType.THEN_BLOCK, null),
                       new Block(BlockType.ELSE_BLOCK, null), true);
     }
-  
+
     private IfStatement(Arg condition, Block thenBlock, Block elseBlock,
                         boolean emptyBlocks) {
       super();
@@ -116,21 +133,21 @@ public class Conditionals {
       this.elseBlock = elseBlock;
       this.elseBlock.setParent(this, emptyBlocks);
     }
-  
+
     @Override
     public IfStatement clone() {
       return new IfStatement(condition, thenBlock.clone(),
                              elseBlock.clone(), false);
     }
-  
+
     public Block thenBlock() {
       return thenBlock;
     }
-  
+
     public Block elseBlock() {
       return elseBlock;
     }
-  
+
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       boolean hasElse = !(elseBlock.isEmpty());
@@ -142,7 +159,7 @@ public class Conditionals {
       }
       gen.endIfStatement();
     }
-  
+
     @Override
     public void prettyPrint(StringBuilder sb, String currentIndent) {
       String newIndent = currentIndent + indent;
@@ -156,23 +173,23 @@ public class Conditionals {
       }
       sb.append(currentIndent + "}\n");
     }
-  
+
     @Override
     public List<Block> getBlocks() {
       return Arrays.asList(thenBlock, elseBlock);
     }
-  
+
     @Override
     protected void replaceConstructVars(Map<Var, Arg> renames,
                                        RenameMode mode) {
       condition = ICUtil.replaceArg(renames, condition, false);
     }
-  
+
     @Override
     public ContinuationType getType() {
       return ContinuationType.IF_STATEMENT;
     }
-  
+
     @Override
     public Collection<Var> requiredVars(boolean forDeadCodeElim) {
       if (condition.isVar()) {
@@ -181,31 +198,30 @@ public class Conditionals {
         return Var.NONE;
       }
     }
-  
+
     @Override
     public void removeVars(Set<Var> removeVars) {
       removeVarsInBlocks(removeVars);
       assert(!condition.isVar() ||
             (!removeVars.contains(condition.getVar())));
     }
-  
+
     @Override
-    public Block tryInline(Set<Var> closedVars, Set<Var> recClosedVars,
-        boolean keepExplicitDependencies) {
-      if (condition.isVar()) {
+    public Block branchPredict(Arg condVal) {
+      if (condVal.isVar()) {
         return null;
       }
 
-      assert(condition.isIntVal() || condition.isBoolVal());
-      if (condition.isIntVal() && condition.getIntLit() != 0) {
+      assert(condVal.isIntVal() || condVal.isBoolVal());
+      if (condVal.isIntVal() && condVal.getIntLit() != 0) {
         return thenBlock;
-      } else if (condition.isBoolVal() && condition.getBoolLit()) {
+      } else if (condVal.isBoolVal() && condVal.getBoolLit()) {
         return thenBlock;
       } else {
         return elseBlock;
       }
     }
-  
+
     /**
      * Can these be fused into one if statement
      * @param other
@@ -213,9 +229,9 @@ public class Conditionals {
      */
     public boolean fuseable(IfStatement other) {
       return this.condition.equals(other.condition);
-              
+
     }
-  
+
     /**
      * Fuse other if statement into this
      * @param other
@@ -225,7 +241,12 @@ public class Conditionals {
     public void fuse(IfStatement other, boolean insertAtTop) {
       thenBlock.insertInline(other.thenBlock, insertAtTop);
       elseBlock.insertInline(other.elseBlock, insertAtTop);
-      
+
+    }
+
+    @Override
+    public Arg conditionArg() {
+      return condition;
     }
   }
 
@@ -234,12 +255,12 @@ public class Conditionals {
     private final ArrayList<Block> caseBlocks;
     private final Block defaultBlock;
     private Arg switchVar;
-  
+
     public SwitchStatement(Arg switchVar, List<Integer> caseLabels) {
       this(switchVar, new ArrayList<Integer>(caseLabels),
           new ArrayList<Block>(), new Block(BlockType.CASE_BLOCK, null),
           true);
-  
+
       // number of non-default cases
       int caseCount = caseLabels.size();
       for (int i = 0; i < caseCount; i++) {
@@ -248,7 +269,7 @@ public class Conditionals {
         caseBlock.setParent(this, true);
       }
     }
-  
+
     private SwitchStatement(Arg switchVar,
         ArrayList<Integer> caseLabels, ArrayList<Block> caseBlocks,
         Block defaultBlock, boolean emptyBlocks) {
@@ -262,42 +283,42 @@ public class Conditionals {
       this.defaultBlock = defaultBlock;
       this.defaultBlock.setParent(this, emptyBlocks);
     }
-  
+
     @Override
     public SwitchStatement clone() {
       return new SwitchStatement(switchVar,
           new ArrayList<Integer>(this.caseLabels),
           ICUtil.cloneBlocks(this.caseBlocks), this.defaultBlock.clone(),
           false);
-  
+
     }
-  
+
     public List<Block> caseBlocks() {
       return Collections.unmodifiableList(caseBlocks);
     }
-  
+
     public Block getDefaultBlock() {
       return this.defaultBlock;
     }
-  
+
     @Override
     public void generate(Logger logger, CompilerBackend gen, GenInfo info) {
       boolean hasDefault = !defaultBlock.isEmpty();
       gen.startSwitch(switchVar, caseLabels, hasDefault);
-  
+
       for (Block b: this.caseBlocks) {
         b.generate(logger, gen, info);
         gen.endCase();
       }
-  
+
       if (hasDefault) {
         defaultBlock.generate(logger, gen, info);
         gen.endCase();
       }
-  
+
       gen.endSwitch();
     }
-  
+
     @Override
     public void prettyPrint(StringBuilder sb, String currentIndent) {
       assert(this.caseBlocks.size() == this.caseLabels.size());
@@ -316,7 +337,7 @@ public class Conditionals {
       }
       sb.append(currentIndent + "}\n");
     }
-  
+
     @Override
     public List<Block> getBlocks() {
       List<Block> result = new ArrayList<Block>();
@@ -324,18 +345,18 @@ public class Conditionals {
       result.add(defaultBlock);
       return result;
     }
-    
+
     @Override
-    public void replaceConstructVars(Map<Var, Arg> renames, 
+    public void replaceConstructVars(Map<Var, Arg> renames,
                                      RenameMode mode) {
       switchVar = ICUtil.replaceArg(renames, switchVar, false);
     }
-  
+
     @Override
     public ContinuationType getType() {
       return ContinuationType.SWITCH_STATEMENT;
     }
-  
+
     @Override
     public Collection<Var> requiredVars(boolean forDeadCodeElim) {
       if (switchVar.isVar()) {
@@ -344,26 +365,25 @@ public class Conditionals {
         return Var.NONE;
       }
     }
-  
+
     @Override
     public void removeVars(Set<Var> removeVars) {
-      assert(!switchVar.isVar() 
+      assert(!switchVar.isVar()
           || !removeVars.contains(switchVar.getVar()));
       defaultBlock.removeVars(removeVars);
       for (Block caseBlock: this.caseBlocks) {
         caseBlock.removeVars(removeVars);
       }
-  
+
     }
-  
+
     @Override
-    public Block tryInline(Set<Var> closedVars, Set<Var> recClosedVars,
-                           boolean keepExplicitDependencies) {
-      if (switchVar.isVar()) {
+    public Block branchPredict(Arg switchVal) {
+      if (switchVal.isVar()) {
         // Variable condition
         return null;
-      } 
-      long val = switchVar.getIntLit();
+      }
+      long val = switchVal.getIntLit();
       // Check cases
       for (int i = 0; i < caseLabels.size(); i++) {
         if (val == caseLabels.get(i)) {
@@ -373,6 +393,10 @@ public class Conditionals {
       // Otherwise return (maybe empty) default block
       return defaultBlock;
     }
-  }
 
+    @Override
+    public Arg conditionArg() {
+      return switchVar;
+    }
+  }
 }
