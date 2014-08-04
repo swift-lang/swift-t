@@ -202,7 +202,9 @@ namespace eval turbine {
         puts [ blob_fmt $b ]
     }
 
-    proc blob_dict_to_dbl_array { d } { 
+    # Input:  L: a Tcl dict of integer->integer indexed from 0
+    # Output:    a SWIG pointer (double*) to a fresh double array
+    proc blob_dict_to_int_array { d } { 
         set L [ dict size $d ]
         set bytes [ expr $L * [ blobutils_sizeof_int ] ]
         set ptr [ blobutils_malloc $bytes ]
@@ -212,6 +214,29 @@ namespace eval turbine {
             blobutils_set_int $ptr $i $v 
         }
         return $ptr
+    }
+
+    # Input:  L: a Tcl dict of integer->string indexed from 0
+    # Output:    a SWIG pointer (char**) to the C strings
+    proc blob_strings_to_char_ptr_ptr { d } { 
+        set argc [ dict size $d ]
+        # Allocate array of char*
+        set bytes [ expr $argc * [blobutils_sizeof_ptr] ]
+        # This is a void*
+        set alloc [ blobutils_malloc $bytes ]
+        # This is a char**
+        set charss [ blobutils_cast_to_char_ptrptr $alloc ]
+
+        # Fill in argv...
+        # This is a void**
+        set v [ blobutils_cast_to_ptrptr $alloc ]
+        # Set arguments...
+        for { set i 0 } { $i < $argc } { incr i } { 
+            set s [ dict get $d $i ]
+            set p [ blobutils_cast_string_to_ptr $s ]
+            blobutils_set_ptr $v $i $p
+        }
+        return $charss
     }
 }
 
