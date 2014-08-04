@@ -107,6 +107,7 @@ gdb_check(int rank)
       int t = 0;
       int i = 0;
       while (!t)
+        // In GDB, set t=1 to break out
         gdb_sleep(&t, i++);
     }
   }
