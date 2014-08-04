@@ -4,7 +4,7 @@
 Turbine Sites Guide
 ===================
 Justin M. Wozniak <wozniak@mcs.anl.gov>
-v0.5.0, April 2014
+v0.6.1, August 2014
 
 ////
 
@@ -847,6 +847,14 @@ To run:
 export TURBINE_LAUNCH_OPTS="-f $HOME/hosts.txt"
 turbine program.tcl
 ----
+
+== Mac OS X
+
+Swift/T is regularly tested on the Mac.  You may use Swift/T as on any
+other single system.  
+
+* SWIG: You may use SWIG from source or the MacPorts +swig-tcl+ package
+* MPI: You may use any MPI implementation
 
 ////
 Local Variables:
