@@ -49,7 +49,7 @@ c_utils_heapsize_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   long count = -1;
 
-  #ifdef HAVE_MALLOC_H
+  #ifdef HAVE_MALLINFO
   struct mallinfo s = mallinfo();
   count = s.uordblks;
   #endif

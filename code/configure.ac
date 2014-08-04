@@ -121,6 +121,7 @@ AC_TYPE_MODE_T
 AC_TYPE_UINT8_T
 AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
+AC_TYPE_UINT64_T
 AC_CHECK_TYPES([ptrdiff_t])
 
 # Checks for library functions.
@@ -129,8 +130,9 @@ AC_CHECK_TYPES([ptrdiff_t])
 AC_FUNC_FORK
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
-AC_CHECK_FUNCS([gettimeofday memset pow setenv strchr strdup strlen])
-AC_CHECK_FUNCS([strnlen strstr strtol strtoul uname])
+AC_CHECK_FUNCS([gettimeofday mallinfo memchr memset pow setenv strchr])
+AC_CHECK_FUNCS([strdup strerror strlen strnlen strstr strtol strtoul ])
+AC_CHECK_FUNCS([uname])
 
 # Define templates
 AC_DEFINE([HAVE_STDDEF_H], [], [Do we have stddef.h?])
