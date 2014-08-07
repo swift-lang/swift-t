@@ -633,6 +633,10 @@ class CongruentSets {
           Arg canonical = findCanonicalInternal(outerCV);
           if (canonical != null) {
             addUpdatedCV(oldComponent, newComponent, newOuterCV2, canonical);
+          } else {
+            if (logger.isTraceEnabled()) {
+              logger.trace("Could not update " + outerCV);
+            }
           }
           updateEquivCanonicalization(outerCV, newOuterCV2);
         }
@@ -650,25 +654,23 @@ class CongruentSets {
    */
   private void addUpdatedCV(Arg oldComponent, Arg newComponent, ArgOrCV newCV,
                             Arg canonical) {
-    // Check to see if this CV bridges two sets
+    // Add new CV, handling special cases where CV bridges two sets
     Arg newCanonical = findCanonicalInternal(newCV);
-    if (newCanonical != null) {
-      if (newCanonical.equals(canonical)) {
-        // Add to same set
-        addSetEntry(newCV, canonical);
-      } else {
-        // Already in a set, mark that we need to merge
-        mergeQueue.add(new ToMerge(canonical, newCanonical));
-        if (logger.isTraceEnabled()) {
-          if (newComponent != null) {
-            logger.trace("Merging " + oldComponent + " into " +
-              newComponent + " causing merging of " + canonical +
-              " into " + newCanonical);
-          } else {
-            logger.trace("Getting value of " + oldComponent +
-                          " causing merging of " + canonical +
-                          " into " + newCanonical);
-          }
+    if (newCanonical == null || newCanonical.equals(canonical)) {
+      // Add to same set
+      addSetEntry(newCV, canonical);
+    } else {
+      // Already in a set, mark that we need to merge
+      mergeQueue.add(new ToMerge(canonical, newCanonical));
+      if (logger.isTraceEnabled()) {
+        if (newComponent != null) {
+          logger.trace("Merging " + oldComponent + " into " +
+            newComponent + " causing merging of " + canonical +
+            " into " + newCanonical);
+        } else {
+          logger.trace("Getting value of " + oldComponent +
+                        " causing merging of " + canonical +
+                        " into " + newCanonical);
         }
       }
     }

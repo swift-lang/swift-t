@@ -181,9 +181,10 @@ public class UnifiedValues {
         Congruences bs = branchStates.get(i);
         Arg loc = bs.findCanonical(cv, congType);
         if (loc == null) {
-          // TODO: workaround for failed canonicalisation
-          Logging.getSTCLogger().debug("WARN: Could not locate " + cv + " " +
-                                       congType + " on branch + " + i);
+          // Detect errors in canonicalisation
+          Logging.getSTCLogger().warn("Internal warning: Could not locate "
+                      + cv + " " + congType + " on branch + " + i,
+                      new Exception());
           skip = true;
           continue;
         }
