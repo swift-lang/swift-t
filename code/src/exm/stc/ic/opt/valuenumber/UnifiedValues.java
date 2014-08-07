@@ -42,11 +42,11 @@ import exm.stc.ic.tree.TurbineOp;
  * Handle unifying values from multiple branches.
  */
 public class UnifiedValues {
-  
+
   // Cap number of unification iterations to avoid chance of infinite
   // loops in case of bugs, etc.
   static final int MAX_UNIFY_ITERATIONS = 20;
-  
+
   private UnifiedValues(
       Set<Var> closed, Set<Var> recursivelyClosed,
       List<ValLoc> availableVals) {
@@ -63,11 +63,11 @@ public class UnifiedValues {
   /**
    * Assuming that branches are exhaustive, work out the set of variables
    * closed after the conditional has executed.
-   * 
+   *
    * @param state
    * @param branchStates
    * @return
-   * @throws OptUnsafeError 
+   * @throws OptUnsafeError
    */
   public static UnifiedValues unify(Logger logger, GlobalConstants consts,
                  Function fn, boolean reorderingAllowed, int parentStmtIndex,
@@ -89,13 +89,13 @@ public class UnifiedValues {
       Set<Var> closed = new HashSet<Var>();
       Set<Var> recClosed = new HashSet<Var>();
       unifyClosed(branchStates, closed, recClosed, parentStmtIndex);
-      
+
       List<ValLoc> availVals = new ArrayList<ValLoc>();
       List<ArgCV> allUnifiedCVs = new ArrayList<ArgCV>();
-      
+
       // Track which sets of args from each branch are mapped into a
       // unified var
-      Map<List<Arg>, Var> unifiedVars = new HashMap<List<Arg>, Var>(); 
+      Map<List<Arg>, Var> unifiedVars = new HashMap<List<Arg>, Var>();
       int iter = 1;
       boolean newCVs;
       do {
@@ -103,7 +103,7 @@ public class UnifiedValues {
           logger.trace("Start iteration " + iter + " of unification");
         }
         newCVs = false;
-        
+
         for (CongruenceType congType: Arrays.asList(CongruenceType.VALUE,
                                                     CongruenceType.ALIAS)) {
 
@@ -123,7 +123,7 @@ public class UnifiedValues {
                        + congType + " New CVs: " + result.val1);
           }
         }
-        
+
         if (iter >= MAX_UNIFY_ITERATIONS) {
           logger.debug("Exceeded max unify iterations.");
           if (logger.isTraceEnabled()) {
@@ -145,9 +145,9 @@ public class UnifiedValues {
    * @param branchStates
    * @param branchBlocks
    * @param allBranchCVs
-   * @param unifiedLocs 
+   * @param unifiedLocs
    * @return
-   * @throws OptUnsafeError 
+   * @throws OptUnsafeError
    */
   private static Pair<List<ValLoc>, Boolean> unifyCVs(GlobalConstants consts,
     Function fn, boolean reorderingAllowed, Block parent, int parentStmtIndex,
@@ -155,9 +155,9 @@ public class UnifiedValues {
     List<Block> branchBlocks, List<ArgCV> allBranchCVs,
     Map<List<Arg>, Var> unifiedLocs) throws OptUnsafeError {
     List<ValLoc> availVals = new ArrayList<ValLoc>();
-    
+
     boolean createdNewBranchCVs = false;
-    
+
     for (ArgCV cv: allBranchCVs) {
       // See what is same across all branches
       // TODO: this is imperfect in situations where the canonical
@@ -169,7 +169,7 @@ public class UnifiedValues {
       boolean allSameLocation = true;
       Closed allClosed = Closed.YES_RECURSIVE;
       IsValCopy anyValCopy = IsValCopy.NO;
-      
+
       // Keep track of all locations to use as key into map
       List<Arg> branchLocs = new ArrayList<Arg>(branchStates.size());
 
@@ -178,40 +178,38 @@ public class UnifiedValues {
         Congruences bs = branchStates.get(i);
         Arg loc = bs.findCanonical(cv, congType);
         assert(loc != null);
-        
+
         if (loc != firstLoc && !loc.equals(firstLoc)) {
           allSameLocation = false;
         }
-        
+
         if (!Types.isPrimValue(loc.type())) {
           allVals = false;
         }
-        
+
         int branchStmtCount = branchBlocks.get(i).getStatements().size();
-        if (allClosed == Closed.YES_RECURSIVE &&
-            !bs.isRecClosed(loc, branchStmtCount)) {
-          if (bs.isClosed(loc,branchStmtCount)) {
-            allClosed = Closed.MAYBE_NOT;
-          } else {
-            allClosed = Closed.YES_NOT_RECURSIVE;
-          }
-        } else if (allClosed == Closed.YES_NOT_RECURSIVE &&
-            !bs.isClosed(loc, branchStmtCount)) {
+        if (allClosed.isRecClosed() &&
+            bs.isRecClosed(loc, branchStmtCount)) {
+          allClosed = Closed.YES_RECURSIVE;
+        } else if (allClosed.isClosed() &&
+              bs.isClosed(loc,branchStmtCount)) {
+          allClosed = Closed.YES_NOT_RECURSIVE;
+        } else {
           allClosed = Closed.MAYBE_NOT;
         }
-        
+
         branchLocs.add(loc);
       }
-      
+
 
       if (Logging.getSTCLogger().isTraceEnabled()) {
         Logging.getSTCLogger().trace(cv + " appears on all branches " +
                     "allSame: " + allSameLocation + " allVals: " + allVals);
       }
-      
+
       // TODO: fill in with correct
       IsAssign isAssign = IsAssign.NO;
-      
+
       if (allSameLocation) {
         availVals.add(createUnifiedCV(cv, firstLoc, allClosed, anyValCopy,
                                       isAssign));
@@ -227,13 +225,13 @@ public class UnifiedValues {
 
         // Store the new location
         unifiedLocs.put(branchLocs, unifiedLoc);
-        
+
         // Signal that value is stored in new var
         availVals.add(createUnifiedCV(cv, unifiedLoc.asArg(), allClosed, anyValCopy,
                                       isAssign));
       }
     }
-    
+
     return Pair.create(availVals, createdNewBranchCVs);
   }
 
@@ -245,18 +243,18 @@ public class UnifiedValues {
     // declare new temporary value in outer block
     Var unifiedLoc;
     if (isValue) {
-      unifiedLoc = parent.declareUnmapped(type, 
+      unifiedLoc = parent.declareUnmapped(type,
           OptUtil.optVPrefix(parent, "unified"), Alloc.LOCAL,
           DefType.LOCAL_COMPILER,
           VarProvenance.unified(ICUtil.extractVars(locs)));
     } else {
-      unifiedLoc = parent.declareUnmapped(type, 
+      unifiedLoc = parent.declareUnmapped(type,
           OptUtil.optVPrefix(parent, "unified"), Alloc.ALIAS,
           DefType.LOCAL_COMPILER,
           VarProvenance.unified(ICUtil.extractVars(locs)));
     }
-    
-    
+
+
     for (int i = 0; i < branchStates.size(); i++) {
       Arg loc = locs.get(i);
       Block branchBlock = branchBlocks.get(i);
@@ -271,7 +269,7 @@ public class UnifiedValues {
         copyVal = ValLoc.makeAlias(unifiedLoc, loc.getVar());
       }
       branchBlock.addInstruction(copyInst);
-      
+
       // Add in additional computed values resulting from copy
       Congruences branchState = branchStates.get(i);
       int branchStmts = branchBlock.getStatements().size();
@@ -286,12 +284,12 @@ public class UnifiedValues {
             IsAssign maybeAssigned) {
     return new ValLoc(cv, loc, allClosed, anyValCopy, maybeAssigned);
   }
-  
-  
+
+
   /**
    * Find computed values that appear in all branches but not parent
    * @param parentState
-   * @param congType 
+   * @param congType
    * @param branchStates
    * @param alreadyAdded ignore these
    * @return
@@ -322,7 +320,7 @@ public class UnifiedValues {
     }
     return allBranchCVs;
   }
-  
+
   private static void unifyClosed(List<Congruences> branchStates,
       Set<Var> closed, Set<Var> recClosed, int parentStmtIndex) {
     List<Set<Var>> branchClosed = new ArrayList<Set<Var>>();
@@ -332,19 +330,19 @@ public class UnifiedValues {
       branchClosed.add(branchState.getScopeClosed(false));
       branchRecClosed.add(branchState.getScopeClosed(true));
     }
-    
+
 
     // Add variables closed in first branch that aren't closed in parent
     // to output sets
     for (Var closedVar: Sets.intersectionIter(branchClosed)) {
       closed.add(closedVar);
     }
-    
+
     for (Var recClosedVar: Sets.intersectionIter(branchRecClosed)) {
       recClosed.add(recClosedVar);
     }
   }
-  
+
   final Set<Var> closed;
   final Set<Var> recursivelyClosed;
   final List<ValLoc> availableVals;
