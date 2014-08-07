@@ -328,7 +328,7 @@ public class FixupVariables implements OptimizerPass {
     findBlockNeeded(block, result, aliases, createdAliases);
 
     for (Continuation c : block.allComplexStatements()) {
-      fixupContinuationRec(logger, function, execCx, c,
+      variablePassing(logger, function, execCx, c,
               visible, referencedGlobals, aliases,
               blockVars, result, fixupMode);
     }
@@ -434,7 +434,7 @@ public class FixupVariables implements OptimizerPass {
    * @param neededVars
    * @param fixupMode !
    */
-  private static void fixupContinuationRec(Logger logger, Function function,
+  private static void variablePassing(Logger logger, Function function,
           ExecContext outerCx,
           Continuation continuation, HierarchicalSet<Var> visible,
           Set<Var> referencedGlobals, AliasTracker outerAliases, Set<Var> outerBlockVars,
@@ -459,7 +459,7 @@ public class FixupVariables implements OptimizerPass {
         inner.removeReadWrite(constructVars);
       }
 
-      if (continuation.inheritsParentVars()) {
+      if (continuation.variablePassing().isAutomatic()) {
         // Might be some variables not yet defined in this scope
         inner.removeReadWrite(outerBlockVars);
         result.add(inner);

@@ -159,7 +159,7 @@ public class Validate implements OptimizerPass {
     }
 
     HierarchicalSet<Var> unavailChild = unavailable.makeChild();
-    if (!c.inheritsParentVars()) {
+    if (!c.variablePassing().isLocal()) {
       // Remove non-passable
       for (Var v: declared.values()) {
         if (!Semantics.canPassToChildTask(v)) {
