@@ -845,21 +845,13 @@ public class ICTree {
                            RenameMode mode) {
       action.renameVars(function, renames, mode);
 
-      if (mode != RenameMode.VALUE &&
-          canMoveToAlias() && renames.containsKey(var)) {
+      if (mode != RenameMode.VALUE && renames.containsKey(var)) {
         Arg replacement = renames.get(var);
         assert(replacement.isVar()) : replacement;
         this.var = replacement.getVar();
       }
     }
 
-    /**
-     * Can move cleanup action to alias of current var
-     * @return
-     */
-    private boolean canMoveToAlias() {
-      return action.op == Opcode.DECR_WRITERS;
-    }
     @Override
     public CleanupAction clone() {
       return new CleanupAction(var, action.clone());

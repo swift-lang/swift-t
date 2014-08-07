@@ -246,7 +246,7 @@ public class Validate implements OptimizerPass {
               declaredVar.defType() + " " + referencedVar.defType() + " | " +
               declaredVar.mappedDecl() + " " + referencedVar.mappedDecl();
     checkUsed(f, referencedVar);
-    checkAvail(f, referencedVar, unavailable);
+    checkAvail(f, referencedVar, unavailable, context);
   }
 
   private void checkCleanups(Logger logger, Function fn, Block block) {
@@ -303,9 +303,11 @@ public class Validate implements OptimizerPass {
           fn.usedVarNames();
   }
 
-  private void checkAvail(Function fn, Var referencedVar, Set<Var> unavailable) {
+  private void checkAvail(Function fn, Var referencedVar, Set<Var> unavailable,
+                          Object context) {
     assert(!unavailable.contains(referencedVar)) :
-      referencedVar + " was unavailable in scope function " + fn.getName();
+      referencedVar + " was unavailable in scope function " + fn.getName()
+                    + ": " + context;
   }
 
   /**
