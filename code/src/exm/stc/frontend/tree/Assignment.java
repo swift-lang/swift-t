@@ -22,22 +22,19 @@ import java.util.List;
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
 import exm.stc.common.exceptions.STCRuntimeError;
-import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.Types.ExprType;
 import exm.stc.common.util.Pair;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LogHelper;
-import exm.stc.frontend.TypeChecker;
 
 public class Assignment {
-  
+
   public static enum AssignOp {
     ASSIGN, // Regular = assignment
     APPEND, // Append += assignment
     ;
   }
-  
+
   public final AssignOp op;
   public final List<SwiftAST> rValExprs;
   public final List<LValue> lVals;
@@ -48,11 +45,11 @@ public class Assignment {
     this.rValExprs = Collections.unmodifiableList(
                                          new ArrayList<SwiftAST>(rValExprs));
   }
-  
+
   /**
    * Try to match up lVals and corresponding rVals
    * @return List of paired lvals and rvals
-   * @throws UserException 
+   * @throws UserException
    */
   public List<Pair<List<LValue>, SwiftAST>> getMatchedAssignments(Context context)
                   throws UserException {
@@ -77,26 +74,8 @@ public class Assignment {
       return paired;
     }
   }
-  
-  /**
-   * Helper method to find expression type
-   * @param context
-   * @param lVals
-   * @param rValExpr
-   * @return
-   * @throws UserException 
-   */
-  public static ExprType checkAssign(Context context,
-                 List<LValue> lVals, SwiftAST rValExpr) throws UserException {
-    ExprType rValTs = TypeChecker.findExprType(context, rValExpr);
-    if (rValTs.elems() != lVals.size()) {
-      throw new TypeMismatchException(context, "Needed " + rValTs.elems()
-              + " " + "assignment targets on LHS of assignment, but "
-              + lVals.size() + " were present");
-    }
-    return rValTs;
-  }
-  
+
+
   public static final Assignment fromAST(Context context, SwiftAST tree) {
     assert(tree.getType() == ExMParser.ASSIGN_EXPRESSION);
     assert(tree.childCount() >= 3);
@@ -113,10 +92,10 @@ public class Assignment {
         throw new STCRuntimeError("Unknown assign op: " +
                                   LogHelper.tokName(assignOpTok));
     }
-    
+
     SwiftAST lValsT = tree.child(1);
     List<LValue> lVals = LValue.extractLVals(context, lValsT);
-    
+
     List<SwiftAST> rValExprs = tree.children(2);
     return new Assignment(assignOp, lVals, rValExprs);
   }

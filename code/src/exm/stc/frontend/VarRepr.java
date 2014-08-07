@@ -31,11 +31,11 @@ import exm.stc.common.lang.WaitVar;
  * of representing the same logical variable in different ways.
  */
 public class VarRepr {
-  
+
   /**
    * Cache results of conversions, to avoid recomputing.
    */
-  private static HashMap<Type, Type> conversionCache 
+  private static HashMap<Type, Type> conversionCache
                           = new HashMap<Type, Type>();
 
   public static Var backendVar(Var frontendVar) {
@@ -43,11 +43,11 @@ public class VarRepr {
     Type backendT = backendType(frontendVar.type(), true);
     return frontendVar.substituteType(backendT);
   }
-  
+
   public static List<Var> backendVars(Var ...frontendVars) {
     return backendVars(Arrays.asList(frontendVars));
   }
-  
+
   public static List<Var> backendVars(List<Var> frontendVars) {
     ArrayList<Var> result = new ArrayList<Var>(frontendVars.size());
     for (Var v: frontendVars) {
@@ -55,7 +55,7 @@ public class VarRepr {
     }
     return result;
   }
-  
+
   public static List<WaitVar> backendWaitVars(List<WaitVar> frontendVars) {
     ArrayList<WaitVar> result = new ArrayList<WaitVar>(frontendVars.size());
     for (WaitVar v: frontendVars) {
@@ -72,11 +72,11 @@ public class VarRepr {
     return new WaitVar(backendVar(frontendVar.var),
                         frontendVar.explicit);
   }
-  
+
   public static Arg backendArg(Arg frontendArg) {
     return backendArg(frontendArg, false);
   }
-  
+
   public static Arg backendArg(Arg frontendArg,
             boolean passThroughNulls) {
     if (frontendArg == null) {
@@ -93,11 +93,11 @@ public class VarRepr {
       return frontendArg;
     }
   }
-  
+
   public static List<Arg> backendArgs(Arg ...frontendArgs) {
     return backendArgs(Arrays.asList(frontendArgs));
   }
-  
+
   public static List<Arg> backendArgs(List<Arg> frontendArgs) {
     ArrayList<Arg> result = new ArrayList<Arg>(frontendArgs.size());
     for (Arg v: frontendArgs) {
@@ -105,7 +105,7 @@ public class VarRepr {
     }
     return result;
   }
-  
+
   public static TaskProps backendProps(TaskProps props) {
     TaskProps res = new TaskProps();
     for (Entry<TaskPropKey, Arg> e: props.entrySet()) {
@@ -113,10 +113,10 @@ public class VarRepr {
     }
     return res;
   }
-  
+
   /**
    * Convert a frontend logical type used for typechecking and user-facing
-   * messages to a backend type used for implementation 
+   * messages to a backend type used for implementation
    * @param type
    * @param checkInstantiate if true, expect to be able to instantiate type
    * @return
@@ -135,12 +135,12 @@ public class VarRepr {
   private static Type backendTypeInternal(Type type,
                             boolean checkInstantiate) {
     Type originalType = type;
-    
-    Type lookup = conversionCache.get(type); 
+
+    Type lookup = conversionCache.get(type);
     if (lookup != null) {
       return lookup;
     }
-    
+
     if (Types.isContainer(type) || Types.isContainerRef(type)) {
       Type frontendElemType = Types.containerElemType(type);
       Type backendElemType = backendTypeInternal(frontendElemType,
@@ -158,16 +158,16 @@ public class VarRepr {
     } else if (Types.isStruct(type)) {
       type = backendStructType((StructType)type, checkInstantiate);
     }
-    
+
     assert(!checkInstantiate || type.isConcrete()) :
             "Cannot instantiate type " + type;
-    
+
     Logging.getSTCLogger().trace("Type conversion frontend => backend: " +
                                     originalType + " to backend " + type);
     conversionCache.put(originalType, type);
     return type;
   }
-  
+
   /**
    * Convert struct type.
    * Retain name, but convert types of fields
@@ -177,7 +177,7 @@ public class VarRepr {
   private static Type backendStructType(StructType frontend,
                                 boolean checkInstantiate) {
     List<StructField> backendFields = new ArrayList<StructField>();
-    
+
     for (StructField frontendF: frontend.getFields()) {
       Type fieldT = backendTypeInternal(frontendF.getType(), checkInstantiate);
       if (storeRefInStruct(fieldT)) {
@@ -186,7 +186,7 @@ public class VarRepr {
       }
       backendFields.add(new StructField(fieldT, frontendF.getName()));
     }
-    
+
     return new StructType(frontend.isLocal(), frontend.typeName(),
                             backendFields);
   }
@@ -199,16 +199,16 @@ public class VarRepr {
   public static boolean storeRefInContainer(Typed type) {
     return storeRefInCompound(type, CompoundType.CONTAINER);
   }
-  
+
   public static boolean storeRefInStruct(Typed type) {
     return storeRefInCompound(type, CompoundType.STRUCT);
   }
-  
+
   private static enum CompoundType {
     STRUCT,
     CONTAINER,
   }
-  
+
   private static boolean storeRefInCompound(Typed type,
                                  CompoundType compound) {
     if (Types.isFile(type) || Types.isStruct(type)) {
@@ -243,31 +243,31 @@ public class VarRepr {
 
   public static FunctionType backendFnType(FunctionType frontendType) {
 
-    Type lookup = conversionCache.get(frontendType); 
+    Type lookup = conversionCache.get(frontendType);
     if (lookup != null) {
       return (FunctionType)lookup;
     }
-    
+
     // translate input and output arg types
     List<Type> backendInputs = new ArrayList<Type>();
     List<Type> backendOutputs = new ArrayList<Type>();
-    
+
     for (Type in: frontendType.getInputs()) {
       backendInputs.add(backendType(in, false));
     }
-    
+
     for (Type out: frontendType.getOutputs()) {
       backendOutputs.add(backendType(out, false));
     }
-    
-    FunctionType result = new FunctionType(backendInputs, backendOutputs, 
+
+    FunctionType result = new FunctionType(backendInputs, backendOutputs,
                frontendType.hasVarargs(), frontendType.getTypeVars());
-    
+
     conversionCache.put(frontendType, result);
 
     return result;
   }
-  
+
 
   public static Type elemRepr(Type memberType, CompoundType c,
                               boolean mutable) {
@@ -277,7 +277,7 @@ public class VarRepr {
       return memberType;
     }
   }
-  
+
   /**
    * The type of internal storage used for a Swift type when stored in a
    * container.
@@ -289,7 +289,7 @@ public class VarRepr {
   public static Type containerElemRepr(Type memberType, boolean mutable) {
     return elemRepr(memberType, CompoundType.CONTAINER, mutable);
   }
-  
+
   /**
    * The type of internal storage used for a Swift type when stored in a
    * struct.

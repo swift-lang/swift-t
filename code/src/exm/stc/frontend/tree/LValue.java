@@ -34,8 +34,8 @@ import exm.stc.common.lang.Types.StructType;
 import exm.stc.common.lang.Types.Type;
 import exm.stc.common.lang.Types.UnionType;
 import exm.stc.common.lang.Var;
-import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.Alloc;
+import exm.stc.common.lang.Var.DefType;
 import exm.stc.common.lang.Var.VarProvenance;
 import exm.stc.frontend.Context;
 import exm.stc.frontend.LogHelper;
@@ -48,16 +48,16 @@ public class LValue {
   public final String varName;
   public final List<SwiftAST> indices;
   public final SwiftAST tree;
-  
+
   public LValue(SwiftAST tree, Var var) {
     this(tree, var, new ArrayList<SwiftAST>(0));
   }
-  
+
   public LValue(SwiftAST tree, Var var, List<SwiftAST> indices) {
     this(null, tree, var, indices);
   }
-   
-  public LValue(LValue predecessor, 
+
+  public LValue(LValue predecessor,
                 SwiftAST tree, Var var, List<SwiftAST> indices) {
     this.predecessor = predecessor;
     this.tree = tree;
@@ -65,7 +65,7 @@ public class LValue {
     this.varName = var.name();
     this.indices = Collections.unmodifiableList(indices);
   }
-  
+
   public LValue(SwiftAST tree, String varName, List<SwiftAST> indices) {
     this.predecessor = null;
     this.tree = tree;
@@ -73,11 +73,11 @@ public class LValue {
     this.varName = varName;
     this.indices = Collections.unmodifiableList(indices);
   }
-  
+
   public LValue getPredecessor() {
     return predecessor;
   }
-  
+
   public Var getOuterArray() {
     assert(Types.isArray(this.var) || Types.isArrayRef(this.var));
     LValue prev = this;
@@ -89,7 +89,7 @@ public class LValue {
     }
     return prev.var;
   }
-  
+
   public Type getType(Context context) throws TypeMismatchException {
     return getType(context, indices.size());
   }
@@ -199,7 +199,7 @@ public class LValue {
       throw new STCRuntimeError("Expected token identifier_list "
               + " but got " + tree.getText());
     }
-   
+
     ArrayList<LValue> lvals = new ArrayList<LValue>(tree.getChildCount());
     for (SwiftAST subtree: tree.children()) {
       LValue lval = extractAssignmentID(context, subtree);
@@ -209,7 +209,7 @@ public class LValue {
   }
 
   /**
-     @param context 
+     @param context
    */
   private static LValue extractAssignmentID(Context context, SwiftAST subtree) {
     if (subtree.getType() != ExMParser.ASSIGN_TARGET) {
@@ -219,17 +219,17 @@ public class LValue {
       throw new STCRuntimeError("Expected ASSIGN_TARGET ast node "
           + "to have at least one child");
     }
-    
+
     SwiftAST varTree = subtree.child(0);
     if (varTree.getType() != ExMParser.VARIABLE || varTree.getChildCount() != 1) {
       throw new STCRuntimeError("Expected VARIABLE with one child "
           + "as first child of ASSIGN_TARGET");
     }
-  
+
     String varName = varTree.child(0).getText();
-  
+
     List<SwiftAST> path = new ArrayList<SwiftAST>();
-  
+
     for (int i = 1; i < subtree.getChildCount(); i++) {
       SwiftAST pathTree = subtree.child(i);
       if (pathTree.getType() == ExMParser.ARRAY_PATH
@@ -240,7 +240,7 @@ public class LValue {
              + LogHelper.tokName(pathTree.getType()));
       }
     }
-    
+
     // It is ok if here variable isn't undeclared, since we might want
     // to automatically declare it
     Var var = context.lookupVarUnsafe(varName);
@@ -252,13 +252,13 @@ public class LValue {
       return new LValue(subtree, varName, path);
     }
   }
-  
+
   /**
    * If lval var not declared in current context, return var that
    * needs to be declared
    * @param rValType
    * @return
-   * @throws UserException 
+   * @throws UserException
    */
   public LValue varDeclarationNeeded(Context context,
           Type rValType) throws UserException {
@@ -266,11 +266,11 @@ public class LValue {
       // lval var already declared
       return null;
     }
-    
+
     if (!Settings.getBoolean(Settings.AUTO_DECLARE)) {
       throw UndefinedVarError.fromName(context, this.varName);
     }
-    
+
     for (SwiftAST t: this.indices) {
       if (t.getType() != ExMParser.ARRAY_PATH) {
         throw new UndefinedTypeException(context, "Referencing structure field" +
@@ -279,26 +279,26 @@ public class LValue {
     }
     // All must be array indices
     int arrayDepth = this.indices.size();
-    
+
     // Work out what type lhs var must be
     Type declType = rValType;
     if (Types.isUnion(declType)) {
       declType = UnionType.getAlternatives(declType).get(0);
     }
-    
+
     if (Types.isRef(declType)) {
       declType = declType.memberType();
     }
-    
+
+    declType = Types.concretiseArbitrarily(declType);
+
     for (int i = 0; i < arrayDepth; i++) {
       SwiftAST keyExpr = indices.get(i).child(0);
       Type keyType = TypeChecker.findSingleExprType(context, keyExpr);
-      if (Types.isUnion(keyType)) {
-        keyType = UnionType.getAlternatives(keyType).get(0);
-      }
+      keyType = Types.concretiseArbitrarily(keyType);
       declType = ArrayType.sharedArray(keyType, declType);
     }
-    
+
     Var newVar = new Var(declType, this.varName, Alloc.STACK, DefType.LOCAL_USER,
                          VarProvenance.userVar(context.getSourceLoc()));
     return new LValue(this.tree, newVar, this.indices);

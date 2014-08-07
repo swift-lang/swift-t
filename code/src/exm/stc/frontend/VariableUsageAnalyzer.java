@@ -66,10 +66,10 @@ class VariableUsageAnalyzer {
 
   /** Store line mapping as attribute to avoid passing everywhere */
   private LineMapping lineMapping;
-  
+
   /** Store current module as attribute to avoid passing everywhere */
   private String currModuleName;
-  
+
   /**
    * Analyse the variables that are present in the block and add
    * VariableUsageInfo object to the BLOCK AST nodes
@@ -79,37 +79,37 @@ class VariableUsageAnalyzer {
    * @param block
    * @throws UserException
    */
-  public void analyzeVariableUsage(Context context, 
+  public void analyzeVariableUsage(Context context,
           LineMapping lineMapping, String currModuleName,
           String function, List<Var> iList, List<Var> oList, SwiftAST block)
         throws UserException {
     LogHelper.debug(context, "analyzer: starting: " + function);
     this.lineMapping = lineMapping;
     this.currModuleName = currModuleName;
-    
-    VariableUsageInfo globVui = new VariableUsageInfo(); 
+
+    VariableUsageInfo globVui = new VariableUsageInfo();
     // Add global constants
     for (Var global: context.getScopeVariables()) {
       globVui.declare(context,
           global.name(), global.type(), false);
       globVui.assign(context, global.name(), AssignOp.ASSIGN);
     }
-    
+
     VariableUsageInfo argVui = globVui.createNested(); // create copy with globals
     Context fnContext = new LocalContext(context, function);
-    
+
     // Add input and output variables to initial variable info
     for (Var i: iList) {
       argVui.declare(fnContext, i.name(), i.type(), false);
       argVui.assign(fnContext, i.name(), AssignOp.ASSIGN);
-      fnContext.declareVariable(i.type(), i.name(), i.storage(), 
+      fnContext.declareVariable(i.type(), i.name(), i.storage(),
             i.defType(), VarProvenance.unknown(), i.mappedDecl());
     }
     for (Var o: oList) {
       argVui.declare(fnContext, o.name(), o.type(), false);
       // We should assume that return variables will be read
       argVui.read(fnContext, o.name());
-      fnContext.declareVariable(o.type(), o.name(), o.storage(), 
+      fnContext.declareVariable(o.type(), o.name(), o.storage(),
           o.defType(), VarProvenance.unknown(), o.mappedDecl());
     }
 
@@ -137,7 +137,7 @@ class VariableUsageAnalyzer {
   private void syncFilePos(Context context, SwiftAST tree) {
     context.syncFilePos(tree, currModuleName, lineMapping);
   }
-  
+
   private VariableUsageInfo walkBlock(Context context, SwiftAST block,
       VariableUsageInfo initialVu) throws UserException {
     return walkBlock(context, block, initialVu, true);
@@ -154,7 +154,7 @@ class VariableUsageAnalyzer {
    * @throws UserException
    */
   private VariableUsageInfo walkBlock(Context context, SwiftAST block,
-                 VariableUsageInfo initialVu, boolean checkMisuse) 
+                 VariableUsageInfo initialVu, boolean checkMisuse)
                                                    throws UserException {
     assert(block.getType() == ExMParser.BLOCK);
     syncFilePos(context, block);
@@ -170,7 +170,7 @@ class VariableUsageAnalyzer {
       syncFilePos(context, t);
       walk(context, t , vu);
     }
-    
+
     // After having collected data for block, check for unread/unwritten vars
     if (checkMisuse) {
       syncFilePos(context, block);
@@ -211,20 +211,20 @@ class VariableUsageAnalyzer {
       case ExMParser.FOREACH_LOOP:
         foreach(context, vu, tree);
         break;
-        
+
       case ExMParser.FOR_LOOP:
         forLoop(context, vu, tree);
         break;
-        
+
       case ExMParser.ITERATE:
         iterate(context, vu, tree);
         break;
-        
+
       case ExMParser.WAIT_STATEMENT:
       case ExMParser.WAIT_DEEP_STATEMENT:
         waitStmt(context, vu, tree);
         break;
-        
+
       case ExMParser.DECLARATION:
         declareVariable(context, vu, tree);
         break;
@@ -237,11 +237,11 @@ class VariableUsageAnalyzer {
         // Walk the expression to add in reads
         walkExpr(context, vu, tree.child(0));
         break;
-        
+
       case ExMParser.UPDATE:
         updateStmt(context, vu, tree);
         break;
-        
+
       case ExMParser.STATEMENT_CHAIN:
         walkStmtChain(context, tree, vu);
         break;
@@ -255,17 +255,17 @@ class VariableUsageAnalyzer {
       case ExMParser.DEFINE_APP_FUNCTION:
         throw new InvalidConstructException(context, "Function definitions"
             + " are only allowed at top level of program");
-  
+
       case ExMParser.DEFINE_NEW_STRUCT_TYPE:
       case ExMParser.DEFINE_NEW_TYPE:
       case ExMParser.TYPEDEF:
         throw new InvalidConstructException(context, "Type definitions"
             + " are only allowed at top level of program");
-        
+
       case ExMParser.GLOBAL_CONST:
         throw new InvalidConstructException(context, "Global constant"
             + " definitions are only allowed at top level of program");
-              
+
       default:
         throw new STCRuntimeError
         ("Unexpected token type inside procedure: " +
@@ -276,7 +276,7 @@ class VariableUsageAnalyzer {
   private void walkStmtChain(Context context, SwiftAST tree,
       VariableUsageInfo vu) throws UserException {
     assert(tree.getType() == ExMParser.STATEMENT_CHAIN);
-    
+
     // Do iteratively to avoid large stack
     while (tree.getType() == ExMParser.STATEMENT_CHAIN) {
       assert(tree.getChildCount() == 2);
@@ -291,7 +291,7 @@ class VariableUsageAnalyzer {
                                       throws UserException {
     Update up = Update.fromAST(context, tree);
     walkExpr(context, vu, up.getExpr());
-    
+
     // Treat the update as a read so that we know at least that the variable
     //  is used in a particular scope
     vu.read(context, up.getTarget().name());
@@ -300,7 +300,7 @@ class VariableUsageAnalyzer {
   private void ifStatement(Context context, VariableUsageInfo vu,
       SwiftAST tree) throws UserException {
     If ifStmt = If.fromAST(context, tree);
-    
+
     // First walk the condition expression
     walkExpr(context, vu, ifStmt.getCondition());
 
@@ -313,7 +313,7 @@ class VariableUsageAnalyzer {
       ifBranchVus.add(walkBlock(new LocalContext(context),
           ifStmt.getElseBlock(), vu.createNested()));
     }
-    
+
     syncFilePos(context, tree);
     vu.mergeNestedScopes(context,  ifBranchVus, ifStmt.hasElse());
   }
@@ -327,7 +327,7 @@ class VariableUsageAnalyzer {
       if (var.getMappingExpr() != null) {
         walkExpr(context, vu, var.getMappingExpr());
       }
-      
+
       syncFilePos(context, tree);
       // Don't retain mapping information in this pass since it might be
       // mapped to a temporary var
@@ -336,8 +336,8 @@ class VariableUsageAnalyzer {
           DefType.LOCAL_USER, VarProvenance.unknown(), false);
       SwiftAST assignExpr = vd.getVarExpr(i);
       if (assignExpr != null) {
-        LogHelper.debug(context, "Variable " + var.getName() + 
-              " was declared and assigned"); 
+        LogHelper.debug(context, "Variable " + var.getName() +
+              " was declared and assigned");
         walkExpr(context, vu, assignExpr);
         vu.assign(context, var.getName(), AssignOp.ASSIGN);
       }
@@ -356,11 +356,11 @@ class VariableUsageAnalyzer {
                     assignments.getMatchedAssignments(context)) {
       List<LValue> lVals = assign.val1;
       SwiftAST rVal = assign.val2;
-      ExprType rValTs = Assignment.checkAssign(context, lVals, rVal);
-      
+      ExprType rValTs = TypeChecker.findExprType(context, lVals, rVal);
+
       // Walk the rval expression to add in reads
       walkExpr(context, vu, rVal);
-     
+
       for (int i = 0; i < lVals.size(); i++) {
         LValue lVal = lVals.get(i);
         syncFilePos(context, lVal.tree);
@@ -369,10 +369,10 @@ class VariableUsageAnalyzer {
           lVal = lVal.varDeclarationNeeded(context, rValTs.get(i));
           assert(lVal != null);
           vu.declare(context, lVal.var.name(), lVal.var.type(), false);
-          context.declareVariable(lVal.var.type(), lVal.var.name(), 
+          context.declareVariable(lVal.var.type(), lVal.var.name(),
             Alloc.STACK, DefType.LOCAL_USER, VarProvenance.unknown(), false);
         }
-        
+
         singleAssignment(context, vu, lVal, assignments.op);
       }
     }
@@ -431,7 +431,7 @@ class VariableUsageAnalyzer {
   private void foreach(Context context, VariableUsageInfo vu, SwiftAST tree)
                                                         throws UserException {
     ForeachLoop loop = ForeachLoop.fromAST(context, tree);
-    
+
     // Variables might appear in array var expression, so walk that first
     walkExpr(context, vu, loop.getArrayVarTree());
 
@@ -440,16 +440,16 @@ class VariableUsageAnalyzer {
     Context loopContext = loop.setupLoopBodyContext(context, false, true);
 
     VariableUsageInfo initial = vu.createNested();
-    
+
     // Both loop variables are assigned before loop body runs
-    initial.declare(context, loop.getMemberVarName(), 
+    initial.declare(context, loop.getMemberVarName(),
         loop.getMemberVar().type(), loop.getMemberVar().mappedDecl());
     initial.assign(context, loop.getMemberVarName(), AssignOp.ASSIGN);
     if (loop.getCountVarName() != null) {
       initial.declare(context, loop.getCountVarName(), Types.F_INT, false);
       initial.assign(context, loop.getCountVarName(), AssignOp.ASSIGN);
     }
-    
+
     // Workaround to get correct type info: have two nested variable usage infos.
     // In the outer one we assign the two loop counters, so that they're assigned
     // within the loop body
@@ -463,14 +463,14 @@ class VariableUsageAnalyzer {
 
     syncFilePos(context, tree);
     // Merge inner up into outer
-    initial.mergeNestedScopes(context, 
+    initial.mergeNestedScopes(context,
             Arrays.asList(loopBodyInfo, loopBodyInfo), false);
 
     // Merge outer into the current scope
     vu.mergeNestedScopes(context, Arrays.asList(initial), true);
   }
 
-  
+
   private void forLoop(Context context, VariableUsageInfo vu, SwiftAST tree)
       throws UserException {
     ForLoopDescriptor forLoop = ForLoopDescriptor.fromAST(context, tree);
@@ -478,17 +478,17 @@ class VariableUsageAnalyzer {
     for (SwiftAST initExpr: forLoop.getInitExprs().values()) {
       walkExpr(context, vu, initExpr);
     }
-    
+
     VariableUsageInfo outerLoopInfo = vu.createNested();
     Context bodyContext = forLoop.createIterationContext(context);
     forLoop.validateCond(bodyContext);
-    
+
     syncFilePos(context, tree);
     for (LoopVar lv: forLoop.getLoopVars()) {
       Var v = lv.var;
       LogHelper.debug(context, "declared loop var " + v.toString());
-      
-      
+
+
       if (!lv.declaredOutsideLoop) {
         outerLoopInfo.declare(context, v.name(), v.type(),
                               v.mappedDecl());
@@ -497,61 +497,61 @@ class VariableUsageAnalyzer {
       // will be assigned before each loop iteration
       outerLoopInfo.assign(context, v.name(), AssignOp.ASSIGN);
     }
-    
+
     // Create body context with loop vars
     VariableUsageInfo bodyInfo = outerLoopInfo.createNested();
-    
+
     // condition can refer to in loop body context
     walkExpr(bodyContext, bodyInfo, forLoop.getCondition());
-    
+
     walkBlock(bodyContext, forLoop.getBody(), bodyInfo, false);
-    
+
     forLoop.validateCond(bodyContext);
     for (SwiftAST updateExpr: forLoop.getUpdateRules().values()) {
       walkExpr(bodyContext, bodyInfo, updateExpr);
     }
-    
+
     syncFilePos(context, tree);
     // After walking the update expressions, check for warnings or errors
     bodyInfo.detectVariableMisuse(context);
-    
-    outerLoopInfo.mergeNestedScopes(context, 
+
+    outerLoopInfo.mergeNestedScopes(context,
                                     Arrays.asList(bodyInfo, bodyInfo), false);
-    vu.mergeNestedScopes(context, 
+    vu.mergeNestedScopes(context,
                                           Arrays.asList(outerLoopInfo), true);
     //TODO: does this correctly add info about variables used in conditions etc
     //    to the context attached to the body?
   }
-  
+
   private void iterate(Context context, VariableUsageInfo vu, SwiftAST tree)
   throws UserException {
-    IterateDescriptor loop = IterateDescriptor.fromAST(context, 
+    IterateDescriptor loop = IterateDescriptor.fromAST(context,
         tree);
-    
+
     VariableUsageInfo outerLoopInfo = vu.createNested();
     VariableUsageInfo bodyInfo = outerLoopInfo.createNested();
     Context bodyContext = loop.createIterContext(context);
-    
+
     Var v = loop.getLoopVar();
     LogHelper.debug(context, "declared loop var " + v.toString());
     bodyInfo.declare(context, v.name(), v.type(), v.mappedDecl());
     // we assume that each variable has an initializer and an update, so it
     // will be assigned before each loop iteration
     bodyInfo.assign(context, v.name(), AssignOp.ASSIGN);
-    
+
     walkBlock(bodyContext, loop.getBody(), bodyInfo);
-    
+
     // condition can refer to any variable in loop body context, include those
     //  defined in the block
     walkExpr(bodyContext, bodyInfo, loop.getCond());
-    
+
     syncFilePos(context, tree);
-    outerLoopInfo.mergeNestedScopes(context, 
+    outerLoopInfo.mergeNestedScopes(context,
     Arrays.asList(bodyInfo, bodyInfo), false);
-    vu.mergeNestedScopes(context, 
+    vu.mergeNestedScopes(context,
     Arrays.asList(outerLoopInfo), true);
   }
-  
+
   private void waitStmt(Context context, VariableUsageInfo vu, SwiftAST tree)
         throws UserException {
     Wait wait = Wait.fromAST(context, tree);
@@ -561,17 +561,17 @@ class VariableUsageAnalyzer {
     LocalContext waitContext = new LocalContext(context);
     VariableUsageInfo waitVU = vu.createNested();
     walkBlock(waitContext, wait.getBlock(), waitVU);
-    
+
     syncFilePos(context, tree);
     vu.mergeNestedScopes(context, Arrays.asList(waitVU), true);
   }
-  
+
   /**
    * Walk an expression and add all variable reads to variable usage
    * @param file
    * @param vu the variable usage info to update
    * @param exprRoot the root of an expression tree
-   * @throws InvalidSyntaxException 
+   * @throws InvalidSyntaxException
    */
   private void walkExpr(Context context, VariableUsageInfo vu,
       SwiftAST exprRoot) throws InvalidSyntaxException {
@@ -680,9 +680,9 @@ class VariableUsageAnalyzer {
 
         default:
           throw new STCRuntimeError
-          ("Unexpected token type inside expression: " 
+          ("Unexpected token type inside expression: "
               + LogHelper.tokName(token)
-              + " at l." + node.getLine() + ":" 
+              + " at l." + node.getLine() + ":"
               + node.getCharPositionInLine());
       }
     }

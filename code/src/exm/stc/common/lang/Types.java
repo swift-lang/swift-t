@@ -34,8 +34,8 @@ import exm.stc.common.lang.Var.Alloc;
 /**
  * This module provides the type definitions used for Swift,
  * along with convenience functions for creating, checking and
- * manipulating types.  
- * 
+ * manipulating types.
+ *
  * The base class for variable types is Type.
  * Since we don't yet have first class functions, FunctionType is separate
  * from the variable type system.
@@ -52,11 +52,11 @@ public class Types {
       this.keyType = keyType;
       this.memberType = memberType;
     }
-    
+
     public static ArrayType sharedArray(Type keyType, Type memberType) {
       return new ArrayType(false, keyType, memberType);
     }
-    
+
     public static ArrayType localArray(Type keyType, Type memberType) {
       return new ArrayType(true, keyType, memberType);
     }
@@ -73,7 +73,7 @@ public class Types {
     public Type keyType() {
       return keyType;
     }
-    
+
     @Override
     public Type memberType() {
       return memberType;
@@ -115,7 +115,7 @@ public class Types {
 
     @Override
     public int hashCode() {
-      return memberType.hashCode() + 13 * 
+      return memberType.hashCode() + 13 *
             (ArrayType.class.hashCode() + 13 * (local ? 0 : 1));
     }
 
@@ -123,6 +123,12 @@ public class Types {
     public Type bindTypeVars(Map<String, Type> vals) {
       return new ArrayType(local, keyType.bindTypeVars(vals),
                            memberType.bindTypeVars(vals));
+    }
+
+    @Override
+    public Type bindAllTypeVars(Type type) {
+      return new ArrayType(local, keyType.bindAllTypeVars(type),
+          memberType.bindAllTypeVars(type));
     }
 
     @Override
@@ -147,7 +153,7 @@ public class Types {
       }
       return null;
     }
-    
+
     @Override
     public Type concretize(Type concrete) {
       assert((isArray(this) && isArray(concrete)) ||
@@ -169,7 +175,7 @@ public class Types {
       // For now, types must exactly match, due to contra/co-variance issues
       // with type parameters. Need to check to see if member types
       // can be converted to other member types
-      
+
       return keyType.matchTypeVars(otherA.keyType) != null &&
              memberType.matchTypeVars(otherA.memberType) != null;
     }
@@ -189,12 +195,12 @@ public class Types {
         return new ArrayType(local, implKey, implMember);
       }
     }
-    
+
     @Override
     public boolean isConcrete() {
       return keyType.isConcrete() && memberType.isConcrete();
     }
-    
+
     public Type substituteElemType(Type newElem) {
       return new ArrayType(local, keyType, newElem);
     }
@@ -213,15 +219,15 @@ public class Types {
       this.local = local;
       this.elemType = elemType;
     }
-    
+
     public static BagType sharedBag(Type memberType) {
       return new BagType(false, memberType);
     }
-    
+
     public static BagType localBag(Type memberType) {
       return new BagType(true, memberType);
     }
-    
+
     @Override
     public StructureType structureType() {
       if (local) {
@@ -230,7 +236,7 @@ public class Types {
         return StructureType.BAG;
       }
     }
-    
+
     @Override
     public Type memberType() {
       return elemType;
@@ -265,19 +271,24 @@ public class Types {
         return false;
       }
       BagType otherT = (BagType) other;
-      return this.local == otherT.local && 
+      return this.local == otherT.local &&
               otherT.elemType.equals(elemType);
     }
 
     @Override
     public int hashCode() {
-      return local ? 0 : 1 + 31 * 
+      return local ? 0 : 1 + 31 *
               (elemType.hashCode() + 31 * BagType.class.hashCode());
     }
 
     @Override
     public Type bindTypeVars(Map<String, Type> vals) {
       return new BagType(local, elemType.bindTypeVars(vals));
+    }
+
+    @Override
+    public Type bindAllTypeVars(Type type) {
+      return new BagType(local, elemType.bindAllTypeVars(type));
     }
 
     @Override
@@ -289,7 +300,7 @@ public class Types {
       }
       return null;
     }
-    
+
     @Override
     public Type concretize(Type concrete) {
       assert((!local && isBag(concrete)) ||
@@ -310,7 +321,7 @@ public class Types {
       // For now, types must exactly match, due to contra/co-variance issues
       // with type parameters. Need to check to see if member types
       // can be converted to other member types
-      
+
       return elemType.matchTypeVars(otherB.elemType) != null;
     }
 
@@ -327,7 +338,7 @@ public class Types {
       else
         return new BagType(local, implElem);
     }
-    
+
     @Override
     public boolean isConcrete() {
       return elemType.isConcrete();
@@ -337,14 +348,18 @@ public class Types {
       return new BagType(local, newElem);
     }
   }
-  
+
   public static class RefType extends Type {
     private final Type referencedType;
     private final boolean mutable;
-    
+
     public RefType(Type referencedType, boolean mutable) {
       this.referencedType = referencedType;
       this.mutable = mutable;
+    }
+
+    public boolean mutable() {
+      return mutable;
     }
 
     @Override
@@ -367,7 +382,7 @@ public class Types {
         return "*r";
       }
     }
-    
+
     @Override
     public String toString() {
       return refSigil() + "(" + referencedType.toString() + ")";
@@ -397,7 +412,7 @@ public class Types {
       if (!(otherT instanceof RefType)) {
         return false;
       }
-      
+
       RefType otherRef = (RefType)otherT;
       /* TODO: currently treat mutable and non-mutable as separate types
       if (otherRef.mutable && !this.mutable) {
@@ -406,7 +421,7 @@ public class Types {
       return referencedType.assignableTo(otherRef.referencedType);
     }
 
-    
+
     @Override
     public int hashCode() {
       return (referencedType.hashCode() * 13 + RefType.class.hashCode()) +
@@ -418,6 +433,13 @@ public class Types {
       return new RefType(referencedType.bindTypeVars(vals), mutable);
     }
 
+
+    @Override
+    public Type bindAllTypeVars(Type type) {
+      return new RefType(referencedType.bindAllTypeVars(type), mutable);
+    }
+
+
     @Override
     public Map<String, Type> matchTypeVars(Type concrete) {
       concrete = concrete.stripSubTypes();
@@ -427,7 +449,7 @@ public class Types {
       }
       return null;
     }
-    
+
     @Override
     public Type concretize(Type concrete) {
       assert(isRef(concrete));
@@ -441,7 +463,7 @@ public class Types {
     public boolean hasTypeVar() {
       return referencedType.hasTypeVar();
     }
-    
+
     @Override
     public Type getImplType() {
       Type implMember = referencedType.getImplType();
@@ -452,7 +474,7 @@ public class Types {
       else
         return new RefType(implMember, mutable);
     }
-    
+
     @Override
     public boolean isConcrete() {
       return referencedType.isConcrete();
@@ -488,27 +510,27 @@ public class Types {
     private final boolean local;
     private final List<StructField> fields;
     private final String typeName;
-    
+
     private final int hashCode;
-    
+
     public static StructType localStruct(StructType structType) {
       return new StructType(true, structType.typeName, structType.fields);
     }
-    
+
     public static StructType sharedStruct(StructType structType) {
       return new StructType(false, structType.typeName, structType.fields);
     }
-    
+
     public static StructType localStruct(String typeName,
                                    List<StructField> fields) {
       return new StructType(true, typeName, fields);
     }
-    
+
     public static StructType sharedStruct(String typeName,
                                   List<StructField> fields) {
       return new StructType(false, typeName, fields);
     }
-    
+
     /**
      * @return struct type name without any sigils
      */
@@ -519,7 +541,7 @@ public class Types {
     public boolean isLocal() {
       return local;
     }
-    
+
     @Override
     public StructureType structureType() {
       return local ? StructureType.STRUCT_LOCAL : StructureType.STRUCT;
@@ -542,7 +564,7 @@ public class Types {
       }
       return null;
     }
-    
+
     /**
      * Follow field path through one or more levels of structs to
      * find type
@@ -550,7 +572,7 @@ public class Types {
      * @return
      * @throw {@link TypeMismatchException} if path invalid
      */
-    public Type getFieldTypeByPath(List<String> fields) 
+    public Type getFieldTypeByPath(List<String> fields)
         throws TypeMismatchException {
       Type curr = this;
       for (String field: fields) {
@@ -646,21 +668,27 @@ public class Types {
       // Use cached hashcode
       return hashCode;
     }
-    
+
     private int calcHashCode() {
       int code = ((StructType.class.hashCode() * 13) +
                typeName.hashCode()) * 2 + (local ? 0 : 1);
-      
+
      for (StructField field: fields) {
        code *= 13;
        code += (field.name.hashCode() * 7) + field.type.hashCode();
      }
-      
+
       return code;
     }
 
     @Override
     public Type bindTypeVars(Map<String, Type> vals) {
+      // Assume no type variables inside struct
+      return this;
+    }
+
+    @Override
+    public Type bindAllTypeVars(Type type) {
       // Assume no type variables inside struct
       return this;
     }
@@ -680,7 +708,7 @@ public class Types {
       assert(this.assignableTo(concrete));
       return this;
     }
-    
+
     @Override
     public boolean hasTypeVar() {
       for (StructField field: fields) {
@@ -690,13 +718,13 @@ public class Types {
       }
       return false;
     }
-    
-    
+
+
     @Override
     public Type getImplType() {
       return this;
     }
-    
+
     @Override
     public boolean isConcrete() {
       // Concrete if all fields are concrete (they probably should be..)
@@ -709,7 +737,7 @@ public class Types {
     }
   }
 
-  
+
   /**
    * Enum to represent the primitive types implemented in the language.
    */
@@ -719,8 +747,8 @@ public class Types {
      // or the unit type in functional languages)
     VOID,
     // Files are treated in a similar way to other primitive types in Swift
-    FILE; 
-  
+    FILE;
+
     public String typeName() {
       switch (this) {
         case INT:
@@ -745,23 +773,29 @@ public class Types {
    * Abstract class with common functionality for primitive types
    */
   public static abstract class AbstractPrimType extends Type {
-    
+
     @Override
     public abstract PrimType primType();
-    
+
     @Override
     public Type getImplType() {
       // This is a primitive type: implements itself
       return this;
     }
-    
+
     @Override
     public boolean isConcrete() {
       return true;
     }
-    
+
     @Override
     public Type bindTypeVars(Map<String, Type> vals) {
+      // No type vars in primitive
+      return this;
+    }
+
+    @Override
+    public Type bindAllTypeVars(Type type) {
       // No type vars in primitive
       return this;
     }
@@ -792,9 +826,9 @@ public class Types {
     public String toString() {
       // Just return plain typename
       return this.typeName();
-    } 
+    }
   }
-  
+
   /**
    * Abstract class with common functionality for scalar types
    */
@@ -825,7 +859,7 @@ public class Types {
         return false;
       }
     }
-    
+
     @Override
     public int hashCode() {
       return primType.hashCode() * 31 + getClass().hashCode();
@@ -887,14 +921,14 @@ public class Types {
       assert(upType instanceof ScalarUpdateableType);
       return new ScalarFutureType(upType.primType());
     }
-    
+
     public static ScalarValueType asScalarValue(Type valType) {
       assert(valType instanceof ScalarUpdateableType);
       return new ScalarValueType(valType.primType());
     }
 
   }
-  
+
   public static enum FileKind {
     LOCAL_FS, // A file on the local file system
     URL // A file represented by a URL
@@ -926,7 +960,7 @@ public class Types {
     }
 
     /**
-     * @return Whether we can do a physical copy from/to two different 
+     * @return Whether we can do a physical copy from/to two different
      * paths of this file type
      */
     public boolean supportsPhysicalCopy() {
@@ -938,9 +972,9 @@ public class Types {
         default:
           throw new STCRuntimeError("not implemented for " + this);
       }
-    }      
+    }
   }
-  
+
   /**
    * A file variable.  There are multiple possible types of files, such as
    * those on a local file system, or those represented by a URL
@@ -948,7 +982,7 @@ public class Types {
   public abstract static class AbstractFileType extends AbstractPrimType {
 
     protected final FileKind kind;
-    
+
     private AbstractFileType(FileKind kind) {
       this.kind = kind;
     }
@@ -957,7 +991,7 @@ public class Types {
     public PrimType primType() {
       return PrimType.FILE;
     }
-    
+
     @Override
     public FileKind fileKind() {
       return kind;
@@ -967,7 +1001,7 @@ public class Types {
     public int hashCode() {
       return kind.hashCode() + 13 * getClass().hashCode();
     }
-    
+
     @Override
     public boolean equals(Object other) {
       // Generic comparison algorithm for files
@@ -984,23 +1018,23 @@ public class Types {
       }
     }
   }
-  
+
   public static class FileValueType extends AbstractFileType {
-  
+
     public FileValueType(FileKind kind) {
       super(kind);
     }
-    
+
     @Override
     public StructureType structureType() {
       return StructureType.FILE_VALUE;
     }
-  
+
     @Override
     public String typeName() {
       return VALUE_SIGIL + this.kind.typeName();
     }
-    
+
   }
 
   public static class FileFutureType extends AbstractFileType {
@@ -1008,7 +1042,7 @@ public class Types {
     public FileFutureType(FileKind kind) {
       super(kind);
     }
-    
+
     @Override
     public StructureType structureType() {
       return StructureType.FILE_FUTURE;
@@ -1018,9 +1052,9 @@ public class Types {
     public String typeName() {
       return this.kind.typeName();
     }
-    
+
   }
-  
+
   /**
    * A union of multiple types that represents situations such as:
    * - A function that accepts multiple alternative types for an input parameter
@@ -1028,7 +1062,7 @@ public class Types {
    */
   public static class UnionType extends Type {
     private final List<Type> alts;
-    
+
     private UnionType(ArrayList<Type> alts) {
       // Shouldn't have single-element union type
       assert(alts.size() != 1);
@@ -1038,7 +1072,7 @@ public class Types {
     public List<Type> getAlternatives() {
       return alts;
     }
-    
+
     /**
      * Return the list of possible types in a union.  This can be called on
      * non-union types for convenience, in which case it will only return
@@ -1053,7 +1087,7 @@ public class Types {
         return Collections.singletonList(type);
       }
     }
-    
+
     /**
      * @return UnionType if multiple types, or plain type if singular
      */
@@ -1064,7 +1098,7 @@ public class Types {
         return new UnionType(new ArrayList<Type>(alts));
       }
     }
-    
+
     public static Type createUnionType(Type ...alts) {
       if (alts.length == 1) {
         return alts[0];
@@ -1131,7 +1165,7 @@ public class Types {
         if (this.alts.size() != otherUT.alts.size()) {
           return false;
         }
-        
+
         // Check members are the same
         for (Type alt: this.alts) {
           if (!otherUT.alts.contains(alt)) {
@@ -1144,7 +1178,7 @@ public class Types {
 
     @Override
     public boolean assignableTo(Type other) {
-      if (isUnion(other)) { 
+      if (isUnion(other)) {
         UnionType otherUnion = (UnionType)other;
         // Check if subset
         for (Type alt: this.alts) {
@@ -1178,6 +1212,15 @@ public class Types {
     }
 
     @Override
+    public Type bindAllTypeVars(Type type) {
+      ArrayList<Type> boundAlts = new ArrayList<Type>(alts.size());
+      for (Type alt: alts) {
+        boundAlts.add(alt.bindAllTypeVars(type));
+      }
+      return new UnionType(boundAlts);
+    }
+
+    @Override
     public Map<String, Type> matchTypeVars(Type concrete) {
       throw new STCRuntimeError("Not yet implemented: matching typevars for"
           + " union types");
@@ -1193,7 +1236,7 @@ public class Types {
       throw new STCRuntimeError("None of alt types: " + alts +
                                 " matches concrete: " + concrete);
     }
-    
+
     @Override
     public boolean hasTypeVar() {
       for (Type alt: alts) {
@@ -1203,7 +1246,7 @@ public class Types {
       }
       return false;
     }
-    
+
     @Override
     public Type getImplType() {
       ArrayList<Type> implAlts = new ArrayList<Type>();
@@ -1212,13 +1255,13 @@ public class Types {
       }
       return new UnionType(implAlts);
     }
-    
+
     @Override
     public boolean isConcrete() {
       return false;
     }
   }
-  
+
   /**
    * A type variable that represents a wildcard type
    */
@@ -1240,7 +1283,7 @@ public class Types {
 
       Set<String> intersection = new HashSet<String>(m1.keySet());
       intersection.retainAll(m2.keySet());
-      
+
       // All non-overlapping ones should be retained
       Map<String, Type> res = new HashMap<String, Type>();
       res.putAll(m1);
@@ -1248,7 +1291,7 @@ public class Types {
       for (String overlapping: intersection) {
         res.remove(overlapping);
       }
-      
+
       for (String match: intersection) {
         Type t1 = m1.get(match);
         Type t2 = m2.get(match);
@@ -1275,7 +1318,7 @@ public class Types {
     public String typeName() {
       return typeVarName;
     }
-    
+
     @Override
     public String typeVarName() {
       return typeVarName;
@@ -1309,6 +1352,13 @@ public class Types {
       }
     }
 
+
+    @Override
+    public Type bindAllTypeVars(Type type) {
+      // Bind wildcard to type
+      return type;
+    }
+
     @Override
     public Map<String, Type> matchTypeVars(Type concrete) {
       return Collections.singletonMap(typeVarName, concrete);
@@ -1318,23 +1368,23 @@ public class Types {
     public Type concretize(Type concrete) {
       throw new STCRuntimeError("Unbound type var when concretizing");
     }
-    
+
     @Override
     public boolean hasTypeVar() {
       return true;
     }
-    
+
     @Override
     public Type getImplType() {
       return this;
     }
-    
+
     @Override
     public boolean isConcrete() {
       return false;
     }
   }
-  
+
   public static class WildcardType extends Type {
 
     @Override
@@ -1372,6 +1422,12 @@ public class Types {
     }
 
     @Override
+    public Type bindAllTypeVars(Type type) {
+      // Bind wildcard to type
+      return type;
+    }
+
+    @Override
     public Map<String, Type> matchTypeVars(Type concrete) {
       return Collections.emptyMap();
     }
@@ -1381,7 +1437,7 @@ public class Types {
       // Fill in wildcard
       return concrete;
     }
-    
+
     @Override
     public boolean assignableTo(Type other) {
       return true;
@@ -1391,18 +1447,18 @@ public class Types {
     public boolean hasTypeVar() {
       return false;
     }
-    
+
     @Override
     public Type getImplType() {
       return this;
     }
-    
+
     @Override
     public boolean isConcrete() {
       return false;
     }
   }
-  
+
   private enum StructureType
   {
     SCALAR_UPDATEABLE,
@@ -1427,7 +1483,7 @@ public class Types {
    *
    */
   public abstract static class Type implements Typed {
-    
+
     /**
      * For Typed interface
      * @return
@@ -1436,7 +1492,7 @@ public class Types {
     public Type type() {
       return this;
     }
-    
+
     public abstract StructureType structureType();
 
     /**
@@ -1447,7 +1503,7 @@ public class Types {
       throw new STCRuntimeError("primType() not implemented " +
       "for class " + getClass().getName());
     }
-    
+
     public FileKind fileKind() {
       throw new STCRuntimeError("fileKind() not implemented " +
                             "for class " + getClass().getName());
@@ -1464,11 +1520,11 @@ public class Types {
 
     /** Print out a short unique name for type */
     public abstract String typeName();
-    
+
     /** equals is required */
     @Override
     public abstract boolean equals(Object o);
-    
+
     /**
      * Check if this type can be assigned to other type.
      * By default this is only if types are equal
@@ -1480,7 +1536,7 @@ public class Types {
     public boolean assignableTo(Type other) {
       return equals(other);
     }
-    
+
     /** hashcode is required */
     @Override
     public abstract int hashCode();
@@ -1491,20 +1547,27 @@ public class Types {
      * @return new type with bound variables
      */
     public abstract Type bindTypeVars(Map<String, Type> vals);
-    
+
+    /**
+     * Bind any type variables to specified type
+     * @param type
+     * @return
+     */
+    public abstract Type bindAllTypeVars(Type type);
+
     /**
      * Match up any typevars in this type to vars in a concrete type
      * and return the type var binding. Returns null if types can't be matched
      */
     public abstract Map<String, Type> matchTypeVars(Type concrete);
-    
+
     /**
      * Return type with any subtypes stripped off
      */
     public Type stripSubTypes() {
       return this;
     }
-    
+
     /**
      * @return true if any type variables in type
      */
@@ -1516,7 +1579,7 @@ public class Types {
      *        If not a concrete type, e.g. type var, return original type
      */
     public abstract Type getImplType();
-    
+
     /**
      * Get the base type of this type.  This doesn't do anything
      * to any parameter types
@@ -1525,7 +1588,7 @@ public class Types {
       // Default
       return this;
     }
-    
+
     /**
      * @return true if the type is something we can actually instantiate
      */
@@ -1660,43 +1723,58 @@ public class Types {
       for (Type input: inputs) {
         boundInputs.add(input.bindTypeVars(vals));
       }
-      
+
       List<Type> boundOutputs = new ArrayList<Type>();
       for (Type output: outputs) {
         boundOutputs.add(output.bindTypeVars(vals));
       }
-      
+
       return new FunctionType(boundInputs, boundOutputs, varargs);
     }
-    
+
+    @Override
+    public Type bindAllTypeVars(Type type) {
+      List<Type> boundInputs = new ArrayList<Type>();
+      for (Type input: inputs) {
+        boundInputs.add(input.bindAllTypeVars(type));
+      }
+
+      List<Type> boundOutputs = new ArrayList<Type>();
+      for (Type output: outputs) {
+        boundOutputs.add(output.bindAllTypeVars(type));
+      }
+
+      return new FunctionType(boundInputs, boundOutputs, varargs);
+    }
+
     @Override
     public Map<String, Type> matchTypeVars(Type concrete) {
       if (!isFunction(concrete)) {
         return null;
-      }      
+      }
       throw new STCRuntimeError("Not yet implemented: matching typevars for"
           + " function types");
     }
-    
+
     @Override
     public Type concretize(Type concrete) {
       assert(isFunction(concrete));
       FunctionType concreteF = (FunctionType)concrete;
-      
+
       List<Type> concreteIn = new ArrayList<Type>(inputs.size());
       List<Type> concreteOut = new ArrayList<Type>(outputs.size());
-      
+
       for (int i = 0; i < inputs.size(); i++) {
         Type in = this.inputs.get(i);
         Type cIn = concreteF.inputs.get(i);
-        // To use a function of this type type in a place where a 
+        // To use a function of this type type in a place where a
         // function of the concrete type is expected, must be able
         // to accept any args the concrete would
         assert(cIn.assignableTo(in));
         // TODO: this isn't quite right
         concreteIn.add(in.concretize(cIn));
       }
-      
+
       for (int i = 0; i < outputs.size(); i++) {
         Type out = this.outputs.get(i);
         Type cOut = concreteF.outputs.get(i);
@@ -1706,7 +1784,7 @@ public class Types {
       // TODO: how to handle varargs?
       return new FunctionType(concreteIn, concreteOut, varargs);
     }
-    
+
     @Override
     public boolean hasTypeVar() {
       for (Type input: inputs) {
@@ -1721,8 +1799,8 @@ public class Types {
       }
       return false;
     }
-    
-    
+
+
     @Override
     public Type getImplType() {
       List<Type> ins = new ArrayList<Type>(inputs.size());
@@ -1730,14 +1808,14 @@ public class Types {
       for (Type in: inputs) {
         ins.add(in.getImplType());
       }
-      
+
       for (Type out: outputs) {
         outs.add(out.getImplType());
       }
-      
+
       return new FunctionType(ins, outs, varargs);
     }
-    
+
     @Override
     public boolean isConcrete() {
       // Should be able to instantiate function in principle
@@ -1747,7 +1825,7 @@ public class Types {
 
   /**
    * Represents expression type.
-   * 
+   *
    * Can have multiple elements because of multiple return valued functions
    */
   public static class ExprType {
@@ -1765,7 +1843,7 @@ public class Types {
     public List<Type> getTypes() {
       return Collections.unmodifiableList(types);
     }
-    
+
     public Type get(int index) {
       return types.get(index);
     }
@@ -1773,56 +1851,61 @@ public class Types {
     public int elems() {
       return types.size();
     }
-    
+
     @Override
     public String toString() {
       return types.toString();
     }
   }
-  
+
   public static class SubType extends Type {
     private final Type baseType;
     private final String name;
-    
+
     public SubType(Type baseType, String name) {
       super();
       this.baseType = baseType;
       this.name = name;
     }
-    
+
     @Override
     public StructureType structureType() {
       return baseType.structureType();
     }
-    
+
     @Override
     public PrimType primType() {
       return baseType.primType();
     }
-    
+
     @Override
     public FileKind fileKind() {
       return baseType.fileKind();
     }
-    
+
     @Override
     public Type memberType() {
       return baseType.memberType();
     }
-    
+
     @Override
     public boolean assignableTo(Type other) {
-      // Is assignable to anything baseType is 
+      // Is assignable to anything baseType is
       // assignable to, plus any instance of this
       return baseType.assignableTo(other) ||
               this.equals(other);
     }
-    
+
     @Override
     public Type bindTypeVars(Map<String, Type> vals) {
       return new SubType(baseType.bindTypeVars(vals), name);
     }
-    
+
+    @Override
+    public Type bindAllTypeVars(Type type) {
+      return new SubType(baseType.bindAllTypeVars(type), name);
+    }
+
     @Override
     public Map<String, Type> matchTypeVars(Type concrete) {
       while (concrete instanceof SubType) {
@@ -1832,25 +1915,26 @@ public class Types {
           concrete = ((SubType)concrete).baseType();
         }
       }
-      
+
       return baseType.matchTypeVars(concrete);
     }
-    
-    
+
+
     /**
      * Return type with any subtypes stripped off
      */
+    @Override
     public Type stripSubTypes() {
       return baseType.stripSubTypes();
     }
-    
+
     @Override
     public Type concretize(Type concrete) {
       // Should match already
       assert(this.assignableTo(concrete));
       return this;
     }
-    
+
     @Override
     public boolean hasTypeVar() {
       return baseType.hasTypeVar();
@@ -1875,18 +1959,19 @@ public class Types {
       return ot.name.equals(name) &&
               baseType.equals(ot.baseType);
     }
-    
+
     @Override
     public Type getImplType() {
       // This has same implementation as base type
       return baseType.getImplType();
     }
-    
+
     @Override
     public boolean isConcrete() {
       return baseType.isConcrete();
     }
-    
+
+    @Override
     public Type baseType() {
       // Default
       return baseType.baseType();
@@ -1896,21 +1981,21 @@ public class Types {
     public int hashCode() {
       return baseType.hashCode() ^ name.hashCode();
     }
-    
+
   }
-  
+
   /**
    * Interface for something that can be typechecked.  This is mainly
-   * for convenience, allowing utility functions to accept different types 
+   * for convenience, allowing utility functions to accept different types
    */
   public static interface Typed {
     public Type type();
   }
-  
+
   public static Map<String, Type> getBuiltInTypes() {
     return Collections.unmodifiableMap(nativeTypes);
   }
-  
+
   /**
    * Convenience function to check if a type is an array
    * @param t
@@ -1923,7 +2008,7 @@ public class Types {
   public static boolean isArrayLocal(Typed t) {
     return t.type().structureType() == StructureType.ARRAY_LOCAL;
   }
-  
+
   /**
    * Convenience function to check if a type is a reference to an array
    * @param t
@@ -1932,7 +2017,7 @@ public class Types {
   public static boolean isArrayRef(Typed t) {
     return isRef(t) && isArray(t.type().memberType());
   }
-  
+
   public static boolean isArrayRef(Typed t, boolean mutable) {
     return isRef(t, mutable) && isArray(t.type().memberType());
   }
@@ -1940,23 +2025,23 @@ public class Types {
   public static boolean isArrayLocalRef(Typed t) {
     return isRef(t) && isArrayLocal(t.type().memberType());
   }
-  
+
   public static boolean isBag(Typed t) {
     return t.type().structureType() == StructureType.BAG;
   }
-  
+
   public static boolean isBagLocal(Typed t) {
     return t.type().structureType() == StructureType.BAG_LOCAL;
   }
-  
+
   public static boolean isBagRef(Typed t) {
     return isRef(t) && isBag(t.type().memberType());
   }
-  
+
   public static boolean isBagRef(Typed t, boolean mutable) {
     return isRef(t, mutable) && isBag(t.type().memberType());
   }
-  
+
   public static boolean isBagLocalRef(Typed t) {
     return isRef(t) && isBagLocal(t.type().memberType());
   }
@@ -1968,19 +2053,19 @@ public class Types {
   public static boolean isContainer(Typed t) {
     return isArray(t) || isBag(t);
   }
-  
+
   public static boolean isContainerLocal(Typed t) {
     return isArrayLocal(t) || isBagLocal(t);
   }
-  
+
   public static boolean isContainerRef(Typed t) {
     return isArrayRef(t) || isBagRef(t);
   }
-  
+
   public static boolean isContainerLocalRef(Typed t) {
     return isArrayLocalRef(t) || isBagLocalRef(t);
   }
-  
+
   /**
    * Convenience function to get member type of array or array ref
    */
@@ -1998,7 +2083,7 @@ public class Types {
           + " type " + t.toString());
     }
   }
-  
+
   public static Type containerElemValType(Typed t) {
     return retrievedType(containerElemType(t));
   }
@@ -2007,19 +2092,19 @@ public class Types {
     Type expected = containerElemType(cont.type());
     return (elem.type().assignableTo(expected));
   }
-  
+
   public static boolean isElemValType(Typed cont, Typed elem) {
     Type expected = containerElemValType(cont.type());
     return (elem.type().assignableTo(expected));
   }
-  
+
   public static Type substituteElemType(Typed cont, Type newElem) {
     boolean isRef = isRef(cont);
     boolean isMutableRef = isMutableRef(cont);
     if (isRef) {
       cont = cont.type().memberType();
     }
-    
+
     Type newCont;
     if (isArray(cont) || isArrayLocal(cont)) {
       newCont = ((ArrayType)cont).substituteElemType(newElem);
@@ -2027,14 +2112,14 @@ public class Types {
       assert(isBag(cont) || isBagLocal(cont));
       newCont = ((BagType)cont).substituteElemType(newElem);
     }
-    
+
     if (isRef) {
       return new RefType(newCont, isMutableRef);
     } else {
       return newCont;
     }
   }
-  
+
   public static Type arrayKeyType(Typed arr) {
     if (isArray(arr) || isArrayLocal(arr)) {
       return ((ArrayType)arr.type().baseType()).keyType;
@@ -2043,7 +2128,7 @@ public class Types {
       return ((ArrayType)arr.type().baseType().memberType()).keyType;
     }
   }
-  
+
   public static boolean isArrayKeyVal(Typed arr, Arg key) {
     // Interpret arg type as a value
     Type actual = key.typeInternal(false);
@@ -2051,7 +2136,7 @@ public class Types {
     Type expected = retrievedType(arrayKeyType(arr));
     return actual.assignableTo(expected);
   }
-  
+
 
   /**
    * Return true if the type is possibly a valid array key.
@@ -2069,7 +2154,7 @@ public class Types {
     }
     return false;
   }
-  
+
   public static boolean isArrayKeyFuture(Typed arr, Typed key) {
     return key.type().assignableTo(arrayKeyType(arr));
   }
@@ -2086,12 +2171,12 @@ public class Types {
   }
 
   /**
-   * 
+   *
    * @param struct
    * @param fieldPath
    * @throw TypeMismatchException if not a field
    * @return
-   * @throws TypeMismatchException 
+   * @throws TypeMismatchException
    */
   public static Type structFieldType(Typed struct, List<String> fieldPath) throws TypeMismatchException {
     assert(Types.isStruct(struct) || Types.isStructRef(struct) ||
@@ -2104,7 +2189,7 @@ public class Types {
     }
     return structType.getFieldTypeByPath(fieldPath);
   }
-  
+
   public static boolean isStructFieldVal(Typed struct,
       List<String> fieldPath, Typed field) {
     Type fieldType;
@@ -2115,10 +2200,10 @@ public class Types {
     }
     return field.type().assignableTo(retrievedType(fieldType));
   }
-  
+
   /**
    * Return true if the type is one that we can subscribe to
-   * the final value of 
+   * the final value of
    * @param type
    * @return
    */
@@ -2126,7 +2211,7 @@ public class Types {
     return isFuture(type) || isPrimUpdateable(type) ||
             isContainer(type) || isStruct(type);
   }
-  
+
   /**
    * Check if the type is any kind of future that has single-assignment
    * semantics
@@ -2137,7 +2222,7 @@ public class Types {
     return isPrimFuture(t) || isRef(t);
   }
 
-  
+
   /**
    * Convenience function to check if a type is a primitive future
    * @param t
@@ -2146,11 +2231,11 @@ public class Types {
   public static boolean isPrimFuture(Typed t) {
     return isFile(t) || isScalarFuture(t);
   }
-  
+
   public static boolean isPrimValue(Typed t) {
     return isFileVal(t) || isScalarValue(t);
   }
-  
+
   public static boolean isPrimUpdateable(Typed t) {
     return isScalarUpdateable(t);
   }
@@ -2162,7 +2247,7 @@ public class Types {
   public static boolean isScalarValue(Typed t) {
     return t.type().structureType() == StructureType.SCALAR_VALUE;
   }
-  
+
   public static boolean isScalarUpdateable(Typed t) {
     return t.type().structureType() == StructureType.SCALAR_UPDATEABLE;
   }
@@ -2170,15 +2255,15 @@ public class Types {
   public static boolean isRef(Typed t) {
     return isConstRef(t) || isMutableRef(t);
   }
-  
+
   public static boolean isRef(Typed t, boolean mutable) {
     return mutable ? isMutableRef(t): isConstRef(t);
   }
-  
+
   public static boolean isConstRef(Typed t) {
     return t.type().structureType() == StructureType.CONST_REFERENCE;
   }
-  
+
   public static boolean isMutableRef(Typed t) {
     return t.type().structureType() == StructureType.MUTABLE_REFERENCE;
   }
@@ -2186,28 +2271,28 @@ public class Types {
   public static boolean isStruct(Typed t) {
     return t.type().structureType() == StructureType.STRUCT;
   }
-  
+
   public static boolean isStructLocal(Typed t) {
     return t.type().structureType() == StructureType.STRUCT_LOCAL;
   }
-  
+
   public static boolean isStructRef(Typed t) {
     return isRef(t) && isStruct(t.type().memberType());
   }
-  
+
   public static boolean isStructRef(Typed t, boolean mutable) {
     return isRef(t, mutable) && isStruct(t.type().memberType());
   }
-  
-  
+
+
   public static boolean isFuture(PrimType primType, Typed t) {
     return isPrimFuture(t) && t.type().primType() == primType;
   }
-  
+
   public static boolean isVal(PrimType primType, Typed t) {
     return isPrimValue(t) && t.type().primType() == primType;
   }
-  
+
   public static boolean isRef(PrimType primType, Typed t) {
     return isRef(t) && isFuture(primType, t.type().memberType());
   }
@@ -2215,23 +2300,23 @@ public class Types {
   public static boolean isBool(Typed t) {
     return isFuture(PrimType.BOOL, t);
   }
-  
+
   public static boolean isBoolVal(Typed t) {
     return isVal(PrimType.BOOL, t);
   }
-  
+
   public static boolean isBoolRef(Typed t) {
     return isRef(PrimType.BOOL, t);
   }
-  
+
   public static boolean isInt(Typed t) {
     return isFuture(PrimType.INT, t);
   }
-  
+
   public static boolean isIntVal(Typed t) {
     return isVal(PrimType.INT, t);
   }
-  
+
   public static boolean isIntRef(Typed t) {
     return isRef(PrimType.INT, t);
   }
@@ -2239,11 +2324,11 @@ public class Types {
   public static boolean isFloat(Typed t) {
     return isFuture(PrimType.FLOAT, t);
   }
-  
+
   public static boolean isFloatVal(Typed t) {
     return isVal(PrimType.FLOAT, t);
   }
-  
+
   public static boolean isFloatRef(Typed t) {
     return isRef(PrimType.FLOAT, t);
   }
@@ -2251,23 +2336,23 @@ public class Types {
   public static boolean isString(Typed t) {
     return isFuture(PrimType.STRING, t);
   }
-  
+
   public static boolean isStringVal(Typed t) {
     return isVal(PrimType.STRING, t);
   }
-  
+
   public static boolean isStringRef(Typed t) {
     return isRef(PrimType.STRING, t);
   }
-  
+
   public static boolean isVoid(Typed t) {
     return isFuture(PrimType.VOID, t);
   }
-  
+
   public static boolean isVoidVal(Typed t) {
     return isVal(PrimType.VOID, t);
   }
-  
+
   public static boolean isVoidRef(Typed t) {
     return isRef(PrimType.VOID, t);
   }
@@ -2275,54 +2360,54 @@ public class Types {
   public static boolean isFile(Typed t) {
     return t.type().structureType() == StructureType.FILE_FUTURE;
   }
-  
+
   public static boolean isFileVal(Typed t) {
     return t.type().structureType() == StructureType.FILE_VALUE;
   }
-  
+
   public static boolean isFileRef(Typed t) {
     return isRef(PrimType.FILE, t);
   }
-  
+
   public static boolean isBlob(Typed t) {
     return isFuture(PrimType.BLOB, t);
   }
-  
+
   public static boolean isBlobVal(Typed t) {
     return isVal(PrimType.BLOB, t);
   }
-  
+
   public static boolean isBlobRef(Typed t) {
     return isRef(PrimType.BLOB, t);
   }
 
   public static boolean isRefTo(Typed refType, Typed valType) {
-    return isRef(refType) && 
+    return isRef(refType) &&
            refType.type().memberType().equals(valType.type());
   }
-  
+
   public static boolean isRefTo(Typed refType, Typed valType, boolean mutable) {
-    return isRef(refType, mutable) && 
+    return isRef(refType, mutable) &&
            refType.type().memberType().equals(valType.type());
   }
-  
+
   public static boolean isAssignableRefTo(Typed refType, Typed valType) {
-    return isRef(refType) && 
+    return isRef(refType) &&
         refType.type().memberType().assignableTo(valType.type());
   }
-  
+
   public static boolean isAssignableRefTo(Typed refType, Typed valType,
                                           boolean mutable) {
-    return isRef(refType, mutable) && 
+    return isRef(refType, mutable) &&
         refType.type().memberType().assignableTo(valType.type());
   }
-  
+
   public static boolean isUpdateableEquiv(Typed up,
                                           Typed future) {
-    return isScalarFuture(future) && isScalarUpdateable(up) && 
+    return isScalarFuture(future) && isScalarUpdateable(up) &&
               future.type().primType() == up.type().primType();
   }
-  
+
   /**
    * Check if we can dereference the type
    * @param t
@@ -2349,7 +2434,7 @@ public class Types {
   public static Type retrievedType(Typed t) {
     return retrievedType(t, false);
   }
-  
+
   /**
    * The type that would result from a retrieve operation
    * @param t
@@ -2362,7 +2447,7 @@ public class Types {
       return new FileValueType(t.type().fileKind());
     } else if (isRef(t)) {
       return t.type().baseType().memberType();
-    } else if (recursive && 
+    } else if (recursive &&
         (isContainer(t) || isContainerLocal(t))) {
       return unpackedContainerType(t);
     } else if (isArray(t)) {
@@ -2390,7 +2475,7 @@ public class Types {
       throw new STCRuntimeError(t.type() + " can't be dereferenced");
     }
   }
-  
+
   /**
    * Type that would result from storing this type
    * @param t
@@ -2421,8 +2506,8 @@ public class Types {
       throw new STCRuntimeError(t.type() + " can't be stored");
     }
   }
-  
-  
+
+
   /**
    * Work out type of container variable if we extract all
    * values into local variables
@@ -2433,12 +2518,12 @@ public class Types {
     assert(Types.isContainer(t) || Types.isContainerRef(t) ||
            Types.isContainerLocal(t));
     Type elemType = Types.containerElemType(t);
-    
+
     // Strip off references
     while (Types.isRef(elemType)) {
       elemType = Types.retrievedType(elemType);
     }
-    
+
     Type elemValType;
     if (Types.isContainer(elemType) ||
         Types.isContainerLocal(elemType)) {
@@ -2458,7 +2543,7 @@ public class Types {
       return BagType.localBag(elemValType);
     }
   }
-  
+
   /**
    * Is it a type we can map to a file?
    */
@@ -2470,7 +2555,7 @@ public class Types {
   public static boolean isUnion(Typed type) {
     return type.type().structureType() == StructureType.TYPE_UNION;
   }
-  
+
   public static boolean isTypeVar(Typed type) {
     return type.type().structureType() == StructureType.TYPE_VARIABLE;
   }
@@ -2478,7 +2563,7 @@ public class Types {
   public static boolean isPolymorphic(Typed type) {
     return isUnion(type) || isTypeVar(type) || isWildcard(type);
   }
-  
+
   public static boolean isFunction(Typed type) {
     return type.type().structureType() == StructureType.FUNCTION;
   }
@@ -2501,7 +2586,7 @@ public class Types {
     return isFile(type);
   }
 
-  
+
   /**
    * Returns true if the variable requires initialization before
    * being used in input context
@@ -2512,10 +2597,10 @@ public class Types {
     if (Types.isStruct(input)) {
       return structRequiresInputInit(input);
     }
-    return input.storage() == Alloc.ALIAS 
+    return input.storage() == Alloc.ALIAS
         || isPrimUpdateable(input);
   }
-  
+
   private static boolean structRequiresInputInit(Typed typed) {
     StructType type = (StructType)typed.type().getImplType();
     for (StructField f: type.getFields()) {
@@ -2551,11 +2636,11 @@ public class Types {
    * @return
    */
   public static boolean outputRequiresInitialization(Var output) {
-    return output.storage() == Alloc.ALIAS 
+    return output.storage() == Alloc.ALIAS
         || isPrimUpdateable(output)
         || isFileVal(output);
   }
-  
+
   /**
    * If the variable must be assigned before being used as input.
    * E.g. a non-future
@@ -2565,8 +2650,8 @@ public class Types {
   public static boolean assignBeforeRead(Var var) {
     return var.storage() == Alloc.LOCAL;
   }
-  
-  /** 
+
+  /**
    * More convenient way of representing array types for some analysies
    *
    */
@@ -2590,11 +2675,11 @@ public class Types {
       this.nesting = depth;
       this.baseType = type.type();
     }
-    
-    public final Type baseType; 
+
+    public final Type baseType;
     public final int nesting;
   }
-  
+
   public static boolean listsEqual(List<? extends Typed> a,
                                    List<? extends Typed> b) {
     if (a.size() != b.size()) {
@@ -2624,7 +2709,7 @@ public class Types {
         (types.size() == 2 && types.get(0).equals(types.get(1)))) {
       return UnionType.getAlternatives(types.get(0));
     }
-    
+
     boolean sawWildcard = true;
     Set<Type> intersection = null;
     for (Type argType: types) {
@@ -2649,20 +2734,20 @@ public class Types {
             if (requiredMappings != null && requiredMappings.size() == 0) {
               compatible = true;
             }
-          } 
-          
+          }
+
           if (!compatible) {
             it.remove();
           }
         }
       }
     }
-    
+
     if (intersection == null) {
       assert(sawWildcard);
       return Collections.<Type>singletonList(new WildcardType());
     }
-    
+
     // Make sure alternatives in original order
     ArrayList<Type> result = new ArrayList<Type>();
     for (Type alt: UnionType.getAlternatives(types.get(0))) {
@@ -2671,6 +2756,18 @@ public class Types {
       }
     }
     return result;
+  }
+
+  /**
+   * Remove degrees of freedom, e.g. wildcards and typevars
+   * @param t
+   * @return
+   */
+  public static Type concretiseArbitrarily(Type t) {
+    // Make concrete
+    t = UnionType.getAlternatives(t).get(0);
+    t = t.bindAllTypeVars(Types.F_VOID);
+    return t;
   }
 
   public static final Type F_INT = new ScalarFutureType(PrimType.INT);
@@ -2685,29 +2782,29 @@ public class Types {
 
   public static final Type F_BOOL = new ScalarFutureType(PrimType.BOOL);
   public static final Type V_BOOL = new ScalarValueType(PrimType.BOOL);
-  
+
   public static final Type F_BLOB = new ScalarFutureType(PrimType.BLOB);
   public static final Type V_BLOB = new ScalarValueType(PrimType.BLOB);
-  
+
   public static final Type F_FILE = new FileFutureType(FileKind.LOCAL_FS);
   public static final Type V_FILE = new FileValueType(FileKind.LOCAL_FS);
-  
+
   public static final Type F_URL = new FileFutureType(FileKind.URL);
   public static final Type V_URL = new FileValueType(FileKind.URL);
-  
+
   public static final Type V_VOID = new ScalarValueType(PrimType.VOID);
   public static final Type F_VOID = new ScalarFutureType(PrimType.VOID);
-  
+
   /**
-   * Represents location of execution 
+   * Represents location of execution
    */
   public static final Type F_LOCATION = new SubType(F_INT, "location");
   public static final Type V_LOCATION = V_INT; // Internally is int
 
-  
+
   private static final String VALUE_SIGIL = "$";
 
-  private static final Map<String, Type> nativeTypes 
+  private static final Map<String, Type> nativeTypes
                                     = new HashMap<String, Type>();
 
   static {
@@ -2730,7 +2827,7 @@ public class Types {
     registerPrimitiveType(UP_FLOAT);
     registerPrimitiveType(F_LOCATION);
   }
-  
+
   public static void registerPrimitiveType(Type type) {
     String name = type.typeName();
     assert(!nativeTypes.containsKey(name)): name;
