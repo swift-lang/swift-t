@@ -542,7 +542,7 @@ public class  ExprWalker {
                                 f.function(), f.type(), f.args(), oList);
     try {
       // If this is an assert statement, disable it
-      if (ForeignFunctions.isAssertVariant(f.function()) &&
+      if (context.getForeignFunctions().isAssertVariant(f.function()) &&
               Settings.getBoolean(Settings.OPT_DISABLE_ASSERTS)) {
         return;
       }
@@ -836,7 +836,7 @@ public class  ExprWalker {
       inArgs = Arrays.asList(startV, endV);
       fn = SpecialFunction.RANGE;
     }
-    String impl = ForeignFunctions.findSpecialImpl(fn);
+    String impl = context.getForeignFunctions().findSpecialImpl(fn);
     if (impl == null) {
       throw new STCRuntimeError("could not find implementation for " + fn);
     }
@@ -1229,12 +1229,13 @@ public class  ExprWalker {
       backend.intrinsicCall(intF, backendIList, backendOList,
                             backendProps);
     } else if (context.hasFunctionProp(function, FnProp.BUILTIN)) {
-      if (ForeignFunctions.hasOpEquiv(function)) {
+      ForeignFunctions foreignFuncs = context.getForeignFunctions();
+      if (foreignFuncs.hasOpEquiv(function)) {
         assert(oList.size() <= 1);
         Var backendOut = (backendOList.size() == 0 ?
                    null : backendOList.get(0));
 
-        backend.asyncOp(ForeignFunctions.getOpEquiv(function), backendOut,
+        backend.asyncOp(foreignFuncs.getOpEquiv(function), backendOut,
                         Arg.fromVarList(backendIList),
                         backendProps);
       } else {

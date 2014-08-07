@@ -42,6 +42,7 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext.WorkContext;
 import exm.stc.common.lang.ExecTarget;
+import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.LocalForeignFunction;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.RefCounting;
@@ -91,6 +92,8 @@ public class ICTree {
 
     private final GlobalConstants constants = new GlobalConstants();
 
+    private final ForeignFunctions foreignFunctions;
+
     private final ArrayList<Function> functions = new ArrayList<Function>();
     private final Map<String, Function> functionsByName =
                                             new HashMap<String, Function>();
@@ -109,6 +112,10 @@ public class ICTree {
      */
     private boolean checkpointRequired = false;
 
+    public Program(ForeignFunctions foreignFunctions) {
+      this.foreignFunctions = foreignFunctions;
+    }
+
     public void generate(Logger logger, CompilerBackend gen)
         throws UserException {
       Map<String, List<Boolean>> blockVectors = new
@@ -122,7 +129,7 @@ public class ICTree {
       GenInfo info = new GenInfo(blockVectors);
 
       logger.debug("Starting to generate program from Swift IC");
-      gen.initialize(new CodeGenOptions(checkpointRequired));
+      gen.initialize(new CodeGenOptions(checkpointRequired), foreignFunctions);
 
       logger.debug("Generating required packages");
       for (RequiredPackage pkg: required) {
@@ -276,6 +283,10 @@ public class ICTree {
 
     public GlobalConstants constants() {
       return constants;
+    }
+
+    public ForeignFunctions getForeignFunctions() {
+      return foreignFunctions;
     }
 
     /**

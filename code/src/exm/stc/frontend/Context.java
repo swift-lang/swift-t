@@ -35,6 +35,7 @@ import exm.stc.common.exceptions.UndefinedTypeException;
 import exm.stc.common.exceptions.UndefinedVarError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -47,17 +48,17 @@ import exm.stc.common.lang.Var.VarProvenance;
 
 /**
  * Abstract interface used to track and access contextual information about the
- * program at different points in the AST. 
+ * program at different points in the AST.
  */
 public abstract class Context {
-  
+
   /**
    * How many levels from root: 0 if this is the root
    */
   protected final int level;
 
   /**
-   * A logger for use by child classes 
+   * A logger for use by child classes
    */
   protected final Logger logger;
 
@@ -72,7 +73,7 @@ public abstract class Context {
    * restricted scope.
    */
   protected final Map<String, Type> types = new HashMap<String, Type>();
-  
+
   /**
    * Track all definitions (variables and types)
    */
@@ -83,22 +84,22 @@ public abstract class Context {
    * Current input file
    */
   protected String inputFile;
-  
+
   /**
    * Logical name of current module
    */
   protected String moduleName;
-  
+
   /**
      Current line in input file
    */
   protected int line = 0;
-  
+
   /**
    * Current column in input file.  0 if unknown
    */
   protected int col = 0;
-  
+
   public Context(Logger logger, int level) {
     super();
     this.level = level;
@@ -111,32 +112,37 @@ public abstract class Context {
      else return the GlobalContext this is using.
    */
   public abstract GlobalContext getGlobals();
-  
+
+  /**
+   * @return global info about foreign functions
+   */
+  public abstract ForeignFunctions getForeignFunctions();
+
   /**
    * Lookup definition corresponding to name
    * @param name
    * @return the definition info, or null if not defined
    */
   public abstract DefInfo lookupDef(String name);
-  
+
   /**
    * Add definition for current location in file
-   * @param name 
+   * @param name
    * @param type
    */
   protected void addDef(String name, DefKind kind) {
     allDefs.put(name, new DefInfo(kind, inputFile, line, col));
   }
-  
+
   public void checkNotDefined(String name) throws DoubleDefineException {
     DefInfo def = lookupDef(name);
     if (def != null) {
       String loc = buildLocationString(def.file, def.line, def.col, false);
-      throw new DoubleDefineException(this, def.kind.humanReadable() + 
+      throw new DoubleDefineException(this, def.kind.humanReadable() +
           " called " + name + " already defined at " + loc);
     }
   }
-  
+
   /**
    * Declare a new variable that will be visible in the
    * current scope and all descendant scopes
@@ -166,19 +172,19 @@ public abstract class Context {
           throws DoubleDefineException {
     String name = variable.name();
     checkNotDefined(name);
-  
+
     variables.put(name, variable);
     DefKind kind;
     if (Types.isFunction(variable.type())) {
-      kind = DefKind.FUNCTION; 
-    } else { 
+      kind = DefKind.FUNCTION;
+    } else {
       kind = DefKind.VARIABLE;
     }
     addDef(name, kind);
     return variable;
   }
-  
-  
+
+
   /**
    * Define a temporary variable with a unique name in the
    * current context
@@ -224,7 +230,7 @@ public abstract class Context {
     }
     return result;
   }
-  
+
   /**
    * Lookup variable based on name.  This version should be used in contexts
    * where the compiler has already checked the variable is declared, so if
@@ -242,7 +248,7 @@ public abstract class Context {
     }
     return result;
   }
-  
+
   /**
    * Returns a list of all variables that are stored in the current stack
    * or an ancestor stack frame.
@@ -256,17 +262,17 @@ public abstract class Context {
 
   public abstract void defineFunction(String name, FunctionType type)
                                           throws UserException;
-  
+
   public abstract void setFunctionProperty(String name, FnProp prop);
-  
+
   public abstract List<FnProp> getFunctionProps(String function);
-  
+
   public abstract boolean hasFunctionProp(String name, FnProp prop);
-  
+
   public abstract void addIntrinsic(String function, IntrinsicFunction intrinsic);
-  
+
   public abstract IntrinsicFunction lookupIntrinsic(String function);
-  
+
   public boolean isIntrinsic(String function) {
     return lookupIntrinsic(function) != null;
   }
@@ -288,7 +294,7 @@ public abstract class Context {
     return inputFile;
   }
 
-  
+
   /**
    * Synchronize preprocessed line numbers with input file
    * line numbers
@@ -306,11 +312,11 @@ public abstract class Context {
       this.col = tree.getCharPositionInLine();
     }
   }
-  
+
   public int getLine() {
     return line;
   }
-  
+
   public int getColumn() {
     return col;
   }
@@ -339,7 +345,7 @@ public abstract class Context {
     }
     return new SourceLoc(getInputFile(), moduleName, function, getLine(), getColumn());
   }
-  
+
   /**
    * Build a human-readable location string
    * @param inputFile
@@ -373,17 +379,17 @@ public abstract class Context {
   public Collection<Var> getScopeVariables() {
     return Collections.unmodifiableCollection(variables.values());
   }
-  
+
   /**
    * @param typeName
    * @return type corresponding to name, or otherwise null
    */
   abstract public Type lookupTypeUnsafe(String typeName);
-  
+
   /**
    * @param typeName
    * @return type corresponding to name
-   * @throws UndefinedTypeException 
+   * @throws UndefinedTypeException
    * @throw UndefinedTypeException if type is not defined
    */
   public Type lookupTypeUser(String typeName) throws UndefinedTypeException {
@@ -401,7 +407,7 @@ public abstract class Context {
     types.put(typeName, newType);
     addDef(typeName, DefKind.TYPE);
   }
-  
+
   /**
    * Lookup execution target by name in global scope.
    * @param name
@@ -409,7 +415,7 @@ public abstract class Context {
    */
   public abstract ExecContext lookupExecContext(String name)
                     throws UndefinedExecContextException;
-  
+
   /**
    * @return valid names of execution targets
    */
@@ -428,7 +434,7 @@ public abstract class Context {
 
   abstract public Var createStructFieldTmp(Var struct,
       Type fieldType, List<String> fieldPath, Alloc storage);
-  
+
   /** Get info about the enclosing function */
   abstract public FunctionContext getFunctionContext();
 
@@ -442,7 +448,7 @@ public abstract class Context {
   }
 
   /**
-   * 
+   *
    * @param type
    * @param var future this is the value of
    * @return
@@ -451,11 +457,11 @@ public abstract class Context {
   abstract public Var createLocalValueVariable(Type type, Var var)
                                                throws UserException;
 
-  public Var createLocalValueVariable(Type type) 
+  public Var createLocalValueVariable(Type type)
         throws UserException {
     return createLocalValueVariable(type, null);
   }
-  
+
   /**
    * Create filename alias variable (a string future) for a file
    * variable with provided name
@@ -463,7 +469,7 @@ public abstract class Context {
    * @return
    */
   abstract public Var createFilenameAliasVariable(Var fileVar);
-  
+
   public static enum FnProp {
     APP, COMPOSITE,
     BUILTIN, SYNC,
@@ -473,18 +479,18 @@ public abstract class Context {
     DEPRECATED, /** Warn if user uses function */
     CHECKPOINTED, /** Whether results should be checkpointed */
   }
-  
+
   /**
    * Different types of definition name can be associated with.
    */
   public static enum DefKind {
     FUNCTION, VARIABLE, TYPE;
-    
+
     public String humanReadable() {
       return this.toString().toLowerCase();
     }
   }
-  
+
   /**
    * Information about a definition
    */

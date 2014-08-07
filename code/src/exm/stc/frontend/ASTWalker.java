@@ -111,6 +111,7 @@ import exm.stc.tclbackend.TclPackage;
 public class ASTWalker {
 
   private final STCMiddleEnd backend;
+  private final ForeignFunctions foreignFuncs;
   private final VarCreator varCreator;
   private final LValWalker lValWalker;
   private final ExprWalker exprWalker;
@@ -125,8 +126,9 @@ public class ASTWalker {
     COMPILE,     // Compile functions
   }
 
-  public ASTWalker(STCMiddleEnd backend) {
+  public ASTWalker(STCMiddleEnd backend, ForeignFunctions foreignFuncs) {
     this.backend = backend;
+    this.foreignFuncs = foreignFuncs;
     this.modules = new LoadedModules();
     this.varCreator = new VarCreator(backend);
     this.wrapper = new WrapperGen(backend);
@@ -148,7 +150,7 @@ public class ASTWalker {
                  boolean preprocessed) throws UserException {
 
     GlobalContext context = new GlobalContext(mainFilePath,
-                                              Logging.getSTCLogger());
+                      Logging.getSTCLogger(), foreignFuncs);
 
     // Assume root module for now
     String mainModuleName =  FilenameUtils.getBaseName(originalMainFilePath);
@@ -1471,7 +1473,7 @@ public class ASTWalker {
     }
 
     // Register as foreign function
-    ForeignFunctions.addForeignFunction(function);
+    context.getForeignFunctions().addForeignFunction(function);
 
     // Read annotations at end of child list
     for (; pos < tree.getChildCount(); pos++) {
@@ -1479,7 +1481,7 @@ public class ASTWalker {
                                 inlineTcl != null);
     }
 
-    ExecTarget taskMode = ForeignFunctions.getTaskMode(function);
+    ExecTarget taskMode = context.getForeignFunctions().getTaskMode(function);
 
     // TODO: assume for now that all non-local builtins are targetable
     // This is still not quite right (See issue #230)
@@ -1512,7 +1514,7 @@ public class ASTWalker {
       }
 
       // Defer generation of wrapper until it is called
-      wrapper.saveWrapper(function, backendFT, fdecl,
+      wrapper.saveWrapper(context, function, backendFT, fdecl,
                           taskMode, isParallel, isTargetable);
     }
   }
@@ -1554,18 +1556,19 @@ public class ASTWalker {
         }
         context.addIntrinsic(function, intF);
       } else if (key.equals(Annotations.FN_IMPLEMENTS)) {
-        SpecialFunction special = ForeignFunctions.findSpecialFunction(val);
+        ForeignFunctions foreignFuncs = context.getForeignFunctions();
+        SpecialFunction special = foreignFuncs.findSpecialFunction(val);
         if (special == null) {
           throw new InvalidAnnotationException(context, "\"" + val +
               "\" is not the name of a specially handled function in STC. " +
               "Valid options are: " +
               StringUtil.concat(SpecialFunction.values()));
         }
-        ForeignFunctions.addSpecialImpl(special, function);
+        foreignFuncs.addSpecialImpl(special, function);
       } else if (key.equals(Annotations.FN_DISPATCH)) {
         try {
           ExecContext cx = context.lookupExecContext(val);
-          ForeignFunctions.addTaskMode(function, ExecTarget.dispatched(cx));
+          context.getForeignFunctions().addTaskMode(function, ExecTarget.dispatched(cx));
         } catch (IllegalArgumentException e) {
           List<String> dispatchNames = new ArrayList<String>(context.execTargetNames());
           Collections.sort(dispatchNames);
@@ -1589,7 +1592,7 @@ public class ASTWalker {
       throw new UserException(context, "Unknown builtin op " + val);
     }
     assert(opcode != null);
-    ForeignFunctions.addOpEquiv(function, opcode);
+    context.getForeignFunctions().addOpEquiv(function, opcode);
   }
 
   /**
@@ -1601,16 +1604,17 @@ public class ASTWalker {
    */
   private void registerFunctionAnnotation(Context context, String function,
         FunctionDecl fdecl, String annotation) throws UserException {
+    ForeignFunctions foreignFuncs = context.getForeignFunctions();
     if (annotation.equals(Annotations.FN_ASSERTION)) {
-      ForeignFunctions.addAssertVariable(function);
+      foreignFuncs.addAssertVariable(function);
     } else if (annotation.equals(Annotations.FN_PURE)) {
-      ForeignFunctions.addPure(function);
+      foreignFuncs.addPure(function);
     } else if (annotation.equals(Annotations.FN_COMMUTATIVE)) {
-      ForeignFunctions.addCommutative(function);
+      foreignFuncs.addCommutative(function);
     } else if (annotation.equals(Annotations.FN_COPY)) {
-      ForeignFunctions.addCopy(function);
+      foreignFuncs.addCopy(function);
     } else if (annotation.equals(Annotations.FN_MINMAX)) {
-      ForeignFunctions.addMinMax(function);
+      foreignFuncs.addMinMax(function);
     } else if (annotation.equals(Annotations.FN_PAR)) {
       context.setFunctionProperty(function, FnProp.PARALLEL);
     } else if (annotation.equals(Annotations.FN_DEPRECATED)) {

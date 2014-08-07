@@ -6,6 +6,7 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.OpEvaluator;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
 import exm.stc.common.lang.Types;
@@ -29,8 +30,9 @@ public class ConstantFolder {
    *         one of these stored in a future.  Returns null if not
    *         successful.
    */
-  public static ArgOrCV constantFold(Logger logger, CongruentSets sets,
-                                   ComputedValue<Arg> val) {
+  public static ArgOrCV constantFold(Logger logger,
+      ForeignFunctions foreignFuncs, CongruentSets sets,
+      ComputedValue<Arg> val) {
     switch (val.op) {
       case ASYNC_OP:
       case LOCAL_OP:
@@ -43,7 +45,7 @@ public class ConstantFolder {
       case CALL_LOCAL:
       case CALL_LOCAL_CONTROL:
       case CALL_SYNC:
-        return foldFunctionCall(logger, sets, val);
+        return foldFunctionCall(logger, foreignFuncs, sets, val);
       case GET_FILENAME_ALIAS:
         return foldGetFilename(logger, sets, val);
       default:
@@ -93,10 +95,11 @@ public class ConstantFolder {
   }
 
 
-  private static ArgOrCV foldFunctionCall(Logger logger, CongruentSets sets,
+  private static ArgOrCV foldFunctionCall(Logger logger,
+      ForeignFunctions foreignFuncs, CongruentSets sets,
       ComputedValue<Arg> val) {
     List<Arg> inputs;
-    if (!CommonFunctionCall.canConstantFold(val)) {
+    if (!CommonFunctionCall.canConstantFold(foreignFuncs, val)) {
       return null;
     }
     boolean usesValues = CommonFunctionCall.acceptsLocalValArgs(val.op);
@@ -106,7 +109,7 @@ public class ConstantFolder {
       inputs = findFutureValues(sets, val);
     }
     if (inputs != null) {
-      Arg result = CommonFunctionCall.tryConstantFold(val, inputs);
+      Arg result = CommonFunctionCall.tryConstantFold(foreignFuncs, val, inputs);
       if (result != null) {
         return valFromArg(!usesValues, result);
       }

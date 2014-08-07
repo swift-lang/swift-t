@@ -26,6 +26,7 @@ import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.AsyncExecutor;
 import exm.stc.common.lang.ExecContext.WorkContext;
 import exm.stc.common.lang.ExecTarget;
+import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.LocalForeignFunction;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.BuiltinOpcode;
@@ -78,8 +79,9 @@ public interface CompilerBackend {
   /**
    * Called once before code generation starts to initialize generation.
    * @param options
+   * @param information about foreign functions
    */
-  public void initialize(CodeGenOptions options);
+  public void initialize(CodeGenOptions options, ForeignFunctions foreignFuncs);
 
   /**
    * Called once after code generation ends to allow generator to finalize

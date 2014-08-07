@@ -16,6 +16,7 @@ import org.apache.log4j.Logger;
 import exm.stc.common.Logging;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.util.HierarchicalSet;
@@ -102,12 +103,12 @@ public class Congruences implements AliasFinder {
     this.reorderingAllowed = reorderingAllowed;
   }
 
-  public Congruences(Logger logger, GlobalConstants consts,
-                    boolean reorderingAllowed) {
+  public Congruences(Logger logger, ForeignFunctions foreignFuncs,
+      GlobalConstants consts, boolean reorderingAllowed) {
     this(logger, consts, null,
         ClosedVarTracker.makeRoot(logger, reorderingAllowed),
-        CongruentSets.makeRoot(CongruenceType.VALUE),
-         CongruentSets.makeRoot(CongruenceType.ALIAS),
+        CongruentSets.makeRoot(foreignFuncs, CongruenceType.VALUE),
+         CongruentSets.makeRoot(foreignFuncs, CongruenceType.ALIAS),
          new AliasTracker(),
          new HierarchicalSet<List<Arg>>(),
          reorderingAllowed);

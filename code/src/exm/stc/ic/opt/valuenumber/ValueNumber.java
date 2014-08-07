@@ -33,6 +33,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.PassedVar;
 import exm.stc.common.lang.Semantics;
 import exm.stc.common.lang.Types;
@@ -164,8 +165,9 @@ public class ValueNumber implements OptimizerPass {
   }
 
   private Congruences initFuncState(Logger logger,
-        GlobalConstants constants, Function f) throws OptUnsafeError {
-    Congruences congruent = new Congruences(logger, constants,
+      ForeignFunctions foreignFuncs, GlobalConstants constants,
+      Function f) throws OptUnsafeError {
+    Congruences congruent = new Congruences(logger, foreignFuncs, constants,
                                             reorderingAllowed);
     for (Var v : constants.vars()) {
       // First, all constants can be treated as being set
@@ -376,8 +378,9 @@ public class ValueNumber implements OptimizerPass {
   private Map<Block, Congruences> findCongruences(Program program,
           Function f, ExecContext execCx) throws OptUnsafeError {
     Map<Block, Congruences> result = new HashMap<Block, Congruences>();
-    findCongruencesRec(program, f, f.mainBlock(), execCx,
-          initFuncState(logger, program.constants(), f), result);
+    Congruences initState = initFuncState(logger, program.getForeignFunctions(),
+                                          program.constants(), f);
+    findCongruencesRec(program, f, f.mainBlock(), execCx, initState, result);
     return result;
   }
 

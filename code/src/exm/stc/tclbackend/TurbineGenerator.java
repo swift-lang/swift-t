@@ -124,6 +124,8 @@ public class TurbineGenerator implements CompilerBackend {
    */
   private CodeGenOptions options = null;
 
+  private ForeignFunctions foreignFuncs = null;
+
   /**
      This prevents duplicate "lappend auto_path" statements
      We use a List because these should stay in order
@@ -294,8 +296,9 @@ public class TurbineGenerator implements CompilerBackend {
   }
 
   @Override
-  public void initialize(CodeGenOptions options) {
+  public void initialize(CodeGenOptions options, ForeignFunctions foreignFuncs) {
     this.options = options;
+    this.foreignFuncs = foreignFuncs;
 
     //String[] rpaths = Settings.getRpaths();
     File input_file   = new File(Settings.get(Settings.INPUT_FILENAME));
@@ -1383,7 +1386,7 @@ public class TurbineGenerator implements CompilerBackend {
     // Generate in same way as built-in function
     TclFunRef fn = BuiltinOps.getBuiltinOpImpl(op);
     if (fn == null) {
-      List<String> impls = ForeignFunctions.findOpImpl(op);
+      List<String> impls = foreignFuncs.findOpImpl(op);
 
       // It should be impossible for there to be no implementation for a function
       // like this
@@ -1495,7 +1498,7 @@ public class TurbineGenerator implements CompilerBackend {
     logger.debug("call builtin: " + function);
     TclFunRef tclf = tclFuncSymbols.get(function).val2;
     assert tclf != null : "Builtin " + function + "not found";
-    ForeignFunctions.getTaskMode(function).checkCanRunIn(execContextStack.peek());
+    foreignFuncs.getTaskMode(function).checkCanRunIn(execContextStack.peek());
 
     callTclFunction(function, tclf, inputs, outputs, props);
   }
