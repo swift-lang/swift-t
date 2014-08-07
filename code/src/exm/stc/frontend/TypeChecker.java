@@ -401,6 +401,7 @@ public class TypeChecker {
 
   private static TypeMismatchException argumentTypeException(Context context,
       int argPos, Type expType, Type actType, String errContext) {
+    new Exception().printStackTrace();
     return new TypeMismatchException(context, "Expected argument " +
         (argPos + 1) + " to have one of the following types: "
         + expType.typeName() + ", but had type: " + actType.typeName()
@@ -430,25 +431,36 @@ public class TypeChecker {
     assert(!formalArgT.hasTypeVar()) : formalArgT + " " + argExprT;
     for (Type argExprAlt: UnionType.getAlternatives(argExprT)) {
       for (Type formalArgAlt: UnionType.getAlternatives(formalArgT)) {
-        Type argExprAlt2 = argExprAlt;
+
+        Type argExprAltNoRef;
+        if (Types.isRef(argExprAlt)) {
+          argExprAltNoRef = argExprAlt.memberType();
+        } else {
+          argExprAltNoRef = argExprAlt;
+        }
+
+
         if (concretiseAll) {
           /* At this stage, any formalArg typevars constrained by argument
            * type should be bound.  We need to bind any unbound typevars in
            * the expression type.
            */
           Map<String, Type> tvBindings;
-          tvBindings = argExprAlt2.matchTypeVars(formalArgAlt);
+          tvBindings = argExprAltNoRef.matchTypeVars(formalArgAlt);
           if (tvBindings == null) {
             continue;
           } else {
-            argExprAlt2 = argExprAlt2.bindTypeVars(tvBindings);
+            argExprAltNoRef = argExprAltNoRef.bindTypeVars(tvBindings);
           }
         }
 
-
-        Type concreteArgType = compatibleArgTypes(formalArgAlt, argExprAlt2);
-        if (concreteArgType != null) {
-          return Pair.create(formalArgAlt, concreteArgType);
+        if (argExprAltNoRef.assignableTo(formalArgAlt)) {
+          Type argExprResult = argExprAltNoRef.concretize(formalArgAlt);
+          if (Types.isRef(argExprAlt)) {
+            argExprResult = new RefType(argExprResult,
+                       ((RefType)argExprAlt).mutable());
+          }
+          return Pair.create(formalArgAlt, argExprResult);
         }
       }
     }
@@ -471,26 +483,6 @@ public class TypeChecker {
     assert(res.val1.isConcrete()) : "Non-concrete arg type: " + res.val1;
     assert(res.val2.isConcrete()) : "Non-concrete arg type: " + res.val2;
     return res;
-  }
-
-
-  /**
-   * Check if an expression type can be used for function input argument
-   * @param argType non-polymorphic function argument type
-   * @param exprType type of argument expression
-   * @return concretized argType if compatible, null if incompatible
-   */
-  public static Type compatibleArgTypes(Type argType,
-      Type exprType) {
-    if (exprType.assignableTo(argType)) {
-      // Obviously ok if types are exactly the same
-      return exprType.concretize(argType);
-    } else if (Types.isAssignableRefTo(exprType, argType)) {
-      // We can block on reference, so we can transform type here
-      return exprType.concretize(new RefType(argType, false));
-    } else {
-      return null;
-    }
   }
 
   private static ExprType callFunction(Context context, SwiftAST tree)
