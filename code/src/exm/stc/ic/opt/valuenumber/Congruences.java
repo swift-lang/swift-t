@@ -1085,6 +1085,10 @@ public class Congruences implements AliasFinder {
     }
   }
 
+  public boolean isAccessible(Var var) {
+    return byValue.isAccessible(var);
+  }
+
   /**
    * Implement set interface for checking if var is closed
    */
