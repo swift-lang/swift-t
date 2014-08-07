@@ -473,25 +473,19 @@ public class ValueNumber implements OptimizerPass {
       }
     }
 
-    // additional variables may be close once we're inside continuation
-    List<BlockingVar> contClosedVars = null;
-    if (finalizedVarEnabled) {
-      contClosedVars = cont.closedVars(state.getClosed(stmtIndex),
-                                       state.getRecursivelyClosed(stmtIndex));
-    }
-
     // Try to avoid going down invalid branches
     if (cont.isConditional()) {
-      return tryUnifyBranches(prog, fn, execCx, cont, stmtIndex, state, result,
-                              contClosedVars);
+      return tryUnifyBranches(prog, fn, execCx, cont, stmtIndex, state, result);
     } else {
+      findCongruencesBranchesRec(prog, fn, execCx, cont, stmtIndex, state, result,
+                                 cont.getBlocks(), null);
       return UnifiedValues.EMPTY;
     }
   }
 
   private UnifiedValues tryUnifyBranches(Program prog, Function fn,
       ExecContext execCx, Continuation cont, int stmtIndex, Congruences state,
-      Map<Block, Congruences> result, List<BlockingVar> contClosedVars)
+      Map<Block, Congruences> result)
       throws OptUnsafeError {
     Conditional cond = ((Conditional)cont);
     Arg condValue = cond.conditionArg();
@@ -517,6 +511,31 @@ public class ValueNumber implements OptimizerPass {
     List<Congruences> branchStates = unifyBranches ?
                       new ArrayList<Congruences>() : null;
 
+    findCongruencesBranchesRec(prog, fn, execCx, cont, stmtIndex, state, result,
+                                branchBlocks, branchStates);
+
+    if (unifyBranches) {
+      return UnifiedValues.unify(logger, prog.constants(), fn,
+                    reorderingAllowed, stmtIndex, state, cont,
+                              branchStates, branchBlocks);
+    } else {
+      return UnifiedValues.EMPTY;
+    }
+  }
+
+  private void findCongruencesBranchesRec(Program prog, Function fn,
+      ExecContext execCx, Continuation cont, int stmtIndex, Congruences state,
+      Map<Block, Congruences> result,
+      List<Block> branchBlocks, List<Congruences> branchStates)
+      throws OptUnsafeError {
+
+    // additional variables may be close once we're inside continuation
+    List<BlockingVar> contClosedVars = null;
+    if (finalizedVarEnabled) {
+      contClosedVars = cont.closedVars(state.getClosed(stmtIndex),
+                                       state.getRecursivelyClosed(stmtIndex));
+    }
+
     for (Block contBlock: branchBlocks) {
       Congruences blockState = state.enterContBlock(
                     cont.inheritsParentVars(), stmtIndex);
@@ -528,17 +547,9 @@ public class ValueNumber implements OptimizerPass {
       findCongruencesRec(prog, fn, contBlock, cont.childContext(execCx),
                          blockState, result);
 
-      if (unifyBranches) {
+      if (branchStates != null) {
         branchStates.add(blockState);
       }
-    }
-
-    if (unifyBranches) {
-      return UnifiedValues.unify(logger, prog.constants(), fn,
-                    reorderingAllowed, stmtIndex, state, cont,
-                              branchStates, branchBlocks);
-    } else {
-      return UnifiedValues.EMPTY;
     }
   }
 
