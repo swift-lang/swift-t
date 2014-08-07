@@ -1234,15 +1234,12 @@ public class ASTWalker {
       Type argType = v.type();
       SwiftAST expr = loopVarExprs.get(v.name());
       Type exprType = TypeChecker.findSingleExprType(context, expr);
-      exprType = TypeChecker.checkAssignment(context, exprType,
+      exprType = TypeChecker.checkSingleAssignment(context, exprType,
                                              argType,v.name());
       results.add(exprWalker.eval(context, expr, exprType, false, null));
     }
     return results;
   }
-
-
-
 
   private List<Var> declareVariables(Context context, SwiftAST tree, WalkMode walkMode)
           throws UserException {
@@ -1405,6 +1402,7 @@ public class ASTWalker {
     // Need to create throwaway temporaries for return values
     List<Var> oList = new ArrayList<Var>();
     for (Type t : exprType.getTypes()) {
+      t = Types.concretiseArbitrarily(t);
       oList.add(varCreator.createTmp(context, t));
     }
 

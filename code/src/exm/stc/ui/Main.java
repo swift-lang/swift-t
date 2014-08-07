@@ -65,12 +65,12 @@ public class Main {
   private static final String INCLUDE_FLAG = "I";
   private static final String UPDATE_FLAG = "u";
   private static final List<File> temporaries = new ArrayList<File>();
-  
-  
+
+
   public static void main(String[] args) {
-    
+
     Args stcArgs = processArgs(args);
-    
+
     try {
       Settings.initSTCProperties();
     } catch (InvalidOptionException ex) {
@@ -86,15 +86,15 @@ public class Main {
     }
 
 
-    boolean preprocess = preprocessEnabled();
+    boolean preprocess = preprocessEnabled(logger);
     File inputFile = setupInputFile(logger, preprocess, stcArgs);
     PrintStream icOutput = setupICOutput();
     File finalOutput = selectOutputFile(stcArgs);
-    
+
     if (skipCompile(stcArgs, finalOutput)) {
       System.exit(ExitCode.SUCCESS.code());
     }
-    
+
     // Use intermediate file so we don't create invalid output in case of
     // compilation errors
     File tmpOutput = setupTmpOutput();
@@ -121,21 +121,21 @@ public class Main {
 
   private static Options initOptions() {
     Options opts = new Options();
-    
-    Option module = new Option(INCLUDE_FLAG, "include", true, 
+
+    Option module = new Option(INCLUDE_FLAG, "include", true,
                                     "Add to import search path");
     opts.addOption(module);
-    
+
     Option arg = new Option(SWIFT_PROG_ARG_FLAG, "arg", true,
         "Compile-time argument");
     arg.setArgs(2);
     arg.setValueSeparator('=');
     opts.addOption(arg);
-    
+
     Option preprocArg = new Option(PREPROC_MACRO_FLAG, true,
                                     "Preprocessor definition");
     opts.addOption(preprocArg);
-    
+
     opts.addOption(UPDATE_FLAG, false, "Update output only if out of date");
     return opts;
   }
@@ -143,7 +143,7 @@ public class Main {
 
   private static Args processArgs(String[] args) {
     Options opts = initOptions();
-    
+
     CommandLine cmd = null;
     try {
       CommandLineParser parser = new GnuParser();
@@ -153,11 +153,11 @@ public class Main {
       System.err.println(ex.getMessage());
       usage(opts);
       System.exit(1);
-      return null; 
+      return null;
     }
-    
+
     boolean updateOutput = cmd.hasOption(UPDATE_FLAG);
-    
+
     if (cmd.hasOption(INCLUDE_FLAG)) {
       for (String dir: cmd.getOptionValues(INCLUDE_FLAG)) {
         Settings.addModulePath(dir);
@@ -165,14 +165,14 @@ public class Main {
     }
 
     Properties swiftProgramArgs = cmd.getOptionProperties(SWIFT_PROG_ARG_FLAG);
-    
-    String preprocMacros[]; 
+
+    String preprocMacros[];
     if (cmd.hasOption(PREPROC_MACRO_FLAG)) {
       preprocMacros = cmd.getOptionValues(PREPROC_MACRO_FLAG);
     } else {
       preprocMacros = new String[0];
     }
-    
+
     String[] remainingArgs = cmd.getArgs();
     if (remainingArgs.length < 1 || remainingArgs.length > 2) {
       System.out.println("Expected input file and optional output file, but got "
@@ -180,7 +180,7 @@ public class Main {
       usage(opts);
       System.exit(ExitCode.ERROR_COMMAND.code());
     }
-    
+
     String input = remainingArgs[0];
     String output = null;
     if (remainingArgs.length == 2) {
@@ -220,14 +220,14 @@ public class Main {
     }
     return skipCompile;
   }
-  
-  private static boolean preprocessEnabled() {
+
+  private static boolean preprocessEnabled(Logger logger) {
     try {
       if (Settings.getBoolean(Settings.USE_C_PREPROCESSOR)) {
         return true;
       }
     } catch (InvalidOptionException e) {
-      STCompiler.reportInternalError(e);
+      STCompiler.reportInternalError(logger, e);
       System.exit(1);
     }
     return false;
@@ -242,11 +242,11 @@ public class Main {
     if (args.outputFilename != null) {
       Settings.set(Settings.OUTPUT_FILENAME, args.outputFilename);
     }
-    
+
     for (String macro: args.preprocessorMacros) {
       Settings.addMetadata("Macro", macro);
     }
-    
+
     for (Object key: args.swiftProgramArgs.keySet()) {
       String keyS = (String) key;
       String val = args.swiftProgramArgs.getProperty(keyS);
@@ -280,7 +280,7 @@ public class Main {
       FileAppender appender = new FileAppender(layout, logfile, append);
       Level threshold;
       if (trace) {
-        threshold = Level.TRACE; 
+        threshold = Level.TRACE;
       } else {
         threshold = Level.DEBUG;
       }
@@ -297,7 +297,7 @@ public class Main {
 
   /**
      Configures Log4j to log warnings to stderr
-   * @param stcLogger 
+   * @param stcLogger
    */
   private static void setupLoggingToStderr(Logger stcLogger)
   {
@@ -318,8 +318,8 @@ public class Main {
 
   /**
    * Setup input file.  If necessary, run through CPP
-   * @param logger 
-   * @param preprocess 
+   * @param logger
+   * @param preprocess
    * @param args
    * @return
    */
@@ -332,7 +332,7 @@ public class Main {
           System.out.println("Input file \"" + input + "\" is not readable");
           System.exit(1);
         }
-        
+
         result = File.createTempFile("stc-preproc", ".swift");
         temporaries.add(result);
         runPreprocessor(logger, args.inputFilename, result.getPath(),
@@ -350,12 +350,12 @@ public class Main {
               ex.toString());
       System.exit(1);
     } catch (Throwable t) {
-      STCompiler.reportInternalError(t);
+      STCompiler.reportInternalError(logger, t);
       System.exit(1);
     }
     return null;
   }
-  
+
   private static File selectOutputFile(Args args) {
     String outputFilename;
     if (args.outputFilename != null) {
@@ -373,7 +373,7 @@ public class Main {
     }
     return new File(outputFilename);
   }
-  
+
   private static File setupTmpOutput() {
     try {
       File result = File.createTempFile("stc-out", ".swift");
@@ -386,7 +386,7 @@ public class Main {
       return null;
     }
   }
-  
+
   private static OutputStream openForOutput(File outfile) {
     try {
       FileOutputStream stream = new FileOutputStream(outfile);
@@ -415,12 +415,12 @@ public class Main {
     } else {
       cmd.addAll(Arrays.asList("cpp", "-undef", input, output));
     }
-   
+
     for (String dir: Settings.getModulePath()) {
       cmd.add("-I");
       cmd.add(dir);
     }
-    
+
     for (String macro: preprocArgs) {
       cmd.add("-D");
       cmd.add(macro);
@@ -433,21 +433,21 @@ public class Main {
       int cppExitCode = -1;
       boolean done = false;
       do {
-        try { 
+        try {
           cppExitCode = cpp.waitFor();
           done = true;
         } catch (InterruptedException ex) {
           // Continue on after spurious interrupt
         }
       } while (!done);
-      
+
       StringWriter sw = new StringWriter();
       IOUtils.copy(cpp.getErrorStream(), sw, "UTF-8");
       String cppStderr = sw.toString();
-      
+
       logger.debug("Preprocessor exit code: " + cppExitCode);
       logger.debug("Preprocessor stderr: " + cppStderr);
-      
+
       if (cppExitCode != 0) {
         // Print stderr message first, then clarify that failure was in preprocessor
         System.out.println(cppStderr);
@@ -467,7 +467,7 @@ public class Main {
 
   public static boolean useGCCProcessor() {
     try {
-      if ((SystemUtils.IS_OS_MAC_OSX && 
+      if ((SystemUtils.IS_OS_MAC_OSX &&
           !Settings.getBoolean(Settings.PREPROCESSOR_FORCE_CPP))) {
         return true;
       } else if (Settings.getBoolean(Settings.PREPROCESSOR_FORCE_GCC)) {
@@ -549,7 +549,7 @@ public class Main {
     public final boolean updateOutput;
     public final Properties swiftProgramArgs;
     public final List<String> preprocessorMacros;
-    
+
     public Args(String inputFilename, String outputFilename,
                 boolean updateOutput,
                 Properties swiftProgramArgs, List<String> preprocessorArgs) {

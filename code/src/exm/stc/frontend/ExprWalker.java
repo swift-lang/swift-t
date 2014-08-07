@@ -114,6 +114,8 @@ public class  ExprWalker {
       (context, "Cannot assign expression to multiple variables");
 
     Var oVar = oList.get(0);
+    assert(oVar.type().isConcrete()) : oVar.type();
+
     switch (token) {
       case ExMParser.VARIABLE:
         String srcVarName = tree.child(0).getText();
@@ -537,7 +539,7 @@ public class  ExprWalker {
 
     // This will check the type of the function call
     FunctionType concrete = TypeChecker.concretiseFunctionCall(context,
-                                f.function(), f.type(), f.args(), oList, false);
+                                f.function(), f.type(), f.args(), oList);
     try {
       // If this is an assert statement, disable it
       if (ForeignFunctions.isAssertVariant(f.function()) &&
@@ -550,16 +552,16 @@ public class  ExprWalker {
     }
 
     // evaluate argument expressions left to right, creating temporaries
-    ArrayList<Var> argVars = new ArrayList<Var>(
-            f.args().size());
+    ArrayList<Var> argVars = new ArrayList<Var>(f.args().size());
+
 
     for (int i = 0; i < f.args().size(); i++) {
       SwiftAST argtree = f.args().get(i);
       Type expType = concrete.getInputs().get(i);
 
       Type exprType = TypeChecker.findSingleExprType(context, argtree);
-      Type argType = TypeChecker.checkFunArg(context, f.function(), i,
-                                              expType, exprType).val2;
+      Type argType = TypeChecker.concretiseFnArg(context, f.function(), i,
+                                      expType, exprType).val2;
       argVars.add(eval(context, argtree, argType, false, renames));
     }
 

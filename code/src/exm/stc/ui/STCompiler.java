@@ -35,8 +35,8 @@ import exm.stc.tclbackend.TurbineGenerator;
 public class STCompiler {
 
   private Logger logger;
-  
-  
+
+
   public STCompiler(Logger logger) {
     super();
     this.logger = logger;
@@ -45,7 +45,7 @@ public class STCompiler {
   /**
    * Compile a Swift file (input file) to TCL output (output stream) and
    * log intermediate code to icOutput.
-   * 
+   *
    * This function contains the high-level logic orchestrating the different
    * passes of the compiler
    * @param inputFile
@@ -60,8 +60,8 @@ public class STCompiler {
       logger.info("STC starting: " + Misc.timestamp());
 
       boolean profile = Settings.getBoolean(Settings.PROFILE_STC);
-      
-      /* 
+
+      /*
        * Walk AST, and build intermediate representation
        * This is where type checking and other semantic analysis happens.
        */
@@ -89,12 +89,12 @@ public class STCompiler {
       throw new STCFatal(ExitCode.ERROR_USER.code());
     }
     catch (AssertionError e) {
-      reportInternalError(e);
+      reportInternalError(logger, e);
       throw new STCFatal(ExitCode.ERROR_INTERNAL.code());
     }
     catch (Throwable e) {
       // Other error, possibly STCRuntimeError
-      reportInternalError(e);
+      reportInternalError(logger, e);
       throw new STCFatal(ExitCode.ERROR_INTERNAL.code());
     }
   }
@@ -105,14 +105,14 @@ public class STCompiler {
     STCMiddleEnd intermediate = new STCMiddleEnd(logger, icOutput);
     ASTWalker walker = new ASTWalker(intermediate);
     walker.walk(inputFile, originalInputFile, preprocessed);
-    
+
     /* Optimise intermediate representation by repeatedly rewriting tree
      * NOTE: currently the optimizer pass is actually required for correctness,
      * as the frontend doesn't always provide correct information about which variables
      * need to be passed into blocks.  The optimizer will fix this problem
      */
     intermediate.optimize();
-   
+
     /* Generate output tcl code from intermediate representation */
     TurbineGenerator codeGen = new TurbineGenerator(logger, Misc.timestamp());
     intermediate.regenerate(codeGen);
@@ -125,9 +125,7 @@ public class STCompiler {
     }
   }
 
-  public static void reportInternalError(Throwable e) {
-    System.err.println("STC INTERNAL ERROR");
-    System.err.println("Please report this");
-    e.printStackTrace();
+  public static void reportInternalError(Logger logger, Throwable e) {
+    logger.error("STC internal error: please report this", e);
   }
 }

@@ -388,6 +388,7 @@ public class STCMiddleEnd {
 
   public void declare(Var var) throws UndefinedTypeException {
     assert(!var.mappedDecl()|| Types.isMappable(var));
+    assert(var.type().isConcrete()) : var;
     currBlock().addVariable(var);
   }
 

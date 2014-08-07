@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
@@ -260,6 +261,9 @@ public class ReorderInstructions extends FunctionOptimizerPass {
 
   private boolean pathExists(MultiMap<Integer, Integer> after,
       int from, int to) {
+    Set<Integer> visited = new HashSet<Integer>();
+    visited.add(from);
+
     StackLite<Integer> stack = new StackLite<Integer>();
     stack.push(from);
     while (!stack.isEmpty()) {
@@ -267,7 +271,13 @@ public class ReorderInstructions extends FunctionOptimizerPass {
       if (curr.equals(to)) {
         return true;
       }
-      stack.addAll(after.get(curr));
+
+      for (int dst: after.get(curr)) {
+        if (!visited.contains(dst)) {
+          stack.push(dst);
+          visited.add(dst);
+        }
+      }
     }
     return false;
   }
