@@ -28,9 +28,11 @@ import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.Arg;
 import exm.stc.common.lang.ExecContext;
 import exm.stc.common.lang.ExecTarget;
+import exm.stc.common.lang.Semantics;
 import exm.stc.common.lang.Var;
 import exm.stc.common.lang.Var.Alloc;
 import exm.stc.common.lang.Var.DefType;
+import exm.stc.common.util.HierarchicalSet;
 import exm.stc.ic.tree.ICContinuations.ContVarDefType;
 import exm.stc.ic.tree.ICContinuations.Continuation;
 import exm.stc.ic.tree.ICContinuations.ContinuationType;
@@ -129,27 +131,45 @@ public class Validate implements OptimizerPass {
       declared.put(out.name(), out);
     }
 
-    checkUniqueVarNames(logger, fn, fn.mainBlock(), declared);
+    checkUniqueVarNames(logger, fn, fn.mainBlock(), declared, new HierarchicalSet<Var>());
   }
 
   private void checkUniqueVarNames(Logger logger,
-      Function fn, Block block, Map<String, Var> declared) {
+      Function fn, Block block, Map<String, Var> declared,
+      HierarchicalSet<Var> unavailable) {
     for (Var v: block.getVariables()) {
       checkVarUnique(logger, fn, declared, v);
     }
 
-    checkVarReferences(logger, fn, block, declared);
+    checkVarReferences(logger, fn, block, declared, unavailable);
 
     if (checkCleanups)
       checkCleanups(logger, fn, block);
 
-    for (Continuation c: block.getContinuations()) {
-      for (Var v: c.constructDefinedVars(ContVarDefType.NEW_DEF)) {
-        checkVarUnique(logger, fn, declared, v);
+    for (Continuation c: block.allComplexStatements()) {
+      checkUniqueVarNamesContRec(logger, fn, declared, unavailable, c);
+    }
+  }
+
+  private void checkUniqueVarNamesContRec(Logger logger, Function fn,
+      Map<String, Var> declared, HierarchicalSet<Var> unavailable,
+      Continuation c) {
+    for (Var v: c.constructDefinedVars(ContVarDefType.NEW_DEF)) {
+      checkVarUnique(logger, fn, declared, v);
+    }
+
+    HierarchicalSet<Var> unavailChild = unavailable.makeChild();
+    if (!c.inheritsParentVars()) {
+      // Remove non-passable
+      for (Var v: declared.values()) {
+        if (!Semantics.canPassToChildTask(v)) {
+          unavailChild.add(v);
+        }
       }
-      for (Block inner: c.getBlocks()) {
-        checkUniqueVarNames(logger, fn, inner, declared);
-      }
+    }
+
+    for (Block inner: c.getBlocks()) {
+      checkUniqueVarNames(logger, fn, inner, declared, unavailChild);
     }
   }
 
@@ -161,34 +181,34 @@ public class Validate implements OptimizerPass {
    * @param declared
    */
   private void checkVarReferences(Logger logger, Function f,
-      Block block, Map<String, Var> declared) {
+      Block block, Map<String, Var> declared, Set<Var> unavailable) {
     for (Var v: block.getVariables()) {
       if (v.storage() == Alloc.GLOBAL_CONST) {
-        checkVarReference(f, declared, v, v);
+        checkVarReference(f, declared, unavailable, v, v);
       }
     }
     for (Statement stmt: block.getStatements()) {
-      checkVarReferences(f, declared, stmt);
+      checkVarReferences(f, declared, unavailable, stmt);
     }
 
     for (Continuation c: block.getContinuations()) {
-      checkVarReferencesCont(f, declared, c);
+      checkVarReferencesCont(f, declared, unavailable, c);
     }
 
     for (CleanupAction ca: block.getCleanups()) {
-      checkVarReference(f, declared, ca.var(), ca);
-      checkVarReferencesInstruction(f, declared, ca.action());
+      checkVarReference(f, declared, unavailable, ca.var(), ca);
+      checkVarReferencesInstruction(f, declared, unavailable, ca.action());
     }
   }
 
   private void checkVarReferences(Function f, Map<String, Var> declared,
-                                  Statement stmt) {
+                                  Set<Var> unavailable, Statement stmt) {
     switch (stmt.type()) {
       case INSTRUCTION:
-        checkVarReferencesInstruction(f, declared, stmt.instruction());
+        checkVarReferencesInstruction(f, declared, unavailable, stmt.instruction());
         break;
       case CONDITIONAL:
-        checkVarReferencesCont(f, declared, stmt.conditional());
+        checkVarReferencesCont(f, declared, unavailable, stmt.conditional());
         break;
       default:
         throw new STCRuntimeError("Unknown statement type " + stmt.type());
@@ -196,26 +216,26 @@ public class Validate implements OptimizerPass {
   }
 
   private void checkVarReferencesCont(Function f, Map<String, Var> declared,
-                                      Continuation c) {
+                              Set<Var> unavailable, Continuation c) {
     for (Var v: c.requiredVars(false)) {
-      checkVarReference(f, declared, v, c.getType());
+      checkVarReference(f, declared, unavailable, v, c.getType());
     }
   }
 
   private void checkVarReferencesInstruction(Function f,
-          Map<String, Var> declared, Instruction inst) {
+          Map<String, Var> declared, Set<Var> unavailable, Instruction inst) {
     for (Arg i: inst.getInputs()) {
       if (i.isVar()) {
-        checkVarReference(f, declared, i.getVar(), inst);
+        checkVarReference(f, declared, unavailable, i.getVar(), inst);
       }
     }
     for (Var o: inst.getOutputs()) {
-      checkVarReference(f, declared, o, inst);
+      checkVarReference(f, declared, unavailable, o, inst);
     }
   }
 
   private void checkVarReference(Function f, Map<String, Var> declared,
-                                 Var referencedVar, Object context) {
+              Set<Var> unavailable, Var referencedVar, Object context) {
     assert(declared.containsKey(referencedVar.name())): referencedVar +
                               " not among declared vars in scope: " + declared;
     Var declaredVar = declared.get(referencedVar.name());
@@ -226,6 +246,7 @@ public class Validate implements OptimizerPass {
               declaredVar.defType() + " " + referencedVar.defType() + " | " +
               declaredVar.mappedDecl() + " " + referencedVar.mappedDecl();
     checkUsed(f, referencedVar);
+    checkAvail(f, referencedVar, unavailable);
   }
 
   private void checkCleanups(Logger logger, Function fn, Block block) {
@@ -280,6 +301,11 @@ public class Validate implements OptimizerPass {
     assert(var.storage() == Alloc.GLOBAL_CONST || fn.varNameUsed(var.name())) :
           "Variable name not marked as used " + var + ".\n" +
           fn.usedVarNames();
+  }
+
+  private void checkAvail(Function fn, Var referencedVar, Set<Var> unavailable) {
+    assert(!unavailable.contains(referencedVar)) :
+      referencedVar + " was unavailable in scope function " + fn.getName();
   }
 
   /**

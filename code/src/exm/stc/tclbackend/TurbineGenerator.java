@@ -2455,7 +2455,7 @@ public class TurbineGenerator implements CompilerBackend {
 
       for (Var v: passIn) {
         if (Types.isBlobVal(v)) {
-          throw new STCRuntimeError("Can't directly pass blob value");
+          throw new STCRuntimeError("Can't directly pass blob value: " + v);
         }
       }
 
