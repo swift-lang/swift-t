@@ -544,7 +544,7 @@ public class ValueNumber implements OptimizerPass {
 
     for (Block contBlock: branchBlocks) {
       Congruences blockState = state.enterContBlock(
-                    cont.inheritsParentVars(), stmtIndex);
+                    cont.variablePassing().isLocal(), stmtIndex);
 
       blockState.varDeclarations(cont.constructDefinedVars());
       blockState.varDeclarations(contBlock.getVariables());

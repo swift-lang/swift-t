@@ -241,9 +241,9 @@ public class ICContinuations {
      * @return true if all variables in block containing continuation are
      *        automatically visible in inner blocks
      */
-    public boolean inheritsParentVars() {
+    public VarPassing variablePassing() {
       // Generally non-async continuations inherit scope
-      return !isAsync();
+      return isAsync() ? VarPassing.MANUAL_NONLOCAL : VarPassing.AUTOMATIC;
     }
 
     /**
@@ -430,6 +430,28 @@ public class ICContinuations {
 
     public boolean includesInitOnly() {
       return this == INIT;
+    }
+  }
+
+  /**
+   * Style of variable passing.
+   */
+  public static enum VarPassing {
+    AUTOMATIC /** Automatically inherit vars from parent */,
+    MANUAL_LOCAL /** Must manually pass vars, but runs in same context */,
+    MANUAL_NONLOCAL /** Cannot assume runs in same context */,
+    ;
+
+    public boolean isManual() {
+      return this == MANUAL_LOCAL || this == MANUAL_NONLOCAL;
+    }
+
+    public boolean isAutomatic() {
+      return this == AUTOMATIC;
+    }
+
+    public boolean isLocal() {
+      return this == AUTOMATIC || this == MANUAL_LOCAL;
     }
   }
 
@@ -1737,9 +1759,9 @@ public class ICContinuations {
     }
 
     @Override
-    public boolean inheritsParentVars() {
+    public VarPassing variablePassing() {
       // Runs in same context
-      return true;
+      return VarPassing.MANUAL_LOCAL;
     }
 
     @Override
