@@ -942,6 +942,11 @@ public class ValueNumber implements OptimizerPass {
       } else {
         maybeVal = state.findRetrieveResult(toFetch, false);
         fetchedHere = false;
+        if (maybeVal != null && maybeVal.isVar() &&
+            !state.isAccessible(maybeVal.getVar())) {
+          // Check value is accessible
+          maybeVal = null;
+        }
       }
       // Can only retrieve value of future or reference
       // If we inserted a wait, need to consider if local value can
