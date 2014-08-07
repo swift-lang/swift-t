@@ -109,6 +109,7 @@ public class UnifiedValues {
 
           List<ArgCV> newAllBranchCVs = findAllBranchCVs(state, congType,
                                             branchStates, allUnifiedCVs);
+
           Pair<List<ValLoc>, Boolean> result = unifyCVs(consts, fn,
                   reorderingAllowed, cont.parent(), parentStmtIndex, congType,
                   branchStates, branchBlocks, newAllBranchCVs, unifiedVars);
@@ -169,15 +170,23 @@ public class UnifiedValues {
       boolean allSameLocation = true;
       Closed allClosed = Closed.YES_RECURSIVE;
       IsValCopy anyValCopy = IsValCopy.NO;
+      boolean skip = false;
 
       // Keep track of all locations to use as key into map
       List<Arg> branchLocs = new ArrayList<Arg>(branchStates.size());
 
       Arg firstLoc = branchStates.get(0).findCanonical(cv, congType);
+
       for (int i = 0; i < branchStates.size(); i++) {
         Congruences bs = branchStates.get(i);
         Arg loc = bs.findCanonical(cv, congType);
-        assert(loc != null);
+        if (loc == null) {
+          // TODO: workaround for failed canonicalisation
+          Logging.getSTCLogger().debug("WARN: Could not locate " + cv + " " +
+                                       congType + " on branch + " + i);
+          skip = true;
+          continue;
+        }
 
         if (loc != firstLoc && !loc.equals(firstLoc)) {
           allSameLocation = false;
@@ -210,7 +219,9 @@ public class UnifiedValues {
       // TODO: fill in with correct
       IsAssign isAssign = IsAssign.NO;
 
-      if (allSameLocation) {
+      if (skip) {
+        // Do nothing
+      } else if (allSameLocation) {
         availVals.add(createUnifiedCV(cv, firstLoc, allClosed, anyValCopy,
                                       isAssign));
       } else if (unifiedLocs.containsKey(branchLocs)) {
