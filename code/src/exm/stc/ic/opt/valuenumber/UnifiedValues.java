@@ -81,7 +81,6 @@ public class UnifiedValues {
         logger.trace("Branch " + (i + 1) + " type was " +
                     branchBlocks.get(i).getType());
       }
-      logger.trace(cont.toString());
     }
     if (branchStates.isEmpty()) {
       return EMPTY;

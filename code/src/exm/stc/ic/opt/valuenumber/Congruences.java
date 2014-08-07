@@ -3,6 +3,7 @@ package exm.stc.ic.opt.valuenumber;
 import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -132,6 +133,15 @@ public class Congruences implements AliasFinder {
      *    one per state
      */
     return child;
+  }
+
+  /**
+   * Note that variables were declared in this scope
+   * @param vars
+   */
+  public void varDeclarations(Collection<Var> vars) {
+    byAlias.varDeclarations(vars);
+    byValue.varDeclarations(vars);
   }
 
   /**

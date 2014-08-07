@@ -2,6 +2,7 @@ package exm.stc.ic.opt.valuenumber;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -87,6 +88,11 @@ class CongruentSets {
   private final boolean varsFromParent;
 
   /**
+   * Unpassable variables defined in this scope
+   */
+  private final Set<Var> unpassableDeclarations;
+
+  /**
    * Queue of merges that need to be completed before returning
    */
   private final LinkedList<ToMerge> mergeQueue;
@@ -116,6 +122,7 @@ class CongruentSets {
     this.mergedInto = new MultiMap<Arg, Arg>();
     this.componentIndex = new HashMap<Arg, Set<ArgCV>>();
     this.varsFromParent = varsFromParent;
+    this.unpassableDeclarations = new HashSet<Var>();
     this.mergeQueue = new LinkedList<ToMerge>();
     this.recanonicalizeQueue = new LinkedList<Arg>();
 
@@ -293,6 +300,18 @@ class CongruentSets {
 
   private boolean isUnpassable(Arg arg) {
     return arg.isVar() && !Semantics.canPassToChildTask(arg.getVar());
+  }
+
+  /**
+   * Add informaation that variable was declared in this scope
+   * @param vars
+   */
+  public void varDeclarations(Collection<Var> vars) {
+    for (Var var: vars) {
+      if (!Semantics.canPassToChildTask(var)) {
+        unpassableDeclarations.add(var);
+      }
+    }
   }
 
   /**
@@ -696,6 +715,13 @@ class CongruentSets {
    * @return true if new entry in this scope
    */
   private boolean setCanonicalEntry(ArgOrCV val, Arg canonicalVal) {
+    /*if (canonicalVal.isVar() &&
+        canonicalVal.getVar().name().equals("__v:1") &&
+        val.isArg() && val.arg().isVar() &&
+        val.arg().getVar().name().equals("__v:7")) {
+      logger.warn("HERE: " + val + " = " + canonicalVal, new Exception());
+    }*/
+
     Arg prev = canonical.put(val, canonicalVal);
     canonicalInv.put(canonicalVal, val);
     return prev == null;
@@ -1064,24 +1090,28 @@ class CongruentSets {
       ArgOrCV cv = new ArgOrCV(v.asArg());
       Arg replace = null;
       CongruentSets curr = CongruentSets.this;
-      boolean allVarsFromParent = true;
       List<CongruentSets> visited = new ArrayList<CongruentSets>();
+      int i = 0;
       do {
+        if (logger.isTraceEnabled()) {
+          logger.trace("ReplacementMap<" + congType + ">.get(" + v +
+                        ") search up level " + i);
+        }
         replace = curr.canonical.get(cv);
         if (replace != null) {
           break;
         }
         visited.add(curr);
-        allVarsFromParent = allVarsFromParent && curr.varsFromParent;
         curr = curr.parent;
+        i++;
       } while (curr != null);
 
-      if (replace != null && !allVarsFromParent && isUnpassable(replace)) {
+
+      if (replace != null && !replacementIsAccessible(replace)) {
         if (logger.isTraceEnabled()) {
           logger.trace(v + " => !!" + replace + "(" + congType + ")"
                 + ": INACCESSIBLE");
         }
-        // Cannot access variable
         // TODO: find alternative?
         return null;
       }
@@ -1091,9 +1121,38 @@ class CongruentSets {
       }
 
       if (logger.isTraceEnabled()) {
-        logger.trace(v + " => " + replace + "(" + congType + ")");
+        logger.trace("ReplacementMap<" + congType + ">.get(" + v + ") = " +
+                      replace);
+
       }
       return replace;
+    }
+
+    private boolean replacementIsAccessible(Arg replace) {
+      assert(replace != null);
+      CongruentSets curr;
+      if (isUnpassable(replace)) {
+        assert(replace.isVar());
+
+        // Search backwards for declaration
+        curr = CongruentSets.this;
+        do {
+          if (curr.unpassableDeclarations.contains(replace.getVar())) {
+            return true;
+          }
+
+          if (!curr.varsFromParent) {
+            return false;
+          }
+          curr = curr.parent;
+        } while (curr != null);
+
+        Logging.getSTCLogger().debug(
+            "Could not find declaration for " + replace);
+        return false;
+      } else {
+        return true;
+      }
     }
 
     /**
@@ -1149,4 +1208,5 @@ class CongruentSets {
       return false;
     }
   }
+
 }
