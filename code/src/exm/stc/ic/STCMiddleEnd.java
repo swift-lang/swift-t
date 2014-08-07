@@ -110,9 +110,9 @@ public class STCMiddleEnd {
     return blockStack.peek();
   }
 
-  public STCMiddleEnd(Logger logger, PrintStream icOutput) {
+  public STCMiddleEnd(Logger logger, PrintStream icOutput, ForeignFunctions foreignFuncs) {
     this.logger = logger;
-    this.program = new Program();
+    this.program = new Program(foreignFuncs);
     this.icOutput = icOutput;
   }
 
@@ -411,13 +411,15 @@ public class STCMiddleEnd {
     props.assertInternalTypesValid();
     currBlock().addInstruction(
         FunctionCall.createBuiltinCall(functionName, frontendName,
-            outputs, Var.asArgList(inputs), props));
+            outputs, Var.asArgList(inputs), props,
+            program.getForeignFunctions()));
   }
 
   public void builtinLocalFunctionCall(String functionName, String frontendName,
           List<Arg> inputs, List<Var> outputs) {
     currBlock().addInstruction(new LocalFunctionCall(
-        functionName, frontendName, inputs, outputs));
+        functionName, frontendName, inputs, outputs,
+        program.getForeignFunctions()));
   }
 
   public void functionCall(String functionName, String frontendName,
@@ -425,7 +427,7 @@ public class STCMiddleEnd {
     props.assertInternalTypesValid();
     currBlock().addInstruction(
           FunctionCall.createFunctionCall(functionName, frontendName,
-                outputs, inputs, mode, props));
+                outputs, inputs, mode, props, program.getForeignFunctions()));
   }
 
   public void runExternal(String cmd, List<Arg> args, List<Arg> inFiles,
@@ -993,8 +995,8 @@ public class STCMiddleEnd {
             TurbineOp.copyInFilename(var, mapping));
   }
 
-  public void generateWrappedBuiltin(String wrapperName,
-      String builtinName, FunctionType ft,
+  public void generateWrappedBuiltin(
+      String wrapperName, String builtinName, FunctionType ft,
       List<Var> outArgs, List<Var> userInArgs, ExecTarget mode,
       boolean isParallel, boolean isTargetable)
           throws UserException {
@@ -1043,7 +1045,7 @@ public class STCMiddleEnd {
     Block mainBlock = fn.mainBlock();
 
     // Check if we need to initialize mappings of output files
-    boolean mapOutFiles = !ForeignFunctions.initsOutputMapping(builtinName);
+    boolean mapOutFiles = !program.getForeignFunctions().initsOutputMapping(builtinName);
 
     Pair<List<WaitVar>, Map<Var, Var>> p;
     p = WrapUtil.buildWaitVars(mainBlock, mainBlock.statementIterator(),
@@ -1072,7 +1074,8 @@ public class STCMiddleEnd {
     List<Var> outVals = WrapUtil.createLocalOpOutputs(waitBlock, outArgs,
                             filenameVars, instBuffer, false, mapOutFiles,
                             true);
-    instBuffer.add(new LocalFunctionCall(builtinName, builtinName, inVals, outVals));
+    instBuffer.add(new LocalFunctionCall(builtinName, builtinName, inVals, outVals,
+                                         program.getForeignFunctions()));
 
     WrapUtil.setLocalOpOutputs(waitBlock, outArgs, outVals, instBuffer,
                                !mapOutFiles, true);

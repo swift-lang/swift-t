@@ -19,6 +19,7 @@ import exm.stc.common.Settings;
 import exm.stc.common.exceptions.InvalidOptionException;
 import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Semantics;
 import exm.stc.common.lang.Var;
 import exm.stc.common.util.MultiMap;
@@ -42,6 +43,11 @@ import exm.stc.ic.tree.ICTree.GlobalConstants;
  */
 class CongruentSets {
   private final Logger logger = Logging.getSTCLogger();
+
+  /**
+   * Data about defined foreign functions
+   */
+  private final ForeignFunctions foreignFuncs;
 
   private final CongruentSets parent;
 
@@ -112,8 +118,10 @@ class CongruentSets {
    */
   public final CongruenceType congType;
 
-  private CongruentSets(CongruenceType congType, CongruentSets parent,
-                        boolean varsFromParent) {
+  private CongruentSets(ForeignFunctions foreignFuncs,
+          CongruenceType congType, CongruentSets parent,
+          boolean varsFromParent) {
+    this.foreignFuncs = foreignFuncs;
     this.congType = congType;
     this.parent = parent;
     this.canonical = new HashMap<ArgOrCV, Arg>();
@@ -290,12 +298,13 @@ class CongruentSets {
     } while (curr != null);
   }
 
-  public static CongruentSets makeRoot(CongruenceType congType) {
-    return new CongruentSets(congType, null, true);
+  public static CongruentSets makeRoot(ForeignFunctions foreignFuncs,
+                                       CongruenceType congType) {
+    return new CongruentSets(foreignFuncs, congType, null, true);
   }
 
   public CongruentSets makeChild(boolean varsFromParent) {
-    return new CongruentSets(congType, this, varsFromParent);
+    return new CongruentSets(foreignFuncs, congType, this, varsFromParent);
   }
 
   private boolean isUnpassable(Arg arg) {
@@ -892,7 +901,7 @@ class CongruentSets {
   private ArgOrCV tryConstantFold(ArgCV val) {
     assert(constFoldEnabled);
     assert(this.congType == CongruenceType.VALUE);
-    return ConstantFolder.constantFold(logger, this, val);
+    return ConstantFolder.constantFold(logger, foreignFuncs, this, val);
   }
 
   /**

@@ -769,18 +769,20 @@ public class ICInstructions {
     protected final List<Var> outputs;
     protected final List<Arg> inputs;
     protected final TaskProps props;
+    protected final ForeignFunctions foreignFuncs; // Metadata about foreign funcs
 
     private final boolean hasUpdateableInputs;
 
     public CommonFunctionCall(Opcode op, String functionName,
-        String frontendName,
-        List<Var> outputs, List<Arg> inputs, TaskProps props) {
+        String frontendName, List<Var> outputs, List<Arg> inputs,
+        TaskProps props, ForeignFunctions foreignFunctions) {
       super(op);
       this.functionName = functionName;
       this.frontendName = frontendName;
       this.outputs = new ArrayList<Var>(outputs);
       this.inputs = new ArrayList<Arg>(inputs);
       this.props = props;
+      this.foreignFuncs = foreignFunctions;
 
 
       boolean hasUpdateableInputs = false;
@@ -954,10 +956,10 @@ public class ICInstructions {
 
     private boolean isCopyFunction() {
       if (frontendName != null &&
-          ForeignFunctions.isCopyFunction(frontendName)) {
+          foreignFuncs.isCopyFunction(frontendName)) {
         return true;
       } else if (frontendName != null &&
-              ForeignFunctions.isMinMaxFunction(frontendName)
+          foreignFuncs.isMinMaxFunction(frontendName)
               && getInput(0).equals(getInput(1))) {
         return true;
       }
@@ -966,13 +968,13 @@ public class ICInstructions {
 
     @Override
     public boolean hasSideEffects() {
-      return (frontendName == null || !ForeignFunctions.isPure(frontendName));
+      return (frontendName == null || !foreignFuncs.isPure(frontendName));
     }
 
     @Override
     public List<ValLoc> getResults() {
       if (frontendName != null &&
-          ForeignFunctions.isPure(frontendName)) {
+          foreignFuncs.isPure(frontendName)) {
         if (isCopyFunction()) {
           // Handle copy as a special case
           return ValLoc.makeCopy(getOutput(0), getInput(0),
@@ -986,7 +988,7 @@ public class ICInstructions {
             List<Arg> cvArgs = new ArrayList<Arg>(inputs.size() + 1);
             cvArgs.addAll(inputs);
             if (frontendName != null &&
-                ForeignFunctions.isCommutative(this.frontendName)) {
+                foreignFuncs.isCommutative(this.frontendName)) {
               // put in canonical order
               Collections.sort(cvArgs);
             }
@@ -1037,13 +1039,14 @@ public class ICInstructions {
      */
     public boolean isImpl(SpecialFunction ...specials) {
       return frontendName != null &&
-          isImpl(this.frontendName, specials);
+          isImpl(foreignFuncs, this.frontendName, specials);
     }
 
-    public static boolean isImpl(String frontendFunctionName,
+    public static boolean isImpl(ForeignFunctions foreignFuncs,
+                                 String frontendFunctionName,
                                  SpecialFunction ...specials) {
       for (SpecialFunction special: specials) {
-        if (ForeignFunctions.isSpecialImpl(frontendFunctionName, special)) {
+        if (foreignFuncs.isSpecialImpl(frontendFunctionName, special)) {
           return true;
         }
       }
@@ -1120,19 +1123,22 @@ public class ICInstructions {
      * @param cv
      * @return
      */
-    public static boolean canConstantFold(ComputedValue<?> cv) {
-      return isImpl((String)cv.subop(), SpecialFunction.ARGV);
+    public static boolean canConstantFold(ForeignFunctions foreignFuncs,
+                                          ComputedValue<?> cv) {
+      return isImpl(foreignFuncs, (String)cv.subop(), SpecialFunction.ARGV);
     }
 
     /**
      * Try to constant fold any special functions.
+     * @param foreignFuncs
      * @param cv
      * @param inputs
      * @return a value arg if successful, null if not
      */
-    public static Arg tryConstantFold(ComputedValue<?> cv, List<Arg> inputs) {
+    public static Arg tryConstantFold(ForeignFunctions foreignFuncs,
+        ComputedValue<?> cv, List<Arg> inputs) {
       String functionName = (String)cv.subop();
-      if (isImpl(functionName, SpecialFunction.ARGV)) {
+      if (isImpl(foreignFuncs, functionName, SpecialFunction.ARGV)) {
         Arg argName = inputs.get(0);
         if (argName.isStringVal()) {
           String val = CompileTimeArgs.lookup(argName.getStringLit());
@@ -1218,9 +1224,10 @@ public class ICInstructions {
     private final List<Boolean> closedInputs; // which inputs are closed
 
     private FunctionCall(Opcode op, String functionName,
-        String frontendName,
-        List<Var> outputs, List<Arg> inputs, TaskProps props) {
-      super(op, functionName, frontendName, outputs, inputs, props);
+        String frontendName, List<Var> outputs, List<Arg> inputs,
+        TaskProps props, ForeignFunctions foreignFunctions) {
+      super(op, functionName, frontendName, outputs, inputs, props,
+            foreignFunctions);
       if (op != Opcode.CALL_FOREIGN && op != Opcode.CALL_CONTROL &&
           op != Opcode.CALL_SYNC && op != Opcode.CALL_LOCAL &&
           op != Opcode.CALL_LOCAL_CONTROL) {
@@ -1241,7 +1248,7 @@ public class ICInstructions {
     public static FunctionCall createFunctionCall(
         String functionName, String frontendName,
         List<Var> outputs, List<Arg> inputs,
-        ExecTarget mode, TaskProps props) {
+        ExecTarget mode, TaskProps props, ForeignFunctions foreignFuncs) {
       Opcode op;
       ExecContext targetCx = mode.targetContext();
       if (!mode.isAsync()) {
@@ -1260,15 +1267,15 @@ public class ICInstructions {
         }
       }
       return new FunctionCall(op, functionName, frontendName,
-                              outputs, inputs, props);
+                              outputs, inputs, props, foreignFuncs);
     }
 
     public static FunctionCall createBuiltinCall(
         String functionName, String frontendName,
         List<Var> outputs, List<Arg> inputs,
-        TaskProps props) {
+        TaskProps props, ForeignFunctions foreignFuncs) {
       return new FunctionCall(Opcode.CALL_FOREIGN, functionName, frontendName,
-                              outputs, inputs, props);
+                              outputs, inputs, props, foreignFuncs);
     }
 
     @Override
@@ -1341,9 +1348,9 @@ public class ICInstructions {
           (allInputsClosed(closedVars) &&
               allOutputSideChannelsClosed(closedVars, closedLocations));
 
-      if (allNeededClosed && (ForeignFunctions.hasOpEquiv(this.functionName)
-                || ForeignFunctions.hasLocalImpl(this.functionName))) {
-        ExecTarget mode = ForeignFunctions.getTaskMode(this.functionName);
+      if (allNeededClosed && (foreignFuncs.hasOpEquiv(this.functionName)
+                || foreignFuncs.hasLocalImpl(this.functionName))) {
+        ExecTarget mode = foreignFuncs.getTaskMode(this.functionName);
 
         // True unless the function alters mapping itself
         boolean preinitOutputMapping = true;
@@ -1356,7 +1363,7 @@ public class ICInstructions {
             Collections.unmodifiableList(this.outputs),
             Collections.unmodifiableList(this.varInputs(true)),
             Var.NONE,
-            mode, recursiveInOut(this.op, this.frontendName),
+            mode, recursiveInOut(foreignFuncs, this.op, this.frontendName),
             preinitOutputMapping, false);
 
       }
@@ -1430,8 +1437,8 @@ public class ICInstructions {
 
       Instruction inst;
       List<Arg> fetchedVals = Fetched.getFetched(values);
-      if (ForeignFunctions.hasOpEquiv(functionName)) {
-        BuiltinOpcode newOp = ForeignFunctions.getOpEquiv(functionName);
+      if (foreignFuncs.hasOpEquiv(functionName)) {
+        BuiltinOpcode newOp = foreignFuncs.getOpEquiv(functionName);
         assert(newOp != null);
 
         if (outputs.size() == 1) {
@@ -1443,7 +1450,7 @@ public class ICInstructions {
           inst = Builtin.createLocal(newOp, null, fetchedVals);
         }
       } else {
-        String localFunctionName = ForeignFunctions.getLocalImpl(functionName);
+        String localFunctionName = foreignFuncs.getLocalImpl(functionName);
         assert(localFunctionName != null);
         for (int i = 0; i < outputs.size(); i++) {
           assert(outputs.get(i).equals(outVars.get(i).original));
@@ -1451,7 +1458,8 @@ public class ICInstructions {
         }
         List<Var> fetchedOut = Fetched.getFetched(outVars);
         inst = new LocalFunctionCall(localFunctionName, frontendName,
-                                     fetchedVals, fetchedOut);
+                                     fetchedVals, fetchedOut,
+                                     foreignFuncs);
       }
       return new MakeImmChange(inst);
     }
@@ -1464,7 +1472,7 @@ public class ICInstructions {
      */
     private void checkSwappedOutput(Var oldOut, Var newOut) {
       Type exp = Types.retrievedType(oldOut.type(),
-                  recursiveInOut(op, frontendName));
+                  recursiveInOut(foreignFuncs, op, frontendName));
       assert(exp.equals(newOut.type()));
     }
 
@@ -1509,7 +1517,8 @@ public class ICInstructions {
      * @param op
      * @param frontendName frontendName, or null if unknown
      */
-    private static boolean recursiveInOut(Opcode op, String frontendName) {
+    private static boolean recursiveInOut(ForeignFunctions foreignFuncs,
+                                        Opcode op, String frontendName) {
       switch (op) {
         case CALL_SYNC:
         case CALL_LOCAL:
@@ -1520,8 +1529,8 @@ public class ICInstructions {
           // Note: we may be calling wrapper of foreign function -
           // can't assume that it is not foreign based on opcode
           if (frontendName != null &&
-              ForeignFunctions.isForeignFunction(frontendName)) {
-            return ForeignFunctions.recursivelyUnpackedInOut(frontendName);
+              foreignFuncs.isForeignFunction(frontendName)) {
+            return foreignFuncs.recursivelyUnpackedInOut(frontendName);
           } else {
             return false;
           }
@@ -1542,7 +1551,7 @@ public class ICInstructions {
         case CALL_LOCAL_CONTROL:
           return ExecTarget.nonDispatchedControl();
         case CALL_FOREIGN:
-          return ForeignFunctions.getTaskMode(functionName);
+          return foreignFuncs.getTaskMode(functionName);
         case CALL_CONTROL:
           return ExecTarget.dispatchedControl();
         default:
@@ -1572,16 +1581,16 @@ public class ICInstructions {
       // Variables are immutable so just need to clone lists
       return new FunctionCall(op, functionName, frontendName,
           new ArrayList<Var>(outputs), new ArrayList<Arg>(inputs),
-          props.clone());
+          props.clone(), foreignFuncs);
     }
   }
 
   public static class LocalFunctionCall extends CommonFunctionCall {
 
     public LocalFunctionCall(String functionName, String frontendName,
-        List<Arg> inputs, List<Var> outputs) {
+        List<Arg> inputs, List<Var> outputs, ForeignFunctions foreignFuncs) {
       super(Opcode.CALL_FOREIGN_LOCAL, functionName, frontendName,
-            outputs, inputs, null);
+            outputs, inputs, null, foreignFuncs);
       for(Var v: outputs) {
         assert(v != null);
       }
@@ -1625,7 +1634,7 @@ public class ICInstructions {
 
     @Override
     public ExecTarget execMode() {
-      ExecTarget fnMode = ForeignFunctions.getTaskMode(functionName);
+      ExecTarget fnMode = foreignFuncs.getTaskMode(functionName);
 
       // Executes synchronously in desired context
       return ExecTarget.sync(fnMode.targetContext());
@@ -1633,7 +1642,7 @@ public class ICInstructions {
 
     @Override
     public boolean isCheap() {
-      ExecTarget fnMode = ForeignFunctions.getTaskMode(functionName);
+      ExecTarget fnMode = foreignFuncs.getTaskMode(functionName);
       // The logic is that any functions which were designated to execute
       // non-locally must involve some amount of work.
       return !fnMode.isDispatched();
@@ -1659,7 +1668,8 @@ public class ICInstructions {
     public Instruction clone() {
       // Variables are immutable so just need to clone lists
       return new LocalFunctionCall(functionName, frontendName,
-          new ArrayList<Arg>(inputs), new ArrayList<Var>(outputs));
+          new ArrayList<Arg>(inputs), new ArrayList<Var>(outputs),
+          foreignFuncs);
     }
   }
 

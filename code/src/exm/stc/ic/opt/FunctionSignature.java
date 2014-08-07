@@ -12,6 +12,7 @@ import org.apache.log4j.Logger;
 
 import exm.stc.common.Settings;
 import exm.stc.common.lang.Arg;
+import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Semantics;
 import exm.stc.common.lang.TaskProp.TaskProps;
 import exm.stc.common.lang.Types;
@@ -61,7 +62,8 @@ public class FunctionSignature implements OptimizerPass {
     ListIterator<Function> fnIt = program.functionIterator();
     while (fnIt.hasNext()) {
       Function fn = fnIt.next();
-      Function newFn = switchToValuePassing(logger, fn, usedFunctionNames);
+      Function newFn = switchToValuePassing(logger, program.getForeignFunctions(),
+                                            fn, usedFunctionNames);
       if (newFn != null) {
         fnIt.remove(); // Remove old function
         fnIt.add(newFn);
@@ -76,8 +78,8 @@ public class FunctionSignature implements OptimizerPass {
     FunctionInline.inlineAllOccurrences(logger, program, toInline);
   }
 
-  private Function switchToValuePassing(Logger logger, Function fn,
-                                     Set<String> usedFunctionNames) {
+  private Function switchToValuePassing(Logger logger, ForeignFunctions foreignFuncs,
+            Function fn, Set<String> usedFunctionNames) {
     if (fn.blockingInputs().isEmpty())
       return null;
 
@@ -107,7 +109,8 @@ public class FunctionSignature implements OptimizerPass {
     String newName = selectUniqueName(fn.getName(), usedFunctionNames);
 
     // Block that calls into new version
-    Block callNewFunction = callNewFunctionCode(fn, newName, switchVars);
+    Block callNewFunction = callNewFunctionCode(foreignFuncs, fn, newName,
+                                                switchVars);
     Block newBlock = fn.swapBlock(callNewFunction);
 
 
@@ -141,7 +144,8 @@ public class FunctionSignature implements OptimizerPass {
    *
    * @return new main block for fn
    */
-  private Block callNewFunctionCode(Function fn, String newFunctionName,
+  private Block callNewFunctionCode(ForeignFunctions foreignFuncs,
+                              Function fn, String newFunctionName,
                                     List<Var> switched) {
     Block main = new Block(fn);
     // these vars should already be closed.
@@ -162,7 +166,7 @@ public class FunctionSignature implements OptimizerPass {
     String frontendName = null;
     FunctionCall callNew = FunctionCall.createFunctionCall(newFunctionName,
                             frontendName, fn.getOutputList(), callInputs, fn.mode(),
-                            new TaskProps());
+                            new TaskProps(), foreignFuncs);
     main.addInstruction(callNew);
     return main;
   }

@@ -32,7 +32,6 @@ import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedFunctionException;
 import exm.stc.common.exceptions.UndefinedOperatorException;
 import exm.stc.common.exceptions.UserException;
-import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Operators;
 import exm.stc.common.lang.Operators.Op;
 import exm.stc.common.lang.Operators.OpType;
@@ -592,7 +591,7 @@ public class TypeChecker {
           String function, Var output) throws TypeMismatchException {
     if (Types.isFile(output) && output.isMapped() == Ternary.FALSE &&
         !output.type().fileKind().supportsTmpImmediate() &&
-        !ForeignFunctions.initsOutputMapping(function)) {
+        !context.getForeignFunctions().initsOutputMapping(function)) {
       /*
        * We can't create temporary files for this type.  If we detect any
        * where a definitely unmapped var is an output to a function, then

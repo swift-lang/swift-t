@@ -24,6 +24,7 @@ import org.apache.log4j.Logger;
 import exm.stc.common.Settings;
 import exm.stc.common.exceptions.STCFatal;
 import exm.stc.common.exceptions.UserException;
+import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.util.Misc;
 import exm.stc.frontend.ASTWalker;
 import exm.stc.ic.STCMiddleEnd;
@@ -102,8 +103,9 @@ public class STCompiler {
   private void compileOnce(String inputFile, String originalInputFile,
       boolean preprocessed,
       OutputStream output, PrintStream icOutput) throws UserException {
-    STCMiddleEnd intermediate = new STCMiddleEnd(logger, icOutput);
-    ASTWalker walker = new ASTWalker(intermediate);
+    ForeignFunctions foreignFuncs = new ForeignFunctions();
+    STCMiddleEnd intermediate = new STCMiddleEnd(logger, icOutput, foreignFuncs);
+    ASTWalker walker = new ASTWalker(intermediate, foreignFuncs);
     walker.walk(inputFile, originalInputFile, preprocessed);
 
     /* Optimise intermediate representation by repeatedly rewriting tree

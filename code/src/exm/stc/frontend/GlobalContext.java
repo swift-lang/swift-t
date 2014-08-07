@@ -32,6 +32,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedExecContextException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -60,6 +61,11 @@ public class GlobalContext extends Context {
                         new HashMap<String, IntrinsicFunction>();
 
   /**
+   * Track info about foreign functions
+   */
+  private final ForeignFunctions foreignFuncs;
+
+  /**
    * Track name to exec target mapping
    * @param inputFile
    * @param logger
@@ -67,9 +73,11 @@ public class GlobalContext extends Context {
   private final Map<String, ExecContext> execContexts =
                               new HashMap<String, ExecContext>();
 
-  public GlobalContext(String inputFile, Logger logger) {
+  public GlobalContext(String inputFile, Logger logger,
+                        ForeignFunctions foreignFuncs) {
     super(logger, 0);
     this.inputFile = inputFile;
+    this.foreignFuncs = foreignFuncs;
 
     // Add all predefined types into type name dict
     types.putAll(Types.getBuiltInTypes());
@@ -165,6 +173,11 @@ public class GlobalContext extends Context {
   @Override
   public GlobalContext getGlobals() {
     return this;
+  }
+
+  @Override
+  public ForeignFunctions getForeignFunctions() {
+    return foreignFuncs;
   }
 
   @Override

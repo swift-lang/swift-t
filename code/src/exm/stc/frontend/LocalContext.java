@@ -25,6 +25,7 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.UndefinedExecContextException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.ExecContext;
+import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Intrinsics.IntrinsicFunction;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
@@ -58,7 +59,7 @@ public class LocalContext extends Context {
     line = parent.line;
     col = parent.col;
   }
-  
+
   @Override
   public DefInfo lookupDef(String name) {
     DefInfo result = allDefs.get(name);
@@ -79,7 +80,7 @@ public class LocalContext extends Context {
   }
 
   @Override
-  public Var createTmpVar(Type type, boolean storeInStack) 
+  public Var createTmpVar(Type type, boolean storeInStack)
                                                       throws UserException {
       String name;
       do {
@@ -87,9 +88,9 @@ public class LocalContext extends Context {
         name = Var.TMP_VAR_PREFIX + counter;
       } while (lookupDef(name) != null); // In case variable name in use
 
-      Alloc storage = storeInStack ? 
+      Alloc storage = storeInStack ?
                   Alloc.STACK : Alloc.TEMP;
-      return declareVariable(type, name, storage, DefType.LOCAL_COMPILER, 
+      return declareVariable(type, name, storage, DefType.LOCAL_COMPILER,
                              VarProvenance.exprTmp(getSourceLoc()), false);
   }
 
@@ -117,7 +118,7 @@ public class LocalContext extends Context {
   @Override
   public Var createLocalValueVariable(Type type, Var var)
       throws UserException {
-    String varName; 
+    String varName;
     VarProvenance prov;
     if (var != null) {
       prov = VarProvenance.valueOf(var, getSourceLoc());
@@ -132,7 +133,7 @@ public class LocalContext extends Context {
     } else {
       storage = Alloc.ALIAS;
     }
-    
+
     String name = chooseVariableName(Var.LOCAL_VALUE_VAR_PREFIX, varName,
                                     "value_var");
     return declareVariable(type, name, storage, DefType.LOCAL_COMPILER,
@@ -140,7 +141,7 @@ public class LocalContext extends Context {
   }
 
   /**
-   * Helper to choose variable name.  
+   * Helper to choose variable name.
    * @param prefix Prefix that must be at start
    * @param preferredSuffix Preferred suffix
    * @param counterName name of counter to use to make unique if needed
@@ -194,17 +195,17 @@ public class LocalContext extends Context {
   public boolean hasFunctionProp(String name, FnProp prop) {
     return parent.hasFunctionProp(name, prop);
   }
-  
+
   @Override
   public List<FnProp> getFunctionProps(String function) {
     return parent.getFunctionProps(function);
   }
-  
+
   @Override
   public void addIntrinsic(String function, IntrinsicFunction intrinsic) {
     throw new STCRuntimeError("Cannot add intrinsic in local context");
   }
-  
+
   @Override
   public IntrinsicFunction lookupIntrinsic(String function) {
     return parent.lookupIntrinsic(function);
@@ -213,6 +214,11 @@ public class LocalContext extends Context {
   @Override
   public GlobalContext getGlobals() {
     return globals;
+  }
+
+  @Override
+  public ForeignFunctions getForeignFunctions() {
+    return globals.getForeignFunctions();
   }
 
   @Override
@@ -246,7 +252,7 @@ public class LocalContext extends Context {
       return parent.lookupTypeUnsafe(typeName);
     }
   }
-  
+
 
   @Override
   public ExecContext lookupExecContext(String name)
@@ -258,7 +264,7 @@ public class LocalContext extends Context {
   public Collection<String> execTargetNames() {
     return globals.execTargetNames();
   }
-  
+
   /**
    * Called when we want to create a new alias for a structure filed
    */
@@ -284,7 +290,7 @@ public class LocalContext extends Context {
       throw new STCRuntimeError("Shouldn't be possible to have double defn");
     }
   }
-  
+
   @Override
   public FunctionContext getFunctionContext() {
     if (this.functionContext != null) {

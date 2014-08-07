@@ -17,7 +17,6 @@ import exm.stc.common.exceptions.STCRuntimeError;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UserException;
 import exm.stc.common.lang.ExecTarget;
-import exm.stc.common.lang.ForeignFunctions;
 import exm.stc.common.lang.Types;
 import exm.stc.common.lang.Types.FunctionType;
 import exm.stc.common.lang.Types.Type;
@@ -79,7 +78,7 @@ public class WrapperGen {
     }
     inlineTcl.addOutNames(fdecl.getOutNames());
     inlineTcl.verifyNames(context);
-    ForeignFunctions.addLocalImpl(function, function);
+    context.getForeignFunctions().addLocalImpl(function, function);
     return inlineTcl;
   }
 
@@ -152,9 +151,10 @@ public class WrapperGen {
    * @param isParallel
    * @param isTargetable
    */
-  public void saveWrapper(String function, FunctionType ft, FunctionDecl decl,
-      ExecTarget taskMode, boolean isParallel, boolean isTargetable) {
-    assert(ForeignFunctions.hasLocalImpl(function)) :
+  public void saveWrapper(Context context, String function, FunctionType ft,
+      FunctionDecl decl, ExecTarget taskMode, boolean isParallel,
+      boolean isTargetable) {
+    assert(context.getForeignFunctions().hasLocalImpl(function)) :
               "Expected inline version for " + function;
     SavedWrapper wrapper = new SavedWrapper(function, ft, decl, taskMode,
                                     isParallel, isTargetable);
@@ -245,7 +245,7 @@ public class WrapperGen {
 
 
     // Copy over template
-    ForeignFunctions.addLocalImpl(chosenName, wrapper.function);
+    context.getForeignFunctions().addLocalImpl(chosenName, wrapper.function);
     return chosenName;
   }
 
