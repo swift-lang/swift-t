@@ -1737,6 +1737,12 @@ public class ICContinuations {
     }
 
     @Override
+    public boolean inheritsParentVars() {
+      // Runs in same context
+      return true;
+    }
+
+    @Override
     public boolean spawnsSingleTask() {
       return true;
     }
