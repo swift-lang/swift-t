@@ -185,6 +185,9 @@ public class ValueNumber implements OptimizerPass {
         congruent.markClosedBlockStart(wv.var, false);
       }
     }
+
+    congruent.varDeclarations(f.getInputList());
+    congruent.varDeclarations(f.getOutputList());
     return congruent;
   }
 
@@ -539,6 +542,10 @@ public class ValueNumber implements OptimizerPass {
     for (Block contBlock: branchBlocks) {
       Congruences blockState = state.enterContBlock(
                     cont.inheritsParentVars(), stmtIndex);
+
+      blockState.varDeclarations(cont.constructDefinedVars());
+      blockState.varDeclarations(contBlock.getVariables());
+
       if (contClosedVars != null) {
         for (BlockingVar bv: contClosedVars) {
           blockState.markClosedBlockStart(bv.var, bv.recursive);
