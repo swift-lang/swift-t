@@ -29,6 +29,10 @@
 // Default staging mode to use
 #define COASTER_DEFAULT_STAGING_MODE COASTER_STAGE_IF_PRESENT
 
+// Default job manager.  Can be NULL for Coaster default
+extern const char *coaster_default_job_manager;
+extern size_t coaster_default_job_manager_len;
+
 /*
   Register a coaster executor with basic configuration settings.
  */

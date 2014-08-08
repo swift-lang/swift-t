@@ -1455,8 +1455,8 @@ Coaster_Run_Cmd(ClientData cdata, Tcl_Interp *interp,
   const char *stdin_s = NULL, *stdout_s = NULL, *stderr_s = NULL;
   size_t stdin_slen = 0, stdout_slen = 0, stderr_slen = 0;
 
-  const char *job_manager = NULL;
-  size_t job_manager_len = 0;
+  const char *job_manager = coaster_default_job_manager;
+  size_t job_manager_len = coaster_default_job_manager_len;
   coaster_staging_mode staging_mode = COASTER_DEFAULT_STAGING_MODE;
 
   rc = parse_coaster_opts(interp, objv, objv[5], &stdin_s, &stdin_slen,

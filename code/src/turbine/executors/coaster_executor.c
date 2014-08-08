@@ -36,6 +36,7 @@
 /* Environment variable names
    TODO: final config mechanism */
 #define COASTER_ENV_SERVICE_URL "COASTER_SERVICE_URL"
+#define COASTER_ENV_JOB_MANAGER "COASTER_JOB_MANAGER"
 #define COASTER_ENV_CLIENT_SLOTS "COASTER_CLIENT_SLOTS"
 
 #define COASTER_DEFAULT_SERVICE_URL "127.0.0.1:53001"
@@ -46,6 +47,10 @@
   - Memory/CPU overhead of managing many jobs
  */
 #define COASTER_DEFAULT_CLIENT_SLOTS 1024
+
+// Default configured job manager
+const char *coaster_default_job_manager;
+size_t coaster_default_job_manager_len;
 
 /*
   Coaster context info, e.g. configuration that remains constant
@@ -204,6 +209,15 @@ coaster_configure(void **context, const char *config,
   EXEC_MALLOC_CHECK(cx->service_url);
   memcpy(cx->service_url, service_url, service_url_len);
   cx->service_url_len = service_url_len;
+
+  const char *coaster_default_job_manager =
+        getenv(COASTER_ENV_JOB_MANAGER);
+  if (coaster_default_job_manager != NULL) {
+    coaster_default_job_manager_len =
+          strlen(coaster_default_job_manager);
+  } else {
+    coaster_default_job_manager_len = 0;
+  }
 
   *context = cx;
   return TURBINE_SUCCESS;
