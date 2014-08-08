@@ -26,6 +26,9 @@
 // Registered name for coaster executor
 #define COASTER_EXECUTOR_NAME "COASTER"
 
+// Default staging mode to use
+#define COASTER_DEFAULT_STAGING_MODE COASTER_STAGE_IF_PRESENT
+
 /*
   Register a coaster executor with basic configuration settings.
  */

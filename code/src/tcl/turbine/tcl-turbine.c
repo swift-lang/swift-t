@@ -128,13 +128,32 @@ worker_keyword_args(Tcl_Interp *interp, Tcl_Obj *const objv[],
                     Tcl_Obj *dict, int *buffer_count, int *buffer_size);
 
 #if HAVE_COASTER == 1
+struct staging_mode_entry {
+  const char *name;
+  coaster_staging_mode mode;
+};
+
+/*
+ * Convert strings to enum values
+ */
+static struct staging_mode_entry staging_modes[] = {
+  { "always", COASTER_STAGE_ALWAYS },
+  { "if_present", COASTER_STAGE_IF_PRESENT },
+  { "on_error", COASTER_STAGE_ON_ERROR },
+  { "on_success", COASTER_STAGE_ON_SUCCESS },
+};
+
+int num_staging_modes = (int)(sizeof(staging_modes) / sizeof(staging_modes[0]));
+
 static int parse_coaster_stages(Tcl_Interp *interp, Tcl_Obj *const objv[],
-      Tcl_Obj *list, coaster_staging_mode default_stage_mode,
+      Tcl_Obj *list, coaster_staging_mode staging_mode,
       int *count, coaster_stage_entry **stages);
 static int parse_coaster_opts(Tcl_Interp *interp, Tcl_Obj *const objv[],
       Tcl_Obj *dict, const char **stdin_s, size_t *stdin_slen,
       const char **stdout_s, size_t *stdout_slen,
-      const char **stderr_s, size_t *stderr_slen);
+      const char **stderr_s, size_t *stderr_slen,
+      const char **job_manager, size_t *job_manager_len,
+      coaster_staging_mode *staging_mode);
 #endif
 
 
@@ -1298,7 +1317,7 @@ Async_Exec_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   int buffer_count = TURBINE_ASYNC_EXEC_DEFAULT_BUFFER_COUNT;
   int buffer_size = TURBINE_ASYNC_EXEC_DEFAULT_BUFFER_SIZE;
-  
+
   if (objc >= 4)
   {
     DEBUG_TURBINE("Keyword args for %s: %s", exec_name,
@@ -1394,14 +1413,15 @@ Noop_Exec_Run_Cmd(ClientData cdata, Tcl_Interp *interp,
   return TCL_OK;
 }
 
-// TODO: how to select staging mode?
-#define TMP_STAGING_MODE COASTER_STAGE_IF_PRESENT
-
 /*
   turbine::coaster_run <executable> <argument list> <infiles>
               <outfiles> <options dict>
               <success callback> <failure callback>
-  TODO: additional parameters
+  options dict: optional arguments. Valid keys are:
+    stdin/stdout/stderr: redirect output
+    job_manager: coaster job manager to use, e.g. "local:slurm" or "local:local"
+    staging_mode: staging mode to use
+              ("always", "if_present", "on_error", "on_success")
  */
 static int
 Coaster_Run_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -1420,7 +1440,6 @@ Coaster_Run_Cmd(ClientData cdata, Tcl_Interp *interp,
   coaster_exec = turbine_get_async_exec(COASTER_EXECUTOR_NAME, &started);
   TCL_CONDITION(coaster_exec != NULL, "Coaster executor not registered");
   TCL_CONDITION(started, "Coaster executor not started");
-
   const char *executable;
   int executable_len;
   executable = Tcl_GetStringFromObj(objv[1], &executable_len);
@@ -1433,19 +1452,25 @@ Coaster_Run_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = tcllist_to_strings(interp, objv, objv[2], &argc, &argv, &arg_lens);
   TCL_CHECK(rc);
 
-  rc = parse_coaster_stages(interp, objv, objv[3], TMP_STAGING_MODE,
-                    &stageinc, &stageins);
-  TCL_CHECK(rc);
-
-  rc = parse_coaster_stages(interp, objv, objv[4], TMP_STAGING_MODE,
-                    &stageoutc, &stageouts);
-  TCL_CHECK(rc);
-
   const char *stdin_s = NULL, *stdout_s = NULL, *stderr_s = NULL;
   size_t stdin_slen = 0, stdout_slen = 0, stderr_slen = 0;
 
+  const char *job_manager = NULL;
+  size_t job_manager_len = 0;
+  coaster_staging_mode staging_mode = COASTER_DEFAULT_STAGING_MODE;
+
   rc = parse_coaster_opts(interp, objv, objv[5], &stdin_s, &stdin_slen,
-            &stdout_s, &stdout_slen, &stderr_s, &stderr_slen);
+            &stdout_s, &stdout_slen, &stderr_s, &stderr_slen,
+            &job_manager, &job_manager_len, &staging_mode);
+  TCL_CHECK(rc);
+ 
+  // Parse stages after we know staging mode
+  rc = parse_coaster_stages(interp, objv, objv[3], staging_mode,
+                    &stageinc, &stageins);
+  TCL_CHECK(rc);
+
+  rc = parse_coaster_stages(interp, objv, objv[4], staging_mode,
+                    &stageoutc, &stageouts);
   TCL_CHECK(rc);
 
   turbine_task_callbacks callbacks;
@@ -1454,10 +1479,6 @@ Coaster_Run_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   coaster_job *job;
   coaster_rc crc;
-
-  // TODO: get job manager
-  const char *job_manager = NULL;
-  size_t job_manager_len = 0;
 
   crc = coaster_job_create(executable, (size_t)executable_len, argc,
                 argv, arg_lens, job_manager, job_manager_len, &job);
@@ -1533,7 +1554,7 @@ static int tcllist_to_strings(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
 #if HAVE_COASTER == 1
 static int parse_coaster_stages(Tcl_Interp *interp, Tcl_Obj *const objv[],
-      Tcl_Obj *list, coaster_staging_mode default_stage_mode,
+      Tcl_Obj *list, coaster_staging_mode staging_mode,
       int *count, coaster_stage_entry **stages)
 {
   int rc;
@@ -1555,7 +1576,7 @@ static int parse_coaster_stages(Tcl_Interp *interp, Tcl_Obj *const objv[],
       e->src_len = (size_t)tmp_len;
       e->dst = e->src;
       e->dst_len = e->src_len;
-      e->mode = default_stage_mode;
+      e->mode = staging_mode;
     }
   }
   else
@@ -1572,7 +1593,9 @@ static int parse_coaster_stages(Tcl_Interp *interp, Tcl_Obj *const objv[],
 static int parse_coaster_opts(Tcl_Interp *interp, Tcl_Obj *const objv[],
       Tcl_Obj *dict, const char **stdin_s, size_t *stdin_slen,
       const char **stdout_s, size_t *stdout_slen,
-      const char **stderr_s, size_t *stderr_slen)
+      const char **stderr_s, size_t *stderr_slen,
+      const char **job_manager, size_t *job_manager_len,
+      coaster_staging_mode *staging_mode)
 {
   int rc;
 
@@ -1596,7 +1619,7 @@ static int parse_coaster_opts(Tcl_Interp *interp, Tcl_Obj *const objv[],
       *stdin_slen = (size_t)tmp_len;
       continue;
     }
-    if (key_len == 6)
+    else if (key_len == 6)
     {
       if (memcmp(key_s, "stdout", 6) == 0)
       {
@@ -1611,7 +1634,27 @@ static int parse_coaster_opts(Tcl_Interp *interp, Tcl_Obj *const objv[],
         continue;
       }
     }
-
+    else if (key_len == 11 && memcmp(key_s, "job_manager", 11) == 0)
+    {
+      *job_manager = Tcl_GetStringFromObj(value, &tmp_len);
+      *job_manager_len = (size_t)tmp_len;
+      continue;
+    }
+    else if (key_len == 12 && memcmp(key_s, "staging_mode", 12) == 0)
+    {
+      const char *staging_mode_s = Tcl_GetString(value);
+      bool valid_staging_mode = false;
+      for (int i = 0; i < num_staging_modes; i++) {
+        if (strcmp(staging_mode_s, staging_modes[i].name) == 0) {
+          *staging_mode = staging_modes[i].mode;
+          valid_staging_mode = true;
+          break;
+        }
+      }
+      TCL_CONDITION(valid_staging_mode, "Unknown Coaster staging mode: "
+                    "%s", staging_mode_s);
+      continue;
+    }
     TCL_CONDITION(false, "Unknown coaster key: %.*s", key_len, key_s);
   }
   Tcl_DictObjDone(&search);
