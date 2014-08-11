@@ -48,6 +48,9 @@ extern int xlb_my_server;
 /** True if this rank is a server */
 extern bool xlb_am_server;
 
+/** True if this rank is a worker leader */
+extern bool xlb_am_leader;
+
 /** Lowest-ranked server */
 extern int xlb_master_server_rank;
 
@@ -65,7 +68,14 @@ extern bool xlb_perf_counters_enabled;
 
 extern double max_malloc;
 
-extern MPI_Comm adlb_comm, adlb_server_comm, adlb_worker_comm;
+extern MPI_Comm adlb_comm, adlb_server_comm, adlb_worker_comm, adlb_leader_comm;
+
+__attribute__((always_inline))
+static inline bool
+xlb_is_server(int rank)
+{
+  return (rank >= xlb_workers);
+}
 
 /**
    Start time from MPI_Wtime()

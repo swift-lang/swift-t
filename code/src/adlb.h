@@ -39,6 +39,10 @@ adlb_code ADLB_Server(long max_memory);
 
 adlb_code ADLB_Version(version* output);
 
+MPI_Comm ADLB_GetComm_workers(void);
+
+MPI_Comm ADLB_GetComm_leaders(void);
+
 adlb_code ADLB_Hostmap_stats(unsigned int* count,
                              unsigned int* name_max);
 

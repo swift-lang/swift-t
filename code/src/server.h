@@ -94,13 +94,6 @@ xlb_my_worker_ix(int rank)
   return rank / xlb_servers;
 }
 
-__attribute__((always_inline))
-static inline bool
-xlb_is_server(int rank)
-{
-  return (rank >= xlb_workers);
-}
-
 /**
    @param rank of worker
    @return rank of server for this worker rank

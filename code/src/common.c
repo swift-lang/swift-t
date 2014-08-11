@@ -43,6 +43,7 @@ int xlb_servers;
 int xlb_workers;
 int xlb_my_server;
 bool xlb_am_server;
+bool xlb_am_leader;
 int xlb_master_server_rank;
 int xlb_types_size;
 int* xlb_types;
@@ -51,9 +52,9 @@ double xlb_start_time;
 bool xlb_perf_counters_enabled;
 
 MPI_Comm adlb_comm;
-
 MPI_Comm adlb_server_comm;
 MPI_Comm adlb_worker_comm;
+MPI_Comm adlb_leader_comm;
 
 int
 xlb_random_server()
