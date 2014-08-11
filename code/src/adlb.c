@@ -253,6 +253,8 @@ report_debug_ranks()
 bool get_hostmap_mode(void);
 void setup_leaders(int* leader_ranks, int leader_rank_count);
 
+static void free_hostmap(void);
+
 static bool
 setup_hostmap()
 {
@@ -282,8 +284,6 @@ setup_hostmap()
                          allnames, length, MPI_CHAR, adlb_comm);
   MPI_CHECK(rc);
 
-  table_init(&hostmap, 1024);
-
   bool debug_hostmap = false;
   char* t = getenv("ADLB_DEBUG_HOSTMAP");
   if (t != NULL && strcmp(t, "1") == 0)
@@ -291,6 +291,9 @@ setup_hostmap()
 
   int* leader_ranks = malloc((size_t)(xlb_comm_size) * sizeof(int));
   int leader_rank_count = 0;
+
+  // Note: If hostmap mode is LEADERS, we free this table early
+  table_init(&hostmap, 1024);
 
   char* p = allnames;
   for (int rank = 0; rank < xlb_comm_size; rank++)
@@ -313,7 +316,7 @@ setup_hostmap()
       }
     }
 
-    if (hostmap_mode_current == HOSTMAP_ENABLED)
+    if (hostmap_mode_current != HOSTMAP_DISABLED)
     {
       if (lowest_rank_on_node)
       {
@@ -326,6 +329,10 @@ setup_hostmap()
     }
     p += length;
   }
+
+  if (hostmap_mode_current == HOSTMAP_LEADERS)
+    // We created this table just to set up leaders
+    free_hostmap();
 
   setup_leaders(leader_ranks, leader_rank_count);
 
@@ -2072,8 +2079,6 @@ ADLB_Shutdown(void)
   TRACE_END;
   return ADLB_SUCCESS;
 }
-
-static void free_hostmap(void);
 
 adlb_code
 ADLBP_Finalize()
