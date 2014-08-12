@@ -308,11 +308,11 @@ setup_hostmap()
     if (lowest_rank_on_node && !xlb_is_server(rank))
     {
       leader_ranks[leader_rank_count++] = rank;
+      TRACE("leader: %i\n", rank);
       if (rank == xlb_comm_rank)
       {
-        if (xlb_comm_rank == 0)
-          DEBUG("leader: %i\n", rank);
         xlb_am_leader = lowest_rank_on_node;
+        DEBUG("am leader");
       }
     }
 
