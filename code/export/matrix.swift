@@ -10,14 +10,15 @@ import string;
   [ "set <<A>> [ turbine::matrix_from_blob_fortran_impl <<b>> <<m>> <<n>> ] " ];
 
 (void v)
-vector_print(float x[], int rows)
+vector_print(float x[])
 {
-  printf("vector rows: %i", rows);
-  foreach i in [0:rows-1]
+  r = size(x);
+  int i;
+  for (i = 0; i < r; i = i+1)
   {
-    printf("row %i: %0.4f", i, x[i]);
+    printf("%i: %0.4f", i, x[i]);
   }
-  v = make_void();
+  wait(i) { v = make_void(); }
 }
 
 (void v)
