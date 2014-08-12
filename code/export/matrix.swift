@@ -1,8 +1,8 @@
 
 #ifndef MATRIX_SWIFT
 
-#include <io.swift>
-#include <string.swift>
+import io;
+import string;
 
 @pure
 (float A[][]) matrix_from_blob_fortran(blob b, int m, int n)
