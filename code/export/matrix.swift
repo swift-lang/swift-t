@@ -22,14 +22,14 @@ vector_print(float x[])
 }
 
 (void v)
-vector_print_integer(int x[], int rows)
+vector_print_integer(int x[])
 {
+  r = size(x);
   int i;
-  printf("vector rows: %i", rows) =>
-    for (i = 0; i < rows; i = i+1)
+  for (i = 0; i < r; i = i+1)
   {
-    printf("vpi: row %i: %i", i, x[i]);
-  };
+    printf("%i: %i", i, x[i]);
+  }
   wait(i) { v = make_void(); }
 }
 
