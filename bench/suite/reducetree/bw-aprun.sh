@@ -14,7 +14,7 @@
 
 #PBS -N Swift
 #PBS -q normal
-#PBS -l walltime=4:00:00
+#PBS -l walltime=1:00:00
 
 ### Set the job size using appropriate directives for this system
 ### Blue Waters mode
@@ -83,7 +83,7 @@ cd ${TURBINE_OUTPUT}
 OPT_LEVELS="adlb O3 O2 O1 O0"
 
 
-for trial in 1 2 3
+for trial in 1
 do
   for opt in ${OPT_LEVELS}
   do

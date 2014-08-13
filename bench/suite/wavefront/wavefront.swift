@@ -23,6 +23,7 @@ main
     A[0][i] = itof(i);
   }
 
+  @leafdegree=1
   foreach i in [1:N-1]
   {
     foreach j in [1:N-1]

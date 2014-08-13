@@ -13,12 +13,12 @@
 # limitations under the License
 
 #PBS -N Swift
-#PBS -q normal
-#PBS -l walltime=1:00:00
+#PBS -q low
+#PBS -l walltime=0:40:00
 
 ### Set the job size using appropriate directives for this system
 ### Blue Waters mode
-#PBS -l nodes=64:ppn=32
+#PBS -l nodes=256:ppn=32
 ### End job size directives selection
 
 #PBS -o ${PBS_JOBID}.pbs.out
@@ -90,14 +90,21 @@ do
     do
       APRUN_PROCS=$((APRUN_NODES*PPN))
       
-      RERUNS=$APRUN_PROCS
+      # 1 task per processor at full scale
+      # RERUNS=$((PROCS / 12))
+      # 2 tasks per processor at full scale
+      #RERUNS=$((PROCS / 6))
+      RERUNS=2000
+
 
       ARGS+=" --graph_file=${BENCH_SRC}/data/movie_graph.txt"
-      ARGS+=" --annealingcycles=2"
+      ARGS+=" --annealingcycles=1"
       ARGS+=" --all_visible=0"
-      ARGS+=" --minrange=280 --maxrange=2665 --rangeinc=265"
+      # 16x16
+      ARGS+=" --minrange=1 --maxrange=16 --rangeinc=1 --nreps=16"
       ARGS+=" --tstart=1.0 --tend=0.1"
       ARGS+=" --evoreruns=${RERUNS} --reruns_per_task=1"
+      ARGS+=" --n_steps=100 --n_epochs=50"
       ARGS+=" --alphai=2.441387 --alpham=7.358537 --beta=1.304902"
       ARGS+=" --gamma=101.834921 --delta=10.799301"
 
@@ -122,9 +129,8 @@ do
       # The remainder will add up to one less than the total number of
       # nodes allocated, so that the remainder will fit in the largest
       # job's allocate
-      APRUN_NODES=$((APRUN_NODES/2))
-      # APRUN_NODES=0
-      GEN_MX=$((GEN_MX - 1)) # Scale down
+      #APRUN_NODES=$((APRUN_NODES/2))
+      APRUN_NODES=0
     done
 
     # Wait for jobs for this opt level
