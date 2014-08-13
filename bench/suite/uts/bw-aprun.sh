@@ -13,12 +13,12 @@
 # limitations under the License
 
 #PBS -N Swift
-#PBS -q normal
+#PBS -q low 
 #PBS -l walltime=0:30:00
 
 ### Set the job size using appropriate directives for this system
 ### Blue Waters mode
-#PBS -l nodes=8192:ppn=32
+#PBS -l nodes=512:ppn=32
 ### End job size directives selection
 
 #PBS -o ${PBS_JOBID}.pbs.out
@@ -80,7 +80,7 @@ cp $0 ${TURBINE_OUTPUT}/${PBS_JOBID}.submit
 # Be sure we are in an accessible directory
 cd ${TURBINE_OUTPUT}
 
-OPT_LEVELS="adlb O3 O2 O1 O0"
+OPT_LEVELS="O1 O0"
 
 
 for opt in ${OPT_LEVELS}
@@ -88,7 +88,8 @@ do
   for trial in 1
   do
     APRUN_NODES=$NODES
-    GEN_MX=44
+    #GEN_MX=44
+    GEN_MX=32
 
     while ((APRUN_NODES > 0))
     do

@@ -14,11 +14,11 @@
 
 #PBS -N Swift
 #PBS -q normal
-#PBS -l walltime=0:30:00
+#PBS -l walltime=1:00:00
 
 ### Set the job size using appropriate directives for this system
 ### Blue Waters mode
-#PBS -l nodes=16:ppn=32
+#PBS -l nodes=512:ppn=32
 ### End job size directives selection
 
 #PBS -o ${PBS_JOBID}.pbs.out
@@ -34,8 +34,9 @@ module unload PrgEnv-cray
 module load PrgEnv-gnu
 
 # Set variables required for turbine-config.sh
-EXM_HOME=/u/sciteam/tarmstro/soft/exm-sc14/v1
+# EXM_HOME=/u/sciteam/tarmstro/soft/exm-sc14/v1
 #EXM_HOME=/u/sciteam/tarmstro/soft/exm-sc14/v1-debug
+EXM_HOME=/u/sciteam/tarmstro/soft/exm-sc14/v3
 export TURBINE_HOME=${EXM_HOME}/turbine
 TURBINE_STATIC_EXEC=0
 EXEC_SCRIPT=1
@@ -83,17 +84,18 @@ cd ${TURBINE_OUTPUT}
 OPT_LEVELS="adlb O3 O2 O1 O0"
 
 
-for trial in 1 2 3
+for trial in 1
 do
   for opt in ${OPT_LEVELS}
   do
     APRUN_NODES=$NODES
-    WAVEFRONT_N=44
+    WAVEFRONT_N=2000
 
     while ((APRUN_NODES > 0))
     do
       APRUN_PROCS=$((APRUN_NODES*PPN))
-      mu=-6.905000
+      #mu: -5.297500 sigma 1.000000 mean: 5.0041ms stdev: 10.81ms
+      mu=-5.297500
       sigma=1
 
       if [ $opt = adlb ]
