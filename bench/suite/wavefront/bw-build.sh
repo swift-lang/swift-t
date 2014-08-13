@@ -4,7 +4,8 @@ set -e
 
 #INST=$HOME/soft/exm-sc14/v1/
 #INST=$HOME/soft/exm-sc14/v1-debug/
-INST=$HOME/soft/exm-sc14/v3/
+#INST=$HOME/soft/exm-sc14/v3/
+INST=$HOME/soft/exm-sc14/v7-opt/
 TURBINE=$INST/turbine
 LB=$INST/lb
 CUTILS=$INST/c-utils
