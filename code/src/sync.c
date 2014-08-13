@@ -36,6 +36,20 @@
 #include "steal.h"
 #include "sync.h"
 
+// Enable debugging of very long syncs
+#ifndef XLB_DEBUG_SYNC_DELAY
+#define XLB_DEBUG_SYNC_DELAY 0
+#endif
+
+// Print messages if this time in seconds exceeded
+#define XLB_DEBUG_SYNC_DELAY_LIMIT 0.05
+
+struct sync_delay {
+  int attempts;
+  double start_time;
+  double last_check_time;
+};
+
 static adlb_code xlb_sync2(int target, const struct packed_sync *hdr,
                            int *response);
 static xlb_sync_recv *xlb_next_sync_msg(void);
@@ -58,6 +72,10 @@ static adlb_code enqueue_pending(xlb_pending_kind kind, int rank,
 static void free_pending_sync(xlb_pending *pending);
 
 static inline bool sync_accept_required(adlb_sync_mode mode);
+
+static inline void delay_check_init(struct sync_delay *state);
+static inline void delay_check(struct sync_delay *state,
+              int target, const struct packed_sync *hdr);
 
 typedef struct {
   int64_t sent;     /** Sent to other servers */
@@ -353,6 +371,12 @@ xlb_sync2(int target, const struct packed_sync *hdr, int *response)
                           xlb_comm_rank, target);
   }
 
+  struct sync_delay delay;
+
+  if (XLB_DEBUG_SYNC_DELAY) {
+    delay_check_init(&delay);
+  }
+
   /*
    * Must loop until Isend completes at a minimum.
    * We don't just block on it because we want to service any incoming
@@ -362,6 +386,10 @@ xlb_sync2(int target, const struct packed_sync *hdr, int *response)
    */
   while (!done)
   {
+    if (XLB_DEBUG_SYNC_DELAY) {
+      delay_check(&delay, target, hdr);
+    }
+
     TRACE("xlb_sync: loop");
     
     if (accept_required)
@@ -1236,5 +1264,29 @@ cancel_sync(adlb_sync_mode mode, int sync_target)
 
   TRACE_END;
   return ADLB_SUCCESS;
+}
+
+static inline void delay_check_init(struct sync_delay *state) {
+  state->attempts = 0;
+  state->start_time = xlb_approx_time();
+  state->last_check_time = state->start_time;
+}
+
+static inline void delay_check(struct sync_delay *state,
+              int target, const struct packed_sync *hdr) {
+  state->attempts++;
+
+  if (state->attempts % 1000 == 0 )
+  {
+    double now = MPI_Wtime();
+    if (now - state->last_check_time > XLB_DEBUG_SYNC_DELAY_LIMIT)
+    {
+      fprintf(stderr, "[%d] has been waiting %.2lf for %i\
+                sync mode %s\n",
+              xlb_comm_rank, now - state->start_time, target,
+              xlb_sync_mode_name[hdr->mode]);
+      state->last_check_time = now;
+    }
+  }
 }
 

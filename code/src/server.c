@@ -226,6 +226,7 @@ ADLB_Server(long max_memory)
   DEBUG("ADLB_Server(): %i entering server loop", xlb_comm_rank);
 
   update_cached_time(); // Initial timestamp
+
   while (true)
   {
     if (xlb_server_shutting_down)
@@ -652,6 +653,7 @@ xlb_server_check_idle_local(bool master, int64_t check_attempt)
 static bool
 servers_idle()
 {
+  DEBUG("[%i] checking idle %.4f\n", xlb_comm_rank, MPI_Wtime());
   // New serial number for round of checks 
   xlb_idle_check_attempt++;
   DEBUG("Master server initiating idle check attempt #%"PRId64,
@@ -736,6 +738,7 @@ servers_idle()
     }
   }
 
+  DEBUG("[%i] done checking idle %.4f\n", xlb_comm_rank, MPI_Wtime());
   free(request_counts);
   free(work_counts);
   return all_idle;
