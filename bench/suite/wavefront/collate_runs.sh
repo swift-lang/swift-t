@@ -2,7 +2,7 @@
 
 # Arguments: list of run output files to process
 
-echo 'file	opt_level	processes	elapsed_time	N	sleeptime'
+echo 'file	opt_level	processes	elapsed_time	N	mu	sigma'
 
 for f in "$@"
 do
@@ -24,15 +24,17 @@ do
   then
     # ADLB: no data
     n_str=""
-    sleeptime_str=""
+    mu_str=""
+    sigma_str=""
   else
     # Swift:
-    # WAVEFRONT N=2000 sleeptime=0.005000
-    info=$(grep -m1 -o -E "WAVEFRONT N=[0-9]+ sleeptime=[0-9.]+" $f)
+    # WAVEFRONT N=2000 mu=-9 sigma=1
+    info=$(grep -m1 -o -E "WAVEFRONT N=[0-9]+ mu=[-0-9.]+ sigma=[-0-9.]+" $f)
     n_str=$(echo $info | grep -o -E "N=[0-9]+" | grep -o -E "[0-9]+")
-    sleeptime_str=$(echo $info | grep -o -E "sleeptime=[0-9.]+" | grep -o -E "[0-9.]+")
+    mu_str=$(echo $info | grep -o -E "mu=[-0-9.]+" | grep -o -E "[-0-9.]+")
+    sigma_str=$(echo $info | grep -o -E "sigma=[-0-9.]+" | grep -o -E "[-0-9.]+")
   fi
 
-  echo -n "$n_str	$sleeptime_str"
+  echo -n "$n_str	$mu_str	$sigma_str"
   echo
 done
