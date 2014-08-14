@@ -73,7 +73,7 @@ ptasks_1(ClientData cdata, Tcl_Interp *interp,
   assert(rc == TCL_OK);
   adlb_data_type type;
   int length;
-  adlb_retrieve_rc refcounts = ADLB_RETRIEVE_NO_RC;
+  adlb_retrieve_refc refcounts = ADLB_RETRIEVE_NO_REFC;
   adlb_code code = ADLB_Retrieve(id, ADLB_NO_SUB, refcounts, &type, buffer, &length);
   assert(code == ADLB_SUCCESS);
 

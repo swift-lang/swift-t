@@ -4,7 +4,7 @@ DIR := tests
 TEST_SRC_C :=
 TEST_SRC_C += $(DIR)/debug.c
 TEST_SRC_C += $(DIR)/lib-turbine.c # issue #636
-# TEST_SRC_C += $(DIR)/ptasks-1.c
+TEST_SRC_C += $(DIR)/ptasks-1.c
 # This takes too long for ordinary testing:
 # TEST_SRC_C += $(DIR)/ptasks-bench.c
 # The stress test can fail: (#577)
