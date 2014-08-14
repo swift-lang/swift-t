@@ -312,7 +312,7 @@ ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
 
 /**
    usage: adlb::init_comm [<comm>]?
-   
+
    Setup ADLB communicator and MPI if needed, but no other parts of ADLB.
 
    If comm is given, run ADLB in that communicator
@@ -368,12 +368,12 @@ static int adlb_setup_comm(Tcl_Interp *interp, Tcl_Obj *const objv[],
   {
     adlb_comm = *comm;
   }
-  
+
   MPI_Comm_size(adlb_comm, &adlb_comm_size);
   MPI_Comm_rank(adlb_comm, &adlb_comm_rank);
 
   adlb_comm_init = true;
-  
+
   return TCL_OK;
 }
 
@@ -425,7 +425,7 @@ ADLB_Init_Cmd(ClientData cdata, Tcl_Interp *interp,
     TCL_CHECK(rc);
     adlb_comm_ptr = (MPI_Comm *) tmp_comm_ptr;
   }
- 
+
   if (!adlb_comm_init)
   {
     rc = adlb_setup_comm(interp, objv, adlb_comm_ptr);
@@ -1010,8 +1010,9 @@ ADLB_Iget_Cmd(ClientData cdata, Tcl_Interp *interp,
   int work_len;
   int answer_rank;
 
+  MPI_Comm task_comm;
   adlb_code rc = ADLB_Iget(req_type, result, &work_len,
-                           &answer_rank, &work_type);
+                           &answer_rank, &work_type, &task_comm);
   if (rc == ADLB_SHUTDOWN)
   {
     strcpy(result, "ADLB_SHUTDOWN");
@@ -1024,6 +1025,8 @@ ADLB_Iget_Cmd(ClientData cdata, Tcl_Interp *interp,
   }
 
   DEBUG_ADLB("adlb::iget: %s", result);
+
+  turbine_task_comm = task_comm;
 
   // Store answer_rank in caller's stack frame
   Tcl_Obj* tcl_answer_rank = Tcl_NewIntObj(answer_rank);
@@ -5222,7 +5225,7 @@ ADLB_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   if (must_comm_free)
     MPI_Comm_free(&adlb_comm);
-  
+
   adlb_comm_init = false;
   adlb_init = false;
 
