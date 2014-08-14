@@ -123,9 +123,9 @@ adlb_code ADLB_Get(int type_requested, void* payload, int* length,
   NOTE: Iget does not currently support parallel tasks
 */
 adlb_code ADLBP_Iget(int type_requested, void* payload, int* length,
-                     int* answer, int* type_recvd);
+                     int* answer, int* type_recvd, MPI_Comm* comm);
 adlb_code ADLB_Iget(int type_requested, void* payload, int* length,
-                    int* answer, int* type_recvd);
+                    int* answer, int* type_recvd, MPI_Comm* comm);
 /*
   Non-blocking equivalent of ADLB_Get.  Matching requests should be
   filled in in the order that they are posted (i.e. if work matches two

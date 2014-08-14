@@ -191,11 +191,11 @@ ADLB_Get(int type_requested, void* payload, int* length,
 
 adlb_code
 ADLB_Iget(int type_requested, void* payload, int* length,
-         int* answer, int* type_recvd)
+         int* answer, int* type_recvd, MPI_Comm* comm)
 {
   MPE_LOG(xlb_mpe_wkr_iget_start);
   adlb_code rc = ADLBP_Iget(type_requested, payload, length, answer,
-                            type_recvd);
+                            type_recvd, comm);
   MPE_LOG(xlb_mpe_wkr_iget_end);
   return rc;
 }

@@ -130,6 +130,8 @@ static adlb_code xlb_get_req_cancel(adlb_get_req *req,
 static adlb_code xlb_get_req_release(adlb_get_req* req,
                     xlb_get_req_impl* impl, bool cancelled);
 
+static adlb_code xlb_parallel_comm_setup(int parallelism, MPI_Comm* comm);
+
 static void
 check_versions()
 {
@@ -700,6 +702,7 @@ adlb_code
 ADLBP_Get(int type_requested, void* payload, int* length,
           int* answer, int* type_recvd, MPI_Comm* comm)
 {
+  adlb_code rc;
   MPI_Status status;
   MPI_Request request;
 
@@ -729,21 +732,8 @@ ADLBP_Get(int type_requested, void* payload, int* length,
 
   if (g.parallelism > 1)
   {
-    DEBUG("ADLB_Get(): parallelism=%i", g.parallelism);
-    // Parallel tasks require MPI 3.  Cf. configure.ac
-    #if ADLB_MPI_VERSION >= 3
-    // Recv ranks for output comm
-    int ranks[g.parallelism];
-    RECV(ranks, g.parallelism, MPI_INT, xlb_my_server,
-         ADLB_TAG_RESPONSE_GET);
-    MPI_Group group;
-    int rc = MPI_Group_incl(adlb_group, g.parallelism, ranks, &group);
-    assert(rc == MPI_SUCCESS);
-    // This is an MPI 3 function:
-    rc = MPI_Comm_create_group(adlb_comm, group, 0, comm);
-    assert(rc == MPI_SUCCESS);
-    TRACE("MPI_Comm_create_group(): comm=%i\n", *comm);
-    #endif
+    rc = xlb_parallel_comm_setup(g.parallelism, comm);
+    ADLB_CHECK(rc);
   }
   else
     *comm = MPI_COMM_SELF;
@@ -755,10 +745,39 @@ ADLBP_Get(int type_requested, void* payload, int* length,
   return ADLB_SUCCESS;
 }
 
+/*
+ * Receive info about parallel workers and setup communicator.
+ */
+static adlb_code
+xlb_parallel_comm_setup(int parallelism, MPI_Comm* comm)
+{
+  DEBUG("xlb_parallel_comm_setup(): parallelism=%i", parallelism);
+  // Parallel tasks require MPI 3.  Cf. configure.ac
+  CHECK_MSG(ADLB_MPI_VERSION >= 3, "Parallel tasks not supported for MPI "
+                                   "version %i < 3", ADLB_MPI_VERSION);
+  #if ADLB_MPI_VERSION >= 3
+  MPI_Status status;
+  // Recv ranks for output comm
+  int ranks[parallelism];
+  RECV(ranks, parallelism, MPI_INT, xlb_my_server,
+       ADLB_TAG_RESPONSE_GET);
+  MPI_Group group;
+  int rc = MPI_Group_incl(adlb_group, parallelism, ranks, &group);
+  assert(rc == MPI_SUCCESS);
+  // This is an MPI 3 function:
+  rc = MPI_Comm_create_group(adlb_comm, group, 0, comm);
+  assert(rc == MPI_SUCCESS);
+  TRACE("MPI_Comm_create_group(): comm=%i\n", *comm);
+  #endif
+
+  return ADLB_SUCCESS;
+}
+
 adlb_code
 ADLBP_Iget(int type_requested, void* payload, int* length,
-           int* answer, int* type_recvd)
+           int* answer, int* type_recvd, MPI_Comm* comm)
 {
+  adlb_code rc;
   MPI_Status status;
   MPI_Request request;
 
@@ -794,9 +813,13 @@ ADLBP_Iget(int type_requested, void* payload, int* length,
   *answer = g.answer_rank;
   *type_recvd = g.type;
 
-  // TODO: Iget doesn't support parallel tasks
-  ASSERT_MSG(g.parallelism <= 1,
-    "Do not support parallel tasks with Iget yet");
+  if (g.parallelism > 1)
+  {
+    rc = xlb_parallel_comm_setup(g.parallelism, comm);
+    ADLB_CHECK(rc);
+  }
+  else
+    *comm = MPI_COMM_SELF;
 
   return ADLB_SUCCESS;
 }
