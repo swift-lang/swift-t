@@ -16,12 +16,15 @@
 package exm.stc.frontend.tree;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import exm.stc.ast.SwiftAST;
 import exm.stc.ast.antlr.ExMParser;
+import exm.stc.common.exceptions.DoubleDefineException;
 import exm.stc.common.exceptions.InvalidSyntaxException;
 import exm.stc.common.exceptions.TypeMismatchException;
 import exm.stc.common.exceptions.UndefinedTypeException;
@@ -42,10 +45,10 @@ public class FunctionDecl {
   private final FunctionType ftype;
   private final ArrayList<String> inNames;
   private final ArrayList<String> outNames;
-  
-  
+
+
   private FunctionDecl(FunctionType ftype, ArrayList<String> inNames,
-      ArrayList<String> outNames) {
+                       ArrayList<String> outNames) {
     super();
     this.ftype = ftype;
     this.inNames = inNames;
@@ -65,7 +68,7 @@ public class FunctionDecl {
   public List<String> getOutNames() {
     return Collections.unmodifiableList(outNames);
   }
-  
+
   private static class ArgDecl {
     final String name;
     final Type type;
@@ -86,7 +89,7 @@ public class FunctionDecl {
     for (String typeParam: typeParams) {
       typeVarContext.defineType(typeParam, new TypeVariable(typeParam));
     }
-    
+
     assert(inArgTree.getType() == ExMParser.FORMAL_ARGUMENT_LIST);
     assert(outArgTree.getType() == ExMParser.FORMAL_ARGUMENT_LIST);
     ArrayList<String> inNames = new ArrayList<String>();
@@ -122,7 +125,10 @@ public class FunctionDecl {
       }
     }
     assert(outNames.size() == outArgTypes.size());
-    FunctionType ftype = 
+
+    checkDuplicateArgs(context, function, inNames, outNames);
+
+    FunctionType ftype =
           new FunctionType(inArgTypes, outArgTypes, varArgs, typeParams);
     return new FunctionDecl(ftype, inNames, outNames);
   }
@@ -134,14 +140,14 @@ public class FunctionDecl {
     SwiftAST baseTypes = arg.child(0);
     SwiftAST restDecl = arg.child(1);
     assert(restDecl.getType() == ExMParser.DECLARE_VARIABLE_REST);
-    
+
     // Handle alternative types
     List<Type> altPrefixes = TypeTree.extractMultiType(context, baseTypes);
     assert(altPrefixes.size() > 0);
     ArrayList<Type> alts = new ArrayList<Type>(altPrefixes.size());
     String varname = null;
     for (Type altPrefix: altPrefixes) {
-      // Construct var in order to apply array markers and get full type 
+      // Construct var in order to apply array markers and get full type
       Var v = fromFormalArgTree(context, altPrefix, restDecl, DefType.INARG);
       varname = v.name();
       alts.add(v.type());
@@ -153,20 +159,20 @@ public class FunctionDecl {
       assert(arg.child(2).getType() == ExMParser.VARARGS);
       thisVarArgs = true;
     }
-    
+
     return new ArgDecl(varname, argType, thisVarArgs);
   }
-  
+
   /**
     * Take a DECLARE_VARIABLE_REST subtree of the AST and return the appropriate declared
     * variable.  Doesn't check to see if variable already defined
     * @param context the current context, for info to add to error message
-    * @param baseType the type preceding the declaration 
-    * @param tree a parse tree with the root a DECLARE_MULTI or DECLARE_SINGLE 
+    * @param baseType the type preceding the declaration
+    * @param tree a parse tree with the root a DECLARE_MULTI or DECLARE_SINGLE
     *                                                               subtree
     * @return
     * @throws UndefinedTypeException
-   * @throws InvalidSyntaxException 
+   * @throws InvalidSyntaxException
     */
   public static Var fromFormalArgTree(
       Context context, Type baseType, SwiftAST tree, DefType deftype)
@@ -185,11 +191,28 @@ public class FunctionDecl {
         throw new InvalidSyntaxException(context, "Cannot map function argument");
       }
     }
-    
+
     Type varType = TypeTree.applyArrayMarkers(context, arrMarkers, baseType);
 
     return new Var(varType, varName, Alloc.STACK, deftype,
                    VarProvenance.userVar(context.getSourceLoc()));
+  }
+
+  @SafeVarargs
+  private static void checkDuplicateArgs(Context context,
+      String functionName, Collection<String> ...names)
+          throws DoubleDefineException {
+    Set<String> usedNames = new HashSet<String>();
+
+    for (Collection<String> names2: names) {
+      for (String name: names2) {
+        boolean added = usedNames.add(name);
+        if (!added) {
+          throw new DoubleDefineException(context, "Duplicate argument name " +
+                                        name + " in function " + functionName);
+        }
+      }
+    }
   }
 
   public List<Var> getInVars(Context context) {
@@ -201,7 +224,7 @@ public class FunctionDecl {
     }
     return inVars;
   }
-  
+
   public List<Var> getOutVars(Context context) {
     ArrayList<Var> outVars = new ArrayList<Var>(outNames.size());
     for (int i = 0; i < outNames.size(); i++) {
