@@ -120,7 +120,11 @@ public class Validate implements OptimizerPass {
         Function fn) {
     Map<String, Var> declared = new HashMap<String, Var>();
     for (Var constVar: constants.vars()) {
-      checkVarUnique(logger, fn, declared, constVar);
+      if (declared.containsKey(constVar.name())) {
+        throw new STCRuntimeError("Duplicate global constant "
+                                          + constVar.name());
+      }
+      declared.put(constVar.name(), constVar);
     }
 
     for (Var in: fn.getInputList()) {
