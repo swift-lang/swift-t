@@ -1,6 +1,5 @@
-
-// SKIP-THIS-TEST #732 
 // THIS-TEST-SHOULD-NOT-COMPILE
+// SKIP-THIS-TEST issue #702
 
 (file o) f(file o) "turbine" "0.0"
 [ "exec cp <<o>> <<o>>" ];
