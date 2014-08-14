@@ -36,7 +36,6 @@ namespace eval turbine {
 
         set buffer_size_val [ configured_buffer_size $mode ]
 
-        puts "VAL $buffer_size_val"
         if { $buffer_size_val != "" }  {
           dict append keyword_args buffer_size $buffer_size_val
         }
