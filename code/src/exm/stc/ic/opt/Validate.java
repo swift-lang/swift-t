@@ -119,16 +119,16 @@ public class Validate implements OptimizerPass {
   private void checkUniqueVarNames(Logger logger, GlobalConstants constants,
         Function fn) {
     Map<String, Var> declared = new HashMap<String, Var>();
-    for (Var consts: constants.vars()) {
-      declared.put(consts.name(), consts);
+    for (Var constVar: constants.vars()) {
+      checkVarUnique(logger, fn, declared, constVar);
     }
 
     for (Var in: fn.getInputList()) {
-      declared.put(in.name(), in);
+      checkVarUnique(logger, fn, declared, in);
     }
 
     for (Var out: fn.getOutputList()) {
-      declared.put(out.name(), out);
+      checkVarUnique(logger, fn, declared, out);
     }
 
     checkUniqueVarNames(logger, fn, fn.mainBlock(), declared, new HierarchicalSet<Var>());
