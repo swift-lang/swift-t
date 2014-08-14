@@ -533,7 +533,7 @@ do
     if grep -F -q "THIS-TEST-SHOULD-NOT-COMPILE" ${SWIFT_FILE}
     then
       RUN_COMPILED_TEST=0 # Never run these tests
-      if grep -F -q "STC INTERNAL ERROR" ${STC_ERR_FILE}
+      if grep -i -F -q "STC INTERNAL ERROR" ${STC_ERR_FILE}
       then
           :
       else
