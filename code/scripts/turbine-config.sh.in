@@ -25,8 +25,15 @@ export TURBINE_MAC=@USE_MAC@
 TURBINE_PKG_AVAIL=@ENABLE_SHARED@
 
 TCLLIBPATH=
-if [[ -n ${TURBINE_USER_LIB:-} ]] ; then
-  TCLLIBPATH="${TURBINE_USER_LIB} "
+if [[ -n ${SWIFT_PATH:-} ]] 
+then
+  TCLLIBPATH+="${SWIFT_PATH} "
+elif [[ -n ${TURBINE_PATH:-} ]] 
+then
+  TCLLIBPATH+="${TURBINE_PATH} "
+elif [[ -n ${TURBINE_USER_LIB:-} ]] 
+then
+  TCLLIBPATH+="${TURBINE_USER_LIB} "
 fi
 
 if (( EXEC_SCRIPT ))
