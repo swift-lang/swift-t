@@ -955,15 +955,19 @@ adlb_code ADLBP_Aget(int type_requested, adlb_payload_buf payload,
                      adlb_get_req *req)
 {
   // Special case of Amget
-  return ADLBP_Amget(type_requested, 1, &payload, req);
+  return ADLBP_Amget(type_requested, 1, false, &payload, req);
 }
 
-adlb_code ADLBP_Amget(int type_requested, int nreqs,
+adlb_code ADLBP_Amget(int type_requested, int nreqs, bool wait,
                       const adlb_payload_buf* payloads,
                       adlb_get_req *reqs)
 {
   adlb_code ac;
   assert(nreqs >= 0);
+  if (nreqs <= 0)
+  {
+    return ADLB_SUCCESS;
+  }
 
   CHECK_MSG(xlb_type_index(type_requested) != -1,
                 "ADLB_Amget(): Bad work type: %i\n", type_requested);
@@ -998,8 +1002,23 @@ adlb_code ADLBP_Amget(int type_requested, int nreqs,
 
   // Send request after receives initiated
   struct packed_mget_request hdr = { .type = type_requested,
-                                     .count = nreqs };
+                         .count = nreqs, .blocking = wait };
   SEND(&hdr, sizeof(hdr), MPI_BYTE, xlb_my_server, ADLB_TAG_AMGET);
+
+  if (wait)
+  {
+    xlb_get_req_impl *req_impl;
+    ac = xlb_get_req_lookup(reqs[0], &req_impl);
+    ADLB_CHECK(ac);
+
+    ac = xlb_aget_progress(&reqs[0], req_impl, true);
+    ADLB_CHECK(ac);
+    if (ac == ADLB_SHUTDOWN)
+    {
+      return ADLB_SHUTDOWN;
+    }
+    assert(ac == ADLB_SUCCESS); // Shouldn't be ADLB_NOTHING
+  }
 
   return ADLB_SUCCESS;
 }

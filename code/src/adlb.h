@@ -148,16 +148,15 @@ adlb_code ADLB_Aget(int type_requested, adlb_payload_buf payload,
 /*
   Same as ADLB_Aget except initiates multiple requests at once.
   
-  TODO: could reduce message round-trips if we had a flag to
-        block on the first request
   nreqs: number of requests to initiate
+  wait: wait for first request to be filled, if >= 1 requests
   payloads: array of nreqs payload buffers
   reqs: array of nreqs requests, filled in with request handles
  */
-adlb_code ADLBP_Amget(int type_requested, int nreqs,
+adlb_code ADLBP_Amget(int type_requested, int nreqs, bool wait,
                      const adlb_payload_buf* payloads,
                      adlb_get_req *reqs);
-adlb_code ADLB_Amget(int type_requested, int nreqs,
+adlb_code ADLB_Amget(int type_requested, int nreqs, bool wait,
                      const adlb_payload_buf* payloads,
                      adlb_get_req *reqs);
 

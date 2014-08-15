@@ -253,6 +253,7 @@ struct packed_mget_request
 {
   int type;
   int count;
+  bool blocking;
 };
 
 /**

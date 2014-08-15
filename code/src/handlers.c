@@ -759,7 +759,7 @@ handle_amget(int caller)
 
   RECV(&req, sizeof(req), MPI_BYTE, caller, ADLB_TAG_AMGET);
 
-  code = process_get_request(caller, req.type, req.count, false);
+  code = process_get_request(caller, req.type, req.count, req.blocking);
   ADLB_CHECK(code);
 
   MPE_LOG(xlb_mpe_svr_amget_end);
