@@ -1389,7 +1389,6 @@ handle_notify(int caller)
     tc = xlb_engine_close(hdr->id, true, &xlb_server_ready_work);
   }
 
-  // TODO: report error?
   int resp = (tc == XLB_ENGINE_SUCCESS) ? ADLB_SUCCESS : ADLB_ERROR;
   RSEND(&resp, 1, MPI_INT, caller, ADLB_TAG_RESPONSE);
   return ADLB_SUCCESS;
