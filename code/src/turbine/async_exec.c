@@ -356,6 +356,7 @@ get_tasks(Tcl_Interp *interp, turbine_executor *executor,
   int desired_reqs = (max_tasks < reqs->max_reqs) ?
                       max_tasks : reqs->max_reqs;
   int extra_reqs = desired_reqs - reqs->nreqs;
+  bool idle = (reqs->nreqs == 0);
 
   DEBUG_TURBINE("get_tasks: executor=%s adlb_work_type=%i poll=%s "
                 "max_tasks=%i max_reqs=%i nreqs=%i extra_reqs=%i head=%i",
@@ -375,7 +376,7 @@ get_tasks(Tcl_Interp *interp, turbine_executor *executor,
       tmp_bufs[i] = reqs->buffers[(reqs->head + i) % reqs->max_reqs];
     }
 
-    ac = ADLB_Amget(adlb_work_type, extra_reqs, tmp_bufs, tmp_reqs);
+    ac = ADLB_Amget(adlb_work_type, extra_reqs, idle, tmp_bufs, tmp_reqs);
     EXEC_ADLB_CHECK_MSG(ac, TURBINE_EXEC_OTHER,
                           "Error getting work from ADLB");
 
