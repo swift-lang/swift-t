@@ -37,8 +37,9 @@ type external void;
 (float o) pow_integer     (int i1, int i2) "turbine" "0.0.2" "pow_integer";
 
 // This is used by the string+ concatenation operator
+// Take strings, and automatically convert numeric to string
 @pure @builtin_op=STRCAT
-(string o) strcat(string... args) "turbine" "0.0.2" "strcat";
+(string o) strcat(string|int|float... args) "turbine" "0.0.2" "strcat";
 
 // This is used by the string/ directory catenation operator
 @pure @builtin_op=DIRCAT

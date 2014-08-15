@@ -21,6 +21,8 @@
 namespace eval turbine {
 
     # usage: strcat <result> <args>*
+    # Will convert args to string according to standard ADLB/Tcl
+    # conversion rules
     proc strcat { result inputs } {
         rule $inputs "strcat_body $result $inputs" \
             name "strcat-$result"
@@ -30,7 +32,7 @@ namespace eval turbine {
     proc strcat_body { result args } {
         set output [ list ]
         foreach input $args {
-            set t [ retrieve_decr_string $input ]
+            set t [ retrieve_decr $input ]
             lappend output $t
         }
         set total [ join $output "" ]
