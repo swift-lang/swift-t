@@ -128,7 +128,6 @@ static turbine_exec_code
 init_coaster_executor(turbine_executor *exec)
 {
   exec->name = COASTER_EXECUTOR_NAME;
-  exec->notif_mode = EXEC_POLLING;
 
   exec->context = NULL;
   exec->state = NULL;

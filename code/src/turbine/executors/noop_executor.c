@@ -67,7 +67,6 @@ static void
 init_noop_executor(turbine_executor *exec)
 {
   exec->name = NOOP_EXECUTOR_NAME;
-  exec->notif_mode = EXEC_POLLING;
 
   exec->context = NULL;
   exec->state = NULL;

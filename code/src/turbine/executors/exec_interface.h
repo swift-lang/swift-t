@@ -123,14 +123,6 @@ typedef turbine_exec_code (*turbine_exec_slots)(void *state,
 typedef turbine_exec_code (*turbine_exec_max_slots)(void *context,
                                                     int *max);
 
-// Executor notification model
-// TODO: only polling based currently used
-typedef enum
-{
-  EXEC_POLLING, /* We have to periodically poll for status */
-  //EXEC_BG_THREAD, /* Executor has background thread */
-} async_exec_notif;
-
 /*
   Structure with all information about registered executor.
   Typedef'd to turbine_executor in async_exec.h.
@@ -138,7 +130,6 @@ typedef enum
 struct turbine_executor
 {
   const char *name;
-  async_exec_notif notif_mode;
 
   /*
     Function pointers for executors
