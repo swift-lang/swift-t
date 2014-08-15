@@ -143,7 +143,8 @@ static struct staging_mode_entry staging_modes[] = {
   { "on_success", COASTER_STAGE_ON_SUCCESS },
 };
 
-int num_staging_modes = (int)(sizeof(staging_modes) / sizeof(staging_modes[0]));
+static int num_staging_modes = (int)(sizeof(staging_modes) /
+                                     sizeof(staging_modes[0]));
 
 static int parse_coaster_stages(Tcl_Interp *interp, Tcl_Obj *const objv[],
       Tcl_Obj *list, coaster_staging_mode staging_mode,
@@ -238,19 +239,20 @@ log_setup(int rank)
 static void
 set_namespace_constants(Tcl_Interp* interp)
 {
-  tcl_set_integer(interp, "::turbine::WORK", TURBINE_ADLB_WORK_TYPE_WORK);
+  turbine_tcl_set_integer(interp, "::turbine::WORK",
+                          TURBINE_ADLB_WORK_TYPE_WORK);
   // Map control to work for backwards compatibility with Tcl code
   // that distinguishes between the two
-  tcl_set_integer(interp, "::turbine::CONTROL",
+  turbine_tcl_set_integer(interp, "::turbine::CONTROL",
         TURBINE_ADLB_WORK_TYPE_WORK);
-  tcl_set_integer(interp, "::turbine::LOCAL",
+  turbine_tcl_set_integer(interp, "::turbine::LOCAL",
         TURBINE_ADLB_WORK_TYPE_LOCAL);
 
-  tcl_set_string(interp, "::turbine::NOOP_EXEC_NAME",
+  turbine_tcl_set_string(interp, "::turbine::NOOP_EXEC_NAME",
                  NOOP_EXECUTOR_NAME);
 
 #if HAVE_COASTER == 1
-  tcl_set_string(interp, "::turbine::COASTER_EXEC_NAME",
+  turbine_tcl_set_string(interp, "::turbine::COASTER_EXEC_NAME",
                  COASTER_EXECUTOR_NAME);
 #endif
 }
@@ -367,8 +369,9 @@ Turbine_Rule_Cmd(ClientData cdata, Tcl_Interp* interp,
 
 
   adlb_code ac = ADLB_Dput(action, action_len, opts.target,
-        adlb_comm_rank, opts.work_type, ADLB_curr_priority, opts.parallelism,
-        opts.name, input_list, inputs, input_pair_list, input_pairs);
+        adlb_comm_rank, opts.work_type, ADLB_curr_priority,
+        opts.parallelism, opts.name,
+        input_list, inputs, input_pair_list, input_pairs);
   TCL_CONDITION(ac == ADLB_SUCCESS, "could not process rule!");
 
   // Free subscripts that were allocated
@@ -595,7 +598,7 @@ Turbine_Cache_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
   TURBINE_CHECK(rc, "cache retrieve failed: %"PRId64"", td);
 
   Tcl_Obj* result = NULL;
-  int tcl_code = adlb_data_to_tcl_obj(interp, objv, td, type,
+  int tcl_code = adlb_datum2tclobj(interp, objv, td, type,
                       ADLB_TYPE_EXTRA_NULL, data, length, &result);
   TCL_CHECK(tcl_code);
   Tcl_SetObjResult(interp, result);
@@ -603,7 +606,7 @@ Turbine_Cache_Retrieve_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 static int
-tcl_obj_to_binary(Tcl_Interp* interp, Tcl_Obj *const objv[],
+turbine_tclobj2bin(Tcl_Interp* interp, Tcl_Obj *const objv[],
                turbine_datum_id td, turbine_type type,
                adlb_type_extra extra, Tcl_Obj* obj,
                bool canonicalize, void** result, int* length);
@@ -638,16 +641,17 @@ Turbine_Cache_Store_Cmd(ClientData cdata, Tcl_Interp* interp,
 
   adlb_data_type type;
   adlb_type_extra extra;
-  error = type_from_obj_extra(interp, objv, objv[argpos++], &type,
+  error = adlb_type_from_obj_extra(interp, objv, objv[argpos++], &type,
                               &extra);
   TCL_CHECK(error);
 
   TCL_CONDITION(argpos < objc, "not enough arguments");
-  error = tcl_obj_to_binary(interp, objv, td, type, extra,
+  error = turbine_tclobj2bin(interp, objv, td, type, extra,
                          objv[argpos++], false, &data, &length);
   TCL_CHECK_MSG(error, "object extraction failed: <%"PRId64">", td);
 
-  TCL_CONDITION(argpos == objc, "extra trailing arguments from %i", argpos);
+  TCL_CONDITION(argpos == objc, "extra trailing arguments from %i",
+                argpos);
 
   turbine_code rc = turbine_cache_store(td, type, data, length);
   TURBINE_CHECK(rc, "cache store failed: %"PRId64"", td);
@@ -658,23 +662,23 @@ Turbine_Cache_Store_Cmd(ClientData cdata, Tcl_Interp* interp,
 // Allocate a binary buffer and serialize a tcl object into it
 //  for the specified ADLB type
 static int
-tcl_obj_to_binary(Tcl_Interp* interp, Tcl_Obj *const objv[],
+turbine_tclobj2bin(Tcl_Interp* interp, Tcl_Obj *const objv[],
                turbine_datum_id td, turbine_type type,
                adlb_type_extra extra, Tcl_Obj* obj,
                bool canonicalize, void** result, int* length)
 {
   adlb_binary_data data;
 
-  int rc = tcl_obj_to_bin(interp, objv, type, extra, obj, canonicalize,
+  int rc = adlb_tclobj2bin(interp, objv, type, extra, obj, canonicalize,
                           NULL, &data);
-  TCL_CHECK_MSG(rc, "failed serializing tcl object to ADLB <%"PRId64">: \"%s\"",
-                    td, Tcl_GetString(obj));
+  TCL_CHECK_MSG(rc, "failed serializing tcl object to ADLB <%"PRId64">: "
+                "\"%s\"", td, Tcl_GetString(obj));
 
   // Ensure we have ownership of a malloced buffer with the data
   adlb_data_code dc  = ADLB_Own_data(NULL, &data);
 
-  TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "allocating binary buffer for <%"PRId64"> "
-                "failed: %s", td, Tcl_GetString(obj));
+  TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "allocating binary buffer for "
+        "<%"PRId64"> failed: %s", td, Tcl_GetString(obj));
 
   assert(data.caller_data != NULL);
   *result = data.caller_data;
@@ -735,14 +739,16 @@ Turbine_Worker_Loop_Cmd(ClientData cdata, Tcl_Interp* interp,
  */
 static int
 worker_keyword_args(Tcl_Interp *interp, Tcl_Obj *const objv[],
-                    Tcl_Obj *dict, int *buffer_count, int *buffer_size) {
+                  Tcl_Obj *dict, int *buffer_count, int *buffer_size) {
   int rc;
   Tcl_DictSearch search;
   Tcl_Obj *key_obj, *val_obj;
   int done;
 
-  rc = Tcl_DictObjFirst(interp, dict, &search, &key_obj, &val_obj, &done);
-  TCL_CHECK_MSG(rc, "Error iterating over dict: %s", Tcl_GetString(dict));
+  rc = Tcl_DictObjFirst(interp, dict, &search, &key_obj, &val_obj,
+                        &done);
+  TCL_CHECK_MSG(rc, "Error iterating over dict: %s",
+                Tcl_GetString(dict));
 
   for (; !done; Tcl_DictObjNext(&search, &key_obj, &val_obj, &done))
   {
@@ -752,8 +758,8 @@ worker_keyword_args(Tcl_Interp *interp, Tcl_Obj *const objv[],
       rc = Tcl_GetIntFromObj(interp, val_obj, buffer_count);
       TCL_CHECK_MSG(rc, "Expected integer value for buffer_count");
 
-      TCL_CONDITION(*buffer_count >= 0, "Positive value for buffer_count "
-                                   "expected, but got %i", *buffer_count);
+      TCL_CONDITION(*buffer_count >= 0, "Positive value for "
+            "buffer_count expected, but got %i", *buffer_count);
     }
     else if (strcmp(key, "buffer_size") == 0)
     {
@@ -761,7 +767,7 @@ worker_keyword_args(Tcl_Interp *interp, Tcl_Obj *const objv[],
       TCL_CHECK_MSG(rc, "Expected integer value for buffer_size");
 
       TCL_CONDITION(*buffer_size >= 0, "Positive value for buffer_size "
-                                   "expected, but got %i", *buffer_size);
+                                  "expected, but got %i", *buffer_size);
     }
     else
     {
@@ -806,16 +812,16 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
   adlb_type_extra type_extra;
   adlb_data_type tmp;
   if (type == ADLB_DATA_TYPE_CONTAINER) {
-    rc = type_from_obj(interp, objv, objv[argpos++], &tmp);
+    rc = adlb_type_from_obj(interp, objv, objv[argpos++], &tmp);
     TCL_CHECK(rc);
     type_extra.CONTAINER.key_type = tmp;
 
-    rc = type_from_obj(interp, objv, objv[argpos++], &tmp);
+    rc = adlb_type_from_obj(interp, objv, objv[argpos++], &tmp);
     TCL_CHECK(rc);
     type_extra.CONTAINER.val_type = tmp;
   } else {
     assert(type == ADLB_DATA_TYPE_MULTISET);
-    rc = type_from_obj(interp, objv, objv[argpos++], &tmp);
+    rc = adlb_type_from_obj(interp, objv, objv[argpos++], &tmp);
     TCL_CHECK(rc);
     type_extra.MULTISET.val_type = tmp;
   }
@@ -855,8 +861,8 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
   TCL_CONDITION(argpos == objc, "Trailing args starting at %i", argpos);
 
   if (type == ADLB_DATA_TYPE_CONTAINER) {
-    log_printf("creating nested container <%"PRId64">[%.*s] (%s->%s)", id,
-      (int)subscript.length, subscript.key,
+    log_printf("creating nested container <%"PRId64">[%.*s] (%s->%s)",
+      id, (int)subscript.length, subscript.key,
       ADLB_Data_type_tostring(type_extra.CONTAINER.key_type),
       ADLB_Data_type_tostring(type_extra.CONTAINER.val_type));
   } else {
@@ -902,11 +908,13 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
                            refcounts.incr_referand.write_refcount;
 
     adlb_datum_id new_id;
-    code = ADLB_Create(ADLB_DATA_ID_NULL, type, type_extra, props, &new_id);
+    code = ADLB_Create(ADLB_DATA_ID_NULL, type, type_extra, props,
+                       &new_id);
     TCL_CONDITION(code == ADLB_SUCCESS, "Error while creating nested");
 
     // ID is only relevant data, so init refcounts to any value
-    adlb_ref new_ref = { .id = new_id, .read_refs = 0, .write_refs = 0 };
+    adlb_ref new_ref = { .id = new_id, .read_refs = 0,
+                         .write_refs = 0 };
 
     // Pack using standard api.  Checks should be mostly optimized out
     adlb_binary_data packed;
@@ -942,7 +950,7 @@ Turbine_Create_Nested_Impl(ClientData cdata, Tcl_Interp *interp,
             "only works on containers with values of type ref");
 
     Tcl_Obj* result = NULL;
-    adlb_data_to_tcl_obj(interp, objv, id, ADLB_DATA_TYPE_REF,
+    adlb_datum2tclobj(interp, objv, id, ADLB_DATA_TYPE_REF,
             ADLB_TYPE_EXTRA_NULL, xfer, value_len, &result);
     Tcl_SetObjResult(interp, result);
     return TCL_OK;
@@ -1073,8 +1081,8 @@ Turbine_StrInt_Cmd(ClientData cdata, Tcl_Interp *interp,
     errno = 0; // reset errno
     if (my_errno == ERANGE)
     {
-      TCL_RETURN_ERROR("Integer representation of '%s' is out of range of "
-          "%zi bit integers", str, sizeof(Tcl_WideInt) * 8);
+      TCL_RETURN_ERROR("Integer representation of '%s' is out of range "
+          "of %zi bit integers", str, sizeof(Tcl_WideInt) * 8);
     }
     else if (my_errno == EINVAL)
     {
@@ -1419,7 +1427,8 @@ Noop_Exec_Run_Cmd(ClientData cdata, Tcl_Interp *interp,
               <success callback> <failure callback>
   options dict: optional arguments. Valid keys are:
     stdin/stdout/stderr: redirect output
-    job_manager: coaster job manager to use, e.g. "local:slurm" or "local:local"
+    job_manager: coaster job manager to use,
+                  e.g. "local:slurm" or "local:local"
     staging_mode: staging mode to use
               ("always", "if_present", "on_error", "on_success")
  */
@@ -1463,7 +1472,7 @@ Coaster_Run_Cmd(ClientData cdata, Tcl_Interp *interp,
             &stdout_s, &stdout_slen, &stderr_s, &stderr_slen,
             &job_manager, &job_manager_len, &staging_mode);
   TCL_CHECK(rc);
- 
+
   // Parse stages after we know staging mode
   rc = parse_coaster_stages(interp, objv, objv[3], staging_mode,
                     &stageinc, &stageins);

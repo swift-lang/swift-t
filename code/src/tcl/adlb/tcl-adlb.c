@@ -239,21 +239,21 @@ compound_type_next(Tcl_Interp *interp, Tcl_Obj *const objv[],
       adlb_data_type *type, adlb_type_extra *extra);
 
 static int
-tcl_obj_to_bin_compound(Tcl_Interp *interp, Tcl_Obj *const objv[],
+adlb_tclobj2bin_compound(Tcl_Interp *interp, Tcl_Obj *const objv[],
                 const compound_type types,
                 Tcl_Obj *obj, bool canonicalize,
                 const adlb_buffer *caller_buffer,
                 adlb_binary_data* result);
 
 static int
-tcl_obj_bin_append(Tcl_Interp *interp, Tcl_Obj *const objv[],
+adlb_tclobj_bin_append(Tcl_Interp *interp, Tcl_Obj *const objv[],
         const compound_type types, int ctype_pos,
         Tcl_Obj *obj, bool prefix_len, bool canonicalize,
         adlb_buffer *output, bool *output_caller_buf,
         int *output_pos);
 
 static int
-tcl_obj_bin_append2(Tcl_Interp *interp, Tcl_Obj *const objv[],
+adlb_tclobj_bin_append2(Tcl_Interp *interp, Tcl_Obj *const objv[],
         adlb_data_type type, adlb_type_extra extra,
         Tcl_Obj *obj, bool prefix_len, bool canonicalize,
         adlb_buffer *output, bool *output_caller_buf,
@@ -270,8 +270,8 @@ static int ADLB_Parse_Struct_Subscript(Tcl_Interp *interp,
                                 using_caller_buf, append)
 
 static int append_subscript(Tcl_Interp *interp,
-      Tcl_Obj *const objv[], adlb_subscript *sub, adlb_subscript to_append,
-      adlb_buffer *buf);
+      Tcl_Obj *const objv[], adlb_subscript *sub,
+      adlb_subscript to_append, adlb_buffer *buf);
 
 static int field_name_objs_init(Tcl_Interp *interp, Tcl_Obj *const objv[]);
 static int field_name_objs_add(Tcl_Interp *interp, Tcl_Obj *const objv[],
@@ -504,16 +504,17 @@ ADLB_Declare_Struct_Type_Cmd(ClientData cdata, Tcl_Interp *interp,
 
     TCL_CONDITION(field_list_ix < field_list_len, "missing type for "
                   "field named %s", field_names[field_count]);
-    rc = type_from_array(interp, objv, field_list, field_list_len,
+    rc = adlb_type_from_array(interp, objv, field_list, field_list_len,
                          &field_list_ix, &field_types[field_count].type,
                          &field_types[field_count].extra);
     TCL_CHECK(rc);
     field_count++;
   }
 
-  adlb_data_code dc = ADLB_Declare_struct_type(type_id, type_name, field_count,
-                      field_types, field_names);
-  TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Declaring ADLB struct type failed");
+  adlb_data_code dc = ADLB_Declare_struct_type(type_id, type_name,
+                      field_count, field_types, field_names);
+  TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
+                "Declaring ADLB struct type failed");
 
 
   rc = field_name_objs_add(interp, objv, type_id, field_count,
@@ -612,9 +613,9 @@ static int field_name_objs_finalize(Tcl_Interp *interp,
 static void
 set_namespace_constants(Tcl_Interp* interp)
 {
-  tcl_set_integer(interp, "::adlb::SUCCESS",   ADLB_SUCCESS);
-  tcl_set_integer(interp, "::adlb::RANK_ANY",  ADLB_RANK_ANY);
-  tcl_set_long(interp,    "::adlb::NULL_ID",   ADLB_DATA_ID_NULL);
+  turbine_tcl_set_integer(interp, "::adlb::SUCCESS",   ADLB_SUCCESS);
+  turbine_tcl_set_integer(interp, "::adlb::RANK_ANY",  ADLB_RANK_ANY);
+  turbine_tcl_set_long(interp,    "::adlb::NULL_ID",   ADLB_DATA_ID_NULL);
 }
 
 /**
@@ -1041,8 +1042,8 @@ ADLB_Iget_Cmd(ClientData cdata, Tcl_Interp *interp,
    Convert type string to adlb_data_type.
    If extra type info is provided, extra->valid is set to true
  */
-static int type_from_string(Tcl_Interp *interp, const char* type_string,
-                            adlb_data_type *type, adlb_type_extra *extra)
+static int adlb_type_from_string(Tcl_Interp *interp,
+  const char* type_string, adlb_data_type *type, adlb_type_extra *extra)
 {
 
   adlb_code rc = ADLB_Data_string_totype(type_string, type, extra);
@@ -1062,21 +1063,21 @@ static int type_from_string(Tcl_Interp *interp, const char* type_string,
 
   Does not return any extra type info, if present
  */
-int type_from_obj(Tcl_Interp *interp, Tcl_Obj *const objv[],
+int adlb_type_from_obj(Tcl_Interp *interp, Tcl_Obj *const objv[],
                    Tcl_Obj* obj, adlb_data_type *type)
 {
   adlb_type_extra extra;
-  int rc = type_from_obj_extra(interp, objv, obj, type, &extra);
+  int rc = adlb_type_from_obj_extra(interp, objv, obj, type, &extra);
   TCL_CHECK(rc);
   return TCL_OK;
 }
 
-int type_from_obj_extra(Tcl_Interp *interp, Tcl_Obj *const objv[],
+int adlb_type_from_obj_extra(Tcl_Interp *interp, Tcl_Obj *const objv[],
          Tcl_Obj* obj, adlb_data_type *type, adlb_type_extra *extra)
 {
   const char *type_name = Tcl_GetString(obj);
   TCL_CONDITION(type_name != NULL, "type argument not found!");
-  int rc = type_from_string(interp, type_name, type, extra);
+  int rc = adlb_type_from_string(interp, type_name, type, extra);
   TCL_CHECK(rc);
   return TCL_OK;
 }
@@ -1086,7 +1087,7 @@ int type_from_obj_extra(Tcl_Interp *interp, Tcl_Obj *const objv[],
   First consume type name as first arg, then if there is additional info
   needed, e.g. container key/value types, consume that info
  */
-int type_from_array(Tcl_Interp *interp, Tcl_Obj *const objv[],
+int adlb_type_from_array(Tcl_Interp *interp, Tcl_Obj *const objv[],
         Tcl_Obj *const array[], int len, int *ix,
         adlb_data_type *type, adlb_type_extra *extra)
 {
@@ -1095,7 +1096,7 @@ int type_from_array(Tcl_Interp *interp, Tcl_Obj *const objv[],
   memset(extra, 0, sizeof(*extra));
 
   adlb_data_type tmp_type;
-  rc = type_from_obj_extra(interp, objv, array[(*ix)++], &tmp_type,
+  rc = adlb_type_from_obj_extra(interp, objv, array[(*ix)++], &tmp_type,
                            extra);
   TCL_CHECK(rc);
   *type = tmp_type;
@@ -1110,9 +1111,9 @@ int type_from_array(Tcl_Interp *interp, Tcl_Obj *const objv[],
                       "adlb::create type=container requires "
                       "key and value types!");
         adlb_data_type key_type, val_type;
-        rc = type_from_obj(interp, objv, array[(*ix)++], &key_type);
+        rc = adlb_type_from_obj(interp, objv, array[(*ix)++], &key_type);
         TCL_CHECK(rc);
-        rc = type_from_obj(interp, objv, array[(*ix)++], &val_type);
+        rc = adlb_type_from_obj(interp, objv, array[(*ix)++], &val_type);
         TCL_CHECK(rc);
         extra->CONTAINER.key_type = key_type;
         extra->CONTAINER.val_type = val_type;
@@ -1123,7 +1124,7 @@ int type_from_array(Tcl_Interp *interp, Tcl_Obj *const objv[],
         TCL_CONDITION(len > *ix, "adlb::create type=multiset requires "
                       "member type!");
         adlb_data_type val_type;
-        rc = type_from_obj(interp, objv, array[(*ix)++], &val_type);
+        rc = adlb_type_from_obj(interp, objv, array[(*ix)++], &val_type);
         TCL_CHECK(rc);
         extra->MULTISET.val_type = val_type;
         extra->valid = true;
@@ -1143,8 +1144,9 @@ int type_from_array(Tcl_Interp *interp, Tcl_Obj *const objv[],
  */
 static inline int
 extract_create_props(Tcl_Interp *interp, bool accept_id, int argstart,
-    int objc, Tcl_Obj *const objv[], adlb_datum_id *id, adlb_data_type *type,
-    adlb_type_extra *type_extra, adlb_create_props *props)
+    int objc, Tcl_Obj *const objv[], adlb_datum_id *id,
+    adlb_data_type *type, adlb_type_extra *type_extra,
+    adlb_create_props *props)
 {
   int rc;
   int argpos = argstart;
@@ -1162,7 +1164,8 @@ extract_create_props(Tcl_Interp *interp, bool accept_id, int argstart,
   }
 
   // Consume type info from arg list
-  rc = type_from_array(interp, objv, objv, objc, &argpos, type, type_extra);
+  rc = adlb_type_from_array(interp, objv, objv, objc, &argpos, type,
+                            type_extra);
   TCL_CHECK(rc);
 
   // Process create props if present
@@ -1170,12 +1173,14 @@ extract_create_props(Tcl_Interp *interp, bool accept_id, int argstart,
   props->release_write_refs = turbine_release_write_rc_policy(*type);
 
   if (argpos < objc) {
-    rc = Tcl_GetIntFromObj(interp, objv[argpos++], &(props->read_refcount));
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++],
+                          &(props->read_refcount));
     TCL_CHECK_MSG(rc, "could not get read_refcount argument");
   }
 
   if (argpos < objc) {
-    rc = Tcl_GetIntFromObj(interp, objv[argpos++], &(props->write_refcount));
+    rc = Tcl_GetIntFromObj(interp, objv[argpos++],
+                        &(props->write_refcount));
     TCL_CHECK_MSG(rc, "could not get write_refcount argument");
   }
 
@@ -1266,7 +1271,8 @@ ADLB_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
     Tcl_SetObjResult(interp, result);
   }
 
-  TCL_CONDITION(rc == ADLB_SUCCESS, "adlb::create <%"PRId64"> failed!", id);
+  TCL_CONDITION(rc == ADLB_SUCCESS, "adlb::create <%"PRId64"> failed!",
+                id);
   return TCL_OK;
 }
 
@@ -1291,7 +1297,8 @@ ADLB_Multicreate_Cmd(ClientData cdata, Tcl_Interp *interp,
     int n;
     Tcl_Obj **elems;
     rc = Tcl_ListObjGetElements(interp, objv[i + 1], &n, &elems);
-    TCL_CONDITION(rc == TCL_OK, "adlb::multicreate arg %i must be list", i);
+    TCL_CONDITION(rc == TCL_OK, "adlb::multicreate arg %i must be list",
+                  i);
     ADLB_create_spec *spec = &(specs[i]);
     rc = extract_create_props(interp, false, 0, n, elems, &(spec->id),
               &(spec->type), &(spec->type_extra), &(spec->props));
@@ -1362,7 +1369,8 @@ ADLB_Exists_Impl(ClientData cdata, Tcl_Interp *interp,
                 (int)handle.sub.val.length,
                 (const char*)handle.sub.val.key, bool2string(b));
   else
-    DEBUG_ADLB("adlb::exists <%"PRId64"> => %s", handle.id, bool2string(b));
+    DEBUG_ADLB("adlb::exists <%"PRId64"> => %s", handle.id,
+               bool2string(b));
 
   ADLB_PARSE_HANDLE_CLEANUP(&handle);
 
@@ -1382,7 +1390,8 @@ ADLB_Exists_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb::exists_sub <id> [<subscript>] [ <read decr> ] [ <write decr> ]
+   usage: adlb::exists_sub <id> [<subscript>] [ <read decr> ]
+                          [ <write decr> ]
  */
 static int
 ADLB_Exists_Sub_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -1451,7 +1460,7 @@ ADLB_Closed_Cmd(ClientData cdata, Tcl_Interp *interp,
            ADLB_Free_storage
  */
 int
-tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
+adlb_tclobj2datum(Tcl_Interp *interp, Tcl_Obj *const objv[],
   adlb_data_type type, adlb_type_extra extra,
   Tcl_Obj *obj, bool own_pointers,
   adlb_datum_storage *result, bool *alloced)
@@ -1462,7 +1471,8 @@ tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
   {
     case ADLB_DATA_TYPE_INTEGER:
       rc = Tcl_GetADLBInt(interp, obj, &result->INTEGER);
-      TCL_CHECK_MSG(rc, "adlb extract int from %s failed!", Tcl_GetString(obj));
+      TCL_CHECK_MSG(rc, "adlb extract int from %s failed!",
+                    Tcl_GetString(obj));
       return TCL_OK;
     case ADLB_DATA_TYPE_REF:
       rc = Tcl_GetADLB_ID(interp, obj, &result->REF.id);
@@ -1479,7 +1489,8 @@ tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
                       Tcl_GetString(obj));
       return TCL_OK;
     case ADLB_DATA_TYPE_STRING:
-      result->STRING.value = Tcl_GetStringFromObj(obj, &result->STRING.length);
+      result->STRING.value = Tcl_GetStringFromObj(obj,
+                              &result->STRING.length);
       TCL_CONDITION(result != NULL, "adlb extract string from %p failed!",
                       obj);
       result->STRING.length++; // Account for null byte
@@ -1568,7 +1579,7 @@ compound_type_next(Tcl_Interp *interp, Tcl_Obj *const objv[],
 }
 
 static int
-tcl_obj_to_bin_compound(Tcl_Interp *interp, Tcl_Obj *const objv[],
+adlb_tclobj2bin_compound(Tcl_Interp *interp, Tcl_Obj *const objv[],
                 const compound_type types,
                 Tcl_Obj *obj, bool canonicalize,
                 const adlb_buffer *caller_buffer,
@@ -1585,7 +1596,7 @@ tcl_obj_to_bin_compound(Tcl_Interp *interp, Tcl_Obj *const objv[],
   dc = ADLB_Init_buf(caller_buffer, &packed, &using_caller_buf, 2048);
   TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error initializing buffer");
 
-  rc = tcl_obj_bin_append(interp, objv, types, 0, obj, false,
+  rc = adlb_tclobj_bin_append(interp, objv, types, 0, obj, false,
                 canonicalize, &packed, &using_caller_buf, &pos);
   TCL_CHECK(rc);
 
@@ -1603,7 +1614,7 @@ tcl_obj_to_bin_compound(Tcl_Interp *interp, Tcl_Obj *const objv[],
           containers are in sorted order
  */
 static int
-tcl_obj_bin_append(Tcl_Interp *interp, Tcl_Obj *const objv[],
+adlb_tclobj_bin_append(Tcl_Interp *interp, Tcl_Obj *const objv[],
         const compound_type types, int ctype_pos,
         Tcl_Obj *obj, bool prefix_len, bool canonicalize,
         adlb_buffer *output, bool *output_caller_buf,
@@ -1660,7 +1671,7 @@ tcl_obj_bin_append(Tcl_Interp *interp, Tcl_Obj *const objv[],
     // In other cases, we serialize the whole thing, then append it
     adlb_datum_storage tmp;
     bool alloced;
-    rc = tcl_obj_to_adlb_data(interp, objv, type, extra, obj, false,
+    rc = adlb_tclobj2datum(interp, objv, type, extra, obj, false,
                               &tmp, &alloced);
     TCL_CHECK(rc);
 
@@ -1679,8 +1690,9 @@ tcl_obj_bin_append(Tcl_Interp *interp, Tcl_Obj *const objv[],
     TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
                   "Error packing data type %i into buffer", type);
 
-    dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL, packed.data, packed.length,
-              prefix_len, output, output_caller_buf, output_pos);
+    dc = ADLB_Append_buffer(ADLB_DATA_TYPE_NULL, packed.data,
+              packed.length, prefix_len, output, output_caller_buf,
+              output_pos);
 
     if (packed.caller_data != NULL)
     {
@@ -1694,7 +1706,7 @@ tcl_obj_bin_append(Tcl_Interp *interp, Tcl_Obj *const objv[],
 }
 
 static int
-tcl_obj_bin_append2(Tcl_Interp *interp, Tcl_Obj *const objv[],
+adlb_tclobj_bin_append2(Tcl_Interp *interp, Tcl_Obj *const objv[],
         adlb_data_type type, adlb_type_extra extra,
         Tcl_Obj *obj, bool prefix_len, bool canonicalize,
         adlb_buffer *output, bool *output_caller_buf,
@@ -1704,7 +1716,7 @@ tcl_obj_bin_append2(Tcl_Interp *interp, Tcl_Obj *const objv[],
   //       modified by called function.
   compound_type ct = { .len = 1, .types = &type,
         .extras = (adlb_type_extra*)&extra };
-  return tcl_obj_bin_append(interp, objv, ct, 0, obj,
+  return adlb_tclobj_bin_append(interp, objv, ct, 0, obj,
          false, canonicalize, output, output_caller_buf, output_pos);
 }
 
@@ -1716,7 +1728,7 @@ tcl_obj_bin_append2(Tcl_Interp *interp, Tcl_Obj *const objv[],
           or pointer to caller_buffer->data
  */
 int
-tcl_obj_to_bin(Tcl_Interp *interp, Tcl_Obj *const objv[],
+adlb_tclobj2bin(Tcl_Interp *interp, Tcl_Obj *const objv[],
                 adlb_data_type type, adlb_type_extra extra,
                 Tcl_Obj *obj, bool canonicalize,
                 const adlb_buffer *caller_buffer,
@@ -1735,7 +1747,7 @@ tcl_obj_to_bin(Tcl_Interp *interp, Tcl_Obj *const objv[],
                                       &using_caller_buf, 128);
     TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error initializing buffer");
 
-    rc = tcl_obj_bin_append2(interp, objv, type, extra, obj,
+    rc = adlb_tclobj_bin_append2(interp, objv, type, extra, obj,
                 false, canonicalize, &buf, &using_caller_buf, &pos);
     TCL_CHECK(rc);
 
@@ -1747,7 +1759,7 @@ tcl_obj_to_bin(Tcl_Interp *interp, Tcl_Obj *const objv[],
   // For other types, where we will not typically be appending to array
   adlb_datum_storage tmp;
   bool alloced;
-  rc = tcl_obj_to_adlb_data(interp, objv, type, extra, obj, false,
+  rc = adlb_tclobj2datum(interp, objv, type, extra, obj, false,
                             &tmp, &alloced);
   TCL_CHECK(rc);
 
@@ -1766,8 +1778,8 @@ tcl_obj_to_bin(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
   // Make sure caller owns the memory (i.e. it's not a pointer to tmp)
   dc = ADLB_Own_data(caller_buffer, result);
-  TCL_CONDITION(dc == ADLB_DATA_SUCCESS,
-                "Error getting ownership of buffer for data type %i", type);
+  TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error getting ownership of "
+                "buffer for data type %i", type);
   return TCL_OK;
 }
 
@@ -1793,8 +1805,8 @@ tcl_append_key_val(Tcl_Interp *interp, Tcl_Obj *const objv[],
   //  a list or a dict)
   // Value type needs to be first for recursive call
   int rec_ctype_pos = ctype_pos - 1;
-  rc = tcl_obj_bin_append(interp, objv, types, rec_ctype_pos,
-              val, true, canonicalize, output, output_caller_buf, output_pos);
+  rc = adlb_tclobj_bin_append(interp, objv, types, rec_ctype_pos, val, true,
+                  canonicalize, output, output_caller_buf, output_pos);
   TCL_CHECK_MSG(rc, "Error serializing dict val");
 
   return TCL_OK;
@@ -1867,7 +1879,8 @@ tcl_dict_to_packed_container(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
     Tcl_Obj **dict_keysv;
     int dict_keysc;
-    rc = Tcl_ListObjGetElements(interp, dict_keys, &dict_keysc, &dict_keysv);
+    rc = Tcl_ListObjGetElements(interp, dict_keys, &dict_keysc,
+                                &dict_keysv);
     TCL_CHECK(rc);
 
     for (int i = 0; i < dict_keysc; i++)
@@ -1895,7 +1908,8 @@ tcl_dict_to_packed_container(Tcl_Interp *interp, Tcl_Obj *const objv[],
       if (i == 0)
       {
         rc = Tcl_DictObjFirst(interp, dict, &iter, &key, &val, &done);
-        TCL_CHECK_MSG_GOTO(rc, exit_err, "Error parsing packed container entry");
+        TCL_CHECK_MSG_GOTO(rc, exit_err, "Error parsing packed "
+                                         "container entry");
       }
       else
       {
@@ -1963,7 +1977,7 @@ tcl_list_to_packed_multiset(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
     // Value type needs to be first for recursive call
     int rec_ctype_pos = ctype_pos - 1;
-    rc = tcl_obj_bin_append(interp, objv, types, rec_ctype_pos,
+    rc = adlb_tclobj_bin_append(interp, objv, types, rec_ctype_pos,
                 elem, true, canonicalize,
                 output, output_caller_buf, output_pos);
     TCL_CHECK_MSG_GOTO(rc, exit_err, "Error serializing multiset elem");
@@ -2030,8 +2044,8 @@ packed_struct_to_tcl_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
     const char *name = field_names[i];
     // Find slice of buffer for the field
     int offset = hdr->field_offsets[i];
-    TCL_CONDITION(offset >= 0,
-        "invalid struct buffer: negative offset %i for field %s", offset, name);
+    TCL_CONDITION(offset >= 0, "invalid struct buffer: negative offset "
+                               "%i for field %s", offset, name);
     // Check if
     bool valid = (((char*)data)[offset]) != 0;
     if (valid)
@@ -2053,7 +2067,7 @@ packed_struct_to_tcl_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
       // Create a TCL object for the field data
       Tcl_Obj *field_tcl_obj;
-      rc = adlb_data_to_tcl_obj(interp, objv, ADLB_DATA_ID_NULL,
+      rc = adlb_datum2tclobj(interp, objv, ADLB_DATA_ID_NULL,
                     field_types[i].type, field_types[i].extra,
                     field_data, field_data_length, &field_tcl_obj);
       TCL_CHECK_MSG(rc, "Error building tcl object for field %s", name);
@@ -2106,14 +2120,15 @@ tcl_dict_to_adlb_struct(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
     rc = Tcl_DictObjGet(interp, dict, field_names2[i], &val);
     TCL_CHECK_MSG(rc, "Could not find val for %s (or %s) in %s",
-          field_names[i], Tcl_GetString(field_names2[i]), Tcl_GetString(dict));
+          field_names[i], Tcl_GetString(field_names2[i]),
+          Tcl_GetString(dict));
 
     if (val != NULL)
     {
       adlb_datum_storage *field = &(*result)->fields[i].data;
       bool alloced;
       // Need to own memory in allocated object so we can free correctly
-      rc = tcl_obj_to_adlb_data(interp, objv, field_types[i].type,
+      rc = adlb_tclobj2datum(interp, objv, field_types[i].type,
                         field_types[i].extra, val, true, field, &alloced);
       TCL_CHECK(rc);
       (*result)->fields[i].initialized = true;
@@ -2142,7 +2157,8 @@ packed_container_to_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
   dc = ADLB_Unpack_container_hdr(data, length, &pos, &entries,
                                  &key_type, &val_type);
-  TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error parsing packed data header");
+  TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error parsing packed data "
+                                         "header");
 
   if (extra.valid)
   {
@@ -2161,15 +2177,15 @@ packed_container_to_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
   {
     const void *key, *val;
     int key_len, val_len;
-    dc = ADLB_Unpack_container_entry(key_type, val_type, data, length, &pos,
-                                &key, &key_len, &val, &val_len);
+    dc = ADLB_Unpack_container_entry(key_type, val_type, data, length,
+                                &pos, &key, &key_len, &val, &val_len);
     TCL_CONDITION_GOTO(dc == ADLB_DATA_SUCCESS, exit_err,
             "Error parsing packed container entry");
 
     Tcl_Obj *key_obj, *val_obj;
     // TODO: interpreting key as string; support binary keys
 
-    rc = adlb_data_to_tcl_obj(interp, objv, ADLB_DATA_ID_NULL, val_type,
+    rc = adlb_datum2tclobj(interp, objv, ADLB_DATA_ID_NULL, val_type,
             ADLB_TYPE_EXTRA_NULL, val, val_len, &val_obj);
     TCL_CHECK_MSG_GOTO(rc, exit_err,
             "Error constructing Tcl object for packed container val");
@@ -2180,7 +2196,7 @@ packed_container_to_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
     {
       Tcl_DecrRefCount(key_obj);
       Tcl_DecrRefCount(val_obj);
-      tcl_condition_failed(interp, objv[0],
+      turbine_tcl_condition_failed(interp, objv[0],
             "Error adding entry to dict");
       goto exit_err;
 
@@ -2188,7 +2204,7 @@ packed_container_to_dict(Tcl_Interp *interp, Tcl_Obj *const objv[],
   }
 
   TCL_CONDITION_GOTO(pos == length, exit_err, "Didn't consume all "
-        "container data: %i bytes packed, consumed %i bytes", length, pos);
+      "container data: %i bytes packed, consumed %i bytes", length, pos);
 
   rc = TCL_OK;
 exit_err:
@@ -2219,7 +2235,8 @@ packed_multiset_to_list(Tcl_Interp *interp, Tcl_Obj *const objv[],
   adlb_data_code dc;
 
   dc = ADLB_Unpack_multiset_hdr(data, length, &pos, &entries, &elem_type);
-  TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error parsing packed data header");
+  TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error parsing packed data "
+                                          "header");
 
   if (extra.valid)
   {
@@ -2240,23 +2257,23 @@ packed_multiset_to_list(Tcl_Interp *interp, Tcl_Obj *const objv[],
                                     &elem, &elem_len);
     if (dc != ADLB_DATA_SUCCESS)
     {
-      tcl_condition_failed(interp, objv[0],
+      turbine_tcl_condition_failed(interp, objv[0],
             "Error parsing packed multiset entry");
       goto exit_err;
     }
 
-    rc = adlb_data_to_tcl_obj(interp, objv, ADLB_DATA_ID_NULL, elem_type,
+    rc = adlb_datum2tclobj(interp, objv, ADLB_DATA_ID_NULL, elem_type,
             ADLB_TYPE_EXTRA_NULL, elem, elem_len, &arr[entry]);
     if (rc != TCL_OK)
     {
-      tcl_condition_failed(interp, objv[0],
+      turbine_tcl_condition_failed(interp, objv[0],
             "Error constructing Tcl object for packed multiset entry");
       goto exit_err;
     }
   }
 
   TCL_CONDITION_GOTO(pos == length, exit_err, "Didn't consume all "
-        "container data: %i bytes packed, consumed %i bytes", length, pos);
+      "container data: %i bytes packed, consumed %i bytes", length, pos);
   rc = TCL_OK;
 exit_err:
   if (rc == TCL_OK)
@@ -2304,7 +2321,7 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
 
   adlb_data_type type;
   adlb_type_extra extra;
-  rc = type_from_obj_extra(interp, objv, objv[argpos++], &type,
+  rc = adlb_type_from_obj_extra(interp, objv, objv[argpos++], &type,
                          &extra);
   TCL_CHECK(rc);
 
@@ -2320,20 +2337,20 @@ ADLB_Store_Cmd(ClientData cdata, Tcl_Interp *interp,
 
     Tcl_Obj *obj = objv[argpos++];
     // Straightforward case with no nested type info
-    rc = tcl_obj_to_bin_compound(interp, objv, compound_type,
+    rc = adlb_tclobj2bin_compound(interp, objv, compound_type,
                                  obj, false, &xfer_buf, &data);
-    TCL_CHECK_MSG(rc, "<%"PRId64"> failed, could not extract data from %s!",
-                  handle.id, Tcl_GetString(obj));
+    TCL_CHECK_MSG(rc, "<%"PRId64"> failed, could not extract data from "
+                  "%s!", handle.id, Tcl_GetString(obj));
     free_compound_type(&compound_type);
   }
   else
   {
     Tcl_Obj *obj = objv[argpos++];
     // Straightforward case with no nested type info
-    rc = tcl_obj_to_bin(interp, objv, type, extra,
+    rc = adlb_tclobj2bin(interp, objv, type, extra,
                         obj, false, &xfer_buf, &data);
-    TCL_CHECK_MSG(rc, "<%"PRId64"> failed, could not extract data from %s!",
-                  handle.id, Tcl_GetString(obj));
+    TCL_CHECK_MSG(rc, "<%"PRId64"> failed, could not extract data from "
+                  "%s!", handle.id, Tcl_GetString(obj));
   }
 
   // Handle optional refcount spec
@@ -2438,8 +2455,8 @@ ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
   adlb_type_extra extra = { .valid = false };
   if (argpos < objc)
   {
-    rc = type_from_obj_extra(interp, objv, objv[argpos++], &given_type,
-                             &extra);
+    rc = adlb_type_from_obj_extra(interp, objv, objv[argpos++],
+                                  &given_type, &extra);
     TCL_CHECK_MSG(rc, "arg %i must be valid type!", argpos);
   }
 
@@ -2468,7 +2485,7 @@ ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
 
   // Unpack from xfer to Tcl object
   Tcl_Obj* result = NULL;
-  rc = adlb_data_to_tcl_obj(interp, objv, handle.id, type, extra,
+  rc = adlb_datum2tclobj(interp, objv, handle.id, type, extra,
                             xfer, length, &result);
   TCL_CHECK(rc);
 
@@ -2481,9 +2498,9 @@ ADLB_Retrieve_Impl(ClientData cdata, Tcl_Interp *interp,
    If object is a blob, this converts it to a string
  */
 int
-adlb_data_to_tcl_obj(Tcl_Interp *interp, Tcl_Obj *const objv[], adlb_datum_id id,
-                adlb_data_type type, adlb_type_extra extra,
-                const void *data, int length, Tcl_Obj** result)
+adlb_datum2tclobj(Tcl_Interp *interp, Tcl_Obj *const objv[],
+    adlb_datum_id id, adlb_data_type type, adlb_type_extra extra,
+    const void *data, int length, Tcl_Obj** result)
 {
   adlb_datum_storage tmp;
   adlb_data_code dc;
@@ -2532,9 +2549,11 @@ adlb_data_to_tcl_obj(Tcl_Interp *interp, Tcl_Obj *const objv[], adlb_datum_id id
       return packed_struct_to_tcl_dict(interp, objv, data, length,
                                        extra, result);
     case ADLB_DATA_TYPE_CONTAINER:
-      return packed_container_to_dict(interp, objv, data, length, extra, result);
+      return packed_container_to_dict(interp, objv, data, length, extra,
+                                      result);
     case ADLB_DATA_TYPE_MULTISET:
-      return packed_multiset_to_list(interp, objv, data, length, extra, result);
+      return packed_multiset_to_list(interp, objv, data, length, extra,
+                                     result);
     default:
       *result = NULL;
       TCL_CONDITION(false, "unsupported type: %s(%i)",
@@ -2568,8 +2587,9 @@ ADLB_Acquire_Ref_Cmd(ClientData cdata, Tcl_Interp *interp,
 /**
    usage: adlb::acquire_write_ref <id> <type>
           <read increment> <write increment> <read decrement>
-   Retrieve and increment read & write refcount of referenced ids by increment.
-   Decrement refcount of this id by decrement
+   Retrieve and increment read & write refcount of referenced ids by
+      <write increment>.
+   Decrement refcount of this id by <read decrement>
 */
 static int
 ADLB_Acquire_Write_Ref_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -2580,7 +2600,8 @@ ADLB_Acquire_Write_Ref_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb::acquire_sub_ref <id> <subscript> <type> <increment> <decrement>
+   usage: adlb::acquire_sub_ref <id> <subscript> <type> <increment>
+                                <decrement>
    Retrieve value at subscript and increment read refcount of referenced
    ids by increment.
    Decrement refcount of this id by decrement
@@ -2641,8 +2662,8 @@ ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
 
   adlb_data_type expected_type;
   adlb_type_extra extra;
-  rc = type_from_obj_extra(interp, objv, objv[argpos++], &expected_type,
-                          &extra);
+  rc = adlb_type_from_obj_extra(interp, objv, objv[argpos++],
+                          &expected_type, &extra);
   TCL_CHECK(rc);
 
   adlb_retrieve_refc refcounts = ADLB_RETRIEVE_NO_REFC;
@@ -2663,11 +2684,13 @@ ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
   // Retrieve the data, actual type, and length from server
   adlb_data_type type;
   int length;
-  rc = ADLB_Retrieve(handle.id, handle.sub.val, refcounts, &type, xfer, &length);
+  rc = ADLB_Retrieve(handle.id, handle.sub.val, refcounts, &type, xfer,
+                     &length);
   if (adlb_has_sub(handle.sub.val))
   {
-    TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64">[%.*s] failed!", handle.id,
-            (int)handle.sub.val.length, (const char*)handle.sub.val.key);
+    TCL_CONDITION(rc == ADLB_SUCCESS, "<%"PRId64">[%.*s] failed!",
+        handle.id, (int)handle.sub.val.length,
+        (const char*)handle.sub.val.key);
     TCL_CONDITION(length >= 0, "<%"PRId64">[%.*s] not found!", handle.id,
             (int)handle.sub.val.length, (const char*)handle.sub.val.key);
   }
@@ -2688,7 +2711,7 @@ ADLB_Acquire_Ref_Impl(ClientData cdata, Tcl_Interp *interp,
 
   // Unpack from xfer to Tcl object
   Tcl_Obj* result;
-  rc = adlb_data_to_tcl_obj(interp, objv, handle.id, type, extra,
+  rc = adlb_datum2tclobj(interp, objv, handle.id, type, extra,
                             xfer, length, &result);
   TCL_CHECK(rc);
 
@@ -2759,7 +2782,8 @@ ADLB_Enumerate_Cmd(ClientData cdata, Tcl_Interp *interp,
     TCL_CHECK_MSG(rc, "Expected integer argument");
   }
 
-  TCL_CONDITION(argpos == objc, "unexpected trailing args at %ith arg", argpos);
+  TCL_CONDITION(argpos == objc, "unexpected trailing args at %ith arg",
+                                argpos);
 
   // Set up call
   bool include_keys;
@@ -2768,7 +2792,8 @@ ADLB_Enumerate_Cmd(ClientData cdata, Tcl_Interp *interp,
   int data_length;
   int records;
   adlb_type_extra kv_type;
-  rc = set_enumerate_params(interp, objv, token, &include_keys, &include_vals);
+  rc = set_enumerate_params(interp, objv, token, &include_keys,
+                            &include_vals);
   TCL_CHECK_MSG(rc, "unknown token %s!", token);
 
 
@@ -2903,8 +2928,9 @@ enumerate_object(Tcl_Interp *interp, Tcl_Obj *const objv[],
       TCL_CONDITION(val_len <= length - pos, "Truncated/corrupted "
             "message received, key for record %i/%i extends beyond end "
             "of data", i + 1, records);
-      rc = adlb_data_to_tcl_obj(interp, objv, id, kv_type.CONTAINER.val_type,
-                ADLB_TYPE_EXTRA_NULL, data + pos, (int)val_len, &val);
+      rc = adlb_datum2tclobj(interp, objv, id,
+          kv_type.CONTAINER.val_type, ADLB_TYPE_EXTRA_NULL,
+          data + pos, (int)val_len, &val);
 
       pos += (int)val_len;
     }
@@ -3084,7 +3110,8 @@ static int extract_tcl_blob(Tcl_Interp *interp, Tcl_Obj *const objv[],
                 "Error interpreting %s as blob list", Tcl_GetString(obj));
 
   rc = Tcl_GetPtr(interp, elems[0], &blob->value);
-  TCL_CHECK_MSG(rc, "Error extracting pointer from %s", Tcl_GetString(elems[0]));
+  TCL_CHECK_MSG(rc, "Error extracting pointer from %s",
+                Tcl_GetString(elems[0]));
 
   rc = Tcl_GetIntFromObj(interp, elems[1], &blob->length);
   TCL_CHECK_MSG(rc, "Error extracting blob length from %s",
@@ -3470,8 +3497,8 @@ ADLB_Blob_To_String_Cmd(ClientData cdata, Tcl_Interp *interp,
   int rc = extract_tcl_blob(interp, objv, objv[1], &blob, NULL);
   TCL_CHECK(rc);
 
-  TCL_CONDITION(((char*)blob.value)[blob.length-1] == '\0', "adlb::blob_to_string "
-                "blob must be null terminated");
+  TCL_CONDITION(((char*)blob.value)[blob.length-1] == '\0',
+        "adlb::blob_to_string blob must be null terminated");
   Tcl_SetObjResult(interp, Tcl_NewStringObj(blob.value, blob.length-1));
   return TCL_OK;
 }
@@ -3501,12 +3528,12 @@ ADLB_Insert_Impl(ClientData cdata, Tcl_Interp *interp,
 
   adlb_data_type type;
   adlb_type_extra extra;
-  rc = type_from_obj_extra(interp, objv, objv[argpos++], &type,
+  rc = adlb_type_from_obj_extra(interp, objv, objv[argpos++], &type,
                            &extra);
   TCL_CHECK(rc);
 
   adlb_binary_data member;
-  rc = tcl_obj_to_bin(interp, objv, type, extra,
+  rc = adlb_tclobj2bin(interp, objv, type, extra,
                       member_obj, false, &xfer_buf, &member);
 
   // TODO: support binary subscript
@@ -3516,8 +3543,9 @@ ADLB_Insert_Impl(ClientData cdata, Tcl_Interp *interp,
 
   // TODO: support binary subscript
   DEBUG_ADLB("adlb::insert <%"PRId64">[\"%.*s\"]=<%s>",
-               handle.id, (int)handle.sub.val.length, (const char*)handle.sub.val.key,
-               Tcl_GetStringFromObj(member_obj, NULL));
+     handle.id, (int)handle.sub.val.length,
+     (const char*)handle.sub.val.key,
+     Tcl_GetStringFromObj(member_obj, NULL));
 
   adlb_refc decr = ADLB_NO_REFC;
   if (argpos < objc)
@@ -3532,8 +3560,8 @@ ADLB_Insert_Impl(ClientData cdata, Tcl_Interp *interp,
     TCL_CHECK(rc);
   }
 
-  TCL_CONDITION(argpos == objc, "trailing arguments after %i not consumed",
-                                argpos);
+  TCL_CONDITION(argpos == objc, "trailing arguments after %i not "
+                "consumed", argpos);
 
 
   adlb_refc store_rc = ADLB_READ_REFC;
@@ -3563,7 +3591,8 @@ ADLB_Insert_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb::insert_struct <id> <subscript> <member> <type> [<extra for type>]
+   usage: adlb::insert_struct <id> <subscript> <member>
+                        <type> [<extra for type>]
                        [<write refcount decr>] [<read refcount decr>]
 */
 static int
@@ -3591,7 +3620,8 @@ ADLB_Insert_Atomic_Cmd(ClientData cdata, Tcl_Interp *interp,
   rc = ADLB_PARSE_HANDLE(objv[1], &handle, true);
   TCL_CHECK_MSG(rc, "Invalid handle %s", Tcl_GetString(objv[1]));
 
-  rc = ADLB_PARSE_SUB(objv[2], ADLB_SUB_CONTAINER, &handle.sub, true, true);
+  rc = ADLB_PARSE_SUB(objv[2], ADLB_SUB_CONTAINER, &handle.sub,
+                      true, true);
   TCL_CHECK_MSG(rc, "Invalid subscript argument %s",
                     Tcl_GetString(objv[2]));
 
@@ -3715,9 +3745,9 @@ ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
       break;
   } while (spin && rc == ADLB_SUCCESS && len < 0);
 
-  TCL_CONDITION(rc == ADLB_SUCCESS, "lookup failed for: <%"PRId64">[%.*s]",
-                  handle.id, (int)handle.sub.val.length,
-                  (const char*)handle.sub.val.key);
+  TCL_CONDITION(rc == ADLB_SUCCESS, "lookup failed for: "
+          "<%"PRId64">[%.*s]", handle.id, (int)handle.sub.val.length,
+          (const char*)handle.sub.val.key);
 
   // TODO: support binary subscript
   TCL_CONDITION(len >= 0, "adlb::lookup <%"PRId64">[\"%.*s\"] not found",
@@ -3726,7 +3756,7 @@ ADLB_Lookup_Impl(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
   assert(type != ADLB_DATA_TYPE_NULL);
 
   Tcl_Obj* result = NULL;
-  rc = adlb_data_to_tcl_obj(interp, objv, handle.id, type,
+  rc = adlb_datum2tclobj(interp, objv, handle.id, type,
                     ADLB_TYPE_EXTRA_NULL, xfer, len, &result);
   TCL_CHECK(rc);
 
@@ -3754,7 +3784,7 @@ static int
 ADLB_Lookup_Cmd(ClientData cdata, Tcl_Interp *interp,
                 int objc, Tcl_Obj *const objv[])
 {
-    return ADLB_Lookup_Impl(interp, objc, objv, ADLB_SUB_CONTAINER, false);
+  return ADLB_Lookup_Impl(interp, objc, objv, ADLB_SUB_CONTAINER, false);
 }
 
 /**
@@ -3775,7 +3805,8 @@ ADLB_Lookup_Struct_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb::lookup_spin <id> <subscript> [<decr readers>] [<decr writers>]
+   usage: adlb::lookup_spin <id> <subscript>
+        [<decr readers>] [<decr writers>]
         [<incr readers referand>] [<incr writers referand>]
    decr (readers|writers): decrement reference counts.  Default is zero.
    incr (readers|writers) referand: increment reference counts of referand
@@ -3999,7 +4030,8 @@ ADLB_Reference_Impl(ClientData cdata, Tcl_Interp *interp,
   rc = ADLB_PARSE_SUB(objv[2], sub_kind, &handle.sub, true, true);
   TCL_CHECK_MSG(rc, "Invalid subscript %s", Tcl_GetString(objv[2]));
   // Check for no subscript
-  TCL_CONDITION(adlb_has_sub(handle.sub.val), "Invalid subscript argument");
+  TCL_CONDITION(adlb_has_sub(handle.sub.val), "Invalid subscript "
+                "argument");
 
   tcl_adlb_handle ref_handle;
   rc = ADLB_PARSE_HANDLE(objv[3], &ref_handle, false);
@@ -4008,15 +4040,13 @@ ADLB_Reference_Impl(ClientData cdata, Tcl_Interp *interp,
   adlb_data_type ref_type;
   adlb_type_extra extra;
   // ignores extra type info
-  rc = type_from_obj_extra(interp, objv, objv[4], &ref_type,
+  rc = adlb_type_from_obj_extra(interp, objv, objv[4], &ref_type,
                            &extra);
   TCL_CHECK(rc);
 
   // TODO: optionally take num of read/write references to transfer
   adlb_refc transfer_rc = ADLB_READ_REFC;
 
-  // DEBUG_ADLB("adlb::container_reference: <%"PRId64">[%s] => <%"PRId64">\n",
-  //            id, subscript, reference);
   rc = ADLB_Container_reference(handle.id, handle.sub.val,
               ref_handle.id, ref_handle.sub.val, ref_type, transfer_rc);
 
@@ -4028,7 +4058,8 @@ ADLB_Reference_Impl(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-   usage: adlb::container_size <container_id> [ <read decr> ] [ <write decr> ]
+   usage: adlb::container_size <container_id> [ <read decr> ]
+                               [ <write decr> ]
 */
 static int
 ADLB_Container_Size_Cmd(ClientData cdata, Tcl_Interp *interp,
@@ -4054,7 +4085,8 @@ ADLB_Container_Size_Cmd(ClientData cdata, Tcl_Interp *interp,
     TCL_CHECK_MSG(rc, "Expected integer argument");
   }
 
-  TCL_CONDITION(argpos == objc, "unexpected trailing args at %ith arg", argpos);
+  TCL_CONDITION(argpos == objc, "unexpected trailing args at %ith arg",
+                argpos);
 
   int size;
   // DEBUG_ADLB("adlb::container_size: <%"PRId64">",
@@ -4259,8 +4291,8 @@ ADLB_Enable_Read_Refcount_Cmd(ClientData cdata, Tcl_Interp *interp,
 
 /**
   Usage: adlb::xpt_init <filename> <flush policy> <max index val size>
-  filename: the filename of the checkpoint file.  If empty string, checkpointing to file
-            not initialized
+  filename: the filename of the checkpoint file.  If empty string,
+            checkpointing to file not initialized
   flush policy: no_flush, periodic_flush, or always_flush
   max index val size: maximum size of value to store in index
  */
@@ -4319,7 +4351,8 @@ ADLB_Xpt_Finalize_Cmd(ClientData cdata, Tcl_Interp *interp,
 #ifdef ENABLE_XPT
   TCL_ARGS(1);
   adlb_code ac = ADLB_Xpt_finalize();
-  TCL_CONDITION(ac == ADLB_SUCCESS, "Error while finalizing checkpointing");
+  TCL_CONDITION(ac == ADLB_SUCCESS, "Error while finalizing "
+                                    "checkpointing");
   return TCL_OK;
 #else
   TCL_RETURN_ERROR("Checkpointing not enabled in Turbine build");
@@ -4482,7 +4515,7 @@ get_compound_type(Tcl_Interp *interp, int objc, Tcl_Obj *const objv[],
 
     adlb_data_type curr;
     adlb_type_extra extra;
-    rc = type_from_obj_extra(interp, objv, objv[*argpos], &curr,
+    rc = adlb_type_from_obj_extra(interp, objv, objv[*argpos], &curr,
                              &extra);
     TCL_CHECK_GOTO(rc, exit_err);
 
@@ -4569,7 +4602,7 @@ ADLB_Xpt_Pack_Cmd(ClientData cdata, Tcl_Interp *interp,
 
     // pack incrementally into buffer
     int ctype_pos = 0;
-    rc = tcl_obj_bin_append(interp, objv, compound_type, ctype_pos,
+    rc = adlb_tclobj_bin_append(interp, objv, compound_type, ctype_pos,
             val, true, true, &packed, &using_caller_buf, &pos);
     TCL_CHECK(rc);
 
@@ -4598,7 +4631,8 @@ ADLB_Xpt_Unpack_Cmd(ClientData cdata, Tcl_Interp *interp,
   int fieldCount = (objc - 2) / 2;
 
   adlb_blob_t packed;
-  rc = extract_tcl_blob(interp, objv, objv[fieldCount + 1], &packed, NULL);
+  rc = extract_tcl_blob(interp, objv, objv[fieldCount + 1], &packed,
+                        NULL);
   TCL_CHECK(rc);
 
   int packed_pos = 0;
@@ -4611,16 +4645,16 @@ ADLB_Xpt_Unpack_Cmd(ClientData cdata, Tcl_Interp *interp,
     // Get type of object
     adlb_data_type type;
     adlb_type_extra extra;
-    rc = type_from_obj_extra(interp, objv, typeO, &type, &extra);
+    rc = adlb_type_from_obj_extra(interp, objv, typeO, &type, &extra);
     TCL_CHECK(rc);
 
     // Unpack next entry from buffer
     const void *entry;
     int entry_length;
-    adlb_data_code dc = ADLB_Unpack_buffer(type, packed.value, packed.length,
-          &packed_pos, &entry, &entry_length);
-    TCL_CONDITION(dc != ADLB_DATA_DONE, "Hit end of buffer after unpacking "
-               "%i/%i fields", field, fieldCount);
+    adlb_data_code dc = ADLB_Unpack_buffer(type, packed.value,
+            packed.length, &packed_pos, &entry, &entry_length);
+    TCL_CONDITION(dc != ADLB_DATA_DONE, "Hit end of buffer after "
+                    "unpacking %i/%i fields", field, fieldCount);
     TCL_CONDITION(dc == ADLB_DATA_SUCCESS, "Error unpacking field %i "
             "from buffer", field);
 
@@ -4630,7 +4664,7 @@ ADLB_Xpt_Unpack_Cmd(ClientData cdata, Tcl_Interp *interp,
                 packed.length, entry - packed.value, entry_length);
 
     Tcl_Obj *obj;
-    rc = adlb_data_to_tcl_obj(interp, objv, ADLB_DATA_ID_NULL,
+    rc = adlb_datum2tclobj(interp, objv, ADLB_DATA_ID_NULL,
           type, extra, entry, entry_length, &obj);
     TCL_CHECK(rc);
 
@@ -4643,9 +4677,10 @@ ADLB_Xpt_Unpack_Cmd(ClientData cdata, Tcl_Interp *interp,
 }
 
 /**
-  usage: adlb::xpt_reload <checkpoint file name> <loader rank> <total loaders>
-  loader rank/total loads: total count of loaders, and this processes rank within
-          them, used to divide up work
+  usage: adlb::xpt_reload <checkpoint file name> <loader rank>
+                          <total loaders>
+  loader rank/total loads: total count of loaders, and this processes
+          rank within them, used to divide up work
   returns: statistics about reload.  Dict with "ranks" containing total
             number of ranks.  An entry is added for each rank that was
             reloaded (no entry present if not loaded by this process).
@@ -4676,8 +4711,8 @@ ADLB_Xpt_Reload_Cmd(ClientData cdata, Tcl_Interp *interp,
   adlb_code ac;
   adlb_xpt_load_stats stats;
   ac = ADLB_Xpt_reload(filename, &stats, loader_rank, total_loaders);
-  TCL_CONDITION(ac == ADLB_SUCCESS, "Error reloading checkpoint from file %s",
-                filename);
+  TCL_CONDITION(ac == ADLB_SUCCESS, "Error reloading checkpoint from "
+                                                  "file %s", filename);
 
   Tcl_Obj *stat_dict = Tcl_NewDictObj();
 
@@ -4738,7 +4773,8 @@ ADLB_Dict_Create_Cmd(ClientData cdata, Tcl_Interp *interp,
 
       TCL_CONDITION(old_val == NULL, "Tried to create dictionary with "
             "duplicate values \"%s\" and \"%s\" for key \"%s\"",
-            Tcl_GetString(old_val), Tcl_GetString(val), Tcl_GetString(key));
+            Tcl_GetString(old_val), Tcl_GetString(val),
+            Tcl_GetString(key));
     }
 
     rc = Tcl_DictObjPut(interp, dict, key, val);
@@ -4864,8 +4900,8 @@ ADLB_Parse_Subscript(Tcl_Interp *interp, Tcl_Obj *const objv[],
 
       bool using_scratch = (parse->buf.data == tcl_adlb_scratch);
 
-      rc = PARSE_STRUCT_SUB(subscript, subscript_len,
-                          &parse->buf, &parse->val, &using_scratch, append);
+      rc = PARSE_STRUCT_SUB(subscript, subscript_len, &parse->buf,
+                            &parse->val, &using_scratch, append);
       TCL_CHECK(rc);
     }
   }
@@ -4888,8 +4924,8 @@ ADLB_Parse_Subscript_Cleanup(Tcl_Interp *interp, Tcl_Obj *const objv[],
  * scratch buffer
  */
 static int append_subscript(Tcl_Interp *interp,
-      Tcl_Obj *const objv[], adlb_subscript *sub, adlb_subscript to_append,
-      adlb_buffer *buf)
+      Tcl_Obj *const objv[], adlb_subscript *sub,
+      adlb_subscript to_append, adlb_buffer *buf)
 {
   bool using_scratch = (buf->data == tcl_adlb_scratch);
 
@@ -5116,7 +5152,8 @@ static int
 ADLB_Subscript_Container_Cmd(ClientData cdata, Tcl_Interp *interp,
                int objc, Tcl_Obj *const objv[])
 {
-  return ADLB_Subscript_Impl(cdata, interp, objc, objv, ADLB_SUB_CONTAINER);
+  return ADLB_Subscript_Impl(cdata, interp, objc, objv,
+                             ADLB_SUB_CONTAINER);
 }
 
 /**
@@ -5256,8 +5293,8 @@ static int blob_cache_finalize(void)
  */
 #define ADLB_NAMESPACE "adlb::"
 #define COMMAND(tcl_function, c_function) \
-    Tcl_CreateObjCommand(interp, ADLB_NAMESPACE tcl_function, c_function, \
-                         NULL, NULL);
+    Tcl_CreateObjCommand(interp, ADLB_NAMESPACE tcl_function, \
+                         c_function, NULL, NULL);
 
 /**
    Called when Tcl loads this extension

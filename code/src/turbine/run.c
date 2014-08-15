@@ -92,17 +92,18 @@ turbine_code turbine_run_string(MPI_Comm comm, const char* script,
   }
   
   // Render argc/argv for Tcl
-  tcl_set_integer(interp, "argc", argc);
+  turbine_tcl_set_integer(interp, "argc", argc);
   Tcl_Obj* argv_obj     = Tcl_NewStringObj("argv", -1);
   Tcl_Obj* argv_val_obj;
   if (argc > 0)
-    argv_val_obj = tcl_list_new(argc, argv);
+    argv_val_obj = turbine_tcl_list_new(argc, argv);
   else
     argv_val_obj = Tcl_NewStringObj("", 0);
   Tcl_ObjSetVar2(interp, argv_obj, NULL, argv_val_obj, 0);
 
   if (output != NULL)
-    tcl_set_wideint(interp, "turbine_run_output", (ptrdiff_t) output);
+    turbine_tcl_set_wideint(interp, "turbine_run_output",
+                            (ptrdiff_t) output);
 
   // Run the user script
   int rc = Tcl_Eval(interp, script);

@@ -88,52 +88,53 @@ turbine_code turbine_tcl_string_array(Tcl_Interp* interp,
                                       Tcl_Obj* list, int max,
                                       char** output, int* count);
 
-void tcl_condition_failed(Tcl_Interp* interp, Tcl_Obj* command,
+void turbine_tcl_condition_failed(Tcl_Interp* interp, Tcl_Obj* command,
                           const char* format, ...)
   __attribute__ ((format (printf, 3, 4)));
 
 /**
    Convenience function to set name=value
  */
-void tcl_set_string(Tcl_Interp* interp, char* name, char* value);
+void turbine_tcl_set_string(Tcl_Interp* interp, char* name, char* value);
 
 /**
    Convenience function to set name=value
  */
-void tcl_set_integer(Tcl_Interp* interp, char* name, int value);
+void turbine_tcl_set_integer(Tcl_Interp* interp, char* name, int value);
 
 /**
    Convenience function to set name=value
  */
-void tcl_set_long(Tcl_Interp* interp, char* name, long value);
+void turbine_tcl_set_long(Tcl_Interp* interp, char* name, long value);
 
 /**
    Convenience function to set name=value
  */
-void tcl_set_wideint(Tcl_Interp* interp, char* name, int64_t value);
+void turbine_tcl_set_wideint(Tcl_Interp* interp, char* name,
+                             int64_t value);
 
 /**
    Convenience function to set key=value in dict
  */
-void tcl_dict_put(Tcl_Interp* interp, Tcl_Obj* dict,
-                  char* key, Tcl_Obj* value);
+void turbine_tcl_dict_put(Tcl_Interp* interp, Tcl_Obj* dict, char* key,
+                          Tcl_Obj* value);
 
 /**
    Convenience function to get key=value from dict
  */
 void
-tcl_dict_get(Tcl_Interp* interp, Tcl_Obj* dict,
-             char* key, Tcl_Obj** value);
+turbine_tcl_dict_get(Tcl_Interp* interp, Tcl_Obj* dict,
+                     char* key, Tcl_Obj** value);
 
 /**
    Convenience function to construct Tcl list of strings
  */
-Tcl_Obj* tcl_list_new(int count, char** strings);
+Tcl_Obj* turbine_tcl_list_new(int count, char** strings);
 
 /**
    Convenience function to construct Tcl list of integers
  */
-Tcl_Obj* tcl_list_from_array_ints(Tcl_Interp *interp,
+Tcl_Obj* turbine_tcl_list_from_array_ints(Tcl_Interp *interp,
                                   int* vals, int count);
 
 /**
@@ -142,7 +143,7 @@ Tcl_Obj* tcl_list_from_array_ints(Tcl_Interp *interp,
  */
 #define TCL_RETURN_ERROR(format, args...)                        \
   {                                                              \
-    tcl_condition_failed(interp, objv[0], format, ## args);      \
+    turbine_tcl_condition_failed(interp, objv[0], format, ## args); \
     return TCL_ERROR;                                            \
   }
 
@@ -152,7 +153,7 @@ Tcl_Obj* tcl_list_from_array_ints(Tcl_Interp *interp,
  */
 #define TCL_ERROR_GOTO(label, format, args...)                   \
   {                                                              \
-    tcl_condition_failed(interp, objv[0], format, ## args);      \
+    turbine_tcl_condition_failed(interp, objv[0], format, ## args); \
     goto label;                                                  \
   }
 

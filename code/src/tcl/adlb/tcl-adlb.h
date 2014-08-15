@@ -32,33 +32,33 @@ extern int adlb_comm_rank;
 /* Return a pointer to a shared buffer */
 char *tcl_adlb_xfer_buffer(uint64_t *buf_size);
 
-int type_from_obj(Tcl_Interp *interp, Tcl_Obj *const objv[],
+int adlb_type_from_obj(Tcl_Interp *interp, Tcl_Obj *const objv[],
                          Tcl_Obj* obj, adlb_data_type *type);
 
-int type_from_obj_extra(Tcl_Interp *interp, Tcl_Obj *const objv[],
+int adlb_type_from_obj_extra(Tcl_Interp *interp, Tcl_Obj *const objv[],
                          Tcl_Obj* obj, adlb_data_type *type,
                          adlb_type_extra *extra);
 
-int type_from_array(Tcl_Interp *interp, Tcl_Obj *const objv[],
+int adlb_type_from_array(Tcl_Interp *interp, Tcl_Obj *const objv[],
         Tcl_Obj *const array[], int len, int *ix,
         adlb_data_type *type, adlb_type_extra *extra);
 
 int
-tcl_obj_to_adlb_data(Tcl_Interp *interp, Tcl_Obj *const objv[],
+adlb_tclobj2datum(Tcl_Interp *interp, Tcl_Obj *const objv[],
       adlb_data_type type, adlb_type_extra extra,
       Tcl_Obj *obj, bool own_pointers,
       adlb_datum_storage *result, bool *alloced);
 
 int
-tcl_obj_to_bin(Tcl_Interp *interp, Tcl_Obj *const objv[],
+adlb_tclobj2bin(Tcl_Interp *interp, Tcl_Obj *const objv[],
                 adlb_data_type type, adlb_type_extra extra,
                 Tcl_Obj *obj, bool canonicalize,
                 const adlb_buffer *caller_buffer,
                 adlb_binary_data* result);
 int
-adlb_data_to_tcl_obj(Tcl_Interp *interp, Tcl_Obj *const objv[], adlb_datum_id id,
-                adlb_data_type type, adlb_type_extra extra,
-                const void *data, int length, Tcl_Obj** result);
+adlb_datum2tclobj(Tcl_Interp *interp, Tcl_Obj *const objv[],
+            adlb_datum_id id, adlb_data_type type, adlb_type_extra extra,
+            const void *data, int length, Tcl_Obj** result);
 
 /**
   Different ways of interpreting subscripts

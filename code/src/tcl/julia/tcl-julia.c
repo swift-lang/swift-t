@@ -77,7 +77,7 @@ Julia_Eval_Cmd(ClientData cdata, Tcl_Interp *interp,
 {
   TCL_ARGS(2);
   // TODO: Throw TURBINE ERROR for cleaner handling (#601)
-  tcl_condition_failed(interp, objv[0],
+  turbine_tcl_condition_failed(interp, objv[0],
                        "Turbine not compiled with Julia support");
   return TCL_ERROR;
 }
