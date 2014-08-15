@@ -39,30 +39,30 @@ public class Operators {
    * Opcodes for operations operating on local variables
    */
   public static enum BuiltinOpcode {
-    PLUS_INT, MINUS_INT, MULT_INT, DIV_INT, MOD_INT, PLUS_FLOAT, MINUS_FLOAT, 
-    MULT_FLOAT, DIV_FLOAT, 
-    /** Directory catenation (/): */ 
-    DIRCAT, 
-    NEGATE_INT, NEGATE_FLOAT, POW_INT, POW_FLOAT, 
-    MAX_INT, MAX_FLOAT, MIN_INT, MIN_FLOAT, ABS_INT, ABS_FLOAT, 
-    EQ_INT, NEQ_INT, GT_INT, LT_INT, GTE_INT, LTE_INT, 
-    EQ_FLOAT, NEQ_FLOAT, GT_FLOAT, LT_FLOAT, GTE_FLOAT, LTE_FLOAT, 
-    EQ_BOOL, NEQ_BOOL, EQ_STRING, NEQ_STRING, 
-    NOT, AND, OR, XOR, STRCAT, SUBSTRING, 
-    COPY_INT, COPY_FLOAT, COPY_BOOL, COPY_STRING, COPY_BLOB, COPY_VOID, 
-    FLOOR, CEIL, ROUND, INTTOFLOAT, STRTOINT, INTTOSTR, STRTOFLOAT, FLOATTOSTR, 
+    PLUS_INT, MINUS_INT, MULT_INT, DIV_INT, MOD_INT, PLUS_FLOAT, MINUS_FLOAT,
+    MULT_FLOAT, DIV_FLOAT,
+    /** Directory catenation (/): */
+    DIRCAT,
+    NEGATE_INT, NEGATE_FLOAT, POW_INT, POW_FLOAT,
+    MAX_INT, MAX_FLOAT, MIN_INT, MIN_FLOAT, ABS_INT, ABS_FLOAT,
+    EQ_INT, NEQ_INT, GT_INT, LT_INT, GTE_INT, LTE_INT,
+    EQ_FLOAT, NEQ_FLOAT, GT_FLOAT, LT_FLOAT, GTE_FLOAT, LTE_FLOAT,
+    EQ_BOOL, NEQ_BOOL, EQ_STRING, NEQ_STRING,
+    NOT, AND, OR, XOR, STRCAT, SUBSTRING,
+    COPY_INT, COPY_FLOAT, COPY_BOOL, COPY_STRING, COPY_BLOB, COPY_VOID,
+    FLOOR, CEIL, ROUND, INTTOFLOAT, STRTOINT, INTTOSTR, STRTOFLOAT, FLOATTOSTR,
     LOG, EXP, SQRT, IS_NAN,
     ASSERT_EQ, ASSERT, SPRINTF,
   }
-  
+
   /** Map of <token type> -> [(<operator type>, <internal opcode> )] */
   private static final MultiMap<Integer, Op> arithOps =
                                           new MultiMap<Integer, Op>();
-  
+
   /** Types of operations */
-  private static final Map<BuiltinOpcode, OpType> optypes = 
+  private static final Map<BuiltinOpcode, OpType> optypes =
       new HashMap<BuiltinOpcode, OpType>();
-  
+
 
   static {
     fillArithOps();
@@ -70,7 +70,7 @@ public class Operators {
 
   /**
    * Load mapping from AST tags and arg types to actual op codes
-   * 
+   *
    * NOTE: order of insertion into list will determine preference in
    * case of multiple possible matches
    */
@@ -80,14 +80,14 @@ public class Operators {
                                              PrimType.STRING, PrimType.BOOL);
     for (PrimType primT: primTypes) {
       String opTypeName = getOpTypeName(primT);
-      
+
       // Type for relational operations, e.g. a < b
       OpType relOp = new OpType(PrimType.BOOL, primT, primT);
 
       // Types for closed operations - output type is input type
       OpType closedUnaryOp = new OpType(primT, primT);
       OpType closedOp = new OpType(primT, primT, primT);
-      
+
       // Want equality tests for all primitives
       BuiltinOpcode eq = BuiltinOpcode.valueOf("EQ_" + opTypeName);
       registerOperator(ExMParser.EQUALS, eq, relOp);
@@ -106,25 +106,25 @@ public class Operators {
         registerOperator(ExMParser.DIV, BuiltinOpcode.DIV_FLOAT, closedOp);
       }
 
-      if (primT == PrimType.INT || primT == PrimType.FLOAT) {
+      if (isNumeric(primT)) {
         BuiltinOpcode plus = BuiltinOpcode.valueOf("PLUS_" + opTypeName);
         registerOperator(ExMParser.PLUS, plus, closedOp);
-        
+
         BuiltinOpcode minus = BuiltinOpcode.valueOf("MINUS_" + opTypeName);
         registerOperator(ExMParser.MINUS, minus, closedOp);
-        
+
         BuiltinOpcode mult = BuiltinOpcode.valueOf("MULT_" + opTypeName);
         registerOperator(ExMParser.MULT, mult, closedOp);
-        
+
         BuiltinOpcode negate = BuiltinOpcode.valueOf("NEGATE_" + opTypeName);
         registerOperator(ExMParser.NEGATE, negate, closedUnaryOp);
-        
+
         BuiltinOpcode gt = BuiltinOpcode.valueOf("GT_" + opTypeName);
         registerOperator(ExMParser.GT, gt, relOp);
-        
+
         BuiltinOpcode gte = BuiltinOpcode.valueOf("GTE_" + opTypeName);
         registerOperator(ExMParser.GTE, gte, relOp);
-        
+
         BuiltinOpcode lt = BuiltinOpcode.valueOf("LT_" + opTypeName);
         registerOperator(ExMParser.LT, lt, relOp);
 
@@ -134,16 +134,28 @@ public class Operators {
         BuiltinOpcode pow = BuiltinOpcode.valueOf("POW_" + opTypeName);
         registerOperator(ExMParser.POW, pow,
                           new OpType(PrimType.FLOAT, primT, primT));
+
+        /*
+         * Allow + to take integer/string pair and do string concatenation.
+         */
+        registerOperator(ExMParser.PLUS, BuiltinOpcode.STRCAT,
+                          new OpType(PrimType.STRING, primT, PrimType.STRING));
+        registerOperator(ExMParser.PLUS, BuiltinOpcode.STRCAT,
+                          new OpType(PrimType.STRING, PrimType.STRING, primT));
       }
 
       if (primT == PrimType.BOOL) {
         registerOperator(ExMParser.NOT, BuiltinOpcode.NOT, closedUnaryOp);
-        
+
         registerOperator(ExMParser.AND, BuiltinOpcode.AND, closedOp);
-        
+
         registerOperator(ExMParser.OR, BuiltinOpcode.OR, closedOp);
       }
     }
+  }
+
+  private static boolean isNumeric(PrimType primT) {
+    return primT == PrimType.INT || primT == PrimType.FLOAT;
   }
 
   private static void registerOperator(int token, BuiltinOpcode opCode,
@@ -169,12 +181,12 @@ public class Operators {
 
   /**
    * @param tokenType frontend token type
-   * @return list of possible operators, empty list if not 
+   * @return list of possible operators, empty list if not
    */
   public static List<Op> getOps(int tokenType) {
     return arithOps.get(tokenType);
   }
-  
+
   public static OpType getBuiltinOpType(BuiltinOpcode op) {
     OpType t = optypes.get(op);
     if (t == null) {
@@ -220,8 +232,8 @@ public class Operators {
   public static boolean isImpure(BuiltinOpcode op) {
     return impureOps.contains(op);
   }
-  
-  private static Set<BuiltinOpcode> commutative = 
+
+  private static Set<BuiltinOpcode> commutative =
         new HashSet<BuiltinOpcode>();
   static {
     commutative.add(BuiltinOpcode.PLUS_INT);
@@ -233,18 +245,18 @@ public class Operators {
     commutative.add(BuiltinOpcode.MIN_FLOAT);
     commutative.add(BuiltinOpcode.MIN_INT);
   }
-  
+
   public static boolean isCommutative(BuiltinOpcode op) {
     return commutative.contains(op);
   }
-  
+
   /** Ops which are equivalent to another with
    * reversed arguments.  Reverse arguments and swap
    * to another function name to get canoical version
    */
   private static Map<BuiltinOpcode, BuiltinOpcode> flippedOps
        = new HashMap<BuiltinOpcode, BuiltinOpcode>();
-  
+
   public static boolean isFlippable(BuiltinOpcode op) {
     return flippedOps.containsKey(op);
   }
@@ -252,7 +264,7 @@ public class Operators {
   public static BuiltinOpcode flippedOp(BuiltinOpcode op) {
     return flippedOps.get(op);
   }
-  
+
   static {
     // e.g a > b is same as b < a
     // Make less than the canonical representation
@@ -261,7 +273,7 @@ public class Operators {
     flippedOps.put(BuiltinOpcode.GT_INT, BuiltinOpcode.LT_INT);
     flippedOps.put(BuiltinOpcode.GTE_INT, BuiltinOpcode.LTE_INT);
   }
-  
+
   /**
    * Class to represent info about a builtin operator
    */
@@ -272,29 +284,29 @@ public class Operators {
     }
     public final BuiltinOpcode code;
     public final OpType type;
-    
+
     @Override
     public String toString() {
       return this.code + ": " + this.type;
     }
   }
 
-  /** 
+  /**
    * Represent type of builtin operators
    */
   public static class OpType {
     public final PrimType out;
     public final List<PrimType> in;
-    
+
     private OpType(PrimType out, PrimType ...in) {
       this(out, Arrays.asList(in));
     }
-    
+
     private OpType(PrimType out, List<PrimType> in) {
       this.out = out;
       this.in = Collections.unmodifiableList(in);
     }
-    
+
     @Override
     public String toString() {
       return this.in.toString() + " => " + this.out.toString();
@@ -306,7 +318,7 @@ public class Operators {
    */
   public static enum UpdateMode {
     MIN, SCALE, INCR;
-  
+
     @SuppressWarnings("serial")
     private static final Map<String, UpdateMode> nameMap = new
               HashMap<String, UpdateMode>() {{
@@ -317,7 +329,7 @@ public class Operators {
     public static UpdateMode fromString(Context errContext, String modeName)
                                             throws InvalidSyntaxException {
       UpdateMode result = nameMap.get(modeName);
-      
+
       if (result == null) {
         throw new InvalidSyntaxException(errContext, "invalid update mode: "
             + modeName + " valid options are: " + nameMap.values());
