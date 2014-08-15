@@ -444,7 +444,6 @@ transform_create(const char* name, int name_strlen,
   assert(input_id_subs >= 0);
   assert(input_id_subs == 0 || input_id_sub_list != NULL);
 
-  // TODO: could malloc single chunk for all arrays?
   transform* T = malloc(sizeof(transform));
   if (! T)
     return XLB_ENGINE_ERROR_OOM;
