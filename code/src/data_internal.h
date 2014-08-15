@@ -77,7 +77,7 @@ typedef struct
   int read_refcount; // Number of open read refs
   int write_refcount; // Number of open write refs
   adlb_data_type type;
-  adlb_dsym symbol; // TODO: remove for opt build?
+  adlb_dsym symbol;
   adlb_data_status status;
 } adlb_datum;
 
