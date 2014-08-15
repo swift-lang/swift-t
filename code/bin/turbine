@@ -29,12 +29,13 @@ LINE_PREFIX_ENABLED=0
 LINE_PREFIX=
 # MPI machine file
 MACHINE_FILE=0
+MACHINE_MODE=""
 REPORT_VERSION=0
 VERBOSE=0
 TURBINE_STATIC_EXEC=0
 EXEC_SCRIPT=0
 
-while getopts "f:hln:vVxX" OPTION
+while getopts "f:hlm:n:vVxX" OPTION
 do
   case ${OPTION} in
     f)
@@ -45,6 +46,9 @@ do
       ;;
     l)
       LINE_PREFIX_ENABLED=1
+      ;;
+    m)
+      MACHINE_MODE=${OPTARG}
       ;;
     n)
       PROCS=${OPTARG}
@@ -159,6 +163,27 @@ OPTIONS+=${TURBINE_LAUNCH_OPTIONS}
 if (( VERBOSE ))
 then
   which ${TURBINE_LAUNCHER}
+fi
+
+if [[ -n ${MACHINE_MODE} ]]
+then
+  MACHINE_ARGS=""
+  MACHINE_ARGS+="-n ${PROCS} "
+  (( VERBOSE )) && MACHINE_ARGS+="-V "
+  (( TURBINE_STATIC_EXEC )) && MACHINE_ARGS+="-X "
+  (( EXEC_SCRIPT )) && MACHINE_ARGS+="-x "
+  FOUND=0
+  for M in $( ls ${TURBINE_HOME}/scripts/submit )
+  do
+    [[ ${MACHINE_MODE} == ${M} ]] && FOUND=1
+  done
+  if (( ! FOUND ))
+  then
+    echo "No such machine: ${MACHINE_MODE}"
+    exit 1
+  fi
+  ${TURBINE_HOME}/scripts/submit/${MACHINE_MODE}/turbine-${MACHINE_MODE}-run.zsh ${MACHINE_ARGS} ${PROGRAM} ${ARGS}
+  exit ${?}
 fi
 
 # Allow user to insert valgrind
