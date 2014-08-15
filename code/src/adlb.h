@@ -149,7 +149,10 @@ adlb_code ADLB_Aget(int type_requested, adlb_payload_buf payload,
   Same as ADLB_Aget except initiates multiple requests at once.
   
   nreqs: number of requests to initiate
-  wait: wait for first request to be filled, if >= 1 requests
+  wait: wait for first request to be filled (or shutdown to occur),
+       Return immediately if 0 requests.
+       After returns, ADLB_Aget_wait will immediately succeed
+       on first request returned.
   payloads: array of nreqs payload buffers
   reqs: array of nreqs requests, filled in with request handles
  */

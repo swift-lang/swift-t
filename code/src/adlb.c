@@ -1011,13 +1011,9 @@ adlb_code ADLBP_Amget(int type_requested, int nreqs, bool wait,
     ac = xlb_get_req_lookup(reqs[0], &req_impl);
     ADLB_CHECK(ac);
 
+    // Note: ignore ADLB_SHUTDOWN, handle when testing handle
     ac = xlb_aget_progress(&reqs[0], req_impl, true);
     ADLB_CHECK(ac);
-    if (ac == ADLB_SHUTDOWN)
-    {
-      return ADLB_SHUTDOWN;
-    }
-    assert(ac == ADLB_SUCCESS); // Shouldn't be ADLB_NOTHING
   }
 
   return ADLB_SUCCESS;
