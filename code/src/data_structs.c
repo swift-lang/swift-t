@@ -731,13 +731,11 @@ xlb_struct_cleanup(adlb_struct *s, bool free_mem, bool release_read,
     adlb_data_type field_type = t->field_types[i].type;
     adlb_datum_storage *field_data = &s->fields[i].data;
 
-    // TODO: need to recurse here on nested structs/containers
     bool acquiring_field = acquiring &&
                          (acquire_ix < 0 || acquire_ix == i);
     xlb_refc_acquire acquire_field = acquiring_field ? to_acquire
                                                    : XLB_NO_ACQUIRE;
 
-    TRACE("Field %i of %s: acquiring ", i, t->type_name);
     switch (field_type)
     {
       case ADLB_DATA_TYPE_STRUCT:
