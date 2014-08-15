@@ -3536,7 +3536,6 @@ ADLB_Insert_Impl(ClientData cdata, Tcl_Interp *interp,
                                 argpos);
 
 
-  // TODO: support accepting this as arg
   adlb_refc store_rc = ADLB_READ_REFC;
   rc = ADLB_Store(handle.id, handle.sub.val, type,
                   member.data, member.length, decr, store_rc);
