@@ -40,7 +40,7 @@ endif
 # Products:
 ADLB_A  = lib/libadlb.a
 ADLB_SO = lib/libadlb.$(SO_SUFFIX)
-ADLB_LIBS =
+ADLB_LIBS = 
 
 ENABLE_SHARED = @ENABLE_SHARED@
 ENABLE_STATIC = @ENABLE_STATIC@
@@ -106,12 +106,13 @@ C_UTILS = @USE_C_UTILS@
 INCLUDES = -I . -I src -I $(C_UTILS)/include
 
 LDFLAGS  = @LDFLAGS@
+LIBS = @LIBS@
 CFLAGS  = @CFLAGS@ $(PIC) $(STD) $(INCLUDES) $(WARNS)
 ifeq ($(USE_XLC),1)
 	CFLAGS += -qpack_semantic=gnu
 endif
 
-LIBS := -L $(C_UTILS)/lib -lexmcutils
+LIBS += -L $(C_UTILS)/lib -lexmcutils
 
 RPATH :=
 RPATH += -Wl,-rpath -Wl,$(C_UTILS)/lib
