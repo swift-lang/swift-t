@@ -157,6 +157,7 @@ namespace eval turbine {
     # adlb_size: the number of ranks in the ADLB communicator
     #
     # Returns a rank allocation object, a dict with the following keys:
+    # TODO: update info here
     # servers: the number of ADLB servers
     # workers: the total number of ADLB workers
     # workers_by_type: a tcl dictionary mapping work type to the number
