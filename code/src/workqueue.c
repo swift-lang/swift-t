@@ -24,8 +24,10 @@
 
 /*
    Each work unit is indexed by typed_work
-   If the target is not ANY, it is indexed by targeted_work
    If the target is ANY, it is indexed by prioritized_work
+   If the target is not ANY, it is indexed by targeted_work
+      If soft_target is set, it is also indexed in prioritized work
+      with the minimum priority
  */
 
 #include <assert.h>
@@ -49,6 +51,7 @@
 // minimum percentage imbalance to trigger steal if stealers queue not empty
 #define XLB_STEAL_IMBALANCE 0.1
 
+#define XLB_MIN_PRIORITY INT_MIN
 
 /** Uniquify work units on this server */
 static xlb_work_unit_id unique = 1;
@@ -199,9 +202,18 @@ xlb_workq_add(xlb_work_unit* wu)
   }
   else
   {
+    // Targeted task
     heap_t* H = &targeted_work[targeted_work_ix(wu->target, wu->type)];
     bool b = heap_add(H, -wu->priority, wu);
     CHECK_MSG(b, "out of memory expanding heap");
+
+    if (wu->flags.soft_target)
+    {
+      // Add duplicate entry
+      struct rbtree* T = &parallel_work[wu->type];
+      TRACE("rbtree_add for soft targeted: wu: %p key: %i\n", wu, -wu->priority);
+      rbtree_add(T, XLB_MIN_PRIORITY, wu);
+    }
 
     if (xlb_perf_counters_enabled)
     {
@@ -226,6 +238,12 @@ pop_targeted(heap_t* H, int target)
     // Free storage for empty heaps
     heap_clear(H);
   }
+
+  if (result->flags.soft_target)
+  {
+    // TODO: remove from non-targeted
+  }
+
   return result;
 }
 
@@ -254,6 +272,12 @@ xlb_workq_get(int target, int type)
   wu = node->data;
   DEBUG("xlb_workq_get(): untargeted: %"PRId64"", wu->id);
   free(node);
+
+  if (wu->target < 0)
+  {
+    // TODO: remove entry from targeted heap
+  }
+
   return wu;
 }
 
@@ -331,6 +355,10 @@ pop_parallel_cb(struct rbtree_node* node, void* user_data)
   return false;
 }
 
+/*
+ * Steal work of a given type.
+ * Note: we allow soft-targeted tasks to be stolen.
+ */
 static adlb_code
 xlb_workq_steal_type(struct rbtree *q, int num,
                       xlb_workq_steal_callback cb)
@@ -341,8 +369,15 @@ xlb_workq_steal_type(struct rbtree *q, int num,
     struct rbtree_node* node = rbtree_random(q);
     assert(node != NULL);
     rbtree_remove_node(q, node);
-    adlb_code code = cb.f(cb.data, (xlb_work_unit*) node->data);
+    xlb_work_unit *wu = (xlb_work_unit*) node->data;
     free(node);
+
+    if (wu->target < 0) {
+      // TODO: update for soft targeted
+    }
+
+    adlb_code code = cb.f(cb.data, wu);
+
     ADLB_CHECK(code);
   }
   return ADLB_SUCCESS;
@@ -394,7 +429,7 @@ xlb_workq_steal(int max_memory, const int *steal_type_counts,
         code = xlb_workq_steal_type(&(parallel_work[t]), par_to_send, cb);
         xlb_workq_parallel_task_count -= par_to_send;
         ADLB_CHECK(code);
-        
+
         if (xlb_perf_counters_enabled)
         {
           xlb_task_counters[t].single_stolen += single_to_send;
@@ -434,8 +469,12 @@ wu_rbtree_clear_callback(struct rbtree_node *node, void *data)
 static void
 wu_heap_clear_callback(heap_key_t k, heap_val_t v)
 {
-  // Just free the work unit
-  xlb_work_unit_free((xlb_work_unit*)v);
+  xlb_work_unit *wu = (xlb_work_unit*)v;
+  // Free soft targeted via typed work
+  if (!wu->flags.soft_target)
+  {
+    xlb_work_unit_free(wu);
+  }
 }
 
 static void
@@ -452,7 +491,7 @@ targeted_heap_clear(heap_t *H)
                   wu->type, wu->target);
     }
   }
-  
+
   // free the work unit
   heap_clear_callback(H, wu_heap_clear_callback);
 }
