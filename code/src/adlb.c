@@ -512,7 +512,7 @@ adlb_put_check_params(int target, int type, int parallelism)
 
 adlb_code
 ADLBP_Put(const void* payload, int length, int target, int answer,
-          int type, int priority, int parallelism)
+          int type, int priority, int parallelism, adlb_put_flags flags)
 {
   MPI_Status status;
   MPI_Request request;
@@ -550,6 +550,7 @@ ADLBP_Put(const void* payload, int length, int target, int answer,
   p->target = target;
   p->length = length;
   p->parallelism = parallelism;
+  p->flags = flags;
   p->has_inline_data = inline_data_len > 0;
   if (p->has_inline_data)
   {
@@ -590,7 +591,7 @@ ADLBP_Put(const void* payload, int length, int target, int answer,
 
 adlb_code ADLBP_Dput(const void* payload, int length, int target,
         int answer, int type, int priority, int parallelism,
-        const char *name,
+        adlb_put_flags flags, const char *name,
         const adlb_datum_id *wait_ids, int wait_id_count,
         const adlb_datum_id_sub *wait_id_subs, int wait_id_sub_count)
 {
@@ -628,6 +629,7 @@ adlb_code ADLBP_Dput(const void* payload, int length, int target,
   p->target = target;
   p->length = length;
   p->parallelism = parallelism;
+  p->flags = flags;
   p->has_inline_data = inline_data_len > 0;
   p->id_count = wait_id_count;
   p->id_sub_count = wait_id_sub_count;

@@ -83,8 +83,8 @@ static adlb_code notify_nonlocal(int target, int server,
     rc = xlb_sync(server);
     ADLB_CHECK(rc);
   }
-  rc = ADLB_Put(payload, length, target,
-                    answer_rank, work_type, work_prio, 1);
+  rc = ADLB_Put(payload, length, target, answer_rank, work_type,
+                work_prio, 1, ADLB_DEFAULT_PUT_FLAGS);
   ADLB_CHECK(rc);
   return ADLB_SUCCESS;
 }

@@ -199,6 +199,7 @@ struct packed_put
   int target;
   int length;
   int parallelism;
+  adlb_put_flags flags;
   bool has_inline_data;
   char inline_data[]; /* Put small tasks here */
 };
@@ -220,6 +221,7 @@ struct packed_dput
   int target;
   int length;
   int parallelism;
+  adlb_put_flags flags;
   int id_count;
   int id_sub_count;
 #ifndef NDEBUG

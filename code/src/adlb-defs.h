@@ -66,6 +66,20 @@ typedef struct {
   int size; // Size of buffer
 } adlb_payload_buf;
 
+/*
+ * Flags for Put functions
+ */
+typedef struct {
+  /**
+   Enable soft targeted
+   */
+  bool soft_target;
+} adlb_put_flags;
+
+static const adlb_put_flags ADLB_DEFAULT_PUT_FLAGS = {
+    .soft_target = false,
+};
+
 /**
   Request handle for asynchronous get request.
  */
