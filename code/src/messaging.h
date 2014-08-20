@@ -493,6 +493,7 @@ struct packed_steal_work
   int target;
   int length;
   int parallelism;
+  adlb_put_flags flags;
 };
 
 /**
@@ -561,6 +562,7 @@ xlb_pack_steal_work(struct packed_steal_work* p, xlb_work_unit* wu)
   p->target = wu->target;
   p->type = wu->type;
   p->parallelism = wu->parallelism;
+  p->flags = wu->flags;
 }
 
 /** Member count of enum adlb_tag */

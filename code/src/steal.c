@@ -336,7 +336,7 @@ steal_payloads(int target, int count,
     if (!discard) {
       xlb_work_unit_init(work, wus[i].type, wus[i].putter, wus[i].priority,
                     wus[i].answer, wus[i].target, wus[i].length,
-                    wus[i].parallelism);
+                    wus[i].parallelism, wus[i].flags);
       xlb_workq_add(work);
     } else {
       xlb_work_unit_free(work);

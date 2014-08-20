@@ -50,7 +50,8 @@ xlb_put_work_unit(xlb_work_unit *work);
    Targeted put for local target
 */
 adlb_code xlb_put_targeted_local(int type, int putter, int priority,
-           int answer, int target, const void* payload, int length);
+           int answer, int target, adlb_put_flags flags,
+           const void* payload, int length);
 
 void xlb_print_handler_counters(void);
 

@@ -56,6 +56,8 @@ typedef struct
   int length;
   /** Number of processes required to run this task */
   int parallelism;
+  /** Additional flags */
+  adlb_put_flags flags;
   /** Bulk work unit data 
       Payload kept contiguous with data to save memory allocation */
   unsigned char payload[]; 
@@ -76,7 +78,7 @@ static inline xlb_work_unit *work_unit_alloc(size_t payload_length)
 /** Initialize work unit fields, aside from payload */
 static inline void xlb_work_unit_init(xlb_work_unit *wu, int type,
       int putter, int priority, int answer, int target_rank, int length,
-      int parallelism)
+      int parallelism, adlb_put_flags flags)
 {
   wu->id = xlb_workq_unique();
   wu->type = type;
@@ -86,6 +88,7 @@ static inline void xlb_work_unit_init(xlb_work_unit *wu, int type,
   wu->target = target_rank;
   wu->length = length;
   wu->parallelism = parallelism;
+  wu->flags = flags;
 }
 
 /*

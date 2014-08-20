@@ -124,11 +124,12 @@ static inline adlb_code send_parallel_work(int *workers,
 static inline adlb_code send_no_work(int worker);
 
 static adlb_code put(int type, int putter, int priority, int answer,
-         int target, int length, int parallelism, const void *data);
+         int target, int length, int parallelism, adlb_put_flags flags,
+         const void *data);
 
 static inline adlb_code attempt_match_work(int type, int putter,
-      int priority, int answer, int target, int length, int parallelism,
-      const void *inline_data);
+      int priority, int answer, int target, bool soft_target,
+      int length, int parallelism, const void *inline_data);
 
 static adlb_code attempt_match_par_work(int type,
       int answer, const void *payload, int length, int parallelism);
@@ -294,7 +295,7 @@ handle_put(int caller)
   const void *inline_data = p->has_inline_data ? p->inline_data : NULL;
   adlb_code rc;
   rc = put(p->type, p->putter, p->priority, p->answer, p->target,
-           p->length, p->parallelism, inline_data);
+           p->length, p->parallelism, p->flags, inline_data);
   ADLB_CHECK(rc);
 
   MPE_LOG(xlb_mpe_svr_put_end);
@@ -355,7 +356,7 @@ handle_dput(int caller)
   ADLB_MALLOC_CHECK(work);
 
   xlb_work_unit_init(work, p->type, caller, p->priority, p->answer,
-                     p->target, p->length, p->parallelism);
+                     p->target, p->length, p->parallelism, p->flags);
 
   if (inline_data == NULL)
   {
@@ -409,7 +410,7 @@ handle_dput(int caller)
  */
 static adlb_code
 put(int type, int putter, int priority, int answer, int target,
-    int length, int parallelism, const void *inline_data)
+    int length, int parallelism, adlb_put_flags flags, const void *inline_data)
 {
   adlb_code code;
   MPI_Status status;
@@ -419,7 +420,8 @@ put(int type, int putter, int priority, int answer, int target,
   {
     // Try to match to a worker immediately for single-worker task
     adlb_code matched = attempt_match_work(type, putter,
-        priority, answer, target, length, parallelism, inline_data);
+        priority, answer, target, flags.soft_target, length,
+        parallelism, inline_data);
     if (matched == ADLB_SUCCESS)
       // Redirected ok
       return ADLB_SUCCESS;
@@ -467,7 +469,7 @@ put(int type, int putter, int priority, int answer, int target,
   }
 
   xlb_work_unit_init(work, type, putter, priority, answer, target,
-                length, parallelism);
+                length, parallelism, flags);
   code = xlb_workq_add(work);
   ADLB_CHECK(code);
 
@@ -545,7 +547,8 @@ xlb_put_work_unit(xlb_work_unit *work)
 }
 
 adlb_code xlb_put_targeted_local(int type, int putter, int priority,
-      int answer, int target, const void* payload, int length)
+      int answer, int target, adlb_put_flags flags,
+      const void* payload, int length)
 {
   assert(xlb_map_to_server(target) == xlb_comm_rank);
   valgrind_assert(target >= 0 && target < xlb_workers);
@@ -572,7 +575,7 @@ adlb_code xlb_put_targeted_local(int type, int putter, int priority,
     memcpy(work->payload, payload, (size_t)length);
 
     xlb_work_unit_init(work, type, putter, priority, answer, target,
-                       length, 1);
+                       length, 1, flags);
     DEBUG("xlb_put_targeted_local(): server storing work...");
     xlb_workq_add(work);
   }
@@ -588,8 +591,8 @@ adlb_code xlb_put_targeted_local(int type, int putter, int priority,
   inline_data: non-null if we already have task body
  */
 static adlb_code attempt_match_work(int type, int putter,
-      int priority, int answer, int target, int length, int parallelism,
-      const void *inline_data)
+      int priority, int answer, int target, bool soft_target,
+      int length, int parallelism, const void *inline_data)
 {
   if (parallelism > 1)
   {
@@ -610,8 +613,9 @@ static adlb_code attempt_match_work(int type, int putter,
     }
     assert(worker == target);
   }
-  else
-  {
+  
+  
+  if (!targeted || soft_target) {
     worker = xlb_requestqueue_matches_type(type);
     if (worker == ADLB_RANK_NULL)
     {
@@ -663,6 +667,7 @@ static inline adlb_code send_matched_work(int type, int putter,
   adlb_code code;
   if (xlb_perf_counters_enabled)
   {
+    // TODO: track soft targeted separately?
     xlb_task_bypass_count(type, targeted, false);
   }
 
