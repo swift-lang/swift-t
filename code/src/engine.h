@@ -52,7 +52,7 @@ typedef enum
 } xlb_engine_code;
 
 /**
-   The maximal length of a Turbine rule name string
+   The maximal length of a Turbine transform name string
  */
 #define XLB_ENGINE_NAME_MAX 18
 
@@ -74,11 +74,11 @@ void xlb_engine_print_counters(void);
         ownership of arrays and array contents is retained by caller
    work: ownership of this task is passed into the engine module
             until released
-   ready: if true, rule is ready to run, and ownership stays with
+   ready: if true, work is ready to run, and ownership stays with
           caller
    returns XLB_ENGINE_SUCCESS/XLB_ENGINE_ERROR_*
  */
-xlb_engine_code xlb_engine_rule(const char* name, int name_strlen,
+xlb_engine_code xlb_engine_put(const char* name, int name_strlen,
                           int input_tds,
                           const adlb_datum_id* input_id_list,
                           int input_id_subs,

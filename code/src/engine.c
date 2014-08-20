@@ -21,7 +21,7 @@
  *  Moved to ADLB codebase: Apr 2014
  *      Author: wozniak, armstrong
  *
- * TR means TRansform, the in-memory record from a rule
+ * TR means TRansform, the in-memory record of data-dependent work
  * */
 
 #include "engine.h"
@@ -97,7 +97,7 @@ typedef enum
 } transform_status;
 
 /**
-   In-memory structure resulting from rule statement
+   In-memory structure for data-dependent task
  */
 typedef struct
 {
@@ -560,7 +560,7 @@ static xlb_engine_code
 subscribe_td(adlb_datum_id id, bool *subscribed)
 {
   ENGINE_CONDITION(id != ADLB_DATA_ID_NULL, XLB_ENGINE_ERROR_INVALID,
-                    "Null ID provided to rule");
+                    "Null ID provided to data-dependent task");
   int server = ADLB_Locate(id);
 
   DEBUG_ENGINE("Engine subscribe to <%"PRId64">", id);
@@ -629,7 +629,7 @@ subscribe_id_sub(adlb_datum_id id, engine_sub subscript,
      const void *id_sub_key, size_t id_sub_key_len, bool *subscribed)
 {
   ENGINE_CONDITION(id != ADLB_DATA_ID_NULL, XLB_ENGINE_ERROR_INVALID,
-                    "Null ID provided to rule");
+                    "Null ID provided to to data-dependent task");
   
   int server = ADLB_Locate(id);
 
@@ -706,20 +706,20 @@ static int transform_tostring(char* output,
                               transform* transform);
 
 #ifdef ENABLE_DEBUG_ENGINE
-#define DEBUG_XLB_ENGINE_RULE(transform, id) {         \
+#define DEBUG_XLB_ENGINE_TRANSFORM(transform, id) {         \
     char tmp[1024];                                     \
     transform_tostring(tmp, transform);                 \
-    DEBUG_ENGINE("rule: %s {%"PRId64"}", tmp, id);     \
+    DEBUG_ENGINE("transform: %s {%"PRId64"}", tmp, id);     \
   }
 #else
-#define DEBUG_XLB_ENGINE_RULE(transform, id)
+#define DEBUG_XLB_ENGINE_TRANSFORM(transform, id)
 #endif
 
 static xlb_engine_code progress(transform* T, bool* subscribed);
-static xlb_engine_code rule_inputs(transform* T);
+static xlb_engine_code init_inputs(transform* T);
 
 xlb_engine_code
-xlb_engine_rule(const char* name, int name_strlen,
+xlb_engine_put(const char* name, int name_strlen,
               int input_tds,
               const adlb_datum_id* input_id_list,
               int input_id_subs,
@@ -736,19 +736,19 @@ xlb_engine_rule(const char* name, int name_strlen,
 
   ENGINE_CHECK(tc);
 
-  tc = rule_inputs(T);
+  tc = init_inputs(T);
   ENGINE_CHECK(tc);
 
   bool subscribed;
   tc = progress(T, &subscribed);
   if (tc != XLB_ENGINE_SUCCESS)
   {
-    DEBUG_ENGINE("xlb_engine_rule failed:\n");
-    DEBUG_XLB_ENGINE_RULE(T, work->id);
+    DEBUG_ENGINE("xlb_engine_put failed:\n");
+    DEBUG_XLB_ENGINE_TRANSFORM(T, work->id);
     return tc;
   }
 
-  DEBUG_XLB_ENGINE_RULE(T, work->id);
+  DEBUG_XLB_ENGINE_TRANSFORM(T, work->id);
 
   if (subscribed)
   {
@@ -773,10 +773,10 @@ xlb_engine_rule(const char* name, int name_strlen,
   return XLB_ENGINE_SUCCESS;
 }
 
-static inline xlb_engine_code add_rule_blocker(adlb_datum_id id,
+static inline xlb_engine_code add_blocker(adlb_datum_id id,
                                       transform *T);
 
-static inline xlb_engine_code add_rule_blocker_sub(void *id_sub_key,
+static inline xlb_engine_code add_blocker_sub(void *id_sub_key,
         size_t id_sub_keylen, transform *T);
 /**
   Do initial setup of subscribes so that notifications will update
@@ -787,7 +787,7 @@ static inline xlb_engine_code add_rule_blocker_sub(void *id_sub_key,
   to the blockers table.
 */
 static xlb_engine_code
-rule_inputs(transform* T)
+init_inputs(transform* T)
 {
   /*
     We might add duplicate list entries if input appears multiple
@@ -806,7 +806,7 @@ rule_inputs(transform* T)
     {
       // We might add duplicate list entries if id appears multiple
       //      times. This is currently handled upon removal from list
-      tc = add_rule_blocker(id, T);
+      tc = add_blocker(id, T);
       ENGINE_CHECK(tc);
     }
     else
@@ -832,7 +832,7 @@ rule_inputs(transform* T)
     {
       // We might add duplicate list entries if id appears multiple
       //      times. This is currently handled upon removal from list
-      tc = add_rule_blocker_sub(id_sub_key, id_sub_keylen, T);
+      tc = add_blocker_sub(id_sub_key, id_sub_keylen, T);
       ENGINE_CHECK(tc);
     }
     else
@@ -849,10 +849,10 @@ rule_inputs(transform* T)
    @param result return the new blocked list here
  */
 static inline xlb_engine_code
-add_rule_blocker(adlb_datum_id id, transform *T)
+add_blocker(adlb_datum_id id, transform *T)
 {
   assert(xlb_engine_initialized);
-  DEBUG_ENGINE("add_rule_blocker for {%"PRId64"}: <%"PRId64">",
+  DEBUG_ENGINE("add_blocker for {%"PRId64"}: <%"PRId64">",
                 T->work->id, id);
   struct list* blocked;
   table_lp_search(&id_blockers, id, (void**)&blocked);
@@ -868,13 +868,13 @@ add_rule_blocker(adlb_datum_id id, transform *T)
 }
 
 /*
-  Same as add_rule_blocker, but with subscript.
+  Same as add_blocker, but with subscript.
  */
-static inline xlb_engine_code add_rule_blocker_sub(void *id_sub_key,
+static inline xlb_engine_code add_blocker_sub(void *id_sub_key,
         size_t id_sub_keylen, transform *T)
 {
   assert(xlb_engine_initialized);
-  DEBUG_ENGINE("add_rule_blocker_sub for {%"PRId64"}", T->work->id);
+  DEBUG_ENGINE("add_blocker_sub for {%"PRId64"}", T->work->id);
   struct list* blocked;
   bool found = table_bp_search(&id_sub_blockers, id_sub_key,
                          id_sub_keylen, (void**)&blocked);
@@ -912,7 +912,7 @@ xlb_engine_close(adlb_datum_id id, bool remote,
   struct list* L;
   bool found = table_lp_remove(&id_blockers, id, (void**)&L);
   if (!found)
-    // We don't have any rules that block on this td
+    // We don't have any transforms that block on this td
     return XLB_ENGINE_SUCCESS;
 
   DEBUG_ENGINE("%i blocked", L->size);
@@ -945,7 +945,7 @@ xlb_engine_code xlb_engine_sub_close(adlb_datum_id id, adlb_subscript sub,
   
   bool found = table_bp_remove(&id_sub_blockers, key, key_len, (void**)&L);
   if (!found)
-    // We don't have any rules that block on this td
+    // We don't have any transforms that block on this td
     return XLB_ENGINE_SUCCESS;
 
   return xlb_engine_close_update(L, id, sub, ready);
@@ -1066,8 +1066,8 @@ move_to_ready(xlb_engine_work_array *ready, transform *T)
 /**
  * Check if a transform is done, and initiate progress if needed.
  *
- * We initiated all subscribes on rule creation, so we just check
- * to see if we're still waiting on anything.
+ * We initiated all subscribes on entering work into engine, so we just
+ * check to see if we're still waiting on anything.
  *
  * subscribed: set to true if still subscribed to data
  */

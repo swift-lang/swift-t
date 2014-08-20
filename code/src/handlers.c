@@ -78,7 +78,7 @@ static adlb_code handle_sync_response(int caller);
 static adlb_code handle_steal_response(int caller);
 static adlb_code handle_do_nothing(int caller);
 static adlb_code handle_put(int caller);
-static adlb_code handle_put_rule(int caller);
+static adlb_code handle_dput(int caller);
 static adlb_code handle_get(int caller);
 static adlb_code handle_iget(int caller);
 static adlb_code handle_amget(int caller);
@@ -174,7 +174,7 @@ xlb_handlers_init(void)
   register_handler(ADLB_TAG_RESPONSE_STEAL_COUNT, handle_steal_response);
   register_handler(ADLB_TAG_DO_NOTHING, handle_do_nothing);
   register_handler(ADLB_TAG_PUT, handle_put);
-  register_handler(ADLB_TAG_PUT_RULE, handle_put_rule);
+  register_handler(ADLB_TAG_DPUT, handle_dput);
   register_handler(ADLB_TAG_GET, handle_get);
   register_handler(ADLB_TAG_IGET, handle_iget);
   register_handler(ADLB_TAG_AMGET, handle_amget);
@@ -303,14 +303,14 @@ handle_put(int caller)
 }
 
 static adlb_code
-handle_put_rule(int caller)
+handle_dput(int caller)
 {
   MPI_Status status;
 
   MPE_LOG(xlb_mpe_svr_put_start);
 
-  RECV(xlb_xfer, XLB_XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_PUT_RULE);
-  const struct packed_put_rule *p = (struct packed_put_rule*)xlb_xfer;
+  RECV(xlb_xfer, XLB_XFER_SIZE, MPI_BYTE, caller, ADLB_TAG_DPUT);
+  const struct packed_dput *p = (struct packed_dput*)xlb_xfer;
 
   // Put arrays first to avoid alignment issues
   const adlb_datum_id *wait_ids = p->inline_data;
@@ -377,16 +377,16 @@ handle_put_rule(int caller)
     WAIT(&request, &status);
   }
 
-  // We have rule now - caller can proceed.
-  // Any errors in rule will occur in server now.
+  // We have all info from caller now - caller can proceed.
+  // Any errors will occur in server now.
   int response = ADLB_SUCCESS;
   SEND(&response, 1, MPI_INT, caller, ADLB_TAG_RESPONSE_PUT);
 
   bool ready;
-  xlb_engine_code tc = xlb_engine_rule(name, name_strlen,
+  xlb_engine_code tc = xlb_engine_put(name, name_strlen,
         p->id_count, wait_ids, p->id_sub_count, wait_id_subs,
         work, &ready);
-  CHECK_MSG(tc == XLB_ENGINE_SUCCESS, "Error adding rule");
+  CHECK_MSG(tc == XLB_ENGINE_SUCCESS, "Error adding data-dependent work");
 
   if (ready)
   {
@@ -399,7 +399,7 @@ handle_put_rule(int caller)
   xlb_task_data_count(p->type, p->target >= 0, p->parallelism > 1,
                       !ready);
 
-  MPE_LOG(xlb_mpe_svr_put_rule_end);
+  MPE_LOG(xlb_mpe_svr_dput_end);
   return ADLB_SUCCESS;
 }
 

@@ -211,7 +211,7 @@ struct packed_put
 /**
    Put request with data dependencies
  */
-struct packed_put_rule
+struct packed_dput
 {
   int type;
   int priority;
@@ -576,7 +576,7 @@ typedef enum
 
   // task operations
   ADLB_TAG_PUT = 1,
-  ADLB_TAG_PUT_RULE,
+  ADLB_TAG_DPUT,
   ADLB_TAG_GET,
   ADLB_TAG_IGET,
   ADLB_TAG_AMGET,

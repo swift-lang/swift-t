@@ -223,7 +223,7 @@ static inline void xlb_task_bypass_count(int type, bool targeted,
 }
 
 /*
- * Mark that a rule task was created
+ * Mark that a data-dependent task was created
  * wait: if it has to wait for data
  */
 static inline void xlb_task_data_count(int type, bool targeted,

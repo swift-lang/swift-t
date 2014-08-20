@@ -60,7 +60,7 @@ declare_pair(dmn, sync);
 declare_pair(dmn, shutdown);
 
 declare_pair(wkr, put);
-declare_pair(wkr, put_rule);
+declare_pair(wkr, dput);
 declare_pair(wkr, get);
 declare_pair(wkr, iget);
 declare_pair(wkr, aget);
@@ -117,7 +117,7 @@ xlb_mpe_setup()
 
   make_pair(svr, busy);
   make_pair(svr, put);
-  make_pair(svr, put_rule);
+  make_pair(svr, dput);
   make_pair(svr, get);
 
   make_pair(svr, create);

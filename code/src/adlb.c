@@ -620,7 +620,7 @@ adlb_code ADLBP_Dput(const void* payload, int length, int target,
     inline_data_len = 0;
   }
 
-  struct packed_put_rule *p = (struct packed_put_rule*)xlb_xfer;
+  struct packed_dput *p = (struct packed_dput*)xlb_xfer;
   p->type = type;
   p->priority = priority;
   p->putter = xlb_comm_rank;
@@ -632,7 +632,7 @@ adlb_code ADLBP_Dput(const void* payload, int length, int target,
   p->id_count = wait_id_count;
   p->id_sub_count = wait_id_sub_count;
 
-  int p_len = (int)sizeof(struct packed_put_rule);
+  int p_len = (int)sizeof(struct packed_dput);
 
   // pack in all needed data at end
   char *p_data = (char*)p->inline_data;
@@ -669,7 +669,7 @@ adlb_code ADLBP_Dput(const void* payload, int length, int target,
   assert(p_len < XLB_XFER_SIZE);
 
   IRECV(&response, 1, MPI_INT, to_server, ADLB_TAG_RESPONSE_PUT);
-  SEND(p, (int)p_len, MPI_BYTE, to_server, ADLB_TAG_PUT_RULE);
+  SEND(p, (int)p_len, MPI_BYTE, to_server, ADLB_TAG_DPUT);
 
   WAIT(&request, &status);
   if ((adlb_code)response == ADLB_REJECTED)
@@ -687,7 +687,7 @@ adlb_code ADLBP_Dput(const void* payload, int length, int target,
     // Second response to confirm entered ok
     IRECV(&response, 1, MPI_INT, to_server, ADLB_TAG_RESPONSE_PUT);
     // Still need to send payload
-    // Note: don't try to redirect work for rule
+    // Note: don't try to redirect work for data-dependent work
     // Use RSEND so that server can pre-allocate a buffer
     RSEND(payload, length, MPI_BYTE, to_server, ADLB_TAG_WORK);
     WAIT(&request, &status);

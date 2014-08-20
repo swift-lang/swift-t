@@ -70,7 +70,7 @@ add_tags()
 
   /// tags incoming to server
   add_tag(ADLB_TAG_PUT);
-  add_tag(ADLB_TAG_PUT_RULE);
+  add_tag(ADLB_TAG_DPUT);
   add_tag(ADLB_TAG_GET);
   add_tag(ADLB_TAG_IGET);
 

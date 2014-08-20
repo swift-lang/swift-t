@@ -125,13 +125,13 @@ adlb_code ADLB_Dput(const void* payload, int length, int target,
         const adlb_datum_id *wait_ids, int wait_id_count, 
         const adlb_datum_id_sub *wait_id_subs, int wait_id_sub_count)
 {
-  MPE_LOG(xlb_mpe_wkr_put_rule_start);
+  MPE_LOG(xlb_mpe_wkr_dput_start);
 
   adlb_code rc = ADLBP_Dput(payload, length, target, answer,
                      type, priority, parallelism, name,
                      wait_ids, wait_id_count, wait_id_subs, wait_id_sub_count);
 
-  MPE_LOG(xlb_mpe_wkr_put_rule_end);
+  MPE_LOG(xlb_mpe_wkr_dput_end);
 
   return rc;
 }
